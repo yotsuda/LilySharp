@@ -129,6 +129,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第702セッションの経緯
+
+### 1.1 第702セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き。★ `-Start p702`（HEAD `2fce5152`・未 push 96）＝full **10409 / 0 / 2 / 10411**（引継ぎと一致）。**ユーザー決定（2026-09-30）: 文字列の escape は C# の文法に準じる・`@""` の verbatim 形式も使えるようにする。**
+⑴ ★ `d39f1cda`: `Syntax.StringLiteral`（`Value`／`Errors`／`IsQuoted`／`Quote`）を 1 軒に・lexer が `@"…"` を読む・LYS0036（未知の escape・位置はその escape）・`Trim('"')`／`[1..^1]` の 23 か所＋引用の判定 6 か所を寄せた・import の `EscapeString` は `Quote`・LP export は既に値を LP の escape で書いていた（前は Lily# の escape を二重にしていた）・TextMate は verbatim と C# の escape を色付け（`invalid.*` は使わない方針＝`EditorColouringTests`）・GRAMMAR／SYNTAX_REFERENCE／LLM spec に文字列の定義を初めて書いた・CHANGELOG 2 本。コーパスで意味が変わる文字列は 2 本だけ（`chord-name-entry.lys` の `"\^{~}3"` 等＝`@"…"` に）。網 `StringLiteralTests` 20（毒＝`LysValue` を `Trim` に戻す: 読む 2 本だけ赤＝的中）。`lysc check` の掃き 998 冊: 診断の出入り 0。途中のユーザーの問い（`{fonts.serif}` の補間）は「今は入れない・入れるなら `$"…"`」と答えた（§3）。full **10429 / 0 / 2 / 10431**。
+★ `-End p702 -DiffBase 2fce5152`＝full **10429 / 0 / 2 / 10431**・門 6 つ全 OK・Core `+` 258 行に REF 0／OWN 1（`StringLiteral`＝ユーザー決定の言語仕様・LP に対応物なし）。7.6: ⒜ なし。7.7: 引用の判定（`IsQuoted`＋末尾の `"`）がまだ 6 か所で「始まりが引用か＋終わりが `"`」と書かれている＝`StringLiteral` に「閉じた literal か」を聞く関数を置けば 1 軒（未着手）。push はユーザー。
+
 ## 以下は第701セッションの経緯
 
 ### 1.1 第701セッション（2026-09-30・YT-DELL2）

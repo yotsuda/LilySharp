@@ -79,7 +79,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ★★★ **コード図（§2 K が正）＝K5 は全部閉じた（第664〜第668）**。小さい穴: 複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴＝phrase のアンカー・ホバーの綴り・`<< >>` の中／表の中で補完が layout のキーを勧める・TextMate は表を色付けしない（第664）／カポの穴＝双子は `chordNames both` を綴れない（警告）・`chord(…)` のホバーは最初の score のカポを読む（第665・MIDI 側は第687 が鳴らす score のカポに直した）
+- ★★★ **コード図（§2 K が正）＝K5 は全部閉じた（第664〜第668）**。小さい穴: 複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴＝phrase のアンカー・ホバーの綴り・`<< >>` の中／表の中の補完と色は第704 が閉じた（`25f34bd0`・`99442ba8`）／カポの穴＝双子は `chordNames both` を綴れない（警告）・`chord(…)` のホバーは最初の score のカポを読む（第665・MIDI 側は第687 が鳴らす score のカポに直した）
 - **tab の LP 差（第690 起票）は第694 で全部閉じた**: turn の 0.17＝tab の Script の独自配置（`893b968b` で aligned_side に移植）／斜めの bracket の端＝`a08b91df`（make_bracket の字面・隙間も）／「beam 付き tab 符幹が 0.56 高い」「`g,4` のフレット選択」はユーザー決定の帰結＝欠陥ではない（§1.1 第694）。**tuplet の数字の送り幅が LP より 0.07 広い**（同梱書体の「3」0.96 対 LP 0.888＝隙間がその分広い・書体の問題）
 - **MusicXML／頁の既存欠陥（第662・第663 起票）の残る穴**: ★ 第677 の穴: 番号の無い周（`:|*3` に ending 2 つ）は Lily# が最後の ending を繰り返し、LP は余りを最初の alternative に与える＝双子はそのまま（`RepeatPasses.EndingFor` の OWN・観測者なし）。★ 第672 が見つけた穴: `R*N@text` は TextScript のまま＝LP は MultiMeasureRestText（UP・span 中央・count の数字を side support）＝LILYSHARP-OWN・count の数字の ink 箱を layout に持たせてから（§1.1 第672）／MMR 上の dynamic の X＝**第698 が閉じた**（`9e88b601`・LP は PaperColumn の `X-alignment-extent` (0 . 1.35) の中心 0.675）。残りは **MMR の小節の列 X が LP より 0.027 左**（小節線から Lily# 2.230・LP 2.257＝第697 の実測から逆算・Lab `sessions/p698/sp`）＝その列に載るのは dynamic と `R@chord` だけで実コーパス 0 冊＝値段は小さい・直すなら MMR の小節の間隔の組み方から／休符の import（post-event・`R`・`R*N`）は第698 が閉じた（`928f06a9`）。**掃きが見つけた古い穴 3 つ**（Lab `sessions/p698/imp/sweep.ps1`）: ⒤ `<words>`／`<rehearsal>` の import は第698 が閉じた（`aa88c5e9`）／文字列の escape は第702 が C# の文法にした（`d39f1cda`・§3）／⒥ は第699 が閉じた（`dfac7b6c`）／⒧ 途中の time／key／clef／tempo の import は第700 が閉じた（`5928d22f`）・voice block の `time` の検査は第701 が直した（`e89da84d`）／⒦ grace の slur は第700 が閉じた（`49fceda8`）／⒨ grace の和音と relative の和音の綴りは第700 が閉じた（`a9b61939`）／⒩ は計器の誤り（第701・複数 score の本で import の出力フォルダが衝突）＝実際は relative の音高のずれ 68 → 0。5/4 のような 1 つの音価で書けない全小節休符は `<type>` のまま（`R1` が 4/4 ぶん）
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
@@ -119,19 +119,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第704セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p704`（HEAD `7ec53814`・未 push 101）＝full **10443 / 0 / 2 / 10445**（引継ぎと一致）。
+⑴ ★ `25f34bd0`（§1.0 ⒜ の第664 の穴）: shape table の中の補完。表の `{` の前の語は entry のもの（`guitar`・`capo 3`）で layout の frame にならず、どの文脈も表の中を知らなかった＝**`MusicBlock`（音高と articulation）を勧めていた**（HANDOFF の「layout のキーを勧める」は不正確＝毒で実測）。`ChordDiagramTableLevel`（1＝表・2＝表の中の `section`）→ 文脈 `ChordDiagramTable`／`ChordDiagramTableSection`。表の中＝その scope がまだ挙げていない*本のコード*（`CapoAdvisor.ChordsOf`・初出順）→ 調の diatonic → 表の層だけ `section`。`section` の後＝本の section 名から表に block の無いもの（block つきで挿入）。網 `ChordDiagramTests` +1（毒＝分岐を外す: 赤）。CHANGELOG 2 本。
+⑵ ★ `99442ba8`（同じ穴の片割れ）: TextMate の `#shape-table`。表の `{` を誰も取らず `#layout-block` の end が `}` なので、**表（や表の section）の `}` で layout の色が終わり、後ろのキーが無色**だった＝`vscode-textmate` で前後を実測（Lab `sessions/p704/tm/tok.js`＝実エンジンで文法を回す道具・`node tok.js <grammar>`）。表を layout の最初の include にし、`section NAME { }`・調弦語・形（語全体だけ＝`C6/9` の 9 を形と取らない）を塗る。コード名は chords 行と同じく無色。網 `EditorColouringTests` +1（調弦語は `TuningValueVocabulary` と両方向・毒＝include を外す: これと到達性の門が赤）。full **10445 / 0 / 2 / 10447**。
+★ `-End p704 -DiffBase 7ec53814`＝full **10445 / 0 / 2 / 10447**・門 6 つ全 OK・Core `+` 0 行（LSP と文法だけ）。7.6: ⒜ の第664 の穴 2 つ（補完・色）。7.7: 表の判定は補完（`ChordDiagramTableLevel`＝`chordDiagrams` の後の語を見る）と文法（layout の中の `{` は全部表）で別の読み方＝layout に表以外の brace が入る日には文法側を直す。push はユーザー。
+
+## 以下は第703セッションの経緯
+
 ### 1.1 第703セッション（2026-09-30・YT-DELL2）
 
 新しい会話（ユーザー「HANDOFF を読んで着手」）。★ `-Start p703`（HEAD `b95fd90d`・未 push 99）＝full **10429 / 0 / 2 / 10431**（引継ぎと一致）。作業ツリーの `site/examples/*.lys` 20 本の `M` は改行だけ（CRLF・内容の差 0・2026-09-29 から在る）＝触らない。
 ⑴ ★ `510ab1dc`（第702 の 7.7）: `StringLiteral.IsClosed`＝「閉じた 1 つの literal か」を 1 軒に。6 か所の「始まりが引用＋末尾が `"`」は `@"`（開きだけ）・`"a\"`（末尾の引用が escape）・`@"a""`・`"a" "b"`（2 つの literal）を閉じたと取っていた＋`ChordAnnotation.Parse` に 7 つ目の綴り（開きの後に `"` が在れば閉じた）＝全部 `Value` と同じ読みで閉じ引用を探す 1 関数に寄せた（残る引用の判定は `StringLiteral` の中だけ＝grep で確認）。網 `StringLiteralTests` +14（毒＝`IsClosed` を字面の判定に戻す: 予測した 4 件だけ赤）。掃き 998 冊: `lysc check` の診断の出入り 0・svg 782/782 がバイト同一（data-pos を伏せて）＝コーパスに無い形。full **10443 / 0 / 2 / 10445**。
 ★ `-End p703 -DiffBase b95fd90d`＝full **10443 / 0 / 2 / 10445**・門 6 つ全 OK・Core `+` 39 行に REF 0／OWN 0（`StringLiteral` の家の中＝既に OWN の註の下・LP に対応物なし）。7.6: ⒜ なし。7.7: `SymbolCaseValidator.IsQuoted` は `IsClosed` をそのまま呼ぶだけの 1 行になった（名前が「開きだけ」の `StringLiteral.IsQuoted` と紛らわしい＝畳むなら呼び出し 1 か所を `IsClosed` に）。push はユーザー。
-
-## 以下は第702セッションの経緯
-
-### 1.1 第702セッション（2026-09-30・YT-DELL2）
-
-同じ会話の続き。★ `-Start p702`（HEAD `2fce5152`・未 push 96）＝full **10409 / 0 / 2 / 10411**（引継ぎと一致）。**ユーザー決定（2026-09-30）: 文字列の escape は C# の文法に準じる・`@""` の verbatim 形式も使えるようにする。**
-⑴ ★ `d39f1cda`: `Syntax.StringLiteral`（`Value`／`Errors`／`IsQuoted`／`Quote`）を 1 軒に・lexer が `@"…"` を読む・LYS0036（未知の escape・位置はその escape）・`Trim('"')`／`[1..^1]` の 23 か所＋引用の判定 6 か所を寄せた・import の `EscapeString` は `Quote`・LP export は既に値を LP の escape で書いていた（前は Lily# の escape を二重にしていた）・TextMate は verbatim と C# の escape を色付け（`invalid.*` は使わない方針＝`EditorColouringTests`）・GRAMMAR／SYNTAX_REFERENCE／LLM spec に文字列の定義を初めて書いた・CHANGELOG 2 本。コーパスで意味が変わる文字列は 2 本だけ（`chord-name-entry.lys` の `"\^{~}3"` 等＝`@"…"` に）。網 `StringLiteralTests` 20（毒＝`LysValue` を `Trim` に戻す: 読む 2 本だけ赤＝的中）。`lysc check` の掃き 998 冊: 診断の出入り 0。途中のユーザーの問い（`{fonts.serif}` の補間）は「今は入れない・入れるなら `$"…"`」と答えた（§3）。full **10429 / 0 / 2 / 10431**。
-★ `-End p702 -DiffBase 2fce5152`＝full **10429 / 0 / 2 / 10431**・門 6 つ全 OK・Core `+` 258 行に REF 0／OWN 1（`StringLiteral`＝ユーザー決定の言語仕様・LP に対応物なし）。7.6: ⒜ なし。7.7: 引用の判定（`IsQuoted`＋末尾の `"`）がまだ 6 か所で「始まりが引用か＋終わりが `"`」と書かれている＝`StringLiteral` に「閉じた literal か」を聞く関数を置けば 1 軒（未着手）。push はユーザー。
 
 ## 2. 開いている作業
 
