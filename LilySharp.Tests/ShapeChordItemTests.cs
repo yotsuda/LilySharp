@@ -418,6 +418,23 @@ public class ShapeChordItemTests
         Assert.Contains("nothing sounds", HoverAt(doc, "chord(C)"));
     }
 
+    /// <summary>The hover spells a tone that is no chord tone as the key in force spells it, as the
+    /// page does — x32012's top string is F♯ in C and G♭ under a flat key. Until 2026-09-30 the
+    /// hover spelled it in C whatever the key.</summary>
+    [Fact]
+    public void Hover_SpellsANonChordToneInTheKey()
+    {
+        Assert.Contains("F♯4", HoverAt(Book("instrument guitar", "chord(C x32012)1 |"), "chord(C x"));
+        string flat = Book("instrument guitar\n  key f major", "chord(C x32012)1 |");
+        string? hover = HoverAt(flat, "chord(C x");
+        Assert.Contains("G♭4", hover);
+        Assert.DoesNotContain("F♯", hover);
+        // …as the page prints the same note.
+        var chord = Assert.IsType<ChordItem>(Items(Collected(flat))[0]);
+        Assert.Equal(("flat", 0), (chord.Notes.Single(n => n.Accidental != null).Accidental,
+            chord.Notes.Count(n => n.Accidental == "sharp")));
+    }
+
     private static (string After, StepResponse Response) Step(string text, int caret, int dir)
     {
         var uri = new Uri("file:///shape-step.lys");

@@ -65,7 +65,7 @@ public sealed partial class LilySharpLanguageServer
         else if (ChordLikeAt(node) is ChordSyntax { IsShapeChord: true } shapeItem)
         {
             node = shapeItem;
-            content = ShapeChordHover(shapeItem);
+            content = ShapeChordHover(shapeItem, doc.Text);
         }
         else
         {
@@ -155,9 +155,10 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>
     /// A <c>chord(…)</c> item's hover (owner's decision 2026-09-28): the notes it sounds on each
     /// tuning of the parts that play it, lowest first — <c>guitar: `x32013` — C3 E3 G3 C4 G4</c> —
-    /// with where the shape stands in the step's order, or why it sounds nothing.
+    /// with where the shape stands in the step's order, or why it sounds nothing. A tone that is
+    /// no chord tone is spelled in the key in force (<see cref="CurrentKey"/>), as the page spells it.
     /// </summary>
-    internal static string ShapeChordHover(ChordSyntax item)
+    internal static string ShapeChordHover(ChordSyntax item, string text)
     {
         var words = ShapeChords.Words(item);
         var head = new StringBuilder("**Chord from a shape**");
@@ -168,9 +169,10 @@ public sealed partial class LilySharpLanguageServer
         var lines = new List<string>();
         // A capo raises every string by its fret (the first score's capo, as the step reads it).
         int capo = NoteStepper.CapoOf(item);
+        int keySharps = CurrentKeySharps(text, item.SourceStart);
         foreach (var part in ShapeChords.PartTuningsOf(item))
         {
-            var notes = ShapeChords.Notes(words, part.Tuning, part.SoundingShift - capo, keySharps: 0);
+            var notes = ShapeChords.Notes(words, part.Tuning, part.SoundingShift - capo, keySharps);
             if (ShapeChords.ShapeFor(words, part.Tuning) is not { } shape || notes.IsEmpty)
             {
                 lines.Add($"{part.Word}: no shape for its {LilySharp.Core.Tablature.Tunings.GetStringCount(part.Tuning)} "
