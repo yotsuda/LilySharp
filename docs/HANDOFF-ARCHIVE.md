@@ -129,6 +129,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第695セッションの経緯
+
+### 1.1 第695セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p695`（HEAD `227f2536`・未 push 70）＝full **10361 / 0 / 2 / 10363**（引継ぎと一致）。
+⑴ §1.0 ⒜「Script のグリフの近い側の範囲が LP の輪郭でない」（第694 起票）。五線で 14 種 × 符頭が支え／符幹が支え（Lab `sessions/p695/ns`・計器 `scriptcmp.ps1`＋`pairs.ps1`）で測ると、ずれていたのは mordent −0.173・turn/reverseTurn −0.033・trill −0.039/−0.049・staccatissimo −0.017。原因は 2 層＝装飾記号の仮の箱 ±0.5 と、支えを問わず箱の下端 1 つで測っていたこと。LP は Script の輪郭のスカイラインと支えごとのスカイラインの距離＝符頭は符頭の幅の範囲・同じ向きの符幹は全幅（Script の `add-stem-support #t`＝`set_minimum_height`）・五線は全幅。★ `200a9480`＝`SupportReach`／`NearReachOver`（既存の `ScriptSkyline`＝輪郭＋horizon-padding を支えの範囲で読む）を五線・量子化・pure tip・tab の枝に。28 変種が SVG の丸めの範囲で LP と一致・台帳 `script.stem-support.staff-to-ink-bottom` −0.001 → 0。網 `ScriptOutlineSupportTests` 10（0.002）・毒で動いた 8 本赤／一致していた 2 本は緑。snapshot 7 枚承認・掃き 10 冊（コーパス 2）すべてインクだけ。full **10371 / 0 / 2 / 10373**。⚠ 残り: tab の accent −0.017（同梱書体の数字の幅の上での輪郭の読み＝決定済みの領域）／五線の `CalculateYPosition` と tab の枝は同じ aligned_side を別々に書いている（五線は 5 線の直書き）＝一本化は次の島。
+★ `-End p695 -DiffBase 227f2536`＝full **10371 / 0 / 2 / 10373**・門 6 つ全 OK・Core `+` 112 行に REF 9／OWN 0。7.6: ⒜（aligned_side の支えごとのスカイライン距離の字面・支えは箱〔符頭・数字〕と全幅〔符幹・五線〕で、LP の符頭／数字のスカイラインは箱で近似＝既存の HeadSupportExtent と同じ）。7.7: 残る 2 つ目の綴り＝上の一本化。CHANGELOG に 1 件。push はユーザー。
+
 ## 以下は第694セッションの経緯
 
 ### 1.1 第694セッション（2026-09-30・YT-DELL2）

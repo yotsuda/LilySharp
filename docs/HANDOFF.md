@@ -81,8 +81,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - ★★★ **コード図（§2 K が正）＝K5 は全部閉じた（第664〜第668）**。小さい穴: 複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴＝phrase のアンカー・ホバーの綴り・`<< >>` の中／表の中で補完が layout のキーを勧める・TextMate は表を色付けしない（第664）／カポの穴＝双子は `chordNames both` を綴れない（警告）・`chord(…)` のホバーは最初の score のカポを読む（第665・MIDI 側は第687 が鳴らす score のカポに直した）
 - **tab の LP 差（第690 起票）は第694 で全部閉じた**: turn の 0.17＝tab の Script の独自配置（`893b968b` で aligned_side に移植）／斜めの bracket の端＝`a08b91df`（make_bracket の字面・隙間も）／「beam 付き tab 符幹が 0.56 高い」「`g,4` のフレット選択」はユーザー決定の帰結＝欠陥ではない（§1.1 第694）。**tuplet の数字の送り幅が LP より 0.07 広い**（同梱書体の「3」0.96 対 LP 0.888＝隙間がその分広い・書体の問題）
-- **MusicXML／頁の既存欠陥（第662・第663 起票）の残る穴**: ★ 第677 の穴: 番号の無い周（`:|*3` に ending 2 つ）は Lily# が最後の ending を繰り返し、LP は余りを最初の alternative に与える＝双子はそのまま（`RepeatPasses.EndingFor` の OWN・観測者なし）。★ 第672 が見つけた穴: `R*N@text` は TextScript のまま＝LP は MultiMeasureRestText（UP・span 中央・count の数字を side support）＝LILYSHARP-OWN・count の数字の ink 箱を layout に持たせてから（§1.1 第672）／MMR 上の dynamic の X（LP は列・Lily# は休符 ink 中央）／import は休符の post-event を書かず `multiple-rest` を畳まない
-- **小節線 → 音の最小は第693 がスカイラインにした（`SpacingRules.BarlineToColumnMinimum`）。残る同じ量の 2 つ目の綴り**: 調号・拍子の変わり目が小節を開くときの枝（`BarlineToFirstColumnSpring` の `MusicalColumnLeftReach`）はまだ X だけ。LP と食い違う本は未発見（変わり目の後は ideal が効く・Lab `sessions/p693/bl2` q・s）。直すなら変わり目の glyph の Y extent を箱にする
+- **MusicXML／頁の既存欠陥（第662・第663 起票）の残る穴**: ★ 第677 の穴: 番号の無い周（`:|*3` に ending 2 つ）は Lily# が最後の ending を繰り返し、LP は余りを最初の alternative に与える＝双子はそのまま（`RepeatPasses.EndingFor` の OWN・観測者なし）。★ 第672 が見つけた穴: `R*N@text` は TextScript のまま＝LP は MultiMeasureRestText（UP・span 中央・count の数字を side support）＝LILYSHARP-OWN・count の数字の ink 箱を layout に持たせてから（§1.1 第672）／MMR 上の dynamic の X＝**第697 が値付け: 差は 0.048 だけ**（LP 2.932・Lily# 2.980＝小節線の右から p の中心・ragged でも伸びた段でも同じ・Lab `sessions/p697/mmrdyn`）。LP は NoteColumn が無いので X の親が PaperColumn・その extent (−0.059 . 1.409)＝ほぼ p 自身（列が子の p を含む）→ p の中心＝列＋0.675。Lily# は `DynamicEngraver.AnchorCentreOffset` の休符の腕（全休符グリフの ink 中心）。−0.059 の出どころは未読＝直すならそこから／import は休符の post-event を書かず `multiple-rest` を畳まない
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
@@ -117,22 +116,23 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **⒜ と push は「後回し」＝催促しない**（第407 ⑺⑸）。**push はユーザー**（Lab も）
 - ⒜ **R13⒝ の実機確認**（第404 ⑵）／⒝ 群単位の item／⒝′ frame 変更の `applyFrame`（実機の 2 行を見てから）
 - ⏸ 掃き終わった島（第434〜第456）の教訓は `HANDOFF-ARCHIVE.md`「§1.0 から移した perf の島」（第660）。閉じた島の一覧（⒥ Ⓑ ⒢′ … ⒱ ⒲）は第654 が畳んだ＝各便の §1（ARCHIVE）と RULES §5.4 末尾
-- **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**。
+- **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
+
+### 1.1 第697セッション（2026-09-30・YT-DELL2）
+
+同じ会話ではなく新しい会話（ユーザー「HANDOFF.md を読んで作業に着手して」）。★ `-Start p697`（HEAD `bb9b2bf5`・未 push 74）＝full **10374 / 0 / 2 / 10376**（引継ぎと一致）。作業ツリーの `site/examples/*.lys` 20 本は `git diff` 0 行＝改行だけ CRLF（`eol=lf`・2026-09-29 8:03 の書き込み）＝触らない。
+⑴ §1.0 ⒜「小節線 → 音の最小の 2 つ目の綴り＝調号・拍子の変わり目の枝（`MusicalColumnLeftReach`）は X だけ・直すなら変わり目の glyph の Y extent を箱に」（第693 起票）。**起票の前提が逆だった**: LP の KeySignature／KeyCancellation／TimeSignature の `extra-spacing-height` は `pure-from-neighbor-interface::extra-spacing-height-including-staff`（scm/output-lib.scm:976-979）＝**五線と両隣の列の全高さまで伸び、1.01 の上限は小節線（`account-for-span-bar`）だけ**＝音の列はどの高さでも変わり目の箱に当たる＝**X だけが LP の形**。起票どおり glyph の Y extent にすると LP から離れる。双子 26 冊（Lab `sessions/p697/kc`・`kc2`・計器は第693 の `run-bl.ps1`）: 調号の後の ♭4 列の和音が五線の下・中・上・更に上で 11.709261（拍子の後 10.663996）＝最小が効いている（臨時記号なし 8.726973＝ideal・♭2 列 10.032588）・小節線だけなら下の 4 列は箱の下をくぐる 3.926973／中 7.609261。**Lily# は今のまま全部 1e-6 で一致**。★ `732baa87`＝註 2 か所を LP の規則で書き直し（コードは不変＝出力は構成上同一）・網 `BarlineToColumnMinimumTests.AKeyOrTimeChangeOpeningTheBar_MeetsTheNoteColumnAtEveryHeight` 11 行。毒（予測を先に書いた）: 小節線と同じ打ち切った箱で読む＝五線の外の 5 行だけ赤／到達 0＝臨時記号つき 7 行赤・対照 4 行緑＝どちらも的中。⚠ 予測を 1 度外した: 最初の本は Lily# の `ces''`（＝LP C♭6・五線の上）を「中」と読み、♭2 列を「ideal が効く対照」と書いた（実際は最小が効いていた）＝RULES §5.4 の「音を疑う」の再演。もう 1 つ: 毒を戻した後に建て直さず掃きを回し、毒入りの bin で「Lily# が 3〜4 ずれる」を見た（CLAUDE-OPERATIONS §1 の型）。full **10385 / 0 / 2 / 10387**。
+⑵ §1.0 ⒜「MMR 上の dynamic の X（LP は列・Lily# は休符 ink 中央）」を測った: `R1*4@p` の p は LP 2.932・Lily# 2.980（小節線の右から中心・ragged／伸びた段とも・MMR の小節幅は両側 10.80）＝**差 0.048 で、起票の形（休符の中央なら差 2.4）ではない**。LP の dump（Lab `sessions/p697/mmrdyn/dyn.ily`）: X の親は PaperColumn・extent (−0.059 . 1.409)。コードは触らず §1.0 の記述を実測に置き換えた（値段の小さい島・MMR に dynamic を書く本は稀）。
+★ `-End p697 -DiffBase bb9b2bf5`＝full **10385 / 0 / 2 / 10387**（run3.trx）・門 6 つ全 OK・Core `+` 17 行（全部コメント）に REF 3／OWN 0。7.6: ⒟（コードは足していない＝註を LP の規則で書き直しただけ・住所は output-lib.scm:976-979 と define-grobs の 3 grob）。7.7: 匂いなし（「2 つ目の綴り」の札を外した＝LP で形が違う 2 量だった・RULES 7.7 に 1 行）。push はユーザー。
+
+## 以下は第696セッションの経緯
 
 ### 1.1 第696セッション（2026-09-30・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。★ `-Start p696`（HEAD `e16b17a7`・未 push 72）＝full **10371 / 0 / 2 / 10373**（引継ぎと一致）。
 ⑴ 第695 が残した「五線の `CalculateYPosition` と tab の枝が同じ aligned_side を別々に書いている」を一本化。★ `8b8dfc1f`＝`AlignedSideUp(supportReach, staffSpace, staffLines, onNoteHead)`（include_staff・ss×padding・量子化〔span ±(本数−1)+1・ledger 込みの on_line・頭が note head なら「あいだ」の腕〕・staff-padding）を五線（ss 1・`Staff.Lines`）と tab（弦の間隔・弦の数）が呼ぶ。`QuantizedYPosition` は退場。五線の写しに無かった唯一の振る舞い＝**ledger 上の on_line**: 上声部の高い音に `staccato.down`（Lab `sessions/p696/led2`）で LP a''' 8.5・c'''' 9.5／Lily# 9.0・10.0 → 一致。網 `ScriptOutlineSupportTests` +3・毒で ledger の 2 本だけ赤。snapshot 不変・掃き 998 冊 0（その形を踏む本が無い＝結果であって構成ではない）。
 ★ `-End p696 -DiffBase e16b17a7`＝full **10374 / 0 / 2 / 10376**・門 6 つ全 OK・Core `+` 112→75 行に REF 8／OWN 0。7.6: ⒜（aligned_side の後半の字面・五線と tab の 2 軒を 1 軒に）。7.7: 2 つ目の綴りは消えた（`CalculateYPosition`／tab の枝とも `AlignedSideUp`）。push はユーザー。
-
-## 以下は第695セッションの経緯
-
-### 1.1 第695セッション（2026-09-30・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」）。★ `-Start p695`（HEAD `227f2536`・未 push 70）＝full **10361 / 0 / 2 / 10363**（引継ぎと一致）。
-⑴ §1.0 ⒜「Script のグリフの近い側の範囲が LP の輪郭でない」（第694 起票）。五線で 14 種 × 符頭が支え／符幹が支え（Lab `sessions/p695/ns`・計器 `scriptcmp.ps1`＋`pairs.ps1`）で測ると、ずれていたのは mordent −0.173・turn/reverseTurn −0.033・trill −0.039/−0.049・staccatissimo −0.017。原因は 2 層＝装飾記号の仮の箱 ±0.5 と、支えを問わず箱の下端 1 つで測っていたこと。LP は Script の輪郭のスカイラインと支えごとのスカイラインの距離＝符頭は符頭の幅の範囲・同じ向きの符幹は全幅（Script の `add-stem-support #t`＝`set_minimum_height`）・五線は全幅。★ `200a9480`＝`SupportReach`／`NearReachOver`（既存の `ScriptSkyline`＝輪郭＋horizon-padding を支えの範囲で読む）を五線・量子化・pure tip・tab の枝に。28 変種が SVG の丸めの範囲で LP と一致・台帳 `script.stem-support.staff-to-ink-bottom` −0.001 → 0。網 `ScriptOutlineSupportTests` 10（0.002）・毒で動いた 8 本赤／一致していた 2 本は緑。snapshot 7 枚承認・掃き 10 冊（コーパス 2）すべてインクだけ。full **10371 / 0 / 2 / 10373**。⚠ 残り: tab の accent −0.017（同梱書体の数字の幅の上での輪郭の読み＝決定済みの領域）／五線の `CalculateYPosition` と tab の枝は同じ aligned_side を別々に書いている（五線は 5 線の直書き）＝一本化は次の島。
-★ `-End p695 -DiffBase 227f2536`＝full **10371 / 0 / 2 / 10373**・門 6 つ全 OK・Core `+` 112 行に REF 9／OWN 0。7.6: ⒜（aligned_side の支えごとのスカイライン距離の字面・支えは箱〔符頭・数字〕と全幅〔符幹・五線〕で、LP の符頭／数字のスカイラインは箱で近似＝既存の HeadSupportExtent と同じ）。7.7: 残る 2 つ目の綴り＝上の一本化。CHANGELOG に 1 件。push はユーザー。
 
 ## 2. 開いている作業
 

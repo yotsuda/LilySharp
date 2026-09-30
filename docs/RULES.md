@@ -1752,6 +1752,7 @@ dotnet run --project LilySharp.Cli -- png --crop --scale 4.0 "NAME.lys" "out.png
         **「過剰予約側にしか倒れない」等の向き**と**観測者の有無**を書く（2026-07-31 の hairpin）。
       - **平箱で ink を代用**（box vs outline）。**この repo で最も繰り返し出た欠陥**。
       - **同じ量の 2 つ目の綴り**（second model）。⚠️ **2 つある時点で、片方は必ずずれる。**
+        ⚠️ **ただし「同じ量」かは LP の *property の関数*で決める**（2026-09-30・第697）。小節線と調号は同じ `Paper_column::minimum_distance` に乗るが、`extra-spacing-height` が別の関数（小節線は ±1.01 で打ち切り・調号／拍子は上限なし）＝**形が違うのが LP**。起票どおり揃えていたら LP から離れた。
         ⇒ ★★★ **N 人が建てて 1 人に渡しているなら、その量の家は*読む側*である**（2026-09-20・第438）。
         `BeamedItemsToSuppress` は 2 人の呼び手が建てて、**2 人とも `AddStaffToSkylines` に渡すためだけ**に
         建てていた——そして**その `AddStaffToSkylines` は text row と tab 譜では*その次の行で* return する**。
