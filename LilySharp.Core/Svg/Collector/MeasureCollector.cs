@@ -900,6 +900,11 @@ public sealed partial class MeasureCollector
     /// </summary>
     private Fraction TimeSignatureFraction => new(_meta.TimeBeats, _meta.TimeBeatType);
 
+    /// <summary>The running meter as written — <see cref="MeasureBuilder.MeterInForce"/>'s
+    /// opening value.</summary>
+    private TimeSignature MeterOfMeta()
+        => new(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura);
+
     /// <summary>
     /// Snapshots the accumulated piece-level metadata and annotation lists into an
     /// immutable <see cref="ScoreContent"/>. Call once, after all collection is done;
@@ -2737,6 +2742,7 @@ public sealed partial class MeasureCollector
     {
         var builder = new MeasureBuilder(TimeSignatureFraction, voiceNode.SourceStart, _meta.TimeSenzaMisura)
         {
+            MeterInForce = MeterOfMeta(),
             MidBarBreaks = MidBarBreaks,
             MidBarBreakRequests = _midBarBreakRequests,
             MidBarBreakRefusals = _midBarBreakRefusals,
@@ -3134,6 +3140,7 @@ public sealed partial class MeasureCollector
 
         var builder = new MeasureBuilder(TimeSignatureFraction, senzaMisura: _meta.TimeSenzaMisura)
         {
+            MeterInForce = MeterOfMeta(),
             MidBarBreaks = MidBarBreaks,
             MidBarBreakRequests = _midBarBreakRequests,
             MidBarBreakRefusals = _midBarBreakRefusals,

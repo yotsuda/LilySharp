@@ -1598,6 +1598,15 @@ public sealed partial class MeasureCollector
                     if (ParseClefType(newClef) == ParseClefType(_meta.Clef))
                         break;
                     _meta.Clef = newClef;
+                    if (builder.SectionHead is { } head && head.Clef == ParseClefType(newClef))
+                    {
+                        // A section head stating again the clef the section before left: the
+                        // reset is withdrawn and the keys standing with it read this clef
+                        // (MeasureBuilder.SectionHead, LILYSHARP-OWN).
+                        builder.WithdrawStanding<ClefChangeItem>();
+                        builder.RestampStandingKeys(head.Clef);
+                        break;
+                    }
                     // The clef NAME's token span — `clef |bass`. Not clefDecl.SourceStart,
                     // which is the declaration's FULL span and so starts at the trivia
                     // in front of it (see TimeDataPos for what that costs).
@@ -1640,6 +1649,8 @@ public sealed partial class MeasureCollector
                         _meta.TimeSenzaMisura = timeSigChange.IsSenzaMisura;
                         builder.SetMeasureLength(new Fraction(timeSigChange.Beats, timeSigChange.BeatType),
                             timeSigChange.IsSenzaMisura);
+                        builder.MeterInForce = new TimeSignature(timeSigChange.Beats,
+                            timeSigChange.BeatType, timeSigChange.BeatsText, timeSigChange.IsSenzaMisura);
                     }
                     else
                     {
@@ -1649,6 +1660,17 @@ public sealed partial class MeasureCollector
                         // a property set, not a grob) — see TimeSignatureChangeItem.Blanked.
                         var newTime = new TimeSignature(timeSigChange.Beats, timeSigChange.BeatType,
                             timeSigChange.BeatsText, timeSigChange.IsSenzaMisura);
+                        if (builder.SectionHead is { } head && head.SameMeter(newTime))
+                        {
+                            // A section head stating again the meter the section before left:
+                            // no change, so the reset it stands on is withdrawn and nothing is
+                            // drawn (MeasureBuilder.SectionHead, LILYSHARP-OWN).
+                            builder.WithdrawStanding<TimeSignatureChangeItem>();
+                            builder.SetMeasureLength(new Fraction(newTime.Beats, newTime.BeatType),
+                                newTime.SenzaMisura);
+                            builder.MeterInForce = newTime;
+                            break;
+                        }
                         // The numerator, not the keyword — see TimeDataPos.
                         builder.AddItem(new TimeSignatureChangeItem(newTime, TimeDataPos(timeSigChange))
                         {

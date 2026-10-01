@@ -193,6 +193,104 @@ public sealed class SectionResetTests
         Assert.Single(measures[1].Items.OfType<KeySignatureChangeItem>());
     }
 
+    /// <summary>A book that must PARSE: these books are what the rule reads, and a book that
+    /// does not parse is collected from whatever did, which can pass vacuously.</summary>
+    private static Measure[] CollectParsed(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
+        return new MeasureCollector().Collect(tree, "m").Voice.Measures.ToArray();
+    }
+
+    /// <summary>
+    /// A section head that states again what the section before it left in force draws
+    /// nothing — neither the reset nor the restatement (LILYSHARP-OWN, owner's decision
+    /// 2026-10-02, HANDOFF §1.1 第737; MeasureBuilder.SectionHead). LilyPond draws a grob for
+    /// every \time and \key; the twin omits the same restatements.
+    /// </summary>
+    [Theory]
+    [InlineData("key ees major", "key ees major", "")]                 // the key, in the music
+    [InlineData("time 3/4", "time 3/4", "")]                            // the meter, in the music
+    [InlineData("time 3/4", "", "time 3/4")]                            // the meter, in the header
+    [InlineData("key ees major", "", "key ees major")]                  // the key, in the header
+    [InlineData("time 6/8 key d major", "key d major time 6/8", "")]   // both, any order
+    public void ARestatementAtTheSectionHead_DrawsNoChange(string inA, string atB, string headerB)
+    {
+        var measures = CollectParsed($$"""
+            time 4/4
+            part m { clef treble }
+            section A { m { c4 d e f | {{inA}} c2. | } }
+            section B { {{headerB}} m { {{atB}} c2. | } }
+            form main { A B }
+            score main { staff m }
+            """);
+
+        var b = measures[^1];
+        Assert.DoesNotContain(b.Items, i => i is TimeSignatureChangeItem or KeySignatureChangeItem);
+        // …and the bar is still read in the restated meter: one 3/4 or 6/8 bar, not two. (A key
+        // restated in 4/4 leaves B's c2. a short bar of its own all the same.)
+        Assert.True(measures.Length == 3, $"{measures.Length} measures");
+    }
+
+    [Fact]
+    public void ARestatedRelativeMinorAtTheSectionHead_DrawsNoChange()
+    {
+        // The tonic is part of what is restated: E minor again after E minor is nothing,
+        // G major after E minor (one sharp either way) is a change.
+        string Book(string atB) => $$"""
+            key g major
+            part m { clef treble }
+            section A { m { key e minor e1 | } }
+            section B { m { {{atB}} g1 | } }
+            form main { A B }
+            score main { staff m }
+            """;
+        Assert.DoesNotContain(CollectParsed(Book("key e minor"))[1].Items, i => i is KeySignatureChangeItem);
+        Assert.Single(CollectParsed(Book("key g major"))[1].Items.OfType<KeySignatureChangeItem>());
+    }
+
+    [Fact]
+    public void ARestatedClefAtTheSectionHead_DrawsNoChange()
+    {
+        var measures = CollectParsed("""
+            part m { clef bass }
+            section A { m { clef treble c1 | } }
+            section B { m { clef treble c1 | } }
+            form main { A B }
+            score main { staff m }
+            """);
+        Assert.DoesNotContain(measures[1].Items, i => i is ClefChangeItem);
+    }
+
+    [Theory]
+    [InlineData("time 6/8", "time 3/4")]   // the same length, another meter
+    [InlineData("time 3/4", "time 2/4")]
+    public void ADifferentMeterAtTheSectionHead_IsStillDrawn(string inA, string atB)
+    {
+        var measures = CollectParsed($$"""
+            time 4/4
+            part m { clef treble }
+            section A { m { c4 d e f | {{inA}} c2. | } }
+            section B { m { {{atB}} c2 | } }
+            form main { A B }
+            score main { staff m }
+            """);
+        Assert.Single(measures[^1].Items.OfType<TimeSignatureChangeItem>());
+    }
+
+    [Fact]
+    public void ARestatementInsideASection_IsStillDrawn()
+    {
+        // LilyPond's rule where Lily# keeps it: every key event draws.
+        var measures = CollectParsed("""
+            part m { clef treble }
+            section A { m { key g major c1 | key g major c1 | } }
+            form main { A }
+            score main { staff m }
+            """);
+        Assert.Single(measures[1].Items.OfType<KeySignatureChangeItem>());
+    }
+
     [Theory]
     [InlineData("section A { c1 | time 3/4 key d major clef bass c2. | }")]  // written time, key, clef
     [InlineData("section A { key g major time 6/8 c2. | }\n  section B { time 4/4 key d major c1 | }")]

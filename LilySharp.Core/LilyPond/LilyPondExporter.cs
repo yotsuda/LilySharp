@@ -153,6 +153,17 @@ public sealed class LilyPondExporter
     // and after EmitScoreSettings.
     private KeySignatureSyntax? _partHeaderKeyNode;
     private int _restoreKeySharps;
+
+    // The running meter AS WRITTEN (TimeText, "\cadenzaOn" aside): what a section head's
+    // `time` is compared with — the beats alone cannot tell 3+2/8 from 5/8.
+    private string _timeText = "";
+    // A section play's head (the twin of MeasureBuilder.SectionHead): what was in force before
+    // its restores, and the restores themselves, HELD until the head is over — a `time` or
+    // `key` that states the held value again cancels its restore and writes nothing.
+    private (string TimeText, bool Senza, int KeySharps, KeyTonic Tonic)? _sectionHead;
+    private string? _heldTimeRestore;
+    private string? _heldKeyRestore;
+    private string? _heldMark;
     // `time none` in force — LilyPond's \cadenzaOn (Timing.timing = ##f). The running flag
     // decides two spellings: a metered `time` after it writes \cadenzaOff first (or LilyPond
     // keeps not counting, draws no bar and numbers nothing), and a written `|` inside it is
@@ -1471,6 +1482,9 @@ public sealed class LilyPondExporter
         _timeBeats = _homeTimeBeats;
         _timeBeatType = _homeTimeBeatType;
         _timeSenza = _homeTimeSenza;
+        _timeText = _homeTimeNode is { IsSenzaMisura: false } homeTime ? TimeText(homeTime) : "\\time 4/4";
+        _sectionHead = null;
+        _heldTimeRestore = _heldKeyRestore = _heldMark = null;
 
         // Score-level settings (tempo/key/time live at file scope in Lily#), then the part
         // header's own key.
@@ -2367,6 +2381,17 @@ public sealed class LilyPondExporter
                     or StringNumberAnnotationSyntax or ArticulationSyntax or MusicMarkSyntax))
                 FlushTrailingMusic(line, indent);
 
+            // A section head ends at the first item that is not one of its directives: what it
+            // holds (the restores and the mark, EmitSectionPlay) is written BEFORE anything this
+            // item puts on the line — the empty bar's spacer below included.
+            if (_sectionHead != null
+                && item is not (TimeSignatureSyntax or KeySignatureSyntax or ClefDeclarationSyntax))
+            {
+                string held = FlushSectionHead();
+                if (held.Length > 0)
+                    AppendToken(line, held, indent);
+            }
+
             if (item is { Green: SectionPlayGreen })
             {
                 // A section boundary: the next section's music opens a fresh scope, as the
@@ -2447,6 +2472,9 @@ public sealed class LilyPondExporter
 
             i++;
         }
+        string stillHeld = FlushSectionHead();
+        if (stillHeld.Length > 0)
+            AppendToken(line, stillHeld, indent);
         FlushTrailingMusic(line, indent);
         FlushLine(line, indent);
     }
@@ -2704,7 +2732,66 @@ public sealed class LilyPondExporter
 
     // ---- Per-item emit -----------------------------------------------------
 
-    private string EmitItem(SyntaxNode item) => item switch
+    /// <summary>
+    /// One item, through the section head (<see cref="_sectionHead"/>): at a play's head a
+    /// <c>time</c> or <c>key</c> that states again what the section before left in force writes
+    /// nothing and cancels the restore held for it — LilyPond would draw both (a TimeSignature
+    /// for every \time, a KeySignature for every \key), and the page draws neither
+    /// (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision 2026-10-02). Any other
+    /// <c>time</c>/<c>key</c> writes its held restore first, as the play used to; a clef passes
+    /// (LilyPond draws no clef that does not change); anything else writes what is held and ends
+    /// the head.
+    /// </summary>
+    private string EmitItem(SyntaxNode item)
+    {
+        if (_sectionHead is not { } head)
+            return EmitItemCore(item);
+        switch (item)
+        {
+            case TimeSignatureSyntax ts:
+            {
+                bool same = ts.IsSenzaMisura == head.Senza
+                            && (ts.IsSenzaMisura || TimeText(ts) == head.TimeText);
+                string held = _heldTimeRestore ?? "";
+                _heldTimeRestore = null;
+                string written = EmitItemCore(item);   // advances the running meter either way
+                return same ? "" : Join(Join(held, TakeHeldMark()), written);
+            }
+            case KeySignatureSyntax:
+            {
+                string held = _heldKeyRestore ?? "";
+                _heldKeyRestore = null;
+                string written = EmitItemCore(item);   // advances the running key either way
+                bool same = _keySharps == head.KeySharps && _tonic == head.Tonic;
+                return same ? "" : Join(Join(held, TakeHeldMark()), written);
+            }
+            case ClefDeclarationSyntax:
+                return EmitItemCore(item);
+            default:
+                return Join(FlushSectionHead(), EmitItemCore(item));
+        }
+
+        static string Join(string a, string b) => a.Length == 0 ? b : b.Length == 0 ? a : a + " " + b;
+    }
+
+    /// <summary>Writes the restores a section head still holds and ends the head.</summary>
+    private string FlushSectionHead()
+    {
+        string held = string.Join(" ",
+            new[] { _heldTimeRestore, _heldKeyRestore, _heldMark }.Where(s => !string.IsNullOrEmpty(s)));
+        _heldTimeRestore = _heldKeyRestore = _heldMark = null;
+        _sectionHead = null;
+        return held;
+    }
+
+    private string TakeHeldMark()
+    {
+        string mark = _heldMark ?? "";
+        _heldMark = null;
+        return mark;
+    }
+
+    private string EmitItemCore(SyntaxNode item) => item switch
     {
         NoteSyntax n => CloseImprovisation() + EmitNote(n) + TakeRepeatTie(n.Articulations),
         DrumNoteSyntax dn => CloseImprovisation() + EmitDrumNote(dn),
@@ -3159,6 +3246,7 @@ public sealed class LilyPondExporter
         buf._timeBeats = _timeBeats;
         buf._timeBeatType = _timeBeatType;
         buf._timeSenza = _timeSenza;
+        buf._timeText = _timeText;
         buf._homeTimeBeats = _homeTimeBeats;
         buf._homeTimeBeatType = _homeTimeBeatType;
         buf._homeTimeSenza = _homeTimeSenza;
@@ -3199,6 +3287,7 @@ public sealed class LilyPondExporter
         _timeBeats = buf._timeBeats;
         _timeBeatType = buf._timeBeatType;
         _timeSenza = buf._timeSenza;
+        _timeText = buf._timeText;
         // …and the note-value memory comes back out with it: the note after a tuplet, a cue
         // or a repeat reads the body's last value on both sides (the page walks the body
         // inline; LilyPond's parser carries the last value written). The grace site puts the
@@ -3935,6 +4024,13 @@ public sealed class LilyPondExporter
         }
 
         var parts = new List<string>(3);
+        // Whatever an earlier head still holds is written first (two plays back to back with
+        // nothing between them), and THIS head is what stands now, before its restores.
+        string earlierHeld = FlushSectionHead();
+        if (earlierHeld.Length > 0)
+            parts.Add(earlierHeld);
+        var head = (_timeText, _timeSenza, _keySharps, _tonic);
+        int restoresAt = parts.Count;
         // ⚠️ THE METER REVERTS HERE TOO, and this arm is the twin of the key one below.
         // A section that states no `time` of its own opens at the SCORE meter, so a
         // mid-section change in a PRIOR section (or in an earlier play of this one) must
@@ -3958,7 +4054,12 @@ public sealed class LilyPondExporter
                 _timeBeats = 4;
                 _timeBeatType = 4;
                 _timeSenza = false;
+                _timeText = "\\time 4/4";
             }
+            // HELD, not written: a `time` at the play's head that states the meter in force
+            // before this restore cancels it (EmitItem's head arm, MeasureBuilder.SectionHead).
+            _heldTimeRestore = parts[^1];
+            parts.RemoveAt(parts.Count - 1);
         }
         if (!sp.HasHeaderKey && (_keySharps != _restoreKeySharps || _tonic != _homeTonic))
         {
@@ -3975,17 +4076,26 @@ public sealed class LilyPondExporter
                 _keySharps = 0;
                 _tonic = KeyTonic.CMajor;
             }
+            // HELD as the meter's restore is.
+            if (parts.Count > restoresAt)
+            {
+                _heldKeyRestore = parts[^1];
+                parts.RemoveAt(parts.Count - 1);
+            }
         }
+        _sectionHead = head;
         // `layout { sectionLabels … }`: the page engraves no section name under `none`, so the
         // twin writes none either — the two pictures are the same picture or the twin is not
         // one. Under `plain` the twin drops the `\box` and writes the bare string, which is
         // what LilyPond's own SectionLabel grob draws; the frame is the Lily#-own part and
         // `\box` is only how the twin reaches it.
+        // HELD with the restores, and written after them, as it always was: the restores, the
+        // mark, then the section's own directives (EmitItem's head arm keeps that order).
         if (sp.MarkLabel is { Length: > 0 } label
             && _layoutPlan.SectionLabels != Semantics.SectionLabelStyle.None)
-            parts.Add(_layoutPlan.SectionLabels == Semantics.SectionLabelStyle.Plain
+            _heldMark = _layoutPlan.SectionLabels == Semantics.SectionLabelStyle.Plain
                 ? "\\mark \\markup \"" + Escape(label) + "\""
-                : "\\mark \\markup \\box \"" + Escape(label) + "\"");
+                : "\\mark \\markup \\box \"" + Escape(label) + "\"";
         return string.Join(" ", parts);
     }
 
@@ -4509,6 +4619,7 @@ public sealed class LilyPondExporter
         }
         _timeBeats = ts.Beats;
         _timeBeatType = ts.BeatType;
+        _timeText = TimeText(ts);
         return wasSenza
             ? "\\cadenzaOff " + TimeText(ts) + CadenzaReturnPartial(new Fraction(ts.Beats, ts.BeatType))
             : TimeText(ts);

@@ -125,15 +125,16 @@ public class MusicXmlSectionCutTests
     }
 
     /// <summary>
-    /// A mark where a section would have to restate its meter does not cut: the restatement
-    /// would print a second 4/4 the source never drew. It stays on its note, in the section
-    /// before it, and the report says why.
+    /// A mark where a section has to restate its meter cuts all the same: the restatement
+    /// states what the section before left, and a section head that does draws nothing
+    /// (MeasureBuilder.SectionHead, owner's decision 2026-10-02). Until then the mark was
+    /// refused — the restatement printed a second 4/4 the source never drew.
     /// </summary>
     /// <remarks>After the round trip of section-meter-resets-to-global-meter.lys (Lab
     /// sessions/p734/imp): B opens in the 4/4 that A ends in, while C and D — which change
-    /// nothing on their own bars — open in 3/4, so the header is 3/4 and only B would restate.</remarks>
+    /// nothing on their own bars — open in 3/4, so the header is 3/4 and only B restates.</remarks>
     [Fact]
-    public void AMarkThatWouldRestateTheMeter_DoesNotCut()
+    public void AMarkThatRestatesTheMeter_CutsAndDrawsNoSecondSignature()
     {
         string xml = new MusicXmlExporter().Export(SyntaxTree.Parse("""
             octave absolute
@@ -150,9 +151,16 @@ public class MusicXmlSectionCutTests
             """)).ToXml().ToString();
         var (lys, report) = new MusicXmlImporter().Import(xml);
         Assert.Matches(@"(?m)^time 3/4$", lys);
-        Assert.Matches(@"form main \{\s*~A ~C ~D\s*\}", lys);
-        Assert.Contains("@mark(\"B\")", SectionBody(lys, "A"));
-        Assert.Contains(report.Warnings, w => w.Contains("'B' does not start a section"));
+        Assert.Matches(@"form main \{\s*~A ~B ~C ~D\s*\}", lys);
+        Assert.Contains("time 4/4", SectionBody(lys, "B"));
+        Assert.DoesNotContain(report.Warnings, w => w.Contains("does not start a section"));
+        // The page draws the source's two meter changes and no third: B's 4/4 is no change.
+        var tree = SyntaxTree.Parse(lys);
+        Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
+        var drawn = new MeasureCollector().Collect(tree, "m").Voice.Measures
+            .SelectMany(m => m.Items).OfType<TimeSignatureChangeItem>()
+            .Select(t => $"{t.NewTime.Beats}/{t.NewTime.BeatType}").ToArray();
+        Assert.Equal(new[] { "4/4", "3/4" }, drawn);
     }
 
     /// <summary>

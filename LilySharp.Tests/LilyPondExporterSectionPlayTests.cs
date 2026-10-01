@@ -157,4 +157,40 @@ public class LilyPondExporterSectionPlayTests
         Assert.True(restoreBeforeB > bKey,
             $"the d-major restore must not precede B's own key (restore={restoreBeforeB}, bKey={bKey})");
     }
+
+    /// <summary>
+    /// A section head that states again what the section before left writes NOTHING in the twin
+    /// — neither its own \time / \key nor the restore it cancels — because the page draws
+    /// nothing there (MeasureBuilder.SectionHead, LILYSHARP-OWN, 2026-10-02), and LilyPond would
+    /// draw both. A head that changes the value still writes it after its restore.
+    /// </summary>
+    [Fact]
+    public void ARestatementAtTheSectionHead_WritesNothing_AndCancelsTheRestore()
+    {
+        const string book = """
+            time 4/4
+            part m { clef treble }
+            section A { m { c4 d e f | time 3/4 key ees major c2. | } }
+            section B { m { time 3/4 key ees major c2. | } }
+            section C { m { time 2/4 c2 | } }
+            form main { A B C }
+            score main { staff m }
+            """;
+        Assert.False(SyntaxTree.Parse(book).HasErrors);
+        var ly = Export(book);
+        int b = ly.IndexOf("\\box \"B\"");
+        int c = ly.IndexOf("\\box \"C\"");
+        Assert.True(b >= 0 && c > b, ly);
+        // B's play, from its mark to its one bar's end (C's restores come before C's mark):
+        // no meter or key at all.
+        int bEnd = ly.IndexOf("c2. |", b);
+        Assert.True(bEnd > b, ly);
+        string bHead = ly.Substring(b, bEnd - b);
+        Assert.DoesNotContain("\\time", bHead);
+        Assert.DoesNotContain("\\key", bHead);
+        // C changes the meter (and leaves the key): the restores and its own 2/4 are written.
+        string cHead = ly.Substring(c);
+        Assert.Contains("\\time 2/4", cHead);
+        Assert.Contains("\\key c \\major", ly.Substring(b, c - b + 40) + cHead);
+    }
 }

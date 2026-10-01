@@ -237,8 +237,12 @@ public sealed class VoltaBracketShapeTests
     [Theory]
     [InlineData("", "c1 | c1 |", "c2 c2 | break c1 | c1 |", "e1 |", "",
         new[] { 67.980, 102.350, 3.593, 68.303, 69.233, 102.350 })]
+    // E2's `time 4/4` restates the meter E1 left: since session 737 it draws nothing, and the
+    // twin omits it (MeasureBuilder.SectionHead). LilyPond re-measured on that twin (Lab
+    // sessions/p737/volta/nore-p): the restated meter's 0.80 is gone from E1's end and E2's start
+    // (it read 68.504 / 69.434 with the \time drawn).
     [InlineData("", "c1 | c1 |", "time 2/4 c2 | break time 4/4 c1 | c1 |", "time 4/4 e1 |", "",
-        new[] { 75.685, 102.350, 6.813, 68.504, 69.434, 102.350 })]
+        new[] { 75.685, 102.350, 6.813, 69.304, 70.234, 102.350 })]
     [InlineData("key aes major", "c1 | c1 |", "c2 c2 | break c1 | c1 |", "e1 |", "",
         new[] { 69.712, 102.350, 8.093, 69.918, 70.848, 102.350 })]
     [InlineData("", "c1 | c1 |", "c1 | c1 | break", "e1 | e1 |", "",

@@ -51,7 +51,7 @@ internal static class LysWriter
         var marks = RehearsalMarks(doc);
         var header = HeaderState(doc, cuts.Segments.Select(s => s.Start).Concat(marks.Keys));
         var directives = doc.Parts.ToDictionary(p => p, p => Directives(doc, p, header, report));
-        var layout = SplitAtMarks(cuts, CuttableMarks(marks, cuts, directives.Values, doc, report), doc);
+        var layout = SplitAtMarks(cuts, CuttableMarks(marks, cuts, doc, report), doc);
         bool useRelative = relativeOctave;
 
         // ---- header ----
@@ -326,19 +326,18 @@ internal static class LysWriter
     }
 
     /// <summary>
-    /// The marks a section may start at: those where no part has to RESTATE its meter, key or
-    /// clef — a change the source makes on that very bar is no restatement. The others stay
-    /// inside the section before them, as <c>@mark</c>, and the report says so.
+    /// The marks a section may start at: every one but those a slur or a hairpin runs through.
+    /// The others stay inside the section before them, as <c>@mark</c>, and the report says so.
     /// </summary>
     /// <remarks>
-    /// ⚠️ A section boundary resets the meter, the key and the clef (SYNTAX_REFERENCE "Across a
-    /// section boundary"), so a section starting where the one in force is not the file's must
-    /// say it again — and Lily# prints a signature for every <c>time</c> and <c>key</c> it
-    /// reads, as LilyPond prints one for every \time, so that would be a second, identical
-    /// signature the source never drew (Lab sessions/p734/imp, round trip of
-    /// section-meter-resets-to-global-meter.lys: a 4/4 printed again at its mark B). The header
-    /// is chosen so that this is rare (<see cref="HeaderState"/>). A cut the form needs — a
-    /// repeat, an ending — restates regardless: there is no other way to write it.
+    /// A section boundary resets the meter, the key and the clef (SYNTAX_REFERENCE "Across a
+    /// section boundary"), so a section starting where the one in force is not the file's says
+    /// it again (<see cref="Directives"/>). Since 2026-10-02 that restatement draws nothing — it
+    /// states what the section before left, and a section head that does is no change
+    /// (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision; the twin omits it too).
+    /// Until then such a mark was refused — the restatement printed a second, identical
+    /// signature (Lab sessions/p734/imp, round trip of section-meter-resets-to-global-meter.lys:
+    /// a 4/4 printed again at its mark B) — and Bohemian Rhapsody's G and H stayed inside F.
     /// <para>
     /// ⚠️ NOR WHERE A SLUR, A PHRASING SLUR OR A HAIRPIN RUNS ON PAST THE NEXT SECTION: a span
     /// open at a section's end is carried into the next section only and must end there, or it
@@ -349,8 +348,7 @@ internal static class LysWriter
     /// </para>
     /// </remarks>
     private static SortedDictionary<int, string> CuttableMarks(
-        SortedDictionary<int, string> marks, VoltaLayout layout, IEnumerable<PartDirectives> directives,
-        ImportDocument doc, ImportReport report)
+        SortedDictionary<int, string> marks, VoltaLayout layout, ImportDocument doc, ImportReport report)
     {
         var starts = layout.Segments.Select(s => s.Start).ToHashSet();
         // Every place a section may start, so a span carried over a cut must end before the next.
@@ -360,9 +358,6 @@ internal static class LysWriter
         {
             if (starts.Contains(i))
                 result.Add(i, label);
-            else if (directives.Any(d => i < d.Restates.Length && d.Restates[i]))
-                report.Warn(i + 1, $"the rehearsal mark '{label}' does not start a section: one starting "
-                    + "there would have to state its meter, key or clef again, and that prints it again.");
             else if (SpanRunsThrough(doc, i, bounds.First(b => b > i)))
                 report.Warn(i + 1, $"the rehearsal mark '{label}' does not start a section: a slur or "
                     + "hairpin open there would have to run on through the section after it.");
@@ -741,8 +736,8 @@ internal static class LysWriter
     /// disagree about what is in force.
     /// </summary>
     /// <remarks>
-    /// A section that starts in anything else restates it, and a restatement prints (see
-    /// <see cref="CuttableMarks"/>); the header's value is the one no section has to restate. The opening
+    /// A section that starts in anything else restates it — which draws nothing since 2026-10-02 (see
+    /// <see cref="CuttableMarks"/>), but is a line of source; the header's value is the one no section has to restate. The opening
     /// section's own statement costs nothing: a <c>time</c> at the first moment REPLACES the
     /// initial signature (MeasureCollector.MusicWalk.cs, TimeSignatureSyntax). Until
     /// 2026-10-01 a piece was cut only at its repeats and the header was simply the opening.
@@ -788,17 +783,16 @@ internal static class LysWriter
     }
 
     /// <summary>A part's per-measure directives: <see cref="Changes"/> where the bar continues
-    /// a section, <see cref="Opening"/> where it opens one, and whether that opening says again
-    /// something the bar itself does not change (<see cref="Restates"/>).</summary>
-    private sealed record PartDirectives(string[] Changes, string[] Opening, bool[] Restates);
+    /// a section, <see cref="Opening"/> where it opens one.</summary>
+    private sealed record PartDirectives(string[] Changes, string[] Opening);
 
     // ⚠️ OPENING ALSO RESTATES what a section boundary resets — the meter, the key and the
     // clef (SYNTAX_REFERENCE "Across a section boundary") — wherever the one in force is not
     // the file's: without it, a section cut after a key change would be read in the header's
     // key. The tempo is not reset and is not restated.
-    // ⚠️ AND ONLY THERE: Lily# prints a signature for every `time` and `key` it reads, as
-    // LilyPond prints one for every \time (MeasureCollector.Form.cs, the section reset), so a
-    // restatement of the value the header already gives would draw a second, identical one.
+    // ⚠️ AND ONLY THERE: a `time` or `key` restating the file's value where the section before
+    // also left it would still be a needless line of source (it draws nothing since 2026-10-02,
+    // MeasureBuilder.SectionHead — but the source is the user's to read).
     private static PartDirectives Directives(
         ImportDocument doc, ImportPart part, (ImportTime? Time, ImportKey? Key) header, ImportReport report)
     {
@@ -810,7 +804,6 @@ internal static class LysWriter
         string timeText = "", keyText = "", clefText = "";
         var changes = new string[part.Measures.Count];
         var opening = new string[part.Measures.Count];
-        var restates = new bool[part.Measures.Count];
         for (int i = 0; i < part.Measures.Count; i++)
         {
             var m = part.Measures[i];
@@ -824,8 +817,6 @@ internal static class LysWriter
                     sb.Append(text);
                 if (notTheFiles)
                     open.Append(text);
-                if (notTheFiles && !changed)
-                    restates[i] = true;
             }
             bool timeChanged = false, keyChanged = false, clefChanged = false;
             if (m.Time is { } t && t != time)
@@ -855,7 +846,7 @@ internal static class LysWriter
             changes[i] = sb.ToString();
             opening[i] = open.ToString();
         }
-        return new PartDirectives(changes, opening, restates);
+        return new PartDirectives(changes, opening);
     }
 
     private static RelativeOctave? Rel(bool relative) => relative ? new RelativeOctave() : null;

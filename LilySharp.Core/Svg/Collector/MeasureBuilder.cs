@@ -252,6 +252,12 @@ internal sealed class MeasureBuilder
         _senzaMisura = senzaMisura;
     }
 
+    /// <summary>The meter in force AS WRITTEN (6/8 is not 3/4, "3+2" is not 5) — the running
+    /// <see cref="CurrentMeasureLength"/> is a reduced fraction. Set by the collector at the
+    /// opening and moved by every meter change this builder takes; read when a section head is
+    /// armed (<see cref="SectionHeadState"/>).</summary>
+    public TimeSignature MeterInForce { get; set; }
+
     /// <summary>True while the running meter is <c>time none</c> — see <c>_senzaMisura</c>.
     /// A section boundary compares this alongside <see cref="CurrentMeasureLength"/> to
     /// decide whether reverting to the score meter needs a redrawn time signature.</summary>
@@ -374,6 +380,75 @@ internal sealed class MeasureBuilder
         if (_pendingPlay is { } earlier && earlier.Edge > stamp.Edge)
             stamp = stamp with { Edge = earlier.Edge };
         _pendingPlay = stamp;
+    }
+
+    /// <summary>What was in force on the staff when a section play began, BEFORE the
+    /// boundary reset ran: the meter, the key (with its tonic) and the clef. A section head
+    /// that states one of them again is no change (<see cref="SectionHead"/>).</summary>
+    internal readonly record struct SectionHeadState(
+        TimeSignature Time, KeySignature Key, int TonicStep, int TonicAlter, bool TonicValid,
+        ClefType Clef)
+    {
+        /// <summary>The same meter as printed: the numerator as drawn (the additive spelling
+        /// when there is one), the beat type and whether it is unmetered.</summary>
+        public bool SameMeter(TimeSignature t)
+            => t.Beats == Time.Beats && t.BeatType == Time.BeatType && t.SenzaMisura == Time.SenzaMisura
+               && (t.BeatsText ?? t.Beats.ToString()) == (Time.BeatsText ?? Time.Beats.ToString());
+    }
+
+    // The armed section head and the measure count it was armed at (SectionHead's gate).
+    private SectionHeadState? _sectionHead;
+    private int _sectionHeadMeasures;
+
+    /// <summary>Arms <see cref="SectionHead"/> for a new section play (the section prologue,
+    /// before its reset).</summary>
+    public void ArmSectionHead(SectionHeadState head)
+    {
+        _sectionHead = head;
+        _sectionHeadMeasures = _measures.Count;
+    }
+
+    /// <summary>
+    /// The state in force before the section reset, while the walk still stands at the
+    /// section's first moment — no measure closed and no time elapsed since it was armed —
+    /// else null. LILYSHARP-OWN (owner's decision, 2026-10-02, HANDOFF §1.1 第737): a meter,
+    /// key or clef a section head states that equals this is NOT drawn, and the reset it
+    /// stands on is withdrawn with it: the reader sees no change, because none happened.
+    /// LilyPond draws a grob for every \time and \key event (time-signature-engraver.cc:94-122
+    /// compares the spec by identity; key-engraver.cc:141-152 creates a key on every event), so
+    /// the LilyPond twin omits the same restatements (LilyPondExporter) to stay a control.
+    /// </summary>
+    /// <remarks>
+    /// Why the rule exists: a section boundary resets the meter, the key and the clef, so a
+    /// section that continues in what the one before left in force has to say it again — the
+    /// MusicXML importer must, to cut a section at a rehearsal mark after a key change
+    /// (Bohemian Rhapsody's G and H, HANDOFF 第734 ⑶) — and that restatement used to print a
+    /// second, identical signature. A restatement INSIDE a section still draws, as LilyPond's.
+    /// </remarks>
+    public SectionHeadState? SectionHead
+        => _sectionHead is { } h && _measures.Count == _sectionHeadMeasures
+           && _currentDuration == Fraction.Zero && !_hasMeasureContent
+            ? h : null;
+
+    /// <summary>Withdraws the change of kind <typeparamref name="T"/> standing at this moment
+    /// (a section reset a restatement cancels; see <see cref="SectionHead"/>).</summary>
+    internal void WithdrawStanding<T>() where T : MusicItem
+    {
+        int i = FindInPrefixRun<T>();
+        if (i >= 0)
+            _currentItems.RemoveAt(i);
+    }
+
+    /// <summary>Restamps the key changes standing at this moment with <paramref name="clef"/>
+    /// — what an added clef change does to them (AddItem), for a clef that is withdrawn
+    /// instead of added.</summary>
+    internal void RestampStandingKeys(ClefType clef)
+    {
+        for (int i = _currentItems.Count - 1;
+             i >= 0 && _currentItems[i] is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem;
+             i--)
+            if (_currentItems[i] is KeySignatureChangeItem standing)
+                _currentItems[i] = standing with { Clef = clef };
     }
 
     /// <summary>Stamps the armed section play onto <paramref name="item"/> when it is the
@@ -748,6 +823,7 @@ internal sealed class MeasureBuilder
             FreezeOrThaw(tsc.NewTime.SenzaMisura);
             if (!tsc.NewTime.SenzaMisura)
                 _timeSignature = new Fraction(tsc.NewTime.Beats, tsc.NewTime.BeatType);
+            MeterInForce = tsc.NewTime;
             // Collapse a section reset followed by the section's own `time`: keep the last
             // meter so two time signatures don't print side by side ("C ♮ C"). The reset
             // queues the time before the key, so the key change can stand between them —
@@ -789,10 +865,13 @@ internal sealed class MeasureBuilder
             {
                 Clef = kc.Clef,
             };
-            if (merged.NewKey == merged.PreviousKey)
-                _currentItems.RemoveAt(standingKey); // net no change
-            else
-                _currentItems[standingKey] = merged;
+            // ⚠️ KEPT even when the signature comes back to where it was. Until session 737 that
+            // case was removed as "net no change" — but the signature is not the key: E minor →
+            // G major is one sharp either way, and the reset draws it (SectionResetTests,
+            // RelativeMinorSection_RedrawsTheScoreKeyOnItsWayBack). A true restatement — the
+            // same key and tonic the section before left — never reaches here: the collector
+            // withdraws the reset and adds nothing (SectionHead).
+            _currentItems[standingKey] = merged;
             return;
         }
 
@@ -1822,7 +1901,12 @@ internal sealed class MeasureBuilder
         Fraction? AlternativeStart,
         Fraction? AlternativeUndo,
         bool InEnding,
-        SectionPlayStamp? PendingPlay);
+        SectionPlayStamp? PendingPlay,
+        // A clean boundary can stand at a section head (a prologue that drew no reset), and a
+        // resume from it skips the prologue that armed this.
+        SectionHeadState? SectionHead,
+        int SectionHeadMeasures,
+        TimeSignature MeterInForce);
 
     /// <summary>True at a checkpointable boundary: nothing pending in the
     /// current measure, not even a zero-duration directive — and not inside a split bar
@@ -1844,7 +1928,7 @@ internal sealed class MeasureBuilder
         _sectionLabel, _sectionLabelPosition, _measureSourceStart,
         _measures.Count > 0 ? _measures[^1] : null,
         _logicalCount, _barPosition, _alternativeStart, _alternativeUndo, _inEnding,
-        _pendingPlay);
+        _pendingPlay, _sectionHead, _sectionHeadMeasures, MeterInForce);
 
     /// <summary>Restores a captured boundary state, adopting <paramref name="prefix"/>
     /// as the measures emitted before it. The <see cref="MeasureCompleted"/> hook
@@ -1883,6 +1967,9 @@ internal sealed class MeasureBuilder
         _alternativeUndo = ck.AlternativeUndo;
         _inEnding = ck.InEnding;
         _pendingPlay = ck.PendingPlay;
+        _sectionHead = ck.SectionHead;
+        _sectionHeadMeasures = ck.SectionHeadMeasures;
+        MeterInForce = ck.MeterInForce;
     }
 
     /// <summary>A copy of the emitted measures BEFORE <see cref="FinalizeMeasures"/>

@@ -526,6 +526,29 @@ value, the meter, the key, the clef, overrides), so a tie's target states its oc
 opened in the last section and never closed is still the ordinary unclosed slur (LYS4010) or
 phrasing slur (LYS4018). Text spanners, ottavas, pedals and trill spanners are paired as before.
 
+### Restating at a section's start
+
+Because the meter, the key and the clef reset at a section boundary, a section that continues
+in what the section before it left has to say so again. Such a restatement **draws nothing**:
+written at the section's start — in its header or before its first note — a `time`, `key` or
+`clef` equal to what was in force when the section before it ended is no change, so neither it
+nor the boundary's reset is engraved. A different value is drawn as usual, and a restatement
+inside a section is drawn too (as in LilyPond, which engraves every `\time` and `\key`).
+
+```
+time 4/4
+part m { clef treble }
+section A { m { c4 d e f | time 3/4 key ees major c2. | } }
+section B { m { time 3/4 key ees major c2. | } }   // nothing drawn at B
+section C { m { c1 | } }                           // 4/4 and C major drawn: the reset
+form main { A B C }
+score main { staff m }
+```
+
+The key compares its tonic too: `key g major` after a section in `key e minor` is drawn. The
+LilyPond twin omits the same restatements. This is what lets the MusicXML import and the
+editor's Split Sections cut a section wherever the music in force is not the file's.
+
 ## Barlines
 
 | Syntax | Type | Where |

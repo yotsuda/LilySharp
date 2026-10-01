@@ -435,6 +435,12 @@ public sealed partial class MeasureCollector
         // pairing with — or anchoring against — whatever the previous section wrote.
         builder.ResetMeasureBoundary();
 
+        // What is in force BEFORE the reset below, for the section head's restatements
+        // (MeasureBuilder.SectionHead: one equal to this is no change, and is not drawn).
+        builder.ArmSectionHead(new MeasureBuilder.SectionHeadState(
+            builder.MeterInForce, new KeySignature(_meta.KeySharps, _meta.KeyCustom),
+            _ambientTonicStep, _ambientTonicAlter, _ambientTonicValid, ParseClefType(_meta.Clef)));
+
         // The phrase auto-transpose baseline reverts with the key: a mid-section
         // modulation must not carry into the next section (nor a reused copy).
         // Unconditional — the running tonic can differ from home even when the
@@ -528,17 +534,24 @@ public sealed partial class MeasureCollector
             _meta.TimeSenzaMisura = sectionTime.IsSenzaMisura;
             builder.SetMeasureLength(new Fraction(sectionTime.Beats, sectionTime.BeatType),
                 sectionTime.IsSenzaMisura);
+            builder.MeterInForce = new TimeSignature(sectionTime.Beats, sectionTime.BeatType,
+                sectionTime.BeatsText, sectionTime.IsSenzaMisura);
         }
         else if (sectionTime is not null)
         {
-            // A `time none` header carries no ink and no width — TimeSignatureChangeItem.Blanked.
-            builder.AddItem(new TimeSignatureChangeItem(
-                new TimeSignature(sectionTime.Beats, sectionTime.BeatType, sectionTime.BeatsText,
-                    sectionTime.IsSenzaMisura),
-                sectionPos)
-            {
-                Blanked = sectionTime.IsSenzaMisura,
-            });
+            var headerTime = new TimeSignature(sectionTime.Beats, sectionTime.BeatType,
+                sectionTime.BeatsText, sectionTime.IsSenzaMisura);
+            // A header restating the meter the section before left is no change
+            // (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so there
+            // is nothing to withdraw.
+            if (builder.SectionHead is { } head && head.SameMeter(headerTime))
+                builder.MeterInForce = headerTime;
+            else
+                // A `time none` header carries no ink and no width — TimeSignatureChangeItem.Blanked.
+                builder.AddItem(new TimeSignatureChangeItem(headerTime, sectionPos)
+                {
+                    Blanked = sectionTime.IsSenzaMisura,
+                });
             builder.SetMeasureLength(new Fraction(sectionTime.Beats, sectionTime.BeatType),
                 sectionTime.IsSenzaMisura);
         }
@@ -829,6 +842,17 @@ public sealed partial class MeasureCollector
         if (builder.AtPieceOpening)
         {
             _openingKeyOverride = (_meta.KeySharps, _meta.KeyCustom);
+            return;
+        }
+
+        // A section head stating again the key the section before it left — signature AND
+        // tonic, as the reset compares them — is no change: the reset it stands on is withdrawn
+        // and nothing is drawn (MeasureBuilder.SectionHead, LILYSHARP-OWN).
+        if (builder.SectionHead is { } head && head.Key == newKey
+            && (newKey.Custom != null
+                || (head.TonicValid && head.TonicStep == _ambientTonicStep && head.TonicAlter == _ambientTonicAlter)))
+        {
+            builder.WithdrawStanding<KeySignatureChangeItem>();
             return;
         }
 
