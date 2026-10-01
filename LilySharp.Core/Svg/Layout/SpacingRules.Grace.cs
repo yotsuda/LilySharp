@@ -97,10 +97,19 @@ internal static partial class SpacingRules
     /// One object because the run is one chain: the reservation, the drawn heads and the
     /// beam quanter's x frame all have to read the same numbers. Until 2026-08-01 they read
     /// four different ones — see <see cref="GraceColumns"/>.
+    /// <para>
+    /// <c>Gaps</c>, one per column (the last is the gap to the main note), is what each gap
+    /// gives under compression: its ROD and its inverse compress strength. Default for a
+    /// run that stays rigid.
+    /// </para>
     /// </remarks>
     internal readonly record struct GraceColumnLayout(
-        ImmutableArray<double> Offsets, double ToMain)
+        ImmutableArray<double> Offsets, double ToMain,
+        ImmutableArray<(double Rod, double InverseCompress)> Gaps = default)
     {
+        /// <summary>The natural length of gap <paramref name="k"/>.</summary>
+        public double Gap(int k) => k + 1 < Offsets.Length ? Offsets[k + 1] - Offsets[k] : ToMain;
+
         /// <summary>First grace column → the main note's column.</summary>
         public double Span => (Offsets.IsDefaultOrEmpty ? 0 : Offsets[^1]) + ToMain;
     }
@@ -163,6 +172,7 @@ internal static partial class SpacingRules
         int beamedPrefix = GraceNoteEngraver.BeamedPrefix(notes);
 
         var offsets = ImmutableArray.CreateBuilder<double>(notes.Length);
+        var gaps = ImmutableArray.CreateBuilder<(double Rod, double InverseCompress)>(notes.Length);
         double x = 0, toMain = 0;
         for (int i = 0; i < notes.Length; i++)
         {
@@ -170,7 +180,7 @@ internal static partial class SpacingRules
             bool beamed = i < beamedPrefix;
             GraceColumnInfo? next = i + 1 < notes.Length ? notes[i + 1] : null;
             bool nextBeamed = i + 1 < beamedPrefix;
-            double minDistance, correction;
+            double minDistance, rod, correction;
             if (notes[i].TabDigitHalfWidth > 0 && (next is { } tn ? !tn.IsRest : mainItem is not null))
             {
                 // A TAB-ONLY run (GraceColumnInfo.TabDigitHalfWidth): the columns are fret
@@ -186,6 +196,7 @@ internal static partial class SpacingRules
                     : TabConstants.FretGlyphWidthAtDefault("0") / 2.0 - EngravingDefaults.TabHeadCenterOffset;
                 minDistance = notes[i].TabDigitHalfWidth + DefaultExtraSpacingWidth
                               + mainLeft + DefaultExtraSpacingWidth;
+                rod = minDistance + SeparationRodPadding;
                 correction = 0;
             }
             else if (!notes[i].IsRest && (next is { } n ? !n.IsRest : mainItem is not null))
@@ -195,11 +206,11 @@ internal static partial class SpacingRules
                 // and the optical stem correction on the ideal. MEASURED (Lab sessions/p728/first):
                 // 1.147939 / 1.647939 / 1.726510 where the flat reaches gave 1.417939 to all three.
                 // LILYPOND-REF: lily/note-spacing.cc:78-83 Note_spacing::get_spacing — the minimum; :111 the correction.
-                minDistance = SkylineFloorPair(
+                (minDistance, rod) = SkylineFloorPair(
                     ItemSkylineFactory.CreateGraceWishSkyline(notes[i], beamed, HorizontalDirection.Right),
                     next is { } nc
                         ? ItemSkylineFactory.CreateGraceWishSkyline(nc, nextBeamed, HorizontalDirection.Left)
-                        : ItemSkylineFactory.SharedWishLeftSkylineAtColumn(mainItem!, 0.0, 0.0)).SkyMin;
+                        : ItemSkylineFactory.SharedWishLeftSkylineAtColumn(mainItem!, 0.0, 0.0));
                 correction = GraceStemCorrection(notes[i], beamed, next, nextBeamed, mainItem,
                     NoteSpacingParameters.Default, gp.SpacingIncrement);
             }
@@ -212,11 +223,13 @@ internal static partial class SpacingRules
                     ? GraceColumnLeftReach(nr)
                     : MainColumnLeftReach(mainItem);
                 minDistance = rightReach + leftReach;
+                rod = minDistance + SeparationRodPadding;
                 correction = 0;
             }
+            double dotRod = GraceDotRod(notes[i], beamed, next, mainItem);
             double gap = Math.Max(
-                GraceColumnGap(notes[i], dtMin, gp, minDistance, correction),
-                GraceDotRod(notes[i], beamed, next, mainItem));
+                GraceColumnGap(notes[i], dtMin, gp, minDistance, correction), dotRod);
+            rod = Math.Max(rod, dotRod);
             // A slur from this column to the next (or out to the main note) rods the two
             // columns the Slur's minimum-length apart — the rule SlurPairRod states for the
             // main grid. MEASURED (2.26.0, Lab sessions/p727/span/inner.ly): 1.5 with the slur,
@@ -227,10 +240,24 @@ internal static partial class SpacingRules
                 : mainItem is not null
                   && Collector.SlurDetector.TryGetSlurFlags(mainItem, out _, out bool mainEnd) && mainEnd;
             if (notes[i].SlurStart && nextEndsSlur)
+            {
                 gap = Math.Max(gap, SlurScoringProblem.MinimumLengthSpaces);
+                rod = Math.Max(rod, SlurScoringProblem.MinimumLengthSpaces);
+            }
+            // Under compression the gap closes to its rod at the grace spring's own compress
+            // strength — Spring (len, increment) defaults it to len - increment, and neither
+            // Note_spacing nor merge_springs (one wish) changes it. MEASURED (2.26.0, Lab
+            // sessions/p732/compress, ledger grace.compress.*): 1.417939 -> 1.217939 = the
+            // padding-free skyline 1.117939 + 0.1.
+            // LILYPOND-REF: lily/spring.cc:204-210 set_default_compress_strength — ideal - min, run by the constructor:
+            // LILYPOND-REF: lily/spacing-basic.cc:163-175 Spacing_spanner::note_spacing — ret = Spring (len, min) in the grace branch.
+            // LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods — the rod, padding + skyline distance.
+            double inverseCompress = Math.Max(0.0,
+                CreateGraceSpring(notes[i].Length, gp, dtMin).IdealDistance - gp.SpacingIncrement);
+            gaps.Add((Math.Min(rod, gap), inverseCompress));
             if (i + 1 < notes.Length) x += gap; else toMain = gap;
         }
-        return new GraceColumnLayout(offsets.ToImmutable(), toMain);
+        return new GraceColumnLayout(offsets.ToImmutable(), toMain, gaps.MoveToImmutable());
     }
 
     /// <summary>
@@ -257,13 +284,27 @@ internal static partial class SpacingRules
     /// carries the stretch of the spring INTO the run (SpringIntoGraceRun adds the run's
     /// springs' inverse strengths in series); this puts the same stretch back between the run's
     /// own columns.
-    /// ⒝ NOT for a compressed line (force &lt; 0): a grace spring's compress strength is its
-    /// ideal less its minimum, and the run's gaps already sit at their minimum in every
-    /// measured book — the run stays rigid there.
+    /// On a COMPRESSED line (force &lt; 0) each gap closes by force × its own compress
+    /// strength down to its rod (<see cref="GraceColumnLayout"/>.Gaps) — the lengths the
+    /// series spring into the run (<see cref="SpringIntoGraceRun"/>) gave the solver, so the
+    /// drawn run and the solved main column agree.
     /// </remarks>
     internal static GraceColumnLayout StretchGraceColumns(GraceColumnLayout columns, double force,
         GraceSpacingParameters? graceParams = null)
     {
+        if (force < 0 && !columns.Offsets.IsDefaultOrEmpty && !columns.Gaps.IsDefaultOrEmpty)
+        {
+            var closed = ImmutableArray.CreateBuilder<double>(columns.Offsets.Length);
+            double at = 0, last = 0;
+            for (int k = 0; k < columns.Offsets.Length; k++)
+            {
+                closed.Add(at);
+                var (rod, inverseCompress) = columns.Gaps[k];
+                last = Math.Max(rod, columns.Gap(k) + force * inverseCompress);
+                at += last;
+            }
+            return new GraceColumnLayout(closed.MoveToImmutable(), last, columns.Gaps);
+        }
         if (!(force > 0) || columns.Offsets.IsDefaultOrEmpty)
             return columns;
         double grow = force * GraceSpringInverseStretch(graceParams);
@@ -543,13 +584,14 @@ internal static partial class SpacingRules
     public static Spring AdjustSpringForGraceNotes(Spring spring,
         ImmutableArray<GraceColumnInfo> graceNotes,
         GraceSpacingParameters? graceParams = null,
-        MusicItem? mainItem = null)
+        MusicItem? mainItem = null,
+        (double SkyMin, double Rod)? approachFloor = null)
         => graceNotes.IsDefaultOrEmpty
             ? spring
             : SpringIntoGraceRun(spring,
-                GraceColumns(graceNotes, mainItem, graceParams).Span,
+                GraceColumns(graceNotes, mainItem, graceParams),
                 CalculateGraceGroupSpringWidth(graceNotes, graceParams),
-                graceNotes.Length * GraceSpringInverseStretch(graceParams));
+                GraceSpringInverseStretch(graceParams), approachFloor);
 
     /// <summary>
     /// The spring that runs into a grace run, given how wide the run itself is: LilyPond's
@@ -558,15 +600,25 @@ internal static partial class SpacingRules
     /// <remarks>
     /// ⚠️ ONE HOME for the rule, because Lily# builds springs in two places and they must
     /// agree — the column system (<see cref="AdjustSpringForGraceNotes(Spring,
-    /// ImmutableArray{Model.GraceColumnInfo}, GraceSpacingParameters, Model.MusicItem)"/>) and the drawn
+    /// ImmutableArray{Model.GraceColumnInfo}, GraceSpacingParameters, Model.MusicItem, System.Nullable{System.ValueTuple{double, double}})"/>) and the drawn
     /// timing-column system (MeasureLayouter). The 0.8 was added to the first alone at
     /// first and the ledger did not move a hair, because the drawn output comes from the
     /// second (HANDOFF §2 A's "two places computing one quantity", in its spring form).
+    /// <para>
+    /// The run's own springs are in SERIES with the approach, and the result is a series
+    /// spring (<see cref="Spring.Series"/>): under one force their lengths add, so the
+    /// stretch strengths add (StretchGraceColumns hands the same stretch back to the run's
+    /// columns when the run is placed), and on a compressed line each grace spring stops at
+    /// its own rod while the approach still gives — until session 732 the run was one rigid
+    /// block there.
+    /// LILYPOND-REF: lily/spring.cc:218-237 Spring::length — distance + force × inverse_stretch_strength.
+    /// LILYPOND-REF: lily/simple-spacer.cc:232-287 compress_line — each spring blocks at its own force.
+    /// </para>
     /// </remarks>
-    /// <param name="graceRunSpan">
-    /// The run's own ANCHOR-TO-ANCHOR width — first grace to main note. This is what the
-    /// ideal grows by, because it is the distance the drawn glyphs actually occupy between
-    /// two column origins.
+    /// <param name="run">
+    /// The run's columns as they are PLACED. Its span — the ANCHOR-TO-ANCHOR width, first
+    /// grace to main note — is what the ideal grows by, because it is the distance the drawn
+    /// glyphs actually occupy between two column origins; its gaps become the series parts.
     /// </param>
     /// <param name="graceRunClearance">
     /// The same plus whatever ink hangs LEFT of the first grace's anchor. This is what the
@@ -575,25 +627,76 @@ internal static partial class SpacingRules
     /// spring's own min_dist, so it binds only when the line is squeezed and never widens a
     /// comfortable line.
     /// </param>
-    /// <param name="graceRunStretch">
-    /// The run's own springs' inverse stretch strengths, summed — one
-    /// <see cref="GraceSpringInverseStretch"/> per column (each column has its spring to the
-    /// next, the last one to the main note). 0 keeps the run rigid, as it was until session 729.
+    /// <param name="gapStretch">
+    /// The inverse stretch strength of ONE of the run's springs —
+    /// <see cref="GraceSpringInverseStretch"/> (each column has its spring to the next, the
+    /// last one to the main note).
+    /// </param>
+    /// <param name="approachFloor">
+    /// The previous column against the run's FIRST grace column
+    /// (<see cref="GraceApproachFloor"/>): the approach's own minimum, which sets its compress
+    /// strength, and its rod. Null where no previous note column is known (a run opening a
+    /// line), which keeps the approach's minimum the main note's plus the run's left ink.
     /// </param>
     public static Spring SpringIntoGraceRun(
-        Spring spring, double graceRunSpan, double graceRunClearance, double graceRunStretch = 0)
+        Spring spring, GraceColumnLayout run, double graceRunClearance, double gapStretch,
+        (double SkyMin, double Rod)? approachFloor = null)
     {
         if (graceRunClearance <= 0)
             return spring;
 
+        double graceRunSpan = run.Span;
         var approach = spring.Scale(GraceApproachScale);
         double newMin = approach.MinDistance + graceRunClearance;
         double newIdeal = Math.Max(approach.IdealDistance + graceRunSpan, newMin);
-        // The run's own springs are in SERIES with the approach: under one force their
-        // lengths add, so their inverse stretch strengths add (StretchGraceColumns hands the
-        // same stretch back to the run's columns when the run is placed).
-        // LILYPOND-REF: lily/spring.cc:218-237 Spring::length — distance + force × inverse_stretch_strength.
-        return new Spring(newIdeal, newMin, approach.InverseStretchStrength + graceRunStretch);
+        int columns = run.Offsets.IsDefaultOrEmpty ? 0 : run.Offsets.Length;
+        if (columns == 0 || run.Gaps.IsDefaultOrEmpty)
+            return new Spring(newIdeal, newMin, approach.InverseStretchStrength + columns * gapStretch);
+
+        // The approach is LilyPond's note spring between the previous column and the FIRST
+        // grace column, scaled: operator*= leaves its compress strength ideal - min, the min
+        // being the skyline distance to that grace, and the rod over the same pair floors it.
+        // MEASURED (2.26.0, ledger grace.compress.*): at the line's force -0.80 the beamed
+        // run's approach compresses at 0.898 and the flagged eighth's at 1.079 — the two
+        // runs' different first-grace skylines.
+        // LILYPOND-REF: lily/spring.cc:85-93 Spring::operator*= — inverse_compress_strength_ = max (0, ideal - min).
+        double headIdeal = newIdeal - graceRunSpan;
+        var parts = new Spring[columns + 1];
+        parts[0] = approachFloor is { } floor
+            ? new Spring(headIdeal, floor.Rod,
+                approach.InverseStretchStrength, Math.Max(0.0, headIdeal - floor.SkyMin))
+            : new Spring(headIdeal, newMin - graceRunSpan,
+                approach.InverseStretchStrength, approach.InverseCompressStrength);
+        for (int k = 0; k < columns; k++)
+            parts[k + 1] = new Spring(run.Gap(k), run.Gaps[k].Rod, gapStretch, run.Gaps[k].InverseCompress);
+        return Spring.InSeries(ImmutableArray.Create(parts), newMin);
+    }
+
+    /// <summary>
+    /// The spring into <paramref name="main"/>'s grace run, floored: <paramref name="prev"/>'s
+    /// column against the run's FIRST grace column — the padding-free skyline distance (the
+    /// spring's minimum) and the rod (padding + the separation skylines' distance). Null when
+    /// <paramref name="main"/> leads with no grace.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-spacing.cc:78-83 Note_spacing::get_spacing — min_dist, the skylines' distance.
+    /// LILYPOND-REF: lily/separation-item.cc:47-68 Separation_item::set_distance — the rod.
+    /// ⒝ The grace column's side of both is its wish skyline (CreateGraceWishSkyline), as
+    /// <see cref="GraceColumns"/> reads it.
+    /// </remarks>
+    internal static (double SkyMin, double Rod)? GraceApproachFloor(MusicItem prev, MusicItem main,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
+    {
+        var grace = GraceNotesOf(main);
+        if (grace.IsDefaultOrEmpty)
+            return null;
+        var first = ItemSkylineFactory.CreateGraceWishSkyline(
+            grace[0], GraceNoteEngraver.BeamedPrefix(grace) > 0, HorizontalDirection.Left);
+        double sky = SkylineFloorPair(
+            ItemSkylineFactory.SharedWishRightSkylineAtColumn(prev, 0.0, 0.0, staffLines), first).SkyMin;
+        double rod = SkylineFloorPair(
+            ItemSkylineFactory.SharedRightSkylineAtColumn(prev, 0.0, 0.0, staffLines), first).Rod;
+        return (sky, rod);
     }
 
     /// <summary>

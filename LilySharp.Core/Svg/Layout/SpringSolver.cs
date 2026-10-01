@@ -266,12 +266,25 @@ internal sealed class SpringSolver
         for (int k = 0; k < springs.Count; k++)
         {
             var s = springs[k];
-            int j = sorted.Count;
-            while (j > 0 && sorted[j - 1].BlockingForce.CompareTo(s.BlockingForce) < 0)
-                j--;
-            sorted.Insert(j, s);
+            if (s.IsSeries)
+            {
+                // A series spring's parts block one by one (Spring.Series), so they enter the
+                // walk as the separate springs LilyPond has there.
+                for (int p = 0; p < s.Series.Length; p++)
+                    InsertByBlockingForce(sorted, s.Series[p]);
+                continue;
+            }
+            InsertByBlockingForce(sorted, s);
         }
         return sorted;
+    }
+
+    private static void InsertByBlockingForce(List<Spring> sorted, Spring s)
+    {
+        int j = sorted.Count;
+        while (j > 0 && sorted[j - 1].BlockingForce.CompareTo(s.BlockingForce) < 0)
+            j--;
+        sorted.Insert(j, s);
     }
 
     // LILYPOND-REF: lily/simple-spacer.cc:295-305 Simple_spacer::spring_positions()
@@ -417,25 +430,11 @@ internal sealed class SpringSolver
             double blockForce = new SpringSolver(range).Solve(dist).Force;
 
             // LILYPOND-REF: lily/simple-spacer.cc:124-126 — set_blocking_force (max (…)).
+            // set_blocking_force: min_distance = length (f), whose inverse constant is the
+            // compress one for f < 0 and the stretch one for f >= 0 (Spring.RaisedToBlockingForce;
+            // a series spring raises each of its parts).
             for (int i = left; i < right; i++)
-            {
-                var s = result[i];
-                double newBlockForce = Math.Max(blockForce, s.BlockingForce);
-                if (newBlockForce > s.BlockingForce)
-                {
-                    // set_blocking_force: min_distance = length (f), whose inverse constant is
-                    // the compress one for f < 0 and the stretch one for f >= 0; the Spring
-                    // constructor then re-derives the blocking force from that min.
-                    // LILYPOND-REF: lily/spring.cc:183-195 set_blocking_force — min_distance_ =
-                    //   length (f); :218-237 length picks inv_k by the force's sign.
-                    double newMin = Math.Max(s.MinDistance,
-                        s.IdealDistance + newBlockForce
-                        * (newBlockForce < 0
-                            ? s.InverseCompressStrength
-                            : s.InverseStretchStrength));
-                    result[i] = s.WithMinDistance(newMin);
-                }
-            }
+                result[i] = result[i].RaisedToBlockingForce(blockForce);
         }
 
         return result.ToImmutableArray();

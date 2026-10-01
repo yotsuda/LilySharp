@@ -797,8 +797,9 @@ internal static partial class SpacingRules
     }
 
     /// <summary>
-    /// The widest leading grace run's ANCHOR-TO-ANCHOR span among <paramref name="items"/> —
-    /// first grace origin to main note origin, with no ink allowance.
+    /// The widest leading grace run among <paramref name="items"/>, its columns as PLACED —
+    /// its span is the ANCHOR-TO-ANCHOR width, first grace origin to main note origin, with
+    /// no ink allowance; empty when no item leads with a grace.
     /// </summary>
     /// <remarks>
     /// The companion of <see cref="LeadingGracePrefixWidth"/>, which is the same runs
@@ -806,33 +807,19 @@ internal static partial class SpacingRules
     /// <see cref="SpringIntoGraceRun"/> — so they are separate readings rather than one
     /// number with a fudge.
     /// </remarks>
-    internal static double LeadingGraceRunSpan(ItemColumn items)
+    internal static GraceColumnLayout LeadingGraceRun(ItemColumn items)
     {
-        double w = 0;
-        for (int i = 0; i < items.Count; i++)
-            w = Math.Max(w, LeadingGraceRunSpan(items[i]));
-        return w;
-    }
-
-    /// <summary>
-    /// The inverse stretch strength of the run whose span <see cref="LeadingGraceRunSpan(ItemColumn)"/>
-    /// answers — the widest run's columns × <see cref="GraceSpringInverseStretch"/> — so the
-    /// spring into it stretches as LilyPond's chain of springs does (SpringIntoGraceRun).
-    /// </summary>
-    internal static double LeadingGraceRunStretch(ItemColumn items)
-    {
-        double widest = 0;
-        int columns = 0;
+        var widest = new GraceColumnLayout(ImmutableArray<double>.Empty, 0);
         for (int i = 0; i < items.Count; i++)
         {
-            double span = LeadingGraceRunSpan(items[i]);
-            if (span > widest)
-            {
-                widest = span;
-                columns = GraceNotesOf(items[i]).Length;
-            }
+            var grace = GraceNotesOf(items[i]);
+            if (grace.IsDefaultOrEmpty)
+                continue;
+            var run = GraceColumns(grace, items[i]);
+            if (run.Span > widest.Span)
+                widest = run;
         }
-        return columns * GraceSpringInverseStretch();
+        return widest;
     }
 
     /// <summary>One item's leading grace run span, measured the way the run is PLACED.</summary>
@@ -1025,9 +1012,11 @@ internal static partial class SpacingRules
                 if (widest == null || run.IdealDistance > widest.IdealDistance)
                     widest = run;
             }
+            // Back out of the column frame through the approach, so a series spring keeps its
+            // run's parts (Spring.Series).
             if (widest != null)
-                spring = new Spring(widest.IdealDistance - origin, Math.Max(0.0, widest.MinDistance - origin),
-                    widest.InverseStretchStrength, widest.InverseCompressStrength);
+                spring = widest.WithIdealDistance(widest.IdealDistance - origin)
+                    .WithMinDistance(Math.Max(0.0, widest.MinDistance - origin));
         }
 
         // The column ROD over this pair: set_column_rods walks every adjacent column pair,

@@ -833,6 +833,9 @@ internal sealed class MeasureLayouter
         // while every spring-bound book in the same set stayed EXACT.
         double maxSkyDist = 0;
         double maxRod = 0;
+        // The previous column against the next column's leading grace run, when it has one
+        // (SpacingRules.GraceApproachFloor): the floor of the approach part of the spring.
+        (double SkyMin, double Rod)? graceFloor = null;
         bool anyWish = false;
         // The left items of the PAIRS that actually carry a wish — one per voice
         // whose notes occupy BOTH columns. The left-head refinement below prices
@@ -902,6 +905,10 @@ internal sealed class MeasureLayouter
             // house as the estimate system's (SpacingRules.SlurPairRod).
             // LILYPOND-REF: lily/spanner.cc:429-473 set_spacing_rods.
             maxRod = Math.Max(maxRod, SpacingRules.SlurPairRod(prev, next));
+            if (SpacingRules.GraceApproachFloor(prev, next, staffLines) is { } gf)
+                graceFloor = graceFloor is { } g
+                    ? (Math.Max(g.SkyMin, gf.SkyMin), Math.Max(g.Rod, gf.Rod))
+                    : gf;
         }
 
         // ⚠️ THE WISH CHAIN IS PER VOICE, NOT PER STAFF. Until 2026-09-10 a branch here made
@@ -1056,9 +1063,10 @@ internal sealed class MeasureLayouter
         // 0.8 first, which is the half this used to skip (SpacingRules.SpringIntoGraceRun).
         spring = SpacingRules.SpringIntoGraceRun(
             spring,
-            SpacingRules.LeadingGraceRunSpan(nextItems),
+            SpacingRules.LeadingGraceRun(nextItems),
             SpacingRules.LeadingGracePrefixWidth(nextItems),
-            SpacingRules.LeadingGraceRunStretch(nextItems));
+            SpacingRules.GraceSpringInverseStretch(),
+            graceFloor);
 
         // LilyPond merges every wish through merge_springs, which floors the ideal at
         // min + 0.3. A no-op for an ordinary note-to-note ideal (~3.0 vs a ~1.8 floor)

@@ -2179,6 +2179,48 @@
       "residual": 0.467277323,
       "why": "Since session 731 a grace on a TAB-only staff is spaced by its digits as LilyPond's Note_spacing does there (the TabStaff stem is invisible, so no stem correction; the floor is grace digit half + extra-spacing + the main digit's left reach), not by the notation grace's flagged reach (1.124 until then). What is left is the digit size: Lily#'s tab digits are the ratified larger ones, so the main digit's centre stands 0.652 right of its column (EngravingDefaults.TabHeadCenterOffset) where LilyPond's stands ~0.12; the column gap itself is within 0.07 of LilyPond's 1.3438 (Lab sessions/p730/tg/nos2.ly)."
     },
+    "grace.compress.approach": {
+      "probe": "grace-compress.ly",
+      "score": "GSC",
+      "lilypond": 1.68344226594376,
+      "residual": 0.000000075,
+      "why": "Since session 732 the spring into a grace run is a SERIES spring (Spring.Series): on a compressed line each grace spring closes at its own compress strength (len - increment) to its rod while the approach still gives (lily/simple-spacer.cc compress_line). Until then the run was one rigid block there. EXACT: the approach compresses at 0.8 x ideal - the skyline to the FIRST grace (SpacingRules.GraceApproachFloor); -0.179 with the run rigid."
+    },
+    "grace.compress.grace-step": {
+      "probe": "grace-compress.ly",
+      "score": "GSC",
+      "lilypond": 1.21793861919804,
+      "residual": -0.000000173,
+      "why": "Since session 732 the spring into a grace run is a SERIES spring (Spring.Series): on a compressed line each grace spring closes at its own compress strength (len - increment) to its rod while the approach still gives (lily/simple-spacer.cc compress_line). Until then the run was one rigid block there. EXACT: 1.417939 -> 1.217939, the rod (padding-free skyline 1.117939 + 0.1); +0.2 with the run rigid."
+    },
+    "grace.compress.to-main": {
+      "probe": "grace-compress.ly",
+      "score": "GSC",
+      "lilypond": 1.21793861919804,
+      "residual": -0.000000173,
+      "why": "See grace.compress.grace-step: the last grace to its main note closes to its rod too (+0.2 with the run rigid)."
+    },
+    "grace.compress.main-to-flagged": {
+      "probe": "grace-compress.ly",
+      "score": "GSC",
+      "lilypond": 1.53863404663399,
+      "residual": -0.000000080,
+      "why": "See grace.compress.approach: the flagged eighth's first-grace skyline is not the beamed run's, so this approach compresses at 1.079 where that one does at 0.898 (-0.034, then +0.108 with the main note's minimum for both)."
+    },
+    "grace.compress.flagged-to-main": {
+      "probe": "grace-compress.ly",
+      "score": "GSC",
+      "lilypond": 1.73862706483148,
+      "residual": 0.000000150,
+      "why": "See grace.compress.grace-step: 1.938627 -> 1.738627, the flagged grace's rod (+0.2 with the run rigid)."
+    },
+    "grace.compress.quarter-control": {
+      "probe": "grace-compress.ly",
+      "score": "GSC",
+      "lilypond": 1.6432851046062,
+      "residual": 0.000000141,
+      "why": "An ordinary quarter spring on the same compressed line, the force's witness: -0.039 while the rigid run made the line stiffer."
+    },
     "slur.beamed.reserved-text": {
       "probe": "slur-beam-reserve.ly",
       "score": "A",

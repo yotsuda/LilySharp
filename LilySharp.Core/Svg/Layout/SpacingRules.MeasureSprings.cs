@@ -248,7 +248,8 @@ internal static partial class SpacingRules
             // is the point LilyPond clamps at; ApplyLeftHeadWidth (:77) does not clamp.
             spring = spring.WithIdealDistance(Math.Max(0.0, spring.IdealDistance));
             spring = AdjustSpringForGraceNotes(
-                spring, GraceNotesOf(nextItem), graceParams: null, mainItem: nextItem);
+                spring, GraceNotesOf(nextItem), graceParams: null, mainItem: nextItem,
+                approachFloor: GraceApproachFloor(prevItem, nextItem));
             // A pair touching a mid-measure change column is priced by the change column,
             // not by duration — and NOT by merge_springs' headroom afterwards, which would
             // add 0.3 to a gap LilyPond has already fixed.

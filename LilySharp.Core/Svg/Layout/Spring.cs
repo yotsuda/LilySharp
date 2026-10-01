@@ -24,6 +24,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Generic;
+using System.Collections.Immutable;
 
 namespace LilySharp.Core.Svg.Layout;
 
@@ -128,6 +129,85 @@ internal sealed record Spring
     }
 
     /// <summary>
+    /// The parts of a SERIES spring — the spring into a grace run, which in LilyPond is the
+    /// approach spring followed by one spring per grace column (Lily# hangs the run off its
+    /// main column, so the chain arrives here as one spring). Default for every other spring.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/simple-spacer.cc:232-287 compress_line — every spring of the line
+    /// blocks at its own force, so a chain of springs is not one linear spring: the run's
+    /// springs stop at their rods while the approach still gives. <see cref="Length"/> sums
+    /// the parts and <see cref="SpringSolver"/> walks them one by one when it compresses.
+    /// <para>
+    /// The other fields keep the RIGID reading every geometric caller compares against:
+    /// <see cref="MinDistance"/> is the approach's minimum plus the run at its natural length,
+    /// and the edits below go to the approach (<c>Series[0]</c>), which is where they landed
+    /// when the run was rigid. <see cref="BlockingForce"/> is the parts' largest.
+    /// </para>
+    /// </remarks>
+    public ImmutableArray<Spring> Series { get; private init; }
+
+    /// <summary>Whether this is a series spring (<see cref="Series"/>).</summary>
+    public bool IsSeries => !Series.IsDefaultOrEmpty;
+
+    private Spring(double idealDistance, double minDistance, double inverseStretchStrength,
+                   double inverseCompressStrength, double blockingForce, ImmutableArray<Spring> series)
+    {
+        IdealDistance = idealDistance;
+        MinDistance = minDistance;
+        InverseStretchStrength = inverseStretchStrength;
+        InverseCompressStrength = inverseCompressStrength;
+        BlockingForce = blockingForce;
+        Series = series;
+    }
+
+    /// <summary>
+    /// The series spring of <paramref name="parts"/> — the approach first — whose rigid
+    /// minimum is <paramref name="minDistance"/>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spring.cc:218-237 Spring::length — ideal_distance_ + force × inv_k per spring;
+    /// springs in series under one force: lengths add, so the ideals and both inverse strengths add.
+    /// </remarks>
+    internal static Spring InSeries(ImmutableArray<Spring> parts, double minDistance)
+    {
+        double ideal = 0, stretch = 0, compress = 0, block = double.NegativeInfinity;
+        for (int i = 0; i < parts.Length; i++)
+        {
+            var p = parts[i];
+            ideal += p.IdealDistance;
+            stretch += p.InverseStretchStrength;
+            compress += p.InverseCompressStrength;
+            block = Math.Max(block, p.BlockingForce);
+        }
+        return new Spring(ideal, minDistance, stretch, compress, block, parts);
+    }
+
+    /// <summary>This series spring with its approach replaced and its rigid minimum set.</summary>
+    private Spring WithApproach(Spring approach, double minDistance)
+        => InSeries(Series.SetItem(0, approach), minDistance);
+
+    /// <summary>
+    /// Raises the blocking force to at least <paramref name="force"/>: the minimum becomes
+    /// the length at that force. A series spring raises each part.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/simple-spacer.cc:124-126 add_rod — set_blocking_force (max (block_force, …)) on every spring of the range.
+    /// LILYPOND-REF: lily/spring.cc:183-195 set_blocking_force — min_distance_ = length (f); :218-237 length picks inv_k by the force's sign.
+    /// ⒝ A SERIES spring takes the raised minimum on its approach alone
+    /// (<see cref="WithMinDistance"/>), not on each part at the force as LilyPond would.
+    /// POISONED (session 732): raising each part instead moved no page and no test — no book
+    /// has a rod binding across a grace run — so the per-part branch was not kept.
+    /// </remarks>
+    internal Spring RaisedToBlockingForce(double force)
+    {
+        if (!(force > BlockingForce))
+            return this;
+        return WithMinDistance(Math.Max(MinDistance,
+            IdealDistance + force * (force < 0 ? InverseCompressStrength : InverseStretchStrength)));
+    }
+
+    /// <summary>
     /// Replaces the ideal distance, leaving BOTH strengths exactly as they are.
     /// </summary>
     /// <remarks>
@@ -153,7 +233,10 @@ internal sealed record Spring
     /// </para>
     /// </remarks>
     public Spring WithIdealDistance(double idealDistance)
-        => new(idealDistance, MinDistance, InverseStretchStrength, InverseCompressStrength);
+        => IsSeries
+            ? WithApproach(Series[0].WithIdealDistance(
+                Math.Max(0.0, Series[0].IdealDistance + idealDistance - IdealDistance)), MinDistance)
+            : new(idealDistance, MinDistance, InverseStretchStrength, InverseCompressStrength);
 
     /// <summary>
     /// Replaces the minimum distance, leaving BOTH strengths exactly as they are.
@@ -167,14 +250,23 @@ internal sealed record Spring
     /// compressibility stays the duration one.
     /// </remarks>
     public Spring WithMinDistance(double minDistance)
-        => new(IdealDistance, minDistance, InverseStretchStrength, InverseCompressStrength);
+        => IsSeries
+            ? WithApproach(Series[0].WithMinDistance(
+                Math.Max(0.0, Series[0].MinDistance + minDistance - MinDistance)), minDistance)
+            : new(IdealDistance, minDistance, InverseStretchStrength, InverseCompressStrength);
 
     /// <summary>
     /// Raises the minimum distance to at least <paramref name="minDistance"/>, leaving both
     /// strengths as they are.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/spring.cc:155-159 Spring::ensure_min_distance —
-    /// <c>set_min_distance (std::max (d, min_distance_))</c>.</remarks>
+    /// <c>set_min_distance (std::max (d, min_distance_))</c>.
+    /// <para>
+    /// ⒝ A series spring takes the floor on its rigid reading — the approach, where it landed
+    /// while the run was one block — and not as LilyPond's rod over the run's parts
+    /// (Simple_spacer::add_rod over the range), so under compression the parts may close
+    /// below it. POISONED (session 732): the per-part rod moved no page and no test.
+    /// </para></remarks>
     public Spring EnsureMinDistance(double minDistance)
         => minDistance > MinDistance ? WithMinDistance(minDistance) : this;
 
@@ -260,6 +352,13 @@ internal sealed record Spring
     /// <returns>The resulting length, never less than MinDistance</returns>
     public double Length(double force)
     {
+        if (IsSeries)
+        {
+            double sum = 0;
+            for (int i = 0; i < Series.Length; i++)
+                sum += Series[i].Length(force);
+            return sum;
+        }
         // LILYPOND-REF: lily/spring.cc:219-237 Spring::length()
         double effectiveForce = Math.Max(force, BlockingForce);
         double invK = effectiveForce < 0 ? InverseCompressStrength : InverseStretchStrength;

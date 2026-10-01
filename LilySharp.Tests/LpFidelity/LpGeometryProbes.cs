@@ -8822,6 +8822,17 @@ internal static class LpGeometryProbes
     private static readonly LayoutOptions GraceStretchPaper =
         LayoutOptions.Default with { PageWidth = 100.0 / 1.757299017 + 2 * 8.535827 };
 
+    /// <summary>
+    /// A GRACE RUN ON A COMPRESSED LINE (probes/grace-compress.ly): GST's music on a 33mm line,
+    /// narrower than its natural width. A grace spring's inverse compress strength is its own
+    /// len − increment (lily/spring.cc:204-210, run by the constructor in
+    /// lily/spacing-basic.cc:163-175), so its gaps close to their skyline minimum.
+    /// </summary>
+    private static readonly string GSC = GST;
+
+    /// <summary>The 33mm line of <see cref="GSC"/>, widened by the two margins as <see cref="GraceStretchPaper"/> is.</summary>
+    private static readonly LayoutOptions GraceCompressPaper =
+        LayoutOptions.Default with { PageWidth = 33.0 / 1.757299017 + 2 * 8.535827 };
     /// <summary>GKF: a flagged grace whose flag meets only part of the main column (d'8 → c'4).</summary>
     private static readonly string GKF = GraceSlurBook("GKF", "treble", "c'4 grace { d8 } c4 g4 a4 |");
     private static readonly string GKD = GraceSlurBook("GKD", "treble", "c'4 grace { f16 g16 } a'4 c'4 d'4 |");
@@ -16484,6 +16495,13 @@ internal static class LpGeometryProbes
         new("grace.stretch.to-main", GST, g => g.NoteheadAnchorStep(2), GraceStretchPaper),
         new("grace.stretch.flagged-to-main", GST, g => g.NoteheadAnchorStep(4), GraceStretchPaper),
         new("grace.stretch.quarter-control", GST, g => g.NoteheadAnchorStep(5), GraceStretchPaper),
+        // A grace run compressed with its line. See GSC.
+        new("grace.compress.approach", GSC, g => g.NoteheadAnchorStep(0), GraceCompressPaper),
+        new("grace.compress.grace-step", GSC, g => g.NoteheadAnchorStep(1), GraceCompressPaper),
+        new("grace.compress.to-main", GSC, g => g.NoteheadAnchorStep(2), GraceCompressPaper),
+        new("grace.compress.main-to-flagged", GSC, g => g.NoteheadAnchorStep(3), GraceCompressPaper),
+        new("grace.compress.flagged-to-main", GSC, g => g.NoteheadAnchorStep(4), GraceCompressPaper),
+        new("grace.compress.quarter-control", GSC, g => g.NoteheadAnchorStep(5), GraceCompressPaper),
         // The slur's spacing rod on the main grid. See SRR.
         new("slur.rod.adjacent-columns", SRR, g => g.NoteheadAnchorStep(1), NarrowPaper),
         new("slur.rod.no-slur-control", SRN, g => g.NoteheadAnchorStep(1), NarrowPaper),
