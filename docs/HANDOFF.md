@@ -81,7 +81,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - **tuplet の数字の送り幅が LP より 0.07 広い**（同梱書体の「3」0.96 対 LP 0.888＝書体の問題）。tab の LP 差の他は第694 で閉じた
 - **MusicXML**: 第662〜第722 の起票分は全部閉じた（ARCHIVE）。残りは 5/4 のような 1 つの音価で書けない全小節休符が `<type>` のまま（`R1` が 4/4 ぶん）
-- **第733 起票（ユーザーの 02 の本で見つけた・未着手）**: ⑴ Coda の頭で LP は調号を描き直す（twin が `\key` を書く）が Lily# は描かない＝section の key の戻り方の差を先に確かめる／⑵ 「To 𝄌」は描く側が中央揃え・`MarkXExtent` は右揃え（End の既定）＝見積もりと絵が食い違う（LP 側の grob を先に測る）
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
@@ -130,6 +129,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 01 の acciaccatura の弧が加線と重なる＝**LP と 0.01 以内で同形**（LP も重なる・Lab `sessions/p733/acc`）＝変えない。
 - 02 の前打音 b'' と fis'' の符幹＝LP と同じ並び（拡大比較・Lab `sessions/p733/p02`）。どこが重なって見えたかをユーザーに問い返し中。
 - ⑵ ★ `558e93f1` **02 の D.S. al Coda が小節線をまたいで ff と重なる**: LP の JumpScript は `self-alignment-X RIGHT`（右端＝小節線の anchor・プローブ `jump-mark-x.ly` で 0.000000）。Lily# は「小節の右端 − 0.5」に中央揃え。台帳 +2 `mark.jump.right-from-bar-anchor.*`（開いた値 +6.048／+1.866）→ 位置を `EndBarAnchorX`・描く側を右揃え（`IsJumpScript`＝D.S./D.C. 一族と Fine）で**両方 EXACT**。毒 2（片方ずつ外す）＝どちらも 2 赤。掃き（998 冊・1199 枚・基準 `1e19bd08`・Lab `sessions/p733/sweep`）: 4 枚＝snapshot 3（ユーザー承認で再ベース）＋ユーザーの `blogger.lys`（文字列の x だけ・改行不動）。full **10615 / 0 / 2 / 10617**。
+- ⑶ `672efd5f` **Coda の頭で調号が出なかった**（ユーザーの 02 で見つけた）: section の頭の key の戻しが ♯/♭ の数だけを比べていた＝e minor → g major（どちらも ♯ 1 つ）で何も出さない。twin は主音も比べて `\key g \major` を書き、LP は描く（`key-engraver.cc:141-152`・Lab `sessions/p733/key` k1）。→ 主音のリセット前に「既定から外れていたか」を控えて条件に足した（パート見出しの key は既定の主音をパートごとに張り直すので余計な調号は出ない）。網 +1（`SectionResetTests`）・毒で赤・掃き 0 冊（その形の本が無い）。
+- ⑷ `69545925` **「To 𝄌」の X の見積もり**: `MarkXExtent` に分岐が無く、既定（End＝右揃え・「To Coda」の幅）に落ちていた＝ページの輪郭の箱が絵より半分左。→ 描く側と stacker と同じ `ToCodaInk` の中央揃えに。網 +1・毒で赤・掃き 0 冊。full **10617 / 0 / 2 / 10619**。
 ★ `-End p733 -DiffBase 3b5a7aff`＝full **10613 / 0 / 2 / 10615**（網 +1）・門 全 OK・Core `+` 3 行（註だけ・REF／OWN 0）。7.6・7.7: 該当なし（コードの振る舞いは変えていない）。push はユーザー（未 push 42）。
 判定: 前打音の島の残りはどれも観測者なし／⒝＝**次は §1.0 ⒜ の項目（tuplet の数字の送り幅・MusicXML の 5/4 の全小節休符）から選ぶのが筋**。どちらも今便の文脈を使わない＝続けても新しい会話でも差は小さい（既定は続ける）。
 
