@@ -125,9 +125,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ⑴ **tab の斜めの tuplet bracket（`tt-cap` 0.2〜0.25）は欠陥ではなかった＝beam の決定（`uniformBeamedLength`・第569・第694 ユーザー決定「維持」）の帰結**。LP の Beam の positions を直接読むと（Lab `sessions/p737/beamdump.ily`）1 本目の beam は LP と同一・2 本目（`g,8[ g,8]`）だけ 0.56 低く、括弧の右の bound はその列＝右端が下がり傾きが緩む。`TabStaffGeometry` の `uniformBeamedLength` を一時的に false にすると `tt-cap` は LP と 0.04 以内（8.32／5.84 対 8.36／5.85）・`tt-beam`／`tt-nest` の 0.56 も 0＝第690 の 16 冊は決定を外せば全部 LP。製品は不変・§1.0 ⒜ の行を閉じた（pin の警告だけ残した）。
 ⑵ 第736 の残りの pin なし計器も回し直した: 第695 の `scriptcmp.ps1`（`ns` 28 冊）は pin あり・なしで 252 行すべて同じ＝結論は不変（Lab `sessions/p737/ns-*.txt`）。これで 6 本とも済み。
 ⑶ §1.0 ⒜「双子の LP 失敗 2」を読んだ＝**本の側・Lily# は既に警告している**（4 弦 bass の最低弦 E1 より下の音: You're the One (-1) は `a,,,4`・`g,,,8` など 1 オクターブ低い箇所、Mandy も同じ＋13/16 の小節）。LP は弦の無い TabNoteHead で `ly:grob-object: Wrong type argument` と自分の Guile が落ちる（Lab `sessions/p737/lpfail`）。書き出し側の欠陥ではない＝本の修正はユーザー。
-★ `-End p737 -DiffBase 70122cce`＝full **10643 / 0 / 2 / 10645**・門 全 OK・Core `+` 0 行（製品は不変・この便は調査だけ）。push はユーザー（未 push 67）。
-判定: §1.0 ⒜ で手が動くものは尽きた（残りはユーザーの手動確認・リリース時期・T7〔数字の大きさの決定の族〕・観測者の無い速度記号の残り 3 つ）＝**次はユーザーの選択が要る**。候補: 第734 ⑶ の未決（section 頭の書き直しが前と同じなら描かない＝Bohemian の G・H も切れる）／5/4 の全小節休符の綴り（言語設計）／⒝ の設計項目。
-
+⑷ ユーザー選択「1」＝**section 頭の書き直しを描かない**（ユーザー決定 2026-10-02・LILYSHARP-OWN）。★ `e6581dab`:
+- LP は `\time` も `\key` も毎回描く（time-signature-engraver.cc:94-122 は spec を*同一性*で比べる・key-engraver.cc:141-152 は key イベントごとに作る）＝これは LP からの意図した逸脱。規則: **section の最初の瞬間に、境界の reset の前に効いていた値（拍子は書いたまま・調は主音込み・音部記号）と同じ `time`/`key`/`clef` は変化ではない**＝それも、その下の reset も描かない。section の途中の書き直しは LP どおり描く。
+- page: `MeasureBuilder.SectionHead`（prologue が reset 前の状態を武装・最初の時間のある item で外れる）。**builder の checkpoint に載せた**（reset を描かない head は clean boundary＝そこからの resume は prologue を飛ばす）＋`MeterInForce`（走る長さは約分された分数＝6/8 と 3/4 が同じになる）。key の merge の「署名が戻れば消す」は外した（E minor → G major は同じ ♯1 で描く＝第733 の決定・本当の書き直しは merge まで来ない）。
+- twin: `LilyPondExporter` が section play の restore と mark を head の間だけ保留し、書き直しの `\time`/`\key` は何も書かずに restore を取り消す（順序は従来どおり: restore → mark → section 自身の指示）。
+- importer: `LysWriter` の「書き直しが要る mark では切らない」を外した。
+- 網: `SectionResetTests` +10（書籍が parse することを確かめる形に＝最初の版は by-part の中に `m { }` を書いて parse に失敗し、空振りしうる形だった）・`LilyPondExporterSectionPlayTests` +1・`CollectSectionHeadResumeTests`（全 checkpoint から resume）・`MusicXmlSectionCutTests` を反転。`VoltaBracketShapeTests` の E2 が 4/4 を書き直す 1 件は twin から `\time` を外した LP で測り直した（69.304／70.234・Lab `sessions/p737/volta`）。毒 4 種（page の head・twin の head・旧 merge・checkpoint）すべて赤（checkpoint の毒は最初は緑＝網を足して赤）。
+- 掃き（998 冊・1,199 枚）: **6 枚（ユーザーの 2 冊: ABC・Reelin' In the Years＝2 番括弧の頭の 4/4）**。import の round trip 1,199 枚で SVG 差 0。**Bohemian（6 ファイル）は A〜H に切れた**・SVG は以前と同一・twin も LP で通る（Lab `sessions/p737/boh`）。SYNTAX_REFERENCE「Restating at a section's start」・CHANGELOG。full **10655 / 0 / 2 / 10657**。
+- 副産物: エディタの Split Sections もこれで切れ目の書き直しが描かれない（SYNTAX_REFERENCE の Split Sections 節＝切れ目ごとに meter／key／clef を書き直す）。
+★ `-End p737 -DiffBase 70122cce`＝full **10655 / 0 / 2 / 10657**（網 +12）・門 全 OK。7.5: Core `+` 288 行・REF 0／OWN 7＝7 つとも同じ 1 つの決定（page・twin・importer で同じ規則を名乗る）・LP の出典は OWN の註の中に engraver の行番号で書いた。7.6: ⒜＝LP からの宣言した逸脱（ユーザー決定）。7.7: 2 つ目の綴り＝page（collector）と twin（exporter）が同じ規則を別々に持つ（既存の section reset と同じ形・`CollectSectionHeadResumeTests` と `LilyPondExporterSectionPlayTests` が両側を見る）。push はユーザー（未 push 69）。
+判定: 次はまたユーザーの選択（第737 ⑶ の候補の残り: 5/4 の全小節休符の綴り・⒝ の設計項目）。今回の文脈（section 境界）を使う候補は無い＝続けても新しい会話でも差は小さい。
 ## 以下は第736セッションの経緯
 
 ### 1.1 第736セッション（2026-10-01・YT-DELL2）
