@@ -725,6 +725,16 @@ public class SpacingInvariantTests
             ideal += lineStart.IdealDistance - gate[0].Spring0Ideal;
             min += lineStart.MinDistance - gate[0].Spring0Min;
         }
+        // …and its LAST bar with the springs the keep-inside-line rods leave it when it ends the
+        // line (MeasureSpringData.LineEndSprings, session 735): the final syllable reaches past
+        // the last note, and the layout holds it inside the line as LilyPond does. A sung line
+        // is priced from these SUMS (its lyric rod keeps it off the spring solve), so the swap
+        // must reach them — the window below is the observer.
+        Assert.False(gate[1].LineEndSprings.IsDefault,
+            "precondition: the last syllable must bind a keep-inside rod at the line's end");
+        double endMin = gate[1].LineEndSprings.Sum(s => s.MinDistance) - gate[1].Springs.Sum(s => s.MinDistance);
+        Assert.True(endMin > 0.2, $"precondition: the line-end rod must bite (endMin={endMin:F3})");
+        min += endMin;
         double minWithRod = min + excess;
         Assert.True(minWithRod > ideal,
             $"precondition: the rod must exceed the pair's natural width (min+excess={minWithRod:F3}, ideal={ideal:F3})");
@@ -742,6 +752,12 @@ public class SpacingInvariantTests
         var granted = new KnuthPlassBreaker(prefix + minWithRod + 0.5,
             prefix, prefix, raggedRight: true).BreakIntoLines(measures, gate);
         Assert.Single(granted);
+
+        // The line-end window: wide enough for everything but the last syllable's rod — so the
+        // one-line candidate is unsettable only if the sums carry the line-end swap.
+        var endSqueezed = new KnuthPlassBreaker(prefix + minWithRod - endMin / 2,
+            prefix, prefix, raggedRight: true).BreakIntoLines(measures, gate);
+        Assert.Equal(2, endSqueezed.Count);
     }
 
     /// <summary>The three-voice book of test/dot-cross-voice-spacing — a dotted half in

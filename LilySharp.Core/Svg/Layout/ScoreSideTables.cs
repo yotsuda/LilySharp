@@ -151,6 +151,19 @@ internal static class ScoreSideTables
     internal static IndexBuckets<ChordNameItem> BucketChordNames(IReadOnlyList<ChordNameItem> chordNames)
         => IndexBuckets<ChordNameItem>.Build(chordNames, cn => cn.MeasureIndex);
 
+    private static readonly System.Runtime.CompilerServices
+        .ConditionalWeakTable<MultiStaffScore, IndexBuckets<MusicMarkItem>> _temposByScore = new();
+
+    /// <summary>The score's metronome marks bucketed by measure (memoized per score) — what
+    /// prices a mark's ink into its column's keep-inside-line reach
+    /// (<c>MultiStaffLayouter.ColumnOverhangs</c>), read by the break gate and the layout alike.</summary>
+    internal static IndexBuckets<MusicMarkItem> TempoMarks(MultiStaffScore score)
+        => score.MusicMarks.IsDefaultOrEmpty
+            ? IndexBuckets<MusicMarkItem>.Empty
+            : _temposByScore.GetValue(score, s => IndexBuckets<MusicMarkItem>.Build(
+                s.MusicMarks.Where(m => m.Type == MusicMarkType.Tempo).ToList(),
+                m => m.MeasureIndex));
+
     // ---- STAFF-keyed buckets: the per-(system, staff) skyline pass reads a staff's
     // own slice of these tables on every system, so the slice is cut once per score.
     // Stable (document-order) bucketing on purpose: the engravers' input order —

@@ -1055,6 +1055,41 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The text-only metronome mark reading <paramref name="text"/>: its drawn RIGHT edge (the
+    /// bold marking's advance from its pen, as <see cref="MetronomeMarkGeometry.Ink"/> prices
+    /// it) minus the RIGHT edge of the last bar line on its staff — the line's end column.
+    /// LilyPond holds every column's extent inside the line (keep-inside-line), so where the
+    /// mark is wider than the bar that ends the line the number to read is 0
+    /// (tempo-line-end.ly TME).
+    /// </summary>
+    /// <remarks>The mark stands ABOVE the staff, so the strokes are looked for below it.</remarks>
+    public double TempoTextRightFromLineEndBar(string text, int page = 0)
+    {
+        var texts = _pages[page].Texts
+            .Where(t => t.Role == TextRole.Tempo && t.Text == text).ToList();
+        if (texts.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected ONE metronome mark reading \"{text}\", found "
+                + $"{texts.Count}.\nDrawn geometry:\n" + Describe());
+        }
+        var t = texts[0];
+        double right = t.X + LilySharp.Core.Rendering.TextFontMetrics.Advance(
+            t.Text, t.FontSize, sans: false, LilySharp.Core.Rendering.FontStyle.Bold);
+        var strokes = _pages[page].Rects
+            .Where(r => r.Width > 0 && r.Width <= EngravingDefaults.ThickBarlineThickness + 1e-6
+                        && r.Height > r.Width && r.Y > t.Y && r.Y < t.Y + 14.0)
+            .ToList();
+        if (strokes.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: no bar-line stroke under the metronome mark \"{text}\".\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        return right - strokes.Max(r => r.X + r.Width);
+    }
+
+    /// <summary>
     /// The FIRST boxed mark's BASELINE above the staff reference point it rides over.
     /// </summary>
     /// <remarks>

@@ -6446,6 +6446,49 @@ internal static class LpGeometryProbes
     private static readonly string TMT = TempoScore("TMT",
         "c'4@startTrillSpan c' c' c'@stopTrillSpan | c4 c c c |");
 
+    /// <summary>
+    /// A METRONOME MARK AT A MID-LINE METER CHANGE, AND AT A LINE'S END — the mirrors of
+    /// tempo-line-end.ly's books TMM / TME (session 735, the 01-piano-nocturne line-break
+    /// divergence, Lab sessions/p734/lb).
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (audit/lp-geometry/probes/tempo-line-end.ly, 2026-10-01):
+    /// <list type="bullet">
+    /// <item>TMM: mark ink-left = TimeSignature ink-left = 18.868954 — a bar OPENING with a key
+    /// and a meter change mid-line aligns the mark on the meter, as the line start does.</item>
+    /// <item>TME: mark ink-right = end BarLine ink-right = 102.429921 — the keep-inside-line rod
+    /// widened the line's last bar from 11.81 to 35.69 to hold the mark.</item>
+    /// </list>
+    /// No header tempo: each book's mark is its only one.
+    /// </remarks>
+    private static string TempoLineScore(string name, string bars) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part mel { clef treble }
+
+        section Main {
+          mel { {{bars}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff mel
+        }
+        """;
+
+    /// <summary>Mid-line bar opening with a key and a meter change under the mark.</summary>
+    private static readonly string TMM = TempoLineScore("TMM",
+        "time 2/4 c''4 c'' | key d major time 4/4 tempo 4 = 120 c''4 c'' c'' c'' | c''1 |");
+
+    /// <summary>A justified line forced to end on a bar carrying a mark far wider than it.</summary>
+    private static readonly string TME = TempoLineScore("TME",
+        "c''4 c'' c'' c'' | c''4 c'' c'' c'' | c''4 c'' c'' c'' | c''4 c'' c'' c'' | "
+        + "c''4 c'' c'' c'' | tempo \"Molto più mosso, appassionato\" c''4 c'' c'' c'' break | "
+        + "c''4 c'' c'' c'' | c''1 |");
+
     /// <summary>Beat-long beamed triplets — number only, no bracket.</summary>
     private static readonly string TNB = BeamedTupletScore("TNB",
         "tuplet 3/2 { b8 c' b } tuplet 3/2 { b8 c' b } tuplet 3/2 { b8 c' b } tuplet 3/2 { b8 c' b } | "
@@ -16100,6 +16143,13 @@ internal static class LpGeometryProbes
         // exactly 0). Opened with the port, as the session-32 plan said.
         new("tempo.x.mark-to-time-signature", TMQ,
             g => g.TempoMarkToTimeSignatureLeft(), RaggedBottomPaper),
+        // The same 0 MID-LINE, at a bar opening with a key and a meter change (TMM), and the
+        // mark's right edge ON the line's end bar line when it is wider than the bar that ends
+        // the line (TME, keep-inside-line). See TempoLineScore.
+        new("tempo.x.mid-line-meter-change", TMM,
+            g => g.TempoMarkToTimeSignatureLeft(), RaggedBottomPaper),
+        new("tempo.line-end.right-from-end-bar", TME,
+            g => g.TempoTextRightFromLineEndBar("Molto più mosso, appassionato"), RaggedBottomPaper),
 
         // The same two counts on TIGHT paper, where the breaker's force actually decides
         // them. These are the entries that bind — see probe T and book T.

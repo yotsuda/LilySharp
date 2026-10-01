@@ -5010,6 +5010,20 @@
       "residual": 0.0,
       "why": "OPENED 2026-07-29 (session 33, with the port -- the probe header carried the LilyPond reading since session 32, and the plan said open it when the LEFT alignment lands). MEASURED (LilyPond, probe header): mark ink-left = TimeSignature ink-left = 4.885000, difference EXACTLY 0 -- self-alignment-X LEFT on the break-aligned time signature (define-grobs.scm:2352,2360; output-lib.scm:498-504 self-aligned-on-breakable). The pair cannot split pen-vs-ink alignment (both books' first glyph is the note); it pins the zero. Lily#: the mark's X comes from the SAME line-start break-align table the spring model and the drawn prefix solve (MultiStaffLayouter.SolveLineStartPrefix -> PrefixColumns.TimeX), so the difference is structurally 0.000000000 -- the entry is the net that keeps the three consumers reading one table (a second prefix model drifting would fire here first). With no meter to align on, the mark falls to the first musical column (metronome-engraver.cc stop_translation_timestep, Gardner Read p.278); that arm has no point yet."
     },
+    "tempo.x.mid-line-meter-change": {
+      "probe": "tempo-line-end.ly",
+      "score": "TMM",
+      "lilypond": 0.000000,
+      "residual": 0.0,
+      "why": "OPENED 2026-10-01 (session 735) with the port, from the 01-piano-nocturne line-break divergence (Lab sessions/p734/lb). MEASURED (LilyPond, tempo-line-end.ly TMM): at a MID-LINE bar opening with \\key d \\major \\time 4/4 \\tempo 4 = 120, mark ink-left = TimeSignature ink-left = 18.868954, difference EXACTLY 0 -- the line-start rule of tempo.x.mark-to-time-signature holds mid-line (break-align-symbols (time-signature), self-alignment-X LEFT; the mark's X-parent is the meter's break-align group, lily/metronome-engraver.cc:80-135). MEASURED (Lily#, before the port): +4.046000000 -- the mark stood on the bar's first note: its item index (2, past the key and meter items) sent it down MusicMarkEngraver's mid-measure arm, and the measure-start arm had no mid-line meter to align on anyway (a LILYSHARP-OWN limit noted there since the meter change is not a break-align column in this model). PORTED: a mark at its bar's first MOMENT is a measure-start mark (MusicMarkEngraver.IsMeasureStartTempo), and mid-line it stands on SpacingRules.OpeningTimeChangeInkLeft, the renderer's own opening-change walk. EXACT."
+    },
+    "tempo.line-end.right-from-end-bar": {
+      "probe": "tempo-line-end.ly",
+      "score": "TME",
+      "lilypond": 0.000000,
+      "residual": 0.0,
+      "why": "OPENED 2026-10-01 (session 735) with the port. MEASURED (LilyPond, tempo-line-end.ly TME): a justified line forced to end on a bar opening with \\tempo \"Molto più mosso, appassionato\" -- mark ink-right = end BarLine ink-right = 102.429921, difference EXACTLY 0: the keep-inside-line rod of the mark's column (lily/simple-spacer.cc:431-432, :497-502) binds and widens the last bar from the line's 11.81 to 35.69. MEASURED (Lily#, before the port): +20.173924687 -- the mark ran past the right margin: MultiStaffLayouter's keep-inside rods carried the lyric, chord and musical ink of a column but no metronome mark, and the break gate priced no keep-inside rod at all. PORTED: the mark's ink joins the column's reach in MultiStaffLayouter.ColumnOverhangs (one home for the layout's rods and the gate's), and the gate prices a line's last bar with those rods applied (MeasureSpringData.LineEndSprings, swapped in as LineStartSpring is at the line's first). EXACT. The same port moves 01-piano-nocturne from 6/6/6/7 to LilyPond's 7/6/5/7."
+    },
     "staff.staff.beamed-tuplet-number": {
       "probe": "tuplet-number-beamed.ly",
       "score": "TNB",

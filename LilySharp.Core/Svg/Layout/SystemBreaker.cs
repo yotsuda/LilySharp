@@ -336,6 +336,25 @@ internal sealed class SystemBreaker
                     score, i, isFirstSystem: i == 0, run.Count, measureLength);
             }
 
+            // The springs this measure gets when it ENDS a line: every column's own ink held
+            // inside the line by a rod to the line's end column — the same reaches
+            // (MultiStaffLayouter.ColumnOverhangs) and the same rod, less the end bar line's
+            // ink, that the layout gives the line (its KEEP-INSIDE-LINE block). Default when no
+            // rod binds, which is nearly every measure: a note head's reach is cleared by the
+            // spring to the bar line. ⚠️ Until session 735 the gate priced none of these, and a
+            // metronome mark on a short bar ending a line ran past the right margin (01's
+            // "Più mosso", Lab sessions/p734/lb).
+            // LILYPOND-REF: lily/simple-spacer.cc:497-502 get_line_forces — each column's
+            //   keep_inside_line_[RIGHT] rodded to the candidate line's end column.
+            // ⚠️ Only this measure's own columns: a reach running past the measure BEFORE
+            // (a long mark on the penultimate bar) is held by the layout and not priced here.
+            // And a one-bar line prices a measure-start mark the layout stands on the prefix's
+            // meter (ColumnOverhangs' tempoOnPrefix), which keeps nothing inside.
+            ImmutableArray<Spring> lineEndSprings = default;
+            if (!runRod && springs.Length > 1)
+                lineEndSprings = LineEndSprings(score, i, springs, allTimings, allMeasures,
+                    SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline));
+
             double barlines = SpacingRules.GetBarlineWidth(primaryMeasure.StartBarline)
                             + SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline);
             // The measure's own spring 0 — the one the layout REPLACES when this measure
@@ -385,9 +404,49 @@ internal sealed class SystemBreaker
                 // the breaker does not know that start, so the clef of the measure before
                 // this one stands in for it (they differ only across a mid-line clef change).
                 i == 0 ? 0.0 : MultiStaffLayouter.LineEndCourtesyWidth(score, i - 1, i),
-                runIdealDelta, runMinDelta, runNaturalDelta);
+                runIdealDelta, runMinDelta, runNaturalDelta,
+                lineEndSprings);
         }
         return springData;
+    }
+
+    /// <summary>
+    /// The measure's springs with its columns' keep-inside-line rods to the line's end applied
+    /// (see the caller), or default when none binds.
+    /// </summary>
+    private static ImmutableArray<Spring> LineEndSprings(
+        MultiStaffScore score, int measureIndex, ImmutableArray<Spring> springs,
+        List<Fraction> allTimings, List<Measure> allMeasures, double endBarInk)
+    {
+        int columnCount = allTimings.Count;
+        if (columnCount == 0)
+            return default;
+        var left = new double[columnCount];
+        var right = new double[columnCount];
+        var ownEdge = score.Lyrics.IsDefaultOrEmpty ? null : LyricSpacing.OwnVoiceEdgeProvider(score);
+        double startReach = MultiStaffLayouter.ColumnOverhangs(score, measureIndex, springs,
+            allTimings, allMeasures, ScoreSideTables.Lyrics(score), ScoreSideTables.ChordNames(score),
+            SpacingRules.ParentAlignmentEdgesPerColumn(allMeasures, allTimings), ownEdge,
+            tempoOnPrefix: false, left, right);
+        List<(int Left, int Right, double Distance)>? rods = null;
+        if (startReach - endBarInk > 0.0)
+            (rods ??= new()).Add((0, springs.Length, startReach - endBarInk));
+        for (int c = 0; c < columnCount; c++)
+        {
+            // Column c is the right end of spring c (spring 0 runs from the bar line), so its
+            // rod spans springs c + 1 .. the last — the layout's (column, allSprings.Length).
+            int column = c + 1;
+            double reach = right[c] - endBarInk;
+            if (reach > 0.0 && column < springs.Length)
+                (rods ??= new()).Add((column, springs.Length, reach));
+        }
+        if (rods == null)
+            return default;
+        var rodded = SpringSolver.ApplyRods(springs, rods);
+        for (int s = 0; s < springs.Length; s++)
+            if (!rodded[s].Equals(springs[s]))
+                return rodded;
+        return default;
     }
 
     /// <summary>

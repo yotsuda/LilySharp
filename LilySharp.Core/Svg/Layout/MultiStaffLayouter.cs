@@ -1440,6 +1440,110 @@ internal sealed class MultiStaffLayouter
         KeySignatureChangeItem? LeadingKeyChange = null);
 
     /// <summary>
+    /// How far each of measure <paramref name="measureIndex"/>'s columns' own ink reaches past
+    /// the column, on each side — LilyPond's <c>keep_inside_line_ = col->extent (col, X_AXIS)</c>,
+    /// negated on the left. ONE home for the system layout's keep-inside rods and the break
+    /// gate's line-end springs (<see cref="MeasureSpringData.LineEndSprings"/>), so a bar is
+    /// priced for ending a line exactly as the layout will hold it (RULES §5.4).
+    /// </summary>
+    /// <remarks>
+    /// The reaches, joined by max per column: a syllable (centred on its column's alignment
+    /// extent), a chord symbol (its whole width right, nothing left), the musical ink (a note
+    /// head right, an accidental left) and a metronome mark (its whole ink right).
+    /// LILYPOND-REF: lily/simple-spacer.cc:431-432 get_column_description — every column but
+    ///   the line starter keeps its extent inside the line; :497-502 get_line_forces adds the
+    ///   rod of each column to the candidate line's END column.
+    /// ⚠️ THE METRONOME MARK was not in this list until session 735 — LilyPond's MetronomeMark
+    /// is an element of its column (its X-parent the meter's break-align group, or the musical
+    /// column when there is no meter: lily/metronome-engraver.cc:80-135), so its ink is part of
+    /// the column's extent. MEASURED (Lab sessions/p734/lb): `\tempo "Più mosso" 4. = 76` on a
+    /// bar that ends a candidate line widens that line's natural length by 1.647, and with it
+    /// LilyPond breaks 7/6/5/7 where Lily# broke 6/6/6/7 and drew the mark past the right margin
+    /// when the line did end there.
+    /// The mark is priced where Lily# DRAWS it (MusicMarkEngraver.CalculateXPosition): on its
+    /// timing column, so the reach is its whole ink width — or, at a bar opening with a meter
+    /// change, from that meter's ink left, which is no column of the spring chain: that reach
+    /// is RETURNED, measured from the chain's start (the left end of spring 0, past the opening
+    /// bar line's ink). One standing on the line-start prefix's meter
+    /// (<paramref name="tempoOnPrefix"/>) is in LilyPond's line-starting column, which keeps
+    /// nothing inside.
+    /// ⚠️ Unpriced: a mark stood beside a section label (<c>markTempo beside</c>) reaches further
+    /// right by the label, and the score's OPENING mark is merged in by the engraver
+    /// (BuildAllMarks), not read from <c>MusicMarks</c> — it opens the first line, on its meter.
+    /// </remarks>
+    /// <param name="tempoOnPrefix">True when a measure-start metronome mark here is drawn on
+    /// the line-start prefix's meter: this measure opens the line and the prefix engraves one.</param>
+    /// <returns>How far ink standing on no column reaches right of the spring chain's start
+    /// (a meter-aligned metronome mark), 0 when none does.</returns>
+    internal static double ColumnOverhangs(
+        MultiStaffScore score, int measureIndex, ImmutableArray<Spring> springs,
+        List<Fraction> allTimings, List<Measure> allMeasures,
+        IndexBuckets<LyricItem> lyricsByMeasure, IndexBuckets<ChordNameItem> chordsByMeasure,
+        IReadOnlyList<(double Left, double Centre)> alignmentEdges,
+        Func<LyricItem, (double Left, double Centre)?>? ownEdge,
+        bool tempoOnPrefix, Span<double> left, Span<double> right)
+    {
+        // The five per-column tables this reads once and drops — the lyric reaches, the chord
+        // widths and the musical overhangs — are slices of one drawer the thread keeps
+        // (ScratchArray); the overhang pair is the caller's. MEASURED (session 533's array
+        // census at HEAD, Release, the reader's corpus, eight forward keystrokes a book): 3.99
+        // bars a keystroke, 1,490 B of fresh arrays each keystroke.
+        int columnCount = allTimings.Count;
+        var columnScratch = ScratchArray.Take(ref t_columnScratch, 5 * columnCount);
+        var lyricLeft = columnScratch.AsSpan(0, columnCount);
+        var lyricRight = columnScratch.AsSpan(columnCount, columnCount);
+        var chordWidth = columnScratch.AsSpan(2 * columnCount, columnCount);
+        var musicalLeft = columnScratch.AsSpan(3 * columnCount, columnCount);
+        var musicalRight = columnScratch.AsSpan(4 * columnCount, columnCount);
+        LyricSpacing.InkReachPerColumn(
+            score.TextMetrics, springs, allTimings, measureIndex, lyricsByMeasure, score.IsLeadSheet,
+            alignmentEdges, lyricLeft, lyricRight, ownEdge);
+        SpacingRules.ChordInkRightReachPerColumn(score.TextMetrics,
+            allTimings, measureIndex, chordsByMeasure.At(measureIndex),
+            includeAttached: !score.IsLeadSheet, chordWidth);
+        // …and so does the MUSICAL ink on the column, which is the rest of
+        // col->extent (col, X_AXIS).
+        SpacingRules.MusicalInkOverhangsPerColumn(
+            score.TextMetrics, allMeasures, allTimings, musicalLeft, musicalRight);
+        for (int c = 0; c < left.Length; c++)
+        {
+            // A syllable is centred on its column's alignment extent, so it reaches
+            // w/2 - he.centre left and w/2 + he.centre right; a chord symbol is
+            // anchored at its ink left (scm/define-grobs.scm:837-855), so it reaches
+            // its WHOLE width right and nothing at all left.
+            left[c] = Math.Max(lyricLeft[c], musicalLeft[c]);
+            right[c] = Math.Max(Math.Max(lyricRight[c], chordWidth[c]), musicalRight[c]);
+        }
+
+        double startReach = 0.0;
+        foreach (var mark in ScoreSideTables.TempoMarks(score).At(measureIndex))
+        {
+            if (mark.Position == MusicMarkPosition.End)
+                continue;
+            double width = MetronomeMarkGeometry.Ink(score.TextMetrics,
+                mark.Text, mark.TempoText, mark.TempoBeatUnit, mark.TempoDots,
+                mark.SwingSubdivision).Width;
+            if (MusicMarkEngraver.IsMeasureStartTempo(mark) && mark.Position == MusicMarkPosition.Beginning)
+            {
+                if (tempoOnPrefix)
+                    continue;
+                var primary = score.PrimaryContentStaff.PrimaryVoice.Measures[measureIndex];
+                if (SpacingRules.OpeningTimeChangeInkLeft(score.TextMetrics, primary) is { } meterLeft)
+                {
+                    startReach = Math.Max(startReach, meterLeft
+                        - SpacingRules.GetBarlineWidth(primary.StartBarline) + width);
+                    continue;
+                }
+            }
+            int c = allTimings.IndexOf(mark.AnchorTiming);
+            if (c < 0)
+                continue;
+            right[c] = Math.Max(right[c], width);
+        }
+        return startReach;
+    }
+
+    /// <summary>
     /// Solves the line-start break-align column table for the system opening at
     /// <paramref name="startMeasureIndex"/> — ONE derivation shared by the spring model
     /// (<see cref="LineStartSpringForLine"/>), the measure layout
@@ -1600,6 +1704,10 @@ internal sealed class MultiStaffLayouter
         // the left. Not symmetric: a note head reaches its full width right and nothing left,
         // while a centred chord symbol reaches half its width both ways.
         var measureColumnOverhangs = new List<(double[] Left, double[] Right)>();
+        // Per measure: how far ink on no column reaches right of its spring chain's start (a
+        // meter-aligned metronome mark — ColumnOverhangs' return), rodded to the line's end
+        // with the columns' reaches.
+        var measureStartReaches = new List<double>();
         // Per measure: its lyric lines' edge geometry, for the cross-bar lyric rods below
         // (empty on every measure of an unsung score — the whole machinery is inert there).
         var measureLineEdges = new List<ImmutableArray<LyricSpacing.LyricLineEdge>>();
@@ -1629,6 +1737,7 @@ internal sealed class MultiStaffLayouter
                 measureBarlineWidths.Add(0);
                 measureColumnOverhangs.Add(
                     (System.Array.Empty<double>(), System.Array.Empty<double>()));
+                measureStartReaches.Add(0.0);
                 measureLineEdges.Add(ImmutableArray<LyricSpacing.LyricLineEdge>.Empty);
                 continue;
             }
@@ -1645,6 +1754,7 @@ internal sealed class MultiStaffLayouter
                 measureBarlineWidths.Add(0);
                 measureColumnOverhangs.Add(
                     (System.Array.Empty<double>(), System.Array.Empty<double>()));
+                measureStartReaches.Add(0.0);
                 measureLineEdges.Add(ImmutableArray<LyricSpacing.LyricLineEdge>.Empty);
                 continue;
             }
@@ -1709,22 +1819,6 @@ internal sealed class MultiStaffLayouter
             // memoized per score, and not asked for at all on an unsung book.
             var ownEdge = score.Lyrics.IsDefaultOrEmpty
                 ? null : LyricSpacing.OwnVoiceEdgeProvider(score);
-            // The five per-column tables this loop reads once and drops — the lyric reaches,
-            // the chord widths and the musical overhangs — are slices of one drawer the
-            // thread keeps (ScratchArray); the overhang pair below is the answer and stays.
-            // MEASURED (session 533's array census at HEAD, Release, the reader's corpus,
-            // eight forward keystrokes a book): 3.99 bars a keystroke, 1,490 B of fresh
-            // arrays each keystroke.
-            int columnCount = allTimings.Count;
-            var columnScratch = ScratchArray.Take(ref t_columnScratch, 5 * columnCount);
-            var lyricLeft = columnScratch.AsSpan(0, columnCount);
-            var lyricRight = columnScratch.AsSpan(columnCount, columnCount);
-            var chordWidth = columnScratch.AsSpan(2 * columnCount, columnCount);
-            var musicalLeft = columnScratch.AsSpan(3 * columnCount, columnCount);
-            var musicalRight = columnScratch.AsSpan(4 * columnCount, columnCount);
-            LyricSpacing.InkReachPerColumn(
-                score.TextMetrics, springs, allTimings, i, lyricsByMeasure, score.IsLeadSheet,
-                alignmentEdges, lyricLeft, lyricRight, ownEdge);
             // The measure's lyric line edges, for the cross-bar rods below and the
             // line-start lyric floor — read off the FINAL reserved springs, the same
             // chain ApplyRods will span.
@@ -1733,30 +1827,14 @@ internal sealed class MultiStaffLayouter
                 : LyricSpacing.MeasureLineEdges(
                     score.TextMetrics, springs, allTimings, i, lyricsByMeasure,
                     score.IsLeadSheet, alignmentEdges, ownEdge));
-            SpacingRules.ChordInkRightReachPerColumn(score.TextMetrics,
-                allTimings, i, chordsByMeasure.At(i), includeAttached: !score.IsLeadSheet, chordWidth);
             var leftOverhangs = new double[allTimings.Count];
             var rightOverhangs = new double[allTimings.Count];
-            for (int c = 0; c < leftOverhangs.Length; c++)
-            {
-                // A syllable is centred on its column's alignment extent, so it reaches
-                // w/2 - he.centre left and w/2 + he.centre right; a chord symbol is
-                // anchored at its ink left (scm/define-grobs.scm:837-855), so it reaches
-                // its WHOLE width right and nothing at all left.
-                double chord = c < chordWidth.Length ? chordWidth[c] : 0.0;
-                leftOverhangs[c] = c < lyricLeft.Length ? lyricLeft[c] : 0.0;
-                rightOverhangs[c] = Math.Max(
-                    c < lyricRight.Length ? lyricRight[c] : 0.0, chord);
-            }
-            // …and so does the MUSICAL ink on the column, which is the rest of
-            // col->extent (col, X_AXIS).
-            SpacingRules.MusicalInkOverhangsPerColumn(
-                score.TextMetrics, allMeasures, allTimings, musicalLeft, musicalRight);
-            for (int c = 0; c < leftOverhangs.Length; c++)
-            {
-                leftOverhangs[c] = Math.Max(leftOverhangs[c], musicalLeft[c]);
-                rightOverhangs[c] = Math.Max(rightOverhangs[c], musicalRight[c]);
-            }
+            // A measure-start metronome mark OPENING this line stands on the prefix's meter,
+            // in LilyPond's line-starting column — which carries no keep-inside rod.
+            measureStartReaches.Add(ColumnOverhangs(score, i, springs, allTimings, allMeasures,
+                lyricsByMeasure, chordsByMeasure, alignmentEdges, ownEdge,
+                tempoOnPrefix: i == startMeasureIndex && prefix.HasTime,
+                leftOverhangs, rightOverhangs));
             measureColumnOverhangs.Add((leftOverhangs, rightOverhangs));
 
             if (i == startMeasureIndex && springs.Length > 0)
@@ -1910,6 +1988,11 @@ internal sealed class MultiStaffLayouter
                     if (rightReach > 0.0 && column < allSprings.Length)
                         rods.Add((column, allSprings.Length, rightReach));
                 }
+                // Ink on no column — a metronome mark on the meter a bar opens with — is held
+                // from the measure's chain start, the left end of its spring 0.
+                double startReach = measureStartReaches[m] - lineEndBarInk;
+                if (startReach > 0.0 && columnOffset < allSprings.Length)
+                    rods.Add((columnOffset, allSprings.Length, startReach));
                 columnOffset += measureSprings[m].Length;
             }
         }

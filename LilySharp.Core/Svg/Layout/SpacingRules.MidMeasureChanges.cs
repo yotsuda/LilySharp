@@ -429,6 +429,45 @@ internal static partial class SpacingRules
                   ? BetweenChangeItemsSpace(change, next) : 0);
 
     /// <summary>
+    /// The ink left of the time signature a mid-line measure OPENS with, from the measure's
+    /// X — where the renderer draws it (SharedRenderer.Noteheads' opening-change arm: the
+    /// opening bar line's ink, the bar line's space-alist distance to the first change, then
+    /// each change's advance) — or null when the measure opens with no meter change.
+    /// </summary>
+    /// <remarks>
+    /// The metronome mark at such a bar aligns its left on this ink
+    /// (MusicMarkEngraver.CalculateXPosition) and is held inside the line from it
+    /// (MultiStaffLayouter.ColumnOverhangs). ⚠️ The renderer keeps its own walk (it threads a
+    /// clef opening the bar, which hangs before the bar line and takes no part here); the
+    /// ledger point tempo.x.mid-line-meter-change holds the two to one number — it reads the
+    /// mark this places against the meter the renderer draws, EXACT at 0.
+    /// </remarks>
+    internal static double? OpeningTimeChangeInkLeft(Rendering.ScoreTextMetrics fonts, Measure measure)
+    {
+        double x = double.NaN;
+        var items = measure.Items;
+        for (int k = 0; k < items.Length; k++)
+        {
+            var item = items[k];
+            if (item.Duration != Fraction.Zero)
+                return null;
+            if (item is not (KeySignatureChangeItem or TimeSignatureChangeItem))
+                continue;
+            if (double.IsNaN(x))
+                x = (measure.StartBarline != BarlineType.None
+                        ? EngravingDefaults.BarlineDrawnWidth(measure.StartBarline) : 0)
+                    + GetBarlineToItemSpace(item);
+            if (item is TimeSignatureChangeItem)
+                return x;
+            var next = k + 1 < items.Length
+                       && items[k + 1] is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem
+                ? items[k + 1] : null;
+            x += ChangeColumnGlyphAdvance(fonts, item, next);
+        }
+        return null;
+    }
+
+    /// <summary>
     /// Where <paramref name="change"/> sits inside its change column, measured from the
     /// column's origin. Zero for the first change; later ones follow their predecessors'
     /// widths and the break-align gap between them.

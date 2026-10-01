@@ -92,7 +92,13 @@ internal readonly record struct MeasureSpringData(
     // natural length beyond the spring 0 swap, added with it. 0 on every other measure.
     double LineStartRunIdealDelta = 0,
     double LineStartRunMinDelta = 0,
-    double LineStartRunNaturalDelta = 0)
+    double LineStartRunNaturalDelta = 0,
+    // The springs this measure gets when it ENDS a line: Springs with its columns'
+    // keep-inside-line rods to the line's end column applied (SystemBreaker.LineEndSprings,
+    // from MultiStaffLayouter.ColumnOverhangs — the reaches the layout rods). Default when
+    // no rod binds; the breaker swaps it in for a line's last measure as it swaps
+    // LineStartSpring in for its first.
+    ImmutableArray<Spring> LineEndSprings = default)
 {
     /// <summary>Value equality, the spring vector included element by element — an
     /// ImmutableArray compares by reference on its own, which would make every
@@ -116,7 +122,8 @@ internal readonly record struct MeasureSpringData(
            && LineStartRunIdealDelta == other.LineStartRunIdealDelta
            && LineStartRunMinDelta == other.LineStartRunMinDelta
            && LineStartRunNaturalDelta == other.LineStartRunNaturalDelta
-           && SpringsEqual(Springs, other.Springs);
+           && SpringsEqual(Springs, other.Springs)
+           && SpringsEqual(LineEndSprings, other.LineEndSprings);
 
     public override int GetHashCode()
         => HashCode.Combine(IdealWidth, MinWidth, InverseStretchStrength, InverseCompressStrength,
@@ -331,6 +338,13 @@ internal sealed class KnuthPlassBreaker
             cumForce[i + 1] = cumForce[i]
                 + (springData[i].BreakPermission == BreakPermission.Force ? 1 : 0);
         }
+        // What a line ENDING at measure m gains in its five sums from m's line-end springs
+        // (MeasureSpringData.LineEndSprings) — ideal, min, the two Hooke sums, the natural
+        // length. Null on the many books where no measure carries any.
+        double[]? lineEndDeltas = null;
+        for (int m = 0; m < n; m++)
+            if (!springData[m].LineEndSprings.IsDefault)
+                LineEndDelta(springData[m], lineEndDeltas ??= new double[5 * n], 5 * m);
 
         // The DP state is (break index, LINE COUNT), as LilyPond's is (break index, system
         // index): dp[j, k] is the least demerits for measures 0..j-1 in exactly k lines,
@@ -436,6 +450,18 @@ internal sealed class KnuthPlassBreaker
                     ref idealSum, ref minSum, ref invStretchSum, ref invCompressSum);
                 double naturalSum = cumNatural[j] - cumNatural[i]
                     + LineStartNaturalDelta(springData[i]);
+                // …and its LAST measure with the springs the layout's keep-inside-line rods
+                // leave it when it ends the line (they never touch spring 0, which the
+                // line-start swap above replaces, so a one-bar line takes both).
+                if (lineEndDeltas != null)
+                {
+                    int e = 5 * (j - 1);
+                    idealSum += lineEndDeltas[e];
+                    minSum += lineEndDeltas[e + 1];
+                    invStretchSum += lineEndDeltas[e + 2];
+                    invCompressSum += lineEndDeltas[e + 3];
+                    naturalSum += lineEndDeltas[e + 4];
+                }
 
                 // ⚠️ There is deliberately NO "this line is too underfull to consider" rule
                 // here. LilyPond has none: an underfull line is PRICED — a big positive
@@ -679,7 +705,7 @@ internal sealed class KnuthPlassBreaker
             if (d.Springs.IsDefault)
                 return false;
             rigidWidth += d.RigidWidth;
-            var springs = d.Springs;
+            var springs = m == j - 1 && !d.LineEndSprings.IsDefault ? d.LineEndSprings : d.Springs;
             for (int s = 0; s < springs.Length; s++)
             {
                 var spring = m == i && s == 0 && d.LineStartSpring is { } lineStart
@@ -764,6 +790,23 @@ internal sealed class KnuthPlassBreaker
         foreach (var s in d.Springs)
             natural += Math.Max(s.MinDistance, s.IdealDistance);
         return natural;
+    }
+
+    /// <summary>What swapping a line's last measure onto its line-end springs does to the five
+    /// sums the line is priced from (ideal, min, the stretch and compress Hooke sums, the
+    /// natural length), written at <paramref name="at"/>.</summary>
+    private static void LineEndDelta(in MeasureSpringData d, double[] into, int at)
+    {
+        for (int s = 0; s < d.Springs.Length; s++)
+        {
+            Spring before = d.Springs[s], after = d.LineEndSprings[s];
+            into[at] += after.IdealDistance - before.IdealDistance;
+            into[at + 1] += after.MinDistance - before.MinDistance;
+            into[at + 2] += after.InverseStretchStrength - before.InverseStretchStrength;
+            into[at + 3] += after.InverseCompressStrength - before.InverseCompressStrength;
+            into[at + 4] += Math.Max(after.MinDistance, after.IdealDistance)
+                            - Math.Max(before.MinDistance, before.IdealDistance);
+        }
     }
 
     /// <summary>What swapping a line's first measure onto its line-start spring does to the

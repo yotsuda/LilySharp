@@ -2629,6 +2629,15 @@ internal static class MusicMarkEngraver
     /// LILYPOND-REF: scm/define-grobs.scm RehearsalMark —
     ///   break-align-symbols (staff-bar key-signature clef).
     /// </remarks>
+    /// <summary>
+    /// A metronome mark standing at its bar's FIRST moment — break-aligned on the meter there
+    /// (CalculateXPosition), and priced from it (MultiStaffLayouter.ColumnOverhangs) — rather
+    /// than on a later note's column. Read off the timing: the item index counts the key and
+    /// meter changes the bar opens with.
+    /// </summary>
+    internal static bool IsMeasureStartTempo(MusicMarkItem mark)
+        => mark.AnchorItemIndex <= 0 || mark.AnchorTiming == Semantics.Fraction.Zero;
+
     private static double CalculateXPosition(
         ScoreTextMetrics fonts,
         MusicMarkItem mark, MeasureLayout measureLayout,
@@ -2665,7 +2674,12 @@ internal static class MusicMarkEngraver
         // break-align prefix. Index 0 (first note) stays a measure-start tempo
         // and falls through to the break-align logic below.
         // LILYPOND-REF: metronome-engraver.cc — mark attached at its moment.
-        if (mark.Type == MusicMarkType.Tempo && mark.AnchorItemIndex > 0)
+        // ⚠️ "Mid-measure" is the MOMENT, not the item index: a bar opening with a key or meter
+        // change carries those items first, so a mark at the bar's first moment has an index
+        // past them (2 under a key + meter change). Until session 735 that index sent it here,
+        // to the note column, instead of to the break-aligned meter below
+        // (IsMeasureStartTempo).
+        if (mark.Type == MusicMarkType.Tempo && !IsMeasureStartTempo(mark))
         {
             // Resolve the note column the mark sits over. On a grand staff the
             // staves share timing columns, but each voice indexes its OWN notes,
@@ -2691,14 +2705,18 @@ internal static class MusicMarkEngraver
         // tempo-mark.ly header). At a line start that column is the prefix's meter; with
         // no meter to align on, the mark sits over the first notational element of the
         // measure instead ("Gardner Read, Music Notation p.278", LilyPond's own comment).
-        // ⚠️ LILYSHARP-OWN limit: a mid-line meter CHANGE is not a break-align column in
-        // this model (MidMeasureChangeGaps stands in), so a tempo at such a bar takes the
-        // musical-column arm where LilyPond would align it on the changed meter.
+        // MID-LINE, a bar OPENING with a meter change aligns the mark on that meter's ink left
+        // the same way (SpacingRules.OpeningTimeChangeInkLeft, where the renderer draws it).
+        // ⚠️ Until session 735 such a mark took the musical-column arm — a LILYSHARP-OWN limit
+        // noted here since the meter change is not a break-align column in this model — and
+        // stood on the bar's first note, a key change and a meter right of LilyPond's (01's
+        // "Più mosso" at a 3/4→6/8, E♭→c bar: 5.08 right, Lab sessions/p735).
         // LILYPOND-REF: lily/metronome-engraver.cc:109-135 stop_translation_timestep —
         //   break-align parent when a support was acknowledged, currentMusicalColumn
         //   otherwise; scm/output-lib.scm:498-504 self-aligned-on-breakable.
         if (mark.Type == MusicMarkType.Tempo && mark.Position == MusicMarkPosition.Beginning)
         {
+            bool opensLine = false;
             if (prefixTimeSignatureX != null)
             {
                 for (int i = 0; i < systems.Length; i++)
@@ -2710,9 +2728,14 @@ internal static class MusicMarkEngraver
                     double tsX = prefixTimeSignatureX(i);
                     if (!double.IsNaN(tsX))
                         return tsX;
+                    opensLine = true;
                     break; // line start without a meter → the musical column below
                 }
             }
+            if (!opensLine && !measures.IsDefault && measureLayout.MeasureIndex < measures.Length
+                && SpacingRules.OpeningTimeChangeInkLeft(fonts, measures[measureLayout.MeasureIndex])
+                    is { } meterLeft)
+                return measureLayout.X + meterLeft;
             if (!measureLayout.Columns.IsDefaultOrEmpty)
                 return measureLayout.X + measureLayout.GetXForTiming(mark.AnchorTiming);
             if (measureLayout.Items.Length > 0)
