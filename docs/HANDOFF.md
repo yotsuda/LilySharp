@@ -118,6 +118,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第733セッション（2026-10-01・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで作業に着手して」＝第732 の次の候補: `condensedStaff` の 2 声目の前打音）。`-Start p733`（HEAD `3b5a7aff`・未 push 40）＝full **10612 / 0 / 2 / 10614**（引継ぎと一致）。
+⑴ ★ `33d121e3` **`condensedStaff` の 2 声目の前打音は*既に* DOWN だった＝起票（第726「collect 時は声 0」）が誤り**: 第284 から、後続パートは共有する段の自分の位置（base）で collect される（`CollectScore` の `staffVoiceSlots`）＝`ProcessGraceRegion` は声 2 を読み、項目と群の列の両方に `GraceStemDown` を刻んでいた。
+- 実測（Lab `sessions/p733/cond`）: 同じ音楽を 1 パートの `voice { } { }`（＝第726 が LP と並べた形・LP 側は `<< \a \\ \b >>`）で書いた本と、data-pos を伏せて SVG がバイト同一。
+- 直したのは誤った註（`MeasureCollector.cs` の `ProcessGraceRegion`）と網 +1（`SharedStaffVoiceSlotTests.ALaterPartsGraceOnASharedStaffPointsDown`）。毒（後続パートを声 0 で collect）で新しい網と既存 6 本が赤。描画は不変＝掃きは不要。
+残り（第732 から・どれも観測者なし／⒝）: 3 列以上の弧の rod・2 桁の主音符の数字の左の張り出し・前打音の列にまたがる rod の部品ごとの扱い。
+★ `-End p733 -DiffBase 3b5a7aff`＝full **10613 / 0 / 2 / 10615**（網 +1）・門 全 OK・Core `+` 3 行（註だけ・REF／OWN 0）。7.6・7.7: 該当なし（コードの振る舞いは変えていない）。push はユーザー（未 push 42）。
+判定: 前打音の島の残りはどれも観測者なし／⒝＝**次は §1.0 ⒜ の項目（tuplet の数字の送り幅・MusicXML の 5/4 の全小節休符）から選ぶのが筋**。どちらも今便の文脈を使わない＝続けても新しい会話でも差は小さい（既定は続ける）。
+
+## 以下は第732セッションの経緯
+
 ### 1.1 第732セッション（2026-10-01・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」＝第731 の次の一手: 前打音の島の残り）。`-Start p732`（HEAD `7493d7b1`・未 push 38）＝full **10606 / 0 / 2 / 10608**（引継ぎと一致）。
@@ -140,23 +152,6 @@ LP 実測（Lab `sessions/p732/compress`・行幅 36/33/30mm）: 縮む行では
 - 7.7: 「縮む行では前打音の鎖は固い」の畳みを外した側。`LeadingGraceRunSpan`／`LeadingGraceRunStretch` の 2 本を `LeadingGraceRun` 1 本に畳んだ。`ApplyRods` の手写しの blocking も `RaisedToBlockingForce` 1 つへ。
 - ユーザー「続けて」→「厳密に移植」→「劣化なしで」→ snapshot「再ベース」・ベンチ「今」。push はユーザー（未 push 40）。
 - 判定: 次の候補（`condensedStaff` の 2 声目の前打音）は collector 側の話で、今便の solver の計器とは別の家＝**新しい会話で始めるのが有利**。今便の材料は全部 HANDOFF と Lab にあり、会話の文脈に頼る部分がない。
-
-## 以下は第731セッションの経緯
-
-### 1.1 第731セッション（2026-10-01・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」＝第730 の次の一手: TAB の前打音の間隔）。`-Start p731`（HEAD `29bbecdb`・未 push 36）＝full **10605 / 0 / 2 / 10607**（引継ぎと一致）。
-ユーザー「移植する」（AskUserQuestion）。
-⑴ ★ `af2aabad` **TAB だけの段の前打音は数字の列として並ぶ**: LP の `Note_spacing::get_spacing` で、TabStaff の符幹は見えない（`Stem::is_invisible`）＝stem_dir_correction は何もしない。床＝前打音の数字の半幅＋extra-spacing＋主音符の数字の左の張り出し＋extra-spacing。`GraceColumnGap` の left_head_end＝数字の右端。
-- 数字の半幅は `MeasureCollector.StampTabGraceDigits` が刻む。対象は、どの五線譜の段もその声部を持たない TAB 段だけ（`both` の本は五線譜の前打音の幅のまま＝LP も五線譜の列が支配する）。
-- ⒝ 開示: 数字は既定の大きさで測る（fonts{} は collector に届かない）。主音符の数字は 1 桁幅（2 桁のフレットはもっと左へ張り出す）。
-- 台帳 +1 `grace.tab.to-main`（`probes/tab-grace-slur.ly` NOSLUR＝TGH の弧なし・LP の数字中心間 1.4667）: 1.124 → **0.467**。残りは承認済みの大きい数字（主音符の数字の中心が列の 0.652 右、LP は ~0.12）で、列の間隔は LP の 1.3438 と 0.07 以内。
-- 弧の点: hand.span 0.655 → 0.363・acciaccatura.span 0.655 → 0.218・hand.end −0.509 → −0.443。
-- ⚠️ **inner.span は 0 → 0.176（後退）**: 同じ弦の前打音 2 つでは、大きい数字の床（~1.78）が rod の 1.5 を越える＝間隔ではなく数字の大きさの逸脱（why に書いた）。
-- 毒 5: 刻み＝4 点が戻る・headEnd＝2 赤・TAB の腕＝新しい点が 1.124 へ・mainLeft の 2 本＝点が動く（mainLeft を落とすと LP に*近づく*のは大きい数字との打ち消し＝式は LP のまま）。
-- 全 score の SVG（基準 `29bbecdb`・Lab `sessions/p731/svg/`）: 1199 枚中 5 枚＝実コーパスの前打音 4 冊と real-gone の `-tab` 頁だけ。y の集合と要素の数は同一＝改行は不動・x だけ。`both` 頁と snapshot は不動。
-残り: 縮む側の前打音の鎖・`condensedStaff` の 2 声目の前打音・3 列以上の弧の rod・2 桁の主音符の数字の左の張り出し（⒝）。
-★ `-End p731 -DiffBase 29bbecdb`＝full **10606 / 0 / 2 / 10608**（台帳 +1）・門 全 OK・Core `+` 134 行に REF 2／OWN 0（床の式は `Note_spacing::get_spacing` の REF の下・刻みは五線譜の段の有無を見るだけの配管で ⒝ を doc に開示）。7.6: 床の各項は ⒜（LP の項をそのまま・数字の幅だけ Lily# の承認済みの大きさ）。7.7: 「TAB の前打音も五線譜の前打音の幅で並べる」の畳みを外した側。ユーザー「続けて」→「移植する」。push はユーザー（未 push 38）。判定: 前打音の島の残り（縮む鎖・condensedStaff・3 列の rod）は今便と同じ `GraceColumns` の計器の上に立つ＝**この会話で続けるのが有利**（圧縮はまだ無い）。
 
 ## 2. 開いている作業
 

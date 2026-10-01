@@ -129,6 +129,23 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第731セッションの経緯
+
+### 1.1 第731セッション（2026-10-01・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第730 の次の一手: TAB の前打音の間隔）。`-Start p731`（HEAD `29bbecdb`・未 push 36）＝full **10605 / 0 / 2 / 10607**（引継ぎと一致）。
+ユーザー「移植する」（AskUserQuestion）。
+⑴ ★ `af2aabad` **TAB だけの段の前打音は数字の列として並ぶ**: LP の `Note_spacing::get_spacing` で、TabStaff の符幹は見えない（`Stem::is_invisible`）＝stem_dir_correction は何もしない。床＝前打音の数字の半幅＋extra-spacing＋主音符の数字の左の張り出し＋extra-spacing。`GraceColumnGap` の left_head_end＝数字の右端。
+- 数字の半幅は `MeasureCollector.StampTabGraceDigits` が刻む。対象は、どの五線譜の段もその声部を持たない TAB 段だけ（`both` の本は五線譜の前打音の幅のまま＝LP も五線譜の列が支配する）。
+- ⒝ 開示: 数字は既定の大きさで測る（fonts{} は collector に届かない）。主音符の数字は 1 桁幅（2 桁のフレットはもっと左へ張り出す）。
+- 台帳 +1 `grace.tab.to-main`（`probes/tab-grace-slur.ly` NOSLUR＝TGH の弧なし・LP の数字中心間 1.4667）: 1.124 → **0.467**。残りは承認済みの大きい数字（主音符の数字の中心が列の 0.652 右、LP は ~0.12）で、列の間隔は LP の 1.3438 と 0.07 以内。
+- 弧の点: hand.span 0.655 → 0.363・acciaccatura.span 0.655 → 0.218・hand.end −0.509 → −0.443。
+- ⚠️ **inner.span は 0 → 0.176（後退）**: 同じ弦の前打音 2 つでは、大きい数字の床（~1.78）が rod の 1.5 を越える＝間隔ではなく数字の大きさの逸脱（why に書いた）。
+- 毒 5: 刻み＝4 点が戻る・headEnd＝2 赤・TAB の腕＝新しい点が 1.124 へ・mainLeft の 2 本＝点が動く（mainLeft を落とすと LP に*近づく*のは大きい数字との打ち消し＝式は LP のまま）。
+- 全 score の SVG（基準 `29bbecdb`・Lab `sessions/p731/svg/`）: 1199 枚中 5 枚＝実コーパスの前打音 4 冊と real-gone の `-tab` 頁だけ。y の集合と要素の数は同一＝改行は不動・x だけ。`both` 頁と snapshot は不動。
+残り: 縮む側の前打音の鎖・`condensedStaff` の 2 声目の前打音・3 列以上の弧の rod・2 桁の主音符の数字の左の張り出し（⒝）。
+★ `-End p731 -DiffBase 29bbecdb`＝full **10606 / 0 / 2 / 10608**（台帳 +1）・門 全 OK・Core `+` 134 行に REF 2／OWN 0（床の式は `Note_spacing::get_spacing` の REF の下・刻みは五線譜の段の有無を見るだけの配管で ⒝ を doc に開示）。7.6: 床の各項は ⒜（LP の項をそのまま・数字の幅だけ Lily# の承認済みの大きさ）。7.7: 「TAB の前打音も五線譜の前打音の幅で並べる」の畳みを外した側。ユーザー「続けて」→「移植する」。push はユーザー（未 push 38）。判定: 前打音の島の残り（縮む鎖・condensedStaff・3 列の rod）は今便と同じ `GraceColumns` の計器の上に立つ＝**この会話で続けるのが有利**（圧縮はまだ無い）。
+
 ## 以下は第730セッションの経緯
 
 ### 1.1 第730セッション（2026-10-01・YT-DELL2）
