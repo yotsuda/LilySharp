@@ -79,7 +79,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- **tuplet の数字の送り幅が LP より 0.07 広い**（同梱書体の「3」0.96 対 LP 0.888＝書体の問題）。tab の LP 差の他は第694 で閉じた
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
@@ -88,6 +87,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **U9 ユーザー報告 `space.lys` の小節頭の余白＝保留（ユーザー判断「一旦この件は忘れて」・第477）**。4 通りすべてで再現せず LP とも同比率（Lab `sessions/p477/`）。⚠️ **毒は今後も同じフォルダで回してよい**（ユーザー決定）＝毒の最中のビルドはユーザー側で避ける
 - ⏸ **perf の島（⒭⁸・⒮*・⒩⁴・⒨・⒯ …）は第615 で区切り＝一時停止（ユーザー判断・忠実度が先）**。本文は `HANDOFF-ARCHIVE.md`「§1.0 から移した perf の島」（第660 に移した）
 - ★★ **U10 ユーザーのコーパスに*効いていない弦番号*が 473 件（39 冊）**（第486・LYS5003・Lab `sessions/p486/lys5003-corpus.txt`）: 書いた `\N` の弦では弾けない音＝Lily# は黙って別の弦に描く（LP も同じ）。**ユーザー決定「放置」（第523）＝本は直さない・描画は今までと同じ**
+
+- **tab の斜めの tuplet bracket が LP より 0.2〜0.25 高い**（`tt-cap`・第736 ⑵ で pin つきの計器が初めて見せた）・`tabtuplet2`／`tabtuplet4` の右の鉤 +0.28 は第736 ⑶ で閉じた。計器 Lab `sessions/p736/cb/cmp.ps1 -BooksDir …\books1722`（数字を LP の大きさにした 16 冊）。⚠️ **LP を `-dbackend=svg` で描く計器は `lysc ly --pin-fonts` 必須**（第690〜第695 の 6 本は無しで、数字の幅・高さが汎用 serif だった＝第736 ⑴⑵）
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
 - ⚠️ **U11（`Hold the Line` の page1 が LP 8 系・Lily# 7 系）＝第547 が「移植できる欠陥は無い」と確定・第573 が lead を閉じた（頁 DP の僅差 0.030576 対 0.031049＝1e-3 級の差でどちらにも倒れる）＝提案しない**（全文は §1.1 第547・第573＝ARCHIVE・Lab `sessions/p547/`・`sessions/p573/u11/`）。重複 mark は第558 が畳んだ（LYS4021）＝page 割りは動かない
@@ -118,6 +119,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第736セッション（2026-10-01・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。`-Start p736`（HEAD `09038a4f`・未 push 63）＝full **10641 / 0 / 2 / 10643**（引継ぎと一致）。
+⑴ §1.0 ⒜「tuplet の数字の送り幅が LP より 0.07 広い（書体の問題）」は**欠陥ではなかった＝計器の産物**。LP の TupletNumber の extent はどの数字も 0.956（font-size −2・C059 と TeX Gyre Schola で同じ＝LP に Lily# の Schola を `ly:font-config-add-font` で読ませて比べた・Lab `sessions/p736/fontcmp.ly`・`tupnum.ly`）＝隙間は両方 1.956。第694 の計器 `tupbr.ps1` は `lysc ly` を `--pin-fonts` なしで呼び `-dbackend=svg` で描いていた＝LP は数字を機械の汎用 serif で組み 0.888 と読めた（RULES 1239 の罠）。pin を足すと（`sessions/p736/tupbr-pinned.ps1`）水平 1.891..3.847 対 1.890..3.850・斜め 2.146..4.087 対 2.150..4.090＝一致。§1.0 から行を消し、`TupletBracketGapTests` の誤った註（「LP の gap は 1.874」）を直した。
+⑵ ★ **同じ罠の他の計器を pin つきで回し直した**（`lysc ly` を `--pin-fonts` なしで `-dbackend=svg` に通していたのは第690〜第695 の 6 本だけ・T7 の双子〔第321 の `sweep321.ps1`〕は cairo＝pin 済み・`LilyPondTabDigitHalfHeight`〔第634〕も pin 済みの値）:
+- 第694 の tab の Script（`ts4`）: pin すると数字に乗る 6 変種で LP が 0.03 遠い（LP の TabNoteHead の箱は C059 で ±0.621598＝高さ 1.243196・汎用 serif では 1.18）。`TabScriptAlignedSideTests` は「LP の高さ」1.6343 と pin なしの LP の値で組まれていた → **1.7218**（同梱の太字の数字のインク 0.72205／em）と pin した LP の値 3.3716／−3.3803／3.5476 に（Lab `sessions/p736/tsfix`・`scriptdump3.ily`）。製品は不変＝Lily# は元から LP どおりだった。
+- 第690 の tab の tuplet（`compare-bracket.ps1`・16 冊）: pin した LP に対し Lily# は 8 冊で 0.03 以内・残りは数字の大きさの決定（LP の大きさにすると消える）と beam の決定（0.56）・それ以外に **2 つ**: `tabtuplet2`／`tabtuplet4` の右の鉤 +0.28 と `tt-cap` の斜めの括弧 0.2〜0.25 高い（Lab `sessions/p736/cb`・`cmp.ps1`）。
+⑶ ★ `c03c61e8` **tab の声部の対を*記譜の*スカイラインで値付けしていた**（⑵ の +0.28 の原因）: `MeasureLayouter` の対の最小 `CalculateSkylineDistance`／`SeparationRodDistance` は音高の譜表位置の符頭・加線・記譜の符幹の旗を読む＝低い bass の弦の旗つき上向き 8 分が「五線の下の加線つきの音」（flag-low の 2.567）で組まれていた。LP の TabStaff は弦と同じ 2.289（D 弦と同じ）。tab の声部ではこの 2 つを読まない（スラー・トレモロ・前打音の rod は残す）。`bes,,8 bes,,4.`・`tuplet 3/2 { bes,,8 bes,,4 }`・休符つきが LP と一致（Lab `sessions/p736/dig`・`digits.ps1`）。網 `TabStemSpacingTests.ALowBassEighthIsNotSpacedAsALedgeredNote` 2・毒（`tabVoice = false`）で 2 赤。掃き（998 冊・1,199 枚）: **82 枚（81 冊・全部 tab・コーパス 74）**・段割れが変わったのは 2 冊: Universe "tab" 32 → 31（LP 31）／A Thousand Miles "tab" 20 → 23（Lily# の 2.8 の数字のとき。LP の大きさの数字では 23 → **19＝LP 19**）。snapshot 0 枚。full **10643 / 0 / 2 / 10645**。
+- ⚠ 未変更・観測者なし: `AddAccidentalReachRods` も tab の声部の（描かれない）臨時記号で rod を張りうる（試した 3 本は LP と一致＝噛まない）。
+★ `-End p736 -DiffBase 09038a4f`＝full **10643 / 0 / 2 / 10645**（網 +2）・門 全 OK。7.5: Core `+` 21 行・REF 1（spacing-spanner.cc の既存の引用を条件の内側へ移しただけ）・OWN 0＝読み直した。7.6: ⑶＝⒜（LP の TabStaff に無い grob を値付けしない）。7.7: 該当なし。push はユーザー（未 push 66）。
+判定: 次は §1.0 ⒜ の「tab の斜めの tuplet bracket 0.2〜0.25」（この便の計器 `cb/cmp.ps1` と `books1722` がそのまま使える）＝**この会話で続けるのが有利**（(a)＝今の文脈の上に立つ）。
+
+## 以下は第735セッションの経緯
+
 ### 1.1 第735セッション（2026-10-01・YT-DELL2）
 
 新しい会話（ユーザー「HANDOFF を読んで作業に着手して」）。`-Start p735`（HEAD `43d6e508`・未 push 61）＝full **10638 / 0 / 2 / 10640**（第734 の 10630 ＋ ⑶ の網 8＝一致）。
@@ -133,22 +148,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 残り（未値付け）: `markTempo beside` で標識の右に立つ速度記号の張り出し／gate は行末の小節の自分の列の rod だけ（前の小節から行末まで届く長い記号は layout だけが保つ）／1 小節の行で前置きの拍子に立つ速度記号を gate が余分に値付け。
 ★ `-End p735 -DiffBase 43d6e508`＝full **10641 / 0 / 2 / 10643**（網 +3）・門 全 OK・台帳 959 点（exact 765・OPEN 0）。7.5: Core `+` 306 行・REF 2（simple-spacer.cc・metronome-engraver.cc）・OWN 1＝この便が閉じた旧い限界の名を書いた註（新しい逸脱ではない）。7.6・7.7: 該当なし。push はユーザー（未 push 63）。
 判定: 次の候補は §1.0 ⒜／⒝ からで、どれもこの便の文脈（行末の rod）を使わない＝続けても新しい会話でも差は小さい（既定は続ける）。近いのは「残り（未値付け）」の 3 つだが、どれも観測者（実コーパスで動く本）が見つかっていない＝掃きで 0 冊。
-
-## 以下は第734セッションの経緯
-
-### 1.1 第734セッション（2026-10-01・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」＝第733 の残り: 01 のオッターヴァの表記の違い）。`-Start p734`（HEAD `ea92fa17`・未 push 57）＝full **10629 / 0 / 2 / 10631**（引継ぎと一致）。
-⑴ `264c5754` **twin のオッターヴァの表記を「8va」に**（01）: LP 2.26 の既定は「8」（`ottavation-numbers`）、ページの「8va」は 2026-08-02 のユーザー決定（`ottava-floor.ly`）＝ページは正しく、twin だけ食い違っていた。オッターヴァを書くパートの段に `\set Staff.ottavationMarkups = #ottavation-simple-ordinals` を書く（ペダル・指番号の `\set` と同じ形）。LP 2.26 で「8va」を確認。網 +1・毒で赤。書き出しだけ＝SVG 不変。full **10630 / 0 / 2 / 10632**。
-⑵ 01 の改行の違い（LP 7 小節／Lily# 6 小節）の**診断だけ**（fork・Lab `sessions/p734/lb` に README・Lab で commit 済み）: 原因は小節 13 の `\tempo "Più mosso"`。LP は列の中身を行の内側に収める（`lily/simple-spacer.cc:431-432 get_column_description`・`:497-502 get_line_forces`）＝小節 13 で終わる行の自然幅が +1.647 sp。Lily# は改行器が値付けしない（`SystemBreaker.cs:280` が明言）＋ページの組版も歌詞・コード・符頭だけ（`MultiStaffLayouter.cs:1736-1758`）。Lily# の力に +1.647 を足して LP の改行計算を回すと 7/13/18＝LP と一致（+1.0 では 6/12/18＝僅差）。⚠ LP 自身も svg の汎用フォントでは 6/6/6/7。**未実装の提案**: 速度記号の張り出しを列の中身に入れる（新プローブ＋台帳点）＋改行器が行末で同じ張り出しを値付け。全木の掃きで件数を数えてから。
-⑶ `c4959fd4` **import: 練習番号ごとに section を切り、音楽を 4 小節ずつ改行**（ユーザー依頼「適当な位置で改行」「セクションマークの位置でセクションを区切る」）: 以前は 1 section に全小節・パートごとに 1 行・`@mark` は行内。
-- mark ごとに section（名前は mark の文字が名前になれるとき＝大文字始まり英数字・数字だけなら `M12`）。`@mark` は音符に残し、label は隠す（`~`）＝**ページは不変**。行は 4 小節、ふつうでない小節線で改行。
-- ⚠ **書き直し（restate）が要る mark では切らない**: section 境界は拍子・調・音部記号を戻す→ section 頭で書き直すと、Lily# は `time`/`key` を読むたびに記号を描く（LP の \time と同じ）＝同じ記号が 2 度出る（round trip の `section-meter-resets-to-global-meter.lys` で 4/4 が再描画）。その小節自体の変更は書き直しではない。ヘッダーの time/key は「自分の小節で変えない切れ目」の多数決。残す mark は report に出す。
-- ⚠ **slur・hairpin が次の section を貫く mark でも切らない**（LYS4023。import の hairpin は終わりを持たない＝次の強弱まで）。
-- 反復・volta の切れ目は**今回から書き直す**（以前は書き直さず、後の小節をヘッダーの拍子・調で読んでいた）。flat の section は最長のパートまで（第 1 パートが 0 小節だと他が空になった・`inporder.lys`）。
-- 網: `MusicXmlSectionCutTests` 8 本・毒 7 種すべて赤。既存の round trip 3 本は空白を畳んで比べる形に。**全 998 冊の round trip（Lab `sessions/p734/imp/rt.ps1`・1,199 枚）で SVG 差 0**・504 冊で section が増えた。診断の差は既存の問題（パート間の小節数の違い LYS2007 が section ごとに出る・短い小節が section 頭に来て LYS2001→2006）だけ。
-- Bohemian（6 ファイル）を取り込み直し: SVG 同一・section A〜F（G・H は E♭ の書き直しが要るので F の中）。MIDI は tick 0 の拍子 meta が増えるだけ（既存の「パートごとに 1 つ」）。
-- 未決（ユーザーに聞く）: G・H も切りたいなら、Lily# 側で「section 頭の書き直しが前の section の残した値と同じなら描かない」にする（twin も重複 `\key` を省く）。言語の意味に触れる。
 
 ## 2. 開いている作業
 
