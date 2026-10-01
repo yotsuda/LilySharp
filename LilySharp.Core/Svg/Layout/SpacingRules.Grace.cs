@@ -167,14 +167,39 @@ internal static partial class SpacingRules
         for (int i = 0; i < notes.Length; i++)
         {
             offsets.Add(x);
-            double rightReach = GraceColumnRightReach(notes[i], beamed: i < beamedPrefix);
-            double leftReach = i + 1 < notes.Length
-                ? GraceColumnLeftReach(notes[i + 1])
-                : MainColumnLeftReach(mainItem);
+            bool beamed = i < beamedPrefix;
+            GraceColumnInfo? next = i + 1 < notes.Length ? notes[i + 1] : null;
+            bool nextBeamed = i + 1 < beamedPrefix;
+            double minDistance, correction;
+            if (!notes[i].IsRest && (next is { } n ? !n.IsRest : mainItem is not null))
+            {
+                // Two sounding columns: LilyPond's own Note_spacing pair — the skylines' distance
+                // for the minimum (a grace and its neighbour at different heights need not meet)
+                // and the optical stem correction on the ideal. MEASURED (Lab sessions/p728/first):
+                // 1.147939 / 1.647939 / 1.726510 where the flat reaches gave 1.417939 to all three.
+                // LILYPOND-REF: lily/note-spacing.cc:78-83 Note_spacing::get_spacing — the minimum; :111 the correction.
+                minDistance = SkylineFloorPair(
+                    ItemSkylineFactory.CreateGraceWishSkyline(notes[i], beamed, HorizontalDirection.Right),
+                    next is { } nc
+                        ? ItemSkylineFactory.CreateGraceWishSkyline(nc, nextBeamed, HorizontalDirection.Left)
+                        : ItemSkylineFactory.SharedWishLeftSkylineAtColumn(mainItem!, 0.0, 0.0)).SkyMin;
+                correction = GraceStemCorrection(notes[i], beamed, next, nextBeamed, mainItem,
+                    NoteSpacingParameters.Default, gp.SpacingIncrement);
+            }
+            else
+            {
+                // A REST on either side keeps the flat reaches (GraceColumnRightReach's remarks
+                // carry its glyph and the spacer's measured width) and no stem correction.
+                double rightReach = GraceColumnRightReach(notes[i], beamed);
+                double leftReach = next is { } nr
+                    ? GraceColumnLeftReach(nr)
+                    : MainColumnLeftReach(mainItem);
+                minDistance = rightReach + leftReach;
+                correction = 0;
+            }
             double gap = Math.Max(
-                GraceColumnGap(notes[i], dtMin, gp, rightReach + leftReach),
-                GraceDotRod(notes[i], beamed: i < beamedPrefix,
-                            i + 1 < notes.Length ? notes[i + 1] : null, mainItem));
+                GraceColumnGap(notes[i], dtMin, gp, minDistance, correction),
+                GraceDotRod(notes[i], beamed, next, mainItem));
             // A slur from this column to the next (or out to the main note) rods the two
             // columns the Slur's minimum-length apart — the rule SlurPairRod states for the
             // main grid. MEASURED (2.26.0, Lab sessions/p727/span/inner.ly): 1.5 with the slur,
@@ -225,11 +250,14 @@ internal static partial class SpacingRules
 
     /// <summary>One gap of a grace run — the spring, floored by the skyline distance.</summary>
     private static double GraceColumnGap(GraceColumnInfo left, double dtMin,
-                                         GraceSpacingParameters gp, double minDistance)
+                                         GraceSpacingParameters gp, double minDistance,
+                                         double stemCorrection)
     {
         var baseSpring = CreateGraceSpring(left.Length, gp, dtMin);
         // LILYPOND-REF: lily/note-spacing.cc:77 — ideal = base.ideal - increment + left_head_end.
-        double ideal = baseSpring.IdealDistance - gp.SpacingIncrement + GraceHeadEnd(left);
+        // LILYPOND-REF: lily/note-spacing.cc:111-113 stem_dir_correction — added, then floored at 0.
+        double ideal = Math.Max(0.0,
+            baseSpring.IdealDistance - gp.SpacingIncrement + GraceHeadEnd(left) + stemCorrection);
         // LILYPOND-REF: lily/note-spacing.cc:78-83 set_min_distance, then lily/spring.cc:122.
         return Math.Max(ideal, minDistance + SpringHeadroom);
     }

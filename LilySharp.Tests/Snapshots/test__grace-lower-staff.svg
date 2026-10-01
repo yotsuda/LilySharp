@@ -45,8 +45,8 @@
   <line x1="37.72" y1="25.43" x2="39.78" y2="25.43" stroke="#000000" stroke-width="0.200"/>
   <line x1="37.72" y1="24.43" x2="39.78" y2="24.43" stroke="#000000" stroke-width="0.200"/>
   <line x1="37.72" y1="23.43" x2="39.78" y2="23.43" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="15.44" y="27.93" font-size="2.83" data-pos="451"></text>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="16.86" y="27.43" font-size="2.83" data-pos="455"></text>
+  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="15.43" y="27.93" font-size="2.83" data-pos="451"></text>
+  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="16.85" y="27.43" font-size="2.83" data-pos="455"></text>
   <text class="music" x="18.28" y="26.93" font-size="4.00" data-pos="459"></text>
   <line x1="18.34" y1="27.08" x2="18.34" y2="30.43" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="21.28" y="26.43" font-size="4.00" data-pos="462"></text>
@@ -63,10 +63,10 @@
   <line x1="38.12" y1="23.43" x2="38.12" y2="28.43" stroke="#000000" stroke-width="0.130"/>
   <rect x="30.08" y="26.43" width="0.19" height="4.00" data-pos="468"/>
   <rect x="42.19" y="26.43" width="0.19" height="4.00" data-pos="492"/>
-  <line x1="16.29" y1="27.93" x2="16.29" y2="25.56" stroke="#000000" stroke-width="0.130" data-pos="443"/>
-  <line x1="17.71" y1="27.43" x2="17.71" y2="25.30" stroke="#000000" stroke-width="0.130" data-pos="443"/>
-  <polygon points="16.23,25.38 17.78,25.10 17.78,25.48 16.23,25.77" data-pos="443"/>
-  <polygon points="16.23,26.03 17.78,25.75 17.78,26.13 16.23,26.42" data-pos="443"/>
+  <line x1="16.28" y1="27.93" x2="16.28" y2="25.56" stroke="#000000" stroke-width="0.130" data-pos="443"/>
+  <line x1="17.70" y1="27.43" x2="17.70" y2="25.30" stroke="#000000" stroke-width="0.130" data-pos="443"/>
+  <polygon points="16.22,25.38 17.77,25.10 17.77,25.48 16.22,25.77" data-pos="443"/>
+  <polygon points="16.22,26.03 17.77,25.75 17.77,26.13 16.22,26.42" data-pos="443"/>
   <line x1="31.80" y1="24.93" x2="31.80" y2="22.56" stroke="#000000" stroke-width="0.130" data-pos="470"/>
   <line x1="33.22" y1="24.43" x2="33.22" y2="22.30" stroke="#000000" stroke-width="0.130" data-pos="470"/>
   <polygon points="31.74,22.38 33.28,22.10 33.28,22.48 31.74,22.77" data-pos="470"/>

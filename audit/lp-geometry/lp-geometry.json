@@ -1938,8 +1938,8 @@
       "probe": "grace-inner-slur.ly",
       "score": "FIRST",
       "lilypond": 1.9700094876883387,
-      "residual": -0.008887387,
-      "why": "Grace column spacing again (see slur.in-grace.inner.span), here between the first grace column and the main note. See slur.in-grace.inner.left-attachment for the port."
+      "residual": 0.0,
+      "why": "EXACT since session 728: the grace-to-main gap is a note spring with its stem correction (the main a'8 stem down, overlap 0.4: 1.426422 against the flat 1.417939 - see grace.column.same-direction.step). Before it: Grace column spacing again (see slur.in-grace.inner.span), here between the first grace column and the main note. See slur.in-grace.inner.left-attachment for the port."
     },
     "slur.in-grace.into-grace.left-attachment": {
       "probe": "grace-inner-slur.ly",
@@ -2059,6 +2059,34 @@
       "lilypond": 0.0,
       "residual": 0.0,
       "why": "EXACT from the start: the control of slur.rod.adjacent-columns - the same 30mm bar without the slur, whose two heads LilyPond and Lily# both stand at the same x (no skyline overlap, every spring at its minimum). It is what makes the 1.5 the rod's and nothing else's."
+    },
+    "grace.column.same-direction.step": {
+      "probe": "grace-column-skyline.ly",
+      "score": "UPTHIRD",
+      "lilypond": 1.647938619198038,
+      "residual": 0.0,
+      "why": "EXACT since session 728: a grace spring is a note spring (lily/note-spacing.cc:42-115, Note_spacing::get_spacing; lily/spacing-basic.cc:163-180 swaps only the duration space). Here the two graces' heads are two positions apart with both stems up, so stem_dir_correction's same-direction arm (:162-197) adds same-direction-correction 0.25 to the ideal: 1.397939 + 0.25. Lily# priced grace gaps with flat reaches and no correction until session 728 (SpacingRules.GraceColumns now reads ItemSkylineFactory.CreateGraceWishSkyline and SpacingRules.GraceStemCorrection) and drew 1.417939."
+    },
+    "grace.column.skyline.to-main": {
+      "probe": "grace-column-skyline.ly",
+      "score": "STEP",
+      "lilypond": 1.147938619198038,
+      "residual": 0.0,
+      "why": "EXACT since session 728 (see grace.column.same-direction.step): the last grace e'' and the main f' stand at heights whose skylines never meet, so the spring's minimum drops below the flat 1.417939 floor and its ideal, less the same-direction 0.25 (the main note is lower), wins: 1.397939 - 0.25."
+    },
+    "grace.column.up-to-down.to-main": {
+      "probe": "grace-column-skyline.ly",
+      "score": "TOMAINDN",
+      "lilypond": 1.726510047769468,
+      "residual": 0.0,
+      "why": "EXACT since session 728 (see grace.column.same-direction.step): grace stem up, main stem down, the two stems' bands overlap, so different_directions_correction (lily/note-spacing.cc:140-160) widens the ideal past the floor."
+    },
+    "grace.column.flag-low.to-main": {
+      "probe": "grace-column-skyline.ly",
+      "score": "FLAGLOW",
+      "lilypond": 1.7603527550021596,
+      "residual": 0.0,
+      "why": "EXACT since session 728 (see grace.column.same-direction.step): the flag of a grace d'8 meets only the upper part of the main c'4's column, so the skylines' distance is less than the flat flag reach (1.938627, which LilyPond reads too once the main note is a third higher - Lab sessions/p728/flag)."
     },
     "slur.beamed.reserved-text": {
       "probe": "slur-beam-reserve.ly",

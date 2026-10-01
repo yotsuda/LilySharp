@@ -578,6 +578,79 @@ internal static class ItemSkylineFactory
         return GraceSkyline(parts, ColumnElements.All, HorizontalDirection.Left);
     }
 
+    /// <summary>
+    /// The WISH's view of a GRACE column — the skyline the spring between two grace columns
+    /// (or the last grace and its main note) takes its minimum from: the note column's own
+    /// elements (heads, stem, flag), the accidentals too on the LEFT side, out of the grace's
+    /// fonts, in the grace column's own frame (origin the head's left edge, staff middle at
+    /// y = 0, y down), padded as <see cref="SharedWishLeftSkylineAtColumn"/> is.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-spacing.cc:78-83 Note_spacing::get_spacing — the spring's minimum is
+    ///   the distance between the two columns' separation skylines, with the right column's
+    ///   skyline-vertical-padding; a grace column's spring is a Note_spacing like any other
+    ///   (lily/spacing-basic.cc:163-180 only swaps the duration space).
+    /// The stem band is <see cref="SpacingRules.GraceStemBand"/>, the one the stem correction
+    /// reads (one Y-extent for both, as <see cref="AddStem"/> says of a full-size column).
+    /// MEASURED (2.26.0, Lab sessions/p728/first/q.ly): `\grace { d''16 e''16 } f'4` stands the
+    /// main note 1.147939 after the last grace — the e'' column's skyline and the f' column's
+    /// never meet, so the floor drops and the spring's ideal (less the same-direction 0.25)
+    /// wins; Lily# drew the flat-reach floor 1.417939 until session 728.
+    /// A REST column is not built here (<c>SpacingRules.GraceColumns</c> keeps its flat reach).
+    /// </remarks>
+    internal static HorizontalSkyline CreateGraceWishSkyline(
+        GraceColumnInfo column, bool beamed, HorizontalDirection direction)
+    {
+        var parts = new List<ColumnPart>();
+        if (!column.IsRest)
+        {
+            var font = column.Font;
+            int noteValue = GlyphMetrics.NoteValueOf(column.BaseDuration);
+            var head = GlyphMetrics.GetNoteheadBBox(font, noteValue);
+            var headOffsets = GraceColumnHeads.HeadOffsets(column);
+            var accidentalXs = direction == HorizontalDirection.Left
+                ? GraceColumnHeads.AccidentalOffsets(column)
+                : System.Collections.Immutable.ImmutableArray<double?>.Empty;
+            for (int i = 0; i < column.Heads.Length; i++)
+            {
+                double y = -column.Heads[i].StaffPosition / 2.0;
+                double hx = headOffsets.IsDefaultOrEmpty ? 0.0 : headOffsets[i];
+                parts.Add(ColumnPart.Head(y - head.Top, y - head.Bottom,
+                                          hx + head.Left, hx + head.Right));
+                if (i < accidentalXs.Length && accidentalXs[i] is { } ax
+                    && column.Heads[i].Accidental is { } accidental)
+                {
+                    var box = GlyphMetrics.GetAccidentalBBox(column.AccidentalFont, accidental);
+                    parts.Add(Accidental(y - box.Top, y - box.Bottom, ax, ax + box.Width));
+                }
+            }
+            if (SpacingRules.GraceStemBand(column, beamed) is { } stem)
+            {
+                double centreX = LayoutUtilities.StemX(0.0, stem.StemUp, noteValue,
+                    NoteheadStyle.Default, font);
+                double half = EngravingDefaults.StemThickness / 2;
+                parts.Add(ColumnPart.Ink(-stem.StemMax / 2.0, -stem.StemMin / 2.0,
+                    centreX - half, centreX + half));
+                // The flag of an unbeamed grace, hung from the stem's end as AddFlag hangs a
+                // full-size one, at the grace's flag font.
+                if (!beamed && noteValue >= 8
+                    && GlyphMetrics.GetFlagBBox(font, noteValue, stem.StemUp) is var flag
+                    && flag != default)
+                {
+                    double stemEndY = -(stem.StemUp ? stem.StemMax : stem.StemMin) / 2.0;
+                    var (flagYMin, flagYMax) = FlagInkBand(stemEndY, stem.StemUp, flag);
+                    parts.Add(ColumnPart.Ink(flagYMin, flagYMax, centreX, centreX + flag.Width));
+                }
+            }
+        }
+        var boxes = BoxesOf(parts, 0.0,
+            direction == HorizontalDirection.Left ? ColumnElements.WishLeft : ColumnElements.NoteColumn);
+        var skyline = HorizontalSkyline.FromBoxesPadded(
+            boxes, direction, SpacingRules.NoteColumnSkylineVerticalPadding);
+        HorizontalSkyline.GiveBoxList(boxes);
+        return skyline;
+    }
+
     /// <summary>A grace column's rod skyline out of its parts, in the grace column's own
     /// frame (staff middle line at y = 0), padded as every rod view is.</summary>
     private static HorizontalSkyline GraceSkyline(

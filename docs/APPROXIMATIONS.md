@@ -183,8 +183,8 @@
 ### `LilySharp.Core/Svg/Layout/HorizontalSkyline.cs`
 - **:178** outline. So the clearing is right and unobserved: a forgotten Clear here would
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
-- **:790** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
-- **:1067** NOT MEASURED — no ledger point reads a flag's draw x, and the last
+- **:863** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
+- **:1140** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
 - **:2435** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
 - **:2457** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
@@ -223,7 +223,7 @@
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
 - **:890** constant with a name, and no ledger point reached it.
 ### `LilySharp.Core/Svg/Layout/SpacingRules.Grace.cs`
-- **:286** observed by: NOTHING. No ledger point covers a grace spacer, and the drawn
+- **:314** observed by: NOTHING. No ledger point covers a grace spacer, and the drawn
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
 - **:418** rest. No point observes it — see the branch below.
 ### `LilySharp.Core/Svg/Layout/TrillSpannerEngraver.cs`

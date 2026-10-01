@@ -8790,6 +8790,19 @@ internal static class LpGeometryProbes
     private static readonly string GDF = GraceSlurBook("GDF", "treble", "voice { s1 } { c4 grace { d8 } c4 e4 f4 } |");
     private static readonly string GDA = GraceSlurBook("GDA", "treble", "voice { s1 } { c4 acciaccatura { b8 } c4 e4 f4 } |");
     private static readonly string GDC = GraceSlurBook("GDC", "treble", "voice { s1 } { c4 grace { <d f>8 } c4 e4 f4 } |");
+    /// <summary>
+    /// A GRACE SPRING IS A NOTE SPRING (probes/grace-column-skyline.ly): the skylines'
+    /// distance for its minimum and the optical stem correction on its ideal
+    /// (lily/note-spacing.cc:42-115). GKU: same direction, heads two positions apart (+0.25).
+    /// GKS: the last grace and its main note never meet (−0.25 wins over the old floor).
+    /// GKD: grace up, main down, overlapping stems.
+    /// </summary>
+    private static readonly string GKU = GraceSlurBook("GKU", "treble", "c'4 grace { c'16 e'16 } f4 g4 a4 |");
+    private static readonly string GKS = GraceSlurBook("GKS", "treble", "c'4 grace { d'16 e'16 } f4 g4 a4 |");
+    /// <summary>GKF: a flagged grace whose flag meets only part of the main column (d'8 → c'4).</summary>
+    private static readonly string GKF = GraceSlurBook("GKF", "treble", "c'4 grace { d8 } c4 g4 a4 |");
+    private static readonly string GKD = GraceSlurBook("GKD", "treble", "c'4 grace { f16 g16 } a'4 c'4 d'4 |");
+
     /// <summary>The lower voice's grace OPENS the second bar: the bar line's optical correction
     /// reads the grace column's DOWN stem (SpacingRules.LeadGraceOpticalCorrection).</summary>
     /// <summary>
@@ -16401,6 +16414,11 @@ internal static class LpGeometryProbes
         new("grace.voice-two.chord.flag", GDC, g => g.GlyphAboveStaffMiddle('', 0)),
         new("grace.voice-two.column.to-main", GDF, g => g.NoteheadAnchorStep(1)),
         new("grace.voice-two.bar-opening", GDO, g => g.BarlineRightToNextNotehead(0)),
+        // A grace spring's skyline minimum and stem correction. See GKU.
+        new("grace.column.same-direction.step", GKU, g => g.NoteheadAnchorStep(1)),
+        new("grace.column.skyline.to-main", GKS, g => g.NoteheadAnchorStep(2)),
+        new("grace.column.up-to-down.to-main", GKD, g => g.NoteheadAnchorStep(2)),
+        new("grace.column.flag-low.to-main", GKF, g => g.NoteheadAnchorStep(1)),
         // The slur's spacing rod on the main grid. See SRR.
         new("slur.rod.adjacent-columns", SRR, g => g.NoteheadAnchorStep(1), NarrowPaper),
         new("slur.rod.no-slur-control", SRN, g => g.NoteheadAnchorStep(1), NarrowPaper),

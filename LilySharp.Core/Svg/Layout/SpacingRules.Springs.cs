@@ -1065,6 +1065,71 @@ internal static partial class SpacingRules
     }
 
     /// <summary>
+    /// <see cref="StemSpacingInfo"/> for a GRACE column — its stem's Y band in staff positions
+    /// (+up) and its head range — or null for a rest or a stemless value.
+    /// </summary>
+    /// <remarks>
+    /// The same two ends as a full-size stem's, each asked of the grace: the head side is the
+    /// grace head's own attachment (the column's font — design 14 at magstep −3, the way the
+    /// cue head reads design 13, see <see cref="StemBeginPosition"/>), the tip the grace stem
+    /// rule (GrobFontSize.GraceStemDetails: length-fraction 0.8, no-stem-extend) from the head
+    /// at the tip's end. LILYPOND-REF: lily/stem.cc:934-963 internal_calc_stem_begin_position.
+    /// ⚠️ A BEAMED grace's tip is its UNBEAMED one: the quanted beam is answered after the
+    /// spacing it depends on (GraceNoteEngraver.QuantGraceBeam reads the column offsets). The
+    /// two readers — the wish skyline and the stem correction — meet a neighbour only near the
+    /// HEAD side of a grace stem in every regime measured (Lab sessions/p728/first).
+    /// <c>BeamId</c> is null: no grace shares a beam with its neighbour across a gap the
+    /// correction prices (the knee arm), and the flag gate is the caller's (it knows the beam).
+    /// </remarks>
+    internal static (bool StemUp, double StemMin, double StemMax, double HeadMin, double HeadMax,
+                    int? BeamId)?
+        GraceStemBand(GraceColumnInfo column, bool beamed)
+    {
+        if (column.IsRest || column.Heads.IsDefaultOrEmpty)
+            return null;
+        int noteValue = column.BaseDuration.Numerator == 1 ? column.BaseDuration.Denominator : 1;
+        if (noteValue < 2)
+            return null;
+        bool up = column.StemUp;
+        int lo = column.Lowest.StaffPosition, hi = column.Highest.StaffPosition;
+        double begin = (up ? lo : hi)
+                       + (up ? 1 : -1) * GlyphMetrics.GetNoteheadStemAttachment(column.Font, noteValue).Y * 2.0;
+        double end = StemCalculator.CalculateStemEndPosition(
+            up, StemCalculator.GetDurationLog(noteValue), up ? hi : lo, GrobFontSize.GraceStemDetails);
+        return (up, Math.Min(begin, end), Math.Max(begin, end), lo, hi, null);
+    }
+
+    /// <summary>
+    /// The optical stem correction on a grace spring — <see cref="StemCorrectionOf"/> on the
+    /// grace's own band (<see cref="GraceStemBand"/>) against the next column's: the next grace's,
+    /// or the main note's.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-spacing.cc:111 Note_spacing::get_spacing — stem_dir_correction is
+    ///   added to the ideal of EVERY note spring, a grace one included.
+    /// LILYPOND-REF: lily/note-spacing.cc:264-266 stem_dir_correction — the left flag gate,
+    ///   asked here of the grace (an unbeamed eighth or shorter).
+    /// MEASURED (2.26.0, Lab sessions/p728/first/q.ly): `\grace { c''16 e''16 }` 1.647939 apart
+    /// (ideal 1.397939 + same-direction 0.25); `\grace { f'16 g'16 } a''4` grace to main 1.726510
+    /// (up to down, overlap); `\grace { f'16( g'16 } a'8)` 1.426422 (a' stem down, overlap 0.4).
+    /// </remarks>
+    internal static double GraceStemCorrection(GraceColumnInfo left, bool leftBeamed,
+        GraceColumnInfo? nextGrace, bool nextBeamed, MusicItem? mainItem,
+        NoteSpacingParameters noteParams, double increment)
+    {
+        if (!leftBeamed && !left.IsRest
+            && left.BaseDuration.Numerator == 1 && left.BaseDuration.Denominator >= 8)
+            return 0;
+        var leftBand = GraceStemBand(left, leftBeamed);
+        var rightBand = nextGrace is { } g ? GraceStemBand(g, nextBeamed) : StemSpacingInfo(mainItem);
+        MusicItem? nextItem = nextGrace is { } ng
+            ? GraceColumnHeads.StandIn(ng, sourcePosition: 0, stemUpOverride: ng.StemUp)
+            : mainItem;
+        return StemCorrectionOf(leftBand, rightBand, prevItem: null, nextItem,
+            accidentalsSeen: true, noteParams, increment);
+    }
+
+    /// <summary>
     /// Where the stem MEETS THE HEAD, in staff positions (+up) — the head-side end of
     /// the stem's y-extent. Not the head centre: the stem attaches a fraction of the
     /// head height off centre (up-stem above, down-stem below).
