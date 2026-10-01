@@ -129,6 +129,32 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第737セッションの経緯
+
+### 1.1 第737セッション（2026-10-02・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第736 の判定: tab の斜めの tuplet bracket）。`-Start p737`（HEAD `70122cce`・未 push 66）＝full **10643 / 0 / 2 / 10645**（引継ぎと一致）。
+⑴ **tab の斜めの tuplet bracket（`tt-cap` 0.2〜0.25）は欠陥ではなかった＝beam の決定（`uniformBeamedLength`・第569・第694 ユーザー決定「維持」）の帰結**。LP の Beam の positions を直接読むと（Lab `sessions/p737/beamdump.ily`）1 本目の beam は LP と同一・2 本目（`g,8[ g,8]`）だけ 0.56 低く、括弧の右の bound はその列＝右端が下がり傾きが緩む。`TabStaffGeometry` の `uniformBeamedLength` を一時的に false にすると `tt-cap` は LP と 0.04 以内（8.32／5.84 対 8.36／5.85）・`tt-beam`／`tt-nest` の 0.56 も 0＝第690 の 16 冊は決定を外せば全部 LP。製品は不変・§1.0 ⒜ の行を閉じた（pin の警告だけ残した）。
+⑵ 第736 の残りの pin なし計器も回し直した: 第695 の `scriptcmp.ps1`（`ns` 28 冊）は pin あり・なしで 252 行すべて同じ＝結論は不変（Lab `sessions/p737/ns-*.txt`）。これで 6 本とも済み。
+⑶ §1.0 ⒜「双子の LP 失敗 2」を読んだ＝**本の側・Lily# は既に警告している**（4 弦 bass の最低弦 E1 より下の音: You're the One (-1) は `a,,,4`・`g,,,8` など 1 オクターブ低い箇所、Mandy も同じ＋13/16 の小節）。LP は弦の無い TabNoteHead で `ly:grob-object: Wrong type argument` と自分の Guile が落ちる（Lab `sessions/p737/lpfail`）。書き出し側の欠陥ではない＝本の修正はユーザー。
+⑷ ユーザー選択「1」＝**section 頭の書き直しを描かない**（ユーザー決定 2026-10-02・LILYSHARP-OWN）。★ `e6581dab`:
+- LP は `\time` も `\key` も毎回描く（time-signature-engraver.cc:94-122 は spec を*同一性*で比べる・key-engraver.cc:141-152 は key イベントごとに作る）＝これは LP からの意図した逸脱。規則: **section の最初の瞬間に、境界の reset の前に効いていた値（拍子は書いたまま・調は主音込み・音部記号）と同じ `time`/`key`/`clef` は変化ではない**＝それも、その下の reset も描かない。section の途中の書き直しは LP どおり描く。
+- page: `MeasureBuilder.SectionHead`（prologue が reset 前の状態を武装・最初の時間のある item で外れる）。**builder の checkpoint に載せた**（reset を描かない head は clean boundary＝そこからの resume は prologue を飛ばす）＋`MeterInForce`（走る長さは約分された分数＝6/8 と 3/4 が同じになる）。key の merge の「署名が戻れば消す」は外した（E minor → G major は同じ ♯1 で描く＝第733 の決定・本当の書き直しは merge まで来ない）。
+- twin: `LilyPondExporter` が section play の restore と mark を head の間だけ保留し、書き直しの `\time`/`\key` は何も書かずに restore を取り消す（順序は従来どおり: restore → mark → section 自身の指示）。
+- importer: `LysWriter` の「書き直しが要る mark では切らない」を外した。
+- 網: `SectionResetTests` +10（書籍が parse することを確かめる形に＝最初の版は by-part の中に `m { }` を書いて parse に失敗し、空振りしうる形だった）・`LilyPondExporterSectionPlayTests` +1・`CollectSectionHeadResumeTests`（全 checkpoint から resume）・`MusicXmlSectionCutTests` を反転。`VoltaBracketShapeTests` の E2 が 4/4 を書き直す 1 件は twin から `\time` を外した LP で測り直した（69.304／70.234・Lab `sessions/p737/volta`）。毒 4 種（page の head・twin の head・旧 merge・checkpoint）すべて赤（checkpoint の毒は最初は緑＝網を足して赤）。
+- 掃き（998 冊・1,199 枚）: **6 枚（ユーザーの 2 冊: ABC・Reelin' In the Years＝2 番括弧の頭の 4/4）**。import の round trip 1,199 枚で SVG 差 0。**Bohemian（6 ファイル）は A〜H に切れた**・SVG は以前と同一・twin も LP で通る（Lab `sessions/p737/boh`）。SYNTAX_REFERENCE「Restating at a section's start」・CHANGELOG。full **10655 / 0 / 2 / 10657**。
+- 副産物: エディタの Split Sections もこれで切れ目の書き直しが描かれない（SYNTAX_REFERENCE の Split Sections 節＝切れ目ごとに meter／key／clef を書き直す）。
+★ `-End p737 -DiffBase 70122cce`＝full **10655 / 0 / 2 / 10657**（網 +12）・門 全 OK。7.5: Core `+` 288 行・REF 0／OWN 7＝7 つとも同じ 1 つの決定（page・twin・importer で同じ規則を名乗る）・LP の出典は OWN の註の中に engraver の行番号で書いた。7.6: ⒜＝LP からの宣言した逸脱（ユーザー決定）。7.7: 2 つ目の綴り＝page（collector）と twin（exporter）が同じ規則を別々に持つ（既存の section reset と同じ形・`CollectSectionHeadResumeTests` と `LilyPondExporterSectionPlayTests` が両側を見る）。push はユーザー（未 push 69）。
+⑸ ユーザー決定（2026-10-02・⑷ の作り直し）: 「**既定では変化しなければ描かない、明示的に何かを指定した場合は変化してなくても描く**」・「絶対に描かない」は要らない・綴りは **`key! ees major`**（`!` は keyword の直後＝値の後ろの `!` は破線の小節線と衝突するため。keyword の後ろには必ず値が来るので曖昧さが無い・`key ! ees` も可）。★ `65ab753b`:
+- 構文: `TimeSignatureGreen`／`KeySignatureGreen`／`ClefDeclarationGreen` の keyword の直後に nullable の bang の slot（`Parser.Directives.ParseForceMark`）・red に `ForceMark`／`IsForced`。**slot が 1 つずれた**＝`KeyDataPos` が `GetChild(1)` のままで key の data-pos が keyword を指し snapshot 35 枚が落ちた（直した・毒に入れた）。
+- page: 変化しない非強制のものは section の途中でも描かない（key＝調号と主音、time＝`MeterInForce`、clef＝効いている音部記号）。head では ⑷ どおり reset 前の値と比べる。
+- twin: page が描くものを書く＝変化しない `\time`／`\key` は書かない（LP は毎回描く）・強制は必ず書く・`clef!` は `\set Staff.forceClef = ##t`（LP の clef engraver は変化しない clef を描かない。2.26.0 で確認: forceClef ありで glyph が 1 つ多い・Lab `sessions/p737/force`）。
+- 網: `ForceMarkParserTests`（round trip・`key ! ees`・値の後ろの `!` は破線のまま）・`SectionResetTests`（途中の書き直しは描かない ×3＝旧 `ARestatementInsideASection_IsStillDrawn` を反転・途中の強制 ×3・head の強制 ×4）・`LilyPondExporterSectionPlayTests` +2。毒 9 種すべて赤（Lab `sessions/p737/poisons2.ps1`）。
+- 掃き（`fd87482e` 比・998 冊・1,199 枚）: **1 枚＝ホーリー&ブライト**（A2 の途中の `time 4/4` が section reset 後の 4/4 の中＝描かなくなった。本は 1 小節前に `time 2/4` を書き忘れている可能性＝本の修正はユーザー）。import の round trip 1,199 枚で SVG 差 0。GRAMMAR（KeyDecl／TimeDecl／MidMusicCommand）・SYNTAX_REFERENCE「Restating: `key!`, `time!`, `clef!`」・CHANGELOG を書き換え。full **10676 / 0 / 2 / 10678**。
+- ★ `-End p737 -DiffBase 70122cce`（2 回目）＝full **10676 / 0 / 2 / 10678**・門 全 OK。7.5: Core `+` 407 行・REF 0／OWN 7（⑷ と同じ 1 つの決定に `!` を足した）。7.6: ⒜＝LP からの宣言した逸脱。7.7: page と twin が同じ規則を別々に持つ（⑷ と同じ・両側に網）。未 push 71。
+- 残り（未着手）: LSP の semantic token で keyword 直後の `!` は小節線の色のまま（`SyntaxFacts` の barline 分類）・MusicXML 書き出しは変化しない key も従来どおり書く（page と一致させるかは未決）。
+判定: 次はまたユーザーの選択（第737 ⑶ の候補の残り: 5/4 の全小節休符の綴り・⒝ の設計項目、または ⑸ の残り 2 つ）。⑸ の残りなら今回の文脈がそのまま使える＝続けるのが少し得。それ以外なら新しい会話でも差は小さい。
 ## 以下は第736セッションの経緯
 
 ### 1.1 第736セッション（2026-10-01・YT-DELL2）
@@ -44347,4 +44373,40 @@ HANDOFF §1.0 の ⒜⒝⒞ にあった perf の項目を逐語で。§1.0 に�
 - ⚠️ **掃き終わった島（第434〜第456）＝*ここには戻らない*。根拠の全文は各便の §1＝ARCHIVE**（第496 が表を 3 行に畳んだ）。
   教訓だけ残す: **`GetOrAdd` の非 static factory はもう探さない**（第437）／`MusicSiteList.cs:83` は定数 hint で弁護できない（直すなら前回の数を憶える＝設計）／`OutsideStaffStacker:1171` の `toStore` は上限で直せない（第442）／
   **struct walk を歩く外側の iterator は太る**＝直すなら鎖ごと（第445）／census の hold1 欄は直し方を選べない（第451）／起票が外すのは値段より*直し方*（第455＝鍵がいつも添字なら地図ではなく配列）／**checkpoint は前と同値なら共有・walk の器は drawer**（第522・残りは `WalkCheckpoint` 本体 33 × ~330 B と path＝実仕事）
+
+#### ★★★ 文字列は C# の文法: `"…"` は C# の escape を解き（他は LYS0036）・`@"…"` は verbatim（`""` が引用符）（2026-09-30・第702・ユーザー決定「文字列のエ…
+
+読み手は `Syntax.StringLiteral` 1 軒（23 か所の `Trim('"')` を寄せた）。補間は未採用。**採るなら C# の `$"…{name}…"`**（ユーザーが最初 `@"…{fonts.serif}"` と書き、私が「`$` が補間・`@` は verbatim」と答え、**ユーザー確認「正しくは $"{var}" だね」**＝2026-09-30）。`@"…"` は verbatim 専用のまま＝後から `$"…"` を足しても今の文法と衝突しない（GRAMMAR の String に予約として 1 文）
+
+#### ★★★★ 和音・アルペジオは相対の枠を書く＝次の音は群のアンカー（文字モード＝先頭メンバーの素の文字・度数モード＝主音）± `>`/`>>` の後のマーク。メンバー自身のマークは枠に入らない。休符だけの群・`<>` は透…
+
+2026-09-16 の「読むが書かない」を改めた。ユーザー報告: `g1 \| <c e g>1 \| <f a c>` の `g1` を `f1` にすると `<c e g>` は動かず `<f a c>` だけ 1 オクターブ動く（和音の後の音が 2 つ前の単音を読む）。代償は単音と同じ連鎖＝`<c e g> \| <d f a> \| <g b d> \| <c e g>` は 1 オクターブ上がり、`<g b d>,` で戻す。**先頭メンバーの実音（LP の ret_first）にしない理由**: `<c, e g>` を貼り重ねても落ちない・`x <c, e g> b <c, e g>` の 2 和音が一致する。**度数モードを先頭の度数にしない理由**: 度数は主音から上へ積む（最寄りで選ばない）ので `<1 3 5> <5 7 2> <1 3 5>` が 1 オクターブ上がる。ユーザー指示「手元のコーパスは参考にしないで」（サンプルが少なく偏っている）
+
+#### ★★ ⒳⁵ 和音にも tie の outline の旗の箱を建てる（2026-09-23・第524・ユーザー決定「建てて」）
+
+第524 が LP 双子で測った: 建てると 2 冊の下の tie が LP に寄る（GT の幅 +0.47 → +0.04・LST の高さ +0.035 → exact）、上の tie は不変、動く頁は実コーパス 24 頁・2 冊、割当 ±0。台帳 `tie.width.chord-flag`／`tie.y.chord-flag`。残差 0.04 は第525 が閉じた（箱の Y＝blot/2・左端ではなかった） <!-- ledger: tie.width.chord-flag = 0 --> <!-- ledger: tie.y.chord-flag = -4.32e-07 -->
+
+#### ★★ §1.0 の判断待ち 7 件（2026-09-23・第523・ユーザー決定）＝⒮¹⁴ `LedgerLineSpannerEngraver` は消す／⒳⁷ 小節線の床は「効かない床」として計算しない／⒮¹² は第3…
+
+私が 7 件を perf に効く順に並べて訊いた答え。⒮¹⁴ は読み手がテストだけ・⒳⁷ は 2 便かけて動かせる本が見つからず・⒮¹² は門を支える母集団（第366 の 88 件）をスイートが持っていない・U10 は描画が変わらない。着手と結果は §1 第523
+
+#### ★★★ フレージング・スラーの綴りは `@phrasingSlur` … `@!phrasingSlur`（2026-09-22・第482・ユーザー決定＝3 択から選択・✅ `eedf4197`）
+
+既存の span（`@rit`…`@!rit`・`@ottava`…`@!ottava`・`@sustain`…`@!sustain`）と同じ型。名前は LP の grob 名 PhrasingSlur。LP の `\(` `\)` は「バックスラッシュはタブ譜専用・注釈は `@`」の方針に例外を作るので退けた。`@phrase` は `phrase` が予約語で使えない
+
+#### ★★★ 歌詞の音節はスラー・タイの中の音符を取らない（LP の `\lyricsto`）・`__` は線だけで音符を取らない・`_` は 1 つ取る（2026-09-24・第570・ユーザー決定「LP に合わせて」。旧＝…
+
+LP 実測 5 通り＝`LyricSlurMelismaTests`
+
+#### ★★★ full-notation のタブ譜では 8 分の群の符尾を 16 分の群と同じ理想の長さにする＝同じ弦の上の 8 分対と 16 分群の梁が揃う＝LP の `\tabFullNotation` から宣言して離れる…
+
+台帳 `beam.quant.tab.flat-*` 2 点が乖離を記録
+
+#### ★★★ tab の声部の spacing wish は LP の数字（TabNoteHead 既定の大きさ）で左の頭を読む＝Lily# の大きい数字（F9）ではない（2026-09-25・第576・ユーザー決定＝2 択か…
+
+LP は声部ごとの wish を平均し、tab の wish は数字を頭に読む（数字だけの tab は符尾の補正なし）。LP の数字で読めば列の ideal は LP と一致（Never Stop 抜粋で 4 桁）。Lily# の数字で読むと ideal は LP より約 +0.26 広がる見積り。**描く数字の大きさと、数字どうしを離す rod は Lily# のまま**
+
+#### ★★ 1 段目の indent は LP の 15mm＝楽器名の有無にかかわらず（2026-09-25・第586・ユーザー決定「楽器名の無い score の 1 段目の字下げを LP と合わせて」）
+
+`LayoutOptions.Indent` の既定が `LilyPondDefaultIndent`（8.535827）。紙の `indent`（0 も）はそのまま、`size` は側余白と同じく拡縮（`scm/paper.scm` の scalable-values）。双子は常に `indent = 15\mm`。**LP 実測の網は測った紙を言う**: 台帳は `RenderedGeometry.ProbePaper`（名前の無い probe は indent 0＝probe の `.ly` と同じ）、単体テストは `TestPaper`（`paper { indent 0 }` を本に足す）
 
