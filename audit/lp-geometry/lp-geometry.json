@@ -2123,6 +2123,55 @@
       "residual": 0.0,
       "why": "EXACT: the line's ordinary quarter spring, the control that fixes the force - it moved with the graces' share of the stretch (the run's springs now take part)."
     },
+    "slur.tab.grace.hand.string-to-attachment": {
+      "probe": "tab-grace-slur.ly",
+      "score": "TGH",
+      "lilypond": -1.002156948677093,
+      "residual": -0.332691379,
+      "why": "Since session 730 (see slur.tab.grace.hand.span). Not decomposed: the run is ~1.0 longer than LilyPond's (the tab grace spacing, open) and the digits are Lily#'s ratified larger ones (slur.tab.up.string-to-attachment); replacing only the half-digit by LilyPond's moved this by 0.08 and left the rest (Lab sessions/p730), so the span is the larger part."
+    },
+    "slur.tab.grace.hand.end": {
+      "probe": "tab-grace-slur.ly",
+      "score": "TGH",
+      "lilypond": -1.2388267106111481,
+      "residual": -0.509292856,
+      "why": "Since session 730 (see slur.tab.grace.hand.span). Not decomposed: the run is ~1.0 longer than LilyPond's (the tab grace spacing, open) and the digits are Lily#'s ratified larger ones (slur.tab.up.string-to-attachment); replacing only the half-digit by LilyPond's moved this by 0.08 and left the rest (Lab sessions/p730), so the span is the larger part."
+    },
+    "slur.tab.grace.hand.span": {
+      "probe": "tab-grace-slur.ly",
+      "score": "TGH",
+      "lilypond": 1.0722157275417576,
+      "residual": 0.655336855,
+      "why": "Since session 730 a tab slur bound on a grace column is drawn (it was skipped): the grace's own digit, DOWN when it starts in grace time (score-grace-settings). OPEN: the run's spacing on a TAB staff - LilyPond stands a tab grace 1.3438 before its main note without a slur (Lab sessions/p730/tg/nos.ly; the rod's 1.5 with one) because its columns are digits, where Lily# spaces a tab grace by the notation grace's reach (the flagged sixteenth's 1.9386, SpacingRules.GraceColumns). The longer bow then lies lower at both ends (see the attachments)."
+    },
+    "slur.tab.grace.acciaccatura.string-to-attachment": {
+      "probe": "tab-grace-slur.ly",
+      "score": "TGA",
+      "lilypond": -1.002156948677093,
+      "residual": -0.332691379,
+      "why": "The acciaccatura's automatic slur, the same bow as slur.tab.grace.hand.* (WithGraceSlurs now runs on a TAB staff too)."
+    },
+    "slur.tab.grace.acciaccatura.span": {
+      "probe": "tab-grace-slur.ly",
+      "score": "TGA",
+      "lilypond": 1.0722157275417576,
+      "residual": 0.655336855,
+      "why": "See slur.tab.grace.hand.span."
+    },
+    "slur.tab.grace.inner.string-to-attachment": {
+      "probe": "tab-grace-slur.ly",
+      "score": "TGI",
+      "lilypond": -1.0363785743392684,
+      "residual": -0.298469753,
+      "why": "Since session 730 (see slur.tab.grace.hand.span): both ends in grace time, the span is the slur rod's 1.5 page units in both engines (EXACT); the height is not decomposed (the ratified larger digit, and the attachment landing at the tab's fourth line)."
+    },
+    "slur.tab.grace.inner.span": {
+      "probe": "tab-grace-slur.ly",
+      "score": "TGI",
+      "lilypond": 1.0,
+      "residual": 0.0,
+      "why": "Since session 730 (see slur.tab.grace.hand.span): both ends in grace time, the span is the slur rod's 1.5 page units in both engines (EXACT); the height is not decomposed (the ratified larger digit, and the attachment landing at the tab's fourth line)."
+    },
     "slur.beamed.reserved-text": {
       "probe": "slur-beam-reserve.ly",
       "score": "A",

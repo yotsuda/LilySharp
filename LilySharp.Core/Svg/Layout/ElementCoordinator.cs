@@ -3541,14 +3541,15 @@ internal sealed class ElementCoordinator
     /// <remarks>
     /// Every entry to the slur layout calls it (LayoutSlurs, and the preliminary pass before it
     /// buckets slurs by system), so a staff whose only bows are grace slurs still has them;
-    /// a list that already holds them is returned as it is. A TAB staff has none (its grace
-    /// notes are digits alone — SharedRenderer.GraceNotes).
+    /// a list that already holds them is returned as it is. A TAB staff has them too since
+    /// session 730: LilyPond's TabVoice runs the same grace-init.ly slur over the grace's digit
+    /// (MEASURED, audit/lp-geometry/probes/tab-grace-slur.ly TGA), laid out by BuildTabSlurLayout.
     /// </remarks>
     internal static ImmutableArray<SlurItem> WithGraceSlurs(
         ImmutableArray<SlurItem> slurs, Score score, ImmutableArray<GraceNoteItem> graceNotes,
         int staffIndex, Model.Staff? staff)
     {
-        if (graceNotes.IsDefaultOrEmpty || staff is { IsTab: true })
+        if (graceNotes.IsDefaultOrEmpty)
             return slurs;
         foreach (var s in slurs)
             if (s.StartGraceGroup >= 0)
@@ -4563,19 +4564,13 @@ internal sealed class ElementCoordinator
                 // See BuildTabSlurLayout for LilyPond's two stages and the measurement.
                 if (staff is { IsTab: true })
                 {
-                    // ⚠️ NOT PORTED: a slur bound on a GRACE column is not drawn on a TAB staff.
-                    // LilyPond draws it there — DOWN, under the digits, the acciaccatura's too
-                    // (MEASURED, Lab sessions/p725/tabgrace, LilyPond 2.26.0) — but the tab
-                    // frame below arches every slur over the numbers and has no grace bound:
-                    // `grace { d16( } e4)` came out 3.4 off and on the wrong side, and
-                    // `grace { d16( e16) }` not at all. Left as the page was before session 725
-                    // (WithGraceSlurs skips a TAB staff for the same reason).
-                    if (startGrace is not null || endGrace is not null)
-                        continue;
+                    // A bound on a GRACE column is the grace's own digit (session 730; until then
+                    // such a slur was skipped here). MEASURED, audit/lp-geometry/probes/tab-grace-slur.ly.
                     var tabLayout = BuildTabSlurLayout(
                         fonts, score, slur, segment.IsFirst, segment.IsLast, segSystem,
                         staffIndex, staff, segStartX, segEndX, graceNotes,
-                        graceByMeasure, graceGeomCache, slurLayouts, beamByMember);
+                        graceByMeasure, graceGeomCache, slurLayouts, beamByMember,
+                        segment.IsFirst ? startGrace : null, segment.IsLast ? endGrace : null);
                     if (tabLayout != null)
                         slurLayouts.Add(tabLayout with { RenderMeasureIndex = segment.StartMeasureIndex });
                     continue;
@@ -4989,10 +4984,24 @@ internal sealed class ElementCoordinator
         Dictionary<int, List<int>>? graceByMeasure,
         GraceObstacleGeom?[]? graceGeomCache,
         IReadOnlyList<SlurLayout> slurLayouts,
-        Dictionary<(int Voice, int Measure, int Item), BeamLayout>? beamByMember)
+        Dictionary<(int Voice, int Measure, int Item), BeamLayout>? beamByMember,
+        (int Group, int Column)? startGrace = null, (int Group, int Column)? endGrace = null)
     {
         const double eps = 0.001;
         var voice = score.Voices[slur.VoiceIndex];
+        // A GRACE bound (session 730): the bound is the grace column's own digit — drawn centred
+        // on the column's X at TabConstants.GraceFretScale, with no stem (SharedRenderer.TabGraceDigits).
+        MusicItem? GraceBoundItem((int Group, int Column)? bound)
+        {
+            if (bound is not { } b || b.Group < 0 || b.Group >= graceNotes.Length)
+                return null;
+            var g = graceNotes[b.Group];
+            return b.Column < g.ColumnItemIndices.Length
+                ? ItemAt(voice, g.MeasureIndex, g.ColumnItemIndices[b.Column])
+                : null;
+        }
+        var startGraceItem = GraceBoundItem(startGrace);
+        var endGraceItem = GraceBoundItem(endGrace);
         // A FULL tab draws its stems and beams (LilyPond's \tabFullNotation reverts the
         // TabStaff's zero-length stems), so they enter the scorer as they do on a staff. A
         // numbers-only tab keeps LilyPond's default TabStaff: bare digits, then the 0.35.
@@ -5030,8 +5039,12 @@ internal sealed class ElementCoordinator
                 columns.Add((cx, items[i], mi, i));
             }
         }
-        if (columns.Count == 0)
+        // The edge items: the grace's own column where a bound is one, else the outermost
+        // covered main column.
+        if (columns.Count == 0 && (startGraceItem is null || endGraceItem is null))
             return null;
+        var leftItem = startGraceItem ?? columns[0].Item;
+        var rightItem = endGraceItem ?? columns[^1].Item;
 
         // The DRAWN stem's direction: a beamed stem takes its whole beam's (a full tab
         // draws beams; ArticulationEngraver asks the same), a lone one its own digits'.
@@ -5117,6 +5130,11 @@ internal sealed class ElementCoordinator
                 _ => null,
             } is { } voiceUp)
             written = voiceUp ? 1 : -1;
+        // A slur that STARTS in grace time is DOWN — the grace settings' Slur direction, in a
+        // TabVoice as in a Voice (MEASURED, tab-grace-slur.ly: all three DOWN).
+        // LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings — (Voice Slur direction ,DOWN).
+        if (written == 0 && startGraceItem is not null)
+            written = -1;
         bool curveUp = written > 0;
         if (written == 0)
         {
@@ -5137,19 +5155,24 @@ internal sealed class ElementCoordinator
         // so it reads the nearest covered column instead and keeps the system-edge X.
         // LILYPOND-REF: lily/slur-scoring.cc:555-557 get_base_attachments (real edge) and
         //   :600-614 breakable_bound_extent (broken).
-        var startCol = geom.EdgeDigitColumn(columns[0].Item, top: curveUp);
-        var endCol = geom.EdgeDigitColumn(columns[^1].Item, top: curveUp);
+        var startCol = geom.EdgeDigitColumn(leftItem, top: curveUp);
+        var endCol = geom.EdgeDigitColumn(rightItem, top: curveUp);
+        // A grace digit is drawn at TabConstants.GraceFretScale, so its ink box — the head the
+        // base attachment clears — is that much smaller.
+        double startScale = startGraceItem is not null ? TabConstants.GraceFretScale : 1.0;
+        double endScale = endGraceItem is not null ? TabConstants.GraceFretScale : 1.0;
         double startDigitY = geom.StringY(startCol.StringNum);
         double endDigitY = geom.StringY(endCol.StringNum);
-        double startY = startDigitY + outward * (halfDigit + 0.5 * space);
-        double endY = endDigitY + outward * (halfDigit + 0.5 * space);
+        double startY = startDigitY + outward * (halfDigit * startScale + 0.5 * space);
+        double endY = endDigitY + outward * (halfDigit * endScale + 0.5 * space);
 
         // A full tab's stems, in the frame the staff path hands the scorer (ResolveSlurEdge,
         // BuildSlurObstacles): the stem stands on the digits' X centre (SharedRenderer.TabStemX),
         // a beamed stem ends on its beam's outer face, a lone one where the renderer ends it.
         // A lone stem's flag joins its extent (TabStemOf), as on the staff.
-        var leftStem = isFirst ? TabStemOf(columns[0], leftEdge: true) : default;
-        var rightStem = isLast ? TabStemOf(columns[^1], leftEdge: false) : default;
+        // A tab grace has no stem (SharedRenderer.TabGraceDigits draws the bare number).
+        var leftStem = isFirst && startGraceItem is null ? TabStemOf(columns[0], leftEdge: true) : default;
+        var rightStem = isLast && endGraceItem is null ? TabStemOf(columns[^1], leftEdge: false) : default;
         // LILYPOND-REF: lily/slur-scoring.cc:549-557 get_base_attachments — a stem pointing
         //   the slur's way and beamed on the inner side: its end, then dir·0.5·staff_space.
         if (leftStem.Beamed && leftStem.BeamedInner && leftStem.StemUp == curveUp)
@@ -5159,8 +5182,14 @@ internal sealed class ElementCoordinator
 
         // The fret digits sit a TabHeadCenterOffset right of their note columns
         // (see EngravingDefaults), plus the chord zigzag of the digit actually attached to.
-        double startX = segStartX + (isFirst ? EngravingDefaults.TabHeadCenterOffset + startCol.Dx : 0);
-        double endX = segEndX + (isLast ? EngravingDefaults.TabHeadCenterOffset + endCol.Dx : 0);
+        // A grace digit is drawn CENTRED on its column's X (the run's own placement), so it
+        // takes no TabHeadCenterOffset.
+        double startX = segStartX + (isFirst
+            ? (startGraceItem is not null ? startCol.Dx * startScale : EngravingDefaults.TabHeadCenterOffset + startCol.Dx)
+            : 0);
+        double endX = segEndX + (isLast
+            ? (endGraceItem is not null ? endCol.Dx * endScale : EngravingDefaults.TabHeadCenterOffset + endCol.Dx)
+            : 0);
         if (endX - startX < 0.5)
             return null;
 
@@ -5198,8 +5227,8 @@ internal sealed class ElementCoordinator
         // stencil-less), so the edge info carries only the head width the min-length
         // snap-back and the tilt shift read — LilyPond's slur_head_x_extent_. A full tab's
         // edge carries its stem as well, which the stem-attachment X rule reads.
-        var leftEdge = leftStem with { HeadWidth = isFirst ? startCol.HalfWidth * 2 : 0.0 };
-        var rightEdge = rightStem with { HeadWidth = isLast ? endCol.HalfWidth * 2 : 0.0 };
+        var leftEdge = leftStem with { HeadWidth = isFirst ? startCol.HalfWidth * 2 * startScale : 0.0 };
+        var rightEdge = rightStem with { HeadWidth = isLast ? endCol.HalfWidth * 2 * endScale : 0.0 };
 
         var tabSlur = new SlurItem(
             slur.StartStaffPosition, slur.EndStaffPosition, curveUp,

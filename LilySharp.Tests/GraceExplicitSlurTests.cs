@@ -117,28 +117,26 @@ public class GraceExplicitSlurTests
     }
 
     /// <summary>
-    /// ⚠️ A DISCLOSED GAP, pinned so it is not lost: on a TAB staff a slur bound on a grace
-    /// column is not drawn. LilyPond draws it — DOWN, under the digits (Lab sessions/p725/
-    /// tabgrace) — but Lily#'s tab slur frame arches over the numbers and has no grace bound
-    /// (ElementCoordinator.LayoutSlurs' TAB arm). When that port lands this test goes red.
+    /// On a TAB staff a slur bound on a grace column is drawn — the grace's own digit is the
+    /// bound (ElementCoordinator.BuildTabSlurLayout, session 730; until then it was skipped and
+    /// this test pinned the gap). LilyPond draws it DOWN, under the digits
+    /// (audit/lp-geometry/probes/tab-grace-slur.ly; ledger slur.tab.grace.*).
     /// <para>
-    /// It counts the BOWS (the Bézier paths), not the page: since session 727 the slur's spacing
-    /// rod (SpacingRules.GraceColumns — LilyPond rods a slur's two columns 1.5 apart whether or
-    /// not the tab draws the curve) moves the written run's columns, so the two pages differ by
-    /// the spacing alone.
+    /// It counts the BOWS (the Bézier paths), not the page: the slur's spacing rod moves the
+    /// written run's columns (session 727), so the two pages differ by spacing as well.
     /// </para>
     /// </summary>
     [Theory]
     [InlineData("c,4 r g,, r | c, r grace { d16( } e4) g, |", "c,4 r g,, r | c, r grace { d16 } e4 g, |")]
     [InlineData("c,4 r g,, r | c, r grace { d16( e16) } f4 g, |", "c,4 r g,, r | c, r grace { d16 e16 } f4 g, |")]
-    public void OnATabStaff_AGraceSlurIsNotDrawnYet(string written, string control)
+    public void OnATabStaff_AGraceSlurIsDrawn(string written, string control)
     {
         // Through the render block: LiveRender.Svg draws the part on a notation staff.
         static string TabPage(string music) => Regex.Replace(LiveRender.SvgFromRenderSpec(
             "octave absolute\ntime 4/4\npart bl { clef bass tuning bass }\nsection A { bl {\n" + music
             + "\n} }\nform main { ~A }\nscore main { tab bl }\n"), "data-pos=\"\\d+\"", "data-pos=\"#\"");
         static int Bows(string page) => Regex.Matches(page, "<path d=\"M[^\"]* C ").Count;
-        Assert.Equal(Bows(TabPage(control)), Bows(TabPage(written)));
+        Assert.Equal(Bows(TabPage(control)) + 1, Bows(TabPage(written)));
     }
 
     /// <summary>The twin writes both marks, and LilyPond draws its Slur from them.</summary>

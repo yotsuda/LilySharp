@@ -10736,6 +10736,31 @@ internal static class LpGeometryProbes
     /// control points by the same 1.5 — the convention <see cref="BQT"/> already set.
     /// </para>
     /// </remarks>
+    /// <summary>
+    /// A SLUR ON A GRACE COLUMN, ON A TAB STAFF (probes/tab-grace-slur.ly): the grace's own digit
+    /// is the bound and a slur that starts in grace time is DOWN. TGH: a hand-written
+    /// `grace { d16( } e4)`; TGA: an acciaccatura's automatic slur; TGI: both ends in grace time.
+    /// </summary>
+    private static string TabGraceSlurBook(string tag, string music) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part bl { clef bass tuning bass }
+
+        section Main {
+          bl { {{music}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{tag}}" { tab bl as numbers }
+        """;
+
+    private static readonly string TGH = TabGraceSlurBook("TGH", "c,4\\3 r g,,\\4 r | c,\\3 r grace { d,16\\3( } e,4\\3) g,,\\4 |");
+    private static readonly string TGA = TabGraceSlurBook("TGA", "c,4\\3 r g,,\\4 r | c,\\3 r acciaccatura { d,16\\3 } e,4\\3 g,,\\4 |");
+    private static readonly string TGI = TabGraceSlurBook("TGI", "c,4\\3 r g,,\\4 r | c,\\3 r grace { d,16\\3( e,16\\3) } f,4\\3 g,,\\4 |");
+
     private static readonly string TSL = """
         octave absolute
         time 4/4
@@ -16387,6 +16412,14 @@ internal static class LpGeometryProbes
         // a wrong height or a wrong span and the ledger could not tell. One entry, not a pair:
         // LilyPond prints the same span for both bars, and so does Lily#.
         new("slur.tab.span", TSL, g => g.TabBowSpan(0)),
+        // A slur on a grace column of a TAB staff. See TGH.
+        new("slur.tab.grace.hand.string-to-attachment", TGH, g => g.TabBowPointAboveStaffMiddle(0, 0)),
+        new("slur.tab.grace.hand.end", TGH, g => g.TabBowPointAboveStaffMiddle(0, 3)),
+        new("slur.tab.grace.hand.span", TGH, g => g.TabBowSpan(0)),
+        new("slur.tab.grace.acciaccatura.string-to-attachment", TGA, g => g.TabBowPointAboveStaffMiddle(0, 0)),
+        new("slur.tab.grace.acciaccatura.span", TGA, g => g.TabBowSpan(0)),
+        new("slur.tab.grace.inner.string-to-attachment", TGI, g => g.TabBowPointAboveStaffMiddle(0, 0)),
+        new("slur.tab.grace.inner.span", TGI, g => g.TabBowSpan(0)),
         // The same two landings on a FULL tab, which reverts the 0.35. See TSLF.
         new("slur.tab.full.up.string-to-attachment", TSLF,
             g => g.TabBowPointAboveStaffMiddle(0, 0)),
