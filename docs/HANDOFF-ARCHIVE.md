@@ -129,6 +129,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第729セッションの経緯
+
+### 1.1 第729セッション（2026-10-01・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第728 の次の一手: 前打音の固い鎖）。`-Start p729`（HEAD `1f533dc5`・未 push 32）＝full **10593 / 0 / 2 / 10595**（引継ぎと一致）。
+⑴ ★ `cf613ebe` **前打音の鎖は行と一緒に伸びる**（第728 の起票）: LP の前打音のばねも行のばねで、伸びは力 × inverse-strength・その強さは **increment/2＝0.4**（spacing-basic.cc:163-175「あまり伸ばさない」）。実測（Lab `sessions/p729/stretch`・行幅 ragged/60/80/100/140mm）: 前打音の間隔は全部同じだけ伸び、4 分のばねの伸びとの比が 0.4/1.698。→ `SpringIntoGraceRun` が前打音のばねの inverse-strength を直列に足す（3 つの呼び手＝timing 系 `LeadingGraceRunStretch`・見積り系と小節頭は `AdjustSpringForGraceNotes`）／`MeasureLayout.SpringForce`（行の力・作る 1 か所で）／`StretchGraceColumns`（各間隔を force×0.4）を `RunPlacement`（描画・スカイライン・quant）と `GraceGeomOf`（弧）が読む・弧の pass にあった `GraceGeomOf` の手写しを畳んだ。⒝ 縮む側（力 < 0）は固いまま（開示）。台帳 +5（`probes/grace-stretch.ly`・100mm の行）EXACT。毒 5: 描く鎖を固く／ばねの直列なし／timing 系の呼び手＝それぞれ赤・弧の家の力と見積り系＝緑（観測者なし）。全 score の SVG（基準 `1f533dc5`）: 20 枚・14 冊（**実コーパス 4 冊**＝9 to 5・Real Gone・Something That I Want・青い珊瑚礁・site の petite-valse を含む）・**全部段数は不変**（行の中の配分だけ）・snapshot 不動。
+残り: 縮む側の前打音の鎖・TAB の前打音の弧・`condensedStaff` の 2 声目の前打音・3 列以上の弧の rod。
+★ `-End p729 -DiffBase 1f533dc5`＝full **10598 / 0 / 2 / 10600**（台帳 +5）・門 全 OK・Core `+` 100 行に REF 4／OWN 0。7.6: 伸びは ⒜（`set_inverse_stretch_strength (increment / 2)` と `Spring::length` を、ぶら下げた鎖に直列のばねとして）＋ ⒝（縮む側は固いまま＝開示）。7.7: `GraceGeomOf` の手写し（2 つ目の綴り）を 1 つ畳んだ。ユーザー「続けて」。push はユーザー（未 push 33）。判定: 前打音の島の残り（縮む側・TAB の弧）は今便の計器の上に立つ＝**この会話で続けるのが有利**（圧縮はまだ無い）。
+
 ## 以下は第728セッションの経緯
 
 ### 1.1 第728セッション（2026-10-01・YT-DELL2）
