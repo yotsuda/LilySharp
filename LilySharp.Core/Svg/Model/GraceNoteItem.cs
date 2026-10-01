@@ -112,7 +112,12 @@ public readonly record struct GraceColumnInfo(
     // column's item carries (MusicItem.GraceStemDown, whose remarks hold LilyPond's rule),
     // stamped on every column of the group by MeasureCollector.ProcessGraceRegion so the
     // layouts that hold only a column read it without an address.
-    bool StemDown = false
+    bool StemDown = false,
+    // The slur marks this column's item carries (SlurDetector.TryGetSlurFlags — a grace column
+    // is a slur bound since session 725). Read by the run's spacing: a slur from one column to
+    // the next rods them the Slur's minimum-length apart (SpacingRules.GraceColumns).
+    bool SlurStart = false,
+    bool SlurEnd = false
 )
 {
     /// <summary>Whether this column's stem points up — <c>!</c><see cref="StemDown"/>.</summary>
@@ -199,7 +204,8 @@ public readonly record struct GraceColumnInfo(
     public bool Equals(GraceColumnInfo other)
     {
         if (BaseDuration != other.BaseDuration || Dots != other.Dots
-            || ContextFontSizeStep != other.ContextFontSizeStep || StemDown != other.StemDown)
+            || ContextFontSizeStep != other.ContextFontSizeStep || StemDown != other.StemDown
+            || SlurStart != other.SlurStart || SlurEnd != other.SlurEnd)
             return false;
         if (Heads.IsDefaultOrEmpty || other.Heads.IsDefaultOrEmpty)
             return Heads.IsDefaultOrEmpty && other.Heads.IsDefaultOrEmpty;
@@ -219,6 +225,8 @@ public readonly record struct GraceColumnInfo(
         hc.Add(Dots);
         hc.Add(ContextFontSizeStep);
         hc.Add(StemDown);
+        hc.Add(SlurStart);
+        hc.Add(SlurEnd);
         if (!Heads.IsDefaultOrEmpty)
             foreach (var head in Heads)
                 hc.Add(head);

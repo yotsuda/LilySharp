@@ -898,6 +898,10 @@ internal sealed class MeasureLayouter
             // gapped floating beam. Same house as the measure-estimate system's.
             // LILYPOND-REF: lily/beam.cc:429-449 tremolo_springs_and_rods.
             maxRod = Math.Max(maxRod, SpacingRules.TremoloPairRod(prev, next));
+            // A slur from prev to next rods them the Slur's minimum-length apart — the same
+            // house as the estimate system's (SpacingRules.SlurPairRod).
+            // LILYPOND-REF: lily/spanner.cc:429-473 set_spacing_rods.
+            maxRod = Math.Max(maxRod, SpacingRules.SlurPairRod(prev, next));
         }
 
         // ⚠️ THE WISH CHAIN IS PER VOICE, NOT PER STAFF. Until 2026-09-10 a branch here made

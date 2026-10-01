@@ -110,7 +110,9 @@ internal static partial class SpacingRules
         //   the accidentals and on duration_log <= 0, it calls set_spacing_rods;
         //   the distance is the Beam grob's minimum-length 6.0
         //   (scm/define-grobs.scm Beam) via lily/spanner.cc:429-473 set_spacing_rods.
-        return spring.EnsureMinDistance(TremoloPairRod(prevItem, nextItem));
+        // A slur from the one to the other rods them minimum-length apart (SlurPairRod).
+        return spring.EnsureMinDistance(
+            Math.Max(TremoloPairRod(prevItem, nextItem), SlurPairRod(prevItem, nextItem)));
     }
 
     /// <summary>The Beam grob's minimum-length (scm/define-grobs.scm Beam), the rod a
@@ -127,6 +129,35 @@ internal static partial class SpacingRules
     internal static double TremoloPairRod(MusicItem? prev, MusicItem? next) =>
         IsWholeTremoloPairStart(prev) && IsTremoloPairEndWithAccidentals(next)
             ? TremoloPairAccidentalRod
+            : 0.0;
+
+    /// <summary>
+    /// The slur's spacing rod between <paramref name="prev"/> and <paramref name="next"/>: the
+    /// Slur's minimum-length (1.5) when a slur runs from the one to the other, else 0. One
+    /// house for BOTH spring systems, as <see cref="TremoloPairRod"/> is.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:3176-3178 springs-and-rods — Slur's (minimum-length . 1.5)
+    ///   and (springs-and-rods . ly:spanner::set-spacing-rods)
+    /// LILYPOND-REF: lily/spanner.cc:429-473 set_spacing_rods — a rod of minimum-length between
+    ///   the slur's two bound columns (Rod::add_to_cols, lily/rod.cc:33-54: column origin to
+    ///   column origin), read raw — no staff_space, unlike the scorer's use of the same number.
+    /// MEASURED (2.26.0, Lab sessions/p727/span/inner.ly): `\grace { d''16( e''16) }` stands its
+    ///   two grace heads 1.5 apart where the same run without the slur stands them 1.417939.
+    /// <para>
+    /// ⒝ ADJACENT COLUMNS ONLY: the two items are neighbours in one voice, so a slur from the
+    /// one to the other is the one open on the stack — a '(' on <paramref name="prev"/> is the
+    /// innermost open slur when <paramref name="next"/>'s ')' pops (SlurDetector's pairing). A
+    /// slur over three or more columns spans two springs or more and is not rodded here; over
+    /// 998 books (Lab sessions/p727/census.txt) no such slur's ends stand under 1.5. A slur
+    /// across a bar line is not rodded either (its ends are not one spring's two items).
+    /// </para>
+    /// </remarks>
+    internal static double SlurPairRod(MusicItem? prev, MusicItem? next) =>
+        prev is not null && next is not null
+        && Collector.SlurDetector.TryGetSlurFlags(prev, out bool prevStart, out _) && prevStart
+        && Collector.SlurDetector.TryGetSlurFlags(next, out _, out bool nextEnd) && nextEnd
+            ? SlurScoringProblem.MinimumLengthSpaces
             : 0.0;
 
     /// <summary>The LEFT half of a whole-DISPLAY two-note tremolo pair (the only beam

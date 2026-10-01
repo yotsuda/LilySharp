@@ -8792,6 +8792,30 @@ internal static class LpGeometryProbes
     private static readonly string GDC = GraceSlurBook("GDC", "treble", "voice { s1 } { c4 grace { <d f>8 } c4 e4 f4 } |");
     /// <summary>The lower voice's grace OPENS the second bar: the bar line's optical correction
     /// reads the grace column's DOWN stem (SpacingRules.LeadGraceOpticalCorrection).</summary>
+    /// <summary>
+    /// THE SLUR'S SPACING ROD on the main grid (probes/slur-spacing-rod.ly), read on
+    /// <see cref="NarrowPaper"/>: every spring at its minimum, and a 64th on c'''' then one on c'
+    /// has no skyline overlap. LilyPond stands the two heads at the SAME x without a slur (SRN)
+    /// and 1.5 apart with one from the one to the other (SRR) — Slur's minimum-length rod.
+    /// </summary>
+    private static string SlurRodBook(string music) => $$"""
+        octave absolute
+        time 5/16
+
+        part m { clef treble }
+
+        section Main { m { {{music}} } }
+
+        form main { ~Main }
+
+        score main { staff m }
+        """;
+
+    private static readonly string SRR = SlurRodBook(
+        "c64[ c'''64]( c64[) c'''64] c64[ c'''64] c64[ c'''64] c64[ c'''64] c64[ c'''64] c64[ c'''64] c64[ c'''64] c64[ c'''64] c64[ c'''64] |");
+    private static readonly string SRN = SlurRodBook(
+        "c64[ c'''64] c64[ c'''64] c64[ c'''64] c64[ c'''64] c64[ c'''64] c64[ c'''64] c64[ c'''64] c64[ c'''64] c64[ c'''64] c64[ c'''64] |");
+
     private static readonly string GDO = GraceSlurBook("GDO", "treble", "c1 | voice { s1 } { grace { d'8 } c'4 e4 f4 g4 } |");
 
     private static readonly string BQA = """
@@ -16377,6 +16401,9 @@ internal static class LpGeometryProbes
         new("grace.voice-two.chord.flag", GDC, g => g.GlyphAboveStaffMiddle('', 0)),
         new("grace.voice-two.column.to-main", GDF, g => g.NoteheadAnchorStep(1)),
         new("grace.voice-two.bar-opening", GDO, g => g.BarlineRightToNextNotehead(0)),
+        // The slur's spacing rod on the main grid. See SRR.
+        new("slur.rod.adjacent-columns", SRR, g => g.NoteheadAnchorStep(1), NarrowPaper),
+        new("slur.rod.no-slur-control", SRN, g => g.NoteheadAnchorStep(1), NarrowPaper),
         new("slur.over-flagged-grace.left-attachment", GFS, g => g.BowAttachmentAboveStaffMiddle(0)),
         new("slur.under-flagged-grace.left-attachment", GFS, g => g.BowAttachmentAboveStaffMiddle(1)),
         // The skyline reserves a slur laid out apart from the drawn one. See SBR.

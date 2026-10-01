@@ -175,6 +175,17 @@ internal static partial class SpacingRules
                 GraceColumnGap(notes[i], dtMin, gp, rightReach + leftReach),
                 GraceDotRod(notes[i], beamed: i < beamedPrefix,
                             i + 1 < notes.Length ? notes[i + 1] : null, mainItem));
+            // A slur from this column to the next (or out to the main note) rods the two
+            // columns the Slur's minimum-length apart — the rule SlurPairRod states for the
+            // main grid. MEASURED (2.26.0, Lab sessions/p727/span/inner.ly): 1.5 with the slur,
+            // the 1.417939 floor without it.
+            // LILYPOND-REF: lily/spanner.cc:429-473 set_spacing_rods — minimum-length between the bound columns.
+            bool nextEndsSlur = i + 1 < notes.Length
+                ? notes[i + 1].SlurEnd
+                : mainItem is not null
+                  && Collector.SlurDetector.TryGetSlurFlags(mainItem, out _, out bool mainEnd) && mainEnd;
+            if (notes[i].SlurStart && nextEndsSlur)
+                gap = Math.Max(gap, SlurScoringProblem.MinimumLengthSpaces);
             if (i + 1 < notes.Length) x += gap; else toMain = gap;
         }
         return new GraceColumnLayout(offsets.ToImmutable(), toMain);

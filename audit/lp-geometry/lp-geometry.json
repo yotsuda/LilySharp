@@ -1917,15 +1917,15 @@
       "probe": "grace-inner-slur.ly",
       "score": "INNER",
       "lilypond": 0.19546406867365063,
-      "residual": -0.001637893,
-      "why": "Since session 725 a slur in grace time is an ordinary slur (SlurDetector walks grace time; LayoutSlurs puts a grace bound at its run's own X and font; DOWN by score-grace-settings). Before it this slur was a LYS4020 drop and drew nothing. The 0.0016 left rides the span's residual (slur.in-grace.inner.span) through the slope."
+      "residual": 0.0,
+      "why": "EXACT since session 727: the tail it carried was the grace column distance, which the Slur spacing rod now sets (see slur.in-grace.inner.span). Since session 725 a slur in grace time is an ordinary slur (SlurDetector walks grace time; LayoutSlurs puts a grace bound at its run's own X and font; DOWN by score-grace-settings). Before it this slur was a LYS4020 drop and drew nothing. The 0.0016 left rides the span's residual (slur.in-grace.inner.span) through the slope."
     },
     "slur.in-grace.inner.span": {
       "probe": "grace-inner-slur.ly",
       "score": "INNER",
       "lilypond": 1.5,
-      "residual": -0.082061554,
-      "why": "Grace column spacing: Lily# stands the two grace heads 1.418 apart (SpacingRules.GraceColumns), LilyPond 1.5 - both ends attach at the head centres, so the span is the column distance unless a tilt shift moves an end (not decomposed). The same open residual as the three bow pairs session 724 made worse. See slur.in-grace.inner.left-attachment for the port."
+      "residual": 0.0,
+      "why": "EXACT since session 727: the Slur's spacing rod. A slur spans its two bound columns at least its minimum-length 1.5 apart (scm/define-grobs.scm:3176-3178 Slur, lily/spanner.cc:429-473 set_spacing_rods) - LilyPond stands the two graces 1.5 apart where the same run without the slur stands them 1.417939 (Lab sessions/p727/span/inner.ly). Lily# had no slur rod; SpacingRules.GraceColumns now rods a slur's two grace columns (GraceColumnInfo.SlurStart/SlurEnd) and SpacingRules.SlurPairRod the main grid's. Was -0.082061554."
     },
     "slur.in-grace.first-column.left-attachment": {
       "probe": "grace-inner-slur.ly",
@@ -1959,15 +1959,15 @@
       "probe": "grace-inner-slur.ly",
       "score": "VOICEONE",
       "lilypond": 3.8482760736196315,
-      "residual": 0.000756824,
-      "why": "The voice fixes the side over the grace settings: under \\voiceOne LilyPond draws `\\grace { d16( e16) }` UP (3.85; alone, DOWN at 0.20), and since session 725 so does Lily# (SlurDetector: VoiceScan.ForcedCurveUpAt before the grace DOWN). An UP slur hangs 0.5 above the grace BEAM on a bound beamed toward its other end (ElementCoordinator.GraceBeamUpperFaceDeviceY, slur-scoring.cc:549-557): 0.45 low on the heads before that clause."
+      "residual": 0.0,
+      "why": "EXACT since session 727: the tail it carried was the grace column distance, which the Slur spacing rod now sets (see slur.in-grace.inner.span). The voice fixes the side over the grace settings: under \\voiceOne LilyPond draws `\\grace { d16( e16) }` UP (3.85; alone, DOWN at 0.20), and since session 725 so does Lily# (SlurDetector: VoiceScan.ForcedCurveUpAt before the grace DOWN). An UP slur hangs 0.5 above the grace BEAM on a bound beamed toward its other end (ElementCoordinator.GraceBeamUpperFaceDeviceY, slur-scoring.cc:549-557): 0.45 low on the heads before that clause."
     },
     "slur.in-grace.voice-one.span": {
       "probe": "grace-inner-slur.ly",
       "score": "VOICEONE",
       "lilypond": 1.5,
-      "residual": -0.082061554,
-      "why": "Grace column spacing (see slur.in-grace.inner.span)."
+      "residual": 0.0,
+      "why": "EXACT since session 727: the Slur's spacing rod. A slur spans its two bound columns at least its minimum-length 1.5 apart (scm/define-grobs.scm:3176-3178 Slur, lily/spanner.cc:429-473 set_spacing_rods) - LilyPond stands the two graces 1.5 apart where the same run without the slur stands them 1.417939 (Lab sessions/p727/span/inner.ly). Lily# had no slur rod; SpacingRules.GraceColumns now rods a slur's two grace columns (GraceColumnInfo.SlurStart/SlurEnd) and SpacingRules.SlurPairRod the main grid's. Was -0.082061554."
     },
     "slur.grace.acciaccatura-voice-one.left-attachment": {
       "probe": "grace-inner-slur.ly",
@@ -1987,15 +1987,15 @@
       "probe": "grace-inner-slur.ly",
       "score": "VOICETWO",
       "lilypond": -5.1777239263803665,
-      "residual": 0.000756824,
-      "why": "The voice fixes the side and the stems: under \\voiceTwo LilyPond draws `\\grace { d16( e16) }` DOWN, its grace stems DOWN too (graceSettings = general-grace-settings, scm/music-functions.scm:666-674 - Lab sessions/p725 stemdir.ly: dir=-1), so the slur hangs 0.5 below the grace beam's LOWER face at -5.18. Since session 726 Lily# reads a lower voice's grace stem DOWN everywhere (MusicItem.GraceStemDown, GraceColumnInfo.StemDown) and ElementCoordinator.GraceBeamOuterFaceDeviceY hangs the slur from the face on the stems' side; it sat under the heads at -3.39 (+1.78) before. The 0.0008 left is the one slur.in-grace.voice-one.left-attachment carries."
+      "residual": 0.0,
+      "why": "EXACT since session 727: the tail it carried was the grace column distance, which the Slur spacing rod now sets (see slur.in-grace.inner.span). The voice fixes the side and the stems: under \\voiceTwo LilyPond draws `\\grace { d16( e16) }` DOWN, its grace stems DOWN too (graceSettings = general-grace-settings, scm/music-functions.scm:666-674 - Lab sessions/p725 stemdir.ly: dir=-1), so the slur hangs 0.5 below the grace beam's LOWER face at -5.18. Since session 726 Lily# reads a lower voice's grace stem DOWN everywhere (MusicItem.GraceStemDown, GraceColumnInfo.StemDown) and ElementCoordinator.GraceBeamOuterFaceDeviceY hangs the slur from the face on the stems' side; it sat under the heads at -3.39 (+1.78) before. The 0.0008 left is the one slur.in-grace.voice-one.left-attachment carries."
     },
     "slur.in-grace.voice-two.span": {
       "probe": "grace-inner-slur.ly",
       "score": "VOICETWO",
       "lilypond": 1.5,
-      "residual": -0.082061554,
-      "why": "Grace column spacing (see slur.in-grace.inner.span)."
+      "residual": 0.0,
+      "why": "EXACT since session 727: the Slur's spacing rod. A slur spans its two bound columns at least its minimum-length 1.5 apart (scm/define-grobs.scm:3176-3178 Slur, lily/spanner.cc:429-473 set_spacing_rods) - LilyPond stands the two graces 1.5 apart where the same run without the slur stands them 1.417939 (Lab sessions/p727/span/inner.ly). Lily# had no slur rod; SpacingRules.GraceColumns now rods a slur's two grace columns (GraceColumnInfo.SlurStart/SlurEnd) and SpacingRules.SlurPairRod the main grid's. Was -0.082061554."
     },
     "grace.voice-two.beam.left": {
       "probe": "grace-voice-two-stem.ly",
@@ -2045,6 +2045,20 @@
       "lilypond": 0.804769495848520,
       "residual": 0.005861361,
       "why": "PENDING"
+    },
+    "slur.rod.adjacent-columns": {
+      "probe": "slur-spacing-rod.ly",
+      "score": "SRR",
+      "lilypond": 1.5,
+      "residual": 0.0,
+      "why": "EXACT since session 727: the Slur's spacing rod on the main grid. Slur carries (minimum-length . 1.5) and (springs-and-rods . ly:spanner::set-spacing-rods) (scm/define-grobs.scm:3176-3178, lily/spanner.cc:429-473), so on a 30mm line, where every spring sits at its minimum and the c''''-to-c' pair has no skyline overlap (see slur.rod.no-slur-control: 0), LilyPond stands the slur's two heads 1.5 apart. Lily# had no slur rod; SpacingRules.SlurPairRod (both spring systems) now raises it. ⚠️ Adjacent columns only - no book of the 998 puts a longer slur's ends under 1.5."
+    },
+    "slur.rod.no-slur-control": {
+      "probe": "slur-spacing-rod.ly",
+      "score": "SRN",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "EXACT from the start: the control of slur.rod.adjacent-columns - the same 30mm bar without the slur, whose two heads LilyPond and Lily# both stand at the same x (no skyline overlap, every spring at its minimum). It is what makes the 1.5 the rod's and nothing else's."
     },
     "slur.beamed.reserved-text": {
       "probe": "slur-beam-reserve.ly",
@@ -5585,7 +5599,7 @@
     },
     "stem.reach.accidental-above-head": {
       "probe": "stem-reach.ly",
-      "score": "SRA",
+      "score": "SRR",
       "lilypond": 3.822200000000000,
       "residual": 0,
       "why": "OPENED EXACT 2026-08-02 (session 75), and it is the point the STEM belongs to. LilyPond's column skyline holds a stem because nothing takes it out -- every acknowledged Item goes into the column's `elements` (lily/paper-column-engraver.cc:246-261) and every element becomes its own box (lily/separation-item.cc:152-187, axis groups skipped at :160-161 so head and stem enter separately). Lily# built the same skyline from a HAND-WRITTEN LIST of parts and the stem was not on it; worse, SpacingRules.CalculateNoteheadRightExtent said 'excluding stems and flags' with the separation-item citation standing directly under it, so the omission read as ported. In this book g's two heads and ceses''s are 1.5 ss apart and never share a Y, so the ONLY part of the left column standing opposite the double flat is the stem: 3.822200 = 1.404200 (head ink + its own 0.1) + 2.118000 (the double flat's ink + the Accidental grob's 0.2 on the left) + 0.3 (merge_springs' headroom). ⚠️ THE PAIR CANNOT BE READ ON THE LILYPOND SIDE: a stem never reaches further right than its own head (lily/stem.cc:889-906 Stem::width is +/-thickness/2 about an X-offset that puts its right edge ON the head's), so LilyPond answers the SAME 3.822200 to the control, where the head does the standing. What a stem changes is not how far a column reaches but AT WHICH Y it reaches at all -- which is exactly why an opt-in list of parts could lose one and stay green. FALSIFIER, MEASURED and not argued: with the stem taken back out of ItemSkylineFactory this book reads 3.163357961 (residual -0.658842039) and the control stays EXACT. ⚠️ THE PREDICTED FALSIFIER VALUE WAS WRONG AND THE MEASUREMENT CORRECTED IT: it was written as the bare quarter duration space 3.002244999; the 0.161112962 on top is the optical stem correction this pair carries because the two stems point opposite ways, a term no skyline touches. NOT PORTED and stated here too: the stem's Y range is the UNBEAMED one (lily/stem.cc:393-398 Stem::internal_pure_height with calc_beam = false); the beamed branch at :399-444 unites it with the beam's other same-direction stems, and :443 clips the union back on the non-stem side, so what Lily# uses can only UNDER-reserve. A book whose stem is not its beam group's extreme one would measure that, and none exists yet."

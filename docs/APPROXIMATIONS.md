@@ -114,7 +114,7 @@
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
 - **:982** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: the same
 ### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
-- **:1308** approximation there); RIGHT wins when both edges match, as LP's
+- **:1309** approximation there); RIGHT wins when both edges match, as LP's
 ### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
 - **:429** NOT PORTED HERE: the box's reach toward the OTHER neighbour. LilyPond grows it from
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
@@ -223,7 +223,7 @@
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
 - **:890** constant with a name, and no ledger point reached it.
 ### `LilySharp.Core/Svg/Layout/SpacingRules.Grace.cs`
-- **:275** observed by: NOTHING. No ledger point covers a grace spacer, and the drawn
+- **:286** observed by: NOTHING. No ledger point covers a grace spacer, and the drawn
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
 - **:418** rest. No point observes it — see the branch below.
 ### `LilySharp.Core/Svg/Layout/TrillSpannerEngraver.cs`

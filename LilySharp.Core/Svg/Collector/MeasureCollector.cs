@@ -5339,7 +5339,15 @@ public sealed partial class MeasureCollector
                     break;
             }
             if (columns.Count > before)
+            {
                 indices.Add(i);
+                // The slur marks the column's item carries, read by the ONE predicate the
+                // slur's pairing reads (a spacer answers none) — the run's spacing rods a
+                // slur's two columns apart (SpacingRules.GraceColumns).
+                if (Svg.Collector.SlurDetector.TryGetSlurFlags(items[i], out bool slurStart, out bool slurEnd)
+                    && (slurStart || slurEnd))
+                    columns[^1] = columns[^1] with { SlurStart = slurStart, SlurEnd = slurEnd };
+            }
         }
         return (columns.ToImmutable(), indices.ToImmutable());
     }

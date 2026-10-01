@@ -943,8 +943,9 @@ internal sealed class SlurScoringProblem
     /// </summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm Slur (minimum-length . 1.5),
     /// consumed at lily/slur-scoring.cc:728-730 as
-    /// <c>staff_space_ * minimum-length</c> — so a TabStaff's is 2.25.</remarks>
-    private const double MinimumLengthSpaces = 1.5;
+    /// <c>staff_space_ * minimum-length</c> — so a TabStaff's is 2.25. The same property is the
+    /// slur's SPACING rod, read raw there (SpacingRules.SlurPairRod).</remarks>
+    internal const double MinimumLengthSpaces = 1.5;
 
     private double MinimumLength => MinimumLengthSpaces * _staffSpace;
 
