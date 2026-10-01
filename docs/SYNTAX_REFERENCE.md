@@ -559,6 +559,14 @@ writes no `<attributes>` for a restatement and writes them again for `key!`, `ti
 import and the editor's Split Sections cut a section wherever the music in force is not the
 file's.
 
+The MusicXML import reads it back the same way. A `<key>`, `<time>` or `<clef>` that changes
+nothing is in the file on purpose (MusicXML prints what `<attributes>` states), so it comes
+back as `key!`, `time!` or `clef!`, and a section opens on its bar. One on a bar that opens a
+system (`<print new-system="yes">` or `new-page`) is the courtesy one a line's head prints —
+a writer copying the printed page restates the clef and key on every line — and is dropped. In
+a piece with no rehearsal mark, a section also opens at every change of key, time or clef;
+where there are marks, the sections are the marks'.
+
 ## Barlines
 
 | Syntax | Type | Where |

@@ -1240,10 +1240,12 @@ public class MusicXmlRoundTripTests
     /// voices the change rides the first voice's stream — where the source wrote it — and the
     /// import reads exactly as the source does (that source warns about its own bar 1: a
     /// `time` inside one voice block is checked against the other voice's first bar too).
+    /// The mark keeps the piece in one section: without one, each change opens a section of
+    /// its own (<see cref="MusicXmlSectionCutTests"/>).
     /// </summary>
     [Theory]
-    [InlineData("c'1 | time 3/4 c'2. | key d major d'2. | clef bass tempo 80 d2. | time 4/4 key c major clef treble c'1 |")]
-    [InlineData("voice { c''1 | time 3/4 c''2. | } { c'1 | c'2. | }")]
+    [InlineData("c'1@mark(\"A\") | time 3/4 c'2. | key d major d'2. | clef bass tempo 80 d2. | time 4/4 key c major clef treble c'1 |")]
+    [InlineData("voice { c''1@mark(\"A\") | time 3/4 c''2. | } { c'1 | c'2. | }")]
     public void MidPieceChanges_RoundTrip(string music)
     {
         string source = "octave absolute\ntime 4/4\nkey c major\ntempo 100\npart m { clef treble }\n"

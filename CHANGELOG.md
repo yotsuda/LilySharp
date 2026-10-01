@@ -324,6 +324,12 @@ workflow attaches that section to the GitHub Release verbatim.
   value is still the dashed barline. A different value is drawn as before. The MusicXML import now cuts a section at every
   rehearsal mark a slur or hairpin does not run through — a mark where the meter or key had to
   be restated was left inside the section before it.
+- **The MusicXML import keeps a restated key, time or clef, and cuts a section there.** A
+  `<key>`, `<time>` or `<clef>` that changes nothing was dropped, so `key!` exported to
+  MusicXML came back without its `!`. It now comes back as `key!`, `time!` or `clef!` and opens
+  a section — except on a bar that opens a system (`<print new-system="yes">`), where it is the
+  courtesy one a line's head prints. A piece with no rehearsal mark is also cut at every change
+  of key, time or clef; where there are marks, the sections are the marks'.
 
 ### Fixes
 

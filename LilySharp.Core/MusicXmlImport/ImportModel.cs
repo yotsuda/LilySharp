@@ -126,6 +126,10 @@ internal sealed class ImportMeasure
 {
     /// <summary>MusicXML <c>implicit="yes"</c> — an anacrusis/pickup measure.</summary>
     public bool Implicit { get; set; }
+    /// <summary>A <c>&lt;print new-system="yes"&gt;</c> (or <c>new-page</c>) opens this measure:
+    /// a key, time or clef it states again without changing it is the courtesy one a system's
+    /// head prints, not one the score asks for (<c>LysWriter.Restatements</c>).</summary>
+    public bool NewSystem { get; set; }
     public ImportKey? Key { get; set; }
     public ImportTime? Time { get; set; }
     public string? Clef { get; set; }

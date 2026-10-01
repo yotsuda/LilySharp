@@ -277,7 +277,7 @@
 - **:1085** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
 - **:5391** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
 ### `LilySharp.Core/MusicXmlImport/LysWriter.cs`
-- **:337** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision; the twin omits it too).
+- **:347** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision; the twin omits it too).
 ### `LilySharp.Core/Parser/Parser.Music.cs`
 - **:452** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
 - **:735** LILYSHARP-OWN: LilyPond writes such a chord out note by note.

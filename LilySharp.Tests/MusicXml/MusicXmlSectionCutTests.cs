@@ -230,4 +230,112 @@ public class MusicXmlSectionCutTests
         Assert.Matches(@"form main \{\s*~Intro ~M12 ~\w+\s*\}", lys);
         Assert.DoesNotContain(SyntaxTree.Parse(lys).Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
     }
+
+    // Every time, key and clef the page draws for part m, by bar.
+    private static string[] Drawn(string lys)
+    {
+        var tree = SyntaxTree.Parse(lys);
+        Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
+        return new MeasureCollector().Collect(tree, "m").Voice.Measures
+            .SelectMany((m, i) => m.Items.Select(item => item switch
+            {
+                TimeSignatureChangeItem t => $"{i}: time {t.NewTime.Beats}/{t.NewTime.BeatType}",
+                KeySignatureChangeItem k => $"{i}: key {k.NewKey.Sharps}",
+                ClefChangeItem c => $"{i}: clef {c.NewClef}",
+                _ => null,
+            }))
+            .OfType<string>().ToArray();
+    }
+
+    /// <summary>
+    /// A key, time or clef the document states again without changing it is there on purpose
+    /// (MusicXML prints what <c>&lt;attributes&gt;</c> states), so it comes back forced, and a
+    /// section opens on its bar (owner's decision 2026-10-02). Until then it was dropped, and
+    /// <c>key!</c> did not survive its own round trip.
+    /// </summary>
+    [Fact]
+    public void AForcedRestatement_ComesBackForced_AtTheHeadOfASection()
+    {
+        const string source = """
+            octave absolute
+            time 4/4
+            key g major
+            part m { clef treble }
+            section S { m { g'1 | a'1 | key! g major b'1 | c''1 | time! 4/4 d''1 | clef! treble e''1 | } }
+            form main { ~S }
+            score main { staff m }
+            """;
+        string lys = Import(source);
+        Assert.Matches(@"form main \{\s*~A ~A2 ~A3 ~A4\s*\}", lys);
+        Assert.StartsWith("key! g major b'1", SectionBody(lys, "A2").Trim().Split('\n')[1].Trim());
+        Assert.Contains("time! 4/4 d''1", SectionBody(lys, "A3"));
+        Assert.Contains("clef! treble e''1", SectionBody(lys, "A4"));
+        Assert.Equal(Drawn(source), Drawn(lys));
+        Assert.Equal(3, Drawn(lys).Length);
+    }
+
+    /// <summary>In a piece with marks, the section a restatement opens continues the name of
+    /// the mark's: B, then B2.</summary>
+    [Fact]
+    public void ARestatementInAMarkedPiece_ContinuesTheMarksName()
+    {
+        const string source = """
+            octave absolute
+            key d major
+            part m { clef treble }
+            section S { m { d'1@mark("A") | e'1 | fis'1@mark("B") | key! d major g'1 | a'1 | } }
+            form main { ~S }
+            score main { staff m }
+            """;
+        string lys = Import(source);
+        Assert.Matches(@"form main \{\s*~A ~B ~B2\s*\}", lys);
+        Assert.Contains("key! d major g'1", SectionBody(lys, "B2"));
+        Assert.Equal(Drawn(source), Drawn(lys));
+    }
+
+    /// <summary>
+    /// A restatement on a bar that opens a system (<c>&lt;print new-system="yes"&gt;</c>) is the
+    /// courtesy one the line's head prints — a writer copying the printed page (an optical
+    /// reader) restates the clef and key on every line — and is dropped as before: a section per
+    /// line would be absurd (owner's decision 2026-10-02).
+    /// </summary>
+    [Fact]
+    public void ARestatementOnANewSystem_IsDroppedAndCutsNothing()
+    {
+        var doc = new MusicXmlExporter().Export(SyntaxTree.Parse("""
+            octave absolute
+            key g major
+            part m { clef treble }
+            section S { m { g'1 | a'1 | key! g major clef! treble b'1 | c''1 | } }
+            form main { ~S }
+            score main { staff m }
+            """)).ToXml();
+        var third = doc.Descendants().Where(e => e.Name.LocalName == "measure").ElementAt(2);
+        third.AddFirst(new System.Xml.Linq.XElement(third.Name.Namespace + "print",
+            new System.Xml.Linq.XAttribute("new-system", "yes")));
+        var (lys, _) = new MusicXmlImporter().Import(doc.ToString());
+        Assert.Matches(@"form main \{\s*~A\s*\}", lys);
+        Assert.DoesNotContain("!", SectionBody(lys, "A"));
+        Assert.Empty(Drawn(lys));
+    }
+
+    /// <summary>
+    /// A change of key, time or clef opens a section only in a piece with no rehearsal mark: the
+    /// marks are the score's own sections, and a change inside one is often a bar's detour
+    /// (Bohemian Rhapsody's one-bar 6/4, 2/4 and 6/8). Either way the page draws what it drew.
+    /// </summary>
+    [Theory]
+    [InlineData("c'1 | time 3/4 c'2. | key d major d'2. | clef bass d2. | time 4/4 key c major clef treble c'1 |",
+                @"~A ~A2 ~A3 ~A4 ~A5")]
+    [InlineData("c'1@mark(\"A\") | time 3/4 c'2. | key d major d'2. | clef bass d2. | time 4/4 key c major clef treble c'1 |",
+                @"~A")]
+    public void AChange_OpensASectionOnlyWhereNoMarkDoes(string music, string form)
+    {
+        string source = "octave absolute\ntime 4/4\nkey c major\npart m { clef treble }\n"
+                        + $"section S {{ m {{ {music} }} }}\nform main {{ ~S }}\nscore main {{ staff m }}\n";
+        string lys = Import(source);
+        Assert.Matches(@"form main \{\s*" + form + @"\s*\}", lys);
+        Assert.DoesNotContain("!", lys.Replace("@mark", ""));
+        Assert.Equal(Drawn(source), Drawn(lys));
+    }
 }

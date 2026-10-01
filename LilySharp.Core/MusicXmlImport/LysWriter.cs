@@ -42,15 +42,16 @@ internal static class LysWriter
         // (LYS1034), so an imported book whose repeat stayed in the music would not compile —
         // this writer would have been emitting `|:` into a section body.
         // Anything else is one flat section played once. Either is then cut again at the
-        // rehearsal marks.
+        // rehearsal marks and at the bars that state a key, time or clef (CutPoints).
         // ⚠️ The flat section runs to the LONGEST part's end, not the first part's: a first
         // part with no bars at all (a round trip of inporder.lys) must not empty the others.
         int longest = doc.Parts.Count > 0 ? doc.Parts.Max(p => p.Measures.Count) : 0;
         var cuts = TryFactorVoltas(firstMeasures) ?? TryFactorPlainRepeats(firstMeasures, report)
             ?? new VoltaLayout([new VoltaSegment("A", 0, longest, EndBar: true)], HiddenLabel("A"));
-        var marks = RehearsalMarks(doc);
+        var systemStarts = SystemStarts(doc);
+        var marks = CutPoints(RehearsalMarks(doc), doc, systemStarts);
         var header = HeaderState(doc, cuts.Segments.Select(s => s.Start).Concat(marks.Keys));
-        var directives = doc.Parts.ToDictionary(p => p, p => Directives(doc, p, header, report));
+        var directives = doc.Parts.ToDictionary(p => p, p => Directives(doc, p, header, systemStarts, report));
         var layout = SplitAtMarks(cuts, CuttableMarks(marks, cuts, doc, report), doc);
         bool useRelative = relativeOctave;
 
@@ -258,7 +259,7 @@ internal static class LysWriter
     /// Only the marks <see cref="CuttableMarks"/> lets through arrive here.
     /// </para>
     /// </remarks>
-    private static VoltaLayout SplitAtMarks(VoltaLayout layout, SortedDictionary<int, string> marks, ImportDocument doc)
+    private static VoltaLayout SplitAtMarks(VoltaLayout layout, SortedDictionary<int, string?> marks, ImportDocument doc)
     {
         if (marks.Count == 0)
             return layout;
@@ -293,13 +294,22 @@ internal static class LysWriter
             }
             bounds.Add(seg.End);
             var names = new List<string>();
+            // A cut no mark names (a key, time or clef statement, or a mark that cannot name a
+            // section) continues the name before it: A, A2, A3; after mark B, B2. "Intro" only
+            // where a mark follows — a piece cut at its key changes alone has no intro.
+            bool marked = bounds.Any(b => marks.GetValueOrDefault(b) != null);
+            string run = seg.Name;
+            int count = 1;
             for (int k = 0; k + 1 < bounds.Count; k++)
             {
-                string name = marks.TryGetValue(bounds[k], out var label) && SectionNameFor(label) is { } fromMark
-                        && !used.Contains(fromMark)
-                    ? Unique(fromMark)
-                    : k == 0 ? (flat ? Unique("Intro") : seg.Name)
-                    : Unique(seg.Name + (k + 1));
+                string name;
+                if (marks.GetValueOrDefault(bounds[k]) is { } label && SectionNameFor(label) is { } fromMark
+                        && !used.Contains(fromMark))
+                    (name, run, count) = (Unique(fromMark), fromMark, 1);
+                else if (k == 0)
+                    (name, run, count) = flat ? (Unique(marked ? "Intro" : seg.Name), marked ? "Intro" : seg.Name, 1) : (seg.Name, seg.Name, 1);
+                else
+                    name = Unique(run + (char.IsAsciiDigit(run[^1]) ? "_" : "") + ++count);
                 names.Add(name);
                 bool last = k + 2 == bounds.Count;
                 segments.Add(new VoltaSegment(name, bounds[k], bounds[k + 1], last ? seg.EndBar : true));
@@ -347,22 +357,111 @@ internal static class LysWriter
     /// hairpin-in-a-repeated-section.lys). A tie may cross anything.
     /// </para>
     /// </remarks>
-    private static SortedDictionary<int, string> CuttableMarks(
-        SortedDictionary<int, string> marks, VoltaLayout layout, ImportDocument doc, ImportReport report)
+    private static SortedDictionary<int, string?> CuttableMarks(
+        SortedDictionary<int, string?> marks, VoltaLayout layout, ImportDocument doc, ImportReport report)
     {
         var starts = layout.Segments.Select(s => s.Start).ToHashSet();
         // Every place a section may start, so a span carried over a cut must end before the next.
         var bounds = starts.Concat(marks.Keys).Append(int.MaxValue).Distinct().Order().ToList();
-        var result = new SortedDictionary<int, string>();
+        var result = new SortedDictionary<int, string?>();
         foreach (var (i, label) in marks)
         {
             if (starts.Contains(i))
                 result.Add(i, label);
-            else if (SpanRunsThrough(doc, i, bounds.First(b => b > i)))
+            else if (!SpanRunsThrough(doc, i, bounds.First(b => b > i)))
+                result.Add(i, label);
+            // A statement left inside a section loses nothing: it is written where it stands.
+            else if (label != null)
                 report.Warn(i + 1, $"the rehearsal mark '{label}' does not start a section: a slur or "
                     + "hairpin open there would have to run on through the section after it.");
-            else
-                result.Add(i, label);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// The places a section may start: the rehearsal marks (by their label), and every other bar
+    /// past the first that states a key, time or clef again that its system's head does not
+    /// explain (<see cref="Restatements"/>), with no label — and, in a piece with no rehearsal
+    /// mark, every bar that changes one.
+    /// </summary>
+    /// <remarks>
+    /// Owner's decision 2026-10-02. A <c>&lt;key&gt;</c> that changes nothing is in the file on
+    /// purpose — MusicXML prints whatever <c>&lt;attributes&gt;</c> states (print-object defaults
+    /// to yes); MuseScore, Finale and Sibelius write one only where it changes or where the user
+    /// put one, and musicxml2ly turns every one into a <c>\key</c> that LilyPond draws. It used to
+    /// be dropped here, so a <c>key!</c> exported to MusicXML came back without its <c>!</c>. The
+    /// bar that states one is where a new section of the piece most often opens, so the book is
+    /// cut there, and the statement is <c>key!</c> (<see cref="Directives"/>) — at a section's
+    /// head, a plain one restating what the section before left would draw nothing
+    /// (MeasureBuilder.SectionHead).
+    /// <para>
+    /// A change cuts only where no mark does: the marks are the score's own sections, and a
+    /// change inside one is often a bar's detour (Bohemian Rhapsody's one-bar 6/4, 2/4 and 6/8
+    /// would each have become a section of their own). Without marks, a change is the best
+    /// guess at where a section opens.
+    /// </para>
+    /// </remarks>
+    private static SortedDictionary<int, string?> CutPoints(
+        SortedDictionary<int, string> marks, ImportDocument doc, HashSet<int> systemStarts)
+    {
+        var points = new SortedDictionary<int, string?>();
+        foreach (var (i, label) in marks)
+            points.Add(i, label);
+        foreach (var part in doc.Parts)
+        {
+            var restated = Restatements(part, systemStarts);
+            var (time, key, clef) = ((ImportTime?)null, (ImportKey?)null, (string?)null);
+            for (int i = 0; i < part.Measures.Count; i++)
+            {
+                var m = part.Measures[i];
+                bool changes = (time != null && m.Time is { } t && t != time)
+                    || (key != null && m.Key is { } k && k != key)
+                    || (part.StaffGroup == null && clef != null && m.Clef is { } c && c != clef);
+                if (i > 0 && ((changes && marks.Count == 0) || restated[i] != default))
+                    points.TryAdd(i, null);
+                (time, key) = (m.Time ?? time, m.Key ?? key);
+                clef = m.Clef ?? clef;
+            }
+        }
+        return points;
+    }
+
+    /// <summary>The bars a <c>&lt;print new-system="yes"&gt;</c> or <c>new-page</c> opens, in any
+    /// part.</summary>
+    private static HashSet<int> SystemStarts(ImportDocument doc)
+    {
+        var starts = new HashSet<int>();
+        foreach (var part in doc.Parts)
+            for (int i = 0; i < part.Measures.Count; i++)
+                if (part.Measures[i].NewSystem)
+                    starts.Add(i);
+        return starts;
+    }
+
+    /// <summary>Which of the time, key and clef a bar states again without changing it.</summary>
+    private readonly record struct Restated(bool Time, bool Key, bool Clef);
+
+    /// <summary>
+    /// Per measure of <paramref name="part"/>, the time, key and clef it states again, unchanged,
+    /// after an earlier bar of the part stated them — except on a bar that opens a system: a
+    /// writer that copies what a system's head prints (an optical reader, typically) restates
+    /// the clef and key on every line, and those are not the score's (owner's decision
+    /// 2026-10-02 — a section per line would be absurd).
+    /// </summary>
+    private static Restated[] Restatements(ImportPart part, HashSet<int> systemStarts)
+    {
+        var result = new Restated[part.Measures.Count];
+        var (time, key, clef) = ((ImportTime?)null, (ImportKey?)null, (string?)null);
+        for (int i = 0; i < part.Measures.Count; i++)
+        {
+            var m = part.Measures[i];
+            if (!systemStarts.Contains(i))
+                result[i] = new Restated(
+                    time != null && m.Time == time,
+                    key != null && m.Key == key,
+                    part.StaffGroup == null && clef != null && m.Clef == clef);
+            (time, key) = (m.Time ?? time, m.Key ?? key);
+            clef = m.Clef ?? clef;
         }
         return result;
     }
@@ -793,10 +892,15 @@ internal static class LysWriter
     // ⚠️ AND ONLY THERE: a `time` or `key` restating the file's value where the section before
     // also left it would still be a needless line of source (it draws nothing since 2026-10-02,
     // MeasureBuilder.SectionHead — but the source is the user's to read).
+    // ⚠️ THE SOURCE'S OWN RESTATEMENT IS ANOTHER THING: a bar that states the key again without
+    // changing it writes `key!` (CutPoints, owner's decision 2026-10-02), at a section's head
+    // or not, and the plain restatement is not written beside it.
     private static PartDirectives Directives(
-        ImportDocument doc, ImportPart part, (ImportTime? Time, ImportKey? Key) header, ImportReport report)
+        ImportDocument doc, ImportPart part, (ImportTime? Time, ImportKey? Key) header,
+        HashSet<int> systemStarts, ImportReport report)
     {
         var (time, key) = header;
+        var restated = Restatements(part, systemStarts);
         string clef = part.Clef;
         int? tempo = doc.Tempo;
         // The directive that states each one in force (KeyToLily once per change, so its
@@ -818,25 +922,41 @@ internal static class LysWriter
                 if (notTheFiles)
                     open.Append(text);
             }
+            // A statement that changes nothing is forced (CutPoints), wherever it stands.
+            void Force(string text)
+            {
+                text = text.Insert(text.IndexOf(' '), "!");
+                sb.Append(text);
+                open.Append(text);
+            }
             bool timeChanged = false, keyChanged = false, clefChanged = false;
             if (m.Time is { } t && t != time)
             {
                 (time, timeChanged) = (t, true);
                 timeText = $"time {t.Beats}/{t.BeatType} ";
             }
-            State(timeChanged, time != header.Time, timeText);
+            if (restated[i].Time)
+                Force($"time {m.Time!.Value.Beats}/{m.Time.Value.BeatType} ");
+            else
+                State(timeChanged, time != header.Time, timeText);
             if (m.Key is { } k && k != key)
             {
                 (key, keyChanged) = (k, true);
                 keyText = "key " + KeyToLily(k, report) + " ";
             }
-            State(keyChanged, key != header.Key, keyText);
+            if (restated[i].Key)
+                Force(keyText != "" ? keyText : "key " + KeyToLily(m.Key!.Value, report) + " ");
+            else
+                State(keyChanged, key != header.Key, keyText);
             if (part.StaffGroup == null && m.Clef is { } c && c != clef)
             {
                 (clef, clefChanged) = (c, true);
                 clefText = "clef " + c + " ";
             }
-            State(clefChanged, clef != part.Clef, clefText);
+            if (restated[i].Clef)
+                Force("clef " + m.Clef + " ");
+            else
+                State(clefChanged, clef != part.Clef, clefText);
             // The tempo is not reset: written where it changes, whether a section opens or not.
             if (m.Tempo is int bpm && bpm != tempo)
             {

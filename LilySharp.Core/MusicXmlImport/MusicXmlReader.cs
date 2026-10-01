@@ -213,6 +213,8 @@ internal static class MusicXmlReader
             var measure = new ImportMeasure
             {
                 Implicit = (string?)measEl.Attribute("implicit") == "yes",
+                NewSystem = Els(measEl, "print").Any(p =>
+                    (string?)p.Attribute("new-system") == "yes" || (string?)p.Attribute("new-page") == "yes"),
             };
 
             int lastVoice = 1;          // voice a dangling annotation attaches to
@@ -438,6 +440,7 @@ internal static class MusicXmlReader
                 var m = new ImportMeasure
                 {
                     Implicit = measure.Implicit,
+                    NewSystem = measure.NewSystem,
                     Key = measure.Key,
                     Time = measure.Time,
                     Tempo = measure.Tempo,
