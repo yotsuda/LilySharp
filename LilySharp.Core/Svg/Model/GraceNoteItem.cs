@@ -107,9 +107,17 @@ public readonly record struct GraceColumnInfo(
     // CueVoice's −4 for a grace written inside `cue { }`, 0 everywhere else. See Font.
     // LILYPOND-REF: lily/font-size-engraver.cc:47-62 Font_size_engraver::acknowledge_font —
     //   font_size = size + the grob's own font-size.
-    double ContextFontSizeStep = 0
+    double ContextFontSizeStep = 0,
+    // True when this column's stem points DOWN — a grace of a lower voice. The same answer the
+    // column's item carries (MusicItem.GraceStemDown, whose remarks hold LilyPond's rule),
+    // stamped on every column of the group by MeasureCollector.ProcessGraceRegion so the
+    // layouts that hold only a column read it without an address.
+    bool StemDown = false
 )
 {
+    /// <summary>Whether this column's stem points up — <c>!</c><see cref="StemDown"/>.</summary>
+    public bool StemUp => !StemDown;
+
     /// <summary>
     /// The FONT this column's head, stem, flag and dots read: the design
     /// <see cref="GraceNoteItem.FontSizeStep"/> plus <see cref="ContextFontSizeStep"/> selects,
@@ -191,7 +199,7 @@ public readonly record struct GraceColumnInfo(
     public bool Equals(GraceColumnInfo other)
     {
         if (BaseDuration != other.BaseDuration || Dots != other.Dots
-            || ContextFontSizeStep != other.ContextFontSizeStep)
+            || ContextFontSizeStep != other.ContextFontSizeStep || StemDown != other.StemDown)
             return false;
         if (Heads.IsDefaultOrEmpty || other.Heads.IsDefaultOrEmpty)
             return Heads.IsDefaultOrEmpty && other.Heads.IsDefaultOrEmpty;
@@ -210,6 +218,7 @@ public readonly record struct GraceColumnInfo(
         hc.Add(BaseDuration);
         hc.Add(Dots);
         hc.Add(ContextFontSizeStep);
+        hc.Add(StemDown);
         if (!Heads.IsDefaultOrEmpty)
             foreach (var head in Heads)
                 hc.Add(head);
@@ -496,6 +505,15 @@ public sealed record GraceNoteItem
                     return c.Scale;
         return ScaleFactor;
     }
+
+    /// <summary>Whether this run's stems point up — the group-level reading of
+    /// <see cref="GraceColumnInfo.StemDown"/>, which every column of a group shares (one voice
+    /// writes a group). UP for a group with no columns.</summary>
+    internal bool StemUp => StemUpOf(Columns);
+
+    /// <summary><see cref="StemUp"/> for a run held only as its columns (a layout's copy).</summary>
+    internal static bool StemUpOf(ImmutableArray<GraceColumnInfo> columns)
+        => columns.IsDefaultOrEmpty || columns[0].StemUp;
 
     /// <summary><see cref="HeadFontOf"/> for this run.</summary>
     internal Svg.Layout.GlyphMetrics.DesignMetrics HeadFont => HeadFontOf(Columns);

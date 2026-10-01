@@ -147,6 +147,7 @@ internal sealed record MusicItemRare
     public PassSet SectionEndingPasses { get; init; }
     public bool SectionPlayRewinds { get; init; }
     public bool GraceSlash { get; init; }
+    public bool GraceStemDown { get; init; }
     public bool HasPhrasingSlurStart { get; init; }
     public bool HasPhrasingSlurEnd { get; init; }
     public int PhrasingSlurDirection { get; init; }
@@ -372,6 +373,33 @@ public abstract record MusicItem
     {
         get => _rareBase?.GraceSlash ?? false;
         init { if (value != GraceSlash) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { GraceSlash = value }; }
+    }
+
+    /// <summary>
+    /// True when this grace-time item's stem points DOWN — a grace written by a lower voice of
+    /// a <c>voice { } { }</c> span. Meaningless off <see cref="GraceTime"/>.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond pushes <c>(Voice Stem direction ,UP)</c> for a grace body only through
+    /// <c>score-grace-settings</c>, the DEFAULT <c>graceSettings</c>; <c>\voiceOne</c> …
+    /// <c>\voiceFour</c> replace <c>graceSettings</c> with <c>general-grace-settings</c>, which
+    /// states no direction, so a voice's grace keeps the voice's own Stem direction.
+    /// LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings (Stem direction UP)
+    /// LILYPOND-REF: scm/music-functions.scm:666-674 make-voice-props-set (graceSettings = general-grace-settings)
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p725/tabgrace/stemdir.ly): under <c>\voiceTwo</c>
+    /// both grace stems answer direction −1.
+    /// <para>
+    /// ⚠️ ONE ANSWER, STAMPED BY ONE HAND: <c>MeasureCollector.ProcessGraceRegion</c> decides it
+    /// from the writing voice and the builder stamps it here and on every
+    /// <see cref="GraceColumnInfo.StemDown"/> of the group, so the drawn stem and the spaced,
+    /// beamed, slurred column cannot disagree. Rides the item for the reason
+    /// <see cref="GraceSlash"/> does: the stem is drawn by whoever draws the note.
+    /// </para>
+    /// </remarks>
+    public bool GraceStemDown
+    {
+        get => _rareBase?.GraceStemDown ?? false;
+        init { if (value != GraceStemDown) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { GraceStemDown = value }; }
     }
 
     /// <summary>Source position in the syntax tree for click-to-source mapping.

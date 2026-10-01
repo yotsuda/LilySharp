@@ -44,7 +44,7 @@
 - **:270** fans twice. Not ported; no book in the corpus has one.
 - **:688** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
-- **:368** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
+- **:372** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:1300** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
 - **:1305** whiteout −1) is not ported.
@@ -75,10 +75,10 @@
 - **:49** ⚠️ NOT PORTED, DISCLOSED (no pair measures either) — both are LP behaviours this
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
 - **:1337** ⚠️ NOT PORTED, and named rather than left to be discovered: the ONLY-RESTS
-- **:1556** ⚠️ NOT PORTED: another VOICE's notes at that moment (a grace rest under polyphony);
-- **:2332** ⚠️ NOT PORTED — LP's solve-once-then-break order: A BROKEN COLUMN IS SOLVED
-- **:4209** ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
-- **:4555** ⚠️ NOT PORTED: a slur bound on a GRACE column is not drawn on a TAB staff.
+- **:1557** ⚠️ NOT PORTED: another VOICE's notes at that moment (a grace rest under polyphony);
+- **:2333** ⚠️ NOT PORTED — LP's solve-once-then-break order: A BROKEN COLUMN IS SOLVED
+- **:4218** ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
+- **:4564** ⚠️ NOT PORTED: a slur bound on a GRACE column is not drawn on a TAB staff.
 ### `LilySharp.Core/Svg/Layout/FiguredBassEngraver.cs`
 - **:142** spells it after the digit — the order FiguredBassGlyphRun names as not ported. The box
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
@@ -112,7 +112,7 @@
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **:489** ⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED PEDAL IS **NOT PORTED HERE** either:
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
-- **:978** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: the same
+- **:982** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: the same
 ### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
 - **:1308** approximation there); RIGHT wins when both edges match, as LP's
 ### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
@@ -144,7 +144,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:1426** no observer reaches that branch yet.
 ### `LilySharp.Core/Rendering/SharedRenderer.Noteheads.cs`
-- **:779** observed by: no observer, and none is possible while the term is dominated — it
+- **:781** observed by: no observer, and none is possible while the term is dominated — it
 ### `LilySharp.Core/Semantics/DrummapValidator.cs`
 - **:30** ★ This validator exists because the block had NO observer of any kind. Measured
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
@@ -170,7 +170,7 @@
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:111** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
-- **:2758** observed by: NOTHING. There is no ledger point on a tab tie's width,
+- **:2759** observed by: NOTHING. There is no ledger point on a tab tie's width,
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
 - **:63** moving output no observer can check.
 - **:140** ⚠️ NOTHING WATCHES THIS WIDTH. Since the figure was left-aligned on its column
@@ -179,7 +179,7 @@
 - **:647** own widths of one x. No ledger point measures a chord fingering's X, so this stays as
 - **:648** it was rather than being changed unobserved.
 ### `LilySharp.Core/Svg/Layout/GraceNoteEngraver.cs`
-- **:529** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
+- **:532** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
 ### `LilySharp.Core/Svg/Layout/HorizontalSkyline.cs`
 - **:178** outline. So the clearing is right and unobserved: a forgotten Clear here would
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
@@ -290,7 +290,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
 - **:652** prefix — LILYSHARP-OWN, a decided divergence (user decision
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
-- **:214** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
+- **:215** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:1419** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
@@ -388,8 +388,8 @@
 - **:122** ⚠️ LILYSHARP-OWN: a string the bundled face cannot spell (CJK — TextFontMetrics reports
 - **:445** ⚠️ LILYSHARP-OWN: the number is a support of THIS text alone, not ink of the staff's
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
-- **:2747** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
-- **:2796** ⚠️ LILYSHARP-OWN, and LilyPond cannot be asked: MEASURED on 2.26.0, all three
+- **:2748** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
+- **:2797** ⚠️ LILYSHARP-OWN, and LilyPond cannot be asked: MEASURED on 2.26.0, all three
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
 - **:133** ⚠️ LILYSHARP-OWN: the fallback branch. A character with no bass-figure glyph is
 ### `LilySharp.Core/Svg/Layout/FingeringGlyphRun.cs`
@@ -485,7 +485,7 @@
 - **:129** ⚠️ LILYSHARP-OWN: THE TWO-EDGE MODEL ITSELF. LilyPond has no such pair —
 - **:297** ⚠️ LILYSHARP-OWN: THE SELECTION IS DELIBERATELY THE OLD ONE, and it is a KNOWN
 - **:383** ⚠️ LILYSHARP-OWN: THE FALLBACK TO THE DERIVED VALUE IS A SECOND ANSWER FOR ONE
-- **:1621** LILYSHARP-OWN (2026-09-28). Until then the diagram was merged with the other scripts at
+- **:1633** LILYSHARP-OWN (2026-09-28). Until then the diagram was merged with the other scripts at
 ### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
 - **:324** LILYSHARP-OWN: the bar line's box is grown toward THIS column only. LilyPond grows it
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`

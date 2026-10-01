@@ -381,6 +381,10 @@ internal static class GraceNoteEngraver
         for (int i = 0; i < beamed; i++)
             counts[i] = BeamCountForDuration(notes[i].BaseDuration.Denominator);
 
+        // LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings —
+        //   ((Voice Stem direction ,UP)): a grace stem is forced up whatever the pitch; a lower
+        //   voice's is DOWN (make-voice-props-set, :666-674 — GraceColumnInfo.StemDown).
+        bool stemUp = grace.StemUp;
         var members = ImmutableArray.CreateBuilder<BeamMember>(beamed);
         var xs = new double[beamed];
         for (int i = 0; i < beamed; i++)
@@ -395,6 +399,7 @@ internal static class GraceNoteEngraver
             // stem-up chord is the TOP head, and BeamMember says so through
             // HeadPositionMin/Max. StaffPosition itself is documented as the heads' mean for a
             // chord — see BeamMember's remarks, which name it as the quanter's NON-input.
+            // (The BOTTOM head for a lower voice's down stem — the same [my_dir].)
             var heads = notes[i].Heads;
             int lo = notes[i].Lowest.StaffPosition;
             int hi = notes[i].Highest.StaffPosition;
@@ -403,14 +408,12 @@ internal static class GraceNoteEngraver
             members.Add(new BeamMember(
                 GraceColumnHeads.StandIn(notes[i], grace.SourcePosition),
                 counts[i], left, right, sum / heads.Length, i,
-                // LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings —
-                //   ((Voice Stem direction ,UP)): a grace stem is forced up whatever the pitch.
-                memberStemUp: true,
+                memberStemUp: stemUp,
                 headPositionMin: lo,
                 headPositionMax: hi));
         }
 
-        var group = new BeamGroup(members.ToImmutable(), grace.MeasureIndex, 0, stemUp: true);
+        var group = new BeamGroup(members.ToImmutable(), grace.MeasureIndex, 0, stemUp: stemUp);
         var (leftY, rightY, _) = BeamScoringProblem.SolveLent(
             group, xs,
             lengthFraction: EngravingDefaults.GraceBeamLengthFraction,
@@ -629,11 +632,14 @@ internal static class GraceNoteEngraver
             {
                 // Read from the grace's own font, exactly as SpacingRules.GraceColumnRightReach
                 // does — this is the same ink, measured for a different caller.
+                // The column's own direction (GraceColumnInfo.StemDown — a lower voice's grace
+                // hangs its flag off a DOWN stem).
                 var font = grace.Columns[0].Font;
-                var flag = GlyphMetrics.GetFlagBBox(font, d.Denominator, stemUp: true);
+                bool up = grace.Columns[0].StemUp;
+                var flag = GlyphMetrics.GetFlagBBox(font, d.Denominator, stemUp: up);
                 if (flag != default)
                     return LayoutUtilities.StemAttachX(
-                        up: true, GlyphMetrics.NoteValueOf(d),
+                        up, GlyphMetrics.NoteValueOf(d),
                         NoteheadStyle.Default, font) + flag.Width;
             }
         }

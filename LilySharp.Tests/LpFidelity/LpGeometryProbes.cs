@@ -8780,6 +8780,20 @@ internal static class LpGeometryProbes
     private static readonly string GVA = GraceSlurBook("GVA", "treble", "voice { c'4 acciaccatura { e'8 } d'4 e'4 f'4 } { c1 } |");
     private static readonly string GV2 = GraceSlurBook("GV2", "treble", "voice { c1 } { c4 grace { d16( e16) } c4 e4 f4 } |");
 
+    /// <summary>
+    /// A GRACE IN A LOWER VOICE (probes/grace-voice-two-stem.ly): \voiceTwo replaces
+    /// graceSettings with general-grace-settings, so the grace keeps the voice's DOWN stem —
+    /// a beamed pair (GDB), a flagged eighth (GDF), an acciaccatura (GDA), a flagged chord
+    /// (GDC). The upper voice is a spacer, so the only heads are the lower voice's.
+    /// </summary>
+    private static readonly string GDB = GraceSlurBook("GDB", "treble", "voice { s1 } { c4 grace { d16 e16 } c4 e4 f4 } |");
+    private static readonly string GDF = GraceSlurBook("GDF", "treble", "voice { s1 } { c4 grace { d8 } c4 e4 f4 } |");
+    private static readonly string GDA = GraceSlurBook("GDA", "treble", "voice { s1 } { c4 acciaccatura { b8 } c4 e4 f4 } |");
+    private static readonly string GDC = GraceSlurBook("GDC", "treble", "voice { s1 } { c4 grace { <d f>8 } c4 e4 f4 } |");
+    /// <summary>The lower voice's grace OPENS the second bar: the bar line's optical correction
+    /// reads the grace column's DOWN stem (SpacingRules.LeadGraceOpticalCorrection).</summary>
+    private static readonly string GDO = GraceSlurBook("GDO", "treble", "c1 | voice { s1 } { grace { d'8 } c'4 e4 f4 g4 } |");
+
     private static readonly string BQA = """
         octave absolute
         time 4/4
@@ -16354,6 +16368,15 @@ internal static class LpGeometryProbes
         new("slur.grace.acciaccatura-voice-one.span", GVA, g => g.BowSpan(0)),
         new("slur.in-grace.voice-two.left-attachment", GV2, g => g.BowAttachmentAboveStaffMiddle(0)),
         new("slur.in-grace.voice-two.span", GV2, g => g.BowSpan(0)),
+        // A lower voice's grace stems point DOWN (probes/grace-voice-two-stem.ly). See GDB.
+        // Flag8thDown = U+E0DE (flags.d3).
+        new("grace.voice-two.beam.left", GDB, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("grace.voice-two.beam.right", GDB, g => g.BeamPositionAboveStaffMiddle(0, true)),
+        new("grace.voice-two.flag", GDF, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("grace.voice-two.acciaccatura.flag", GDA, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("grace.voice-two.chord.flag", GDC, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("grace.voice-two.column.to-main", GDF, g => g.NoteheadAnchorStep(1)),
+        new("grace.voice-two.bar-opening", GDO, g => g.BarlineRightToNextNotehead(0)),
         new("slur.over-flagged-grace.left-attachment", GFS, g => g.BowAttachmentAboveStaffMiddle(0)),
         new("slur.under-flagged-grace.left-attachment", GFS, g => g.BowAttachmentAboveStaffMiddle(1)),
         // The skyline reserves a slur laid out apart from the drawn one. See SBR.

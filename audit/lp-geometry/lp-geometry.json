@@ -1987,8 +1987,8 @@
       "probe": "grace-inner-slur.ly",
       "score": "VOICETWO",
       "lilypond": -5.1777239263803665,
-      "residual": 1.783664631,
-      "why": "GRACE STEMS IN A LOWER VOICE: under \\voiceTwo LilyPond's grace stems point DOWN (the voice's Stem direction wins over score-grace-settings' UP, as the slur's does - MEASURED, Lab sessions/p725 stemdir.ly: dir=-1 on both grace stems), and the DOWN slur clears their tips at -5.18. Lily# draws every grace stem UP (SharedRenderer, the obstacles, ResolveSlurEdge), so the slur sits under the heads at -3.39. Open: the grace stem direction in polyphony, not a slur defect."
+      "residual": 0.000756824,
+      "why": "The voice fixes the side and the stems: under \\voiceTwo LilyPond draws `\\grace { d16( e16) }` DOWN, its grace stems DOWN too (graceSettings = general-grace-settings, scm/music-functions.scm:666-674 - Lab sessions/p725 stemdir.ly: dir=-1), so the slur hangs 0.5 below the grace beam's LOWER face at -5.18. Since session 726 Lily# reads a lower voice's grace stem DOWN everywhere (MusicItem.GraceStemDown, GraceColumnInfo.StemDown) and ElementCoordinator.GraceBeamOuterFaceDeviceY hangs the slur from the face on the stems' side; it sat under the heads at -3.39 (+1.78) before. The 0.0008 left is the one slur.in-grace.voice-one.left-attachment carries."
     },
     "slur.in-grace.voice-two.span": {
       "probe": "grace-inner-slur.ly",
@@ -1996,6 +1996,55 @@
       "lilypond": 1.5,
       "residual": -0.082061554,
       "why": "Grace column spacing (see slur.in-grace.inner.span)."
+    },
+    "grace.voice-two.beam.left": {
+      "probe": "grace-voice-two-stem.ly",
+      "score": "GDB",
+      "lilypond": -4.5,
+      "residual": 0.0,
+      "why": "EXACT since session 726: a lower voice's grace stems point DOWN in LilyPond (\\voiceTwo replaces graceSettings with general-grace-settings, which states no Stem direction - scm/music-functions.scm:666-674 make-voice-props-set), so the run is quanted as a DOWN beam: (-4.5 . -4.142). Lily# forced every grace stem UP (GraceColumnHeads.StemUp, QuantGraceBeam's memberStemUp: true) until MeasureCollector.ProcessGraceRegion stamped MusicItem.GraceStemDown / GraceColumnInfo.StemDown from the writing voice."
+    },
+    "grace.voice-two.beam.right": {
+      "probe": "grace-voice-two-stem.ly",
+      "score": "GDB",
+      "lilypond": -4.142,
+      "residual": 0.0,
+      "why": "EXACT since session 726 (see grace.voice-two.beam.left)."
+    },
+    "grace.voice-two.flag": {
+      "probe": "grace-voice-two-stem.ly",
+      "score": "GDF",
+      "lilypond": -4.859999999999999,
+      "residual": 0.0,
+      "why": "EXACT since session 726: a lower voice's flagged grace hangs flags.d3 off a DOWN stem ending at -4.9 (the grace stem rule, GrobFontSize.GraceStemDetails, from the BOTTOM head), the flag half a blot inside it (see grace.voice-two.beam.left for the rule)."
+    },
+    "grace.voice-two.acciaccatura.flag": {
+      "probe": "grace-voice-two-stem.ly",
+      "score": "GDA",
+      "lilypond": -2.6600000000000006,
+      "residual": 0.0,
+      "why": "EXACT since session 726 (see grace.voice-two.flag): b' in a lower voice's acciaccatura, stem tip -2.7. The stroke is the dgrace glyph (mf/feta-flags.mf:1263-1298, SharedRenderer.DrawGraceSlash's down arm) - drawn, not measured here."
+    },
+    "grace.voice-two.chord.flag": {
+      "probe": "grace-voice-two-stem.ly",
+      "score": "GDC",
+      "lilypond": -4.859999999999999,
+      "residual": 0.0,
+      "why": "EXACT since session 726 (see grace.voice-two.flag): a chord's down stem is measured from its BOTTOM head (Stem::chord_start_y, head_positions[DOWN])."
+    },
+    "grace.voice-two.column.to-main": {
+      "probe": "grace-voice-two-stem.ly",
+      "score": "GDF",
+      "lilypond": 1.417939,
+      "residual": 0.0,
+      "why": "EXACT since session 726 (to 6e-7): the flagged grace's right reach reads its DOWN flag (SpacingRules.GraceColumnRightReach) - the same 1.417939 LilyPond prints for the grace head to the main head."
+    },
+    "grace.voice-two.bar-opening": {
+      "probe": "grace-voice-two-stem.ly",
+      "score": "GDO",
+      "lilypond": 0.804769495848520,
+      "residual": 0.005861361,
+      "why": "PENDING"
     },
     "slur.beamed.reserved-text": {
       "probe": "slur-beam-reserve.ly",

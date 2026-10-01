@@ -5216,7 +5216,17 @@ public sealed partial class MeasureCollector
         // An acciaccatura's stroke is a property of each item's own Flag, not of the group —
         // see MusicItem.GraceSlash for LilyPond's spelling of it.
         bool slash = type == GraceNoteType.Acciaccatura;
-        builder.EnterGraceTime(slash);
+        // The grace's stem direction, decided ONCE for the group (MusicItem.GraceStemDown):
+        // a voice's \voiceN props replace graceSettings with general-grace-settings, which
+        // states no Stem direction, so the grace keeps its voice's — DOWN for the second and
+        // fourth voice. A voice past the first is only ever written inside a voice { } span,
+        // so the writing voice's number is the whole question; the primary voice's answer
+        // (voice one, or no span at all) is UP either way.
+        // LILYPOND-REF: scm/music-functions.scm:666-674 make-voice-props-set (graceSettings = general-grace-settings)
+        // ⚠️ NOT a condensedStaff's second part: its voices are put together after collection
+        // (RenderSpec.ToStaffGroups), so here it is still voice 0 and stays UP.
+        bool graceStemDown = VoiceDefaults.GetDefaultStemUp(_cursor.VoiceIndex + 1) == false;
+        builder.EnterGraceTime(slash, graceStemDown);
         // The body items are reds already (a grace body is always live), exactly as
         // ProcessCueRegion's are.
         // ⚠️ GatherMusicSite, NOT a bare GreenSite each: a phrase reference is a CONTAINER
@@ -5235,7 +5245,7 @@ public sealed partial class MeasureCollector
         _defaultDuration = savedDuration;
         _defaultDots = savedDots;
 
-        var (graceColumns, columnItemIndices) = DeriveGraceColumns(builder, firstItemIndex);
+        var (graceColumns, columnItemIndices) = DeriveGraceColumns(builder, firstItemIndex, graceStemDown);
         if (graceColumns.Length == 0)
             return;
 
@@ -5276,7 +5286,7 @@ public sealed partial class MeasureCollector
     /// </para>
     /// </remarks>
     private static (ImmutableArray<GraceColumnInfo> Columns, ImmutableArray<int> ItemIndices)
-        DeriveGraceColumns(MeasureBuilder builder, int firstItemIndex)
+        DeriveGraceColumns(MeasureBuilder builder, int firstItemIndex, bool stemDown)
     {
         var items = builder.CurrentItems;
         if (firstItemIndex >= items.Count)
@@ -5300,7 +5310,7 @@ public sealed partial class MeasureCollector
                     columns.Add(new GraceColumnInfo(
                         note.StaffPosition, note.Accidental, note.NeedsLedgerLines,
                         note.BaseDuration, note.Midi, note.StringNumber, note.Dots)
-                    { ContextFontSizeStep = note.IsCue ? EngravingDefaults.CueFontSizeStep : 0 });
+                    { ContextFontSizeStep = note.IsCue ? EngravingDefaults.CueFontSizeStep : 0, StemDown = stemDown });
                     break;
 
                 case ChordItem chord when chord.Notes.Length > 0:
@@ -5317,14 +5327,15 @@ public sealed partial class MeasureCollector
                         heads.Sort(static (a, b) => a.StaffPosition.CompareTo(b.StaffPosition));
                         columns.Add(new GraceColumnInfo(
                             heads.ToImmutable(), chord.BaseDuration, chord.Dots,
-                            ContextFontSizeStep: chord.IsCue ? EngravingDefaults.CueFontSizeStep : 0));
+                            ContextFontSizeStep: chord.IsCue ? EngravingDefaults.CueFontSizeStep : 0,
+                            StemDown: stemDown));
                     }
                     break;
 
                 case RestItem rest:
                     columns.Add(new GraceColumnInfo(
                         ImmutableArray<GraceHeadInfo>.Empty,
-                        rest.BaseDuration, rest.Dots, IsSpacer: rest.IsSpacer));
+                        rest.BaseDuration, rest.Dots, IsSpacer: rest.IsSpacer, StemDown: stemDown));
                     break;
             }
             if (columns.Count > before)

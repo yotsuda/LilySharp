@@ -188,7 +188,9 @@ internal sealed class SlurDetector
     // True when any note/chord covered by the slur (inclusive range) has a
     // DOWN stem — rests are transparent, like LP's !has_rests columns. A grace
     // column's stem is UP whatever its model says (score-grace-settings Stem
-    // direction UP, as the renderer draws it), so it never flips the slur.
+    // direction UP, as the renderer draws it), except a lower voice's, which is
+    // DOWN (MusicItem.GraceStemDown) — and that one sits in a voice span, whose
+    // slur direction the voice fixes before this is asked.
     // LILYPOND-REF: lily/slur.cc Slur::calc_direction.
     private static bool AnyCoveredStemDown(
         ImmutableArray<Measure> measures,
@@ -203,9 +205,9 @@ internal sealed class SlurDetector
             {
                 switch (items[ii])
                 {
-                    case NoteItem n when !n.StemUp && !n.GraceTime:
+                    case NoteItem n when n.GraceTime ? n.GraceStemDown : !n.StemUp:
                         return true;
-                    case ChordItem c when !c.StemUp && !c.GraceTime:
+                    case ChordItem c when c.GraceTime ? c.GraceStemDown : !c.StemUp:
                         return true;
                 }
             }

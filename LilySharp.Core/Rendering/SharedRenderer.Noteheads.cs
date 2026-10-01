@@ -84,13 +84,15 @@ internal static partial class SharedRenderer
             // is asked per item — not once per part, nor per measure (a span can open
             // or close mid-bar; VoiceDefaults.GetDefaultStemUpAt's remarks).
             // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
-            // ⚠️ GRACE TIME OUTRANKS THE VOICE, and it is stated rather than derived from the
-            // pitch: LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings —
+            // ⚠️ A GRACE'S DIRECTION IS STATED, not derived from the pitch:
+            // LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings —
             // ((Voice Stem direction ,UP) (Voice Slur direction ,DOWN)), so a grace stem
-            // points up whatever the note's own position would ask for. The grace side model
-            // has always drawn them so; the ordinary pass has to be told.
+            // points up whatever the note's own position would ask for — except in a lower
+            // voice, whose \voiceTwo replaces graceSettings with general-grace-settings (no
+            // direction) and keeps the voice's DOWN. The collector stamped that one answer on
+            // the item (MusicItem.GraceStemDown); every grace layout reads the same stamp.
             bool? forcedStemUp = item.GraceTime
-                ? true
+                ? !item.GraceStemDown
                 : VoiceDefaults.GetDefaultStemUpAt(
                     staffVoices, voiceNumber - 1, ml.MeasureIndex, itemIdx);
 
@@ -898,7 +900,7 @@ internal static partial class SharedRenderer
                 // the flag's transparency for the same reason the flag follows the stem's.
                 if (note.GraceSlash && !stemTransparent)
                     DrawGraceSlash(stemX, stemEndY,
-                        GrobFontSize.ScaleOf(note, SizedGrob.Flag), gc);
+                        GrobFontSize.ScaleOf(note, SizedGrob.Flag), stemUp, gc);
             }
 
             if (note.HasTremolo)
@@ -1283,7 +1285,7 @@ internal static partial class SharedRenderer
             // An acciaccatura's stroke belongs to the flag — see DrawNote / MusicItem.GraceSlash.
             if (chord.GraceSlash && !stemTransparent)
                 DrawGraceSlash(stemX, stemEndY,
-                    GrobFontSize.ScaleOf(chord, SizedGrob.Flag), gc);
+                    GrobFontSize.ScaleOf(chord, SizedGrob.Flag), stemUp, gc);
 
             // The tremolo is the STEM's grob too — one StemTremolo per stem however
             // many heads hang on it, the single-note recipe exactly (DrawNote). This

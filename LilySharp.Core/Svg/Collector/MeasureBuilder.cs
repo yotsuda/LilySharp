@@ -553,12 +553,21 @@ internal sealed class MeasureBuilder
     /// <see cref="MusicItem.GraceSlash"/>, the way LilyPond states the stroke as a property
     /// of the note's own Flag (see that member).
     /// </param>
-    public void EnterGraceTime(bool slash = false)
+    /// <param name="stemDown">
+    /// True for a grace written by a lower voice: every note and chord added inside the region
+    /// carries <see cref="MusicItem.GraceStemDown"/> (see that member for LilyPond's rule).
+    /// </param>
+    public void EnterGraceTime(bool slash = false, bool stemDown = false)
     {
         _graceDepth++;
         if (slash)
             _graceSlashDepth++;
+        _graceStemDown = stemDown;
     }
+
+    /// <summary>The stem direction of the grace body being walked — see
+    /// <see cref="EnterGraceTime"/>. A bool, not a depth: a grace body cannot nest.</summary>
+    private bool _graceStemDown;
 
     /// <summary>How deep into <c>acciaccatura { }</c> bodies this builder is — a counter for
     /// the reason <see cref="_graceDepth"/> is one.</summary>
@@ -571,6 +580,8 @@ internal sealed class MeasureBuilder
             _graceDepth--;
         if (slash && _graceSlashDepth > 0)
             _graceSlashDepth--;
+        if (_graceDepth == 0)
+            _graceStemDown = false;
     }
 
     /// <summary>
@@ -622,6 +633,7 @@ internal sealed class MeasureBuilder
             {
                 GraceTime = true,
                 GraceSlash = slash,
+                GraceStemDown = _graceStemDown,
                 Midi = n.Midi,
                 StringNumber = n.StringNumber,
                 SlurStartSourcePosition = n.SlurStartSourcePosition,
@@ -640,6 +652,7 @@ internal sealed class MeasureBuilder
             {
                 GraceTime = true,
                 GraceSlash = slash,
+                GraceStemDown = _graceStemDown,
                 SlurStartSourcePosition = c.SlurStartSourcePosition,
                 SlurEndSourcePosition = c.SlurEndSourcePosition,
                 SlurStartHeadPosition = c.SlurStartHeadPosition,

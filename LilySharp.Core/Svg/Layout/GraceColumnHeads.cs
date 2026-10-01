@@ -58,15 +58,10 @@ namespace LilySharp.Core.Svg.Layout;
 /// </remarks>
 internal static class GraceColumnHeads
 {
-    /// <summary>
-    /// Grace stems are forced UP, whatever the pitches are, so every caller here reads one
-    /// direction rather than deciding one.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: scm/music-functions.scm:652-656 <c>score-grace-settings</c> —
-    /// <c>((Voice Stem direction ,UP) (Voice Slur direction ,DOWN))</c>.
-    /// </remarks>
-    internal const bool StemUp = true;
+    // ⚠️ THERE IS NO "GRACE STEMS ARE UP" CONSTANT HERE ANY MORE (session 726): a lower
+    // voice's grace points DOWN (MusicItem.GraceStemDown has LilyPond's rule), so every reader
+    // asks the column — GraceColumnInfo.StemUp — rather than a constant that was right for
+    // the primary voice only.
 
     /// <summary>
     /// How far RIGHT of the column's origin each head is drawn, parallel to
@@ -80,7 +75,7 @@ internal static class GraceColumnHeads
         if (column.Heads.IsDefaultOrEmpty || column.Heads.Length < 2)
             return ImmutableArray<double>.Empty;
         var offsets = ChordHeadPositioning.CalculateOffsets(
-            AsChordNotes(column), StemUp,
+            AsChordNotes(column), column.StemUp,
             GlyphMetrics.NoteValueOf(column.BaseDuration),
             column.Font);
         return ImmutableArray.Create(offsets);
@@ -108,7 +103,7 @@ internal static class GraceColumnHeads
             headOffsets: HeadOffsetsOrNull(column),
             accidentalFont: column.AccidentalFont,
             column.Font,
-            AccidentalStem.Of(StemUp, GlyphMetrics.NoteValueOf(column.BaseDuration),
+            AccidentalStem.Of(column.StemUp, GlyphMetrics.NoteValueOf(column.BaseDuration),
                 NoteheadStyle.Default, notes, 0, column.Font));
         // position_apes answers per ACCIDENTAL, keyed on the staff position it belongs to;
         // the heads of one column are distinct positions (a unison writes one head), so the

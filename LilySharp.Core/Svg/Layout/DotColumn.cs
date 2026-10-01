@@ -366,20 +366,24 @@ internal static class DotColumn
         int supportCount = 0;
         if (noteValue >= 2 && !beamed)
         {
-            // The stem stands on the TOP head: a grace stem is up (GraceColumnHeads.StemUp).
-            int top = headPositions.Max();
+            // The stem is measured from the head at its far end — the TOP head for a grace's
+            // usual up stem, the BOTTOM one for a lower voice's down stem
+            // (GraceColumnInfo.StemDown) — Stem::chord_start_y's head_positions[dir]
+            // (lily/stem.cc:114-122).
+            bool up = column.StemUp;
+            int anchor = up ? headPositions.Max() : headPositions.Min();
             double stemX = LayoutUtilities.StemAttachX(
-                GraceColumnHeads.StemUp, noteValue, NoteheadStyle.Default, font);
-            supports[supportCount++] = StemSupport(top, GraceColumnHeads.StemUp,
+                up, noteValue, NoteheadStyle.Default, font);
+            supports[supportCount++] = StemSupport(anchor, up,
                 stemX + EngravingDefaults.StemThickness / 2);
-            var flagBox = GlyphMetrics.GetFlagBBox(font, noteValue, GraceColumnHeads.StemUp);
+            var flagBox = GlyphMetrics.GetFlagBBox(font, noteValue, up);
             if (noteValue >= 8 && flagBox != default)
             {
                 double tip = LayoutUtilities.FlagPlacementY(
                     StemCalculator.CalculateStemEndPosition(
-                        GraceColumnHeads.StemUp, StemCalculator.GetDurationLog(noteValue), top,
+                        up, StemCalculator.GetDurationLog(noteValue), anchor,
                         GrobFontSize.GraceStemDetails) / 2.0,
-                    GraceColumnHeads.StemUp);
+                    up);
                 supports[supportCount++] = FlagSupport(tip + flagBox.Bottom, tip + flagBox.Top,
                                                        stemX + flagBox.Right);
             }

@@ -301,12 +301,15 @@ internal static partial class SpacingRules
             // MEASURED: 0.852939 + 0.585689 = 1.438627 is LilyPond's own reading to nine
             // places (ledger grace.column.single.to-main). It hung off the head's ADVANCE
             // until 2026-08-02, 0.063472 too far right.
+            // A lower voice's grace hangs its flag off a DOWN stem (GraceColumnInfo.StemDown):
+            // the same two terms in that direction.
             var font = note.Font;
-            var flag = GlyphMetrics.GetFlagBBox(font, note.BaseDuration.Denominator, stemUp: true);
+            bool up = note.StemUp;
+            var flag = GlyphMetrics.GetFlagBBox(font, note.BaseDuration.Denominator, stemUp: up);
             if (flag != default)
                 ink = Math.Max(ink,
                     LayoutUtilities.StemAttachX(
-                        up: true, GlyphMetrics.NoteValueOf(note.BaseDuration),
+                        up, GlyphMetrics.NoteValueOf(note.BaseDuration),
                         NoteheadStyle.Default, font)
                     + flag.Width);
         }
@@ -496,7 +499,8 @@ internal static partial class SpacingRules
     ///   then reads the two stems, and which wants the head ranges more than one staff
     ///   position apart.
     /// LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings —
-    ///   <c>((Voice Stem direction ,UP))</c>, why the stand-in's stem is forced up.
+    ///   <c>((Voice Stem direction ,UP))</c>, why the stand-in's stem is forced up — and
+    ///   :666-674 make-voice-props-set, why a lower voice's is DOWN (GraceColumnInfo.StemDown).
     /// <para>
     /// LilyPond's spring stops at the grace column — the run is columns of its own, so the
     /// pair whose stems the optical correction compares is (previous note, first grace), not
@@ -512,10 +516,11 @@ internal static partial class SpacingRules
     /// it added became 0.2 after the approach scaling.
     /// </para>
     /// <para>
-    /// ⚠️ The stand-in's stem is forced UP, not derived from its pitch: a grace stem is up
+    /// ⚠️ The stand-in's stem is STATED, not derived from its pitch: a grace stem is up
     /// whatever the note (scm/music-functions.scm:652-656 score-grace-settings, the same
-    /// rule GraceNoteEngraver draws by). Letting the pitch decide would flip the correction's
-    /// sign on any grace above the middle line.
+    /// rule GraceNoteEngraver draws by), down in a lower voice (GraceColumnInfo.StemDown).
+    /// Letting the pitch decide would flip the correction's sign on any grace above the
+    /// middle line.
     /// </para>
     /// </remarks>
     private static MusicItem? ApproachColumn(MusicItem? item)
@@ -532,7 +537,31 @@ internal static partial class SpacingRules
         // CalculateStemCorrection's StemSpacingInfo already answers that interval for a
         // ChordItem. Picking one head here would have been a second, narrower spelling of a
         // rule this repository already owns.
-        return GraceColumnHeads.StandIn(grace[0], sourcePosition: 0, stemUpOverride: true);
+        // The column's own direction — UP, or a lower voice's DOWN (GraceColumnInfo.StemDown).
+        return GraceColumnHeads.StandIn(grace[0], sourcePosition: 0, stemUpOverride: grace[0].StemUp);
+    }
+
+    /// <summary>
+    /// The bar line's optical correction when a grace run opens the bar: the max over the
+    /// columns that carry a leading grace, each read through its first grace
+    /// (<see cref="ApproachColumn"/>) — the grace column's own stems, which are the only note
+    /// columns of that paper column.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/staff-spacing.cc:95-110 next_notes_correction — the max of
+    /// optical_correction over the right column's note columns.
+    /// </remarks>
+    private static double LeadGraceOpticalCorrection(in ItemColumn firstItems)
+    {
+        double max = 0;
+        for (int i = 0; i < firstItems.Count; i++)
+        {
+            var item = firstItems[i];
+            if (GraceNotesOf(item).IsDefaultOrEmpty)
+                continue;
+            max = Math.Max(max, BarlineToStemOpticalCorrection(ApproachColumn(item)));
+        }
+        return max;
     }
 
     /// <summary>The leading grace notes hanging left of an item's column, if any.</summary>

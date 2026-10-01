@@ -714,9 +714,10 @@ internal sealed class SkylineBuilder
                             upSkyline, downSkyline,
                             // LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings
                             //   — (Voice Stem direction UP): a grace stem points up whatever
-                            //   the pitch would ask, and the renderer is told the same at the
-                            //   item (SharedRenderer.DrawStaffMeasures).
-                            forcedStemUp: GraceColumnHeads.StemUp,
+                            //   the pitch would ask — DOWN in a lower voice (the item's
+                            //   GraceStemDown stamp), as the renderer reads it at the item
+                            //   (SharedRenderer.DrawStaffMeasures).
+                            forcedStemUp: !item.GraceStemDown,
                             // A column the run's beam covers ends its stem ON the beam, so the
                             // beam and those stems are seeded together (AddGraceBeamsToSkyline)
                             // — the same split the full-size walk makes with suppressStems.
@@ -802,7 +803,7 @@ internal sealed class SkylineBuilder
         // grace counterpart of AddBeamsToSkyline, run after the columns because it seeds
         // the drawn geometry the withheld stems above were left to.
         if (graceSeeds is not null)
-            AddGraceBeamsToSkyline(graceSeeds, staffMiddleUp, StaffSize.Of(staff), upSkyline);
+            AddGraceBeamsToSkyline(graceSeeds, staffMiddleUp, StaffSize.Of(staff), upSkyline, downSkyline);
     }
 
     /// <summary>
@@ -945,7 +946,9 @@ internal sealed class SkylineBuilder
     /// <summary>
     /// Seeds each beamed grace run's BEAM and the stems that end on it — the drawn geometry
     /// <c>SharedRenderer.DrawGraceBeam</c> draws, into the UP skyline (a grace stem is forced
-    /// up, so its beam is the run's top edge).
+    /// up, so its beam is the run's top edge) — or the DOWN one for a lower voice's run, whose
+    /// stems point down (GraceColumnInfo.StemDown; make-voice-props-set,
+    /// scm/music-functions.scm:666-674).
     /// </summary>
     /// <remarks>
     /// The same frame the renderer draws in: each stem stands at <c>LayoutUtilities.StemX</c>
@@ -962,7 +965,8 @@ internal sealed class SkylineBuilder
     ///   outer stems.
     /// </remarks>
     private static void AddGraceBeamsToSkyline(
-        GraceSeeds seeds, double staffMiddleUp, StaffSize size, VerticalSkyline upSkyline)
+        GraceSeeds seeds, double staffMiddleUp, StaffSize size, VerticalSkyline upSkyline,
+        VerticalSkyline downSkyline)
     {
         if (seeds.BeamedRuns.Count == 0)
             return;
@@ -979,32 +983,40 @@ internal sealed class SkylineBuilder
             // constant DrawGraceBeam spells for the same reason (a beam needs two columns of
             // an eighth or shorter, so every column here draws a black head).
             const int graceHeadNoteValue = 4;
+            // A lower voice's run points DOWN (GraceColumnInfo.StemDown): its beam is the run's
+            // BOTTOM edge, seeded into the down skyline from the bottom head, as the renderer
+            // draws it.
+            bool up = run.Run.StemUp;
+            double sign = up ? 1 : -1;
             double StemX(int i) => run.X + run.Columns.Offsets[i]
-                + size.Span(LayoutUtilities.StemX(0.0, up: true, graceHeadNoteValue,
+                + size.Span(LayoutUtilities.StemX(0.0, up, graceHeadNoteValue,
                     NoteheadStyle.Default, headFont));
-            double TopHeadUp(int i)
-                => staffMiddleUp + size.Span(run.Run.Columns[i].Highest.StaffPosition * 0.5);
+            // The head at the beam's end of the column — the top one for up, the bottom for down.
+            double TipHeadUp(int i)
+                => staffMiddleUp + size.Span((up ? run.Run.Columns[i].Highest
+                                                 : run.Run.Columns[i].Lowest).StaffPosition * 0.5);
             double edgeL = StemX(0), edgeR = StemX(last);
             double beamLeftY = run.BeamLeftY is { } bl
                 ? staffMiddleUp + size.Span(bl / 2.0)
-                : TopHeadUp(0) + size.Span(GraceNoteEngraver.StemLength(run.Run.HeadScale));
+                : TipHeadUp(0) + sign * size.Span(GraceNoteEngraver.StemLength(run.Run.HeadScale));
             double beamRightY = run.BeamRightY is { } br
                 ? staffMiddleUp + size.Span(br / 2.0)
-                : TopHeadUp(last) + size.Span(GraceNoteEngraver.StemLength(run.Run.HeadScale));
+                : TipHeadUp(last) + sign * size.Span(GraceNoteEngraver.StemLength(run.Run.HeadScale));
             double span = edgeR - edgeL;
             double slope = span > 0.001 ? (beamRightY - beamLeftY) / span : 0.0;
             double BeamY(double x) => beamLeftY + slope * (x - edgeL);
 
+            var skyline = up ? upSkyline : downSkyline;
             for (int i = 0; i <= last; i++)
             {
                 double sx = StemX(i);
-                double foot = TopHeadUp(i);
+                double foot = TipHeadUp(i);
                 double tip = BeamY(sx);
-                if (tip > foot)
-                    upSkyline.MergeBox(sx - halfStem, sx + halfStem, foot, tip);
+                if (sign * (tip - foot) > 0)
+                    skyline.MergeBox(sx - halfStem, sx + halfStem, Math.Min(foot, tip), Math.Max(foot, tip));
             }
             double xL = edgeL - halfStem, xR = edgeR + halfStem;
-            upSkyline.MergeSlope(xL, BeamY(xL) + beamHalf, xR, BeamY(xR) + beamHalf, thickness: 0);
+            skyline.MergeSlope(xL, BeamY(xL) + sign * beamHalf, xR, BeamY(xR) + sign * beamHalf, thickness: 0);
         }
     }
 
@@ -3203,8 +3215,8 @@ internal sealed class SkylineBuilder
             downSkyline.MergeBox(stemCentre - stemHalfWidth, stemCentre + stemHalfWidth,
                 ToSystemUp(stemTipUp), ToSystemUp(stemBaseUp));
 
-            // The grace flag's own outline, as in the up arm (a grace stem is forced up, so
-            // this arm is reached only by a hand-forced one).
+            // The grace flag's own outline, as in the up arm — reached by a lower voice's grace,
+            // whose stem points DOWN (MusicItem.GraceStemDown), and by a hand-forced one.
             if (noteValue >= 8 && graceItem is { } graceFlagItem)
             {
                 double flagOriginX = stemCentre + size.Span(EngravingDefaults.StemThickness / 2);

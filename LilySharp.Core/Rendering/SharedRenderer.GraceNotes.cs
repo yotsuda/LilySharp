@@ -170,7 +170,8 @@ internal static partial class SharedRenderer
                 // an ordinary beam uses (SharedRenderer.BuildBeamedItemsSet).
                 // LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings —
                 //   ((Voice Stem direction ,UP) (Voice Slur direction ,DOWN)): grace
-                //   stems are forced up regardless of pitch, and the auto-slur bows down.
+                //   stems are forced up regardless of pitch, and the auto-slur bows down — a
+                //   lower voice's run DOWN (GraceColumnInfo.StemDown, make-voice-props-set).
                 // The beam's own height comes from the QUANTER, in the layout stage
                 // (GraceNoteEngraver.QuantGraceBeam) — the renderer places it, it does not
                 // decide it. The pair is in staff positions at the beam's OUTER STEMS, which
@@ -185,7 +186,7 @@ internal static partial class SharedRenderer
                            os.YUp(staffMiddleY + br / 2.0, g.StaffIndex, g.MeasureIndex))
                         : null;
                 DrawGraceBeam(headX, headY, headTopY, beamCounts, eff, graceFont,
-                    beamEnds, beamedPrefix, gc);
+                    beamEnds, beamedPrefix, GraceNoteItem.StemUpOf(g.Columns), gc);
 
                 // The grace slur (last grace column → main note) is NOT drawn here any more:
                 // since session 724 it is an ordinary slur, laid out with the rest
@@ -312,6 +313,9 @@ internal static partial class SharedRenderer
     ///   stems are forced UP (so a stem-up beam stacks its secondary beams toward
     ///   the heads, i.e. downward on the page). The ordinary pass is told the same, at the
     ///   item (SharedRenderer.DrawStaffMeasures).
+    /// LILYPOND-REF: scm/music-functions.scm:666-674 make-voice-props-set — a lower voice's
+    ///   graceSettings name no direction, so its run is DOWN (<paramref name="stemUp"/>): the
+    ///   stems stand on the TOP heads, the beam hangs below, the secondaries stack upward.
     /// LILYPOND-REF: lily/beam.cc secondary beams translated by beam-thickness + gap.
     /// </remarks>
     /// <param name="beamEnds">
@@ -338,7 +342,7 @@ internal static partial class SharedRenderer
         List<double> xs, List<double> ys, List<double> topYs, List<int> beamCounts,
         double scale,
         GlyphMetrics.DesignMetrics headFont,
-        (double Left, double Right)? beamEnds, int beamedCount,
+        (double Left, double Right)? beamEnds, int beamedCount, bool stemUp,
         IDrawingContext gc)
     {
         // ONE COLUMN IS A FLAG, NOT A BEAM, and the ordinary pass has already drawn it: the
@@ -378,12 +382,16 @@ internal static partial class SharedRenderer
         //     duration log.
         const int graceHeadNoteValue = 4;
         double StemX(int i) =>
-            LayoutUtilities.StemX(xs[i], up: true, graceHeadNoteValue,
+            LayoutUtilities.StemX(xs[i], up: stemUp, graceHeadNoteValue,
                 NoteheadStyle.Default, headFont);
         // Stem end: the up-stem runs from the head to stemLen above it — up is larger
         // Y-up, so add in the native page Y-up frame. Only the FALLBACK reads it (a group
         // the layout could not quant); a quanted beam gives every stem its own end.
-        double StemEndY(int i) => topYs[i] + stemLen;
+        // A lower voice's DOWN stem (GraceColumnInfo.StemDown) runs the other way, from the top
+        // head down past the bottom one.
+        double StemEndY(int i) => stemUp ? topYs[i] + stemLen : ys[i] - stemLen;
+        // The stem's FOOT is the head at the far end from the beam.
+        double StemFootY(int i) => stemUp ? ys[i] : topYs[i];
 
         // OVER THE PREFIX, NOT OVER THE RUN. beamedCount is GraceNoteEngraver.BeamedPrefix —
         // the same sentence the reservation, the quanter and the ordinary pass's withholding
@@ -424,7 +432,7 @@ internal static partial class SharedRenderer
         double BeamY(double x) => beamLeftY + beamSlope * (x - edgeL);
 
         for (int i = 0; i < beamedCount; i++)
-            gc.DrawLine(StemX(i), ys[i], StemX(i), BeamY(StemX(i)), Color.Black, stemThick);
+            gc.DrawLine(StemX(i), StemFootY(i), StemX(i), BeamY(StemX(i)), Color.Black, stemThick);
 
         // A grace beam's thickness is DECLARED, not scaled: scm/music-functions.scm:635-648
         // general-grace-settings has (Voice Beam beam-thickness 0.384) where
@@ -472,9 +480,9 @@ internal static partial class SharedRenderer
         Beam(0, last, 0);                     // primary across the beamed prefix
         for (int level = 1; level < maxBeams; level++)
         {
-            // Secondaries stack toward the heads (below the up-stem beam), which is
-            // the negative direction in the page Y-up frame.
-            double off = -(level * beamTrans);
+            // Secondaries stack toward the heads: below an up-stem beam (the negative direction
+            // in the page Y-up frame), above a down-stem one.
+            double off = (stemUp ? -1 : 1) * (level * beamTrans);
             int i = 0;
             while (i < last)
             {
@@ -504,23 +512,31 @@ internal static partial class SharedRenderer
     ///   hip_width = upflag_width − hip_thickness/2,
     ///   upflag_width = .65·notehead_width + stemthickness/2,
     ///   hip_thickness = linethickness + .069 ss. All scaled by the grace scale.
+    /// LILYPOND-REF: mf/feta-flags.mf:1263-1298 downflag_width, "grace dash (down)" (flags.dgrace) —
+    ///   the same stroke with flare = .99 ss, foot_depth = total_depth = 2.85 ss and
+    ///   hip_width = downflag_width − hip_thickness/2 (downflag_width = .833·notehead_width +
+    ///   stemthickness/2, feta-flags.mf:30), then y_mirror_char: it hangs UP from the end of a
+    ///   down stem. A lower voice's acciaccatura reaches it (MusicItem.GraceStemDown).
     /// </remarks>
-    private static void DrawGraceSlash(double stemX, double stemTopY, double scale, IDrawingContext gc)
+    private static void DrawGraceSlash(double stemX, double stemEndY, double scale, bool stemUp,
+        IDrawingContext gc)
     {
         const double hipDepthRatio = 0.72;
-        const double footDepth = 3.0;   // staff spaces
-        const double flare = 1.0;       // staff spaces
-        double upflagWidth = 0.65 * EngravingDefaults.NoteheadBlackWidth
-                           + EngravingDefaults.StemThickness / 2;
+        double footDepth = stemUp ? 3.0 : 2.85;   // staff spaces
+        double flare = stemUp ? 1.0 : 0.99;       // staff spaces
+        double flagWidth = (stemUp ? 0.65 : 0.833) * EngravingDefaults.NoteheadBlackWidth
+                         + EngravingDefaults.StemThickness / 2;
         double hipThickness = EngravingDefaults.LineThickness + 0.069;
-        double hipWidth = upflagWidth - hipThickness / 2;
+        double hipWidth = flagWidth - hipThickness / 2;
 
         // feta y is up; the page frame is now Y-up too, so a feta y of -k is k
-        // staff-spaces below the stem top (= −k in Y-up).
+        // staff-spaces below the stem end (= −k in Y-up). The down glyph is the same
+        // stroke mirrored (y_mirror_char), so its y's change sign.
+        double sign = stemUp ? 1 : -1;
         double x1 = stemX - hipWidth * hipDepthRatio * scale;
-        double y1 = stemTopY - footDepth * hipDepthRatio * scale;   // lower-left
+        double y1 = stemEndY - sign * footDepth * hipDepthRatio * scale;   // the foot, toward the head
         double x2 = stemX + hipWidth * scale;
-        double y2 = stemTopY - flare * scale;                       // upper-right
+        double y2 = stemEndY - sign * flare * scale;                       // the hip, at the flag
         gc.DrawLine(x1, y1, x2, y2, Color.Black, 1.5 * EngravingDefaults.StemThickness * scale);
     }
 

@@ -1546,7 +1546,8 @@ internal sealed class ElementCoordinator
     /// <remarks>
     /// The DIRECTION is why a grace rest moves and an ordinary one does not: the rest has
     /// none, so Rest_collision falls back to its column's, which is its stem's — and a grace
-    /// stem is UP (score-grace-settings). An ordinary rest's column has no direction and
+    /// stem is UP (score-grace-settings) — in a lower voice the rest carries the voice's own
+    /// direction (VoiceDirection), as its grace stems do. An ordinary rest's column has no direction and
     /// takes no translation. The rest's own position stays the unvoiced one.
     /// LILYPOND-REF: lily/rest-collision-engraver.cc:55-80 process_acknowledged — busyGrobs,
     ///   "Include notes that started any time";
@@ -3152,10 +3153,11 @@ internal sealed class ElementCoordinator
             default:
                 return default; // rest / spacer / barline — no stem
         }
-        // A grace column's stem is UP whatever its pitch (score-grace-settings), as the
-        // renderer draws it; the model's StemUp is the ungraced default.
+        // A grace column's stem is UP whatever its pitch (score-grace-settings) — DOWN in a lower
+        // voice (MusicItem.GraceStemDown) — as the renderer draws it; the model's StemUp is the
+        // ungraced default.
         if (items[itemIndex].GraceTime)
-            stemUp = true;
+            stemUp = !items[itemIndex].GraceStemDown;
 
         // Whole notes (value 1) and breves have no stem.
         bool hasStem = GlyphMetrics.NoteValueOf(baseDuration) >= 2;
@@ -3198,7 +3200,7 @@ internal sealed class ElementCoordinator
                 // A grace stem by the rule the renderer draws it with (GraceStemDetails:
                 // length-fraction 0.8, no-stem-extend) — see AddGraceObstaclesForMeasure.
                 stemTipY = staffMiddleDown - StemCalculator.CalculateStemEndPosition(
-                    true, StemCalculator.GetDurationLog(col.NoteValue), col.HeadPositionToward(true),
+                    stemUp, StemCalculator.GetDurationLog(col.NoteValue), col.HeadPositionToward(stemUp),
                     GrobFontSize.GraceStemDetails) / 2.0;
             else
                 stemTipY = staffMiddleDown - EngravingDefaults.StaffMiddle
@@ -3645,8 +3647,9 @@ internal sealed class ElementCoordinator
     }
 
     /// <summary>
-    /// Device Y of a beamed grace run's beam — its UPPER face, the side an up slur hangs
-    /// from — at <paramref name="stemX"/>, when column <paramref name="column"/> is beamed on
+    /// Device Y of a beamed grace run's beam — its OUTER face, the side a slur on the stems'
+    /// side hangs from: the upper face of an up run, the lower face of a lower voice's down
+    /// run (GraceColumnInfo.StemDown) — at <paramref name="stemX"/>, when column <paramref name="column"/> is beamed on
     /// the side toward the slur's other end (<paramref name="towardRight"/>); null otherwise
     /// (a lone or flagged column, a run with a rest, or the run's outer end on that side).
     /// </summary>
@@ -3657,7 +3660,7 @@ internal sealed class ElementCoordinator
     /// LILYPOND-REF: lily/slur-scoring.cc:549-557 get_base_attachments — a bound whose stem
     /// points the slur's way and is beamed on its inner side attaches 0.5 beyond the beam.
     /// </remarks>
-    private static double? GraceBeamUpperFaceDeviceY(Voice voice, ImmutableArray<GraceNoteItem> graceNotes,
+    private static double? GraceBeamOuterFaceDeviceY(Voice voice, ImmutableArray<GraceNoteItem> graceNotes,
         int gi, int column, bool towardRight, GraceObstacleGeom?[] cache, MeasureLayout ml, int voiceIndex,
         VoiceCollisionTable voiceShifts, double stemX, double staffMiddleDown)
     {
@@ -3673,11 +3676,12 @@ internal sealed class ElementCoordinator
             return null;
         double groupX = GraceGroupX(voice, g, geom, ml, voiceIndex, voiceShifts);
         var font = g.HeadFont;
-        double xL = LayoutUtilities.StemX(groupX + geom.Offsets[0], up: true, noteValue: 4, NoteheadStyle.Default, font);
-        double xR = LayoutUtilities.StemX(groupX + geom.Offsets[last], up: true, noteValue: 4, NoteheadStyle.Default, font);
+        bool up = g.StemUp;
+        double xL = LayoutUtilities.StemX(groupX + geom.Offsets[0], up, noteValue: 4, NoteheadStyle.Default, font);
+        double xR = LayoutUtilities.StemX(groupX + geom.Offsets[last], up, noteValue: 4, NoteheadStyle.Default, font);
         double t = xR - xL > 0.001 ? (stemX - xL) / (xR - xL) : 0.0;
         double centerUp = (bl + (br - bl) * t) / 2.0;
-        return staffMiddleDown - (centerUp + EngravingDefaults.GraceBeamThickness / 2.0);
+        return staffMiddleDown - (centerUp + (up ? 1 : -1) * EngravingDefaults.GraceBeamThickness / 2.0);
     }
 
     /// <summary>Where a grace group's first column stands: its main note's column, shifted
@@ -3693,7 +3697,8 @@ internal sealed class ElementCoordinator
     /// <summary>
     /// Adds the grace columns the slur covers in measure <paramref name="mi"/> to
     /// <paramref name="obstacles"/> — heads at the grace font's own ink, stems
-    /// forced UP (score-grace-settings), the group's geometry rebuilt from the
+    /// forced UP (score-grace-settings) or a lower voice's DOWN (GraceColumnInfo.StemDown),
+    /// the group's geometry rebuilt from the
     /// same producers the renderer reads. See
     /// <see cref="BuildSlurObstacles"/> for the LP references and disclosures.
     /// </summary>
@@ -3742,9 +3747,11 @@ internal sealed class ElementCoordinator
             // scored line's staff-position pair at the two OUTER STEMS, exactly
             // what the renderer anchors the drawn beam on.
             var (beamL, beamR) = (geom.BeamLeftY, geom.BeamRightY);
+            // The run's stem direction: up, or a lower voice's down (GraceColumnInfo.StemDown).
+            bool stemUp = g.StemUp;
             double StemXAt(int k) => LayoutUtilities.StemX(
                 groupX + (k < geom.Offsets.Length ? geom.Offsets[k] : 0.0),
-                up: true, noteValue: 4, NoteheadStyle.Default, font);
+                stemUp, noteValue: 4, NoteheadStyle.Default, font);
 
             for (int k = 0; k < g.Columns.Length; k++)
             {
@@ -3786,11 +3793,11 @@ internal sealed class ElementCoordinator
                 double headCenterY = staffMiddleDown - headPos / 2.0;
 
                 // Grace stems are forced UP whatever the pitch
-                // (scm/music-functions.scm:652-656 score-grace-settings), so the
-                // stem participates only under an UP slur.
+                // (scm/music-functions.scm:652-656 score-grace-settings) — DOWN in a lower
+                // voice — so the stem participates only under a slur on its side.
                 double stemY = double.NaN;
                 double obstacleX = hx + font.NoteheadBlackAdvance / 2.0;
-                if (slur.CurveUp)
+                if (slur.CurveUp == stemUp)
                 {
                     double stemX = StemXAt(k);
                     if (beamL is { } bl && beamR is { } br && g.Columns.Length > 1)
@@ -3803,7 +3810,7 @@ internal sealed class ElementCoordinator
                         double t = xR - xL > 0.001 ? (stemX - xL) / (xR - xL) : 0.0;
                         double centerUp = (bl + (br - bl) * t) / 2.0;
                         stemY = staffMiddleDown
-                            - (centerUp + EngravingDefaults.GraceBeamThickness);
+                            - (centerUp + (stemUp ? 1 : -1) * EngravingDefaults.GraceBeamThickness);
                     }
                     else
                     {
@@ -3818,7 +3825,9 @@ internal sealed class ElementCoordinator
                         // alone, slur-scoring.cc:146-151).
                         int durationLog = StemCalculator.GetDurationLog(note.BaseDuration.Denominator);
                         stemY = staffMiddleDown - StemCalculator.CalculateStemEndPosition(
-                            true, durationLog, note.Highest.StaffPosition, GrobFontSize.GraceStemDetails) / 2.0;
+                            stemUp, durationLog,
+                            (stemUp ? note.Highest : note.Lowest).StaffPosition,
+                            GrobFontSize.GraceStemDetails) / 2.0;
                     }
                     obstacleX = stemX;
                 }
@@ -4671,15 +4680,15 @@ internal sealed class ElementCoordinator
                         leftEdgeInfo.StemXLo + EngravingDefaults.StemThickness / 2.0,
                         staffMiddleDown, slur.CurveUp, out double startTip))
                     segStartY = startTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
-                // A grace bound under an UP slur (its stem is up whatever its pitch), beamed
-                // toward the slur's other end, hangs from the grace beam. MEASURED
-                // (probes/grace-inner-slur.ly VOICEONE): `grace { d''16( e''16) }` under
-                // \voiceOne — 0.45 low on the heads until session 725.
-                else if (segment.IsFirst && slur.CurveUp && startGrace is { } sgb && graceGeomCache != null
-                    && GraceBeamUpperFaceDeviceY(score.Voices[slur.VoiceIndex], graceNotes, sgb.Group, sgb.Column,
+                // A grace bound whose stem points the slur's way (up, or a lower voice's down —
+                // MusicItem.GraceStemDown), beamed toward the slur's other end, hangs from the
+                // grace beam. MEASURED (probes/grace-inner-slur.ly VOICEONE): `grace { d''16(
+                // e''16) }` under \voiceOne — 0.45 low on the heads until session 725.
+                else if (segment.IsFirst && leftEdgeInfo.StemUp == slur.CurveUp && startGrace is { } sgb && graceGeomCache != null
+                    && GraceBeamOuterFaceDeviceY(score.Voices[slur.VoiceIndex], graceNotes, sgb.Group, sgb.Column,
                         towardRight: true, graceGeomCache, startMeasure, slur.VoiceIndex, voiceShifts,
                         leftEdgeInfo.StemXLo + EngravingDefaults.StemThickness / 2.0, staffMiddleDown) is { } startFace)
-                    segStartY = startFace - stemTipGap;
+                    segStartY = startFace + (slur.CurveUp ? -stemTipGap : stemTipGap);
                 else
                 {
                     // The lift off the head is that head's own extent (a cue head is smaller).
@@ -4716,11 +4725,11 @@ internal sealed class ElementCoordinator
                         rightEdgeInfo.StemXLo + EngravingDefaults.StemThickness / 2.0,
                         staffMiddleDown, slur.CurveUp, out double endTip))
                     segEndY = endTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
-                else if (segment.IsLast && slur.CurveUp && endGrace is { } egb && graceGeomCache != null
-                    && GraceBeamUpperFaceDeviceY(score.Voices[slur.VoiceIndex], graceNotes, egb.Group, egb.Column,
+                else if (segment.IsLast && rightEdgeInfo.StemUp == slur.CurveUp && endGrace is { } egb && graceGeomCache != null
+                    && GraceBeamOuterFaceDeviceY(score.Voices[slur.VoiceIndex], graceNotes, egb.Group, egb.Column,
                         towardRight: false, graceGeomCache, endMeasure, slur.VoiceIndex, voiceShifts,
                         rightEdgeInfo.StemXLo + EngravingDefaults.StemThickness / 2.0, staffMiddleDown) is { } endFace)
-                    segEndY = endFace - stemTipGap;
+                    segEndY = endFace + (slur.CurveUp ? -stemTipGap : stemTipGap);
                 else
                 {
                     double endLift = HeadLift(segment.IsLast

@@ -1065,18 +1065,26 @@ internal static partial class SpacingRules
             // MEASURED (2.26.0, scratch/p390/ks/verify): test/articulations-lower-staff,
             // instrument-names and multi-staff-ottava put the first note 1.09 / 1.07 / 1.01 off
             // the bar line — exactly the column-wide correction; each staff's own drew 0.10 short.
-            // And none when a grace run opens the bar: the spring then stops at the GRACE column,
-            // whose note columns are the graces alone, and a grace's stem is forced UP — the
-            // correction only answers a down stem. (The mid-bar approach hands its correction the
-            // first grace for the same reason, SpacingRules.ApproachColumn.)
+            // And when a grace run opens the bar, the spring stops at the GRACE column, whose note
+            // columns are the graces alone: the correction reads THEIR stems — up for a grace, so
+            // it answers nothing (the correction only answers a down stem), except a lower
+            // voice's, which is DOWN (GraceColumnInfo.StemDown). The mid-bar approach hands its
+            // correction the first grace for the same reason (SpacingRules.ApproachColumn), and
+            // this reads the same stand-in.
             // LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings — Voice Stem direction UP
             // MEASURED (2.26.0, scratch/p390/kg kg1.ly, a down-stem c'' behind `\grace d''16`): the
             // main note 2.6207 off the bar line, where the column's down stem would have added 0.13.
-            double opticalCorrection = own.HasValue || startLeadGrace > 0
+            // ⚠️ THE STAND-IN'S STEM IS FULL LENGTH (ApproachColumn's remarks): a grace's down stem
+            // is 0.8 of it at the grace font, so where its end falls inside the bar's ±2 the
+            // overlap — and the correction — reads long. No book opens a bar on a lower voice's
+            // grace (session 726: the two that write one put it mid-bar).
+            double opticalCorrection = own.HasValue
                 ? 0.0
-                // Beside a tab, each staff's own: every column against ITS bar
-                // (TabBarlineToNextNotesCorrections).
-                : staffOptical ?? BarlineToNextNotesCorrection(firstItems);
+                : startLeadGrace > 0
+                    ? LeadGraceOpticalCorrection(firstItems)
+                    // Beside a tab, each staff's own: every column against ITS bar
+                    // (TabBarlineToNextNotesCorrections).
+                    : staffOptical ?? BarlineToNextNotesCorrection(firstItems);
             fixedDistance += opticalCorrection;
             ideal += opticalCorrection;
 
