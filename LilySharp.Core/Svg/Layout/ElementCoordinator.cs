@@ -3529,9 +3529,11 @@ internal sealed class ElementCoordinator
 
     /// <summary>
     /// <paramref name="slurs"/> with this staff's GRACE slurs in front: one per grace run that
-    /// slurs to its main note — an <c>acciaccatura</c>, an <c>appoggiatura</c>, or a hand-written
-    /// <c>grace { g16( } a8)</c> (<see cref="GraceNoteItem.ExplicitSlur"/>) — from the run's last
-    /// column to the main note, always DOWN (score-grace-settings). A run whose columns publish
+    /// slurs to its main note — an <c>acciaccatura</c> or an <c>appoggiatura</c> — from the run's
+    /// last column to the main note, DOWN (score-grace-settings) unless the voice fixes the
+    /// side (a \voiceOne's UP wins). A hand-written
+    /// <c>grace { g16( } a8)</c> is not made here: its marks ride the items, and the ordinary
+    /// SlurDetector pairs them (session 725). A run whose columns publish
     /// no item address, whose last column is a rest, or whose main note is no note, has none.
     /// </summary>
     /// <remarks>
@@ -3556,7 +3558,7 @@ internal sealed class ElementCoordinator
                 var g = graceNotes[gi];
                 if (g.StaffIndex != graceStaff || g.Columns.IsDefaultOrEmpty)
                     continue;
-                if (g.Type is not (GraceNoteType.Acciaccatura or GraceNoteType.Appoggiatura) && !g.ExplicitSlur)
+                if (g.Type is not (GraceNoteType.Acciaccatura or GraceNoteType.Appoggiatura))
                     continue;
                 if (g.ColumnItemIndices.IsDefaultOrEmpty || g.ColumnItemIndices.Length != g.Columns.Length
                     || g.VoiceIndex < 0 || g.VoiceIndex >= score.Voices.Length)
@@ -3567,10 +3569,15 @@ internal sealed class ElementCoordinator
                 var main = ItemAt(score.Voices[g.VoiceIndex], g.MeasureIndex, g.MainNoteItemIndex);
                 if (main is not (NoteItem or ChordItem))
                     continue;
+                // DOWN, unless the voice fixes the side: \voiceOne's UP wins over the grace
+                // settings. MEASURED (probes/grace-inner-slur.ly VOICEACC, LilyPond 2.26.0): an
+                // acciaccatura's slur under \voiceOne is drawn UP, 3.89 above the middle line.
+                bool up = Collector.VoiceScan.ForcedCurveUpAt(
+                    score.Voices, g.VoiceIndex, g.MeasureIndex, g.ColumnItemIndices[^1]) ?? false;
                 (graceSlurs ??= new List<SlurItem>()).Add(new SlurItem(
-                    last.Lowest.StaffPosition,
-                    MusicItem.EdgeStaffPosition(main, false) ?? 0,
-                    curveUp: false,
+                    up ? last.Highest.StaffPosition : last.Lowest.StaffPosition,
+                    MusicItem.EdgeStaffPosition(main, up) ?? 0,
+                    curveUp: up,
                     g.MeasureIndex, g.MeasureIndex, g.ColumnItemIndices[^1], g.MainNoteItemIndex,
                     voiceIndex: g.VoiceIndex)
                 {
@@ -3600,6 +3607,77 @@ internal sealed class ElementCoordinator
         var geom = new GraceObstacleGeom(columns.Offsets, columns.Span, bl, br);
         cache[gi] = geom;
         return geom;
+    }
+
+    /// <summary>Which grace column item <paramref name="itemIndex"/> of measure
+    /// <paramref name="measureIndex"/> in voice <paramref name="voiceIndex"/> stands as — its
+    /// group in <paramref name="graceNotes"/> and its column there — or null when it is no
+    /// grace column of this staff's runs (a main-grid item, or a run that publishes no item
+    /// addresses).</summary>
+    private static (int Group, int Column)? GraceColumnOf(
+        ImmutableArray<GraceNoteItem> graceNotes, Dictionary<int, List<int>>? graceByMeasure,
+        int voiceIndex, int measureIndex, int itemIndex)
+    {
+        if (graceByMeasure is null || !graceByMeasure.TryGetValue(measureIndex, out var groups))
+            return null;
+        foreach (int gi in groups)
+        {
+            var g = graceNotes[gi];
+            if (g.VoiceIndex != voiceIndex || g.ColumnItemIndices.IsDefaultOrEmpty
+                || g.ColumnItemIndices.Length != g.Columns.Length)
+                continue;
+            int k = g.ColumnItemIndices.IndexOf(itemIndex);
+            if (k >= 0)
+                return (gi, k);
+        }
+        return null;
+    }
+
+    /// <summary>The head left edge of column <paramref name="column"/> of grace group
+    /// <paramref name="gi"/>: <see cref="GraceGroupX"/> plus the column's offset.</summary>
+    private static double GraceColumnX(Voice voice, ImmutableArray<GraceNoteItem> graceNotes,
+        int gi, int column, GraceObstacleGeom?[] cache, MeasureLayout ml, int voiceIndex,
+        VoiceCollisionTable voiceShifts)
+    {
+        var geom = GraceGeomOf(voice, graceNotes, gi, cache);
+        return GraceGroupX(voice, graceNotes[gi], geom, ml, voiceIndex, voiceShifts)
+            + (column < geom.Offsets.Length ? geom.Offsets[column] : 0.0);
+    }
+
+    /// <summary>
+    /// Device Y of a beamed grace run's beam — its UPPER face, the side an up slur hangs
+    /// from — at <paramref name="stemX"/>, when column <paramref name="column"/> is beamed on
+    /// the side toward the slur's other end (<paramref name="towardRight"/>); null otherwise
+    /// (a lone or flagged column, a run with a rest, or the run's outer end on that side).
+    /// </summary>
+    /// <remarks>
+    /// The grace beam is quanted by <see cref="GraceNoteEngraver.QuantGraceBeam"/> and drawn by
+    /// the grace renderer, so it is not in the BeamLayouts <c>TryGetBeamedStemTipDeviceY</c>
+    /// reads; this is the same line, read the way AddGraceObstaclesForMeasure reads it.
+    /// LILYPOND-REF: lily/slur-scoring.cc:549-557 get_base_attachments — a bound whose stem
+    /// points the slur's way and is beamed on its inner side attaches 0.5 beyond the beam.
+    /// </remarks>
+    private static double? GraceBeamUpperFaceDeviceY(Voice voice, ImmutableArray<GraceNoteItem> graceNotes,
+        int gi, int column, bool towardRight, GraceObstacleGeom?[] cache, MeasureLayout ml, int voiceIndex,
+        VoiceCollisionTable voiceShifts, double stemX, double staffMiddleDown)
+    {
+        var g = graceNotes[gi];
+        int last = g.Columns.Length - 1;
+        if (last < 1 || (towardRight ? column >= last : column <= 0))
+            return null;
+        foreach (var c in g.Columns)
+            if (c.IsRest)
+                return null;
+        var geom = GraceGeomOf(voice, graceNotes, gi, cache);
+        if (geom.BeamLeftY is not { } bl || geom.BeamRightY is not { } br || geom.Offsets.Length <= last)
+            return null;
+        double groupX = GraceGroupX(voice, g, geom, ml, voiceIndex, voiceShifts);
+        var font = g.HeadFont;
+        double xL = LayoutUtilities.StemX(groupX + geom.Offsets[0], up: true, noteValue: 4, NoteheadStyle.Default, font);
+        double xR = LayoutUtilities.StemX(groupX + geom.Offsets[last], up: true, noteValue: 4, NoteheadStyle.Default, font);
+        double t = xR - xL > 0.001 ? (stemX - xL) / (xR - xL) : 0.0;
+        double centerUp = (bl + (br - bl) * t) / 2.0;
+        return staffMiddleDown - (centerUp + EngravingDefaults.GraceBeamThickness / 2.0);
     }
 
     /// <summary>Where a grace group's first column stands: its main note's column, shifted
@@ -3635,15 +3713,25 @@ internal sealed class ElementCoordinator
         foreach (int gi in groupIndices)
         {
             var g = graceNotes[gi];
-            // Covered = the grace's MAIN note lies inside the span, excluding the
-            // start note itself: its grace run sounds BEFORE the slur opens, so
-            // LP's engraver never acknowledges it into this slur.
-            bool afterStart = mi > slur.StartMeasureIndex
-                || g.MainNoteItemIndex > slur.StartItemIndex;
-            bool beforeEnd = mi < slur.EndMeasureIndex
-                || g.MainNoteItemIndex <= slur.EndItemIndex;
-            if (!afterStart || !beforeEnd || g.MainNoteItemIndex > hi)
-                continue;
+            // Which columns the slur covers, read off each column's own item address: from
+            // the start item to the end item, both included — the window the main-grid loop
+            // reads. A run before the start note sounds BEFORE the slur opens, so LP's
+            // engraver never acknowledges it into this slur; a slur that starts or ends IN
+            // the run (`grace { d'16( e') }`, `grace { g16( } a8)`, a grace slur) covers the
+            // columns from its own bound on. A run that publishes no item addresses falls
+            // back to its main note's place, which is the same answer for a slur bound on
+            // main-grid items (the run's items stand just before its main note).
+            bool addressed = !g.ColumnItemIndices.IsDefaultOrEmpty
+                && g.ColumnItemIndices.Length == g.Columns.Length;
+            if (!addressed)
+            {
+                bool afterStart = mi > slur.StartMeasureIndex
+                    || g.MainNoteItemIndex > slur.StartItemIndex;
+                bool beforeEnd = mi < slur.EndMeasureIndex
+                    || g.MainNoteItemIndex <= slur.EndItemIndex;
+                if (!afterStart || !beforeEnd || g.MainNoteItemIndex > hi)
+                    continue;
+            }
 
             var geom = GraceGeomOf(voice, graceNotes, gi, graceGeomCache);
             double groupX = GraceGroupX(voice, g, geom, ml, slur.VoiceIndex, voiceShifts);
@@ -3660,6 +3748,10 @@ internal sealed class ElementCoordinator
 
             for (int k = 0; k < g.Columns.Length; k++)
             {
+                if (addressed
+                    && !((mi > slur.StartMeasureIndex || g.ColumnItemIndices[k] >= slur.StartItemIndex)
+                        && (mi < slur.EndMeasureIndex || g.ColumnItemIndices[k] <= slur.EndItemIndex)))
+                    continue;
                 double hx = groupX + (k < geom.Offsets.Length ? geom.Offsets[k] : 0.0);
                 if (hx < segStartX - eps || hx > segEndX + eps)
                     continue;
@@ -4404,18 +4496,18 @@ internal sealed class ElementCoordinator
                 var segSystem = systems[segment.SystemIndex];
 
                 // LILYPOND-REF: lily/spanner.cc:124-137 — bounds reattached to system edges for broken pieces.
+                // A bound that is a GRACE column stands at its run's own X (the column's head
+                // left edge, as AddGraceObstaclesForMeasure reads it), not on the main grid: the
+                // grace slur's start (StartGraceGroup), and since session 725 either end of a
+                // hand-written slur in grace time — `grace { d'16( e') }`, `grace { g16( } a8)`.
+                var startGrace = slur.StartGraceGroup >= 0
+                    ? (Group: slur.StartGraceGroup, Column: graceNotes[slur.StartGraceGroup].Columns.Length - 1)
+                    : GraceColumnOf(graceNotes, graceByMeasure, slur.VoiceIndex, slur.StartMeasureIndex, slur.StartItemIndex);
+                var endGrace = GraceColumnOf(graceNotes, graceByMeasure, slur.VoiceIndex, slur.EndMeasureIndex, slur.EndItemIndex);
                 double segStartX;
-                if (segment.IsFirst && slur.StartGraceGroup >= 0 && graceGeomCache != null)
-                {
-                    // A grace slur starts on its run's last column, at the run's own X (the
-                    // column's head left edge, as AddGraceObstaclesForMeasure reads it).
-                    var g = graceNotes[slur.StartGraceGroup];
-                    var geom = GraceGeomOf(score.Voices[slur.VoiceIndex], graceNotes, slur.StartGraceGroup, graceGeomCache);
-                    int k = g.Columns.Length - 1;
-                    segStartX = GraceGroupX(score.Voices[slur.VoiceIndex], g, geom, startMeasure,
-                            slur.VoiceIndex, voiceShifts)
-                        + (k < geom.Offsets.Length ? geom.Offsets[k] : 0.0);
-                }
+                if (segment.IsFirst && startGrace is { } sg && graceGeomCache != null)
+                    segStartX = GraceColumnX(score.Voices[slur.VoiceIndex], graceNotes, sg.Group, sg.Column,
+                        graceGeomCache, startMeasure, slur.VoiceIndex, voiceShifts);
                 else if (segment.IsFirst)
                 {
                     segStartX = startMeasure.X
@@ -4435,7 +4527,10 @@ internal sealed class ElementCoordinator
                 }
 
                 double segEndX;
-                if (segment.IsLast)
+                if (segment.IsLast && endGrace is { } eg && graceGeomCache != null)
+                    segEndX = GraceColumnX(score.Voices[slur.VoiceIndex], graceNotes, eg.Group, eg.Column,
+                        graceGeomCache, endMeasure, slur.VoiceIndex, voiceShifts);
+                else if (segment.IsLast)
                 {
                     segEndX = endMeasure.X
                         + GetItemXOffset(score.Voices[slur.VoiceIndex], slur.EndMeasureIndex, slur.EndItemIndex, endMeasure)
@@ -4457,6 +4552,15 @@ internal sealed class ElementCoordinator
                 // See BuildTabSlurLayout for LilyPond's two stages and the measurement.
                 if (staff is { IsTab: true })
                 {
+                    // ⚠️ NOT PORTED: a slur bound on a GRACE column is not drawn on a TAB staff.
+                    // LilyPond draws it there — DOWN, under the digits, the acciaccatura's too
+                    // (MEASURED, Lab sessions/p725/tabgrace, LilyPond 2.26.0) — but the tab
+                    // frame below arches every slur over the numbers and has no grace bound:
+                    // `grace { d16( } e4)` came out 3.4 off and on the wrong side, and
+                    // `grace { d16( e16) }` not at all. Left as the page was before session 725
+                    // (WithGraceSlurs skips a TAB staff for the same reason).
+                    if (startGrace is not null || endGrace is not null)
+                        continue;
                     var tabLayout = BuildTabSlurLayout(
                         fonts, score, slur, segment.IsFirst, segment.IsLast, segSystem,
                         staffIndex, staff, segStartX, segEndX, graceNotes,
@@ -4567,6 +4671,15 @@ internal sealed class ElementCoordinator
                         leftEdgeInfo.StemXLo + EngravingDefaults.StemThickness / 2.0,
                         staffMiddleDown, slur.CurveUp, out double startTip))
                     segStartY = startTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
+                // A grace bound under an UP slur (its stem is up whatever its pitch), beamed
+                // toward the slur's other end, hangs from the grace beam. MEASURED
+                // (probes/grace-inner-slur.ly VOICEONE): `grace { d''16( e''16) }` under
+                // \voiceOne — 0.45 low on the heads until session 725.
+                else if (segment.IsFirst && slur.CurveUp && startGrace is { } sgb && graceGeomCache != null
+                    && GraceBeamUpperFaceDeviceY(score.Voices[slur.VoiceIndex], graceNotes, sgb.Group, sgb.Column,
+                        towardRight: true, graceGeomCache, startMeasure, slur.VoiceIndex, voiceShifts,
+                        leftEdgeInfo.StemXLo + EngravingDefaults.StemThickness / 2.0, staffMiddleDown) is { } startFace)
+                    segStartY = startFace - stemTipGap;
                 else
                 {
                     // The lift off the head is that head's own extent (a cue head is smaller).
@@ -4593,7 +4706,9 @@ internal sealed class ElementCoordinator
                 // `d, grace { a,16( } b,8)` under one beam — LilyPond ends the bow at b's head.
                 // LILYPOND-REF: lily/slur-scoring.cc:549-554 get_base_attachments —
                 //   (!spanner_less (slur_, Stem::get_beam (stem)) || has_same_beam_).
-                bool endMayHangFromBeam = slur.StartGraceGroup < 0;
+                // The same holds for a hand-written `grace { g16( } a8)`: a slur from grace time
+                // out to a main note; one whose two ends are both in grace time is not this case.
+                bool endMayHangFromBeam = startGrace is null || endGrace is not null;
                 if (endRest is { } eRest)
                     segEndY = RestBoundBaseY(eRest);
                 else if (segment.IsLast && endMayHangFromBeam && rightEdgeInfo.StemUp == slur.CurveUp && rightEdgeInfo.BeamedInner
@@ -4601,6 +4716,11 @@ internal sealed class ElementCoordinator
                         rightEdgeInfo.StemXLo + EngravingDefaults.StemThickness / 2.0,
                         staffMiddleDown, slur.CurveUp, out double endTip))
                     segEndY = endTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
+                else if (segment.IsLast && slur.CurveUp && endGrace is { } egb && graceGeomCache != null
+                    && GraceBeamUpperFaceDeviceY(score.Voices[slur.VoiceIndex], graceNotes, egb.Group, egb.Column,
+                        towardRight: false, graceGeomCache, endMeasure, slur.VoiceIndex, voiceShifts,
+                        rightEdgeInfo.StemXLo + EngravingDefaults.StemThickness / 2.0, staffMiddleDown) is { } endFace)
+                    segEndY = endFace - stemTipGap;
                 else
                 {
                     double endLift = HeadLift(segment.IsLast

@@ -228,9 +228,10 @@ public sealed partial class MeasureCollector
     /// written — or null when it carries neither, or when the walk is where bows are dropped.
     /// </summary>
     /// <remarks>
-    /// ⚠️ DROPPED WHERE A SLUR IS: in grace time (LYS4020's drop list — the group is drawn
-    /// from its derived GraceNoteItem) and under a % sign (<see cref="WithoutBowsUnderPercent"/>),
-    /// so the two bows keep one rule. The marks are post-events of the note, so they are read
+    /// ⚠️ DROPPED in grace time (LYS4020's drop list — the group is drawn from its derived
+    /// GraceNoteItem; the SLUR rides there since session 725, the phrasing slur not yet) and
+    /// under a % sign (<see cref="WithoutBowsUnderPercent"/>), where the two bows keep one
+    /// rule. The marks are post-events of the note, so they are read
     /// off its annotation list, the one <c>CollectArticulations</c> reads; a chord member's
     /// own list is not read — a phrasing slur binds to the column, as LilyPond's does.
     /// </remarks>
@@ -904,36 +905,6 @@ public sealed partial class MeasureCollector
                 SlurEndSourcePosition = m.HasSlurEndAfter ? m.SlurEndSource : MusicItem.NoSourcePosition,
             };
 
-    /// <summary>
-    /// Called by the main note's arm right after <c>ProcessGraceRegion</c> walked the grace
-    /// in front of it: when that group's last column opened a slur
-    /// (<see cref="Model.GraceNoteItem.ExplicitSlur"/>), the main note's <c>)</c> is that
-    /// slur's end and goes to the group, not to the ordinary detector. Without one the
-    /// <c>(</c> pairs with nothing — LilyPond warns "unterminated slur" and draws no bow, and
-    /// so does this: the group is told, and the scanner's own sink is told.
-    /// </summary>
-    /// <remarks>
-    /// ⚠️ IT RUNS INSIDE THE ARM, NOT AT THE TOP OF <see cref="ProcessMusicNode"/>: the grace
-    /// region is walked from the main note's arm (<c>_pendingGrace</c> is consumed there), so
-    /// the group does not exist yet when the method's locals are unpacked — the first draft
-    /// read the flag at the top and never saw a pending group (measured: both marks of
-    /// <c>grace { g16( } a8)</c> came back unpaired).
-    /// </remarks>
-    private void TakeGraceSlurEnd(ref bool hasSlurEndAfter)
-    {
-        if (_pendingGraceSlurIndex < 0)
-            return;
-        if (hasSlurEndAfter)
-            hasSlurEndAfter = false;
-        else
-        {
-            _graceNotes[_pendingGraceSlurIndex] =
-                _graceNotes[_pendingGraceSlurIndex] with { ExplicitSlur = false };
-            _unpairedSlurWarnings.Add(new UnpairedSlurWarning(_pendingGraceSlurSource, IsOpen: true));
-        }
-        _pendingGraceSlurIndex = -1;
-    }
-
     /// <summary>Whether this node emits an item a slur can bind to — the carrier an empty
     /// chord's slur mark is waiting for. A wrapper (tuplet, grace, repeat) is not one; its
     /// own inner emit picks the mark up.</summary>
@@ -1006,27 +977,21 @@ public sealed partial class MeasureCollector
         if (_graceDepth > 0 && !CanStandInGraceTime(node))
             return;
 
-        // AND THE MARKERS WRITTEN ON WHAT DOES COME THROUGH ARE DROPPED, not carried onto the
-        // item. A tie, a slur or a manual beam inside a grace body is on LYS4020's drop list
-        // today; letting the flag ride the item would make the detectors pair it and DRAW it —
-        // full size, on the main column grid — while the reader is still being told it was
-        // dropped. Zeroing the folded markers here, rather than teaching each detector to skip
-        // grace time, keeps the drop where the reader was told it is, in ONE line.
+        // THE TIE AND MANUAL-BEAM MARKERS WRITTEN ON WHAT DOES COME THROUGH ARE DROPPED, not
+        // carried onto the item: both are on LYS4020's drop list, and letting the flag ride
+        // would make the detectors pair it and DRAW it — full size, on the main column grid —
+        // while the reader is still being told it was dropped.
         // ⚠️ SCAFFOLDING: ⒝2 deletes this line, and the marks then draw at the grace font
-        // through the same Slur / Tie / Beam engravers LilyPond hands them to.
-        // ⚠️ ONE MARK IS READ BEFORE IT IS DROPPED: the `(` on a column, remembered so that
-        // after the body walk the LAST column's answer is in hand — the bow a hand-written
-        // `grace { g16( } a8)` asks for is the appoggiatura's, which the GROUP draws
-        // (GraceNoteItem.ExplicitSlur), so nothing here rides the item.
+        // through the same Tie / Beam engravers LilyPond hands them to.
+        // THE SLUR MARKS RIDE (session 725, the slur half of ⒝2): `grace { d'16( e') }` and
+        // `grace { g16( } a8)` are paired by the ordinary SlurDetector and laid out as ordinary
+        // slurs, whose grace ends the layout places at the run's own X in the grace font
+        // (ElementCoordinator.LayoutSlurs). Before that the hand-written `(` on the LAST column
+        // was read here into the group (GraceNoteItem.ExplicitSlur, a bow the renderer drew)
+        // and every other one was dropped.
         if (_graceDepth > 0)
-        {
-            if (BindsASlur(node))
-            {
-                _graceSlurOpen = m.HasSlurStartAfter;
-                _graceSlurOpenSource = m.SlurStartSource;
-            }
-            m = default;
-        }
+            m = new MarkerFlags(false, m.HasSlurStartAfter, m.HasSlurEndAfter, false, false,
+                SlurStartSource: m.SlurStartSource, SlurEndSource: m.SlurEndSource);
 
         // ⚠️ The two bool reads come FIRST on purpose: they are false for every item of
         // every score that never writes `<>`, and that short-circuit keeps the type switch
@@ -2012,7 +1977,6 @@ public sealed partial class MeasureCollector
         {
             _pendingGrace = null;
             ProcessGraceRegion(pendingGrace, builder, measureIndex);
-            TakeGraceSlurEnd(ref hasSlurEndAfter);
             itemIndex = builder.CurrentItemCount;
         }
         if (node is NoteSyntax note && HasCourtesyAnnotation(note))

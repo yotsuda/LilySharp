@@ -316,6 +316,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A slur written in a grace body is drawn.** `grace { d'16( e'16) } c'4`, a slur from an
+  earlier grace note to the main note (`grace { f16( g16 } a8)`) and one from a main note into
+  the body (`c'4( grace { e'16) } d'4`) were reported as not drawn (LYS4020) and left off the
+  page; they are now ordinary slurs at the grace notes' own place and size, bending down when
+  they start in the body, as LilyPond draws them. In the upper voice of a `voice { } { }`
+  the voice's side wins, for these and for an acciaccatura's or appoggiatura's slur, which
+  was always drawn below.
 - **The slur of an acciaccatura or appoggiatura is shaped as LilyPond shapes it.** The bow
   from a grace note to its main note (and a hand-written `grace { g16( } a8)`) was drawn
   from fixed clearances; it is now laid out as an ordinary slur. It reaches under the main

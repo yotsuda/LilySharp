@@ -865,7 +865,6 @@ else. Everything else written inside is not drawn, and Lily# says so at what was
 ```
 grace { d16@staccato } c4     // the staccato is not drawn      (LYS4020)
 grace { d16. } c4             // the dot is not drawn           (LYS4020)
-grace { d16( e16) } c4        // the slur is not drawn          (LYS4020)
 grace { d16 r16 } c4          // the rest is not drawn          (LYS4020)
 grace { <d f>16 } c4          // no grace at all is drawn       (LYS4020)
 ```
@@ -881,6 +880,11 @@ column of their own on the page:**
 
 A grace body with at least one bare note keeps its grace; only the parts of the body that are
 not bare notes go missing.
+
+**A slur IS drawn wherever it is written in grace time**, as in LilyPond: inside the body
+(`grace { d16( e16) } c4`), from a grace note to the main note (`grace { d16( } c4)`), or from
+a main note into the body (`b4( grace { d16) } c4`). One that starts in the body bends down,
+unless the voice fixes the side (`voice { … } { … }`).
 
 LilyPond draws all of the spellings above, so each warning says "not drawn yet", not "do not
 write this".

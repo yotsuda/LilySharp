@@ -23,23 +23,23 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// A hand-written slur from a plain grace to its main note — <c>grace { g16( } a8)</c> —
-/// draws the bow an <c>appoggiatura</c> draws on its own, and nothing else about the grace
-/// changes (session 328, owner decision: LilyPond prints it, so does Lily#).
+/// A hand-written slur in grace time is an ordinary slur. <c>grace { g16( } a8)</c> draws the
+/// bow an <c>appoggiatura</c> draws on its own (session 328, owner decision: LilyPond prints
+/// it, so does Lily#), and since session 725 every other place a slur mark can stand in a
+/// grace body draws too — on an earlier column, on a grace rest, or wholly inside the body.
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: ly/grace-init.ly startGraceSlur / stopGraceSlur — an appoggiatura IS a grace
 /// with a slur event on its last note and the end on the main note, so the two spellings are
 /// one picture in LilyPond. The pair is asserted as PAGE EQUALITY against the keyword rather
-/// than as "a path exists": the keyword's bow is the one geometry Lily# has for a grace slur
-/// (SharedRenderer.DrawGraceSlur), and a second one would be the second spelling RULES §5.2.1②
-/// names.
+/// than as "a path exists": both are one ordinary slur (ElementCoordinator.WithGraceSlurs
+/// makes the keyword's, SlurDetector pairs the hand-written one), and a page that told them
+/// apart would be the second spelling RULES §5.2.1② names.
 /// <para>
-/// ⚠️ THE SHAPES THAT ARE NOT THIS BOW STAY REPORTED. A <c>(</c> on an earlier grace column,
-/// or on a grace rest, is not the appoggiatura's slur, and the island that draws those —
-/// grace marks through the ordinary Slur engraver at the grace font, HANDOFF §2 U8 ⒝2 — is
-/// not this change. Each of those is asserted to warn AND to leave the page as the control
-/// leaves it, the way GraceBodyValidatorTests ties every drop to the ink.
+/// The other shapes were LYS4020 drops until session 725 (HANDOFF §2 U8 ⒝2's slur half):
+/// LilyPond's Slur_engraver is a Voice engraver and does not know grace time, so a mark
+/// anywhere in the body is paired like any other. Their geometry is in the LP fidelity ledger
+/// (slur.in-grace.*); here each is asserted to be INK and to warn about nothing.
 /// </para>
 /// </remarks>
 [Trait("Category", "Unit")]
@@ -93,21 +93,44 @@ public class GraceExplicitSlurTests
         Assert.Empty(GraceDrops(open));
         var warning = Assert.Single(UnpairedSlurs(open));
         Assert.Contains("never closed", warning.Message);
-        Assert.Equal(Book(open).IndexOf("(", System.StringComparison.Ordinal), warning.Span.Start);
+        // At the note the `(` was written on, as for an unclosed slur on any note
+        // (SlurPairingScanner reports the bound item's position).
+        Assert.Equal(Book(open).IndexOf("g16(", System.StringComparison.Ordinal), warning.Span.Start);
     }
 
     [Theory]
-    // A `(` on the FIRST of two grace notes: not the bow to the main note.
+    // A `(` on the FIRST of two grace notes, closed on the main note.
     [InlineData("c4 grace { f16( g16 } a8) c4 d | e1 |", "c4 grace { f16 g16 } a8 c4 d | e1 |")]
-    // A `(` on a grace REST: a rest draws no bow.
-    [InlineData("c4 grace { g16 r16( } a8) c4 d | e1 |", "c4 grace { g16 r16 } a8 c4 d | e1 |")]
-    public void AnOpenThatIsNotTheLastGraceNotes_IsStillReported_AndTheCloseIsUnpaired(
-        string written, string control)
+    // ⚠️ NOT A ROW: a `(` on a grace REST (`grace { g16 r16( } a8)`). A rest does not carry a
+    // slur mark on the main grid either — `r16( d)` reports LYS4010 "')' has no '(' open"
+    // (session 725, found while writing this row) — so the grace row waits on that gap.
+    // Both ends inside the body.
+    [InlineData("c4 grace { d'16( e') } c4 d e | e1 |", "c4 grace { d'16 e' } c4 d e | e1 |")]
+    // From a main note into a grace body.
+    [InlineData("c4( grace { d'16) } e4 d e | e1 |", "c4 grace { d'16 } e4 d e | e1 |")]
+    public void ASlurAnywhereInGraceTime_IsDrawn_AndNothingIsReported(string written, string control)
     {
-        Assert.Equal(Page(control), Page(written));
-        Assert.Single(GraceDrops(written));
-        var warning = Assert.Single(UnpairedSlurs(written));
-        Assert.Contains("has no '(' open", warning.Message);
+        Assert.NotEqual(Page(control), Page(written));
+        Assert.Empty(GraceDrops(written));
+        Assert.Empty(UnpairedSlurs(written));
+    }
+
+    /// <summary>
+    /// ⚠️ A DISCLOSED GAP, pinned so it is not lost: on a TAB staff a slur bound on a grace
+    /// column is not drawn. LilyPond draws it — DOWN, under the digits (Lab sessions/p725/
+    /// tabgrace) — but Lily#'s tab slur frame arches over the numbers and has no grace bound
+    /// (ElementCoordinator.LayoutSlurs' TAB arm). When that port lands this test goes red.
+    /// </summary>
+    [Theory]
+    [InlineData("c,4 r g,, r | c, r grace { d16( } e4) g, |", "c,4 r g,, r | c, r grace { d16 } e4 g, |")]
+    [InlineData("c,4 r g,, r | c, r grace { d16( e16) } f4 g, |", "c,4 r g,, r | c, r grace { d16 e16 } f4 g, |")]
+    public void OnATabStaff_AGraceSlurIsNotDrawnYet(string written, string control)
+    {
+        // Through the render block: LiveRender.Svg draws the part on a notation staff.
+        static string TabPage(string music) => Regex.Replace(LiveRender.SvgFromRenderSpec(
+            "octave absolute\ntime 4/4\npart bl { clef bass tuning bass }\nsection A { bl {\n" + music
+            + "\n} }\nform main { ~A }\nscore main { tab bl }\n"), "data-pos=\"\\d+\"", "data-pos=\"#\"");
+        Assert.Equal(TabPage(control), TabPage(written));
     }
 
     /// <summary>The twin writes both marks, and LilyPond draws its Slur from them.</summary>

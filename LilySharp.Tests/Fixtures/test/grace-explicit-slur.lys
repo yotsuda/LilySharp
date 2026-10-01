@@ -5,7 +5,8 @@
 //
 // Three bars, three shapes: bar 1 the hand-written pair (drawn), bar 2 the keyword
 // (drawn, the control it must match), bar 3 a `(` on the FIRST of two grace notes with its
-// `)` on the main note — not the appoggiatura's bow, still reported by LYS4020 and not drawn.
+// `)` on the main note — not the appoggiatura's bow, but an ordinary slur from the first
+// grace note, drawn since session 725 as LilyPond draws it (until then LYS4020 dropped it).
 // The corpus shape this covers: the owner's `\grace cis16( e4\3)` in Real Gone, and six more.
 time 4/4
 part mel {

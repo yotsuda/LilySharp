@@ -8765,6 +8765,21 @@ internal static class LpGeometryProbes
     private static readonly string GSP = GraceSlurBook("GSP", "treble", "c'4 appoggiatura { e'8 } d'4 e'4 f'4 |");
     private static readonly string GSB = GraceSlurBook("GSB", "bass", "d,8 d, d, d, d, grace { a,16( } b,8) a, d, |");
 
+    // A SLUR WRITTEN ANYWHERE IN GRACE TIME (probes/grace-inner-slur.ly, session 725) — an
+    // ordinary slur, DOWN when it starts in the body. LilyPond spelling:
+    // <c>c''4 \grace { d''16( e''16) } c''4 e''4 f''4 |</c>,
+    // <c>c''4 \grace { f'16( g'16 } a'8) c''8 d''4 e''4 |</c>,
+    // <c>c''4( \grace { e''16) } d''4 e''4 f''4 |</c>.
+    private static readonly string GIN = GraceSlurBook("GIN", "treble", "c'4 grace { d'16( e'16) } c'4 e'4 f'4 |");
+    private static readonly string GIF = GraceSlurBook("GIF", "treble", "c'4 grace { f16( g16 } a8) c'8 d'4 e'4 |");
+    private static readonly string GIT = GraceSlurBook("GIT", "treble", "c'4( grace { e'16) } d'4 e'4 f'4 |");
+    // The voice fixes the side over the grace settings' DOWN: <c><< { c''4 \grace { d''16(
+    // e''16) } c''4 e''4 f''4 } \\ { c'1 } >></c> (UP), the acciaccatura's slur the same way, and
+    // the lower voice's <c>c'4 \grace { d'16( e'16) } …</c> (DOWN).
+    private static readonly string GV1 = GraceSlurBook("GV1", "treble", "voice { c'4 grace { d'16( e'16) } c'4 e'4 f'4 } { c1 } |");
+    private static readonly string GVA = GraceSlurBook("GVA", "treble", "voice { c'4 acciaccatura { e'8 } d'4 e'4 f'4 } { c1 } |");
+    private static readonly string GV2 = GraceSlurBook("GV2", "treble", "voice { c1 } { c4 grace { d16( e16) } c4 e4 f4 } |");
+
     private static readonly string BQA = """
         octave absolute
         time 4/4
@@ -16327,6 +16342,18 @@ internal static class LpGeometryProbes
         new("slur.grace.appoggiatura.span", GSP, g => g.BowSpan(0)),
         new("slur.grace.beamed-main.left-attachment", GSB, g => g.BowAttachmentAboveStaffMiddle(0)),
         new("slur.grace.beamed-main.span", GSB, g => g.BowSpan(0)),
+        new("slur.in-grace.inner.left-attachment", GIN, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("slur.in-grace.inner.span", GIN, g => g.BowSpan(0)),
+        new("slur.in-grace.first-column.left-attachment", GIF, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("slur.in-grace.first-column.span", GIF, g => g.BowSpan(0)),
+        new("slur.in-grace.into-grace.left-attachment", GIT, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("slur.in-grace.into-grace.span", GIT, g => g.BowSpan(0)),
+        new("slur.in-grace.voice-one.left-attachment", GV1, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("slur.in-grace.voice-one.span", GV1, g => g.BowSpan(0)),
+        new("slur.grace.acciaccatura-voice-one.left-attachment", GVA, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("slur.grace.acciaccatura-voice-one.span", GVA, g => g.BowSpan(0)),
+        new("slur.in-grace.voice-two.left-attachment", GV2, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("slur.in-grace.voice-two.span", GV2, g => g.BowSpan(0)),
         new("slur.over-flagged-grace.left-attachment", GFS, g => g.BowAttachmentAboveStaffMiddle(0)),
         new("slur.under-flagged-grace.left-attachment", GFS, g => g.BowAttachmentAboveStaffMiddle(1)),
         // The skyline reserves a slur laid out apart from the drawn one. See SBR.

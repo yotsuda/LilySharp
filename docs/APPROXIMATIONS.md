@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 59 | 観測者がゼロだと自認しているもの |
 | `OWN` | 204 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **323** | |
+| **計** | **324** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -27,14 +27,14 @@
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 10 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 8 |
-| `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 7 |
+| `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 7 |
 | `LilySharp.Core/LilyPond/LilyPondExporter.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
 | `LilySharp.Core/Rendering/SharedRenderer.Beams.cs` | 5 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（60 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（61 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **:345** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
@@ -77,7 +77,8 @@
 - **:1337** ⚠️ NOT PORTED, and named rather than left to be discovered: the ONLY-RESTS
 - **:1556** ⚠️ NOT PORTED: another VOICE's notes at that moment (a grace rest under polyphony);
 - **:2332** ⚠️ NOT PORTED — LP's solve-once-then-break order: A BROKEN COLUMN IS SOLVED
-- **:4117** ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
+- **:4209** ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
+- **:4555** ⚠️ NOT PORTED: a slur bound on a GRACE column is not drawn on a TAB staff.
 ### `LilySharp.Core/Svg/Layout/FiguredBassEngraver.cs`
 - **:142** spells it after the digit — the order FiguredBassGlyphRun names as not ported. The box
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
@@ -176,7 +177,7 @@
 - **:647** own widths of one x. No ledger point measures a chord fingering's X, so this stays as
 - **:648** it was rather than being changed unobserved.
 ### `LilySharp.Core/Svg/Layout/GraceNoteEngraver.cs`
-- **:533** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
+- **:529** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
 ### `LilySharp.Core/Svg/Layout/HorizontalSkyline.cs`
 - **:178** outline. So the clearing is right and unobserved: a forgotten Clear here would
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
@@ -326,8 +327,8 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:2804** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:5211** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:2781** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:5188** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`

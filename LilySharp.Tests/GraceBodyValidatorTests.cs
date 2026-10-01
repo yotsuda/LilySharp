@@ -75,7 +75,9 @@ public class GraceBodyValidatorTests
     // ⚠️ `grace { d'8. }` LEFT THIS THEORY ON 2026-08-30 (session 299), which is the way a
     // row is meant to leave it: the dot is drawn now, so the line asserting it is missing
     // went red and taking it out was part of closing the hole. See ADottedGrace_IsDrawn.
-    [InlineData("grace { d'8( e'8) } c'1 | e'1 |", "grace { d'8 e'8 } c'1 | e'1 |")]
+    // ⚠️ `grace { d'8( e'8) }` LEFT THIS THEORY ON 2026-10-01 (session 725), the way a row is
+    // meant to leave it: a slur in grace time is an ordinary slur now, drawn at the grace's X
+    // and font, and this row went red on its own. See GraceExplicitSlurTests.
     [InlineData("grace { d'8[ e'8] } c'1 | e'1 |", "grace { d'8 e'8 } c'1 | e'1 |")]
     [InlineData("grace { d'8~ d'8 } c'1 | e'1 |", "grace { d'8 d'8 } c'1 | e'1 |")]
     // ⚠️ `grace { d'8 r8 }` LEFT THIS THEORY ON 2026-08-31 (session 308), one commit

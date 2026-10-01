@@ -1913,6 +1913,90 @@
       "residual": 0.0,
       "why": "EXACT since session 724 (see slur.grace.acciaccatura.left-attachment): the main note is beamed on its left, so the slur - whose other bound, the grace column, stands inside that beam - ends on the head, not the beam (lily/slur-scoring.cc:549-554, !spanner_less || has_same_beam_). Before this clause the new grace slur hung from the beam, 3.4 low (Real Gone)."
     },
+    "slur.in-grace.inner.left-attachment": {
+      "probe": "grace-inner-slur.ly",
+      "score": "INNER",
+      "lilypond": 0.19546406867365063,
+      "residual": -0.001637893,
+      "why": "Since session 725 a slur in grace time is an ordinary slur (SlurDetector walks grace time; LayoutSlurs puts a grace bound at its run's own X and font; DOWN by score-grace-settings). Before it this slur was a LYS4020 drop and drew nothing. The 0.0016 left rides the span's residual (slur.in-grace.inner.span) through the slope."
+    },
+    "slur.in-grace.inner.span": {
+      "probe": "grace-inner-slur.ly",
+      "score": "INNER",
+      "lilypond": 1.5,
+      "residual": -0.082061554,
+      "why": "Grace column spacing: Lily# stands the two grace heads 1.418 apart (SpacingRules.GraceColumns), LilyPond 1.5 - both ends attach at the head centres, so the span is the column distance unless a tilt shift moves an end (not decomposed). The same open residual as the three bow pairs session 724 made worse. See slur.in-grace.inner.left-attachment for the port."
+    },
+    "slur.in-grace.first-column.left-attachment": {
+      "probe": "grace-inner-slur.ly",
+      "score": "FIRST",
+      "lilypond": -2.3940595074787834,
+      "residual": 0.0,
+      "why": "EXACT since session 725 (see slur.in-grace.inner.left-attachment): a ( on the FIRST of two grace notes, closed on the main note - LYS4020 dropped it before."
+    },
+    "slur.in-grace.first-column.span": {
+      "probe": "grace-inner-slur.ly",
+      "score": "FIRST",
+      "lilypond": 1.9700094876883387,
+      "residual": -0.008887387,
+      "why": "Grace column spacing again (see slur.in-grace.inner.span), here between the first grace column and the main note. See slur.in-grace.inner.left-attachment for the port."
+    },
+    "slur.in-grace.into-grace.left-attachment": {
+      "probe": "grace-inner-slur.ly",
+      "score": "INTO",
+      "lilypond": 1.545,
+      "residual": 0.0,
+      "why": "EXACT since session 725 (see slur.in-grace.inner.left-attachment): a slur from a main note INTO a grace body. Its start is in ordinary time, so the ordinary direction rule holds (UP here, over the stem-down c'')."
+    },
+    "slur.in-grace.into-grace.span": {
+      "probe": "grace-inner-slur.ly",
+      "score": "INTO",
+      "lilypond": 2.391862520230852,
+      "residual": 0.0,
+      "why": "EXACT since session 725: the grace bound at the run's own X (see slur.in-grace.into-grace.left-attachment)."
+    },
+    "slur.in-grace.voice-one.left-attachment": {
+      "probe": "grace-inner-slur.ly",
+      "score": "VOICEONE",
+      "lilypond": 3.8482760736196315,
+      "residual": 0.000756824,
+      "why": "The voice fixes the side over the grace settings: under \\voiceOne LilyPond draws `\\grace { d16( e16) }` UP (3.85; alone, DOWN at 0.20), and since session 725 so does Lily# (SlurDetector: VoiceScan.ForcedCurveUpAt before the grace DOWN). An UP slur hangs 0.5 above the grace BEAM on a bound beamed toward its other end (ElementCoordinator.GraceBeamUpperFaceDeviceY, slur-scoring.cc:549-557): 0.45 low on the heads before that clause."
+    },
+    "slur.in-grace.voice-one.span": {
+      "probe": "grace-inner-slur.ly",
+      "score": "VOICEONE",
+      "lilypond": 1.5,
+      "residual": -0.082061554,
+      "why": "Grace column spacing (see slur.in-grace.inner.span)."
+    },
+    "slur.grace.acciaccatura-voice-one.left-attachment": {
+      "probe": "grace-inner-slur.ly",
+      "score": "VOICEACC",
+      "lilypond": 3.894059507478783,
+      "residual": 0.0,
+      "why": "EXACT since session 725: the acciaccatura's slur under \\voiceOne is UP in LilyPond (3.89) - ElementCoordinator.WithGraceSlurs asks VoiceScan.ForcedCurveUpAt before taking the grace settings' DOWN. It was always DOWN in Lily# before."
+    },
+    "slur.grace.acciaccatura-voice-one.span": {
+      "probe": "grace-inner-slur.ly",
+      "score": "VOICEACC",
+      "lilypond": 2.1437284651143127,
+      "residual": 0.0,
+      "why": "EXACT since session 725 (see slur.grace.acciaccatura-voice-one.left-attachment)."
+    },
+    "slur.in-grace.voice-two.left-attachment": {
+      "probe": "grace-inner-slur.ly",
+      "score": "VOICETWO",
+      "lilypond": -5.1777239263803665,
+      "residual": 1.783664631,
+      "why": "GRACE STEMS IN A LOWER VOICE: under \\voiceTwo LilyPond's grace stems point DOWN (the voice's Stem direction wins over score-grace-settings' UP, as the slur's does - MEASURED, Lab sessions/p725 stemdir.ly: dir=-1 on both grace stems), and the DOWN slur clears their tips at -5.18. Lily# draws every grace stem UP (SharedRenderer, the obstacles, ResolveSlurEdge), so the slur sits under the heads at -3.39. Open: the grace stem direction in polyphony, not a slur defect."
+    },
+    "slur.in-grace.voice-two.span": {
+      "probe": "grace-inner-slur.ly",
+      "score": "VOICETWO",
+      "lilypond": 1.5,
+      "residual": -0.082061554,
+      "why": "Grace column spacing (see slur.in-grace.inner.span)."
+    },
     "slur.beamed.reserved-text": {
       "probe": "slur-beam-reserve.ly",
       "score": "A",

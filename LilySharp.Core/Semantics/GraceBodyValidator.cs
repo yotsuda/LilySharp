@@ -118,8 +118,7 @@ internal sealed class GraceBodyValidator : ISemanticValidator
                             : ""),
                     GraceDropKind.Span =>
                         $"{drop.Written} inside {body} is not engraved: a grace note "
-                        + "carries no beam or tie, and the one slur it carries is a '(' on "
-                        + "the LAST grace note closed on the main note (grace { g16( } a8) )",
+                        + "carries no beam or tie (its slurs are drawn)",
                     // ⚠️ THE ONLY KIND THAT REPORTS A LOSS OFF MUSIC THAT DID REACH THE
                     // PAGE. A tuplet is a container (GraceBodySupport.BodyElements expands
                     // it), so the notes are engraved and the decoration is not, and a

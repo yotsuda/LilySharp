@@ -49,7 +49,7 @@ internal sealed class SlurDetector
         List<SlurItem>? phrasingSlurs = null;
         (int measureIdx, int itemIdx, MusicItem item)? openPhrasing = null;
 
-        foreach (var (v, measures, measureIdx, itemIdx, item) in VoiceScan.WalkVoiceItems(score))
+        foreach (var (v, measures, measureIdx, itemIdx, item) in VoiceScan.WalkVoiceItemsWithGraceTime(score))
         {
             if (v != currentVoice)
             {
@@ -59,6 +59,9 @@ internal sealed class SlurDetector
                 currentVoice = v;
             }
 
+            // Grace time is walked for the SLUR pairing below (and enters the section cursor
+            // as SlurPairingScanner's raw item walk always entered it); the phrasing slur's
+            // marks there stay where LYS4020 reports them (GraceBodySupport).
             if (plays.Enter(item))
             {
                 for (int k = 0; k < openSlurs.Count; k++)
@@ -70,7 +73,7 @@ internal sealed class SlurDetector
 
             // Close before open, as for a slur below (lily/slur-engraver.cc:295-324 is the
             // phrasing engraver's process_music too).
-            if (item.HasPhrasingSlurEnd && openPhrasing is { } op)
+            if (!item.GraceTime && item.HasPhrasingSlurEnd && openPhrasing is { } op)
             {
                 openPhrasing = null;
                 // A written side wins over the slur's own rule.
@@ -90,7 +93,7 @@ internal sealed class SlurDetector
                     IsPhrasing = true,
                 });
             }
-            if (item.HasPhrasingSlurStart && openPhrasing is null)
+            if (!item.GraceTime && item.HasPhrasingSlurStart && openPhrasing is null)
             {
                 openPhrasing = (measureIdx, itemIdx, item);
                 openPhrasingPlay = plays.Play;
@@ -118,8 +121,15 @@ internal sealed class SlurDetector
                 // later note's stem side). Polyphony: the voice fixes the direction.
                 // LILYPOND-REF: lily/slur.cc Slur::calc_direction — d = DOWN, set UP
                 //   if any non-rest note column has direction DOWN.
-                bool curveUp = VoiceScan.SpanCurvesUp(score.Voices, v, startMeasureIdx, startItemIdx,
-                    AnyCoveredStemDown(measures, startMeasureIdx, startItemIdx, measureIdx, itemIdx));
+                // A slur OPENED in grace time is DOWN (`grace { d'16( e') }`) — unless the voice
+                // fixes it: \voiceOne's UP still wins there. MEASURED (probes/grace-inner-slur.ly,
+                // LilyPond 2.26.0): the same body under \voiceOne draws its slur 3.85 above the
+                // middle line, UP; alone, 0.20, DOWN.
+                // LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings —
+                //   (Voice Slur direction DOWN).
+                bool curveUp = VoiceScan.ForcedCurveUpAt(score.Voices, v, startMeasureIdx, startItemIdx)
+                    ?? (!startItem.GraceTime
+                        && AnyCoveredStemDown(measures, startMeasureIdx, startItemIdx, measureIdx, itemIdx));
 
                 // A mark written on a chord MEMBER (<c e( g>) binds the bow to that head.
                 int? startHead = startItem is ChordItem { SlurStartHeadPosition: { } sh } ? sh : null;
@@ -173,7 +183,9 @@ internal sealed class SlurDetector
     }
 
     // True when any note/chord covered by the slur (inclusive range) has a
-    // DOWN stem — rests are transparent, like LP's !has_rests columns.
+    // DOWN stem — rests are transparent, like LP's !has_rests columns. A grace
+    // column's stem is UP whatever its model says (score-grace-settings Stem
+    // direction UP, as the renderer draws it), so it never flips the slur.
     // LILYPOND-REF: lily/slur.cc Slur::calc_direction.
     private static bool AnyCoveredStemDown(
         ImmutableArray<Measure> measures,
@@ -188,9 +200,9 @@ internal sealed class SlurDetector
             {
                 switch (items[ii])
                 {
-                    case NoteItem n when !n.StemUp:
+                    case NoteItem n when !n.StemUp && !n.GraceTime:
                         return true;
-                    case ChordItem c when !c.StemUp:
+                    case ChordItem c when !c.StemUp && !c.GraceTime:
                         return true;
                 }
             }

@@ -597,7 +597,9 @@ internal sealed class MeasureBuilder
     /// <para>
     /// The seven fields are the ones <c>MeasureCollector.DeriveGraceColumns</c> reads:
     /// staff position, accidental, ledger, base duration, dots, MIDI and string number — plus
-    /// the source position, which is click-to-source data no engraver reads.
+    /// the source position, which is click-to-source data no engraver reads. Since session 725
+    /// the slur marks survive too: the slur is the first of the ordinary engravers to draw
+    /// grace time (⒝2's slur half).
     /// </para>
     /// </remarks>
     private MusicItem NarrowToGraceTime(MusicItem item)
@@ -611,14 +613,19 @@ internal sealed class MeasureBuilder
             // the two sizes (GrobFontSize.StepOf) — dropping it here is what made
             // `cue { grace { … } }` an ordinary full-context grace (ledger
             // cue.grace.column.to-main, session 573).
+            // ⚠️ THE SLUR MARKS SURVIVE (session 725): a grace column is a slur bound like any
+            // note, paired by the ordinary SlurDetector and laid out at the grace's own X and
+            // font (ElementCoordinator.LayoutSlurs) — `grace { d'16( e') }`, `grace { g16( } a8)`.
             NoteItem n => new NoteItem(
                 n.StaffPosition, n.BaseDuration, n.Dots, n.Accidental, n.NeedsLedgerLines,
-                n.SourcePosition, isCue: n.IsCue)
+                n.SourcePosition, hasSlurStart: n.HasSlurStart, hasSlurEnd: n.HasSlurEnd, isCue: n.IsCue)
             {
                 GraceTime = true,
                 GraceSlash = slash,
                 Midi = n.Midi,
                 StringNumber = n.StringNumber,
+                SlurStartSourcePosition = n.SlurStartSourcePosition,
+                SlurEndSourcePosition = n.SlurEndSourcePosition,
             },
 
             ChordItem c => new ChordItem(
@@ -628,10 +635,15 @@ internal sealed class MeasureBuilder
                     m.StaffPosition, m.Accidental, m.NeedsLedgerLines,
                     StringNumber: m.StringNumber, Midi: m.Midi,
                     SourcePosition: m.SourcePosition)).ToImmutableArray(),
-                c.BaseDuration, c.Dots, c.SourcePosition, isCue: c.IsCue)
+                c.BaseDuration, c.Dots, c.SourcePosition, isCue: c.IsCue,
+                hasSlurStart: c.HasSlurStart, hasSlurEnd: c.HasSlurEnd)
             {
                 GraceTime = true,
                 GraceSlash = slash,
+                SlurStartSourcePosition = c.SlurStartSourcePosition,
+                SlurEndSourcePosition = c.SlurEndSourcePosition,
+                SlurStartHeadPosition = c.SlurStartHeadPosition,
+                SlurEndHeadPosition = c.SlurEndHeadPosition,
             },
 
             // A REST TAKES NO SLASH: the stroke is the Flag's, and a rest has none.
@@ -639,6 +651,10 @@ internal sealed class MeasureBuilder
             {
                 GraceTime = true,
                 IsSpacer = r.IsSpacer,
+                HasSlurStart = r.HasSlurStart,
+                HasSlurEnd = r.HasSlurEnd,
+                SlurStartSourcePosition = r.SlurStartSourcePosition,
+                SlurEndSourcePosition = r.SlurEndSourcePosition,
             },
 
             _ => item with { GraceTime = true },

@@ -43,7 +43,15 @@ internal static class VoiceScan
     /// nothing. The order — voice, measure, item — and the grace skip are the iterator's
     /// (RULES §5.4: the safety of this rewrite is order identity).
     /// </remarks>
-    public static VoiceItemWalk WalkVoiceItems(Score score) => new(score);
+    public static VoiceItemWalk WalkVoiceItems(Score score) => new(score, includeGraceTime: false);
+
+    /// <summary>
+    /// <see cref="WalkVoiceItems"/> with grace time IN the stream — for the slur detector,
+    /// which pairs an opening mark with its closing mark, never with "the next item", so the
+    /// reason the walk skips grace time does not bind it (session 725: `grace { d'16( e') }`
+    /// and `grace { g16( } a8)` are ordinary slurs, as in LilyPond).
+    /// </summary>
+    public static VoiceItemWalk WalkVoiceItemsWithGraceTime(Score score) => new(score, includeGraceTime: true);
 
     /// <summary>The walk <see cref="WalkVoiceItems"/> hands out; <c>foreach</c> binds to
     /// <see cref="GetEnumerator"/> and allocates nothing.</summary>
@@ -51,10 +59,15 @@ internal static class VoiceScan
         : IEnumerable<(int VoiceIndex, ImmutableArray<Measure> Measures, int MeasureIndex, int ItemIndex, MusicItem Item)>
     {
         private readonly Score _score;
+        private readonly bool _includeGraceTime;
 
-        internal VoiceItemWalk(Score score) => _score = score;
+        internal VoiceItemWalk(Score score, bool includeGraceTime)
+        {
+            _score = score;
+            _includeGraceTime = includeGraceTime;
+        }
 
-        public Enumerator GetEnumerator() => new(_score.Voices);
+        public Enumerator GetEnumerator() => new(_score.Voices, _includeGraceTime);
 
         IEnumerator<(int VoiceIndex, ImmutableArray<Measure> Measures, int MeasureIndex, int ItemIndex, MusicItem Item)>
             IEnumerable<(int VoiceIndex, ImmutableArray<Measure> Measures, int MeasureIndex, int ItemIndex, MusicItem Item)>.GetEnumerator()
@@ -70,10 +83,12 @@ internal static class VoiceScan
             private ImmutableArray<Measure> _measures;
             private ImmutableArray<MusicItem> _items;
             private int _v, _m, _i;
+            private readonly bool _includeGraceTime;
 
-            internal Enumerator(ImmutableArray<Voice> voices)
+            internal Enumerator(ImmutableArray<Voice> voices, bool includeGraceTime)
             {
                 _voices = voices;
+                _includeGraceTime = includeGraceTime;
                 _measures = ImmutableArray<Measure>.Empty;
                 _items = ImmutableArray<MusicItem>.Empty;
                 _v = -1;
@@ -113,11 +128,12 @@ internal static class VoiceScan
                     // `d4@glissando grace { d8 } c` drew its glissando to the GRACE (a
                     // horizontal line, both heads being d) instead of to the c.
                     // ⚠️ SCAFFOLDING, and the one whose removal is the PRIZE: this skip is
-                    // the whole of "a grace note cannot carry a slur or a tie" (LYS4020).
-                    // Deleting it is what HANDOFF §2 U8 ⒞ means, and it can only go once ⒝2
-                    // lets the ordinary engravers draw grace time — until then the detectors
-                    // would pair spans that nothing would draw.
-                    if (_items[_i].GraceTime)
+                    // the whole of "a grace note cannot carry a tie" (LYS4020). Deleting it is
+                    // what HANDOFF §2 U8 ⒞ means, and it can only go once ⒝2 lets the ordinary
+                    // engravers draw grace time — until then the detectors would pair spans
+                    // that nothing would draw. The SLUR detector already walks grace time
+                    // (WalkVoiceItemsWithGraceTime, session 725).
+                    if (!_includeGraceTime && _items[_i].GraceTime)
                         continue;
                     Current = (_v, _measures, _m, _i, _items[_i]);
                     return true;
