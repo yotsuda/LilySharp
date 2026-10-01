@@ -80,7 +80,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - **tuplet の数字の送り幅が LP より 0.07 広い**（同梱書体の「3」0.96 対 LP 0.888＝書体の問題）。tab の LP 差の他は第694 で閉じた
-- **MusicXML**: 第662〜第722 の起票分は全部閉じた（ARCHIVE）。残りは 5/4 のような 1 つの音価で書けない全小節休符が `<type>` のまま（`R1` が 4/4 ぶん）
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
@@ -109,6 +108,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ★★ **候補（第681・設計・ユーザー判断）: `@chord` だけの line も run の要素にする**（今は帯 ＋ staff-staff padding 1.0・LP は ChordNames を loose line として x ごとに歩きばねで配る）。値付け: `test/figbass-chordname-lower-staff` で LP 5.57 対 Lily# 6.02（+0.45・snapshot は第681 が GO で再ベース）。`AttachedChordLineInRun` の「`@chord` は LP の line を持たない」（2026-08-26）を覆す話なので提案だけ
 - ★★ **⒴⁗ 天井 2.03%**＝安くすると `アゲハ蝶.lys` 1 冊が 24→26 系になる＝perf ではなく*忠実度の判断*
   （実装は Lab `sessions/p423/zz423-deferred-prelim.diff.txt`）・**先に LP 双子**
+- **MusicXML の 5/4 のような 1 つの音価で書けない全小節休符**＝`<type>` のまま（`R1` が 4/4 ぶん）。**Lily# に綴りが無い（`R4*5` は 5 小節）＝言語設計・ユーザー判断**（第723 確定・第735 に ⒜ から移した）
 - ⚠️ **`RestCollisionsOf`／`RestDotOffsetsOf` は「今はやらない。着手はずっと後だ」**（第407 ⑺⑴）＝**提案しない**
 - ⚠️ **⒩⁶ の残り＝`ClearBeamStamp`（刻んで良いのは*消したあと*）に観測者が居ない**（第517 実測・計器は Lab `sessions/p517/`）。二択＝破れる 1 冊を見つけて網にする／「効かない保険」として畳む。**ユーザー「後回し」（第523）＝提案しない**
 - ⚠️ **`g4.core` 1.21% と `p1.s1.beams` 5.538% は*もう実仕事*＝この 2 島には戻らない**（割当の話。**時間では第589 が beam の二度解きを閉じた**＝§1.1 第589 ⑵）
@@ -117,6 +117,24 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⏸ 掃き終わった島（第434〜第456）の教訓は `HANDOFF-ARCHIVE.md`「§1.0 から移した perf の島」（第660）。閉じた島の一覧（⒥ Ⓑ ⒢′ … ⒱ ⒲）は第654 が畳んだ＝各便の §1（ARCHIVE）と RULES §5.4 末尾
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
+
+### 1.1 第735セッション（2026-10-01・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで作業に着手して」）。`-Start p735`（HEAD `43d6e508`・未 push 61）＝full **10638 / 0 / 2 / 10640**（第734 の 10630 ＋ ⑶ の網 8＝一致）。
+⑴ §1.0 ⒜ の残り 2 つはどちらも「今すぐ」ではなかった（5/4 の全小節休符は第723 が「Lily# に綴りが無い＝言語設計」と確定済み＝⒞ へ移した・tuplet の数字は書体の字幅）→ ユーザーが選んだ「速度記号の張り出し」（第734 ⑵ の提案）。
+⑵ ★ `1e7fbe5b` **速度記号を keep-inside-line に入れ、改行器が行末の rod を値付け＝01 が LP と同じ 7/6/5/7 に**（旧 6/6/6/7）。原因は 3 つ重なっていた:
+- gate は keep-inside の rod を一切値付けしていなかった → 小節ごとに「行末に来たときの spring」（`MeasureSpringData.LineEndSprings`＝各列から小節末への rod を `ApplyRods` で当てたもの）を持たせ、候補の行の最後の小節で差し替える（行頭の `LineStartSpring` と同じ形・和の差分は `KnuthPlassBreaker.LineEndDelta`）。
+- レイアウトの列の張り出しに速度記号が無かった → `MultiStaffLayouter.ColumnOverhangs` に切り出して 1 つの家に（歌詞・コード・音符・速度記号）。レイアウトと gate が同じ関数を読む。
+- 拍子変更のある小節の速度記号が最初の音符に立っていた（LP は拍子記号のインク左端）: collector は小節頭の記号の `AnchorItemIndex` を調・拍子の item の後に付ける＝engraver の「小節の途中」の分岐に落ちていた → `MusicMarkEngraver.IsMeasureStartTempo`（タイミング 0 なら小節頭）＋`SpacingRules.OpeningTimeChangeInkLeft`（レンダラの描き方と同じ歩き）。その記号の rod は小節の鎖の始点から張る。
+- 01 の小節 13 で終わる行の自然幅 +1.619（LP の測定 +1.647・差 0.028 は未分解）。
+- 新プローブ `tempo-line-end.ly`（TMM・TME）＋台帳 2 点 `tempo.x.mid-line-meter-change`（開いた値 +4.046）・`tempo.line-end.right-from-end-bar`（+20.174）→ **両方 EXACT**。網 `TempoLineEndBreakTests`（01 の 7/6/5/7）＋`SpacingInvariantTests.BreakGate_PricesTheCrossBarLyricRod` に行末の窓（歌詞のある行は和で値付けされる＝和の差し替えの観測者）。
+- 毒 4 種（Lab `sessions/p735/poisons.ps1`）: gate を切る 1 赤・張り出しから速度記号を外す 2 赤・index で判定 1 赤・DP の和の差し替えを外す＝最初は緑（01 の行は spring を解く道）→ 行末の窓を足して 1 赤。
+- 掃き（998 冊・1,199 枚・基準 HEAD・Lab `sessions/p735/sweep`）: **1 枚だけ**＝`audit/lpreg/metropar.lys`（最後の小節の「(♩ = 80)」を行の内側に＝五線の右端 31.47 → 33.45・**LP 33.449**）。snapshot 0 枚。full **10641 / 0 / 2 / 10643**。
+- 残り（未値付け）: `markTempo beside` で標識の右に立つ速度記号の張り出し／gate は行末の小節の自分の列の rod だけ（前の小節から行末まで届く長い記号は layout だけが保つ）／1 小節の行で前置きの拍子に立つ速度記号を gate が余分に値付け。
+★ `-End p735 -DiffBase 43d6e508`＝full **10641 / 0 / 2 / 10643**（網 +3）・門 全 OK・台帳 959 点（exact 765・OPEN 0）。7.5: Core `+` 306 行・REF 2（simple-spacer.cc・metronome-engraver.cc）・OWN 1＝この便が閉じた旧い限界の名を書いた註（新しい逸脱ではない）。7.6・7.7: 該当なし。push はユーザー（未 push 63）。
+判定: 次の候補は §1.0 ⒜／⒝ からで、どれもこの便の文脈（行末の rod）を使わない＝続けても新しい会話でも差は小さい（既定は続ける）。近いのは「残り（未値付け）」の 3 つだが、どれも観測者（実コーパスで動く本）が見つかっていない＝掃きで 0 冊。
+
+## 以下は第734セッションの経緯
 
 ### 1.1 第734セッション（2026-10-01・YT-DELL2）
 
@@ -131,30 +149,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 網: `MusicXmlSectionCutTests` 8 本・毒 7 種すべて赤。既存の round trip 3 本は空白を畳んで比べる形に。**全 998 冊の round trip（Lab `sessions/p734/imp/rt.ps1`・1,199 枚）で SVG 差 0**・504 冊で section が増えた。診断の差は既存の問題（パート間の小節数の違い LYS2007 が section ごとに出る・短い小節が section 頭に来て LYS2001→2006）だけ。
 - Bohemian（6 ファイル）を取り込み直し: SVG 同一・section A〜F（G・H は E♭ の書き直しが要るので F の中）。MIDI は tick 0 の拍子 meta が増えるだけ（既存の「パートごとに 1 つ」）。
 - 未決（ユーザーに聞く）: G・H も切りたいなら、Lily# 側で「section 頭の書き直しが前の section の残した値と同じなら描かない」にする（twin も重複 `\key` を省く）。言語の意味に触れる。
-
-## 以下は第733セッションの経緯
-
-### 1.1 第733セッション（2026-10-01・YT-DELL2）
-
-新しい会話（ユーザー「HANDOFF を読んで作業に着手して」＝第732 の次の候補: `condensedStaff` の 2 声目の前打音）。`-Start p733`（HEAD `3b5a7aff`・未 push 40）＝full **10612 / 0 / 2 / 10614**（引継ぎと一致）。
-⑴ ★ `33d121e3` **`condensedStaff` の 2 声目の前打音は*既に* DOWN だった＝起票（第726「collect 時は声 0」）が誤り**: 第284 から、後続パートは共有する段の自分の位置（base）で collect される（`CollectScore` の `staffVoiceSlots`）＝`ProcessGraceRegion` は声 2 を読み、項目と群の列の両方に `GraceStemDown` を刻んでいた。
-- 実測（Lab `sessions/p733/cond`）: 同じ音楽を 1 パートの `voice { } { }`（＝第726 が LP と並べた形・LP 側は `<< \a \\ \b >>`）で書いた本と、data-pos を伏せて SVG がバイト同一。
-- 直したのは誤った註（`MeasureCollector.cs` の `ProcessGraceRegion`）と網 +1（`SharedStaffVoiceSlotTests.ALaterPartsGraceOnASharedStaffPointsDown`）。毒（後続パートを声 0 で collect）で新しい網と既存 6 本が赤。描画は不変＝掃きは不要。
-残り（第732 から・どれも観測者なし／⒝）: 3 列以上の弧の rod・2 桁の主音符の数字の左の張り出し・前打音の列にまたがる rod の部品ごとの扱い。
-ユーザー「複雑で大きな lys を書いて。私がレンダを確認する」→ Lab `sessions/p733/big/` に 4 冊（ピアノ・室内楽 7 人・バンド譜〔TAB・コード・歌詞・ドラム〕・SATB＋ピアノ）。ユーザーの指摘 3 件:
-- 01 の acciaccatura の弧が加線と重なる＝**LP と 0.01 以内で同形**（LP も重なる・Lab `sessions/p733/acc`）＝変えない。
-- 02 の前打音 b'' と fis'' の符幹＝LP と同じ並び（拡大比較・Lab `sessions/p733/p02`）。どこが重なって見えたかをユーザーに問い返し中。
-- ⑵ ★ `558e93f1` **02 の D.S. al Coda が小節線をまたいで ff と重なる**: LP の JumpScript は `self-alignment-X RIGHT`（右端＝小節線の anchor・プローブ `jump-mark-x.ly` で 0.000000）。Lily# は「小節の右端 − 0.5」に中央揃え。台帳 +2 `mark.jump.right-from-bar-anchor.*`（開いた値 +6.048／+1.866）→ 位置を `EndBarAnchorX`・描く側を右揃え（`IsJumpScript`＝D.S./D.C. 一族と Fine）で**両方 EXACT**。毒 2（片方ずつ外す）＝どちらも 2 赤。掃き（998 冊・1199 枚・基準 `1e19bd08`・Lab `sessions/p733/sweep`）: 4 枚＝snapshot 3（ユーザー承認で再ベース）＋ユーザーの `blogger.lys`（文字列の x だけ・改行不動）。full **10615 / 0 / 2 / 10617**。
-- ⑶ `672efd5f` **Coda の頭で調号が出なかった**（ユーザーの 02 で見つけた）: section の頭の key の戻しが ♯/♭ の数だけを比べていた＝e minor → g major（どちらも ♯ 1 つ）で何も出さない。twin は主音も比べて `\key g \major` を書き、LP は描く（`key-engraver.cc:141-152`・Lab `sessions/p733/key` k1）。→ 主音のリセット前に「既定から外れていたか」を控えて条件に足した（パート見出しの key は既定の主音をパートごとに張り直すので余計な調号は出ない）。網 +1（`SectionResetTests`）・毒で赤・掃き 0 冊（その形の本が無い）。
-- ⑷ `69545925` **「To 𝄌」の X の見積もり**: `MarkXExtent` に分岐が無く、既定（End＝右揃え・「To Coda」の幅）に落ちていた＝ページの輪郭の箱が絵より半分左。→ 描く側と stacker と同じ `ToCodaInk` の中央揃えに。網 +1・毒で赤・掃き 0 冊。full **10617 / 0 / 2 / 10619**。
-- ⑸ `a0eb3593` **下の段（・2 声目）の連桁付き連符に括弧が出た**（ユーザーの 04 のピアノ）: 描画用の判定に渡る `beamGroups` は先頭の段の 1 声目の検出だけ＝下の段の連符は自分の連桁を見つけられなかった（ソプラノ 1 段を上に置くだけで再現・Lab `sessions/p733/tup`）。→ 判定を連符と同じ段の連桁の配置から読む（`FindCoveringBeam` と同じ絞り）。網 +2・毒で赤・掃き 1 枚＝snapshot `multivoice-voice2-tuplet`（LP と同じく数字だけに・承認で再ベース）。
-- ⑹ `cab2a2f1` **多声の同音で 4 分 + 8 分の符頭がまとまらなかった**（⑸ の snapshot で見つけた）: LP は符頭の duration-log を `min 2` で比べる（`output-lib.scm:616-619`）＝黒玉どうしはまとめる。Lily# は音価を比べていた。消す符頭の選び方（`:276`）も同じ比較に（旧比較のままだと両方の黒玉を消していた）。網 +3・毒で赤・掃き 1 枚（同じ snapshot・承認で再ベース）。full **10622 / 0 / 2 / 10624**。
-- ⑺ `4e1b73d4` **6 弦以上のタブのフレット数字（ユーザー決定・LILYSHARP-OWN）**: 03 で和音のジグザグが隣の拍と紛らわしい→見本 11 回（Lab `sessions/p733/tabfont` compare3〜11）でユーザーが選んだ: 数字 2.3・標準の太さ・ジグザグ 0.5 倍・2 桁で左が「1」なら 0.10em 寄せ・列の隙間 1.0（4・5 弦は従来どおり＝2026-09-11 の隙間の決定はベースの話）。`fonts { tab … }` が優先。約 50 の読み手に弦の数を通した（旧形は削除）。網 +4・毒で赤。`TabStemSpacingTests` は「LP の間隔か Lily# の rod の大きい方」で 31 か所一致（符幹の補正は LP のまま）。台帳 `slur.tab.stems.*` 4 点を逸脱として再記録。掃き 40 枚（ギターのタブだけ・改行 0・ベースの本 0）・snapshot 12 枚を承認で再ベース。full **10626 / 0 / 2 / 10628**。
-- ⑻ `25a4ca21` **楽器名がページの左端で切れた**（02 の「Clarinet in B♭」）: 字下げは LP と同じ固定 15mm、名前は Lily# 独自の 3.0（LP は 2.2＝InstrumentName は font-size を持たない）→ ユーザー決定で 2.2 に。網 +1・毒で赤・掃き 73 枚（ユーザーのコーパス 18 冊）・改行 0・snapshot 36 枚を承認で再ベース。full **10627 / 0 / 2 / 10629**。
-- ⑼ `bc085b31` **`pedal mixed` の踏み替えで「Ped.」を描き直していた**（01）: LP は最初の 1 回だけ・踏み替えは線の切れ込み（`piano-pedal-engraver.cc:291-321`）。`PedalEngraver.ChangeEnds` を 1 つの家にして、`mixed` の踏み替えの On は文字なし・その線は先頭の語なし。網 +2・毒で赤・掃き 0 冊。full **10629 / 0 / 2 / 10631**。
-- 03 の残り（未着手・仕様どおりのもの）: タブの段に楽器名を付けない（twin は付ける）／H・P とベンドを五線とタブの両方に描く（文法書どおり）。01 の残り: 段の割り方（T7 の族）・オッターヴァの表記（LP「8」・Lily#「8va」）は未調査。
-★ `-End p733 -DiffBase 3b5a7aff`＝full **10613 / 0 / 2 / 10615**（網 +1）・門 全 OK・Core `+` 3 行（註だけ・REF／OWN 0）。7.6・7.7: 該当なし（コードの振る舞いは変えていない）。push はユーザー（未 push 42）。
-判定: 前打音の島の残りはどれも観測者なし／⒝＝**次は §1.0 ⒜ の項目（tuplet の数字の送り幅・MusicXML の 5/4 の全小節休符）から選ぶのが筋**。どちらも今便の文脈を使わない＝続けても新しい会話でも差は小さい（既定は続ける）。
 
 ## 2. 開いている作業
 
