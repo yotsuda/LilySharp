@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第724セッションの経緯
+
+### 1.1 第724セッション（2026-10-01・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第723 の残り: 弧の終わり直前の高い旗つき前打音）。`-Start p724`（HEAD `0949c7b1`・未 push 20）＝full **10551 / 0 / 2 / 10553**（引継ぎと一致）。
+⒜ 第723 の残り（`a4( grace { e'16 } c'4)`＝弧の終わり直前の高い旗つき前打音・0.5 低い）: Lily# の障害物（符幹の先 4.1・X）は LP と一致＝差は採点の中。LP 2.26 の配布版は `debug-slur-scoring` の内訳を出さない（コンパイルされていない）＝区切った。
+⒝ 弧の全木の計器（p647 の S0・998 冊・Lab `sessions/p724/bows`）: 24,318 対中 2,453 対が差。⚠ 最初の族の集計は `summarize.ps1` に無い引数（`-Work`）を渡し、**既定の第647 の古いレポートを集計していた**（引数は `-Report`）。最大の族＝前打音の自動の弧（第647 が「設計級」と起票）→ **ユーザー決定「移植する」（AskUserQuestion）**。
+⑴ ★ `08d5019e` **前打音の弧を普通の弧に**: `ElementCoordinator.WithGraceSlurs` が「最後の前打音の列（`ColumnItemIndices`）→ 主音」の下向きの `SlurItem`（`StartGraceGroup`）を段の弧の前に足す（`LayoutSlurs` と、系ごとに振り分ける前の `LayoutPreliminaryStaffSlurs` の両方＝既に在れば足さない）。始点の X は前打音の列（`GraceGeomOf`／`GraceGroupX` に切り出した）・頭は前打音のフォント（`BowFont`）・符幹は上向き＋`GraceStemDetails`（`ResolveSlurEdge`）。`SharedRenderer.DrawGraceSlur`（固定の余白 0.5／0.65／0.15）は削除。**移植の穴を 1 つ埋めた**: `get_base_attachments` の `!spanner_less(slur, beam) || has_same_beam_`＝連桁の途中の主音への前打音の弧は連桁でなく頭に付く（普通の弧では束縛しない・Real Gone で新しい弧が 3.4 低く出て発覚）。第723 の休符の項目番号も `ColumnItemIndices` に。台帳 +6（`probes/grace-slur.ly`・`slur.grace.{acciaccatura,appoggiatura,beamed-main}.{left-attachment,span}`）EXACT・毒 2 つ（連桁の条件なし＝2 赤・始点を主音の X に＝6 赤）。**snapshot 5 枚をユーザー承認で再ベース**（02-ornaments・grace-explicit-slur・grace-notes・grace-chord-accidental・grace-accidental-line-start）。弧の計器: 差 2,453 → 1,637（一致 816・改善 308・悪化 3＝Real Gone ×2・02-ornaments＝前打音の列の間隔の既存の差が弧に出た）。全 score の SVG で 17 冊・22 枚。
+⑵ ★ `f30218fc` 複数段のスカイラインの pass（`StaffSlurLayouts`＝段番号 0 の自明な系）が前打音の群を段 0 で選んでいた＝段 N が段 0 の前打音から弧と障害物を作りうる→ `graceStaffIndex` を渡す。観測者なし（全 score の SVG 不変）。
+残り: 前打音の**中**の弧（`grace { d'16( e') }`・LYS4020＝§2 U8 ⒝2）・前打音の列の間隔の差（上の悪化 3 の元）。
+★ `-End p724 -DiffBase 0949c7b1`＝full **10557 / 0 / 2 / 10559**（台帳 +6）・門 7 つ全 OK・Core `+` 184 行に REF 3／OWN 0。7.6: ⑴ ユーザー決定（弧の最大の族の移植）・⑵ ⑴ の書きながら気づいた。push はユーザー（未 push 23）。
+
 ## 以下は第723セッションの経緯
 
 ### 1.1 第723セッション（2026-10-01・YT-DELL2）

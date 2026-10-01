@@ -118,6 +118,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第726セッション（2026-10-01・YT-DELL2）
+
+同じ会話の続き（ユーザー「HANDOFF を読んで作業に着手して」）。`-Start p726`（HEAD `184546dc`・未 push 25）＝full **10571 / 0 / 2 / 10573**（引継ぎと一致）。
+⑴ ★ `1c64e2a7` **LYS4010 が休符の弧を数えていなかった**（第725 の「休符の弧は対にならない」は*誤読*＝弧は描かれていて、**警告だけが嘘**）: `c4 r4( d4) e` は描かれて「`(` が無い」と警告、休符の `(` の未閉は黙っていた。`SlurPairingScanner` が述語（音符・和音）を自前で持ち、`SlurDetector` は休符（spacer 以外）も対にしていた＝同じ述語の 2 つ目の綴り。→ `SlurDetector.TryGetSlurFlags` を 1 軒にして scanner が呼ぶ。休符は cue の印を持たないので、今の region を引き継ぐ（cue の中の休符で region が割れて LYS4012 が偽に鳴るのを防ぐ・cue の最初が休符の形は読めない＝開示）。他の読み手 4 軒は確認済み（歌詞 2・PartCombiner は休符を数える／`LyricHyphen` は休符に届かない／`TabResolver` は対ではない）。網 +9・毒 2（旧版＝6 赤・region を更新＝cue の網 1 赤）。射程: 休符の弧を書く本は LP 双子 `slurrest-*.lys` 4 冊だけ（実コーパス 0）・SVG 不変（診断のみ）。
+⑵ ★ `d716dc6c` **下声部の前打音の符幹は DOWN**（ユーザー選択・AskUserQuestion）: LP は `\voiceOne`〜`\voiceFour`（`make-voice-props-set`・music-functions.scm:666-674）が `graceSettings` を `general-grace-settings`（向きを持たない）に差し替える＝前打音は声の向き。Lily# は UP を約 20 軒に書いていた。→ **印は 1 つ**: `ProcessGraceRegion` が書いた声から決め、builder が項目（`MusicItem.GraceStemDown`）と群の全列（`GraceColumnInfo.StemDown`・等値と hash にも）に刻む。`GraceColumnHeads.StemUp` を消してコンパイラに読み手を名指させた。読み手: 描画の主スイッチ・前打音の連桁の描画と quant・スカイライン（下側）・付点・旗の右への届き 2・接近列・弧の端と障害物と連桁の外面（`GraceBeamOuterFaceDeviceY`）・`AnyCoveredStemDown`・斜線の下向き字形（`dgrace`）。小節頭の前打音は光学補正を 0 に畳まず前打音の列の符幹で読む（`LeadGraceOpticalCorrection`・stand-in の符幹が満長＝+0.0059 を開示）。**届かない**: `condensedStaff` の 2 声目（collect 時は声 0）。台帳 +7（`probes/grace-voice-two-stem.ly`）: 連桁 2・旗 3・列の間隔 EXACT・小節頭 +0.0059。**GV2 の弧 +1.784 → +0.000757**。毒 12＋1（同じ木で 10587 基準）: 赤 6 本・緑 7 本は観測者なし（quant の要素の向き＝群の向きが読まれる・弧の障害物の門・スカイラインの下側・付点・斜線・描く連桁の符幹 x・2 度）＝998 冊にその形が無い。全 score の SVG（基準 `1c64e2a7`）: 1199 枚中 **1 枚＝`audit/lpreg/sttremcol.lys`**（下声部の前打音を持つ唯一の本・LP の双子と並べて同じ形）・snapshot 不動。
+残り: TAB の前打音の弧（第725 の開示）・前打音の列の間隔（弧の span −0.082 の元）・`condensedStaff` の 2 声目の前打音（collect 後に声が合わさる）・小節頭の stand-in の符幹の長さ（+0.0059）。
+★ `-End p726 -DiffBase 184546dc`＝full **10587 / 0 / 2 / 10589**（網 +9・台帳 +7）・門 7 つ全 OK・Core `+` 290 行に REF 8／OWN 0。7.6: 向きの印は `make-voice-props-set` の context 性質を collect 時の刻印に移した＝⒝（REF つき・字面にするには grace 設定を context の性質として持つ模型が要る）／`dgrace` は ⒜／小節頭の補正は ⒝（満長の stand-in・開示）／休符の弧の診断は ⒟（述語を既存の家に指し直しただけ）。7.7: 「ここでは必ず UP」で畳んだ軒を 1 つ消した側（`startLeadGrace > 0 ? 0`）。⑴ はユーザー「作業に着手して」・⑵ はユーザー選択。push はユーザー（未 push 27）。判定: 次の一手（前打音の列の間隔）は今便の前打音の計器とプローブの上に立つ＝**この会話で続けるのが有利**（文脈の圧縮はまだ無い）。
+
+## 以下は第725セッションの経緯
+
 ### 1.1 第725セッション（2026-10-01・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」＝第724 の次の一手: 前打音の中の弧・§2 U8 ⒝2）。`-Start p725`（HEAD `e10320f9`）＝full **10557 / 0 / 2 / 10559**（引継ぎと一致）。
@@ -128,18 +138,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   台帳 +12（`slur.in-grace.{inner,first-column,into-grace,voice-one,voice-two}.*`・`slur.grace.acciaccatura-voice-one.*`）: first-column／into-grace／acciaccatura-voice-one EXACT・voice-one 0.0008・span −0.082／−0.009（前打音の列の間隔＝既存の残り）。**voice-two +1.78＝`\voiceTwo` の LP の前打音の符幹は DOWN**（実測 dir=−1・Lab `sessions/p725/tabgrace/stemdir.ly`）で Lily# は全部 UP＝弧ではなく**前打音の符幹の向き**の穴（開いている）。毒 6 つ全部赤（＋TAB の留めの毒 1）。弧の計器（p724 の LP 側を再利用・`-SkipLp`）: 24,318→24,325 対・差 1,637 のまま・slur-grace の COUNT 残差が消えた。全 score の SVG（基準＝`LilySharp-bisect` を `e10320f9` に）: 1199 枚中 10 枚＝2 冊が弧 1 本増（slur-grace・grace-explicit-slur）・コーパス 4 冊は要素の**順序だけ**。**snapshot `test/grace-explicit-slur` をユーザー承認で再ベース**（3 小節目に弧）。発見（未着手）: 休符に付けた弧は主の格子でも対にならない（`r16( d)` が LYS4010）。
 残り: TAB の前打音の弧・下声部の前打音の符幹の向き・前打音の列の間隔・休符の弧。
 ★ `-End p725 -DiffBase e10320f9`＝full **10571 / 0 / 2 / 10573**（台帳 +12）・門 7 つ全 OK・Core `+` 240 行に REF 3／OWN 0。7.6: ⑴ ユーザー「続けて」（第724 が予告した次の一手）・向きの規則と TAB の除外は書きながら測って決めた。push はユーザー（未 push 25）。
-
-## 以下は第724セッションの経緯
-
-### 1.1 第724セッション（2026-10-01・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」＝第723 の残り: 弧の終わり直前の高い旗つき前打音）。`-Start p724`（HEAD `0949c7b1`・未 push 20）＝full **10551 / 0 / 2 / 10553**（引継ぎと一致）。
-⒜ 第723 の残り（`a4( grace { e'16 } c'4)`＝弧の終わり直前の高い旗つき前打音・0.5 低い）: Lily# の障害物（符幹の先 4.1・X）は LP と一致＝差は採点の中。LP 2.26 の配布版は `debug-slur-scoring` の内訳を出さない（コンパイルされていない）＝区切った。
-⒝ 弧の全木の計器（p647 の S0・998 冊・Lab `sessions/p724/bows`）: 24,318 対中 2,453 対が差。⚠ 最初の族の集計は `summarize.ps1` に無い引数（`-Work`）を渡し、**既定の第647 の古いレポートを集計していた**（引数は `-Report`）。最大の族＝前打音の自動の弧（第647 が「設計級」と起票）→ **ユーザー決定「移植する」（AskUserQuestion）**。
-⑴ ★ `08d5019e` **前打音の弧を普通の弧に**: `ElementCoordinator.WithGraceSlurs` が「最後の前打音の列（`ColumnItemIndices`）→ 主音」の下向きの `SlurItem`（`StartGraceGroup`）を段の弧の前に足す（`LayoutSlurs` と、系ごとに振り分ける前の `LayoutPreliminaryStaffSlurs` の両方＝既に在れば足さない）。始点の X は前打音の列（`GraceGeomOf`／`GraceGroupX` に切り出した）・頭は前打音のフォント（`BowFont`）・符幹は上向き＋`GraceStemDetails`（`ResolveSlurEdge`）。`SharedRenderer.DrawGraceSlur`（固定の余白 0.5／0.65／0.15）は削除。**移植の穴を 1 つ埋めた**: `get_base_attachments` の `!spanner_less(slur, beam) || has_same_beam_`＝連桁の途中の主音への前打音の弧は連桁でなく頭に付く（普通の弧では束縛しない・Real Gone で新しい弧が 3.4 低く出て発覚）。第723 の休符の項目番号も `ColumnItemIndices` に。台帳 +6（`probes/grace-slur.ly`・`slur.grace.{acciaccatura,appoggiatura,beamed-main}.{left-attachment,span}`）EXACT・毒 2 つ（連桁の条件なし＝2 赤・始点を主音の X に＝6 赤）。**snapshot 5 枚をユーザー承認で再ベース**（02-ornaments・grace-explicit-slur・grace-notes・grace-chord-accidental・grace-accidental-line-start）。弧の計器: 差 2,453 → 1,637（一致 816・改善 308・悪化 3＝Real Gone ×2・02-ornaments＝前打音の列の間隔の既存の差が弧に出た）。全 score の SVG で 17 冊・22 枚。
-⑵ ★ `f30218fc` 複数段のスカイラインの pass（`StaffSlurLayouts`＝段番号 0 の自明な系）が前打音の群を段 0 で選んでいた＝段 N が段 0 の前打音から弧と障害物を作りうる→ `graceStaffIndex` を渡す。観測者なし（全 score の SVG 不変）。
-残り: 前打音の**中**の弧（`grace { d'16( e') }`・LYS4020＝§2 U8 ⒝2）・前打音の列の間隔の差（上の悪化 3 の元）。
-★ `-End p724 -DiffBase 0949c7b1`＝full **10557 / 0 / 2 / 10559**（台帳 +6）・門 7 つ全 OK・Core `+` 184 行に REF 3／OWN 0。7.6: ⑴ ユーザー決定（弧の最大の族の移植）・⑵ ⑴ の書きながら気づいた。push はユーザー（未 push 23）。
 
 ## 2. 開いている作業
 
