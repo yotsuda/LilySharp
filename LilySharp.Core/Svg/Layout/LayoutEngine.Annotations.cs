@@ -805,6 +805,9 @@ internal sealed partial class LayoutEngine
         // reader's corpus this one is built 2.17 times a keystroke and stays EMPTY in every
         // one of them: no book in the corpus has a bracketed pedal (session 448).
         ImmutableArray<PedalBracketLayout>.Builder? pedalBracketBuilder = null;
+        // The engages of a MIXED staff that re-pedal inside a span (PedalEngraver.ChangeEnds),
+        // by (staff, source) — the marks whose word the keep-text gate below drops.
+        var mixedChangeEngages = new HashSet<(int Staff, int Source)>();
         // Asked once: with no pedal mark there is no bracket to lay out and no text to
         // suppress, and the pass was paying for both — the staff walk's Where/Select/Distinct
         // and a keep-text delegate the mark engraver then called on every mark
@@ -832,6 +835,13 @@ internal sealed partial class LayoutEngine
                     continue;
                 var staffMarks = musicMarks.Where(m => m.StaffIndex == staffIndex).ToImmutableArray();
                 var brackets = PedalEngraver.DetectPedalBrackets(staffMarks, sectionPlays);
+                if (style == PedalStyle.Mixed)
+                {
+                    var (_, startsAtChange) = PedalEngraver.ChangeEnds(brackets);
+                    for (int b = 0; b < brackets.Length; b++)
+                        if (startsAtChange[b])
+                            mixedChangeEngages.Add((staffIndex, brackets[b].SourcePosition));
+                }
                 // The line the staff's down profile was solved with -- null (fallback to
                 // the legacy below-the-system baseline) when the seed declined this staff
                 // or this pass has no per-staff skylines (the preliminary pass).
@@ -871,8 +881,13 @@ internal sealed partial class LayoutEngine
         // mark list — and every mark's SourceIndex into it — stays intact for the
         // incremental-reuse data-pos path (SharedRenderer.ResolveDataPos).
         // Null keeps every mark, which is what the predicate answers when no mark is a pedal's.
+        // ⚠️ A MIXED STYLE PRINTS ITS WORD AT THE FIRST ENGAGE ONLY: a re-pedalling inside the
+        // span is the bracket's notch, and LilyPond makes no text for it (create_text_grobs
+        // builds the string only for a START with no STOP beside it). Until session 733 every
+        // engage kept its "Ped.", printed over the end of the line before it.
         Func<MusicMarkItem, bool>? keepMarkText = anyPedalMark
             ? m => KeepPedalTextMark(m, StaffPedalStyle(m.StaffIndex))
+                   && !mixedChangeEngages.Contains((m.StaffIndex, m.SourcePosition))
             : null;
 
         // Layout figured bass (drops below below-staff scripts via the

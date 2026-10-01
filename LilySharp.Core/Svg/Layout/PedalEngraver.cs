@@ -704,20 +704,7 @@ internal static class PedalEngraver
         // notch) instead of vertical hooks. Matched by the MUSICAL moment, not by equal X:
         // a change at the first note of a line has its two ends on two different systems,
         // whose X frames are unrelated (until 2026-09-26 that change drew no notch).
-        var endsAtChange = new bool[brackets.Length];
-        var startsAtChange = new bool[brackets.Length];
-        for (int a = 0; a < brackets.Length; a++)
-            for (int b = 0; b < brackets.Length; b++)
-            {
-                var (x, y) = (brackets[a], brackets[b]);
-                if (a != b && x.Type == y.Type
-                    && x.EndMeasureIndex == y.StartMeasureIndex
-                    && x.EndItemIndex == y.StartItemIndex && x.EndTiming == y.StartTiming)
-                {
-                    endsAtChange[a] = true;
-                    startsAtChange[b] = true;
-                }
-            }
+        var (endsAtChange, startsAtChange) = ChangeEnds(brackets);
 
         for (int bi = 0; bi < brackets.Length; bi++)
         {
@@ -802,13 +789,45 @@ internal static class PedalEngraver
                 portionMeasure,
                 bracket.SourcePosition,
                 // Mixed style's leading word stands at the engage; a continuation has none.
-                isMixed && !brokenLeft,
+                isMixed && !brokenLeft && !startsAtChange[bi],
                 StartChange: !brokenLeft && startsAtChange[bi],
                 EndChange: !brokenRight && endsAtChange[bi],
                 SourceIndex: bi,
                 BrokenLeft: brokenLeft,
                 BrokenRight: brokenRight));
         }
+    }
+
+    /// <summary>
+    /// Which brackets END and which START at a pedal CHANGE: one bracket ends at the very
+    /// moment the next of its type begins (a release and a re-engage on one note). Matched by
+    /// the MUSICAL moment, not by equal X — a change at the first note of a line has its two
+    /// ends on two systems whose X frames are unrelated.
+    /// </summary>
+    /// <remarks>
+    /// ONE HOME for the drawn notch (<see cref="Calculate"/>: the abutting flares) and the
+    /// mixed style's word (LayoutEngine.Annotations: a re-pedalling prints no "Ped.").
+    /// LILYPOND-REF: lily/piano-pedal-engraver.cc:291-303 create_text_grobs — a STOP and a
+    ///   START together make no text under the mixed style.
+    /// </remarks>
+    internal static (bool[] EndsAtChange, bool[] StartsAtChange) ChangeEnds(
+        ImmutableArray<PedalBracketItem> brackets)
+    {
+        var endsAtChange = new bool[brackets.Length];
+        var startsAtChange = new bool[brackets.Length];
+        for (int a = 0; a < brackets.Length; a++)
+            for (int b = 0; b < brackets.Length; b++)
+            {
+                var (x, y) = (brackets[a], brackets[b]);
+                if (a != b && x.Type == y.Type
+                    && x.EndMeasureIndex == y.StartMeasureIndex
+                    && x.EndItemIndex == y.StartItemIndex && x.EndTiming == y.StartTiming)
+                {
+                    endsAtChange[a] = true;
+                    startsAtChange[b] = true;
+                }
+            }
+        return (endsAtChange, startsAtChange);
     }
 
     /// <summary>
