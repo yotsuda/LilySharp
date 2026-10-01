@@ -889,13 +889,27 @@ internal sealed class MeasureLayouter
             // LILYPOND-REF: lily/note-spacing.cc:78-83 Note_spacing::get_spacing — the
             //   spring's own minimum, taken with the right column's skyline-vertical-padding
             //   and with NO spanner padding.
-            maxSkyDist = Math.Max(maxSkyDist,
-                SpacingRules.CalculateSkylineDistance(fonts, prev, next, staffY: 0, staffLines: staffLines));
-            // LILYPOND-REF: lily/spacing-spanner.cc:229-296 Spacing_spanner::set_column_rods
-            //   raises a rod over every pair of columns that can reach each other, via
-            //   lily/separation-item.cc:47-68 Separation_item::set_distance.
-            maxRod = Math.Max(maxRod,
-                SpacingRules.SeparationRodDistance(fonts, prev, next, staffY: 0, staffLines: staffLines));
+            // ⚠️ NOT ON A TAB VOICE: these two price the pair's NOTATION ink — heads at the
+            // pitch's staff position, its ledger lines, a flag at the notation stem's tip — and
+            // a TAB staff draws none of it (digits on strings, the tab's own stem and flag). The
+            // tab's digits are priced by the head override above and the column reservations.
+            // Until session 736 a low bass note was spaced as a ledgered note under a staff: a
+            // lone flagged up-stem eighth on the A string took the flag-low gap, 2.567 where
+            // LilyPond's TabStaff sets 2.289, the same as on the D string. MEASURED (2.26.0,
+            // Lab sessions/p736/dig, `lysc ly --pin-fonts` twins): bes,,8 → bes,,4. 2.57 / 2.29,
+            // tuplet 3/2 { bes,,8 bes,,4 } 2.57 / 2.29 — both 2.29 without these two.
+            // The slur, tremolo and grace rods below stay: those grobs exist on a TabStaff.
+            bool tabVoice = stavesAligned && stavesOfMeasures![vi].IsTab;
+            if (!tabVoice)
+            {
+                maxSkyDist = Math.Max(maxSkyDist,
+                    SpacingRules.CalculateSkylineDistance(fonts, prev, next, staffY: 0, staffLines: staffLines));
+                // LILYPOND-REF: lily/spacing-spanner.cc:229-296 Spacing_spanner::set_column_rods
+                //   raises a rod over every pair of columns that can reach each other, via
+                //   lily/separation-item.cc:47-68 Separation_item::set_distance.
+                maxRod = Math.Max(maxRod,
+                    SpacingRules.SeparationRodDistance(fonts, prev, next, staffY: 0, staffLines: staffLines));
+            }
             // A whole-display tremolo pair with accidentals on its right half spans
             // the Beam's minimum-length as a rod (6.0) — the spacing side of the
             // gapped floating beam. Same house as the measure-estimate system's.

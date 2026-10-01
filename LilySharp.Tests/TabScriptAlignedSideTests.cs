@@ -34,9 +34,13 @@ namespace LilySharp.Tests;
 /// LILYPOND-REF: lily/side-position-interface.cc:188-456 Side_position_interface::aligned_side
 /// </summary>
 /// <remarks>
-/// The books set the fret digits to LilyPond's height (<c>fonts { tab size 1.6343 }</c>: the
-/// bundled bold digit inks 0.722 of its size, LilyPond's TabNoteHead is 1.18 tall), so a
-/// digit-supported script can be held to LilyPond's number; Lily#'s default larger digit
+/// The books set the fret digits to LilyPond's height (<c>fonts { tab size 1.7218 }</c>: the
+/// bundled bold digit inks 0.72205 of its size, LilyPond's TabNoteHead box is 1.243196 tall
+/// in C059 — MEASURED, Lab sessions/p736/ts4p, scriptdump3.ily), so a digit-supported script
+/// can be held to LilyPond's number. ⚠️ Until session 736 the books said 1.6343 and the
+/// expectations below were LilyPond's reading of an UNPINNED svg twin (its TabNoteHead 1.18
+/// tall in the machine's generic serif, RULES 1239): the three digit-supported scripts read
+/// 0.03 nearer the staff than LilyPond sets them; Lily#'s default larger digit
 /// moves exactly those scripts out by the difference, which is the owner's decision
 /// (2026-09-30), not a defect. Single notes only — a beamed stem's end follows the tab beam,
 /// whose height is another decision (session 569's uniformBeamedLength).
@@ -44,20 +48,20 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public sealed class TabScriptAlignedSideTests
 {
-    /// <summary>MEASURED, LilyPond 2.26.0 (Lab sessions/p694/ts3, the lysc-ly twins through
-    /// sessions/p694/scriptdump.ily): the Script's origin above (+) or below (−) the tab
-    /// staff's middle line. Until session 694 Lily# put the glyph centre a flat 1.0 from the
-    /// digit, the stem tip or the staff edge: 5.50 / 5.50 / −2.83 / 4.34 / −4.33 / 4.34.</summary>
+    /// <summary>MEASURED, LilyPond 2.26.0 (Lab sessions/p736/tsfix, the `lysc ly --pin-fonts`
+    /// twins through sessions/p694/scriptdump2.ily): the Script's origin above (+) or below (−)
+    /// the tab staff's middle line. Until session 694 Lily# put the glyph centre a flat 1.0
+    /// from the digit, the stem tip or the staff edge: 5.50 / 5.50 / −2.83 / 4.34 / −4.33 / 4.34.</summary>
     [Theory]
     [InlineData("bes,,4@fermata", 5.176)]    // above, the up-stem in the support (padding 0.4 × 1.5)
     [InlineData("bes,,4@staccato", -3.000)]  // below the A string, quantized onto a space
-    [InlineData("g4@staccato", 3.340)]       // above the top digit: past the staff span, not quantized
-    [InlineData("e,,4@staccato", -3.352)]    // below the bottom digit
-    [InlineData("g4@fermata", 3.516)]        // above the top digit, the stem pointing away
+    [InlineData("g4@staccato", 3.3716)]      // above the top digit: past the staff span, not quantized
+    [InlineData("e,,4@staccato", -3.3803)]   // below the bottom digit
+    [InlineData("g4@fermata", 3.5476)]       // above the top digit, the stem pointing away
     public void ATabScript_StandsWhereLilyPondsAlignedSidePutsIt(string note, double originUp)
     {
         string src = $$"""
-            fonts { tab size 1.6343 }
+            fonts { tab size 1.7218 }
             octave absolute
             part cb {
               instrument bass

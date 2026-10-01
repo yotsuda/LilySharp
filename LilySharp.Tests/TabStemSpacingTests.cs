@@ -170,6 +170,37 @@ public sealed class TabStemSpacingTests
         Assert.Equal(0.025823, firsts[1] - firsts[2], 4);
     }
 
+    /// <summary>
+    /// A lone flagged up-stem eighth on a low bass string is spaced as on any string: the TAB
+    /// draws no ledger lines and no notation flag, so its column is not priced as a ledgered
+    /// note under a staff.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, Lab sessions/p736/dig, `lysc ly --pin-fonts` twins): the first gap is
+    /// 2.2891 in both books, as on the D string (`ees8 ees4.`). Until session 736 Lily# read the
+    /// notation skyline of B♭1 — two ledger lines below a bass staff, the flag-low regime — and
+    /// gave 2.567. The digits are LilyPond's size so the gap reads the spacing alone.
+    /// </remarks>
+    [Theory]
+    [InlineData("bes,,8 bes,,4. r2 |")]
+    [InlineData("tuplet 3/2 { bes,,8 bes,,4 } bes,,4 r2 |")]
+    public void ALowBassEighthIsNotSpacedAsALedgeredNote(string music)
+    {
+        string book = $$"""
+            fonts { tab size 1.7218 }
+            octave absolute
+            part cb {
+              instrument bass
+              section A { {{music}} }
+            }
+            form main { A }
+            score main { tab cb }
+            """;
+        var g = RenderedGeometry.Render(book);
+        var xs = g.Texts.Where(t => t.Role == TextRole.TabFret).Select(t => t.X).OrderBy(x => x).ToArray();
+        Assert.Equal(2.289171, xs[1] - xs[0], 3);
+    }
+
     private static void AssertGaps(string music, double[] lilyPondGaps)
     {
         var g = RenderedGeometry.Render(Book.Replace("MUSIC", music));
