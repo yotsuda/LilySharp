@@ -5295,14 +5295,13 @@ public sealed partial class MeasureCollector
     /// digit's right edge as left_head_end). A part ALSO drawn on a notation staff keeps the
     /// notation widths: the two staves share their columns, and the notation floor wins there.
     /// LILYPOND-REF: scm/music-functions.scm:636-650 general-grace-settings — (Voice TabNoteHead font-size -4).
-    /// ⒝ THE DEFAULT DIGIT SIZE (TabConstants.FretFontSize × GraceFretScale, bold): a score whose
+    /// ⒝ THE DEFAULT DIGIT FACE for the staff's string count (TabConstants.DefaultFretEm × GraceFretScale): a score whose
     /// fonts { } restyle the tab's numbers keeps the default's width here (no fonts reach the collector).
     /// </remarks>
     private Model.Staff StampTabGraceDigits(Model.Staff staff, int staffIndex)
     {
         var tuning = LilySharp.Core.Tablature.Tunings.GetTuning(staff.Tuning!.Value);
         int shift = LilySharp.Core.Tablature.Tunings.SoundingShift(staff.TabSourceClef, staff.Transposition);
-        double size = Svg.Layout.TabConstants.FretFontSize * Svg.Layout.TabConstants.GraceFretScale;
         ImmutableArray<GraceColumnInfo> Stamp(ImmutableArray<GraceColumnInfo> columns)
         {
             if (columns.IsDefaultOrEmpty)
@@ -5315,10 +5314,10 @@ public sealed partial class MeasureCollector
                     foreach (var h in c.Heads)
                     {
                         var (_, fret) = LilySharp.Core.Tablature.Tunings.CalculateFret(h.Midi + shift, tuning, h.StringNumber ?? 0);
-                        half = Math.Max(half, Rendering.TextFontMetrics.Advance(
-                            fret.ToString(), size, sans: false, style: Svg.Layout.TabConstants.FretFontStyle) / 2.0);
+                        half = Math.Max(half, Svg.Layout.TabConstants.FretGlyphWidthAtDefault(
+                            tuning.Length, fret.ToString(), Svg.Layout.TabConstants.GraceFretScale) / 2.0);
                     }
-                b.Add(c with { TabDigitHalfWidth = half });
+                b.Add(c with { TabDigitHalfWidth = half, TabStringCount = tuning.Length });
             }
             return b.MoveToImmutable();
         }

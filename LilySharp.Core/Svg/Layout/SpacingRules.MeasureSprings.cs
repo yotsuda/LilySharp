@@ -912,7 +912,7 @@ internal static partial class SpacingRules
         if (!any && !anySlash)
             return springs;
 
-        double tabGap = TabConstants.FretColumnGap; // clearance between adjacent digit columns
+        double tabGap = TabConstants.ColumnGap(tuning.Length); // clearance between adjacent digit columns (the staff's own face)
         var result = springs.ToBuilder();
         void Widen(int idx, double needed)
         {

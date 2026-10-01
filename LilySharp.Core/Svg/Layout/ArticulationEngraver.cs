@@ -840,7 +840,7 @@ internal static class ArticulationEngraver
                     int[] tuning = Tunings.GetTuning(btt);
                     var (strNum, fret) = TabFretOf(bendTab, tuning, item);
                     leftInk = bendItemX + EngravingDefaults.TabHeadCenterOffset
-                        + TabFretHalfWidth(fonts, fret);
+                        + TabFretHalfWidth(fonts, tuning.Length, fret);
                     // Y-up: the string row sits (strNum−1)·space below the (notation)
                     // staff middle. No staff offset — resolved at draw time.
                     bendYUp = StaffMiddle
@@ -881,10 +881,11 @@ internal static class ArticulationEngraver
                         artMeasures, articulation.MeasureIndex, articulation.ItemIndex + 1, measureLayout);
                     if (bendTab is { Tuning: { } ntt } && !AnyNotationStaff(staffByIndex))
                     {
-                        var (_, nextFret) = TabFretOf(bendTab, Tunings.GetTuning(ntt),
+                        int[] nextTuning = Tunings.GetTuning(ntt);
+                        var (_, nextFret) = TabFretOf(bendTab, nextTuning,
                             measure.Items[articulation.ItemIndex + 1]);
                         nextInkLeft += EngravingDefaults.TabHeadCenterOffset
-                            - TabFretHalfWidth(fonts, nextFret);
+                            - TabFretHalfWidth(fonts, nextTuning.Length, nextFret);
                     }
                 }
                 else
@@ -1110,16 +1111,16 @@ internal static class ArticulationEngraver
                 // LILYPOND-REF: lily/side-position-interface.cc:273-281 aligned_side — `if (dir == -get_grob_direction (e)) continue;`
                 // The digit's box is the DRAWN digit's, Lily#'s larger one (TabConstants.FretFontSize):
                 // user decision 2026-09-30 — a script clears the digit it would otherwise touch.
-                double fretHalf = TabConstants.FretDigitHeight(fonts) / 2.0;
+                double fretHalf = TabConstants.FretDigitHeight(fonts, geom.StringCount) / 2.0;
                 int edgeString = geom.StemHeadString(item, stemUp: tabAbove);
                 // The script's outline meets the digit over the digit's own width (LP's TabNoteHead
                 // X extent is its text's), and the stem and the staff across the whole width
                 // (add-stem-support; include_staff) — see SupportReach for the notation staff's.
                 double nearAll = NearReachOver(articulation, tabAbove, fonts);
                 var (_, edgeFret) = geom.StemRootDigit(item, stemUp: !tabAbove);
-                double digitHalf = TabConstants.FretGlyphWidth(fonts,
+                double digitHalf = TabConstants.FretGlyphWidth(fonts, geom.StringCount,
                     edgeFret.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                    TabConstants.FretEm(fonts)) / 2.0;
+                    TabConstants.FretEm(fonts, geom.StringCount)) / 2.0;
                 double support = dir * (tabMiddle - geom.StringY(edgeString)) + fretHalf
                                  + NearReachOver(articulation, tabAbove, fonts, -digitHalf, digitHalf);
                 if (tabStemUp == tabAbove)
@@ -1953,10 +1954,10 @@ internal static class ArticulationEngraver
 
     /// <summary>Half the advance of a fret digit at the score's fret em — half the box the tab
     /// reservation gives it (SkylineBuilder.AddTabStaffToSkylines).</summary>
-    internal static double TabFretHalfWidth(ScoreTextMetrics fonts, int fret)
-        => TabConstants.FretGlyphWidth(fonts,
+    internal static double TabFretHalfWidth(ScoreTextMetrics fonts, int stringCount, int fret)
+        => TabConstants.FretGlyphWidth(fonts, stringCount,
             fret.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            TabConstants.FretEm(fonts)) / 2;
+            TabConstants.FretEm(fonts, stringCount)) / 2;
 
     /// <summary>Whether any staff of the score is a notation staff — one whose note heads
     /// stand AT the column, so the column's united ink left is the column itself.</summary>

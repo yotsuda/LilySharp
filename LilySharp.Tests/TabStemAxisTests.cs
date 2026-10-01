@@ -55,7 +55,7 @@ public class TabStemAxisTests
     {
         var digits = new List<(double, double, string)>();
         foreach (Match m in Regex.Matches(svg,
-            "<text x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" font-size=\"[\\d.]+\" font-weight=\"bold\""
+            "<text x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" font-size=\"[\\d.]+\"(?: font-weight=\"bold\")?"
             + " text-anchor=\"middle\"[^>]*>(\\d+)</text>"))
             digits.Add((
                 double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture),

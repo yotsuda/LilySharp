@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 60 | 観測者がゼロだと自認しているもの |
-| `OWN` | 204 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **324** | |
+| `OWN` | 206 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **326** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -31,8 +31,8 @@
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 7 |
 | `LilySharp.Core/LilyPond/LilyPondExporter.cs` | 6 |
+| `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
-| `LilySharp.Core/Rendering/SharedRenderer.Beams.cs` | 5 |
 
 ## APPROX — LP に対応物はあるが、形が違うと自認しているもの（60 件）
 
@@ -44,7 +44,7 @@
 - **:270** fans twice. Not ported; no book in the corpus has one.
 - **:688** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
-- **:372** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
+- **:373** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:1305** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
 - **:1310** whiteout −1) is not ported.
@@ -121,7 +121,7 @@
 ### `LilySharp.Core/Svg/Layout/StaffAffinity.cs`
 - **:124** order, so the warning has nothing to fire on and is not ported.
 ### `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs`
-- **:115** ⚠️⚠️ AND THIS IS WHY LILYPOND'S TabNoteHead (whiteout . #t) IS NOT PORTED, which
+- **:165** ⚠️⚠️ AND THIS IS WHY LILYPOND'S TabNoteHead (whiteout . #t) IS NOT PORTED, which
 ### `LilySharp.Core/Svg/Layout/TabStaffStencils.cs`
 - **:127** RepeatTie, LaissezVibrerTie, PhrasingSlur) are likewise not ported:
 ### `LilySharp.Core/Svg/Layout/TextSpannerEngraver.cs`
@@ -163,9 +163,9 @@
 - **:205** fixture carries one, so there is no ledger point and no twin — it is ported literally
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **:366** hands the scorer the band it would have had without the digit. No book reaches that
-- **:2016** them as markup — so there is no LP geometry to port and no ledger point can observe
-- **:2184** see the difference, and no fixture and no ledger point reaches it.
-- **:2895** box per duration, which Lily# does not read for this purpose. No ledger point observes
+- **:2017** them as markup — so there is no LP geometry to port and no ledger point can observe
+- **:2185** see the difference, and no fixture and no ledger point reaches it.
+- **:2896** box per duration, which Lily# does not read for this purpose. No ledger point observes
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:111** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
@@ -231,14 +231,14 @@
 - **:409** string slots, not pitches, and no ledger point measures the tab
 - **:947** and no ledger point measures the tab bracket regime (LILYSHARP-OWN gate, the
 - **:1290** positions are string slots; no ledger point measures that regime).
-- **:1742** ⚠️ THE BEAM-SLOPE CAP HAS NO OBSERVER YET: it is reached only when a covering beam
+- **:1743** ⚠️ THE BEAM-SLOPE CAP HAS NO OBSERVER YET: it is reached only when a covering beam
 ### `LilySharp.Core/Svg/Layout/VoltaBracketEngraver.cs`
 - **:355** bar line, which a form never writes. No observer; it goes when the column is modelled.
 - **:486** (SharedRenderer.IsMmrInnerEndBarline). No observer.
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（204 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（206 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:3097** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -289,7 +289,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
 - **:652** prefix — LILYSHARP-OWN, a decided divergence (user decision
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
-- **:215** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
+- **:216** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:1424** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
@@ -301,7 +301,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Tab.cs`
 - **:425** LILYSHARP-OWN: LilyPond has no pitchless note — its slash is a style on
 - **:443** ⚠️ LILYSHARP-OWN on a FULL tab, and deliberately so (USER DECISION,
-- **:973** ⚠️ LILYSHARP-OWN, the other half: which x IS the centre when the digits do not
+- **:990** ⚠️ LILYSHARP-OWN, the other half: which x IS the centre when the digits do not
 ### `LilySharp.Core/Rendering/TextFontMetrics.cs`
 - **:543** LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
 - **:660** ⚠️ LILYSHARP-OWN: the glyphs a missing codepoint falls back to are drawn from a system
@@ -356,7 +356,7 @@
 - **:127** X offset of a bend-up's curve from the fret digit on a TAB staff. LILYSHARP-OWN (above).
 - **:129** X gap between a bend-up's curve and the notehead's right edge. LILYSHARP-OWN (above).
 - **:131** X offset for a curve that arrives FROM THE LEFT (scoop/plop). LILYSHARP-OWN (above).
-- **:2388** LILYSHARP-OWN (2026-09-28, defect seen on the owner's "Shape chords" book: the Cm diagram's
+- **:2389** LILYSHARP-OWN (2026-09-28, defect seen on the owner's "Shape chords" book: the Cm diagram's
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:128** LILYSHARP-OWN (owner's decision 2026-09-27: "the diagram stands below the name, between
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
@@ -501,11 +501,13 @@
 - **:193** every verse number in the same column, clear of the bar. LILYSHARP-OWN: the
 ### `LilySharp.Core/Svg/Layout/TabChordColumns.cs`
 - **:39** LILYSHARP-OWN, all of it, and LilyPond cannot be asked: its tab digits are small enough
-- **:69** LILYSHARP-OWN, tuned on request (2026-08-06): each run's zigzag PHASE puts the
+- **:72** LILYSHARP-OWN, tuned on request (2026-08-06): each run's zigzag PHASE puts the
 ### `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs`
 - **:34** LILYSHARP-OWN: deliberately LARGER than LilyPond's, whose tab digits are small
-- **:407** LILYSHARP-OWN (owner's decision 2026-09-24): an eighth pair takes a sixteenth
-- **:480** and the stem ran up the whole staff). LILYSHARP-OWN: LilyPond has no pitchless note.
+- **:89** LILYSHARP-OWN, USER DECISION 2026-10-01 (session 733): on a guitar tab the 2.8 bold digits
+- **:256** LILYSHARP-OWN, USER DECISION 2026-10-01 (session 733, Lab sessions/p733/tabfont
+- **:482** LILYSHARP-OWN (owner's decision 2026-09-24): an eighth pair takes a sixteenth
+- **:555** and the stem ran up the whole staff). LILYSHARP-OWN: LilyPond has no pitchless note.
 ### `LilySharp.Core/Svg/Layout/TabStaffStencils.cs`
 - **:122** note on the staff above and over the same note on the tab — but it is LILYSHARP-OWN
 - **:221** ★ LILYSHARP-OWN, and it has to be: LilyPond names chords only through a

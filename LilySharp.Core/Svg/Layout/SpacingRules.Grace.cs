@@ -193,7 +193,7 @@ internal static partial class SpacingRules
                 // LILYPOND-REF: lily/note-spacing.cc:42-115 Note_spacing::get_spacing — left_head_end is the digit's right edge.
                 double mainLeft = next is { } ng
                     ? ng.TabDigitHalfWidth
-                    : TabConstants.FretGlyphWidthAtDefault("0") / 2.0 - EngravingDefaults.TabHeadCenterOffset;
+                    : TabConstants.FretGlyphWidthAtDefault(notes[i].TabStringCount, "0") / 2.0 - EngravingDefaults.TabHeadCenterOffset;
                 minDistance = notes[i].TabDigitHalfWidth + DefaultExtraSpacingWidth
                               + mainLeft + DefaultExtraSpacingWidth;
                 rod = minDistance + SeparationRodPadding;

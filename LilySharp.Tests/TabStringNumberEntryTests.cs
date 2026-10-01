@@ -52,14 +52,19 @@ public class TabStringNumberEntryTests
     {
         var svg = LiveRender.SvgFromRenderSpec(BookTwin);
 
-        // Fret digits with their string rows (row = the digit's string line).
-        var digits = new List<(double X, double Y, string Text)>();
-        foreach (Match m in Regex.Matches(svg,
-            "<text x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" font-size=\"" + LilySharp.Core.Svg.Layout.TabConstants.FretFontSize.ToString("F2", CultureInfo.InvariantCulture) + "\" font-weight=\"bold\" text-anchor=\"middle\"[^>]*>(\\d+)</text>"))
-            digits.Add((
-                double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture),
-                double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture),
-                m.Groups[3].Value));
+        // Fret numbers with their string rows (row = the digit's string line). A number is
+        // read as every digit run its note drew on that row, left to right: a guitar's
+        // 10–19 go down as two runs (TabConstants.LeadingOneTighten), the rest as one.
+        var digits = Regex.Matches(svg,
+                "<text x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" font-size=\"[\\d.]+\"[^>]*data-pos=\"(\\d+)\"[^>]*>(\\d+)</text>")
+            .Select(m => (
+                X: double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture),
+                Y: double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture),
+                Pos: m.Groups[3].Value, Text: m.Groups[4].Value))
+            .GroupBy(r => (r.Pos, r.Y))
+            .Select(g => (X: g.Min(r => r.X), g.Key.Y,
+                Text: string.Concat(g.OrderBy(r => r.X).Select(r => r.Text))))
+            .ToList();
 
         // Three chords, two digits each: "13" (dis' on string 4) above "7"
         // (e on string 5) — the LP frets for every forced entry form.

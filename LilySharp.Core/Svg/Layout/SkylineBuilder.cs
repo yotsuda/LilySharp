@@ -1187,8 +1187,8 @@ internal sealed class SkylineBuilder
         int shift = Tunings.SoundingShift(staff.TabSourceClef, staff.Transposition);
         // The digit's box is the score's (fonts { tab step … }), the same em the pen
         // and the column reservation read (TabConstants.FretEm).
-        double fretEm = TabConstants.FretEm(_fonts);
-        double half = TabConstants.FretDigitHeight(_fonts) / 2.0;
+        double fretEm = TabConstants.FretEm(_fonts, tuning.Length);
+        double half = TabConstants.FretDigitHeight(_fonts, tuning.Length) / 2.0;
 
         foreach (var voice in staff.Voices)
         {
@@ -1216,7 +1216,7 @@ internal sealed class SkylineBuilder
                         var (midi, preferred) = TabSoundingNote(item, s);
                         var (stringNum, fret) = Tunings.CalculateFret(midi + shift, tuning, preferred);
                         double lineUp = topLineUp - (stringNum - 1) * space;
-                        double width = TabConstants.FretGlyphWidth(_fonts,
+                        double width = TabConstants.FretGlyphWidth(_fonts, tuning.Length,
                             fret.ToString(CultureInfo.InvariantCulture), fretEm);
                         upSkyline.MergeBox(
                             x - width / 2, x + width / 2, lineUp - half, lineUp + half);

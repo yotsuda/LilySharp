@@ -1693,8 +1693,9 @@ internal static class TupletBracketEngraver
                 bool hasStem = value >= 2;
                 if (hasStem && stemUp == bracketUp)
                     return centre + (left ? -halfStem : halfStem);
-                var (_, fret) = ArticulationEngraver.TabFretOf(tab, Tablature.Tunings.GetTuning(tab.Tuning!.Value), item);
-                double half = Math.Max(ArticulationEngraver.TabFretHalfWidth(fonts, fret), hasStem ? halfStem : 0.0);
+                int[] tabTuning = Tablature.Tunings.GetTuning(tab.Tuning!.Value);
+                var (_, fret) = ArticulationEngraver.TabFretOf(tab, tabTuning, item);
+                double half = Math.Max(ArticulationEngraver.TabFretHalfWidth(fonts, tabTuning.Length, fret), hasStem ? halfStem : 0.0);
                 return centre + (left ? -half : half);
             }
             default:
@@ -1759,7 +1760,7 @@ internal static class TupletBracketEngraver
         double ss = geom.StringSpace;               // the TabStaff's staff-space (1.5)
         double middle = geom.MiddleY;               // device
         double YUp(double device) => middle - device;
-        double halfDigit = TabConstants.FretDigitHeight(fonts) / 2.0;
+        double halfDigit = TabConstants.FretDigitHeight(fonts, geom.StringCount) / 2.0;
         int strings = geom.StringCount;
         // The staff symbol's extent, widened by staff-padding (:471-476), Y-up.
         double staffReach = (strings - 1) / 2.0 * ss + StaffPaddingLP;

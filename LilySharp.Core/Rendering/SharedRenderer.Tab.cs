@@ -562,7 +562,7 @@ internal static partial class SharedRenderer
         var geom = new TabStaffGeometry(fonts, staff.Tuning ?? TuningType.Guitar, pageHeight - staffY,
             staff.TabSourceClef, staff.Transposition);
         int headString = geom.StemHeadString(item, stemUp);
-        double stemBegin = TabConstants.StemBeginOffset(fonts);
+        double stemBegin = TabConstants.StemBeginOffset(fonts, geom.StringCount);
         double nearYDev = geom.StringY(headString) + (stemUp ? -stemBegin : stemBegin);
         if (geom.UnbeamedStemTipY(item, stemUp, headString) is not { } farYDev)
             return;
@@ -623,7 +623,7 @@ internal static partial class SharedRenderer
     // overlapping. Background/clearance dimensions scale with this.
     // Single source: TabConstants (shared with the tie/grace layout so they can't desync),
     // read through the score's plan since 2026-09-09 (fonts { tab step … }).
-    private static double TabFretEm(ScoreTextMetrics fonts) => TabConstants.FretEm(fonts);
+    private static double TabFretEm(ScoreTextMetrics fonts, int stringCount) => TabConstants.FretEm(fonts, stringCount);
 
     /// <summary>Grace fret digits relative to the normal fret size — just slightly
     /// smaller, so the grace reads as a grace without becoming illegible.</summary>
@@ -639,7 +639,7 @@ internal static partial class SharedRenderer
     /// <para>
     /// ⚠️ THE GLYPH'S OWN REACH, WITH NO PADDING IN IT. Clear air between neighbouring
     /// columns belongs to the gap BETWEEN them
-    /// (<see cref="LilySharp.Core.Svg.Layout.TabConstants.FretColumnGap"/>, applied in
+    /// (<see cref="LilySharp.Core.Svg.Layout.TabConstants.ColumnGap"/>, applied in
     /// SpacingRules), not to the column's extent: an extent is also what the FIRST note of a
     /// line is placed from, and padding folded in here pushed
     /// <c>line-start.time-to-first-note.tab-*</c> off LilyPond by 0.023550 — a measured point,
@@ -655,7 +655,7 @@ internal static partial class SharedRenderer
             {
                 var (_, fret) = Tunings.CalculateFret(
                     n.Midi + octaveShift, tuning, n.StringNumber ?? 0);
-                double half = TabChordColumns.FretWidth(fonts, fret) / 2;
+                double half = TabChordColumns.FretWidth(fonts, tuning.Length, fret) / 2;
                 return (half, half);
             }
             case ChordItem c when c.Notes.Length > 0:
@@ -677,11 +677,11 @@ internal static partial class SharedRenderer
             .Select(p => (str: p.stringNum, fret: p.fret))
             .OrderBy(p => p.str)
             .ToList();
-        double[] dx = TabChordColumns.Offsets(fonts, notes);
+        double[] dx = TabChordColumns.Offsets(fonts, tuning.Length, notes);
         double left = 0, right = 0;
         for (int i = 0; i < notes.Count; i++)
         {
-            double half = TabChordColumns.FretWidth(fonts, notes[i].fret) / 2;
+            double half = TabChordColumns.FretWidth(fonts, tuning.Length, notes[i].fret) / 2;
             left = Math.Max(left, -dx[i] + half);
             right = Math.Max(right, dx[i] + half);
         }
@@ -696,13 +696,13 @@ internal static partial class SharedRenderer
     {
         int midiPitch = midi + octaveShift;
         var (stringNum, fret) = Tunings.CalculateFret(midiPitch, tuning, stringNumber ?? 0);
-        DrawTabFret(fonts, fret, stringNum, x, staffY, stringSpace, sourcePosition, gc, digitGaps, isDead,
+        DrawTabFret(fonts, tuning.Length, fret, stringNum, x, staffY, stringSpace, sourcePosition, gc, digitGaps, isDead,
             parenthesized);
         double noteY = staffY - (stringNum - 1) * stringSpace;
         double digitWidth = isDead
             ? TabDeadHeadWidth
-            : LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fonts,
-                fret.ToString(System.Globalization.CultureInfo.InvariantCulture), TabFretEm(fonts));
+            : LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fonts, tuning.Length,
+                fret.ToString(System.Globalization.CultureInfo.InvariantCulture), TabFretEm(fonts, tuning.Length));
         DrawTabAugmentationDots(dots, x, digitWidth, noteY, stringSpace, sourcePosition, gc);
     }
 
@@ -759,7 +759,7 @@ internal static partial class SharedRenderer
     /// Draws one fret number (with its string-line-occluding background) at the
     /// given string line and x. Chord notes share this after their x is shifted.
     /// </summary>
-    private static void DrawTabFret(ScoreTextMetrics fonts, int fret, int stringNum, double x, double staffY,
+    private static void DrawTabFret(ScoreTextMetrics fonts, int stringCount, int fret, int stringNum, double x, double staffY,
         double stringSpace, int sourcePosition, IDrawingContext gc,
         List<(int StringIndex, double Left, double Right)> digitGaps, bool isDead = false,
         bool parenthesized = false)
@@ -770,10 +770,10 @@ internal static partial class SharedRenderer
         // A dead (muted) note shows the cross head in place of the fret number
         // (TabDeadHeadWidth's remarks); its string gap is the glyph's own box.
         string fretText = fret.ToString();
-        double fretEm = TabFretEm(fonts);
+        double fretEm = TabFretEm(fonts, stringCount);
         double bgWidth = isDead
             ? TabDeadHeadWidth
-            : LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fonts,
+            : LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fonts, stringCount,
                 fret.ToString(System.Globalization.CultureInfo.InvariantCulture), fretEm);
 
         // The string line is BROKEN around the digit rather than painted over: the span is
@@ -799,18 +799,35 @@ internal static partial class SharedRenderer
                 gc.DrawGlyph(EmmentalerGlyphs.NoteheadCrossBlack, x - TabDeadHeadWidth / 2, noteY,
                     FontSize * TabDeadHeadScale, Color.Black);
                 if (parenthesized)
-                    DrawTabFretParens(fonts, x, noteY, bgWidth, gc);
+                    DrawTabFretParens(fonts, stringCount, x, noteY, bgWidth, gc);
                 return;
             }
             // Bold so the fret numbers read clearly over the string lines. The baseline is
             // asked of the FACE so the glyph's ink lands centred on the line.
-            gc.DrawText(fretText, x,
-                noteY - LilySharp.Core.Svg.Layout.TabConstants.FretBaselineDrop(
-                    fonts, fretText, fretEm),
-                fretEm, TextRole.TabFret,
-                LilySharp.Core.Svg.Layout.TabConstants.FretStyle(fonts), TextAnchor.Middle, Color.Black);
+            double baseY = noteY - LilySharp.Core.Svg.Layout.TabConstants.FretBaselineDrop(
+                fonts, stringCount, fretText, fretEm);
+            var fretStyle = LilySharp.Core.Svg.Layout.TabConstants.FretStyle(fonts, stringCount);
+            // A leading 1 drawn closer to its second digit (TabConstants.LeadingOneTighten): the
+            // two digits go down as two runs from the number's left edge, which bgWidth — the
+            // same narrowed width — already put at x − bgWidth/2.
+            double tighten = LilySharp.Core.Svg.Layout.TabConstants.LeadingOneTighten(
+                stringCount, fretText, fretEm);
+            if (tighten > 0)
+            {
+                double left = x - bgWidth / 2;
+                double firstAdvance = TextFontMetrics.Advance(fretText[..1], fretEm, sans: false, style: fretStyle);
+                gc.DrawText(fretText[..1], left, baseY, fretEm, TextRole.TabFret, fretStyle,
+                    TextAnchor.Start, Color.Black);
+                gc.DrawText(fretText[1..], left + firstAdvance - tighten, baseY, fretEm,
+                    TextRole.TabFret, fretStyle, TextAnchor.Start, Color.Black);
+            }
+            else
+            {
+                gc.DrawText(fretText, x, baseY, fretEm, TextRole.TabFret, fretStyle,
+                    TextAnchor.Middle, Color.Black);
+            }
             if (parenthesized)
-                DrawTabFretParens(fonts, x, noteY, bgWidth, gc);
+                DrawTabFretParens(fonts, stringCount, x, noteY, bgWidth, gc);
         }
     }
 
@@ -846,10 +863,10 @@ internal static partial class SharedRenderer
     private const double TabTieParenClearance =
         TabTieParenLineWidth + 4.0 / 3 * TabTieParenWidth + TabTieParenLineWidth / 2;
 
-    private static void DrawTabFretParens(ScoreTextMetrics fonts, double x, double noteY, double digitWidth,
+    private static void DrawTabFretParens(ScoreTextMetrics fonts, int stringCount, double x, double noteY, double digitWidth,
         IDrawingContext gc)
     {
-        double h = LilySharp.Core.Svg.Layout.TabConstants.FretDigitHeight(fonts) / 2;
+        double h = LilySharp.Core.Svg.Layout.TabConstants.FretDigitHeight(fonts, stringCount) / 2;
         double control = 0.1 + 0.3 * TabTieParenAngularity;      // 0.22
         double outer = 4.0 / 3 * TabTieParenWidth;               // 0.3333
         double inner = outer - TabTieParenHalfThickness;         // 0.2583
@@ -893,9 +910,9 @@ internal static partial class SharedRenderer
             .OrderBy(p => p.str)
             .ToList();
 
-        double[] dx = TabChordColumns.Offsets(fonts, notes);
+        double[] dx = TabChordColumns.Offsets(fonts, tuning.Length, notes);
         for (int i = 0; i < notes.Count; i++)
-            DrawTabFret(fonts, notes[i].fret, notes[i].str, itemX + dx[i], staffY, stringSpace,
+            DrawTabFret(fonts, tuning.Length, notes[i].fret, notes[i].str, itemX + dx[i], staffY, stringSpace,
                 chord.SourcePosition, gc, digitGaps);
 
         // Augmentation dots sit to the right of the whole chord (its rightmost digit
@@ -907,7 +924,7 @@ internal static partial class SharedRenderer
         {
             double rightEdge = itemX;
             for (int i = 0; i < notes.Count; i++)
-                rightEdge = Math.Max(rightEdge, itemX + dx[i] + TabChordColumns.FretWidth(fonts, notes[i].fret) / 2);
+                rightEdge = Math.Max(rightEdge, itemX + dx[i] + TabChordColumns.FretWidth(fonts, tuning.Length, notes[i].fret) / 2);
             double alignWidth = 2 * (rightEdge - itemX);
             foreach (var (str, _) in notes)
                 DrawTabAugmentationDots(dots, itemX, alignWidth,

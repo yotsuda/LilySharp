@@ -49,11 +49,11 @@ public class TabGraceFretScaleTests
     {
         var svg = LiveRender.SvgFromRenderSpec(BookTwin);
 
-        // Fret digits only: bold centre-anchored DIGIT texts (the section label
+        // Fret digits only: centre-anchored DIGIT texts in either fret face (the section label
         // "A" is bold+centred too, hence the content filter).
         var sizes = new List<double>();
         foreach (Match m in Regex.Matches(svg,
-            "<text [^>]*font-size=\"([\\d.]+)\" font-weight=\"bold\" text-anchor=\"middle\"[^>]*>(\\d+)</text>"))
+            "<text [^>]*font-size=\"([\\d.]+)\"(?: font-weight=\"bold\")? text-anchor=\"middle\"[^>]*>(\\d+)</text>"))
             sizes.Add(double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture));
 
         // 8 normal frets + 1 grace fret.
@@ -61,6 +61,8 @@ public class TabGraceFretScaleTests
         double normal = sizes.Max();
         double grace = sizes.Min();
         Assert.True(grace < normal);
-        Assert.Equal(Math.Pow(2, -2.0 / 6), grace / normal, 2);
+        // The SVG prints a size to two places, so the ratio carries up to 0.005 / normal of
+        // rounding on the grace side (at the 6-string face, 2.0 × 0.7937 = 1.587 prints 1.59).
+        Assert.InRange(grace / normal, Math.Pow(2, -2.0 / 6) - 0.005 / normal, Math.Pow(2, -2.0 / 6) + 0.005 / normal);
     }
 }

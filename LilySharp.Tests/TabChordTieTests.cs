@@ -61,7 +61,7 @@ public class TabChordTieTests
 
     private static List<Digit> ReadDigits(string svg) =>
         Regex.Matches(svg,
-            "<text x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" font-size=\"[\\d.]+\" font-weight=\"bold\""
+            "<text x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" font-size=\"[\\d.]+\"(?: font-weight=\"bold\")?"
             + " text-anchor=\"middle\" data-pos=\"(\\d+)\">\\d+</text>")
         .Select(m => new Digit(Num(m.Groups[1]), Num(m.Groups[2]), int.Parse(m.Groups[3].Value)))
         .ToList();

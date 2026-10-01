@@ -324,7 +324,7 @@ public sealed class TabStringNumberTests
     {
         // Strings 1 (fret 3) and 2 (fret 2), adjacent → the smaller fret (2) shifts left.
         var off = LilySharp.Core.Svg.Layout.TabChordColumns.Offsets(
-            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled,
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, stringCount: 6,
             new[] { (str: 1, fret: 3), (str: 2, fret: 2) });
         Assert.True(off[1] < 0, "smaller fret should be left of centre");
         Assert.True(off[0] > 0, "larger fret should be right of centre");
@@ -335,7 +335,7 @@ public sealed class TabStringNumberTests
     {
         // Three adjacent strings → left, right, left (zigzag, not a slant).
         var off = LilySharp.Core.Svg.Layout.TabChordColumns.Offsets(
-            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled,
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, stringCount: 6,
             new[] { (str: 1, fret: 0), (str: 2, fret: 0), (str: 3, fret: 0) });
         Assert.True(off[0] < 0 && off[1] > 0 && off[2] < 0);
     }
@@ -346,7 +346,7 @@ public sealed class TabStringNumberTests
         // 0/4/5 top-down: the {0,5} column carries the larger fret, so it goes RIGHT
         // and 4 sits alone on the left (user-specified example, 2026-08-06).
         var off = LilySharp.Core.Svg.Layout.TabChordColumns.Offsets(
-            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled,
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, stringCount: 6,
             new[] { (str: 1, fret: 0), (str: 2, fret: 4), (str: 3, fret: 5) });
         Assert.True(off[0] > 0 && off[1] < 0 && off[2] > 0);
     }
@@ -358,7 +358,7 @@ public sealed class TabStringNumberTests
         // 0 and 4 sit left (user-specified example, 2026-08-06 — the open string's
         // 0 has no rule of its own; it just rides the smaller column).
         var off = LilySharp.Core.Svg.Layout.TabChordColumns.Offsets(
-            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled,
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, stringCount: 6,
             new[] { (str: 1, fret: 0), (str: 2, fret: 5), (str: 3, fret: 4) });
         Assert.True(off[0] < 0 && off[1] > 0 && off[2] < 0);
     }
@@ -368,7 +368,7 @@ public sealed class TabStringNumberTests
     {
         // Strings 1 and 3 don't overlap vertically, so neither digit moves.
         var off = LilySharp.Core.Svg.Layout.TabChordColumns.Offsets(
-            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled,
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, stringCount: 6,
             new[] { (str: 1, fret: 5), (str: 3, fret: 7) });
         Assert.Equal(new[] { 0.0, 0.0 }, off);
     }

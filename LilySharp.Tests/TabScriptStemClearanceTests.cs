@@ -171,7 +171,7 @@ public sealed class TabScriptStemClearanceTests
         bool up = geom.TabStemUp(note);
         int headString = geom.StemHeadString(note, up);
         double near = geom.StringY(headString)
-            + (up ? -TabConstants.StemBeginOffset(fonts) : TabConstants.StemBeginOffset(fonts));
+            + (up ? -TabConstants.StemBeginOffset(fonts, geom.StringCount) : TabConstants.StemBeginOffset(fonts, geom.StringCount));
         double tip = geom.UnbeamedStemTipY(note, up, headString)!.Value;
         Assert.Equal(System.Math.Abs(near - tip), drawnLength, 6);
     }

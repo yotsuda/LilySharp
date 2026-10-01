@@ -27,18 +27,18 @@
   <rect x="30.29" y="20.98" width="0.19" height="7.50" data-pos="423"/>
   <rect x="38.80" y="20.98" width="0.19" height="7.50" data-pos="385"/>
   <rect x="47.12" y="20.98" width="0.19" height="7.50" data-pos="385"/>
-  <text x="17.61" y="23.47" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="403">1</text>
-  <text x="25.32" y="23.47" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="418">1</text>
+  <text x="17.61" y="23.29" font-size="2.30" text-anchor="middle" data-pos="403">1</text>
+  <text x="25.32" y="23.29" font-size="2.30" text-anchor="middle" data-pos="418">1</text>
   <line x1="8.59" y1="20.98" x2="47.26" y2="20.98" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="22.48" x2="16.81" y2="22.48" stroke="#000000" stroke-width="0.100"/>
-  <line x1="18.41" y1="22.48" x2="24.52" y2="22.48" stroke="#000000" stroke-width="0.100"/>
-  <line x1="26.12" y1="22.48" x2="47.26" y2="22.48" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="22.48" x2="16.98" y2="22.48" stroke="#000000" stroke-width="0.100"/>
+  <line x1="18.24" y1="22.48" x2="24.69" y2="22.48" stroke="#000000" stroke-width="0.100"/>
+  <line x1="25.95" y1="22.48" x2="47.26" y2="22.48" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="23.98" x2="47.26" y2="23.98" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="25.48" x2="47.26" y2="25.48" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="26.98" x2="47.26" y2="26.98" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="28.48" x2="47.26" y2="28.48" stroke="#000000" stroke-width="0.100"/>
   <path d="M 17.94,16.33 C 19.47,17.53 24.12,17.53 25.65,16.33 C 24.12,17.65 19.47,17.65 17.94,16.33 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="414"/>
-  <path d="M 17.61,21.24 C 19.37,19.67 23.56,19.67 25.32,21.24 C 23.56,19.79 19.37,19.79 17.61,21.24 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="414"/>
+  <path d="M 17.61,21.20 C 19.37,19.63 23.56,19.63 25.32,21.20 C 23.56,19.75 19.37,19.75 17.61,21.20 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="414"/>
   <text x="17.94" y="19.34" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="405">p</text>
   <text x="25.65" y="18.33" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="419">f</text>
   <text class="music" x="17.94" y="17.36" font-size="4.00" data-pos="407"></text>

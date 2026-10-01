@@ -2820,7 +2820,7 @@ internal sealed class ElementCoordinator
             // LilyPond hangs the tab tie right at the digit's edge — a small,
             // shallow curve hugging the number — so offset by the VISIBLE
             // glyph half-height plus a hair, not the full erase-box height.
-            double clearance = 0.36 * TabConstants.FretEm(fonts) + 0.1; // ~0.54 sp at font 2.6
+            double clearance = 0.36 * TabConstants.FretEm(fonts, geom.StringCount) + 0.1; // ~0.54 sp at font 2.6
             // Which SIDE of its digit this bow hangs on was decided for the whole column, by
             // LilyPond's own rule run on the string lines (TabColumnCurveUp). Passed in
             // rather than recomputed because the rule reads the column, not the tie.
@@ -5015,7 +5015,7 @@ internal sealed class ElementCoordinator
         var geom = new TabStaffGeometry(fonts, staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef, staff.Transposition);
         double space = geom.StringSpace;
         double staffMiddleDown = staffY + (geom.StringCount - 1) * space / 2.0;
-        double halfDigit = TabConstants.FretDigitHeight(fonts) / 2.0;
+        double halfDigit = TabConstants.FretDigitHeight(fonts, geom.StringCount) / 2.0;
 
         // The note columns this segment encompasses, in X order — LilyPond's
         // note_columns_. A grace column joins below, at its own (smaller) digit size.
@@ -5308,7 +5308,7 @@ internal sealed class ElementCoordinator
         if (graceByMeasure is null || graceGeomCache is null || graceNotes.IsDefaultOrEmpty)
             return;
         const double eps = 0.001;
-        double halfGrace = TabConstants.FretDigitHeight(geom.Fonts) * TabConstants.GraceFretScale / 2.0;
+        double halfGrace = TabConstants.FretDigitHeight(geom.Fonts, geom.StringCount) * TabConstants.GraceFretScale / 2.0;
 
         foreach (var ml in segSystem.Measures)
         {

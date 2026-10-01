@@ -73,13 +73,63 @@ internal static class TabConstants
     /// USER DECISION 2026-09-09: the notation roles follow a written size and style, named
     /// out loud (<c>tab</c> or <c>notation</c>) — a family binding never reaches them.
     /// </remarks>
-    public static double FretEm(Rendering.ScoreTextMetrics fonts)
-        => fonts.Size(Rendering.TextRole.TabFret, FretFontSize);
+    public static double FretEm(Rendering.ScoreTextMetrics fonts, int stringCount)
+        => fonts.Size(Rendering.TextRole.TabFret, DefaultFretEm(stringCount));
 
-    /// <summary>The style a fret number is set in for THIS score — the engraving's bold
-    /// unless the plan wrote one.</summary>
-    public static Rendering.FontStyle FretStyle(Rendering.ScoreTextMetrics fonts)
-        => fonts.Style(Rendering.TextRole.TabFret, FretFontStyle);
+    /// <summary>The style a fret number is set in for THIS score — the engraving's default
+    /// for the staff's string count (<see cref="DefaultFretStyle"/>) unless the plan wrote one.</summary>
+    public static Rendering.FontStyle FretStyle(Rendering.ScoreTextMetrics fonts, int stringCount)
+        => fonts.Style(Rendering.TextRole.TabFret, DefaultFretStyle(stringCount));
+
+    /// <summary>
+    /// The fewest strings a tab staff takes the REDUCED fret face at — the smaller, lighter
+    /// digits, the narrower zigzag and the wider gap between columns below.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN, USER DECISION 2026-10-01 (session 733): on a guitar tab the 2.8 bold digits
+    /// zigzag a chord into two columns each a full digit wide, and two eighth-note chords then
+    /// stood 0.3 apart — a reader could not tell which beat a zigzagged digit belonged to (the
+    /// owner's band chart, Lab sessions/p733/big/03). Drawn side by side (Lab
+    /// sessions/p733/tabfont compare3–compare11), the owner chose em 2.3 regular, zigzag 0.5, a 1.0 gap and a leading 1 drawn 0.10 em closer: em
+    /// <see cref="ReducedFretEm"/>, regular weight, zigzag <see cref="ReducedZigzagFactor"/>, column
+    /// gap <see cref="ReducedFretColumnGap"/>. A staff with fewer strings (a bass) keeps
+    /// everything as it was — the 2026-09-11 gap decision (<see cref="FretColumnGap"/>) was a
+    /// 16th-dense bass-tab problem and stands there.
+    /// </remarks>
+    public const int ReducedFretMinStrings = 6;
+
+    /// <summary>The reduced face's em (see <see cref="ReducedFretMinStrings"/>).</summary>
+    public const double ReducedFretEm = 2.3;
+
+    /// <summary>The reduced face's weight (see <see cref="ReducedFretMinStrings"/>).</summary>
+    public const Rendering.FontStyle ReducedFretStyle = Rendering.FontStyle.Regular;
+
+    /// <summary>The reduced face's zigzag: each column stands this fraction of the widest digit
+    /// off the axis, with no further gap (see <see cref="ReducedFretMinStrings"/>).</summary>
+    public const double ReducedZigzagFactor = 0.5;
+
+    /// <summary>The reduced face's clear air between neighbouring digit columns (see
+    /// <see cref="ReducedFretMinStrings"/>).</summary>
+    public const double ReducedFretColumnGap = 1.0;
+
+    private static bool Reduced(int stringCount) => stringCount >= ReducedFretMinStrings;
+
+    /// <summary>The engraving's fret em for a staff of <paramref name="stringCount"/> strings.</summary>
+    public static double DefaultFretEm(int stringCount)
+        => Reduced(stringCount) ? ReducedFretEm : FretFontSize;
+
+    /// <summary>The engraving's fret weight for a staff of <paramref name="stringCount"/> strings.</summary>
+    public static Rendering.FontStyle DefaultFretStyle(int stringCount)
+        => Reduced(stringCount) ? ReducedFretStyle : FretFontStyle;
+
+    /// <summary>Half the distance between a chord's two zigzag columns, from its widest digit.</summary>
+    public static double ZigzagColumnDelta(int stringCount, double widestDigit)
+        => Reduced(stringCount) ? widestDigit * ReducedZigzagFactor : widestDigit / 2 + 0.1;
+
+    /// <summary>Clear air between one digit column and the next on a staff of
+    /// <paramref name="stringCount"/> strings.</summary>
+    public static double ColumnGap(int stringCount)
+        => Reduced(stringCount) ? ReducedFretColumnGap : FretColumnGap;
 
     /// <summary>Grace fret digits relative to the main fret size.</summary>
     /// <remarks>
@@ -150,9 +200,9 @@ internal static class TabConstants
     /// <see cref="FretStyle"/>), which is why this stopped being a <c>static readonly</c>
     /// initialised by the type and became a call handed the score's metrics.
     /// </remarks>
-    public static double FretDigitHeight(Rendering.ScoreTextMetrics fonts)
-        => Rendering.TextFontMetrics.InkHeight("0", FretEm(fonts), sans: false,
-            style: FretStyle(fonts));
+    public static double FretDigitHeight(Rendering.ScoreTextMetrics fonts, int stringCount)
+        => Rendering.TextFontMetrics.InkHeight("0", FretEm(fonts, stringCount), sans: false,
+            style: FretStyle(fonts, stringCount));
 
     /// <summary>
     /// How far BELOW its string line a fret glyph's baseline sits, so the glyph's INK is
@@ -171,10 +221,10 @@ internal static class TabConstants
     /// the LILC ink for exactly this reason).
     /// </para>
     /// </remarks>
-    public static double FretBaselineDrop(Rendering.ScoreTextMetrics fonts, string glyph, double fontSize)
+    public static double FretBaselineDrop(Rendering.ScoreTextMetrics fonts, int stringCount, string glyph, double fontSize)
     {
         var (bottom, top) = Rendering.TextFontMetrics.Ink(
-            glyph, fontSize, sans: false, style: FretStyle(fonts));
+            glyph, fontSize, sans: false, style: FretStyle(fonts, stringCount));
         return (top + bottom) / 2;
     }
 
@@ -192,15 +242,40 @@ internal static class TabConstants
     /// are exactly twice one; nothing about that was derivable from the count alone.
     /// </para>
     /// </remarks>
-    public static double FretGlyphWidth(Rendering.ScoreTextMetrics fonts, string glyph, double fontSize)
+    public static double FretGlyphWidth(Rendering.ScoreTextMetrics fonts, int stringCount, string glyph, double fontSize)
         => Rendering.TextFontMetrics.Advance(
-            glyph, fontSize, sans: false, style: FretStyle(fonts));
+            glyph, fontSize, sans: false, style: FretStyle(fonts, stringCount))
+           - LeadingOneTighten(stringCount, glyph, fontSize);
 
-    /// <summary><see cref="FretGlyphWidth"/> at the engraving's own size and weight — for the
-    /// houses no score's fonts reach (the collector's tab pass, the grace run's spacing).</summary>
-    public static double FretGlyphWidthAtDefault(string glyph, double scale = 1.0)
+    /// <summary>
+    /// How far a two-digit fret's second digit is drawn LEFT of where the face's advance would
+    /// put it, on a staff taking the reduced face, when the first digit is a 1 — and so how much
+    /// narrower the number is than its advance. 0 for anything else.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN, USER DECISION 2026-10-01 (session 733, Lab sessions/p733/tabfont
+    /// compare10): the bundled face sets its digits TABULAR, so a 1 carries the same advance
+    /// as an 8 and "12" read as two separate digits in a zigzagged chord. Frets 10–19 are the
+    /// two-digit frets a guitar mostly writes, so only a leading 1 is drawn closer; a 2 is wide
+    /// enough that the same pull would touch. The width every reader reserves and the pen both
+    /// ask here (FretGlyphWidth, SharedRenderer.DrawTabFret), so the gap in the string line and
+    /// the zigzag measure the number as drawn.
+    /// </remarks>
+    public static double LeadingOneTighten(int stringCount, string glyph, double fontSize)
+        => Reduced(stringCount) && glyph.Length == 2 && glyph[0] == '1'
+            ? fontSize * ReducedLeadingOneTighten
+            : 0;
+
+    /// <summary>The reduced face's pull of a leading 1, as a fraction of the em (see
+    /// <see cref="LeadingOneTighten"/>).</summary>
+    public const double ReducedLeadingOneTighten = 0.10;
+
+    /// <summary><see cref="FretGlyphWidth"/> at the engraving's own size and weight for a staff
+    /// of <paramref name="stringCount"/> strings — for the houses no score's fonts reach (the
+    /// collector's tab pass, the grace run's spacing).</summary>
+    public static double FretGlyphWidthAtDefault(int stringCount, string glyph, double scale = 1.0)
         => Rendering.TextFontMetrics.Advance(
-            glyph, FretFontSize * scale, sans: false, style: FretFontStyle);
+            glyph, DefaultFretEm(stringCount) * scale, sans: false, style: DefaultFretStyle(stringCount));
 
     /// <summary>
     /// Clear air the spacing engine keeps BETWEEN one column's fret digits and the next
@@ -269,8 +344,8 @@ internal static class TabConstants
     /// than LilyPond's (HANDOFF §1 第337 ⑺).
     /// </para>
     /// </remarks>
-    public static double StemBeginOffset(Rendering.ScoreTextMetrics fonts)
-        => 1.35 * FretDigitHeight(fonts) / 2;
+    public static double StemBeginOffset(Rendering.ScoreTextMetrics fonts, int stringCount)
+        => 1.35 * FretDigitHeight(fonts, stringCount) / 2;
 
     /// <summary>
     /// A tab beam's <c>length-fraction</c>: 0.62, the one number LilyPond states rather than
@@ -535,8 +610,8 @@ internal readonly struct TabStaffGeometry
             if (k < 0)
                 break;
             return (alloc[i].stringNum,
-                    TabChordColumns.Offsets(Fonts, ordered)[k],
-                    TabChordColumns.FretWidth(Fonts, ordered[k].fret) / 2);
+                    TabChordColumns.Offsets(Fonts, StringCount, ordered)[k],
+                    TabChordColumns.FretWidth(Fonts, StringCount, ordered[k].fret) / 2);
         }
         return (1, 0, 0);
     }
@@ -572,8 +647,8 @@ internal readonly struct TabStaffGeometry
                 if (k < 0 || ordered[k].str < 1)
                     return (1, 0, 0);
                 return (ordered[k].str,
-                        TabChordColumns.Offsets(Fonts, ordered)[k],
-                        TabChordColumns.FretWidth(Fonts, ordered[k].fret) / 2);
+                        TabChordColumns.Offsets(Fonts, StringCount, ordered)[k],
+                        TabChordColumns.FretWidth(Fonts, StringCount, ordered[k].fret) / 2);
             }
             default:
                 return (1, 0, 0);
@@ -588,7 +663,7 @@ internal readonly struct TabStaffGeometry
         int writtenMidi, int? preferredString)
     {
         var (stringNum, fret) = Fret(writtenMidi, preferredString);
-        return (stringNum, 0, TabChordColumns.FretWidth(Fonts, fret) / 2);
+        return (stringNum, 0, TabChordColumns.FretWidth(Fonts, StringCount, fret) / 2);
     }
 
     /// <summary>

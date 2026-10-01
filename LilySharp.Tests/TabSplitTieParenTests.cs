@@ -62,7 +62,7 @@ public class TabSplitTieParenTests
     {
         var digits = new List<(double, double, string)>();
         foreach (Match m in Regex.Matches(svg,
-            "<text x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" font-size=\"" + LilySharp.Core.Svg.Layout.TabConstants.FretFontSize.ToString("F2", CultureInfo.InvariantCulture) + "\" font-weight=\"bold\" text-anchor=\"middle\"[^>]*>(\\d+)</text>"))
+            "<text x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" font-size=\"[\\d.]+\"(?: font-weight=\"bold\")? text-anchor=\"middle\"[^>]*>(\\d+)</text>"))
             digits.Add((
                 double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture),
                 double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture),

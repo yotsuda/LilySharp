@@ -45,7 +45,7 @@ public class TabPolyphonyTests
             + "form main { ~Main }\n\nscore main { staff gt tab gt as numbers }\n");
 
         var digits = System.Text.RegularExpressions.Regex.Matches(svg,
-                "<text x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*font-weight=\"bold\"[^>]*>(\\d+)</text>")
+                "<text x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" font-size=\"[\\d.]+\"(?: font-weight=\"bold\")? text-anchor=\"middle\"[^>]*>(\\d+)</text>")
             .Select(m => (X: double.Parse(m.Groups[1].Value),
                           Y: double.Parse(m.Groups[2].Value),
                           Fret: m.Groups[3].Value))

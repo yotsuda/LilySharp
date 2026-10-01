@@ -671,7 +671,7 @@ internal static partial class SharedRenderer
         // The stem starts on the far side of the digit, where LilyPond's stem-begin-position
         // puts it (TabConstants.StemBeginOffset) — the one house for that offset, shared with
         // the unbeamed stem so the two kinds of stem leave their digits alike.
-        double begin = TabConstants.StemBeginOffset(fonts);
+        double begin = TabConstants.StemBeginOffset(fonts, Tunings.GetStringCount(tuningType));
         return digitY + (stemUp ? -begin : begin);
     }
 

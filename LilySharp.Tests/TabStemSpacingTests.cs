@@ -175,11 +175,21 @@ public sealed class TabStemSpacingTests
         var g = RenderedGeometry.Render(Book.Replace("MUSIC", music));
         // One digit a column, every fret a single digit: the digit's X is its column's plus a
         // constant, so digit gaps are column gaps.
-        var xs = g.Texts.Where(t => t.Role == TextRole.TabFret).Select(t => t.X).OrderBy(x => x).ToArray();
+        var digits = g.Texts.Where(t => t.Role == TextRole.TabFret).OrderBy(t => t.X).ToArray();
+        var xs = digits.Select(t => t.X).ToArray();
         Assert.Equal(lilyPondGaps.Length + 1, xs.Length);
 
+        // ⚠️ A GUITAR'S COLUMNS ARE ALSO HELD APART BY LILY#'S OWN GAP (owner's decision
+        // 2026-10-01, session 733 — TabConstants.ReducedFretColumnGap): two neighbouring digits'
+        // half advances plus that clear air is the rod, and where LilyPond's gap is narrower the
+        // rod is what Lily# draws. Everything else in the gap — the stem corrections this class
+        // is about — is still LilyPond's.
+        double Advance(int i) => LilySharp.Core.Rendering.TextFontMetrics.Advance(
+            digits[i].Text, digits[i].FontSize, sans: false, LilySharp.Core.Svg.Layout.TabConstants.ReducedFretStyle);
+        double Expected(int i) => Math.Max(lilyPondGaps[i],
+            Advance(i) / 2 + Advance(i + 1) / 2 + LilySharp.Core.Svg.Layout.TabConstants.ColumnGap(6));
         var off = Enumerable.Range(0, lilyPondGaps.Length)
-            .Select(i => (Gap: i + 1, LilyPond: lilyPondGaps[i], LilySharp: xs[i + 1] - xs[i]))
+            .Select(i => (Gap: i + 1, LilyPond: Expected(i), LilySharp: xs[i + 1] - xs[i]))
             .Where(p => Math.Abs(p.LilySharp - p.LilyPond) > 0.001)
             .ToList();
         Assert.True(off.Count == 0,

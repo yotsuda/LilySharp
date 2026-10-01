@@ -210,7 +210,8 @@ internal static partial class SharedRenderer
         // grace scale, GraceNoteItem.ScaleFactor): on a tab staff the fret number IS the
         // note, so the size contrast that reads as "grace" in notation would here just
         // make the digit illegibly tiny.
-        double fontSize = TabFretEm(fonts) * TabGraceFretScale;
+        int stringCount = Tunings.GetStringCount(tuning);
+        double fontSize = TabFretEm(fonts, stringCount) * TabGraceFretScale;
         // The columns are the ones the layout reserved (SpacingRules.GraceColumns), the same
         // as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
         // draws no stem and no beam, so its grace run has no Beam grob and this geometry has
@@ -227,9 +228,9 @@ internal static partial class SharedRenderer
                 // TabGraceDigits is the shared producer, so the hole and the glyph cannot
                 // disagree about where the digit is).
                 gc.DrawText(d.Text, d.CenterX,
-                    noteY - LilySharp.Core.Svg.Layout.TabConstants.FretBaselineDrop(fonts, d.Text, fontSize),
+                    noteY - LilySharp.Core.Svg.Layout.TabConstants.FretBaselineDrop(fonts, stringCount, d.Text, fontSize),
                     fontSize, TextRole.TabFret,
-                    LilySharp.Core.Svg.Layout.TabConstants.FretStyle(fonts), TextAnchor.Middle, Color.Black);
+                    LilySharp.Core.Svg.Layout.TabConstants.FretStyle(fonts, stringCount), TextAnchor.Middle, Color.Black);
             }
         }
     }
@@ -255,7 +256,7 @@ internal static partial class SharedRenderer
     {
         int[] tuningArray = Tunings.GetTuning(tuning);
         int octaveShift = Tunings.SoundingShift(clef, transposition);
-        double fontSize = TabFretEm(fonts) * TabGraceFretScale;
+        double fontSize = TabFretEm(fonts, tuningArray.Length) * TabGraceFretScale;
         var colX = g.ColumnOffsets;
         double currentX = g.X;
         int headIndex = 0;
@@ -280,7 +281,7 @@ internal static partial class SharedRenderer
                 string fretText = fret.ToString();
                 yield return new TabGraceDigit(
                     stringNum, fretText, currentX,
-                    LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fonts, fretText, fontSize));
+                    LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fonts, tuningArray.Length, fretText, fontSize));
             }
         }
     }
