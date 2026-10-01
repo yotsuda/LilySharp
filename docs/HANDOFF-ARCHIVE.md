@@ -129,6 +129,31 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第732セッションの経緯
+
+### 1.1 第732セッション（2026-10-01・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第731 の次の一手: 前打音の島の残り）。`-Start p732`（HEAD `7493d7b1`・未 push 38）＝full **10606 / 0 / 2 / 10608**（引継ぎと一致）。
+LP 実測（Lab `sessions/p732/compress`・行幅 36/33/30mm）: 縮む行では前打音の間隔が rod まで閉じる（1.4179 → 1.2179＝padding なし skyline 1.1179＋0.1・旗の 8 分も −0.2）。
+- 前打音のばねの compress strength は `Spring (len, increment)` の既定値 len − increment で、Note_spacing も merge_springs も変えない。
+- 射程（一時の印で全 score を掃いた・Lab `sessions/p732/reach`）＝6 頁。showcase/test/perf/nocturne で、ユーザーの本は 0。
+- 厳密な移植は solver の hot path に触る＝AskUserQuestion → ユーザー「厳密に移植」、追って「大きな perf の劣化がないように。難しいなら報告」。
+⑴ ★ `f37509ee` **前打音の鎖は縮む行で各ばねが rod まで閉じる**: 前打音へ入るばねを**直列ばね**（`Spring.Series`＝近づき＋前打音の隙間ごとの部品）にした。
+- `Length` は部品の和。`SpringSolver` の compress の歩みは部品を 1 つずつ blocking force 順に並べる（`compress_line` のまま）。
+- 他の欄（Ideal・Min・強さ）は従来どおり固い鎖の読み＝幾何の比較をする呼び手は変わらない。編集（headroom・floor・行頭の枠ずらし）は近づきの部品に落ちる。
+- 隙間の部品＝自然長・rod（skyline＋0.1／dot・slur の rod も）・len − increment。近づきの部品＝0.8×ideal − **最初の前打音への skyline**（`GraceApproachFloor`・LP の `operator*=`）と、その rod。
+- 描く側は `StretchGraceColumns` が同じ式で閉じる＝解いた主音符の列と描いた前打音が一致する。
+- 台帳 +6 `grace.compress.*`（`probes/grace-compress.ly`・33mm）: **全部 EXACT**。以前は隙間ごとに +0.2、近づき −0.18、1 回目の試み（近づきに主音符の min）では 2 つ目の近づき +0.108。
+- 毒 9: 描く側・solver の展開・floor・強さ 0・`Length`・rod −0.05 はどれも赤。**直列の rod（`EnsureMinDistance`／`RaisedToBlockingForce` の部品ごと）は full でも頁でも不動＝観測者なし**→畳んで ⒝ 開示（近づきが受ける）。
+- 全 score の SVG（基準 `7493d7b1`・Lab `sessions/p732/svg`）: 予告どおりの 6 頁だけ。改行は不動（feature-tour は字形 1 つが y 0.01）。snapshot `showcase/02-ornaments` はユーザー承認で再ベース。
+- ★ **A/B（Release・静かな窓をユーザーにもらった・Lab `sessions/p732/bench`）**: 全 998 冊 ×3 で 30,641 → 29,998 ms（中央値）、前打音 6 冊 ×10 を ×5 で 5,116 → 5,113 ms＝**劣化なし**（直列は前打音の入るばねだけ・通常のばねは `Length` の分岐 1 つ）。
+残り: `condensedStaff` の 2 声目の前打音・3 列以上の弧の rod・2 桁の主音符の数字の左の張り出し（⒝）・前打音の列にまたがる rod の部品ごとの扱い（⒝・観測者なし）。
+★ `-End p732 -DiffBase 7493d7b1`＝full **10612 / 0 / 2 / 10614**（台帳 +6・snapshot 1 枚を承認で再ベース）・門 全 OK・Core `+` 282 行に REF 12／OWN 0。
+- 7.6: 直列ばねは ⒜（`compress_line` の部品ごとの blocking・`Spring (len, min)` の既定の強さ・`operator*=`・set_column_rods の rod を字面どおり）＋ ⒝（rod の部品ごとの扱い・前打音の列の側の skyline は wish skyline）。
+- 7.7: 「縮む行では前打音の鎖は固い」の畳みを外した側。`LeadingGraceRunSpan`／`LeadingGraceRunStretch` の 2 本を `LeadingGraceRun` 1 本に畳んだ。`ApplyRods` の手写しの blocking も `RaisedToBlockingForce` 1 つへ。
+- ユーザー「続けて」→「厳密に移植」→「劣化なしで」→ snapshot「再ベース」・ベンチ「今」。push はユーザー（未 push 40）。
+- 判定: 次の候補（`condensedStaff` の 2 声目の前打音）は collector 側の話で、今便の solver の計器とは別の家＝**新しい会話で始めるのが有利**。今便の材料は全部 HANDOFF と Lab にあり、会話の文脈に頼る部分がない。
+
 ## 以下は第731セッションの経緯
 
 ### 1.1 第731セッション（2026-10-01・YT-DELL2）
