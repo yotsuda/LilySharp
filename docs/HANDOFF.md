@@ -122,6 +122,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 同じ会話の続き（ユーザー「続けて」＝第733 の残り: 01 のオッターヴァの表記の違い）。`-Start p734`（HEAD `ea92fa17`・未 push 57）＝full **10629 / 0 / 2 / 10631**（引継ぎと一致）。
 ⑴ `264c5754` **twin のオッターヴァの表記を「8va」に**（01）: LP 2.26 の既定は「8」（`ottavation-numbers`）、ページの「8va」は 2026-08-02 のユーザー決定（`ottava-floor.ly`）＝ページは正しく、twin だけ食い違っていた。オッターヴァを書くパートの段に `\set Staff.ottavationMarkups = #ottavation-simple-ordinals` を書く（ペダル・指番号の `\set` と同じ形）。LP 2.26 で「8va」を確認。網 +1・毒で赤。書き出しだけ＝SVG 不変。full **10630 / 0 / 2 / 10632**。
+⑵ 01 の改行の違い（LP 7 小節／Lily# 6 小節）の**診断だけ**（fork・Lab `sessions/p734/lb` に README・Lab で commit 済み）: 原因は小節 13 の `\tempo "Più mosso"`。LP は列の中身を行の内側に収める（`lily/simple-spacer.cc:431-432 get_column_description`・`:497-502 get_line_forces`）＝小節 13 で終わる行の自然幅が +1.647 sp。Lily# は改行器が値付けしない（`SystemBreaker.cs:280` が明言）＋ページの組版も歌詞・コード・符頭だけ（`MultiStaffLayouter.cs:1736-1758`）。Lily# の力に +1.647 を足して LP の改行計算を回すと 7/13/18＝LP と一致（+1.0 では 6/12/18＝僅差）。⚠ LP 自身も svg の汎用フォントでは 6/6/6/7。**未実装の提案**: 速度記号の張り出しを列の中身に入れる（新プローブ＋台帳点）＋改行器が行末で同じ張り出しを値付け。全木の掃きで件数を数えてから。
+⑶ `c4959fd4` **import: 練習番号ごとに section を切り、音楽を 4 小節ずつ改行**（ユーザー依頼「適当な位置で改行」「セクションマークの位置でセクションを区切る」）: 以前は 1 section に全小節・パートごとに 1 行・`@mark` は行内。
+- mark ごとに section（名前は mark の文字が名前になれるとき＝大文字始まり英数字・数字だけなら `M12`）。`@mark` は音符に残し、label は隠す（`~`）＝**ページは不変**。行は 4 小節、ふつうでない小節線で改行。
+- ⚠ **書き直し（restate）が要る mark では切らない**: section 境界は拍子・調・音部記号を戻す→ section 頭で書き直すと、Lily# は `time`/`key` を読むたびに記号を描く（LP の \time と同じ）＝同じ記号が 2 度出る（round trip の `section-meter-resets-to-global-meter.lys` で 4/4 が再描画）。その小節自体の変更は書き直しではない。ヘッダーの time/key は「自分の小節で変えない切れ目」の多数決。残す mark は report に出す。
+- ⚠ **slur・hairpin が次の section を貫く mark でも切らない**（LYS4023。import の hairpin は終わりを持たない＝次の強弱まで）。
+- 反復・volta の切れ目は**今回から書き直す**（以前は書き直さず、後の小節をヘッダーの拍子・調で読んでいた）。flat の section は最長のパートまで（第 1 パートが 0 小節だと他が空になった・`inporder.lys`）。
+- 網: `MusicXmlSectionCutTests` 8 本・毒 7 種すべて赤。既存の round trip 3 本は空白を畳んで比べる形に。**全 998 冊の round trip（Lab `sessions/p734/imp/rt.ps1`・1,199 枚）で SVG 差 0**・504 冊で section が増えた。診断の差は既存の問題（パート間の小節数の違い LYS2007 が section ごとに出る・短い小節が section 頭に来て LYS2001→2006）だけ。
+- Bohemian（6 ファイル）を取り込み直し: SVG 同一・section A〜F（G・H は E♭ の書き直しが要るので F の中）。MIDI は tick 0 の拍子 meta が増えるだけ（既存の「パートごとに 1 つ」）。
+- 未決（ユーザーに聞く）: G・H も切りたいなら、Lily# 側で「section 頭の書き直しが前の section の残した値と同じなら描かない」にする（twin も重複 `\key` を省く）。言語の意味に触れる。
 
 ## 以下は第733セッションの経緯
 
