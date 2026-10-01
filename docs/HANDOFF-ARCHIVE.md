@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第725セッションの経緯
+
+### 1.1 第725セッション（2026-10-01・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第724 の次の一手: 前打音の中の弧・§2 U8 ⒝2）。`-Start p725`（HEAD `e10320f9`）＝full **10557 / 0 / 2 / 10559**（引継ぎと一致）。
+⑴ ★ `cccdd788` **前打音の時間に書いた弧＝普通の弧**（§2 U8 ⒝2 の弧の半分・⒞ の弧も同時に閉じた）: `grace { d'16( e') }`・前の前打音からの `grace { f16( g16 } a8)`・主音から入る `c'4( grace { e'16) }` は LYS4020 で落ちていた（walk が印を剥がし・`NarrowToGraceTime` が運ばず・`VoiceScan` が grace を飛ばす）。→ walk が弧の印を残し、`NarrowToGraceTime` が運び（音符・和音・休符）、`SlurDetector` だけ grace も歩く（`VoiceScan.WalkVoiceItemsWithGraceTime`。タイ・グリッサンドは従来どおり飛ばす）。`GraceNoteItem.ExplicitSlur` と収集側の経路は撤去（手書きの appoggiatura 形は普通に対になり、キーワードと頁が同一のまま）。`GraceBodySupport` は弧を LYS4020 にしない（対のない弧は LYS4010）。
+  向き: grace で始まる弧は DOWN、**ただし声が側を決めていればそちら**——**実測**（`probes/grace-inner-slur.ly`・LP 2.26.0）: `\voiceOne` では前打音の中の弧も acciaccatura の弧も **UP**（3.85／3.89）。⇒ `WithGraceSlurs` も `ForcedCurveUpAt` を先に聞く（第724 は常に DOWN だった）。前打音の符幹は覆う弧を反転させない（`AnyCoveredStemDown` が飛ばす・描くのは UP）。
+  配置: 両端とも前打音の列でありうる（`GraceColumnOf`／`GraceColumnX`＝`StartGraceGroup` の一般化）。UP の弧は、他端へ向けて連桁された前打音では**前打音の連桁の 0.5 上**に付く（`GraceBeamUpperFaceDeviceY`・slur-scoring.cc:549-557・前打音の連桁は `BeamLayouts` に居ない＝なしでは 0.45 低かった）。spanner_less の節は「grace で始まり外で終わる」に。前打音の障害物は群ごとでなく**列ごとに項目番号で**選ぶ（中の弧が自分の列を覆う）。
+  ⚠️ **移植しなかった（開示・テストで留めた）: TAB 段では前打音の列に付く弧を描かない**。LP は描く（数字の下に DOWN・acciaccatura も・Lab `sessions/p725/tabgrace`）が、Lily# の TAB の弧は数字の上に弧を張り前打音の端を持たない（通すと 3.4 ずれて逆側・中の弧は出ない）＝第724 以前の頁のまま（`OnATabStaff_AGraceSlurIsNotDrawnYet`）。
+  台帳 +12（`slur.in-grace.{inner,first-column,into-grace,voice-one,voice-two}.*`・`slur.grace.acciaccatura-voice-one.*`）: first-column／into-grace／acciaccatura-voice-one EXACT・voice-one 0.0008・span −0.082／−0.009（前打音の列の間隔＝既存の残り）。**voice-two +1.78＝`\voiceTwo` の LP の前打音の符幹は DOWN**（実測 dir=−1・Lab `sessions/p725/tabgrace/stemdir.ly`）で Lily# は全部 UP＝弧ではなく**前打音の符幹の向き**の穴（開いている）。毒 6 つ全部赤（＋TAB の留めの毒 1）。弧の計器（p724 の LP 側を再利用・`-SkipLp`）: 24,318→24,325 対・差 1,637 のまま・slur-grace の COUNT 残差が消えた。全 score の SVG（基準＝`LilySharp-bisect` を `e10320f9` に）: 1199 枚中 10 枚＝2 冊が弧 1 本増（slur-grace・grace-explicit-slur）・コーパス 4 冊は要素の**順序だけ**。**snapshot `test/grace-explicit-slur` をユーザー承認で再ベース**（3 小節目に弧）。発見（未着手）: 休符に付けた弧は主の格子でも対にならない（`r16( d)` が LYS4010）。
+残り: TAB の前打音の弧・下声部の前打音の符幹の向き・前打音の列の間隔・休符の弧。
+★ `-End p725 -DiffBase e10320f9`＝full **10571 / 0 / 2 / 10573**（台帳 +12）・門 7 つ全 OK・Core `+` 240 行に REF 3／OWN 0。7.6: ⑴ ユーザー「続けて」（第724 が予告した次の一手）・向きの規則と TAB の除外は書きながら測って決めた。push はユーザー（未 push 25）。
+
 ## 以下は第724セッションの経緯
 
 ### 1.1 第724セッション（2026-10-01・YT-DELL2）
