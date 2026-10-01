@@ -119,6 +119,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第738セッション（2026-10-02・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第737 の判定: ⑸ の残り 2 つ）。`-Start p738`（HEAD `59c01a3d`・未 push 71）＝full **10676 / 0 / 2 / 10678**（引継ぎと一致）。★ `a616a206`:
+⑴ **エディタの `key!`**: 第737 の「semantic token で小節線の色」は誤り＝LSP は `!` を塗らず、TextMate の文法でも `!` は無色だった。`#force-mark`（`\b(key|time|clef)\s*(!)`）を足し、素の keyword を塗る**全ての文脈の前に** include（`#keywords` と part body 自身の一覧＝part body は `#keywords` より先に自分の `clef`/`key` を塗る）。網 `EditorColouringTests.TheForceMark_IsColouredWithItsKeyword`（文脈ごとに順番を問う・全体の平らな並びでは fonts block の `time` が先に来て問えない）。
+⑵ **MusicXML 書き出し**: 第737 の「変化しない key も書く」も誤り＝`SyncAttributes` は元から書いた値との差だけ書く（書き直しは何も書かない＝page と一致）。足したのは強制だけ: `_forcedKey/_forcedTime/_forcedClef` が `<attributes>` を書かせる（音の後なら次の小節の頭＝他の変化と同じ）。網 `MusicXmlForceMarkTests` 7。
+- GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・CHANGELOG。毒 4 種（書き出しの key／clef の強制・文法の include 2 つ）すべて赤（Lab `sessions/p737/poisons3.ps1`）。掃きは省いた（Core の変更は `!` のある本だけに効く・コーパスに 0 冊）。
+- ⚠ 未決（ユーザー判断）: **MusicXML の import は変化しない `<key>`/`<time>`/`<clef>` を落とす**＝`key!` を書き出した XML を読み戻すと `!` が消える。読み手が同じ属性を繰り返す XML（版ごとに違う）を全部 `key!` にすると、今度は描かれなかったものが描かれる。
+★ `-End p738 -DiffBase 59c01a3d`＝full **10687 / 0 / 2 / 10689**（網 +11）・門 全 OK。7.5: Core `+` 16 行・REF 0／OWN 0（第737 の決定の書き出し側＝新しい逸脱なし）。7.6: 該当なし。7.7: 該当なし。push はユーザー（未 push 72）。⚠ HANDOFF の天井 残り 5.7 KB＝次便の頭で `tools\Fold-ClosedHandoffItems.ps1`。
+判定: 次はユーザーの選択（上の import の未決・5/4 の全小節休符の綴り・⒝ の設計項目）。どれも今回の文脈は要らない＝新しい会話でも差は小さい。
+
+## 以下は第737セッションの経緯
+
 ### 1.1 第737セッション（2026-10-02・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」＝第736 の判定: tab の斜めの tuplet bracket）。`-Start p737`（HEAD `70122cce`・未 push 66）＝full **10643 / 0 / 2 / 10645**（引継ぎと一致）。
@@ -143,20 +155,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ★ `-End p737 -DiffBase 70122cce`（2 回目）＝full **10676 / 0 / 2 / 10678**・門 全 OK。7.5: Core `+` 407 行・REF 0／OWN 7（⑷ と同じ 1 つの決定に `!` を足した）。7.6: ⒜＝LP からの宣言した逸脱。7.7: page と twin が同じ規則を別々に持つ（⑷ と同じ・両側に網）。未 push 71。
 - 残り（未着手）: LSP の semantic token で keyword 直後の `!` は小節線の色のまま（`SyntaxFacts` の barline 分類）・MusicXML 書き出しは変化しない key も従来どおり書く（page と一致させるかは未決）。
 判定: 次はまたユーザーの選択（第737 ⑶ の候補の残り: 5/4 の全小節休符の綴り・⒝ の設計項目、または ⑸ の残り 2 つ）。⑸ の残りなら今回の文脈がそのまま使える＝続けるのが少し得。それ以外なら新しい会話でも差は小さい。
-## 以下は第736セッションの経緯
-
-### 1.1 第736セッション（2026-10-01・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」）。`-Start p736`（HEAD `09038a4f`・未 push 63）＝full **10641 / 0 / 2 / 10643**（引継ぎと一致）。
-⑴ §1.0 ⒜「tuplet の数字の送り幅が LP より 0.07 広い（書体の問題）」は**欠陥ではなかった＝計器の産物**。LP の TupletNumber の extent はどの数字も 0.956（font-size −2・C059 と TeX Gyre Schola で同じ＝LP に Lily# の Schola を `ly:font-config-add-font` で読ませて比べた・Lab `sessions/p736/fontcmp.ly`・`tupnum.ly`）＝隙間は両方 1.956。第694 の計器 `tupbr.ps1` は `lysc ly` を `--pin-fonts` なしで呼び `-dbackend=svg` で描いていた＝LP は数字を機械の汎用 serif で組み 0.888 と読めた（RULES 1239 の罠）。pin を足すと（`sessions/p736/tupbr-pinned.ps1`）水平 1.891..3.847 対 1.890..3.850・斜め 2.146..4.087 対 2.150..4.090＝一致。§1.0 から行を消し、`TupletBracketGapTests` の誤った註（「LP の gap は 1.874」）を直した。
-⑵ ★ **同じ罠の他の計器を pin つきで回し直した**（`lysc ly` を `--pin-fonts` なしで `-dbackend=svg` に通していたのは第690〜第695 の 6 本だけ・T7 の双子〔第321 の `sweep321.ps1`〕は cairo＝pin 済み・`LilyPondTabDigitHalfHeight`〔第634〕も pin 済みの値）:
-- 第694 の tab の Script（`ts4`）: pin すると数字に乗る 6 変種で LP が 0.03 遠い（LP の TabNoteHead の箱は C059 で ±0.621598＝高さ 1.243196・汎用 serif では 1.18）。`TabScriptAlignedSideTests` は「LP の高さ」1.6343 と pin なしの LP の値で組まれていた → **1.7218**（同梱の太字の数字のインク 0.72205／em）と pin した LP の値 3.3716／−3.3803／3.5476 に（Lab `sessions/p736/tsfix`・`scriptdump3.ily`）。製品は不変＝Lily# は元から LP どおりだった。
-- 第690 の tab の tuplet（`compare-bracket.ps1`・16 冊）: pin した LP に対し Lily# は 8 冊で 0.03 以内・残りは数字の大きさの決定（LP の大きさにすると消える）と beam の決定（0.56）・それ以外に **2 つ**: `tabtuplet2`／`tabtuplet4` の右の鉤 +0.28 と `tt-cap` の斜めの括弧 0.2〜0.25 高い（Lab `sessions/p736/cb`・`cmp.ps1`）。
-⑶ ★ `c03c61e8` **tab の声部の対を*記譜の*スカイラインで値付けしていた**（⑵ の +0.28 の原因）: `MeasureLayouter` の対の最小 `CalculateSkylineDistance`／`SeparationRodDistance` は音高の譜表位置の符頭・加線・記譜の符幹の旗を読む＝低い bass の弦の旗つき上向き 8 分が「五線の下の加線つきの音」（flag-low の 2.567）で組まれていた。LP の TabStaff は弦と同じ 2.289（D 弦と同じ）。tab の声部ではこの 2 つを読まない（スラー・トレモロ・前打音の rod は残す）。`bes,,8 bes,,4.`・`tuplet 3/2 { bes,,8 bes,,4 }`・休符つきが LP と一致（Lab `sessions/p736/dig`・`digits.ps1`）。網 `TabStemSpacingTests.ALowBassEighthIsNotSpacedAsALedgeredNote` 2・毒（`tabVoice = false`）で 2 赤。掃き（998 冊・1,199 枚）: **82 枚（81 冊・全部 tab・コーパス 74）**・段割れが変わったのは 2 冊: Universe "tab" 32 → 31（LP 31）／A Thousand Miles "tab" 20 → 23（Lily# の 2.8 の数字のとき。LP の大きさの数字では 23 → **19＝LP 19**）。snapshot 0 枚。full **10643 / 0 / 2 / 10645**。
-- ⚠ 未変更・観測者なし: `AddAccidentalReachRods` も tab の声部の（描かれない）臨時記号で rod を張りうる（試した 3 本は LP と一致＝噛まない）。
-★ `-End p736 -DiffBase 09038a4f`＝full **10643 / 0 / 2 / 10645**（網 +2）・門 全 OK。7.5: Core `+` 21 行・REF 1（spacing-spanner.cc の既存の引用を条件の内側へ移しただけ）・OWN 0＝読み直した。7.6: ⑶＝⒜（LP の TabStaff に無い grob を値付けしない）。7.7: 該当なし。push はユーザー（未 push 66）。
-判定: 次は §1.0 ⒜ の「tab の斜めの tuplet bracket 0.2〜0.25」（この便の計器 `cb/cmp.ps1` と `books1722` がそのまま使える）＝**この会話で続けるのが有利**（(a)＝今の文脈の上に立つ）。
-
 ## 2. 開いている作業
 
 ### U. ユーザー報告（2026-08-29・第286 起票）← **順に着手。ユーザーが優先度を与えた**
