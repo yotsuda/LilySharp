@@ -31,10 +31,15 @@ namespace LilySharp.Tests;
 /// LILYPOND-REF: lily/bracket.cc:57-61 Bracket::make_bracket — gap_corners[d] = (dz * 0.5) + gap[d] / length * dz
 /// </summary>
 /// <remarks>
-/// It asserts the RULE off the drawn bracket, not LilyPond's numbers: the number's width is
-/// the bundled face's advance, which is not LilyPond's (Lab sessions/p694/tup: LilyPond's gap
-/// on a sloped `tuplet 3/2 { c'4 e' g' }` is 1.874, Lily#'s 1.96). Until session 694 the gap
-/// was a flat ±1.0 about the midpoint, taken along X, whatever the number.
+/// It asserts the RULE off the drawn bracket. The number's width is the bundled face's advance,
+/// and that IS LilyPond's: TupletNumber's extent is 0.956 for every digit (font-size −2, C059
+/// and TeX Gyre Schola alike), so the gap is 1.956 on both engines — MEASURED (Lab
+/// sessions/p736/tupbr, the p694 instrument with `--pin-fonts`): flat gap 1.891..3.847 against
+/// Lily#'s 1.890..3.850, sloped 2.146..4.087 against 2.150..4.090. ⚠️ Session 694 recorded
+/// LilyPond's gap as 1.874 and a 0.07 "face" difference: its twins were rendered under
+/// -dbackend=svg WITHOUT the font pin, so LilyPond set the number in the machine's generic
+/// serif (RULES 1239). Until session 694 the gap was a flat ±1.0 about the midpoint, taken
+/// along X, whatever the number.
 /// </remarks>
 [Trait("Category", "Unit")]
 public sealed class TupletBracketGapTests
