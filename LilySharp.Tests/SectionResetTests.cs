@@ -104,6 +104,29 @@ public sealed class SectionResetTests
     }
 
     [Fact]
+    public void RelativeMinorSection_RedrawsTheScoreKeyOnItsWayBack()
+    {
+        // A is in E minor, the score in G major: ONE sharp either way, but a key change all
+        // the same. The twin restores `\key g \major` at B and LilyPond engraves it
+        // (measured 2026-10-01, Lab sessions/p733/key k1), so the page draws it too — the
+        // revert compares the tonic, not only the signature. Until session 733 it compared
+        // the sharps alone and B opened with no key.
+        var measures = Collect("""
+            key g major
+            part m {
+              section A { key e minor e1 | }
+              section B { g1 | }
+            }
+            form main { A B }
+            score main { staff m }
+            """);
+
+        var bReset = Assert.Single(measures[1].Items.OfType<KeySignatureChangeItem>());
+        Assert.Equal(1, bReset.NewKey.Sharps);
+        Assert.Equal(1, bReset.PreviousKey.Sharps);
+    }
+
+    [Fact]
     public void MidSectionClefChange_DoesNotLeakIntoNextSection()
     {
         // The part is bass; A opens with its own `clef treble`; B declares nothing, so it

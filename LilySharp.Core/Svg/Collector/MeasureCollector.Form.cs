@@ -439,6 +439,9 @@ public sealed partial class MeasureCollector
         // modulation must not carry into the next section (nor a reused copy).
         // Unconditional — the running tonic can differ from home even when the
         // sharp count matches (A minor → C major both have 0 sharps).
+        // …and THAT is also a key change the revert below must draw, so it is read first.
+        bool tonicLeftHome = _ambientTonicValid
+            && (_ambientTonicStep != _meta.KeyTonicStep || _ambientTonicAlter != _meta.KeyTonicAlter);
         ResetAmbientTonicToHome();
 
         // Time and key revert to the SCORE level too, for the same self-containment:
@@ -627,7 +630,15 @@ public sealed partial class MeasureCollector
         {
             ApplyKeySignatureChange(sectionKey, builder);
         }
-        else if (_meta.KeySharps != _sectionResetKeySharps || _meta.KeyCustom != _sectionResetKeyCustom)
+        // ⚠️ THE TONIC COUNTS, NOT ONLY THE SIGNATURE: a section in E minor followed by one at
+        // the score's G major is a key change with the same one sharp, and the twin restores
+        // it (LilyPondExporter: `_keySharps != _restoreKeySharps || _tonic != _homeTonic`),
+        // which LilyPond engraves as a KeySignature. Until session 733 only the sharps were
+        // compared here, so the page kept silent where the twin's page redrew the sharp.
+        // LILYPOND-REF: lily/key-engraver.cc:141-152 process_music — a key event creates the
+        //   visible KeySignature (create_key (false)) whatever its alterations.
+        else if (_meta.KeySharps != _sectionResetKeySharps || _meta.KeyCustom != _sectionResetKeyCustom
+                 || tonicLeftHome)
         {
             var previousKey = new KeySignature(_meta.KeySharps, _meta.KeyCustom);
             _meta.KeySharps = _sectionResetKeySharps;
