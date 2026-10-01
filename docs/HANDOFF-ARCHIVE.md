@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第728セッションの経緯
+
+### 1.1 第728セッション（2026-10-01・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第727 の次の一手: `slur.in-grace.first-column.span` −0.0089）。`-Start p728`（HEAD `5f417afa`・未 push 30）＝full **10589 / 0 / 2 / 10591**（引継ぎと一致）。
+⑴ ★ `c9123737` **前打音のばねは音符のばね**: FIRST の −0.0089 は弧ではなく**最後の前打音→主音の間隔**（LP 1.426422・Lily# 1.417939・弧なしでも同じ）。LP は前打音のばねにも本線と同じ `Note_spacing::get_spacing`（note-spacing.cc:42-115）＝**床はスカイライン距離**・**ideal に符幹の向きの補正**。Lily# は平らな幅（符頭＋旗）で補正なし＝全部 1.417939。実測（Lab `sessions/p728/first`・`/flag`）: c''→e'' 1.647939（同じ向き +0.25）／e''→主音 f' 1.147939（重ならない）／g'→主音 a'' 1.726510（up→down）／d'8→c'4 1.760353（旗が一部だけ重なる）。→ `ItemSkylineFactory.CreateGraceWishSkyline`（符頭・符幹・旗・左は臨時記号）・`SpacingRules.GraceStemBand`（頭側＝前打音の書体の取り付け・先＝前打音の符幹の規則・⒝ 連桁の先は未連桁の先で代用）・`GraceStemCorrection`（本線の `StemCorrectionOf`）・`GraceColumns`（音のある 2 列は `SkylineFloorPair`＋0.3 と補正つき ideal・休符が絡む列は平らな幅のまま）。台帳: FIRST −0.0089 → 0・+4 点 EXACT（`probes/grace-column-skyline.ly`）・既存の `grace.column.*` は不動。毒 4（baseline＝snapshot 3 赤）: 補正 0＝+3・旗を外す＝+24・取り付けを外す＝+1・符幹の部品を外す＝+0（観測者なし）。**snapshot 3 枚をユーザー承認で再ベース**（`test/grace-rest` 1.93→1.40・LP 1.398／`grace-dot-flag-column`・`grace-lower-staff` は 0.01 級）。全 score の SVG（基準 `5f417afa`）: 1199 枚中 6 枚・実コーパス 0。⚠️ perf は未計測（前打音の 1 間隔あたり小さなスカイライン 2 本＝前打音の本だけ）。
+**新しい起票**: ★ **LP は前打音のばねも行と一緒に伸ばす／Lily# は主音にぶら下げた固い鎖**（両端揃えの段で差が出る: `audit/lpreg/grace-unfold` LP 1.938/2.056・ragged では 1.760＝一致）。直すなら前打音の列を本物の列として行の spring 系に入れる＝設計級。
+残り: 上の固い鎖・TAB の前打音の弧・`condensedStaff` の 2 声目の前打音・3 列以上の弧の rod。
+★ `-End p728 -DiffBase 5f417afa`＝full **10593 / 0 / 2 / 10595**（台帳 +4）・門 全 OK・Core `+` 175 行に REF 6／OWN 0。7.6: 床と補正は ⒜（`Note_spacing::get_spacing` の 2 項を前打音の列にも）＋ ⒝（連桁つきの前打音の符幹の先は未連桁の先・休符の列は平らな幅のまま＝開示）。7.7: 「前打音の間隔は常に平らな幅」という畳みを 1 つ消した側。ユーザー「続けて」＋再ベースの承認（AskUserQuestion）。push はユーザー（未 push 31）。判定: 次の候補（前打音の固い鎖）は設計級で、今便の計器の上に立つが新しい会話でも差は小さい＝**続けるならこの会話のままでよい**（圧縮はまだ無い）。
+
 ## 以下は第727セッションの経緯
 
 ### 1.1 第727セッション（2026-10-01・YT-DELL2）
