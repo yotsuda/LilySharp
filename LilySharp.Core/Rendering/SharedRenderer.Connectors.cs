@@ -60,12 +60,19 @@ internal static partial class SharedRenderer
     /// </para>
     /// </remarks>
     /// <summary>
-    /// The instrument name's ENGRAVING em — 0.75 of the music em, 3.0 staff spaces. ⚠️ Not
-    /// LilyPond's: InstrumentName declares no font-size, so LilyPond sets it at the paper's
-    /// text size (2.2). Kept as it was when the plan learned to reach it (2026-09-08): moving
-    /// the default is a different change, one that moves every named book.
+    /// The instrument name's ENGRAVING em — the paper's text size, 2.2 staff spaces, as
+    /// LilyPond sets it: InstrumentName declares no font-size.
     /// </summary>
-    internal const double InstrumentNameEngravingEm = FontSize * 0.75;
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:1851-1858 InstrumentName, system-start-text::print — no font-size in the block,
+    ///   so the paper's text-font-size, EngravingDefaults.TextScriptFontSize.
+    /// LILYPOND-REF: scm/paper.scm:68-88 layout-set-absolute-staff-size-in-module — text-font-size.
+    /// ⚠️ IT WAS 0.75 OF THE MUSIC EM, 3.0, until session 733 (owner's decision, 2026-10-01):
+    /// with LilyPond's fixed 15mm indent (LayoutOptions.Indent) a name that fits LilyPond's
+    /// first line ran off the page's left edge — "Clarinet in B♭" in a chamber score (Lab
+    /// sessions/p733/iname n1). The indent stays LilyPond's; the name now does too.
+    /// </remarks>
+    internal static readonly double InstrumentNameEngravingEm = LilySharp.Core.Svg.EngravingDefaults.TextScriptFontSize;
 
     /// <summary>The name's em for THIS score: <see cref="InstrumentNameEngravingEm"/> unless
     /// the score's <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for <c>instrument</c>.
