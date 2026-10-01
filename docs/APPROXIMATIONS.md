@@ -128,8 +128,8 @@
 - **:236** bound-details) and that branch is NOT PORTED HERE. No ledger point reads a
 - **:249** ⚠️ THE RIGHT BOUND'S ARITHMETIC IS NOT PORTED HERE, and the left repair is
 ### `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs`
-- **:816** ⚠️ Disclosed, not ported: LilyPond also requires the last column's stem to share a
-- **:1477** inner tuplets' boxes, :646-680 — not ported; no pinned point).
+- **:842** ⚠️ Disclosed, not ported: LilyPond also requires the last column's stem to share a
+- **:1503** inner tuplets' boxes, :646-680 — not ported; no pinned point).
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **:272** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
@@ -228,10 +228,10 @@
 ### `LilySharp.Core/Svg/Layout/TrillSpannerEngraver.cs`
 - **:503** named at the constant), because no point measures a barline-bound trill.
 ### `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs`
-- **:401** string slots, not pitches, and no ledger point measures the tab
-- **:921** and no ledger point measures the tab bracket regime (LILYSHARP-OWN gate, the
-- **:1264** positions are string slots; no ledger point measures that regime).
-- **:1716** ⚠️ THE BEAM-SLOPE CAP HAS NO OBSERVER YET: it is reached only when a covering beam
+- **:409** string slots, not pitches, and no ledger point measures the tab
+- **:947** and no ledger point measures the tab bracket regime (LILYSHARP-OWN gate, the
+- **:1290** positions are string slots; no ledger point measures that regime).
+- **:1742** ⚠️ THE BEAM-SLOPE CAP HAS NO OBSERVER YET: it is reached only when a covering beam
 ### `LilySharp.Core/Svg/Layout/VoltaBracketEngraver.cs`
 - **:355** bar line, which a form never writes. No observer; it goes when the column is modelled.
 - **:486** (SharedRenderer.IsMmrInnerEndBarline). No observer.

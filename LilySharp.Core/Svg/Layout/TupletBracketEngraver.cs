@@ -395,7 +395,15 @@ internal static class TupletBracketEngraver
 
             // LILYPOND-REF: lily/tuplet-bracket.cc:100-115 bracket_basic_visibility —
             //   the bracket is hidden ONLY when the tuplet's own beam is equally long.
-            bool showBracket = !HasEquallyLongBeam(tuplet, beamGroups, tupMeasures);
+            // ⚠️ THE TUPLET'S OWN STAFF'S BEAMS, read from the laid-out beams when the caller
+            // has them (FindCoveringBeam's filter, below): the annotation pass hands
+            // `beamGroups` as the PRIMARY staff's detection, so until session 733 every tuplet
+            // on a lower staff looked for its beam among the top staff's — found none, and drew
+            // the bracket LilyPond hides (an SATB + piano book's right-hand 16th triplet, Lab
+            // sessions/p733/tup b4: one soprano staff above the piano was enough).
+            bool showBracket = !(beamLayouts.IsDefaultOrEmpty
+                ? HasEquallyLongBeam(tuplet, beamGroups, tupMeasures)
+                : HasEquallyLongStaffBeam(tuplet, beamLayouts, tupMeasures));
 
             // Tab staves keep the raw-reach fallback: their staff positions are
             // string slots, not pitches, and no ledger point measures the tab
@@ -680,6 +688,24 @@ internal static class TupletBracketEngraver
                 return true;
         }
 
+        return false;
+    }
+
+    /// <summary>
+    /// <see cref="HasEquallyLongBeam"/> over the laid-out beams of the tuplet's OWN staff —
+    /// LilyPond's par_beam is the beam on the tuplet's own columns' stems, so it cannot be
+    /// another staff's (the filter <see cref="FindCoveringBeam"/> applies).
+    /// </summary>
+    private static bool HasEquallyLongStaffBeam(TupletBracketItem tuplet,
+        ImmutableArray<BeamLayout> beamLayouts, ImmutableArray<Measure> tupMeasures)
+    {
+        foreach (var beam in beamLayouts)
+        {
+            if (beam.StaffIndex != tuplet.StaffIndex || !Covers(beam.Group, tuplet, tupMeasures))
+                continue;
+            if (HasSameBounds(beam.Group, tuplet))
+                return true;
+        }
         return false;
     }
 

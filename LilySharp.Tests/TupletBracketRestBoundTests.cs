@@ -183,6 +183,43 @@ public class TupletBracketRestBoundTests
         """;
 
     /// <summary>
+    /// A fully beamed tuplet on a LOWER staff draws its number alone, as LilyPond does, even
+    /// with a staff above it. Until session 733 the annotation pass judged every tuplet
+    /// against the TOP staff's beams only, so a lower staff's tuplet never found its own beam
+    /// and drew the bracket (an SATB + piano book, Lab sessions/p733/tup b4; LilyPond 2.26.0
+    /// hides it there). The control is the same piano music standing alone, which was right
+    /// all along.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ABeamedTupletOnALowerStaff_DrawsItsNumberOnly(bool staffAbove)
+    {
+        string score = staffAbove
+            ? "score main { staff sop  grandStaff { staff rh  staff lh } }"
+            : "score main { grandStaff { staff rh  staff lh } }";
+        var g = RenderedGeometry.Render($$"""
+            octave absolute
+            time 7/8
+            part sop { clef treble }
+            part rh { clef treble }
+            part lh { clef bass }
+            section S {
+              sop { d''8 e'' f'' g''4 a''4 | }
+              rh { tuplet 3/2 { d''16 e'' f'' } g''8 a'' bes''4 c'''4 | }
+              lh { bes,8 f, bes, c4 f4 | }
+            }
+            form main { ~S }
+            {{score}}
+            """);
+        Assert.Contains(g.Texts, t => t.Text == "3");
+        // The bracket's horizontal pieces, read as Bracket() reads them (the system-start
+        // line and the group's bracket are vertical strokes of the same width).
+        Assert.DoesNotContain(g.Lines, l => Math.Abs(l.StrokeWidth - 0.16) < 1e-9
+                                            && Math.Abs(l.X1 - l.X2) > 1e-9);
+    }
+
+    /// <summary>
     /// A beam that runs over the tuplet's bounding rest IS the tuplet's parallel beam, so the
     /// bracket follows it and slopes — LilyPond's follow-beam arm takes the outer COLUMNS'
     /// stem tips, the rest's invisible one included.
