@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第723セッションの経緯
+
+### 1.1 第723セッション（2026-10-01・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第722 で Omr のレポートと TAB のスラッシュが閉じた後の次の島）。`-Start p723`（HEAD `5aa3e7a0`・未 push 16）＝full **10543 / 0 / 2 / 10545**（引継ぎと一致）。
+⒜ §1.0 を 2 KB 詰めた（閉じた経緯を ARCHIVE に任せた 3 行）。K3 の「複数楽器の本の調弦」は既に閉じていた（`NoteStepper.StepTuning`・網 `StepRequestTests`）＝行を消した。5/4 の全小節休符は **Lily# に 1 つの音価で書く綴りが無い**（`R4*5` は 5 小節・`R1` は 4/4 ぶん）＝MusicXML の残りは言語の設計の話で触らない。
+⑴ ★ `fecc35f1` **前打音の休符の上下と、それを越える弧**（第717 の 7.7 ⑴ を LP の双子で測った）: Lab `sessions/p723/gr` の弧の計器で、休符入りの前打音の弧が LP より 1〜2 スペース低い（休符なしの対照は完全一致）。原因は弧ではなく**休符の高さ**: LP は前打音の休符を**直前の主音**（前打音の時刻 (X, −g) ではまだ鳴っている＝`busyGrobs`）から Rest_collision の休符と音符の枝で離す。向きは休符に無いので列の＝**前打音の符幹の UP**（score-grace-settings）→ e'' の後 +5・e' の後 +2・離れていれば 0。普通の休符は向きが無く動かない（対照）。`ElementCoordinator.GraceRestShift`（`CalculateRestNoteCollisions` が公開・弧のグレースの障害物も同じ関数で休符の描かれる高さを読む）・第717 の LILYSHARP-OWN（休符は障害物でない）は退役。**台帳 +6 点**（`probes/grace-rest-collision.ly`・`rest.grace.after-held-note.{high,low,clear,control}`・`slur.over-grace-rest.{left-attachment,alone.left-attachment}`）全部 EXACT・毒 3 つ（持ち上げない＝4 赤／弧が持ち上げを読まない＝2 赤／弧が休符を飛ばす＝2 赤）。**snapshot `test/grace-rest` をユーザー承認で再ベース**（2・3 小節の休符が前の小節の c2. を避ける）。残り: 前打音の休符と別の声部の音符（未移植）・休符なし前打音の下向きの弧（`a4( grace { b16 } c'4)`）が LP と 0.5 違う（別の差・記録だけ）。
+⚠ **計器の穴**: p397 の SVG の掃きは `<本の名前>.svg` しか比べず、**score に別名のある 216 冊を見ていなかった**（第722 の 2 回の「動いた本 0」も同じ穴）。全 score を比べる `Lab sessions/p723/svg2/sweep-all.ps1`（998 冊・1,199 枚・data-pos を伏せる）で、第722＋第723（base `579493bc`）で変わったのは `grace-rest` の 1 枚だけ＝第722 は描画を動かしていないと確かめ直した。Lab の CLAUDE-OPERATIONS §4 に書いた。
+★ `-End p723 -DiffBase 5aa3e7a0`＝full **10549 / 0 / 2 / 10551**（台帳 +6）・門 7 つ全 OK・Core `+` 111 行に REF 3／OWN 0（LILYSHARP-OWN 1 つ退役）。7.6: ⑴ 第717 の 7.7 ⑴。7.7: 上の「残り」2 つ（下向きの弧は ⑵ で閉じた）。
+⑵ ★ `04402dfe`（ユーザー「続けて」＝⑴ の残りの下向きの弧）: 実は**旗つきの 1 音の前打音**の上の弧すべてが 0.5 低かった（Lab `sessions/p723/gd`・連桁つき 2 音と前打音なしは一致）。弧の障害物が前打音の符幹の先を「3.5 × 前打音の縮尺」＝2.475 で見ていた（コメントは「描画の固定長」だが、描画は既に通常の経路で `GrobFontSize.GraceStemDetails`＝length-fraction 0.8 を使い LP と同じ 2.7）→ 同じ規則（`CalculateStemEndPosition`＋`GraceStemDetails`）を呼ぶ。⚠ 最初に `NoteColumnLayout` を読ませたら悪化した（グレースの項目の列は符幹を持たない）。台帳 +2（`slur.{over,under}-flagged-grace.left-attachment`）EXACT・毒で前者だけ赤。**snapshot `test/tab-grace-slur` をユーザー承認で再ベース**（五線の弧が LP と一致・TAB 段の弧は前後で同値＝既存の差）。全 score の掃きで 2 枚（その snapshot と `bows/slur-grace.lys`＝動いた弧も LP と一致・この本は弧の数が合わず弧の計器が比べていなかった）。残り: 弧の終わり直前の**高い**旗つき前打音（`a4( grace { e'16 } c'4)`）は 0.5 低く右端が 0.125 右＝端の付き方の違い（符幹ではない）。
+★ `-End p723`（2 回目）＝full **10551 / 0 / 2 / 10553**・門 7 つ全 OK・Core `+` 123 行に REF 3／OWN 0。push はユーザー（未 push 20）。
+
 ## 以下は第722セッションの経緯
 
 ### 1.1 第722セッション（2026-10-01・YT-DELL2）

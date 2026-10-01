@@ -118,6 +118,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第725セッション（2026-10-01・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第724 の次の一手: 前打音の中の弧・§2 U8 ⒝2）。`-Start p725`（HEAD `e10320f9`）＝full **10557 / 0 / 2 / 10559**（引継ぎと一致）。
+⑴ ★ `cccdd788` **前打音の時間に書いた弧＝普通の弧**（§2 U8 ⒝2 の弧の半分・⒞ の弧も同時に閉じた）: `grace { d'16( e') }`・前の前打音からの `grace { f16( g16 } a8)`・主音から入る `c'4( grace { e'16) }` は LYS4020 で落ちていた（walk が印を剥がし・`NarrowToGraceTime` が運ばず・`VoiceScan` が grace を飛ばす）。→ walk が弧の印を残し、`NarrowToGraceTime` が運び（音符・和音・休符）、`SlurDetector` だけ grace も歩く（`VoiceScan.WalkVoiceItemsWithGraceTime`。タイ・グリッサンドは従来どおり飛ばす）。`GraceNoteItem.ExplicitSlur` と収集側の経路は撤去（手書きの appoggiatura 形は普通に対になり、キーワードと頁が同一のまま）。`GraceBodySupport` は弧を LYS4020 にしない（対のない弧は LYS4010）。
+  向き: grace で始まる弧は DOWN、**ただし声が側を決めていればそちら**——**実測**（`probes/grace-inner-slur.ly`・LP 2.26.0）: `\voiceOne` では前打音の中の弧も acciaccatura の弧も **UP**（3.85／3.89）。⇒ `WithGraceSlurs` も `ForcedCurveUpAt` を先に聞く（第724 は常に DOWN だった）。前打音の符幹は覆う弧を反転させない（`AnyCoveredStemDown` が飛ばす・描くのは UP）。
+  配置: 両端とも前打音の列でありうる（`GraceColumnOf`／`GraceColumnX`＝`StartGraceGroup` の一般化）。UP の弧は、他端へ向けて連桁された前打音では**前打音の連桁の 0.5 上**に付く（`GraceBeamUpperFaceDeviceY`・slur-scoring.cc:549-557・前打音の連桁は `BeamLayouts` に居ない＝なしでは 0.45 低かった）。spanner_less の節は「grace で始まり外で終わる」に。前打音の障害物は群ごとでなく**列ごとに項目番号で**選ぶ（中の弧が自分の列を覆う）。
+  ⚠️ **移植しなかった（開示・テストで留めた）: TAB 段では前打音の列に付く弧を描かない**。LP は描く（数字の下に DOWN・acciaccatura も・Lab `sessions/p725/tabgrace`）が、Lily# の TAB の弧は数字の上に弧を張り前打音の端を持たない（通すと 3.4 ずれて逆側・中の弧は出ない）＝第724 以前の頁のまま（`OnATabStaff_AGraceSlurIsNotDrawnYet`）。
+  台帳 +12（`slur.in-grace.{inner,first-column,into-grace,voice-one,voice-two}.*`・`slur.grace.acciaccatura-voice-one.*`）: first-column／into-grace／acciaccatura-voice-one EXACT・voice-one 0.0008・span −0.082／−0.009（前打音の列の間隔＝既存の残り）。**voice-two +1.78＝`\voiceTwo` の LP の前打音の符幹は DOWN**（実測 dir=−1・Lab `sessions/p725/tabgrace/stemdir.ly`）で Lily# は全部 UP＝弧ではなく**前打音の符幹の向き**の穴（開いている）。毒 6 つ全部赤（＋TAB の留めの毒 1）。弧の計器（p724 の LP 側を再利用・`-SkipLp`）: 24,318→24,325 対・差 1,637 のまま・slur-grace の COUNT 残差が消えた。全 score の SVG（基準＝`LilySharp-bisect` を `e10320f9` に）: 1199 枚中 10 枚＝2 冊が弧 1 本増（slur-grace・grace-explicit-slur）・コーパス 4 冊は要素の**順序だけ**。**snapshot `test/grace-explicit-slur` をユーザー承認で再ベース**（3 小節目に弧）。発見（未着手）: 休符に付けた弧は主の格子でも対にならない（`r16( d)` が LYS4010）。
+残り: TAB の前打音の弧・下声部の前打音の符幹の向き・前打音の列の間隔・休符の弧。
+★ `-End p725 -DiffBase e10320f9`＝full **10571 / 0 / 2 / 10573**（台帳 +12）・門 7 つ全 OK・Core `+` 240 行に REF 3／OWN 0。7.6: ⑴ ユーザー「続けて」（第724 が予告した次の一手）・向きの規則と TAB の除外は書きながら測って決めた。push はユーザー（未 push 25）。
+
+## 以下は第724セッションの経緯
+
 ### 1.1 第724セッション（2026-10-01・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」＝第723 の残り: 弧の終わり直前の高い旗つき前打音）。`-Start p724`（HEAD `0949c7b1`・未 push 20）＝full **10551 / 0 / 2 / 10553**（引継ぎと一致）。
@@ -127,18 +140,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ⑵ ★ `f30218fc` 複数段のスカイラインの pass（`StaffSlurLayouts`＝段番号 0 の自明な系）が前打音の群を段 0 で選んでいた＝段 N が段 0 の前打音から弧と障害物を作りうる→ `graceStaffIndex` を渡す。観測者なし（全 score の SVG 不変）。
 残り: 前打音の**中**の弧（`grace { d'16( e') }`・LYS4020＝§2 U8 ⒝2）・前打音の列の間隔の差（上の悪化 3 の元）。
 ★ `-End p724 -DiffBase 0949c7b1`＝full **10557 / 0 / 2 / 10559**（台帳 +6）・門 7 つ全 OK・Core `+` 184 行に REF 3／OWN 0。7.6: ⑴ ユーザー決定（弧の最大の族の移植）・⑵ ⑴ の書きながら気づいた。push はユーザー（未 push 23）。
-
-## 以下は第723セッションの経緯
-
-### 1.1 第723セッション（2026-10-01・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」＝第722 で Omr のレポートと TAB のスラッシュが閉じた後の次の島）。`-Start p723`（HEAD `5aa3e7a0`・未 push 16）＝full **10543 / 0 / 2 / 10545**（引継ぎと一致）。
-⒜ §1.0 を 2 KB 詰めた（閉じた経緯を ARCHIVE に任せた 3 行）。K3 の「複数楽器の本の調弦」は既に閉じていた（`NoteStepper.StepTuning`・網 `StepRequestTests`）＝行を消した。5/4 の全小節休符は **Lily# に 1 つの音価で書く綴りが無い**（`R4*5` は 5 小節・`R1` は 4/4 ぶん）＝MusicXML の残りは言語の設計の話で触らない。
-⑴ ★ `fecc35f1` **前打音の休符の上下と、それを越える弧**（第717 の 7.7 ⑴ を LP の双子で測った）: Lab `sessions/p723/gr` の弧の計器で、休符入りの前打音の弧が LP より 1〜2 スペース低い（休符なしの対照は完全一致）。原因は弧ではなく**休符の高さ**: LP は前打音の休符を**直前の主音**（前打音の時刻 (X, −g) ではまだ鳴っている＝`busyGrobs`）から Rest_collision の休符と音符の枝で離す。向きは休符に無いので列の＝**前打音の符幹の UP**（score-grace-settings）→ e'' の後 +5・e' の後 +2・離れていれば 0。普通の休符は向きが無く動かない（対照）。`ElementCoordinator.GraceRestShift`（`CalculateRestNoteCollisions` が公開・弧のグレースの障害物も同じ関数で休符の描かれる高さを読む）・第717 の LILYSHARP-OWN（休符は障害物でない）は退役。**台帳 +6 点**（`probes/grace-rest-collision.ly`・`rest.grace.after-held-note.{high,low,clear,control}`・`slur.over-grace-rest.{left-attachment,alone.left-attachment}`）全部 EXACT・毒 3 つ（持ち上げない＝4 赤／弧が持ち上げを読まない＝2 赤／弧が休符を飛ばす＝2 赤）。**snapshot `test/grace-rest` をユーザー承認で再ベース**（2・3 小節の休符が前の小節の c2. を避ける）。残り: 前打音の休符と別の声部の音符（未移植）・休符なし前打音の下向きの弧（`a4( grace { b16 } c'4)`）が LP と 0.5 違う（別の差・記録だけ）。
-⚠ **計器の穴**: p397 の SVG の掃きは `<本の名前>.svg` しか比べず、**score に別名のある 216 冊を見ていなかった**（第722 の 2 回の「動いた本 0」も同じ穴）。全 score を比べる `Lab sessions/p723/svg2/sweep-all.ps1`（998 冊・1,199 枚・data-pos を伏せる）で、第722＋第723（base `579493bc`）で変わったのは `grace-rest` の 1 枚だけ＝第722 は描画を動かしていないと確かめ直した。Lab の CLAUDE-OPERATIONS §4 に書いた。
-★ `-End p723 -DiffBase 5aa3e7a0`＝full **10549 / 0 / 2 / 10551**（台帳 +6）・門 7 つ全 OK・Core `+` 111 行に REF 3／OWN 0（LILYSHARP-OWN 1 つ退役）。7.6: ⑴ 第717 の 7.7 ⑴。7.7: 上の「残り」2 つ（下向きの弧は ⑵ で閉じた）。
-⑵ ★ `04402dfe`（ユーザー「続けて」＝⑴ の残りの下向きの弧）: 実は**旗つきの 1 音の前打音**の上の弧すべてが 0.5 低かった（Lab `sessions/p723/gd`・連桁つき 2 音と前打音なしは一致）。弧の障害物が前打音の符幹の先を「3.5 × 前打音の縮尺」＝2.475 で見ていた（コメントは「描画の固定長」だが、描画は既に通常の経路で `GrobFontSize.GraceStemDetails`＝length-fraction 0.8 を使い LP と同じ 2.7）→ 同じ規則（`CalculateStemEndPosition`＋`GraceStemDetails`）を呼ぶ。⚠ 最初に `NoteColumnLayout` を読ませたら悪化した（グレースの項目の列は符幹を持たない）。台帳 +2（`slur.{over,under}-flagged-grace.left-attachment`）EXACT・毒で前者だけ赤。**snapshot `test/tab-grace-slur` をユーザー承認で再ベース**（五線の弧が LP と一致・TAB 段の弧は前後で同値＝既存の差）。全 score の掃きで 2 枚（その snapshot と `bows/slur-grace.lys`＝動いた弧も LP と一致・この本は弧の数が合わず弧の計器が比べていなかった）。残り: 弧の終わり直前の**高い**旗つき前打音（`a4( grace { e'16 } c'4)`）は 0.5 低く右端が 0.125 右＝端の付き方の違い（符幹ではない）。
-★ `-End p723`（2 回目）＝full **10551 / 0 / 2 / 10553**・門 7 つ全 OK・Core `+` 123 行に REF 3／OWN 0。push はユーザー（未 push 20）。
 
 ## 2. 開いている作業
 
@@ -303,7 +304,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ⚠️ **正典で取り直していない**（**この機械の 2.26.0 exe は本便で 13 分ブロックした**）。
   **梁の有無という*質的*な形なので WSL で足りるが、座標を要るときは 2.26.0 を待つこと。**
 
-  ▶ **残っているのは——⒞ の*スラーとタイ* ／ ⒟ 注釈の全族**（★★ **和音・休符・⒞ の*梁*は第308 が閉じた**）
+  ▶ **残っているのは——⒞ の*タイ* ／ ⒟ 注釈の全族**（★★ **和音・休符・⒞ の*梁*は第308 が閉じた・⒞ の*スラー*は第725 が閉じた**＝普通の弧として・TAB 段は除く）
   ▶▶ ★★★★ **そしてその 2 つは *⒝2 が閉じるまで手を出さないこと*。** **第310 が ⒝1 を入れて
   住所は実在するようになったが、描くのはまだ脇の模型**——**ここで ⒞⒟ を grace の家に彫ると
   スラーの幾何の*第 2 の綴り*ができる**（RULES §5.2.1②）。**⒝2 は ⒞⒟ を*構築により*閉じる。**
