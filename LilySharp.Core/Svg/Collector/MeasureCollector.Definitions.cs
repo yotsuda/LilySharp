@@ -654,7 +654,7 @@ public sealed partial class MeasureCollector
     /// same reason for reading a TOKEN's span rather than the declaration's.
     /// </summary>
     private static int KeyDataPos(KeySignatureSyntax key)
-        => key.GetChild(1) switch
+        => key.GetChild(2) switch   // slot 1 is the optional `!`
         {
             PitchSyntax pitch => pitch.PitchToken.Span.Start,  // key f major
             SyntaxTokenNode word => word.Span.Start,           // key custom …

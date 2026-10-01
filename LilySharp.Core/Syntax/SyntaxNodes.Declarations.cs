@@ -123,10 +123,15 @@ public sealed class TimeSignatureSyntax : SyntaxNode
 
     /// <summary>The <c>time</c> keyword token.</summary>
     public SyntaxTokenNode TimeKeyword => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The <c>!</c> after the keyword (<c>time! …</c>): drawn even if it changes
+    /// nothing. Null when not written.</summary>
+    public SyntaxTokenNode? ForceMark => GetChild(1) as SyntaxTokenNode;
+    /// <summary>True when <see cref="ForceMark"/> is written.</summary>
+    public bool IsForced => ForceMark is not null;
     /// <summary>The <c>:</c> in a part-header <c>time: 4/4</c>; null for the bare music command.</summary>
-    public SyntaxTokenNode? Colon => GetChild(1) as SyntaxTokenNode;
+    public SyntaxTokenNode? Colon => GetChild(2) as SyntaxTokenNode;
     /// <summary>The first numerator token.</summary>
-    public SyntaxTokenNode Numerator => (SyntaxTokenNode)GetChild(2)!;
+    public SyntaxTokenNode Numerator => (SyntaxTokenNode)GetChild(3)!;
 
     // Additive meters (time 3+2/8) put extra (+, int) tokens between the
     // first numerator and the slash, so these scan instead of using fixed
@@ -135,10 +140,10 @@ public sealed class TimeSignatureSyntax : SyntaxNode
     {
         get
         {
-            for (int i = 3; i < SlotCount; i++)
+            for (int i = 4; i < SlotCount; i++)
                 if (GetChild(i) is SyntaxTokenNode t && t.Kind == SyntaxKind.Slash)
                     return i;
-            return 3;
+            return 4;
         }
     }
 
@@ -161,7 +166,7 @@ public sealed class TimeSignatureSyntax : SyntaxNode
         {
             int sum = 0;
             bool any = false;
-            for (int i = 2; i < SlashIndex; i++)
+            for (int i = 3; i < SlashIndex; i++)
             {
                 if (GetChild(i) is SyntaxTokenNode t && int.TryParse(t.Text, out var v))
                 {
@@ -179,10 +184,10 @@ public sealed class TimeSignatureSyntax : SyntaxNode
     {
         get
         {
-            if (SlashIndex == 3)
+            if (SlashIndex == 4)
                 return null;
             var sb = new System.Text.StringBuilder();
-            for (int i = 2; i < SlashIndex; i++)
+            for (int i = 3; i < SlashIndex; i++)
                 if (GetChild(i) is SyntaxTokenNode t)
                     sb.Append(t.Text);
             return sb.ToString();

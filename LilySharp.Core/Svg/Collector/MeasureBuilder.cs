@@ -389,12 +389,15 @@ internal sealed class MeasureBuilder
         TimeSignature Time, KeySignature Key, int TonicStep, int TonicAlter, bool TonicValid,
         ClefType Clef)
     {
-        /// <summary>The same meter as printed: the numerator as drawn (the additive spelling
-        /// when there is one), the beat type and whether it is unmetered.</summary>
-        public bool SameMeter(TimeSignature t)
-            => t.Beats == Time.Beats && t.BeatType == Time.BeatType && t.SenzaMisura == Time.SenzaMisura
-               && (t.BeatsText ?? t.Beats.ToString()) == (Time.BeatsText ?? Time.Beats.ToString());
+        /// <summary><see cref="MeasureBuilder.SameMeter"/> against the head's meter.</summary>
+        public bool SameMeter(TimeSignature t) => MeasureBuilder.SameMeter(Time, t);
     }
+
+    /// <summary>The same meter as printed: the numerator as drawn (the additive spelling when
+    /// there is one), the beat type and whether it is unmetered — 6/8 is not 3/4.</summary>
+    internal static bool SameMeter(TimeSignature a, TimeSignature b)
+        => a.Beats == b.Beats && a.BeatType == b.BeatType && a.SenzaMisura == b.SenzaMisura
+           && (a.BeatsText ?? a.Beats.ToString()) == (b.BeatsText ?? b.Beats.ToString());
 
     // The armed section head and the measure count it was armed at (SectionHead's gate).
     private SectionHeadState? _sectionHead;
@@ -411,19 +414,20 @@ internal sealed class MeasureBuilder
     /// <summary>
     /// The state in force before the section reset, while the walk still stands at the
     /// section's first moment — no measure closed and no time elapsed since it was armed —
-    /// else null. LILYSHARP-OWN (owner's decision, 2026-10-02, HANDOFF §1.1 第737): a meter,
-    /// key or clef a section head states that equals this is NOT drawn, and the reset it
-    /// stands on is withdrawn with it: the reader sees no change, because none happened.
-    /// LilyPond draws a grob for every \time and \key event (time-signature-engraver.cc:94-122
-    /// compares the spec by identity; key-engraver.cc:141-152 creates a key on every event), so
-    /// the LilyPond twin omits the same restatements (LilyPondExporter) to stay a control.
+    /// else null. It is what a section head's <c>time</c>, <c>key</c> and <c>clef</c> are
+    /// compared with to tell whether they change anything.
     /// </summary>
     /// <remarks>
-    /// Why the rule exists: a section boundary resets the meter, the key and the clef, so a
-    /// section that continues in what the one before left in force has to say it again — the
-    /// MusicXML importer must, to cut a section at a rehearsal mark after a key change
-    /// (Bohemian Rhapsody's G and H, HANDOFF 第734 ⑶) — and that restatement used to print a
-    /// second, identical signature. A restatement INSIDE a section still draws, as LilyPond's.
+    /// LILYSHARP-OWN (owner's decisions, 2026-10-02, HANDOFF §1.1 第737): a <c>time</c>, <c>key</c>
+    /// or <c>clef</c> that changes nothing is NOT drawn — at a section head, nothing compared
+    /// with what the section before left (and the reset it stands on is withdrawn with it);
+    /// anywhere else, nothing compared with the value in force — unless it is written with
+    /// <c>!</c> after its keyword (<c>key! ees major</c>), which draws it regardless. A section
+    /// boundary resets the meter, the key and the clef, so a section that continues in what the
+    /// one before left has to say it again — every section after a modulation must — and that
+    /// restatement is not meant to be read. LilyPond draws a grob for every \time and \key event
+    /// (time-signature-engraver.cc:94-122 compares the spec by identity; key-engraver.cc:141-152
+    /// creates a key on every event); the twin writes what the page draws (LilyPondExporter).
     /// </remarks>
     public SectionHeadState? SectionHead
         => _sectionHead is { } h && _measures.Count == _sectionHeadMeasures

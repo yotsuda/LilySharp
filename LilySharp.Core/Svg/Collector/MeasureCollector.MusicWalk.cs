@@ -1588,25 +1588,35 @@ public sealed partial class MeasureCollector
                     // creates a Clef grob only when the resolved glyph/position/transposition
                     // differ from the previous ones, so a redundant `clef treble` neither
                     // prints nor takes space (clef-unchanged.ly). ClefType bundles
-                    // glyph+position+transposition, so one enum compare is that test;
-                    // LilyPond's forceClef escape hatch has no Lily# spelling and is
-                    // dropped with it.
+                    // glyph+position+transposition, so one enum compare is that test.
+                    // LilyPond's forceClef escape hatch is `clef!` (MeasureBuilder.SectionHead).
                     // A clef changes the DRAWING only: the relative frame carries on from the
                     // last note, as LilyPond's \relative does (InstrumentDefaults.DefaultAnchorOctave).
                     // LILYPOND-REF: lily/clef-engraver.cc:139-166 inspect_clef_properties
+                    // ⚠️ AT A SECTION HEAD "unchanged" is against what the section before left,
+                    // not against the reset the head already stands on (LILYSHARP-OWN): a
+                    // restatement withdraws that reset (the keys standing with it read this
+                    // clef); a real change that IS the reset's value is that reset, already
+                    // drawn; any other drawn clef replaces the reset instead of standing beside it.
                     string newClef = clefDecl.ClefName.Text.ToLowerInvariant();
-                    if (ParseClefType(newClef) == ParseClefType(_meta.Clef))
-                        break;
+                    var newType = ParseClefType(newClef);
+                    var head = builder.SectionHead;
+                    bool unchanged = head is { } h ? h.Clef == newType : newType == ParseClefType(_meta.Clef);
+                    bool theResetsChange = head != null && !unchanged && newType == ParseClefType(_meta.Clef);
                     _meta.Clef = newClef;
-                    if (builder.SectionHead is { } head && head.Clef == ParseClefType(newClef))
+                    if (unchanged && !clefDecl.IsForced)
                     {
-                        // A section head stating again the clef the section before left: the
-                        // reset is withdrawn and the keys standing with it read this clef
-                        // (MeasureBuilder.SectionHead, LILYSHARP-OWN).
-                        builder.WithdrawStanding<ClefChangeItem>();
-                        builder.RestampStandingKeys(head.Clef);
+                        if (head != null)
+                        {
+                            builder.WithdrawStanding<ClefChangeItem>();
+                            builder.RestampStandingKeys(newType);
+                        }
                         break;
                     }
+                    if (theResetsChange && !clefDecl.IsForced)
+                        break;
+                    if (head != null)
+                        builder.WithdrawStanding<ClefChangeItem>();
                     // The clef NAME's token span — `clef |bass`. Not clefDecl.SourceStart,
                     // which is the declaration's FULL span and so starts at the trivia
                     // in front of it (see TimeDataPos for what that costs).
@@ -1660,12 +1670,18 @@ public sealed partial class MeasureCollector
                         // a property set, not a grob) — see TimeSignatureChangeItem.Blanked.
                         var newTime = new TimeSignature(timeSigChange.Beats, timeSigChange.BeatType,
                             timeSigChange.BeatsText, timeSigChange.IsSenzaMisura);
-                        if (builder.SectionHead is { } head && head.SameMeter(newTime))
+                        // A meter that changes nothing is not drawn unless written `time!`: at a
+                        // section head compared with what the section before left (the reset
+                        // standing there is withdrawn too), elsewhere with the meter in force
+                        // (MeasureBuilder.SectionHead, LILYSHARP-OWN).
+                        var head = builder.SectionHead;
+                        bool unchanged = head is { } h
+                            ? h.SameMeter(newTime)
+                            : MeasureBuilder.SameMeter(builder.MeterInForce, newTime);
+                        if (unchanged && !timeSigChange.IsForced)
                         {
-                            // A section head stating again the meter the section before left:
-                            // no change, so the reset it stands on is withdrawn and nothing is
-                            // drawn (MeasureBuilder.SectionHead, LILYSHARP-OWN).
-                            builder.WithdrawStanding<TimeSignatureChangeItem>();
+                            if (head != null)
+                                builder.WithdrawStanding<TimeSignatureChangeItem>();
                             builder.SetMeasureLength(new Fraction(newTime.Beats, newTime.BeatType),
                                 newTime.SenzaMisura);
                             builder.MeterInForce = newTime;

@@ -287,9 +287,21 @@ internal sealed partial class Parser
 
     // ========== Key, Clef, Tuplet ==========
 
+    /// <summary>
+    /// The <c>!</c> right after a <c>key</c>, <c>time</c> or <c>clef</c> keyword — draw this even
+    /// if it changes nothing (<c>key! ees major</c>; without it an unchanged signature or clef is
+    /// not drawn). Read here and only here, so it is unambiguous with or without a space: the
+    /// keyword must be followed by its value, so no dashed bar line (<c>!</c>, the same token) can
+    /// stand there. A <c>!</c> AFTER the value is still that bar line — a trailing mark would have
+    /// let spacing decide between the two, which was rejected for <c>c!</c> (owner's decision
+    /// 2026-10-02, HANDOFF §1.1 第737).
+    /// </summary>
+    private SyntaxToken? ParseForceMark() => Check(SyntaxKind.DashedBar) ? Advance() : null;
+
     private KeySignatureGreen ParseKeySignature()
     {
         var keyKeyword = Expect(SyntaxKind.KeyKeyword);
+        var bang = ParseForceMark();
 
         // Non-traditional signature: key custom fis cis … (altered pitches in
         // print order; naturals allowed for explicit cancels).
@@ -305,7 +317,7 @@ internal sealed partial class Parser
                    && Peek(1)?.Kind is not (SyntaxKind.Apostrophe or SyntaxKind.Comma
                        or SyntaxKind.IntegerLiteral))
                 pitches.Add(ParsePitch());
-            return new KeySignatureGreen(keyKeyword, customWord, [.. pitches]);
+            return new KeySignatureGreen(keyKeyword, bang, customWord, [.. pitches]);
         }
 
         var pitch = ParsePitch();
@@ -344,12 +356,13 @@ internal sealed partial class Parser
             mode = new SyntaxToken(SyntaxKind.MajorKeyword, "", null, null);
         }
 
-        return new KeySignatureGreen(keyKeyword, pitch, mode);
+        return new KeySignatureGreen(keyKeyword, bang, pitch, mode);
     }
 
     private ClefDeclarationGreen ParseClefDeclaration()
     {
         var clefKeyword = Expect(SyntaxKind.ClefKeyword);
+        var bang = ParseForceMark();
 
         SyntaxToken clefName;
         if (SyntaxFacts.IsClefKeyword(Current.Kind))
@@ -372,7 +385,7 @@ internal sealed partial class Parser
             clefName = new SyntaxToken(SyntaxKind.TrebleKeyword, "", null, null);
         }
 
-        return new ClefDeclarationGreen(clefKeyword, clefName);
+        return new ClefDeclarationGreen(clefKeyword, bang, clefName);
     }
 
     /// <summary>

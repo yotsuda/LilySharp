@@ -2744,31 +2744,53 @@ public sealed class LilyPondExporter
     /// </summary>
     private string EmitItem(SyntaxNode item)
     {
-        if (_sectionHead is not { } head)
-            return EmitItemCore(item);
+        var head = _sectionHead;
         switch (item)
         {
             case TimeSignatureSyntax ts:
             {
-                bool same = ts.IsSenzaMisura == head.Senza
-                            && (ts.IsSenzaMisura || TimeText(ts) == head.TimeText);
+                // Unchanged against the head (what the section before left) or, elsewhere, the
+                // meter in force; `time!` writes it regardless — LilyPond draws every \time.
+                bool same = ts.IsSenzaMisura == (head?.Senza ?? _timeSenza)
+                            && (ts.IsSenzaMisura || TimeText(ts) == (head?.TimeText ?? _timeText));
+                string written = EmitItemCore(item);   // advances the running meter either way
+                if (same && !ts.IsForced)
+                {
+                    if (head != null)
+                        _heldTimeRestore = null;
+                    return "";
+                }
+                if (head == null)
+                    return written;
                 string held = _heldTimeRestore ?? "";
                 _heldTimeRestore = null;
-                string written = EmitItemCore(item);   // advances the running meter either way
-                return same ? "" : Join(Join(held, TakeHeldMark()), written);
+                return Join(Join(held, TakeHeldMark()), written);
             }
-            case KeySignatureSyntax:
+            case KeySignatureSyntax k:
             {
+                var (sharpsBefore, tonicBefore) = head is { } h ? (h.KeySharps, h.Tonic) : (_keySharps, _tonic);
+                string written = EmitItemCore(item);   // advances the running key either way
+                bool same = _keySharps == sharpsBefore && _tonic == tonicBefore;
+                if (same && !k.IsForced)
+                {
+                    if (head != null)
+                        _heldKeyRestore = null;
+                    return "";
+                }
+                if (head == null)
+                    return written;
                 string held = _heldKeyRestore ?? "";
                 _heldKeyRestore = null;
-                string written = EmitItemCore(item);   // advances the running key either way
-                bool same = _keySharps == head.KeySharps && _tonic == head.Tonic;
-                return same ? "" : Join(Join(held, TakeHeldMark()), written);
+                return Join(Join(held, TakeHeldMark()), written);
             }
-            case ClefDeclarationSyntax:
-                return EmitItemCore(item);
+            case ClefDeclarationSyntax cl:
+                // LilyPond draws no clef that changes nothing (clef-engraver.cc:139-166), which is
+                // the page's default; `clef!` is LilyPond's forceClef.
+                return cl.IsForced
+                    ? Join("\\set Staff.forceClef = ##t", EmitItemCore(item))
+                    : EmitItemCore(item);
             default:
-                return Join(FlushSectionHead(), EmitItemCore(item));
+                return head == null ? EmitItemCore(item) : Join(FlushSectionHead(), EmitItemCore(item));
         }
 
         static string Join(string a, string b) => a.Length == 0 ? b : b.Length == 0 ? a : a + " " + b;

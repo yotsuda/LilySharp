@@ -390,21 +390,21 @@ internal sealed class TimeSignatureGreen : GreenSyntaxNode
 {
     // In a part/staff header the keyword takes a colon ('time: 4/4'); in the music
     // stream it is a bare command ('time 4/4'), so the colon slot is null there.
-    public TimeSignatureGreen(SyntaxToken timeKeyword, SyntaxToken? colon, SyntaxToken numerator, SyntaxToken slash, SyntaxToken denominator)
-        : base(SyntaxKind.TimeSignature, [timeKeyword, colon, numerator, slash, denominator])
+    public TimeSignatureGreen(SyntaxToken timeKeyword, SyntaxToken? bang, SyntaxToken? colon, SyntaxToken numerator, SyntaxToken slash, SyntaxToken denominator)
+        : base(SyntaxKind.TimeSignature, [timeKeyword, bang, colon, numerator, slash, denominator])
     {
     }
 
     // Senza misura (time none): just the keyword and the "none" word.
-    public TimeSignatureGreen(SyntaxToken timeKeyword, SyntaxToken? colon, SyntaxToken noneWord)
-        : base(SyntaxKind.TimeSignature, [timeKeyword, colon, noneWord])
+    public TimeSignatureGreen(SyntaxToken timeKeyword, SyntaxToken? bang, SyntaxToken? colon, SyntaxToken noneWord)
+        : base(SyntaxKind.TimeSignature, [timeKeyword, bang, colon, noneWord])
     {
     }
 
     // Additive meter (time 3+2/8): extra (+, int)* tokens follow the first
     // numerator IN SOURCE ORDER, before the slash.
-    public TimeSignatureGreen(SyntaxToken timeKeyword, SyntaxToken? colon, GreenNode?[] numeratorTokens, SyntaxToken slash, SyntaxToken denominator)
-        : base(SyntaxKind.TimeSignature, [timeKeyword, colon, .. numeratorTokens, slash, denominator])
+    public TimeSignatureGreen(SyntaxToken timeKeyword, SyntaxToken? bang, SyntaxToken? colon, GreenNode?[] numeratorTokens, SyntaxToken slash, SyntaxToken denominator)
+        : base(SyntaxKind.TimeSignature, [timeKeyword, bang, colon, .. numeratorTokens, slash, denominator])
     {
     }
 }
@@ -657,9 +657,10 @@ internal sealed class KeySignatureGreen : GreenSyntaxNode
 {
     public KeySignatureGreen(
         SyntaxToken keyKeyword,
+        SyntaxToken? bang,
         GreenNode pitch,
         SyntaxToken mode)
-        : base(SyntaxKind.KeySignature, [keyKeyword, pitch, mode])
+        : base(SyntaxKind.KeySignature, [keyKeyword, bang, pitch, mode])
     {
     }
 
@@ -667,9 +668,10 @@ internal sealed class KeySignatureGreen : GreenSyntaxNode
     // in print order. LILYPOND-REF: keyAlterations; MusicXML key-step/key-alter.
     public KeySignatureGreen(
         SyntaxToken keyKeyword,
+        SyntaxToken? bang,
         SyntaxToken customWord,
         GreenNode?[] pitches)
-        : base(SyntaxKind.KeySignature, [keyKeyword, customWord, .. pitches])
+        : base(SyntaxKind.KeySignature, [keyKeyword, bang, customWord, .. pitches])
     {
     }
 }
@@ -681,8 +683,9 @@ internal sealed class ClefDeclarationGreen : GreenSyntaxNode
 {
     public ClefDeclarationGreen(
         SyntaxToken clefKeyword,
+        SyntaxToken? bang,
         SyntaxToken clefName)
-        : base(SyntaxKind.ClefDeclaration, [clefKeyword, clefName])
+        : base(SyntaxKind.ClefDeclaration, [clefKeyword, bang, clefName])
     {
     }
 }

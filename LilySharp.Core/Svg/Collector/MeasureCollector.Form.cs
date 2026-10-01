@@ -541,10 +541,10 @@ public sealed partial class MeasureCollector
         {
             var headerTime = new TimeSignature(sectionTime.Beats, sectionTime.BeatType,
                 sectionTime.BeatsText, sectionTime.IsSenzaMisura);
-            // A header restating the meter the section before left is no change
-            // (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so there
-            // is nothing to withdraw.
-            if (builder.SectionHead is { } head && head.SameMeter(headerTime))
+            // A header restating the meter the section before left is no change unless written
+            // `time!` (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so
+            // there is nothing to withdraw.
+            if (builder.SectionHead is { } head && head.SameMeter(headerTime) && !sectionTime.IsForced)
                 builder.MeterInForce = headerTime;
             else
                 // A `time none` header carries no ink and no width — TimeSignatureChangeItem.Blanked.
@@ -802,6 +802,8 @@ public sealed partial class MeasureCollector
     private void ApplyKeySignatureChange(KeySignatureSyntax keySig, MeasureBuilder builder)
     {
         var previousKey = new KeySignature(_meta.KeySharps, _meta.KeyCustom);
+        var (previousTonicStep, previousTonicAlter, previousTonicValid)
+            = (_ambientTonicStep, _ambientTonicAlter, _ambientTonicValid);
         KeySignature newKey;
         if (keySig.IsCustom)
         {
@@ -845,14 +847,21 @@ public sealed partial class MeasureCollector
             return;
         }
 
-        // A section head stating again the key the section before it left — signature AND
-        // tonic, as the reset compares them — is no change: the reset it stands on is withdrawn
-        // and nothing is drawn (MeasureBuilder.SectionHead, LILYSHARP-OWN).
-        if (builder.SectionHead is { } head && head.Key == newKey
-            && (newKey.Custom != null
-                || (head.TonicValid && head.TonicStep == _ambientTonicStep && head.TonicAlter == _ambientTonicAlter)))
+        // A key that changes nothing — signature AND tonic, as the section reset compares them —
+        // is not drawn unless written `key!` (MeasureBuilder.SectionHead, LILYSHARP-OWN). At a
+        // section head "nothing" is what the section before left, and the reset standing there
+        // is withdrawn with it; elsewhere it is the key in force.
+        var head = builder.SectionHead;
+        bool unchanged = head is { } h
+            ? h.Key == newKey && (newKey.Custom != null
+                || (h.TonicValid && h.TonicStep == _ambientTonicStep && h.TonicAlter == _ambientTonicAlter))
+            : previousKey == newKey && (newKey.Custom != null
+                || (previousTonicValid && previousTonicStep == _ambientTonicStep
+                    && previousTonicAlter == _ambientTonicAlter));
+        if (unchanged && !keySig.IsForced)
         {
-            builder.WithdrawStanding<KeySignatureChangeItem>();
+            if (head != null)
+                builder.WithdrawStanding<KeySignatureChangeItem>();
             return;
         }
 

@@ -117,12 +117,18 @@ public sealed class KeySignatureSyntax : SyntaxNode
     /// <summary>The <c>key</c> keyword token.</summary>
     public SyntaxTokenNode KeyKeyword => (SyntaxTokenNode)GetChild(0)!;
 
-    /// <summary>True for <c>key custom …</c> (slot 1 is the word, pitches follow).</summary>
-    public bool IsCustom => GetChild(1) is SyntaxTokenNode t
+    /// <summary>The <c>!</c> after the keyword (<c>key! …</c>): drawn even if it changes
+    /// nothing. Null when not written.</summary>
+    public SyntaxTokenNode? ForceMark => GetChild(1) as SyntaxTokenNode;
+    /// <summary>True when <see cref="ForceMark"/> is written.</summary>
+    public bool IsForced => ForceMark is not null;
+
+    /// <summary>True for <c>key custom …</c> (slot 2 is the word, pitches follow).</summary>
+    public bool IsCustom => GetChild(2) is SyntaxTokenNode t
         && t.Text.Equals("custom", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The tonic pitch of a traditional key.</summary>
-    public PitchSyntax Pitch => (PitchSyntax)GetChild(1)!;
+    public PitchSyntax Pitch => (PitchSyntax)GetChild(2)!;
 
     /// <summary>How the editor names this key — <c>f major</c>, <c>d minor</c>, or
     /// <c>custom</c> for a custom signature, which has no tonic.</summary>
@@ -130,9 +136,9 @@ public sealed class KeySignatureSyntax : SyntaxNode
     /// it is a cast, and on <c>key custom …</c> it threw — every book with a custom key lost
     /// its outline (found by the language-server sweep, session 717).</remarks>
     public string DisplayName => IsCustom ? "custom"
-        : $"{(GetChild(1) as PitchSyntax)?.PitchName} {(IsMajor ? "major" : "minor")}";
+        : $"{(GetChild(2) as PitchSyntax)?.PitchName} {(IsMajor ? "major" : "minor")}";
     /// <summary>The mode token (e.g. <c>major</c>, <c>minor</c>).</summary>
-    public SyntaxTokenNode Mode => (SyntaxTokenNode)GetChild(2)!;
+    public SyntaxTokenNode Mode => (SyntaxTokenNode)GetChild(3)!;
 
     /// <summary>True for a major key (a non-custom key whose mode is <c>major</c>).</summary>
     public bool IsMajor => !IsCustom && Mode.Kind == SyntaxKind.MajorKeyword;
@@ -144,7 +150,7 @@ public sealed class KeySignatureSyntax : SyntaxNode
         get
         {
             if (!IsCustom) yield break;
-            for (int i = 2; i < SlotCount; i++)
+            for (int i = 3; i < SlotCount; i++)
                 if (GetChild(i) is PitchSyntax p)
                     yield return (
                         "cdefgab".IndexOf(p.BaseName),
@@ -165,8 +171,13 @@ public sealed class ClefDeclarationSyntax : SyntaxNode
 
     /// <summary>The <c>clef</c> keyword token.</summary>
     public SyntaxTokenNode ClefKeyword => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The <c>!</c> after the keyword (<c>clef! …</c>): drawn even if it changes
+    /// nothing. Null when not written.</summary>
+    public SyntaxTokenNode? ForceMark => GetChild(1) as SyntaxTokenNode;
+    /// <summary>True when <see cref="ForceMark"/> is written.</summary>
+    public bool IsForced => ForceMark is not null;
     /// <summary>The clef name token (e.g. <c>treble</c>, <c>bass</c>).</summary>
-    public SyntaxTokenNode ClefName => (SyntaxTokenNode)GetChild(1)!;
+    public SyntaxTokenNode ClefName => (SyntaxTokenNode)GetChild(2)!;
 }
 
 /// <summary>

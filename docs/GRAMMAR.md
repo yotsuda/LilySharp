@@ -276,8 +276,8 @@ FeelWord       = 'swing' | 'shuffle' ;      (* contextual, NOT reserved words *)
                     Every one of those is pinned in TempoValueTests; changing one changes
                     what existing scores mean. A Decimal anywhere in the run is LYS0022 —
                     a metronome mark is whole and a beat unit is a note value. *)
-TimeDecl       = 'time' , Integer , '/' , Integer
-               | 'time' , 'none' ;
+TimeDecl       = 'time' , [ '!' ] , Integer , '/' , Integer
+               | 'time' , [ '!' ] , 'none' ;
                  (* 'time none' is SENZA MISURA — unmetered music, LilyPond's \cadenzaOn.
                     From it to the next 'time N/M' the engine builds no automatic measure
                     boundary: a measure ends only at a WRITTEN '|', which still draws the
@@ -299,7 +299,14 @@ TimeDecl       = 'time' , Integer , '/' , Integer
                     '|' inside it as \bar "|", and \cadenzaOff before the returning \time
                     — followed by \partial <bar> when the span opened mid-bar, since
                     LilyPond's frozen measurePosition is not reset by \cadenzaOff. *)
-KeyDecl        = 'key' , PitchBase , [ Accidental-text ] , Mode ;
+KeyDecl        = 'key' , [ '!' ] , PitchBase , [ Accidental-text ] , Mode ;
+                 (* A 'time', 'key' or 'clef' that changes nothing draws nothing — at a
+                    section's start, compared with what the section before it left
+                    (LILYSHARP-OWN, 2026-10-02; LilyPond engraves every \time and \key).
+                    The '!' right after the keyword draws it all the same. It goes there, not
+                    after the value, because a '!' after the value is the dashed barline
+                    (`key ees major !` is a key, then a dashed bar); a space before it is
+                    allowed. The twin writes a forced clef with \set Staff.forceClef = ##t. *)
 
 Mode           = 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian'
                | 'lydian' | 'mixolydian' | 'aeolian' | 'locrian' ;
@@ -1687,10 +1694,11 @@ MusicItem      = Note | Rest | Chord | Arpeggio | Barline | PhraseRef
 (* Mid-music commands change context here. clef/key/time use the bare COMMAND form
    (no colon) — distinct from a part header which uses the same bare form to set the
    INITIAL value. *)
-MidMusicCommand = 'clef' , ClefName
-               | 'key' , PitchBase , [ Accidental-text ] , Mode
-               | 'time' , Integer , '/' , Integer
-               | 'time' , 'none'                    (* unmetered from here to the next
+MidMusicCommand = 'clef' , [ '!' ] , ClefName       (* '!' forces a clef that changes
+                                                      nothing — see KeyDecl §2 *)
+               | 'key' , [ '!' ] , PitchBase , [ Accidental-text ] , Mode
+               | 'time' , [ '!' ] , Integer , '/' , Integer
+               | 'time' , [ '!' ] , 'none'          (* unmetered from here to the next
                                                       'time N/M' — see TimeDecl §2 *)
                | 'partial' , DurationToken         (* this bar is that long — at a bar's
                                                       start after the section's first bar,

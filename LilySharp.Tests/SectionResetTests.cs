@@ -278,17 +278,56 @@ public sealed class SectionResetTests
         Assert.Single(measures[^1].Items.OfType<TimeSignatureChangeItem>());
     }
 
-    [Fact]
-    public void ARestatementInsideASection_IsStillDrawn()
+    [Theory]
+    [InlineData("key g major c1 | key g major c1 |")]
+    [InlineData("time 3/4 c2. | time 3/4 c2. |")]
+    [InlineData("clef bass c1 | clef bass c1 |")]
+    public void ARestatementInsideASection_DrawsNothing(string music)
     {
-        // LilyPond's rule where Lily# keeps it: every key event draws.
-        var measures = CollectParsed("""
+        // The same rule everywhere, not only at a head: a restatement that changes nothing
+        // draws nothing (LILYSHARP-OWN, owner's decision 2026-10-02 — LilyPond draws every
+        // \key and \time); `!` draws it all the same.
+        var measures = CollectParsed($$"""
             part m { clef treble }
-            section A { m { key g major c1 | key g major c1 | } }
+            section A { m { {{music}} } }
             form main { A }
             score main { staff m }
             """);
-        Assert.Single(measures[1].Items.OfType<KeySignatureChangeItem>());
+        Assert.DoesNotContain(measures[1].Items,
+            i => i is TimeSignatureChangeItem or KeySignatureChangeItem or ClefChangeItem);
+    }
+
+    [Theory]
+    [InlineData("key g major c1 | key! g major c1 |", typeof(KeySignatureChangeItem))]
+    [InlineData("time 3/4 c2. | time! 3/4 c2. |", typeof(TimeSignatureChangeItem))]
+    [InlineData("clef bass c1 | clef! bass c1 |", typeof(ClefChangeItem))]
+    public void AForcedRestatementInsideASection_IsDrawn(string music, Type drawn)
+    {
+        var measures = CollectParsed($$"""
+            part m { clef treble }
+            section A { m { {{music}} } }
+            form main { A }
+            score main { staff m }
+            """);
+        Assert.Single(measures[1].Items, drawn.IsInstanceOfType);
+    }
+
+    [Theory]
+    [InlineData("key ees major", "key! ees major", "", typeof(KeySignatureChangeItem))]
+    [InlineData("time 3/4", "time! 3/4", "", typeof(TimeSignatureChangeItem))]
+    [InlineData("time 3/4", "", "time! 3/4", typeof(TimeSignatureChangeItem))]   // in the header
+    [InlineData("clef bass", "clef! bass", "", typeof(ClefChangeItem))]
+    public void AForcedRestatementAtTheSectionHead_IsDrawnOnce(string inA, string atB, string headerB, Type drawn)
+    {
+        var measures = CollectParsed($$"""
+            time 4/4
+            part m { clef treble }
+            section A { m { c4 d e f | {{inA}} c2. | } }
+            section B { {{headerB}} m { {{atB}} c2. | } }
+            form main { A B }
+            score main { staff m }
+            """);
+        Assert.Single(measures[^1].Items, drawn.IsInstanceOfType);
     }
 
     [Theory]

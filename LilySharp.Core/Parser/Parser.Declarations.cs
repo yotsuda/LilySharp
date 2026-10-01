@@ -951,13 +951,14 @@ internal sealed partial class Parser
     private TimeSignatureGreen ParseTimeSignature()
     {
         var timeKeyword = Expect(SyntaxKind.TimeKeyword);
+        var bang = ParseForceMark();
         SyntaxToken? colon = ConsumeRejectedColon();
         // Senza misura: `time none` — unmeasured music (no signature printed,
         // no bar-length validation). MusicXML <senza-misura/>.
         if (Current.Kind == SyntaxKind.Identifier
             && Current.Text.Equals("none", StringComparison.OrdinalIgnoreCase))
         {
-            return new TimeSignatureGreen(timeKeyword, colon, Advance());
+            return new TimeSignatureGreen(timeKeyword, bang, colon, Advance());
         }
         var numerator = Expect(SyntaxKind.IntegerLiteral);
         // Additive meter: time 3+2/8 — MusicXML <beats>3+2</beats>.
@@ -971,11 +972,11 @@ internal sealed partial class Parser
             }
             var addSlash = Expect(SyntaxKind.Slash);
             var addDen = Expect(SyntaxKind.IntegerLiteral);
-            return new TimeSignatureGreen(timeKeyword, colon, [.. numTokens], addSlash, addDen);
+            return new TimeSignatureGreen(timeKeyword, bang, colon, [.. numTokens], addSlash, addDen);
         }
         var slash = Expect(SyntaxKind.Slash);
         var denominator = Expect(SyntaxKind.IntegerLiteral);
-        return new TimeSignatureGreen(timeKeyword, colon, numerator, slash, denominator);
+        return new TimeSignatureGreen(timeKeyword, bang, colon, numerator, slash, denominator);
     }
 
     // 'tempo 120' is written bare everywhere (music-stream command and part/staff

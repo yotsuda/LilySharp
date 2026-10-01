@@ -193,4 +193,53 @@ public class LilyPondExporterSectionPlayTests
         Assert.Contains("\\time 2/4", cHead);
         Assert.Contains("\\key c \\major", ly.Substring(b, c - b + 40) + cHead);
     }
+
+    /// <summary>
+    /// Inside a section the twin writes what the page draws too: a restatement that changes
+    /// nothing is left out (LilyPond would draw every \time and \key), and `key!` / `time!` /
+    /// `clef!` are written — the clef with LilyPond's forceClef, since its clef engraver draws
+    /// no clef that changes nothing.
+    /// </summary>
+    [Fact]
+    public void ARestatementInsideASection_IsWrittenOnlyWhenForced()
+    {
+        string Book(string bang) => $$"""
+            part m { clef treble }
+            section A { m { key g major time 3/4 clef bass c2. | key{{bang}} g major time{{bang}} 3/4 clef{{bang}} bass c2. | } }
+            form main { A }
+            score main { staff m }
+            """;
+        Assert.False(SyntaxTree.Parse(Book("!")).HasErrors);
+        static int Count(string s, string what) => (s.Length - s.Replace(what, "").Length) / what.Length;
+
+        var plain = Export(Book(""));
+        Assert.Equal(1, Count(plain, "\\key g \\major"));
+        Assert.Equal(1, Count(plain, "\\time 3/4"));
+        Assert.DoesNotContain("forceClef", plain);
+
+        var forced = Export(Book("!"));
+        Assert.Equal(2, Count(forced, "\\key g \\major"));
+        Assert.Equal(2, Count(forced, "\\time 3/4"));
+        Assert.Contains("\\set Staff.forceClef = ##t \\clef ", forced);
+    }
+
+    [Fact]
+    public void AForcedRestatementAtTheSectionHead_IsWritten()
+    {
+        const string book = """
+            time 4/4
+            part m { clef treble }
+            section A { m { c4 d e f | time 3/4 key ees major c2. | } }
+            section B { m { time! 3/4 key! ees major c2. | } }
+            form main { A B }
+            score main { staff m }
+            """;
+        Assert.False(SyntaxTree.Parse(book).HasErrors);
+        var ly = Export(book);
+        int b = ly.IndexOf("\\box \"B\"");
+        Assert.True(b >= 0, ly);
+        string bHead = ly.Substring(b);
+        Assert.Contains("\\time 3/4", bHead);
+        Assert.Contains("\\key ees \\major", bHead);
+    }
 }

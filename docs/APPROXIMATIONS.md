@@ -136,7 +136,7 @@
 ## UNWATCHED — 観測者がゼロだと自認しているもの（60 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:3223** container, and the value stops being unobserved with the line above.
+- **:3245** container, and the value stops being unobserved with the line above.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:691** no observer; add the paren widths when a book brings one. The unpacked
 - **:693** bare glyph width, which is exact for one and unobserved for many.
@@ -242,11 +242,11 @@
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2740** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision 2026-10-02). Any other
-- **:3218** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:3598** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
-- **:5571** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
-- **:5630** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
-- **:7328** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:3240** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
+- **:3620** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
+- **:5593** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
+- **:5652** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
+- **:7350** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
@@ -331,16 +331,16 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureBuilder.cs`
-- **:414** else null. LILYSHARP-OWN (owner's decision, 2026-10-02, HANDOFF §1.1 第737): a meter,
+- **:421** LILYSHARP-OWN (owner's decisions, 2026-10-02, HANDOFF §1.1 第737): a time, key
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **:2800** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
 - **:5208** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Form.cs`
-- **:545** (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so there
-- **:850** and nothing is drawn (MeasureBuilder.SectionHead, LILYSHARP-OWN).
+- **:545** `time!` (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so
+- **:851** is not drawn unless written `key!` (MeasureBuilder.SectionHead, LILYSHARP-OWN). At a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.MusicWalk.cs`
-- **:1605** (MeasureBuilder.SectionHead, LILYSHARP-OWN).
-- **:1667** drawn (MeasureBuilder.SectionHead, LILYSHARP-OWN).
+- **:1597** not against the reset the head already stands on (LILYSHARP-OWN): a
+- **:1676** (MeasureBuilder.SectionHead, LILYSHARP-OWN).
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
