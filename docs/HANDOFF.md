@@ -83,12 +83,12 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
 - **T7 の残り（双子と段割れが違う 22 score＝双子の既定の数字と比べる限り残る差）**: ⒜ staff＋tab で Lily# が段を増やす族（Amanda・Butterfly ほか）＝**第583 が F9 の帰結と確定**（Lily# の数字の rod は LP の font-size 2〜3 の間＝§1.1 第583）／⒣ **カムフラージュ（staff＋tab）1 段目 LP 6,7・Lily# 7,6**＝第587 が値付けした（LP の割りを測るには percent 反復の内側で割らせる必要＝保留）／⒡ **小節の合計が合わない score（Disco Inferno ほか＝22 の外）は計器**（LP の小節番号の数え方）／⒞ tab だけの Lily# が段を増やす 5／⒟ Le Freak は A1 の僅差が逆に倒れた（`SystemCountPageScoreTests.LineStartInk` の説明）。閉じた分（merge・Universe・奏・rod・小節線のばね・first_head）は第576〜第661 の §1.1（ARCHIVE）
-- ⚠️ **双子の計器の残り**: 小節数の違う 14 score は計器（LP の小節番号の数え方＝途中の弱起・反復）／署名なし 21 は 1 段だけの試験ファイル（段中の番号が無い）／LP 失敗 2（Mandy・You're the One That I Want (-1)）＝未読。**比較の基準は双子の既定の数字**（`TabNoteHead.font-size` 2・3 を足すと一致が 413 → 409 → 394 に減る）
+- ⚠️ **双子の計器の残り**: 小節数の違う 14 score は計器（LP の小節番号の数え方＝途中の弱起・反復）／署名なし 21 は 1 段だけの試験ファイル（段中の番号が無い）／LP 失敗 2（Mandy・You're the One That I Want (-1)）＝本の側（第737 で読んだ: 4 弦 bass の最低弦より下の音＝Lily# は 1 音ずつ「tab から省いた・1 オクターブ低いのでは」と警告・LP は弦の無い TabNoteHead で自分の Guile が落ちる＝LP の不具合。Mandy は 13/16 の小節も本の側＝LYS2001）。**比較の基準は双子の既定の数字**（`TabNoteHead.font-size` 2・3 を足すと一致が 413 → 409 → 394 に減る）
 - **U9 ユーザー報告 `space.lys` の小節頭の余白＝保留（ユーザー判断「一旦この件は忘れて」・第477）**。4 通りすべてで再現せず LP とも同比率（Lab `sessions/p477/`）。⚠️ **毒は今後も同じフォルダで回してよい**（ユーザー決定）＝毒の最中のビルドはユーザー側で避ける
 - ⏸ **perf の島（⒭⁸・⒮*・⒩⁴・⒨・⒯ …）は第615 で区切り＝一時停止（ユーザー判断・忠実度が先）**。本文は `HANDOFF-ARCHIVE.md`「§1.0 から移した perf の島」（第660 に移した）
 - ★★ **U10 ユーザーのコーパスに*効いていない弦番号*が 473 件（39 冊）**（第486・LYS5003・Lab `sessions/p486/lys5003-corpus.txt`）: 書いた `\N` の弦では弾けない音＝Lily# は黙って別の弦に描く（LP も同じ）。**ユーザー決定「放置」（第523）＝本は直さない・描画は今までと同じ**
 
-- **tab の斜めの tuplet bracket が LP より 0.2〜0.25 高い**（`tt-cap`・第736 ⑵ で pin つきの計器が初めて見せた）・`tabtuplet2`／`tabtuplet4` の右の鉤 +0.28 は第736 ⑶ で閉じた。計器 Lab `sessions/p736/cb/cmp.ps1 -BooksDir …\books1722`（数字を LP の大きさにした 16 冊）。⚠️ **LP を `-dbackend=svg` で描く計器は `lysc ly --pin-fonts` 必須**（第690〜第695 の 6 本は無しで、数字の幅・高さが汎用 serif だった＝第736 ⑴⑵）
+- ⚠️ **LP を `-dbackend=svg` で描く計器は `lysc ly --pin-fonts` 必須**（第690〜第695 の 6 本は無しで、数字の幅・高さが汎用 serif だった＝第736 ⑴⑵）。tab の tuplet の残差は全部 beam の決定（`uniformBeamedLength`）の帰結＝第737
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
 - ⚠️ **U11（`Hold the Line` の page1 が LP 8 系・Lily# 7 系）＝第547 が「移植できる欠陥は無い」と確定・第573 が lead を閉じた（頁 DP の僅差 0.030576 対 0.031049＝1e-3 級の差でどちらにも倒れる）＝提案しない**（全文は §1.1 第547・第573＝ARCHIVE・Lab `sessions/p547/`・`sessions/p573/u11/`）。重複 mark は第558 が畳んだ（LYS4021）＝page 割りは動かない
@@ -119,6 +119,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第737セッション（2026-10-02・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第736 の判定: tab の斜めの tuplet bracket）。`-Start p737`（HEAD `70122cce`・未 push 66）＝full **10643 / 0 / 2 / 10645**（引継ぎと一致）。
+⑴ **tab の斜めの tuplet bracket（`tt-cap` 0.2〜0.25）は欠陥ではなかった＝beam の決定（`uniformBeamedLength`・第569・第694 ユーザー決定「維持」）の帰結**。LP の Beam の positions を直接読むと（Lab `sessions/p737/beamdump.ily`）1 本目の beam は LP と同一・2 本目（`g,8[ g,8]`）だけ 0.56 低く、括弧の右の bound はその列＝右端が下がり傾きが緩む。`TabStaffGeometry` の `uniformBeamedLength` を一時的に false にすると `tt-cap` は LP と 0.04 以内（8.32／5.84 対 8.36／5.85）・`tt-beam`／`tt-nest` の 0.56 も 0＝第690 の 16 冊は決定を外せば全部 LP。製品は不変・§1.0 ⒜ の行を閉じた（pin の警告だけ残した）。
+⑵ 第736 の残りの pin なし計器も回し直した: 第695 の `scriptcmp.ps1`（`ns` 28 冊）は pin あり・なしで 252 行すべて同じ＝結論は不変（Lab `sessions/p737/ns-*.txt`）。これで 6 本とも済み。
+⑶ §1.0 ⒜「双子の LP 失敗 2」を読んだ＝**本の側・Lily# は既に警告している**（4 弦 bass の最低弦 E1 より下の音: You're the One (-1) は `a,,,4`・`g,,,8` など 1 オクターブ低い箇所、Mandy も同じ＋13/16 の小節）。LP は弦の無い TabNoteHead で `ly:grob-object: Wrong type argument` と自分の Guile が落ちる（Lab `sessions/p737/lpfail`）。書き出し側の欠陥ではない＝本の修正はユーザー。
+★ `-End p737 -DiffBase 70122cce`＝full **10643 / 0 / 2 / 10645**・門 全 OK・Core `+` 0 行（製品は不変・この便は調査だけ）。push はユーザー（未 push 67）。
+判定: §1.0 ⒜ で手が動くものは尽きた（残りはユーザーの手動確認・リリース時期・T7〔数字の大きさの決定の族〕・観測者の無い速度記号の残り 3 つ）＝**次はユーザーの選択が要る**。候補: 第734 ⑶ の未決（section 頭の書き直しが前と同じなら描かない＝Bohemian の G・H も切れる）／5/4 の全小節休符の綴り（言語設計）／⒝ の設計項目。
+
+## 以下は第736セッションの経緯
+
 ### 1.1 第736セッション（2026-10-01・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。`-Start p736`（HEAD `09038a4f`・未 push 63）＝full **10641 / 0 / 2 / 10643**（引継ぎと一致）。
@@ -130,24 +141,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠ 未変更・観測者なし: `AddAccidentalReachRods` も tab の声部の（描かれない）臨時記号で rod を張りうる（試した 3 本は LP と一致＝噛まない）。
 ★ `-End p736 -DiffBase 09038a4f`＝full **10643 / 0 / 2 / 10645**（網 +2）・門 全 OK。7.5: Core `+` 21 行・REF 1（spacing-spanner.cc の既存の引用を条件の内側へ移しただけ）・OWN 0＝読み直した。7.6: ⑶＝⒜（LP の TabStaff に無い grob を値付けしない）。7.7: 該当なし。push はユーザー（未 push 66）。
 判定: 次は §1.0 ⒜ の「tab の斜めの tuplet bracket 0.2〜0.25」（この便の計器 `cb/cmp.ps1` と `books1722` がそのまま使える）＝**この会話で続けるのが有利**（(a)＝今の文脈の上に立つ）。
-
-## 以下は第735セッションの経緯
-
-### 1.1 第735セッション（2026-10-01・YT-DELL2）
-
-新しい会話（ユーザー「HANDOFF を読んで作業に着手して」）。`-Start p735`（HEAD `43d6e508`・未 push 61）＝full **10638 / 0 / 2 / 10640**（第734 の 10630 ＋ ⑶ の網 8＝一致）。
-⑴ §1.0 ⒜ の残り 2 つはどちらも「今すぐ」ではなかった（5/4 の全小節休符は第723 が「Lily# に綴りが無い＝言語設計」と確定済み＝⒞ へ移した・tuplet の数字は書体の字幅）→ ユーザーが選んだ「速度記号の張り出し」（第734 ⑵ の提案）。
-⑵ ★ `1e7fbe5b` **速度記号を keep-inside-line に入れ、改行器が行末の rod を値付け＝01 が LP と同じ 7/6/5/7 に**（旧 6/6/6/7）。原因は 3 つ重なっていた:
-- gate は keep-inside の rod を一切値付けしていなかった → 小節ごとに「行末に来たときの spring」（`MeasureSpringData.LineEndSprings`＝各列から小節末への rod を `ApplyRods` で当てたもの）を持たせ、候補の行の最後の小節で差し替える（行頭の `LineStartSpring` と同じ形・和の差分は `KnuthPlassBreaker.LineEndDelta`）。
-- レイアウトの列の張り出しに速度記号が無かった → `MultiStaffLayouter.ColumnOverhangs` に切り出して 1 つの家に（歌詞・コード・音符・速度記号）。レイアウトと gate が同じ関数を読む。
-- 拍子変更のある小節の速度記号が最初の音符に立っていた（LP は拍子記号のインク左端）: collector は小節頭の記号の `AnchorItemIndex` を調・拍子の item の後に付ける＝engraver の「小節の途中」の分岐に落ちていた → `MusicMarkEngraver.IsMeasureStartTempo`（タイミング 0 なら小節頭）＋`SpacingRules.OpeningTimeChangeInkLeft`（レンダラの描き方と同じ歩き）。その記号の rod は小節の鎖の始点から張る。
-- 01 の小節 13 で終わる行の自然幅 +1.619（LP の測定 +1.647・差 0.028 は未分解）。
-- 新プローブ `tempo-line-end.ly`（TMM・TME）＋台帳 2 点 `tempo.x.mid-line-meter-change`（開いた値 +4.046）・`tempo.line-end.right-from-end-bar`（+20.174）→ **両方 EXACT**。網 `TempoLineEndBreakTests`（01 の 7/6/5/7）＋`SpacingInvariantTests.BreakGate_PricesTheCrossBarLyricRod` に行末の窓（歌詞のある行は和で値付けされる＝和の差し替えの観測者）。
-- 毒 4 種（Lab `sessions/p735/poisons.ps1`）: gate を切る 1 赤・張り出しから速度記号を外す 2 赤・index で判定 1 赤・DP の和の差し替えを外す＝最初は緑（01 の行は spring を解く道）→ 行末の窓を足して 1 赤。
-- 掃き（998 冊・1,199 枚・基準 HEAD・Lab `sessions/p735/sweep`）: **1 枚だけ**＝`audit/lpreg/metropar.lys`（最後の小節の「(♩ = 80)」を行の内側に＝五線の右端 31.47 → 33.45・**LP 33.449**）。snapshot 0 枚。full **10641 / 0 / 2 / 10643**。
-- 残り（未値付け）: `markTempo beside` で標識の右に立つ速度記号の張り出し／gate は行末の小節の自分の列の rod だけ（前の小節から行末まで届く長い記号は layout だけが保つ）／1 小節の行で前置きの拍子に立つ速度記号を gate が余分に値付け。
-★ `-End p735 -DiffBase 43d6e508`＝full **10641 / 0 / 2 / 10643**（網 +3）・門 全 OK・台帳 959 点（exact 765・OPEN 0）。7.5: Core `+` 306 行・REF 2（simple-spacer.cc・metronome-engraver.cc）・OWN 1＝この便が閉じた旧い限界の名を書いた註（新しい逸脱ではない）。7.6・7.7: 該当なし。push はユーザー（未 push 63）。
-判定: 次の候補は §1.0 ⒜／⒝ からで、どれもこの便の文脈（行末の rod）を使わない＝続けても新しい会話でも差は小さい（既定は続ける）。近いのは「残り（未値付け）」の 3 つだが、どれも観測者（実コーパスで動く本）が見つかっていない＝掃きで 0 冊。
 
 ## 2. 開いている作業
 

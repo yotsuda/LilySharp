@@ -129,6 +129,24 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第735セッションの経緯
+
+### 1.1 第735セッション（2026-10-01・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで作業に着手して」）。`-Start p735`（HEAD `43d6e508`・未 push 61）＝full **10638 / 0 / 2 / 10640**（第734 の 10630 ＋ ⑶ の網 8＝一致）。
+⑴ §1.0 ⒜ の残り 2 つはどちらも「今すぐ」ではなかった（5/4 の全小節休符は第723 が「Lily# に綴りが無い＝言語設計」と確定済み＝⒞ へ移した・tuplet の数字は書体の字幅）→ ユーザーが選んだ「速度記号の張り出し」（第734 ⑵ の提案）。
+⑵ ★ `1e7fbe5b` **速度記号を keep-inside-line に入れ、改行器が行末の rod を値付け＝01 が LP と同じ 7/6/5/7 に**（旧 6/6/6/7）。原因は 3 つ重なっていた:
+- gate は keep-inside の rod を一切値付けしていなかった → 小節ごとに「行末に来たときの spring」（`MeasureSpringData.LineEndSprings`＝各列から小節末への rod を `ApplyRods` で当てたもの）を持たせ、候補の行の最後の小節で差し替える（行頭の `LineStartSpring` と同じ形・和の差分は `KnuthPlassBreaker.LineEndDelta`）。
+- レイアウトの列の張り出しに速度記号が無かった → `MultiStaffLayouter.ColumnOverhangs` に切り出して 1 つの家に（歌詞・コード・音符・速度記号）。レイアウトと gate が同じ関数を読む。
+- 拍子変更のある小節の速度記号が最初の音符に立っていた（LP は拍子記号のインク左端）: collector は小節頭の記号の `AnchorItemIndex` を調・拍子の item の後に付ける＝engraver の「小節の途中」の分岐に落ちていた → `MusicMarkEngraver.IsMeasureStartTempo`（タイミング 0 なら小節頭）＋`SpacingRules.OpeningTimeChangeInkLeft`（レンダラの描き方と同じ歩き）。その記号の rod は小節の鎖の始点から張る。
+- 01 の小節 13 で終わる行の自然幅 +1.619（LP の測定 +1.647・差 0.028 は未分解）。
+- 新プローブ `tempo-line-end.ly`（TMM・TME）＋台帳 2 点 `tempo.x.mid-line-meter-change`（開いた値 +4.046）・`tempo.line-end.right-from-end-bar`（+20.174）→ **両方 EXACT**。網 `TempoLineEndBreakTests`（01 の 7/6/5/7）＋`SpacingInvariantTests.BreakGate_PricesTheCrossBarLyricRod` に行末の窓（歌詞のある行は和で値付けされる＝和の差し替えの観測者）。
+- 毒 4 種（Lab `sessions/p735/poisons.ps1`）: gate を切る 1 赤・張り出しから速度記号を外す 2 赤・index で判定 1 赤・DP の和の差し替えを外す＝最初は緑（01 の行は spring を解く道）→ 行末の窓を足して 1 赤。
+- 掃き（998 冊・1,199 枚・基準 HEAD・Lab `sessions/p735/sweep`）: **1 枚だけ**＝`audit/lpreg/metropar.lys`（最後の小節の「(♩ = 80)」を行の内側に＝五線の右端 31.47 → 33.45・**LP 33.449**）。snapshot 0 枚。full **10641 / 0 / 2 / 10643**。
+- 残り（未値付け）: `markTempo beside` で標識の右に立つ速度記号の張り出し／gate は行末の小節の自分の列の rod だけ（前の小節から行末まで届く長い記号は layout だけが保つ）／1 小節の行で前置きの拍子に立つ速度記号を gate が余分に値付け。
+★ `-End p735 -DiffBase 43d6e508`＝full **10641 / 0 / 2 / 10643**（網 +3）・門 全 OK・台帳 959 点（exact 765・OPEN 0）。7.5: Core `+` 306 行・REF 2（simple-spacer.cc・metronome-engraver.cc）・OWN 1＝この便が閉じた旧い限界の名を書いた註（新しい逸脱ではない）。7.6・7.7: 該当なし。push はユーザー（未 push 63）。
+判定: 次の候補は §1.0 ⒜／⒝ からで、どれもこの便の文脈（行末の rod）を使わない＝続けても新しい会話でも差は小さい（既定は続ける）。近いのは「残り（未値付け）」の 3 つだが、どれも観測者（実コーパスで動く本）が見つかっていない＝掃きで 0 冊。
+
 ## 以下は第734セッションの経緯
 
 ### 1.1 第734セッション（2026-10-01・YT-DELL2）
