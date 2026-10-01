@@ -324,6 +324,25 @@ public class MarkReserveVersusDrawTests
     }
 
     /// <summary>
+    /// The X extent every reader of <see cref="MusicMarkEngraver.MarkXExtent"/> reserves for
+    /// "To 𝄌" (the page silhouette, the label windows) is the composition the renderer DRAWS
+    /// — centred on its anchor, one "To" plus the gap plus the sign wide — and the box the
+    /// stacker places it by (<see cref="MusicMarkEngraver.ToCodaInk"/>). Until session 733
+    /// it fell to the plain-text arm, which right-aligns an End mark on its anchor and prices
+    /// the words "To Coda".
+    /// </summary>
+    [Fact]
+    public void ToCodaReservation_IsTheCentredComposition()
+    {
+        var mark = new MusicMarkItem(MusicMarkType.ToCoda, measureIndex: 0, sourcePosition: 0);
+        var (x0, x1) = MusicMarkEngraver.MarkXExtent(Fonts, mark, x: 0.0, boxed: true);
+        var (textW, glyphW) = MusicMarkEngraver.ToCodaStencilWidths(Fonts);
+        Assert.Equal(-(textW + glyphW) / 2, x0, 9);
+        Assert.Equal((textW + glyphW) / 2, x1, 9);
+        Assert.Equal(MusicMarkEngraver.ToCodaInk(Fonts).HalfWidth, x1, 9);
+    }
+
+    /// <summary>
     /// A boxed label's frame stands the same distance off the string's ink on all four
     /// sides, and the ink is centred in it. Until 2026-09-26 the width wrapped the ADVANCE
     /// (LilyPond's X extent of a text stencil), so the side margins carried the side

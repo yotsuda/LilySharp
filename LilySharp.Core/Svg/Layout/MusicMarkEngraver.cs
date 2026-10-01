@@ -2026,6 +2026,16 @@ internal static class MusicMarkEngraver
             case MusicMarkType.Segno:
             case MusicMarkType.Coda:
                 return (x - 1.2, x + 1.2);
+            case MusicMarkType.ToCoda:
+            {
+                // "To 𝄌" is drawn CENTRED on its anchor as one composition (SharedRenderer,
+                // ToCodaStencilWidths) and the stacker prices it so (ToCodaInk). Until
+                // session 733 it fell to the plain-text arm below, which right-aligns an End
+                // mark on x and prices the words "To Coda" — so the page's silhouette held a
+                // box half the composition left of the ink.
+                double half = ToCodaInk(fonts).HalfWidth;
+                return (x - half, x + half);
+            }
             default:
             {
                 // Plain text marks: the string's own advance at the size and style the draw
