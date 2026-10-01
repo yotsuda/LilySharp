@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第727セッションの経緯
+
+### 1.1 第727セッション（2026-10-01・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第726 の次の一手: 前打音の列の間隔）。`-Start p727`（HEAD `a140e285`・未 push 28）＝full **10587 / 0 / 2 / 10589**（引継ぎと一致）。
+⑴ ★ `4cf074a0` **弧の spacing rod（minimum-length 1.5）**: 起票は「前打音の列の間隔の差」だったが、**列の法則は既に EXACT**（`grace.column.two-sixteenths.step` 1.417939）で、LP は**弧があるときだけ** 2 列を 1.5 に離す（弧なし 1.417939・Lab `sessions/p727/span`）＝ Slur の `(minimum-length . 1.5)` と `(springs-and-rods . ly:spanner::set-spacing-rods)`（define-grobs.scm:3176-3178・spanner.cc:429-473）。Lily# は弧の rod を持っていなかった。→ `SpacingRules.SlurPairRod`（隣り合う 2 項目・`SlurDetector.TryGetSlurFlags` で判定・timing 系と見積り系の 2 系統）と `GraceColumns`（`GraceColumnInfo.SlurStart/SlurEnd`・最後の前打音→主音も）。1.5 は `SlurScoringProblem.MinimumLengthSpaces` の 1 軒（rod は staff_space を掛けない）。⒝ 開示: 3 列以上・小節線越えの弧は rod しない（国勢調査 998 冊 16,324 本で端が 1.5 未満のものは無い＝`census.txt`）。台帳: span 3 点 −0.082 → 0、付け根 3 点の尾も 0（列の間隔だった）。本線の観測者を新設＝`slur.rod.adjacent-columns` 1.5／対照 `slur.rod.no-slur-control` 0（30mm 行で c''''→c' の 64 分が弧なしでは同じ x・`probes/slur-spacing-rod.ly`）EXACT。毒 4: timing 系＝本線の点・前打音の rod と弧の印＝各 6 赤・見積り系＝緑（改行判断のみ＝観測者なし）。全 score の SVG（基準 `a140e285`）: 1199 枚中 1 枚＝`Fixtures/bows/slur-grace.lys`・snapshot 不動。TAB の前打音の弧の留めは「頁一致」→「弧の数」に（rod は TAB でも列を動かす＝LP も同じ）。
+発見: 使い捨ての計器を書く途中で MCP コンソールに Core の DLL を `Add-Type` してしまい、コンソールを作り直した（ビルド前に気づいた＝被害なし）。
+残り: `slur.in-grace.first-column.span` −0.0089（前打音→主音 1.97・rod は効かない領域＝別の原因・未分解）・TAB の前打音の弧・`condensedStaff` の 2 声目の前打音・3 列以上の弧の rod（観測者なし）。
+★ `-End p727 -DiffBase a140e285`＝full **10589 / 0 / 2 / 10591**（台帳 +2）・門 7 つ全 OK・Core `+` 68 行に REF 4／OWN 0。7.6: rod は ⒜（define-grobs の 2 性質と `set_spacing_rods` の rod を、隣り合う 2 列の spring の最小値として字面どおり）＋ ⒝（3 列以上・小節線越えは rod しない＝開示）。7.7: 匂いなし（`?? default` も畳みも無し）。ユーザー「続けて」。push はユーザー（未 push 29）。判定: 次の候補（first-column の −0.0089）は今便の弧・前打音の計器の上に立つ＝**この会話で続けるのが有利**。
+
 ## 以下は第726セッションの経緯
 
 ### 1.1 第726セッション（2026-10-01・YT-DELL2）

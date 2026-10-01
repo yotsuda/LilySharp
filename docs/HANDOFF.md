@@ -118,6 +118,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第729セッション（2026-10-01・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第728 の次の一手: 前打音の固い鎖）。`-Start p729`（HEAD `1f533dc5`・未 push 32）＝full **10593 / 0 / 2 / 10595**（引継ぎと一致）。
+⑴ ★ `cf613ebe` **前打音の鎖は行と一緒に伸びる**（第728 の起票）: LP の前打音のばねも行のばねで、伸びは力 × inverse-strength・その強さは **increment/2＝0.4**（spacing-basic.cc:163-175「あまり伸ばさない」）。実測（Lab `sessions/p729/stretch`・行幅 ragged/60/80/100/140mm）: 前打音の間隔は全部同じだけ伸び、4 分のばねの伸びとの比が 0.4/1.698。→ `SpringIntoGraceRun` が前打音のばねの inverse-strength を直列に足す（3 つの呼び手＝timing 系 `LeadingGraceRunStretch`・見積り系と小節頭は `AdjustSpringForGraceNotes`）／`MeasureLayout.SpringForce`（行の力・作る 1 か所で）／`StretchGraceColumns`（各間隔を force×0.4）を `RunPlacement`（描画・スカイライン・quant）と `GraceGeomOf`（弧）が読む・弧の pass にあった `GraceGeomOf` の手写しを畳んだ。⒝ 縮む側（力 < 0）は固いまま（開示）。台帳 +5（`probes/grace-stretch.ly`・100mm の行）EXACT。毒 5: 描く鎖を固く／ばねの直列なし／timing 系の呼び手＝それぞれ赤・弧の家の力と見積り系＝緑（観測者なし）。全 score の SVG（基準 `1f533dc5`）: 20 枚・14 冊（**実コーパス 4 冊**＝9 to 5・Real Gone・Something That I Want・青い珊瑚礁・site の petite-valse を含む）・**全部段数は不変**（行の中の配分だけ）・snapshot 不動。
+残り: 縮む側の前打音の鎖・TAB の前打音の弧・`condensedStaff` の 2 声目の前打音・3 列以上の弧の rod。
+★ `-End p729 -DiffBase 1f533dc5`＝full **10598 / 0 / 2 / 10600**（台帳 +5）・門 全 OK・Core `+` 100 行に REF 4／OWN 0。7.6: 伸びは ⒜（`set_inverse_stretch_strength (increment / 2)` と `Spring::length` を、ぶら下げた鎖に直列のばねとして）＋ ⒝（縮む側は固いまま＝開示）。7.7: `GraceGeomOf` の手写し（2 つ目の綴り）を 1 つ畳んだ。ユーザー「続けて」。push はユーザー（未 push 33）。判定: 前打音の島の残り（縮む側・TAB の弧）は今便の計器の上に立つ＝**この会話で続けるのが有利**（圧縮はまだ無い）。
+
+## 以下は第728セッションの経緯
+
 ### 1.1 第728セッション（2026-10-01・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」＝第727 の次の一手: `slur.in-grace.first-column.span` −0.0089）。`-Start p728`（HEAD `5f417afa`・未 push 30）＝full **10589 / 0 / 2 / 10591**（引継ぎと一致）。
@@ -125,16 +134,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **新しい起票**: ★ **LP は前打音のばねも行と一緒に伸ばす／Lily# は主音にぶら下げた固い鎖**（両端揃えの段で差が出る: `audit/lpreg/grace-unfold` LP 1.938/2.056・ragged では 1.760＝一致）。直すなら前打音の列を本物の列として行の spring 系に入れる＝設計級。
 残り: 上の固い鎖・TAB の前打音の弧・`condensedStaff` の 2 声目の前打音・3 列以上の弧の rod。
 ★ `-End p728 -DiffBase 5f417afa`＝full **10593 / 0 / 2 / 10595**（台帳 +4）・門 全 OK・Core `+` 175 行に REF 6／OWN 0。7.6: 床と補正は ⒜（`Note_spacing::get_spacing` の 2 項を前打音の列にも）＋ ⒝（連桁つきの前打音の符幹の先は未連桁の先・休符の列は平らな幅のまま＝開示）。7.7: 「前打音の間隔は常に平らな幅」という畳みを 1 つ消した側。ユーザー「続けて」＋再ベースの承認（AskUserQuestion）。push はユーザー（未 push 31）。判定: 次の候補（前打音の固い鎖）は設計級で、今便の計器の上に立つが新しい会話でも差は小さい＝**続けるならこの会話のままでよい**（圧縮はまだ無い）。
-
-## 以下は第727セッションの経緯
-
-### 1.1 第727セッション（2026-10-01・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」＝第726 の次の一手: 前打音の列の間隔）。`-Start p727`（HEAD `a140e285`・未 push 28）＝full **10587 / 0 / 2 / 10589**（引継ぎと一致）。
-⑴ ★ `4cf074a0` **弧の spacing rod（minimum-length 1.5）**: 起票は「前打音の列の間隔の差」だったが、**列の法則は既に EXACT**（`grace.column.two-sixteenths.step` 1.417939）で、LP は**弧があるときだけ** 2 列を 1.5 に離す（弧なし 1.417939・Lab `sessions/p727/span`）＝ Slur の `(minimum-length . 1.5)` と `(springs-and-rods . ly:spanner::set-spacing-rods)`（define-grobs.scm:3176-3178・spanner.cc:429-473）。Lily# は弧の rod を持っていなかった。→ `SpacingRules.SlurPairRod`（隣り合う 2 項目・`SlurDetector.TryGetSlurFlags` で判定・timing 系と見積り系の 2 系統）と `GraceColumns`（`GraceColumnInfo.SlurStart/SlurEnd`・最後の前打音→主音も）。1.5 は `SlurScoringProblem.MinimumLengthSpaces` の 1 軒（rod は staff_space を掛けない）。⒝ 開示: 3 列以上・小節線越えの弧は rod しない（国勢調査 998 冊 16,324 本で端が 1.5 未満のものは無い＝`census.txt`）。台帳: span 3 点 −0.082 → 0、付け根 3 点の尾も 0（列の間隔だった）。本線の観測者を新設＝`slur.rod.adjacent-columns` 1.5／対照 `slur.rod.no-slur-control` 0（30mm 行で c''''→c' の 64 分が弧なしでは同じ x・`probes/slur-spacing-rod.ly`）EXACT。毒 4: timing 系＝本線の点・前打音の rod と弧の印＝各 6 赤・見積り系＝緑（改行判断のみ＝観測者なし）。全 score の SVG（基準 `a140e285`）: 1199 枚中 1 枚＝`Fixtures/bows/slur-grace.lys`・snapshot 不動。TAB の前打音の弧の留めは「頁一致」→「弧の数」に（rod は TAB でも列を動かす＝LP も同じ）。
-発見: 使い捨ての計器を書く途中で MCP コンソールに Core の DLL を `Add-Type` してしまい、コンソールを作り直した（ビルド前に気づいた＝被害なし）。
-残り: `slur.in-grace.first-column.span` −0.0089（前打音→主音 1.97・rod は効かない領域＝別の原因・未分解）・TAB の前打音の弧・`condensedStaff` の 2 声目の前打音・3 列以上の弧の rod（観測者なし）。
-★ `-End p727 -DiffBase a140e285`＝full **10589 / 0 / 2 / 10591**（台帳 +2）・門 7 つ全 OK・Core `+` 68 行に REF 4／OWN 0。7.6: rod は ⒜（define-grobs の 2 性質と `set_spacing_rods` の rod を、隣り合う 2 列の spring の最小値として字面どおり）＋ ⒝（3 列以上・小節線越えは rod しない＝開示）。7.7: 匂いなし（`?? default` も畳みも無し）。ユーザー「続けて」。push はユーザー（未 push 29）。判定: 次の候補（first-column の −0.0089）は今便の弧・前打音の計器の上に立つ＝**この会話で続けるのが有利**。
 
 ## 2. 開いている作業
 
