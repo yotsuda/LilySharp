@@ -134,7 +134,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 掃き（998 冊・1,199 枚）: **6 枚（ユーザーの 2 冊: ABC・Reelin' In the Years＝2 番括弧の頭の 4/4）**。import の round trip 1,199 枚で SVG 差 0。**Bohemian（6 ファイル）は A〜H に切れた**・SVG は以前と同一・twin も LP で通る（Lab `sessions/p737/boh`）。SYNTAX_REFERENCE「Restating at a section's start」・CHANGELOG。full **10655 / 0 / 2 / 10657**。
 - 副産物: エディタの Split Sections もこれで切れ目の書き直しが描かれない（SYNTAX_REFERENCE の Split Sections 節＝切れ目ごとに meter／key／clef を書き直す）。
 ★ `-End p737 -DiffBase 70122cce`＝full **10655 / 0 / 2 / 10657**（網 +12）・門 全 OK。7.5: Core `+` 288 行・REF 0／OWN 7＝7 つとも同じ 1 つの決定（page・twin・importer で同じ規則を名乗る）・LP の出典は OWN の註の中に engraver の行番号で書いた。7.6: ⒜＝LP からの宣言した逸脱（ユーザー決定）。7.7: 2 つ目の綴り＝page（collector）と twin（exporter）が同じ規則を別々に持つ（既存の section reset と同じ形・`CollectSectionHeadResumeTests` と `LilyPondExporterSectionPlayTests` が両側を見る）。push はユーザー（未 push 69）。
-判定: 次はまたユーザーの選択（第737 ⑶ の候補の残り: 5/4 の全小節休符の綴り・⒝ の設計項目）。今回の文脈（section 境界）を使う候補は無い＝続けても新しい会話でも差は小さい。
+⑸ ユーザー決定（2026-10-02・⑷ の作り直し）: 「**既定では変化しなければ描かない、明示的に何かを指定した場合は変化してなくても描く**」・「絶対に描かない」は要らない・綴りは **`key! ees major`**（`!` は keyword の直後＝値の後ろの `!` は破線の小節線と衝突するため。keyword の後ろには必ず値が来るので曖昧さが無い・`key ! ees` も可）。★ `65ab753b`:
+- 構文: `TimeSignatureGreen`／`KeySignatureGreen`／`ClefDeclarationGreen` の keyword の直後に nullable の bang の slot（`Parser.Directives.ParseForceMark`）・red に `ForceMark`／`IsForced`。**slot が 1 つずれた**＝`KeyDataPos` が `GetChild(1)` のままで key の data-pos が keyword を指し snapshot 35 枚が落ちた（直した・毒に入れた）。
+- page: 変化しない非強制のものは section の途中でも描かない（key＝調号と主音、time＝`MeterInForce`、clef＝効いている音部記号）。head では ⑷ どおり reset 前の値と比べる。
+- twin: page が描くものを書く＝変化しない `\time`／`\key` は書かない（LP は毎回描く）・強制は必ず書く・`clef!` は `\set Staff.forceClef = ##t`（LP の clef engraver は変化しない clef を描かない。2.26.0 で確認: forceClef ありで glyph が 1 つ多い・Lab `sessions/p737/force`）。
+- 網: `ForceMarkParserTests`（round trip・`key ! ees`・値の後ろの `!` は破線のまま）・`SectionResetTests`（途中の書き直しは描かない ×3＝旧 `ARestatementInsideASection_IsStillDrawn` を反転・途中の強制 ×3・head の強制 ×4）・`LilyPondExporterSectionPlayTests` +2。毒 9 種すべて赤（Lab `sessions/p737/poisons2.ps1`）。
+- 掃き（`fd87482e` 比・998 冊・1,199 枚）: **1 枚＝ホーリー&ブライト**（A2 の途中の `time 4/4` が section reset 後の 4/4 の中＝描かなくなった。本は 1 小節前に `time 2/4` を書き忘れている可能性＝本の修正はユーザー）。import の round trip 1,199 枚で SVG 差 0。GRAMMAR（KeyDecl／TimeDecl／MidMusicCommand）・SYNTAX_REFERENCE「Restating: `key!`, `time!`, `clef!`」・CHANGELOG を書き換え。full **10676 / 0 / 2 / 10678**。
+- ★ `-End p737 -DiffBase 70122cce`（2 回目）＝full **10676 / 0 / 2 / 10678**・門 全 OK。7.5: Core `+` 407 行・REF 0／OWN 7（⑷ と同じ 1 つの決定に `!` を足した）。7.6: ⒜＝LP からの宣言した逸脱。7.7: page と twin が同じ規則を別々に持つ（⑷ と同じ・両側に網）。未 push 71。
+- 残り（未着手）: LSP の semantic token で keyword 直後の `!` は小節線の色のまま（`SyntaxFacts` の barline 分類）・MusicXML 書き出しは変化しない key も従来どおり書く（page と一致させるかは未決）。
+判定: 次はまたユーザーの選択（第737 ⑶ の候補の残り: 5/4 の全小節休符の綴り・⒝ の設計項目、または ⑸ の残り 2 つ）。⑸ の残りなら今回の文脈がそのまま使える＝続けるのが少し得。それ以外なら新しい会話でも差は小さい。
 ## 以下は第736セッションの経緯
 
 ### 1.1 第736セッション（2026-10-01・YT-DELL2）
