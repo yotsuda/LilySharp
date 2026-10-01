@@ -2318,8 +2318,16 @@ public sealed class MusicXmlExporter
         _writtenClef = (_clefSign, _clefLine, _clefOctaveChange);
     }
 
+    /// <summary>`key!` / `time!` / `clef!` seen since the last attributes were written: the
+    /// page draws them though they change nothing (owner's decision 2026-10-02), so the
+    /// document states them again. Held with <see cref="_attributesDirty"/> when they arrive
+    /// after notes.</summary>
+    private bool _forcedKey, _forcedTime, _forcedClef;
+
     /// <summary>Write an <c>&lt;attributes&gt;</c> for whatever the walk has changed since
-    /// the document last said it — a key change, a meter change, a clef change.</summary>
+    /// the document last said it — a key change, a meter change, a clef change — or forced
+    /// with a `!` (<see cref="_forcedKey"/>). A restatement that changes nothing writes
+    /// nothing, as the page draws nothing.</summary>
     /// <remarks>
     /// ⚠️ A measure carries ONE attributes slot and renders it at the bar's head, so a change
     /// seen after notes have been written would sound a bar early. Such a change is held
@@ -2336,10 +2344,11 @@ public sealed class MusicXmlExporter
         var key = (EffectiveKeyFifths(), _keyMode, _keyCustomXml);
         var time = (_timeNumerator, _timeNumeratorText, _timeDenominator, _timeSenzaMisura);
         var clef = (_clefSign, _clefLine, _clefOctaveChange);
-        bool keyChanged = _writtenKey is null || !_writtenKey.Value.Equals(key);
-        bool timeChanged = _writtenTime is null || !_writtenTime.Value.Equals(time);
-        bool clefChanged = _writtenClef is null || !_writtenClef.Value.Equals(clef);
+        bool keyChanged = _forcedKey || _writtenKey is null || !_writtenKey.Value.Equals(key);
+        bool timeChanged = _forcedTime || _writtenTime is null || !_writtenTime.Value.Equals(time);
+        bool clefChanged = _forcedClef || _writtenClef is null || !_writtenClef.Value.Equals(clef);
         _attributesDirty = false;
+        _forcedKey = _forcedTime = _forcedClef = false;
         if (!keyChanged && !timeChanged && !clefChanged) return;
 
         // Merge into this measure's own attributes when it already has one (the part's
@@ -2905,6 +2914,7 @@ public sealed class MusicXmlExporter
             _timeNumeratorText = timeSig.BeatsText;
             _timeDenominator = timeSig.BeatType;
         }
+        _forcedTime |= timeSig.IsForced;
         _attributesDirty = true;
         SyncAttributes();
     }
@@ -2974,6 +2984,7 @@ public sealed class MusicXmlExporter
 
     private void ProcessKeySignature(KeySignatureSyntax key)
     {
+        _forcedKey |= key.IsForced;
         if (key.IsCustom)
         {
             _keyCustomXml = LilySharp.Core.Svg.Model.KeySignature.EncodeCustom(key.CustomAlterations);
@@ -3049,6 +3060,7 @@ public sealed class MusicXmlExporter
     {
         var word = clef.ClefName?.Text.ToLower();
         SetClef(word);
+        _forcedClef |= clef.IsForced;
         // A clef is drawing only: it moves no relative frame (InstrumentDefaults.DefaultAnchorOctave).
         // ⚠️ Only the IN-MUSIC clef syncs. A header clef reaches the document through the
         // part's opening attributes, and syncing there would write a change on the bar a

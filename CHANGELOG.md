@@ -319,8 +319,9 @@ workflow attaches that section to the GitHub Release verbatim.
   in force, so neither the restatement nor the boundary's reset is drawn — until now that
   printed a second, identical signature. A `!` right after the keyword (`key! ees major`,
   `time! 3/4`, `clef! bass`) draws it whether or not it changes anything; the twin writes a
-  forced clef with `\set Staff.forceClef = ##t`. A `!` after the value is still the dashed
-  barline. A different value is drawn as before. The MusicXML import now cuts a section at every
+  forced clef with `\set Staff.forceClef = ##t`, and the MusicXML export states a forced one's
+  `<attributes>` again. The VS Code grammar colours the `!` with its keyword. A `!` after the
+  value is still the dashed barline. A different value is drawn as before. The MusicXML import now cuts a section at every
   rehearsal mark a slur or hairpin does not run through — a mark where the meter or key had to
   be restated was left inside the section before it.
 

@@ -446,6 +446,7 @@
                 { "include": "#comments" },
                 { "include": "#strings" },
                 { "include": "#part-inner-section" },
+                { "include": "#force-mark" },
                 {
                     "comment": "⚠️ Longest spelling first, in every list below: TextMate takes the first alternative that matches and \\b succeeds before `_` is not true — but it DOES succeed before `^`, so a bare `treble` would colour the head of `treble^8` and leave `^8` plain. `treble_8`/`bass_8` are the same trap with the boundary inside the word.",
                     "match": "\\b(clef)\\s+(treble\\^8|treble_8|bass_8|treble|bass|alto|tenor|soprano|mezzosoprano|baritone|percussion)\\b",
@@ -590,6 +591,7 @@
                     "name": "keyword.control.navigation.lilysharp",
                     "match": "\\b(segno|coda|fine|dc|ds|al|to)\\b"
                 },
+                { "include": "#force-mark" },
                 {
                     "name": "keyword.other.lilysharp",
                     "match": "\\b(title|subtitle|composer|poet|tempo|time|partial|key|clef|fonts|paper|layout|embedded|major|minor|ionian|dorian|phrygian|lydian|mixolydian|aeolian|locrian|instrument|octave|pitch|tuning|noPageBreak|pageBreak|noBreak|break|treble_8|treble|bass_8|bass|alto|tenor|soprano|mezzosoprano|baritone|percussion)\\b"
@@ -662,6 +664,18 @@
                     "comment": "⚠️ The leading guard is NOT \\b, which is what this was until 2026-08-23 — and \\b between `d` and `2` is false, both being word characters, so a duration was coloured only when the pitch happened to carry an octave mark (`c'4` yes, `d4` NO). Measured on `c'1 d2 e4 f8 g16 a32 b64`: two of seven, and the two were the ones written with `'`. What the guard has to say instead is `not in the middle of a number` (so `100` is not a `1`) and `not after an underscore` (so `treble_8` keeps its `_8`). ⚠️ The trailing guard replaces a \\b that came AFTER the dots, where a `.` followed by a space is not a boundary — `c'2.` coloured the 2 and left the dot, `d4..` coloured nothing. It also has to refuse a following letter, which is what keeps `8va` and `15ma` out. ⚠️ And the alternation is now longest-first, the habit #part-body's comment already preaches: the old one read `1|2|4|8|16|…`, where `16` matched as `1` and only the trailing \\b made it backtrack — remove that \\b without reordering and `16` silently becomes `1`.",
                     "name": "constant.numeric.duration.lilysharp",
                     "match": "(?<![0-9_])(128|64|32|16|8|4|2|1)\\.{0,3}(?![0-9A-Za-z_])"
+                }
+            ]
+        },
+        "force-mark": {
+            "comment": "The force mark: `key! ees major`, `time! 3/4`, `clef! bass` draw a restatement that changes nothing (2026-10-02). Included BEFORE every list that colours the bare keyword, so the `!` is taken with it; a `!` anywhere else is the dashed barline.",
+            "patterns": [
+                {
+                    "match": "\\b(key|time|clef)\\s*(!)",
+                    "captures": {
+                        "1": { "name": "keyword.other.lilysharp" },
+                        "2": { "name": "keyword.operator.force.lilysharp" }
+                    }
                 }
             ]
         },

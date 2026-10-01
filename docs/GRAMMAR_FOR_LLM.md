@@ -174,6 +174,12 @@ top level is an error (LYS0020), as are a top-level `{ … }` block, `grace`/`tu
 unambiguous: with no music able to stand beside them they are always the FILE DEFAULTS, and
 a directive written among the notes is always a mid-music change.
 
+A `time`, `key` or `clef` that changes nothing **draws nothing** — including one that opens a
+section with what the section before it left (the boundary resets them, so a section that
+continues in E♭ must say `key ees major` again, and that line is not engraved). To draw one
+anyway, put `!` right after the keyword: `key! ees major`, `time! 3/4`, `clef! bass`. A `!`
+after the value is the dashed barline (`key ees major !` = a key, then a dashed bar).
+
 Below, a code block that is only music (no `part`/`section`/`score`) is showing a **section
 body** — the four lines above are omitted so each example shows just what it teaches. To run
 one, put it where `c4 d e f |` sits in the minimal document.

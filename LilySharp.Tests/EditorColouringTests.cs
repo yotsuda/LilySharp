@@ -437,6 +437,55 @@ public class EditorColouringTests
             + "words they cover are coloured: " + string.Join(" | ", unreadable));
     }
 
+    [Theory]
+    [InlineData("key!")]
+    [InlineData("key !")]
+    [InlineData("time!")]
+    [InlineData("clef!")]
+    public void TheForceMark_IsColouredWithItsKeyword(string spelling)
+    {
+        // `key! ees major` (2026-10-02): the `!` is taken with its keyword, and in EVERY context
+        // where the keyword is coloured that rule must come first — TextMate takes the first
+        // rule that matches at a position, and a list matching the bare `key` there leaves the
+        // `!` plain. Asked per context, since a part body lists its own keywords before it
+        // reaches #keywords. (The fonts block's `time` is a font key, not this keyword.)
+        Assert.Contains("force-mark", Reachable().Rules);
+        foreach (string context in new[] { "keywords", "part-body" })
+        {
+            var patterns = ContextPatterns(context);
+            int force = patterns.FindIndex(p => Covers(p, spelling));
+            int bare = patterns.FindIndex(p => Covers(p, spelling.TrimEnd('!', ' ')));
+            Assert.True(force >= 0, $"{context}: no rule colours `{spelling}`");
+            Assert.True(bare < 0 || force < bare,
+                $"{context}: `{spelling}` — the force-mark rule ({force}) comes after the bare keyword ({bare})");
+        }
+    }
+
+    /// <summary>The match patterns one context tries, in the order TextMate tries them: its own
+    /// <c>patterns</c>, each <c>#include</c> expanded in place.</summary>
+    private static List<string> ContextPatterns(string rule)
+    {
+        using var doc = JsonDocument.Parse(File.ReadAllText(GrammarPath));
+        var repository = doc.RootElement.GetProperty("repository");
+        var found = new List<string>();
+        Expand(repository.GetProperty(rule), new HashSet<string>(StringComparer.Ordinal) { rule });
+        return found;
+
+        void Expand(JsonElement r, HashSet<string> seen)
+        {
+            if (!r.TryGetProperty("patterns", out var list)) return;
+            foreach (var x in list.EnumerateArray())
+            {
+                if (x.TryGetProperty("include", out var inc) && inc.GetString() is { } t
+                    && t.StartsWith('#') && seen.Add(t[1..])
+                    && repository.TryGetProperty(t[1..], out var target))
+                    Expand(target, seen);
+                else if (x.TryGetProperty("match", out var m))
+                    found.Add(m.GetString()!);
+            }
+        }
+    }
+
     [Fact]
     public void EveryRuleInTheGrammar_IsReachable()
     {

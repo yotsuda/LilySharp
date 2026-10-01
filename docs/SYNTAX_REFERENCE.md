@@ -553,7 +553,9 @@ score main { staff m }
 
 The key compares its tonic too: `key g major` after `key e minor` is drawn. The LilyPond twin
 writes what the page draws: it omits the same restatements (LilyPond engraves every `\time` and
-`\key`), and writes `clef!` with `\set Staff.forceClef = ##t`. This is what lets the MusicXML
+`\key`), and writes `clef!` with `\set Staff.forceClef = ##t`. The MusicXML export likewise
+writes no `<attributes>` for a restatement and writes them again for `key!`, `time!` and
+`clef!`. This is what lets the MusicXML
 import and the editor's Split Sections cut a section wherever the music in force is not the
 file's.
 
