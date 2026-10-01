@@ -77,8 +77,8 @@
 - **:1337** ⚠️ NOT PORTED, and named rather than left to be discovered: the ONLY-RESTS
 - **:1557** ⚠️ NOT PORTED: another VOICE's notes at that moment (a grace rest under polyphony);
 - **:2333** ⚠️ NOT PORTED — LP's solve-once-then-break order: A BROKEN COLUMN IS SOLVED
-- **:4218** ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
-- **:4564** ⚠️ NOT PORTED: a slur bound on a GRACE column is not drawn on a TAB staff.
+- **:4220** ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
+- **:4566** ⚠️ NOT PORTED: a slur bound on a GRACE column is not drawn on a TAB staff.
 ### `LilySharp.Core/Svg/Layout/FiguredBassEngraver.cs`
 - **:142** spells it after the digit — the order FiguredBassGlyphRun names as not ported. The box
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
@@ -94,9 +94,9 @@
 - **:503** ⚠️ NOT PORTED — the bound extent: the barline's ink width is taken
 - **:519** ⚠️ NOT PORTED — the boundary-column regime: the left bound is the
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:3084** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
-- **:3136** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
-- **:4141** same approximation the scripts' own remark records for the movers; the books that
+- **:3085** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
+- **:3137** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
+- **:4142** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1178** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
 - **:2289** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
@@ -179,7 +179,7 @@
 - **:647** own widths of one x. No ledger point measures a chord fingering's X, so this stays as
 - **:648** it was rather than being changed unobserved.
 ### `LilySharp.Core/Svg/Layout/GraceNoteEngraver.cs`
-- **:532** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
+- **:534** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
 ### `LilySharp.Core/Svg/Layout/HorizontalSkyline.cs`
 - **:178** outline. So the clearing is right and unobserved: a forgotten Clear here would
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
@@ -201,8 +201,8 @@
 ### `LilySharp.Core/Svg/Layout/LyricSpacing.cs`
 - **:152** is measured-exact there, and no ledger point prices replacing it.
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:3692** staff down, and this reserves it on the hidden one. No book reaches that.
-- **:5061** company on a row whose symbols sit closer than its spec's 1.0. No point measures
+- **:3693** staff down, and this reserves it on the hidden one. No book reaches that.
+- **:5062** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:851** does not spell a per-type padding — no point observes a segno/coda over a
 - **:1510** pinned there), no ledger point.
@@ -223,7 +223,7 @@
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
 - **:890** constant with a name, and no ledger point reached it.
 ### `LilySharp.Core/Svg/Layout/SpacingRules.Grace.cs`
-- **:314** observed by: NOTHING. No ledger point covers a grace spacer, and the drawn
+- **:354** observed by: NOTHING. No ledger point covers a grace spacer, and the drawn
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
 - **:418** rest. No point observes it — see the branch below.
 ### `LilySharp.Core/Svg/Layout/TrillSpannerEngraver.cs`
@@ -447,8 +447,8 @@
 - **:523** ⚠️ LILYSHARP-OWN, AND IT IS NOW THE LAST FLAT VERSE STEP LEFT. Where the row is an
 - **:1263** LILYSHARP-OWN (MusicMarkEngraver.StafflessLabelLineStartReach has the measurement).
 - **:1835** LILYSHARP-OWN, the lead-sheet grid's line-start bar (user request
-- **:2441** timing-placed chord symbol and a beat slash do. LILYSHARP-OWN: the filler-slot keep.
-- **:4752** LILYSHARP-OWN: the band is Lily#'s model of a line LilyPond walks as a loose line
+- **:2442** timing-placed chord symbol and a beat slash do. LILYSHARP-OWN: the filler-slot keep.
+- **:4753** LILYSHARP-OWN: the band is Lily#'s model of a line LilyPond walks as a loose line
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:152** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **:178** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN

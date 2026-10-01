@@ -3598,13 +3598,15 @@ internal sealed class ElementCoordinator
     /// <summary>A grace group's column geometry (offsets, span, quanted beam), solved once
     /// per pass into <paramref name="cache"/>.</summary>
     private static GraceObstacleGeom GraceGeomOf(
-        Voice voice, ImmutableArray<GraceNoteItem> graceNotes, int gi, GraceObstacleGeom?[] cache)
+        Voice voice, ImmutableArray<GraceNoteItem> graceNotes, int gi, GraceObstacleGeom?[] cache,
+        double force)
     {
         if (cache[gi] is { } hit)
             return hit;
         var g = graceNotes[gi];
         var mainItem = ItemAt(voice, g.MeasureIndex, g.MainNoteItemIndex);
-        var columns = SpacingRules.GraceColumns(g.Columns, mainItem);
+        // At the system's force, as GraceNoteEngraver.RunPlacement places the drawn run.
+        var columns = SpacingRules.StretchGraceColumns(SpacingRules.GraceColumns(g.Columns, mainItem), force);
         var (bl, br) = GraceNoteEngraver.QuantGraceBeam(g, columns.Offsets);
         var geom = new GraceObstacleGeom(columns.Offsets, columns.Span, bl, br);
         cache[gi] = geom;
@@ -3641,7 +3643,7 @@ internal sealed class ElementCoordinator
         int gi, int column, GraceObstacleGeom?[] cache, MeasureLayout ml, int voiceIndex,
         VoiceCollisionTable voiceShifts)
     {
-        var geom = GraceGeomOf(voice, graceNotes, gi, cache);
+        var geom = GraceGeomOf(voice, graceNotes, gi, cache, ml.SpringForce);
         return GraceGroupX(voice, graceNotes[gi], geom, ml, voiceIndex, voiceShifts)
             + (column < geom.Offsets.Length ? geom.Offsets[column] : 0.0);
     }
@@ -3671,7 +3673,7 @@ internal sealed class ElementCoordinator
         foreach (var c in g.Columns)
             if (c.IsRest)
                 return null;
-        var geom = GraceGeomOf(voice, graceNotes, gi, cache);
+        var geom = GraceGeomOf(voice, graceNotes, gi, cache, ml.SpringForce);
         if (geom.BeamLeftY is not { } bl || geom.BeamRightY is not { } br || geom.Offsets.Length <= last)
             return null;
         double groupX = GraceGroupX(voice, g, geom, ml, voiceIndex, voiceShifts);
@@ -3738,7 +3740,7 @@ internal sealed class ElementCoordinator
                     continue;
             }
 
-            var geom = GraceGeomOf(voice, graceNotes, gi, graceGeomCache);
+            var geom = GraceGeomOf(voice, graceNotes, gi, graceGeomCache, ml.SpringForce);
             double groupX = GraceGroupX(voice, g, geom, ml, slur.VoiceIndex, voiceShifts);
 
             var font = g.HeadFont;
@@ -5298,14 +5300,9 @@ internal sealed class ElementCoordinator
                 if (!afterStart || !beforeEnd)
                     continue;
 
-                if (graceGeomCache[gi] is not { } cached)
-                {
-                    var mainItem = ItemAt(voice, mi, g.MainNoteItemIndex);
-                    var cols = SpacingRules.GraceColumns(g.Columns, mainItem);
-                    var (bl, br) = GraceNoteEngraver.QuantGraceBeam(g, cols.Offsets);
-                    cached = new GraceObstacleGeom(cols.Offsets, cols.Span, bl, br);
-                    graceGeomCache[gi] = cached;
-                }
+                // The one house for a run's geometry (it was spelt out again here until session
+                // 729, which would have left this reader on the unstretched run).
+                var cached = GraceGeomOf(voice, graceNotes, gi, graceGeomCache, ml.SpringForce);
                 double groupX = ml.X + GetItemXOffset(voice, mi, g.MainNoteItemIndex, ml) - cached.Span;
 
                 for (int k = 0; k < g.Columns.Length; k++)

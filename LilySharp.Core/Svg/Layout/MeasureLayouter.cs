@@ -1057,7 +1057,8 @@ internal sealed class MeasureLayouter
         spring = SpacingRules.SpringIntoGraceRun(
             spring,
             SpacingRules.LeadingGraceRunSpan(nextItems),
-            SpacingRules.LeadingGracePrefixWidth(nextItems));
+            SpacingRules.LeadingGracePrefixWidth(nextItems),
+            SpacingRules.LeadingGraceRunStretch(nextItems));
 
         // LilyPond merges every wish through merge_springs, which floors the ideal at
         // min + 0.3. A no-op for an ordinary note-to-note ideal (~3.0 vs a ~1.8 floor)

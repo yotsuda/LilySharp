@@ -8799,6 +8799,29 @@ internal static class LpGeometryProbes
     /// </summary>
     private static readonly string GKU = GraceSlurBook("GKU", "treble", "c'4 grace { c'16 e'16 } f4 g4 a4 |");
     private static readonly string GKS = GraceSlurBook("GKS", "treble", "c'4 grace { d'16 e'16 } f4 g4 a4 |");
+    /// <summary>
+    /// A GRACE RUN ON A JUSTIFIED LINE (probes/grace-stretch.ly): LilyPond stretches a grace's
+    /// springs with the line, by force × increment / 2 each (lily/spacing-basic.cc:163-175), and
+    /// the spring into the run as an ordinary note spring scaled by 0.8. Two systems on a 100mm
+    /// line; the second system is a whole-bar rest, so every head is the first system's.
+    /// </summary>
+    private static readonly string GST = """
+        octave absolute
+        time 4/4
+
+        part m { clef treble }
+
+        section Main { m { c'4 grace { d'16 e'16 } c'4 grace { f'8 } e'4 f'4 | break R1 | } }
+
+        form main { ~Main }
+
+        score main { staff m }
+        """;
+
+    /// <summary>The 100mm line of <see cref="GST"/>: LilyPond's line-width, widened by the two margins.</summary>
+    private static readonly LayoutOptions GraceStretchPaper =
+        LayoutOptions.Default with { PageWidth = 100.0 / 1.757299017 + 2 * 8.535827 };
+
     /// <summary>GKF: a flagged grace whose flag meets only part of the main column (d'8 → c'4).</summary>
     private static readonly string GKF = GraceSlurBook("GKF", "treble", "c'4 grace { d8 } c4 g4 a4 |");
     private static readonly string GKD = GraceSlurBook("GKD", "treble", "c'4 grace { f16 g16 } a'4 c'4 d'4 |");
@@ -16419,6 +16442,12 @@ internal static class LpGeometryProbes
         new("grace.column.skyline.to-main", GKS, g => g.NoteheadAnchorStep(2)),
         new("grace.column.up-to-down.to-main", GKD, g => g.NoteheadAnchorStep(2)),
         new("grace.column.flag-low.to-main", GKF, g => g.NoteheadAnchorStep(1)),
+        // A grace run stretched with its justified line. See GST.
+        new("grace.stretch.approach", GST, g => g.NoteheadAnchorStep(0), GraceStretchPaper),
+        new("grace.stretch.grace-step", GST, g => g.NoteheadAnchorStep(1), GraceStretchPaper),
+        new("grace.stretch.to-main", GST, g => g.NoteheadAnchorStep(2), GraceStretchPaper),
+        new("grace.stretch.flagged-to-main", GST, g => g.NoteheadAnchorStep(4), GraceStretchPaper),
+        new("grace.stretch.quarter-control", GST, g => g.NoteheadAnchorStep(5), GraceStretchPaper),
         // The slur's spacing rod on the main grid. See SRR.
         new("slur.rod.adjacent-columns", SRR, g => g.NoteheadAnchorStep(1), NarrowPaper),
         new("slur.rod.no-slur-control", SRN, g => g.NoteheadAnchorStep(1), NarrowPaper),

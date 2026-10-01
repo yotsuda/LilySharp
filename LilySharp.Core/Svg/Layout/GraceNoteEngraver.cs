@@ -270,7 +270,9 @@ internal static class GraceNoteEngraver
         var mainItem = grace.MainNoteItemIndex < measure.Items.Length
             ? measure.Items[grace.MainNoteItemIndex]
             : null;
-        var columns = SpacingRules.GraceColumns(grace.Columns, mainItem);
+        // At the system's force: a justified line stretches the run's own springs too.
+        var columns = SpacingRules.StretchGraceColumns(
+            SpacingRules.GraceColumns(grace.Columns, mainItem), measureLayout.SpringForce);
         double scriptOverhang = ScriptOverhangForGrace(
             articulations, grace, measure, columns.Span);
         // The run's FIRST column stands that far in front of the main note's.

@@ -54,6 +54,16 @@ internal sealed record MeasureLayout
     public ImmutableArray<ColumnLayout> Columns { get; }  // Timing-based columns (for multi-staff)
 
     /// <summary>
+    /// The force the system's springs were solved at (positive: stretched). A grace run hung
+    /// off a main column stretches its own springs by the same force
+    /// (<see cref="SpacingRules.StretchGraceColumns"/>); 0 where no solve ran.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/simple-spacer.cc:175-205 Simple_spacer::solve — one force for the whole line.
+    /// </remarks>
+    public double SpringForce { get; init; }
+
+    /// <summary>
     /// Per change-column hang distances for LOOSE mid-measure change columns, keyed by the
     /// moment the change shares with its note. Null (the overwhelmingly common case) when
     /// this measure has no loose column. The renderer hangs the change glyphs back from the

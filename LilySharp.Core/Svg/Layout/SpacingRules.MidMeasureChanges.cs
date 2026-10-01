@@ -814,6 +814,27 @@ internal static partial class SpacingRules
         return w;
     }
 
+    /// <summary>
+    /// The inverse stretch strength of the run whose span <see cref="LeadingGraceRunSpan(ItemColumn)"/>
+    /// answers — the widest run's columns × <see cref="GraceSpringInverseStretch"/> — so the
+    /// spring into it stretches as LilyPond's chain of springs does (SpringIntoGraceRun).
+    /// </summary>
+    internal static double LeadingGraceRunStretch(ItemColumn items)
+    {
+        double widest = 0;
+        int columns = 0;
+        for (int i = 0; i < items.Count; i++)
+        {
+            double span = LeadingGraceRunSpan(items[i]);
+            if (span > widest)
+            {
+                widest = span;
+                columns = GraceNotesOf(items[i]).Length;
+            }
+        }
+        return columns * GraceSpringInverseStretch();
+    }
+
     /// <summary>One item's leading grace run span, measured the way the run is PLACED.</summary>
     /// <remarks>
     /// ⚠️ The main item has to go in. <c>GraceColumns</c> answers a different span without

@@ -2128,6 +2128,7 @@ internal sealed class MultiStaffLayouter
 
             var measureLayout = new MeasureLayout(measureIndex, currentX, measureWidth, itemLayouts, columnLayouts)
             {
+                SpringForce = force,
                 LooseChangeHangs = ComputeLooseChangeHangs(
                     score.TextMetrics, measureAllMeasures[i], measureTimings[i],
                     measureColumnOverhangs[i].Right, columnLayouts),

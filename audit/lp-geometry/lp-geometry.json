@@ -2088,6 +2088,41 @@
       "residual": 0.0,
       "why": "EXACT since session 728 (see grace.column.same-direction.step): the flag of a grace d'8 meets only the upper part of the main c'4's column, so the skylines' distance is less than the flat flag reach (1.938627, which LilyPond reads too once the main note is a third higher - Lab sessions/p728/flag)."
     },
+    "grace.stretch.approach": {
+      "probe": "grace-stretch.ly",
+      "score": "GST",
+      "lilypond": 8.491779173952397,
+      "residual": 0.0,
+      "why": "EXACT since session 729: on a justified 100mm line LilyPond stretches the spring INTO a grace run as an ordinary note spring scaled by 0.8 (lily/spacing-spanner.cc:396-403) and each of the run's own springs by force x increment/2 (lily/spacing-basic.cc:163-175). Lily# hung the run off its main column as a rigid chain: the spring into it now carries the run's inverse strengths in series (SpacingRules.SpringIntoGraceRun) and the run is placed at the system's force (SpacingRules.StretchGraceColumns, MeasureLayout.SpringForce)."
+    },
+    "grace.stretch.grace-step": {
+      "probe": "grace-stretch.ly",
+      "score": "GST",
+      "lilypond": 3.211172360868133,
+      "residual": 0.0,
+      "why": "EXACT since session 729 (see grace.stretch.approach): 1.417939 + force x 0.4."
+    },
+    "grace.stretch.to-main": {
+      "probe": "grace-stretch.ly",
+      "score": "GST",
+      "lilypond": 3.211172360868133,
+      "residual": 0.0,
+      "why": "EXACT since session 729 (see grace.stretch.approach): the last grace's spring to its main note stretches like the others."
+    },
+    "grace.stretch.flagged-to-main": {
+      "probe": "grace-stretch.ly",
+      "score": "GST",
+      "lilypond": 3.7318608065015724,
+      "residual": 0.0,
+      "why": "EXACT since session 729 (see grace.stretch.approach): a one-column run, 1.938627 + force x 0.4."
+    },
+    "grace.stretch.quarter-control": {
+      "probe": "grace-stretch.ly",
+      "score": "GST",
+      "lilypond": 10.61472396744049,
+      "residual": 0.0,
+      "why": "EXACT: the line's ordinary quarter spring, the control that fixes the force - it moved with the graces' share of the stretch (the run's springs now take part)."
+    },
     "slur.beamed.reserved-text": {
       "probe": "slur-beam-reserve.ly",
       "score": "A",

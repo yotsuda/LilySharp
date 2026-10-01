@@ -217,6 +217,46 @@ internal static partial class SpacingRules
     }
 
     /// <summary>
+    /// The inverse stretch strength of ONE grace spring — half the GraceSpacing increment:
+    /// "Grace notes should not stretch very much".
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-basic.cc:163-175 Spacing_spanner::note_spacing — set_inverse_stretch_strength (grace_opts.increment_ / 2.0).
+    /// MEASURED (2.26.0, Lab sessions/p729/stretch): on a justified line every grace gap of
+    /// `\grace { d''16 e''16 } c''4` grows by the same amount, and that amount over a quarter
+    /// spring's growth is 0.4 / 1.698 (the quarter's fraction · (len − min)).
+    /// </remarks>
+    internal static double GraceSpringInverseStretch(GraceSpacingParameters? graceParams = null)
+        => (graceParams ?? GraceSpacingParameters.Default).SpacingIncrement / 2.0;
+
+    /// <summary>
+    /// A grace run's columns at the system's solved <paramref name="force"/>: each of its
+    /// springs — column to column, and the last one to the main note — grows by
+    /// force × <see cref="GraceSpringInverseStretch"/>, as every spring of a LilyPond line does.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spring.cc:218-237 Spring::length — distance + force × inverse_stretch_strength.
+    /// The run is drawn hanging off its main column, so the main column's position already
+    /// carries the stretch of the spring INTO the run (SpringIntoGraceRun adds the run's
+    /// springs' inverse strengths in series); this puts the same stretch back between the run's
+    /// own columns.
+    /// ⒝ NOT for a compressed line (force &lt; 0): a grace spring's compress strength is its
+    /// ideal less its minimum, and the run's gaps already sit at their minimum in every
+    /// measured book — the run stays rigid there.
+    /// </remarks>
+    internal static GraceColumnLayout StretchGraceColumns(GraceColumnLayout columns, double force,
+        GraceSpacingParameters? graceParams = null)
+    {
+        if (!(force > 0) || columns.Offsets.IsDefaultOrEmpty)
+            return columns;
+        double grow = force * GraceSpringInverseStretch(graceParams);
+        var offsets = ImmutableArray.CreateBuilder<double>(columns.Offsets.Length);
+        for (int k = 0; k < columns.Offsets.Length; k++)
+            offsets.Add(columns.Offsets[k] + k * grow);
+        return new GraceColumnLayout(offsets.MoveToImmutable(), columns.ToMain + grow);
+    }
+
+    /// <summary>
     /// The paper-column ROD a dotted grace column puts on its gap: 0.1 plus the distance from
     /// its dots' right skyline to the next column's left one. Negative infinity when there is
     /// nothing to measure — no dots, or no next column known.
@@ -488,7 +528,8 @@ internal static partial class SpacingRules
             ? spring
             : SpringIntoGraceRun(spring,
                 GraceColumns(graceNotes, mainItem, graceParams).Span,
-                CalculateGraceGroupSpringWidth(graceNotes, graceParams));
+                CalculateGraceGroupSpringWidth(graceNotes, graceParams),
+                graceNotes.Length * GraceSpringInverseStretch(graceParams));
 
     /// <summary>
     /// The spring that runs into a grace run, given how wide the run itself is: LilyPond's
@@ -514,8 +555,13 @@ internal static partial class SpacingRules
     /// spring's own min_dist, so it binds only when the line is squeezed and never widens a
     /// comfortable line.
     /// </param>
+    /// <param name="graceRunStretch">
+    /// The run's own springs' inverse stretch strengths, summed — one
+    /// <see cref="GraceSpringInverseStretch"/> per column (each column has its spring to the
+    /// next, the last one to the main note). 0 keeps the run rigid, as it was until session 729.
+    /// </param>
     public static Spring SpringIntoGraceRun(
-        Spring spring, double graceRunSpan, double graceRunClearance)
+        Spring spring, double graceRunSpan, double graceRunClearance, double graceRunStretch = 0)
     {
         if (graceRunClearance <= 0)
             return spring;
@@ -523,7 +569,11 @@ internal static partial class SpacingRules
         var approach = spring.Scale(GraceApproachScale);
         double newMin = approach.MinDistance + graceRunClearance;
         double newIdeal = Math.Max(approach.IdealDistance + graceRunSpan, newMin);
-        return new Spring(newIdeal, newMin, approach.InverseStretchStrength);
+        // The run's own springs are in SERIES with the approach: under one force their
+        // lengths add, so their inverse stretch strengths add (StretchGraceColumns hands the
+        // same stretch back to the run's columns when the run is placed).
+        // LILYPOND-REF: lily/spring.cc:218-237 Spring::length — distance + force × inverse_stretch_strength.
+        return new Spring(newIdeal, newMin, approach.InverseStretchStrength + graceRunStretch);
     }
 
     /// <summary>
