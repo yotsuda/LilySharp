@@ -222,7 +222,7 @@
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
 - **:890** constant with a name, and no ledger point reached it.
 ### `LilySharp.Core/Svg/Layout/SpacingRules.Grace.cs`
-- **:354** observed by: NOTHING. No ledger point covers a grace spacer, and the drawn
+- **:374** observed by: NOTHING. No ledger point covers a grace spacer, and the drawn
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
 - **:418** rest. No point observes it — see the branch below.
 ### `LilySharp.Core/Svg/Layout/TrillSpannerEngraver.cs`
@@ -328,8 +328,8 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:2781** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:5188** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:2794** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:5201** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
@@ -504,8 +504,8 @@
 - **:69** LILYSHARP-OWN, tuned on request (2026-08-06): each run's zigzag PHASE puts the
 ### `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs`
 - **:34** LILYSHARP-OWN: deliberately LARGER than LilyPond's, whose tab digits are small
-- **:401** LILYSHARP-OWN (owner's decision 2026-09-24): an eighth pair takes a sixteenth
-- **:474** and the stem ran up the whole staff). LILYSHARP-OWN: LilyPond has no pitchless note.
+- **:407** LILYSHARP-OWN (owner's decision 2026-09-24): an eighth pair takes a sixteenth
+- **:480** and the stem ran up the whole staff). LILYSHARP-OWN: LilyPond has no pitchless note.
 ### `LilySharp.Core/Svg/Layout/TabStaffStencils.cs`
 - **:122** note on the staff above and over the same note on the tab — but it is LILYSHARP-OWN
 - **:221** ★ LILYSHARP-OWN, and it has to be: LilyPond names chords only through a

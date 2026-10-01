@@ -10759,6 +10759,8 @@ internal static class LpGeometryProbes
 
     private static readonly string TGH = TabGraceSlurBook("TGH", "c,4\\3 r g,,\\4 r | c,\\3 r grace { d,16\\3( } e,4\\3) g,,\\4 |");
     private static readonly string TGA = TabGraceSlurBook("TGA", "c,4\\3 r g,,\\4 r | c,\\3 r acciaccatura { d,16\\3 } e,4\\3 g,,\\4 |");
+    /// <summary>TGN: TGH without its slur — the TAB grace column's own spacing (probes/tab-grace-slur.ly NOSLUR).</summary>
+    private static readonly string TGN = TabGraceSlurBook("TGN", "c,4\\3 r g,,\\4 r | c,\\3 r grace { d,16\\3 } e,4\\3 g,,\\4 |");
     private static readonly string TGI = TabGraceSlurBook("TGI", "c,4\\3 r g,,\\4 r | c,\\3 r grace { d,16\\3( e,16\\3) } f,4\\3 g,,\\4 |");
 
     private static readonly string TSL = """
@@ -16420,6 +16422,7 @@ internal static class LpGeometryProbes
         new("slur.tab.grace.acciaccatura.span", TGA, g => g.TabBowSpan(0)),
         new("slur.tab.grace.inner.string-to-attachment", TGI, g => g.TabBowPointAboveStaffMiddle(0, 0)),
         new("slur.tab.grace.inner.span", TGI, g => g.TabBowSpan(0)),
+        new("grace.tab.to-main", TGN, g => g.TabFretStep(4)),
         // The same two landings on a FULL tab, which reverts the 0.35. See TSLF.
         new("slur.tab.full.up.string-to-attachment", TSLF,
             g => g.TabBowPointAboveStaffMiddle(0, 0)),

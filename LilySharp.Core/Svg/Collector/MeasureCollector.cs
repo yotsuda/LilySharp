@@ -2013,6 +2013,14 @@ public sealed partial class MeasureCollector
         // own primary voice: a fall slides the finger off, and the hand is free after it.
         {
             int tabStaffIndex = 0;
+            // The parts some NOTATION staff of this score draws: a part drawn on a tab staff
+            // only spaces its grace runs by their fret digits (StampTabGraceDigits).
+            var notationParts = new HashSet<string>();
+            foreach (var sg in staffGroups)
+                foreach (var st in sg.Staves)
+                    if (!st.IsTab && !st.IsTextRow)
+                        foreach (var v in st.Voices)
+                            notationParts.Add(v.Name);
             staffGroups = staffGroups
                 .Select(sg => sg with
                 {
@@ -2027,9 +2035,14 @@ public sealed partial class MeasureCollector
                                             && a.StaffIndex == staffIndex && a.VoiceIndex == 0)
                                 .Select(a => (a.MeasureIndex, a.ItemIndex))
                                 .ToHashSet();
-                            return st with { Voices = st.Voices.SetItem(0, TabResolver.RemoveAccidentals(
+                            var resolved = st with { Voices = st.Voices.SetItem(0, TabResolver.RemoveAccidentals(
                                 _tabResolver.ResolveTabStrings(st.PrimaryVoice, st.Tuning.Value,
                                     st.TabSourceClef, st.Transposition, falls))) };
+                            bool tabOnly = true;
+                            foreach (var v in resolved.Voices)
+                                if (notationParts.Contains(v.Name))
+                                    tabOnly = false;
+                            return tabOnly ? StampTabGraceDigits(resolved, staffIndex) : resolved;
                         })
                         .ToImmutableArray()
                 })
@@ -5266,6 +5279,89 @@ public sealed partial class MeasureCollector
             columnItemIndices));
         // Hand the infos to the next main note/chord so it can reserve front space.
         _pendingLeadingGrace = graceColumns;
+    }
+
+    /// <summary>
+    /// Stamps the fret digits of a TAB-ONLY staff's grace runs on their columns
+    /// (<see cref="GraceColumnInfo.TabDigitHalfWidth"/>) — on the main notes' leading runs in
+    /// the staff's voices and on the staff's grace groups alike, so the springs and the
+    /// placement read one width.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond spaces a grace on a TabStaff by its TabNoteHead — the fret number at the grace's
+    /// font-size −4 (general-grace-settings) — and draws no stem (MEASURED, 2.26.0, Lab
+    /// sessions/p730/tg/nos.ly: a grace 1.3438 before its main note, the spring's ideal with the
+    /// digit's right edge as left_head_end). A part ALSO drawn on a notation staff keeps the
+    /// notation widths: the two staves share their columns, and the notation floor wins there.
+    /// LILYPOND-REF: scm/music-functions.scm:636-650 general-grace-settings — (Voice TabNoteHead font-size -4).
+    /// ⒝ THE DEFAULT DIGIT SIZE (TabConstants.FretFontSize × GraceFretScale, bold): a score whose
+    /// fonts { } restyle the tab's numbers keeps the default's width here (no fonts reach the collector).
+    /// </remarks>
+    private Model.Staff StampTabGraceDigits(Model.Staff staff, int staffIndex)
+    {
+        var tuning = LilySharp.Core.Tablature.Tunings.GetTuning(staff.Tuning!.Value);
+        int shift = LilySharp.Core.Tablature.Tunings.SoundingShift(staff.TabSourceClef, staff.Transposition);
+        double size = Svg.Layout.TabConstants.FretFontSize * Svg.Layout.TabConstants.GraceFretScale;
+        ImmutableArray<GraceColumnInfo> Stamp(ImmutableArray<GraceColumnInfo> columns)
+        {
+            if (columns.IsDefaultOrEmpty)
+                return columns;
+            var b = ImmutableArray.CreateBuilder<GraceColumnInfo>(columns.Length);
+            foreach (var c in columns)
+            {
+                double half = 0;
+                if (!c.IsRest)
+                    foreach (var h in c.Heads)
+                    {
+                        var (_, fret) = LilySharp.Core.Tablature.Tunings.CalculateFret(h.Midi + shift, tuning, h.StringNumber ?? 0);
+                        half = Math.Max(half, Rendering.TextFontMetrics.Advance(
+                            fret.ToString(), size, sans: false, style: Svg.Layout.TabConstants.FretFontStyle) / 2.0);
+                    }
+                b.Add(c with { TabDigitHalfWidth = half });
+            }
+            return b.MoveToImmutable();
+        }
+
+        for (int g = 0; g < _graceNotes.Count; g++)
+        {
+            var gn = _graceNotes[g];
+            if (gn.StaffIndex != staffIndex)
+                continue;
+            _graceNotes[g] = new GraceNoteItem(gn.Type, Stamp(gn.Columns), gn.MeasureIndex,
+                gn.MainNoteItemIndex, gn.SourcePosition, gn.StaffIndex, gn.VoiceIndex, gn.ColumnItemIndices);
+        }
+        var voices = staff.Voices.ToBuilder();
+        for (int vi = 0; vi < voices.Count; vi++)
+        {
+            var measures = voices[vi].Measures.ToBuilder();
+            bool changed = false;
+            for (int mi = 0; mi < measures.Count; mi++)
+            {
+                var items = measures[mi].Items;
+                ImmutableArray<MusicItem>.Builder? nb = null;
+                for (int ii = 0; ii < items.Length; ii++)
+                {
+                    MusicItem? updated = items[ii] switch
+                    {
+                        NoteItem { LeadingGrace.IsDefaultOrEmpty: false } n => n with { LeadingGrace = Stamp(n.LeadingGrace) },
+                        ChordItem { LeadingGrace.IsDefaultOrEmpty: false } c => c with { LeadingGrace = Stamp(c.LeadingGrace) },
+                        _ => null,
+                    };
+                    if (updated is null)
+                        continue;
+                    nb ??= items.ToBuilder();
+                    nb[ii] = updated;
+                }
+                if (nb is not null)
+                {
+                    measures[mi] = measures[mi] with { Items = nb.MoveToImmutable() };
+                    changed = true;
+                }
+            }
+            if (changed)
+                voices[vi] = voices[vi] with { Measures = measures.MoveToImmutable() };
+        }
+        return staff with { Voices = voices.MoveToImmutable() };
     }
 
     /// <summary>

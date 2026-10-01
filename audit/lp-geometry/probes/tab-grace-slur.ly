@@ -75,3 +75,16 @@ blTGI = \fixed c' {
   \layout {}
 }
 
+% NOSLUR (book TGN): TGH without its slur - the tab grace column's own spacing, read digit centre to digit
+% centre: 1.466742 (session 731).
+blTGN = \fixed c' {
+  \time 4/4
+  \key c \major
+  c,4\3 r g,,\4 r |
+  c,\3 r \grace { d,16\3 } e,4\3 g,,\4 |
+}
+
+\score {
+  \new TabStaff \with { stringTunings = #bass-four-string-tuning } { \transpose c c, \blTGN }
+  \layout {}
+}

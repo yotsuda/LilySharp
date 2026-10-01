@@ -196,6 +196,12 @@ internal static class TabConstants
         => Rendering.TextFontMetrics.Advance(
             glyph, fontSize, sans: false, style: FretStyle(fonts));
 
+    /// <summary><see cref="FretGlyphWidth"/> at the engraving's own size and weight — for the
+    /// houses no score's fonts reach (the collector's tab pass, the grace run's spacing).</summary>
+    public static double FretGlyphWidthAtDefault(string glyph, double scale = 1.0)
+        => Rendering.TextFontMetrics.Advance(
+            glyph, FretFontSize * scale, sans: false, style: FretFontStyle);
+
     /// <summary>
     /// Clear air the spacing engine keeps BETWEEN one column's fret digits and the next
     /// column's.

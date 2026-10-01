@@ -171,7 +171,24 @@ internal static partial class SpacingRules
             GraceColumnInfo? next = i + 1 < notes.Length ? notes[i + 1] : null;
             bool nextBeamed = i + 1 < beamedPrefix;
             double minDistance, correction;
-            if (!notes[i].IsRest && (next is { } n ? !n.IsRest : mainItem is not null))
+            if (notes[i].TabDigitHalfWidth > 0 && (next is { } tn ? !tn.IsRest : mainItem is not null))
+            {
+                // A TAB-ONLY run (GraceColumnInfo.TabDigitHalfWidth): the columns are fret
+                // digits, drawn centred on the column's X, with no stem — LilyPond's TabStaff
+                // stems are invisible, so stem_dir_correction returns before any branch
+                // (lily/note-spacing.cc:248-249 Stem::is_invisible). The floor is the two digits'
+                // boxes on one row (⒝: the digits' strings are not read), the main note's digit
+                // centred TabHeadCenterOffset right of its column (one digit wide: ⒝ a two-digit
+                // main fret reaches further left).
+                // LILYPOND-REF: lily/note-spacing.cc:42-115 Note_spacing::get_spacing — left_head_end is the digit's right edge.
+                double mainLeft = next is { } ng
+                    ? ng.TabDigitHalfWidth
+                    : TabConstants.FretGlyphWidthAtDefault("0") / 2.0 - EngravingDefaults.TabHeadCenterOffset;
+                minDistance = notes[i].TabDigitHalfWidth + DefaultExtraSpacingWidth
+                              + mainLeft + DefaultExtraSpacingWidth;
+                correction = 0;
+            }
+            else if (!notes[i].IsRest && (next is { } n ? !n.IsRest : mainItem is not null))
             {
                 // Two sounding columns: LilyPond's own Note_spacing pair — the skylines' distance
                 // for the minimum (a grace and its neighbour at different heights need not meet)
@@ -296,8 +313,11 @@ internal static partial class SpacingRules
         var baseSpring = CreateGraceSpring(left.Length, gp, dtMin);
         // LILYPOND-REF: lily/note-spacing.cc:77 — ideal = base.ideal - increment + left_head_end.
         // LILYPOND-REF: lily/note-spacing.cc:111-113 stem_dir_correction — added, then floored at 0.
+        // A tab-only grace's head is its fret digit (GraceColumnInfo.TabDigitHalfWidth: drawn
+        // centred on the column, so its right edge is that half width).
+        double headEnd = left.TabDigitHalfWidth > 0 ? left.TabDigitHalfWidth : GraceHeadEnd(left);
         double ideal = Math.Max(0.0,
-            baseSpring.IdealDistance - gp.SpacingIncrement + GraceHeadEnd(left) + stemCorrection);
+            baseSpring.IdealDistance - gp.SpacingIncrement + headEnd + stemCorrection);
         // LILYPOND-REF: lily/note-spacing.cc:78-83 set_min_distance, then lily/spring.cc:122.
         return Math.Max(ideal, minDistance + SpringHeadroom);
     }

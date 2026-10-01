@@ -117,7 +117,12 @@ public readonly record struct GraceColumnInfo(
     // is a slur bound since session 725). Read by the run's spacing: a slur from one column to
     // the next rods them the Slur's minimum-length apart (SpacingRules.GraceColumns).
     bool SlurStart = false,
-    bool SlurEnd = false
+    bool SlurEnd = false,
+    // Half the width of this column's widest FRET DIGIT, when the run is drawn on a TAB staff
+    // only (0 otherwise): a tab grace is a digit, and LilyPond spaces its column by that digit
+    // (SpacingRules.GraceColumns' tab arm). Stamped by the collector's tab pass, which knows the
+    // tuning (MeasureCollector.StampTabGraceDigits).
+    double TabDigitHalfWidth = 0
 )
 {
     /// <summary>Whether this column's stem points up — <c>!</c><see cref="StemDown"/>.</summary>
@@ -205,7 +210,8 @@ public readonly record struct GraceColumnInfo(
     {
         if (BaseDuration != other.BaseDuration || Dots != other.Dots
             || ContextFontSizeStep != other.ContextFontSizeStep || StemDown != other.StemDown
-            || SlurStart != other.SlurStart || SlurEnd != other.SlurEnd)
+            || SlurStart != other.SlurStart || SlurEnd != other.SlurEnd
+            || TabDigitHalfWidth != other.TabDigitHalfWidth)
             return false;
         if (Heads.IsDefaultOrEmpty || other.Heads.IsDefaultOrEmpty)
             return Heads.IsDefaultOrEmpty && other.Heads.IsDefaultOrEmpty;
@@ -227,6 +233,7 @@ public readonly record struct GraceColumnInfo(
         hc.Add(StemDown);
         hc.Add(SlurStart);
         hc.Add(SlurEnd);
+        hc.Add(TabDigitHalfWidth);
         if (!Heads.IsDefaultOrEmpty)
             foreach (var head in Heads)
                 hc.Add(head);
