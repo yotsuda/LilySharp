@@ -5236,8 +5236,9 @@ public sealed partial class MeasureCollector
         // so the writing voice's number is the whole question; the primary voice's answer
         // (voice one, or no span at all) is UP either way.
         // LILYPOND-REF: scm/music-functions.scm:666-674 make-voice-props-set (graceSettings = general-grace-settings)
-        // ⚠️ NOT a condensedStaff's second part: its voices are put together after collection
-        // (RenderSpec.ToStaffGroups), so here it is still voice 0 and stays UP.
+        // A condensedStaff's later part reaches this too: it is collected at its slot in the
+        // shared staff (the base CollectScore hands each binding), not at 0, so its grace
+        // points DOWN as LilyPond's << \a \\ \b >> draws it (SharedStaffVoiceSlotTests).
         bool graceStemDown = VoiceDefaults.GetDefaultStemUp(_cursor.VoiceIndex + 1) == false;
         builder.EnterGraceTime(slash, graceStemDown);
         // The body items are reds already (a grace body is always live), exactly as

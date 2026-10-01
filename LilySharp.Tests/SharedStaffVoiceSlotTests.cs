@@ -523,6 +523,49 @@ public class SharedStaffVoiceSlotTests
         Assert.Contains(staff.Voices[0].Measures[0].Items, i => i is ChordItem);
     }
 
+    /// <summary>
+    /// A grace in a shared staff's LATER part points DOWN, as a lower voice's grace does:
+    /// LilyPond reads <c>condensedStaff { a b }</c> as <c>&lt;&lt; \a \\ \b &gt;&gt;</c>
+    /// (LilyPondExporter), and <c>\voiceTwo</c> replaces graceSettings with
+    /// general-grace-settings, which states no Stem direction. The direction is decided at
+    /// collect time from the voice number (MusicItem.GraceStemDown), so it is the slot this
+    /// class pins that carries it — the part's base, not 0.
+    /// </summary>
+    /// <remarks>
+    /// Session 726 filed this as unreachable ("collected at voice 0, put together after"),
+    /// and session 733 found it already drawn right: the same music as a voice { } { } span
+    /// in one part engraves byte-identically (Lab sessions/p733/cond — cg.lys against
+    /// ctl.lys, data-pos masked). Both stamps are asserted, the items' and the group's
+    /// columns', because different readers take each.
+    /// </remarks>
+    [Fact]
+    public void ALaterPartsGraceOnASharedStaffPointsDown()
+    {
+        var score = Collect("""
+            octave absolute
+            time 4/4
+            part fl1 { clef treble }
+            part fl2 { clef treble }
+            section A {
+              fl1 { c''4 grace { d''16 } e''4 f''2 | }
+              fl2 { e'4 grace { f'16 } g'4 a'2 | }
+            }
+            form main { A }
+            score main "x" { condensedStaff { fl1 fl2 } }
+            """);
+        var staff = score.EnumerateStaves().Single().Staff;
+
+        bool ItemsDown(int voice) => staff.Voices[voice].Measures[0].Items
+            .Where(i => i.GraceTime).Select(i => i.GraceStemDown).Distinct().Single();
+        Assert.False(ItemsDown(0));
+        Assert.True(ItemsDown(1));
+
+        var groups = score.GraceNotes.OrderBy(g => g.VoiceIndex).ToArray();
+        Assert.Equal(new[] { 0, 1 }, groups.Select(g => g.VoiceIndex));
+        Assert.All(groups[0].Columns, c => Assert.False(c.StemDown));
+        Assert.All(groups[1].Columns, c => Assert.True(c.StemDown));
+    }
+
     // ---------- helpers ----------
 
     private static MultiStaffScore Collect(string source)
