@@ -583,6 +583,21 @@ public class LilyPondExporterTests
     }
 
     /// <summary>
+    /// A part that writes an ottava opens its staff with LilyPond's ordinal ottavation, so the
+    /// twin prints "8va" where the page does — LilyPond 2.26's default is the bare "8"
+    /// (ly/engraver-init.ly, the Staff context), and the page's "8va" is the owner's decision of 2026-08-02.
+    /// A part with no ottava is left as it was.
+    /// </summary>
+    [Fact]
+    public void AnOttavaPart_OpensWithTheOrdinalOttavation()
+    {
+        string with = Export(Score("c,4@ottava d,4 e,4 f,4@!ottava |"));
+        Assert.Equal(1, Occurrences(with, "\\set Staff.ottavationMarkups = #ottavation-simple-ordinals"));
+        string without = Export(Score("c,4 d,4 e,4 f,4 |"));
+        Assert.DoesNotContain("ottavationMarkups", without);
+    }
+
+    /// <summary>
     /// <c>@breath</c> and <c>@caesura</c> are LilyPond's <c>\breathe</c> / <c>\caesura</c>:
     /// standalone music AFTER the note, not post-events — and after every post-event the
     /// note carries, so a tie written after <c>@breath</c> still ties.

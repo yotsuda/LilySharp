@@ -296,6 +296,26 @@ public sealed class LilyPondExporter
     /// </summary>
     private readonly Dictionary<string, string> _pedalParts = new(StringComparer.Ordinal);
 
+    /// <summary>
+    /// The parts that write an ottava. Their staff opens with LilyPond's ORDINAL ottavation —
+    /// "8va" / "8vb" / "15ma" / "15mb", the strings the page draws — because LilyPond 2.26's
+    /// default is the bare number ("8"), and a twin that says nothing prints a different
+    /// label. Written only for a part with an ottava, so every other twin is unchanged.
+    /// </summary>
+    /// <remarks>
+    /// The page's strings are the owner's decision (2026-08-02, audit/lp-geometry/probes/
+    /// ottava-floor.ly: Lily# keeps "8va"); this makes the twin say the same (session 734).
+    /// LILYPOND-REF: ly/engraver-init.ly, the Staff context — ottavationMarkups = #ottavation-numbers, the default.
+    /// LILYPOND-REF: scm/translation-functions.scm:1178 ottavation-simple-ordinals — "8va" and its siblings.
+    /// </remarks>
+    private readonly HashSet<string> _ottavaParts = new(StringComparer.Ordinal);
+
+    /// <summary>The <c>\set</c> an ottava part's staff opens with, or "" (<see cref="_ottavaParts"/>).</summary>
+    private string OttavaStyleSet(string? partName)
+        => partName != null && _ottavaParts.Contains(partName)
+            ? "\\set Staff.ottavationMarkups = #ottavation-simple-ordinals "
+            : "";
+
     /// <summary>Whether the twin currently has <c>\improvisationOn</c> open — the
     /// LilyPond spelling of a slash-note run. Opened by the first slash, closed
     /// by the next pitched event.</summary>
@@ -563,6 +583,8 @@ public sealed class LilyPondExporter
                     _stringNumberParts.Add(name);
                 if (HasStrokeFingers(music))
                     _strokeFingerParts.Add(name);
+                if (HasOttavaMarks(music))
+                    _ottavaParts.Add(name);
                 if (HasPedalMarks(music))
                     _pedalParts[name] = (part != null ? PartProperty(part, "pedal") : null)?.ToLowerInvariant() switch
                     {
@@ -1302,6 +1324,18 @@ public sealed class LilyPondExporter
         foreach (var item in music)
             foreach (var n in item.DescendantNodes().Prepend(item))
                 if (n is MusicMarkSyntax mk && StrokeFinger(mk) != null)
+                    return true;
+        return false;
+    }
+
+    /// <summary>Whether the part's music writes any ottava (<see cref="OttavaCommand"/>) — the
+    /// argument forms and the terminator are marks, the bare word an articulation.</summary>
+    private static bool HasOttavaMarks(List<SyntaxNode> music)
+    {
+        foreach (var item in music)
+            foreach (var n in item.DescendantNodes().Prepend(item))
+                if ((n is MusicMarkSyntax mk && OttavaCommand(mk.MarkName, mk.IsSpanEnd) != null)
+                    || (n is ArticulationSyntax art && OttavaCommand(art.NameToken.Text, spanEnd: false) != null))
                     return true;
         return false;
     }
@@ -6840,6 +6874,7 @@ public sealed class LilyPondExporter
         if (PartClefWord(part) is { } clef)
             sb.Append("\\clef ").Append(LyClefName(clef)).Append(' ');
         sb.Append(PedalStyleSet(names[0]));
+        sb.Append(OttavaStyleSet(names[0]));
         sb.Append(StrokeFingerSet(names[0]));
         if (combined)
             sb.Append("\\partCombine \\").Append(vars[0]).Append(" \\").Append(vars[1]);
@@ -6958,6 +6993,7 @@ public sealed class LilyPondExporter
             sb.Append(" { ");
             if (clef != null) sb.Append("\\clef ").Append(LyClefName(clef)).Append(' ');
             sb.Append(PedalStyleSet(partName));
+            sb.Append(OttavaStyleSet(partName));
             sb.Append(StrokeFingerSet(partName));
             // An octave clef does not move a Lily# pitch: `g` under `treble_8` is drawn where
             // `g` stands under treble and SOUNDS an octave down (the 0.8.0 rule; TabResolver
