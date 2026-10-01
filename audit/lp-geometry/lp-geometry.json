@@ -5872,6 +5872,20 @@
       "why": "OPENED AND CLOSED 2026-08-18 (session 204) with mark.jump.width.fine, and it is the reason that one is not alone: a SIZE error scales with the string and a per-glyph one does not, so two lengths of the same family are what tell them apart without subtracting anything. MEASURED (LilyPond): 12.906170078740160 ss = 378 pixels, C059-Italic at the same 3.865234375 mm. Its italic control TIJ reads 12.906170078740157 (the same number; the last digit is float noise on two different code paths) and its bold-italic control TBJ reads 13.964612598425195, so LilyPond's weight costs +1.058442520 on this string and +0.512149606 on Fine -- NOT one ratio (1.082 against 1.114), which is what a face TABLE looks like and a scalar does not, and it is why neither string's weight may be borrowed for another's. THE OPENING RESIDUAL WAS +5.053209449 (Lily# 17.959379528). DECOMPOSED BY POISON: em 2.2 left +1.092585827 and em 2.2 + Italic left 0.000000000, so SIZE 3.960623622 and STYLE 1.092585827. ⚠️ Lily#'s style term is ONE PIXEL (0.034143307086614) larger than LilyPond's own +1.058442520 for the same twelve glyphs -- the per-glyph rounding text-advance.ly named -- and it CANCELS in the full port, which is why the end state is exact and the halfway state was not. A session that ports only one of the two will see that pixel and must not chase it. ⇒ CLOSED by the port in the same session. EXACT.",
       "$comment": "This is the string HANDOFF section 1 measured the largest reservation error on (4.233770079 ss) when MarkXExtent still priced the neighbouring boxed case. That error was Lily#-against-Lily#; this entry is the same string against LilyPond, and the two numbers are unrelated -- one was a reservation that disagreed with its own draw, this is a draw that disagrees with LilyPond."
     },
+    "mark.jump.right-from-bar-anchor.ds-al-coda": {
+      "probe": "jump-mark-x.ly",
+      "score": "JXJ",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED 2026-10-01 (session 733) on the owner's report: in a chamber score the D.S. al Coda under the cello ran across the bar line into the next measure's ff. MEASURED (LilyPond 2.26.0, jump-mark-x.ly JXJ): the JumpScript's right edge 33.589634279 = the bar line's anchor (the centre of its 33.494634..33.684634 extent), 0.000000 -- self-alignment-X RIGHT on the staff-bar it break-aligns to (scm/define-grobs.scm:1898-1926). THE OPENING RESIDUAL WAS +6.048085039, and it is TWO terms, both closed by the port: the draw CENTRED the string on the mark's X (half the 12.906170 advance, +6.453085) and the X stood 0.5 left of the measure's end where the bar's anchor is 0.095 left of it (-0.405). MusicMarkEngraver.CalculateXPosition now answers the closing bar line's anchor (EndBarAnchorX) and SharedRenderer draws a JumpScript right-anchored on it -- the extent MarkXExtent had always reserved, (x - w, x), so the reservation and the ink now agree too. EXACT."
+    },
+    "mark.jump.right-from-bar-anchor.dc": {
+      "probe": "jump-mark-x.ly",
+      "score": "JXC",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "THE SHORT-STRING TWIN of mark.jump.right-from-bar-anchor.ds-al-coda (jump-mark-x.ly JXC, the same book with \\jump \"D.C.\"): LilyPond's right edge is the bar anchor again, 0.000000, so the alignment is RIGHT and not a centring -- a centred draw would read half of each width, and the two opening residuals did (+1.865529921 here against +6.048085039 there: half the advance minus the same 0.405 on both). Closed by the same port. EXACT."
+    },
     "mark.pedal-text.staff-to-ped-baseline": {
       "probe": "pedal-lyric-stack.ly",
       "score": "PLT",

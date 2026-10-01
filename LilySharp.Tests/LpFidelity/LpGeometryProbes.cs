@@ -5410,6 +5410,38 @@ internal static class LpGeometryProbes
     /// 2.2 reservation was short on by 4.233770079 ss (book JMJ).</summary>
     private static readonly string MKJ = MarkWidthScore("MKJ", "ds al coda");
 
+    /// <summary>
+    /// WHERE A JUMP SCRIPT STANDS ACROSS ITS BAR LINE — the mirrors of jump-mark-x.ly's
+    /// books: the jump at a mid-line plain bar line with music after it. LilyPond's
+    /// JumpScript is <c>self-alignment-X RIGHT</c> on the staff-bar it break-aligns to
+    /// (scm/define-grobs.scm:1898-1926), so its right edge stands on the bar's anchor —
+    /// MEASURED 2026-10-01 on 2.26.0: 0.000000 for both strings. Two lengths, so a centring
+    /// cannot pass for the right alignment. ⚠️ Lily# <c>c'</c> is LilyPond <c>c''</c>.
+    /// </summary>
+    private static string JumpMarkXScore(string name, string mark) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section A {
+          melody { c'4 c' c' c' | c'4 c' c' c' {{mark}} | c'4 c' c' c' | c'1 | }
+        }
+
+        form main { ~A }
+
+        score main "{{name}}" {
+          staff melody
+        }
+        """;
+
+    /// <summary>"D.S. al Coda" at a mid-line bar (book JXJ).</summary>
+    private static readonly string MXJ = JumpMarkXScore("MXJ", "ds al coda");
+
+    /// <summary>"D.C." at a mid-line bar (book JXC).</summary>
+    private static readonly string MXC = JumpMarkXScore("MXC", "dc");
+
     /// <summary>"Sost. Ped." — the pedal that IS text on both sides (book PSO), at
     /// LilyPond's own sostenuto default <c>'mixed</c> (leading string, then a bracket).</summary>
     private static readonly string MKO =
@@ -15548,6 +15580,17 @@ internal static class LpGeometryProbes
             RaggedBottomPaper),
         new("mark.jump.width.ds-al-coda", MKJ,
             g => g.SoleMusicMarkReservedWidth(LilySharp.Core.Svg.Model.MusicMarkType.DalSegnoAlCoda),
+            RaggedBottomPaper),
+        // --- WHERE A JUMP SCRIPT STANDS (books JXJ/JXC, jump-mark-x.ly) ---
+        // Its RIGHT edge on the bar line's anchor (self-alignment-X RIGHT); two string
+        // lengths, so a centred draw reads half its width on each and cannot pass.
+        new("mark.jump.right-from-bar-anchor.ds-al-coda", MXJ,
+            g => g.JumpScriptRightFromBarlineAnchor(
+                LilySharp.Core.Svg.Model.MusicMarkType.DalSegnoAlCoda, "D.S. al Coda"),
+            RaggedBottomPaper),
+        new("mark.jump.right-from-bar-anchor.dc", MXC,
+            g => g.JumpScriptRightFromBarlineAnchor(
+                LilySharp.Core.Svg.Model.MusicMarkType.DaCapo, "D.C."),
             RaggedBottomPaper),
         new("mark.pedal.width.sostenuto", MKO,
             g => g.SoleMusicMarkReservedWidth(LilySharp.Core.Svg.Model.MusicMarkType.SostenutoOn),

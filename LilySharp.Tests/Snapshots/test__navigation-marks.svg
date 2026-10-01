@@ -74,9 +74,9 @@
   <text x="15.57" y="18.27" font-size="2.77" text-anchor="middle" data-pos="752">Main</text>
   <text x="39.88" y="15.94" font-size="2.20" font-style="italic" data-pos="810">To</text>
   <text class="music" x="43.72" y="15.16" font-size="4.00" data-pos="810"></text>
-  <text x="50.46" y="27.01" font-size="2.20" font-style="italic" text-anchor="middle" data-pos="829">D.S. al Coda</text>
+  <text x="50.86" y="27.01" font-size="2.20" font-style="italic" text-anchor="end" data-pos="829">D.S. al Coda</text>
   <text class="music" x="50.96" y="16.66" font-size="4.00" data-pos="844"></text>
-  <text x="71.99" y="27.01" font-size="2.20" font-style="italic" text-anchor="middle" data-pos="868">D.C. al Fine</text>
-  <text x="80.14" y="17.01" font-size="2.20" font-style="italic" text-anchor="middle" data-pos="890">Fine</text>
+  <text x="72.39" y="27.01" font-size="2.20" font-style="italic" text-anchor="end" data-pos="868">D.C. al Fine</text>
+  <text x="80.54" y="17.01" font-size="2.20" font-style="italic" text-anchor="end" data-pos="890">Fine</text>
   </g>
 </svg>

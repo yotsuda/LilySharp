@@ -993,6 +993,68 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The plain-text jump script reading <paramref name="text"/> (D.S. / D.C. family): its
+    /// drawn RIGHT edge minus the <c>break-align-anchor</c> of the bar line nearest that edge
+    /// — the centre of the bar's strokes, read as
+    /// <see cref="MusicMarkBoxCenterFromBarlineAnchor"/> reads it. LilyPond's JumpScript is
+    /// <c>self-alignment-X RIGHT</c> on the staff-bar it break-aligns to
+    /// (scm/define-grobs.scm:1898-1926), so the number to read is 0.
+    /// </summary>
+    /// <remarks>
+    /// The edge is the DRAWN one: the text's recorded anchor and its advance at the size and
+    /// style the draw uses, so a centred draw and a right-aligned one read differently. The
+    /// mark hangs BELOW the staff, so the strokes are looked for above it.
+    /// </remarks>
+    public double JumpScriptRightFromBarlineAnchor(
+        LilySharp.Core.Svg.Model.MusicMarkType type, string text, int page = 0)
+    {
+        var role = MusicMarkEngraver.TextRoleOf(type);
+        var texts = _pages[page].Texts.Where(t => t.Role == role && t.Text == text).ToList();
+        if (texts.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected ONE jump script reading \"{text}\", found "
+                + $"{texts.Count}.\nDrawn geometry:\n" + Describe());
+        }
+        var t = texts[0];
+        double w = LilySharp.Core.Rendering.TextFontMetrics.Advance(
+            t.Text, t.FontSize, sans: false, MusicMarkEngraver.TextStyleOf(type));
+        double right = t.Anchor switch
+        {
+            TextAnchor.End => t.X,
+            TextAnchor.Middle => t.X + w / 2,
+            _ => t.X + w,
+        };
+
+        var strokes = _pages[page].Rects
+            .Where(r => r.Width > 0 && r.Width <= EngravingDefaults.ThickBarlineThickness + 1e-6
+                        && r.Height > r.Width && r.Y < t.Y && r.Y > t.Y - 14.0)
+            .OrderBy(r => r.X).ToList();
+        var groups = new List<DrawnRect>();
+        foreach (var r in strokes)
+        {
+            if (groups.Count > 0)
+            {
+                var last = groups[^1];
+                if (r.X - (last.X + last.Width) < MaxBarlineStrokeGap)
+                {
+                    groups[^1] = last with { Width = r.X + r.Width - last.X };
+                    continue;
+                }
+            }
+            groups.Add(r);
+        }
+        if (groups.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: no bar-line stroke over the jump script \"{text}\".\nDrawn geometry:\n"
+                + Describe());
+        }
+        var bar = groups.OrderBy(g => Math.Abs(g.X + g.Width / 2 - right)).First();
+        return right - (bar.X + bar.Width / 2);
+    }
+
+    /// <summary>
     /// The FIRST boxed mark's BASELINE above the staff reference point it rides over.
     /// </summary>
     /// <remarks>

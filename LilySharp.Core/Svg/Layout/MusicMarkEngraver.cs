@@ -455,6 +455,20 @@ internal static class MusicMarkEngraver
              or MusicMarkType.DalSegnoAlFine or MusicMarkType.DalSegnoAlCoda
              or MusicMarkType.DaCapoAlFine or MusicMarkType.DaCapoAlCoda;
 
+    /// <summary>
+    /// The marks LilyPond engraves as a JumpScript — the jump-from instructions and "Fine"
+    /// (<c>\fine</c> puts its fineText on the same grob, audit/lp-geometry/probes/jump-mark-em.ly
+    /// JMF). Their string stands with its RIGHT edge on the bar line it break-aligns to: the
+    /// placement (<see cref="CalculateXPosition"/>) answers that edge and the draw is
+    /// right-anchored on it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:1898-1926 JumpScript — (break-align-symbols . (staff-bar
+    ///   key-signature clef)), (self-alignment-X . RIGHT), X-offset self-aligned-on-breakable.
+    /// </remarks>
+    internal static bool IsJumpScript(MusicMarkType type)
+        => type == MusicMarkType.Fine || IsJumpInstruction(type);
+
     // Gap between stacked marks
     // LILYPOND-REF: axis-group-interface.cc:45 default_outside_staff_padding_ = 0.46
     private const double StackGap = 0.46;
@@ -2624,7 +2638,17 @@ internal static class MusicMarkEngraver
         bool boxed = true)
     {
         if (mark.Position == MusicMarkPosition.End)
+        {
+            // A JumpScript's RIGHT edge stands on the anchor of the bar line closing its
+            // measure (IsJumpScript). MEASURED on 2.26.0 (audit/lp-geometry/probes/jump-mark-x.ly,
+            // "D.S. al Coda" and "D.C."): right edge − bar anchor = 0.000000 for both. Until
+            // session 733 the string was CENTRED 0.5 left of the measure's end and ran across
+            // the bar into the next measure's dynamics (+6.048 / +1.866, ledger
+            // mark.jump.right-from-bar-anchor.*).
+            if (IsJumpScript(mark.Type) && EndBarAnchorX(measureLayout, measures) is { } endBar)
+                return endBar;
             return measureLayout.X + measureLayout.Width - 0.5; // Before end barline
+        }
 
         // A mid-measure tempo change attaches to the musical column of the note
         // that follows it (LilyPond's MetronomeMark moment), not the measure's
@@ -2853,5 +2877,28 @@ internal static class MusicMarkEngraver
             return null;
         return measureLayout.X - EngravingDefaults.BarlineDrawnWidth(end)
                + EngravingDefaults.BarlineAnchorFromInkLeft(end);
+    }
+
+    /// <summary>
+    /// The absolute X of the <c>break-align-anchor</c> of the bar line CLOSING
+    /// <paramref name="measureLayout"/> — the mirror of <see cref="MidLineBarAnchorX"/> from the
+    /// other side: the measure's own end bar line (drawn ending at its right edge), else the
+    /// next measure's start bar line (a <c>|:</c> the plain end bar yields to, drawn from that
+    /// edge), else null.
+    /// </summary>
+    private static double? EndBarAnchorX(MeasureLayout measureLayout, ImmutableArray<Measure> measures)
+    {
+        int idx = measureLayout.MeasureIndex;
+        if (measures.IsDefaultOrEmpty || idx < 0 || idx >= measures.Length)
+            return null;
+        double right = measureLayout.X + measureLayout.Width;
+        var end = measures[idx].EndBarline;
+        if (end != BarlineType.None)
+            return right - EngravingDefaults.BarlineDrawnWidth(end)
+                   + EngravingDefaults.BarlineAnchorFromInkLeft(end);
+        if (idx + 1 < measures.Length && measures[idx + 1].StartBarline is var start
+            && start != BarlineType.None)
+            return right + EngravingDefaults.BarlineAnchorFromInkLeft(start);
+        return null;
     }
 }

@@ -863,9 +863,14 @@ internal static partial class SharedRenderer
             return;
         }
         // Default text marks (D.S./D.C./Fine/etc.) — size and style from the one home the
-        // reservations read, so the box and the ink cannot drift apart again.
+        // reservations read, so the box and the ink cannot drift apart again. A JumpScript is
+        // drawn RIGHT-anchored on its X, which is the bar line's anchor (MusicMarkEngraver.
+        // IsJumpScript) — the extent MarkXExtent reserves, (x − w, x), and until session 733 the
+        // draw centred it there instead, so the reservation and the ink disagreed by w/2.
         gc.DrawText(m.Text, m.X, absY, MusicMarkEngraver.PlainMarkEm(fonts, m.MarkType), TextRole.Navigation,
-            MusicMarkEngraver.TextStyleOf(fonts, m.MarkType), TextAnchor.Middle, Color.Black);
+            MusicMarkEngraver.TextStyleOf(fonts, m.MarkType),
+            MusicMarkEngraver.IsJumpScript(m.MarkType) ? TextAnchor.End : TextAnchor.Middle,
+            Color.Black);
     }
 
     private static bool IsHandledBySpannerEngraver(MusicMarkType type) =>

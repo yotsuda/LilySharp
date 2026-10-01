@@ -62,7 +62,7 @@
   <text x="36.03" y="17.78" font-size="2.47" text-anchor="middle" data-pos="450">up</text>
   <text x="39.42" y="17.78" font-size="2.47" text-anchor="middle" data-pos="453">up</text>
   <text x="42.81" y="17.78" font-size="2.47" text-anchor="middle" data-pos="456">up</text>
-  <text x="46.35" y="21.78" font-size="2.20" font-style="italic" text-anchor="middle" data-pos="487">D.C.</text>
+  <text x="46.31" y="21.78" font-size="2.20" font-style="italic" text-anchor="end" data-pos="487">D.C.</text>
   <rect x="11.90" y="6.69" width="2.75" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="312"/>
   <text x="13.28" y="9.08" font-size="2.77" text-anchor="middle" data-pos="312">A</text>
   <rect x="28.39" y="6.73" width="2.48" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="343"/>
