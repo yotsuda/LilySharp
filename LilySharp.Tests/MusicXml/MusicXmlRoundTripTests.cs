@@ -1253,7 +1253,7 @@ public class MusicXmlRoundTripTests
         var (lys, _) = new MusicXmlImporter().Import(xml);
         var tree = SyntaxTree.Parse(lys);
         Assert.False(HasErrors(tree), $"{lys}\n---\n{Diagnostics(tree)}");
-        Assert.Contains(music, lys);
+        Assert.Contains(music, OneLine(lys));
         static IEnumerable<string> Messages(SyntaxTree t)
             => t.Diagnostics.Concat(SemanticValidation.Run(t)).Select(d => d.Message);
         Assert.Equal(Messages(sourceTree), Messages(tree));
@@ -1274,8 +1274,14 @@ public class MusicXmlRoundTripTests
                         + $"section A {{ m {{ {music} }} }}\nform main {{ ~A }}\nscore main {{ staff m }}\n";
         string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().ToString();
         var (lys, _) = new MusicXmlImporter().Import(xml);
-        Assert.Contains(expected, lys);
+        Assert.Contains(expected, OneLine(lys));
     }
+
+    /// <summary>The imported source with its line breaks read as spaces: the importer writes
+    /// a few bars to a line (LysWriter.BarsPerLine), and these fixtures name a stretch of
+    /// music, not where its lines fall.</summary>
+    private static string OneLine(string lys)
+        => System.Text.RegularExpressions.Regex.Replace(lys, @"\s*\n\s*", " ");
 
     /// <summary>
     /// A rest's post-events, a whole-measure rest and a multi-measure rest survive the round
@@ -1293,7 +1299,7 @@ public class MusicXmlRoundTripTests
                         + $"section A {{ m {{ {music} }} }}\nform main {{ ~A }}\nscore main {{ staff m }}\n";
         string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().ToString();
         var (lys, _) = new MusicXmlImporter().Import(xml);
-        Assert.Contains(music, lys);
+        Assert.Contains(music, OneLine(lys));
     }
 
     /// <summary>

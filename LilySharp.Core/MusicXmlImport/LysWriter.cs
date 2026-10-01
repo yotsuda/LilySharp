@@ -41,7 +41,17 @@ internal static class LysWriter
         // OPTIMISATION: since 2026-08-31 a repeat barline may only be written in a `form`
         // (LYS1034), so an imported book whose repeat stayed in the music would not compile —
         // this writer would have been emitting `|:` into a section body.
-        var layout = TryFactorVoltas(firstMeasures) ?? TryFactorPlainRepeats(firstMeasures, report);
+        // Anything else is one flat section played once. Either is then cut again at the
+        // rehearsal marks.
+        // ⚠️ The flat section runs to the LONGEST part's end, not the first part's: a first
+        // part with no bars at all (a round trip of inporder.lys) must not empty the others.
+        int longest = doc.Parts.Count > 0 ? doc.Parts.Max(p => p.Measures.Count) : 0;
+        var cuts = TryFactorVoltas(firstMeasures) ?? TryFactorPlainRepeats(firstMeasures, report)
+            ?? new VoltaLayout([new VoltaSegment("A", 0, longest, EndBar: true)], HiddenLabel("A"));
+        var marks = RehearsalMarks(doc);
+        var header = HeaderState(doc, cuts.Segments.Select(s => s.Start).Concat(marks.Keys));
+        var directives = doc.Parts.ToDictionary(p => p, p => Directives(doc, p, header, report));
+        var layout = SplitAtMarks(cuts, CuttableMarks(marks, cuts, directives.Values, doc, report), doc);
         bool useRelative = relativeOctave;
 
         // ---- header ----
@@ -64,7 +74,7 @@ internal static class LysWriter
             sb.Append("tempo ").Append(tempo).Append('\n');
 
         // Opening time/key/clef come from the first measure that declares them.
-        var (firstTime, firstKey) = Opening(doc);
+        var (firstTime, firstKey) = header;
         if (firstTime is { } t0)
             sb.Append("time ").Append(t0.Beats).Append('/').Append(t0.BeatType).Append('\n');
         if (firstKey is { } k0)
@@ -100,12 +110,7 @@ internal static class LysWriter
         sb.Append('\n');
 
         // ---- sections + structure ----
-        // First/second endings factor into named sections + a volta structure;
-        // anything else is one flat section played once.
-        if (layout != null)
-            WriteVoltaSections(sb, doc, layout, report, useRelative);
-        else
-            WriteFlatSection(sb, doc, report, useRelative);
+        WriteSections(sb, doc, layout, directives, report, useRelative);
 
         // ---- score: one staff per part; split staves regroup into a grand staff ----
         // The part carrying lyrics places them EXPLICITLY, by band order — one
@@ -192,44 +197,23 @@ internal static class LysWriter
 
     // ---- sections ---------------------------------------------------------
 
-    // The single-section flat layout: every part's full music in section A, played once by
-    // `form main { ~A }`. ⚠️ Reached only when the piece has NO repeat barline at all — a
-    // repeat is cut into sections and spelled in the form (LYS1034, TryFactorPlainRepeats).
-    private static void WriteFlatSection(StringBuilder sb, ImportDocument doc, ImportReport report, bool relative)
-    {
-        sb.Append("section A {\n");
-        foreach (var part in doc.Parts)
-        {
-            sb.Append("  ").Append(part.SafeName).Append(" {\n");
-            sb.Append("    ").Append(WriteMusic(part, report, relative, Directives(doc, part, report))).Append('\n');
-            sb.Append("  }\n");
-        }
-        // Section-level lyrics sing the first part carrying them.
-        var lyricPart = doc.Parts.FirstOrDefault(HasLyrics);
-        if (lyricPart != null)
-            foreach (var line in WriteLyrics(lyricPart, 0, lyricPart.Measures.Count))
-                sb.Append("  ").Append(line).Append('\n');
-        sb.Append("}\n\n");
-        // `~`: the section is the importer's, not the source's — its label is not printed
-        // (see HiddenLabel).
-        sb.Append("form main { ").Append(HiddenLabel("A")).Append(" }\n\n");
-    }
-
-    // A first/second-ending layout: the music splits into named sections and the
-    // repeat + volta brackets live in the structure (Body played twice, End1 the
-    // first time, End2 the second).
-    private static void WriteVoltaSections(
-        StringBuilder sb, ImportDocument doc, VoltaLayout layout, ImportReport report, bool relative)
+    // Every section the layout cut, each part's music for its measures, then the form that
+    // plays them. A flat piece is one section A played once (`form main { ~A }`) — reached only
+    // when the piece has NO repeat barline at all: a repeat is cut into sections and spelled in
+    // the form (LYS1034, TryFactorPlainRepeats). With endings, the repeat + volta brackets live
+    // in the form (Body played twice, End1 the first time, End2 the second).
+    private static void WriteSections(
+        StringBuilder sb, ImportDocument doc, VoltaLayout layout, Dictionary<ImportPart, PartDirectives> directives,
+        ImportReport report, bool relative)
     {
         var lyricPart = doc.Parts.FirstOrDefault(HasLyrics);
-        var directives = doc.Parts.ToDictionary(p => p, p => Directives(doc, p, report));
         foreach (var seg in layout.Segments)
         {
             sb.Append("section ").Append(seg.Name).Append(" {\n");
             foreach (var part in doc.Parts)
             {
                 sb.Append("  ").Append(part.SafeName).Append(" {\n");
-                sb.Append("    ").Append(WriteMusicRange(part, seg.Start, seg.End, report, relative, directives[part])).Append('\n');
+                sb.Append("    ").Append(WriteMusicRange(part, seg, report, relative, directives[part])).Append('\n');
                 sb.Append("  }\n");
             }
             // Lyrics for just this section's measures, so each ending sings its own text.
@@ -238,11 +222,224 @@ internal static class LysWriter
                     sb.Append("  ").Append(line).Append('\n');
             sb.Append("}\n\n");
         }
-        sb.Append("form main {\n  ").Append(layout.Structure).Append("\n}\n\n");
+        // `~`: the sections are the importer's, not the source's — their labels are not
+        // printed (see HiddenLabel).
+        if (layout.Segments.Count == 1)
+            sb.Append("form main { ").Append(layout.Structure).Append(" }\n\n");
+        else
+            sb.Append("form main {\n  ").Append(layout.Structure).Append("\n}\n\n");
     }
 
-    private sealed record VoltaSegment(string Name, int Start, int End);
+    /// <summary>A stretch of measures [Start, End) written as one section.</summary>
+    /// <param name="EndBar">Whether the section closes on its last measure's own bar line. A
+    /// section that ends at a repeat or an ending leaves that bar to the form.</param>
+    private sealed record VoltaSegment(string Name, int Start, int End, bool EndBar = false);
     private sealed record VoltaLayout(IReadOnlyList<VoltaSegment> Segments, string Structure);
+
+    /// <summary>
+    /// Cuts every section of <paramref name="layout"/> again before each measure that carries a
+    /// rehearsal mark, so the book's sections are the source's own: a section per mark, named
+    /// after it where its text can name one, and the form plays them in order where it played
+    /// the uncut section.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Until 2026-10-01 a piece with no repeat came back as ONE section holding every bar, the
+    /// marks written inline (<c>@mark("A")</c> … <c>@mark("H")</c>) — a book nobody could
+    /// rearrange or read by its form. The mark itself stays where the source put it, as
+    /// <c>@mark</c> on its note: the section's label is still hidden (<see cref="HiddenLabel"/>),
+    /// so the page prints exactly what it printed before.
+    /// </para>
+    /// <para>
+    /// The cut is at the start of the mark's MEASURE, wherever in the bar the mark stands: a
+    /// section boundary inside a bar would leave two short bars.
+    /// </para>
+    /// <para>
+    /// Only the marks <see cref="CuttableMarks"/> lets through arrive here.
+    /// </para>
+    /// </remarks>
+    private static VoltaLayout SplitAtMarks(VoltaLayout layout, SortedDictionary<int, string> marks, ImportDocument doc)
+    {
+        if (marks.Count == 0)
+            return layout;
+
+        // Names already taken: the layout's own sections and the parts.
+        var used = new HashSet<string>(layout.Segments.Select(s => s.Name), StringComparer.Ordinal);
+        used.UnionWith(doc.Parts.Select(p => p.SafeName));
+        string Unique(string name)
+        {
+            string candidate = name;
+            for (int k = 2; !used.Add(candidate); k++)
+                candidate = name + k;
+            return candidate;
+        }
+
+        // ⚠️ A flat piece's one section is named A, which is also the commonest mark: once it
+        // is cut, its unmarked opening bars are the piece's Intro, and A stays free for the mark.
+        bool flat = layout.Segments.Count == 1 && layout.Segments[0].EndBar;
+        if (flat)
+            used.Remove(layout.Segments[0].Name);
+
+        var segments = new List<VoltaSegment>();
+        string structure = layout.Structure;
+        foreach (var seg in layout.Segments)
+        {
+            var bounds = new List<int> { seg.Start };
+            bounds.AddRange(marks.Keys.Where(i => i > seg.Start && i < seg.End));
+            if (bounds.Count == 1)
+            {
+                segments.Add(seg);
+                continue;
+            }
+            bounds.Add(seg.End);
+            var names = new List<string>();
+            for (int k = 0; k + 1 < bounds.Count; k++)
+            {
+                string name = marks.TryGetValue(bounds[k], out var label) && SectionNameFor(label) is { } fromMark
+                        && !used.Contains(fromMark)
+                    ? Unique(fromMark)
+                    : k == 0 ? (flat ? Unique("Intro") : seg.Name)
+                    : Unique(seg.Name + (k + 1));
+                names.Add(name);
+                bool last = k + 2 == bounds.Count;
+                segments.Add(new VoltaSegment(name, bounds[k], bounds[k + 1], last ? seg.EndBar : true));
+            }
+            structure = System.Text.RegularExpressions.Regex.Replace(structure,
+                System.Text.RegularExpressions.Regex.Escape(HiddenLabel(seg.Name)) + "(?![A-Za-z0-9_])",
+                string.Join(" ", names.Select(HiddenLabel)));
+        }
+        return new VoltaLayout(segments, structure);
+    }
+
+    /// <summary>The first rehearsal mark of each measure, in any part, voice or chord, by
+    /// measure index.</summary>
+    private static SortedDictionary<int, string> RehearsalMarks(ImportDocument doc)
+    {
+        var marks = new SortedDictionary<int, string>();
+        foreach (var part in doc.Parts)
+            for (int i = 0; i < part.Measures.Count; i++)
+                foreach (var note in part.Measures[i].VoiceItems.Values.SelectMany(v => v).OfType<ImportNote>())
+                    foreach (var art in note.Articulations)
+                        if (MarkLabel(art) is { } label)
+                            marks.TryAdd(i, label);
+        return marks;
+    }
+
+    /// <summary>
+    /// The marks a section may start at: those where no part has to RESTATE its meter, key or
+    /// clef — a change the source makes on that very bar is no restatement. The others stay
+    /// inside the section before them, as <c>@mark</c>, and the report says so.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A section boundary resets the meter, the key and the clef (SYNTAX_REFERENCE "Across a
+    /// section boundary"), so a section starting where the one in force is not the file's must
+    /// say it again — and Lily# prints a signature for every <c>time</c> and <c>key</c> it
+    /// reads, as LilyPond prints one for every \time, so that would be a second, identical
+    /// signature the source never drew (Lab sessions/p734/imp, round trip of
+    /// section-meter-resets-to-global-meter.lys: a 4/4 printed again at its mark B). The header
+    /// is chosen so that this is rare (<see cref="HeaderState"/>). A cut the form needs — a
+    /// repeat, an ending — restates regardless: there is no other way to write it.
+    /// <para>
+    /// ⚠️ NOR WHERE A SLUR, A PHRASING SLUR OR A HAIRPIN RUNS ON PAST THE NEXT SECTION: a span
+    /// open at a section's end is carried into the next section only and must end there, or it
+    /// is cut and reported (LYS4023). An imported hairpin has no end of its own (the reader
+    /// keeps no wedge stop) — the next dynamic or hairpin ends it — so one opened before a mark
+    /// and followed by no dynamic until the mark after it cannot be cut there (round trip of
+    /// hairpin-in-a-repeated-section.lys). A tie may cross anything.
+    /// </para>
+    /// </remarks>
+    private static SortedDictionary<int, string> CuttableMarks(
+        SortedDictionary<int, string> marks, VoltaLayout layout, IEnumerable<PartDirectives> directives,
+        ImportDocument doc, ImportReport report)
+    {
+        var starts = layout.Segments.Select(s => s.Start).ToHashSet();
+        // Every place a section may start, so a span carried over a cut must end before the next.
+        var bounds = starts.Concat(marks.Keys).Append(int.MaxValue).Distinct().Order().ToList();
+        var result = new SortedDictionary<int, string>();
+        foreach (var (i, label) in marks)
+        {
+            if (starts.Contains(i))
+                result.Add(i, label);
+            else if (directives.Any(d => i < d.Restates.Length && d.Restates[i]))
+                report.Warn(i + 1, $"the rehearsal mark '{label}' does not start a section: one starting "
+                    + "there would have to state its meter, key or clef again, and that prints it again.");
+            else if (SpanRunsThrough(doc, i, bounds.First(b => b > i)))
+                report.Warn(i + 1, $"the rehearsal mark '{label}' does not start a section: a slur or "
+                    + "hairpin open there would have to run on through the section after it.");
+            else
+                result.Add(i, label);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Whether, in any part or voice, a slur, phrasing slur or hairpin open at the start of
+    /// measure <paramref name="cut"/> is not ended before measure <paramref name="next"/> (or
+    /// the end of the part) — the one span a cut there would carry into a section and not end.
+    /// </summary>
+    private static bool SpanRunsThrough(ImportDocument doc, int cut, int next)
+    {
+        foreach (var part in doc.Parts)
+            foreach (int voice in part.Measures.SelectMany(m => m.VoiceItems.Keys).Distinct())
+            {
+                bool slur = false, phrasing = false, hairpin = false;
+                bool carried = false; // past the cut: only the spans open there are followed
+                for (int i = 0; i < Math.Min(next, part.Measures.Count); i++)
+                {
+                    if (i == cut)
+                    {
+                        if (!slur && !phrasing && !hairpin)
+                            break;
+                        carried = true;
+                    }
+                    if (!part.Measures[i].VoiceItems.TryGetValue(voice, out var items))
+                        continue;
+                    foreach (var note in items.OfType<ImportNote>().Where(n => !n.ChordWithPrev))
+                    {
+                        // Close before open, the order the writer spells them in.
+                        if (note.SlurStop) slur = false;
+                        if (note.SlurStart && !carried) slur = true;
+                        if (note.PhrasingSlurStop) phrasing = false;
+                        if (note.PhrasingSlurStart && !carried) phrasing = true;
+                        foreach (var art in note.Articulations)
+                        {
+                            // A new hairpin ends the one before it, as a dynamic does.
+                            if (art is "cresc" or "decresc")
+                                hairpin = !carried;
+                            else if (IsDynamic(art))
+                                hairpin = false;
+                        }
+                    }
+                }
+                if (carried && (slur || phrasing || hairpin))
+                    return true;
+            }
+        return false;
+    }
+
+    // A dynamic mark as the reader spells one: it ends a hairpin.
+    private static bool IsDynamic(string articulation)
+        => System.Text.RegularExpressions.Regex.IsMatch(articulation, "^(p+|f+|m[pf]|s?f+z?|sfp+|fp|rf+z?|fz|sp+|n)$");
+
+    /// <summary>The text of a <c>mark("…")</c> articulation, or null for any other.</summary>
+    private static string? MarkLabel(string articulation)
+        => articulation.StartsWith("mark(\"", StringComparison.Ordinal) && articulation.EndsWith("\")", StringComparison.Ordinal)
+            ? articulation[6..^2]
+            : null;
+
+    /// <summary>
+    /// The section name a mark's text gives, or null when it cannot name one. Only a word
+    /// opening with a capital: every keyword is lower case (SYNTAX_REFERENCE "Reserved Words"),
+    /// save <c>R</c>, the bar rest. A text of digits alone ("12") names <c>M12</c>.
+    /// </summary>
+    private static string? SectionNameFor(string label)
+    {
+        if (label.Length > 0 && label.All(char.IsAsciiDigit))
+            return "M" + label;
+        if (label.Length == 0 || !char.IsAsciiLetterUpper(label[0]) || !label.All(char.IsAsciiLetterOrDigit) || label == "R")
+            return null;
+        return label;
+    }
 
     /// <summary>Recognizes the common <c>[Intro] |: Body [1. End1] :| [2. End2]
     /// [Coda]</c> shape from the measures' repeat and ending markers, returning the
@@ -296,8 +493,8 @@ internal static class LysWriter
     /// <remarks>
     /// <para>
     /// ⚠️ This exists because of LYS1034 (2026-08-31): a repeat barline is legal only inside a
-    /// <c>form</c>, so <see cref="WriteFlatSection"/>'s output — one section holding the whole
-    /// piece with <c>BarlineBetween</c>'s <c>|:</c> / <c>:|</c> / <c>:|:</c> in it — stopped
+    /// <c>form</c>, so the flat layout's output — one section holding the whole piece with
+    /// its <c>|:</c> / <c>:|</c> / <c>:|:</c> in it — stopped
     /// being a book Lily# accepts. The endings case already factored (TryFactorVoltas); this
     /// is the same move for the case that did not.
     /// </para>
@@ -404,42 +601,79 @@ internal static class LysWriter
 
     private static readonly List<ImportItem> EmptyItems = new();
 
-    // One part's music over a measure range [start, end), voice-aware, joined by plain
-    // barlines (repeat/volta bars come from the structure, not the notes). Each section
-    // is its own relative-octave stream (Lily# resets relative per section).
+    /// <summary>How many bars a line of the written music holds at most. A bar line other than
+    /// a plain one ends the line early.</summary>
+    private const int BarsPerLine = 4;
+
+    // The indent of a section's music: inside `section X {` and `part {`.
+    private const string MusicIndent = "    ";
+
+    // One part's music over a section's measures, voice-aware. Repeat and volta bars come
+    // from the form, not the notes. Each section is its own relative-octave stream (Lily#
+    // resets relative per section).
     private static string WriteMusicRange(
-        ImportPart part, int start, int end, ImportReport report, bool relative, string[] directives)
+        ImportPart part, VoltaSegment seg, ImportReport report, bool relative, PartDirectives directives)
     {
         var voices = part.Measures.SelectMany(m => m.VoiceItems.Keys).Distinct().OrderBy(x => x).ToList();
         if (voices.Count <= 1)
-            return WriteVoiceRange(part, voices.Count == 1 ? voices[0] : 1, start, end, report, Rel(relative), directives);
+            return WriteVoiceRange(part, voices.Count == 1 ? voices[0] : 1, seg, report, Rel(relative),
+                directives, "\n" + MusicIndent);
+        // Several voices on one staff → one parallel span. Ascending voice order puts voice 1
+        // (the upper part, stems up) first. Each voice is its own relative-octave stream; the
+        // staff's changes ride the first one only.
         return VoiceSpan(voices.Select(v =>
-            WriteVoiceRange(part, v, start, end, report, Rel(relative), v == voices[0] ? directives : null)));
+            WriteVoiceRange(part, v, seg, report, Rel(relative), v == voices[0] ? directives : null,
+                "\n" + MusicIndent + "  ")));
     }
 
     /// <summary>Wraps several simultaneous streams in one span. <c>voice</c> opens the span
-    /// ONCE and each further voice is another block (repeating the keyword is LYS0019).</summary>
+    /// ONCE and each further voice is another block (repeating the keyword is LYS0019); a
+    /// further block starts on a line of its own.</summary>
     private static string VoiceSpan(IEnumerable<string> bodies)
-        => "voice " + string.Join(" ", bodies.Select(b => "{ " + b + " }"));
+        => "voice " + string.Join("\n" + MusicIndent, bodies.Select(b => "{ " + b + " }"));
 
+    /// <summary>
+    /// One voice's measures of a section, with the source's bar lines between them, broken
+    /// into lines of <see cref="BarsPerLine"/> bars and after any bar line that is not plain.
+    /// </summary>
+    /// <remarks>
+    /// Until 2026-10-01 a part's whole piece was written on ONE line — hundreds of bars, which
+    /// no editor shows and no reader can find a bar in. A bar rest folded over several bars
+    /// (<c>R1*8</c>) counts as one bar of the line.
+    /// </remarks>
     private static string WriteVoiceRange(
-        ImportPart part, int voice, int start, int end, ImportReport report, RelativeOctave? rel,
-        string[]? directives)
+        ImportPart part, int voice, VoltaSegment seg, ImportReport report, RelativeOctave? rel,
+        PartDirectives? directives, string newline)
     {
         var sb = new StringBuilder();
-        end = Math.Min(end, part.Measures.Count);
+        int start = seg.Start, end = Math.Min(seg.End, part.Measures.Count);
+        int onLine = 0;
         for (int i = start; i < end;)
         {
             int bars = MultiRestSpan(part.Measures, i, end, voice);
             var items = part.Measures[i].VoiceItems.TryGetValue(voice, out var v) ? v : EmptyItems;
             if (directives != null)
-                sb.Append(directives[i]);
-            sb.Append(WriteMeasureItems(items, report, rel, bars)).Append(' ');
+                sb.Append(i == start ? directives.Opening[i] : directives.Changes[i]);
+            sb.Append(WriteMeasureItems(items, report, rel, bars));
+            // The folded bars close at the LAST one's bar line.
+            var last = part.Measures[i + bars - 1];
             i += bars;
+            onLine++;
             if (i < end)
-                sb.Append("| ");
+            {
+                string bar = PlainOrDoubleBarline(last);
+                sb.Append(' ').Append(bar);
+                bool breakHere = onLine >= BarsPerLine || bar != "|";
+                sb.Append(breakHere ? newline : " ");
+                if (breakHere)
+                    onLine = 0;
+            }
+            else if (seg.EndBar)
+            {
+                sb.Append(' ').Append(PlainOrDoubleBarline(last));
+            }
         }
-        return sb.ToString().TrimEnd();
+        return sb.ToString();
     }
 
     /// <summary>
@@ -482,21 +716,6 @@ internal static class LysWriter
             ? rest
             : null;
 
-    private static string WriteMusic(ImportPart part, ImportReport report, bool relative, string[] directives)
-    {
-        var voices = part.Measures
-            .SelectMany(m => m.VoiceItems.Keys)
-            .Distinct().OrderBy(n => n).ToList();
-        if (voices.Count <= 1)
-            return WriteVoiceStream(part, voices.Count == 1 ? voices[0] : 1, report, Rel(relative), directives);
-
-        // Several voices on one staff → one parallel span. Ascending voice order puts
-        // voice 1 (the upper part, stems up) first. Each voice is its own
-        // relative-octave stream; the staff's changes ride the first one only.
-        return VoiceSpan(voices.Select(v =>
-            WriteVoiceStream(part, v, report, Rel(relative), v == voices[0] ? directives : null)));
-    }
-
     /// <summary>
     /// Per measure, the changes that open it — <c>time</c>, <c>key</c>, <c>clef</c>,
     /// <c>tempo</c> — as the directives written before its music ("" when none).
@@ -510,77 +729,136 @@ internal static class LysWriter
     /// A grand staff's clef is left alone: the reader keeps one clef per measure, which
     /// cannot say which staff changed.
     /// </remarks>
-    // The time and key the header states: the first a measure declares, in any part. ONE
-    // house, so the header and the changes after it cannot disagree about what is in force.
+    // The time and key the piece opens in: the first a measure declares, in any part.
     private static (ImportTime? Time, ImportKey? Key) Opening(ImportDocument doc)
         => (doc.Parts.SelectMany(p => p.Measures).Select(m => m.Time).FirstOrDefault(t => t != null),
             doc.Parts.SelectMany(p => p.Measures).Select(m => m.Key).FirstOrDefault(k => k != null));
 
-    private static string[] Directives(ImportDocument doc, ImportPart part, ImportReport report)
+    /// <summary>
+    /// The time and key the header states: the ones in force at the most places a section may
+    /// start (the form's cuts and the rehearsal marks), the opening's where none is more
+    /// common. ONE house, so the header and the directives (<see cref="Directives"/>) cannot
+    /// disagree about what is in force.
+    /// </summary>
+    /// <remarks>
+    /// A section that starts in anything else restates it, and a restatement prints (see
+    /// <see cref="CuttableMarks"/>); the header's value is the one no section has to restate. The opening
+    /// section's own statement costs nothing: a <c>time</c> at the first moment REPLACES the
+    /// initial signature (MeasureCollector.MusicWalk.cs, TimeSignatureSyntax). Until
+    /// 2026-10-01 a piece was cut only at its repeats and the header was simply the opening.
+    /// </remarks>
+    private static (ImportTime? Time, ImportKey? Key) HeaderState(ImportDocument doc, IEnumerable<int> sectionStarts)
     {
         var (time, key) = Opening(doc);
+        var starts = sectionStarts.Where(s => s > 0).ToHashSet();
+        if (doc.Parts.Count == 0 || starts.Count == 0)
+            return (time, key);
+        var times = new List<ImportTime?>();
+        var keys = new List<ImportKey?>();
+        var (t, k) = (time, key);
+        var measures = doc.Parts[0].Measures;
+        // A bar that changes the value itself writes it anyway, so only the others vote.
+        for (int i = 0; i < measures.Count; i++)
+        {
+            bool timeChanges = measures[i].Time is { } mt && mt != t;
+            bool keyChanges = measures[i].Key is { } mk && mk != k;
+            t = measures[i].Time ?? t;
+            k = measures[i].Key ?? k;
+            if (starts.Contains(i))
+            {
+                if (!timeChanges)
+                    times.Add(t);
+                if (!keyChanges)
+                    keys.Add(k);
+            }
+        }
+        return (MostCommon(times, time), MostCommon(keys, key));
+    }
+
+    // The value met most often, the fallback on a tie with it.
+    private static T MostCommon<T>(List<T> values, T fallback)
+    {
+        int Count(T v) => values.Count(x => EqualityComparer<T>.Default.Equals(x, v));
+        int best = Count(fallback);
+        T result = fallback;
+        foreach (var v in values.Distinct())
+            if (Count(v) > best)
+                (best, result) = (Count(v), v);
+        return result;
+    }
+
+    /// <summary>A part's per-measure directives: <see cref="Changes"/> where the bar continues
+    /// a section, <see cref="Opening"/> where it opens one, and whether that opening says again
+    /// something the bar itself does not change (<see cref="Restates"/>).</summary>
+    private sealed record PartDirectives(string[] Changes, string[] Opening, bool[] Restates);
+
+    // ⚠️ OPENING ALSO RESTATES what a section boundary resets — the meter, the key and the
+    // clef (SYNTAX_REFERENCE "Across a section boundary") — wherever the one in force is not
+    // the file's: without it, a section cut after a key change would be read in the header's
+    // key. The tempo is not reset and is not restated.
+    // ⚠️ AND ONLY THERE: Lily# prints a signature for every `time` and `key` it reads, as
+    // LilyPond prints one for every \time (MeasureCollector.Form.cs, the section reset), so a
+    // restatement of the value the header already gives would draw a second, identical one.
+    private static PartDirectives Directives(
+        ImportDocument doc, ImportPart part, (ImportTime? Time, ImportKey? Key) header, ImportReport report)
+    {
+        var (time, key) = header;
         string clef = part.Clef;
         int? tempo = doc.Tempo;
-        var result = new string[part.Measures.Count];
+        // The directive that states each one in force (KeyToLily once per change, so its
+        // warnings are not repeated per bar).
+        string timeText = "", keyText = "", clefText = "";
+        var changes = new string[part.Measures.Count];
+        var opening = new string[part.Measures.Count];
+        var restates = new bool[part.Measures.Count];
         for (int i = 0; i < part.Measures.Count; i++)
         {
             var m = part.Measures[i];
             var sb = new StringBuilder();
+            var open = new StringBuilder();
+            // A change is written where the bar makes it; a section opening on the bar writes
+            // the value in force wherever it is not the file's.
+            void State(bool changed, bool notTheFiles, string text)
+            {
+                if (changed)
+                    sb.Append(text);
+                if (notTheFiles)
+                    open.Append(text);
+                if (notTheFiles && !changed)
+                    restates[i] = true;
+            }
+            bool timeChanged = false, keyChanged = false, clefChanged = false;
             if (m.Time is { } t && t != time)
             {
-                sb.Append("time ").Append(t.Beats).Append('/').Append(t.BeatType).Append(' ');
-                time = t;
+                (time, timeChanged) = (t, true);
+                timeText = $"time {t.Beats}/{t.BeatType} ";
             }
+            State(timeChanged, time != header.Time, timeText);
             if (m.Key is { } k && k != key)
             {
-                sb.Append("key ").Append(KeyToLily(k, report)).Append(' ');
-                key = k;
+                (key, keyChanged) = (k, true);
+                keyText = "key " + KeyToLily(k, report) + " ";
             }
+            State(keyChanged, key != header.Key, keyText);
             if (part.StaffGroup == null && m.Clef is { } c && c != clef)
             {
-                sb.Append("clef ").Append(c).Append(' ');
-                clef = c;
+                (clef, clefChanged) = (c, true);
+                clefText = "clef " + c + " ";
             }
+            State(clefChanged, clef != part.Clef, clefText);
+            // The tempo is not reset: written where it changes, whether a section opens or not.
             if (m.Tempo is int bpm && bpm != tempo)
             {
-                sb.Append("tempo ").Append(bpm).Append(' ');
                 tempo = bpm;
+                State(true, true, $"tempo {bpm} ");
             }
-            result[i] = sb.ToString();
+            changes[i] = sb.ToString();
+            opening[i] = open.ToString();
         }
-        return result;
+        return new PartDirectives(changes, opening, restates);
     }
 
     private static RelativeOctave? Rel(bool relative) => relative ? new RelativeOctave() : null;
-
-    // One voice's measures assembled with the shared barlines between them.
-    private static string WriteVoiceStream(
-        ImportPart part, int voice, ImportReport report, RelativeOctave? rel, string[]? directives)
-    {
-        var measures = part.Measures;
-        var sb = new StringBuilder();
-        if (measures.Count > 0 && measures[0].RepeatForward)
-            sb.Append("|: ");
-
-        for (int i = 0; i < measures.Count;)
-        {
-            int bars = MultiRestSpan(measures, i, measures.Count, voice);
-            if (directives != null)
-                sb.Append(directives[i]);
-            sb.Append(WriteMeasureItems(
-                measures[i].VoiceItems.TryGetValue(voice, out var items) ? items : EmptyItems, report, rel, bars));
-            // The folded bars close at the LAST one's bar line.
-            int last = i + bars - 1;
-            sb.Append(' ');
-            sb.Append(last < measures.Count - 1
-                ? BarlineBetween(measures[last], measures[last + 1])
-                : FinalBarline(measures[last]));
-            if (last < measures.Count - 1)
-                sb.Append(' ');
-            i = last + 1;
-        }
-        return sb.ToString();
-    }
 
     private static string WriteMeasureItems(
         List<ImportItem> items, ImportReport report, RelativeOctave? rel = null, int multiRest = 1)
@@ -649,7 +927,7 @@ internal static class LysWriter
             OpenCueIfNeeded(note);
             if (note.IsRest)
             {
-                // A whole-measure rest is `R` (and `R…*N` when the bars fold — WriteVoiceStream);
+                // A whole-measure rest is `R` (and `R…*N` when the bars fold — WriteVoiceRange);
                 // its post-events follow as a note's do. Until 2026-09-30 a rest was written
                 // bare: `R1*4@p`, `r2@fermata` and `r4@f` came back as plain rests, and a tuplet
                 // opening or closing on a rest lost its brace.
@@ -888,32 +1166,16 @@ internal static class LysWriter
 
     // ---- barlines ---------------------------------------------------------
 
+    /// <summary>A measure's own right bar line as a section writes it. A repeat is the form's,
+    /// so it reads as plain here.</summary>
     /// <remarks>
-    /// ⚠️ THE THREE REPEAT ARMS ARE NO LONGER REACHABLE, and they are left standing rather
-    /// than deleted while the fact is fresh. Since LYS1034 (2026-08-31) a repeat barline is
-    /// legal only in a <c>form</c>, and <see cref="TryFactorPlainRepeats"/> now cuts a section
-    /// at every one of them — so the flat layout, which is the only caller of this, is only
-    /// chosen for measures that hold none. If a fourth repeat spelling ever arrives, this is
-    /// where the old answer is written down.
+    /// Since LYS1034 (2026-08-31) a repeat barline is legal only in a <c>form</c>, and
+    /// <see cref="TryFactorPlainRepeats"/> cuts a section at every one. The repeat spellings
+    /// this used to write (<c>|:</c> <c>:|</c> <c>:|:</c>) left with the one-line flat writer,
+    /// 2026-10-01.
     /// </remarks>
-    private static string BarlineBetween(ImportMeasure cur, ImportMeasure next)
+    private static string PlainOrDoubleBarline(ImportMeasure m) => m.BarlineRight switch
     {
-        bool endRepeat = cur.BarlineRight == BarlineKind.RepeatEnd;
-        bool startNext = next.RepeatForward;
-        if (endRepeat && startNext) return ":|:";
-        if (endRepeat) return ":|";
-        if (startNext) return "|:";
-        return cur.BarlineRight switch
-        {
-            BarlineKind.Final => "|.",
-            BarlineKind.Double => "||",
-            _ => "|",
-        };
-    }
-
-    private static string FinalBarline(ImportMeasure cur) => cur.BarlineRight switch
-    {
-        BarlineKind.RepeatEnd => ":|",
         BarlineKind.Final => "|.",
         BarlineKind.Double => "||",
         _ => "|",
