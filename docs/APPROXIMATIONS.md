@@ -102,10 +102,10 @@
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:180** non-default merge-differently-* switches. dot_wipe_head is NOT ported (no channel).
 - **:571** ⚠️ NOT PORTED — dot_wipe_head: LilyPond also kills the down head's DOT on
-- **:772** see . ⚠️ STILL NOT PORTED: :578-586 (an up
-- **:999** ⚠️ NOT PORTED: stem/flag boxes and rest supports (see DotColumnSupportMinX);
-- **:1097** ⚠️ NOT PORTED: the FLAG boxes of the support heads' stems (dot-column.cc:135-141
-- **:1191** whole note reads [0, 0.375] — is not ported: Lily# has no producer for a
+- **:785** see . ⚠️ STILL NOT PORTED: :578-586 (an up
+- **:1012** ⚠️ NOT PORTED: stem/flag boxes and rest supports (see DotColumnSupportMinX);
+- **:1110** ⚠️ NOT PORTED: the FLAG boxes of the support heads' stems (dot-column.cc:135-141
+- **:1204** whole note reads [0, 0.375] — is not ported: Lily# has no producer for a
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
 - **:531** ⚠️⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED OTTAVA IS **NOT PORTED HERE**, deliberately.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`

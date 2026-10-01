@@ -579,7 +579,9 @@ internal sealed class NoteCollision
         bool downIsOpen = downNoteValue <= 2;
 
         bool hideUp = false, hideDown = false;
-        if (upNoteValue == downNoteValue)
+        // The BALL types (up_ball_type == down_ball_type), as the merge test reads them: a
+        // quarter over an eighth is one black head twice, and the arm below would wipe BOTH.
+        if (BallNoteValue(upNoteValue) == BallNoteValue(downNoteValue))
         {
             // LILYPOND-REF: note-collision.cc:276-290 — equal heads: wipe only on a
             // visible-dot-count difference, the less-dotted side.
@@ -677,11 +679,22 @@ internal sealed class NoteCollision
         // Half+quarter/eighth merges: when merge-differently-headed is true,
         // notes with different noteheads (open vs filled) can merge.
         // The open notehead (half) is kept visible.
-        if (upNoteValue != downNoteValue && !_params.MergeDifferentlyHeaded)
+        // ⚠️ THE HEAD'S duration-log, NOT THE NOTE'S: a NoteHead's is capped at 2, so a quarter,
+        // an eighth and a sixteenth all carry the black head and merge without the switch.
+        // Until session 733 the note values were compared, and `c''4` over `c''8` in two
+        // voices printed two heads side by side where LilyPond prints one (Lab
+        // sessions/p733/merge m1).
+        // LILYPOND-REF: scm/output-lib.scm:616-619 note-head::calc-duration-log — (min 2 …).
+        if (BallNoteValue(upNoteValue) != BallNoteValue(downNoteValue) && !_params.MergeDifferentlyHeaded)
             return false;
 
         return true;
     }
+
+    /// <summary>The note value of the head's own glyph — whole, half, or (for a quarter and
+    /// anything shorter) the black head — as LilyPond's capped NoteHead duration-log reads
+    /// it.</summary>
+    private static int BallNoteValue(int noteValue) => Math.Min(noteValue, 4);
 
     private (bool closeHalf, bool distantHalf, bool fullCollide) DetectCollisionTypes(
         List<int> ups, List<int> downs, int threshold, ref bool mergePossible)

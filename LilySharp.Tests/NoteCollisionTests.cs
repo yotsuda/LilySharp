@@ -55,6 +55,27 @@ public class NoteCollisionTests
         Assert.True(result.ShouldMerge);
     }
 
+    /// <summary>
+    /// A quarter over an eighth (or a sixteenth) at the unison is ONE black head twice, so
+    /// it merges without merge-differently-headed and wipes neither head: LilyPond's NoteHead
+    /// duration-log is capped at 2 (scm/output-lib.scm:616-619), and that capped value is what
+    /// note-collision.cc:112 and :276 compare. Until session 733 the note values were compared
+    /// and the two heads stood side by side (Lab sessions/p733/merge m1, against the twin).
+    /// </summary>
+    [Theory]
+    [InlineData(4, 8)]
+    [InlineData(8, 4)]
+    [InlineData(4, 16)]
+    public void MergeCollision_BlackHeadsOfDifferentValues(int upValue, int downValue)
+    {
+        var result = new NoteCollision().AnalyzeCollision(new[] { 4 }, new[] { 4 },
+            upNoteValue: upValue, downNoteValue: downValue, upDots: 0, downDots: 0);
+
+        Assert.Equal(CollisionType.Merge, result.Type);
+        Assert.False(result.UpHeadTransparent);
+        Assert.False(result.DownHeadTransparent);
+    }
+
     [Fact]
     public void FullCollision_SamePosition_DifferentDots()
     {
