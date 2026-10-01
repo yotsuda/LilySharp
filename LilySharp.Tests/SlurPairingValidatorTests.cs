@@ -51,8 +51,46 @@ public class SlurPairingValidatorTests
     [InlineData("c4( d) e f")]                  // plain notes after a closed slur
     [InlineData("c4 d e f")]                    // no slur at all
     [InlineData("c4( r4 d2)")]                  // a rest under the slur is transparent
+    [InlineData("c4 r4( d4) e")]                // a slur FROM a rest (SlurDetector draws it)
+    [InlineData("c4( d r4) e")]                 // a slur TO a rest
+    [InlineData("r4( r r) r")]                  // rest to rest (slur-rest-direction.ly)
     public void PairedSlurs_NoWarning(string music) =>
         Assert.Equal(0, WarningCount(music));
+
+    /// <summary>
+    /// The scanner pairs the item kinds the detector pairs, so the warning names exactly the
+    /// marks the page drops. Until session 726 it kept its own list without the rest: the
+    /// first two warned about slurs that ARE drawn, and the last two — rest marks the page
+    /// drops — said nothing.
+    /// </summary>
+    [Theory]
+    [InlineData("c4 r4( d4) e", 1)]             // drawn, so no warning
+    [InlineData("c4( d r4) e", 1)]
+    [InlineData("c4 r4( d e", 0)]               // a rest's '(' never closed
+    [InlineData("c4 d r4) e", 0)]               // a rest's ')' with nothing open
+    public void ARestIsASlurBoundForTheWarningAsForThePage(string music, int drawn)
+    {
+        var tree = SyntaxTree.Parse(
+            $"part m {{ section A {{ {music} }} }} form main {{ A }} score main {{ staff m }}");
+        var score = new LilySharp.Core.Svg.Collector.MeasureCollector().Collect(tree, "m");
+        var slurs = new LilySharp.Core.Svg.Collector.SlurDetector().DetectSlurs(score);
+        Assert.Equal(drawn, slurs.Count(s => !s.IsPhrasing));
+        Assert.Equal(1 - drawn, WarningCount(music));
+    }
+
+    [Fact]
+    public void ASpacerIsNoSlurBound() =>
+        // SlurDetector skips spacers (no NoteColumn in LilyPond), so `s4(` opens nothing and
+        // the ')' after it is the surplus close.
+        Assert.Equal(1, WarningCount("c4 s4( d4) e"));
+
+    [Fact]
+    public void ARestInsideACueDoesNotSplitItsRegion() =>
+        // A rest carries no cue flag; read as "outside every cue" it would make one cue
+        // region two and report a crossing that is not there.
+        Assert.Empty(SemanticValidation.Run(SyntaxTree.Parse(
+                "part m { section A { c'4 cue { e4( r4 g4) } r4 | } } form main { A } score main { staff m }"))
+            .Where(d => d.Code == DiagnosticCodes.SpanCrossesCueBoundary));
 
     [Theory]
     [InlineData("c4( d e f")]                   // never closed

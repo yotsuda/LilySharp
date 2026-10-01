@@ -29,7 +29,10 @@ namespace LilySharp.Core.Svg.Collector;
 /// THE PAIRING RULES ARE THE RENDERER'S, not a second opinion about them — a warning that
 /// disagreed with what gets drawn would be worse than no warning:
 /// <list type="bullet">
-/// <item>marks pair as a STACK, innermost first, exactly as <c>SlurDetector</c> pops;</item>
+/// <item>marks pair as a STACK, innermost first, exactly as <c>SlurDetector</c> pops — on the
+/// item kinds <see cref="SlurDetector.TryGetSlurFlags"/> names (a note, a chord, a rest that is
+/// not a spacer). Until session 726 this class kept its own list without the rest, so
+/// <c>c4 r4( d4)</c> was DRAWN and warned "a slur ')' has no '(' open";</item>
 /// <item>the scan is PER VOICE, because <c>SlurDetector</c> clears its stack at every
 /// voice change (LILYPOND-REF: ly/engraver-init.ly — Slur_engraver lives in the Voice
 /// context), so a <c>(</c> left open when a voice ends never pairs with anything;</item>
@@ -108,9 +111,15 @@ internal static class SlurPairingScanner
                         open.RemoveAt(k--);
                     }
                 }
-                if (!TryGetSlurFlags(items[ii], out bool hasStart, out bool hasEnd))
+                if (!SlurDetector.TryGetSlurFlags(items[ii], out bool hasStart, out bool hasEnd))
                     continue;
-                region = RegionOf(items[ii], region, ref regionsSeen);
+                // A rest carries no cue flag (RestItem has no IsCue), so it stays in the region
+                // the walk is in rather than reading as "outside every cue" — which would split
+                // one cue { c( r d) } into two regions and warn about a slur that crosses none.
+                // ⚠️ The cost: a rest that OPENS a cue region reads as the region before it, so
+                // `c4( cue { r4) e }` is not reported (no observer; no book writes it).
+                if (items[ii] is not RestItem)
+                    region = RegionOf(items[ii], region, ref regionsSeen);
                 if (hasEnd)
                 {
                     if (open.Count > 0)
@@ -262,15 +271,4 @@ internal static class SlurPairingScanner
         _ => false,
     };
 
-    /// <summary>Slurs attach to a note OR a chord — the same two item kinds
-    /// <see cref="SlurDetector.DetectSlurs"/> pairs.</summary>
-    private static bool TryGetSlurFlags(MusicItem item, out bool hasStart, out bool hasEnd)
-    {
-        switch (item)
-        {
-            case NoteItem n: hasStart = n.HasSlurStart; hasEnd = n.HasSlurEnd; return true;
-            case ChordItem c: hasStart = c.HasSlurStart; hasEnd = c.HasSlurEnd; return true;
-            default: hasStart = false; hasEnd = false; return false;
-        }
-    }
 }

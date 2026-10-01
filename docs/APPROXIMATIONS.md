@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 59 | 観測者がゼロだと自認しているもの |
+| `UNWATCHED` | 60 | 観測者がゼロだと自認しているもの |
 | `OWN` | 204 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **324** | |
+| **計** | **325** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -134,7 +134,7 @@
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **:272** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（59 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（60 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:3102** container, and the value stops being unobserved with the line above.
@@ -155,6 +155,8 @@
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
 - **:456** this is unobserved rather than known-good; it closes when the labels travel with
 - **:1635** accidental, ledgers and fingering only. ⚠️ No point observes it: the corpus has no
+### `LilySharp.Core/Svg/Collector/SlurPairingScanner.cs`
+- **:120** `c4( cue { r4) e }` is not reported (no observer; no book writes it).
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
 - **:235** snapshot and no ledger point. What remains is the BEAM quanter's use below, which is a
 - **:843** would be fitting inside a formula that is not yet LilyPond's. No point observes it.

@@ -167,7 +167,10 @@ internal sealed class SlurDetector
         return slurs.ToImmutableArray();
     }
 
-    private static bool TryGetSlurFlags(MusicItem item, out bool hasStart, out bool hasEnd)
+    /// <summary>Which item kinds carry a slur bound, and its two marks — the ONE home of that
+    /// question: <see cref="SlurPairingScanner"/> asks it too, so the warning pairs exactly the
+    /// marks this detector draws.</summary>
+    internal static bool TryGetSlurFlags(MusicItem item, out bool hasStart, out bool hasEnd)
     {
         switch (item)
         {
