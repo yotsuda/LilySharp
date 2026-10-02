@@ -405,10 +405,9 @@ public sealed partial class LilyPondExporter
     }
 
     /// <summary>
-    /// Section-header directives keyed by section NAME — the exporter's mirror of the
-    /// collector's <c>_sectionHeaderKeys/Times/Tempos/Partials</c> registries
-    /// (MeasureCollector.cs:2411-2423): any declaration of the name WITHOUT inline music
-    /// registers its direct-child directives, first declaration wins per directive, and
+    /// The section-header registry keyed by section NAME (<see cref="Semantics.SectionHeaders"/>,
+    /// the collector's rule in its one spelling): any declaration of the name WITHOUT inline
+    /// music registers its direct-child directives, first declaration wins per directive, and
     /// they apply to every play of that name. Keyed by name because a section reaches the
     /// form in SPLIT declarations too — <c>section A { partial 8 }</c> beside
     /// <c>part melody { section A { … } }</c> — and the played declaration is not the one
@@ -416,7 +415,7 @@ public sealed partial class LilyPondExporter
     /// (SectionHeaderMusic) lost that pickup: the twin of
     /// scratch/ベースタブLy/blogger2.lys carried no <c>\partial</c> at all (第99 handoff ③).
     /// </summary>
-    private Dictionary<string, List<SyntaxNode>> _sectionHeaders = new(StringComparer.Ordinal);
+    private Semantics.SectionHeaders _sectionHeaders = Semantics.SectionHeaders.Empty;
 
     /// <summary>Sections standing in for the single-part shorthand, so
     /// <see cref="ContainerMusic"/> knows to take only their LOOSE music and leave any other

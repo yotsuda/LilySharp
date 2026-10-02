@@ -769,17 +769,13 @@ public sealed partial class MeasureCollector
     // multi-staff part), never the shared score key, so sibling staves with different
     // opening keys do not overwrite each other. See ApplyKeySignatureChange.
     private (int Sharps, string? Custom)? _openingKeyOverride;
-    // section name -> its own starting key, for a section that carries a `key` but no
-    // inline music: a by-section section (`section A { key g major  melody { … } }`)
-    // or a standalone by-part header (`section A { key g major }`). Applied to every
-    // part playing that section (an inline-music section walks its key as music instead).
-    private readonly Dictionary<string, KeySignatureSyntax> _sectionHeaderKeys = new();
-    // section name -> its own starting time / tempo, same rule as the header key: a
-    // by-section section or a standalone by-part header that carries the directive
-    // but no inline music. Applied to every part of the section.
-    private readonly Dictionary<string, TimeSignatureSyntax> _sectionHeaderTimes = new();
-    private readonly Dictionary<string, TempoDeclarationSyntax> _sectionHeaderTempos = new();
-    private readonly Dictionary<string, PartialDeclarationSyntax> _sectionHeaderPartials = new();
+    // section name -> its own starting key / time / tempo / partial, for a section that
+    // carries the directive but no inline music: a by-section section
+    // (`section A { key g major  melody { … } }`) or a standalone by-part header
+    // (`section A { key g major }`). Applied to every part playing that section (an
+    // inline-music section walks its directives as music instead). Read once per collect
+    // (CollectDefinitions) by Semantics.SectionHeaders, the one spelling of the rule.
+    private Semantics.SectionHeaders _sectionHeaders = Semantics.SectionHeaders.Empty;
     // section node -> canonical bar count (GetCanonicalSectionBars). A pure function of
     // the syntax within one collect, so it is counted once — not once per part per
     // reprise. Keyed by node identity; cleared per collect (Reset).
@@ -2936,12 +2932,9 @@ public sealed partial class MeasureCollector
         // so it resets with it or IsCollectedMusicMark would answer from a stale set.
         _musicMarkPositions.Clear();
         _musicMarkPositionsSynced = 0;
-        // First-one-wins section-header tables: stale entries would WIN over the new
-        // tree's headers on reuse, so these clear even though every walk repopulates.
-        _sectionHeaderKeys.Clear();
-        _sectionHeaderTimes.Clear();
-        _sectionHeaderTempos.Clear();
-        _sectionHeaderPartials.Clear();
+        // The section-header registry: a stale one would answer for the new tree's headers
+        // on reuse, so it clears even though every collect reads it again.
+        _sectionHeaders = Semantics.SectionHeaders.Empty;
         // Per-node resolution memos keyed by syntax node identity — a reused
         // collector on a NEW tree would never hit them, but a re-collect of the
         // SAME tree would replay stale octave context. Clear both.

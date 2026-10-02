@@ -71,16 +71,15 @@ public sealed class MidiExporter
     // declares the same section name once per part (`part melody { section A … }`,
     // `part bass { section A … }`); a structure reference plays them all.
     private Dictionary<string, List<SectionDeclarationSyntax>>? _sections;
-    // section name -> its own header key (a section carrying a `key` but no inline
-    // music: by-section, or a standalone by-part header `section A { key g major }`).
-    // Applied up front to every part of the section, since it is not walked with the
-    // part cell's music.
-    private readonly Dictionary<string, KeySignatureSyntax> _sectionHeaderKeys = new();
-    // …and the same registry for the section's own header METER, read the same way and
-    // applied at the same boundary. See Semantics.ScoreHomeMeter: the page reverts the
-    // meter at every section boundary and this walk did not, so a mid-section `time 3/4`
-    // stayed in the conductor track for the rest of the piece (measured 2026-08-31).
-    private readonly Dictionary<string, TimeSignatureSyntax> _sectionHeaderTimes = new();
+    // The section HEADER registry (Semantics.SectionHeaders, the one spelling): a section's
+    // own key / time / partial when it carries the directive but no inline music (by-section,
+    // or a standalone by-part header `section A { key g major }`). Applied up front to every
+    // part of the section, since it is not walked with the part cell's music. The meter is
+    // applied at the same boundary — see Semantics.ScoreHomeMeter: the page reverts the meter
+    // at every section boundary and this walk did not, so a mid-section `time 3/4` stayed in
+    // the conductor track for the rest of the piece (measured 2026-08-31). The pickup arms
+    // every part's first bar, as the page's does (MeasureCollector.Form.cs).
+    private Semantics.SectionHeaders _sectionHeaders = Semantics.SectionHeaders.Empty;
     private int _homeTimeBeats = 4;
     private int _homeTimeBeatType = 4;
     private bool _formDriven;
@@ -139,10 +138,6 @@ public sealed class MidiExporter
     // fell to ProcessChildren and vanished. No book on disk writes `partial N |`
     // (13825 counted); the pair is kept honest by EmptyMeasureValidatorTests.
     private Fraction? _partial;
-    // …and the section-header pickup (`section A { partial 4  melody { … } }`), the twin of
-    // _sectionHeaderTimes: the page arms every part's first bar with it at the section
-    // boundary (MeasureCollector.Form.cs), so this walk arms the same bar the same way.
-    private readonly Dictionary<string, PartialDeclarationSyntax> _sectionHeaderPartials = new();
 
     // Tie handling: a tie (~) merges the next same-pitch note into the previous
     // one (one sustained note) instead of re-articulating it.
@@ -416,6 +411,7 @@ public sealed class MidiExporter
         _phraseBodies = new Dictionary<string, SyntaxNode>();
         _sections = new Dictionary<string, List<SectionDeclarationSyntax>>();
         _partDecls = new Dictionary<string, PartDeclarationSyntax>();
+        var sectionsInOrder = new List<SectionDeclarationSyntax>();
         foreach (var n in _root.DescendantNodes())
         {
             if (n is PhraseDeclarationSyntax ph)
@@ -427,16 +423,12 @@ public sealed class MidiExporter
                 if (!_sections.TryGetValue(sd.Name.Text, out var sameName))
                     _sections[sd.Name.Text] = sameName = new List<SectionDeclarationSyntax>();
                 sameName.Add(sd);
-                if (!SectionHasInlineMusic(sd) && FirstDirectKey(sd) is { } hk)
-                    _sectionHeaderKeys.TryAdd(sd.Name.Text, hk);
-                if (!SectionHasInlineMusic(sd) && FirstDirectTime(sd) is { } ht)
-                    _sectionHeaderTimes.TryAdd(sd.Name.Text, ht);
-                if (!SectionHasInlineMusic(sd) && FirstDirectPartial(sd) is { } hp)
-                    _sectionHeaderPartials.TryAdd(sd.Name.Text, hp);
+                sectionsInOrder.Add(sd);
             }
             else if (n is PartDeclarationSyntax pd)
                 _partDecls.TryAdd(pd.Name.Text, pd); // first-wins, matching the old first-match scans
         }
+        _sectionHeaders = Semantics.SectionHeaders.Read(sectionsInOrder);
         _scoreTransposeDefault = PartTranspose.ReadScoreDefault(_root);
         _fileConcert = ConcertPitch.FileIsConcert(_root);
         _homeTonic = ScoreHomeKey.Read(_root);
@@ -931,46 +923,6 @@ public sealed class MidiExporter
         return false;
     }
 
-    /// <summary>The first <c>key</c> that is a DIRECT child of the section, or null.</summary>
-    private static KeySignatureSyntax? FirstDirectKey(SectionDeclarationSyntax section)
-    {
-        for (int i = 0; i < section.SlotCount; i++)
-            if (section.GetChild(i) is KeySignatureSyntax k)
-                return k;
-        return null;
-    }
-
-    /// <summary>The first <c>time</c> that is a DIRECT child of the section, or null — the
-    /// twin of <see cref="FirstDirectKey"/>, asked of the same declarations.</summary>
-    private static TimeSignatureSyntax? FirstDirectTime(SectionDeclarationSyntax section)
-    {
-        for (int i = 0; i < section.SlotCount; i++)
-            if (section.GetChild(i) is TimeSignatureSyntax t)
-                return t;
-        return null;
-    }
-
-    /// <summary>The first <c>partial</c> that is a DIRECT child of the section, or null —
-    /// the third of the family (<see cref="FirstDirectKey"/>, <see cref="FirstDirectTime"/>),
-    /// read the way the collector reads its <c>_sectionHeaderPartials</c>.</summary>
-    private static PartialDeclarationSyntax? FirstDirectPartial(SectionDeclarationSyntax section)
-    {
-        for (int i = 0; i < section.SlotCount; i++)
-            if (section.GetChild(i) is PartialDeclarationSyntax p)
-                return p;
-        return null;
-    }
-
-    /// <summary>True when the section has a direct-child MUSIC node (note / phrase / …),
-    /// as opposed to only directives and part / chord / lyric blocks — i.e. its own
-    /// <c>key</c> is walked as music, not a header. THE one spelling lives with the
-    /// collector (MeasureCollector.SectionHasInlineMusic): this file's own copy was the
-    /// drifted one — it did not exclude override/revert/once, so a header carrying a
-    /// page directive beside its key lost the key here and the .mid played the phrase
-    /// in the home key while the page engraved the section's.</summary>
-    private static bool SectionHasInlineMusic(SectionDeclarationSyntax section)
-        => Svg.Collector.MeasureCollector.SectionHasInlineMusic(section);
-
     /// <summary>
     /// Plays one section: its part blocks run SIMULTANEOUSLY (each from the
     /// section's start tick; the section ends with the longest part), and each
@@ -1007,7 +959,7 @@ public sealed class MidiExporter
         // A section's own header key — stated beside the part blocks (by-section) or
         // in a standalone by-part header — is not walked with the part cell's music,
         // so apply it up front (overriding the home reset) for every part of the section.
-        if (_sectionHeaderKeys.TryGetValue(section.SectionName, out var headerKey))
+        if (_sectionHeaders.Keys.TryGetValue(section.SectionName, out var headerKey))
         {
             _ambientTonic = KeyTonic.Of(headerKey);
             _keySharps = headerKey.IsCustom ? 0 : KeySpelling.SharpsFor(
@@ -1023,7 +975,7 @@ public sealed class MidiExporter
         // changes nothing adds no event (ProcessTimeSignature is the one writer).
         // A `time none` header is no meter at all (see ProcessTimeSignature): the running
         // pair stays, and nothing is written.
-        var boundaryTime = _sectionHeaderTimes.TryGetValue(section.SectionName, out var headerTime)
+        var boundaryTime = _sectionHeaders.Times.TryGetValue(section.SectionName, out var headerTime)
             ? headerTime.IsSenzaMisura ? (_timeNumerator, _timeDenominator) : (headerTime.Beats, headerTime.BeatType)
             : (_homeTimeBeats, _homeTimeBeatType);
         if (boundaryTime != (_timeNumerator, _timeDenominator))
@@ -1039,7 +991,7 @@ public sealed class MidiExporter
         // the pickup restores to the section's own time (MeasureCollector.Form.cs). The same
         // registry arms this walk's pickup here, and a pickup the previous section left
         // pending ends with that section, as its bars did.
-        _partial = _sectionHeaderPartials.TryGetValue(section.SectionName, out var headerPartial)
+        _partial = _sectionHeaders.Partials.TryGetValue(section.SectionName, out var headerPartial)
             ? headerPartial.ToFraction()
             : null;
 
@@ -3065,7 +3017,7 @@ public sealed class MidiExporter
             if (section.GetChild(i) is PartBlockSyntax pb)
                 partNames.Add(pb.Name);
         int firstBar = FractionToTicks(
-            section != null && _sectionHeaderPartials.TryGetValue(section.SectionName, out var hp)
+            section != null && _sectionHeaders.Partials.TryGetValue(section.SectionName, out var hp)
                 ? hp.ToFraction()
                 : _partial ?? new Fraction(_timeNumerator, _timeDenominator));
         int barTicks = FractionToTicks(new Fraction(_timeNumerator, _timeDenominator));

@@ -518,7 +518,7 @@ public sealed partial class MeasureCollector
 
         // A section can state its own time (by-section or a standalone header): apply
         // it and re-arm the measure length; otherwise revert to the score meter.
-        if (_sectionHeaderTimes.TryGetValue(section.SectionName, out var sectionTime)
+        if (_sectionHeaders.Times.TryGetValue(section.SectionName, out var sectionTime)
             && builder.AtPieceOpening)
         {
             // The section that OPENS the piece states the piece's opening meter: it
@@ -581,7 +581,7 @@ public sealed partial class MeasureCollector
         }
 
         // A section can state its own tempo, printed as a metronome mark at its start.
-        if (_sectionHeaderTempos.TryGetValue(section.SectionName, out var sectionTempo))
+        if (_sectionHeaders.Tempos.TryGetValue(section.SectionName, out var sectionTempo))
         {
             // At the very first timestep the section tempo IS the piece's opening tempo,
             // so it REPLACES the score's initial metronome mark rather than stacking a
@@ -639,7 +639,7 @@ public sealed partial class MeasureCollector
         // printed on every staff); it overrides the score-level revert below. Keyed by
         // section NAME so a standalone header applies whichever node represents the
         // section. An inline-music section walks its `key` as music, so it is not mapped.
-        if (_sectionHeaderKeys.TryGetValue(section.SectionName, out var sectionKey))
+        if (_sectionHeaders.Keys.TryGetValue(section.SectionName, out var sectionKey))
         {
             ApplyKeySignatureChange(sectionKey, builder);
         }
@@ -667,7 +667,7 @@ public sealed partial class MeasureCollector
         // A section can begin with a pickup (`section A { partial 4  melody { … } }`):
         // shorten its first measure, per part. Applied after any section meter so the
         // pickup restores to the section's own time when it closes.
-        if (_sectionHeaderPartials.TryGetValue(section.SectionName, out var sectionPartial))
+        if (_sectionHeaders.Partials.TryGetValue(section.SectionName, out var sectionPartial))
             builder.SetPartial(sectionPartial.ToFraction());
 
     }
@@ -870,16 +870,6 @@ public sealed partial class MeasureCollector
         {
             Clef = ParseClefType(_meta.Clef),
         });
-    }
-
-    /// <summary>The first direct-child directive of type <typeparamref name="T"/> (the
-    /// section's own starting key / time / tempo), or null when it states none.</summary>
-    private static T? FirstDirect<T>(SectionDeclarationSyntax section) where T : SyntaxNode
-    {
-        for (int i = 0; i < section.SlotCount; i++)
-            if (section.GetChild(i) is T t)
-                return t;
-        return null;
     }
 
     /// <summary>

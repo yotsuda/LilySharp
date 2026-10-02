@@ -410,24 +410,8 @@ public sealed partial class MeasureCollector
                     var owningPart = EnclosingPartName(section);
                     if (owningPart != null)
                         _sectionState.GroupedByPartCells[(section.SectionName, owningPart)] = section;
-                    // A section that carries its own key / time / tempo but no inline
-                    // music applies those to every part of the section: by-section
-                    // (`section A { key g major  melody { … } }`) or a standalone
-                    // by-part header (`section A { key g major }`). An inline-music
-                    // section walks the directives as music, so it is excluded to avoid a
-                    // double application. First one wins.
-                    if (!SectionHasInlineMusic(section))
-                    {
-                        var nm = section.SectionName;
-                        if (FirstDirect<KeySignatureSyntax>(section) is { } hk && !_sectionHeaderKeys.ContainsKey(nm))
-                            _sectionHeaderKeys[nm] = hk;
-                        if (FirstDirect<TimeSignatureSyntax>(section) is { } ht && !_sectionHeaderTimes.ContainsKey(nm))
-                            _sectionHeaderTimes[nm] = ht;
-                        if (FirstDirect<TempoDeclarationSyntax>(section) is { } htp && !_sectionHeaderTempos.ContainsKey(nm))
-                            _sectionHeaderTempos[nm] = htp;
-                        if (FirstDirect<PartialDeclarationSyntax>(section) is { } hp && !_sectionHeaderPartials.ContainsKey(nm))
-                            _sectionHeaderPartials[nm] = hp;
-                    }
+                    // (Its header key / time / tempo / partial is read after the loop:
+                    // _sectionHeaders, from the same list in the same order.)
                     break;
 
                 case FormDeclarationSyntax form:
@@ -522,6 +506,15 @@ public sealed partial class MeasureCollector
         // resets revert to THIS (CollectMeasures), not to whatever _meta holds when that
         // voice starts — the first voice's opening `time` has rewritten it by then.
         _scoreTime = (_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura);
+        // The section HEADER registry (Semantics.SectionHeaders, the one spelling): a section
+        // that carries its own key / time / tempo / partial but no inline music applies those
+        // to every part of the section — by-section (`section A { key g major  melody { … } }`)
+        // or a standalone by-part header (`section A { key g major }`); an inline-music
+        // section walks the directives as music instead. First declaration of a name wins,
+        // in the loop's own order. A chords / lyrics track's cell is not a structure section
+        // and registers nothing (the `break` above).
+        _sectionHeaders = Semantics.SectionHeaders.Read(
+            _sectionDeclarationsInOrder.Where(s => !IsInsideGroupedByPartTrack(s)));
     }
 
     /// <summary>True for exactly the node kinds <see cref="CollectDefinitions"/>'s

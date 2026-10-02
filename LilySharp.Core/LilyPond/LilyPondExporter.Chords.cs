@@ -412,7 +412,7 @@ public sealed partial class LilyPondExporter
     private List<SyntaxNode> OrderedChordItems(List<ChordPartBlockSyntax> blocks,
         FormDeclarationSyntax? form, List<SectionDeclarationSyntax> allSections)
     {
-        _sectionHeaders = BuildSectionHeaderRegistry(allSections);
+        _sectionHeaders = Semantics.SectionHeaders.Read(allSections);
         var byName = new Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)>(
             StringComparer.Ordinal);
         var inOrder = new List<(SectionDeclarationSyntax Section, SyntaxNode Container)>();
@@ -463,9 +463,7 @@ public sealed partial class LilyPondExporter
     /// this reader does not see; the page's degrees follow it, the twin's do not).</summary>
     private (int TonicStep, int Sharps) ChordKeyFor(string sectionName)
     {
-        var key = _sectionHeaders.TryGetValue(sectionName, out var headers)
-            ? headers.OfType<KeySignatureSyntax>().FirstOrDefault()
-            : null;
+        var key = _sectionHeaders.Keys.GetValueOrDefault(sectionName);
         if (key == null || key.IsCustom)
             return (_homeTonic.Step, _homeKeySharps);
         return (KeyTonic.Of(key).Step, KeySpelling.SharpsFor(key.Pitch.PitchName, key.Mode.Text) ?? 0);
@@ -475,9 +473,7 @@ public sealed partial class LilyPondExporter
     /// length of the FIRST bar of that section's play, which the chord track has to write
     /// as short as the music does or every later chord lands late.</summary>
     private Fraction? ChordPickupFor(string sectionName)
-        => _sectionHeaders.TryGetValue(sectionName, out var headers)
-            ? headers.OfType<PartialDeclarationSyntax>().FirstOrDefault()?.ToFraction()
-            : null;
+        => _sectionHeaders.Partials.GetValueOrDefault(sectionName)?.ToFraction();
 
     /// <summary>
     /// The meter of each bar of a section's play, as its MUSIC writes it — the length a chord
@@ -496,8 +492,7 @@ public sealed partial class LilyPondExporter
     private List<Fraction>? SectionBarMeters(SectionDeclarationSyntax section, string sectionName)
     {
         var start = new Fraction(_homeTimeBeats, _homeTimeBeatType);
-        if (_sectionHeaders.TryGetValue(sectionName, out var headers)
-            && headers.OfType<TimeSignatureSyntax>().LastOrDefault() is { IsSenzaMisura: false } headerTime)
+        if (_sectionHeaders.Times.GetValueOrDefault(sectionName) is { IsSenzaMisura: false } headerTime)
             start = new Fraction(headerTime.Beats, headerTime.BeatType);
 
         PartBlockSyntax? part = null;

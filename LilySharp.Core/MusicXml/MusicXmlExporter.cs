@@ -1315,40 +1315,12 @@ public sealed class MusicXmlExporter
     // pickup of `test/chord-flag` exported as a full bar 1), while the header declaration
     // itself was emitted as music — under "Part 1" when no single engraved part owned it,
     // an EMPTY <part/> the schema forbids and the importer cannot read back.
-    private readonly Dictionary<string, KeySignatureSyntax> _sectionHeaderKeys = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, TimeSignatureSyntax> _sectionHeaderTimes = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, TempoDeclarationSyntax> _sectionHeaderTempos = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, PartialDeclarationSyntax> _sectionHeaderPartials = new(StringComparer.Ordinal);
+    private Semantics.SectionHeaders _sectionHeaders = Semantics.SectionHeaders.Empty;
 
-    /// <summary>Fills the three header registries from every section declaration of the file
-    /// (see the fields' remarks). A declaration with inline music registers nothing — its
-    /// directives are walked as music, from their own position.</summary>
+    /// <summary>Reads the header registry off every section declaration of the file (see the
+    /// field's remarks): <see cref="Semantics.SectionHeaders"/>, the one spelling.</summary>
     private void BuildSectionHeaderRegistry(SyntaxNode root)
-    {
-        _sectionHeaderKeys.Clear();
-        _sectionHeaderTimes.Clear();
-        _sectionHeaderTempos.Clear();
-        _sectionHeaderPartials.Clear();
-        foreach (var section in root.DescendantNodes().OfType<SectionDeclarationSyntax>())
-        {
-            if (Svg.Collector.MeasureCollector.SectionHasInlineMusic(section))
-                continue;
-            var name = section.SectionName;
-            if (FirstDirect<KeySignatureSyntax>(section) is { } hk) _sectionHeaderKeys.TryAdd(name, hk);
-            if (FirstDirect<TimeSignatureSyntax>(section) is { } ht) _sectionHeaderTimes.TryAdd(name, ht);
-            if (FirstDirect<TempoDeclarationSyntax>(section) is { } htp) _sectionHeaderTempos.TryAdd(name, htp);
-            if (FirstDirect<PartialDeclarationSyntax>(section) is { } hp) _sectionHeaderPartials.TryAdd(name, hp);
-        }
-    }
-
-    /// <summary>The first direct-child directive of type <typeparamref name="T"/>, or null.</summary>
-    private static T? FirstDirect<T>(SectionDeclarationSyntax section) where T : SyntaxNode
-    {
-        foreach (var child in DirectChildren(section))
-            if (child is T t)
-                return t;
-        return null;
-    }
+        => _sectionHeaders = Semantics.SectionHeaders.Read(root);
 
     /// <summary>True when the section is a HEADER and nothing else: a TOP-LEVEL declaration
     /// with no part, chord or lyrics block and no inline music — only directives
@@ -1390,10 +1362,10 @@ public sealed class MusicXmlExporter
         // same line in the same words (MeasureCollector.SectionHasInlineMusic, which the
         // LilyPond exporter's BuildSectionHeaderRegistry already consults: "a declaration
         // with inline music walks its own directives as music and registers NOTHING").
-        _sectionKey = _sectionHeaderKeys.TryGetValue(section.SectionName, out var headerKey) ? headerKey : null;
-        _sectionTime = _sectionHeaderTimes.TryGetValue(section.SectionName, out var headerTime) ? headerTime : null;
-        _sectionTempo = _sectionHeaderTempos.TryGetValue(section.SectionName, out var headerTempo) ? headerTempo : null;
-        _sectionPartial = _sectionHeaderPartials.TryGetValue(section.SectionName, out var headerPartial) ? headerPartial : null;
+        _sectionKey = _sectionHeaders.Keys.TryGetValue(section.SectionName, out var headerKey) ? headerKey : null;
+        _sectionTime = _sectionHeaders.Times.TryGetValue(section.SectionName, out var headerTime) ? headerTime : null;
+        _sectionTempo = _sectionHeaders.Tempos.TryGetValue(section.SectionName, out var headerTempo) ? headerTempo : null;
+        _sectionPartial = _sectionHeaders.Partials.TryGetValue(section.SectionName, out var headerPartial) ? headerPartial : null;
 
         // The section's chord rows (owner's decisions 2026-09-29, EmitPendingChordRows): a
         // by-part chord track's section (`chords prog { section A { … } }`) holds a placed
