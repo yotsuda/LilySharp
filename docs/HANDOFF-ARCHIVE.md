@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第755セッションの経緯
+
+### 1.1 第755セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き（ユーザー GO ×2: A2 を測る → 実装）。`-Start p755`（HEAD `57175f02`・未 push 115）＝full **10765 / 0 / 2 / 10767**。§7 3.5 で第753 を ARCHIVE へ。
+- 測定（Lab `sessions/p755/`）: 違いは「XML だけが弱起を書いた音価の累積で閉じ、**小節線で使い切らない**」＝差が出る形は宣言より短い弱起のあとの `|`（`partial 2 c4 | d4 e f g |`: 旧 XML は `d4` で閉じて `d4`／`e f g` の 2 小節・頁は 1 小節）。小節線で使い切る 1 行の probe で xml 998 冊 1,199 枚 **差 0**（陽性対照 `probes/a2/short-pickup.lys` は動く＝計器は生きている）・suite 0 赤（行番号表の 1 赤を除く）。ユーザー GO。
+★ `74eeef3f` **A2**: `_pendingPickup`／`_pickupLength` を消し `_bars.SetPartial`／`Partial`／`SpendPartial`／`BarLength` を読む。小節線の腕は閉じた小節（時間のある小節・span の最後・裸 `|` の無音小節）で `SpendPartial`（MIDI の `pairsHere || timePassed` と同じ・type 付き小節線が空の span を閉じないのも同じ）。宣言長の自動 close（`MaybeClosePickup`）は頁の `AddItem` と同じで残す。`AddSilentBar`・裸 `R` は `BarLength`。`BarContext` の註を「settled」に。網 +5（`MusicXmlPickupBarLineTests`）。CHANGELOG Fixes 1 項・REFACTOR_PLAN §5.1「綴りの違いは全部閉じた」。
+- 踏んだ罠: 1 回目は小節線の腕で `SpendPartial` を `AddSilentBar` より**先**に呼び、空の弱起小節の休符が拍子の長さになった＝`SectionVoicePaddingExportTests.Xml_ASilentPlay_…` が 1 赤で捕まえた（読んでから使い切る順に直した）。
+- 計器: xml の掃き（`sweep-xml.ps1`＝p742 の写し・exe は両側とも写し）998 冊 **差 0**（`sweep-xml2.log`）。full **10770 / 0 / 2 / 10772**。
+- 毒（`poisons.ps1`・`poisons.log`・`poisons-4.log`）: ① 小節線が使い切らない → **2 赤**（＋行番号表）／② 宣言長で閉じない → **2 赤**（新網＋既存 `Partial_AutoClosesWithoutWrittenBarline`）／③ `AddSilentBar` が拍子を読む → **1 赤**／④ 裸 `R` が拍子を読む → **0 赤** → 5 本目の網を足して **1 赤**。
+★ `-End p755 -DiffBase 57175f02`＝full **10770 / 0 / 2 / 10772**（網 +5）・門 全 OK（HANDOFF 残り 8,423 B・§1 残り 9,785 字）。7.5: Core `+` 40 行・REF 0／OWN 0＝規則の移動（LP 由来の式なし・定数なし・`partial` の REF は `BarContext.SetPartial` の既存の家）。7.6: ⒟ 既存の家を指し直しただけ。7.7: ⒜ 「読んでから使い切る」順は網が教えた（`SectionVoicePaddingExportTests` が番人）／⒝ 裸 `R` の弱起は網を足すまで無観測＝足した。push はユーザー（未 push 116）。
+★ ユーザー決定（同じ会話・-End の後）: **D は (a) 今のまま**＝コメントの経緯もコードに残す（REFACTOR_PLAN §7 に記録）。これで計画 A〜D は全部判断済み。
+判定: A2 は閉じた＝**C の綴りの判断は全部閉じた**。残り（§1.0 ⒜）: D（コメントの経緯・ユーザー判断が先）／観測者の無い規則の候補／StreamFrame の網／⑹⑺ は観察。会話を区切るか: 次は D の判断待ちか、網の追加（軽い）。(c) 無関係の島＝差は小さいが、(b) 2 便で文脈は軽い ⇒ **続ける**（D の方針が出れば同じ会話で `-Start p756`）。
+
 ## 以下は第754セッションの経緯
 
 ### 1.1 第754セッション（2026-10-02・YT-DELL2）
