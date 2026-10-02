@@ -30,9 +30,9 @@
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 7 |
-| `LilySharp.Core/LilyPond/LilyPondExporter.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
+| `LilySharp.Core/Rendering/SharedRenderer.Beams.cs` | 5 |
 
 ## APPROX — LP に対応物はあるが、形が違うと自認しているもの（60 件）
 
@@ -238,13 +238,17 @@
 
 ## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（214 件）
 
+### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
+- **:90** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:2787** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision 2026-10-02). Any other
-- **:3267** ⚠️ LILYSHARP-OWN: carrying AbsoluteBaseOctave is correct by construction. A degree
-- **:3692** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
-- **:5666** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
-- **:5725** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
-- **:7545** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:717** ⚠️ LILYSHARP-OWN: carrying AbsoluteBaseOctave is correct by construction. A degree
+### `LilySharp.Core/LilyPond/LilyPondExporter.Form.cs`
+- **:948** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+### `LilySharp.Core/LilyPond/LilyPondExporter.Marks.cs`
+- **:933** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
+### `LilySharp.Core/LilyPond/LilyPondExporter.Music.cs`
+- **:628** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision 2026-10-02). Any other
+- **:1420** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
