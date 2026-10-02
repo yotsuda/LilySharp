@@ -115,8 +115,8 @@ internal static class DynamicEngraver
     //   vertical-skylines from the stencil.
     // LILYPOND-REF: lily/text-engraver.cc:84-100 — acknowledge_note_column sets the X parent
     //   only; no add_support.
-    // ⚠️ It is still PLACED in the dynamics' outside-staff turn (250), where LilyPond places a
-    // TextScript at 450 — the order only matters where a dynamic and a text meet on one side.
+    // Its outside-staff turn is TextScript's 450, after the dynamics' 250 and the hairpins
+    // (OutsideStaffStacker; until 2026-10-02 it stood in the 250 turn in source order).
     private const double TextScriptPadding = 0.3;
 
     // ⚠️ LILYSHARP-OWN: a string the bundled face cannot spell (CJK — TextFontMetrics reports

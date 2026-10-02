@@ -534,13 +534,18 @@ internal static class OutsideStaffStacker
         }
 
         // Dynamics: push below anything already occupying their X range
-        // (below-staff scripts), then record their own extent.
-        if (!adjDynamics.IsDefaultOrEmpty)
+        // (below-staff scripts), then record their own extent. Free expressive text is a
+        // TextScript, placed later at its own 450 (PlaceBelowDynamics' second call).
+        adjDynamics = PlaceBelowDynamics(adjDynamics, expressive: false);
+
+        ImmutableArray<DynamicLayout> PlaceBelowDynamics(ImmutableArray<DynamicLayout> dynamicsIn, bool expressive)
         {
-            var dynBuilder = adjDynamics.ToBuilder();
+            if (dynamicsIn.IsDefaultOrEmpty)
+                return dynamicsIn;
+            var dynBuilder = dynamicsIn.ToBuilder();
             for (int i = 0; i < dynBuilder.Count; i++)
             {
-                if (groupedDynIdx.Contains(i))
+                if (groupedDynIdx.Contains(i) || dynBuilder[i].IsExpressiveText != expressive)
                     continue;
                 var dyn = dynBuilder[i];
                 // Forced-above dynamics sit above the staff (DynamicEngraver placed them);
@@ -573,7 +578,7 @@ internal static class OutsideStaffStacker
                     dynBuilder[i] = dyn with
                     { YUp = dynYup + move + off + EngravingDefaults.StaffMiddle };
             }
-            adjDynamics = dynBuilder.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
+            return dynBuilder.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
         }
 
         // Adjust hairpins: avoid overlapping with dynamics in the same X range
@@ -610,8 +615,14 @@ internal static class OutsideStaffStacker
         // TextSpanner (priority 350) is now stacked ABOVE the staff (LilyPond
         // TextSpanner direction=UP) by StackAboveStaff, not here.
 
-        // --- Priority 450: a chord diagram forced below (@diagram(…).down) — a TextScript,
-        // so AFTER the dynamics (ArticulationSpacing.TextScriptOutsideStaffPriority).
+        // --- Priority 450: TextScript — free expressive text (@text), then a chord diagram
+        // forced below (@diagram(…).down), so AFTER the dynamics and the hairpins
+        // (ArticulationSpacing.TextScriptOutsideStaffPriority). Until 2026-10-02 @text stood
+        // in the dynamics' 250 turn in source order, so `c'4@text("dolce") d'@p` pushed the p
+        // below the text where LilyPond seats the p by the staff and the text under it
+        // (Lab sessions/p739/textosp u2: LilyPond p 15.91 / dolce 18.57).
+        // LILYPOND-REF: scm/define-grobs.scm:3800-3807 TextScript outside-staff-priority 450.
+        adjDynamics = PlaceBelowDynamics(adjDynamics, expressive: true);
         adjArticulations = PlaceBelowScriptMovers(adjArticulations, textScriptStage: true);
         return (adjDynamics, adjHairpins, adjArticulations, adjTrills);
     }
@@ -1714,10 +1725,14 @@ internal static class OutsideStaffStacker
         var adjArticulations = PlaceArticulations(
             articulations, trackers, measureToSystem, systems, textScriptStage: false);
         var adjBarNumbers = PlaceBarNumbers(fonts, barNumbers, trackers, measureToSystem, topStaff, systems);
-        var adjDynamics = PlaceAboveDynamics(fonts, aboveDynamics, trackers, measureToSystem, systems);
+        var adjDynamics = PlaceAboveDynamics(fonts, aboveDynamics, trackers, measureToSystem, systems,
+            expressive: false);
         var adjTextSpanners = PlaceTextSpanners(fonts, textSpanners, trackers, measureToSystem, systems);
         var adjOttavas = PlaceOttavas(fonts, ottavas, trackers, measureToSystem);
-        // 450: a chord diagram (@diagram) is a TextScript — ArticulationSpacing.TextScriptOutsideStaffPriority.
+        // 450: TextScript — free expressive text (@text.up), then a chord diagram (@diagram),
+        // ArticulationSpacing.TextScriptOutsideStaffPriority.
+        adjDynamics = PlaceAboveDynamics(fonts, adjDynamics, trackers, measureToSystem, systems,
+            expressive: true);
         adjArticulations = PlaceArticulations(
             adjArticulations, trackers, measureToSystem, systems, textScriptStage: true);
         var adjCustomTexts = PlaceCustomTexts(fonts, customTexts, trackers, measureToSystem, systems);
@@ -2434,15 +2449,18 @@ internal static class OutsideStaffStacker
         return b.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
     }
 
-    // ---- 250: DynamicText forced ABOVE (@f.up) ----
+    // ---- 250: DynamicText forced ABOVE (@f.up); 450: free expressive text (@text.up) ----
     // LILYPOND-REF: scm/define-grobs.scm:1298 DynamicText.outside-staff-priority = 250
+    // LILYPOND-REF: scm/define-grobs.scm:3800-3807 TextScript outside-staff-priority 450
     // Below-staff dynamics are handled by StackBelowStaff; here the FORCED-above ones
     // stack outward from the staff and push higher-priority above-staff grobs (ottava,
-    // marks, …) clear of them. Text ascends UP from its baseline anchor.
+    // marks, …) clear of them. Text ascends UP from its baseline anchor. Called twice:
+    // the dynamics (<paramref name="expressive"/> false) in the 250 turn, the @text in the 450.
     private static ImmutableArray<DynamicLayout> PlaceAboveDynamics(
         ScoreTextMetrics fonts,
         ImmutableArray<DynamicLayout> aboveDynamics, Func<int, int, OutsideStaffSkylines> trackers,
-        IReadOnlyDictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+        IReadOnlyDictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems,
+        bool expressive)
     {
         if (aboveDynamics.IsDefaultOrEmpty)
             return aboveDynamics;
@@ -2450,7 +2468,8 @@ internal static class OutsideStaffStacker
         for (int i = 0; i < b.Count; i++)
         {
             var dyn = b[i];
-            if (!dyn.IsAbove || !measureToSystem.TryGetValue(dyn.MeasureIndex, out int sysIdx))
+            if (!dyn.IsAbove || dyn.IsExpressiveText != expressive
+                || !measureToSystem.TryGetValue(dyn.MeasureIndex, out int sysIdx))
                 continue;
             // Stack in system-relative Y-up: dyn.YUp relative to this staff's WITHIN-
             // SYSTEM middle is dyn.YUp + midUp; place, then shift back. The mover is the

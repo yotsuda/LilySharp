@@ -341,6 +341,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **`@text` stands beyond the dynamics, as in LilyPond.** A text is placed after the dynamics
+  and hairpins of its side (LilyPond's TextScript priority 450 against their 250), so
+  `c'4@text("dolce") d'@p` seats the p by the staff and the text under it; the p used to be
+  pushed below the text. Above the staff the same.
 - **The MIDI rests through every bar of `R1*N`.** It sounded one bar of `R1*3` where the page
   draws three, so everything after it came in two bars early.
 
