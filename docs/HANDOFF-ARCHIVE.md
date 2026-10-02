@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第749セッションの経緯
+
+### 1.1 第749セッション（2026-10-02・YT-DELL2）
+
+同じ会話の続き。ユーザー報告「`@p` を付けた part と別の part の MIDI の音量も下がる」→ 再現（Lab `sessions/p748/probes/dyn/`: rh の A に `@p` → lh も A・B で 50／lh に `@p` → rh の B が 50）→ GO。`-Start p749`（HEAD `2649494c`・未 push 103）＝full **10745 / 0 / 2 / 10747**。§7 3.5 で第747 を ARCHIVE へ。
+★ `7dd2d6be` **MIDI の velocity を part の lane ごとに**。原因: `_velocity` が exporter に 1 本で、lane を開く `PlayInPart`／`PlaySectionCore` は音高の枠・音価・音色・transpose・grace の負債は part ごとに戻すのに強弱だけ戻さない＝直前に演奏した lane の強弱が次の lane（同 section の別 part／次 section の最初の part）に流れる。直し: `_partVelocity`（`_partPitchLanes` の双子）＝開くとき「その part の前回の値・無ければ 80」、閉じるとき保存。section 境界では消さない（強弱は section が開き直すものに入っていない＝頁の印は次の印まで立つ）。和音の行は自分の lane（強弱を書かないので 56＝既定の 70%）。頭からの反復（form の片側 `:|`）は lane も曲頭に戻す。LILYPOND-REF `ly/performer-init.ly:100-103`（Dynamic_performer は Voice に consists）。
+- 出力は意図どおり変わる: **.mid 998 冊中 16 冊**（追跡 15・ユーザーのコーパス 1＝`がくふ`）、全部長さ同一で velocity バイトだけ（2〜126 B）。svg／ly／xml は触っていない。full **10751 / 0 / 2**（網 +6: by-section／by-part × marked part 2・和音の行・頭からの反復）。APPROXIMATIONS 住所だけ。CHANGELOG Fixes に 1 項。
+- 毒（`sessions/p749/poisons.ps1`）: ① `PlayInPart` で戻さない → **最初は 0 赤**（網が by-section の綴りしか無かった＝by-part の綴りを足して **2 赤**）／② `PlaySectionCore` で戻さない → **2 赤**／③ 閉じるとき保存しない → **2 赤**（by-part）／④ 行が running velocity を読む → **0 → 網を足して 1 赤**／⑤ 頭からの反復で lane を戻さない → **0 → 網を足して 1 赤**。⚠️ 毒 ⑤ の 1 回目は綴りミス（`$kv`）で「PATTERN HITS 0」＝走っていない（門が叫んだ）。
+★ `-End p749 -DiffBase 2649494c`＝full **10751 / 0 / 2 / 10753**（網 +6）・門 全 OK（HANDOFF 残り 9,042 B）。7.5: Core `+` 36 行・REF 1／OWN 0。7.6: ⒝ LP 由来・字面でない＝LP は Voice ごとの performer が音量を持つ（`ly/performer-init.ly:100-103`）、Lily# は lane の表で同じ答え（字面にするには part ごとの performer 相当の器が要る）。7.7: ⒜ 和音の行の 56 は既定からの 70%＝既存の LILYSHARP-OWN（第625）の継続・「velocity in force」の読みを「行自身の lane」に固定した／⒝ 頭からの反復の lane 復元は既存設計（曲頭の状態に戻す・2026-08-15）に合わせた＝LP は反復で強弱を戻さないので、LP 忠実の観点では別の判断がありうる（網 1 本で現状を主張）。push はユーザー（未 push 104）。
+判定: ユーザー報告は閉じた。次は §1.0 ⒜ ⑴〜⑶（ユーザー判断・(i) の推しは section 境界の戻しを pair に揃える＝第748）。会話を区切るか: (b) 3 便・文脈はまだ軽い＝**続ける**。
+
 ## 以下は第748セッションの経緯
 
 ### 1.1 第748セッション（2026-10-02・YT-DELL2）

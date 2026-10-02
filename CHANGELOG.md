@@ -341,6 +341,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A `time` inside a pickup bar changes the meter of the bars that follow; it no longer
+  rewrites the pickup.** `partial 4 time 3/4 c4 d e f g a b` is a one-beat pickup and two full
+  3/4 bars. The page used to stretch the pickup to a whole bar of the new meter and then fall
+  back to the old one (the MIDI, the MusicXML and the `.ly` twin always read it the new way).
+- **The bar check resumes after a document-level `time none` is followed by a document-level
+  `time N/M`.** One top-level `time none` used to leave the whole document unchecked.
 - **A section boundary restates the score meter when the meter changed, not when the bar
   length did.** A section that ended in 2/2 against a 4/4 score drew nothing at the next
   section (1 == 1), where the `.ly` twin wrote `\time 4/4` and LilyPond printed it; and a
