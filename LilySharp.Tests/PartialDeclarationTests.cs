@@ -70,6 +70,23 @@ public sealed class PartialDeclarationTests
     private static int NoteEvents(Measure m) =>
         m.Items.Count(it => it is NoteItem or RestItem or ChordItem);
 
+    /// <summary>
+    /// A <c>time</c> inside the pickup bar moves the METER and leaves the pickup: `partial 4
+    /// time 3/4 c4 d e f g a b` is a one-beat pickup, then two full 3/4 bars. A `partial` says how
+    /// long the bar in progress is; a `time` says how long the bars after it are. Until 2026-10-02
+    /// the page re-armed the pickup to a whole bar of the new meter and then fell back to the OLD
+    /// meter (c d e | f g a b — two bars, the 3/4 lost); the MIDI, the MusicXML and the twin
+    /// always read it this way. Owner's decision (p751): musical validity decides the semantics.
+    /// </summary>
+    [Fact]
+    public void ATimeInsideThePickup_MovesTheMeter_AndLeavesThePickup()
+    {
+        var measures = CollectMeasures("partial 4 time 3/4 c4 d e f g a b");
+        Assert.Equal(3, measures.Length);
+        Assert.True(measures[0].IsPickup);
+        Assert.Equal(new[] { 1, 3, 3 }, measures.Select(NoteEvents).ToArray());
+    }
+
     [Fact]
     public void PickupAutoClosesWithoutWrittenBarline()
     {

@@ -34,7 +34,7 @@ public readonly record struct Meter(int Beats, int BeatType, string? BeatsText =
 /// <summary>
 /// The bar's context as a walk advances through the music — the meter in force, the score's
 /// home meter it reverts to, and the pickup pending — with the rules that move them: a
-/// <c>time</c> (<see cref="SetTime"/>), a section boundary (<see cref="OpenSection"/>), a
+/// <c>time</c> (<see cref="SetTime(TimeSignatureSyntax)"/>), a section boundary (<see cref="OpenSection"/>), a
 /// <c>partial</c> (<see cref="SetPartial"/>) and the bar line that spends it
 /// (<see cref="SpendPartial"/>). What an empty bar, a bare <c>R</c> or a padding bar is worth
 /// is read here (<see cref="BarLength"/>, <see cref="MeterLength"/>), not re-derived.
@@ -56,19 +56,19 @@ public readonly record struct Meter(int Beats, int BeatType, string? BeatsText =
 /// <c>MeasureBuilder._frozenPosition</c>; C6: the home it reverts to at a section boundary,
 /// armed per voice from the collector's score-level meter). Every reader is on it now.
 /// <para>
-/// ⚠️ SPELLINGS THAT STILL DIFFER between the outputs, recorded here so the move onto one type
-/// does not paper over them (each is a separate decision, with its own net): a <c>time</c> written
-/// while a pickup is pending moves the meter here (<see cref="SetTime"/>: the MIDI, the MusicXML,
-/// the twin), where the page re-arms the PICKUP to a bar of the new meter and keeps the meter from
-/// before the <c>partial</c> (<see cref="SetMeterRearmingPickup"/>); a top-level <c>time none</c>
-/// is not undone by a later top-level <c>time</c> in the validator (<see cref="SetMeterLeavingSenza"/>);
-/// and the MusicXML spends a pickup by the duration written into it, closing the implicit measure
-/// itself when the length is reached (<c>MusicXmlExporter.MaybeClosePickup</c>, with
-/// <c>_pendingPickup</c> / <c>_pickupLength</c>), where the MIDI, the twin and the page spend it at
-/// the first bar line that closes after it — so the MusicXML does not read <see cref="Partial"/> yet.
-/// A section that states no meter reverts to the home in all of them, and all of them write
-/// that move for a changed PAIR (<see cref="OpenSection"/>, <see cref="LeftHome"/>; the page
-/// asked the bar's reduced length until p750). A second <c>partial</c> before the pickup bar closes REPLACES the pending one in all of them
+/// ⚠️ THE ONE SPELLING THAT STILL DIFFERS between the outputs, recorded here so the move onto one
+/// type does not paper over it (a separate decision, with its own net): the MusicXML spends a
+/// pickup by the duration written into it, closing the implicit measure itself when the length is
+/// reached (<c>MusicXmlExporter.MaybeClosePickup</c>, with <c>_pendingPickup</c> /
+/// <c>_pickupLength</c>), where the MIDI, the twin and the page spend it at the first bar line that
+/// closes after it — so the MusicXML does not read <see cref="Partial"/> yet. The differences
+/// stage C found and p750–p751 settled (owner's decisions): a <c>time</c> while a pickup is
+/// pending moves the meter and leaves the pickup, in every output (<see cref="SetTime(Meter?, bool)"/>;
+/// the page re-armed the pickup until p751); a top-level <c>time none</c> is undone by a later
+/// top-level <c>time</c> in the validator as everywhere else (p751); a section that states no
+/// meter reverts to the home in all of them, and all of them write that move for a changed PAIR
+/// (<see cref="OpenSection"/>, <see cref="LeftHome"/>; the page asked the bar's reduced length
+/// until p750). A second <c>partial</c> before the pickup bar closes REPLACES the pending one in all of them
 /// (until C5 this type recorded the page as keeping the first: its <c>_partialRestore ??=</c>
 /// parked the METER to restore, not the first pickup — the pickup field was overwritten). Under
 /// <c>time none</c> all of them keep the last metered meter in force (LilyPond's performer writes
@@ -162,37 +162,24 @@ public sealed class BarContext
         SenzaMisura = false;
     }
 
-    /// <summary>A meter set outright that says nothing about <c>time none</c> — the validator's
-    /// document-level <c>time</c> (MeasureValidator.SetTimeSignature), which never cleared its
-    /// senza flag: a top-level <c>time none</c> leaves the document unmetered for every later
-    /// top-level <c>time</c>. Kept as it was (stage C5 (iii) moves the state, not the rule);
-    /// whether that is right is a separate decision, with its own net.</summary>
-    public void SetMeterLeavingSenza(Meter meter) => Meter = meter;
-
     /// <summary>The page's meter write (<c>MeasureBuilder</c>: its opening meter, a section
-    /// head's or reset's, a <c>time</c> in the music): the meter in force — or, WHILE A PICKUP IS
-    /// PENDING, the pickup, re-armed to one bar of the new meter, the meter itself left where the
-    /// <c>partial</c> found it. <paramref name="meter"/> null is a <c>time none</c> change item,
-    /// which carries no meter; a header's or a reset's <c>time none</c> carries the last metered
-    /// pair, the placeholder spacer's length.</summary>
+    /// head's or reset's, a <c>time</c> in the music) — the same move as
+    /// <see cref="SetTime(TimeSignatureSyntax)"/> from the page's model type: a pending pickup
+    /// is untouched (a <c>partial</c> says how long the bar in progress is, a <c>time</c> says
+    /// how long the bars after it are — two different things, and the one does not rewrite the
+    /// other). <paramref name="meter"/> null is a <c>time none</c> change item, which carries no
+    /// meter; a header's or a reset's <c>time none</c> carries the last metered pair, the
+    /// placeholder spacer's length.</summary>
     /// <remarks>
-    /// The page kept ONE field for what the bar in progress is worth (<c>_timeSignature</c>) and
-    /// parked the meter to restore beside it (<c>_partialRestore</c>), so a <c>time</c> written
-    /// inside a pickup bar overwrote the pickup with a whole bar of the new meter, and the bar's
-    /// close put back the meter from BEFORE the <c>partial</c> — the new meter was lost. Kept as
-    /// it was (stage C5 moves the state, not the rule); whether a <c>time</c> inside a pickup
-    /// should move the meter instead — <see cref="SetTime"/>, what the MIDI, the MusicXML and
-    /// the twin do — is a separate decision, with its own net.
+    /// Until 2026-10-02 (p751, owner's decision: musical validity decides the semantics) the page
+    /// re-armed the PICKUP to a whole bar of the new meter and kept the meter from before the
+    /// <c>partial</c> — the one-field spelling it had before stage C5 (<c>_timeSignature</c> was
+    /// both the pickup and the meter) made it so, and no book or test observed it.
     /// </remarks>
-    public void SetMeterRearmingPickup(Meter? meter, bool senzaMisura)
+    public void SetTime(Meter? meter, bool senzaMisura)
     {
         if (meter is { } m)
-        {
-            if (Partial is not null)
-                Partial = m.Length;
-            else
-                Meter = m;
-        }
+            Meter = m;
         SenzaMisura = senzaMisura;
     }
 
@@ -217,7 +204,7 @@ public sealed class BarContext
     /// against the home's): 2/2 → 4/4 drew nothing and stayed 2/2 where the twin restated 4/4,
     /// and a pickup still pending at the boundary (<c>section Body_1 { partial 2 }</c> whose body
     /// is <c>r8</c> with no bar line — `Locked out of Heaven`) read 1/2 ≠ 1, drew a 4/4 of the
-    /// same meter and re-armed the pickup to a whole bar (<see cref="SetMeterRearmingPickup"/>).
+    /// same meter and re-armed the pickup to a whole bar (the page's own <c>time</c> rule, gone in p751).
     /// Owner's GO 2026-10-02 (p750): the page asks the pair like everyone else.
     /// </remarks>
     public bool LeftHome => !Meter.SamePair(HomeMeter) || SenzaMisura != HomeSenzaMisura;
@@ -234,7 +221,7 @@ public sealed class BarContext
 
     /// <summary>
     /// A section boundary, whole: the section's own header <c>time</c> if it states one
-    /// (<see cref="SetTime"/> — a <c>time none</c> header is no meter at all and leaves the running
+    /// (<see cref="SetTime(TimeSignatureSyntax)"/> — a <c>time none</c> header is no meter at all and leaves the running
     /// one), else the HOME meter (<see cref="RevertToHome"/>). The header's <c>partial</c> becomes
     /// the pickup pending, and a pickup the previous section left pending ends with that section,
     /// as its bars did. Returns whether the meter's FRACTION moved (<see cref="Meter.SamePair"/>),

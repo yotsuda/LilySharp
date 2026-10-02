@@ -143,7 +143,7 @@ internal sealed class MeasureBuilder
     // The meter in force, `time none` and the pickup pending — Semantics.BarContext, the one
     // spelling every output reads (REFACTOR_PLAN stage C5, the page last). What the bar in
     // progress is worth is _bars.BarLength: the pickup while one is pending, else one bar of the
-    // meter. The page's own rule for a `time` inside a pickup bar is BarContext.SetMeterRearmingPickup.
+    // meter.
     private readonly BarContext _bars = new();
     private Fraction _currentDuration = Fraction.Zero;
     // LilyPond's measurePosition where the last emitted bar ENDS: zero when the bars so far
@@ -586,15 +586,15 @@ internal sealed class MeasureBuilder
     /// <summary>The one place the clock freezes and thaws (see <c>_frozenPosition</c>): a
     /// <c>time none</c> arriving on a metered clock freezes it at its current reading; a
     /// metered <c>time</c> thaws it. A second <c>time none</c> inside a cadenza changes nothing.
-    /// Then the meter moves (<see cref="BarContext.SetMeterRearmingPickup"/>: null is a
-    /// <c>time none</c> change item, which carries none).</summary>
+    /// Then the meter moves (<see cref="BarContext.SetTime(Meter?, bool)"/>: null is a
+    /// <c>time none</c> change item, which carries none; a pending pickup is left alone).</summary>
     private void FreezeOrThaw(Meter? meter, bool senzaMisura)
     {
         if (senzaMisura && !_bars.SenzaMisura)
             _frozenPosition = _currentDuration;
         else if (!senzaMisura)
             _frozenPosition = Fraction.Zero;
-        _bars.SetMeterRearmingPickup(meter, senzaMisura);
+        _bars.SetTime(meter, senzaMisura);
     }
 
     /// <summary>Settles the measure boundary at a section/phrase edge. A section or phrase

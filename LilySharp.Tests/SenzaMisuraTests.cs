@@ -274,6 +274,36 @@ public class SenzaMisuraTests
     }
 
     /// <summary>
+    /// A document-level <c>time none</c> ends at the next document-level metered <c>time</c> —
+    /// for the bar check too. Until 2026-10-02 the validator never cleared its senza flag on
+    /// that arm, so one top-level <c>time none</c> left the whole document unchecked while the
+    /// page and every exporter were metered again (p751, owner's decision).
+    /// </summary>
+    [Fact]
+    public void TheMeasureValidator_ChecksAgain_AfterATopLevelMeteredTime()
+    {
+        const string source = """
+            time none
+            part free { clef treble }
+            section Free { free { c'1 c'2 | } }
+            time 4/4
+            part strict { clef treble }
+            section Strict { strict { c'4 d e f | c'4 d e | } }
+            form main { Free Strict }
+            score main { staff free  staff strict }
+            """;
+        var tree = TestPaper.ParseAtIndentZero(source);
+        Assert.False(tree.HasErrors);
+        var validator = new MeasureValidator();
+        validator.Validate(tree);
+        // The unmetered bar (a whole and a half) is not measured; the second bar of the
+        // metered section, three quarters under 4/4, is.
+        Assert.DoesNotContain(validator.Diagnostics, d => d.Code == DiagnosticCodes.MeasureOverflow);
+        var incomplete = Assert.Single(validator.Diagnostics, d => d.Code == DiagnosticCodes.MeasureIncomplete);
+        Assert.Contains("4/4", incomplete.Message);
+    }
+
+    /// <summary>
     /// The MIDI conductor track writes no time-signature event for <c>time none</c> and keeps
     /// the last meter: LilyPond's \cadenzaOn sets Timing.timing, not timeSignature, and the
     /// performer emits only on a \time event or a changed fraction

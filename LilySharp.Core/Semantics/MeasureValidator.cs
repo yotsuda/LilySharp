@@ -61,10 +61,13 @@ internal sealed class MeasureValidator : ISemanticValidator
     public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.ToList();
 
     /// <summary>
-    /// Sets the current time signature.
+    /// Sets the current time signature — a document-level metered <c>time</c>, which also ends a
+    /// document-level <c>time none</c> before it (until 2026-10-02 the senza flag was never cleared
+    /// here, so a top-level <c>time none</c> kept the whole document unchecked; p751, owner's
+    /// decision — the page and every exporter already read it this way).
     /// </summary>
     public void SetTimeSignature(int beats, int beatUnit)
-        => _bars.SetMeterLeavingSenza(new Meter(beats, beatUnit));
+        => _bars.SetMeter(new Meter(beats, beatUnit));
 
     /// <summary>
     /// Validates all measures in a compilation unit.
