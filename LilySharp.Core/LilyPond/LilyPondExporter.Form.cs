@@ -388,7 +388,7 @@ public sealed partial class LilyPondExporter
         {
             var meter = _sectionHeaders.Times.GetValueOrDefault(name) is { IsSenzaMisura: false } t
                 ? new Fraction(t.Beats, t.BeatType)
-                : new Fraction(_homeTimeBeats, _homeTimeBeatType);
+                : _bars.HomeMeter.Length;
             var pickup = ChordPickupFor(name);
             for (int i = 0; i < bars; i++)
             {
@@ -442,7 +442,7 @@ public sealed partial class LilyPondExporter
         {
             if (open)
                 yield return CreateBarline(SyntaxKind.Bar, "|", position, 0);
-            var meter = new Fraction(_homeTimeBeats, _homeTimeBeatType);
+            var meter = _bars.HomeMeter.Length;
             for (int i = 0; i < missing; i++)
             {
                 yield return new ChordBarMarker("s" + ChordModeDuration(meter));
@@ -672,7 +672,7 @@ public sealed partial class LilyPondExporter
     /// </summary>
     private Fraction FirstBarsLength(IReadOnlyList<string> sections, int bars)
     {
-        var meter = new Fraction(_timeBeats, _timeBeatType);
+        var meter = _bars.MeterLength;
         var total = Fraction.Zero;
         int left = bars;
         foreach (string name in sections)
@@ -793,7 +793,7 @@ public sealed partial class LilyPondExporter
         string earlierHeld = FlushSectionHead();
         if (earlierHeld.Length > 0)
             parts.Add(earlierHeld);
-        var head = (_timeText, _timeSenza, _keySharps, _tonic);
+        var head = (TimeTextInForce, _bars.SenzaMisura, _keySharps, _tonic);
         int restoresAt = parts.Count;
         // ⚠️ THE METER REVERTS HERE TOO, and this arm is the twin of the key one below.
         // A section that states no `time` of its own opens at the SCORE meter, so a
@@ -803,8 +803,7 @@ public sealed partial class LilyPondExporter
         // this carrier answered only the key question, so `section A { … time 3/4 … }
         // section B { c'4 d e f | }` handed LilyPond a 3/4 bar holding four quarters.
         if (!sp.HasHeaderTime
-            && (_timeBeats != _homeTimeBeats || _timeBeatType != _homeTimeBeatType
-                || _timeSenza != _homeTimeSenza))
+            && (!_bars.Meter.SamePair(_bars.HomeMeter) || _bars.SenzaMisura != _bars.HomeSenzaMisura))
         {
             if (_homeTimeNode != null)
             {
@@ -812,13 +811,10 @@ public sealed partial class LilyPondExporter
             }
             else
             {
-                parts.Add(_timeSenza
+                parts.Add(_bars.SenzaMisura
                     ? "\\cadenzaOff \\time 4/4" + CadenzaReturnPartial(Fraction.Whole)
                     : "\\time 4/4");
-                _timeBeats = 4;
-                _timeBeatType = 4;
-                _timeSenza = false;
-                _timeText = "\\time 4/4";
+                _bars.SetMeter(new Semantics.Meter(4, 4));
             }
             // HELD, not written: a `time` at the play's head that states the meter in force
             // before this restore cancels it (EmitItem's head arm, MeasureBuilder.SectionHead).

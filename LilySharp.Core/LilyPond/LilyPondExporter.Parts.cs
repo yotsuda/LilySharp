@@ -343,10 +343,7 @@ public sealed partial class LilyPondExporter
         // the file-level start).
         _keySharps = 0;
         _tonic = _homeTonic;
-        _timeBeats = _homeTimeBeats;
-        _timeBeatType = _homeTimeBeatType;
-        _timeSenza = _homeTimeSenza;
-        _timeText = _homeTimeNode is { IsSenzaMisura: false } homeTime ? TimeText(homeTime) : "\\time 4/4";
+        _bars.RevertToHome();
         _sectionHead = null;
         _heldTimeRestore = _heldKeyRestore = _heldMark = null;
 

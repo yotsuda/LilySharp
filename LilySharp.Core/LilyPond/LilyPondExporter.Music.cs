@@ -309,12 +309,11 @@ public sealed partial class LilyPondExporter
                 bool pairsHere = kind == SyntaxKind.Bar
                     || (kind == SyntaxKind.RepeatStartBar && !atScopeStart && !opensASectionPlay);
                 if (pairsHere && !_timeSinceBoundary)
-                    AppendToken(line, "s" + ChordModeDuration(
-                        _twinPartial ?? new Fraction(_timeBeats, _timeBeatType)), indent);
+                    AppendToken(line, "s" + ChordModeDuration(_bars.BarLength), indent);
                 // The bar behind this bar line closed (or was the empty bar just written), so
                 // a pending pickup is spent — MeasureBuilder.RestorePartialIfPending.
                 if (pairsHere || _timeSinceBoundary)
-                    _twinPartial = null;
+                    _bars.SpendPartial();
                 _timeSinceBoundary = false;
                 atScopeStart = false;
             }
@@ -639,8 +638,8 @@ public sealed partial class LilyPondExporter
             {
                 // Unchanged against the head (what the section before left) or, elsewhere, the
                 // meter in force; `time!` writes it regardless — LilyPond draws every \time.
-                bool same = ts.IsSenzaMisura == (head?.Senza ?? _timeSenza)
-                            && (ts.IsSenzaMisura || TimeText(ts) == (head?.TimeText ?? _timeText));
+                bool same = ts.IsSenzaMisura == (head?.Senza ?? _bars.SenzaMisura)
+                            && (ts.IsSenzaMisura || TimeText(ts) == (head?.TimeText ?? TimeTextInForce));
                 string written = EmitItemCore(item);   // advances the running meter either way
                 if (same && !ts.IsForced)
                 {
@@ -1131,7 +1130,7 @@ public sealed partial class LilyPondExporter
             // as it leaves Lily#'s running duration alone while LilyPond's moves to the value
             // written here, the next event states its own.
             _forceNextDuration = true;
-            return prefix + "R" + Music.BarRest.LilyPondDuration(_twinPartial ?? new Fraction(_timeBeats, _timeBeatType))
+            return prefix + "R" + Music.BarRest.LilyPondDuration(_bars.BarLength)
                 + mmr + suffix;
         }
         return prefix + r.RestToken.Text + EmitEventDuration(r.Duration) + mmr + suffix;
@@ -1547,7 +1546,7 @@ public sealed partial class LilyPondExporter
         {
             // Under \cadenzaOn a bare `|` is a bar CHECK that draws nothing; Lily#'s `|`
             // closes and draws the bar wherever it stands, so the twin writes the glyph.
-            SyntaxKind.Bar => _timeSenza ? "\\bar \"|\"" : "|",
+            SyntaxKind.Bar => _bars.SenzaMisura ? "\\bar \"|\"" : "|",
             SyntaxKind.DoubleBar => "\\bar \"||\"",
             SyntaxKind.FinalBar => "\\bar \"|.\"",
             SyntaxKind.DashedBar => "\\bar \"!\"",
@@ -1593,9 +1592,8 @@ public sealed partial class LilyPondExporter
         // resets nothing else, so the \time that follows it is the re-arm — and it PRINTS, as
         // every \time event does (measured, scratch/p354/lp/senza-reprint.ly), which is what
         // the page draws for it too (MeasureCollector.MusicWalk's TimeSignatureChangeItem).
-        bool wasSenza = _timeSenza;
-        _timeSenza = ts.IsSenzaMisura;
-        if (ts.IsSenzaMisura)
+        bool wasSenza = _bars.SenzaMisura;
+        if (!_bars.SetTime(ts))   // `time none`: the last metered pair stays in force
         {
             // Opened mid-bar: LilyPond's clock freezes there and the return will need a
             // \partial (see _cadenzaOpenedMidBar). A second `time none` changes nothing.
@@ -1603,9 +1601,6 @@ public sealed partial class LilyPondExporter
                 _cadenzaOpenedMidBar = _timeSinceBoundary;
             return "\\cadenzaOn";
         }
-        _timeBeats = ts.Beats;
-        _timeBeatType = ts.BeatType;
-        _timeText = TimeText(ts);
         return wasSenza
             ? "\\cadenzaOff " + TimeText(ts) + CadenzaReturnPartial(new Fraction(ts.Beats, ts.BeatType))
             : TimeText(ts);
@@ -1631,11 +1626,15 @@ public sealed partial class LilyPondExporter
     ///   numerator is one number or a list of two or more numbers. A list represents
     ///   concatenation."</summary>
     private static string TimeText(TimeSignatureSyntax ts)
+        => TimeText(new Semantics.Meter(ts.Beats, ts.BeatType, ts.BeatsText));
+
+    /// <summary>The same spelling for the meter in force (<see cref="TimeTextInForce"/>).</summary>
+    private static string TimeText(Semantics.Meter meter)
     {
-        string beats = ts.BeatsText ?? ts.Beats.ToString();
+        string beats = meter.BeatsText ?? meter.Beats.ToString();
         if (beats.Contains('+'))
-            return "\\time #'((" + beats.Replace("+", " ") + ") . " + ts.BeatType + ")";
-        return "\\time " + beats + "/" + ts.BeatType;
+            return "\\time #'((" + beats.Replace("+", " ") + ") . " + meter.BeatType + ")";
+        return "\\time " + beats + "/" + meter.BeatType;
     }
 
     /// <summary>
@@ -1744,7 +1743,7 @@ public sealed partial class LilyPondExporter
     }
 
     /// <summary>Writes the <c>\partial</c> and remembers its length for an empty bar written
-    /// inside the pickup (<see cref="_twinPartial"/>).</summary>
+    /// inside the pickup (<c>_bars.Partial</c>, <see cref="Semantics.BarContext.SetPartial"/>).</summary>
     private string ArmPartial(PartialDeclarationSyntax p)
     {
         // Under `time none` the page's clock stands still and the pickup shortens nothing
@@ -1753,7 +1752,7 @@ public sealed partial class LilyPondExporter
         // mid-measure — a different book (MEASURED 2.26.0, scratch/p359/lp/partial-senza.ly:
         // bar check failed at 3/4, an automatic bar inside the following whole note). Not
         // written, and said so.
-        if (_timeSenza)
+        if (_bars.SenzaMisura)
         {
             _warnings.Add(
                 "a 'partial' inside 'time none' is not exported: the clock stands still there "
@@ -1762,7 +1761,7 @@ public sealed partial class LilyPondExporter
             return "";
         }
         if (p.Duration != null)
-            _twinPartial = p.ToFraction();
+            _bars.SetPartial(p.ToFraction());
         return EmitPartial(p);
     }
 

@@ -491,7 +491,7 @@ public sealed partial class LilyPondExporter
     /// </remarks>
     private List<Fraction>? SectionBarMeters(SectionDeclarationSyntax section, string sectionName)
     {
-        var start = new Fraction(_homeTimeBeats, _homeTimeBeatType);
+        var start = _bars.HomeMeter.Length;
         if (_sectionHeaders.Times.GetValueOrDefault(sectionName) is { IsSenzaMisura: false } headerTime)
             start = new Fraction(headerTime.Beats, headerTime.BeatType);
 
@@ -567,7 +567,7 @@ public sealed partial class LilyPondExporter
             // The bar is as long as the MUSIC's bar at this point of the section (see
             // SectionBarMeters): a chord row written under a `time 7/8` bar still said `a1:m`,
             // a whole 4/4 bar, and LilyPond's bar check failed there (Lab probes/complex-lys/06).
-            var home = new Fraction(_homeTimeBeats, _homeTimeBeatType);
+            var home = _bars.HomeMeter.Length;
             var barMeter = meters is { Count: > 0 }
                 ? meters[Math.Min(barIndex, meters.Count - 1)] : home;
             barIndex++;
@@ -610,10 +610,10 @@ public sealed partial class LilyPondExporter
     {
         // The page grids every bar on the meter (ChordRhythm); a PICKUP bar is shorter, and
         // its slots are scaled to it so the chords keep their share of the bar they stand in.
-        var meter = new Fraction(_homeTimeBeats, _homeTimeBeatType);
+        var meter = _bars.HomeMeter.Length;
         var sb = new StringBuilder();
         foreach (var (node, _, gridDur) in Svg.Collector.ChordNameCollector.SlotGroups(
-                     slots, _homeTimeBeats, _homeTimeBeatType, out _))
+                     slots, _bars.HomeMeter.Beats, _bars.HomeMeter.BeatType, out _))
         {
             var dur = barLength.Equals(meter) ? gridDur : gridDur * barLength / meter;
             if (sb.Length > 0)

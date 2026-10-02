@@ -48,8 +48,9 @@ public readonly record struct Meter(int Beats, int BeatType, string? BeatsText =
 /// twin's — so a rule added to one (the bare <c>R</c>, 2026-10-02) had to be added to six places,
 /// and one copy (<c>R1*N</c> in the MIDI) had drifted. This type is REFACTOR_PLAN stage C: the
 /// MIDI read it first (C2, whole), the MusicXML next (C3, the meter — its pickup is still its own,
-/// see below); the twin, the validator and the page follow, one at a time, each checked by its
-/// own full-corpus byte comparison.
+/// see below), then the LilyPond twin (C4, whole; its section-head restores and the <c>\cadenzaOn</c>
+/// bookkeeping stay the twin's); the validator and the page follow, one at a time, each checked
+/// by its own full-corpus byte comparison.
 /// <para>
 /// ⚠️ SPELLINGS THAT STILL DIFFER between the outputs, recorded here so the move onto one type
 /// does not paper over them (stage C5 decides, with nets): a second <c>partial</c> before the
@@ -90,6 +91,22 @@ public sealed class BarContext
     /// to EVERY part's first bar and a walk that plays the parts one after another re-arms it
     /// per lane (MidiExporter.PlaySectionCore).</summary>
     public Fraction? Partial { get; set; }
+
+    /// <summary>The meter half of the context as ONE value — what a nested walk inherits and
+    /// hands back (the twin's StreamFrame carries it into a tuplet's or a phrase's exporter and,
+    /// for a sequential body, out again). The pickup is not part of it: a body opens with none
+    /// pending, and what it spends is its own.</summary>
+    public readonly record struct MeterState(Meter Meter, bool SenzaMisura);
+
+    /// <summary>The meter in force and whether <c>time none</c> is, as one value (<see cref="Restore"/>).</summary>
+    public MeterState Save() => new(Meter, SenzaMisura);
+
+    /// <summary>Puts back what <see cref="Save"/> took.</summary>
+    public void Restore(MeterState state)
+    {
+        Meter = state.Meter;
+        SenzaMisura = state.SenzaMisura;
+    }
 
     /// <summary>One bar of the meter in force — what a padding bar is worth.</summary>
     public Fraction MeterLength => Meter.Length;

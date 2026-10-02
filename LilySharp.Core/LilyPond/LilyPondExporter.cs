@@ -136,15 +136,15 @@ public sealed partial class LilyPondExporter
     // source (see EmitSectionPlay).
     private KeySignatureSyntax? _homeKeyNode;
 
-    // The running METER and the score meter a section boundary reverts it to — the twin of
-    // the key pair above, and of the collector's per-voice _sectionResetTimeBeats snapshot.
-    // Held as the WRITTEN pair, not a Fraction, so 4/4 and 2/2 stay distinct (they engrave
-    // differently and \time takes the pair). The home node is re-emitted verbatim on a
-    // restore so a `C` written in the source stays `C` (see ScoreHomeMeter).
-    private int _timeBeats = 4;
-    private int _timeBeatType = 4;
-    private int _homeTimeBeats = 4;
-    private int _homeTimeBeatType = 4;
+    // The running METER, the score meter a section boundary reverts it to, `time none` in
+    // force and the pickup pending — Semantics.BarContext, the one spelling of those rules
+    // (REFACTOR_PLAN stage C4; the MIDI and the MusicXML moved first). Held as the WRITTEN
+    // pair, not a Fraction, so 4/4 and 2/2 stay distinct (they engrave differently and \time
+    // takes the pair). The home node is re-emitted verbatim on a restore so a `C` written in
+    // the source stays `C` (see ScoreHomeMeter). ⚠️ Each nested-body exporter has a context of
+    // its own: the meter half rides the frames (PartFrame's home, StreamFrame's running
+    // state), the pickup does not — a body opens with none pending, as before.
+    private readonly Semantics.BarContext _bars = new();
     private TimeSignatureSyntax? _homeTimeNode;
     // The part header's own key (part p { key bes major … } outside its sections), null when it
     // writes none, and the key sharps a section boundary restores — the part header's, else the
@@ -156,7 +156,7 @@ public sealed partial class LilyPondExporter
 
     // The running meter AS WRITTEN (TimeText, "\cadenzaOn" aside): what a section head's
     // `time` is compared with — the beats alone cannot tell 3+2/8 from 5/8.
-    private string _timeText = "";
+    private string TimeTextInForce => TimeText(_bars.Meter);
     // A section play's head (the twin of MeasureBuilder.SectionHead): what was in force before
     // its restores, and the restores themselves, HELD until the head is over — a `time` or
     // `key` that states the held value again cancels its restore and writes nothing.
@@ -164,15 +164,14 @@ public sealed partial class LilyPondExporter
     private string? _heldTimeRestore;
     private string? _heldKeyRestore;
     private string? _heldMark;
-    // `time none` in force — LilyPond's \cadenzaOn (Timing.timing = ##f). The running flag
-    // decides two spellings: a metered `time` after it writes \cadenzaOff first (or LilyPond
-    // keeps not counting, draws no bar and numbers nothing), and a written `|` inside it is
-    // `\bar "|"` — under \cadenzaOn LilyPond's `|` is only a bar CHECK and draws nothing,
-    // while Lily#'s `|` is the boundary and draws the bar (MeasureBuilder.HandleBarline).
-    // MEASURED (2.26.0, scratch/p354/lp/senza-misura.ly against senza-fixed.ly, 2026-09-08):
-    // with plain `|` the cadenza drew no bar line and the bars after \time 4/4 none either.
-    private bool _timeSenza;
-    private bool _homeTimeSenza;
+    // `time none` in force (_bars.SenzaMisura) — LilyPond's \cadenzaOn (Timing.timing = ##f).
+    // The running flag decides two spellings: a metered `time` after it writes \cadenzaOff
+    // first (or LilyPond keeps not counting, draws no bar and numbers nothing), and a written
+    // `|` inside it is `\bar "|"` — under \cadenzaOn LilyPond's `|` is only a bar CHECK and
+    // draws nothing, while Lily#'s `|` is the boundary and draws the bar
+    // (MeasureBuilder.HandleBarline). MEASURED (2.26.0, scratch/p354/lp/senza-misura.ly
+    // against senza-fixed.ly, 2026-09-08): with plain `|` the cadenza drew no bar line and the
+    // bars after \time 4/4 none either.
     // True while the cadenza in force opened INSIDE a bar — music had sounded since the last
     // bar line when `time none` arrived. LilyPond's measurePosition froze at that reading and
     // nothing in the cadenza resets it (not its `\bar "|"`, not \cadenzaOff), so the returning
@@ -192,11 +191,10 @@ public sealed partial class LilyPondExporter
     // Standalone music a note leaves for AFTER its sibling post-events — `\breathe`,
     // `\caesura` (SplitAttachments) — written by EmitMusicStream before the next event.
     private readonly StringBuilder _trailingMusic = new();
-    // The pickup in force — a `partial` read and not yet closed by a bar — for the one
-    // reader that needs it here: the spacer an empty `| |` bar stands for
-    // (EmitMusicStream). MeasureBuilder._partialRestore's twin, spent the way
-    // RestorePartialIfPending spends it: at the first bar that closes after it.
-    private Fraction? _twinPartial;
+    // (The pickup in force — a `partial` read and not yet closed by a bar — is _bars.Partial,
+    // for the two readers that need it here: the spacer an empty `| |` bar stands for and a
+    // bare `R`. MeasureBuilder._partialRestore's twin, spent the way RestorePartialIfPending
+    // spends it: at the first bar that closes after it.)
 
     /// <summary>
     /// The relative-octave frame, TWICE: where Lily# stands, and where the text this exporter
@@ -529,13 +527,14 @@ public sealed partial class LilyPondExporter
             if (child is ClefDeclarationSyntax fileClef)
                 _fileClef = fileClef.ClefName.Text;
 
-        // …and the meter the same boundary reverts to, read the same way.
-        (_homeTimeBeats, _homeTimeBeatType) = ScoreHomeMeter.Read(root);
+        // …and the meter the same boundary reverts to, read the same way (with the numerator
+        // as the home node writes it, so a `3+2/8` home is compared and restored as written).
+        var (homeBeats, homeBeatType) = ScoreHomeMeter.Read(root);
         _homeTimeNode = ScoreHomeMeter.Declaration(root);
-        _homeTimeSenza = _homeTimeNode?.IsSenzaMisura ?? false;
-        _timeBeats = _homeTimeBeats;
-        _timeBeatType = _homeTimeBeatType;
-        _timeSenza = _homeTimeSenza;
+        _bars.HomeMeter = new Semantics.Meter(homeBeats, homeBeatType,
+            _homeTimeNode is { IsSenzaMisura: false } homeTime ? homeTime.BeatsText : null);
+        _bars.HomeSenzaMisura = _homeTimeNode?.IsSenzaMisura ?? false;
+        _bars.RevertToHome();
 
         CollectPhrases(root);
 
@@ -729,7 +728,7 @@ public sealed partial class LilyPondExporter
         bool OctaveAbsolute, int AnchorOctave, int AbsoluteBaseOctave, int SectionOctaveOffset,
         bool DrumMode, string? CurrentPartName, bool CombinedPart,
         int HomeKeySharps, KeyTonic HomeTonic,
-        int HomeTimeBeats, int HomeTimeBeatType, bool HomeTimeSenza, TimeSignatureSyntax? HomeTimeNode,
+        Semantics.Meter HomeMeter, bool HomeSenzaMisura, TimeSignatureSyntax? HomeTimeNode,
         KeySignatureSyntax? PartHeaderKeyNode, int RestoreKeySharps);
 
     /// <summary>
@@ -753,14 +752,14 @@ public sealed partial class LilyPondExporter
         bool ImprovisationOpen, ClefType LysClef,
         int LysStep, int LysOctave, int LyStep, int LyOctave, bool FrameTracked,
         int KeySharps, KeyTonic Tonic,
-        int TimeBeats, int TimeBeatType, bool TimeSenza, string TimeText,
+        Semantics.BarContext.MeterState Time,
         string LastWrittenValue, int LastWrittenDots, bool ForceNextDuration);
 
     private PartFrame CapturePart() => new(
         _octaveAbsolute, _anchorOctave, _absoluteBaseOctave, _sectionOctaveOffset,
         _drumMode, _currentPartName, _combinedPart,
         _homeKeySharps, _homeTonic,
-        _homeTimeBeats, _homeTimeBeatType, _homeTimeSenza, _homeTimeNode,
+        _bars.HomeMeter, _bars.HomeSenzaMisura, _homeTimeNode,
         _partHeaderKeyNode, _restoreKeySharps);
 
     private void ApplyPart(in PartFrame f)
@@ -768,15 +767,17 @@ public sealed partial class LilyPondExporter
         (_octaveAbsolute, _anchorOctave, _absoluteBaseOctave, _sectionOctaveOffset,
          _drumMode, _currentPartName, _combinedPart,
          _homeKeySharps, _homeTonic,
-         _homeTimeBeats, _homeTimeBeatType, _homeTimeSenza, _homeTimeNode,
+         _, _, _homeTimeNode,
          _partHeaderKeyNode, _restoreKeySharps) = f;
+        _bars.HomeMeter = f.HomeMeter;
+        _bars.HomeSenzaMisura = f.HomeSenzaMisura;
     }
 
     private StreamFrame CaptureStream() => new(
         _improvisationOpen, _lysClef,
         _lysStep, _lysOctave, _lyStep, _lyOctave, _frameTracked,
         _keySharps, _tonic,
-        _timeBeats, _timeBeatType, _timeSenza, _timeText,
+        _bars.Save(),
         _lastWrittenValue, _lastWrittenDots, _forceNextDuration);
 
     private void ApplyStream(in StreamFrame f)
@@ -784,8 +785,9 @@ public sealed partial class LilyPondExporter
         (_improvisationOpen, _lysClef,
          _lysStep, _lysOctave, _lyStep, _lyOctave, _frameTracked,
          _keySharps, _tonic,
-         _timeBeats, _timeBeatType, _timeSenza, _timeText,
+         _,
          _lastWrittenValue, _lastWrittenDots, _forceNextDuration) = f;
+        _bars.Restore(f.Time);
     }
 
     /// <summary>

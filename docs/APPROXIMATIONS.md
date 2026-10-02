@@ -241,14 +241,14 @@
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **:90** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:716** ⚠️ LILYSHARP-OWN: carrying AbsoluteBaseOctave is correct by construction. A degree
+- **:715** ⚠️ LILYSHARP-OWN: carrying AbsoluteBaseOctave is correct by construction. A degree
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Form.cs`
-- **:899** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:895** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Marks.cs`
 - **:933** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Music.cs`
-- **:628** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision 2026-10-02). Any other
-- **:1420** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
+- **:627** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision 2026-10-02). Any other
+- **:1419** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
