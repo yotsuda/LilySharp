@@ -2109,11 +2109,23 @@ public sealed class MusicXmlExporter
         {
             _currentPart.Measures.Add(_currentMeasure);
         }
-        // A percent run that ends its block leaves its STOP on the empty bar its closing bar
-        // line opened, which is not written: the stop moves to the part's next bar, in the
-        // next play (StartNewMeasure), so the reader's repeat does not run on to the end.
-        else if (_currentMeasure?.Attributes is { MeasureRepeat: "stop" } dropped && _currentPartName != null)
-            _pendingRepeatStop[_currentPartName] = dropped.MeasureRepeatBars;
+        else if (_currentMeasure is { } dropped)
+        {
+            // A measure dropped UNWRITTEN hands its number back: the empty bar a block's
+            // closing bar line opened took the next number, and the music after the block
+            // was numbered past it — `voice { c'2 d | e2 f | } { … }` then a third bar went
+            // 1, 2, 4 (test/multi-voice, and nine more books of the corpus, 2026-10-03,
+            // p757). PadVoice and EnsurePart resume from the last written bar for the same
+            // reason; this is the one spelling under them. Bar 0 (an implicit pickup never
+            // written) hands nothing back — the count after it is 1 either way.
+            if (dropped.Number >= 1)
+                _measureNumber = dropped.Number;
+            // A percent run that ends its block leaves its STOP on the empty bar its closing
+            // bar line opened, which is not written: the stop moves to the part's next bar, in
+            // the next play (StartNewMeasure), so the reader's repeat does not run on to the end.
+            if (dropped.Attributes is { MeasureRepeat: "stop" } && _currentPartName != null)
+                _pendingRepeatStop[_currentPartName] = dropped.Attributes.MeasureRepeatBars;
+        }
         _currentMeasure = null;
         _bars.SpendPartial();
         _justAutoClosedPickup = false;

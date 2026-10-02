@@ -341,6 +341,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **MusicXML measure numbers no longer skip one after a `voice { } { }` span that ends on a
+  bar line.** The empty measure that bar line opened was never written but kept its number,
+  so the bar after the span came out as 4 after 1, 2. Ten of the 1,199 exports in the
+  reference corpus change, in their `number` attributes only.
 - **MusicXML measure numbers no longer skip one after a pickup.** A part that opens with a
   pickup (bar 0) resumed its count at the wrong place when its next section began: a book
   whose first section is the pickup alone exported measures 0, 2, 3, and `Greensleeves` went
