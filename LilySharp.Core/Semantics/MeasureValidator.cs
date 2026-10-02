@@ -77,9 +77,11 @@ internal sealed class MeasureValidator : ISemanticValidator
         var root = tree.GetRoot();
         _structured = TopLevelNodes.IsStructured(root);
         _phraseBodies = CollectPhraseBodies(root);
-        _boundaries = new SectionBoundaryBars(root, _phraseBodies);
         _sectionPartials = CollectSectionPartials(root);
         _sectionTimes = CollectSectionTimes(root);
+        // The split-bar exemption reads the header pickups: a predecessor whose only bar is its
+        // declared pickup leaves the PICKUP open, not a bar of the meter (p753).
+        _boundaries = new SectionBoundaryBars(root, _phraseBodies, _sectionPartials);
         // The nodes the walk does something at, in document order — asked of the tree's
         // descendant index rather than found by walking the book. The recursion this
         // replaces entered every non-token node (65,009 of them on perf-fingbeam1k, each
@@ -706,11 +708,20 @@ internal sealed class MeasureValidator : ISemanticValidator
                     // ⚠️ "Last" here means the last bar that SOUNDS: a `| break` closing the
                     // section leaves a trailing chunk holding the break alone, worth nothing,
                     // and that chunk is what `isLast` names.
-                    bool splitByBoundary = cell is { } c && partialLength == null
-                        && renderedBarsClosed == 0
-                        && ((isFirst && _boundaries!.FirstBarCompletesEveryPredecessor(c, duration, expected))
+                    // A section's DECLARED PICKUP can be the bar the boundary splits too: a
+                    // one-bar section `section Body_1 { partial 2 }` whose body is `r8` with no
+                    // bar line, followed by a section opening with three eighths (the owner's
+                    // `Locked out of Heaven`) — the pickup is one half-bar of the music written
+                    // across two sections. The last-bar arm therefore asks the successors to
+                    // complete the PICKUP (`expected`), where a first bar carrying its own
+                    // `partial` is a new pickup, not the rest of anything (p753, owner's
+                    // decision; until then LYS2001 "pickup 1/8 is less than the declared partial
+                    // 1/2" and LYS2006 on the next section's first bar stood on that book).
+                    bool splitByBoundary = cell is { } c && renderedBarsClosed == 0
+                        && ((isFirst && partialLength == null
+                             && _boundaries!.FirstBarCompletesEveryPredecessor(c, duration, expected))
                             || ((isLast || TrailingMeasuresAreSilent(measures, i + 1, defaultDuration))
-                                && _boundaries!.LastBarCompletedByEverySuccessor(c, duration, expected)));
+                                && _boundaries!.LastBarCompletedByEverySuccessor(c, duration, _bars.MeterLength, expected)));
 
                     // A repeat body's trailing chunk (openTail) is not closed where the
                     // body ends — its shortness is no claim about any rendered bar, so

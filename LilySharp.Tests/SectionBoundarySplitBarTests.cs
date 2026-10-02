@@ -94,6 +94,46 @@ public class SectionBoundarySplitBarTests
         Assert.Single(codes, c => c == "LYS2006");
     }
 
+    /// <summary>
+    /// A declared PICKUP can be the bar the boundary splits: a one-bar section whose header
+    /// says `partial 2` and whose body is `r8` with no bar line, followed by a section opening
+    /// with three eighths — one half-bar pickup written across two sections (the owner's
+    /// `Locked out of Heaven`). Until 2026-10-02 the bar check judged the halves apart: LYS2001
+    /// "Pickup measure duration 1/8 is less than the declared partial 1/2" on the first and
+    /// LYS2006 on the second, where the page, the twin, the MIDI and the MusicXML all read one
+    /// pickup. Owner's decision (p753): musical validity decides.
+    /// </summary>
+    [Fact]
+    public void APickupSpilledIntoTheNextSection_IsOnePickup()
+    {
+        const string book = """
+            time 4/4
+            section Body_1 { partial 2 }
+            part m { clef bass  section Body_1 { r8 }  section Intro { c8 r d | e4 f g a | } }
+            form main { ~Body_1 ~Intro }
+            score main { staff m }
+            """;
+        Assert.Empty(BarCodes(Diagnose(book)));
+    }
+
+    /// <summary>…and the complement is the PICKUP's, not the meter's: a successor opening
+    /// with two eighths (1/8 + 2/8 ≠ 1/2) leaves the pickup short and is itself a bare pickup,
+    /// so both warnings stand.</summary>
+    [Fact]
+    public void ASuccessorThatDoesNotFinishThePickup_KeepsBothWarnings()
+    {
+        const string book = """
+            time 4/4
+            section Body_1 { partial 2 }
+            part m { clef bass  section Body_1 { r8 }  section Intro { c8 d | e4 f g a | } }
+            form main { ~Body_1 ~Intro }
+            score main { staff m }
+            """;
+        var codes = BarCodes(Diagnose(book));
+        Assert.Contains("LYS2001", codes);
+        Assert.Contains("LYS2006", codes);
+    }
+
     [Fact]
     public void APlainSequence_SplitsABarTheSameWay_AndTheSectionAloneStillWarns()
     {

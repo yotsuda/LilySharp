@@ -55,14 +55,20 @@ internal sealed class SectionBoundaryBars
 {
     private readonly SyntaxNode _root;
     private readonly IReadOnlyDictionary<string, SyntaxNode> _phraseBodies;
+    private readonly IReadOnlyDictionary<string, Fraction> _sectionPickups;
     private Dictionary<string, HashSet<string>>? _before;
     private Dictionary<string, HashSet<string>>? _after;
     private readonly Dictionary<(string Section, string Part, Fraction Meter), List<MeasureModel.Bar>?> _bars = new();
 
-    public SectionBoundaryBars(SyntaxNode root, IReadOnlyDictionary<string, SyntaxNode> phraseBodies)
+    /// <param name="sectionPickups">Every section header's <c>partial</c> by section name: a
+    /// predecessor whose only bar is its declared pickup leaves THAT much open, not a bar of the
+    /// meter (<see cref="FirstBarCompletesEveryPredecessor"/>).</param>
+    public SectionBoundaryBars(SyntaxNode root, IReadOnlyDictionary<string, SyntaxNode> phraseBodies,
+        IReadOnlyDictionary<string, Fraction>? sectionPickups = null)
     {
         _root = root;
         _phraseBodies = phraseBodies;
+        _sectionPickups = sectionPickups ?? new Dictionary<string, Fraction>();
     }
 
     /// <summary>The (section, part) cell a music item belongs to — a by-section part block
@@ -80,18 +86,25 @@ internal sealed class SectionBoundaryBars
     }
 
     /// <summary>True when the section's FIRST bar, <paramref name="firstBar"/> long, is the
-    /// rest of a bar every predecessor in the form leaves open by exactly that much.</summary>
+    /// rest of a bar every predecessor in the form leaves open by exactly that much. The bar a
+    /// predecessor leaves open is a bar of <paramref name="meter"/> — or its declared PICKUP, when
+    /// the predecessor's only bar is that pickup (<c>section Body_1 { partial 2 }</c> whose body is
+    /// <c>r8</c> and no bar line, the owner's `Locked out of Heaven`: the next section's first
+    /// three eighths finish the half-bar pickup, not a whole bar).</summary>
     public bool FirstBarCompletesEveryPredecessor((string Section, string Part) cell, Fraction firstBar, Fraction meter)
-        => Complements(cell, firstBar, meter, before: true);
+        => Complements(cell, firstBar, meter, target: null, before: true);
 
     /// <summary>True when the section's LAST bar, <paramref name="lastBar"/> long, is finished
-    /// by every successor in the form opening with exactly its complement.</summary>
-    public bool LastBarCompletedByEverySuccessor((string Section, string Part) cell, Fraction lastBar, Fraction meter)
-        => Complements(cell, lastBar, meter, before: false);
+    /// by every successor in the form opening with exactly its complement to
+    /// <paramref name="target"/> — the meter, or the section's declared pickup when that last
+    /// bar is the pickup bar. <paramref name="meter"/> is the meter the successors' bars are
+    /// split under.</summary>
+    public bool LastBarCompletedByEverySuccessor((string Section, string Part) cell, Fraction lastBar, Fraction meter, Fraction target)
+        => Complements(cell, lastBar, meter, target, before: false);
 
-    private bool Complements((string Section, string Part) cell, Fraction bar, Fraction meter, bool before)
+    private bool Complements((string Section, string Part) cell, Fraction bar, Fraction meter, Fraction? target, bool before)
     {
-        if (bar <= Fraction.Zero || bar >= meter)
+        if (bar <= Fraction.Zero || bar >= (target ?? meter))
             return false;
         var neighbours = Neighbours(cell.Section, before);
         if (neighbours.Count == 0)
@@ -102,7 +115,12 @@ internal sealed class SectionBoundaryBars
             if (bars == null || bars.Count == 0)
                 return false;
             var edge = before ? bars[^1] : bars[0];
-            if (edge.IsEmpty || edge.Duration <= Fraction.Zero || edge.Duration + bar != meter)
+            // What the open bar is worth: the target the caller named (judging a last bar), or —
+            // judging a first bar — the predecessor's declared pickup when its edge bar IS that
+            // pickup (its only bar), else a bar of the meter.
+            var whole = target
+                ?? (bars.Count == 1 && _sectionPickups.TryGetValue(other, out var pickup) ? pickup : meter);
+            if (edge.IsEmpty || edge.Duration <= Fraction.Zero || edge.Duration + bar != whole)
                 return false;
         }
         return true;
