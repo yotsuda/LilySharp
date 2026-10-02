@@ -341,6 +341,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A dynamic stays in the part it is written in, in the MIDI.** `@p` on one part's note
+  quietened whichever part the exporter played next — the other part of the same section,
+  or the first part of the next section — because one running velocity was shared by all
+  the parts. Each part now carries its own, as LilyPond's Dynamic_performer does per voice:
+  a part's `@p` stands into its later sections and no further; a part never marked plays
+  at the default; a chord row accompanies at 70% of the default rather than of whatever the
+  previous part left. Sixteen of the 998 books on hand sound differently, by velocity alone.
 - **The LilyPond twin writes figured bass, note-head styles and a chord member's own marks.**
   `@figuredBass` becomes a FiguredBass context under the staff (a `\figuremode` stream read
   off the page, `<6 4>`, `6+`, `6-`, `6!`; a held `_` is written blank and said so);

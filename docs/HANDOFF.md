@@ -117,6 +117,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第749セッション（2026-10-02・YT-DELL2）
+
+同じ会話の続き。ユーザー報告「`@p` を付けた part と別の part の MIDI の音量も下がる」→ 再現（Lab `sessions/p748/probes/dyn/`: rh の A に `@p` → lh も A・B で 50／lh に `@p` → rh の B が 50）→ GO。`-Start p749`（HEAD `2649494c`・未 push 103）＝full **10745 / 0 / 2 / 10747**。§7 3.5 で第747 を ARCHIVE へ。
+★ `7dd2d6be` **MIDI の velocity を part の lane ごとに**。原因: `_velocity` が exporter に 1 本で、lane を開く `PlayInPart`／`PlaySectionCore` は音高の枠・音価・音色・transpose・grace の負債は part ごとに戻すのに強弱だけ戻さない＝直前に演奏した lane の強弱が次の lane（同 section の別 part／次 section の最初の part）に流れる。直し: `_partVelocity`（`_partPitchLanes` の双子）＝開くとき「その part の前回の値・無ければ 80」、閉じるとき保存。section 境界では消さない（強弱は section が開き直すものに入っていない＝頁の印は次の印まで立つ）。和音の行は自分の lane（強弱を書かないので 56＝既定の 70%）。頭からの反復（form の片側 `:|`）は lane も曲頭に戻す。LILYPOND-REF `ly/performer-init.ly:100-103`（Dynamic_performer は Voice に consists）。
+- 出力は意図どおり変わる: **.mid 998 冊中 16 冊**（追跡 15・ユーザーのコーパス 1＝`がくふ`）、全部長さ同一で velocity バイトだけ（2〜126 B）。svg／ly／xml は触っていない。full **10751 / 0 / 2**（網 +6: by-section／by-part × marked part 2・和音の行・頭からの反復）。APPROXIMATIONS 住所だけ。CHANGELOG Fixes に 1 項。
+- 毒（`sessions/p749/poisons.ps1`）: ① `PlayInPart` で戻さない → **最初は 0 赤**（網が by-section の綴りしか無かった＝by-part の綴りを足して **2 赤**）／② `PlaySectionCore` で戻さない → **2 赤**／③ 閉じるとき保存しない → **2 赤**（by-part）／④ 行が running velocity を読む → **0 → 網を足して 1 赤**／⑤ 頭からの反復で lane を戻さない → **0 → 網を足して 1 赤**。⚠️ 毒 ⑤ の 1 回目は綴りミス（`$kv`）で「PATTERN HITS 0」＝走っていない（門が叫んだ）。
+★ `-End p749 -DiffBase 2649494c`＝full **10751 / 0 / 2 / 10753**（網 +6）・門 全 OK（HANDOFF 残り 9,042 B）。7.5: Core `+` 36 行・REF 1／OWN 0。7.6: ⒝ LP 由来・字面でない＝LP は Voice ごとの performer が音量を持つ（`ly/performer-init.ly:100-103`）、Lily# は lane の表で同じ答え（字面にするには part ごとの performer 相当の器が要る）。7.7: ⒜ 和音の行の 56 は既定からの 70%＝既存の LILYSHARP-OWN（第625）の継続・「velocity in force」の読みを「行自身の lane」に固定した／⒝ 頭からの反復の lane 復元は既存設計（曲頭の状態に戻す・2026-08-15）に合わせた＝LP は反復で強弱を戻さないので、LP 忠実の観点では別の判断がありうる（網 1 本で現状を主張）。push はユーザー（未 push 104）。
+判定: ユーザー報告は閉じた。次は §1.0 ⒜ ⑴〜⑶（ユーザー判断・(i) の推しは section 境界の戻しを pair に揃える＝第748）。会話を区切るか: (b) 3 便・文脈はまだ軽い＝**続ける**。
+
+## 以下は第748セッションの経緯
+
 ### 1.1 第748セッション（2026-10-02・YT-DELL2）
 
 同じ会話の続き（ユーザー「任せる。続けて」＝私の選択: ⑷ C6＝出力を変えずに済む唯一の候補・⑴⑶ は LP の裁定が要る）。`-Start p748`（HEAD `cb9aa70a`・未 push 101）＝full **10745 / 0 / 2 / 10747**（引継ぎと一致）。§7 3.5 で第746 を ARCHIVE へ。
@@ -126,19 +137,6 @@ C6＝★ `67d5ef06` **頁の section 境界の拍子の戻しを `BarContext.Hom
 - ★ **② の 1 冊＝`Locked out of Heaven`（ユーザーの実コーパス）**: `section Body_1 { partial 2 }` の body が `r8`・bar 無し＝次の境界（Intro）で弱起 1/2 が pending → 頁は `LeftHomeByLength`（1/2 ≠ 1）で **4/4 を描き直し**、`SetMeterRearmingPickup` で弱起を 1 小節に張り替える（text 要素 1 つ分の差・頁全体が組み直る）。pair で比べれば描かない。LP は \time を書かない限り描かない＝**頁の側に欠陥の疑い**。直すのは (i) で別 commit・網つき＝§1.0 ⒜ ⑴ に材料として載せた。2 つの頁の規則（C5 の張り替え・C6 の長さ比較）が同じ本で噛み合っている。
 ★ `-End p748 -DiffBase cb9aa70a`＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（**HANDOFF 残り 7,827 B**＝次便は `-Start` のアーカイブで約 2 KB 空くが、§1.0 の ✅ と重複を落とす番）。7.5: Core `+` 89 行・REF 0／OWN 0＝⒟ 何も足していない（senza-reprint の MEASURED 註は戻しと一緒に `MeasureBuilder` へ動いただけ）。7.6: 該当なし（4 出力 差 0）。7.7: ⒜ `LeftHomeByLength` は「規則の保存」の名前（`SetMeterRearmingPickup`・`SetMeterLeavingSenza` と同じ族）／⒝ 二重の保証 1 つ＝`RevertMeterToHome` の後ろの `SetMeter`（毒 ④・註あり）／⒞ 毒 ⑤ は恒等写像＝設計ミス（RULES §5.4 の 3 つ目の顔・その場で閉じた）。push はユーザー（未 push 102）。
 判定: 段階 C は C6 まで閉じた＝REFACTOR_PLAN の A〜C は全部済み。**次はすべてユーザー判断**（§1.0 ⒜ ⑴〜⑶・D）。(i) には今便で**コーパス 1 冊の観測者**が付いた（`Locked out of Heaven` の描き直し 4/4）＝最初に裁定する候補として推す。会話を区切るか: (c) 判断は文脈と独立・(b) この会話は 2 便＝軽い。**既定は続ける**。
-
-## 以下は第747セッションの経緯
-
-### 1.1 第747セッション（2026-10-02・YT-DELL2）
-
-新しい会話。`-Start p747`（HEAD `611ebc1d`・未 push 99）＝full **10745 / 0 / 2 / 10747**（引継ぎと一致）。§7 3.5 で第745 を ARCHIVE へ（残り 13,968 B）。ユーザー選択（4 択: C5 頁／(i) 綴り／(iii) 観測者の無い規則／D）: **C5 の頁**。
-C5 頁＝★ `a49b2abc` **頁（`MeasureBuilder`）の拍子・`time none`・弱起を `BarContext` に**。3 field（`_timeSignature`＝走っている小節長・`_senzaMisura`・`_partialRestore`＝弱起中に parked した拍子）と checkpoint の 3 項を `_bars` に: 読みは全部 `BarLength`（弱起 pending なら弱起・でなければ拍子の 1 小節）・`isPickup` は `Partial is not null`・`SetMeasureLength(Fraction)` → `SetMeter(Meter)`（collector は pair＋加算の文字列を渡す・ctor も `Meter`）・checkpoint は `MeterState`＋`Partial`。`_frozenPosition`（`time none` が凍らせる clock）は頁の clock＝builder に残す。**保存した頁固有の規則**: 弱起が pending のまま `time` が来ると、頁は弱起を新拍子の 1 小節に張り替え、閉じたとき partial 前の拍子に戻す（新拍子は捨てる）＝`BarContext.SetMeterRearmingPickup` と名付けて保存（MIDI・XML・双子は `SetTime` で拍子を動かす）。perf: `BarContext` が拍子の 1 小節をキャッシュ（`Fraction` の ctor は GCD を回す・頁は item ごとに読む）＝hot read は field 1 回のまま・割当は builder 1 つに BarContext 1 個・新しい走査なし。
-- 確かめ: svg 1,199 枚（data-pos 伏せ）・ly・mid・xml 998 冊＝**全部 差 0**（警告の行数も同じ）。full 10745 / 0 / 2・Core 0 警告。APPROXIMATIONS は住所だけ（新規 0／消滅 0）・magic_constants 変化なし。
-- 毒（`sessions/p747/poisons.ps1`・baseline 0）: ① `BarLength` が弱起を無視 → **13 赤**／② 弱起中の `time` が拍子を動かす（頁の規則を他出力の規則に）→ **0 赤**・**svg／ly の掃きでも 0 冊**（`poisons-sweep.ps1`）＝観測者なし／③ 小節線が弱起を使わない → **16 赤**／④ 頁の `time none` が落ちる → **10 赤**／⑤ clock が凍らない → **2 赤**／⑥ 小節長のキャッシュが腐る → **88 赤**／⑦ 冒頭の `time none` が落ちる → **1 赤**／⑧ resume が弱起を落とす → **1 赤**（`CollectResumeTests`）。
-- ★ **註の訂正**: 第742〜746 が `BarContext`・HANDOFF・計画に書いた「頁は 2 つ目の `partial` を無視して最初を保つ（`_partialRestore ??=`）」は読み違い＝`??=` が守るのは*戻す拍子*で、弱起の field は上書きされる＝**全出力で置き換え**。「`time none` で頁は時計を凍らせ、他は拍子を保つ」も拍子の綴りの差ではない（全出力が最後の有拍子を保つ・頁だけ clock を持つ）。代わりに**本物の差は「弱起中の `time`」**（上の ②）。型の註と REFACTOR_PLAN §5.1 を書き直した。
-- 段階 C は完了＝読み手 5 つ全部が型に載った。REFACTOR_PLAN §0・§5.1 に済みを書いた。
-★ `-End p747 -DiffBase 611ebc1d`＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（HANDOFF 残り 10,125 B・§1 残り 10,513 字）。7.5: Core `+` 165 行・REF 0／OWN 0＝⒟ 何も足していない（既存の REF 行＝partial・cadenzaOn・timing translator はコードと一緒に動いただけ）。7.6: 該当なし（4 出力 差 0）。7.7: ⒜ `SetMeterRearmingPickup` は「規則の保存」の名前＝揃えるなら消える（`SetMeterLeavingSenza` と同じ族）／⒝ 2 つ目の綴りが 1 つ残る: 頁の section の拍子の戻しは collector 側（`ProcessSectionPrologue` の `_sectionResetTime*` と `CurrentMeasureLength != resetMeter.Length`）で、型の `HomeMeter`／`RevertToHome` に載っていない（C5 の射程＝builder の 3 field の外）／⒞ 計器の罠を 1 つ踏んだ: APPROXIMATIONS の「住所だけ」の照合を `^[+-][^+-]` で書き、表の行（`- **:N**`）を全部落として空の抽出で「差 0」と読んでいた（RULES §5.4「抽出は在ると分かっている本で 1 度鳴らす」の形）＝正しい照合（removed 2／added 2／masked 0）で取り直し・空行 1 本で表が 1 行ずれたぶんは amend 1 回。push はユーザー（未 push 100）。
-判定: C5 頁＝段階 C は閉じた。**次はすべてユーザー判断**（§1.0 ⒜ ⑴〜⑷）。会話を区切るか: (c) どの判断も今の文脈とは独立＝差は小さい。**既定は続ける**＝この会話で判断を受けてそのまま着手できる（材料は型の註・計画 §5.1・この便の毒の数）。
 
 ## 2. 開いている作業
 

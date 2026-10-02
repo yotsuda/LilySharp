@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第747セッションの経緯
+
+### 1.1 第747セッション（2026-10-02・YT-DELL2）
+
+新しい会話。`-Start p747`（HEAD `611ebc1d`・未 push 99）＝full **10745 / 0 / 2 / 10747**（引継ぎと一致）。§7 3.5 で第745 を ARCHIVE へ（残り 13,968 B）。ユーザー選択（4 択: C5 頁／(i) 綴り／(iii) 観測者の無い規則／D）: **C5 の頁**。
+C5 頁＝★ `a49b2abc` **頁（`MeasureBuilder`）の拍子・`time none`・弱起を `BarContext` に**。3 field（`_timeSignature`＝走っている小節長・`_senzaMisura`・`_partialRestore`＝弱起中に parked した拍子）と checkpoint の 3 項を `_bars` に: 読みは全部 `BarLength`（弱起 pending なら弱起・でなければ拍子の 1 小節）・`isPickup` は `Partial is not null`・`SetMeasureLength(Fraction)` → `SetMeter(Meter)`（collector は pair＋加算の文字列を渡す・ctor も `Meter`）・checkpoint は `MeterState`＋`Partial`。`_frozenPosition`（`time none` が凍らせる clock）は頁の clock＝builder に残す。**保存した頁固有の規則**: 弱起が pending のまま `time` が来ると、頁は弱起を新拍子の 1 小節に張り替え、閉じたとき partial 前の拍子に戻す（新拍子は捨てる）＝`BarContext.SetMeterRearmingPickup` と名付けて保存（MIDI・XML・双子は `SetTime` で拍子を動かす）。perf: `BarContext` が拍子の 1 小節をキャッシュ（`Fraction` の ctor は GCD を回す・頁は item ごとに読む）＝hot read は field 1 回のまま・割当は builder 1 つに BarContext 1 個・新しい走査なし。
+- 確かめ: svg 1,199 枚（data-pos 伏せ）・ly・mid・xml 998 冊＝**全部 差 0**（警告の行数も同じ）。full 10745 / 0 / 2・Core 0 警告。APPROXIMATIONS は住所だけ（新規 0／消滅 0）・magic_constants 変化なし。
+- 毒（`sessions/p747/poisons.ps1`・baseline 0）: ① `BarLength` が弱起を無視 → **13 赤**／② 弱起中の `time` が拍子を動かす（頁の規則を他出力の規則に）→ **0 赤**・**svg／ly の掃きでも 0 冊**（`poisons-sweep.ps1`）＝観測者なし／③ 小節線が弱起を使わない → **16 赤**／④ 頁の `time none` が落ちる → **10 赤**／⑤ clock が凍らない → **2 赤**／⑥ 小節長のキャッシュが腐る → **88 赤**／⑦ 冒頭の `time none` が落ちる → **1 赤**／⑧ resume が弱起を落とす → **1 赤**（`CollectResumeTests`）。
+- ★ **註の訂正**: 第742〜746 が `BarContext`・HANDOFF・計画に書いた「頁は 2 つ目の `partial` を無視して最初を保つ（`_partialRestore ??=`）」は読み違い＝`??=` が守るのは*戻す拍子*で、弱起の field は上書きされる＝**全出力で置き換え**。「`time none` で頁は時計を凍らせ、他は拍子を保つ」も拍子の綴りの差ではない（全出力が最後の有拍子を保つ・頁だけ clock を持つ）。代わりに**本物の差は「弱起中の `time`」**（上の ②）。型の註と REFACTOR_PLAN §5.1 を書き直した。
+- 段階 C は完了＝読み手 5 つ全部が型に載った。REFACTOR_PLAN §0・§5.1 に済みを書いた。
+★ `-End p747 -DiffBase 611ebc1d`＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（HANDOFF 残り 10,125 B・§1 残り 10,513 字）。7.5: Core `+` 165 行・REF 0／OWN 0＝⒟ 何も足していない（既存の REF 行＝partial・cadenzaOn・timing translator はコードと一緒に動いただけ）。7.6: 該当なし（4 出力 差 0）。7.7: ⒜ `SetMeterRearmingPickup` は「規則の保存」の名前＝揃えるなら消える（`SetMeterLeavingSenza` と同じ族）／⒝ 2 つ目の綴りが 1 つ残る: 頁の section の拍子の戻しは collector 側（`ProcessSectionPrologue` の `_sectionResetTime*` と `CurrentMeasureLength != resetMeter.Length`）で、型の `HomeMeter`／`RevertToHome` に載っていない（C5 の射程＝builder の 3 field の外）／⒞ 計器の罠を 1 つ踏んだ: APPROXIMATIONS の「住所だけ」の照合を `^[+-][^+-]` で書き、表の行（`- **:N**`）を全部落として空の抽出で「差 0」と読んでいた（RULES §5.4「抽出は在ると分かっている本で 1 度鳴らす」の形）＝正しい照合（removed 2／added 2／masked 0）で取り直し・空行 1 本で表が 1 行ずれたぶんは amend 1 回。push はユーザー（未 push 100）。
+判定: C5 頁＝段階 C は閉じた。**次はすべてユーザー判断**（§1.0 ⒜ ⑴〜⑷）。会話を区切るか: (c) どの判断も今の文脈とは独立＝差は小さい。**既定は続ける**＝この会話で判断を受けてそのまま着手できる（材料は型の註・計画 §5.1・この便の毒の数）。
+
 ## 以下は第746セッションの経緯
 
 ### 1.1 第746セッション（2026-10-02・YT-DELL2）
