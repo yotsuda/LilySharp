@@ -402,8 +402,21 @@ public sealed partial class MeasureCollector
                     }
                     // First declaration of a name wins as the order/label
                     // representative (source order), so a name appearing in both
-                    // forms stays stable.
-                    if (!_sectionState.Sections.ContainsKey(section.SectionName))
+                    // forms stays stable — EXCEPT that a standalone header never
+                    // outranks a body: `section P { partial 2 }` beside
+                    // `section P { m { r8 } }` (a by-section book) used to make the header
+                    // the representative, so `~P` walked a section with no part block, padded
+                    // the part with a whole-bar spacer and never played the r8 — where the
+                    // twin, the MIDI and the MusicXML, which gather every declaration of the
+                    // name, played it (p752's probe). The header's directives reach the play
+                    // through _sectionHeaders either way (owner's decision 2026-10-02, p753).
+                    // ⚠️ Only a ROOT-level body outranks it: a by-part cell (`part m { section A
+                    // { … } }`) is one part's music, not the section — the standalone header beside
+                    // the parts IS the section's declaration there, and the label jumps to it
+                    // (test/chord-flag's data-pos moved when the cell was allowed to win).
+                    if (!_sectionState.Sections.TryGetValue(section.SectionName, out var representative)
+                        || (IsStandaloneHeader(representative) && !IsStandaloneHeader(section)
+                            && section.Parent is not PartDeclarationSyntax))
                         _sectionState.Sections[section.SectionName] = section;
                     // By-part: an inner section binds its music to the part it
                     // lives in. Record the (section, part) cell for voice lookup.

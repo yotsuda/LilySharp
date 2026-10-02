@@ -895,6 +895,26 @@ public sealed partial class MeasureCollector
         return false;
     }
 
+    /// <summary>True for a STANDALONE HEADER: a section declaration holding only header
+    /// directives — no part, chord or lyrics block and no inline music (<c>section A { partial 2 }</c>
+    /// beside the cells or the by-part bodies that play A). Its directives reach every play of
+    /// A through <see cref="Semantics.SectionHeaders"/>; it holds nothing to walk.</summary>
+    internal static bool IsStandaloneHeader(SectionDeclarationSyntax section)
+    {
+        if (SectionHasInlineMusic(section))
+            return false;
+        var green = section.Green;
+        for (int i = 0; i < green.SlotCount; i++)
+        {
+            var child = green.GetSlot(i);
+            if (child is null || child.IsToken)
+                continue;
+            if (child.Kind is SyntaxKind.PartBlock or SyntaxKind.ChordPartBlock or SyntaxKind.LyricsBlock)
+                return false;
+        }
+        return true;
+    }
+
     /// <summary>The direct-child kinds that do NOT make a section inline music: its part,
     /// chord and lyrics blocks and its header directives.</summary>
     private static bool IsSectionBlockOrDirectiveKind(SyntaxKind kind) => kind is

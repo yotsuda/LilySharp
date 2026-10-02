@@ -50,6 +50,38 @@ public class SectionHeaderDirectiveTests
         Assert.DoesNotContain(score.Voice.Measures[0].Items, i => i is TimeSignatureChangeItem);
     }
 
+    /// <summary>
+    /// A standalone header beside a by-section BODY of the same name is one section: the
+    /// header's `partial 2` shortens the body's first bar, and the body plays. Until 2026-10-02
+    /// the first declaration was the section's representative whatever it held, so with the
+    /// header written first the page walked a section with no part block, padded the part with
+    /// a whole-bar spacer and never played the `r8` — where the twin, the MIDI and the MusicXML
+    /// gather every declaration of the name (p752's probe). Owner's decision (p753): the page
+    /// does too. Both orders, since the body outranks the header wherever it stands.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void AStandaloneHeader_BesideABySectionBody_IsOneSection(bool headerFirst)
+    {
+        const string header = "section P { partial 2 }";
+        const string body = "section P { melody { r8 } }";
+        var score = Collect($$"""
+            time 4/4
+            {{(headerFirst ? header : body)}}
+            {{(headerFirst ? body : header)}}
+            section Q { melody { c'8 d' e' | f'4 g' a' b' | } }
+            form main { ~P ~Q }
+            score main { staff melody }
+            """);
+        Assert.Equal(2, score.Voice.Measures.Length);
+        var pickup = score.Voice.Measures[0];
+        Assert.True(pickup.IsPickup);
+        Assert.Equal(4, pickup.Items.Count(i => i is NoteItem or RestItem)); // r8 c'8 d'8 e'8 = the half
+        Assert.DoesNotContain(pickup.Items, i => i is RestItem { IsSpacer: true });
+        Assert.Equal(4, score.Voice.Measures[1].Items.Count(i => i is NoteItem));
+    }
+
     [Fact]
     public void GroupedBySectionTime_EmitsTheSectionMeter()
     {
