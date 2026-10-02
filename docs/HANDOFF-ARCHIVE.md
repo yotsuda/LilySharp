@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第744セッションの経緯
+
+### 1.1 第744セッション（2026-10-02・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第743 の判定: C3）。`-Start p744`（HEAD `d9b3f9a3`・未 push 93）＝full **10745 / 0 / 2 / 10747**（引継ぎと一致）。§7 3.5 で第742 を ARCHIVE へ（残り 14,801 B）。
+C3＝★ `b29bae2b` **XML の拍子を `BarContext` に**。型に足した面: `Meter.BeatsText`（加算拍子 `3+2` の綴り）・`SenzaMisura`（`time none` 中＝最後の有拍子を保ち、文書は senza misura と言う）・`HomeSenzaMisura`・`CaptureHome()`（metadata の pass の後に走っている拍子を home に）・`RevertToHome()`（`OpenSection` の header 無しの枝を名前付きで）・`SetMeter()`（row を独立 part として書くとき）。XML の 5 field（`_timeNumerator/_timeNumeratorText/_timeDenominator/_timeSenzaMisura/_homeTime`）を消し、12 か所の読みを型へ（`RunningTime` の tuple 1 つを written-attributes の memo と比べる）。`OpenSection` の「動いた」は分数で判定（`Meter.SamePair`＝MIDI の event は pair・LP の performer も fraction を比べる＝文字列だけの差では書かない）。**XML の弱起は独自のまま**（`_pendingPickup`／`_pickupLength`＝書いた音価の累積で implicit measure を閉じる＝MIDI・頁の「閉じる小節線で使い切る」と違う 3 つ目の綴り）＝型の註に C5 の材料として書いた。
+- 確かめ: XML 998 冊・1,199 枚＝**差 0**・MIDI も **差 0**（型を共有するので両方）。full 10745 / 0 / 2・Core 0 警告。APPROXIMATIONS は住所 1 行。
+- 毒（`sessions/p744/poisons.ps1`・`poisons-sweep.ps1`）: ① `time none` が senza と言わない → suite **0 赤**・掃き **1 冊差**（`test/senza-misura`＝`<senza-misura>` に単体の網が無い）／② 加算拍子の文字列を落とす → suite **0 赤**・掃き **0 冊差**＝`<beats>3+2</beats>` に観測者なし／③ 境界で home に戻さない → **4 赤**（XML・MIDI）／④ home を捕まえない（4/4 のまま）→ **10 赤**。⇒ ①② は §1.0 ⒜ の候補に足した。
+★ `-End p744 -DiffBase d9b3f9a3`＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（HANDOFF 残り 12,270 B）。7.5: Core `+` 112 行（型の面 +60・XML の読み替え）・REF 0／OWN 0。7.6: 該当なし（XML・MIDI 差 0）。7.7: ⒜ 弱起の綴りが 3 つ（頁＝先勝ち・小節線で消費／MIDI＝置き換え・小節線で消費／XML＝音価の累積で閉じる）＝型の註・C5 の主題／⒝ XML の `_writtenTime` は文書側の memo（RULES §7.7 の二重の綴り）＝型に入れない／⒞ `_homeTime` の null 判定を外した（multi-section の経路でしか読まれない＝掃き・full で裏取り）。push はユーザー（未 push 95）。
+判定: 次は C4＝双子を `BarContext` に（`_timeBeats/_timeBeatType/_timeText/_timeSenza/_homeTime*/_twinPartial`＝「書いた綴り」`TimeText` の面と、section head の held restore は双子固有のまま）。型の面の足し方は今便で 1 度やった＝(a) で**この会話で続けるのが得**。`-Start p745` から。
+
 ## 以下は第743セッションの経緯
 
 ### 1.1 第743セッション（2026-10-02・YT-DELL2）
