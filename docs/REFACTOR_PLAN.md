@@ -122,6 +122,7 @@ phrase・tuplet・grace・cue・repeat の中身は `new LilyPondExporter { … 
 - **(b) `BarContext`＝推す**: 各出力が自前で持つ「拍子（beats／beatType／text／senza）・弱起・小節内の位置・音価の引き継ぎ（value／dots）」と、その規則（section 境界で home へ戻す・header の time／partial を当てる・`time none`・弱起は最初に閉じる小節で使い切る・span／grace／phrase／tuplet で音価の記憶を保存／復元）を 1 型にして、各出力はそれを読む。写しの数（第742 の grep）: 音価の引き継ぎの代入 MIDI 10／XML 9／頁 24・section 境界の meter 戻し 5 か所・**section header の registry の構築 5 か所**（collector `Definitions.cs:419`・MIDI `Export`・XML `BuildSectionHeaderRegistry`・双子 `BuildSectionHeaderRegistry`・validator `CollectSectionTimes/Partials`＝同じ規則「inline music の無い宣言の first direct key／time／tempo／partial・先勝ち」）。
 - **提案する順**: **C1 `Semantics.SectionHeaders`**（registry の構築を 1 本に・5 か所が読む。(a)(b) どちらでも要る・出力 3 種の掃き＋import の往復で差 0）→ **C2 `BarContext` の型を MIDI に**（`MeasureTicks` と頁の `EmitEmptyMeasure` の長さの一致を型で保証）→ C3 XML → C4 双子 → C5 検証・頁（頁は打鍵ごとの walk と `Resume` の checkpoint が `_defaultDuration` を持つ＝最後・perf の規則＝ユーザーに一声）。
 - **毒の形**: 共有部品の section 境界の meter 戻しを外す → 移した出力の網が赤（MIDI は `SectionBoundaryMeterRevertTests` の族）。registry の構築では「inline music の有無」の判定を外す → 5 出力の section header の網が赤。
+- **C1 済み（第742・2026-10-02・`0193be8e`）**: `Semantics.SectionHeaders`（`Read`・4 表・`DirectivesOf`・`FirstDirect<T>`）。頁・MIDI・XML・双子の 4 builder を消した。4 出力の掃き 998 冊で差 0。validator の `CollectSectionTimes/Partials` は規則が違う（後勝ち）＝C5 で。毒: inline music の除外を外す 21 赤／partial 表なし 16 赤／**先勝ち→後勝ち 0 赤・掃きも 0 冊差＝観測者なし**（HANDOFF §1.1 第742 ⑵）。
 
 ## 6. 確かめ方（計器）
 
