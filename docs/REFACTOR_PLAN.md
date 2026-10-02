@@ -124,6 +124,7 @@ phrase・tuplet・grace・cue・repeat の中身は `new LilyPondExporter { … 
 - **毒の形**: 共有部品の section 境界の meter 戻しを外す → 移した出力の網が赤（MIDI は `SectionBoundaryMeterRevertTests` の族）。registry の構築では「inline music の有無」の判定を外す → 5 出力の section header の網が赤。
 - **C1 済み（第742・2026-10-02・`0193be8e`）**: `Semantics.SectionHeaders`（`Read`・4 表・`DirectivesOf`・`FirstDirect<T>`）。頁・MIDI・XML・双子の 4 builder を消した。4 出力の掃き 998 冊で差 0。validator の `CollectSectionTimes/Partials` は規則が違う（後勝ち）＝C5 で。毒: inline music の除外を外す 21 赤／partial 表なし 16 赤／**先勝ち→後勝ち 0 赤・掃きも 0 冊差＝観測者なし**（HANDOFF §1.1 第742 ⑵）。
 - **C2 済み（第743・2026-10-02・`776dadb7`）**: `Semantics.BarContext`（`Meter`・`HomeMeter`・`Partial`・`SetTime`・`OpenSection`・`SetPartial`・`SpendPartial`・`BarLength`・`MeterLength`）を MIDI に。MIDI 998 冊 差 0。毒 1／5／0+0／1。MIDI と頁でまだ違う 2 つの綴り（弱起が閉じる前の 2 つ目の `partial`・`time none`）は型の註＝C5 の判断材料。C3（XML）は text（`3+2`）と senza の面を型に足してから。
+- **C3 済み（第744・2026-10-02・`b29bae2b`）**: 型に `Meter.BeatsText`・`SenzaMisura`・`HomeSenzaMisura`・`CaptureHome`・`RevertToHome`・`SetMeter` を足し、XML の 5 field（拍子の 4 つ＋`_homeTime`）を消した。XML の弱起（`_pendingPickup`／`_pickupLength`＝書いた音価の累積で閉じる）は独自のまま＝3 つ目の綴りとして型の註に。XML・MIDI 998 冊 差 0。毒 4／10／0+1（senza は `test/senza-misura` だけが観測）／0+0（加算拍子の文字列は観測者なし）。
 
 ## 6. 確かめ方（計器）
 

@@ -79,7 +79,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ★★★ **リファクタ（ユーザー決定 2026-10-02）**＝計画は `docs/REFACTOR_PLAN.md`。**A（第740）・B（第741）・C1（第742・`0193be8e`）・C2（第743・`776dadb7`＝`Semantics.BarContext` を MIDI に）は済み → 次は C3＝XML を `BarContext` に（`_timeNumerator/_timeNumeratorText/_timeDenominator/_timeSenzaMisura/_writtenTime/_homeTime/_sectionTime/_sectionPartial`＝型に text と senza の面を足す）→ C4 双子 → C5 検証／頁（ユーザー決定 2026-10-02「GO」＝(b)）。計器は 4 種そろった: Lab `sessions/p742/` の `twin/sweep-ly.ps1`・`sweep-midi.ps1`・`sweep-xml.ps1`・`svg/sweep-all.ps1`（base の exe は掃きの出力先と別の場所に）**／★ 候補（ユーザー判断）: section header の「先勝ち」は suite にもコーパス 998 冊にも観測者なし（第742 ②）＝網を足すか規則を畳む、D はユーザー判断が先。双子の全冊バイト比較は Lab `sessions/p741/twin/sweep-ly.ps1`（base の exe は掃きの出力先と別の場所に置く）／★ 候補（網を足すのは別 commit）: 入れ子の StreamFrame の suite の網（入れない→1 赤・戻さない→0 赤。掃きは 125／16 冊差＝第740 ⑶）・頁の stream の網（歌詞の `\skip`・figures の小節末の隙間・`BreaksMidBar` の無 bar check は suite 0 赤。掃きは 1 冊＝第741 ③）
+- ★★★ **リファクタ（ユーザー決定 2026-10-02）**＝計画は `docs/REFACTOR_PLAN.md`。**A（第740）・B（第741）・C1（第742・`0193be8e`）・C2（第743・`776dadb7`＝`Semantics.BarContext` を MIDI に）・C3（第744・`b29bae2b`＝XML の拍子を `BarContext` に。弱起は XML 独自のまま）は済み → 次は C4＝双子を `BarContext` に（`_timeBeats/_timeBeatType/_timeText/_timeSenza/_home*/_twinPartial`＝型に「書いた綴り」`TimeText` の面を足す。section head の held restore は双子固有）→ C5 検証／頁（ユーザー決定 2026-10-02「GO」＝(b)）。計器は 4 種そろった: Lab `sessions/p742/` の `twin/sweep-ly.ps1`・`sweep-midi.ps1`・`sweep-xml.ps1`・`svg/sweep-all.ps1`（base の exe は掃きの出力先と別の場所に）**／★ 候補（ユーザー判断）: 観測者の無い規則＝section header の「先勝ち」（suite 0・コーパス 0＝第742 ②）・XML の `<beats>3+2</beats>`（suite 0・コーパス 0＝第744 ②）・XML の `<senza-misura>`（suite 0・コーパスは `test/senza-misura` 1 冊＝第744 ①）・StreamFrame／`BreaksMidBar`（第740・741）＝網を足すか規則を畳む、D はユーザー判断が先。双子の全冊バイト比較は Lab `sessions/p741/twin/sweep-ly.ps1`（base の exe は掃きの出力先と別の場所に置く）／★ 候補（網を足すのは別 commit）: 入れ子の StreamFrame の suite の網（入れない→1 赤・戻さない→0 赤。掃きは 125／16 冊差＝第740 ⑶）・頁の stream の網（歌詞の `\skip`・figures の小節末の隙間・`BreaksMidBar` の無 bar check は suite 0 赤。掃きは 1 冊＝第741 ③）
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
@@ -117,6 +117,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第744セッション（2026-10-02・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第743 の判定: C3）。`-Start p744`（HEAD `d9b3f9a3`・未 push 93）＝full **10745 / 0 / 2 / 10747**（引継ぎと一致）。§7 3.5 で第742 を ARCHIVE へ（残り 14,801 B）。
+C3＝★ `b29bae2b` **XML の拍子を `BarContext` に**。型に足した面: `Meter.BeatsText`（加算拍子 `3+2` の綴り）・`SenzaMisura`（`time none` 中＝最後の有拍子を保ち、文書は senza misura と言う）・`HomeSenzaMisura`・`CaptureHome()`（metadata の pass の後に走っている拍子を home に）・`RevertToHome()`（`OpenSection` の header 無しの枝を名前付きで）・`SetMeter()`（row を独立 part として書くとき）。XML の 5 field（`_timeNumerator/_timeNumeratorText/_timeDenominator/_timeSenzaMisura/_homeTime`）を消し、12 か所の読みを型へ（`RunningTime` の tuple 1 つを written-attributes の memo と比べる）。`OpenSection` の「動いた」は分数で判定（`Meter.SamePair`＝MIDI の event は pair・LP の performer も fraction を比べる＝文字列だけの差では書かない）。**XML の弱起は独自のまま**（`_pendingPickup`／`_pickupLength`＝書いた音価の累積で implicit measure を閉じる＝MIDI・頁の「閉じる小節線で使い切る」と違う 3 つ目の綴り）＝型の註に C5 の材料として書いた。
+- 確かめ: XML 998 冊・1,199 枚＝**差 0**・MIDI も **差 0**（型を共有するので両方）。full 10745 / 0 / 2・Core 0 警告。APPROXIMATIONS は住所 1 行。
+- 毒（`sessions/p744/poisons.ps1`・`poisons-sweep.ps1`）: ① `time none` が senza と言わない → suite **0 赤**・掃き **1 冊差**（`test/senza-misura`＝`<senza-misura>` に単体の網が無い）／② 加算拍子の文字列を落とす → suite **0 赤**・掃き **0 冊差**＝`<beats>3+2</beats>` に観測者なし／③ 境界で home に戻さない → **4 赤**（XML・MIDI）／④ home を捕まえない（4/4 のまま）→ **10 赤**。⇒ ①② は §1.0 ⒜ の候補に足した。
+★ `-End p744 -DiffBase d9b3f9a3`＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（HANDOFF 残り 12,270 B）。7.5: Core `+` 112 行（型の面 +60・XML の読み替え）・REF 0／OWN 0。7.6: 該当なし（XML・MIDI 差 0）。7.7: ⒜ 弱起の綴りが 3 つ（頁＝先勝ち・小節線で消費／MIDI＝置き換え・小節線で消費／XML＝音価の累積で閉じる）＝型の註・C5 の主題／⒝ XML の `_writtenTime` は文書側の memo（RULES §7.7 の二重の綴り）＝型に入れない／⒞ `_homeTime` の null 判定を外した（multi-section の経路でしか読まれない＝掃き・full で裏取り）。push はユーザー（未 push 95）。
+判定: 次は C4＝双子を `BarContext` に（`_timeBeats/_timeBeatType/_timeText/_timeSenza/_homeTime*/_twinPartial`＝「書いた綴り」`TimeText` の面と、section head の held restore は双子固有のまま）。型の面の足し方は今便で 1 度やった＝(a) で**この会話で続けるのが得**。`-Start p745` から。
+
+## 以下は第743セッションの経緯
+
 ### 1.1 第743セッション（2026-10-02・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」＝第742 の判定: C2）。`-Start p743`（HEAD `aa92955a`・未 push 91）＝full **10745 / 0 / 2 / 10747**（引継ぎと一致）。§7 3.5 で第741 を ARCHIVE へ（残り 13,265 B）。
@@ -126,22 +137,6 @@ C2＝★ `776dadb7` **`Semantics.BarContext`（拍子・home の拍子・弱起�
 - ⚠ restored の full で `Lsp.UsingExpansionCacheTests.AMissingIncludeAppearing_Recomputes_AndTheWarningClears` が 1 赤 → 単独で再走 6/6 緑＝時間依存の flake（コードとは無関係・直前の full は緑）。
 ★ `-End p743 -DiffBase aa92955a`＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（HANDOFF 残り 11,195 B）。7.5: Core `+` 176 行（型 128 行＋MIDI の読み替え）・REF 2＝MIDI から型へ移した 2 本（`git diff` の削除側に同数＝新規 0）／OWN 0。7.6: 該当なし（MIDI 差 0）。7.7: ⒜ MIDI の走る拍子は Export で reset されない（従来のまま＝exporter を使い回すと前の本の拍子が残る。1 本ずつ new しているので実害なし・直すなら別 commit）／⒝ 境界で前の弱起を残す形に観測者なし（③）／⒞ 2 つの綴りの違い（型の註）。push はユーザー（未 push 93）。
 判定: 次は C3＝XML を `BarContext` に。型に text（`3+2`）と senza の面を足すので、今便で読んだ型の形と MIDI の使い方の上に立つ＝(a) で**この会話で続けるのが得**。§1 の残り 11 KB は便を区切る理由＝`-Start p744` から。
-
-## 以下は第742セッションの経緯
-
-### 1.1 第742セッション（2026-10-02・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」＝第741 の判定: 段階 C の入口）。`-Start p742`（HEAD `ecdeb946`・未 push 88）＝full **10745 / 0 / 2 / 10747**（引継ぎと一致）。§7 3.5 で第740 を ARCHIVE へ（残り 14,616 B）。
-段階 C の入口＝**値付けと計器だけ・コードは変えていない**（設計の選択はユーザー判断＝計画 §5）:
-- **MIDI の全冊バイト比較を作った**（`REFACTOR_PLAN` §6 ⑶ の「無い」を埋めた）: Lab `sessions/p742/sweep-midi.ps1`＝`sweep-ly.ps1` の型で `midi --batch`・SHA256。998 冊・1,199 枚・約 20 秒。base（A の前の HEAD の exe）対 head（B の後）＝**差 0**・警告行 1,156 で同数（MIDI は A・B で触っていない＝計器が偽陽性を出さない確認）。
-- **値付け＝`REFACTOR_PLAN.md` §5.1**: (a) 頁のモデルは印刷の形（score ごと・staff ごと・`BreaksMidBar`・padding）で、MIDI／XML が歩く*演奏の順*と違う＝採らない。(b) `BarContext` を推す。写しの数: 音価の引き継ぎの代入 MIDI 10／XML 9／頁 24・section 境界の meter 戻し 5・**section header の registry の構築 5 か所**（同じ規則の 5 写し）。提案の順は C1 `Semantics.SectionHeaders`（5 か所→1）→ C2 MIDI → C3 XML → C4 双子 → C5 検証／頁。
-★ `-End p742 -DiffBase ecdeb946`＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（HANDOFF 残り 12,998 B）。7.5: Core `+` 0 行（コード無変更）。7.6／7.7: 該当なし。push はユーザー（未 push 89）。
-判定: **ユーザー判断待ち**＝計画 §5.1 の (b)＋C1 の順で GO か。GO なら C1（`Semantics.SectionHeaders`）はこの会話で続けるのが得＝5 か所の registry を今読んだ（(a) で決めた）。
-⑵ ユーザー「GO」（(b)＋C1 の順＝ユーザー決定 2026-10-02）。★ `0193be8e` **`Semantics.SectionHeaders`＝section header の registry の 1 本化**: `Read(declarations)`／`Read(root)`・4 表・`DirectivesOf(name)`（頁の適用順 time→tempo→key→partial＝双子が play の item として書く順）・`FirstDirect<T>`。頁は自前の `_sectionDeclarationsInOrder` から chords／lyrics track の cell を除いて渡す（従来の loop と同じ順・同じ除外）、exporter 3 つは文書順の全宣言＝**渡す集合は 1 つも変えていない**。4 か所の builder・3 つの `FirstDirect<T>`・MIDI の `FirstDirectKey/Time/Partial` と `SectionHasInlineMusic` の wrapper を消した（−231／+209 行）。validator の `CollectSectionTimes/Partials` は規則が違う（後勝ち・part 直下の cell は header でない）＝C5 へ（型の註に書いた）。
-- 確かめ: **4 出力とも 998 冊・1,199 枚で差 0**（ly・mid・xml・svg＝`sessions/p742/{twin,sweep-midi.ps1,sweep-xml.ps1,svg}`・xml の掃きは今便で作った）。full 10745 / 0 / 2・Core 0 警告。APPROXIMATIONS は住所だけ。
-- 毒（`poisons.ps1`・`poisons-sweep.ps1`）: ① inline music のある宣言も登録 → **21 赤**（頁・双子・MIDI）。② 先勝ちを後勝ちに → suite **0 赤**・**掃き 4 種とも 0 冊差**＝「先勝ち」は suite にもコーパスにも観測者が無い（同名の header 宣言が同じ directive を 2 回書く本が無い）。③ partial の表を落とす → **16 赤**（頁・MIDI・XML・双子）。⇒ ② は網を足すか規則を畳むか＝ユーザー判断（§1.0 ⒜ の候補に足した）。
-★ `-End p742 -DiffBase ecdeb946`（2 回目）＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（HANDOFF 残り 10,579 B）。7.5: Core `+` 201 行（新しい型 133 行＋4 か所の読み替え）・REF 0／OWN 0（新規の逸脱なし＝規則の移動）。7.6: 該当なし（4 出力とも差 0）。7.7: ⒜ 「先勝ち」に観測者が無い（②）／⒝ validator の registry は別規則のまま（C5）／⒞ MIDI は `sectionsInOrder` の list を 1 本足した（`_sections` は名前→list で順を失うため）。push はユーザー（未 push 91）。
-判定: 次は C2（`BarContext` の型を MIDI に＝拍子・弱起・小節長 `MeasureTicks` と頁の `EmitEmptyMeasure` の一致を型で）。今回読んだのは MIDI の field と `MeasureTicks` だけ＝文脈は小さく、(c) どちらの会話でも差は小さい。続けるなら `-Start p743` から。
 
 ## 2. 開いている作業
 
