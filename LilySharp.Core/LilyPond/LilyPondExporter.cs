@@ -397,6 +397,8 @@ public sealed class LilyPondExporter
     /// marks (part name → variable), filled by <see cref="EmitInlineChordTracks"/>; the
     /// parts whose ChordNames row <see cref="EmitScore"/> has already placed.</summary>
     private readonly Dictionary<string, string> _inlineChordVars = new(StringComparer.Ordinal);
+    // The source position of every @chord mark a ChordNames stream above carries.
+    private HashSet<int> _inlineChordMarks = new();
     private readonly HashSet<string> _inlineChordPlaced = new(StringComparer.Ordinal);
 
     /// <summary>The part whose music variable is being written — what tells
@@ -513,6 +515,7 @@ public sealed class LilyPondExporter
         // Before the part variables: EmitMark asks whether a part's @chord marks have a
         // ChordNames stream of their own while it writes that part's music.
         EmitInlineChordTracks(tree, render);
+        EmitFiguredBassTracks(tree, render);
         EmitLyricTracks(tree, render);
 
         // One music variable per part. A by-part score keeps its sections inside
@@ -3233,6 +3236,11 @@ public sealed class LilyPondExporter
         // reference open the phrase again and expand forever.
         buf._phrases = _phrases;
         buf._activePhrases = _activePhrases;
+        // The marks the page's ChordNames / FiguredBass streams already carry (EmitMark): a
+        // phrase body is written by a nested exporter, which used to report every @chord and
+        // @figuredBass in it "dropped" while the twin printed them (2026-10-02).
+        buf._inlineChordMarks = _inlineChordMarks;
+        buf._figureMarks = _figureMarks;
         // The ABSOLUTE anchor belongs with the two relative frames below — it is what a pitch
         // resolves against in the other octave mode. All six nested-exporter sites set
         // _octaveAbsolute and _anchorOctave in their initializers and then call this, so it
@@ -3516,6 +3524,18 @@ public sealed class LilyPondExporter
                         break;
                     case ArticulationSyntax ca when AccidentalMark(ca) == '?':
                         break; // written on the pitch above
+                    // A member's own script (`<c'@staccato e'>`, chord-scripts.ly) and string
+                    // number (`<a,\2 d>`) take the note's spelling — a chord member takes
+                    // post-events (chord_body_element). Until 2026-10-02 both were "dropped (out
+                    // of scope)": 65 warnings, three of the owner's tab books among them.
+                    case StringNumberAnnotationSyntax msn:
+                        sb.Append(msn.StringNumberToken.Text);
+                        break;
+                    case ArticulationSyntax ma2 when MapArticulation(ma2) is { Length: > 0 } mev:
+                        if (mev[0] == '\\')
+                            sb.Append('-');
+                        sb.Append(mev);
+                        break;
                     case MusicMarkSyntax mk when Fingering(mk) is { } fg:
                         sb.Append(fg);
                         break;
@@ -3762,6 +3782,18 @@ public sealed class LilyPondExporter
                 // durations, which Lily# does not do — `@feather` fans the drawing and leaves
                 // the rhythm alone, so writing it would make the twin play music the page
                 // does not.
+                // A NOTEHEAD STYLE is a property of the NoteHead grob, set before the note like
+                // the feathered beam below — `\once`, so it reaches every head of a chord at
+                // this moment and nothing after. The page's glyphs are LilyPond's own
+                // (EmmentalerGlyphs.GetNotehead: noteheads.s2cross, s2diamond, …). Until
+                // 2026-10-02 every @notehead was "dropped (out of scope)".
+                // LILYPOND-REF: lily/note-head.cc internal_print — glyph "noteheads.s" +
+                //   min(duration-log, 2) + the style symbol.
+                case MusicMarkSyntax nh when Semantics.AnnotationValues.Notehead(nh) is { } headStyle:
+                    prefix.Append("\\once \\override NoteHead.style = #'")
+                          .Append(headStyle == "x" ? "cross" : headStyle)
+                          .Append(' ');
+                    break;
                 case MusicMarkSyntax fm when Semantics.AnnotationValues.Feather(fm) is not 0 and var dir:
                     prefix.Append("\\once \\override Beam.grow-direction = #")
                           .Append(dir > 0 ? "RIGHT" : "LEFT")
@@ -4169,7 +4201,14 @@ public sealed class LilyPondExporter
             return fg;
         // An inline @chord rides its part's ChordNames stream (EmitInlineChordTracks), not
         // the music: the note is written bare here, the symbol stands in that context.
-        if (mk.Name == "chord" && _currentPartName != null && _inlineChordVars.ContainsKey(_currentPartName))
+        // ⚠️ A phrase's music is written outside any part (_currentPartName is null), so its
+        // marks are matched by their own position in that stream: until 2026-10-02 every
+        // @chord in a phrase was reported "dropped" while the twin printed it.
+        if (mk.Name == "chord" && ((_currentPartName != null && _inlineChordVars.ContainsKey(_currentPartName))
+                                   || _inlineChordMarks.Contains(mk.SourceStart)))
+            return "";
+        // …and so does @figuredBass, in its part's FiguredBass stream (EmitFiguredBassTracks).
+        if (mk.Name == "figuredBass" && _figureMarks.Contains(mk.SourceStart))
             return "";
         // '@!phrasingSlur' — LilyPond's `\)`, the PhrasingSlurEvent STOP.
         if (mk.IsSpanEnd && Semantics.AnnotationValues.IsPhrasingSlurName(mk.Name))
@@ -5747,6 +5786,7 @@ public sealed class LilyPondExporter
                     case StaffRenderSyntax st:
                         AddInlineChordRow(rows, RenderPartName(st), "    ");
                         rows.Add(EmitStaff(RenderPartName(st), parts, partVars, tab: false, "    ", writtenClef: StaffClefWord(st)));
+                        AddFiguredBassRow(rows, RenderPartName(st), "    ");
                         AddLyricRows(rows, RenderPartName(st), "    ", asRow: false);
                         lastMainStaffPart = RenderPartName(st) ?? lastMainStaffPart;
                         break;
@@ -6204,6 +6244,8 @@ public sealed class LilyPondExporter
                 .ToList();
             if (items.Count == 0)
                 continue;
+            foreach (var c in items)
+                _inlineChordMarks.Add(c.SourcePosition);
 
             string varName = VarName(partName + "InlineChords");
             _inlineChordVars[partName] = varName;
@@ -6243,6 +6285,126 @@ public sealed class LilyPondExporter
             _sb.Append("}\n\n");
         }
     }
+
+    /// <summary>
+    /// One <c>\figuremode</c> variable per staff carrying <c>@figuredBass</c> marks, read off
+    /// the page's model like the inline chords (<see cref="EmitInlineChordTracks"/>): each
+    /// group at its note's onset, lasting to the next group of the bar (or the bar's end),
+    /// with silent <c>s</c> between, so LilyPond's FiguredBass context prints the figures the
+    /// page prints, under the staff, where it prints them.
+    /// </summary>
+    /// <remarks>
+    /// Until 2026-10-02 every <c>@figuredBass</c> was "dropped (out of scope)" — 13 of the 25
+    /// twin warnings left in the repository (Lab sessions/p546/warnings-after.tsv).
+    /// A held figure (<c>_</c>, the page's continuation dash) has no figure of its own in
+    /// LilyPond (an extender joins two equal figures) and is written blank, with a warning.
+    /// LILYPOND-REF: ly/engraver-init.ly FiguredBass context; lily/figured-bass-engraver.cc —
+    ///   <c>\figuremode</c> entries <c>&lt;6 4&gt;</c> (top first), <c>6+</c> sharp, <c>6-</c>
+    ///   flat, <c>6!</c> natural, <c>_+</c> a bare accidental, <c>_</c> a blank figure.
+    /// </remarks>
+    private void EmitFiguredBassTracks(SyntaxTree tree, RenderDeclarationSyntax? render)
+    {
+        if (render == null)
+            return;
+        if (!tree.GetRoot().DescendantNodes<MusicMarkSyntax>().Any(m => m.Name == "figuredBass"))
+            return;
+        if (PageModel(tree, render) is not { } score || score.FiguredBasses.IsDefaultOrEmpty)
+            return;
+
+        var meters = Svg.Layout.ScoreSideTables.PrevailingMeters(score);
+        foreach (var (_, staff, idx) in score.EnumerateStaves())
+        {
+            if (staff.IsTextRow)
+                continue;
+            string partName = staff.PrimaryVoice.Name;
+            if (_figureVars.ContainsKey(partName))
+                continue;
+            var measures = staff.PrimaryVoice.Measures;
+            // The page names a group by its bass note's item; its onset is the items before it.
+            var items = score.FiguredBasses
+                .Where(f => f.StaffIndex == idx && f.MeasureIndex < measures.Length
+                            && f.ItemIndex < measures[f.MeasureIndex].Items.Length)
+                .Select(f => (Item: f, Onset: OnsetOf(measures[f.MeasureIndex], f.ItemIndex)))
+                .OrderBy(t => t.Item.MeasureIndex).ThenBy(t => t.Onset)
+                .ToList();
+            if (items.Count == 0)
+                continue;
+            foreach (var (f, _) in items)
+                _figureMarks.Add(f.SourcePosition);
+
+            string varName = VarName(partName + "Figures");
+            _figureVars[partName] = varName;
+            _sb.Append(varName).Append(" = \\figuremode {\n");
+            int k = 0;
+            for (int m = 0; m < measures.Length; m++)
+            {
+                var length = BarLength(measures[m], meters, m);
+                var line = new StringBuilder("  ");
+                var at = Fraction.Zero;
+                while (k < items.Count && items[k].Item.MeasureIndex == m)
+                {
+                    var (f, onset) = items[k++];
+                    if (onset < at)
+                        continue;   // the same moment as the group just written: the first wins
+                    if (onset > at)
+                    {
+                        AppendToken(line, "s" + ChordModeDuration(onset - at), "  ");
+                        at = onset;
+                    }
+                    var next = length;
+                    for (int j = k; j < items.Count && items[j].Item.MeasureIndex == m; j++)
+                        if (items[j].Onset > at) { next = items[j].Onset; break; }
+                    if (next > length) next = length;
+                    AppendToken(line, FigureGroup(f) + ChordModeDuration(next - at), "  ");
+                    at = next;
+                }
+                if (at < length)
+                    AppendToken(line, "s" + ChordModeDuration(length - at), "  ");
+                _sb.Append(line).Append(measures[m].BreaksMidBar ? "\n" : " |\n");
+            }
+            _sb.Append("}\n\n");
+        }
+    }
+
+    private static Fraction OnsetOf(Svg.Model.Measure measure, int itemIndex)
+    {
+        var at = Fraction.Zero;
+        for (int i = 0; i < itemIndex; i++)
+            at += measure.Items[i].Duration;
+        return at;
+    }
+
+    /// <summary>One figure group in <c>\figuremode</c>: <c>&lt;6 4+&gt;</c>.</summary>
+    private string FigureGroup(Svg.Model.FiguredBassItem f)
+    {
+        var figures = new List<string>(f.Figures.Length);
+        foreach (var fig in f.Figures)
+        {
+            if (fig.Held)
+            {
+                _warnings.Add("a held figure (@figuredBass(_)) is written blank: LilyPond draws a "
+                    + "continuation only between two equal figures");
+                figures.Add("_");
+                continue;
+            }
+            string alt = fig.Alteration switch { 1 => "+", -1 => "-", 2 => "!", _ => "" };
+            figures.Add((fig.Number > 0 ? fig.Number.ToString(System.Globalization.CultureInfo.InvariantCulture) : "_") + alt);
+        }
+        return "<" + string.Join(" ", figures) + ">";
+    }
+
+    /// <summary>The FiguredBass context for a part's <c>@figuredBass</c> marks, under the first
+    /// staff that shows the part — once.</summary>
+    private void AddFiguredBassRow(List<string> rows, string? partName, string indent)
+    {
+        if (partName != null && _figureVars.TryGetValue(partName, out var v) && _figurePlaced.Add(partName))
+            rows.Add(indent + "\\new FiguredBass \\" + v + "\n");
+    }
+
+    private readonly Dictionary<string, string> _figureVars = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _figurePlaced = new(StringComparer.Ordinal);
+    // The source position of every @figuredBass mark a FiguredBass stream carries.
+    private HashSet<int> _figureMarks = new();
 
     /// <summary>
     /// One <c>\lyricmode</c> variable per lyric LINE the page places — a staff's attached
@@ -6786,6 +6948,7 @@ public sealed class LilyPondExporter
             foreach (var r in groupRows) sb.Append(r);
             sb.Append(EmitStaff(RenderPartName(staff), parts, partVars, tab: false, memberIndent, writtenClef: StaffClefWord(staff)));
             groupRows.Clear();
+            AddFiguredBassRow(groupRows, RenderPartName(staff), memberIndent);
             AddLyricRows(groupRows, RenderPartName(staff), memberIndent, asRow: false);
             foreach (var r in groupRows) sb.Append(r);
         }

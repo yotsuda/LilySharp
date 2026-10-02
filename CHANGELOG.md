@@ -341,6 +341,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **The LilyPond twin writes figured bass, note-head styles and a chord member's own marks.**
+  `@figuredBass` becomes a FiguredBass context under the staff (a `\figuremode` stream read
+  off the page, `<6 4>`, `6+`, `6-`, `6!`; a held `_` is written blank and said so);
+  `@notehead(x|diamond|triangle|slash|xcircle)` becomes `\once \override NoteHead.style`; a
+  chord member's string number and script stay on that member (`<a,\2 d>`, `<c-. e-.>`). All
+  were "dropped (out of scope)", and a `@chord` or `@figuredBass` in a phrase was reported
+  dropped while the twin printed it. The repository's twin warnings go from 8,910 to 801 (800
+  are two benchmark books with no score).
 - **`@text` stands beyond the dynamics, as in LilyPond.** A text is placed after the dynamics
   and hairpins of its side (LilyPond's TextScript priority 450 against their 250), so
   `c'4@text("dolce") d'@p` seats the p by the staff and the text under it; the p used to be
