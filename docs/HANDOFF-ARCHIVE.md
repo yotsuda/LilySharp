@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第745セッションの経緯
+
+### 1.1 第745セッション（2026-10-02・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第744 の判定: C4）。`-Start p745`（HEAD `fb55d28a`・未 push 95）＝full **10745 / 0 / 2 / 10747**（引継ぎと一致）。§7 3.5 で第743 を ARCHIVE へ（残り 14,118 B）。
+C4＝★ `2f544c8d` **双子の拍子・home・`time none`・弱起を `BarContext` に**。8 field（`_timeBeats/_timeBeatType/_timeSenza/_timeText`・`_homeTimeBeats/_homeTimeBeatType/_homeTimeSenza`・`_twinPartial`）を `_bars` 1 つに（`_homeTimeNode` は restore で逐語に書くので残す）。`_timeText` は走っている `Meter` から導出（`TimeText(Meter)`＝`TimeText(ts)` と同じ綴り・home の加算拍子は `HomeMeter.BeatsText` に乗せる）。`EmitTime` は `SetTime` ＋ `\cadenzaOn/Off` の綴り（双子固有のまま）。**入れ子の frame**: `PartFrame` に home（`HomeMeter`・`HomeSenzaMisura`）、`StreamFrame` に `BarContext.MeterState`（`Save()`／`Restore()`）＝拍子の半分だけを 1 つの値で運ぶ。弱起は従来どおり運ばない（body は弱起なしで開く）。`EmitSectionPlay` の「home から動いたか」は pair＋senza（`Meter.SamePair`）＝従来の 4 field の比較と同じ。
+- 確かめ: ly 998 冊・1,199 枚＝**差 0**・xml・midi も差 0（型を共有）。full 10745 / 0 / 2・Core 0 警告。APPROXIMATIONS は住所だけ。
+- 毒（`sessions/p745/poisons.ps1`・`poisons-sweep.ps1`）: ① home の加算拍子の綴りを落とす → 実の赤 0（行番号の表だけ）・掃き **0 冊差**／② 入れ子の body が拍子を戻さない（`Restore` 空）→ **0 赤**・掃き **0 冊差**（tuplet／repeat の body の中の `time` に観測者なし）／③ `BarLength` が弱起を見ない → **9 赤**（`EmptyBarExportTests`・`EmptyMeasureValidatorTests`・`SectionVoicePaddingExportTests`）／④ `RevertToHome` 空 → **4 赤**（XML・MIDI。双子の section の restore は `EmitTime(_homeTimeNode)` 経由なので別の毒）。⇒ ①② を §1.0 ⒜ の候補に足した。
+★ `-End p745 -DiffBase fb55d28a`＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（HANDOFF 残り 11,608 B）。7.5: Core `+` 87 行・REF 0／OWN 0。7.6: 該当なし（3 出力 差 0）。7.7: ⒜ 双子は section の restore を `EmitTime(_homeTimeNode)` で書く（逐語の綴りのため）＝型の `RevertToHome` を通らない唯一の出力／⒝ `_sectionHead` の `TimeText` は文字列のまま（頁の `SectionHead` の twin）／⒞ 入れ子の body の `time` に観測者なし（②）。push はユーザー（未 push 97）。
+判定: **C5 はユーザー判断が先**＝弱起の綴り 3 つと `time none` の 2 つを揃えるか（＝振る舞いの変更・別 commit・網つき）、違いのまま validator と頁を型に載せるか。頁は perf の経路でもある。判断の材料は `BarContext` の註と `REFACTOR_PLAN` §5.1。この会話は 6 便を跨いだ＝(b) 文脈は重いが、判断の提示はこの場でできる。
+
 ## 以下は第744セッションの経緯
 
 ### 1.1 第744セッション（2026-10-02・YT-DELL2）
