@@ -82,6 +82,8 @@ phrase・tuplet・grace・cue・repeat の中身は `new LilyPondExporter { … 
 
 ## 4. 段階 B — 双子を分ける・「頁のモデルを読む流れ」を 1 つに（中・リスク低）
 
+> **済み（第741・2026-10-02・`ee5f306d` 分割＋`da5e3b2c` `EmitTimedStream`）**: 9 本の partial（本体 1,088 行・最大は `.Music` 2,366）。双子 998 冊 差 0・full 10745。毒と残る穴（歌詞の `\skip`・`BreaksMidBar` は suite に網が無い）は HANDOFF §1.1 第741。
+
 **狙い**: §2.2 の最大ファイルを読める単位にする。3 本の写しを 1 本にする。
 
 1. `LilyPondExporter.cs` を役割ごとの partial ファイルに分ける。`MeasureCollector` が既に `.MusicWalk`・`.Form`・`.Annotations`… と分けている型に合わせる。候補:

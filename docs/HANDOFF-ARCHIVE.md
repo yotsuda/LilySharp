@@ -129,6 +129,43 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第739セッションの経緯
+
+### 1.1 第739セッション（2026-10-02・YT-DELL2）
+
+新しい会話（HANDOFF から着手）。`-Start p739`（HEAD `74451431`・未 push 73）＝full **10687 / 0 / 2 / 10689**（引継ぎと一致）。§7 3.5 で第737 を ARCHIVE へ・`Fold-ClosedHandoffItems` で §3 の根拠 9 セル（3,416 B）を畳んだ。
+ユーザー選択＝第738 の未決「MusicXML の import は変化しない `<key>`/`<time>`/`<clef>` を落とす」。★ `a44198cb`:
+- ユーザー決定（2026-10-02）: ⑴ 変化しない key/time/clef は**その小節の前で section を切り、頭に `key!`/`time!`/`clef!`**（MusicXML は `<attributes>` に書いたものを印刷する＝print-object の既定 yes・MuseScore／Finale／Sibelius は変化か利用者が置いた記号しか書かない・musicxml2ly も `\key`/`\time` を全部描く）。⑵ **`<print new-system="yes">`／`new-page` の小節の再記述は段頭の courtesy（OMR 等が毎段書く形）＝従来どおり落とし、切らない**（ユーザー「五線を改行するたび clef が出るならそこで切るのはおかしい」）。⑶ **変化する key/time/clef の前も切る＝ただしリハーサル記号が 1 つも無い曲だけ**（記号がある曲は記号の section が優先。Bohemian は 1 小節だけの 6/4・2/4・6/8 の寄り道で 16 section になった）。
+- 実装: `ImportMeasure.NewSystem`（reader が `<print>` を読む）・`LysWriter.CutPoints`（mark ∪ 再記述 ∪ 記号の無い曲の変化）・`Restatements`（部ごとに先行の記述と同じ・段頭は除く）・`Directives` が再記述を `!` で書く（section 頭でも途中でも・素の再記述は並べない）・`SplitAtMarks` の名前: 記号の無い切れ目は直前の名前を継ぐ（A, A2…／B, B2・数字で終わる名前は `_`）・記号のある曲だけ先頭を Intro。`CuttableMarks` は無ラベルの切れ目を拒むときは警告しない（その場に書かれるので失うものが無い）。
+- 網: `MusicXmlSectionCutTests` +5（往復で `!` が戻る・記号の名前を継ぐ・new-system は落とす・変化は記号の無い曲だけ切る ×2・どれも描かれる time/key/clef が元と同じ）・`MidPieceChanges_RoundTrip` は `@mark` を足して 1 section のまま（意図を保つ）。毒 5 種すべて赤（Lab `sessions/p739/poisons.ps1`）。
+- 掃き: import の round trip（998 冊・1,199 枚・Lab `sessions/p739/imp/rt.ps1`・base は HEAD の worktree）＝**.lys の文面が変わったもの 176・SVG 差 1**（`test/senza-misura`: reader が senza-misura を落とすので戻りの 4/4 が「変化しない」に見え `time!` になった＝元の本と同じく 4/4 を描く＝改善）。Bohemian（MuseScore 4.7.5）は再記述 0＝A〜H のまま。
+- SYNTAX_REFERENCE（Restating の節の末尾）・CHANGELOG。
+★ `-End p739 -DiffBase 74451431`＝full **10692 / 0 / 2 / 10694**（網 +5）・門 全 OK・棚卸し: APPROXIMATIONS の行番号 1 行のみ。7.5: Core `+` 146 行（commit 前に数えた numstat）・REF 0／OWN 0（importer の規則＝LP の対応物無し・ユーザー決定は註に書いた）。7.6: 該当なし。7.7: 他のソフトの MusicXML は手元に Bohemian と LP の回帰の数個だけ＝OMR 形の頻度は測れていない（new-system の規則は推測に基づく）。push はユーザー（未 push 74→75）。
+⑵ ユーザー選択「5/4 の全小節休符に進んで」＝§1.0 ⒞ の項を閉じた。ユーザー決定（2026-10-02・LILYSHARP-OWN）: **素の `R`＝その小節ぶん**（「音楽的に妥当か・書けなくなる楽譜は」に答えた: 全小節休符は拍子によらず 1 つの記号＝MusicXML の `measure="yes"` と同じ意味・変わるのは素の `R` だけで、998 冊の music に 0 件）。細部も決定: `R*N`＝N 小節の省略記法・**`R | R | R` はまとめない**（LP と同じ・ユーザー「R*3 と書いたらまとめる」）・弱起では partial の長さ・後続の音価を変えない・小節の途中／`time none` は LYS2016（error）・`R1` 等は不変・import は常に `R`／`R*N`。★ `b44667fc`:
+- `Music.BarRest`（`Shape`: 1 つの音価で書ける小節は `R1`/`R2.` と同じ event＝4/4・3/4 は 1 バイトも変わらない、書けない小節は LP の `R4*5`＝音価 × `TimeScale`）。page（`CreateRestItem` に小節の残り）・`MeasureDurations`（0）＋`MeasureValidator.BareBarRests`（小節の不足分・LYS2016）・`MeasureModel`（meter の残り）・MIDI（`MeasureTicks`）・twin（`R4*5`＋次の event に音価を書く）・MusicXML（小節の長さ・書けなければ `<type>` 無し）・import（`R`）・Split Sections／Extract Phrase（音価の stamp は R の次の音符へ）。
+- ★ **既存の欠陥を直した: MIDI が `R1*N` を 1 小節しか鳴らさなかった**（頁は N 小節＝後ろが N−1 小節早く鳴る）。影響は repo の 25 冊（実コーパス 0）。
+- 網: `BarRestTests` 31（Shape・twin の綴り・頁 ×4 拍子・4/4 で `R1` と同一・検証・パート間・音価の引き継ぎ・弱起・LYS2016 ×2・MIDI・twin・MusicXML）・`SectionSplitterTests.ACutBeforeABareBarRest_StampsTheNoteAfterIt`・`MusicXmlRoundTripTests` 3 本を `R` へ（＋5/4 の往復）。毒 11 種＋splitter 1 種すべて赤（Lab `sessions/p739/poisons2.ps1`）。**Extract Phrase には網が無い**（修正は splitter と同じ形）。
+- 掃き: 描画 998 冊・1,199 枚＝差 0（Lab `sessions/p739/svg`）。import の往復 1,199 枚＝SVG 差 0・素の `R` を書く import 45（`sessions/p739/imp2`）。SYNTAX_REFERENCE（Rests）・GRAMMAR_FOR_LLM・CHANGELOG（機能＋MIDI の Fixes）。
+- GRAMMAR_FOR_LLM の例（1 つの section としてコンパイルされる）が小節の途中の `R` で LYS2016 になった＝例を小節線で区切った（`DocExamplesParseTests`）。
+★ `-End p739 -DiffBase 74451431`（2 回目）＝full **10723 / 0 / 2 / 10725**（網 +31）・門 全 OK。7.5: Core `+` 337 行（⑴ と ⑵）・REF 0／OWN 1（`BarRest`＝ユーザー決定の逸脱は 1 箇所に名乗った・LP の `R4*5` は Shape の註）。7.6: ⒜＝LP からの宣言した逸脱（素の `R` の意味）＋MIDI の既存の欠陥の修正。7.7: 小節の長さを知る場所が 5 つ（page の builder・validator・model・MIDI・twin・MusicXML がそれぞれ自分の meter／partial を持つ＝既存の形・どれにも網）。push はユーザー（未 push 77）。
+⑶ ユーザー「続けて」→選択「@text の高さを LP に合わせる」＝§1.0 ⒝ の項を閉じた。★ `a296ab97`:
+- **第644 の「0.12 低い」は fonts を固定しない計器の見かけ**だった: `lysc ly --pin-fonts` の双子で測り直すと `c'4@p@text("dolce")` は LP 18.4936・Lily# 18.49＝一致（第736 の教訓どおり）。
+- **本当の差は順番**: `c'4@text("dolce") d'@p`（text の後ろの音の dynamic が横で重なる）で LP は p 15.91・dolce 18.57、Lily# は dolce 16.27・p 17.89＝上下が逆（Lily# は 250 の列に source 順で置いていた）。`OutsideStaffStacker` の下側は「dynamics → hairpin → `@text` → 450 の diagram」、上側は「dynamics（250）… ottava（400）→ `@text` → diagram」に。8 形（hairpin・同じ音・上側・2 つの text）すべて LP と 0.01 以内（Lab `sessions/p739/textosp`）。
+- 網 `TextScriptPriorityTests` 6（LP の数字で）。毒 2 種（上下それぞれ旧順）とも赤（`sessions/p739/poisons3.ps1`）。掃き 998 冊・1,199 枚＝差 0（この形の本は無い・`sessions/p739/svg3`）。snapshot も動かない。CHANGELOG（Fixes）。
+★ `-End p739 -DiffBase 74451431`（3 回目）＝full **10729 / 0 / 2 / 10731**（網 +6）・門 全 OK。7.5: Core `+` 371 行（⑴〜⑶）・REF 2（TextScript 450 の出典＝新規の逸脱なし）／OWN 1（⑵）。7.6: ⒜＝LP の順番の移植。7.7: 該当なし。push はユーザー（未 push 79）。
+⑷ ユーザー選択「双子」＝§1.0 ⒝「双子の穴の残り 25 行」を閉じた。★ `4b83d43b`:
+- **25 行は一部の本の数だった**: 全 998 冊の双子の掃き（Lab `sessions/p739/twin/sweep-ly.ps1`）では「dropped (out of scope)」が **8,910 行**（`@notehead` 8,018・`@figuredBass` 800＋13・和音の音の注釈 65 など）。
+- `@chord` 8 行は**見かけ**: phrase の中身は入れ子の exporter が part の外で書くので、頁の ChordNames が載せた印でも「落ちた」と言っていた＝印の位置（`ChordNameItem.SourcePosition`）で照合・`CarryFrameInto` で入れ子に渡す。
+- `@figuredBass`: 頁のモデルから `\figuremode`（item の onset・次の group か小節末まで・`<6 4>` `6+` `6-` `6!` `_+`）＋譜表の下の `\new FiguredBass`。頁の figures は LP と同じ高さ（最下線から 2.956）。held（`_`）は空白で書いて警告。
+- `@notehead(x|diamond|triangle|slash|xcircle)`＝`\once \override NoteHead.style = #'…`（音符・和音の前）。頁の glyph は LP の `noteheads.s2cross` 等＝絵で同じ形を確認（`sessions/p739/twin/nh`）。
+- 和音の音の弦番号（`<a,\2 d>`＝ユーザーの tab 3 冊）と script（chord-scripts.ly の `<c-. e-.>`）を音ごとに。
+- 結果: 8,910 → **801 行**（800＝score の無い計測用 2 冊 `audit/lpreg/perf-figbass*`・頁のモデルが無い＝inline chord と同じ既存の制限／1＝和音の音の `@stemUp`）。双子の変化 19 冊はすべて LP 2.26.0 で通る。網 3 クラス 16 本（`LilyPondExporterFiguredBassTests`・`…NoteheadTests`・`…ChordMemberTests`）、毒 6 種すべて赤（`sessions/p739/poisons4.ps1`・`poisons5.ps1`）。CHANGELOG（Fixes）。
+★ `-End p739 -DiffBase 74451431`（4 回目）＝full **10745 / 0 / 2 / 10747**（網 +16）・門 全 OK。7.5: Core `+` 535 行（⑴〜⑷）・REF 4／OWN 1。7.6: ⒜＝双子の配管（頁のモデルを読む既存の形・LP の綴り）。7.7: 頁のモデルを読む双子の流れが 3 つ（chords・figures・lyrics）＝同じ形の 3 つの写し（小節を s で埋める処理が 2 つ）。push はユーザー（未 push 81）。
+⑸ ユーザー「続けて」＝§1.0 ⒝ の最後の非 perf 項目（ピアノ譜の小節線 0.05）。**値付けだけで止めた**: LP は span bar 側で小節線を 0.05 伸ばし、箱の 1.01 の上限も外す（後者の方が大きい規則）が、PianoStaff と 2 段の差は LP 自身の中で最大 0.003（Lab `sessions/p739/span`）＝§1.0 の項を「値付け済み・提案しない」に書き換えた。コードは変えていない。
+⑹ ユーザー「リファクタしておきたい部分はある？今のコードは、十分に保守が容易な状態を保てているだろうか」→ 調べて答えた（Core 460 ファイル・246,953 行・コメント 44%・3,000 行超 10 ファイル・規則を出力ごとに 6 か所で実装）→ ユーザー「その内容を .md にして。次のセッションから取り組む」＝`docs/REFACTOR_PLAN.md` を書き、§1.0 ⒜ の先頭にポインタを置いた。
+判定: 次の便は `docs/REFACTOR_PLAN.md` の段階 A から（ユーザー決定）。今回の文脈（双子の入れ子・頁のモデルを読む流れ）がそのまま使えるので、この会話で続けるのが少し得。新しい会話でも計画のファイルから始められる。
+
+
 ## 以下は第738セッションの経緯
 
 ### 1.1 第738セッション（2026-10-02・YT-DELL2）
