@@ -80,8 +80,6 @@ public sealed class MidiExporter
     // the conductor track for the rest of the piece (measured 2026-08-31). The pickup arms
     // every part's first bar, as the page's does (MeasureCollector.Form.cs).
     private Semantics.SectionHeaders _sectionHeaders = Semantics.SectionHeaders.Empty;
-    private int _homeTimeBeats = 4;
-    private int _homeTimeBeatType = 4;
     private bool _formDriven;
     private bool _formPlayed;
 
@@ -124,20 +122,19 @@ public sealed class MidiExporter
     private int _tempo = 120;
     private int _velocity = 80;
     private readonly Stack<(int numerator, int denominator)> _tupletStack = new();
-    private int _timeNumerator = 4;
-    private int _timeDenominator = 4;
 
-    // The pickup in force: set by a `partial` and spent at the first bar that closes after
-    // it, exactly as MeasureBuilder.SetPartial / RestorePartialIfPending keep the page's
-    // copy. This walk counts durations, so the notes of a pickup need nothing from it —
-    // the ONE reader is MeasureTicks, what an empty `| |` bar is worth. MEASURED before the
-    // repair (session 357, scratch/p358/midi): `partial 4 | c'4 …` drew a one-beat spacer
-    // on the page and sounded a FULL bar of silence here (first note at tick 1920 against
-    // 480 for the `partial 4 s4 |` an author would type), both at the piece's opening and
-    // after a mid-piece `partial` — the exporter had no `partial` arm at all, so the node
-    // fell to ProcessChildren and vanished. No book on disk writes `partial N |`
-    // (13825 counted); the pair is kept honest by EmptyMeasureValidatorTests.
-    private Fraction? _partial;
+    // The bar's context — the meter in force, the score's home meter, the pickup pending —
+    // and its rules (a `time`, a section boundary, a `partial`, the bar line that spends it):
+    // Semantics.BarContext, the one spelling the outputs move onto one by one (REFACTOR_PLAN
+    // stage C2: this walk first). This walk counts durations, so the notes of a pickup need
+    // nothing from it — the readers are MeasureTicks (what an empty `| |` bar, a bare `R` or a
+    // chord row's first bar is worth) and PaddingTicks. MEASURED before the pickup arm existed
+    // (session 357, scratch/p358/midi): `partial 4 | c'4 …` drew a one-beat spacer on the page
+    // and sounded a FULL bar of silence here (first note at tick 1920 against 480 for the
+    // `partial 4 s4 |` an author would type), both at the piece's opening and after a
+    // mid-piece `partial` — the node fell to ProcessChildren and vanished. No book on disk
+    // writes `partial N |` (13825 counted); the pair is kept honest by EmptyMeasureValidatorTests.
+    private readonly Semantics.BarContext _bars = new();
 
     // Tie handling: a tie (~) merges the next same-pitch note into the previous
     // one (one sustained note) instead of re-articulating it.
@@ -435,8 +432,9 @@ public sealed class MidiExporter
         _ambientTonic = _homeTonic;
         _homeKeySharps = ScoreHomeKey.Sharps(_root);
         _keySharps = _homeKeySharps;
-        (_homeTimeBeats, _homeTimeBeatType) = ScoreHomeMeter.Read(_root);
-        _partial = null;
+        var (homeBeats, homeBeatType) = ScoreHomeMeter.Read(_root);
+        _bars.HomeMeter = new Semantics.Meter(homeBeats, homeBeatType);
+        _bars.SpendPartial();
         _formDriven = _root.DescendantNodes().OfType<FormDeclarationSyntax>().Any();
         _formPlayed = false;
         _playedSpec = RenderSpecParser.PlayedSpec(tree, Score, Form);
@@ -453,7 +451,7 @@ public sealed class MidiExporter
         // value here put a spurious downbeat event on any score whose time signature
         // changes later. Only seed the default when no tick-0 signature exists.
         if (!conductorTrack.TimeSignatures.Any(ts => ts.Tick == 0))
-            conductorTrack.TimeSignatures.Insert(0, new TimeSignatureChange(0, _timeNumerator, _timeDenominator));
+            conductorTrack.TimeSignatures.Insert(0, new TimeSignatureChange(0, _bars.Meter.Beats, _bars.Meter.BeatType));
 
         // The parts the score does not show are stripped HERE, after the whole stream is
         // played and before it is split: every part walked as before, so the timeline (a
@@ -690,13 +688,9 @@ public sealed class MidiExporter
                 break;
 
             case PartialDeclarationSyntax partial:
-                // Anacrusis: the bar in progress is a pickup of this length until it closes.
-                // The clock needs nothing from it — notes take their written time either way —
-                // but an empty `| |` bar inside the pickup is worth the pickup, not the meter
-                // (MeasureBuilder.SetPartial is the page's copy of this arm).
-                // LILYPOND-REF: ly/music-functions-init.ly:1697-1705 partial = context-spec-music 'Timing
-                //   — "adjust the measure position to end the current measure at dur past the point of use".
-                _partial = partial.ToFraction();
+                // Anacrusis: the bar in progress is a pickup of this length until it closes
+                // (Semantics.BarContext.SetPartial has the rule and LilyPond's reference).
+                _bars.SetPartial(partial.ToFraction());
                 break;
 
             case KeySignatureSyntax keySig:
@@ -967,33 +961,19 @@ public sealed class MidiExporter
                 headerKey.Mode.Text.ToLowerInvariant()) ?? 0;
         }
 
-        // ⚠️ THE METER IS THE SAME QUESTION, asked of the same registry: the section's own
-        // `time` if it states one, the SCORE meter if it does not. The revert is what this
-        // walk was missing — a mid-section change stayed in the conductor track for every
-        // later section, so the bar grid a DAW draws parted from the page after the first
-        // meter change. Only written when the pair actually moves, so a boundary that
-        // changes nothing adds no event (ProcessTimeSignature is the one writer).
-        // A `time none` header is no meter at all (see ProcessTimeSignature): the running
-        // pair stays, and nothing is written.
-        var boundaryTime = _sectionHeaders.Times.TryGetValue(section.SectionName, out var headerTime)
-            ? headerTime.IsSenzaMisura ? (_timeNumerator, _timeDenominator) : (headerTime.Beats, headerTime.BeatType)
-            : (_homeTimeBeats, _homeTimeBeatType);
-        if (boundaryTime != (_timeNumerator, _timeDenominator))
-        {
-            _timeNumerator = boundaryTime.Item1;
-            _timeDenominator = boundaryTime.Item2;
+        // ⚠️ THE METER AND THE PICKUP ARE THE SAME QUESTION, asked of the same registry
+        // (Semantics.BarContext.OpenSection has the rule): the section's own `time` if it
+        // states one, the SCORE meter if it does not — the revert is what this walk was
+        // missing: a mid-section change stayed in the conductor track for every later section,
+        // so the bar grid a DAW draws parted from the page after the first meter change — and
+        // the header's `partial` as every part's first bar's pickup (the page shortens every
+        // part's first bar with it, MeasureCollector.Form.cs). The event is written only when
+        // the pair actually moves, so a boundary that changes nothing adds none
+        // (ProcessTimeSignature is the other writer).
+        if (_bars.OpenSection(_sectionHeaders.Times.GetValueOrDefault(section.SectionName),
+                _sectionHeaders.Partials.GetValueOrDefault(section.SectionName)))
             conductorTrack.TimeSignatures.Add(
-                new TimeSignatureChange(_currentTick, _timeNumerator, _timeDenominator));
-        }
-
-        // A section can begin with a pickup (`section A { partial 4  melody { … } }`): the
-        // page shortens every part's first bar with it, applied after the section meter so
-        // the pickup restores to the section's own time (MeasureCollector.Form.cs). The same
-        // registry arms this walk's pickup here, and a pickup the previous section left
-        // pending ends with that section, as its bars did.
-        _partial = _sectionHeaders.Partials.TryGetValue(section.SectionName, out var headerPartial)
-            ? headerPartial.ToFraction()
-            : null;
+                new TimeSignatureChange(_currentTick, _bars.Meter.Beats, _bars.Meter.BeatType));
 
         // A by-part CHORD TRACK's section (`chords harmony { section A { … } }`): its
         // entries sound when the score places the row (PlayChordRow), and take their bars'
@@ -1044,7 +1024,7 @@ public sealed class MidiExporter
         // so it is re-armed per lane: a second part used to open with a FULL bar — partial.lys
         // (`partial 2`, a melody and an empty `X { | | | }`) ran its section a bar and a half
         // past the page's 4,800 ticks.
-        var sectionPickup = _partial;
+        var sectionPickup = _bars.Partial;
         for (int i = 0; i < section.SlotCount; i++)
         {
             var child = section.GetChild(i);
@@ -1079,7 +1059,7 @@ public sealed class MidiExporter
                 // another voice, or does not exist.
                 _pendingGraceSteal = 0;
                 if (!tickLanes.ContainsKey(pname))
-                    _partial = sectionPickup;
+                    _bars.Partial = sectionPickup;
                 ProcessNode(sectionPart, track, conductorTrack);
                 _pendingGraceSteal = 0;
                 _currentPart = outerPart;
@@ -1148,7 +1128,7 @@ public sealed class MidiExporter
     /// the longest lane) — this is what a chord row, which has no lane, adds.
     /// </summary>
     private int PaddingTicks(SyntaxNode voice)
-        => _sectionBars.Missing(voice, out _) * FractionToTicks(new Fraction(_timeNumerator, _timeDenominator));
+        => _sectionBars.Missing(voice, out _) * FractionToTicks(_bars.MeterLength);
 
     /// <summary>Sounds every chord-track cell written directly in <paramref name="section"/>
     /// whose row the score places, each from the current tick (the section's start), and
@@ -1230,12 +1210,12 @@ public sealed class MidiExporter
         string part = rowName + ChordRowTrackSuffix;
         int timbre = PartTimbre(part);
         int velocity = Math.Max(1, _velocity * 7 / 10);
-        int barTicks = FractionToTicks(new Fraction(_timeNumerator, _timeDenominator));
+        int barTicks = FractionToTicks(_bars.MeterLength);
         // A section's pickup shortens the row's FIRST bar as it shortens every part's (the
         // page's pickup measure): amazing-grace's row opens with an empty `|` over the
         // one-beat pickup, and a full bar there played every later bar a bar late and ran the
         // section past its parts.
-        int thisBarTicks = _partial is { } pickup ? FractionToTicks(pickup) : barTicks;
+        int thisBarTicks = FractionToTicks(_bars.BarLength);
         int tonicStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
         int barStart = startTick;
         var bar = new List<SyntaxNode>();
@@ -1245,7 +1225,7 @@ public sealed class MidiExporter
             if (bar.Count == 0)
                 return;
             foreach (var (node, timing, duration) in
-                     Svg.Collector.ChordNameCollector.SlotGroups(bar, _timeNumerator, _timeDenominator, out _))
+                     Svg.Collector.ChordNameCollector.SlotGroups(bar, _bars.Meter.Beats, _bars.Meter.BeatType, out _))
             {
                 if (node is not ChordEntrySyntax entry
                     || Svg.Collector.ChordNameCollector.StructureOf(entry.SymbolText, tonicStep, _keySharps)
@@ -1682,7 +1662,7 @@ public sealed class MidiExporter
                 // A typed barline on an empty span decorates and closes nothing, so it leaves
                 // the pickup pending, as it leaves the bar open on the page.
                 if (pairsHere || timePassed)
-                    _partial = null;
+                    _bars.SpendPartial();
                 boundaryTick = _currentTick;
                 boundaryClaimed = true;
                 // …and fall through: the repeat spans below key on the repeat barlines,
@@ -1788,7 +1768,7 @@ public sealed class MidiExporter
     /// <c>partial</c> IS the meter in force: the empty pickup <c>partial 4 |</c> is worth
     /// the one beat the page draws, not the whole bar it drew nothing of.</summary>
     private int MeasureTicks()
-        => FractionToTicks(_partial ?? new Fraction(_timeNumerator, _timeDenominator));
+        => FractionToTicks(_bars.BarLength);
 
     private static int FindMatchingRepeatEnd(List<SyntaxNode> items, int start)
     {
@@ -2597,19 +2577,15 @@ public sealed class MidiExporter
 
     private void ProcessTimeSignature(TimeSignatureSyntax timeSig, MidiTrack conductorTrack)
     {
-        // `time none` writes NO meta event and leaves the running meter alone: LilyPond's
-        // \cadenzaOn sets Timing.timing, not timeSignature, and the performer emits only on
-        // a \time event or a changed fraction. The bars the MIDI grid draws through a cadenza
-        // are the last meter's — the same picture a DAW gets from LilyPond's file.
-        // LILYPOND-REF: lily/time-signature-performer.cc:102-115 Time_signature_performer::process_music
-        //   — `if (scm_is_pair (fr) && (event_ || !ly_is_equal (fr, last_time_fraction_)))`.
-        // Before session 353 this wrote the 4/4 the syntax falls back to, so a `time none`
-        // after a 3/4 stretch flipped the DAW's grid to 4/4 where the page shows no meter.
-        if (timeSig.IsSenzaMisura)
+        // `time none` writes NO meta event and leaves the running meter alone
+        // (Semantics.BarContext.SetTime has the rule and LilyPond's reference): the bars the
+        // MIDI grid draws through a cadenza are the last meter's — the same picture a DAW gets
+        // from LilyPond's file. Before session 353 this wrote the 4/4 the syntax falls back to,
+        // so a `time none` after a 3/4 stretch flipped the DAW's grid to 4/4 where the page
+        // shows no meter.
+        if (!_bars.SetTime(timeSig))
             return;
-        _timeNumerator = timeSig.Beats;
-        _timeDenominator = timeSig.BeatType;
-        conductorTrack.TimeSignatures.Add(new TimeSignatureChange(_currentTick, _timeNumerator, _timeDenominator));
+        conductorTrack.TimeSignatures.Add(new TimeSignatureChange(_currentTick, _bars.Meter.Beats, _bars.Meter.BeatType));
     }
 
     private void ProcessTempo(TempoDeclarationSyntax tempo, MidiTrack conductorTrack)
@@ -3019,8 +2995,8 @@ public sealed class MidiExporter
         int firstBar = FractionToTicks(
             section != null && _sectionHeaders.Partials.TryGetValue(section.SectionName, out var hp)
                 ? hp.ToFraction()
-                : _partial ?? new Fraction(_timeNumerator, _timeDenominator));
-        int barTicks = FractionToTicks(new Fraction(_timeNumerator, _timeDenominator));
+                : _bars.BarLength);
+        int barTicks = FractionToTicks(_bars.MeterLength);
 
         foreach (var (block, partAtBlock) in _sectionLyrics)
         {
