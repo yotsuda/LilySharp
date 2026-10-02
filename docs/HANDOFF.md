@@ -79,7 +79,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ★★★ **次の便から: リファクタ（ユーザー決定 2026-10-02「次のセッションから取り組む」）**＝計画の本文は `docs/REFACTOR_PLAN.md`（根拠・段階 A〜D・各段階の確かめ方）。順は **A（入れ子の exporter の状態を 1 つに）→ B（双子を partial に分け、頁のモデルを読む流れ 3 本を 1 つに）→ C（小節の文脈の共有・1 出力ずつ）**、D（コメントの経緯部分）はユーザー判断が先。A・B は出力不変＝双子の全冊バイト比較（Lab `sessions/p739/twin/sweep-ly.ps1`）で確かめる
+- ★★★ **リファクタ（ユーザー決定 2026-10-02）**＝計画は `docs/REFACTOR_PLAN.md`。**A は第740 で済み（`166a3857`）→ 次は B（双子を partial に分け、頁のモデルを読む流れ 3 本を 1 つに）→ C（小節の文脈の共有・1 出力ずつ）**、D はユーザー判断が先。B は出力不変＝双子の全冊バイト比較（Lab `sessions/p740/twin/sweep-ly.ps1`・base の exe は掃きの出力先と別の場所に置く）で確かめる／★ 候補: 入れ子の StreamFrame の suite の網（入れない→1 赤・戻さない→0 赤。掃きは 125／16 冊差＝第740 ⑶）
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
@@ -117,6 +117,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第740セッション（2026-10-02・YT-DELL2）
+
+新しい会話（HANDOFF から着手）。`-Start p740`（HEAD `50ae546b`・未 push 83）＝full **10745 / 0 / 2 / 10747**（引継ぎと一致）。§7 3.5 で第738 を ARCHIVE へ・`Fold-ClosedHandoffItems` は畳む物 0（天井の残り 6,771 B）。
+ユーザー「リファクタに着手して」＝`docs/REFACTOR_PLAN.md` 段階 A。★ `166a3857`:
+- 棚卸し: 入れ子は 6 か所（phrase 参照・tuplet・voice 枝・grace・cue・repeat）。`CarryFrameInto` が写していた 34 個を 3 つに分けた＝**`SharedState`**（phrase 表・再帰の番・`@chord`/`@figuredBass` の印・木・**警告の list**。入れ子は private ctor でこれを受け取る＝足した表が届かない形が無い）／**`PartFrame`**（octave の方式と錨・drum/combined・部の名前・home の key/time＝写すだけ）／**`StreamFrame`**（octave の枠 2 組・走っている key/time/clef・improvisation・音価の記憶＝写して戻す。`CarryFrameBack` は同じ record を戻すだけ＝入れた物を戻し忘れる形が無い）。工場は `OpenNested()` 1 つ・本文を読むのは `NestedText(buf)` 1 つ。6 か所の `_warnings.AddRange` は list が 1 つなので消えた（順序は同じ＝親は入れ子の最中に警告を足さない）。各 site の種（grace の 8・voice 枝の span の値・phrase の 4）と写す物の集合は 1 つも変えていない。
+- 確かめ: 双子 998 冊・1,199 枚＝**差 0**・'dropped' 801 行で同数（Lab `sessions/p740/twin/sweep-ly.ps1`・base は -Start のビルドの exe を scratch に写した）。full 10745 / 0 / 2。行番号の表 2 枚を再生成（APPROXIMATIONS の UNWATCHED 60→59＝「unobserved」で数えられていた文は観測者が在ると言う文だった）。CHANGELOG 無し（出力不変）。
+- 毒（`sessions/p740/poisons.ps1`・`poisons-sweep.ps1`）: ⑴ SharedState を入れ子ごとに新品 → **8 赤**（container 内の phrase 参照・再帰の番）。⑵ StreamFrame を入れない → suite **1 赤**（`ShapeChordItemTests.InAGraceAndATuplet`）だが掃きは **125 冊差**。⑶ 戻さない → suite **0 赤**・掃き **16 冊差**（例 `test/tuplets-beamed`: 2 つ目の tuplet の頭が `c` → `c4`＝前の tuplet が残した force を失う）。⇒ **stream frame の網は掃きであって suite ではない**＝§1.0 ⒜ に候補として置いた（網を足すのは別 commit）。
+★ `-End p740 -DiffBase 50ae546b`＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（HANDOFF 残り 4,155 B）。7.5: Core `+` 191 行・REF 0／OWN 1（`PartFrame` へ移した既存の註＝新規の逸脱なし）。7.6: 該当なし（出力不変）。7.7: 入れ子へ写す物の集合は変えていない＝`_homeKeyNode` だけ写していない非対称は従来のまま（意図は読めていない・B で読む）。push はユーザー（未 push 85）。
+判定: 次は段階 B（双子の partial 分割＋頁のモデルを読む 3 本の統合）。今回読んだ入れ子 6 か所と frame の形の上に立つ＝(a) で**この会話で続ける**。§1 の残り 4,155 B は便を区切る理由＝B に入る前に `-Start p741` を回す。
+
+## 以下は第739セッションの経緯
+
 ### 1.1 第739セッション（2026-10-02・YT-DELL2）
 
 新しい会話（HANDOFF から着手）。`-Start p739`（HEAD `74451431`・未 push 73）＝full **10687 / 0 / 2 / 10689**（引継ぎと一致）。§7 3.5 で第737 を ARCHIVE へ・`Fold-ClosedHandoffItems` で §3 の根拠 9 セル（3,416 B）を畳んだ。
@@ -151,18 +163,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ⑹ ユーザー「リファクタしておきたい部分はある？今のコードは、十分に保守が容易な状態を保てているだろうか」→ 調べて答えた（Core 460 ファイル・246,953 行・コメント 44%・3,000 行超 10 ファイル・規則を出力ごとに 6 か所で実装）→ ユーザー「その内容を .md にして。次のセッションから取り組む」＝`docs/REFACTOR_PLAN.md` を書き、§1.0 ⒜ の先頭にポインタを置いた。
 判定: 次の便は `docs/REFACTOR_PLAN.md` の段階 A から（ユーザー決定）。今回の文脈（双子の入れ子・頁のモデルを読む流れ）がそのまま使えるので、この会話で続けるのが少し得。新しい会話でも計画のファイルから始められる。
 
-
-## 以下は第738セッションの経緯
-
-### 1.1 第738セッション（2026-10-02・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」＝第737 の判定: ⑸ の残り 2 つ）。`-Start p738`（HEAD `59c01a3d`・未 push 71）＝full **10676 / 0 / 2 / 10678**（引継ぎと一致）。★ `a616a206`:
-⑴ **エディタの `key!`**: 第737 の「semantic token で小節線の色」は誤り＝LSP は `!` を塗らず、TextMate の文法でも `!` は無色だった。`#force-mark`（`\b(key|time|clef)\s*(!)`）を足し、素の keyword を塗る**全ての文脈の前に** include（`#keywords` と part body 自身の一覧＝part body は `#keywords` より先に自分の `clef`/`key` を塗る）。網 `EditorColouringTests.TheForceMark_IsColouredWithItsKeyword`（文脈ごとに順番を問う・全体の平らな並びでは fonts block の `time` が先に来て問えない）。
-⑵ **MusicXML 書き出し**: 第737 の「変化しない key も書く」も誤り＝`SyncAttributes` は元から書いた値との差だけ書く（書き直しは何も書かない＝page と一致）。足したのは強制だけ: `_forcedKey/_forcedTime/_forcedClef` が `<attributes>` を書かせる（音の後なら次の小節の頭＝他の変化と同じ）。網 `MusicXmlForceMarkTests` 7。
-- GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・CHANGELOG。毒 4 種（書き出しの key／clef の強制・文法の include 2 つ）すべて赤（Lab `sessions/p737/poisons3.ps1`）。掃きは省いた（Core の変更は `!` のある本だけに効く・コーパスに 0 冊）。
-- ⚠ 未決（ユーザー判断）: **MusicXML の import は変化しない `<key>`/`<time>`/`<clef>` を落とす**＝`key!` を書き出した XML を読み戻すと `!` が消える。読み手が同じ属性を繰り返す XML（版ごとに違う）を全部 `key!` にすると、今度は描かれなかったものが描かれる。
-★ `-End p738 -DiffBase 59c01a3d`＝full **10687 / 0 / 2 / 10689**（網 +11）・門 全 OK。7.5: Core `+` 16 行・REF 0／OWN 0（第737 の決定の書き出し側＝新しい逸脱なし）。7.6: 該当なし。7.7: 該当なし。push はユーザー（未 push 72）。⚠ HANDOFF の天井 残り 5.7 KB＝次便の頭で `tools\Fold-ClosedHandoffItems.ps1`。
-判定: 次はユーザーの選択（上の import の未決・5/4 の全小節休符の綴り・⒝ の設計項目）。どれも今回の文脈は要らない＝新しい会話でも差は小さい。
 
 ## 2. 開いている作業
 

@@ -69,6 +69,8 @@ phrase・tuplet・grace・cue・repeat の中身は `new LilyPondExporter { … 
 
 ## 3. 段階 A — 入れ子の exporter の状態を 1 つの共有オブジェクトに（小・リスク低）
 
+> **済み（第740・2026-10-02・`166a3857`）**: `SharedState`（共有・private ctor で受け取る）／`PartFrame`（写すだけ）／`StreamFrame`（写して戻す・同じ record）／`OpenNested()`。双子 998 冊 差 0・full 10745。毒と残る穴（stream frame の網は掃きだけ）は HANDOFF §1.1 第740。
+
 **狙い**: §2.3 の「写し忘れ」という種類の事故をなくす。
 
 1. `LilyPondExporter` のうち、入れ子と**共有する**状態（`_phrases`・`_activePhrases`・`_inlineChordMarks`・`_figureMarks` など）と、**入れ子ごとに写して戻す**状態（octave の枠・`_lastWrittenValue`・`_forceNextDuration` など）を棚卸しする。入れ子を作る箇所をすべて列挙する（`new LilyPondExporter` を grep。`CarryFrameInto` の註では 6 か所）。

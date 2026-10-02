@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第738セッションの経緯
+
+### 1.1 第738セッション（2026-10-02・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第737 の判定: ⑸ の残り 2 つ）。`-Start p738`（HEAD `59c01a3d`・未 push 71）＝full **10676 / 0 / 2 / 10678**（引継ぎと一致）。★ `a616a206`:
+⑴ **エディタの `key!`**: 第737 の「semantic token で小節線の色」は誤り＝LSP は `!` を塗らず、TextMate の文法でも `!` は無色だった。`#force-mark`（`\b(key|time|clef)\s*(!)`）を足し、素の keyword を塗る**全ての文脈の前に** include（`#keywords` と part body 自身の一覧＝part body は `#keywords` より先に自分の `clef`/`key` を塗る）。網 `EditorColouringTests.TheForceMark_IsColouredWithItsKeyword`（文脈ごとに順番を問う・全体の平らな並びでは fonts block の `time` が先に来て問えない）。
+⑵ **MusicXML 書き出し**: 第737 の「変化しない key も書く」も誤り＝`SyncAttributes` は元から書いた値との差だけ書く（書き直しは何も書かない＝page と一致）。足したのは強制だけ: `_forcedKey/_forcedTime/_forcedClef` が `<attributes>` を書かせる（音の後なら次の小節の頭＝他の変化と同じ）。網 `MusicXmlForceMarkTests` 7。
+- GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・CHANGELOG。毒 4 種（書き出しの key／clef の強制・文法の include 2 つ）すべて赤（Lab `sessions/p737/poisons3.ps1`）。掃きは省いた（Core の変更は `!` のある本だけに効く・コーパスに 0 冊）。
+- ⚠ 未決（ユーザー判断）: **MusicXML の import は変化しない `<key>`/`<time>`/`<clef>` を落とす**＝`key!` を書き出した XML を読み戻すと `!` が消える。読み手が同じ属性を繰り返す XML（版ごとに違う）を全部 `key!` にすると、今度は描かれなかったものが描かれる。
+★ `-End p738 -DiffBase 59c01a3d`＝full **10687 / 0 / 2 / 10689**（網 +11）・門 全 OK。7.5: Core `+` 16 行・REF 0／OWN 0（第737 の決定の書き出し側＝新しい逸脱なし）。7.6: 該当なし。7.7: 該当なし。push はユーザー（未 push 72）。⚠ HANDOFF の天井 残り 5.7 KB＝次便の頭で `tools\Fold-ClosedHandoffItems.ps1`。
+判定: 次はユーザーの選択（上の import の未決・5/4 の全小節休符の綴り・⒝ の設計項目）。どれも今回の文脈は要らない＝新しい会話でも差は小さい。
+
 ## 以下は第737セッションの経緯
 
 ### 1.1 第737セッション（2026-10-02・YT-DELL2）
