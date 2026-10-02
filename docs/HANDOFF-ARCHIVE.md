@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第753セッションの経緯
+
+### 1.1 第753セッション（2026-10-02・YT-DELL2）
+
+同じ会話の続き（ユーザー GO: ⑸ validator が pending の弱起を section 境界越しに運ぶ／⑷ (a) 頁が header＋body の同名 section を合成）。`-Start p753`（HEAD `5e585979`・未 push 110）＝full **10755 / 0 / 2 / 10757**。§7 3.5 で第751 を ARCHIVE へ。
+★ `deb49459` **⑸**: `SectionBoundaryBars` の「境界が割った小節は 1 つ」の免除が `partialLength == null` に閉じていて、補完の目標も拍子の 1 小節だけだった。last-bar の腕は宣言された弱起でも走り、後続に**弱起**を補完させる（`LastBarCompletedByEverySuccessor(cell, bar, meter, target)`＝割る拍子と補完の目標を分けた）。first-bar の腕は、前任の唯一の小節がその宣言弱起なら「空いているのは弱起」と読む（型が header の partial 表を持つ）。自分の `partial` を持つ first bar は新しい弱起＝厳密検査のまま。後続が弱起を完成させなければ両方の警告は立つ（対照の網）。
+★ `112ea7f2` **⑷ (a)**: `_sectionState.Sections` の代表は「最初の宣言」だったのを、登録済みが standalone header（`IsStandaloneHeader`＝header 指示だけ）で新しい宣言が **root 直下の body** なら body に。⚠️ 1 回目は by-part の cell にも勝たせて `test/chord-flag`（`section A { partial 8 }`＋`part melody { section A {…} }`）の **data-pos が動いた**（ラベルの飛び先が header 行→body 行）＝svg の掃きは data-pos を伏せるので 0 だった・snapshot が捕まえた→cell は勝たない形に絞った。
+- 計器: **`lysc check` の全冊掃き**（新・`sweep-check.ps1`＝本ごとの診断を base／head で比べる・1 側 約 5 分）: 998 冊で **1 冊**＝`Locked out of Heaven` の 2 警告が消え「No errors found.」、他は同一（1,964→1,963 行）。svg 0・ly 0（⑷ の形はコーパス 0）。full **10759 / 0 / 2**（網 +4: 弱起の跨ぎ 2・header＋body の順 2）。APPROXIMATIONS 変化なし。CHANGELOG Fixes に 2 項。
+- 毒（`sessions/p753/poisons.ps1`）: ① 前任の空きを常に拍子の 1 小節に → **1 赤**／② 旧 `partialLength == null` の門に戻す → **1 赤**／③ 旧「最初の宣言が代表」に戻す → **1 赤**（header 先の順）。
+- 踏んだ罠 2 つ: ⒜ `$"""` の生文字列に `{{` を書いて build が落ちた（`$$"""` が要る）＝Tests.dll が消えて full が「見つからない」→ 掃きは Core だけ建った exe で走っていた（結果は正しかったが読む前に build の exit を見ること）／⒝ 毒スクリプトが書き戻している最中に Edit を当てて「不一致」、さらに毒の後の `--no-build` な full が毒入りの dll を走らせた＝**毒の後は build し直す**（CLAUDE-OPERATIONS の既知の罠を 2 つ踏んだ）。
+★ `-End p753 -DiffBase 5e585979`＝full **10759 / 0 / 2 / 10761**（網 +4）・門 全 OK（HANDOFF 残り 9,127 B・§1 残り 9,754 字）。7.5: Core `+` 78 行・REF 0／OWN 0＝ユーザー決定の意味論（LP 由来の式なし）。7.6: 該当なし。7.7: ⒜ ⑷ の「cell は勝たない」は snapshot が教えた制限＝`chord-flag` が番人／⒝ ⑺ の resume の穴は向きが変わっただけ（註に書いた）。push はユーザー（未 push 112）。
+判定: ⑷⑸ は閉じた。残り＝A3（validator の registry を `SectionHeaders` に・出力不変）→ A2 を測る（xml の掃き）→ C の StreamFrame の網／⑹⑺ は観察。会話を区切るか: (b) 7 便＝**新しい会話が得**（材料は §1.0 ⒜ と Lab `p753/`。A3 から再開できる）。
+
 ## 以下は第752セッションの経緯
 
 ### 1.1 第752セッション（2026-10-02・YT-DELL2）
