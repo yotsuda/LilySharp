@@ -92,7 +92,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
 - ⚠️ **U11（`Hold the Line` の page1 が LP 8 系・Lily# 7 系）＝第547 が「移植できる欠陥は無い」と確定・第573 が lead を閉じた（頁 DP の僅差 0.030576 対 0.031049＝1e-3 級の差でどちらにも倒れる）＝提案しない**（全文は §1.1 第547・第573＝ARCHIVE・Lab `sessions/p547/`・`sessions/p573/u11/`）。重複 mark は第558 が畳んだ（LYS4021）＝page 割りは動かない
-- ★ **双子の穴の残り 25 行（第546 の掃き＝Lab `sessions/p546/warnings-after.tsv`）**: `@fig.*` 13（`\figuremode` の別 context＝設計）／inline `@chord.X` 8（`_inlineChordVars` の無い part＝設計）／既知の自認 4＝**安い残りは無い**
 - ★★★ **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す**（0.074% ＋ 1 ULP の尾）
 - ★★ **⒵⁴ `prefixMarkAnchorX` の解き直し 0.338%**＝**memo は反証済み**（hit 率 0.53%）
 - ★★ **⒳⁶ span の fold が*跨がれた全小節*に入る＝健全側への過剰無効化**（第453 起票・実測: 24 小節・括弧 3→22・解放を消す 1 編集で fold を落とすと hit 1 / miss 12 → hit 5 / miss 8＝4 系ぶん・SVG はバイト同一）。`MeasureContentKey.BucketSpan` が括弧の覆う全小節に `(role, content)` を畳むが、まん中を横切るだけの括弧に依存する cache 値は無い。直すなら**端だけに fold**（`role` 0／1／3 の小節だけ）＝網 `MeasureContentKeySpanTests` は端だけにすると赤＝一緒に書き換える。⚠️ cache の健全性に触る（RULES §5.0）ので、値段（1 打鍵あたりの系の再計算数）を測る前にまず判断
@@ -139,7 +138,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **本当の差は順番**: `c'4@text("dolce") d'@p`（text の後ろの音の dynamic が横で重なる）で LP は p 15.91・dolce 18.57、Lily# は dolce 16.27・p 17.89＝上下が逆（Lily# は 250 の列に source 順で置いていた）。`OutsideStaffStacker` の下側は「dynamics → hairpin → `@text` → 450 の diagram」、上側は「dynamics（250）… ottava（400）→ `@text` → diagram」に。8 形（hairpin・同じ音・上側・2 つの text）すべて LP と 0.01 以内（Lab `sessions/p739/textosp`）。
 - 網 `TextScriptPriorityTests` 6（LP の数字で）。毒 2 種（上下それぞれ旧順）とも赤（`sessions/p739/poisons3.ps1`）。掃き 998 冊・1,199 枚＝差 0（この形の本は無い・`sessions/p739/svg3`）。snapshot も動かない。CHANGELOG（Fixes）。
 ★ `-End p739 -DiffBase 74451431`（3 回目）＝full **10729 / 0 / 2 / 10731**（網 +6）・門 全 OK。7.5: Core `+` 371 行（⑴〜⑶）・REF 2（TextScript 450 の出典＝新規の逸脱なし）／OWN 1（⑵）。7.6: ⒜＝LP の順番の移植。7.7: 該当なし。push はユーザー（未 push 79）。
-判定: 次はユーザーの選択（§1.0 ⒝ の残り: 双子の穴・ピアノ譜の小節線 0.05、perf の島は一時停止中）。今回の文脈は要らない＝(c) 無関係な島で差は小さい。既定どおりこの会話で続けてよい。
+⑷ ユーザー選択「双子」＝§1.0 ⒝「双子の穴の残り 25 行」を閉じた。★ `4b83d43b`:
+- **25 行は一部の本の数だった**: 全 998 冊の双子の掃き（Lab `sessions/p739/twin/sweep-ly.ps1`）では「dropped (out of scope)」が **8,910 行**（`@notehead` 8,018・`@figuredBass` 800＋13・和音の音の注釈 65 など）。
+- `@chord` 8 行は**見かけ**: phrase の中身は入れ子の exporter が part の外で書くので、頁の ChordNames が載せた印でも「落ちた」と言っていた＝印の位置（`ChordNameItem.SourcePosition`）で照合・`CarryFrameInto` で入れ子に渡す。
+- `@figuredBass`: 頁のモデルから `\figuremode`（item の onset・次の group か小節末まで・`<6 4>` `6+` `6-` `6!` `_+`）＋譜表の下の `\new FiguredBass`。頁の figures は LP と同じ高さ（最下線から 2.956）。held（`_`）は空白で書いて警告。
+- `@notehead(x|diamond|triangle|slash|xcircle)`＝`\once \override NoteHead.style = #'…`（音符・和音の前）。頁の glyph は LP の `noteheads.s2cross` 等＝絵で同じ形を確認（`sessions/p739/twin/nh`）。
+- 和音の音の弦番号（`<a,\2 d>`＝ユーザーの tab 3 冊）と script（chord-scripts.ly の `<c-. e-.>`）を音ごとに。
+- 結果: 8,910 → **801 行**（800＝score の無い計測用 2 冊 `audit/lpreg/perf-figbass*`・頁のモデルが無い＝inline chord と同じ既存の制限／1＝和音の音の `@stemUp`）。双子の変化 19 冊はすべて LP 2.26.0 で通る。網 3 クラス 16 本（`LilyPondExporterFiguredBassTests`・`…NoteheadTests`・`…ChordMemberTests`）、毒 6 種すべて赤（`sessions/p739/poisons4.ps1`・`poisons5.ps1`）。CHANGELOG（Fixes）。
+★ `-End p739 -DiffBase 74451431`（4 回目）＝full **10745 / 0 / 2 / 10747**（網 +16）・門 全 OK。7.5: Core `+` 535 行（⑴〜⑷）・REF 4／OWN 1。7.6: ⒜＝双子の配管（頁のモデルを読む既存の形・LP の綴り）。7.7: 頁のモデルを読む双子の流れが 3 つ（chords・figures・lyrics）＝同じ形の 3 つの写し（小節を s で埋める処理が 2 つ）。push はユーザー（未 push 81）。
+判定: 次はユーザーの選択（§1.0 ⒝ の残り: ピアノ譜の小節線 0.05、perf の島は一時停止中）。今回の文脈は要らない＝(c) 無関係な島で差は小さい。既定どおりこの会話で続けてよい。
 
 
 ## 以下は第738セッションの経緯
