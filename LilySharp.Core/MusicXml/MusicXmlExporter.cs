@@ -1968,6 +1968,8 @@ public sealed class MusicXmlExporter
         // moment the header stopped being played).
         if (_sectionTempo is { } sectionTempo && isFirst)
             ProcessTempo(sectionTempo);
+        // The bar the play opens in — what a split bar's two halves must add up to.
+        int barTicksAtStart = _bars.SenzaMisura ? 0 : 4 * DivisionsPerQuarter * _bars.Meter.Beats / _bars.Meter.BeatType;
         StartNewMeasure(addAttributes: isFirst);
         if (_sectionTempo is { } laterSectionTempo && !isFirst)
             ProcessTempo(laterSectionTempo);
@@ -1994,6 +1996,7 @@ public sealed class MusicXmlExporter
         // A hairpin the carry rule cuts stops at this play's end, before the bar is flushed.
         CloseCutWedge();
         FlushCurrentMeasure();
+        ContinueSplitBar(measuresBefore, barTicksAtStart);
         AttachLyrics(_currentPart!, measuresBefore, lyricsBlocks);
 
         // The block's first onset (what a tie carried into this play stops on), and what it
@@ -2237,6 +2240,40 @@ public sealed class MusicXmlExporter
     // The time a measure's notes fill: the furthest point any voice reaches (a <backup>
     // rewinds for the next voice; chord members and grace notes take no time; raw elements
     // — directions, harmony — none either).
+    /// <summary>
+    /// The bar a section boundary splits is ONE bar for the numbering: a play whose first bar
+    /// is the rest of the bar the play before it left short — the two together exactly one
+    /// bar of the meter the play opens in, neither a declared pickup — takes the number of
+    /// that bar and is implicit (a reader displays no number on it), and the play's later
+    /// bars follow from there. The page's rule (MeasureCollector.SectionBoundaryContinuations,
+    /// BarNumberEngraver.NumberMeasures: <c>ContinuesBar</c>): written that way when a repeat
+    /// sign or a volta bracket stands mid-bar — <c>|: A [1. B] :| [2. C]</c> where A ends on
+    /// the half bar and every ending opens with the other half. A declared <c>partial</c> is a
+    /// pickup bar of its own and counts, as it does on the page. A second ending's first bar
+    /// follows the FIRST ending's last bar in this document (the body is written once, under
+    /// repeat bar lines), which is a full bar, so it is numbered on — as the page numbers it
+    /// ("bar numbers continue through alternatives"). Until 2026-10-03 (p759, owner's GO) the
+    /// MusicXML numbered both halves: 1, 2, 3 where the page prints 1, 2, 2 and the twin's
+    /// LilyPond 1, 2, 3.
+    /// </summary>
+    private void ContinueSplitBar(int firstIndex, int barTicks)
+    {
+        var measures = _currentPart!.Measures;
+        if (barTicks <= 0 || firstIndex <= 0 || firstIndex >= measures.Count)
+            return;
+        var prev = measures[firstIndex - 1];
+        var first = measures[firstIndex];
+        if (prev.Implicit || first.Implicit)
+            return;
+        int head = ElapsedTicks(prev), tail = ElapsedTicks(first);
+        if (head <= 0 || tail <= 0 || head >= barTicks || head + tail != barTicks)
+            return;
+        first.Implicit = true;
+        for (int i = firstIndex; i < measures.Count; i++)
+            measures[i].Number -= 1;
+        _measureNumber -= 1;
+    }
+
     private static int ElapsedTicks(MusicXmlMeasure measure)
     {
         int at = 0, furthest = 0;

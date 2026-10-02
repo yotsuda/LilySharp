@@ -341,6 +341,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A bar a section boundary splits is one bar in the MusicXML's numbering, as on the
+  page.** A section opening with the rest of the bar the section before it left short — the
+  shape a repeat sign or a volta bracket standing mid-bar is written in, `|: A [1. B] :| [2. C]`
+  — now gives that first bar the number of the bar it completes, as an implicit measure
+  (readers display no number on it), and numbers on from there: 1, 2, 2, 3 where the export
+  wrote 1, 2, 3, 4. A declared `partial` stays a pickup bar of its own, as on the page. Three
+  of the 1,199 exports in the reference corpus change (`Disco Inferno`), in their `number`
+  and `implicit` attributes only.
 - **MusicXML measure numbers no longer skip one after a `voice { } { }` span that ends on a
   bar line.** The empty measure that bar line opened was never written but kept its number,
   so the bar after the span came out as 4 after 1, 2. Ten of the 1,199 exports in the

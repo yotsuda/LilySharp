@@ -49,6 +49,86 @@ public class MusicXmlMeasureNumberingTests
         Assert.Equal(new[] { 1, 2, 3 }, numbers);
     }
 
+    private static (int Number, bool Implicit)[] NumbersAndImplicit(string source)
+        => new MusicXmlExporter().Export(SyntaxTree.Parse(source))
+            .Parts.Single().Measures.Select(x => (x.Number, x.Implicit)).ToArray();
+
+    /// <summary>
+    /// The bar a section boundary splits is one bar: B opens with the half bar A left short,
+    /// with no <c>partial</c>, so its first bar takes A's number 2, implicit, and the bar
+    /// after it is 3 — the page's 1, 2, 2, 3 (MeasureCollector.SectionBoundaryContinuations).
+    /// Until 2026-10-03 the MusicXML wrote 1, 2, 3, 4.
+    /// </summary>
+    [Fact]
+    public void ASectionOpeningWithTheRestOfTheBarBefore_ContinuesItsNumber()
+    {
+        var m = NumbersAndImplicit("""
+            octave absolute
+            time 4/4
+            part m { clef treble }
+            section A { m { c'1 | c'2 | } }
+            section B { m { d'2 | e'1 | } }
+            form main { A B }
+            score main { staff m }
+            """);
+        Assert.Equal(new[] { (1, false), (2, false), (2, true), (3, false) }, m);
+    }
+
+    /// <summary>The other control: a short first bar that does NOT complete the bar before
+    /// it (a half and a quarter) is a short bar of its own — numbered on, not implicit — as
+    /// the page numbers it (the two must add up to exactly one bar).</summary>
+    [Fact]
+    public void AShortFirstBarThatDoesNotCompleteTheBarBefore_IsNotContinued()
+    {
+        var m = NumbersAndImplicit("""
+            octave absolute
+            time 4/4
+            part m { clef treble }
+            section A { m { c'1 | c'2 | } }
+            section B { m { d'4 | e'1 | } }
+            form main { A B }
+            score main { staff m }
+            """);
+        Assert.Equal(new[] { (1, false), (2, false), (3, false), (4, false) }, m);
+    }
+
+    /// <summary>The control: a DECLARED pickup is a pickup bar of its own and counts, on the
+    /// page (1, 2, 3, 4) as here — only its number is hidden (implicit).</summary>
+    [Fact]
+    public void ADeclaredPickupAfterAShortBar_IsABarOfItsOwn()
+    {
+        var m = NumbersAndImplicit("""
+            octave absolute
+            time 4/4
+            part m { clef treble }
+            section A { m { c'1 | c'2 | } }
+            section B { partial 2  m { d'2 | e'1 | } }
+            form main { A B }
+            score main { staff m }
+            """);
+        Assert.Equal(new[] { (1, false), (2, false), (3, true), (4, false) }, m);
+    }
+
+    /// <summary>The shape the rule was written for: the repeat sign mid-bar. The first
+    /// ending continues the body's half bar (2, implicit); the second ending follows the
+    /// first ending's full bar in the document and is numbered on (4), as the page numbers it
+    /// ("bar numbers continue through alternatives") — 1, 2, 2, 3, 4, 5.</summary>
+    [Fact]
+    public void AVoltaOpeningMidBar_ContinuesTheBodysNumber_AndTheSecondEndingCountsOn()
+    {
+        var m = NumbersAndImplicit("""
+            octave absolute
+            time 4/4
+            part m { clef treble }
+            section A { m { c'1 | c'2 | } }
+            section B { m { d'2 | e'1 | } }
+            section C { m { f'2 | g'1 | } }
+            form main { |: A [1. B] :| [2. C] }
+            score main { staff m }
+            """);
+        Assert.Equal(new[] { (1, false), (2, false), (2, true), (3, false), (4, false), (5, false) }, m);
+    }
+
     /// <summary>A span whose voices do NOT end on a bar line hands back no empty measure: the
     /// bar after it is the same bar continued — 1, 2 (the control, which never moved).</summary>
     [Fact]
