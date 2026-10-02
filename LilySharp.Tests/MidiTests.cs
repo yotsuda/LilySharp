@@ -500,6 +500,80 @@ public class MidiTests
         Assert.All(notes, n => Assert.Equal(velocity, n.Velocity));
     }
 
+    /// <summary>
+    /// A dynamic belongs to the PART it is written in, and stays with that part into its
+    /// later sections: LilyPond's Dynamic_performer is consisted in the Voice
+    /// (ly/performer-init.ly:100-103), so one staff's <c>\p</c> leaves every other staff's
+    /// volume where it was. Until 2026-10-02 the exporter kept ONE running velocity across
+    /// the part lanes it plays one after another, and a <c>@p</c> in one part leaked into
+    /// whichever lane played next — the other part of the same section (first row), or the
+    /// first part of the next section (second row; owner's report, Lab sessions/p748/probes/dyn).
+    /// </summary>
+    /// <para>Both spellings, because they are two lanes in the exporter: by-section part blocks
+    /// (<c>PlaySectionCore</c>) and by-part sections (<c>PlayInPart</c>).</para>
+    [Theory]
+    [InlineData("rh", "lh", true)]
+    [InlineData("lh", "rh", true)]
+    [InlineData("rh", "lh", false)]
+    [InlineData("lh", "rh", false)]
+    public void ADynamic_StaysInItsPart_AndFollowsItIntoTheNextSection(string marked, string other, bool bySection)
+    {
+        static string Bar(string part, string mark)
+            => part == "rh" ? $"c'4{mark} d' e' f' |" : $"c4{mark} d e f |";
+        string rhA = Bar("rh", marked == "rh" ? "@p" : ""), lhA = Bar("lh", marked == "lh" ? "@p" : "");
+        string rhB = Bar("rh", ""), lhB = Bar("lh", "");
+        var source = bySection
+            ? $"section A {{ rh {{ {rhA} }} lh {{ {lhA} }} }} section B {{ rh {{ {rhB} }} lh {{ {lhB} }} }} form main {{ A B }}"
+            : $"part rh {{ section A {{ {rhA} }} section B {{ {rhB} }} }} part lh {{ section A {{ {lhA} }} section B {{ {lhB} }} }} form main {{ A B }}";
+        var midi = new MidiExporter().Export(SyntaxTree.Parse(source));
+
+        var markedNotes = midi.Tracks.Single(t => t.Name == marked).Notes;
+        var otherNotes = midi.Tracks.Single(t => t.Name == other).Notes;
+        Assert.Equal(8, markedNotes.Count);
+        Assert.Equal(8, otherNotes.Count);
+        Assert.All(markedNotes, n => Assert.Equal(50, n.Velocity)); // p, in A and still in B
+        Assert.All(otherNotes, n => Assert.Equal(80, n.Velocity));  // the default, in A and in B
+    }
+
+    /// <summary>A one-sided <c>:|</c> in the form replays the piece from its beginning with the
+    /// state the piece started from (PlayForm / RepeatFromTheBeginning), and the per-part
+    /// velocity lanes are part of that state: the replayed first section opens the part at
+    /// the default again, not at the dynamic its last section left.</summary>
+    [Fact]
+    public void AFromTheBeginningRepeat_ReopensEachPartAtItsOpeningVelocity()
+    {
+        var source = "section A { rh { c'4 d'@p e' f' | } } section B { rh { c'4@f d' e' f' | } } form main { A B :| }";
+        var midi = new MidiExporter().Export(SyntaxTree.Parse(source));
+
+        var notes = midi.Tracks.Single(t => t.Name == "rh").Notes.OrderBy(n => n.StartTick).Select(n => n.Velocity).ToArray();
+        // A: 80 then p; B: f; A again: 80 then p; B again: f.
+        Assert.Equal(new[] { 80, 50, 50, 50, 95, 95, 95, 95, 80, 50, 50, 50, 95, 95, 95, 95 }, notes);
+    }
+
+    /// <summary>A chord row writes no dynamic, so it accompanies at 70% of the DEFAULT —
+    /// a <c>@p</c> in the melody does not quieten it, in its own section or the next one
+    /// (the row plays before the part lanes of its section, and used to read whatever the
+    /// previous lane had left in the running velocity).</summary>
+    [Fact]
+    public void AChordRow_DoesNotTakeThePartsDynamic()
+    {
+        var source = @"
+            time 4/4
+            part melody
+            section A { melody { c'4@p d' e' f' | g'1 | } chords harmony { C . G7 . | Dm/F | } }
+            section B { melody { c'4 d' e' f' | } chords harmony { C | } }
+            form main { A B }
+            score main { chords harmony  staff melody }";
+        var midi = new MidiExporter().Export(SyntaxTree.Parse(source));
+
+        var row = midi.Tracks.Single(t => t.Name == "harmony (chords)").Notes;
+        var melody = midi.Tracks.Single(t => t.Name == "melody").Notes;
+        Assert.NotEmpty(row);
+        Assert.Equal(9, melody.Count);
+        Assert.All(row, n => Assert.Equal(56, n.Velocity));    // 80 * 7 / 10, in A and in B
+        Assert.All(melody, n => Assert.Equal(50, n.Velocity)); // p, in A and still in B
+    }
+
     [Fact]
     public void ExportWithStaccato()
     {

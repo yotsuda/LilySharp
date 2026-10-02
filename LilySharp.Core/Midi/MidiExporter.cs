@@ -120,7 +120,27 @@ public sealed class MidiExporter
     }
     private Fraction _defaultDuration = Fraction.Quarter;
     private int _tempo = 120;
-    private int _velocity = 80;
+    /// <summary>The velocity a note sounds at when it carries no dynamic of its own — the
+    /// last dynamic written in the PART being played, else <see cref="DefaultVelocity"/>.</summary>
+    private int _velocity = DefaultVelocity;
+    private const int DefaultVelocity = 80;
+
+    // The running velocity PER PART — the lane twin of _partPitchLanes for dynamics. A part's
+    // lane opens at the velocity its last lane closed with (a `@p` in section A still sounds
+    // in that part's section B, as the page's mark stands until the next one) and a part
+    // never heard before opens at the default. Not cleared at a section boundary: a dynamic
+    // is not among the things a section reopens (the octave frame and the note value are).
+    // LILYPOND-REF: ly/performer-init.ly:100-103 Dynamic_performer — the performer that turns
+    //   dynamics into volume is consisted in the VOICE, so each voice carries its own, and
+    //   a `\p` in one staff leaves every other staff's volume where it was.
+    // ⚠️ Until 2026-10-02 there was ONE running velocity for the whole export, and the lanes
+    // are played one after another: a `@p` in one part leaked into whichever lane played
+    // next — the other part of the same section, or the first part of the next section
+    // (owner's report; Lab sessions/p748/probes/dyn: both parts at 50 where one was marked).
+    private readonly Dictionary<string, int> _partVelocity = new();
+
+    private int LaneVelocity(string part)
+        => _partVelocity.TryGetValue(part, out int v) ? v : DefaultVelocity;
     private readonly Stack<(int numerator, int denominator)> _tupletStack = new();
 
     // The bar's context — the meter in force, the score's home meter, the pickup pending —
@@ -442,6 +462,8 @@ public sealed class MidiExporter
         _soundingChordRows = SoundingChordRows(tree, Score, Form);
         _soundingParts = SoundingParts(_playedSpec);
         _partPitchLanes.Clear();
+        _partVelocity.Clear();
+        _velocity = DefaultVelocity;
         _sourceOrdinals = new Dictionary<int, int>();
         ProcessNode(_root, mainTrack, conductorTrack);
 
@@ -886,6 +908,7 @@ public sealed class MidiExporter
         _currentNoteName = pitch.NoteName;
         _currentOctave = pitch.Octave;
         _defaultDuration = pitch.Dur;
+        _velocity = LaneVelocity(partName);
         _partOctaveAnchor = anchor;
         _partAbsoluteBase = absBase;
         _currentTimbre = PartTimbre(partName);
@@ -901,6 +924,7 @@ public sealed class MidiExporter
         _currentTransposeSemitones = PartPlaybackShift(partName);
         body();
         _partPitchLanes[partName] = (_currentNoteName, _currentOctave, _defaultDuration);
+        _partVelocity[partName] = _velocity;
         (_partOctaveAnchor, _partAbsoluteBase) = (4, 4);
         _currentTimbre = 0;
         _currentTransposeSemitones = 0;
@@ -1046,6 +1070,7 @@ public sealed class MidiExporter
                 _currentNoteName = pitch.NoteName;
                 _currentOctave = pitch.Octave;
                 _defaultDuration = pitch.Dur;
+                _velocity = LaneVelocity(pname);
                 _partOctaveAnchor = anchor;
                 _partAbsoluteBase = absBase;
                 _currentTimbre = PartTimbre(pname);
@@ -1064,6 +1089,7 @@ public sealed class MidiExporter
                 _pendingGraceSteal = 0;
                 _currentPart = outerPart;
                 _partPitchLanes[pname] = (_currentNoteName, _currentOctave, _defaultDuration);
+                _partVelocity[pname] = _velocity;
                 _currentTick += PaddingTicks(sectionPart);
                 tickLanes[pname] = _currentTick;
                 sectionEnd = Math.Max(sectionEnd, _currentTick);
@@ -1209,7 +1235,9 @@ public sealed class MidiExporter
     {
         string part = rowName + ChordRowTrackSuffix;
         int timbre = PartTimbre(part);
-        int velocity = Math.Max(1, _velocity * 7 / 10);
+        // The row's OWN lane: a row writes no dynamic, so this is the default — not whatever
+        // the part lane played before it left in _velocity (the leak the per-part lanes close).
+        int velocity = Math.Max(1, LaneVelocity(part) * 7 / 10);
         int barTicks = FractionToTicks(_bars.MeterLength);
         // A section's pickup shortens the row's FIRST bar as it shortens every part's (the
         // page's pickup measure): amazing-grace's row opens with an empty `|` over the
@@ -1295,6 +1323,7 @@ public sealed class MidiExporter
         // '|: … :|' body never rewinds past its own start.
         var pieceOrdinals = new Dictionary<int, int>(_sourceOrdinals);
         var piecePitchLanes = new Dictionary<string, (int, int, Fraction)>(_partPitchLanes);
+        var pieceVelocityLanes = new Dictionary<string, int>(_partVelocity);
         var pieceDuration = _defaultDuration;
         int pieceVelocity = _velocity;
 
@@ -1310,7 +1339,7 @@ public sealed class MidiExporter
             // everything before it, once.
             if (items[i] is FormWalk.LoneRepeatEnd)
                 RepeatFromTheBeginning(items, i, track, conductorTrack,
-                    pieceOrdinals, piecePitchLanes, pieceDuration, pieceVelocity);
+                    pieceOrdinals, piecePitchLanes, pieceVelocityLanes, pieceDuration, pieceVelocity);
             else
                 PlayFormItem(items[i], track, conductorTrack);
         }
@@ -1360,6 +1389,7 @@ public sealed class MidiExporter
         MidiTrack track, MidiTrack conductorTrack,
         Dictionary<int, int> pieceOrdinals,
         Dictionary<string, (int, int, Fraction)> piecePitchLanes,
+        Dictionary<string, int> pieceVelocityLanes,
         Fraction pieceDuration, int pieceVelocity)
     {
         // The replayed music is ENGRAVED once, so its printed copies are the ones already
@@ -1369,6 +1399,9 @@ public sealed class MidiExporter
         _partPitchLanes.Clear();
         foreach (var kv in piecePitchLanes)
             _partPitchLanes[kv.Key] = kv.Value;
+        _partVelocity.Clear();
+        foreach (var kv in pieceVelocityLanes)
+            _partVelocity[kv.Key] = kv.Value;
         _defaultDuration = pieceDuration;
         _velocity = pieceVelocity;
 
