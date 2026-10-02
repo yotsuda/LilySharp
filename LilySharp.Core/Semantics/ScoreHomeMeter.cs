@@ -28,9 +28,10 @@ namespace LilySharp.Core.Semantics;
 /// </summary>
 /// <remarks>
 /// ⚠️ THE RULE IS THE COLLECTOR'S AND THIS IS ITS TWIN.
-/// <c>MeasureCollector.ProcessSectionPrologue</c> owns it for the page (against the
-/// per-voice snapshot <c>_sectionResetTimeBeats</c>, taken before any section music is
-/// walked); <c>MeasureValidator</c> agrees through the per-block scoping in
+/// <c>MeasureCollector.ProcessSectionPrologue</c> owns it for the page (every voice's builder
+/// is armed with the score-level meter as its home, <c>MeasureBuilder.SetHomeMeter</c> from
+/// <c>MeasureCollector._scoreTime</c>, and <c>MeasureBuilder.RevertMeterToHome</c> reverts to
+/// it); <c>MeasureValidator</c> agrees through the per-block scoping in
 /// <c>ValidateItemsScoped</c>. The three EXPORTERS did not: measured 2026-08-31 on
 /// <c>section A { c'4 d e f | time 3/4 key g major g a b | } section B { c'4 d e f | }</c>,
 /// the page draws bar 3 in 4/4 with a natural, and

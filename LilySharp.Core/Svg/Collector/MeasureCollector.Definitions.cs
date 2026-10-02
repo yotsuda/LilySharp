@@ -502,9 +502,10 @@ public sealed partial class MeasureCollector
         // …and the layout's shape table (the chords that draw wherever they are named).
         _chordDiagramTable = _meta.LayoutPlan.ChordDiagramTable;
         _chordNameCollector.Table = _chordDiagramTable;
-        // …and the score-level meter, while _meta still holds it: every voice's section
-        // resets revert to THIS (CollectMeasures), not to whatever _meta holds when that
-        // voice starts — the first voice's opening `time` has rewritten it by then.
+        // …and the score-level meter, while _meta still holds it: every voice's builder is
+        // armed with THIS as its home (CollectMeasures, MeasureBuilder.SetHomeMeter), not with
+        // whatever _meta holds when that voice starts — the first voice's opening `time` has
+        // rewritten it by then.
         _scoreTime = (_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura);
         // The section HEADER registry (Semantics.SectionHeaders, the one spelling): a section
         // that carries its own key / time / tempo / partial but no inline music applies those

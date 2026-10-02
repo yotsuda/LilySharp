@@ -687,23 +687,20 @@ public sealed partial class MeasureCollector
     // into the next section, nor into the same section reused elsewhere in the form.
     private string _sectionResetClef = "treble";
 
-    // This voice's score-level time signature, snapshotted at collection start (before any
-    // section music is walked). A section boundary reverts the running meter to it — like
-    // key/clef — so a mid-section `time` change cannot leak into the next section. The
-    // snapshot is essential: mid-music time changes MUTATE _meta.TimeBeats, so by the next
-    // boundary _meta no longer holds the score-level meter.
-    private int _sectionResetTimeBeats = 4;
-    private int _sectionResetTimeBeatType = 4;
-    private string? _sectionResetTimeBeatsText;
-    private bool _sectionResetTimeSenzaMisura;
-
-    // The score-level meter as the file-level walk left it (CollectDefinitions), which
-    // the snapshot above is taken FROM for every voice. ⚠️ Not _meta at the voice's start:
-    // a `time` at the piece's opening (in the music, or in the opening section's header)
-    // rewrites _meta.Time* so the opening signature reads it, and the NEXT voice then
-    // took that as its score meter — its later sections never reverted, and a grand
-    // staff's second staff lost the revert the first staff drew (2026-09-26).
+    // The score-level meter as the file-level walk left it (CollectDefinitions) — the HOME
+    // every voice's builder is armed with (MeasureBuilder.SetHomeMeter, BarContext.HomeMeter),
+    // which a section boundary with no section meter reverts to, like key/clef, so a
+    // mid-section `time` cannot leak into the next section. ⚠️ Not _meta at the voice's start:
+    // mid-music time changes MUTATE _meta.TimeBeats, and a `time` at the piece's opening (in
+    // the music, or in the opening section's header) rewrites _meta.Time* so the opening
+    // signature reads it — the NEXT voice then took that as its score meter, its later
+    // sections never reverted, and a grand staff's second staff lost the revert the first
+    // staff drew (2026-09-26). (Until stage C6 each voice copied this into four
+    // _sectionResetTime* fields the prologue compared against; the builder's context holds it now.)
     private (int Beats, int BeatType, string? BeatsText, bool SenzaMisura) _scoreTime = (4, 4, null, false);
+
+    /// <summary>The home meter as the bar context keeps it (<see cref="_scoreTime"/>).</summary>
+    private Meter HomeMeterOfScore => new(_scoreTime.Beats, _scoreTime.BeatType, _scoreTime.BeatsText);
 
     // The grob-override state a section boundary reverts to (the grob analogue of
     // _sectionResetClef, but a SET): the part-default values — global + this voice's
@@ -2749,6 +2746,7 @@ public sealed partial class MeasureCollector
             // its builder reads the split table at the same keys the primary stream does.
             LogicalIndexBase = logicalIndexBase,
         };
+        builder.SetHomeMeter(HomeMeterOfScore, _scoreTime.SenzaMisura);
         // The file-level pickup arms a sub-collection only when it really sits
         // at the piece's start (a mid-piece voice{} span must not shorten its
         // own first bar).
@@ -3109,11 +3107,9 @@ public sealed partial class MeasureCollector
         _sectionResetKeyCustom = _meta.KeyCustom;
         // Same for the clef: the part default a section without its own clef reverts to.
         _sectionResetClef = _meta.Clef;
-        // And the score-level meter: the value a section without its own time reverts to —
-        // the file-level one, which _meta no longer holds once an earlier voice's opening
-        // `time` rewrote it (see _scoreTime).
-        (_sectionResetTimeBeats, _sectionResetTimeBeatType, _sectionResetTimeBeatsText,
-            _sectionResetTimeSenzaMisura) = _scoreTime;
+        // The score-level meter a section without its own time reverts to is the file-level
+        // one, which _meta no longer holds once an earlier voice's opening `time` rewrote it
+        // (see _scoreTime) — the builder below is armed with it as its home (SetHomeMeter).
         // …and this voice STARTS in it too: the builder below is armed from _meta, and an
         // earlier voice's opening `time` left its own meter there — the second staff then
         // began in 3/4, its section reset drew a 4/4 "change", and its own opening `time
@@ -3141,6 +3137,7 @@ public sealed partial class MeasureCollector
             MidBarBreakRequests = _midBarBreakRequests,
             MidBarBreakRefusals = _midBarBreakRefusals,
         };
+        builder.SetHomeMeter(HomeMeterOfScore, _scoreTime.SenzaMisura);
         if (_filePartial is { } filePickup)
             builder.SetPartial(filePickup); // top-level partial N arms every voice
         ResetAccidentalMemory();

@@ -544,6 +544,45 @@ internal sealed class MeasureBuilder
     /// placeholder spacer but nothing auto-completes until a metered <c>time</c> follows.</summary>
     public void SetMeter(Meter meter, bool senzaMisura = false) => FreezeOrThaw(meter, senzaMisura);
 
+    /// <summary>The score-level meter this voice's sections revert to (<see cref="RevertMeterToHome"/>)
+    /// — the file-level <c>time</c> as the definitions walk left it, armed by the collector for
+    /// every voice (<c>MeasureCollector._scoreTime</c>; not <c>_meta</c> at the voice's start,
+    /// which an earlier voice's opening <c>time</c> has rewritten by then).</summary>
+    public void SetHomeMeter(Meter home, bool senzaMisura)
+    {
+        _bars.HomeMeter = home;
+        _bars.HomeSenzaMisura = senzaMisura;
+    }
+
+    /// <summary>
+    /// A section boundary with no section meter: the running meter reverts to the SCORE level
+    /// (<see cref="SetHomeMeter"/>), for the same self-containment as key and clef — a
+    /// mid-section <c>time</c> cannot leak past the section end, nor into the same section
+    /// reused elsewhere by the form. Only redrawn when a prior section actually left a different
+    /// meter (<see cref="BarContext.LeftHomeByLength"/>), so the common case emits nothing and
+    /// the first section is a no-op; the redraw makes the revert visible instead of silently
+    /// leaving the previous signature on the staff. <c>time none</c> is part of the comparison:
+    /// a section that ended unmetered against a 4/4 score meter differs, and the 4/4 is redrawn
+    /// — LilyPond prints a grob for every \time event (measured 2.26.0,
+    /// scratch/p354/lp/senza-reprint.ly: `\time 4/4 … \time 4/4` prints twice). A
+    /// <c>time none</c> home carries no ink and no width (<see cref="TimeSignatureChangeItem.Blanked"/>).
+    /// </summary>
+    public void RevertMeterToHome(int sourcePosition)
+    {
+        if (!_bars.LeftHomeByLength)
+            return;
+        var home = _bars.HomeMeter;
+        bool senza = _bars.HomeSenzaMisura;
+        AddItem(new TimeSignatureChangeItem(
+            new TimeSignature(home.Beats, home.BeatType, home.BeatsText, senza), sourcePosition)
+        {
+            Blanked = senza,
+        });
+        // For a metered home the change item above has already moved the meter (AddItem); this
+        // adds the pair for a `time none` home, whose change item carries none (p748 poison 4).
+        SetMeter(home, senza);
+    }
+
     /// <summary>The one place the clock freezes and thaws (see <c>_frozenPosition</c>): a
     /// <c>time none</c> arriving on a metered clock freezes it at its current reading; a
     /// metered <c>time</c> thaws it. A second <c>time none</c> inside a cadenza changes nothing.

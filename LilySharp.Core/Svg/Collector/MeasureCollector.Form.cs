@@ -557,27 +557,11 @@ public sealed partial class MeasureCollector
         }
         else
         {
-            // No section meter: revert the running meter to the SCORE level. Compare (and
-            // redraw) against the SNAPSHOT, not _meta.Time - a mid-music `time` in a prior
-            // section mutates _meta (which also drives the opening signature), so _meta no
-            // longer holds the score meter. Only redraw when the previous section actually
-            // left a different meter on the staff. `time none` is part of the comparison: a
-            // section that ended unmetered against a 4/4 score meter differs, and the 4/4
-            // is redrawn — LilyPond prints a grob for every \time event (measured 2.26.0,
-            // scratch/p354/lp/senza-reprint.ly: `\time 4/4 … \time 4/4` prints twice).
-            var resetMeter = new Meter(_sectionResetTimeBeats, _sectionResetTimeBeatType, _sectionResetTimeBeatsText);
-            if (builder.CurrentMeasureLength != resetMeter.Length
-                || builder.SenzaMisura != _sectionResetTimeSenzaMisura)
-            {
-                builder.AddItem(new TimeSignatureChangeItem(
-                    new TimeSignature(_sectionResetTimeBeats, _sectionResetTimeBeatType,
-                        _sectionResetTimeBeatsText, _sectionResetTimeSenzaMisura),
-                    sectionPos)
-                {
-                    Blanked = _sectionResetTimeSenzaMisura,
-                });
-                builder.SetMeter(resetMeter, _sectionResetTimeSenzaMisura);
-            }
+            // No section meter: revert the running meter to the SCORE level — the home the
+            // builder was armed with (MeasureBuilder.SetHomeMeter, from _scoreTime: not
+            // _meta.Time, which a mid-music `time` in a prior section has mutated). Redrawn
+            // only when the previous section left a different meter (MeasureBuilder.RevertMeterToHome).
+            builder.RevertMeterToHome(sectionPos);
         }
 
         // A section can state its own tempo, printed as a metronome mark at its start.

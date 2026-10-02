@@ -41,8 +41,8 @@ public readonly record struct Meter(int Beats, int BeatType, string? BeatsText =
 /// </summary>
 /// <remarks>
 /// ⚠️ THE RULES ARE THE PAGE'S (<c>MeasureBuilder</c>: <c>SetPartial</c> /
-/// <c>SpendPartial</c> at every measure close / <c>EmitEmptyMeasure</c>'s "the meter in force";
-/// <c>MeasureCollector.ProcessSectionPrologue</c>: the section revert, <see cref="ScoreHomeMeter"/>)
+/// <c>SpendPartial</c> at every measure close / <c>EmitEmptyMeasure</c>'s "the meter in force" /
+/// <c>RevertMeterToHome</c>: the section revert, <see cref="ScoreHomeMeter"/>)
 /// and every output used to keep its own copy of them in its own fields — the MIDI's
 /// <c>_timeNumerator / _timeDenominator / _partial / _homeTimeBeats</c>, the MusicXML's, the
 /// twin's — so a rule added to one (the bare <c>R</c>, 2026-10-02) had to be added to six places,
@@ -53,7 +53,8 @@ public readonly record struct Meter(int Beats, int BeatType, string? BeatsText =
 /// reading, not a pending state, and its header registries keep their own rule — see
 /// <see cref="SectionHeaders"/>), and last the page itself (C5, whole: the meter, <c>time none</c>
 /// and the pickup; the clock it freezes under <c>time none</c> is the page's own state,
-/// <c>MeasureBuilder._frozenPosition</c>). Every reader is on it now.
+/// <c>MeasureBuilder._frozenPosition</c>; C6: the home it reverts to at a section boundary,
+/// armed per voice from the collector's score-level meter). Every reader is on it now.
 /// <para>
 /// ⚠️ SPELLINGS THAT STILL DIFFER between the outputs, recorded here so the move onto one type
 /// does not paper over them (each is a separate decision, with its own net): a <c>time</c> written
@@ -65,7 +66,10 @@ public readonly record struct Meter(int Beats, int BeatType, string? BeatsText =
 /// itself when the length is reached (<c>MusicXmlExporter.MaybeClosePickup</c>, with
 /// <c>_pendingPickup</c> / <c>_pickupLength</c>), where the MIDI, the twin and the page spend it at
 /// the first bar line that closes after it — so the MusicXML does not read <see cref="Partial"/> yet.
-/// A second <c>partial</c> before the pickup bar closes REPLACES the pending one in all of them
+/// A section that states no meter reverts to the home in all of them; whether that move is
+/// WRITTEN they ask differently — the pair here (<see cref="OpenSection"/>), the bar's reduced
+/// length and <c>time none</c> on the page (<see cref="LeftHomeByLength"/>: 2/2 after 4/4 draws
+/// nothing and stays 2/2). A second <c>partial</c> before the pickup bar closes REPLACES the pending one in all of them
 /// (until C5 this type recorded the page as keeping the first: its <c>_partialRestore ??=</c>
 /// parked the METER to restore, not the first pickup — the pickup field was overwritten). Under
 /// <c>time none</c> all of them keep the last metered meter in force (LilyPond's performer writes
@@ -201,10 +205,20 @@ public sealed class BarContext
         HomeSenzaMisura = SenzaMisura;
     }
 
+    /// <summary>The page's reading of "did the section before leave the home" — what the
+    /// revert at a section boundary is drawn for (<c>MeasureBuilder.RevertMeterToHome</c>): the
+    /// bar's LENGTH, reduced, and <c>time none</c>, not the pair. So 2/2 after a 4/4 home is no
+    /// change (nothing is drawn, the meter in force stays 2/2), and a pickup pending at the
+    /// boundary is compared as the pickup. The other outputs ask the pair
+    /// (<see cref="OpenSection"/>, <see cref="Meter.SamePair"/>). Kept as it was (stage C6 moves
+    /// the state, not the rule); whether the page should ask the pair too is a separate
+    /// decision, with its own net.</summary>
+    public bool LeftHomeByLength => BarLength != HomeMeter.Length || SenzaMisura != HomeSenzaMisura;
+
     /// <summary>A section that states no <c>time</c> of its own opens at the HOME meter — a
     /// mid-section change cannot leak into the next section, nor into the same section played
     /// again elsewhere by the form (<see cref="ScoreHomeMeter"/>; the page's
-    /// <c>MeasureCollector.ProcessSectionPrologue</c>).</summary>
+    /// <c>MeasureBuilder.RevertMeterToHome</c>, which first asks <see cref="LeftHomeByLength"/>).</summary>
     public void RevertToHome()
     {
         Meter = HomeMeter;
