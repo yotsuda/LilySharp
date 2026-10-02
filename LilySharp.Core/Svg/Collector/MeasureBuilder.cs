@@ -140,7 +140,11 @@ internal sealed class MeasureBuilder
     [System.ThreadStatic]
     internal static int t_boundaryRewrites;
 
-    private Fraction _timeSignature; // mutable: a mid-piece time change re-arms it
+    // The meter in force, `time none` and the pickup pending — Semantics.BarContext, the one
+    // spelling every output reads (REFACTOR_PLAN stage C5, the page last). What the bar in
+    // progress is worth is _bars.BarLength: the pickup while one is pending, else one bar of the
+    // meter. The page's own rule for a `time` inside a pickup bar is BarContext.SetMeterRearmingPickup.
+    private readonly BarContext _bars = new();
     private Fraction _currentDuration = Fraction.Zero;
     // LilyPond's measurePosition where the last emitted bar ENDS: zero when the bars so far
     // filled the meter, not zero after a bar closed short (a written `|` is only a bar check
@@ -157,11 +161,11 @@ internal sealed class MeasureBuilder
     // True while a note, rest or chord (or a tuplet's reported duration) has entered the
     // measure under construction. Read where "is there music in this span" is asked —
     // HasMeasureContent, AtPieceOpening — instead of `_currentDuration > 0`, because under
-    // `time none` the clock is FROZEN (see _senzaMisura) and a cadenza's notes add no
+    // `time none` the clock is FROZEN (see _frozenPosition) and a cadenza's notes add no
     // duration: the span still holds music, and a written `|` still has a bar to close.
     private bool _hasMeasureContent;
 
-    // `time none` — senza misura. LilyPond's \cadenzaOn is `\set Timing.timing = ##f`
+    // `time none` — senza misura (_bars.SenzaMisura). LilyPond's \cadenzaOn is `\set Timing.timing = ##f`
     // (LILYPOND-REF: ly/property-init.ly cadenzaOn), `timing` is "keep administration of
     // measure length, position, bar number, etc.?" (scm/define-context-properties.scm), and
     // the administration it switches off is one function: LILYPOND-REF:
@@ -171,12 +175,12 @@ internal sealed class MeasureBuilder
     // advance (a cadenza's notes add nothing to _currentDuration, exactly as LilyPond's
     // measurePosition stands still), no measure auto-completes (no measureLength to reach),
     // and every measure a WRITTEN barline closes is stamped Measure.Unmetered so the bar
-    // number does not advance across it. _timeSignature keeps the meter written before it,
+    // number does not advance across it. _bars.Meter keeps the meter written before it,
     // for the `| |` placeholder's spacer. Cleared by the next `time N/M`.
     // MEASURED (2.26.0, scratch/p354/lp/senza-fixed.ly): `\cadenzaOn … \bar "|" … \bar "|"
     // \break \cadenzaOff \time 4/4 c'1 |` draws the two written bars, breaks where told, and
     // numbers the next line 2 — the cadenza and the bar after it share one number.
-    private bool _senzaMisura;
+
     // The clock's reading when `time none` froze it — LilyPond's measurePosition, which
     // start_translation_timestep leaves alone while `timing` is off and which nothing in the
     // cadenza resets (not its written `\bar "|"`, not \cadenzaOff). Zero when the span opened
@@ -187,12 +191,6 @@ internal sealed class MeasureBuilder
     // at every stem and 1/4 ends no eighth beam in 4/4 — where `c'4 d \cadenzaOn e8 …` (frozen
     // at 1/2, a beam end) makes none.
     private Fraction _frozenPosition = Fraction.Zero;
-
-    // When a 'partial N' shortens the next measure to a pickup, the meter to
-    // restore once that measure closes is parked here. LILYPOND-REF:
-    // ly/music-functions-init.ly:1697-1705 — \partial sets measurePosition for one
-    // measure; the normal measureLength resumes afterwards.
-    private Fraction? _partialRestore;
 
     private BarlineType _pendingStartBarline = BarlineType.None;
     private BarlineType _pendingEndBarline = BarlineType.None;
@@ -245,11 +243,12 @@ internal sealed class MeasureBuilder
     /// </summary>
     public Action? MeasureCompleted;
 
-    public MeasureBuilder(Fraction timeSignature, int sourceStart = 0, bool senzaMisura = false)
+    public MeasureBuilder(Meter meter, int sourceStart = 0, bool senzaMisura = false)
     {
-        _timeSignature = timeSignature;
+        // The opening meter as one value: `time none` at the score level keeps the pair for the
+        // placeholder spacer and freezes nothing (the clock opens at zero).
+        _bars.Restore(new BarContext.MeterState(meter, senzaMisura));
         _measureSourceStart = sourceStart;
-        _senzaMisura = senzaMisura;
     }
 
     /// <summary>The meter in force AS WRITTEN (6/8 is not 3/4, "3+2" is not 5) — the running
@@ -258,18 +257,19 @@ internal sealed class MeasureBuilder
     /// armed (<see cref="SectionHeadState"/>).</summary>
     public TimeSignature MeterInForce { get; set; }
 
-    /// <summary>True while the running meter is <c>time none</c> — see <c>_senzaMisura</c>.
-    /// A section boundary compares this alongside <see cref="CurrentMeasureLength"/> to
-    /// decide whether reverting to the score meter needs a redrawn time signature.</summary>
-    public bool SenzaMisura => _senzaMisura;
+    /// <summary>True while the running meter is <c>time none</c> (<see cref="BarContext.SenzaMisura"/>;
+    /// the clock it freezes is <c>_frozenPosition</c>). A section boundary compares this alongside
+    /// <see cref="CurrentMeasureLength"/> to decide whether reverting to the score meter needs a
+    /// redrawn time signature.</summary>
+    public bool SenzaMisura => _bars.SenzaMisura;
 
     /// <summary>Gets the current accumulated duration within the measure.</summary>
     public Fraction CurrentDuration => _currentDuration;
 
-    /// <summary>The auto-complete measure length currently in force (the running
-    /// meter). A section boundary reads this to decide whether reverting to the
-    /// score meter needs a redrawn time signature.</summary>
-    public Fraction CurrentMeasureLength => _timeSignature;
+    /// <summary>The auto-complete measure length currently in force — the running meter, or
+    /// the pickup while one is pending (<see cref="BarContext.BarLength"/>). A section boundary
+    /// reads this to decide whether reverting to the score meter needs a redrawn time signature.</summary>
+    public Fraction CurrentMeasureLength => _bars.BarLength;
 
     /// <summary>Current measure index (completed measures count).</summary>
     public int CurrentMeasureIndex => _measures.Count;
@@ -498,7 +498,7 @@ internal sealed class MeasureBuilder
     /// boundary; anything else is mid-measure. Under <c>time none</c> a measure is never
     /// "full" — only its written barline ends it.</summary>
     public bool AtMeasureBoundary
-        => _currentItems.Count == 0 || (!_senzaMisura && _currentDuration == _timeSignature);
+        => _currentItems.Count == 0 || (!_bars.SenzaMisura && _currentDuration == _bars.BarLength);
 
     /// <summary>True when the current span holds measure-worthy content — something with
     /// duration (a note/rest/chord) — as opposed to only zero-duration directives (a
@@ -538,25 +538,24 @@ internal sealed class MeasureBuilder
     /// </remarks>
     public void ArmBoundaryForStructuralBarline() => _confirmableBoundary = true;
     /// <summary>Re-arms the auto-complete measure length without printing a grob
-    /// (used when a leading meter change collapses into the initial time signature).
-    /// <paramref name="senzaMisura"/> true is <c>time none</c>: the length is kept for the
+    /// (used when a leading meter change collapses into the initial time signature, and for a
+    /// section head's own meter or the reset to the score's).
+    /// <paramref name="senzaMisura"/> true is <c>time none</c>: the pair is kept for the
     /// placeholder spacer but nothing auto-completes until a metered <c>time</c> follows.</summary>
-    public void SetMeasureLength(Fraction length, bool senzaMisura = false)
-    {
-        _timeSignature = length;
-        FreezeOrThaw(senzaMisura);
-    }
+    public void SetMeter(Meter meter, bool senzaMisura = false) => FreezeOrThaw(meter, senzaMisura);
 
     /// <summary>The one place the clock freezes and thaws (see <c>_frozenPosition</c>): a
     /// <c>time none</c> arriving on a metered clock freezes it at its current reading; a
-    /// metered <c>time</c> thaws it. A second <c>time none</c> inside a cadenza changes nothing.</summary>
-    private void FreezeOrThaw(bool senzaMisura)
+    /// metered <c>time</c> thaws it. A second <c>time none</c> inside a cadenza changes nothing.
+    /// Then the meter moves (<see cref="BarContext.SetMeterRearmingPickup"/>: null is a
+    /// <c>time none</c> change item, which carries none).</summary>
+    private void FreezeOrThaw(Meter? meter, bool senzaMisura)
     {
-        if (senzaMisura && !_senzaMisura)
+        if (senzaMisura && !_bars.SenzaMisura)
             _frozenPosition = _currentDuration;
         else if (!senzaMisura)
             _frozenPosition = Fraction.Zero;
-        _senzaMisura = senzaMisura;
+        _bars.SetMeterRearmingPickup(meter, senzaMisura);
     }
 
     /// <summary>Settles the measure boundary at a section/phrase edge. A section or phrase
@@ -583,23 +582,7 @@ internal sealed class MeasureBuilder
     /// Timing measurePosition so the current measure ends <paramref name="length"/>
     /// past the point of use; normal measureLength applies thereafter.
     /// </summary>
-    public void SetPartial(Fraction length)
-    {
-        // Remember the meter to restore once the pickup closes (don't stack a
-        // second partial onto a still-pending one — the first wins until it ends).
-        _partialRestore ??= _timeSignature;
-        _timeSignature = length;
-    }
-
-    /// <summary>After a pickup measure closes, restore the meter \partial replaced.</summary>
-    private void RestorePartialIfPending()
-    {
-        if (_partialRestore is Fraction restore)
-        {
-            _timeSignature = restore;
-            _partialRestore = null;
-        }
-    }
+    public void SetPartial(Fraction length) => _bars.SetPartial(length);
 
     /// <summary>
     /// How deep into <c>grace { }</c> bodies this builder currently is. While it is
@@ -822,11 +805,9 @@ internal sealed class MeasureBuilder
         // change point), so it never advances timing or completes a measure.
         if (item is TimeSignatureChangeItem tsc)
         {
-            // `time none` freezes the clock (see _senzaMisura, _frozenPosition) and keeps the
-            // last metered length; a metered `time` after it thaws the clock and re-arms.
-            FreezeOrThaw(tsc.NewTime.SenzaMisura);
-            if (!tsc.NewTime.SenzaMisura)
-                _timeSignature = new Fraction(tsc.NewTime.Beats, tsc.NewTime.BeatType);
+            // `time none` freezes the clock (see _frozenPosition) and keeps the last metered
+            // meter; a metered `time` after it thaws the clock and re-arms.
+            FreezeOrThaw(tsc.NewTime.SenzaMisura ? null : MeterOf(tsc.NewTime), tsc.NewTime.SenzaMisura);
             MeterInForce = tsc.NewTime;
             // Collapse a section reset followed by the section's own `time`: keep the last
             // meter so two time signatures don't print side by side ("C ♮ C"). The reset
@@ -886,7 +867,7 @@ internal sealed class MeasureBuilder
         // slot or a `voice { }` sub-voice's lead-in pad gets split with the music
         // (MidBarBreakTable's remarks). A sounding item across the split was refused by the
         // table's builder before the table existed, so none can reach here.
-        if (itemDuration > Fraction.Zero && !_senzaMisura
+        if (itemDuration > Fraction.Zero && !_bars.SenzaMisura
             && item is RestItem { IsSpacer: true } spacer
             && MidBarBreaks?.At(LogicalMeasureIndex) is { } cut
             && _currentDuration < cut.Offset && _currentDuration + itemDuration > cut.Offset)
@@ -923,15 +904,16 @@ internal sealed class MeasureBuilder
 
         // UNMETERED: the clock stands still and nothing auto-completes — LilyPond's
         // measurePosition under `timing = ##f`. The item is in the measure; only a written
-        // barline will end it. See _senzaMisura.
-        if (_senzaMisura)
+        // barline will end it. See _frozenPosition.
+        if (_bars.SenzaMisura)
             return;
 
         // Track duration
         _currentDuration += itemDuration;
 
-        // Auto-complete measure if we've reached or exceeded time signature
-        if (_currentDuration >= _timeSignature)
+        // Auto-complete measure if we've reached or exceeded what the bar is worth (the
+        // meter, or the pickup while one is pending)
+        if (_currentDuration >= _bars.BarLength)
         {
             AutoCompleteMeasure(item.SourcePosition + 1);
             return;
@@ -973,7 +955,7 @@ internal sealed class MeasureBuilder
             return;
         }
         bool pageToo = page || (_pendingMidBar?.Page ?? false);
-        if (_senzaMisura)
+        if (_bars.SenzaMisura)
         {
             _pendingMidBar = (Fraction.Zero, pageToo, sourcePosition,
                 "the bar is unmetered (time none), so it has no beat to break at");
@@ -988,7 +970,7 @@ internal sealed class MeasureBuilder
                 "the break stands inside a tuplet");
             return;
         }
-        if (!_hasMeasureContent || _currentDuration <= Fraction.Zero || _currentDuration >= _timeSignature)
+        if (!_hasMeasureContent || _currentDuration <= Fraction.Zero || _currentDuration >= _bars.BarLength)
         {
             _pendingMidBar = null;
             return;
@@ -1039,7 +1021,7 @@ internal sealed class MeasureBuilder
             hasBreakAfter: true,
             pageBreakPermission: pagePermission,
             sectionLabelPosition: _sectionLabelPosition,
-            isPickup: _partialRestore != null,
+            isPickup: _bars.Partial is not null,
             breaksMidBar: true)
         {
             IsEmptyPlaceholder = isEmptyPlaceholder,
@@ -1099,12 +1081,12 @@ internal sealed class MeasureBuilder
             _hasMeasureContent = true;
 
         // UNMETERED: the clock stands still (see AddItem).
-        if (_senzaMisura)
+        if (_bars.SenzaMisura)
             return;
 
         _currentDuration += duration;
 
-        if (_currentDuration >= _timeSignature)
+        if (_currentDuration >= _bars.BarLength)
         {
             AutoCompleteMeasure(sourcePosition);
             return;
@@ -1120,17 +1102,18 @@ internal sealed class MeasureBuilder
     /// </summary>
     private void AdvanceBarPosition()
     {
-        if (_senzaMisura)
+        if (_bars.SenzaMisura)
             return;
-        if (_partialRestore != null)
+        if (_bars.Partial is not null)
         {
             _barPosition = Fraction.Zero;
             return;
         }
         var p = _barPosition + _currentDuration;
-        if (_timeSignature > Fraction.Zero)
-            while (p >= _timeSignature)
-                p -= _timeSignature;
+        var bar = _bars.BarLength;
+        if (bar > Fraction.Zero)
+            while (p >= bar)
+                p -= bar;
         _barPosition = p;
     }
 
@@ -1141,9 +1124,10 @@ internal sealed class MeasureBuilder
     private Fraction CurrentBarPosition()
     {
         var p = _barPosition + _currentDuration;
-        if (_timeSignature > Fraction.Zero)
-            while (p >= _timeSignature)
-                p -= _timeSignature;
+        var bar = _bars.BarLength;
+        if (bar > Fraction.Zero)
+            while (p >= bar)
+                p -= bar;
         return p;
     }
 
@@ -1160,7 +1144,7 @@ internal sealed class MeasureBuilder
     /// </remarks>
     internal void BeginAlternatives()
     {
-        if (_senzaMisura)
+        if (_bars.SenzaMisura)
             return;
         _alternativeStart ??= CurrentBarPosition();
         _inEnding = true;
@@ -1208,14 +1192,18 @@ internal sealed class MeasureBuilder
     /// <summary>A position brought into [0, meter).</summary>
     private Fraction RoundTheMeter(Fraction p)
     {
-        if (_timeSignature <= Fraction.Zero)
+        var bar = _bars.BarLength;
+        if (bar <= Fraction.Zero)
             return p;
         while (p < Fraction.Zero)
-            p += _timeSignature;
-        while (p >= _timeSignature)
-            p -= _timeSignature;
+            p += bar;
+        while (p >= bar)
+            p -= bar;
         return p;
     }
+
+    /// <summary>The pair a <see cref="TimeSignature"/> states, as the bar context keeps it.</summary>
+    private static Meter MeterOf(TimeSignature time) => new(time.Beats, time.BeatType, time.BeatsText);
 
 
     private Fraction GetItemDuration(MusicItem item)
@@ -1302,8 +1290,8 @@ internal sealed class MeasureBuilder
             lineBreakPermission: line,
             pageBreakPermission: page,
             sectionLabelPosition: _sectionLabelPosition,
-            isPickup: _partialRestore != null,
-            unmetered: _senzaMisura,
+            isPickup: _bars.Partial is not null,
+            unmetered: _bars.SenzaMisura,
             continuesBar: _continuesBar,
             unmeteredPosition: _frozenPosition));
 
@@ -1389,7 +1377,8 @@ internal sealed class MeasureBuilder
         _continuesBar = false;
         _pendingMidBar = null;
         _logicalCount++;
-        RestorePartialIfPending();
+        // The bar is closed: a pending pickup is spent and the meter is back in force.
+        _bars.SpendPartial();
         MeasureCompleted?.Invoke();
     }
 
@@ -1645,7 +1634,7 @@ internal sealed class MeasureBuilder
         // THE BAR IS FILLED, not left empty: one full-measure SPACER, which is the `s1`
         // (or `s2.`, or whatever the meter's own length spells) the author would otherwise
         // have had to type. Owner's decision, 2026-08-28.
-        // ⚠️ IT IS THE METER IN FORCE, not a whole note — `_timeSignature` is the running
+        // ⚠️ IT IS THE METER IN FORCE, not a whole note — `_bars.BarLength` is the running
         // measure length, so a 3/4 gap is worth a dotted half and a `partial` pickup's gap
         // is worth the shortened bar it opens.
         // ⚠️ WHY A SPACER RATHER THAN NOTHING, and it is not the page: the layouter walks
@@ -1664,18 +1653,19 @@ internal sealed class MeasureBuilder
         // Under `time none` there is no meter to fill; the spacer keeps the last METERED
         // length (the clock is frozen, so it advances nothing here either way), which is
         // what keeps every reader of a spacer's duration off zero.
-        var spacerLength = _timeSignature;
+        var bar = _bars.BarLength;
+        var spacerLength = bar;
         // An empty bar of THIS part at a bar the score breaks inside: the placeholder is
         // cut where the music is — a head spacer up to the break, then the tail — so this
         // part's measure indices keep step with the split (MidBarBreakTable's remarks).
-        if (!_senzaMisura && !_continuesBar && _currentItems.Count == 0
+        if (!_bars.SenzaMisura && !_continuesBar && _currentItems.Count == 0
             && MidBarBreaks?.At(LogicalMeasureIndex) is { } split
-            && split.Offset > Fraction.Zero && split.Offset < _timeSignature)
+            && split.Offset > Fraction.Zero && split.Offset < bar)
         {
             _currentItems.Add(new RestItem(split.Offset, 0, _measureSourceStart) { IsSpacer = true });
             _currentDuration = split.Offset;
             EmitSplitHead(split, sourceEnd, isEmptyPlaceholder: true);
-            spacerLength = _timeSignature - split.Offset;
+            spacerLength = bar - split.Offset;
         }
         var spacer = new RestItem(spacerLength, 0, _measureSourceStart) { IsSpacer = true };
         _measures.Add(new Measure(
@@ -1691,8 +1681,8 @@ internal sealed class MeasureBuilder
             lineBreakPermission: noBreak ? Layout.BreakPermission.Forbid : Layout.BreakPermission.Allow,
             pageBreakPermission: pagePermission,
             sectionLabelPosition: _sectionLabelPosition,
-            isPickup: _partialRestore != null,
-            unmetered: _senzaMisura,
+            isPickup: _bars.Partial is not null,
+            unmetered: _bars.SenzaMisura,
             continuesBar: _continuesBar,
             unmeteredPosition: _frozenPosition)
         {
@@ -1727,8 +1717,8 @@ internal sealed class MeasureBuilder
                 _measureSourceStart,
                 _measureSourceStart,  // End position same as start for incomplete
                 sectionLabelPosition: _sectionLabelPosition,
-                isPickup: _partialRestore != null,
-                unmetered: _senzaMisura,
+                isPickup: _bars.Partial is not null,
+                unmetered: _bars.SenzaMisura,
                 continuesBar: _continuesBar,
                 unmeteredPosition: _frozenPosition));
         }
@@ -1886,10 +1876,9 @@ internal sealed class MeasureBuilder
         bool BoundaryRetargetable,
         bool LastEndAutoFill,
         bool AtScopeStart,
-        Fraction TimeSignature,
-        bool SenzaMisura,
+        BarContext.MeterState Meter,
         Fraction FrozenPosition,
-        Fraction? PartialRestore,
+        Fraction? Partial,
         BarlineType PendingStartBarline,
         BarlineType PendingEndBarline,
         bool PendingBreak,
@@ -1926,7 +1915,7 @@ internal sealed class MeasureBuilder
     // (MeasureCollector.SuffixStateMatches), so a field captured here is compared there.
     internal BuilderCheckpoint Capture() => new(
         _confirmableBoundary, _boundaryRetargetable, _lastEndAutoFill, _atScopeStart,
-        _timeSignature, _senzaMisura, _frozenPosition, _partialRestore,
+        _bars.Save(), _frozenPosition, _bars.Partial,
         _pendingStartBarline, _pendingEndBarline,
         _pendingBreak, _pendingNoBreak, _pendingPageBreak, _pendingNoPageBreak,
         _sectionLabel, _sectionLabelPosition, _measureSourceStart,
@@ -1953,10 +1942,9 @@ internal sealed class MeasureBuilder
         _boundaryRetargetable = ck.BoundaryRetargetable;
         _lastEndAutoFill = ck.LastEndAutoFill;
         _atScopeStart = ck.AtScopeStart;
-        _timeSignature = ck.TimeSignature;
-        _senzaMisura = ck.SenzaMisura;
+        _bars.Restore(ck.Meter);
         _frozenPosition = ck.FrozenPosition;
-        _partialRestore = ck.PartialRestore;
+        _bars.Partial = ck.Partial;
         _pendingStartBarline = ck.PendingStartBarline;
         _pendingEndBarline = ck.PendingEndBarline;
         _pendingBreak = ck.PendingBreak;

@@ -1658,7 +1658,7 @@ public sealed class MidiExporter
                 }
                 // The bar behind this barline is closed (time passed) or was the empty bar
                 // just paid for: either way a pending pickup is SPENT and the meter is back
-                // in force — MeasureBuilder.RestorePartialIfPending at every measure close.
+                // in force — the page's MeasureBuilder.ResetPerMeasureState at every measure close.
                 // A typed barline on an empty span decorates and closes nothing, so it leaves
                 // the pickup pending, as it leaves the bar open on the page.
                 if (pairsHere || timePassed)

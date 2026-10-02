@@ -311,7 +311,7 @@ public sealed partial class LilyPondExporter
                 if (pairsHere && !_timeSinceBoundary)
                     AppendToken(line, "s" + ChordModeDuration(_bars.BarLength), indent);
                 // The bar behind this bar line closed (or was the empty bar just written), so
-                // a pending pickup is spent — MeasureBuilder.RestorePartialIfPending.
+                // a pending pickup is spent — as the page's MeasureBuilder.ResetPerMeasureState does.
                 if (pairsHere || _timeSinceBoundary)
                     _bars.SpendPartial();
                 _timeSinceBoundary = false;

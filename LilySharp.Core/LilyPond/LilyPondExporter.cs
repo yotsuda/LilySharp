@@ -193,8 +193,8 @@ public sealed partial class LilyPondExporter
     private readonly StringBuilder _trailingMusic = new();
     // (The pickup in force — a `partial` read and not yet closed by a bar — is _bars.Partial,
     // for the two readers that need it here: the spacer an empty `| |` bar stands for and a
-    // bare `R`. MeasureBuilder._partialRestore's twin, spent the way RestorePartialIfPending
-    // spends it: at the first bar that closes after it.)
+    // bare `R`. The same BarContext.Partial the page's MeasureBuilder reads, spent the same way:
+    // at the first bar that closes after it.)
 
     /// <summary>
     /// The relative-octave frame, TWICE: where Lily# stands, and where the text this exporter

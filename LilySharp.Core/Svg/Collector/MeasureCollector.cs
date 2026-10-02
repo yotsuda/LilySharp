@@ -896,6 +896,9 @@ public sealed partial class MeasureCollector
     /// </summary>
     private Fraction TimeSignatureFraction => new(_meta.TimeBeats, _meta.TimeBeatType);
 
+    /// <summary>The score-level meter as the bar context keeps it — a builder's opening meter.</summary>
+    private Meter ScoreMeter => new(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText);
+
     /// <summary>The running meter as written — <see cref="MeasureBuilder.MeterInForce"/>'s
     /// opening value.</summary>
     private TimeSignature MeterOfMeta()
@@ -2736,7 +2739,7 @@ public sealed partial class MeasureCollector
     private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode,
         bool applyFilePartial = true, Fraction? leadingOffset = null, int logicalIndexBase = 0)
     {
-        var builder = new MeasureBuilder(TimeSignatureFraction, voiceNode.SourceStart, _meta.TimeSenzaMisura)
+        var builder = new MeasureBuilder(ScoreMeter, voiceNode.SourceStart, _meta.TimeSenzaMisura)
         {
             MeterInForce = MeterOfMeta(),
             MidBarBreaks = MidBarBreaks,
@@ -3131,7 +3134,7 @@ public sealed partial class MeasureCollector
         _phraseAnchorSaves.Clear();
         _phraseAbsoluteBaseSaves.Clear();
 
-        var builder = new MeasureBuilder(TimeSignatureFraction, senzaMisura: _meta.TimeSenzaMisura)
+        var builder = new MeasureBuilder(ScoreMeter, senzaMisura: _meta.TimeSenzaMisura)
         {
             MeterInForce = MeterOfMeta(),
             MidBarBreaks = MidBarBreaks,

@@ -532,7 +532,7 @@ public sealed partial class MeasureCollector
             _meta.TimeBeatsText = sectionTime.BeatsText;
             _meta.TimeBeatType = sectionTime.BeatType;
             _meta.TimeSenzaMisura = sectionTime.IsSenzaMisura;
-            builder.SetMeasureLength(new Fraction(sectionTime.Beats, sectionTime.BeatType),
+            builder.SetMeter(new Meter(sectionTime.Beats, sectionTime.BeatType, sectionTime.BeatsText),
                 sectionTime.IsSenzaMisura);
             builder.MeterInForce = new TimeSignature(sectionTime.Beats, sectionTime.BeatType,
                 sectionTime.BeatsText, sectionTime.IsSenzaMisura);
@@ -552,7 +552,7 @@ public sealed partial class MeasureCollector
                 {
                     Blanked = sectionTime.IsSenzaMisura,
                 });
-            builder.SetMeasureLength(new Fraction(sectionTime.Beats, sectionTime.BeatType),
+            builder.SetMeter(new Meter(sectionTime.Beats, sectionTime.BeatType, sectionTime.BeatsText),
                 sectionTime.IsSenzaMisura);
         }
         else
@@ -565,8 +565,8 @@ public sealed partial class MeasureCollector
             // section that ended unmetered against a 4/4 score meter differs, and the 4/4
             // is redrawn — LilyPond prints a grob for every \time event (measured 2.26.0,
             // scratch/p354/lp/senza-reprint.ly: `\time 4/4 … \time 4/4` prints twice).
-            var resetTime = new Fraction(_sectionResetTimeBeats, _sectionResetTimeBeatType);
-            if (builder.CurrentMeasureLength != resetTime
+            var resetMeter = new Meter(_sectionResetTimeBeats, _sectionResetTimeBeatType, _sectionResetTimeBeatsText);
+            if (builder.CurrentMeasureLength != resetMeter.Length
                 || builder.SenzaMisura != _sectionResetTimeSenzaMisura)
             {
                 builder.AddItem(new TimeSignatureChangeItem(
@@ -576,7 +576,7 @@ public sealed partial class MeasureCollector
                 {
                     Blanked = _sectionResetTimeSenzaMisura,
                 });
-                builder.SetMeasureLength(resetTime, _sectionResetTimeSenzaMisura);
+                builder.SetMeter(resetMeter, _sectionResetTimeSenzaMisura);
             }
         }
 

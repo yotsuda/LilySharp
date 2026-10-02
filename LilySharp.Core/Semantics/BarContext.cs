@@ -41,7 +41,7 @@ public readonly record struct Meter(int Beats, int BeatType, string? BeatsText =
 /// </summary>
 /// <remarks>
 /// ⚠️ THE RULES ARE THE PAGE'S (<c>MeasureBuilder</c>: <c>SetPartial</c> /
-/// <c>RestorePartialIfPending</c> / <c>EmitEmptyMeasure</c>'s "the meter in force";
+/// <c>SpendPartial</c> at every measure close / <c>EmitEmptyMeasure</c>'s "the meter in force";
 /// <c>MeasureCollector.ProcessSectionPrologue</c>: the section revert, <see cref="ScoreHomeMeter"/>)
 /// and every output used to keep its own copy of them in its own fields — the MIDI's
 /// <c>_timeNumerator / _timeDenominator / _partial / _homeTimeBeats</c>, the MusicXML's, the
@@ -49,23 +49,28 @@ public readonly record struct Meter(int Beats, int BeatType, string? BeatsText =
 /// and one copy (<c>R1*N</c> in the MIDI) had drifted. This type is REFACTOR_PLAN stage C: the
 /// MIDI read it first (C2, whole), the MusicXML next (C3, the meter — its pickup is still its own,
 /// see below), then the LilyPond twin (C4, whole; its section-head restores and the <c>\cadenzaOn</c>
-/// bookkeeping stay the twin's), then the validator (C5, the meter; its pickup is a per-bar
+/// bookkeeping stay the twin's), then the validator (C5 (iii), the meter; its pickup is a per-bar
 /// reading, not a pending state, and its header registries keep their own rule — see
-/// <see cref="SectionHeaders"/>). The page is not on it (owner's decision 2026-10-02, "iii": it is
-/// the perf path and the authority the others are compared with; the differences below are decided
-/// first).
+/// <see cref="SectionHeaders"/>), and last the page itself (C5, whole: the meter, <c>time none</c>
+/// and the pickup; the clock it freezes under <c>time none</c> is the page's own state,
+/// <c>MeasureBuilder._frozenPosition</c>). Every reader is on it now.
 /// <para>
 /// ⚠️ SPELLINGS THAT STILL DIFFER between the outputs, recorded here so the move onto one type
-/// does not paper over them (stage C5 decides, with nets): a second <c>partial</c> before the
-/// pickup bar closes REPLACES the pending one here (the MIDI's rule), where the page keeps the
-/// first (<c>MeasureBuilder.SetPartial</c>: <c>_partialRestore ??=</c>); <c>time none</c> leaves
-/// the meter in force here (LilyPond's performer writes no event for a cadenza —
-/// lily/time-signature-performer.cc:102-115), where the page freezes its clock
-/// (<c>MeasureBuilder.FreezeOrThaw</c>); and the MusicXML spends a pickup by the duration
-/// written into it, closing the implicit measure itself when the length is reached
-/// (<c>MusicXmlExporter.MaybeClosePickup</c>, with <c>_pendingPickup</c> / <c>_pickupLength</c>),
-/// where the MIDI and the page spend it at the first bar line that closes after it — so the
-/// MusicXML does not read <see cref="Partial"/> yet.
+/// does not paper over them (each is a separate decision, with its own net): a <c>time</c> written
+/// while a pickup is pending moves the meter here (<see cref="SetTime"/>: the MIDI, the MusicXML,
+/// the twin), where the page re-arms the PICKUP to a bar of the new meter and keeps the meter from
+/// before the <c>partial</c> (<see cref="SetMeterRearmingPickup"/>); a top-level <c>time none</c>
+/// is not undone by a later top-level <c>time</c> in the validator (<see cref="SetMeterLeavingSenza"/>);
+/// and the MusicXML spends a pickup by the duration written into it, closing the implicit measure
+/// itself when the length is reached (<c>MusicXmlExporter.MaybeClosePickup</c>, with
+/// <c>_pendingPickup</c> / <c>_pickupLength</c>), where the MIDI, the twin and the page spend it at
+/// the first bar line that closes after it — so the MusicXML does not read <see cref="Partial"/> yet.
+/// A second <c>partial</c> before the pickup bar closes REPLACES the pending one in all of them
+/// (until C5 this type recorded the page as keeping the first: its <c>_partialRestore ??=</c>
+/// parked the METER to restore, not the first pickup — the pickup field was overwritten). Under
+/// <c>time none</c> all of them keep the last metered meter in force (LilyPond's performer writes
+/// no event for a cadenza — lily/time-signature-performer.cc:102-115); only the page has a clock
+/// to freeze.
 /// </para>
 /// </remarks>
 public sealed class BarContext
@@ -81,7 +86,16 @@ public sealed class BarContext
 
     /// <summary>The meter in force: the last metered <c>time</c> written or restored.
     /// Opens at 4/4, the language's default, until the music says otherwise.</summary>
-    public Meter Meter { get; private set; } = new(4, 4);
+    public Meter Meter
+    {
+        get => _meter;
+        private set { _meter = value; _meterLength = value.Length; }
+    }
+    private Meter _meter = new(4, 4);
+    // One bar of _meter, kept beside it: Fraction's constructor reduces (a GCD), and the page
+    // asks what the bar is worth on every item it adds (MeasureBuilder.AddItem's auto-complete),
+    // where it used to read one field of its own — so the answer stays one field read.
+    private Fraction _meterLength = new(4, 4);
 
     /// <summary>Whether a <c>time none</c> is in force: the meter above is then the last
     /// METERED one (what an empty bar is still worth, and what a DAW's grid still draws), and a
@@ -112,13 +126,14 @@ public sealed class BarContext
     }
 
     /// <summary>One bar of the meter in force — what a padding bar is worth.</summary>
-    public Fraction MeterLength => Meter.Length;
+    public Fraction MeterLength => _meterLength;
 
     /// <summary>What the bar in progress is worth: the pickup when one is pending, else one bar
     /// of the meter — the length of an empty <c>| |</c> bar, of a bare <c>R</c>, of a chord row's
-    /// first bar (the same length the page's <c>MeasureBuilder.EmitEmptyMeasure</c> gives its
-    /// spacer, so the walks agree on what a gap is worth).</summary>
-    public Fraction BarLength => Partial ?? Meter.Length;
+    /// first bar, and the length the page auto-completes a bar at and gives its placeholder
+    /// spacer (<c>MeasureBuilder.AddItem</c>, <c>EmitEmptyMeasure</c>), so the walks agree on
+    /// what a gap is worth.</summary>
+    public Fraction BarLength => Partial ?? _meterLength;
 
     /// <summary>
     /// A <c>time</c> in the music. A metered one becomes the meter in force (true: the caller
@@ -150,6 +165,33 @@ public sealed class BarContext
     /// top-level <c>time</c>. Kept as it was (stage C5 (iii) moves the state, not the rule);
     /// whether that is right is a separate decision, with its own net.</summary>
     public void SetMeterLeavingSenza(Meter meter) => Meter = meter;
+
+    /// <summary>The page's meter write (<c>MeasureBuilder</c>: its opening meter, a section
+    /// head's or reset's, a <c>time</c> in the music): the meter in force — or, WHILE A PICKUP IS
+    /// PENDING, the pickup, re-armed to one bar of the new meter, the meter itself left where the
+    /// <c>partial</c> found it. <paramref name="meter"/> null is a <c>time none</c> change item,
+    /// which carries no meter; a header's or a reset's <c>time none</c> carries the last metered
+    /// pair, the placeholder spacer's length.</summary>
+    /// <remarks>
+    /// The page kept ONE field for what the bar in progress is worth (<c>_timeSignature</c>) and
+    /// parked the meter to restore beside it (<c>_partialRestore</c>), so a <c>time</c> written
+    /// inside a pickup bar overwrote the pickup with a whole bar of the new meter, and the bar's
+    /// close put back the meter from BEFORE the <c>partial</c> — the new meter was lost. Kept as
+    /// it was (stage C5 moves the state, not the rule); whether a <c>time</c> inside a pickup
+    /// should move the meter instead — <see cref="SetTime"/>, what the MIDI, the MusicXML and
+    /// the twin do — is a separate decision, with its own net.
+    /// </remarks>
+    public void SetMeterRearmingPickup(Meter? meter, bool senzaMisura)
+    {
+        if (meter is { } m)
+        {
+            if (Partial is not null)
+                Partial = m.Length;
+            else
+                Meter = m;
+        }
+        SenzaMisura = senzaMisura;
+    }
 
     /// <summary>The running meter becomes the score's home — read once the top-level directives
     /// are walked and before any section is (MusicXmlExporter.Export's metadata pass).</summary>
@@ -196,6 +238,6 @@ public sealed class BarContext
     public void SetPartial(Fraction length) => Partial = length;
 
     /// <summary>A bar closed: a pending pickup is SPENT and the meter is back in force
-    /// (the page's <c>MeasureBuilder.RestorePartialIfPending</c> at every measure close).</summary>
+    /// (the page's <c>MeasureBuilder.ResetPerMeasureState</c> at every measure close).</summary>
     public void SpendPartial() => Partial = null;
 }

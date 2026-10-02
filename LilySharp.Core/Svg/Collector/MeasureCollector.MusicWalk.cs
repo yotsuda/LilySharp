@@ -1662,7 +1662,7 @@ public sealed partial class MeasureCollector
                         _meta.TimeBeatsText = timeSigChange.BeatsText;
                         _meta.TimeBeatType = timeSigChange.BeatType;
                         _meta.TimeSenzaMisura = timeSigChange.IsSenzaMisura;
-                        builder.SetMeasureLength(new Fraction(timeSigChange.Beats, timeSigChange.BeatType),
+                        builder.SetMeter(new Meter(timeSigChange.Beats, timeSigChange.BeatType, timeSigChange.BeatsText),
                             timeSigChange.IsSenzaMisura);
                         builder.MeterInForce = new TimeSignature(timeSigChange.Beats,
                             timeSigChange.BeatType, timeSigChange.BeatsText, timeSigChange.IsSenzaMisura);
@@ -1687,7 +1687,7 @@ public sealed partial class MeasureCollector
                         {
                             if (head != null)
                                 builder.WithdrawStanding<TimeSignatureChangeItem>();
-                            builder.SetMeasureLength(new Fraction(newTime.Beats, newTime.BeatType),
+                            builder.SetMeter(new Meter(newTime.Beats, newTime.BeatType, newTime.BeatsText),
                                 newTime.SenzaMisura);
                             builder.MeterInForce = newTime;
                             break;
