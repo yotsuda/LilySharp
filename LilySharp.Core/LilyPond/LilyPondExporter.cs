@@ -62,7 +62,7 @@ public sealed class LilyPondExporter
     private const string LilyPondVersion = "2.26.0";
 
     private readonly StringBuilder _sb = new();
-    private readonly List<string> _warnings = new();
+    private readonly List<string> _warnings;   // _shared.Warnings — see SharedState
     private bool _octaveAbsolute; // false = relative (Lily#'s default)
 
     /// <summary>
@@ -346,14 +346,63 @@ public sealed class LilyPondExporter
     private bool _forceNextDuration;
 
     /// <summary>
-    /// Phrase (and variable) bodies by name, so a bare reference in a section can be
-    /// expanded in place. Shared with the sub-exporters that emit nested bodies.
+    /// What this exporter and every nested-body exporter it opens (<see cref="OpenNested"/>)
+    /// hold IN COMMON — one instance, handed over by reference, never copied: the phrase
+    /// table, the cycle guard, the marks the page's streams already carry, the tree, and the
+    /// one warning list every body reports into.
     /// </summary>
-    private Dictionary<string, SyntaxNode> _phrases = new(StringComparer.Ordinal);
+    /// <remarks>
+    /// ⚠️ ONE HOME, BY CONSTRUCTION. This used to be a field-by-field hand-over at the
+    /// nested-exporter sites, and every table added to the exporter had to be added there
+    /// too: the phrase table was missing from four of the six sites (MEASURED 2026-08-17:
+    /// samples/canon-in-d.lys, whose header advertises a ground "written ONCE and cycled 13
+    /// times", emitted <c>\repeat unfold 13 {  }</c> — 53 bars of continuo on the page against
+    /// 1 in the twin, so every LilyPond comparison taken through that book compared different
+    /// music), and the chord / figure mark registries from all six (2026-10-02: every
+    /// <c>@chord</c> in a phrase was reported "dropped" while the twin printed it). A table
+    /// declared here reaches every body, because a body is constructed WITH it.
+    /// <para>
+    /// ⚠️ <see cref="ActivePhrases"/> in particular must be SHARED, not copied: recursion has
+    /// to be caught through a container as well (<c>phrase A { tuplet 3/2 { A } }</c>), and
+    /// a copy would let the inner reference open the phrase again and expand forever.
+    /// </para>
+    /// </remarks>
+    private sealed class SharedState
+    {
+        /// <summary>Phrase (and variable) bodies by name, so a bare reference in a section
+        /// can be expanded in place.</summary>
+        public readonly Dictionary<string, SyntaxNode> Phrases = new(StringComparer.Ordinal);
 
-    /// <summary>References being expanded right now — the cycle guard, the same one
-    /// MusicXmlExporter and MidiExporter keep for the same reason.</summary>
-    private HashSet<string> _activePhrases = new(StringComparer.Ordinal);
+        /// <summary>References being expanded right now — the cycle guard, the same one
+        /// MusicXmlExporter and MidiExporter keep for the same reason.</summary>
+        public readonly HashSet<string> ActivePhrases = new(StringComparer.Ordinal);
+
+        /// <summary>The source position of every <c>@chord</c> mark a ChordNames stream
+        /// carries (<see cref="EmitInlineChordTracks"/>), and of every <c>@figuredBass</c>
+        /// mark a FiguredBass stream carries (<see cref="EmitFiguredBassTracks"/>): what tells
+        /// <see cref="EmitMark"/> the symbol is already on the page.</summary>
+        public readonly HashSet<int> InlineChordMarks = new();
+        public readonly HashSet<int> FigureMarks = new();
+
+        /// <summary>Diagnostics collected while exporting (constructs dropped because they
+        /// are deprecated or out of scope, and the like). Not fatal.</summary>
+        public readonly List<string> Warnings = new();
+
+        /// <summary>The exported file's root, for the tuning a chord diagram or a shape chord
+        /// draws on (<see cref="Semantics.ChordDiagramScores"/>); null before an export.</summary>
+        public SyntaxNode? Root;
+    }
+
+    private readonly SharedState _shared;
+
+    public LilyPondExporter() : this(new SharedState()) { }
+
+    /// <summary>A nested-body exporter: the same tables as the exporter opening it.</summary>
+    private LilyPondExporter(SharedState shared)
+    {
+        _shared = shared;
+        _warnings = shared.Warnings;
+    }
 
     /// <summary>
     /// Section-header directives keyed by section NAME — the exporter's mirror of the
@@ -397,8 +446,6 @@ public sealed class LilyPondExporter
     /// marks (part name → variable), filled by <see cref="EmitInlineChordTracks"/>; the
     /// parts whose ChordNames row <see cref="EmitScore"/> has already placed.</summary>
     private readonly Dictionary<string, string> _inlineChordVars = new(StringComparer.Ordinal);
-    // The source position of every @chord mark a ChordNames stream above carries.
-    private HashSet<int> _inlineChordMarks = new();
     private readonly HashSet<string> _inlineChordPlaced = new(StringComparer.Ordinal);
 
     /// <summary>The part whose music variable is being written — what tells
@@ -503,7 +550,7 @@ public sealed class LilyPondExporter
         _layoutPlan = ResolveLayoutPlan(root, render);
         // …and what a chord diagram's tuning is read against (the parts' instruments, the
         // staff a row stands over — ChordDiagramScores).
-        _root = root;
+        _shared.Root = root;
         _renderSpec = render != null ? Svg.Collector.RenderSpecParser.Parse(render) : null;
 
         EmitHeader(root);
@@ -655,9 +702,9 @@ public sealed class LilyPondExporter
     /// </remarks>
     private Semantics.LayoutPlan _layoutPlan = Semantics.LayoutPlan.Default;
 
-    /// <summary>The exported file's root and score spec, for the tuning a chord diagram draws
-    /// on (<see cref="Semantics.ChordDiagramScores"/>); null before an export.</summary>
-    private SyntaxNode? _root;
+    /// <summary>The exported score's spec, for the tuning a chord diagram draws on
+    /// (<see cref="Semantics.ChordDiagramScores"/>, with <see cref="SharedState.Root"/>); null
+    /// before an export.</summary>
     private Svg.Collector.RenderSpec? _renderSpec;
 
     private static Semantics.LayoutPlan ResolveLayoutPlan(SyntaxNode root, RenderDeclarationSyntax? render)
@@ -980,10 +1027,10 @@ public sealed class LilyPondExporter
             switch (node)
             {
                 case PhraseDeclarationSyntax phrase:
-                    _phrases[phrase.Name.Text] = phrase.Body;
+                    _shared.Phrases[phrase.Name.Text] = phrase.Body;
                     break;
                 case VariableDeclarationSyntax varDecl:
-                    _phrases[varDecl.Name.Text] = varDecl.Expression;
+                    _shared.Phrases[varDecl.Name.Text] = varDecl.Expression;
                     break;
             }
         }
@@ -1017,12 +1064,12 @@ public sealed class LilyPondExporter
     private string EmitPhraseReference(VariableReferenceSyntax v)
     {
         string name = v.Name.Text;
-        if (!_phrases.TryGetValue(name, out var body))
+        if (!_shared.Phrases.TryGetValue(name, out var body))
         {
             _warnings.Add($"phrase '{name}' is referenced but not declared — nothing exported for it");
             return "";
         }
-        if (!_activePhrases.Add(name))
+        if (!_shared.ActivePhrases.Add(name))
         {
             _warnings.Add($"phrase '{name}' refers to itself — the inner reference is not expanded");
             return "";
@@ -1033,9 +1080,7 @@ public sealed class LilyPondExporter
             // which this exporter could not re-derive, so it warned that the body went out
             // UNSHIFTED. The spelling was removed 2026-08-28, so there is nothing left to
             // warn about: the marks below are whole octaves, which the twin CAN express.)
-            var buf = new LilyPondExporter
-            { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
-            CarryFrameInto(buf);
+            var buf = OpenNested();
             // The body opens Lily#'s FRESH frame — a crotchet (MeasureCollector.MusicWalk
             // EnterDefaultFrame: `_defaultDuration = … Fraction.Quarter`) — where LilyPond
             // carries the last value written before the reference, so the body's first bare
@@ -1065,8 +1110,7 @@ public sealed class LilyPondExporter
             buf._lysOctave = buf._lyOctave =
                 _anchorOctave + _sectionOctaveOffset + v.OctaveOffset;
             buf.EmitMusicStream(MusicItems(body).ToList(), "");
-            _warnings.AddRange(buf._warnings);
-            string inner = buf._sb.ToString().Replace("\n", " ").Trim();
+            string inner = NestedText(buf);
             _lastWrittenValue = buf._lastWrittenValue;
             _lastWrittenDots = buf._lastWrittenDots;
             _forceNextDuration = buf._forceNextDuration;
@@ -1104,7 +1148,7 @@ public sealed class LilyPondExporter
         }
         finally
         {
-            _activePhrases.Remove(name);
+            _shared.ActivePhrases.Remove(name);
         }
     }
 
@@ -3214,118 +3258,117 @@ public sealed class LilyPondExporter
     }
 
     /// <summary>
-    /// Hands a nested body's exporter the state a body is emitted against — the two octave
-    /// frames, the running key, and the phrase table — so a body written into a temporary
-    /// buffer sees what the stream around it sees.
+    /// The state a nested body is written AGAINST and cannot move — the PART's: the octave
+    /// mode and its anchors, the drum / combined flags, the part's name, and the home key and
+    /// meter a section boundary restores. Copied INTO a body's exporter
+    /// (<see cref="OpenNested"/>) and never back.
     /// </summary>
-    private void CarryFrameInto(LilyPondExporter buf)
+    /// <remarks>
+    /// ⚠️ LILYSHARP-OWN: carrying AbsoluteBaseOctave is correct by construction. A degree
+    /// chord's two uses of it CANCEL — the anchor is base + rootOffset and the written mark is
+    /// octave − base — so no nesting of one can see it. The use that does NOT cancel is the
+    /// nested <c>\fixed</c> a marked phrase reference emits, which is exactly what a nested
+    /// body can do; the observer is AMarkedReference_MovesTheAnchor_WithANestedFixed reached
+    /// through a container. SectionOctaveOffset rides with it for the same reason: a nested
+    /// body written inside a <c>~B'</c> play sounds where the play sounds.
+    /// The part's name and the tree (<see cref="SharedState.Root"/>) are for a chord(…) item
+    /// in the body: its notes are on the PART's strings (EmitShapeChord). Measured 2026-09-28:
+    /// without them a grace or tuplet body wrote the item on the guitar at sounding pitch, an
+    /// octave under the page.
+    /// </remarks>
+    private readonly record struct PartFrame(
+        bool OctaveAbsolute, int AnchorOctave, int AbsoluteBaseOctave, int SectionOctaveOffset,
+        bool DrumMode, string? CurrentPartName, bool CombinedPart,
+        int HomeKeySharps, KeyTonic HomeTonic,
+        int HomeTimeBeats, int HomeTimeBeatType, bool HomeTimeSenza, TimeSignatureSyntax? HomeTimeNode,
+        KeySignatureSyntax? PartHeaderKeyNode, int RestoreKeySharps);
+
+    /// <summary>
+    /// The state a body ADVANCES — the STREAM's: the two octave frames, the running key and
+    /// meter, the clef, the improvisation switch, and the note-value memory. Copied into a
+    /// body's exporter and, for a body that is plain sequential music on both sides, back out
+    /// of it (<see cref="CarryFrameBack"/>) — the same record both ways, so what goes in cannot
+    /// be left behind on the way out.
+    /// </summary>
+    /// <remarks>
+    /// The note-value memory goes in with the frame (session 398): a tuplet, cue or repeat
+    /// body is sequential music on both sides, so its first bare note reads what the stream
+    /// last wrote — and reads it the same way on both sides only if the buffer knows it. A
+    /// fresh buffer knew "4" and forced nothing, so <c>c8 tuplet 3/2 { d e f }</c> wrote
+    /// <c>d e f</c> bare and LilyPond read them as quavers by luck of the lexical carry, while
+    /// a site that had to force a value (a voice branch) then forced the WRONG one after its
+    /// tuplet. Sites whose body opens its own memory (a grace at an eighth, a voice branch at
+    /// the span's value, a phrase body) overwrite the three after <see cref="OpenNested"/>.
+    /// </remarks>
+    private readonly record struct StreamFrame(
+        bool ImprovisationOpen, ClefType LysClef,
+        int LysStep, int LysOctave, int LyStep, int LyOctave, bool FrameTracked,
+        int KeySharps, KeyTonic Tonic,
+        int TimeBeats, int TimeBeatType, bool TimeSenza, string TimeText,
+        string LastWrittenValue, int LastWrittenDots, bool ForceNextDuration);
+
+    private PartFrame CapturePart() => new(
+        _octaveAbsolute, _anchorOctave, _absoluteBaseOctave, _sectionOctaveOffset,
+        _drumMode, _currentPartName, _combinedPart,
+        _homeKeySharps, _homeTonic,
+        _homeTimeBeats, _homeTimeBeatType, _homeTimeSenza, _homeTimeNode,
+        _partHeaderKeyNode, _restoreKeySharps);
+
+    private void ApplyPart(in PartFrame f)
     {
-        // The phrase table and the set of references currently being expanded. ONE home for
-        // this, because two of the six nested-exporter sites used to set them for themselves
-        // and the other four therefore did not have them: a reference inside a tuplet, a
-        // grace, a cue or a repeat resolved against an EMPTY table and exported as nothing,
-        // under a warning that called the phrase "referenced but not declared" while the
-        // file declared it. MEASURED 2026-08-17: samples/canon-in-d.lys, whose header
-        // advertises a ground "written ONCE and cycled 13 times", emitted
-        // `\repeat unfold 13 {  }` — 53 bars of continuo on the page against 1 in the twin,
-        // so every LilyPond comparison taken through that book compared different music. The
-        // hole had been recorded here as unobservable on the strength of "0 of 300 books";
-        // the tree has 566 and the one book that writes the spelling was in the other 266.
-        // ⚠️ _activePhrases is SHARED, not copied: recursion has to be caught through a
-        // container as well (`phrase A { tuplet 3/2 { A } }`), and a copy would let the inner
-        // reference open the phrase again and expand forever.
-        buf._phrases = _phrases;
-        buf._activePhrases = _activePhrases;
-        // The marks the page's ChordNames / FiguredBass streams already carry (EmitMark): a
-        // phrase body is written by a nested exporter, which used to report every @chord and
-        // @figuredBass in it "dropped" while the twin printed them (2026-10-02).
-        buf._inlineChordMarks = _inlineChordMarks;
-        buf._figureMarks = _figureMarks;
-        // The ABSOLUTE anchor belongs with the two relative frames below — it is what a pitch
-        // resolves against in the other octave mode. All six nested-exporter sites set
-        // _octaveAbsolute and _anchorOctave in their initializers and then call this, so it
-        // rides here rather than being copied six times.
-        // ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-        // CANCEL — the anchor is base + rootOffset and the written mark is octave − base — so
-        // no nesting of one can see it. The use that does NOT cancel is the nested \fixed a
-        // marked phrase reference emits, which is exactly what a nested body can now do; the
-        // observer is AMarkedReference_MovesTheAnchor_WithANestedFixed reached through a
-        // container, and the value stops being unobserved with the line above.
-        buf._absoluteBaseOctave = _absoluteBaseOctave;
-        // …and the section reference's absolute shift with it, for the same reason: a nested
-        // body written inside a `~B'` play sounds where the play sounds.
-        buf._sectionOctaveOffset = _sectionOctaveOffset;
-        buf._drumMode = _drumMode;
-        // The part and the tree, for a chord(…) item in the body: its notes are on the PART's
-        // strings (EmitShapeChord). Measured 2026-09-28: without them a grace or tuplet body
-        // wrote the item on the guitar at sounding pitch, an octave under the page.
-        buf._currentPartName = _currentPartName;
-        buf._root = _root;
-        buf._combinedPart = _combinedPart;
-        buf._improvisationOpen = _improvisationOpen;
-        buf._lysClef = _lysClef;
-        buf._lysStep = _lysStep;
-        buf._lysOctave = _lysOctave;
-        buf._lyStep = _lyStep;
-        buf._lyOctave = _lyOctave;
-        buf._frameTracked = _frameTracked;
-        buf._keySharps = _keySharps;
-        buf._tonic = _tonic;
-        buf._homeKeySharps = _homeKeySharps;
-        buf._homeTonic = _homeTonic;
-        buf._timeBeats = _timeBeats;
-        buf._timeBeatType = _timeBeatType;
-        buf._timeSenza = _timeSenza;
-        buf._timeText = _timeText;
-        buf._homeTimeBeats = _homeTimeBeats;
-        buf._homeTimeBeatType = _homeTimeBeatType;
-        buf._homeTimeSenza = _homeTimeSenza;
-        buf._homeTimeNode = _homeTimeNode;
-        buf._partHeaderKeyNode = _partHeaderKeyNode;
-        buf._restoreKeySharps = _restoreKeySharps;
-        // The note-value memory goes in with the frame (session 398): a tuplet, cue or repeat
-        // body is sequential music on both sides, so its first bare note reads what the
-        // stream last wrote — and reads it the same way on both sides only if the buffer
-        // knows it. A fresh buffer knew "4" and forced nothing, so `c8 tuplet 3/2 { d e f }`
-        // wrote `d e f` bare and LilyPond read them as quavers by luck of the lexical carry,
-        // while a site that had to force a value (a voice branch) then forced the WRONG one
-        // after its tuplet. Sites whose body opens its own memory (a grace at an eighth, a
-        // voice branch at the span's value, a phrase body) overwrite these three after
-        // this call.
-        buf._lastWrittenValue = _lastWrittenValue;
-        buf._lastWrittenDots = _lastWrittenDots;
-        buf._forceNextDuration = _forceNextDuration;
+        (_octaveAbsolute, _anchorOctave, _absoluteBaseOctave, _sectionOctaveOffset,
+         _drumMode, _currentPartName, _combinedPart,
+         _homeKeySharps, _homeTonic,
+         _homeTimeBeats, _homeTimeBeatType, _homeTimeSenza, _homeTimeNode,
+         _partHeaderKeyNode, _restoreKeySharps) = f;
+    }
+
+    private StreamFrame CaptureStream() => new(
+        _improvisationOpen, _lysClef,
+        _lysStep, _lysOctave, _lyStep, _lyOctave, _frameTracked,
+        _keySharps, _tonic,
+        _timeBeats, _timeBeatType, _timeSenza, _timeText,
+        _lastWrittenValue, _lastWrittenDots, _forceNextDuration);
+
+    private void ApplyStream(in StreamFrame f)
+    {
+        (_improvisationOpen, _lysClef,
+         _lysStep, _lysOctave, _lyStep, _lyOctave, _frameTracked,
+         _keySharps, _tonic,
+         _timeBeats, _timeBeatType, _timeSenza, _timeText,
+         _lastWrittenValue, _lastWrittenDots, _forceNextDuration) = f;
     }
 
     /// <summary>
-    /// Takes the state back out of a body that is plain sequential music on BOTH sides (a
-    /// tuplet, a repeat) — the stream continues where the body left off. Bodies whose frame
-    /// the two engines hand over differently (a grace, a voice span, a phrase reference) do
-    /// not call this; they clear <see cref="_frameTracked"/> instead.
+    /// Opens the exporter a nested body — a phrase reference, a tuplet, a voice branch, a
+    /// grace, a cue, a repeat — is written into: the same shared tables as this one
+    /// (<see cref="SharedState"/>), the part's frame, and the stream's frame as it stands
+    /// here. The ONE way to make one; a site whose body opens its own memory sets those
+    /// fields after this call.
     /// </summary>
-    private void CarryFrameBack(LilyPondExporter buf)
+    private LilyPondExporter OpenNested()
     {
-        _improvisationOpen = buf._improvisationOpen;
-        _lysClef = buf._lysClef;
-        _lysStep = buf._lysStep;
-        _lysOctave = buf._lysOctave;
-        _lyStep = buf._lyStep;
-        _lyOctave = buf._lyOctave;
-        _frameTracked = buf._frameTracked;
-        _keySharps = buf._keySharps;
-        _tonic = buf._tonic;
-        _timeBeats = buf._timeBeats;
-        _timeBeatType = buf._timeBeatType;
-        _timeSenza = buf._timeSenza;
-        _timeText = buf._timeText;
-        // …and the note-value memory comes back out with it: the note after a tuplet, a cue
-        // or a repeat reads the body's last value on both sides (the page walks the body
-        // inline; LilyPond's parser carries the last value written). The grace site puts the
-        // stream's own value back after this, because Lily# does not carry a grace's out.
-        _lastWrittenValue = buf._lastWrittenValue;
-        _lastWrittenDots = buf._lastWrittenDots;
-        _forceNextDuration = buf._forceNextDuration;
+        var buf = new LilyPondExporter(_shared);
+        buf.ApplyPart(CapturePart());
+        buf.ApplyStream(CaptureStream());
+        return buf;
     }
+
+    /// <summary>What a nested body's exporter wrote, as one line.</summary>
+    private static string NestedText(LilyPondExporter buf)
+        => buf._sb.ToString().Replace("\n", " ").Trim();
+
+    /// <summary>
+    /// Takes the stream's frame back out of a body that is plain sequential music on BOTH
+    /// sides (a tuplet, a cue, a repeat) — the stream continues where the body left off, and
+    /// the note after it reads the body's last value on both sides (the page walks the body
+    /// inline; LilyPond's parser carries the last value written). Bodies whose frame the two
+    /// engines hand over differently (a voice span, a phrase reference) do not call this and
+    /// clear <see cref="_frameTracked"/> or set the frame by hand instead; the grace site
+    /// calls it and then puts the stream's own note value back, because Lily# does not carry
+    /// a grace's out.
+    /// </summary>
+    private void CarryFrameBack(LilyPondExporter buf) => ApplyStream(buf.CaptureStream());
 
     /// <summary>Octave marks for a net shift: <c>'</c> up, <c>,</c> down.</summary>
     private static string OctaveMarks(int offset)
@@ -3626,9 +3669,9 @@ public sealed class LilyPondExporter
     private System.Collections.Immutable.ImmutableArray<Music.ShapeNote> ShapeNotesOf(ChordSyntax c, bool warn = false)
     {
         var (tuning, shift) = (TuningType.Guitar, 0);
-        if (_currentPartName != null && _root != null)
+        if (_currentPartName != null && _shared.Root is { } root)
         {
-            var header = Semantics.PartHeaderDefaults.Read(Semantics.ConcertPitch.FindPart(_root, _currentPartName));
+            var header = Semantics.PartHeaderDefaults.Read(Semantics.ConcertPitch.FindPart(root, _currentPartName));
             (tuning, shift) = (Music.ShapeChords.TuningOf(header), header.SoundingShiftSemitones);
         }
         else if (Music.ShapeChords.PartTuningsOf(c) is [var only])
@@ -4205,10 +4248,10 @@ public sealed class LilyPondExporter
         // marks are matched by their own position in that stream: until 2026-10-02 every
         // @chord in a phrase was reported "dropped" while the twin printed it.
         if (mk.Name == "chord" && ((_currentPartName != null && _inlineChordVars.ContainsKey(_currentPartName))
-                                   || _inlineChordMarks.Contains(mk.SourceStart)))
+                                   || _shared.InlineChordMarks.Contains(mk.SourceStart)))
             return "";
         // …and so does @figuredBass, in its part's FiguredBass stream (EmitFiguredBassTracks).
-        if (mk.Name == "figuredBass" && _figureMarks.Contains(mk.SourceStart))
+        if (mk.Name == "figuredBass" && _shared.FigureMarks.Contains(mk.SourceStart))
             return "";
         // '@!phrasingSlur' — LilyPond's `\)`, the PhrasingSlurEvent STOP.
         if (mk.IsSpanEnd && Semantics.AnnotationValues.IsPhrasingSlurName(mk.Name))
@@ -4472,7 +4515,7 @@ public sealed class LilyPondExporter
         // (per the section the mark is written in, ChordShapeTable; 2026-09-29).
         var table = _layoutPlan.ChordDiagramTable;
         bool namesAlone = _layoutPlan.ChordDiagramsAll || table != null;
-        return _layoutPlan.ChordDiagramTuningFor(_currentPartName is { } part && _root is { } root
+        return _layoutPlan.ChordDiagramTuningFor(_currentPartName is { } part && _shared.Root is { } root
                 ? Semantics.ChordDiagramScores.FrettedWordOfPart(root, part) is { } w ? Tablature.Tunings.Parse(w) : null
                 : null) is { } tuning
            && Semantics.ChordAnnotation.Of(mk) is { } words
@@ -4852,18 +4895,12 @@ public sealed class LilyPondExporter
 
     private string EmitTuplet(TupletExpressionSyntax tup)
     {
-        var inner = new StringBuilder();
-        var saved = _sb.Length;
-        // Reuse EmitMusicStream via a temporary buffer.
-        var buf = new LilyPondExporter
-        { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
-        CarryFrameInto(buf);
+        var buf = OpenNested();
         buf.EmitMusicStream(MusicItems(tup.Body).ToList(), "");
         // A tuplet is plain sequential music on both sides: its notes are in the enclosing
         // frame and the note after it follows the tuplet's last, so the frame comes back.
         CarryFrameBack(buf);
-        _warnings.AddRange(buf._warnings);
-        string body = buf._sb.ToString().Replace("\n", " ").Trim();
+        string body = NestedText(buf);
         return $"\\tuplet {tup.Numerator.Text}/{tup.Denominator.Text} {{ {body} }}";
     }
 
@@ -5288,9 +5325,7 @@ public sealed class LilyPondExporter
         var bodies = new List<string>();
         foreach (var (_, block) in par.NamedVoices)
         {
-            var buf = new LilyPondExporter
-            { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
-            CarryFrameInto(buf);
+            var buf = OpenNested();
             buf._lysStep = spanStep;
             buf._lysOctave = spanOctave;
             buf._lyStep = chainStep;
@@ -5302,8 +5337,7 @@ public sealed class LilyPondExporter
             chainStep = buf._lyStep;
             chainOctave = buf._lyOctave;
             _frameTracked &= buf._frameTracked;
-            _warnings.AddRange(buf._warnings);
-            string body = buf._sb.ToString().Replace("\n", " ").Trim();
+            string body = NestedText(buf);
             if (body.Length > 0)
                 bodies.Add(body);
         }
@@ -5331,9 +5365,7 @@ public sealed class LilyPondExporter
     private string EmitGrace(GraceExpressionSyntax g)
     {
         string kw = g.IsAcciaccatura ? "\\acciaccatura" : g.IsAppoggiatura ? "\\appoggiatura" : "\\grace";
-        var buf = new LilyPondExporter
-        { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
-        CarryFrameInto(buf);
+        var buf = OpenNested();
         // The grace body has its OWN default duration, an eighth, and it is Lily#'s own rule
         // (MeasureCollector.CollectGraceNotes graceDefaultDuration = Fraction.Eighth;
         // LilyPond has no grace-specific default and would take whatever the main stream last
@@ -5352,8 +5384,7 @@ public sealed class LilyPondExporter
         string streamValue = _lastWrittenValue;
         int streamDots = _lastWrittenDots;
         CarryFrameBack(buf);
-        _warnings.AddRange(buf._warnings);
-        string body = buf._sb.ToString().Replace("\n", " ").Trim();
+        string body = NestedText(buf);
         // LilyPond carries the grace body's last duration out to the next event; Lily# does
         // not — the stream's own memory stands, and the next event writes it out. See
         // EmitEventDuration.
@@ -5390,17 +5421,14 @@ public sealed class LilyPondExporter
     /// </remarks>
     private string EmitCue(CueExpressionSyntax cue)
     {
-        var buf = new LilyPondExporter
-        { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
-        CarryFrameInto(buf);
+        var buf = OpenNested();
         // A cue clef is drawing only: neither side's relative frame moves
         // (InstrumentDefaults.DefaultAnchorOctave), so the body is written with its own marks.
         buf.EmitMusicStream(MusicItems(cue.Body).ToList(), "");
         // The body is written once and read once by the relative pass on both sides, so its
         // frame carries out like a tuplet's or a repeat's.
         CarryFrameBack(buf);
-        _warnings.AddRange(buf._warnings);
-        string body = buf._sb.ToString().Replace("\n", " ").Trim();
+        string body = NestedText(buf);
         string region = $"\\new CueVoice {{ {body} }}";
         return cue.ClefKeyword is { } clef
             ? $"\\cueClef {LyClefName(clef.Text)} {region} \\cueClefUnset"
@@ -5444,15 +5472,12 @@ public sealed class LilyPondExporter
     {
         string type = rep.RepeatType.Text;
         string count = rep.Count.Text;
-        var buf = new LilyPondExporter
-        { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
-        CarryFrameInto(buf);
+        var buf = OpenNested();
         buf.EmitMusicStream(MusicItems(rep.Body).ToList(), "");
         // The body is WRITTEN once and read once by the relative pass on both sides, however
         // many times it is played, so its frame carries out like a tuplet's.
         CarryFrameBack(buf);
-        _warnings.AddRange(buf._warnings);
-        string body = buf._sb.ToString().Replace("\n", " ").Trim();
+        string body = NestedText(buf);
         return $"\\repeat {type} {count} {{ {body} }}";
     }
 
@@ -5975,8 +6000,8 @@ public sealed class LilyPondExporter
             // shape table lists (2026-09-29), or — in a `chordDiagrams … all` score — every
             // entry. The track is spelled first and kept only when a prefix was written
             // (_fretPrefixes): a FretBoards context of silent slots alone would be an empty band.
-            var rowStaffWord = _root != null && _renderSpec != null
-                ? Semantics.ChordDiagramScores.RowStaffWord(_root, _renderSpec, row.PartName) : null;
+            var rowStaffWord = _shared.Root is { } fileRoot && _renderSpec != null
+                ? Semantics.ChordDiagramScores.RowStaffWord(fileRoot, _renderSpec, row.PartName) : null;
             if (_layoutPlan.ChordDiagramTuningFor(rowStaffWord is { } rw ? Tablature.Tunings.Parse(rw) : null)
                     is { } diagramTuning)
             {
@@ -6245,7 +6270,7 @@ public sealed class LilyPondExporter
             if (items.Count == 0)
                 continue;
             foreach (var c in items)
-                _inlineChordMarks.Add(c.SourcePosition);
+                _shared.InlineChordMarks.Add(c.SourcePosition);
 
             string varName = VarName(partName + "InlineChords");
             _inlineChordVars[partName] = varName;
@@ -6330,7 +6355,7 @@ public sealed class LilyPondExporter
             if (items.Count == 0)
                 continue;
             foreach (var (f, _) in items)
-                _figureMarks.Add(f.SourcePosition);
+                _shared.FigureMarks.Add(f.SourcePosition);
 
             string varName = VarName(partName + "Figures");
             _figureVars[partName] = varName;
@@ -6403,8 +6428,6 @@ public sealed class LilyPondExporter
 
     private readonly Dictionary<string, string> _figureVars = new(StringComparer.Ordinal);
     private readonly HashSet<string> _figurePlaced = new(StringComparer.Ordinal);
-    // The source position of every @figuredBass mark a FiguredBass stream carries.
-    private HashSet<int> _figureMarks = new();
 
     /// <summary>
     /// One <c>\lyricmode</c> variable per lyric LINE the page places — a staff's attached
