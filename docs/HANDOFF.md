@@ -79,7 +79,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ★★★ **リファクタ（ユーザー決定 2026-10-02）**＝計画は `docs/REFACTOR_PLAN.md`。**A（第740）・B（第741）・C1（第742・`0193be8e`）・C2（第743・`776dadb7`＝`Semantics.BarContext` を MIDI に）・C3（第744・`b29bae2b`＝XML の拍子を `BarContext` に。弱起は XML 独自のまま）は済み → 次は C4＝双子を `BarContext` に（`_timeBeats/_timeBeatType/_timeText/_timeSenza/_home*/_twinPartial`＝型に「書いた綴り」`TimeText` の面を足す。section head の held restore は双子固有）→ C5 検証／頁（ユーザー決定 2026-10-02「GO」＝(b)）。計器は 4 種そろった: Lab `sessions/p742/` の `twin/sweep-ly.ps1`・`sweep-midi.ps1`・`sweep-xml.ps1`・`svg/sweep-all.ps1`（base の exe は掃きの出力先と別の場所に）**／★ 候補（ユーザー判断）: 観測者の無い規則＝section header の「先勝ち」（suite 0・コーパス 0＝第742 ②）・XML の `<beats>3+2</beats>`（suite 0・コーパス 0＝第744 ②）・XML の `<senza-misura>`（suite 0・コーパスは `test/senza-misura` 1 冊＝第744 ①）・StreamFrame／`BreaksMidBar`（第740・741）＝網を足すか規則を畳む、D はユーザー判断が先。双子の全冊バイト比較は Lab `sessions/p741/twin/sweep-ly.ps1`（base の exe は掃きの出力先と別の場所に置く）／★ 候補（網を足すのは別 commit）: 入れ子の StreamFrame の suite の網（入れない→1 赤・戻さない→0 赤。掃きは 125／16 冊差＝第740 ⑶）・頁の stream の網（歌詞の `\skip`・figures の小節末の隙間・`BreaksMidBar` の無 bar check は suite 0 赤。掃きは 1 冊＝第741 ③）
+- ★★★ **リファクタ（ユーザー決定 2026-10-02）**＝計画は `docs/REFACTOR_PLAN.md`。**A（第740）・B（第741）・C1（第742・`0193be8e`）・C2（第743・`776dadb7`＝`Semantics.BarContext` を MIDI に）・C3（第744・`b29bae2b`＝XML の拍子）・C4（第745・`2f544c8d`＝双子の拍子と弱起）は済み → 次は **C5＝検証と頁**（validator の `_timeSignature/_meterText/_filePartial/_sectionTimes/_sectionPartials`・`MeasureBuilder` の `_timeSignature/_partialRestore/FreezeOrThaw`＝弱起の 3 つの綴りと `time none` の 2 つの綴りをどう揃えるかの**判断が先**＝型の註に事実を並べた。頁は perf の経路（打鍵ごとの walk・`Resume` の checkpoint）＝ベンチの前にユーザーへ一声）（ユーザー決定 2026-10-02「GO」＝(b)）。計器は 4 種そろった: Lab `sessions/p742/` の `twin/sweep-ly.ps1`・`sweep-midi.ps1`・`sweep-xml.ps1`・`svg/sweep-all.ps1`（base の exe は掃きの出力先と別の場所に）**／★ 候補（ユーザー判断）: 観測者の無い規則＝section header の「先勝ち」（suite 0・コーパス 0＝第742 ②）・XML の `<beats>3+2</beats>`（suite 0・コーパス 0＝第744 ②）・XML の `<senza-misura>`（suite 0・コーパスは `test/senza-misura` 1 冊＝第744 ①）・双子の home の加算拍子の綴りと入れ子の body が戻す拍子（suite 0・コーパス 0＝第745 ①②）・StreamFrame／`BreaksMidBar`（第740・741）＝網を足すか規則を畳む、D はユーザー判断が先。双子の全冊バイト比較は Lab `sessions/p741/twin/sweep-ly.ps1`（base の exe は掃きの出力先と別の場所に置く）／★ 候補（網を足すのは別 commit）: 入れ子の StreamFrame の suite の網（入れない→1 赤・戻さない→0 赤。掃きは 125／16 冊差＝第740 ⑶）・頁の stream の網（歌詞の `\skip`・figures の小節末の隙間・`BreaksMidBar` の無 bar check は suite 0 赤。掃きは 1 冊＝第741 ③）
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
@@ -117,6 +117,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第745セッション（2026-10-02・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第744 の判定: C4）。`-Start p745`（HEAD `fb55d28a`・未 push 95）＝full **10745 / 0 / 2 / 10747**（引継ぎと一致）。§7 3.5 で第743 を ARCHIVE へ（残り 14,118 B）。
+C4＝★ `2f544c8d` **双子の拍子・home・`time none`・弱起を `BarContext` に**。8 field（`_timeBeats/_timeBeatType/_timeSenza/_timeText`・`_homeTimeBeats/_homeTimeBeatType/_homeTimeSenza`・`_twinPartial`）を `_bars` 1 つに（`_homeTimeNode` は restore で逐語に書くので残す）。`_timeText` は走っている `Meter` から導出（`TimeText(Meter)`＝`TimeText(ts)` と同じ綴り・home の加算拍子は `HomeMeter.BeatsText` に乗せる）。`EmitTime` は `SetTime` ＋ `\cadenzaOn/Off` の綴り（双子固有のまま）。**入れ子の frame**: `PartFrame` に home（`HomeMeter`・`HomeSenzaMisura`）、`StreamFrame` に `BarContext.MeterState`（`Save()`／`Restore()`）＝拍子の半分だけを 1 つの値で運ぶ。弱起は従来どおり運ばない（body は弱起なしで開く）。`EmitSectionPlay` の「home から動いたか」は pair＋senza（`Meter.SamePair`）＝従来の 4 field の比較と同じ。
+- 確かめ: ly 998 冊・1,199 枚＝**差 0**・xml・midi も差 0（型を共有）。full 10745 / 0 / 2・Core 0 警告。APPROXIMATIONS は住所だけ。
+- 毒（`sessions/p745/poisons.ps1`・`poisons-sweep.ps1`）: ① home の加算拍子の綴りを落とす → 実の赤 0（行番号の表だけ）・掃き **0 冊差**／② 入れ子の body が拍子を戻さない（`Restore` 空）→ **0 赤**・掃き **0 冊差**（tuplet／repeat の body の中の `time` に観測者なし）／③ `BarLength` が弱起を見ない → **9 赤**（`EmptyBarExportTests`・`EmptyMeasureValidatorTests`・`SectionVoicePaddingExportTests`）／④ `RevertToHome` 空 → **4 赤**（XML・MIDI。双子の section の restore は `EmitTime(_homeTimeNode)` 経由なので別の毒）。⇒ ①② を §1.0 ⒜ の候補に足した。
+★ `-End p745 -DiffBase fb55d28a`＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（HANDOFF 残り 11,608 B）。7.5: Core `+` 87 行・REF 0／OWN 0。7.6: 該当なし（3 出力 差 0）。7.7: ⒜ 双子は section の restore を `EmitTime(_homeTimeNode)` で書く（逐語の綴りのため）＝型の `RevertToHome` を通らない唯一の出力／⒝ `_sectionHead` の `TimeText` は文字列のまま（頁の `SectionHead` の twin）／⒞ 入れ子の body の `time` に観測者なし（②）。push はユーザー（未 push 97）。
+判定: **C5 はユーザー判断が先**＝弱起の綴り 3 つと `time none` の 2 つを揃えるか（＝振る舞いの変更・別 commit・網つき）、違いのまま validator と頁を型に載せるか。頁は perf の経路でもある。判断の材料は `BarContext` の註と `REFACTOR_PLAN` §5.1。この会話は 6 便を跨いだ＝(b) 文脈は重いが、判断の提示はこの場でできる。
+
+## 以下は第744セッションの経緯
+
 ### 1.1 第744セッション（2026-10-02・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」＝第743 の判定: C3）。`-Start p744`（HEAD `d9b3f9a3`・未 push 93）＝full **10745 / 0 / 2 / 10747**（引継ぎと一致）。§7 3.5 で第742 を ARCHIVE へ（残り 14,801 B）。
@@ -125,18 +136,6 @@ C3＝★ `b29bae2b` **XML の拍子を `BarContext` に**。型に足した面: 
 - 毒（`sessions/p744/poisons.ps1`・`poisons-sweep.ps1`）: ① `time none` が senza と言わない → suite **0 赤**・掃き **1 冊差**（`test/senza-misura`＝`<senza-misura>` に単体の網が無い）／② 加算拍子の文字列を落とす → suite **0 赤**・掃き **0 冊差**＝`<beats>3+2</beats>` に観測者なし／③ 境界で home に戻さない → **4 赤**（XML・MIDI）／④ home を捕まえない（4/4 のまま）→ **10 赤**。⇒ ①② は §1.0 ⒜ の候補に足した。
 ★ `-End p744 -DiffBase d9b3f9a3`＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（HANDOFF 残り 12,270 B）。7.5: Core `+` 112 行（型の面 +60・XML の読み替え）・REF 0／OWN 0。7.6: 該当なし（XML・MIDI 差 0）。7.7: ⒜ 弱起の綴りが 3 つ（頁＝先勝ち・小節線で消費／MIDI＝置き換え・小節線で消費／XML＝音価の累積で閉じる）＝型の註・C5 の主題／⒝ XML の `_writtenTime` は文書側の memo（RULES §7.7 の二重の綴り）＝型に入れない／⒞ `_homeTime` の null 判定を外した（multi-section の経路でしか読まれない＝掃き・full で裏取り）。push はユーザー（未 push 95）。
 判定: 次は C4＝双子を `BarContext` に（`_timeBeats/_timeBeatType/_timeText/_timeSenza/_homeTime*/_twinPartial`＝「書いた綴り」`TimeText` の面と、section head の held restore は双子固有のまま）。型の面の足し方は今便で 1 度やった＝(a) で**この会話で続けるのが得**。`-Start p745` から。
-
-## 以下は第743セッションの経緯
-
-### 1.1 第743セッション（2026-10-02・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」＝第742 の判定: C2）。`-Start p743`（HEAD `aa92955a`・未 push 91）＝full **10745 / 0 / 2 / 10747**（引継ぎと一致）。§7 3.5 で第741 を ARCHIVE へ（残り 13,265 B）。
-C2＝★ `776dadb7` **`Semantics.BarContext`（拍子・home の拍子・弱起と、その規則: `SetTime`／`OpenSection(headerTime, headerPartial)`／`SetPartial`／`SpendPartial`・`BarLength`＝弱起 ?? 拍子の 1 小節・`MeterLength`）を MIDI に**。MIDI の 5 field（`_timeNumerator/_timeDenominator/_homeTimeBeats/_homeTimeBeatType/_partial`）を消し、13 か所の読みを型へ。`MeasureTicks` は `FractionToTicks(_bars.BarLength)`。型の註に MIDI と頁でまだ違う 2 つの綴りを書いた（弱起が閉じる前の 2 つ目の `partial`: MIDI は置き換え・頁は先勝ち／`time none`: MIDI は拍子を保つ・頁は時計を凍らせる）＝C5 で判断。
-- 確かめ: MIDI 998 冊・1,199 枚＝**差 0**。full 10745 / 0 / 2・Core 0 警告。APPROXIMATIONS は住所だけ。
-- 毒（`sessions/p743/poisons.ps1`・`poisons-sweep.ps1`）: ① 境界で home に戻さない → **1 赤**（`SectionBoundaryMeterRevertTests`）／② `BarLength` が弱起を見ない → **5 赤**（`EmptyMeasureValidatorTests`・`SectionVoicePaddingExportTests`）／③ 境界で前の section の弱起を残す → suite **0 赤**・掃き **0 冊差**（弱起の途中で section を終える本が無い）／④ `time none` が拍子を変える → **1 赤**（`SenzaMisuraTests`）。
-- ⚠ restored の full で `Lsp.UsingExpansionCacheTests.AMissingIncludeAppearing_Recomputes_AndTheWarningClears` が 1 赤 → 単独で再走 6/6 緑＝時間依存の flake（コードとは無関係・直前の full は緑）。
-★ `-End p743 -DiffBase aa92955a`＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（HANDOFF 残り 11,195 B）。7.5: Core `+` 176 行（型 128 行＋MIDI の読み替え）・REF 2＝MIDI から型へ移した 2 本（`git diff` の削除側に同数＝新規 0）／OWN 0。7.6: 該当なし（MIDI 差 0）。7.7: ⒜ MIDI の走る拍子は Export で reset されない（従来のまま＝exporter を使い回すと前の本の拍子が残る。1 本ずつ new しているので実害なし・直すなら別 commit）／⒝ 境界で前の弱起を残す形に観測者なし（③）／⒞ 2 つの綴りの違い（型の註）。push はユーザー（未 push 93）。
-判定: 次は C3＝XML を `BarContext` に。型に text（`3+2`）と senza の面を足すので、今便で読んだ型の形と MIDI の使い方の上に立つ＝(a) で**この会話で続けるのが得**。§1 の残り 11 KB は便を区切る理由＝`-Start p744` から。
 
 ## 2. 開いている作業
 

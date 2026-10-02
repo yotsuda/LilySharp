@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第743セッションの経緯
+
+### 1.1 第743セッション（2026-10-02・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第742 の判定: C2）。`-Start p743`（HEAD `aa92955a`・未 push 91）＝full **10745 / 0 / 2 / 10747**（引継ぎと一致）。§7 3.5 で第741 を ARCHIVE へ（残り 13,265 B）。
+C2＝★ `776dadb7` **`Semantics.BarContext`（拍子・home の拍子・弱起と、その規則: `SetTime`／`OpenSection(headerTime, headerPartial)`／`SetPartial`／`SpendPartial`・`BarLength`＝弱起 ?? 拍子の 1 小節・`MeterLength`）を MIDI に**。MIDI の 5 field（`_timeNumerator/_timeDenominator/_homeTimeBeats/_homeTimeBeatType/_partial`）を消し、13 か所の読みを型へ。`MeasureTicks` は `FractionToTicks(_bars.BarLength)`。型の註に MIDI と頁でまだ違う 2 つの綴りを書いた（弱起が閉じる前の 2 つ目の `partial`: MIDI は置き換え・頁は先勝ち／`time none`: MIDI は拍子を保つ・頁は時計を凍らせる）＝C5 で判断。
+- 確かめ: MIDI 998 冊・1,199 枚＝**差 0**。full 10745 / 0 / 2・Core 0 警告。APPROXIMATIONS は住所だけ。
+- 毒（`sessions/p743/poisons.ps1`・`poisons-sweep.ps1`）: ① 境界で home に戻さない → **1 赤**（`SectionBoundaryMeterRevertTests`）／② `BarLength` が弱起を見ない → **5 赤**（`EmptyMeasureValidatorTests`・`SectionVoicePaddingExportTests`）／③ 境界で前の section の弱起を残す → suite **0 赤**・掃き **0 冊差**（弱起の途中で section を終える本が無い）／④ `time none` が拍子を変える → **1 赤**（`SenzaMisuraTests`）。
+- ⚠ restored の full で `Lsp.UsingExpansionCacheTests.AMissingIncludeAppearing_Recomputes_AndTheWarningClears` が 1 赤 → 単独で再走 6/6 緑＝時間依存の flake（コードとは無関係・直前の full は緑）。
+★ `-End p743 -DiffBase aa92955a`＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（HANDOFF 残り 11,195 B）。7.5: Core `+` 176 行（型 128 行＋MIDI の読み替え）・REF 2＝MIDI から型へ移した 2 本（`git diff` の削除側に同数＝新規 0）／OWN 0。7.6: 該当なし（MIDI 差 0）。7.7: ⒜ MIDI の走る拍子は Export で reset されない（従来のまま＝exporter を使い回すと前の本の拍子が残る。1 本ずつ new しているので実害なし・直すなら別 commit）／⒝ 境界で前の弱起を残す形に観測者なし（③）／⒞ 2 つの綴りの違い（型の註）。push はユーザー（未 push 93）。
+判定: 次は C3＝XML を `BarContext` に。型に text（`3+2`）と senza の面を足すので、今便で読んだ型の形と MIDI の使い方の上に立つ＝(a) で**この会話で続けるのが得**。§1 の残り 11 KB は便を区切る理由＝`-Start p744` から。
+
 ## 以下は第742セッションの経緯
 
 ### 1.1 第742セッション（2026-10-02・YT-DELL2）

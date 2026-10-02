@@ -125,6 +125,7 @@ phrase・tuplet・grace・cue・repeat の中身は `new LilyPondExporter { … 
 - **C1 済み（第742・2026-10-02・`0193be8e`）**: `Semantics.SectionHeaders`（`Read`・4 表・`DirectivesOf`・`FirstDirect<T>`）。頁・MIDI・XML・双子の 4 builder を消した。4 出力の掃き 998 冊で差 0。validator の `CollectSectionTimes/Partials` は規則が違う（後勝ち）＝C5 で。毒: inline music の除外を外す 21 赤／partial 表なし 16 赤／**先勝ち→後勝ち 0 赤・掃きも 0 冊差＝観測者なし**（HANDOFF §1.1 第742 ⑵）。
 - **C2 済み（第743・2026-10-02・`776dadb7`）**: `Semantics.BarContext`（`Meter`・`HomeMeter`・`Partial`・`SetTime`・`OpenSection`・`SetPartial`・`SpendPartial`・`BarLength`・`MeterLength`）を MIDI に。MIDI 998 冊 差 0。毒 1／5／0+0／1。MIDI と頁でまだ違う 2 つの綴り（弱起が閉じる前の 2 つ目の `partial`・`time none`）は型の註＝C5 の判断材料。C3（XML）は text（`3+2`）と senza の面を型に足してから。
 - **C3 済み（第744・2026-10-02・`b29bae2b`）**: 型に `Meter.BeatsText`・`SenzaMisura`・`HomeSenzaMisura`・`CaptureHome`・`RevertToHome`・`SetMeter` を足し、XML の 5 field（拍子の 4 つ＋`_homeTime`）を消した。XML の弱起（`_pendingPickup`／`_pickupLength`＝書いた音価の累積で閉じる）は独自のまま＝3 つ目の綴りとして型の註に。XML・MIDI 998 冊 差 0。毒 4／10／0+1（senza は `test/senza-misura` だけが観測）／0+0（加算拍子の文字列は観測者なし）。
+- **C4 済み（第745・2026-10-02・`2f544c8d`）**: 双子の 8 field（拍子 4・home 3・`_twinPartial`）を `_bars` に。`TimeText` は走っている `Meter` から導出。入れ子の frame は `BarContext.MeterState`（`Save`／`Restore`）で拍子の半分だけ運ぶ（弱起は従来どおり運ばない）。ly・xml・midi 998 冊 差 0。毒 9／4／0+0／0+0。**次は C5＝判断が先**: 弱起の綴り 3 つ（頁＝先勝ち・小節線で消費／MIDI・双子＝置き換え・小節線で消費／XML＝音価の累積で閉じる）と `time none` の 2 つ（頁＝時計を凍らせる／他＝拍子を保つ）を揃えるか、違いのまま型に載せるか。
 
 ## 6. 確かめ方（計器）
 
