@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第750セッションの経緯
+
+### 1.1 第750セッション（2026-10-02・YT-DELL2）
+
+同じ会話の続き（ユーザー GO: (i) の 1 件目＝section 境界の戻しの判定を pair に）。`-Start p750`（HEAD `8d3fcf4b`・未 push 105）＝full **10751 / 0 / 2 / 10753**。§7 3.5 で第748 を ARCHIVE へ。
+★ `1f804723` **頁の section 境界の戻しを pair で判定**（`BarContext.LeftHome`＝`!Meter.SamePair(HomeMeter) || senza が違う`＝双子・MIDI と同じ規則。`LeftHomeByLength` は消えた）。旧規則（約分した小節長）は両向きに外れていた: 2/2→4/4 の home は 1 == 1 で描かず（双子は `\time 4/4` を書き LP は印字する＝engraver は spec を identity で比べて \time ごとに印字・`lily/time-signature-engraver.cc:99-105`）／弱起 pending の境界で 1/2 ≠ 1 と読んで同じ拍子の 4/4 を弱起の中に描き、弱起を 1 小節に張り替えた（`Locked out of Heaven`）。
+- 出力: svg **998 冊中 1 冊**（`Locked out of Heaven`＝小節 0 の `TimeSignatureChange` が消えるだけ・小節構造は同じ＝書かれた `|` が 3/8 で弱起を閉じていた）・ly 0。full **10753 / 0 / 2**（網 +2・`SectionBoundaryMeterRevertTests`: 2/2→4/4 を 5 読み手が言う／pending の弱起は拍子の変化でない）。APPROXIMATIONS 変化なし。CHANGELOG Fixes に 1 項。
+- 毒（`sessions/p750/poisons.ps1`）: ① 戻しを描かない → **10 赤**／② 旧規則（長さ）に戻す → **2 赤**（新しい網 2 本）／③ senza を比べない → **1 赤**。
+- ⚠️ 網の 1 本目は by-section の綴り（`section P { m { r8 } }`）で書いて赤（期待 2 小節・実際 3）＝probe で base も head も小節 0 が `Spacer(1)` で `r8` が無い＝**同名 section 2 つの by-section は part を無音扱いにする**（別の問い＝§1.0 ⒜ ⑷）。ユーザーの本は by-part で、そちらは正しい＝網を by-part に書き直した。
+★ `-End p750 -DiffBase 8d3fcf4b`＝full **10753 / 0 / 2 / 10755**（網 +2）・門 全 OK（HANDOFF 残り 10,036 B）。7.5: Core `+` 27 行・REF 1／OWN 0。7.6: ⒝ LP 由来・字面でない＝LP は \time ごとに印字（engraver が spec を identity で比べる）、Lily# は「双子が `\time` を書く条件」＝pair＋senza を同じ答えとして型に置いた。7.7: ⒜ `LeftHomeByLength` と「規則の保存」の註は消えた（残る保存は `SetMeterRearmingPickup`・`SetMeterLeavingSenza`）／⒝ 網の 1 本目が別の問いを掘った（⑷）＝網より先に本の形を probe で見ること（RULES §5.0「対の両側が同じ音楽か」の by-section／by-part 版）。push はユーザー（未 push 106）。
+判定: (i) の 1 件目は閉じた。次は §1.0 ⒜ ⑴ の残り（弱起中の `time`・XML の弱起・validator の後勝ち・senza）・⑷ の問い・⑵⑶＝ユーザー判断。会話を区切るか: (b) 4 便・文脈はまだ軽い＝**続ける**。
+
 ## 以下は第749セッションの経緯
 
 ### 1.1 第749セッション（2026-10-02・YT-DELL2）
