@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第752セッションの経緯
+
+### 1.1 第752セッション（2026-10-02・YT-DELL2）
+
+同じ会話の続き（推しの順番: B を測る・測るだけ＝コード変更なし）。`-Start p752`（HEAD `9273d509`・未 push 109）＝full **10755 / 0 / 2 / 10757**。§7 3.5 で第750 を ARCHIVE へ。
+B の測定（Lab `sessions/p752/`）: ⑴ by-section の同名 section（header＋body）を 4 出力に通す（`b/bysection.lys`＝p750 の網の 1 本目の本）: 双子 `\partial 2 r8 c'8 d' e' | f'4 g' a' b' |`・XML 8 音 1 休符（implicit の弱起）・MIDI は tick 240 から 7 音＝**3 出力は正しい**。頁だけ `Spacer(1)`＝body を捨てる（MIDI は同名の宣言を全部 list に集めて順に鳴らす・XML も list・頁は `_sectionState.Sections[name]` の代表 1 つ）。⑵ GRAMMAR.md:1052-1057 は standalone header を「by-part のファイルで」とだけ書く。⑶ 国勢調査: root 直下の同名 section は 998 冊で **0**（陽性対照の p750 の本は検出＝計器は生きている）。⑷ **副産物**: `lysc check` が**ユーザーの実本 `Locked out of Heaven`（by-part）に偽の警告 2 つ**＝LYS2001「Pickup measure duration 1/8 is less than the declared partial 1/2」（Body_1 の `r8`）と LYS2006（Intro の 3/8）。pending の弱起が section 境界をまたぐことを validator だけが知らない（per-bar の読み）。頁・双子・XML・MIDI は正しい。⑸ 観察: XML の measure 番号 0・2・3（1 が飛ぶ）。
+結論は §1.0 ⒜ ⑷⑸ に＝ユーザー判断（⑷ は推し ⒜・優先低／⑸ は推し「validator も pending を運ぶ」・GO 要）。
+★ `-End p752 -DiffBase 9273d509`＝full **10755 / 0 / 2 / 10757**（網 ±0）・門 全 OK（HANDOFF 残り 9,396 B）。7.5: Core `+` 0（測るだけの便）。7.6／7.7: 該当なし。計器の罠 1 つ: 国勢調査の 1 回目は「parent が PartDeclaration でない section」を root 扱いして lyrics／chords の track 内 section を 22 件数えた＝root 直下（`Parent -eq $root`）に直し、陽性対照で鳴ることを見てから数を読んだ。push はユーザー（未 push 109）。
+判定: B は測り終えた＝⑷⑸ はユーザー判断。推しの順番の残り: A3（出力不変）→ A2 を測る → C の StreamFrame の網。会話を区切るか: (b) 6 便＝文脈は重い。**ユーザーの判断を受ける所で区切るのが得**＝⑷⑸ の GO を待つ間に新しい会話でも再開できる（材料は §1.0 と Lab `p752/`）。
+
 ## 以下は第751セッションの経緯
 
 ### 1.1 第751セッション（2026-10-02・YT-DELL2）
