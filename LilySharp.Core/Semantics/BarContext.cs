@@ -66,10 +66,9 @@ public readonly record struct Meter(int Beats, int BeatType, string? BeatsText =
 /// itself when the length is reached (<c>MusicXmlExporter.MaybeClosePickup</c>, with
 /// <c>_pendingPickup</c> / <c>_pickupLength</c>), where the MIDI, the twin and the page spend it at
 /// the first bar line that closes after it — so the MusicXML does not read <see cref="Partial"/> yet.
-/// A section that states no meter reverts to the home in all of them; whether that move is
-/// WRITTEN they ask differently — the pair here (<see cref="OpenSection"/>), the bar's reduced
-/// length and <c>time none</c> on the page (<see cref="LeftHomeByLength"/>: 2/2 after 4/4 draws
-/// nothing and stays 2/2). A second <c>partial</c> before the pickup bar closes REPLACES the pending one in all of them
+/// A section that states no meter reverts to the home in all of them, and all of them write
+/// that move for a changed PAIR (<see cref="OpenSection"/>, <see cref="LeftHome"/>; the page
+/// asked the bar's reduced length until p750). A second <c>partial</c> before the pickup bar closes REPLACES the pending one in all of them
 /// (until C5 this type recorded the page as keeping the first: its <c>_partialRestore ??=</c>
 /// parked the METER to restore, not the first pickup — the pickup field was overwritten). Under
 /// <c>time none</c> all of them keep the last metered meter in force (LilyPond's performer writes
@@ -205,20 +204,28 @@ public sealed class BarContext
         HomeSenzaMisura = SenzaMisura;
     }
 
-    /// <summary>The page's reading of "did the section before leave the home" — what the
-    /// revert at a section boundary is drawn for (<c>MeasureBuilder.RevertMeterToHome</c>): the
-    /// bar's LENGTH, reduced, and <c>time none</c>, not the pair. So 2/2 after a 4/4 home is no
-    /// change (nothing is drawn, the meter in force stays 2/2), and a pickup pending at the
-    /// boundary is compared as the pickup. The other outputs ask the pair
-    /// (<see cref="OpenSection"/>, <see cref="Meter.SamePair"/>). Kept as it was (stage C6 moves
-    /// the state, not the rule); whether the page should ask the pair too is a separate
-    /// decision, with its own net.</summary>
-    public bool LeftHomeByLength => BarLength != HomeMeter.Length || SenzaMisura != HomeSenzaMisura;
+    /// <summary>Whether the section before left the home — what a boundary that states no meter
+    /// RESTATES (the page's <c>MeasureBuilder.RevertMeterToHome</c>; the twin's <c>\time</c> at
+    /// the boundary, LilyPondExporter.Form): the PAIR and <c>time none</c>. 2/2 after a 4/4 home
+    /// is a change — the twin writes <c>\time 4/4</c>, and LilyPond prints a TimeSignature for
+    /// every \time event because its engraver compares the spec by identity
+    /// (LILYPOND-REF: lily/time-signature-engraver.cc:99-105 process_music, scm_is_eq on last_spec_).
+    /// A pickup pending at the boundary is not a meter and does not count. The MIDI asks the
+    /// same pair (<see cref="OpenSection"/>, <see cref="Meter.SamePair"/>).</summary>
+    /// <remarks>
+    /// Until 2026-10-02 the page asked the bar's reduced LENGTH instead (<c>BarLength</c>
+    /// against the home's): 2/2 → 4/4 drew nothing and stayed 2/2 where the twin restated 4/4,
+    /// and a pickup still pending at the boundary (<c>section Body_1 { partial 2 }</c> whose body
+    /// is <c>r8</c> with no bar line — `Locked out of Heaven`) read 1/2 ≠ 1, drew a 4/4 of the
+    /// same meter and re-armed the pickup to a whole bar (<see cref="SetMeterRearmingPickup"/>).
+    /// Owner's GO 2026-10-02 (p750): the page asks the pair like everyone else.
+    /// </remarks>
+    public bool LeftHome => !Meter.SamePair(HomeMeter) || SenzaMisura != HomeSenzaMisura;
 
     /// <summary>A section that states no <c>time</c> of its own opens at the HOME meter — a
     /// mid-section change cannot leak into the next section, nor into the same section played
     /// again elsewhere by the form (<see cref="ScoreHomeMeter"/>; the page's
-    /// <c>MeasureBuilder.RevertMeterToHome</c>, which first asks <see cref="LeftHomeByLength"/>).</summary>
+    /// <c>MeasureBuilder.RevertMeterToHome</c>, which first asks <see cref="LeftHome"/>).</summary>
     public void RevertToHome()
     {
         Meter = HomeMeter;

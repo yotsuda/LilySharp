@@ -559,17 +559,17 @@ internal sealed class MeasureBuilder
     /// (<see cref="SetHomeMeter"/>), for the same self-containment as key and clef — a
     /// mid-section <c>time</c> cannot leak past the section end, nor into the same section
     /// reused elsewhere by the form. Only redrawn when a prior section actually left a different
-    /// meter (<see cref="BarContext.LeftHomeByLength"/>), so the common case emits nothing and
-    /// the first section is a no-op; the redraw makes the revert visible instead of silently
-    /// leaving the previous signature on the staff. <c>time none</c> is part of the comparison:
-    /// a section that ended unmetered against a 4/4 score meter differs, and the 4/4 is redrawn
-    /// — LilyPond prints a grob for every \time event (measured 2.26.0,
+    /// meter — the PAIR or <c>time none</c> (<see cref="BarContext.LeftHome"/>: what the twin
+    /// writes a <c>\time</c> for), so the common case emits nothing and the first section is a
+    /// no-op; the redraw makes the revert visible instead of silently leaving the previous
+    /// signature on the staff. A section that ended unmetered against a 4/4 score meter differs,
+    /// and the 4/4 is redrawn — LilyPond prints a grob for every \time event (measured 2.26.0,
     /// scratch/p354/lp/senza-reprint.ly: `\time 4/4 … \time 4/4` prints twice). A
     /// <c>time none</c> home carries no ink and no width (<see cref="TimeSignatureChangeItem.Blanked"/>).
     /// </summary>
     public void RevertMeterToHome(int sourcePosition)
     {
-        if (!_bars.LeftHomeByLength)
+        if (!_bars.LeftHome)
             return;
         var home = _bars.HomeMeter;
         bool senza = _bars.HomeSenzaMisura;

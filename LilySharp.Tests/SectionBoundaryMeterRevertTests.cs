@@ -116,6 +116,76 @@ public sealed class SectionBoundaryMeterRevertTests
     }
 
     /// <summary>
+    /// The revert is written for a changed PAIR, not a changed bar length: a section that ends
+    /// in 2/2 against a 4/4 home is restated — the twin writes <c>\time 4/4</c> and LilyPond
+    /// prints a TimeSignature for every \time event (lily/time-signature-engraver.cc:99-105,
+    /// <c>scm_is_eq</c> on the spec), the MIDI writes the meter event — and so the page draws
+    /// the 4/4 again. Until 2026-10-02 the page compared the reduced bar length (1 == 1) and
+    /// drew nothing, leaving the staff in 2/2 where the twin's LilyPond showed 4/4.
+    /// </summary>
+    [Fact]
+    public void ATwoTwoSectionAgainstAFourFourHome_IsRestatedByEveryReader()
+    {
+        var tree = SyntaxTree.Parse("""
+            time 4/4
+            part m {
+              section A { c'4 d e f | time 2/2 g a b c' | }
+              section B { c'4 d e f | }
+            }
+            form main { ~A ~B }
+            score main { staff m }
+            """);
+
+        var score = new LilySharp.Core.Svg.Collector.MeasureCollector().Collect(tree, "m");
+        Assert.Equal(3, score.Voice.Measures.Length);
+        var change = Assert.Single(score.Voice.Measures[1].Items.OfType<Core.Svg.Model.TimeSignatureChangeItem>());
+        Assert.Equal((2, 2), (change.NewTime.Beats, change.NewTime.BeatType));
+        var restate = Assert.Single(score.Voice.Measures[2].Items.OfType<Core.Svg.Model.TimeSignatureChangeItem>());
+        Assert.Equal((4, 4), (restate.NewTime.Beats, restate.NewTime.BeatType));
+        Assert.False(restate.Blanked);
+
+        var ly = new LilyPondExporter().Export(tree);
+        Assert.True(ly.IndexOf("\\time 4/4", ly.IndexOf("\\time 2/2") + 1) > 0, "the twin restates 4/4 after 2/2");
+        var sigs = new MidiExporter().Export(tree).Tracks.SelectMany(t => t.TimeSignatures)
+            .OrderBy(t => t.Tick).Select(t => (t.Numerator, t.Denominator)).ToList();
+        Assert.Equal(new[] { (4, 4), (2, 2), (4, 4) }, sigs);
+    }
+
+    /// <summary>
+    /// A pickup still pending at the boundary is not a meter change: the next section fills
+    /// the rest of the pickup bar, and no signature is drawn. The shape is the owner's
+    /// `Locked out of Heaven` — a by-part book with <c>section Body_1 { partial 2 }</c> whose
+    /// body is <c>r8</c> with no bar line. Until 2026-10-02 the page compared the pending pickup
+    /// (1/2) with the home's bar (1) and drew a second 4/4 inside the pickup bar.
+    /// </summary>
+    /// <remarks>⚠️ By-part on purpose: the by-section spelling of the same book (<c>section P
+    /// { partial 2 }</c> beside <c>section P { m { r8 } }</c>) pads the part with a whole-bar
+    /// spacer and drops the <c>r8</c> — on the base and the head alike (p750's probe), so it is
+    /// a question of its own, not of this rule.</remarks>
+    [Fact]
+    public void APickupPendingAtTheBoundary_IsNoMeterChange_AndTheNextSectionFillsIt()
+    {
+        var tree = SyntaxTree.Parse("""
+            time 4/4
+            section P { partial 2 }
+            part m {
+              section P { r8 }
+              section Q { c'8 d' e' | f'4 g' a' b' | }
+            }
+            form main { ~P ~Q }
+            score main { staff m }
+            """);
+
+        var score = new LilySharp.Core.Svg.Collector.MeasureCollector().Collect(tree, "m");
+        Assert.Equal(2, score.Voice.Measures.Length);
+        var pickup = score.Voice.Measures[0];
+        Assert.True(pickup.IsPickup);
+        Assert.Equal(4, pickup.Items.Count(i => i is Core.Svg.Model.NoteItem or Core.Svg.Model.RestItem)); // r8 c'8 d'8 e'8 = the half
+        Assert.DoesNotContain(score.Voice.Measures.SelectMany(m => m.Items), i => i is Core.Svg.Model.TimeSignatureChangeItem);
+        Assert.Equal(4, score.Voice.Measures[1].Items.Count(i => i is Core.Svg.Model.NoteItem));
+    }
+
+    /// <summary>
     /// A section that DOES state its own meter keeps it — the revert is the else-arm, not
     /// a blanket reset, and the same registry answers both halves.
     /// </summary>
