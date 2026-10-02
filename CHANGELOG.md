@@ -341,6 +341,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **MusicXML measure numbers no longer skip one after a pickup.** A part that opens with a
+  pickup (bar 0) resumed its count at the wrong place when its next section began: a book
+  whose first section is the pickup alone exported measures 0, 2, 3, and `Greensleeves` went
+  from 8 to 10 at its second section. The count now follows the last written bar, as the
+  page numbers it. Fifteen of the 1,199 exports in the reference corpus change, in their
+  `number` attributes only.
 - **The MusicXML spends a pickup at the bar line that closes it, as the page, the MIDI and
   the `.ly` twin do.** A pickup shorter than declared — `partial 2  c4 | d4 e f g |` — ran
   on across its `|` in the MusicXML and closed in the middle of the next bar, so the `d4`

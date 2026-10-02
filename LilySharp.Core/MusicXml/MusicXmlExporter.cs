@@ -2085,7 +2085,14 @@ public sealed class MusicXmlExporter
         if (_partsByName.TryGetValue(name, out var existing))
         {
             _currentPart = existing;
-            _measureNumber = existing.Measures.Count + 1;
+            // The number follows the part's LAST WRITTEN bar, as PadVoice's does — not the
+            // count of its bars. The two differ by one whenever the part opened with a
+            // pickup (bar 0): counted, `0 | 1 … 8` is nine bars, and the next play's first bar
+            // was numbered 10 — `Greensleeves` skipped 9 and `I'm Your Man`, whose first
+            // section is the pickup alone, went 0, 2, 3 (measured 2026-10-03, p756, over the
+            // 998-book corpus: every by-section book with a header pickup skipped a number
+            // at its second section).
+            _measureNumber = existing.Measures.Count > 0 ? existing.Measures[^1].Number + 1 : 1;
         }
         else
         {
