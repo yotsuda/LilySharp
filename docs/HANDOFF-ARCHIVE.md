@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第748セッションの経緯
+
+### 1.1 第748セッション（2026-10-02・YT-DELL2）
+
+同じ会話の続き（ユーザー「任せる。続けて」＝私の選択: ⑷ C6＝出力を変えずに済む唯一の候補・⑴⑶ は LP の裁定が要る）。`-Start p748`（HEAD `cb9aa70a`・未 push 101）＝full **10745 / 0 / 2 / 10747**（引継ぎと一致）。§7 3.5 で第746 を ARCHIVE へ。
+C6＝★ `67d5ef06` **頁の section 境界の拍子の戻しを `BarContext.HomeMeter` に**。collector の `_sectionResetTime*` 4 field は毎 voice `_scoreTime` から写すだけの複製で読み手は `ProcessSectionPrologue` の 1 か所＝消して、builder の生成地点 2 か所で `SetHomeMeter`（`_scoreTime` から）・prologue は `builder.RevertMeterToHome(sectionPos)`。**保存した頁固有の規則**: 戻しを描くかの判定は pair ではなく約分した小節長＋`time none`（`BarContext.LeftHomeByLength`・2/2→4/4 は描かず 2/2 のまま・弱起 pending なら弱起で比べる）。他の 3 出力は pair（`OpenSection`／`SamePair`）。新しい走査・割当なし。
+- 確かめ: svg 1,199 枚・ly・mid・xml 998 冊＝**全部 差 0**。full 10745 / 0 / 2・Core 0 警告。APPROXIMATIONS は住所だけ（3／3／masked 0・**今回は照合が表の行を見ている**）。
+- 毒（`sessions/p748/poisons.ps1`・baseline 0）: ① 戻しを描かない → **9 赤**／② pair で比べる（頁の規則を他出力の規則に）→ **0 赤**・**svg の掃きで 1 冊差**（`poisons-sweep.ps1`・下）／③ home の `time none` を落とす → **3 赤**／④ 後ろの `SetMeter` を落とす → **0**＝有拍子の home では AddItem の change item が既に拍子を動かす二重の保証・`time none` の home の pair だけが依存（無観測・コードに註）／⑤ home を `_scoreTime` でなく `_meta` から → **0**＝恒等写像（builder を武装する 1 行前に `_meta` が `_scoreTime` で戻されている・毒の設計ミス＝その場で閉じる）／⑥ sub-voice の builder を武装しない → **0**（行番号の 1 赤だけ）＝sub-voice は section を歩かない（武装は揃えのため）。
+- ★ **② の 1 冊＝`Locked out of Heaven`（ユーザーの実コーパス）**: `section Body_1 { partial 2 }` の body が `r8`・bar 無し＝次の境界（Intro）で弱起 1/2 が pending → 頁は `LeftHomeByLength`（1/2 ≠ 1）で **4/4 を描き直し**、`SetMeterRearmingPickup` で弱起を 1 小節に張り替える（text 要素 1 つ分の差・頁全体が組み直る）。pair で比べれば描かない。LP は \time を書かない限り描かない＝**頁の側に欠陥の疑い**。直すのは (i) で別 commit・網つき＝§1.0 ⒜ ⑴ に材料として載せた。2 つの頁の規則（C5 の張り替え・C6 の長さ比較）が同じ本で噛み合っている。
+★ `-End p748 -DiffBase cb9aa70a`＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（**HANDOFF 残り 7,827 B**＝次便は `-Start` のアーカイブで約 2 KB 空くが、§1.0 の ✅ と重複を落とす番）。7.5: Core `+` 89 行・REF 0／OWN 0＝⒟ 何も足していない（senza-reprint の MEASURED 註は戻しと一緒に `MeasureBuilder` へ動いただけ）。7.6: 該当なし（4 出力 差 0）。7.7: ⒜ `LeftHomeByLength` は「規則の保存」の名前（`SetMeterRearmingPickup`・`SetMeterLeavingSenza` と同じ族）／⒝ 二重の保証 1 つ＝`RevertMeterToHome` の後ろの `SetMeter`（毒 ④・註あり）／⒞ 毒 ⑤ は恒等写像＝設計ミス（RULES §5.4 の 3 つ目の顔・その場で閉じた）。push はユーザー（未 push 102）。
+判定: 段階 C は C6 まで閉じた＝REFACTOR_PLAN の A〜C は全部済み。**次はすべてユーザー判断**（§1.0 ⒜ ⑴〜⑶・D）。(i) には今便で**コーパス 1 冊の観測者**が付いた（`Locked out of Heaven` の描き直し 4/4）＝最初に裁定する候補として推す。会話を区切るか: (c) 判断は文脈と独立・(b) この会話は 2 便＝軽い。**既定は続ける**。
+
 ## 以下は第747セッションの経緯
 
 ### 1.1 第747セッション（2026-10-02・YT-DELL2）

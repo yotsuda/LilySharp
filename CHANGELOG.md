@@ -341,6 +341,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A section boundary restates the score meter when the meter changed, not when the bar
+  length did.** A section that ended in 2/2 against a 4/4 score drew nothing at the next
+  section (1 == 1), where the `.ly` twin wrote `\time 4/4` and LilyPond printed it; and a
+  pickup still open at the boundary (`section Body_1 { partial 2 }` whose body is `r8`) drew
+  a 4/4 of the same meter inside the pickup bar. The page now asks the pair, as the twin and
+  the MIDI always did. One of the 998 books on hand changes, by that one signature.
 - **A dynamic stays in the part it is written in, in the MIDI.** `@p` on one part's note
   quietened whichever part the exporter played next — the other part of the same section,
   or the first part of the next section — because one running velocity was shared by all
