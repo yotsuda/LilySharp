@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第754セッションの経緯
+
+### 1.1 第754セッション（2026-10-02・YT-DELL2）
+
+新しい会話（第753 の判定どおり）。`-Start p754`（HEAD `4ed14186`・未 push 113）＝full **10759 / 0 / 2 / 10761**。§7 3.5 で第752 を ARCHIVE へ。着手は §1.0 ⒜ の **A3**。
+★ `2b2cbbd8` **A3**: validator の `_sectionTimes`／`_sectionPartials`（自前の loop・**後勝ち**・`part` 直下の cell は header でない）を消し、`SectionHeaders.Read`（頁と同じ offering＝chords／lyrics track の cell を除く全宣言・先勝ち）を読む。`SectionBoundaryBars` も registry を受け取る。`HeaderSectionOf` は registry と同じ線（inline music だけが失格）＝**`part m { section A { time 3/4 } }` の `time` は A の header になり、文書の拍子を動かさなくなった**（従来は top-level の経路で後続 section の 4/4 を 3/4 で検査していた）。網 +6（`SectionHeaderRegistryValidatorTests`: partial／time の先勝ち各 2 形＋逆順の対照・part cell の header＋top-level の対照）。CHANGELOG Fixes 1 項・REFACTOR_PLAN §5.1 に済み。
+- 計器: `lysc check` 998 冊（`sessions/p754/sweep-check.ps1`＝p753 の写し・`-Head` も写した exe）: base 1,963 行＝head 1,963 行・**差 0 冊**。full **10765 / 0 / 2 / 10767**。
+- 毒（`sessions/p754/poisons.ps1`・`poisons2.log`）: ① registry を後勝ちに → **4 赤**（新網だけ＝suite の他に先勝ちの観測者は無い・第742 ② の確認）／② `part` 直下の cell を header から外す（旧規則）→ **1 赤**／③ 全宣言を offer（track の cell も）→ **0 赤**＝chord cell の文法は header 指示を持てない（`ParseChordBodyItem`）＝頁との parity のみ・呼び出しの註に書いた／④ 境界の免除が header の弱起を無視 → **1 赤**（p753 の網が新しい型を通して効く）。
+- 踏んだ罠 2 つ（CLAUDE-OPERATIONS §1 に書いた）: ⒜ **`dotnet build LilySharp.Tests` は Cli の `lysc.exe`・`LilySharp.Core.dll` も書き換える**＝掃きの head 側（作業ツリーの Debug lysc）と毒を並走させ、head の数百冊が毒入りで走った（それでも「差 0」に見えた）→ head の exe も `exe-head\` に写して取り直した（2 回目が本物）／⒝ hidden の `cmd … pwsh -File poisons.ps1 > log` では `dotnet test` の日本語要約が別コードページで返り `'合計'` が拾えず 5 行空＝dll 名の行で拾う形に直した。
+★ `-End p754 -DiffBase 4ed14186`＝full **10765 / 0 / 2 / 10767**（網 +6）・門 全 OK（HANDOFF 残り 7,987 B・§1 残り 9,661 字）。7.5: Core `+` 52 行・REF 0／OWN 0＝規則の移動（LP 由来の式なし・定数なし）。7.6: 該当なし（⒟ 既存の家 `SectionHeaders` を指し直しただけ）。7.7: ⒜ 「全宣言を offer」の毒が 0 赤＝文法が観測を禁じる＝parity の註／⒝ 掃きの汚染（罠 ⒜）＝exe を写す手順に。push はユーザー（未 push 114）。
+判定: A3 は閉じた。残り＝A2 を測る（xml の掃きで動く冊数）→ C の StreamFrame の網／⑹⑺ は観察。会話を区切るか: (a) A2 は同じ族（弱起の綴り）で計器は `sessions/p742/sweep-xml.ps1`＝文脈は使うが薄い／(b) 1 便目で軽い ⇒ **続ける**（この会話で `-Start p755` を回して A2 へ）。
+
 ## 以下は第753セッションの経緯
 
 ### 1.1 第753セッション（2026-10-02・YT-DELL2）
