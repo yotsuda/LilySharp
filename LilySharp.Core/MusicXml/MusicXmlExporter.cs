@@ -89,9 +89,15 @@ public sealed class MusicXmlExporter
             "MusicXmlExporter: the document was accessed before the build created it.");
 
     private int _tempo = 120;
-    private int _timeNumerator = 4;
-    private string? _timeNumeratorText; // additive meters ("3+2")
-    private int _timeDenominator = 4;
+    // The meter in force (the pair, the additive numerator's text, `time none`) and the score's
+    // home meter a section reverts to: Semantics.BarContext, the one spelling of those rules
+    // (REFACTOR_PLAN stage C3; the MIDI moved first). The pickup is still this exporter's own —
+    // it spends it by the duration written into the implicit measure (MaybeClosePickup), a
+    // different rule from the MIDI's and the page's bar-line spending (see the type's remarks).
+    private readonly Semantics.BarContext _bars = new();
+    // The meter as the document states it — one tuple, so a written <time> can be told from a repeat.
+    private (int Beats, string? BeatsText, int BeatType, bool Senza) RunningTime
+        => (_bars.Meter.Beats, _bars.Meter.BeatsText, _bars.Meter.BeatType, _bars.SenzaMisura);
     private int _keyFifths = 0;
     private string _keyMode = "major";
     private string _clefSign = "G";
@@ -121,18 +127,16 @@ public sealed class MusicXmlExporter
     private readonly Dictionary<string, ((int Fifths, string? Mode, string? Custom)? Key,
         (int Beats, string? BeatsText, int BeatType, bool Senza)? Time,
         (string Sign, int Line, int? OctaveChange)? Clef)> _writtenByPart = new();
-    // The score's own signature, captured after the metadata pass.
+    // The score's own signature, captured after the metadata pass. (Its own METER is captured
+    // at the same spot and reverted at the same boundary — _bars.CaptureHome / RevertToHome.
+    // See ScoreHomeMeter: the collector reverts both at a section boundary, and this exporter
+    // reverted neither until 2026-08-31 — a mid-section `time 3/4` leaked into every following
+    // section of the exported document.)
     private (int Fifths, string Mode, string? Custom)? _homeKey;
-    // …and its own METER, captured at the same spot and reverted at the same boundary.
-    // See ScoreHomeMeter: the collector reverts both at a section boundary, and this
-    // exporter reverted neither until 2026-08-31 — a mid-section `time 3/4` leaked into
-    // every following section of the exported document.
-    private (int Beats, string? BeatsText, int BeatType, bool Senza)? _homeTime;
     // A change seen after the bar had started. The measure carries ONE attributes slot,
     // rendered at its head, so writing it here would move the change a bar early; it
     // waits for the next measure instead.
     private bool _attributesDirty;
-    private bool _timeSenzaMisura;  // time none
     private string? _keyCustomXml;  // non-traditional key (encoded pairs)
     private string? _noteFrameSpec; // @diagram(...) on the note being written
     private int[] _partTuning = Tablature.Tunings.Guitar; // what a symbol-less @chord(x32010) is named on
@@ -372,7 +376,7 @@ public sealed class MusicXmlExporter
             // A section reverts to it before stating a key of its own, the way its
             // auto-transpose baseline reverts to _homeTonic just above.
             _homeKey = (_keyFifths, _keyMode, _keyCustomXml);
-            _homeTime = (_timeNumerator, _timeNumeratorText, _timeDenominator, _timeSenzaMisura);
+            _bars.CaptureHome();
             BuildSectionHeaderRegistry(root);
             ProcessSections(root);
             // The chord rows, once every part has written its bars (their measures are the
@@ -1923,8 +1927,8 @@ public sealed class MusicXmlExporter
         // this exporter kept the previous section's mid-music change instead: measured
         // 2026-08-31, `section A { … time 3/4 … } section B { … }` exported every one of
         // B's bars in 3/4 while the page draws them in 4/4.
-        if (_homeTime is { } ht && _sectionTime is null)
-            (_timeNumerator, _timeNumeratorText, _timeDenominator, _timeSenzaMisura) = ht;
+        if (_sectionTime is null)
+            _bars.RevertToHome();
         // ⚠️ AND A RESTORE HAS TO BE *WRITTEN*, not merely held. Both reverts above only
         // moved the running state; nothing marked the document dirty, so the next
         // StartNewMeasure's `else if (_attributesDirty)` arm never ran and the revert was
@@ -2124,7 +2128,7 @@ public sealed class MusicXmlExporter
     private void AddSilentBar()
     {
         if (_currentMeasure == null) return;
-        var length = _pendingPickup ? _pickupLength : new Fraction(_timeNumerator, _timeDenominator);
+        var length = _pendingPickup ? _pickupLength : _bars.MeterLength;
         var (type, dots) = GetNoteType(length);
         _currentMeasure.Notes.Add(new MusicXmlNote
         {
@@ -2198,9 +2202,9 @@ public sealed class MusicXmlExporter
     private void CloseFullBarAtPassEnd()
     {
         if (_currentMeasure is not { Notes.Count: > 0 } open || _currentPart == null
-            || _timeSenzaMisura || _pendingPickup)
+            || _bars.SenzaMisura || _pendingPickup)
             return;
-        int barTicks = 4 * DivisionsPerQuarter * _timeNumerator / _timeDenominator;
+        int barTicks = 4 * DivisionsPerQuarter * _bars.Meter.Beats / _bars.Meter.BeatType;
         if (ElapsedTicks(open) < barTicks)
             return;
         _currentPart.Measures.Add(open);
@@ -2250,10 +2254,10 @@ public sealed class MusicXmlExporter
             _currentMeasure.Attributes = new MusicXmlAttributes
             {
                 Divisions = DivisionsPerQuarter,
-                TimeBeats = _timeNumerator,
-                TimeBeatsText = _timeNumeratorText,
-                TimeSenzaMisura = _timeSenzaMisura,
-                TimeBeatType = _timeDenominator,
+                TimeBeats = _bars.Meter.Beats,
+                TimeBeatsText = _bars.Meter.BeatsText,
+                TimeSenzaMisura = _bars.SenzaMisura,
+                TimeBeatType = _bars.Meter.BeatType,
                 KeyFifths = OnPercussionStaff ? null : EffectiveKeyFifths(),
                 KeyCustom = OnPercussionStaff ? null : _keyCustomXml,
                 KeyMode = OnPercussionStaff ? null : _keyMode,
@@ -2286,7 +2290,7 @@ public sealed class MusicXmlExporter
     private void RecordWrittenAttributes()
     {
         _writtenKey = (EffectiveKeyFifths(), _keyMode, _keyCustomXml);
-        _writtenTime = (_timeNumerator, _timeNumeratorText, _timeDenominator, _timeSenzaMisura);
+        _writtenTime = RunningTime;
         _writtenClef = (_clefSign, _clefLine, _clefOctaveChange);
     }
 
@@ -2314,7 +2318,7 @@ public sealed class MusicXmlExporter
         if (_currentMeasure.Notes.Count > 0) { _attributesDirty = true; return; }
 
         var key = (EffectiveKeyFifths(), _keyMode, _keyCustomXml);
-        var time = (_timeNumerator, _timeNumeratorText, _timeDenominator, _timeSenzaMisura);
+        var time = RunningTime;
         var clef = (_clefSign, _clefLine, _clefOctaveChange);
         bool keyChanged = _forcedKey || _writtenKey is null || !_writtenKey.Value.Equals(key);
         bool timeChanged = _forcedTime || _writtenTime is null || !_writtenTime.Value.Equals(time);
@@ -2338,10 +2342,10 @@ public sealed class MusicXmlExporter
         }
         if (timeChanged)
         {
-            attrs.TimeBeats = _timeNumerator;
-            attrs.TimeBeatsText = _timeNumeratorText;
-            attrs.TimeBeatType = _timeDenominator;
-            attrs.TimeSenzaMisura = _timeSenzaMisura;
+            attrs.TimeBeats = time.Beats;
+            attrs.TimeBeatsText = time.BeatsText;
+            attrs.TimeBeatType = time.BeatType;
+            attrs.TimeSenzaMisura = time.Senza;
         }
         if (clefChanged)
         {
@@ -2879,13 +2883,9 @@ public sealed class MusicXmlExporter
 
     private void ProcessTimeSignature(TimeSignatureSyntax timeSig)
     {
-        _timeSenzaMisura = timeSig.IsSenzaMisura;
-        if (!_timeSenzaMisura)
-        {
-            _timeNumerator = timeSig.Beats;
-            _timeNumeratorText = timeSig.BeatsText;
-            _timeDenominator = timeSig.BeatType;
-        }
+        // A metered `time` is the meter in force; `time none` keeps the last metered pair and
+        // says senza misura (Semantics.BarContext.SetTime has the rule).
+        _bars.SetTime(timeSig);
         _forcedTime |= timeSig.IsForced;
         _attributesDirty = true;
         SyncAttributes();
@@ -4367,7 +4367,7 @@ public sealed class MusicXmlExporter
         // A bare `R` lasts its bar (Music.BarRest) and leaves the running duration alone. A bar
         // no single note value spells (5/4) writes no <type>, as a whole-measure rest may.
         bool bare = Music.BarRest.IsBare(rest);
-        var meter = new Fraction(_timeNumerator, _timeDenominator);
+        var meter = _bars.MeterLength;
         var duration = bare ? (_pendingPickup ? _pickupLength : meter) : GetDuration(rest.Duration);
         int durationTicks = FractionToTicks(duration);
         var (type, dots) = bare && Music.BarRest.Shape(duration).Scale != 1
@@ -5393,14 +5393,14 @@ public sealed class MusicXmlExporter
     /// (the section's header, else the score's home).</summary>
     private void RememberChordRow(string row, IEnumerable<SyntaxNode> items)
     {
-        int beats = _timeNumerator, beatType = _timeDenominator;
+        int beats = _bars.Meter.Beats, beatType = _bars.Meter.BeatType;
         if (_sectionTime is { } st)
         {
             if (!st.IsSenzaMisura)
                 (beats, beatType) = (st.Beats, st.BeatType);
         }
-        else if (_homeTime is { } ht && !ht.Senza)
-            (beats, beatType) = (ht.Beats, ht.BeatType);
+        else if (!_bars.HomeSenzaMisura)
+            (beats, beatType) = (_bars.HomeMeter.Beats, _bars.HomeMeter.BeatType);
         var (fifths, mode, custom) = _homeKey ?? (_keyFifths, _keyMode, _keyCustomXml);
         var tonic = _homeTonic;
         if (_sectionKey is { } sk)
@@ -5614,7 +5614,7 @@ public sealed class MusicXmlExporter
         _keyFifths = pending.Key.Fifths;
         _keyMode = pending.Key.Mode;
         _keyCustomXml = pending.Key.Custom;
-        (_timeNumerator, _timeNumeratorText, _timeDenominator, _timeSenzaMisura) = (pending.Beats, null, pending.BeatType, false);
+        _bars.SetMeter(new Semantics.Meter(pending.Beats, pending.BeatType));
         _attributesDirty = true;
         var tuning = Semantics.ChordDiagramsKey.Resolve(_diagramsWord.Word, null);
         for (int k = 0; k < bars.Count; k++)
