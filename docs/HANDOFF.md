@@ -102,7 +102,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **段を束ねた小節線（PianoStaff 等）が隣の段へ 0.05 伸びる分は未移植**（`ColumnOpticalCorrectionTests` の註・LP 0.133646 対 0.132217・ピアノ譜の小節頭で 0.0014＝束ね方を間隔の計算へ通す配管が要る・第661）／小節線をまたぐ梁は小節ごとに半分で読む
 - ⚠️ **tab のタイの行き先の数字は*描かない*＝意図した LP からの逸脱（ユーザー決定・§2 T の冒頭にも在る・第636 で再確認）**。LP の `\tabFullNotation` は描く（scheme-engravers.scm:2196-2200）が、**Lily# は tab の種類を問わず消す＝欠陥として起票しない・提案しない**（`SharedRenderer.Tab.cs` の該当行に LILYSHARP-OWN の註を置いた）
 - ⚠️ **梁の無い符尾がスラー側を向くとき、スラーは頭の側（符尾のあいだ）に付く＝LP の規則のまま**（slur-scoring.cc:549-557／:742-752）。ユーザーは LP の絵を見て「stem の先につくべき」と指摘したが、決定は「LP 忠実にしておくのが無難」（第635）＝**変えない・提案しない**
-- ⚠️ **`@text` の outside-staff の順番は dynamics の 250 のまま（LP は 450）＝第644 が値付けした**: `c'4@p@text("dolce")` で dolce が LP より 0.12 低い（LP 6.681・Lily# 6.800）・同じ音に dynamic と `@text` が付く本は回帰入力の 2 冊だけ（実コーパス 0）・直すなら `@text` を dynamics の全経路から外す＝設計級（Lab `sessions/p644/x1`）／CJK 文字列は字面の ascender/descender の箱（LILYSHARP-OWN・`DynamicEngraver.HasMissingGlyph`）
 
 **⒞ ユーザー決定が先・触らない**
 
@@ -135,7 +134,12 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 掃き: 描画 998 冊・1,199 枚＝差 0（Lab `sessions/p739/svg`）。import の往復 1,199 枚＝SVG 差 0・素の `R` を書く import 45（`sessions/p739/imp2`）。SYNTAX_REFERENCE（Rests）・GRAMMAR_FOR_LLM・CHANGELOG（機能＋MIDI の Fixes）。
 - GRAMMAR_FOR_LLM の例（1 つの section としてコンパイルされる）が小節の途中の `R` で LYS2016 になった＝例を小節線で区切った（`DocExamplesParseTests`）。
 ★ `-End p739 -DiffBase 74451431`（2 回目）＝full **10723 / 0 / 2 / 10725**（網 +31）・門 全 OK。7.5: Core `+` 337 行（⑴ と ⑵）・REF 0／OWN 1（`BarRest`＝ユーザー決定の逸脱は 1 箇所に名乗った・LP の `R4*5` は Shape の註）。7.6: ⒜＝LP からの宣言した逸脱（素の `R` の意味）＋MIDI の既存の欠陥の修正。7.7: 小節の長さを知る場所が 5 つ（page の builder・validator・model・MIDI・twin・MusicXML がそれぞれ自分の meter／partial を持つ＝既存の形・どれにも網）。push はユーザー（未 push 77）。
-判定: 次はユーザーの選択（§1.0 ⒝ の設計項目など）。今回の文脈は要らない＝(c) 無関係な島で差は小さい。既定どおりこの会話で続けてよい。
+⑶ ユーザー「続けて」→選択「@text の高さを LP に合わせる」＝§1.0 ⒝ の項を閉じた。★ `a296ab97`:
+- **第644 の「0.12 低い」は fonts を固定しない計器の見かけ**だった: `lysc ly --pin-fonts` の双子で測り直すと `c'4@p@text("dolce")` は LP 18.4936・Lily# 18.49＝一致（第736 の教訓どおり）。
+- **本当の差は順番**: `c'4@text("dolce") d'@p`（text の後ろの音の dynamic が横で重なる）で LP は p 15.91・dolce 18.57、Lily# は dolce 16.27・p 17.89＝上下が逆（Lily# は 250 の列に source 順で置いていた）。`OutsideStaffStacker` の下側は「dynamics → hairpin → `@text` → 450 の diagram」、上側は「dynamics（250）… ottava（400）→ `@text` → diagram」に。8 形（hairpin・同じ音・上側・2 つの text）すべて LP と 0.01 以内（Lab `sessions/p739/textosp`）。
+- 網 `TextScriptPriorityTests` 6（LP の数字で）。毒 2 種（上下それぞれ旧順）とも赤（`sessions/p739/poisons3.ps1`）。掃き 998 冊・1,199 枚＝差 0（この形の本は無い・`sessions/p739/svg3`）。snapshot も動かない。CHANGELOG（Fixes）。
+★ `-End p739 -DiffBase 74451431`（3 回目）＝full **10729 / 0 / 2 / 10731**（網 +6）・門 全 OK。7.5: Core `+` 371 行（⑴〜⑶）・REF 2（TextScript 450 の出典＝新規の逸脱なし）／OWN 1（⑵）。7.6: ⒜＝LP の順番の移植。7.7: 該当なし。push はユーザー（未 push 79）。
+判定: 次はユーザーの選択（§1.0 ⒝ の残り: 双子の穴・ピアノ譜の小節線 0.05、perf の島は一時停止中）。今回の文脈は要らない＝(c) 無関係な島で差は小さい。既定どおりこの会話で続けてよい。
 
 
 ## 以下は第738セッションの経緯
