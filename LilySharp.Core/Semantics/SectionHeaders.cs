@@ -46,10 +46,11 @@ namespace LilySharp.Core.Semantics;
 /// is the one spelling of "inline music"). WHICH declarations are offered is the caller's:
 /// the page leaves out the cells of a <c>chords</c> / <c>lyrics</c> track
 /// (<c>MeasureCollector.IsInsideGroupedByPartTrack</c>: a track cell is not a structure
-/// section); the exporters offer every declaration of the file, in document order.
-/// ⚠️ <c>MeasureValidator.CollectSectionTimes</c> / <c>CollectSectionPartials</c> still read
-/// the same directives by a rule of their own (the LAST declaration wins; a cell directly
-/// under a <c>part</c> is no header) — stage C5's to reconcile, with its own nets.
+/// section); the exporters offer every declaration of the file, in document order; the
+/// bar check (<c>MeasureValidator</c>) offers what the page offers. Until 2026-10-02 the
+/// validator read the same directives by a rule of its own (the LAST declaration wins; a
+/// cell directly under a <c>part</c> is no header) — the fifth copy, reconciled as decision
+/// A3 of stage C5 (<c>SectionHeaderRegistryValidatorTests</c> holds it to this one).
 /// </para>
 /// </remarks>
 public sealed class SectionHeaders

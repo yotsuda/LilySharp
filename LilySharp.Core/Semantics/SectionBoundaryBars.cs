@@ -55,20 +55,20 @@ internal sealed class SectionBoundaryBars
 {
     private readonly SyntaxNode _root;
     private readonly IReadOnlyDictionary<string, SyntaxNode> _phraseBodies;
-    private readonly IReadOnlyDictionary<string, Fraction> _sectionPickups;
+    private readonly SectionHeaders _headers;
     private Dictionary<string, HashSet<string>>? _before;
     private Dictionary<string, HashSet<string>>? _after;
     private readonly Dictionary<(string Section, string Part, Fraction Meter), List<MeasureModel.Bar>?> _bars = new();
 
-    /// <param name="sectionPickups">Every section header's <c>partial</c> by section name: a
-    /// predecessor whose only bar is its declared pickup leaves THAT much open, not a bar of the
-    /// meter (<see cref="FirstBarCompletesEveryPredecessor"/>).</param>
+    /// <param name="headers">The section headers, for their <c>partial</c>s: a predecessor
+    /// whose only bar is its declared pickup leaves THAT much open, not a bar of the meter
+    /// (<see cref="FirstBarCompletesEveryPredecessor"/>).</param>
     public SectionBoundaryBars(SyntaxNode root, IReadOnlyDictionary<string, SyntaxNode> phraseBodies,
-        IReadOnlyDictionary<string, Fraction>? sectionPickups = null)
+        SectionHeaders? headers = null)
     {
         _root = root;
         _phraseBodies = phraseBodies;
-        _sectionPickups = sectionPickups ?? new Dictionary<string, Fraction>();
+        _headers = headers ?? SectionHeaders.Empty;
     }
 
     /// <summary>The (section, part) cell a music item belongs to — a by-section part block
@@ -119,7 +119,7 @@ internal sealed class SectionBoundaryBars
             // judging a first bar — the predecessor's declared pickup when its edge bar IS that
             // pickup (its only bar), else a bar of the meter.
             var whole = target
-                ?? (bars.Count == 1 && _sectionPickups.TryGetValue(other, out var pickup) ? pickup : meter);
+                ?? (bars.Count == 1 && _headers.Partials.TryGetValue(other, out var pickup) ? pickup.ToFraction() : meter);
             if (edge.IsEmpty || edge.Duration <= Fraction.Zero || edge.Duration + bar != whole)
                 return false;
         }

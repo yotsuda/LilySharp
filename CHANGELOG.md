@@ -341,6 +341,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **The bar check reads the section headers as the page does.** Two headers of one name
+  (`section A { partial 4 }` … `section A { partial 2 }`): the page, the MIDI, the MusicXML
+  and the `.ly` twin take the first, and the bar check took the last, judging the section's
+  first bar against a pickup nothing else used. A directives-only cell under a part
+  (`part m { section A { time 3/4 } }`) is A's header for every part; the check read its
+  `time` as the document's and flagged the 4/4 bars of the sections after it. One registry
+  now serves all five readers. (No book in the corpus has either shape.)
 - **The bar check reads a pickup written across a section boundary as one pickup.** A one-bar
   section whose header says `partial 2` and whose body is `r8` with no bar line, followed by a
   section opening with the other three eighths, was warned twice ("Pickup measure duration 1/8

@@ -236,7 +236,7 @@ internal sealed class CrossPartMeasureValidator
                     // A section's own `time` is ITS meter only — the next section starts
                     // back in the score meter, as the collector reverts it at every boundary
                     // (MeasureCollector.ProcessSection). Carrying it on was the cross-part
-                    // half of the leak MeasureValidator._sectionTimes closes (2026-09-26).
+                    // half of the leak MeasureValidator's header registry closes (2026-09-26).
                     ValidateSectionCrossPart(section, time);
                     break;
                 case PhraseDeclarationSyntax:

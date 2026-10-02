@@ -34,7 +34,7 @@ internal sealed class MeasureValidator : ISemanticValidator
     private readonly HashSet<(int Start, int Length)> _warnedSpans = new();
     // The meter in force and `time none` (no bar-length validation): Semantics.BarContext,
     // the one spelling the outputs read too (REFACTOR_PLAN stage C5; the pickup stays this
-    // validator's per-bar reading, and the header registries below keep their own rule).
+    // validator's per-bar reading).
     private readonly BarContext _bars = new();
     // The meter AS WRITTEN ("4/4", "6/8") for diagnostics — the Fraction normalizes
     // (4/4 → "1"), which made the overfull warning read "exceeds time signature 1".
@@ -43,17 +43,19 @@ internal sealed class MeasureValidator : ISemanticValidator
     // Set by a top-level `partial N` — the declared pickup length for every
     // voice's first measure (mirrors MeasureCollector._filePartial).
     private Fraction? _filePartial;
-    // A SECTION HEADER's `partial N`, by section name — the pickup of THAT section's opening
-    // bar, the only place a structured file can declare one since 2026-09-15. Kept apart from
-    // _filePartial because it names its section: its first bar is checked strictly, where the
-    // file-wide value has to guess which section opens the piece (see ValidateMeasures).
-    private Dictionary<string, Fraction> _sectionPartials = new();
-    // A SECTION HEADER's `time`, by section name — the meter of THAT section's music only,
-    // as the collector applies it (MeasureCollector.ProcessSection: a section without one
-    // reverts to the score meter). It re-armed the DOCUMENT meter until 2026-09-26, so
-    // `section A { time 3/4 … }` flagged every 4/4 bar of the sections after it (LYS2002),
-    // and a standalone header over by-part music did not reach that music at all.
-    private Dictionary<string, TimeSignatureSyntax> _sectionTimes = new();
+    // The SECTION HEADERS — a section's `partial` (the pickup of THAT section's opening bar,
+    // the only place a structured file can declare one since 2026-09-15) and its `time` (the
+    // meter of THAT section's music only; a section without one reverts to the score meter),
+    // by section name: Semantics.SectionHeaders, the page's registry, offered the same
+    // declarations the page offers (every one outside a chords / lyrics track; the first
+    // declaration of a name wins). The pickup is kept apart from _filePartial because it names
+    // its section: its first bar is checked strictly, where the file-wide value has to guess
+    // which section opens the piece (see ValidateMeasures). Until 2026-10-02 this validator
+    // built the two tables by a loop of its own with the LAST declaration winning and a cell
+    // under a `part` never a header (REFACTOR_PLAN stage C5, decision A3); the header `time`
+    // re-armed the DOCUMENT meter until 2026-09-26, so `section A { time 3/4 … }` flagged every
+    // 4/4 bar of the sections after it (LYS2002).
+    private SectionHeaders _sectionHeaders = SectionHeaders.Empty;
     // True once the file has any part/section/form: a `partial` then belongs to a section
     // directive; a bare note stream takes a leading `partial` instead. Drives the pickup hint.
     private bool _structured;
@@ -77,11 +79,19 @@ internal sealed class MeasureValidator : ISemanticValidator
         var root = tree.GetRoot();
         _structured = TopLevelNodes.IsStructured(root);
         _phraseBodies = CollectPhraseBodies(root);
-        _sectionPartials = CollectSectionPartials(root);
-        _sectionTimes = CollectSectionTimes(root);
+        // Asked of the descendant index, as the walk below is — not a book walk. A cell of a
+        // chords / lyrics track is not a structure section (the page's offering,
+        // MeasureCollector.CollectDefinitions). Parity only: a chord cell's grammar holds
+        // chord entries, bar lines and rests (Parser.ParseChordBodyItem) and a lyrics cell
+        // syllables, never a header directive, so nothing can observe the filter (p754's
+        // poison 3: 0 red).
+        _sectionHeaders = SectionHeaders.Read(
+            root.DescendantNodesOfKinds(SyntaxKind.SectionDeclaration)
+                .OfType<SectionDeclarationSyntax>()
+                .Where(s => !MeasureCollector.IsInsideGroupedByPartTrack(s)));
         // The split-bar exemption reads the header pickups: a predecessor whose only bar is its
         // declared pickup leaves the PICKUP open, not a bar of the meter (p753).
-        _boundaries = new SectionBoundaryBars(root, _phraseBodies, _sectionPartials);
+        _boundaries = new SectionBoundaryBars(root, _phraseBodies, _sectionHeaders);
         // The nodes the walk does something at, in document order — asked of the tree's
         // descendant index rather than found by walking the book. The recursion this
         // replaces entered every non-token node (65,009 of them on perf-fingbeam1k, each
@@ -282,7 +292,7 @@ internal sealed class MeasureValidator : ISemanticValidator
                 break;
 
             case TimeSignatureSyntax headerTime when HeaderSectionOf(headerTime) is not null:
-                // A section header's meter — already in _sectionTimes, and only for its own
+                // A section header's meter — already in _sectionHeaders, and only for its own
                 // section's music (ValidateMeasures adopts it there), not the document's.
                 break;
 
@@ -299,7 +309,7 @@ internal sealed class MeasureValidator : ISemanticValidator
                 break;
 
             case PartialDeclarationSyntax headerPartial when HeaderSectionOf(headerPartial) is not null:
-                // A section header's pickup — already in _sectionPartials, and only for its
+                // A section header's pickup — already in _sectionHeaders, and only for its
                 // own section (not the file-wide value below).
                 break;
 
@@ -403,14 +413,14 @@ internal sealed class MeasureValidator : ISemanticValidator
         // `section A { partial 2 }` is an overfull pickup. (It was read as the file-wide
         // value until 2026-09-24, whose full-bar exemption below hid exactly that mistake.)
         Fraction? streamPickup = cell is { } headerCell
-            && _sectionPartials.TryGetValue(headerCell.Section, out var sectionPartial)
-                ? sectionPartial
+            && _sectionHeaders.Partials.TryGetValue(headerCell.Section, out var sectionPartial)
+                ? sectionPartial.ToFraction()
                 : inheritedPickup;
 
         // Its section header's meter, for this stream only (ValidateItemsScoped restores the
         // enclosing one after it) — the section's own music, and a repeat body or a span's
         // later voice inside it inherits it from here.
-        if (cell is { } meterCell && _sectionTimes.TryGetValue(meterCell.Section, out var sectionTime))
+        if (cell is { } meterCell && _sectionHeaders.Times.TryGetValue(meterCell.Section, out var sectionTime))
             _bars.SetTime(sectionTime);
 
         // ONE forward pass: each bar adopts its meter, then its duration is counted in
@@ -1032,9 +1042,14 @@ internal sealed class MeasureValidator : ISemanticValidator
 
     /// <summary>
     /// The section whose HEADER holds <paramref name="directive"/> (a `partial` or a `time`)
-    /// — `section A { partial 2 }` standalone, or before the part blocks of a by-section
-    /// section — or null when it is written in music (a by-part section's inline music,
-    /// a part block) or at the top level.
+    /// — `section A { partial 2 }` standalone, before the part blocks of a by-section
+    /// section, or a directives-only cell under a `part` — or null when it is written in
+    /// music (a by-part section's inline music, a part block) or at the top level. The same
+    /// line <see cref="SectionHeaders"/> draws ("a declaration with inline music registers
+    /// nothing"), so a directive this returns a name for is one the registry holds (or lost
+    /// to an earlier declaration of the name) and the walk passes it over. Until 2026-10-02
+    /// a cell under a `part` was no header here: its `time` re-armed the DOCUMENT meter
+    /// (the top-level path) while the registry — the page's — read it as the section's own.
     /// </summary>
     private static string? HeaderSectionOf(SyntaxNode directive)
     {
@@ -1043,32 +1058,9 @@ internal sealed class MeasureValidator : ISemanticValidator
             if (p is MusicBlockSyntax)
                 return null;
             if (p is SectionDeclarationSyntax s)
-                return s.Parent is PartDeclarationSyntax || SectionHasInlineMusic(s)
-                    ? null
-                    : s.SectionName;
+                return SectionHasInlineMusic(s) ? null : s.SectionName;
         }
         return null;
-    }
-
-    /// <summary>Every section header's pickup, by section name (see <see cref="_sectionPartials"/>).</summary>
-    private static Dictionary<string, Fraction> CollectSectionPartials(SyntaxNode root)
-    {
-        var map = new Dictionary<string, Fraction>(StringComparer.Ordinal);
-        // Asked of the descendant index, as the walk in Validate is — not a book walk.
-        foreach (var node in root.DescendantNodesOfKinds(SyntaxKind.PartialDeclaration))
-            if (node is PartialDeclarationSyntax pd && HeaderSectionOf(pd) is { } name)
-                map[name] = pd.ToFraction();
-        return map;
-    }
-
-    /// <summary>Every section header's meter, by section name (see <see cref="_sectionTimes"/>).</summary>
-    private static Dictionary<string, TimeSignatureSyntax> CollectSectionTimes(SyntaxNode root)
-    {
-        var map = new Dictionary<string, TimeSignatureSyntax>(StringComparer.Ordinal);
-        foreach (var node in root.DescendantNodesOfKinds(SyntaxKind.TimeSignature))
-            if (node is TimeSignatureSyntax ts && HeaderSectionOf(ts) is { } name)
-                map[name] = ts;
-        return map;
     }
 
     /// <summary>True when the node sits inside a music block (an in-music
