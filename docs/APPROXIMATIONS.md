@@ -247,8 +247,8 @@
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Marks.cs`
 - **:933** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Music.cs`
-- **:627** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision 2026-10-02). Any other
-- **:1419** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
+- **:640** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision 2026-10-02). Any other
+- **:1439** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`

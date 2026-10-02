@@ -134,6 +134,19 @@ public sealed partial class LilyPondExporter
             _lastWrittenValue = buf._lastWrittenValue;
             _lastWrittenDots = buf._lastWrittenDots;
             _forceNextDuration = buf._forceNextDuration;
+            // …and so do the METER and the KEY the body changed: the page walks the body
+            // inline (PhraseEndMarker restores nothing), the MusicXML writes the next
+            // section's 4/4 and C major again, and LilyPond's \time and \key are Timing's and
+            // the Staff's, not the nested block's — so the section after a phrase that wrote
+            // `time 3/4` or `key g major` has to restate the home. Until 2026-10-03 only the
+            // note value came back: this exporter kept 4/4 and C major in its own books,
+            // wrote no restore at the next section head, and LilyPond read that section in
+            // the phrase's meter and key (measured: a whole note failing its bar check in
+            // 3/4; LilyPondExporterMeterNetsTests). The octave frame is the one thing that
+            // does not come back — the nested \relative below is its own frame.
+            _bars.Restore(buf._bars.Save());
+            _keySharps = buf._keySharps;
+            _tonic = buf._tonic;
             // The nested \relative the reference opens is where the two frames part company
             // (the warning above says so); stop tracking rather than guess.
             _frameTracked = false;
@@ -649,6 +662,13 @@ public sealed partial class LilyPondExporter
                 }
                 if (head == null)
                     return written;
+                // A `time` at the head that states the HOME the held restore brings back is
+                // that restore said twice — LilyPond draws a TimeSignature for every \time
+                // (the page draws one) — so the restore stands alone, still held for whatever
+                // ends the head. Until 2026-10-03 both were written: `\time #'((3 2) . 8)`
+                // twice at the head of a section restating its additive home (p760).
+                if (!ts.IsForced && _heldTimeRestore == written)
+                    return "";
                 string held = _heldTimeRestore ?? "";
                 _heldTimeRestore = null;
                 return Join(Join(held, TakeHeldMark()), written);

@@ -341,6 +341,17 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A `time` at the head of a section that states the home meter the section reopens at is
+  written once in the `.ly` twin.** After a section that changed the meter, the next section
+  reopens at the home, and a `time` restating that home at its head was written beside the
+  restore — `\time #'((3 2) . 8)` twice, two signatures in LilyPond where the page draws one.
+- **A `time` or `key` written inside a phrase reaches the section after the phrase in the
+  `.ly` twin.** The page and the MusicXML already read a phrase body inline — a `time 3/4`
+  in it leaves the section in 3/4, and the next section, stating no meter, reopens at the
+  home 4/4. The twin carried only the body's last note value out, so it wrote no `\time 4/4`
+  (or `\key c \major`) at the next section and LilyPond read that section in the phrase's
+  meter and key, failing its bar check. One book of the reference corpus changes
+  (`test/keysig-change`: `\key g \major` restated at its B and C).
 - **A bar a section boundary splits is one bar in the MusicXML's numbering, as on the
   page.** A section opening with the rest of the bar the section before it left short — the
   shape a repeat sign or a volta bracket standing mid-bar is written in, `|: A [1. B] :| [2. C]`
