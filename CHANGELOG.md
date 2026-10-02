@@ -341,6 +341,19 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **The bar check reads a pickup written across a section boundary as one pickup.** A one-bar
+  section whose header says `partial 2` and whose body is `r8` with no bar line, followed by a
+  section opening with the other three eighths, was warned twice ("Pickup measure duration 1/8
+  is less than the declared partial 1/2", then "first measure is shorter than the meter") where
+  the page, the MIDI, the MusicXML and the `.ly` twin all read one half-bar pickup. The check
+  now asks the next section to finish the pickup, as it already asked it to finish a short
+  last bar. A successor that does not finish it keeps both warnings.
+- **A standalone section header beside a by-section body of the same name is one section.**
+  `section P { partial 2 }` written beside `section P { melody { r8 } }` made the page walk the
+  header alone — the part came out as a silent whole bar and the `r8` never played — while the
+  MIDI, the MusicXML and the `.ly` twin played it. The page now plays the body under the header's
+  settings, in either order of declaration. (A by-part book, `part m { section P { … } }`, was
+  never affected.)
 - **A `time` inside a pickup bar changes the meter of the bars that follow; it no longer
   rewrites the pickup.** `partial 4 time 3/4 c4 d e f g a b` is a one-beat pickup and two full
   3/4 bars. The page used to stretch the pickup to a whole bar of the new meter and then fall

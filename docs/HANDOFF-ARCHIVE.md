@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第751セッションの経緯
+
+### 1.1 第751セッション（2026-10-02・YT-DELL2）
+
+同じ会話の続き。ユーザーに「何を判断すべきか」を A（綴り 4 件）・B（同名 section）・C（観測者の無い規則）・D（コメント）で説明 → ユーザー決定「おおむね提案どおり。LP 忠実より音楽的妥当性。LP から引き継ぐのはレンダリングとレイアウトの美しさだけ」＝**RULES §5.2 に規則として置いた**（§1.0 の系譜にも）。`-Start p751`（HEAD `40b41ac0`・未 push 107）＝full **10753 / 0 / 2 / 10755**。§7 3.5 で第749 を ARCHIVE へ。
+★ `86fe6fc8` **A1＋A4**（同じ型の註と数行に跨るので 1 commit）。A1: 頁の `time` は `BarContext.SetTime(Meter?, bool)`＝他出力と同じ「拍子を動かし、pending の弱起は触らない」（`SetMeterRearmingPickup` は消えた）。`partial 4 time 3/4 c4 d e f g a b` は 1・3・3 の 3 小節（旧: 3・4 の 2 小節で 3/4 が消えていた）。A4: validator の `SetTimeSignature` は `SetMeter`（senza を解く・`SetMeterLeavingSenza` は消えた）。cref の曖昧（`SetTime` の overload）は引数つきで書いて Core 0 警告。
+- 出力: svg 0・ly 0（998 冊）・双子 batch の診断 log 同一（elapsed の 1 行だけ）＝どちらの規則もコーパスに観測者なし→網 2 本が観測者（`PartialDeclarationTests.ATimeInsideThePickup_MovesTheMeter_AndLeavesThePickup`・`SenzaMisuraTests.TheMeasureValidator_ChecksAgain_AfterATopLevelMeteredTime`）。full **10755 / 0 / 2**（+2）。APPROXIMATIONS 変化なし。CHANGELOG Fixes に 2 項。
+- 毒（`sessions/p751/poisons.ps1`）: A1 を戻す → **1 赤**／A4 を戻す → **1 赤**。
+- ⚠️ A4 の網の 1 本目は 1 小節目で書いて LYS2006（弱起の疑い）が出た＝直しは効いていたが読む診断が違った（probe `probe-validator.ps1`・internal 型は reflection で）。2 小節にして LYS2001 を読む形に。
+★ `-End p751 -DiffBase 40b41ac0`＝full **10755 / 0 / 2 / 10757**（網 +2）・門 全 OK（HANDOFF 残り 10,069 B・RULES 248,595 / 250,000 B＝**残り 1,405 B・次に足すなら規則を畳む**）。7.5: Core `+` 38 行・REF 0／OWN 0＝⒟ LP 由来の式なし（ユーザー決定の意味論）。7.6: 該当なし。7.7: ⒜ 「規則の保存」の名前は `SetMeterRearmingPickup`・`SetMeterLeavingSenza` とも消えた＝型に残る保存は無い／⒝ 網の本の形で 1 回外した（1 小節目は弱起の疑いになる＝診断の読み手を probe で確かめてから書く）。push はユーザー（未 push 108）。
+判定: A1・A4 は閉じた。次＝推しの順番どおり **B を測る**（同名 section の by-section を 4 出力で・GRAMMAR の約束を読む）→ A3 → A2 を測る → C の StreamFrame の網。すべて測るか出力不変の作業なので GO 無しで進められる（出力を変える判断が出たら止まる）。会話を区切るか: (b) 5 便・文脈は重くなりつつあるが各判断は型の註と §1.0 から再開できる＝**続ける**。
+
 ## 以下は第750セッションの経緯
 
 ### 1.1 第750セッション（2026-10-02・YT-DELL2）
