@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第746セッションの経緯
+
+### 1.1 第746セッション（2026-10-02・YT-DELL2）
+
+同じ会話の続き（ユーザー決定「iii で始めて」＝C5 は validator だけ・頁は触らない）。`-Start p746`（HEAD `bcb797d9`・未 push 97）＝full **10745 / 0 / 2 / 10747**（引継ぎと一致）。§7 3.5 で第744 を ARCHIVE へ（残り 13,890 B）。
+C5 (iii)＝★ `0ca123b9` **validator の拍子を `BarContext` に**。3 field（`_timeSignature/_meterText/_senzaMisura`）を `_bars` に: `MeterText` は pair から導出（`3+2/8` は従来どおり "5/8"・加算の文字列は使わない）、block ごとの save/restore（`ValidateItemsScoped`）と voice span の meter memo は `BarContext.MeterState`（`Save`／`Restore`）。**保存した従来の形**: top-level の `time none` の後の top-level `time N/M` は senza を解かない（`SetTimeSignature` が flag に触らなかった）＝`SetMeterLeavingSenza` と名付けて型に置き、註に「規則の是非は別の判断・網つき」と書いた。弱起は per-bar の `partialLength`（pending 状態ではない）・header registry（後勝ち・part 直下の cell は header でない）は独自のまま＝C1 の註のとおり。
+- 確かめ: ly・xml・midi 998 冊＝**差 0**。**診断の log も 998 冊で同一**（`ly-base.log` 対 `ly-head.log` 4,376 行＝違いは batch の所要秒の 1 行と stdout/stderr の順序だけ）。full 10745 / 0 / 2・Core 0 警告。APPROXIMATIONS・magic_constants 変化なし。
+- 毒（`sessions/p746/poisons.ps1`）: ① `time none` で検査が止まらない → **5 赤**（`SenzaMisuraTests`・`BarRestTests`）／② block の途中の拍子が次の block に漏れる（`Restore` 空）→ **9 赤**（`CrossPartMeasureValidationTests`・`VoiceSpanMeasureValidationTests`・`SectionBoundaryMeterRevertTests`）／③ 有拍子の `time` を無視 → **44 赤**（型の読み手 4 つ全部）。
+- 段階 C は (iii) の範囲で完了＝`REFACTOR_PLAN` §5.1 に済みと「残る判断」を書いた。
+★ `-End p746 -DiffBase bcb797d9`＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（HANDOFF 残り 11,717 B）。7.5: Core `+` 42 行・REF 0／OWN 0。7.6: 該当なし（3 出力と診断 差 0）。7.7: ⒜ `SetMeterLeavingSenza` は「規則の保存」の名前＝直すなら消える／⒝ validator の header registry は `SectionHeaders` と別規則のまま（C1 の註）／⒞ 頁は型に載っていない＝`MeasureBuilder` の `_timeSignature/_partialRestore/FreezeOrThaw` が独立の 5 つ目の綴り。push はユーザー（未 push 99）。
+判定: リファクタの A〜C5 (iii) は閉じた。**次はすべてユーザー判断**（§1.0 ⒜: 綴りを揃える (i)・D・観測者の無い規則）。この会話は 7 便を跨いだ＝どれを選ぶにせよ**新しい会話**が得（(b) 文脈が重い・各判断は型の註と計画 §5.1 から始められる）。
+
 ## 以下は第745セッションの経緯
 
 ### 1.1 第745セッション（2026-10-02・YT-DELL2）
