@@ -103,6 +103,62 @@ public sealed partial class LilyPondExporter
         return length > Fraction.Zero || m >= meters.Count ? length : meters[m];
     }
 
+    /// <summary>
+    /// One variable of TIMED entries read off the page — the one shape the three page streams
+    /// share (inline chord names, figured bass, lyrics): the staff's bars in order; in each bar
+    /// every entry at its onset, lasting to the next entry of the bar at a LATER moment (else the
+    /// bar's end), the gaps before and after filled with the mode's silence
+    /// (<paramref name="silence"/>: <c>s</c>, or <c>\skip</c> for lyrics). What an entry is
+    /// (<paramref name="entry"/>: a <c>\chordmode</c> entry, a figure group, a syllable with its
+    /// alignment and connector) is the caller's; everything else is here ONCE.
+    /// </summary>
+    /// <remarks>
+    /// Until 2026-10-02 this loop stood three times, written out (the third copied from the
+    /// first the day before), and a rule on it — the first of two entries on one moment wins, a
+    /// bar a line break splits (<c>Measure.BreaksMidBar</c>) is ONE bar in LilyPond with no bar
+    /// check between its halves, an entry the walk placed past the part's last bar is dropped —
+    /// had to be kept the same in three places by hand.
+    /// </remarks>
+    private void EmitTimedStream<T>(string varName, string mode, string silence,
+        System.Collections.Immutable.ImmutableArray<Svg.Model.Measure> measures,
+        IReadOnlyList<Fraction> meters, List<(T Item, int Measure, Fraction Onset)> items,
+        Action<StringBuilder, T, string> entry)
+    {
+        _sb.Append(varName).Append(" = \\").Append(mode).Append(" {\n");
+        int k = 0;
+        for (int m = 0; m < measures.Length; m++)
+        {
+            var length = BarLength(measures[m], meters, m);
+            var line = new StringBuilder("  ");
+            var at = Fraction.Zero;
+            while (k < items.Count && items[k].Measure == m)
+            {
+                var (item, _, onset) = items[k++];
+                if (onset < at)
+                    continue;   // the same moment as the entry just written: the first wins
+                if (onset > at)
+                {
+                    AppendToken(line, silence + ChordModeDuration(onset - at), "  ");
+                    at = onset;
+                }
+                // Up to the next entry of this bar at a LATER moment, else the bar end.
+                var next = length;
+                for (int j = k; j < items.Count && items[j].Measure == m; j++)
+                    if (items[j].Onset > at) { next = items[j].Onset; break; }
+                if (next > length) next = length;
+                entry(line, item, ChordModeDuration(next - at));
+                at = next;
+            }
+            if (at < length)
+                AppendToken(line, silence + ChordModeDuration(length - at), "  ");
+            // The two halves of a bar a line break splits (Measure.BreaksMidBar) are ONE
+            // bar in LilyPond: no bar check between them.
+            _sb.Append(line).Append(measures[m].BreaksMidBar ? "\n" : " |\n");
+        }
+        // Entries the walk placed past the part's last bar (none in practice) are dropped.
+        _sb.Append("}\n\n");
+    }
+
     private void EmitInlineChordTracks(SyntaxTree tree, RenderDeclarationSyntax? render)
     {
         if (render == null)
@@ -124,48 +180,17 @@ public sealed partial class LilyPondExporter
             var items = score.ChordNames
                 .Where(c => !c.UseTiming && c.StaffIndex == idx)
                 .OrderBy(c => c.MeasureIndex).ThenBy(c => c.Timing)
+                .Select(c => (Item: c, Measure: c.MeasureIndex, Onset: c.Timing))
                 .ToList();
             if (items.Count == 0)
                 continue;
-            foreach (var c in items)
+            foreach (var (c, _, _) in items)
                 _shared.InlineChordMarks.Add(c.SourcePosition);
 
             string varName = VarName(partName + "InlineChords");
             _inlineChordVars[partName] = varName;
-            _sb.Append(varName).Append(" = \\chordmode {\n");
-            var measures = staff.PrimaryVoice.Measures;
-            int k = 0;
-            for (int m = 0; m < measures.Length; m++)
-            {
-                var length = BarLength(measures[m], meters, m);
-                var line = new StringBuilder("  ");
-                var at = Fraction.Zero;
-                while (k < items.Count && items[k].MeasureIndex == m)
-                {
-                    var c = items[k++];
-                    if (c.Timing < at)
-                        continue;   // the same moment as the symbol just written: the first wins
-                    if (c.Timing > at)
-                    {
-                        AppendToken(line, "s" + ChordModeDuration(c.Timing - at), "  ");
-                        at = c.Timing;
-                    }
-                    // Up to the next symbol of this bar at a LATER moment, else the bar end.
-                    var next = length;
-                    for (int j = k; j < items.Count && items[j].MeasureIndex == m; j++)
-                        if (items[j].Timing > at) { next = items[j].Timing; break; }
-                    if (next > length) next = length;
-                    AppendToken(line, InlineChordEntry(c, ChordModeDuration(next - at)), "  ");
-                    at = next;
-                }
-                if (at < length)
-                    AppendToken(line, "s" + ChordModeDuration(length - at), "  ");
-                // The two halves of a bar a line break splits (Measure.BreaksMidBar) are ONE
-                // bar in LilyPond: no bar check between them.
-                _sb.Append(line).Append(measures[m].BreaksMidBar ? "\n" : " |\n");
-            }
-            // Symbols the walk placed past the part's last bar (none in practice) are dropped.
-            _sb.Append("}\n\n");
+            EmitTimedStream(varName, "chordmode", "s", staff.PrimaryVoice.Measures, meters, items,
+                (line, c, duration) => AppendToken(line, InlineChordEntry(c, duration), "  "));
         }
     }
 
@@ -207,45 +232,18 @@ public sealed partial class LilyPondExporter
             var items = score.FiguredBasses
                 .Where(f => f.StaffIndex == idx && f.MeasureIndex < measures.Length
                             && f.ItemIndex < measures[f.MeasureIndex].Items.Length)
-                .Select(f => (Item: f, Onset: OnsetOf(measures[f.MeasureIndex], f.ItemIndex)))
-                .OrderBy(t => t.Item.MeasureIndex).ThenBy(t => t.Onset)
+                .Select(f => (Item: f, Measure: f.MeasureIndex, Onset: OnsetOf(measures[f.MeasureIndex], f.ItemIndex)))
+                .OrderBy(t => t.Measure).ThenBy(t => t.Onset)
                 .ToList();
             if (items.Count == 0)
                 continue;
-            foreach (var (f, _) in items)
+            foreach (var (f, _, _) in items)
                 _shared.FigureMarks.Add(f.SourcePosition);
 
             string varName = VarName(partName + "Figures");
             _figureVars[partName] = varName;
-            _sb.Append(varName).Append(" = \\figuremode {\n");
-            int k = 0;
-            for (int m = 0; m < measures.Length; m++)
-            {
-                var length = BarLength(measures[m], meters, m);
-                var line = new StringBuilder("  ");
-                var at = Fraction.Zero;
-                while (k < items.Count && items[k].Item.MeasureIndex == m)
-                {
-                    var (f, onset) = items[k++];
-                    if (onset < at)
-                        continue;   // the same moment as the group just written: the first wins
-                    if (onset > at)
-                    {
-                        AppendToken(line, "s" + ChordModeDuration(onset - at), "  ");
-                        at = onset;
-                    }
-                    var next = length;
-                    for (int j = k; j < items.Count && items[j].Item.MeasureIndex == m; j++)
-                        if (items[j].Onset > at) { next = items[j].Onset; break; }
-                    if (next > length) next = length;
-                    AppendToken(line, FigureGroup(f) + ChordModeDuration(next - at), "  ");
-                    at = next;
-                }
-                if (at < length)
-                    AppendToken(line, "s" + ChordModeDuration(length - at), "  ");
-                _sb.Append(line).Append(measures[m].BreaksMidBar ? "\n" : " |\n");
-            }
-            _sb.Append("}\n\n");
+            EmitTimedStream(varName, "figuremode", "s", measures, meters, items,
+                (line, f, duration) => AppendToken(line, FigureGroup(f) + duration, "  "));
         }
     }
 
@@ -329,8 +327,9 @@ public sealed partial class LilyPondExporter
             if (!staves.TryGetValue(line.Key.StaffIndex, out var staff))
                 continue;
             string partName = staff.PrimaryVoice.Name;
-            var items = line.OrderBy(l => l.MeasureIndex).ThenBy(l => l.Timing).ToList();
-            var measures = staff.PrimaryVoice.Measures;
+            var items = line.OrderBy(l => l.MeasureIndex).ThenBy(l => l.Timing)
+                .Select(l => (Item: l, Measure: l.MeasureIndex, Onset: l.Timing))
+                .ToList();
 
             // A LilyPond identifier is letters only, so the verse (and voice) is a word.
             string varName = VarName(partName
@@ -341,27 +340,9 @@ public sealed partial class LilyPondExporter
                 target[partName] = vars = new List<string>();
             vars.Add(varName);
 
-            _sb.Append(varName).Append(" = \\lyricmode {\n");
-            int k = 0;
-            for (int m = 0; m < measures.Length; m++)
-            {
-                var length = BarLength(measures[m], meters, m);
-                var text = new StringBuilder("  ");
-                var at = Fraction.Zero;
-                while (k < items.Count && items[k].MeasureIndex == m)
+            EmitTimedStream(varName, "lyricmode", "\\skip ", staff.PrimaryVoice.Measures, meters, items,
+                (text, l, duration) =>
                 {
-                    var l = items[k++];
-                    if (l.Timing < at)
-                        continue;   // two syllables on one moment: the first wins
-                    if (l.Timing > at)
-                    {
-                        AppendToken(text, "\\skip " + ChordModeDuration(l.Timing - at), "  ");
-                        at = l.Timing;
-                    }
-                    var next = length;
-                    for (int j = k; j < items.Count && items[j].MeasureIndex == m; j++)
-                        if (items[j].Timing > at) { next = items[j].Timing; break; }
-                    if (next > length) next = length;
                     // A melisma syllable is LEFT-aligned on its note (the page's `~` / `__`;
                     // LilyPond's lyricMelismaAlignment, lily/lyric-engraver.cc:180-183). LilyPond
                     // learns a melisma only through \lyricsto from the music's slurs, ties or
@@ -371,20 +352,12 @@ public sealed partial class LilyPondExporter
                     // carries its consequence rather than switching to \lyricsto.
                     if (l.MelismaAlignLeft)
                         AppendToken(text, "\\once \\override LyricText.self-alignment-X = #LEFT", "  ");
-                    AppendToken(text, LyricSyllable(l.Text) + ChordModeDuration(next - at), "  ");
+                    AppendToken(text, LyricSyllable(l.Text) + duration, "  ");
                     if (l.ConnectorType == Svg.Model.LyricConnectorType.Hyphen)
                         AppendToken(text, "--", "  ");
                     else if (l.ConnectorType == Svg.Model.LyricConnectorType.Extender)
                         AppendToken(text, "__", "  ");
-                    at = next;
-                }
-                if (at < length)
-                    AppendToken(text, "\\skip " + ChordModeDuration(length - at), "  ");
-                // The two halves of a bar a line break splits (Measure.BreaksMidBar) are ONE
-                // bar in LilyPond: no bar check between them.
-                _sb.Append(text).Append(measures[m].BreaksMidBar ? "\n" : " |\n");
-            }
-            _sb.Append("}\n\n");
+                });
         }
     }
 
