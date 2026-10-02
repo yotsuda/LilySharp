@@ -1029,6 +1029,12 @@ public static class DiagnosticCodes
     /// cadenza fails at 3/4 and an automatic bar line lands inside the following whole note.</summary>
     public const string PartialUnderTimeNone = "LYS2015";
 
+    /// <summary>Measure error: a bar rest with no duration (<c>R</c>, <c>R*N</c>) that does not
+    /// open its bar, or stands under <c>time none</c> — it lasts its bar (<see cref="Music.BarRest"/>),
+    /// and there it has no bar to last. The page reads it as the rest of the bar; write a
+    /// duration (<c>R2</c>).</summary>
+    public const string BareBarRestNeedsABar = "LYS2016";
+
     /// <summary>Measure warning: a rendered score holds NO BARS AT ALL — every part it
     /// draws is empty, so the file compiles to a blank page.
     /// <para>

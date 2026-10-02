@@ -670,6 +670,7 @@ internal sealed class MeasureValidator : ISemanticValidator
             // The pickup's declared length overrides the meter as the fill target
             // for the measure that carries the \partial.
             var expected = partialLength ?? _timeSignature;
+            duration += BareBarRests(barItems, expected, i == 0 && leadIn is not null);
 
             // Remember the opening pickup: the first sounding bar, when shorter
             // than a full bar (a bare anacrusis or a declared \partial). Its
@@ -886,6 +887,43 @@ internal sealed class MeasureValidator : ISemanticValidator
             }
         }
         return true;
+    }
+
+    /// <summary>
+    /// What the bare bar rests (<c>R</c>, <c>R*N</c> — <see cref="Music.BarRest"/>) of one bar
+    /// are worth: the bar they open, <paramref name="expected"/>. One that does not open its bar
+    /// (music before it, or a stream that starts mid-bar) or stands under <c>time none</c> is
+    /// an error (LYS2016) and worth the rest of the bar, as the page reads it.
+    /// </summary>
+    private Fraction BareBarRests(List<SyntaxNode> barItems, Fraction expected, bool startsMidBar)
+    {
+        var worth = Fraction.Zero;
+        var before = Fraction.Zero;
+        var running = Fraction.Quarter; // only "is there music before it" depends on it
+        foreach (var item in barItems)
+        {
+            if (item is not RestSyntax rest || !Music.BarRest.IsBare(rest))
+            {
+                before += MeasureDurations.ItemDuration(item, ref running);
+                continue;
+            }
+            if (_senzaMisura || startsMidBar || before != Fraction.Zero)
+            {
+                _diagnostics.Error(rest.Span, DiagnosticCodes.BareBarRestNeedsABar,
+                    _senzaMisura
+                        ? "A bar rest with no duration lasts its bar, and under 'time none' there is no bar: write its duration (R2, R1)."
+                        : "A bar rest with no duration lasts its bar, so it must open it: write its duration here (R2), or put it in a bar of its own.");
+                if (_senzaMisura)
+                    continue;
+            }
+            var left = expected - before;
+            if (left > Fraction.Zero)
+            {
+                worth += left;
+                before += left;
+            }
+        }
+        return worth;
     }
 
     /// <summary>

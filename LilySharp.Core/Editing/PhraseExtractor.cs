@@ -97,7 +97,10 @@ public static class PhraseExtractor
         // the chunk's first undurated note must carry the running duration.
         string? durationStamp = null;
         int durationInsertAt = -1;
-        if (FirstDurationless(timed[0]) is { } insertAt)
+        // A bare `R` lasts its bar and neither reads nor moves the running duration
+        // (Music.BarRest), so the first item that does is the one to stamp.
+        if (timed.FirstOrDefault(n => n is not RestSyntax r || !Music.BarRest.IsBare(r)) is { } carrier
+            && FirstDurationless(carrier) is { } insertAt)
         {
             var runningAt = container.DescendantNodes()
                 .Where(n => n is NoteSyntax or ChordSyntax or ChordRepetitionSyntax or RestSyntax)

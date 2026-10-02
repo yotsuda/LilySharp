@@ -4392,9 +4392,14 @@ public sealed class MusicXmlExporter
         _lastPitchedNote = null;
         _lastEmittedNotes.Clear();
 
-        var duration = GetDuration(rest.Duration);
+        // A bare `R` lasts its bar (Music.BarRest) and leaves the running duration alone. A bar
+        // no single note value spells (5/4) writes no <type>, as a whole-measure rest may.
+        bool bare = Music.BarRest.IsBare(rest);
+        var meter = new Fraction(_timeNumerator, _timeDenominator);
+        var duration = bare ? (_pendingPickup ? _pickupLength : meter) : GetDuration(rest.Duration);
         int durationTicks = FractionToTicks(duration);
-        var (type, dots) = GetNoteType(duration);
+        var (type, dots) = bare && Music.BarRest.Shape(duration).Scale != 1
+            ? ((string?)null, 0) : GetNoteType(duration);
         int bars = rest.MeasureCount;
         // A rest inside a tuplet plays its share like a note (the pitched rest above stamps
         // the same): without the ratio a reader sees a plain eighth where a triplet eighth
@@ -4453,6 +4458,13 @@ public sealed class MusicXmlExporter
             // multiple-rest is such a change, and a change block repeats no <divisions>.
             first.Attributes ??= new MusicXmlAttributes { Divisions = null };
             first.Attributes.MultipleRest = bars;
+        }
+        // The bars after a bare `R*N`'s first are whole bars of the meter, a pickup's or not.
+        if (bare && duration != meter)
+        {
+            duration = meter;
+            durationTicks = FractionToTicks(duration);
+            (type, dots) = Music.BarRest.Shape(duration).Scale != 1 ? ((string?)null, 0) : GetNoteType(duration);
         }
         for (int i = 1; i < bars; i++)
         {

@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 60 | 観測者がゼロだと自認しているもの |
-| `OWN` | 213 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **333** | |
+| `OWN` | 214 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **334** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -238,23 +238,25 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（213 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（214 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2740** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision 2026-10-02). Any other
 - **:3240** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:3620** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
-- **:5593** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
-- **:5652** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
-- **:7350** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:3629** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
+- **:5602** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
+- **:5661** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
+- **:7359** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:505** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
 - **:1271** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
-- **:2757** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+- **:2762** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ArpeggioSpread.cs`
 - **:30** LILYSHARP-OWN: the owner's decision (2026-09-30) — &lt;&lt; chord(C x32010) &gt;&gt;2
+### `LilySharp.Core/Music/BarRest.cs`
+- **:24** meter (owner's decision 2026-10-02, LILYSHARP-OWN): a whole-bar rest is one sign in every
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
 - **:69** LILYSHARP-OWN: LilyPond's q takes no marks, so there is nothing to port.
 ### `LilySharp.Core/Music/ChordShapes.cs`
@@ -275,7 +277,7 @@
 - **:91** LILYSHARP-OWN: LilyPond has no chord-from-a-shape item.
 ### `LilySharp.Core/MusicXml/MusicXmlExporter.cs`
 - **:1085** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
-- **:5391** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
+- **:5403** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
 ### `LilySharp.Core/MusicXmlImport/LysWriter.cs`
 - **:347** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision; the twin omits it too).
 ### `LilySharp.Core/Parser/Parser.Music.cs`
@@ -339,8 +341,8 @@
 - **:545** `time!` (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so
 - **:851** is not drawn unless written `key!` (MeasureBuilder.SectionHead, LILYSHARP-OWN). At a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.MusicWalk.cs`
-- **:1597** not against the reset the head already stands on (LILYSHARP-OWN): a
-- **:1676** (MeasureBuilder.SectionHead, LILYSHARP-OWN).
+- **:1602** not against the reset the head already stands on (LILYSHARP-OWN): a
+- **:1681** (MeasureBuilder.SectionHead, LILYSHARP-OWN).
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`

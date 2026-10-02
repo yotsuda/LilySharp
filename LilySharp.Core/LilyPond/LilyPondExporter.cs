@@ -3346,6 +3346,15 @@ public sealed class LilyPondExporter
     {
         var (prefix, suffix) = SplitAttachments(r.Articulations);
         string mmr = r.IsMultiMeasure ? "*" + r.MeasureCount : "";
+        if (Music.BarRest.IsBare(r))
+        {
+            // A bare `R` lasts its bar (Music.BarRest): LilyPond's `R1`, `R2.`, `R4*5` — and,
+            // as it leaves Lily#'s running duration alone while LilyPond's moves to the value
+            // written here, the next event states its own.
+            _forceNextDuration = true;
+            return prefix + "R" + Music.BarRest.LilyPondDuration(_twinPartial ?? new Fraction(_timeBeats, _timeBeatType))
+                + mmr + suffix;
+        }
         return prefix + r.RestToken.Text + EmitEventDuration(r.Duration) + mmr + suffix;
     }
 

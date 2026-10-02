@@ -2209,8 +2209,13 @@ public sealed class MidiExporter
         // LilySharp-Lab/sessions/p398/probes/r14/tie-over-rest: one note of 960 ticks
         // where the page draws two crotchets and a rest).
         ForgetOnset();
-        var duration = GetDuration(rest.Duration);
-        int durationTicks = FractionToTicks(duration);
+        // A bare `R` lasts its bar (Music.BarRest) and leaves the running duration alone.
+        // ⚠️ `*N` is N of them, as on the page (MeasureCollector.MusicWalk expands the run):
+        // until 2026-10-02 this read one, so `R1*3 | c'1` sounded the c a bar after the
+        // rest began, where the page draws it after three.
+        int durationTicks = (Music.BarRest.IsBare(rest)
+            ? MeasureTicks()
+            : FractionToTicks(GetDuration(rest.Duration))) * rest.MeasureCount;
         durationTicks -= ConsumeGraceSteal(durationTicks); // grace notes steal from this rest
         _currentTick += durationTicks;
     }

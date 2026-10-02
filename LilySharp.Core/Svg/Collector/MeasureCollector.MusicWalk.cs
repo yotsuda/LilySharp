@@ -1158,7 +1158,12 @@ public sealed partial class MeasureCollector
                     // like any column — "slur-rest-direction.ly". These flags used
                     // to be dropped on the floor here, which silently swallowed a
                     // rest-bound slur with no warning.
-                    var restItem = CreateRestItem(rest);
+                    // A bare `R` lasts what is left of its bar (all of it, where it belongs —
+                    // MeasureValidator reports one elsewhere, LYS2016); under `time none` there
+                    // is no bar, and it falls back to the running duration.
+                    var restItem = CreateRestItem(rest, bar: builder.SenzaMisura ? null
+                        : builder.CurrentMeasureLength - builder.CurrentDuration is { Numerator: > 0 } left
+                            ? left : builder.CurrentMeasureLength);
                     int restMeasureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                     int restItemIndex = builder.CurrentItemCount;
                     Fraction restAnchorTiming = builder.CurrentDuration;

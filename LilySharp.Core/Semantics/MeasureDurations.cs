@@ -52,6 +52,12 @@ internal static class MeasureDurations
                 if (drum.Duration != null) defaultDuration = drumDuration;
                 return drumDuration;
 
+            // A bare `R` lasts its bar (Music.BarRest), which this item-by-item count cannot
+            // know: it is worth nothing here, and the bar's own check (MeasureValidator,
+            // MeasureModel) gives it what the bar lacks. It leaves the running duration alone.
+            case RestSyntax rest when Music.BarRest.IsBare(rest):
+                return Fraction.Zero;
+
             case RestSyntax rest:
                 var restDuration = DurationCalculator.GetDuration(rest, defaultDuration);
                 if (rest.Duration != null) defaultDuration = restDuration;

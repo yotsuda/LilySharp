@@ -1042,9 +1042,13 @@ internal static class LysWriter
                 // its post-events follow as a note's do. Until 2026-09-30 a rest was written
                 // bare: `R1*4@p`, `r2@fermata` and `r4@f` came back as plain rests, and a tuplet
                 // opening or closing on a rest lost its brace.
-                string rest = (note.IsSpacer ? "s" : note.IsMeasureRest ? "R" : "r")
-                    + Value(note.NoteValue, note.Dots)
-                    + (note.IsMeasureRest && multiRest > 1 ? "*" + multiRest : "");
+                // A whole-measure rest is a bare `R` (owner's decision 2026-10-02, Music.BarRest):
+                // it lasts its bar whatever the meter — `R1` read a 5/4 bar's rest as four
+                // quarters, and no note value spells five.
+                string rest = note.IsMeasureRest && !note.IsSpacer
+                    ? "R" + (multiRest > 1 ? "*" + multiRest : "")
+                    : (note.IsSpacer ? "s" : "r") + Value(note.NoteValue, note.Dots)
+                      + (note.IsMeasureRest && multiRest > 1 ? "*" + multiRest : "");
                 // A chord symbol stands on a rest's beat (owner's decision 2026-09-28: the
                 // page draws `r1@chord(C)`); figured bass on a rest has no Lily# spelling.
                 if (pendingChord != null)

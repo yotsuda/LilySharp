@@ -268,8 +268,19 @@ public sealed partial class MeasureCollector
         };
     }
 
-    private RestItem CreateRestItem(RestSyntax rest, (int Value, int Dots)? forcedDuration = null)
+    private RestItem CreateRestItem(RestSyntax rest, (int Value, int Dots)? forcedDuration = null,
+        Fraction? bar = null)
     {
+        // A bare `R` lasts the bar it opens (BarRest), and leaves the running duration alone.
+        if (forcedDuration == null && bar is { } length && Music.BarRest.IsBare(rest))
+        {
+            var (value, barDots, scale) = Music.BarRest.Shape(length);
+            return new RestItem(Fraction.FromNoteValue(value), barDots, rest.SourceStart)
+            {
+                TimeScale = new Fraction(scale),
+                IsMultiMeasure = true,
+            };
+        }
         // An arpeggio member has no written duration — the group forces the
         // equal-subdivision value/dots on it (and must not disturb the default carry).
         var duration = rest.DurationReading;

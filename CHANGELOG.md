@@ -330,8 +330,19 @@ workflow attaches that section to the GitHub Release verbatim.
   a section — except on a bar that opens a system (`<print new-system="yes">`), where it is the
   courtesy one a line's head prints. A piece with no rehearsal mark is also cut at every change
   of key, time or clef; where there are marks, the sections are the marks'.
+- **`R` with no duration is a full-measure rest in any meter.** It lasts the bar it opens —
+  five quarters in 5/4, the pickup's length in a pickup — so a 5/4 or 5/8 bar rest can be
+  written at last (`R1` is four quarters, and no single note value is five). `R*3` is one
+  three-bar rest; `R | R | R` stays three. It leaves the running duration alone, must open its
+  bar (LYS2016, also under `time none`), and `R1`, `R2.*4` keep their meaning. The LilyPond
+  twin writes `R1`, `R2.` or `R4*5`; MusicXML writes the bar's length (no `<type>` where no
+  note value spells it); the MusicXML import writes every whole-measure rest as `R` / `R*N`.
+  An `R` with no duration used to take the running duration.
 
 ### Fixes
+
+- **The MIDI rests through every bar of `R1*N`.** It sounded one bar of `R1*3` where the page
+  draws three, so everything after it came in two bars early.
 
 - **A slur written in a grace body is drawn.** `grace { d'16( e'16) } c'4`, a slur from an
   earlier grace note to the main note (`grace { f16( g16 } a8)`) and one from a main note into

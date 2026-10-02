@@ -957,7 +957,10 @@ public static class SectionSplitter
                     + $"{name} would open with 'q', which repeats a chord written before the cut.");
                 return null;
             }
-            if (firstTimed != null && DurationSlot(firstTimed) is { } slot)
+            // A bare `R` lasts its bar and neither reads nor moves the running duration
+            // (Music.BarRest): the stamp goes on the first item that does.
+            if (piece.FirstOrDefault(n => IsTimedLeaf(n) && (n is not RestSyntax r || !Music.BarRest.IsBare(r)))
+                    is { } carrier && DurationSlot(carrier) is { } slot)
             {
                 string? running = before.Where(n => IsTimedLeaf(n) && !n.IsInside<GraceExpressionSyntax>())
                     .Select(DurationText).LastOrDefault(t => t != null);

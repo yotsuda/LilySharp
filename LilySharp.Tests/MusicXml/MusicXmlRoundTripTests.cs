@@ -1290,18 +1290,24 @@ public class MusicXmlRoundTripTests
     /// trip. Until 2026-09-30 the importer wrote every rest bare (`R1*4@p` came back as four
     /// `r1`, `r2@fermata` as `r2`), the exporter wrote a lone `R1` as a plain rest and left
     /// the tuplet ratio off a rest, so a bracket opening on one came back as a stray `}`.
+    /// A whole-measure rest comes back as a bare `R` (owner's decision 2026-10-02,
+    /// Music.BarRest), whatever duration it was written with — 5/4 has none to write.
     /// </summary>
     [Theory]
-    [InlineData("time 4/4", "c'1 | R1*4@p | c'2 r2@fermata | R1 | r4@f c'4 c'2 |")]
-    [InlineData("time 3/4", "c'2. | R2.*3@mf | tuplet 3/2 { r8 c'8 c'8 } c'2 | r2.@chord(C) | R2. | R2.*2 | c'2. |")]
-    public void RestsAndTheirPostEvents_RoundTrip(string time, string music)
+    [InlineData("time 4/4", "c'1 | R1*4@p | c'2 r2@fermata | R1 | r4@f c'4 c'2 |",
+                "c'1 | R*4@p | c'2 r2@fermata | R | r4@f c'4 c'2 |")]
+    [InlineData("time 3/4", "c'2. | R2.*3@mf | tuplet 3/2 { r8 c'8 c'8 } c'2 | r2.@chord(C) | R2. | R2.*2 | c'2. |",
+                "c'2. | R*3@mf | tuplet 3/2 { r8 c'8 c'8 } c'2 | r2.@chord(C) | R | R*2 | c'2. |")]
+    [InlineData("time 5/4", "c'4 d'4 e'4 f'4 g'4 | R*2@p | R | c'1 r4 |",
+                "c'4 d'4 e'4 f'4 g'4 | R*2@p | R | c'1 r4 |")]
+    public void RestsAndTheirPostEvents_RoundTrip(string time, string music, string expected)
     {
         // `~A`: no section label, which would come back as the first note's @mark.
         string source = $"octave absolute\n{time}\npart m {{ clef treble }}\n"
                         + $"section A {{ m {{ {music} }} }}\nform main {{ ~A }}\nscore main {{ staff m }}\n";
         string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().ToString();
         var (lys, _) = new MusicXmlImporter().Import(xml);
-        Assert.Contains(music, OneLine(lys));
+        Assert.Contains(expected, OneLine(lys));
     }
 
     /// <summary>
@@ -1312,7 +1318,7 @@ public class MusicXmlRoundTripTests
     [Fact]
     public void TextRehearsalAndUnaCorda_RoundTrip()
     {
-        const string music = "c'4@mark(\"Q\") d'4 e'4@text(\"dolce\").up f'4 | R1@text(\"tacet\") | c'4@unaCorda d'4 e'4@treCorde f'4 |";
+        const string music = "c'4@mark(\"Q\") d'4 e'4@text(\"dolce\").up f'4 | R@text(\"tacet\") | c'4@unaCorda d'4 e'4@treCorde f'4 |";
         string source = "octave absolute\ntime 4/4\npart m { clef treble }\n"
                         + $"section S {{ m {{ {music} }} }}\nform main {{ ~S }}\nscore main {{ staff m }}\n";
         string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().ToString();
@@ -1374,6 +1380,6 @@ public class MusicXmlRoundTripTests
             </score-partwise>
             """;
         var (lys, _) = new MusicXmlImporter().Import(xml);
-        Assert.Contains("R2.*2 | R2. | R2. |", lys);
+        Assert.Contains("R*2 | R | R |", lys);
     }
 }

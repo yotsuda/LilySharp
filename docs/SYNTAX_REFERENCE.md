@@ -181,8 +181,20 @@ the note position reads it as a slash.
 | `r4` | Quarter rest |
 | `r2` | Half rest |
 | `s4` | Spacer rest (invisible) |
-| `R1` | Full-measure rest |
+| `R` | Full-measure rest — lasts its bar, whatever the meter |
+| `R*3` | One rest over three bars (the count is printed above it) |
+| `R1`, `R2.*4` | A full-measure rest of a written duration, as in LilyPond |
 | `a4@rest` | Quarter rest placed where the note `a` would sit |
+
+A full-measure rest written with no duration lasts the bar it opens: four quarters in 4/4,
+five in 5/4, the pickup's length in a pickup bar. It is the one spelling for a 5/4 or 5/8 bar,
+which no single note value fills (`R1` is four quarters; `R4*5` would be five bars). It must
+open its bar, and there must be a bar to last — one after other music in the bar, or under
+`time none`, is an error (LYS2016). It does not change the running duration: the note after
+it takes the value the note before it had. `R | R | R` is three one-bar rests and `R*3` one
+three-bar rest, as LilyPond engraves `R1 | R1 | R1` and `R1*3`. The LilyPond twin writes the
+bar's own duration (`R1`, `R2.`, `R4*5`), and the MusicXML import writes every whole-measure
+rest this way.
 
 A rest normally finds its own height: on the middle line alone, up or down inside a
 `voice { } { }` span, and out of the way of whatever the other voices are playing at

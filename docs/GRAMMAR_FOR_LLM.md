@@ -242,7 +242,9 @@ bes8 8 8 8  // bes eighths, written once
 fis8        // F# eighth
 r4          // quarter rest
 s4          // invisible spacer rest
-R1          // full-measure rest
+R           // full-measure rest: lasts ITS BAR in any meter (5/4, 7/8, a pickup); must open the bar (LYS2016)
+R*3         // one 3-bar rest (a count above it); `R | R | R` stays three 1-bar rests
+R1          // a bar rest of a written duration (a whole note), as in LilyPond; a bare R moves no running duration
 a,4@rest    // quarter rest printed where the note a, would sit (a PITCHED rest)
 <c e g>4    // chord (shared duration after '>'), C major triad as a quarter
 <c 3 5>4    // the same triad by scale degrees (root + 3rd + 5th of the key)

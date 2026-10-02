@@ -174,6 +174,10 @@ internal static class MeasureModel
                 continue;
             }
             var itemDuration = MeasureDurations.ItemDuration(node, ref defaultDuration);
+            // A bare `R` lasts what its bar lacks, as the collector reads it (Music.BarRest);
+            // a pickup is the validator's to know, and the meter is this model's answer.
+            if (node is RestSyntax bareRest && Music.BarRest.IsBare(bareRest) && !senzaMisura)
+                itemDuration = meter - total is { Numerator: > 0 } left ? left : meter;
             total += itemDuration;
             current.Add(node);
 

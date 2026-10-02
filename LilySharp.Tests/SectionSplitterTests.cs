@@ -696,4 +696,34 @@ public class SectionSplitterTests
         Assert.NotNull(unchecked_.NewText);
         Assert.NotEqual(Notes(Owner)["vn2"], Notes(unchecked_.NewText!)["vn2"]);
     }
+
+    /// <summary>
+    /// A new section opening on a bare <c>R</c> stamps the running duration on the first note
+    /// after it: the rest lasts its bar and neither reads nor moves that duration
+    /// (Music.BarRest, 2026-10-02). Stamped on the rest, <c>R8</c> would be an eighth.
+    /// </summary>
+    [Fact]
+    public void ACutBeforeABareBarRest_StampsTheNoteAfterIt()
+    {
+        const string source = """
+            octave absolute
+            part vn1 {
+              clef treble
+              section A { c'1 | }
+              section B { R | c'1 | }
+            }
+            part vn2 {
+              clef treble
+              section A { c'8 d' e' f' g' a' b' c'' | R | d' e' f' g' a' b' c'' d'' | }
+            }
+            form main { A B }
+            score main { staff vn1 staff vn2 }
+
+            """;
+        var result = Split(source);
+        Assert.True(result.NewText != null, result.Error);
+        Assert.Contains("R | d'8 e'", result.NewText);
+        AssertSoundsTheSame(source, result.NewText!, "vn2");
+        Assert.Empty(SemanticValidation.Run(SyntaxTree.Parse(result.NewText!)));
+    }
 }
