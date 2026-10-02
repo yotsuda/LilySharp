@@ -98,7 +98,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 - ★ **⒵ perf は第615 で区切り（ユーザー判断）**: render 約 12,030 → 9,200 ms（3,760 打鍵・−24%）・割当 −31%（第598〜第615・経緯は ARCHIVE）。照合の基準は `SvgGenerator.Generate`（Lab `sessions/p611/verify-all.ps1`・Release の `p594/cpuhost`）・打鍵ごとの計器は Lab `sessions/p613/lathost`。残る大物は設計級＝長い score の段ごと引き継ぎと collect の尾の `_tieTargetWarnings` abort（第613 ⒝）。⚠️ 弱参照の表で全 item を memo する形は GC で負ける（第602）
 
-- ⚠️ **段を束ねた小節線（PianoStaff 等）が隣の段へ 0.05 伸びる分は未移植**（`ColumnOpticalCorrectionTests` の註・LP 0.133646 対 0.132217・ピアノ譜の小節頭で 0.0014＝束ね方を間隔の計算へ通す配管が要る・第661）／小節線をまたぐ梁は小節ごとに半分で読む
+- ⚠️ **段を束ねた小節線（PianoStaff 等）は未移植・値付け済み＝提案しない**（第739）: LP は span bar でつながる側だけ小節線を 0.05 長くし（scm/bar-line.scm:693-714 `bar-line::widen-bar-extent-on-span`）、箱の伸びの 1.01 の上限も外す（scm/output-lib.scm:965-974 `account-for-span-bar`）。PianoStaff と 2 段の同じ音楽を LP で比べた差は**最大 0.0011（普通の形）・0.0029（加線の音を小節線に接して並べた極端な形）**（Lab `sessions/p739/span`）＝間隔の全経路と cache の鍵へ段のつながりを通す配管に見合わない（`ColumnOpticalCorrectionTests` の 0.0014 も同じ族）。／小節線をまたぐ梁は小節ごとに半分で読む
 - ⚠️ **tab のタイの行き先の数字は*描かない*＝意図した LP からの逸脱（ユーザー決定・§2 T の冒頭にも在る・第636 で再確認）**。LP の `\tabFullNotation` は描く（scheme-engravers.scm:2196-2200）が、**Lily# は tab の種類を問わず消す＝欠陥として起票しない・提案しない**（`SharedRenderer.Tab.cs` の該当行に LILYSHARP-OWN の註を置いた）
 - ⚠️ **梁の無い符尾がスラー側を向くとき、スラーは頭の側（符尾のあいだ）に付く＝LP の規則のまま**（slur-scoring.cc:549-557／:742-752）。ユーザーは LP の絵を見て「stem の先につくべき」と指摘したが、決定は「LP 忠実にしておくのが無難」（第635）＝**変えない・提案しない**
 
@@ -146,7 +146,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 和音の音の弦番号（`<a,\2 d>`＝ユーザーの tab 3 冊）と script（chord-scripts.ly の `<c-. e-.>`）を音ごとに。
 - 結果: 8,910 → **801 行**（800＝score の無い計測用 2 冊 `audit/lpreg/perf-figbass*`・頁のモデルが無い＝inline chord と同じ既存の制限／1＝和音の音の `@stemUp`）。双子の変化 19 冊はすべて LP 2.26.0 で通る。網 3 クラス 16 本（`LilyPondExporterFiguredBassTests`・`…NoteheadTests`・`…ChordMemberTests`）、毒 6 種すべて赤（`sessions/p739/poisons4.ps1`・`poisons5.ps1`）。CHANGELOG（Fixes）。
 ★ `-End p739 -DiffBase 74451431`（4 回目）＝full **10745 / 0 / 2 / 10747**（網 +16）・門 全 OK。7.5: Core `+` 535 行（⑴〜⑷）・REF 4／OWN 1。7.6: ⒜＝双子の配管（頁のモデルを読む既存の形・LP の綴り）。7.7: 頁のモデルを読む双子の流れが 3 つ（chords・figures・lyrics）＝同じ形の 3 つの写し（小節を s で埋める処理が 2 つ）。push はユーザー（未 push 81）。
-判定: 次はユーザーの選択（§1.0 ⒝ の残り: ピアノ譜の小節線 0.05、perf の島は一時停止中）。今回の文脈は要らない＝(c) 無関係な島で差は小さい。既定どおりこの会話で続けてよい。
+⑸ ユーザー「続けて」＝§1.0 ⒝ の最後の非 perf 項目（ピアノ譜の小節線 0.05）。**値付けだけで止めた**: LP は span bar 側で小節線を 0.05 伸ばし、箱の 1.01 の上限も外す（後者の方が大きい規則）が、PianoStaff と 2 段の差は LP 自身の中で最大 0.003（Lab `sessions/p739/span`）＝§1.0 の項を「値付け済み・提案しない」に書き換えた。コードは変えていない。
+判定: §1.0 ⒝ の非 perf 項目は尽きた。残りは perf の島（一時停止中＝ユーザー判断）と ⒞ のユーザー決定待ち（`@chord` だけの line を run の要素に・⒴⁗ ほか）と ⒜ の手動確認。次はユーザーの選択。今回の文脈は要らない＝新しい会話でも差は小さいが、既定どおりこの会話で続けてよい。
 
 
 ## 以下は第738セッションの経緯
