@@ -109,7 +109,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ★★ **候補（第681・設計・ユーザー判断）: `@chord` だけの line も run の要素にする**（今は帯 ＋ staff-staff padding 1.0・LP は ChordNames を loose line として x ごとに歩きばねで配る）。値付け: `test/figbass-chordname-lower-staff` で LP 5.57 対 Lily# 6.02（+0.45・snapshot は第681 が GO で再ベース）。`AttachedChordLineInRun` の「`@chord` は LP の line を持たない」（2026-08-26）を覆す話なので提案だけ
 - ★★ **⒴⁗ 天井 2.03%**＝安くすると `アゲハ蝶.lys` 1 冊が 24→26 系になる＝perf ではなく*忠実度の判断*
   （実装は Lab `sessions/p423/zz423-deferred-prelim.diff.txt`）・**先に LP 双子**
-- **MusicXML の 5/4 のような 1 つの音価で書けない全小節休符**＝`<type>` のまま（`R1` が 4/4 ぶん）。**Lily# に綴りが無い（`R4*5` は 5 小節）＝言語設計・ユーザー判断**（第723 確定・第735 に ⒜ から移した）
 - ⚠️ **`RestCollisionsOf`／`RestDotOffsetsOf` は「今はやらない。着手はずっと後だ」**（第407 ⑺⑴）＝**提案しない**
 - ⚠️ **⒩⁶ の残り＝`ClearBeamStamp`（刻んで良いのは*消したあと*）に観測者が居ない**（第517 実測・計器は Lab `sessions/p517/`）。二択＝破れる 1 冊を見つけて網にする／「効かない保険」として畳む。**ユーザー「後回し」（第523）＝提案しない**
 - ⚠️ **`g4.core` 1.21% と `p1.s1.beams` 5.538% は*もう実仕事*＝この 2 島には戻らない**（割当の話。**時間では第589 が beam の二度解きを閉じた**＝§1.1 第589 ⑵）
@@ -129,7 +128,14 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 掃き: import の round trip（998 冊・1,199 枚・Lab `sessions/p739/imp/rt.ps1`・base は HEAD の worktree）＝**.lys の文面が変わったもの 176・SVG 差 1**（`test/senza-misura`: reader が senza-misura を落とすので戻りの 4/4 が「変化しない」に見え `time!` になった＝元の本と同じく 4/4 を描く＝改善）。Bohemian（MuseScore 4.7.5）は再記述 0＝A〜H のまま。
 - SYNTAX_REFERENCE（Restating の節の末尾）・CHANGELOG。
 ★ `-End p739 -DiffBase 74451431`＝full **10692 / 0 / 2 / 10694**（網 +5）・門 全 OK・棚卸し: APPROXIMATIONS の行番号 1 行のみ。7.5: Core `+` 146 行（commit 前に数えた numstat）・REF 0／OWN 0（importer の規則＝LP の対応物無し・ユーザー決定は註に書いた）。7.6: 該当なし。7.7: 他のソフトの MusicXML は手元に Bohemian と LP の回帰の数個だけ＝OMR 形の頻度は測れていない（new-system の規則は推測に基づく）。push はユーザー（未 push 74→75）。
-判定: 次はユーザーの選択（5/4 の全小節休符の綴り・⒝ の設計項目）。どれも今回の文脈は要らない＝(c) 無関係な島で差は小さいが、既定どおり続けてよい。
+⑵ ユーザー選択「5/4 の全小節休符に進んで」＝§1.0 ⒞ の項を閉じた。ユーザー決定（2026-10-02・LILYSHARP-OWN）: **素の `R`＝その小節ぶん**（「音楽的に妥当か・書けなくなる楽譜は」に答えた: 全小節休符は拍子によらず 1 つの記号＝MusicXML の `measure="yes"` と同じ意味・変わるのは素の `R` だけで、998 冊の music に 0 件）。細部も決定: `R*N`＝N 小節の省略記法・**`R | R | R` はまとめない**（LP と同じ・ユーザー「R*3 と書いたらまとめる」）・弱起では partial の長さ・後続の音価を変えない・小節の途中／`time none` は LYS2016（error）・`R1` 等は不変・import は常に `R`／`R*N`。★ `b44667fc`:
+- `Music.BarRest`（`Shape`: 1 つの音価で書ける小節は `R1`/`R2.` と同じ event＝4/4・3/4 は 1 バイトも変わらない、書けない小節は LP の `R4*5`＝音価 × `TimeScale`）。page（`CreateRestItem` に小節の残り）・`MeasureDurations`（0）＋`MeasureValidator.BareBarRests`（小節の不足分・LYS2016）・`MeasureModel`（meter の残り）・MIDI（`MeasureTicks`）・twin（`R4*5`＋次の event に音価を書く）・MusicXML（小節の長さ・書けなければ `<type>` 無し）・import（`R`）・Split Sections／Extract Phrase（音価の stamp は R の次の音符へ）。
+- ★ **既存の欠陥を直した: MIDI が `R1*N` を 1 小節しか鳴らさなかった**（頁は N 小節＝後ろが N−1 小節早く鳴る）。影響は repo の 25 冊（実コーパス 0）。
+- 網: `BarRestTests` 31（Shape・twin の綴り・頁 ×4 拍子・4/4 で `R1` と同一・検証・パート間・音価の引き継ぎ・弱起・LYS2016 ×2・MIDI・twin・MusicXML）・`SectionSplitterTests.ACutBeforeABareBarRest_StampsTheNoteAfterIt`・`MusicXmlRoundTripTests` 3 本を `R` へ（＋5/4 の往復）。毒 11 種＋splitter 1 種すべて赤（Lab `sessions/p739/poisons2.ps1`）。**Extract Phrase には網が無い**（修正は splitter と同じ形）。
+- 掃き: 描画 998 冊・1,199 枚＝差 0（Lab `sessions/p739/svg`）。import の往復 1,199 枚＝SVG 差 0・素の `R` を書く import 45（`sessions/p739/imp2`）。SYNTAX_REFERENCE（Rests）・GRAMMAR_FOR_LLM・CHANGELOG（機能＋MIDI の Fixes）。
+- GRAMMAR_FOR_LLM の例（1 つの section としてコンパイルされる）が小節の途中の `R` で LYS2016 になった＝例を小節線で区切った（`DocExamplesParseTests`）。
+★ `-End p739 -DiffBase 74451431`（2 回目）＝full **10723 / 0 / 2 / 10725**（網 +31）・門 全 OK。7.5: Core `+` 337 行（⑴ と ⑵）・REF 0／OWN 1（`BarRest`＝ユーザー決定の逸脱は 1 箇所に名乗った・LP の `R4*5` は Shape の註）。7.6: ⒜＝LP からの宣言した逸脱（素の `R` の意味）＋MIDI の既存の欠陥の修正。7.7: 小節の長さを知る場所が 5 つ（page の builder・validator・model・MIDI・twin・MusicXML がそれぞれ自分の meter／partial を持つ＝既存の形・どれにも網）。push はユーザー（未 push 77）。
+判定: 次はユーザーの選択（§1.0 ⒝ の設計項目など）。今回の文脈は要らない＝(c) 無関係な島で差は小さい。既定どおりこの会話で続けてよい。
 
 
 ## 以下は第738セッションの経緯
