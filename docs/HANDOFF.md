@@ -79,7 +79,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ★★★ **リファクタ（ユーザー決定 2026-10-02）**＝計画は `docs/REFACTOR_PLAN.md`。**A（第740）・B（第741）・C1（第742・`0193be8e`＝`Semantics.SectionHeaders`）は済み → 次は C2＝`BarContext` の型を MIDI に（ユーザー決定 2026-10-02「GO」＝(b) の方針・計画 §5.1 の順 C2 MIDI → C3 XML → C4 双子 → C5 検証／頁）。計器は 4 種そろった: Lab `sessions/p742/` の `twin/sweep-ly.ps1`・`sweep-midi.ps1`・`sweep-xml.ps1`・`svg/sweep-all.ps1`（base の exe は掃きの出力先と別の場所に）**／★ 候補（ユーザー判断）: section header の「先勝ち」は suite にもコーパス 998 冊にも観測者なし（第742 ②）＝網を足すか規則を畳む、D はユーザー判断が先。双子の全冊バイト比較は Lab `sessions/p741/twin/sweep-ly.ps1`（base の exe は掃きの出力先と別の場所に置く）／★ 候補（網を足すのは別 commit）: 入れ子の StreamFrame の suite の網（入れない→1 赤・戻さない→0 赤。掃きは 125／16 冊差＝第740 ⑶）・頁の stream の網（歌詞の `\skip`・figures の小節末の隙間・`BreaksMidBar` の無 bar check は suite 0 赤。掃きは 1 冊＝第741 ③）
+- ★★★ **リファクタ（ユーザー決定 2026-10-02）**＝計画は `docs/REFACTOR_PLAN.md`。**A（第740）・B（第741）・C1（第742・`0193be8e`）・C2（第743・`776dadb7`＝`Semantics.BarContext` を MIDI に）は済み → 次は C3＝XML を `BarContext` に（`_timeNumerator/_timeNumeratorText/_timeDenominator/_timeSenzaMisura/_writtenTime/_homeTime/_sectionTime/_sectionPartial`＝型に text と senza の面を足す）→ C4 双子 → C5 検証／頁（ユーザー決定 2026-10-02「GO」＝(b)）。計器は 4 種そろった: Lab `sessions/p742/` の `twin/sweep-ly.ps1`・`sweep-midi.ps1`・`sweep-xml.ps1`・`svg/sweep-all.ps1`（base の exe は掃きの出力先と別の場所に）**／★ 候補（ユーザー判断）: section header の「先勝ち」は suite にもコーパス 998 冊にも観測者なし（第742 ②）＝網を足すか規則を畳む、D はユーザー判断が先。双子の全冊バイト比較は Lab `sessions/p741/twin/sweep-ly.ps1`（base の exe は掃きの出力先と別の場所に置く）／★ 候補（網を足すのは別 commit）: 入れ子の StreamFrame の suite の網（入れない→1 赤・戻さない→0 赤。掃きは 125／16 冊差＝第740 ⑶）・頁の stream の網（歌詞の `\skip`・figures の小節末の隙間・`BreaksMidBar` の無 bar check は suite 0 赤。掃きは 1 冊＝第741 ③）
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
@@ -117,6 +117,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第743セッション（2026-10-02・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第742 の判定: C2）。`-Start p743`（HEAD `aa92955a`・未 push 91）＝full **10745 / 0 / 2 / 10747**（引継ぎと一致）。§7 3.5 で第741 を ARCHIVE へ（残り 13,265 B）。
+C2＝★ `776dadb7` **`Semantics.BarContext`（拍子・home の拍子・弱起と、その規則: `SetTime`／`OpenSection(headerTime, headerPartial)`／`SetPartial`／`SpendPartial`・`BarLength`＝弱起 ?? 拍子の 1 小節・`MeterLength`）を MIDI に**。MIDI の 5 field（`_timeNumerator/_timeDenominator/_homeTimeBeats/_homeTimeBeatType/_partial`）を消し、13 か所の読みを型へ。`MeasureTicks` は `FractionToTicks(_bars.BarLength)`。型の註に MIDI と頁でまだ違う 2 つの綴りを書いた（弱起が閉じる前の 2 つ目の `partial`: MIDI は置き換え・頁は先勝ち／`time none`: MIDI は拍子を保つ・頁は時計を凍らせる）＝C5 で判断。
+- 確かめ: MIDI 998 冊・1,199 枚＝**差 0**。full 10745 / 0 / 2・Core 0 警告。APPROXIMATIONS は住所だけ。
+- 毒（`sessions/p743/poisons.ps1`・`poisons-sweep.ps1`）: ① 境界で home に戻さない → **1 赤**（`SectionBoundaryMeterRevertTests`）／② `BarLength` が弱起を見ない → **5 赤**（`EmptyMeasureValidatorTests`・`SectionVoicePaddingExportTests`）／③ 境界で前の section の弱起を残す → suite **0 赤**・掃き **0 冊差**（弱起の途中で section を終える本が無い）／④ `time none` が拍子を変える → **1 赤**（`SenzaMisuraTests`）。
+- ⚠ restored の full で `Lsp.UsingExpansionCacheTests.AMissingIncludeAppearing_Recomputes_AndTheWarningClears` が 1 赤 → 単独で再走 6/6 緑＝時間依存の flake（コードとは無関係・直前の full は緑）。
+★ `-End p743 -DiffBase aa92955a`＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（HANDOFF 残り 11,195 B）。7.5: Core `+` 176 行（型 128 行＋MIDI の読み替え）・REF 2＝MIDI から型へ移した 2 本（`git diff` の削除側に同数＝新規 0）／OWN 0。7.6: 該当なし（MIDI 差 0）。7.7: ⒜ MIDI の走る拍子は Export で reset されない（従来のまま＝exporter を使い回すと前の本の拍子が残る。1 本ずつ new しているので実害なし・直すなら別 commit）／⒝ 境界で前の弱起を残す形に観測者なし（③）／⒞ 2 つの綴りの違い（型の註）。push はユーザー（未 push 93）。
+判定: 次は C3＝XML を `BarContext` に。型に text（`3+2`）と senza の面を足すので、今便で読んだ型の形と MIDI の使い方の上に立つ＝(a) で**この会話で続けるのが得**。§1 の残り 11 KB は便を区切る理由＝`-Start p744` から。
+
+## 以下は第742セッションの経緯
+
 ### 1.1 第742セッション（2026-10-02・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」＝第741 の判定: 段階 C の入口）。`-Start p742`（HEAD `ecdeb946`・未 push 88）＝full **10745 / 0 / 2 / 10747**（引継ぎと一致）。§7 3.5 で第740 を ARCHIVE へ（残り 14,616 B）。
@@ -130,20 +142,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 毒（`poisons.ps1`・`poisons-sweep.ps1`）: ① inline music のある宣言も登録 → **21 赤**（頁・双子・MIDI）。② 先勝ちを後勝ちに → suite **0 赤**・**掃き 4 種とも 0 冊差**＝「先勝ち」は suite にもコーパスにも観測者が無い（同名の header 宣言が同じ directive を 2 回書く本が無い）。③ partial の表を落とす → **16 赤**（頁・MIDI・XML・双子）。⇒ ② は網を足すか規則を畳むか＝ユーザー判断（§1.0 ⒜ の候補に足した）。
 ★ `-End p742 -DiffBase ecdeb946`（2 回目）＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（HANDOFF 残り 10,579 B）。7.5: Core `+` 201 行（新しい型 133 行＋4 か所の読み替え）・REF 0／OWN 0（新規の逸脱なし＝規則の移動）。7.6: 該当なし（4 出力とも差 0）。7.7: ⒜ 「先勝ち」に観測者が無い（②）／⒝ validator の registry は別規則のまま（C5）／⒞ MIDI は `sectionsInOrder` の list を 1 本足した（`_sections` は名前→list で順を失うため）。push はユーザー（未 push 91）。
 判定: 次は C2（`BarContext` の型を MIDI に＝拍子・弱起・小節長 `MeasureTicks` と頁の `EmitEmptyMeasure` の一致を型で）。今回読んだのは MIDI の field と `MeasureTicks` だけ＝文脈は小さく、(c) どちらの会話でも差は小さい。続けるなら `-Start p743` から。
-
-## 以下は第741セッションの経緯
-
-### 1.1 第741セッション（2026-10-02・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」＝第740 の判定: 段階 B）。`-Start p741`（HEAD `f1fba2d3`・未 push 85）＝full **10745 / 0 / 2 / 10747**（引継ぎと一致）。§7 3.5 で第739 を ARCHIVE へ（残り 15,114 B）。
-段階 B＝2 commit:
-⑴ ★ `ee5f306d` **`LilyPondExporter.cs`（7,885 行）を役割の partial 9 本に分けた＝移動だけ**（Lab `sessions/p741/split.ps1`: HEAD の署名行の番号を境に、各 member の doc comment から次の境までを逐語で写す。CRLF・BOM 無しのまま）: 本体 1,088（状態・Export・入れ子の frame・行と変数名の道具）／`.Header` 350／`.Parts` 574／`.Form` 1,017／`.Music` 2,366／`.Marks` 977／`.Score` 625／`.Chords` 716／`.Streams` 435。`InternalSyntax` の alias は使う `.Form` と本体だけに。最初の走りは partial に `namespace` 行を入れ忘れて 21 エラー＝ヘッダの範囲を 1 行伸ばした。
-⑵ ★ `da5e3b2c` **頁のモデルを読む 3 本（和音名・figures・歌詞）の小節の歩きを `EmitTimedStream<T>`（変数名・mode・隙間の綴り・小節・拍子・(item, 小節, onset) の list・entry の書き方）1 本に**。呼ぶ側に残るのは item の集め方・印の登録・変数の表・entry 1 つの綴り（lambda）。
-- 確かめ（⑴⑵とも）: 双子 998 冊・1,199 枚＝**差 0**・'dropped' 801（Lab `sessions/p741/twin`・base は p740 の scratch の exe＝A の前の HEAD。A が差 0 なので基準として有効）。full 10745 / 0 / 2・Core 0 警告。APPROXIMATIONS は ⑴ で住所だけ動いた（333 件のまま）・⑵ では動かず。
-- 毒（`sessions/p741/poisons.ps1`・`poisons-sweep.ps1`）: ① entry の前の隙間を入れない → **3 赤**（inline chord・figured bass・chord diagram。**歌詞は 0**）。② 小節末の隙間を入れない → **2 赤**（inline chord のみ）。③ 段割れの小節（`BreaksMidBar`）に bar check を付ける → suite **0 赤**・掃き **1 冊差**（`test/mid-bar-break`）。⇒ 歌詞の `\skip`・figures の小節末・`BreaksMidBar` は suite に網が無い＝§1.0 ⒜ の候補に足した（網を足すのは別 commit）。
-- 変えていないもの: 3 本の前処理（EnumerateStaves／GroupBy の順・`IsTextRow` の skip・変数の二重防止）はそのまま。`REFACTOR_PLAN.md` §4 に済みを書いた。
-★ `-End p741 -DiffBase f1fba2d3`＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（HANDOFF 残り 12,313 B）。7.5: Core `+` 7,108 行＝ほぼ移動（REF +93／−93・OWN +7／−7＝新規 0・`git diff` の両側で数えた）。7.6: 該当なし（出力不変）。7.7: `.Music` 2,366 行はまだ大きい（音符・休符・和音・連符・arpeggio が 1 本）＝割るなら次の便で `.Music` を `.Events`／`.Nested` に；`EmitTimedStream` の 3 本の前処理（staff の列挙・印の登録）はまだ 3 通り。push はユーザー（未 push 88）。
-判定: 次は段階 C（小節の文脈の共有）。最初の一手は設計の選択（(a) 頁のモデルを全出力が読む／(b) `BarContext` だけ共有）の値付け＋MIDI の全冊バイト比較の計器＝**ユーザー判断で止める**。今回読んだ双子の文脈は C では主役でない（MIDI → XML が先）＝(c) 無関係な島で差は小さい。既定どおりこの会話で続けるなら `-Start p742` を回してから。
 
 ## 2. 開いている作業
 

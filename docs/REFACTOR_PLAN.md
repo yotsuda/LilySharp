@@ -123,6 +123,7 @@ phrase・tuplet・grace・cue・repeat の中身は `new LilyPondExporter { … 
 - **提案する順**: **C1 `Semantics.SectionHeaders`**（registry の構築を 1 本に・5 か所が読む。(a)(b) どちらでも要る・出力 3 種の掃き＋import の往復で差 0）→ **C2 `BarContext` の型を MIDI に**（`MeasureTicks` と頁の `EmitEmptyMeasure` の長さの一致を型で保証）→ C3 XML → C4 双子 → C5 検証・頁（頁は打鍵ごとの walk と `Resume` の checkpoint が `_defaultDuration` を持つ＝最後・perf の規則＝ユーザーに一声）。
 - **毒の形**: 共有部品の section 境界の meter 戻しを外す → 移した出力の網が赤（MIDI は `SectionBoundaryMeterRevertTests` の族）。registry の構築では「inline music の有無」の判定を外す → 5 出力の section header の網が赤。
 - **C1 済み（第742・2026-10-02・`0193be8e`）**: `Semantics.SectionHeaders`（`Read`・4 表・`DirectivesOf`・`FirstDirect<T>`）。頁・MIDI・XML・双子の 4 builder を消した。4 出力の掃き 998 冊で差 0。validator の `CollectSectionTimes/Partials` は規則が違う（後勝ち）＝C5 で。毒: inline music の除外を外す 21 赤／partial 表なし 16 赤／**先勝ち→後勝ち 0 赤・掃きも 0 冊差＝観測者なし**（HANDOFF §1.1 第742 ⑵）。
+- **C2 済み（第743・2026-10-02・`776dadb7`）**: `Semantics.BarContext`（`Meter`・`HomeMeter`・`Partial`・`SetTime`・`OpenSection`・`SetPartial`・`SpendPartial`・`BarLength`・`MeterLength`）を MIDI に。MIDI 998 冊 差 0。毒 1／5／0+0／1。MIDI と頁でまだ違う 2 つの綴り（弱起が閉じる前の 2 つ目の `partial`・`time none`）は型の註＝C5 の判断材料。C3（XML）は text（`3+2`）と senza の面を型に足してから。
 
 ## 6. 確かめ方（計器）
 

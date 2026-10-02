@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第741セッションの経緯
+
+### 1.1 第741セッション（2026-10-02・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第740 の判定: 段階 B）。`-Start p741`（HEAD `f1fba2d3`・未 push 85）＝full **10745 / 0 / 2 / 10747**（引継ぎと一致）。§7 3.5 で第739 を ARCHIVE へ（残り 15,114 B）。
+段階 B＝2 commit:
+⑴ ★ `ee5f306d` **`LilyPondExporter.cs`（7,885 行）を役割の partial 9 本に分けた＝移動だけ**（Lab `sessions/p741/split.ps1`: HEAD の署名行の番号を境に、各 member の doc comment から次の境までを逐語で写す。CRLF・BOM 無しのまま）: 本体 1,088（状態・Export・入れ子の frame・行と変数名の道具）／`.Header` 350／`.Parts` 574／`.Form` 1,017／`.Music` 2,366／`.Marks` 977／`.Score` 625／`.Chords` 716／`.Streams` 435。`InternalSyntax` の alias は使う `.Form` と本体だけに。最初の走りは partial に `namespace` 行を入れ忘れて 21 エラー＝ヘッダの範囲を 1 行伸ばした。
+⑵ ★ `da5e3b2c` **頁のモデルを読む 3 本（和音名・figures・歌詞）の小節の歩きを `EmitTimedStream<T>`（変数名・mode・隙間の綴り・小節・拍子・(item, 小節, onset) の list・entry の書き方）1 本に**。呼ぶ側に残るのは item の集め方・印の登録・変数の表・entry 1 つの綴り（lambda）。
+- 確かめ（⑴⑵とも）: 双子 998 冊・1,199 枚＝**差 0**・'dropped' 801（Lab `sessions/p741/twin`・base は p740 の scratch の exe＝A の前の HEAD。A が差 0 なので基準として有効）。full 10745 / 0 / 2・Core 0 警告。APPROXIMATIONS は ⑴ で住所だけ動いた（333 件のまま）・⑵ では動かず。
+- 毒（`sessions/p741/poisons.ps1`・`poisons-sweep.ps1`）: ① entry の前の隙間を入れない → **3 赤**（inline chord・figured bass・chord diagram。**歌詞は 0**）。② 小節末の隙間を入れない → **2 赤**（inline chord のみ）。③ 段割れの小節（`BreaksMidBar`）に bar check を付ける → suite **0 赤**・掃き **1 冊差**（`test/mid-bar-break`）。⇒ 歌詞の `\skip`・figures の小節末・`BreaksMidBar` は suite に網が無い＝§1.0 ⒜ の候補に足した（網を足すのは別 commit）。
+- 変えていないもの: 3 本の前処理（EnumerateStaves／GroupBy の順・`IsTextRow` の skip・変数の二重防止）はそのまま。`REFACTOR_PLAN.md` §4 に済みを書いた。
+★ `-End p741 -DiffBase f1fba2d3`＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（HANDOFF 残り 12,313 B）。7.5: Core `+` 7,108 行＝ほぼ移動（REF +93／−93・OWN +7／−7＝新規 0・`git diff` の両側で数えた）。7.6: 該当なし（出力不変）。7.7: `.Music` 2,366 行はまだ大きい（音符・休符・和音・連符・arpeggio が 1 本）＝割るなら次の便で `.Music` を `.Events`／`.Nested` に；`EmitTimedStream` の 3 本の前処理（staff の列挙・印の登録）はまだ 3 通り。push はユーザー（未 push 88）。
+判定: 次は段階 C（小節の文脈の共有）。最初の一手は設計の選択（(a) 頁のモデルを全出力が読む／(b) `BarContext` だけ共有）の値付け＋MIDI の全冊バイト比較の計器＝**ユーザー判断で止める**。今回読んだ双子の文脈は C では主役でない（MIDI → XML が先）＝(c) 無関係な島で差は小さい。既定どおりこの会話で続けるなら `-Start p742` を回してから。
+
 ## 以下は第740セッションの経緯
 
 ### 1.1 第740セッション（2026-10-02・YT-DELL2）
