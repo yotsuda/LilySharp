@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第760セッションの経緯
+
+### 1.1 第760セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き（ユーザー GO: 観測者の無い規則 4 つに網を足す）。`-Start p760`（HEAD `6cab4551`・未 push 126）＝full **10782 / 0 / 2 / 10784**。§7 3.5 で第758 を ARCHIVE へ。
+- 棚卸し: ⑴ 弱起中の `time` の頁の規則は第751 A1 の網で既に観測済み（候補の文が古かった）／⑵ XML `<beats>3+2</beats>`・⑶ `<senza-misura>` は probe で綴りを確かめて網 2／⑷ 双子の home の加算拍子は、home に戻すたび `EmitTime(_homeTimeNode)` が node を読み直すので `HomeMeter.BeatsText` は構造上観測できない（毒 3 は網の形を 2 つ試して 0 赤＝parity のみ）／⑸ 「入れ子の body が戻す拍子」の網を書いたら**赤**＝欠陥。
+★ `d0acd7da` **欠陥 2 つ＋網 7**: ⒜ **phrase の site は body の最後の音価しか戻していなかった**（tuplet・cue・repeat は `CarryFrameBack`）→ `phrase ph { time 3/4 … }` のあと次の section に `\time 4/4` が書かれず LP は 3/4 のまま bar check 失敗（`key` も同じ）。頁と XML は body を inline に歩き次の section で home を書き直す（XML で確認: 拍子 4/4・fifths 0）→ `_bars.Restore(buf._bars.Save())`＋`_keySharps`／`_tonic` を戻す（octave の frame は nested `\relative` なので戻さない・従来どおり）。⒝ **section 頭で home を書き直す `time`（`time 4/4` 等）が restore と二重に書かれていた**（`\time 4/4 \mark … \time 4/4`＝LP は TimeSignature を 2 つ描く・頁は 1 つ）→ held restore と同じ文字列なら written を落とす。網: `MusicXmlMeterSpellingTests` 2・`LilyPondExporterMeterNetsTests` 5。CHANGELOG Fixes 2 項。
+- 計器: 双子の掃き 998 冊 1,199 枚で **25 枚**（`keysig-change`＝B・C に `\key g \major` の書き直し／残り 24＝ABC・Bohemian Rhapsody・Butterfly・Can't Fight This Feeling・Real Gone・Reelin' In the Years・銀河鉄道999・秋桜 ほか＝section 頭の二重 `\time 4/4` が 1 つに）。full **10789 / 0 / 2 / 10791**。
+- 毒（`poisons.ps1`・`poisons-3.log`・`-3b`・`-5`）: ① XML の加算文字列を落とす → **1 赤**／② senza を書かない → **1 赤**／③ home の加算文字列を落とす → **0 赤**（構造上・上記）／④ phrase が戻さない → **2 赤**／⑤ 頭の二重書きに戻す → **1 赤**（＋行番号表）。
+★ `-End p760 -DiffBase 6cab4551`＝full **10789 / 0 / 2 / 10791**（網 +7）・門 全 OK（HANDOFF 残り 7,281 B・§1 残り 8,684 字）。7.5: Core `+` 20 行・REF 0／OWN 0＝頁の規則の写し（LP の `\time` が Timing の性質であることは LILYPOND-REF 済みの既存の註＝新規なし）。7.6: 該当なし。7.7: ⒜ 二重 `\time` は 24 冊が長く持っていた＝LP が 2 つ描いていたのを誰も見ていなかった（T7 の段割れの差に混ざっていた可能性＝次に双子の計器を回すとき数が動くかを見る）／⒝ `HomeMeter.BeatsText` は構造上無観測＝型の註ではなく網の summary に書いた。push はユーザー（未 push 127）。
+判定: 観測者の無い規則は全部閉じた。残り（§1.0 ⒜）: ⑻ 双子の割れた小節の番号（ユーザー判断・先に数える）だけ。会話を区切るか: 判断待ち＝(c)。判断が出ればこの会話で `-Start p761`。
+
 ## 以下は第759セッションの経緯
 
 ### 1.1 第759セッション（2026-10-03・YT-DELL2）
