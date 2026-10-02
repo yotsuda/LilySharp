@@ -341,6 +341,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **The MusicXML spends a pickup at the bar line that closes it, as the page, the MIDI and
+  the `.ly` twin do.** A pickup shorter than declared — `partial 2  c4 | d4 e f g |` — ran
+  on across its `|` in the MusicXML and closed in the middle of the next bar, so the `d4`
+  came out as a bar of its own and `e f g` as another, where the page draws `d4 e f g` as one
+  bar. A pickup with no bar line written after it still closes itself at the declared
+  length. (No book in the corpus has the shape.)
 - **The bar check reads the section headers as the page does.** Two headers of one name
   (`section A { partial 4 }` … `section A { partial 2 }`): the page, the MIDI, the MusicXML
   and the `.ly` twin take the first, and the bar check took the last, judging the section's

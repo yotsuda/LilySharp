@@ -56,13 +56,14 @@ public readonly record struct Meter(int Beats, int BeatType, string? BeatsText =
 /// <c>MeasureBuilder._frozenPosition</c>; C6: the home it reverts to at a section boundary,
 /// armed per voice from the collector's score-level meter). Every reader is on it now.
 /// <para>
-/// ⚠️ THE ONE SPELLING THAT STILL DIFFERS between the outputs, recorded here so the move onto one
-/// type does not paper over it (a separate decision, with its own net): the MusicXML spends a
-/// pickup by the duration written into it, closing the implicit measure itself when the length is
-/// reached (<c>MusicXmlExporter.MaybeClosePickup</c>, with <c>_pendingPickup</c> /
-/// <c>_pickupLength</c>), where the MIDI, the twin and the page spend it at the first bar line that
-/// closes after it — so the MusicXML does not read <see cref="Partial"/> yet. The differences
-/// stage C found and p750–p751 settled (owner's decisions): a <c>time</c> while a pickup is
+/// The spellings stage C found to differ, all settled by the owner's decisions (p750–p755)
+/// and recorded here so the move onto one type does not paper over them: the MusicXML spent a
+/// pickup by the duration written into it alone — closing the implicit measure itself when the
+/// length was reached, and running ON across a bar line written before that — where the MIDI,
+/// the twin and the page spend it at the first bar line that closes after it; since p755 (A2,
+/// 2026-10-03) it reads <see cref="Partial"/> and its bar line spends it too, keeping the
+/// auto-close at the declared length (the page's <c>MeasureBuilder.AddItem</c> has the same;
+/// <c>MusicXmlExporter.MaybeClosePickup</c>). A <c>time</c> while a pickup is
 /// pending moves the meter and leaves the pickup, in every output (<see cref="SetTime(Meter?, bool)"/>;
 /// the page re-armed the pickup until p751); a top-level <c>time none</c> is undone by a later
 /// top-level <c>time</c> in the validator as everywhere else (p751); a section that states no

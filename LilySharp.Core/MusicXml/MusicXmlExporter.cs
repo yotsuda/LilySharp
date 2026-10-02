@@ -55,12 +55,15 @@ public sealed class MusicXmlExporter
     // (a triplet is (3, 2)). Scales note durations and drives <time-modification>.
     private readonly Stack<(int Actual, int Normal)> _tupletStack = new();
     private int _measureNumber = 1;
-    // Anacrusis (partial) state: while a pickup is open, accumulate its duration
-    // and auto-close the implicit measure once it reaches the declared length
-    // (mirrors MeasureCollector). _justAutoClosedPickup absorbs a written barline
-    // that immediately follows the auto-close, so no empty measure is emitted.
-    private bool _pendingPickup;
-    private Fraction _pickupLength = Fraction.Zero;
+    // Anacrusis (partial) state: the pickup pending is _bars.Partial (Semantics.BarContext —
+    // the page's rule: a `partial` arms it, the bar line that closes a bar spends it); while
+    // one is open, accumulate the duration written into it and auto-close the implicit
+    // measure once it reaches the declared length (the page's MeasureBuilder.AddItem
+    // auto-complete). _justAutoClosedPickup absorbs a written barline that immediately
+    // follows the auto-close, so no empty measure is emitted. Until 2026-10-03 (p755,
+    // owner's decision A2) the pickup was two fields of this exporter's own and a bar line
+    // did NOT spend it: a short pickup (`partial 2  c4 | d4 e f g |`) ran on across the `|`
+    // and closed after the d4, where the page, the MIDI and the twin close it at the `|`.
     private Fraction _pickupAccumulated = Fraction.Zero;
     private bool _justAutoClosedPickup;
     // A block just closed its last bar and handed back an EMPTY measure: a `voice { } { }`
@@ -2105,7 +2108,7 @@ public sealed class MusicXmlExporter
         else if (_currentMeasure?.Attributes is { MeasureRepeat: "stop" } dropped && _currentPartName != null)
             _pendingRepeatStop[_currentPartName] = dropped.MeasureRepeatBars;
         _currentMeasure = null;
-        _pendingPickup = false;
+        _bars.SpendPartial();
         _justAutoClosedPickup = false;
         _barClosedByBlock = false;
         _barSeenInScope = false;
@@ -2128,7 +2131,7 @@ public sealed class MusicXmlExporter
     private void AddSilentBar()
     {
         if (_currentMeasure == null) return;
-        var length = _pendingPickup ? _pickupLength : _bars.MeterLength;
+        var length = _bars.BarLength;
         var (type, dots) = GetNoteType(length);
         _currentMeasure.Notes.Add(new MusicXmlNote
         {
@@ -2140,7 +2143,7 @@ public sealed class MusicXmlExporter
         _lastPitchedNote = null;
         _lastEmittedNotes.Clear();
         // The pickup, if one was pending, is this bar: spent.
-        _pendingPickup = false;
+        _bars.SpendPartial();
     }
 
     /// <summary>
@@ -2165,25 +2168,25 @@ public sealed class MusicXmlExporter
             _currentMeasure.Number = 0;
             _measureNumber = 1;
         }
-        _pendingPickup = true;
-        _pickupLength = partial.ToFraction();
+        _bars.SetPartial(partial.ToFraction());
         _pickupAccumulated = Fraction.Zero;
     }
 
     /// <summary>
-    /// While a leading 'partial' pickup is open, accumulate its duration and
+    /// While a 'partial' pickup is pending, accumulate the duration written into it and
     /// auto-close the implicit measure once it reaches the declared length — even
-    /// with no written barline — mirroring MeasureCollector so MusicXML and SVG
-    /// split the pickup identically.
+    /// with no written barline — mirroring MeasureBuilder.AddItem so MusicXML and SVG
+    /// split the pickup identically. A bar line before that closes the bar and spends
+    /// the pickup short (the bar-line arm of <see cref="ProcessNode"/>), as the page does.
     /// </summary>
     private void MaybeClosePickup(Fraction added)
     {
-        if (!_pendingPickup)
+        if (_bars.Partial is not { } pickup)
             return;
         _pickupAccumulated += added;
-        if (_pickupAccumulated >= _pickupLength)
+        if (_pickupAccumulated >= pickup)
         {
-            _pendingPickup = false;
+            _bars.SpendPartial();
             if (_currentMeasure != null && _currentPart != null && _currentMeasure.Notes.Count > 0)
             {
                 _currentPart.Measures.Add(_currentMeasure);
@@ -2202,7 +2205,7 @@ public sealed class MusicXmlExporter
     private void CloseFullBarAtPassEnd()
     {
         if (_currentMeasure is not { Notes.Count: > 0 } open || _currentPart == null
-            || _bars.SenzaMisura || _pendingPickup)
+            || _bars.SenzaMisura || _bars.Partial is not null)
             return;
         int barTicks = 4 * DivisionsPerQuarter * _bars.Meter.Beats / _bars.Meter.BeatType;
         if (ElapsedTicks(open) < barTicks)
@@ -2514,9 +2517,17 @@ public sealed class MusicXmlExporter
                         && _currentMeasure is { Notes.Count: 0 } && _currentPart is { Measures.Count: > 0 };
                     if (!inChordRow)
                         _barClosedByBlock = false;
+                    bool timePassed = closesSpan || _currentMeasure is { Notes.Count: > 0 };
                     if (pairsHere && !closesSpan && _currentMeasure != null && _currentPart != null
                         && _currentMeasure.Notes.Count == 0)
-                        AddSilentBar();
+                        AddSilentBar();   // worth the pickup while one is pending — read before it is spent
+                    // The line closes a bar — one with time in it, the span's last, or the
+                    // empty bar a bare `|` stands for — so a pending pickup is SPENT, short or
+                    // not (the page's MeasureBuilder.ResetPerMeasureState at every measure close;
+                    // MidiExporter.ProcessSequence's `pairsHere || timePassed`). A typed bar line
+                    // on an empty span decorates and closes nothing, and leaves it pending.
+                    if (!inChordRow && (pairsHere || timePassed))
+                        _bars.SpendPartial();
                     var closing = closesSpan ? _currentPart!.Measures[^1] : _currentMeasure;
                     if (closing != null)
                     {
@@ -4367,8 +4378,7 @@ public sealed class MusicXmlExporter
         // A bare `R` lasts its bar (Music.BarRest) and leaves the running duration alone. A bar
         // no single note value spells (5/4) writes no <type>, as a whole-measure rest may.
         bool bare = Music.BarRest.IsBare(rest);
-        var meter = _bars.MeterLength;
-        var duration = bare ? (_pendingPickup ? _pickupLength : meter) : GetDuration(rest.Duration);
+        var duration = bare ? _bars.BarLength : GetDuration(rest.Duration);
         int durationTicks = FractionToTicks(duration);
         var (type, dots) = bare && Music.BarRest.Shape(duration).Scale != 1
             ? ((string?)null, 0) : GetNoteType(duration);
@@ -4432,6 +4442,7 @@ public sealed class MusicXmlExporter
             first.Attributes.MultipleRest = bars;
         }
         // The bars after a bare `R*N`'s first are whole bars of the meter, a pickup's or not.
+        var meter = _bars.MeterLength;
         if (bare && duration != meter)
         {
             duration = meter;
