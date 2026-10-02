@@ -115,6 +115,14 @@ phrase・tuplet・grace・cue・repeat の中身は `new LilyPondExporter { … 
 **確かめ方**: MIDI は全冊の .mid のバイト比較（**計器が無い＝C の最初に作る**・§6 ⑶）。XML・双子は §6。
 **毒**: 共有部品の拍子の更新を 1 か所外す → 移した出力の網が赤になること。
 
+### 5.1 第742 の値付け（2026-10-02・ユーザー判断待ち）
+
+- **計器を先に作った**: MIDI の全冊バイト比較＝Lab `sessions/p742/sweep-midi.ps1`（998 冊・1,199 枚・SHA256・約 20 秒）。A/B の前後の HEAD で差 0（MIDI は触っていない＝計器の健全性の確認）。
+- **(a) 頁のモデルを全出力が読む＝採らない**: MIDI・MusicXML は*演奏される順*（form・反復・volta・section play の serial）で歩くが、頁のモデルは *score ごとの印刷の形*（staff ごとの小節・`BreaksMidBar`・padding・courtesy・text row・combined staff の silence の選択）。MIDI の walk（3,105 行の大半: tie の lane・grace の steal・tuplet・phrase の ordinal）を頁の形の上に書き直すことになり、1 出力でも何便かの書き直し＝音に無関係な決定が混ざる。双子の 3 stream が頁を読むのは「頁が置いた位置を写す」目的で、音楽の規則の共有ではない。
+- **(b) `BarContext`＝推す**: 各出力が自前で持つ「拍子（beats／beatType／text／senza）・弱起・小節内の位置・音価の引き継ぎ（value／dots）」と、その規則（section 境界で home へ戻す・header の time／partial を当てる・`time none`・弱起は最初に閉じる小節で使い切る・span／grace／phrase／tuplet で音価の記憶を保存／復元）を 1 型にして、各出力はそれを読む。写しの数（第742 の grep）: 音価の引き継ぎの代入 MIDI 10／XML 9／頁 24・section 境界の meter 戻し 5 か所・**section header の registry の構築 5 か所**（collector `Definitions.cs:419`・MIDI `Export`・XML `BuildSectionHeaderRegistry`・双子 `BuildSectionHeaderRegistry`・validator `CollectSectionTimes/Partials`＝同じ規則「inline music の無い宣言の first direct key／time／tempo／partial・先勝ち」）。
+- **提案する順**: **C1 `Semantics.SectionHeaders`**（registry の構築を 1 本に・5 か所が読む。(a)(b) どちらでも要る・出力 3 種の掃き＋import の往復で差 0）→ **C2 `BarContext` の型を MIDI に**（`MeasureTicks` と頁の `EmitEmptyMeasure` の長さの一致を型で保証）→ C3 XML → C4 双子 → C5 検証・頁（頁は打鍵ごとの walk と `Resume` の checkpoint が `_defaultDuration` を持つ＝最後・perf の規則＝ユーザーに一声）。
+- **毒の形**: 共有部品の section 境界の meter 戻しを外す → 移した出力の網が赤（MIDI は `SectionBoundaryMeterRevertTests` の族）。registry の構築では「inline music の有無」の判定を外す → 5 出力の section header の網が赤。
+
 ## 6. 確かめ方（計器）
 
 1. **双子（.ly）の全冊比較**: Lab `sessions/p739/twin/sweep-ly.ps1 -Base <base の lysc>`（998 冊・1,199 枚・警告の行数と .ly の差分を数える・約 30 秒）。base の lysc は HEAD の worktree をビルドして**掃きの出力先と別のフォルダ**に置く（第739 で `base` に置いたら掃きが消した）。

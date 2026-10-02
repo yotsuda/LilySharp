@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第740セッションの経緯
+
+### 1.1 第740セッション（2026-10-02・YT-DELL2）
+
+新しい会話（HANDOFF から着手）。`-Start p740`（HEAD `50ae546b`・未 push 83）＝full **10745 / 0 / 2 / 10747**（引継ぎと一致）。§7 3.5 で第738 を ARCHIVE へ・`Fold-ClosedHandoffItems` は畳む物 0（天井の残り 6,771 B）。
+ユーザー「リファクタに着手して」＝`docs/REFACTOR_PLAN.md` 段階 A。★ `166a3857`:
+- 棚卸し: 入れ子は 6 か所（phrase 参照・tuplet・voice 枝・grace・cue・repeat）。`CarryFrameInto` が写していた 34 個を 3 つに分けた＝**`SharedState`**（phrase 表・再帰の番・`@chord`/`@figuredBass` の印・木・**警告の list**。入れ子は private ctor でこれを受け取る＝足した表が届かない形が無い）／**`PartFrame`**（octave の方式と錨・drum/combined・部の名前・home の key/time＝写すだけ）／**`StreamFrame`**（octave の枠 2 組・走っている key/time/clef・improvisation・音価の記憶＝写して戻す。`CarryFrameBack` は同じ record を戻すだけ＝入れた物を戻し忘れる形が無い）。工場は `OpenNested()` 1 つ・本文を読むのは `NestedText(buf)` 1 つ。6 か所の `_warnings.AddRange` は list が 1 つなので消えた（順序は同じ＝親は入れ子の最中に警告を足さない）。各 site の種（grace の 8・voice 枝の span の値・phrase の 4）と写す物の集合は 1 つも変えていない。
+- 確かめ: 双子 998 冊・1,199 枚＝**差 0**・'dropped' 801 行で同数（Lab `sessions/p740/twin/sweep-ly.ps1`・base は -Start のビルドの exe を scratch に写した）。full 10745 / 0 / 2。行番号の表 2 枚を再生成（APPROXIMATIONS の UNWATCHED 60→59＝「unobserved」で数えられていた文は観測者が在ると言う文だった）。CHANGELOG 無し（出力不変）。
+- 毒（`sessions/p740/poisons.ps1`・`poisons-sweep.ps1`）: ⑴ SharedState を入れ子ごとに新品 → **8 赤**（container 内の phrase 参照・再帰の番）。⑵ StreamFrame を入れない → suite **1 赤**（`ShapeChordItemTests.InAGraceAndATuplet`）だが掃きは **125 冊差**。⑶ 戻さない → suite **0 赤**・掃き **16 冊差**（例 `test/tuplets-beamed`: 2 つ目の tuplet の頭が `c` → `c4`＝前の tuplet が残した force を失う）。⇒ **stream frame の網は掃きであって suite ではない**＝§1.0 ⒜ に候補として置いた（網を足すのは別 commit）。
+★ `-End p740 -DiffBase 50ae546b`＝full **10745 / 0 / 2 / 10747**（網 ±0）・門 全 OK（HANDOFF 残り 4,155 B）。7.5: Core `+` 191 行・REF 0／OWN 1（`PartFrame` へ移した既存の註＝新規の逸脱なし）。7.6: 該当なし（出力不変）。7.7: 入れ子へ写す物の集合は変えていない＝`_homeKeyNode` だけ写していない非対称は従来のまま（意図は読めていない・B で読む）。push はユーザー（未 push 85）。
+判定: 次は段階 B（双子の partial 分割＋頁のモデルを読む 3 本の統合）。今回読んだ入れ子 6 か所と frame の形の上に立つ＝(a) で**この会話で続ける**。§1 の残り 4,155 B は便を区切る理由＝B に入る前に `-Start p741` を回す。
+
 ## 以下は第739セッションの経緯
 
 ### 1.1 第739セッション（2026-10-02・YT-DELL2）
