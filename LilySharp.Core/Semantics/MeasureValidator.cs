@@ -32,12 +32,14 @@ internal sealed class MeasureValidator : ISemanticValidator
     // reads this to avoid double-reporting the same bar (one root cause, one
     // diagnostic); the set is shared with CrossPartMeasureValidator.
     private readonly HashSet<(int Start, int Length)> _warnedSpans = new();
-    private Fraction _timeSignature = new(4, 4); // Default 4/4
-    private bool _senzaMisura; // time none: no bar-length validation
-    // The meter AS WRITTEN ("4/4", "6/8") for diagnostics — the Fraction
-    // normalizes (4/4 → "1"), which made the overfull warning read
-    // "exceeds time signature 1".
-    private string _meterText = "4/4";
+    // The meter in force and `time none` (no bar-length validation): Semantics.BarContext,
+    // the one spelling the outputs read too (REFACTOR_PLAN stage C5; the pickup stays this
+    // validator's per-bar reading, and the header registries below keep their own rule).
+    private readonly BarContext _bars = new();
+    // The meter AS WRITTEN ("4/4", "6/8") for diagnostics — the Fraction normalizes
+    // (4/4 → "1"), which made the overfull warning read "exceeds time signature 1".
+    // The pair, not the additive text: `3+2/8` reads "5/8" here, as it always did.
+    private string MeterText => $"{_bars.Meter.Beats}/{_bars.Meter.BeatType}";
     // Set by a top-level `partial N` — the declared pickup length for every
     // voice's first measure (mirrors MeasureCollector._filePartial).
     private Fraction? _filePartial;
@@ -62,10 +64,7 @@ internal sealed class MeasureValidator : ISemanticValidator
     /// Sets the current time signature.
     /// </summary>
     public void SetTimeSignature(int beats, int beatUnit)
-    {
-        _timeSignature = DurationCalculator.ParseTimeSignature(beats, beatUnit);
-        _meterText = $"{beats}/{beatUnit}";
-    }
+        => _bars.SetMeterLeavingSenza(new Meter(beats, beatUnit));
 
     /// <summary>
     /// Validates all measures in a compilation unit.
@@ -283,7 +282,7 @@ internal sealed class MeasureValidator : ISemanticValidator
                 break;
 
             case TimeSignatureSyntax timeSig when !IsInsideMusicBlock(timeSig) && timeSig.IsSenzaMisura:
-                _senzaMisura = true;
+                _bars.SetTime(timeSig);   // senza: the last metered pair stays, nothing is checked
                 break;
 
             case TimeSignatureSyntax timeSig when !IsInsideMusicBlock(timeSig):
@@ -365,9 +364,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         // flagged against the previous part's 3/4.
         // LILYPOND-REF: Timing is Score-level in LP, but Lily# parts restate
         // meter changes per part; validation follows the per-block timeline.
-        var savedTime = _timeSignature;
-        var savedMeterText = _meterText;
-        var savedSenza = _senzaMisura;
+        var saved = _bars.Save();
         try
         {
             ValidateMeasures(items, startPos, leadIn, initialDefault, openTail, leadInSpan,
@@ -375,9 +372,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         }
         finally
         {
-            _timeSignature = savedTime;
-            _meterText = savedMeterText;
-            _senzaMisura = savedSenza;
+            _bars.Restore(saved);
         }
     }
 
@@ -411,15 +406,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         // enclosing one after it) — the section's own music, and a repeat body or a span's
         // later voice inside it inherits it from here.
         if (cell is { } meterCell && _sectionTimes.TryGetValue(meterCell.Section, out var sectionTime))
-        {
-            if (sectionTime.IsSenzaMisura)
-                _senzaMisura = true;
-            else
-            {
-                _senzaMisura = false;
-                SetTimeSignature(sectionTime.Beats, sectionTime.BeatType);
-            }
-        }
+            _bars.SetTime(sectionTime);
 
         // ONE forward pass: each bar adopts its meter, then its duration is counted in
         // segments around the voice-span / repeat addresses, then it is checked. (This
@@ -432,7 +419,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         // running default note value there. Voices 2..N sound from that instant, so this
         // is the lead-in their own first bar is validated with. Collected during the
         // pass, validated after it (they are simultaneous with the music counted here).
-        var spanEntry = new List<(ParallelExpressionSyntax Span, Fraction LeadIn, Fraction Default, Fraction? Pickup, (Fraction, string, bool) Meter)>();
+        var spanEntry = new List<(ParallelExpressionSyntax Span, Fraction LeadIn, Fraction Default, Fraction? Pickup, BarContext.MeterState Meter)>();
 
         // The opening pickup: the first sounding bar, when it is shorter than a
         // full bar. A legitimately shortened FINAL bar must complete it
@@ -456,7 +443,7 @@ internal sealed class MeasureValidator : ISemanticValidator
             // Read in item order against the running meter: a `partial` under `time none`
             // shortens nothing — the clock stands still there (MeasureBuilder's frozen clock)
             // — and is reported rather than silently dropped (LYS2015, see DiagnosticCodes).
-            bool senzaHere = _senzaMisura;
+            bool senzaHere = _bars.SenzaMisura;
             foreach (var item in barItems)
             {
                 if (item is TimeSignatureSyntax tsx)
@@ -490,10 +477,7 @@ internal sealed class MeasureValidator : ISemanticValidator
                 for (int k = fromIndex; k < toIndex; k++)
                 {
                     if (barItems[k] is TimeSignatureSyntax ts)
-                    {
-                        if (ts.IsSenzaMisura) _senzaMisura = true;
-                        else { _senzaMisura = false; SetTimeSignature(ts.Beats, ts.BeatType); }
-                    }
+                        _bars.SetTime(ts);
                 }
             }
 
@@ -596,7 +580,7 @@ internal sealed class MeasureValidator : ISemanticValidator
                 // needed (ignoringZeroDurationMarks) goes with it — see PercentRepeatShape.
 
 
-                if (!_senzaMisura && FlowsThroughBarAccounting(rep, out int playCount))
+                if (!_bars.SenzaMisura && FlowsThroughBarAccounting(rep, out int playCount))
                 {
                     // The played content flows ACROSS the written bar: mirror
                     // MeasureBuilder.AddDuration, which auto-completes the rendered bar
@@ -623,7 +607,7 @@ internal sealed class MeasureValidator : ISemanticValidator
                                 continue;
                             }
                             total += MeasureDurations.ItemDuration(bodyItem, ref defaultDuration);
-                            if (total >= _timeSignature)
+                            if (total >= _bars.MeterLength)
                             {
                                 renderedBarsClosed++;
                                 total = Fraction.Zero;
@@ -662,14 +646,14 @@ internal sealed class MeasureValidator : ISemanticValidator
             // section's full first bar is not the pickup). An inline `partial`
             // in the bar always wins.
             if (partialLength == null && i == 0 && _filePartial is { } fp
-                && duration != _timeSignature)
+                && duration != _bars.MeterLength)
             {
                 partialLength = fp;
             }
 
             // The pickup's declared length overrides the meter as the fill target
             // for the measure that carries the \partial.
-            var expected = partialLength ?? _timeSignature;
+            var expected = partialLength ?? _bars.MeterLength;
             duration += BareBarRests(barItems, expected, i == 0 && leadIn is not null);
 
             // Remember the opening pickup: the first sounding bar, when shorter
@@ -678,14 +662,14 @@ internal sealed class MeasureValidator : ISemanticValidator
             if (duration != Fraction.Zero && !seenSounding)
             {
                 seenSounding = true;
-                if (duration < _timeSignature)
+                if (duration < _bars.MeterLength)
                 {
                     openingPickupIndex = i;
                     openingPickupDuration = duration;
                 }
             }
 
-            if (!_senzaMisura && duration != expected && duration != Fraction.Zero)
+            if (!_bars.SenzaMisura && duration != expected && duration != Fraction.Zero)
             {
                 if (duration < expected)
                 {
@@ -775,10 +759,9 @@ internal sealed class MeasureValidator : ISemanticValidator
         RestoreMeter(streamEnd);
     }
 
-    private (Fraction, string, bool) MeterNow() => (_timeSignature, _meterText, _senzaMisura);
+    private BarContext.MeterState MeterNow() => _bars.Save();
 
-    private void RestoreMeter((Fraction Signature, string Text, bool Senza) m)
-        => (_timeSignature, _meterText, _senzaMisura) = m;
+    private void RestoreMeter(BarContext.MeterState m) => _bars.Restore(m);
 
     // Voice 1's meter changes, by the bar of the span they stand in (bar lines counted).
     private static Dictionary<int, List<TimeSignatureSyntax>> MetersByBar(IEnumerable<SyntaxNode> items)
@@ -907,13 +890,13 @@ internal sealed class MeasureValidator : ISemanticValidator
                 before += MeasureDurations.ItemDuration(item, ref running);
                 continue;
             }
-            if (_senzaMisura || startsMidBar || before != Fraction.Zero)
+            if (_bars.SenzaMisura || startsMidBar || before != Fraction.Zero)
             {
                 _diagnostics.Error(rest.Span, DiagnosticCodes.BareBarRestNeedsABar,
-                    _senzaMisura
+                    _bars.SenzaMisura
                         ? "A bar rest with no duration lasts its bar, and under 'time none' there is no bar: write its duration (R2, R1)."
                         : "A bar rest with no duration lasts its bar, so it must open it: write its duration here (R2), or put it in a bar of its own.");
-                if (_senzaMisura)
+                if (_bars.SenzaMisura)
                     continue;
             }
             var left = expected - before;
@@ -967,7 +950,7 @@ internal sealed class MeasureValidator : ISemanticValidator
             _diagnostics.Warning(span, DiagnosticCodes.MeasureIncomplete,
                 partialLength != null
                     ? $"Pickup measure duration {duration} is less than the declared partial {expected}"
-                    : $"Measure duration {duration} is less than time signature {_meterText}");
+                    : $"Measure duration {duration} is less than time signature {MeterText}");
         }
         else if (isBarePickup)
         {
@@ -984,7 +967,7 @@ internal sealed class MeasureValidator : ISemanticValidator
                 ? $"in the section header (e.g. section A {{ {SuggestPartial(duration)}  … }})"
                 : $"with a leading '{SuggestPartial(duration)}'";
             _diagnostics.Warning(span, DiagnosticCodes.PickupWithoutPartial,
-                $"first measure is shorter than the meter ({duration} of {_meterText}); " +
+                $"first measure is shorter than the meter ({duration} of {MeterText}); " +
                 $"if this is a pickup, declare it {where} so its length is checked and " +
                 "bar numbering starts after it");
         }
@@ -1030,7 +1013,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         _diagnostics.Warning(span, DiagnosticCodes.MeasureOverflow,
             partialLength != null
                 ? $"Pickup measure duration {duration} exceeds the declared partial {expected}"
-                : $"Measure duration {duration} exceeds time signature {_meterText}");
+                : $"Measure duration {duration} exceeds time signature {MeterText}");
     }
 
     /// <summary>

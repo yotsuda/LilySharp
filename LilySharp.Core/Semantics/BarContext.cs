@@ -49,8 +49,11 @@ public readonly record struct Meter(int Beats, int BeatType, string? BeatsText =
 /// and one copy (<c>R1*N</c> in the MIDI) had drifted. This type is REFACTOR_PLAN stage C: the
 /// MIDI read it first (C2, whole), the MusicXML next (C3, the meter — its pickup is still its own,
 /// see below), then the LilyPond twin (C4, whole; its section-head restores and the <c>\cadenzaOn</c>
-/// bookkeeping stay the twin's); the validator and the page follow, one at a time, each checked
-/// by its own full-corpus byte comparison.
+/// bookkeeping stay the twin's), then the validator (C5, the meter; its pickup is a per-bar
+/// reading, not a pending state, and its header registries keep their own rule — see
+/// <see cref="SectionHeaders"/>). The page is not on it (owner's decision 2026-10-02, "iii": it is
+/// the perf path and the authority the others are compared with; the differences below are decided
+/// first).
 /// <para>
 /// ⚠️ SPELLINGS THAT STILL DIFFER between the outputs, recorded here so the move onto one type
 /// does not paper over them (stage C5 decides, with nets): a second <c>partial</c> before the
@@ -140,6 +143,13 @@ public sealed class BarContext
         Meter = meter;
         SenzaMisura = false;
     }
+
+    /// <summary>A meter set outright that says nothing about <c>time none</c> — the validator's
+    /// document-level <c>time</c> (MeasureValidator.SetTimeSignature), which never cleared its
+    /// senza flag: a top-level <c>time none</c> leaves the document unmetered for every later
+    /// top-level <c>time</c>. Kept as it was (stage C5 (iii) moves the state, not the rule);
+    /// whether that is right is a separate decision, with its own net.</summary>
+    public void SetMeterLeavingSenza(Meter meter) => Meter = meter;
 
     /// <summary>The running meter becomes the score's home — read once the top-level directives
     /// are walked and before any section is (MusicXmlExporter.Export's metadata pass).</summary>
