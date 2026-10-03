@@ -55,7 +55,7 @@ public class AccidentalReachRodTests
         var timings = MultiStaffLayouter.CollectAllTimingsForMeasure(multi, 0);
         var rods = new List<(int Left, int Right, double Distance)>();
 
-        MeasureLayouter.AddAccidentalReachRods(multi.TextMetrics, measures, timings,
+        MeasureLayouter.AddColumnReachRods(multi.TextMetrics, measures, timings,
             MultiStaffLayouter.CollectStavesOfMeasuresAtIndex(multi, 0), rods);
 
         // Column 0 (the f) to column 2 (the a): springs 1 and 2.
@@ -98,7 +98,7 @@ public class AccidentalReachRodTests
         var timings = MultiStaffLayouter.CollectAllTimingsForMeasure(multi, 0);
         var rods = new List<(int Left, int Right, double Distance)>();
 
-        MeasureLayouter.AddAccidentalReachRods(multi.TextMetrics, measures, timings,
+        MeasureLayouter.AddColumnReachRods(multi.TextMetrics, measures, timings,
             MultiStaffLayouter.CollectStavesOfMeasuresAtIndex(multi, 0), rods);
 
         int fis = timings.IndexOf(new Fraction(3, 8)), chord = timings.IndexOf(new Fraction(1, 2));
@@ -149,7 +149,7 @@ public class AccidentalReachRodTests
         var timings = MultiStaffLayouter.CollectAllTimingsForMeasure(multi, 0);
         var rods = new List<(int Left, int Right, double Distance)>();
 
-        MeasureLayouter.AddAccidentalReachRods(multi.TextMetrics, measures, timings,
+        MeasureLayouter.AddColumnReachRods(multi.TextMetrics, measures, timings,
             MultiStaffLayouter.CollectStavesOfMeasuresAtIndex(multi, 0), rods);
 
         // Three eighths in the time of two: the f' on 1/12, the g' on 1/6, the left hand's

@@ -580,7 +580,8 @@ internal sealed partial class LayoutEngine
             double demerits = cur?.demerits ?? double.PositiveInfinity;
             debug?.Invoke($"trying {count} systems: {demerits:F6}"
                 + (cur is { } d ? $" (pages {string.Join(",", d.pages.SystemsPerPage)} forces "
-                    + $"{string.Join(",", d.pages.Forces.Select(f => f.ToString("F3")))}; lines {string.Join(",", LineSizes(d.breaks))})"
+                    + $"{string.Join(",", d.pages.Forces.Select(f => f.ToString("F3")))}; lines {string.Join(",", LineSizes(d.breaks))}"
+                    + $"; line force² {lineBreaks.For(count)!.Value.ForceSquaredSum:F6} break penalty {lineBreaks.For(count)!.Value.BreakPenaltySum:F6})"
                       + Fresh(count)
                     : ""));
             if (demerits < bestDemerits)

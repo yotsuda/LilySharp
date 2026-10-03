@@ -303,7 +303,7 @@ internal sealed class MeasureLayouter
         springs[timings.Count] = CreateLastToBarlineSpring(fonts, timings, columns, measuresToScan, totalDuration,
             so, SpacingRules.BoundaryClefAllowance(fonts, measure.EndBarline, nextMeasure), stavesOfMeasures);
 
-        AddAccidentalReachRods(fonts, measuresToScan, timings, stavesOfMeasures, looseRods);
+        AddColumnReachRods(fonts, measuresToScan, timings, stavesOfMeasures, looseRods);
 
         var chain = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(springs);
         var rodded = looseRods.Count > 0
@@ -316,8 +316,8 @@ internal sealed class MeasureLayouter
     /// <summary>
     /// The rods a column raises past its neighbour: to the columns further left on its STAFF
     /// that its ink can still reach — its own voice's and the other voices' — each spanning the
-    /// springs between. (Named for the accidental it was first written for; it has walked every
-    /// item since 2026-10-03.)
+    /// springs between. (AddAccidentalReachRods until 2026-10-04: it walked only an accidental's
+    /// column, the shape of its first measurement.)
     /// </summary>
     /// <remarks>
     /// <para>
@@ -358,7 +358,7 @@ internal sealed class MeasureLayouter
     /// LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods — the inner loop over j.
     /// LILYPOND-REF: lily/separation-item.cc:47-68 Separation_item::set_distance.
     /// </remarks>
-    internal static void AddAccidentalReachRods(Rendering.ScoreTextMetrics fonts,
+    internal static void AddColumnReachRods(Rendering.ScoreTextMetrics fonts,
         IReadOnlyList<Measure> measuresToScan, List<Fraction> timings,
         IReadOnlyList<Staff>? stavesOfMeasures,
         List<(int Left, int Right, double Distance)> rods)
