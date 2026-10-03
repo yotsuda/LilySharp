@@ -357,6 +357,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **The same score is the same PDF.** Two PDFs of one score differed in their embedded
+  subset font names (a random six-letter tag each, `/RFYOHX+Emmentaler-20`) and in the
+  trailer's document ID, so no two runs could be compared; both are now derived from the
+  file itself. The creation date stays the clock unless `SOURCE_DATE_EPOCH` is set
+  (seconds since 1970, the reproducible-builds convention), in which case it is that
+  moment and the whole file is reproducible.
 - **A MIDI file's conductor track says each thing once, and every track runs to the end.**
   A meter change was written once per part (a five-part book carried `6/4` five times at
   one tick), the file opened with two tempo events at tick 0 (the default 120 and the

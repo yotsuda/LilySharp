@@ -46,12 +46,17 @@ namespace LilySharp.Tests;
 /// </para>
 /// </remarks>
 [Trait("Category", "Integration")]
+[Collection("SourceDateEpoch")]
 public sealed class ScoreExportTests : IDisposable
 {
     private readonly string _dir = Directory.CreateTempSubdirectory("lysc-doors-").FullName;
+    // A PDF's creation date is the clock unless SOURCE_DATE_EPOCH says otherwise; the
+    // spawned CLI inherits it, so the three doors' PDFs can be compared byte for byte.
+    private readonly SourceDateEpoch _epoch = SourceDateEpoch.Set("1700000000");
 
     public void Dispose()
     {
+        _epoch.Dispose();
         try { Directory.Delete(_dir, recursive: true); } catch { /* best effort */ }
         GC.SuppressFinalize(this);
     }
@@ -129,25 +134,14 @@ public sealed class ScoreExportTests : IDisposable
         var batch = Server().Export(new ExportParams { Path = book, Format = format, All = true, OutputDirectory = batchDir });
         Assert.True(batch.Success, batch.Error);
 
-        string cli = Comparable(Path.Combine(cliDir, "two-sub" + ext), format);
-        Assert.Equal(cli, Comparable(Path.Combine(buttonDir, "two-sub" + ext), format));
-        Assert.Equal(cli, Comparable(Path.Combine(batchDir, "two-sub" + ext), format));
+        // Byte for byte, the PDF included (PdfReproducibility: its subset font tags and
+        // document ID are deterministic, its clock is SOURCE_DATE_EPOCH's here).
+        byte[] cli = File.ReadAllBytes(Path.Combine(cliDir, "two-sub" + ext));
+        Assert.Equal(cli, File.ReadAllBytes(Path.Combine(buttonDir, "two-sub" + ext)));
+        Assert.Equal(cli, File.ReadAllBytes(Path.Combine(batchDir, "two-sub" + ext)));
 
         // And `sub` is not `main`: the doors agreed on the score, not on a default.
-        Assert.NotEqual(cli, Comparable(Path.Combine(batchDir, "two" + ext), format));
-    }
-
-    // The file's bytes as text, byte for byte — except a PDF's, where PDFsharp writes the
-    // clock (/CreationDate), a document /ID and a random six-letter tag on each subset
-    // font name (/RFYOHX+Emmentaler-20): the one format that is not reproducible from
-    // one process to the next. Those are masked; everything drawn stays compared.
-    private static string Comparable(string path, string format)
-    {
-        string text = System.Text.Encoding.Latin1.GetString(File.ReadAllBytes(path));
-        return format == "pdf"
-            ? System.Text.RegularExpressions.Regex.Replace(text,
-                @"/[A-Z]{6}\+|/(CreationDate|ModDate) \(D:[^)]*\)|/ID ?\[[^\]]*\]", "X")
-            : text;
+        Assert.NotEqual(cli, File.ReadAllBytes(Path.Combine(batchDir, "two" + ext)));
     }
 
     // The home itself, without a door: a file with no `score` block is the null score —

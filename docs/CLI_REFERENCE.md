@@ -149,6 +149,11 @@ lysc pdf score.lys                    # Creates score.pdf (+ score-<alias>.pdf)
 lysc pdf -d out score.lys             # The same, into out/
 ```
 
+The same score writes the same bytes, except for the creation date, which is the
+clock. Set `SOURCE_DATE_EPOCH` (seconds since 1970, the reproducible-builds
+convention) to make that a fixed moment too — then two runs are byte-identical and
+can be compared.
+
 ### png - Export to PNG
 
 ```bash

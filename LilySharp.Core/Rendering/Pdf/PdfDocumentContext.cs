@@ -149,10 +149,14 @@ internal sealed class PdfDocumentContext : IDocumentContext
     {
         if (_disposed) return;
         if (_currentPage != null) EndPage();
+        // The same score, the same bytes (PdfReproducibility): the clock only under
+        // SOURCE_DATE_EPOCH, the subset tags and the document ID always.
+        if (PdfReproducibility.CreationDate() is DateTime creation)
+            _document.Info.CreationDate = creation;
         using (var ms = new MemoryStream())
         {
             _document.Save(ms);
-            _savedBytes = ms.ToArray();
+            _savedBytes = PdfReproducibility.Apply(ms.ToArray());
         }
         _document.Dispose();
         _disposed = true;
