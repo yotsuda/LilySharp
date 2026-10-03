@@ -521,6 +521,11 @@ internal static class MusicMarkEngraver
         // line-start edge. See CalculateXPosition's Rehearsal arm for the mechanism
         // and the LILYPOND-REFs.
         Func<int, double>? prefixMarkAnchorX = null,
+        // Per system, the ABSOLUTE X a boxed label sharing the ROW LINE puts its left edge
+        // on at the line start (the staff-bar column after the meter), NaN where labels keep
+        // their band above a staff — see RowLineLabelLeftX. Null keeps the edge/key/clef
+        // arms alone (single-staff callers without the prefix model).
+        Func<int, double>? rowLineLabelLeftX = null,
         // TEXT-style pedal words solved at skyline-build time: (staff, system, the
         // mark's SOURCE POSITION) -> the word's baseline, Y-up about that STAFF's middle
         // line. Null (or a null answer) keeps the legacy below-the-system stack — the
@@ -569,7 +574,8 @@ internal static class MusicMarkEngraver
             var measureLayout = measureLayouts[mark.MeasureIndex];
             double x = CalculateXPosition(
                 fonts, mark, measureLayout, systems, prefixTimeSignatureX, lineStartBarlineX,
-                prefixMarkAnchorX, measures, marksBeside);
+                prefixMarkAnchorX, measures, marksBeside,
+                rowLineLabelLeftX: rowLineLabelLeftX);
             markEntries.Add((mark, x, si));
         }
 
@@ -2372,7 +2378,10 @@ internal static class MusicMarkEngraver
         Score? score = null,
         bool marksBeside = false,
         // …and the label style, for the reason Calculate's own parameter gives.
-        Semantics.SectionLabelStyle sectionLabels = Semantics.SectionLabelStyle.Boxed)
+        Semantics.SectionLabelStyle sectionLabels = Semantics.SectionLabelStyle.Boxed,
+        // …and the row-line label's line-start column (RowLineLabelLeftX), so the window is
+        // asked with the same anchor the placement is.
+        Func<int, double>? rowLineLabelLeftX = null)
     {
         var windows = new List<(int, double, double)>();
         if (measureLayouts.IsDefaultOrEmpty)
@@ -2434,7 +2443,7 @@ internal static class MusicMarkEngraver
             double x = CalculateXPosition(
                 fonts, mark, measureLayouts[mark.MeasureIndex], systems,
                 prefixTimeSignatureX, lineStartBarlineX, prefixMarkAnchorX, measures, marksBeside,
-                IsBoxDrawn(mark.Type, labelStyle));
+                IsBoxDrawn(mark.Type, labelStyle), rowLineLabelLeftX);
             var (x0, x1) = MarkXExtent(fonts, mark, x, IsBoxDrawn(mark.Type, labelStyle));
             // The tempo standing beside this label is drawn on the same line, so the
             // symbols keep out of its ink too — read through the placement's own X.
@@ -2483,12 +2492,12 @@ internal static class MusicMarkEngraver
     /// this existed (2026-09-09, scratch/p356/mk9): bar 1 stayed 13.90 wide under every label
     /// and `IntroductionLong' pushed the first `C' to 25.92, into bar 3.
     /// <para>
-    /// The box's left edge is <paramref name="labelLeft"/>: the line-start edge (0.3 past
-    /// the indent), which is what <see cref="CalculateXPosition"/> gives a staffless label
-    /// with no prefix anchor, or the DRAWN opening bar's X when the line opens on a
-    /// <c>|:</c> (the caller reads it off the prefix's <c>BarX</c>, the same column
-    /// <c>lineStartBarlineX</c> answers from the placed system — measured equal on
-    /// scratch/p356/mk10: bar and box both at 3.50).
+    /// The box's left edge is <paramref name="labelLeft"/>: <see cref="RowLineLabelLeft"/> of
+    /// the line's prefix — the staff-bar column after the meter (the DRAWN opening bar's X
+    /// when the line opens on a <c>|:</c>, the same column <c>lineStartBarlineX</c> answers
+    /// from the placed system — measured equal on scratch/p356/mk10: bar and box both at
+    /// 3.50), or the line-start edge (0.3 past the indent) on a line with nothing prefatory
+    /// — which is what <see cref="CalculateXPosition"/> gives the same label.
     /// </para>
     /// </remarks>
     internal static double StafflessLabelLineStartReach(
@@ -2552,6 +2561,72 @@ internal static class MusicMarkEngraver
         ListPool<MusicMarkItem>.Give(atLineStart);
         return reach > 0.0 ? reach + ChordNameEngraver.SymbolGap : 0.0;
     }
+
+    /// <summary>
+    /// Where a boxed label that SHARES THE ROW LINE puts its LEFT edge at a line start,
+    /// relative to the prefix origin: the drawn opening bar's X when the line opens on a
+    /// <c>|:</c>; else, when the meter is engraved ON THE LABEL'S OWN ROW, the
+    /// <c>staff-bar</c> column 1.0 past it
+    /// (<see cref="BreakAlignSpacing.PrefixColumns.StaffBarColumnX"/>); else the line-start
+    /// edge (0.3) — a continuation line, which engraves nothing prefatory, or a sheet whose
+    /// grid (bars and meter) runs in a LYRIC row below the chord row the label sits on
+    /// (<see cref="MultiStaffScore.GridBarlineRowIndex"/>), where nothing on the label's line
+    /// stands under a box at the edge.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN, the fourth step of the 2026-08-24 decision (the label sits ON the chord
+    /// line): the meter is drawn on that line too (SharedRenderer's grid row, user decision
+    /// 2026-08-20), so a box at the edge printed over it — owner's report, session 778,
+    /// amazing-grace's `score "grid"`: `Verse` over the 3/4. The column is the one the drawn
+    /// `|:` already took (measured 2026-09-09, scratch/p356/mk10: bar and box both at 3.50),
+    /// and the one LilyPond's find_parent falls back to for a (staff-bar key-signature clef)
+    /// mark on a line with no key and no clef (break-alignment-interface.cc:299-334).
+    /// ⚠️ ONE SPELLING for the placement (<see cref="RowLineLabelLeftX"/> → CalculateXPosition)
+    /// and the reservation (the spring floor in <c>MultiStaffLayouter.LineStartSpringForLine</c>,
+    /// through <see cref="StafflessLabelLineStartReach"/>): the box the symbols are spaced
+    /// against and the box that is drawn come from this function or they drift (HANDOFF 5.3).
+    /// </remarks>
+    internal static double RowLineLabelLeft(
+        MultiStaffScore score, BreakAlignSpacing.PrefixColumns columns)
+    {
+        if (columns.HasBar)
+            return columns.BarX;
+        // The label's row is the TOP row (StafflessLabelLineStartReach's anchor); the meter
+        // is drawn on the grid row (SharedRenderer.DrawSystem). Measured when this was gated
+        // (session 781, test/rows-song-sheet and test/lead-sheet): ungated, a chords+lyrics
+        // sheet moved its label 3.2 right over a lyric-row meter it never touched, and bar 1
+        // widened with it.
+        int topRow = -1;
+        foreach (var (_, _, index) in score.EnumerateStaves()) { topRow = index; break; }
+        return columns.Right > 0.0 && score.GridBarlineRowIndex == topRow
+            ? columns.StaffBarColumnX
+            : 0.3;
+    }
+
+    /// <summary>
+    /// Per system index, the ABSOLUTE X of <see cref="RowLineLabelLeft"/> on a sheet whose
+    /// labels share the row line — a staffless sheet whose anchor row carries chord-row
+    /// symbols, the placement's one condition (<c>StafflessAnchorRefpointBelowTop</c>) — and
+    /// NaN on every other system, where the label keeps its band above the staff and the
+    /// edge/key/clef arms of <c>CalculateXPosition</c> decide.
+    /// </summary>
+    internal static Func<int, double> RowLineLabelLeftX(
+        MultiStaffScore score, ImmutableArray<SystemLayout> systems)
+        => sysIdx =>
+        {
+            if (sysIdx < 0 || sysIdx >= systems.Length
+                || systems[sysIdx].Measures.IsDefaultOrEmpty)
+                return double.NaN;
+            var system = systems[sysIdx];
+            // The same gate as the Y half and the window (RowsOnlySectionLabelTests' two
+            // controls): no staff, and chord-row symbols on the row the label hangs on.
+            if (score.ChordNames.IsDefaultOrEmpty
+                || !HasChordRowOn(score.ChordNames, LayoutUtilities.TopScoreGrobStaff(system)))
+                return double.NaN;
+            var prefix = MultiStaffLayouter.SolveLineStartPrefix(
+                score, system.Measures[0].MeasureIndex, sysIdx == 0);
+            return system.Indent + RowLineLabelLeft(score, prefix.Columns);
+        };
 
     /// <summary>
     /// The padding a boxed label's frame keeps around its text, per side.
@@ -2654,7 +2729,12 @@ internal static class MusicMarkEngraver
         // ⚠️ Optional only because C# puts required parameters first and this method's
         // options came earlier: BOTH call sites pass it (they are in this file, five lines
         // apart), and the leaf that actually prices the frame takes it as required.
-        bool boxed = true)
+        bool boxed = true,
+        // Per system, the ABSOLUTE X a boxed label that SHARES THE ROW LINE (the staffless
+        // sheet's convention) puts its LEFT edge on at the line start — the staff-bar column
+        // after the meter — or NaN on every system whose labels keep their own band above
+        // the staff. See RowLineLabelLeftX. Both call sites pass it.
+        Func<int, double>? rowLineLabelLeftX = null)
     {
         if (mark.Position == MusicMarkPosition.End)
         {
@@ -2827,11 +2907,29 @@ internal static class MusicMarkEngraver
             //   line where that bar is drawn, so a box at the edge would print over the
             //   repeat sign (measured 2026-09-09, scratch/p356/mk10: the `|:` stands at 3.50,
             //   the box at the edge would span 0.30..8.01).
+            //   ⚠️ AND SO DOES THE METER, on the same sheet (owner's report, session 778:
+            //   amazing-grace's `score "grid"` printed its `Verse` box over the 3/4). The grid
+            //   row engraves the score meter at its line-start prefix (SharedRenderer, the
+            //   2026-08-20 decision), on the very line the label is set on, and a box at the
+            //   edge spans that column. So a row-line label's left edge is the STAFF-BAR
+            //   column — the drawn `|:` when there is one, else where that bar WOULD stand,
+            //   1.0 past the meter's ink (PrefixColumns.StaffBarColumnX) — under both
+            //   arrangements, like the drawn bar. That is also where LilyPond's own
+            //   find_parent lands a (staff-bar key-signature clef) mark on a line with no
+            //   key and no clef: the invisible bar is its last fallback
+            //   (break-alignment-interface.cc:299-334). A line with nothing prefatory keeps
+            //   the edge, and so does a sheet whose grid — bars and meter — runs in a LYRIC
+            //   row under the label's chord row (RowLineLabelLeft). Reservation and
+            //   placement read the same function (RowLineLabelLeftX here, RowLineLabelLeft
+            //   in the spring floor).
             if (lineStartSystem >= 0)
             {
                 if (lineStartBarlineX?.Invoke(measureLayout.MeasureIndex) is { } barX
                     && !double.IsNaN(barX))
                     anchor = barX;
+                else if (rowLineLabelLeftX?.Invoke(lineStartSystem) is { } rowLeft
+                         && !double.IsNaN(rowLeft))
+                    anchor = rowLeft;
                 else if (!marksBeside && prefixMarkAnchorX?.Invoke(lineStartSystem) is { } prefX
                          && !double.IsNaN(prefX))
                     anchor = prefX;

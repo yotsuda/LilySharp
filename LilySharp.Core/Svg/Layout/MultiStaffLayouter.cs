@@ -1261,10 +1261,12 @@ internal sealed class MultiStaffLayouter
         // the floor speaks the measure frame (prefix right + the opening bar), so the frame
         // comes off. Joins by max like the lyric floor; a sheet with no such label adds 0.
         // LILYSHARP-OWN (MusicMarkEngraver.StafflessLabelLineStartReach has the measurement).
-        // The box stands at the line-start edge, or on the drawn opening bar when the line
-        // opens on a `|:` — the same choice CalculateXPosition makes from the placed system.
+        // The box stands on the staff-bar column — the drawn opening bar when the line opens
+        // on a `|:`, else 1.0 past the meter the grid row engraves — or at the line-start
+        // edge on a line with nothing prefatory: MusicMarkEngraver.RowLineLabelLeft, the same
+        // function CalculateXPosition reads from the placed system.
         double labelFloor = MusicMarkEngraver.StafflessLabelLineStartReach(score, startMeasureIndex,
-                prefix.Columns.HasBar ? prefix.Columns.BarX : 0.3)
+                MusicMarkEngraver.RowLineLabelLeft(score, prefix.Columns))
             - (prefix.Columns.Right + measureStartBarWidth);
         if (labelFloor > 0.0)
             ownFixedFloor = Math.Max(ownFixedFloor ?? double.NegativeInfinity, labelFloor);

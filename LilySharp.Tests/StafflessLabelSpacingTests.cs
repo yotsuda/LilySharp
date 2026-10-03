@@ -114,6 +114,60 @@ public class StafflessLabelSpacingTests
 
     private static LilySharp.Core.Rendering.ScoreTextMetrics fonts0(MultiStaffScore score) => score.TextMetrics;
 
+    private static double BoxLeft(MultiStaffScore score, ScoreLayout layout)
+    {
+        var box = layout.MusicMarkLayouts.Single(m => m.MarkType == MusicMarkType.SectionLabel);
+        return box.X - MusicMarkEngraver.LabelBoxHalfWidth(score.TextMetrics, box.MarkType, box.Text, box.Boxed);
+    }
+
+    /// <summary>
+    /// The grid row engraves the score meter at the line start, ON the line the label is set
+    /// on — so the box's left edge is the staff-bar column after it, not the line-start edge
+    /// it spanned the meter from (owner's report, session 778: amazing-grace's
+    /// <c>score "grid"</c> printed <c>Verse</c> over the 3/4).
+    /// </summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("layout { markTempo beside }\n")]
+    public void TheBox_StandsOnTheStaffBarColumn_PastTheMeter(string top)
+    {
+        var (score, layout) = Lay(Book(top, "Intro"));
+        double left = BoxLeft(score, layout);
+        var prefix = MultiStaffLayouter.SolveLineStartPrefix(score, 0, isFirstSystem: true);
+        Assert.True(prefix.HasTime, "the grid row engraves the meter at the line start");
+        double meterRight = layout.Systems[0].Indent + prefix.Columns.Right;
+        // (staff-bar . (extra-space . 1.0)) of TimeSignature.space-alist, the column a `|:`
+        // takes there (StafflessLabelSpacingTests' repeat arm) — one column for both.
+        Assert.Equal(meterRight + 1.0, left, 6);
+        Assert.Equal(layout.Systems[0].Indent + prefix.Columns.StaffBarColumnX, left, 6);
+    }
+
+    /// <summary>
+    /// CONTROL — a sheet whose grid runs in a LYRIC row keeps its label at the line-start
+    /// edge: the meter is drawn on the lyric row, and nothing on the chord row's line stands
+    /// under a box at the edge (measured ungated, session 781: the label moved 3.2 right and
+    /// bar 1 widened with it, on a sheet with no overlap to fix).
+    /// </summary>
+    [Fact]
+    public void TheBox_KeepsTheEdge_WhenTheMeterIsOnTheLyricRow()
+    {
+        const string source = """
+            tempo 117
+            time 4/4
+            part melody { section Intro { c'4 d' e' f' | g' a' b' c'' | } }
+            chords prog { section Intro { C | G | } }
+            lyrics words { section Intro { one two three four | five six sev- en | } }
+            form main { Intro }
+            score main {
+              chords prog as names
+              lyrics words sings melody
+            }
+            """ + "\n";
+        var (score, layout) = Lay(source);
+        Assert.NotEqual(0, score.GridBarlineRowIndex);   // the grid is on the lyric row
+        Assert.Equal(layout.Systems[0].Indent + 0.3, BoxLeft(score, layout), 6);
+    }
+
     [Fact]
     public void ABarWithNoLabel_IsUntouched()
     {

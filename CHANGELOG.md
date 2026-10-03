@@ -371,6 +371,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A chord grid's section label stands clear of the meter.** On a staffless sheet whose
+  grid row carries the chord symbols, the section's box is set on the symbols' line — and
+  that row engraves the meter at the line start, so the box was printed over it (`Verse`
+  across the 3/4 of a chords-only `score`). The box now opens where the first bar's bar line
+  would stand, 1.0 past the meter, the column it already took on a line opening with `|:`; a
+  sheet whose grid runs in the lyric row, and a continuation line, keep the box at the edge.
 - **Tab fret numbers are set in the regular weight by default.** They were bold on a staff
   of fewer than six strings (a six-string staff's lighter face had already gone regular);
   now every tab staff is regular, and `fonts { tab bold }` brings the bold face back. The

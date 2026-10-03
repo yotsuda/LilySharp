@@ -592,6 +592,7 @@ internal sealed partial class LayoutEngine
             PrefixTimeSignatureX = BuildPrefixTimeSignatureX(score, systemsArray),
             PrefixMarkAnchorX = BuildPrefixMarkAnchorX(score, systemsArray),
             LineStartBarlineX = BuildLineStartBarlineX(score, systemsArray),
+            RowLineLabelLeftX = MusicMarkEngraver.RowLineLabelLeftX(score, systemsArray),
             // The FINAL pass's above-stack memo — its own instance, because the
             // preliminary pass stacks different systems every keystroke and one shared
             // store would overwrite itself twice per keystroke and never hit.

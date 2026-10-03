@@ -287,6 +287,7 @@ internal sealed partial class LayoutEngine
             PrefixTimeSignatureX = BuildPrefixTimeSignatureX(score, prelimSystems),
             PrefixMarkAnchorX = BuildPrefixMarkAnchorX(score, prelimSystems),
             LineStartBarlineX = BuildLineStartBarlineX(score, prelimSystems),
+            RowLineLabelLeftX = MusicMarkEngraver.RowLineLabelLeftX(score, prelimSystems),
             // The PRELIMINARY pass's own above-stack memo (see the final pass's site).
             AboveStackMemo = systemCache?.PreliminaryAboveStack,
             // ...and its below-side mirror (finding 4-3).

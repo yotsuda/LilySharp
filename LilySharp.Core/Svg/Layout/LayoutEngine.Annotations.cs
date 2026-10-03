@@ -346,6 +346,14 @@ internal sealed partial class LayoutEngine
         /// </summary>
         public Func<int, double>? LineStartBarlineX { get; init; }
 
+        /// <summary>
+        /// Per system, the absolute X a boxed label that shares the ROW LINE (a staffless
+        /// sheet's) puts its left edge on at the line start — the staff-bar column after the
+        /// meter the grid row engraves — or NaN where labels keep their band above a staff.
+        /// See <see cref="MusicMarkEngraver.RowLineLabelLeftX"/>.
+        /// </summary>
+        public Func<int, double>? RowLineLabelLeftX { get; init; }
+
         /// <summary>Device-down from the system origin to the LAST SPACEABLE staff's top
         /// line — the staff a note-bound lyric block hangs from. 0 on a one-staff system,
         /// which is why that case is untouched by it.</summary>
@@ -1219,6 +1227,7 @@ internal sealed partial class LayoutEngine
             prefixTimeSignatureX: ctx.PrefixTimeSignatureX,
             lineStartBarlineX: ctx.LineStartBarlineX,
             prefixMarkAnchorX: ctx.PrefixMarkAnchorX,
+            rowLineLabelLeftX: ctx.RowLineLabelLeftX,
             solvedPedalRowUp: solvedPedalRowUp,
             marksBeside: ctx.MultiScore?.MarksBeside ?? false,
             sectionLabels: ctx.MultiScore?.LayoutPlan.SectionLabels
@@ -1495,6 +1504,7 @@ internal sealed partial class LayoutEngine
             prefixTimeSignatureX: ctx.PrefixTimeSignatureX,
             lineStartBarlineX: ctx.LineStartBarlineX,
             prefixMarkAnchorX: ctx.PrefixMarkAnchorX,
+            rowLineLabelLeftX: ctx.RowLineLabelLeftX,
             score: ctx.Score,
             marksBeside: ctx.MultiScore?.MarksBeside ?? false,
             sectionLabels: ctx.MultiScore?.LayoutPlan.SectionLabels

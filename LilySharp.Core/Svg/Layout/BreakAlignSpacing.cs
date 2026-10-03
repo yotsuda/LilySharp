@@ -472,6 +472,43 @@ internal static class BreakAlignSpacing
         /// no bar. The renderer nudges the measure's start bar line right by this.
         /// </summary>
         public double BarGap => HasBar ? BarX - Right : 0.0;
+
+        /// <summary>
+        /// Where the <c>staff-bar</c> column stands at this line start WHETHER OR NOT a bar
+        /// line is drawn there: the drawn opener's <see cref="BarX"/>, else the column a bar
+        /// would take after the last prefatory grob — its ink right plus that grob's
+        /// space-alist distance to <c>staff-bar</c> (meter 1.0, key 1.1, clef 0.7), the same
+        /// walk <see cref="SolveColumns"/> makes when a bar IS present — or 0, the left edge,
+        /// when nothing prefatory is engraved (LeftEdge's (staff-bar . (extra-space . 0.0))).
+        /// </summary>
+        /// <remarks>
+        /// A mark whose break-align list ends on the staff bar lands on this column when
+        /// nothing earlier in its list is engraved — LilyPond's <c>find_parent</c> falls back
+        /// to the invisible bar's column (break-alignment-interface.cc:299-334). The reader is
+        /// the staffless sheet's section label (<c>MusicMarkEngraver.RowLineLabelLeft</c>),
+        /// whose line has no key and no clef, so the meter is the last grob before the bar.
+        /// </remarks>
+        public double StaffBarColumnX
+        {
+            get
+            {
+                if (HasBar)
+                    return BarX;
+                // The last PLACED prefatory column, in the begin-of-line order (clef, key,
+                // time). `Right > 0` is "something was placed": a clef placed alone leaves its
+                // ink right there, and nothing placed leaves 0 (see SolvePrefixColumns).
+                BreakAlignSymbol? last = HasTime ? BreakAlignSymbol.TimeSignature
+                    : HasKey ? BreakAlignSymbol.KeySignature
+                    : Right > 0.0 ? BreakAlignSymbol.Clef
+                    : null;
+                if (last is not { } l)
+                    return 0.0;
+                // Every (… . staff-bar) entry of those three alists is extra-space, so the
+                // column's left is the previous ink right plus the distance, exactly as
+                // SolveColumns places it (the MinimumSpace arm there is for other pairs).
+                return Right + GetSpacing(l, BreakAlignSymbol.StaffBar).Value;
+            }
+        }
     }
 
     /// <summary>
