@@ -122,7 +122,7 @@ score main "out" {           // one or more render blocks
     <tr><th>Thing</th><th>Rule</th></tr>
     <tr><td>Comments</td><td><code>// to end of line</code> and <code>/* block */</code></td></tr>
     <tr><td>Case</td><td><b>Everything is case-sensitive.</b> <code>Treble</code> is not <code>treble</code>; it is an unknown symbol and an error, never a silent fallback.</td></tr>
-    <tr><td>Identifiers</td><td>Any Unicode letters. <code>phrase Übergang { … }</code> is fine.</td></tr>
+    <tr><td>Identifiers</td><td>Any Unicode letters. <code>phrase 動機 { … }</code> is fine.</td></tr>
     <tr><td>Strings</td><td>Double quotes, with C#'s escapes: <code>"say \"hi\""</code>, <code>"a\\b"</code>, <code>"\u00e9"</code>. A backslash that is no escape is an error. The verbatim form <code>@"C:\music"</code> takes a backslash as written, and <code>""</code> inside it is one quote.</td></tr>
     <tr><td>Numbers</td><td>Integers, and decimals as <i>values</i> (<code>3.5</code>). A decimal is never a duration — <code>c4.5</code> is an error, <code>c4.</code> is a dotted quarter.</td></tr>
     <tr><td>Units</td><td>Glued to the number: <code>210mm</code>, <code>8.5in</code>. A space (<code>210 mm</code>) is an error that names the glued spelling.</td></tr>
