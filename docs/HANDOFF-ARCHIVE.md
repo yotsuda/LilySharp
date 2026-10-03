@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第762セッションの経緯
+
+### 1.1 第762セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き（ユーザー「複雑で大きな lys をいくつか書いて」）。`-Start p762`（HEAD `bf94d8ab`・未 push 129）＝full **10789 / 0 / 2 / 10791**。⚠️ `-Start` を隠し窓（`Start-Process`）で回したら log が途中で切れ、アーカイブ（第760 を ARCHIVE へ）だけ済んだ状態で 2 回目を前面で回して継続性の 3 本が赤＝見出し `## 以下は第761` を立てて緑（罠: 隠し窓で `-Start` を回さない）。
+- 書いた本 4 冊（Lab `corpora/dogfood/big/`・約 5〜8 KB ずつ）: `bigband-swing`（移調楽器 2＋concert score・header の弱起・repeat＋2 endings・3/4 の bridge・D.S. al coda・slash＋percent の solo・tuplet／grace／fall／doit／hairpin・grandStaff・bass tab・click）／`choir-chorale`（choirStaff SATB・各段の `sings` 行・`[1.][2.]` の verse・日本語 verse・3/2 と調変更・phrasing slur・`time none` の Amen・condensed の reduction・part sheet・words sheet）／`guitar-tab-song`（absolute・treble_8＋tab 2 style・shape chord・弦番号・H/P/bend/dead/l.v.・slash・percent・3 endings・capo 付き chords row＋diagram・歌詞・rit. spanner・4 score）／`piano-sonatina`（grandStaff・両手 voice・arpeggio `<< >>`・tuplet・grace／mordent／trill span・ottava・pedal mixed・`3+2/8`・`time none` cadenza・mid-bar break・pageBreak・once override）。
+- 計器 `sessions/p762/run-big.ps1`＝check＋svg／xml／midi／png＋`ly --pin-fonts`→LilyPond 2.26 コンパイル。結果: 4 冊 check 0・出力 OK・双子 10 本 LP exit 0。png を目視（Read）して読み取れた分は §1.0 ⑼（欠陥候補 5）。自己流の間違い（相対モードで nearest の後に `,` を重ねる・treble_8 の実音を 1 オクターブ違える・絶対モードの `''`）は probe で切り分けて直した＝「警告が本物か」は毎回最小本で確かめた（`sessions/p762/probes/`）。
+- 第 1 の収穫: `tab bass` の罠（⑼ ⒜）は目視でしか見つからなかった（check 0・LP 0）＝tab が全部 17 で「click を弾いていた」。
+★ `-End p762 -DiffBase bf94d8ab`＝full **10789 / 0 / 2 / 10791**（網 ±0）・門 全 OK（HANDOFF 残り **5,891 B**・§1 残り 7,755 字）。7.5: Core `+` 0（本と計器の便）。7.6／7.7: 該当なし。⚠️ **次便の頭で `Fold-ClosedHandoffItems.ps1`**（天井まで 6 KB）。push はユーザー（未 push 130）。
+判定: 本は書いた。次は ⑼ の判断（⒜⒝ は直す価値が高い・⒞ は双子の磨き・⒟ は頁割りの調査）。会話を区切るか: (b) 10 便＝文脈は重い。⑼ の直しは本と計器の上に立つ (a) だが、**新しい会話でも §1.0 ⑼ と run-big.ps1 から再開できる**。
+
 ## 以下は第761セッションの経緯
 
 ### 1.1 第761セッション（2026-10-03・YT-DELL2）
