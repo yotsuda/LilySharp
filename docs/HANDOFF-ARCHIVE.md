@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第769セッションの経緯
+
+### 1.1 第769セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き・ユーザー報告「`score main` の midi の 65（2/4）〜66 小節目（4/4 に戻る）が何かおかしく聞こえる」。`-Start p769`（HEAD `f1aeeb69`・未 push 141）＝full **10885 / 0 / 2 / 10887**。§7 3.5 で第767 を ARCHIVE へ。コード変更なし。
+- **計器**（Lab `sessions/p769/`）: `dump-window.ps1`（tick 窓の音を track ごとに）・`dump-raw.ps1`（窓の生 on/off ＋ 窓の頭で鳴り続けている音）・`twin/`＝`lysc ly` の出力に `\midi { }` を足して LP 2.26 に書かせた `twin.mid`（tpq 384）。
+- **判定: MIDI は本文のとおりで、LP の MIDI と音高も tick も一致**（小節 64〜66・5 part・LP の bass は書いた高さ＝46、Lily# は `instrument bass` の 8vb＝34 で、これは意図）。拍子 meta は 124800 に 2/4・125760 に 4/4（各 5 本＝§1.0 ⒜ の重なり）。65 小節目の 2/4 は 960 tick で全 part が収まる。
+- 耳に残りそうな所は本文の側: 65 小節目のピックアップが vn1 `bes,8 bes' bes`＝B♭3→B♭4→B♭4・bass `bes8 bes' bes`＝B♭1→B♭2→B♭2 と**3 音の中でオクターブ跳ぶ**（`'` は相対の上書き）。vn2 の 66 は `r8 g4. g2`＝G3。PDF と違うなら本の側＝ユーザー確認待ち。
+- ユーザー追報「音高より小節の長さ。66 小節目は 4 拍あるか・3 拍に聞こえる」→ **tick では 4 拍**: 65 小節目 124800〜125760（960＝2/4）・66 小節目 125760〜127680（1920）・F の頭は 127680 に 5 part とも揃う（LP の twin.mid も同じ）。秒では 72→154 の tempo 表で 65 小節目 197.14 s・66 小節目 197.92 s・F 199.48 s（66 小節目＝1.56 s＝4 拍 @154）。**ユーザーが聴いた本人の `Documents\bohemian-rhapsody.mid`（12:02・古い拡張の server）も、`dump-window.ps1` の全音（0〜400000）を velocity 抜きで比べて差 0**（差は velocity だけ 1,028 音＝古い server の強弱写像）。耳の仮説（未検証）: 66 小節目は表拍に attack が無く（vn2 1.5 拍・va 2.5 拍・vc 3.5／4.5 拍の裏入り、vn1 は全音符）、vc の C–B♭ が F へのピックアップに聞こえて小節が縮んで聞こえる。
+- ユーザー報告「v0.10.0 の gh release notes に不正な contributor」→ **正体は GitHub の @mention**: release body（＝CHANGELOG の最上段）の斜体の中に裸の `@finger(3)`・`@chord(c)`・`'@sf'`・`@chord(Am x02210)` が在り、GitHub が user finger／sf／chord への言及と読んで release 頁の Contributors に並べていた（v0.7.0 も `'@feather(accel)'`・`"@chord dropped…"` で feather／chord）。Co-Authored-By は無関係（v0.9.0..v0.10.0 に 1 本 `a5c2791a3`＝tag の commit 自身に在るが、頁には出ていない）。**直した**: 両 release の body を `gh release edit --notes-file` で code span に包み直し（原文と修正は Lab `sessions/p769/release/`・編集後の頁に Contributors 節は無い）、CHANGELOG.md の同じ 6 行を直し、網 `ChangelogMentionTests`（code span の外の `@name` を拒む・fence は飛ばす）を足した。
+★ `-End` は未（ユーザーの返事で続きが決まる）。
+
 ## 以下は第768セッションの経緯
 
 ### 1.1 第768セッション（2026-10-03・YT-DELL2）

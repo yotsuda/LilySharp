@@ -121,6 +121,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第771セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き・ユーザー決定「Midi」（第770 末の次の一手＝conductor track の衛生）。`-Start p771`（HEAD `bcbc2353`・未 push 2）＝full **10898 / 0 / 2 / 10900**。§7 3.5 で第769 を ARCHIVE へ。
+- **LP の規則を読んだ**: 拍子は timestep に 1 つ・`\time` event があれば同じ分数でも書く（time-signature-performer.cc:102-115）／tempo は `tempoWholesPerMinute` が変わったときだけ（tempo-performer.cc:60-68）／end-of-track は**全 track が performance の end moment**（staff-performer.cc:219-227 `end_mom_`・midi-walker.cc:77-82 `finalize`）＝twin.mid は 6 track とも 230016 で終わる。
+- **直した（commit 下記）**: `MidiTrack.SetTempo`／`SetTimeSignature`（同じ tick は最後が勝つ・tempo は在効と同じなら書かない・list は tick 順を保つ）＋ `MidiTrack.LastTick`／`MidiFile.EndTick`＋ `WriteTrack` の end-of-track の delta＝`EndTick − lastTick`（`Midi_walker::finalize` の式）。`MidiExporter` の 5 か所の `Add`／`Insert` を Set に。
+- **網** `Midi/ConductorTrackTests` 4 本（5 part の本で拍子が 1 本ずつ・tick 0 の tempo は本の 72 だけ・同じ tempo の言い直しは書かない・全 track の end-of-track が piece の end＝SMF の tail から delta を読む）。
+- **掃き**（base＝p770 の exe・head＝p771・Lab `sessions/p771/`）: midi 1,199 本中 **1,172 本が byte で違う＝想定どおり**。`compare-mid.ps1`（SMF を読んで比べる計器）で **音は 1,199 本とも同一・base の meta を同じ規則で畳むと head と全部一致・落ちた重複 meta 619 本・end-of-track が piece の end に無い track 0**（計器が 2 本挙げたのは同音の重なり（tab の articulation）で on を上書きした計器側の読み違い＝head の file は最後の off で終わっている）。
+★ `-End p771 -DiffBase bcbc2353`＝full **10902 / 0 / 2 / 10904**（網 +4）・門 全 OK（HANDOFF 残り 7,384 B・§1 残り 9,804 字・棚卸し `APPROXIMATIONS.md` 行番号 3 行＝増減 0・1 回目は stale で赤→再生成）。7.5: Core `+` 102 行＝`MidiTrack.SetTempo`／`SetTimeSignature`／`LastTick`・`MidiFile.EndTick`・end-of-track の delta・REF 3（tempo-performer.cc・time-signature-performer.cc・staff-performer.cc＋midi-walker.cc）・OWN 0。7.6: ⒜ 出所は第768 の起票（計器 `dump-mid.ps1`）＋ LP の twin.mid の読み。7.7: 拍子の「同じ分数でも `\time` event なら書く」は `BarContext.SetTime` が既に LP の規則（`time none` だけ false）＝触っていない。commit `1a70d551`（code）。push はユーザー。
+判定: conductor track の衛生は閉じた。次の一手: PDF の再現性（§1.0 ⒜・PDFsharp の時計／ID／タグ）か、第769 末の列挙の残り（双子の警告 3 件・D.C./D.S. の MIDI・行末の `__`）＝ユーザー判断。会話を区切るか: (a) 続けられる。
+
+## 以下は第770セッションの経緯
+
 ### 1.1 第770セッション（2026-10-03・YT-DELL2）
 
 同じ会話の続き・ユーザー決定「扉の一本化から着手して」（第769 末の「私が直したい所」の筆頭）。`-Start p770`（HEAD `c92a5940`・未 push 0＝ユーザーが push 済み）＝full **10886 / 0 / 2 / 10888**。§7 3.5 で第768 を ARCHIVE へ。
@@ -130,18 +142,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 掃き（base＝p767 の exe（Core は `ChooseDeclared` 1 本ぶん前）・head＝p770・Lab `sessions/p770/sweep-*.log`）: **check 診断 1,963 行 差 0／ly 1,199 本 差 0／midi 1,199 本 差 0／svg 1,199 本 差 0**（998 冊）＝CLI の出力は byte で同じ。
 ★ `-End p770 -DiffBase c92a5940`＝full **10898 / 0 / 2 / 10900**（網 +12）・門 全 OK（HANDOFF 残り 7,136 B・§1 残り 9,420 字・棚卸し 差分なし）。7.5: Core `+` 265 行＝新 `ScoreExport.cs`（約 200）＋ `PngGenerator.CropToContent`（CLI から移動）＋ Choose 化 2 か所・REF 1（`PngPagePaths` の ps-to-png.scm＝CLI に在った註の移動）・OWN 0。7.6: ⒜ 出所は第769 末の私の列挙＋ユーザー決定・PDF の非再現性は計器で測った。7.7: 配管の二重化は消えたが、**svg の `--combined`（`GenerateMultiMovement`）と `IncrementalCompiler` のプレビュー描画は家の外**（layout と session の話＝扉ではない）。commit `1e395639`（code）。push はユーザー。
 判定: 扉は一本になった（CLI・ボタン・batch が 1 つの `ScoreExport.Write`）。次の一手: 第769 末の列挙の 2 つ目＝MIDI の conductor track の衛生（拍子 meta の重なり・end-of-track）か、PDF の再現性（§1.0 ⒜）＝ユーザー判断。会話を区切るか: (a) 続けられる。
-
-## 以下は第769セッションの経緯
-
-### 1.1 第769セッション（2026-10-03・YT-DELL2）
-
-同じ会話の続き・ユーザー報告「`score main` の midi の 65（2/4）〜66 小節目（4/4 に戻る）が何かおかしく聞こえる」。`-Start p769`（HEAD `f1aeeb69`・未 push 141）＝full **10885 / 0 / 2 / 10887**。§7 3.5 で第767 を ARCHIVE へ。コード変更なし。
-- **計器**（Lab `sessions/p769/`）: `dump-window.ps1`（tick 窓の音を track ごとに）・`dump-raw.ps1`（窓の生 on/off ＋ 窓の頭で鳴り続けている音）・`twin/`＝`lysc ly` の出力に `\midi { }` を足して LP 2.26 に書かせた `twin.mid`（tpq 384）。
-- **判定: MIDI は本文のとおりで、LP の MIDI と音高も tick も一致**（小節 64〜66・5 part・LP の bass は書いた高さ＝46、Lily# は `instrument bass` の 8vb＝34 で、これは意図）。拍子 meta は 124800 に 2/4・125760 に 4/4（各 5 本＝§1.0 ⒜ の重なり）。65 小節目の 2/4 は 960 tick で全 part が収まる。
-- 耳に残りそうな所は本文の側: 65 小節目のピックアップが vn1 `bes,8 bes' bes`＝B♭3→B♭4→B♭4・bass `bes8 bes' bes`＝B♭1→B♭2→B♭2 と**3 音の中でオクターブ跳ぶ**（`'` は相対の上書き）。vn2 の 66 は `r8 g4. g2`＝G3。PDF と違うなら本の側＝ユーザー確認待ち。
-- ユーザー追報「音高より小節の長さ。66 小節目は 4 拍あるか・3 拍に聞こえる」→ **tick では 4 拍**: 65 小節目 124800〜125760（960＝2/4）・66 小節目 125760〜127680（1920）・F の頭は 127680 に 5 part とも揃う（LP の twin.mid も同じ）。秒では 72→154 の tempo 表で 65 小節目 197.14 s・66 小節目 197.92 s・F 199.48 s（66 小節目＝1.56 s＝4 拍 @154）。**ユーザーが聴いた本人の `Documents\bohemian-rhapsody.mid`（12:02・古い拡張の server）も、`dump-window.ps1` の全音（0〜400000）を velocity 抜きで比べて差 0**（差は velocity だけ 1,028 音＝古い server の強弱写像）。耳の仮説（未検証）: 66 小節目は表拍に attack が無く（vn2 1.5 拍・va 2.5 拍・vc 3.5／4.5 拍の裏入り、vn1 は全音符）、vc の C–B♭ が F へのピックアップに聞こえて小節が縮んで聞こえる。
-- ユーザー報告「v0.10.0 の gh release notes に不正な contributor」→ **正体は GitHub の @mention**: release body（＝CHANGELOG の最上段）の斜体の中に裸の `@finger(3)`・`@chord(c)`・`'@sf'`・`@chord(Am x02210)` が在り、GitHub が user finger／sf／chord への言及と読んで release 頁の Contributors に並べていた（v0.7.0 も `'@feather(accel)'`・`"@chord dropped…"` で feather／chord）。Co-Authored-By は無関係（v0.9.0..v0.10.0 に 1 本 `a5c2791a3`＝tag の commit 自身に在るが、頁には出ていない）。**直した**: 両 release の body を `gh release edit --notes-file` で code span に包み直し（原文と修正は Lab `sessions/p769/release/`・編集後の頁に Contributors 節は無い）、CHANGELOG.md の同じ 6 行を直し、網 `ChangelogMentionTests`（code span の外の `@name` を拒む・fence は飛ばす）を足した。
-★ `-End` は未（ユーザーの返事で続きが決まる）。
 
 ## 2. 開いている作業
 
