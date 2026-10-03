@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第785セッションの経緯
+
+### 1.1 第785セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザー「続けて」＝第784 の 7.7 に残した **staff の無い sheet の label の高さ＝LP と比べていない**（台帳 1 点）。`-Start p785`（HEAD `f6211459`・未 push 13）＝full **10955 / 0 / 2 / 10957**。§7 3.5 で第783 を ARCHIVE へ。
+- **台帳の対を立てた（probe `mark-chord-row.ly` に MKY／MKZ＝MKW/MKX の staff を外した形: chords 行＋lyrics 行・bar 3 の label「Chorus」が和音に乗る・MKZ は♯付き）**。MKT/MKV（行頭）は使えない: Lily# の grid は行頭に拍子を描くので label の下に和音が来ない。label の綴りは 3 稿目＝「B」は Lily# が bar 中央に置くので和音に届かず、「Bridge」は g の descender が短い和音の箱の斜面に落ちて 2 冊が割れ（0.857／0.991＝0.46＋0.531）、「Chorus」（幅広・下端平ら）で両冊 **0.499245**＝0.46 ＋ 丸文字の overshoot 0.039245。読み手 `RenderedGeometry.MusicMarkBaselineAboveChordInkTop`（label の baseline − 箱に重なる和音の ink 上端・ink は layout の `ChordNameLayout` から＝drawn text だけだと♯の glyph が抜けて MKZ が 0.318 ずれた＝`RenderedGeometry` が layout を持つようにした）。
+- **直した 2 つ（commit 下記）**: ⑴ boxed label の床は staff の 0.8（staff symbol の外縁から）を text row にも当てていた＝row に staff symbol は無い。**grid 行**の床は帯の ink（小節線・拍子）＋0.46（`TextRowLabelFrameBottomAboveBandMiddle`）、**grid でない chord 行**（lyrics が grid を持つ sheet）は帯が空＝床なし・和音の天井だけ（`AnchorRowCarriesTheGrid`・`gridBarlineRowIndex` を Calculate に渡す）。⑵ `ChordBandUp` が「anchor の top line より上の ink だけ」で row の中の和音を全部捨てていた（staff なら中は staff 自身の profile が見る＝正しい・row では和音が中にある）＝row の anchor では捨てない。結果 Lily# **0.853562**（両冊同一）・残差 **0.354317**＝箱の margin 0.351984 ＋ face 0.002（他の mark の点と同じ箱の項）。
+- 網: 台帳 +2（`mark.staffless.over-chord.row-ink-to-baseline`・`.tall`）。snapshot **5 枚再ベース**（lead-sheet-chords・lead-sheet・lead-sheet-repeat・lead-sheet-lyrics・rows-song-sheet＝箱が 0.46 まで降りる・絵は `sessions/p785/probes/`）。CHANGELOG Fixes。棚卸し行番号のみ。
+- 掃き（998 冊・base＝開始時 HEAD `f6211459` の exe・head＝p785・`sessions/p785/svg/sweep.log`・`sweep-ly.log`）: svg **差 9 / 1199**＝label を持つ staff 無しの本の全部（第784 と同じ 8 冊＋ lead-sheet-lyrics＝lyrics だけの sheet も床が 0.8→0.46・amazing-grace の grid は label が tempo の上に積まれるので不変）／ly **差 0**。
+★ `-End p785 -DiffBase f6211459`（`end.log`）＝full **10957 / 0 / 2 / 10959**（台帳 +2）・門 全 OK（HANDOFF 残り 6,758 B・§1 残り 10,255 字・棚卸し `APPROXIMATIONS.md` 行番号のみ）。7.5: スクリプトは commit 前で「Core `+` 0」＝手で `git diff f6211459 -- LilySharp.Core`: **`+` 73 / `−` 10 行**（`MusicMarkEngraver` 82＝`AnchorRowCarriesTheGrid`・床の切替・`ChordBandUp` の row の腕・`TextRowLabelFrameBottomAboveBandMiddle`・Annotations 3）・REF +1（axis-group-interface.cc:45 の 0.46＝新定数の出所）・OWN 0（grid の帯の ink を 0.46 で避けるのは LP の規則を Lily# の面に読んだもの＝註にそう書いた・OWN の印は置かず）。7.6: ⒜ 0.46 は LP の outside-staff-padding（probe 4 冊が ink 上端＋0.46 を読む）／row の中の和音を天井に入れるのは LP の「ChordNames の skyline＝symbol」の帰結。7.7: 台帳の残差 0.354 は箱の項（他の mark の点と同じ）・chords だけの grid（label が tempo の上に積まれる amazing-grace の形）は tempo の床（generic の `baseAboveYUp`）がまだ staff の形＝未計測（tempo の点は staff の probe のみ）。commit `a85e77ef`（code・probe・台帳・snapshot 5・CHANGELOG・棚卸し）＋ docs の commit。push はユーザー。
+判定: 台帳 1 点（対）は閉じた。次の一手: ⒝ の設計級（跳躍の 3 軒・小節番号と和音行）か、上の 7.7 の tempo の床（staffless の tempo＝LP の MetronomeMark を ChordNames 行で測る 1 点・小）＝ユーザー判断。会話を区切るか: (b) 便が 5 つ続き（第781〜785）文脈は重い＝**区切るのがよい**（続けるなら `-Start p786`）。
+
 ## 以下は第784セッションの経緯
 
 ### 1.1 第784セッション（2026-10-04・YT-DELL2）
