@@ -116,12 +116,18 @@ public sealed class VoiceSpanMeasureValidationTests
     /// bar from there: <c>voice { d2 } { d4. d8 } d8 c bes a |</c> is one full 4/4 bar whose
     /// lower voice sounds for its first half. Until 2026-10-03 the lower voice's chunk was
     /// held to the meter — LYS2001 "1/2 is less than 4/4" on a bar the page draws right
-    /// (owner's report, scratch/voices.lys). The control: a voice that stops SHORT of the
-    /// span's end is still the short bar it is.
+    /// (owner's report, scratch/voices.lys). The voice may instead write the rest of the bar
+    /// itself (<see cref="BarlinesInsideTheLeadVoice_SplitTheEnclosingStream"/>). The controls:
+    /// a voice that stops SHORT of the span's end is still the short bar it is, and one that
+    /// stops BETWEEN the span's end and the bar's (<c>{ d4. d }</c>, 3/4 — the owner's second
+    /// report) is neither and warns, naming both.
     /// </summary>
     [Theory]
     [InlineData("voice { d2 } { d4. d8 } d8 c bes a~ | a2 r |", false)]
     [InlineData("voice { d2 } { d4 } d8 c bes a~ | a2 r |", true)]
+    [InlineData("voice { d2 } { d4. d } d8 c bes a~ | a2 r |", true)]
+    [InlineData("voice { d2 } { d2 d4 } d8 c bes a~ | a2 r |", true)]
+    [InlineData("voice { d2 } { d2 d2 } d8 c bes a~ | a2 r |", false)]
     [InlineData("c4 voice { d4 } { d8 d } d8 c bes a |", false)]
     [InlineData("voice { c4 d e f | c4 d } { e4 f g a | e4 f } e f |", false)]
     public void ALaterVoiceEndsWhereTheSpanEnds_AndTheEnclosingMusicCompletesTheBar(string music, bool warns)

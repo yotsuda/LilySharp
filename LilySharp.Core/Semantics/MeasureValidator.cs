@@ -750,14 +750,23 @@ internal sealed class MeasureValidator : ISemanticValidator
                     // d8 c bes a |` is one full bar whose lower voice sounds for its first half
                     // (the collector pads the voice to the bar; LilyPond's `<< … \\ … >>` is the
                     // same, with the bar check in the main voice). So the voice's trailing chunk
-                    // is held to the span's end, not to the meter: a chunk that reaches it is
+                    // is held to the span's end, not to the meter: a chunk that ends there is
                     // complete, one that stops short of it is the short bar it always was
-                    // (`c2 voice { d2 } { e4 } |`, where the span ends on the barline). Until
-                    // 2026-10-03 that chunk was held to the meter and the owner's bar warned
-                    // LYS2001 "1/2 is less than 4/4" on music the page draws right.
-                    bool openSpanTail = spanEnd is { } spanEndHere && tailUnclosed && isLast
-                        && duration >= spanEndHere;
-                    if (!(openTail && tailUnclosed && isLast) && !splitByBoundary && !openSpanTail)
+                    // (`c2 voice { d2 } { e4 } |`, where the span ends on the barline). The
+                    // voice may instead write the rest of the bar itself, as a track over the
+                    // same bar (the 08-chorale shape, `voice { … | c4 d e } { … | e4 f g a } a |`)
+                    // — that is a full bar and never reaches this arm. A chunk that stops
+                    // BETWEEN the two (`voice { d2 } { d4. d } d8 c bes a |`, 3/4 against a span
+                    // ending at 1/2) is neither, and is reported as such (owner's report, the
+                    // same day). Until 2026-10-03 every such chunk was held to the meter, and
+                    // the owner's `{ d4. d8 }` warned LYS2001 "1/2 is less than 4/4" on music
+                    // the page draws right.
+                    if (spanEnd is { } spanEndHere && tailUnclosed && isLast && duration >= spanEndHere)
+                    {
+                        if (duration > spanEndHere)
+                            EmitSpanTailBetween(measure, duration, spanEndHere, expected);
+                    }
+                    else if (!(openTail && tailUnclosed && isLast) && !splitByBoundary)
                         EmitUnderfull(measure, duration, expected, partialLength, completesOpeningPickup,
                             isBarePickup, i == 0 ? leadInSpan : null);
                 }
@@ -1071,6 +1080,19 @@ internal sealed class MeasureValidator : ISemanticValidator
     }
 
     /// <summary>Emits the overfull-measure warning (a bar longer than its expected fill).</summary>
+    /// <summary>A span's later voice whose trailing chunk stops between the span's end and
+    /// the bar's: it neither ends with the span nor writes the rest of the bar.</summary>
+    private void EmitSpanTailBetween(MeasureContent measure, Fraction duration, Fraction spanEnd,
+        Fraction expected)
+    {
+        var span = Reported(measure, null);
+        _diagnostics.Warning(span, DiagnosticCodes.MeasureIncomplete,
+            $"This voice of the span lasts {duration}, past the span's end at {spanEnd} and short of "
+            + $"the bar ({(expected == _bars.MeterLength ? MeterText : expected.ToString())}): "
+            + "a later voice of a 'voice { } { }' span ends with the span - "
+            + "the music written after the span goes on from there - or writes the rest of the bar itself");
+    }
+
     private void EmitOverfull(MeasureContent measure, Fraction duration, Fraction expected,
         Fraction? partialLength, TextSpan? leadInSpan = null)
     {
