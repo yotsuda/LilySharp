@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第768セッションの経緯
+
+### 1.1 第768セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き・ユーザー報告「`bohemian-rhapsody.lys` の `score practice` を midi に変換すると section A が含まれている。`form practice` は B から始まる」。`-Start p768`（HEAD `22790d03`・未 push 139）＝full **10882 / 0 / 2 / 10884**。§7 3.5 で第766 を ARCHIVE へ。
+- **再現と切り分け（Lab `sessions/p768/repro/`・SMF を読む計器 `dump-mid.ps1`）**: CLI `lysc midi --score practice` は**正しい**（track 1 の最初の音は B の `d2 g4 f`・長さは `bass` より section A ぶん 31,680 tick 短い）。**壊れていたのはプレビューの Export ボタン**＝LSP `lilysharp/export` の 1 score の道が MIDI・MusicXML・ly に `form: null`（＝primary＝`main`）を渡していた（`WriteExport` の註「the primary form, what the preview's button has always exported」＝設計のまま、batch（`All`）だけ score の form を渡していた）。`MidiExporter` は Score=practice の part で絞り、Form=main で A〜H を歩く＝A が鳴る。
+- **直した（commit 下記）**: `RenderSpecParser.ChooseDeclared(tree, renderName)`（`Choose` の方針＋宣言）を足し、`Export` の 1 score の道も batch の道もこれを `WriteExport(... score)` に渡す。midi は `Form = score.Spec.Form, Score = score.Spec`・xml は `Form`・ly は `Form` ＋ `Score = Declaration`＝CLI の `--score` と同じ exporter 設定。LSP の道で書いた practice.mid は CLI のと **byte 同一**（捨てた probe test で確認）。網 `ExportRequestTests.OneScore_GivesAFormDrivenFormat_ThatScoresOwnForm`（midi／xml／ly ×「sub 単独＝All の two-sub・main 単独＝All の two・両者は異なる」）。文書: CHANGELOG Fixes・`ExportParams.RenderName`・`extension.ts` の註（「MusicXML exports the primary form」を消した）。
+- 見つけた別件（§1.0 ⒜ に起票・直していない）: conductor track に同じ拍子の meta event が part の数だけ重なる。
+★ `-End p768 -DiffBase 22790d03`＝full **10885 / 0 / 2 / 10887**（網 +3）・門 全 OK（HANDOFF 残り 7,911 B・§1 残り 10,026 字・棚卸し 差分なし）。7.5: Core `+` 19 行＝`RenderSpecParser.ChooseDeclared` だけ（REF 0・OWN 0＝exporter の設定の配管で、LP の規則も Lily# 独自の規則も触らない）。7.6: ⒜ 出所はユーザー報告（本は OneDrive の `bohemian-rhapsody.lys`）＋ `Commands.cs` の自分の註。7.7: なし。commit `12e2c597`（code）。push はユーザー。
+判定: 報告は閉じた（CLI は元から正しく、プレビューの Export の道だけが primary form を書いていた）。次の一手は §1.0 ⒜ の双子 3 件か拍子 meta event の重なり（どちらも小）＝ユーザー判断。会話を区切るか: (a) 本と計器は Lab に在る＝続けられる。
+
 ## 以下は第767セッションの経緯
 
 ### 1.1 第767セッション（2026-10-03・YT-DELL2）
