@@ -3054,6 +3054,57 @@ public class LilyPondExporterTests
         Assert.Contains("\\new Lyrics \\enLyricsOne", ly);
     }
 
+    // ----- a lead sheet's clock: the silent timing track (session 777) -----
+
+    [Fact]
+    public void LeadSheet_CarriesThePagesBars_InASilentTimingTrack()
+    {
+        // A words-only sheet bound to an unengraved part — a pickup, then a 3/2 section:
+        // LilyPond's clock hears neither from the Lyrics lines alone, and the chorale's
+        // words-only score failed its first bar check at `The4 |` (session 762).
+        var ly = Export("""
+            time 4/4
+            key c major
+            part sop { clef treble }
+            section A {
+              partial 4
+              sop { c'4 | d'4 e' f' g' | }
+              lyrics v1 sings sop { The | eve- ning falls so | }
+            }
+            section B {
+              time 3/2
+              sop { a'2 b' c'' | }
+              lyrics v1 sings sop { Sing to the | }
+            }
+            form main { A B }
+            score main { lyrics v1 }
+            """);
+        // The pickup is a \time of its length, not a \partial (which trips LilyPond's
+        // spacing in a staff-less score); the score's meter in its own spelling.
+        Assert.Contains("leadSheetTiming = {\n  \\time 1/4 s4 |\n  \\time 4/4 s1 |\n  \\time 3/2 s1. |\n}", ly);
+        Assert.Contains("The4 |\n  eve4 -- ning4 falls4 so4 |\n  Sing2 to2 the2 |", ly);
+        Assert.True(ly.IndexOf("\\new Devnull \\leadSheetTiming") < ly.IndexOf("\\new Lyrics \\vOneLyricsOne"));
+    }
+
+    [Fact]
+    public void LeadSheet_OfChordsAlone_HasTheTrackToo_AndAStaffScoreHasNone()
+    {
+        const string book = """
+            time 4/4
+            key c major
+            part melody { clef treble section A { c4 c g' g | a a g2 | } }
+            chords prog { section A { C | G | } }
+            form main { A }
+            score main { RENDER }
+            """;
+        var rows = Export(book.Replace("RENDER", "chords prog"));
+        Assert.Contains("leadSheetTiming = {\n  \\time 4/4 s1 |\n  s1 |\n}", rows);
+        Assert.True(rows.IndexOf("\\new Devnull \\leadSheetTiming") < rows.IndexOf("\\new ChordNames"));
+        // A staff carries the clock itself.
+        var staff = Export(book.Replace("RENDER", "staff melody  chords prog"));
+        Assert.DoesNotContain("Devnull", staff);
+    }
+
     // ----- the section boundary reopens the DURATION at a quarter (HANDOFF §3, 2026-09-04) -----
 
     [Fact]

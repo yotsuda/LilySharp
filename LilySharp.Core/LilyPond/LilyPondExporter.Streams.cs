@@ -395,6 +395,86 @@ public sealed partial class LilyPondExporter
         }
     }
 
+    /// <summary>
+    /// The silent TIMING track of a lead sheet's twin — a score of text rows and no staff
+    /// (<see cref="Svg.Model.MultiStaffScore.IsLeadSheet"/>). The rows' lines end every bar
+    /// with a bar check, and LilyPond checks them against ITS clock, which with no staff's
+    /// music never hears the pickup or a change of meter: the chorale's words-only score
+    /// opened <c>The4 |</c> under a 4/4 clock and the check failed (session 762). This track
+    /// carries the page's grid — the bar lengths of the row the page draws its bar lines on
+    /// (<see cref="Svg.Model.MultiStaffScore.GridBarlineRowIndex"/>) — as skips in a
+    /// <c>\new Devnull</c> (<see cref="EmitScore"/> places it first), so LilyPond's clock is
+    /// the page's and nothing is printed. A bar a line break splits is one bar of the clock,
+    /// as it is one bar of the lines (<see cref="EmitTimedStream"/>).
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond has no lead sheet — a staff-less score prints no bar line,
+    /// meter or bar number, so the page's grid has no counterpart to match and this track
+    /// only makes the clock agree. Nothing observes the difference; the track goes if the
+    /// twin ever draws the grid on a staff of its own, which would carry the timing itself.
+    /// The page's rows know their bars' LENGTHS only (a row's spacers; no time-change item
+    /// reaches a row — the page prints the score's meter once, at the sheet's head), so every
+    /// change of length is written as a <c>\time</c> of that length, a length equal to the
+    /// score's meter in the meter's own spelling (4/4, not 1/1) — the pickup as
+    /// <c>\time 1/4</c>, NOT as <c>\partial</c>: MEASURED (2.26.0, Lab sessions/p777/probes:
+    /// m.ly, m2.ly), a <c>\partial</c> in a score with no staff trips LilyPond's spacing
+    /// ("programming error: insane spring distance requested", twice, and the syllables
+    /// move), where a <c>\time</c> of the pickup's length is silent.
+    /// </remarks>
+    private void EmitLeadSheetTiming(SyntaxTree tree, RenderDeclarationSyntax? render)
+    {
+        if (render == null || PageModel(tree, render) is not { IsLeadSheet: true } score)
+            return;
+        Svg.Model.Staff? grid = null;
+        foreach (var (_, staff, idx) in score.EnumerateStaves())
+            if (idx == score.GridBarlineRowIndex)
+            {
+                grid = staff;
+                break;
+            }
+        if (grid == null || grid.PrimaryVoice.Measures.Length == 0)
+            return;
+        var measures = grid.PrimaryVoice.Measures;
+        var meters = Svg.Layout.ScoreSideTables.PrevailingMeters(score);
+        var senza = SenzaMisuraByBar(score);
+        var home = score.TimeSignature;
+
+        _leadSheetTimingVar = VarName("leadSheetTiming");
+        _sb.Append(_leadSheetTimingVar).Append(" = {\n");
+        Fraction? inForce = null;   // the clock's measure length, once written
+        bool inCadenza = false;
+        for (int m = 0; m < measures.Length; m++)
+        {
+            int last = m;
+            var length = BarLength(measures[m], meters, m);
+            while (measures[last].BreaksMidBar && last + 1 < measures.Length)
+                length += BarLength(measures[++last], meters, last);
+            bool cadenza = m < senza.Length && senza[m];
+            var line = new StringBuilder("  ");
+            if (cadenza != inCadenza)
+            {
+                AppendToken(line, cadenza ? "\\cadenzaOn" : "\\cadenzaOff", "  ");
+                inCadenza = cadenza;
+                inForce = null;     // the clock is re-armed when the cadenza closes
+            }
+            if (!cadenza && length != inForce)
+            {
+                AppendToken(line, !home.SenzaMisura && length == home.MeasureDuration
+                    ? TimeText(new Semantics.Meter(home.Beats, home.BeatType, home.BeatsText))
+                    : "\\time " + length.Numerator + "/" + length.Denominator, "  ");
+                inForce = length;
+            }
+            for (int h = m; h <= last; h++)
+                AppendToken(line, "s" + ChordModeDuration(BarLength(measures[h], meters, h)), "  ");
+            _sb.Append(line).Append(cadenza ? "\n" : " |\n");
+            m = last;
+        }
+        _sb.Append("}\n\n");
+    }
+
+    /// <summary>The lead sheet's timing track, when the score is one (<see cref="EmitLeadSheetTiming"/>).</summary>
+    private string? _leadSheetTimingVar;
+
     /// <summary>Whether <c>time none</c> is in force at each bar of the page — the walk
     /// <see cref="Svg.Layout.MultiMeasureRestEngraver.PrevailingMeters"/> makes, asked for the
     /// cadenza (every voice's time changes, the score's signature first).</summary>

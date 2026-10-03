@@ -562,6 +562,7 @@ public sealed partial class LilyPondExporter
         EmitInlineChordTracks(tree, render);
         EmitFiguredBassTracks(tree, render);
         EmitLyricTracks(tree, render);
+        EmitLeadSheetTiming(tree, render);
 
         // One music variable per part. A by-part score keeps its sections inside
         // the part block; the form orders them.

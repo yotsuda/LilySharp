@@ -117,6 +117,9 @@ public sealed partial class LilyPondExporter
                 }
             }
         }
+        // A lead sheet's clock stands first: the silent timing track (EmitLeadSheetTiming).
+        if (_leadSheetTimingVar != null)
+            rows.Insert(0, "    \\new Devnull \\" + _leadSheetTimingVar + "\n");
         if (rows.Count == 0 && partVars.Count > 0)
         {
             // Fall back to a plain staff for the first part.

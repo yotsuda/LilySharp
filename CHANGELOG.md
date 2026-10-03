@@ -371,6 +371,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **The LilyPond twin of a lead sheet keeps the page's bars.** A score of rows and no
+  staff (`score words { lyrics v1 lyrics v2 }`) gave LilyPond no music to count by, so a
+  pickup or a change of meter failed its bar checks ("bar check failed at: 1/4" at the
+  chorale's `The4 |`) and its line breaks fell a beat off the page's. The twin now carries
+  the page's bar lengths in a silent `\new Devnull` timing track — the pickup as a
+  `\time` of its length, since a `\partial` in a staff-less score trips LilyPond's spacing
+  — and compiles clean.
 - **The LilyPond twin of a lead sheet compiles without warnings in two more shapes.** A
   by-part chord track (`chords prog { section Bridge { … } }`) under a section whose header
   changes the meter wrote its bars in the score's meter (`d1:m` under a 3/4 bridge), and
