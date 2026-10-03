@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第778セッションの経緯
+
+### 1.1 第778セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き・ユーザー「続けて」＝第777 末の次の一手の筆頭 **lead sheet の弱起（頁の側）**。`-Start p778`（HEAD `8cad6b8b`・未 push 17）＝full **10929 / 0 / 2 / 10931**。§7 3.5 で第776 を ARCHIVE へ。
+- **正体**: 行の小節を音楽の小節に合わせる `FitRowsToMusicBars`（第350）は音楽の声部の長さを読む＝staff の無い score では読む物が無く何もしない。section header の `partial`／`time` を行に当てる walk はどこにも無かった（`EnsureSectionStartsForRows` は段の開始位置だけ）。
+- **直した（commit 下記）**: `RowsOnlyBarLengths`＝音楽の声部が無いときだけ、構造から小節長の表を組む（`SectionState.AllStarts` の各出現 × `RowGridSectionBars` の幅・header の `time` 無ければ home・header の `partial`（0 小節目は file の partial も）を最初の小節に・pickup の印）。`FitRowsToMusicBars` が表を fallback に取り、縮めた小節に `IsPickup` を立てる（`LayoutEngine` の番号の −1 が読む）。網 `RowsOnlyFormOrderTests` Theory 2（弱起＋control・staffful と同じ長さ・`IsPickup`）。CHANGELOG Fixes。
+- 掃き（998 冊・base＝p777 exe・head＝p778・`sessions/p778/svg/sweep.log`・`sweep-ly.log`）: svg **差 3**＝amazing-grace の grid 2 冊＋greensleeves の grid（chords だけの sheet で弱起のある本＝全部・fixture には無い＝snapshot 不変）・ly 差 3（同じ 3 冊・`leadSheetTiming` の先頭が `\time 1/4`）・LP の bar check **3 冊とも 1 → 0**（`sessions/p778/lp/`）。絵: grid の 2 段目の番号 8 → 7（`probes/ag/`）・弱起の幅は grid floor で他と同じ（設計どおり）。
+★ `-End p778 -DiffBase 8cad6b8b`＝full **10931 / 0 / 2 / 10933**（網 +2）・門 全 OK（HANDOFF 残り 6,704 B・§1 残り 10,101 字・棚卸し `APPROXIMATIONS.md` 行番号 2 行＝増減 0・CRLF に揃え直した）。7.5: Core `+` 70 行＝`RowsOnlyBarLengths`（新規・約 35）＋ `FitRowsToMusicBars` の fallback と `IsPickup` の腕・REF 0・OWN 0（音楽の clock を行に当てる規則は第350 の `FitRowsToMusicBars` の既存 REF＝Timing は Score に 1 つ・新しい量 0）。7.6: ⒟ 既存の家（`FitRowsToMusicBars`）の読む物を増やしただけ＝header の partial／time は `SectionHeaders`（全出力が境界で当てる registry）から読む。7.7: 「縮める側だけ」は既存規則のまま＝header の time が home より長い rows-only の sheet は §1.0 ⒜ ⒞ に観察として置いた（コーパス 0）。commit `90d2c914`（code）。push はユーザー。
+判定: lead sheet の弱起は閉じた（頁・双子の両方）。残りは §1.0 ⒜ の新項（label と拍子の重なり・小）。次の一手: §1.0 ⒜ の残り（小）か ⒝ の設計級（跳躍の 3 軒・小節番号と和音行）＝ユーザー判断。会話を区切るか: (b) 便が 3 つ続いて文脈は重め・次はどれも独立の島＝**区切ってよい**（続けるなら `-Start p779`）。
+
 ## 以下は第777セッションの経緯
 
 ### 1.1 第777セッション（2026-10-03・YT-DELL2）

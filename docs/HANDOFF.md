@@ -120,6 +120,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第780セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き・ユーザー指示「fonts の tab のスタイルは bold が既定だ。regular が既定になるように直して」。`-Start p780`（HEAD `bc8074c8`・未 push 21）＝full **10934 / 0 / 2 / 10936**。§7 3.5 で第778 を ARCHIVE へ。
+- **直した（commit 下記）**: `TabConstants.FretFontStyle` Bold → Regular（6 弦以上の reduced face は第733 で既に regular・4〜5 弦の full face が bold のままだった）。`fonts { tab bold }` で bold に戻る。双子は LP の TabNoteHead の既定（bold・define-grobs.scm:3738）のまま＝digit size と同じ扱い（LILYSHARP-OWN の註に書いた）。
+- snapshot **25 枚を再ベース**（6 弦未満の tab を持つ fixture 全部＋bend／dead-note／transposition-explicit／system-count-line-start-ink）＝根拠はユーザー決定（fret face は批准済みの逸脱・台帳点は無い）。網 `TabFretFaceTests`（4 弦は regular・`tab bold` で bold）・`TabTupletBracketTests` の digit の regex から bold 必須を外した。CHANGELOG Fixes。
+- 掃き（svg・998 冊・base＝p779 exe・head＝p780・`sessions/p780/svg/sweep.log`）: **差 419 / 1199**＝6 弦未満の tab を持つ本（ユーザーコーパスの bass tab が大半）。ユーザーの bohemian-rhapsody は `fonts { tab regular }` を書いているので不変（`probes/bass/` base＝head・byte 同一）。
+- **1 回目の `-End` で 13 赤**＝台帳 `LpGeometryLedgerTests` の tab の slur／grace 12 点（residual が digit の ink の高さ・幅ぶん動く＝例: `slur.tab.up.string-to-attachment` 0.103644 → 0.100844＝regular の digit は 2.0132 高・half 0.671067 tab spaces − 0.570223）と `BowTwinTests`（tab の slur 4・tie 4 の residual）。台帳 12 点の residual を書き換え why に「RE-MEASURED session 780 with the regular fret face（旧値つき）」を追記（`sessions/p780/relabel.ps1` は無し＝pipeline で id ごとに 1 件の門つきで当てた）・bows は `LILYSHARP_UPDATE_BOWS=1` で再取得（CRLF に揃えた）。
+★ `-End p780 -DiffBase bc8074c8`（2 回目・`end2.log`）＝full **10935 / 0 / 2 / 10937**（網 +1）・門 全 OK（HANDOFF 残り 6,605 B・§1 残り 10,330 字・棚卸し `APPROXIMATIONS.md` +10/−9＝OWN 1 本＋行番号）。7.5: Core `+` 13 行＝`FretFontStyle` の定数 1 行＋註・REF 0・OWN 1（既定の weight はユーザー決定・LP の TabNoteHead は bold）。7.6: ⒞ LP に対応物無し（LP は bold）＝双子は LP の既定のまま（digit size と同じ扱い）。7.7: なし（snapshot 25 枚と台帳 12 点の動きは全部 digit の ink の差・絵は digit の太さだけ）。commit `a531097e`（code・snapshot・台帳・bows）。push はユーザー。
+判定: 閉じた。次の一手: §1.0 ⒜ の残り（lead sheet の label と拍子の重なり・小）か ⒝ の設計級＝ユーザー判断。会話を区切るか: (b) 便が 5 つ続いて文脈は重い＝**区切ってよい**（続けるなら `-Start p781`）。
+
+## 以下は第779セッションの経緯
+
 ### 1.1 第779セッション（2026-10-03・YT-DELL2）
 
 同じ会話の続き・ユーザー報告「`bohemian-rhapsody.lys` の `score "tab2"` の G セクション先頭で `key ees` と `time 12/8` の x が重なる・12/8 が 2 つ重複して描かれる」。`-Start p779`（HEAD `2ca43fc8`・未 push 19）＝full **10931 / 0 / 2 / 10933**。§7 3.5 で第777 を ARCHIVE へ。本は Lab `sessions/p779/repro/`（写し・最小再現 `dup.lys`・before／after の png）。
@@ -129,17 +141,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 掃き（svg・998 冊・base＝p778 exe・head＝p779・`sessions/p779/svg/sweep.log`）: **差 1**＝`corpora/ベースタブLy/partial.lys`（condensed の両 part が同じ瞬間に `time 2/4`＝2 本重なっていたのが 1 本・絵は同じ・`probes/partial/`）。
 ★ `-End p779 -DiffBase 2ca43fc8`＝full **10934 / 0 / 2 / 10936**（網 +3）・門 全 OK（HANDOFF 残り 6,547 B・§1 残り 9,189 字・棚卸し `APPROXIMATIONS.md` 行番号 2 行＝増減 0・CRLF に揃え直した）。7.5: Core `+` 366 行＝`JunkCondensedStaffDuplicateChanges`／`JunkOnOneCondensedStaff`（約 190・註含む）＋ `CondensedStaffChangeValidator`（新規・約 80）＋ 警告 record・LYS4024 の文書・REF 4（key-engraver.cc `listen_key_change`・stream-event.hh `assign_event_once`・stream-event.cc `warn_reassign_event_ptr` ×2 か所）・OWN 0。7.6: ⒝ LP の規則（同じ timestep の 2 つ目の event は junk・同じなら無言）を頁の item に組み替えた＝字面にならないのは Lily# が event ではなく measure の item で持つため／「後の part だけの change を声部 0 へ移す」は LP の「どの voice の event も Staff に届く」の帰結／「調の食い違いの警告」は LP に対応物無し（LP は Staff で臨時記号を綴るので食い違い自体が起きない）＝警告の文に書いた。7.7: 臨時記号の綴り直しはしていない（上の残り）・`time`／`clef` の食い違いの警告は junk の形だけ（bar の長さの食い違いは MeasureValidator の cross-part が見る）。commit `02f6a059`（code）。push はユーザー。
 判定: 報告は閉じた（12/8 の重複・key と time の重なり）。残り: 調が食い違う condensed staff の臨時記号は各 part の調のまま（LP は Staff の Accidental_engraver が 1 つの調で綴る）＝警告で本の側に返す設計・直すなら condensed の声部の臨時記号を staff の調で綴り直す（§1.0 ⒝ に起票しない＝ユーザー判断待ちの小さな観察としてここに置く）。次の一手: §1.0 ⒜ の残り（lead sheet の label と拍子の重なり・小）か ⒝ の設計級＝ユーザー判断。会話を区切るか: (b) 便が 4 つ続いて文脈は重い＝**区切ってよい**（続けるなら `-Start p780`）。
-
-## 以下は第778セッションの経緯
-
-### 1.1 第778セッション（2026-10-03・YT-DELL2）
-
-同じ会話の続き・ユーザー「続けて」＝第777 末の次の一手の筆頭 **lead sheet の弱起（頁の側）**。`-Start p778`（HEAD `8cad6b8b`・未 push 17）＝full **10929 / 0 / 2 / 10931**。§7 3.5 で第776 を ARCHIVE へ。
-- **正体**: 行の小節を音楽の小節に合わせる `FitRowsToMusicBars`（第350）は音楽の声部の長さを読む＝staff の無い score では読む物が無く何もしない。section header の `partial`／`time` を行に当てる walk はどこにも無かった（`EnsureSectionStartsForRows` は段の開始位置だけ）。
-- **直した（commit 下記）**: `RowsOnlyBarLengths`＝音楽の声部が無いときだけ、構造から小節長の表を組む（`SectionState.AllStarts` の各出現 × `RowGridSectionBars` の幅・header の `time` 無ければ home・header の `partial`（0 小節目は file の partial も）を最初の小節に・pickup の印）。`FitRowsToMusicBars` が表を fallback に取り、縮めた小節に `IsPickup` を立てる（`LayoutEngine` の番号の −1 が読む）。網 `RowsOnlyFormOrderTests` Theory 2（弱起＋control・staffful と同じ長さ・`IsPickup`）。CHANGELOG Fixes。
-- 掃き（998 冊・base＝p777 exe・head＝p778・`sessions/p778/svg/sweep.log`・`sweep-ly.log`）: svg **差 3**＝amazing-grace の grid 2 冊＋greensleeves の grid（chords だけの sheet で弱起のある本＝全部・fixture には無い＝snapshot 不変）・ly 差 3（同じ 3 冊・`leadSheetTiming` の先頭が `\time 1/4`）・LP の bar check **3 冊とも 1 → 0**（`sessions/p778/lp/`）。絵: grid の 2 段目の番号 8 → 7（`probes/ag/`）・弱起の幅は grid floor で他と同じ（設計どおり）。
-★ `-End p778 -DiffBase 8cad6b8b`＝full **10931 / 0 / 2 / 10933**（網 +2）・門 全 OK（HANDOFF 残り 6,704 B・§1 残り 10,101 字・棚卸し `APPROXIMATIONS.md` 行番号 2 行＝増減 0・CRLF に揃え直した）。7.5: Core `+` 70 行＝`RowsOnlyBarLengths`（新規・約 35）＋ `FitRowsToMusicBars` の fallback と `IsPickup` の腕・REF 0・OWN 0（音楽の clock を行に当てる規則は第350 の `FitRowsToMusicBars` の既存 REF＝Timing は Score に 1 つ・新しい量 0）。7.6: ⒟ 既存の家（`FitRowsToMusicBars`）の読む物を増やしただけ＝header の partial／time は `SectionHeaders`（全出力が境界で当てる registry）から読む。7.7: 「縮める側だけ」は既存規則のまま＝header の time が home より長い rows-only の sheet は §1.0 ⒜ ⒞ に観察として置いた（コーパス 0）。commit `90d2c914`（code）。push はユーザー。
-判定: lead sheet の弱起は閉じた（頁・双子の両方）。残りは §1.0 ⒜ の新項（label と拍子の重なり・小）。次の一手: §1.0 ⒜ の残り（小）か ⒝ の設計級（跳躍の 3 軒・小節番号と和音行）＝ユーザー判断。会話を区切るか: (b) 便が 3 つ続いて文脈は重め・次はどれも独立の島＝**区切ってよい**（続けるなら `-Start p779`）。
 
 ## 2. 開いている作業
 
