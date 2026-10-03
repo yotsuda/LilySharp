@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第780セッションの経緯
+
+### 1.1 第780セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き・ユーザー指示「fonts の tab のスタイルは bold が既定だ。regular が既定になるように直して」。`-Start p780`（HEAD `bc8074c8`・未 push 21）＝full **10934 / 0 / 2 / 10936**。§7 3.5 で第778 を ARCHIVE へ。
+- **直した（commit 下記）**: `TabConstants.FretFontStyle` Bold → Regular（6 弦以上の reduced face は第733 で既に regular・4〜5 弦の full face が bold のままだった）。`fonts { tab bold }` で bold に戻る。双子は LP の TabNoteHead の既定（bold・define-grobs.scm:3738）のまま＝digit size と同じ扱い（LILYSHARP-OWN の註に書いた）。
+- snapshot **25 枚を再ベース**（6 弦未満の tab を持つ fixture 全部＋bend／dead-note／transposition-explicit／system-count-line-start-ink）＝根拠はユーザー決定（fret face は批准済みの逸脱・台帳点は無い）。網 `TabFretFaceTests`（4 弦は regular・`tab bold` で bold）・`TabTupletBracketTests` の digit の regex から bold 必須を外した。CHANGELOG Fixes。
+- 掃き（svg・998 冊・base＝p779 exe・head＝p780・`sessions/p780/svg/sweep.log`）: **差 419 / 1199**＝6 弦未満の tab を持つ本（ユーザーコーパスの bass tab が大半）。ユーザーの bohemian-rhapsody は `fonts { tab regular }` を書いているので不変（`probes/bass/` base＝head・byte 同一）。
+- **1 回目の `-End` で 13 赤**＝台帳 `LpGeometryLedgerTests` の tab の slur／grace 12 点（residual が digit の ink の高さ・幅ぶん動く＝例: `slur.tab.up.string-to-attachment` 0.103644 → 0.100844＝regular の digit は 2.0132 高・half 0.671067 tab spaces − 0.570223）と `BowTwinTests`（tab の slur 4・tie 4 の residual）。台帳 12 点の residual を書き換え why に「RE-MEASURED session 780 with the regular fret face（旧値つき）」を追記（`sessions/p780/relabel.ps1` は無し＝pipeline で id ごとに 1 件の門つきで当てた）・bows は `LILYSHARP_UPDATE_BOWS=1` で再取得（CRLF に揃えた）。
+★ `-End p780 -DiffBase bc8074c8`（2 回目・`end2.log`）＝full **10935 / 0 / 2 / 10937**（網 +1）・門 全 OK（HANDOFF 残り 6,605 B・§1 残り 10,330 字・棚卸し `APPROXIMATIONS.md` +10/−9＝OWN 1 本＋行番号）。7.5: Core `+` 13 行＝`FretFontStyle` の定数 1 行＋註・REF 0・OWN 1（既定の weight はユーザー決定・LP の TabNoteHead は bold）。7.6: ⒞ LP に対応物無し（LP は bold）＝双子は LP の既定のまま（digit size と同じ扱い）。7.7: なし（snapshot 25 枚と台帳 12 点の動きは全部 digit の ink の差・絵は digit の太さだけ）。commit `a531097e`（code・snapshot・台帳・bows）。push はユーザー。
+判定: 閉じた。次の一手: §1.0 ⒜ の残り（lead sheet の label と拍子の重なり・小）か ⒝ の設計級＝ユーザー判断。会話を区切るか: (b) 便が 5 つ続いて文脈は重い＝**区切ってよい**（続けるなら `-Start p781`）。
+
 ## 以下は第779セッションの経緯
 
 ### 1.1 第779セッション（2026-10-03・YT-DELL2）
