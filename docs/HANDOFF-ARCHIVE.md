@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第784セッションの経緯
+
+### 1.1 第784セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・**ユーザー決定（第783 末）「staff の無い sheet の section label は常に上の段へ」＝2026-08-24 の線上の規則を撤回**（§3 最上段）。`-Start p784`（HEAD `4cb14542`・未 push 11）＝full **10959 / 0 / 2 / 10961**。§7 3.5 で第782 を ARCHIVE へ。
+- **落とした（commit 下記）**: Y＝`StafflessAnchorRefpointBelowTop` と Calculate の線上の腕（label は generic の腕＝`LabelFrameBottomAboveStaffMiddle` ＋ chord ceiling＝staff と同じ）／X＝`BoxedLabelXWindows`（symbol の退避）・`ChordNameEngraver` の window loop と `labelWindows` 引数・`StafflessLabelLineStartReach` と `MultiStaffLayouter` の spring floor・第781 の `RowLineLabelLeft`／`RowLineLabelLeftX`／`PrefixColumns.StaffBarColumnX`・第783 の `RowLineLabelLeftPastOpeningMeter`・ctx の `RowLineLabelLeftX`・`HasChordRowOn`。line-start の X は staff と同じ腕（`|:` の bar か prefix anchor か edge 0.3）。
+- 網: `StafflessLabelSpacingTests` を削除（主題が消えた）・`RowsOnlySectionLabelTests` を書き換え（chords sheet で label は symbol の上 >1.0／symbol と小節線の x は label の有無で不変／lyrics sheet・staff 付きの control は旧のまま／line-start の箱＝edge 0.3・`|:` は bar・beside でも／label の有無で bar の幅不変）。`RowsOnlyMeterChangeTests` は不変（3/2 は G と Am の間のまま）。snapshot **4 枚を再ベース**（test/lead-sheet-chords・lead-sheet・lead-sheet-repeat・rows-song-sheet＝箱が上の帯へ・symbol の x は label 無しの位置に戻る・絵は `sessions/p784/probes/`）。CHANGELOG Fixes。棚卸し `APPROXIMATIONS.md` OWN 220→**215**（線上の OWN 5 本が消えた）・csv は行番号。
+- 掃き（998 冊・base＝開始時 HEAD `4cb14542` の exe＝`sessions/p783/exe-head`・head＝p784・`sessions/p784/svg/sweep2.log`・`sweep-ly.log`）: svg **差 9 / 1199**＝label を持つ staff 無しの本の全部（test/chords-attached の grid・lead-sheet-chords・lead-sheet・lead-sheet-repeat・rows-song-sheet・amazing-grace の grid ×2・greensleeves の grid・samples/drunken-sailor の main＝chords＋lyrics の rows-only＝箱が上の帯へ・bar 1 の spring floor が消えて symbol と syllable が左へ戻る）／ly **差 0**（twin は `\mark \markup \box` のまま）。
+★ `-End p784 -DiffBase 4cb14542`（`end.log`）＝full **10955 / 0 / 2 / 10957**（網 −4＝旧 10 本を消し 7 本を書いた＋ 1）・門 全 OK（HANDOFF 残り 6,888 B・§1 残り 10,745 字・棚卸し 2 枚＝OWN −5・行番号）。7.5: スクリプトは commit 前で「Core `+` 0」＝手で `git diff 4cb14542 -- LilySharp.Core`: **`+` 54 / `−` 593 行**（`MusicMarkEngraver` −471・`ChordNameEngraver` −48・`BreakAlignSpacing` −37・Annotations −27・Layouter −15）・REF +0・OWN +0 / **−5**（線上の規則の 5 本）＝足した 54 行は全部「何を落としたか・誰の決定か」の註。7.6: 落としただけ＝新しい出所は無い。残る label の Y は staff と同じ generic の腕（`LabelFrameBottomAboveStaffMiddle`＝LP の side-position padding 0.8・chord ceiling＝0.46）。7.7: 台帳に staffless の label の点は無い（MKT/MKS/MKV は probe にあるが entry は無い）＝**上の帯の高さは LP と比べていない**（起票するなら: staffless の label の baseline＝row の ink 上端 + 0.46 の 1 点・小）。commit `35d31758`（code・snapshot 4・網・CHANGELOG・棚卸し）＋ docs の commit。push はユーザー。
+判定: 反転は閉じた。次の一手: §1.0 ⒜ の残り（⒝ 設計どおり・⒠ 観察）は小さく、⒝ の設計級（跳躍の 3 軒・小節番号と和音行）か、上の 7.7 の台帳 1 点＝ユーザー判断。会話を区切るか: (b) 便が 4 つ続き（第781〜784）文脈は重い＝**区切ってよい**（続けるなら `-Start p785`）。
+
 ## 以下は第783セッションの経緯
 
 ### 1.1 第783セッション（2026-10-04・YT-DELL2）
