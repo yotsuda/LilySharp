@@ -357,6 +357,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A MIDI file's conductor track says each thing once, and every track runs to the end.**
+  A meter change was written once per part (a five-part book carried `6/4` five times at
+  one tick), the file opened with two tempo events at tick 0 (the default 120 and the
+  book's own), a restated tempo was written again, and each track's end-of-track stood at
+  its own last event — the conductor's in the middle of the piece. One event per moment
+  now, a tempo only when it changes, and every track ends where the music ends, as
+  LilyPond's MIDI does.
 - **The command line, the preview's Export button and the Explorer's batch export write
   one file.** The three had their own exporter settings and had drifted: the button's
   PDF or PNG of a score whose name no longer matched drew the file's scoreless picture

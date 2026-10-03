@@ -36,6 +36,79 @@ public class MidiTrack
     public List<TimeSignatureChange> TimeSignatures { get; } = [];
     /// <summary>The lyric events on this track.</summary>
     public List<LyricEvent> Lyrics { get; } = [];
+
+    /// <summary>
+    /// Sets the tempo from <paramref name="tick"/> on: ONE event per moment — a tempo already
+    /// at that tick is replaced (the last writer wins), and a tempo equal to the one in force
+    /// before it writes nothing. The list stays in tick order.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tempo-performer.cc:60-68 Tempo_performer::process_music — an
+    /// Audio_tempo only when tempoWholesPerMinute differs from the last one announced.
+    /// Until 2026-10-03 the exporter appended every tempo it met, so the file opened with
+    /// the 120 the exporter seeds and the book's own tempo at the same tick 0.
+    /// </remarks>
+    public void SetTempo(int tick, int microsecondsPerBeat)
+    {
+        int at = LastAtOrBefore(TempoChanges, tick, t => t.Tick);
+        if (at >= 0 && TempoChanges[at].Tick == tick)
+        {
+            TempoChanges[at] = new TempoChange(tick, microsecondsPerBeat);
+            return;
+        }
+        if (at >= 0 && TempoChanges[at].MicrosecondsPerBeat == microsecondsPerBeat)
+            return;
+        TempoChanges.Insert(at + 1, new TempoChange(tick, microsecondsPerBeat));
+    }
+
+    /// <summary>
+    /// Sets the meter from <paramref name="tick"/> on: ONE event per moment — a meter already
+    /// at that tick is replaced (the last writer wins). A meter equal to the one in force is
+    /// written when asked for: the caller decides whether a boundary that changes nothing
+    /// writes (it does not, MidiExporter.PlaySection) and whether a written <c>time</c>
+    /// does (it does, as LilyPond's performer emits on a \time event even when the fraction
+    /// is unchanged). The list stays in tick order.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/time-signature-performer.cc:102-115 Time_signature_performer::process_music
+    /// — one Audio_time_signature per timestep. Until 2026-10-03 every PART's walk through a
+    /// section added the section's meter, so a five-part book carried each change five
+    /// times at one tick.
+    /// </remarks>
+    public void SetTimeSignature(int tick, int numerator, int denominator)
+    {
+        int at = LastAtOrBefore(TimeSignatures, tick, t => t.Tick);
+        if (at >= 0 && TimeSignatures[at].Tick == tick)
+        {
+            TimeSignatures[at] = new TimeSignatureChange(tick, numerator, denominator);
+            return;
+        }
+        TimeSignatures.Insert(at + 1, new TimeSignatureChange(tick, numerator, denominator));
+    }
+
+    /// <summary>The last tick this track sounds or says anything at: a note's release, a
+    /// tempo, a meter, a lyric. Zero for an empty track.</summary>
+    public int LastTick
+    {
+        get
+        {
+            int last = 0;
+            foreach (var n in Notes) last = Math.Max(last, n.StartTick + n.DurationTicks);
+            foreach (var t in TempoChanges) last = Math.Max(last, t.Tick);
+            foreach (var t in TimeSignatures) last = Math.Max(last, t.Tick);
+            foreach (var l in Lyrics) last = Math.Max(last, l.Tick);
+            return last;
+        }
+    }
+
+    // The index of the last entry at or before `tick` in a tick-ordered list, or -1.
+    private static int LastAtOrBefore<T>(List<T> list, int tick, Func<T, int> tickOf)
+    {
+        int at = -1;
+        for (int i = 0; i < list.Count && tickOf(list[i]) <= tick; i++)
+            at = i;
+        return at;
+    }
 }
 
 /// <summary>
@@ -51,17 +124,33 @@ public class MidiFile
     /// <summary>The tracks contained in this MIDI file.</summary>
     public List<MidiTrack> Tracks { get; } = [];
 
+    /// <summary>The piece's end: the last tick any track sounds or says anything at.
+    /// Every track's end-of-track stands here (<see cref="WriteTo"/>).</summary>
+    public int EndTick => Tracks.Count == 0 ? 0 : Tracks.Max(t => t.LastTick);
+
     /// <summary>
     /// Writes the MIDI file to a stream.
     /// </summary>
+    /// <remarks>
+    /// Every track runs to the PIECE's end, not to its own last event: a conductor track
+    /// whose last meter change is in the middle of the piece, or a part that rests through
+    /// the last bars, still ends where the music ends, so a player or a DAW reading the
+    /// tracks' lengths sees one piece of one length.
+    /// LILYPOND-REF: lily/staff-performer.cc:219-227 Staff_performer::finalize — every
+    /// audio staff's end_mom_ is the performance's end moment — and
+    /// lily/midi-walker.cc:77-82 Midi_walker::finalize — the end-of-track is pushed at
+    /// end_tick minus the track's last tick. Until 2026-10-03 each track ended at its own
+    /// last event (a delta of 0 before the end-of-track).
+    /// </remarks>
     public void WriteTo(Stream stream)
     {
         using var writer = new BinaryWriter(stream, System.Text.Encoding.ASCII, leaveOpen: true);
         WriteHeader(writer);
         var channelPlans = PlanQuarterToneChannels();
+        int end = EndTick;
         for (int i = 0; i < Tracks.Count; i++)
         {
-            WriteTrack(writer, Tracks[i], channelPlans[i]);
+            WriteTrack(writer, Tracks[i], channelPlans[i], end);
         }
     }
 
@@ -132,7 +221,7 @@ public class MidiFile
         WriteBigEndian16(writer, (ushort)TicksPerQuarterNote);
     }
 
-    private void WriteTrack(BinaryWriter writer, MidiTrack track, int[]? channelPlan = null)
+    private void WriteTrack(BinaryWriter writer, MidiTrack track, int[]? channelPlan, int endTick)
     {
         using var trackStream = new MemoryStream();
         using var trackWriter = new BinaryWriter(trackStream);
@@ -201,7 +290,8 @@ public class MidiFile
             lastTick = evt.Tick;
         }
 
-        WriteVariableLength(trackWriter, 0);
+        // The end-of-track at the piece's end (Midi_walker::finalize's delta).
+        WriteVariableLength(trackWriter, Math.Max(0, endTick - lastTick));
         trackWriter.Write((byte)0xFF);
         trackWriter.Write((byte)0x2F);
         trackWriter.Write((byte)0x00);

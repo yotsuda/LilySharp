@@ -415,7 +415,9 @@ public sealed class MidiExporter
         var midi = new MidiFile { TicksPerQuarterNote = _ticksPerQuarter };
 
         var conductorTrack = new MidiTrack { Name = "Tempo", Channel = 0 };
-        conductorTrack.TempoChanges.Add(new TempoChange(0, BpmToMicroseconds(_tempo)));
+        // The default tempo at tick 0; a book's own `tempo` replaces it there (SetTempo:
+        // one event per moment).
+        conductorTrack.SetTempo(0, BpmToMicroseconds(_tempo));
         midi.Tracks.Add(conductorTrack);
 
         var mainTrack = new MidiTrack { Name = "Track 1", Channel = 0 };
@@ -473,7 +475,7 @@ public sealed class MidiExporter
         // value here put a spurious downbeat event on any score whose time signature
         // changes later. Only seed the default when no tick-0 signature exists.
         if (!conductorTrack.TimeSignatures.Any(ts => ts.Tick == 0))
-            conductorTrack.TimeSignatures.Insert(0, new TimeSignatureChange(0, _bars.Meter.Beats, _bars.Meter.BeatType));
+            conductorTrack.SetTimeSignature(0, _bars.Meter.Beats, _bars.Meter.BeatType);
 
         // The parts the score does not show are stripped HERE, after the whole stream is
         // played and before it is split: every part walked as before, so the timeline (a
@@ -993,11 +995,11 @@ public sealed class MidiExporter
         // the header's `partial` as every part's first bar's pickup (the page shortens every
         // part's first bar with it, MeasureCollector.Form.cs). The event is written only when
         // the pair actually moves, so a boundary that changes nothing adds none
-        // (ProcessTimeSignature is the other writer).
+        // (ProcessTimeSignature is the other writer). Every part walks the section, so the
+        // conductor track takes the event ONCE per tick (MidiTrack.SetTimeSignature).
         if (_bars.OpenSection(_sectionHeaders.Times.GetValueOrDefault(section.SectionName),
                 _sectionHeaders.Partials.GetValueOrDefault(section.SectionName)))
-            conductorTrack.TimeSignatures.Add(
-                new TimeSignatureChange(_currentTick, _bars.Meter.Beats, _bars.Meter.BeatType));
+            conductorTrack.SetTimeSignature(_currentTick, _bars.Meter.Beats, _bars.Meter.BeatType);
 
         // A by-part CHORD TRACK's section (`chords harmony { section A { … } }`): its
         // entries sound when the score places the row (PlayChordRow), and take their bars'
@@ -2618,7 +2620,7 @@ public sealed class MidiExporter
         // shows no meter.
         if (!_bars.SetTime(timeSig))
             return;
-        conductorTrack.TimeSignatures.Add(new TimeSignatureChange(_currentTick, _bars.Meter.Beats, _bars.Meter.BeatType));
+        conductorTrack.SetTimeSignature(_currentTick, _bars.Meter.Beats, _bars.Meter.BeatType);
     }
 
     private void ProcessTempo(TempoDeclarationSyntax tempo, MidiTrack conductorTrack)
@@ -2630,7 +2632,7 @@ public sealed class MidiExporter
         if (tempo.Value.QuarterBpm is double quarterBpm)
         {
             _tempo = (int)System.Math.Round(quarterBpm);
-            conductorTrack.TempoChanges.Add(new TempoChange(_currentTick, BpmToMicroseconds(quarterBpm)));
+            conductorTrack.SetTempo(_currentTick, BpmToMicroseconds(quarterBpm));
         }
     }
 
