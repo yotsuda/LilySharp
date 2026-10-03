@@ -311,9 +311,10 @@ public sealed partial class LilyPondExporter
     /// page prints before verse 2+ (LilyPond's <c>\set stanza</c>), and the extender's exact
     /// end (the page stops it at the last held head, LilyPond's <c>__</c> runs to the next
     /// syllable) — both are named in the CHANGELOG. A connector is the page's:
-    /// <c>--</c> after a hyphenated syllable, <c>__</c> after an extended one; a line-ending
-    /// extender gets an empty syllable to end at (<see cref="ExtenderTerminator"/>), and a
-    /// cadenza bar no bar check (<see cref="SenzaMisuraByBar"/>) — both 2026-10-03.
+    /// <c>--</c> after a hyphenated syllable, <c>__</c> after an extended one; an extender
+    /// whose end comes before the next syllable (or the line's end) gets an empty syllable to
+    /// end at (<see cref="ExtenderTerminator"/>), and a cadenza bar no bar check
+    /// (<see cref="SenzaMisuraByBar"/>) — both 2026-10-03.
     /// </remarks>
     private void EmitLyricTracks(SyntaxTree tree, RenderDeclarationSyntax? render)
     {
@@ -339,16 +340,30 @@ public sealed partial class LilyPondExporter
             var items = line.OrderBy(l => l.MeasureIndex).ThenBy(l => l.Timing)
                 .Select(l => (Item: l, Measure: l.MeasureIndex, Onset: l.Timing))
                 .ToList();
-            // A line's LAST syllable with an extender: LilyPond ends an extender at the next
-            // syllable and warns "unterminated extender" (drawing none) when there is none, so
-            // an EMPTY syllable is written where the page's extender ends (ExtenderTerminator).
-            if (items.Count > 0 && items[^1].Item.ConnectorType == Svg.Model.LyricConnectorType.Extender
-                && ExtenderTerminator(staff.PrimaryVoice.Measures, meters, items[^1].Item) is { } end)
-                items.Add((items[^1].Item with
+            // An extender ends at the NEXT syllable in LilyPond — and in this duration-carrying
+            // \lyricmode form (no \lyricsto, no voice to take heads from) it needs that syllable
+            // at the very next moment of the line: with a \skip between, the extender is dropped
+            // in silence, and with nothing after it at all LilyPond warns "unterminated extender"
+            // (drawing none). So wherever the page's extender ends BEFORE the next syllable — a
+            // melisma followed by a rest or by notes nobody sings, or a bare `__` on a note that
+            // holds nothing — an EMPTY syllable is written at that end (ExtenderTerminator), as a
+            // line's last extender has had since 2026-10-03 (session 764); every extender since
+            // session 776, when the chorale's `hill __ | Sing` showed the silent drop.
+            for (int k = 0; k < items.Count; k++)
+            {
+                if (items[k].Item.ConnectorType != Svg.Model.LyricConnectorType.Extender
+                    || ExtenderTerminator(staff.PrimaryVoice.Measures, meters, items[k].Item) is not { } end)
+                    continue;
+                if (k + 1 < items.Count && !(items[k + 1].Measure > end.Measure
+                        || (items[k + 1].Measure == end.Measure && items[k + 1].Onset > end.Onset)))
+                    continue; // the next syllable stands at (or before) the end: it terminates the line
+                items.Insert(k + 1, (items[k].Item with
                 {
                     Text = "", ConnectorType = Svg.Model.LyricConnectorType.None, MelismaAlignLeft = false,
                     MeasureIndex = end.Measure, Timing = end.Onset,
                 }, end.Measure, end.Onset));
+                k++;
+            }
 
             // A LilyPond identifier is letters only, so the verse (and voice) is a word.
             string varName = VarName(partName
@@ -388,31 +403,40 @@ public sealed partial class LilyPondExporter
             score.AllVoices.Select(v => v.Measures).ToList(), score.MeasureCount, score.TimeSignature.SenzaMisura);
 
     /// <summary>
-    /// Where a line-ending extender's EMPTY terminating syllable goes: the onset after the
-    /// melisma's last note (<see cref="Svg.Model.LyricItem.MelismaEndMeasureIndex"/>) — the next
-    /// bar's head when that note closes its bar — or, when that note is the part's last, the
-    /// note's own onset; null when the extender consumed no note or sits on that last note
-    /// itself (then LilyPond's warning stands, and nothing is drawn either way).
+    /// Where an extender's EMPTY terminating syllable goes: the onset after the melisma's last
+    /// note (<see cref="Svg.Model.LyricItem.MelismaEndMeasureIndex"/>; the syllable's own note
+    /// when it holds none — a bare <c>__</c>) — the next bar's head when that note closes its
+    /// bar — or, when that note is the part's last, the note's own onset; null when the
+    /// extender sits on that last note itself (then LilyPond's warning stands, and nothing is
+    /// drawn either way).
     /// </summary>
     /// <remarks>
     /// MEASURED (2.26.0, Lab sessions/p764/probes/extender.ly): <c>la1 __ \skip 1 ""1</c> draws
     /// the extender to the empty syllable and warns nothing; <c>la1 __ \skip 1 \skip 1</c> warns
-    /// "unterminated extender" and draws none. The page stops its extender at the last held
-    /// head's RIGHT (lily/lyric-extender.cc:80-84, as LyricItem says); LilyPond's reaches the
-    /// next syllable's LEFT, which is the following note's column — one head's width apart at
-    /// most, and at the part's last note the terminator stands ON the head, a head short.
+    /// "unterminated extender" and draws none. MEASURED (Lab sessions/p776/probes/mid-extender2.ly):
+    /// <c>la2 __ \skip 4 \skip 4 | lu1</c> warns nothing and draws NOTHING either — a skip between
+    /// the extender and the next syllable drops it — while <c>la2 __ ""4 \skip 4 | lu1</c> and the
+    /// same with nothing after the skips end it at the empty syllable, drawn when the room allows
+    /// (LilyPond's minimum-length and drop threshold, which the page shares). The page stops its
+    /// extender at the last held head's RIGHT (lily/lyric-extender.cc:80-84, as LyricItem says);
+    /// LilyPond's reaches the next syllable's LEFT, which is the following note's column — one
+    /// head's width apart at most, and at the part's last note the terminator stands ON the head,
+    /// a head short.
     /// </remarks>
     private static (int Measure, Fraction Onset)? ExtenderTerminator(
         System.Collections.Immutable.ImmutableArray<Svg.Model.Measure> measures,
         IReadOnlyList<Fraction> meters, Svg.Model.LyricItem last)
     {
-        int m = last.MelismaEndMeasureIndex;
+        // A bare `__` holds no note: the line the page draws is the stub past its own note.
+        bool bare = last.MelismaEndMeasureIndex < 0;
+        int m = bare ? last.MeasureIndex : last.MelismaEndMeasureIndex;
+        var heldOnset = bare ? last.Timing : last.MelismaEndTiming;
         if (m < 0 || m >= measures.Length)
             return null;
         var at = Fraction.Zero;
         foreach (var it in measures[m].Items)
         {
-            if (it.Duration > Fraction.Zero && at == last.MelismaEndTiming)
+            if (it.Duration > Fraction.Zero && at == heldOnset)
             {
                 var end = at + it.Duration;
                 if (end < BarLength(measures[m], meters, m))

@@ -2934,12 +2934,50 @@ public class LilyPondExporterTests
             "lyrics words sings melody { Twin- kle twin- kle | star _ | }",
             "staff melody  lyrics words sings melody"));
         Assert.Contains("#LEFT star1 __ |\n  \"\"1 |", ly);
-        // An extender that held no note (a bare `__` with nothing to consume) is left to
-        // LilyPond's warning: the page draws only its minimum stub there.
+        // An extender that held no note (a bare `__` with nothing to consume) ends after its own
+        // note — the page draws its minimum stub there — rather than being left to LilyPond's
+        // warning (session 776; until then it was).
         ly = Export(LyricBook(
             "c'4 d' e' f' | g'2 g' |",
             "lyrics words sings melody { Twin- kle twin- kle | star __ | }",
             "staff melody  lyrics words sings melody"));
+        Assert.Contains("star2 __ \"\"2 |", ly);
+        Assert.DoesNotContain("#LEFT star", ly);
+    }
+
+    /// <summary>
+    /// An extender in the MIDDLE of a line ends at an empty syllable too, when the next syllable
+    /// comes later than the melisma's end: in this duration-carrying <c>\lyricmode</c> form a
+    /// <c>\skip</c> between the extender and the next syllable drops the extender in silence
+    /// (session 762's chorale, <c>hill __ | Sing</c> — no line, no warning). The next syllable
+    /// standing right at the end needs nothing.
+    /// </summary>
+    /// <remarks>MEASURED (2.26.0, Lab sessions/p776/probes/mid-extender2.ly): <c>la2 __ \skip 4
+    /// \skip 4 | lu1</c> draws nothing and warns nothing; <c>la2 __ ""4 \skip 4 | lu1</c> ends the
+    /// extender at the empty syllable; <c>la1. __ ""4 \skip 4 | lu1</c> after a slurred melisma
+    /// draws the line to it.</remarks>
+    [Fact]
+    public void AttachedLyrics_AMidLineExtender_EndsAtAnEmptySyllable_WhenTheNextSyllableComesLater()
+    {
+        // A bare `__` on the g'2: the terminator at the g'4 after it, lasting (as every
+        // syllable of this stream does) up to the next syllable, `lu`.
+        var ly = Export(LyricBook(
+            "c'4 d' e' f' | g'2 g'4 a'4 | b'1 |",
+            "lyrics words sings melody { Twin- kle twin- kle | star __ | lu | }",
+            "staff melody  lyrics words sings melody"));
+        Assert.Contains("star2 __ \"\"2 |\n  lu1 |", ly);
+        // A slurred melisma g'2( g'4) with the a'4 unsung: the terminator stands on the a'4.
+        ly = Export(LyricBook(
+            "c'4 d' e' f' | g'2( g'4) a'4 | b'1 |",
+            "lyrics words sings melody { Twin- kle twin- kle | star __ | lu | }",
+            "staff melody  lyrics words sings melody"));
+        Assert.Contains("#LEFT star2. __ \"\"4 |\n  lu1 |", ly);
+        // The next syllable right after the melisma: no terminator.
+        ly = Export(LyricBook(
+            "c'4 d' e' f' | g'2( g'4) a'4 | b'1 |",
+            "lyrics words sings melody { Twin- kle twin- kle | star __ lu | li | }",
+            "staff melody  lyrics words sings melody"));
+        Assert.Contains("#LEFT star2. __ lu4 |\n  li1 |", ly);
         Assert.DoesNotContain("\"\"", ly);
 
         // A cadenza: the music's bars are `\bar "|"`, the lyric line's end with no check.

@@ -427,7 +427,12 @@ workflow attaches that section to the GitHub Release verbatim.
   `star1 __` with nothing after it, which LilyPond reports as "unterminated extender" and
   draws nothing; an empty syllable now stands where the page's extender ends (the note after
   the melisma's last, or that last note itself at the end of the part), so LilyPond draws the
-  line and says nothing. A bare `__` that held no note is left as it was. In a `time none`
+  line and says nothing. The same empty syllable now ends an extender in the middle of a line
+  whose next syllable comes later than the melisma's end (`hill __ | Sing`: in this
+  duration-carrying `\lyricmode` form a `\skip` between the extender and the next syllable
+  made LilyPond drop the line in silence), and a bare `__` on a note that holds nothing (the
+  chorale's `ring __ |`, `fall. __ |` — seven "unterminated extender" warnings) ends after
+  that note, where the page draws its stub. In a `time none`
   passage the lyric, inline-chord and figured-bass lines wrote a `|` LilyPond's `\cadenzaOn`
   cannot check ("bar check failed"); they write none there.
 - **`@ottava(8va)` and `@ottava(1)` are told the ottava spellings.** The family takes no such
