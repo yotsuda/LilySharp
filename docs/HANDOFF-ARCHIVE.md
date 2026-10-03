@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第767セッションの経緯
+
+### 1.1 第767セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。`-Start p767`（HEAD `1c16e193`・未 push 137）＝full **10880 / 0 / 2 / 10882**。§7 3.5 で第765 を ARCHIVE へ。第766 の候補 5 つを**双子（LP 2.26 の png・`sessions/p767/twin/`）と並べて**裁いた:
+- ⑴ **複数小節休符の後の小節番号＝欠陥・直した**: `barNumbers every N` で `R1*2` に畳まれた小節の番号が次の小節の列に積まれていた（probe `sessions/p767/probes/mmrest.lys`: 1 2 4/3 5 8/7/6）。`BarNumberEngraver.Calculate(runMap)` が `MmrRunMap.IsInterior` の小節を飛ばす（LP は bar line の在る所にしか BarNumber を作らない＝bar-number-engraver.cc:66-70 の註・畳んだ run は 1 列）。今は 1 2 4 5 8。網 `LayoutBlockTests.EveryN_SkipsTheBarsACompressedRestSwallows`。
+- ⑷ **cue の境目の clef の二重描画＝欠陥・直した**: 小節ごとに書いた `cue treble { }` が 2 つ並ぶと、前の領域の alto への復帰と次の領域の treble が同じ列に重なって描かれていた（LP は何も描かない）。`ClefChangeCollapse`（collector の後処理・単段と多段の両道）が「鳴る item を挟まない連続した clef 変更」を最後の 1 つに畳み、それが在効の clef と同じなら全部落とす（clef-engraver.cc:139-165 `inspect_clef_properties`＝timestep に 1 回の比較）。単独の変更は触らない（`clef!` の強制は walk の問い）。網 `ClefChangeTests.ClefChangesAtOneMoment_…`。
+- ⑵ pedal text と強弱の帯（piano lh 小節 2〜4）＝**LP も同じ並び**（`f`・`sempre legato`・`* Ped.`）＝欠陥ではない。
+- ⑶⑸ **小節番号が chord diagram の運指に重なる＝置き方の差・未着手（§1.0 ⒝ に起票）**: LP は段の途中の番号を**和音行の上**（ChordNames の上端）に置く（`lp-leadsheet…/out-page1.png` の `5F/A`・`6C7`・`12 Dm/C`）。Lily# は staff の上の帯の高さで、diagram の運指の数字を踏む。
+- 双子の警告（leadsheet・LP 6 本・§1.0 ⒜ に起票）: ⒜ 1 小節目で file の `tempo` と section の `tempo` を同じ瞬間に書く → LP「conflict with event: tempo-change-event」×2／⒝ section で拍子が変わる（Bridge 3/4）とき chords 行の entry は Verse の 4/4 の長さ（`d1:m`）のまま → bar check 失敗／⒞ `[1-2.` の ending に「already have a VoltaBracket; ending it prematurely」。
+- 掃き（`sessions/p723/svg2/sweep-all.ps1`・998 冊・base p764 の exe 対 head）: **svg 1,199 本 差 0**＝既存の本に畳まれた休符の `every N` も同じ瞬間の clef 変更も無い。
+★ `-End p767 -DiffBase 1c16e193`＝full **10882 / 0 / 2 / 10884**（網 +2）・門 全 OK（HANDOFF 残り 8,893 B・§1 残り 10,327 字・棚卸し `APPROXIMATIONS.md` 行番号 8 行＝増減 0）。7.5: Core `+` 30 行／`-` 2 行（tracked）＋新規 `ClefChangeCollapse.cs`・REF 2（bar-number-engraver.cc・clef-engraver.cc）・OWN 0。7.6: ⒜ 両方とも LP の engraver の規則を字面で写した。7.7: なし。push はユーザー。
+判定: 第766 の候補 5 つは裁き終えた（2 直した・1 は LP と同じ・1 は起票・双子の 3 件を起票）。次の一手は §1.0 ⒜ の双子 3 件（小・計器あり）か ⒝ の小節番号と和音行（設計）＝ユーザー判断。会話を区切るか: (a) どちらも今の本と png の上に立つ＝続ける。
+
 ## 以下は第766セッションの経緯
 
 ### 1.1 第766セッション（2026-10-03・YT-DELL2）

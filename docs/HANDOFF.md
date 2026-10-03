@@ -120,6 +120,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第769セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き・ユーザー報告「`score main` の midi の 65（2/4）〜66 小節目（4/4 に戻る）が何かおかしく聞こえる」。`-Start p769`（HEAD `f1aeeb69`・未 push 141）＝full **10885 / 0 / 2 / 10887**。§7 3.5 で第767 を ARCHIVE へ。コード変更なし。
+- **計器**（Lab `sessions/p769/`）: `dump-window.ps1`（tick 窓の音を track ごとに）・`dump-raw.ps1`（窓の生 on/off ＋ 窓の頭で鳴り続けている音）・`twin/`＝`lysc ly` の出力に `\midi { }` を足して LP 2.26 に書かせた `twin.mid`（tpq 384）。
+- **判定: MIDI は本文のとおりで、LP の MIDI と音高も tick も一致**（小節 64〜66・5 part・LP の bass は書いた高さ＝46、Lily# は `instrument bass` の 8vb＝34 で、これは意図）。拍子 meta は 124800 に 2/4・125760 に 4/4（各 5 本＝§1.0 ⒜ の重なり）。65 小節目の 2/4 は 960 tick で全 part が収まる。
+- 耳に残りそうな所は本文の側: 65 小節目のピックアップが vn1 `bes,8 bes' bes`＝B♭3→B♭4→B♭4・bass `bes8 bes' bes`＝B♭1→B♭2→B♭2 と**3 音の中でオクターブ跳ぶ**（`'` は相対の上書き）。vn2 の 66 は `r8 g4. g2`＝G3。PDF と違うなら本の側＝ユーザー確認待ち。
+★ `-End` は未（ユーザーの返事で続きが決まる）。
+
+## 以下は第768セッションの経緯
+
 ### 1.1 第768セッション（2026-10-03・YT-DELL2）
 
 同じ会話の続き・ユーザー報告「`bohemian-rhapsody.lys` の `score practice` を midi に変換すると section A が含まれている。`form practice` は B から始まる」。`-Start p768`（HEAD `22790d03`・未 push 139）＝full **10882 / 0 / 2 / 10884**。§7 3.5 で第766 を ARCHIVE へ。
@@ -128,20 +138,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 見つけた別件（§1.0 ⒜ に起票・直していない）: conductor track に同じ拍子の meta event が part の数だけ重なる。
 ★ `-End p768 -DiffBase 22790d03`＝full **10885 / 0 / 2 / 10887**（網 +3）・門 全 OK（HANDOFF 残り 7,911 B・§1 残り 10,026 字・棚卸し 差分なし）。7.5: Core `+` 19 行＝`RenderSpecParser.ChooseDeclared` だけ（REF 0・OWN 0＝exporter の設定の配管で、LP の規則も Lily# 独自の規則も触らない）。7.6: ⒜ 出所はユーザー報告（本は OneDrive の `bohemian-rhapsody.lys`）＋ `Commands.cs` の自分の註。7.7: なし。commit `12e2c597`（code）。push はユーザー。
 判定: 報告は閉じた（CLI は元から正しく、プレビューの Export の道だけが primary form を書いていた）。次の一手は §1.0 ⒜ の双子 3 件か拍子 meta event の重なり（どちらも小）＝ユーザー判断。会話を区切るか: (a) 本と計器は Lab に在る＝続けられる。
-
-## 以下は第767セッションの経緯
-
-### 1.1 第767セッション（2026-10-03・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」）。`-Start p767`（HEAD `1c16e193`・未 push 137）＝full **10880 / 0 / 2 / 10882**。§7 3.5 で第765 を ARCHIVE へ。第766 の候補 5 つを**双子（LP 2.26 の png・`sessions/p767/twin/`）と並べて**裁いた:
-- ⑴ **複数小節休符の後の小節番号＝欠陥・直した**: `barNumbers every N` で `R1*2` に畳まれた小節の番号が次の小節の列に積まれていた（probe `sessions/p767/probes/mmrest.lys`: 1 2 4/3 5 8/7/6）。`BarNumberEngraver.Calculate(runMap)` が `MmrRunMap.IsInterior` の小節を飛ばす（LP は bar line の在る所にしか BarNumber を作らない＝bar-number-engraver.cc:66-70 の註・畳んだ run は 1 列）。今は 1 2 4 5 8。網 `LayoutBlockTests.EveryN_SkipsTheBarsACompressedRestSwallows`。
-- ⑷ **cue の境目の clef の二重描画＝欠陥・直した**: 小節ごとに書いた `cue treble { }` が 2 つ並ぶと、前の領域の alto への復帰と次の領域の treble が同じ列に重なって描かれていた（LP は何も描かない）。`ClefChangeCollapse`（collector の後処理・単段と多段の両道）が「鳴る item を挟まない連続した clef 変更」を最後の 1 つに畳み、それが在効の clef と同じなら全部落とす（clef-engraver.cc:139-165 `inspect_clef_properties`＝timestep に 1 回の比較）。単独の変更は触らない（`clef!` の強制は walk の問い）。網 `ClefChangeTests.ClefChangesAtOneMoment_…`。
-- ⑵ pedal text と強弱の帯（piano lh 小節 2〜4）＝**LP も同じ並び**（`f`・`sempre legato`・`* Ped.`）＝欠陥ではない。
-- ⑶⑸ **小節番号が chord diagram の運指に重なる＝置き方の差・未着手（§1.0 ⒝ に起票）**: LP は段の途中の番号を**和音行の上**（ChordNames の上端）に置く（`lp-leadsheet…/out-page1.png` の `5F/A`・`6C7`・`12 Dm/C`）。Lily# は staff の上の帯の高さで、diagram の運指の数字を踏む。
-- 双子の警告（leadsheet・LP 6 本・§1.0 ⒜ に起票）: ⒜ 1 小節目で file の `tempo` と section の `tempo` を同じ瞬間に書く → LP「conflict with event: tempo-change-event」×2／⒝ section で拍子が変わる（Bridge 3/4）とき chords 行の entry は Verse の 4/4 の長さ（`d1:m`）のまま → bar check 失敗／⒞ `[1-2.` の ending に「already have a VoltaBracket; ending it prematurely」。
-- 掃き（`sessions/p723/svg2/sweep-all.ps1`・998 冊・base p764 の exe 対 head）: **svg 1,199 本 差 0**＝既存の本に畳まれた休符の `every N` も同じ瞬間の clef 変更も無い。
-★ `-End p767 -DiffBase 1c16e193`＝full **10882 / 0 / 2 / 10884**（網 +2）・門 全 OK（HANDOFF 残り 8,893 B・§1 残り 10,327 字・棚卸し `APPROXIMATIONS.md` 行番号 8 行＝増減 0）。7.5: Core `+` 30 行／`-` 2 行（tracked）＋新規 `ClefChangeCollapse.cs`・REF 2（bar-number-engraver.cc・clef-engraver.cc）・OWN 0。7.6: ⒜ 両方とも LP の engraver の規則を字面で写した。7.7: なし。push はユーザー。
-判定: 第766 の候補 5 つは裁き終えた（2 直した・1 は LP と同じ・1 は起票・双子の 3 件を起票）。次の一手は §1.0 ⒜ の双子 3 件（小・計器あり）か ⒝ の小節番号と和音行（設計）＝ユーザー判断。会話を区切るか: (a) どちらも今の本と png の上に立つ＝続ける。
 
 ## 2. 開いている作業
 
