@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第775セッションの経緯
+
+### 1.1 第775セッション（2026-10-03・YT-DELL2）
+
+新しい会話・ユーザー「HANDOFF を読んで着手」＝第774 末の列挙の筆頭 **D.C./D.S. の MIDI**（設計→実装まで）。`-Start p775`（HEAD `8d82bf32`・未 push 11）＝full **10909 / 0 / 2 / 10911**。§7 3.5 で第773 を ARCHIVE へ。
+- **設計（RULES §5.2 第751 の裁定＝意味論は音楽的妥当性）**: 経路の読み手 `Semantics/FormRoute.cs`（`FormWalk` の item 列 → `Stretch(From,To,Replay)` の列）を 1 軒立て、`MidiExporter.PlayForm` が歩く。規則: `dc`→冒頭・`ds`→直近の form-level `segno` の次（無ければ追わない＝絵のまま）／`al fine` は replay 範囲の最初の `fine` で終曲（跳躍文の後は鳴らない）／`al coda` は `to coda` で止め、跳躍文の後の `coda` の次から再開／裸の `dc`/`ds` は跳躍文まで replay して続行（片側 `:|` と同じ）／replay 中は repeat block を最終 pass 1 回（`PlayRepeatRun(lastPassOnly)`）・片側 `:|` と跳躍文は不発／再開後は first pass（2 本目の経路も追う）。状態は `PieceState`（ordinals・pitch lane・velocity lane・duration・velocity）を冒頭と segno 通過時に写し、replay 前に戻す＝`RepeatFromTheBeginning` も同じ器に畳んだ。LP の `\jump` は絵だけ・意味の綴りは `\repeat segno`（双子は書かない）＝LILYSHARP-OWN（`FormRoute` の註）。
+- **網** `FormJumpMidiTests` 17 本（al fine／al coda／裸／replay の repeat は最終 pass／segno 無し／coda 無し／al fine 後は鳴らない／2 経路／replay 中の片側 `:|`／segno の状態復元（velocity）／全 part／経路の Theory 6）。文書: SYNTAX_REFERENCE（Navigation marks に再生の段落・tie の「MIDI も追わない」を訂正）・GRAMMAR_FOR_LLM・GRAMMAR・CHANGELOG「Navigation marks」。
+- 掃き（midi・998 冊・base＝p774 exe・head＝p775・`sessions/p775/sweep-midi.log`・予測は `prediction.txt` に先に書いた）: **差 3 ＝予測どおり**（`nav-below-clears-lyrics`＝`dc`・`tocoda-volta-clearance`＝segno＋`ds al coda`・ユーザーの `blogger.lys`＝Intro A B A C D **A C** E E）。dogfood は手で（`dogfood-{base,head}`・`dump-notes.ps1`）: sarabande の replay は Theme と pitch:len が全音一致（最終 fermata の ×1.5 だけ曲末で露出）・bare-dsc／05-form（segno 無し）は不変・bigband-swing は Solo を歩く part だけ増。
+- **残り（ユーザー判断・§1.0 ⒝ に起票）**: 演奏順の読み手は他に 3 軒（page の tie carry・`SectionBoundaryBars` の隣接・XML は `<sound>` 宣言のみ）＝跳躍を追わない。tie を segno の section へ運ぶか／解決できない跳躍文の診断／music 中の跳躍文（追わない＝文書に明記）。
+★ `-End p775 -DiffBase 8d82bf32`（code commit 後の 2 回目・`end2.log`）＝full **10926 / 0 / 2 / 10928**（網 +17）・門 全 OK（HANDOFF 残り 8,231 B・§1 残り 9,711 字・棚卸し 差分なし）。7.5: Core `+` 267 行＝`FormRoute.cs`（新規・経路の読み手と註）＋`MidiExporter` の `PlayForm`／`PieceState`／`lastPassOnly`・REF 0・OWN 1（`FormRoute`＝LP の `\jump` に意味は無い・出所は第751 のユーザー決定）。7.6: ⒞ 経路の規則は LP に対応物無し（`\repeat segno` は双子が書かない綴り）／⒟ `PieceState` は `RepeatFromTheBeginning` の既存 5 量を器に畳んだだけ（新しい量 0）。7.7: 「`ds` に segno 無し→追わない」は握りつぶしではなく絵のまま＝註に名前・網 `ADalSegnoWithNoSegno_IsNotFollowed` が観測／診断は §1.0 ⒝ ⑵。commit `5b80cb3f`（code）。push はユーザー。
+判定: D.C./D.S. の MIDI は閉じた（form-level）。次の一手: 第774 末の列挙の残り＝行末の裸の `__`（⑼ ⒞′・双子の歌詞・Lab `corpora/dogfood/big/` の choir 2 本）か、§1.0 ⒝ の跳躍の 3 軒（ユーザー判断）。会話を区切るか: (c) 裸の `__` はこの便と無関係の島＝既定どおり**続けられる**（文脈の圧縮は未・読み直しは `__` 側だけ）。
+
 ## 以下は第774セッションの経緯
 
 ### 1.1 第774セッション（2026-10-03・YT-DELL2）
