@@ -199,6 +199,27 @@ internal sealed class ChordNameCollector
     /// <summary>All collected chord-name items.</summary>
     public IReadOnlyList<ChordNameItem> Items => _items;
 
+    /// <summary>
+    /// Scales the timings of one chord row's symbols in one bar by
+    /// <paramref name="to"/>/<paramref name="from"/> — the share each keeps when
+    /// <c>MeasureCollector.FitRowsToMusicBars</c> refits that bar's spacers from
+    /// <paramref name="from"/> to the music's <paramref name="to"/> (a pickup, a header meter
+    /// longer or shorter than the book's). The symbols were gridded on the book's meter
+    /// (<see cref="ChordRhythm"/>) and are drawn at their timing on the row's columns
+    /// (<c>ChordNameEngraver.SymbolX</c>), so a bar refitted without them left `Am F` of a
+    /// 3/2 bar at 0 and 2/4 where the twin's slots stand at 0 and 3/4
+    /// (<c>LilyPondExporter.ChordBarText</c>, which scales the same way).
+    /// </summary>
+    internal void RescaleRowBar(int staffIndex, int measureIndex, Fraction from, Fraction to)
+    {
+        for (int k = 0; k < _items.Count; k++)
+        {
+            var it = _items[k];
+            if (it.IsChordRow && it.UseTiming && it.StaffIndex == staffIndex && it.MeasureIndex == measureIndex)
+                _items[k] = it with { Timing = it.Timing * to / from };
+        }
+    }
+
     /// <summary>The mutable list, for the checkpoint/resume probe only — inline
     /// <c>@chord</c> items are appended DURING the primary walk, so a resumed walk
     /// adopts this table's prefix like the collector's own lists

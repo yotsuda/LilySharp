@@ -3087,6 +3087,28 @@ public class LilyPondExporterTests
     }
 
     [Fact]
+    public void LeadSheet_OfChordsAlone_ClocksAHeadersLongerMeter()
+    {
+        // A chords-only sheet whose section header says `time 3/2` on a 4/4 book: the page's
+        // rows are fitted to the longer bar (MeasureCollector.FitRowsToMusicBars, session
+        // 782), so the clock the twin writes off the page agrees with the chord stream the
+        // twin scales to the meter — before, `\time 4/4 s1 |` stood against `a2.:m f2.`.
+        var ly = Export("""
+            time 4/4
+            key c major
+            section A { chords prog { C | G | } }
+            section B {
+              time 3/2
+              chords prog { Am F | G C | }
+            }
+            form main { A B }
+            score main { chords prog }
+            """);
+        Assert.Contains("leadSheetTiming = {\n  \\time 4/4 s1 |\n  s1 |\n  \\time 3/2 s1. |\n  s1. |\n}", ly);
+        Assert.Contains("a2.:m f2.", ly);
+    }
+
+    [Fact]
     public void LeadSheet_OfChordsAlone_HasTheTrackToo_AndAStaffScoreHasNone()
     {
         const string book = """

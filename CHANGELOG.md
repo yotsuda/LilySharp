@@ -371,6 +371,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A chord or lyric row's bars follow a section's longer meter.** A section header's
+  `time 3/2` on a 4/4 book left a row's bars at 4/4 — a chords-only sheet drew them a whole
+  short and its `.ly` twin's clock disagreed with its own chord stream (a bar check failure);
+  with a staff the row's chords stood on the 4/4 grid inside the 3/2 bar. A row's bar is now
+  as long as the music's at that index either way, and its chords and syllables keep their
+  share of it (a pickup, the shorter case, already did).
 - **A chord grid's section label stands clear of the meter.** On a staffless sheet whose
   grid row carries the chord symbols, the section's box is set on the symbols' line — and
   that row engraves the meter at the line start, so the box was printed over it (`Verse`

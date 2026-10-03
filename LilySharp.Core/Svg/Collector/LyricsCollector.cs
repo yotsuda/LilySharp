@@ -48,6 +48,32 @@ internal sealed class LyricsCollector
     /// <summary>All collected lyric syllables (note-bound and row).</summary>
     public IReadOnlyList<LyricItem> Lyrics => _lyrics;
 
+    /// <summary>
+    /// Scales the timings of one independent lyrics ROW's syllables in one bar by
+    /// <paramref name="to"/>/<paramref name="from"/> — the share each keeps when
+    /// <c>MeasureCollector.FitRowsToMusicBars</c> refits that bar's spacers to the music's
+    /// length (a pickup, a header meter longer or shorter than the book's), as
+    /// <c>ChordNameCollector.RescaleRowBar</c> does for a chord row. A row's syllables are
+    /// gridded on the book's meter (<see cref="CollectRow"/>) and drawn at their timing on the
+    /// row's columns (the IsLyricsRow path of <c>LyricEngraver</c>), so they have to move with
+    /// the spacers. A melisma's end moment in that bar moves the same way. A row that SINGS a
+    /// part is never refitted (its skeleton IS the melody's bars) and is untouched.
+    /// </summary>
+    internal void RescaleRowBar(int staffIndex, int measureIndex, Fraction from, Fraction to)
+    {
+        for (int k = 0; k < _lyrics.Count; k++)
+        {
+            var it = _lyrics[k];
+            if (!it.IsLyricsRow || it.StaffIndex != staffIndex)
+                continue;
+            if (it.MeasureIndex == measureIndex)
+                it = it with { Timing = it.Timing * to / from };
+            if (it.MelismaEndMeasureIndex == measureIndex)
+                it = it with { MelismaEndTiming = it.MelismaEndTiming * to / from };
+            _lyrics[k] = it;
+        }
+    }
+
     /// <summary>Lyric lines with more syllables than notes (trailing words dropped).</summary>
     public IReadOnlyList<LyricSyllableWarning> Warnings => _warnings;
 

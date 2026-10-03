@@ -1806,7 +1806,13 @@ public sealed partial class MeasureCollector
             rowNames.Add(rowName);
         // …and a score with NO music voice reads the same clock off its structure
         // (RowsOnlyBarLengths): the header's pickup and meter, which no walk applied to a row.
-        FitRowsToMusicBars(staffVoices, rowNames, RowsOnlyBarLengths(tree.GetRoot(), staffVoices, rowNames));
+        var rowStaffIndex = new Dictionary<string, int>();
+        foreach (var (rowName, rowIdx, _) in pendingChordRows)
+            rowStaffIndex[rowName] = rowIdx;
+        foreach (var (rowName, rowIdx, _) in pendingLyricsRows)
+            rowStaffIndex[rowName] = rowIdx;
+        FitRowsToMusicBars(staffVoices, rowNames, RowsOnlyBarLengths(tree.GetRoot(), staffVoices, rowNames),
+            rowStaffIndex);
 
         // A rows-only score prints its section labels from the FIRST row's
         // measures (that row is the PrimaryContentStaff fallback the mark
@@ -2635,17 +2641,31 @@ public sealed partial class MeasureCollector
 
     /// <summary>
     /// Fits every row's bars to the music's: where a music voice's bar at the same index is
-    /// SHORTER than the row's (a pickup, a bar under a meter change the row's grid never
-    /// saw), the row's spacers are scaled down to that length, share for share — the same
-    /// rule the LilyPond twin applies to a pickup's chord slots (LilyPondExporter.ChordBarText).
+    /// a different length from the row's (a pickup, a bar under a meter change the row's
+    /// grid never saw — shorter OR longer), the row's spacers are scaled to that length,
+    /// share for share — the same rule the LilyPond twin applies to every chord bar
+    /// (LilyPondExporter.ChordBarText, which scales a bar's slots to the music's meter there).
     /// A rows-only score (no music voice) reads the same lengths off its structure instead
     /// (<paramref name="rowsOnlyBars"/>, <see cref="RowsOnlyBarLengths"/>), and a bar that
-    /// table calls a pickup is flagged one for the numbering; a row bar no longer than the
-    /// music is left as it is.
+    /// table calls a pickup is flagged one for the numbering; a row bar of the music's length
+    /// is left as it is.
     /// </summary>
-    private static void FitRowsToMusicBars(
+    /// <remarks>
+    /// Until session 782 only a LONGER row bar was fitted, so a section header's <c>time 3/2</c>
+    /// on a 4/4 book left the row's bars at 4/4: a chords-only sheet drew them a whole short,
+    /// and its LilyPond twin wrote the page's 4/4 clock (<c>leadSheetTiming</c>) against the
+    /// chord stream's <c>a2.:m f2.</c>, which the twin itself had already scaled to the meter
+    /// — a bar check failure the page caused (Lab sessions/p782/probes/longmeter). With a staff
+    /// the same row stood its chords on the 4/4 grid inside the 3/2 bar, where the twin spread
+    /// them over the whole bar.
+    /// </remarks>
+    private void FitRowsToMusicBars(
         Dictionary<string, ImmutableArray<Voice>> staffVoices, IReadOnlySet<string> rowNames,
-        IReadOnlyList<(Fraction Length, bool IsPickup)>? rowsOnlyBars)
+        IReadOnlyList<(Fraction Length, bool IsPickup)>? rowsOnlyBars,
+        // Each row's global staff index: the symbols and syllables of a refitted bar are
+        // keyed by it (ChordNameCollector.RescaleRowBar, LyricsCollector.RescaleRowBar), and
+        // they keep their share of the bar as the spacers do.
+        IReadOnlyDictionary<string, int> rowStaffIndex)
     {
         if (rowNames.Count == 0)
             return;
@@ -2691,7 +2711,7 @@ public sealed partial class MeasureCollector
                 var total = Fraction.Zero;
                 foreach (var it in measures[m].Items)
                     total += it.Duration;
-                if (total <= music)
+                if (total == music)
                 {
                     if (pickup)
                     {
@@ -2707,6 +2727,12 @@ public sealed partial class MeasureCollector
                         : it);
                 fitted ??= measures.ToArray();
                 fitted[m] = measures[m] with { Items = items.MoveToImmutable(), IsPickup = pickup || measures[m].IsPickup };
+                // …and the bar's symbols / syllables keep their share of it (session 782).
+                if (rowStaffIndex.TryGetValue(rowName, out int rowStaff))
+                {
+                    _chordNameCollector.RescaleRowBar(rowStaff, m, total, music);
+                    _lyricsCollector.RescaleRowBar(rowStaff, m, total, music);
+                }
             }
             if (fitted != null)
                 staffVoices[rowName] = ImmutableArray.Create(new Voice(rowName, fitted.ToImmutableArray()));

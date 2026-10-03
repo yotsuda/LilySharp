@@ -252,6 +252,50 @@ public class RowsOnlyFormOrderTests
         Assert.Equal(header.Length > 0, rowFirstBar.IsPickup);
     }
 
+    /// <summary>A section header's meter LONGER than the book's reaches the rows too
+    /// (session 782): the row's bars under <c>time 3/2</c> are as long as a staff's, with or
+    /// without a staff. Until then only a shorter music bar was fitted, so a chords-only sheet
+    /// drew the 3/2 bars a whole short and its twin's clock disagreed with its chord stream;
+    /// with a staff the chords stood on the 4/4 grid inside the 3/2 bar.</summary>
+    [Theory]
+    [InlineData("time 3/2", "e'1.", 3, 2)]
+    [InlineData("time 3/4", "e'2.", 3, 4)]   // the shorter way, fitted before too
+    [InlineData("", "e'1", 4, 4)]            // the control: the home meter
+    public void RowsOnlyGrid_TakesTheHeadersMeter_AsTheStaffDoes(string header, string bar, int num, int den)
+    {
+        string head = $$"""
+            time 4/4
+            part melody { clef treble }
+            section A {
+              melody { c'1 | d'1 | }
+              chords prog { C | G | }
+            }
+            section B {
+              {{header}}
+              melody { {{bar}} | {{bar}} | }
+              chords prog { Am F | G C | }
+            }
+            form main { A B }
+            """;
+        var staffless = Collect($"{head}\nscore main {{\n  chords prog\n}}");
+        var staffful = Collect($"{head}\nscore main {{\n  staff melody\n  chords prog\n}}");
+
+        static List<LilySharp.Core.Semantics.Fraction> BarLengths(LilySharp.Core.Svg.Model.MultiStaffScore score, string row)
+            => score.StaffGroups.SelectMany(g => g.Staves).SelectMany(s => s.Voices)
+                .Where(v => v.Name == row).SelectMany(v => v.Measures)
+                .Select(m => m.Items.Aggregate(LilySharp.Core.Semantics.Fraction.Zero, (sum, it) => sum + it.Duration))
+                .ToList();
+
+        var expected = new LilySharp.Core.Semantics.Fraction(num, den);
+        Assert.Equal(BarLengths(staffful, "prog"), BarLengths(staffless, "prog"));
+        Assert.Equal(new[] { new LilySharp.Core.Semantics.Fraction(1, 1), new LilySharp.Core.Semantics.Fraction(1, 1), expected, expected },
+            BarLengths(staffless, "prog"));
+        // …share for share: the second chord of `Am F` stands at the bar's middle, whatever
+        // its length (the chord items' timings are the row's own).
+        var secondChord = staffless.ChordNames.Where(c => c.MeasureIndex == 2).OrderBy(c => c.Timing).Last();
+        Assert.Equal(new LilySharp.Core.Semantics.Fraction(num, den * 2), secondChord.Timing);
+    }
+
     // The measured answer, pinned independently of the differential above — so a
     // regression that moves BOTH walks the same way still fails something.
     [Fact]
