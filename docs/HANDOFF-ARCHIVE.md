@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第787セッションの経緯
+
+### 1.1 第787セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザー「続けて」＝§1.0 ⒜ に第786 が起票した「rows-only の tempo」⑴⑵。`-Start p787`（HEAD `0507e940`・未 push 17）＝full **10960 / 0 / 2 / 10962**。§7 3.5 で第785 を ARCHIVE へ。
+- **⑴ 頁（commit 下記）**: rows-only の form walk `EnsureSectionStartsForRows.AdvanceSection` に section header の tempo の腕を足した＝staff 側 `ProcessSection` と同じ規則（開始小節 0 なら `CollectTempo`＝開始 tempo を置き換える・それ以外は section の最初の小節に Tempo の mark・pass ごと）。mark の組み立ては新 `SectionTempoMark`（1 軒＝staff 側の 2 分岐もこれを呼ぶ）。⚠️ anchor は `(0, Fraction.Zero)` で渡す＝default の Fraction は 0 ではなく `GetXForTiming` が小節の外（80.38）に置いた（1 回踏んだ）。**score に置かない part の music 中の `tempo` は描かないまま**＝LP と同じ（使われない変数の `\tempo` は鳴らない）・section-level だけが score の設定。網 `RowsOnlySectionTempoTests` 4 本（staff 付きとの差分: 式の列・mid-line の mark の符頭が bar 3 の和音の上・開始 section の tempo が header を置き換える・marking だけ・2 回演奏で 2 つ）。
+- **⑵ 双子（commit 下記）**: `EmitLeadSheetTiming` の Devnull の timing track に **頁が描く mark**（`MusicMarkEngraver.BuildAllMarks` の列＝header tempo・section tempo・section label・`sectionLabels none/plain` 込み）を小節頭に書く（新 `LeadSheetScoreMarks`・`EmitTempo(MusicMarkItem)`＝`EmitTempo` を値の核に割った）。**LP は Devnull の `\tempo`／`\mark` を聞く**（実測 `sessions/p787/probes/devnull.ly`＝Score の engraver は events-below で聞く）＝twin の chord 行に ♩=84 と Verse の箱が出る（`probes/lp-st.png`: ♩=111 が C・♩=90 が Am の上＝頁と同じ列）。navigation mark は別の綴りのまま（書かない）。網: `LilyPondExporterTests.LeadSheet_*` 3 本の期待を更新 ＋ 新 1 本（header＋section tempo・`~B` は label だけ隠す・`sectionLabels none` で label 無し）。
+- ⚠️ 観察: chords＋lyrics の rows-only twin は LP が `warning: staff-affinities should only decrease` を出す＝**第786 以前から**（p786 の `tcy-TCY.ly` でも同じ）・本便の変更とは無関係。
+- CHANGELOG Fixes 2 本。棚卸し `APPROXIMATIONS.md` 行番号 2 行・csv 不変。full **10965 / 0 / 2 / 10967**（網 +5）・snapshot 不動（fixture に section tempo の rows-only は無い）。
+- 掃き（998 冊・base＝`sessions/p786/exe-head`＝HEAD のコード・head＝p787・`sessions/p787/svg/sweep.log`・`sweep-ly.log`）: svg **差 0 / 1199**（section tempo の rows-only はコーパスに無い）／ly **差 11**＝label か tempo を持つ staffless の本の全部（test/chords-attached の grid・lead-sheet-chords・lead-sheet-lyrics・lead-sheet-repeat・lead-sheet・rows-song-sheet・samples/drunken-sailor ×2・amazing-grace の grid ×2・greensleeves の grid）＝timing track に `\mark`／`\tempo` が入った。**11 冊とも LP 2.26.0 で compile OK**（`sessions/p787/lp-twins/`・lead-sheet の「unterminated extender」は base でも出る）。
+★ `-End p787 -DiffBase 0507e940`（`end.log`）＝full **10965 / 0 / 2 / 10967**（網 +5）・門 全 OK（HANDOFF 残り 3,892 B・§1 残り 9,741 字・棚卸し差分なし）。7.5: Core **`+` 147** 行・REF +1（`LeadSheetScoreMarks` の translator-group.cc＝Devnull が聞かれる理由）・OWN 0＝数値は足していない。頁の腕は staff walk の既存規則の指し直し（`SectionTempoMark` 1 軒）、双子は LP 自身の綴り（`\tempo`・`\mark`）を既存の OWN の track に書く（新しい出所なし）。7.6: ⒟（指し直し）＋⒜（LP の綴り）。7.7: 匂いなし（guard 無し・sentinel は anchor の (0, Zero)＝staff 側と同じ値・平箱なし）。commit `ed9642a4`（code・網・CHANGELOG・棚卸し）＋ docs の commit。push はユーザー。
+判定: rows-only の tempo ⑴⑵ は閉じた（§1.0 から消した）。次の一手: ⒝ の設計級（跳躍の 3 軒・小節番号と和音行）か ⒜ の小物（lead sheet の grid の残り ⒝⒠・⑼ の残り）＝ユーザー判断。会話を区切るか: (c) 次は本便と無関係の島＝差は小さいが、(b) 便が 2 つで文脈はまだ軽い＝**続けてよい**（続けるなら `-Start p788`）。
+
 ## 以下は第786セッションの経緯
 
 ### 1.1 第786セッション（2026-10-04・YT-DELL2）
