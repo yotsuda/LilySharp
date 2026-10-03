@@ -248,7 +248,8 @@ internal static class BarNumberEngraver
         int numberOffset = 0,
         int gridBarlineRowIndex = -1,
         ImmutableArray<int> displayedNumbers = default,
-        ImmutableArray<Measure> measures = default)
+        ImmutableArray<Measure> measures = default,
+        MmrRunMap? runMap = null)
     {
         if (systems.IsDefaultOrEmpty || policy.Mode == Semantics.BarNumberMode.None)
             return ImmutableArray<BarNumberLayout>.Empty;
@@ -314,6 +315,20 @@ internal static class BarNumberEngraver
                 int measureIndex = ml.MeasureIndex;
                 bool isFirstSystem = sysIdx == 0;
                 bool isFirstInSystem = i == 0;
+
+                // A bar swallowed by a compressed multi-measure rest has no bar line of its
+                // own and no column: its layout sits at the run's end, so a number made for
+                // it would stand on top of the next bar's (seen by eye, session 767: `R1*2`
+                // under `barNumbers every 1` printed "16" over "17"). LilyPond makes a
+                // BarNumber only where a bar line stands (or at a break, or the start).
+                // LILYPOND-REF: lily/bar-number-engraver.cc:66-70 consider_creating_bar_number —
+                //   its comment: "Allow a bar number if any of these conditions is met: there
+                //   is a bar line, there is a break point, we are at the start of the piece";
+                //   acknowledge_bar_line sets saw_bar_line_, and a compressed run
+                //   (lily/multi-measure-rest.cc) spans ONE column pair, so no bar line is
+                //   acknowledged inside it.
+                if (runMap != null && runMap.IsInterior(measureIndex))
+                    continue;
 
                 // LP shows 1-based numbers. measureIndex is 0-based. A leading
                 // \partial pickup shifts everything down by one (numberOffset = -1)

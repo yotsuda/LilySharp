@@ -1106,6 +1106,10 @@ public sealed partial class MeasureCollector
         foreach (var (i, from) in SectionBoundaryContinuations(measures))
             measures[i] = measures[i] with { ContinuesBar = true, ContinuedFromMeasure = from == i - 1 ? -1 : from };
 
+        // Clef changes written at one moment fold into the last of them (ClefChangeCollapse —
+        // the multi-staff road applies it in CollectStaffVoices).
+        ClefChangeCollapse.Apply(measures, ParseClefType(_meta.InitialClef));
+
         // A tie carried over a repeat to a play that is not printed next: its repeat tie and
         // hanging tie (SectionTieCarry — the multi-staff road applies it in CollectStaffVoices).
         ApplySectionTieCarry(measures);
@@ -2532,10 +2536,14 @@ public sealed partial class MeasureCollector
     /// </summary>
     private ImmutableArray<Voice> CollectStaffVoices(string voiceName)
     {
+        // The clef the walk starts from, read BEFORE the walk moves it (the single-staff road
+        // reads _meta.InitialClef, which that road alone sets).
+        var startClef = ParseClefType(_meta.Clef);
         var track0 = CollectMeasuresForVoice(voiceName); // clears + fills _parallelSpans
         if (_lastEndsOffTheBar)
             _offBarVoices.Add(voiceName);
         ResolveBeamStemDirections(track0);
+        ClefChangeCollapse.Apply(track0, startClef);
         ApplySectionTieCarry(track0);
 
         var voices = ImmutableArray.CreateBuilder<Voice>();

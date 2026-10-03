@@ -195,6 +195,42 @@ score main ""test"" { staff melody }
         Assert.Equal(ClefType.Treble, m2Changes[0].NewClef);
     }
 
+    /// <summary>
+    /// Clef changes written at ONE moment fold into the last of them, and into nothing when
+    /// that restores the clef in force — LilyPond's Clef_engraver compares once per
+    /// timestep (lily/clef-engraver.cc:139-165 inspect_clef_properties). Two <c>cue treble</c>
+    /// regions back to back on an alto part used to write the alto restore and the next
+    /// region's treble at the same column, drawn on top of each other (session 767).
+    /// </summary>
+    [Fact]
+    public void ClefChangesAtOneMoment_FoldIntoTheLast_AndIntoNothingWhenItRestoresTheClef()
+    {
+        static System.Collections.Generic.List<(int Measure, ClefType Clef)> Changes(string music)
+        {
+            var tree = TestPaper.ParseAtIndentZero(
+                "octave absolute\npart va { clef alto }\nsection A { va { " + music + " } }\n"
+                + "form main { A }\nscore main \"test\" { staff va }\n");
+            var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+            var voice = score.StaffGroups[0].Staves[0].Voices[0];
+            var found = new System.Collections.Generic.List<(int, ClefType)>();
+            for (int m = 0; m < voice.Measures.Length; m++)
+                foreach (var cc in voice.Measures[m].Items.OfType<ClefChangeItem>())
+                    found.Add((m, cc.NewClef));
+            return found;
+        }
+
+        // Two cue regions, one per bar: the treble at the first region's start and the
+        // alto restore at the second's end — nothing at the bar line between them.
+        Assert.Equal([(0, ClefType.Treble), (2, ClefType.Alto)],
+            Changes("c'4 d' cue treble { e''4 f'' } | cue treble { g''4 a'' b'' c''' } | d'4 e' f' g' |"));
+        // Two changes at one moment that end elsewhere: only the last stands.
+        Assert.Equal([(1, ClefType.Bass), (2, ClefType.Alto)],
+            Changes("c'4 d' e' f' | clef treble clef bass c4 d e f | clef alto g4 a b c' |"));
+        // A lone change is left alone, and one with a note between stays two.
+        Assert.Equal([(1, ClefType.Treble), (1, ClefType.Bass)],
+            Changes("c'4 d' e' f' | clef treble c''4 clef bass d4 e f |"));
+    }
+
     [Fact]
     public void ClefChange_RenderedInSvg_ChangeGlyphs()
     {

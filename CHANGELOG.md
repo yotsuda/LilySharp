@@ -357,6 +357,15 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **Bars inside a compressed multi-measure rest carry no bar number.** Under
+  `barNumbers every N` the bars `R1*3` folds away were numbered anyway, and their numbers
+  stood at the rest's end on top of the next bar's ("16" over "17"). As in LilyPond, a number
+  is made only where a bar line stands: `c1 | R1*2 | d1 |` numbers 1, 2 and 4.
+- **Clef changes written at one moment fold into the last of them.** Two `cue treble { … }`
+  regions back to back on an alto part — one per bar — drew the alto restore and the next
+  region's treble cue clef on top of each other at the bar line; `clef treble clef bass c4`
+  drew both too. LilyPond's clef engraver compares once per moment, so only the last clef
+  set is drawn, and nothing when it restores the clef in force. A lone change is untouched.
 - **A shape that disagrees with its symbol under a capo is told so in sounding names.** The
   check (LYS1039) ran in the pressed frame and printed the written symbol beside the pressed
   recognition, so `chord(G 320003)` under `capo 2` said "'320003' sounds G B D, which is G, not

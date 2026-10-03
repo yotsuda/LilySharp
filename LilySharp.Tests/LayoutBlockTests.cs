@@ -395,6 +395,24 @@ public class LayoutBlockTests
             Lay(EightBars("layout { barNumbers every 1 }\n")).BarNumberLayouts.Select(b => b.Text));
     }
 
+    /// <summary>
+    /// A bar a compressed multi-measure rest swallows has no bar line and no column of its
+    /// own, so it carries no number: LilyPond makes a BarNumber only where a bar line stands
+    /// (lily/bar-number-engraver.cc:66-70). Under <c>every 1</c> the swallowed bars' numbers
+    /// used to be made anyway and stood at the run's end on top of the next bar's (seen by
+    /// eye, session 767: "16" over "17").
+    /// </summary>
+    [Fact]
+    public void EveryN_SkipsTheBarsACompressedRestSwallows()
+    {
+        string book = "layout { barNumbers every 1 }\npart m { clef treble }\n"
+            + "section A { m { c1 | R1*2 | d1 | R*3 | e1 | } }\nform main { A }\nscore main { staff m }\n";
+        var layout = Lay(book);
+        Assert.Equal(new[] { "1", "2", "4", "5", "8" }, layout.BarNumberLayouts.Select(b => b.Text));
+        // …and the numbers that stand are each at their own column.
+        Assert.Equal(layout.BarNumberLayouts.Length, layout.BarNumberLayouts.Select(b => b.X).Distinct().Count());
+    }
+
     [Fact]
     public void EveryN_CountsTheDisplayedNumber_NotTheMeasureIndex()
     {

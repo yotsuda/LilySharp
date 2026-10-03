@@ -1225,7 +1225,12 @@ internal sealed partial class LayoutEngine
             numberOffset: barNumberOffset,
             gridBarlineRowIndex: ctx.GridBarlineRowIndex,
             displayedNumbers: BarNumberEngraver.NumberMeasures(measures, barNumberOffset),
-            measures: measures);
+            measures: measures,
+            // The bars a compressed multi-measure rest swallows carry no number (the
+            // engraver's remark); the run map is the score's, built once per score.
+            runMap: ctx.MultiScore is { } mmrScore ? MmrRunMap.ForScore(mmrScore)
+                : ctx.Score is { } mmrSingle ? MmrRunMap.Build(MultiMeasureRestEngraver.FindRuns(mmrSingle))
+                : null);
         // Forced-above dynamics (@f.up) join the above-staff pass so they clear, and are
         // cleared by, the other above-staff grobs. Below dynamics were already placed by
         // StackBelowStaff and pass through untouched.
