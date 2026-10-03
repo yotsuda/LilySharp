@@ -123,10 +123,10 @@ score main "out" {           // one or more render blocks
     <tr><td>Comments</td><td><code>// to end of line</code> and <code>/* block */</code></td></tr>
     <tr><td>Case</td><td><b>Everything is case-sensitive.</b> <code>Treble</code> is not <code>treble</code>; it is an unknown symbol and an error, never a silent fallback.</td></tr>
     <tr><td>Identifiers</td><td>Any Unicode letters. <code>phrase 動機 { … }</code> is fine.</td></tr>
-    <tr><td>Strings</td><td>Double quotes: <code>"Für Elise"</code></td></tr>
+    <tr><td>Strings</td><td>Double quotes, with C#'s escapes: <code>"say \"hi\""</code>, <code>"a\\b"</code>, <code>"\u00e9"</code>. A backslash that is no escape is an error. The verbatim form <code>@"C:\music"</code> takes a backslash as written, and <code>""</code> inside it is one quote.</td></tr>
     <tr><td>Numbers</td><td>Integers, and decimals as <i>values</i> (<code>3.5</code>). A decimal is never a duration — <code>c4.5</code> is an error, <code>c4.</code> is a dotted quarter.</td></tr>
     <tr><td>Units</td><td>Glued to the number: <code>210mm</code>, <code>8.5in</code>. A space (<code>210 mm</code>) is an error that names the glued spelling.</td></tr>
-    <tr><td>Annotation prefix</td><td><code>@</code>. The backslash is used for one thing only: a string number (<code>c'\3</code>).</td></tr>
+    <tr><td>Annotation prefix</td><td><code>@</code>. Outside a string the backslash is used for one thing only: a string number (<code>c'\3</code>).</td></tr>
   </table>
   <p>Whitespace and newlines are not significant. You can put a whole part on one line or
   one bar per line; the samples on the <a href="index.html">showcase page</a> do both.</p>
@@ -197,7 +197,9 @@ score main "out" {           // one or more render blocks
     <tr><td><code>fis8</code></td><td>F♯ eighth</td></tr>
     <tr><td><code>r4</code></td><td>quarter rest</td></tr>
     <tr><td><code>s4</code></td><td>invisible spacer rest</td></tr>
-    <tr><td><code>R1</code></td><td>full-measure rest</td></tr>
+    <tr><td><code>R</code></td><td>full-measure rest — it lasts the bar it opens, in any meter (five quarters in 5/4, a pickup's length in the pickup), must open its bar, and leaves the running duration alone</td></tr>
+    <tr><td><code>R*3</code></td><td>one rest over three bars, its count printed above it (<code>R | R | R</code> stays three)</td></tr>
+    <tr><td><code>R1</code> <code>R2.*4</code></td><td>a full-measure rest of a written length, as in LilyPond</td></tr>
     <tr><td><code>a,4@rest</code></td><td>a rest printed where the note <code>a,</code> would sit</td></tr>
     <tr><td><code>&lt;c e g&gt;4</code></td><td>chord</td></tr>
     <tr><td><code>&lt;c 3 5&gt;4</code></td><td>the same triad by scale degree</td></tr>
@@ -262,7 +264,8 @@ score main "out" {           // one or more render blocks
 &lt;&lt; c . . d &gt;&gt;4   // 3:1 — c8. d16 (never glued: c. would be a duration dot, 3. a decimal)
 &lt;&lt; c@accent e\3 g( a) &gt;&gt;   // a member carries scripts, string numbers, fingering, dynamics, slur marks
 &lt;&lt; c e g &gt;&gt;4\2   // on the group: a dynamic, a chord name, a string number (every member's);
-                 //   a ~ or ( written after &gt;&gt; hangs on the last member</pre>
+                 //   a ~ or ( written after &gt;&gt; hangs on the last member
+&lt;&lt; chord(C x32010) &gt;&gt;2   // a shape is SPREAD: its strings in turn, lowest first — five, under 5:4</pre>
   <p>The tuplet is spelled the way engraving convention spells it — the member count against
   the power of two below it (3:2, 5:4, 7:4), a dotted total against 3 (2:3, 4:3) — from the
   total number of shares.</p>
@@ -277,6 +280,7 @@ score main "out" {           // one or more render blocks
 <pre>c4~ | c4 d e f       // tie — same pitch, with ~
 c4( d e f)           // slur — different pitches, with ( )
 &lt;c e&gt;4( &lt;d f&gt;)       // a slur may bind chords too
+&lt;c e( g&gt;4 &lt;d f) a&gt;   // ...or one note of each: the mark after the pitch, inside the brackets
 c8[ d e f]           // manual beam; beaming is automatic otherwise
 c4@phrasingSlur d( e) f g@!phrasingSlur   // a phrasing slur over a whole phrase; ordinary slurs may sit inside</pre>
   <p>A tie whose next note is a different pitch warns and tells you to use a slur instead.
@@ -453,9 +457,13 @@ part sing   { clef treble transpose d }</pre>
     <tr><td><code>midiInstrument</code></td><td>a quoted General MIDI sound, <code>midiInstrument "acoustic bass"</code> — what playback sounds like, overriding the preset's</td></tr>
     <tr><td><code>pedal</code></td><td><code>text</code> ("Ped. … *"), <code>bracket</code> (the default) or <code>mixed</code> — how this part's pedal marks are drawn</td></tr>
   </table>
-  <p>Part names are ordinary identifiers and may not be reserved words — except the four
-  clef words <code>treble bass alto tenor</code>, which are allowed, so a part called
-  <code>bass</code> is fine.</p>
+  <p>A part may be named almost any word — <code>part bass</code>, <code>part p</code>,
+  <code>part percussion</code>, <code>part c</code> all compile. Only the structural keywords
+  are refused: the words that open a block of their own (<code>voice</code>,
+  <code>staff</code>, <code>section</code>, <code>grace</code>, …), the section settings
+  (<code>key</code>, <code>time</code>, <code>tempo</code>, …) and the form's own words
+  (<code>segno</code>, <code>break</code>, …); the error lists them. A section is named by
+  the same rule.</p>
 
   <h3><code>instrument</code> — one word, several answers</h3>
   <p>Naming an instrument is not just a label. The preset settles everything a part needs
@@ -562,6 +570,12 @@ section Main { melody { motif g2 g | } }</pre>
   time 3/4
   melody { g4 a b | }
 }</pre>
+  <p>A <code>key</code>, <code>time</code> or <code>clef</code> that changes nothing draws
+  nothing. At a section's start it is compared with what the section before it left in
+  force, so a section that continues in the same key prints no second signature. To draw one
+  anyway — a courtesy key at a new movement, a clef restated after a long rest — write
+  <code>!</code> right after the keyword: <code>key! ees major</code>, <code>time! 3/4</code>,
+  <code>clef! bass</code>. After the value, <code>!</code> is the dashed barline.</p>
 
   <h3>Grouped by section, or by part</h3>
   <p>The examples on this page are grouped <b>by section</b>: each section lists the music of
@@ -771,16 +785,23 @@ form main { |: A :|*3 }
 form practice { Verse }        // a second form = a second output</pre>
   <table class="g">
     <tr><th>Written</th><th>Means</th></tr>
-    <tr><td><code>|: … :|</code></td><td>repeat; count defaults to the number of endings, or 2</td></tr>
-    <tr><td><code>:|*N</code></td><td>an explicit play count</td></tr>
+    <tr><td><code>|: … :|</code></td><td>repeat; without endings the body plays twice</td></tr>
+    <tr><td><code>:|*N</code></td><td>an explicit play count, for a repeat without endings</td></tr>
     <tr><td><code>[1. Name]</code></td><td>a volta ending — the first stands just before the <code>:|</code>, each later one just after one. The <code>]</code> ends it and hooks the bracket's right end down; it may be left off only right before a <code>:|</code> (<code>[1. B C :|</code>, hooked). An unclosed last ending is an error</td></tr>
     <tr><td><code>[2. Name -]</code></td><td>the same ending with a straight (open) right end</td></tr>
+    <tr><td><code>[1-2. Name]</code> <code>[1,3. Name]</code> <code>[1,3,5. Name]</code></td><td>a range or a list of passes, as long as you like; the bracket prints them as LilyPond does (“1. 2.”, “1.–3.”, “1. 3.”)</td></tr>
     <tr><td><code>[1. B C]@voltaBracket(2)</code></td><td>how far this ending's bracket reaches — <code>all</code>, <code>line</code> or a number of bars — over the layout's <code>voltaBracket</code>; a bracket cut short always ends straight</td></tr>
     <tr><td><code>[1. B C]</code></td><td>an ending of several sections, played in order under one bracket</td></tr>
     <tr><td><code>~Name</code></td><td>hide that play's rehearsal label</td></tr>
     <tr><td><code>Name'</code> <code>Name,</code></td><td>shift that play's octave — one section quoted at two octaves is <code>~B ~B'</code></td></tr>
     <tr><td><code>"Label"</code></td><td>a custom printed label for that play</td></tr>
   </table>
+  <p><b>With endings, the numbers are the passes.</b> The repeat plays as many passes as the
+  highest number, and each pass plays the ending that names it: <code>|: A [1-2. B] :| [3.
+  C]</code> is A B A B A C. A pass no ending names, or two name, is an error, and so is a
+  count beside endings — <code>|: A [1. B] :|*3 [2. C]</code> is refused with the numbered
+  spelling. The passes are written with <code>,</code> or <code>-</code>; <code>[1.3.
+  B]</code>, the printed points, is an error that names both.</p>
   <p>An ending needs a repeat to be an ending <i>of</i>: written without one, no bracket is
   drawn and a warning says the <code>1.</code> prints nothing. And a repeat needs a body —
   the music every pass plays: <code>|: [1. B] :| [2. C]</code> is an error.</p>
@@ -789,7 +810,14 @@ form practice { Verse }        // a second form = a second output</pre>
   section; text directives (<code>fine</code>, <code>to coda</code>, <code>dc</code>,
   <code>ds</code>, and <code>dc al fine</code>, <code>ds al coda</code>) engrave at the end
   of the section just played.</p>
-<pre>form main { A segno  B to coda  C ds al coda  coda D }</pre>
+<pre>form main { A segno  B to coda  C ds al coda  coda D }   // the MIDI plays A B C B D</pre>
+  <p>The MIDI follows the jump texts as a player reads them: <code>dc</code> goes back to
+  the beginning and <code>ds</code> to after the last <code>segno</code>; <code>al fine</code>
+  ends the piece at the first <code>fine</code> of the replay, <code>al coda</code> goes on
+  from the <code>coda</code> sign after the jump, and a bare <code>dc</code> /
+  <code>ds</code> goes on after the jump. On the replay a repeat plays once. A
+  <code>ds</code> with no <code>segno</code> before it, and a mark written in the music, are
+  drawn and not followed.</p>
   <p>The same bare words may also be written in a section's music at a barline boundary.
   They are landmarks, never note modifiers, so <code>c4@segno</code> is an error and putting
   one mid-measure warns.</p>
@@ -843,7 +871,10 @@ form practice { Verse }        // a second form = a second output</pre>
   two players — unisons become one notehead marked <code>a2</code>, different notes in the
   same rhythm within a ninth become one voice of chords, a lone part is marked
   <code>Solo</code>. The chord case is the usual outcome, not a corner; use
-  <code>condensedStaff</code> when the lines must stay visibly separate.</p>
+  <code>condensedStaff</code> when the lines must stay visibly separate. A condensed staff
+  takes one key, one meter and one clef at a moment: a <code>time</code> both parts write is
+  drawn once, and a later part's change that differs from the first part's at the same
+  moment is not applied and warns — write the same change in every part.</p>
   <p>Because these are score items, one source prints both the condensed score and the
   separate parts:</p>
 <pre>score main "full"  { condensedStaff { fl1 fl2 } }
@@ -868,6 +899,12 @@ score main {
   <p><code>\N</code> pins a note to string N when the automatic choice is not the one your
   fingers want: <code>c'\2</code>. Technique letters (<code>@tap @hammerOn @pullOff
   @pluck(i)</code>) print on the tab, because they are ink a guitarist reads there.</p>
+  <p>Fret numbers are set in the regular weight; <code>fonts { tab bold }</code> brings the
+  bold face back, and <code>fonts { tab size 3 }</code> makes them a little larger (the
+  default is 2.8). A word after <code>tab</code> that names a declared part is that part —
+  <code>tab bass click</code> is part <code>bass</code>'s tab plus the MIDI-only
+  <code>click</code>, as after a <code>staff</code>; for a tuning over a part that shares a
+  tuning word's name, write the synonym: <code>tab bass4 click</code>.</p>
   <p>Chord diagrams over the staff, and <code>chord(C x32013)</code> — a chord written as a
   fretboard shape, which the tab then shows string for string — are on
   <a href="chords.html">Chords and chord diagrams</a>.</p>
@@ -900,6 +937,7 @@ score main {
   sans  "Verdana"                      //   "the whole document's text"
   lyrics "Charis SIL" "Noto Serif CJK JP"      // several names = a fallback chain
   tempo "Playfair Display"             // one role beats the group it belongs to
+  title "Cormorant" size 3.8 bold      // a face, an absolute size, a weight; or step +1, a LilyPond font-size step
   embedded                             // subset the named faces into the PDF
 }</pre>
   <p>Keys are a generic family, a group, or a single role, and the <b>narrower</b> spelling
@@ -988,8 +1026,11 @@ tuplet grace acciaccatura appoggiatura lyrics chords tuning
 override revert once
 segno fine coda dc ds al to
 ppp pp p mp mf ff fff</pre>
-  <p>The four clef words <code>treble bass alto tenor</code> are the exception: they may
-  still be used as part, section and phrase names. Single letters <code>a</code>–<code>g</code>
+  <p>Most of them may still name a part or a section — only the structural words are refused
+  (see <a href="#parts">Parts</a>). A phrase name is narrower, because a phrase is played
+  bare in the music: an identifier, the four clef words <code>treble bass alto tenor</code>,
+  or a dynamic word (<code>phrase p { … }</code>, played by a bare <code>p</code>); any other
+  keyword is refused at the declaration. Single letters <code>a</code>–<code>g</code>
   are pitches and <code>r</code>/<code>R</code>/<code>s</code> are rests — note that
   <code>f</code> is a pitch, while <code>@f</code> still works because dynamics resolve from
   the annotation's text. <code>q</code>, <code>chord</code> and the drum names are reserved
@@ -1011,6 +1052,9 @@ ppp pp p mp mf ff fff</pre>
     <tr><td><code>4 g f e</code> opening a part's music</td><td>A bare duration repeats the previous note, chord or slash - and nothing repeatable comes before this one…</td></tr>
     <tr><td><code>c4 d e f :|</code></td><td>':|' is a repeat, so it belongs in the form, not in the music…</td></tr>
     <tr><td><code>repeat volta 2 { … }</code></td><td>'repeat volta' is LilyPond's spelling. In Lily# a repeat is written in the form…</td></tr>
+    <tr><td><code>|: A [1. B] :|*3 [2. C]</code></td><td>A repeat with endings takes its passes from the endings' numbers: remove '*3' and number every pass instead — the pass an ending plays on is the number it prints: three passes, the first two on B, are '|: A [1-2. B] :| [3. C]'.</td></tr>
+    <tr><td><code>[1.3. B]</code></td><td>An ending's passes are separated by ',' or '-', not by points: write '[1,3.' for passes 1 and 3, or '[1-3.' for the range. The bracket prints the points itself.</td></tr>
+    <tr><td><code>@text("say \^")</code></td><td>'\^' is not an escape sequence. A string follows C#'s escapes (\" \\ \n \t \uXXXX …); write '\\' for a backslash, or use a verbatim string @"…", which takes a backslash as written.</td></tr>
     <tr><td><code>\relative { … }</code></td><td>Lily# is relative by default — drop '\relative …'; switch modes with 'octave absolute'.</td></tr>
     <tr><td><code>clef Treble</code></td><td>Unknown clef 'Treble'. clef names are case-sensitive; known: alto, baritone, bass, …</td></tr>
     <tr><td><code>fonts "Georgia"</code></td><td><code>fonts</code> binds a face per text role, so it takes a block…</td></tr>
