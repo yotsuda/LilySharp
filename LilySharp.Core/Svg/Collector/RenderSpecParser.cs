@@ -598,6 +598,25 @@ public static class RenderSpecParser
     }
 
     /// <summary>
+    /// <see cref="Choose"/>'s policy with the chosen score's DECLARATION beside its spec —
+    /// for a caller that writes one arrangement from one score (the language server's
+    /// single export): the midi takes the spec's form and parts, the twin takes the
+    /// declaration's staves. Null for a file that declares no score.
+    /// </summary>
+    public static (RenderDeclarationSyntax Declaration, RenderSpec Spec)? ChooseDeclared(
+        SyntaxTree tree, string? renderName)
+    {
+        var scores = FindAllDeclared(tree);
+        if (!string.IsNullOrEmpty(renderName))
+        {
+            foreach (var score in scores)
+                if (MatchesName(score.Spec, renderName!))
+                    return score;
+        }
+        return scores.Count > 0 ? scores[0] : null;
+    }
+
+    /// <summary>
     /// <c>condensedStaff { partA partB … }</c> → one staff carrying every named part's
     /// voices. The clef is the FIRST part's, since a condensed staff has only one and the
     /// leading part is the one whose register the writer put on top.

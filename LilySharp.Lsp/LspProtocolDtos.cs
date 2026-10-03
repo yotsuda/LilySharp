@@ -222,8 +222,9 @@ public class ExportParams
     /// <summary>Absolute path to write the exported file to (one score). Ignored when
     /// <see cref="All"/> is set.</summary>
     public string OutputPath { get; set; } = "";
-    /// <summary>Score to export (visual formats); null = first/default score. Ignored
-    /// when <see cref="All"/> is set.</summary>
+    /// <summary>Score to export — drawn by the visual formats, and its FORM, parts and
+    /// staves written by MIDI, MusicXML and the LilyPond twin; null = first/default
+    /// score. Ignored when <see cref="All"/> is set.</summary>
     public string? RenderName { get; set; }
     /// <summary>Write EVERY score the file declares into <see cref="OutputDirectory"/>,
     /// named the way <c>lysc --all</c> names them (<c>RenderSpec.ResolveOutputStem</c>:

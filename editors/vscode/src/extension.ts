@@ -1316,8 +1316,9 @@ function revealInFileManager(file: string) {
 
 // Export the currently-previewed score: open the save dialog straight away and let
 // its "Save as type" dropdown choose the format; the saved file's extension decides
-// what the language server generates. SVG/PNG/PDF honour the selected score, and so
-// does MIDI (the score's parts, its form); MusicXML exports the primary form.
+// what the language server generates. Every format honours the selected score:
+// SVG/PNG/PDF draw it; MIDI, MusicXML and the LilyPond source write ITS form (and MIDI
+// its parts), as `lysc <format> --score NAME` does.
 async function exportPreview(
     uri: string,
     renderName: string | undefined

@@ -724,9 +724,12 @@ public sealed partial class LilySharpLanguageServer
     /// in OutputPath) and the Explorer's batch export (any <c>.lys</c>, open or not — an
     /// open one by TextDocument so its unsaved edits are what gets written, as the
     /// preview shows them, else by Path from disk — with <c>All</c> writing EVERY score
-    /// into OutputDirectory under the CLI's <c>--all</c> names). SVG/PNG/PDF honour the
-    /// score; MIDI, MusicXML and the LilyPond twin export a form — the score's own under
-    /// <c>All</c> (the CLI's RunFormOutput), the primary otherwise.
+    /// into OutputDirectory under the CLI's <c>--all</c> names). Every format honours the
+    /// score: SVG/PNG/PDF draw it, and MIDI, MusicXML and the LilyPond twin write ITS form
+    /// (the CLI's RunFormOutput — <c>lysc midi --score practice</c> writes `form practice`).
+    /// Until 2026-10-03 the one-score export handed the three a null form, which is the
+    /// PRIMARY one: the preview's Export button on <c>score practice { tab bass }</c>, whose
+    /// form starts at section B, wrote a .mid that began with section A (owner report).
     /// </summary>
     [JsonRpcMethod("lilysharp/export", UseSingleObjectParameterDeserialization = true)]
     public Task<ExportResponse> ExportAsync(ExportParams @params, CancellationToken token)
@@ -791,7 +794,10 @@ public sealed partial class LilySharpLanguageServer
         {
             if (!@params.All)
             {
-                var written = WriteExport(tree, format, @params.OutputPath, @params.RenderName, form: null);
+                // The score the preview DRAWS (Choose's policy: the name, else the first),
+                // with its declaration — the one the playback request plays, too.
+                var chosen = RenderSpecParser.ChooseDeclared(tree, @params.RenderName);
+                var written = WriteExport(tree, format, @params.OutputPath, @params.RenderName, chosen);
                 // The dialog's path names ONE file; a multi-page PNG writes several, so
                 // report what was actually written so the toast isn't a lie.
                 var reported = written.Count == 1
@@ -808,8 +814,8 @@ public sealed partial class LilySharpLanguageServer
 
             var outputs = new List<string>();
             var warnings = new List<string>();
-            var specs = RenderSpecParser.FindAll(tree);
-            if (specs.Count == 0)
+            var scores = RenderSpecParser.FindAllDeclared(tree);
+            if (scores.Count == 0)
             {
                 // A file with no `score` block has exactly one thing to write (the CLI's
                 // RunFormOutput says the same), under the file's own name.
@@ -821,14 +827,15 @@ public sealed partial class LilySharpLanguageServer
                 // first score is what the CLI writes too — say what was left out
                 // ("If you drop something, say so in Warnings", HANDOFF §2F).
                 outputs.AddRange(WriteExport(tree, format, Path.Combine(dir, stem + ext), null, null));
-                if (specs.Count > 1)
+                if (scores.Count > 1)
                     warnings.Add($"{stem}: a .vsqx holds one arrangement — wrote the first score, left out "
-                        + string.Join(", ", specs.Skip(1).Select(s => s.Name)));
+                        + string.Join(", ", scores.Skip(1).Select(s => s.Spec.Name)));
             }
             else
             {
-                foreach (var spec in specs)
+                foreach (var score in scores)
                 {
+                    var spec = score.Spec;
                     var target = Path.Combine(dir, spec.ResolveOutputStem(stem) + ext);
                     if (outputs.Contains(target, StringComparer.OrdinalIgnoreCase))
                     {
@@ -841,7 +848,7 @@ public sealed partial class LilySharpLanguageServer
                     // The selector the generators resolve with (RenderSpecParser.Choose):
                     // the basename when the score has one, else its form name.
                     var selector = string.IsNullOrEmpty(spec.OutputFile) ? spec.Name : spec.OutputFile;
-                    outputs.AddRange(WriteExport(tree, format, target, selector, spec.Form));
+                    outputs.AddRange(WriteExport(tree, format, target, selector, score));
                 }
             }
             return new ExportResponse
@@ -861,12 +868,13 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>
     /// Writes one export and returns every file it produced — one, except a multi-page
     /// PNG. <paramref name="renderName"/> picks the score for the visual formats;
-    /// <paramref name="form"/> picks the arrangement for MIDI, MusicXML and the twin
-    /// (null = the primary form, what the preview's button has always exported).
+    /// <paramref name="score"/> — the same score, with its declaration — gives MIDI,
+    /// MusicXML and the twin their arrangement: ITS form, its parts, its staves. Null is a
+    /// file with no <c>score</c> block: the primary form, every part.
     /// </summary>
     private static List<string> WriteExport(
         SyntaxTree tree, string format, string outputPath, string? renderName,
-        LilySharp.Core.Syntax.FormDeclarationSyntax? form)
+        (LilySharp.Core.Syntax.RenderDeclarationSyntax Declaration, RenderSpec Spec)? score)
     {
         switch (format)
         {
@@ -907,33 +915,33 @@ public sealed partial class LilySharpLanguageServer
                 File.WriteAllBytes(outputPath,
                     LilySharp.Core.Pdf.PdfGenerator.Generate(tree, null, renderName));
                 return [outputPath];
+            // The three one-arrangement formats take the score's own form, as the CLI's
+            // `--score` gives it (Program.cs WriteMidi / WriteXml / WriteLy): the same
+            // exporter settings, so the button and the command line write one file.
             case "midi":
-                // The named score's parts sound (its form is `form`); a request naming no
-                // score writes the file's first, as the preview draws it.
+                // The score's parts sound, in its form.
                 new LilySharp.Core.Midi.MidiExporter
                 {
-                    Form = form,
-                    Score = RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), renderName),
+                    Form = score?.Spec.Form,
+                    Score = score?.Spec,
                 }.Export(tree).Save(outputPath);
                 return [outputPath];
             case "musicxml":
-                new LilySharp.Core.MusicXml.MusicXmlExporter { Form = form }.ExportToFile(tree, outputPath);
+                new LilySharp.Core.MusicXml.MusicXmlExporter { Form = score?.Spec.Form }.ExportToFile(tree, outputPath);
                 return [outputPath];
             case "vsqx":
                 new LilySharp.Core.Vocaloid.VsqxExporter().Export(tree).Save(outputPath);
                 return [outputPath];
             case "ly":
-            {
-                // Export-all names each score (form + selector): the twin engraves THAT
-                // score's staves, not the file's first score's (LilyPondExporter.Score).
-                // The single export keeps its primary-form contract above.
-                var score = form != null && renderName != null
-                    ? RenderSpecParser.FindDeclaredByName(tree, renderName)?.Declaration
-                    : null;
+                // The twin engraves THAT score's staves, not the file's first score's
+                // (LilyPondExporter.Score) — two scores of one form differ only there.
                 File.WriteAllText(outputPath,
-                    new LilySharp.Core.LilyPond.LilyPondExporter { Form = form, Score = score }.Export(tree));
+                    new LilySharp.Core.LilyPond.LilyPondExporter
+                    {
+                        Form = score?.Spec.Form,
+                        Score = score?.Declaration,
+                    }.Export(tree));
                 return [outputPath];
-            }
             default:
                 throw new ArgumentException($"Unknown format: {format}");
         }

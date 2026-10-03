@@ -122,6 +122,33 @@ public sealed class ExportRequestTests : IDisposable
             File.ReadAllText(Path.Combine(Out, "two-sub.ly")));
     }
 
+    // The preview's Export button: one score, named. `sub` plays Main twice and `main` once,
+    // so a form-driven format that honours the name writes a different file for each — and
+    // the same file the batch export writes for that score. Until 2026-10-03 the one-score
+    // call handed MIDI, MusicXML and the twin a null form (the primary): the owner's
+    // `score practice` on `form practice { B … }` exported a .mid that began with section A.
+    [Theory]
+    [InlineData("midi", ".mid")]
+    [InlineData("musicxml", ".xml")]
+    [InlineData("ly", ".ly")]
+    public void OneScore_GivesAFormDrivenFormat_ThatScoresOwnForm(string format, string ext)
+    {
+        var book = Book("two.lys", TwoScores);
+        var subOnly = Path.Combine(_dir, "sub-only" + ext);
+        var mainOnly = Path.Combine(_dir, "main-only" + ext);
+
+        var sub = Server().Export(new ExportParams { Path = book, Format = format, OutputPath = subOnly, RenderName = "sub" });
+        var main = Server().Export(new ExportParams { Path = book, Format = format, OutputPath = mainOnly, RenderName = "main" });
+        var all = Server().Export(new ExportParams { Path = book, Format = format, All = true, OutputDirectory = Out });
+
+        Assert.True(sub.Success, sub.Error);
+        Assert.True(main.Success, main.Error);
+        Assert.True(all.Success, all.Error);
+        Assert.Equal(File.ReadAllBytes(Path.Combine(Out, "two-sub" + ext)), File.ReadAllBytes(subOnly));
+        Assert.Equal(File.ReadAllBytes(Path.Combine(Out, "two" + ext)), File.ReadAllBytes(mainOnly));
+        Assert.NotEqual(File.ReadAllBytes(mainOnly), File.ReadAllBytes(subOnly));
+    }
+
     [Fact]
     public void All_Vsqx_WritesTheFirstScore_AndSaysWhatItLeftOut()
     {

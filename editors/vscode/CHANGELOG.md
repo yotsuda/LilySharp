@@ -176,6 +176,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Fixes
 
+- **The preview's Export button writes the selected score's own form** to MIDI, MusicXML
+  and LilyPond source. With the picker on `score practice` whose `form practice` starts at
+  section B, the .mid began with section A (the file's primary form); it now begins at B,
+  as `lysc midi --score practice` does.
 - **A tie into the next section sounds as one note in the preview's playback** in a book of
   more than one part (it was played twice).
 - **An `@chord` on a rest or a spacer draws in the preview** (`r1@chord(C x32013)`,

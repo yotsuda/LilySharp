@@ -357,6 +357,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **The preview's Export button writes the selected score's own form.** With the picker
+  on `score practice { tab bass }` and `form practice { B C … }`, Export to MIDI, MusicXML
+  or LilyPond wrote the file's primary form — the .mid began with section A, which the
+  practice form never plays — while the parts and the page were the practice score's.
+  The three now take the score's form, as `lysc midi --score practice` always did; the
+  Explorer's batch export already did.
 - **Bars inside a compressed multi-measure rest carry no bar number.** Under
   `barNumbers every N` the bars `R1*3` folds away were numbered anyway, and their numbers
   stood at the rest's end on top of the next bar's ("16" over "17"). As in LilyPond, a number
