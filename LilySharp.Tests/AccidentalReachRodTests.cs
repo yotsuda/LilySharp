@@ -115,4 +115,61 @@ public class AccidentalReachRodTests
             Assert.Empty(reach);
         }
     }
+
+    /// <summary>
+    /// Every column is walked, not only an accidental's: two plain heads of one staff with
+    /// another staff's column between them carry the rod LilyPond's set_column_rods raises
+    /// over any pair whose ink can reach. The owner's piano-sonatina (Lab corpora/dogfood/big,
+    /// 2026-10-03): <c>tuplet 3/2 { e'8 f' g' }</c> over Alberti eighths — the f' on 1/12 and
+    /// the g' on 1/6 with the left hand's 1/8 between them — drew the g' 1.10 after the f' on
+    /// an eight-bar line, the heads touching; LilyPond 2.26.0 holds 2.17 there (its line is
+    /// less crammed) and never less than the rod. Counter-case: the same bar with no left
+    /// hand, where the two columns ARE adjacent and the pair pass prices them.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void APlainHead_IsRoddedToItsOwnVoicesNote_PastAColumnItDoesNotShare(bool leftHand)
+    {
+        var tree = SyntaxTree.Parse($$"""
+            octave absolute
+            time 4/4
+            part rh { clef treble }
+            part lh { clef bass }
+            section S {
+              rh { tuplet 3/2 { e'8 f' g' } c'4~ c'2 | }
+              lh { {{(leftHand ? "c8 g e g c g e g" : "c1")}} | }
+            }
+            form main { S }
+            score main { grandStaff { staff rh  staff lh } }
+            """);
+        Assert.False(tree.HasErrors);
+        var multi = SvgGenerator.CollectScore(tree, RenderSpecParser.FindAll(tree).First());
+        var measures = MultiStaffLayouter.CollectAllMeasuresAtIndex(multi, 0);
+        var timings = MultiStaffLayouter.CollectAllTimingsForMeasure(multi, 0);
+        var rods = new List<(int Left, int Right, double Distance)>();
+
+        MeasureLayouter.AddAccidentalReachRods(multi.TextMetrics, measures, timings,
+            MultiStaffLayouter.CollectStavesOfMeasuresAtIndex(multi, 0), rods);
+
+        // Three eighths in the time of two: the f' on 1/12, the g' on 1/6, the left hand's
+        // 1/8 between them. By value, so a tuplet onset's spelling cannot miss.
+        int f = timings.FindIndex(t => System.Math.Abs(t.ToDouble() - 1.0 / 12) < 1e-9);
+        int g = timings.FindIndex(t => System.Math.Abs(t.ToDouble() - 1.0 / 6) < 1e-9);
+        Assert.True(f >= 0 && g >= 0, string.Join(" ", timings.Select(t => t.ToString())));
+        var reach = rods.Where(r => r.Left == f + 1 && r.Right == g + 1).ToList();
+        if (leftHand)
+        {
+            Assert.Equal(f + 2, g);                       // the left hand's 1/4 stands between
+            // The rod: the spanner's 0.1 over the f' column's right skyline against the g''s
+            // left — the head and its up-stem, 1.5 — the same 1.604200 LilyPond's dump carries
+            // for two eighths (SpacingRules.SeparationRodDistance's measurement).
+            Assert.InRange(Assert.Single(reach).Distance, 1.55, 1.65);
+        }
+        else
+        {
+            Assert.Equal(f + 1, g);                       // adjacent: the pair pass's rod
+            Assert.Empty(reach);
+        }
+    }
 }

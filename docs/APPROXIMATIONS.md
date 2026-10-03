@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 59 | 観測者がゼロだと自認しているもの |
-| `OWN` | 218 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **337** | |
+| `OWN` | 219 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **338** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -236,7 +236,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（218 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（219 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **:90** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
@@ -459,6 +459,8 @@
 - **:176** ⚠️ LILYSHARP-OWN, what remains: the LEAD-SHEET halves (keepEdgeHalves — user
 - **:197** Leading extent: LILYSHARP-OWN, keepEdgeHalves only — on a LEAD SHEET the line's
 - **:412** leading/trailing halves (LILYSHARP-OWN, a user decision — see
+### `LilySharp.Core/Svg/Layout/MeasureLayouter.cs`
+- **:350** LILYSHARP-OWN: the walk stops four items back (LilyPond's overhang test runs until no
 ### `LilySharp.Core/Svg/Layout/MeterGlyphRun.cs`
 - **:108** LILYSHARP-OWN, a text character LilyPond spells with markup.
 - **:143** ⚠️ LILYSHARP-OWN: the fallback branch. The only non-digit that reaches here is the

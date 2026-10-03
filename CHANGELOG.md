@@ -650,6 +650,16 @@ workflow attaches that section to the GitHub Release verbatim.
   stop sits on the first bar after the run — also when that bar restates a clef, key or
   meter, or opens the next section, where it used to be dropped. A two-bar body is now a
   `%%` in the file too, where it was only written out.
+- **Two notes of one staff with another staff's note between them keep their distance on a
+  compressed line.** In a piano book, `tuplet 3/2 { e'8 f' g' }` over Alberti eighths puts
+  a left-hand column between the f' and the g', and on an eight-bar line the g' was drawn
+  1.1 spaces after the f' — the heads touching (owner's report, the dogfood sonatina).
+  LilyPond raises a minimum distance (a rod) between every pair of columns whose ink can
+  reach each other, not only neighbours; Lily# raised it only for a column with an
+  accidental. Every column is walked now, and the gap holds at the rod, 1.6 for two eighths,
+  as LilyPond holds it. The line itself is still laid out eight bars wide where LilyPond
+  breaks the page into one system more — the line breaker's cost of a crammed line does not
+  yet feel these rods — so the bar reads tight, but nothing overlaps.
 - **The bar check lets a `voice { } { }` span end mid-bar.** `voice { d2 } { d4. d8 } d8 c
   bes a |` is one full 4/4 bar whose lower voice sounds for its first half, and the page
   draws it so; the check held the lower voice's chunk to the meter and warned LYS2001

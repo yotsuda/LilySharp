@@ -314,8 +314,10 @@ internal sealed class MeasureLayouter
     }
 
     /// <summary>
-    /// The rods an ACCIDENTAL raises past its neighbour: to the notes further left in its own
-    /// voice that its ink can still reach, each spanning the springs between.
+    /// The rods a column raises past its neighbour: to the columns further left on its STAFF
+    /// that its ink can still reach — its own voice's and the other voices' — each spanning the
+    /// springs between. (Named for the accidental it was first written for; it has walked every
+    /// item since 2026-10-03.)
     /// </summary>
     /// <remarks>
     /// <para>
@@ -329,13 +331,26 @@ internal sealed class MeasureLayouter
     /// two columns on, while c → a is 1.604200.
     /// </para>
     /// <para>
-    /// Only the accidental's column is walked, against its own voice and the other voices of
-    /// its STAFF: the conditional parts are the ones a column's skyline hangs past its
-    /// neighbour, and a separation skyline is a staff's. Every rod goes to
-    /// <see cref="SpringSolver.ApplyRods"/>, which drops the ones the springs' minimums already
-    /// satisfy (range_len at −infinity), so LilyPond's reach test (the overhangs) is answered
-    /// there rather than estimated here; the walk stops four items back, past which no
-    /// accidental reaches.
+    /// ⚠️ IT IS EVERY COLUMN'S WALK, NOT THE ACCIDENTAL'S. A column of the OTHER staff standing
+    /// between two of this staff's notes makes them non-adjacent, and the adjacent-pair pass
+    /// then prices each of the two gaps against a column this staff has nothing in — minimum
+    /// 0, the hemiola branch — so under compression the two heads met: in the owner's
+    /// piano-sonatina (Lab corpora/dogfood/big, 2026-10-03) `tuplet 3/2 { e'8 f' g' }` over
+    /// Alberti eighths put the g' 1.10 after the f' on an eight-bar line (LilyPond 2.26.0
+    /// keeps 2.17 there, the rod 0.1 + the head). Until then only an accidental's column was
+    /// walked (the gate was the first measurement's shape, not LilyPond's letter: set_column_rods
+    /// reads the columns' horizontal skylines, whatever ink they hold).
+    /// </para>
+    /// <para>
+    /// The walk is against its own voice and the other voices of its STAFF: the conditional
+    /// parts are the ones a column's skyline hangs past its neighbour, and a separation
+    /// skyline is a staff's. Every rod goes to <see cref="SpringSolver.ApplyRods"/>, which
+    /// drops the ones the springs' minimums already satisfy (range_len at −infinity), so
+    /// LilyPond's reach test (the overhangs) is answered there rather than estimated here.
+    /// LILYSHARP-OWN: the walk stops four items back (LilyPond's overhang test runs until no
+    /// column can reach); four is where the accidental measurement above stopped binding, and
+    /// a head's reach is shorter than an accidental's — the bound is a cost cap, four skyline
+    /// distances an item at most.
     /// ⚠️ APPROXIMATIONS: the walk stays inside the bar (LilyPond's runs over the whole line,
     /// bar-line columns included), and another voice's item is rodded at no collision shift
     /// (the adjacent pair's pass, ApplyCrossVoiceColumnSpacing, reads the shifts).
@@ -352,10 +367,7 @@ internal sealed class MeasureLayouter
         for (int vi = 0; vi < measuresToScan.Count; vi++)
         {
             var items = measuresToScan[vi].Items;
-            bool anyAccidental = false;
-            foreach (var item in items)
-                if (HasAccidental(item)) { anyAccidental = true; break; }
-            if (!anyAccidental)
+            if (items.Length < 2)
                 continue;
 
             int staffLines = stavesOfMeasures is { } staves && staves.Count == measuresToScan.Count
@@ -378,12 +390,15 @@ internal sealed class MeasureLayouter
                 onset += item.Duration;
             }
 
-            for (int r = 2; r < own.Count; r++)
+            // The voice's own earlier items at NON-ADJACENT columns — the adjacent pair is the
+            // pair pass's (CreateInterColumnSpring's maxRod); the item just before may itself be
+            // two columns back when another staff's column stands between.
+            for (int r = 1; r < own.Count; r++)
             {
-                if (!HasAccidental(own[r].Item))
-                    continue;
-                for (int l = r - 2; l >= 0 && l >= r - maxReach; l--)
+                for (int l = r - 1; l >= 0 && l >= r - maxReach; l--)
                 {
+                    if (own[r].Column - own[l].Column < 2)
+                        continue;
                     double rod = SpacingRules.SeparationRodDistance(
                         fonts, own[l].Item, own[r].Item, staffY: 0, staffLines: staffLines);
                     if (rod > 0)
@@ -392,7 +407,7 @@ internal sealed class MeasureLayouter
             }
 
             // …and the OTHER voices of the same staff: a separation skyline is the staff's,
-            // not the voice's, so an accidental is held off whatever another voice drew in a
+            // not the voice's, so an item is held off whatever another voice drew in a
             // column it can reach. The adjacent column is priced already (the cross-voice pass,
             // SpacingRules.ApplyCrossVoiceColumnSpacing); what it cannot see is a column the
             // staff shares with NOBODY in between — another staff's notes put a column there.
@@ -403,8 +418,6 @@ internal sealed class MeasureLayouter
             if (stavesOfMeasures is { } byStaff && byStaff.Count == measuresToScan.Count)
                 for (int ri = 0; ri < own.Count; ri++)
                 {
-                    if (!HasAccidental(own[ri].Item))
-                        continue;
                     int column = own[ri].Column;
                     for (int oj = 0; oj < measuresToScan.Count; oj++)
                     {
@@ -448,22 +461,6 @@ internal sealed class MeasureLayouter
             if (found.Count > count)
                 found.RemoveRange(0, found.Count - count);
             return found;
-        }
-
-        static bool HasAccidental(MusicItem item) => item switch
-        {
-            NoteItem { Accidental: not null } => true,
-            ChordItem c => ChordHasAccidental(c),
-            _ => false,
-        };
-
-        // Indexed: an ImmutableArray walked through LINQ boxes its enumerator (RULES §5.3).
-        static bool ChordHasAccidental(ChordItem c)
-        {
-            for (int k = 0; k < c.Notes.Length; k++)
-                if (c.Notes[k].Accidental != null)
-                    return true;
-            return false;
         }
     }
 
