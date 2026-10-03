@@ -371,6 +371,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A mid-line bar number on a lead sheet stands beside the chord names.** With
+  `barNumbers every N` a number inside the line took a staff's height — padding above the top
+  staff line — under the chord row, and on a row carrying chord diagrams it printed through
+  the fingering digits. Where the bar's chord stands within reach of the number, LilyPond sets
+  the number on the chord row, 1.0 over the symbols' baseline, and so does Lily# now; a bar
+  with no chord near its line keeps the number on the staff, and line-start numbers are
+  unchanged.
 - **A chord grid prints a section's tempo.** On a chords-only or chords-and-lyrics sheet a
   section header's `tempo` (`section Chorus { tempo 4 = 90 … }`) drew nothing — only the
   file's tempo was printed — while the MIDI and the `.ly` twin carried it. The grid now prints

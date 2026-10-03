@@ -1239,6 +1239,9 @@ internal sealed partial class LayoutEngine
             gridBarlineRowIndex: ctx.GridBarlineRowIndex,
             displayedNumbers: BarNumberEngraver.NumberMeasures(measures, barNumberOffset),
             measures: measures,
+            // A mid-line number re-parents onto a chord row whose symbol stands within 1.0
+            // of it (the engraver's remark, session 788); the placed symbols are the reach.
+            chordNames: chordNameLayouts,
             // The bars a compressed multi-measure rest swallows carry no number (the
             // engraver's remark); the run map is the score's, built once per score.
             runMap: ctx.MultiScore is { } mmrScore ? MmrRunMap.ForScore(mmrScore)

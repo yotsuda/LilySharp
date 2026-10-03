@@ -2444,8 +2444,26 @@ internal static class OutsideStaffStacker
             // found nothing to re-parent onto, and the top placed staff stands in.
             // LILYPOND-REF: lily/side-position-interface.cc:545-547 move_to_extremal_staff.
             int anchorStaff = bn.AnchorStaffIndex ?? topStaff[sysIdx];
-            double move = trackers(sysIdx, anchorStaff)
-                .Place(bnUp, bnDown, OutsideStaffPadding);
+            // A MID-LINE number a chord ROW hosts above a staff (BarNumberEngraver
+            // .MidLineRowAnchor, session 788) is already placed the way LilyPond places it —
+            // padding 1.0 off the symbols' baseline, 0.46 over a symbol it overlaps — so it is
+            // NOT placed again: a chord row above a staff has no room of its own here (its
+            // tracker is a flat base at the band's TOP with no symbol profile — AboveTrackers'
+            // FlatBase, Lily#'s band model), and placing the number against that lifted it to
+            // the band top + 0.46 (MEASURED, ledger barnumber.mid-line.chord-row.*: 2.360000
+            // of lift = 0.46 − (−1.9), 3.360000 over the baseline for LilyPond's 1.0). It is
+            // RESERVED in the top staff's room instead, where the Score-level movers that
+            // come after it (voltas 600, marks 1500) are placed, so they clear it as
+            // LilyPond's do (all_v_skylines.push_back). The staffless sheet's number keeps the
+            // pass: there the grid row IS the anchor.
+            if (bn.AnchorStaffIndex is { } host
+                && StaffAffinity.TopSpaceableStaff(systems[sysIdx]) is { } hostStaff
+                && host != hostStaff.StaffIndex)
+            {
+                trackers(sysIdx, hostStaff.StaffIndex).Reserve(bnUp, bnDown, OutsideStaffPadding);
+                continue;
+            }
+            double move = trackers(sysIdx, anchorStaff).Place(bnUp, bnDown, OutsideStaffPadding);
             b[i] = bn with { YUp = bn.YUp + move };
         }
         return b.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
@@ -3329,6 +3347,15 @@ internal static class OutsideStaffStacker
             // its own padding.
             _entries.Add((supportUp, supportDown, 0.0, 0.0));
         }
+
+        /// <summary>
+        /// Appends a grob's pair WITHOUT moving it: for a grob whose own pass has already
+        /// placed it against this room's ink (a mid-line bar number a chord row hosts,
+        /// PlaceBarNumbers), so that the later movers of the room clear it as LilyPond's do
+        /// (all_v_skylines.push_back) while its own position stays the engraver's.
+        /// </summary>
+        public void Reserve(VerticalSkyline up, VerticalSkyline down, double padding)
+            => _entries.Add((up, down, padding, 0.0));
 
         /// <summary>Merges more inside-staff ink into the support entry. Must be
         /// complete before the first <see cref="Place"/> — LilyPond builds the

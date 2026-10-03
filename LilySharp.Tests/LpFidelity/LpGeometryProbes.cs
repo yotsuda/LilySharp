@@ -4719,6 +4719,45 @@ internal static class LpGeometryProbes
         }
         """;
 
+    /// <summary>
+    /// A MID-LINE bar number (<c>barNumbers every 1</c>) with a chord row leading the system
+    /// — the mirrors of barnumber-mid-line.ly's BNM (a chord on every bar), BNT (every chord
+    /// sharped) and BNE (a chord in bar 1 only). Session 788, the leadsheet-collide report of
+    /// session 767: Lily# set every number at the staff's height and printed through the
+    /// chord diagrams' fingering; LilyPond sets a mid-line number beside the chord names.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's move-to-extremal-staff re-parents a mid-line number onto the chord row when
+    /// a symbol stands within 1.0 of it (the bar's chord, at the bar's first column), drops
+    /// the staff from its support set and pads 1.0 off the row's refpoint — the symbols'
+    /// baseline. MEASURED 2.26.0: BNM and BNT 1.000000 over the chord baseline (the row's
+    /// height does not enter); BNE's numbers 2 and 4, with no symbol in reach, 3.050000 over
+    /// the STAFF — the line-start value (its "3" clears a stem under it, 4.56). One system,
+    /// four bars; the entries read the number "2".
+    /// </remarks>
+    private static string MidLineBarNumberScore(string name, string chords) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+        layout { barNumbers every 1 }
+
+        section Main {
+          melody { c'4 d' e' f' | g' a' b' c'' | c''4 b' a' g' | f' e' d' c' | }
+          chords harm { {{chords}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          chords harm
+          staff melody
+        }
+        """;
+
+    private static readonly string BNM = MidLineBarNumberScore("BNM", "C | G | Am | F |");
+    private static readonly string BNT = MidLineBarNumberScore("BNT", "C# | G# | A#m | F# |");
+    private static readonly string BNE = MidLineBarNumberScore("BNE", "C | | | |");
+
     /// <summary>The same music two octaves up — the mirror of book BNH.</summary>
     private static readonly string BNH = BarNumberScore("BNH", "''");
 
@@ -15562,6 +15601,16 @@ internal static class LpGeometryProbes
         // LilyPond's is 2.05 + padding 1.0 = 3.050000 for every numeral, chord row or not.
         new("barnumber.chord-row.staff-to-ink-bottom", BNC,
             g => g.FirstBarNumberInkBottomAboveStaff(), RaggedBottomPaper),
+        // ...and the MID-LINE number on that sheet (books BNM/BNT/BNE, session 788): where
+        // the bar's chord stands within 1.0, LilyPond re-parents the number onto the chord
+        // row and pads 1.0 off the symbols' baseline (the pair's identity is the claim);
+        // where no symbol is in reach, the number keeps the staff, 2.05 + 1.0.
+        new("barnumber.mid-line.chord-row.row-to-ink-bottom", BNM,
+            g => g.BarNumberInkBottomAboveChordRow("2"), RaggedBottomPaper),
+        new("barnumber.mid-line.chord-row.tall.row-to-ink-bottom", BNT,
+            g => g.BarNumberInkBottomAboveChordRow("2"), RaggedBottomPaper),
+        new("barnumber.mid-line.no-chord-near.staff-to-ink-bottom", BNE,
+            g => g.BarNumberInkBottomAboveStaff("2"), RaggedBottomPaper),
 
         // ...and the SAME QUESTION for the SECTION LABEL (books MKR/MKN), which the entry
         // above did not settle even though its own `why' stated the general fact. A mark

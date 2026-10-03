@@ -183,8 +183,8 @@
 - **:863** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
 - **:1140** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
-- **:2451** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
-- **:2473** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
+- **:2454** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
+- **:2476** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
 - **:919** THE CLEAR HAS NO OBSERVER HERE, and that was measured rather than assumed. Session 457's
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
@@ -382,8 +382,8 @@
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:128** LILYSHARP-OWN (owner's decision 2026-09-27: "the diagram stands below the name, between
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
-- **:285** ⚠️ LILYSHARP-OWN, AND IT IS THE BAND TOP, NOT LILYPOND'S REFPOINT.
-- **:301** Lily#'s own object, hence LILYSHARP-OWN rather than a REF.
+- **:294** ⚠️ LILYSHARP-OWN, AND IT IS THE BAND TOP, NOT LILYPOND'S REFPOINT.
+- **:310** Lily#'s own object, hence LILYSHARP-OWN rather than a REF.
 ### `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs`
 - **:253** LILYSHARP-OWN, owner's decision 2026-09-24 (session 569, The Final Countdown's tab). On
 - **:731** LILYSHARP-OWN: LilyPond's charge there is 0/0 = NaN (dist/gap.length()
@@ -427,8 +427,8 @@
 - **:456** ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's mark aligns to the BreakAlignGroup,
 - **:487** LILYSHARP-OWN (2026-09-28): see for
 - **:1079** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
-- **:1864** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
-- **:2159** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
+- **:1867** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
+- **:2162** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
 - **:840** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
@@ -494,7 +494,7 @@
 - **:69** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
 - **:1197** system would hand back marks placed without the labels under them. LILYSHARP-OWN
-- **:3409** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
+- **:3436** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
 ### `LilySharp.Core/Svg/Layout/PageBreaker.cs`
 - **:100** ⚠️ LILYSHARP-OWN: THE NULLABILITY. LilyPond's Line_details ALWAYS carries a shape —
 - **:154** LILYSHARP-OWN: the number itself has no LilyPond counterpart, because LilyPond's

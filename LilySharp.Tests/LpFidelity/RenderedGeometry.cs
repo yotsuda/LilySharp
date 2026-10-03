@@ -848,6 +848,61 @@ internal sealed class RenderedGeometry
         return (below.Min() - t.Y) + ink.Bottom;
     }
 
+    /// <summary>
+    /// The bar number reading <paramref name="text"/>: its INK BOTTOM above the chord row's
+    /// baseline — the row LilyPond re-parents a MID-LINE number onto when a symbol stands
+    /// within 1.0 of it (probes/barnumber-mid-line.ly BNM/BNT: padding 1.0 off the ChordNames
+    /// group's refpoint, which IS the symbols' baseline). Font-free, as
+    /// <see cref="FirstBarNumberInkBottomAboveStaff"/> is.
+    /// </summary>
+    public double BarNumberInkBottomAboveChordRow(string text, int page = 0)
+    {
+        var t = SoleBarNumber(text, page);
+        var below = ChordSymbols.Select(c => c.Y).Where(y => y > t.Y).ToList();
+        if (below.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the bar number \"{text}\" at {t.Y:F6} has no chord row below it, so "
+                + "it is not riding over one.\nDrawn geometry:\n" + Describe());
+        }
+        var ink = LilySharp.Core.Rendering.TextFontMetrics.Ink(
+            t.Text, t.FontSize, sans: false, LilySharp.Core.Rendering.FontStyle.Bold);
+        return (below.Min() - t.Y) + ink.Bottom;
+    }
+
+    /// <summary>
+    /// The bar number reading <paramref name="text"/>: its INK BOTTOM above the staff
+    /// reference point below it — <see cref="FirstBarNumberInkBottomAboveStaff"/> for a
+    /// named number (probes/barnumber-mid-line.ly BNE: a mid-line number with no symbol
+    /// within reach stays on the staff, 2.05 + 1.0).
+    /// </summary>
+    public double BarNumberInkBottomAboveStaff(string text, int page = 0)
+    {
+        var t = SoleBarNumber(text, page);
+        var below = StaffRefpoints(page).Where(r => r > t.Y).ToList();
+        if (below.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the bar number \"{text}\" at {t.Y:F6} has no staff below it, so it "
+                + "is not riding over one.\nDrawn geometry:\n" + Describe());
+        }
+        var ink = LilySharp.Core.Rendering.TextFontMetrics.Ink(
+            t.Text, t.FontSize, sans: false, LilySharp.Core.Rendering.FontStyle.Bold);
+        return (below.Min() - t.Y) + ink.Bottom;
+    }
+
+    private DrawnText SoleBarNumber(string text, int page)
+    {
+        var numbers = BarNumbers.Where(n => n.Text == text).ToList();
+        if (numbers.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected ONE bar number reading \"{text}\", found {numbers.Count}."
+                + "\nDrawn geometry:\n" + Describe());
+        }
+        return numbers[0];
+    }
+
     public double FirstBarNumberBaselineAboveStaff(int page = 0)
     {
         var numbers = BarNumbers;
