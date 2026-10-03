@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第783セッションの経緯
+
+### 1.1 第783セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザー「続けて」＝先に §1.0 を畳み（⑼ の閉じた分の列挙・perf 島の重複 2 つ・⒵ の数字＝約 1.5 KB）、§1.0 ⒜ ⒟ **grid が途中の拍子変更を描かない**に着手。`-Start p783`（HEAD `d5edcecc`・未 push 9）＝full **10954 / 0 / 2 / 10956**。§7 3.5 で第781 を ARCHIVE へ。
+- **直した（commit 下記・Lab `sessions/p783/probes/longmeter/` に絵）**: ⑴ **collector**: `RowsOnlyBarLengths` の表が小節ごとの拍子（綴り＋source 位置）を持ち、`FitRowsToMusicBars` の rows-only 経路が拍子の変わる小節の先頭に `TimeSignatureChangeItem` を入れる（全行・`time none` は null＝描かない）。曲頭の section header の `time` は staff と同じく**初期拍子を置き換える**（`_meta` を書き換え・bar 0 に change item は無し＝今まで rows-only は file の拍子を prefix に描いていた＝別件の欠陥も同時に閉じた）。⑵ **renderer** grid 行: prefix は「最初の系の score.TimeSignature」か「行頭に hoist された change（`GetSystemStartTimeChange`）」、途中は **staff・tab と同じ `CollectStaffItems` の歩き**（hoist の複写の skip も共有）、行末の courtesy は `GetSystemEndTimeChange`（幅は `LineEndCourtesyWidth` が既に予約していた）。⑶ **mid-line の label**: row-line の label は小節頭の拍子変更の ink 右 ＋ 1.0（`RowLineLabelLeftPastOpeningMeter`＝第781 の line-start 規則の mid-line 読み）＝箱が `3/2` を貫いていた。⑷ **form の `break`／`noBreak`／`pageBreak`／`noPageBreak` が rows-only で無視されていた**（builder が書く flag＝rows-only は builder を持たない）＝`_rowsOnlyFormBreaks` を rows-only の form 歩きが集め `FitRows` が row の measures に当てる（MeasureBuilder の対応表と同じ）。
+- 網 `RowsOnlyMeterChangeTests` 5（mid-line＝staff と同じ glyph 列・X は bar 2 と bar 3 の symbol の間／break＝hoist＋courtesy 5 glyph＝staff と同じ列／曲頭 header＝3/4 だけで C 無し／1 つの拍子＝C だけ／form break＝系 2 つ・`noBreak`＝1 つ）。snapshot 不変。CHANGELOG Fixes。棚卸し `APPROXIMATIONS.md` 行番号のみ・csv 増減 0。
+- 掃き（998 冊・base＝開始時 HEAD `d5edcecc` の exe・head＝p783・`sessions/p783/svg/sweep.log`・`sweep-ly.log`）: svg **差 0 / 1199**・ly **差 0 / 1199**（LP 警告 801＝801）＝途中で拍子の変わる rows-only の本も form に `break` を書いた rows-only の本もコーパスに 0。
+★ `-End p783 -DiffBase d5edcecc`（`end.log`）＝full **10959 / 0 / 2 / 10961**（網 +5）・門 全 OK（HANDOFF 残り 7,105 B・§1 残り 10,294 字・棚卸し `APPROXIMATIONS.md` 行番号のみ）。7.5: スクリプトは commit 前で「Core `+` 0」＝手で `git diff d5edcecc -- LilySharp.Core`: **`+` 207 行**（`MeasureCollector` 109/−9＝`RowsOnlyBar`・表・change item と break の当て込み・`SharedRenderer` 38/−6・`MusicMarkEngraver` 50・`Form` 13）・REF 1（pageBreak の両 permission＝music-functions-init.ly:1411-1418・MeasureBuilder と同じ引用）・OWN 0（grid に拍子を描く決定そのものは 2026-08-20 の既存の OWN）。7.6: ⒝ staff の既存の規則（header の time→change item・hoist・courtesy・break の flag）を rows-only に写した＝出所は全部 MeasureCollector.Form／MeasureBuilder／SharedRenderer の staff 側の腕。7.7: `time none` の section の後の復帰を描かない（⒠）・mid-line label の window の押し出し（⒡）・pickup＋chord の timing は第782 の網が兼ねる。commit `01775fdd`（code・CHANGELOG・棚卸し）＋ docs の commit。push はユーザー。
+- ★★★ **ユーザー決定（2026-10-04・この便の最後・絵を見て）「その形は、セクションマークを上の段に書いた方が見やすい」→ 射程を訊いた答え「staff の無い sheet は常に上へ」＝2026-08-24 の決定（label は和音の行の線上）を覆す。** 次便（第784）で: `StafflessAnchorRefpointBelowTop` の腕を落とす（label は行の上の帯＝LP と同じ）・X 半分（`BoxedLabelXWindows`・`StafflessLabelLineStartReach`・第781 の `RowLineLabelLeft*`・第783 の `RowLineLabelLeftPastOpeningMeter`）も不要＝落とす・`RowsOnlySectionLabelTests`／`StafflessLabelSpacingTests` を書き換え・snapshot の lead sheet 群を再ベース・§3 の 2026-08-24 の決定を上書き・CHANGELOG。
+判定: ⒟ は閉じた（form の break も）。次の一手: **上の反転（ユーザー決定・第784）**。会話を区切るか: (a) 反転は今便と第781 の文脈（label の X の 3 か所と Y の腕）の上に立つ＝**続ける**（`-Start p784`）。
+
 ## 以下は第782セッションの経緯
 
 ### 1.1 第782セッション（2026-10-04・YT-DELL2）
