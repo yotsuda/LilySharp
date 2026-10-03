@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第782セッションの経緯
+
+### 1.1 第782セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザー「続けて」＝§1.0 ⒜ の残りのうち欠陥のほう **⒞ header の `time` が home より長い rows-only の sheet**（⒝ は設計どおりと確定済み）。`-Start p782`（HEAD `8f7b7eab`・未 push 7）＝full **10950 / 0 / 2 / 10952**。§7 3.5 で第780 を ARCHIVE へ。
+- **正体（Lab `sessions/p782/probes/longmeter/`）**: `FitRowsToMusicBars` は `total <= music` を素通し＝縮める側だけ。rows-only では section B（`time 3/2`）の小節が 4/4 のまま描かれ、双子の `leadSheetTiming` は頁を写すので `s1 |` ×4、chord stream は twin 自身が meter で scale した `a2.:m f2.`＝bar check が割れる。**staff のある本も同じ族**: 行の小節は音楽の 3/2 に揃うが、chord 行の symbol は 4/4 の grid の timing（0・2/4）のまま＝twin は 0・3/4。
+- **直した（commit 下記）**: ⑴ `FitRowsToMusicBars` は `total == music` 以外を全部 fit（伸ばす側も share for share）。⑵ 伸縮した小節の **symbol と syllable の timing も同じ比で動かす**＝`ChordNameCollector.RescaleRowBar`・`LyricsCollector.RescaleRowBar`（独立 lyrics 行だけ・`sings` の行は skeleton が melody そのものなので fit されない）。FitRows は instance method になり、行名→staff index の表（pendingChordRows・pendingLyricsRows）を受ける。⚠️ pickup（縮める側）でも chord の timing は今まで動いていなかった＝amazing-grace の pickup は空小節だったので見えなかった。
+- 網 `RowsOnlyFormOrderTests.RowsOnlyGrid_TakesTheHeadersMeter_AsTheStaffDoes` Theory 3（3/2・3/4・control＝staffful と同じ長さ・2 つ目の chord が小節の中点）・`LilyPondExporterTests.LeadSheet_OfChordsAlone_ClocksAHeadersLongerMeter`（`\time 3/2 s1. |` と `a2.:m f2.`）。snapshot 不変。CHANGELOG Fixes。棚卸し `APPROXIMATIONS.md` 行番号 2 行・csv 増減 0。
+- 掃き（998 冊・base＝開始時 HEAD `8f7b7eab` の exe・head＝p782・`sessions/p782/svg/sweep.log`・`sweep-ly.log`）: svg **差 0 / 1199**・ly **差 0 / 1199**（LP 警告の行数も base＝head 801）＝home より長い header `time` を持つ rows-only の本も、chord 行を持つ staff の本で途中の拍子が長くなる本も、コーパスに 0。
+- **見つけた別件（§1.0 ⒜ に起票）**: lead sheet の grid は拍子を**最初の系の prefix にしか描かない**（`SharedRenderer` の `isFirstSystem` 条件）＝section header の `time 3/2` は行の長さには効くが絵には出ない（probe の rows-only では B の小節が広いだけで `3/2` が無い・staff のある本は staff が描く）。
+★ `-End p782 -DiffBase 8f7b7eab`（`end.log`）＝full **10954 / 0 / 2 / 10956**（網 +4）・門 全 OK（**HANDOFF 残り 4,757 B**・§1 残り 9,556 字・棚卸し `APPROXIMATIONS.md` 行番号 2 行）。⚠️ **次便は §1.0 の重複と ✅ を先に落とすこと**（450,000 B まで 4.7 KB＝語り 1 便ぶん無い）。7.5: スクリプトは commit 前なので「Core `+` 0」＝手で `git diff 8f7b7eab -- LilySharp.Core`: **`+` 80 行**（`ChordNameCollector` 21・`LyricsCollector` 26＝`RescaleRowBar` ×2・`MeasureCollector` 35/−9＝fit の条件・表・remarks）・REF 0・OWN 0（規則は既存の「行の小節は音楽の小節と同じ長さ」＝Timing_translator の引用が同じ場所に在る）。7.6: ⒝ 既存の規則の片側（縮める）を両側にした＝新しい出所は無い／symbol・syllable の timing の追従は twin の `ChordBarText` が既にしていた scale を頁に写した。7.7: `sings` の行は fit されない前提（skeleton＝melody）・途中の拍子変更を grid が描かない（⒟ に起票）・pickup で chord 付きの小節は今便まで timing が動いていなかった（網は 3/2・3/4 の Theory が兼ねる・pickup＋chord の fixture は無し）。commit `b36217e0`（code・CHANGELOG・棚卸し）＋ docs の commit。push はユーザー。
+判定: ⒞ は閉じた。次の一手: §1.0 ⒜ の ⒟（grid の途中の拍子・小〜中）か ⒝ の設計級（跳躍の 3 軒・小節番号と和音行）＝ユーザー判断。会話を区切るか: (a) ⒟ なら今便の probe と `SharedRenderer` の grid 行の読みの上に立つ＝**続けてよい**が、**先に §1.0 を畳む便にする**（天井 4.7 KB）。
+
 ## 以下は第781セッションの経緯
 
 ### 1.1 第781セッション（2026-10-04・YT-DELL2）
