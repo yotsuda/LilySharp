@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第773セッションの経緯
+
+### 1.1 第773セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き・ユーザー「続けて」＝第772 末の次の一手の筆頭＝**双子の警告 3 件**（§1.0 ⒜・第767 起票・leadsheet-collide）。`-Start p773`（HEAD `bbc43d22`・未 push 6）＝full **10905 / 0 / 2 / 10907**。§7 3.5 で第771 を ARCHIVE へ。
+- **切り分け**: ⒝ の正体＝by-part の chord track（`chords prog { section Bridge { … } }`）は `OrderedChordItems` が**行の内側の section 節**を登録するので `SectionBarMeters` が part block を見つけられず null→score の拍子（4/4）に落ちていた（既に `SectionBarMeters` は在った＝第 ? が 7/8 の probe で入れた物・by-part の形だけ漏れ）。⒞（VoltaBracket の警告）は ⒝ の帰結＝chords 行の alternative が 6×4/4 で staff の 6×3/4 より長く、`\volta 3` の頭がずれていた。⒜＝file の `tempo` と最初に鳴る section の header `tempo` が同じ瞬間＝LP の `assign_event_once`（stream-event.hh:59-70）が 2 本目を捨てる（stream-event.cc:113-116）。
+- **直した（commit 下記）**: ⒝ `SectionBarMeters` が同名の宣言から music の part block を探し、無ければ header の拍子を 1 本返す（`_allSections` を `OrderedMusic`／`OrderedChordItems` で持つ）／⒜ `OrderedMusic` が `FirstPlayedSection(formItems)`（repeat・ending の中も最初の参照）の header tempo の有無を `_firstPlayRestatesTempo` に置き、`EmitScoreSettings` が file の `\tempo` を書かない（page が見せ MIDI が鳴らすのは section の方＝`SetTempo` の last-wins と同じ裁定）。
+- **双子で確認**: `sessions/p773/twin/`＝leadsheet-collide の .ly を LP 2.26 で**警告 0・Success**（6 本→0 本・⒞ も消えた）。
+- **網** `LilyPondExporterTests` 3 本（by-part の行が 3/4 section で `d2.:m`・file tempo は最初の section が言い直すと消える・言い直さなければ残る）。CHANGELOG Fixes。
+- 掃き（ly・base＝p772 の exe・head＝p773・`sessions/p773/sweep-ly.log`）: **1,199 本 差 0**＝掃きの 998 冊には by-part の行が拍子の変わる section に在る本も file tempo を最初の section が言い直す本も無い（この 2 つの形は Lab `corpora/dogfood/collide/` の本だけ）＝既存の双子は 1 本も動かない。
+- **full が拾った第772 の取りこぼし（commit `cfd35e6d`）**: `PdfReproducibilityTests.WithoutTheEpoch_OnlyTheClockDiffers` が full で赤＝epoch 無しの 2 回書きが秒をまたぐと `/CreationDate` に加えて `/ID`（file 全体の MD5）も動く。`PdfReproducibility.Apply` が hash のあいだ日付の桁も 0 で埋める（終わったら戻す）＝ID は描画だけに従い、epoch 無しで動くのは日付 14 桁だけ。
+★ `-End p773 -DiffBase bbc43d22`＝full **10908 / 0 / 2 / 10910**（網 +3）・門 全 OK（HANDOFF 残り 8,495 B・§1 残り 10,357 字・棚卸し `APPROXIMATIONS.md` 行番号 1 行・1 回目は inventory stale ＋ PDF の 1 本で赤→直して再実行）。7.5: Core `+` 90 行＝`SectionBarMeters` の同名探し＋`FirstPartBlock`＋`_allSections`・`FirstPlayedSection`＋`_firstPlayRestatesTempo`・`EmitScoreSettings` の分岐・PDF の日付 blank・REF 1（stream-event.hh:59-70 `assign_event_once`＋stream-event.cc:113-116）・OWN 0。7.6: ⒜ 出所は第767 の起票（6 本の警告）と LP 2.26 の再実行（0 本）。7.7: `PaddingBars` の chord 行の不足小節はまだ score の拍子（`_bars.HomeMeter`）＝section の拍子で足りない行が拍子の変わる section に在れば同じ族の欠陥（コーパス 0・probe で出る）。commit `746856ae`（twin）・`cfd35e6d`（pdf）。push はユーザー。
+判定: 双子の警告 3 件は閉じた（⒞ は ⒝ の帰結）。次の一手: 第769 末の列挙の残り＝D.C./D.S. の MIDI（設計・`PlayForm` の註「not yet honored」）か、行末の裸の `__`（⑼ ⒞′）か、7.7 の `PaddingBars`（小）＝ユーザー判断。会話を区切るか: (a) 続けられる。
+
 ## 以下は第772セッションの経緯
 
 ### 1.1 第772セッション（2026-10-03・YT-DELL2）

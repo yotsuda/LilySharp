@@ -93,6 +93,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **LP を `-dbackend=svg` で描く計器は `lysc ly --pin-fonts` 必須**（第690〜第695 の 6 本は無しで、数字の幅・高さが汎用 serif だった＝第736 ⑴⑵）。tab の tuplet の残差は全部 beam の決定（`uniformBeamedLength`）の帰結＝第737
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
+- ★ **跳躍（D.C./D.S.）の経路を読まない 3 軒（第775・ユーザー判断）**: `Semantics/FormRoute.cs` は MIDI だけが読む。page の tie carry（`SectionPlayCarry.PlayedOrder`＝stamp から組む）・`SectionBoundaryBars.Expand`（小節補完の隣接）・XML（`<sound dalsegno>` の宣言のみ）は跳躍を追わない（`FormRoute` の註に名指し）。候補: ⑴ tie を segno の section へ運ぶ（stamp に跳躍を足す配管・LYS4007 の的が増える・跳躍文を持つ form はディスク上 8 冊）／⑵ 診断「`ds` に `segno` が無い」「`al coda` に `coda` が無い」（新 LYS・今は絵のまま＝`FormJumpMidiTests` が観測）／⑶ music 中の跳躍文は追わない（コーパス 0・文書に明記）。
 - ★★ **小節番号と和音行（第767・leadsheet-collide 小節 12〜13・`sessions/p766/png/`）**: `barNumbers every 1` で段の途中の番号が chord diagram の運指の数字に重なる。LP は段の途中の BarNumber を**和音行（ChordNames）の上端の上**に置き、段頭の番号だけ staff の左に置く（`sessions/p767/twin/lp-leadsheet…/out-page1.png`）。Lily# は `BarNumberEngraver` が staff の上の帯（anchorUp）に置き、和音行の ink を見ない。直すなら段途中の番号の support に和音行（diagram 含む）の up-skyline を足す＝outside-staff の積み方の話（RULES §5.2）。
 - ⚠️ **U11（`Hold the Line` の page1 が LP 8 系・Lily# 7 系）＝第547 が「移植できる欠陥は無い」と確定・第573 が lead を閉じた（頁 DP の僅差 0.030576 対 0.031049＝1e-3 級の差でどちらにも倒れる）＝提案しない**（全文は §1.1 第547・第573＝ARCHIVE・Lab `sessions/p547/`・`sessions/p573/u11/`）。重複 mark は第558 が畳んだ（LYS4021）＝page 割りは動かない
 - ★★★ **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す**（0.074% ＋ 1 ULP の尾）
@@ -119,6 +120,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第775セッション（2026-10-03・YT-DELL2）
+
+新しい会話・ユーザー「HANDOFF を読んで着手」＝第774 末の列挙の筆頭 **D.C./D.S. の MIDI**（設計→実装まで）。`-Start p775`（HEAD `8d82bf32`・未 push 11）＝full **10909 / 0 / 2 / 10911**。§7 3.5 で第773 を ARCHIVE へ。
+- **設計（RULES §5.2 第751 の裁定＝意味論は音楽的妥当性）**: 経路の読み手 `Semantics/FormRoute.cs`（`FormWalk` の item 列 → `Stretch(From,To,Replay)` の列）を 1 軒立て、`MidiExporter.PlayForm` が歩く。規則: `dc`→冒頭・`ds`→直近の form-level `segno` の次（無ければ追わない＝絵のまま）／`al fine` は replay 範囲の最初の `fine` で終曲（跳躍文の後は鳴らない）／`al coda` は `to coda` で止め、跳躍文の後の `coda` の次から再開／裸の `dc`/`ds` は跳躍文まで replay して続行（片側 `:|` と同じ）／replay 中は repeat block を最終 pass 1 回（`PlayRepeatRun(lastPassOnly)`）・片側 `:|` と跳躍文は不発／再開後は first pass（2 本目の経路も追う）。状態は `PieceState`（ordinals・pitch lane・velocity lane・duration・velocity）を冒頭と segno 通過時に写し、replay 前に戻す＝`RepeatFromTheBeginning` も同じ器に畳んだ。LP の `\jump` は絵だけ・意味の綴りは `\repeat segno`（双子は書かない）＝LILYSHARP-OWN（`FormRoute` の註）。
+- **網** `FormJumpMidiTests` 17 本（al fine／al coda／裸／replay の repeat は最終 pass／segno 無し／coda 無し／al fine 後は鳴らない／2 経路／replay 中の片側 `:|`／segno の状態復元（velocity）／全 part／経路の Theory 6）。文書: SYNTAX_REFERENCE（Navigation marks に再生の段落・tie の「MIDI も追わない」を訂正）・GRAMMAR_FOR_LLM・GRAMMAR・CHANGELOG「Navigation marks」。
+- 掃き（midi・998 冊・base＝p774 exe・head＝p775・`sessions/p775/sweep-midi.log`・予測は `prediction.txt` に先に書いた）: **差 3 ＝予測どおり**（`nav-below-clears-lyrics`＝`dc`・`tocoda-volta-clearance`＝segno＋`ds al coda`・ユーザーの `blogger.lys`＝Intro A B A C D **A C** E E）。dogfood は手で（`dogfood-{base,head}`・`dump-notes.ps1`）: sarabande の replay は Theme と pitch:len が全音一致（最終 fermata の ×1.5 だけ曲末で露出）・bare-dsc／05-form（segno 無し）は不変・bigband-swing は Solo を歩く part だけ増。
+- **残り（ユーザー判断・§1.0 ⒝ に起票）**: 演奏順の読み手は他に 3 軒（page の tie carry・`SectionBoundaryBars` の隣接・XML は `<sound>` 宣言のみ）＝跳躍を追わない。tie を segno の section へ運ぶか／解決できない跳躍文の診断／music 中の跳躍文（追わない＝文書に明記）。
+★ `-End p775 -DiffBase 8d82bf32`（code commit 後の 2 回目・`end2.log`）＝full **10926 / 0 / 2 / 10928**（網 +17）・門 全 OK（HANDOFF 残り 8,231 B・§1 残り 9,711 字・棚卸し 差分なし）。7.5: Core `+` 267 行＝`FormRoute.cs`（新規・経路の読み手と註）＋`MidiExporter` の `PlayForm`／`PieceState`／`lastPassOnly`・REF 0・OWN 1（`FormRoute`＝LP の `\jump` に意味は無い・出所は第751 のユーザー決定）。7.6: ⒞ 経路の規則は LP に対応物無し（`\repeat segno` は双子が書かない綴り）／⒟ `PieceState` は `RepeatFromTheBeginning` の既存 5 量を器に畳んだだけ（新しい量 0）。7.7: 「`ds` に segno 無し→追わない」は握りつぶしではなく絵のまま＝註に名前・網 `ADalSegnoWithNoSegno_IsNotFollowed` が観測／診断は §1.0 ⒝ ⑵。commit `5b80cb3f`（code）。push はユーザー。
+判定: D.C./D.S. の MIDI は閉じた（form-level）。次の一手: 第774 末の列挙の残り＝行末の裸の `__`（⑼ ⒞′・双子の歌詞・Lab `corpora/dogfood/big/` の choir 2 本）か、§1.0 ⒝ の跳躍の 3 軒（ユーザー判断）。会話を区切るか: (c) 裸の `__` はこの便と無関係の島＝既定どおり**続けられる**（文脈の圧縮は未・読み直しは `__` 側だけ）。
+
+## 以下は第774セッションの経緯
+
 ### 1.1 第774セッション（2026-10-03・YT-DELL2）
 
 同じ会話の続き・ユーザー「次便は、このセッションでやる方が有利なら着手して。次のセッションでやった方が有利なら着手してはいけない」＝**判断: 第773 の 7.7（chord 行の不足小節の padding が score の拍子）だけ着手**（直前に読んだ `Chords.cs`／`Form.cs` と p773 の双子の計器がそのまま効く＝この会話で有利）。**D.C./D.S. の MIDI（設計）と行末の裸の `__` は着手しない**（どちらも読み直しから始まり、handoff に必要な物は全部在る＝次のセッションで不利にならない）。`-Start p774`（HEAD `4c2f25ee`・未 push 9）＝full **10908 / 0 / 2 / 10910**。§7 3.5 で第772 を ARCHIVE へ。
@@ -126,20 +139,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 掃き（ly・base＝p773 の exe・head＝p774・`sessions/p774/sweep-ly.log`）: **1,199 本 差 0**（この形もコーパスに無い＝網だけが観測者）。
 ★ `-End p774 -DiffBase 4c2f25ee`＝full **10909 / 0 / 2 / 10911**（網 +1）・門 全 OK（HANDOFF 残り 8,602 B・§1 残り 11,064 字・棚卸し 行番号 1 行＝1 回目は stale で赤→再生成）。7.5: Core `+` 20 行＝`SectionOf`＋`PaddingBars` の 3 行・REF 0・OWN 0。7.6: ⒜ 出所は第773 の 7.7（自分の匂い一覧）。7.7: なし。commit `5a3b28af`（code）。push はユーザー。
 判定: 第769 末の列挙のうち「小」は全部閉じた（扉・conductor track・PDF・双子 3 件・padding）。**残りは次のセッションで**: D.C./D.S. の MIDI（設計・`MidiExporter.PlayForm` の註「not yet honored」＝segno／fine の時刻を form の walk に持たせる話）と行末の裸の `__`（⑼ ⒞′・双子の歌詞）。どちらもこの会話の文脈に依存しない。会話を区切るか: (b) **区切ってよい**＝残りは設計から始まる。
-
-## 以下は第773セッションの経緯
-
-### 1.1 第773セッション（2026-10-03・YT-DELL2）
-
-同じ会話の続き・ユーザー「続けて」＝第772 末の次の一手の筆頭＝**双子の警告 3 件**（§1.0 ⒜・第767 起票・leadsheet-collide）。`-Start p773`（HEAD `bbc43d22`・未 push 6）＝full **10905 / 0 / 2 / 10907**。§7 3.5 で第771 を ARCHIVE へ。
-- **切り分け**: ⒝ の正体＝by-part の chord track（`chords prog { section Bridge { … } }`）は `OrderedChordItems` が**行の内側の section 節**を登録するので `SectionBarMeters` が part block を見つけられず null→score の拍子（4/4）に落ちていた（既に `SectionBarMeters` は在った＝第 ? が 7/8 の probe で入れた物・by-part の形だけ漏れ）。⒞（VoltaBracket の警告）は ⒝ の帰結＝chords 行の alternative が 6×4/4 で staff の 6×3/4 より長く、`\volta 3` の頭がずれていた。⒜＝file の `tempo` と最初に鳴る section の header `tempo` が同じ瞬間＝LP の `assign_event_once`（stream-event.hh:59-70）が 2 本目を捨てる（stream-event.cc:113-116）。
-- **直した（commit 下記）**: ⒝ `SectionBarMeters` が同名の宣言から music の part block を探し、無ければ header の拍子を 1 本返す（`_allSections` を `OrderedMusic`／`OrderedChordItems` で持つ）／⒜ `OrderedMusic` が `FirstPlayedSection(formItems)`（repeat・ending の中も最初の参照）の header tempo の有無を `_firstPlayRestatesTempo` に置き、`EmitScoreSettings` が file の `\tempo` を書かない（page が見せ MIDI が鳴らすのは section の方＝`SetTempo` の last-wins と同じ裁定）。
-- **双子で確認**: `sessions/p773/twin/`＝leadsheet-collide の .ly を LP 2.26 で**警告 0・Success**（6 本→0 本・⒞ も消えた）。
-- **網** `LilyPondExporterTests` 3 本（by-part の行が 3/4 section で `d2.:m`・file tempo は最初の section が言い直すと消える・言い直さなければ残る）。CHANGELOG Fixes。
-- 掃き（ly・base＝p772 の exe・head＝p773・`sessions/p773/sweep-ly.log`）: **1,199 本 差 0**＝掃きの 998 冊には by-part の行が拍子の変わる section に在る本も file tempo を最初の section が言い直す本も無い（この 2 つの形は Lab `corpora/dogfood/collide/` の本だけ）＝既存の双子は 1 本も動かない。
-- **full が拾った第772 の取りこぼし（commit `cfd35e6d`）**: `PdfReproducibilityTests.WithoutTheEpoch_OnlyTheClockDiffers` が full で赤＝epoch 無しの 2 回書きが秒をまたぐと `/CreationDate` に加えて `/ID`（file 全体の MD5）も動く。`PdfReproducibility.Apply` が hash のあいだ日付の桁も 0 で埋める（終わったら戻す）＝ID は描画だけに従い、epoch 無しで動くのは日付 14 桁だけ。
-★ `-End p773 -DiffBase bbc43d22`＝full **10908 / 0 / 2 / 10910**（網 +3）・門 全 OK（HANDOFF 残り 8,495 B・§1 残り 10,357 字・棚卸し `APPROXIMATIONS.md` 行番号 1 行・1 回目は inventory stale ＋ PDF の 1 本で赤→直して再実行）。7.5: Core `+` 90 行＝`SectionBarMeters` の同名探し＋`FirstPartBlock`＋`_allSections`・`FirstPlayedSection`＋`_firstPlayRestatesTempo`・`EmitScoreSettings` の分岐・PDF の日付 blank・REF 1（stream-event.hh:59-70 `assign_event_once`＋stream-event.cc:113-116）・OWN 0。7.6: ⒜ 出所は第767 の起票（6 本の警告）と LP 2.26 の再実行（0 本）。7.7: `PaddingBars` の chord 行の不足小節はまだ score の拍子（`_bars.HomeMeter`）＝section の拍子で足りない行が拍子の変わる section に在れば同じ族の欠陥（コーパス 0・probe で出る）。commit `746856ae`（twin）・`cfd35e6d`（pdf）。push はユーザー。
-判定: 双子の警告 3 件は閉じた（⒞ は ⒝ の帰結）。次の一手: 第769 末の列挙の残り＝D.C./D.S. の MIDI（設計・`PlayForm` の註「not yet honored」）か、行末の裸の `__`（⑼ ⒞′）か、7.7 の `PaddingBars`（小）＝ユーザー判断。会話を区切るか: (a) 続けられる。
 
 ## 2. 開いている作業
 
