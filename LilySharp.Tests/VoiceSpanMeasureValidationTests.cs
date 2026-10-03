@@ -111,6 +111,27 @@ public sealed class VoiceSpanMeasureValidationTests
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.PickupWithoutPartial);
     }
 
+    /// <summary>
+    /// A span's later voice ends where the span ends, and the enclosing music completes the
+    /// bar from there: <c>voice { d2 } { d4. d8 } d8 c bes a |</c> is one full 4/4 bar whose
+    /// lower voice sounds for its first half. Until 2026-10-03 the lower voice's chunk was
+    /// held to the meter — LYS2001 "1/2 is less than 4/4" on a bar the page draws right
+    /// (owner's report, scratch/voices.lys). The control: a voice that stops SHORT of the
+    /// span's end is still the short bar it is.
+    /// </summary>
+    [Theory]
+    [InlineData("voice { d2 } { d4. d8 } d8 c bes a~ | a2 r |", false)]
+    [InlineData("voice { d2 } { d4 } d8 c bes a~ | a2 r |", true)]
+    [InlineData("c4 voice { d4 } { d8 d } d8 c bes a |", false)]
+    [InlineData("voice { c4 d e f | c4 d } { e4 f g a | e4 f } e f |", false)]
+    public void ALaterVoiceEndsWhereTheSpanEnds_AndTheEnclosingMusicCompletesTheBar(string music, bool warns)
+    {
+        var diags = Diagnose($"time 4/4\npart mel {{\n  section A {{ {music} }}\n}}\n");
+        Assert.True(warns == diags.Any(d => d.Code == DiagnosticCodes.MeasureIncomplete),
+            string.Join("\n", diags.Select(d => d.Message)));
+        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.MeasureOverflow);
+    }
+
     [Fact]
     public void BarlinesInsideTheLeadVoice_SplitTheEnclosingStream()
     {

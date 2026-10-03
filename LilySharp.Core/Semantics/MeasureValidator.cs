@@ -369,9 +369,14 @@ internal sealed class MeasureValidator : ISemanticValidator
     /// <param name="inheritedPickup">The declared pickup of the bar this stream starts inside,
     /// when that bar is its section's opening bar — for a span's later voice or a repeat body
     /// that opens there, which is the same rendered bar and so the same pickup.</param>
+    /// <param name="spanEnd">For a span's later voice: the beats elapsed in the rendered bar
+    /// where the SPAN ends — the lead voice's trailing chunk on top of the span's lead-in (or on
+    /// a fresh bar when the lead wrote a barline). The voice's own trailing chunk is open there:
+    /// the enclosing music goes on from the span's end and completes the bar, so that chunk is
+    /// held to the span's end, not to the meter (it is still overfull past the meter).</param>
     private void ValidateItemsScoped(IEnumerable<SyntaxNode> items, int startPos,
         Fraction? leadIn = null, Fraction? initialDefault = null, bool openTail = false,
-        TextSpan? leadInSpan = null, Fraction? inheritedPickup = null)
+        TextSpan? leadInSpan = null, Fraction? inheritedPickup = null, Fraction? spanEnd = null)
     {
         // A mid-music `time` re-arms the meter for the rest of THIS block/section
         // only — the state must not leak into the next part's block (each part
@@ -383,7 +388,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         try
         {
             ValidateMeasures(items, startPos, leadIn, initialDefault, openTail, leadInSpan,
-                inheritedPickup);
+                inheritedPickup, spanEnd);
         }
         finally
         {
@@ -393,7 +398,7 @@ internal sealed class MeasureValidator : ISemanticValidator
 
     private void ValidateMeasures(IEnumerable<SyntaxNode> items, int startPos,
         Fraction? leadIn = null, Fraction? initialDefault = null, bool openTail = false,
-        TextSpan? leadInSpan = null, Fraction? inheritedPickup = null)
+        TextSpan? leadInSpan = null, Fraction? inheritedPickup = null, Fraction? spanEnd = null)
     {
         var measures = SplitIntoMeasures(items, startPos, out var voiceSpans, out var repeatSpans,
             out var phraseSpans, out bool tailUnclosed);
@@ -434,7 +439,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         // running default note value there. Voices 2..N sound from that instant, so this
         // is the lead-in their own first bar is validated with. Collected during the
         // pass, validated after it (they are simultaneous with the music counted here).
-        var spanEntry = new List<(ParallelExpressionSyntax Span, Fraction LeadIn, Fraction Default, Fraction? Pickup, BarContext.MeterState Meter)>();
+        var spanEntry = new List<(ParallelExpressionSyntax Span, Fraction LeadIn, Fraction Default, Fraction? Pickup, BarContext.MeterState Meter, Fraction SpanEnd)>();
 
         // The opening pickup: the first sounding bar, when it is shorter than a
         // full bar. A legitimately shortened FINAL bar must complete it
@@ -530,7 +535,8 @@ internal sealed class MeasureValidator : ISemanticValidator
                 from = itemIndex;
                 if (span != null)
                 {
-                    spanEntry.Add((span, total, defaultDuration, i == 0 ? partialLength : null, MeterNow()));
+                    spanEntry.Add((span, total, defaultDuration, i == 0 ? partialLength : null, MeterNow(),
+                        SpanEndOf(span, total, defaultDuration)));
                     continue;
                 }
 
@@ -739,7 +745,19 @@ internal sealed class MeasureValidator : ISemanticValidator
                     // length can still be wrong the other way: a chunk LONGER than the
                     // meter can never fit any rendered bar, so the overfull arm below
                     // still applies to it.
-                    if (!(openTail && tailUnclosed && isLast) && !splitByBoundary)
+                    // A span's later voice ends where the SPAN ends, and the enclosing music
+                    // goes on from there to complete the rendered bar — `voice { d2 } { d4. d8 }
+                    // d8 c bes a |` is one full bar whose lower voice sounds for its first half
+                    // (the collector pads the voice to the bar; LilyPond's `<< … \\ … >>` is the
+                    // same, with the bar check in the main voice). So the voice's trailing chunk
+                    // is held to the span's end, not to the meter: a chunk that reaches it is
+                    // complete, one that stops short of it is the short bar it always was
+                    // (`c2 voice { d2 } { e4 } |`, where the span ends on the barline). Until
+                    // 2026-10-03 that chunk was held to the meter and the owner's bar warned
+                    // LYS2001 "1/2 is less than 4/4" on music the page draws right.
+                    bool openSpanTail = spanEnd is { } spanEndHere && tailUnclosed && isLast
+                        && duration >= spanEndHere;
+                    if (!(openTail && tailUnclosed && isLast) && !splitByBoundary && !openSpanTail)
                         EmitUnderfull(measure, duration, expected, partialLength, completesOpeningPickup,
                             isBarePickup, i == 0 ? leadInSpan : null);
                 }
@@ -754,7 +772,8 @@ internal sealed class MeasureValidator : ISemanticValidator
         // still has voices to check; they simply start on the boundary.
         foreach (var vs in voiceSpans)
             if (vs.MeasureIndex >= measures.Count)
-                spanEntry.Add((vs.Span, Fraction.Zero, defaultDuration, null, MeterNow()));
+                spanEntry.Add((vs.Span, Fraction.Zero, defaultDuration, null, MeterNow(),
+                    SpanEndOf(vs.Span, Fraction.Zero, defaultDuration)));
 
         // Voices 2..N of each span, once this stream's own bars are counted: they are
         // simultaneous with the music just validated, so each is its own bar stream that
@@ -770,14 +789,14 @@ internal sealed class MeasureValidator : ISemanticValidator
         // LILYPOND-REF: lily/timing-translator.cc — timeSignatureFraction and measureLength
         //   live in the Timing (Score-level) context that \time sets.
         var streamEnd = MeterNow();
-        foreach (var (span, spanLeadIn, spanDefault, spanPickup, entryMeter) in spanEntry)
+        foreach (var (span, spanLeadIn, spanDefault, spanPickup, entryMeter, spanEndBeats) in spanEntry)
         {
             var leadMeters = MetersByBar(ItemsOf(span.Voices.First()));
             foreach (var voice in span.Voices.Skip(1))
             {
                 RestoreMeter(entryMeter);
                 ValidateItemsScoped(WithMeters(ItemsOf(voice), leadMeters), voice.Position,
-                    spanLeadIn, spanDefault, inheritedPickup: spanPickup);
+                    spanLeadIn, spanDefault, inheritedPickup: spanPickup, spanEnd: spanEndBeats);
             }
         }
         RestoreMeter(streamEnd);
@@ -960,6 +979,28 @@ internal sealed class MeasureValidator : ISemanticValidator
     /// <summary>The music items of one voice block of a span.</summary>
     private static IEnumerable<SyntaxNode> ItemsOf(SyntaxNode voice)
         => voice is MusicBlockSyntax block ? block.Items : [];
+
+    /// <summary>
+    /// The beats elapsed in the rendered bar where a span ENDS: the lead voice's trailing
+    /// chunk — its music after its last barline — on top of the beats elapsed when the span
+    /// opened, or on a fresh bar when the lead wrote a barline. The lead is the stream the
+    /// enclosing pass counts inline, so this is also where the enclosing music resumes.
+    /// </summary>
+    private static Fraction SpanEndOf(ParallelExpressionSyntax span, Fraction leadIn, Fraction defaultDuration)
+    {
+        var end = leadIn;
+        var running = defaultDuration;
+        foreach (var item in ItemsOf(span.Voices.First()))
+        {
+            if (item is BarlineSyntax)
+            {
+                end = Fraction.Zero;
+                continue;
+            }
+            end += MeasureDurations.ItemDuration(item, ref running);
+        }
+        return end;
+    }
 
     /// <summary>Emits the diagnostic (if any) for a bar shorter than its expected
     /// fill: a hard incomplete-measure warning, a soft pickup-without-partial nudge

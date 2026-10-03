@@ -650,6 +650,12 @@ workflow attaches that section to the GitHub Release verbatim.
   stop sits on the first bar after the run — also when that bar restates a clef, key or
   meter, or opens the next section, where it used to be dropped. A two-bar body is now a
   `%%` in the file too, where it was only written out.
+- **The bar check lets a `voice { } { }` span end mid-bar.** `voice { d2 } { d4. d8 } d8 c
+  bes a |` is one full 4/4 bar whose lower voice sounds for its first half, and the page
+  draws it so; the check held the lower voice's chunk to the meter and warned LYS2001
+  "Measure duration 1/2 is less than time signature 4/4" (owner's report). A later voice's
+  trailing chunk is now held to where the span ends — a voice that stops short of that is
+  still a short bar, and one that runs past the meter is still overfull.
 - **A fermata on a full-measure rest stands over the rest.** `R@fermata` (and `R1*4@fermata`)
   is LilyPond's multi-measure-rest script: centred on the rest symbol, which stands at the
   bar's centre, and clear of its bar count. It stood at the bar's start, where a note would
