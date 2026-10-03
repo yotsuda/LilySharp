@@ -79,6 +79,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。→ **第751（2026-10-02・ユーザー決定）「LP 忠実にこだわるより音楽的な妥当性を重視。LP から引き継ぐのはレンダリングとレイアウトの美しさだけ。ユーザーがまだ少ないので過去のしがらみに縛られない」＝意味論（拍子・弱起・反復・強弱・検査・出力の意味）の裁定者は音楽的妥当性、LP は描画と配置の裁定者（RULES §5.2 に規則として置いた）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
+- ★★ **双子の 3 件（第767・leadsheet-collide の LP 警告 6 本・計器 `sessions/p767/twin/`）**: ⒜ 1 小節目に file の `tempo` と section の `tempo` を同じ瞬間に書く（`\tempo "Moderato"` → `\mark … \tempo "Rubato"`）＝LP が後者を捨てる＝section が同じ小節で言い直すなら file の分を書かない／⒝ section で拍子が変わる（Bridge 3/4）とき chords 行の entry が前の拍子の長さ（`d1:m`）＝行の長さは `PrevailingMeters` で読む（歌詞の `EmitTimedStream` は読んでいる）／⒞ `[1-2. ~Bridge] :| [3. ~Tag]` に「already have a VoltaBracket; ending it prematurely」（`\volta 1,2` の override の形）。
 - ★★ **⑼ の残り（第762・ユーザー判断・本は Lab `corpora/dogfood/big/` 4 冊・計器 `sessions/p762/run-big.ps1`＝check＋4 出力＋LP）**: ⒞′ 音を取らない裸の `__`（行末）は双子で LP の「unterminated extender」のまま（choir 2 本・page は最小長の線だけ）／⑺ resume の probe は代表 1 つの header 読みしか記録しない（`MeasureCollector.Form.cs` の註）／⑻ 観察（優先低）: 宣言した弱起が短い小節の後に来る形＝LP は `\partial` で併合・頁と XML は弱起を 1 小節に数える（コーパス 0・第761）。／**閉じた分（経緯は ARCHIVE の各便）**: リファクタ A〜C6（第740〜748）・綴り A1〜A4（第750〜755）・D=(a)（第755）・同名 section (a)（第753 `112ea7f2`）・validator の弱起（第753 `deb49459`）・XML の番号 ⑹⑹′（第756 `f43e48c4`・第757 `280cbbde`）・割れた小節 ⑻（第759 `2a77777c`・双子は不要＝第761）・StreamFrame の網（第758 `234b5361`）・観測者の無い規則 4 つ＋双子の欠陥 2（第760 `d0acd7da`）・⑽ part 名に予約語＋⑼ ⒜ `tab X Y` は宣言された part が勝つ（第763 `3274e1b7`・§3 の最上段）・⑼ ⒝ capo の LYS1039 の文面・⒞ 双子の歌詞の終端と cadenza の bar check・⒠ `@ottava(8va)` の文面（第764）・⒟ 1 頁目の沈み＝本の側＋LP も同じ（第765・コード変更なし）。計器: Lab `sessions/p742/`（ly／midi／xml／svg の掃き・exe は両側とも写す）・`sessions/p753/sweep-check.ps1`（診断の掃き）・`sessions/p762/run-big.ps1`
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**
@@ -92,6 +93,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **LP を `-dbackend=svg` で描く計器は `lysc ly --pin-fonts` 必須**（第690〜第695 の 6 本は無しで、数字の幅・高さが汎用 serif だった＝第736 ⑴⑵）。tab の tuplet の残差は全部 beam の決定（`uniformBeamedLength`）の帰結＝第737
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
+- ★★ **小節番号と和音行（第767・leadsheet-collide 小節 12〜13・`sessions/p766/png/`）**: `barNumbers every 1` で段の途中の番号が chord diagram の運指の数字に重なる。LP は段の途中の BarNumber を**和音行（ChordNames）の上端の上**に置き、段頭の番号だけ staff の左に置く（`sessions/p767/twin/lp-leadsheet…/out-page1.png`）。Lily# は `BarNumberEngraver` が staff の上の帯（anchorUp）に置き、和音行の ink を見ない。直すなら段途中の番号の support に和音行（diagram 含む）の up-skyline を足す＝outside-staff の積み方の話（RULES §5.2）。
 - ⚠️ **U11（`Hold the Line` の page1 が LP 8 系・Lily# 7 系）＝第547 が「移植できる欠陥は無い」と確定・第573 が lead を閉じた（頁 DP の僅差 0.030576 対 0.031049＝1e-3 級の差でどちらにも倒れる）＝提案しない**（全文は §1.1 第547・第573＝ARCHIVE・Lab `sessions/p547/`・`sessions/p573/u11/`）。重複 mark は第558 が畳んだ（LYS4021）＝page 割りは動かない
 - ★★★ **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す**（0.074% ＋ 1 ULP の尾）
 - ★★ **⒵⁴ `prefixMarkAnchorX` の解き直し 0.338%**＝**memo は反証済み**（hit 率 0.53%）
@@ -117,6 +119,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第767セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。`-Start p767`（HEAD `1c16e193`・未 push 137）＝full **10880 / 0 / 2 / 10882**。§7 3.5 で第765 を ARCHIVE へ。第766 の候補 5 つを**双子（LP 2.26 の png・`sessions/p767/twin/`）と並べて**裁いた:
+- ⑴ **複数小節休符の後の小節番号＝欠陥・直した**: `barNumbers every N` で `R1*2` に畳まれた小節の番号が次の小節の列に積まれていた（probe `sessions/p767/probes/mmrest.lys`: 1 2 4/3 5 8/7/6）。`BarNumberEngraver.Calculate(runMap)` が `MmrRunMap.IsInterior` の小節を飛ばす（LP は bar line の在る所にしか BarNumber を作らない＝bar-number-engraver.cc:66-70 の註・畳んだ run は 1 列）。今は 1 2 4 5 8。網 `LayoutBlockTests.EveryN_SkipsTheBarsACompressedRestSwallows`。
+- ⑷ **cue の境目の clef の二重描画＝欠陥・直した**: 小節ごとに書いた `cue treble { }` が 2 つ並ぶと、前の領域の alto への復帰と次の領域の treble が同じ列に重なって描かれていた（LP は何も描かない）。`ClefChangeCollapse`（collector の後処理・単段と多段の両道）が「鳴る item を挟まない連続した clef 変更」を最後の 1 つに畳み、それが在効の clef と同じなら全部落とす（clef-engraver.cc:139-165 `inspect_clef_properties`＝timestep に 1 回の比較）。単独の変更は触らない（`clef!` の強制は walk の問い）。網 `ClefChangeTests.ClefChangesAtOneMoment_…`。
+- ⑵ pedal text と強弱の帯（piano lh 小節 2〜4）＝**LP も同じ並び**（`f`・`sempre legato`・`* Ped.`）＝欠陥ではない。
+- ⑶⑸ **小節番号が chord diagram の運指に重なる＝置き方の差・未着手（§1.0 ⒝ に起票）**: LP は段の途中の番号を**和音行の上**（ChordNames の上端）に置く（`lp-leadsheet…/out-page1.png` の `5F/A`・`6C7`・`12 Dm/C`）。Lily# は staff の上の帯の高さで、diagram の運指の数字を踏む。
+- 双子の警告（leadsheet・LP 6 本・§1.0 ⒜ に起票）: ⒜ 1 小節目で file の `tempo` と section の `tempo` を同じ瞬間に書く → LP「conflict with event: tempo-change-event」×2／⒝ section で拍子が変わる（Bridge 3/4）とき chords 行の entry は Verse の 4/4 の長さ（`d1:m`）のまま → bar check 失敗／⒞ `[1-2.` の ending に「already have a VoltaBracket; ending it prematurely」。
+- 掃き（`sessions/p723/svg2/sweep-all.ps1`・998 冊・base p764 の exe 対 head）: **svg 1,199 本 差 0**＝既存の本に畳まれた休符の `every N` も同じ瞬間の clef 変更も無い。
+★ `-End p767 -DiffBase 1c16e193`＝full **10882 / 0 / 2 / 10884**（網 +2）・門 全 OK（HANDOFF 残り 8,893 B・§1 残り 10,327 字・棚卸し `APPROXIMATIONS.md` 行番号 8 行＝増減 0）。7.5: Core `+` 30 行／`-` 2 行（tracked）＋新規 `ClefChangeCollapse.cs`・REF 2（bar-number-engraver.cc・clef-engraver.cc）・OWN 0。7.6: ⒜ 両方とも LP の engraver の規則を字面で写した。7.7: なし。push はユーザー。
+判定: 第766 の候補 5 つは裁き終えた（2 直した・1 は LP と同じ・1 は起票・双子の 3 件を起票）。次の一手は §1.0 ⒜ の双子 3 件（小・計器あり）か ⒝ の小節番号と和音行（設計）＝ユーザー判断。会話を区切るか: (a) どちらも今の本と png の上に立つ＝続ける。
+
+## 以下は第766セッションの経緯
+
 ### 1.1 第766セッション（2026-10-03・YT-DELL2）
 
 同じ会話の続き（ユーザー「重なりがないかを確認する意図で、複雑な lys をいくつか書いて。私が目視して確認する」）。`-Start p766`（HEAD `9d29de46`・未 push 136）＝full **10880 / 0 / 2 / 10882**。§7 3.5 で第764 を ARCHIVE へ。
@@ -125,15 +141,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 目視は**ユーザーが行う**。私が png で気づいた候補（未検証・ユーザーの判断待ち）: ⑴ piano 小節 15〜17: 複数小節休符の後に小節番号 `16` と `17` が同じ列に縦に 2 つ／⑵ piano 小節 3〜4: lh の `sempre legato` と `Ped.`／`*` と強弱が同じ帯に並ぶ／⑶ leadsheet 小節 12〜13: 小節番号が chord diagram の運指の数字に重なる／⑷ quartet 小節 8〜9: viola の cue の clef 変更の直後に拍子（7/8）がもう一度描かれているように見える／⑸ guitar 小節 2: diagram `F` と小節番号 `2`。
 ★ `-End p766 -DiffBase 9d29de46`＝full **10880 / 0 / 2 / 10882**（網 ±0）・門 全 OK（HANDOFF 残り 11,714 B・§1 残り 11,315 字）。7.5: Core `+` 0（本だけの便）。7.6／7.7: 該当なし。push はユーザー。
 判定: 次の一手はユーザーの目視の結果待ち（重なりの報告があれば、本と png から再現して起票）。会話を区切るか: (a) 報告の直し方は本と png の上に立つ＝続ける。
-
-## 以下は第765セッションの経緯
-
-### 1.1 第765セッション（2026-10-03・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」）。`-Start p765`（HEAD `f894c720`・未 push 135）＝full **10880 / 0 / 2 / 10882**。§7 3.5 で第763 を ARCHIVE へ。
-- **⑼ ⒟ 合唱の総譜 1 頁目の沈み＝コード変更なしで閉じた**。⑴ 第762 の png は bass が 1 オクターブ低く書かれた版（加線 7 本）で、段が高すぎて 1 頁目に 1 段しか入らなかった＝**本の側**（ユーザーが 9:56 に `g,`→`g` で直した版では Lily# も LP も 1 頁目に 2 段・上端から＝`sessions/p765/ls-choir/`・`lp-choir/`）。⑵ 最後でない頁に 1 段だけ載るとき段が頁の中ほどに沈むのは **LP も同じ**（`sessions/p765/probes/lone1.ly`＝`{ c'1 d'1 \pageBreak … }` の 1 頁目で LP は段を頁の中央やや上に置く＝top-system-spacing と last-bottom-spacing のばねが伸びる・ragged-bottom は既定 ##f）。⇒ 起票は本の誤りの帰結で、Lily# の頁割りに欠陥は無い。
-★ `-End p765 -DiffBase f894c720`＝full **10880 / 0 / 2 / 10882**（網 ±0）・門 全 OK（HANDOFF 残り 10,677 B・§1 残り 12,178 字）。7.5: Core `+` 0（測るだけの便）。7.6／7.7: 該当なし。push はユーザー。
-判定: ⑼ は閉じた（残る ⒞′ は観察・⑺⑻ は優先低）。次の一手は無い＝ユーザーの指示待ち（§1.0 ⒝⒞ の設計級の島か、新しい本）。会話を区切るか: (c)＝次の島は未定・既定は続ける。
 
 ## 2. 開いている作業
 
