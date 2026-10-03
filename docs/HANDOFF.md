@@ -119,6 +119,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第774セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き・ユーザー「次便は、このセッションでやる方が有利なら着手して。次のセッションでやった方が有利なら着手してはいけない」＝**判断: 第773 の 7.7（chord 行の不足小節の padding が score の拍子）だけ着手**（直前に読んだ `Chords.cs`／`Form.cs` と p773 の双子の計器がそのまま効く＝この会話で有利）。**D.C./D.S. の MIDI（設計）と行末の裸の `__` は着手しない**（どちらも読み直しから始まり、handoff に必要な物は全部在る＝次のセッションで不利にならない）。`-Start p774`（HEAD `4c2f25ee`・未 push 9）＝full **10908 / 0 / 2 / 10910**。§7 3.5 で第772 を ARCHIVE へ。
+- **直した（commit 下記）**: `PaddingBars` の chord 行の arm が `SectionOf(container)`（by-part なら行の内側の section・flat なら囲む section）→ `SectionBarMeters` の最後の拍子で `s` を書く（第773 と同じ族＝section の音楽の長さ）。網 `LilyPondExporterTests.ByPartChordRow_ShortOfASectionInAnotherMeter_IsPaddedInThatMeter`（3/4 の section に 1 小節足りない行が `s2. |`・`s1 |` 無し）。CHANGELOG は第773 の項に 1 文。
+- 掃き（ly・base＝p773 の exe・head＝p774・`sessions/p774/sweep-ly.log`）: **1,199 本 差 0**（この形もコーパスに無い＝網だけが観測者）。
+★ `-End p774 -DiffBase 4c2f25ee`＝full **10909 / 0 / 2 / 10911**（網 +1）・門 全 OK（HANDOFF 残り 8,602 B・§1 残り 11,064 字・棚卸し 行番号 1 行＝1 回目は stale で赤→再生成）。7.5: Core `+` 20 行＝`SectionOf`＋`PaddingBars` の 3 行・REF 0・OWN 0。7.6: ⒜ 出所は第773 の 7.7（自分の匂い一覧）。7.7: なし。commit `5a3b28af`（code）。push はユーザー。
+判定: 第769 末の列挙のうち「小」は全部閉じた（扉・conductor track・PDF・双子 3 件・padding）。**残りは次のセッションで**: D.C./D.S. の MIDI（設計・`MidiExporter.PlayForm` の註「not yet honored」＝segno／fine の時刻を form の walk に持たせる話）と行末の裸の `__`（⑼ ⒞′・双子の歌詞）。どちらもこの会話の文脈に依存しない。会話を区切るか: (b) **区切ってよい**＝残りは設計から始まる。
+
+## 以下は第773セッションの経緯
+
 ### 1.1 第773セッション（2026-10-03・YT-DELL2）
 
 同じ会話の続き・ユーザー「続けて」＝第772 末の次の一手の筆頭＝**双子の警告 3 件**（§1.0 ⒜・第767 起票・leadsheet-collide）。`-Start p773`（HEAD `bbc43d22`・未 push 6）＝full **10905 / 0 / 2 / 10907**。§7 3.5 で第771 を ARCHIVE へ。
@@ -130,18 +140,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **full が拾った第772 の取りこぼし（commit `cfd35e6d`）**: `PdfReproducibilityTests.WithoutTheEpoch_OnlyTheClockDiffers` が full で赤＝epoch 無しの 2 回書きが秒をまたぐと `/CreationDate` に加えて `/ID`（file 全体の MD5）も動く。`PdfReproducibility.Apply` が hash のあいだ日付の桁も 0 で埋める（終わったら戻す）＝ID は描画だけに従い、epoch 無しで動くのは日付 14 桁だけ。
 ★ `-End p773 -DiffBase bbc43d22`＝full **10908 / 0 / 2 / 10910**（網 +3）・門 全 OK（HANDOFF 残り 8,495 B・§1 残り 10,357 字・棚卸し `APPROXIMATIONS.md` 行番号 1 行・1 回目は inventory stale ＋ PDF の 1 本で赤→直して再実行）。7.5: Core `+` 90 行＝`SectionBarMeters` の同名探し＋`FirstPartBlock`＋`_allSections`・`FirstPlayedSection`＋`_firstPlayRestatesTempo`・`EmitScoreSettings` の分岐・PDF の日付 blank・REF 1（stream-event.hh:59-70 `assign_event_once`＋stream-event.cc:113-116）・OWN 0。7.6: ⒜ 出所は第767 の起票（6 本の警告）と LP 2.26 の再実行（0 本）。7.7: `PaddingBars` の chord 行の不足小節はまだ score の拍子（`_bars.HomeMeter`）＝section の拍子で足りない行が拍子の変わる section に在れば同じ族の欠陥（コーパス 0・probe で出る）。commit `746856ae`（twin）・`cfd35e6d`（pdf）。push はユーザー。
 判定: 双子の警告 3 件は閉じた（⒞ は ⒝ の帰結）。次の一手: 第769 末の列挙の残り＝D.C./D.S. の MIDI（設計・`PlayForm` の註「not yet honored」）か、行末の裸の `__`（⑼ ⒞′）か、7.7 の `PaddingBars`（小）＝ユーザー判断。会話を区切るか: (a) 続けられる。
-
-## 以下は第772セッションの経緯
-
-### 1.1 第772セッション（2026-10-03・YT-DELL2）
-
-同じ会話の続き・ユーザー「続けて」＝第771 末の次の一手の筆頭＝**PDF の再現性**。`-Start p772`（HEAD `69d391c4`・未 push 4）＝full **10902 / 0 / 2 / 10904**。§7 3.5 で第770 を ARCHIVE へ。
-- **正体（第770 の計器 `sessions/p770/pdfdet/`）**: PdfSharpCore 1.3.65 が書く 3 つ＝`/CreationDate`（時計）・trailer の `/ID`（Guid・同じ値を 2 回）・subset font 名の 6 字タグ（Guid・`/RFYOHX+Emmentaler-20`・1 冊に 21 か所）。`/ModDate` は無い・object stream も無い＝全部 **非圧縮の辞書の中の固定長の文字列**。
-- **直した（commit 下記）**: 新 `Rendering/Pdf/PdfReproducibility.cs`＝⒜ `CreationDate()`: `SOURCE_DATE_EPOCH`（reproducible-builds の慣習・1970 からの秒）が在れば `_document.Info.CreationDate` にその時刻、無ければ時計のまま（PDF の作成日は読者に意味がある）／⒝ `Apply(bytes)`: 保存後の byte 列を**同じ長さで**書き換える＝タグは「face 名＋出現順」の SHA-256 から A〜Z 6 字（同じ face の 2 つ目の subset も別名を保つ）・`/ID` は ID を 0 で埋めた file 全体の MD5（xref の offset が動かない）。`PdfDocumentContext.Dispose` が保存前後に呼ぶ。LILYSHARP-OWN（LP の PDF は Cairo の時計のまま・慣習は reproducible-builds.org）。
-- **網** `PdfReproducibilityTests` 3 本（epoch 下で 2 回書いて byte 同一・epoch 無しは `/CreationDate` だけ違う・タグは A〜Z で subset ごとに別・`/ID` の 2 つは同じ hex・epoch の日付が入る）＋ `ScoreExportTests` の PDF の mask を外した（3 つの扉が epoch 下で byte 同一＝`SourceDateEpoch` の collection で直列）。文書: CHANGELOG Fixes・`CLI_REFERENCE.md` pdf 節に `SOURCE_DATE_EPOCH`。
-- 掃き（新 `sessions/p772/sweep-pdf.ps1`＝head を 2 回・base 対 head は mask して比較・998 冊・`SOURCE_DATE_EPOCH=1700000000`）: **PDF 1,198 本＝head 2 回は 1,198 本とも byte 同一・base 対 head は描画同一 1,198 本（差 0）**＝PDF の掃きが初めて立った（以後は base 対 head を byte で比べられる）。
-★ `-End p772 -DiffBase 69d391c4`＝full **10905 / 0 / 2 / 10907**（網 +3）・門 全 OK（HANDOFF 残り 8,219 B・§1 残り 10,005 字・棚卸し `APPROXIMATIONS.md` +5/−3＝OWN 1 本が増えた・1 回目は stale で赤→再生成）。7.5: Core `+` 124 行＝新 `PdfReproducibility.cs`（約 110）＋ `PdfDocumentContext.Dispose` の 4 行・REF 0・OWN 1（慣習は reproducible-builds の物・LP は時計のまま）。7.6: ⒜ 出所は第770 の計器（180 byte・28 か所）と PdfSharpCore の出力の読み（`/ModDate` 無し・ObjStm 無し）。7.7: `SOURCE_DATE_EPOCH` は時計だけに効く＝タグと ID は常に決定的（意味を持たないから）。commit `af7038f3`（code）。push はユーザー。
-判定: PDF の再現性は閉じた＝svg／ly／midi／xml に続いて PDF も byte で掃ける。次の一手: 第769 末の列挙の残り＝双子の警告 3 件（§1.0 ⒜・小）・D.C./D.S. の MIDI（設計）・行末の裸の `__`（⑼ ⒞′）＝ユーザー判断。会話を区切るか: (a) 続けられる。
 
 ## 2. 開いている作業
 

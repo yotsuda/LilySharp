@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第772セッションの経緯
+
+### 1.1 第772セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き・ユーザー「続けて」＝第771 末の次の一手の筆頭＝**PDF の再現性**。`-Start p772`（HEAD `69d391c4`・未 push 4）＝full **10902 / 0 / 2 / 10904**。§7 3.5 で第770 を ARCHIVE へ。
+- **正体（第770 の計器 `sessions/p770/pdfdet/`）**: PdfSharpCore 1.3.65 が書く 3 つ＝`/CreationDate`（時計）・trailer の `/ID`（Guid・同じ値を 2 回）・subset font 名の 6 字タグ（Guid・`/RFYOHX+Emmentaler-20`・1 冊に 21 か所）。`/ModDate` は無い・object stream も無い＝全部 **非圧縮の辞書の中の固定長の文字列**。
+- **直した（commit 下記）**: 新 `Rendering/Pdf/PdfReproducibility.cs`＝⒜ `CreationDate()`: `SOURCE_DATE_EPOCH`（reproducible-builds の慣習・1970 からの秒）が在れば `_document.Info.CreationDate` にその時刻、無ければ時計のまま（PDF の作成日は読者に意味がある）／⒝ `Apply(bytes)`: 保存後の byte 列を**同じ長さで**書き換える＝タグは「face 名＋出現順」の SHA-256 から A〜Z 6 字（同じ face の 2 つ目の subset も別名を保つ）・`/ID` は ID を 0 で埋めた file 全体の MD5（xref の offset が動かない）。`PdfDocumentContext.Dispose` が保存前後に呼ぶ。LILYSHARP-OWN（LP の PDF は Cairo の時計のまま・慣習は reproducible-builds.org）。
+- **網** `PdfReproducibilityTests` 3 本（epoch 下で 2 回書いて byte 同一・epoch 無しは `/CreationDate` だけ違う・タグは A〜Z で subset ごとに別・`/ID` の 2 つは同じ hex・epoch の日付が入る）＋ `ScoreExportTests` の PDF の mask を外した（3 つの扉が epoch 下で byte 同一＝`SourceDateEpoch` の collection で直列）。文書: CHANGELOG Fixes・`CLI_REFERENCE.md` pdf 節に `SOURCE_DATE_EPOCH`。
+- 掃き（新 `sessions/p772/sweep-pdf.ps1`＝head を 2 回・base 対 head は mask して比較・998 冊・`SOURCE_DATE_EPOCH=1700000000`）: **PDF 1,198 本＝head 2 回は 1,198 本とも byte 同一・base 対 head は描画同一 1,198 本（差 0）**＝PDF の掃きが初めて立った（以後は base 対 head を byte で比べられる）。
+★ `-End p772 -DiffBase 69d391c4`＝full **10905 / 0 / 2 / 10907**（網 +3）・門 全 OK（HANDOFF 残り 8,219 B・§1 残り 10,005 字・棚卸し `APPROXIMATIONS.md` +5/−3＝OWN 1 本が増えた・1 回目は stale で赤→再生成）。7.5: Core `+` 124 行＝新 `PdfReproducibility.cs`（約 110）＋ `PdfDocumentContext.Dispose` の 4 行・REF 0・OWN 1（慣習は reproducible-builds の物・LP は時計のまま）。7.6: ⒜ 出所は第770 の計器（180 byte・28 か所）と PdfSharpCore の出力の読み（`/ModDate` 無し・ObjStm 無し）。7.7: `SOURCE_DATE_EPOCH` は時計だけに効く＝タグと ID は常に決定的（意味を持たないから）。commit `af7038f3`（code）。push はユーザー。
+判定: PDF の再現性は閉じた＝svg／ly／midi／xml に続いて PDF も byte で掃ける。次の一手: 第769 末の列挙の残り＝双子の警告 3 件（§1.0 ⒜・小）・D.C./D.S. の MIDI（設計）・行末の裸の `__`（⑼ ⒞′）＝ユーザー判断。会話を区切るか: (a) 続けられる。
+
 ## 以下は第771セッションの経緯
 
 ### 1.1 第771セッション（2026-10-03・YT-DELL2）
