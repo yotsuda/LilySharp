@@ -413,6 +413,7 @@ public sealed partial class LilyPondExporter
         FormDeclarationSyntax? form, List<SectionDeclarationSyntax> allSections)
     {
         _sectionHeaders = Semantics.SectionHeaders.Read(allSections);
+        _allSections = allSections;
         var byName = new Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)>(
             StringComparer.Ordinal);
         var inOrder = new List<(SectionDeclarationSyntax Section, SyntaxNode Container)>();
@@ -495,11 +496,22 @@ public sealed partial class LilyPondExporter
         if (_sectionHeaders.Times.GetValueOrDefault(sectionName) is { IsSenzaMisura: false } headerTime)
             start = new Fraction(headerTime.Beats, headerTime.BeatType);
 
-        PartBlockSyntax? part = null;
-        foreach (var node in section.DescendantNodes())
-            if (node is PartBlockSyntax pb) { part = pb; break; }
+        // The music of the name: in the section given, else in any declaration of the name
+        // — a by-part chord track (`chords prog { section Bridge { … } }`) registers its OWN
+        // inner section, which holds no part block, and until 2026-10-03 that read as "no
+        // meters" and the bars fell back to the SCORE's: a row under a 3/4 Bridge wrote
+        // `d1:m` and LilyPond's bar check failed there (Lab corpora/dogfood/collide,
+        // sessions/p767/twin). With no music to read at all, the header's meter holds.
+        PartBlockSyntax? part = FirstPartBlock(section);
         if (part is null)
-            return null;
+            foreach (var declaration in _allSections)
+                if (declaration.SectionName == sectionName && FirstPartBlock(declaration) is { } other)
+                {
+                    part = other;
+                    break;
+                }
+        if (part is null)
+            return [start];
 
         var meters = new List<Fraction>();
         var current = start;
@@ -536,8 +548,21 @@ public sealed partial class LilyPondExporter
         Walk(part);
         if (pendingNotes)
             meters.Add(current);
-        return meters.Count > 0 ? meters : null;
+        return meters.Count > 0 ? meters : [start];
     }
+
+    private static PartBlockSyntax? FirstPartBlock(SectionDeclarationSyntax section)
+    {
+        foreach (var node in section.DescendantNodes())
+            if (node is PartBlockSyntax pb)
+                return pb;
+        return null;
+    }
+
+    /// <summary>Every section declaration of the book in document order (the caller's
+    /// <c>allSections</c>), for <see cref="SectionBarMeters"/> to find the music of a name
+    /// whose chord row was registered under its own inner section.</summary>
+    private List<SectionDeclarationSyntax> _allSections = new();
 
     /// <summary>
     /// One chord container's bars as stream items: each bar's slots pre-spelled into ONE

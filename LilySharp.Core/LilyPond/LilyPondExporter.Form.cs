@@ -59,6 +59,7 @@ public sealed partial class LilyPondExporter
         // walk the collector registers from (every declaration of a name contributes;
         // the played declaration may be a different node — see the field's remarks).
         _sectionHeaders = Semantics.SectionHeaders.Read(allSections);
+        _allSections = allSections;
 
         var partSections = part?.DescendantNodes<SectionDeclarationSyntax>().ToList()
             ?? new List<SectionDeclarationSyntax>();
@@ -121,10 +122,14 @@ public sealed partial class LilyPondExporter
             var formItems = FormWalk.Read(form);
             _repeatTiePlays = RepeatTiePlays(formItems, byName);
             _lpPlayIndex = 0;
+            _firstPlayRestatesTempo = FirstPlayedSection(formItems) is { } first
+                && _sectionHeaders.Tempos.ContainsKey(first);
             AppendFormItems(formItems, byName, result);
         }
         else
         {
+            _firstPlayRestatesTempo = inOrder.Count > 0
+                && _sectionHeaders.Tempos.ContainsKey(inOrder[0].Section.SectionName);
             foreach (var entry in inOrder)
             {
                 // No form: sections play in declaration order and each is labelled with
@@ -145,6 +150,36 @@ public sealed partial class LilyPondExporter
         // Also carry any part-level clef declared outside a section (e.g. a
         // mid-part clef change is inside a section and handled there).
         return result;
+    }
+
+    /// <summary>
+    /// True when the first section the part plays carries a header <c>tempo</c>: it stands
+    /// at the same moment as the file's, and LilyPond keeps one tempo event per moment —
+    /// <see cref="EmitScoreSettings"/> then leaves the file's out (its remark says why).
+    /// </summary>
+    private bool _firstPlayRestatesTempo;
+
+    /// <summary>The name of the first section a form plays, through a repeat's or an
+    /// ending's first reference; null for a form that plays none.</summary>
+    private static string? FirstPlayedSection(IReadOnlyList<FormWalk.Item> items)
+    {
+        foreach (var item in items)
+        {
+            switch (item)
+            {
+                case FormWalk.SectionRef s:
+                    return s.Name;
+                case FormWalk.Repeat r:
+                    if (FirstPlayedSection(r.Children) is { } inRepeat)
+                        return inRepeat;
+                    break;
+                case FormWalk.Ending e:
+                    if (e.Sections.Count > 0)
+                        return e.Sections[0].Name;
+                    break;
+            }
+        }
+        return null;
     }
 
     /// <summary>

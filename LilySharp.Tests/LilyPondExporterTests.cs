@@ -2597,6 +2597,71 @@ public class LilyPondExporterTests
         score main { {{render}} }
         """;
 
+    // A by-part chord track (`chords prog { section B { … } }`) registers its own inner
+    // section, which holds no music; the bar's length still has to be the music's — the
+    // section's header meter. Until 2026-10-03 it fell back to the score's: a row under a
+    // 3/4 Bridge wrote `d1:m` and LilyPond's bar check failed there (Lab corpora/dogfood/
+    // collide/leadsheet-collide, sessions/p767/twin).
+    [Fact]
+    public void ByPartChordRow_UnderASectionsOwnMeter_WritesBarsOfThatMeter()
+    {
+        var ly = Export("""
+            time 4/4
+            key c major
+            part m { clef treble }
+            section A { m { c1 | } }
+            section B { time 3/4 m { c2. | } }
+            chords prog { section A { C | } section B { Dm | } }
+            form main { A B }
+            score main { chords prog  staff m }
+            """);
+        int chords = ly.IndexOf("progChords = \\chordmode {");
+        Assert.True(chords >= 0, ly);
+        string track = ly[chords..ly.IndexOf("}\n", chords)];
+        Assert.Contains("c1 |", track);
+        Assert.Contains("d2.:m |", track);
+        Assert.DoesNotContain("d1:m", track);
+    }
+
+    // The file's `tempo` and the first played section's header `tempo` stand at one moment;
+    // LilyPond keeps one tempo event per moment and discards the second with a warning
+    // ("conflict with event: tempo-change-event"), which was the SECTION's — the one the page
+    // shows. The twin now writes the section's alone there.
+    [Fact]
+    public void FileTempo_StandsAside_WhenTheFirstPlayedSectionRestatesOne()
+    {
+        var ly = Export("""
+            tempo "Moderato" 4 = 100
+            time 4/4
+            key c major
+            part m { clef treble }
+            section A { tempo "Rubato" 4 = 80 m { c1 | } }
+            section B { m { c1 | } }
+            form main { A B }
+            score main { staff m }
+            """);
+        Assert.Contains("\\tempo \"Rubato\" 4 = 80", ly);
+        Assert.DoesNotContain("\\tempo \"Moderato\" 4 = 100", ly);
+        Assert.Equal(1, Occurrences(ly, "\\tempo "));
+    }
+
+    [Fact]
+    public void FileTempo_Stays_WhenTheFirstPlayedSectionHasNone()
+    {
+        var ly = Export("""
+            tempo "Moderato" 4 = 100
+            time 4/4
+            key c major
+            part m { clef treble }
+            section A { m { c1 | } }
+            section B { tempo "Slower" 4 = 72 m { c1 | } }
+            form main { A B }
+            score main { staff m }
+            """);
+        Assert.Contains("\\tempo \"Moderato\" 4 = 100", ly);
+        Assert.Contains("\\tempo \"Slower\" 4 = 72", ly);
+    }
+
     [Fact]
     public void ChordRow_IsAChordNamesContext_OverAChordmodeVariable_AboveTheStaff()
     {

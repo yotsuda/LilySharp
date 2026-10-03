@@ -322,7 +322,20 @@ public sealed partial class LilyPondExporter
         {
             switch (m)
             {
-                case TempoDeclarationSyntax t: _sb.Append("  ").Append(EmitTempo(t)).Append('\n'); break;
+                case TempoDeclarationSyntax t:
+                    // The file's tempo stands at the part's first moment; a header `tempo`
+                    // on the first section the part plays stands there too, and LilyPond
+                    // keeps ONE tempo-change event per moment, warning "conflict with
+                    // event" and discarding the section's — the one the page shows and the
+                    // MIDI plays (MidiTrack.SetTempo: the last writer at a tick wins). So
+                    // the file's is left out when the first play restates it.
+                    // LILYPOND-REF: lily/include/stream-event.hh:59-70 assign_event_once —
+                    //   the second event of a class in one timestep is refused, and
+                    //   lily/stream-event.cc:113-116 says so ("conflict with event",
+                    //   "discarding event"); Metronome_mark_engraver listens that way.
+                    if (!_firstPlayRestatesTempo)
+                        _sb.Append("  ").Append(EmitTempo(t)).Append('\n');
+                    break;
                 case KeySignatureSyntax k:
                     if (EmitKey(k) is { Length: > 0 } key)   // empty in \drummode
                         _sb.Append("  ").Append(key).Append('\n');
