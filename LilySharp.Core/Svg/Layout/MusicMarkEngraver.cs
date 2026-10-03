@@ -663,6 +663,13 @@ internal static class MusicMarkEngraver
         // staff; else whether that row is the GRID row, whose band carries ink (the lead
         // sheet's bar lines and meter) — any other row's band is empty space.
         bool? AnchorRowCarriesTheGrid(int measureIndex)
+            => AnchorRowLayout(measureIndex) is { } row ? row.StaffIndex == gridBarlineRowIndex : null;
+
+        // The placed layout of the mark's anchor when it is a ROW; null when it is a staff (or
+        // the system is not placed). The tempo reads the row's own refpoint off it (session
+        // 786): a staffless mark's LilyPond support set is empty and the padding is paid from
+        // the row's baseline, not from a staff symbol's edge.
+        StaffLayout? AnchorRowLayout(int measureIndex)
         {
             if (!measureToSystemIdx.TryGetValue(measureIndex, out int sysIdx)
                 || sysIdx < 0 || sysIdx >= systems.Length)
@@ -673,7 +680,7 @@ internal static class MusicMarkEngraver
             foreach (var g in system.StaffGroups)
                 foreach (var st in g.Staves)
                     if (st.StaffIndex == anchor)
-                        return st.StaffAffinity is not null ? anchor == gridBarlineRowIndex : null;
+                        return st.StaffAffinity is not null ? st : null;
             return null;
         }
 
@@ -1023,7 +1030,36 @@ internal static class MusicMarkEngraver
                     // (baseline + Ink.Bottom), not a half-extent.
                     var tInk = MetronomeMarkGeometry.Ink(fonts, mark.Text, mark.TempoText,
                         mark.TempoBeatUnit, mark.TempoDots, mark.SwingSubdivision);
-                    yUp = MetronomeMarkGeometry.QuietBaselineAboveMiddle(tInk.Bottom);
+                    // ⚠️ AND ON A STAFFLESS SHEET THE STAFF'S QUIET BASELINE IS A SHAPE WITH
+                    // NOTHING UNDER IT: the anchor is a chords or lyrics ROW, LilyPond's
+                    // support set (stavesFound) is empty, and aligned_side pads the 0.8 from
+                    // the row's own refpoint -- the symbol / syllable baseline -- which sits
+                    // RefpointBelowTop under the band top (the mark frame's 2.0). MEASURED
+                    // (session 786, ledger tempo.staffless.over-chord.*): the staff's 2.85
+                    // floor read 0.542750 over a short chord's ink where LilyPond reads
+                    // 0.460000, and bound the pair apart (the tall chord's ceiling already
+                    // read 0.460000) -- the identity is the claim. The GRID row's band carries
+                    // ink of Lily#'s own (bar lines, meter) and the mark clears it as the
+                    // boxed label does (TextRowLabelFrameBottomAboveBandMiddle); the row's
+                    // symbols are the chord ceiling below, as over a staff.
+                    // ⚠️ THE ONE NON-LITERAL STEP (HANDOFF 7.6 (b)): LilyPond chooses the
+                    // row PER MARK -- move_to_extremal_staff takes the top live axis group
+                    // whose X extent meets the mark's, and an axis group's X extent is its
+                    // ELEMENTS' -- so over an EMPTY first bar it passes the chord row by and
+                    // wedges the tempo between the chord row and the lyrics (probe TCQ), or,
+                    // with nothing in reach at all, leaves it 0.8 off the SYSTEM refpoint
+                    // (TCF). Lily# anchors every Score-level mark on the top score-grob row
+                    // (ResolveScoreGrobStaff) and keeps that row's refpoint as the quiet base
+                    // in those regimes. To be literal the anchor would have to be chosen by
+                    // X extent per mark -- and reproduce both pictures. No ledger point is
+                    // comparable there (the engines anchor on different grobs).
+                    yUp = AnchorRowLayout(mark.MeasureIndex) is { RefpointBelowTop: { } refBelowTop } row
+                        ? Math.Max(
+                            2.0 - refBelowTop + MetronomeMarkGeometry.QuietBaselineAboveRowRefpoint(tInk.Bottom),
+                            row.StaffIndex == gridBarlineRowIndex
+                                ? TextRowLabelFrameBottomAboveBandMiddle - tInk.Bottom
+                                : double.NegativeInfinity)
+                        : MetronomeMarkGeometry.QuietBaselineAboveMiddle(tInk.Bottom);
                     if (!double.IsNegativeInfinity(markCeilingUp))
                         yUp = Math.Max(yUp, markCeilingUp - tInk.Bottom);
                 }
@@ -2314,7 +2350,9 @@ internal static class MusicMarkEngraver
     /// grid — LilyPond engraves neither on a ChordNames line — so the floor is a reading of
     /// that rule onto Lily#'s surface, not a measured number; the staff's 0.8 side-position
     /// padding (<see cref="LabelFrameBottomAboveStaffMiddle"/>) is a staff symbol's and has
-    /// no staff to apply to. Session 785.
+    /// no staff to apply to. Session 785. The METRONOME MARK's ink bottom reads the same floor
+    /// on the grid row since session 786 (ledger tempo.staffless.grid.over-chord.*); its quiet
+    /// base on any row is <see cref="MetronomeMarkGeometry.QuietBaselineAboveRowRefpoint"/>.
     /// </remarks>
     internal static double TextRowLabelFrameBottomAboveBandMiddle => 2.0 + OutsideStaffPadding;
 

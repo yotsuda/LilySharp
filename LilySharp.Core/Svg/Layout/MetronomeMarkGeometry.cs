@@ -392,4 +392,24 @@ internal static class MetronomeMarkGeometry
     public static double QuietBaselineAboveMiddle(double inkBottom)
         => 2.0 + EngravingDefaults.StaffLineThickness / 2.0
            + EngravingDefaults.MetronomeMarkPadding - inkBottom;
+
+    /// <summary>
+    /// The quiet resting BASELINE above a text ROW's reference point (the chord-symbol or
+    /// syllable baseline) — a STAFFLESS sheet's mark. The supports are the staves and a
+    /// rows-only sheet has none, so aligned_side pads from an EMPTY support set: a skyline
+    /// of height 0 at the mark's own Y-parent's refpoint, the row it was re-parented onto.
+    /// The stencil bottom lands 0.8 over that baseline and the mark's baseline rides its own
+    /// ink bottom above it (ledger tempo.staffless.over-chord.*, probes/tempo-chord-row.ly;
+    /// there the row's symbols then lift it further, by the outside-staff pass).
+    /// </summary>
+    // LILYPOND-REF: lily/side-position-interface.cc:347-351 aligned_side — an empty support
+    //   set becomes a skyline of minimum height 0.0 in the common refpoint's frame, which with
+    //   no supports is the Y-parent's; :370 the padding is then paid from it.
+    // LILYPOND-REF: lily/side-position-interface.cc:513-547 move_to_extremal_staff — the
+    //   Y-parent of a Score-level mark on a staffless sheet is the top live axis group whose X
+    //   extent meets the mark's (a ChordNames or Lyrics line), whose refpoint IS its baseline.
+    // LILYPOND-REF: lily/staff-collecting-engraver.cc:41-54 acknowledge_staff_symbol — stavesFound
+    //   collects staff symbols, so a sheet without a Staff leaves it empty.
+    public static double QuietBaselineAboveRowRefpoint(double inkBottom)
+        => EngravingDefaults.MetronomeMarkPadding - inkBottom;
 }

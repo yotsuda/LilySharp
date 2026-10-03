@@ -371,6 +371,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A chord grid's tempo mark rests on the row, not on a staff it has not got.** On a
+  chords-only or chords-and-lyrics sheet the header's metronome mark took a staff's resting
+  height (0.8 over a staff line's edge) above a row with no staff line, so over a short chord
+  it stood higher than over a tall one; it now rests 0.8 over the row's own baseline and
+  clears the chord under it by LilyPond's 0.46, the same on every chord, and on a chords-only
+  grid it clears the grid's bar lines and meter by that padding.
 - **A chord grid's section name clears its symbols by LilyPond's padding.** Above a chord
   or lyric row the box now stands 0.46 over the symbols under it (or over the grid's bar
   lines where nothing else is under it), where it kept a staff's 0.8 from a staff line the

@@ -1878,32 +1878,7 @@ internal sealed class RenderedGeometry
                 + "Drawn geometry:\n" + Describe());
         }
         double boxLeft = boxes[0].X, boxRight = boxes[0].X + boxes[0].Width;
-        var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
-        // The symbols under the box: below it (device Y larger), within a row's reach, and
-        // meeting the box in X. The highest ink top among them is the support.
-        // ⚠️ THE INK IS THE PLACED SYMBOL'S, read off the layout by source position: the
-        // recorder sees `A♯m' as the runs "A" and "m" around an accidental GLYPH, so the
-        // drawn text alone would price the sharp's 0.317582 of ink away (MKZ's whole
-        // difference from MKY).
-        double? inkTopY = null;
-        foreach (var c in ChordSymbols)
-        {
-            if (c.Y <= t.Y || c.Y - t.Y > 10.0)
-                continue;
-            var placed = _layout?.ChordNameLayouts.FirstOrDefault(l => l.SourcePosition == c.SourcePosition);
-            double width = placed is { } pw
-                ? ChordNameEngraver.SymbolInkWidth(fonts, pw)
-                : ChordNameEngraver.SymbolInkWidth(fonts, c.Text);
-            double right = c.X + width;
-            if (right <= boxLeft || c.X >= boxRight)
-                continue;
-            double inkTop = placed is { } pi
-                ? ChordNameEngraver.SymbolInk(fonts, pi).Top
-                : ChordNameEngraver.SymbolInk(fonts, c.Text).Top;
-            double top = c.Y - inkTop;
-            inkTopY = inkTopY is { } y ? Math.Min(y, top) : top;
-        }
-        if (inkTopY is not { } supportTop)
+        if (HighestChordInkTopUnder(boxLeft, boxRight, t.Y) is not { } supportTop)
         {
             throw new InvalidOperationException(
                 $"page {page}: no chord symbol stands under the mark \"{label}\" "
@@ -1911,6 +1886,106 @@ internal sealed class RenderedGeometry
                 + "claims.\nDrawn geometry:\n" + Describe());
         }
         return supportTop - t.Y;
+    }
+
+    /// <summary>
+    /// The METRONOME MARK's baseline above the ink top of the chord symbol(s) its ink meets in
+    /// X — on a STAFFLESS sheet, where the mark has no staff to rest on
+    /// (probes/tempo-chord-row.ly TCY/TCZ/TCG). The mark's extent is its drawn note glyph's
+    /// left to the equation's advance, the same span <see cref="MetronomeMarkGeometry.Ink"/>
+    /// prices; its baseline is the equation's (the DOWN-aligned note and the flat-bottomed
+    /// digits `111' both stand ON it, so it is the ink bottom too — the probe header says why
+    /// that count).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/side-position-interface.cc:347-351 aligned_side — an empty
+    /// support set (no staff: stavesFound is empty) pads 0.8 from the parent's refpoint;
+    /// lily/axis-group-interface.cc:648-676 avoid_outside_staff_collisions — then the mark
+    /// clears the row's symbol boxes by outside-staff-padding 0.46 where they meet in X. The
+    /// chord's side is read as <see cref="MusicMarkBaselineAboveChordInkTop"/> reads it.
+    /// </remarks>
+    public double TempoBaselineAboveChordInkTop(int page = 0)
+    {
+        var (eq, x0, x1) = SoleTempoEquationExtent(page);
+        if (HighestChordInkTopUnder(x0, x1, eq.Y) is not { } supportTop)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: no chord symbol stands under the metronome mark "
+                + $"({x0:F3}..{x1:F3}) — the probe is not measuring what it claims.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        return supportTop - eq.Y;
+    }
+
+    /// <summary>
+    /// The one metronome equation ("= N") on the page with the mark's X span: the metronome-size
+    /// note glyph's left (the mark's ink left, as <see cref="TempoMarkToTimeSignatureLeft"/>
+    /// reads it) to the equation's advance.
+    /// </summary>
+    private (DrawnText Equation, double Left, double Right) SoleTempoEquationExtent(int page)
+    {
+        var eq = _pages[page].Texts
+            .Where(t => t.Role == TextRole.Tempo
+                        && t.Text.StartsWith("= ", StringComparison.Ordinal))
+            .ToList();
+        if (eq.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE tempo equation (\"= N\"), found "
+                + $"{eq.Count} — the probe is not measuring what it claims.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
+        var heads = _pages[page].Glyphs
+            .Where(g => g.Glyph == EmmentalerGlyphs.NoteheadBlack
+                        && Math.Abs(g.FontSize - MetronomeMarkGeometry.NoteSize(fonts)) < 1e-9)
+            .ToList();
+        if (heads.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE metronome-size notehead, found "
+                + $"{heads.Count} — the probe is not measuring what it claims.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        double right = eq[0].X + LilySharp.Core.Rendering.TextFontMetrics.Advance(
+            eq[0].Text, eq[0].FontSize, sans: false, MetronomeMarkGeometry.PlainStyle(fonts));
+        return (eq[0], heads[0].X, right);
+    }
+
+    /// <summary>
+    /// The device Y of the HIGHEST ink top among the chord symbols standing under an
+    /// outside-staff mark: below <paramref name="aboveY"/> (device Y larger), within a row's
+    /// reach, and meeting [<paramref name="x0"/>, <paramref name="x1"/>] in X. Null when none
+    /// does.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE INK IS THE PLACED SYMBOL'S, read off the layout by source position: the
+    /// recorder sees `A♯m' as the runs "A" and "m" around an accidental GLYPH, so the
+    /// drawn text alone would price the sharp's 0.317582 of ink away (MKZ's whole
+    /// difference from MKY).
+    /// </remarks>
+    private double? HighestChordInkTopUnder(double x0, double x1, double aboveY)
+    {
+        var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
+        double? inkTopY = null;
+        foreach (var c in ChordSymbols)
+        {
+            if (c.Y <= aboveY || c.Y - aboveY > 10.0)
+                continue;
+            var placed = _layout?.ChordNameLayouts.FirstOrDefault(l => l.SourcePosition == c.SourcePosition);
+            double width = placed is { } pw
+                ? ChordNameEngraver.SymbolInkWidth(fonts, pw)
+                : ChordNameEngraver.SymbolInkWidth(fonts, c.Text);
+            double right = c.X + width;
+            if (right <= x0 || c.X >= x1)
+                continue;
+            double inkTop = placed is { } pi
+                ? ChordNameEngraver.SymbolInk(fonts, pi).Top
+                : ChordNameEngraver.SymbolInk(fonts, c.Text).Top;
+            double top = c.Y - inkTop;
+            inkTopY = inkTopY is { } y ? Math.Min(y, top) : top;
+        }
+        return inkTopY;
     }
 
     /// <summary>

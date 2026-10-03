@@ -5074,6 +5074,59 @@ internal static class LpGeometryProbes
     /// <inheritdoc cref="MKY"/>
     private static readonly string MKZ = StafflessMarkOverChordScore("MKZ", sharp: true);
 
+    /// <summary>
+    /// THE METRONOME MARK ON A STAFFLESS SHEET: a chord row and a lyric row, the header tempo
+    /// standing over bar 1's chord (probes/tempo-chord-row.ly TCY; TCZ is the sharped mirror,
+    /// TCG the same chords with no lyric row — a chords-only grid).
+    /// </summary>
+    /// <remarks>
+    /// Opened 2026-10-04 (session 786), the sibling session 785 left open: the staffless LABEL
+    /// has its LilyPond number (MKY/MKZ) and the tempo on the same sheet still rested at a
+    /// STAFF's quiet baseline (MetronomeMarkGeometry.QuietBaselineAboveMiddle = 2.0 + 0.05 +
+    /// 0.8 − ink bottom) over a row that has no staff symbol. AT THE LINE START because a
+    /// rows-only score engraves only its HEADER tempo (a section-level or in-music tempo of a
+    /// part the score does not place is not drawn there — Lab sessions/p786/probes v2/v3), so
+    /// MKY's mid-line arrangement is not reachable. `4 = 111': flat-bottomed digits, so the
+    /// mark's ink bottom is its baseline along its whole width and a pointwise skyline reads
+    /// the same edge as a flat box (the probe header). The pair's identity is the claim;
+    /// LilyPond reads 0.460000 on all three books.
+    /// </remarks>
+    private static readonly string TCY = StafflessTempoOverChordScore("TCY", sharp: false, lyrics: true);
+
+    /// <inheritdoc cref="TCY"/>
+    private static readonly string TCZ = StafflessTempoOverChordScore("TCZ", sharp: true, lyrics: true);
+
+    /// <inheritdoc cref="TCY"/>
+    private static readonly string TCG = StafflessTempoOverChordScore("TCG", sharp: false, lyrics: false);
+
+    private static string StafflessTempoOverChordScore(string name, bool sharp, bool lyrics)
+    {
+        string chords = sharp ? "A#m | F#" : "Am | F";
+        string chords2 = sharp ? "C# | G#" : "C | G";
+        string lyricsA = lyrics ? "  lyrics words { one two three four | five six sev- en | }\n" : "";
+        string lyricsB = lyrics ? "  lyrics words { eight nine ten e- le- ven | twelve thir- teen | }\n" : "";
+        string lyricsRow = lyrics ? "  lyrics words\n" : "";
+        return $$"""
+            tempo 4 = 111
+            time 4/4
+            key c major
+
+            section A {
+              chords harm { {{chords}} }
+            {{lyricsA}}}
+
+            section B {
+              chords harm { {{chords2}} }
+            {{lyricsB}}}
+
+            form main { ~A ~B }
+
+            score main "{{name}}" {
+              chords harm
+            {{lyricsRow}}}
+            """;
+    }
+
     private static string StafflessMarkOverChordScore(string name, bool sharp)
     {
         string chords = sharp ? "C# | G#" : "C | G";
@@ -15599,6 +15652,19 @@ internal static class LpGeometryProbes
             g => g.MusicMarkBaselineAboveChordInkTop("Chorus"), RaggedBottomPaper),
         new("mark.staffless.over-chord.tall.row-ink-to-baseline", MKZ,
             g => g.MusicMarkBaselineAboveChordInkTop("Chorus"), RaggedBottomPaper),
+        // ...and the TEMPO on that sheet (books TCY/TCZ/TCG, session 786): the header
+        // metronome mark over bar 1's chord — its baseline above the chord's ink top. No staff
+        // under it, so LilyPond's support set is empty and the mark pads 0.8 off the ROW's
+        // refpoint, then clears the symbols' boxes by 0.46 where they meet in X; Lily# rested
+        // it at a staff's quiet baseline. TCZ sharps every chord (the identity is the claim);
+        // TCG drops the lyric row, so the chord row itself carries Lily#'s grid — the meter
+        // and bar lines LilyPond's ChordNames line has not got — under the mark.
+        new("tempo.staffless.over-chord.row-ink-to-baseline", TCY,
+            g => g.TempoBaselineAboveChordInkTop(), RaggedBottomPaper),
+        new("tempo.staffless.over-chord.tall.row-ink-to-baseline", TCZ,
+            g => g.TempoBaselineAboveChordInkTop(), RaggedBottomPaper),
+        new("tempo.staffless.grid.over-chord.row-ink-to-baseline", TCG,
+            g => g.TempoBaselineAboveChordInkTop(), RaggedBottomPaper),
 
         // ...and the shape BOTH of those were blind to: NO STAFF AT ALL (book BNS, mirroring
         // barnumber-staffless.ly). The entries above measure over a staff refpoint, which a
