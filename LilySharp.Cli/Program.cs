@@ -16,6 +16,7 @@
 
 using System.Reflection;
 using LilySharp.Cli;
+using LilySharp.Core.Export;
 using LilySharp.Core.Midi;
 using LilySharp.Core.MusicXml;
 using LilySharp.Core.Pdf;
@@ -234,13 +235,9 @@ static int RunSvg(string[] args)
         if (error != null) return OptionError(error, "svg");
         return ExecuteSvgCombined(input!, OutputPathFor(input!, dir!, ".svg"), embedFont);
     }
-    return RunScoreOutputs("svg", r, ".svg", (tree, output) =>
-    {
-        var svg = LilySharp.Core.Svg.SvgGenerator.GenerateScore(tree, output.Spec, MakeSvgOptions(embedFont));
-        File.WriteAllText(output.Path, svg);
-        Console.WriteLine($"Created: {output.Path}");
-        return 0;
-    });
+    var options = new ExportOptions { EmbedFont = embedFont };
+    return RunScoreOutputs("svg", r, ".svg",
+        (tree, output) => Report(ScoreExport.Write(tree, "svg", output.Path, output.Score, options)));
 }
 
 static void ShowSvgHelp()
@@ -269,10 +266,9 @@ static void ShowSvgHelp()
         """);
 }
 
+// The combined stack draws with the options a score's export uses (ScoreExport, one home).
 static LilySharp.Core.Svg.Renderer.SvgRenderOptions MakeSvgOptions(bool embedFont)
-    => embedFont
-        ? LilySharp.Core.Svg.Renderer.SvgRenderOptions.Export(LilySharp.Core.Rendering.FontLocator.Find())
-        : LilySharp.Core.Svg.Renderer.SvgRenderOptions.Default;
+    => ScoreExport.SvgOptions(embedFont);
 
 // The generators deliberately fall back to the FIRST score for an unknown
 // name (the LSP preview needs that after a rename) — on the command line a
@@ -318,14 +314,8 @@ static int RunPdf(string[] args)
         .Parse(args);
     if (r.Error != null) return OptionError(r.Error, "pdf");
 
-    return RunScoreOutputs("pdf", r, ".pdf", (tree, output) =>
-    {
-        var pdfBytes = PdfGenerator.GenerateScore(tree, output.Spec);
-        File.WriteAllBytes(output.Path, pdfBytes);
-        Console.WriteLine($"Created: {output.Path}");
-        Console.WriteLine($"  Size: {pdfBytes.Length / 1024.0:F1} KB");
-        return 0;
-    });
+    return RunScoreOutputs("pdf", r, ".pdf",
+        (tree, output) => Report(ScoreExport.Write(tree, "pdf", output.Path, output.Score)));
 }
 
 static void ShowPdfHelp()
@@ -372,30 +362,10 @@ static int RunPng(string[] args)
         return OptionError("--scale must be a positive number", "png");
     bool crop = r.Has("crop");
 
-    var pngOptions = new PngRenderOptions { Scale = scale, FontDirectory = LilySharp.Core.Rendering.FontLocator.Find() };
-    return RunScoreOutputs("png", r, ".png", (tree, output) =>
-    {
-        // One file per page, following LilyPond's PNG naming: a single page
-        // keeps the score's name, multiple pages become NAME-page1.png,
-        // NAME-page2.png, … (scm/ps-to-png.scm).
-        var rendered = PngGenerator.GenerateScorePages(tree, output.Spec, pngOptions);
-        var pages = crop
-            ? rendered.Select(CropToContent).ToList()
-            : rendered.ToList();
-        string dir = Path.GetDirectoryName(output.Path) ?? "";
-        string baseName = Path.GetFileNameWithoutExtension(output.Path);
-        for (int p = 0; p < pages.Count; p++)
-        {
-            string pagePath = pages.Count == 1
-                ? output.Path
-                : Path.Combine(dir, $"{baseName}-page{p + 1}.png");
-            File.WriteAllBytes(pagePath, pages[p]);
-            Console.WriteLine($"Created: {pagePath}");
-            Console.WriteLine($"  Size: {pages[p].Length / 1024.0:F1} KB");
-        }
-        Console.WriteLine($"  Scale: {scale:F1}x");
-        return 0;
-    });
+    // One file per page, named as LilyPond names them (ScoreExport.PngPagePaths).
+    var options = new ExportOptions { PngScale = scale, CropPng = crop };
+    return RunScoreOutputs("png", r, ".png",
+        (tree, output) => Report(ScoreExport.Write(tree, "png", output.Path, output.Score, options)));
 }
 
 static void ShowPngHelp()
@@ -424,51 +394,6 @@ static void ShowPngHelp()
         """);
 }
 
-// Trims a PNG to the bounding box of its non-background (non-near-white) pixels,
-// plus a small margin, so a tiny snippet fills the frame instead of floating in a
-// page-sized sea of white. Returns the original bytes if nothing (or everything)
-// is background.
-static byte[] CropToContent(byte[] png, int marginPx = 8)
-{
-    using var bitmap = SkiaSharp.SKBitmap.Decode(png);
-    if (bitmap == null) return png;
-    int w = bitmap.Width, h = bitmap.Height;
-    int minX = w, minY = h, maxX = -1, maxY = -1;
-    for (int y = 0; y < h; y++)
-        for (int x = 0; x < w; x++)
-        {
-            var c = bitmap.GetPixel(x, y);
-            // "Ink" = any pixel darker than near-white on any channel (ignores the
-            // white/near-white page background and anti-aliasing fringe).
-            if (c.Alpha > 16 && (c.Red < 240 || c.Green < 240 || c.Blue < 240))
-            {
-                if (x < minX) minX = x;
-                if (x > maxX) maxX = x;
-                if (y < minY) minY = y;
-                if (y > maxY) maxY = y;
-            }
-        }
-    if (maxX < minX || maxY < minY) return png; // blank image
-
-    minX = Math.Max(0, minX - marginPx);
-    minY = Math.Max(0, minY - marginPx);
-    maxX = Math.Min(w - 1, maxX + marginPx);
-    maxY = Math.Min(h - 1, maxY + marginPx);
-    int cw = maxX - minX + 1, ch = maxY - minY + 1;
-    if (cw >= w && ch >= h) return png; // already tight
-
-    using var cropped = new SkiaSharp.SKBitmap(cw, ch);
-    using (var canvas = new SkiaSharp.SKCanvas(cropped))
-    {
-        canvas.Clear(SkiaSharp.SKColors.White);
-        canvas.DrawBitmap(bitmap, new SkiaSharp.SKRect(minX, minY, maxX + 1, maxY + 1),
-            new SkiaSharp.SKRect(0, 0, cw, ch));
-    }
-    using var img = SkiaSharp.SKImage.FromBitmap(cropped);
-    using var data = img.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100);
-    return data.ToArray();
-}
-
 // ============ MIDI Command ============
 
 static int RunMidi(string[] args)
@@ -479,7 +404,8 @@ static int RunMidi(string[] args)
         return 0;
     }
 
-    return RunFormOutput(args, "midi", ".mid", (tree, form, score, path) => WriteMidi(tree, form, score, path));
+    return RunFormOutput(args, "midi", ".mid",
+        (tree, output) => Report(ScoreExport.Write(tree, "midi", output.Path, output.Score)));
 }
 
 static void ShowMidiHelp()
@@ -505,29 +431,6 @@ static void ShowMidiHelp()
           lysc midi -d out score.lys
           lysc midi --score movement2 multi-movement.lys
         """);
-}
-
-static int WriteMidi(SyntaxTree tree, LilySharp.Core.Syntax.FormDeclarationSyntax? form,
-                     LilySharp.Core.Syntax.RenderDeclarationSyntax? score, string outputPath)
-{
-    // Each score's .mid sounds the parts THAT score shows (song-p2.mid is p2's staff, not
-    // the whole file); a scoreless file (null) sounds every part.
-    var exporter = new MidiExporter
-    {
-        Form = form,
-        Score = score != null ? LilySharp.Core.Svg.Collector.RenderSpecParser.Parse(score) : null,
-    };
-    var midi = exporter.Export(tree);
-    midi.Save(outputPath);
-    Console.WriteLine($"Created: {outputPath}");
-    Console.WriteLine($"  Tracks: {midi.Tracks.Count}");
-    Console.WriteLine($"  Notes: {midi.Tracks.Skip(1).Sum(t => t.Notes.Count)}");
-    // Surfaced the way `lysc ly` surfaces the LilyPond exporter's: MIDI has 128 keys,
-    // and a note the file writes outside them is the one thing this format loses that
-    // the page and the MusicXML keep.
-    foreach (var w in exporter.Warnings)
-        Console.WriteLine($"  warning: {w}");
-    return 0;
 }
 
 // ============ VSQX Command ============
@@ -560,13 +463,8 @@ static int RunVsqx(string[] args)
     if (error != null) return OptionError(error, "vsqx");
     string outputPath = OutputPathFor(inputPath!, dir!, ".vsqx");
 
-    return RunOutputCommand(inputPath!, null, tree =>
-    {
-        var doc = new LilySharp.Core.Vocaloid.VsqxExporter().Export(tree);
-        doc.Save(outputPath);
-        Console.WriteLine($"Created: {outputPath}");
-        return 0;
-    });
+    return RunOutputCommand(inputPath!, null,
+        tree => Report(ScoreExport.Write(tree, "vsqx", outputPath, null)));
 }
 
 // ============ MusicXML Command ============
@@ -579,7 +477,8 @@ static int RunXml(string[] args)
         return 0;
     }
 
-    return RunFormOutput(args, "xml", ".xml", (tree, form, _, path) => WriteXml(tree, form, path));
+    return RunFormOutput(args, "xml", ".xml",
+        (tree, output) => Report(ScoreExport.Write(tree, "musicxml", output.Path, output.Score)));
 }
 
 static void ShowXmlHelp()
@@ -605,16 +504,6 @@ static void ShowXmlHelp()
         """);
 }
 
-static int WriteXml(SyntaxTree tree, LilySharp.Core.Syntax.FormDeclarationSyntax? form,
-                    string outputPath)
-{
-    var (parts, measures) = new MusicXmlExporter { Form = form }.ExportToFile(tree, outputPath);
-    Console.WriteLine($"Created: {outputPath}");
-    Console.WriteLine($"  Parts: {parts}");
-    Console.WriteLine($"  Measures: {measures}");
-    return 0;
-}
-
 // ============ LilyPond Command ============
 
 static int RunLy(string[] args)
@@ -630,8 +519,9 @@ static int RunLy(string[] args)
     // the same reason --verbose and --batch are stripped before the per-command parsers.
     bool pinFonts = args.Contains("--pin-fonts");
     var rest = pinFonts ? args.Where(a => a != "--pin-fonts").ToArray() : args;
+    var options = new ExportOptions { PinFonts = pinFonts };
     return RunFormOutput(rest, "ly", ".ly",
-        (tree, form, score, path) => WriteLy(tree, form, score, path, pinFonts));
+        (tree, output) => Report(ScoreExport.Write(tree, "ly", output.Path, output.Score, options)));
 }
 
 static void ShowLyHelp()
@@ -672,22 +562,6 @@ static void ShowLyHelp()
           lysc ly -d out score.lys
           lysc ly --score movement2 multi-movement.lys
         """);
-}
-
-static int WriteLy(SyntaxTree tree, LilySharp.Core.Syntax.FormDeclarationSyntax? form,
-                   LilySharp.Core.Syntax.RenderDeclarationSyntax? score,
-                   string outputPath, bool pinFonts)
-{
-    var exporter = new LilySharp.Core.LilyPond.LilyPondExporter
-    {
-        Form = form, Score = score, PinFonts = pinFonts,
-    };
-    var ly = exporter.Export(tree);
-    File.WriteAllText(outputPath, ly);
-    Console.WriteLine($"Created: {outputPath}");
-    foreach (var w in exporter.Warnings)
-        Console.WriteLine($"  warning: {w}");
-    return 0;
 }
 
 // ============ Import Command ============
@@ -1164,6 +1038,20 @@ static int RunOutputCommand(string inputPath, string? scoreName, Func<SyntaxTree
     }
 }
 
+// The console's account of one export (ScoreExport.Write): every file it wrote, the
+// figures under it, the exporter's warnings. The writing itself is not the CLI's — the
+// preview's Export button and the batch export write through the same home.
+static int Report(ExportResult result)
+{
+    foreach (var file in result.Files)
+        Console.WriteLine($"Created: {file}");
+    foreach (var note in result.Notes)
+        Console.WriteLine($"  {note}");
+    foreach (var warning in result.Warnings)
+        Console.WriteLine($"  warning: {warning}");
+    return 0;
+}
+
 // ============ One form per file: the shape `midi`, `xml` and `ly` share ============
 //
 // A .mid, a .musicxml and a .ly each carry ONE arrangement, while a .lys may declare
@@ -1185,8 +1073,7 @@ static int RunOutputCommand(string inputPath, string? scoreName, Func<SyntaxTree
 // twin engraves them. midi and xml write the form's music and take no staves from it.
 static int RunFormOutput(
     string[] args, string verb, string defaultExt,
-    Func<SyntaxTree, LilySharp.Core.Syntax.FormDeclarationSyntax?,
-         LilySharp.Core.Syntax.RenderDeclarationSyntax?, string, int> write)
+    Func<SyntaxTree, ScoreOutput, int> write)
 {
     var r = OutputOptions()
         .Value("score", "--score requires a score name", "--score")
@@ -1195,9 +1082,9 @@ static int RunFormOutput(
 
     return RunScoreOutputs(verb, r, defaultExt, (tree, output) =>
     {
-        int rc = write(tree, output.Spec?.Form, output.Declaration, output.Path);
+        int rc = write(tree, output);
         // A file with no `score` block writes its primary form alone.
-        if (rc == 0 && output.Spec == null) WarnFormsLeftOut(tree);
+        if (rc == 0 && output.Score == null) WarnFormsLeftOut(tree);
         return rc;
     });
 }
@@ -1295,10 +1182,10 @@ static List<ScoreOutput>? ScoreOutputs(SyntaxTree tree, string input, string dir
     if (dir.Length > 0) Directory.CreateDirectory(dir);
     string stem = Path.GetFileNameWithoutExtension(input);
     if (scores.Count == 0)
-        return [new ScoreOutput(Path.Combine(dir, stem + ext), null, null)];
+        return [new ScoreOutput(Path.Combine(dir, stem + ext), null)];
 
     var outputs = scores
-        .Select(s => new ScoreOutput(Path.Combine(dir, s.Spec.ResolveOutputStem(stem) + ext), s.Declaration, s.Spec))
+        .Select(s => new ScoreOutput(Path.Combine(dir, s.Spec.ResolveOutputStem(stem) + ext), (s.Declaration, s.Spec)))
         .ToList();
     // Two scores with one name would write one file twice, the second over the first.
     var clash = outputs.GroupBy(o => o.Path, StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1);
@@ -1332,8 +1219,8 @@ static string LineCol(string text, int offset)
     return $"{line},{col}";
 }
 
-/// <summary>One output of one score: where it goes, and the score (null for a file with no
-/// <c>score</c> block, which writes its one rendering under the input's own stem).</summary>
+/// <summary>One output of one score: where it goes, and the score with its declaration
+/// (null for a file with no <c>score</c> block, which writes its one rendering under the
+/// input's own stem) — what ScoreExport.Write takes.</summary>
 sealed record ScoreOutput(string Path,
-    LilySharp.Core.Syntax.RenderDeclarationSyntax? Declaration,
-    LilySharp.Core.Svg.Collector.RenderSpec? Spec);
+    (LilySharp.Core.Syntax.RenderDeclarationSyntax Declaration, LilySharp.Core.Svg.Collector.RenderSpec Spec)? Score);

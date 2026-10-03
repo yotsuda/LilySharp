@@ -50,10 +50,10 @@ public static class PngGenerator
     {
         options ??= PngRenderOptions.Default;
 
-        // Find render specification - by name if specified, otherwise first
-        var renderSpec = string.IsNullOrEmpty(renderName)
-            ? RenderSpecParser.FindFirst(tree)
-            : RenderSpecParser.FindByName(tree, renderName);
+        // The score a name picks: Choose's policy (a match, else the FIRST score), the
+        // one every door resolves with. Until 2026-10-03 this and the PDF used FindByName,
+        // which answered null for a stale name — the file's scoreless picture.
+        var renderSpec = RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), renderName);
 
         // ONE collection path for every output format: this used to be a
         // hand-copied subset of SvgGenerator.CollectScore and silently missed
@@ -85,11 +85,7 @@ public static class PngGenerator
     /// callers name the files accordingly.
     /// </summary>
     public static IReadOnlyList<byte[]> GeneratePages(SyntaxTree tree, PngRenderOptions? options = null, string? renderName = null)
-        => GenerateScorePages(tree,
-            string.IsNullOrEmpty(renderName)
-                ? RenderSpecParser.FindFirst(tree)
-                : RenderSpecParser.FindByName(tree, renderName),
-            options);
+        => GenerateScorePages(tree, RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), renderName), options);
 
     /// <summary>One PNG per page of one given score (null = a file with no <c>score</c>
     /// block) — <see cref="SvgGenerator.GenerateScore"/> says why a name is not always
@@ -116,4 +112,50 @@ public static class PngGenerator
         return doc.GetPageBytes();
     }
 
+    /// <summary>
+    /// Trims a PNG to the bounding box of its non-background (non-near-white) pixels,
+    /// plus a small margin, so a tiny snippet fills the frame instead of floating in a
+    /// page-sized sea of white. Returns the original bytes if nothing (or everything)
+    /// is background. (<c>lysc png --crop</c>; lived in the CLI until 2026-10-03.)
+    /// </summary>
+    public static byte[] CropToContent(byte[] png, int marginPx = 8)
+    {
+        using var bitmap = SkiaSharp.SKBitmap.Decode(png);
+        if (bitmap == null) return png;
+        int w = bitmap.Width, h = bitmap.Height;
+        int minX = w, minY = h, maxX = -1, maxY = -1;
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                var c = bitmap.GetPixel(x, y);
+                // "Ink" = any pixel darker than near-white on any channel (ignores the
+                // white/near-white page background and anti-aliasing fringe).
+                if (c.Alpha > 16 && (c.Red < 240 || c.Green < 240 || c.Blue < 240))
+                {
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                }
+            }
+        if (maxX < minX || maxY < minY) return png; // blank image
+
+        minX = System.Math.Max(0, minX - marginPx);
+        minY = System.Math.Max(0, minY - marginPx);
+        maxX = System.Math.Min(w - 1, maxX + marginPx);
+        maxY = System.Math.Min(h - 1, maxY + marginPx);
+        int cw = maxX - minX + 1, ch = maxY - minY + 1;
+        if (cw >= w && ch >= h) return png; // already tight
+
+        using var cropped = new SkiaSharp.SKBitmap(cw, ch);
+        using (var canvas = new SkiaSharp.SKCanvas(cropped))
+        {
+            canvas.Clear(SkiaSharp.SKColors.White);
+            canvas.DrawBitmap(bitmap, new SkiaSharp.SKRect(minX, minY, maxX + 1, maxY + 1),
+                new SkiaSharp.SKRect(0, 0, cw, ch));
+        }
+        using var img = SkiaSharp.SKImage.FromBitmap(cropped);
+        using var data = img.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100);
+        return data.ToArray();
+    }
 }

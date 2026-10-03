@@ -42,10 +42,9 @@ public static class PdfGenerator
     /// <returns>PDF document as byte array</returns>
     public static byte[] Generate(SyntaxTree tree, PdfRenderOptions? options = null, string? renderName = null)
     {
-        // Find render specification - by name if specified, otherwise first
-        var renderSpec = string.IsNullOrEmpty(renderName)
-            ? RenderSpecParser.FindFirst(tree)
-            : RenderSpecParser.FindByName(tree, renderName);
+        // The score a name picks: Choose's policy (a match, else the FIRST score), the one
+        // every door resolves with (PngGenerator.Generate says what FindByName did here).
+        var renderSpec = RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), renderName);
         return GenerateScore(tree, renderSpec, options);
     }
 

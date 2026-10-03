@@ -357,6 +357,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **The command line, the preview's Export button and the Explorer's batch export write
+  one file.** The three had their own exporter settings and had drifted: the button's
+  PDF or PNG of a score whose name no longer matched drew the file's scoreless picture
+  where its SVG and the preview draw the first score; the button's SVG left the font out
+  when the bundled font folder was not found where `lysc svg` embeds it. One home now
+  writes every format for every door, and a MIDI or LilyPond export's warnings (a note
+  beyond the keyboard) reach the editor's reply as they reach the console.
 - **The preview's Export button writes the selected score's own form.** With the picker
   on `score practice { tab bass }` and `form practice { B C … }`, Export to MIDI, MusicXML
   or LilyPond wrote the file's primary form — the .mid began with section A, which the
