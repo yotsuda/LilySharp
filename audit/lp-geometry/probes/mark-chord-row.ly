@@ -373,3 +373,49 @@ probeM =
     \layout { \context { \Score \consists "Mark_engraver" } }
   }
 }
+
+%% MKY / MKZ -- THE STAFFLESS OVERLAP, MID-LINE (session 785, 2026-10-04): MKW/MKX with the
+%% staff removed. One system, four bars, chords on every bar, lyrics under them, and ONE
+%% section label at bar 3 standing on that bar's chord. MKZ is MKY with every chord sharped.
+%%
+%% WHY NOW. MKT/MKV read the staffless LINE-START label over the first chord, and until
+%% session 784 that gap was deliberately open by the owner's decision of 2026-08-24 (the
+%% label set ON the chord line). The owner withdrew that decision on 2026-10-04 -- a
+%% staffless sheet's label stands above the row, as LilyPond's does -- so the staffless
+%% sheet needs a ledger pair of its own. Not MKT/MKV: Lily#'s grid engraves the score METER
+%% at the line start (its own 2026-08-20 decision), so its line-start label stands over the
+%% meter with no chord under it, a configuration LilyPond never produces on a ChordNames
+%% line. Mid-line the two engines agree about what is under the label: bar 3's chord.
+%%
+%% PREDICTION, written before running (HANDOFF 5.0-2): both books read the same gap,
+%% outside-staff-padding 0.460000 -- the same mechanism MKT/MKV and MKW/MKX read (the
+%% label is placed against the ChordNames axis group's accumulated skyline, which IS the
+%% symbols' extent boxes, lily/grob.cc:81-85). FALSIFIER: a gap that differs between the two
+%% books means the label is placed against something other than the symbols' ink.
+\book {
+  \probeM "MKY"
+  \score {
+    <<
+      \new ChordNames \chordmode { c1 g \sectionLabel "Chorus" a:m f }
+      \new Lyrics \lyricmode {
+        \set stanza = "" one4 two three four five six sev -- en
+        eight nine ten e -- le -- ven twelve thir -- teen
+      }
+    >>
+    \layout { \context { \Score \consists "Mark_engraver" } }
+  }
+}
+
+\book {
+  \probeM "MKZ"
+  \score {
+    <<
+      \new ChordNames \chordmode { cis1 gis \sectionLabel "Chorus" ais:m fis }
+      \new Lyrics \lyricmode {
+        \set stanza = "" one4 two three four five six sev -- en
+        eight nine ten e -- le -- ven twelve thir -- teen
+      }
+    >>
+    \layout { \context { \Score \consists "Mark_engraver" } }
+  }
+}

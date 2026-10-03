@@ -5055,6 +5055,53 @@ internal static class LpGeometryProbes
     private static readonly string MKX = MarkOverChordScore("MKX", sharp: true);
 
     /// <summary>
+    /// The STAFFLESS overlap, mid-line: book MKW with the staff removed — a chord row and a
+    /// lyric row, one label at bar 3 standing on that bar's chord (probes/mark-chord-row.ly
+    /// MKY; MKZ is the sharped mirror).
+    /// </summary>
+    /// <remarks>
+    /// Opened 2026-10-04 (session 785), the day after the owner withdrew the 2026-08-24
+    /// convention that set a staffless sheet's label ON the chord line: the label stands above
+    /// the row now, as LilyPond's does, and nothing in the ledger watched that height. Not
+    /// MKT/MKV (the line-start pair): Lily#'s grid engraves the score METER at the line start,
+    /// so its line-start label stands over the meter with no chord under it — a configuration
+    /// LilyPond never produces on a ChordNames line. Mid-line both engines agree about what is
+    /// under the label. The pair's identity (MKY and MKZ read one residual) is the claim; the
+    /// absolute carries the box term every mark entry carries (Lily# frames its label).
+    /// </remarks>
+    private static readonly string MKY = StafflessMarkOverChordScore("MKY", sharp: false);
+
+    /// <inheritdoc cref="MKY"/>
+    private static readonly string MKZ = StafflessMarkOverChordScore("MKZ", sharp: true);
+
+    private static string StafflessMarkOverChordScore(string name, bool sharp)
+    {
+        string chords = sharp ? "C# | G#" : "C | G";
+        string chords2 = sharp ? "A#m | F#" : "Am | F";
+        return $$"""
+            time 4/4
+            key c major
+
+            section A {
+              chords harm { {{chords}} }
+              lyrics words { one two three four | five six sev- en | }
+            }
+
+            section Chorus {
+              chords harm { {{chords2}} }
+              lyrics words { eight nine ten e- le- ven | twelve thir- teen | }
+            }
+
+            form main { ~A Chorus }
+
+            score main "{{name}}" {
+              chords harm
+              lyrics words
+            }
+            """;
+    }
+
+    /// <summary>
     /// The overlap pair's book: one system, one label, standing on a chord. See
     /// <see cref="MKW"/> for what the pair decides.
     /// </summary>
@@ -15538,6 +15585,20 @@ internal static class LpGeometryProbes
             g => g.FirstMusicMarkBaselineAboveStaff(), RaggedBottomPaper),
         new("mark.over-chord.tall.staff-to-baseline", MKX,
             g => g.FirstMusicMarkBaselineAboveStaff(), RaggedBottomPaper),
+        // ...and the same arrangement with NO STAFF (books MKY/MKZ, session 785): the label's
+        // baseline over the ink top of the chord it stands on. Read from the ROW's ink, not a
+        // staff refpoint a lead sheet has not got. The pair's identity is the claim.
+        // ⚠️ A WIDE, FLAT-BOTTOMED LABEL ON PURPOSE (`Chorus'): Lily# centres a mid-line label
+        // on the bar line (the Rehearsal rule, HANDOFF §3 第322) where LilyPond's SectionLabel
+        // is left-aligned on it, so a one-letter box stands clear of the chord in Lily# and
+        // over it in LilyPond -- the first draft of this pair read "no chord symbol stands
+        // under the mark". Six letters reach the chord's plateau on both sides; and no
+        // descender, because `Bridge''s g hung past the short chord's box onto its padded
+        // flank and the two books read 0.857 and 0.991 (= 0.46 + the g's 0.531).
+        new("mark.staffless.over-chord.row-ink-to-baseline", MKY,
+            g => g.MusicMarkBaselineAboveChordInkTop("Chorus"), RaggedBottomPaper),
+        new("mark.staffless.over-chord.tall.row-ink-to-baseline", MKZ,
+            g => g.MusicMarkBaselineAboveChordInkTop("Chorus"), RaggedBottomPaper),
 
         // ...and the shape BOTH of those were blind to: NO STAFF AT ALL (book BNS, mirroring
         // barnumber-staffless.ly). The entries above measure over a staff refpoint, which a

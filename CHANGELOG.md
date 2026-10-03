@@ -371,6 +371,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A chord grid's section name clears its symbols by LilyPond's padding.** Above a chord
+  or lyric row the box now stands 0.46 over the symbols under it (or over the grid's bar
+  lines where nothing else is under it), where it kept a staff's 0.8 from a staff line the
+  row has not got, and on a chords-and-lyrics sheet the chords under it were not seen at all.
 - **A chord grid's section names stand above the row.** On a chords-only (or lyrics-only)
   sheet the `form`'s section boxes were set on the chord line itself, level with the
   symbols, which moved aside for them; with the grid's meters on that same line the boxes

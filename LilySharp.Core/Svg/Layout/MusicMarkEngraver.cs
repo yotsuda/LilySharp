@@ -539,7 +539,11 @@ internal static class MusicMarkEngraver
         // 407's shape, and this is the house that never got the door (see the remark at
         // `measureToSystemIdx` below). Null keeps the local build, so the CLI, the
         // per-system callers and the tests are unchanged.
-        IReadOnlyDictionary<int, int>? prebuiltMeasureToSystem = null)
+        IReadOnlyDictionary<int, int>? prebuiltMeasureToSystem = null,
+        // The lead sheet's GRID row (MultiStaffScore.GridBarlineRowIndex, handed down as the
+        // bar-number pass takes it): the one text row whose band carries ink for a boxed
+        // label to clear (see AnchorRowCarriesTheGrid). −1 on every other score.
+        int gridBarlineRowIndex = -1)
     {
         // Does THIS mark carry a frame? Only a SECTION label loses one, and only under
         // `plain`: a `@mark` rehearsal box is a different spelling with its own meaning,
@@ -651,6 +655,27 @@ internal static class MusicMarkEngraver
         // lower than they stood.
         double LyricMarkFrameUp(LyricLayout ly)
             => 2.0 + ly.YUp - AnchorStaffUp(ly.Item.MeasureIndex);
+
+        // The mark's anchor when it is a chords / lyrics ROW rather than a staff: the top
+        // score-grob staff of the mark's system, asked the one question LilyPond asks of a
+        // line (lily/page-layout-problem.cc:1173-1177 is_spaceable — a row declares
+        // staff-affinity, a staff does not; the placed StaffLayout carries it). Null for a
+        // staff; else whether that row is the GRID row, whose band carries ink (the lead
+        // sheet's bar lines and meter) — any other row's band is empty space.
+        bool? AnchorRowCarriesTheGrid(int measureIndex)
+        {
+            if (!measureToSystemIdx.TryGetValue(measureIndex, out int sysIdx)
+                || sysIdx < 0 || sysIdx >= systems.Length)
+                return null;
+            var system = systems[sysIdx];
+            int anchor = LayoutUtilities.TopScoreGrobStaff(system);
+            if (system.StaffGroups.IsDefaultOrEmpty) return null;
+            foreach (var g in system.StaffGroups)
+                foreach (var st in g.Staves)
+                    if (st.StaffIndex == anchor)
+                        return st.StaffAffinity is not null ? anchor == gridBarlineRowIndex : null;
+            return null;
+        }
 
         // ⚠️ A STAFFLESS SHEET'S LABEL KEEPS ITS BAND ABOVE THE ROW, as LilyPond's does
         // (probes/mark-chord-row.ly books MKT/MKS/MKV: the row's ink top +
@@ -852,6 +877,7 @@ internal static class MusicMarkEngraver
                     && chordBandUpBySystem.TryGetValue(sysIdx, out var cached))
                     return cached;
                 VerticalSkyline? sky = null;
+                bool anchorIsRow = AnchorRowCarriesTheGrid(measureIndex) is not null;
                 foreach (var cn in chordNames)
                 {
                     if (!SameSystem(cn.MeasureIndex, measureIndex))
@@ -868,7 +894,13 @@ internal static class MusicMarkEngraver
                     // above the whole band, and a collision the moment it stopped:
                     // samples/greensleeves.lys printed its tempo THROUGH the first
                     // chord symbol (session 243).
-                    if (chordUp <= 2.0)
+                    // ⚠️ AND NOT WHEN THE ANCHOR IS A ROW: a chords row's own symbols stand
+                    // INSIDE its band, below its top, and they ARE the support LilyPond
+                    // places a staffless sheet's label against (probes/mark-chord-row.ly
+                    // MKY/MKZ: ink top + 0.46). With the staff test applied to the row every
+                    // symbol was discarded, the ceiling answered nothing and the label fell
+                    // to its floor 0.153 over the chord's ink (session 785).
+                    if (chordUp <= 2.0 && !anchorIsRow)
                         continue;
                     // ⚠️ cn.X IS THE SYMBOL'S LEFT EDGE, NOT ITS CENTRE — a chord name is
                     // drawn with TextAnchor.Start (SharedRenderer.DrawChordNames) — and
@@ -1008,13 +1040,26 @@ internal static class MusicMarkEngraver
                     // ⚠️ The generic base stays for every OTHER above-mark type; this arm
                     // deliberately does not re-price a tempo, a segno or a jump instruction,
                     // none of which has been measured against LilyPond here.
-                    // On a STAFFLESS sheet the anchor is the top row and the chord ceiling
-                    // lifts the box off the symbols (owner's decision 2026-10-04, see the
-                    // remark at the top of this method; until session 784 a staffless label
-                    // took a row-line arm here instead).
-                    yUp = IsBoxedLabel(mark.Type)
-                        ? LabelFrameBottomAboveStaffMiddle + halfExtent
-                        : baseAboveYUp + Padding;
+                    // On a STAFFLESS sheet the anchor is the top row (owner's decision
+                    // 2026-10-04, see the remark at the top of this method; until session 784
+                    // a staffless label took a row-line arm here instead), and a ROW HAS NO
+                    // STAFF SYMBOL TO PAD 0.8 FROM. Its support is what LilyPond's is — the
+                    // symbols' skyline, the chord ceiling below — and the band is a floor only
+                    // where it carries ink: the GRID row's bar lines and meter, which an
+                    // outside-staff grob clears by 0.46 like any other ink
+                    // (TextRowLabelFrameBottomAboveBandMiddle). A chord row above a lyric
+                    // grid has an empty band, and a floor read off it stood the label a whole
+                    // row's depth over its symbols. MEASURED (session 785, ledger pair
+                    // mark.staffless.over-chord.*, a chords+lyrics sheet): the staff's 0.8
+                    // floor read 0.936311 over the chord's ink and the band's 0.46 floor
+                    // 0.546311, both floor-bound, where LilyPond reads 0.499245 off the
+                    // symbols — the ceiling alone is the port.
+                    bool? gridRow = IsBoxedLabel(mark.Type) ? AnchorRowCarriesTheGrid(mark.MeasureIndex) : null;
+                    yUp = !IsBoxedLabel(mark.Type) ? baseAboveYUp + Padding
+                        : gridRow is null ? LabelFrameBottomAboveStaffMiddle + halfExtent
+                        : gridRow == true || double.IsNegativeInfinity(markCeilingUp)
+                            ? TextRowLabelFrameBottomAboveBandMiddle + halfExtent
+                            : double.NegativeInfinity;
                     if (!double.IsNegativeInfinity(markCeilingUp))
                         yUp = Math.Max(yUp, markCeilingUp + halfExtent); // box bottom clears the chord
                     stackTopYUp = yUp + halfExtent;
@@ -2253,6 +2298,25 @@ internal static class MusicMarkEngraver
     /// </remarks>
     internal static double LabelFrameBottomAboveStaffMiddle
         => 2.0 + EngravingDefaults.StaffLineThickness / 2 + LabelSidePositionPadding;
+
+    /// <summary>
+    /// How far above a chords / lyrics ROW's band middle a boxed label's frame bottom stands
+    /// when nothing pushes it higher: the band's top (the grid's bar lines and meter end
+    /// there) plus outside-staff-padding — the clearance an outside-staff grob keeps from
+    /// ink that is not a staff symbol. The chord ceiling lifts the box further where a
+    /// symbol stands under it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:45 default_outside_staff_padding_ = 0.46 —
+    /// the padding the outside-staff pass keeps from the row's accumulated skyline
+    /// (probes/mark-chord-row.ly MKT/MKV/MKY/MKZ: the label's ink bottom stands 0.460000
+    /// over the symbols' boxes). The BAND INK it pads here (bar lines, meter) is Lily#'s own
+    /// grid — LilyPond engraves neither on a ChordNames line — so the floor is a reading of
+    /// that rule onto Lily#'s surface, not a measured number; the staff's 0.8 side-position
+    /// padding (<see cref="LabelFrameBottomAboveStaffMiddle"/>) is a staff symbol's and has
+    /// no staff to apply to. Session 785.
+    /// </remarks>
+    internal static double TextRowLabelFrameBottomAboveBandMiddle => 2.0 + OutsideStaffPadding;
 
     // Both labels declare it and spend it through side-position-interface::y-aligned-side;
     // the addresses are on LabelFrameBottomAboveStaffMiddle, which is the one reader.

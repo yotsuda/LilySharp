@@ -64,10 +64,20 @@ internal sealed class RenderedGeometry
 
     private readonly IReadOnlyList<RecordingDrawingContext> _pages;
 
+    /// <summary>The layout the pages were drawn from — for a reader that needs what the
+    /// drawing does not carry (a chord symbol's SPELLING with its accidental and
+    /// superscripts, which the recorder sees as text runs and glyphs). Null for a geometry
+    /// built from pages alone.</summary>
+    private readonly ScoreLayout? _layout;
+
     /// <summary>The first page, which is all the X probes look at.</summary>
     private RecordingDrawingContext _page => _pages[0];
 
-    private RenderedGeometry(IReadOnlyList<RecordingDrawingContext> pages) => _pages = pages;
+    private RenderedGeometry(IReadOnlyList<RecordingDrawingContext> pages, ScoreLayout? layout = null)
+    {
+        _pages = pages;
+        _layout = layout;
+    }
 
     /// <summary>
     /// Parses and lays out <paramref name="source"/>, recording what gets drawn.
@@ -129,7 +139,7 @@ internal sealed class RenderedGeometry
 
         using var doc = new RecordingDocumentContext();
         SharedRenderer.RenderTo(score, layout, doc);
-        return new RenderedGeometry(doc.Pages);
+        return new RenderedGeometry(doc.Pages, layout);
     }
 
     /// <summary>
@@ -153,7 +163,7 @@ internal sealed class RenderedGeometry
 
         using var doc = new RecordingDocumentContext();
         SharedRenderer.RenderTo(score, layout, doc);
-        return new RenderedGeometry(doc.Pages);
+        return new RenderedGeometry(doc.Pages, layout);
     }
 
     // ===================== PAGE VERTICAL =====================
@@ -1828,6 +1838,79 @@ internal sealed class RenderedGeometry
         }
         // Device-down: the box's bottom is the larger Y; the line's top the smaller.
         return VoltaLineTop(page) - (boxes[0].Y + boxes[0].Height);
+    }
+
+    /// <summary>
+    /// How far the boxed mark reading <paramref name="label"/> stands above the chord row it
+    /// rides over: its BASELINE above the ink top of the chord symbol(s) its box meets in X —
+    /// on a STAFFLESS sheet, where there is no staff refpoint for
+    /// <see cref="MusicMarkBaselineAboveStaff"/> to read (probes/mark-chord-row.ly MKY/MKZ).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:648-676 avoid_outside_staff_collisions —
+    /// the label is placed by its DOWN skyline's distance to the row's UP (the symbols'
+    /// extent boxes, lily/grob.cc:81-85) plus outside-staff-padding 0.46; LilyPond draws the
+    /// letter ON its baseline (ext bottom 0.0), so its baseline IS its ink bottom. Lily#'s
+    /// reading carries its box below the baseline (the pair's identity is the claim, as
+    /// MKW/MKX's remark says). FACE-FREE on the chord's side: the ink top comes from
+    /// <see cref="ChordNameEngraver.SymbolInk"/>, the one house the reservation and the
+    /// draw read.
+    /// </remarks>
+    public double MusicMarkBaselineAboveChordInkTop(string label, int page = 0)
+    {
+        var texts = _pages[page].Texts
+            .Where(t => t.Role == TextRole.Mark && t.Text == label).ToList();
+        if (texts.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected ONE boxed mark reading \"{label}\", found "
+                + $"{texts.Count}.\nDrawn geometry:\n" + Describe());
+        }
+        var t = texts[0];
+        var boxes = _pages[page].Rects
+            .Where(r => r.X <= t.X && t.X <= r.X + r.Width
+                        && r.Y <= t.Y && t.Y <= r.Y + r.Height).ToList();
+        if (boxes.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the mark \"{label}\" at ({t.X:F3},{t.Y:F3}) sits in "
+                + $"{boxes.Count} rect(s) — the reading cannot name its box.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        double boxLeft = boxes[0].X, boxRight = boxes[0].X + boxes[0].Width;
+        var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
+        // The symbols under the box: below it (device Y larger), within a row's reach, and
+        // meeting the box in X. The highest ink top among them is the support.
+        // ⚠️ THE INK IS THE PLACED SYMBOL'S, read off the layout by source position: the
+        // recorder sees `A♯m' as the runs "A" and "m" around an accidental GLYPH, so the
+        // drawn text alone would price the sharp's 0.317582 of ink away (MKZ's whole
+        // difference from MKY).
+        double? inkTopY = null;
+        foreach (var c in ChordSymbols)
+        {
+            if (c.Y <= t.Y || c.Y - t.Y > 10.0)
+                continue;
+            var placed = _layout?.ChordNameLayouts.FirstOrDefault(l => l.SourcePosition == c.SourcePosition);
+            double width = placed is { } pw
+                ? ChordNameEngraver.SymbolInkWidth(fonts, pw)
+                : ChordNameEngraver.SymbolInkWidth(fonts, c.Text);
+            double right = c.X + width;
+            if (right <= boxLeft || c.X >= boxRight)
+                continue;
+            double inkTop = placed is { } pi
+                ? ChordNameEngraver.SymbolInk(fonts, pi).Top
+                : ChordNameEngraver.SymbolInk(fonts, c.Text).Top;
+            double top = c.Y - inkTop;
+            inkTopY = inkTopY is { } y ? Math.Min(y, top) : top;
+        }
+        if (inkTopY is not { } supportTop)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: no chord symbol stands under the mark \"{label}\" "
+                + $"(box {boxLeft:F3}..{boxRight:F3}) — the probe is not measuring what it "
+                + "claims.\nDrawn geometry:\n" + Describe());
+        }
+        return supportTop - t.Y;
     }
 
     /// <summary>
