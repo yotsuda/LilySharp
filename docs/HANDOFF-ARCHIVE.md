@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第776セッションの経緯
+
+### 1.1 第776セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き・ユーザー「続けて」＝第774 末の列挙の残り **行末の裸の `__`（⑼ ⒞′）**。`-Start p776`（HEAD `a6f9dd6f`・未 push 13）＝full **10926 / 0 / 2 / 10928**。§7 3.5 で第774 を ARCHIVE へ。
+- **切り分け（LP 2.26 プローブ `sessions/p776/probes/mid-extender2.ly`・6 本）**: 双子の `\lyricmode`（duration 付き・voice 無し）では extender は*直後の timestep* に音節が要る。`la2 __ \skip 4 \skip 4 | lu1` は**警告も線も無い**（skip が挟まると黙って落ちる＝合唱の `hill __ | Sing` の線は双子で消えていた）・skip で終わると「unterminated extender」・`""` を直後に置けば警告なし（線は LP の最小長規則の範囲で）。p764 の `""` 終端は「行の最後の extender」だけだった。
+- **直した（commit 下記）**: `EmitLyricTracks` が*全部の* extender について、`ExtenderTerminator` の終端が次の音節より手前なら（または次が無ければ）`""` を挿す。`ExtenderTerminator` は裸の `__`（`MelismaEnd` −1）を自分の音の終わりで終端する（part の最後の音の上なら従来どおり null＝LP の警告のまま）。網 `LilyPondExporterTests` の既存 1 本の期待を更新（裸の `star __` → `star2 __ ""2 |`）＋新網 1 本（途中の裸・途中の slur melisma＋未歌の音・直後に音節＝挿さない）。CHANGELOG は p764 の項に追記。
+- 双子（`sessions/p776/big-out/choir-chorale/`・`run-big.ps1`）: 主 score の LP 警告 **7 → 0**・reduction／soprano 0。`choir-words` に残る 1 本は別件（冒頭 `The4 |` の bar check＝歌詞だけの score に `\partial` が無い・p762 から・§1.0 ⒜ ⒞″ に起票）。LP の絵: `hill` の stub は `""` の列が近すぎて落ちる（プローブ a／f と同じ・LP の最小長）＝page の stub より短い側の残差。
+- 掃き（ly・998 冊・base＝p775 exe・head＝p776・`sessions/p776/sweep-ly.log`）: **差 0**＝途中の `__` の後に skip が来る本も裸の `__` の本も掃きの母集団には無い（dogfood の合唱だけ）。
+★ `-End p776 -DiffBase a6f9dd6f`＝full **10927 / 0 / 2 / 10929**（網 +1）・門 全 OK（HANDOFF 残り 6,980 B・§1 残り 10,125 字・棚卸し 差分なし）。7.5: Core `+` 44 行＝`EmitLyricTracks` の挿入ループと `ExtenderTerminator` の裸の腕・REF 0・OWN 0（LP の規則は実測＝extender-engraver.cc の `completize` の帰結を双子の形で測った・式は無い）。7.6: ⒟ 既存の終端の射程を広げただけ（新しい量 0）。7.7: なし（`""` の位置は p764 の規則そのまま・sentinel の −1 は `bare` に名前を付けて読む）。commit `a51eb4e1`（code）。push はユーザー。
+判定: ⑼ ⒞′ は閉じた（残る残差は LP の最小長で落ちる stub＝LP の側）。第774 末の列挙は全部閉じた。次の一手: §1.0 ⒜ の conductor track の拍子 meta の重なり（小）か、⒞″ 歌詞だけの score の `\partial`（小）か、⒝ の設計級（跳躍の 3 軒・小節番号と和音行）＝ユーザー判断。会話を区切るか: (b) 便が 2 つ続いて文脈は重め・次はどれも独立の島＝**区切ってよい**（続けるなら `-Start p777`）。
+
 ## 以下は第775セッションの経緯
 
 ### 1.1 第775セッション（2026-10-03・YT-DELL2）

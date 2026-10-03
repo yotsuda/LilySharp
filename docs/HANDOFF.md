@@ -79,7 +79,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。→ **第751（2026-10-02・ユーザー決定）「LP 忠実にこだわるより音楽的な妥当性を重視。LP から引き継ぐのはレンダリングとレイアウトの美しさだけ。ユーザーがまだ少ないので過去のしがらみに縛られない」＝意味論（拍子・弱起・反復・強弱・検査・出力の意味）の裁定者は音楽的妥当性、LP は描画と配置の裁定者（RULES §5.2 に規則として置いた）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ★ **lead sheet の行は header の `partial` を無視する（第777・頁の側）**: chords だけ／独立の lyrics 行の sheet で、空の 1 小節目が拍子ぶんの長さ（`ChordNameCollector.CollectRow` の `emptyBar`／`barLength`・`LyricsCollector.CollectRow` の `measureLen`）＝`samples/amazing-grace.lys` の `score grid` は弱起が他の小節と同じ幅・2 段目の番号が 8（melody の score は 7）・`Verse` の箱が 3/4 の上に重なる（`sessions/p777/probes/ag/amazing-grace-grid.png`）。melody に `sings` で縛った行は正しい（spacer が melody の timing）。直すなら section 開始小節の長さを header の partial（`SectionHeaders.Partials`）で短くする＝両 collector に「小節→弱起長」の表を渡す。頁・XML・双子（`leadSheetTiming` と chord 行の `s4 |` が揃う＝amazing-grace-grid／greensleeves-grid の bar check 1 本が消える）が動く＝svg の掃き（`sessions/p723/svg2/sweep-all.ps1`）を先に。
+- ★ **lead sheet の grid の残り（第778・小・頁の側）**: ⒜ staff の無い grid では section label の箱（`Verse`）が拍子の `3/4` の上に重なる（`sessions/p778/probes/ag/amazing-grace-grid.png`・staff のある score では label が staff の上・拍子は staff の中で重ならない）＝label の帯が行の拍子 glyph の ink を見ていない／⒝ 弱起の小節は長さ 1/4 になったが幅は他と同じ（lead sheet の grid floor `EnsureLeadSheetBarWidth` が空の小節にも効く＝設計どおり・staff のある score は狭い）／⒞ header の `time` が home より*長い*（4/4 → 3/2）rows-only の sheet は、行の小節が短いまま（`FitRowsToMusicBars` は縮める側だけ・コーパス 0）。
 - ★★ **⑼ の残り（第762・ユーザー判断・本は Lab `corpora/dogfood/big/` 4 冊・計器 `sessions/p762/run-big.ps1`＝check＋4 出力＋LP）**: ⑺ resume の probe は代表 1 つの header 読みしか記録しない（`MeasureCollector.Form.cs` の註）／⑻ 観察（優先低）: 宣言した弱起が短い小節の後に来る形＝LP は `\partial` で併合・頁と XML は弱起を 1 小節に数える（コーパス 0・第761）。／**閉じた分（経緯は ARCHIVE の各便）**: リファクタ A〜C6（第740〜748）・綴り A1〜A4（第750〜755）・D=(a)（第755）・同名 section (a)（第753 `112ea7f2`）・validator の弱起（第753 `deb49459`）・XML の番号 ⑹⑹′（第756 `f43e48c4`・第757 `280cbbde`）・割れた小節 ⑻（第759 `2a77777c`・双子は不要＝第761）・StreamFrame の網（第758 `234b5361`）・観測者の無い規則 4 つ＋双子の欠陥 2（第760 `d0acd7da`）・⑽ part 名に予約語＋⑼ ⒜ `tab X Y` は宣言された part が勝つ（第763 `3274e1b7`・§3 の最上段）・⑼ ⒝ capo の LYS1039 の文面・⒞ 双子の歌詞の終端と cadenza の bar check・⒠ `@ottava(8va)` の文面（第764）・⒟ 1 頁目の沈み＝本の側＋LP も同じ（第765・コード変更なし）・⒞′ 行末の裸の `__`（第776 `a51eb4e1`）・⒞″ 歌詞だけの score の双子の clock（第777 `64d9a973`）。計器: Lab `sessions/p742/`（ly／midi／xml／svg の掃き・exe は両側とも写す）・`sessions/p753/sweep-check.ps1`（診断の掃き）・`sessions/p762/run-big.ps1`
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**
@@ -120,6 +120,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第778セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き・ユーザー「続けて」＝第777 末の次の一手の筆頭 **lead sheet の弱起（頁の側）**。`-Start p778`（HEAD `8cad6b8b`・未 push 17）＝full **10929 / 0 / 2 / 10931**。§7 3.5 で第776 を ARCHIVE へ。
+- **正体**: 行の小節を音楽の小節に合わせる `FitRowsToMusicBars`（第350）は音楽の声部の長さを読む＝staff の無い score では読む物が無く何もしない。section header の `partial`／`time` を行に当てる walk はどこにも無かった（`EnsureSectionStartsForRows` は段の開始位置だけ）。
+- **直した（commit 下記）**: `RowsOnlyBarLengths`＝音楽の声部が無いときだけ、構造から小節長の表を組む（`SectionState.AllStarts` の各出現 × `RowGridSectionBars` の幅・header の `time` 無ければ home・header の `partial`（0 小節目は file の partial も）を最初の小節に・pickup の印）。`FitRowsToMusicBars` が表を fallback に取り、縮めた小節に `IsPickup` を立てる（`LayoutEngine` の番号の −1 が読む）。網 `RowsOnlyFormOrderTests` Theory 2（弱起＋control・staffful と同じ長さ・`IsPickup`）。CHANGELOG Fixes。
+- 掃き（998 冊・base＝p777 exe・head＝p778・`sessions/p778/svg/sweep.log`・`sweep-ly.log`）: svg **差 3**＝amazing-grace の grid 2 冊＋greensleeves の grid（chords だけの sheet で弱起のある本＝全部・fixture には無い＝snapshot 不変）・ly 差 3（同じ 3 冊・`leadSheetTiming` の先頭が `\time 1/4`）・LP の bar check **3 冊とも 1 → 0**（`sessions/p778/lp/`）。絵: grid の 2 段目の番号 8 → 7（`probes/ag/`）・弱起の幅は grid floor で他と同じ（設計どおり）。
+★ `-End p778 -DiffBase 8cad6b8b`＝full **10931 / 0 / 2 / 10933**（網 +2）・門 全 OK（HANDOFF 残り 6,704 B・§1 残り 10,101 字・棚卸し `APPROXIMATIONS.md` 行番号 2 行＝増減 0・CRLF に揃え直した）。7.5: Core `+` 70 行＝`RowsOnlyBarLengths`（新規・約 35）＋ `FitRowsToMusicBars` の fallback と `IsPickup` の腕・REF 0・OWN 0（音楽の clock を行に当てる規則は第350 の `FitRowsToMusicBars` の既存 REF＝Timing は Score に 1 つ・新しい量 0）。7.6: ⒟ 既存の家（`FitRowsToMusicBars`）の読む物を増やしただけ＝header の partial／time は `SectionHeaders`（全出力が境界で当てる registry）から読む。7.7: 「縮める側だけ」は既存規則のまま＝header の time が home より長い rows-only の sheet は §1.0 ⒜ ⒞ に観察として置いた（コーパス 0）。commit `90d2c914`（code）。push はユーザー。
+判定: lead sheet の弱起は閉じた（頁・双子の両方）。残りは §1.0 ⒜ の新項（label と拍子の重なり・小）。次の一手: §1.0 ⒜ の残り（小）か ⒝ の設計級（跳躍の 3 軒・小節番号と和音行）＝ユーザー判断。会話を区切るか: (b) 便が 3 つ続いて文脈は重め・次はどれも独立の島＝**区切ってよい**（続けるなら `-Start p779`）。
+
+## 以下は第777セッションの経緯
+
 ### 1.1 第777セッション（2026-10-03・YT-DELL2）
 
 新しい会話・ユーザー「HANDOFF を読んで着手」。`-Start p777`（HEAD `ce35f8e7`・未 push 15）＝full **10927 / 0 / 2 / 10929**。§7 3.5 で第775 を ARCHIVE へ。
@@ -130,18 +141,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **見つけた別件（§1.0 ⒜ に起票）**: chords だけの lead sheet（amazing-grace の `score grid`・greensleeves-grid）は**頁が header の `partial` を無視する**＝空の 1 小節目が拍子ぶんの長さで、番号も弱起を 1 と数え、`Verse` の箱が拍子に重なる。双子は頁を写すので timing は 3/4、chord 行の stream（構文から `s4 |`）と食い違って bar check 1 本が残る＝頁の側。
 ★ `-End p777 -DiffBase ce35f8e7`＝full **10929 / 0 / 2 / 10931**（網 +2）・門 全 OK（HANDOFF 残り 6,343 B・§1 残り 9,127 字・棚卸し `APPROXIMATIONS.md` +6/−4＝OWN 1 本が増えた・CRLF に揃え直した）。7.5: Core `+` 84 行＝`EmitLeadSheetTiming`（新規・約 70）＋ `EmitScore` の Devnull 行 3 ＋ 呼び出し 1・REF 0・OWN 1（`EmitLeadSheetTiming`＝LP に lead sheet は無い・観測者なし・頁の行が拍子を持てば消える）。7.6: ⒞ LP に対応物無し（staff の無い score の clock は LP が数えない）＝timing-translator.cc の bar check と Devnull の alias は読んだが式は写していない（`\partial` を避けた理由は実測）。7.7: 「長さが拍子と同じなら拍子の綴り」は頁の `C` と同じ物を言うため（1/1 を書かない）＝規則ではなく綴り・`BarLength` の meter fallback は行の空の小節で頁と食い違う（上の別件＝頁の側で直す）。commit `64d9a973`（code）。push はユーザー。
 判定: ⑼ ⒞″ は閉じた（双子の側）。次の一手: §1.0 ⒜ の新項（lead sheet の弱起＝頁の側・小〜中・snapshot が動く）か、⒝ の設計級（跳躍の 3 軒・小節番号と和音行）＝ユーザー判断。会話を区切るか: (a) lead sheet の弱起なら今の文脈（両 collector の読み・`sessions/p777` の計器）の上に立つ＝**続ける側**。
-
-## 以下は第776セッションの経緯
-
-### 1.1 第776セッション（2026-10-03・YT-DELL2）
-
-同じ会話の続き・ユーザー「続けて」＝第774 末の列挙の残り **行末の裸の `__`（⑼ ⒞′）**。`-Start p776`（HEAD `a6f9dd6f`・未 push 13）＝full **10926 / 0 / 2 / 10928**。§7 3.5 で第774 を ARCHIVE へ。
-- **切り分け（LP 2.26 プローブ `sessions/p776/probes/mid-extender2.ly`・6 本）**: 双子の `\lyricmode`（duration 付き・voice 無し）では extender は*直後の timestep* に音節が要る。`la2 __ \skip 4 \skip 4 | lu1` は**警告も線も無い**（skip が挟まると黙って落ちる＝合唱の `hill __ | Sing` の線は双子で消えていた）・skip で終わると「unterminated extender」・`""` を直後に置けば警告なし（線は LP の最小長規則の範囲で）。p764 の `""` 終端は「行の最後の extender」だけだった。
-- **直した（commit 下記）**: `EmitLyricTracks` が*全部の* extender について、`ExtenderTerminator` の終端が次の音節より手前なら（または次が無ければ）`""` を挿す。`ExtenderTerminator` は裸の `__`（`MelismaEnd` −1）を自分の音の終わりで終端する（part の最後の音の上なら従来どおり null＝LP の警告のまま）。網 `LilyPondExporterTests` の既存 1 本の期待を更新（裸の `star __` → `star2 __ ""2 |`）＋新網 1 本（途中の裸・途中の slur melisma＋未歌の音・直後に音節＝挿さない）。CHANGELOG は p764 の項に追記。
-- 双子（`sessions/p776/big-out/choir-chorale/`・`run-big.ps1`）: 主 score の LP 警告 **7 → 0**・reduction／soprano 0。`choir-words` に残る 1 本は別件（冒頭 `The4 |` の bar check＝歌詞だけの score に `\partial` が無い・p762 から・§1.0 ⒜ ⒞″ に起票）。LP の絵: `hill` の stub は `""` の列が近すぎて落ちる（プローブ a／f と同じ・LP の最小長）＝page の stub より短い側の残差。
-- 掃き（ly・998 冊・base＝p775 exe・head＝p776・`sessions/p776/sweep-ly.log`）: **差 0**＝途中の `__` の後に skip が来る本も裸の `__` の本も掃きの母集団には無い（dogfood の合唱だけ）。
-★ `-End p776 -DiffBase a6f9dd6f`＝full **10927 / 0 / 2 / 10929**（網 +1）・門 全 OK（HANDOFF 残り 6,980 B・§1 残り 10,125 字・棚卸し 差分なし）。7.5: Core `+` 44 行＝`EmitLyricTracks` の挿入ループと `ExtenderTerminator` の裸の腕・REF 0・OWN 0（LP の規則は実測＝extender-engraver.cc の `completize` の帰結を双子の形で測った・式は無い）。7.6: ⒟ 既存の終端の射程を広げただけ（新しい量 0）。7.7: なし（`""` の位置は p764 の規則そのまま・sentinel の −1 は `bare` に名前を付けて読む）。commit `a51eb4e1`（code）。push はユーザー。
-判定: ⑼ ⒞′ は閉じた（残る残差は LP の最小長で落ちる stub＝LP の側）。第774 末の列挙は全部閉じた。次の一手: §1.0 ⒜ の conductor track の拍子 meta の重なり（小）か、⒞″ 歌詞だけの score の `\partial`（小）か、⒝ の設計級（跳躍の 3 軒・小節番号と和音行）＝ユーザー判断。会話を区切るか: (b) 便が 2 つ続いて文脈は重め・次はどれも独立の島＝**区切ってよい**（続けるなら `-Start p777`）。
 
 ## 2. 開いている作業
 
