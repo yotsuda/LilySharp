@@ -79,7 +79,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。→ **第751（2026-10-02・ユーザー決定）「LP 忠実にこだわるより音楽的な妥当性を重視。LP から引き継ぐのはレンダリングとレイアウトの美しさだけ。ユーザーがまだ少ないので過去のしがらみに縛られない」＝意味論（拍子・弱起・反復・強弱・検査・出力の意味）の裁定者は音楽的妥当性、LP は描画と配置の裁定者（RULES §5.2 に規則として置いた）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ★★ **⑼ の残り（第762・ユーザー判断・本は Lab `corpora/dogfood/big/` 4 冊・計器 `sessions/p762/run-big.ps1`＝check＋4 出力＋LP）**: ⒟ 合唱の総譜 1 頁目: 背の高い 1 段だけの頁で段が見出しの下 1/4 頁ほど沈む（2 頁目は上端から）＝頁割りの調査／⒞′ 音を取らない裸の `__`（行末）は双子で LP の「unterminated extender」のまま（choir 2 本・page は最小長の線だけ）／⑺ resume の probe は代表 1 つの header 読みしか記録しない（`MeasureCollector.Form.cs` の註）／⑻ 観察（優先低）: 宣言した弱起が短い小節の後に来る形＝LP は `\partial` で併合・頁と XML は弱起を 1 小節に数える（コーパス 0・第761）。／**閉じた分（経緯は ARCHIVE の各便）**: リファクタ A〜C6（第740〜748）・綴り A1〜A4（第750〜755）・D=(a)（第755）・同名 section (a)（第753 `112ea7f2`）・validator の弱起（第753 `deb49459`）・XML の番号 ⑹⑹′（第756 `f43e48c4`・第757 `280cbbde`）・割れた小節 ⑻（第759 `2a77777c`・双子は不要＝第761）・StreamFrame の網（第758 `234b5361`）・観測者の無い規則 4 つ＋双子の欠陥 2（第760 `d0acd7da`）・⑽ part 名に予約語＋⑼ ⒜ `tab X Y` は宣言された part が勝つ（第763 `3274e1b7`・§3 の最上段）・⑼ ⒝ capo の LYS1039 の文面・⒞ 双子の歌詞の終端と cadenza の bar check・⒠ `@ottava(8va)` の文面（第764）。計器: Lab `sessions/p742/`（ly／midi／xml／svg の掃き・exe は両側とも写す）・`sessions/p753/sweep-check.ps1`（診断の掃き）・`sessions/p762/run-big.ps1`
+- ★★ **⑼ の残り（第762・ユーザー判断・本は Lab `corpora/dogfood/big/` 4 冊・計器 `sessions/p762/run-big.ps1`＝check＋4 出力＋LP）**: ⒞′ 音を取らない裸の `__`（行末）は双子で LP の「unterminated extender」のまま（choir 2 本・page は最小長の線だけ）／⑺ resume の probe は代表 1 つの header 読みしか記録しない（`MeasureCollector.Form.cs` の註）／⑻ 観察（優先低）: 宣言した弱起が短い小節の後に来る形＝LP は `\partial` で併合・頁と XML は弱起を 1 小節に数える（コーパス 0・第761）。／**閉じた分（経緯は ARCHIVE の各便）**: リファクタ A〜C6（第740〜748）・綴り A1〜A4（第750〜755）・D=(a)（第755）・同名 section (a)（第753 `112ea7f2`）・validator の弱起（第753 `deb49459`）・XML の番号 ⑹⑹′（第756 `f43e48c4`・第757 `280cbbde`）・割れた小節 ⑻（第759 `2a77777c`・双子は不要＝第761）・StreamFrame の網（第758 `234b5361`）・観測者の無い規則 4 つ＋双子の欠陥 2（第760 `d0acd7da`）・⑽ part 名に予約語＋⑼ ⒜ `tab X Y` は宣言された part が勝つ（第763 `3274e1b7`・§3 の最上段）・⑼ ⒝ capo の LYS1039 の文面・⒞ 双子の歌詞の終端と cadenza の bar check・⒠ `@ottava(8va)` の文面（第764）・⒟ 1 頁目の沈み＝本の側＋LP も同じ（第765・コード変更なし）。計器: Lab `sessions/p742/`（ly／midi／xml／svg の掃き・exe は両側とも写す）・`sessions/p753/sweep-check.ps1`（診断の掃き）・`sessions/p762/run-big.ps1`
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
@@ -117,6 +117,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第765セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。`-Start p765`（HEAD `f894c720`・未 push 135）＝full **10880 / 0 / 2 / 10882**。§7 3.5 で第763 を ARCHIVE へ。
+- **⑼ ⒟ 合唱の総譜 1 頁目の沈み＝コード変更なしで閉じた**。⑴ 第762 の png は bass が 1 オクターブ低く書かれた版（加線 7 本）で、段が高すぎて 1 頁目に 1 段しか入らなかった＝**本の側**（ユーザーが 9:56 に `g,`→`g` で直した版では Lily# も LP も 1 頁目に 2 段・上端から＝`sessions/p765/ls-choir/`・`lp-choir/`）。⑵ 最後でない頁に 1 段だけ載るとき段が頁の中ほどに沈むのは **LP も同じ**（`sessions/p765/probes/lone1.ly`＝`{ c'1 d'1 \pageBreak … }` の 1 頁目で LP は段を頁の中央やや上に置く＝top-system-spacing と last-bottom-spacing のばねが伸びる・ragged-bottom は既定 ##f）。⇒ 起票は本の誤りの帰結で、Lily# の頁割りに欠陥は無い。
+★ `-End p765 -DiffBase f894c720`＝full **10880 / 0 / 2 / 10882**（網 ±0）・門 全 OK（HANDOFF 残り 10,677 B・§1 残り 12,178 字）。7.5: Core `+` 0（測るだけの便）。7.6／7.7: 該当なし。push はユーザー。
+判定: ⑼ は閉じた（残る ⒞′ は観察・⑺⑻ は優先低）。次の一手は無い＝ユーザーの指示待ち（§1.0 ⒝⒞ の設計級の島か、新しい本）。会話を区切るか: (c)＝次の島は未定・既定は続ける。
+
+## 以下は第764セッションの経緯
+
 ### 1.1 第764セッション（2026-10-03・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。`-Start p764`（HEAD `68c22933`・未 push 133）＝full **10875 / 0 / 2 / 10877**。§7 3.5 で第762 を ARCHIVE へ。
@@ -126,17 +135,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 閉じなかった分: ⒟ 合唱の総譜 1 頁目の沈み（頁割りの調査＝別便）。
 ★ `-End p764 -DiffBase 68c22933`＝full **10880 / 0 / 2 / 10882**（網 **+5**）・門 全 OK（HANDOFF 残り 7,015 B・§1 残り 10,864 字・棚卸し `APPROXIMATIONS.md` 行番号 1 行＝増減 0）。7.5: Core `+` 189 行／`-` 33 行・REF 0・OWN 0＝文面と双子の仕事で LP の式は無い（LP の extender の終わりは `LyricItem` の既存 REF の帰結を双子に写しただけ）。7.6: ⒟。7.7: なし（`""` の終端は LP 実測の上に立つ・sentinel なし）。push はユーザー。
 判定: ⑼ は ⒟（頁割り）と ⒞′（裸の `__`）を残して閉じた。次の一手はユーザー判断（⒟ は 1 頁目の DP の調査＝設計級・`sessions/p762/big-out/choir-chorale/` の png から）。会話を区切るか: (c)＝⒟ は今の文脈と無関係・既定は続ける。
-
-## 以下は第763セッションの経緯
-
-### 1.1 第763セッション（2026-10-03・YT-DELL2）
-
-新しい会話（HANDOFF から着手）。`-Start p763`（HEAD `f1a2c6de`・未 push 131）＝full **10789 / 0 / 2 / 10791**。§7 3.5 で第761 を ARCHIVE へ。
-- **⑽ part 名に予約語＋⑼ ⒜ `tab X Y` は宣言された part が勝つ＝1 commit（code・網・docs・CHANGELOG）**。⑴ `SyntaxFacts.IsPartNameKind(kind)` → **`IsPartNameToken(kind, text)`**＝`IsBareWord` ∧ 先頭が数字でない ∧ `PartNameReservedVocabulary`（**語**のリスト・kind は `Lexer.GetKeywordKind` から導く・ExpectPartName の拒否文がこのリストを刷る）に無い。deny-list は設計の 24 語に **17 語を足した**＝`revert`／`once`（section 本文が項目頭で取る）・`using`／`title`／`subtitle`／`composer`／`poet`（score 本文が裸の名前より先に取る）・`grace`／`acciaccatura`／`appoggiatura`／`cue`（音楽の流れで `X {` を開く＝cell と同じ形）・form 本文の語 `segno`〜`to`・`break`〜`noPageBreak`（section 名は同じ `ExpectPartName` で、form が裸で参照するから）＝**41 語**。⑵ section 本文の cell は「名前 token＋直後の `{`」で開く（識別子は従来どおり無条件・`ParsePartBlockWithKeyword` は退役）。form 本文の参照と ending も同じ述語（`ParseFormItem` の腕は nav／break の後ろへ）。⑶ phrase: **`Parser.IsBareReferenceKind`＝clef 4＋dynamics kind 8 を 1 軒**にして music dispatch・`IsMusicItemStart`・`RejectUnreachablePhraseName` が読む＝それ以外の keyword と pitch 字は LYS1030（文面が「note」「reserved word」を言う）。**設計からの逸脱: `phrase f` は不可**＝`f` は lexer で `PitchF`（裸の `f` は音・設計はここを見ていなかった）。`part f` は通る。top-level の裸の clef／dynamics 語は従来どおり stray（`IsTopLevelMusicStart`／`ParseTopLevelItem` で除外＝LYS0011 の grand-staff ヒントが生きる）。⑷ `tab X Y` の読みは **node 1 軒**（`TabRenderSyntax.PartToken`／`TuningToken`／`MidiOnlyPartToken`・宣言された名前は `CompilationUnitSyntax.DeclaredPartNames`＝index から 1 回で建てて root に持つ）＝page（`RenderSpecParser.ParseTab`）・rename／LYS1007（`PartReferenceFinder`・MIDI 専用の語も参照）・双子（`LilyPondExporter.RenderPartName`＝staff 側も `StaffPartToken` を読む・従来は「最初の Identifier」で `staff treble p` なら clef を取っていた）・validator が同じ答え。**LYS1044（warning）**＝X が part でも tuning 語でもあるとき同義語（`tab bass4 Y`）を言う。⑸ condensed／combined の member は括弧の中を読まない（`BarePartNameMembers`）＝pitch 字が名前になった副作用の網。
-- 網: `PartNameVocabularyTests`（新・16 本）・`ReservedWordsTests`（書き直し＝phrase と part の 2 規則）・`SymbolReferenceValidatorTests` の予約語を `voice`／`staff` に・`EditorColouringTests.TheCheckCanFail` ⑵（裸の `p` は参照＝validator の undefined）・`DocKeywordListTests` の述語・full で赤になった 4 本＝前提が古くなった網（`RenderSpecTests` の `staff a` → `staff voice`・`CreateRedExhaustivenessTests` の `melody instrument:1` → 裸・`ScoreRowSpellingMatrixTests` の `bass instrument piano` は LYS1007 で拒む・`MusicXmlRoundTripTests`＝importer の `SafeIdentifier` の手表に `s` を足して「S」が `part s` にならないようにした＝生成する本の読みやすさの側）。docs: GRAMMAR（`PartName`／`PhraseName` の生成規則・PartDecl／SectionDecl／PartBlock／PartRef・tab と staff の註・Keyword の註・PhraseRef）・SYNTAX_REFERENCE「Reserved Words」・GRAMMAR_FOR_LLM・CHANGELOG（Breaking 2 本）・APPROXIMATIONS 再生成（行番号 4 行）。
-- 掃き（Lab `sessions/p763/run-sweeps.ps1`＝p753 check＋p739 ly＋p742 midi・exe は両側 `exe-base`／`exe-head` に写した・998 冊）: **診断 1,963 行→1,963 行で差のある本 0・ly 1,199 本 差 0・mid 1,199 本 差 0**＝既存の本は不変（設計の前提「`tab bass` 単独 2 冊・`part bass` 6 冊は動かない」の実測）。第762 の `bigband-swing.lys` は p762 が `tab bass bass` に直してあり、**同じ語 2 つは tuning の読みのまま（警告なし）**＝最初の head は LYS1044 を出したので特例にした（`sessions/p763/bigband-check.txt`）。
-★ `-End p763 -DiffBase f1a2c6de`＝full **10875 / 0 / 2 / 10877**（網 **+86**）・門 全 OK（HANDOFF 残り 7,992 B・§1 残り 9,583 字・棚卸し `APPROXIMATIONS.md` 行番号 4 行＝増減 0）。7.5: Core `+` 448 行／`-` 182 行・REF 0・OWN 0＝**言語と parser の仕事で LP の式は 1 本も無い**（監査対象なし）。7.6: ⒟（LP に対応物の無い構文規則）。7.7: sentinel・fallback なし。`as` を字面で除く `IsPartNameAhead` は既存の文脈語（`ConsumeAsSelector` と同じ理由）。push はユーザー（未 push 133）。
-判定: ⑽＋⑼ ⒜ は閉じた。次の一手は ⑼ ⒝〜⒠（ユーザー判断待ち＝capo の LYS1039 は設計・双子の歌詞 `__`・1 頁目の沈み・`@ottava` の文面）。会話を区切るか: (c) 次の島はどれも parser と無関係＝既定は続ける（この会話は 1 便で軽い）が、着手はユーザーの指示があってから。
 
 ## 2. 開いている作業
 
