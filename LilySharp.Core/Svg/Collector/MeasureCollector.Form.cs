@@ -1744,6 +1744,12 @@ public sealed partial class MeasureCollector
                             when silent.GetChild(1) is SyntaxTokenNode silentName:
                         AdvanceSection(silentName.Text, LabelForSilentReference(silent, silentName.Text), SectionDeclPos(silentName.Text));
                         break;
+                    // A break inside the block flags the section just played (the
+                    // top-level arm's rule; ProcessRepeatBlock's builder.ApplyBreak).
+                    case BreakSyntax brk:
+                        if (cur > 0)
+                            _rowsOnlyFormBreaks[cur - 1] = brk.Directive;
+                        break;
                 }
             }
         }
@@ -1781,6 +1787,13 @@ public sealed partial class MeasureCollector
                     case SectionReferenceSyntax r when !IsInsideRepeatBlock(r):
                         AdvanceSection(r.SectionName, LabelForReference(r), SectionDeclPos(r.SectionName));
                         CloseDividerEndingAfter(r);
+                        break;
+                    // `break` / `noBreak` / `pageBreak` / `noPageBreak` flag the bar before
+                    // them — MeasureBuilder.ApplyBreak's boundary arm, restated against the
+                    // cursor (session 783; a rows-only form's breaks were ignored before).
+                    case BreakSyntax brk when !IsInsideRepeatBlock(brk):
+                        if (cur > 0)
+                            _rowsOnlyFormBreaks[cur - 1] = brk.Directive;
                         break;
                     // The arm ProcessForm has and this walk did not. Every other arm is
                     // gated on !IsInsideRepeatBlock, so without this one the whole block

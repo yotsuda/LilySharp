@@ -371,6 +371,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A chord grid shows its meter changes.** A chords-only (or lyrics-only) sheet drew the
+  meter once, at the top of the first line; a section header's `time 3/2` lengthened its bars
+  and showed nothing. The grid now engraves the change where a staff would — after the bar
+  line where it falls, in the prefix of a line it opens, and as the courtesy at the end of the
+  line before — and a section header that opens the piece sets the meter the first line shows.
 - **A chord or lyric row's bars follow a section's longer meter.** A section header's
   `time 3/2` on a 4/4 book left a row's bars at 4/4 — a chords-only sheet drew them a whole
   short and its `.ly` twin's clock disagreed with its own chord stream (a bar check failure);

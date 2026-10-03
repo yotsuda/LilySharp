@@ -2937,6 +2937,18 @@ internal static class MusicMarkEngraver
             else if (!measures.IsDefaultOrEmpty
                      && MidLineBarAnchorX(measureLayout, measures) is { } barAnchor)
             {
+                // …AND ON THE ROW LINE, CLEAR OF A METER CHANGE OPENING THE BAR (session 783):
+                // a rows-only sheet now engraves a section header's `time` after the bar
+                // line it opens (MeasureCollector.FitRowsToMusicBars), on the very line the
+                // label is set on, so a box centred on the bar printed through the 3/2. The
+                // box then opens past the meter by the meter's own staff-bar distance — the
+                // line-start rule (RowLineLabelLeft) read mid-line. Reservation and placement
+                // agree by construction (BoxedLabelXWindows calls this). A staff keeps the
+                // centred box: its label stands above the staff, clear of the meter.
+                if (rowLineLabelLeftX != null
+                    && RowLineLabelLeftPastOpeningMeter(
+                        fonts, measureLayout, measures, systems, rowLineLabelLeftX) is { } pastMeter)
+                    return pastMeter + LabelBoxHalfWidth(fonts, mark.Type, mark.Text, boxed);
                 // Centred on the bar line's anchor: the returned X IS the box centre.
                 return barAnchor;
             }
@@ -2981,6 +2993,44 @@ internal static class MusicMarkEngraver
         }
 
         return anchor + 0.5;
+    }
+
+    /// <summary>
+    /// On a sheet whose labels share the row line, the absolute X a boxed label's LEFT edge
+    /// takes at a mid-line bar that OPENS with a meter change: the change's ink right plus
+    /// the meter's staff-bar distance (1.0, TimeSignature.space-alist) — the column
+    /// <see cref="RowLineLabelLeft"/> gives the same label at a line start. Null off the row
+    /// line (a staff's label keeps its band), and at a bar that opens with no meter.
+    /// </summary>
+    private static double? RowLineLabelLeftPastOpeningMeter(
+        ScoreTextMetrics fonts, MeasureLayout measureLayout, ImmutableArray<Measure> measures,
+        ImmutableArray<SystemLayout> systems, Func<int, double> rowLineLabelLeftX)
+    {
+        int idx = measureLayout.MeasureIndex;
+        if (idx < 0 || idx >= measures.Length)
+            return null;
+        TimeSignatureChangeItem? opening = null;
+        foreach (var item in measures[idx].Items)
+        {
+            if (item is TimeSignatureChangeItem { Blanked: false } tc) { opening = tc; break; }
+            if (item.Duration > Semantics.Fraction.Zero) break;
+        }
+        if (opening == null || SpacingRules.OpeningTimeChangeInkLeft(fonts, measures[idx]) is not { } meterLeft)
+            return null;
+        for (int i = 0; i < systems.Length; i++)
+        {
+            foreach (var ml in systems[i].Measures)
+                if (ml.MeasureIndex == idx)
+                {
+                    double rowLeft = rowLineLabelLeftX(i);
+                    if (double.IsNaN(rowLeft))
+                        return null;   // not a row-line sheet
+                    return measureLayout.X + meterLeft
+                           + SpacingRules.GetTimeSignatureChangeWidth(fonts, opening)
+                           + BreakAlignSpacing.GetSpacing(BreakAlignSymbol.TimeSignature, BreakAlignSymbol.StaffBar).Value;
+                }
+        }
+        return null;
     }
 
     /// <summary>

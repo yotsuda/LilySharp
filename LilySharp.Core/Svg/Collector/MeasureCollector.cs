@@ -201,6 +201,16 @@ public sealed partial class MeasureCollector
     // to SynchronizeBarlines as one synthetic voice, the same road HarvestOmittedStructure
     // uses for an undrawn part's bars. Empty for every score that draws a staff.
     private readonly Dictionary<int, (BarlineType Start, BarlineType End)> _rowsOnlyFormBars = new();
+
+    /// <summary>
+    /// A rows-only score's form break directives, by the bar they flag (the bar BEFORE the
+    /// directive, as <c>MeasureBuilder.ApplyBreak</c> flags the measure just closed) —
+    /// written by the rows-only form walk (<c>EnsureSectionStartsForRows</c>) and applied to
+    /// the rows' measures by <see cref="FitRowsToMusicBars"/>. A staff's walk writes the same
+    /// flags through the builder; a rows-only sheet has no builder, so until session 783 its
+    /// form's <c>break</c> / <c>noBreak</c> / <c>pageBreak</c> were silently ignored.
+    /// </summary>
+    private readonly Dictionary<int, BreakKind> _rowsOnlyFormBreaks = new();
     // Bars in that grid — the synthetic voice's length, so it never claims bars the rows lack.
     private int _rowsOnlyFormGridBars;
     // Inline volta endings collected during the current voice walk; finalized
@@ -2661,7 +2671,7 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private void FitRowsToMusicBars(
         Dictionary<string, ImmutableArray<Voice>> staffVoices, IReadOnlySet<string> rowNames,
-        IReadOnlyList<(Fraction Length, bool IsPickup)>? rowsOnlyBars,
+        IReadOnlyList<RowsOnlyBar>? rowsOnlyBars,
         // Each row's global staff index: the symbols and syllables of a refitted bar are
         // keyed by it (ChordNameCollector.RescaleRowBar, LyricsCollector.RescaleRowBar), and
         // they keep their share of the bar as the spacers do.
@@ -2691,8 +2701,8 @@ public sealed partial class MeasureCollector
         {
             if (rowsOnlyBars == null)
                 return;
-            foreach (var (length, _) in rowsOnlyBars)
-                lengths.Add(length);
+            foreach (var bar in rowsOnlyBars)
+                lengths.Add(bar.Length);
         }
 
         foreach (string rowName in rowNames)
@@ -2734,6 +2744,63 @@ public sealed partial class MeasureCollector
                     _lyricsCollector.RescaleRowBar(rowStaff, m, total, music);
                 }
             }
+            // A ROWS-ONLY sheet ENGRAVES its meter changes on the grid (session 783): where the
+            // meter in force changes from the bar before — a section header's `time`, or the
+            // revert to the score's after one — the bar opens with the change item a staff's
+            // walk would have written (MeasureCollector.Form's header arm), so the grid row
+            // draws it (SharedRenderer.DrawSystem), the prefix hoists it at a line start
+            // (MultiStaffLayouter.SolveLineStartPrefix reads the primary voice, which IS the
+            // first row here) and the end-of-line courtesy follows. Until then a rows-only
+            // sheet's bars took the header's length (session 778) and showed no meter for it.
+            // Every row carries it, as every staff of a system does; a `time none` section
+            // (null meter) engraves nothing and breaks no run.
+            if (rowsOnlyBars != null)
+                for (int m = 1; m < measures.Length && m < rowsOnlyBars.Count; m++)
+                {
+                    if (rowsOnlyBars[m].Meter is not { } meter || rowsOnlyBars[m - 1].Meter is not { } before
+                        || meter == before)
+                        continue;
+                    var items = fitted?[m].Items ?? measures[m].Items;
+                    bool opensWithChange = false;
+                    foreach (var it in items)
+                    {
+                        if (it is TimeSignatureChangeItem) { opensWithChange = true; break; }
+                        if (it.Duration > Fraction.Zero) break;
+                    }
+                    if (opensWithChange)
+                        continue;
+                    fitted ??= measures.ToArray();
+                    fitted[m] = fitted[m] with
+                    {
+                        Items = items.Insert(0, new TimeSignatureChangeItem(meter, rowsOnlyBars[m].MeterPos)
+                        {
+                            Blanked = meter.SenzaMisura,
+                        }),
+                    };
+                }
+            // …and the form's break directives (_rowsOnlyFormBreaks), as MeasureBuilder's
+            // SetBreak / SetNoBreak / SetPageBreak / SetNoPageBreak flag a staff's measures:
+            // a page break forces the line break with it (LILYPOND-REF:
+            // ly/music-functions-init.ly:1411-1418 pageBreak — both permissions 'force).
+            if (rowsOnlyBars != null && _rowsOnlyFormBreaks.Count > 0)
+                foreach (var (m, kind) in _rowsOnlyFormBreaks)
+                {
+                    if (m < 0 || m >= measures.Length)
+                        continue;
+                    fitted ??= measures.ToArray();
+                    fitted[m] = kind switch
+                    {
+                        BreakKind.Line => fitted[m] with { LineBreakPermission = Layout.BreakPermission.Force },
+                        BreakKind.NoLine => fitted[m] with { LineBreakPermission = Layout.BreakPermission.Forbid },
+                        BreakKind.Page => fitted[m] with
+                        {
+                            LineBreakPermission = Layout.BreakPermission.Force,
+                            PageBreakPermission = Layout.BreakPermission.Force,
+                        },
+                        BreakKind.NoPage => fitted[m] with { PageBreakPermission = Layout.BreakPermission.Forbid },
+                        _ => fitted[m],
+                    };
+                }
             if (fitted != null)
                 staffVoices[rowName] = ImmutableArray.Create(new Voice(rowName, fitted.ToImmutableArray()));
         }
@@ -2753,7 +2820,7 @@ public sealed partial class MeasureCollector
     /// file's at bar 0, as a staff takes it — as the first bar, a pickup for the numbering.
     /// Null when a music voice exists: the music is the clock then.
     /// </summary>
-    private List<(Fraction Length, bool IsPickup)>? RowsOnlyBarLengths(
+    private List<RowsOnlyBar>? RowsOnlyBarLengths(
         SyntaxNode root, Dictionary<string, ImmutableArray<Voice>> staffVoices, IReadOnlySet<string> rowNames)
     {
         foreach (var (name, voices) in staffVoices)
@@ -2763,26 +2830,58 @@ public sealed partial class MeasureCollector
                         return null;
         if (_rowsOnlyFormGridBars <= 0)
             return null;
+        // The section that OPENS the piece states the piece's opening meter, as it does for
+        // a staff (MeasureCollector.Form's AtPieceOpening arm): the score's signature becomes
+        // the header's, and no change is engraved at bar 0. Until session 783 a rows-only
+        // sheet kept the file's meter in the first system's prefix while its bars (since
+        // session 778) ran at the header's.
+        foreach (var (name, starts) in _sectionState.AllStarts)
+            if (starts.Contains(0) && _sectionHeaders.Times.TryGetValue(name, out var opening)
+                && !opening.IsSenzaMisura)
+            {
+                _meta.TimeBeats = opening.Beats;
+                _meta.TimeBeatsText = opening.BeatsText;
+                _meta.TimeBeatType = opening.BeatType;
+                break;
+            }
         var home = new Fraction(_meta.TimeBeats, _meta.TimeBeatType);
-        var table = new List<(Fraction Length, bool IsPickup)>(_rowsOnlyFormGridBars);
+        var homeSig = new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura);
+        var table = new List<RowsOnlyBar>(_rowsOnlyFormGridBars);
         for (int i = 0; i < _rowsOnlyFormGridBars; i++)
-            table.Add((home, false));
+            table.Add(new RowsOnlyBar(home, false, homeSig, 0));
         foreach (var (name, starts) in _sectionState.AllStarts)
         {
             int bars = RowGridSectionBars(root, name);
-            var meter = _sectionHeaders.Times.TryGetValue(name, out var time) && !time.IsSenzaMisura
-                ? new Fraction(time.Beats, time.BeatType) : home;
+            // A `time none` header keeps the home length and engraves nothing
+            // (TimeSignatureChangeItem.Blanked's shape): its meter is null here.
+            bool hasTime = _sectionHeaders.Times.TryGetValue(name, out var time) && !time.IsSenzaMisura;
+            var meter = hasTime ? new Fraction(time!.Beats, time.BeatType) : home;
+            TimeSignature? meterSig = hasTime
+                ? new TimeSignature(time!.Beats, time.BeatType, time.BeatsText, false)
+                : _sectionHeaders.Times.ContainsKey(name) ? null : homeSig;
+            int meterPos = hasTime ? TimeDataPos(time!) : 0;
             Fraction? headerPickup = _sectionHeaders.Partials.TryGetValue(name, out var partial) && partial.Duration != null
                 ? partial.ToFraction() : null;
             foreach (int start in starts)
                 for (int k = 0; k < bars && start + k < table.Count; k++)
                 {
                     var pickup = k == 0 ? headerPickup ?? (start == 0 ? _filePartial : null) : null;
-                    table[start + k] = pickup is { } length ? (length, true) : (meter, false);
+                    table[start + k] = pickup is { } length
+                        ? new RowsOnlyBar(length, true, meterSig, meterPos)
+                        : new RowsOnlyBar(meter, false, meterSig, meterPos);
                 }
         }
         return table;
     }
+
+    /// <summary>
+    /// One bar of a rows-only score's clock (<see cref="RowsOnlyBarLengths"/>): its length,
+    /// whether it is a pickup, and the meter IN FORCE there as spelled — the section header's
+    /// <c>time</c>, else the score's — with the header's source position, so the grid can
+    /// engrave the change where a staff would (<see cref="FitRowsToMusicBars"/>). Null meter:
+    /// a <c>time none</c> section, which engraves nothing.
+    /// </summary>
+    private readonly record struct RowsOnlyBar(Fraction Length, bool IsPickup, TimeSignature? Meter, int MeterPos);
 
     /// <summary>
     /// ONE key, ONE time, ONE clef at a moment on a condensed staff. Every part of a
@@ -3224,6 +3323,7 @@ public sealed partial class MeasureCollector
         _sectionState.Reset();
         _variables.Clear();
         _rowsOnlyFormBars.Clear();
+        _rowsOnlyFormBreaks.Clear();
         _rowsOnlyFormGridBars = 0;
         // ⚠️ MetadataMeasureOffset is deliberately NOT written here, preserving the
         // manual reset verbatim (the bundling changed spellings, not behavior): it is

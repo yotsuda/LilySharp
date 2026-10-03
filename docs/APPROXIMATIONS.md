@@ -298,7 +298,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:417** LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
-- **:652** prefix — LILYSHARP-OWN, a decided divergence (user decision
+- **:654** prefix — LILYSHARP-OWN, a decided divergence (user decision
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:216** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
@@ -343,8 +343,8 @@
 ### `LilySharp.Core/Svg/Collector/MeasureBuilder.cs`
 - **:421** LILYSHARP-OWN (owner's decisions, 2026-10-02, HANDOFF §1.1 第737): a time, key
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:3139** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:5544** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:3238** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:5644** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Form.cs`
 - **:545** `time!` (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so
 - **:835** is not drawn unless written `key!` (MeasureBuilder.SectionHead, LILYSHARP-OWN). At a
@@ -490,7 +490,7 @@
 - **:2790** ⚠️ Until session 735 such a mark took the musical-column arm — a LILYSHARP-OWN limit
 - **:2892** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
 - **:2903** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
-- **:2967** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
+- **:2979** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:296** too (LILYSHARP-OWN, the remark at the meshing branch). Kept as LilyPond's number.
 - **:499** LILYSHARP-OWN (user decision 2026-09-26): ONE meshing shift, dotted or not.

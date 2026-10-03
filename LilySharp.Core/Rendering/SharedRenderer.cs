@@ -22,6 +22,8 @@ using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Tablature;
+using StaffItemPlacement = (LilySharp.Core.Svg.Model.MusicItem Item, LilySharp.Core.Svg.Layout.MeasureLayout Ml,
+    int ItemIdx, double X, double DotAdjust);
 
 namespace LilySharp.Core.Rendering;
 
@@ -672,18 +674,48 @@ internal static partial class SharedRenderer
                     // with no middle line of its own — StaffMiddleLineDrop's remark names
                     // it as the reason that constant exists. ⚠️ A four-space band cancels
                     // to `rowTopY` EXACTLY, so an ordinary one-verse grid does not move.
-                    if (isFirstSystem && !score.TimeSignature.SenzaMisura)
+                    // ⚠️ AND NOT THE OPENING METER ON THE FIRST SYSTEM ALONE (session 783): a
+                    // rows-only sheet's section header `time` reaches its bars as a
+                    // TimeSignatureChangeItem (MeasureCollector.FitRowsToMusicBars), and the
+                    // grid engraves it where a staff would — hoisted into the prefix when it
+                    // opens a continuation line (GetSystemStartTimeChange, the column the
+                    // layout booked through SolveLineStartPrefix), after the bar line mid-line
+                    // (the SAME item walk a staff and a tab read, CollectStaffItems, which also
+                    // owns the skip of the hoisted copy), and as the end-of-line courtesy
+                    // before a line that opens with one (GetSystemEndTimeChange, the width
+                    // LineEndCourtesyWidth reserved). Until then the header's 3/2 widened the
+                    // bars and showed nothing.
+                    double meterY = rowTopY - h / 2 + StaffMiddleLineDrop;
+                    var startTimeChange = GetSystemStartTimeChange(staff, system);
+                    var prefixMeter = isFirstSystem ? score.TimeSignature : startTimeChange?.NewTime;
+                    if (prefixMeter is { SenzaMisura: false } pm)
                     {
                         var pc = BreakAlignSpacing.SolvePrefixColumns(
                             score.TextMetrics, SpacingRules.MaxClefWidth(score),
                             SpacingRules.WidestActiveKeyInk(
                                 score, system.Measures.Length > 0 ? system.Measures[0].MeasureIndex : 0),
                             includeTimeSignature: true,
-                            score.TimeSignature.NumeratorText, score.TimeSignature.DenominatorText);
-                        using (SourceScope(gc, score.Header.Time))
-                            DrawTimeSignature(score.TextMetrics,
-                                score.TimeSignature, systemStartX + pc.TimeX,
-                                rowTopY - h / 2 + StaffMiddleLineDrop, gc);
+                            pm.NumeratorText, pm.DenominatorText);
+                        using (SourceScope(gc, isFirstSystem ? score.Header.Time : startTimeChange!.SourcePosition))
+                            DrawTimeSignature(score.TextMetrics, pm, systemStartX + pc.TimeX, meterY, gc);
+                    }
+                    var rowItems = ListPool<StaffItemPlacement>.Rent();
+                    CollectStaffItems(score.TextMetrics, staff.PrimaryVoice, 1, system, layout, globalIdx, rowItems);
+                    foreach (var (item, _, _, itemX, _) in rowItems)
+                        if (item is TimeSignatureChangeItem { Blanked: false } timeChange
+                            && !timeChange.NewTime.SenzaMisura)
+                            DrawTimeSignatureChange(score.TextMetrics, timeChange, itemX, meterY, gc);
+                    ListPool<StaffItemPlacement>.Give(rowItems);
+                    if (system.Measures.Length > 0
+                        && GetSystemEndTimeChange(staff, system) is { } eolTimeChange
+                        && !eolTimeChange.NewTime.SenzaMisura)
+                    {
+                        var lastMl = system.Measures[^1];
+                        using (gc.Source(eolTimeChange.SourcePosition))
+                            DrawTimeSignature(score.TextMetrics, eolTimeChange.NewTime,
+                                lastMl.X + lastMl.Width + SpacingRules.BreakAlignGap(
+                                    BreakAlignSymbol.StaffBar, BreakAlignSymbol.TimeSignature),
+                                meterY, gc);
                     }
                 }
                 continue;
