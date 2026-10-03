@@ -33,8 +33,11 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class CreateRedExhaustivenessTests
 {
-    // Direct regression for the original defect: a `partName instrument:N` render
-    // item must materialize as MidiPartRenderSyntax, not GenericSyntaxNode.
+    // Direct regression for the original defect: a bare `partName` render item (the
+    // `partName instrument:N` of the colon era, whose options left the language on
+    // 2026-09-12) must materialize as MidiPartRenderSyntax, not GenericSyntaxNode.
+    // ⚠️ Written bare: since 2026-10-03 `instrument` is a legal part name, so the old
+    // spelling would parse as TWO bare rows (`melody` and `instrument`) plus strays.
     [Fact]
     public void MidiPartRender_CreatesDedicatedRedNode()
     {
@@ -42,7 +45,7 @@ public class CreateRedExhaustivenessTests
             "part melody { clef treble }\n" +
             "section Main { melody { c4 d e f | } }\n" +
             "form main { Main }\n" +
-            "score main \"audio\" { melody instrument:1 }\n");
+            "score main \"audio\" { melody }\n");
 
         var renders = tree.GetRoot().DescendantNodes<MidiPartRenderSyntax>().ToList();
         Assert.Single(renders);

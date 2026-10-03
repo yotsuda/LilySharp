@@ -176,17 +176,18 @@ public class RenderSpecTests
     [Fact]
     public void EnsembleWithAPitchNamedStaff_ReportsErrorWithoutCrashing()
     {
-        // `staff a` / `staff b5` name a part with a pitch-letter token, which is not
-        // a valid part name — the parser reports it and leaves a zero-width (empty)
-        // VoiceName. With two+ plain staves the ensemble default-name pass runs;
-        // it must SKIP the empty name rather than index [0] into "" and throw
-        // IndexOutOfRangeException (found via TabRangeValidator -> FindAll).
+        // `staff voice` names a part with a reserved word, which is not a valid part
+        // name — the parser reports it and leaves a zero-width (empty) VoiceName. With
+        // two+ plain staves the ensemble default-name pass runs; it must SKIP the empty
+        // name rather than index [0] into "" and throw IndexOutOfRangeException (found
+        // via TabRangeValidator -> FindAll). (The shape was `staff a` until 2026-10-03,
+        // when a pitch letter became a legal part name — SyntaxFacts.IsPartNameToken.)
         var tree = SyntaxTree.Parse("""
             part foo { clef treble }
-            part a { clef treble }
-            section A { foo { c'1 } a { c'1 } }
+            part voice { clef treble }
+            section A { foo { c'1 } voice { c'1 } }
             form main { A }
-            score main { staff foo staff a }
+            score main { staff foo staff voice }
             """);
         Assert.True(tree.HasErrors);
 

@@ -933,36 +933,23 @@ public sealed partial class LilyPondExporter
                 yield return child;
     }
 
-    private static string? RenderPartName(SyntaxNode renderItem)
+    /// <summary>The part a <c>staff</c> or <c>tab</c> item renders, read the way the page
+    /// reads it — the node for a tab (<see cref="TabRenderSyntax.PartToken"/>: of two words
+    /// the first when it is a declared part, else the last) and the rename's reading for a
+    /// staff (<see cref="Editing.PartReferenceFinder.StaffPartToken"/>: selectors, tilde and
+    /// display name cut, a clef word before the name skipped).</summary>
+    /// <remarks>
+    /// Until 2026-10-03 this took the first IDENTIFIER after the keyword for itself, which
+    /// named <c>full</c> as the part of <c>tab bass as full</c> (<c>bass</c> lexes as a clef
+    /// word) — a TabStaff of a part that does not exist, in guitar tuning, holding only the
+    /// form's road-map marks (Lab probes/complex-lys/06) — and, once any bare word may name a
+    /// part, would have named the clef of <c>staff treble p</c>. One reading per item now,
+    /// and the twin can no longer disagree with the page about which part a row shows.
+    /// </remarks>
+    private static string? RenderPartName(SyntaxNode renderItem) => renderItem switch
     {
-        // A tab item is `tab [tuning] part [as numbers|full]`, read the way the page reads it
-        // (RenderSpecParser.ParseTab): the selector off, the LAST target is the part. The
-        // first-identifier rule below named `full` as the part of `tab bass as full` — `bass`
-        // lexes as a clef word, not an identifier — so the twin wrote a TabStaff of a part
-        // that does not exist, in guitar tuning, holding only the form's road-map marks, which
-        // LilyPond then found all at one moment (Lab probes/complex-lys/06).
-        if (renderItem is TabRenderSyntax tab)
-        {
-            string? last = null;
-            for (int i = 1; i < tab.SlotCount; i++)
-            {
-                if (tab.GetChild(i) is not SyntaxTokenNode t) continue;
-                if (t.Kind is SyntaxKind.OpenBrace or SyntaxKind.CloseBrace) continue;
-                if (string.Equals(t.Text, "as", StringComparison.Ordinal)) break;
-                last = t.Text;
-            }
-            if (last != null)
-                return last;
-        }
-        // staff/tab items: the first bare identifier token after the keyword is
-        // the part name (an optional clef/tuning token may precede or follow it,
-        // but the part name is what a declared part matches).
-        // Skip slot 0 (the staff/tab keyword); the part name is the first
-        // identifier after it.
-        var toks = renderItem.DescendantNodes().OfType<SyntaxTokenNode>().ToList();
-        for (int i = 1; i < toks.Count; i++)
-            if (toks[i].Kind == SyntaxKind.Identifier)
-                return toks[i].Text;
-        return toks.Count > 1 ? toks[1].Text : null;
-    }
+        TabRenderSyntax tab => tab.PartToken?.Text,
+        StaffRenderSyntax staff => Editing.PartReferenceFinder.StaffPartToken(staff)?.Text,
+        _ => null,
+    };
 }

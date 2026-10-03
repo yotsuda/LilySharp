@@ -987,12 +987,14 @@ public class EditorColouringTests
                 .Diagnostics,
             d => d.Code == DiagnosticCodes.LilyPondRepeatVolta);
 
-        // ⑵ The exception list is measured, not assumed: the level marks really are refused
-        //    where a dynamic would stand, so painting them would advertise a spelling nobody
-        //    may type — while the '@' form they ARE written in is coloured.
-        Assert.True(SyntaxTree.Parse(
-                "part m { clef treble }\nsection A { m { c'4 p d'4 } }").HasErrors,
-            "a bare level mark is not a dynamic — it is written @p");
+        // ⑵ The exception list is measured, not assumed: a bare level mark is NOT a dynamic
+        //    where a dynamic would stand — since 2026-10-03 it is a PHRASE REFERENCE (a
+        //    stray item before that), so painting it as a dynamic would advertise a meaning
+        //    the word does not have — while the '@' form a dynamic IS written in is coloured.
+        var bareP = SyntaxTree.Parse("part m { clef treble }\nsection A { m { c'4 p d'4 } }");
+        Assert.False(bareP.HasErrors, "a bare level mark parses — as a reference, not a dynamic");
+        Assert.Contains(LilySharp.Core.Semantics.SemanticValidation.Run(bareP),
+            d => d.Code == DiagnosticCodes.UndefinedVariable && d.Message.Contains("'p'"));
         Assert.True(IsColoured("@p"), "the spelling that IS writable has to keep its colour");
 
         // ⑶ Whole-word coverage is not substring coverage — the pair that fooled the first

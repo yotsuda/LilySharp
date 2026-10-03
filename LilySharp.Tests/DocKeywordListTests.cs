@@ -173,7 +173,7 @@ public class DocKeywordListTests
     private static string[] KeywordScoreItems() =>
         Listed("docs/SYNTAX_REFERENCE.md")
             .Where(w => KindOf(w) != SyntaxKind.Identifier)
-            .Where(w => !SyntaxFacts.IsPartNameKind(KindOf(w)))
+            .Where(w => !SyntaxFacts.IsPartNameToken(KindOf(w), w))
             .Where(w => !IsStrayInsideAScore(w))
             .Distinct(StringComparer.Ordinal)
             .OrderBy(w => w, StringComparer.Ordinal)

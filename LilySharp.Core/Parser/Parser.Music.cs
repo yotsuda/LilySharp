@@ -94,9 +94,33 @@ internal sealed partial class Parser
             SyntaxKind.Slash => true,
             SyntaxKind.IntegerLiteral => true,
             SyntaxKind.Identifier => true, // Variable reference
+            // A clef word or a dynamic word — a bare reference to a phrase of that name
+            // (ParseMusicItem's IsBareReferenceKind arm; the same keep-in-step rule).
+            _ when IsBareReferenceKind(kind) => true,
             _ => false
         };
     }
+
+    /// <summary>
+    /// The keyword kinds a music stream reads as a BARE PHRASE REFERENCE, beside the
+    /// identifier: the four clef words (since 2026-08-22) and the eight dynamic kinds (since
+    /// 2026-10-03, when a part or phrase may be named <c>p</c>).
+    /// </summary>
+    /// <remarks>
+    /// ONE HOME for both sides of the question. <see cref="ParseMusicItem"/> dispatches on
+    /// it, <see cref="IsMusicItemStart"/> keeps in step with it, and
+    /// <see cref="RejectUnreachablePhraseName"/> refuses at the declaration every keyword
+    /// kind that is NOT in it — so a phrase named for a word the stream cannot read back is
+    /// told so where it is written. Nothing else claims a bare clef or dynamic word in a
+    /// music stream: <c>clef bass</c> reaches its clef through its own keyword, and a
+    /// dynamic is written <c>@p</c> on a note, so a bare <c>p</c> was a stray item (LYS0030)
+    /// until it became a reference. ⚠️ <c>f</c> is NOT here: it lexes as the pitch F, and a
+    /// bare <c>f</c> is a note.
+    /// </remarks>
+    private static bool IsBareReferenceKind(SyntaxKind kind) =>
+        kind is SyntaxKind.BassKeyword or SyntaxKind.TrebleKeyword
+            or SyntaxKind.AltoKeyword or SyntaxKind.TenorKeyword
+        || SyntaxFacts.IsDynamicKind(kind);
 
     private GreenNode? ParseMusicItem()
     {
@@ -188,19 +212,19 @@ internal sealed partial class Parser
 
             // The four clef words lex as their own keywords, so they never reached the
             // Identifier arm above and a bare `bass` in music was LYS0030 — reachable only
-            // as `$bass`. ExpectPartName has always accepted them (SyntaxFacts.IsPartNameKind),
+            // as `$bass`. ExpectPartName has always accepted them (SyntaxFacts.IsPartNameToken),
             // and ParserTests.PartAndSectionNames_AcceptClefWords pins that a `bass` part can
             // be declared, referenced, sectioned and structured; when the `$` sigil was
             // removed (2026-08-22) that guarantee would have silently lost its phrase half.
             // Nothing else claims a bare clef word here — `clef bass` and `tuning bass` are
             // reached through their own directive keyword — so reading it as a reference is
             // unambiguous, and an undefined one is reported by SymbolReferenceValidator like
-            // any other name. ⚠️ `q` and the drum vocabulary are NOT like this: they ARE real
-            // music items here, so their names stay unreachable and are refused at the
-            // declaration instead (DiagnosticCodes.PhraseNameUnreachable).
-            SyntaxKind.BassKeyword or SyntaxKind.TrebleKeyword
-                or SyntaxKind.AltoKeyword or SyntaxKind.TenorKeyword
-                => ParseBareVariableReference(),
+            // any other name. The eight dynamic kinds joined 2026-10-03 for the same reason
+            // (a bare `p` was a stray item; `@p` is how a dynamic is written). ⚠️ `q` and
+            // the drum vocabulary are NOT like this: they ARE real music items here, so their
+            // names stay unreachable and are refused at the declaration instead
+            // (DiagnosticCodes.PhraseNameUnreachable). The set is IsBareReferenceKind.
+            _ when IsBareReferenceKind(kind) => ParseBareVariableReference(),
 
             // `/` in note position is a SLASH NOTE — rhythm (comping) notation:
             // a pitchless note drawn as a slash head on the middle staff line.

@@ -52,7 +52,7 @@ internal sealed partial class Parser
         if (!Check(SyntaxKind.Tilde))
             return null;
         var span = new TextSpan(_textPosition + Current.LeadingTriviaWidth, 1);
-        var name = IsPartNameKind(Peek(1).Kind) ? Peek(1).Text : "A";
+        var name = IsPartNameToken(Peek(1)) ? Peek(1).Text : "A";
         _diagnostics.Error(span, DiagnosticCodes.SectionDeclarationTilde,
             $"A section declaration takes no '~'. To play a section without its rehearsal "
             + $"label, write the '~' on the form reference: form {{ ~{name} }}.");
@@ -95,12 +95,17 @@ internal sealed partial class Parser
             SyntaxKind.OverrideKeyword => ParseOverrideDeclaration(),
             SyntaxKind.RevertKeyword => ParseRevertDeclaration(),
             SyntaxKind.OnceKeyword => ParseOnceModifier(),
-            // Allow identifier or instrument keywords (bass, guitar-like names) as part names
+            // An identifier opens a part cell.
             SyntaxKind.Identifier => ParsePartBlock(),
-            // bass, treble etc. can also be part names
-            SyntaxKind.BassKeyword or SyntaxKind.TrebleKeyword
-                or SyntaxKind.AltoKeyword or SyntaxKind.TenorKeyword
-                when Peek(1)?.Kind == SyntaxKind.OpenBrace => ParsePartBlockWithKeyword(),
+            // So does any other bare word a part may be named — a clef word, a dynamic, a
+            // pitch letter, `q`, a drum name (SyntaxFacts.IsPartNameToken; owner's decision
+            // 2026-10-03) — WHEN A BRACE FOLLOWS. The brace is what tells a cell `p { … }`
+            // from the bare music the arm below reads (`p` alone is a stray item there), and
+            // the words that open a brace of their own in a music stream (`grace {`,
+            // `voice {`, `cue {`) are in the reserved list, so they never reach this arm.
+            // Until 2026-10-03 only the four clef words took this route.
+            _ when IsPartNameStart() && Peek(1)?.Kind == SyntaxKind.OpenBrace
+                => ParsePartBlock(),
             // Bare music (a note / rest / chord / …) in a section body. Parse it PROPERLY as
             // music rather than dropping the tokens (plain pitches used to be skipped silently;
             // notes carrying an @annotation were even mis-read as a part cell named after the
@@ -128,16 +133,6 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// Parse part block when part name is a keyword (e.g., bass)
-    /// </summary>
-    private PartBlockGreen ParsePartBlockWithKeyword()
-    {
-        var partName = Advance(); // bass, treble, etc. as identifier
-        var body = ParseMusicBlock();
-        return new PartBlockGreen(partName, [], body);
-    }
-
-    /// <summary>
     /// Parse lyrics block: lyrics { syllable syllable | syllable | }
     /// </summary>
     /// <remarks>
@@ -153,10 +148,10 @@ internal sealed partial class Parser
         var keyword = Expect(SyntaxKind.LyricsKeyword);
         // Optional voice-binding name: `lyrics sop { … }` aligns to voice 'sop'.
         // ⚠️ A PART NAME, not just an identifier — the clef words are legal part names
-        // (SyntaxFacts.IsPartNameKind), and until 2026-09-26 `lyrics w sings bass { … }`
+        // (SyntaxFacts.IsPartNameToken), and until 2026-09-26 `lyrics w sings bass { … }`
         // was a parse error ("Expected 'OpenBrace', found 'BassKeyword'") for a part the
         // grammar says may be called `bass` (found writing a hymn probe).
-        var name = SyntaxFacts.IsPartNameKind(Current.Kind) ? Advance() : (SyntaxToken?)null;
+        var name = IsPartNameToken(Current) ? Advance() : (SyntaxToken?)null;
         // Optional melody binding: `lyrics ja sings vocal { … }` — the track sings
         // the named part. Contextual like `q`: 'sings' stays an ordinary identifier
         // everywhere else, claimed only between a track name and its brace.
@@ -164,7 +159,7 @@ internal sealed partial class Parser
         if (name != null && Check(SyntaxKind.Identifier) && Current.Text == "sings")
         {
             singsKeyword = Advance();
-            singsTarget = SyntaxFacts.IsPartNameKind(Current.Kind) ? Advance() : null;
+            singsTarget = IsPartNameToken(Current) ? Advance() : null;
         }
         var openBrace = Expect(SyntaxKind.OpenBrace);
 

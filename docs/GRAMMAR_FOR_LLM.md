@@ -48,8 +48,8 @@ layout {                 // optional; the score-wide display switches (see the l
 
 part rightHand { clef treble }  // declare each part; clef lives here (it only DRAWS —
 part leftHand  { clef bass octave 3 }  // the register is `octave N` or an instrument preset)
-                                // part names are identifiers, NOT reserved words
-                                // (bass/treble/melody-as-keyword etc. are taken)
+                                // a part name is any bare word except the structural
+                                // keywords (voice staff section key time … — see below)
 
 phrase motif { c4 d e f | }     // optional reusable music, referenced by bare name
 
@@ -1034,9 +1034,15 @@ layout {
 
 ## Reserved words
 
-These are keywords and cannot be used as bare identifiers, EXCEPT the four clef-name words
-(`treble bass alto tenor`), which ARE allowed as part / section / phrase names (so a `bass`
-part is fine). Keywords:
+These are keywords. A PART or SECTION name may be any of them EXCEPT the structural ones
+(`voice lyrics chords section part phrase form score tab staff ossia grandStaff staffGroup
+choirStaff condensedStaff combinedStaff layout paper fonts grace acciaccatura appoggiatura
+cue key time tempo partial override revert once using title subtitle composer poet segno
+fine coda dc ds al to break noBreak pageBreak noPageBreak`) — so
+`part p`, `part bass`, `part q` are fine (2026-10-03). A PHRASE name is referenced bare in
+music, so it is an identifier, a clef word (`treble bass alto tenor`) or a dynamic word
+(`ppp pp p mp mf ff fff`; `f` is the note F, so not `f`); any other keyword is LYS1030.
+Keywords:
 
 ```text
 section form using tab ossia transpose octave pitch instrument percussion drummap
@@ -1053,7 +1059,10 @@ ppp pp p mp mf ff fff   (f is a PITCH; @f still works - dynamics resolve from te
 
 Also special: single letters `a`-`g` are pitches; `r`/`R`/`s` are rests. Reserved IN
 MUSIC only: `q`, `chord` (`chord(C x32010)`) and the drum names (`bd` `sn` `hh` …) — a
-phrase cannot be named them; a part can. Articulation,
+phrase cannot be named them; a part can. In a score, `tab X Y` is part X's tab plus the
+MIDI-only part Y when the file declares a part named X, else the X tuning over part Y
+(`tab bass click` beside `part bass`: the part wins, LYS1044 names `tab bass4 click` for
+the tuning). Articulation,
 ornament, dynamic-text and mark NAMES (`staccato`, `tr`, `mordent`, `cresc`, `dim`, …) are
 NOT reserved — they are resolved from the `@name` text — so they remain free for your own
 identifiers.

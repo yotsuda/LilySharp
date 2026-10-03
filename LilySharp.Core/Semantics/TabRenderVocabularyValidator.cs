@@ -142,6 +142,23 @@ internal sealed class TabRenderVocabularyValidator : ISemanticValidator
                     + $"{string.Join(", ", LanguageVocabulary.TuningNames)}. "
                     + "Omit it to take the tuning from the part.");
             }
+
+            // `tab bass click` where `bass` is BOTH a part of this file and a tuning word: the
+            // part wins (TabRenderSyntax.PartToken), and the writer who meant the tuning is
+            // told the synonym that says so unambiguously.
+            if (tab.MidiOnlyPartToken is { } midiOnly && tab.PartToken is { } part
+                && LanguageVocabulary.TuningNames.Contains(part.Text, StringComparer.Ordinal))
+            {
+                var tuningType = Tablature.Tunings.Parse(part.Text);
+                string synonym = Tablature.Tunings.Names
+                    .FirstOrDefault(n => n != part.Text && Tablature.Tunings.Parse(n) == tuningType)
+                    ?? part.Text;
+                _diagnostics.Warning(part.Span, DiagnosticCodes.TabPartNameIsAlsoATuning,
+                    $"'{part.Text}' names a part of this file, so this is part '{part.Text}'s tab "
+                    + $"and '{midiOnly.Text}' after it is a part played to MIDI only. "
+                    + $"For the {part.Text} tuning over part '{midiOnly.Text}', write "
+                    + $"'tab {synonym} {midiOnly.Text}'.");
+            }
         }
     }
 }

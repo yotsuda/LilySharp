@@ -51,6 +51,34 @@ public sealed class CompilationUnitSyntax : SyntaxNode
         }
     }
 
+    private HashSet<string>? _declaredPartNames;
+
+    /// <summary>
+    /// The names this file DECLARES a part under — a <c>part NAME</c> header or a
+    /// section-body cell <c>NAME { … }</c> (<see cref="Editing.PartReferenceFinder.DeclaredName"/>)
+    /// — built on first demand and kept for the life of this root, like
+    /// <see cref="Descendants"/>.
+    /// </summary>
+    /// <remarks>
+    /// Asked by <see cref="TabRenderSyntax.PartToken"/>, whose reading of <c>tab X Y</c>
+    /// depends on whether X is a part of this file; the index makes the answer O(declared
+    /// parts) rather than a walk per tab item.
+    /// </remarks>
+    internal IReadOnlySet<string> DeclaredPartNames
+    {
+        get
+        {
+            var names = Volatile.Read(ref _declaredPartNames);
+            if (names != null)
+                return names;
+            var built = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var node in DescendantNodesOfKinds(Editing.PartReferenceFinder.DeclaringKinds))
+                if (Editing.PartReferenceFinder.DeclaredName(node) is { } name && name.Text.Length > 0)
+                    built.Add(name.Text);
+            return Interlocked.CompareExchange(ref _declaredPartNames, built, null) ?? built;
+        }
+    }
+
     /// <summary>
     /// All members (notes, declarations, etc.)
     /// </summary>

@@ -123,10 +123,12 @@ Keyword = 'title' | 'subtitle' | 'composer' | 'poet' | 'tempo' | 'time' | 'key' 
         | 'ppp' | 'pp' | 'p' | 'mp' | 'mf' | 'ff' | 'fff'
         ;
 
-(* The four clef-name words (treble bass alto tenor) ARE allowed as part / section /
-   phrase names. Single letters a-g are pitches ('f' is a pitch, not a keyword — @f
-   resolves the dynamic from text); r / R / s are rests. The reserved dynamic words
-   above (p, pp, mp, …) cannot be identifiers. 'swing'/'shuffle' are NOT reserved
+(* A PART or SECTION may be named any of these except the structural ones (PartName,
+   §3 — e.g. 'part p', 'part bass', 'part percussion' compile); a PHRASE only for a word a
+   music stream reads back as a reference — the four clef-name words and the dynamic words
+   ppp pp p mp mf ff fff (PhraseName, §4). Single letters a-g are pitches ('f' is a pitch,
+   not a keyword — @f resolves the dynamic from text); r / R / s are rests. A variable name
+   is an identifier. 'swing'/'shuffle' are NOT reserved
    (tempo value words). Articulation, ornament, dynamic-text and mark NAMES
    (staccato, tr, sfz, cresc, dim, …) are resolved from the '@name' text and are
    NOT reserved. 'using' is the multi-file include ('using "other.lys"', UsingDecl below —
@@ -870,7 +872,21 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
 (* Parts declare instruments/voices. Header attributes are written BARE — the same
    command form as the top-level commands (NO colon, NO '='). *)
 
-PartDecl       = 'part' , Identifier , [ String ] , [ PartBody ] ;  (* String = display name *)
+PartDecl       = 'part' , PartName , [ String ] , [ PartBody ] ;  (* String = display name *)
+
+(* A PART NAME — and a section's — is ANY BARE WORD except the structural keywords
+   (owner's decision 2026-10-03; until then an identifier and the four clef words
+   treble/bass/alto/tenor). The words a name cannot be are the ones that open a block
+   of their own where a name could stand, and the section settings: voice lyrics chords
+   section part phrase form score tab staff ossia grandStaff staffGroup choirStaff
+   condensedStaff combinedStaff layout paper fonts grace acciaccatura appoggiatura cue
+   key time tempo partial override revert once using title subtitle composer poet, and
+   the words a form body reads as items of its own — segno fine coda dc ds al to and
+   break noBreak pageBreak noPageBreak — since a section is named by the same rule
+   (SyntaxFacts.PartNameReservedVocabulary — the refusal names the list). So 'part p', 'part bass',
+   'part percussion', 'part q' and 'part c' all compile; a name never stands bare in a
+   music stream, so a pitch letter or a dynamic is no ambiguity there. *)
+PartName       = BareWord ;        (* minus the reserved words above *)
 PartBody       = '{' , { PartProperty } , '}' ;
 PartProperty   = 'clef'          , PartClefName
                | 'instrument'    , ( InstrumentPreset , [ String ] | String )
@@ -1016,7 +1032,14 @@ TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
    itself, directly or around a ring (x -> y -> x, x -> y -> z -> x): a cycle would never
    expand to a finite piece and is rejected with LYS1027. *)
 
-PhraseDecl     = 'phrase' , Identifier , MusicBlock ;
+PhraseDecl     = 'phrase' , PhraseName , MusicBlock ;
+PhraseName     = PartName ;
+                 (* NARROWER than a part name in practice, because a phrase is played by a
+                    BARE reference in a music stream and the stream reads only an identifier,
+                    the four clef words and the dynamic words ppp pp p mp mf ff fff as a
+                    reference (Parser.IsBareReferenceKind). A phrase named for any other
+                    keyword, for 'f' (the note F), for 'q', 'chord' or a drum name is refused
+                    at the declaration (LYS1030) — the reference would never reach it. *)
 
 (* Example:
    phrase theme { c4 d e f | g a b c' | }
@@ -1029,7 +1052,7 @@ PhraseDecl     = 'phrase' , Identifier , MusicBlock ;
 
 (* Musical sections bind music to each part by name. At least one is required. *)
 
-SectionDecl    = 'section' , Identifier , '{' , { SectionItem } , '}' ;
+SectionDecl    = 'section' , PartName , '{' , { SectionItem } , '}' ;   (* the same name rule as a part *)
 
 (* A SECTION'S LABEL IS HIDDEN AT THE FORM REFERENCE, NOWHERE ELSE (2026-09-24). Every
    play of a section prints its rehearsal label unless that reference carries '~':
@@ -1085,7 +1108,11 @@ SectionItem    = SectionSetting
 
 SectionSetting = KeyDecl | TempoDecl | TimeDecl | PartialDecl ;
 
-PartBlock      = Identifier , MusicBlock ;
+PartBlock      = PartName , MusicBlock ;
+                 (* A keyword name opens a cell only when the brace follows it directly —
+                    'p { … }' is part p's cell, a bare 'p' is the music the arm below reads.
+                    The words that open a brace of their own in music (grace, voice, cue …)
+                    are reserved, so the two shapes never meet. *)
 
 (* A lyrics track BINDS TO ITS OWN MELODY AT THE DEFINITION (user decision,
    2026-08-19, closed before the first tag): 'lyrics ja sings vocal { ... }' says the
@@ -1356,6 +1383,17 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                      (* tablature: tab partName, or
                                                         tab bass5 partName to override the
                                                         part header's own `tuning`.
+                                                        ⚠️ Of two words, the FIRST is the
+                                                        part when the file declares a part
+                                                        by that name, and the second is then
+                                                        a MIDI-only PartRef (2026-10-03):
+                                                        'tab bass click' beside 'part bass'
+                                                        is bass's tab plus the click track.
+                                                        A tuning word that is also a part
+                                                        reports LYS1044 naming the synonym
+                                                        ('tab bass4 click'). No such part,
+                                                        or the same word twice ('tab bass
+                                                        bass'), and the first is the tuning.
                                                         The style word is TabStyle, below.
                                                         With no clause the SCORE answers.
                                                         ⚠️ NO SEMICOLONS IN HERE — the doc
@@ -1537,15 +1575,15 @@ StaffSelector  = 'lines' , Integer
                     the PART NAME, not a clef with the name left off: 'staff bass'
                     renders a part literally named 'bass' (whose clef then comes from
                     its own definition), and reports LYS1007 when no such part is
-                    declared. The four words this can happen to are treble, bass, alto
-                    and tenor, which are also legal part names (SyntaxFacts.
-                    IsPartNameKind); the other seven part-header clefs are not, so
-                    'staff percussion' is a syntax error instead. The reading is
-                    RenderSpecParser.ParseStaff's and ParseOssia's; until 2026-08-28 the
-                    REFERENCE scan disagreed with both and collected nothing, so
-                    'score main { staff bass }' over a part named 'bassline' engraved a
-                    blank staff and 'lysc check' said "No errors found". *)
-PartRef        = Identifier ;
+                    declared. The words this can happen to are the five ClefName words,
+                    and since 2026-10-03 every bare word is a legal part name
+                    (SyntaxFacts.IsPartNameToken), so 'staff percussion' names a part
+                    called percussion. The reading is RenderSpecParser.ParseStaff's and
+                    ParseOssia's; until 2026-08-28 the REFERENCE scan disagreed with both
+                    and collected nothing, so 'score main { staff bass }' over a part named
+                    'bassline' engraved a blank staff and 'lysc check' said "No errors
+                    found". *)
+PartRef        = PartName ;
 DisplayName    = String ;
                  (* 'staff flute "津田さん"': overrides the instrument label for THIS
                     score only. QUOTED ONLY (2026-08-23, user decision — the bare form
@@ -2002,17 +2040,18 @@ RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N ti
      InlineVolta = '[' , Integer , [ ( '-' | ',' ) , Integer ] , '.' , { MusicItem } , [ ']' ] ;
    and its endings held their MUSIC, where a form's ending NAMES a section that holds it. *)
 Beam           = '[' | ']' ;
-PhraseRef      = Identifier , { "'" | ',' } ;
+PhraseRef      = PhraseName , { "'" | ',' } ;
                  (* ⚠️ The '$' sigil was REMOVED 2026-08-22. The two spellings had been
                     measured identical 2026-08-16 (eight forms, both octave modes), so the
                     sigil distinguished nothing — except three name families, each now
                     closed on its own terms: drum vocabulary and 'q' are refused as
                     phrase names at the DECLARATION (LYS1030, since a bare reference
                     would read as a drum note and silently turn the staff into a
-                    DrumStaff); dynamics (p, f, mf, …) were already reserved words
-                    there; and the clef words (bass, treble, alto, tenor) are
+                    DrumStaff); the clef words (bass, treble, alto, tenor) are
                     reachable bare because 'clef bass' reaches its clef through its
-                    own keyword, so the music stream reads them as references.
+                    own keyword, so the music stream reads them as references; and
+                    the dynamic words (ppp pp p mp mf ff fff — not f, the note) joined
+                    them 2026-10-03, a bare 'p' having been a stray item until then.
                     Unreleased, so no migration diagnostic ('$theme' is now an
                     unexpected character followed by a reference — LYS0018 names it).
                     A movable phrase: it lands in the AMBIENT key at the reference

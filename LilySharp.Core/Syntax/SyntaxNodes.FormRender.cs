@@ -881,24 +881,47 @@ public sealed partial class CondensedStaffRenderSyntax : SyntaxNode
     {
         get
         {
-            // Slots: keyword, '{', member…, '}'. Selected by KIND rather than by index, so
-            // a missing brace (error recovery) cannot shift the names.
+            // Slots: keyword, '{', member…, '}'. Selected by the part-name rule rather than
+            // by index, so a missing brace (error recovery) cannot shift the names.
             // ⚠️ Positively a PART NAME, not merely "not a brace": a member the container
             // rejected is KEPT in the tree so its width survives (ParseBarePartNameMembers),
             // and a `not` test would hand that rejected token back as a part name — which
             // would then be reported a SECOND time as an undefined part, under the
             // "cannot contain" error that already says what is wrong.
-            for (int i = 0; i < SlotCount; i++)
-            {
-                if (GetChild(i) is SyntaxTokenNode t && SyntaxFacts.IsPartNameKind(t.Kind))
-                    yield return t;
-            }
+            foreach (var t in BarePartNameMembers(this))
+                yield return t;
         }
     }
 
     /// <summary>The same names as text. ONE loop, so the token span and the string can
     /// never come from different members.</summary>
     public IEnumerable<string> PartNames => PartNameTokens.Select(t => t.Text);
+
+    /// <summary>
+    /// The bare part-name members of a <c>condensedStaff { … }</c> / <c>combinedStaff
+    /// { … }</c> node — one reading for both.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Only the tokens OUTSIDE a kept brace body count. A rejected member that carried a
+    /// body (<c>condensedStaff { grandStaff { staff a } }</c>) is kept whole for its width,
+    /// braces and all (ParseBarePartNameMembers), and the words inside it are not members:
+    /// since a part may be named any bare word (2026-10-03), a pitch letter inside such a
+    /// body would otherwise come back as a part and be reported undefined under the
+    /// "cannot contain" error that already names the mistake. Its own braces open and close
+    /// the node's slots 1 and last, which is why the depth starts below zero for them.
+    /// </remarks>
+    internal static IEnumerable<SyntaxTokenNode> BarePartNameMembers(SyntaxNode node)
+    {
+        int depth = 0;
+        for (int i = 2; i < node.SlotCount - 1; i++)   // inside the node's own braces
+        {
+            if (node.GetChild(i) is not SyntaxTokenNode t) continue;
+            if (t.Kind == SyntaxKind.OpenBrace) { depth++; continue; }
+            if (t.Kind == SyntaxKind.CloseBrace) { depth--; continue; }
+            if (depth == 0 && SyntaxFacts.IsPartNameToken(t.Kind, t.Text))
+                yield return t;
+        }
+    }
 }
 
 /// <summary>
@@ -928,14 +951,12 @@ public sealed partial class CombinedStaffRenderSyntax : SyntaxNode
     {
         get
         {
-            // Selected by KIND, not index, so error recovery on a missing brace cannot
-            // shift the names — and positively a part name, so a rejected member kept for
-            // its width is not returned as one (as in CondensedStaffRenderSyntax).
-            for (int i = 0; i < SlotCount; i++)
-            {
-                if (GetChild(i) is SyntaxTokenNode t && SyntaxFacts.IsPartNameKind(t.Kind))
-                    yield return t;
-            }
+            // Selected by the part-name rule, not index, so error recovery on a missing
+            // brace cannot shift the names — and positively a part name, so a rejected member
+            // kept for its width is not returned as one (the one reading is
+            // CondensedStaffRenderSyntax.BarePartNameMembers).
+            foreach (var t in CondensedStaffRenderSyntax.BarePartNameMembers(this))
+                yield return t;
         }
     }
 
@@ -996,15 +1017,9 @@ public sealed partial class TabRenderSyntax : SyntaxNode
         }
     }
 
-    /// <summary>The token naming an explicit TUNING override (<c>tab bass m</c>), or null
-    /// when the tuning comes from the part definition.</summary>
-    /// <remarks>
-    /// The item is <c>tab [tuning] part [as style]</c>, so the tuning is present exactly when
-    /// TWO target tokens stand before the selector. Reading it from the node rather than
-    /// re-cutting the token list keeps RenderSpecParser, PartReferenceFinder and the
-    /// validator on one answer (HANDOFF §5.2.1②).
-    /// </remarks>
-    public SyntaxTokenNode? TuningToken
+    /// <summary>The one or two bare words between <c>tab</c> and the <c>as</c> selector —
+    /// what the item NAMES, before the reading below says which is which.</summary>
+    private List<SyntaxTokenNode> TargetTokens
     {
         get
         {
@@ -1016,7 +1031,86 @@ public sealed partial class TabRenderSyntax : SyntaxNode
                 if (string.Equals(t.Text, "as", System.StringComparison.Ordinal)) break;
                 targets.Add(t);
             }
-            return targets.Count >= 2 ? targets[0] : null;
+            return targets;
+        }
+    }
+
+    /// <summary>
+    /// Whether the FIRST of two target words is the part — because the file declares a part
+    /// by that name — rather than a tuning override. ONE reading of <c>tab X Y</c>, shared by
+    /// <see cref="PartToken"/>, <see cref="TuningToken"/> and <see cref="MidiOnlyPartToken"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Owner's decision 2026-10-03: a declared part wins. <c>tab bass click</c> in a book with
+    /// a part named <c>bass</c> is that part's tab plus <c>click</c> played to MIDI only, as
+    /// <c>staff bass click</c> would be read if <c>bass</c> were not a clef word — until then
+    /// it was the <c>bass</c> TUNING over part <c>click</c>, and a big-band book's bass tab
+    /// silently drew the click track's notes (session 762; <c>lysc check</c> and the LilyPond
+    /// twin both said nothing). To write the tuning over a part that is also a tuning word,
+    /// use a synonym: <c>tab bass4 click</c>. With no part of that name the reading is the
+    /// old one, so every book that compiled before reads the same (measured: the corpus holds
+    /// <c>tab bass NAME</c> only where no part is named bass).
+    /// </para>
+    /// <para>
+    /// The declared names are the ROOT's (<see cref="CompilationUnitSyntax.DeclaredPartNames"/>),
+    /// so the reading is the same wherever the declarations stand in the file. A node whose
+    /// root is not a compilation unit (a detached fragment) knows no parts and takes the old
+    /// reading. So does <c>tab bass bass</c> — the SAME word twice, which the 2026-10-02 book
+    /// wrote to get the bass tuning onto its part named bass: both readings draw that part's
+    /// tab in that tuning, so the old one stands and no warning is raised for it.
+    /// </para>
+    /// </remarks>
+    private bool FirstTargetIsThePart(List<SyntaxTokenNode> targets)
+    {
+        if (targets.Count < 2 || string.Equals(targets[0].Text, targets[1].Text, System.StringComparison.Ordinal))
+            return false;
+        SyntaxNode root = this;
+        while (root.Parent is { } parent)
+            root = parent;
+        return root is CompilationUnitSyntax unit && unit.DeclaredPartNames.Contains(targets[0].Text);
+    }
+
+    /// <summary>The token naming the PART this item engraves as a tab, or null when the
+    /// item names nothing. Of two words, the first when it is a declared part
+    /// (<see cref="FirstTargetIsThePart"/>), else the last.</summary>
+    /// <remarks>
+    /// Reading it from the node rather than re-cutting the token list keeps
+    /// RenderSpecParser, PartReferenceFinder, the LilyPond twin and the validator on one
+    /// answer (HANDOFF §5.2.1②) — until 2026-10-03 the twin and the page each took the last
+    /// token for themselves.
+    /// </remarks>
+    public SyntaxTokenNode? PartToken
+    {
+        get
+        {
+            var targets = TargetTokens;
+            if (targets.Count == 0) return null;
+            return FirstTargetIsThePart(targets) ? targets[0] : targets[^1];
+        }
+    }
+
+    /// <summary>The token naming an explicit TUNING override (<c>tab bass5 m</c>), or null
+    /// when the tuning comes from the part definition — or when the first word is a declared
+    /// part and so the part itself (<see cref="FirstTargetIsThePart"/>).</summary>
+    public SyntaxTokenNode? TuningToken
+    {
+        get
+        {
+            var targets = TargetTokens;
+            return targets.Count >= 2 && !FirstTargetIsThePart(targets) ? targets[0] : null;
+        }
+    }
+
+    /// <summary>The token naming a part played to MIDI only — the bare word after the part
+    /// (<c>tab bass click</c> with a part named bass; GRAMMAR §7's bare PartRef, which stands
+    /// after a tab item as it stands after a staff item) — or null.</summary>
+    public SyntaxTokenNode? MidiOnlyPartToken
+    {
+        get
+        {
+            var targets = TargetTokens;
+            return FirstTargetIsThePart(targets) ? targets[1] : null;
         }
     }
 }

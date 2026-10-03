@@ -717,6 +717,16 @@ public static class DiagnosticCodes
     /// the numbers leave out, or name twice, has no reading the page can show.</remarks>
     public const string EndingPassNotNamedOnce = "LYS1043";
 
+    /// <summary>Warning: a <c>tab X Y</c> item whose first word names a PART of this file and
+    /// is also a tuning word — <c>tab bass click</c> beside <c>part bass</c>. The part wins
+    /// (<see cref="TabRenderSyntax.PartToken"/>): the item is part X's tab, and Y a part played
+    /// to MIDI only. Reported at X, naming the tuning's synonym (<c>tab bass4 click</c>) for a
+    /// writer who meant the tuning.</summary>
+    /// <remarks>Owner's decision 2026-10-03, after a big-band book whose bass tab silently drew
+    /// the click track's notes and nothing said so (session 762). A book with no part named X
+    /// keeps the tuning reading and never sees this.</remarks>
+    public const string TabPartNameIsAlsoATuning = "LYS1044";
+
     /// <summary>Syntax error: a phrase reference needs a <c>$</c> — write <c>$name</c>.</summary>
     public const string BareReferenceRequiresDollar = "LYS1012";
 
@@ -772,8 +782,12 @@ public static class DiagnosticCodes
     /// <para>The four clef words are deliberately NOT here. They were unreachable for the
     /// same reason until 2026-08-22, but nothing claims a bare clef word in a music stream,
     /// so the fix there was to make the stream read it as a reference rather than to refuse
-    /// the name (Parser.Music.cs). <c>q</c> and the drum vocabulary are real music items, so
-    /// no such fix exists for them and the declaration is the only place left to speak.</para>
+    /// the name (Parser.Music.cs); the eight dynamic kinds (<c>p</c>, <c>mf</c> …) joined
+    /// them 2026-10-03 the same way. <c>q</c> and the drum vocabulary are real music items,
+    /// so no such fix exists for them and the declaration is the only place left to speak —
+    /// and since a part may be named almost any word (2026-10-03), so is every OTHER keyword
+    /// a phrase is named for, and the pitch letters (<c>phrase f</c>: a bare <c>f</c> is the
+    /// note F).</para>
     /// <para>⚠️ This is reported at the DECLARATION, not the reference, on purpose: the
     /// reference does not fail loudly. Measured 2026-08-22 — <c>phrase sn { c4 d e f | }</c>
     /// played as bare <c>sn</c> turns the whole staff into a <c>DrumStaff</c> holding one

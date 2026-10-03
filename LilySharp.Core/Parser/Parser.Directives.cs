@@ -539,15 +539,19 @@ internal sealed partial class Parser
     /// </summary>
     /// <remarks>
     /// The set is the gap between the two sides of the same name: <c>ExpectPartName</c>
-    /// (<see cref="SyntaxFacts.IsPartNameKind"/>) accepts an identifier or one of the four
-    /// clef words, while a music stream turns only an IDENTIFIER into a reference — and
-    /// claims <c>q</c> and the drum vocabulary out of that before it gets there
-    /// (Parser.Music.cs, the music-item dispatch). So the unreachable names are exactly the
-    /// clef words plus <c>q</c> and <c>chord</c> plus <see cref="DrumNameRegistry"/>. Both halves are read
+    /// (<see cref="SyntaxFacts.IsPartNameToken"/>) accepts any bare word outside the
+    /// structural keywords (owner's decision 2026-10-03), while a music stream turns only an
+    /// IDENTIFIER, the four clef words and the dynamic kinds into a reference
+    /// (<see cref="IsBareReferenceKind"/>) — and claims <c>q</c>, <c>chord</c> and the drum
+    /// vocabulary out of the identifiers before it gets there (Parser.Music.cs, the
+    /// music-item dispatch). So the unreachable names are those three families plus every
+    /// other kind a part may be named: a pitch letter (<c>f</c> is the note F, not the
+    /// forte the dynamics table knows by text), a rest letter, a navigation word, a mode, a
+    /// clef the music stream does not read bare (<c>treble_8</c>) … Both halves are read
     /// from their own source here rather than listed, so the set cannot drift from them.
-    /// ⚠️ The two failure modes differ and the message says which: a clef word is a loud
-    /// LYS0030 at the reference, a drum name silently rewrites the staff (measured
-    /// 2026-08-22 — see <see cref="DiagnosticCodes.PhraseNameUnreachable"/>).
+    /// ⚠️ The failure modes differ and the message says which: a reserved word is a loud
+    /// error at the reference, a pitch letter is a NOTE, a drum name silently rewrites the
+    /// staff (measured 2026-08-22 — see <see cref="DiagnosticCodes.PhraseNameUnreachable"/>).
     /// </remarks>
     private void RejectUnreachablePhraseName(SyntaxToken name, int position)
     {
@@ -566,6 +570,12 @@ internal sealed partial class Parser
             : DrumNameRegistry.Contains(text)
                 ? $"'{text}' is a drum-kit name, so a music stream reads it as a drum note "
                   + "on ANY part — the staff would silently become a drum staff"
+            : SyntaxFacts.IsPitchKind(name.Kind)
+                ? $"a bare '{text}' in a music stream is the note {text}, so it can never be "
+                  + "read as a phrase to play"
+            : name.Kind != SyntaxKind.Identifier && !IsBareReferenceKind(name.Kind)
+                ? $"'{text}' is a reserved word, and a music stream reads it as its own item, "
+                  + "never as a phrase to play (a part may be named it; a phrase cannot)"
             : null;
 
         if (why != null)

@@ -283,8 +283,8 @@
 ### `LilySharp.Core/MusicXmlImport/LysWriter.cs`
 - **:347** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision; the twin omits it too).
 ### `LilySharp.Core/Parser/Parser.Music.cs`
-- **:452** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
-- **:735** LILYSHARP-OWN: LilyPond writes such a chord out note by note.
+- **:476** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
+- **:759** LILYSHARP-OWN: LilyPond writes such a chord out note by note.
 ### `LilySharp.Core/Rendering/HarfBuzzOutline.cs`
 - **:50** LILYSHARP-OWN: LilyPond reads its text ink through FreeType as well (Pango over the
 ### `LilySharp.Core/Rendering/Pdf/EmmentalerFontResolver.cs`
@@ -553,8 +553,8 @@
 ### `LilySharp.Core/Syntax/StringLiteral.cs`
 - **:27** LILYSHARP-OWN: the owner's decision (2026-09-30) — Lily#'s strings follow C#'s grammar:
 ### `LilySharp.Core/Syntax/SyntaxNodes.cs`
-- **:892** LILYSHARP-OWN: LilyPond has no such item — the twin writes the notes out as an
-- **:1071** LILYSHARP-OWN: LilyPond's q repeats the previous chord and cannot be
+- **:920** LILYSHARP-OWN: LilyPond has no such item — the twin writes the notes out as an
+- **:1099** LILYSHARP-OWN: LilyPond's q repeats the previous chord and cannot be
 ### `LilySharp.Core/Tablature/TabFingeringPlanner.cs`
 - **:120** LILYSHARP-OWN, USER APPROVED (2026-09-14). A dynamic programme (Viterbi) over states
 ### `LilySharp.Core/Tablature/Tunings.cs`

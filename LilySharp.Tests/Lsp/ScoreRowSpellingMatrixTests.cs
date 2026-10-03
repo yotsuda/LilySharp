@@ -172,15 +172,18 @@ public class ScoreRowSpellingMatrixTests
     /// NOT ONE of the 128 MIDI-only rows in them carried an option.
     /// </remarks>
     [Theory]
-    [InlineData("bass instrument piano")]
-    [InlineData("bass octave 1")]
-    public void TheMidiRowsRetiredOptions_AreRefused(string row)
+    // The number is a stray item, and the report names what a score body DOES hold — the
+    // one list a writer reads at the moment of the mistake.
+    [InlineData("bass octave 1", "A score body holds render items")]
+    // Since 2026-10-03 `instrument` and `piano` are both legal part names (any bare word
+    // outside SyntaxFacts.PartNameReservedVocabulary), so the row reads as three MIDI-only
+    // parts and the two that no part declares are refused by name (LYS1007).
+    [InlineData("bass instrument piano", "Undefined part: 'instrument'")]
+    public void TheMidiRowsRetiredOptions_AreRefused(string row, string report)
     {
         var errors = Errors(Book + "score main { staff melody  " + row + " }\n");
         Assert.NotEmpty(errors);
-        // The report names what a score body DOES hold — the one list a writer reads at the
-        // moment of the mistake.
-        Assert.Contains(errors, e => e.Contains("A score body holds render items"));
+        Assert.Contains(errors, e => e.Contains(report));
     }
 
     [Fact]

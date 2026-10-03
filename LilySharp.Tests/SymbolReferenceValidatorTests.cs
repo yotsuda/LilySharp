@@ -230,8 +230,8 @@ undefined2
     /// reference at all. So <c>score main { staff bass }</c> over a part named
     /// <c>bassline</c> engraved a blank staff and <c>lysc check</c> said "No errors found"
     /// (reported by the user on scratch/ベースタブLy/Viva La Vida.lys, whose fifteen systems
-    /// of music came out as empty bars). Four words reach here — the clef keywords
-    /// SyntaxFacts.IsPartNameKind also accepts as names.
+    /// of music came out as empty bars). The clef keywords a music block takes reach here,
+    /// and since 2026-10-03 any bare word names a part (SyntaxFacts.IsPartNameToken).
     /// </summary>
     [Theory]
     [InlineData("staff bass", "bass")]
@@ -297,14 +297,16 @@ undefined2
     /// a seventh spelling gets it by construction rather than by remembering.
     /// </remarks>
     [Theory]
-    [InlineData("staff treble_8")]
-    [InlineData("staff percussion")]
-    [InlineData("ossia treble_8")]
-    [InlineData("tab treble_8")]
-    [InlineData("chords treble_8")]
-    [InlineData("lyrics treble_8")]
-    [InlineData("condensedStaff { treble_8 melody }")]
-    [InlineData("combinedStaff { treble_8 melody }")]
+    // `voice` and `staff` are in SyntaxFacts.PartNameReservedVocabulary; `treble_8` and
+    // `percussion`, which stood here until 2026-10-03, name a part now and report LYS1007.
+    [InlineData("staff voice")]
+    [InlineData("staff staff")]
+    [InlineData("ossia voice")]
+    [InlineData("tab voice")]
+    [InlineData("chords voice")]
+    [InlineData("lyrics voice")]
+    [InlineData("condensedStaff { voice melody }")]
+    [InlineData("combinedStaff { voice melody }")]
     public void Validate_ReservedWordInTheNameSlot_DoesNotAlsoReportTheEmptyName(string item)
     {
         string source = "section A { melody { c d e f } }\nform main { A }\n"

@@ -1263,17 +1263,20 @@ internal static class MusicXmlReader
 
     // ---- helpers ----------------------------------------------------------
 
-    // Lily# reserved words a part identifier must not collide with. Besides keywords,
-    // this includes the single-letter tokens a short part name can lex as: pitch
-    // letters (a-g), the rest r, and the dynamic marks (p, f, mf, …) — a part named
-    // "P" or "F" in the source would otherwise fail to parse (found 'DynamicP').
+    // Words a GENERATED part identifier avoids. The parser's own rule is the probe below
+    // (LexesAsOneName); this table is the importer's taste on top of it: since 2026-10-03
+    // a part may be named almost any word (a pitch letter, the rest letters, a dynamic —
+    // SyntaxFacts.IsPartNameToken), but `part s` or `part f` at the head of a generated
+    // book reads as a spacer or a note to anyone who opens it, so a source part named "S",
+    // "F" or "P" takes its index name (part3) instead. Before that date these words also
+    // failed to parse ("found 'DynamicP'"), which is how the table began.
     private static readonly HashSet<string> Reserved = new(StringComparer.Ordinal)
     {
         "part", "section", "score", "staff", "structure", "chords", "lyrics",
         "time", "key", "clef", "tempo", "octave", "title", "composer", "subtitle", "poet",
         "phrase", "drummap", "grace", "partial", "repeat", "tuplet",
         "acciaccatura", "appoggiatura",
-        "a", "b", "c", "d", "e", "f", "g", "r",
+        "a", "b", "c", "d", "e", "f", "g", "r", "s",
         "ppp", "pp", "p", "mp", "mf", "ff", "fff", "sf", "sfz", "fp", "fz", "rfz", "rf", "sffz",
     };
 

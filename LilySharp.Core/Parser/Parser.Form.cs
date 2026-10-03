@@ -53,13 +53,6 @@ internal sealed partial class Parser
     {
         return Current.Kind switch
         {
-            // Section reference with optional per-occurrence display label:
-            //   structure { First Second First "First (reprise)" }
-            // Clef-name words (bass/treble/alto/tenor) are allowed as section names too,
-            // matching part/section/phrase declarations.
-            SyntaxKind.Identifier or SyntaxKind.BassKeyword or SyntaxKind.TrebleKeyword
-                or SyntaxKind.AltoKeyword or SyntaxKind.TenorKeyword
-                => ParseSectionReference(),
             SyntaxKind.Tilde => ParseSilentSectionReference(),
             SyntaxKind.At => ParseMusicMark(),
             SyntaxKind.Underscore => ParseCustomText(),
@@ -91,6 +84,13 @@ internal sealed partial class Parser
                 => ParseNavigationMark(),
             // Same guard as the ':|' arm above, for `using` (LYS0029).
             SyntaxKind.UsingKeyword => ParseMisplacedUsing("a form"),
+            // Section reference with optional per-occurrence display label:
+            //   form main { First Second First "First (reprise)" }
+            // Any word a section may be NAMED (SyntaxFacts.IsPartNameToken — the rule a
+            // declaration uses, so a declared name is always referenceable): an identifier,
+            // a clef word, a dynamic, `q` … The form's own words (navigation marks, breaks)
+            // are reserved as names, which is what lets this arm stand after theirs.
+            _ when IsPartNameStart() => ParseSectionReference(),
             // Anything else: reported and KEPT (LYS0030) — the general case of the two
             // arms above, which were added one silent spelling at a time. Measured
             // 2026-08-16 on `form main { A section B }`: the `section` keyword was dropped
@@ -278,7 +278,7 @@ internal sealed partial class Parser
         // play's label, `B'` opens it an octave up, `B "label"` relabels it). They are the
         // SAME nodes, so everything that reads a reference reads these too.
         var sections = new List<GreenNode?> { ParseEndingSection() };
-        while (IsEndingSectionStart(Current.Kind))
+        while (IsEndingSectionStart(Current))
             sections.Add(ParseEndingSection());
 
         // RANGE, then END SHAPE (owner's design 2026-09-28 — the two are separate questions):
@@ -406,9 +406,10 @@ internal sealed partial class Parser
             : "This repeat has nothing to repeat: write a section between its bars, "
               + "e.g. '|: A :|'.");
 
-    private static bool IsEndingSectionStart(SyntaxKind kind) =>
-        kind is SyntaxKind.Tilde or SyntaxKind.Identifier or SyntaxKind.BassKeyword
-            or SyntaxKind.TrebleKeyword or SyntaxKind.AltoKeyword or SyntaxKind.TenorKeyword;
+    // A `~` or any word a section may be named (the same rule as ParseFormItem's reference
+    // arm; the ending's own delimiters `]`, `-]` and `:|` are not words).
+    private static bool IsEndingSectionStart(SyntaxToken token) =>
+        token.Kind == SyntaxKind.Tilde || IsPartNameToken(token);
 
     /// <summary>One section of an ending: a plain or <c>~</c> reference, the same node the
     /// form body builds. A missing name is reported once and kept as an empty reference, so
@@ -417,7 +418,7 @@ internal sealed partial class Parser
     {
         if (Check(SyntaxKind.Tilde))
             return ParseSilentSectionReference();
-        if (IsEndingSectionStart(Current.Kind))
+        if (IsEndingSectionStart(Current))
             return ParseSectionReference();
         return new SectionReferenceGreen(Expect(SyntaxKind.Identifier), [], null);
     }
@@ -640,34 +641,52 @@ internal sealed partial class Parser
 
 
     /// <summary>
-    /// Check if current token can be a part name (Identifier or instrument keyword like bass).
+    /// Check if current token can be a part name: any bare word outside
+    /// <see cref="SyntaxFacts.PartNameReservedVocabulary"/>.
     /// </summary>
-    private bool IsPartNameStart() => IsPartNameKind(Current.Kind);
+    private bool IsPartNameStart() => IsPartNameToken(Current);
 
     // Delegates to the one home for the rule — the render nodes read the same predicate
     // when deciding which of their kept tokens are members (see SyntaxFacts).
-    private static bool IsPartNameKind(SyntaxKind? kind) =>
-        kind is { } k && SyntaxFacts.IsPartNameKind(k);
+    private static bool IsPartNameToken(SyntaxToken? token) =>
+        token is { } t && SyntaxFacts.IsPartNameToken(t.Kind, t.Text);
+
+    /// <summary>
+    /// Whether the token AFTER the current one is a part name — the lookahead that reads a
+    /// clef word or a tuning word before it as an override (<c>staff bass melody</c>,
+    /// <c>tab bass5 melody</c>) rather than as the part itself (<c>staff bass</c>).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The selector word <c>as</c> is excluded by TEXT: it lexes as the Dutch A-flat, which
+    /// is a bare word and so a legal part name since 2026-10-03, and without the exclusion
+    /// <c>staff bass as lines 1</c> would read <c>bass</c> as a clef and <c>as</c> as the part.
+    /// </remarks>
+    private bool IsPartNameAhead() =>
+        Peek(1) is { } next && IsPartNameToken(next)
+        && !string.Equals(next.Text, "as", System.StringComparison.Ordinal);
 
     /// <summary>
     /// The token after the <c>-</c> in a hyphenated part-header value (<c>instrument
     /// piano-left</c>): any BARE WORD, whatever else that word is reserved for.
     /// </summary>
     /// <remarks>
-    /// ⚠️ A separate predicate from <see cref="IsPartNameKind"/> on purpose. That one answers
-    /// "may this word name a part?" and was standing in for this question until 2026-08-19,
-    /// which made <c>voice-soprano</c> — a published preset that <c>GetInstrument</c> reads —
-    /// impossible to write, while <c>voice-alto</c>, <c>voice-tenor</c> and <c>voice-bass</c>
-    /// compiled because their tails are clef words and <c>soprano</c> is not.
-    /// The rule asks the token's TEXT rather than its kind: what makes a tail legal is being a
-    /// word, and no set of kinds says that without being re-checked every time a keyword is
-    /// added.
+    /// ⚠️ A separate predicate from <see cref="IsPartNameToken(SyntaxToken?)"/> on purpose.
+    /// That one answers "may this word name a part?" and was standing in for this question
+    /// until 2026-08-19, which made <c>voice-soprano</c> — a published preset that
+    /// <c>GetInstrument</c> reads — impossible to write, while <c>voice-alto</c>,
+    /// <c>voice-tenor</c> and <c>voice-bass</c> compiled because their tails are clef words
+    /// and <c>soprano</c> is not. The rule asks the token's TEXT rather than its kind: what
+    /// makes a tail legal is being a word, and no set of kinds says that without being
+    /// re-checked every time a keyword is added. (The part-name rule asks the text too since
+    /// 2026-10-03, but still refuses the structural keywords, which a preset's tail may be.)
     /// </remarks>
     private static bool IsHyphenatedValueTail(SyntaxToken? token) =>
         token is { } t && SyntaxFacts.IsBareWord(t.Text);
 
     /// <summary>
-    /// Expect a part name (Identifier or instrument keyword like bass).
+    /// Expect a part name: any bare word outside
+    /// <see cref="SyntaxFacts.PartNameReservedVocabulary"/> (a clef word, a dynamic,
+    /// <c>q</c>, a drum name … all qualify; owner's decision 2026-10-03).
     /// </summary>
     private SyntaxToken ExpectPartName()
     {
@@ -681,7 +700,7 @@ internal sealed partial class Parser
         // stray digit and identifier cascade into three more unrelated errors
         // ("expected {", "detached duration", "undefined variable 'foo'").
         if (Check(SyntaxKind.IntegerLiteral)
-            && IsPartNameKind(Peek(1).Kind)
+            && IsPartNameToken(Peek(1))
             && Current.TrailingTriviaWidth == 0 && Peek(1).LeadingTriviaWidth == 0)
         {
             // Span the combined ink `2foo` (skip the digit's leading trivia).
@@ -699,12 +718,14 @@ internal sealed partial class Parser
                 digits.LeadingTrivia, rest.TrailingTrivia);
         }
 
-        // Report error. If a reserved word (segno/coda/time/…) was written where a
+        // Report error. If a reserved word (voice/staff/time/…) was written where a
         // name belongs, name the actual word and flag it as reserved — clearer than
-        // the internal token kind.
+        // the internal token kind. The words are SyntaxFacts.PartNameReservedVocabulary,
+        // the one list a writer can be pointed at.
         var span = new TextSpan(_textPosition, Current.FullWidth);
         string found = !string.IsNullOrEmpty(Current.Text) && char.IsLetter(Current.Text[0])
-            ? $"'{Current.Text}', a reserved word — pick another name"
+            ? $"'{Current.Text}', a reserved word — pick another name (the words a name "
+              + $"cannot be: {string.Join(", ", SyntaxFacts.PartNameReservedVocabulary)})"
             : $"'{Current.Kind}'";
         _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
             $"Expected a name, found {found}");
@@ -777,7 +798,7 @@ internal sealed partial class Parser
             tokens.Add(Advance());
 
         // A clef keyword followed by a part name is an override.
-        if (IsClefKeyword() && IsPartNameKind(Peek(1)?.Kind))
+        if (IsClefKeyword() && IsPartNameAhead())
             tokens.Add(Advance());
 
         tokens.Add(ExpectPartName());
@@ -1103,7 +1124,7 @@ internal sealed partial class Parser
             // preview's click-to-jump landed short (measured — a `condensedStaff { staff
             // fl1 staff fl2 }` lost the two `staff ` words and moved a later score's title
             // data-pos off its string). The tokens are kept as members of the green node
-            // and filtered out by KIND where the names are read (SyntaxFacts.IsPartNameKind
+            // and filtered out where the names are read (SyntaxFacts.IsPartNameToken
             // in CondensedStaffRenderSyntax / CombinedStaffRenderSyntax), so they cost
             // nothing but the width they are here to preserve.
             members.Add(Advance());
@@ -1135,7 +1156,7 @@ internal sealed partial class Parser
 
         // A clef keyword followed by a part name is an override; alone it IS
         // the part name (clef words are legal part names, as for staff).
-        if (IsClefKeyword() && IsPartNameKind(Peek(1)?.Kind))
+        if (IsClefKeyword() && IsPartNameAhead())
             tokens.Add(Advance());
 
         tokens.Add(ExpectPartName());
@@ -1144,17 +1165,27 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// Parse tab render: tab tuning { partName }
+    /// Parse tab render: <c>tab [tuning] part [as numbers|full]</c>.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ TWO WORDS BEFORE THE SELECTOR ARE KEPT AS WRITTEN AND NOT NAMED HERE. Which of
+    /// them is the tuning and which the part depends on what the file DECLARES —
+    /// <c>tab bass click</c> is part <c>bass</c>'s tab plus the MIDI-only part <c>click</c>
+    /// when a part named <c>bass</c> exists, and the <c>bass</c> tuning over part
+    /// <c>click</c> when none does (owner's decision 2026-10-03, after a book whose bass tab
+    /// silently drew the click track's notes). A parser sees one token at a time and the
+    /// declarations may come after the score, so the reading is the node's
+    /// (<see cref="TabRenderSyntax.PartToken"/>), against the whole tree.
+    /// </remarks>
     private TabRenderGreen ParseTabRender()
     {
         // tab [tuning] part   (tuning optional; no braces)
         var tokens = new List<SyntaxToken> { Expect(SyntaxKind.TabKeyword) };
 
-        // A tuning name followed by a part name is an override; otherwise the lone
-        // token is the part and the tuning comes from the part definition.
-        bool tuningish = Current.Kind is SyntaxKind.Identifier or SyntaxKind.BassKeyword;
-        if (tuningish && IsPartNameKind(Peek(1)?.Kind))
+        // A bare word followed by another bare word: the first is a tuning override or the
+        // part (the node decides), the second the part or a MIDI-only part. A lone word is
+        // the part and the tuning comes from the part definition.
+        if (IsPartNameStart() && IsPartNameAhead())
             tokens.Add(Advance());
 
         tokens.Add(ExpectPartName());

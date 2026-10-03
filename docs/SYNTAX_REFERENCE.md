@@ -2251,10 +2251,22 @@ c4@hammerOn d@pullOff e@tap f@bend(full) |
 
 ## Reserved Words
 
-The following words are keywords. They cannot be used as bare identifiers (variable /
-part / section / phrase names) — **except** the four clef-name words `treble`, `bass`,
-`alto`, `tenor`, which are accepted as part / section / phrase names (so a `bass` part can
-be declared and referenced).
+The following words are keywords. A **part or section name may still be any of them**
+except the structural ones (2026-10-03): the words that open a block of their own where a
+name could stand — `voice` `lyrics` `chords` `section` `part` `phrase` `form` `score` `tab`
+`staff` `ossia` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff`
+`layout` `paper` `fonts` `grace` `acciaccatura` `appoggiatura` `cue` — plus the section
+settings and item-head directives `key` `time` `tempo` `partial` `override` `revert` `once`
+`using` `title` `subtitle` `composer` `poet`, and the words a form body reads as items of
+its own, `segno` `fine` `coda` `dc` `ds` `al` `to` `break` `noBreak` `pageBreak`
+`noPageBreak` (a section is named by the same rule). Everything else names a part: `part p`,
+`part bass`, `part percussion`, `part q`, `part c` all compile (the list is
+`SyntaxFacts.PartNameReservedVocabulary`, and the error for a reserved name prints it).
+A **phrase name** is narrower, because a phrase is referenced *bare in a music stream*:
+an identifier, the four clef words `treble` `bass` `alto` `tenor`, or a dynamic word
+`ppp` `pp` `p` `mp` `mf` `ff` `fff` (a bare `p` in music was an error, so it now plays the
+phrase). Any other keyword — and `f`, which is the note F — is refused at the declaration
+(LYS1030). A variable name is an identifier.
 
 | Group | Words |
 |-------|-------|
@@ -2287,6 +2299,12 @@ Notes:
   shape, `chord(C x32010)` — 2026-09-28) and the drum-kit names (`bd`, `sn`, `hh`, …). A music
   stream reads them as music items, so a **phrase** cannot be named any of them (LYS1030); a
   part, a section or a `fonts` key still can (`part chord { … }` compiles).
+- **`tab X Y` reads a declared part first** (2026-10-03): with a part named `bass` in the
+  file, `tab bass click` is part `bass`'s tab plus `click` played to MIDI only — the same
+  bare-part-name item that follows a staff — and LYS1044 says so when `bass` is a tuning
+  word too. With no such part — or with the same word twice, `tab bass bass` — it is the
+  `bass` tuning over the part, as before. For the tuning over a part that shares a tuning
+  word's name, write the synonym: `tab bass4 click`.
 - Articulation, ornament, dynamic-text and mark **names** (`staccato`, `tr`, `mordent`,
   `cresc`, `dim`, `segno`, …) are resolved from the `@name` text and are **not** reserved
   as identifiers — `tr`, `acc`, `ten`, `dim` etc. remain usable as your own names.

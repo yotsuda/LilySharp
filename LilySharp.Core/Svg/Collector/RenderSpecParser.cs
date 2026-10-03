@@ -165,6 +165,10 @@ public static class RenderSpecParser
                     var tabSpec = ParseTab(tab, staffParts);
                     if (tabSpec != null)
                         items.Add(tabSpec);
+                    // `tab bass click` with a part named bass: the word after the part is a
+                    // MIDI-only part, exactly as the bare MidiPartRender item below.
+                    if (tab.MidiOnlyPartToken is { } midiOnly)
+                        midiOnlyParts.Add(midiOnly.Text);
                     break;
 
                 case OssiaRenderSyntax ossia:
@@ -888,28 +892,24 @@ public static class RenderSpecParser
 
     private static TabStaffSpec? ParseTab(TabRenderSyntax tab, HashSet<string> staffParts)
     {
-        // [tuning?] part [as numbers|full]; braces (if any) are skipped.
-        var toks = RenderTargetTokens(tab);
-        if (toks.Count == 0) return null;
+        // [tuning?] part [as numbers|full]. Which word is the part and which the tuning is
+        // the NODE's reading (TabRenderSyntax.PartToken / TuningToken): of two words the
+        // first is the part when the file declares a part by that name, else the tuning
+        // (owner's decision 2026-10-03) — one answer for the page, the twin, the rename and
+        // the validator.
+        if (tab.PartToken is not { } partToken) return null;
 
         // Trailing `as numbers | full` — the tab STYLE selector (parallel to the
-        // chord `as roman|names`). Strip it before reading the part/tuning so
-        // the part stays the last token. `numbers` = fret digits only.
+        // chord `as roman|names`). `numbers` = fret digits only.
         // ⚠️ ORDINAL. It was OrdinalIgnoreCase, so `as NUMBERS` engraved a numbers-only tab
         // while every other symbol in the language is case-sensitive — the split `removeEmpty`
         // had until 2026-08-19. TabRenderVocabularyValidator refuses the wrong case now, and
         // a reader that still lowercased it would accept what the compiler had just rejected.
-        bool? explicitStyle = null;
-        int asIdx = toks.FindIndex(t => string.Equals(t.Text, "as", System.StringComparison.Ordinal));
-        if (asIdx >= 0 && asIdx + 1 < toks.Count)
-        {
-            explicitStyle = string.Equals(toks[asIdx + 1].Text, "numbers", System.StringComparison.Ordinal);
-            toks = toks.GetRange(0, asIdx);
-        }
-        if (toks.Count == 0) return null;
+        bool? explicitStyle = tab.DisplayModeToken is { } style
+            ? string.Equals(style.Text, "numbers", System.StringComparison.Ordinal)
+            : null;
 
-        var partToken = toks[^1];
-        var tuningToken = toks.Count >= 2 ? toks[0] : null;
+        var tuningToken = tab.TuningToken;
         string voiceName = partToken.Text;
 
         // Explicit tuning override → the part's `tuning` property → the tuning

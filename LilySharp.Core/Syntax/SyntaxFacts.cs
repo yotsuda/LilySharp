@@ -426,19 +426,73 @@ internal static class SyntaxFacts
         ["partial", "key", "time", "tempo", "override"];
 
     /// <summary>
-    /// The token kinds that can spell a PART NAME: a plain identifier, or one of the four
-    /// clef words, which are legal part names (<c>part bass { … }</c>).
+    /// The words that can NOT name a part or a section: the keywords that open a structure of
+    /// their own where a part name may stand, and the section settings. Every other bare word
+    /// — a clef word, a dynamic, a pitch letter, <c>q</c>, a drum name, <c>grace</c> — names a
+    /// part (owner's decision 2026-10-03; until then only an identifier and the four clef
+    /// words did, and <c>part p</c> / <c>phrase p</c> were "a reserved word — pick another
+    /// name").
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// WHY A DENY-LIST IS ENOUGH: every position a part name is written in has a keyword or a
+    /// shape beside it — <c>part X</c>, <c>X { … }</c> in a section, <c>staff X</c>,
+    /// <c>tab X</c>, <c>ossia X</c>, <c>condensedStaff { X Y }</c>, <c>sings X</c>, and the
+    /// bare X of a score body — so a name never stands in a music stream where it could be
+    /// read as a note. The two places the shape alone decides are the section body, where
+    /// <c>X {</c> opens a part cell, and the score body, where a bare X is the MIDI-only part;
+    /// the words below are the ones an <c>X {</c> or a bare X would otherwise mean there.
+    /// </para>
+    /// <para>
+    /// The groups, in the order they are listed: the containers a section or score body
+    /// dispatches on before it looks for a cell (<c>voice</c> … <c>fonts</c>); the words a
+    /// music stream reads as a block opener when a <c>{</c> follows, which is exactly the
+    /// shape of a part cell (<c>grace</c>, <c>acciaccatura</c>, <c>appoggiatura</c>,
+    /// <c>cue</c>); the section settings and the directives a section or part body claims at
+    /// the head of an item (<c>key</c> … <c>once</c>); the file-level words a score body
+    /// claims before its bare-name arm (<c>using</c>, <c>title</c> … <c>poet</c>); and the
+    /// words a FORM body reads as items of its own — the navigation marks and the break
+    /// directives — since a section is named by the same rule and referenced bare in a form.
+    /// </para>
+    /// <para>
+    /// ⚠️ WORDS, not kinds, and the kinds are DERIVED (<see cref="PartNameReservedKinds"/>)
+    /// through the lexer's own table, so the list cannot name a word that is not a keyword and
+    /// the parser's refusal message can print the same spellings a writer sees here.
+    /// </para>
+    /// </remarks>
+    public static IReadOnlyList<string> PartNameReservedVocabulary { get; } =
+    [
+        "voice", "lyrics", "chords", "section", "part", "phrase", "form", "score",
+        "tab", "staff", "ossia", "grandStaff", "staffGroup", "choirStaff",
+        "condensedStaff", "combinedStaff", "layout", "paper", "fonts",
+        "grace", "acciaccatura", "appoggiatura", "cue",
+        "key", "time", "tempo", "partial", "override", "revert", "once",
+        "using", "title", "subtitle", "composer", "poet",
+        "segno", "fine", "coda", "dc", "ds", "al", "to",
+        "break", "noBreak", "pageBreak", "noPageBreak",
+    ];
+
+    /// <summary>The kinds of <see cref="PartNameReservedVocabulary"/>, read off the lexer.</summary>
+    private static readonly HashSet<SyntaxKind> PartNameReservedKinds =
+        [.. PartNameReservedVocabulary.Select(Parser.Lexer.GetKeywordKind)];
+
+    /// <summary>
+    /// Whether a token can spell a PART NAME (or a section's): any bare word — letters,
+    /// digits and <c>_</c> (<see cref="IsBareWord"/>) — that does not start with a digit
+    /// (a leading number is a duration or a scale degree; <c>ExpectPartName</c> names that
+    /// mistake) and whose kind is not one of <see cref="PartNameReservedVocabulary"/>.
     /// </summary>
     /// <remarks>
     /// One home for the rule, shared by the parser (which decides what to consume) and the
     /// render nodes (which decide what counts as a member). They must agree: a container
     /// that KEEPS a rejected token so its width survives would otherwise hand that token
-    /// back as a part name.
+    /// back as a part name. Asked of the TEXT as well as the kind, for the reason
+    /// <see cref="IsBareWord"/> gives: a list of admitted kinds has to be revisited every time
+    /// a keyword is added, and the list this replaced admitted four clef words and refused
+    /// the other seven for no reason anybody chose.
     /// </remarks>
-    public static bool IsPartNameKind(SyntaxKind kind) => kind is
-        SyntaxKind.Identifier or
-        SyntaxKind.BassKeyword or SyntaxKind.TrebleKeyword or
-        SyntaxKind.AltoKeyword or SyntaxKind.TenorKeyword;
+    public static bool IsPartNameToken(SyntaxKind kind, string? text) =>
+        IsBareWord(text) && !char.IsDigit(text![0]) && !PartNameReservedKinds.Contains(kind);
 
     /// <summary>
     /// A bare word: letters, digits and <c>_</c>, nothing else and not empty. Quoted strings,

@@ -510,6 +510,11 @@ internal sealed partial class Parser
             or SyntaxKind.OverrideKeyword or SyntaxKind.RevertKeyword
             or SyntaxKind.OnceKeyword => false,
         SyntaxKind.Identifier when Peek(1)?.Kind == SyntaxKind.Equals => false,
+        // A bare clef or dynamic word is a phrase reference INSIDE a music stream
+        // (IsBareReferenceKind), and nothing at the file level: it keeps falling to the
+        // skip path, where `treble { … }` gets its grand-staff hint (LYS0011) and anything
+        // else the file-level stray report, as before the dynamics joined the set.
+        _ when IsBareReferenceKind(Current.Kind) => false,
 
         _ => IsMusicItemStart(),
     };
@@ -589,6 +594,9 @@ internal sealed partial class Parser
             SyntaxKind.OnceKeyword => ParseOnceModifier(),
             SyntaxKind.OpenBrace => ParseMusicBlock(),
             SyntaxKind.Backslash => ParseLilypondBackslashCommand(),
+            // The same exclusion IsTopLevelMusicStart makes: a bare clef or dynamic word is
+            // not a file-level item, and the caller's skip path names the mistake.
+            _ when IsBareReferenceKind(Current.Kind) => null,
             _ when IsMusicItemStart() => ParseMusicItem(),
             _ => null
         };

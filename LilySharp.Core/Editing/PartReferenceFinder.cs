@@ -70,6 +70,8 @@ public static class PartReferenceFinder
                 case TabRenderSyntax tab:
                     if (TabPartToken(tab) is { } tt)
                         tokens.Add(tt);
+                    if (Referenceable(tab.MidiOnlyPartToken) is { } tm)
+                        tokens.Add(tm);
                     break;
                 // `condensedStaff { a b … }` / `combinedStaff { a b }` hold BARE part names
                 // — no clef, no display name, no tail to cut off — so the node's own
@@ -189,6 +191,10 @@ public static class PartReferenceFinder
             case TabRenderSyntax tab:
                 if (TabPartToken(tab) is { } tt)
                     into.Add(tt);
+                // `tab bass click` with a part named bass: the trailing word is the MIDI-only
+                // part, a reference like the bare MidiPartRender item (one node, two names).
+                if (Referenceable(tab.MidiOnlyPartToken) is { } tm)
+                    into.Add(tm);
                 break;
             case CondensedStaffRenderSyntax condensed:
                 into.AddRange(condensed.PartNameTokens);
@@ -374,12 +380,14 @@ public static class PartReferenceFinder
     /// <item><c>staff bass as lines 1</c> selected the uncut selector's <c>as</c> and
     /// reported "Undefined part: 'as'" — the right error on the wrong word.</item>
     /// </list>
-    /// Four words reach this at all: treble, bass, alto and tenor, the clef keywords
-    /// <see cref="Syntax.SyntaxFacts.IsPartNameKind"/> also accepts as names.
-    /// <c>treble_8</c> and the other six part-header clefs are not part-name kinds, so
-    /// <c>ExpectPartName</c> refuses them and the author already has a syntax error.
+    /// The clef words that reach this are the ones a music block takes
+    /// (<see cref="Syntax.SyntaxFacts.IsClefKeyword"/>); every bare word is a legal part name
+    /// since 2026-10-03 (<see cref="Syntax.SyntaxFacts.IsPartNameToken"/>), so
+    /// <c>staff percussion</c> names a part called percussion. Internal since the same day so
+    /// the LilyPond twin (<c>LilyPondExporter.RenderPartName</c>) reads the staff's part
+    /// here instead of taking the first identifier after the keyword for itself.
     /// </remarks>
-    private static SyntaxTokenNode? StaffPartToken(StaffRenderSyntax staff)
+    internal static SyntaxTokenNode? StaffPartToken(StaffRenderSyntax staff)
     {
         var toks = TargetTokens(staff);
         Svg.Collector.RenderSpecParser.CutStaffSelectors(toks);
@@ -405,27 +413,20 @@ public static class PartReferenceFinder
     }
 
     /// <summary>
-    /// The part token in a <c>tab</c> render item: cut off the trailing
-    /// <c>as numbers | full</c> style selector, and take the last token that
-    /// remains. A leading token before it is the tuning override, not the part.
+    /// The part token in a <c>tab</c> render item — the NODE's reading
+    /// (<see cref="TabRenderSyntax.PartToken"/>): the selector cut off, and of two words the
+    /// first when the file declares a part by that name, else the last.
     /// </summary>
     /// <remarks>
-    /// Mirrors RenderSpecParser.ParseTab, which strips BOTH tails before reading
-    /// <c>toks[^1]</c> (a trailing <c>as</c> with no mode word is left alone
-    /// there, so it is left alone here). Taking the last token flat instead read the
-    /// selector word as the part name: <c>tab m as numbers</c> reported LYS1007
-    /// "Undefined part: 'numbers'" on a perfectly good score — the committed fixture
-    /// test/tab-as-numbers.lys among them — and a rename from any occurrence would have
-    /// rewritten the selector rather than the part.
+    /// Until 2026-10-03 this and RenderSpecParser.ParseTab each cut the <c>as</c> tail and
+    /// took <c>toks[^1]</c> for themselves (taking the last token flat had read the selector
+    /// word as the part: <c>tab m as numbers</c> reported LYS1007 "Undefined part:
+    /// 'numbers'" on a good score, and a rename would have rewritten the selector). The
+    /// declared-part rule made a third reader of the same question, so the three ask the
+    /// node (HANDOFF §5.2.1②).
     /// </remarks>
-    private static SyntaxTokenNode? TabPartToken(TabRenderSyntax tab)
-    {
-        var toks = TargetTokens(tab);
-        int asIdx = toks.FindIndex(t => string.Equals(t.Text, "as", System.StringComparison.Ordinal));
-        if (asIdx >= 0 && asIdx + 1 < toks.Count)
-            toks = toks.GetRange(0, asIdx);
-        return toks.Count > 0 ? Referenceable(toks[^1]) : null;
-    }
+    private static SyntaxTokenNode? TabPartToken(TabRenderSyntax tab) =>
+        Referenceable(tab.PartToken);
 
     /// <summary>
     /// The part token of a ROW render item — <c>chords NAME [as …]</c> or

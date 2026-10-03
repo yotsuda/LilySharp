@@ -8,6 +8,22 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Breaking changes
 
+- **`tab X Y` reads a declared part first.** With a part named `bass` in the file,
+  `tab bass click` is now part `bass`'s tab plus `click` played to MIDI only — the bare
+  part-name item that already follows a staff — where it used to be the `bass` *tuning* over
+  part `click` (a big-band book's bass tab silently drew the click track, and nothing said
+  so). A new warning, LYS1044, names the synonym to write for the tuning when the word is
+  both (`tab bass4 click`). A file with no part of that name reads as before.
+- **A part or section may be named almost any word.** `part p`, `part bass`,
+  `part percussion`, `part q`, `part c` all compile; only the structural keywords — the
+  words that open a block of their own (`voice`, `staff`, `section`, `grace`, …), the
+  section settings (`key`, `time`, `tempo`, …) and the form's own words (`segno`, `break`,
+  …) — are refused, and the error now lists them. A form references a section by the same
+  rule, so a section named `p` or `bass` plays.
+  A **phrase** may be named for a dynamic word (`phrase p { … }`, played by a bare `p`,
+  which was an error); a phrase named for any other keyword, or for `f` (the note F), is
+  LYS1030 at the declaration, since a bare reference could never reach it.
+
 - **An ending's numbers are its passes.** `|: A [1. B] :|*3 [2. C]` is now an error
   (LYS1042): the count said three passes where the numbers said two, and the page printed
   "1." "2." while it played A B A C A C — a C followed by a return no bar line shows (LilyPond
