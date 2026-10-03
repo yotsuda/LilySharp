@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第781セッションの経緯
+
+### 1.1 第781セッション（2026-10-04・YT-DELL2）
+
+新しい会話・ユーザー「HANDOFF を読んで着手」＝§1.0 ⒜ の筆頭 **lead sheet の grid の label と拍子の重なり（頁の側・小）**。`-Start p781`（HEAD `4ab423f0`・未 push 5＝第780 の後にユーザーが 5 commit: spacing の reach rod・check の voice span・R の fermata）＝full **10947 / 0 / 2 / 10949**。§7 3.5 で第779 を ARCHIVE へ。
+- **正体**: staff の無い sheet の label は「行の線上」（ユーザー決定 2026-08-24）だが、line-start の X は `CalculateXPosition` の edge（`Indent + 0.3`）＝grid 行が同じ線上に描く拍子（ユーザー決定 2026-08-20）の列。`|:` で開く行だけ `lineStartBarlineX` で bar の上に移っていた（mk10）。
+- **直した（commit 下記）**: `PrefixColumns.StaffBarColumnX`（描かれない staff-bar 列＝最後の prefatory grob の ink 右 ＋ その space-alist の staff-bar 距離・拍子なら 1.0）と `MusicMarkEngraver.RowLineLabelLeft(score, columns)`＝`|:` なら BarX／拍子が label と同じ行に描かれる（`GridBarlineRowIndex == top row`）なら StaffBarColumnX／それ以外は edge 0.3。`RowLineLabelLeftX(score, systems)` を ctx の Func に足し（LayoutEngine・Prelim の両方）、`CalculateXPosition` の boxed-label の腕（bar の次・key/clef の前・`markTempo beside` でも効く）・`BoxedLabelXWindows`・spring floor（`LineStartSpringForLine`）の 3 か所が同じ関数を読む。LP の根拠: find_parent は key も clef も無い行で invisible staff-bar に落ちる（break-alignment-interface.cc:299-334）＝列は LP の規則、左端を列に置くのは mk10 の既存の LILYSHARP-OWN（OWN +1）。
+- 門を絞った経緯: 最初は「prefix に拍子が在れば」で、chords＋lyrics の sheet（grid＝拍子は歌詞の行）の label まで 3.2 右へ動き bar 1 が広がった（test/rows-song-sheet・test/lead-sheet の snapshot）＝label の行に拍子が無いので edge のまま（control `TheBox_KeepsTheEdge_WhenTheMeterIsOnTheLyricRow`）。
+- 網 `StafflessLabelSpacingTests` +3（Theory 2: 箱の左端＝拍子の ink 右＋1.0＝`StaffBarColumnX`・beside でも／control 1）。snapshot **2 枚を再ベース**（test/lead-sheet-chords・test/lead-sheet-repeat＝chords だけの sheet・動いたのは箱と bar 1 の symbol と小節線の x だけ・絵は `sessions/p781/probes/fx/`・amazing-grace は `probes/ag/`）。CHANGELOG Fixes。棚卸し `APPROXIMATIONS.md` OWN 219→220・csv は行番号（旧 `MultiStaffLayouter` の 0.3 の行が消えた）。
+- 掃き（svg・998 冊・base＝開始時 HEAD `4ab423f0` の exe・head＝p781・`sessions/p781/svg/sweep.log`）: **差 6 / 1199**＝全部 chords だけの grid に label のある本（test/chords-attached の grid score・lead-sheet-chords・lead-sheet-repeat・amazing-grace の grid＝samples と corpora の写し・greensleeves の grid）＝snapshot 2 枚と同じ族（箱と bar 1 の x だけ）。chords＋lyrics の sheet と staff のある本は byte 同一。
+- 観察（起票なし・小・未検証）: `Calculate` は `CalculateXPosition` に `boxed` を渡さず既定 true、`BoxedLabelXWindows` は `IsBoxDrawn` を渡す（引数の註は「両方の呼び出しが渡す」と言う）＝`layout { sectionLabels plain }` の staffless sheet で placement と window の半幅が frame の margin ぶん食い違う可能性。
+★ `-End p781 -DiffBase 4ab423f0`（`end.log`）＝full **10950 / 0 / 2 / 10952**（網 +3）・門 全 OK（HANDOFF 残り 7,033 B・§1 残り 9,238 字・棚卸し差分あり＝上）。7.5: スクリプトは「Core `+` 0」と刷った（commit 前に回したので diff base と HEAD が同じ）＝手で `git diff 4ab423f0 -- LilySharp.Core`: **`+` 158 行**（`BreakAlignSpacing` 37＝`StaffBarColumnX`・`MusicMarkEngraver` 108＝`RowLineLabelLeft`／`RowLineLabelLeftX`／腕と註・Annotations 10・Layouter 5）・REF 0（引用は既存の break-alignment-interface.cc:299-334 を本文で指すだけ）・OWN 1。7.6: ⒝ LP の規則（find_parent は key も clef も無い行で invisible staff-bar に落ちる）を prefix 表の列（`Right` ＋ 最後の prefatory grob の space-alist 距離）に組み替えた＝字面にならないのは Lily# の prefix が列の表で、LP の extents 配列ではないため／左端を列に置くのと「行の線上」自体は mk10・2026-08-24 の既存の OWN。7.7: **頁の高さ**＝amazing-grace／greensleeves の grid が 43.73 → 42.12（−1.61・tempo 付きの chords だけの grid 2 冊）。tempo を外すと base＝head＝40.08、`markTempo beside` でも base＝head＝40.89＝描かれた系の中の tempo・label・拍子の相対位置は不変（tempo は bar の上 0.88 のまま）で、**header と系の間だけが 2.8 → 1.2 ss**＝prelim（paging）の label／tempo の積み方の見積りの差とみる（label が edge に在った base では prelim が 1.61 多く取っていた・未特定・絵は `probes/ag/`）。見た目は両方とも普通＝起票なし。commit `25782206`（code・snapshot・棚卸し・CHANGELOG）＋ docs の commit。push はユーザー。
+判定: ⒜ は閉じた。次の一手: §1.0 ⒜ の残り（lead sheet の弱起の幅 ⒝・rows-only の長い `time` ⒞＝どちらもコーパス 0・小）か ⒝ の設計級（跳躍の 3 軒・小節番号と和音行）＝ユーザー判断。会話を区切るか: (c) 次はどれも今便と無関係の島で、文脈はまだ軽い（圧縮なし・1 便）＝**続けてよい**（`-Start p782` を回す）。
+
 ## 以下は第780セッションの経緯
 
 ### 1.1 第780セッション（2026-10-03・YT-DELL2）
