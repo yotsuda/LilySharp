@@ -113,7 +113,10 @@ internal static class BarNumberEngraver
     /// For the staffless case it is answered structurally instead — see
     /// <see cref="AnchorRow"/>, whose whole justification is which row reaches x≈0. For a
     /// MID-LINE number it IS asked, against the placed symbols (<see cref="MidLineRowAnchor"/>,
-    /// session 788), and the number moves onto the chord row where the bar's chord reaches it.
+    /// session 788), and the number moves onto the chord row where the ROW's X extent — the
+    /// union of its symbols' ink, as an axis group's extent is its elements' — meets the
+    /// number's own widened by 1.0 (session 789: the first port asked the nearest SYMBOL to
+    /// reach, which left the bar after a `|:` or a mid-line key change on the staff).
     /// </remarks>
     /// ⚠️ THE WALK ITSELF MOVED TO <see cref="StaffAffinity.TopSpaceableStaff"/> on
     /// 2026-08-24; this is the bar number's NAME for it. The remarks above stay here because
@@ -252,8 +255,9 @@ internal static class BarNumberEngraver
         ImmutableArray<int> displayedNumbers = default,
         ImmutableArray<Measure> measures = default,
         MmrRunMap? runMap = null,
-        // The placed chord symbols: a MID-LINE number re-parents onto the chord row whose
-        // symbol stands within reach of it (see MidLineRowAnchor). Default: no row is asked.
+        // The placed chord symbols: a MID-LINE number re-parents onto the chord row whose X
+        // extent (its symbols' union) meets the number's own widened by 1.0 (see
+        // MidLineRowAnchor). Default: no row is asked.
         ImmutableArray<ChordNameLayout> chordNames = default)
     {
         if (systems.IsDefaultOrEmpty || policy.Mode == Semantics.BarNumberMode.None)
@@ -317,6 +321,12 @@ internal static class BarNumberEngraver
                 // Nothing to hang on — LilyPond's move_to_extremal_staff returns #f and the
                 // number keeps the system. Unchanged from before this branch existed.
                 : EngravingDefaults.StaffLineThickness / 2;
+
+            // The chord rows this system's MID-LINE numbers may hang on, each with its X
+            // extent — gathered once per system (see RowExtents); null when none can take one.
+            var rowSymbols = rowSymbolsBySystem?[sysIdx];
+            var rowExtents = anchorStaff is { } rowHost && rowSymbols is { Count: > 0 }
+                ? RowExtents(fonts, system, rowHost, rowSymbols) : null;
 
             for (int i = 0; i < system.Measures.Length; i++)
             {
@@ -404,7 +414,21 @@ internal static class BarNumberEngraver
                 // the indent (margins live in the page transform). ml.X is
                 // the prefix END, and PrefixWidth is not reliable per-system
                 // here, so anchor on the staff-line origin directly.
-                double x = atLineStart ? system.Indent : ml.X;
+                // MID-LINE the number's LEFT edge stands on its bar line's break-align
+                // anchor — the centre of the bar's strokes with the dots dropped
+                // (EngravingDefaults.BarlineAnchorFromInkLeft, the house the rehearsal mark
+                // already hangs on: 0.095 into a `|', 0.545 into a `.|:'), NOT on the
+                // measure's X, which is a plain bar's RIGHT edge and a `|:`'s LEFT.
+                // LILYPOND-REF: scm/define-grobs.scm:334-337 BarNumber — X-offset self-aligned-on-breakable
+                //   (self-alignment-interface), self-alignment-X (break-alignment-list LEFT
+                //   LEFT RIGHT): mid-line the triple's middle entry, LEFT — the number's left
+                //   on the parent's anchor.
+                // MEASURED 2.26.0 (probes/barnumber-row-extent.ly): BRX "3" at 0.095000
+                //   past a `|'s ink left; BRR "3" at 0.545000 past a `.|:'s; BRK "3" at
+                //   0.095000 past the `|' a key and a meter change follow. Lily# stood every
+                //   mid-line number at ml.X until session 789.
+                double x = atLineStart ? system.Indent
+                    : (measures.IsDefault ? null : MusicMarkEngraver.MidLineBarAnchorX(ml, measures)) ?? ml.X;
 
                 // The number's INK BOTTOM sits padding 1.0 above the staff's own
                 // up-skyline, and that skyline is the top staff LINE plus half its
@@ -436,16 +460,16 @@ internal static class BarNumberEngraver
                 double yUp = anchorUp + padding + overshoot;
                 int? numberAnchor = anchorIndex;
 
-                // A MID-LINE number stands at its bar line, and the bar's chord stands at the
-                // bar's first column — within LilyPond's reach — so the CHORD ROW takes it:
-                // its ink bottom is padding 1.0 over the symbols' BASELINE (the row's
-                // refpoint), lifted by the outside-staff pass only where it overlaps a
-                // symbol. Session 788; see MidLineRowAnchor for the mechanism and the numbers.
-                if (!atLineStart && anchorStaff is { } anchoredStaff
-                    && rowSymbolsBySystem?[sysIdx] is { Count: > 0 } rowSymbols)
+                // A MID-LINE number stands at its bar line, and the CHORD ROW takes it where
+                // the row's X extent — its first symbol's left to its last symbol's right —
+                // meets the number's own widened by 1.0: its ink bottom is then padding 1.0
+                // over the symbols' BASELINE (the row's refpoint), lifted by the outside-staff
+                // pass only where it overlaps a symbol. Sessions 788-789; see MidLineRowAnchor
+                // for the mechanism and the numbers.
+                if (!atLineStart && rowExtents is { Count: > 0 } && rowSymbols is not null)
                 {
                     double width = fonts.Advance(text, Em(fonts), Rendering.TextRole.BarNumber, Style(fonts));
-                    if (MidLineRowAnchor(fonts, system, anchoredStaff, rowSymbols, x, width) is { } hostRow)
+                    if (MidLineRowAnchor(rowExtents, x, width) is { } hostRow)
                     {
                         double bottomUp = hostRow.RefpointUp + padding;
                         foreach (var sym in rowSymbols)
@@ -478,17 +502,75 @@ internal static class BarNumberEngraver
 
     /// <summary>
     /// How far LilyPond widens a mark's X extent when it asks which row the mark re-parents
-    /// onto — the reach a chord symbol has to stand within for the row to take a number.
+    /// onto — the reach a chord ROW's extent has to come within for the row to take a number.
     /// </summary>
     // LILYPOND-REF: lily/side-position-interface.cc:521-523 move_to_extremal_staff —
     //   `Interval iv = me->extent (sys, X_AXIS); iv.widen (1.0);'
     private const double ExtremalStaffReach = 1.0;
 
     /// <summary>
-    /// The chord ROW a mid-line number hangs on, with its refpoint — the topmost row above
-    /// the anchor staff whose placed symbol's ink meets the number's X extent widened by
-    /// <see cref="ExtremalStaffReach"/> — or null when none reaches and the number keeps the
-    /// staff (a bar with no chord near its line: ledger
+    /// A chord row a mid-line number may hang on: its staff index, its Y (up from the system
+    /// top), its X extent in the system — the UNION of its placed symbols' ink, as LilyPond's
+    /// ChordNames axis group's extent is its elements' — and its refpoint, the symbols'
+    /// baseline (the LINE's: the lowest, a symbol lifted over another standing higher).
+    /// </summary>
+    private readonly record struct RowExtent(
+        int StaffIndex, double RowY, double Left, double Right, double RefpointUp);
+
+    /// <summary>
+    /// The chord rows ABOVE <paramref name="anchorStaff"/> that this system's mid-line
+    /// numbers may hang on, each with its X extent and refpoint — gathered once per system
+    /// from the placed symbols, so every number of the system asks the same few intervals.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:178-182 Axis_group_interface::width —
+    ///   a VerticalAxisGroup's X-extent is generic_group_extent (:221-237), the
+    ///   relative_group_extent (:85-89) of its elements: relative_maybe_bound_group_extent
+    ///   (:92-110) unites the elements' extents. The ChordNames group's elements are its
+    ///   ChordName grobs, so its X extent runs from the line's first symbol to its last.
+    /// </remarks>
+    private static List<RowExtent> RowExtents(
+        Rendering.ScoreTextMetrics fonts, SystemLayout system, StaffLayout anchorStaff,
+        List<ChordNameLayout> rowSymbols)
+    {
+        var rows = new List<RowExtent>();
+        List<int>? rejected = null;
+        foreach (var sym in rowSymbols)
+        {
+            double right = sym.X + ChordNameEngraver.SymbolInkWidth(fonts, sym);
+            int at = -1;
+            for (int r = 0; r < rows.Count; r++)
+                if (rows[r].StaffIndex == sym.RowStaffIndex) { at = r; break; }
+            if (at >= 0)
+            {
+                var row = rows[at];
+                rows[at] = row with
+                {
+                    Left = Math.Min(row.Left, sym.X),
+                    Right = Math.Max(row.Right, right),
+                    RefpointUp = Math.Min(row.RefpointUp, sym.YUp),
+                };
+                continue;
+            }
+            if (rejected is not null && rejected.Contains(sym.RowStaffIndex))
+                continue;
+            var layout = RowLayout(system, sym.RowStaffIndex);
+            // Above the anchor staff (Y-up from the system top: larger is higher).
+            if (layout is null || layout.IsHidden || layout.Y <= anchorStaff.Y)
+            {
+                (rejected ??= new List<int>()).Add(sym.RowStaffIndex);
+                continue;
+            }
+            rows.Add(new RowExtent(sym.RowStaffIndex, layout.Y, sym.X, right, sym.YUp));
+        }
+        return rows;
+    }
+
+    /// <summary>
+    /// The chord ROW a mid-line number hangs on, with its refpoint — the topmost of
+    /// <paramref name="rows"/> whose X extent meets the number's own widened by
+    /// <see cref="ExtremalStaffReach"/> — or null when none does and the number keeps the
+    /// staff (a number outside every row's span: ledger
     /// barnumber.mid-line.no-chord-near.staff-to-ink-bottom, 3.050000 on both engines).
     /// </summary>
     /// <remarks>
@@ -499,52 +581,44 @@ internal static class BarNumberEngraver
     ///   the padding off an empty support: a height-0 skyline at the ROW's refpoint, the
     ///   symbols' baseline.
     /// LILYPOND-REF: lily/staff-grouper-interface.cc:31-56 get_extremal_staff — from the
-    ///   top, the first live element whose X extent (its ELEMENTS', for an axis group)
-    ///   intersects the interval.
+    ///   top, the first live element whose X extent (its ELEMENTS', for an axis group — see
+    ///   RowExtents) intersects the interval; a touching edge counts, the test being
+    /// LILYPOND-REF: flower/include/interval.hh:212 is_empty — `left () > right ()', strict.
     /// MEASURED 2.26.0 (probes/barnumber-mid-line.ly): BNM number "2" ink bottom 1.000000
     /// over the chord baseline (6.045 over the staff refpoint); BNT, every chord sharped, the
-    /// same 1.000000 — the symbols' height does not enter; BNE, no symbol within reach,
-    /// 3.050000 over the staff. Before this port Lily# set every mid-line number at the
-    /// staff's 3.05 and, on a chord row carrying diagrams, printed it through the fingering
-    /// (dogfood leadsheet-collide bars 12-13, session 767).
+    /// same 1.000000 — the symbols' height does not enter; BNE, a chord in bar 1 only,
+    /// 3.050000 over the staff: the row's extent ends at bar 1 and spans none of 2-4.
+    /// MEASURED 2.26.0 (probes/barnumber-row-extent.ly, session 789): BRX, a chord in bars 1
+    /// and 5 only, numbers 2 3 4 ALL 1.000000 over the chord baseline though no symbol is
+    /// within a bar of them — the row's extent spans them; BRR "3" after a mid-line `.|:'
+    /// (the chord 2.9 past the bar) 1.000000; BRK "3" after a mid-line key+meter change
+    /// 1.000000. Session 788's port asked the nearest SYMBOL to reach instead, which kept
+    /// BRR's and BRK's shapes — dogfood leadsheet-collide bars 3 and 11 — on the staff.
+    /// Before session 788 Lily# set every mid-line number at the staff's 3.05 and, on a
+    /// chord row carrying diagrams, printed it through the fingering (bars 12-13, session 767).
     /// <para>
-    /// ⚠️ THE REACH IS THE SYMBOLS' INK, as LilyPond's ChordNames group's extent is its
+    /// ⚠️ THE EXTENT IS THE SYMBOLS' INK, as LilyPond's ChordNames group's extent is its
     /// ChordName grobs'. A row's DIAGRAMS are not in it: LilyPond draws those in a FretBoards
-    /// group of its own, which would take a number the names miss and pad it off that
+    /// group of its own, which would take a number the names' span misses and pad it off that
     /// group's refpoint instead — a shape no book has shown yet, left unported and named here.
     /// A LYRICS row above the staff is not asked either (no corpus book has one).
     /// </para>
     /// </remarks>
     private static (int StaffIndex, double RefpointUp)? MidLineRowAnchor(
-        Rendering.ScoreTextMetrics fonts, SystemLayout system, StaffLayout anchorStaff,
-        List<ChordNameLayout> rowSymbols, double x, double width)
+        List<RowExtent> rows, double x, double width)
     {
         double left = x - ExtremalStaffReach, right = x + width + ExtremalStaffReach;
-        StaffLayout? best = null;
-        foreach (var sym in rowSymbols)
+        RowExtent? best = null;
+        foreach (var row in rows)
         {
-            if (sym.X >= right || sym.X + ChordNameEngraver.SymbolInkWidth(fonts, sym) <= left)
+            if (row.Left > right || row.Right < left)
                 continue;
-            if (best is { } b && b.StaffIndex == sym.RowStaffIndex)
+            // The topmost of those the interval meets (Y-up: larger is higher).
+            if (best is { } b && row.RowY <= b.RowY)
                 continue;
-            var row = RowLayout(system, sym.RowStaffIndex);
-            // Above the anchor staff (Y-up from the system top: larger is higher), and the
-            // topmost of those that reach.
-            if (row is null || row.IsHidden || row.Y <= anchorStaff.Y)
-                continue;
-            if (best is null || row.Y > best.Y)
-                best = row;
+            best = row;
         }
-        if (best is null)
-            return null;
-        // The row's refpoint IS its symbols' baseline — read off the placed symbols
-        // themselves (the LINE's baseline: the lowest, a symbol lifted over another standing
-        // higher), the same number the symbols are drawn at.
-        double refpointUp = double.PositiveInfinity;
-        foreach (var sym in rowSymbols)
-            if (sym.RowStaffIndex == best.StaffIndex && sym.YUp < refpointUp)
-                refpointUp = sym.YUp;
-        return (best.StaffIndex, refpointUp);
+        return best is { } host ? (host.StaffIndex, host.RefpointUp) : null;
     }
 
     private static StaffLayout? RowLayout(SystemLayout system, int staffIndex)

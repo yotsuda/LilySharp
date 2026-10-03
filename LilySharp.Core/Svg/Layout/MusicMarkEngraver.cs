@@ -2715,8 +2715,10 @@ internal static class MusicMarkEngraver
     /// bar line (drawn ending AT the measure's X; a <c>:|</c> before a <c>|:</c> is one
     /// <c>:|.|:</c> on the predecessor's end, the collector's folding). The anchor is
     /// then <see cref="EngravingDefaults.BarlineAnchorFromInkLeft"/> from the ink's left.
+    /// Shared with the bar number (BarNumberEngraver.Calculate, session 789), whose
+    /// mid-line LEFT edge stands on the same anchor.
     /// </summary>
-    private static double? MidLineBarAnchorX(MeasureLayout measureLayout, ImmutableArray<Measure> measures)
+    internal static double? MidLineBarAnchorX(MeasureLayout measureLayout, ImmutableArray<Measure> measures)
     {
         int idx = measureLayout.MeasureIndex;
         if (idx < 0 || idx >= measures.Length)

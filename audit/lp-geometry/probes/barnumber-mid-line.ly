@@ -66,6 +66,11 @@
 %%    baseline + 1.0, lifted 0.46 over a symbol it overlaps — and keeps the staff otherwise.
 %%    Lily# read 3.050000 over the staff on all three books before it (the number below the
 %%    chord row; through the fingering of a row carrying diagrams).
+%% ⇒ CORRECTED (session 789, barnumber-row-extent.ly): the reach is tested against the ROW's
+%%    X extent — the UNION of its symbols', an axis group's extent being its elements' — not
+%%    against the nearest symbol. BNM and BNE cannot tell the two readings apart (every bar
+%%    has a chord / only bar 1 has one); BRX there does (chords in bars 1 and 5 only, and
+%%    numbers 2-4 all ride the row). The port now asks the row's span (MidLineRowAnchor).
 
 #(define (dump tag layout pages)
    (for-each

@@ -4758,6 +4758,88 @@ internal static class LpGeometryProbes
     private static readonly string BNT = MidLineBarNumberScore("BNT", "C# | G# | A#m | F# |");
     private static readonly string BNE = MidLineBarNumberScore("BNE", "C | | | |");
 
+    /// <summary>
+    /// The mirrors of barnumber-row-extent.ly (session 789): WHICH mid-line numbers the chord
+    /// row takes is decided by the ROW's whole X extent, not by the nearest symbol. BRX has a
+    /// chord in bars 1 and 5 only, so numbers 2, 3 and 4 stand a full bar from any symbol —
+    /// and LilyPond sets all three on the row (1.000000 over the chord baseline), because the
+    /// ChordNames group's extent runs from bar 1's symbol to bar 5's. BRR opens a repeat at
+    /// bar 3 (a mid-line <c>|:</c>, the chord 2.9 past the bar), BRK changes key and meter at
+    /// bar 3: both "3"s on the row in LilyPond, both on the staff under session 788's
+    /// per-symbol port (dogfood leadsheet-collide bars 3 and 11). The X half: a mid-line
+    /// number's LEFT edge stands on the bar's break-align anchor — 0.095 into a <c>|</c>,
+    /// 0.545 into a <c>.|:</c> (the centre of thick + kern + thin, the dots dropped).
+    /// ⚠️ Lily# <c>c'</c> is LilyPond <c>c''</c> (HANDOFF 5.5).
+    /// </summary>
+    private static readonly string BRX = $$"""
+        octave absolute
+        time 4/4
+        key c major
+        layout { barNumbers every 1 }
+
+        section Main {
+          melody { c'4 d' e' f' | g' a' b' c'' | c''4 b' a' g' | f' e' d' c' | c'4 d' e' f' | }
+          chords harm { C | | | | F | }
+        }
+
+        form main { ~Main }
+
+        score main "BRX" {
+          chords harm
+          staff melody
+        }
+        """;
+
+    private static readonly string BRR = $$"""
+        octave absolute
+        time 4/4
+        key c major
+        layout { barNumbers every 1 }
+
+        section A {
+          melody { c'4 d' e' f' | g' a' b' c'' | }
+          chords harm { C | G | }
+        }
+
+        section B {
+          melody { c''4 b' a' g' | f' e' d' c' | }
+          chords harm { Am | F | }
+        }
+
+        form main { ~A |: ~B :| }
+
+        score main "BRR" {
+          chords harm
+          staff melody
+        }
+        """;
+
+    private static readonly string BRK = $$"""
+        octave absolute
+        time 4/4
+        key c major
+        layout { barNumbers every 1 }
+
+        section A {
+          melody { c'4 d' e' f' | g' a' b' c'' | }
+          chords harm { C | G | }
+        }
+
+        section B {
+          key f major
+          time 3/4
+          melody { c''4 bes' a' | g' f' e' | }
+          chords harm { F | C | }
+        }
+
+        form main { ~A ~B }
+
+        score main "BRK" {
+          chords harm
+          staff melody
+        }
+        """;
+
     /// <summary>The same music two octaves up — the mirror of book BNH.</summary>
     private static readonly string BNH = BarNumberScore("BNH", "''");
 
@@ -15611,6 +15693,21 @@ internal static class LpGeometryProbes
             g => g.BarNumberInkBottomAboveChordRow("2"), RaggedBottomPaper),
         new("barnumber.mid-line.no-chord-near.staff-to-ink-bottom", BNE,
             g => g.BarNumberInkBottomAboveStaff("2"), RaggedBottomPaper),
+        // ...and WHICH numbers the row takes (books BRX/BRR/BRK, session 789): the ROW's
+        // whole X extent decides, not the nearest symbol — BRX's "3" stands a full bar from
+        // either chord and rides the row; so do the "3"s after a mid-line `|:` (BRR) and a
+        // mid-line key+meter change (BRK). The X half: the number's left edge on the bar's
+        // break-align anchor, 0.095 into a `|`, 0.545 into a `.|:`.
+        new("barnumber.mid-line.row-spans.row-to-ink-bottom", BRX,
+            g => g.BarNumberInkBottomAboveChordRow("3"), RaggedBottomPaper),
+        new("barnumber.mid-line.repeat-start.row-to-ink-bottom", BRR,
+            g => g.BarNumberInkBottomAboveChordRow("3"), RaggedBottomPaper),
+        new("barnumber.mid-line.key-time.row-to-ink-bottom", BRK,
+            g => g.BarNumberInkBottomAboveChordRow("3"), RaggedBottomPaper),
+        new("barnumber.mid-line.anchor.plain.bar-left-to-number-left", BRX,
+            g => g.BarNumberLeftFromBarlineLeft("3"), RaggedBottomPaper),
+        new("barnumber.mid-line.anchor.repeat-start.bar-left-to-number-left", BRR,
+            g => g.BarNumberLeftFromBarlineLeft("3"), RaggedBottomPaper),
 
         // ...and the SAME QUESTION for the SECTION LABEL (books MKR/MKN), which the entry
         // above did not settle even though its own `why' stated the general fact. A mark

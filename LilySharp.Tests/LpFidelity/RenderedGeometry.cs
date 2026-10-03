@@ -891,6 +891,52 @@ internal sealed class RenderedGeometry
         return (below.Min() - t.Y) + ink.Bottom;
     }
 
+    /// <summary>
+    /// The bar number reading <paramref name="text"/>: its LEFT edge past the LEFT edge of
+    /// the bar line's ink it stands at — LilyPond's break-align anchor of that bar
+    /// (scm/bar-line.scm:812-852 ly:bar-line::calc-anchor: the centre of the strokes with
+    /// the dots dropped; a mid-line number's self-alignment-X is LEFT, so its left edge is
+    /// what stands there). MEASURED 2.26.0 (probes/barnumber-row-extent.ly): 0.095000 into
+    /// a <c>|</c>, 0.545000 into a <c>.|:</c>.
+    /// </summary>
+    /// <remarks>
+    /// The bar line is read from the drawn strokes the way
+    /// <see cref="MusicMarkBoxCenterFromBarlineAnchor"/> reads it: every rect no wider than a
+    /// thick stroke, taller than wide, grouped where the gaps are under one staff space; the
+    /// repeat dots are circles and fall out by themselves. The group nearest the number's
+    /// left edge is its bar.
+    /// </remarks>
+    public double BarNumberLeftFromBarlineLeft(string text, int page = 0)
+    {
+        var t = SoleBarNumber(text, page);
+        var strokes = _pages[page].Rects
+            .Where(r => r.Width > 0 && r.Width <= EngravingDefaults.ThickBarlineThickness + 1e-6
+                        && r.Height > r.Width && r.Y > t.Y && r.Y < t.Y + 12.0)
+            .OrderBy(r => r.X).ToList();
+        var groups = new List<DrawnRect>();
+        foreach (var r in strokes)
+        {
+            if (groups.Count > 0)
+            {
+                var last = groups[^1];
+                if (r.X - (last.X + last.Width) < MaxBarlineStrokeGap)
+                {
+                    groups[^1] = last with { Width = r.X + r.Width - last.X };
+                    continue;
+                }
+            }
+            groups.Add(r);
+        }
+        if (groups.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: no bar-line stroke under the bar number \"{text}\".\nDrawn geometry:\n"
+                + Describe());
+        }
+        var bar = groups.OrderBy(g => Math.Abs(g.X - t.X)).First();
+        return t.X - bar.X;
+    }
+
     private DrawnText SoleBarNumber(string text, int page)
     {
         var numbers = BarNumbers.Where(n => n.Text == text).ToList();
