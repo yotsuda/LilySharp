@@ -120,6 +120,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第779セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き・ユーザー報告「`bohemian-rhapsody.lys` の `score "tab2"` の G セクション先頭で `key ees` と `time 12/8` の x が重なる・12/8 が 2 つ重複して描かれる」。`-Start p779`（HEAD `2ca43fc8`・未 push 19）＝full **10931 / 0 / 2 / 10933**。§7 3.5 で第777 を ARCHIVE へ。本は Lab `sessions/p779/repro/`（写し・最小再現 `dup.lys`・before／after の png）。
+- **正体**: `condensedStaff { violins1 violins2 }` は両 part の声部を連結しただけ（`RenderSpec.BuildStaffGroups`）で、各 part が自分で歩いた `time 12/8`（section header）の change item を両方持ち、頁は 2 本描く。G では violins1 の section に `key ees major` が無く home の bes へ戻る change（♮♭♭）が声部 0 に、violins2 の `key ees major`（F から同じ調＝item 無し）…最小再現では後の part だけの key が声部 1 に残り、break-align の列は声部 0 しか読まないので 12/8 の上に重なった。`combinedStaff` は合成器が 1 本に書き直すので無事。
+- **直した（commit 下記）**: `MeasureCollector.JunkCondensedStaffDuplicateChanges`＝声部を束ねる前に、最初の part の change が同じ瞬間に在れば後の part の change を落とす（同じなら黙って・違えば LYS4024「not applied」）、後の part だけが書いた change は最初の part の声部 0 へ移す（staff の物＝LP の Staff にどの voice の event も届く）。LP の規則＝`Key_engraver::listen_key_change` の `assign_event_once`（最初が勝ち・同じ event は無言・違えば "conflict with event"）。**調が食い違う瞬間**（各 part の opening key＋自分の key change の timeline を比べる）は LYS4024 の 2 つ目の文「from here parts X and Y are in different keys (X: 2 flats, Y: 3 flats)」＝頁は 1 つの調号しか示せず、各 part の臨時記号は自分の調で綴られている（collect 時）＝本の側で揃えてもらう。新 validator `CondensedStaffChangeValidator` は **condensedStaff を持つ全 score を集める**（最初の score の shared collect だけでは `tab2` が見えない）。網 `CondensedStaffTests` 3 本・文書 GRAMMAR／GRAMMAR_FOR_LLM／CHANGELOG。
+- 本: tab2 の G は「♮♭♭ ＋ 12/8 が 1 本」になり、`lysc check` が (136,11)＝violins1 の `section G {` に LYS4024（violins1: 2 flats・violins2: 3 flats）＝**本の側**: violins1 の section G に `key ees major` が無い（他の 4 part には在る）＝ユーザーに伝えた。
+- 掃き（svg・998 冊・base＝p778 exe・head＝p779・`sessions/p779/svg/sweep.log`）: **差 1**＝`corpora/ベースタブLy/partial.lys`（condensed の両 part が同じ瞬間に `time 2/4`＝2 本重なっていたのが 1 本・絵は同じ・`probes/partial/`）。
+★ `-End p779 -DiffBase 2ca43fc8`＝full **10934 / 0 / 2 / 10936**（網 +3）・門 全 OK（HANDOFF 残り 6,547 B・§1 残り 9,189 字・棚卸し `APPROXIMATIONS.md` 行番号 2 行＝増減 0・CRLF に揃え直した）。7.5: Core `+` 366 行＝`JunkCondensedStaffDuplicateChanges`／`JunkOnOneCondensedStaff`（約 190・註含む）＋ `CondensedStaffChangeValidator`（新規・約 80）＋ 警告 record・LYS4024 の文書・REF 4（key-engraver.cc `listen_key_change`・stream-event.hh `assign_event_once`・stream-event.cc `warn_reassign_event_ptr` ×2 か所）・OWN 0。7.6: ⒝ LP の規則（同じ timestep の 2 つ目の event は junk・同じなら無言）を頁の item に組み替えた＝字面にならないのは Lily# が event ではなく measure の item で持つため／「後の part だけの change を声部 0 へ移す」は LP の「どの voice の event も Staff に届く」の帰結／「調の食い違いの警告」は LP に対応物無し（LP は Staff で臨時記号を綴るので食い違い自体が起きない）＝警告の文に書いた。7.7: 臨時記号の綴り直しはしていない（上の残り）・`time`／`clef` の食い違いの警告は junk の形だけ（bar の長さの食い違いは MeasureValidator の cross-part が見る）。commit `02f6a059`（code）。push はユーザー。
+判定: 報告は閉じた（12/8 の重複・key と time の重なり）。残り: 調が食い違う condensed staff の臨時記号は各 part の調のまま（LP は Staff の Accidental_engraver が 1 つの調で綴る）＝警告で本の側に返す設計・直すなら condensed の声部の臨時記号を staff の調で綴り直す（§1.0 ⒝ に起票しない＝ユーザー判断待ちの小さな観察としてここに置く）。次の一手: §1.0 ⒜ の残り（lead sheet の label と拍子の重なり・小）か ⒝ の設計級＝ユーザー判断。会話を区切るか: (b) 便が 4 つ続いて文脈は重い＝**区切ってよい**（続けるなら `-Start p780`）。
+
+## 以下は第778セッションの経緯
+
 ### 1.1 第778セッション（2026-10-03・YT-DELL2）
 
 同じ会話の続き・ユーザー「続けて」＝第777 末の次の一手の筆頭 **lead sheet の弱起（頁の側）**。`-Start p778`（HEAD `8cad6b8b`・未 push 17）＝full **10929 / 0 / 2 / 10931**。§7 3.5 で第776 を ARCHIVE へ。
@@ -128,19 +140,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 掃き（998 冊・base＝p777 exe・head＝p778・`sessions/p778/svg/sweep.log`・`sweep-ly.log`）: svg **差 3**＝amazing-grace の grid 2 冊＋greensleeves の grid（chords だけの sheet で弱起のある本＝全部・fixture には無い＝snapshot 不変）・ly 差 3（同じ 3 冊・`leadSheetTiming` の先頭が `\time 1/4`）・LP の bar check **3 冊とも 1 → 0**（`sessions/p778/lp/`）。絵: grid の 2 段目の番号 8 → 7（`probes/ag/`）・弱起の幅は grid floor で他と同じ（設計どおり）。
 ★ `-End p778 -DiffBase 8cad6b8b`＝full **10931 / 0 / 2 / 10933**（網 +2）・門 全 OK（HANDOFF 残り 6,704 B・§1 残り 10,101 字・棚卸し `APPROXIMATIONS.md` 行番号 2 行＝増減 0・CRLF に揃え直した）。7.5: Core `+` 70 行＝`RowsOnlyBarLengths`（新規・約 35）＋ `FitRowsToMusicBars` の fallback と `IsPickup` の腕・REF 0・OWN 0（音楽の clock を行に当てる規則は第350 の `FitRowsToMusicBars` の既存 REF＝Timing は Score に 1 つ・新しい量 0）。7.6: ⒟ 既存の家（`FitRowsToMusicBars`）の読む物を増やしただけ＝header の partial／time は `SectionHeaders`（全出力が境界で当てる registry）から読む。7.7: 「縮める側だけ」は既存規則のまま＝header の time が home より長い rows-only の sheet は §1.0 ⒜ ⒞ に観察として置いた（コーパス 0）。commit `90d2c914`（code）。push はユーザー。
 判定: lead sheet の弱起は閉じた（頁・双子の両方）。残りは §1.0 ⒜ の新項（label と拍子の重なり・小）。次の一手: §1.0 ⒜ の残り（小）か ⒝ の設計級（跳躍の 3 軒・小節番号と和音行）＝ユーザー判断。会話を区切るか: (b) 便が 3 つ続いて文脈は重め・次はどれも独立の島＝**区切ってよい**（続けるなら `-Start p779`）。
-
-## 以下は第777セッションの経緯
-
-### 1.1 第777セッション（2026-10-03・YT-DELL2）
-
-新しい会話・ユーザー「HANDOFF を読んで着手」。`-Start p777`（HEAD `ce35f8e7`・未 push 15）＝full **10927 / 0 / 2 / 10929**。§7 3.5 で第775 を ARCHIVE へ。
-- **§1.0 ⒜ の筆頭「conductor track の拍子 meta の重なり」は第771（`1a70d551`・`ConductorTrackTests` 4 本）で閉じていた**＝一覧から落とした（第771 が §7 3「閉じたら消す」を飛ばし、第775・776 がそのまま継いだ）。着手したのは ⒞″ **歌詞だけの score の双子の bar check**。
-- **切り分け（LP 2.26 プローブ Lab `sessions/p777/probes/` a〜p・m〜m3）**: staff の無い score では LP の clock は Lyrics の duration を聞かず（`\time` も `\partial` も無い＝4/4 のまま）、bar check は最初の 1 本だけ鳴る（timing-translator.cc:229-240 `warned_for_bar_check_`＝2 本目からは黙る）＝**段割れも頁の小節から 1 拍ずれていた**（旧双子は 1 段目 16 語・新 17 語）。**`\partial` は staff 無しの score で LP の spacing を踏む**（`m.ly`＝Lyrics 1 本＋`\partial 4` だけで「programming error: insane spring distance requested」×2・音節が動く）。`\time 1/4` で弱起を綴ると無音（`m2.ly`・`p.ly`＝警告 0）。`\new Devnull` の skip 声部は Score の Timing に届く（Devnull は Staff／Voice の alias・engraver-init.ly:1126）。
-- **直した（commit 下記）**: `EmitLeadSheetTiming`＝lead sheet（`MultiStaffScore.IsLeadSheet`）の双子に、頁が小節線を引く行（`GridBarlineRowIndex`）の小節長を `leadSheetTiming = { \time 4/4 s1 | … }` として書き、`EmitScore` が `\new Devnull \leadSheetTiming` を先頭に置く。長さが変わる所だけ `\time`（頁の拍子と同じ長さは拍子の綴り＝4/4・それ以外は約分した分数＝1/4・3/2・2/1）・cadenza の段は `\cadenzaOn`・段割れで割れた小節は 1 小節。LILYSHARP-OWN（LP に lead sheet は無い）。網 `LilyPondExporterTests` 2 本（弱起＋3/2・chords だけの sheet＋staff の score には無い）。CHANGELOG Fixes。
-- 双子（`sessions/p777/big-out/choir-chorale/`）: 4 score とも LP 警告 **0**（words 1 → 0）。掃き（ly・998 冊・base＝p776 exe・head＝p777・`sweep-ly.log`）: **差 12＝全部 lead sheet**（test/lead-sheet-*・rows-song-sheet・lytie・samples の grid 3）・LP の警告数は 12 冊とも base＝head（`lp12/`）。
-- **見つけた別件（§1.0 ⒜ に起票）**: chords だけの lead sheet（amazing-grace の `score grid`・greensleeves-grid）は**頁が header の `partial` を無視する**＝空の 1 小節目が拍子ぶんの長さで、番号も弱起を 1 と数え、`Verse` の箱が拍子に重なる。双子は頁を写すので timing は 3/4、chord 行の stream（構文から `s4 |`）と食い違って bar check 1 本が残る＝頁の側。
-★ `-End p777 -DiffBase ce35f8e7`＝full **10929 / 0 / 2 / 10931**（網 +2）・門 全 OK（HANDOFF 残り 6,343 B・§1 残り 9,127 字・棚卸し `APPROXIMATIONS.md` +6/−4＝OWN 1 本が増えた・CRLF に揃え直した）。7.5: Core `+` 84 行＝`EmitLeadSheetTiming`（新規・約 70）＋ `EmitScore` の Devnull 行 3 ＋ 呼び出し 1・REF 0・OWN 1（`EmitLeadSheetTiming`＝LP に lead sheet は無い・観測者なし・頁の行が拍子を持てば消える）。7.6: ⒞ LP に対応物無し（staff の無い score の clock は LP が数えない）＝timing-translator.cc の bar check と Devnull の alias は読んだが式は写していない（`\partial` を避けた理由は実測）。7.7: 「長さが拍子と同じなら拍子の綴り」は頁の `C` と同じ物を言うため（1/1 を書かない）＝規則ではなく綴り・`BarLength` の meter fallback は行の空の小節で頁と食い違う（上の別件＝頁の側で直す）。commit `64d9a973`（code）。push はユーザー。
-判定: ⑼ ⒞″ は閉じた（双子の側）。次の一手: §1.0 ⒜ の新項（lead sheet の弱起＝頁の側・小〜中・snapshot が動く）か、⒝ の設計級（跳躍の 3 軒・小節番号と和音行）＝ユーザー判断。会話を区切るか: (a) lead sheet の弱起なら今の文脈（両 collector の読み・`sessions/p777` の計器）の上に立つ＝**続ける側**。
 
 ## 2. 開いている作業
 

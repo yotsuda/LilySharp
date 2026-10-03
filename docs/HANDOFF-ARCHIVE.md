@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第777セッションの経緯
+
+### 1.1 第777セッション（2026-10-03・YT-DELL2）
+
+新しい会話・ユーザー「HANDOFF を読んで着手」。`-Start p777`（HEAD `ce35f8e7`・未 push 15）＝full **10927 / 0 / 2 / 10929**。§7 3.5 で第775 を ARCHIVE へ。
+- **§1.0 ⒜ の筆頭「conductor track の拍子 meta の重なり」は第771（`1a70d551`・`ConductorTrackTests` 4 本）で閉じていた**＝一覧から落とした（第771 が §7 3「閉じたら消す」を飛ばし、第775・776 がそのまま継いだ）。着手したのは ⒞″ **歌詞だけの score の双子の bar check**。
+- **切り分け（LP 2.26 プローブ Lab `sessions/p777/probes/` a〜p・m〜m3）**: staff の無い score では LP の clock は Lyrics の duration を聞かず（`\time` も `\partial` も無い＝4/4 のまま）、bar check は最初の 1 本だけ鳴る（timing-translator.cc:229-240 `warned_for_bar_check_`＝2 本目からは黙る）＝**段割れも頁の小節から 1 拍ずれていた**（旧双子は 1 段目 16 語・新 17 語）。**`\partial` は staff 無しの score で LP の spacing を踏む**（`m.ly`＝Lyrics 1 本＋`\partial 4` だけで「programming error: insane spring distance requested」×2・音節が動く）。`\time 1/4` で弱起を綴ると無音（`m2.ly`・`p.ly`＝警告 0）。`\new Devnull` の skip 声部は Score の Timing に届く（Devnull は Staff／Voice の alias・engraver-init.ly:1126）。
+- **直した（commit 下記）**: `EmitLeadSheetTiming`＝lead sheet（`MultiStaffScore.IsLeadSheet`）の双子に、頁が小節線を引く行（`GridBarlineRowIndex`）の小節長を `leadSheetTiming = { \time 4/4 s1 | … }` として書き、`EmitScore` が `\new Devnull \leadSheetTiming` を先頭に置く。長さが変わる所だけ `\time`（頁の拍子と同じ長さは拍子の綴り＝4/4・それ以外は約分した分数＝1/4・3/2・2/1）・cadenza の段は `\cadenzaOn`・段割れで割れた小節は 1 小節。LILYSHARP-OWN（LP に lead sheet は無い）。網 `LilyPondExporterTests` 2 本（弱起＋3/2・chords だけの sheet＋staff の score には無い）。CHANGELOG Fixes。
+- 双子（`sessions/p777/big-out/choir-chorale/`）: 4 score とも LP 警告 **0**（words 1 → 0）。掃き（ly・998 冊・base＝p776 exe・head＝p777・`sweep-ly.log`）: **差 12＝全部 lead sheet**（test/lead-sheet-*・rows-song-sheet・lytie・samples の grid 3）・LP の警告数は 12 冊とも base＝head（`lp12/`）。
+- **見つけた別件（§1.0 ⒜ に起票）**: chords だけの lead sheet（amazing-grace の `score grid`・greensleeves-grid）は**頁が header の `partial` を無視する**＝空の 1 小節目が拍子ぶんの長さで、番号も弱起を 1 と数え、`Verse` の箱が拍子に重なる。双子は頁を写すので timing は 3/4、chord 行の stream（構文から `s4 |`）と食い違って bar check 1 本が残る＝頁の側。
+★ `-End p777 -DiffBase ce35f8e7`＝full **10929 / 0 / 2 / 10931**（網 +2）・門 全 OK（HANDOFF 残り 6,343 B・§1 残り 9,127 字・棚卸し `APPROXIMATIONS.md` +6/−4＝OWN 1 本が増えた・CRLF に揃え直した）。7.5: Core `+` 84 行＝`EmitLeadSheetTiming`（新規・約 70）＋ `EmitScore` の Devnull 行 3 ＋ 呼び出し 1・REF 0・OWN 1（`EmitLeadSheetTiming`＝LP に lead sheet は無い・観測者なし・頁の行が拍子を持てば消える）。7.6: ⒞ LP に対応物無し（staff の無い score の clock は LP が数えない）＝timing-translator.cc の bar check と Devnull の alias は読んだが式は写していない（`\partial` を避けた理由は実測）。7.7: 「長さが拍子と同じなら拍子の綴り」は頁の `C` と同じ物を言うため（1/1 を書かない）＝規則ではなく綴り・`BarLength` の meter fallback は行の空の小節で頁と食い違う（上の別件＝頁の側で直す）。commit `64d9a973`（code）。push はユーザー。
+判定: ⑼ ⒞″ は閉じた（双子の側）。次の一手: §1.0 ⒜ の新項（lead sheet の弱起＝頁の側・小〜中・snapshot が動く）か、⒝ の設計級（跳躍の 3 軒・小節番号と和音行）＝ユーザー判断。会話を区切るか: (a) lead sheet の弱起なら今の文脈（両 collector の読み・`sessions/p777` の計器）の上に立つ＝**続ける側**。
+
 ## 以下は第776セッションの経緯
 
 ### 1.1 第776セッション（2026-10-03・YT-DELL2）
