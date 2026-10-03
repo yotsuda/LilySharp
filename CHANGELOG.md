@@ -371,6 +371,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **Tab fret numbers are set in the regular weight by default.** They were bold on a staff
+  of fewer than six strings (a six-string staff's lighter face had already gone regular);
+  now every tab staff is regular, and `fonts { tab bold }` brings the bold face back. The
+  `.ly` twin keeps LilyPond's own bold TabNoteHead, as it keeps LilyPond's digit size.
 - **A condensed staff takes one meter, one key and one clef at a moment.** Every part of a
   `condensedStaff { a b }` walked its own music, so a section header's `time 12/8` was drawn
   once per part, side by side, and two parts' `key` changes at one bar were drawn on top of

@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 59 | 観測者がゼロだと自認しているもの |
-| `OWN` | 217 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **336** | |
+| `OWN` | 218 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **337** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -30,7 +30,7 @@
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 7 |
-| `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 6 |
+| `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
 | `LilySharp.Core/Rendering/SharedRenderer.Beams.cs` | 5 |
 
@@ -121,7 +121,7 @@
 ### `LilySharp.Core/Svg/Layout/StaffAffinity.cs`
 - **:124** order, so the warning has nothing to fire on and is not ported.
 ### `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs`
-- **:165** ⚠️⚠️ AND THIS IS WHY LILYPOND'S TabNoteHead (whiteout . #t) IS NOT PORTED, which
+- **:175** ⚠️⚠️ AND THIS IS WHY LILYPOND'S TabNoteHead (whiteout . #t) IS NOT PORTED, which
 ### `LilySharp.Core/Svg/Layout/TabStaffStencils.cs`
 - **:127** RepeatTie, LaissezVibrerTie, PhrasingSlur) are likewise not ported:
 ### `LilySharp.Core/Svg/Layout/TextSpannerEngraver.cs`
@@ -236,7 +236,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（217 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（218 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **:90** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
@@ -525,10 +525,11 @@
 - **:72** LILYSHARP-OWN, tuned on request (2026-08-06): each run's zigzag PHASE puts the
 ### `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs`
 - **:34** LILYSHARP-OWN: deliberately LARGER than LilyPond's, whose tab digits are small
-- **:89** LILYSHARP-OWN, USER DECISION 2026-10-01 (session 733): on a guitar tab the 2.8 bold digits
-- **:256** LILYSHARP-OWN, USER DECISION 2026-10-01 (session 733, Lab sessions/p733/tabfont
-- **:482** LILYSHARP-OWN (owner's decision 2026-09-24): an eighth pair takes a sixteenth
-- **:555** and the stem ran up the whole staff). LILYSHARP-OWN: LilyPond has no pitchless note.
+- **:61** LILYSHARP-OWN, USER DECISION 2026-10-03 (session 780): REGULAR, on every tab staff —
+- **:99** LILYSHARP-OWN, USER DECISION 2026-10-01 (session 733): on a guitar tab the 2.8 bold digits
+- **:266** LILYSHARP-OWN, USER DECISION 2026-10-01 (session 733, Lab sessions/p733/tabfont
+- **:492** LILYSHARP-OWN (owner's decision 2026-09-24): an eighth pair takes a sixteenth
+- **:565** and the stem ran up the whole staff). LILYSHARP-OWN: LilyPond has no pitchless note.
 ### `LilySharp.Core/Svg/Layout/TabStaffStencils.cs`
 - **:122** note on the staff above and over the same note on the tab — but it is LILYSHARP-OWN
 - **:221** ★ LILYSHARP-OWN, and it has to be: LilyPond names chords only through a

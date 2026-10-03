@@ -1714,8 +1714,8 @@
       "probe": "tab-slur.ly",
       "score": "A",
       "lilypond": 1.2202227531373033,
-      "residual": 0.103643914,
-      "why": "THE FRET DIGIT'S OWN INK, and the whole residual is that one ratified deviation — no part of it is the slur. LilyPond's attachment is the digit's ink edge + dir*0.5*staff_space, then -0.35 for the tablature.scm transformer: 0.5 (string 2's position) + 0.570223 + 0.5 - 0.35 = 1.220223 tab spaces, so 0.570223 of it is HALF LILYPOND'S TabNoteHead. Lily#'s fret digits are deliberately larger (TabConstants.FretFontSize 2.8 since session 694, 3.0 before; ratified in HANDOFF §3 and tuned by eye on request): TabConstants.FretDigitHeight measures 2.0216 at that size, half of it is 1.0108 page = 0.673867 tab spaces, and 0.673867 - 0.570223 = 0.103644 to nine digits (at 3.0: 2.166 / 0.722000 / 0.151777). ⚠️ RE-MEASURED session 376 WITH -dbackend=null: the value recorded until then (1.043326, residual 0.328674, half-digit 0.393326) came from an unpinned -dbackend=svg run, where LilyPond 2.26 drops fonts.serif to the generic 'serif' and fontconfig substitutes a machine face with smaller digits (scratch/p377/dual/tab-slur, both backends side by side). The decomposition was right; the LilyPond digit it subtracted was the fallback face's. It cannot go to 0 while the larger digits stand, and it is NOT a licence to tune the 0.5 or the 0.35 -- those two are exact (see the pairs below)."
+      "residual": 0.100843914,
+      "why": "THE FRET DIGIT'S OWN INK, and the whole residual is that one ratified deviation — no part of it is the slur. LilyPond's attachment is the digit's ink edge + dir*0.5*staff_space, then -0.35 for the tablature.scm transformer: 0.5 (string 2's position) + 0.570223 + 0.5 - 0.35 = 1.220223 tab spaces, so 0.570223 of it is HALF LILYPOND'S TabNoteHead. Lily#'s fret digits are deliberately larger (TabConstants.FretFontSize 2.8 since session 694, 3.0 before; ratified in HANDOFF §3 and tuned by eye on request): TabConstants.FretDigitHeight measures 2.0216 at that size, half of it is 1.0108 page = 0.673867 tab spaces, and 0.673867 - 0.570223 = 0.103644 to nine digits (at 3.0: 2.166 / 0.722000 / 0.151777). ⚠️ RE-MEASURED session 376 WITH -dbackend=null: the value recorded until then (1.043326, residual 0.328674, half-digit 0.393326) came from an unpinned -dbackend=svg run, where LilyPond 2.26 drops fonts.serif to the generic 'serif' and fontconfig substitutes a machine face with smaller digits (scratch/p377/dual/tab-slur, both backends side by side). The decomposition was right; the LilyPond digit it subtracted was the fallback face's. It cannot go to 0 while the larger digits stand, and it is NOT a licence to tune the 0.5 or the 0.35 -- those two are exact (see the pairs below). RE-MEASURED session 780: the fret face went REGULAR (owner's decision 2026-10-03, TabConstants.FretFontStyle): the regular digit's ink at 2.8 is 2.0132 tall, half of it 1.0066 page = 0.671067 tab spaces, and 0.671067 - 0.570223 = 0.100844 (0.103644 with the bold face). The decomposition is unchanged."
     },
     "slur.tab.up.attachment-to-control": {
       "probe": "tab-slur.ly",
@@ -1728,8 +1728,8 @@
       "probe": "tab-slur.ly",
       "score": "A",
       "lilypond": -1.2202227531373033,
-      "residual": -0.103643914,
-      "why": "The exact negative of the up bow's, which is the point of the pair -- bar 2 is bar 1 with its strings REFLECTED (positions 1,3,3,1 become -1,-3,-3,-1), so LilyPond returns exactly minus bar 1's numbers. LilyPond's slur direction reads the STRING, not the notated pitch (lily/slur.cc:60-68 calc_direction -- UP as soon as one encompassed column's stem points DOWN), so the low strings bow DOWN and subtract the 0.525 upward instead. A constant absorbed on one side, or a direction rule that had fallen back to 'tab slurs bow up' (which is what Lily# did until 2026-09-01), breaks this symmetry rather than hiding in it. Same cause as slur.tab.up.string-to-attachment."
+      "residual": -0.100843914,
+      "why": "The exact negative of the up bow's, which is the point of the pair -- bar 2 is bar 1 with its strings REFLECTED (positions 1,3,3,1 become -1,-3,-3,-1), so LilyPond returns exactly minus bar 1's numbers. LilyPond's slur direction reads the STRING, not the notated pitch (lily/slur.cc:60-68 calc_direction -- UP as soon as one encompassed column's stem points DOWN), so the low strings bow DOWN and subtract the 0.525 upward instead. A constant absorbed on one side, or a direction rule that had fallen back to 'tab slurs bow up' (which is what Lily# did until 2026-09-01), breaks this symmetry rather than hiding in it. Same cause as slur.tab.up.string-to-attachment. RE-MEASURED session 780 with the regular fret face: the exact negative of the up bow's 0.100844 (was -0.103644 with the bold face)."
     },
     "slur.tab.down.attachment-to-control": {
       "probe": "tab-slur.ly",
@@ -1749,15 +1749,15 @@
       "probe": "tab-slur-full.ly",
       "score": "A",
       "lilypond": 1.5702227531373032,
-      "residual": 0.103643914,
-      "why": "slur.tab.up.string-to-attachment's book on a FULL tab (Lily#'s default lone tab; the twin writes \\tabFullNotation), and the same residual: the larger fret digit's half-height (F9, ratified HANDOFF §3), nothing of the slur. \\tabFullNotation reverts TabStaff.Slur.control-points (ly/property-init.ly:845), so LilyPond's y is the plain tab's 1.220223 + 0.35 exactly. Until session 633 Lily# applied the tablature.scm translation on every tab, and this point read 0.151777 - 0.35 = -0.198223."
+      "residual": 0.100843914,
+      "why": "slur.tab.up.string-to-attachment's book on a FULL tab (Lily#'s default lone tab; the twin writes \\tabFullNotation), and the same residual: the larger fret digit's half-height (F9, ratified HANDOFF §3), nothing of the slur. \\tabFullNotation reverts TabStaff.Slur.control-points (ly/property-init.ly:845), so LilyPond's y is the plain tab's 1.220223 + 0.35 exactly. Until session 633 Lily# applied the tablature.scm translation on every tab, and this point read 0.151777 - 0.35 = -0.198223. RE-MEASURED session 780: the fret face went REGULAR (owner's decision 2026-10-03, TabConstants.FretFontStyle): the regular digit's ink at 2.8 is 2.0132 tall, half of it 1.0066 page = 0.671067 tab spaces, and 0.671067 - 0.570223 = 0.100844 (0.103644 with the bold face). The decomposition is unchanged."
     },
     "slur.tab.full.down.string-to-attachment": {
       "probe": "tab-slur-full.ly",
       "score": "A",
       "lilypond": -1.5702227531373032,
-      "residual": -0.103643914,
-      "why": "The exact negative of slur.tab.full.up.string-to-attachment (bar 2 is bar 1 with its strings reflected), so a translation that had kept its sign on one side only breaks the pair. Same cause: F9."
+      "residual": -0.100843914,
+      "why": "The exact negative of slur.tab.full.up.string-to-attachment (bar 2 is bar 1 with its strings reflected), so a translation that had kept its sign on one side only breaks the pair. Same cause: F9. RE-MEASURED session 780 with the regular fret face: the exact negative of the up bow's 0.100844 (was -0.103644 with the bold face)."
     },
     "slur.tab.stems.left-attachment": {
       "probe": "tab-slur-stems.ly",
@@ -2127,57 +2127,57 @@
       "probe": "tab-grace-slur.ly",
       "score": "TGH",
       "lilypond": -1.002156948677093,
-      "residual": -0.332691379,
-      "why": "Since session 730 (see slur.tab.grace.hand.span). Not decomposed: the run is ~1.0 longer than LilyPond's (the tab grace spacing, open) and the digits are Lily#'s ratified larger ones (slur.tab.up.string-to-attachment); replacing only the half-digit by LilyPond's moved this by 0.08 and left the rest (Lab sessions/p730), so the span is the larger part."
+      "residual": -0.330469018,
+      "why": "Since session 730 (see slur.tab.grace.hand.span). Not decomposed: the run is ~1.0 longer than LilyPond's (the tab grace spacing, open) and the digits are Lily#'s ratified larger ones (slur.tab.up.string-to-attachment); replacing only the half-digit by LilyPond's moved this by 0.08 and left the rest (Lab sessions/p730), so the span is the larger part. RE-MEASURED session 780 with the regular fret face (owner's decision, TabConstants.FretFontStyle): -0.330469 (was -0.332691 with the bold face); the digit's ink and the width the columns reserve shrank, nothing else moved."
     },
     "slur.tab.grace.hand.end": {
       "probe": "tab-grace-slur.ly",
       "score": "TGH",
       "lilypond": -1.2388267106111481,
-      "residual": -0.442583743,
-      "why": "Since session 730 (see slur.tab.grace.hand.span); -0.509 until session 731's digit spacing. Not decomposed: the run is still longer than LilyPond's by the ratified larger digits (slur.tab.up.string-to-attachment), and the bow lies lower with it."
+      "residual": -0.440198267,
+      "why": "Since session 730 (see slur.tab.grace.hand.span); -0.509 until session 731's digit spacing. Not decomposed: the run is still longer than LilyPond's by the ratified larger digits (slur.tab.up.string-to-attachment), and the bow lies lower with it. RE-MEASURED session 780 with the regular fret face: -0.440198 (was -0.442584 with the bold face)."
     },
     "slur.tab.grace.hand.span": {
       "probe": "tab-grace-slur.ly",
       "score": "TGH",
       "lilypond": 1.0722157275417576,
-      "residual": 0.363014049,
-      "why": "Since session 730 a tab slur bound on a grace column is drawn (it was skipped): the grace's own digit, DOWN when it starts in grace time (score-grace-settings). Since session 731 a TAB-only grace column is spaced by its digits (SpacingRules.GraceColumns, see grace.tab.to-main), no longer by the notation grace's flagged reach (0.655 until then). What is left is the digit size: Lily#'s tab digits are the ratified larger ones (slur.tab.up.string-to-attachment), so the grace digit's half and the main digit's left reach are wider than LilyPond's."
+      "residual": 0.363031056,
+      "why": "Since session 730 a tab slur bound on a grace column is drawn (it was skipped): the grace's own digit, DOWN when it starts in grace time (score-grace-settings). Since session 731 a TAB-only grace column is spaced by its digits (SpacingRules.GraceColumns, see grace.tab.to-main), no longer by the notation grace's flagged reach (0.655 until then). What is left is the digit size: Lily#'s tab digits are the ratified larger ones (slur.tab.up.string-to-attachment), so the grace digit's half and the main digit's left reach are wider than LilyPond's. RE-MEASURED session 780 with the regular fret face: 0.363031 (was 0.363014 with the bold face)."
     },
     "slur.tab.grace.acciaccatura.string-to-attachment": {
       "probe": "tab-grace-slur.ly",
       "score": "TGA",
       "lilypond": -1.002156948677093,
-      "residual": -0.332691379,
-      "why": "The acciaccatura's automatic slur, the same bow as slur.tab.grace.hand.* (WithGraceSlurs now runs on a TAB staff too)."
+      "residual": -0.330469018,
+      "why": "The acciaccatura's automatic slur, the same bow as slur.tab.grace.hand.* (WithGraceSlurs now runs on a TAB staff too). RE-MEASURED session 780 with the regular fret face: -0.330469 (was -0.332691 with the bold face)."
     },
     "slur.tab.grace.acciaccatura.span": {
       "probe": "tab-grace-slur.ly",
       "score": "TGA",
       "lilypond": 1.0722157275417576,
-      "residual": 0.217756778,
-      "why": "See slur.tab.grace.hand.span (0.655 until session 731). Smaller than the hand-written run's because no rod of 1.5 holds it: the acciaccatura's digit-to-digit floor is the whole distance."
+      "residual": 0.195025095,
+      "why": "See slur.tab.grace.hand.span (0.655 until session 731). Smaller than the hand-written run's because no rod of 1.5 holds it: the acciaccatura's digit-to-digit floor is the whole distance. RE-MEASURED session 780 with the regular fret face: 0.195025 (was 0.217757 with the bold face); the narrower regular digits shorten the run."
     },
     "slur.tab.grace.inner.string-to-attachment": {
       "probe": "tab-grace-slur.ly",
       "score": "TGI",
       "lilypond": -1.0363785743392684,
-      "residual": -0.298469753,
-      "why": "Since session 730 (see slur.tab.grace.hand.span): both ends in grace time, the span is the slur rod's 1.5 page units in both engines (EXACT); the height is not decomposed (the ratified larger digit, and the attachment landing at the tab's fourth line)."
+      "residual": -0.296247392,
+      "why": "Since session 730 (see slur.tab.grace.hand.span): both ends in grace time, the span is the slur rod's 1.5 page units in both engines (EXACT); the height is not decomposed (the ratified larger digit, and the attachment landing at the tab's fourth line). RE-MEASURED session 780 with the regular fret face: -0.296247 (was -0.298470 with the bold face)."
     },
     "slur.tab.grace.inner.span": {
       "probe": "tab-grace-slur.ly",
       "score": "TGI",
       "lilypond": 1.0,
-      "residual": 0.175534908,
-      "why": "Since session 730 (see slur.tab.grace.hand.span). EXACT (the slur rod's 1.5) until session 731: two grace digits on one string now stand by their digit floor (SpacingRules.GraceColumns), and with Lily#'s ratified larger digits (slur.tab.up.string-to-attachment) that floor (~1.78) is wider than the rod, where LilyPond's smaller digits leave the rod in charge. A deviation of the ratified digit size, not of the spacing."
+      "residual": 0.152772703,
+      "why": "Since session 730 (see slur.tab.grace.hand.span). EXACT (the slur rod's 1.5) until session 731: two grace digits on one string now stand by their digit floor (SpacingRules.GraceColumns), and with Lily#'s ratified larger digits (slur.tab.up.string-to-attachment) that floor (~1.78) is wider than the rod, where LilyPond's smaller digits leave the rod in charge. A deviation of the ratified digit size, not of the spacing. RE-MEASURED session 780 with the regular fret face: 0.152773 (was 0.175535 with the bold face); the narrower regular digits shorten the run."
     },
     "grace.tab.to-main": {
       "probe": "tab-grace-slur.ly",
       "score": "NOSLUR",
       "lilypond": 1.466741574803141,
-      "residual": 0.467277323,
-      "why": "Since session 731 a grace on a TAB-only staff is spaced by its digits as LilyPond's Note_spacing does there (the TabStaff stem is invisible, so no stem correction; the floor is grace digit half + extra-spacing + the main digit's left reach), not by the notation grace's flagged reach (1.124 until then). What is left is the digit size: Lily#'s tab digits are the ratified larger ones, so the main digit's centre stands 0.652 right of its column (EngravingDefaults.TabHeadCenterOffset) where LilyPond's stands ~0.12; the column gap itself is within 0.07 of LilyPond's 1.3438 (Lab sessions/p730/tg/nos2.ly)."
+      "residual": 0.433134016,
+      "why": "Since session 731 a grace on a TAB-only staff is spaced by its digits as LilyPond's Note_spacing does there (the TabStaff stem is invisible, so no stem correction; the floor is grace digit half + extra-spacing + the main digit's left reach), not by the notation grace's flagged reach (1.124 until then). What is left is the digit size: Lily#'s tab digits are the ratified larger ones, so the main digit's centre stands 0.652 right of its column (EngravingDefaults.TabHeadCenterOffset) where LilyPond's stands ~0.12; the column gap itself is within 0.07 of LilyPond's 1.3438 (Lab sessions/p730/tg/nos2.ly). RE-MEASURED session 780 with the regular fret face: 0.433134 (was 0.467277 with the bold face); the narrower regular digits bring the grace digit closer to the main one."
     },
     "grace.compress.approach": {
       "probe": "grace-compress.ly",

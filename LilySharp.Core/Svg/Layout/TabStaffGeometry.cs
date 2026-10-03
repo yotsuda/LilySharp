@@ -56,9 +56,19 @@ internal static class TabConstants
     /// </remarks>
     public const double FretFontSize = 2.8;
 
-    /// <summary>The weight the engraving sets a fret number in — bold, so the digits read
-    /// over the string lines they sit on.</summary>
-    public const Rendering.FontStyle FretFontStyle = Rendering.FontStyle.Bold;
+    /// <summary>The weight the engraving sets a fret number in.</summary>
+    /// <remarks>
+    /// LILYSHARP-OWN, USER DECISION 2026-10-03 (session 780): REGULAR, on every tab staff —
+    /// "いま、fonts の tab のスタイルは bold が既定だ。これを regular が既定になるように直して".
+    /// Bold since the tab staff's first day (the digits were to read over the string lines
+    /// they sit on; the string line breaks around the digit now, so the digit carries the
+    /// contrast on its own — see <see cref="FretFontSize"/>), and the reduced face of a
+    /// six-string staff had already gone regular on 2026-10-01 (<see cref="ReducedFretStyle"/>).
+    /// LilyPond's TabNoteHead is bold (scm/define-grobs.scm:3717-3745 tab-note-head::print,
+    /// (font-series . bold)); the twin keeps LilyPond's default there as it keeps LilyPond's
+    /// digit size, and a written <c>fonts { tab bold }</c> still reaches both.
+    /// </remarks>
+    public const Rendering.FontStyle FretFontStyle = Rendering.FontStyle.Regular;
 
     /// <summary>
     /// The em a fret number is set at for THIS score: <see cref="FretFontSize"/> stepped by

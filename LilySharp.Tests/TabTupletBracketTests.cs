@@ -228,7 +228,8 @@ public class TabTupletBracketTests
 
     /// <summary>Every fret digit's centre x, by its source offset (text-anchor middle).</summary>
     private static Dictionary<int, double> DigitCentres(string svg) =>
-        Regex.Matches(svg, "<text x=\"([-\\d.]+)\" y=\"[-\\d.]+\" font-size=\"[\\d.]+\" font-weight=\"bold\" text-anchor=\"middle\" data-pos=\"(\\d+)\">\\d+</text>")
+        // The fret face is regular since session 780 (bold only when `fonts { tab bold }` says so).
+        Regex.Matches(svg, "<text x=\"([-\\d.]+)\" y=\"[-\\d.]+\" font-size=\"[\\d.]+\" (?:font-weight=\"bold\" )?text-anchor=\"middle\" data-pos=\"(\\d+)\">\\d+</text>")
             .ToDictionary(m => int.Parse(m.Groups[2].Value), m => double.Parse(m.Groups[1].Value));
 
     /// <summary>The bracket's vertical hooks (x1 == x2) tagged with the tuplet's source offset,

@@ -27,7 +27,8 @@ namespace LilySharp.Tests;
 
 /// <summary>
 /// The fret face a tab staff draws its digits in follows its STRING COUNT: six strings or
-/// more take the reduced face (em 2.3, regular weight), fewer keep the full one (2.8, bold),
+/// more take the reduced face (em 2.3), fewer keep the full one (2.8) — both in the regular
+/// weight since 2026-10-03 (session 780, the owner's decision; the full face was bold) —
 /// and a score's <c>fonts { tab … }</c> still wins over either default.
 /// </summary>
 /// <remarks>
@@ -78,6 +79,14 @@ public class TabFretFaceTests
     public void AFourStringTab_KeepsTheFullFace()
     {
         var face = Assert.Single(FretFaces(Svg(Bass)));
+        Assert.Equal(F2(TabConstants.FretFontSize), face.Size);
+        Assert.False(face.Bold);
+    }
+
+    [Fact]
+    public void AWrittenTabBold_BringsTheBoldFaceBack()
+    {
+        var face = Assert.Single(FretFaces(Svg("fonts { tab bold }\n" + Bass)));
         Assert.Equal(F2(TabConstants.FretFontSize), face.Size);
         Assert.True(face.Bold);
     }
