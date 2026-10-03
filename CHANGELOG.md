@@ -650,6 +650,12 @@ workflow attaches that section to the GitHub Release verbatim.
   stop sits on the first bar after the run — also when that bar restates a clef, key or
   meter, or opens the next section, where it used to be dropped. A two-bar body is now a
   `%%` in the file too, where it was only written out.
+- **A fermata on a full-measure rest stands over the rest.** `R@fermata` (and `R1*4@fermata`)
+  is LilyPond's multi-measure-rest script: centred on the rest symbol, which stands at the
+  bar's centre, and clear of its bar count. It stood at the bar's start, where a note would
+  be — one and a half spaces left of the rest (owner's report). Measured against LilyPond
+  2.26.0: the fermata's origin is the rest's centre to four decimals, 2.526 over the staff
+  middle; over an `R1*4` Lily# lands 0.046 higher than LilyPond, from the count number's box.
 - **Text on a multi-measure rest stands over it, as in LilyPond.** `R1*4@text("tacet")` (and
   `R1@text(…)`) is LilyPond's multi-measure-rest text: above the staff by default, centred on
   the rest, clear of its bar count. It printed below the staff at the bar's left edge, like

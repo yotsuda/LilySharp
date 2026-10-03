@@ -692,6 +692,20 @@ internal sealed partial class LayoutEngine
             ctx, score, systems, voicesByStaff, beamLayouts ?? default,
             articulations, ml, measuresByStaff, staffYAt, staffByIndex,
             measureToSystem, passMeasureMap);
+        // The multi-measure rests of this pass, laid out once and only when a script or a text
+        // written on an R asks for them (both passes, so the preliminary extents reserve what
+        // the final pass draws). The tail lays them out again for drawing.
+        ImmutableArray<MultiMeasureRestLayout>? passMmrLayouts = null;
+        ImmutableArray<MultiMeasureRestLayout> PassMmrLayouts() =>
+            passMmrLayouts ??= MultiMeasureRestEngraver.Calculate(score!, systems, _options.StaffHeight,
+                voicesByStaff: voicesByStaff, prebuiltMeasureMap: passMeasureMap,
+                staffByIndex: ctx.StaffByIndex);
+        // A script on an R is LilyPond's MultiMeasureRestScript: centred on the rest and sided
+        // off it and its count number, so it needs the rest laid out — BEFORE anything reads the
+        // scripts' positions (the diagrams' pass, the support skylines, the movers).
+        if (score != null && articulationLayouts.Any(static a => a.OnMultiMeasureRest))
+            articulationLayouts = ArticulationEngraver.PlaceOnMultiMeasureRests(
+                articulationLayouts, PassMmrLayouts(), articulations);
         // The chord diagrams an @chord chose stand over the staff's whole inside profile, not
         // just their note's heads and stem — BEFORE anything reads the scripts' positions
         // (the chord-name line over them, the movers, the lyric rows). 2026-09-28.
@@ -725,9 +739,7 @@ internal sealed partial class LayoutEngine
         // so the preliminary extents reserve what the final pass draws).
         if (score != null && dynamicLayouts.Any(static d => d.OnMultiMeasureRest))
             dynamicLayouts = DynamicEngraver.PlaceOnMultiMeasureRests(ctx.Fonts, dynamicLayouts,
-                MultiMeasureRestEngraver.Calculate(score, systems, _options.StaffHeight,
-                    voicesByStaff: voicesByStaff, prebuiltMeasureMap: passMeasureMap,
-                    staffByIndex: ctx.StaffByIndex));
+                PassMmrLayouts());
 
         // Detect and layout hairpins from cresc/decresc marks
         // The section carry rule's plays — the hairpin's since 2026-09-28, the text spanner's,

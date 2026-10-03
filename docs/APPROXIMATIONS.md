@@ -64,7 +64,7 @@
 ### `LilySharp.Core/Svg/Layout/AlignmentWalk.cs`
 - **:140** ⚠️ THE ONE LINE OF THAT BRANCH NOT PORTED is its dy,
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
-- **:718** that does not exist yet. Named, not silently approximated.
+- **:724** that does not exist yet. Named, not silently approximated.
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
 - **:112** ⚠️ The X test itself is NOT ported HERE: a row's ink X-range is not on StaffLayout.
 ### `LilySharp.Core/Svg/Layout/ChordNameGlyphRun.cs`
@@ -160,10 +160,10 @@
 ### `LilySharp.Core/Svg/Layout/ArpeggioEngraver.cs`
 - **:205** fixture carries one, so there is no ledger point and no twin — it is ported literally
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
-- **:366** hands the scorer the band it would have had without the digit. No book reaches that
-- **:2017** them as markup — so there is no LP geometry to port and no ledger point can observe
-- **:2185** see the difference, and no fixture and no ledger point reaches it.
-- **:2896** box per duration, which Lily# does not read for this purpose. No ledger point observes
+- **:372** hands the scorer the band it would have had without the digit. No book reaches that
+- **:2027** them as markup — so there is no LP geometry to port and no ledger point can observe
+- **:2195** see the difference, and no fixture and no ledger point reaches it.
+- **:2996** box per duration, which Lily# does not read for this purpose. No ledger point observes
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:111** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
@@ -183,8 +183,8 @@
 - **:863** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
 - **:1140** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
-- **:2455** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
-- **:2477** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
+- **:2467** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
+- **:2489** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
 - **:919** THE CLEAR HAS NO OBSERVER HERE, and that was measured rather than assumed. Session 457's
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
@@ -210,7 +210,7 @@
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
 - **:131** staff_extent[DOWN], which is the ink edge too. ⚠️ No ledger point measures
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
-- **:1944** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
+- **:1945** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **:502** same part (leftHand). No book reaches the configuration, so no ledger point and
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
@@ -373,11 +373,11 @@
 - **:856** ⚠️ LILYSHARP-OWN: ONE NOMINAL BOX FOR EVERY REST, WHICH LILYPOND DOES NOT HAVE. There a
 - **:956** a LILYSHARP-OWN divergence that had been measured and left because closing it redraws
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
-- **:121** LILYSHARP-OWN: the bend-up is Lily#'s own arrow-and-label device — LilyPond's guitar
-- **:127** X offset of a bend-up's curve from the fret digit on a TAB staff. LILYSHARP-OWN (above).
-- **:129** X gap between a bend-up's curve and the notehead's right edge. LILYSHARP-OWN (above).
-- **:131** X offset for a curve that arrives FROM THE LEFT (scoop/plop). LILYSHARP-OWN (above).
-- **:2389** LILYSHARP-OWN (2026-09-28, defect seen on the owner's "Shape chords" book: the Cm diagram's
+- **:127** LILYSHARP-OWN: the bend-up is Lily#'s own arrow-and-label device — LilyPond's guitar
+- **:133** X offset of a bend-up's curve from the fret digit on a TAB staff. LILYSHARP-OWN (above).
+- **:135** X gap between a bend-up's curve and the notehead's right edge. LILYSHARP-OWN (above).
+- **:137** X offset for a curve that arrives FROM THE LEFT (scoop/plop). LILYSHARP-OWN (above).
+- **:2489** LILYSHARP-OWN (2026-09-28, defect seen on the owner's "Shape chords" book: the Cm diagram's
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:128** LILYSHARP-OWN (owner's decision 2026-09-27: "the diagram stands below the name, between
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
@@ -426,9 +426,9 @@
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
 - **:456** ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's mark aligns to the BreakAlignGroup,
 - **:487** LILYSHARP-OWN (2026-09-28): see for
-- **:1067** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
-- **:1868** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
-- **:2163** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
+- **:1079** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
+- **:1880** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
+- **:2175** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
 - **:840** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
@@ -494,8 +494,8 @@
 ### `LilySharp.Core/Svg/Layout/NoteSpacingParameters.cs`
 - **:69** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
-- **:1196** system would hand back marks placed without the labels under them. LILYSHARP-OWN
-- **:3407** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
+- **:1197** system would hand back marks placed without the labels under them. LILYSHARP-OWN
+- **:3410** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
 ### `LilySharp.Core/Svg/Layout/PageBreaker.cs`
 - **:100** ⚠️ LILYSHARP-OWN: THE NULLABILITY. LilyPond's Line_details ALWAYS carries a shape —
 - **:154** LILYSHARP-OWN: the number itself has no LilyPond counterpart, because LilyPond's

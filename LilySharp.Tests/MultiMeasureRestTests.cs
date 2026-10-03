@@ -168,6 +168,42 @@ public class MultiMeasureRestTests
         Assert.False(Assert.Single(onNote.DynamicLayouts).IsAbove);
     }
 
+    /// <summary>
+    /// A fermata on an R is LilyPond's MultiMeasureRestScript, not a Script: centred on the rest
+    /// spanner (the whole-rest symbol stands at the bar's centre) and sided off it with the
+    /// script's own padding. MEASURED (LilyPond 2.26.0, scratch/R-fermata.ly, 2026-10-03): the
+    /// fermata's origin x is the whole rest's centre to four decimals (27.8567 both) and 2.526
+    /// over the staff middle — the staff ink 2.05 + the fermata's padding 0.40 + the glyph's
+    /// 0.076 below its origin. Until 2026-10-03 it stood at the bar's column, 1.5 left of the
+    /// rest (owner's report). Over an <c>R*4</c> (scratch/R4-fermata.ly, \compressMMRests) it
+    /// clears the count number the same way the text does — the number is the UP stack's first
+    /// support — and LilyPond puts it on 4.8845: the "4"'s ink top 4.408 + 0.40 + 0.076.
+    /// ⚠️ Lily# lands 0.046 over that, from the count box alone: <see cref="MultiMeasureRestEngraver.NumberInkBox"/>
+    /// gives the digit 2.004 of height where LilyPond's "4" has 1.958 (the text over the same
+    /// number carries the same +0.011..0.05); the range pins it so a change to it is seen.
+    /// </summary>
+    [Theory]
+    [InlineData("R@fermata |", 2.526, 0.002)]
+    [InlineData("R1@fermata |", 2.526, 0.002)]
+    [InlineData("R*4@fermata |", 4.8845, 0.05)]
+    public void Layout_FermataOnAnR_IsMultiMeasureRestScript(string music, double lilyPond, double residual)
+    {
+        var (_, layout) = BuildLayout(music);
+        var rest = Assert.Single(layout.MultiMeasureRestLayouts);
+        var fermata = Assert.Single(layout.ArticulationLayouts);
+        Assert.True(fermata.IsAbove);
+        Assert.True(fermata.OnMultiMeasureRest);
+        Assert.Equal((rest.StartX + rest.EndX) / 2.0, fermata.X, 6);
+        Assert.InRange(fermata.YUp, lilyPond - 0.002, lilyPond + residual);
+        Assert.Equal(ArticulationEngraver.MmrScriptOutsideStaffPriority, fermata.OutsideStaffPriority);
+        // A fermata on an ordinary whole rest is the Script it always was: on the rest's column,
+        // which is not the bar's centre.
+        var (_, onRest) = BuildLayout("r1@fermata |");
+        var script = Assert.Single(onRest.ArticulationLayouts);
+        Assert.False(script.OnMultiMeasureRest);
+        Assert.NotEqual(fermata.X, script.X, 3);
+    }
+
     /// <summary>The count's box, the MultiMeasureRestText's support, stands 0.4 over the staff's
     /// outer line INK, 2.45 over the middle, as LilyPond 2.26 draws the number — and so does
     /// the drawn number (<see cref="TheDrawnCountNumber_StandsOnTheSameBaseline"/>).</summary>

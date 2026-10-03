@@ -573,7 +573,7 @@ internal static class DynamicEngraver
     /// <c>empty_skyline</c> / <c>single_skyline</c> (skyline.cc:259-282) — so this is back to
     /// what <c>set_minimum_height</c> says: no horizon at all, the whole dim is raised.
     /// </remarks>
-    private static (VerticalSkyline Up, VerticalSkyline Down) StaffFloorSupport()
+    internal static (VerticalSkyline Up, VerticalSkyline Down) StaffFloorSupport()
         => (VerticalSkyline.FromBox(
                 double.NegativeInfinity, double.PositiveInfinity,
                 StaffExtent, StaffExtent, VerticalDirection.Up),

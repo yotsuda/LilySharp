@@ -56,7 +56,7 @@ internal readonly record struct ArticulationLayout(
     // this number (lily/stencil-integral.cc:881-893), so every consumer of the profile sees
     // a shape up to 2× the glyph's own width. See ArticulationSpacing.SkylineHorizontalPadding.
     double SkylineHorizontalPadding = 0.0,
-    double? OutsideStaffPriority = null // The script's outside-staff-priority (the
+    double? OutsideStaffPriority = null, // The script's outside-staff-priority (the
                             // fermata family's DECLARED 75), or null for the scripts that
                             // declare none — LilyPond's #f, which is not a zero (a grob
                             // declaring 0 would be the first MOVER placed). Baked from the
@@ -68,6 +68,12 @@ internal readonly record struct ArticulationLayout(
                             // A script WITH a priority is a mover in the outside-staff
                             // collision pass, one without seeds the occupancy the movers
                             // clear. See ArticulationSpacing.OutsideStaffPriority.
+    // True for a script written on an R — LilyPond's MultiMeasureRestScript, a grob of its own:
+    // centred on the rest spanner, sided off it and its count, priority 40, outside-staff-padding
+    // 0. Set by the engraver, read by PlaceOnMultiMeasureRests (which re-places it once the rest
+    // is laid out) and by the outside-staff stacker (its own padding).
+    // LILYPOND-REF: scm/define-grobs.scm:2450-2463 MultiMeasureRestScript — outside-staff-priority 40, outside-staff-padding 0, parent-alignment-X CENTER
+    bool OnMultiMeasureRest = false
 );
 
 /// <summary>
@@ -1234,7 +1240,11 @@ internal static class ArticulationEngraver
                 StaffIndex: effArt.StaffIndex,
                 SkylineHorizontalPadding:
                     ArticulationSpacing.SkylineHorizontalPadding(effArt.Type),
-                OutsideStaffPriority: ArticulationSpacing.OutsideStaffPriority(effArt)
+                OutsideStaffPriority: ArticulationSpacing.OutsideStaffPriority(effArt),
+                // A script on an R is a MultiMeasureRestScript: PlaceOnMultiMeasureRests moves it
+                // onto the rest once the rest's span is known. The column answer made here stands
+                // until then (and for a book whose rests are never laid out).
+                OnMultiMeasureRest: item is RestItem { IsMultiMeasure: true }
             );
 
             // A tie starting or ending on this note supports this script: pointwise
@@ -2261,6 +2271,96 @@ internal static class ArticulationEngraver
         var (bUp, bDown) = FallbackBoxSkylines(a, anchorY, magnification);
         return extraPad > 0.0 ? (bUp.Padded(extraPad), bDown.Padded(extraPad)) : (bUp, bDown);
     }
+
+    /// <summary>
+    /// Places the scripts written on an <c>R</c> — LilyPond's MultiMeasureRestScript, a grob of
+    /// its own — once the rests are laid out: X centred on the rest spanner (the symbol stands at
+    /// the bar's centre, so the fermata stands over the rest, not over the bar's column), Y sided
+    /// off the rest and its count number with the script's own padding, floored by its
+    /// staff-padding, and the outside-staff clearance of the number at the grob's own padding, 0.
+    /// The same chain as <see cref="DynamicEngraver.PlaceOnMultiMeasureRests"/>'s for the text.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/multi-measure-rest-engraver.cc:133-147 initialize_grobs — one
+    ///   MultiMeasureRestScript per articulation event, its properties from script.scm
+    ///   (make_script_from_event: the fermata's padding 0.40); :169-189 Side_position_interface::add_support —
+    ///   the UP grobs are stacked, each a side support of the next (the count number, text_[0],
+    ///   first), and every one has the rest as support and as X and Y parent.
+    /// LILYPOND-REF: scm/define-grobs.scm:2450-2463 MultiMeasureRestScript — X-offset aligned-on-x-parent
+    ///   with parent-alignment-X and self-alignment-X CENTER (centred on the rest's stencil),
+    ///   Y-offset side-position-interface::y-aligned-side, staff-padding 0.25.
+    /// LILYPOND-REF: lily/multi-measure-rest.cc:66-85 print — the symbol is centred in bar_width,
+    ///   so the spanner's X centre is the bar's (SharedRenderer.DrawChurchRest's cx).
+    /// LILYPOND-REF: lily/side-position-interface.cc:217-220,323-330 include_staff — the staff
+    ///   symbol is a support when staff-padding is a number; :433-452 Side_position_interface::aligned_side
+    ///   — the staff-padding floor from the refpoint.
+    /// LILYPOND-REF: lily/axis-group-interface.cc:745-750,798-800 avoid_outside_staff_collisions — the
+    ///   outside-staff pass clears the number's ink by the grob's own outside-staff-padding (0 here).
+    /// MEASURED (LilyPond 2.26.0, scratch/R-fermata.ly, 2026-10-03): <c>R1-\fermata</c> puts the
+    ///   fermata's origin on the whole rest's centre to four decimals (27.8567 both) and 2.526
+    ///   over the staff middle — the staff ink 2.05 + padding 0.40 + the glyph's 0.076 below its
+    ///   origin. Until 2026-10-03 the fermata stood at the bar's column, 1.5 left of the rest
+    ///   (owner's report, scratch/R-fermata.lys).
+    /// </remarks>
+    internal static ImmutableArray<ArticulationLayout> PlaceOnMultiMeasureRests(
+        ImmutableArray<ArticulationLayout> layouts, ImmutableArray<MultiMeasureRestLayout> rests,
+        ImmutableArray<ArticulationItem> articulations)
+    {
+        if (layouts.IsDefaultOrEmpty || rests.IsDefaultOrEmpty)
+            return layouts;
+        ImmutableArray<ArticulationLayout>.Builder? placed = null;
+        for (int i = 0; i < layouts.Length; i++)
+        {
+            var a = layouts[i];
+            if (!a.OnMultiMeasureRest)
+                continue;
+            // The staff's rest that opens at the script's bar — the counted one when voices share it.
+            MultiMeasureRestLayout? found = null;
+            foreach (var r in rests)
+                if (r.StartMeasureIndex == a.MeasureIndex && (r.StaffIndex == a.StaffIndex || r.StaffIndex < 0)
+                    && (found is null || (r.DrawsCount && !found.Value.DrawsCount)))
+                    found = r;
+            if (found is not { } rest)
+                continue;
+            var type = a.SourceIndex >= 0 && a.SourceIndex < articulations.Length
+                ? articulations[a.SourceIndex].Type : ArticulationType.Fermata;
+
+            double cx = (rest.StartX + rest.EndX) / 2.0;
+            double dir = a.IsAbove ? 1.0 : -1.0;
+            var centred = a with { X = cx };
+            // The side facing the supports: the script's outline placed with its origin at 0.
+            var mine = ScriptSkyline(centred, 0.0, a.IsAbove ? VerticalDirection.Down : VerticalDirection.Up);
+            var (floorUp, floorDown) = DynamicEngraver.StaffFloorSupport();
+            // The count number is the first UP grob of the stack, so an UP script's support.
+            VerticalSkyline? numberSky = null;
+            if (rest.MeasureCount > 1 && rest.DrawsCount && dir > 0)
+            {
+                var nb = MultiMeasureRestEngraver.NumberInkBox(rest.MeasureCount, cx, DynamicEngraver.StaffExtent);
+                numberSky = VerticalSkyline.FromBox(nb.Left, nb.Right, nb.Bottom, nb.Top, VerticalDirection.Up);
+                floorUp.Merge(numberSky);
+            }
+            // aligned_side: the supports' distance, the padding, then the staff-padding floor.
+            double off = dir * (dir > 0 ? mine.Distance(floorUp) : mine.Distance(floorDown));
+            off += dir * ArticulationSpacing.VerticalPadding(type);
+            off += dir * Math.Max(DynamicEngraver.StaffExtent + ArticulationSpacing.StaffPadding(type) - dir * off, 0.0);
+            // The outside-staff pass: clear the number's INK by the grob's own padding (0).
+            if (numberSky != null)
+                off = Math.Max(off, mine.Distance(numberSky, OutsideStaffStacker.OutsideStaffHorizontalPadding)
+                                    + MmrScriptOutsideStaffPadding);
+            (placed ??= layouts.ToBuilder())[i] = centred with
+            {
+                YUp = off,
+                OutsideStaffPriority = MmrScriptOutsideStaffPriority,
+            };
+        }
+        return placed?.MoveToImmutable() ?? layouts;
+    }
+
+    /// <summary>The MultiMeasureRestScript's declared outside-staff-priority (a Script's fermata
+    /// declares 75) and outside-staff-padding (a Script takes the 0.46 default).</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2453-2454 MultiMeasureRestScript outside-staff-padding 0, outside-staff-priority 40.</remarks>
+    internal const double MmrScriptOutsideStaffPriority = 40.0;
+    internal const double MmrScriptOutsideStaffPadding = 0.0;
 
     /// <summary>
     /// The same profile merged straight into <paramref name="target"/> at this script's

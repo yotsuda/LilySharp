@@ -429,7 +429,8 @@ internal static class OutsideStaffStacker
                     && staffYBySystem[sysIdx].TryGetValue(a.StaffIndex, out var so2) ? so2 : 0;
                 double aYup = a.YUp - off - EngravingDefaults.StaffMiddle;
                 var (myUp, myDown) = ArticulationEngraver.ScriptSkylines(a, aYup);
-                double move = Track(sysIdx, a.StaffIndex).Place(myUp, myDown, OutsideStaffPadding);
+                double move = Track(sysIdx, a.StaffIndex).Place(myUp, myDown,
+                    a.OnMultiMeasureRest ? ArticulationEngraver.MmrScriptOutsideStaffPadding : OutsideStaffPadding);
                 if (move != 0)
                     artBuilder[i] = a with { YUp = a.YUp + move };
             }
@@ -2378,8 +2379,10 @@ internal static class OutsideStaffStacker
             var (myUp, myDown) = ArticulationEngraver.ScriptSkylines(a, a.YUp + midUp);
             // Script declares no outside-staff-horizontal-padding, so the horizon padding
             // is the 0.0 default (its horizon-padding 0.1 is aligned_side's, spent by the
-            // engraver, not this pass's).
-            double move = trackers(sysIdx, a.StaffIndex).Place(myUp, myDown, OutsideStaffPadding);
+            // engraver, not this pass's). A MultiMeasureRestScript declares its own —
+            // LILYPOND-REF: scm/define-grobs.scm:2453 MultiMeasureRestScript outside-staff-padding 0.
+            double move = trackers(sysIdx, a.StaffIndex).Place(myUp, myDown,
+                a.OnMultiMeasureRest ? ArticulationEngraver.MmrScriptOutsideStaffPadding : OutsideStaffPadding);
             if (move != 0)
                 b[i] = a with { YUp = a.YUp + move };
         }
