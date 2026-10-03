@@ -89,7 +89,13 @@ function Expand-Examples([string]$body) {
         $name = $m.Groups[1].Value
         $lys = Join-Path $here "examples/$name.lys"
         $svg = "examples/$name.svg"
-        if (-not (Test-Path $lys)) { throw "No example named '$name' (looked for $lys)" }
+        if (-not (Test-Path $lys)) {
+            # A gallery picture (build-site.ps1's $pictures, drawn from site/NAME.lys) is shown
+            # the same way, source and all, so no engraving on a page is left without its file.
+            $lys = Join-Path $here "$name.lys"
+            $svg = "$name.svg"
+        }
+        if (-not (Test-Path $lys)) { throw "No example named '$name' (looked for examples/$name.lys and $name.lys)" }
         $src = (Get-Content $lys -Raw -Encoding UTF8).TrimEnd().
             Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;')
         @"
