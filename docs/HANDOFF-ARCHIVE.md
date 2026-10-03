@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第779セッションの経緯
+
+### 1.1 第779セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き・ユーザー報告「`bohemian-rhapsody.lys` の `score "tab2"` の G セクション先頭で `key ees` と `time 12/8` の x が重なる・12/8 が 2 つ重複して描かれる」。`-Start p779`（HEAD `2ca43fc8`・未 push 19）＝full **10931 / 0 / 2 / 10933**。§7 3.5 で第777 を ARCHIVE へ。本は Lab `sessions/p779/repro/`（写し・最小再現 `dup.lys`・before／after の png）。
+- **正体**: `condensedStaff { violins1 violins2 }` は両 part の声部を連結しただけ（`RenderSpec.BuildStaffGroups`）で、各 part が自分で歩いた `time 12/8`（section header）の change item を両方持ち、頁は 2 本描く。G では violins1 の section に `key ees major` が無く home の bes へ戻る change（♮♭♭）が声部 0 に、violins2 の `key ees major`（F から同じ調＝item 無し）…最小再現では後の part だけの key が声部 1 に残り、break-align の列は声部 0 しか読まないので 12/8 の上に重なった。`combinedStaff` は合成器が 1 本に書き直すので無事。
+- **直した（commit 下記）**: `MeasureCollector.JunkCondensedStaffDuplicateChanges`＝声部を束ねる前に、最初の part の change が同じ瞬間に在れば後の part の change を落とす（同じなら黙って・違えば LYS4024「not applied」）、後の part だけが書いた change は最初の part の声部 0 へ移す（staff の物＝LP の Staff にどの voice の event も届く）。LP の規則＝`Key_engraver::listen_key_change` の `assign_event_once`（最初が勝ち・同じ event は無言・違えば "conflict with event"）。**調が食い違う瞬間**（各 part の opening key＋自分の key change の timeline を比べる）は LYS4024 の 2 つ目の文「from here parts X and Y are in different keys (X: 2 flats, Y: 3 flats)」＝頁は 1 つの調号しか示せず、各 part の臨時記号は自分の調で綴られている（collect 時）＝本の側で揃えてもらう。新 validator `CondensedStaffChangeValidator` は **condensedStaff を持つ全 score を集める**（最初の score の shared collect だけでは `tab2` が見えない）。網 `CondensedStaffTests` 3 本・文書 GRAMMAR／GRAMMAR_FOR_LLM／CHANGELOG。
+- 本: tab2 の G は「♮♭♭ ＋ 12/8 が 1 本」になり、`lysc check` が (136,11)＝violins1 の `section G {` に LYS4024（violins1: 2 flats・violins2: 3 flats）＝**本の側**: violins1 の section G に `key ees major` が無い（他の 4 part には在る）＝ユーザーに伝えた。
+- 掃き（svg・998 冊・base＝p778 exe・head＝p779・`sessions/p779/svg/sweep.log`）: **差 1**＝`corpora/ベースタブLy/partial.lys`（condensed の両 part が同じ瞬間に `time 2/4`＝2 本重なっていたのが 1 本・絵は同じ・`probes/partial/`）。
+★ `-End p779 -DiffBase 2ca43fc8`＝full **10934 / 0 / 2 / 10936**（網 +3）・門 全 OK（HANDOFF 残り 6,547 B・§1 残り 9,189 字・棚卸し `APPROXIMATIONS.md` 行番号 2 行＝増減 0・CRLF に揃え直した）。7.5: Core `+` 366 行＝`JunkCondensedStaffDuplicateChanges`／`JunkOnOneCondensedStaff`（約 190・註含む）＋ `CondensedStaffChangeValidator`（新規・約 80）＋ 警告 record・LYS4024 の文書・REF 4（key-engraver.cc `listen_key_change`・stream-event.hh `assign_event_once`・stream-event.cc `warn_reassign_event_ptr` ×2 か所）・OWN 0。7.6: ⒝ LP の規則（同じ timestep の 2 つ目の event は junk・同じなら無言）を頁の item に組み替えた＝字面にならないのは Lily# が event ではなく measure の item で持つため／「後の part だけの change を声部 0 へ移す」は LP の「どの voice の event も Staff に届く」の帰結／「調の食い違いの警告」は LP に対応物無し（LP は Staff で臨時記号を綴るので食い違い自体が起きない）＝警告の文に書いた。7.7: 臨時記号の綴り直しはしていない（上の残り）・`time`／`clef` の食い違いの警告は junk の形だけ（bar の長さの食い違いは MeasureValidator の cross-part が見る）。commit `02f6a059`（code）。push はユーザー。
+判定: 報告は閉じた（12/8 の重複・key と time の重なり）。残り: 調が食い違う condensed staff の臨時記号は各 part の調のまま（LP は Staff の Accidental_engraver が 1 つの調で綴る）＝警告で本の側に返す設計・直すなら condensed の声部の臨時記号を staff の調で綴り直す（§1.0 ⒝ に起票しない＝ユーザー判断待ちの小さな観察としてここに置く）。次の一手: §1.0 ⒜ の残り（lead sheet の label と拍子の重なり・小）か ⒝ の設計級＝ユーザー判断。会話を区切るか: (b) 便が 4 つ続いて文脈は重い＝**区切ってよい**（続けるなら `-Start p780`）。
+
 ## 以下は第778セッションの経緯
 
 ### 1.1 第778セッション（2026-10-03・YT-DELL2）
