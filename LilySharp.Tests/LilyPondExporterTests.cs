@@ -2623,6 +2623,29 @@ public class LilyPondExporterTests
         Assert.DoesNotContain("d1:m", track);
     }
 
+    // The same family one step on: a row SHORT of its section is padded with silent bars,
+    // and those too have to be the section's length (`s2.` beside `c2.`), not the score's.
+    [Fact]
+    public void ByPartChordRow_ShortOfASectionInAnotherMeter_IsPaddedInThatMeter()
+    {
+        var ly = Export("""
+            time 4/4
+            key c major
+            part m { clef treble }
+            section A { m { c1 | } }
+            section B { time 3/4 m { c2. | c2. | } }
+            chords prog { section A { C | } section B { Dm | } }
+            form main { A B }
+            score main { chords prog  staff m }
+            """);
+        int chords = ly.IndexOf("progChords = \\chordmode {");
+        Assert.True(chords >= 0, ly);
+        string track = ly[chords..ly.IndexOf("}\n", chords)];
+        Assert.Contains("d2.:m |", track);
+        Assert.Contains("s2. |", track);
+        Assert.DoesNotContain("s1 |", track);
+    }
+
     // The file's `tempo` and the first played section's header `tempo` stand at one moment;
     // LilyPond keeps one tempo event per moment and discards the second with a warning
     // ("conflict with event: tempo-change-event"), which was the SECTION's — the one the page

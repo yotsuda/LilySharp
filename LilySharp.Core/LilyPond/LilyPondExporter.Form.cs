@@ -467,6 +467,19 @@ public sealed partial class LilyPondExporter
     /// the first cut used the page's syntactic count and wrote 48 spurious bars after
     /// canon-in-d's <c>repeat unfold 13</c>.
     /// </remarks>
+    /// <summary>The section a chord container belongs to: the container itself when it is
+    /// a by-part track's inner section, else the section enclosing the flat block; null
+    /// for a block at top level.</summary>
+    private static SectionDeclarationSyntax? SectionOf(SyntaxNode container)
+    {
+        if (container is SectionDeclarationSyntax own)
+            return own;
+        for (var n = container.Parent; n != null; n = n.Parent)
+            if (n is SectionDeclarationSyntax s)
+                return s;
+        return null;
+    }
+
     private IEnumerable<SyntaxNode> PaddingBars(SyntaxNode container)
     {
         int missing = _sectionBars.Missing(container, out bool open);
@@ -477,7 +490,14 @@ public sealed partial class LilyPondExporter
         {
             if (open)
                 yield return CreateBarline(SyntaxKind.Bar, "|", position, 0);
+            // The missing bars are as long as the MUSIC's last bar of the section
+            // (SectionBarMeters: the header's meter, moved by any `time` the music writes) —
+            // not the score's, which a row short of a 3/4 section was padded with until
+            // 2026-10-03 (`s1` beside `c2.`, the same family as the bars it did write).
             var meter = _bars.HomeMeter.Length;
+            if (SectionOf(container) is { } section
+                && SectionBarMeters(section, section.SectionName) is { Count: > 0 } meters)
+                meter = meters[^1];
             for (int i = 0; i < missing; i++)
             {
                 yield return new ChordBarMarker("s" + ChordModeDuration(meter));

@@ -360,7 +360,8 @@ workflow attaches that section to the GitHub Release verbatim.
 - **The LilyPond twin of a lead sheet compiles without warnings in two more shapes.** A
   by-part chord track (`chords prog { section Bridge { … } }`) under a section whose header
   changes the meter wrote its bars in the score's meter (`d1:m` under a 3/4 bridge), and
-  LilyPond's bar check failed there; the bars now take the section's. A file-level `tempo`
+  LilyPond's bar check failed there; the bars now take the section's, and so do the
+  silent bars that pad a row shorter than its section. A file-level `tempo`
   beside a `tempo` in the first played section's header put two tempo events at one moment,
   and LilyPond discarded the section's with a warning; the twin now writes the section's
   alone, which is what the page shows and the MIDI plays.
