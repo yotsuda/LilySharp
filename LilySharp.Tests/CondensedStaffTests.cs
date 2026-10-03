@@ -94,6 +94,90 @@ public class CondensedStaffTests
         Assert.Equal(1, StaffCount(Svg(TwoParts("condensedStaff { fl1 fl2 }"))));
     }
 
+    /// <summary>Two parts, both opening section B with the header's <c>time 12/8</c>; the
+    /// second also with a <c>key</c> the first does not write. One staff takes one meter
+    /// and one key at a moment (session 779).</summary>
+    private static string ChangesInBothParts(string secondPartKey, string firstPartKey = "") => Defaults + $$"""
+        key bes major
+        part a { clef treble }
+        part b { clef treble }
+        section A {
+          a { bes'4 bes' bes' bes' | }
+          b { d'4 d' d' d' | }
+        }
+        section B {
+          a { {{firstPartKey}} time 12/8 ees'4. g'4 aes'8 bes'4 c''8 d'' ees''4 | }
+          b { {{secondPartKey}} time 12/8 g4. g4 g8 g4 g8 g g4 | }
+        }
+        form main { ~A ~B }
+        """ + "\n";
+
+    private static LilySharp.Core.Svg.Model.Staff CondensedStaffOf(string source)
+    {
+        var tree = TestPaper.ParseAtIndentZero(source + "score main { condensedStaff { a b } }\n");
+        var spec = LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree)!;
+        return new LilySharp.Core.Svg.Collector.MeasureCollector().CollectMultiStaff(tree, spec).StaffGroups[0].Staves[0];
+    }
+
+    [Fact]
+    public void TheSectionsMeter_WrittenByBothParts_StandsOnceOnTheStaff()
+    {
+        // Until session 779 the staff — both parts' voices concatenated — drew 12/8 twice,
+        // side by side (the owner's bohemian-rhapsody, section G of its tab2 score).
+        var staff = CondensedStaffOf(ChangesInBothParts(""));
+        var meters = staff.Voices.SelectMany(v => v.Measures[1].Items.OfType<LilySharp.Core.Svg.Model.TimeSignatureChangeItem>()).ToList();
+        var meter = Assert.Single(meters);
+        Assert.Equal((12, 8), (meter.NewTime.Beats, meter.NewTime.BeatType));
+        // …on the FIRST part's voice; and nothing is said, since nothing of value was lost.
+        Assert.Contains(meter, staff.Voices[0].Measures[1].Items);
+        Assert.DoesNotContain(Diagnose(ChangesInBothParts("") + "score main { condensedStaff { a b } }\n"),
+            d => d.Code == DiagnosticCodes.CondensedStaffChangeConflict);
+    }
+
+    [Fact]
+    public void AKeyOnlyTheLaterPartWrites_ReachesTheStaff_AndTheDisagreementWarns()
+    {
+        // Part b writes `key ees major` where part a (first) stays in the home key. The change
+        // reaches the staff — on the FIRST part's voice, where the break-align column reads it
+        // (left on b's voice it was drawn over the meter) — and from there the two parts stand
+        // in different keys, which LYS4024 says at b's `key`.
+        var source = ChangesInBothParts("key ees major");
+        var staff = CondensedStaffOf(source);
+        var change = Assert.Single(staff.Voices.SelectMany(v => v.Measures[1].Items.OfType<LilySharp.Core.Svg.Model.KeySignatureChangeItem>()));
+        Assert.Equal(-3, change.NewKey.Sharps);
+        Assert.Contains(change, staff.Voices[0].Measures[1].Items);
+        var warning = Assert.Single(Diagnose(source + "score main { condensedStaff { a b } }\n"),
+            d => d.Code == DiagnosticCodes.CondensedStaffChangeConflict);
+        Assert.Equal(DiagnosticSeverity.Warning, warning.Severity);
+        Assert.Contains("different keys ('a': 2 flats, 'b': 3 flats)", warning.Message);
+        int keyAt = source.IndexOf("key ees major", System.StringComparison.Ordinal);
+        Assert.InRange(warning.Span.Start, keyAt, keyAt + "key ees major".Length);
+        // Two separate staves apply both, and nothing warns.
+        Assert.DoesNotContain(Diagnose(source + "score main { staff a staff b }\n"),
+            d => d.Code == DiagnosticCodes.CondensedStaffChangeConflict);
+    }
+
+    [Fact]
+    public void ALaterPartsDifferentKey_AtTheFirstPartsOwn_IsNotApplied_AndWarns()
+    {
+        // Both parts change key at bar 2 and disagree: the first part's stands (LilyPond's
+        // Staff keeps the first key event of a timestep), b's is junked and warns.
+        var source = ChangesInBothParts("key f major", firstPartKey: "key ees major");
+        var staff = CondensedStaffOf(source);
+        var change = Assert.Single(staff.Voices.SelectMany(v => v.Measures[1].Items.OfType<LilySharp.Core.Svg.Model.KeySignatureChangeItem>()));
+        Assert.Equal(-3, change.NewKey.Sharps);
+        var warnings = Diagnose(source + "score main { condensedStaff { a b } }\n")
+            .Where(d => d.Code == DiagnosticCodes.CondensedStaffChangeConflict).ToList();
+        int keyAt = source.IndexOf("key f major", System.StringComparison.Ordinal);
+        Assert.Contains(warnings, w => w.Message.Contains("'key' of part 'b' is not applied")
+            && w.Span.Start >= keyAt && w.Span.Start <= keyAt + "key f major".Length);
+        // …and the same keys in both parts: one change, nothing said.
+        var agreed = ChangesInBothParts("key ees major", firstPartKey: "key ees major");
+        Assert.Single(CondensedStaffOf(agreed).Voices.SelectMany(v => v.Measures[1].Items.OfType<LilySharp.Core.Svg.Model.KeySignatureChangeItem>()));
+        Assert.DoesNotContain(Diagnose(agreed + "score main { condensedStaff { a b } }\n"),
+            d => d.Code == DiagnosticCodes.CondensedStaffChangeConflict);
+    }
+
     [Fact]
     public void BothPartsAreEngraved_NotJustTheFirst()
     {

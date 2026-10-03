@@ -97,6 +97,17 @@ public record NavigationMarkPlacementWarning(int SourcePosition, string MarkText
 /// points at the mark; <see cref="Label"/> is the section label that stands in its place.</summary>
 public record ShadowedRehearsalMarkWarning(int SourcePosition, string MarkText, string Label);
 
+/// <summary>Two shapes of one fault on a condensed staff (LYS4024,
+/// <c>MeasureCollector.JunkCondensedStaffDuplicateChanges</c>). <see cref="Junked"/>: a
+/// <c>key</c>, <c>time</c> or <c>clef</c> change a LATER part writes at a moment where the
+/// first part already wrote a DIFFERENT one of that kind — the first stands, this one is not
+/// applied (an equal one is dropped in silence). Not junked: from this change on, the two
+/// parts stand in different KEYS (<see cref="FirstKey"/> / <see cref="PartKey"/>, in words),
+/// so the one signature the staff shows cannot be right for both parts' accidentals.
+/// <see cref="Kind"/> is the word written: "key", "time" or "clef".</summary>
+public record CondensedStaffChangeWarning(int SourcePosition, string Kind, string PartName, string FirstPart,
+    bool Junked, string? FirstKey = null, string? PartKey = null);
+
 /// <summary>
 /// A tie (<c>~</c>) whose immediately following timed item cannot receive it — a
 /// note/chord repeating none of the tied pitches, or an audible rest. A tie joins

@@ -1510,7 +1510,12 @@ CondensedStaff = 'condensedStaff' , '{' , PartRef , PartRef , { PartRef } , '}' 
                       score parts { staff fl1  staff fl2 }
 
                     This is plain condensation. Unisons are NOT merged into one notehead and
-                    no "a2"/"Solo" text is printed — that is `combinedStaff`, below. *)
+                    no "a2"/"Solo" text is printed — that is `combinedStaff`, below.
+
+                    One staff takes ONE key, meter and clef at a moment: where every part
+                    writes the section's `time 12/8`, it is drawn once; where a later part
+                    writes a `key` / `time` / `clef` that differs from the first part's at
+                    the same moment, the first part's stands and the other warns (LYS4024). *)
 
 CombinedStaff  = 'combinedStaff' , '{' , PartRef , PartRef , '}' ;
                  (* The part COMBINER: exactly two parts on one staff, merged wherever they

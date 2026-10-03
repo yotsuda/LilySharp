@@ -371,6 +371,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A condensed staff takes one meter, one key and one clef at a moment.** Every part of a
+  `condensedStaff { a b }` walked its own music, so a section header's `time 12/8` was drawn
+  once per part, side by side, and two parts' `key` changes at one bar were drawn on top of
+  each other (an owner's string arrangement, at a 12/8 section of its condensed score). The
+  first part's change now stands; a later part's equal change is dropped in silence, and a
+  different one is not applied and warns (LYS4024) — the rule LilyPond's staff applies to
+  simultaneous key events.
 - **A lead sheet with no staff takes its pickup.** A score of chord or lyric rows alone
   (`score grid { chords prog }`) drew a section header's `partial` as a whole bar — the
   pickup as wide as the others, numbered 1, so the second system of `samples/amazing-grace`'s

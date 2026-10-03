@@ -1306,6 +1306,20 @@ public static class DiagnosticCodes
     /// decision, session 645: the same rule as <see cref="RehearsalMarkShadowedBySectionLabel"/>.
     /// </para></summary>
     public const string DoubleDynamic = "LYS4022";
+    /// <summary>Warning: a <c>key</c>, <c>time</c> or <c>clef</c> change in a LATER part of a
+    /// <c>condensedStaff { … }</c>, at a moment where an earlier part of the same staff already
+    /// wrote a DIFFERENT change of that kind. One staff takes one key, one meter and one clef
+    /// at a moment — the first part's — so this one is not applied, and this says so at it.
+    /// An equal change (both parts write the section's <c>time 12/8</c>) is dropped in silence.
+    /// <para>
+    /// LILYPOND-REF: lily/key-engraver.cc:125-130 Key_engraver::listen_key_change — one key event
+    /// a timestep, kept by assign_event_once; lily/stream-event.cc:103-117 warn_reassign_event_ptr
+    /// — an equal event is dropped without a word, a different one warns "conflict with event" /
+    /// "discarding event". The rule <see cref="DoubleDynamic"/> follows for a note's second dynamic.
+    /// Until 2026-10-03 the page drew both parts' changes side by side (the meter twice, two keys
+    /// on top of each other — the owner's bohemian-rhapsody, section G of its <c>tab2</c> score).
+    /// </para></summary>
+    public const string CondensedStaffChangeConflict = "LYS4024";
     /// <summary>A slur, phrasing slur, tie or hairpin — and, since 2026-09-29, a text spanner,
     /// ottava, pedal or trill span — that breaks the SECTION CARRY RULE
     /// (owner's decisions, 2026-09-28): a span open when a section ends is carried into the

@@ -433,6 +433,11 @@ public sealed partial class MeasureCollector
     /// the label instead. So LYS4019 stays silent about it and this list says what happened.
     /// </remarks>
     public IReadOnlyList<ShadowedRehearsalMarkWarning> ShadowedRehearsalMarks => _shadowedRehearsalMarks;
+    private readonly List<CondensedStaffChangeWarning> _condensedStaffChangeWarnings = new();
+    /// <summary>Key / time / clef changes a condensed staff's later part wrote where an earlier
+    /// part's DIFFERENT change of the same kind already stands (LYS4024) — recorded by
+    /// <see cref="JunkCondensedStaffDuplicateChanges"/>, surfaced by <c>CondensedStaffChangeValidator</c>.</summary>
+    public IReadOnlyList<CondensedStaffChangeWarning> CondensedStaffChangeWarnings => _condensedStaffChangeWarnings;
 
     /// <summary>
     /// Records, from the score this collect produced, every rehearsal mark that
@@ -1940,6 +1945,9 @@ public sealed partial class MeasureCollector
         // A combinedStaff also reports how it re-addressed its parts, because building it
         // is where the two streams are rewritten (see CombinedStaffAddressing).
         var combinedAddressings = new List<CombinedStaffAddressing>();
+        // A condensed staff's parts each walked their own key / time / clef: one staff
+        // takes one of each at a moment (the first part's), the rest are junked here.
+        JunkCondensedStaffDuplicateChanges(renderSpec, staffVoices, voiceKeyDict);
         var staffGroups = renderSpec.ToStaffGroups(name =>
             staffVoices.TryGetValue(name, out var v) ? v
                 : ImmutableArray.Create(new Voice(name, ImmutableArray<Measure>.Empty)),
@@ -2750,6 +2758,242 @@ public sealed partial class MeasureCollector
         return table;
     }
 
+    /// <summary>
+    /// ONE key, ONE time, ONE clef at a moment on a condensed staff. Every part of a
+    /// <c>condensedStaff { a b }</c> walked its own music, so each wrote the section header's
+    /// <c>time 12/8</c> (and its own <c>key</c>) as a change item of its own, and the staff —
+    /// which is both parts' voices concatenated — drew the meter twice and the two keys on
+    /// top of each other (the owner's bohemian-rhapsody, section G of its <c>tab2</c> score,
+    /// 2026-10-03). Here the FIRST part's change at a moment stands and a later part's change of
+    /// the same kind at the same moment is removed: in silence when it is the same change,
+    /// recorded for LYS4024 when it differs (the second part's music was spelled under its own
+    /// key by the collect; the staff shows the first part's — the warning is what tells the
+    /// writer to make the two agree). A part's own extra voices are its own business.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/key-engraver.cc:125-130 Key_engraver::listen_key_change — one key
+    ///   event a timestep for the Staff, kept by assign_event_once;
+    /// LILYPOND-REF: lily/include/stream-event.hh:59-71 assign_event_once — the first event
+    ///   stays, a second goes to warn_reassign_event_ptr;
+    /// LILYPOND-REF: lily/stream-event.cc:103-117 warn_reassign_event_ptr — an EQUAL event is
+    ///   dropped without a word ("nothing of value was lost"), a different one warns
+    ///   "conflict with event" / "discarding event". The same rule <see cref="DiagnosticCodes.DoubleDynamic"/>
+    ///   follows for a note's second dynamic (owner's decision, session 645).
+    /// A change only a LATER part writes at a moment reaches the staff as any voice's event
+    /// reaches LilyPond's Staff: it is MOVED onto the first part's voice, the one the
+    /// break-align column reads (a change left on a later voice was drawn over the first
+    /// voice's — the key under the meter in the owner's book). The parts' NOTES were spelled
+    /// under their own keys by the collect, so wherever two parts of one staff stand in
+    /// different keys the page cannot be right for both, and this says so (LYS4024, the
+    /// second shape) at the change that opened the disagreement — a section that states no
+    /// key reverts to the file's, which is how the owner's book got there.
+    /// A combined staff needs none of this: the part combiner rewrites both streams into one
+    /// (<c>PartCombiner.Combine</c>), and the time it carries is written once.
+    /// </remarks>
+    private void JunkCondensedStaffDuplicateChanges(
+        RenderSpec renderSpec, Dictionary<string, ImmutableArray<Voice>> staffVoices,
+        IReadOnlyDictionary<string, KeySignature> voiceKeyDict)
+    {
+        foreach (var item in renderSpec.Items)
+        {
+            if (item is CondensedStaffSpec condensed)
+                JunkOnOneCondensedStaff(condensed, staffVoices, voiceKeyDict);
+            else if (item is GrandStaffRenderSpec grand)
+                foreach (var member in grand.GrandStaff.Members)
+                    if (member is CondensedStaffSpec nested)
+                        JunkOnOneCondensedStaff(nested, staffVoices, voiceKeyDict);
+        }
+    }
+
+    private void JunkOnOneCondensedStaff(CondensedStaffSpec condensed,
+        Dictionary<string, ImmutableArray<Voice>> staffVoices, IReadOnlyDictionary<string, KeySignature> voiceKeyDict)
+    {
+        if (condensed.PartNames.Length < 2)
+            return;
+        string firstPart = condensed.PartNames[0];
+        if (!staffVoices.TryGetValue(firstPart, out var firstVoices) || firstVoices.Length == 0)
+            return;
+        var firstMeasures = firstVoices[0].Measures.ToArray();
+        bool firstChanged = false;
+
+        // Each part's key timeline as the collect spelled its notes: the opening key (the
+        // part's own header key, else the score's) and its own key changes, in order.
+        KeySignature OpeningKey(string part) => voiceKeyDict.TryGetValue(part, out var k)
+            ? k : new KeySignature(_meta.InitialKeySharps, _meta.InitialKeyCustom);
+        static List<(int Measure, Fraction Onset, KeySignatureChangeItem Item)> KeyEvents(ImmutableArray<Measure> measures)
+        {
+            var list = new List<(int, Fraction, KeySignatureChangeItem)>();
+            for (int m = 0; m < measures.Length; m++)
+            {
+                var at = Fraction.Zero;
+                foreach (var it in measures[m].Items)
+                {
+                    if (it is KeySignatureChangeItem kc)
+                        list.Add((m, at, kc));
+                    at += it.Duration;
+                }
+            }
+            return list;
+        }
+        static KeySignature KeyInForce(KeySignature opening, List<(int Measure, Fraction Onset, KeySignatureChangeItem Item)> events, int m, Fraction at)
+        {
+            var key = opening;
+            foreach (var (em, eat, item) in events)
+                if (em < m || (em == m && eat <= at))
+                    key = item.NewKey;
+            return key;
+        }
+        var firstKeyEvents = KeyEvents(firstVoices[0].Measures);
+        var firstOpening = OpeningKey(firstPart);
+
+        for (int p = 1; p < condensed.PartNames.Length; p++)
+        {
+            string part = condensed.PartNames[p];
+            if (!staffVoices.TryGetValue(part, out var voices) || voices.Length == 0)
+                continue;
+            var partKeyEvents = KeyEvents(voices[0].Measures);
+            var partOpening = OpeningKey(part);
+            // The moments where the two parts' keys in force part company, each said once.
+            var disagreed = new HashSet<(int, Fraction)>();
+            void CheckKeys(int m, Fraction at, int sourcePosition)
+            {
+                var mine = KeyInForce(partOpening, partKeyEvents, m, at);
+                var theirs = KeyInForce(firstOpening, firstKeyEvents, m, at);
+                if (mine == theirs || !disagreed.Add((m, at)))
+                    return;
+                _condensedStaffChangeWarnings.Add(new CondensedStaffChangeWarning(
+                    sourcePosition, "key", part, firstPart, Junked: false, KeyWords(theirs), KeyWords(mine)));
+            }
+            // The first part's own key changes open a disagreement too (its section reverted
+            // to the file's key where this part's stated one) — said at the first part's change.
+            foreach (var (em, eat, item) in firstKeyEvents)
+                if (partKeyEvents.All(e => e.Measure != em || e.Onset != eat))
+                    CheckKeys(em, eat, item.SourcePosition);
+
+            Voice[]? rewritten = null;
+            for (int vi = 0; vi < voices.Length; vi++)
+            {
+                var measures = voices[vi].Measures;
+                Measure[]? fitted = null;
+                for (int m = 0; m < measures.Length; m++)
+                {
+                    var at = Fraction.Zero;
+                    List<MusicItem>? kept = null;
+                    var items = measures[m].Items;
+                    for (int i = 0; i < items.Length; i++)
+                    {
+                        var it = items[i];
+                        int kind = it switch
+                        {
+                            KeySignatureChangeItem => 1,
+                            TimeSignatureChangeItem => 2,
+                            ClefChangeItem { IsCue: false } => 3,
+                            _ => 0,
+                        };
+                        if (kind != 0)
+                        {
+                            if (kind == 1 && vi == 0)
+                                CheckKeys(m, at, it.SourcePosition);
+                            var standing = m < firstMeasures.Length ? ChangeAt(firstMeasures[m], at, kind) : null;
+                            if (standing != null)
+                            {
+                                // The first part's change stands; this one is junked — in silence
+                                // when it is the same change.
+                                if (!SameChange(standing, it))
+                                    _condensedStaffChangeWarnings.Add(new CondensedStaffChangeWarning(
+                                        it.SourcePosition, kind switch { 1 => "key", 2 => "time", _ => "clef" }, part, firstPart, Junked: true));
+                            }
+                            else if (m < firstMeasures.Length)
+                            {
+                                // Only this part writes it: the staff takes it, on the voice the
+                                // break-align column reads.
+                                firstMeasures[m] = firstMeasures[m] with { Items = WithChangeAt(firstMeasures[m].Items, at, kind, it) };
+                                firstChanged = true;
+                            }
+                            else
+                                continue;   // past the first part's last bar: nothing to stand it on; left as it is
+                            kept ??= new List<MusicItem>(items.Take(i));
+                            continue;
+                        }
+                        kept?.Add(it);
+                        at += it.Duration;
+                    }
+                    if (kept != null)
+                    {
+                        fitted ??= measures.ToArray();
+                        fitted[m] = measures[m] with { Items = kept.ToImmutableArray() };
+                    }
+                }
+                if (fitted != null)
+                {
+                    rewritten ??= voices.ToArray();
+                    rewritten[vi] = voices[vi] with { Measures = fitted.ToImmutableArray() };
+                }
+            }
+            if (rewritten != null)
+                staffVoices[part] = rewritten.ToImmutableArray();
+        }
+        if (firstChanged)
+        {
+            var updated = firstVoices.ToArray();
+            updated[0] = firstVoices[0] with { Measures = firstMeasures.ToImmutableArray() };
+            staffVoices[firstPart] = updated.ToImmutableArray();
+        }
+
+        static int KindOf(MusicItem it) => it switch
+        {
+            KeySignatureChangeItem => 1,
+            TimeSignatureChangeItem => 2,
+            ClefChangeItem { IsCue: false } => 3,
+            _ => 0,
+        };
+
+        // The change of `kind` standing at `onset` of `measure`, or null.
+        static MusicItem? ChangeAt(Measure measure, Fraction onset, int kind)
+        {
+            var at = Fraction.Zero;
+            foreach (var it in measure.Items)
+            {
+                if (at > onset)
+                    return null;
+                if (at == onset && KindOf(it) == kind)
+                    return it;
+                at += it.Duration;
+            }
+            return null;
+        }
+
+        // `items` with `change` inserted at `onset`, behind the changes already standing there
+        // (a clef before a key before a meter, as LilyPond's break-align order has them).
+        static ImmutableArray<MusicItem> WithChangeAt(ImmutableArray<MusicItem> items, Fraction onset, int kind, MusicItem change)
+        {
+            var at = Fraction.Zero;
+            int index = items.Length;
+            for (int i = 0; i < items.Length; i++)
+            {
+                if (at > onset || (at == onset && (KindOf(items[i]) == 0 || KindOf(items[i]) > kind)))
+                {
+                    index = i;
+                    break;
+                }
+                at += items[i].Duration;
+            }
+            return items.Insert(index, change);
+        }
+
+        static bool SameChange(MusicItem a, MusicItem b) => (a, b) switch
+        {
+            (KeySignatureChangeItem ka, KeySignatureChangeItem kb) => ka.NewKey == kb.NewKey,
+            (TimeSignatureChangeItem ta, TimeSignatureChangeItem tb) => ta.NewTime == tb.NewTime,
+            (ClefChangeItem ca, ClefChangeItem cb) => ca.NewClef == cb.NewClef,
+            _ => false,
+        };
+
+        static string KeyWords(KeySignature key) => key.Custom != null ? "a custom key"
+            : key.Sharps == 0 ? "no sharps or flats"
+            : $"{Math.Abs(key.Sharps)} {(key.Sharps > 0 ? "sharp" : "flat")}{(Math.Abs(key.Sharps) == 1 ? "" : "s")}";
+    }
+
     /// <summary>The row skeleton of a melody-bound lyrics row: the melody's
     /// measures with every item replaced by an invisible spacer of the same
     /// length, 1:1 by item index so the syllable alignment's (measure, item)
@@ -2979,6 +3223,7 @@ public sealed partial class MeasureCollector
         _sectionStartLog.Clear();
         _voiceMeasuresByName.Clear();
         _shadowedRehearsalMarks.Clear(); // refilled from the finished score (RecordShadowedRehearsalMarks)
+        _condensedStaffChangeWarnings.Clear();
         _canonicalSectionBars.Clear();
         _canonicalByName = null;
         // The definitions walk's own gatherings (its fields say what for): cleared here as

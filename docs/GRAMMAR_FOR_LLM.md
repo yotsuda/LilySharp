@@ -85,7 +85,9 @@ score parts { staff flute1  staff flute2 }
 ```
 
 This is plain condensation: unisons are not merged into one notehead and no "a2"/"Solo" is
-printed.
+printed. One staff takes one key, meter and clef at a moment: a `time` both parts write is
+drawn once, and a later part's `key` / `time` / `clef` that differs from the first part's at
+the same moment is not applied and warns (LYS4024) — write the same change in every part.
 
 **Several staves as ONE GROUP** — `grandStaff`, `staffGroup` and `choirStaff` all take
 `staff` items and nothing else, and differ only in the left edge:
