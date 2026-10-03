@@ -371,6 +371,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A lead sheet with no staff takes its pickup.** A score of chord or lyric rows alone
+  (`score grid { chords prog }`) drew a section header's `partial` as a whole bar — the
+  pickup as wide as the others, numbered 1, so the second system of `samples/amazing-grace`'s
+  grid began at 8 where the staff's began at 7 — and its LilyPond twin failed a bar check
+  there. The rows now take the header's `partial` and `time` as a staff does, and the
+  pickup bar counts as one.
 - **The LilyPond twin of a lead sheet keeps the page's bars.** A score of rows and no
   staff (`score words { lyrics v1 lyrics v2 }`) gave LilyPond no music to count by, so a
   pickup or a change of meter failed its bar checks ("bar check failed at: 1/4" at the

@@ -1799,7 +1799,9 @@ public sealed partial class MeasureCollector
         var rowNames = new HashSet<string>(_lyricsRowNames);
         foreach (var (rowName, _, _) in pendingChordRows)
             rowNames.Add(rowName);
-        FitRowsToMusicBars(staffVoices, rowNames);
+        // …and a score with NO music voice reads the same clock off its structure
+        // (RowsOnlyBarLengths): the header's pickup and meter, which no walk applied to a row.
+        FitRowsToMusicBars(staffVoices, rowNames, RowsOnlyBarLengths(tree.GetRoot(), staffVoices, rowNames));
 
         // A rows-only score prints its section labels from the FIRST row's
         // measures (that row is the PrimaryContentStaff fallback the mark
@@ -2628,11 +2630,14 @@ public sealed partial class MeasureCollector
     /// SHORTER than the row's (a pickup, a bar under a meter change the row's grid never
     /// saw), the row's spacers are scaled down to that length, share for share — the same
     /// rule the LilyPond twin applies to a pickup's chord slots (LilyPondExporter.ChordBarText).
-    /// A rows-only score (no music voice) keeps its grid; a row bar no longer than the music
-    /// is left as it is.
+    /// A rows-only score (no music voice) reads the same lengths off its structure instead
+    /// (<paramref name="rowsOnlyBars"/>, <see cref="RowsOnlyBarLengths"/>), and a bar that
+    /// table calls a pickup is flagged one for the numbering; a row bar no longer than the
+    /// music is left as it is.
     /// </summary>
     private static void FitRowsToMusicBars(
-        Dictionary<string, ImmutableArray<Voice>> staffVoices, IReadOnlySet<string> rowNames)
+        Dictionary<string, ImmutableArray<Voice>> staffVoices, IReadOnlySet<string> rowNames,
+        IReadOnlyList<(Fraction Length, bool IsPickup)>? rowsOnlyBars)
     {
         if (rowNames.Count == 0)
             return;
@@ -2655,7 +2660,12 @@ public sealed partial class MeasureCollector
                 }
         }
         if (lengths.Count == 0)
-            return;
+        {
+            if (rowsOnlyBars == null)
+                return;
+            foreach (var (length, _) in rowsOnlyBars)
+                lengths.Add(length);
+        }
 
         foreach (string rowName in rowNames)
         {
@@ -2668,22 +2678,76 @@ public sealed partial class MeasureCollector
                 var music = lengths[m];
                 if (music <= Fraction.Zero)
                     continue;
+                bool pickup = rowsOnlyBars != null && m < rowsOnlyBars.Count && rowsOnlyBars[m].IsPickup
+                    && !measures[m].IsPickup;
                 var total = Fraction.Zero;
                 foreach (var it in measures[m].Items)
                     total += it.Duration;
                 if (total <= music)
+                {
+                    if (pickup)
+                    {
+                        fitted ??= measures.ToArray();
+                        fitted[m] = measures[m] with { IsPickup = true };
+                    }
                     continue;
+                }
                 var items = ImmutableArray.CreateBuilder<MusicItem>(measures[m].Items.Length);
                 foreach (var it in measures[m].Items)
                     items.Add(it is RestItem { IsSpacer: true } r
                         ? new RestItem(r.Duration * music / total, 0, r.SourcePosition) { IsSpacer = true }
                         : it);
                 fitted ??= measures.ToArray();
-                fitted[m] = measures[m] with { Items = items.MoveToImmutable() };
+                fitted[m] = measures[m] with { Items = items.MoveToImmutable(), IsPickup = pickup || measures[m].IsPickup };
             }
             if (fitted != null)
                 staffVoices[rowName] = ImmutableArray.Create(new Voice(rowName, fitted.ToImmutableArray()));
         }
+    }
+
+    /// <summary>
+    /// The bar lengths of a ROWS-ONLY score, read off its structure — what
+    /// <see cref="FitRowsToMusicBars"/> reads off the music when there is some. A score with
+    /// no staff has no voice that walked the section headers, so the rows kept their grid
+    /// whole: amazing-grace's <c>score grid { chords prog }</c> drew the one-beat pickup as a
+    /// full 3/4 bar and numbered it 1 (its second system began at 8, the staff's at 7), and
+    /// its LilyPond twin's chord stream (<c>s4 |</c>, written from the source) disagreed with
+    /// the page's clock there (session 777). Per section the form plays — every occurrence,
+    /// <see cref="SectionState.AllStarts"/>, over the bar span <see cref="RowGridSectionBars"/>
+    /// laid out: the header's <c>time</c> else the score's (<see cref="Semantics.SectionHeaders"/>,
+    /// the registry every output applies at a boundary), and the header's <c>partial</c> — the
+    /// file's at bar 0, as a staff takes it — as the first bar, a pickup for the numbering.
+    /// Null when a music voice exists: the music is the clock then.
+    /// </summary>
+    private List<(Fraction Length, bool IsPickup)>? RowsOnlyBarLengths(
+        SyntaxNode root, Dictionary<string, ImmutableArray<Voice>> staffVoices, IReadOnlySet<string> rowNames)
+    {
+        foreach (var (name, voices) in staffVoices)
+            if (!rowNames.Contains(name))
+                foreach (var v in voices)
+                    if (v.Measures.Length > 0)
+                        return null;
+        if (_rowsOnlyFormGridBars <= 0)
+            return null;
+        var home = new Fraction(_meta.TimeBeats, _meta.TimeBeatType);
+        var table = new List<(Fraction Length, bool IsPickup)>(_rowsOnlyFormGridBars);
+        for (int i = 0; i < _rowsOnlyFormGridBars; i++)
+            table.Add((home, false));
+        foreach (var (name, starts) in _sectionState.AllStarts)
+        {
+            int bars = RowGridSectionBars(root, name);
+            var meter = _sectionHeaders.Times.TryGetValue(name, out var time) && !time.IsSenzaMisura
+                ? new Fraction(time.Beats, time.BeatType) : home;
+            Fraction? headerPickup = _sectionHeaders.Partials.TryGetValue(name, out var partial) && partial.Duration != null
+                ? partial.ToFraction() : null;
+            foreach (int start in starts)
+                for (int k = 0; k < bars && start + k < table.Count; k++)
+                {
+                    var pickup = k == 0 ? headerPickup ?? (start == 0 ? _filePartial : null) : null;
+                    table[start + k] = pickup is { } length ? (length, true) : (meter, false);
+                }
+        }
+        return table;
     }
 
     /// <summary>The row skeleton of a melody-bound lyrics row: the melody's

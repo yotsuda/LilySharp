@@ -215,6 +215,43 @@ public class RowsOnlyFormOrderTests
         Assert.Equal(LilySharp.Core.Svg.Model.BarlineType.RepeatEnd, RowBarlines(staffless, "verse")[3].End);
     }
 
+    /// <summary>The header's pickup reaches a rows-only grid (session 778): the row's first
+    /// bar is as long as a staff's would be, and a pickup for the numbering. Until then a
+    /// chords-only grid drew the pickup a whole meter long and numbered it 1 (amazing-grace's
+    /// `score grid`), and its LilyPond twin failed a bar check there.</summary>
+    [Theory]
+    [InlineData("partial 4", "d4", 1, 4)]
+    [InlineData("", "d2 d4", 3, 4)]   // the control: no pickup, the first bar is whole
+    public void RowsOnlyGrid_TakesTheHeadersPickup_AsTheStaffDoes(string header, string firstBar, int num, int den)
+    {
+        string head = $$"""
+            time 3/4
+            part melody { clef treble }
+            section Verse {
+              {{header}}
+              melody { {{firstBar}} | g2 b8 g8 | b2 a4 | }
+              chords prog { | G | G | }
+            }
+            form main { Verse }
+            """;
+        var staffless = Collect($"{head}\nscore main {{\n  chords prog\n}}");
+        var staffful = Collect($"{head}\nscore main {{\n  staff melody\n  chords prog\n}}");
+
+        static List<LilySharp.Core.Semantics.Fraction> BarLengths(LilySharp.Core.Svg.Model.MultiStaffScore score, string row)
+            => score.StaffGroups.SelectMany(g => g.Staves).SelectMany(s => s.Voices)
+                .Where(v => v.Name == row).SelectMany(v => v.Measures)
+                .Select(m => m.Items.Aggregate(LilySharp.Core.Semantics.Fraction.Zero, (sum, it) => sum + it.Duration))
+                .ToList();
+
+        Assert.Equal(BarLengths(staffful, "prog"), BarLengths(staffless, "prog"));
+        Assert.Equal(new LilySharp.Core.Semantics.Fraction(num, den), BarLengths(staffless, "prog")[0]);
+        // The row IS the primary content staff of a staffless score, so its first bar's
+        // flag is what the bar numbering reads (LayoutEngine's barNumberOffset).
+        var rowFirstBar = staffless.StaffGroups.SelectMany(g => g.Staves).SelectMany(s => s.Voices)
+            .First(v => v.Name == "prog").Measures[0];
+        Assert.Equal(header.Length > 0, rowFirstBar.IsPickup);
+    }
+
     // The measured answer, pinned independently of the differential above — so a
     // regression that moves BOTH walks the same way still fails something.
     [Fact]
