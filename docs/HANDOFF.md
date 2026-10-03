@@ -79,6 +79,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。→ **第751（2026-10-02・ユーザー決定）「LP 忠実にこだわるより音楽的な妥当性を重視。LP から引き継ぐのはレンダリングとレイアウトの美しさだけ。ユーザーがまだ少ないので過去のしがらみに縛られない」＝意味論（拍子・弱起・反復・強弱・検査・出力の意味）の裁定者は音楽的妥当性、LP は描画と配置の裁定者（RULES §5.2 に規則として置いた）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
+- ★ **MIDI の conductor track に同じ拍子の meta event が part の数だけ重なる（第768・計器 Lab `sessions/p768/dump-mid.ps1`）**: 5 part の本（bohemian-rhapsody）で `time 6/4` が同じ tick に 5 本・冒頭の 9/8 は 6 本。鳴らない part も timeline のために歩く（`MidiExporter.Export` の註）ので、各 part の section 開き（`OpenSection` → `TimeSignatures.Add`）が 1 本ずつ足す。DAW は無害だが file は太る。直すなら conductor track を閉じる所で「同じ tick・同じ拍子」を 1 本に畳む（tempo も同じ族か確認）。掃き midi の byte 比較は多 part の本で全部変わる＝網を先に。
 - ★★ **双子の 3 件（第767・leadsheet-collide の LP 警告 6 本・計器 `sessions/p767/twin/`）**: ⒜ 1 小節目に file の `tempo` と section の `tempo` を同じ瞬間に書く（`\tempo "Moderato"` → `\mark … \tempo "Rubato"`）＝LP が後者を捨てる＝section が同じ小節で言い直すなら file の分を書かない／⒝ section で拍子が変わる（Bridge 3/4）とき chords 行の entry が前の拍子の長さ（`d1:m`）＝行の長さは `PrevailingMeters` で読む（歌詞の `EmitTimedStream` は読んでいる）／⒞ `[1-2. ~Bridge] :| [3. ~Tag]` に「already have a VoltaBracket; ending it prematurely」（`\volta 1,2` の override の形）。
 - ★★ **⑼ の残り（第762・ユーザー判断・本は Lab `corpora/dogfood/big/` 4 冊・計器 `sessions/p762/run-big.ps1`＝check＋4 出力＋LP）**: ⒞′ 音を取らない裸の `__`（行末）は双子で LP の「unterminated extender」のまま（choir 2 本・page は最小長の線だけ）／⑺ resume の probe は代表 1 つの header 読みしか記録しない（`MeasureCollector.Form.cs` の註）／⑻ 観察（優先低）: 宣言した弱起が短い小節の後に来る形＝LP は `\partial` で併合・頁と XML は弱起を 1 小節に数える（コーパス 0・第761）。／**閉じた分（経緯は ARCHIVE の各便）**: リファクタ A〜C6（第740〜748）・綴り A1〜A4（第750〜755）・D=(a)（第755）・同名 section (a)（第753 `112ea7f2`）・validator の弱起（第753 `deb49459`）・XML の番号 ⑹⑹′（第756 `f43e48c4`・第757 `280cbbde`）・割れた小節 ⑻（第759 `2a77777c`・双子は不要＝第761）・StreamFrame の網（第758 `234b5361`）・観測者の無い規則 4 つ＋双子の欠陥 2（第760 `d0acd7da`）・⑽ part 名に予約語＋⑼ ⒜ `tab X Y` は宣言された part が勝つ（第763 `3274e1b7`・§3 の最上段）・⑼ ⒝ capo の LYS1039 の文面・⒞ 双子の歌詞の終端と cadenza の bar check・⒠ `@ottava(8va)` の文面（第764）・⒟ 1 頁目の沈み＝本の側＋LP も同じ（第765・コード変更なし）。計器: Lab `sessions/p742/`（ly／midi／xml／svg の掃き・exe は両側とも写す）・`sessions/p753/sweep-check.ps1`（診断の掃き）・`sessions/p762/run-big.ps1`
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
@@ -119,6 +120,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第768セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き・ユーザー報告「`bohemian-rhapsody.lys` の `score practice` を midi に変換すると section A が含まれている。`form practice` は B から始まる」。`-Start p768`（HEAD `22790d03`・未 push 139）＝full **10882 / 0 / 2 / 10884**。§7 3.5 で第766 を ARCHIVE へ。
+- **再現と切り分け（Lab `sessions/p768/repro/`・SMF を読む計器 `dump-mid.ps1`）**: CLI `lysc midi --score practice` は**正しい**（track 1 の最初の音は B の `d2 g4 f`・長さは `bass` より section A ぶん 31,680 tick 短い）。**壊れていたのはプレビューの Export ボタン**＝LSP `lilysharp/export` の 1 score の道が MIDI・MusicXML・ly に `form: null`（＝primary＝`main`）を渡していた（`WriteExport` の註「the primary form, what the preview's button has always exported」＝設計のまま、batch（`All`）だけ score の form を渡していた）。`MidiExporter` は Score=practice の part で絞り、Form=main で A〜H を歩く＝A が鳴る。
+- **直した（commit 下記）**: `RenderSpecParser.ChooseDeclared(tree, renderName)`（`Choose` の方針＋宣言）を足し、`Export` の 1 score の道も batch の道もこれを `WriteExport(... score)` に渡す。midi は `Form = score.Spec.Form, Score = score.Spec`・xml は `Form`・ly は `Form` ＋ `Score = Declaration`＝CLI の `--score` と同じ exporter 設定。LSP の道で書いた practice.mid は CLI のと **byte 同一**（捨てた probe test で確認）。網 `ExportRequestTests.OneScore_GivesAFormDrivenFormat_ThatScoresOwnForm`（midi／xml／ly ×「sub 単独＝All の two-sub・main 単独＝All の two・両者は異なる」）。文書: CHANGELOG Fixes・`ExportParams.RenderName`・`extension.ts` の註（「MusicXML exports the primary form」を消した）。
+- 見つけた別件（§1.0 ⒜ に起票・直していない）: conductor track に同じ拍子の meta event が part の数だけ重なる。
+★ `-End p768 -DiffBase 22790d03`＝full **10885 / 0 / 2 / 10887**（網 +3）・門 全 OK（HANDOFF 残り 7,911 B・§1 残り 10,026 字・棚卸し 差分なし）。7.5: Core `+` 19 行＝`RenderSpecParser.ChooseDeclared` だけ（REF 0・OWN 0＝exporter の設定の配管で、LP の規則も Lily# 独自の規則も触らない）。7.6: ⒜ 出所はユーザー報告（本は OneDrive の `bohemian-rhapsody.lys`）＋ `Commands.cs` の自分の註。7.7: なし。commit `12e2c597`（code）。push はユーザー。
+判定: 報告は閉じた（CLI は元から正しく、プレビューの Export の道だけが primary form を書いていた）。次の一手は §1.0 ⒜ の双子 3 件か拍子 meta event の重なり（どちらも小）＝ユーザー判断。会話を区切るか: (a) 本と計器は Lab に在る＝続けられる。
+
+## 以下は第767セッションの経緯
+
 ### 1.1 第767セッション（2026-10-03・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。`-Start p767`（HEAD `1c16e193`・未 push 137）＝full **10880 / 0 / 2 / 10882**。§7 3.5 で第765 を ARCHIVE へ。第766 の候補 5 つを**双子（LP 2.26 の png・`sessions/p767/twin/`）と並べて**裁いた:
@@ -130,17 +142,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 掃き（`sessions/p723/svg2/sweep-all.ps1`・998 冊・base p764 の exe 対 head）: **svg 1,199 本 差 0**＝既存の本に畳まれた休符の `every N` も同じ瞬間の clef 変更も無い。
 ★ `-End p767 -DiffBase 1c16e193`＝full **10882 / 0 / 2 / 10884**（網 +2）・門 全 OK（HANDOFF 残り 8,893 B・§1 残り 10,327 字・棚卸し `APPROXIMATIONS.md` 行番号 8 行＝増減 0）。7.5: Core `+` 30 行／`-` 2 行（tracked）＋新規 `ClefChangeCollapse.cs`・REF 2（bar-number-engraver.cc・clef-engraver.cc）・OWN 0。7.6: ⒜ 両方とも LP の engraver の規則を字面で写した。7.7: なし。push はユーザー。
 判定: 第766 の候補 5 つは裁き終えた（2 直した・1 は LP と同じ・1 は起票・双子の 3 件を起票）。次の一手は §1.0 ⒜ の双子 3 件（小・計器あり）か ⒝ の小節番号と和音行（設計）＝ユーザー判断。会話を区切るか: (a) どちらも今の本と png の上に立つ＝続ける。
-
-## 以下は第766セッションの経緯
-
-### 1.1 第766セッション（2026-10-03・YT-DELL2）
-
-同じ会話の続き（ユーザー「重なりがないかを確認する意図で、複雑な lys をいくつか書いて。私が目視して確認する」）。`-Start p766`（HEAD `9d29de46`・未 push 136）＝full **10880 / 0 / 2 / 10882**。§7 3.5 で第764 を ARCHIVE へ。
-- 書いた本 4 冊（Lab `corpora/dogfood/collide/`・check 0・png は `sessions/p766/png/`）: `piano-collide`（grandStaff・両段の同じ列に強弱＋hairpin・積んだ articulation・加線の上の ornament と trill span・pedal text と強弱・tempo と section label・tuplet の括弧と臨時記号・2 声部の休符・ottava・fermata）／`leadsheet-collide`（3 verse の stack・melisma と extender・`chordDiagrams guitar all` で全 diagram が tempo と label の上・歌詞の位置の強弱と text・3 回の repeat と 2 つの ending・3/4 の bridge・1 線の slash 譜）／`quartet-collide`（4 段の同じ列の強弱／hairpin／bowing／articulation・tuplet 5:4 と 7:4・trill＋courtesy＋trill span・phrasing slur・text spanner・pizz./arco・glissando・viola の cue・7/8 と 5/4）／`guitar-collide`（shape chord の名前と diagram・弦番号と運指・bend／H／P／T・harm. の text・rit. spanner・tab の triplet・slash と chord 名・tab 単独 full）。
-- 書きながら踏んだ自分の誤り（本の側・直した）: `r r2 r` の 3 つ目の `r` は 2 分（裸の休符は直前の長さを継ぐ）／`cue { }` は 1 小節の中の領域＝2 小節の cue は小節ごとに書く／`a'4( bes') c''( d'')` は 5 拍／3 slot の chords 小節は `.` で 4 に。`tuplet 7/4 { 7×16th }` は 4 分（`7/8` なら 2 分）。
-- 目視は**ユーザーが行う**。私が png で気づいた候補（未検証・ユーザーの判断待ち）: ⑴ piano 小節 15〜17: 複数小節休符の後に小節番号 `16` と `17` が同じ列に縦に 2 つ／⑵ piano 小節 3〜4: lh の `sempre legato` と `Ped.`／`*` と強弱が同じ帯に並ぶ／⑶ leadsheet 小節 12〜13: 小節番号が chord diagram の運指の数字に重なる／⑷ quartet 小節 8〜9: viola の cue の clef 変更の直後に拍子（7/8）がもう一度描かれているように見える／⑸ guitar 小節 2: diagram `F` と小節番号 `2`。
-★ `-End p766 -DiffBase 9d29de46`＝full **10880 / 0 / 2 / 10882**（網 ±0）・門 全 OK（HANDOFF 残り 11,714 B・§1 残り 11,315 字）。7.5: Core `+` 0（本だけの便）。7.6／7.7: 該当なし。push はユーザー。
-判定: 次の一手はユーザーの目視の結果待ち（重なりの報告があれば、本と png から再現して起票）。会話を区切るか: (a) 報告の直し方は本と png の上に立つ＝続ける。
 
 ## 2. 開いている作業
 

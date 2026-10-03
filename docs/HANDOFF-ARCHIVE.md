@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第766セッションの経緯
+
+### 1.1 第766セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き（ユーザー「重なりがないかを確認する意図で、複雑な lys をいくつか書いて。私が目視して確認する」）。`-Start p766`（HEAD `9d29de46`・未 push 136）＝full **10880 / 0 / 2 / 10882**。§7 3.5 で第764 を ARCHIVE へ。
+- 書いた本 4 冊（Lab `corpora/dogfood/collide/`・check 0・png は `sessions/p766/png/`）: `piano-collide`（grandStaff・両段の同じ列に強弱＋hairpin・積んだ articulation・加線の上の ornament と trill span・pedal text と強弱・tempo と section label・tuplet の括弧と臨時記号・2 声部の休符・ottava・fermata）／`leadsheet-collide`（3 verse の stack・melisma と extender・`chordDiagrams guitar all` で全 diagram が tempo と label の上・歌詞の位置の強弱と text・3 回の repeat と 2 つの ending・3/4 の bridge・1 線の slash 譜）／`quartet-collide`（4 段の同じ列の強弱／hairpin／bowing／articulation・tuplet 5:4 と 7:4・trill＋courtesy＋trill span・phrasing slur・text spanner・pizz./arco・glissando・viola の cue・7/8 と 5/4）／`guitar-collide`（shape chord の名前と diagram・弦番号と運指・bend／H／P／T・harm. の text・rit. spanner・tab の triplet・slash と chord 名・tab 単独 full）。
+- 書きながら踏んだ自分の誤り（本の側・直した）: `r r2 r` の 3 つ目の `r` は 2 分（裸の休符は直前の長さを継ぐ）／`cue { }` は 1 小節の中の領域＝2 小節の cue は小節ごとに書く／`a'4( bes') c''( d'')` は 5 拍／3 slot の chords 小節は `.` で 4 に。`tuplet 7/4 { 7×16th }` は 4 分（`7/8` なら 2 分）。
+- 目視は**ユーザーが行う**。私が png で気づいた候補（未検証・ユーザーの判断待ち）: ⑴ piano 小節 15〜17: 複数小節休符の後に小節番号 `16` と `17` が同じ列に縦に 2 つ／⑵ piano 小節 3〜4: lh の `sempre legato` と `Ped.`／`*` と強弱が同じ帯に並ぶ／⑶ leadsheet 小節 12〜13: 小節番号が chord diagram の運指の数字に重なる／⑷ quartet 小節 8〜9: viola の cue の clef 変更の直後に拍子（7/8）がもう一度描かれているように見える／⑸ guitar 小節 2: diagram `F` と小節番号 `2`。
+★ `-End p766 -DiffBase 9d29de46`＝full **10880 / 0 / 2 / 10882**（網 ±0）・門 全 OK（HANDOFF 残り 11,714 B・§1 残り 11,315 字）。7.5: Core `+` 0（本だけの便）。7.6／7.7: 該当なし。push はユーザー。
+判定: 次の一手はユーザーの目視の結果待ち（重なりの報告があれば、本と png から再現して起票）。会話を区切るか: (a) 報告の直し方は本と png の上に立つ＝続ける。
+
 ## 以下は第765セッションの経緯
 
 ### 1.1 第765セッション（2026-10-03・YT-DELL2）
