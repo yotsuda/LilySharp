@@ -58,6 +58,10 @@ internal static class PdfReproducibility
     private static readonly Regex SubsetTag = new(@"/([A-Z]{6})\+([^\s/\[\]<>()]+)", RegexOptions.Compiled);
     // The trailer's document identifier: two 32-digit hex strings (PdfSharpCore writes one Guid twice).
     private static readonly Regex DocumentId = new(@"/ID\s*\[<([0-9A-Fa-f]{32})><([0-9A-Fa-f]{32})>\]", RegexOptions.Compiled);
+    // The creation date's digits — left out of the identifier's hash, so that without
+    // SOURCE_DATE_EPOCH two writings differ in the date ALONE, not in the date and an
+    // identifier that follows it.
+    private static readonly Regex CreationDateDigits = new(@"/CreationDate \(D:([^)]*)\)", RegexOptions.Compiled);
 
     /// <summary>Rewrites the subset font tags and the document ID of a saved PDF in
     /// place (same length everywhere), and returns the same array.</summary>
@@ -82,11 +86,17 @@ internal static class PdfReproducibility
         var id = DocumentId.Match(text);
         if (id.Success)
         {
-            // Hash the file with the identifier blanked, then write the hash as the identifier.
+            // Hash the file with the identifier and the clock blanked, then write the hash
+            // as the identifier; the clock goes back as it was.
             var zero = new string('0', 32);
             Overwrite(pdf, text, id.Groups[1].Index, zero);
             Overwrite(pdf, text, id.Groups[2].Index, zero);
+            var date = CreationDateDigits.Match(text);
+            if (date.Success)
+                Overwrite(pdf, text, date.Groups[1].Index, new string('0', date.Groups[1].Length));
             string hash = Convert.ToHexString(MD5.HashData(pdf));
+            if (date.Success)
+                Overwrite(pdf, text, date.Groups[1].Index, date.Groups[1].Value);
             Overwrite(pdf, text, id.Groups[1].Index, hash);
             Overwrite(pdf, text, id.Groups[2].Index, hash);
         }
