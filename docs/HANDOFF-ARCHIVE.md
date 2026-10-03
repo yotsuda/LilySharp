@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第770セッションの経緯
+
+### 1.1 第770セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き・ユーザー決定「扉の一本化から着手して」（第769 末の「私が直したい所」の筆頭）。`-Start p770`（HEAD `c92a5940`・未 push 0＝ユーザーが push 済み）＝full **10886 / 0 / 2 / 10888**。§7 3.5 で第768 を ARCHIVE へ。
+- **一本化した（commit 下記）**: 新 `LilySharp.Core/Export/ScoreExport.cs`＝`Write(tree, format, path, (Declaration, Spec)? score, ExportOptions)` が 7 形式（svg／png／pdf／midi／musicxml／vsqx／ly）の exporter 設定の**唯一の家**。返りは `ExportResult(Files, Notes, Warnings)`＝書いた file・console に出す数字（`Tracks: 2` など）・exporter の警告。扉ごとの設定は `ExportOptions`（EmbedFont／PngScale／CropPng／PinFonts）。CLI（`Program.cs`）は `WriteMidi`／`WriteXml`／`WriteLy`／`CropToContent`／各 lambda を捨てて `Report(ScoreExport.Write(...))` だけ（`CropToContent` は `PngGenerator` へ）。LSP（`Commands.cs`）は `WriteExport` と `ExportExtensions` を捨て、1 score の道も batch の道も `ScoreExport.Write`＝exporter の警告が `ExportResponse.Warnings` に乗る（batch は `<stem>: ` を前置）。
+- **ついでに消えた drift**: `PdfGenerator.Generate`／`PngGenerator.Generate(Pages)` の名前解決が `FindByName`（外れたら null＝score 無しの絵）だったのを `Choose`（外れたら最初の score＝svg・プレビューと同じ）に。ボタンの svg は font folder が見つからないと埋め込みを落としていた（CLI は埋め込む）＝今は CLI と同じ。
+- **網** `ScoreExportTests`（Integration・CLI を `dotnet lysc.dll` で起動）: 6 形式 × 「CLI `--score sub`・ボタン `RenderName=sub`・batch の `two-sub`」が byte 同一、かつ `two`（main）とは異なる。⚠️ **PDF は PDFsharp が時計（`/CreationDate`）・`/ID`・subset font の 6 字タグ（`/RFYOHX+Emmentaler-20`）を毎 process 変える＝同じ CLI を 2 回走らせても 180 byte 違う**（Lab `sessions/p770/pdfdet/`）ので、網はその 3 つを mask して比べる。PDF の掃きが無いのはこれが理由（起票: §1.0 ⒜）。
+- 掃き（base＝p767 の exe（Core は `ChooseDeclared` 1 本ぶん前）・head＝p770・Lab `sessions/p770/sweep-*.log`）: **check 診断 1,963 行 差 0／ly 1,199 本 差 0／midi 1,199 本 差 0／svg 1,199 本 差 0**（998 冊）＝CLI の出力は byte で同じ。
+★ `-End p770 -DiffBase c92a5940`＝full **10898 / 0 / 2 / 10900**（網 +12）・門 全 OK（HANDOFF 残り 7,136 B・§1 残り 9,420 字・棚卸し 差分なし）。7.5: Core `+` 265 行＝新 `ScoreExport.cs`（約 200）＋ `PngGenerator.CropToContent`（CLI から移動）＋ Choose 化 2 か所・REF 1（`PngPagePaths` の ps-to-png.scm＝CLI に在った註の移動）・OWN 0。7.6: ⒜ 出所は第769 末の私の列挙＋ユーザー決定・PDF の非再現性は計器で測った。7.7: 配管の二重化は消えたが、**svg の `--combined`（`GenerateMultiMovement`）と `IncrementalCompiler` のプレビュー描画は家の外**（layout と session の話＝扉ではない）。commit `1e395639`（code）。push はユーザー。
+判定: 扉は一本になった（CLI・ボタン・batch が 1 つの `ScoreExport.Write`）。次の一手: 第769 末の列挙の 2 つ目＝MIDI の conductor track の衛生（拍子 meta の重なり・end-of-track）か、PDF の再現性（§1.0 ⒜）＝ユーザー判断。会話を区切るか: (a) 続けられる。
+
 ## 以下は第769セッションの経緯
 
 ### 1.1 第769セッション（2026-10-03・YT-DELL2）

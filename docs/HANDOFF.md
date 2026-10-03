@@ -79,7 +79,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。→ **第751（2026-10-02・ユーザー決定）「LP 忠実にこだわるより音楽的な妥当性を重視。LP から引き継ぐのはレンダリングとレイアウトの美しさだけ。ユーザーがまだ少ないので過去のしがらみに縛られない」＝意味論（拍子・弱起・反復・強弱・検査・出力の意味）の裁定者は音楽的妥当性、LP は描画と配置の裁定者（RULES §5.2 に規則として置いた）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ★ **PDF が再現可能でない（第770・Lab `sessions/p770/pdfdet/`）**: PDFsharp 1.50 が `/CreationDate`・trailer の `/ID`・subset font 名の 6 字タグを process ごとに変える＝同じ本を 2 回書くと 180 byte 違う。`document.Info.CreationDate` は設定できる（固定の値を入れる）・タグと `/ID` は PDFsharp の内部（`PdfFontDescriptor`／`PdfTrailer`）＝直せるか要調査。直れば PDF の掃き（byte 比較）が立つ。今は網 `ScoreExportTests` が 3 つを mask して比べている。
 - ★ **MIDI の conductor track に同じ拍子の meta event が part の数だけ重なる（第768・計器 Lab `sessions/p768/dump-mid.ps1`）**: 5 part の本（bohemian-rhapsody）で `time 6/4` が同じ tick に 5 本・冒頭の 9/8 は 6 本。鳴らない part も timeline のために歩く（`MidiExporter.Export` の註）ので、各 part の section 開き（`OpenSection` → `TimeSignatures.Add`）が 1 本ずつ足す。DAW は無害だが file は太る。直すなら conductor track を閉じる所で「同じ tick・同じ拍子」を 1 本に畳む（tempo も同じ族か確認）。掃き midi の byte 比較は多 part の本で全部変わる＝網を先に。
 - ★★ **双子の 3 件（第767・leadsheet-collide の LP 警告 6 本・計器 `sessions/p767/twin/`）**: ⒜ 1 小節目に file の `tempo` と section の `tempo` を同じ瞬間に書く（`\tempo "Moderato"` → `\mark … \tempo "Rubato"`）＝LP が後者を捨てる＝section が同じ小節で言い直すなら file の分を書かない／⒝ section で拍子が変わる（Bridge 3/4）とき chords 行の entry が前の拍子の長さ（`d1:m`）＝行の長さは `PrevailingMeters` で読む（歌詞の `EmitTimedStream` は読んでいる）／⒞ `[1-2. ~Bridge] :| [3. ~Tag]` に「already have a VoltaBracket; ending it prematurely」（`\volta 1,2` の override の形）。
 - ★★ **⑼ の残り（第762・ユーザー判断・本は Lab `corpora/dogfood/big/` 4 冊・計器 `sessions/p762/run-big.ps1`＝check＋4 出力＋LP）**: ⒞′ 音を取らない裸の `__`（行末）は双子で LP の「unterminated extender」のまま（choir 2 本・page は最小長の線だけ）／⑺ resume の probe は代表 1 つの header 読みしか記録しない（`MeasureCollector.Form.cs` の註）／⑻ 観察（優先低）: 宣言した弱起が短い小節の後に来る形＝LP は `\partial` で併合・頁と XML は弱起を 1 小節に数える（コーパス 0・第761）。／**閉じた分（経緯は ARCHIVE の各便）**: リファクタ A〜C6（第740〜748）・綴り A1〜A4（第750〜755）・D=(a)（第755）・同名 section (a)（第753 `112ea7f2`）・validator の弱起（第753 `deb49459`）・XML の番号 ⑹⑹′（第756 `f43e48c4`・第757 `280cbbde`）・割れた小節 ⑻（第759 `2a77777c`・双子は不要＝第761）・StreamFrame の網（第758 `234b5361`）・観測者の無い規則 4 つ＋双子の欠陥 2（第760 `d0acd7da`）・⑽ part 名に予約語＋⑼ ⒜ `tab X Y` は宣言された part が勝つ（第763 `3274e1b7`・§3 の最上段）・⑼ ⒝ capo の LYS1039 の文面・⒞ 双子の歌詞の終端と cadenza の bar check・⒠ `@ottava(8va)` の文面（第764）・⒟ 1 頁目の沈み＝本の側＋LP も同じ（第765・コード変更なし）。計器: Lab `sessions/p742/`（ly／midi／xml／svg の掃き・exe は両側とも写す）・`sessions/p753/sweep-check.ps1`（診断の掃き）・`sessions/p762/run-big.ps1`
@@ -121,6 +120,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第772セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き・ユーザー「続けて」＝第771 末の次の一手の筆頭＝**PDF の再現性**。`-Start p772`（HEAD `69d391c4`・未 push 4）＝full **10902 / 0 / 2 / 10904**。§7 3.5 で第770 を ARCHIVE へ。
+- **正体（第770 の計器 `sessions/p770/pdfdet/`）**: PdfSharpCore 1.3.65 が書く 3 つ＝`/CreationDate`（時計）・trailer の `/ID`（Guid・同じ値を 2 回）・subset font 名の 6 字タグ（Guid・`/RFYOHX+Emmentaler-20`・1 冊に 21 か所）。`/ModDate` は無い・object stream も無い＝全部 **非圧縮の辞書の中の固定長の文字列**。
+- **直した（commit 下記）**: 新 `Rendering/Pdf/PdfReproducibility.cs`＝⒜ `CreationDate()`: `SOURCE_DATE_EPOCH`（reproducible-builds の慣習・1970 からの秒）が在れば `_document.Info.CreationDate` にその時刻、無ければ時計のまま（PDF の作成日は読者に意味がある）／⒝ `Apply(bytes)`: 保存後の byte 列を**同じ長さで**書き換える＝タグは「face 名＋出現順」の SHA-256 から A〜Z 6 字（同じ face の 2 つ目の subset も別名を保つ）・`/ID` は ID を 0 で埋めた file 全体の MD5（xref の offset が動かない）。`PdfDocumentContext.Dispose` が保存前後に呼ぶ。LILYSHARP-OWN（LP の PDF は Cairo の時計のまま・慣習は reproducible-builds.org）。
+- **網** `PdfReproducibilityTests` 3 本（epoch 下で 2 回書いて byte 同一・epoch 無しは `/CreationDate` だけ違う・タグは A〜Z で subset ごとに別・`/ID` の 2 つは同じ hex・epoch の日付が入る）＋ `ScoreExportTests` の PDF の mask を外した（3 つの扉が epoch 下で byte 同一＝`SourceDateEpoch` の collection で直列）。文書: CHANGELOG Fixes・`CLI_REFERENCE.md` pdf 節に `SOURCE_DATE_EPOCH`。
+- 掃き（新 `sessions/p772/sweep-pdf.ps1`＝head を 2 回・base 対 head は mask して比較・998 冊・`SOURCE_DATE_EPOCH=1700000000`）: **PDF 1,198 本＝head 2 回は 1,198 本とも byte 同一・base 対 head は描画同一 1,198 本（差 0）**＝PDF の掃きが初めて立った（以後は base 対 head を byte で比べられる）。
+★ `-End p772 -DiffBase 69d391c4`＝full **10905 / 0 / 2 / 10907**（網 +3）・門 全 OK（HANDOFF 残り 8,219 B・§1 残り 10,005 字・棚卸し `APPROXIMATIONS.md` +5/−3＝OWN 1 本が増えた・1 回目は stale で赤→再生成）。7.5: Core `+` 124 行＝新 `PdfReproducibility.cs`（約 110）＋ `PdfDocumentContext.Dispose` の 4 行・REF 0・OWN 1（慣習は reproducible-builds の物・LP は時計のまま）。7.6: ⒜ 出所は第770 の計器（180 byte・28 か所）と PdfSharpCore の出力の読み（`/ModDate` 無し・ObjStm 無し）。7.7: `SOURCE_DATE_EPOCH` は時計だけに効く＝タグと ID は常に決定的（意味を持たないから）。commit `af7038f3`（code）。push はユーザー。
+判定: PDF の再現性は閉じた＝svg／ly／midi／xml に続いて PDF も byte で掃ける。次の一手: 第769 末の列挙の残り＝双子の警告 3 件（§1.0 ⒜・小）・D.C./D.S. の MIDI（設計）・行末の裸の `__`（⑼ ⒞′）＝ユーザー判断。会話を区切るか: (a) 続けられる。
+
+## 以下は第771セッションの経緯
+
 ### 1.1 第771セッション（2026-10-03・YT-DELL2）
 
 同じ会話の続き・ユーザー決定「Midi」（第770 末の次の一手＝conductor track の衛生）。`-Start p771`（HEAD `bcbc2353`・未 push 2）＝full **10898 / 0 / 2 / 10900**。§7 3.5 で第769 を ARCHIVE へ。
@@ -130,18 +141,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **掃き**（base＝p770 の exe・head＝p771・Lab `sessions/p771/`）: midi 1,199 本中 **1,172 本が byte で違う＝想定どおり**。`compare-mid.ps1`（SMF を読んで比べる計器）で **音は 1,199 本とも同一・base の meta を同じ規則で畳むと head と全部一致・落ちた重複 meta 619 本・end-of-track が piece の end に無い track 0**（計器が 2 本挙げたのは同音の重なり（tab の articulation）で on を上書きした計器側の読み違い＝head の file は最後の off で終わっている）。
 ★ `-End p771 -DiffBase bcbc2353`＝full **10902 / 0 / 2 / 10904**（網 +4）・門 全 OK（HANDOFF 残り 7,384 B・§1 残り 9,804 字・棚卸し `APPROXIMATIONS.md` 行番号 3 行＝増減 0・1 回目は stale で赤→再生成）。7.5: Core `+` 102 行＝`MidiTrack.SetTempo`／`SetTimeSignature`／`LastTick`・`MidiFile.EndTick`・end-of-track の delta・REF 3（tempo-performer.cc・time-signature-performer.cc・staff-performer.cc＋midi-walker.cc）・OWN 0。7.6: ⒜ 出所は第768 の起票（計器 `dump-mid.ps1`）＋ LP の twin.mid の読み。7.7: 拍子の「同じ分数でも `\time` event なら書く」は `BarContext.SetTime` が既に LP の規則（`time none` だけ false）＝触っていない。commit `1a70d551`（code）。push はユーザー。
 判定: conductor track の衛生は閉じた。次の一手: PDF の再現性（§1.0 ⒜・PDFsharp の時計／ID／タグ）か、第769 末の列挙の残り（双子の警告 3 件・D.C./D.S. の MIDI・行末の `__`）＝ユーザー判断。会話を区切るか: (a) 続けられる。
-
-## 以下は第770セッションの経緯
-
-### 1.1 第770セッション（2026-10-03・YT-DELL2）
-
-同じ会話の続き・ユーザー決定「扉の一本化から着手して」（第769 末の「私が直したい所」の筆頭）。`-Start p770`（HEAD `c92a5940`・未 push 0＝ユーザーが push 済み）＝full **10886 / 0 / 2 / 10888**。§7 3.5 で第768 を ARCHIVE へ。
-- **一本化した（commit 下記）**: 新 `LilySharp.Core/Export/ScoreExport.cs`＝`Write(tree, format, path, (Declaration, Spec)? score, ExportOptions)` が 7 形式（svg／png／pdf／midi／musicxml／vsqx／ly）の exporter 設定の**唯一の家**。返りは `ExportResult(Files, Notes, Warnings)`＝書いた file・console に出す数字（`Tracks: 2` など）・exporter の警告。扉ごとの設定は `ExportOptions`（EmbedFont／PngScale／CropPng／PinFonts）。CLI（`Program.cs`）は `WriteMidi`／`WriteXml`／`WriteLy`／`CropToContent`／各 lambda を捨てて `Report(ScoreExport.Write(...))` だけ（`CropToContent` は `PngGenerator` へ）。LSP（`Commands.cs`）は `WriteExport` と `ExportExtensions` を捨て、1 score の道も batch の道も `ScoreExport.Write`＝exporter の警告が `ExportResponse.Warnings` に乗る（batch は `<stem>: ` を前置）。
-- **ついでに消えた drift**: `PdfGenerator.Generate`／`PngGenerator.Generate(Pages)` の名前解決が `FindByName`（外れたら null＝score 無しの絵）だったのを `Choose`（外れたら最初の score＝svg・プレビューと同じ）に。ボタンの svg は font folder が見つからないと埋め込みを落としていた（CLI は埋め込む）＝今は CLI と同じ。
-- **網** `ScoreExportTests`（Integration・CLI を `dotnet lysc.dll` で起動）: 6 形式 × 「CLI `--score sub`・ボタン `RenderName=sub`・batch の `two-sub`」が byte 同一、かつ `two`（main）とは異なる。⚠️ **PDF は PDFsharp が時計（`/CreationDate`）・`/ID`・subset font の 6 字タグ（`/RFYOHX+Emmentaler-20`）を毎 process 変える＝同じ CLI を 2 回走らせても 180 byte 違う**（Lab `sessions/p770/pdfdet/`）ので、網はその 3 つを mask して比べる。PDF の掃きが無いのはこれが理由（起票: §1.0 ⒜）。
-- 掃き（base＝p767 の exe（Core は `ChooseDeclared` 1 本ぶん前）・head＝p770・Lab `sessions/p770/sweep-*.log`）: **check 診断 1,963 行 差 0／ly 1,199 本 差 0／midi 1,199 本 差 0／svg 1,199 本 差 0**（998 冊）＝CLI の出力は byte で同じ。
-★ `-End p770 -DiffBase c92a5940`＝full **10898 / 0 / 2 / 10900**（網 +12）・門 全 OK（HANDOFF 残り 7,136 B・§1 残り 9,420 字・棚卸し 差分なし）。7.5: Core `+` 265 行＝新 `ScoreExport.cs`（約 200）＋ `PngGenerator.CropToContent`（CLI から移動）＋ Choose 化 2 か所・REF 1（`PngPagePaths` の ps-to-png.scm＝CLI に在った註の移動）・OWN 0。7.6: ⒜ 出所は第769 末の私の列挙＋ユーザー決定・PDF の非再現性は計器で測った。7.7: 配管の二重化は消えたが、**svg の `--combined`（`GenerateMultiMovement`）と `IncrementalCompiler` のプレビュー描画は家の外**（layout と session の話＝扉ではない）。commit `1e395639`（code）。push はユーザー。
-判定: 扉は一本になった（CLI・ボタン・batch が 1 つの `ScoreExport.Write`）。次の一手: 第769 末の列挙の 2 つ目＝MIDI の conductor track の衛生（拍子 meta の重なり・end-of-track）か、PDF の再現性（§1.0 ⒜）＝ユーザー判断。会話を区切るか: (a) 続けられる。
 
 ## 2. 開いている作業
 

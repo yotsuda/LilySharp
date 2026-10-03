@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 59 | 観測者がゼロだと自認しているもの |
-| `OWN` | 214 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **333** | |
+| `OWN` | 215 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **334** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -236,7 +236,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（214 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（215 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **:90** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
@@ -291,6 +291,8 @@
 - **:75** ⚠️ LILYSHARP-OWN: ONE NAME BOUND TO BOTH FAMILIES keeps the FIRST role's answer.
 ### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
 - **:245** LILYSHARP-OWN: the stand-in case has no LilyPond counterpart, and cannot have one.
+### `LilySharp.Core/Rendering/Pdf/PdfReproducibility.cs`
+- **:41** LILYSHARP-OWN: the convention is reproducible-builds.org's, not LilyPond's (its PDFs
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:417** LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
