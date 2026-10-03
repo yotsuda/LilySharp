@@ -117,24 +117,23 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第766セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き（ユーザー「重なりがないかを確認する意図で、複雑な lys をいくつか書いて。私が目視して確認する」）。`-Start p766`（HEAD `9d29de46`・未 push 136）＝full **10880 / 0 / 2 / 10882**。§7 3.5 で第764 を ARCHIVE へ。
+- 書いた本 4 冊（Lab `corpora/dogfood/collide/`・check 0・png は `sessions/p766/png/`）: `piano-collide`（grandStaff・両段の同じ列に強弱＋hairpin・積んだ articulation・加線の上の ornament と trill span・pedal text と強弱・tempo と section label・tuplet の括弧と臨時記号・2 声部の休符・ottava・fermata）／`leadsheet-collide`（3 verse の stack・melisma と extender・`chordDiagrams guitar all` で全 diagram が tempo と label の上・歌詞の位置の強弱と text・3 回の repeat と 2 つの ending・3/4 の bridge・1 線の slash 譜）／`quartet-collide`（4 段の同じ列の強弱／hairpin／bowing／articulation・tuplet 5:4 と 7:4・trill＋courtesy＋trill span・phrasing slur・text spanner・pizz./arco・glissando・viola の cue・7/8 と 5/4）／`guitar-collide`（shape chord の名前と diagram・弦番号と運指・bend／H／P／T・harm. の text・rit. spanner・tab の triplet・slash と chord 名・tab 単独 full）。
+- 書きながら踏んだ自分の誤り（本の側・直した）: `r r2 r` の 3 つ目の `r` は 2 分（裸の休符は直前の長さを継ぐ）／`cue { }` は 1 小節の中の領域＝2 小節の cue は小節ごとに書く／`a'4( bes') c''( d'')` は 5 拍／3 slot の chords 小節は `.` で 4 に。`tuplet 7/4 { 7×16th }` は 4 分（`7/8` なら 2 分）。
+- 目視は**ユーザーが行う**。私が png で気づいた候補（未検証・ユーザーの判断待ち）: ⑴ piano 小節 15〜17: 複数小節休符の後に小節番号 `16` と `17` が同じ列に縦に 2 つ／⑵ piano 小節 3〜4: lh の `sempre legato` と `Ped.`／`*` と強弱が同じ帯に並ぶ／⑶ leadsheet 小節 12〜13: 小節番号が chord diagram の運指の数字に重なる／⑷ quartet 小節 8〜9: viola の cue の clef 変更の直後に拍子（7/8）がもう一度描かれているように見える／⑸ guitar 小節 2: diagram `F` と小節番号 `2`。
+★ `-End p766 -DiffBase 9d29de46`＝full **10880 / 0 / 2 / 10882**（網 ±0）・門 全 OK（HANDOFF 残り 11,714 B・§1 残り 11,315 字）。7.5: Core `+` 0（本だけの便）。7.6／7.7: 該当なし。push はユーザー。
+判定: 次の一手はユーザーの目視の結果待ち（重なりの報告があれば、本と png から再現して起票）。会話を区切るか: (a) 報告の直し方は本と png の上に立つ＝続ける。
+
+## 以下は第765セッションの経緯
+
 ### 1.1 第765セッション（2026-10-03・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。`-Start p765`（HEAD `f894c720`・未 push 135）＝full **10880 / 0 / 2 / 10882**。§7 3.5 で第763 を ARCHIVE へ。
 - **⑼ ⒟ 合唱の総譜 1 頁目の沈み＝コード変更なしで閉じた**。⑴ 第762 の png は bass が 1 オクターブ低く書かれた版（加線 7 本）で、段が高すぎて 1 頁目に 1 段しか入らなかった＝**本の側**（ユーザーが 9:56 に `g,`→`g` で直した版では Lily# も LP も 1 頁目に 2 段・上端から＝`sessions/p765/ls-choir/`・`lp-choir/`）。⑵ 最後でない頁に 1 段だけ載るとき段が頁の中ほどに沈むのは **LP も同じ**（`sessions/p765/probes/lone1.ly`＝`{ c'1 d'1 \pageBreak … }` の 1 頁目で LP は段を頁の中央やや上に置く＝top-system-spacing と last-bottom-spacing のばねが伸びる・ragged-bottom は既定 ##f）。⇒ 起票は本の誤りの帰結で、Lily# の頁割りに欠陥は無い。
 ★ `-End p765 -DiffBase f894c720`＝full **10880 / 0 / 2 / 10882**（網 ±0）・門 全 OK（HANDOFF 残り 10,677 B・§1 残り 12,178 字）。7.5: Core `+` 0（測るだけの便）。7.6／7.7: 該当なし。push はユーザー。
 判定: ⑼ は閉じた（残る ⒞′ は観察・⑺⑻ は優先低）。次の一手は無い＝ユーザーの指示待ち（§1.0 ⒝⒞ の設計級の島か、新しい本）。会話を区切るか: (c)＝次の島は未定・既定は続ける。
-
-## 以下は第764セッションの経緯
-
-### 1.1 第764セッション（2026-10-03・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」）。`-Start p764`（HEAD `68c22933`・未 push 133）＝full **10875 / 0 / 2 / 10877**。§7 3.5 で第762 を ARCHIVE へ。
-- **⑼ ⒝ capo 下の LYS1039 の自己矛盾**: 検出は正しかった（書いた shape は capo の上で押さえる形＝pressed chord と比べる・K2 の設計どおり）。壊れていたのは**文面**で、pressed 枠の認識（G）の隣に sounding の symbol（G）を刷っていた。直し: 検査を sounding 枠で行う（`ChordShapes.AtCapo`＝shape の fret を capo ぶん上げて、音楽が書いた sounding chord と比べる＝結果は同じ・移調は全音を等しく動かす）＋ `MismatchMessage(capo, pressedShape)` が capo を 1 回名指し、symbol 自身の pressed shape（`Default(tuning, chord.Pressed(capo))`）を「symbol を保つ直し方」として添える。3 つの読み手（item・row・layout table）とも。網 `ChordShapeCheckTests.UnderACapo_TheMessageSpeaksSoundingNames`・`ChordDiagramTests` の期待文を更新。**capo 下の shape chord の意味は変えていない**（設計判断は不要だった＝「sounding を書き pressed shape を添える」の K2 の規則が答え）。
-- **⑼ ⒠ `@ottava(8va)` の LYS1008**: `OttavaHint`＝head が `ottava`／`quindicesima` の未知の名前に 4 つの綴りと `@!ottava` を言う（`Did you mean` より先）。網 `AnnotationNameValidatorTests`。
-- **⑼ ⒞ 双子の歌詞**: ⑴ verse 末尾の `__`＝LP は次の音節で extender を終えるので、行末の extender は「unterminated extender」で何も描かなかった → `ExtenderTerminator`（Streams.cs）が**空の音節 `""`** を page の extender の終わり（`LyricItem.MelismaEnd*` の次の音の onset・小節を閉じるなら次の小節頭・part の最後の音ならその音の上）に書く。LP 実測（`sessions/p764/probes/extender.ly`）: `la1 __ \skip 1 ""1` は警告なしで線を描く。音を 1 つも取っていない裸の `__`（`MelismaEnd` −1）は従来どおり＝LP の警告が残る（choir の 8 本中 2 本）。⑵ `time none` の小節＝`\cadenzaOn` の下で歌詞・inline chord・figured bass の行の `|` は bar check に落ちる → `MultiMeasureRestEngraver.PrevailingSenzaMisura`（`PrevailingMeters` と同じ歩き）で小節ごとに判定し、`EmitTimedStream(senza)` がその小節の `|` を書かない（音楽側は従来どおり `\bar "|"`）。choir-chorale の双子: 警告 bar check 2＋extender 8 → extender 2（`sessions/p764/choir2/`）。既存の網 1 本の期待を更新（`star1 __ |` → `star2 __ ""2 |`）＋新網 1 本（途中終端・次小節頭・裸の `__`・cadenza）。**ly の掃き（p739・998 冊・base p763 head）: 差 0**＝既存の本に行末の held extender も cadenza の歌詞も無い。
-- 閉じなかった分: ⒟ 合唱の総譜 1 頁目の沈み（頁割りの調査＝別便）。
-★ `-End p764 -DiffBase 68c22933`＝full **10880 / 0 / 2 / 10882**（網 **+5**）・門 全 OK（HANDOFF 残り 7,015 B・§1 残り 10,864 字・棚卸し `APPROXIMATIONS.md` 行番号 1 行＝増減 0）。7.5: Core `+` 189 行／`-` 33 行・REF 0・OWN 0＝文面と双子の仕事で LP の式は無い（LP の extender の終わりは `LyricItem` の既存 REF の帰結を双子に写しただけ）。7.6: ⒟。7.7: なし（`""` の終端は LP 実測の上に立つ・sentinel なし）。push はユーザー。
-判定: ⑼ は ⒟（頁割り）と ⒞′（裸の `__`）を残して閉じた。次の一手はユーザー判断（⒟ は 1 頁目の DP の調査＝設計級・`sessions/p762/big-out/choir-chorale/` の png から）。会話を区切るか: (c)＝⒟ は今の文脈と無関係・既定は続ける。
 
 ## 2. 開いている作業
 

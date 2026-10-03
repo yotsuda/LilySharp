@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第764セッションの経緯
+
+### 1.1 第764セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。`-Start p764`（HEAD `68c22933`・未 push 133）＝full **10875 / 0 / 2 / 10877**。§7 3.5 で第762 を ARCHIVE へ。
+- **⑼ ⒝ capo 下の LYS1039 の自己矛盾**: 検出は正しかった（書いた shape は capo の上で押さえる形＝pressed chord と比べる・K2 の設計どおり）。壊れていたのは**文面**で、pressed 枠の認識（G）の隣に sounding の symbol（G）を刷っていた。直し: 検査を sounding 枠で行う（`ChordShapes.AtCapo`＝shape の fret を capo ぶん上げて、音楽が書いた sounding chord と比べる＝結果は同じ・移調は全音を等しく動かす）＋ `MismatchMessage(capo, pressedShape)` が capo を 1 回名指し、symbol 自身の pressed shape（`Default(tuning, chord.Pressed(capo))`）を「symbol を保つ直し方」として添える。3 つの読み手（item・row・layout table）とも。網 `ChordShapeCheckTests.UnderACapo_TheMessageSpeaksSoundingNames`・`ChordDiagramTests` の期待文を更新。**capo 下の shape chord の意味は変えていない**（設計判断は不要だった＝「sounding を書き pressed shape を添える」の K2 の規則が答え）。
+- **⑼ ⒠ `@ottava(8va)` の LYS1008**: `OttavaHint`＝head が `ottava`／`quindicesima` の未知の名前に 4 つの綴りと `@!ottava` を言う（`Did you mean` より先）。網 `AnnotationNameValidatorTests`。
+- **⑼ ⒞ 双子の歌詞**: ⑴ verse 末尾の `__`＝LP は次の音節で extender を終えるので、行末の extender は「unterminated extender」で何も描かなかった → `ExtenderTerminator`（Streams.cs）が**空の音節 `""`** を page の extender の終わり（`LyricItem.MelismaEnd*` の次の音の onset・小節を閉じるなら次の小節頭・part の最後の音ならその音の上）に書く。LP 実測（`sessions/p764/probes/extender.ly`）: `la1 __ \skip 1 ""1` は警告なしで線を描く。音を 1 つも取っていない裸の `__`（`MelismaEnd` −1）は従来どおり＝LP の警告が残る（choir の 8 本中 2 本）。⑵ `time none` の小節＝`\cadenzaOn` の下で歌詞・inline chord・figured bass の行の `|` は bar check に落ちる → `MultiMeasureRestEngraver.PrevailingSenzaMisura`（`PrevailingMeters` と同じ歩き）で小節ごとに判定し、`EmitTimedStream(senza)` がその小節の `|` を書かない（音楽側は従来どおり `\bar "|"`）。choir-chorale の双子: 警告 bar check 2＋extender 8 → extender 2（`sessions/p764/choir2/`）。既存の網 1 本の期待を更新（`star1 __ |` → `star2 __ ""2 |`）＋新網 1 本（途中終端・次小節頭・裸の `__`・cadenza）。**ly の掃き（p739・998 冊・base p763 head）: 差 0**＝既存の本に行末の held extender も cadenza の歌詞も無い。
+- 閉じなかった分: ⒟ 合唱の総譜 1 頁目の沈み（頁割りの調査＝別便）。
+★ `-End p764 -DiffBase 68c22933`＝full **10880 / 0 / 2 / 10882**（網 **+5**）・門 全 OK（HANDOFF 残り 7,015 B・§1 残り 10,864 字・棚卸し `APPROXIMATIONS.md` 行番号 1 行＝増減 0）。7.5: Core `+` 189 行／`-` 33 行・REF 0・OWN 0＝文面と双子の仕事で LP の式は無い（LP の extender の終わりは `LyricItem` の既存 REF の帰結を双子に写しただけ）。7.6: ⒟。7.7: なし（`""` の終端は LP 実測の上に立つ・sentinel なし）。push はユーザー。
+判定: ⑼ は ⒟（頁割り）と ⒞′（裸の `__`）を残して閉じた。次の一手はユーザー判断（⒟ は 1 頁目の DP の調査＝設計級・`sessions/p762/big-out/choir-chorale/` の png から）。会話を区切るか: (c)＝⒟ は今の文脈と無関係・既定は続ける。
+
 ## 以下は第763セッションの経緯
 
 ### 1.1 第763セッション（2026-10-03・YT-DELL2）
