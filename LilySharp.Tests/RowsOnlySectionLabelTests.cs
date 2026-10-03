@@ -15,44 +15,39 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Linq;
-using LilySharp.Core.Rendering;
+using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Syntax;
 using LilySharp.Tests.LpFidelity;
 using Xunit;
 
 namespace LilySharp.Tests;
 
 /// <summary>
-/// A staffless lead sheet sets its <c>form</c> section names ON the chord line, level with
-/// the symbols, and the symbols keep out of the label's frame.
+/// A staffless lead sheet sets its <c>form</c> section names ABOVE the row, in their own
+/// band, as LilyPond sets a mark over a ChordNames line — and the row's symbols stand where
+/// they would with no label at all.
 /// </summary>
 /// <remarks>
-/// ⚠️ THIS IS A DECIDED DIVERGENCE FROM LilyPond, NOT A PORT (owner's decision, 2026-08-24).
-/// LilyPond puts the mark ABOVE the row's symbols: probes/mark-chord-row.ly reads the row's
-/// ink top plus <c>outside-staff-padding</c> 0.460000 on book MKT (SectionLabel), MKS
-/// (RehearsalMark) and MKV (the same book with taller symbols) — one number for two grobs and
-/// two symbol heights, so it is the padding and not an accident of the ink. Lily# is asked for
-/// the printed-chart convention instead. See
-/// <c>MusicMarkEngraver.StafflessAnchorRefpointBelowTop</c>.
+/// LILYPOND-REF: probes/mark-chord-row.ly books MKT (SectionLabel), MKS (RehearsalMark) and
+/// MKV (taller symbols) all read the row's ink top plus <c>outside-staff-padding</c>
+/// 0.460000 — one number for two grobs and two symbol heights.
 /// <para>
-/// ★ THE TWO CONTROLS ARE THE POINT (HANDOFF 5.0-1, and bone 2 of session 243: an arm that
-/// cannot be made red is not a control). Both were RED while this was being written:
-/// <list type="bullet">
-/// <item>the LYRICS-ONLY arm printed its <c>Main</c> box straight through the first syllable
-/// when the rule fired on any staffless sheet rather than on one whose anchor row carries
-/// CHORD symbols;</item>
-/// <item>the X arm — <c>A2</c> printed through <c>Dmaj7</c> on the owner's own book — was red
-/// with only the Y half of the change in, which is HANDOFF 5.3's "placement and reservation
-/// are one claim" caught in the act.</item>
-/// </list>
+/// ⚠️ THIS REVERSES A DECISION. From 2026-08-24 to session 784 the owner had the label set
+/// ON the chord line, level with the symbols (a printed-chart convention), with the overlap
+/// resolved in X: a window that moved the symbols clear of the box, a spring floor that
+/// widened the first bar for it, and — once the grid engraved its meters on that line — a
+/// box pushed past the meter (sessions 781, 783). Looking at that last shape the owner
+/// reversed it for every staffless sheet (2026-10-04: "the section mark reads better in
+/// the row above"), and the X half went with the convention (HANDOFF 5.3). The controls
+/// below are the old file's, read the other way round.
 /// </para>
 /// </remarks>
 [Trait("Category", "Unit")]
 public class RowsOnlySectionLabelTests
 {
-    /// <summary>The size <c>SharedRenderer.DrawSingleMusicMark</c> sets a section label at.</summary>
-    private const double SectionLabelFontSize = 2.2;
-
     private static string RowsOnly(bool withChords) => $$"""
         octave absolute
         key c major
@@ -79,77 +74,55 @@ public class RowsOnlySectionLabelTests
         }
         """;
 
-    /// <summary>With a chord row leading a staffless sheet, every label sits ON the chord line.</summary>
+    /// <summary>On a staffless chord sheet every label stands ABOVE the chord line, clear of
+    /// the symbols by a real margin (device Y grows downward, so "above" is a smaller Y).</summary>
     [Fact]
-    public void SectionLabel_OnAStafflessChordSheet_SharesTheChordBaseline()
+    public void SectionLabel_OnAStafflessChordSheet_StandsAboveTheSymbols()
     {
         var g = RenderedGeometry.Render(RowsOnly(withChords: true));
         var labels = g.MusicMarkLabels;
         Assert.Equal(2, labels.Count);          // one per section, one per system
         foreach (var label in labels)
         {
-            // The chord symbols of the label's own system: the ones nearest it vertically.
-            double nearest = g.ChordSymbols
+            double nearestChord = g.ChordSymbols
                 .Select(c => c.Y)
                 .OrderBy(y => System.Math.Abs(y - label.Y))
                 .First();
-            Assert.Equal(nearest, label.Y, 9);
+            Assert.True(nearestChord - label.Y > 1.0,
+                $"'{label.Text}' at {label.Y:F6} must stand above the chord line at {nearestChord:F6}, "
+                + "not level with the symbols (the 2026-08-24 convention, reversed 2026-10-04).");
         }
     }
 
-    /// <summary>...and no symbol stands inside the label's frame.</summary>
+    /// <summary>...and the symbols owe the label nothing: hidden (<c>~A</c>) or shown, every
+    /// chord symbol and every bar line stands at the same X.</summary>
     [Fact]
-    public void SectionLabel_OnAStafflessChordSheet_IsClearOfEverySymbolInX()
+    public void SectionLabel_OnAStafflessChordSheet_LeavesTheSymbolsWhereTheyStand()
     {
-        var g = RenderedGeometry.Render(RowsOnly(withChords: true));
-        foreach (var label in g.MusicMarkLabels)
-        {
-            // DrawnText.X is the box CENTRE for a mark (TextAnchor.Middle) and the ink LEFT
-            // for a chord symbol (TextAnchor.Start) — the two conventions the renderer draws
-            // them with.
-            double half = TextFontMetrics.Advance(
-                label.Text, SectionLabelFontSize, sans: false, FontStyle.Bold) / 2
-                + MusicMarkEngraver.LabelBoxPadding;
-            double boxLeft = label.X - half;
-            double boxRight = label.X + half;
-            foreach (var chord in g.ChordSymbols.Where(c => System.Math.Abs(c.Y - label.Y) < 1e-9))
-            {
-                double inkRight = chord.X + TextFontMetrics.Advance(
-                    chord.Text, chord.FontSize, sans: true, FontStyle.Regular);
-                Assert.True(chord.X >= boxRight || inkRight <= boxLeft,
-                    $"'{label.Text}' box [{boxLeft:F6}, {boxRight:F6}] overlaps "
-                    + $"'{chord.Text}' ink [{chord.X:F6}, {inkRight:F6}] on the shared line.");
-            }
-        }
+        var shown = RenderedGeometry.Render(RowsOnly(withChords: true));
+        var hidden = RenderedGeometry.Render(RowsOnly(withChords: true).Replace("form main { A B }", "form main { ~A ~B }"));
+        Assert.Empty(hidden.MusicMarkLabels);
+        Assert.Equal(hidden.ChordSymbols.Select(c => (c.Text, System.Math.Round(c.X, 6))).ToList(),
+                     shown.ChordSymbols.Select(c => (c.Text, System.Math.Round(c.X, 6))).ToList());
+        Assert.Equal(hidden.Barlines.Select(b => System.Math.Round(b.X, 6)).ToList(),
+                     shown.Barlines.Select(b => System.Math.Round(b.X, 6)).ToList());
     }
 
-    /// <summary>
-    /// CONTROL — a staffless sheet with NO chord row keeps its label ABOVE the row.
-    /// </summary>
-    /// <remarks>
-    /// The decision is "level with the CHORD NAMES", and a lyrics-only sheet has none. It is
-    /// also the arm with no repair available: nothing would move out of the label's way, so a
-    /// label on that line prints through the words. It did, before the gate.
-    /// </remarks>
+    /// <summary>A lyrics-only sheet keeps its label above the row too.</summary>
     [Fact]
     public void SectionLabel_OnAStafflessLyricsSheet_StaysAboveTheRow()
     {
         var g = RenderedGeometry.Render(RowsOnly(withChords: false));
         Assert.Empty(g.ChordSymbols);
-        var label = Assert.IsAssignableFrom<System.Collections.Generic.IReadOnlyList<DrawnText>>(
-            g.MusicMarkLabels)[0];
-        // Device Y grows DOWNWARD, so "above" is a smaller Y — and by a real margin, not a
-        // rounding: the label must clear the syllables it would otherwise overprint.
+        var label = g.MusicMarkLabels[0];
         double firstSyllable = g.LyricSyllables.Where(s => s.Y > label.Y).Min(s => s.Y);
         Assert.True(firstSyllable - label.Y > 1.0,
             $"the label sits {firstSyllable - label.Y:F6} above the first syllable it "
-            + "overlaps; on a sheet with no chord row it must keep its own band.");
+            + "overlaps; it must keep its own band.");
     }
 
-    /// <summary>
-    /// CONTROL — the same book WITH a staff is untouched: the label keeps its band above the
-    /// staff, which the owner confirmed is already right (2026-08-24).
-    /// </summary>
+    /// <summary>CONTROL — the same book WITH a staff: the label keeps its band above the
+    /// staff, which the owner confirmed on 2026-08-24 and which the reversal leaves alone.</summary>
     [Fact]
     public void SectionLabel_WithAStaff_KeepsItsBandAboveTheChordRow()
     {
@@ -181,6 +154,60 @@ public class RowsOnlySectionLabelTests
             .First();
         Assert.True(nearestChord - label.Y > 1.0,
             $"with a staff present the label must stay {nearestChord - label.Y:F6} > 1.0 above "
-            + "the chord line — the staffless convention may not reach this book.");
+            + "the chord line.");
+    }
+
+    // ----- the line-start X of a staffless label: the same anchors a staff's takes -----
+
+    private static string Chart(string top, string form) => top + $$"""
+        tempo 117
+        time 4/4
+        chords prog { section Intro { C | G | Am | F | } }
+        form main { {{form}} }
+        score main { chords prog }
+        """ + "\n";
+
+    private static (MultiStaffScore Score, ScoreLayout Layout) Lay(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        return (score, new LayoutEngine(score.Paper).Layout(score));
+    }
+
+    private static double BoxLeft(MultiStaffScore score, ScoreLayout layout)
+    {
+        var box = layout.MusicMarkLayouts.Single(m => m.MarkType == MusicMarkType.SectionLabel);
+        return box.X - MusicMarkEngraver.LabelBoxHalfWidth(score.TextMetrics, box.MarkType, box.Text, box.Boxed);
+    }
+
+    /// <summary>At a line start the box keeps the line-start edge — over the grid's meter,
+    /// which stands on the row below it now — under both arrangements; a line opening on a
+    /// drawn <c>|:</c> puts the box on that bar, as on a staff.</summary>
+    [Theory]
+    [InlineData("", "Intro", false)]
+    [InlineData("layout { markTempo beside }\n", "Intro", false)]
+    [InlineData("", "|: Intro :|", true)]
+    [InlineData("layout { markTempo beside }\n", "|: Intro :|", true)]
+    public void TheBox_TakesAStaffsLineStartAnchor(string top, string form, bool openingRepeat)
+    {
+        var (score, layout) = Lay(Chart(top, form));
+        double left = BoxLeft(score, layout);
+        double indent = layout.Systems[0].Indent;
+        if (openingRepeat)
+            Assert.True(left > indent + 0.3 + 1.0, $"the box's left edge ({left:F2}) should stand on the drawn `|:`, past the edge");
+        else
+            Assert.Equal(indent + 0.3, left, 6);
+    }
+
+    /// <summary>...and a label hidden or shown leaves the first bar's width alone: no spring
+    /// floor is paid for a box that stands above the row.</summary>
+    [Fact]
+    public void TheBox_WidensNoBar()
+    {
+        var (_, shown) = Lay(Chart("", "Intro"));
+        var (_, hidden) = Lay(Chart("", "~Intro"));
+        Assert.Equal(hidden.Systems[0].Measures[0].Width, shown.Systems[0].Measures[0].Width, 6);
+        Assert.Equal(hidden.Systems[0].Measures[1].Width, shown.Systems[0].Measures[1].Width, 6);
     }
 }

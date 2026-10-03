@@ -371,6 +371,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A chord grid's section names stand above the row.** On a chords-only (or lyrics-only)
+  sheet the `form`'s section boxes were set on the chord line itself, level with the
+  symbols, which moved aside for them; with the grid's meters on that same line the boxes
+  crowded the signatures. The boxes now stand in their own band above the row, as they do
+  over a staff and as LilyPond sets a mark over a chord line, and the symbols stay put.
 - **A chord grid shows its meter changes.** A chords-only (or lyrics-only) sheet drew the
   meter once, at the top of the first line; a section header's `time 3/2` lengthened its bars
   and showed nothing. The grid now engraves the change where a staff would — after the bar

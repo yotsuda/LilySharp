@@ -2201,9 +2201,8 @@ internal static class OutsideStaffStacker
     /// row's skyline is handed to the two Score-level passes alone.
     /// </para>
     /// <para>
-    /// ⚠️ NOT ON A STAFFLESS SHEET: there the movers' anchor IS the row, and the owner's
-    /// lead-sheet decision puts a label ON the symbols' line with the overlap resolved in X
-    /// (MusicMarkEngraver.StafflessAnchorRefpointBelowTop).
+    /// ⚠️ NOT ON A STAFFLESS SHEET: there the movers' anchor IS the row, whose ink the
+    /// anchor's own profile already carries.
     /// </para>
     /// </remarks>
     /// <summary><see cref="ChordRowSupport"/>'s answer for a book with no chord names — read

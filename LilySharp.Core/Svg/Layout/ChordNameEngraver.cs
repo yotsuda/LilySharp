@@ -256,11 +256,9 @@ internal static class ChordNameEngraver
     /// where it cannot, it does nothing and the book is untouched.
     /// </para>
     /// <para>
-    /// ⚠️ THE X MODEL IS THE DRAWN ONE, but it does NOT carry the boxed-label shift
-    /// <see cref="Calculate"/> makes. That shift exists only on a STAFFLESS lead sheet
-    /// (<c>MusicMarkEngraver.StafflessAnchorRefpointBelowTop</c>), and a staffless sheet has
-    /// no staff for an <c>@chord</c> to hang on — so the two never disagree about a symbol
-    /// either of them is asked about.
+    /// ⚠️ THE X MODEL IS THE DRAWN ONE. (Until session 784 <see cref="Calculate"/> also
+    /// shifted a STAFFLESS sheet's symbols clear of a section label set on their line; that
+    /// convention and its shift are gone — owner's decision 2026-10-04.)
     /// </para>
     /// </remarks>
     private static (List<(double X, ChordNameItem Chord, double Lift)> Line, bool Merged)
@@ -512,7 +510,6 @@ internal static class ChordNameEngraver
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
         bool chordGridSheet = false,
         Func<int, int, VerticalSkyline?>? lowerStaffUpSkyline = null,
-        IReadOnlyList<(int MeasureIndex, double X0, double X1)>? labelWindows = null,
         Func<int, int, double?>? attachedBaselineAboveTop = null,
         IReadOnlyDictionary<int, int>? chordRowAboveStaff = null,
         Func<ChordNameItem, bool>? blanked = null)
@@ -575,45 +572,9 @@ internal static class ChordNameEngraver
             a.sysIdx != b.sysIdx ? a.sysIdx.CompareTo(b.sysIdx)
             : a.chord.StaffIndex != b.chord.StaffIndex ? a.chord.StaffIndex.CompareTo(b.chord.StaffIndex)
             : a.x.CompareTo(b.x));
-        // ...and against the BOXED SECTION LABELS that share this row's line, on the sheets
-        // where they do (MusicMarkEngraver.StafflessAnchorRefpointBelowTop: a staffless lead
-        // sheet sets its section letters ON the chord line, by the owner's decision of
-        // 2026-08-24). A label standing on a symbol's own column is exactly the case that
-        // decision creates, so the reservation travels in the same commit as the placement
-        // (HANDOFF 5.3): `A2' printed straight through `Dmaj7' with only the Y half in.
-        // ⚠️ LILYSHARP-OWN, and it is the SAME shift ClearOfPrevious makes — a symbol whose
-        // column is occupied moves right until its box is clear, with the same SymbolGap.
-        // LilyPond never creates the configuration (its label does not share the line), so
-        // there is no LilyPond rule to copy here; when the convention goes, this goes with it.
-        // ⚠️ THE LABEL LOOP RUNS FIRST so the neighbour cascade below sees the moved symbol
-        // and re-clears everything after it. Running it afterwards would push one symbol onto
-        // the next.
-        // ⚠️⚠️ AND IT ONLY MOVES: nothing in the row's SPACING reads these windows
-        // (ApplyChordRowSpacing prices the symbols alone), so a label wider than the bar's
-        // slack pushes the symbol past its own bar line — measured 2026-09-09, the note on
-        // MusicMarkEngraver.BoxedLabelXWindows has the numbers. "Reserves" above means this
-        // shift, not a spring; the spring is the open half (HANDOFF §2 A).
-        if (labelWindows is { Count: > 0 })
-        {
-            for (int i = 0; i < prepared.Count; i++)
-            {
-                var cur = prepared[i];
-                if (!cur.chord.UseTiming) continue;   // an inline @chord stays on its note
-                double x = cur.x;
-                foreach (var (measureIndex, x0, x1) in labelWindows)
-                {
-                    if (!measureToSystem.TryGetValue(measureIndex, out int labelSys)
-                        || labelSys != cur.sysIdx)
-                        continue;
-                    double width = SymbolWidth(fonts, cur.chord);
-                    if (x + width + SymbolGap <= x0 || x >= x1 + SymbolGap)
-                        continue;   // the box and the symbol do not meet
-                    x = Math.Max(x, x1 + SymbolGap);
-                }
-                if (x != cur.x)
-                    prepared[i] = (cur.chord, x, cur.staffOffset, cur.topStaff, cur.sysIdx, cur.idx);
-            }
-        }
+        // (From 2026-08-24 to session 784 a loop here also moved a STAFFLESS sheet's
+        // symbols clear of the boxed section label set on their line — "the convention
+        // goes, this goes with it": owner's decision 2026-10-04, the label is above the row.)
 
         for (int i = 1; i < prepared.Count; i++)
         {
@@ -918,9 +879,6 @@ internal static class ChordNameEngraver
     /// two that collide simply collide. This is Lily#'s own overlap resolution for
     /// proportionally-timed symbols; see <see cref="ClearOfPrevious"/>.
     /// </remarks>
-    // internal: the line-start reservation of a staffless label
-    // (MusicMarkEngraver.StafflessLabelLineStartReach) clears the first symbol by this same
-    // gap, so the spring and the shift agree — one number, two readers.
     internal const double SymbolGap = 0.6;
 
     /// <summary>

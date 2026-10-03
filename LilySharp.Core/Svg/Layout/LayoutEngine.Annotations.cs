@@ -346,14 +346,6 @@ internal sealed partial class LayoutEngine
         /// </summary>
         public Func<int, double>? LineStartBarlineX { get; init; }
 
-        /// <summary>
-        /// Per system, the absolute X a boxed label that shares the ROW LINE (a staffless
-        /// sheet's) puts its left edge on at the line start — the staff-bar column after the
-        /// meter the grid row engraves — or NaN where labels keep their band above a staff.
-        /// See <see cref="MusicMarkEngraver.RowLineLabelLeftX"/>.
-        /// </summary>
-        public Func<int, double>? RowLineLabelLeftX { get; init; }
-
         /// <summary>Device-down from the system origin to the LAST SPACEABLE staff's top
         /// line — the staff a note-bound lyric block hangs from. 0 on a one-staff system,
         /// which is why that case is untouched by it.</summary>
@@ -1227,7 +1219,6 @@ internal sealed partial class LayoutEngine
             prefixTimeSignatureX: ctx.PrefixTimeSignatureX,
             lineStartBarlineX: ctx.LineStartBarlineX,
             prefixMarkAnchorX: ctx.PrefixMarkAnchorX,
-            rowLineLabelLeftX: ctx.RowLineLabelLeftX,
             solvedPedalRowUp: solvedPedalRowUp,
             marksBeside: ctx.MultiScore?.MarksBeside ?? false,
             sectionLabels: ctx.MultiScore?.LayoutPlan.SectionLabels
@@ -1493,23 +1484,6 @@ internal sealed partial class LayoutEngine
         var staffByIndex = ctx.StaffByIndex;
         var cn = ctx.ChordNames ?? ImmutableArray<ChordNameItem>.Empty;
 
-        // The boxed section labels that will share this row's LINE — on a staffless sheet the
-        // label is set ON the chord line (MusicMarkEngraver.StafflessAnchorRefpointBelowTop),
-        // so the symbols have to keep out of its frame. Asked BEFORE the marks are laid out
-        // because the chord layouts are an input to that pass; a mark's X depends only on its
-        // break-align column, so the two readings agree by construction (see
-        // BoxedLabelXWindows). Empty — and free — on every book that has a staff.
-        var labelWindows = MusicMarkEngraver.BoxedLabelXWindows(
-            ctx.Fonts, ctx.MusicMarks, ctx.Measures, cn, systems, ml,
-            prefixTimeSignatureX: ctx.PrefixTimeSignatureX,
-            lineStartBarlineX: ctx.LineStartBarlineX,
-            prefixMarkAnchorX: ctx.PrefixMarkAnchorX,
-            rowLineLabelLeftX: ctx.RowLineLabelLeftX,
-            score: ctx.Score,
-            marksBeside: ctx.MultiScore?.MarksBeside ?? false,
-            sectionLabels: ctx.MultiScore?.LayoutPlan.SectionLabels
-                ?? ctx.Score?.LayoutPlan.SectionLabels ?? Semantics.SectionLabelStyle.Boxed);
-
         // An attached chord line that is a RUN ELEMENT is drawn at the run's own answer —
         // the walk's closing step over the pair that brackets it — instead of the
         // 0.6+protrusion offset (which stays the placement for the top staff and for
@@ -1549,7 +1523,6 @@ internal sealed partial class LayoutEngine
             cn, systems, ml, ctx.Measures,
             ctx.MeasuresByStaff, staffYAt, minStaffYAt, scriptedSkylines,
             chordGridSheet: chordGridSheet, lowerStaffUpSkyline: lowerStaffUpSkyline,
-            labelWindows: labelWindows,
             attachedBaselineAboveTop: attachedBaselineAboveTop,
             chordRowAboveStaff: rowAbove,
             blanked: blanked);

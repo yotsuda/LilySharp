@@ -521,11 +521,6 @@ internal static class MusicMarkEngraver
         // line-start edge. See CalculateXPosition's Rehearsal arm for the mechanism
         // and the LILYPOND-REFs.
         Func<int, double>? prefixMarkAnchorX = null,
-        // Per system, the ABSOLUTE X a boxed label sharing the ROW LINE puts its left edge
-        // on at the line start (the staff-bar column after the meter), NaN where labels keep
-        // their band above a staff — see RowLineLabelLeftX. Null keeps the edge/key/clef
-        // arms alone (single-staff callers without the prefix model).
-        Func<int, double>? rowLineLabelLeftX = null,
         // TEXT-style pedal words solved at skyline-build time: (staff, system, the
         // mark's SOURCE POSITION) -> the word's baseline, Y-up about that STAFF's middle
         // line. Null (or a null answer) keeps the legacy below-the-system stack — the
@@ -574,8 +569,7 @@ internal static class MusicMarkEngraver
             var measureLayout = measureLayouts[mark.MeasureIndex];
             double x = CalculateXPosition(
                 fonts, mark, measureLayout, systems, prefixTimeSignatureX, lineStartBarlineX,
-                prefixMarkAnchorX, measures, marksBeside,
-                rowLineLabelLeftX: rowLineLabelLeftX);
+                prefixMarkAnchorX, measures, marksBeside);
             markEntries.Add((mark, x, si));
         }
 
@@ -658,60 +652,17 @@ internal static class MusicMarkEngraver
         double LyricMarkFrameUp(LyricLayout ly)
             => 2.0 + ly.YUp - AnchorStaffUp(ly.Item.MeasureIndex);
 
-        // How far below its band top the anchor keeps its own baseline, on a system that has
-        // NO STAFF — null on every system that has one.
-        //
-        // ⚠️ LILYSHARP-OWN, AND IT IS A USER DECISION (2026-08-24), NOT A PORT. LilyPond puts
-        // a mark on a staffless sheet ABOVE the row's symbols (probes/mark-chord-row.ly books
-        // MKT/MKS/MKV all read the row's ink top + outside-staff-padding 0.460000, the same
-        // number for two different grobs and two different symbol heights). Lily# is asked for
-        // the LEAD-SHEET convention instead: the section letter belongs ON the chord line,
-        // level with the symbols, the way a printed chart sets it. That is a divergence with a
-        // decision behind it, and it is deliberately NARROW — it applies only where there is
-        // no staff to hang on, because the owner confirmed the same book WITH a staff
-        // (`chords / staff / lyrics`) already places its marks correctly (2026-08-24).
-        // ⇒ WHEN IT WOULD GO: if the convention is ever dropped, this method loses its arm and
-        // the mark returns to base + Padding; nothing else changes.
-        // ⚠️ THE X HALF TRAVELS WITH IT (HANDOFF 5.3): a label sharing the symbols' line can
-        // land ON one, so ChordNameEngraver reserves the label's box in the row's spacing.
-        // Placing without reserving is the shape that printed a tempo through greensleeves'
-        // first chord in session 243.
-        double? StafflessAnchorRefpointBelowTop(int measureIndex)
-        {
-            if (!measureToSystemIdx.TryGetValue(measureIndex, out int sysIdx)
-                || sysIdx < 0 || sysIdx >= systems.Length)
-                return null;
-            var system = systems[sysIdx];
-            int anchor = LayoutUtilities.TopScoreGrobStaff(system);
-            // ONE CONDITION, AND IT SAYS BOTH HALVES: the row these grobs hang on carries
-            // CHORD-ROW symbols.
-            //   ⑴ "no staff" comes free — LayoutUtilities.TopScoreGrobStaff returns the top
-            //      SPACEABLE staff whenever the system has one, and an independent chords row
-            //      is never spaceable, so the anchor is a chords row exactly on a staffless
-            //      sheet. A separate `TopSpaceableStaff is not null' guard was here and NO
-            //      TEST COULD MAKE IT RED on its own (HANDOFF bone 2: an arm that cannot go
-            //      red is not a control); it is this line that both controls watch.
-            //   ⑵ "there are chord names to be level with" is the decision itself. A
-            //      lyrics-only sheet has none, and nothing there would move out of the label's
-            //      way either — the X reservation only ever shifts chord symbols. MEASURED:
-            //      without this, test/lead-sheet-lyrics printed its `Main' box straight
-            //      through the first syllable.
-            // ⚠️ THE ITEMS, NOT THE LAYOUTS: a ChordNameLayout carries no StaffIndex, and the
-            // question is which ROW the symbols belong to. Asked of the same array the X half
-            // is gated on (LayoutEngine hands it ctx.ChordNames), so the two arms cover
-            // exactly the same set of books.
-            var chordItems = score?.ChordNames ?? ImmutableArray<ChordNameItem>.Empty;
-            // (A loop, not a lambda over `anchor`: the lambda's environment was built on
-            // every call, before the bail-out above — see HasChordRowOn.)
-            if (chordItems.IsDefaultOrEmpty || !HasChordRowOn(chordItems, anchor))
-                return null;
-            if (system.StaffGroups.IsDefaultOrEmpty) return null;
-            foreach (var g in system.StaffGroups)
-                foreach (var st in g.Staves)
-                    if (st.StaffIndex == anchor)
-                        return st.RefpointBelowTop;
-            return null;
-        }
+        // ⚠️ A STAFFLESS SHEET'S LABEL KEEPS ITS BAND ABOVE THE ROW, as LilyPond's does
+        // (probes/mark-chord-row.ly books MKT/MKS/MKV: the row's ink top +
+        // outside-staff-padding 0.460000, one number for two grobs and two symbol heights).
+        // From 2026-08-24 to session 784 a label on a staffless sheet was set ON the chord
+        // line, level with the symbols (a lead-sheet convention, the owner's decision of that
+        // day), with the overlap resolved in X: a window that moved the row's symbols clear
+        // of the box, a spring floor that widened the first bar for it, and — once the grid
+        // engraved its meters on the same line — a box pushed past the meter at a line start
+        // (session 781) and mid-line (session 783). The owner reversed the decision on
+        // 2026-10-04, looking at that last shape ("the section mark reads better in the row
+        // above"), for every staffless sheet; the X half went with it (HANDOFF 5.3).
 
         // ⚠️ BUILT ON DEMAND, AND THE DEMAND IS RARE. This map has exactly ONE reader — the
         // below-staff stacking base further down — and that reader stands behind
@@ -987,8 +938,7 @@ internal static class MusicMarkEngraver
             // `markTempo beside`: the bar's measure-start tempo rides its boxed label instead of
             // taking its own anchor — placed WITH the label below (the label's arm decides
             // the line, the tempo's own chord ceiling may lift the pair) and skipped here.
-            // The pair is the one BesidePair names, so the chord-row reservation
-            // (BoxedLabelXWindows) widens the same label the tempo lands beside.
+            // The pair is the one BesidePair names.
             int besideTempo = -1, besideLabel = -1;
             // ⚠️ INDEXED BY A LOOP, NOT `FindIndex(e => … pair …)`: those two lambdas captured
             // `pair`, which made this loop body's whole scope a heap environment (with the
@@ -1047,43 +997,26 @@ internal static class MusicMarkEngraver
                 }
                 else if (!chainStarted)
                 {
-                    // A BOXED LABEL ON A STAFFLESS SHEET SITS ON THE ROW'S OWN LINE, not above
-                    // it (see StafflessAnchorRefpointBelowTop for the decision and the LilyPond
-                    // reading it departs from). The mark frame puts the anchor's band top at
-                    // 2.0, so the anchor's baseline is `2.0 - refpoint below that top', and the
-                    // box centre stands its own baseline offset above that.
-                    double? rowRefpoint = IsBoxedLabel(mark.Type)
-                        ? StafflessAnchorRefpointBelowTop(mark.MeasureIndex)
-                        : null;
-                    if (rowRefpoint is { } below)
-                    {
-                        // ⚠️ AND THE CHORD CEILING IS NOT APPLIED HERE, deliberately: it is the
-                        // device that lifts a mark OFF a symbol it overlaps, and on this sheet
-                        // the two are meant to share a line. The overlap is resolved in X
-                        // instead (ChordNameEngraver reserves the box), so lifting as well
-                        // would undo the placement the decision asks for.
-                        yUp = 2.0 - below
-                              + LabelBaselineBelowCentre(fonts, mark.Type, mark.Text, BoxedOf(mark.Type));
-                    }
-                    else
-                    {
-                        // A BOXED LABEL STANDS ON LilyPond's OWN SIDE-POSITION PADDING, not on
-                        // this family's generic base: 0.8 above the staff symbol's outer edge
-                        // (scm/define-grobs.scm:2889-2896 side-position-interface::y-aligned-side,
-                        // and :3065-3071 for SectionLabel). MEASURED 2026-09-07
-                        // (scratch/p344/markbase.ly): LilyPond puts the frame's bottom at
-                        // 0.850000 over the top line for A / x / Q alike, on an empty staff and
-                        // over notes two ledger lines up, where `baseAboveYUp + Padding' put it
-                        // at 1.100000 — 0.250000 of air on every marked system in the corpus.
-                        // ⚠️ The generic base stays for every OTHER above-mark type; this arm
-                        // deliberately does not re-price a tempo, a segno or a jump instruction,
-                        // none of which has been measured against LilyPond here.
-                        yUp = IsBoxedLabel(mark.Type)
-                            ? LabelFrameBottomAboveStaffMiddle + halfExtent
-                            : baseAboveYUp + Padding;
-                        if (!double.IsNegativeInfinity(markCeilingUp))
-                            yUp = Math.Max(yUp, markCeilingUp + halfExtent); // box bottom clears the chord
-                    }
+                    // A BOXED LABEL STANDS ON LilyPond's OWN SIDE-POSITION PADDING, not on
+                    // this family's generic base: 0.8 above the staff symbol's outer edge
+                    // (scm/define-grobs.scm:2889-2896 side-position-interface::y-aligned-side,
+                    // and :3065-3071 for SectionLabel). MEASURED 2026-09-07
+                    // (scratch/p344/markbase.ly): LilyPond puts the frame's bottom at
+                    // 0.850000 over the top line for A / x / Q alike, on an empty staff and
+                    // over notes two ledger lines up, where `baseAboveYUp + Padding' put it
+                    // at 1.100000 — 0.250000 of air on every marked system in the corpus.
+                    // ⚠️ The generic base stays for every OTHER above-mark type; this arm
+                    // deliberately does not re-price a tempo, a segno or a jump instruction,
+                    // none of which has been measured against LilyPond here.
+                    // On a STAFFLESS sheet the anchor is the top row and the chord ceiling
+                    // lifts the box off the symbols (owner's decision 2026-10-04, see the
+                    // remark at the top of this method; until session 784 a staffless label
+                    // took a row-line arm here instead).
+                    yUp = IsBoxedLabel(mark.Type)
+                        ? LabelFrameBottomAboveStaffMiddle + halfExtent
+                        : baseAboveYUp + Padding;
+                    if (!double.IsNegativeInfinity(markCeilingUp))
+                        yUp = Math.Max(yUp, markCeilingUp + halfExtent); // box bottom clears the chord
                     stackTopYUp = yUp + halfExtent;
                     chainStarted = true;
                 }
@@ -1479,8 +1412,7 @@ internal static class MusicMarkEngraver
     /// Under <c>markTempo beside</c>, the (tempo, label) pair one anchor's marks make: the
     /// bar's measure-start metronome mark and the first boxed label in priority order —
     /// or null when either is missing. ONE HOME, read by <see cref="Calculate"/> (the
-    /// placement) and <see cref="BoxedLabelXWindows"/> (the chord row's reservation) so
-    /// the tempo is reserved beside the label it is drawn beside.
+    /// placement; until session 784 a chord-row reservation read it too).
     /// </summary>
     /// <remarks>
     /// The tempo is the one <see cref="CalculateXPosition"/>'s break-align arm would place
@@ -2326,137 +2258,6 @@ internal static class MusicMarkEngraver
     // the addresses are on LabelFrameBottomAboveStaffMiddle, which is the one reader.
     private const double LabelSidePositionPadding = 0.8;
 
-    /// <summary>
-    /// Where each boxed label's frame stands horizontally, per measure — the X half of
-    /// putting a label on a staffless sheet's chord line.
-    /// </summary>
-    /// <remarks>
-    /// ★ THE SAME TWO CALLS THE FULL LAYOUT MAKES, and that is the point: the anchor
-    /// (<see cref="CalculateXPosition"/>) and the box
-    /// (<c>MarkXExtent</c>) are asked here exactly as they are asked there, so the interval a
-    /// chord symbol is spaced against cannot drift from the one the label is drawn in. A
-    /// second X model for the same box is the shape HANDOFF 5.2.1② names.
-    /// <para>
-    /// ⚠️ WHY IT IS A SEPARATE PASS AT ALL. The chord layouts are an INPUT to
-    /// <see cref="Calculate"/> (they feed the chord ceiling), so the marks cannot be laid out
-    /// first; but a mark's X depends only on its measure's break-align column and never on a
-    /// chord, so asking for the X alone is well defined before the chords exist. The two
-    /// passes agree by construction because they call the same function on the same
-    /// arguments.
-    /// </para>
-    /// <para>
-    /// ⚠️ ABOVE-STAFF LABELS ONLY. A below-staff mark is not one of these types, and an
-    /// <c>End</c>-positioned one (fine, D.S.) is not a boxed label either.
-    /// </para>
-    /// <para>
-    /// ⚠️⚠️ THE WINDOW MOVES THE SYMBOLS; IT DOES NOT WIDEN THE ROW. <c>ChordNameEngraver</c>
-    /// shifts a symbol right until its box clears the window, but no spring reads the window
-    /// — <c>SpacingRules.ApplyChordRowSpacing</c> prices the symbols alone — so a label wider
-    /// than its bar's slack pushes the first symbol PAST its own bar line. MEASURED 2026-09-09
-    /// (scratch/p356/mk9.lys, a staffless <c>chords</c> row, section <c>IntroductionLong</c>):
-    /// bar 1 stays 13.90 wide with no label, with <c>Intro</c> and with the long one, while
-    /// the `C' moves 4.50 → 8.61 → 25.92, i.e. into bar 3. Under <c>markTempo beside</c> the
-    /// window grows by the tempo (mk6: `C' at 16.82 past the bar line at 13.90, the tempo's
-    /// ink across it), so the option makes the same hole visible on a short label. The
-    /// repair is a line-start wish in the row's spacing (LineStartColumn's shape), which
-    /// moves every staffless book with a label — HANDOFF §2 A, session 355; not done here.
-    /// </para>
-    /// </remarks>
-    internal static IReadOnlyList<(int MeasureIndex, double X0, double X1)> BoxedLabelXWindows(
-        ScoreTextMetrics fonts,
-        ImmutableArray<MusicMarkItem> musicMarks,
-        ImmutableArray<Measure> measures,
-        ImmutableArray<ChordNameItem> chordNames,
-        ImmutableArray<SystemLayout> systems,
-        ImmutableArray<MeasureLayout> measureLayouts,
-        Func<int, double>? prefixTimeSignatureX = null,
-        Func<int, double>? lineStartBarlineX = null,
-        Func<int, double>? prefixMarkAnchorX = null,
-        // `markTempo beside`: the label's window widens to the tempo drawn beside it, so the
-        // score's tempo (the same arguments Calculate hands BuildAllMarks) is needed here
-        // too; null and false leave the window the label's own box.
-        Score? score = null,
-        bool marksBeside = false,
-        // …and the label style, for the reason Calculate's own parameter gives.
-        Semantics.SectionLabelStyle sectionLabels = Semantics.SectionLabelStyle.Boxed,
-        // …and the row-line label's line-start column (RowLineLabelLeftX), so the window is
-        // asked with the same anchor the placement is.
-        Func<int, double>? rowLineLabelLeftX = null)
-    {
-        var windows = new List<(int, double, double)>();
-        if (measureLayouts.IsDefaultOrEmpty)
-            return windows;
-        // ⚠️ THROUGH BuildAllMarks, NOT THE RAW LIST. A `form' section name is not a
-        // MusicMarkItem in the score — MergeSectionLabels manufactures it from the MEASURES —
-        // so reading musicMarks alone finds no label at all, which is exactly how the first
-        // draft of this reservation did nothing. The tempo arguments are neutral on purpose
-        // in the stacked arrangement: MergeTempoMark only ever adds a Tempo, and a Tempo is
-        // not a boxed label, so the one mark this list would gain is filtered out on the next
-        // line either way. Under `markTempo beside` the tempo IS part of the label's window, so
-        // there the list is built exactly as Calculate builds it.
-        var labelStyle = sectionLabels;
-        var marks = marksBeside
-            ? BuildAllMarks(musicMarks, measures, score?.Tempo, score?.SwingSubdivision ?? 0,
-                score?.TempoText, score?.TempoBeatUnit ?? 4, score?.TempoDots ?? 0,
-                score?.Header.Tempo ?? 0, labelStyle, score?.Header.TempoPieces ?? default)
-            : BuildAllMarks(musicMarks, measures, tempo: null, sectionLabels: labelStyle);
-        // The label each measure-start tempo stands beside (BesidePair, the placement's
-        // rule), keyed by the label so the window below finds its tempo.
-        var besideTempoOf = new Dictionary<MusicMarkItem, MusicMarkItem>();
-        if (marksBeside)
-            foreach (var group in marks
-                         .Where(m => m.Vertical == MusicMarkVertical.Above)
-                         .GroupBy(m => (m.MeasureIndex, m.Position, m.AnchorTiming)))
-                if (BesidePair(group.OrderBy(m => GetOutsideStaffPriority(m.Type)).ToList()) is { } pair)
-                    besideTempoOf[pair.Label] = pair.Tempo;
-        // Only the systems that HAVE NO STAFF: everywhere else the label keeps its own band
-        // above the row and nothing has to move for it. Asked through the same property the
-        // placement asks (StaffAffinity.TopSpaceableStaff), so the two arms cannot disagree
-        // about which sheets the convention covers.
-        // Only the systems whose ANCHOR ROW CARRIES CHORD-ROW SYMBOLS — the same single
-        // condition the placement applies, spelled the same way (see
-        // StafflessAnchorRefpointBelowTop for why it says "staffless" too). The two arms have
-        // to cover the same books or one of them acts alone, which is HANDOFF 5.3's shape.
-        // ⚠️ A LOOP, NOT `Any(c => … == anchor)`: the lambda captured the loop's `anchor`, so
-        // its environment was built at the top of EVERY system's iteration — the
-        // no-chord-names `continue` included — 1,257 B a keystroke over the tab corpus
-        // (session 469, allocation sampling).
-        var stafflessMeasures = new HashSet<int>();
-        foreach (var system in systems)
-        {
-            int anchor = LayoutUtilities.TopScoreGrobStaff(system);
-            if (chordNames.IsDefaultOrEmpty || !HasChordRowOn(chordNames, anchor))
-                continue;
-            foreach (var m in system.Measures)
-                stafflessMeasures.Add(m.MeasureIndex);
-        }
-        if (stafflessMeasures.Count == 0)
-            return windows;
-        foreach (var mark in marks)
-        {
-            if (!IsBoxedLabel(mark.Type) || mark.Vertical != MusicMarkVertical.Above)
-                continue;
-            if (mark.MeasureIndex < 0 || mark.MeasureIndex >= measureLayouts.Length)
-                continue;
-            if (!stafflessMeasures.Contains(mark.MeasureIndex))
-                continue;
-            double x = CalculateXPosition(
-                fonts, mark, measureLayouts[mark.MeasureIndex], systems,
-                prefixTimeSignatureX, lineStartBarlineX, prefixMarkAnchorX, measures, marksBeside,
-                IsBoxDrawn(mark.Type, labelStyle), rowLineLabelLeftX);
-            var (x0, x1) = MarkXExtent(fonts, mark, x, IsBoxDrawn(mark.Type, labelStyle));
-            // The tempo standing beside this label is drawn on the same line, so the
-            // symbols keep out of its ink too — read through the placement's own X.
-            if (besideTempoOf.TryGetValue(mark, out var tempo))
-                x1 = Math.Max(x1, MarkXExtent(
-                    fonts, tempo,
-                    BesideTempoX(fonts, mark, x, IsBoxDrawn(mark.Type, labelStyle)),
-                    IsBoxDrawn(tempo.Type, labelStyle)).x1);
-            windows.Add((mark.MeasureIndex, x0, x1));
-        }
-        return windows;
-    }
-
     /// <summary>The index in <paramref name="marks"/> of <paramref name="mark"/> by
     /// reference, or −1.</summary>
     private static int IndexOfMark(
@@ -2467,166 +2268,6 @@ internal static class MusicMarkEngraver
                 return i;
         return -1;
     }
-
-    /// <summary>Whether a chord-row symbol stands on staff <paramref name="staffIndex"/>.</summary>
-    private static bool HasChordRowOn(ImmutableArray<ChordNameItem> chordNames, int staffIndex)
-    {
-        foreach (var c in chordNames)
-            if (c.IsChordRow && c.StaffIndex == staffIndex)
-                return true;
-        return false;
-    }
-
-    /// <summary>
-    /// On a staffless sheet whose top row carries chord-row symbols, how far RIGHT of the
-    /// line start the boxed labels that open <paramref name="measureIndex"/> reach — the box's
-    /// right edge (under <c>markTempo beside</c>, the tempo's ink right beside it) plus the
-    /// chord row's symbol gap — or 0 when nothing of the kind stands there. The SPRING half
-    /// of the label window: <see cref="BoxedLabelXWindows"/> moves a symbol clear of the box
-    /// after spacing; this floors the line-start spring so the row is wide enough for it.
-    /// </summary>
-    /// <remarks>
-    /// LILYSHARP-OWN, the same decision's third step (2026-08-24: the label sits ON the chord
-    /// line; 2026-08-25: the symbols move clear of it; this: the bar makes room). LilyPond
-    /// never has a label on a ChordNames line, so there is no rod to cite. Measured before
-    /// this existed (2026-09-09, scratch/p356/mk9): bar 1 stayed 13.90 wide under every label
-    /// and `IntroductionLong' pushed the first `C' to 25.92, into bar 3.
-    /// <para>
-    /// The box's left edge is <paramref name="labelLeft"/>: <see cref="RowLineLabelLeft"/> of
-    /// the line's prefix — the staff-bar column after the meter (the DRAWN opening bar's X
-    /// when the line opens on a <c>|:</c>, the same column <c>lineStartBarlineX</c> answers
-    /// from the placed system — measured equal on scratch/p356/mk10: bar and box both at
-    /// 3.50), or the line-start edge (0.3 past the indent) on a line with nothing prefatory
-    /// — which is what <see cref="CalculateXPosition"/> gives the same label.
-    /// </para>
-    /// </remarks>
-    internal static double StafflessLabelLineStartReach(
-        MultiStaffScore score, int measureIndex, double labelLeft)
-    {
-        if (!score.IsLeadSheet || score.ChordNames.IsDefaultOrEmpty)
-            return 0.0;
-        // The anchor row is the top row (the staffless TopScoreGrobStaff), and it has to
-        // carry chord-row symbols — the placement's one condition, spelled the same way.
-        int topRow = -1;
-        foreach (var (_, _, index) in score.EnumerateStaves()) { topRow = index; break; }
-        if (topRow < 0)
-            return 0.0;
-        // Loops, not Any / Where: their predicates captured topRow and measureIndex, which
-        // made this method's environment a class built on every call, plus a delegate each
-        // (session 535).
-        bool topRowHasChords = false;
-        foreach (var c in score.ChordNames)
-            if (c.IsChordRow && c.StaffIndex == topRow)
-            {
-                topRowHasChords = true;
-                break;
-            }
-        if (!topRowHasChords)
-            return 0.0;
-
-        var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
-        if (measureIndex < 0 || measureIndex >= measures.Length)
-            return 0.0;
-        var fonts = score.TextMetrics;
-        // Here the score IS the multi-staff one, so the plan can be read off it directly —
-        // unlike Calculate, whose `score` is null on every book with more than one staff.
-        var labelStyle = score.LayoutPlan.SectionLabels;
-        var marks = BuildAllMarks(score.MusicMarks, measures, score.Tempo, score.SwingSubdivision,
-            score.TempoText, score.TempoBeatUnit, score.TempoDots, score.Header.Tempo,
-            labelStyle, score.Header.TempoPieces);
-        double reach = 0.0;
-        var atLineStart = ListPool<MusicMarkItem>.Rent();
-        foreach (var m in marks)
-            if (m.MeasureIndex == measureIndex && m.Vertical == MusicMarkVertical.Above
-                && m.Position == MusicMarkPosition.Beginning)
-                atLineStart.Add(m);
-        foreach (var group in atLineStart.GroupBy(m => m.AnchorTiming))
-        {
-            var byPriority = group.OrderBy(m => GetOutsideStaffPriority(m.Type)).ToList();
-            var pair = score.MarksBeside ? BesidePair(byPriority) : null;
-            foreach (var label in byPriority)
-            {
-                if (!IsBoxedLabel(label.Type))
-                    continue;
-                bool boxed = IsBoxDrawn(label.Type, labelStyle);
-                double labelX = labelLeft + LabelBoxHalfWidth(fonts, label.Type, label.Text, boxed);
-                double right = MarkXExtent(fonts, label, labelX, boxed).x1;
-                if (pair is { } p && ReferenceEquals(p.Label, label))
-                    right = Math.Max(right, MarkXExtent(
-                        fonts, p.Tempo, BesideTempoX(fonts, label, labelX, boxed),
-                        IsBoxDrawn(p.Tempo.Type, labelStyle)).x1);
-                reach = Math.Max(reach, right);
-            }
-        }
-        ListPool<MusicMarkItem>.Give(atLineStart);
-        return reach > 0.0 ? reach + ChordNameEngraver.SymbolGap : 0.0;
-    }
-
-    /// <summary>
-    /// Where a boxed label that SHARES THE ROW LINE puts its LEFT edge at a line start,
-    /// relative to the prefix origin: the drawn opening bar's X when the line opens on a
-    /// <c>|:</c>; else, when the meter is engraved ON THE LABEL'S OWN ROW, the
-    /// <c>staff-bar</c> column 1.0 past it
-    /// (<see cref="BreakAlignSpacing.PrefixColumns.StaffBarColumnX"/>); else the line-start
-    /// edge (0.3) — a continuation line, which engraves nothing prefatory, or a sheet whose
-    /// grid (bars and meter) runs in a LYRIC row below the chord row the label sits on
-    /// (<see cref="MultiStaffScore.GridBarlineRowIndex"/>), where nothing on the label's line
-    /// stands under a box at the edge.
-    /// </summary>
-    /// <remarks>
-    /// LILYSHARP-OWN, the fourth step of the 2026-08-24 decision (the label sits ON the chord
-    /// line): the meter is drawn on that line too (SharedRenderer's grid row, user decision
-    /// 2026-08-20), so a box at the edge printed over it — owner's report, session 778,
-    /// amazing-grace's `score "grid"`: `Verse` over the 3/4. The column is the one the drawn
-    /// `|:` already took (measured 2026-09-09, scratch/p356/mk10: bar and box both at 3.50),
-    /// and the one LilyPond's find_parent falls back to for a (staff-bar key-signature clef)
-    /// mark on a line with no key and no clef (break-alignment-interface.cc:299-334).
-    /// ⚠️ ONE SPELLING for the placement (<see cref="RowLineLabelLeftX"/> → CalculateXPosition)
-    /// and the reservation (the spring floor in <c>MultiStaffLayouter.LineStartSpringForLine</c>,
-    /// through <see cref="StafflessLabelLineStartReach"/>): the box the symbols are spaced
-    /// against and the box that is drawn come from this function or they drift (HANDOFF 5.3).
-    /// </remarks>
-    internal static double RowLineLabelLeft(
-        MultiStaffScore score, BreakAlignSpacing.PrefixColumns columns)
-    {
-        if (columns.HasBar)
-            return columns.BarX;
-        // The label's row is the TOP row (StafflessLabelLineStartReach's anchor); the meter
-        // is drawn on the grid row (SharedRenderer.DrawSystem). Measured when this was gated
-        // (session 781, test/rows-song-sheet and test/lead-sheet): ungated, a chords+lyrics
-        // sheet moved its label 3.2 right over a lyric-row meter it never touched, and bar 1
-        // widened with it.
-        int topRow = -1;
-        foreach (var (_, _, index) in score.EnumerateStaves()) { topRow = index; break; }
-        return columns.Right > 0.0 && score.GridBarlineRowIndex == topRow
-            ? columns.StaffBarColumnX
-            : 0.3;
-    }
-
-    /// <summary>
-    /// Per system index, the ABSOLUTE X of <see cref="RowLineLabelLeft"/> on a sheet whose
-    /// labels share the row line — a staffless sheet whose anchor row carries chord-row
-    /// symbols, the placement's one condition (<c>StafflessAnchorRefpointBelowTop</c>) — and
-    /// NaN on every other system, where the label keeps its band above the staff and the
-    /// edge/key/clef arms of <c>CalculateXPosition</c> decide.
-    /// </summary>
-    internal static Func<int, double> RowLineLabelLeftX(
-        MultiStaffScore score, ImmutableArray<SystemLayout> systems)
-        => sysIdx =>
-        {
-            if (sysIdx < 0 || sysIdx >= systems.Length
-                || systems[sysIdx].Measures.IsDefaultOrEmpty)
-                return double.NaN;
-            var system = systems[sysIdx];
-            // The same gate as the Y half and the window (RowsOnlySectionLabelTests' two
-            // controls): no staff, and chord-row symbols on the row the label hangs on.
-            if (score.ChordNames.IsDefaultOrEmpty
-                || !HasChordRowOn(score.ChordNames, LayoutUtilities.TopScoreGrobStaff(system)))
-                return double.NaN;
-            var prefix = MultiStaffLayouter.SolveLineStartPrefix(
-                score, system.Measures[0].MeasureIndex, sysIdx == 0);
-            return system.Indent + RowLineLabelLeft(score, prefix.Columns);
-        };
 
     /// <summary>
     /// The padding a boxed label's frame keeps around its text, per side.
@@ -2729,12 +2370,7 @@ internal static class MusicMarkEngraver
         // ⚠️ Optional only because C# puts required parameters first and this method's
         // options came earlier: BOTH call sites pass it (they are in this file, five lines
         // apart), and the leaf that actually prices the frame takes it as required.
-        bool boxed = true,
-        // Per system, the ABSOLUTE X a boxed label that SHARES THE ROW LINE (the staffless
-        // sheet's convention) puts its LEFT edge on at the line start — the staff-bar column
-        // after the meter — or NaN on every system whose labels keep their own band above
-        // the staff. See RowLineLabelLeftX. Both call sites pass it.
-        Func<int, double>? rowLineLabelLeftX = null)
+        bool boxed = true)
     {
         if (mark.Position == MusicMarkPosition.End)
         {
@@ -2903,33 +2539,18 @@ internal static class MusicMarkEngraver
             //   (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
             //   arm it switches off; a mid-line label is centred on its bar either way.
             //   ⚠️ A DRAWN opening bar (`|:`) wins under BOTH arrangements: `markTempo beside`
-            //   skips only the key/clef anchor. On a staffless sheet the label sits ON the row
-            //   line where that bar is drawn, so a box at the edge would print over the
-            //   repeat sign (measured 2026-09-09, scratch/p356/mk10: the `|:` stands at 3.50,
-            //   the box at the edge would span 0.30..8.01).
-            //   ⚠️ AND SO DOES THE METER, on the same sheet (owner's report, session 778:
-            //   amazing-grace's `score "grid"` printed its `Verse` box over the 3/4). The grid
-            //   row engraves the score meter at its line-start prefix (SharedRenderer, the
-            //   2026-08-20 decision), on the very line the label is set on, and a box at the
-            //   edge spans that column. So a row-line label's left edge is the STAFF-BAR
-            //   column — the drawn `|:` when there is one, else where that bar WOULD stand,
-            //   1.0 past the meter's ink (PrefixColumns.StaffBarColumnX) — under both
-            //   arrangements, like the drawn bar. That is also where LilyPond's own
-            //   find_parent lands a (staff-bar key-signature clef) mark on a line with no
-            //   key and no clef: the invisible bar is its last fallback
-            //   (break-alignment-interface.cc:299-334). A line with nothing prefatory keeps
-            //   the edge, and so does a sheet whose grid — bars and meter — runs in a LYRIC
-            //   row under the label's chord row (RowLineLabelLeft). Reservation and
-            //   placement read the same function (RowLineLabelLeftX here, RowLineLabelLeft
-            //   in the spring floor).
+            //   skips only the key/clef anchor. (Measured 2026-09-09 on a staffless sheet,
+            //   scratch/p356/mk10, while its label still shared the row line: the `|:` stood
+            //   at 3.50 and a box at the edge would have spanned 0.30..8.01. A staffless
+            //   label stands above the row since session 784 — owner's decision 2026-10-04 —
+            //   and takes the same bar anchor as a staff's, with no row-line arm: the
+            //   staff-bar column past the grid's meter that sessions 781 and 783 gave it went
+            //   with the convention.)
             if (lineStartSystem >= 0)
             {
                 if (lineStartBarlineX?.Invoke(measureLayout.MeasureIndex) is { } barX
                     && !double.IsNaN(barX))
                     anchor = barX;
-                else if (rowLineLabelLeftX?.Invoke(lineStartSystem) is { } rowLeft
-                         && !double.IsNaN(rowLeft))
-                    anchor = rowLeft;
                 else if (!marksBeside && prefixMarkAnchorX?.Invoke(lineStartSystem) is { } prefX
                          && !double.IsNaN(prefX))
                     anchor = prefX;
@@ -2937,18 +2558,6 @@ internal static class MusicMarkEngraver
             else if (!measures.IsDefaultOrEmpty
                      && MidLineBarAnchorX(measureLayout, measures) is { } barAnchor)
             {
-                // …AND ON THE ROW LINE, CLEAR OF A METER CHANGE OPENING THE BAR (session 783):
-                // a rows-only sheet now engraves a section header's `time` after the bar
-                // line it opens (MeasureCollector.FitRowsToMusicBars), on the very line the
-                // label is set on, so a box centred on the bar printed through the 3/2. The
-                // box then opens past the meter by the meter's own staff-bar distance — the
-                // line-start rule (RowLineLabelLeft) read mid-line. Reservation and placement
-                // agree by construction (BoxedLabelXWindows calls this). A staff keeps the
-                // centred box: its label stands above the staff, clear of the meter.
-                if (rowLineLabelLeftX != null
-                    && RowLineLabelLeftPastOpeningMeter(
-                        fonts, measureLayout, measures, systems, rowLineLabelLeftX) is { } pastMeter)
-                    return pastMeter + LabelBoxHalfWidth(fonts, mark.Type, mark.Text, boxed);
                 // Centred on the bar line's anchor: the returned X IS the box centre.
                 return barAnchor;
             }
@@ -2993,44 +2602,6 @@ internal static class MusicMarkEngraver
         }
 
         return anchor + 0.5;
-    }
-
-    /// <summary>
-    /// On a sheet whose labels share the row line, the absolute X a boxed label's LEFT edge
-    /// takes at a mid-line bar that OPENS with a meter change: the change's ink right plus
-    /// the meter's staff-bar distance (1.0, TimeSignature.space-alist) — the column
-    /// <see cref="RowLineLabelLeft"/> gives the same label at a line start. Null off the row
-    /// line (a staff's label keeps its band), and at a bar that opens with no meter.
-    /// </summary>
-    private static double? RowLineLabelLeftPastOpeningMeter(
-        ScoreTextMetrics fonts, MeasureLayout measureLayout, ImmutableArray<Measure> measures,
-        ImmutableArray<SystemLayout> systems, Func<int, double> rowLineLabelLeftX)
-    {
-        int idx = measureLayout.MeasureIndex;
-        if (idx < 0 || idx >= measures.Length)
-            return null;
-        TimeSignatureChangeItem? opening = null;
-        foreach (var item in measures[idx].Items)
-        {
-            if (item is TimeSignatureChangeItem { Blanked: false } tc) { opening = tc; break; }
-            if (item.Duration > Semantics.Fraction.Zero) break;
-        }
-        if (opening == null || SpacingRules.OpeningTimeChangeInkLeft(fonts, measures[idx]) is not { } meterLeft)
-            return null;
-        for (int i = 0; i < systems.Length; i++)
-        {
-            foreach (var ml in systems[i].Measures)
-                if (ml.MeasureIndex == idx)
-                {
-                    double rowLeft = rowLineLabelLeftX(i);
-                    if (double.IsNaN(rowLeft))
-                        return null;   // not a row-line sheet
-                    return measureLayout.X + meterLeft
-                           + SpacingRules.GetTimeSignatureChangeWidth(fonts, opening)
-                           + BreakAlignSpacing.GetSpacing(BreakAlignSymbol.TimeSignature, BreakAlignSymbol.StaffBar).Value;
-                }
-        }
-        return null;
     }
 
     /// <summary>
