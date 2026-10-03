@@ -199,7 +199,7 @@ workflow attaches that section to the GitHub Release verbatim.
   than "unknown annotation". A name with no shape is not warned about (save in a
   `chordDiagrams … all` score, above).
 - **A written shape is checked against its symbol (LYS1039).** `@chord(C x02210)` warns
-  *'x02210' sounds A C E, which is Am, not C (A is not a tone of C) - write @chord(Am x02210) or
+  *'x02210' sounds A C E, which is Am, not C (A is not a tone of C) - write `@chord(Am x02210)` or
   another shape*; `@chord(C7 x3201x)` *lacks B♭ (the 7th) - fret B♭ or write another shape* —
   one warning per shape listing every problem, in `@chord` and in rows, on the tuning each score
   routes the shape to (a shape no score uses is not checked). Two rules: only chord tones (for
@@ -767,13 +767,13 @@ workflow attaches that section to the GitHub Release verbatim.
 - **"Did you mean …?" is offered only for a close typo.** An unknown annotation is compared
   with the known names allowing a third of its length in edits (at most two; a swap of two
   adjacent letters is one), and a one- or two-letter name gets a suggestion only for a swapped
-  pair (`@fs` → `@sf`). `c4@ho` said *did you mean '@sf'?*; it now says only that `@ho` is
+  pair (`@fs` → `@sf`). `c4@ho` said *did you mean `'@sf'`?*; it now says only that `@ho` is
   unknown. `@glisando`, `@acent` and `@tenuot` are still pointed at `@glissando`, `@accent`
   and `@tenuto`.
 - **The stray-dot error no longer names an old annotation spelling.** `c4@finger.3` gets the
   ordinary *This '.' belongs to nothing* (LYS0023) and `@finger`'s own *takes its argument in
-  parentheses*; the dot message used to add *write @finger(3) and @chord(c), not @finger.3
-  and @chord.c*, a hint for an older Lily# spelling.
+  parentheses*; the dot message used to add *write `@finger(3)` and `@chord(c)`, not `@finger.3`
+  and `@chord.c`*, a hint for an older Lily# spelling.
 
 ## 0.9.0
 
@@ -1747,7 +1747,7 @@ refused; they come first, each with what the compiler says.
 - **`@feather` takes `right` or `left`, nothing else.** The tempo words `accel` and `rit` were a
   second spelling of the same two directions, and the same words name the `@accel` / `@rit`
   text spanners. `@feather(accel)` is now ignored with a warning ("Unknown annotation
-  '@feather(accel)'"); write `@feather(right)` for accelerando and `@feather(left)` for
+  `'@feather(accel)'`"); write `@feather(right)` for accelerando and `@feather(left)` for
   ritardando.
 - **The tunings `standard` and `uke` are gone.** They were Lily#'s own second names for
   `guitar` and `ukulele`; every tuning word is now LilyPond's. `tuning standard` is refused
@@ -2527,7 +2527,7 @@ refused; they come first, each with what the compiler says.
   staff.** The symbols are taken from the page's own placement — at the note's moment, a bare
   `@chord` named from the notes it sits on, a pickup bar as short as the page's — with silence
   between them, so LilyPond prints exactly the symbols the page prints. They used to be
-  dropped with "@chord dropped (out of scope)". A numbers-only tab gets none, as on the page.
+  dropped with `"@chord dropped (out of scope)"`. A numbers-only tab gets none, as on the page.
 - **`lysc ly` writes the lyrics.** Every line the page places — a verse attached under a staff,
   a row that `sings` a part, an independent row spread over its bars, each stacked verse — is a
   `Lyrics` context over a `\lyricmode` line whose syllables carry the durations the page
