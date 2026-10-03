@@ -2810,12 +2810,65 @@ public class LilyPondExporterTests
             "lyrics words sings melody { Twin- kle twin- kle | star _ | }",
             "staff melody  lyrics words sings melody"));
         Assert.Contains("Twin4 -- kle4 twin4 -- kle4 |", ly);
-        // `star` holds over the second half: one whole-bar syllable, then the extender —
-        // LEFT-aligned on its note as the page aligns a melisma (LilyPond would only learn
-        // the melisma through \lyricsto, which the twin does not use), so the alignment is
-        // written on the syllable. A plain syllable carries no override.
-        Assert.Contains("\\once \\override LyricText.self-alignment-X = #LEFT star1 __ |", ly);
+        // `star` holds over the second half: the syllable, then the extender — LEFT-aligned
+        // on its note as the page aligns a melisma (LilyPond would only learn the melisma
+        // through \lyricsto, which the twin does not use), so the alignment is written on the
+        // syllable. A plain syllable carries no override. The extender is the LINE's last and
+        // its held note the part's last, so an EMPTY syllable ends it on that head
+        // (2026-10-03): LilyPond ends an extender only at a syllable, and `star1 __ |` alone
+        // was "unterminated extender" with nothing drawn.
+        Assert.Contains("\\once \\override LyricText.self-alignment-X = #LEFT star2 __ \"\"2 |", ly);
         Assert.DoesNotContain("#LEFT Twin4", ly);
+    }
+
+    /// <summary>
+    /// A line-ending extender ends at an EMPTY syllable where the page's extender ends: the
+    /// onset after the melisma's last note (LilyPond ends an extender at the next syllable and
+    /// warns "unterminated extender", drawing none, when there is none — session 762's chorale,
+    /// eight of them); and a cadenza bar (<c>time none</c>) writes no bar check, since under
+    /// <c>\cadenzaOn</c> LilyPond counts nothing and the lyric line's <c>|</c> failed.
+    /// </summary>
+    /// <remarks>MEASURED (2.26.0, Lab sessions/p764/probes/extender.ly): <c>la1 __ \skip 1 ""1</c>
+    /// draws the extender to the empty syllable and warns nothing.</remarks>
+    [Fact]
+    public void AttachedLyrics_ALineEndingExtender_EndsAtAnEmptySyllable_AndACadenzaBarHasNoBarCheck()
+    {
+        // `_` holds `star` over the g'4; the a'4 after it has no syllable, so the
+        // terminator stands on the a'4 and `star` lasts a dotted half.
+        var ly = Export(LyricBook(
+            "c'4 d' e' f' | g'2 g'4 a'4 |",
+            "lyrics words sings melody { Twin- kle twin- kle | star _ | }",
+            "staff melody  lyrics words sings melody"));
+        Assert.Contains("#LEFT star2. __ \"\"4 |", ly);
+        // The held note closes its bar and another bar follows: the terminator opens that bar.
+        ly = Export(LyricBook(
+            "c'4 d' e' f' | g'2 g'2 | a'1 |",
+            "lyrics words sings melody { Twin- kle twin- kle | star _ | }",
+            "staff melody  lyrics words sings melody"));
+        Assert.Contains("#LEFT star1 __ |\n  \"\"1 |", ly);
+        // An extender that held no note (a bare `__` with nothing to consume) is left to
+        // LilyPond's warning: the page draws only its minimum stub there.
+        ly = Export(LyricBook(
+            "c'4 d' e' f' | g'2 g' |",
+            "lyrics words sings melody { Twin- kle twin- kle | star __ | }",
+            "staff melody  lyrics words sings melody"));
+        Assert.DoesNotContain("\"\"", ly);
+
+        // A cadenza: the music's bars are `\bar "|"`, the lyric line's end with no check.
+        ly = Export("""
+            octave absolute
+            time none
+            part melody { clef treble }
+            section A {
+              melody { c'4 d' e' | f'2 g' | }
+              lyrics words sings melody { a b c | d e | }
+            }
+            form main { A }
+            score main { staff melody  lyrics words sings melody }
+            """);
+        Assert.Contains("\\cadenzaOn", ly);
+        Assert.Contains("  a4 b4 c4\n  d2 e2\n}", ly);
+        Assert.DoesNotContain("c4 |", ly);
     }
 
     [Fact]

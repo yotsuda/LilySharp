@@ -608,17 +608,21 @@ internal static class LayoutPlanReader
             foreach (var p in problems)
                 Warn(entryWords[p.WordIndex].Span, DiagnosticCodes.ChordDiagramNotDrawn, p.Message);
             checkTunings ??= CheckTunings(root, tuningWord);
-            // A table shape is the PRESSED shape: under a capo it is checked against the
-            // pressed chord (ChordStructure.Pressed), the sounding chord that many frets down.
+            // A table shape is the PRESSED shape: under a capo it is raised by the capo
+            // (ChordShapes.AtCapo) and checked against the sounding chord the entry names, so the
+            // message speaks sounding names; the pressed chord (ChordStructure.Pressed) only
+            // names the fix that keeps the symbol.
             var pressed = chord.Pressed(capo, 0);
             foreach (var tuning in checkTunings)
             {
                 if (Music.ChordShapes.WrittenFor(tuning, shapes) is not { } shape
-                    || Music.ChordShapes.Mismatch(Music.ChordShapes.Frets(shape), Tablature.Tunings.GetTuning(tuning), pressed)
-                        is not { } mismatch)
+                    || Music.ChordShapes.Mismatch(Music.ChordShapes.AtCapo(Music.ChordShapes.Frets(shape), capo),
+                        Tablature.Tunings.GetTuning(tuning), chord) is not { } mismatch)
                     continue;
                 string? tuningName = shapes.First(s => s.Shape == shape).TuningName;
-                string message = Music.ChordShapes.MismatchMessage(mismatch, shape, tuningName, symbol, inRow: false, inTable: true);
+                string? pressedShape = capo > 0 ? Music.ChordShapes.Default(tuning, pressed)?.Spelled : null;
+                string message = Music.ChordShapes.MismatchMessage(mismatch, shape, tuningName, symbol, inRow: false, inTable: true,
+                    capo: capo, pressedShape: pressedShape);
                 var at = entryWords.First(w => w.Text == shape).Span;
                 if (!found.Any(f => f.Span.Start == at.Start && f.Message == message))
                     Warn(at, DiagnosticCodes.ChordShapeMismatch, message);

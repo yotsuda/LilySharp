@@ -1968,7 +1968,9 @@ reads follows the capo:
 - every shape is the shape PRESSED above the capo, drawn capo-relative: `Eb(x32010)` is the C
   shape; the usual shape of a chord is its pressed chord's (`Eb` at capo 3 draws `x32010`
   under `all`); the table's shapes are pressed shapes; a written shape is checked (LYS1039)
-  against the pressed chord — the sounding chord that many semitones down;
+  as pressed above the capo — the warning speaks in sounding names ("'320003' sounds A C♯ E
+  with the capo on fret 2, which is A, not G … write chord(A 320003), or chord(G 133211) for
+  G under the capo") and offers the symbol's own pressed shape as the fix that keeps it;
 - the printed NAME is the pressed chord's: `C` for `Eb`, `G` for `Bb`, spelled in the key that
   many semitones below the key at the bar (the key's own letter, else a natural, else the key's
   side of the accidental: in E major at capo 3, the pressed key is D♭, so a sounding `G#m`

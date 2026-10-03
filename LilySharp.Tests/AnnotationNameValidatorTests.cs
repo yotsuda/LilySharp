@@ -200,6 +200,24 @@ public class AnnotationNameValidatorTests
         Assert.Contains("Did you mean '@glissando'?", warning.Message);
     }
 
+    /// <summary>An ottava with an argument the family does not take is told the four
+    /// spellings — '@ottava(8va)' got nothing and '@ottava(1)' a guess ("Did you mean
+    /// '@ottava'?") until 2026-10-03 (session 762's piano book, HANDOFF ⑼ ⒠).</summary>
+    [Theory]
+    [InlineData("c4@ottava(8va) d e f@!ottava |")]
+    [InlineData("c4@ottava(1) d e f@!ottava |")]
+    [InlineData("c4@quindicesima(15ma) d e f@!ottava |")]
+    public void AnOttavaWithAnArgumentItDoesNotTake_IsToldTheSpellings(string music)
+    {
+        var warning = Assert.Single(Validate(music), d => d.Code == DiagnosticCodes.UnknownAnnotation);
+        Assert.Contains("An ottava is written '@ottava' (8va), '@ottava(bassa)' (8vb), '@quindicesima' (15ma) "
+                        + "or '@quindicesima(bassa)' (15mb), and closed by '@!ottava'.", warning.Message);
+        Assert.DoesNotContain("Did you mean", warning.Message);
+        // The case-only slip keeps its own, more exact hint.
+        Assert.Contains("write '@ottava(bassa)'",
+            Assert.Single(Validate("c4@ottava(BASSA) d e f@!ottava |"), d => d.Code == DiagnosticCodes.UnknownAnnotation).Message);
+    }
+
     /// <summary>
     /// A suggestion the reader cannot type is worse than no suggestion. A
     /// compound annotation is keyed internally as one dotted string

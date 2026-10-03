@@ -858,6 +858,33 @@ internal static class MultiMeasureRestEngraver
     }
 
     /// <summary>
+    /// Whether <c>time none</c> is in force at each bar index — the same walk as
+    /// <see cref="PrevailingMeters"/> (the score's signature carried forward, updated by any
+    /// time change a bar holds, in any voice), asking the one thing that walk drops: a cadenza
+    /// bar has a length (its notes') but no meter, and LilyPond's <c>\cadenzaOn</c> counts
+    /// nothing there, so a bar CHECK written in a lyric or chord line fails under it.
+    /// </summary>
+    internal static bool[] PrevailingSenzaMisura(
+        IReadOnlyList<ImmutableArray<Measure>> voices, int barCount, bool initial)
+    {
+        var senza = new bool[barCount];
+        bool state = initial;
+        for (int m = 0; m < barCount; m++)
+        {
+            for (int v = 0; v < voices.Count; v++)
+            {
+                var measures = voices[v];
+                if (m < measures.Length)
+                    foreach (var item in measures[m].Items)
+                        if (item is TimeSignatureChangeItem tc)
+                            state = tc.NewTime.SenzaMisura;
+            }
+            senza[m] = state;
+        }
+        return senza;
+    }
+
+    /// <summary>
     /// A clef / key / time change LilyPond hangs on the run's opening NonMusicalPaperColumn,
     /// so it rides the bar rather than being its content.
     /// </summary>

@@ -584,6 +584,11 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             message += " " + (SameHead(corrected, Written(node, name))
                 ? $"Values are case-sensitive: write '{corrected}'."
                 : CaseHint(corrected));
+        // An ottava with an argument the family does not take — '@ottava(8va)', '@ottava(1)'
+        // — is told the four spellings, not sent to guess ("Did you mean '@ottava'?" was all
+        // it got, and '@ottava(8va)' got nothing; session 762's piano book).
+        else if (OttavaHint(name) is { } ottava)
+            message += " " + ottava;
         else if (FindSuggestion(name) is { } suggestion)
             message += $" Did you mean '@{SourceSpelling(suggestion)}'?";
 
@@ -591,6 +596,20 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             node.Span,
             DiagnosticCodes.UnknownAnnotation,
             message);
+    }
+
+    /// <summary>The sentence naming the ottava family's four spellings, for an unknown name
+    /// whose head is <c>ottava</c> or <c>quindicesima</c> (a dotted name carries the written
+    /// argument: <c>@ottava(8va)</c> reaches here as <c>ottava.8va</c>); null otherwise. The
+    /// spellings are <c>MusicMarkItem</c>'s four ottava names.</summary>
+    private static string? OttavaHint(string name)
+    {
+        int dot = name.IndexOf('.');
+        string head = dot < 0 ? name : name[..dot];
+        return head is "ottava" or "quindicesima"
+            ? "An ottava is written '@ottava' (8va), '@ottava(bassa)' (8vb), '@quindicesima' (15ma) "
+              + "or '@quindicesima(bassa)' (15mb), and closed by '@!ottava'."
+            : null;
     }
 
     /// <summary>Whether two written annotations share their name — the part before '(' —

@@ -119,10 +119,15 @@ public sealed partial class LilyPondExporter
     /// check between its halves, an entry the walk placed past the part's last bar is dropped —
     /// had to be kept the same in three places by hand.
     /// </remarks>
+    /// <param name="senza">Whether <c>time none</c> is in force at each bar
+    /// (<see cref="Svg.Layout.MultiMeasureRestEngraver.PrevailingSenzaMisura"/>): such a bar
+    /// ends with no bar check, since under <c>\cadenzaOn</c> LilyPond counts nothing and a
+    /// <c>|</c> in a lyric or chord line fails ("bar check failed", session 762's chorale) —
+    /// the music line draws the bar with <c>\bar "|"</c> instead (<c>BarlineText</c>).</param>
     private void EmitTimedStream<T>(string varName, string mode, string silence,
         System.Collections.Immutable.ImmutableArray<Svg.Model.Measure> measures,
         IReadOnlyList<Fraction> meters, List<(T Item, int Measure, Fraction Onset)> items,
-        Action<StringBuilder, T, string> entry)
+        Action<StringBuilder, T, string> entry, bool[]? senza = null)
     {
         _sb.Append(varName).Append(" = \\").Append(mode).Append(" {\n");
         int k = 0;
@@ -152,8 +157,9 @@ public sealed partial class LilyPondExporter
             if (at < length)
                 AppendToken(line, silence + ChordModeDuration(length - at), "  ");
             // The two halves of a bar a line break splits (Measure.BreaksMidBar) are ONE
-            // bar in LilyPond: no bar check between them.
-            _sb.Append(line).Append(measures[m].BreaksMidBar ? "\n" : " |\n");
+            // bar in LilyPond: no bar check between them — nor at the end of a cadenza bar.
+            bool noCheck = measures[m].BreaksMidBar || (senza != null && m < senza.Length && senza[m]);
+            _sb.Append(line).Append(noCheck ? "\n" : " |\n");
         }
         // Entries the walk placed past the part's last bar (none in practice) are dropped.
         _sb.Append("}\n\n");
@@ -190,7 +196,7 @@ public sealed partial class LilyPondExporter
             string varName = VarName(partName + "InlineChords");
             _inlineChordVars[partName] = varName;
             EmitTimedStream(varName, "chordmode", "s", staff.PrimaryVoice.Measures, meters, items,
-                (line, c, duration) => AppendToken(line, InlineChordEntry(c, duration), "  "));
+                (line, c, duration) => AppendToken(line, InlineChordEntry(c, duration), "  "), SenzaMisuraByBar(score));
         }
     }
 
@@ -243,7 +249,7 @@ public sealed partial class LilyPondExporter
             string varName = VarName(partName + "Figures");
             _figureVars[partName] = varName;
             EmitTimedStream(varName, "figuremode", "s", measures, meters, items,
-                (line, f, duration) => AppendToken(line, FigureGroup(f) + duration, "  "));
+                (line, f, duration) => AppendToken(line, FigureGroup(f) + duration, "  "), SenzaMisuraByBar(score));
         }
     }
 
@@ -305,7 +311,9 @@ public sealed partial class LilyPondExporter
     /// page prints before verse 2+ (LilyPond's <c>\set stanza</c>), and the extender's exact
     /// end (the page stops it at the last held head, LilyPond's <c>__</c> runs to the next
     /// syllable) — both are named in the CHANGELOG. A connector is the page's:
-    /// <c>--</c> after a hyphenated syllable, <c>__</c> after an extended one.
+    /// <c>--</c> after a hyphenated syllable, <c>__</c> after an extended one; a line-ending
+    /// extender gets an empty syllable to end at (<see cref="ExtenderTerminator"/>), and a
+    /// cadenza bar no bar check (<see cref="SenzaMisuraByBar"/>) — both 2026-10-03.
     /// </remarks>
     private void EmitLyricTracks(SyntaxTree tree, RenderDeclarationSyntax? render)
     {
@@ -317,6 +325,7 @@ public sealed partial class LilyPondExporter
             return;
 
         var meters = Svg.Layout.ScoreSideTables.PrevailingMeters(score);
+        var senza = SenzaMisuraByBar(score);
         var staves = score.EnumerateStaves().ToDictionary(t => t.GlobalStaffIndex, t => t.Staff);
         // One line = one staff's one voice's one verse (a row's lines key on the row's staff).
         var lines = score.Lyrics
@@ -330,6 +339,16 @@ public sealed partial class LilyPondExporter
             var items = line.OrderBy(l => l.MeasureIndex).ThenBy(l => l.Timing)
                 .Select(l => (Item: l, Measure: l.MeasureIndex, Onset: l.Timing))
                 .ToList();
+            // A line's LAST syllable with an extender: LilyPond ends an extender at the next
+            // syllable and warns "unterminated extender" (drawing none) when there is none, so
+            // an EMPTY syllable is written where the page's extender ends (ExtenderTerminator).
+            if (items.Count > 0 && items[^1].Item.ConnectorType == Svg.Model.LyricConnectorType.Extender
+                && ExtenderTerminator(staff.PrimaryVoice.Measures, meters, items[^1].Item) is { } end)
+                items.Add((items[^1].Item with
+                {
+                    Text = "", ConnectorType = Svg.Model.LyricConnectorType.None, MelismaAlignLeft = false,
+                    MeasureIndex = end.Measure, Timing = end.Onset,
+                }, end.Measure, end.Onset));
 
             // A LilyPond identifier is letters only, so the verse (and voice) is a word.
             string varName = VarName(partName
@@ -357,8 +376,54 @@ public sealed partial class LilyPondExporter
                         AppendToken(text, "--", "  ");
                     else if (l.ConnectorType == Svg.Model.LyricConnectorType.Extender)
                         AppendToken(text, "__", "  ");
-                });
+                }, senza);
         }
+    }
+
+    /// <summary>Whether <c>time none</c> is in force at each bar of the page — the walk
+    /// <see cref="Svg.Layout.MultiMeasureRestEngraver.PrevailingMeters"/> makes, asked for the
+    /// cadenza (every voice's time changes, the score's signature first).</summary>
+    private static bool[] SenzaMisuraByBar(Svg.Model.MultiStaffScore score)
+        => Svg.Layout.MultiMeasureRestEngraver.PrevailingSenzaMisura(
+            score.AllVoices.Select(v => v.Measures).ToList(), score.MeasureCount, score.TimeSignature.SenzaMisura);
+
+    /// <summary>
+    /// Where a line-ending extender's EMPTY terminating syllable goes: the onset after the
+    /// melisma's last note (<see cref="Svg.Model.LyricItem.MelismaEndMeasureIndex"/>) — the next
+    /// bar's head when that note closes its bar — or, when that note is the part's last, the
+    /// note's own onset; null when the extender consumed no note or sits on that last note
+    /// itself (then LilyPond's warning stands, and nothing is drawn either way).
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, Lab sessions/p764/probes/extender.ly): <c>la1 __ \skip 1 ""1</c> draws
+    /// the extender to the empty syllable and warns nothing; <c>la1 __ \skip 1 \skip 1</c> warns
+    /// "unterminated extender" and draws none. The page stops its extender at the last held
+    /// head's RIGHT (lily/lyric-extender.cc:80-84, as LyricItem says); LilyPond's reaches the
+    /// next syllable's LEFT, which is the following note's column — one head's width apart at
+    /// most, and at the part's last note the terminator stands ON the head, a head short.
+    /// </remarks>
+    private static (int Measure, Fraction Onset)? ExtenderTerminator(
+        System.Collections.Immutable.ImmutableArray<Svg.Model.Measure> measures,
+        IReadOnlyList<Fraction> meters, Svg.Model.LyricItem last)
+    {
+        int m = last.MelismaEndMeasureIndex;
+        if (m < 0 || m >= measures.Length)
+            return null;
+        var at = Fraction.Zero;
+        foreach (var it in measures[m].Items)
+        {
+            if (it.Duration > Fraction.Zero && at == last.MelismaEndTiming)
+            {
+                var end = at + it.Duration;
+                if (end < BarLength(measures[m], meters, m))
+                    return (m, end);
+                if (m + 1 < measures.Length)
+                    return (m + 1, Fraction.Zero);
+                return last.MeasureIndex == m && last.Timing == at ? null : (m, at);
+            }
+            at += it.Duration;
+        }
+        return null;
     }
 
     /// <summary>A small number as a word, for a LilyPond identifier (letters only).</summary>

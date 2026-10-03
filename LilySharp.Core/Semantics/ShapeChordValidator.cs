@@ -73,9 +73,10 @@ internal sealed class ShapeChordValidator : ISemanticValidator
                 + "the item names nothing.");
 
         // ⑵ A shape the part's tuning can play, and ⑶ the shape against the symbol — under a
-        // capo, against the PRESSED chord (the shape is pressed above the capo; 2026-09-29) — each
-        // score's capo, as the page and the MIDI sound it (2026-09-30; the first score's alone
-        // until then, silent where another score's capo makes the shape a different chord).
+        // capo, the shape RAISED by the capo against the sounding chord the music writes (the
+        // shape is pressed above the capo; 2026-09-29, the frame of the message 2026-10-03) —
+        // each score's capo, as the page and the MIDI sound it (2026-09-30; the first score's
+        // alone until then, silent where another score's capo makes the shape a different chord).
         var said = new HashSet<string>();
         var capos = ChordDiagramScores.CaposOfNode(item).Select(c => c.Capo).DefaultIfEmpty(0).ToList();
         foreach (var part in ShapeChords.PartTuningsOf(item))
@@ -95,11 +96,12 @@ internal sealed class ShapeChordValidator : ISemanticValidator
                 continue;
             foreach (int capo in capos)
             {
-                if (ChordShapes.Mismatch(ChordShapes.Frets(shape), strings, structure.Pressed(capo, 0)) is not { } mismatch)
+                if (ChordShapes.Mismatch(ChordShapes.AtCapo(ChordShapes.Frets(shape), capo), strings, structure) is not { } mismatch)
                     continue;
                 string? tuningName = words.Shapes.First(w => w.Shape == shape).TuningName;
+                string? pressedShape = capo > 0 ? ChordShapes.Default(part.Tuning, structure.Pressed(capo, 0))?.Spelled : null;
                 string mismatchMessage = ChordShapes.MismatchMessage(mismatch, shape, tuningName, symbol,
-                    inRow: false, item: true);
+                    inRow: false, item: true, capo: capo, pressedShape: pressedShape);
                 int at = args.Select((a, i) => (a, i)).FirstOrDefault(x => x.a.Text == shape).i;
                 if (said.Add(mismatchMessage))
                     _diagnostics.Warning(SpanOf(at), DiagnosticCodes.ChordShapeMismatch, mismatchMessage);

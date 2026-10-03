@@ -416,14 +416,18 @@ internal sealed class ChordDiagramValidator : ISemanticValidator
                 if (word == null)
                     continue;
                 var tuning = Tablature.Tunings.Parse(word);
-                // A written shape is the PRESSED shape: under a capo it is checked against the
-                // pressed chord (ChordStructure.Pressed), the sounding one that many frets down.
+                // A written shape is the PRESSED shape: under a capo it is raised by the capo
+                // (ChordShapes.AtCapo) and checked against the sounding chord the row writes, so
+                // the message speaks sounding names (the pressed chord, ChordStructure.Pressed,
+                // only names the fix that keeps the symbol).
                 if (ChordShapes.WrittenFor(tuning, shapes) is not { } shape
-                    || ChordShapes.Mismatch(ChordShapes.Frets(shape), Tablature.Tunings.GetTuning(tuning),
-                        chord.Pressed(score.Capo, 0)) is not { } mismatch)
+                    || ChordShapes.Mismatch(ChordShapes.AtCapo(ChordShapes.Frets(shape), score.Capo),
+                        Tablature.Tunings.GetTuning(tuning), chord) is not { } mismatch)
                     continue;
                 string? tuningName = shapes.First(s => s.Shape == shape).TuningName;
-                string message = ChordShapes.MismatchMessage(mismatch, shape, tuningName, symbol, inRow);
+                string? pressedShape = score.Capo > 0 ? ChordShapes.Default(tuning, chord.Pressed(score.Capo, 0))?.Spelled : null;
+                string message = ChordShapes.MismatchMessage(mismatch, shape, tuningName, symbol, inRow,
+                    capo: score.Capo, pressedShape: pressedShape);
                 var at = words.FirstOrDefault(w => w.Text == shape);
                 var span = at.Text == null ? words[0].Span : at.Span;
                 if (said.Add((span.Start, message)))

@@ -314,7 +314,7 @@
 - **:660** ⚠️ LILYSHARP-OWN: the glyphs a missing codepoint falls back to are drawn from a system
 - **:705** LILYSHARP-OWN: a face with no readable extents (none of the bundled ones), so
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
-- **:660** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
+- **:679** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Semantics/CapoAdvisor.cs`
 - **:40** the barres and before the fret itself in the ranking. LILYSHARP-OWN: LilyPond has nothing
 ### `LilySharp.Core/Semantics/ChordAnnotation.cs`

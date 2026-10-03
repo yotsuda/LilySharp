@@ -357,6 +357,26 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A shape that disagrees with its symbol under a capo is told so in sounding names.** The
+  check (LYS1039) ran in the pressed frame and printed the written symbol beside the pressed
+  recognition, so `chord(G 320003)` under `capo 2` said "'320003' sounds G B D, which is G, not
+  G … write chord(G 320003)". It now reads "'320003' sounds A C♯ E with the capo on fret 2,
+  which is A, not G (…) - write chord(A 320003), or chord(G 133211) for G under the capo, or
+  another shape" — the shape as it sounds, the capo named once, and the symbol's own pressed
+  shape offered as the fix that keeps it. A chords row and a `chordDiagrams` table read the
+  same way. What is checked has not changed.
+- **The `.ly` twin ends a verse's last extender, and writes no bar check in a cadenza.** A
+  melisma at the end of a lyric line (`star _ |`, a slur running to the last notes) was written
+  `star1 __` with nothing after it, which LilyPond reports as "unterminated extender" and
+  draws nothing; an empty syllable now stands where the page's extender ends (the note after
+  the melisma's last, or that last note itself at the end of the part), so LilyPond draws the
+  line and says nothing. A bare `__` that held no note is left as it was. In a `time none`
+  passage the lyric, inline-chord and figured-bass lines wrote a `|` LilyPond's `\cadenzaOn`
+  cannot check ("bar check failed"); they write none there.
+- **`@ottava(8va)` and `@ottava(1)` are told the ottava spellings.** The family takes no such
+  argument; the unknown-annotation warning (LYS1008) now names the four — `@ottava` (8va),
+  `@ottava(bassa)` (8vb), `@quindicesima` (15ma), `@quindicesima(bassa)` (15mb) — and the
+  `@!ottava` that closes them, instead of nothing or a guess.
 - **A `time` at the head of a section that states the home meter the section reopens at is
   written once in the `.ly` twin.** After a section that changed the meter, the next section
   reopens at the home, and a `time` restating that home at its head was written beside the

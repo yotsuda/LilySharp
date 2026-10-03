@@ -2063,9 +2063,14 @@ public class ChordDiagramTests
         Assert.Equal(new string?[] { "x32010|032010", "320003|210003" }, RowFrames(Song(Capo3All, "Eb | Bb |", "c'1 | c'1 |")));
         Assert.Equal(new string?[] { "x32013", null }, RowFrames(Song(Capo3, "Eb(x32013) | Bb |", "c'1 | c'1 |")));
         Assert.Equal(new string?[] { "133211" }, RowFrames(Song("layout { chordDiagrams guitar capo 3 { Ab 133211 } }\n", "Ab |", "c'1 |")));
-        // LYS1039 reads the pressed chord: x32010 is the pressed E♭ (C); 320003 is not.
+        // LYS1039 reads the shape as pressed above the capo: x32010 is the pressed E♭ (C);
+        // 320003 is not — and the message speaks in SOUNDING names, naming the capo once and
+        // the symbol's own pressed shape as the fix that keeps it (2026-10-03; until then it
+        // mixed the frames: "sounds G B D, which is G, not Eb (G B D are not tones of Eb)").
         Assert.Empty(Mismatches(Song(Capo3, "Eb(x32010) |", "c'1 |")));
-        Assert.Contains("'320003' sounds G B D, which is G, not Eb", Assert.Single(Mismatches(Song(Capo3, "Eb(320003) |", "c'1 |"))).Message);
+        Assert.Equal("'320003' sounds B♭ D F with the capo on fret 3, which is Bb, not Eb (D F are not tones of Eb; "
+                     + "it lacks G (the 3rd)) - write Bb(320003), or Eb(x32010) for Eb under the capo, or another shape.",
+            Assert.Single(Mismatches(Song(Capo3, "Eb(320003) |", "c'1 |"))).Message);
         Assert.Empty(Mismatches("layout { chordDiagrams guitar capo 3 { Eb x32010 } }\npart m { }\nsection A { m { c'1 | } }\nform main { A }\nscore main { staff m }\n"));
         // A listed chord with no pressed shape on the tuning warns (C13 → A13 on the ukulele).
         Assert.Contains("C13 has no chord diagram on 'ukulele'",

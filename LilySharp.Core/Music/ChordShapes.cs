@@ -650,25 +650,49 @@ public static class ChordShapes
     /// spelled <c>chord(X shape)</c>.</param>
     /// <param name="inTable">A layout table entry's shape (<see cref="ChordShapeTable"/>): the fix
     /// is spelled as the table writes it, <c>X shape</c>.</param>
+    /// <param name="capo">The fret the score's capo is on, 0 for none. Under a capo
+    /// <paramref name="m"/> is the mismatch of the shape RAISED by the capo (<see cref="AtCapo"/>)
+    /// against the sounding chord the music writes, so every note and name in the message is a
+    /// sounding one and the capo is named once.</param>
+    /// <param name="pressedShape">Under a capo, the symbol's own pressed shape there
+    /// (<see cref="Default"/> of <see cref="ChordStructure.Pressed"/>), offered as the fix that
+    /// keeps the written symbol; null when the tuning has none.</param>
+    /// <remarks>
+    /// ⚠️ THE TWO FRAMES MUST NOT MIX. Until 2026-10-03 the callers checked the pressed shape
+    /// against the PRESSED chord and then printed the SOUNDING symbol beside the pressed
+    /// recognition: <c>chord(G 320003)</c> under capo 2 said "'320003' sounds G B D, which is
+    /// G, not G (G B D are not tones of G; it lacks A (the 3rd)) - write chord(G 320003)" —
+    /// a sentence that contradicts itself and names the written spelling as the fix (session
+    /// 762's big-band book). The check is the same in either frame (a capo transposes every
+    /// note alike); only the message cares, and it now speaks sounding names throughout.
+    /// </remarks>
     internal static string MismatchMessage(ShapeMismatch m, string shape, string? tuningName,
-        string symbol, bool inRow, bool item = false, bool inTable = false)
+        string symbol, bool inRow, bool item = false, bool inTable = false,
+        int capo = 0, string? pressedShape = null)
     {
         string Notes(IEnumerable<int> pcs) => string.Join(" ", pcs.Select(m.Spell));
         string written = tuningName == null ? shape : $"{tuningName} {shape}";
-        string Form(string sym) => inRow ? $"{sym}({written})"
-            : item ? $"chord({sym} {written})"
-            : inTable ? $"{sym} {written}"
-            : $"@chord({sym} {written})";
+        string FormWith(string sym, string shp) => inRow ? $"{sym}({shp})"
+            : item ? $"chord({sym} {shp})"
+            : inTable ? $"{sym} {shp}"
+            : $"@chord({sym} {shp})";
+        string Form(string sym) => FormWith(sym, written);
         string missingList = AndList(m.Missing.Select(t => $"{m.Spell(t.Pc)} ({t.Role})").ToList());
         string foreignWords = m.Foreign.Length == 1 ? "is not a tone" : "are not tones";
+        string atCapo = capo > 0 ? $" with the capo on fret {capo}" : "";
+        // Under a capo: the symbol's own pressed shape, spelled with the shape's tuning word.
+        string? pressedForm = capo > 0 && pressedShape != null
+            ? FormWith(symbol, tuningName == null ? pressedShape : $"{tuningName} {pressedShape}")
+            : null;
 
         if (m.Recognized is { } rec && SourceSymbol(rec) is { } named)
         {
             var details = new List<string> { $"{Notes(m.Foreign)} {foreignWords} of {symbol}" };
             if (m.Missing.Length > 0)
                 details.Add($"it lacks {missingList}");
-            return $"'{shape}' sounds {Notes(m.Sounding)}, which is {named}, not {symbol} "
-                   + $"({string.Join("; ", details)}) - write {Form(named)} or another shape.";
+            string alsoPressed = pressedForm != null ? $", or {pressedForm} for {symbol} under the capo," : "";
+            return $"'{shape}' sounds {Notes(m.Sounding)}{atCapo}, which is {named}, not {symbol} "
+                   + $"({string.Join("; ", details)}) - write {Form(named)}{alsoPressed} or another shape.";
         }
 
         var clauses = new List<string>();
@@ -677,14 +701,25 @@ public static class ChordShapes
                         + $"not {(m.Foreign.Length == 1 ? "a tone" : "tones")} of {symbol}");
         if (m.Missing.Length > 0)
             clauses.Add($"lacks {missingList}");
-        string fix = m.Foreign.Length > 0
-            ? $"write a shape of {symbol}'s tones"
-            : $"fret {AndList(m.Missing.Select(t => m.Spell(t.Pc)).ToList())} or write another shape";
+        string fix = pressedForm != null
+            ? $"write {pressedForm} ({symbol} under the capo) or another shape of {symbol}'s tones"
+            : m.Foreign.Length > 0
+                ? $"write a shape of {symbol}'s tones"
+                : $"fret {AndList(m.Missing.Select(t => m.Spell(t.Pc)).ToList())} or write another shape";
         // The clauses take a serial comma: a clause holds its own "and" ("lacks E and B♭").
         string joined = clauses.Count == 1 ? clauses[0]
             : string.Join(", ", clauses.Take(clauses.Count - 1)) + ", and " + clauses[^1];
-        return $"'{shape}' for {symbol} {joined} - {fix}.";
+        return $"'{shape}' for {symbol}{atCapo} {joined} - {fix}.";
     }
+
+    /// <summary>
+    /// The shape <paramref name="frets"/> as it SOUNDS under a capo on fret <paramref name="capo"/>:
+    /// every fretted or open string that much higher, a muted string still muted. A written
+    /// shape is the pressed shape — its frets count from the capo — so this is what the
+    /// mismatch check compares with the sounding chord the music writes (<see cref="Mismatch"/>).
+    /// </summary>
+    public static ImmutableArray<int> AtCapo(IReadOnlyList<int> frets, int capo)
+        => capo == 0 ? [.. frets] : [.. frets.Select(f => f < 0 ? f : f + capo)];
 
     /// <summary>"A", "A and B", "A, B and C".</summary>
     private static string AndList(IReadOnlyList<string> items) => items.Count switch
