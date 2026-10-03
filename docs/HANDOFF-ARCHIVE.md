@@ -129,6 +129,21 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第786セッションの経緯
+
+### 1.1 第786セッション（2026-10-04・YT-DELL2）
+
+新しい会話・ユーザー「HANDOFF を読んで作業に着手して」＝第785 の判定が残した 3 候補のうち、第785 の直続きで最小の **staffless の sheet の tempo の床**（7.7 の 1 点）を選んだ。`-Start p786`（HEAD `6bd4a45a`・未 push 15）＝full **10957 / 0 / 2 / 10959**。§7 3.5 で第784 を ARCHIVE へ。
+- **LP の機構を先に読んだ**: MetronomeMark の support は `stavesFound`（metronome-engraver.cc:137-139）＝staff symbol の集まり（staff-collecting-engraver.cc）。staff の無い sheet では**空**＝`aligned_side` は空の support を「Y 親の refpoint に高さ 0 の skyline」と読んで padding 0.8 を払う（side-position-interface.cc:347-351・:370）。Y 親は `move_to_extremal_staff`（:513-547）が X extent の重なる最上の live な axis group（ChordNames／Lyrics 行）に付け替える＝refpoint は和音／音節の baseline。その上で outside-staff pass が行の symbol の箱に 0.46 で避ける。
+- **probe `tempo-chord-row.ly` 6 冊（PROBET・`sessions/p786/probes/lp-tempo-chord-row.txt`）**: ⚠️ rows-only の Lily# score は **header の tempo しか描かない**（下の観察 ⑴）ので対は行頭＝bar 1 の和音の上。`4 = 111`（1 は底が平ら＝ink 下端が全幅で baseline＝pointwise と平箱が同じ縁を読む）。予測: TCY/TCZ（Am／A#m・chords＋lyrics）は mark 底 − 和音 ink 上端＝0.46 で同一、TCQ（bar 1 が空）は行 baseline＋0.8、TCG（chords のみ＝control）は TCY と同じ。**結果**: TCY/TCZ/TCG **0.460000000**（9 桁・行は ink 成長ぶん動く＝同一性は LP 側も成立）／**TCQ は反証**＝mark は和音行と lyrics 行の**あいだ**（rel −5.3389＝lyric baseline −7.4387＋音節 `two` の outline＋0.46）: axis group の X extent は**要素の extent**なので空の bar 1 では ChordNames 群を素通りして Lyrics 行に付け替わる／TCE（chords のみ・空 bar 1 つ）は 5.8 幅の空小節に 7.4 幅の mark＝bar 2 の `f` の上で 0.46＝静かでない／**TCF**（空 3 小節）は**反証 2 つ目**＝どの群にも当たらず System に残り **system refpoint から 0.8**（rel 0.800000）。
+- **Lily# 側（直す前）**: TCY **0.542749629**／TCZ 0.460000000／TCG 1.842749629＝短い和音では staff の床 2.85（`QuietBaselineAboveMiddle`）が勝ち、高い和音では天井が勝つ＝**対が割れる**（0.0827＝2.85 − (0.4＋1.907250371) − 0.46・9 桁）。
+- **直した（commit 下記）**: `MusicMarkEngraver` の tempo の腕＝anchor が行なら quiet の床は **行の refpoint（`StaffLayout.RefpointBelowTop`）＋0.8**（新 `MetronomeMarkGeometry.QuietBaselineAboveRowRefpoint`・REF 3 本）、grid 行なら帯の ink の床（`TextRowLabelFrameBottomAboveBandMiddle`＝label と同じ家）、和音の天井は既存のまま。`AnchorRowCarriesTheGrid` は新 `AnchorRowLayout` 経由。**非字面の 1 歩（7.6 ⒝）を腕に書いた**: LP は mark ごとに X extent で行を選ぶ（TCQ の「行間に挟む」・TCF の「system 天から 0.8」）が Lily# は最上の score-grob 行を anchor にする＝その 2 regime は再現しない（比較できる台帳点は無い＝棚卸し UNWATCHED +1）。結果 TCY/TCZ **0.460000000**（残差 0）・TCG **1.452749629**（残差 **0.992749629**＝帯の上端 2.0 − 和音 ink 上端 1.007250371＝grid の meter と小節線＝Lily# 固有の ink・why に明記。床は X 非依存で、行頭の meter の glyph 上端は帯上端より約 1 低い＝pointwise にすればその分下がる＝次の精錬・label も同じ床）。
+- 網: 台帳 +3（`tempo.staffless.over-chord.row-ink-to-baseline`・`.tall`・`tempo.staffless.grid.over-chord.row-ink-to-baseline`）・読み手 `RenderedGeometry.TempoBaselineAboveChordInkTop`（和音の ink を読む loop は `HighestChordInkTopUnder` に括って label の読み手と共有）。snapshot **0 枚**（fixture に header tempo の staffless sheet が無い）。CHANGELOG Fixes。棚卸し `APPROXIMATIONS.md` 行番号＋UNWATCHED 59→60（上の非字面の註）・csv 不変。
+- 掃き（998 冊・base＝`sessions/p785/exe-head`＝HEAD のコード・head＝p786・`sessions/p786/svg/sweep.log`・`sweep-ly.log`）: svg **差 3 / 1199**＝amazing-grace の grid ×2（repo・corpora）・greensleeves の grid＝header tempo を持つ staffless の grid の全部（tempo が帯の上端＋0.46 へ降り label が付いて来る＝`probes/amazing-grace-grid.png`）／ly **差 0**（exporter は触っていない）。
+- 観察 2 つ（起票は §1.0 ⒜ の「rows-only の tempo」）: ⑴ rows-only の score は header 以外の tempo を描かない／⑵ `lysc ly` の twin は rows-only の score の tempo（header も）を使われない `music` 変数に出す＝LP 側に tempo が無い。
+★ `-End p786 -DiffBase 6bd4a45a`（`end.log`）＝full **10960 / 0 / 2 / 10962**（台帳 +3）・門 全 OK（HANDOFF 残り 3,133 B・§1 残り 8,166 字・棚卸し差分なし）。7.5: Core **`+` 61** 行・REF +3（`QuietBaselineAboveRowRefpoint` の side-position-interface.cc:347-351／:513-547・staff-collecting-engraver.cc）・OWN 0＝非字面の 1 歩は REF の腕に註（7.6 ⒝＝LP から導出・anchor の選び方だけが違う）。7.6: ⒜ 0.8 は MetronomeMark の padding を空の support から払う LP の式そのまま／⒝ anchor は Lily# の最上行＝上述／grid の帯の床は第785 の読みを tempo にも当てたもの（新しい出所なし）。7.7: 匂いなし（guard・sentinel 無し・床は LP の規則・snapshot 不動）。⚠️ HANDOFF は残り 3,133 B＝次便の `-Start` が第785 を落として空く。commit `5c811afc`（code・probe・台帳・読み手・CHANGELOG・棚卸し）＋ docs の commit。push はユーザー。
+判定: 7.7 の 1 点は閉じた（対＋grid の 3 点）。次の一手: §1.0 ⒜ の新項「rows-only の tempo」⑴⑵（小・本便の直続き）か ⒝ の設計級（跳躍の 3 軒・小節番号と和音行）＝ユーザー判断。会話を区切るか: (a) rows-only の tempo なら本便の文脈（probe・計器）の上に立つ＝**続けるのが有利**（この会話は 1 便目で軽い）。
+
 ## 以下は第785セッションの経緯
 
 ### 1.1 第785セッション（2026-10-04・YT-DELL2）
