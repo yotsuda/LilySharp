@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 59 | 観測者がゼロだと自認しているもの |
-| `OWN` | 215 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **334** | |
+| `OWN` | 216 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **335** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -236,7 +236,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（215 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（216 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **:90** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
@@ -254,7 +254,7 @@
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:519** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
 - **:1231** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
-- **:2725** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+- **:2770** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ArpeggioSpread.cs`
 - **:30** LILYSHARP-OWN: the owner's decision (2026-09-30) — &lt;&lt; chord(C x32010) &gt;&gt;2
 ### `LilySharp.Core/Music/BarRest.cs`
@@ -324,6 +324,8 @@
 ### `LilySharp.Core/Semantics/FontPlanReader.cs`
 - **:271** LILYSHARP-OWN: a limit of the LANGUAGE, not a geometry — LilyPond's font-size
 - **:279** The range a size may take, in staff spaces. LILYSHARP-OWN, as
+### `LilySharp.Core/Semantics/FormRoute.cs`
+- **:75** LILYSHARP-OWN: LilyPond's \jump (lily/jump-engraver.cc) is a mark only — its MIDI
 ### `LilySharp.Core/Semantics/LayoutPlan.cs`
 - **:264** LILYSHARP-OWN: LilyPond 2.26 has no capo property on its ChordNames context (its
 - **:285** LILYSHARP-OWN: LilyPond has no such list; the twin writes a \markup line of

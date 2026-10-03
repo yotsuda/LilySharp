@@ -668,8 +668,13 @@ of the following section; text directives `fine`, `to coda`, `dc`/`ds` (and `dc 
 `ds al coda`) engrave at the end of the section just played.
 
 ```
-form main { A segno  B to coda  C ds al coda  coda D }
+form main { A segno  B to coda  C ds al coda  coda D }   // the MIDI plays A B C B D
 ```
+
+The MIDI follows a FORM's jump texts as a player reads them (`dc` to the beginning, `ds` to
+after the last `segno`; `al fine` ends at the first `fine` of the replay; `al coda` goes on
+from the `coda` after the jump; a bare `dc`/`ds` goes on after the jump; repeats play once on
+the replay). A `ds` with no `segno`, and a mark written in the music, are drawn only.
 
 The same bare words are also written in a section's music, at a barline boundary
 (`segno c4 d e f |`, `c4 d e f | ds al fine`) — they are landmarks, never note

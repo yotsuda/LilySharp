@@ -530,8 +530,9 @@ note gets a hanging tie and the note the music arrives at a repeat tie, drawn as
 `@laissezVibrer` / `@repeatTie` were written there (once, however many ties arrive at it). The
 MIDI sustains the note on each pass the tie is carried on and re-attacks it on the others;
 MusicXML writes the tie's start on the tied note and its stop on every note it reaches; the
-LilyPond twin writes `\repeatTie`. Jumps (D.S., D.C.) are not followed, as the MIDI does not
-follow them.
+LilyPond twin writes `\repeatTie`. Jumps (D.S., D.C.) are not followed by the tie: the MIDI
+follows them (see Navigation marks), but a tie at the section before a jump text is carried
+to the section printed and played next on the first pass, not to the segno's.
 
 Everything else a section starts from still resets at the boundary (the relative frame, the note
 value, the meter, the key, the clef, overrides), so a tie's target states its octave. A span
@@ -1328,6 +1329,17 @@ form main {
   coda  D
 }
 ```
+
+The MIDI **follows** a form's jump texts, the way a player reads them: `dc` goes back to the
+beginning, `ds` to the item after the last `segno` before it; `al fine` plays to the first
+`fine` in the replayed stretch and ends the piece there (nothing written after the jump
+sounds); `al coda` plays to the first `to coda` in it, then goes on from the `coda` sign after
+the jump; a bare `dc` / `ds` plays up to the jump and goes on after it. On the replayed stretch
+a repeat block plays once, as its last pass (`|: A [1. B] :| [2. C]` replays A C), and a
+one-sided `:|` rewinds nothing. The form above plays A B C B D. A `ds` with no `segno` before
+it, and a mark written in the music or inside a `|: … :|` block, are drawn and not followed.
+The page draws the marks where they stand, MusicXML writes each with its `<sound>` attribute,
+and the LilyPond twin writes `\jump`, whose MIDI does not follow it.
 
 ## Render Block
 

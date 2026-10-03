@@ -1303,9 +1303,11 @@ public sealed class MidiExporter
 
     /// <summary>
     /// Plays sections in structure order. `|: … :|` bodies play twice (or
-    /// once per volta alternative); display relabels ("A2") and navigation
-    /// text are visual and skipped. D.C./D.S. jump SEMANTICS are not yet
-    /// honored (they would need segno/fine targets in time).
+    /// once per volta alternative); display relabels ("A2") are visual and skipped.
+    /// The jump texts (D.C., D.S., al fine, al coda) are FOLLOWED, along the route
+    /// <see cref="Semantics.FormRoute"/> reads off the form (2026-10-03; until then they
+    /// were visual too): a replayed stretch restores the state the piece had at its target
+    /// — the beginning, or the segno — exactly as a one-sided ':|' restores the beginning's.
     /// </summary>
     /// <remarks>
     /// ⚠️ A '~' REFERENCE HIDES A LABEL, NOT THE MUSIC. <c>~Name</c> is the same section
@@ -1319,32 +1321,83 @@ public sealed class MidiExporter
     /// </remarks>
     private void PlayForm(FormDeclarationSyntax structure, MidiTrack track, MidiTrack conductorTrack)
     {
-        // The state a from-the-beginning repeat has to put back, captured before anything
-        // plays. The same three things PlayRepeatBlock / ProcessRepeatSpan already restore
-        // per pass, plus the per-part pitch lanes, which those two do not touch because a
-        // '|: … :|' body never rewinds past its own start.
-        var pieceOrdinals = new Dictionary<int, int>(_sourceOrdinals);
-        var piecePitchLanes = new Dictionary<string, (int, int, Fraction)>(_partPitchLanes);
-        var pieceVelocityLanes = new Dictionary<string, int>(_partVelocity);
-        var pieceDuration = _defaultDuration;
-        int pieceVelocity = _velocity;
-
         // The item spellings are read ONCE, by FormWalk (a silent `~Name` is a
-        // SectionRef like any other — the bite this method's remark records).
+        // SectionRef like any other — the bite this method's remark records), and the
+        // ROUTE through them once, by FormRoute.
         var items = FormWalk.Read(structure);
-        for (int i = 0; i < items.Count; i++)
+        var route = Semantics.FormRoute.Of(items);
+
+        // The state a replay has to put back, keyed by the item it starts from: the
+        // beginning's, captured before anything plays, and each segno's, captured as the
+        // first pass meets the sign. FormRoute sends a replay only to the beginning or to
+        // the item after a segno the first pass has met, so the key is always there.
+        var states = new Dictionary<int, PieceState> { [0] = CaptureState() };
+
+        foreach (var stretch in route)
         {
-            // A ':|' written in the form outside any '|: … :|' block: it has no '|:' to
-            // pair with, so it repeats FROM THE BEGINNING OF THE PIECE (user decision,
-            // 2026-08-15) — the ordinary reading of a one-sided end-repeat, and the one
-            // MusicXML already spells (a backward repeat with no forward one). Replay
-            // everything before it, once.
-            if (items[i] is FormWalk.LoneRepeatEnd)
-                RepeatFromTheBeginning(items, i, track, conductorTrack,
-                    pieceOrdinals, piecePitchLanes, pieceVelocityLanes, pieceDuration, pieceVelocity);
-            else
-                PlayFormItem(items[i], track, conductorTrack);
+            if (stretch.Replay)
+                RestoreState(states[stretch.From]);
+            for (int i = stretch.From; i < stretch.To; i++)
+            {
+                var item = items[i];
+                if (stretch.Replay)
+                {
+                    // The D.C./D.S. pass: a repeat block plays once, on its last pass (the
+                    // performer's convention), and a one-sided ':|' rewinds nothing — one
+                    // rewind per written sign, as inside RepeatFromTheBeginning's stretch.
+                    if (item is FormWalk.Repeat replayed)
+                        PlayRepeatBlock(replayed, track, conductorTrack, lastPassOnly: true);
+                    else if (item is not FormWalk.LoneRepeatEnd)
+                        PlayFormItem(item, track, conductorTrack);
+                    continue;
+                }
+                if (Semantics.FormRoute.IsSegno(item))
+                    states[i + 1] = CaptureState();
+                // A ':|' written in the form outside any '|: … :|' block: it has no '|:' to
+                // pair with, so it repeats FROM THE BEGINNING OF THE PIECE (user decision,
+                // 2026-08-15) — the ordinary reading of a one-sided end-repeat, and the one
+                // MusicXML already spells (a backward repeat with no forward one). Replay
+                // everything before it, once.
+                if (item is FormWalk.LoneRepeatEnd)
+                    RepeatFromTheBeginning(items, i, track, conductorTrack, states[0]);
+                else
+                    PlayFormItem(item, track, conductorTrack);
+            }
         }
+    }
+
+    /// <summary>The state a replay puts back: the same three things PlayRepeatBlock /
+    /// ProcessRepeatSpan already restore per pass, plus the per-part pitch lanes, which those
+    /// two do not touch because a '|: … :|' body never rewinds past its own start.</summary>
+    private sealed record PieceState(
+        Dictionary<int, int> Ordinals,
+        Dictionary<string, (int, int, Fraction)> PitchLanes,
+        Dictionary<string, int> VelocityLanes,
+        Fraction Duration,
+        int Velocity);
+
+    private PieceState CaptureState() => new(
+        new Dictionary<int, int>(_sourceOrdinals),
+        new Dictionary<string, (int, int, Fraction)>(_partPitchLanes),
+        new Dictionary<string, int>(_partVelocity),
+        _defaultDuration,
+        _velocity);
+
+    /// <summary>Puts <paramref name="state"/> back, so the replayed stretch sounds as it did
+    /// the first time. The replayed music is ENGRAVED once, so its printed copies are the ones
+    /// already laid out — the ordinals restart from the snapshot, exactly as a '|: … :|' second
+    /// pass does (see PlayRepeatBlock).</summary>
+    private void RestoreState(PieceState state)
+    {
+        _sourceOrdinals = new Dictionary<int, int>(state.Ordinals);
+        _partPitchLanes.Clear();
+        foreach (var kv in state.PitchLanes)
+            _partPitchLanes[kv.Key] = kv.Value;
+        _partVelocity.Clear();
+        foreach (var kv in state.VelocityLanes)
+            _partVelocity[kv.Key] = kv.Value;
+        _defaultDuration = state.Duration;
+        _velocity = state.Velocity;
     }
 
     /// <summary>Plays one form item. The one switch both the first pass and a
@@ -1377,8 +1430,10 @@ public sealed class MidiExporter
                 break;
             // A one-sided ':|' only rewinds on the FIRST pass (PlayForm's loop); inside
             // a replayed stretch it does NOT rewind again — that would not terminate.
-            // One rewind per written ':|' is what the sign says. Display relabels,
-            // navigation text and anything else are visual and skipped.
+            // One rewind per written ':|' is what the sign says. Display relabels and
+            // anything else are visual and skipped — the navigation marks included: WHERE
+            // a jump text sends the walk is PlayForm's (FormRoute), not this switch's, and
+            // the signs (segno, coda) are the points it comes back to.
         }
     }
 
@@ -1388,30 +1443,17 @@ public sealed class MidiExporter
     /// sounds like the first.
     /// </summary>
     private void RepeatFromTheBeginning(IReadOnlyList<FormWalk.Item> items, int upTo,
-        MidiTrack track, MidiTrack conductorTrack,
-        Dictionary<int, int> pieceOrdinals,
-        Dictionary<string, (int, int, Fraction)> piecePitchLanes,
-        Dictionary<string, int> pieceVelocityLanes,
-        Fraction pieceDuration, int pieceVelocity)
+        MidiTrack track, MidiTrack conductorTrack, PieceState piece)
     {
-        // The replayed music is ENGRAVED once, so its printed copies are the ones already
-        // laid out — the ordinals restart from the snapshot, exactly as a '|: … :|' second
-        // pass does (see PlayRepeatBlock).
-        _sourceOrdinals = new Dictionary<int, int>(pieceOrdinals);
-        _partPitchLanes.Clear();
-        foreach (var kv in piecePitchLanes)
-            _partPitchLanes[kv.Key] = kv.Value;
-        _partVelocity.Clear();
-        foreach (var kv in pieceVelocityLanes)
-            _partVelocity[kv.Key] = kv.Value;
-        _defaultDuration = pieceDuration;
-        _velocity = pieceVelocity;
-
+        RestoreState(piece);
         for (int j = 0; j < upTo; j++)
             PlayFormItem(items[j], track, conductorTrack);
     }
 
-    private void PlayRepeatBlock(FormWalk.Repeat repeatBlock, MidiTrack track, MidiTrack conductorTrack)
+    /// <param name="lastPassOnly">True on a D.C./D.S. replay (PlayForm): the block plays once,
+    /// on its last pass — the body, then the ending that pass names.</param>
+    private void PlayRepeatBlock(FormWalk.Repeat repeatBlock, MidiTrack track, MidiTrack conductorTrack,
+        bool lastPassOnly = false)
     {
         // The body carries each reference's OWN octave shift, not just its name: `|: ~A ~A' :|`
         // is two different plays of one section and the list has to keep them apart.
@@ -1439,13 +1481,13 @@ public sealed class MidiExporter
                         e.Sections.Select(s => (s.Name, s.OctaveOffset)).ToList()));
                     break;
                 case FormWalk.BothBar:
-                    PlayRepeatRun(repeatBlock, body, alternatives, track, conductorTrack);
+                    PlayRepeatRun(repeatBlock, body, alternatives, track, conductorTrack, lastPassOnly);
                     body = new List<(string Name, int OctaveOffset)>();
                     alternatives = new List<(PassSet, List<(string Name, int OctaveOffset)>)>();
                     break;
             }
         }
-        PlayRepeatRun(repeatBlock, body, alternatives, track, conductorTrack);
+        PlayRepeatRun(repeatBlock, body, alternatives, track, conductorTrack, lastPassOnly);
     }
 
     /// <summary>One <c>|: body [endings] :|</c> run of a form repeat block — the whole block
@@ -1454,7 +1496,7 @@ public sealed class MidiExporter
     private void PlayRepeatRun(FormWalk.Repeat repeatBlock,
         List<(string Name, int OctaveOffset)> body,
         List<(PassSet Passes, List<(string Name, int OctaveOffset)> Sections)> alternatives,
-        MidiTrack track, MidiTrack conductorTrack)
+        MidiTrack track, MidiTrack conductorTrack, bool lastPassOnly = false)
     {
         if (body.Count == 0 && alternatives.Count == 0)
             return;
@@ -1481,7 +1523,10 @@ public sealed class MidiExporter
         // revisit the same printed BODY copy, so the body's ordinals restart from
         // this snapshot each pass (the highlight re-lights the same printed body).
         var structOrdSnapshot = new Dictionary<int, int>(_sourceOrdinals);
-        for (int pass = 1; pass <= passes; pass++)
+        // On a D.C./D.S. replay the run is heard once, as its LAST pass: the body and the
+        // ending that pass names (`|: A [1. B] :| [2. C]` replays A C) — the performer's
+        // convention that repeats are not taken after the jump (FormRoute).
+        for (int pass = lastPassOnly ? passes : 1; pass <= passes; pass++)
         {
             // A tie is carried to whatever is PLAYED next — back to the body at a new pass,
             // into this pass's ending — as the page draws it (SectionPlayGraph).

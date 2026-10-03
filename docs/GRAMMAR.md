@@ -1727,7 +1727,10 @@ MusicItem      = Note | Rest | Chord | Arpeggio | Barline | PhraseRef
    `segno c4` is the spelling). Written mid-measure it engraves but warns (LYS4003);
    put it at a barline boundary. It is an event at a MOMENT and '|' takes no time, so
    `c4 d e f | fine` and `c4 d e f fine |` are one mark at one barline: a text (fine,
-   dc, ds, to coda) is drawn to that bar's left, a sign (segno, coda) to its right. *)
+   dc, ds, to coda) is drawn to that bar's left, a sign (segno, coda) to its right.
+   The MIDI FOLLOWS a form-level jump text (Semantics.FormRoute: dc to the beginning, ds
+   to after the last segno, al fine ends at fine, al coda goes on from the coda sign,
+   repeats once on the replay); a mark in the music is drawn and not followed. *)
 
 (* Mid-music commands change context here. clef/key/time use the bare COMMAND form
    (no colon) — distinct from a part header which uses the same bare form to set the

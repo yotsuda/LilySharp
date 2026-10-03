@@ -304,6 +304,20 @@ workflow attaches that section to the GitHub Release verbatim.
 - **A repeat needs a body.** `|: [1. B] :| [2. C]` (nothing before the first ending),
   `|: :|` and an empty run after `:|:` are errors (**LYS1041**) — they compiled in silence.
 
+### Navigation marks
+
+- **The MIDI follows a form's jump texts.** `form main { A segno B to coda C ds al coda
+  coda D }` now plays A B C B D, as a player reads it: `dc` goes back to the beginning,
+  `ds` to after the last `segno` before it; `al fine` plays to the first `fine` of the
+  replayed stretch and ends the piece there; `al coda` plays to its `to coda` and goes on
+  from the `coda` sign after the jump; a bare `dc` / `ds` plays up to the jump and goes on.
+  On the replay a repeat block plays once, as its last pass, and a one-sided `:|` rewinds
+  nothing. The replay puts back the state the piece had at its target (the beginning, or
+  the segno), as a one-sided `:|` already did. A `ds` with no `segno` before it, and a mark
+  written in a section's music, are drawn and not followed, as every mark was until now.
+  The page, MusicXML (`<sound dalsegno="segno">` …) and the LilyPond twin (`\jump`) are
+  unchanged.
+
 ### Spans across a section boundary
 
 - **A slur, phrasing slur, tie or hairpin may run from one section into the next.** One still
