@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第771セッションの経緯
+
+### 1.1 第771セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き・ユーザー決定「Midi」（第770 末の次の一手＝conductor track の衛生）。`-Start p771`（HEAD `bcbc2353`・未 push 2）＝full **10898 / 0 / 2 / 10900**。§7 3.5 で第769 を ARCHIVE へ。
+- **LP の規則を読んだ**: 拍子は timestep に 1 つ・`\time` event があれば同じ分数でも書く（time-signature-performer.cc:102-115）／tempo は `tempoWholesPerMinute` が変わったときだけ（tempo-performer.cc:60-68）／end-of-track は**全 track が performance の end moment**（staff-performer.cc:219-227 `end_mom_`・midi-walker.cc:77-82 `finalize`）＝twin.mid は 6 track とも 230016 で終わる。
+- **直した（commit 下記）**: `MidiTrack.SetTempo`／`SetTimeSignature`（同じ tick は最後が勝つ・tempo は在効と同じなら書かない・list は tick 順を保つ）＋ `MidiTrack.LastTick`／`MidiFile.EndTick`＋ `WriteTrack` の end-of-track の delta＝`EndTick − lastTick`（`Midi_walker::finalize` の式）。`MidiExporter` の 5 か所の `Add`／`Insert` を Set に。
+- **網** `Midi/ConductorTrackTests` 4 本（5 part の本で拍子が 1 本ずつ・tick 0 の tempo は本の 72 だけ・同じ tempo の言い直しは書かない・全 track の end-of-track が piece の end＝SMF の tail から delta を読む）。
+- **掃き**（base＝p770 の exe・head＝p771・Lab `sessions/p771/`）: midi 1,199 本中 **1,172 本が byte で違う＝想定どおり**。`compare-mid.ps1`（SMF を読んで比べる計器）で **音は 1,199 本とも同一・base の meta を同じ規則で畳むと head と全部一致・落ちた重複 meta 619 本・end-of-track が piece の end に無い track 0**（計器が 2 本挙げたのは同音の重なり（tab の articulation）で on を上書きした計器側の読み違い＝head の file は最後の off で終わっている）。
+★ `-End p771 -DiffBase bcbc2353`＝full **10902 / 0 / 2 / 10904**（網 +4）・門 全 OK（HANDOFF 残り 7,384 B・§1 残り 9,804 字・棚卸し `APPROXIMATIONS.md` 行番号 3 行＝増減 0・1 回目は stale で赤→再生成）。7.5: Core `+` 102 行＝`MidiTrack.SetTempo`／`SetTimeSignature`／`LastTick`・`MidiFile.EndTick`・end-of-track の delta・REF 3（tempo-performer.cc・time-signature-performer.cc・staff-performer.cc＋midi-walker.cc）・OWN 0。7.6: ⒜ 出所は第768 の起票（計器 `dump-mid.ps1`）＋ LP の twin.mid の読み。7.7: 拍子の「同じ分数でも `\time` event なら書く」は `BarContext.SetTime` が既に LP の規則（`time none` だけ false）＝触っていない。commit `1a70d551`（code）。push はユーザー。
+判定: conductor track の衛生は閉じた。次の一手: PDF の再現性（§1.0 ⒜・PDFsharp の時計／ID／タグ）か、第769 末の列挙の残り（双子の警告 3 件・D.C./D.S. の MIDI・行末の `__`）＝ユーザー判断。会話を区切るか: (a) 続けられる。
+
 ## 以下は第770セッションの経緯
 
 ### 1.1 第770セッション（2026-10-03・YT-DELL2）

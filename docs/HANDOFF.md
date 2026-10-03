@@ -80,7 +80,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - ★ **MIDI の conductor track に同じ拍子の meta event が part の数だけ重なる（第768・計器 Lab `sessions/p768/dump-mid.ps1`）**: 5 part の本（bohemian-rhapsody）で `time 6/4` が同じ tick に 5 本・冒頭の 9/8 は 6 本。鳴らない part も timeline のために歩く（`MidiExporter.Export` の註）ので、各 part の section 開き（`OpenSection` → `TimeSignatures.Add`）が 1 本ずつ足す。DAW は無害だが file は太る。直すなら conductor track を閉じる所で「同じ tick・同じ拍子」を 1 本に畳む（tempo も同じ族か確認）。掃き midi の byte 比較は多 part の本で全部変わる＝網を先に。
-- ★★ **双子の 3 件（第767・leadsheet-collide の LP 警告 6 本・計器 `sessions/p767/twin/`）**: ⒜ 1 小節目に file の `tempo` と section の `tempo` を同じ瞬間に書く（`\tempo "Moderato"` → `\mark … \tempo "Rubato"`）＝LP が後者を捨てる＝section が同じ小節で言い直すなら file の分を書かない／⒝ section で拍子が変わる（Bridge 3/4）とき chords 行の entry が前の拍子の長さ（`d1:m`）＝行の長さは `PrevailingMeters` で読む（歌詞の `EmitTimedStream` は読んでいる）／⒞ `[1-2. ~Bridge] :| [3. ~Tag]` に「already have a VoltaBracket; ending it prematurely」（`\volta 1,2` の override の形）。
 - ★★ **⑼ の残り（第762・ユーザー判断・本は Lab `corpora/dogfood/big/` 4 冊・計器 `sessions/p762/run-big.ps1`＝check＋4 出力＋LP）**: ⒞′ 音を取らない裸の `__`（行末）は双子で LP の「unterminated extender」のまま（choir 2 本・page は最小長の線だけ）／⑺ resume の probe は代表 1 つの header 読みしか記録しない（`MeasureCollector.Form.cs` の註）／⑻ 観察（優先低）: 宣言した弱起が短い小節の後に来る形＝LP は `\partial` で併合・頁と XML は弱起を 1 小節に数える（コーパス 0・第761）。／**閉じた分（経緯は ARCHIVE の各便）**: リファクタ A〜C6（第740〜748）・綴り A1〜A4（第750〜755）・D=(a)（第755）・同名 section (a)（第753 `112ea7f2`）・validator の弱起（第753 `deb49459`）・XML の番号 ⑹⑹′（第756 `f43e48c4`・第757 `280cbbde`）・割れた小節 ⑻（第759 `2a77777c`・双子は不要＝第761）・StreamFrame の網（第758 `234b5361`）・観測者の無い規則 4 つ＋双子の欠陥 2（第760 `d0acd7da`）・⑽ part 名に予約語＋⑼ ⒜ `tab X Y` は宣言された part が勝つ（第763 `3274e1b7`・§3 の最上段）・⑼ ⒝ capo の LYS1039 の文面・⒞ 双子の歌詞の終端と cadenza の bar check・⒠ `@ottava(8va)` の文面（第764）・⒟ 1 頁目の沈み＝本の側＋LP も同じ（第765・コード変更なし）。計器: Lab `sessions/p742/`（ly／midi／xml／svg の掃き・exe は両側とも写す）・`sessions/p753/sweep-check.ps1`（診断の掃き）・`sessions/p762/run-big.ps1`
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**
@@ -120,6 +119,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第773セッション（2026-10-03・YT-DELL2）
+
+同じ会話の続き・ユーザー「続けて」＝第772 末の次の一手の筆頭＝**双子の警告 3 件**（§1.0 ⒜・第767 起票・leadsheet-collide）。`-Start p773`（HEAD `bbc43d22`・未 push 6）＝full **10905 / 0 / 2 / 10907**。§7 3.5 で第771 を ARCHIVE へ。
+- **切り分け**: ⒝ の正体＝by-part の chord track（`chords prog { section Bridge { … } }`）は `OrderedChordItems` が**行の内側の section 節**を登録するので `SectionBarMeters` が part block を見つけられず null→score の拍子（4/4）に落ちていた（既に `SectionBarMeters` は在った＝第 ? が 7/8 の probe で入れた物・by-part の形だけ漏れ）。⒞（VoltaBracket の警告）は ⒝ の帰結＝chords 行の alternative が 6×4/4 で staff の 6×3/4 より長く、`\volta 3` の頭がずれていた。⒜＝file の `tempo` と最初に鳴る section の header `tempo` が同じ瞬間＝LP の `assign_event_once`（stream-event.hh:59-70）が 2 本目を捨てる（stream-event.cc:113-116）。
+- **直した（commit 下記）**: ⒝ `SectionBarMeters` が同名の宣言から music の part block を探し、無ければ header の拍子を 1 本返す（`_allSections` を `OrderedMusic`／`OrderedChordItems` で持つ）／⒜ `OrderedMusic` が `FirstPlayedSection(formItems)`（repeat・ending の中も最初の参照）の header tempo の有無を `_firstPlayRestatesTempo` に置き、`EmitScoreSettings` が file の `\tempo` を書かない（page が見せ MIDI が鳴らすのは section の方＝`SetTempo` の last-wins と同じ裁定）。
+- **双子で確認**: `sessions/p773/twin/`＝leadsheet-collide の .ly を LP 2.26 で**警告 0・Success**（6 本→0 本・⒞ も消えた）。
+- **網** `LilyPondExporterTests` 3 本（by-part の行が 3/4 section で `d2.:m`・file tempo は最初の section が言い直すと消える・言い直さなければ残る）。CHANGELOG Fixes。
+- 掃き（ly・base＝p772 の exe・head＝p773・`sessions/p773/sweep-ly.log`）: **1,199 本 差 0**＝掃きの 998 冊には by-part の行が拍子の変わる section に在る本も file tempo を最初の section が言い直す本も無い（この 2 つの形は Lab `corpora/dogfood/collide/` の本だけ）＝既存の双子は 1 本も動かない。
+- **full が拾った第772 の取りこぼし（commit `cfd35e6d`）**: `PdfReproducibilityTests.WithoutTheEpoch_OnlyTheClockDiffers` が full で赤＝epoch 無しの 2 回書きが秒をまたぐと `/CreationDate` に加えて `/ID`（file 全体の MD5）も動く。`PdfReproducibility.Apply` が hash のあいだ日付の桁も 0 で埋める（終わったら戻す）＝ID は描画だけに従い、epoch 無しで動くのは日付 14 桁だけ。
+★ `-End p773 -DiffBase bbc43d22`＝full **10908 / 0 / 2 / 10910**（網 +3）・門 全 OK（HANDOFF 残り 8,495 B・§1 残り 10,357 字・棚卸し `APPROXIMATIONS.md` 行番号 1 行・1 回目は inventory stale ＋ PDF の 1 本で赤→直して再実行）。7.5: Core `+` 90 行＝`SectionBarMeters` の同名探し＋`FirstPartBlock`＋`_allSections`・`FirstPlayedSection`＋`_firstPlayRestatesTempo`・`EmitScoreSettings` の分岐・PDF の日付 blank・REF 1（stream-event.hh:59-70 `assign_event_once`＋stream-event.cc:113-116）・OWN 0。7.6: ⒜ 出所は第767 の起票（6 本の警告）と LP 2.26 の再実行（0 本）。7.7: `PaddingBars` の chord 行の不足小節はまだ score の拍子（`_bars.HomeMeter`）＝section の拍子で足りない行が拍子の変わる section に在れば同じ族の欠陥（コーパス 0・probe で出る）。commit `746856ae`（twin）・`cfd35e6d`（pdf）。push はユーザー。
+判定: 双子の警告 3 件は閉じた（⒞ は ⒝ の帰結）。次の一手: 第769 末の列挙の残り＝D.C./D.S. の MIDI（設計・`PlayForm` の註「not yet honored」）か、行末の裸の `__`（⑼ ⒞′）か、7.7 の `PaddingBars`（小）＝ユーザー判断。会話を区切るか: (a) 続けられる。
+
+## 以下は第772セッションの経緯
+
 ### 1.1 第772セッション（2026-10-03・YT-DELL2）
 
 同じ会話の続き・ユーザー「続けて」＝第771 末の次の一手の筆頭＝**PDF の再現性**。`-Start p772`（HEAD `69d391c4`・未 push 4）＝full **10902 / 0 / 2 / 10904**。§7 3.5 で第770 を ARCHIVE へ。
@@ -129,18 +142,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 掃き（新 `sessions/p772/sweep-pdf.ps1`＝head を 2 回・base 対 head は mask して比較・998 冊・`SOURCE_DATE_EPOCH=1700000000`）: **PDF 1,198 本＝head 2 回は 1,198 本とも byte 同一・base 対 head は描画同一 1,198 本（差 0）**＝PDF の掃きが初めて立った（以後は base 対 head を byte で比べられる）。
 ★ `-End p772 -DiffBase 69d391c4`＝full **10905 / 0 / 2 / 10907**（網 +3）・門 全 OK（HANDOFF 残り 8,219 B・§1 残り 10,005 字・棚卸し `APPROXIMATIONS.md` +5/−3＝OWN 1 本が増えた・1 回目は stale で赤→再生成）。7.5: Core `+` 124 行＝新 `PdfReproducibility.cs`（約 110）＋ `PdfDocumentContext.Dispose` の 4 行・REF 0・OWN 1（慣習は reproducible-builds の物・LP は時計のまま）。7.6: ⒜ 出所は第770 の計器（180 byte・28 か所）と PdfSharpCore の出力の読み（`/ModDate` 無し・ObjStm 無し）。7.7: `SOURCE_DATE_EPOCH` は時計だけに効く＝タグと ID は常に決定的（意味を持たないから）。commit `af7038f3`（code）。push はユーザー。
 判定: PDF の再現性は閉じた＝svg／ly／midi／xml に続いて PDF も byte で掃ける。次の一手: 第769 末の列挙の残り＝双子の警告 3 件（§1.0 ⒜・小）・D.C./D.S. の MIDI（設計）・行末の裸の `__`（⑼ ⒞′）＝ユーザー判断。会話を区切るか: (a) 続けられる。
-
-## 以下は第771セッションの経緯
-
-### 1.1 第771セッション（2026-10-03・YT-DELL2）
-
-同じ会話の続き・ユーザー決定「Midi」（第770 末の次の一手＝conductor track の衛生）。`-Start p771`（HEAD `bcbc2353`・未 push 2）＝full **10898 / 0 / 2 / 10900**。§7 3.5 で第769 を ARCHIVE へ。
-- **LP の規則を読んだ**: 拍子は timestep に 1 つ・`\time` event があれば同じ分数でも書く（time-signature-performer.cc:102-115）／tempo は `tempoWholesPerMinute` が変わったときだけ（tempo-performer.cc:60-68）／end-of-track は**全 track が performance の end moment**（staff-performer.cc:219-227 `end_mom_`・midi-walker.cc:77-82 `finalize`）＝twin.mid は 6 track とも 230016 で終わる。
-- **直した（commit 下記）**: `MidiTrack.SetTempo`／`SetTimeSignature`（同じ tick は最後が勝つ・tempo は在効と同じなら書かない・list は tick 順を保つ）＋ `MidiTrack.LastTick`／`MidiFile.EndTick`＋ `WriteTrack` の end-of-track の delta＝`EndTick − lastTick`（`Midi_walker::finalize` の式）。`MidiExporter` の 5 か所の `Add`／`Insert` を Set に。
-- **網** `Midi/ConductorTrackTests` 4 本（5 part の本で拍子が 1 本ずつ・tick 0 の tempo は本の 72 だけ・同じ tempo の言い直しは書かない・全 track の end-of-track が piece の end＝SMF の tail から delta を読む）。
-- **掃き**（base＝p770 の exe・head＝p771・Lab `sessions/p771/`）: midi 1,199 本中 **1,172 本が byte で違う＝想定どおり**。`compare-mid.ps1`（SMF を読んで比べる計器）で **音は 1,199 本とも同一・base の meta を同じ規則で畳むと head と全部一致・落ちた重複 meta 619 本・end-of-track が piece の end に無い track 0**（計器が 2 本挙げたのは同音の重なり（tab の articulation）で on を上書きした計器側の読み違い＝head の file は最後の off で終わっている）。
-★ `-End p771 -DiffBase bcbc2353`＝full **10902 / 0 / 2 / 10904**（網 +4）・門 全 OK（HANDOFF 残り 7,384 B・§1 残り 9,804 字・棚卸し `APPROXIMATIONS.md` 行番号 3 行＝増減 0・1 回目は stale で赤→再生成）。7.5: Core `+` 102 行＝`MidiTrack.SetTempo`／`SetTimeSignature`／`LastTick`・`MidiFile.EndTick`・end-of-track の delta・REF 3（tempo-performer.cc・time-signature-performer.cc・staff-performer.cc＋midi-walker.cc）・OWN 0。7.6: ⒜ 出所は第768 の起票（計器 `dump-mid.ps1`）＋ LP の twin.mid の読み。7.7: 拍子の「同じ分数でも `\time` event なら書く」は `BarContext.SetTime` が既に LP の規則（`time none` だけ false）＝触っていない。commit `1a70d551`（code）。push はユーザー。
-判定: conductor track の衛生は閉じた。次の一手: PDF の再現性（§1.0 ⒜・PDFsharp の時計／ID／タグ）か、第769 末の列挙の残り（双子の警告 3 件・D.C./D.S. の MIDI・行末の `__`）＝ユーザー判断。会話を区切るか: (a) 続けられる。
 
 ## 2. 開いている作業
 
