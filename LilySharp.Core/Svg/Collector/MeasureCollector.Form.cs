@@ -592,29 +592,9 @@ public sealed partial class MeasureCollector
             {
                 // already emitted for an earlier staff of this section
             }
-            else if (sectionTempo.Bpm is int bpm)
-                _musicMarks.Add(new MusicMarkItem(
-                    MusicMarkType.Tempo, bpm.ToString(),
-                    builder.CurrentMeasureIndex, sectionPos,
-                    builder.CurrentItemCount, builder.CurrentDuration)
-                {
-                    TempoText = sectionTempo.Marking,
-                    TempoBeatUnit = sectionTempo.BeatUnit ?? 4,
-                    TempoDots = sectionTempo.BeatDots,
-                    SwingSubdivision = sectionTempo.SwingSubdivision,
-                    TempoPieces = PiecePositions(sectionTempo),
-                });
-            else if (sectionTempo.Marking != null || sectionTempo.SwingSubdivision != 0)
-                // No count: the marking and/or the swing equation (`tempo swing`).
-                _musicMarks.Add(new MusicMarkItem(
-                    MusicMarkType.Tempo, "",
-                    builder.CurrentMeasureIndex, sectionPos,
-                    builder.CurrentItemCount, builder.CurrentDuration)
-                {
-                    TempoText = sectionTempo.Marking,
-                    SwingSubdivision = sectionTempo.SwingSubdivision,
-                    TempoPieces = PiecePositions(sectionTempo),
-                });
+            else if (SectionTempoMark(sectionTempo, builder.CurrentMeasureIndex, sectionPos,
+                         builder.CurrentItemCount, builder.CurrentDuration) is { } tempoMark)
+                _musicMarks.Add(tempoMark);
         }
 
         // A section's own starting key sits beside the part blocks (by-section) or in
@@ -1596,6 +1576,38 @@ public sealed partial class MeasureCollector
         return new BarlineSyntax(green, null, position);
     }
 
+    /// <summary>
+    /// A section header's tempo as the metronome mark printed at the section's start — the
+    /// count (<c>tempo 4 = 120</c>), or the marking and/or the swing equation alone
+    /// (<c>tempo "Grave"</c>, <c>tempo swing</c>). Null when the header states none of the
+    /// three: nothing to print. ONE HOME for the staff walk (<see cref="ProcessSection"/>) and
+    /// the rows-only walk (<see cref="EnsureSectionStartsForRows"/>): until session 787 only
+    /// the staff walk built it, so a chord grid with a section tempo printed no mark at all.
+    /// </summary>
+    private static MusicMarkItem? SectionTempoMark(TempoDeclarationSyntax sectionTempo,
+        int measureIndex, int sectionPos, int anchorItemIndex = -1, Fraction anchorTiming = default)
+    {
+        if (sectionTempo.Bpm is int bpm)
+            return new MusicMarkItem(MusicMarkType.Tempo, bpm.ToString(),
+                measureIndex, sectionPos, anchorItemIndex, anchorTiming)
+            {
+                TempoText = sectionTempo.Marking,
+                TempoBeatUnit = sectionTempo.BeatUnit ?? 4,
+                TempoDots = sectionTempo.BeatDots,
+                SwingSubdivision = sectionTempo.SwingSubdivision,
+                TempoPieces = PiecePositions(sectionTempo),
+            };
+        if (sectionTempo.Marking != null || sectionTempo.SwingSubdivision != 0)
+            return new MusicMarkItem(MusicMarkType.Tempo, "",
+                measureIndex, sectionPos, anchorItemIndex, anchorTiming)
+            {
+                TempoText = sectionTempo.Marking,
+                SwingSubdivision = sectionTempo.SwingSubdivision,
+                TempoPieces = PiecePositions(sectionTempo),
+            };
+        return null;
+    }
+
     // The pair below moved here from the main part (review 2026-08-26 appendix E-9):
     // EnsureSectionStartsForRows is the self-declared SECOND SPELLING of the form walk's
     // section-start bookkeeping — kept unfolded (a net holds the pair), placed next to
@@ -1658,6 +1670,23 @@ public sealed partial class MeasureCollector
             RecordSectionStart(name, cur);
             if (label != null)
                 _sectionState.RowLabels.Add((cur, label, pos));
+            // The section's own tempo, as the staff walk prints it (ProcessSection's arm): at
+            // the piece's opening it IS the opening tempo and replaces the score's initial
+            // metronome mark; anywhere else it is a mark at the section's first bar. Every
+            // pass gets one, as every pass of ProcessSection does. Until session 787 this walk
+            // had no arm for it, so a rows-only score drew only its HEADER tempo and a
+            // `section Chorus { tempo 4 = 120 … }` was silent on the page (its `.ly` twin
+            // and its MIDI already carried it).
+            if (_sectionHeaders.Tempos.TryGetValue(name, out var sectionTempo))
+            {
+                // Anchored at the bar's FIRST moment (item 0, timing 0), as the staff walk's
+                // mark is at a section's first bar: a default anchor timing is not a zero and
+                // sent the mark past the bar's end through GetXForTiming.
+                if (cur == 0)
+                    CollectTempo(sectionTempo);
+                else if (SectionTempoMark(sectionTempo, cur, pos, 0, Fraction.Zero) is { } tempoMark)
+                    _musicMarks.Add(tempoMark);
+            }
             // …and the cursor moves FORWARD by this pass's width. It used to be assigned
             // `StartMeasure[name] + secBars`, which REWOUND the grid to the section's
             // first occurrence, so every bar after a reprise overprinted bars already written.

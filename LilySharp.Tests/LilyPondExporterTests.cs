@@ -3081,7 +3081,10 @@ public class LilyPondExporterTests
             """);
         // The pickup is a \time of its length, not a \partial (which trips LilyPond's
         // spacing in a staff-less score); the score's meter in its own spelling.
-        Assert.Contains("leadSheetTiming = {\n  \\time 1/4 s4 |\n  \\time 4/4 s1 |\n  \\time 3/2 s1. |\n}", ly);
+        // …and the section labels the page draws ride the track too (session 787): a
+        // rows-only \score has no staff variable, so a \mark in the part's variable never
+        // reaches LilyPond's Score — the Devnull is heard (Lab sessions/p787/probes/devnull.ly).
+        Assert.Contains("leadSheetTiming = {\n  \\time 1/4 \\mark \\markup \\box \"A\" s4 |\n  \\time 4/4 s1 |\n  \\time 3/2 \\mark \\markup \\box \"B\" s1. |\n}", ly);
         Assert.Contains("The4 |\n  eve4 -- ning4 falls4 so4 |\n  Sing2 to2 the2 |", ly);
         Assert.True(ly.IndexOf("\\new Devnull \\leadSheetTiming") < ly.IndexOf("\\new Lyrics \\vOneLyricsOne"));
     }
@@ -3104,8 +3107,41 @@ public class LilyPondExporterTests
             form main { A B }
             score main { chords prog }
             """);
-        Assert.Contains("leadSheetTiming = {\n  \\time 4/4 s1 |\n  s1 |\n  \\time 3/2 s1. |\n  s1. |\n}", ly);
+        Assert.Contains("leadSheetTiming = {\n  \\time 4/4 \\mark \\markup \\box \"A\" s1 |\n  s1 |\n  \\time 3/2 \\mark \\markup \\box \"B\" s1. |\n  s1. |\n}", ly);
         Assert.Contains("a2.:m f2.", ly);
+    }
+
+    [Fact]
+    public void LeadSheet_CarriesTheHeaderTempo_AndASectionsTempo_InTheTimingTrack()
+    {
+        // The page's metronome marks ride the clock: the header's at bar 1 and a section
+        // header's at the bar it opens (session 787). A rows-only \score places no staff
+        // variable, so the `\tempo` the part variable carries never reached LilyPond's Score —
+        // the amazing-grace grid's twin printed no ♩ = 84. A silent reference (`~B`) hides
+        // the label, never the tempo.
+        var ly = Export("""
+            tempo 4 = 111
+            time 4/4
+            key c major
+            section A { chords prog { C | G | } }
+            section B {
+              tempo "Slower" 4 = 90
+              chords prog { Am | F | }
+            }
+            form main { A ~B }
+            score main { chords prog }
+            """);
+        Assert.Contains("leadSheetTiming = {\n  \\time 4/4 \\mark \\markup \\box \"A\" \\tempo 4 = 111 s1 |\n  s1 |\n  \\tempo \"Slower\" 4 = 90 s1 |\n  s1 |\n}", ly);
+        // Under `sectionLabels none` the track writes no label, as the page draws none.
+        var plain = Export("""
+            layout { sectionLabels none }
+            time 4/4
+            key c major
+            section A { chords prog { C | G | } }
+            form main { A }
+            score main { chords prog }
+            """);
+        Assert.Contains("leadSheetTiming = {\n  \\time 4/4 s1 |\n  s1 |\n}", plain);
     }
 
     [Fact]
@@ -3120,7 +3156,7 @@ public class LilyPondExporterTests
             score main { RENDER }
             """;
         var rows = Export(book.Replace("RENDER", "chords prog"));
-        Assert.Contains("leadSheetTiming = {\n  \\time 4/4 s1 |\n  s1 |\n}", rows);
+        Assert.Contains("leadSheetTiming = {\n  \\time 4/4 \\mark \\markup \\box \"A\" s1 |\n  s1 |\n}", rows);
         Assert.True(rows.IndexOf("\\new Devnull \\leadSheetTiming") < rows.IndexOf("\\new ChordNames"));
         // A staff carries the clock itself.
         var staff = Export(book.Replace("RENDER", "staff melody  chords prog"));

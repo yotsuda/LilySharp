@@ -1665,16 +1665,22 @@ public sealed partial class LilyPondExporter
     ///   ((text) duration tempo) — <c>\tempo [text] [duration = count]</c>, either part optional.
     /// </summary>
     private static string EmitTempo(TempoDeclarationSyntax t)
+        => EmitTempo(t.Marking, t.Bpm, t.BeatUnit ?? 4, t.BeatDots, t.SwingSubdivision);
+
+    /// <summary>The same spelling for a metronome mark the PAGE holds — a lead sheet's
+    /// timing track writes the marks the page draws (<see cref="EmitLeadSheetTiming"/>),
+    /// whose count is the mark's text.</summary>
+    private static string EmitTempo(Svg.Model.MusicMarkItem mark)
+        => EmitTempo(mark.TempoText, int.TryParse(mark.Text, out int bpm) ? bpm : null,
+            mark.TempoBeatUnit, mark.TempoDots, mark.SwingSubdivision);
+
+    private static string EmitTempo(string? marking, int? bpm, int unit, int dots, int swingSubdivision)
     {
-        string text = !string.IsNullOrEmpty(t.Marking) ? " \"" + Escape(t.Marking!) + "\"" : "";
-        if (t.SwingSubdivision != 0)
-            return EmitSwingTempo(t, text);
-        if (t.Bpm is int bpm)
-        {
-            int unit = t.BeatUnit is int u ? u : 4;
-            string dots = new string('.', t.BeatDots);
-            return $"\\tempo{text} {unit}{dots} = {bpm}";
-        }
+        string text = !string.IsNullOrEmpty(marking) ? " \"" + Escape(marking!) + "\"" : "";
+        if (swingSubdivision != 0)
+            return EmitSwingTempo(text, bpm, unit, dots, swingSubdivision);
+        if (bpm is int count)
+            return $"\\tempo{text} {unit}{new string('.', dots)} = {count}";
         if (text.Length > 0)
             return "\\tempo" + text;
         return "";
@@ -1689,22 +1695,22 @@ public sealed partial class LilyPondExporter
     /// LILYPOND-REF: scm/define-markup-commands.scm:1920-1990 define-markup-command (rhythm …);
     /// scm/translation-functions.scm:100-151 format-metronome-markup (tempoHideNote).
     /// </summary>
-    private static string EmitSwingTempo(TempoDeclarationSyntax t, string text)
+    private static string EmitSwingTempo(string text, int? bpm, int beatUnit, int dots, int swingSubdivision)
     {
         var sb = new StringBuilder("\\tempo \\markup {");
         sb.Append(text);
-        string unit = (t.BeatUnit is int u ? u : 4) + new string('.', t.BeatDots);
-        if (t.Bpm is int bpm)
+        string unit = beatUnit + new string('.', dots);
+        if (bpm is int shown)
             sb.Append(" \\normal-text \\concat { ")
               .Append(text.Length > 0 ? "\"(\" " : "")
               .Append("\\smaller \\general-align #Y #DOWN \\note {").Append(unit).Append("} #UP \" = ")
-              .Append(bpm).Append(text.Length > 0 ? ")" : "").Append("\" }");
-        if (text.Length > 0 || t.Bpm != null)
+              .Append(shown).Append(text.Length > 0 ? ")" : "").Append("\" }");
+        if (text.Length > 0 || bpm != null)
             sb.Append(" \\hspace #0.4");
-        sb.Append(t.SwingSubdivision >= 16
+        sb.Append(swingSubdivision >= 16
             ? " \\rhythm { 16[ 16] } = \\rhythm { \\tuplet 3/2 { 8 16 } } }"
             : " \\rhythm { 8[ 8] } = \\rhythm { \\tuplet 3/2 { 4 8 } } }");
-        if (t.Bpm is int count)
+        if (bpm is int count)
             return "\\once \\set Score.tempoHideNote = ##t " + sb + " " + unit + " = " + count;
         return sb.ToString();
     }

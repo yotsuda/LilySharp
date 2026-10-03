@@ -438,6 +438,7 @@ public sealed partial class LilyPondExporter
         var meters = Svg.Layout.ScoreSideTables.PrevailingMeters(score);
         var senza = SenzaMisuraByBar(score);
         var home = score.TimeSignature;
+        var marks = LeadSheetScoreMarks(score);
 
         _leadSheetTimingVar = VarName("leadSheetTiming");
         _sb.Append(_leadSheetTimingVar).Append(" = {\n");
@@ -465,11 +466,83 @@ public sealed partial class LilyPondExporter
                 inForce = length;
             }
             for (int h = m; h <= last; h++)
+            {
+                // The bar's SCORE marks stand at its head, before its skip (see LeadSheetScoreMarks).
+                if (marks.TryGetValue(h, out var atBar))
+                    foreach (string mark in atBar)
+                        AppendToken(line, mark, "  ");
                 AppendToken(line, "s" + ChordModeDuration(BarLength(measures[h], meters, h)), "  ");
+            }
             _sb.Append(line).Append(cadenza ? "\n" : " |\n");
             m = last;
         }
         _sb.Append("}\n\n");
+    }
+
+    /// <summary>
+    /// The SCORE-level marks a lead sheet's timing track carries, per bar: the metronome marks
+    /// and the section labels the page draws, in LilyPond's spelling. A rows-only score has no
+    /// staff variable in its <c>\score</c>, so a <c>\tempo</c> or <c>\mark</c> written in the
+    /// part variables never reaches LilyPond's Score — the header tempo and every section
+    /// label of a chords-only twin were missing from its page until session 787 (the
+    /// amazing-grace grid printed neither "Verse" nor ♩ = 84). The Devnull track is heard:
+    /// MEASURED 2.26.0 (Lab sessions/p787/probes/devnull.ly), a <c>\tempo</c> and two
+    /// <c>\mark \markup \box</c> in a <c>\new Devnull</c> stream engrave over the ChordNames
+    /// line exactly as from a staff.
+    /// </summary>
+    /// <remarks>
+    /// THE LIST IS THE PAGE'S OWN: <see cref="Svg.Layout.MusicMarkEngraver.BuildAllMarks"/>, the
+    /// one home that merges the header tempo and the section labels into the drawn marks (and
+    /// drops the header's stream copies, and every label under <c>layout { sectionLabels
+    /// none }</c>) — so the twin writes what the page draws, not a second reading of the
+    /// source. The labels are read off the FIRST text row's measures, which is where the
+    /// rows-only collector stamps them (MeasureCollector: "A rows-only score prints its
+    /// section labels from the FIRST row's measures"). A <c>plain</c> label drops the
+    /// <c>\box</c>, as the staff twin's does (EmitSectionHead). Navigation marks (segno, coda,
+    /// D.S.) keep their own spelling and are not written here.
+    /// LILYPOND-REF: lily/translator-group.cc connect_to_context — a translator's listeners
+    ///   hang on the context's events-below dispatcher, so Score's Metronome_mark_engraver and
+    ///   Mark_engraver hear a tempo-change or ad-hoc-mark event from ANY descendant, a Devnull
+    ///   included.
+    /// </remarks>
+    private Dictionary<int, List<string>> LeadSheetScoreMarks(Svg.Model.MultiStaffScore score)
+    {
+        var byBar = new Dictionary<int, List<string>>();
+        Svg.Model.Staff? firstRow = null;
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+            if (staff.IsTextRow && staff.PrimaryVoice.Measures.Length > 0)
+            {
+                firstRow = staff;
+                break;
+            }
+        if (firstRow == null)
+            return byBar;
+        var marks = Svg.Layout.MusicMarkEngraver.BuildAllMarks(
+            score.MusicMarks, firstRow.PrimaryVoice.Measures, score.Tempo, score.SwingSubdivision,
+            score.TempoText, score.TempoBeatUnit, score.TempoDots, 0, _layoutPlan.SectionLabels);
+        foreach (var mark in marks)
+        {
+            string text;
+            switch (mark.Type)
+            {
+                case Svg.Model.MusicMarkType.Tempo:
+                    text = EmitTempo(mark);
+                    break;
+                case Svg.Model.MusicMarkType.SectionLabel:
+                    text = _layoutPlan.SectionLabels == Semantics.SectionLabelStyle.Plain
+                        ? "\\mark \\markup \"" + Escape(mark.Text) + "\""
+                        : "\\mark \\markup \\box \"" + Escape(mark.Text) + "\"";
+                    break;
+                default:
+                    continue;
+            }
+            if (text.Length == 0)
+                continue;
+            if (!byBar.TryGetValue(mark.MeasureIndex, out var list))
+                byBar[mark.MeasureIndex] = list = new List<string>();
+            list.Add(text);
+        }
+        return byBar;
     }
 
     /// <summary>The lead sheet's timing track, when the score is one (<see cref="EmitLeadSheetTiming"/>).</summary>

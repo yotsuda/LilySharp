@@ -371,6 +371,16 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A chord grid prints a section's tempo.** On a chords-only or chords-and-lyrics sheet a
+  section header's `tempo` (`section Chorus { tempo 4 = 90 … }`) drew nothing — only the
+  file's tempo was printed — while the MIDI and the `.ly` twin carried it. The grid now prints
+  the metronome mark at the section's first bar, as a staff does; a first section's tempo is
+  the piece's opening tempo, as it already was over a staff.
+- **A chord grid's `.ly` twin carries its tempo and its section names.** A rows-only score's
+  twin wrote the header tempo and the `form`'s section boxes into a part variable its
+  `\score` never placed, so LilyPond printed neither (the amazing-grace grid's twin had no
+  ♩ = 84 and no "Verse"). They now ride the sheet's silent timing track, where LilyPond
+  engraves them over the chord line.
 - **A chord grid's tempo mark rests on the row, not on a staff it has not got.** On a
   chords-only or chords-and-lyrics sheet the header's metronome mark took a staff's resting
   height (0.8 over a staff line's edge) above a row with no staff line, so over a short chord

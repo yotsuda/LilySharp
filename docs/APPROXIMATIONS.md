@@ -348,7 +348,7 @@
 - **:5644** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Form.cs`
 - **:545** `time!` (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so
-- **:835** is not drawn unless written `key!` (MeasureBuilder.SectionHead, LILYSHARP-OWN). At a
+- **:815** is not drawn unless written `key!` (MeasureBuilder.SectionHead, LILYSHARP-OWN). At a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.MusicWalk.cs`
 - **:1602** not against the reset the head already stands on (LILYSHARP-OWN): a
 - **:1681** (MeasureBuilder.SectionHead, LILYSHARP-OWN).
