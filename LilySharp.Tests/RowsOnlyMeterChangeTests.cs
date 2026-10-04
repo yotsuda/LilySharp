@@ -155,4 +155,94 @@ public sealed class RowsOnlyMeterChangeTests
         var staffless = RenderedGeometry.Render(Book("A B", "chords prog", headerB: ""));
         Assert.Equal(new List<char> { EmmentalerGlyphs.TimeSigCommon }, MeterGlyphs(staffless));
     }
+
+    /// <summary>
+    /// A <c>time none</c> section engraves no meter of its own, and the metered section
+    /// AFTER it opens with its meter again — the staff's revert (MeasureBuilder.RevertMeterToHome)
+    /// redraws a meter the section before left different, and the grid draws the same glyphs
+    /// (session 791: the null meter used to break the run, and the grid came back from a
+    /// <c>time none</c> section with no sign).
+    /// </summary>
+    [Fact]
+    public void AfterATimeNoneSection_TheReturningMeterIsEngraved()
+    {
+        static string Book3(string render) => $$"""
+            octave absolute
+            time 4/4
+            key c major
+            part melody { clef treble }
+            section A {
+              melody { c'1 | d'1 | }
+              chords prog { C | G | }
+            }
+            section Free {
+              time none
+              melody { e'4 f' g' a' b' c'' | d''2 | }
+              chords prog { Am | F | }
+            }
+            section B {
+              melody { g'1 | c'1 | }
+              chords prog { G | C | }
+            }
+            form main { A Free B }
+            score main { {{render}} }
+            """;
+        var staffless = RenderedGeometry.Render(Book3("chords prog"));
+        var staffful = RenderedGeometry.Render(Book3("chords prog staff melody"));
+        var glyphs = MeterGlyphs(staffless);
+        Assert.Equal(MeterGlyphs(staffful), glyphs);
+        // The opening C and the C that B returns to; nothing for Free.
+        Assert.Equal(new List<char> { EmmentalerGlyphs.TimeSigCommon, EmmentalerGlyphs.TimeSigCommon }, glyphs);
+        // …standing right of bar 4's last symbol (`F') and left of B's first (`G').
+        var meter = staffless.Glyphs.Where(x => IsMeterGlyph(x.Glyph)).OrderBy(x => x.X).ToList();
+        var symbols = staffless.ChordSymbols.OrderBy(c => c.X).ToList();
+        Assert.True(symbols[3].X < meter[1].X && meter[1].X < symbols[4].X,
+            $"the returning C at {meter[1].X:F2} should stand between `F' ({symbols[3].X:F2}) and `G' ({symbols[4].X:F2})");
+    }
+
+    /// <summary>
+    /// A PICKUP cell on a grid is held to its share of the grid floor — its length over the
+    /// meter — not to a full cell (owner's decision, session 791, shown both pictures of the
+    /// amazing-grace grid): a one-beat upbeat on a 4/4 grid is about a quarter of a full bar,
+    /// as it is on a staff. Session 778 gave the pickup its length (the numbering counts it as
+    /// bar 0) but the floor still drew it as wide as the bars beside it.
+    /// </summary>
+    [Fact]
+    public void APickupCell_IsHeldToItsShareOfTheGridFloor()
+    {
+        static LilySharp.Core.Svg.Layout.ScoreLayout Lay(string render)
+        {
+            var source = $$"""
+                octave absolute
+                time 4/4
+                key c major
+                part melody { clef treble }
+                section Intro {
+                  partial 4
+                  melody { g'4 | }
+                  chords prog { G7 | }
+                }
+                section A {
+                  melody { c'1 | d'1 | }
+                  chords prog { C | G | }
+                }
+                form main { Intro A }
+                score main { {{render}} }
+                """;
+            var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(source);
+            var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+            return new LilySharp.Core.Svg.Layout.LayoutEngine(score.Paper).Layout(score);
+        }
+        var grid = Lay("chords prog").Systems[0].Measures;
+        double pickup = grid[0].Width, full = grid[1].Width;
+        // A quarter of the floor plus the cell's own parts — the line-start meter it carries,
+        // the `G7', the bar line and command columns (5.86 against 10.49 when written): a
+        // clearly shorter cell, and never below the floor's quarter. Under the full floor it
+        // was as wide as the bars beside it.
+        Assert.True(pickup < full * 0.75, $"the pickup cell ({pickup:F2}) should be clearly shorter than a full cell ({full:F2})");
+        Assert.True(pickup >= 2.5, $"the pickup cell ({pickup:F2}) keeps its quarter of the 10.0 floor");
+        // …and with a staff the pickup is the shorter bar as well: the grid now agrees in kind.
+        var staffful = Lay("chords prog staff melody").Systems[0].Measures;
+        Assert.True(staffful[0].Width < staffful[1].Width);
+    }
 }

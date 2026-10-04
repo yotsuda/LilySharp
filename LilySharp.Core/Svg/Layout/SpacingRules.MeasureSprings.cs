@@ -803,8 +803,16 @@ internal static partial class SpacingRules
     /// and a floor share folded into them is invisible fitting. Trailing room is also
     /// where LilyPond's own duration springs put a whole note's width.
     /// </para>
+    /// <para>
+    /// A PICKUP cell is floored at its SHARE of the floor — the pickup's length over its
+    /// meter (<paramref name="share"/>, 1.0 for a full bar) — so a one-beat upbeat on a 4/4
+    /// grid is a quarter-width cell, as it is a quarter-width bar on a staff, rather than a
+    /// cell as wide as the full bars beside it (session 791; MultiStaffLayouter.LeadSheetFloorShare
+    /// is the one place that computes the share). The chord's own width is reserved before
+    /// this runs (ApplyChordRowSpacing), so a short cell never cuts its symbol.
+    /// </para>
     /// </remarks>
-    public static ImmutableArray<Spring> EnsureLeadSheetBarWidth(ImmutableArray<Spring> springs)
+    public static ImmutableArray<Spring> EnsureLeadSheetBarWidth(ImmutableArray<Spring> springs, double share = 1.0)
     {
         const double gridBarMinWidth = 10.0;
         if (springs.Length == 0)
@@ -812,9 +820,10 @@ internal static partial class SpacingRules
         double minSum = 0;
         foreach (var s in springs)
             minSum += s.MinDistance;
-        if (minSum >= gridBarMinWidth)
+        double floor = gridBarMinWidth * Math.Clamp(share, 0.0, 1.0);
+        if (minSum >= floor)
             return springs;
-        double extra = gridBarMinWidth - minSum;
+        double extra = floor - minSum;
         var result = springs.ToBuilder();
         var last = result[^1];
         result[^1] = new Spring(

@@ -2294,6 +2294,25 @@ internal sealed class MultiStaffLayouter
     }
 
     /// <summary>
+    /// The share of a lead sheet's grid floor a bar is held to (SpacingRules.EnsureLeadSheetBarWidth):
+    /// 1 for a metered bar; for a PICKUP, its length over the meter in force there — a one-beat
+    /// upbeat on a 4/4 grid is a quarter cell, as it is a quarter bar on a staff. Owner's
+    /// decision 2026-10-04 (session 791), shown both pictures of the amazing-grace grid:
+    /// until then the floor held the pickup to a full cell (that grid opened with a cell as
+    /// wide as its 3/4 bars for one beat). LILYSHARP-OWN like the floor itself: LilyPond has
+    /// no grid and no floor, so there is no number of its to meet here.
+    /// </summary>
+    private static double LeadSheetFloorShare(MultiStaffScore score, Measure primaryMeasure, int measureIndex)
+    {
+        if (!primaryMeasure.IsPickup)
+            return 1.0;
+        var meters = ScoreSideTables.PrevailingMeters(score);
+        if (measureIndex >= meters.Count || meters[measureIndex] <= Fraction.Zero)
+            return 1.0;
+        return primaryMeasure.TotalDuration.ToDouble() / meters[measureIndex].ToDouble();
+    }
+
+    /// <summary>
     /// The reservations the SHARED note columns carry on top of their duration
     /// springs — lyric syllables, chord symbols (lead-sheet grid or staff-attached),
     /// tab fret digits and wide scripts — applied by the ONE list both consumers
@@ -2367,7 +2386,9 @@ internal sealed class MultiStaffLayouter
                 rightDoublePercentHalfWidth: measureIndex + 1 < signHalf.Count ? signHalf[measureIndex + 1] : 0);
             // A lead sheet's grid floor is Lily#'s own and applies to every bar of the
             // grid, the empty ones included (see EnsureLeadSheetBarWidth).
-            return score.IsLeadSheet ? SpacingRules.EnsureLeadSheetBarWidth(empty) : empty;
+            return score.IsLeadSheet
+                ? SpacingRules.EnsureLeadSheetBarWidth(empty, LeadSheetFloorShare(score, primaryMeasure, measureIndex))
+                : empty;
         }
 
         // Cross-voice column pairs of each staff, with each item's ink at the X the
@@ -2425,7 +2446,8 @@ internal sealed class MultiStaffLayouter
             // chords-only chart packs onto one line and never wraps).
             springs = SpacingRules.ApplyChordRowSpacing(score.TextMetrics, springs, allTimings,
                 measureIndex, ScoreSideTables.ChordNames(score).At(measureIndex));
-            springs = SpacingRules.EnsureLeadSheetBarWidth(springs);
+            springs = SpacingRules.EnsureLeadSheetBarWidth(springs,
+                LeadSheetFloorShare(score, primaryMeasure, measureIndex));
         }
         else if (!score.ChordNames.IsDefaultOrEmpty)
         {

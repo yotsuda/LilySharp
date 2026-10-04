@@ -2752,13 +2752,17 @@ public sealed partial class MeasureCollector
             // (MultiStaffLayouter.SolveLineStartPrefix reads the primary voice, which IS the
             // first row here) and the end-of-line courtesy follows. Until then a rows-only
             // sheet's bars took the header's length (session 778) and showed no meter for it.
-            // Every row carries it, as every staff of a system does; a `time none` section
-            // (null meter) engraves nothing and breaks no run.
+            // Every row carries it, as every staff of a system does. A `time none` section
+            // (null meter) engraves nothing of its own — TimeSignatureChangeItem.Blanked's
+            // shape on a staff — but the metered section AFTER it opens with its meter again,
+            // as the staff's MeasureBuilder.RevertMeterToHome redraws a meter the section
+            // before left different (session 791; until then the null broke the run and the
+            // grid returned from a `time none` section with no sign).
             if (rowsOnlyBars != null)
                 for (int m = 1; m < measures.Length && m < rowsOnlyBars.Count; m++)
                 {
-                    if (rowsOnlyBars[m].Meter is not { } meter || rowsOnlyBars[m - 1].Meter is not { } before
-                        || meter == before)
+                    if (rowsOnlyBars[m].Meter is not { } meter
+                        || (rowsOnlyBars[m - 1].Meter is { } before && meter == before))
                         continue;
                     var items = fitted?[m].Items ?? measures[m].Items;
                     bool opensWithChange = false;

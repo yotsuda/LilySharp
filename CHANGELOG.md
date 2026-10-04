@@ -377,6 +377,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A chord grid's pickup cell is a short cell.** On a chords-only or chords-and-lyrics
+  sheet the one-beat upbeat (`partial 4`) was as wide as the full bars beside it — the grid's
+  minimum cell width applied to it whole. It is now held to its share of that width (a
+  quarter, for one beat of 4/4), as a pickup bar is shorter on a staff; the chord's own
+  width is still reserved, so a short cell never cuts its symbol.
+- **A chord grid draws the meter that returns after a `time none` section.** A section
+  with `time none` draws no meter, as on a staff; the next metered section opens with its
+  meter again on a staff but drew nothing on a grid. The grid now draws it there too.
 - **A mid-line bar number on a lead sheet stands beside the chord names.** With
   `barNumbers every N` a number inside the line took a staff's height — padding above the top
   staff line — under the chord row, and on a row carrying chord diagrams it printed through
