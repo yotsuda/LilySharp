@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第811セッションの経緯
+
+### 1.1 第811セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き。ユーザー「続けて」＝§2 B の ②′（grace が続く 2 順序を change 列の直列 spring に足す）。`-Start p811`（HEAD `27a2c673`・未 push 38）＝full **11087 / 0 / 2 / 11089**。§7 3.5 で第809 を ARCHIVE へ（moved 13 lines）。
+- **clef → grace の順序（MCG 型）`862198c09`**: `SpacingRules.MidMeasureChangeBeforeGraceSeries`＝[左 ×0.8, 右（Staff_spacing を最初の grace 列の左 skyline まで）×0.8, grace の gap 群]＋列 rod。`Spring.Scale`＝operator*=（ideal を min で床）。台帳 6 点（MCG・MCGA・MCGM）が 0、MCGA の grace の `#` は「0.8 で ideal が min に落ち列 rod +0.1 が効く」形のまま字面で出た。**1 回目の build で触っていない MCGB が −1.098／+1.309 動いた**＝**collector はどちらの順序でも clef を grace の前に並べる**（grace は保留され、主音が来たとき `OpenSoundingItem` で本体を歩く）＝§2 B の「書いた順序は `measure.Items` に残っている」は誤り。保留中に足された change に `MusicItem.WrittenAfterGrace`（`MeasureBuilder.MarkChangesWrittenAfterGrace`）を付け、`ChangeStandsBeforeGrace` が読む。毒 6 本: 左／右の 0.8・右の rod・印・hang の和 → 各点が赤／左の列 rod は観測者 0（註）。
+- **grace → clef の順序（MCGB 型）**: 点 `0d8fea49c`（前の音 → grace +2.118062・grace → clef −1.906942＝Lily# は grace を clef の右に描いていた）→ 移植 `cbfd9a0d6`: grace 経路を change 無しと同じに組み、最後の部分を [最後の grace → change（`GraceIntoChangeColumn`＝grace の Note_spacing・:103-108 の床・0.8 なし）, change → 主音] に差し替え（`MidMeasureChangeAfterGraceSeries`）。run の配置は `MeasureLayout.GraceRunToMain`（cache の鍵にも）を `GraceNoteEngraver.PlacedColumns` が読み、`RunPlacement` と `ElementCoordinator.GraceGeomOf` が共有。hang の門は 3 順序とも「部分＝n＋2」。**予測（0）は 1 回目に外れた**（+0.400／+1.240）＝**2 つ目の欠陥: grace を後の clef（bass）の譜表位置で彫っていた**（同じ保留のせい）。grace を書いた時点の clef で歩く（cue 領域の退避と同じ型）→ 4 点とも 0・絵でも grace が treble の加線つきで clef の前に立つ。毒 6 本: clef を戻さない・ToMain を差し替えない・:105 の床なし・hang の起点 → 各点が赤／rod 2 本は観測者 0（註）。
+- 3 commit とも snapshot 不動・掃き（998 冊・1,199 svg）差 0・陽性対照は差あり。CHANGELOG は第805 の項に 2 文。§2 B の項は ✅ に畳んだ（残りは名指しのみ）。
+★ `-End p811 -DiffBase 27a2c673`（`end1.log`）＝full **11089 / 0 / 2 / 11091**（網 +2＝MCGB の点）・門 全 OK（HANDOFF 441,670 B）。台帳 1007 → 1009 点・ss 非ゼロ総和 23.068 → **14.868**・exact 803 → 812・OPEN 0。7.5: Core `+` 436 行・REF 14・OWN 0。7.6: ⒜ 字面＝0.8 は spacing-spanner.cc:396-403／:519-527 と operator*=・grace → change は note-spacing.cc:77／:78-83／:103-108／:113＋merge_springs・change → 主音は staff-spacing.cc・列 rod／⒝ grace → change の rod は wish の skyline＋点（`GraceColumns` と同じ読み）・grace の後の key は臨時記号の状態を戻さない（clef だけ）・Staff_spacing の wish 1 本。7.7: LP に無い分岐＝「run が休符／tab の数字で終わる」ときの旧経路の門だけ（註）。7.9 perf: change の無い小節は増えた仕事 0・grace の後の change は `ChangeStandsBeforeGrace` の 1 走査。commit `862198c09`・`0d8fea49c`・`cbfd9a0d6`＋docs。Lab は sessions/p811。push はユーザー。
+判定: §2 B の「行中の change 列」の島は 3 順序とも LP と同じ連なりになって閉じた。教訓: **起票の「X は Y に残っている」も確かめる前は予測**——collector の保留が書いた順序を消していて、それを教えたのは**触っていない対照（MCGB）が動いた**こと。そして**外れた予測が 2 つ目の欠陥（grace を後の clef で彫る）を出した**（§5.0 の 4）。次の一手: 第808 が挙げた ⒜ §2 C・D・E の古い起票の測り直し（第805 の型）か ⒝ §2 H の束（設計）。会話を区切るか: (a) どちらも別の島で今の文脈は効かない／(b) **この会話は 2 便＋長い探索で非常に長い**（大きなファイルを何度も読んだ）／(c) 無関係な島。⇒ **新しい会話が有利**（(b)(c)）。
+
 ## 以下は第810セッションの経緯
 
 ### 1.1 第810セッション（2026-10-04・YT-DELL2）
