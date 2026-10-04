@@ -397,6 +397,9 @@ workflow attaches that section to the GitHub Release verbatim.
   the flag glyph's outline, as in LilyPond: a down-stem flag rising toward the next staff no
   longer holds the staves 1.87 apart (1.96 for a sixteenth) where its curve leaves room, and
   marks, lyrics and the page's top margin settle a few hundredths closer over flagged notes.
+  A rest likewise takes its outline rather than the box around it: an eighth or sixteenth rest
+  pushed out of the staff reaches down only at its stem's foot, so a neighbouring stem in the
+  next staff no longer holds the staves apart (1.96 for a sixteenth).
 - **A clef change after a note above the staff stands where LilyPond puts it.** The space before
   a mid-measure clef, key or meter change was priced as if the previous note's ink filled every
   height. LilyPond measures it by shape: a clef only clears what stands at its own height, so

@@ -2726,12 +2726,33 @@ internal sealed class SkylineBuilder
                 double restOriginUp = staffMiddleUp
                     + size.Span(ElementCoordinator.NeutralRestPosition(staffLines, restValue) / 2.0)
                     + size.Span(restShiftUp);
-                double restTop = restOriginUp + restBox.Top;
-                double restBottom = restOriginUp + restBox.Bottom;
-                upSkyline.MergeBox(
-                    x + restBox.Left, x + restBox.Right, restBottom, restTop);
-                downSkyline.MergeBox(
-                    x + restBox.Left, x + restBox.Right, restBottom, restTop);
+                // ...and the OUTLINE ITSELF, not its box (session 813): an eighth or sixteenth
+                // rest reaches its lowest point only in its stem's narrow foot and stands high
+                // at its right end, where the box stayed flat at the foot across the whole
+                // width (staff.staff.rest-outline.sixteenth). The glyph origin is x — the
+                // outline box's Left is its own bearing about that origin.
+                // LILYPOND-REF: scm/define-grobs.scm Rest
+                //   grob::unpure-vertical-skylines-from-stencil, walked by
+                //   lily/stencil-integral.cc:535-563 add_named_glyph_segments.
+                // ⚠️ The UNLEDGERED glyph, as the box was: whether a ledgered whole / half
+                // rest's skyline carries its ledger is not measured here.
+                var (restUp, restDown) = TextOutlineSkylines.MusicGlyphProfile(
+                    EmmentalerGlyphs.GetRest(restValue, 0), size.Span(Rendering.SharedRenderer.FontSize));
+                if (restUp.Count > 0 || restDown.Count > 0)
+                {
+                    upSkyline.Merge(restUp, x, restOriginUp);
+                    downSkyline.Merge(restDown, x, restOriginUp);
+                }
+                else
+                {
+                    // No walkable music font: the outline's box.
+                    double restTop = restOriginUp + restBox.Top;
+                    double restBottom = restOriginUp + restBox.Bottom;
+                    upSkyline.MergeBox(
+                        x + restBox.Left, x + restBox.Right, restBottom, restTop);
+                    downSkyline.MergeBox(
+                        x + restBox.Left, x + restBox.Right, restBottom, restTop);
+                }
                 // The rest's dots, where the renderer puts them (SharedRenderer.DrawRest):
                 // one dot width right of the rest's LILC ink, at the dot-column answer
                 // RELATIVE to the glyph origin — riding the same shift the glyph took.

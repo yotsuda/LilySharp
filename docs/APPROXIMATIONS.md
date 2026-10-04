@@ -216,7 +216,7 @@
 - **:502** same part (leftHand). No book reaches the configuration, so no ledger point and
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
 - **:1349** ⚠️ The half-blot Y has no observer (session 812): the tab test reads
-- **:3205** ⚠️ NO OBSERVER for this arm's half-blot Y nor its up-skyline merge (poisons,
+- **:3226** ⚠️ NO OBSERVER for this arm's half-blot Y nor its up-skyline merge (poisons,
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
 - **:56** the distance is taken at — and NO ledger point moves with it. An output change no point
 ### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
