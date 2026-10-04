@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第810セッションの経緯
+
+### 1.1 第810セッション（2026-10-04・YT-DELL2）
+
+新しい会話。第809 の次の一手＝§2 B 冒頭の手順 ②（直列の部分を書いた順序で作る builder）。`-Start p810`（HEAD `97ff3feb`・未 push 35）＝full **11075 / 0 / 2 / 11077**。§7 3.5 で第808 を ARCHIVE へ（moved 15 lines）。
+- 着手の 1 手目に「grace の無い change 列」（ケース A）を先に切り出した: 既存の台帳点は全部 ragged（力 0）で、1 本と 2 本のばねを見分けられない＝**観測者 0**。LP は change 列の左右に Note_spacing／Staff_spacing の 2 本を持ち、clef の右は伸び（extra-space の stretch 1.0）、key の右は伸びない（shrink-space）。
+- §5.0 の型: **`2443a7665`（出力不変）**＝probe `audit/lp-geometry/probes/midmeasure-force.ly`（MFCJ・MFKJ＝100mm、MFCC・MFKC＝36mm。33mm は key の小節が溢れた）＋台帳 12 点。基準: 引き伸ばし clef +1.088／+1.088／**−4.353716**（LP の力 × 右の stretch 1.0 ちょうど）・圧縮 clef −0.046／+0.004／+0.154・圧縮 key 前の音 → key **−1.115**（Lily# は key を前の符頭に重ねて描いていた）／key → 次 +0.971・対照 4 点（引き伸ばし key 3・圧縮 key の四分）は 0。予測は全点 0（`why` に先に書いた）。
+- **`8f24d048a`（移植）**: `SpacingRules.MidMeasureChangeSeries`＝左（`MidMeasureChangeGaps` の理想と最小・強さは note spring のまま）＋右（`ChangeColumnStaffSpacing`＝staff-spacing.cc:166-219 の字面・`RightGap` はその理想）＋列 rod 2 本（`WithPartRod`）を直列に。対の rod（slur・tremolo・音符列の分離）は範囲の rod（新設 `Spring.WithRangeRod`）。③＝`MeasureLayout.LooseChangeHangs` → **`ChangeColumnHangs`**: 列が spring の中にあるときは右の部分の解いた長さを記録し、renderer・SkylineBuilder・`ElementCoordinator.AddChangeCollisions`（梁の衝突箱。力 0 の幅しか読んでいなかった）が読む。grace が後に続く順序は旧経路（1 本に畳む）のまま。
+- 結果: **8 点が予測どおり 0・対照 4 点は 0 のまま・他の点と snapshot は不動**。毒 7 本（`p810/poisons.ps1`・各 full）: 右の stretch 0 → 引き伸ばし clef 3 赤／左の列 rod 無し → 圧縮 key 2 赤／力 0 の hang → 6 赤／:213 の補正無し → 5 赤。**観測者 0 は 3 本**（右の列 rod・範囲 rod・梁の衝突箱の hang）＝註に名指した。掃き（`p810/sweep`・base＝`2443a7665` の worktree build）: **998 冊・1,199 svg・差 0**、陽性対照（MFCJ の音楽を 4 小節に伸ばした本）は差あり＝コーパスに「力のかかる段の行中 change」が無い。CHANGELOG は第805 の項に 1 文。
+★ `-End p810 -DiffBase 97ff3feb`（`end1.log`）＝full **11087 / 0 / 2 / 11089**（網 +12＝台帳点）・門 全 OK（HANDOFF 443,588 B・残り 6,412）。台帳 995 → 1007 点・exact 791 → 803・OPEN 0。7.5: Core `+` 272 行・REF 5（simple-spacer.cc:89-127 ×2・spring.cc:218-237・separation-item.cc:47-68・staff-spacing.cc:117-221）・OWN 0。7.6: ⒜ 字面＝左は setter が強さを保つ（spring.cc:131-153）・右は staff-spacing.cc:166-219・列 rod・範囲 rod＝add_rod／⒝ Staff_spacing の wish は 1 本（段ごとの wish を merge しない＝column walk の最広の grob）・範囲 rod は set_column_rods の「届かなければ打ち切る」を省いて常に足す（打ち切りは効かない rod を足さない最適化＝答えは同じ）。7.7: LP に無い分岐は「grace が続くか」の門だけ（`CreateInterColumnSpring`・`ComputeChangeColumnHangs`＝未移植の順序の段階の門・註と §2 B に名指し）／観測者 0 の腕 3 本は註に。7.9 perf: change の無い小節は増えた仕事 0（同じ null の門）・change の対だけ skyline 2 枚と部分 rod 2 本。commit `2443a7665`（点）・`8f24d048a`（移植）＋ docs。Lab は sessions/p810。push はユーザー。
+判定: 行中の change 列は grace が後に続かない限り LP と同じ 2 本のばねになった（力 0 以外でも）。教訓: **ragged の点だけで閉じた島は「1 本と 2 本」を見分けられない**——力 0 は理想しか測らないので、強さ・rod・吊り下げの誤りが全部 exact に隠れていた（圧縮 key は符頭に重ねて描いていた）。次の一手: §2 B の ②′（grace が続く 2 順序を同じ builder の部分に足す）→ ④。会話を区切るか: (a) ②′ はこの便の builder・hang の門・probe の上に立つ／(b) 圧縮は起きていない（RULES は §5.0・§5.2 だけ読んだ）／(c) 同じ島。⇒ **続ける側が有利（この会話で `-Start p811`）**。
+
 ## 以下は第809セッションの経緯
 
 ### 1.1 第809セッション（2026-10-04・YT-DELL2）

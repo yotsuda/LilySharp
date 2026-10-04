@@ -115,6 +115,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第812セッション（2026-10-04・YT-DELL2）
+
+新しい会話（HANDOFF・CLAUDE-OPERATIONS 通読、RULES は読んでいない）。第811 の次の一手 ⒜＝§2 C・D・E の古い起票の測り直し（第805 の型）。`-Start p812`（HEAD `33a3f509`・未 push 42）＝full **11089 / 0 / 2 / 11091**。§7 3.5 で第810 を ARCHIVE へ（moved 13 lines）。
+- 起票の裏取り: §2 E の ⑴ tuplet の on-line・⑵ volta shorten-pair・⑶ volta の範囲畳みは既に移植済み（`TupletBracketEngraver`:1293・`VoltaBracketEngraver`:418・`SyntaxFacts`:186＝§2 E の行は stale）。§2 C「同じ半分が Flag / Accidental / Rest に」のうち **Accidental は既に輪郭、Flag は名目の箱（`EngravingDefaults.FlagWidth` 1.2×2.5・LILYSHARP-OWN）のまま、Rest は輪郭の箱**＝Flag を選んだ。
+- §5.0 の型: **`e3f6d0aa1`（出力不変）**＝probe `audit/lp-geometry/probes/flag-staff-gap.ly`（上の譜の符尾下向き C4 の旗 対 下の譜の符尾上向き C4＝符尾どうしは X で出会わず旗だけが下の符尾に届きうる形）＋台帳 3 点: 8 分 **+1.873026**・16 分 **+1.955**・4 分の対照 0。予測（+1.37／+1.2）は **stem-shorten（旗 1 本 0.5・2 本 0.25）の分だけ外れた**＝Lily# 12.500／12.750 は「上の符尾の先＋下の符尾の先 5.5＋padding 1」ちょうど＝箱が 2 本の符尾の先を縛っていた。
+- **`49f438341`（移植）**: `MergeGraceFlagInk` → `MergeFlagInk`（grace は自分の design と倍率・普通の旗は score の design）を両方の腕と tab の旗（`\tabFullNotation`）に、描画と同じ点（`FlagDrawX`・`FlagPlacementY`）で。名目の 3 定数と `CalculateFlagHeight` は読み手が消えたので削除。**8 分・16 分とも予測どおり 0、他の点は不動**。snapshot `test/scripts-stem-support` が動いた（系全体が 0.05 上＝32 分の旗の箱が系を押し下げていた）＝**LP の双子の最上線 13.5754 に対し 13.58（前 13.63）＝ユーザー承認（2026-10-04）を得て再ベース**。tab の試験は輪郭の形（旗の下は符尾の先より低く、旗の外より高い）に書き直し、`internal_print|lily/flag.cc` が未検証の棚から外れた。CHANGELOG Fixes 1 項。
+- 掃き（`p812/sweep`・base＝HEAD の worktree build）: **998 冊・1,199 svg・差 5**＝上の snapshot・`samples/greensleeves`（頁 −0.07・譜 → 歌詞は LP の 7.02 に一致、前 7.07。テンポ記号 → 譜は LP 1.455 に前 1.49・後 1.42＝テンポ記号の X が LP と別物で下に来る音が違う・別の差）・`site/ode-to-joy`（歌詞の伸ばし線 0.01）・実コーパス 2 冊（It's Not Unusual ±0.01・Listen To The Music-tab は段ごとに最大 0.4 累積・段割れも頁割れも同じ＝絵で確かめた）。
+- 網: 毒 7 本（`p812/poisons.ps1`・各 full）: 下の腕の半 blot の Y・符尾の右端の X・下向きの merge → 8 分の点が赤／tab の merge → tab の試験が赤／**観測者 0 は 3 本＝上の腕の半 blot の Y・上向きの merge・tab の Y**（上向きの旗の輪郭の天辺は起点＝符尾の先より 0.05 下＝旗を見る読み手は必ず符尾も見る）＝註に名指した（`bca88f8f7`）。網を足そうと mark-grace.ly に MFU（2 段目冒頭の符尾上向き 8 分の上の mark）を試したが、mark の窓が音に届かず戻した。16 分の点は旗を観測しない（下向きの merge を消しても緑＝長い符尾が先に縛る）＝`why` に書いた。
+
+★ `-End p812 -DiffBase 33a3f509`（`end1.log`）＝full **11092 / 0 / 2 / 11094**（網 +3＝台帳点）・門 全 OK（HANDOFF 442,727 B）。台帳 1009 → 1012 点・exact 812 → 815・OPEN 0。7.5: Core `+` 61 行・REF 1・OWN 0（足した規則は「旗の skyline はグリフの輪郭」1 つ＝REF は既存の註の define-grobs Flag／stencil-integral.cc を tab の分岐にも引いた）。7.6: ⒜ 字面＝輪郭の歩き（`MusicGlyphProfile`）と起点（flag.cc:183-196）は描画と同じ式／⒝ 普通の旗は score の design（倍率の小さい音符＝cue も 20 の輪郭＝頭と符尾の seed と同じ単純化）。7.7: 名目の 3 定数と `CalculateFlagHeight` を消した（2 つ目の綴りが 1 つ減った）・音楽フォントが見つからないときだけ LILC の箱（旧の grace 経路と同じ）。7.9 perf: 旗ごとに箱 1 枚 → 輪郭 12〜13 棟の merge（`MusicGlyphProfile` は cache 済み）。commit `e3f6d0aa1`（点）・`49f438341`（移植・snapshot 1 枚・CHANGELOG）・`bca88f8f7`（毒の註）＋docs。Lab は sessions/p812。push はユーザー。
+判定: §2 C の「Flag の半分」は閉じた（Accidental は既に済み・残るのは Rest の多角形だけ）。教訓: **起票の 3 つの grob を裏取りしたら 1 つは既に閉じていて 1 つは別の形だった**（§2 E の 3 行も stale）＝古い起票は「測り直す」前に「読み直す」。そして**名目の箱は「天辺は符尾の先」だから既存の読み手（符尾も見る mark）では見えず、符尾どうしが X で出会わない形を作って初めて 1.87 が出た**。次の一手: ⒜ §2 C の Rest（同じ型・点が先）／⒝ §2 D・E の残り（`PageLayouter` の `i == 0` の spec 食い違い・冗長アクセサ）の裏取り／⒞ §2 H の束（設計）。会話を区切るか: (a) ⒜ はこの便の計器（flag-staff-gap.ly の形・`MusicGlyphProfile`）の上に立つ／(b) この会話は 1 便で、大きなファイルは HANDOFF の一部しか読んでいない＝重くない／(c) ⒜ は同じ島。⇒ **続ける側が有利（この会話で `-Start p813`）**。
+
+## 以下は第811セッションの経緯
+
 ### 1.1 第811セッション（2026-10-04・YT-DELL2）
 
 同じ会話の続き。ユーザー「続けて」＝§2 B の ②′（grace が続く 2 順序を change 列の直列 spring に足す）。`-Start p811`（HEAD `27a2c673`・未 push 38）＝full **11087 / 0 / 2 / 11089**。§7 3.5 で第809 を ARCHIVE へ（moved 13 lines）。
@@ -123,18 +137,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 3 commit とも snapshot 不動・掃き（998 冊・1,199 svg）差 0・陽性対照は差あり。CHANGELOG は第805 の項に 2 文。§2 B の項は ✅ に畳んだ（残りは名指しのみ）。
 ★ `-End p811 -DiffBase 27a2c673`（`end1.log`）＝full **11089 / 0 / 2 / 11091**（網 +2＝MCGB の点）・門 全 OK（HANDOFF 441,670 B）。台帳 1007 → 1009 点・ss 非ゼロ総和 23.068 → **14.868**・exact 803 → 812・OPEN 0。7.5: Core `+` 436 行・REF 14・OWN 0。7.6: ⒜ 字面＝0.8 は spacing-spanner.cc:396-403／:519-527 と operator*=・grace → change は note-spacing.cc:77／:78-83／:103-108／:113＋merge_springs・change → 主音は staff-spacing.cc・列 rod／⒝ grace → change の rod は wish の skyline＋点（`GraceColumns` と同じ読み）・grace の後の key は臨時記号の状態を戻さない（clef だけ）・Staff_spacing の wish 1 本。7.7: LP に無い分岐＝「run が休符／tab の数字で終わる」ときの旧経路の門だけ（註）。7.9 perf: change の無い小節は増えた仕事 0・grace の後の change は `ChangeStandsBeforeGrace` の 1 走査。commit `862198c09`・`0d8fea49c`・`cbfd9a0d6`＋docs。Lab は sessions/p811。push はユーザー。
 判定: §2 B の「行中の change 列」の島は 3 順序とも LP と同じ連なりになって閉じた。教訓: **起票の「X は Y に残っている」も確かめる前は予測**——collector の保留が書いた順序を消していて、それを教えたのは**触っていない対照（MCGB）が動いた**こと。そして**外れた予測が 2 つ目の欠陥（grace を後の clef で彫る）を出した**（§5.0 の 4）。次の一手: 第808 が挙げた ⒜ §2 C・D・E の古い起票の測り直し（第805 の型）か ⒝ §2 H の束（設計）。会話を区切るか: (a) どちらも別の島で今の文脈は効かない／(b) **この会話は 2 便＋長い探索で非常に長い**（大きなファイルを何度も読んだ）／(c) 無関係な島。⇒ **新しい会話が有利**（(b)(c)）。
-
-## 以下は第810セッションの経緯
-
-### 1.1 第810セッション（2026-10-04・YT-DELL2）
-
-新しい会話。第809 の次の一手＝§2 B 冒頭の手順 ②（直列の部分を書いた順序で作る builder）。`-Start p810`（HEAD `97ff3feb`・未 push 35）＝full **11075 / 0 / 2 / 11077**。§7 3.5 で第808 を ARCHIVE へ（moved 15 lines）。
-- 着手の 1 手目に「grace の無い change 列」（ケース A）を先に切り出した: 既存の台帳点は全部 ragged（力 0）で、1 本と 2 本のばねを見分けられない＝**観測者 0**。LP は change 列の左右に Note_spacing／Staff_spacing の 2 本を持ち、clef の右は伸び（extra-space の stretch 1.0）、key の右は伸びない（shrink-space）。
-- §5.0 の型: **`2443a7665`（出力不変）**＝probe `audit/lp-geometry/probes/midmeasure-force.ly`（MFCJ・MFKJ＝100mm、MFCC・MFKC＝36mm。33mm は key の小節が溢れた）＋台帳 12 点。基準: 引き伸ばし clef +1.088／+1.088／**−4.353716**（LP の力 × 右の stretch 1.0 ちょうど）・圧縮 clef −0.046／+0.004／+0.154・圧縮 key 前の音 → key **−1.115**（Lily# は key を前の符頭に重ねて描いていた）／key → 次 +0.971・対照 4 点（引き伸ばし key 3・圧縮 key の四分）は 0。予測は全点 0（`why` に先に書いた）。
-- **`8f24d048a`（移植）**: `SpacingRules.MidMeasureChangeSeries`＝左（`MidMeasureChangeGaps` の理想と最小・強さは note spring のまま）＋右（`ChangeColumnStaffSpacing`＝staff-spacing.cc:166-219 の字面・`RightGap` はその理想）＋列 rod 2 本（`WithPartRod`）を直列に。対の rod（slur・tremolo・音符列の分離）は範囲の rod（新設 `Spring.WithRangeRod`）。③＝`MeasureLayout.LooseChangeHangs` → **`ChangeColumnHangs`**: 列が spring の中にあるときは右の部分の解いた長さを記録し、renderer・SkylineBuilder・`ElementCoordinator.AddChangeCollisions`（梁の衝突箱。力 0 の幅しか読んでいなかった）が読む。grace が後に続く順序は旧経路（1 本に畳む）のまま。
-- 結果: **8 点が予測どおり 0・対照 4 点は 0 のまま・他の点と snapshot は不動**。毒 7 本（`p810/poisons.ps1`・各 full）: 右の stretch 0 → 引き伸ばし clef 3 赤／左の列 rod 無し → 圧縮 key 2 赤／力 0 の hang → 6 赤／:213 の補正無し → 5 赤。**観測者 0 は 3 本**（右の列 rod・範囲 rod・梁の衝突箱の hang）＝註に名指した。掃き（`p810/sweep`・base＝`2443a7665` の worktree build）: **998 冊・1,199 svg・差 0**、陽性対照（MFCJ の音楽を 4 小節に伸ばした本）は差あり＝コーパスに「力のかかる段の行中 change」が無い。CHANGELOG は第805 の項に 1 文。
-★ `-End p810 -DiffBase 97ff3feb`（`end1.log`）＝full **11087 / 0 / 2 / 11089**（網 +12＝台帳点）・門 全 OK（HANDOFF 443,588 B・残り 6,412）。台帳 995 → 1007 点・exact 791 → 803・OPEN 0。7.5: Core `+` 272 行・REF 5（simple-spacer.cc:89-127 ×2・spring.cc:218-237・separation-item.cc:47-68・staff-spacing.cc:117-221）・OWN 0。7.6: ⒜ 字面＝左は setter が強さを保つ（spring.cc:131-153）・右は staff-spacing.cc:166-219・列 rod・範囲 rod＝add_rod／⒝ Staff_spacing の wish は 1 本（段ごとの wish を merge しない＝column walk の最広の grob）・範囲 rod は set_column_rods の「届かなければ打ち切る」を省いて常に足す（打ち切りは効かない rod を足さない最適化＝答えは同じ）。7.7: LP に無い分岐は「grace が続くか」の門だけ（`CreateInterColumnSpring`・`ComputeChangeColumnHangs`＝未移植の順序の段階の門・註と §2 B に名指し）／観測者 0 の腕 3 本は註に。7.9 perf: change の無い小節は増えた仕事 0（同じ null の門）・change の対だけ skyline 2 枚と部分 rod 2 本。commit `2443a7665`（点）・`8f24d048a`（移植）＋ docs。Lab は sessions/p810。push はユーザー。
-判定: 行中の change 列は grace が後に続かない限り LP と同じ 2 本のばねになった（力 0 以外でも）。教訓: **ragged の点だけで閉じた島は「1 本と 2 本」を見分けられない**——力 0 は理想しか測らないので、強さ・rod・吊り下げの誤りが全部 exact に隠れていた（圧縮 key は符頭に重ねて描いていた）。次の一手: §2 B の ②′（grace が続く 2 順序を同じ builder の部分に足す）→ ④。会話を区切るか: (a) ②′ はこの便の builder・hang の門・probe の上に立つ／(b) 圧縮は起きていない（RULES は §5.0・§5.2 だけ読んだ）／(c) 同じ島。⇒ **続ける側が有利（この会話で `-Start p811`）**。
 
 ## 2. 開いている作業
 
@@ -1250,7 +1252,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   外れる**——それが `lyrics.*.staff-to-lyric` に残っていた **−0.105961**。
   ⇒ **残り半分は書いてある（未 commit・▶0）。** 下の「移植の道筋は確定」は**箱までの話**。
   ⚠️ **同じ半分が Flag / Accidental / Rest にも残っている**（`define-grobs.scm` が stencil から
-  と宣言している grob 全部）。clef と違って**台帳点も踏む本も無い**ので、次は点が先。
+  と宣言している grob 全部）。▶ **第812 で測り直した**: **Accidental は既に輪郭**（`MergeAccidentalInk`＝`MusicGlyphProfile`）／**Flag は閉じた**（名目の箱 1.2×2.5 → グリフの輪郭・台帳 `staff.staff.flag-down.*`・`49f438341`）／**残るのは Rest だけ**（`GetRestSkylineBBox`＝輪郭の*箱*・多角形ではない）＝次は点が先（休符の輪郭の凹みが効く形＝休符の肩の横に別の譜のインクが来る双子）。
 - （以下は上の項目の旧記述・**経緯として残す**）★★ **clef の箱そのものが LP より大きい** —
   **LILC の `clefs.G` は LP の stencil より上に 0.024000・下に 0.010000 はみ出している**。
   ⇒ **中央線の上**: Lily# 3.800000（＝`ClefG.Top` − 1.0）対 LP **3.776000**。
