@@ -80,6 +80,25 @@ public class TieDetectionTests
         Assert.Empty(Ties("c4~ r4 c4 d4 |"));
     }
 
+    /// <summary>A tie joins heads of the same PITCH, not the same staff position: the e of
+    /// <c>&lt;c e&gt;2~</c> does not tie into the ees that stands on its line, so the chord
+    /// pair carries one tie (the c's), as LilyPond makes one Tie grob (Lab sessions/p452,
+    /// book TMB). Until session 797 the position was compared first and the e tied into the
+    /// ees too (HANDOFF §2 E). The controls: the same chord twice ties both heads; a single
+    /// head of another alteration (<c>cis~ c</c>) or spelling (<c>fis~ ges</c>) ties nothing.</summary>
+    [Fact]
+    public void Tie_JoinsTheSamePitch_NotTheSameStaffPosition()
+    {
+        var tie = Assert.Single(Ties("<c e>2~ <c ees>2 |"));
+        Assert.Equal(tie.StartNote.StaffPosition, tie.EndNote.StaffPosition);
+        Assert.Equal(tie.StartNote.Midi, tie.EndNote.Midi);
+        Assert.Equal(2, Ties("<c e>2~ <c e>2 |").Length);
+        Assert.Empty(Ties("cis4~ c4 d4 e4 |"));
+        Assert.Empty(Ties("fis4~ ges4 e4 f4 |"));
+        var single = Assert.Single(Ties("e4~ e4 d4 c4 |"));
+        Assert.Equal(single.StartNote.Midi, single.EndNote.Midi);
+    }
+
     [Fact]
     public void Tie_NoteIntoChord_TiesTheMatchingPitch()
     {

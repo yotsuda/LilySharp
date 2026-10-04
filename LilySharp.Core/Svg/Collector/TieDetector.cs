@@ -201,11 +201,13 @@ internal sealed class TieDetector
     }
 
     /// <summary>
-    /// Whether two heads are the SAME PITCH for a tie: the same staff position, or — where the
-    /// drawn position moved under them (an ottava bracket begins or ends between the two) —
-    /// the same sounding MIDI number a whole number of octaves (7 positions) apart. The
-    /// octave test keeps an enharmonic pair (fis~ges: one position apart) untied, as LilyPond
-    /// does.
+    /// Whether two heads are the SAME PITCH for a tie: the same sounding MIDI number at the
+    /// same staff position, or — where the drawn position moved under them (an ottava bracket
+    /// begins or ends between the two) — a whole number of octaves (7 positions) apart. The
+    /// octave test keeps an enharmonic pair (fis~ges: one position apart) untied, and the
+    /// MIDI test a same-letter pair of another alteration (<c>&lt;c e&gt;2~ &lt;c ees&gt;2</c>: the
+    /// e and the ees share a position), as LilyPond does. A head with no MIDI (an unpitched
+    /// one) is matched by position alone.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/tie-engraver.cc — the tie binds heads whose PITCHES are equal
@@ -215,10 +217,17 @@ internal sealed class TieDetector
     /// stands an octave higher; Lily# dropped every tie whose end note carried `@ottava` or
     /// `@!ottava`. ⚠️ A clef change between the two heads moves the position by a non-octave
     /// amount and is still left untied (no corpus book writes one).
+    /// MEASURED, Lab sessions/p452 (tie-match-and-accidental.ly, book TMB, LilyPond 2.26.0):
+    /// `&lt;c e&gt;2~ &lt;c ees&gt;2` makes ONE Tie grob; until session 797 this compared the
+    /// position first and tied the e to the ees as well (HANDOFF §2 E; the summary line of
+    /// this class said "the same pitch" all along).
     /// </remarks>
     internal static bool SamePitch(int positionA, int midiA, int positionB, int midiB)
-        => positionA == positionB
-           || (midiA != 0 && midiA == midiB && (positionA - positionB) % 7 == 0);
+    {
+        if (midiA == 0 || midiB == 0)
+            return positionA == positionB;
+        return midiA == midiB && (positionA - positionB) % 7 == 0;
+    }
 
     /// <summary>The synthesized end note for a note→chord tie: the chord pitch
     /// matching <paramref name="staffPosition"/>, or null when the chord does

@@ -392,6 +392,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A tie joins two heads of the same pitch, not two heads on the same line.** `<c e>2~ <c ees>2`
+  tied the e into the e♭ beside the c; now only the c is tied, as LilyPond ties it (one tie),
+  and a tie into a head of another alteration or spelling (`cis~ c`, `fis~ ges`) is left
+  unterminated with its warning. The MIDI and the MusicXML already paired ties by pitch.
 - **The preview follows a section header written below the part.** With the parts first
   and the headers after them (`section A { key g major }` under `part melody { section A
   { … } }`), a change to the header — another key, a `partial`, `time` or `tempo` typed in —

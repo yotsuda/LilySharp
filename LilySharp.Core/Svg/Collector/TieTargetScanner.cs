@@ -154,7 +154,11 @@ internal static class TieTargetScanner
             for (int j = 0, m = PitchCount(end); j < m; j++)
             {
                 var (endPos, endMidi) = PitchAt(end, j);
-                if (pos == endPos && midi == endMidi)
+                // ONE SPELLING of "the same pitch" with the detector that draws the arc
+                // (TieDetector.SamePitch): until session 797 this compared position and MIDI
+                // itself, and so warned on a tie an ottava bracket's end stands between —
+                // heads the detector ties, an octave of positions apart at one MIDI number.
+                if (TieDetector.SamePitch(pos, midi, endPos, endMidi))
                     return true;
             }
         }

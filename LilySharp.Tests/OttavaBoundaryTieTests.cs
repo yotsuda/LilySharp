@@ -61,4 +61,26 @@ public sealed class OttavaBoundaryTieTests
             .Max(g => g.X);
         Assert.Equal(-0.335, ties[1].P1.X - lastHead, 3);
     }
+
+    /// <summary>…and the bar check reads the same pitch the detector ties: no LYS4007 on the
+    /// head the bracket's end shifted. Until session 797 <c>TieTargetScanner</c> compared the
+    /// position and the MIDI number by a spelling of its own; it gave the same answer here
+    /// (MEASURED: no LYS4007 on four ottava shapes with either spelling, Lab
+    /// sessions/p797/ottava), and now it asks <c>TieDetector.SamePitch</c>, so the two cannot
+    /// drift — this pins the answer, not a repair.</summary>
+    [Fact]
+    public void ATieIntoTheBracketsEnd_IsNoPitchMismatch()
+    {
+        var tree = SyntaxTree.Parse("""
+            octave absolute
+            part m {
+              section A { c''4@ottava~ c'' d''~ d''@!ottava | }
+            }
+            form main { A }
+            score main { staff m }
+            """);
+        Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
+        var diags = LilySharp.Core.Semantics.SemanticValidation.Run(tree);
+        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.TieTargetMismatch);
+    }
 }
