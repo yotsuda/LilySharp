@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第798セッションの経緯
+
+### 1.1 第798セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・GO の順の 3 つ目と 4 つ目。`-Start p798`（HEAD `c98bfa3f`・未 push 4）＝full **11023 / 0 / 2 / 11025**。§7 3.5 で第796 を ARCHIVE へ。
+- **F 繰り返し⑹「section 音楽中の片側 `:|` を MIDI が鳴らさない」＝問いが消えていた**: probe（Lab `sessions/p798/probe/a..d.lys`）を `lysc midi` に通すと 4 形とも **LYS1034 error**＝2026-08-31（`78a2ef89`）から反復縦線は form にしか書けない。起票は第174（2026-08-15）で、その 2 週間後に綴りごと退いていた。§2 F の ⑹ を ✅ に・`MidiExporter.ProcessSequence` の註に「以後はエラー本の MIDI のために残る腕」と追記（Core は註だけ）。
+- **E 加線「`LedgerLineSpanner` の短縮が未移植・新しい engraver が要る」＝既に移植済み**: 第564（`dc3928e4`・2026-09-24）が `SharedRenderer.Noteheads.cs` の `CollectLedgerRequest`／`DrawPlannedLedgers` に `ledger-line-spanner.cc:216-408` を字面移植（隣接列の短縮・gap 0.1・臨時記号の glyph 固有の短縮範囲・同列の結合・Lab `p564` で LP と一致）。§2 E の行（第39 起票）は stale＝✅ に書き換えた。残るのは `ledger_positions`（線位置を変えた譜）だけ（本 0）。
+- ⇒ **GO の 4 件の内訳: 直した 1（tie の音高照合・第797）・既に閉じていた 2（tie の臨時記号＝第658 `d4ecf4d2`・加線＝第564）・言語が退けた 1（片側 `:|`＝LYS1034）**。教訓: §2 の「伝聞」の札は本物で、着手前の実コード確認（probe 1 本＋`git log -S`）で 3 件が 1 便未満で畳めた。subagent の §2 要約も stale をそのまま拾う＝要約は候補の列挙にだけ使い、着手判断は実コードで。
+- 出力不変（註と docs だけ）・掃き不要・snapshot 不動。棚卸し `APPROXIMATIONS.md` 行番号 1 行（註 3 行で MidiExporter の OWN が動いた＝1 度目の `-End` が `TheInventoryIsNotStale` で 1 赤・再生成して 2 度目で緑）。
+★ `-End p798 -DiffBase c98bfa3f`（`end2.log`）＝full **11023 / 0 / 2 / 11025**（網 ±0）・門 全 OK（HANDOFF 436,162 B・残り 13,838）。7.5: Core `+` 3 行（註だけ）・REF 0・OWN 0。7.6／7.7: 該当なし。commit `0d0d6079c`（註＋棚卸し）＋ docs の commit。Lab は sessions/p798 だけ commit。push はユーザー。
+判定: GO の 4 件は全部閉じた。次の候補（第797 の棚卸しから・どれも着手前に実コードで確認）: ⒜ H の 3 つ（旗の reach −0.18・`ChordNameEngraver` の幅の床 `Math.Max(2.0)`・beam-auto の 1 段目の改行位置）／⒝ F ⑷ `lyrics NAME` の名指し損ねが黙って第 1 声部に付く＝error か warning かユーザー判断／⒞ F ⒨ `lysc svg --combined` の例外・双子が chords／lyrics 行を出せない 5 冊。どれも小さい島＝ユーザーの指定待ち。会話を区切るか: (b) 便が 5 つ続き文脈が重い＝**区切る側**（続けるなら `-Start p799`）。
+
 ## 以下は第797セッションの経緯
 
 ### 1.1 第797セッション（2026-10-04・YT-DELL2）

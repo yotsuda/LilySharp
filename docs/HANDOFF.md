@@ -115,6 +115,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第800セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザー「続けて」。第799 の候補 ⒜ H の 3 つのうち、計器も直し方も分かっている `ChordNameEngraver` の幅の床から。`-Start p800`（HEAD `8dad58a0`・未 push 8）＝full **11024 / 0 / 2 / 11026**。§7 3.5 で第798 を ARCHIVE へ。
+- **H「`ChordNameEngraver.SymbolWidth` の `Math.Max(2.0, …)` の床」＝消した**（LILYSHARP-OWN・LP の ChordName の extent は stencil のまま＝define-grobs.scm:837-855 に床は無い）。床を見ていたのは engraver の読者 5 人（inline との干渉 `Meets`・行の床 `MaxProtrusionInRange` 2 軒・隣との `ClearOfPrevious`・行 skyline の `MergeBox`）だけで、**spacing（`SpacingRules.ApplyChordRowSpacing`）は元から床なしの `FootprintWidth`**＝同じ量の 2 綴り（§7.7）。`SymbolWidth` を消して全員 `FootprintWidth`（1 綴り・OWN 216→215）。
+- 掃き（`p723/svg2/sweep-all.ps1`・base＝`p800/exe-base`・head＝`p800/exe-head`・`sweep.log`）: **998 冊 1,199 枚中 差 1**＝`site/rising-sun.lys`（chords 行が 0.04 ss 譜に寄る＝頁 97.43→97.40。1 文字の "C"・"D"・"F" の footprint 2.0→1.89 で、右隣の高い物に届かなくなった分＝床が消えた向き）。snapshot 247 枚不動・`~ChordName` 152 緑。
+- 網は足していない: 消したのは分岐ではなく定数で、許可した観測者は掃き（動いた 1 冊の向きの説明）＋snapshot 247（§7.6 ⒟）。床を戻す形は `LpProvenanceTests` が数値定数として捕まえる。
+- 棚卸し `APPROXIMATIONS.md` 再生成（OWN −1・行番号 1 行・LF→CRLF 揃え直し済み）。CHANGELOG Fixes 1 項。
+- H の残り 2 つは未着手: 旗の reach −0.18（LP 側の機構が未特定＝`pcdump.ily` で旗付き対の WISH/min_dist を吐かせるのが次）・beam-auto の 1 段目の改行位置（縦線 3 対 5＝計器から）。
+★ `-End p800 -DiffBase 8dad58a0`（`end1.log`）＝full **11024 / 0 / 2 / 11026**（網 ±0）・門 全 OK（HANDOFF 437,165 B・残り 12,835）。7.5: Core `+` 15 行・REF 0・OWN 0＝足したのは doc コメント（`FootprintWidth` の summary に「床は無い・第800 までは 2 綴り」）と呼び手の綴り替えだけ・新しい定数なし。7.6: ⒟ 発明の削除（許可した観測者＝掃き 1 冊の向き＋snapshot 247）。7.7: 「同じ量の 2 つ目の綴り」を 1 つに畳んだ側＝匂いは消えた方向・guard／sentinel／fallback なし。commit `5d20ce08b`（code・CHANGELOG・棚卸し）＋ docs の commit。Lab は sessions/p800 を commit。push はユーザー。
+判定: H の床は閉じた。次の候補（着手前に実コードで確認）: ⒜ H の残り 2 つ（旗の reach −0.18＝LP の機構が未特定・計器が先／beam-auto の 1 段目の改行位置＝計器が先）／⒝ F ⑷ `lyrics NAME`＝error か warning かユーザー判断／⒞′ 双子の chords／lyrics 行（5 冊・exporter の設計）。どれも「小さく閉じる」型ではない＝次は計器か設計かユーザー判断。会話を区切るか: (a) H の残りは今便の文脈（ChordNameEngraver）を使わない／(b) 会話はまだ軽い＝**既定どおり続ける**（`-Start p801`）。
+
+## 以下は第799セッションの経緯
+
 ### 1.1 第799セッション（2026-10-04・YT-DELL2）
 
 新しい会話。ユーザー「HANDOFF を読んで作業に着手して」＝候補の指定なし → 第798 の 3 候補のうちユーザー判断が要らない ⒞ F ⒨ から。`-Start p799`（HEAD `e1c99153`・未 push 6）＝full **11023 / 0 / 2 / 11025**。§7 3.5 で第797 を ARCHIVE へ。
@@ -126,18 +139,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 罠 1 つ（Lab OPERATIONS §1 に足した）: `cmd /d /s /c "dotnet test … --filter "A|B" < NUL …"` は内側の `"` で引用が切れて `|` がパイプになる（`'B' is not recognized as an internal or external command`・test は走らず log 2 行）＝`^|` でエスケープし filter は引用符なしで書く。
 ★ `-End p799 -DiffBase e1c99153`（`end1.log`）＝full **11024 / 0 / 2 / 11026**（網 +1）・門 全 OK（HANDOFF 436,725 B・残り 13,275）。7.5: Core `+` 14 行・REF 0・OWN 0＝監査対象だが、足したのは「文書が空文字列なら movement に数えない」の分岐と `<svg` 無しの Empty 返しだけ（数値定数なし・LP の量を綴っていない）。7.6: ⒟ 何も足していない側（book.cc の空 score の扱いは読んでいない＝新しい REF は要らない・`GenerateMultiMovement` の既存 REF が住所）。7.7: `svg.Length == 0` の skip は「fallback で握りつぶす」の顔だが、空文字列は `SvgDocumentContext.Assemble` が頁 0 に返す*定義済みの答え*で、観測者は新しい網＝黙った既定値ではない。commit `37663beac`（code・網・CHANGELOG）＋ docs の commit。Lab は sessions/p799 と notes/CLAUDE-OPERATIONS.md を commit。push はユーザー。
 判定: ⒞ の前半（例外）は閉じた。次の候補（第798 の一覧の残り・着手前に実コードで確認）: ⒜ H の 3 つ（旗の reach −0.18・`ChordNameEngraver` の幅の床 `Math.Max(2.0)`・beam-auto の 1 段目の改行位置）／⒝ F ⑷ `lyrics NAME`＝error か warning かユーザー判断／⒞′ 双子の chords／lyrics 行（5 冊・exporter の設計）。会話を区切るか: (a) 次の島はこの便の文脈（`SvgGenerator`・CLI の stack）を使わない／(b) 会話はまだ軽い＝**既定どおり続ける**（`-Start p800`）。
-
-## 以下は第798セッションの経緯
-
-### 1.1 第798セッション（2026-10-04・YT-DELL2）
-
-同じ会話の続き・GO の順の 3 つ目と 4 つ目。`-Start p798`（HEAD `c98bfa3f`・未 push 4）＝full **11023 / 0 / 2 / 11025**。§7 3.5 で第796 を ARCHIVE へ。
-- **F 繰り返し⑹「section 音楽中の片側 `:|` を MIDI が鳴らさない」＝問いが消えていた**: probe（Lab `sessions/p798/probe/a..d.lys`）を `lysc midi` に通すと 4 形とも **LYS1034 error**＝2026-08-31（`78a2ef89`）から反復縦線は form にしか書けない。起票は第174（2026-08-15）で、その 2 週間後に綴りごと退いていた。§2 F の ⑹ を ✅ に・`MidiExporter.ProcessSequence` の註に「以後はエラー本の MIDI のために残る腕」と追記（Core は註だけ）。
-- **E 加線「`LedgerLineSpanner` の短縮が未移植・新しい engraver が要る」＝既に移植済み**: 第564（`dc3928e4`・2026-09-24）が `SharedRenderer.Noteheads.cs` の `CollectLedgerRequest`／`DrawPlannedLedgers` に `ledger-line-spanner.cc:216-408` を字面移植（隣接列の短縮・gap 0.1・臨時記号の glyph 固有の短縮範囲・同列の結合・Lab `p564` で LP と一致）。§2 E の行（第39 起票）は stale＝✅ に書き換えた。残るのは `ledger_positions`（線位置を変えた譜）だけ（本 0）。
-- ⇒ **GO の 4 件の内訳: 直した 1（tie の音高照合・第797）・既に閉じていた 2（tie の臨時記号＝第658 `d4ecf4d2`・加線＝第564）・言語が退けた 1（片側 `:|`＝LYS1034）**。教訓: §2 の「伝聞」の札は本物で、着手前の実コード確認（probe 1 本＋`git log -S`）で 3 件が 1 便未満で畳めた。subagent の §2 要約も stale をそのまま拾う＝要約は候補の列挙にだけ使い、着手判断は実コードで。
-- 出力不変（註と docs だけ）・掃き不要・snapshot 不動。棚卸し `APPROXIMATIONS.md` 行番号 1 行（註 3 行で MidiExporter の OWN が動いた＝1 度目の `-End` が `TheInventoryIsNotStale` で 1 赤・再生成して 2 度目で緑）。
-★ `-End p798 -DiffBase c98bfa3f`（`end2.log`）＝full **11023 / 0 / 2 / 11025**（網 ±0）・門 全 OK（HANDOFF 436,162 B・残り 13,838）。7.5: Core `+` 3 行（註だけ）・REF 0・OWN 0。7.6／7.7: 該当なし。commit `0d0d6079c`（註＋棚卸し）＋ docs の commit。Lab は sessions/p798 だけ commit。push はユーザー。
-判定: GO の 4 件は全部閉じた。次の候補（第797 の棚卸しから・どれも着手前に実コードで確認）: ⒜ H の 3 つ（旗の reach −0.18・`ChordNameEngraver` の幅の床 `Math.Max(2.0)`・beam-auto の 1 段目の改行位置）／⒝ F ⑷ `lyrics NAME` の名指し損ねが黙って第 1 声部に付く＝error か warning かユーザー判断／⒞ F ⒨ `lysc svg --combined` の例外・双子が chords／lyrics 行を出せない 5 冊。どれも小さい島＝ユーザーの指定待ち。会話を区切るか: (b) 便が 5 つ続き文脈が重い＝**区切る側**（続けるなら `-Start p799`）。
 
 ## 2. 開いている作業
 
@@ -2293,8 +2294,8 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   **発散側だけが動いた**＝**恒等の対が「修理が形の項に効いた」ことを言っている**（§5.0）。
   ⚠️ **⑴ の*モデル*の話（独立列を持たない）は残っている**——**閉じたのは点であって列ではない。**
 - ~~**中心合わせされた 2 つの text grob**~~ — **両方とも片付いた**（和音記号 `7e7fe5cb`・
-  音節 `df8fb3e4`）。⚠️ ただし `ChordNameEngraver` の `Math.Max(2.0, …)` 幅の床は**残っている**
-  （`LILYSHARP-OWN` と明示済・1 文字の "C" 1.877882 を上書きするので**実際に効く**）
+  音節 `df8fb3e4`）。✅ `ChordNameEngraver` の `Math.Max(2.0, …)` 幅の床は**第800 で消した**
+  （spacing は元から床なし＝同じ量の 2 綴りを 1 つに・掃き 998 冊で動いた本 1 冊 0.04 ss・§1.1 第800）
 - ⚠️ **`KnuthPlassBreaker` は `LpProvenanceTests` の監視範囲外**＝§5.2.1① の網の穴。
   `OverfullPenalty` の誤った `LILYPOND-REF` が何年も生き延びたのはそのため
 
