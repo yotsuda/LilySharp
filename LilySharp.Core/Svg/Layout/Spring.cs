@@ -236,13 +236,31 @@ internal sealed record Spring
     /// blocking force is raised to the force at which it reaches the distance. The arithmetic is
     /// <see cref="SpringSolver.ApplyRods"/>'s, over the one part.
     /// </remarks>
-    internal Spring WithPartRod(int part, double distance)
+    internal Spring WithPartRod(int part, double distance) => WithRangeRod(part, part + 1, distance);
+
+    /// <summary>
+    /// A rod over the parts [<paramref name="first"/>, <paramref name="end"/>) of this series
+    /// spring — LilyPond's rod between two columns with others between them (a slur from the
+    /// note before a mid-measure change to the note after it).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/simple-spacer.cc:89-127 Simple_spacer::add_rod — over the range [l, r): dropped when the
+    /// springs' minimums already sum past the distance, otherwise every spring of the range has
+    /// its blocking force raised to the force at which the range reaches the distance.
+    /// </remarks>
+    internal Spring WithRangeRod(int first, int end, double distance)
     {
-        var rodded = SpringSolver.ApplyRods(
-            ImmutableArray.Create(Series[part]), new[] { (0, 1, distance) })[0];
-        if (ReferenceEquals(rodded, Series[part]))
+        var range = Series.Slice(first, end - first);
+        var rodded = SpringSolver.ApplyRods(range, new[] { (0, end - first, distance) });
+        bool moved = false;
+        for (int k = 0; k < rodded.Length; k++)
+            moved |= !ReferenceEquals(rodded[k], range[k]);
+        if (!moved)
             return this;
-        var parts = Series.SetItem(part, rodded);
+        var builder = Series.ToBuilder();
+        for (int k = 0; k < rodded.Length; k++)
+            builder[first + k] = rodded[k];
+        var parts = builder.MoveToImmutable();
         return InSeries(parts, Math.Max(MinDistance, LengthOf(parts, double.NegativeInfinity)));
     }
 

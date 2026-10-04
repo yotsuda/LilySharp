@@ -1063,6 +1063,25 @@ internal sealed class MeasureLayouter
         //   column of the same moment.
         if (changeGaps is { } gaps)
         {
+            // With no grace run after the change, the slot holds exactly LilyPond's two
+            // springs — Note_spacing into the change column, Staff_spacing out of it — and
+            // they go in as one series spring, each part on its own strengths and rod
+            // (SpacingRules.MidMeasureChangeSeries). The pair's own rods (a slur, a tremolo,
+            // the two note columns' separation) span both parts: add_rod over the range.
+            // ⚠️ No book observes the range rod (session 810's poison no. 5 dropped it: every
+            // test green) — the two parts' own minimums already sum past it in every shape
+            // measured.
+            // Nothing else below applies: the left wish's headroom is in its ideal, the
+            // right one's is in Staff_spacing's 0.3, and no grace follows.
+            // LILYPOND-REF: lily/simple-spacer.cc:89-127 Simple_spacer::add_rod — a rod over a range of springs.
+            if (SpacingRules.LeadingGracePrefixWidth(nextItems) <= 0)
+            {
+                var series = SpacingRules.MidMeasureChangeSeries(fonts, nextItems, prevItems, gaps, spring);
+                return maxRod > 0 ? series.WithRangeRod(0, series.Series.Length, maxRod) : series;
+            }
+            // ⚠️ A GRACE RUN AFTER THE CHANGE still takes the one spring both gaps were folded
+            // into, with the run hung off it below (HANDOFF §2 B: the clef → grace order puts
+            // LilyPond's 0.8 on both springs and ends the right one at the grace column).
             spring = new Spring(
                 gaps.TotalIdeal,
                 Math.Max(spring.MinDistance, gaps.MinDistance),

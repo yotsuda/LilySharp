@@ -1148,8 +1148,8 @@ internal sealed class SkylineBuilder
 
         var columnItems = Rendering.SharedRenderer.ChangeColumnItems(measure, itemIndex);
         double hung = itemX;
-        hung -= ml.LooseChangeHangs != null
-                && ml.LooseChangeHangs.TryGetValue(timing, out var hang)
+        hung -= ml.ChangeColumnHangs != null
+                && ml.ChangeColumnHangs.TryGetValue(timing, out var hang)
             ? hang
             : SpacingRules.MidMeasureChangeRightGap(fonts, columnItems);
         hung += SpacingRules.MidMeasureChangeOffsetWithin(fonts, columnItems, measure.Items[itemIndex]);

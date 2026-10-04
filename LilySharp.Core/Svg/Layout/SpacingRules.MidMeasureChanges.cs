@@ -28,12 +28,16 @@ internal static partial class SpacingRules
     /// </summary>
     /// <param name="LeftGap">Previous musical column → the change column's origin.</param>
     /// <param name="RightGap">The change column's origin → the next musical column.</param>
-    /// <param name="MinDistance">Minimum for the two together (the rods, summed).</param>
+    /// <param name="LeftMinDistance">The left spring's minimum — Note_spacing's skyline <c>min_dist</c>.</param>
+    /// <param name="RightMinDistance">The right spring's minimum — Staff_spacing's <c>Paper_column::minimum_distance</c>.</param>
     internal readonly record struct MidMeasureChangeSpacing(
-        double LeftGap, double RightGap, double MinDistance)
+        double LeftGap, double RightGap, double LeftMinDistance, double RightMinDistance)
     {
         /// <summary>Previous musical column → the next one, i.e. what one spring must span.</summary>
         public double TotalIdeal => LeftGap + RightGap;
+
+        /// <summary>Minimum for the two together (the two springs' minimums, summed).</summary>
+        public double MinDistance => LeftMinDistance + RightMinDistance;
     }
 
     /// <summary>
@@ -352,12 +356,11 @@ internal static partial class SpacingRules
     /// when a wide accidental on the next note would otherwise collide.
     /// </para>
     /// <para>
-    /// ⚠️ NOT modelled: LilyPond has TWO springs here and Lily# still has one, so the split
-    /// is exact only at force 0 (which is where the corpus measures). Under justification
-    /// LilyPond stretches the two independently, and for a key or time change the right one
-    /// does not stretch at all (shrink-space / semi-shrink-space set
-    /// <c>is_stretchable = false</c>, staff-spacing.cc:191, :197). Fixing that needs the real
-    /// second column — the same work roadmap item 3 needs at a bar line.
+    /// These are the two springs' IDEALS and MINIMUMS. Their strengths and rods are
+    /// <see cref="MidMeasureChangeSeries"/>'s, which puts both in the timing slot as one series
+    /// spring (session 810: until then one spring carried the pair and the split was exact only
+    /// at force 0). ⚠️ When a GRACE RUN follows the change the slot still folds both into one
+    /// spring (MeasureLayouter.CreateInterColumnSpring), the order HANDOFF §2 B is porting.
     /// </para>
     /// </remarks>
     internal static MidMeasureChangeSpacing? MidMeasureChangeGaps(
@@ -392,7 +395,143 @@ internal static partial class SpacingRules
         double rightRod = RightRod(fonts, columnItems, columnWidth, lastChange!);
         double rightGap = RightGap(columnWidth, lastChange!, rightRod);
 
-        return new MidMeasureChangeSpacing(leftGap, rightGap, leftRod + rightRod);
+        return new MidMeasureChangeSpacing(leftGap, rightGap, leftRod, rightRod);
+    }
+
+    /// <summary>
+    /// The pair across a mid-measure change column as LilyPond springs it: the Note_spacing
+    /// spring into the column and the Staff_spacing spring out of it, IN SERIES — one timing
+    /// slot of Lily#'s holds both, and under one force each part keeps its own strengths, its
+    /// own minimum and its own column rod.
+    /// </summary>
+    /// <param name="columnItems">Everything starting at this timing (the change items and the
+    /// note(s) after them).</param>
+    /// <param name="prevItems">Everything at the previous column.</param>
+    /// <param name="gaps">This pair's <see cref="MidMeasureChangeGaps"/>.</param>
+    /// <param name="noteSpring">The note spring the left wish was built on — the duration spring
+    /// with the left head width (lily/note-spacing.cc:77 Note_spacing::get_spacing), whose strengths the wish keeps.</param>
+    /// <remarks>
+    /// <para>
+    /// LEFT — lily/spacing-spanner.cc:322-393 musical_column_spacing: Note_spacing::get_spacing
+    /// moves the ideal (:77, :103-108, :113) and puts the skyline <c>min_dist</c> under it (:83)
+    /// through setters that keep the note spring's strengths (lily/spring.cc:131-153 Spring::set_ideal_distance, Spring::set_min_distance), and
+    /// merge_springs lifts the ideal to min + 0.3 (lily/spring.cc:122 merge_springs). Both are
+    /// <paramref name="gaps"/>' LeftGap and LeftMinDistance.
+    /// </para>
+    /// <para>
+    /// RIGHT — lily/spacing-spanner.cc:478-536 breakable_column_spacing (dt == 0) builds it with
+    /// Staff_spacing::get_spacing (<see cref="ChangeColumnStaffSpacing"/>).
+    /// ⒝ ONE WISH: LilyPond merges one Staff_spacing per staff, each from its own staff's last
+    /// break-aligned grob; Lily#'s column walk takes the widest grob of each kind across the
+    /// staves (<see cref="MeasureChangeColumn"/>), as the force-0 gaps always have. A single
+    /// wish's merge_springs changes nothing here: its ideal already stands at least 0.3 over
+    /// its minimum (staff-spacing.cc:212-215).
+    /// </para>
+    /// <para>
+    /// RODS — lily/spacing-spanner.cc:228-297 set_column_rods puts a rod on each adjacent pair,
+    /// lily/separation-item.cc:47-68 set_distance: padding plus the left column's right skyline
+    /// against the right column's left one, raised only when positive. They stand on the parts
+    /// (<see cref="Spring.WithPartRod"/>). ⚠️ NOTHING IN THE SUITE OBSERVES THE RIGHT ONE:
+    /// dropping it leaves every test green (session 810's poison no. 3) — it stands 0.1 over the
+    /// right spring's own minimum, and no book compresses a change column's right gap that far.
+    /// The left one is observed (ledger midmeasure.force.compress.key.prev-note-to-key).
+    /// </para>
+    /// <para>
+    /// Until session 810 the two gaps rode ONE spring with the note spring's strengths and the
+    /// renderer hung the glyph back by the force-0 right gap, exact only on a ragged line:
+    /// MEASURED (2.26.0, audit/lp-geometry/probes/midmeasure-force.ly), a clef's right gap
+    /// stretches with its line (3.146600 → 7.500316 on 100mm) and a key's does not, and on a
+    /// 36mm line the key's left spring stops at its rod 1.504200 where the one spring drew the
+    /// signature over the previous head (ledger midmeasure.force.*).
+    /// </para>
+    /// </remarks>
+    internal static Spring MidMeasureChangeSeries(
+        Rendering.ScoreTextMetrics fonts,
+        in ItemColumn columnItems, in ItemColumn prevItems,
+        in MidMeasureChangeSpacing gaps, Spring noteSpring)
+    {
+        var (columnWidth, _, lastChange) = MeasureChangeColumn(fonts, columnItems);
+        var left = new Spring(gaps.LeftGap, gaps.LeftMinDistance,
+                              noteSpring.InverseStretchStrength, noteSpring.InverseCompressStrength);
+        var right = ChangeColumnStaffSpacing(columnWidth, lastChange!, gaps.RightMinDistance);
+        var series = Spring.InSeries(ImmutableArray.Create(left, right),
+                                     left.MinDistance + right.MinDistance);
+
+        double leftRod = SeparationRodPadding + ChangeColumnLeftSeparation(fonts, columnItems, prevItems);
+        if (leftRod > 0)
+            series = series.WithPartRod(0, leftRod);
+        double rightRod = SeparationRodPadding + RightSkylineDistance(fonts, columnItems, columnWidth, lastChange!);
+        if (rightRod > 0)
+            series = series.WithPartRod(1, rightRod);
+        return series;
+    }
+
+    /// <summary>
+    /// The previous column's right skyline against the change column's left one — the distance
+    /// <c>Separation_item::set_distance</c> pads into the left column rod. Negative infinity when
+    /// no previous item stands in a column.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/separation-item.cc:47-68 Separation_item::set_distance — <c>lines[LEFT][RIGHT].distance (right)</c>
+    ///   over the columns' horizontal-skylines, each padded by its own skyline-vertical-padding when it was
+    ///   built (:105-108): the musical column's (<see cref="ItemSkylineFactory.SharedRightSkylineAtColumn"/>),
+    ///   none for a NonMusicalPaperColumn (<see cref="NonMusicalColumnSkylineVerticalPadding"/>).
+    /// The wish's skyline (<see cref="ChangeColumnLeftMinDistance"/>) is the other reading of the
+    /// same pair: the note column alone, no dots. Pairs taken in one staff frame, as there.
+    /// </remarks>
+    private static double ChangeColumnLeftSeparation(
+        Rendering.ScoreTextMetrics fonts, in ItemColumn columnItems, in ItemColumn prevItems)
+    {
+        var changeLeft = ChangeColumnLeftSkyline(fonts, columnItems, prevItems);
+        double distance = double.NegativeInfinity;
+        for (int q = 0; q < prevItems.Count; q++)
+        {
+            if (IsChangeItem(prevItems[q]))
+                continue;
+            var prevRight = ItemSkylineFactory.SharedRightSkylineAtColumn(prevItems[q], 0.0, 0.0);
+            distance = Math.Max(distance, prevRight.Distance(changeLeft));
+        }
+        return distance;
+    }
+
+    /// <summary>
+    /// <c>Staff_spacing::get_spacing</c> from a mid-measure change column to the musical column
+    /// after it: the spring, with the strengths the space-alist entry gives it.
+    /// </summary>
+    /// <param name="columnWidth">The change column's extent right of its origin — <c>last_ext[RIGHT]</c>.</param>
+    /// <param name="lastChange">The column's rightmost break-aligned grob, whose space-alist is read.</param>
+    /// <param name="minDistance"><c>Paper_column::minimum_distance</c> (<see cref="RightRod"/>).</param>
+    /// <remarks>
+    /// LILYPOND-REF: lily/staff-spacing.cc:117-221 Staff_spacing::get_spacing —
+    /// :166-198 fixed and ideal by the entry's type (<see cref="ChangeItemSpaceDef"/>);
+    /// :200 stretchability, taken BEFORE the corrections; :204 situational_space, 0 off a bar
+    /// line (only full-measure-extra-space feeds it, spacing-spanner.cc:484-489); :206-208 the
+    /// optical correction, 0 here — next_notes_correction reads the last grob's bar extent and a
+    /// change grob has none (:72-93 bar_y_positions); :212-215 the 0.3 floor on fixed;
+    /// :217-219 the spring.
+    /// </remarks>
+    private static Spring ChangeColumnStaffSpacing(double columnWidth, MusicItem lastChange, double minDistance)
+    {
+        var (distance, splitsFixed, stretchable) = ChangeItemSpaceDef(lastChange);
+        double fixedDistance = columnWidth;
+        double ideal;
+        if (splitsFixed)
+        {
+            fixedDistance += distance / 2;
+            ideal = fixedDistance + distance / 2;
+        }
+        else
+            ideal = fixedDistance + distance;
+
+        double stretchability = stretchable ? ideal - fixedDistance : 0;
+
+        double minDistanceCorrection = Math.Max(0.0, StaffSpacingFixedHeadroom + minDistance - fixedDistance);
+        fixedDistance += minDistanceCorrection;
+        ideal = Math.Max(ideal, fixedDistance);
+
+        return new Spring(ideal, minDistance,
+                          Math.Max(0.0, stretchability),
+                          Math.Max(0.0, ideal - fixedDistance));
     }
 
     /// <summary>
@@ -755,8 +894,18 @@ internal static partial class SpacingRules
     /// </remarks>
     private static double RightRod(
         Rendering.ScoreTextMetrics fonts, in ItemColumn columnItems, double columnWidth, MusicItem lastChange)
+        => Math.Max(0.0, RightSkylineDistance(fonts, columnItems, columnWidth, lastChange));
+
+    /// <summary>
+    /// <see cref="RightRod"/> before its clamp at 0 — the distance <c>Separation_item::set_distance</c>
+    /// pads into the column rod (lily/separation-item.cc:47-68 Separation_item::set_distance: the rod is raised when padding
+    /// plus this is positive, so a negative distance still counts). Negative infinity when only
+    /// change items stand at this moment.
+    /// </summary>
+    private static double RightSkylineDistance(
+        Rendering.ScoreTextMetrics fonts, in ItemColumn columnItems, double columnWidth, MusicItem lastChange)
     {
-        double rod = 0.0;
+        double rod = double.NegativeInfinity;
         HorizontalSkyline? changeRight = null;
         for (int q = 0; q < columnItems.Count; q++)
         {
@@ -786,10 +935,10 @@ internal static partial class SpacingRules
     /// one whose right edge is largest), which under break-align-orders is the last of
     /// clef / key / time present.
     /// LILYPOND-REF: lily/staff-spacing.cc:166-175 (ideal), :213-215 (the 0.3 correction).
+    /// The ideal of <see cref="ChangeColumnStaffSpacing"/>, the one implementation.
     /// </remarks>
     private static double RightGap(double columnWidth, MusicItem lastChange, double rightRod) =>
-        Math.Max(columnWidth + ChangeItemSpaceToNextNote(lastChange),
-                 SpringHeadroom + rightRod);
+        ChangeColumnStaffSpacing(columnWidth, lastChange, rightRod).IdealDistance;
 
     // ========================================
     // Loose change columns (multi-staff polyphony)

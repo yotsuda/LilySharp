@@ -367,7 +367,7 @@ internal sealed class ElementCoordinator
                 score.Voices[group.VoiceIndex].Measures[group.MeasureIndex],
                 group,
                 itemXPositions,
-                score.TextMetrics, fromColumns);
+                score.TextMetrics, fromColumns, measureLayout.ChangeColumnHangs);
 
             // Also keep the beam clear of the OTHER voices' notes/rests (a
             // polyphonic staff's stem-up beam rides over a high note held below).
@@ -602,7 +602,8 @@ internal sealed class ElementCoordinator
         BeamGroup group,
         IReadOnlyList<double> itemXPositions,
         Rendering.ScoreTextMetrics fonts,
-        bool fromColumns)
+        bool fromColumns,
+        ImmutableDictionary<Fraction, double>? changeHangs)
     {
         List<BeamCollision>? collisions = null;
         var beamMemberIndices = new HashSet<int>(group.Members.Select(m => m.ItemIndex));
@@ -655,7 +656,7 @@ internal sealed class ElementCoordinator
             if (item is ClefChangeItem or KeySignatureChangeItem)
             {
                 if (i > firstMemberIndex && i < lastMemberIndex)
-                    AddChangeCollisions(ref collisions, fonts, measure, i, itemX, fromColumns,
+                    AddChangeCollisions(ref collisions, fonts, measure, i, itemX, fromColumns, changeHangs,
                                         beamEdgeLeftX, beamEdgeRightX, beamOriginX);
                 continue;
             }
@@ -680,10 +681,13 @@ internal sealed class ElementCoordinator
     ///   fall in; KeyCancellation carries key-signature-interface too. Booked like every
     ///   covered box (<see cref="AddBoxCollision"/>, beam-quanting.cc:377-392).
     /// The x is the one the renderer draws the change at (SharedRenderer's change-column arm:
-    /// the musical column hung back by <see cref="SpacingRules.MidMeasureChangeRightGap"/>,
-    /// then <see cref="SpacingRules.MidMeasureChangeOffsetWithin"/>); on the item-slot path
-    /// the change has its own slot. A LOOSE change column's stored hang is not read — the
-    /// renderer reads it only for multi-staff polyphony a beam across a change never met.
+    /// the musical column hung back by the measure's solved hang
+    /// (<see cref="MeasureLayout.ChangeColumnHangs"/>, else
+    /// <see cref="SpacingRules.MidMeasureChangeRightGap"/>), then
+    /// <see cref="SpacingRules.MidMeasureChangeOffsetWithin"/>); on the item-slot path the
+    /// change has its own slot. ⚠️ No book observes the solved hang HERE (session 810's poison
+    /// no. 7 read the force-0 gap instead: every test green) — no beam in the suite runs over a
+    /// mid-measure change on a line off force 0.
     /// ⚠️ NOT BOOKED, and not reached by any book: a CUE clef (drawn from the plain glyph
     /// shrunk), a percussion clef change (no change-glyph box in the metrics), the clef
     /// modifier's 8, and a meter change (BeamDetector still ends the beam there).
@@ -691,6 +695,7 @@ internal sealed class ElementCoordinator
     private static void AddChangeCollisions(
         ref List<BeamCollision>? collisions, Rendering.ScoreTextMetrics fonts, Measure measure,
         int itemIndex, double columnX, bool fromColumns,
+        ImmutableDictionary<Fraction, double>? changeHangs,
         double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX)
     {
         var item = measure.Items[itemIndex];
@@ -698,8 +703,13 @@ internal sealed class ElementCoordinator
         if (fromColumns)
         {
             var columnItems = Rendering.SharedRenderer.ChangeColumnItems(measure, itemIndex);
+            var timing = Fraction.Zero;
+            for (int k = 0; k < itemIndex; k++)
+                timing += measure.Items[k].Duration;
             x += SpacingRules.MidMeasureChangeOffsetWithin(fonts, columnItems, item)
-                 - SpacingRules.MidMeasureChangeRightGap(fonts, columnItems);
+                 - (changeHangs != null && changeHangs.TryGetValue(timing, out var hang)
+                     ? hang
+                     : SpacingRules.MidMeasureChangeRightGap(fonts, columnItems));
         }
 
         switch (item)

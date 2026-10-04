@@ -64,14 +64,22 @@ internal sealed record MeasureLayout
     public double SpringForce { get; init; }
 
     /// <summary>
-    /// Per change-column hang distances for LOOSE mid-measure change columns, keyed by the
-    /// moment the change shares with its note. Null (the overwhelmingly common case) when
-    /// this measure has no loose column. The renderer hangs the change glyphs back from the
-    /// note column by this distance instead of the spring-charged
-    /// <see cref="SpacingRules.MidMeasureChangeRightGap"/>, because a pruned column's room
-    /// is not in the springs at all — see <see cref="SpacingRules.LooseChangeColumnHangDistance"/>.
+    /// Per change-column hang distances for mid-measure change columns, keyed by the moment
+    /// the change shares with its note: how far the column's origin stands before that note's
+    /// column on the SOLVED line. Null (the overwhelmingly common case) when this measure has
+    /// no change column. The renderer hangs the change glyphs back from the note column by
+    /// this distance; a column with no entry falls back on the force-0
+    /// <see cref="SpacingRules.MidMeasureChangeRightGap"/>.
     /// </summary>
-    public ImmutableDictionary<Fraction, double>? LooseChangeHangs { get; init; }
+    /// <remarks>
+    /// Two kinds of entry. A LOOSE column's room is not in the springs at all — see
+    /// <see cref="SpacingRules.LooseChangeColumnHangDistance"/>. A column IN the springs is
+    /// the right part of the slot's series spring at the line's force
+    /// (<see cref="SpacingRules.MidMeasureChangeSeries"/>): LilyPond's Staff_spacing spring
+    /// stretches and compresses with the line, so the force-0 gap is right only on a ragged
+    /// one (session 810).
+    /// </remarks>
+    public ImmutableDictionary<Fraction, double>? ChangeColumnHangs { get; init; }
 
     /// <summary>
     /// Creates a MeasureLayout with item-based positioning (for single-staff scores).
@@ -102,7 +110,7 @@ internal sealed record MeasureLayout
     /// per-system memo hands back when it serves a system found under other numbers
     /// (<see cref="SystemLayoutCache"/>).</summary>
     public MeasureLayout WithMeasureIndex(int measureIndex)
-        => new(measureIndex, X, Width, Items, Columns) { LooseChangeHangs = LooseChangeHangs };
+        => new(measureIndex, X, Width, Items, Columns) { ChangeColumnHangs = ChangeColumnHangs };
 
     /// <summary>
     /// Gets the X coordinate for a given timing within this measure.

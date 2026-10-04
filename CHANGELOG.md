@@ -400,7 +400,10 @@ workflow attaches that section to the GitHub Release verbatim.
   reaches every neighbour's height. And after a lone flagged eighth, a clef or key change now
   keeps LilyPond's breathing room past the flag (0.18 / 0.13 more). On the far side, a sharp or
   flat on the note after a mid-measure clef no longer pushes it away when it stands above or below
-  the clef: it tucks under the clef as in LilyPond, 1.05 closer.
+  the clef: it tucks under the clef as in LilyPond, 1.05 closer. And on a line that is stretched
+  or squeezed, the two sides of the change now give the way LilyPond's do: the space after a clef
+  widens with the line (after a key or meter change it stays put), and on a tight line a key
+  change stops at the note before it instead of being drawn over it.
 - **A line that ends in a courtesy for a key with no signature.** When the next line opens in
   C major or A minor, the end-of-line courtesy is a cancellation with no signature after it —
   or nothing at all, from C major to A minor — and the group was still spaced as

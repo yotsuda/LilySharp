@@ -2205,9 +2205,9 @@ internal sealed class MultiStaffLayouter
             var measureLayout = new MeasureLayout(measureIndex, currentX, measureWidth, itemLayouts, columnLayouts)
             {
                 SpringForce = force,
-                LooseChangeHangs = ComputeLooseChangeHangs(
+                ChangeColumnHangs = ComputeChangeColumnHangs(
                     score.TextMetrics, measureAllMeasures[i], measureTimings[i],
-                    measureColumnOverhangs[i].Right, columnLayouts),
+                    measureColumnOverhangs[i].Right, columnLayouts, measureSprings[i], force),
             };
             layouts.Add(measureLayout);
             currentX += measureLayout.Width;
@@ -2217,22 +2217,28 @@ internal sealed class MultiStaffLayouter
     }
 
     /// <summary>
-    /// Hang distances for this measure's LOOSE mid-measure change columns, computed from
-    /// the SOLVED column positions — the scale factor needs the room the line actually
-    /// left, so this cannot run until after the springs are solved. Null when the measure
-    /// has none, which is nearly every measure.
+    /// Hang distances for this measure's mid-measure change columns on the SOLVED line —
+    /// a loose column's scale factor needs the room the line actually left, and a column in
+    /// the springs stands where its right spring's solved length puts it, so this cannot run
+    /// until after the springs are solved. Null when the measure has none, which is nearly
+    /// every measure.
     /// </summary>
+    /// <param name="springs">The measure's springs as the line was solved — rods applied.</param>
+    /// <param name="force">The line's force.</param>
     /// <remarks>
     /// The loose decision here must match the one CreateInterColumnSpring made when it
     /// pruned the column from the springs — both call the same
     /// <see cref="SpacingRules.IsLooseChangeColumn"/> on the same inputs.
     /// LILYPOND-REF: lily/spacing-loose-columns.cc:33-222 set_loose_columns — loose columns
     ///   are draped around the columns in between-cols after the line is solved.
+    /// LILYPOND-REF: lily/spring.cc:218-237 Spring::length — ideal_distance_ + force × inv_k: a column in the
+    ///   springs stands its right spring's length at the line's force before the next column.
     /// </remarks>
-    private static ImmutableDictionary<Fraction, double>? ComputeLooseChangeHangs(
+    private static ImmutableDictionary<Fraction, double>? ComputeChangeColumnHangs(
         Rendering.ScoreTextMetrics fonts,
         List<Measure> allMeasures, List<Fraction> allTimings,
-        double[] columnInkRight, ImmutableArray<ColumnLayout> columns)
+        double[] columnInkRight, ImmutableArray<ColumnLayout> columns,
+        ImmutableArray<Spring> springs, double force)
     {
         if (columns.IsDefaultOrEmpty || columnInkRight.Length < allTimings.Count)
             return null;
@@ -2277,7 +2283,20 @@ internal sealed class MultiStaffLayouter
 
             var ownLeft = SpacingRules.LooseChangeLeftNeighborTiming(allMeasures, columnItems);
             if (!SpacingRules.IsLooseChangeColumn(fonts, allTimings, ownLeft, changeTiming, columnItems))
+            {
+                // In the springs: the slot into this timing is the change column's series
+                // spring (MeasureLayouter.CreateInterColumnSpring — Note_spacing, then
+                // Staff_spacing), unless a grace run follows the change, which still folds
+                // both gaps into one spring and keeps the force-0 hang.
+                if (c < springs.Length
+                    && springs[c] is { IsSeries: true } series && series.Series.Length == 2
+                    && SpacingRules.LeadingGracePrefixWidth(new ItemColumn(columnItems)) <= 0)
+                {
+                    hangs ??= ImmutableDictionary.CreateBuilder<Fraction, double>();
+                    hangs[changeTiming] = series.Series[1].Length(force);
+                }
                 continue;
+            }
 
             int leftIndex = allTimings.IndexOf(ownLeft!.Value);
             if (leftIndex < 0)

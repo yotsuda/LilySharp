@@ -82,7 +82,7 @@ internal enum OverlayDrawerId
 /// argument — an item whose SourcePosition lags outside its own value text would slip
 /// past both other layers.</item>
 /// <item>GEOMETRY reads — system.Y/Width/PrefixWidth/Indent/SystemIndex, every
-/// measure's X/Width/Items/Columns/LooseChangeHangs, the staff-group table (staff Ys,
+/// measure's X/Width/Items/Columns/ChangeColumnHangs, the staff-group table (staff Ys,
 /// heights, hidden flags, delimiter box) and the page height (the Y-flip bakes it into
 /// every emitted Y) — are folded by VALUE into <see cref="Entry.GeometryHash"/>. A 64-bit
 /// FNV fold decides equality, the same bound <see cref="MeasureContentKey"/> already
@@ -922,12 +922,12 @@ internal sealed class SvgSystemFragmentCache
                     hc.Add(c.Width);
                 }
             }
-            if (m.LooseChangeHangs != null)
+            if (m.ChangeColumnHangs != null)
             {
-                hc.Add(m.LooseChangeHangs.Count);
+                hc.Add(m.ChangeColumnHangs.Count);
                 // Ordered: ImmutableDictionary enumeration order is not stable across
                 // instances holding the same pairs, and the hash must be.
-                foreach (var kv in m.LooseChangeHangs.OrderBy(kv => kv.Key))
+                foreach (var kv in m.ChangeColumnHangs.OrderBy(kv => kv.Key))
                 {
                     hc.Add(kv.Key);
                     hc.Add(kv.Value);

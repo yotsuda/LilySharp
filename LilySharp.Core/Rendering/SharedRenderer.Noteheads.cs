@@ -355,8 +355,8 @@ internal static partial class SharedRenderer
                     // reserved nothing for it (my_offset = right_point - distance_to_next).
                     // LILYPOND-REF: lily/spacing-loose-columns.cc:202-220 set_loose_columns.
                     var columnItems = ChangeColumnItems(measure, itemIdx);
-                    itemX -= ml.LooseChangeHangs != null
-                             && ml.LooseChangeHangs.TryGetValue(currentTiming, out var hang)
+                    itemX -= ml.ChangeColumnHangs != null
+                             && ml.ChangeColumnHangs.TryGetValue(currentTiming, out var hang)
                         ? hang
                         : SpacingRules.MidMeasureChangeRightGap(fonts, columnItems);
                     itemX += SpacingRules.MidMeasureChangeOffsetWithin(fonts, columnItems, item);
