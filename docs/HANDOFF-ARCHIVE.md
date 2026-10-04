@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第800セッションの経緯
+
+### 1.1 第800セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザー「続けて」。第799 の候補 ⒜ H の 3 つのうち、計器も直し方も分かっている `ChordNameEngraver` の幅の床から。`-Start p800`（HEAD `8dad58a0`・未 push 8）＝full **11024 / 0 / 2 / 11026**。§7 3.5 で第798 を ARCHIVE へ。
+- **H「`ChordNameEngraver.SymbolWidth` の `Math.Max(2.0, …)` の床」＝消した**（LILYSHARP-OWN・LP の ChordName の extent は stencil のまま＝define-grobs.scm:837-855 に床は無い）。床を見ていたのは engraver の読者 5 人（inline との干渉 `Meets`・行の床 `MaxProtrusionInRange` 2 軒・隣との `ClearOfPrevious`・行 skyline の `MergeBox`）だけで、**spacing（`SpacingRules.ApplyChordRowSpacing`）は元から床なしの `FootprintWidth`**＝同じ量の 2 綴り（§7.7）。`SymbolWidth` を消して全員 `FootprintWidth`（1 綴り・OWN 216→215）。
+- 掃き（`p723/svg2/sweep-all.ps1`・base＝`p800/exe-base`・head＝`p800/exe-head`・`sweep.log`）: **998 冊 1,199 枚中 差 1**＝`site/rising-sun.lys`（chords 行が 0.04 ss 譜に寄る＝頁 97.43→97.40。1 文字の "C"・"D"・"F" の footprint 2.0→1.89 で、右隣の高い物に届かなくなった分＝床が消えた向き）。snapshot 247 枚不動・`~ChordName` 152 緑。
+- 網は足していない: 消したのは分岐ではなく定数で、許可した観測者は掃き（動いた 1 冊の向きの説明）＋snapshot 247（§7.6 ⒟）。床を戻す形は `LpProvenanceTests` が数値定数として捕まえる。
+- 棚卸し `APPROXIMATIONS.md` 再生成（OWN −1・行番号 1 行・LF→CRLF 揃え直し済み）。CHANGELOG Fixes 1 項。
+- H の残り 2 つは未着手: 旗の reach −0.18（LP 側の機構が未特定＝`pcdump.ily` で旗付き対の WISH/min_dist を吐かせるのが次）・beam-auto の 1 段目の改行位置（縦線 3 対 5＝計器から）。
+★ `-End p800 -DiffBase 8dad58a0`（`end1.log`）＝full **11024 / 0 / 2 / 11026**（網 ±0）・門 全 OK（HANDOFF 437,165 B・残り 12,835）。7.5: Core `+` 15 行・REF 0・OWN 0＝足したのは doc コメント（`FootprintWidth` の summary に「床は無い・第800 までは 2 綴り」）と呼び手の綴り替えだけ・新しい定数なし。7.6: ⒟ 発明の削除（許可した観測者＝掃き 1 冊の向き＋snapshot 247）。7.7: 「同じ量の 2 つ目の綴り」を 1 つに畳んだ側＝匂いは消えた方向・guard／sentinel／fallback なし。commit `5d20ce08b`（code・CHANGELOG・棚卸し）＋ docs の commit。Lab は sessions/p800 を commit。push はユーザー。
+判定: H の床は閉じた。次の候補（着手前に実コードで確認）: ⒜ H の残り 2 つ（旗の reach −0.18＝LP の機構が未特定・計器が先／beam-auto の 1 段目の改行位置＝計器が先）／⒝ F ⑷ `lyrics NAME`＝error か warning かユーザー判断／⒞′ 双子の chords／lyrics 行（5 冊・exporter の設計）。どれも「小さく閉じる」型ではない＝次は計器か設計かユーザー判断。会話を区切るか: (a) H の残りは今便の文脈（ChordNameEngraver）を使わない／(b) 会話はまだ軽い＝**既定どおり続ける**（`-Start p801`）。
+
 ## 以下は第799セッションの経緯
 
 ### 1.1 第799セッション（2026-10-04・YT-DELL2）
