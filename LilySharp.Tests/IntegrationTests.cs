@@ -286,6 +286,38 @@ score main ""movement2"" {
     }
 
     [Fact]
+    public void GenerateMultiMovement_AScoreWithNothingToDrawIsNoMovement()
+    {
+        // The chord row is written in the retired `a:m` spelling, so every symbol is a
+        // parse error (LYS1028) and the grid score — the row alone — has nothing to draw:
+        // it renders to no page, i.e. the empty string. The stack must still carry the
+        // staff score, with no title and no blank band for the empty one. Before, the
+        // empty string reached ExtractSvgContent and `lysc svg --combined` threw
+        // ArgumentOutOfRangeException where the plain command wrote the staff score.
+        var source = @"
+part melody { clef treble }
+section Main {
+  melody { a4 b c' d' | e'2 e' | a1 | }
+  chords prog { a:m e | d:m | a:m | }
+}
+form main { Main }
+score main ""attached"" { chords prog  staff melody }
+score main ""grid"" { chords prog }
+";
+        var tree = SyntaxTree.Parse(source);
+        Assert.True(tree.HasErrors);
+        Assert.Equal(string.Empty,
+            SvgGenerator.GenerateScore(tree, RenderSpecParser.FindAll(tree)[1]));
+
+        var svg = SvgGenerator.GenerateMultiMovement(tree);
+
+        Assert.Contains("<svg", svg);
+        Assert.Contains("</svg>", svg);
+        Assert.Contains("translate", svg);
+        Assert.DoesNotContain("grid", svg);
+    }
+
+    [Fact]
     public void GenerateAll_NoRenderBlocks_FallsBackToDefault()
     {
         // Hand-written rather than MusicSource.Wrap: the subject is a document with NO

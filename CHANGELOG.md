@@ -392,6 +392,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **`lysc svg --combined` stacks what did draw.** A book whose chord row failed to parse
+  (the retired `a:m` spelling, say) has a grid score with nothing on it; the plain command
+  wrote the staff score anyway, but `--combined` threw an index error and wrote nothing. An
+  empty score is now no movement in the stack — no title, no blank band — and the other
+  scores are written, with the errors reported as before.
 - **A tie joins two heads of the same pitch, not two heads on the same line.** `<c e>2~ <c ees>2`
   tied the e into the e♭ beside the c; now only the c is tied, as LilyPond ties it (one tie),
   and a tie into a head of another alteration or spelling (`cis~ c`, `fis~ ges`) is left

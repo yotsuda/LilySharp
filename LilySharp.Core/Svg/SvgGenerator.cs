@@ -129,6 +129,15 @@ public static class SvgGenerator
         {
             var (multiScore, layout) = BuildLayout(tree, spec);
             var svg = RenderToSvg(multiScore, layout, options);
+            // A score with nothing to draw renders to NO page, and the document reads as
+            // the empty string (SvgDocumentContext.Assemble). On its own such a score is
+            // an empty file; in the stack it is no movement at all — neither a title nor
+            // a blank band — so a book whose chord row failed to parse still stacks the
+            // scores that did draw. Before this, the empty string reached
+            // ExtractSvgContent, whose IndexOf('>', IndexOf("<svg")) threw on -1, and
+            // `lysc svg --combined` wrote nothing for a book the plain command recovers.
+            if (svg.Length == 0)
+                continue;
             var title = System.IO.Path.GetFileNameWithoutExtension(spec.OutputFile);
             movements.Add((title, svg, layout.Width, layout.Height));
         }
@@ -341,8 +350,11 @@ public static class SvgGenerator
     /// </summary>
     private static string ExtractSvgContent(string svg)
     {
-        // Find end of opening <svg ...> tag
-        int svgTagEnd = svg.IndexOf('>', svg.IndexOf("<svg"));
+        // Find the opening <svg ...> tag, then its end. A document without one (a render
+        // with no page is the empty string) has no content, like one missing the close.
+        int svgTagStart = svg.IndexOf("<svg", StringComparison.Ordinal);
+        if (svgTagStart < 0) return string.Empty;
+        int svgTagEnd = svg.IndexOf('>', svgTagStart);
         if (svgTagEnd < 0) return string.Empty;
 
         // Find </svg>
