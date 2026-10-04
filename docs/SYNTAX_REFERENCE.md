@@ -1579,7 +1579,11 @@ coda c4 d e f | ds al coda
 ```
 
 The same words are how a `form` names the route: `form main { A segno B to coda C ds al
-coda coda D }`.
+coda coda D }`. A jump text in a form whose landmark is missing warns (LYS4025) and says what
+the MIDI does instead: a `ds` with no `segno` before it is not followed, an `al fine` with no
+`fine` on the replayed stretch replays to the jump and ends there, an `al coda` with no
+`to coda` on it replays to the jump, and one with no `coda` after the jump resumes right
+after it.
 
 ### Display switches — `layout { }`
 

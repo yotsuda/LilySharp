@@ -79,6 +79,7 @@ public static class SemanticValidation
         new LyricSingsValidator(),          // sings bindings: unknown target / conflict / attachment
         new LyricPlainVerseShadowedValidator(), // a plain verse fully shadowed by [N.] verses
         new NavigationPlacementValidator(), // a nav mark placed mid-measure
+        new FormJumpTargetValidator(),      // a form's jump text with no segno / fine / to coda / coda to work with
         new TabTieStringValidator(),        // a tie naming two tab strings
         new TieTargetValidator(),           // a tie whose next note is not the tied pitch
         new ChordRepetitionValidator(),     // a `q` with no chord before it to repeat

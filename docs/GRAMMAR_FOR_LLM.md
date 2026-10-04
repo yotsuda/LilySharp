@@ -676,7 +676,10 @@ form main { A segno  B to coda  C ds al coda  coda D }   // the MIDI plays A B C
 The MIDI follows a FORM's jump texts as a player reads them (`dc` to the beginning, `ds` to
 after the last `segno`; `al fine` ends at the first `fine` of the replay; `al coda` goes on
 from the `coda` after the jump; a bare `dc`/`ds` goes on after the jump; repeats play once on
-the replay). A `ds` with no `segno`, and a mark written in the music, are drawn only.
+the replay). A `ds` with no `segno`, and a mark written in the music, are drawn only. A
+jump text whose landmark is missing in the form (`ds` with no `segno` before it, `al fine`
+with no `fine`, `al coda` with no `to coda` or no `coda` after it) warns (LYS4025) and names
+the fallback the MIDI takes.
 
 The same bare words are also written in a section's music, at a barline boundary
 (`segno c4 d e f |`, `c4 d e f | ds al fine`) — they are landmarks, never note

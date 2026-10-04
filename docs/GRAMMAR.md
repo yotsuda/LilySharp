@@ -1735,7 +1735,10 @@ MusicItem      = Note | Rest | Chord | Arpeggio | Barline | PhraseRef
    dc, ds, to coda) is drawn to that bar's left, a sign (segno, coda) to its right.
    The MIDI FOLLOWS a form-level jump text (Semantics.FormRoute: dc to the beginning, ds
    to after the last segno, al fine ends at fine, al coda goes on from the coda sign,
-   repeats once on the replay); a mark in the music is drawn and not followed. *)
+   repeats once on the replay); a mark in the music is drawn and not followed. A jump
+   text whose landmark the form does not write (ds with no segno before it, al fine with
+   no fine, al coda with no to coda or no coda after it) warns (LYS4025) and names the
+   fallback the route takes. *)
 
 (* Mid-music commands change context here. clef/key/time use the bare COMMAND form
    (no colon) — distinct from a part header which uses the same bare form to set the

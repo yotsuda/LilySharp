@@ -317,6 +317,12 @@ workflow attaches that section to the GitHub Release verbatim.
   written in a section's music, are drawn and not followed, as every mark was until now.
   The page, MusicXML (`<sound dalsegno="segno">` …) and the LilyPond twin (`\jump`) are
   unchanged.
+- **A jump text whose landmark is missing says so** (`LYS4025`). A `ds` with no `segno`
+  before it, an `al fine` with no `fine` on the replayed stretch, an `al coda` with no
+  `to coda` on it or no `coda` after the jump — each of these had a silent fallback (the
+  jump not followed; the replay running to the jump; the piece resuming right after it)
+  and now warns at the jump text, with the fallback the MIDI takes spelled out. The page
+  and the exports are unchanged.
 
 ### Spans across a section boundary
 

@@ -1320,6 +1320,29 @@ public static class DiagnosticCodes
     /// on top of each other — the owner's bohemian-rhapsody, section G of its <c>tab2</c> score).
     /// </para></summary>
     public const string CondensedStaffChangeConflict = "LYS4024";
+    /// <summary>Warning: a jump text in a <c>form</c> asks for a landmark the form does not
+    /// write where the route looks for it — a <c>ds</c> with no <c>segno</c> before it (the
+    /// jump is not followed: the mark is printed and the MIDI plays on), an <c>al fine</c>
+    /// with no <c>fine</c> on the replayed stretch (the replay runs to the jump and the
+    /// piece ends there), an <c>al coda</c> with no <c>to coda</c> on that stretch (the replay
+    /// runs to the jump before going to the coda) or with no <c>coda</c> after the jump (the
+    /// first pass resumes right after it). Reported at the jump text.
+    /// <para>
+    /// ⚠️ THE FAULTS ARE THE ROUTE'S OWN. <c>Semantics.FormRoute.Of</c> is the one reader of a
+    /// form's jump texts (the MIDI plays what it says), and it names each fallback it takes as
+    /// it takes it; <c>FormJumpTargetValidator</c> only puts those into words. A rule spelled a
+    /// second time here would be the fourth reader of the form's played order that the route's
+    /// remarks warn against. Until session 790 every one of these fallbacks was silent — the
+    /// route's remarks said what happened and nothing told the writer (owner's choice among
+    /// the three candidates of session 775).
+    /// </para>
+    /// <para>
+    /// A WARNING, not an error: each form still has a reading (the one the MIDI plays), the
+    /// page prints every mark as written, and a lead sheet that writes <c>ds al coda</c> for
+    /// the player's eye without a <c>segno</c> is a book, not a mistake the compiler refuses.
+    /// Scope when written: 0 of the 8 forms on disk with a jump text (2026-10-03's count).
+    /// </para></summary>
+    public const string JumpTargetMissing = "LYS4025";
     /// <summary>A slur, phrasing slur, tie or hairpin — and, since 2026-09-29, a text spanner,
     /// ottava, pedal or trill span — that breaks the SECTION CARRY RULE
     /// (owner's decisions, 2026-09-28): a span open when a section ends is carried into the

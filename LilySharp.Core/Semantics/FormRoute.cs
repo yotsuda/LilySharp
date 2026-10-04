@@ -34,15 +34,16 @@ namespace LilySharp.Core.Semantics;
 /// <list type="bullet">
 /// <item><c>dc</c> goes back to the beginning of the form, <c>ds</c> to the item after the
 /// last <c>segno</c> the first pass has met. A <c>ds</c> with no <c>segno</c> before it has
-/// nowhere to go and stays a mark on the page (the route does not guess the beginning).</item>
+/// nowhere to go and stays a mark on the page (the route does not guess the beginning) —
+/// and is reported, LYS4025 (session 790; every fallback in this list is).</item>
 /// <item>The replayed stretch ends at the jump text itself, or earlier: an <c>al fine</c>
 /// stops at the first <c>fine</c> in it, an <c>al coda</c> at the first <c>to coda</c> in it
-/// (neither found: the whole stretch, up to the jump).</item>
+/// (neither found: the whole stretch, up to the jump — reported).</item>
 /// <item>After an <c>al fine</c> the piece ENDS — nothing written after the jump text
 /// sounds. After an <c>al coda</c> the first pass resumes at the item after the first
-/// <c>coda</c> sign that follows the jump text (none: at the item after the jump). After a
-/// bare <c>dc</c> / <c>ds</c> it resumes at the item after the jump, as it does after a
-/// one-sided <c>:|</c>.</item>
+/// <c>coda</c> sign that follows the jump text (none: at the item after the jump —
+/// reported). After a bare <c>dc</c> / <c>ds</c> it resumes at the item after the jump, as
+/// it does after a one-sided <c>:|</c>.</item>
 /// <item>On the replayed stretch a repeat block plays ONCE, on its last pass (body, then the
 /// ending that pass names) — the performer's convention that repeats are not taken on the
 /// D.C./D.S. pass; a one-sided <c>:|</c> rewinds nothing (one rewind per written sign —
@@ -92,9 +93,33 @@ internal static class FormRoute
     /// piece ends or goes on to the coda after it.</summary>
     private readonly record struct Jump(bool DaCapo, bool AlFine, bool AlCoda);
 
+    /// <summary>A landmark a jump text asked for and the form does not write where the route
+    /// looks for it — the four fallbacks the class remarks spell out, named so the writer is
+    /// told (LYS4025, <see cref="FormJumpTargetValidator"/>).</summary>
+    internal enum JumpFault
+    {
+        /// <summary>A <c>ds</c> with no <c>segno</c> before it: the jump is not followed.</summary>
+        NoSegno,
+        /// <summary>An <c>al fine</c> with no <c>fine</c> on the replayed stretch: the replay
+        /// runs to the jump and the piece ends there.</summary>
+        NoFine,
+        /// <summary>An <c>al coda</c> with no <c>to coda</c> on the replayed stretch: the replay
+        /// runs to the jump before going to the coda.</summary>
+        NoToCoda,
+        /// <summary>An <c>al coda</c> with no <c>coda</c> after the jump: the first pass resumes
+        /// right after the jump.</summary>
+        NoCoda,
+    }
+
+    /// <summary>A jump text and the landmark it lacks.</summary>
+    internal readonly record struct Fault(NavigationMarkSyntax Jump, JumpFault Kind);
+
     /// <summary>The route through <paramref name="items"/> (a <see cref="FormWalk.Read"/>).
-    /// A form with no jump text is one first-pass stretch over everything.</summary>
-    internal static IReadOnlyList<Stretch> Of(IReadOnlyList<FormWalk.Item> items)
+    /// A form with no jump text is one first-pass stretch over everything. When
+    /// <paramref name="faults"/> is given, every landmark a jump text asked for and did not
+    /// find is appended to it — read off THIS walk, so a report can never disagree with the
+    /// route the MIDI plays.</summary>
+    internal static IReadOnlyList<Stretch> Of(IReadOnlyList<FormWalk.Item> items, List<Fault>? faults = null)
     {
         var route = new List<Stretch>();
         int n = items.Count;
@@ -110,10 +135,12 @@ internal static class FormRoute
                 i++;
                 continue;
             }
-            // A `ds` with no segno before it: nowhere to go — the mark stays visual.
+            // A `ds` with no segno before it: nowhere to go — the mark stays visual (and is
+            // reported; the landmarks the `al` half asks for are moot without the jump).
             int from = jump.DaCapo ? 0 : segno >= 0 ? segno + 1 : -1;
             if (from < 0)
             {
+                Report(faults, items[i], JumpFault.NoSegno);
                 i++;
                 continue;
             }
@@ -121,22 +148,43 @@ internal static class FormRoute
             Add(route, start, i, replay: false);
 
             int to = i;
-            if (jump.AlFine && IndexOf(items, NavigationMarkType.Fine, from, i) is { } fine)
-                to = fine;
-            else if (jump.AlCoda && IndexOf(items, NavigationMarkType.ToCoda, from, i) is { } toCoda)
-                to = toCoda;
+            if (jump.AlFine)
+            {
+                if (IndexOf(items, NavigationMarkType.Fine, from, i) is { } fine)
+                    to = fine;
+                else
+                    Report(faults, items[i], JumpFault.NoFine);
+            }
+            else if (jump.AlCoda)
+            {
+                if (IndexOf(items, NavigationMarkType.ToCoda, from, i) is { } toCoda)
+                    to = toCoda;
+                else
+                    Report(faults, items[i], JumpFault.NoToCoda);
+            }
             Add(route, from, to, replay: true);
 
             if (jump.AlFine)
                 return route; // the piece ends at Fine (or at the jump, with no Fine to stop at)
 
-            start = jump.AlCoda && IndexOf(items, NavigationMarkType.Coda, i + 1, n) is { } coda
-                ? coda + 1
-                : i + 1;
+            if (jump.AlCoda && IndexOf(items, NavigationMarkType.Coda, i + 1, n) is { } coda)
+                start = coda + 1;
+            else
+            {
+                if (jump.AlCoda)
+                    Report(faults, items[i], JumpFault.NoCoda);
+                start = i + 1;
+            }
             i = start;
         }
         Add(route, start, n, replay: false);
         return route;
+    }
+
+    private static void Report(List<Fault>? faults, FormWalk.Item jump, JumpFault kind)
+    {
+        if (faults is not null && jump is FormWalk.Other { Node: NavigationMarkSyntax nav })
+            faults.Add(new Fault(nav, kind));
     }
 
     /// <summary>Whether <paramref name="item"/> is the form-level <c>segno</c> sign — the point a
