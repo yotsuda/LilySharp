@@ -257,21 +257,6 @@ internal static class LayoutUtilities
     }
 
     /// <summary>
-    /// Calculates the flag height based on note value.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/flag.cc:80-95 Flag::internal_print
-    /// Flag height increases with shorter note values (more beams/flags).
-    /// </remarks>
-    public static double CalculateFlagHeight(int noteValue)
-    {
-        double height = EngravingDefaults.FlagBaseHeight;
-        if (noteValue >= 16) height += EngravingDefaults.FlagHeightIncrement;
-        if (noteValue >= 32) height += EngravingDefaults.FlagHeightIncrement;
-        return height;
-    }
-
-    /// <summary>
     /// The measures a per-staff annotation is positioned against: the annotation's own
     /// staff measures when a multi-staff map is supplied and contains the staff, else
     /// the fallback (the single- or primary-voice measures). Shared by the annotation

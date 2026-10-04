@@ -1333,23 +1333,32 @@ internal sealed class SkylineBuilder
                     else
                         downSkyline.MergeBox(x - halfStem, x + halfStem, yTip, yHead);
 
-                    // ...and the FLAG of an unbeamed eighth or shorter, hanging from the tip
-                    // back towards the digit and running right of the stem — the same box the
-                    // notation seed claims for its flag, at the tab's own tip. \tabFullNotation
-                    // reverts Flag.stencil too (ly/property-init.ly:833), so the flag is drawn
-                    // and is in the axis group's skyline like the stem it hangs from.
-                    // LILYPOND-REF: lily/flag.cc:51-69 Flag::width, get_x_parent — the flag's X
-                    //   extent is measured from its STEM's right edge, i.e. it runs right of it.
+                    // ...and the FLAG of an unbeamed eighth or shorter — its glyph's outline,
+                    // where SharedRenderer.Tab draws it (FlagDrawX, FlagPlacementY), as the
+                    // notation seed takes it. \tabFullNotation reverts Flag.stencil too
+                    // (ly/property-init.ly:833), so the flag is drawn and is in the axis
+                    // group's skyline like the stem it hangs from.
+                    // LILYPOND-REF: scm/define-grobs.scm:1633 Flag
+                    //   grob::always-vertical-skylines-from-stencil;
+                    //   lily/flag.cc:183-196 Flag::internal_calc_y_offset.
                     int noteValue = GlyphMetrics.NoteValueOf(item);
-                    if (noteValue >= 8)
+                    if (noteValue >= 8 && EmmentalerGlyphs.GetFlag(noteValue, stemUp) is { } flagGlyph)
                     {
-                        double flagHeight = LayoutUtilities.CalculateFlagHeight(noteValue);
-                        double flagLeft = x - halfStem;
-                        double flagRight = flagLeft + EngravingDefaults.FlagWidth;
-                        if (stemUp)
-                            upSkyline.MergeBox(flagLeft, flagRight, yTip - flagHeight, yTip);
-                        else
-                            downSkyline.MergeBox(flagLeft, flagRight, yTip, yTip + flagHeight);
+                        var (flagUp, flagDown) = TextOutlineSkylines.MusicGlyphProfile(
+                            flagGlyph, Rendering.SharedRenderer.FontSize);
+                        double flagX = x + halfStem;
+                        double flagUpY = yTip - (stemUp ? 1 : -1) * EngravingDefaults.BlotDiameter / 2;
+                        if (flagUp.Count > 0 || flagDown.Count > 0)
+                        {
+                            upSkyline.Merge(flagUp, flagX, flagUpY);
+                            downSkyline.Merge(flagDown, flagX, flagUpY);
+                        }
+                        else if (GlyphMetrics.GetFlagBBox(noteValue, stemUp) is var fb && fb != default)
+                        {
+                            // No walkable music font: the glyph's designed box.
+                            (stemUp ? upSkyline : downSkyline).MergeBox(
+                                flagX + fb.Left, flagX + fb.Right, flagUpY + fb.Bottom, flagUpY + fb.Top);
+                        }
                     }
                 }
             }
@@ -2936,29 +2945,34 @@ internal sealed class SkylineBuilder
     }
 
     /// <summary>
-    /// Merges a GRACE flag's own outline — the glyph out of the design its <c>font-size</c>
-    /// selects, at that magnification — with its origin at (<paramref name="originX"/>,
-    /// <paramref name="originUp"/>), the point the renderer draws it at. Falls back to the
-    /// glyph's box out of <paramref name="flagFont"/> when the music font cannot be walked.
+    /// Merges a flag's own outline with its origin at (<paramref name="originX"/>,
+    /// <paramref name="originUp"/>), the point the renderer draws it at — a GRACE flag's
+    /// (<paramref name="graceItem"/>) out of the design its <c>font-size</c> selects, at that
+    /// magnification, a full-size one's out of the score's own. Falls back to the glyph's box
+    /// out of <paramref name="flagFont"/> (the twenty's for a full-size flag) when the music
+    /// font cannot be walked.
     /// </summary>
-    private static void MergeGraceFlagInk(
-        MusicItem item, int noteValue, bool stemUp, double originX, double originUp,
+    private static void MergeFlagInk(
+        MusicItem? graceItem, int noteValue, bool stemUp, double originX, double originUp,
         StaffSize size, VerticalSkyline upSkyline, VerticalSkyline downSkyline,
         GlyphMetrics.DesignMetrics? flagFont)
     {
         if (EmmentalerGlyphs.GetFlag(noteValue, stemUp) is not { } glyph)
             return;
-        var (up, down) = TextOutlineSkylines.MusicGlyphProfile(
-            glyph,
-            size.Span(Rendering.SharedRenderer.FontSize * GrobFontSize.ScaleOf(item, SizedGrob.Flag)),
-            GrobFontSize.DesignOf(item, SizedGrob.Flag));
+        var (up, down) = graceItem is { } item
+            ? TextOutlineSkylines.MusicGlyphProfile(
+                glyph,
+                size.Span(Rendering.SharedRenderer.FontSize * GrobFontSize.ScaleOf(item, SizedGrob.Flag)),
+                GrobFontSize.DesignOf(item, SizedGrob.Flag))
+            : TextOutlineSkylines.MusicGlyphProfile(
+                glyph, size.Span(Rendering.SharedRenderer.FontSize));
         if (up.Count > 0 || down.Count > 0)
         {
             upSkyline.Merge(up, originX, originUp);
             downSkyline.Merge(down, originX, originUp);
             return;
         }
-        if (flagFont is not { } font)
+        if ((flagFont ?? (graceItem is null ? GlyphMetrics.Design20 : null)) is not { } font)
             return;
         var fb = size.Ink(GlyphMetrics.GetFlagBBox(font, noteValue, stemUp));
         if (fb == default)
@@ -3162,7 +3176,6 @@ internal sealed class SkylineBuilder
             ? LayoutUtilities.StemAttachX(stemUp, noteValue, headStyle, attachFont)
             : LayoutUtilities.StemAttachX(stemUp, noteValue, headStyle));
         double stemHalfWidth = size.Span(EngravingDefaults.StemThickness / 2);
-        double flagWidth = size.Span(EngravingDefaults.FlagWidth);
 
         if (stemUp)
         {
@@ -3172,39 +3185,27 @@ internal sealed class SkylineBuilder
             upSkyline.MergeBox(stemCentre - stemHalfWidth, stemCentre + stemHalfWidth,
                 ToSystemUp(stemBaseUp), ToSystemUp(stemTipUp));
 
-            // A GRACE flag is its own glyph's OUTLINE out of the grace design, hung where the
-            // renderer hangs it — on the stem's right edge (FlagDrawX), half a blot inside
-            // the stem's end (FlagPlacementY) — because the nominal FlagWidth/height below
-            // are the twenty's and a grace's flag is the fourteen's at magstep(−3).
-            // ⚠️ THE OUTLINE, NOT THE BOX, and the difference is measured: the sixteenth
-            // flag's box tops its origin by 0.058, but that ink is not at the stem, and
+            // The flag is its own glyph's OUTLINE (a grace's out of the grace design), hung
+            // where the renderer hangs it — on the stem's right edge (FlagDrawX), half a blot
+            // inside the stem's end (FlagPlacementY).
+            // ⚠️ THE OUTLINE, NOT A BOX, and the difference is measured twice: the sixteenth
+            // grace flag's box tops its origin by 0.058, but that ink is not at the stem, and
             // LilyPond's mark over `grace { gis'16 }` stands off the STEM's top (5.100000,
-            // ledger mark.over-grace.staff-to-baseline) — a box seed read 0.018409 too high.
+            // ledger mark.over-grace.staff-to-baseline) — a box seed read 0.018409 too high;
+            // and a full-size flag was a nominal 1.2 × 2.5 box flat at the tip until session
+            // 812, which reached over the next staff's stem (staff.staff.flag-down.*).
             // LILYPOND-REF: scm/music-functions.scm:636-650 general-grace-settings —
             //   (Voice Flag font-size -3); lily/flag.cc:183-196 Flag::internal_calc_y_offset;
             //   scm/define-grobs.scm:1633 Flag grob::always-vertical-skylines-from-stencil
             //   (its vertical-skylines entry), walked by
             //   lily/stencil-integral.cc:535-563 add_named_glyph_segments
             //   (TextOutlineSkylines.MusicGlyphProfile is that walk).
-            if (noteValue >= 8 && graceItem is { } graceFlagItem)
+            if (noteValue >= 8)
             {
                 double flagOriginX = stemCentre + size.Span(EngravingDefaults.StemThickness / 2);
                 double flagOriginUp = stemTipUp - size.Span(EngravingDefaults.BlotDiameter / 2);
-                MergeGraceFlagInk(graceFlagItem, noteValue, stemUp, flagOriginX,
+                MergeFlagInk(graceItem, noteValue, stemUp, flagOriginX,
                     ToSystemUp(flagOriginUp), size, upSkyline, downSkyline, flagFont);
-            }
-            // LILYPOND-REF: lily/flag.cc:51-69 Flag::width
-            // Flag for eighth notes and shorter (noteValue >= 8), hanging DOWN
-            // from the stem tip — drawn AT the stem, running right of it.
-            else if (noteValue >= 8)
-            {
-                double flagHeight = size.Span(LayoutUtilities.CalculateFlagHeight(noteValue));
-                double flagLeft = stemCentre - stemHalfWidth;
-                double flagRight = flagLeft + flagWidth;
-                double flagTopUp = stemTipUp;
-                double flagBottomUp = stemTipUp - flagHeight;
-                upSkyline.MergeBox(flagLeft, flagRight,
-                    ToSystemUp(flagBottomUp), ToSystemUp(flagTopUp));
             }
         }
         else
@@ -3215,26 +3216,15 @@ internal sealed class SkylineBuilder
             downSkyline.MergeBox(stemCentre - stemHalfWidth, stemCentre + stemHalfWidth,
                 ToSystemUp(stemTipUp), ToSystemUp(stemBaseUp));
 
-            // The grace flag's own outline, as in the up arm — reached by a lower voice's grace,
-            // whose stem points DOWN (MusicItem.GraceStemDown), and by a hand-forced one.
-            if (noteValue >= 8 && graceItem is { } graceFlagItem)
+            // The flag's own outline, as in the up arm — it rises off the stem's lower end as
+            // it runs right, so it does not reach where a box flat at the tip would
+            // (staff.staff.flag-down.*: the next staff's up stem at the head's right).
+            if (noteValue >= 8)
             {
                 double flagOriginX = stemCentre + size.Span(EngravingDefaults.StemThickness / 2);
                 double flagOriginUp = stemTipUp + size.Span(EngravingDefaults.BlotDiameter / 2);
-                MergeGraceFlagInk(graceFlagItem, noteValue, stemUp, flagOriginX,
+                MergeFlagInk(graceItem, noteValue, stemUp, flagOriginX,
                     ToSystemUp(flagOriginUp), size, upSkyline, downSkyline, flagFont);
-            }
-            // LILYPOND-REF: lily/flag.cc:51-69 Flag::width
-            // Flag rises UP from the stem bottom.
-            else if (noteValue >= 8)
-            {
-                double flagHeight = size.Span(LayoutUtilities.CalculateFlagHeight(noteValue));
-                double flagLeft = stemCentre - stemHalfWidth;
-                double flagRight = flagLeft + flagWidth;
-                double flagTopUp = stemTipUp + flagHeight;
-                double flagBottomUp = stemTipUp;
-                downSkyline.MergeBox(flagLeft, flagRight,
-                    ToSystemUp(flagBottomUp), ToSystemUp(flagTopUp));
             }
         }
     }

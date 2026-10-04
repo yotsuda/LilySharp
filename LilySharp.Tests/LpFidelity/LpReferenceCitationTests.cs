@@ -150,7 +150,6 @@ public sealed class LpReferenceCitationTests
         "calc_springs|lily/grace-spacing-engraver.cc",
         "footnote_height|lily/page-layout-problem.cc",
         "get_break_align_spacing|lily/break-alignment-interface.cc",
-        "internal_print|lily/flag.cc",
         "Line_details|lily/simple-spacer.cc",
         "max_pages|lily/page-spacing.cc",
         "min_pages|lily/page-spacing.cc",

@@ -8000,7 +8000,7 @@ internal static class LpGeometryProbes
     /// <remarks>
     /// LilyPond's Flag declares <c>grob::always-vertical-skylines-from-stencil</c>
     /// (scm/define-grobs.scm Flag), so the gap reads the glyph's traced outline; Lily#'s
-    /// SkylineBuilder seeds a nominal 1.2 × 2.5 box at the stem's tip
+    /// SkylineBuilder seeded a nominal 1.2 × 2.5 box at the stem's tip until session 812
     /// (EngravingDefaults.FlagWidth — LILYSHARP-OWN, with no LilyPond counterpart).
     /// The control <see cref="FDC"/> is the same book with a quarter (no flag); FDL16 a
     /// sixteenth's.

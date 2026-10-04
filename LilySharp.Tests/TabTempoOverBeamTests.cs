@@ -88,9 +88,10 @@ public sealed class TabTempoOverBeamTests
     public void FullTab_SeedsTheFlagBesideAnUnbeamedEighthsStem()
     {
         // A lone eighth on the low string: up stem, and a flag hanging from its tip running
-        // RIGHT of the stem (lily/flag.cc:51-69 Flag::width). The tab's inside skyline must be
-        // as tall just right of the stem — under the flag — as at the stem itself, and lower
-        // again past the flag's width.
+        // RIGHT of the stem (lily/flag.cc:51-69 Flag::width). The tab's inside skyline is the
+        // flag glyph's OUTLINE (define-grobs Flag always-vertical-skylines-from-stencil), whose
+        // top edge falls away from the tip as it runs right (about 0.47 lower 0.1 past the
+        // stem): under the flag it stands below the tip and above the profile past the glyph.
         var tree = SyntaxTree.Parse(Book.Replace("STAVES", "tab bl as full")
             .Replace("section A { fis,,8\\4 cis,\\3 e,\\3 fis,\\3 e,\\3 cis,\\3 b,,\\4 cis,\\3 | fis,,8\\4 cis,\\3 e,\\3 fis,\\3 e,\\3 cis,\\3 b,,\\4 cis,\\3 | }",
                      "section A { fis,,8\\4 r8 r2 r4 | }"));
@@ -106,9 +107,11 @@ public sealed class TabTempoOverBeamTests
             + LayoutUtilities.GetItemXOffset(staff.PrimaryVoice.Measures, 0, 0, measures[0])
             + EngravingDefaults.TabHeadCenterOffset;
         double atStem = up.Height(stemX);
-        double underFlag = up.Height(stemX + EngravingDefaults.FlagWidth * 0.7);
-        double pastFlag = up.Height(stemX + EngravingDefaults.FlagWidth + 1.0);
-        Assert.Equal(atStem, underFlag, 6);
+        double flagLeft = LayoutUtilities.FlagDrawX(stemX);
+        double underFlag = up.Height(flagLeft + 0.1);
+        double pastFlag = up.Height(flagLeft + GlyphMetrics.GetFlagBBox(8, stemUp: true).Right + 1.0);
+        Assert.True(underFlag < atStem, $"under the flag {underFlag:F3} must be below the stem tip {atStem:F3}");
+        Assert.True(underFlag > pastFlag, $"under the flag {underFlag:F3} must stand over the profile past it {pastFlag:F3}");
         Assert.True(pastFlag < atStem, $"past the flag {pastFlag:F3} must drop below the stem tip {atStem:F3}");
     }
 

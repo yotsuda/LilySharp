@@ -4724,8 +4724,8 @@
       "probe": "flag-staff-gap.ly",
       "score": "FDL",
       "lilypond": 10.626974290,
-      "residual": 1.87302571,
-      "why": "OPEN since session 812 (read before the port as its baseline). Cause: Lily#'s SkylineBuilder seeds an ordinary flag as a nominal box (EngravingDefaults.FlagWidth 1.2 x FlagBaseHeight 2.5, LILYSHARP-OWN, no LilyPond counterpart) flat at the stem's tip, where LilyPond's Flag declares grob::always-vertical-skylines-from-stencil (scm/define-grobs.scm Flag) and the gap reads the glyph's traced outline (lily/stencil-integral.cc:535-563 add_named_glyph_segments). The down flag's outline rises off the stem's end as it runs right, so it is high above the lower staff's up stem at the head's right; the box is not, and reaches over that stem. READING: Lily# 12.500000 = the upper stem's tip 6.0 + the lower stem's tip 5.5 + padding 1, exactly - the box binds the two stem tips. PREDICTION was about +1.37 (12.0) and missed by 0.5: the flagged stem is longer than the quarter's, because an unnatural-direction stem is shortened by stem-shorten (1.0 0.5 0.25) indexed by flag count (LilyPond's own extent says so: -6.025 for FDL against -5.5 for FDC), and Lily# shortens it the same way. PREDICTION for the port: 0 once the flag is seeded as its glyph's outline at the point the renderer draws it, as the grace flag already is (SkylineBuilder.MergeGraceFlagInk)."
+      "residual": 0,
+      "why": "EXACT since session 812: a flag is seeded as its glyph's traced outline at the point the renderer draws it (SkylineBuilder.MergeFlagInk - the walk the grace flag already took), not as a nominal box. PREDICTION (written before the port, commit e3f6d0aa1): 0. OUTCOME: held, 0.000000000 (was +1.873026). The account of the defect follows. Cause: Lily#'s SkylineBuilder seeds an ordinary flag as a nominal box (EngravingDefaults.FlagWidth 1.2 x FlagBaseHeight 2.5, LILYSHARP-OWN, no LilyPond counterpart) flat at the stem's tip, where LilyPond's Flag declares grob::always-vertical-skylines-from-stencil (scm/define-grobs.scm Flag) and the gap reads the glyph's traced outline (lily/stencil-integral.cc:535-563 add_named_glyph_segments). The down flag's outline rises off the stem's end as it runs right, so it is high above the lower staff's up stem at the head's right; the box is not, and reaches over that stem. READING: Lily# 12.500000 = the upper stem's tip 6.0 + the lower stem's tip 5.5 + padding 1, exactly - the box binds the two stem tips. PREDICTION was about +1.37 (12.0) and missed by 0.5: the flagged stem is longer than the quarter's, because an unnatural-direction stem is shortened by stem-shorten (1.0 0.5 0.25) indexed by flag count (LilyPond's own extent says so: -6.025 for FDL against -5.5 for FDC), and Lily# shortens it the same way. PREDICTION for the port: 0 once the flag is seeded as its glyph's outline at the point the renderer draws it, as the grace flag already is (SkylineBuilder.MergeGraceFlagInk)."
     },
     "staff.staff.flag-down.control": {
       "probe": "flag-staff-gap.ly",
@@ -4738,8 +4738,8 @@
       "probe": "flag-staff-gap.ly",
       "score": "FDL16",
       "lilypond": 10.795,
-      "residual": 1.955,
-      "why": "OPEN since session 812 (read before the port as its baseline). Cause: see staff.staff.flag-down.eighth - the nominal flag box is flat at the stem's tip whatever the flag count. READING: Lily# 12.750000 = the upper stem's tip 6.25 (stem-shorten 0.25 for two flags) + 5.5 + 1, exactly. PREDICTION was about +1.2 and missed by the same stem-shorten term as the eighth's. PREDICTION for the port: 0."
+      "residual": 0,
+      "why": "EXACT since session 812 (see staff.staff.flag-down.eighth). PREDICTION (written before the port, commit e3f6d0aa1): 0. OUTCOME: held, 0.000000000 (was +1.955). The account of the defect follows. Cause: see staff.staff.flag-down.eighth - the nominal flag box is flat at the stem's tip whatever the flag count. READING: Lily# 12.750000 = the upper stem's tip 6.25 (stem-shorten 0.25 for two flags) + 5.5 + 1, exactly. PREDICTION was about +1.2 and missed by the same stem-shorten term as the eighth's. PREDICTION for the port: 0."
     },
     "hara-kiri.wide-ink.lone-staff-to-next-system": {
       "probe": "page-vertical.ly",

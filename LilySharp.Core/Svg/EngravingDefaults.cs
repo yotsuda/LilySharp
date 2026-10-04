@@ -545,32 +545,6 @@ internal static class EngravingDefaults
     /// LILYPOND-REF: scm/define-grobs.scm PianoPedalBracket bracket-flare = (0.5 . 0.5).</summary>
     public const double PedalBracketFlare = 0.5;
 
-    // === Flags ===
-    // ⚠️ LILYSHARP-OWN: A NOMINAL BOX, AND LILYPOND HAS NO COUNTERPART TO IT. A Flag's
-    //   extent there IS its stencil's — lily/flag.cc:49-67 Flag::width returns
-    //   `sten->extent (X_AXIS)` off the glyph lily/flag.cc:69-83 Flag::glyph_name selected —
-    //   so there is no width, no base height and no per-level increment to cite. These three
-    //   are Lily#'s own, and the ONLY thing that reads them is the reservation
-    //   (SkylineBuilder's flag box); the DRAWN flag goes through GlyphMetrics, which is the
-    //   two-spellings shape HANDOFF 7.7 names.
-    // ⚠️ MEASURED against our own extracted Emmentaler metrics (design 20, staff spaces), so
-    //   the size of the disagreement is on the record rather than merely suspected:
-    //     eighth up    box 1.2 x 2.5   glyph 0.828200 x 3.115200  (+0.372 wide, -0.615 short)
-    //     eighth down  box 1.2 x 2.5   glyph 1.066800 x 2.905200  (+0.133 wide, -0.405 short)
-    //     16th up      box 1.2 x 3.0   glyph 0.828200 x 3.615200  (          , -0.615 short)
-    //     16th down    box 1.2 x 3.0   glyph 1.066800 x 3.115200  (          , -0.115 short)
-    //   The reservation is WIDER and SHORTER than the ink in every case, and it is not even
-    //   the same shape: the real glyph differs up against down, this box does not.
-    // ⚠️ CLOSING IT IS NOT A PROVENANCE FIX. Seeding GlyphMetrics.Flag* here moves the column
-    //   reach on every flagged note, so it changes spacing as well as reserved height — its
-    //   own island with its own snapshot approval. Recorded, not done.
-    /// <summary>Reserved width of a flag (staff spaces) — Lily#'s nominal box, see above.</summary>
-    public const double FlagWidth = 1.2;
-    /// <summary>Reserved height of an eighth-note flag (staff spaces) — nominal, see above.</summary>
-    public const double FlagBaseHeight = 2.5;
-    /// <summary>Reserved height added per further flag level — nominal, see above.</summary>
-    public const double FlagHeightIncrement = 0.5;
-
     /// <summary>
     /// The gap between a system's left edge and the clef glyph's drawing origin — the
     /// LeftEdge → Clef break-align spacing.
