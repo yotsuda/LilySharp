@@ -4741,6 +4741,34 @@
       "residual": 0,
       "why": "EXACT since session 812 (see staff.staff.flag-down.eighth). ⚠️ THIS POINT DOES NOT OBSERVE THE FLAG'S OUTLINE, only the box's absence: the poison that drops the flag from the down skyline left it green (Lab sessions/p812/poisons.log, poison 4) - the sixteenth's longer stem (stem-shorten 0.25) binds against the lower head before the outline can, so LilyPond's 10.795 is a stem number. PREDICTION (written before the port, commit e3f6d0aa1): 0. OUTCOME: held, 0.000000000 (was +1.955). The account of the defect follows. Cause: see staff.staff.flag-down.eighth - the nominal flag box is flat at the stem's tip whatever the flag count. READING: Lily# 12.750000 = the upper stem's tip 6.25 (stem-shorten 0.25 for two flags) + 5.5 + 1, exactly. PREDICTION was about +1.2 and missed by the same stem-shorten term as the eighth's. PREDICTION for the port: 0."
     },
+    "staff.staff.rest-outline.sixteenth": {
+      "probe": "rest-staff-gap.ly",
+      "score": "RSXD",
+      "lilypond": 12.585,
+      "residual": 1.955,
+      "why": "OPEN since session 813 (read before the port as its baseline). Cause: LilyPond's Rest declares grob::unpure-vertical-skylines-from-stencil (scm/define-grobs.scm Rest), so the gap reads the rest's traced OUTLINE (lily/stencil-integral.cc:535-563): the sixteenth rest pushed below the staff reaches its lowest point only in its stem's narrow foot (glyph x 0.26-0.48) and stands high at its right end, where the lower staff's up stem (tip 8.5) stands - LilyPond 12.585, 1.035 over the control. Lily# seeds the outline's BOX (SkylineBuilder's rest seed, GlyphMetrics.GetRestSkylineBBox), flat at the foot across the whole width out to 1.2, which overlaps that stem. READING: Lily# 14.540 = the box's bottom 5.04 + 8.5 + 1, exactly. PREDICTION was about +1.965 and missed by 0.01 - the box is the outline's (bottom -2.04 about the glyph origin), not LILC's -2.05. PREDICTION for the port: 0 once the rest is seeded as its glyph's outline at the point the renderer draws it."
+    },
+    "staff.staff.rest-outline.control": {
+      "probe": "rest-staff-gap.ly",
+      "score": "RSXC",
+      "lilypond": 11.55,
+      "residual": 0,
+      "why": "EXACT (PREDICTION, written before Lily# was read: 0 - held). Spacers in place of the rest: the lower staff's up stem tip 8.5 against the upper staff's bottom line 2.05, + 1 - the reading that lets the rest points beside it be read as the rest."
+    },
+    "staff.staff.rest-outline.eighth": {
+      "probe": "rest-staff-gap.ly",
+      "score": "RSXE",
+      "lilypond": 11.585,
+      "residual": 0,
+      "why": "EXACT before the port (session 813). PREDICTION (written before Lily# was read) was about +1.965 - that the box's right edge (1.0) would reach the up stem at 1.17 - and it missed: the box falls short of the stem on Lily#'s side, and LilyPond's own +0.035 over the control is matched as it stands. PREDICTION for the port: 0 (the outline lies inside the box)."
+    },
+    "staff.staff.rest-outline.quarter": {
+      "probe": "rest-staff-gap.ly",
+      "score": "RSXQ",
+      "lilypond": 11.825,
+      "residual": 0,
+      "why": "EXACT before the port (session 813). PREDICTION (written before Lily# was read) was about +1.925, for the eighth's reason, and missed for it too (the box's right edge 0.972 falls short of the stem). PREDICTION for the port: 0."
+    },
     "hara-kiri.wide-ink.lone-staff-to-next-system": {
       "probe": "page-vertical.ly",
       "score": "HKW",

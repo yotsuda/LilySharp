@@ -226,3 +226,53 @@ probeTag =
   }
 }
 
+
+%% RSXD / RSXC / RSXE / RSXQ — THE REST'S OUTLINE, NOT ITS BOX (session 813, HANDOFF §2 C).
+%%     RSTD's shape with ONE rest (then spacers) and the lower staff's b' stem forced UP, so
+%%     the stem stands at the head's RIGHT. An eighth or sixteenth rest reaches its lowest
+%%     point only in its stem's narrow foot and stands high at its right end; a box of the
+%%     outline is flat at the foot across the whole width. The sixteenth's box reaches the up
+%%     stem (its right edge 1.2 against the stem at 1.17), the eighth's (1.0) and the
+%%     quarter's (0.972) do not. RSXC is the control (spacers only): the stem tip 8.5 against
+%%     the upper staff's bottom line 2.05, + 1.
+%%     READ (2.26.0, session 813): RSXD 12.585, RSXC 11.55, RSXE 11.585, RSXQ 11.825.
+\book {
+  \probeTag "RSXD"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new PianoStaff <<
+      \new Staff << { \voiceOne b'4 b' b' b' } \\ { \voiceTwo r16 s16 s8 s4 s2 } >>
+      \new Staff { \clef bass \stemUp b'4 r4 r2 }
+    >>
+  }
+}
+\book {
+  \probeTag "RSXC"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new PianoStaff <<
+      \new Staff << { \voiceOne b'4 b' b' b' } \\ { \voiceTwo s16 s16 s8 s4 s2 } >>
+      \new Staff { \clef bass \stemUp b'4 r4 r2 }
+    >>
+  }
+}
+\book {
+  \probeTag "RSXE"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new PianoStaff <<
+      \new Staff << { \voiceOne b'4 b' b' b' } \\ { \voiceTwo r8 s8 s4 s2 } >>
+      \new Staff { \clef bass \stemUp b'4 r4 r2 }
+    >>
+  }
+}
+\book {
+  \probeTag "RSXQ"
+  \paper { ragged-bottom = ##t }
+  \score {
+    \new PianoStaff <<
+      \new Staff << { \voiceOne b'4 b' b' b' } \\ { \voiceTwo r4 s4 s2 } >>
+      \new Staff { \clef bass \stemUp b'4 r4 r2 }
+    >>
+  }
+}

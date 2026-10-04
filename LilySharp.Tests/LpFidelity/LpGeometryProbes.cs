@@ -8006,6 +8006,54 @@ internal static class LpGeometryProbes
     /// sixteenth's.
     /// LilyPond twin: score FDL of audit/lp-geometry/probes/flag-staff-gap.ly.
     /// </remarks>
+    /// <summary>
+    /// A REST'S OUTLINE in the staff gap: <see cref="RSTD"/>'s shape — voice two's rest pushed
+    /// below the staff by voice one's middle-line heads — with ONE rest (then spacers) and the
+    /// lower staff's B4 stem forced UP, so its stem stands at the head's RIGHT. An eighth or
+    /// sixteenth rest reaches its lowest point only in the narrow foot of its stem (x ≈ 0.3–0.5
+    /// of the glyph) and stands high at its right; Lily#'s seed is the outline's BOX
+    /// (GlyphMetrics.GetRestSkylineBBox), flat at the foot across the whole width.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's Rest declares grob::unpure-vertical-skylines-from-stencil (scm/define-grobs.scm
+    /// Rest), so the gap reads the traced outline (lily/stencil-integral.cc:535-563).
+    /// RSXC is the control (spacers only); RSXE an eighth rest, RSXQ a quarter.
+    /// LilyPond twin: scores RSXD / RSXC / RSXE / RSXQ of audit/lp-geometry/probes/rest-staff-gap.ly.
+    /// </remarks>
+    private static readonly string RSXD = RestOutlineGapScore("RSXD", "r16 s16 s8 s4 s2");
+
+    /// <summary><see cref="RSXD"/>'s control — spacers only. Mirror of book RSXC.</summary>
+    private static readonly string RSXC = RestOutlineGapScore("RSXC", "s16 s16 s8 s4 s2");
+
+    /// <summary><see cref="RSXD"/> with an eighth rest. Mirror of book RSXE.</summary>
+    private static readonly string RSXE = RestOutlineGapScore("RSXE", "r8 s8 s4 s2");
+
+    /// <summary><see cref="RSXD"/> with a quarter rest. Mirror of book RSXQ.</summary>
+    private static readonly string RSXQ = RestOutlineGapScore("RSXQ", "r4 s4 s2");
+
+    private static string RestOutlineGapScore(string name, string rests) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part rh { clef treble }
+        part lh { clef bass }
+
+        section Main {
+          rh { voice { b4 b b b } { {{rests}} } | }
+          lh { b4@stemUp r4 r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          grandStaff {
+            staff rh
+            staff lh
+          }
+        }
+        """;
+
     private static readonly string FDL = FlagStaffGapScore("FDL", "c8@stemDown r8 r4 r2");
 
     /// <summary>The control — <see cref="FDL"/> with a quarter, so no flag: the gap rests on
@@ -16748,6 +16796,12 @@ internal static class LpGeometryProbes
         new("staff.staff.flag-down.eighth", FDL, g => g.StaffGap()),
         new("staff.staff.flag-down.control", FDC, g => g.StaffGap()),
         new("staff.staff.flag-down.sixteenth", FDL16, g => g.StaffGap()),
+        // A REST's outline between the staves, against Lily#'s outline box. See probes
+        // RSXD / RSXC / RSXE / RSXQ (rest-staff-gap.ly).
+        new("staff.staff.rest-outline.sixteenth", RSXD, g => g.StaffGap()),
+        new("staff.staff.rest-outline.control", RSXC, g => g.StaffGap()),
+        new("staff.staff.rest-outline.eighth", RSXE, g => g.StaffGap()),
+        new("staff.staff.rest-outline.quarter", RSXQ, g => g.StaffGap()),
 
         // The same gap again, shaped so a DYNAMIC under a stemless whole note is what binds
         // it — the first ledger point that reaches DynamicEngraver. See probe DY.
