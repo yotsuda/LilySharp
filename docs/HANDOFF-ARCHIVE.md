@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第789セッションの経緯
+
+### 1.1 第789セッション（2026-10-04・YT-DELL2）
+
+新しい会話・ユーザー「HANDOFF を読んで着手」→ AskUserQuestion で ⒜ の **mid-line prefix 後の和音の X**（第788 起票）を選択。`-Start p789`（HEAD `2d056809`・未 push 21）＝full **10968 / 0 / 2 / 10970**。§7 3.5 で第787 を ARCHIVE へ。
+- **起票の前提を測り直した（5.0）＝外れ**: twin（`sessions/p767/twin/…leadsheet-collide.ly`）に PROBEX の dump を足して LP を回した（`sessions/p789/probes/lsc-dump.ly`／`.out`）: bar 3 の `.|:` 左端→符頭＝LP 2.917・Lily# 2.90（svg F2）＝和音は両方とも符頭に乗る＝**和音の X は同じ**。違うのは番号の側 2 つ。⑴ LP の番号「3」は X 61.896..62.852・和音は 64.268＝**reach 1.0 を 0.42 超えても再親化**＝第788 の「symbol の ink が届く」読みが誤り。`get_extremal_staff`（staff-grouper-interface.cc:42-55）が交差を見るのは要素＝**ChordNames 群の X extent＝ChordName 全部の union**（axis-group-interface.cc relative_group_extent）＝行の span が番号を覆えば取る（BNE は bar 1 の和音で span が終わるから 2〜4 が staff に残っただけ）。⑵ 番号の X: LP は bar line の **break-align anchor**（`calc-anchor`＝`|` の中心 0.095・`.|:` は span 部 `.|` の中心 0.545）に左端を置く（define-grobs.scm:334-337 self-aligned-on-breakable・mid-line は LEFT）。Lily# は ml.X＝`|` の右端（+0.095）・`|:` の左端（−0.545）。
+- **probe `barnumber-row-extent.ly` 3 冊（PROBER・`sessions/p789/lp-barnumber-row-extent.txt`）・予測を先に書いた**: BRX（和音は bar 1 と 5 だけ・番号 2〜4 はどの symbol からも 1 小節離れる）＝3 つとも **1.000000**（反証 3.05＝per-symbol）／BRR（bar 3 に mid-line `.|:`）＝「3」1.000000・左端 − bar ink 左端 **0.545000**／BRK（bar 3 で調号＋3/4）＝1.000000・**0.095000**。**5 点とも HELD**。
+- **直した（commit `2e509001`）**: `MidLineRowAnchor` は行ごとの **union extent**（新 `RowExtents`＝system ごとに 1 回・`RowExtent` record）と番号の X±1.0 の交差で決める（触れるだけでも可＝`Interval::is_empty` は strict）／mid-line の番号の x は `MusicMarkEngraver.MidLineBarAnchorX`（rehearsal mark の家・internal に）＝REF を増やさず指し直し。台帳 +5（`barnumber.mid-line.row-spans/.repeat-start/.key-time.row-to-ink-bottom`・`barnumber.mid-line.anchor.plain/.repeat-start.bar-left-to-number-left`）・読み手 `BarNumberLeftFromBarlineLeft`（mark の stroke 群の読みと同形）・Lily# **5 点とも exact**。CHANGELOG の第788 Fixes を書き直し。棚卸し `APPROXIMATIONS.md` 行番号 2 行・csv 不変。snapshot 不動（fixture に `barNumbers every` は無い）。
+- **絵（`sessions/p789/probes/…page1.png`）**: 3・11 が和音名の脇＝LP と同じ段。13 は Bb の ink の上に lift（LP も Y −0.608 で同じ形）。
+- 掃き（`sessions/p789/svg/sweep789.ps1`＝p723 の型＋dogfood 177 冊を別母集団・base＝`sessions/p788/exe-head`＝HEAD のコード・head＝`sessions/p789/exe-head`・`sweep.log`）: main 998 冊 svg **差 0 / 1199**（追跡＋実コーパスに `barNumbers every` は無い）／dogfood **差 13 / 195**＝`barNumbers every` を持つ 7 冊ちょうど: mid-line の番号が全部 0.095 左へ。右端が 0.095 縮んで次の列の ink を踏まなくなった番号は lift が消えて 3.05 に降りる（piano-sonatina の 6・8 が 0.31 下）＝その system の skyline が下がり段が 0.05〜0.29 動く（quartet-collide・bigband-swing）。全部 X anchor の帰結。
+★ `-End p789 -DiffBase 2d056809`（`end.log`）＝full **10973 / 0 / 2 / 10975**（台帳 +5）・門 全 OK。7.5: Core **`+` 125** 行・REF +3（`RowExtents` の axis-group-interface.cc:178-182・`MidLineRowAnchor` の interval.hh:212・x の define-grobs.scm:334-337）・OWN 0＝足した数値なし（1.0 は既存 REF・0.095／0.545 は `BarlineAnchorFromInkLeft` の既存の家）。7.6: ⒜ union の試験と anchor は LP の字面／⒟ x は mark の家の指し直し／⒞ 新しい OWN なし（FretBoards 群・lyrics 行は未移植・名指し据え置き）。7.7: 匂いなし（guard なし・sentinel なし・床は LP の規則）。commit `2e509001`（code・probe・台帳・読み手・CHANGELOG・棚卸し）＋ docs の commit。push はユーザー。
+判定: ⒜ の「mid-line prefix 後の和音の X」は閉じた（前提は外れ・原因は番号の reach の読みと anchor＝§1.0 から消した）。次の一手: ⒝ 跳躍の 3 軒（候補 ⑴〜⑶ はユーザー判断）か ⒜ の小物（lead sheet の grid の残り ⒝⒠・⑼ の残り）＝ユーザー判断。会話を区切るか: (a) 次の一手は本便の文脈を使わない・(b) 便は 1 つで文脈は軽い＝**続けてよい**（続けるなら `-Start p790`・跳躍は候補の選択をユーザーに訊いてから）。
+
 ## 以下は第788セッションの経緯
 
 ### 1.1 第788セッション（2026-10-04・YT-DELL2）
