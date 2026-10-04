@@ -305,6 +305,11 @@
         "title": "Import from Image/PDF…"
       },
       {
+        "command": "lilysharp.showScan",
+        "category": "Lily#",
+        "title": "Show Original Scan"
+      },
+      {
         "command": "lilysharp.aiTransform",
         "category": "Lily#",
         "icon": "$(sparkle)",
@@ -476,6 +481,10 @@
         {
           "command": "lilysharp.importImage",
           "when": "lilysharp.omrAvailable"
+        },
+        {
+          "command": "lilysharp.showScan",
+          "when": "resourceLangId == lilysharp && lilysharp.hasScan"
         },
         {
           "command": "lilysharp.aiTransform",

@@ -9,5 +9,5 @@
         "sourceMap": false,
         "types": ["node"]
     },
-    "include": ["src/smartTypingCore.ts", "src/exportBatchCore.ts", "src/markdownFenceCore.ts", "src/aiTransformCore.ts", "src/auditionCore.ts", "src/splitSectionsCore.ts", "src/omrCore.ts", "test/**/*"]
+    "include": ["src/smartTypingCore.ts", "src/exportBatchCore.ts", "src/markdownFenceCore.ts", "src/aiTransformCore.ts", "src/auditionCore.ts", "src/splitSectionsCore.ts", "src/omrCore.ts", "src/omrScanCore.ts", "test/**/*"]
 }

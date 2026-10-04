@@ -523,6 +523,22 @@ public class TodoInfo
     public string? Part { get; set; }
 }
 
+/// <summary>Parameters for lilysharp/placeAt: a caret, as a 0-based character offset.</summary>
+public class PlaceAtParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    public int Offset { get; set; }
+}
+
+/// <summary>Response for lilysharp/placeAt: the bar number the page prints and the part of the
+/// item at the caret, both null when its line writes none.</summary>
+public class PlaceAtResponse
+{
+    public int? Measure { get; set; }
+    public string? Part { get; set; }
+    public int Version { get; set; }
+}
+
 /// <summary>Response for lilysharp/todos: the marks in source order.</summary>
 public class TodosResponse
 {

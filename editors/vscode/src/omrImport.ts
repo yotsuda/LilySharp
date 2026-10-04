@@ -34,6 +34,8 @@ export interface OmrImportDeps {
     readonly openPreview: (column: vscode.ViewColumn) => void;
     /** The lysc the reader re-draws with when it verifies, if the extension carries one. */
     readonly lysc: () => string | undefined;
+    /** Opens the scan view of a .lys (omrScan.ts), beside the preview. */
+    readonly showScan: (lys: vscode.Uri) => Promise<void>;
 }
 
 /** The command: from the palette (a file picker), or the Explorer (one file or a selection). */
@@ -150,12 +152,15 @@ export async function importFromImage(
         return;
     }
 
-    // The score, its preview beside it, and the annotated first page beside that.
+    // The score, its preview beside it, and beside that the scan it was read from (the marks
+    // boxed, B3) — or, when the reader wrote no side file, its annotated first page.
     const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(result.done.lys));
     await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
     deps.openPreview(vscode.ViewColumn.Two);
     const annotated = result.done.annotated?.find(p => fs.existsSync(p));
-    if (annotated) {
+    if (result.done.json && fs.existsSync(result.done.json)) {
+        await deps.showScan(doc.uri);
+    } else if (annotated) {
         await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(annotated),
             { viewColumn: vscode.ViewColumn.Three, preserveFocus: true });
     }

@@ -93,6 +93,26 @@ public class TodoIndexTests
         static double Num(Match m, int g) => double.Parse(m.Groups[g].Value, CultureInfo.InvariantCulture);
     }
 
+    /// <summary>B3: the caret's bar is the item written before it on its line, else the first
+    /// after it there; a line that writes no music has none.</summary>
+    [Theory]
+    [InlineData("lh { r4 | c1 | d^1", 2, "lh")]          // on the d
+    [InlineData("lh { r4 | c1 |^ d1", 1, "lh")]          // after the c's bar line: still the c
+    [InlineData("^  lh { r4", 0, "lh")]                  // the head of the line: its first item
+    [InlineData("d''1 | e''1 | }^", 3, "rh")]            // the end of the line: its last item
+    [InlineData("form ^main", null, null)]
+    public void TheCaretsPlace_IsReadOnItsLine(string caretAt, int? measure, string? part)
+    {
+        // '^' is the caret.
+        string probe = caretAt.Replace("^", "");
+        int at = Book.IndexOf(probe, StringComparison.Ordinal);
+        Assert.True(at >= 0, probe);
+
+        var tree = SyntaxTree.Parse(Book);
+        var place = TodoIndex.PlaceAt(TodoIndex.Places(tree), Book, at + caretAt.IndexOf('^'));
+        Assert.Equal((measure, part), (place?.Measure, place?.Part));
+    }
+
     [Fact]
     public void AFileWithoutMarks_ListsNone()
         => Assert.Empty(TodoIndex.Find(SyntaxTree.Parse(Book.Replace("@todo(r1 \"high C?\")", "")
@@ -115,6 +135,13 @@ public class TodoIndexTests
         Assert.Equal(new int?[] { 1, 3, null }, response.Todos.Select(t => t.Measure));
         Assert.Equal(new[] { "rh", "lh", null }, response.Todos.Select(t => t.Part));
         Assert.Equal("high C?", response.Todos[0].Memo);
+
+        var place = server.PlaceAt(new PlaceAtParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = uri },
+            Offset = Book.IndexOf("e1@todo", StringComparison.Ordinal),
+        });
+        Assert.Equal((3, "lh", 7), (place.Measure, place.Part, place.Version));
 
         var missing = server.Todos(new TodosParams
         {

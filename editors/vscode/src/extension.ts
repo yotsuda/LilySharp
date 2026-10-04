@@ -33,6 +33,7 @@ import { registerStepAudition } from './stepAudition';
 import { registerExportBatch } from './exportBatch';
 import { importFromImage } from './omrImport';
 import { locateOmr } from './omrCore';
+import { OmrScanDeps, hasScan, registerScanFollow, showScan } from './omrScan';
 import { markdownItExtensionApi } from './markdownFence';
 import { svgPostKey, pagesSummary, SvgPages } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
@@ -431,6 +432,25 @@ export function activate(context: vscode.ExtensionContext) {
         locateOmr(process.env, path.join(context.globalStorageUri.fsPath, 'omr'),
             process.platform, process.arch) !== undefined);
 
+    // "Show Original Scan" (LilySharp-Omr proposal B3) is offered on a .lys an OMR reader
+    // wrote, i.e. one with its side file beside it.
+    const scanDeps: OmrScanDeps = {
+        output: outputChannel,
+        client: async () => {
+            try {
+                await ensureClientReady();
+                return client;
+            } catch {
+                return undefined;
+            }
+        },
+    };
+    const updateHasScan = () => void vscode.commands.executeCommand('setContext', 'lilysharp.hasScan',
+        hasScan(vscode.window.activeTextEditor?.document.uri));
+    updateHasScan();
+    registerScanFollow(context, scanDeps);
+    context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(updateHasScan));
+
     // Push preview.theme changes to every open preview, so the setting takes effect
     // without reopening (a new panel reads it when its HTML is built).
     context.subscriptions.push(
@@ -536,7 +556,10 @@ export function activate(context: vscode.ExtensionContext) {
                     const p = path.join(context.extensionPath, 'server', process.platform === 'win32' ? 'lysc.exe' : 'lysc');
                     return fs.existsSync(p) ? p : undefined;
                 },
+                showScan: lys => showScan(context, scanDeps, lys, vscode.ViewColumn.Three),
             }, uri, uris)),
+        vscode.commands.registerCommand('lilysharp.showScan', (uri?: vscode.Uri) =>
+            showScan(context, scanDeps, uri instanceof vscode.Uri ? uri : undefined)),
         vscode.commands.registerCommand('lilysharp.importMusicXml', (uri?: vscode.Uri) => {
             outputChannel.appendLine('importMusicXml command triggered');
             importMusicXml(context, uri);

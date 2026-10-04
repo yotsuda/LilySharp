@@ -406,7 +406,14 @@ workflow attaches that section to the GitHub Release verbatim.
   (`lilysharp/todos`: key, memo, where each is written, the bar number the page prints for it
   and its part), and the preview's page carries an invisible box over every bar of every
   system with that bar's number (`<rect class="bar-box" data-bar="12">`) — what an editor lines
-  the page up with a scanned original by. Exported SVG is unchanged.
+  the page up with a scanned original by. Exported SVG is unchanged. `lilysharp/placeAt` answers
+  the printed bar and part of the item at a caret.
+- **Lily#: Show Original Scan.** On a `.lys` an OMR reader wrote (its `x.omr.json` beside it),
+  the pages it read open beside the score with the marks it was unsure of boxed in red. A click
+  on a mark goes to its `@todo`, a click on a bar to the line it is written on, and the caret
+  lights its mark's box, else its bar's — through any edit since: a mark is found by its key, a
+  bar by the line the reader wrote it on, carried along as lines are added or removed. Importing
+  from an image opens it in place of the annotated page.
 
 ### Fixes
 

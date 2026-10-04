@@ -41,61 +41,48 @@ namespace LilySharp.Core.Editing;
 public sealed record TodoEntry(
     string? Key, string? Memo, int Start, int End, int HostStart, int HostEnd, int? Measure, string? Part);
 
+/// <summary>Where the score draws one item written at <see cref="Position"/>: the bar number the
+/// page prints and the part whose staff it is on.</summary>
+public readonly record struct ItemPlace(int Position, int Measure, string Part);
+
 /// <summary>
-/// The <c>@todo</c> marks of a document in source order, each with the bar number and the
-/// part the score draws it in (LilySharp-Omr proposal C1: an editor goes from a mark to the
-/// bar of the scanned page, and from the caret to the mark).
+/// Where the score draws what a document writes (LilySharp-Omr proposal C1: which bar of the
+/// page a mark, or the caret, is in): every item's printed
+/// bar and part (<see cref="Places"/>), the bar at a caret (<see cref="PlaceAt"/>), and the
+/// <c>@todo</c> marks located (<see cref="Find"/>).
 /// </summary>
 /// <remarks>
 /// The bar number is the one the page PRINTS — <see cref="BarNumberEngraver.NumberMeasures"/>
 /// over the measures that drive the layout, with a leading pickup as bar 0 — so a reader of
 /// the page and of this answer count alike. A phrase played twice is in two bars; the first
 /// is answered. The scores are collected the way the render path collects them
-/// (<c>SvgGenerator.CollectScore</c>), and the
-/// first score that plays the host decides.
+/// (<c>SvgGenerator.CollectScore</c>), and the first score that plays an item decides.
 /// </remarks>
 public static class TodoIndex
 {
-    /// <summary>Every <c>@todo</c> of <paramref name="tree"/>, located.</summary>
-    public static IReadOnlyList<TodoEntry> Find(SyntaxTree tree)
+    /// <summary>One place per written item position, ordered by position. Empty when the
+    /// document cannot be collected.</summary>
+    public static IReadOnlyList<ItemPlace> Places(SyntaxTree tree)
     {
-        var marks = new List<(TodoAnnotation Todo, SyntaxNode Mark, SyntaxNode Host)>();
-        foreach (var node in tree.GetRoot().DescendantNodesOfKinds(AnnotationNameValidator.AnnotationKinds))
-            if (TodoAnnotation.Of(node) is { } todo && node.Parent is { } host)
-                marks.Add((todo, node, host));
-        if (marks.Count == 0)
-            return [];
-
-        var located = new (int Measure, string Part)?[marks.Count];
+        var byPosition = new Dictionary<int, ItemPlace>();
         try
         {
             // A file without a score block draws its first part alone (the render path's null spec).
             var all = RenderSpecParser.FindAll(tree);
             RenderSpec?[] specs = all.Count > 0 ? [.. all] : [null];
             foreach (var spec in specs)
-            {
-                if (located.All(l => l != null))
-                    break;
-                Locate(SvgGenerator.CollectScore(tree, spec), marks, located);
-            }
+                Collect(SvgGenerator.CollectScore(tree, spec), byPosition);
         }
         catch (Exception)
         {
-            // A document the collector cannot walk still lists its marks, unlocated.
+            // A document the collector cannot walk has no places; its marks stay unlocated.
         }
-
-        var entries = new TodoEntry[marks.Count];
-        for (int i = 0; i < marks.Count; i++)
-        {
-            var (todo, mark, host) = marks[i];
-            entries[i] = new TodoEntry(todo.Key, todo.Memo, mark.Span.Start, mark.Span.End,
-                host.Span.Start, host.Span.End, located[i]?.Measure, located[i]?.Part);
-        }
-        return entries;
+        var places = byPosition.Values.ToList();
+        places.Sort((a, b) => a.Position.CompareTo(b.Position));
+        return places;
     }
 
-    private static void Locate(MultiStaffScore score,
-        List<(TodoAnnotation Todo, SyntaxNode Mark, SyntaxNode Host)> marks, (int, string)?[] located)
+    private static void Collect(MultiStaffScore score, Dictionary<int, ItemPlace> byPosition)
     {
         var primary = score.PrimaryContentStaff.PrimaryVoice.Measures;
         if (primary.IsDefaultOrEmpty)
@@ -105,14 +92,63 @@ public static class TodoIndex
             foreach (var voice in staff.Voices)
                 for (int m = 0; m < voice.Measures.Length && m < numbers.Length; m++)
                     foreach (var item in voice.Measures[m].Items)
-                    {
-                        if (item.TodoKey == null)
-                            continue;
-                        for (int i = 0; i < marks.Count; i++)
-                            if (located[i] == null
-                                && item.SourcePosition >= marks[i].Host.Span.Start
-                                && item.SourcePosition < marks[i].Host.Span.End)
-                                located[i] = (numbers[m], staff.PrimaryVoice.Name);
-                    }
+                        if (item.SourcePosition >= 0)
+                            byPosition.TryAdd(item.SourcePosition,
+                                new ItemPlace(item.SourcePosition, numbers[m], staff.PrimaryVoice.Name));
+    }
+
+    /// <summary>
+    /// The place of the item at a caret: the last item written on the caret's line at or
+    /// before it, else the first after it on that line; null when the line writes none.
+    /// </summary>
+    /// <remarks>
+    /// The LINE bounds the answer because a part's music is written in its own block: the
+    /// nearest item before a caret on an empty line, or at the head of a block, belongs to
+    /// another part as often as not. A line is where a reader — and an OMR reader, which
+    /// writes a bar per line — expects the bar to be read off.
+    /// </remarks>
+    public static ItemPlace? PlaceAt(IReadOnlyList<ItemPlace> places, string text, int offset)
+    {
+        offset = Math.Clamp(offset, 0, text.Length);
+        int lineStart = offset == 0 ? 0 : text.LastIndexOf('\n', offset - 1) + 1;
+        int lineEnd = text.IndexOf('\n', offset);
+        if (lineEnd < 0)
+            lineEnd = text.Length;
+
+        // The first place at or after the caret, then step back to the last one before it.
+        int lo = 0, hi = places.Count;
+        while (lo < hi)
+        {
+            int mid = (lo + hi) / 2;
+            if (places[mid].Position <= offset) lo = mid + 1; else hi = mid;
+        }
+        if (lo > 0 && places[lo - 1].Position >= lineStart)
+            return places[lo - 1];
+        if (lo < places.Count && places[lo].Position < lineEnd)
+            return places[lo];
+        return null;
+    }
+
+    /// <summary>Every <c>@todo</c> of <paramref name="tree"/>, located through
+    /// <paramref name="places"/> (<see cref="Places"/> of the same tree; collected here when null).</summary>
+    public static IReadOnlyList<TodoEntry> Find(SyntaxTree tree, IReadOnlyList<ItemPlace>? places = null)
+    {
+        var entries = new List<TodoEntry>();
+        foreach (var node in tree.GetRoot().DescendantNodesOfKinds(AnnotationNameValidator.AnnotationKinds))
+        {
+            if (TodoAnnotation.Of(node) is not { } todo || node.Parent is not { } host)
+                continue;
+            places ??= Places(tree);
+            ItemPlace? place = null;
+            foreach (var p in places)
+                if (p.Position >= host.Span.Start && p.Position < host.Span.End)
+                {
+                    place = p;
+                    break;
+                }
+            entries.Add(new TodoEntry(todo.Key, todo.Memo, node.Span.Start, node.Span.End,
+                host.Span.Start, host.Span.End, place?.Measure, place?.Part));
+        }
+        return entries;
     }
 }

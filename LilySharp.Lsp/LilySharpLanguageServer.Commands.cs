@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -1272,7 +1272,7 @@ public sealed partial class LilySharpLanguageServer
         {
             return new TodosResponse
             {
-                Todos = TodoIndex.Find(doc.Tree).Select(t => new TodoInfo
+                Todos = TodoIndex.Find(doc.Tree, PlacesOf(@params.TextDocument.Uri, doc)).Select(t => new TodoInfo
                 {
                     Key = t.Key, Memo = t.Memo, Start = t.Start, End = t.End,
                     HostStart = t.HostStart, HostEnd = t.HostEnd, Measure = t.Measure, Part = t.Part,
@@ -1284,6 +1284,48 @@ public sealed partial class LilySharpLanguageServer
         {
             return new TodosResponse { Error = ex.Message, Version = doc.Version };
         }
+    }
+
+    /// <summary>
+    /// The printed bar and the part of the item at a caret (LilySharp-Omr proposal C1's second
+    /// request). See <see cref="TodoIndex.PlaceAt"/>. ⚠️ The PRINTED bar: after a bar written
+    /// too long it is one more than the bar a reader counts in the text — the scan view goes by
+    /// the line its reader wrote a bar on instead (editors/vscode omrScanCore.anchorsOf).
+    /// </summary>
+    [JsonRpcMethod("lilysharp/placeAt", UseSingleObjectParameterDeserialization = true)]
+    public Task<PlaceAtResponse> PlaceAtAsync(PlaceAtParams @params, CancellationToken token)
+        => OffDispatch(() => PlaceAt(@params), token);
+
+    public PlaceAtResponse PlaceAt(PlaceAtParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new PlaceAtResponse();
+        try
+        {
+            var place = TodoIndex.PlaceAt(PlacesOf(@params.TextDocument.Uri, doc), doc.Text, @params.Offset);
+            return new PlaceAtResponse { Measure = place?.Measure, Part = place?.Part, Version = doc.Version };
+        }
+        catch (Exception)
+        {
+            return new PlaceAtResponse { Version = doc.Version };
+        }
+    }
+
+    // The last document's places, by version: the caret asks on every move, and a collect per
+    // move would be the preview's whole cost again.
+    private readonly object _placesLock = new();
+    private (Uri Uri, int Version, IReadOnlyList<ItemPlace> Places)? _places;
+
+    private IReadOnlyList<ItemPlace> PlacesOf(Uri uri, Document doc)
+    {
+        lock (_placesLock)
+            if (_places is { } cached && cached.Uri == uri && cached.Version == doc.Version)
+                return cached.Places;
+        var places = TodoIndex.Places(doc.Tree);
+        lock (_placesLock)
+            _places = (uri, doc.Version, places);
+        return places;
     }
 
     /// <summary>
