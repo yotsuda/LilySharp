@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第803セッションの経緯
+
+### 1.1 第803セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き（第802 の判定 ⒜）。`-Start p803`（HEAD `deab87ef`・未 push 14）＝full **11035 / 0 / 2 / 11037**。§7 3.5 で第801 を ARCHIVE へ（moved 14 lines）。
+- **第802 が起票した `sings VOICE`＝閉じた。ただし根は起票より 1 段下に在った**: 着手の 1 手目で読み手を数えると、歌詞を結ぶのは collector だけ（双子と MusicXML は `score.Lyrics`＝ページのモデルを読む）。直しを入れて単一譜の経路は通ったが多段譜の網が赤のまま＝**多段譜の経路（`CollectMultiStaff`）は voice 名の表 `_voiceMeasuresByName` を 1 度も埋めていなかった**（埋めるのは単一譜の `BuildMultiVoiceScore` だけ）。⇒ **2 譜以上の score では、名前で結ぶ `voice alt { }`＋`lyrics alt { }` も第 1 声部のリズムに立っていた**（実測・第802 の exe・Lab `sessions/p803/ms/two-staves.lys`＝`test/named-voice-lyrics` に 2 段目を足した本: `part` 23.04・`deep` 28.61。単一譜は 24.87・30.44）。RULES §5.0「起票が外すのは形」の例＝起票は「`sings` の宛先を読まない」と書き、実物は「多段譜では name も読めていない」を含んでいた。
+- 入れたもの（commit 1 本・依存があるので同時）: ⑴ `StaffSpec.VerseVoices`（畳んだ verse のうち `sings` が part の voice を名指すものだけ・track→voice の疎な表）。書き手は 2 つの fold が共有する `RenderSpecParser.WithFoldedVerse` 1 軒（`WithLyrics` と一緒に書く）。⑵ `LyricsCollector.CollectNoteBound` は `voiceOfTrack` が在ればそれで voice を引く（無ければ従来どおり track 名）。⑶ 多段譜: `MeasureCollector.NamedVoiceTracks`＝slot は構文から（`LyricBindings.VoiceSlotsOfPart`・新設＝span の中の位置・無名も数える）、track は出来上がった staff から（resume で歩きを飛ばしても同じ答え）。⑷ 譜から離れた bound row（`staff m  staff n  lyrics en sings alt`）は `EngravedVoiceNamed` でその voice の小節を melody にする（以前は「`alt` という part は無い」→均等割り）。⑸ LYS6013 の文面に `sings VOICE` を足した。
+- 網: `SingsLyricsTests` +6（theory 3＝行の `sings`・定義の `sings`・group の中。どれも「name で結んだ対照と同じ・かつ絶対に 0, 1/2, 3/4」／単一譜の経路／離れた row／`sings PART` は記録せず第 1 声部のまま）。毒 4 本（Lab `sessions/p803/poison-*.log`・baseline 28 緑）: fold が voice を記録しない→4 赤／collector が `voiceOfTrack` を無視→4 赤／多段譜の表を空に→3 赤（単一譜の fact は緑のまま＝予測どおり）／row の voice を見つけない→1 赤。
+- 掃き（`p723/svg2/sweep-all.ps1` を `p803/sweep/` に写した・base＝`p802/exe-head`・head＝`p803/exe-head`）: **998 冊・1,199 svg・差 0**＝実の本は 1 冊も動かない（snapshot の `test/named-voice-lyrics` は単一譜なので不動）。陽性対照 `two-staves.lys` は head で `part` 24.87・`deep` 30.44。
+- **残り（測っていない・起票しない理由つき）**: この score が**描かない** part の voice を `sings` する row（`CollectMelodyFor` はその part の第 1 声部しか返さない）＝均等割りに落ちる。実の本 0 冊（第802 の census で `sings` が voice を指す行は自作の 1 冊だけ）なので網も足していない＝書く人が出たら `CollectMelodyFor` に slot を通す。
+- GRAMMAR.md・GRAMMAR_FOR_LLM.md に `sings VOICE` の 1 文・CHANGELOG Fixes 1 項（第802 の項の文面も `sings VOICE` に）。棚卸し `APPROXIMATIONS.md` は行番号 3 行。
+★ `-End p803 -DiffBase deab87ef`（`end1.log`）＝full **11041 / 0 / 2 / 11043**（網 +6）・門 全 OK（HANDOFF 438,738 B・残り 11,262）。7.5: Core `+` 176 行・REF 0・OWN 0＝歌詞をどの voice に結ぶかは意味論の側（RULES §5.2 第751）で、描画・配置の式は 1 行も動いていない（`CollectNoteBound` の既存の REF は「結んだあと音符にどう付けるか」で、今回触ったのは「どの voice か」）。7.6: ⒞ 設計の側（観測者＝`SingsLyricsTests` の 6 本＋掃き）。7.7: ⑴ `VerseVoices` は `WithLyrics` の隣の疎な表＝verse についての 2 つ目の配列だが、書き手は `WithFoldedVerse` 1 軒・読み手は `VerseVoiceMapOf` 1 軒／⑵ **黙る fallback が 1 つ在る**: `NamedVoiceTracks` と `EngravedVoiceNamed` の `slot < voices.Length`（名前付き voice の slot に track が無いとき第 1 声部／均等割りへ落ちる）＝構文の slot と collector の track の数が食い違う本は見つけていない（網の 4 形は全部一致）・観測者なし。7.9 perf: 足した計算は「attached verse を持つ staff ごとに 1 回」の `VerseVoiceMapOf`（items を 1 回歩く）と、**part が名前付き voice を持つときだけ** voice ごとの `Measures.ToList()`＝多段譜でその形を書く本は 998 冊中 0 なので測っていない（回数は読んだ数であって測った数ではない）。commit `c93db6c2a`（code・網・GRAMMAR 2 文書・CHANGELOG・棚卸し）＋ docs の commit。Lab は sessions/p803 を commit。push はユーザー。
+判定: `sings VOICE` と多段譜の name 結びは閉じた。次の候補: ⒞′ 双子の chords／lyrics 行（5 冊・exporter の設計）／H の束（paper column・設計）／§1.0 ⒜ の T7 の残り（計器）。どれも設計か計器が先で、ユーザー判断 1 つで閉じる小物は §2 F に残っていない（F の残りは Dead-code 監査の手動分と REF 行番号の再採番＝島2 に紐づく繰延）。会話を区切るか: (a) 次の候補はどれもこの 2 便の文脈（歌詞の結び）を使わない／(b) RULES 通読＋2 便で会話は重い／(c) 無関係な島＝**新しい会話が有利**。
+
 ## 以下は第802セッションの経緯
 
 ### 1.1 第802セッション（2026-10-04・YT-DELL2）
