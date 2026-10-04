@@ -413,7 +413,10 @@ workflow attaches that section to the GitHub Release verbatim.
   on a mark goes to its `@todo`, a click on a bar to the line it is written on, and the caret
   lights its mark's box, else its bar's — through any edit since: a mark is found by its key, a
   bar by the line the reader wrote it on, carried along as lines are added or removed. Importing
-  from an image opens it in place of the annotated page.
+  from an image opens it in place of the annotated page. With *Scroll with the preview* on, the
+  scan and the score preview scroll together bar by bar (a bar the page splits in two — one the
+  reader wrote too long — keeps the scan on the bar it came from), and the preview frames the
+  bars that carry a mark.
 
 ### Fixes
 

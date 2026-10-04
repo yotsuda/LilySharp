@@ -21,7 +21,10 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { anchorsOf, barOnLine, parseSideFile, shiftAnchors, shownImage, sideFileOf, todoTarget } from '../src/omrScanCore';
+import * as vm from 'node:vm';
+import {
+    anchorsOf, barOnLine, parseSideFile, scanBarForPrinted, shiftAnchors, shownImage, sideFileOf, todoTarget,
+} from '../src/omrScanCore';
 
 // Absolute on whichever OS runs the tests.
 const SCANS = path.resolve('scans');
@@ -53,6 +56,18 @@ describe('the core is editor-free', () => {
     });
 });
 
+describe('the scan page script', () => {
+    // It lives in a template literal in omrScan.ts, so neither tsc nor esbuild parses it (as
+    // the preview's — webviewScript.test.ts). It carries no substitution and no escape.
+    it('parses', () => {
+        const src = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'omrScan.ts'), 'utf8');
+        const open = src.indexOf('<script nonce=');
+        const body = src.slice(src.indexOf('>', open) + 1, src.indexOf('</script>', open));
+        assert.doesNotMatch(body, /\$\{|\\/);
+        assert.doesNotThrow(() => new vm.Script(body));
+    });
+});
+
 describe('the side file', () => {
     const sidePath = path.join(WORK, 'omr.omr.json');
     const side = parseSideFile(WRITTEN, sidePath)!;
@@ -80,6 +95,28 @@ describe('the side file', () => {
         assert.equal(shownImage(side.pages[0]), path.join(SCANS, 'p01.png'));
         assert.equal(shownImage(side.pages[1]), undefined);
         assert.equal(shownImage({ ...side.pages[1], annotated: 'C:\\o\\x.omr-p02.png' }), 'C:\\o\\x.omr-p02.png');
+    });
+});
+
+describe('the scan beside the score (B4)', () => {
+    // The reader's Chopin Op.28/4: its bar 19 is written too long, so the page prints it as
+    // 19 and 20, and the reader's bar 20 prints as 21. Two parts per bar.
+    const bars = [
+        { index: 0, printed: 18 }, { index: 1, printed: 18 },
+        { index: 2, printed: 19 }, { index: 3, printed: 19 },
+        { index: 4, printed: 21 }, { index: 5, printed: 21 },
+        { index: 6, printed: null },
+    ];
+
+    it('shows the first bar that prints as the score\'s', () => {
+        assert.equal(scanBarForPrinted(bars, 19), 2);
+        assert.equal(scanBarForPrinted(bars, 21), 4);
+    });
+
+    it('shows the bar before for a bar only the page has', () => {
+        assert.equal(scanBarForPrinted(bars, 20), 2);     // the second half of the reader's 19
+        assert.equal(scanBarForPrinted(bars, 99), 4);
+        assert.equal(scanBarForPrinted(bars, 1), undefined);
     });
 });
 

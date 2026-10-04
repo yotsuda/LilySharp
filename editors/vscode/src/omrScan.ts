@@ -27,17 +27,20 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import {
-    BarAnchor, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, parseSideFile, shiftAnchors,
-    shownImage, sideFileOf, todoTarget,
+    BarAnchor, PrintedBar, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, parseSideFile,
+    scanBarForPrinted, shiftAnchors, shownImage, sideFileOf, todoTarget,
 } from './omrScanCore';
 
 export interface OmrScanDeps {
     readonly output: vscode.OutputChannel;
     /** The language client, started and ready (undefined when it cannot start). */
     readonly client: () => Promise<LanguageClient | undefined>;
+    /** Posts to the score preview of a .lys, if one is open (B4: the two scroll together). */
+    readonly postToPreview: (lys: vscode.Uri, message: unknown) => void;
 }
 
 interface TodosResponse { Todos?: ServerTodo[]; Version: number; Error?: string | null }
+interface PlaceAtResponse { Places?: { Measure?: number | null }[] | null; Version: number }
 
 /** One open scan view: the .lys it follows and the side file it draws. */
 interface ScanView {
@@ -49,6 +52,10 @@ interface ScanView {
     /** The marks of the document's last version asked about. */
     todos?: { version: number; list: ServerTodo[] };
     lastTarget?: string;
+    /** The bar the page prints for each pinned bar's line, for the document's version (B4). */
+    printed?: { version: number; bars: PrintedBar[] };
+    /** Whether the scan and the preview scroll together (the view's checkbox). */
+    linked: boolean;
 }
 
 const views = new Map<string, ScanView>();
@@ -61,6 +68,7 @@ export function hasScan(uri: vscode.Uri | undefined): boolean {
 /** Wires the caret and the side file's changes to every open view. Call once from activate. */
 export function registerScanFollow(context: vscode.ExtensionContext, deps: OmrScanDeps): void {
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let marksTimer: ReturnType<typeof setTimeout> | undefined;
     context.subscriptions.push(
         vscode.window.onDidChangeTextEditorSelection(e => {
             const view = views.get(e.textEditor.document.uri.toString());
@@ -75,6 +83,9 @@ export function registerScanFollow(context: vscode.ExtensionContext, deps: OmrSc
             const view = views.get(e.document.uri.toString());
             if (view) {
                 view.todos = undefined;
+                view.printed = undefined;
+                if (marksTimer) { clearTimeout(marksTimer); }
+                marksTimer = setTimeout(() => void markPreview(view, deps), 400);
                 shiftAnchors(view.anchors, e.contentChanges.map(c =>
                     ({ offset: c.rangeOffset, removed: c.rangeLength, inserted: c.text.length })));
             }
@@ -108,7 +119,7 @@ export async function showScan(
     const panel = vscode.window.createWebviewPanel('lilysharpScan', `Scan: ${path.basename(lys.fsPath)}`,
         { viewColumn: column ?? vscode.ViewColumn.Beside, preserveFocus: true },
         { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: rootsOf(side, sidePath) });
-    const view: ScanView = { panel, lys, side, anchors: anchorsOf(side, doc.getText()) };
+    const view: ScanView = { panel, lys, side, anchors: anchorsOf(side, doc.getText()), linked: true };
     views.set(lys.toString(), view);
     render(view);
 
@@ -122,6 +133,7 @@ export async function showScan(
             // A side file written again is written against the .lys on disk.
             view.anchors = anchorsOf(next, fs.existsSync(lys.fsPath) ? fs.readFileSync(lys.fsPath, 'utf8') : doc.getText());
             view.lastTarget = undefined;
+            view.printed = undefined;
             panel.webview.options = { ...panel.webview.options, localResourceRoots: rootsOf(next, sidePath) };
             render(view);
         }
@@ -129,12 +141,19 @@ export async function showScan(
     watcher.onDidChange(reload);
     watcher.onDidCreate(reload);
 
-    panel.webview.onDidReceiveMessage(async (m: { type: string; key?: string; index?: number }) => {
+    panel.webview.onDidReceiveMessage(async (m: { type: string; key?: string; index?: number; on?: boolean }) => {
         try {
             if (m.type === 'todo' && m.key) {
                 await goToTodo(view, m.key, deps);
             } else if (m.type === 'bar' && Number.isInteger(m.index)) {
                 await goToBar(view, m.index!);
+            } else if (m.type === 'visibleBar' && Number.isInteger(m.index) && view.linked) {
+                const printed = (await printedOf(view, deps)).find(b => b.index === m.index)?.printed;
+                if (printed !== null && printed !== undefined) {
+                    deps.postToPreview(lys, { type: 'showBar', bar: printed });
+                }
+            } else if (m.type === 'link') {
+                view.linked = !!m.on;
             }
         } catch (err) {
             deps.output.appendLine(`Scan: ${err}`);
@@ -143,12 +162,14 @@ export async function showScan(
     panel.onDidDispose(() => {
         watcher.dispose();
         views.delete(lys.toString());
+        deps.postToPreview(lys, { type: 'markBars', bars: [] });
     });
 
     const editor = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === lys.toString());
     if (editor) {
         void follow(view, editor, deps);
     }
+    void markPreview(view, deps);
 }
 
 function readSide(sidePath: string): ScanSideFile | undefined {
@@ -181,6 +202,57 @@ async function todosOf(view: ScanView, doc: vscode.TextDocument, deps: OmrScanDe
     const list = resp.Error ? [] : (resp.Todos ?? []);
     view.todos = { version: doc.version, list };
     return list;
+}
+
+/** The bar the page prints for each pinned bar's line (one lilysharp/placeAt for them all). */
+async function printedOf(view: ScanView, deps: OmrScanDeps): Promise<PrintedBar[]> {
+    const doc = await vscode.workspace.openTextDocument(view.lys);
+    if (view.printed && view.printed.version === doc.version) {
+        return view.printed.bars;
+    }
+    const client = await deps.client();
+    if (!client) {
+        return [];
+    }
+    const anchors = [...view.anchors];
+    const resp = await client.sendRequest<PlaceAtResponse>('lilysharp/placeAt', {
+        textDocument: { uri: doc.uri.toString() }, offset: 0, offsets: anchors.map(a => a.offset),
+    });
+    const bars = anchors.map((a, i) => ({ index: view.side.measures.indexOf(a.bar), printed: resp.Places?.[i]?.Measure }));
+    view.printed = { version: doc.version, bars };
+    return bars;
+}
+
+/** Frames, on the preview, the bars that carry a mark (B4: what the reader flagged, on both sides). */
+async function markPreview(view: ScanView, deps: OmrScanDeps): Promise<void> {
+    try {
+        const doc = await vscode.workspace.openTextDocument(view.lys);
+        const bars = [...new Set((await todosOf(view, doc, deps))
+            .map(t => t.Measure).filter((m): m is number => m !== null && m !== undefined))];
+        deps.postToPreview(view.lys, { type: 'markBars', bars });
+    } catch (err) {
+        deps.output.appendLine(`Scan: ${err}`);
+    }
+}
+
+/** The preview of `lys` scrolled to the printed bar `bar`: the linked scan follows. */
+export async function previewShowsBar(lys: string, bar: number, deps: OmrScanDeps): Promise<void> {
+    const view = views.get(lys);
+    if (!view || !view.linked) {
+        return;
+    }
+    const index = scanBarForPrinted(await printedOf(view, deps), bar);
+    if (index !== undefined) {
+        void view.panel.webview.postMessage({ type: 'showBar', index });
+    }
+}
+
+/** A preview of `lys` (re)loaded: it shows no marks until told again. */
+export function previewReady(lys: string, deps: OmrScanDeps): void {
+    const view = views.get(lys);
+    if (view) {
+        void markPreview(view, deps);
+    }
 }
 
 /** Lights what the caret is on: its mark's box, else its bar's. */
@@ -276,17 +348,56 @@ function render(view: ScanView): void {
   rect.light { fill: rgba(0, 120, 215, .14); stroke: #0078d7; stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: none; }
 </style></head><body>
 <p class="note">${esc(path.basename(view.lys.fsPath))} — read from ${side.pages.length === 1 ? 'this page' : `these ${side.pages.length} pages`}. `
-        + `Red: marked to check. A click goes to the music; the caret lights its bar here.</p>
+        + `Red: marked to check. A click goes to the music; the caret lights its bar here. `
+        + `<label><input type="checkbox" id="link" checked> Scroll with the preview</label></p>
 ${pages || '<p>The side file lists no page.</p>'}
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
+  const link = document.getElementById('link');
+  const state = vscode.getState() || {};
+  if (state.linked === false) link.checked = false;
+  vscode.postMessage({ type: 'link', on: link.checked });
+  link.addEventListener('change', () => {
+    vscode.setState({ ...state, linked: link.checked });
+    vscode.postMessage({ type: 'link', on: link.checked });
+  });
   document.addEventListener('click', e => {
     const r = e.target.closest('rect');
     if (!r) return;
     if (r.classList.contains('todo')) vscode.postMessage({ type: 'todo', key: r.dataset.key });
     else if (r.classList.contains('bar')) vscode.postMessage({ type: 'bar', index: Number(r.dataset.i) });
   });
+
+  // B4: the bar at the top of the view goes to the preview as the scan scrolls; a scroll
+  // the preview asked for (showBar) is not reported back.
+  let quietUntil = 0, reportTimer = null;
+  function topBar() {
+    let best = null, bestTop = Infinity, bestLeft = Infinity;
+    for (const r of document.querySelectorAll('rect.bar')) {
+      const b = r.getBoundingClientRect();
+      if (b.bottom <= 4 || b.top >= window.innerHeight) continue;
+      const top = Math.round(Math.max(b.top, 0));
+      if (top < bestTop || (top === bestTop && b.left < bestLeft)) { best = r; bestTop = top; bestLeft = b.left; }
+    }
+    return best;
+  }
+  window.addEventListener('scroll', () => {
+    if (!link.checked || Date.now() < quietUntil) return;
+    clearTimeout(reportTimer);
+    reportTimer = setTimeout(() => {
+      const r = topBar();
+      if (r) vscode.postMessage({ type: 'visibleBar', index: Number(r.dataset.i) });
+    }, 150);
+  });
+
   window.addEventListener('message', ({ data }) => {
+    if (data.type === 'showBar') {
+      const r = document.querySelector('rect.bar[data-i="' + data.index + '"]');
+      if (!r) return;
+      quietUntil = Date.now() + 400;
+      window.scrollBy({ top: r.getBoundingClientRect().top - 24 });
+      return;
+    }
     if (data.type !== 'light') return;
     for (const l of document.querySelectorAll('rect.light')) l.setAttribute('width', '0');
     const t = data.target;

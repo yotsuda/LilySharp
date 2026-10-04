@@ -149,6 +149,8 @@ export interface ServerTodo {
     readonly Key?: string | null;
     readonly HostStart: number;
     readonly HostEnd: number;
+    /** The bar the page prints for it, null when no score plays it. */
+    readonly Measure?: number | null;
 }
 
 /** What the caret answers on the scan: the mark it is on, else its bar. */
@@ -216,6 +218,24 @@ export function shiftAnchors(anchors: BarAnchor[], edits: readonly TextEdit[]): 
             else if (a.offset > e.offset) { a.offset = e.offset; }
         }
     }
+}
+
+/** A bar of the side file (its index in `measures`) and the bar the page prints for its line. */
+export interface PrintedBar { readonly index: number; readonly printed?: number | null }
+
+/**
+ * The side file's bar to show for a bar the page prints (B4: the scan follows the score as it
+ * scrolls): the first bar whose line prints as that bar, else — a bar the page has and the
+ * reader has not, the second half of one the reader wrote too long — the last one before it.
+ */
+export function scanBarForPrinted(bars: readonly PrintedBar[], printed: number): number | undefined {
+    let before: PrintedBar | undefined;
+    for (const b of bars) {
+        if (b.printed === null || b.printed === undefined) { continue; }
+        if (b.printed === printed) { return b.index; }
+        if (b.printed < printed && (!before || b.printed > before.printed!)) { before = b; }
+    }
+    return before?.index;
 }
 
 /** The bar written on the line [lineStart, lineEnd], as a target on the scan. The LAST one

@@ -142,6 +142,16 @@ public class TodoIndexTests
             Offset = Book.IndexOf("e1@todo", StringComparison.Ordinal),
         });
         Assert.Equal((3, "lh", 7), (place.Measure, place.Part, place.Version));
+        Assert.Null(place.Places);
+
+        // Several at once, in order (the scan view maps every bar line it pins).
+        var many = server.PlaceAt(new PlaceAtParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = uri },
+            Offsets = [Book.IndexOf("d''1", StringComparison.Ordinal), Book.IndexOf("form", StringComparison.Ordinal)],
+        });
+        Assert.Equal(new int?[] { 2, null }, many.Places!.Select(p => p.Measure));
+        Assert.Equal(new[] { "rh", null }, many.Places!.Select(p => p.Part));
 
         var missing = server.Todos(new TodosParams
         {

@@ -33,7 +33,7 @@ import { registerStepAudition } from './stepAudition';
 import { registerExportBatch } from './exportBatch';
 import { importFromImage } from './omrImport';
 import { locateOmr } from './omrCore';
-import { OmrScanDeps, hasScan, registerScanFollow, showScan } from './omrScan';
+import { OmrScanDeps, hasScan, previewReady, previewShowsBar, registerScanFollow, showScan } from './omrScan';
 import { markdownItExtensionApi } from './markdownFence';
 import { svgPostKey, pagesSummary, SvgPages } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
@@ -63,6 +63,8 @@ function ensureClientReady(): Promise<void> {
     return clientReadyPromise;
 }
 const previewPanels = new Map<string, vscode.WebviewPanel>();
+// The scan view's hooks (omrScan.ts, set in activate): a preview reports the bar it scrolled to.
+let scanDeps: OmrScanDeps | undefined;
 // A message posted before the webview has finished loading its HTML is
 // DROPPED by VS Code. The webview script posts 'webviewReady' as its last
 // statement; content updates await that (with a timeout escape hatch).
@@ -434,8 +436,9 @@ export function activate(context: vscode.ExtensionContext) {
 
     // "Show Original Scan" (LilySharp-Omr proposal B3) is offered on a .lys an OMR reader
     // wrote, i.e. one with its side file beside it.
-    const scanDeps: OmrScanDeps = {
+    const deps: OmrScanDeps = {
         output: outputChannel,
+        postToPreview: (lys, message) => void previewPanels.get(lys.toString())?.webview.postMessage(message),
         client: async () => {
             try {
                 await ensureClientReady();
@@ -448,7 +451,8 @@ export function activate(context: vscode.ExtensionContext) {
     const updateHasScan = () => void vscode.commands.executeCommand('setContext', 'lilysharp.hasScan',
         hasScan(vscode.window.activeTextEditor?.document.uri));
     updateHasScan();
-    registerScanFollow(context, scanDeps);
+    scanDeps = deps;
+    registerScanFollow(context, deps);
     context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(updateHasScan));
 
     // Push preview.theme changes to every open preview, so the setting takes effect
@@ -556,10 +560,10 @@ export function activate(context: vscode.ExtensionContext) {
                     const p = path.join(context.extensionPath, 'server', process.platform === 'win32' ? 'lysc.exe' : 'lysc');
                     return fs.existsSync(p) ? p : undefined;
                 },
-                showScan: lys => showScan(context, scanDeps, lys, vscode.ViewColumn.Three),
+                showScan: lys => showScan(context, deps, lys, vscode.ViewColumn.Three),
             }, uri, uris)),
         vscode.commands.registerCommand('lilysharp.showScan', (uri?: vscode.Uri) =>
-            showScan(context, scanDeps, uri instanceof vscode.Uri ? uri : undefined)),
+            showScan(context, deps, uri instanceof vscode.Uri ? uri : undefined)),
         vscode.commands.registerCommand('lilysharp.importMusicXml', (uri?: vscode.Uri) => {
             outputChannel.appendLine('importMusicXml command triggered');
             importMusicXml(context, uri);
@@ -892,6 +896,13 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     // Handle messages from webview
     panel.webview.onDidReceiveMessage(
         async message => {
+            if (message.type === 'visibleBar') {
+                // Every settled scroll — not logged.
+                if (scanDeps && Number.isInteger(message.bar)) {
+                    void previewShowsBar(uri, message.bar, scanDeps);
+                }
+                return;
+            }
             outputChannel.appendLine(`Received message from webview: ${message.type}`);
             if (message.type === 'webviewReady') {
                 // A (re)loaded webview is blank — drop the dedup memory so the next render
@@ -900,6 +911,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 lastPostedSvg.delete(uri);
                 shownPagesVersion.delete(uri);
                 panelReady.get(uri)?.resolve();
+                if (scanDeps) { previewReady(uri, scanDeps); }
                 return;
             }
             if (message.type === 'requestFull') {
@@ -2277,6 +2289,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
            invert + hue-rotate(180deg) brings the red back to red. */
         :root:not(.todo-plain) #svgContainer [data-todo] {
             fill: #e53935;
+        }
+        /* A bar an OMR reader flagged (the scan view's B4), framed as on the scan. */
+        #svgContainer rect.bar-box.flagged {
+            stroke: #e53935;
+            stroke-width: 2;
+            stroke-dasharray: 4 3;
+            vector-effect: non-scaling-stroke;
         }
         .error {
             color: #f44336;
@@ -3751,15 +3770,60 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (fitMode === 'width') fitWidth();
         });
 
+        // The scan view's link (LilySharp-Omr proposal B4): the bar at the top of the
+        // score goes out as the preview scrolls (the server's bar-box rects carry the
+        // printed number), a bar the scan asks for is brought to the top, and the bars
+        // the reader flagged are framed. A scroll asked for here is not reported back.
+        let flaggedBars = new Set();
+        let barQuietUntil = 0, barReportTimer = null;
+        function applyBarFlags() {
+            for (const r of svgContainer.querySelectorAll('rect.bar-box')) {
+                r.classList.toggle('flagged', flaggedBars.has(Number(r.dataset.bar)));
+            }
+        }
+        function topVisibleBar() {
+            const view = mainContent.getBoundingClientRect();
+            let best = null, bestTop = Infinity, bestLeft = Infinity;
+            for (const r of svgContainer.querySelectorAll('rect.bar-box')) {
+                const b = r.getBoundingClientRect();
+                if (b.bottom <= view.top + 4 || b.top >= view.bottom || b.height === 0) continue;
+                const top = Math.round(Math.max(b.top, view.top));
+                if (top < bestTop || (top === bestTop && b.left < bestLeft)) { best = r; bestTop = top; bestLeft = b.left; }
+            }
+            return best;
+        }
+        function showBar(bar) {
+            const r = svgContainer.querySelector('rect.bar-box[data-bar="' + bar + '"]');
+            if (!r) return;
+            barQuietUntil = Date.now() + 400;
+            mainContent.scrollTop += r.getBoundingClientRect().top - mainContent.getBoundingClientRect().top - 24;
+        }
+        mainContent.addEventListener('scroll', () => {
+            if (Date.now() < barQuietUntil) return;
+            clearTimeout(barReportTimer);
+            barReportTimer = setTimeout(() => {
+                const r = topVisibleBar();
+                if (r) vscode.postMessage({ type: 'visibleBar', bar: Number(r.dataset.bar) });
+            }, 150);
+        });
+
         window.addEventListener('message', event => {
             const message = event.data;
             console.log('Webview received message:', message.type);
+
             switch (message.type) {
                 case 'setTheme':
                     applyTheme(message.theme);
                     break;
                 case 'setHighlightTodos':
                     document.documentElement.classList.toggle('todo-plain', !message.on);
+                    break;
+                case 'showBar':
+                    showBar(message.bar);
+                    break;
+                case 'markBars':
+                    flaggedBars = new Set(message.bars || []);
+                    applyBarFlags();
                     break;
                 case 'updateContent': {
                     updateRenderSelect(message.renders, message.selectedRender);
@@ -3797,6 +3861,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         // next audition / Play refetches fresh events.
                         playbackNotes = null;
                         collectPages();
+                        applyBarFlags();
                         // Keep the fit across re-renders (this is also what fits
                         // the FIRST render of a freshly opened preview); otherwise
                         // re-apply the current manual zoom to the fresh SVG.

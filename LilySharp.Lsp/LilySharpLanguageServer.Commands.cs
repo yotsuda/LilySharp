@@ -1303,8 +1303,14 @@ public sealed partial class LilySharpLanguageServer
             return new PlaceAtResponse();
         try
         {
-            var place = TodoIndex.PlaceAt(PlacesOf(@params.TextDocument.Uri, doc), doc.Text, @params.Offset);
-            return new PlaceAtResponse { Measure = place?.Measure, Part = place?.Part, Version = doc.Version };
+            var places = PlacesOf(@params.TextDocument.Uri, doc);
+            var place = TodoIndex.PlaceAt(places, doc.Text, @params.Offset);
+            return new PlaceAtResponse
+            {
+                Measure = place?.Measure, Part = place?.Part, Version = doc.Version,
+                Places = @params.Offsets?.Select(o => TodoIndex.PlaceAt(places, doc.Text, o) is { } p
+                    ? new PlaceInfo { Measure = p.Measure, Part = p.Part } : new PlaceInfo()).ToArray(),
+            };
         }
         catch (Exception)
         {

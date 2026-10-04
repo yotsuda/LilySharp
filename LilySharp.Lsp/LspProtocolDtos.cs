@@ -528,6 +528,16 @@ public class PlaceAtParams
 {
     public TextDocumentIdentifier TextDocument { get; set; } = null!;
     public int Offset { get; set; }
+    /// <summary>Several carets at once (optional): answered in <see cref="PlaceAtResponse.Places"/>,
+    /// in this order.</summary>
+    public int[]? Offsets { get; set; }
+}
+
+/// <summary>One answer of lilysharp/placeAt's <c>Offsets</c>.</summary>
+public class PlaceInfo
+{
+    public int? Measure { get; set; }
+    public string? Part { get; set; }
 }
 
 /// <summary>Response for lilysharp/placeAt: the bar number the page prints and the part of the
@@ -536,6 +546,8 @@ public class PlaceAtResponse
 {
     public int? Measure { get; set; }
     public string? Part { get; set; }
+    /// <summary>The answers for <see cref="PlaceAtParams.Offsets"/>, when given.</summary>
+    public PlaceInfo[]? Places { get; set; }
     public int Version { get; set; }
 }
 
