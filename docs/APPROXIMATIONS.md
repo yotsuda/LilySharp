@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
+| `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
 | `OWN` | 215 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **338** | |
+| **計** | **339** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -26,10 +26,10 @@
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 11 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 10 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 9 |
+| `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 7 |
-| `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
@@ -133,7 +133,7 @@
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **:272** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（63 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（64 件）
 
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:691** no observer; add the paren widths when a book brings one. The unpacked
@@ -216,7 +216,8 @@
 - **:502** same part (leftHand). No book reaches the configuration, so no ledger point and
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
 - **:1349** ⚠️ The half-blot Y has no observer (session 812): the tab test reads
-- **:3226** ⚠️ NO OBSERVER for this arm's half-blot Y nor its up-skyline merge (poisons,
+- **:2739** ⚠️ NO OBSERVER for the X origin (poisons, session 813): shifting it by the
+- **:3229** ⚠️ NO OBSERVER for this arm's half-blot Y nor its up-skyline merge (poisons,
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
 - **:56** the distance is taken at — and NO ledger point moves with it. An output change no point
 ### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`

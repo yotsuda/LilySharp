@@ -2736,6 +2736,9 @@ internal sealed class SkylineBuilder
                 //   lily/stencil-integral.cc:535-563 add_named_glyph_segments.
                 // ⚠️ The UNLEDGERED glyph, as the box was: whether a ledgered whole / half
                 // rest's skyline carries its ledger is not measured here.
+                // ⚠️ NO OBSERVER for the X origin (poisons, session 813): shifting it by the
+                // outline's own bearing (≤ 0.104) moves no point — the sixteenth's high right
+                // end stays clear of the next staff's stem either way.
                 var (restUp, restDown) = TextOutlineSkylines.MusicGlyphProfile(
                     EmmentalerGlyphs.GetRest(restValue, 0), size.Span(Rendering.SharedRenderer.FontSize));
                 if (restUp.Count > 0 || restDown.Count > 0)
