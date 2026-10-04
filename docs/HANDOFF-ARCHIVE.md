@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第809セッションの経緯
+
+### 1.1 第809セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き。ユーザー「計測結果に基づいて、コードを発明していないだろうか。可能な限り LP のコードを字面移植してほしい」→ 第807・第808 を監査して 4 件の非字面を報告（下）→ ユーザー「(b) して (a)」＝第808 の移植を外し、change 列を本物の列にする設計へ。`-Start p809`（HEAD `8991704f`・未 push 31）＝full **11069 / 0 / 2 / 11071**。§7 3.5 で第807 を ARCHIVE へ（moved 14 lines）。
+- 監査（第807・第808 の差分を §5.2 片手に）: 字面＝`Paper_column::minimum_distance` の skyline 化（第807・残す）・`operator*=` の `max(min, 0.8×ideal)`・grace 列までの右 rod。**実測合わせ 4 件**（第808）: ⑴ 列 rod の＋0.1 を右の理想に畳んだ（h-grace-sharp の 0.10 から）⑵ 左の列 rod を「届いた本が無い」で省いた（§5.2「LP が計算しているものは計算する」違反）⑶ change 列のときだけ grace run の clearance・床を切り替えた（0.35 を消すため）⑷ grace の手前の判定が LP の条件（clef 列の moment に grace part）ではない＝双子 `p808/gr/j-grace-then-clef` で、grace の**後**に書いた clef を LP は grace と主音のあいだに置き、Lily# は前に描く。
+- ⒝: **`5c4887462`**＝`d842aecb3` の revert（台帳 MCG の 2 点は OPEN に戻る・CHANGELOG の 1 文も外れた）。**`419eeb32d`**＝観測者 MCGA／MCGM を OPEN で戻し、新しく MCGB（grace の後の clef・LP 前の音 → clef 2.900765／clef → 主音 3.146600＝0.8 なし）＋台帳 6 点（基準の読み・予測ではない・原因は §2 B の根）。full 11071 / 0 / 2 / 11073。
+- ⒜: change 列（と grace 列）を本物の timing 列にする設計を着手（§2 B 冒頭の項）。構造の調査（サブエージェント）→ 案 (ii) を推奨しユーザー承認。perf の問いに「劣化しうるのはソルバの共通経路だけ・普通の spring の経路は変えない」と答えた。
+- **手順 ① `7fb83a946`**: `Spring.RaisedToBlockingForce` が直列 spring の**全部分**の blocking force を上げる（add_rod の範囲＝全 spring・第732 の ⒝ を字面に）・`Spring.WithPartRod`（直列の 1 部分に add_rod）を新設（呼び手はまだ無い）。網 `SeriesSpringRodTests` 4 本（力 0 で rod・min を上げ理想は上げない＝引き伸ばして 2.0、理想に畳むと 2.5・min 未満の rod は捨てる・直列全体の rod は全部分）。毒＝直列の枝を切る → 狙いの 1 本だけ赤。計数（使い捨て・998 冊各 1 描画）: `RaisedToBlockingForce` 235,228 回・直列 12 回・実際に上げた 0 回＝出力不変、増えた仕事は `IsSeries` の判定だけ。full 11075 / 0 / 2 / 11077。
+★ `-End p809 -DiffBase 8991704f`（`end1.log`）: 1 回目は `HistoryCitationTests.DeadCitationsDoNotGrow` が 1 赤＝①の commit を amend した後も HANDOFF が旧 SHA を引いていた → 差し替えて緑（full は直前の full4 で **11075 / 0 / 2 / 11077**）。門 ほか全 OK（HANDOFF 443,468 B・残り 6,532）。台帳 993 → 995 点（revert で −4・観測者 6 点）・OPEN 0（MCG 系は理由つきの非ゼロ）。7.5: Core `+` 54 行（revert 後の差＝①だけ）・REF 1（simple-spacer.cc:89-127）＋既存の spring.cc の REF を書き直し・OWN 0。7.6: ⒜ 字面＝add_rod の範囲の全 spring に set_blocking_force（min を length(f) に）。7.7: 直列の ⒝（先頭だけに寄せる）を消した／guard なし。7.9 perf: 上の計数＝ホット経路は `IsSeries` 1 判定。commit `5c4887462`（revert）・`419eeb32d`（点 6）・`7fb83a946`（①）＋ docs。Lab は sessions/p809。push はユーザー。
+判定: ⒝ は済み、⒜ は手順 ① まで。教訓: **監査の問いに答える前に「その形は LP のどの行か」を項ごとに書くと、移植の顔をした当てはめが 4 件出た**（RULES §5.2「同値な簡約」と同族＝出力が合っているので網は鳴らない）。次の一手: ② 直列の部分を書いた順序で作る builder（§2 B 冒頭の手順）。会話を区切るか: (a) ② は MeasureLayouter・MidMeasureChanges・Grace の読み直しが要り、この会話の文脈は前半（第807〜808）の移植に偏る／(b) **この会話は RULES 通読＋3 便で非常に長い**（同じファイルを何度も読み直している）／(c) 同じ島。⇒ **(b) で新しい会話が有利**（設計の本体を新しい文脈で読む）。
+
 ## 以下は第808セッションの経緯
 
 ### 1.1 第808セッション（2026-10-04・YT-DELL2）
