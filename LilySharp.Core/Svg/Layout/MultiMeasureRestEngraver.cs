@@ -795,6 +795,8 @@ internal static class MultiMeasureRestEngraver
                     if (_spentRequested)
                         return false;
                     _spentRequested = true;
+                    if (IsHiddenIn(_system, _requested))
+                        return false;
                     Current = _requested;
                     return true;
                 }
@@ -805,9 +807,15 @@ internal static class MultiMeasureRestEngraver
                     var group = groups[_group];
                     if (_staff < group.Staves.Length)
                     {
-                        Current = group.Staves[_staff].StaffIndex;
+                        var staff = group.Staves[_staff];
                         _staff++;
                         _any = true;
+                        // A staff hidden in this system (hara-kiri) has its Y collapsed onto
+                        // the next survivor's, so its rest would be drawn on that staff
+                        // (LilySharp-Omr feedback #19: the hidden voice's R1 on the piano).
+                        if (staff.IsHidden)
+                            continue;
+                        Current = staff.StaffIndex;
                         return true;
                     }
                     _group++;
@@ -820,6 +828,17 @@ internal static class MultiMeasureRestEngraver
                     Current = _requested;
                     return true;
                 }
+                return false;
+            }
+
+            private static bool IsHiddenIn(SystemLayout system, int staffIndex)
+            {
+                if (staffIndex < 0 || system.StaffGroups.IsDefaultOrEmpty)
+                    return false;
+                foreach (var group in system.StaffGroups)
+                    foreach (var staff in group.Staves)
+                        if (staff.StaffIndex == staffIndex)
+                            return staff.IsHidden;
                 return false;
             }
         }

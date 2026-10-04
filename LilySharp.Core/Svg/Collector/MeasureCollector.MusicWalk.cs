@@ -1051,9 +1051,22 @@ public sealed partial class MeasureCollector
                     // pitch did before 2026-08-01.
                     var spanFrame = _octave.Snapshot();
                     var (spanDuration, spanDots) = (_defaultDuration, _defaultDots);
+                    // The meter is the one IN FORCE at the span, not the piece's opening one:
+                    // a mid-piece `time` re-arms this builder only (the TimeSignatureChangeItem),
+                    // and the other voices used to measure their bars in the opening meter — a
+                    // 12/8 bar after 4/4 cut voice 2 at one whole note and dropped the rest
+                    // (LilySharp-Omr feedback #20).
+                    var spanMeta = _meta.Clone();
+                    // (A `time none` keeps the opening's numbers: the frozen clock has no bar.)
+                    if (builder.MeterInForce is { Beats: > 0, BeatType: > 0, SenzaMisura: false } inForce)
+                    {
+                        spanMeta.TimeBeats = inForce.Beats;
+                        spanMeta.TimeBeatType = inForce.BeatType;
+                        spanMeta.TimeBeatsText = inForce.BeatsText;
+                    }
                     _parallelSpans.Add(
                         (parallel, builder.CurrentMeasureIndex, builder.CurrentDuration, spanFrame,
-                            spanDuration, spanDots, _meta.Clone()));
+                            spanDuration, spanDots, spanMeta));
                     if (voiceBlocks.Count > 0)
                     {
                         // Voice 0 is render voice 1: an override in its block scopes to it.

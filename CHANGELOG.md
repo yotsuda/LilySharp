@@ -392,6 +392,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A staff hidden on a system takes its rests and its lyrics with it.** A voice staff written
+  `as removeEmpty` that rested through a system had its whole-bar rests drawn on the staff
+  below it (the piano's right hand), and a lyrics row under a voice hidden on the first system
+  hung under the last staff of every system after it. Both now follow the voice: nothing is
+  drawn where the staff is hidden, and the words stand under the voice where it is shown.
+- **The second voice of a bar after a meter change measures the new meter.** After `time 4/4`
+  ... `time 12/8`, a `voice { } { }` bar cut its lower voice at the old bar's length (its last
+  note vanished) and turned the upper voice's later stems down; both voices now keep the bar.
 - **A flag takes the room of its own shape.** The space a flag claimed above or below its staff
   was a fixed box, flat at the stem's tip and wider and shorter than any real flag. It is now
   the flag glyph's outline, as in LilyPond: a down-stem flag rising toward the next staff no

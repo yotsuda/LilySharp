@@ -1201,11 +1201,23 @@ internal sealed partial class LayoutEngine
         // Device-DOWN offsets: the annotation engravers downstream (grace notes,
         // lyrics, ottava, chord names) all measure downward from the system top, so
         // this table reflects staff.Y's Y-up storage once, here at the island edge.
+        // System 0's staff, unless hara-kiri hid it there: then the first system that shows
+        // it (a hidden staff's Y is collapsed onto the next survivor's, and a voice resting
+        // through the first system put its lyrics row on the piano — LilySharp-Omr feedback #19).
         var staffYByIndex = new Dictionary<int, double>();
-        if (systemsArray.Length > 0 && !systemsArray[0].StaffGroups.IsDefaultOrEmpty)
-            foreach (var sg in systemsArray[0].StaffGroups)
+        var shownIn = new HashSet<int>();
+        foreach (var system in systemsArray)
+        {
+            if (system.StaffGroups.IsDefaultOrEmpty) continue;
+            foreach (var sg in system.StaffGroups)
                 foreach (var st in sg.Staves)
-                    staffYByIndex[st.StaffIndex] = -st.Y;
+                {
+                    if (shownIn.Contains(st.StaffIndex)) continue;
+                    if (!st.IsHidden) shownIn.Add(st.StaffIndex);
+                    if (!st.IsHidden || !staffYByIndex.ContainsKey(st.StaffIndex))
+                        staffYByIndex[st.StaffIndex] = -st.Y;
+                }
+        }
 
         // Anchor Y for note-bound lyrics: THE STAFF THEY ARE ATTACHED TO, device-down from
         // the system origin to that staff's top line (Y-up reflected, like staffYByIndex
@@ -1230,11 +1242,19 @@ internal sealed partial class LayoutEngine
         // `staff-affinity` and nothing else, so an ossia — declaring none — counts as the
         // staff it is, and a text ROW (a chord or lyrics track) does not count at all: a row
         // carries no staff spring and LilyPond never makes one a `last_spaceable_line`.
+        // ⚠️ EVERY SYSTEM, the first that shows a staff answering for it: which family a
+        // lyric line joins is decided here once for the score, and a staff hara-kiri hid on
+        // system 0 used to be absent, so its lyrics joined the `-1` family and hung under the
+        // LAST staff on every system (LilySharp-Omr feedback #19: a song whose voice rests
+        // through the first system had its words under the piano's left hand). The per-system
+        // Y is UpperAnchorStaff's; this value is only the fallback.
         var noteBoundAnchorY = new Dictionary<int, double>();
-        if (systemsArray.Length > 0 && !systemsArray[0].StaffGroups.IsDefaultOrEmpty)
+        var spaceable = new List<StaffLayout>();
+        foreach (var system in systemsArray)
         {
-            var spaceable = new List<StaffLayout>();
-            foreach (var group in systemsArray[0].StaffGroups)
+            if (system.StaffGroups.IsDefaultOrEmpty) continue;
+            spaceable.Clear();
+            foreach (var group in system.StaffGroups)
             {
                 if (group.Staves.IsDefaultOrEmpty) continue;
                 foreach (var st in group.Staves)
@@ -1246,7 +1266,7 @@ internal sealed partial class LayoutEngine
                 double deepest = spaceable.Max(s => -s.Y);
                 foreach (var st in spaceable)
                     if (-st.Y < deepest)
-                        noteBoundAnchorY[st.StaffIndex] = -st.Y;
+                        noteBoundAnchorY.TryAdd(st.StaffIndex, -st.Y);
             }
         }
 
