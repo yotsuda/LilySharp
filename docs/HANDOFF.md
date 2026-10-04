@@ -115,6 +115,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第797セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザー「機能・レイアウトの修正が残っているなら先に。無ければ perf」→ §2 の棚卸し（K・S・T は自分で、A〜R は subagent の要約）→ 着手できる候補を提示 → ユーザー「GO」＝E 節のタイ 2 件から。`-Start p797`（HEAD `2642b0f6`・未 push 2）＝full **11021 / 0 / 2 / 11023**。§7 3.5 で第795 を ARCHIVE へ。
+- **E ⑴ 「tie が小節線をまたぐと臨時記号を刷り直す」は既に閉じていた**（`d4ecf4d2`・2026-09-27「a tie's right head keeps its accidental for a line start only」＝`MeasureBuilder.TiesInto`＋`MarkAccidentalTied`）。probe（Lab `sessions/p797/before/tma.png`・`tmc.png`）: `cis1~ | cis1` は ♯ 1 つ・`cis'1~ | cis'4 c' cis' c'` は到着側に無く次の c' に ♮＝LP と同じ。§2 E の起票は stale だった＝落とした。
+- **E ⑵ tie の照合が音高ではなく位置＝直した**（`TieDetector.SamePitch`）: MIDI 番号が同じで、位置が同じか 7 の倍数（ottava）離れている対だけを結ぶ（unpitched＝midi 0 は位置だけ）。`<c e>2~ <c ees>2` は tie 2 本 → **1 本**（LP の Tie grob 1 個＝第452 実測・`after/tmb-TMB.png`）。`cis~ c`・`fis~ ges` は結ばない。MIDI（`ExtendTied`）と MusicXML（`SameNotehead`）は元から音高で対にしていた＝頁だけが違っていた。**`TieTargetScanner.AnyPitchMatches`（LYS4007）の自前の綴りを `SamePitch` に畳んだ**（§7.7 の 2 綴り。ottava の 4 形で旧綴りも警告なし＝観測者なし・網は答えの pin）。
+- **網**: `TieDetectionTests.Tie_JoinsTheSamePitch_NotTheSameStaffPosition`（毒＝旧綴り で 1 赤・`poison-tie.log`）・`OttavaBoundaryTieTests.ATieIntoTheBracketsEnd_IsNoPitchMismatch`。`~Tie` 276・`~Bow` 36・`~SectionCarry` 17・`~Midi` 245・`~Ottava` 57 緑。
+- **掃き**（`sweep/run-sweeps.ps1`＝全 svg・base＝p795 の exe-head・head＝`exe-head`）: 998 冊 1,199 枚 **差 0**＝ディスク上に「同じ線で別の変化記号へ結ぶ tie」は無い。census: tie が小節線をまたぐ本 196・たいだ音に変化記号の綴りがある本 92（`check-user4` と同じ母集団・E ⑴ の射程の参考）。
+- CHANGELOG Fixes 1 項。棚卸し差分なし。snapshot 不動。
+★ `-End p797 -DiffBase 2642b0f6`（`end.log`）＝full **11023 / 0 / 2 / 11025**（網 +2）・門 全 OK（HANDOFF 436,612 B・残り 13,388）。7.5: Core **`+` 21** 行（numstat 16＋5・`-End` は commit 前で 0 と刷った）・REF 0（既存の REF の下の式の形を変えた＝tie-engraver.cc の「pitch が等しい」のほうへ寄せた・新しい LP 行は読んでいない）・OWN 0。7.6: ⒝ 既存 REF の射程＝字面ではなく等価（ly:pitch の比較を MIDI＋位置で綴る・enharmonic は位置で切る）。7.7: 2 綴りを 1 つに畳んだ（scanner）・guard／sentinel なし（midi 0 は unpitched の既存の意味）。commit `889022a71`（code・網・CHANGELOG）＋ docs の commit。Lab は sessions/p797 だけ commit。push はユーザー。
+判定: E のタイ 2 件は閉じた（⑴ は既に閉じていた・⑵ を直した）。次の一手（GO の順）: **F 繰り返し⑹ section の音楽中の片側 `:|` を MIDI が鳴らさない**（§2 F・伝聞＝先に実コードで確認）→ **E 加線（LedgerLineSpanner の短縮・新 engraver）**。会話を区切るか: (b) 便が 4 つ・文脈はまだ軽い／(a) 次の島は無関係＝**続ける**（`-Start p798`）。
+
+## 以下は第796セッションの経緯
+
 ### 1.1 第796セッション（2026-10-04・YT-DELL2）
 
 同じ会話の続き・ユーザー「次便は (b) をやって」＝⒝ のうち値段の分かっている ⒳⁶ から（他は「提案しない」か perf 一時停止）。`-Start p796`（HEAD `f04054c0`・**未 push 0＝ユーザーが push した**）＝full **11010 / 0 / 2 / 11012**。§7 3.5 で第794 を ARCHIVE へ。
@@ -123,19 +136,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - §1.0 ⒝ から ⒳⁶ を落とした。
 ★ `-End p796 -DiffBase f04054c0`（`end.log`）＝full **11021 / 0 / 2 / 11023**（網 +11）・門 全 OK（HANDOFF 438,779 B・残り 11,221）。7.5: Core **`+` 0** 行（`git diff -- LilySharp.Core` が空＝出力同一は構成から）・REF 0・OWN 0。7.6: ⒟ 何も足していない（反証＝網と remark の訂正だけ）。7.7: 当たる面なし。commit `531ac4d63`（網 2 ファイル）＋ docs の commit。Lab は sessions/p796 だけ commit。push はユーザー。
 判定: ⒳⁶ は反証して閉じた（Core 不変）。§1.0 ⒝ に残るのは ⒡′（bow の採点枠 0.074%）・⒵⁴（`prefixMarkAnchorX` 0.338%）＝どちらも perf の島（第615 の一時停止の下）・設計級、ほかは「提案しない」。次の一手: ユーザーが perf の一時停止を解くなら ⒡′ か ⒵⁴（値段は §1.0 の分母つきの数字・計器は Lab `sessions/p613/lathost`）、解かないなら手の動く島は無い＝指示待ち。会話を区切るか: (b) 便が 3 つ続き文脈はまだ軽い／(c) 次は未定＝**続ける**（指示が出れば `-Start p797`）。
-
-## 以下は第795セッションの経緯
-
-### 1.1 第795セッション（2026-10-04・YT-DELL2）
-
-同じ会話の続き・ユーザー決定「1 (8)」（本 4 冊は放置・v0.10.0 はまだ）。`-Start p795`（HEAD `8ca1e118`・未 push 36）＝full **11006 / 1 / 2 / 11009**＝赤 1 は `HistoryCitationTests.DeadCitationsDoNotGrow`（947→948・第794 の語りに Lab の commit SHA を書いた＝本体に無い引用）→ 語りの SHA を消して緑（`dead.log`）。§7 3.5 で第793 を ARCHIVE へ。
-- **⑻ の設計（前提として置いた・RULES §5.2 第751）**: 宣言した弱起が直前の短い小節をちょうど 1 小節に補うなら、頁も XML も 1 小節に数える＝弱起は前の不完全小節を完成させる（音楽的慣習）・LP の途中の `\partial` と同じ（第761 実測 1 2 3）・validator（`SectionBoundaryBars`）は既にその対を補完として扱っていた。満杯の小節の後の弱起（第755: 頁・XML・LP 一致で 1 小節）は従来どおり。
-- **直し**: 頁 `SectionBoundaryContinuations` の `cur.IsPickup` 除外を外し、**前の小節が自分の拍子で満杯なら補完しない**の門（`head >= meters[from]`＝2/4 の `g'2 |` の後に 4/4 の `partial 2`）を足した（旧規則の盲点＝拍子は i でしか読んでいなかった）。XML `ContinueSplitBar` の `first.Implicit` 除外を外し、同じ門（play の前の拍子 `barTicksBefore` を revert の前に取る）。頁の絵: probe `d-declared`（p759）が 1 2 3 4 → **1 2 2 3**・XML 1 2 3i 4 → **1 2 2i 3**（`before/`・`after/`）。fixture `partial-pickup`・`partial-barnumber` は svg も xml も不変（弱起は曲頭）。
-- **網**: `SectionBoundarySplitBarTests.ThePage_ADeclaredPickupCompletingTheBarBefore_IsOneBar`（併合・満杯の後の対照・自分の拍子で満杯の対照）・`MusicXmlMeasureNumberingTests` の `…CompletesIt`（旧 `…IsABarOfItsOwn` を反転）＋対照 2（満杯の後・自分の拍子で満杯）。毒 4 本（頁の除外を戻す／XML の除外を戻す／頁の門を外す／XML の門を外す）＝**それぞれ 1 赤・全部別の網**（`poison-a..d.log`）。
-- **掃き**（`sweep/run-sweeps.ps1`＝p723 の全 svg ＋ p742 の xml・base＝p793 の exe-head（HEAD の出力・第794 は出力不変）・head＝`exe-head`）: 998 冊 svg 1199 枚 **差 0**・xml 1199 枚 **差 0**（第761 の国勢調査どおり本物は 0）。
-- CHANGELOG: p759 の項の「宣言した partial は独立」の文を落とし、Fixes に 1 項。棚卸し `APPROXIMATIONS.md` 行番号 3 行・csv 不変。snapshot 不動。
-★ `-End p795 -DiffBase 8ca1e118`（`end.log`）＝full **11010 / 0 / 2 / 11012**（網 +3）・門 全 OK（HANDOFF 441,345 B・残り 8,655）。7.5: Core **`+` 27** 行（`-End` は commit 前で 0 と刷った・numstat 16＋11）・REF 0・OWN 0（ユーザー決定の意味論＝第753 と同じ扱い・LP の `\partial` は実測で裏取り・式は写していない）。7.6: 該当なし（新しい定数なし・既存の規則の射程を広げ、門を 1 つ足した）。7.7: 匂いなし（門は「自分の拍子で満杯」という意味の門で、観測者は毒 c／d の 2 網）。commit `8e9ad797`（code・網・CHANGELOG・棚卸し）＋ docs の commit。Lab は sessions/p795 だけ commit。push はユーザー。
-判定: ⑻ は閉じた＝⑼ は全部閉じた（§1.0 の一覧を 1 行の指標に畳んだ）。次の一手: §1.0 ⒜ に手の動く島は無い（残りは VS Code の手動確認・v0.10.0 の時期＝ユーザー判断・本 4 冊は放置の決定）＝指示待ち。⒝ の設計級（値段の分かっている順に ⒳⁶ span の fold の端だけ化）はユーザーの GO が要る。会話を区切るか: (b) 便が 2 つ・文脈は軽い／(c) 次の島は未定＝**続ける**（指示が出れば `-Start p796`）。
 
 ## 2. 開いている作業
 
@@ -1409,21 +1409,6 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 - **bench の縦の残差 3 つ＝未着手**（第380 起票・下の閉じた項の副産物）。▶ **第381: 双子に譜が出るようになった**（`8e81034c`＝`combinedStaff` を `\partCombine` で書く）。**新しい双子**（`scratch/p382/shared/bench-twin.ly`・font pin）の LP 2.26.0: **Intro 9.04／roman 行（C・D）6.03／inline 和音行（F sus4・E）3.00／a2 1.53**。⚠️ **まだ比べられない**: 双子は inline 和音を**別の ChordNames 行**（roman 行の下）に置き、**ページは roman 行と同じ行**に描く＝行が 1 本多い＝Intro も roman 行も押し上がる。**ページの 1 行はユーザー決定で意図どおり（§3・2026-09-14）**＝**直すのは双子**。⚠️⚠️ **ただし双子は完全には揃わない**（第381 第 2 便が読んだ）: ページの線は `ChordNameEngraver.ChordLineOfSystem` の規則＝**列がぶつかる和音行の記号だけを 1 段持ち上げる**（bench では `Dmaj7`）で、remarks が **LILYSHARP-OWN（LP では綴れない）** と明言。1 つの ChordNames に畳めば線は 1 本になるが持ち上げは出ない＝⇒ **ユーザー決定（§3・2026-09-14）「LP が綴れない形を含む本は、比べる形に直してから比べる」**＝**次は変種の本を作るところから**（`audit/lpreg/combined-staff-chord-row-label.lys` から、和音行の記号と inline 和音の列がぶつからない配置の変種を追跡で作り、何を直したかを header に書く→双子の inline 和音を和音行の ChordNames に畳む→縦を比べる）。比較の側で `Dmaj7` を除外する形は取らない。★ **測る本は追跡コピー `audit/lpreg/combined-staff-chord-row-label.lys`**（2026-09-14 に `scratch\ベースタブLy\bench.lys` から複製・原本はユーザーが編集する）。以下は起票時の記録:**LP 2.26.0**（`scratch/p381/label/bench-a2-nodump.ly`・font pin・`svgtext.ps1`＝譜の最上線から上の baseline）: **Intro 6.66／和音行 3.65／a2 1.53**。**Lily#**（`scratch\ベースタブLy\bench.lys`・第378 の記録値・未再描画）: 6.89／4.13／1.43＝**差 +0.23／+0.48／−0.10**。上下は一致しているので、量の問題。⚠️⚠️ **第380 第 2 便: この差はまだ残差として読めない**＝LP 双子の和音行の中身が違う（双子は C／D の和音名で inline `@chord` 無し・Lily# は roman の `Imaj7` と inline の和音名）。**`lysc ly` は最上位の `combinedStaff` を黙って落とす**（双子に譜が出ない・warning 無し）＝**まず忠実な双子を作るところから**（§1 ⑹）。**最初の一手の候補**: 今の木で bench を描き直して差を取り直す（第379 の spacing 変更は横だけ）→ 和音行の +0.48 から見る（label は和音行の上に積むので、和音行の差の一部を継いでいる可能性がある）。⚠️ **LP の dump で位置を読むときは after-line-breaking を override しない**（下の項の教訓）。
 - ✅ **閉じた（第380・製品 0・§1 ⑵）＝「逆転」は第378 の計器の作り物**: `bench-a2.ly` の `RehearsalMark.after-line-breaking` dump が、既定の `move-to-extremal-staff`（`define-grobs.scm:2879`）を置き換えていた。dump を外すと LP も label 6.66 ＞ 和音行 3.65 ＞ a2 1.53 で、Lily# と同じ上下になる（変種 8 冊は §1 ⑵ の表）。以下は起票時の記録（⚠️ 下の表の bench-a2 行は dump 付きの値で、LP の絵ではない）: **section label と和音行の上下が LP と逆になる本がある＝要ユーザー判断・未着手**（第378 起票・a2 の移植 `f913ba60` の後に残った差）。**LP 2.26.0 の実測**（`scratch/p378/a2`・font pin・値は**譜の上端から上へ**の baseline・ss）: → **本文は `HANDOFF-ARCHIVE.md`「閉じた §2 の本文」の同じ見出し**（2026-09-15 に落とした）
 
-- ★★ **tie が小節線をまたぐと Lily# は臨時記号を*刷り直す*。LP は刷らない**（第452 実測・両側）。
-  `cis1~ | cis1` は **LP が `Accidental` grob 1 個**なのに **Lily# は 2 個*描く***（絵で確認＝Lab
-  `sessions/p452/books/TMA.png`。LP の dump は同 `tie-match-and-accidental.ly` の book TMA）。
-  ⚠️ **決まっているのは描画ではなく*収集*の段**＝`NoteItem.Accidental` が両方の音符で sharp
-  （同 `accidentals.txt`）。LP は `Accidental_engraver` が tie の到着側を抑える。
-  ⚠️ **射程は未調査**（実コーパスで tie が小節線をまたぐ本の数を数えていない）。
-  ★ **横道で見つけた**——⒱ の臨時記号の網を書くとき候補本に入れたら*箱が在った*ので気づいた。
-  **網はこの本を採っていない**（欠陥を pin しないため）
-- ★★ **tie の照合は「同じ音高」ではなく「同じ譜面上の位置」＝註とコードの 2 綴り**（第452 実測・両側）。
-  `Svg/Collector/TieDetector.cs` は `:49 :122 :139 :166` のどれも **`StaffPosition` を比べる**のに、
-  同ファイル `:23` の要約は **「notes of the same pitch」**と書いてある。⇒ **`<c e>2~ <c ees>2` は
-  Lily# で tie が 2 本**（`e`→`ees` が結ばれる）・**LP は 1 本**（Lab `tie-match-and-accidental.ly`
-  の book TMB＝`Tie` grob 1 個。Lily# 側は `sessions/p452/accidentals.txt` の `acc.chordF ties=2`）。
-  ⚠️ **⒱ の網がこの形を避けたのはこれが理由**＝`<c g>2~ <c g aes>2` の `aes` は*結ばれない*余りの
-  符頭にしてあるので、**照合の規則が変わっても `TieOutlineBoxTests` は生きる**
 ### F. 言語・ツール側（X/Y とは独立・**一覧は伝聞。着手前に実コードで確認**）
 
 - ✅ **F-midi. `.mid` に GM 音色を書く＝パートごとにトラックとチャンネル・チャンネルごとにプログラムチェンジ・`midiInstrument "…"` で上書き**（2026-09-15・第385 起票・**ユーザー承認「良い」**・`## 0.8.0`）。**出荷（第385 続き）**: `LilySharp.Core/Midi/GeneralMidi.cs`（LP の 128 名・0 始まり・`PreviewTimbreFamily`）／`InstrumentDefaults.GetMidiProgram`／`PartHeaderDefaults.MidiProgram`（`midiInstrument` ＞ プリセット ＞ 0）／`SymbolCaseValidator` が未知名・裸の値をエラー／`MidiExporter.SplitIntoPartTracks`（音符に `Part` を持たせて後で分割・初めて鳴った順・歌詞は先頭トラック）／`MidiFile` の `ProgramChange`（tick 0・ch 9 除外）／双子は既定（0）以外で `midiInstrument =`／MusicXML `<midi-instrument>`／補完・tmLanguage・GRAMMAR。テスト `MidiInstrumentTests`。**名前の整理も同便で実施**: `midiInstrument` で音色は書けるので `acoustic-guitar`/`electric-guitar`/`electric-bass` も削除（ユーザー「削除する（推奨）」）＝`uke` と合わせて別名 14 個が退役。以下は起票時の記録。**発端**: 楽器プリセットの別名の整理（`uke` 退役の続き）で「別名は MIDI に効かないか」を測った——**実測（`lysc midi` のバイト）: format 1・2 トラック（"Tempo"＋"Track 1"）・全パートの音程音符がチャンネル 0・ドラムだけチャンネル 9・プログラムチェンジ 0 個**＝**どの楽器も一般の MIDI プレイヤーでは GM 1（ピアノ）で鳴る**。楽器名が効くのは記譜（音部記号・オクターブ・移調）と、エディタのプレビュー合成の音色系統（`MidiExporter.TimbreFamily`＝名前の部分一致・`.mid` には入らない）だけ。**設計（承認済み）**: ⑴ 1 パート＝1 トラック（トラック名＝パート名）・音程パートに ch 0〜15（9 を除く）を順に・ドラムは 9 のまま・**16 に収まらなければ同じ音色のパートでチャンネル共有、それでも足りなければ警告**・4 分音の補助チャンネル（`MidiFile.PlanQuarterToneChannels`）は残りから（足りなければ既存の同一チャンネル内ベンドに落ちる）。⑵ 既定の音色＝プリセットの GM 番号（`guitar` 25 nylon・`acoustic-guitar` 26 steel・`electric-guitar` 28 clean・`bass`/`electric-bass` 34 finger・`contrabass` 44・`ukulele` 25・`mandolin` 26・`banjo` 106・弦 41〜43・木管 69/71/72/73/74・サックス 65〜68・金管 57/58/59/61・声 53 choir aahs・ピアノ 1）、プリセットなし＝1（LP の既定 "acoustic grand"）。⑶ **上書き＝part header の `midiInstrument "electric guitar (clean)"`**（LP の `midiInstrument` と同名・値は LP の 128 名＝`C:\bin\lilypond-2.26.0\share\lilypond\2.26.0\scm\lily\midi.scm` の `instrument-names-alist`・未知名はエラーで一覧）。⑷ 出力: `.mid` のプログラムチェンジ／双子の `\with { midiInstrument = "…" }`／MusicXML の `<score-instrument>`＋`<midi-instrument>`（`<midi-channel>`・`<midi-program>`）／プレビュー合成の音色系統は GM 番号から引く（部分一致をやめる＝`double-bass`・`piano-bass` の誤判定も消える）。⑸ **名前の整理はこの後にまとめて**＝純粋な別名 10 個（`bass-guitar`・`5-string-bass`・`6-string-bass`・`french-horn`・`piano-treble`・`voice-soprano`/`voice-alto`/`voice-tenor`・`double-bass`・`piano-bass`）は削除で決定済み（ユーザー: 声は `soprano`/`alto`/`tenor`＋`voice-bass`・`contrabass` を残す・`piano-bass` 削除）。`acoustic-guitar`/`electric-guitar`/`electric-bass` は「音色が違い得る名前は残す」決定——`midiInstrument` が入った時点で残す理由を再確認する。**影響**: 全 `.mid` の中身が変わる（トラック分割とプログラムチェンジ）＝MIDI のテストは書き直し・言語は追加だけ。

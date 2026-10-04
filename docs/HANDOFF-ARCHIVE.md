@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第795セッションの経緯
+
+### 1.1 第795セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザー決定「1 (8)」（本 4 冊は放置・v0.10.0 はまだ）。`-Start p795`（HEAD `8ca1e118`・未 push 36）＝full **11006 / 1 / 2 / 11009**＝赤 1 は `HistoryCitationTests.DeadCitationsDoNotGrow`（947→948・第794 の語りに Lab の commit SHA を書いた＝本体に無い引用）→ 語りの SHA を消して緑（`dead.log`）。§7 3.5 で第793 を ARCHIVE へ。
+- **⑻ の設計（前提として置いた・RULES §5.2 第751）**: 宣言した弱起が直前の短い小節をちょうど 1 小節に補うなら、頁も XML も 1 小節に数える＝弱起は前の不完全小節を完成させる（音楽的慣習）・LP の途中の `\partial` と同じ（第761 実測 1 2 3）・validator（`SectionBoundaryBars`）は既にその対を補完として扱っていた。満杯の小節の後の弱起（第755: 頁・XML・LP 一致で 1 小節）は従来どおり。
+- **直し**: 頁 `SectionBoundaryContinuations` の `cur.IsPickup` 除外を外し、**前の小節が自分の拍子で満杯なら補完しない**の門（`head >= meters[from]`＝2/4 の `g'2 |` の後に 4/4 の `partial 2`）を足した（旧規則の盲点＝拍子は i でしか読んでいなかった）。XML `ContinueSplitBar` の `first.Implicit` 除外を外し、同じ門（play の前の拍子 `barTicksBefore` を revert の前に取る）。頁の絵: probe `d-declared`（p759）が 1 2 3 4 → **1 2 2 3**・XML 1 2 3i 4 → **1 2 2i 3**（`before/`・`after/`）。fixture `partial-pickup`・`partial-barnumber` は svg も xml も不変（弱起は曲頭）。
+- **網**: `SectionBoundarySplitBarTests.ThePage_ADeclaredPickupCompletingTheBarBefore_IsOneBar`（併合・満杯の後の対照・自分の拍子で満杯の対照）・`MusicXmlMeasureNumberingTests` の `…CompletesIt`（旧 `…IsABarOfItsOwn` を反転）＋対照 2（満杯の後・自分の拍子で満杯）。毒 4 本（頁の除外を戻す／XML の除外を戻す／頁の門を外す／XML の門を外す）＝**それぞれ 1 赤・全部別の網**（`poison-a..d.log`）。
+- **掃き**（`sweep/run-sweeps.ps1`＝p723 の全 svg ＋ p742 の xml・base＝p793 の exe-head（HEAD の出力・第794 は出力不変）・head＝`exe-head`）: 998 冊 svg 1199 枚 **差 0**・xml 1199 枚 **差 0**（第761 の国勢調査どおり本物は 0）。
+- CHANGELOG: p759 の項の「宣言した partial は独立」の文を落とし、Fixes に 1 項。棚卸し `APPROXIMATIONS.md` 行番号 3 行・csv 不変。snapshot 不動。
+★ `-End p795 -DiffBase 8ca1e118`（`end.log`）＝full **11010 / 0 / 2 / 11012**（網 +3）・門 全 OK（HANDOFF 441,345 B・残り 8,655）。7.5: Core **`+` 27** 行（`-End` は commit 前で 0 と刷った・numstat 16＋11）・REF 0・OWN 0（ユーザー決定の意味論＝第753 と同じ扱い・LP の `\partial` は実測で裏取り・式は写していない）。7.6: 該当なし（新しい定数なし・既存の規則の射程を広げ、門を 1 つ足した）。7.7: 匂いなし（門は「自分の拍子で満杯」という意味の門で、観測者は毒 c／d の 2 網）。commit `8e9ad797`（code・網・CHANGELOG・棚卸し）＋ docs の commit。Lab は sessions/p795 だけ commit。push はユーザー。
+判定: ⑻ は閉じた＝⑼ は全部閉じた（§1.0 の一覧を 1 行の指標に畳んだ）。次の一手: §1.0 ⒜ に手の動く島は無い（残りは VS Code の手動確認・v0.10.0 の時期＝ユーザー判断・本 4 冊は放置の決定）＝指示待ち。⒝ の設計級（値段の分かっている順に ⒳⁶ span の fold の端だけ化）はユーザーの GO が要る。会話を区切るか: (b) 便が 2 つ・文脈は軽い／(c) 次の島は未定＝**続ける**（指示が出れば `-Start p796`）。
+
 ## 以下は第794セッションの経緯
 
 ### 1.1 第794セッション（2026-10-04・YT-DELL2）
