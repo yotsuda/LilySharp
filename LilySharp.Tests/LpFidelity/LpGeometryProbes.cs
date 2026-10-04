@@ -14225,6 +14225,11 @@ internal static class LpGeometryProbes
             g => g.FirstClefAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1)),
         new("midmeasure.clef.grace-then-clef.clef-to-main-note", MCGB,
             g => g.NoteheadAnchor(3) - g.FirstClefAfter(g.NoteheadAnchor(1))),
+        // Where the grace itself stands in MCGB: before the clef column, at the approach's 0.8.
+        new("midmeasure.clef.grace-then-clef.prev-note-to-grace", MCGB,
+            g => g.NoteheadAnchor(2) - g.NoteheadAnchor(1)),
+        new("midmeasure.clef.grace-then-clef.grace-to-clef", MCGB,
+            g => g.FirstClefAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(2)),
         // The change column's two springs off force 0. See MCJ.
         new("midmeasure.force.stretch.clef.control", MFCJ,
             g => g.NoteheadAnchor(1) - g.NoteheadAnchor(0), MidMeasureStretchPaper),

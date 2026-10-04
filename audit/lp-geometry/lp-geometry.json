@@ -432,6 +432,20 @@
       "residual": 0,
       "why": "EXACT since session 810: a mid-measure change column is a SERIES spring of LilyPond's two in its timing slot - the Note_spacing spring into it on the note spring's strengths, the Staff_spacing spring out of it on the space-alist's (lily/staff-spacing.cc:117-221), each with its column rod (lily/separation-item.cc:47-68 Separation_item::set_distance) - and the glyph hangs back from the next note by the right part's length at the line's force (SpacingRules.MidMeasureChangeSeries, MeasureLayout.ChangeColumnHangs). PREDICTION (written before the port, commit 2443a7665): 0. OUTCOME: held, +1.4e-07 (was +0.970615)."
     },
+    "midmeasure.clef.grace-then-clef.prev-note-to-grace": {
+      "probe": "barline-spacing.ly",
+      "score": "MCGB",
+      "lilypond": 2.201796,
+      "residual": 2.118062,
+      "why": "OPEN since session 811 (read before the port as its baseline). Cause: a change written AFTER a grace stands at the main note's moment in LilyPond, its column between the last grace column and the main note's - prev -> first grace is the approach (x 0.8, lily/spacing-spanner.cc:396-403), the last grace -> change a grace Note_spacing spring into a NonMusical column (lily/note-spacing.cc:103-108, no 0.8), change -> main Staff_spacing (no 0.8) - while Lily# folds both of the change's gaps into one spring and hangs the grace run off the main note by its own span, so the run lands to the RIGHT of the clef. Lily# puts the grace 4.32 after the previous note (the run hung from the main note, the clef's gaps all in the approach). PREDICTION: 0 once the run's last spring is LilyPond's two (grace -> change -> main) and the run is placed by them."
+    },
+    "midmeasure.clef.grace-then-clef.grace-to-clef": {
+      "probe": "barline-spacing.ly",
+      "score": "MCGB",
+      "lilypond": 0.698969,
+      "residual": -1.906941785,
+      "why": "OPEN since session 811 (read before the port as its baseline). Cause: a change written AFTER a grace stands at the main note's moment in LilyPond, its column between the last grace column and the main note's - prev -> first grace is the approach (x 0.8, lily/spacing-spanner.cc:396-403), the last grace -> change a grace Note_spacing spring into a NonMusical column (lily/note-spacing.cc:103-108, no 0.8), change -> main Staff_spacing (no 0.8) - while Lily# folds both of the change's gaps into one spring and hangs the grace run off the main note by its own span, so the run lands to the RIGHT of the clef. Lily# draws the grace 1.21 to the right of the clef. PREDICTION: 0 (see grace-then-clef.prev-note-to-grace)."
+    },
     "midmeasure.clef.clef-to-next-note": {
       "probe": "barline-spacing.ly",
       "score": "MC",
