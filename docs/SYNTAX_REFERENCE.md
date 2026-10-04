@@ -530,9 +530,11 @@ note gets a hanging tie and the note the music arrives at a repeat tie, drawn as
 `@laissezVibrer` / `@repeatTie` were written there (once, however many ties arrive at it). The
 MIDI sustains the note on each pass the tie is carried on and re-attacks it on the others;
 MusicXML writes the tie's start on the tied note and its stop on every note it reaches; the
-LilyPond twin writes `\repeatTie`. Jumps (D.S., D.C.) are not followed by the tie: the MIDI
-follows them (see Navigation marks), but a tie at the section before a jump text is carried
-to the section printed and played next on the first pass, not to the segno's.
+LilyPond twin writes `\repeatTie`. Jumps (D.S., D.C.) are followed too: a tie at the end of
+the section before a jump text is carried to every section the route plays next — the segno's
+(or the piece's first) on the replay, the one after the `coda` sign when the replay leaves at
+`to coda` — exactly where the MIDI sustains it (see Navigation marks). A jump text written in a
+section's music, or inside a `|: … :|` block, is drawn and not followed by any of them.
 
 Everything else a section starts from still resets at the boundary (the relative frame, the note
 value, the meter, the key, the clef, overrides), so a tie's target states its octave. A span
