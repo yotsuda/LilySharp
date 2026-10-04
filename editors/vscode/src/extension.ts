@@ -31,6 +31,8 @@ import { pickAiModel } from './modelClient';
 import { registerSmartTyping } from './smartTyping';
 import { registerStepAudition } from './stepAudition';
 import { registerExportBatch } from './exportBatch';
+import { importFromImage } from './omrImport';
+import { locateOmr } from './omrCore';
 import { markdownItExtensionApi } from './markdownFence';
 import { svgPostKey, pagesSummary, SvgPages } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
@@ -423,6 +425,12 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    // "Import from Image/PDF…" is shown only where an OMR reader is (L1): the reader is not
+    // distributed yet (L2-L6), and a menu item that can only say "not installed" helps nobody.
+    void vscode.commands.executeCommand('setContext', 'lilysharp.omrAvailable',
+        locateOmr(process.env, path.join(context.globalStorageUri.fsPath, 'omr'),
+            process.platform, process.arch) !== undefined);
+
     // Push preview.theme changes to every open preview, so the setting takes effect
     // without reopening (a new panel reads it when its HTML is built).
     context.subscriptions.push(
@@ -518,6 +526,17 @@ export function activate(context: vscode.ExtensionContext) {
                 outputChannel.appendLine(`applyScoreTemplate command triggered (${label})`);
                 return applyScoreTemplate(label, template, range);
             }),
+        vscode.commands.registerCommand('lilysharp.importImage', (uri?: vscode.Uri, uris?: vscode.Uri[]) =>
+            importFromImage(context, {
+                output: outputChannel,
+                openPreview: column => openPreview(context, column),
+                // The lysc the reader verifies with: the one beside the bundled server, if any
+                // (else the reader looks beside itself, then on PATH).
+                lysc: () => {
+                    const p = path.join(context.extensionPath, 'server', process.platform === 'win32' ? 'lysc.exe' : 'lysc');
+                    return fs.existsSync(p) ? p : undefined;
+                },
+            }, uri, uris)),
         vscode.commands.registerCommand('lilysharp.importMusicXml', (uri?: vscode.Uri) => {
             outputChannel.appendLine('importMusicXml command triggered');
             importMusicXml(context, uri);

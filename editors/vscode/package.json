@@ -300,6 +300,11 @@
         "title": "Import MusicXML…"
       },
       {
+        "command": "lilysharp.importImage",
+        "category": "Lily#",
+        "title": "Import from Image/PDF…"
+      },
+      {
         "command": "lilysharp.aiTransform",
         "category": "Lily#",
         "icon": "$(sparkle)",
@@ -469,6 +474,10 @@
           "command": "lilysharp.importMusicXml"
         },
         {
+          "command": "lilysharp.importImage",
+          "when": "lilysharp.omrAvailable"
+        },
+        {
           "command": "lilysharp.aiTransform",
           "when": "resourceLangId == lilysharp"
         },
@@ -559,6 +568,11 @@
         {
           "command": "lilysharp.importMusicXml",
           "when": "resourceExtname == .xml || resourceExtname == .musicxml || resourceExtname == .mxl",
+          "group": "7_modification"
+        },
+        {
+          "command": "lilysharp.importImage",
+          "when": "lilysharp.omrAvailable && resourceExtname =~ /^\\.(png|jpe?g|tiff?|pdf)$/i",
           "group": "7_modification"
         },
         {
