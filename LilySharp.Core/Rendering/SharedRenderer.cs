@@ -299,14 +299,18 @@ internal static partial class SharedRenderer
         {
             var eolCourtesy = GetSystemEndKeyChange(score.PrimaryContentStaff, system);
             var eolTime = GetSystemEndTimeChange(score.PrimaryContentStaff, system);
-            if (eolCourtesy is not null)
-                notationStaffRight += SpacingRules.KeyCourtesySuffixWidth(
+            // 0 when the change prints nothing — then no key group stands there, and the meter
+            // measures off the bar line (SpacingRules.KeyCourtesyClosingSymbol).
+            double keySuffix = eolCourtesy is not null
+                ? SpacingRules.KeyCourtesySuffixWidth(
                     score, system.Measures[0].MeasureIndex,
-                    system.Measures[^1].MeasureIndex + 1, meterFollows: eolTime is not null);
+                    system.Measures[^1].MeasureIndex + 1, meterFollows: eolTime is not null)
+                : 0.0;
+            notationStaffRight += keySuffix;
             if (eolTime is { } eolMeter)
             {
                 notationStaffRight += SpacingRules.TimeCourtesySuffixWidth(
-                    score.TextMetrics, eolMeter, afterCourtesyKey: eolCourtesy is not null);
+                    score.TextMetrics, eolMeter, afterCourtesyKey: keySuffix > 0.0);
                 tabStaffRight += SpacingRules.TimeCourtesySuffixWidth(
                     score.TextMetrics, eolMeter, afterCourtesyKey: false);
             }
@@ -985,8 +989,17 @@ internal static partial class SharedRenderer
                     //   observed by: audit/lp-geometry courtesy.* — including the line-end
                     //     spans, which see the whole suffix from the bar line's ink to the
                     //     staff line's end.
+                    // ⚠️ A CHANGE THAT PRINTS NOTHING IS NOT IN THE GROUP (C major → A minor: no
+                    // cancellation, no signature). LilyPond steps over a member whose extent
+                    // is empty, so the meter then stands off the bar line as if no key had
+                    // changed; until session 804 this opened a group for it anyway and stood
+                    // the meter 1.0 + 1.15 out, past the room reserved and past the staff's
+                    // end (ledger courtesy.meter.barline-to-meter.silent-key, +1.400000).
+                    // LILYPOND-REF: lily/break-alignment-interface.cc:144-156 Break_alignment_interface::calc_positioning_done
                     if (SpacingRules.ContributesToKeyColumnWidth(staff)
-                        && GetSystemEndKeyChange(staff, system) is { } eolKeyChange)
+                        && GetSystemEndKeyChange(staff, system) is { } eolKeyChange
+                        && KeyChangeGeometry(eolKeyChange).Glyphs is var eolKeyGlyphs
+                        && SpacingRules.KeyCourtesyClosingSymbol(eolKeyGlyphs) is { } eolKeyCloser)
                     {
                         // Which symbol OPENS the group decides which entry the bar line's alist
                         // is keyed by — a cancellation and a signature are different break-align
@@ -995,12 +1008,15 @@ internal static partial class SharedRenderer
                         // (SpacingRules.KeyCourtesyOpeningGap), so the two sides cannot
                         // disagree about the opener — custom keys included.
                         double groupLeft = barlineRight + SpacingRules.KeyCourtesyOpeningGap(
-                            KeyChangeGeometry(eolKeyChange).Glyphs);
+                            eolKeyGlyphs);
                         // A meter after a key stands off the KEY's real right edge, which is
-                        // what the draw returns — not off a width computed a second time.
+                        // what the draw returns — not off a width computed a second time — by
+                        // the entry of the grob that CLOSES the key group: the signature's
+                        // 1.15, or the cancellation's 1.25 when the new key prints none
+                        // (SpacingRules.KeyCourtesyClosingSymbol, the reservation's read).
                         meterX = DrawKeySignatureChange(eolKeyChange, groupLeft, localStaffY, sgc)
                             + SpacingRules.BreakAlignGap(
-                                BreakAlignSymbol.KeySignature, BreakAlignSymbol.TimeSignature);
+                                eolKeyCloser, BreakAlignSymbol.TimeSignature);
                     }
 
                     if (GetSystemEndTimeChange(staff, system) is { } eolTimeChange)

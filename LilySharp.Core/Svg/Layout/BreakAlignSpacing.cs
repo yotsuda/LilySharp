@@ -215,6 +215,9 @@ internal static class BreakAlignSpacing
         // (staff-bar . (extra-space . 0.6))
         BreakAlignSymbol.StaffBar =>
             new SpacingEntry(SpacingStyle.ExtraSpace, 0.6),
+        // (right-edge . (extra-space . 0.5))  — define-grobs.scm:1946
+        BreakAlignSymbol.RightEdge =>
+            new SpacingEntry(SpacingStyle.ExtraSpace, 0.5),
         _ => new SpacingEntry(SpacingStyle.ExtraSpace, 0.5)
     };
 

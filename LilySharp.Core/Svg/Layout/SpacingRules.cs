@@ -771,9 +771,14 @@ internal static partial class SpacingRules
     /// <param name="meterFollows">
     /// True when a courtesy METER stands after this key in the same end-of-line group. Then
     /// the key is not the group's last member and does NOT pay the gap to the right edge —
-    /// the meter does, out of its own alist. Getting this wrong charges 0.5 twice or not at
-    /// all, and both look like a spacing bug rather than a double-count.
+    /// the meter does, out of its own alist — and pays the gap to the METER instead, out of
+    /// the alist of the grob that closes it (<see cref="KeyCourtesyClosingSymbol"/>), which
+    /// <see cref="TimeCourtesySuffixWidth"/> then does not charge again. Getting this wrong
+    /// charges a gap twice or not at all, and both look like a spacing bug rather than a
+    /// double-count.
     /// </param>
+    /// <returns>0 when no staff prints a glyph for the change — then there is no key group,
+    /// and a meter after it stands off the bar line.</returns>
     public static double KeyCourtesySuffixWidth(
         MultiStaffScore score, int startMeasureIndex, int nextMeasureIndex, bool meterFollows)
     {
@@ -810,21 +815,41 @@ internal static partial class SpacingRules
             return 0.0;
 
         var (glyphs, ink) = Rendering.SharedRenderer.KeyChangeGeometry(change);
-        if (glyphs.Count == 0)
+        if (KeyCourtesyClosingSymbol(glyphs) is not { } closer)
             return 0.0;
-        double w = KeyCourtesyOpeningGap(glyphs) + ink;
-        // The group's last member owes a gap to `right-edge`, and which grob that is depends
-        // on what the change prints: a signature when the new key has accidentals, otherwise
-        // the bare cancellation. Both declare 0.5, so the ARITHMETIC does not care — reading
-        // the entry that is actually last is what keeps that a fact rather than a coincidence.
-        if (!meterFollows)
-            w += BreakAlignGap(
-                glyphs[^1].Kind != "natural"
-                    ? BreakAlignSymbol.KeySignature
-                    : BreakAlignSymbol.KeyCancellation,
-                BreakAlignSymbol.RightEdge);
-        return w;
+        // The key group's last grob owes a gap to whatever stands after it — the courtesy
+        // meter, or `right-edge` — and which grob that is depends on what the change prints: a
+        // signature when the new key has accidentals, otherwise the bare cancellation. To the
+        // edge both declare 0.5; to the meter they do NOT (1.15 against 1.25), so the entry is
+        // read off the grob that is actually last.
+        return KeyCourtesyOpeningGap(glyphs) + ink
+            + BreakAlignGap(closer,
+                meterFollows ? BreakAlignSymbol.TimeSignature : BreakAlignSymbol.RightEdge);
     }
+
+    /// <summary>
+    /// The break-align symbol of the grob that CLOSES an end-of-line courtesy key group — the
+    /// signature when the change prints one, the cancellation when it prints only naturals —
+    /// or null when the change prints nothing (C major → A minor), which is then no member of
+    /// the group at all.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:144-156 Break_alignment_interface::calc_positioning_done
+    ///   — a member whose extent is empty is stepped over, on both sides of every gap: the
+    ///   KeySignature of a change into C major is such a member, so the cancellation's alist
+    ///   is keyed by what prints NEXT (time-signature 1.25, right-edge 0.5 —
+    ///   scm/define-grobs.scm:1941, :1946), and with no cancellation either the bar line's is
+    ///   (time-signature 0.75, :293).
+    /// Read off the DRAWN walk's last glyph, as <see cref="KeyCourtesyOpeningGap"/> reads its
+    /// first, so the reservation and the draw cannot disagree about it.
+    /// MEASURED 2.26.0 (probe courtesy-meter.ly, scores CANCONLY / CANCMETER / NOKEYMETER;
+    /// ledger courtesy.key.cancellation-to-line-end and its three neighbours, session 804).
+    /// </remarks>
+    public static BreakAlignSymbol? KeyCourtesyClosingSymbol(
+        List<(string Kind, double Dx, int StaffPosition)> keyChangeGlyphs) =>
+        keyChangeGlyphs.Count == 0 ? null
+        : keyChangeGlyphs[^1].Kind != "natural" ? BreakAlignSymbol.KeySignature
+        : BreakAlignSymbol.KeyCancellation;
 
     /// <summary>
     /// The bar line's gap to whichever grob OPENS the end-of-line courtesy key group —
@@ -918,14 +943,20 @@ internal static partial class SpacingRules
     ///   sides of the break. See SharedRenderer.GetSystemEndTimeChange for why only a
     ///   changed one does.
     /// </remarks>
+    /// <param name="afterCourtesyKey">True when a courtesy key group that PRINTS stands
+    /// before the meter (<see cref="KeyCourtesySuffixWidth"/> returned more than 0). The
+    /// gap between the two is then already in the key's width — read off the grob that closes
+    /// the key group — and is not charged here.</param>
     public static double TimeCourtesySuffixWidth(
         Rendering.ScoreTextMetrics fonts, TimeSignatureChangeItem change, bool afterCourtesyKey)
         // The meter's gap is measured off whatever stands to its LEFT in the group — the key
-        // when one is there, otherwise the bar line — and those are different alist entries
-        // (1.15 against 0.75), which is why one "space after the bar line" cannot cover both.
-        => BreakAlignGap(
-               afterCourtesyKey ? BreakAlignSymbol.KeySignature : BreakAlignSymbol.StaffBar,
-               BreakAlignSymbol.TimeSignature)
+        // group's last grob when one prints, otherwise the bar line — and those are different
+        // alist entries (signature 1.15, cancellation 1.25, bar line 0.75), which is why one
+        // "space after the bar line" cannot cover them. The key's two are the key suffix's to
+        // pay (it knows which grob closes it); the bar line's is paid here.
+        => (afterCourtesyKey
+               ? 0.0
+               : BreakAlignGap(BreakAlignSymbol.StaffBar, BreakAlignSymbol.TimeSignature))
            + GlyphMetrics.GetTimeSigWidth(fonts,
                change.NewTime.NumeratorText, change.NewTime.DenominatorText)
            // ⚠️ AND THE GAP TO THE EDGE ITSELF. A break-align group has a member to the RIGHT
@@ -1230,8 +1261,9 @@ internal static partial class SpacingRules
     /// LILYPOND-REF: scm/define-grobs.scm:1930-1964 KeyCancellation — its own break-align-symbol key-cancellation
     /// Read off <see cref="Rendering.SharedRenderer.KeyChangeGeometry"/> with the clef the change
     /// carries: the naturals come first, and the new signature's first glyph opens the
-    /// KeySignature. The walk's advance for a change that prints only naturals includes the
-    /// trailing gap its drawer uses; the ink extent stops at the last natural.
+    /// KeySignature. A change that prints only naturals has no signature and no gap after
+    /// them: its extent stops at the last natural (and so, since session 804, does the walk's
+    /// own advance).
     /// </remarks>
     internal static (double Cancellation, double Signature, double Extent) KeyChangeGrobWidths(
         KeySignatureChangeItem keyChange)

@@ -821,7 +821,8 @@ internal static partial class SharedRenderer
     /// The glyphs a mid-measure key change engraves — cancellation naturals, then the
     /// new signature — as (glyph kind, dx from the change's left edge, staff position
     /// about the middle line — <see cref="KeySignatureGlyphs"/>' frame). Width is the
-    /// full advance, the x the drawer returns. ONE home for the walk: the drawer
+    /// change's ink extent — the last glyph's right edge, nothing after it — and the x the
+    /// drawer returns. ONE home for the walk: the drawer
     /// consumes it glyph by glyph, and SkylineBuilder seeds the same ink into the
     /// inside-staff profile — a KeySignature declares no outside-staff-priority, so the
     /// outside-staff movers (the section label that sat ON the sharps it could not see,
@@ -866,13 +867,17 @@ internal static partial class SharedRenderer
                 prevNaturalPos = staffPosition;
                 anyNatural = true;
             }
-            if (anyNatural)
-                // The same cancellation→key entry the standard branch reads — it was the same
-                // 0.4 written a THIRD time (draw, reserve, and here), so it moves with them.
-                dx += GlyphMetrics.AccidentalNatural.Width
-                    + SpacingRules.BreakAlignGap(
-                        BreakAlignSymbol.KeyCancellation, BreakAlignSymbol.KeySignature);
             var customNewSig = KeySignatureGlyphs(change.NewKey, clef, out double customKeyWidth);
+            if (anyNatural)
+            {
+                dx += GlyphMetrics.AccidentalNatural.Width;
+                // The same cancellation→key entry the standard branch reads — it was the same
+                // 0.4 written a THIRD time (draw, reserve, and here), so it moves with them —
+                // and, as there, only when a signature stands after the cancellation.
+                if (customNewSig.Count > 0)
+                    dx += SpacingRules.BreakAlignGap(
+                        BreakAlignSymbol.KeyCancellation, BreakAlignSymbol.KeySignature);
+            }
             foreach (var (kind, gdx, pos) in customNewSig)
                 glyphs.Add((kind, dx + gdx, pos));
             return (glyphs, dx + customKeyWidth);
@@ -928,8 +933,17 @@ internal static partial class SharedRenderer
             // ⚠️ THE RESERVATION READS THE SAME ENTRY (SpacingRules.KeyCourtesySuffixWidth),
             //   so the room widens by exactly what this moves. It was the same 0.4 spelled
             //   twice, which is why both had to change in one commit.
-            dx += SpacingRules.BreakAlignGap(
-                BreakAlignSymbol.KeyCancellation, BreakAlignSymbol.KeySignature);
+            // ⚠️ ONLY WHEN A SIGNATURE FOLLOWS. A change into C major / A minor prints no
+            //   signature: LilyPond's KeySignature is there with an EMPTY extent, and
+            // LILYPOND-REF: lily/break-alignment-interface.cc:144-156 Break_alignment_interface::calc_positioning_done
+            //   steps over every member whose extent is empty, so this entry is paid to nobody
+            //   and the cancellation's neighbour is whatever prints next. Until session 804
+            //   the gap was written unconditionally and the advance of a naturals-only change
+            //   ended 0.5 past its ink — the end-of-line courtesy reserved and chained off that
+            //   (ledger courtesy.key.cancellation-to-line-end opened at +0.500000).
+            if (next != 0)
+                dx += SpacingRules.BreakAlignGap(
+                    BreakAlignSymbol.KeyCancellation, BreakAlignSymbol.KeySignature);
         }
 
         if (next == 0)

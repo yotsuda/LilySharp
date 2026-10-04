@@ -271,5 +271,127 @@ public sealed class CourtesyMeterTests
             + "right-edge entry is not being charged");
         Assert.Equal(0.5, margin, 3);
     }
+
+    // --- AND WHEN THE NEW KEY PRINTS NO SIGNATURE (session 804) ---
+    //
+    // A change into C major / A minor prints no KeySignature. LilyPond keeps the grob with an
+    // EMPTY extent and steps over it
+    // LILYPOND-REF: lily/break-alignment-interface.cc:144-156 Break_alignment_interface::calc_positioning_done
+    // so the cancellation reads its own alist for what prints next, and a change that prints
+    // nothing is no member of the group. The measured halves are the ledger's
+    // (courtesy.key.cancellation-to-line-end and its three neighbours, probe courtesy-meter.ly
+    // scores CANCONLY / CANCMETER / NOKEYMETER); these state the RULE in each shape.
+
+    private static double NaturalWidth => LilySharp.Core.Svg.Layout.GlyphMetrics.AccidentalNatural.Width;
+
+    /// <summary>
+    /// E-flat → C major: three naturals and nothing after them. The cancellation is the
+    /// group's last member and pays right-edge 0.5 once — the cancellation → key-signature 0.5
+    /// has nobody to be paid to. This read 1.0 until session 804.
+    /// </summary>
+    [Fact]
+    public void ACancellationWithNoSignatureAfterIt_PaysTheEdgeGapOnce()
+    {
+        var g = RenderedGeometry.Render(Book("4/4", "r1", "key c major"));
+        double barRight = g.BarlineRight(0);
+        var courtesy = g.Glyphs.Where(x => x.X > barRight + 1e-9).ToList();
+        Assert.Equal(3, courtesy.Count);
+
+        double margin = LineEdge(g, courtesy[0].Y) - (courtesy.Max(x => x.X) + NaturalWidth);
+        Assert.Equal(0.5, margin, 3);
+    }
+
+    /// <summary>
+    /// The same cancellation with a courtesy meter after it: the meter stands the
+    /// CANCELLATION's time-signature entry off the last natural's ink — 1.25
+    /// (scm/define-grobs.scm:1941) — not 0.5 to a signature that is not there plus the
+    /// signature's 1.15, which is what it read (1.65) until session 804.
+    /// </summary>
+    [Fact]
+    public void ACancellationBeforeAMeter_StandsTheMeterItsOwnGapAway()
+    {
+        var g = RenderedGeometry.Render(Book("2/4", "r2", "time 4/4 key c major"));
+        double barRight = g.BarlineRight(0);
+        var courtesy = g.Glyphs.Where(x => x.X > barRight + 1e-9).OrderBy(x => x.X).ToList();
+        Assert.Equal(4, courtesy.Count);   // three naturals, then the C
+
+        Assert.Equal(1.25, courtesy[3].X - (courtesy[2].X + NaturalWidth), 3);
+    }
+
+    /// <summary>
+    /// C major → A minor prints neither cancellation nor signature, so the courtesy meter
+    /// stands exactly where it stands when no key changes at all: BarLine's 0.75 off the bar,
+    /// and the same distance from the line's end. Until session 804 a group was opened for
+    /// the silent key and the meter stood 2.15 out — past the end of its own staff line.
+    /// </summary>
+    [Fact]
+    public void AKeyChangeThatPrintsNothing_LeavesTheMeterWhereTheBarLinePutsIt()
+    {
+        string plain = Book("2/4", "r2", "time 4/4", openingKey: "c major");
+        string silent = Book("2/4", "r2", "time 4/4 key a minor", openingKey: "c major");
+
+        Assert.Equal(1, CourtesyGlyphCount(silent));
+        Assert.Equal(0.75, RenderedGeometry.Render(silent).BarlineRightToNextGlyph(0), 3);
+        Assert.Equal(MeterAnchorToLineEnd(plain), MeterAnchorToLineEnd(silent), 3);
+    }
+
+    /// <summary>
+    /// RESERVE = DRAW, in each of the three shapes: the line that carries the courtesy ends
+    /// where the next line ends. The staff line is drawn to the last bar plus the suffix
+    /// (<c>SharedRenderer.StaffRightEdges</c>) and the music was laid out in the line width
+    /// minus the suffix (<c>MultiStaffLayouter.LineEndCourtesyWidth</c>) — two readings of one
+    /// width, and when they differ the first line runs past the margin or stops short of it.
+    /// </summary>
+    /// <remarks>
+    /// The readings above cannot see the layout's half: they measure from the bar line, which
+    /// moves WITH a wrong reservation. Poisoned (session 804: the layout told a silent key
+    /// stands before the meter), every one of them stayed green and the first line ran 0.75
+    /// past the second.
+    /// </remarks>
+    [Theory]
+    [InlineData("4/4", "r1", "key c major", "ees major")]            // cancellation last
+    [InlineData("2/4", "r2", "time 4/4 key c major", "ees major")]   // cancellation, then meter
+    [InlineData("2/4", "r2", "time 4/4 key a minor", "c major")]     // a silent key, then meter
+    public void TheLineCarryingTheCourtesy_EndsWhereTheNextLineEnds(
+        string openingMeter, string restA, string header, string openingKey)
+    {
+        var g = RenderedGeometry.Render(Book(openingMeter, restA, header, openingKey));
+        // Staff lines only: a ledger line is horizontal too, and a few staff spaces long.
+        var ends = g.Lines
+            .Where(l => System.Math.Abs(l.Y1 - l.Y2) < 1e-9 && System.Math.Abs(l.X2 - l.X1) > 20.0)
+            .Select(l => System.Math.Max(l.X1, l.X2))
+            .ToList();
+        Assert.Equal(10, ends.Count);   // two systems of five lines
+        Assert.Equal(ends.Min(), ends.Max(), 3);
+    }
+
+    /// <summary>
+    /// The walk itself, in the two branches that can end on a natural — a standard key and a
+    /// CUSTOM one, each cancelled to C major: the advance is the ink, ending at the last
+    /// natural's right edge. No book in the corpus cancels a custom key to nothing, so that
+    /// branch is stated here directly.
+    /// </summary>
+    [Fact]
+    public void AChangeThatPrintsOnlyNaturals_EndsAtItsLastNatural()
+    {
+        var cMajor = new LilySharp.Core.Svg.Model.KeySignature(0);
+        var standard = new LilySharp.Core.Svg.Model.KeySignatureChangeItem(
+            cMajor, new LilySharp.Core.Svg.Model.KeySignature(-3), 0);
+        var custom = new LilySharp.Core.Svg.Model.KeySignatureChangeItem(
+            cMajor,
+            new LilySharp.Core.Svg.Model.KeySignature(0,
+                LilySharp.Core.Svg.Model.KeySignature.EncodeCustom(new[] { (3, 1), (6, -1) })),
+            0);
+
+        foreach (var change in new[] { standard, custom })
+        {
+            var (glyphs, width) = LilySharp.Core.Rendering.SharedRenderer.KeyChangeGeometry(change);
+            Assert.NotEmpty(glyphs);
+            Assert.All(glyphs, x => Assert.Equal("natural", x.Kind));
+            Assert.Equal(glyphs[^1].Dx + NaturalWidth, width, 6);
+            Assert.Equal(LilySharp.Core.Svg.Layout.BreakAlignSymbol.KeyCancellation,
+                LilySharp.Core.Svg.Layout.SpacingRules.KeyCourtesyClosingSymbol(glyphs));
+        }
+    }
 }
 

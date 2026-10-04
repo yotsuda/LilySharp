@@ -1574,13 +1574,15 @@ internal sealed class MultiStaffLayouter
             if (lead.Duration > Fraction.Zero)
                 break;
         }
-        double width = 0.0;
-        if (leadKey is not null)
-            width += SpacingRules.KeyCourtesySuffixWidth(
-                score, startMeasureIndex, nextMeasureIndex, meterFollows: leadTime is not null);
+        // 0 when the change prints nothing (then the meter measures off the bar line) — the
+        // same reading SharedRenderer.StaffRightEdges makes for the drawn staff line.
+        double width = leadKey is not null
+            ? SpacingRules.KeyCourtesySuffixWidth(
+                score, startMeasureIndex, nextMeasureIndex, meterFollows: leadTime is not null)
+            : 0.0;
         if (leadTime is { } t)
             width += SpacingRules.TimeCourtesySuffixWidth(
-                score.TextMetrics, t, afterCourtesyKey: leadKey is not null);
+                score.TextMetrics, t, afterCourtesyKey: width > 0.0);
         return width;
     }
 

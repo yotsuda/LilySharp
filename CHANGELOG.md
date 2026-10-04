@@ -392,6 +392,16 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A line that ends in a courtesy for a key with no signature.** When the next line opens in
+  C major or A minor, the end-of-line courtesy is a cancellation with no signature after it —
+  or nothing at all, from C major to A minor — and the group was still spaced as
+  "cancellation, gap, signature". A cancellation standing last left one staff space of white
+  before the line's end instead of half; a courtesy meter after it stood 1.65 from the last
+  natural instead of 1.25; and after a key change that prints nothing the meter was drawn a
+  staff space past the room made for it, off the end of its staff line. All three now follow
+  LilyPond, which skips an empty member of the group: the cancellation reads its own distance
+  to whatever prints next, and a silent key change leaves the meter where the bar line puts it.
+  A tab-only score, which prints no key, had the same fault in its line's width.
 - **A lyrics row that misses its voice is said.** Under a staff whose part names its voices
   (`voice sop { … } voice alt { … }`), a row spelled `lyrics allt` binds to nothing: it is the
   even-spread lead-sheet row, drawn off the alto's rhythm, and nothing said so. A new warning,
