@@ -31,10 +31,6 @@ internal sealed class ImportDocument
     public string? Composer { get; set; }
     public string? Subtitle { get; set; }
     public string? Poet { get; set; }
-    /// <summary>The document names Lily# as its encoder (<c>&lt;encoding&gt;&lt;software&gt;</c>,
-    /// written since 2026-10-05): its octave clefs are read under the clef, never as the
-    /// restated spelling (<c>MusicXmlReader.ClefOctaveRestated</c>).</summary>
-    public bool EncodedByLilySharp { get; set; }
     /// <summary>Opening tempo (quarter BPM), or null when the source gives none.</summary>
     public int? Tempo { get; set; }
     /// <summary>The page the document states (<c>&lt;defaults&gt;&lt;page-layout&gt;</c>),

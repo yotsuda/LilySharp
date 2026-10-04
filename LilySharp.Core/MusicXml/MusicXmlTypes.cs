@@ -53,16 +53,14 @@ internal sealed class MusicXmlDocument
                 new XElement("work-title", Title)));
         }
 
-        // Identification: one <creator> per credited person, typed, and the encoder — which the
-        // importer reads to tell this file's octave clefs from the spelling Lily# wrote before
-        // 2026-10-05 without naming itself (MusicXmlReader.ClefOctaveRestated).
+        // Identification: one <creator> per credited person, typed.
+        if (!string.IsNullOrEmpty(Composer) || !string.IsNullOrEmpty(Poet))
         {
             var identification = new XElement("identification");
             if (!string.IsNullOrEmpty(Composer))
                 identification.Add(new XElement("creator", new XAttribute("type", "composer"), Composer));
             if (!string.IsNullOrEmpty(Poet))
                 identification.Add(new XElement("creator", new XAttribute("type", "poet"), Poet));
-            identification.Add(new XElement("encoding", new XElement("software", "Lily#")));
             scorePartwise.Add(identification);
         }
 

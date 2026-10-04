@@ -118,19 +118,19 @@ public class MusicXmlRoundTripTests
     }
 
     /// <summary>
-    /// A guitar part spelled the OTHER way in circulation — an octave clef and a
-    /// <c>transpose</c> restating the same octave, the pitches as on the plain clef (Lily#'s
-    /// own export wrote it until 2026-10-05) — imports as <c>clef treble_8</c> and nothing else.
+    /// An octave clef and a <c>transpose</c> on one part are two octaves, each read as
+    /// MusicXML says: the pitch under the clef, the transpose what it sounds beyond that — so
+    /// the part comes in as <c>clef treble_8 transposition 8vb</c> and goes out as it came in.
+    /// The control is the second part: an octave no clef word carries survives AS the property.
     /// </summary>
     /// <remarks>
-    /// ⚠️ THE FALSIFIER IS A DOCUMENT LILY# DID NOT WRITE, which is why the round-trip
-    /// theory above cannot stand in for it: while the exporter left <c>transpose</c> off a
-    /// guitar, its own loop was green and this one dropped the part two octaves
-    /// (<c>clef treble_8 transposition 8vb</c>). The control is the second part: an octave
-    /// no clef word carries has to survive AS the property.
+    /// A document Lily# did not write, which the round-trip theory above cannot stand in for.
+    /// Lily# wrote this spelling itself from 2026-08-17 to 2026-10-05 meaning ONE octave;
+    /// those files are not read that way (owner's decision 2026-10-05: no compatibility with
+    /// Lily#'s own older output while it has hardly any users).
     /// </remarks>
     [Fact]
-    public void PublishedTransposingPart_DoesNotCountItsOctaveTwice()
+    public void OctaveClefAndTranspose_AreTwoOctaves_EachReadAsMusicXmlSays()
     {
         const string xml = """
             <score-partwise version="4.0">
@@ -163,16 +163,11 @@ public class MusicXmlRoundTripTests
 
         var (lys, _) = new MusicXmlImporter().Import(xml);
 
-        // The clef word already says the guitar's octave, so the property must not repeat it.
-        Assert.Contains("clef treble_8", lys);
-        Assert.DoesNotContain("clef treble_8 transposition", lys);
-        // …and the bass's octave, which no clef word carries, must still be stated.
+        Assert.Contains("clef treble_8 transposition 8vb", lys);
         Assert.Contains("clef bass transposition 8vb", lys);
 
-        // The proof is what it SOUNDS: both parts are written C and both sound an octave
-        // below it — the guitar's C3 written under its clef (no transpose), the bass's C3
-        // with its transpose. Asked of the re-export rather than of the header, so the two
-        // halves of the reading have to agree.
+        // Asked of the re-export rather than of the header, so the two halves of the reading
+        // have to agree: each part goes out as it came in.
         var doc = XDocument.Parse(
             new MusicXmlExporter().Export(SyntaxTree.Parse(lys)).ToXml().ToString());
         var parts = doc.Descendants().Where(e => e.Name.LocalName == "part").ToList();
@@ -180,7 +175,7 @@ public class MusicXmlRoundTripTests
             is { } t ? int.Parse(t.Elements().First(e => e.Name.LocalName == "octave-change").Value) : null;
         string FirstPitch(XElement part) => string.Concat(part.Descendants()
             .First(e => e.Name.LocalName == "pitch").Elements().Select(e => e.Value));
-        Assert.Equal(("C3", (int?)null), (FirstPitch(parts[0]), Transpose(parts[0])));
+        Assert.Equal(("C4", (int?)-1), (FirstPitch(parts[0]), Transpose(parts[0])));
         Assert.Equal(("C3", (int?)-1), (FirstPitch(parts[1]), Transpose(parts[1])));
     }
 

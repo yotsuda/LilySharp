@@ -414,7 +414,7 @@ workflow attaches that section to the GitHub Release verbatim.
   B3, which is where the page draws it and what it sounds — and `<transpose>` states only the
   instrument's own shift. The file used to keep the pitches as on the plain clef and restate the
   clef's octave in `<transpose>`: it sounded right, but MuseScore drew the staff and fretted the
-  TAB an octave high. Import reads both spellings, and the file now names Lily# as its encoder.
+  TAB an octave high. Import reads a file the same way, so a Lily# file written before this change brings an octave-clef part back written an octave higher with a `transposition 8vb` (sounding the same).
 - **MusicXML: a staff drawn with other than five lines says so** (`as lines N` →
   `<staff-lines>`), and the notes of a one-line staff stand on its line; a one-line
   percussion staff used to open with five.
