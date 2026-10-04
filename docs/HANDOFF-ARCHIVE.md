@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第807セッションの経緯
+
+### 1.1 第807セッション（2026-10-04・YT-DELL2）
+
+新しい会話（HANDOFF・RULES 通読・CLAUDE-OPERATIONS 通読）。第806 の次の候補 ⒜（change 列の右の rod）に着手。`-Start p807`（HEAD `534eb9c3`・未 push 25）＝full **11059 / 0 / 2 / 11061**。§7 3.5 で第805 を ARCHIVE へ（moved 15 lines）。
+- 双子（Lab `sessions/p807/rod`・`pair.ps1`）: 行中 bass clef の直後の音に `#`。**clef の帯の外（下 `cis,,`・上 `gis`）だけ Lily# が 1.05 右**、帯の中（`fis,`）と臨時記号なしは 2 桁で一致。LP の `#` は clef の下に潜り込む（インクが clef の右端より 0.45 左から始まる）。根: staff-spacing.cc:210 の min_dist＝Paper_column::minimum_distance（paper-column.cc:145-164）＝**skyline 距離**を、`SpacingRules.RightRod` は「列の幅＋最後の grob の右 esw＋次の列の左への到達」の**箱**で作っていた。第805 が左側で直したのと同じ病の右側。
+- §5.0 の型: **`1c918366c`（出力不変）**＝probe `barline-spacing.ly` に MCA（帯の外の `#`）・MCS（対照・帯の中）・MKL（調号の後の譜の下の♭）＋台帳 3 点（MCA +1.050000 は予測の桁どおり・他 2 点 0）。**`c631cfc86`（移植）**＝`ChangeColumnBoxes` を左 skyline から切り出し、`ChangeColumnRightSkyline`（同じ箱の右向き）対 `ItemSkylineFactory.SharedLeftSkylineAtColumn`（小節線の `BarlineToColumnMinimum` が同じ LP 関数に読む view）。3 人の呼び手（spring・renderer・loose）が同じ答え。MCA → 0、MCS・MKL 不動。CHANGELOG は第805 の項に 1 文。
+- 網: 毒 4 本（Lab `sessions/p807/poisons.ps1`）の 1 回目で ⑵（右の帯から次の列の高さを外す）が 0 赤＝**MKL の `bes` は♭が譜の中に届くので観測者でなかった** → `ees` に替えて ⑵ は MKL だけ赤。⑷（wish の左 view）は**恒等写像**（その view も臨時記号を含む＝RULES §5.4 の 3 つ目の顔）→「次の列を頭だけの箱にする」に差し替えて MCS・MKL・MKA・`test/keysig-change` が赤。⑴（箱に戻す）＝MCA だけ赤。⑶（非音楽 item の X だけの腕）は全緑＝観測者 0（註と §2 B に名指し）。
+- 掃き（`p807/sweep/`・base＝`p806/exe-head`）: **998 冊・1,199 svg・差 0**＝この形は母集団に無い。snapshot 不動。副産物: grace の形（`h-grace-lo`）は主音符が LP に揃った（約 0.27 右 → 47.49 対 47.48）が、**clef 自体は 0.26 右のまま**＝左の量（§2 B に起票）。
+- 触っていない: 右側の調号／拍子の帯は前の列の高さを読まない（次の列の高さが帯に入っているので距離には届かない＝註）。多段譜の 1 枠の読みは左と同じ。
+★ `-End p807 -DiffBase 534eb9c3`（`end1.log`）＝full **11062 / 0 / 2 / 11064**（網 +3＝台帳点 3）・門 全 OK（HANDOFF 439,264 B・残り 10,736）。台帳 983 → 986 点・exact 786 → 789・OPEN 0。7.5: Core `+` 81 行・REF 3（staff-spacing.cc:210・paper-column.cc:145-164・separation-item.cc:89-110）・OWN 0。7.6: ⒜ 字面＝min_dist は 2 つの skyline の距離・max(0, …)・次の列は PaperColumn の 0.08 と臨時記号の無 padding（小節線側と同じ view）／⒝ 右の帯は前の列を読まない（距離に届かない・註）・多段譜は 1 枠。7.7: ⑴ 非音楽 item の旧い X だけの腕を残した＝観測者 0（註と §2 B）／⑵ 同じ箱の 2 つ目の綴りは作らず `ChangeColumnBoxes` 1 軒に畳んだ／⑶ guard・fallback なし。7.9 perf: change 列の右の距離 1 回ごとに箱 1〜3 の skyline 1 枚＋次の item の左 skyline（render memo 共有）＝change 列の数だけ。commit `1c918366c`（点）・`c631cfc86`（移植・CHANGELOG）＋ docs の commit。Lab は sessions/p807 を commit。push はユーザー。
+判定: 行中の change 列は左右とも LP の skyline 距離になった（左＝第805・余白＝第806・右＝第807）。教訓: **毒の 1 回目で 2 本が空振り**——⑵ は観測者のつもりの点が観測していなかった（♭の上端が譜に届く）、⑷ は毒が恒等写像だった。どちらも 2 回目で直った（RULES §5.4「網は毒で赤くなるまで」・「緑の毒の 3 つ目の顔」の再演）。次の候補: ⒜ §2 B の新しい起票＝行中 clef の直後に grace が付くと clef が 0.26 右（この便の双子と計器の上に立つ・LP に grace 列と clef 列の spring を吐かせる 1 手から）／⒝ §2 C・D・E の古い起票の測り直し／⒞ H の束（設計）。会話を区切るか: (a) ⒜ は今の計器（`rod/pair.ps1`・probe）と読んだコード（`MidMeasureChanges`・LP の staff-spacing／paper-column）の上に立つ＝続ける側／(b) この会話は RULES 通読＋1 便で、圧縮は起きていない／(c) ⒝⒞ は別の島。⇒ **⒜ ならこの会話で `-Start p808` が有利、⒝⒞ でも新しい会話にする理由は小さい（既定は続ける）**。
+
 ## 以下は第806セッションの経緯
 
 ### 1.1 第806セッション（2026-10-04・YT-DELL2）
