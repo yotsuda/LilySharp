@@ -123,7 +123,7 @@ public sealed class TailValidatorKindsTests
         int volta = 0, phrases = 0;
         foreach (var (_, root) in Roots())
         {
-            Assert.Equal(Walk(root, n => n is BarlineSyntax || n is InlineVoltaSyntax),
+            Assert.Equal(Walk(root, n => n is BarlineSyntax || n is InlineVoltaSyntax || n is NavigationMarkSyntax),
                 root.DescendantNodesOfKinds(RepeatStructureScopeValidator.RepeatStructureKinds).ToList());
             Assert.Equal(
                 Walk(root, n => n is PhraseDeclarationSyntax || n is VariableDeclarationSyntax),

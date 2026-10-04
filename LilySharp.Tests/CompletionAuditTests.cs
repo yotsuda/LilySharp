@@ -187,31 +187,33 @@ public class CompletionAuditTests
     // ================= music =================
 
     [Fact]
-    public void Music_OffersCue_Q_NavigationMarks_AndPhraseReferences_AndEachCompiles()
+    public void Music_OffersCue_Q_AndPhraseReferences_AndEachCompiles_AndNoNavigationMark()
     {
         var items = LilySharpLanguageServer.GetMusicCompletions("", 0, phraseNames: ["theme"]).Items;
         var labels = items.Select(i => i.Label!).ToHashSet(StringComparer.Ordinal);
         Assert.Contains("cue", labels);
         Assert.Contains("q", labels);
         Assert.Contains("theme", labels);
+        // The navigation marks are form-only (LYS1034, owner's decision 2026-10-04): the
+        // music popup offers none, and one written in music is that error.
         foreach (string mark in LanguageVocabulary.NavigationMarks)
-            Assert.Contains(mark, labels);
+            Assert.DoesNotContain(mark, labels);
 
         var cue = items.Single(i => i.Label == "cue");
         AssertCompiles(Book(music: "c4 d " + Resolved(cue, "e4 f") + " g4 a |"), "`cue { }` in music");
         AssertCompiles(Book(music: "cue bass { c4 d } e4 f |"), "`cue bass { }` in music");
         AssertCompiles(Book(music: "<c e g>4 q q q |"), "`q` in music");
         AssertCompiles("phrase theme { c4 d e f | }\n" + Book(music: "theme g4 a b c' |"), "a phrase reference in music");
-        // The marks are landmarks at a bar's edge (mid-bar is LYS4003, a warning).
         foreach (string mark in LanguageVocabulary.NavigationMarks)
-            AssertCompiles(Book(music: $"c4 d e f | {mark} g4 a b c' |"), $"`{mark}` in music");
+            Assert.Contains(SemanticValidation.Run(SyntaxTree.Parse(Book(music: $"c4 d e f | {mark} g4 a b c' |"))),
+                d => d.Code == DiagnosticCodes.RepeatStructureOutsideForm);
         // …and a phrase list absent (the parameterless callers) offers no reference row.
         Assert.DoesNotContain("theme",
             LilySharpLanguageServer.GetMusicCompletions("", 0).Items.Select(i => i.Label));
     }
 
     [Fact]
-    public void NavigationMarks_AreTheCompilersList_InBothPopups()
+    public void NavigationMarks_AreTheCompilersList_InTheFormPopupAlone()
     {
         const string doc = "part m { section A { c4 d e f | } }\nform main { A }";
         var form = LilySharpLanguageServer.GetFormCompletions(doc).Items.Select(i => i.Label).ToHashSet();
@@ -219,7 +221,7 @@ public class CompletionAuditTests
         foreach (string mark in LanguageVocabulary.NavigationMarks)
         {
             Assert.Contains(mark, form);
-            Assert.Contains(mark, drums);
+            Assert.DoesNotContain(mark, drums);
             AssertCompiles(Book().Replace("form main { A }", $"form main {{ A {mark} A }}"), $"`{mark}` in a form");
         }
         // The list is the ten the grammar spells (GRAMMAR NavMark) — guard the guard.

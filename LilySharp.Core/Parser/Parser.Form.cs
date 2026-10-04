@@ -204,7 +204,7 @@ internal sealed partial class Parser
             // consumed, so _textPosition/Current now point one token past it).
             var span = new TextSpan(nameStart, Math.Max(1, name.FullWidth));
             _diagnostics.Error(span, DiagnosticCodes.NavigationMarkIsBare,
-                $"A navigation mark is bare, not '@': write '{name.Text}' (e.g. segno, ds al coda) — '@' modifies a note.");
+                $"A navigation mark is bare, not '@', and it is written in the form, between the section names (e.g. 'form main {{ A segno B ds al coda }}') — '@' modifies a note.");
         }
 
         // Handle compound marks like @ds.al.fine

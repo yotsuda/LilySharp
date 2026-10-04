@@ -23,9 +23,11 @@ section B {
   m { g4 a b c' | }
 }
 section C {
-  m { segno e4 d c d | e1 | }
+  m { e4 d c d | e1 | }
 }
 
-form main { A B to coda C }
+// The segno stands in the form, before C (a mark in music is LYS1034 since 2026-10-04):
+// the same barline, the same picture.
+form main { A B to coda segno C }
 
 score main "tocoda-label-mirror" { staff m }

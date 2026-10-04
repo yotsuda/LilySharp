@@ -2,27 +2,30 @@
 // bare tokens: `to coda`, `ds al coda`, `dc al fine`. Segno/Coda targets and
 // "To Coda" sit above; the jump-FROM instructions ("D.S. al Coda", "D.C. al
 // Fine", "Fine") sit below the staff, right-aligned at the barline (Gould,
-// Behind Bars). A mark is an event at a MOMENT, and `|` takes no time: written
-// before the bar (`… c' to coda |`) or after it (`… g1 | ds al coda`) it stands at
-// the same barline — a text to the bar's left, a sign to its right — so both
-// spellings are exercised here and the one after the LAST bar is drawn too.
+// Behind Bars). A mark is an event at a MOMENT, and a section boundary takes no
+// time: written before a section (`segno ~B1`) it stands at that section's first
+// barline, after one (`~B3 ds al coda`) at the barline that closes it — a text to the
+// bar's left, a sign to its right — and the one after the LAST section is drawn too.
+// ⚠️ RE-CUT 2026-10-04 (LYS1034, session 793): the marks used to be written inside the
+// music (`segno g4 a b c' |`, `g1 | ds al coda`); a navigation mark is form-only now,
+// so each bar is a section of its own and the marks stand between the silent references
+// (absolute pitches, since the relative frame restarts at every section). The marks stand
+// at the barlines the music-level spelling put them at, with the last two texts swapped
+// (`fine` before the `dc al fine` that looks for it) so the route reads clean.
 // LILYPOND-REF: lily/mark-engraver.cc; scm/output-lib.scm.
 title "Navigation marks"
 time 4/4
+octave absolute
 
 part rh { clef treble }
 
-section Main {
-  rh {
-    segno g4 a b c' |
-    g4 a b c' to coda |
-    g1 | ds al coda
-    coda g4 a b c' |
-    g1 dc al fine |
-    g1 | fine
-  }
-}
+section B1 { rh { g'4 a' b' c'' | } }
+section B2 { rh { g'4 a' b' c'' | } }
+section B3 { rh { g'1 | } }
+section B4 { rh { g'4 a' b' c'' | } }
+section B5 { rh { g'1 | } }
+section B6 { rh { g'1 | } }
 
-form main { Main }
+form main { segno ~B1 ~B2 to coda ~B3 ds al coda coda ~B4 ~B5 fine ~B6 dc al fine }
 
 score main "navigation-marks" { staff rh }

@@ -21,7 +21,9 @@ namespace LilySharp.Core.Semantics;
 
 /// <summary>
 /// Keeps the constructs that change a book's PLAYING ORDER inside its <c>form { … }</c>:
-/// a repeat barline (<c>|:</c> <c>:|</c> <c>:|:</c>) and a volta ending (<c>[1. … ]</c>)
+/// a repeat barline (<c>|:</c> <c>:|</c> <c>:|:</c>), a volta ending (<c>[1. … ]</c>) and —
+/// since 2026-10-04 (owner's decision, session 793) — a navigation mark (<c>segno</c>,
+/// <c>coda</c>, <c>fine</c>, <c>to coda</c>, <c>dc</c>, <c>ds</c> and the <c>al</c> forms)
 /// written in music are refused (<see cref="DiagnosticCodes.RepeatStructureOutsideForm"/>).
 /// </summary>
 /// <remarks>
@@ -103,8 +105,36 @@ internal sealed class RepeatStructureScopeValidator : ISemanticValidator
                         + "spelling: '[1. … ]' in a 'lyrics' row is the words for the first "
                         + "pass, and stays where it is.)");
                     break;
+
+                // The navigation marks (owner's decision 2026-10-04, session 793): the route
+                // through a book — where a `ds` returns to, where an `al fine` ends — is read
+                // off the FORM alone (Semantics.FormRoute), so a mark in the music was drawn
+                // and never followed, and a `segno` there was no target for the form's `ds`.
+                // One place for the order, as the repeat barlines have had since LYS1034; a
+                // landmark that falls inside a section is written by cutting the section there.
+                case NavigationMarkSyntax nav when !nav.IsInside<FormDeclarationSyntax>():
+                    _diagnostics.Error(nav.Span,
+                        DiagnosticCodes.RepeatStructureOutsideForm,
+                        $"'{Written(nav)}' is a navigation mark, so it belongs in the form, not "
+                        + "in the music: the route a jump takes is read off the form alone, and a "
+                        + "mark here would be drawn and never followed (a 'segno' here is no "
+                        + "target for the form's 'ds'). Write it between the section names - "
+                        + $"'form main {{ A {Written(nav)} B }}' - cutting the section where the "
+                        + "mark falls inside it.");
+                    break;
             }
         }
+    }
+
+    /// <summary>The mark as the writer spelled it (<c>ds al coda</c>), one space between
+    /// its words.</summary>
+    private static string Written(NavigationMarkSyntax mark)
+    {
+        var words = new List<string>();
+        for (int i = 0; i < mark.SlotCount; i++)
+            if (mark.GetChild(i) is SyntaxTokenNode token)
+                words.Add(token.Text);
+        return string.Join(' ', words);
     }
 
     /// <summary>The kinds the switch above has a case for, so the walk asks the tree's
@@ -119,5 +149,5 @@ internal sealed class RepeatStructureScopeValidator : ISemanticValidator
     /// the plain walk's answer with the index's, over every net book.
     /// </remarks>
     internal static readonly SyntaxKind[] RepeatStructureKinds =
-        [SyntaxKind.Barline, SyntaxKind.InlineVolta];
+        [SyntaxKind.Barline, SyntaxKind.InlineVolta, SyntaxKind.NavigationMark];
 }

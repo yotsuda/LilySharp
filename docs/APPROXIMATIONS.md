@@ -344,14 +344,14 @@
 ### `LilySharp.Core/Svg/Collector/MeasureBuilder.cs`
 - **:421** LILYSHARP-OWN (owner's decisions, 2026-10-02, HANDOFF §1.1 第737): a time, key
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:3269** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:5687** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:3265** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:5684** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Form.cs`
 - **:552** `time!` (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so
 - **:822** is not drawn unless written `key!` (MeasureBuilder.SectionHead, LILYSHARP-OWN). At a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.MusicWalk.cs`
-- **:1602** not against the reset the head already stands on (LILYSHARP-OWN): a
-- **:1681** (MeasureBuilder.SectionHead, LILYSHARP-OWN).
+- **:1584** not against the reset the head already stands on (LILYSHARP-OWN): a
+- **:1663** (MeasureBuilder.SectionHead, LILYSHARP-OWN).
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`

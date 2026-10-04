@@ -1711,7 +1711,7 @@ MusicBlock     = '{' , { MusicItem } , '}' ;
 
 MusicItem      = Note | Rest | Chord | Arpeggio | Barline | PhraseRef
                | SlashNote | BareDuration
-               | Slur | Tie | Beam | Tuplet | Grace | Cue | MidMusicCommand | NavMark ;
+               | Slur | Tie | Beam | Tuplet | Grace | Cue | MidMusicCommand ;
 
 (* ⚠️ REPEAT STRUCTURE IS NOT A MUSIC ITEM (user decision, 2026-08-31; LYS1034). A repeat
    barline ('|:' ':|' ':|:') and a volta ending ('[1. … ]') change the ORDER the music plays
@@ -1727,18 +1727,21 @@ MusicItem      = Note | Rest | Chord | Arpeggio | Barline | PhraseRef
    (measured: 8 notes over 4 in the upper part alone, against 8 and 8). The page always
    treated it as score-level, so that spelling let the picture and the sound disagree. *)
 
-(* NavMark (see §6) is the SAME bare token in a section's music as in a form — it is a
-   landmark, never a note modifier, so it takes no '@' (c4@segno is LYS1022 and
-   `segno c4` is the spelling). Written mid-measure it engraves but warns (LYS4003);
-   put it at a barline boundary. It is an event at a MOMENT and '|' takes no time, so
-   `c4 d e f | fine` and `c4 d e f fine |` are one mark at one barline: a text (fine,
-   dc, ds, to coda) is drawn to that bar's left, a sign (segno, coda) to its right.
-   The MIDI FOLLOWS a form-level jump text (Semantics.FormRoute: dc to the beginning, ds
-   to after the last segno, al fine ends at fine, al coda goes on from the coda sign,
-   repeats once on the replay); a mark in the music is drawn and not followed. A jump
-   text whose landmark the form does not write (ds with no segno before it, al fine with
-   no fine, al coda with no to coda or no coda after it) warns (LYS4025) and names the
-   fallback the route takes. *)
+(* ⚠️ A NAVIGATION MARK IS NOT A MUSIC ITEM EITHER (user decision, 2026-10-04; LYS1034).
+   NavMark (see §6) — segno, coda, fine, to coda, dc, ds and the al forms — is written in the
+   form, between the section names, and nowhere else: the route a jump takes is read off the
+   form alone (Semantics.FormRoute: dc to the beginning, ds to after the last segno, al fine
+   ends at fine, al coda goes on from the coda sign, repeats once on the replay), and the
+   MIDI, the tie carry, MusicXML and the twin all follow that one reading. A mark in the
+   music was drawn and never followed, and a segno there was no target for the form's ds; so
+   it is an ERROR now, as the repeat barlines above are — still lexed and parsed here so the
+   error can name it. A landmark that falls inside a section is written by cutting the
+   section there (`~` hides the label). It is a landmark, never a note modifier, so it takes
+   no '@' (c4@segno is LYS1022). A jump text whose landmark the form does not write (ds with
+   no segno before it, al fine with no fine, al coda with no to coda or no coda after it)
+   warns (LYS4025) and names the fallback the route takes. From 2026-09-24 to 2026-10-04 the
+   mark was a music item too, drawn at the written barline (a text to the bar's left, a sign
+   to its right) and warned mid-measure (LYS4003, retired). *)
 
 (* Mid-music commands change context here. clef/key/time use the bare COMMAND form
    (no colon) — distinct from a part header which uses the same bare form to set the

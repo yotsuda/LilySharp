@@ -681,12 +681,12 @@ jump text whose landmark is missing in the form (`ds` with no `segno` before it,
 with no `fine`, `al coda` with no `to coda` or no `coda` after it) warns (LYS4025) and names
 the fallback the MIDI takes.
 
-The same bare words are also written in a section's music, at a barline boundary
-(`segno c4 d e f |`, `c4 d e f | ds al fine`) — they are landmarks, never note
-modifiers, so `c4@segno` is an error (LYS1022) and mid-measure warns (LYS4003). A mark is
-an event at a moment and `|` takes no time: `c4 d e f | fine` and `c4 d e f fine |` are the
-same mark at the same barline (a text to the bar's left, a sign — `segno`, `coda` — to its
-right).
+The words are **form-only** (LYS1034, user decision 2026-10-04 — the same line as the repeat
+barlines): a navigation mark written in a section's music (`segno c4 d e f |`,
+`c4 d e f | ds al fine`) is an error, because the route is read off the form alone and a mark
+there was drawn and never followed. A landmark that falls inside a section is written by
+cutting the section there (`~` hides the label). They are landmarks, never note modifiers, so
+`c4@segno` is an error too (LYS1022).
 
 In-note marks: `c4@mark("A")` (rehearsal mark),
 text spanners `@textSpan("poco rit.")` ... `@!textSpan` (sugar: `@rit` / `@accel` / `@rall`,

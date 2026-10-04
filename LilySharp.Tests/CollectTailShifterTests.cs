@@ -84,7 +84,6 @@ public class CollectTailShifterTests
         [typeof(GrobOverride)] = Array.Empty<string>(),
         [typeof(GrobRevert)] = Array.Empty<string>(),
         [typeof(MeasureCollector.PitchTraceEntry)] = new[] { "Position" },
-        [typeof(NavigationMarkPlacementWarning)] = new[] { "SourcePosition" },
         [typeof(TieTargetWarning)] = new[] { "SourcePosition" },
         [typeof(UnpairedSlurWarning)] = new[] { "SourcePosition" },
         [typeof(UnpairedBeamWarning)] = new[] { "SourcePosition" },

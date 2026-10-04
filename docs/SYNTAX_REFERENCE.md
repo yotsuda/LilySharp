@@ -1562,25 +1562,21 @@ hide the label with `~Name` in the form (or `layout { sectionLabels none }`).
 
 ### Navigation Marks
 
-A navigation mark is **bare** — it is a landmark in the music, not a note modifier, so it
-takes no `@` (writing `c4@segno` is LYS1022). Place it at a barline boundary; mid-measure
-it engraves but warns (LYS4003). The mark is an event at a **moment**, and `|` takes no
-time: `c4 d e f | fine` and `c4 d e f fine |` are the same mark at the same barline. Which
-side of that barline it is drawn on is the mark's kind — a text (`fine`, `dc`, `ds`,
-`to coda`, the `al` forms) hangs to the bar's left, at the end of the measure just played;
-a sign (`segno`, `coda`) sits to its right, at the start of the next — as LilyPond aligns
-`JumpScript` and `SegnoMark`/`CodaMark`. A text after the last bar is drawn at that bar.
+A navigation mark is **bare** and **form-only**: it is written between the section names of
+a `form`, never in the music (LYS1034, the same rule as the repeat barlines — user decision
+2026-10-04) and never as a note modifier (`c4@segno` is LYS1022). The route a jump takes is
+read off the form alone, so a mark in the music was drawn and never followed; a landmark that
+falls inside a section is written by cutting the section there (`~` hides the label). A mark
+stands at the section boundary it is written at — a text (`fine`, `dc`, `ds`, `to coda`, the
+`al` forms) hangs to the bar's left, at the end of the section just played; a sign (`segno`,
+`coda`) sits to its right, at the start of the next — as LilyPond aligns `JumpScript` and
+`SegnoMark`/`CodaMark`. A text after the last section is drawn at the final bar.
 
 ```
-segno c4 d e f |
-c4 d e f | to coda
-c4 d e f | fine
-c4 d e f | dc
-c4 d e f | ds al fine
-coda c4 d e f | ds al coda
+form main { segno A B to coda C ds al coda coda D fine }
 ```
 
-The same words are how a `form` names the route: `form main { A segno B to coda C ds al
+The words are how a `form` names the route: `form main { A segno B to coda C ds al
 coda coda D }`. A jump text in a form whose landmark is missing warns (LYS4025) and says what
 the MIDI does instead: a `ds` with no `segno` before it is not followed, an `al fine` with no
 `fine` on the replayed stretch replays to the jump and ends there, an `al coda` with no

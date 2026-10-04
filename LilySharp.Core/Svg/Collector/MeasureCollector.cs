@@ -296,10 +296,6 @@ public sealed partial class MeasureCollector
     /// verses (never rendered). Populated as a side effect of Collect.</summary>
     public IReadOnlyList<ShadowedPlainLyricWarning> LyricShadowedPlainWarnings =>
         _lyricsCollector.ShadowedPlainWarnings;
-    private readonly List<NavigationMarkPlacementWarning> _navPlacementWarnings = new();
-    /// <summary>Navigation marks written mid-measure instead of at a barline boundary.
-    /// Populated as a side effect of Collect.</summary>
-    public IReadOnlyList<NavigationMarkPlacementWarning> NavigationPlacementWarnings => _navPlacementWarnings;
     // Tablature post-pass (tie-string reconciliation + per-tuning string assignment),
     // extracted as a self-contained collaborator. Its warnings are surfaced below.
     private readonly TabResolver _tabResolver = new();
@@ -4009,7 +4005,7 @@ public sealed partial class MeasureCollector
         _dynamics, _articulations, _graceNotes, _musicMarks, _customTexts,
         _voltaBrackets, _tupletBrackets, _arpeggios, _figuredBasses,
         _percentRepeats, _crossStaffItems, _grobOverrides, _grobReverts,
-        _trillSpannerEvents, _pitchTrace, _navPlacementWarnings,
+        _trillSpannerEvents, _pitchTrace,
         _tieTargetWarnings, _unpairedSlurWarnings, _unpairedBeamWarnings,
         _cueSpanBoundaryWarnings,
         _chordNameCollector.ItemsList,
@@ -4560,7 +4556,8 @@ public sealed partial class MeasureCollector
     /// barline. Which measure carries it is the side its kind draws on — a text (fine, D.C.,
     /// D.S., To Coda) is right-aligned to the bar, so it is the END of the measure before;
     /// a sign (segno, coda) is left-aligned, so it is the START of the measure after.
-    /// Mid-measure the mark stays in its measure and warns (LYS4003).
+    /// Mid-measure the mark stays in its measure. (Since 2026-10-04 a mark in music is LYS1034,
+    /// an error; this walk still places it so the picture of a book with that error is whole.)
     /// Owner's decision, session 559 (HANDOFF ⒳¹²): the doc's <c>c4 d e f | to coda</c> and
     /// the form's <c>A to coda B</c> read this way already; the picture read "the measure the
     /// builder stands in", which drew a text one measure late from EITHER side of the bar and

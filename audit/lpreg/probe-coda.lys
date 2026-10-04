@@ -1,15 +1,17 @@
 time 4/4
 part melody
 
-section A {
-  melody {
-    coda R1 |
-    coda R1 |
-    coda
-  }
+// The coda signs stand in the form (a navigation mark in music is LYS1034 since 2026-10-04):
+// one bar per section, a sign before each and one after the last, as the music-level
+// spelling `coda R1 | coda R1 | coda` drew them.
+section A1 {
+  melody { R1 | }
+}
+section A2 {
+  melody { R1 | }
 }
 
 // ~A hides the section label, so the engraved result is unchanged.
-form main { ~A }
+form main { coda ~A1 coda ~A2 coda }
 
 score main { staff melody }

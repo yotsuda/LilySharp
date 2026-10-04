@@ -30,6 +30,10 @@ namespace LilySharp.Tests;
 /// carries the mark is the side its kind draws on — a text (fine, D.C., D.S., To Coda) to
 /// the bar's left (the measure before), a sign (segno, coda) to its right (the measure
 /// after). Owner's decision, session 559 (HANDOFF ⒳¹²).
+/// ⚠️ Since 2026-10-04 a navigation mark in music is an ERROR (LYS1034, owner's decision,
+/// session 793: the marks are form-only). The collector still places it, so the picture of a
+/// book with that error is whole — which is what these facts pin; the books here carry the
+/// error by design.
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: scm/define-grobs.scm:1898-1925 jump-script-interface — JumpScript's
@@ -97,14 +101,16 @@ public sealed class NavigationMarkMomentTests
     }
 
     /// <summary>The control: mid-measure there is no bar to stand at — the mark keeps its
-    /// measure and LYS4003 says where it is.</summary>
+    /// measure. (LYS4003 said where it was until 2026-10-04; a mark in music is LYS1034 now,
+    /// wherever it stands in the bar.)</summary>
     [Fact]
-    public void AMidMeasureText_StaysInItsMeasure_AndWarns()
+    public void AMidMeasureText_StaysInItsMeasure_AndIsTheFormOnlyError()
     {
         string music = "c'4 d' fine e' f' | g'4 a' b' c'' |";
         Assert.Equal(0, Mark(music, MusicMarkType.Fine).MeasureIndex);
-        Assert.Contains(SemanticValidation.Run(SyntaxTree.Parse(Book(music))),
-            d => d.Code == DiagnosticCodes.NavigationMarkMidMeasure);
+        var diagnostics = SemanticValidation.Run(SyntaxTree.Parse(Book(music)));
+        Assert.Contains(diagnostics, d => d.Code == DiagnosticCodes.RepeatStructureOutsideForm);
+        Assert.DoesNotContain(diagnostics, d => d.Code == "LYS4003");
     }
 
     /// <summary>A text at the piece's opening has no bar before it: bar 0, not −1.</summary>

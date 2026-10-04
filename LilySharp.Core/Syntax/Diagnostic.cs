@@ -883,6 +883,20 @@ public static class DiagnosticCodes
     /// MIDI disagreed before this rule existed; after it, the disagreeing spelling cannot be
     /// written.
     /// </para>
+    /// <para>
+    /// ⚠️ THE NAVIGATION MARKS JOINED THE RULE ON 2026-10-04 (owner's decision, session 793):
+    /// <c>segno</c>, <c>coda</c>, <c>fine</c>, <c>to coda</c>, <c>dc</c>, <c>ds</c> and the
+    /// <c>al</c> forms written in music are the same error. The route a jump takes —
+    /// <c>Semantics.FormRoute</c>, which the MIDI plays and (since session 792) the tie carry,
+    /// MusicXML, the twin and the bar-complement adjacency follow — is read off the FORM alone,
+    /// so a mark in the music was drawn and never followed, and a <c>segno</c> there was no
+    /// target for the form's <c>ds</c> (LYS4025 said "no segno" to a writer who could see
+    /// one). The same line as the repeat barlines: one place for the order. A landmark that
+    /// falls inside a section is written by cutting the section there (<c>~</c> hides the
+    /// label). Measured before the decision: 11 of 1177 books on disk wrote a mark in music,
+    /// one of them the owner's (`Billie Jean`'s <c>segno</c> at a bar's end); the rest were
+    /// test shapes. LYS4003 (a mark mid-measure, a warning) retired with it.
+    /// </para>
     /// </remarks>
     public const string RepeatStructureOutsideForm = "LYS1034";
 
@@ -1111,9 +1125,9 @@ public static class DiagnosticCodes
     /// <summary>Lyric error: a top-level lyrics track in a by-part file is written
     /// flat; it must group its verses by section (<c>lyrics { section A { … } }</c>).</summary>
     public const string LyricTrackNeedsSections = "LYS4002";
-    /// <summary>Warning: a navigation mark (segno/coda/D.S./…) sits mid-measure rather
-    /// than at a barline boundary.</summary>
-    public const string NavigationMarkMidMeasure = "LYS4003";
+    // LYS4003 (NavigationMarkMidMeasure) retired 2026-10-04 (session 793): a navigation mark
+    // in music is LYS1034 now, so "mid-measure" has nothing left to warn about. The code
+    // number is left unreused.
     /// <summary>Lyric warning: a section's plain (unbracketed) verse is fully shadowed
     /// by its <c>[N. …]</c> verses — every written-out occurrence already has a numbered
     /// verse, so the plain line (a fallback for uncovered occurrences) never renders.</summary>

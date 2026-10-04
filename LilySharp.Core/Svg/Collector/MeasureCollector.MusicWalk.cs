@@ -1560,29 +1560,11 @@ public sealed partial class MeasureCollector
             case NavigationMarkSyntax nav:
                 {
                     // A bare navigation mark inside a section's music: place its sign at
-                    // the current note position (same MusicMarkItem the form uses).
+                    // the current note position (same MusicMarkItem the form uses). An ERROR
+                    // since 2026-10-04 (LYS1034, RepeatStructureScopeValidator — the route is
+                    // read off the form alone); still placed, so the picture of a book with
+                    // that error is whole. The mid-measure warning (LYS4003) retired with it.
                     var navType = NavigationToMusicMark(nav.MarkType);
-                    // A landmark belongs at a barline; flag a mid-measure placement.
-                    if (!builder.AtMeasureBoundary)
-                    {
-                        // The reader knows the notation term ("D.S.", "To Coda"), not the
-                        // internal enum name ("DalSegno") — spell it the way it is written.
-                        string term = nav.MarkType switch
-                        {
-                            NavigationMarkType.Segno => "segno",
-                            NavigationMarkType.Coda => "coda",
-                            NavigationMarkType.Fine => "Fine",
-                            NavigationMarkType.ToCoda => "To Coda",
-                            NavigationMarkType.DaCapo => "D.C.",
-                            NavigationMarkType.DaCapoAlFine => "D.C. al Fine",
-                            NavigationMarkType.DaCapoAlCoda => "D.C. al Coda",
-                            NavigationMarkType.DalSegno => "D.S.",
-                            NavigationMarkType.DalSegnoAlFine => "D.S. al Fine",
-                            NavigationMarkType.DalSegnoAlCoda => "D.S. al Coda",
-                            _ => nav.MarkType.ToString()
-                        };
-                        _navPlacementWarnings.Add(new NavigationMarkPlacementWarning(nav.SourceStart, term));
-                    }
                     _musicMarks.Add(new MusicMarkItem(navType, NavigationMarkMeasure(navType, builder) + _cursor.MetadataMeasureOffset, nav.SourceStart));
                 }
                 break;

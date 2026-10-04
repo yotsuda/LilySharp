@@ -242,8 +242,6 @@ internal static class CollectTailShifter
                 return w.TryShift(e.SourcePosition, out int p11) ? e with { SourcePosition = p11 } : null;
             case ChordNameItem e:
                 return w.TryShift(e.SourcePosition, out int p12) ? e with { SourcePosition = p12 } : null;
-            case NavigationMarkPlacementWarning e:
-                return w.TryShift(e.SourcePosition, out int p13) ? e with { SourcePosition = p13 } : null;
             case TieTargetWarning e:
                 return w.TryShift(e.SourcePosition, out int p14) ? e with { SourcePosition = p14 } : null;
             case UnpairedSlurWarning e:

@@ -87,10 +87,6 @@ public record TabRangeWarning(
 /// handle-negative 'recalculate, "Requested string for pitch requires negative fret".</remarks>
 public record TabStringUnplayableWarning(int SourcePosition, int StringNumber, int Fret);
 
-/// <summary>A navigation mark (segno/coda/D.S./…) written mid-measure rather than at a
-/// barline boundary — an unusual placement worth flagging.</summary>
-public record NavigationMarkPlacementWarning(int SourcePosition, string MarkText);
-
 /// <summary>A rehearsal mark (<c>@mark("A")</c>) written at a bar a section label opens:
 /// the label is engraved and the mark is not (one mark a moment —
 /// <c>Layout.MusicMarkEngraver.ShadowedBySectionLabel</c>). <see cref="SourcePosition"/>

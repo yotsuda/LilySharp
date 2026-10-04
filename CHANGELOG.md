@@ -8,6 +8,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Breaking changes
 
+- **A navigation mark is written in the `form` and nowhere else** (`LYS1034`, the rule the
+  repeat barlines already follow). `segno`, `coda`, `fine`, `to coda`, `dc`, `ds` and the
+  `al` forms written in a section's music are refused: the route a jump takes is read off the
+  form alone, so a mark there was drawn and never followed, and a `segno` there was no target
+  for the form's `ds`. Write the mark between the section names, cutting the section where
+  the mark falls inside it (`~` hides the label). The mid-measure warning (LYS4003) retires
+  with the spelling, and the music completion no longer offers the words.
 - **`tab X Y` reads a declared part first.** With a part named `bass` in the file,
   `tab bass click` is now part `bass`'s tab plus `click` played to MIDI only — the bare
   part-name item that already follows a staff — where it used to be the `bass` *tuning* over

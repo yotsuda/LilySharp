@@ -266,8 +266,9 @@ score main { staff melody }
 ```
 
 A plain `form main { |: Body :| }` (no endings) just repeats its body, and a third or
-later ending is written the same way: `:| [3. Third]`. A repeat bar or a volta ending
-written in the music is refused with `LYS1034`.
+later ending is written the same way: `:| [3. Third]`. A repeat bar, a volta ending or a
+navigation mark (`segno`, `coda`, `fine`, `to coda`, `dc`, `ds`) written in the music is
+refused with `LYS1034`; the marks go between the section names of the form too.
 
 (The `repeat` keyword remains for `unfold` / `percent` / `tremolo`, which abbreviate
 notes rather than change the playing order, and so stay in the music.)

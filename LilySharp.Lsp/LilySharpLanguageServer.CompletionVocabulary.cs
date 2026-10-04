@@ -3674,8 +3674,8 @@ public sealed partial class LilySharpLanguageServer
             new CompletionItem { Label = "pageBreak", Kind = CompletionItemKind.Keyword, InsertText = "pageBreak", Detail = "Force a page break", Documentation = "LilyPond \\pageBreak; breaks the line too", SortText = "4pagebreak" },
             new CompletionItem { Label = "noPageBreak", Kind = CompletionItemKind.Keyword, InsertText = "noPageBreak", Detail = "Forbid a page break", Documentation = "LilyPond \\noPageBreak", SortText = "4nopagebreak" },
         });
-        // The navigation marks are music items in drum music as in pitched music.
-        items.AddRange(NavigationMarkItems("5"));
+        // The navigation marks are NOT offered in drum music either: they are form-only since
+        // 2026-10-04 (LYS1034, owner's decision) — the form popup has them.
         // voice { } is only meaningful directly in the part's music —
         // NESTED voice blocks silently become parallel siblings (verified),
         // so the snippet is withheld inside a voice wrapper.
@@ -3868,11 +3868,11 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "once override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "once override $0", Detail = "One-time override", SortText = "4once", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } }
         });
 
-        // The navigation marks — the same bare words a form takes (GRAMMAR §8.1: "NavMark is
-        // the SAME bare token in a section's music as in a form"). GetArticulationCompletions
-        // has said since the '@' form was refused that they "come from the music / form
-        // completions", and the form's list had them; this one did not, until 2026-09-10.
-        items.AddRange(NavigationMarkItems("5"));
+        // The navigation marks are NOT offered here (since 2026-10-04): they are form-only —
+        // LYS1034, owner's decision, the same line as the repeat barlines (a mark in music was
+        // drawn and never followed). From 2026-09-10 to that day this list offered them, as
+        // GRAMMAR §8.1 then read "NavMark is the SAME bare token in a section's music as in a
+        // form". The form popup (GetFormCompletions) is where they live.
 
         // Parallel voices (voice { } voice { }): only meaningful directly in the
         // part's music — nested voice blocks silently become siblings — so the
@@ -4189,7 +4189,7 @@ public sealed partial class LilySharpLanguageServer
 
                 // Navigation signs (segno / coda / fine / D.S. / D.C. / to coda) are
                 // NOT offered here: they are standalone BARE landmarks, not note
-                // modifiers ('@'), so they come from the music / form completions.
+                // modifiers ('@'), and form-only (LYS1034), so they come from the form completions.
                 // Rehearsal mark: @mark("A") drops a boxed label. Shown as a bare
                 // "mark" (like @text), but completes straight into the quotes so the
                 // caret lands where the label is typed.

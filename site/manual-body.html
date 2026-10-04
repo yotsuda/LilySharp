@@ -815,12 +815,13 @@ form practice { Verse }        // a second form = a second output</pre>
   the beginning and <code>ds</code> to after the last <code>segno</code>; <code>al fine</code>
   ends the piece at the first <code>fine</code> of the replay, <code>al coda</code> goes on
   from the <code>coda</code> sign after the jump, and a bare <code>dc</code> /
-  <code>ds</code> goes on after the jump. On the replay a repeat plays once. A
-  <code>ds</code> with no <code>segno</code> before it, and a mark written in the music, are
-  drawn and not followed.</p>
-  <p>The same bare words may also be written in a section's music at a barline boundary.
-  They are landmarks, never note modifiers, so <code>c4@segno</code> is an error and putting
-  one mid-measure warns.</p>
+  <code>ds</code> goes on after the jump. On the replay a repeat plays once. A tie at the
+  end of a section is carried along the same route. A <code>ds</code> with no
+  <code>segno</code> before it is drawn and not followed, and a warning says so.</p>
+  <p>The marks are form-only: written in a section's music they are an error, like a repeat
+  barline there — the route is read off the form alone. A landmark that falls inside a
+  section is written by cutting the section there (<code>~</code> hides the label). They are
+  landmarks, never note modifiers, so <code>c4@segno</code> is an error too.</p>
   <p>The reserved form name <code>main</code> writes to the input file's name; any other
   form name becomes the output file name unless a <code>"basename"</code> overrides it.</p>
   <!--EXAMPLE:repeats-->
