@@ -151,6 +151,23 @@ internal static partial class SpacingRules
     /// ordinary bar, and bar line to whole rest measures 1.900000 — the same 0.9 + 1.0 it
     /// gives a whole note. See the ledger's barline.next.whole-rest.
     /// </para>
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN, WHERE THE DIRECT FORM PARTS FROM LILYPOND: free time. fills_measure
+    /// answers false when the left column carries no <c>measure-length</c>
+    /// (lily/spacing-spanner.cc:459-461), and Paper_column_engraver writes that property
+    /// only on a column where <c>measureStartNow</c> holds
+    /// (lily/paper-column-engraver.cc:181-194) — which Timing_translator never sets while
+    /// <c>timing</c> is off, nor at the moment <c>\cadenzaOff</c> switches it back on
+    /// (lily/timing-translator.cc:476-515). So in the twin a lone note in the SECOND and
+    /// later bars of a <c>time none</c> section, and in the FIRST bar after the section,
+    /// earns no extra space, while the section's first bar does. MEASURED 2.26.0 (Lab
+    /// sessions/p801/probe/q5-cadenza-wholes): bar line → head 1.09 where the section's
+    /// first bar reads 2.09; time signature → head 3.70 where a plain meter change reads
+    /// 4.70. That is the cadenza's bar-position bookkeeping, not a spacing rule: Lily# knows
+    /// each of those bars starts a measure — the meaning is the book's (RULES §5.2) — and
+    /// prices every lone note alike. No ledger point watches the difference;
+    /// SkipColumnSpacingTests pins this side's choice.
+    /// </para>
     /// </remarks>
     public static bool FillsMeasure(Measure measure)
     {

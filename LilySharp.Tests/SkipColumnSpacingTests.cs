@@ -109,6 +109,26 @@ public class SkipColumnSpacingTests
         score main { combinedStaff { vone vtwo } }
         """;
 
+    /// <summary>Lab sessions/p801/probe/q5-cadenza-wholes.lys — lone notes in the bars of a
+    /// free-time section and in the first bars after it.</summary>
+    private const string FreeTime = """
+        paper { raggedRight }
+        time 4/4
+        key c major
+        part melody { clef treble }
+        section A { melody { c'4 d e f | } }
+        section B { time none  melody { c1 | d1 | e4 f | } }
+        section C { melody { c1 | d1 | c4 d e f | } }
+        form main { A B C }
+        score main { staff melody }
+        """;
+
+    /// <summary>The same book with section B in 2/4: the meter change into section C is an
+    /// ordinary one, which LilyPond prices as Lily# does (Lab sessions/p801/probe/q3).</summary>
+    private static readonly string MeteredControl = FreeTime
+        .Replace("time none  melody { c1 | d1 | e4 f | }", "time 2/4  melody { c2 | d2 | e4 f | }")
+        .Replace("section C { melody", "section C { time 4/4  melody");
+
     private static (System.Collections.Generic.List<Fraction> Timings,
                     System.Collections.Generic.List<Measure> AllMeasures,
                     Measure Primary, MultiStaffScore Score)
@@ -238,6 +258,26 @@ public class SkipColumnSpacingTests
         var whole = ColumnSprings(OneVoice.Replace("| c4 s2. |", "| c1 |"), 1);
         Assert.True(whole[0].IdealDistance > EngravingDefaults.BarLineToNextNoteSpace + 0.9,
             $"a whole note's bar keeps it: {whole[0].IdealDistance}");
+    }
+
+    [Fact]
+    public void ALoneNoteInAFreeTimeBar_EarnsFullMeasureExtraSpaceLikeAnyBar()
+    {
+        // LILYSHARP-OWN, deliberate (SpacingRules.FillsMeasure's remark): LilyPond's twin gives
+        // the extra space to the FIRST bar of a cadenza only — its later bars and the first
+        // bar after \cadenzaOff carry no measure-length, a by-product of how the cadenza keeps
+        // its bar position. MEASURED 2.26.0: bar line → head 2.09, 1.09, then time signature
+        // → head 3.70 (4.70 after a plain meter change). Lily# prices every lone note alike.
+        Assert.Equal(BarToBar(FreeTime, 1), BarToBar(FreeTime, 2), 9);
+        foreach (int bar in new[] { 1, 2, 5 })
+            Assert.True(
+                ColumnSprings(FreeTime, bar)[0].IdealDistance > EngravingDefaults.BarLineToNextNoteSpace + 0.9,
+                $"bar {bar}: a lone note keeps full-measure-extra-space");
+        // The first bar after the section opens with the meter: the same spring a plain
+        // meter change into a whole-note bar gets.
+        Assert.Equal(
+            ColumnSprings(MeteredControl, 4)[0].IdealDistance,
+            ColumnSprings(FreeTime, 4)[0].IdealDistance, 9);
     }
 
     [Fact]

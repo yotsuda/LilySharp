@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 60 | 観測者がゼロだと自認しているもの |
-| `OWN` | 215 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **335** | |
+| `UNWATCHED` | 61 | 観測者がゼロだと自認しているもの |
+| `OWN` | 216 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **337** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -133,7 +133,7 @@
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **:272** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（60 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（61 件）
 
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:691** no observer; add the paren widths when a book brings one. The unpacked
@@ -219,7 +219,8 @@
 ### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
 - **:433** the distance only through the 0.08 padding at that band's edge. No ledger point
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
-- **:890** constant with a name, and no ledger point reached it.
+- **:168** prices every lone note alike. No ledger point watches the difference;
+- **:907** constant with a name, and no ledger point reached it.
 ### `LilySharp.Core/Svg/Layout/SpacingRules.Grace.cs`
 - **:415** observed by: NOTHING. No ledger point covers a grace spacer, and the drawn
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
@@ -237,7 +238,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（215 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（216 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **:90** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
@@ -508,7 +509,8 @@
 ### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
 - **:324** LILYSHARP-OWN: the bar line's box is grown toward THIS column only. LilyPond grows it
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
-- **:553** LILYSHARP-OWN, a DECIDED divergence (user decision 2026-08-20, HANDOFF §3):
+- **:155** ⚠️ LILYSHARP-OWN, WHERE THE DIRECT FORM PARTS FROM LILYPOND: free time. fills_measure
+- **:570** LILYSHARP-OWN, a DECIDED divergence (user decision 2026-08-20, HANDOFF §3):
 ### `LilySharp.Core/Svg/Layout/SpacingRules.EmptyBar.cs`
 - **:242** LILYSHARP-OWN: LilyPond has no such spring because it has no such column — the
 ### `LilySharp.Core/Svg/Layout/SpacingRules.MeasureSprings.cs`
