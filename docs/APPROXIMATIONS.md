@@ -310,7 +310,7 @@
 - **:229** The bend amount label's ENGRAVING em. LILYSHARP-OWN, as
 - **:357** LILYSHARP-OWN: LilyPond's guitar bend is the BendSpanner (`\^`) — a line and curve to
 ### `LilySharp.Core/Rendering/SharedRenderer.Prefix.cs`
-- **:573** LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
+- **:582** LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
 ### `LilySharp.Core/Rendering/SharedRenderer.Tab.cs`
 - **:425** LILYSHARP-OWN: LilyPond has no pitchless note — its slash is a style on
 - **:443** ⚠️ LILYSHARP-OWN on a FULL tab, and deliberately so (USER DECISION,

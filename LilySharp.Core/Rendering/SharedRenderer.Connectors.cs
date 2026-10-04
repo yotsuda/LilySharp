@@ -766,19 +766,9 @@ internal static partial class SharedRenderer
                 ClefType.Percussion => EmmentalerGlyphs.PercussionClefChange,
                 _ => EmmentalerGlyphs.GClefChange,
             };
-        // LILYPOND-REF: scm/parser-clef.scm supported-clefs — each clef's middle
-        // integer is the staff position of the named line (treble G=-2, bass F=2,
-        // alto C=0); the glyph anchors on the line it names.
-        double clefY = clefChange.NewClef switch
-        {
-            ClefType.Bass or ClefType.Bass8Below => staffY - 1,
-            ClefType.Alto or ClefType.Percussion => staffY - 2,
-            ClefType.Tenor => staffY - 1,
-            ClefType.Soprano => staffY - 4,
-            ClefType.MezzoSoprano => staffY - 3,
-            ClefType.Baritone => staffY - 0,
-            _ => staffY - 3,
-        };
+        // The glyph anchors on the line it names (ClefLineBelowTopLine, one home with the
+        // line-start clef and the change column's spacing box).
+        double clefY = staffY - ClefLineBelowTopLine(clefChange.NewClef);
         using (gc.Source(clefChange.SourcePosition))
         {
             gc.DrawGlyph(glyph, x, clefY,

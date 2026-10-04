@@ -219,8 +219,8 @@
       "probe": "barline-spacing.ly",
       "score": "MCH",
       "lilypond": 1.666122,
-      "residual": 0.587100500,
-      "why": "OPEN: +0.587100 since 2026-10-04 (session 805), opened with its cause named and predicted before reading (prediction: about +0.58, read off a twin the day before; the clef-to-next-note point of the same book: 0). MC with the note before the clef ABOVE the staff and its stem DOWN. LilyPond (probe barline-spacing.ly, score MCH): head 11.730102 -> clef 13.396225 = 1.666122, against MC's 2.253222. lily/note-spacing.cc:78-82 Note_spacing::get_spacing takes the rod into the NonMusical change column as the SKYLINE distance between the two columns (Spacing_interface::skylines, with the right column's skyline-vertical-padding), and :105-107 floors the ideal at (ideal + min_dist) / 2 -- the branch that binds for a mid-measure clef. Here the clef's ink stands below the head, and the stem hangs at the head's LEFT, so the skylines meet only far down and the rod is small; in MC the stem is UP at the head's right edge and runs through the clef's band, so the skyline distance equals the horizontal reach. Lily# (SpacingRules.MidMeasureChangeGaps) builds the rod as the previous items' horizontal ink reach plus the two extra-spacing-widths -- a BOX -- whatever their heights, so it answers MC's 2.253222 to both books. The same box sits in front of a mid-measure key or meter change. Measured on twins (Lab sessions/p805/clef): every in-staff and below-staff note before a clef, and a clef opening a bar, agree with LilyPond to the SVG's two digits; only a head above the clef's ink opens. PREDICTION for the port (the rod read off the previous column's right skyline and the change column's left skyline): 0, with MC unchanged."
+      "residual": 0,
+      "why": "EXACT since 2026-10-04 (session 805): closed by the port its prediction names — SpacingRules.ChangeColumnLeftMinDistance takes Note_spacing's min_dist as the skyline distance between the previous voice's NoteColumn (the wish view) and the change column's grob boxes (a mid-line clef: its _change glyph where it stands, ±0.1; a key or meter: the staff and the neighbours' heights, scm/output-lib.scm:976-979), at the NonMusicalPaperColumn's 0 padding. 1.666123 against 1.666122 (the same last-digit 5e-7 as MC); MC stayed EXACT. One snapshot moved, test/clef-change (a clef after a' above the staff), onto its LilyPond twin to the SVG's two digits (Lab sessions/p805/clef/fx-clef-change). AS OPENED, one commit earlier: +0.587100, opened with its cause named and predicted before reading (prediction: about +0.58, read off a twin the day before; the clef-to-next-note point of the same book: 0). MC with the note before the clef ABOVE the staff and its stem DOWN. LilyPond (probe barline-spacing.ly, score MCH): head 11.730102 -> clef 13.396225 = 1.666122, against MC's 2.253222. lily/note-spacing.cc:78-82 Note_spacing::get_spacing takes the rod into the NonMusical change column as the SKYLINE distance between the two columns (Spacing_interface::skylines, with the right column's skyline-vertical-padding), and :105-107 floors the ideal at (ideal + min_dist) / 2 -- the branch that binds for a mid-measure clef. Here the clef's ink stands below the head, and the stem hangs at the head's LEFT, so the skylines meet only far down and the rod is small; in MC the stem is UP at the head's right edge and runs through the clef's band, so the skyline distance equals the horizontal reach. Lily# (SpacingRules.MidMeasureChangeGaps) builds the rod as the previous items' horizontal ink reach plus the two extra-spacing-widths -- a BOX -- whatever their heights, so it answers MC's 2.253222 to both books. The same box sits in front of a mid-measure key or meter change. Measured on twins (Lab sessions/p805/clef): every in-staff and below-staff note before a clef, and a clef opening a bar, agree with LilyPond to the SVG's two digits; only a head above the clef's ink opens. PREDICTION for the port (the rod read off the previous column's right skyline and the change column's left skyline): 0, with MC unchanged."
     },
     "midmeasure.clef.clef-to-next-note.head-above-clef": {
       "probe": "barline-spacing.ly",
@@ -228,6 +228,27 @@
       "lilypond": 3.146600,
       "residual": 0,
       "why": "EXACT from its first reading (session 805), as predicted: the clef -> next note gap is Staff_spacing's (lily/staff-spacing.cc:166-215), which reads the NEXT column and not the previous one, so moving the previous note above the staff changes nothing here -- 3.146600 on both sides, MC's number. It is the control that says the open residual on midmeasure.clef.prev-note-to-clef.head-above-clef belongs to the LEFT gap alone."
+    },
+    "midmeasure.key.prev-note-to-key.head-above-staff": {
+      "probe": "barline-spacing.ly",
+      "score": "MKH",
+      "lilypond": 2.203223,
+      "residual": 0,
+      "why": "EXACT from its first reading (session 805), as predicted — an OBSERVER of the rule midmeasure.clef.prev-note-to-clef.head-above-clef closed. MK with the note before the change above the staff, stem down (probe barline-spacing.ly, score MKH): LilyPond 2.203223, MK's own number, because a KeySignature's (and KeyCancellation's, and TimeSignature's) extra-spacing-height is pure-from-neighbor-interface::extra-spacing-height-including-staff (scm/output-lib.scm:976-979; define-grobs.scm:1934-1935, :1980-1981, :3931): the box grows to the staff and to the neighbouring columns' pure heights, so the head above the staff still meets it, where MCH's clef (+-0.1 off the line start, :929-932) lets the same head pass. What turns this red: a key/meter box limited to the staff (SpacingRules.ChangeColumnLeftSkyline's neighbour band dropped)."
+    },
+    "midmeasure.clef.prev-note-to-clef.stemless-head-above": {
+      "probe": "barline-spacing.ly",
+      "score": "MCW",
+      "lilypond": 4.111023,
+      "residual": 0,
+      "why": "EXACT from its first reading (session 805), as predicted — an OBSERVER of where a mid-line clef's box STANDS. A stemless whole note on g'' (head just above the staff) before a bass clef in 6/4 (probe barline-spacing.ly, score MCW): LilyPond 4.111023. With no stem, only the head's box can meet the clef's, and it does so only because clefs.F_change stands on the F line (top 0.8 over it, +0.1): the clef box's top and the head's padded bottom overlap by 0.05, so the head's whole reach counts. A clef box stood on the mirror line (or anywhere lower) misses the head and the gap shrinks. What turns this red: the anchor's sign in SpacingRules.ChangeColumnLeftSkyline, or SharedRenderer.ClefLineBelowTopLine's bass value."
+    },
+    "midmeasure.clef.prev-note-to-clef.dotted": {
+      "probe": "barline-spacing.ly",
+      "score": "MCD",
+      "lilypond": 3.277400,
+      "residual": 0,
+      "why": "EXACT from its first reading (session 805), as predicted — an OBSERVER of WHICH skyline the left column contributes. A dotted half c'' before a bass clef (probe barline-spacing.ly, score MCD): LilyPond 3.277400. The dot is the PAPER column's element, not the NoteColumn's, so it is outside the Note_spacing wish's left-items (lily/note-spacing.cc:78, Spacing_interface::skylines) and the min_dist is the head's reach alone (ItemSkylineFactory.SharedWishRightSkylineAtColumn). Before session 805 the box read CalculateNoteheadRightExtent, which carries the dot, and this book would have stood the clef further right. What turns this red: the rod view (dots in) in place of the wish view."
     },
     "midmeasure.clef.clef-to-next-note": {
       "probe": "barline-spacing.ly",

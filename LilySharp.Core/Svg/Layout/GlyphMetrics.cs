@@ -261,6 +261,22 @@ internal static partial class GlyphMetrics
     public static double CClefChangeWidth => ClefCChange.Right;
 
     /// <summary>
+    /// The stencil box of the "_change" glyph a mid-measure clef change prints, in staff
+    /// spaces, Y-up from the line the glyph anchors on — the same family choice the renderer
+    /// draws (SharedRenderer.DrawClefChange): F for the bass clefs, C for the five C clefs, G
+    /// otherwise. A percussion clef cannot change mid-music (the grammar refuses it) and falls
+    /// to G, as the width always did.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/clef.cc:29-52 Clef::calc_glyph_name — the "_change" suffix.</remarks>
+    public static BBox ClefChangeBBox(Model.ClefType clef) => clef switch
+    {
+        Model.ClefType.Bass or Model.ClefType.Bass8Below => ClefFChange,
+        Model.ClefType.Alto or Model.ClefType.Tenor or Model.ClefType.Soprano
+            or Model.ClefType.MezzoSoprano or Model.ClefType.Baritone => ClefCChange,
+        _ => ClefGChange,
+    };
+
+    /// <summary>
     /// The line-start clef's stencil BBox (LILC bbox, staff spaces, Y-up) — the ONE place a
     /// clef's ink extent is read from, so the line-start prefix treats every clef uniformly
     /// through its own stencil, exactly as LilyPond does (no glyph is special-cased).

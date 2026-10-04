@@ -282,6 +282,20 @@ lay =
 %%       and runs into the clef's band, cannot tell the two apart.
 \score { \new Staff { \time 4/4 c'4 a'' \clef bass e4 f4 } \lay "MCH" }
 
+%% The three below are the OBSERVERS of the rule MCH opened (session 805): each tells one
+%% piece of the change column's spacing boxes from its neighbour, and each was predicted EXACT.
+%% MKH — MK after a note ABOVE the staff, stem down: a KeySignature's box grows to the
+%%       neighbours' heights (scm/output-lib.scm:976-979 extra-spacing-height-including-staff),
+%%       so — unlike MCH's clef — the head's whole reach still counts.
+\score { \new Staff { \time 4/4 c'4 a'' \key a \major e'4 f'4 } \lay "MKH" }
+%% MCW — a STEMLESS head just above the staff before a bass clef: only the head's box can meet
+%%       the clef's, and only if the clef stands on its own line (F, a space below the top).
+\score { \new Staff { \time 6/4 g''1 \clef bass e2 } \lay "MCW" }
+%% MCD — a DOTTED half before a bass clef: the dot is the paper column's, not the NoteColumn's,
+%%       so it is outside Note_spacing's skyline (lily/note-spacing.cc:78, Spacing_interface::skylines
+%%       over the wish's left-items).
+\score { \new Staff { \time 4/4 c''2. \clef bass e4 } \lay "MCD" }
+
 %% NO mid-measure TIME probe. `\time 3/4` inside a 4/4 bar makes LilyPond restructure the
 %% measures rather than engrave a change column, and the resulting dump is not the thing we
 %% would be comparing against. An uninterpretable probe is worse than no probe: it would

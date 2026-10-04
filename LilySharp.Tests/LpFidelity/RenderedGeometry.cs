@@ -5587,6 +5587,19 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The first CLEF glyph's anchor right of <paramref name="x"/> — <see cref="FirstNonNoteheadAfter"/>
+    /// for a book whose previous column also draws a dot, which that reading would take.
+    /// </summary>
+    public double FirstClefAfter(double x)
+    {
+        foreach (var g in Glyphs)
+            if (g.X > x + 1e-9 && IsClef(g.Glyph))
+                return g.X;
+        throw new InvalidOperationException(
+            $"no clef glyph is drawn right of x={x:F6}.\nDrawn geometry:\n" + Describe());
+    }
+
+    /// <summary>
     /// The last music glyph's anchor before bar line <paramref name="barIndex"/> → that bar
     /// line's LEFT edge. The closing side of a measure, in the same anchor frame.
     /// </summary>

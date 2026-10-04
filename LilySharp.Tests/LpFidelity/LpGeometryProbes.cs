@@ -245,6 +245,18 @@ internal static class LpGeometryProbes
     // which MC's up-stem — at the head's right, inside the clef's band — cannot tell from a box.
     private static readonly string MCH = Score("c4 a' clef bass e, f, |", "MCH");
 
+    // The OBSERVERS of the rule MCH opened — each tells one piece of the change column's
+    // spacing boxes from its neighbour (probe barline-spacing.ly, session 805):
+    // LilyPond twin: c'4 a'' \key a \major e'4 f'4 — a key's box grows to the neighbours'
+    // heights, so the head above the staff still meets it (MK's number).
+    private static readonly string MKH = Score("c4 a' key a major e f |", "MKH");
+    // LilyPond twin: \time 6/4 g''1 \clef bass e2 — a STEMLESS head just above the staff, so
+    // only the head can meet the clef's box, and only if the clef stands on its own F line.
+    private static readonly string MCW = TimedScore("6/4", "g'1 clef bass e,2 |", "MCW");
+    // LilyPond twin: c''2. \clef bass e4 — the dot is the paper column's, outside
+    // Note_spacing's skyline.
+    private static readonly string MCD = Score("c'2. clef bass e, |", "MCD");
+
     // LilyPond twin: c'4 d' \key a \major e'4 f'4   — likewise one measure.
     private static readonly string MK = Score("c4 d key a major e f |", "MK");
 
@@ -14127,6 +14139,12 @@ internal static class LpGeometryProbes
             g => g.FirstNonNoteheadAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1)),
         new("midmeasure.clef.clef-to-next-note.head-above-clef", MCH,
             g => g.NoteheadAnchor(2) - g.FirstNonNoteheadAfter(g.NoteheadAnchor(1))),
+        new("midmeasure.key.prev-note-to-key.head-above-staff", MKH,
+            g => g.FirstNonNoteheadAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1)),
+        new("midmeasure.clef.prev-note-to-clef.stemless-head-above", MCW,
+            g => g.FirstClefAfter(g.NoteheadAnchor(0)) - g.NoteheadAnchor(0)),
+        new("midmeasure.clef.prev-note-to-clef.dotted", MCD,
+            g => g.FirstClefAfter(g.NoteheadAnchor(0)) - g.NoteheadAnchor(0)),
         new("midmeasure.key.prev-note-to-key", MK,
             g => g.FirstNonNoteheadAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1)),
         new("midmeasure.key.key-to-next-note", MK,

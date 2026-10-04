@@ -340,6 +340,28 @@ internal static partial class SharedRenderer
         return false;
     }
 
+    /// <summary>
+    /// How far below the staff's TOP line the line a clef names lies, in staff spaces — the
+    /// line its glyph anchors on (G / F / C; percussion centres on the middle line). ONE home:
+    /// the line-start clef, the mid-measure change and the change column's spacing box
+    /// (SpacingRules.ChangeColumnLeftSkyline) all stand the glyph here.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/parser-clef.scm supported-clefs — each clef's middle integer is the
+    /// staff position of the named line (treble G=-2, bass F=2, alto C=0), i.e. 2 − pos/2
+    /// staff spaces below the top line.
+    /// </remarks>
+    internal static double ClefLineBelowTopLine(ClefType clef) => clef switch
+    {
+        ClefType.Bass or ClefType.Bass8Below => 1,
+        ClefType.Alto or ClefType.Percussion => 2,
+        ClefType.Tenor => 1,
+        ClefType.Soprano => 4,       // C4 on the bottom line
+        ClefType.MezzoSoprano => 3,  // C4 on line 2
+        ClefType.Baritone => 0,      // C4 on the top line
+        _ => 3,
+    };
+
     private static double DrawClef(ScoreTextMetrics fonts, ClefType clef, double x, double staffY,
         double clefColumnWidth, double clefGroupInkLeft, IDrawingContext gc)
     {
@@ -351,20 +373,7 @@ internal static partial class SharedRenderer
             ClefType.Percussion => EmmentalerGlyphs.PercussionClef,
             _ => EmmentalerGlyphs.GClef,
         };
-        // LILYPOND-REF: scm/parser-clef.scm supported-clefs — each clef's middle
-        // integer is the staff position of the named line (treble G=-2, bass F=2,
-        // alto C=0). Y baseline matches LP positioning: the clef glyph anchors on the
-        // line it names (G / F / C); percussion centres on the middle line.
-        double clefY = clef switch
-        {
-            ClefType.Bass or ClefType.Bass8Below => staffY - 1,
-            ClefType.Alto or ClefType.Percussion => staffY - 2,
-            ClefType.Tenor => staffY - 1,
-            ClefType.Soprano => staffY - 4,       // C4 on the bottom line
-            ClefType.MezzoSoprano => staffY - 3,  // C4 on line 2
-            ClefType.Baritone => staffY - 0,      // C4 on the top line
-            _ => staffY - 3,
-        };
+        double clefY = staffY - ClefLineBelowTopLine(clef);
         // Anchor the clef GROUP's ink-left on the shared LeftEdge->clef column
         // (ClefGlyphXOffset), not each clef's own: break-alignment offsets by
         // `- extents[group][LEFT]` (LILYPOND-REF break-alignment-interface.cc:242) and that

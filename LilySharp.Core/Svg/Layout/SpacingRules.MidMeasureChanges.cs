@@ -369,16 +369,8 @@ internal static partial class SpacingRules
         if (firstChange == null)
             return null;
 
-        // --- LEFT: note-spacing.cc:79-82 rod, then :105-107 ---
-        // The rod is the pure skyline distance between the previous column and this one:
-        // the previous item's own ink reach plus each side's extra-spacing-width.
-        double prevReach = 0;
-        for (int q = 0; q < prevItems.Count; q++)
-            if (!IsChangeItem(prevItems[q]))
-                prevReach = Math.Max(prevReach, CalculateNoteheadRightExtent(fonts, prevItems[q]));
-        double leftRod = prevReach
-                         + DefaultExtraSpacingWidth
-                         + ChangeItemExtraSpacingWidth(firstChange).Left;
+        // --- LEFT: note-spacing.cc:78-82 min_dist, then :105-107 ---
+        double leftRod = ChangeColumnLeftMinDistance(fonts, columnItems, prevItems);
         double leftGap = Math.Max(durationIdeal - columnWidth,
                                   (durationIdeal + leftRod) / 2.0);
         // LILYPOND-REF: lily/note-spacing.cc:113 Note_spacing::get_spacing — set_ideal_distance (std::max (0.0, ideal)).
@@ -392,6 +384,154 @@ internal static partial class SpacingRules
 
         return new MidMeasureChangeSpacing(leftGap, rightGap, leftRod + rightRod);
     }
+
+    /// <summary>
+    /// <c>Note_spacing</c>'s <c>min_dist</c> from the previous musical column to a change
+    /// column: the SKYLINE distance between the previous note columns' right side and the
+    /// change grobs' boxes, clamped at 0 — the term the left gap's floor
+    /// <c>(ideal + min_dist) / 2</c> and the pair's minimum are built from.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-spacing.cc:78-82 Note_spacing::get_spacing — <c>skys[LEFT].distance
+    ///   (skys[RIGHT], skyline-vertical-padding of right_col)</c>, max'd with 0. The left skyline
+    ///   is the voice's NoteColumn (Spacing_interface::skylines over the wish's left-items: heads,
+    ///   stem, flag — no dots, which are the paper column's), carrying NoteColumn's own 0.15
+    ///   padding (<see cref="ItemSkylineFactory.SharedWishRightSkylineAtColumn"/>); the right
+    ///   column is a NonMusicalPaperColumn, which declares no skyline-vertical-padding, so the
+    ///   distance is taken with 0 (<see cref="NonMusicalColumnSkylineVerticalPadding"/>).
+    /// <para>
+    /// ⚠️ UNTIL SESSION 805 THIS WAS A BOX — the previous items' horizontal ink reach
+    /// (<see cref="CalculateNoteheadRightExtent"/>: the head, its dots, no stem or flag) plus the
+    /// two extra-spacing-widths, whatever their heights — under a comment that called it "the
+    /// pure skyline distance". The two agree when the previous column's ink shares a height
+    /// with the change's box, which is every key and meter change (their boxes grow to the
+    /// neighbours' heights) and a clef after a note whose up-stem stands in the clef's band. A
+    /// note ABOVE a mid-line clef, stem down at its left, is where they part: LilyPond 1.666122
+    /// against the box's 2.253222 (ledger midmeasure.clef.prev-note-to-clef.head-above-clef,
+    /// probe barline-spacing.ly MCH). A dotted note (the dots leave the reach) and a flagged
+    /// one (the flag enters it) move too.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE PAIRS ARE TAKEN IN ONE STAFF FRAME. <paramref name="prevItems"/> may hold several
+    /// staves' items and the column several staves' changes, and a LilyPond wish pairs a voice
+    /// only with its own staff's separation item; here every previous item meets every change
+    /// box at the same height. That can only find MORE overlap than LilyPond does — the answer
+    /// lies between LilyPond's and the old box, never below LilyPond's — and the one caller
+    /// that knows the own-staff neighbour (the loose column) already passes just it.
+    /// </para>
+    /// </remarks>
+    private static double ChangeColumnLeftMinDistance(
+        Rendering.ScoreTextMetrics fonts, in ItemColumn columnItems, in ItemColumn prevItems)
+    {
+        var changeLeft = ChangeColumnLeftSkyline(fonts, columnItems, prevItems);
+        double min = 0.0;
+        for (int q = 0; q < prevItems.Count; q++)
+        {
+            if (IsChangeItem(prevItems[q]))
+                continue;
+            var prevRight = ItemSkylineFactory.SharedWishRightSkylineAtColumn(prevItems[q], 0.0, 0.0);
+            min = Math.Max(min, prevRight.Distance(changeLeft, NonMusicalColumnSkylineVerticalPadding));
+        }
+        return min;
+    }
+
+    /// <summary>
+    /// The skyline-vertical-padding a NON-musical column's distance is taken with: none.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm NonMusicalPaperColumn — declares no skyline-vertical-padding,
+    ///   so lily/note-spacing.cc:80-81 Note_spacing::get_spacing reads its default 0.0.
+    /// </remarks>
+    internal const double NonMusicalColumnSkylineVerticalPadding = 0.0;
+
+    /// <summary>
+    /// The LEFT skyline of a mid-measure change column: one box per break-aligned grob, its X
+    /// extent widened by its <c>extra-spacing-width</c> and its Y extent by its
+    /// <c>extra-spacing-height</c>, in the frame the previous column's wish skyline is built in
+    /// (x from the change column's origin, y down, the staff's middle line at 0).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/separation-item.cc:150-187 Separation_item::boxes — Box (extent X + extra-spacing-width, pure Y extent + extra-spacing-height).
+    /// The heights are where the three kinds part:
+    /// <list type="bullet">
+    /// <item>A CLEF is its "_change" glyph where it stands (<see cref="GlyphMetrics.ClefChangeBBox"/>
+    ///   on <see cref="Rendering.SharedRenderer.ClefLineBelowTopLine"/>), widened by ±0.1 —
+    ///   LILYPOND-REF: scm/output-lib.scm:929-932 pure-from-neighbor-interface::extra-spacing-height-at-beginning-of-line,
+    ///   whose mid-line arm is <c>(cons -0.1 0.1)</c>.</item>
+    /// <item>A KEY (cancellation or signature) and a METER reach the staff and every
+    ///   neighbour's height — LILYPOND-REF: scm/output-lib.scm:976-979 pure-from-neighbor-interface::extra-spacing-height-including-staff
+    ///   (define-grobs.scm:1934-1935, :1980-1981, :3931): the union of the grob's height, the
+    ///   staff's and the pure heights of the columns beside it. So their boxes span the staff
+    ///   and the previous and next columns' heights here
+    ///   (<see cref="ItemSkylineFactory.ColumnYExtent"/>), and the distance to them is the
+    ///   previous column's whole reach, as the old box had it.</item>
+    /// </list>
+    /// X follows the column walk (<see cref="MeasureChangeColumn"/>: one grob per kind, the
+    /// widest, in break-align order); a key is one box for its cancellation and its signature
+    /// together — the two share the neighbour-wide height, so splitting them changes nothing
+    /// the distance can see.
+    /// </remarks>
+    private static HorizontalSkyline ChangeColumnLeftSkyline(
+        Rendering.ScoreTextMetrics fonts, in ItemColumn columnItems, in ItemColumn prevItems)
+    {
+        // The neighbour-wide band a key or meter box spans: the staff (lines at ±2 about the
+        // middle, y down) and the pure heights of the columns on either side.
+        double bandTop = -2.0, bandBottom = 2.0;
+        void Widen(in ItemColumn column)
+        {
+            for (int q = 0; q < column.Count; q++)
+            {
+                if (IsChangeItem(column[q]))
+                    continue;
+                var (yMin, yMax) = ItemSkylineFactory.ColumnYExtent(column[q], 0.0);
+                bandTop = Math.Min(bandTop, yMin);
+                bandBottom = Math.Max(bandBottom, yMax);
+            }
+        }
+        Widen(prevItems);
+        Widen(columnItems);
+
+        var boxes = new List<(double YBottom, double YTop, double XLeft, double XRight)>();
+        double offset = 0;
+        MusicItem? last = null;
+        for (int i = 0; i < columnItems.Count; i++)
+        {
+            var item = columnItems[i];
+            if (!IsChangeItem(item) || !ChangeItemHasInk(item) || !IsFirstChangeOfItsKind(columnItems, i))
+                continue;
+            if (last != null)
+                offset += BetweenChangeItemsSpace(last, item);
+            double width = WidestChangeOfKind(fonts, columnItems, ChangeItemKind(item));
+            var (eswLeft, eswRight) = ChangeItemExtraSpacingWidth(item);
+            double xLeft = offset - eswLeft, xRight = offset + width + eswRight;
+            if (item is ClefChangeItem)
+            {
+                // Every staff's clef of this column, each at its own line (one frame: see
+                // ChangeColumnLeftMinDistance).
+                for (int j = 0; j < columnItems.Count; j++)
+                {
+                    if (columnItems[j] is not ClefChangeItem clef)
+                        continue;
+                    var b = GlyphMetrics.ClefChangeBBox(clef.NewClef);
+                    double lineUp = 2.0 - Rendering.SharedRenderer.ClefLineBelowTopLine(clef.NewClef);
+                    boxes.Add((-(lineUp + b.Top) - ClefMidLineExtraSpacingHeight,
+                               -(lineUp + b.Bottom) + ClefMidLineExtraSpacingHeight,
+                               xLeft, xRight));
+                }
+            }
+            else
+            {
+                boxes.Add((bandTop, bandBottom, xLeft, xRight));
+            }
+            offset += width;
+            last = item;
+        }
+        return HorizontalSkyline.FromBoxes(boxes, HorizontalDirection.Left);
+    }
+
+    /// <summary>A mid-line clef's extra-spacing-height, each way.</summary>
+    /// <remarks>LILYPOND-REF: scm/output-lib.scm:929-932 pure-from-neighbor-interface::extra-spacing-height-at-beginning-of-line — <c>(cons -0.1 0.1)</c> off the line start.</remarks>
+    private const double ClefMidLineExtraSpacingHeight = 0.1;
 
     /// <summary>
     /// The change column's origin → the next musical column: the SAME quantity

@@ -1033,13 +1033,14 @@ internal static partial class SpacingRules
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/clef.cc:29-52 calc_glyph_name — "_change" suffix glyphs are smaller variants.
+    /// <para>
+    /// The glyph is the one the renderer draws (<see cref="GlyphMetrics.ClefChangeBBox"/>).
+    /// Until session 805 this was its own switch, which gave bass_8 and the soprano,
+    /// mezzo-soprano and baritone clefs the G glyph's width while the renderer drew F / C —
+    /// clefs the grammar does not let a change write, so nothing moved.
+    /// </para>
     /// </remarks>
-    internal static double GetClefChangeWidth(ClefType clef) => clef switch
-    {
-        ClefType.Bass => GlyphMetrics.FClefChangeWidth,
-        ClefType.Alto or ClefType.Tenor => GlyphMetrics.CClefChangeWidth,
-        _ => GlyphMetrics.GClefChangeWidth
-    };
+    internal static double GetClefChangeWidth(ClefType clef) => GlyphMetrics.ClefChangeBBox(clef).Right;
 
     // ========================================
     // Spring-Rod Model Support
