@@ -115,6 +115,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第808セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き。ユーザー「続けて」＝第807 の次の候補 ⒜（行中 clef の直後の音に grace が付くと clef が LP より 0.26 右）。`-Start p808`（HEAD `ae0d4b54`・未 push 28）＝full **11062 / 0 / 2 / 11064**。§7 3.5 で第806 を ARCHIVE へ（moved 13 lines）。
+- 双子（Lab `sessions/p808/gr`）: grace の高さ・音価・数を振ると、**grace と主音は LP どおり、clef だけ** 1.31 右（grace 2 つで 2.2）。第807 の 0.26 は譜の上の前の音（MCH 型）との相殺だった。LP に列をダンプ（`gr/lp-probe.ly`）: 前の音 → clef **1.802578 = MC の 2.253222 × 0.8**、clef → grace **2.517280 = 3.1466 × 0.8**。根: `\clef` は grace の moment に立つ＝change 列の右隣は最初の grace 列で、spacing-spanner.cc:396-403（左）と :519-527（右）が**それぞれ**×0.8（Spring::operator*=＝各自の min で床）。
+- §5.0 の型: **`2fdb02f28`（出力不変）**＝probe MCG＋台帳 3 点（+1.309307／−1.309307 は予測の桁どおり・前の音 → 主音の対照 0）。**`d842aecb3`（移植）**＝`MidMeasureChangeGaps` が左右を個別に縮め（`ScaledIntoGrace`）、MeasureLayouter は `SpringIntoGraceRun(approachIdealScaled)` で理想を二重に縮めない。renderer の `MidMeasureChangeRightGap` は「縮めた右間隔＋grace run の幅」。
+- **1 回目の移植は台帳が 1 点も動かなかった**: `SharedRenderer.ChangeColumnItems` が clef の後の**最初の grace item で列を閉じ**、主音（`LeadingGrace` を持つ）を見ていなかった＝spring と renderer が別の列を読む 2 つ目の答え（第807 の観測者 0 の腕もこれ）。grace item を飛ばすようにして 2 点とも 0。
+- 双子の 2 巡目で**主音に `#`（g-main-sharp）が 1.38 右に悪化**＝右の rod を主音の `#` で読み、新しい床がそれで効いた。LP の右の rod は grace 列まで → `RightRod` に grace の腕（`CreateGraceLeftSkyline`）。**grace に `#`（h）は 0.10 不足**＝0.8 で理想が min まで落ちると列 rod（set_column_rods の padding 0.1）が効く → `RightGapIntoGrace`。あわせて change 列のときは run の左インクを min に二重に足さず、前の音 → grace の床も使わない。観測者 4 点（MCGA・MCGM）は初回から 0。
+- 網: 毒 10 本（`p808/poisons.ps1`・3 回）＝8 本がそれぞれの点だけ赤。⑹（自分の min の床）と ⑽（change 列をまたぐ前の音 → grace の床）は 0 赤＝註に名指し。掃き（`p808/sweep/`・base＝`p807/exe-head`）: **998 冊・1,199 svg・差 0**。snapshot 不動。CHANGELOG は第805 の項に 1 文。
+- 触っていない: 左の列 rod（別の skyline view・0.8 がまだ届いた本なし）／右の rod を理想に畳んだのは ⒝（力 0 と圧縮では同じ）／grace の手前の調号の帯は主音の高さを読む。
+★ `-End p808 -DiffBase ae0d4b54`（`end1.log`）＝full **11069 / 0 / 2 / 11071**（網 +7＝台帳点 7）・門 全 OK（HANDOFF 441,422 B・残り 8,578）。台帳 986 → 993 点・exact 789 → 796・OPEN 0。7.5: Core `+` 134 行・REF 8（spacing-spanner.cc:396-403／:519-527／:478-517／:228-297・spring.cc:87-93 ×2・separation-item.cc:47-68）・OWN 0。7.6: ⒜ 字面＝左右それぞれ max(min, 0.8×ideal)・右の rod は grace 列の skyline・列 rod＝距離＋0.1／⒝ 列 rod を右の理想に畳んだ（1 本の timing spring が別の床を運べない・註）。7.7: ⑴ renderer と spring が別の列を読んでいた 2 つ目の答えを 1 つに（`ChangeColumnItems` が grace を飛ばす）／⑵ guard・fallback なし／⑶ 観測者 0 の腕 3 つを註で名指し。7.9 perf: change 列が grace の手前のときだけ grace 列の左 skyline 1 枚と乗算 2 回。commit `2fdb02f28`（点）・`d842aecb3`（移植・CHANGELOG・棚卸し）＋ docs の commit。Lab は sessions/p808 を commit。push はユーザー。
+判定: 行中の change 列は grace の手前まで LP と同じ式になった（第805〜第808 で左・余白・右・grace）。教訓: **移植して台帳が 1 点も動かなかったのは反証**（RULES §5.0「出力が動かない修正は no-op ではなく反証」）——renderer が別の列を読んでいた。そして**2 巡目の双子（臨時記号を振る）が 1 巡目の移植の悪化を見つけた**。次の候補: ⒜ §2 C・D・E の古い起票の測り直し（第805 の型）／⒝ H の束（設計）／⒞ 観測者 0 の 3 つの腕に網を張る（spacer＋change・圧縮した grace の手前の change）。会話を区切るか: (a) ⒜⒝ は別の島＝今の文脈は効かない、⒞ は今の文脈の上／(b) この会話は RULES 通読＋2 便で、圧縮は起きていない／(c) 既定は続ける。⇒ **⒞ ならこの会話で `-Start p809`。⒜⒝ でも新しい会話にする理由は小さい（既定は続ける）**。
+
+## 以下は第807セッションの経緯
+
 ### 1.1 第807セッション（2026-10-04・YT-DELL2）
 
 新しい会話（HANDOFF・RULES 通読・CLAUDE-OPERATIONS 通読）。第806 の次の候補 ⒜（change 列の右の rod）に着手。`-Start p807`（HEAD `534eb9c3`・未 push 25）＝full **11059 / 0 / 2 / 11061**。§7 3.5 で第805 を ARCHIVE へ（moved 15 lines）。
@@ -125,18 +139,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 触っていない: 右側の調号／拍子の帯は前の列の高さを読まない（次の列の高さが帯に入っているので距離には届かない＝註）。多段譜の 1 枠の読みは左と同じ。
 ★ `-End p807 -DiffBase 534eb9c3`（`end1.log`）＝full **11062 / 0 / 2 / 11064**（網 +3＝台帳点 3）・門 全 OK（HANDOFF 439,264 B・残り 10,736）。台帳 983 → 986 点・exact 786 → 789・OPEN 0。7.5: Core `+` 81 行・REF 3（staff-spacing.cc:210・paper-column.cc:145-164・separation-item.cc:89-110）・OWN 0。7.6: ⒜ 字面＝min_dist は 2 つの skyline の距離・max(0, …)・次の列は PaperColumn の 0.08 と臨時記号の無 padding（小節線側と同じ view）／⒝ 右の帯は前の列を読まない（距離に届かない・註）・多段譜は 1 枠。7.7: ⑴ 非音楽 item の旧い X だけの腕を残した＝観測者 0（註と §2 B）／⑵ 同じ箱の 2 つ目の綴りは作らず `ChangeColumnBoxes` 1 軒に畳んだ／⑶ guard・fallback なし。7.9 perf: change 列の右の距離 1 回ごとに箱 1〜3 の skyline 1 枚＋次の item の左 skyline（render memo 共有）＝change 列の数だけ。commit `1c918366c`（点）・`c631cfc86`（移植・CHANGELOG）＋ docs の commit。Lab は sessions/p807 を commit。push はユーザー。
 判定: 行中の change 列は左右とも LP の skyline 距離になった（左＝第805・余白＝第806・右＝第807）。教訓: **毒の 1 回目で 2 本が空振り**——⑵ は観測者のつもりの点が観測していなかった（♭の上端が譜に届く）、⑷ は毒が恒等写像だった。どちらも 2 回目で直った（RULES §5.4「網は毒で赤くなるまで」・「緑の毒の 3 つ目の顔」の再演）。次の候補: ⒜ §2 B の新しい起票＝行中 clef の直後に grace が付くと clef が 0.26 右（この便の双子と計器の上に立つ・LP に grace 列と clef 列の spring を吐かせる 1 手から）／⒝ §2 C・D・E の古い起票の測り直し／⒞ H の束（設計）。会話を区切るか: (a) ⒜ は今の計器（`rod/pair.ps1`・probe）と読んだコード（`MidMeasureChanges`・LP の staff-spacing／paper-column）の上に立つ＝続ける側／(b) この会話は RULES 通読＋1 便で、圧縮は起きていない／(c) ⒝⒞ は別の島。⇒ **⒜ ならこの会話で `-Start p808` が有利、⒝⒞ でも新しい会話にする理由は小さい（既定は続ける）**。
-
-## 以下は第806セッションの経緯
-
-### 1.1 第806セッション（2026-10-04・YT-DELL2）
-
-同じ会話の続き。ユーザー「a」＝第805 の次の候補 ⒜（単独の旗付き 8 分の直後の行中 change）。`-Start p806`（HEAD `2681f0c5`・未 push 22）＝full **11057 / 0 / 2 / 11059**。§7 3.5 で第804 を ARCHIVE へ（moved 15 lines）。
-- §2 B の第805 起票（旗付き 8 分の直後の行中 clef／調号が LP より約 0.3 狭い）＝**閉じた**。LP に 3 冊を通して割った（Lab `sessions/p806/flag`）: 旗あり 2.5674・旗の stencil を消すと 2.0042・clef なしの次の音まで 2.5042。床の式 (ideal＋min)/2 から ideal 2.5042 が出て、旗ありは**ちょうど min（旗の右端 2.0674＋0.2）＋0.3**＝`merge_springs` の頭上余白（spring.cc:122）。Lily# はこれを `MeasureLayouter` で左右を足した spring に掛けていた（足した最小に対して効かない）。前便の「min_dist だけでは説明できない」は正しく、残りは spring の合成の側だった。
-- §5.0 の型: **`a11bc5c79`（出力不変）**＝probe `barline-spacing.ly` に MCF／MKE＋台帳 2 点（−0.181600 は予測の数どおり・−0.131600 は形だけ予測＝調号の左 esw 0 のぶん床も 0.05 下がる）。**`d8c2a8221`（移植）**＝`MidMeasureChangeGaps` が左の間隔を自分の min＋0.3 で床張り（`SpringHeadroom`＝LP の 0.3 の 2 か所が共有する定数）。2 点とも 0・他の midmeasure 点は不動。毒 1 本（Lab `sessions/p806/poisons.ps1`）＝その 2 点だけが赤。計器に `RenderedGeometry.FirstAccidentalAfter`。
-- 掃き（`p806/sweep/`・base＝`p805/exe-head`）: **998 冊・1,199 svg・差 0**＝今の母集団にこの形は無い（snapshot も不動）。第805 の 2 小節の双子は LP と 2 桁で一致（clef 45.27／45.26・調号 45.17／45.16）。CHANGELOG は第805 の項に 1 文。
-- 触っていない: `MeasureLayouter` の合成 spring への頭上余白は残した（左右とも各自の 0.3 を持つので合成側では効かない＝消す根拠は「効かない」だけ。消すと wish の無い対の扱いの註ごと書き直しになる）。
-★ `-End p806 -DiffBase 2681f0c5`（`end1.log`）＝full **11059 / 0 / 2 / 11061**（網 +2＝台帳点 2）・門 全 OK（HANDOFF 439,640 B・残り 10,360）。台帳 981 → 983 点・exact 784 → 786・OPEN 0。7.5: Core `+` 10 行・REF 2（spacing-spanner.cc:380-393・spring.cc:122）・OWN 0。7.6: ⒜ 字面＝`max(min + 0.3, ideal)` を LP と同じ spring（左）に。7.7: 同じ 0.3 を合成 spring にも掛けたまま＝効かない 2 つ目の適用（触っていない理由は上）／guard・fallback なし。7.9 perf: change 列ごとに Math.Max 1 回。commit `a11bc5c79`（点）・`d8c2a8221`（移植・CHANGELOG）＋ docs の commit。Lab は sessions/p806 を commit。push はユーザー。
-判定: §2 B の旗付き 8 分は閉じた（第805 の測り直しの副産物が 1 便で閉じた）。行中の change の左側は、LP の 3 つの量（skyline の min・:105 の床・merge_springs の余白）が全部揃った。次の候補: ⒜ 同じ島の残り＝change 列の**右の rod**（`RightRod`＝Paper_column::minimum_distance を箱で作っている・第805 が名指した）を双子で測る／⒝ §2 C・D・E の古い起票の測り直し／⒞ H の束（設計）。会話を区切るか: (a) ⒜ は今の計器（`pair.ps1`・barline-spacing の probe）の上に立つ＝続ける側／(b) この会話は RULES 通読＋4 便で長い。圧縮はまだ起きていないが重い／(c) ⒝⒞ は別の島。⇒ **⒜ なら続けてよいが、重さを考えると新しい会話でも損は小さい**。
 
 ## 2. 開いている作業
 
@@ -1171,7 +1173,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 - ✅ **mid-line clef change の origin＝第805 が測って閉じた**（`1b8b17904` 点・`403dd3e4c` 移植）: 譜の中・譜の下の音の後、小節頭の clef は元から LP と一致。ずれていたのは**譜の上の音（符尾下）の直後の行中 clef**だけで、根は「行中の change 列への rod（Note_spacing の min_dist）を箱で作っていた」＝skyline に移植（台帳 5 点・snapshot `test/clef-change` 1 枚・実コーパス 0 冊）。<!-- ledger: midmeasure.clef.prev-note-to-clef.head-above-clef = 0 -->
 - ✅ **単独の旗付き 8 分の直後の行中 change が LP より狭い（第805 起票）＝第806 が閉じた**（`a11bc5c79` 点・`d8c2a8221` 移植）: 根は `merge_springs` の min＋0.3（spring.cc:122）を、LP は change 列の**左の spring だけ**に掛けるのに、Lily# は左右を足した spring に掛けていたこと（効かない）。旗が clef／調号の帯に入ると min が ideal に近づき、:105 の床が min＋0.3 を下回る＝この形だけで割れる。台帳 `midmeasure.*.flagged-eighth` 2 点が 0・snapshot 不動・998 冊で動いた本 0。<!-- ledger: midmeasure.clef.prev-note-to-clef.flagged-eighth = 0 -->
 - ✅ **行中の change 列 → 次の音の rod（`RightRod`）が箱だった＝第807 が閉じた**（`1c918366c` 点・`c631cfc86` 移植）: LP は Paper_column::minimum_distance＝change 列の右 skyline 対 次の列の左 skyline（臨時記号込み）。行中の bass clef の下・上に立つ `#` は clef の下に潜り込み、Lily# は 1.05 右だった。台帳 `midmeasure.clef.clef-to-next-note.sharp-below-clef` +1.05 → 0・対照 MCS／観測者 MKL は 0・snapshot 不動・998 冊で動いた本 0。<!-- ledger: midmeasure.clef.clef-to-next-note.sharp-below-clef = 0 -->
-- **行中 clef の直後の音に grace が付くと、clef が LP より 0.26 右（第807 の双子で見つけた・未着手）**: `g' a' clef bass grace { cis,,16 } d,,`（Lab `sessions/p807/rod/h-grace-lo`）で Lily# の clef 43.29・LP 43.03、主音符は移植後 47.49 対 47.48 で一致＝**左の間隔（前の音 → clef）か grace 列の扱いの量**。あわせて `RightRod` の**非音楽 item（spacer・grace）の X だけの腕には観測者 0**（第807 の毒 3 が全緑・コードに註）＝この形を測るときに一緒に読む。
+- ✅ **行中 clef の直後の音に grace が付くと clef が LP より右（第807 起票）＝第808 が閉じた**（`2fdb02f28` 点・`d842aecb3` 移植）: LP は `\clef` を grace の moment に置く＝change 列の右隣は**最初の grace 列**で、左右の spring がそれぞれ ×0.8（spacing-spanner.cc:396-403・:519-527・各自の min で床）、右の rod は grace 列まで（その臨時記号込み）、0.8 で min まで落ちると列 rod（＋0.1）が効く。Lily# は和の spring に 0.8 を掛け（主音は合っていた）、renderer は主音から縮めない右間隔で吊るし、`ChangeColumnItems` は最初の grace item で列を閉じていた（spring と renderer が別の列を読む）。台帳 +1.309307／−1.309307 → 0・観測者 4 点（grace の `#`・主音の `#`）・snapshot 不動・998 冊で動いた本 0。<!-- ledger: midmeasure.clef.prev-note-to-clef.before-grace = 0 --> ⚠️ 残り: `RightRod` の非音楽 item（spacer）の腕・`ScaledIntoGrace` の自分の min の床・change 列をまたぐ前の音 → grace の床（圧縮時の強度）は観測者 0（それぞれ註）。
 - ~~★★ **ビーム数が端で変わるビームの傾き**~~ — **閉じた**（第57セッション・`4b78405b`＋`5df1b0e1`・
   §1 ①②）。**`beamCount` はステム自身の多重度ではなく、その向きの最大値**
   （`stem.cc:1158` → `beam.cc:1517-1532`）。★ **残す教訓は 3 つ**: ⑴ **LP のソースが

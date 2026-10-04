@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第806セッションの経緯
+
+### 1.1 第806セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き。ユーザー「a」＝第805 の次の候補 ⒜（単独の旗付き 8 分の直後の行中 change）。`-Start p806`（HEAD `2681f0c5`・未 push 22）＝full **11057 / 0 / 2 / 11059**。§7 3.5 で第804 を ARCHIVE へ（moved 15 lines）。
+- §2 B の第805 起票（旗付き 8 分の直後の行中 clef／調号が LP より約 0.3 狭い）＝**閉じた**。LP に 3 冊を通して割った（Lab `sessions/p806/flag`）: 旗あり 2.5674・旗の stencil を消すと 2.0042・clef なしの次の音まで 2.5042。床の式 (ideal＋min)/2 から ideal 2.5042 が出て、旗ありは**ちょうど min（旗の右端 2.0674＋0.2）＋0.3**＝`merge_springs` の頭上余白（spring.cc:122）。Lily# はこれを `MeasureLayouter` で左右を足した spring に掛けていた（足した最小に対して効かない）。前便の「min_dist だけでは説明できない」は正しく、残りは spring の合成の側だった。
+- §5.0 の型: **`a11bc5c79`（出力不変）**＝probe `barline-spacing.ly` に MCF／MKE＋台帳 2 点（−0.181600 は予測の数どおり・−0.131600 は形だけ予測＝調号の左 esw 0 のぶん床も 0.05 下がる）。**`d8c2a8221`（移植）**＝`MidMeasureChangeGaps` が左の間隔を自分の min＋0.3 で床張り（`SpringHeadroom`＝LP の 0.3 の 2 か所が共有する定数）。2 点とも 0・他の midmeasure 点は不動。毒 1 本（Lab `sessions/p806/poisons.ps1`）＝その 2 点だけが赤。計器に `RenderedGeometry.FirstAccidentalAfter`。
+- 掃き（`p806/sweep/`・base＝`p805/exe-head`）: **998 冊・1,199 svg・差 0**＝今の母集団にこの形は無い（snapshot も不動）。第805 の 2 小節の双子は LP と 2 桁で一致（clef 45.27／45.26・調号 45.17／45.16）。CHANGELOG は第805 の項に 1 文。
+- 触っていない: `MeasureLayouter` の合成 spring への頭上余白は残した（左右とも各自の 0.3 を持つので合成側では効かない＝消す根拠は「効かない」だけ。消すと wish の無い対の扱いの註ごと書き直しになる）。
+★ `-End p806 -DiffBase 2681f0c5`（`end1.log`）＝full **11059 / 0 / 2 / 11061**（網 +2＝台帳点 2）・門 全 OK（HANDOFF 439,640 B・残り 10,360）。台帳 981 → 983 点・exact 784 → 786・OPEN 0。7.5: Core `+` 10 行・REF 2（spacing-spanner.cc:380-393・spring.cc:122）・OWN 0。7.6: ⒜ 字面＝`max(min + 0.3, ideal)` を LP と同じ spring（左）に。7.7: 同じ 0.3 を合成 spring にも掛けたまま＝効かない 2 つ目の適用（触っていない理由は上）／guard・fallback なし。7.9 perf: change 列ごとに Math.Max 1 回。commit `a11bc5c79`（点）・`d8c2a8221`（移植・CHANGELOG）＋ docs の commit。Lab は sessions/p806 を commit。push はユーザー。
+判定: §2 B の旗付き 8 分は閉じた（第805 の測り直しの副産物が 1 便で閉じた）。行中の change の左側は、LP の 3 つの量（skyline の min・:105 の床・merge_springs の余白）が全部揃った。次の候補: ⒜ 同じ島の残り＝change 列の**右の rod**（`RightRod`＝Paper_column::minimum_distance を箱で作っている・第805 が名指した）を双子で測る／⒝ §2 C・D・E の古い起票の測り直し／⒞ H の束（設計）。会話を区切るか: (a) ⒜ は今の計器（`pair.ps1`・barline-spacing の probe）の上に立つ＝続ける側／(b) この会話は RULES 通読＋4 便で長い。圧縮はまだ起きていないが重い／(c) ⒝⒞ は別の島。⇒ **⒜ なら続けてよいが、重さを考えると新しい会話でも損は小さい**。
+
 ## 以下は第805セッションの経緯
 
 ### 1.1 第805セッション（2026-10-04・YT-DELL2）
