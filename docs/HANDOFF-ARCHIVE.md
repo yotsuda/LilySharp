@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第802セッションの経緯
+
+### 1.1 第802セッション（2026-10-04・YT-DELL2）
+
+新しい会話・ユーザー「HANDOFF を読んで作業に着手して」。`-Start p802`（HEAD `04413199`・未 push 12）＝full **11025 / 0 / 2 / 11027**。§7 3.5 で第800 を ARCHIVE へ（moved 14 lines）。第801 の候補のうち、ユーザー判断 1 つで閉じる ⒝ F ⑷ から。
+- **§2 F ⑷ `lyrics NAME` が voice を名指し損ねる件＝閉じた（ユーザー決定 2026-10-04＝warning）**。起票（第181）のあとに `sings` の規則が入っていたので、まず今の木で再現した: `test/named-voice-lyrics` の `alt` を `allt` と綴ると診断 0 で `part` 24.87→23.07・`deep` 30.44→28.84（Lab `sessions/p802/f4/typo.lys`）。機構は起票の「第 1 声部へ付け替わる」ではなく**どこにも結ばない行＝均等割りのリードシート行**（`RowBindsToPart` が偽→畳まれない→`CollectRow`）。設問の前に母集団を数えた（使い捨ての `Zz802ProbeTests`・Lab `f4/census.txt`）: ディスク上 **46,382 冊・lyrics 行 1,893・staff の直下で結ばない行 376・そのうち part が名前付き voice を持つもの 0**（自作の 1 冊だけ）。
+- 入れたもの: **LYS6013 `RowNamesNoVoiceOfStaffAbove`（warning）**＝`LyricSingsValidator` が score の直下を歩き、`FoldAdjacentRows` と同じ窓（staff か group の最後の素の staff が開く・畳まれる行は開けたまま・他は閉じる）の中で、結ばない行（行にも定義にも `sings` が無く、名前が part でも voice でもない）が**名前付き voice を持つ part** の直下に在るとき警告する。絵は今までどおり。文面は voice の一覧と直し方 2 つ（track を voice の名前にする／`sings PART`）。voice の表は fold が既に引いている `LyricBindings.VoicesOfPart`（木ごとの CWT）＝打鍵の経路に歩きは足していない。
+- 網: `SingsLyricsTests` に 3 本（出る 1・出ない theory 8・1 つの綴り違いは 1 警告）。`LyricSingsWalkTests` の手書きの本は `lyrics plain` が voice 持ちの part の下に在る＝警告 1 件を主張に書き換えた。毒 4 本（Lab `sessions/p802/poison-*.log`）: voice の無い part でも出す→1 赤／畳まれる行の腕を殺す→4 赤／`sings` を見ない→**最初 0 赤**（`sings m`・`sings alt` は畳まれる腕が先に拾うので条件に観測者が居なかった）→他 part を歌う行 `lyrics allt sings n` を theory に足して 1 赤。
+- 掃き（`p753/sweep-check.ps1` を `p802/` に写した・base＝`p800/exe-head`・head＝`p802/exe-head`・1 側 約 7 分）: **998 冊・診断 1,955 行＝1,955 行・差 0**。陽性対照 `typo.lys` は head で警告 1。
+- **副産物＝新しい起票（§2 F・`sings VOICE` は第 1 声部に付く）**: voice を `sings` で名指すと受理され畳まれるが、verse を voice に結ぶのは track 名だけ。実の本 0 冊。LYS6013 の文面はそのため `sings VOICE` を勧めていない。
+- GRAMMAR.md・GRAMMAR_FOR_LLM.md に 1 文ずつ・CHANGELOG Fixes 1 項。棚卸し 2 枚は再生成して差分なし。
+★ `-End p802 -DiffBase 04413199`（`end1.log`）＝full **11035 / 0 / 2 / 11037**（網 +10＝fact 2・theory 8）・門 全 OK（HANDOFF 439,278 B・残り 10,722）。7.5: Core `+` 80 行・REF 0・OWN 0＝全部が検証器と診断コードの doc（描画・配置の式は 1 行も無い＝意味論の側・RULES §5.2 第751）。7.6: ⒞ LP に対応物が無い側（診断。観測者＝`SingsLyricsTests` の 3 本＋掃き）。7.7: **畳みの窓を検証器がもう 1 度綴っている**（`FoldAdjacentRows` と同じ開閉＝同じ量の 2 つ目の綴り。group の側の LYS6012 が先例で、畳めないのは parser の側が span を持たない spec を歩くから）＝窓の 3 つの閉じ方（tab のあと・staff の前・結び損ねた行のあと）は theory と `OneMisspelling_IsOneWarning` が見ている。guard／fallback なし。commit `a48d93689`（検証器・網・GRAMMAR 2 文書・CHANGELOG）＋ docs の commit。Lab は sessions/p802 を commit。push はユーザー。
+判定: F ⑷ は閉じた。次の候補: ⒜ **§2 F の新規 `sings VOICE`**（この便の文脈＝`RowBindsToPart`・`CollectNoteBound`・`WithLyrics` の上に立つ。読み手は collector と 3 つの exporter＝着手前に数える・実の本 0 冊なので絵は動かないはず）／⒞′ 双子の chords／lyrics 行（5 冊・exporter の設計）／H の束（設計）。会話を区切るか: (a) ⒜ はこの便で読んだコードをそのまま使う＝**続ける側**／(b) 通読（RULES 全文）で会話は重めだが圧縮はまだ起きていない／(c) ⒞′ と H は無関係な島＝どちらでも。⇒ **⒜ ならこの会話で `-Start p803`**。
+
 ## 以下は第801セッションの経緯
 
 ### 1.1 第801セッション（2026-10-04・YT-DELL2）

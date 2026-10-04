@@ -115,6 +115,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第804セッション（2026-10-04・YT-DELL2）
+
+新しい会話・ユーザー「HANDOFF を読んで作業に着手して」。`-Start p804`（HEAD `ac560a8d`・未 push 16）＝full **11041 / 0 / 2 / 11043**。§7 3.5 で第802 を ARCHIVE へ（moved 15 lines）。
+- **候補 ⒞′（双子が chords／lyrics 行を出せない 5 冊）＝既に閉じていた**（`7b5ec5557`・2026-09-08）: 6 冊とも双子が ChordNames／Lyrics を出し LP が描く（Lab `sessions/p804/twin/`）。残る LP の警告 2 種は欠陥ではない（§2 F の該当行を ✅ に書き換えた）。
+- **候補 H の束 ⑷「courtesy 拍子の右側 0.455」（第131 起票）＝これも閉じていた**（上の §2 H ⑷）。ただし texture を振った 12 冊のうち**取消だけの courtesy 1 形が 0.50 ずれていた**＝新しい欠陥。根は 1 つ: LP は C major／A minor への変更でも KeySignature を**空の extent の grob**として持ち、`Break_alignment_interface::calc_positioning_done`（break-alignment-interface.cc:144-156）が空の member を飛ばす。Lily# の行末の群は全部を「取消・0.5・調号」と読んでいた。3 形: ⑴ 取消が最後＝右端まで 1.0（LP 0.5）／⑵ 取消の次に拍子＝1.65（LP は KeyCancellation 自身の 1.25）／⑶ 何も刷らない変更（C→Am）の次に拍子＝予約 +0.4・描画 +1.4＝**拍子が五線の右端からはみ出す**。行中は元から正しい（`KeyChangeGrobWidths` が歩きの advance を最後のナチュラルで切っていた）。
+- 進め方は §5.0 の型: **commit 1 `5efb24756`（出力不変）**＝probe `courtesy-meter.ly` に CANCONLY／CANCMETER／NOKEYMETER の 3 冊（LP 2.26 実測 0.500000／1.250000／0.750000）＋台帳 4 点を予測つきで起票（+0.5／+0.4／+1.4／+0.4＝4 点とも予測どおり開いた）。**commit 2 `eed3a3bc6`（移植）**＝⑴ `SharedRenderer.KeyChangeGeometry` は取消→調号の 0.5 を調号が続くときだけ書く（標準・custom の両枝）／⑵ `SpacingRules.KeyCourtesyClosingSymbol`（新設・描いた歩きの最後の glyph から＝調号／取消／null）で拍子までの gap を引く。gap は key の suffix が持ち、`TimeCourtesySuffixWidth` は key の群が刷られないときだけ小節線の 0.75 を払う（調号で閉じる群は従来と同じ和）／⑶ 描画は何も刷らない変更に群を開かない・予約 2 軒（`LineEndCourtesyWidth`・`StaffRightEdges`）は「key の item が在るか」ではなく「key が幅を取ったか」を訊く。**4 点とも 0 に閉じた**。
+- 網: `CourtesyMeterTests` +7（fact 4・theory 3）。毒 7 本（Lab `sessions/p804/poisons.ps1`・`poisons.out`）＝7 つの編集を 1 つずつ戻すと台帳点と fact の 1〜5 本が赤。**毒 7（layout 側の予約）は 1 回目 観測者 0**（読みが全部「小節線から」で、小節線は誤った予約と一緒に動く）→ `TheLineCarryingTheCourtesy_EndsWhereTheNextLineEnds`（courtesy を持つ段の五線の右端＝次の段の右端）を書いて赤を確かめた（`poisons-run2.out`）。⚠️ 毒 7 は `MagicConstantInventoryTests` も 1 赤にする（毒自身のリテラル＝観測者ではない）。
+- 掃き（`p804/sweep/`・base＝`p803/exe-head`・head＝`p804/exe-head`）: **998 冊・1,199 svg・差 1**＝`Endless Story` の tab だけの score の 1 段（調と拍子が変わる改行）。tab は調号を刷らない＝⑶ の形で、最後の小節線→五線の右端が 3.30 → **2.90**＝台帳 `courtesy.meter.meter-to-line-end` の LP 値。同じ本の staff／staff＋tab の score は不動。snapshot 不動。
+- 触っていない: 譜ごとに違う調の群（移調譜）は LP が列で揃え、Lily# は譜ごとに自分のインクから鎖でつなぐ＝§2 H の paper column の束のまま。CHANGELOG Fixes 1 項。棚卸し 2 枚は行番号。
+★ `-End p804 -DiffBase ac560a8d`（`end2.log`）＝full **11052 / 0 / 2 / 11054**（網 +11＝台帳点 4・fact 4・theory 3）・門 全 OK（HANDOFF 442,300 B・残り 7,700）。台帳 972 → 976 点・exact 775 → 779・OPEN 0。1 回目の `-End` は 1 赤（`HandoffLedgerCitationTests`＝§2 に台帳点の名前を書いて札 `<!-- ledger: … -->` を付けなかった）→ 札を足して緑。7.5: Core `+` 109 行・REF 3・OWN 0＝足した規則は 1 つ（空の member は飛ばす）で 3 か所とも同じ住所。7.6: ⒝ LP 由来・字面でない＝LP は群の列を歩いて空の extent を飛ばすが、Lily# の行末は譜ごとに描いたインクから鎖でつなぐ（`SolveColumns` を通らない＝既存の註）。だから「最後に刷った glyph は何か」で読む。字面にするには行末の群を列として持つこと＝§2 H の束。7.7: ⑴ `keySuffix > 0.0`／`width > 0.0`＝「key が刷られたか」を幅で訊く代理（opener の 1.0 が在るので幅 0 ⇔ 何も刷らない）・観測者は毒 6・7／⑵ 予約 2 軒（layout と五線の右端）は同じ和の 2 綴りのまま＝3 形での一致は新しい theory が見る／⑶ null を返す `KeyCourtesyClosingSymbol` は握りつぶす既定値ではなく LP の規則（台帳 2 点と fact が観測）。7.9 perf: 歩きは足していない（行末の key courtesy ごとに null 判定 1 つ）。commit `5efb24756`（点）・`eed3a3bc6`（移植・網・CHANGELOG・棚卸し）＋ docs の commit。Lab は sessions/p804 を commit（計器 `courtesy/pair.ps1`＝.lys 1 冊を Lily# と LP 双子の SVG で並べる・2 桁の go／no-go 用）。push はユーザー。⚠️ **出力が変わる変更＝ユーザーの承認待ち**（snapshot 不動・実コーパス 1 冊 1 段・LP の台帳値と一致）。
+判定: 候補 2 つ（⒞′・H ⑷）は実コードで測ると閉じていて、測り直しが新しい欠陥 1 つを出して閉じた。教訓は第798 と同じ（§2 の古い起票は着手前に今の木で再現する）＋**「閉じていた」を確かめる texture の掃きが、隣の開いた形を見つける**。次の候補: ⒜ §2 の古い起票の測り直しを続ける（B・C・D・E の「伝聞」＝`pair.ps1` で 1 件数分）／⒝ H の束の本体（行末・行頭の群を列として持つ＝設計・移調譜の courtesy が観測点になる）／⒞ T7 の残り（計器）。会話を区切るか: (a) ⒜ は今便の計器と break-align の文脈を使う＝続ける側／(b) RULES 通読＋1 便で圧縮はまだ／(c) ⒝⒞ は別の島。⇒ **⒜ ならこの会話で `-Start p805`、⒝⒞ は新しい会話でも差は小さい**。
+
+## 以下は第803セッションの経緯
+
 ### 1.1 第803セッション（2026-10-04・YT-DELL2）
 
 同じ会話の続き（第802 の判定 ⒜）。`-Start p803`（HEAD `deab87ef`・未 push 14）＝full **11035 / 0 / 2 / 11037**。§7 3.5 で第801 を ARCHIVE へ（moved 14 lines）。
@@ -126,20 +140,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - GRAMMAR.md・GRAMMAR_FOR_LLM.md に `sings VOICE` の 1 文・CHANGELOG Fixes 1 項（第802 の項の文面も `sings VOICE` に）。棚卸し `APPROXIMATIONS.md` は行番号 3 行。
 ★ `-End p803 -DiffBase deab87ef`（`end1.log`）＝full **11041 / 0 / 2 / 11043**（網 +6）・門 全 OK（HANDOFF 438,738 B・残り 11,262）。7.5: Core `+` 176 行・REF 0・OWN 0＝歌詞をどの voice に結ぶかは意味論の側（RULES §5.2 第751）で、描画・配置の式は 1 行も動いていない（`CollectNoteBound` の既存の REF は「結んだあと音符にどう付けるか」で、今回触ったのは「どの voice か」）。7.6: ⒞ 設計の側（観測者＝`SingsLyricsTests` の 6 本＋掃き）。7.7: ⑴ `VerseVoices` は `WithLyrics` の隣の疎な表＝verse についての 2 つ目の配列だが、書き手は `WithFoldedVerse` 1 軒・読み手は `VerseVoiceMapOf` 1 軒／⑵ **黙る fallback が 1 つ在る**: `NamedVoiceTracks` と `EngravedVoiceNamed` の `slot < voices.Length`（名前付き voice の slot に track が無いとき第 1 声部／均等割りへ落ちる）＝構文の slot と collector の track の数が食い違う本は見つけていない（網の 4 形は全部一致）・観測者なし。7.9 perf: 足した計算は「attached verse を持つ staff ごとに 1 回」の `VerseVoiceMapOf`（items を 1 回歩く）と、**part が名前付き voice を持つときだけ** voice ごとの `Measures.ToList()`＝多段譜でその形を書く本は 998 冊中 0 なので測っていない（回数は読んだ数であって測った数ではない）。commit `c93db6c2a`（code・網・GRAMMAR 2 文書・CHANGELOG・棚卸し）＋ docs の commit。Lab は sessions/p803 を commit。push はユーザー。
 判定: `sings VOICE` と多段譜の name 結びは閉じた。次の候補: ⒞′ 双子の chords／lyrics 行（5 冊・exporter の設計）／H の束（paper column・設計）／§1.0 ⒜ の T7 の残り（計器）。どれも設計か計器が先で、ユーザー判断 1 つで閉じる小物は §2 F に残っていない（F の残りは Dead-code 監査の手動分と REF 行番号の再採番＝島2 に紐づく繰延）。会話を区切るか: (a) 次の候補はどれもこの 2 便の文脈（歌詞の結び）を使わない／(b) RULES 通読＋2 便で会話は重い／(c) 無関係な島＝**新しい会話が有利**。
-
-## 以下は第802セッションの経緯
-
-### 1.1 第802セッション（2026-10-04・YT-DELL2）
-
-新しい会話・ユーザー「HANDOFF を読んで作業に着手して」。`-Start p802`（HEAD `04413199`・未 push 12）＝full **11025 / 0 / 2 / 11027**。§7 3.5 で第800 を ARCHIVE へ（moved 14 lines）。第801 の候補のうち、ユーザー判断 1 つで閉じる ⒝ F ⑷ から。
-- **§2 F ⑷ `lyrics NAME` が voice を名指し損ねる件＝閉じた（ユーザー決定 2026-10-04＝warning）**。起票（第181）のあとに `sings` の規則が入っていたので、まず今の木で再現した: `test/named-voice-lyrics` の `alt` を `allt` と綴ると診断 0 で `part` 24.87→23.07・`deep` 30.44→28.84（Lab `sessions/p802/f4/typo.lys`）。機構は起票の「第 1 声部へ付け替わる」ではなく**どこにも結ばない行＝均等割りのリードシート行**（`RowBindsToPart` が偽→畳まれない→`CollectRow`）。設問の前に母集団を数えた（使い捨ての `Zz802ProbeTests`・Lab `f4/census.txt`）: ディスク上 **46,382 冊・lyrics 行 1,893・staff の直下で結ばない行 376・そのうち part が名前付き voice を持つもの 0**（自作の 1 冊だけ）。
-- 入れたもの: **LYS6013 `RowNamesNoVoiceOfStaffAbove`（warning）**＝`LyricSingsValidator` が score の直下を歩き、`FoldAdjacentRows` と同じ窓（staff か group の最後の素の staff が開く・畳まれる行は開けたまま・他は閉じる）の中で、結ばない行（行にも定義にも `sings` が無く、名前が part でも voice でもない）が**名前付き voice を持つ part** の直下に在るとき警告する。絵は今までどおり。文面は voice の一覧と直し方 2 つ（track を voice の名前にする／`sings PART`）。voice の表は fold が既に引いている `LyricBindings.VoicesOfPart`（木ごとの CWT）＝打鍵の経路に歩きは足していない。
-- 網: `SingsLyricsTests` に 3 本（出る 1・出ない theory 8・1 つの綴り違いは 1 警告）。`LyricSingsWalkTests` の手書きの本は `lyrics plain` が voice 持ちの part の下に在る＝警告 1 件を主張に書き換えた。毒 4 本（Lab `sessions/p802/poison-*.log`）: voice の無い part でも出す→1 赤／畳まれる行の腕を殺す→4 赤／`sings` を見ない→**最初 0 赤**（`sings m`・`sings alt` は畳まれる腕が先に拾うので条件に観測者が居なかった）→他 part を歌う行 `lyrics allt sings n` を theory に足して 1 赤。
-- 掃き（`p753/sweep-check.ps1` を `p802/` に写した・base＝`p800/exe-head`・head＝`p802/exe-head`・1 側 約 7 分）: **998 冊・診断 1,955 行＝1,955 行・差 0**。陽性対照 `typo.lys` は head で警告 1。
-- **副産物＝新しい起票（§2 F・`sings VOICE` は第 1 声部に付く）**: voice を `sings` で名指すと受理され畳まれるが、verse を voice に結ぶのは track 名だけ。実の本 0 冊。LYS6013 の文面はそのため `sings VOICE` を勧めていない。
-- GRAMMAR.md・GRAMMAR_FOR_LLM.md に 1 文ずつ・CHANGELOG Fixes 1 項。棚卸し 2 枚は再生成して差分なし。
-★ `-End p802 -DiffBase 04413199`（`end1.log`）＝full **11035 / 0 / 2 / 11037**（網 +10＝fact 2・theory 8）・門 全 OK（HANDOFF 439,278 B・残り 10,722）。7.5: Core `+` 80 行・REF 0・OWN 0＝全部が検証器と診断コードの doc（描画・配置の式は 1 行も無い＝意味論の側・RULES §5.2 第751）。7.6: ⒞ LP に対応物が無い側（診断。観測者＝`SingsLyricsTests` の 3 本＋掃き）。7.7: **畳みの窓を検証器がもう 1 度綴っている**（`FoldAdjacentRows` と同じ開閉＝同じ量の 2 つ目の綴り。group の側の LYS6012 が先例で、畳めないのは parser の側が span を持たない spec を歩くから）＝窓の 3 つの閉じ方（tab のあと・staff の前・結び損ねた行のあと）は theory と `OneMisspelling_IsOneWarning` が見ている。guard／fallback なし。commit `a48d93689`（検証器・網・GRAMMAR 2 文書・CHANGELOG）＋ docs の commit。Lab は sessions/p802 を commit。push はユーザー。
-判定: F ⑷ は閉じた。次の候補: ⒜ **§2 F の新規 `sings VOICE`**（この便の文脈＝`RowBindsToPart`・`CollectNoteBound`・`WithLyrics` の上に立つ。読み手は collector と 3 つの exporter＝着手前に数える・実の本 0 冊なので絵は動かないはず）／⒞′ 双子の chords／lyrics 行（5 冊・exporter の設計）／H の束（設計）。会話を区切るか: (a) ⒜ はこの便で読んだコードをそのまま使う＝**続ける側**／(b) 通読（RULES 全文）で会話は重めだが圧縮はまだ起きていない／(c) ⒞′ と H は無関係な島＝どちらでも。⇒ **⒜ ならこの会話で `-Start p803`**。
 
 ## 2. 開いている作業
 
@@ -1908,15 +1908,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   **bar check failed 17 冊**（罠17＝測定から除く既知の仕分け）・
   **skipping zero-duration score 7 冊**・discarding/conflict event 5 冊・
   タブの弦/フレット 1 冊・rest collision 1 冊。**Unattached FingeringEvent は 0**（第2便の直しが 299 冊で保った）。
-  ⇒ ★★★ **`zero-duration` の 7 冊が「測れる面積」の実損**——**LP がその score を丸ごと飛ばす**ので、
-  **その本では何ひとつ突き合わせられない**。**内訳は 2 冊が既知の parse しない fixture**
-  （`multi-movement`・`grammar-2026-06-09`＝§2F の別項）で、**残る 5 冊は chords 行／lyrics 行だけの本**
-  （`lead-sheet` 系 4 冊と `rows-song-sheet`）。
-  ⚠️ **これは黙った穴ではない**——exporter は
-  **`chord row 'prog' is not exported — the twin has no chord row`** と**ちゃんと警告している**
-  （下の規則は守られている）。**新しい欠陥ではなく、既知の穴の*値段*が 5 冊と分かったということ。**
-  ⇒ ★ **chords/lyrics 行を双子に出せると、譜を持たない本 5 冊が測定面積に入る。**
-  ⚠️ §2F 下段の「chords 行 / lyrics 行が `PartReferenceFinder` に無い」と**同じ島**（別の顔）。
+  ⇒ ✅ **`zero-duration` 7 冊のうち chords 行／lyrics 行だけの 5 冊（`lead-sheet` 系 4 冊と `rows-song-sheet`）は閉じていた**（`7b5ec5557`・2026-09-08「the chords and the lyrics reach the twin」）＝第804 が今の木で確かめた: 6 冊（showcase/07 を含む）とも双子が ChordNames／Lyrics を出し、LP 2.26 は全部描く・`zero-duration` 0（Lab `sessions/p804/twin/`）。残る LP の警告は 2 種でどちらも欠陥ではない: `lead-sheet` の行末 `you~`＝「unterminated extender」（`ExtenderTerminator` の註が名指す既知の形）／chords 行の直後に lyrics 行（`lead-sheet`・`rows-song-sheet`）＝「staff-affinities should only decrease」（ChordNames DOWN の次に Lyrics UP・lily/page-layout-problem.cc:1322 が 1 度だけ言う。ばねはどちらの向きでも `nonstaff-nonstaff-spacing`＝:1327-1332）。残る 2 冊は parse しない fixture（§2F の別項）。
   ⚠️ **「exporter が黙って空を返す」欠陥はこれで 6 度目**（第55・56・61・62・63）。
   ⇒ ★ **落とすなら必ず `Warnings` に出す**。**`<>` や空の part 変数を黙って書かない。**
   ⇒ ★ **塞いだら双子 199 本の before/after を全数比較する**（第62セッション ② の手順。
@@ -2249,24 +2241,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   自己監査で自白）。**1.15 は 2 か所独立一致で交差検証済み**。⇒ **0.75 には texture を変えた 2 冊目**
   （行末が `|.` や複縦線／拍子が C や 3/4）**が要る。観測は `courtesy.meter.barline-to-meter` 1 点だけ。**
   モデルに列を足す日はこの 4 つを一緒に見ること（⑵ grouper・⑸ 倍率と同じ「モデル追加が先」型）。
-  ★★★ ⚠️ **2026-08-10（第131セッション）＝ユーザーが目で見つけて起票。乖離は縦線の手前ではなく
-  *拍子の右側*に在る。** 対 `scratch/beamskip/lp-courtesy.ly` と `courtesy.lys`（同じ紙・
-  `c1 | c1 break / time 1/4 / c4 | c4 |` ＝改行位置で拍子が変わる最小の本）:
-
-  | | LP | Lily# |
-  |---|---|---|
-  | 五線 | 8.5358..110.9157 | 8.5358..110.9658 |
-  | 行末の縦線 | 107.921 | 108.426 |
-  | courtesy の拍子 | 108.861 | 109.366 |
-  | **縦線→拍子** | **0.940** | **0.940**（一致） |
-  | **拍子→五線の右端** | **2.055** | **1.600** |
-
-  ⇒ ★★ **`BarlineToCourtesyTime` 側は合っている。足りないのは「拍子の右に取る場所」で 0.455 ss。**
-  Lily# はその分だけ行末群に取る幅が狭く、**手前の音楽を余計に伸ばして縦線が 0.505 右へ寄る**
-  （だから縦線の位置も拍子の位置も同時にずれる——**どちらか片方を定数で直すと嘘の一致になる**）。
-  ⚠️ **台帳に「courtesy 拍子の右側」を測る点は 1 つも無い**。§5.0 のとおり**点が先**。
-  ⚠️ **定数で埋めないこと**（ユーザー判断 2026-08-10）。この ⑷ は⑴⑵⑶ と同じ
-  「paper column モデルの欠落」なので、1 件だけ定数化すると**同じ量の 2 つ目の綴り**を作る。
+  ✅ **⑷ の「拍子の右側 0.455」（第131 起票）は閉じていた＝第804 が今の木で測り直した**: 起票の本（Lab `probes/beamskip/courtesy.lys`・今の文法では `c1 | c1 | break`）で行末の縦線 107.93／拍子 108.87／五線の右端 110.92＝LP 107.92／108.86／110.92。texture を変えた 5 冊（3/4・複縦線・調号・調号＋拍子・2/2）と行中 3 冊も SVG の 2 桁で LP の双子と一致（Lab `sessions/p804/courtesy/tex`）＝第206 の right-edge 0.5 と第376 の五線の inset が閉じていた。**その測り直しで出た唯一の食い違い（取消だけの courtesy）は第804 が直した**（§1.1 第804・台帳 `courtesy.key.cancellation-to-line-end` ほか 3 点）。<!-- ledger: courtesy.key.cancellation-to-line-end = 0 -->⑷ に残るのは譜ごとに違う調の群（移調譜）を列で揃えない件だけ＝⑴⑵⑶ と同じ paper column の束。
   ✅ ~~併せて別件の起票: `beam-auto` の 1 段目は LP と Lily# で改行位置が違う（縦線 3 対 5）~~＝**第801 実測: 20 段とも LP と同じ割り**（Lab `sessions/p801/pair-beamauto.log`）。
   同じ段に別の音楽が載るので、**あの本で行末の x を比べてはいけない**。
   ⚠️ ~~ただし**数値の乖離は現状ゼロ**（合成が厳密なので）——着手根拠は点が出た regime だけ~~
