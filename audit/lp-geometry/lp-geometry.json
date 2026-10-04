@@ -264,6 +264,27 @@
       "residual": 0,
       "why": "EXACT since 2026-10-04 (session 806): closed by the port its prediction names — SpacingRules.MidMeasureChangeGaps floors the LEFT gap at its own min_dist + 0.3 (lily/spring.cc:122 merge_springs, taken for a single wish, lily/spacing-spanner.cc:380-393). No snapshot moved. AS OPENED, one commit earlier: -0.131600 since 2026-10-04 (session 806), the same defect as midmeasure.clef.prev-note-to-clef.flagged-eighth before a mid-measure KEY (score MKE): LilyPond 2.467400. The key's box reaches the neighbours' heights, so min_dist is the flag's reach 2.067400 plus the eighth's 0.1 and the KeySignature's LEFT extra-spacing-width 0 = 2.167400; the floor gives Lily#'s 2.335800 and merge_springs' min + 0.3 gives LilyPond's 2.467400. (The prediction named the shape, not this number: the key's esw of 0 lowers both min and floor against the clef's.) PREDICTION for the port: 0."
     },
+    "midmeasure.clef.clef-to-next-note.sharp-below-clef": {
+      "probe": "barline-spacing.ly",
+      "score": "MCA",
+      "lilypond": 3.146600,
+      "residual": 1.050000,
+      "why": "OPEN since 2026-10-04 (session 807), opened with its cause named and predicted to the digit before reading (+1.0500 = MCS's 4.1966 less MC's 3.1466). A mid-measure bass clef, then a note with a sharp FAR BELOW the clef's box (cis, two ledger lines down; probe barline-spacing.ly, score MCA): LilyPond 3.146600, MC's own number — the sharp tucks under the clef (its ink starts 0.45 left of the clef's ink right) and adds nothing. lily/staff-spacing.cc:210 takes the rod as Paper_column::minimum_distance (lily/paper-column.cc:145-164): the SKYLINE distance between the change column's right skyline (the clef's _change glyph where it stands, +-0.1, scm/output-lib.scm:929-932) and the musical column's left skyline with its conditional accidentals merged in. The clef and the sharp share no height, so the rod is the head's and the stem's, and the space-alist ideal (extra-space 1.0 past the clef) binds, as in MC. Lily# (SpacingRules.RightRod) builds the rod as a BOX — the column's width, its last grob's right extra-spacing-width and the next column's whole leftward reach (MusicalColumnLeftReach), whatever their heights — so it charges the sharp anyway and lifts the gap through :213's 0.3 + rod to MCS's number. Measured on twins (Lab sessions/p807/rod): a sharp below the bass clef and one above it both stand 1.05 right of LilyPond; a sharp on the clef's line and the same notes without a sharp agree to the SVG's two digits. PREDICTION for the port (the rod read off the change column's right skyline and the musical column's left skyline): 0, with MCS and MKL unchanged."
+    },
+    "midmeasure.clef.clef-to-next-note.sharp-on-clef-line": {
+      "probe": "barline-spacing.ly",
+      "score": "MCS",
+      "lilypond": 4.196600,
+      "residual": 0,
+      "why": "The CONTROL of midmeasure.clef.clef-to-next-note.sharp-below-clef (session 807), predicted EXACT before and after the port: the sharp stands on the F line, inside the clef's box, so the skyline distance and the box agree and lily/staff-spacing.cc:213's 0.3 + Paper_column::minimum_distance binds over the space-alist ideal (4.1966 against MC's 3.1466)."
+    },
+    "midmeasure.key.key-to-next-note.flat-below-staff": {
+      "probe": "barline-spacing.ly",
+      "score": "MKL",
+      "lilypond": 6.070000,
+      "residual": 0,
+      "why": "An OBSERVER for the right side of a mid-measure KEY change (session 807), predicted EXACT before and after the port: a flat BELOW the staff (bes) after a change to A major (probe barline-spacing.ly, score MKL). A KeySignature's box is pure-from-neighbor-interface::extra-spacing-height-including-staff (scm/output-lib.scm:976-979): it grows to the staff and the neighbouring columns' pure heights, so — unlike MCA's clef — it meets the flat below the staff and the flat's whole reach enters the rod (6.07 against MK's 5.80). What turns this red: a key box limited to the staff on the right side."
+    },
     "midmeasure.clef.clef-to-next-note": {
       "probe": "barline-spacing.ly",
       "score": "MC",

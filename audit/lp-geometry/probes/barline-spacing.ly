@@ -305,6 +305,24 @@ lay =
 \score { \new Staff { \time 4/4 c'4 g'4. a'8 \clef bass c4 } \lay "MCF" }
 \score { \new Staff { \time 4/4 c'4 g'4. a'8 \key a \major c'4 } \lay "MKE" }
 
+%% MCA / MCS / MKL — the RIGHT side of a mid-measure change: the change column -> next note rod
+%%       (session 807). lily/staff-spacing.cc:210 takes Paper_column::minimum_distance
+%%       (lily/paper-column.cc:145-164) — a SKYLINE distance between the change column's right
+%%       skyline and the musical column's left one (its conditional accidentals merged in) — and
+%%       :213 lifts the gap to 0.3 + that rod when it beats the space-alist ideal.
+%% MCA — a sharp FAR BELOW a mid-measure bass clef (cis, two ledger lines down): the clef's box
+%%       (its _change glyph on the F line, +-0.1) never shares a height with the sharp, so the
+%%       sharp adds nothing and the space-alist ideal binds, as in MC. A rod read as a horizontal
+%%       reach (a box) charges the sharp's width anyway.
+\score { \new Staff { \time 4/4 c'4 d' \clef bass cis,4 d,4 } \lay "MCA" }
+%% MCS — the CONTROL: the same clef, the sharp ON the clef's line (fis, the F line). Here the
+%%       skylines meet at the sharp, and the rod is the box's — the :213 correction binds.
+\score { \new Staff { \time 4/4 c'4 d' \clef bass fis4 g4 } \lay "MCS" }
+%% MKL — a KEY change before a flat BELOW the staff (bes): a KeySignature's box grows to the
+%%       staff and the neighbouring columns' heights (scm/output-lib.scm:976-979), so it meets
+%%       the flat where a clef's would not, and the flat's reach still counts.
+\score { \new Staff { \time 4/4 c'4 d' \key a \major bes4 c'4 } \lay "MKL" }
+
 %% NO mid-measure TIME probe. `\time 3/4` inside a 4/4 bar makes LilyPond restructure the
 %% measures rather than engrave a change column, and the resulting dump is not the thing we
 %% would be comparing against. An uninterpretable probe is worse than no probe: it would

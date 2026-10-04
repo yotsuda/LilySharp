@@ -264,6 +264,19 @@ internal static class LpGeometryProbes
     private static readonly string MCF = Score("c4 g4. a8 clef bass c,4 |", "MCF");
     private static readonly string MKE = Score("c4 g4. a8 key a major c4 |", "MKE");
 
+    // The RIGHT side of a mid-measure change (session 807): the change column -> next note rod
+    // is Paper_column::minimum_distance (lily/staff-spacing.cc:210, lily/paper-column.cc:145-164),
+    // a SKYLINE distance between the change column and the musical column with its accidentals.
+    // LilyPond twin: c'4 d' \clef bass cis,4 d,4 — a sharp FAR BELOW the clef's box: it tucks
+    // under the clef and adds nothing, so the space-alist ideal binds (MC's number).
+    private static readonly string MCA = Score("c4 d clef bass cis,, d,, |", "MCA");
+    // LilyPond twin: c'4 d' \clef bass fis4 g4 — the CONTROL: the sharp on the clef's own line,
+    // where the two skylines meet and the :213 correction binds.
+    private static readonly string MCS = Score("c4 d clef bass fis, g, |", "MCS");
+    // LilyPond twin: c'4 d' \key a \major bes4 c'4 — a flat BELOW the staff after a KEY change:
+    // the key's box reaches the next column's height, so the flat's reach counts.
+    private static readonly string MKL = Score("c4 d key a major bes, c |", "MKL");
+
     // LilyPond twin: c'4 d' \key a \major e'4 f'4   — likewise one measure.
     private static readonly string MK = Score("c4 d key a major e f |", "MK");
 
@@ -14156,6 +14169,12 @@ internal static class LpGeometryProbes
             g => g.FirstClefAfter(g.NoteheadAnchor(2)) - g.NoteheadAnchor(2)),
         new("midmeasure.key.prev-note-to-key.flagged-eighth", MKE,
             g => g.FirstAccidentalAfter(g.NoteheadAnchor(2)) - g.NoteheadAnchor(2)),
+        new("midmeasure.clef.clef-to-next-note.sharp-below-clef", MCA,
+            g => g.NoteheadAnchor(2) - g.FirstNonNoteheadAfter(g.NoteheadAnchor(1))),
+        new("midmeasure.clef.clef-to-next-note.sharp-on-clef-line", MCS,
+            g => g.NoteheadAnchor(2) - g.FirstNonNoteheadAfter(g.NoteheadAnchor(1))),
+        new("midmeasure.key.key-to-next-note.flat-below-staff", MKL,
+            g => g.NoteheadAnchor(2) - g.FirstNonNoteheadAfter(g.NoteheadAnchor(1))),
         new("midmeasure.key.prev-note-to-key", MK,
             g => g.FirstNonNoteheadAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1)),
         new("midmeasure.key.key-to-next-note", MK,
