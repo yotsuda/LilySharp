@@ -79,7 +79,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。→ **第751（2026-10-02・ユーザー決定）「LP 忠実にこだわるより音楽的な妥当性を重視。LP から引き継ぐのはレンダリングとレイアウトの美しさだけ。ユーザーがまだ少ないので過去のしがらみに縛られない」＝意味論（拍子・弱起・反復・強弱・検査・出力の意味）の裁定者は音楽的妥当性、LP は描画と配置の裁定者（RULES §5.2 に規則として置いた）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ★★ **⑼ の残り（第762・ユーザー判断・本は Lab `corpora/dogfood/big/` 4 冊・計器 `sessions/p762/run-big.ps1`＝check＋4 出力＋LP）**: ⑻ 観察（優先低）: 宣言した弱起が短い小節の後に来る形＝LP は `\partial` で併合・頁と XML は弱起を 1 小節に数える（コーパス 0・第761）。／閉じた分（リファクタ A〜C6・綴り A1〜A4・D・同名 section・validator の弱起・XML の番号・割れた小節・StreamFrame・観測者の無い規則・⑽ 予約語・⑼ ⒜〜⒠・⒞′⒞″）は **ARCHIVE 第740〜第777 の各便**・⑺ resume の 2 つ目の出所は第794（第783 が列挙を畳んだ）。計器: Lab `sessions/p742/`（ly／midi／xml／svg の掃き）・`sessions/p753/sweep-check.ps1`（診断の掃き）・`sessions/p762/run-big.ps1`
+- **⑼（第762 起票・dogfood の大きい本 4 冊）は全部閉じた**（最後の 2 つ: ⑺ resume の 2 つ目の出所＝第794・⑻ 宣言した弱起の併合＝第795）。経緯は **ARCHIVE 第740〜第795 の各便**（第783 が列挙を畳んだ）。計器: Lab `sessions/p742/`（ly／midi／xml／svg の掃き）・`sessions/p753/sweep-check.ps1`（診断の掃き）・`sessions/p762/run-big.ps1`（4 冊の check＋4 出力＋LP）・`sessions/p723/svg2/sweep-all.ps1`（全 svg・p795 の `sweep/run-sweeps.ps1` が svg＋xml を束ねる）
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
@@ -116,6 +116,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第795セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザー決定「1 (8)」（本 4 冊は放置・v0.10.0 はまだ）。`-Start p795`（HEAD `8ca1e118`・未 push 36）＝full **11006 / 1 / 2 / 11009**＝赤 1 は `HistoryCitationTests.DeadCitationsDoNotGrow`（947→948・第794 の語りに Lab の commit SHA を書いた＝本体に無い引用）→ 語りの SHA を消して緑（`dead.log`）。§7 3.5 で第793 を ARCHIVE へ。
+- **⑻ の設計（前提として置いた・RULES §5.2 第751）**: 宣言した弱起が直前の短い小節をちょうど 1 小節に補うなら、頁も XML も 1 小節に数える＝弱起は前の不完全小節を完成させる（音楽的慣習）・LP の途中の `\partial` と同じ（第761 実測 1 2 3）・validator（`SectionBoundaryBars`）は既にその対を補完として扱っていた。満杯の小節の後の弱起（第755: 頁・XML・LP 一致で 1 小節）は従来どおり。
+- **直し**: 頁 `SectionBoundaryContinuations` の `cur.IsPickup` 除外を外し、**前の小節が自分の拍子で満杯なら補完しない**の門（`head >= meters[from]`＝2/4 の `g'2 |` の後に 4/4 の `partial 2`）を足した（旧規則の盲点＝拍子は i でしか読んでいなかった）。XML `ContinueSplitBar` の `first.Implicit` 除外を外し、同じ門（play の前の拍子 `barTicksBefore` を revert の前に取る）。頁の絵: probe `d-declared`（p759）が 1 2 3 4 → **1 2 2 3**・XML 1 2 3i 4 → **1 2 2i 3**（`before/`・`after/`）。fixture `partial-pickup`・`partial-barnumber` は svg も xml も不変（弱起は曲頭）。
+- **網**: `SectionBoundarySplitBarTests.ThePage_ADeclaredPickupCompletingTheBarBefore_IsOneBar`（併合・満杯の後の対照・自分の拍子で満杯の対照）・`MusicXmlMeasureNumberingTests` の `…CompletesIt`（旧 `…IsABarOfItsOwn` を反転）＋対照 2（満杯の後・自分の拍子で満杯）。毒 4 本（頁の除外を戻す／XML の除外を戻す／頁の門を外す／XML の門を外す）＝**それぞれ 1 赤・全部別の網**（`poison-a..d.log`）。
+- **掃き**（`sweep/run-sweeps.ps1`＝p723 の全 svg ＋ p742 の xml・base＝p793 の exe-head（HEAD の出力・第794 は出力不変）・head＝`exe-head`）: 998 冊 svg 1199 枚 **差 0**・xml 1199 枚 **差 0**（第761 の国勢調査どおり本物は 0）。
+- CHANGELOG: p759 の項の「宣言した partial は独立」の文を落とし、Fixes に 1 項。棚卸し `APPROXIMATIONS.md` 行番号 3 行・csv 不変。snapshot 不動。
+★ `-End p795 -DiffBase 8ca1e118`（`end.log`）＝full **11010 / 0 / 2 / 11012**（網 +3）・門 全 OK（HANDOFF 441,345 B・残り 8,655）。7.5: Core **`+` 27** 行（`-End` は commit 前で 0 と刷った・numstat 16＋11）・REF 0・OWN 0（ユーザー決定の意味論＝第753 と同じ扱い・LP の `\partial` は実測で裏取り・式は写していない）。7.6: 該当なし（新しい定数なし・既存の規則の射程を広げ、門を 1 つ足した）。7.7: 匂いなし（門は「自分の拍子で満杯」という意味の門で、観測者は毒 c／d の 2 網）。commit `8e9ad797`（code・網・CHANGELOG・棚卸し）＋ docs の commit。Lab は sessions/p795 だけ commit。push はユーザー。
+判定: ⑻ は閉じた＝⑼ は全部閉じた（§1.0 の一覧を 1 行の指標に畳んだ）。次の一手: §1.0 ⒜ に手の動く島は無い（残りは VS Code の手動確認・v0.10.0 の時期＝ユーザー判断・本 4 冊は放置の決定）＝指示待ち。⒝ の設計級（値段の分かっている順に ⒳⁶ span の fold の端だけ化）はユーザーの GO が要る。会話を区切るか: (b) 便が 2 つ・文脈は軽い／(c) 次の島は未定＝**続ける**（指示が出れば `-Start p796`）。
+
+## 以下は第794セッションの経緯
+
 ### 1.1 第794セッション（2026-10-04・YT-DELL2）
 
 新しい会話（HANDOFF を読んで着手＝⑼ の残りの ⑺）。`-Start p794`（HEAD `1204565c`・未 push 34）＝full **10994 / 0 / 2 / 10996**（`run1.trx`）。§7 3.5 で第792 を ARCHIVE へ。ユーザーの本 4 冊（LYS1034）は未修正＝`lysc check` で 4 冊とも error のまま（`sessions/p794/check-user4.log`）。Lab の作業ツリーにはユーザーの未 commit の本の変更が多数＝触らない・commit に混ぜない。
@@ -124,21 +137,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **値段**: 読みは「その header を読む play から後」＝B の header に `partial` を打つと A の 2 小節は残る（adopted 2）・A の key を変えると 0。part の**上**の header は下の編集で動かない（値段 0）。part の**下**の header は上の長さの変わる編集で prefix を断る＝**ディスク上 891 冊中 0 冊がその形（上に置く本は 17 冊）**（`sessions/p794/census-headers.ps1`）。record mode の回数: section play ごとに宣言表を 1 周（文字列比較だけ）。
 - **網**（`CollectEditResumeTests`）: `AKeystrokeInAStandaloneHeaderBelowThePart_ReachesTheResumedCollect` 10 形（header 7＝key 3 種・partial／time／tempo を打つ・header を空に／cell 3＝音を全部消して header 化・どちらかの part の cell に小節を足す）・`…_KeepsTheBarsBeforeItsSection` 3（adopted 2／2／0）。毒 A（`RecordRegistrySourcesOf` を呼ばない）**11 赤**／毒 B（`ShapeWalk` の分類を戻す）**1 赤**（header 化の形だけ＝load-bearing は 1 形）（`poisonA.log`・`poisonB.log`）。cell の header 化は実機では `CollectResumeAbortException`（journal の鍵数が合わない）→ `IncrementalCompiler` が受けて full collect＝健全。`~Resume` 78 本緑。
 - CHANGELOG Fixes 1 項。棚卸し `APPROXIMATIONS.md` 行番号 2 行・csv 不変。snapshot 不動（出力は変わらない＝resume の再利用の判定だけ・掃きは不要）。
-★ `-End p794 -DiffBase 1204565c`（`end.log`）＝full **11007 / 0 / 2 / 11009**（網 +13）・門 全 OK（HANDOFF 442,083 B・残り 7,917）。7.5: Core **`+` 72** 行（作業ツリーの diff＝`-End` は commit 前で 0 と刷った）・REF 0・OWN 0（LP に対応物なし＝resume の基盤・数値なし・第522 と同じ扱い）。7.6: ⒞ 既存の resume の基盤の射程を広げただけ＝新しい出所なし。7.7: `ShapeWalk` が `KeySignature` を「directive だけの run」の印に使う＝kind の二重使用だが、collectable kind は run に畳まれるので素の child がその kind で立つことは無い＝衝突なし（remarks に書いた）・観測者は毒 B の 1 形。commit `fcb3c845`（code・網・CHANGELOG・棚卸し）＋ docs の commit。Lab `8aeb47c9`（sessions/p794 だけ・ユーザーの本の変更は混ぜていない）。push はユーザー。
+★ `-End p794 -DiffBase 1204565c`（`end.log`）＝full **11007 / 0 / 2 / 11009**（網 +13）・門 全 OK（HANDOFF 442,083 B・残り 7,917）。7.5: Core **`+` 72** 行（作業ツリーの diff＝`-End` は commit 前で 0 と刷った）・REF 0・OWN 0（LP に対応物なし＝resume の基盤・数値なし・第522 と同じ扱い）。7.6: ⒞ 既存の resume の基盤の射程を広げただけ＝新しい出所なし。7.7: `ShapeWalk` が `KeySignature` を「directive だけの run」の印に使う＝kind の二重使用だが、collectable kind は run に畳まれるので素の child がその kind で立つことは無い＝衝突なし（remarks に書いた）・観測者は毒 B の 1 形。commit `fcb3c845`（code・網・CHANGELOG・棚卸し）＋ docs の commit。Lab の commit（sessions/p794 だけ・ユーザーの本の変更は混ぜていない）。push はユーザー。
 判定: ⑺ は閉じた（§1.0 から落とした）。§1.0 ⒜ の残りは ⑻（観察・優先低・ユーザー判断）・VS Code の手動確認・v0.10.0 の時期・ユーザーの本 4 冊＝全部ユーザー判断＝次の一手は指示待ち。会話を区切るか: (c) 次の島は未定・この便は 1 便で文脈は軽い＝**続ける**（指示が出れば `-Start p795`）。
-
-## 以下は第793セッションの経緯
-
-### 1.1 第793セッション（2026-10-04・YT-DELL2）
-
-同じ会話の続き・ユーザーが ⑶ の根拠と使い勝手を問い、選択肢 A／B を示して **A「navigation の 10 語は form だけ・music 中はエラー」をユーザー決定（2026-10-04）**。`-Start p793`（HEAD `3696f9e0`・未 push 30）＝full **10999 / 0 / 2 / 11001**。§7 3.5 で第791 を ARCHIVE へ。
-- **根拠の整理（ユーザーへの回答）**: 第775 の「追わない」は実測の不可能ではなく form-level に射程を区切った scoping。08-31 の LYS1034 の線「演奏順を変えるものは form」に照らすと、music 中の跳躍文が書けて黙って追わないのは一貫しない。landmark の途中置きは便利だが、意味を持たせるなら経路が section 内の小節を指す設計（B）が要り、演奏順の情報が 2 か所に散る。証拠: music 中に navigation 語を書いた本は 1177 冊中 11 冊・ほぼ試験形（当初の数え方は 1 冊と読んだが掃きで 4 冊＝下）。
-- **実装（commit caee9639）**: `RepeatStructureScopeValidator` に `NavigationMarkSyntax` の腕（LYS1034・文面は書いた綴りで「form に書け・section を割れ」）・`RepeatStructureKinds` に `NavigationMark`（`TailValidatorKindsTests` の鏡も）。LYS4003（mid-measure 警告）は退役＝`NavigationPlacementValidator`・網・collector の `_navPlacementWarnings`／record／`CollectTailShifter` の腕を削除。collector は music 中の mark を従来どおり描く（エラー本の絵を欠かさない）。LSP: music と drum の補完から navigation 語を外した（form の popup に残る）・LYS1022 の文面は form を名指す。`CompletionAuditTests` 2 本を書き換え・`NavigationMarkMomentTests` の mid-measure は LYS1034 を見る。
-- **fixture**: `test/navigation-marks.lys` を 1 小節 1 section＋`~` 参照の間に印（絶対音高・`fine` を `dc al fine` の前に＝LYS4025 無し）に再切り・`tocoda-label-mirror.lys` の segno を form へ（絵は同一）・`audit/lpreg/probe-coda.lys` も再切り。snapshot 2 枚を再ベース（fixture の書き換え＝幾何の変更ではない・`probes/before|after/`）。
-- **文書**: GRAMMAR（MusicItem から NavMark を外し「NOT A MUSIC ITEM EITHER」の註）・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE（Navigation Marks の段落）・README・site/manual-body.html・CHANGELOG Breaking changes・Diagnostic.cs の LYS1034 の註。棚卸し `APPROXIMATIONS.md` 行番号 4 行・csv 不変。
-- **掃き（`lysc check`・`sessions/p793/check/`・base＝`sessions/p792/exe-head`＝HEAD のコード）**: main 998 冊 **差 5**＝ユーザーの本 4 冊（`Addicted To Love`(36,158) coda・`Billie Jean`(40,159) segno・`ワインレッドの心`(28,369) segno・`残酷な天使のテーゼ`(33,582)(42,219) coda＝旧 LYS4003 の 2 本がエラーに）＋ `probe-coda`（本便で再切り）。dogfood 177 冊 **差 11**＝LYS1022 の文面変更 6 冊・新エラー 5 冊（bare-coda・name-segno・nav-bound・nav-mid・sec-segno＝試験形）。**ユーザーの本 4 冊の修正はユーザー**（Lab）。full **10994 / 0 / 2 / 10996**（網 −5）。
-★ `-End p793 -DiffBase 3696f9e0`（`end.log`）＝full **10994 / 0 / 2 / 10996**・門 全 OK。7.5: Core **`+` 57** 行・REF 0・OWN 0（規則は言語の設計＝LP に対応物なし・数値なし）。7.6: ⒞ 既存の LYS1034 の射程を広げた＝新しい出所なし／⒟ LYS4003 の削除は「観測者＝NavigationPlacementValidatorTests ごと退役」。7.7: 匂いなし。commit caee9639 ＋ docs の commit ＋ **後片付け $c**（ユーザー「不要になったコードが残っていないか確認して」＝MeasureBuilder.AtMeasureBoundary が死んでいた（読み手は消した mid-measure 判定だけ）＝削除・退役した field を名指す履歴コメント 2 か所と SectionBoundaryBars の註を更新・full 不変）。push はユーザー。
-判定: ⒝ 跳躍の 3 軒は全部閉じた（§1.0 から落とした）。次の一手: ⑼ の残り（⑺ resume の probe・⑻ 宣言した弱起が短い小節の後）か、ユーザーの本 4 冊の修正後の確認＝ユーザー判断。会話を区切るか: (b) 便が 5 つ・文脈が重い＝**区切る**（続けるなら `-Start p794`）。
 
 ## 2. 開いている作業
 

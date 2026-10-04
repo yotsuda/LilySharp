@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第793セッションの経緯
+
+### 1.1 第793セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザーが ⑶ の根拠と使い勝手を問い、選択肢 A／B を示して **A「navigation の 10 語は form だけ・music 中はエラー」をユーザー決定（2026-10-04）**。`-Start p793`（HEAD `3696f9e0`・未 push 30）＝full **10999 / 0 / 2 / 11001**。§7 3.5 で第791 を ARCHIVE へ。
+- **根拠の整理（ユーザーへの回答）**: 第775 の「追わない」は実測の不可能ではなく form-level に射程を区切った scoping。08-31 の LYS1034 の線「演奏順を変えるものは form」に照らすと、music 中の跳躍文が書けて黙って追わないのは一貫しない。landmark の途中置きは便利だが、意味を持たせるなら経路が section 内の小節を指す設計（B）が要り、演奏順の情報が 2 か所に散る。証拠: music 中に navigation 語を書いた本は 1177 冊中 11 冊・ほぼ試験形（当初の数え方は 1 冊と読んだが掃きで 4 冊＝下）。
+- **実装（commit caee9639）**: `RepeatStructureScopeValidator` に `NavigationMarkSyntax` の腕（LYS1034・文面は書いた綴りで「form に書け・section を割れ」）・`RepeatStructureKinds` に `NavigationMark`（`TailValidatorKindsTests` の鏡も）。LYS4003（mid-measure 警告）は退役＝`NavigationPlacementValidator`・網・collector の `_navPlacementWarnings`／record／`CollectTailShifter` の腕を削除。collector は music 中の mark を従来どおり描く（エラー本の絵を欠かさない）。LSP: music と drum の補完から navigation 語を外した（form の popup に残る）・LYS1022 の文面は form を名指す。`CompletionAuditTests` 2 本を書き換え・`NavigationMarkMomentTests` の mid-measure は LYS1034 を見る。
+- **fixture**: `test/navigation-marks.lys` を 1 小節 1 section＋`~` 参照の間に印（絶対音高・`fine` を `dc al fine` の前に＝LYS4025 無し）に再切り・`tocoda-label-mirror.lys` の segno を form へ（絵は同一）・`audit/lpreg/probe-coda.lys` も再切り。snapshot 2 枚を再ベース（fixture の書き換え＝幾何の変更ではない・`probes/before|after/`）。
+- **文書**: GRAMMAR（MusicItem から NavMark を外し「NOT A MUSIC ITEM EITHER」の註）・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE（Navigation Marks の段落）・README・site/manual-body.html・CHANGELOG Breaking changes・Diagnostic.cs の LYS1034 の註。棚卸し `APPROXIMATIONS.md` 行番号 4 行・csv 不変。
+- **掃き（`lysc check`・`sessions/p793/check/`・base＝`sessions/p792/exe-head`＝HEAD のコード）**: main 998 冊 **差 5**＝ユーザーの本 4 冊（`Addicted To Love`(36,158) coda・`Billie Jean`(40,159) segno・`ワインレッドの心`(28,369) segno・`残酷な天使のテーゼ`(33,582)(42,219) coda＝旧 LYS4003 の 2 本がエラーに）＋ `probe-coda`（本便で再切り）。dogfood 177 冊 **差 11**＝LYS1022 の文面変更 6 冊・新エラー 5 冊（bare-coda・name-segno・nav-bound・nav-mid・sec-segno＝試験形）。**ユーザーの本 4 冊の修正はユーザー**（Lab）。full **10994 / 0 / 2 / 10996**（網 −5）。
+★ `-End p793 -DiffBase 3696f9e0`（`end.log`）＝full **10994 / 0 / 2 / 10996**・門 全 OK。7.5: Core **`+` 57** 行・REF 0・OWN 0（規則は言語の設計＝LP に対応物なし・数値なし）。7.6: ⒞ 既存の LYS1034 の射程を広げた＝新しい出所なし／⒟ LYS4003 の削除は「観測者＝NavigationPlacementValidatorTests ごと退役」。7.7: 匂いなし。commit caee9639 ＋ docs の commit ＋ **後片付け $c**（ユーザー「不要になったコードが残っていないか確認して」＝MeasureBuilder.AtMeasureBoundary が死んでいた（読み手は消した mid-measure 判定だけ）＝削除・退役した field を名指す履歴コメント 2 か所と SectionBoundaryBars の註を更新・full 不変）。push はユーザー。
+判定: ⒝ 跳躍の 3 軒は全部閉じた（§1.0 から落とした）。次の一手: ⑼ の残り（⑺ resume の probe・⑻ 宣言した弱起が短い小節の後）か、ユーザーの本 4 冊の修正後の確認＝ユーザー判断。会話を区切るか: (b) 便が 5 つ・文脈が重い＝**区切る**（続けるなら `-Start p794`）。
+
 ## 以下は第792セッションの経緯
 
 ### 1.1 第792セッション（2026-10-04・YT-DELL2）
