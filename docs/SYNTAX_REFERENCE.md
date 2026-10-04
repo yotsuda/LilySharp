@@ -861,6 +861,7 @@ paper {
   raggedRight                  // bare flag: lines keep their ideal width
   raggedBottom                 // bare flag: every page keeps its natural system spacing
                                // (default: only the last page does, as in LilyPond)
+  breaksOnly                   // bare flag: break lines and pages only at break / pageBreak
   spacingIncrement 1.2         // horizontal note-spacing unit
   systemSystemSpacing { basicDistance 12  minimumDistance 8  padding 1  stretchability 60 }
   staffStaffSpacing   { basicDistance 9 }

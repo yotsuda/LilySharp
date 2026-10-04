@@ -667,10 +667,12 @@ public class VocabularyPerturbationTests
     [MemberData(nameof(PaperFlags))]
     public void EveryPaperFlagMovesThePage(string flag)
     {
-        if (flag == "raggedBottom")
+        if (flag is "raggedBottom" or "breaksOnly")
         {
             // Against a book that must SPREAD: on a one-page book `raggedBottom` is a no-op
-            // because ragged-last-bottom has already made that page ragged.
+            // because ragged-last-bottom has already made that page ragged — and `breaksOnly`
+            // one on a book that fits a line. Here its 24 written `break`s are no longer
+            // page breaks, so the systems stay on one page.
             AssertMoves(FilledPageBook(""), FilledPageBook(flag), "paper " + flag);
             return;
         }

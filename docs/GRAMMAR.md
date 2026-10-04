@@ -517,7 +517,7 @@ PaperDecl      = 'paper' , [ Identifier ] , PaperBlock ;
 PaperBlock     = '{' , { PaperEntry } , '}' ;
 PaperEntry     = 'size' , ( SizeName | String ) (* a whole page by name - see below *)
                | PaperScalarKey , Length
-               | 'raggedRight' | 'raggedBottom'      (* bare flags - see below *)
+               | 'raggedRight' | 'raggedBottom' | 'breaksOnly'   (* bare flags - see below *)
                | SpacingKey , SpacingBlock ;
 SizeName       = Word-run ;                     (* the GLUED tokens after 'size' read
                                                    as one word - b5 lexes as a pitch
@@ -604,6 +604,13 @@ SignedNumber   = [ '-' ] , ( Integer | Decimal ) ;
    ragged-bottom). Without it only the LAST page is ragged (LilyPond's ragged-last-bottom
    default), so a `pageBreak` that leaves one system on a first page justifies that system
    to the page bottom, half a page below the title — both engines do, by default.
+   `breaksOnly` (owner's decision 2026-10-05) breaks lines and pages ONLY at the written
+   `break` / `pageBreak`: every other bar line is closed to both (LilyPond's
+   line-break-permission and page-break-permission ##f on the Score's columns). For a score
+   copied from a page — an OMR reader writes the original's breaks and this flag — so its
+   systems and pages fall where the original's did. A line that cannot hold its bars is
+   squeezed and a page that cannot hold its systems runs over, as in LilyPond; a plain
+   `break` is not a page break under it.
 
    `stretchability` is unitless (a spring flexibility), so a physical unit on it is
    refused. paperHeight 0 keeps the single content-driven page.

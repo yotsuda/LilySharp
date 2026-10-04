@@ -1281,6 +1281,7 @@ public sealed partial class LilySharpLanguageServer
         "spacingIncrement" => "Horizontal note-spacing unit (default 1.2 staff spaces)",
         "raggedRight" => "Do not justify lines; measures sit at their ideal width",
         "raggedBottom" => "Do not justify pages; systems keep their natural spacing on every page, not only the last",
+        "breaksOnly" => "Break lines and pages only at the written break / pageBreak (a score copied from a page)",
         "systemSystemSpacing" => "Between two consecutive systems",
         "scoreSystemSpacing" => "After a score boundary, before the next system",
         "markupSystemSpacing" => "After a title or markup, before the next system",

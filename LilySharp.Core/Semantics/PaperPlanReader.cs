@@ -99,7 +99,7 @@ internal static class PaperPlanReader
     /// first page — no longer the last — has its one system justified to the page bottom by
     /// LilyPond's own default, so the title sits half a page above the staff.
     /// </remarks>
-    private static readonly string[] FlagKeys = ["raggedRight", "raggedBottom"];
+    private static readonly string[] FlagKeys = ["raggedRight", "raggedBottom", "breaksOnly"];
 
     private static readonly string[] Units = ["mm", "cm", "in"];
 
@@ -300,6 +300,9 @@ internal static class PaperPlanReader
                 options = key switch
                 {
                     "raggedRight" => options with { RaggedRight = true },
+                    // Lines and pages break only at the written break / pageBreak
+                    // (owner's decision 2026-10-05, LilySharp-Omr proposal C3).
+                    "breaksOnly" => options with { BreaksOnly = true },
                     // LILYPOND-REF: ly/paper-defaults-init.ly — ragged-bottom; read by
                     // PageLayouter (every page keeps its systems at natural spacing) and
                     // PageBreaker (the same flag in the breaker's own scoring).

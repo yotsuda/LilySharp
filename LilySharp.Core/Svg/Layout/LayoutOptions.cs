@@ -145,6 +145,20 @@ internal sealed record LayoutOptions
     public bool RaggedRight { get; init; } = false;
 
     /// <summary>
+    /// If true (<c>paper { breaksOnly }</c>), lines and pages break only where the music writes
+    /// <c>break</c> / <c>pageBreak</c>: every other bar line is closed to both
+    /// (<c>Collector.BreaksOnly</c>). For a score copied from a page — an OMR reader writes the
+    /// original's breaks — so its systems and pages fall where the original's did.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grob-properties.scm — line-break-permission /
+    /// page-break-permission; LilyPond spells it <c>\override
+    /// Score.NonMusicalPaperColumn.line-break-permission = ##f</c> (and page-) beside the
+    /// <c>\break</c>s that force theirs. A line that cannot hold its bars is squeezed, as there.
+    /// </remarks>
+    public bool BreaksOnly { get; init; } = false;
+
+    /// <summary>
     /// If true, uses Knuth-Plass optimal line breaking algorithm.
     /// Otherwise uses greedy first-fit algorithm.
     /// </summary>

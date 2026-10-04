@@ -417,6 +417,11 @@ workflow attaches that section to the GitHub Release verbatim.
   scan and the score preview scroll together bar by bar (a bar the page splits in two — one the
   reader wrote too long — keeps the scan on the bar it came from), and the preview frames the
   bars that carry a mark.
+- **`paper { breaksOnly }` breaks lines and pages only where the music says.** Every bar line
+  other than a written `break` / `pageBreak` is closed to both (a plain `break` is then not a
+  page break either), so a score copied from a page — an OMR reader writes the original's
+  breaks and this flag — keeps its systems and pages where the original had them. A line that
+  cannot hold its bars is squeezed, as in LilyPond with the same permissions.
 
 ### Fixes
 

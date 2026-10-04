@@ -239,7 +239,8 @@ public static class SvgGenerator
     private static MultiStaffScore WithShadowedMarksRecorded(MeasureCollector collector, MultiStaffScore score)
     {
         collector.RecordShadowedRehearsalMarks(score);
-        return score;
+        // `paper { breaksOnly }` closes every open break here, the exit both collects share.
+        return Collector.BreaksOnly.Apply(score);
     }
 
     internal static string RenderToSvg(MultiStaffScore score, ScoreLayout layout,
