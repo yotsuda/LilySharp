@@ -1079,6 +1079,10 @@ public sealed class MusicXmlExporter
             list.Add(s);
         }
         WalkForm(structure, byName);
+        // The marks after the last play (`… B dc al fine`) are that play's MarksAfter.
+        if (_xmlPendingMarks.Count > 0 && _printedPlays.Count > 0)
+            _printedPlays[^1] = _printedPlays[^1] with { MarksAfter = Svg.Collector.NavMarkStamp.Encode(_xmlPendingMarks) };
+        _xmlPendingMarks.Clear();
         FinishCarriedTies();
     }
 
@@ -1199,11 +1203,18 @@ public sealed class MusicXmlExporter
     private void BeginPrintedPlay()
     {
         _printedPlays.Add(new Svg.Collector.PrintedPlay(_xmlRole, _xmlRunStart,
-            _xmlRunStart ? _xmlRunCount : 0, _xmlRewind, _xmlEndingPasses));
+            _xmlRunStart ? _xmlRunCount : 0, _xmlRewind, _xmlEndingPasses,
+            Svg.Collector.NavMarkStamp.Encode(_xmlPendingMarks)));
+        _xmlPendingMarks.Clear();
         _xmlRunStart = false;
         _xmlRewind = false;
         _xmlEndingPasses = PassSet.None;
     }
+
+    // The form-level navigation marks met since the last printed play — the next play's
+    // MarksBefore, or the last play's MarksAfter when the form ends on them (WalkForm): what
+    // lets the played order follow the jump texts (Svg.Collector.PlayedOrder).
+    private readonly List<NavigationMarkType> _xmlPendingMarks = new();
 
     /// <summary>Stops every carried tie on the plays that follow its play, retracts the
     /// starts nothing stops, and marks the start no arc leaves as the hanging tie the page
@@ -1504,6 +1515,7 @@ public sealed class MusicXmlExporter
     private void WalkForm(SyntaxNode container, Dictionary<string, List<SectionDeclarationSyntax>> byName)
     {
         _pendingTargetDirections.Clear();
+        _xmlPendingMarks.Clear();
         foreach (var item in FormWalk.Read(container))
         {
             switch (item)
@@ -1524,6 +1536,7 @@ public sealed class MusicXmlExporter
                     });
                     break;
                 case FormWalk.Other { Node: NavigationMarkSyntax nav }:
+                    _xmlPendingMarks.Add(nav.MarkType);
                     ApplyNavMark(nav.MarkType);
                     break;
                 case FormWalk.Other { Node: CustomTextSyntax custom }:

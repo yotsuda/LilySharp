@@ -249,7 +249,7 @@
 - **:933** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Music.cs`
 - **:640** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision 2026-10-02). Any other
-- **:1439** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
+- **:1390** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Streams.cs`
 - **:411** LILYSHARP-OWN: LilyPond has no lead sheet — a staff-less score prints no bar line,
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
@@ -281,8 +281,8 @@
 ### `LilySharp.Core/Music/ShapeChords.cs`
 - **:91** LILYSHARP-OWN: LilyPond has no chord-from-a-shape item.
 ### `LilySharp.Core/MusicXml/MusicXmlExporter.cs`
-- **:1092** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
-- **:5442** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
+- **:1096** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
+- **:5455** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
 ### `LilySharp.Core/MusicXmlImport/LysWriter.cs`
 - **:347** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision; the twin omits it too).
 ### `LilySharp.Core/Parser/Parser.Music.cs`
@@ -328,7 +328,7 @@
 - **:271** LILYSHARP-OWN: a limit of the LANGUAGE, not a geometry — LilyPond's font-size
 - **:279** The range a size may take, in staff spaces. LILYSHARP-OWN, as
 ### `LilySharp.Core/Semantics/FormRoute.cs`
-- **:76** LILYSHARP-OWN: LilyPond's \jump (lily/jump-engraver.cc) is a mark only — its MIDI
+- **:79** LILYSHARP-OWN: LilyPond's \jump (lily/jump-engraver.cc) is a mark only — its MIDI
 ### `LilySharp.Core/Semantics/LayoutPlan.cs`
 - **:264** LILYSHARP-OWN: LilyPond 2.26 has no capo property on its ChordNames context (its
 - **:285** LILYSHARP-OWN: LilyPond has no such list; the twin writes a \markup line of
@@ -344,11 +344,11 @@
 ### `LilySharp.Core/Svg/Collector/MeasureBuilder.cs`
 - **:421** LILYSHARP-OWN (owner's decisions, 2026-10-02, HANDOFF §1.1 第737): a time, key
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:3242** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:5648** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:3269** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:5687** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Form.cs`
-- **:545** `time!` (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so
-- **:815** is not drawn unless written `key!` (MeasureBuilder.SectionHead, LILYSHARP-OWN). At a
+- **:552** `time!` (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so
+- **:822** is not drawn unless written `key!` (MeasureBuilder.SectionHead, LILYSHARP-OWN). At a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.MusicWalk.cs`
 - **:1602** not against the reset the head already stands on (LILYSHARP-OWN): a
 - **:1681** (MeasureBuilder.SectionHead, LILYSHARP-OWN).
@@ -359,7 +359,7 @@
 ### `LilySharp.Core/Svg/Collector/ScoreAssembler.cs`
 - **:175** omission. LILYSHARP-OWN: a `|:` that opens the piece IS printed. LilyPond's default
 ### `LilySharp.Core/Svg/Collector/SectionPlayCarry.cs`
-- **:537** LILYSHARP-OWN: the hanging tie is drawn as a laissez-vibrer tie, LilyPond's short half-tie,
+- **:704** LILYSHARP-OWN: the hanging tie is drawn as a laissez-vibrer tie, LilyPond's short half-tie,
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`
 - **:84** ⚠️ LILYSHARP-OWN GATE, and a DIVERGENCE: LilyPond packs a cue accidental into
 ### `LilySharp.Core/Svg/Collector/TabResolver.cs`

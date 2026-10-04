@@ -141,12 +141,17 @@ internal sealed class SectionBoundaryBars
         _after = new(StringComparer.Ordinal);
         foreach (var form in TopLevelNodes.OfRoot<FormDeclarationSyntax>(_root))
         {
-            var plays = new List<string>();
-            Expand(FormWalk.Read(form), plays);
-            for (int i = 1; i < plays.Count; i++)
+            // The played order off the form — repeats per their passes, the jump texts
+            // followed — through the ONE expansion every reader of it shares
+            // (Svg.Collector.PlayedOrder; until session 792 this class spelled its own, which
+            // stopped at the jump texts).
+            var names = new List<string>();
+            var printed = Svg.Collector.PlayedOrder.PlaysOf(FormWalk.Read(form), names);
+            var played = Svg.Collector.PlayedOrder.Expand(printed);
+            for (int i = 1; i < played.Count; i++)
             {
-                Add(_after, plays[i - 1], plays[i]);
-                Add(_before, plays[i], plays[i - 1]);
+                Add(_after, names[played[i - 1]], names[played[i]]);
+                Add(_before, names[played[i]], names[played[i - 1]]);
             }
         }
 
@@ -155,54 +160,6 @@ internal sealed class SectionBoundaryBars
             if (!map.TryGetValue(key, out var set))
                 map[key] = set = new HashSet<string>(StringComparer.Ordinal);
             set.Add(value);
-        }
-    }
-
-    private static void Expand(IReadOnlyList<FormWalk.Item> items, List<string> plays)
-    {
-        foreach (var item in items)
-        {
-            switch (item)
-            {
-                case FormWalk.SectionRef r:
-                    plays.Add(r.Name);
-                    break;
-                case FormWalk.Ending e:
-                    // A lone ending plays once, as its plain sections.
-                    foreach (var s in e.Sections)
-                        plays.Add(s.Name);
-                    break;
-                case FormWalk.Repeat rep:
-                    ExpandRepeat(rep, plays);
-                    break;
-            }
-        }
-    }
-
-    private static void ExpandRepeat(FormWalk.Repeat rep, List<string> plays)
-    {
-        var body = new List<FormWalk.Item>();
-        var endings = new List<FormWalk.Ending>();
-        foreach (var child in rep.Children)
-        {
-            if (child is FormWalk.Ending e)
-                endings.Add(e);
-            else if (child is FormWalk.SectionRef or FormWalk.Repeat)
-                body.Add(child);
-        }
-        // The run's passes and the ending each plays (RepeatPasses — the MIDI's and the
-        // played order's rule): the written `:|*N`, else the highest number an ending names.
-        var endingPasses = new List<PassSet>(endings.Count);
-        foreach (var e in endings)
-            endingPasses.Add(PassSet.Of(e.Node.Numbers));
-        int turns = RepeatPasses.Count(rep.ExplicitPlayCount, endingPasses);
-        for (int t = 1; t <= turns; t++)
-        {
-            Expand(body, plays);
-            int ending = RepeatPasses.EndingFor(t, endingPasses);
-            if (ending >= 0)
-                foreach (var s in endings[ending].Sections)
-                    plays.Add(s.Name);
         }
     }
 

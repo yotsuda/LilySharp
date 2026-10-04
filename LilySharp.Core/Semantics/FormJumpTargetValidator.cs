@@ -28,7 +28,8 @@ namespace LilySharp.Core.Semantics;
 /// <c>coda</c> after the jump. Each message names the fallback the MIDI takes.
 /// </summary>
 /// <remarks>
-/// The faults are <see cref="FormRoute"/>'s own: <see cref="FormRoute.Of"/> appends one as it
+/// The faults are <see cref="FormRoute"/>'s own:
+/// <see cref="FormRoute.Of(IReadOnlyList{FormWalk.Item}, List{FormRoute.Fault})"/> appends one as it
 /// takes each fallback, on the same walk whose stretches the MIDI plays, so this validator
 /// spells no rule of its own and cannot drift from the sound. Forms are read wherever they
 /// stand (one per scope, <see cref="FormDeclarationValidator"/>'s rule); a file with no

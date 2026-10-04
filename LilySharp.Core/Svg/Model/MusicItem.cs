@@ -146,6 +146,8 @@ internal sealed record MusicItemRare
     public int SectionRepeatCount { get; init; }
     public PassSet SectionEndingPasses { get; init; }
     public bool SectionPlayRewinds { get; init; }
+    public string? SectionPlayMarksBefore { get; init; }
+    public string? SectionPlayMarksAfter { get; init; }
     public bool GraceSlash { get; init; }
     public bool GraceStemDown { get; init; }
     public bool HasPhrasingSlurStart { get; init; }
@@ -322,6 +324,27 @@ public abstract record MusicItem
     {
         get => _rareBase?.SectionPlayRewinds ?? false;
         init { if (value != SectionPlayRewinds) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { SectionPlayRewinds = value }; }
+    }
+
+    /// <summary>On a play's first item: the form-level navigation marks (segno, coda, fine,
+    /// to coda, the jump texts) standing between the play before and this one, in form order —
+    /// <c>Collector.NavMarkStamp</c>'s spelling, null when none. With
+    /// <see cref="SectionPlayMarksAfter"/> it is what lets <see cref="Collector.SectionPlayGraph"/>
+    /// rebuild the form's mark sequence and follow the jump texts (session 792). Content, like
+    /// its siblings: the marks between two plays depend on the form text there alone.</summary>
+    public string? SectionPlayMarksBefore
+    {
+        get => _rareBase?.SectionPlayMarksBefore;
+        init { if (value != SectionPlayMarksBefore) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { SectionPlayMarksBefore = value }; }
+    }
+
+    /// <summary>On the LAST play's first item: the form-level navigation marks standing after
+    /// the last play (<c>… B dc al fine</c>), in form order; null on every other item and when
+    /// the form ends on a play.</summary>
+    public string? SectionPlayMarksAfter
+    {
+        get => _rareBase?.SectionPlayMarksAfter;
+        init { if (value != SectionPlayMarksAfter) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { SectionPlayMarksAfter = value }; }
     }
 
     /// <summary>

@@ -14,10 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Svg.Collector;
 
@@ -31,7 +33,32 @@ public readonly record struct SectionPlayStamp(
     bool RunStart = false,
     int Count = 0,
     bool Rewinds = false,
-    PassSet Passes = default);
+    PassSet Passes = default,
+    // The form-level navigation marks standing between the play before and this one
+    // (NavMarkStamp's spelling), so the played order can follow the jump texts.
+    string? MarksBefore = null);
+
+/// <summary>
+/// The spelling of a run of form-level navigation marks on a play's stamp
+/// (<see cref="MusicItem.SectionPlayMarksBefore"/> / <see cref="MusicItem.SectionPlayMarksAfter"/>):
+/// the <see cref="NavigationMarkType"/> names in form order, joined with <c>|</c>. A string so the
+/// item's rare fields keep their value equality and the stamp stays position-independent content
+/// (the marks between two plays depend on the form text there, not on where in the piece it is).
+/// </summary>
+internal static class NavMarkStamp
+{
+    public static string? Encode(IReadOnlyList<NavigationMarkType> marks)
+        => marks.Count == 0 ? null : string.Join('|', marks);
+
+    public static IEnumerable<NavigationMarkType> Decode(string? stamp)
+    {
+        if (string.IsNullOrEmpty(stamp))
+            yield break;
+        foreach (var word in stamp.Split('|'))
+            if (Enum.TryParse<NavigationMarkType>(word, out var mark))
+                yield return mark;
+    }
+}
 
 /// <summary>Which span a section-boundary complaint is about — the four families a span may
 /// be carried from one section into the next (owner's decision, 2026-09-28), and the four
@@ -333,15 +360,19 @@ internal sealed class SectionPlays
 
 /// <summary>What one printed section play is to the PLAYED order — the input
 /// <see cref="PlayedOrder.Expand"/> rebuilds it from. The page reads it off the stamps
-/// (<see cref="SectionPlayGraph"/>); MusicXML and the LilyPond twin off the form.</summary>
+/// (<see cref="SectionPlayGraph"/>); MusicXML and the LilyPond twin off the form
+/// (<see cref="PlayedOrder.PlaysOf"/>). <paramref name="MarksBefore"/> are the form-level
+/// navigation marks between the play before and this one, <paramref name="MarksAfter"/> those
+/// after the LAST play of the form (<see cref="NavMarkStamp"/>'s spelling, null when none).</summary>
 internal readonly record struct PrintedPlay(SectionRepeatRole Role, bool RunStart, int Count, bool Rewinds,
-    PassSet Passes = default);
+    PassSet Passes = default, string? MarksBefore = null, string? MarksAfter = null);
 
 /// <summary>
 /// The PLAYED order of a form's printed section plays: the order the MIDI plays them in
-/// (<c>MidiExporter.PlayRepeatRun</c> / <c>RepeatFromTheBeginning</c>), as indices into the
-/// printed order. A tie is carried along it (owner's decision 2026-09-28): from the end of a
-/// printed play to the first note of EVERY play that follows it in this order.
+/// (<c>MidiExporter.PlayForm</c> along <see cref="FormRoute"/>, <c>PlayRepeatRun</c>,
+/// <c>RepeatFromTheBeginning</c>), as indices into the printed order. A tie is carried along it
+/// (owner's decision 2026-09-28): from the end of a printed play to the first note of EVERY play
+/// that follows it in this order.
 /// </summary>
 /// <remarks>
 /// A repeat RUN (a block, or a block's part between <c>:|:</c> dividers, or a run a form-level
@@ -351,65 +382,200 @@ internal readonly record struct PrintedPlay(SectionRepeatRole Role, bool RunStar
 /// played the N-th WRITTEN ending on pass N and counted the endings, so a tie out of
 /// <c>[2. C]</c> in <c>|: A [1,3. B] :| [2. C] D</c> was carried into D, which never follows it.
 /// A one-sided form <c>:|</c> plays the piece so far again (without its own earlier rewinds).
-/// Jumps (D.S., D.C.) are not followed, as the MIDI does not follow them.
+/// <para>
+/// THE JUMP TEXTS ARE FOLLOWED (session 792; owner's choice among session 775's candidates):
+/// the marks stamped between the plays (<see cref="PrintedPlay.MarksBefore"/> /
+/// <see cref="PrintedPlay.MarksAfter"/>) rebuild the form's mark sequence, <see cref="FormRoute"/>
+/// reads the route through it — the ONE reading of the signs, the MIDI's — and each stretch is
+/// expanded here: on a first-pass stretch as above; on a REPLAY a run plays once, as its last
+/// pass, and a one-sided <c>:|</c> rewinds nothing. Until this session the four readers of the
+/// played order (this one for the page, MusicXML, the twin, the bar-complement adjacency) stopped
+/// at the jump texts while the MIDI followed them, so a tie at the end of the section before a
+/// <c>ds al coda</c> reached nothing where the MIDI sustained it into the segno's section.
+/// </para>
 /// ⚠️ A one-sided <c>:|</c> at the very END of a form has no play after it to carry the stamp,
 /// so its rewind is not seen here: a tie at the end of such a piece has no successor.
 /// </remarks>
 internal static class PlayedOrder
 {
+    private enum Unit { Mark, Rewind, Single, Run }
+
     public static List<int> Expand(IReadOnlyList<PrintedPlay> plays)
     {
-        var played = new List<int>();
-        var plain = new List<int>(); // the same, without rewinds — what a rewind replays
+        int n = plays.Count;
+        // The form's top-level sequence, rebuilt from the stamps: a mark, a rewind (a one-sided
+        // `:|`), a single play, or a repeat RUN [Start, End) of consecutive printed plays — the
+        // grouping the stamps' roles give (a run continues while the role is a repeat's and no
+        // new run starts and no rewind stands).
+        var units = new List<(Unit Kind, int Start, int End)>();
+        var marks = new List<NavigationMarkType?>();
+        void Add(Unit kind, int start, int end, NavigationMarkType? mark = null)
+        {
+            units.Add((kind, start, end));
+            marks.Add(mark);
+        }
         int i = 0;
-        while (i < plays.Count)
+        while (i < n)
         {
             if (plays[i].Rewinds)
-                played.AddRange(plain);
+                Add(Unit.Rewind, i, i);
+            foreach (var mark in NavMarkStamp.Decode(plays[i].MarksBefore))
+                Add(Unit.Mark, i, i, mark);
             if (plays[i].Role == SectionRepeatRole.None)
             {
-                played.Add(i);
-                plain.Add(i);
+                Add(Unit.Single, i, i + 1);
                 i++;
                 continue;
             }
-            var body = new List<int>();
-            // One list per ending: its sections' plays in order ([1. C D] is two plays) — and
-            // the passes its bracket names, off its first play's stamp.
-            var endings = new List<List<int>>();
-            var endingPasses = new List<PassSet>();
-            int count = plays[i].Count;
             int j = i;
             do
-            {
-                if (plays[j].Role == SectionRepeatRole.Body)
-                    body.Add(j);
-                else if (plays[j].Role == SectionRepeatRole.EndingContinued && endings.Count > 0)
-                    endings[^1].Add(j);
-                else
-                {
-                    endings.Add(new List<int> { j });
-                    endingPasses.Add(plays[j].Passes);
-                }
                 j++;
-            }
-            while (j < plays.Count && plays[j].Role != SectionRepeatRole.None
+            while (j < n && plays[j].Role != SectionRepeatRole.None
                    && !plays[j].RunStart && !plays[j].Rewinds);
-            int passes = RepeatPasses.Count(count > 0 ? count : null, endingPasses);
-            for (int pass = 1; pass <= passes; pass++)
-            {
-                played.AddRange(body);
-                plain.AddRange(body);
-                int ending = RepeatPasses.EndingFor(pass, endingPasses);
-                if (ending >= 0)
-                {
-                    played.AddRange(endings[ending]);
-                    plain.AddRange(endings[ending]);
-                }
-            }
+            Add(Unit.Run, i, j);
             i = j;
         }
+        if (n > 0)
+            foreach (var mark in NavMarkStamp.Decode(plays[n - 1].MarksAfter))
+                Add(Unit.Mark, n, n, mark);
+
+        var played = new List<int>();
+        var plain = new List<int>(); // the first-pass plays so far, without rewinds — what a rewind replays
+        foreach (var stretch in FormRoute.Of(marks))
+        {
+            for (int u = stretch.From; u < stretch.To; u++)
+            {
+                var (kind, start, end) = units[u];
+                switch (kind)
+                {
+                    case Unit.Rewind:
+                        // One rewind per written sign, on the first pass only (MidiExporter.PlayForm).
+                        if (!stretch.Replay)
+                            played.AddRange(plain);
+                        break;
+                    case Unit.Single:
+                        played.Add(start);
+                        if (!stretch.Replay)
+                            plain.Add(start);
+                        break;
+                    case Unit.Run:
+                        ExpandRun(plays, start, end, stretch.Replay, played, plain);
+                        break;
+                }
+            }
+        }
         return played;
+    }
+
+    /// <summary>One repeat run, printed plays <c>[start, end)</c>: its body once per pass and,
+    /// on pass p, the ending whose numbers name p — on a replay, the last pass alone.</summary>
+    private static void ExpandRun(IReadOnlyList<PrintedPlay> plays, int start, int end, bool replay,
+        List<int> played, List<int> plain)
+    {
+        var body = new List<int>();
+        // One list per ending: its sections' plays in order ([1. C D] is two plays) — and
+        // the passes its bracket names, off its first play's stamp.
+        var endings = new List<List<int>>();
+        var endingPasses = new List<PassSet>();
+        int count = plays[start].Count;
+        for (int j = start; j < end; j++)
+        {
+            if (plays[j].Role == SectionRepeatRole.Body)
+                body.Add(j);
+            else if (plays[j].Role == SectionRepeatRole.EndingContinued && endings.Count > 0)
+                endings[^1].Add(j);
+            else
+            {
+                endings.Add(new List<int> { j });
+                endingPasses.Add(plays[j].Passes);
+            }
+        }
+        int passes = RepeatPasses.Count(count > 0 ? count : null, endingPasses);
+        for (int pass = replay ? passes : 1; pass <= passes; pass++)
+        {
+            played.AddRange(body);
+            if (!replay)
+                plain.AddRange(body);
+            int ending = RepeatPasses.EndingFor(pass, endingPasses);
+            if (ending >= 0)
+            {
+                played.AddRange(endings[ending]);
+                if (!replay)
+                    plain.AddRange(endings[ending]);
+            }
+        }
+    }
+
+    /// <summary>
+    /// The printed plays of a form read off its items (<see cref="FormWalk.Read"/>), in printed
+    /// order, with their roles, counts, rewinds, passes and the navigation marks between them —
+    /// the input <see cref="Expand"/> takes, built from the FORM for the readers that have no
+    /// stamps (the LilyPond twin, the bar-complement adjacency). <paramref name="names"/>, when
+    /// given, receives each play's section name. A section of a nested repeat block is not read
+    /// (no reader walks one; the page's block walk has no arm for it either).
+    /// </summary>
+    public static List<PrintedPlay> PlaysOf(IReadOnlyList<FormWalk.Item> items, List<string>? names = null)
+    {
+        var plays = new List<PrintedPlay>();
+        var pending = new List<NavigationMarkType>();
+        bool rewind = false;
+        void Add(string name, SectionRepeatRole role, bool runStart, int count, PassSet passes = default)
+        {
+            plays.Add(new PrintedPlay(role, runStart, runStart ? count : 0, rewind, passes,
+                NavMarkStamp.Encode(pending)));
+            pending.Clear();
+            names?.Add(name);
+            rewind = false;
+        }
+        foreach (var item in items)
+        {
+            switch (item)
+            {
+                case FormWalk.SectionRef s:
+                    Add(s.Name, SectionRepeatRole.None, false, 0);
+                    break;
+                case FormWalk.Ending e:
+                    foreach (var es in e.Sections)
+                        Add(es.Name, SectionRepeatRole.None, false, 0);
+                    break;
+                case FormWalk.LoneRepeatEnd:
+                    rewind = true;
+                    break;
+                case FormWalk.Other { Node: NavigationMarkSyntax nav }:
+                    pending.Add(nav.MarkType);
+                    break;
+                case FormWalk.Repeat rb:
+                    bool runStart = true;
+                    int count = rb.ExplicitPlayCount ?? 0;
+                    foreach (var child in rb.Children)
+                    {
+                        if (child is FormWalk.SectionRef bs)
+                        {
+                            Add(bs.Name, SectionRepeatRole.Body, runStart, count);
+                            runStart = false;
+                        }
+                        else if (child is FormWalk.Ending be)
+                        {
+                            // [1. C D] is two printed plays of ONE ending; its passes ride the first.
+                            var role = SectionRepeatRole.Ending;
+                            var passes = PassSet.Of(be.Node.Numbers);
+                            foreach (var es in be.Sections)
+                            {
+                                Add(es.Name, role, runStart, count, passes);
+                                runStart = false;
+                                role = SectionRepeatRole.EndingContinued;
+                                passes = default;
+                            }
+                        }
+                        else if (child is FormWalk.BothBar)
+                            runStart = true;
+                    }
+                    break;
+            }
+        }
+        if (pending.Count > 0 && plays.Count > 0)
+            plays[^1] = plays[^1] with { MarksAfter = NavMarkStamp.Encode(pending) };
+        return plays;
     }
 
     /// <summary>For each printed play, the printed plays that follow it in the played order.</summary>
@@ -470,7 +636,8 @@ internal sealed class SectionPlayGraph
                 (starts ??= new()).Add((mi, ii));
                 (names ??= new()).Add(item.SectionPlayName);
                 (plays ??= new()).Add(new PrintedPlay(item.SectionRepeatRole, item.SectionRepeatRunStart,
-                    item.SectionRepeatCount, item.SectionPlayRewinds, item.SectionEndingPasses));
+                    item.SectionRepeatCount, item.SectionPlayRewinds, item.SectionEndingPasses,
+                    item.SectionPlayMarksBefore, item.SectionPlayMarksAfter));
             }
         }
         return starts is { Count: > 0 } ? new SectionPlayGraph(starts, names!, PlayedOrder.Successors(plays!)) : null;

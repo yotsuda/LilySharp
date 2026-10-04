@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
 using System.Collections.Generic;
 using LilySharp.Core.Syntax;
 
@@ -64,13 +65,15 @@ namespace LilySharp.Core.Semantics;
 /// are signs).
 /// </para>
 /// <para>
-/// ⚠️ THREE OTHER READERS EXPAND A FORM'S PLAYED ORDER AND DO NOT FOLLOW THE JUMPS — the
-/// page's tie carry (<c>SectionPlayCarry.PlayedOrder</c>, built from the stamped plays), the
-/// bar-complement adjacency (<c>SectionBoundaryBars.Expand</c>) and the MusicXML export's
-/// <c>_xmlRewind</c> (which writes the jump as a <c>&lt;sound&gt;</c> attribute and leaves
-/// following it to the importer). They are named here so the next reader to need the route
-/// takes this one rather than spelling a fourth; whether a tie carried over a jump text
-/// should reach the segno's section is an open question for the owner, not an oversight.
+/// THE OTHER READERS OF A FORM'S PLAYED ORDER FOLLOW THE JUMPS THROUGH THIS CLASS (session 792;
+/// the owner's choice among session 775's candidates): <c>Svg.Collector.PlayedOrder.Expand</c>
+/// rebuilds the form's mark sequence from the marks stamped on the plays and takes the route
+/// from <see cref="Of(IReadOnlyList{NavigationMarkType?}, Action{int, JumpFault})"/>, and the
+/// page's tie carry, the MusicXML tie stops, the twin's <c>\repeatTie</c>s and the bar-complement
+/// adjacency (<c>SectionBoundaryBars</c>) all read that one expansion — so a tie at the end of
+/// the section before a <c>ds al coda</c> now reaches the segno's section, as the MIDI sustains
+/// it. Until then they stopped at the jump texts. MusicXML still writes the jump itself as a
+/// <c>&lt;sound&gt;</c> attribute and leaves following it to the importer.
 /// </para>
 /// <para>
 /// LILYSHARP-OWN: LilyPond's <c>\jump</c> (lily/jump-engraver.cc) is a mark only — its MIDI
@@ -121,16 +124,35 @@ internal static class FormRoute
     /// route the MIDI plays.</summary>
     internal static IReadOnlyList<Stretch> Of(IReadOnlyList<FormWalk.Item> items, List<Fault>? faults = null)
     {
+        var marks = new List<NavigationMarkType?>(items.Count);
+        foreach (var item in items)
+            marks.Add(MarkOf(item));
+        return Of(marks, faults is null ? null : (i, kind) =>
+        {
+            if (items[i] is FormWalk.Other { Node: NavigationMarkSyntax nav })
+                faults.Add(new Fault(nav, kind));
+        });
+    }
+
+    /// <summary>The route through a sequence of positions of which some are the form's
+    /// navigation marks (<paramref name="marks"/>[i], null for anything else — a section play,
+    /// a repeat run, a one-sided <c>:|</c>). The spelling the page's stamps rebuild
+    /// (<c>Svg.Collector.PlayedOrder</c>) and <see cref="FormWalk"/>'s items share: the ONE
+    /// reading of the signs. <paramref name="report"/>, when given, is told each landmark a jump
+    /// text asked for and did not find (the jump's index and the fault).</summary>
+    internal static IReadOnlyList<Stretch> Of(IReadOnlyList<NavigationMarkType?> marks,
+        Action<int, JumpFault>? report = null)
+    {
         var route = new List<Stretch>();
-        int n = items.Count;
+        int n = marks.Count;
         int segno = -1; // the last segno the first pass met (its index)
         int start = 0;  // where the first-pass stretch being walked began
         int i = 0;
         while (i < n)
         {
-            if (MarkOf(items[i]) == NavigationMarkType.Segno)
+            if (marks[i] == NavigationMarkType.Segno)
                 segno = i;
-            if (JumpOf(items[i]) is not { } jump)
+            if (JumpOf(marks[i]) is not { } jump)
             {
                 i++;
                 continue;
@@ -140,7 +162,7 @@ internal static class FormRoute
             int from = jump.DaCapo ? 0 : segno >= 0 ? segno + 1 : -1;
             if (from < 0)
             {
-                Report(faults, items[i], JumpFault.NoSegno);
+                report?.Invoke(i, JumpFault.NoSegno);
                 i++;
                 continue;
             }
@@ -150,41 +172,35 @@ internal static class FormRoute
             int to = i;
             if (jump.AlFine)
             {
-                if (IndexOf(items, NavigationMarkType.Fine, from, i) is { } fine)
+                if (IndexOf(marks, NavigationMarkType.Fine, from, i) is { } fine)
                     to = fine;
                 else
-                    Report(faults, items[i], JumpFault.NoFine);
+                    report?.Invoke(i, JumpFault.NoFine);
             }
             else if (jump.AlCoda)
             {
-                if (IndexOf(items, NavigationMarkType.ToCoda, from, i) is { } toCoda)
+                if (IndexOf(marks, NavigationMarkType.ToCoda, from, i) is { } toCoda)
                     to = toCoda;
                 else
-                    Report(faults, items[i], JumpFault.NoToCoda);
+                    report?.Invoke(i, JumpFault.NoToCoda);
             }
             Add(route, from, to, replay: true);
 
             if (jump.AlFine)
                 return route; // the piece ends at Fine (or at the jump, with no Fine to stop at)
 
-            if (jump.AlCoda && IndexOf(items, NavigationMarkType.Coda, i + 1, n) is { } coda)
+            if (jump.AlCoda && IndexOf(marks, NavigationMarkType.Coda, i + 1, n) is { } coda)
                 start = coda + 1;
             else
             {
                 if (jump.AlCoda)
-                    Report(faults, items[i], JumpFault.NoCoda);
+                    report?.Invoke(i, JumpFault.NoCoda);
                 start = i + 1;
             }
             i = start;
         }
         Add(route, start, n, replay: false);
         return route;
-    }
-
-    private static void Report(List<Fault>? faults, FormWalk.Item jump, JumpFault kind)
-    {
-        if (faults is not null && jump is FormWalk.Other { Node: NavigationMarkSyntax nav })
-            faults.Add(new Fault(nav, kind));
     }
 
     /// <summary>Whether <paramref name="item"/> is the form-level <c>segno</c> sign — the point a
@@ -197,10 +213,10 @@ internal static class FormRoute
             route.Add(new Stretch(from, to, replay));
     }
 
-    private static int? IndexOf(IReadOnlyList<FormWalk.Item> items, NavigationMarkType type, int from, int to)
+    private static int? IndexOf(IReadOnlyList<NavigationMarkType?> marks, NavigationMarkType type, int from, int to)
     {
         for (int k = from; k < to; k++)
-            if (MarkOf(items[k]) == type)
+            if (marks[k] == type)
                 return k;
         return null;
     }
@@ -208,7 +224,7 @@ internal static class FormRoute
     private static NavigationMarkType? MarkOf(FormWalk.Item item)
         => item is FormWalk.Other { Node: NavigationMarkSyntax nav } ? nav.MarkType : null;
 
-    private static Jump? JumpOf(FormWalk.Item item) => MarkOf(item) switch
+    private static Jump? JumpOf(NavigationMarkType? mark) => mark switch
     {
         NavigationMarkType.DaCapo => new Jump(DaCapo: true, AlFine: false, AlCoda: false),
         NavigationMarkType.DaCapoAlFine => new Jump(DaCapo: true, AlFine: true, AlCoda: false),

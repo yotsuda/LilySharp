@@ -69,6 +69,11 @@ public sealed partial class MeasureCollector
     private bool _pendingRewind;
     // The passes the NEXT play's ending bracket names ([1-2. B] is {1, 2}); none for a body.
     private Semantics.PassSet _pendingPasses;
+    // The form-level navigation marks met since the last play — stamped on the next play as
+    // MarksBefore; those left when the form ends are the last play's MarksAfter
+    // (_formTrailingMarks, stamped when the voice is finished: StampTrailingMarks).
+    private readonly List<NavigationMarkType> _pendingMarks = new();
+    private string? _formTrailingMarks;
 
     private void ProcessRepeatBlockCore(FormRepeatBlockSyntax repeat, Action<MusicSiteList> processNodes, MeasureBuilder builder)
     {
@@ -355,11 +360,13 @@ public sealed partial class MeasureCollector
         _invocationInSection = 0;
         // Consumed at every play, live or skipped, so a resumed walk reads the same edges.
         var playStamp = new SectionPlayStamp(_pendingFormEdge, section.SectionName, _pendingRole,
-            _pendingRunStart, _pendingRunStart ? _pendingRunCount : 0, _pendingRewind, _pendingPasses);
+            _pendingRunStart, _pendingRunStart ? _pendingRunCount : 0, _pendingRewind, _pendingPasses,
+            NavMarkStamp.Encode(_pendingMarks));
         _pendingFormEdge = SectionPlayEdge.Sequential;
         _pendingRunStart = false;
         _pendingRewind = false;
         _pendingPasses = default;
+        _pendingMarks.Clear();
         // A spliced walk adopted every remaining section — prologue, music,
         // padding epilogue — inside the recorded tail (the end checkpoint
         // carries the section maps and metadata the prologue would write).

@@ -473,6 +473,7 @@ internal sealed class MeasureBuilder
             SectionRepeatCount = play.Count,
             SectionEndingPasses = play.Passes,
             SectionPlayRewinds = play.Rewinds,
+            SectionPlayMarksBefore = play.MarksBefore,
         };
     }
 

@@ -317,6 +317,14 @@ workflow attaches that section to the GitHub Release verbatim.
   written in a section's music, are drawn and not followed, as every mark was until now.
   The page, MusicXML (`<sound dalsegno="segno">` …) and the LilyPond twin (`\jump`) are
   unchanged.
+- **A tie is carried along the route the jump texts give.** The page, MusicXML and the
+  LilyPond twin carried a tie at the end of a section to the sections played next — back to a
+  `|:`, into a later ending — but stopped at a `dc` / `ds`: in `I segno A fine B ds al fine`
+  the tie that ends B reached nothing, while the MIDI sustained it into A on the replay. All
+  three now follow the same route the MIDI plays (a repeat tie on A's first note, a hanging tie
+  on B's), a target on another pitch is LYS4007 as every carried tie's is, and a bar a section
+  boundary splits is judged by the neighbours the route gives (`A to coda B dc al coda coda C`:
+  C follows A, so A's short last bar and C's short first bar are one bar).
 - **A jump text whose landmark is missing says so** (`LYS4025`). A `ds` with no `segno`
   before it, an `al fine` with no `fine` on the replayed stretch, an `al coda` with no
   `to coda` on it or no `coda` after the jump — each of these had a silent fallback (the

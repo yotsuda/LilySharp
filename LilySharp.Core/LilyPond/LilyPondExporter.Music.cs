@@ -876,59 +876,10 @@ public sealed partial class LilyPondExporter
     private HashSet<int> RepeatTiePlays(IReadOnlyList<FormWalk.Item> items,
         Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName)
     {
-        var plays = new List<Svg.Collector.PrintedPlay>();
+        // The plays and the marks between them off the form — the one builder every
+        // stamp-less reader shares (PlayedOrder.PlaysOf); the jump texts are followed.
         var names = new List<string>();
-        bool rewind = false;
-        void Add(string name, Svg.Model.SectionRepeatRole role, bool runStart, int count,
-            Semantics.PassSet passes = default)
-        {
-            plays.Add(new Svg.Collector.PrintedPlay(role, runStart, runStart ? count : 0, rewind, passes));
-            names.Add(name);
-            rewind = false;
-        }
-        foreach (var item in items)
-        {
-            switch (item)
-            {
-                case FormWalk.SectionRef s:
-                    Add(s.Name, Svg.Model.SectionRepeatRole.None, false, 0);
-                    break;
-                case FormWalk.Ending e:
-                    foreach (var es in e.Sections)
-                        Add(es.Name, Svg.Model.SectionRepeatRole.None, false, 0);
-                    break;
-                case FormWalk.LoneRepeatEnd:
-                    rewind = true;
-                    break;
-                case FormWalk.Repeat rb:
-                    bool runStart = true;
-                    int count = rb.ExplicitPlayCount ?? 0;
-                    foreach (var child in rb.Children)
-                    {
-                        if (child is FormWalk.SectionRef bs)
-                        {
-                            Add(bs.Name, Svg.Model.SectionRepeatRole.Body, runStart, count);
-                            runStart = false;
-                        }
-                        else if (child is FormWalk.Ending be)
-                        {
-                            // [1. C D] is two printed plays of ONE ending; its passes ride the first.
-                            var role = Svg.Model.SectionRepeatRole.Ending;
-                            var passes = Semantics.PassSet.Of(be.Node.Numbers);
-                            foreach (var es in be.Sections)
-                            {
-                                Add(es.Name, role, runStart, count, passes);
-                                runStart = false;
-                                role = Svg.Model.SectionRepeatRole.EndingContinued;
-                                passes = default;
-                            }
-                        }
-                        else if (child is FormWalk.BothBar)
-                            runStart = true;
-                    }
-                    break;
-            }
-        }
+        var plays = Svg.Collector.PlayedOrder.PlaysOf(items, names);
         var result = new HashSet<int>();
         var successors = Svg.Collector.PlayedOrder.Successors(plays);
         for (int q = 0; q < plays.Count; q++)

@@ -2546,12 +2546,39 @@ public sealed partial class MeasureCollector
 
     /// <summary>Gives a voice's ties carried over a repeat their repeat ties and hanging ties
     /// (<see cref="SectionTieCarry"/>), in place.</summary>
-    private static void ApplySectionTieCarry(List<Measure> measures)
+    private void ApplySectionTieCarry(List<Measure> measures)
     {
+        StampTrailingMarks(measures);
         var carried = SectionTieCarry.Apply(measures.ToImmutableArray());
         for (int i = 0; i < measures.Count; i++)
             if (!ReferenceEquals(carried[i], measures[i]))
                 measures[i] = carried[i];
+    }
+
+    /// <summary>Stamps the navigation marks that stand after the form's last play
+    /// (<see cref="_formTrailingMarks"/>, ProcessForm) on the LAST play's first item
+    /// (<see cref="MusicItem.SectionPlayMarksAfter"/>) — the one stamp a play cannot carry as it
+    /// opens, since the marks come after it. Idempotent, so a resumed collect that re-finishes
+    /// the voice stamps the same value; nothing to do when the form ends on a play.</summary>
+    private void StampTrailingMarks(List<Measure> measures)
+    {
+        if (_formTrailingMarks is not { } marks)
+            return;
+        for (int mi = measures.Count - 1; mi >= 0; mi--)
+        {
+            var items = measures[mi].Items;
+            for (int ii = items.Length - 1; ii >= 0; ii--)
+            {
+                if (items[ii].BeginsSectionPlay == SectionPlayEdge.None)
+                    continue;
+                if (items[ii].SectionPlayMarksAfter != marks)
+                    measures[mi] = measures[mi] with
+                    {
+                        Items = items.SetItem(ii, items[ii] with { SectionPlayMarksAfter = marks }),
+                    };
+                return;
+            }
+        }
     }
 
     /// <summary>
@@ -3396,6 +3423,8 @@ public sealed partial class MeasureCollector
         // fresh instance, so this only matters for reuse via the public API.)
         _lyricsRowNames = new();
         _form = null;
+        _pendingMarks.Clear();
+        _formTrailingMarks = null;
         _filePartial = null;
         _root = null;
         _octave.ResetAll();
@@ -4139,6 +4168,8 @@ public sealed partial class MeasureCollector
         _pendingRunStart = false;
         _pendingRewind = false;
         _pendingPasses = default;
+        _pendingMarks.Clear();
+        _formTrailingMarks = null;
         _formDividerOpen = false;
         _formDividerClosed = false;
         _dividerEnding = null;
@@ -4218,9 +4249,13 @@ public sealed partial class MeasureCollector
                 // boundary of the section just played.
                 case NavigationMarkSyntax nav when !IsInsideRepeatBlock(nav):
                     // A jump lands here or leaves from here: no slur, phrasing slur or hairpin
-                    // is carried over this edge. (A tie is carried along the played order,
-                    // which does not follow jumps — neither does the MIDI.)
+                    // is carried over this edge. A tie is carried along the played order, which
+                    // FOLLOWS the jump texts (session 792) — the mark is stamped on the next
+                    // play (MarksBefore; the last play's MarksAfter when none follows) so the
+                    // page can rebuild the form's mark sequence (PlayedOrder, FormRoute).
+                    // Bookkeeping, set live or not, like _pendingRewind.
                     MarkFormEdge(SectionPlayEdge.Repeat);
+                    _pendingMarks.Add(nav.MarkType);
                     // Record mode: the mark BURNS the form line's position (its data-pos)
                     // into the cumulative table a prefix resume adopts unshifted, and the
                     // form line sits below the music — so, like a section header, it is
@@ -4359,6 +4394,10 @@ public sealed partial class MeasureCollector
                     break;
             }
         }
+        // The marks after the form's last play (`… B dc al fine`): the last play's MarksAfter,
+        // stamped when the voice is finished (StampTrailingMarks).
+        _formTrailingMarks = NavMarkStamp.Encode(_pendingMarks);
+        _pendingMarks.Clear();
     }
 
     /// <summary>Source offset of a section's <c>section X</c> declaration (0 if the
