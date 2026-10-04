@@ -348,6 +348,90 @@
       "residual": 0,
       "why": "EXACT on its first reading (session 809), and only because Lily# hangs every mid-measure change from the main note by the clef -> note gap (3.146600): here LilyPond's clef really does stand at the main note's moment with no 0.8, where in MCG it does not. The point is the order's control: the literal port must keep it at 0 while it moves MCG's clef."
     },
+    "midmeasure.force.stretch.clef.control": {
+      "probe": "midmeasure-force.ly",
+      "score": "MFCJ",
+      "lilypond": 10.395051,
+      "residual": 1.088429011,
+      "why": "OPEN since session 810 (read before the port as its baseline). Cause: Lily# carries a mid-measure change column's two gaps on ONE timing spring with the duration spring's strengths, and hangs the glyph back from the next note by the force-0 right gap (SpacingRules.MidMeasureChangeGaps, its 'NOT modelled' remark). LilyPond's change column is a NonMusicalPaperColumn with a Note_spacing spring before it (lily/note-spacing.cc:42-115, strengths the duration spring's) and a Staff_spacing spring after it (lily/staff-spacing.cc:117-221: stretch ideal - fixed for extra-space, 0 for shrink-space; compress ideal - fixed), each with its own column rod (lily/spacing-spanner.cc:228-297). The force's witness: the line is stiffer by the clef's right spring (stretch 1.0), so the rest of the bar takes its share. PREDICTION: 0 once the change column is a series spring of LilyPond's two."
+    },
+    "midmeasure.force.stretch.clef.prev-note-to-clef": {
+      "probe": "midmeasure-force.ly",
+      "score": "MFCJ",
+      "lilypond": 9.646028,
+      "residual": 1.088429511,
+      "why": "OPEN since session 810 (read before the port as its baseline). Cause: Lily# carries a mid-measure change column's two gaps on ONE timing spring with the duration spring's strengths, and hangs the glyph back from the next note by the force-0 right gap (SpacingRules.MidMeasureChangeGaps, its 'NOT modelled' remark). LilyPond's change column is a NonMusicalPaperColumn with a Note_spacing spring before it (lily/note-spacing.cc:42-115, strengths the duration spring's) and a Staff_spacing spring after it (lily/staff-spacing.cc:117-221: stretch ideal - fixed for extra-space, 0 for shrink-space; compress ideal - fixed), each with its own column rod (lily/spacing-spanner.cc:228-297). LilyPond's left spring stretches at the quarter's 1.698045 (9.646028 = 2.253222 + 4.353716 x 1.698045); Lily#'s takes the whole slot's stretch. PREDICTION: 0."
+    },
+    "midmeasure.force.stretch.clef.clef-to-next-note": {
+      "probe": "midmeasure-force.ly",
+      "score": "MFCJ",
+      "lilypond": 7.500316,
+      "residual": -4.353716,
+      "why": "OPEN since session 810 (read before the port as its baseline). Cause: Lily# carries a mid-measure change column's two gaps on ONE timing spring with the duration spring's strengths, and hangs the glyph back from the next note by the force-0 right gap (SpacingRules.MidMeasureChangeGaps, its 'NOT modelled' remark). LilyPond's change column is a NonMusicalPaperColumn with a Note_spacing spring before it (lily/note-spacing.cc:42-115, strengths the duration spring's) and a Staff_spacing spring after it (lily/staff-spacing.cc:117-221: stretch ideal - fixed for extra-space, 0 for shrink-space; compress ideal - fixed), each with its own column rod (lily/spacing-spanner.cc:228-297). Exactly LilyPond's force x the clef's right-spring stretch 1.0 (extra-space: ideal - fixed = 1.0, staff-spacing.cc:174-175, :200): Lily# draws the force-0 gap 3.146600. PREDICTION: 0, and the glyph's x read from the solved right part rather than the force-0 gap."
+    },
+    "midmeasure.force.stretch.key.control": {
+      "probe": "midmeasure-force.ly",
+      "score": "MFKJ",
+      "lilypond": 10.723209,
+      "residual": -0.000000418,
+      "why": "OPEN since session 810 (read before the port as its baseline). Cause: Lily# carries a mid-measure change column's two gaps on ONE timing spring with the duration spring's strengths, and hangs the glyph back from the next note by the force-0 right gap (SpacingRules.MidMeasureChangeGaps, its 'NOT modelled' remark). LilyPond's change column is a NonMusicalPaperColumn with a Note_spacing spring before it (lily/note-spacing.cc:42-115, strengths the duration spring's) and a Staff_spacing spring after it (lily/staff-spacing.cc:117-221: stretch ideal - fixed for extra-space, 0 for shrink-space; compress ideal - fixed), each with its own column rod (lily/spacing-spanner.cc:228-297). EXACT at the baseline: a key's right spring does not stretch (shrink-space, staff-spacing.cc:188-192), so one spring with the left's stretch IS LilyPond's under stretch. The control of MFCJ; PREDICTION: stays 0 through the port."
+    },
+    "midmeasure.force.stretch.key.prev-note-to-key": {
+      "probe": "midmeasure-force.ly",
+      "score": "MFKJ",
+      "lilypond": 9.924186,
+      "residual": 0.000000083,
+      "why": "OPEN since session 810 (read before the port as its baseline). Cause: Lily# carries a mid-measure change column's two gaps on ONE timing spring with the duration spring's strengths, and hangs the glyph back from the next note by the force-0 right gap (SpacingRules.MidMeasureChangeGaps, its 'NOT modelled' remark). LilyPond's change column is a NonMusicalPaperColumn with a Note_spacing spring before it (lily/note-spacing.cc:42-115, strengths the duration spring's) and a Staff_spacing spring after it (lily/staff-spacing.cc:117-221: stretch ideal - fixed for extra-space, 0 for shrink-space; compress ideal - fixed), each with its own column rod (lily/spacing-spanner.cc:228-297). EXACT at the baseline (see midmeasure.force.stretch.key.control). PREDICTION: stays 0."
+    },
+    "midmeasure.force.stretch.key.key-to-next-note": {
+      "probe": "midmeasure-force.ly",
+      "score": "MFKJ",
+      "lilypond": 5.800000,
+      "residual": 0,
+      "why": "OPEN since session 810 (read before the port as its baseline). Cause: Lily# carries a mid-measure change column's two gaps on ONE timing spring with the duration spring's strengths, and hangs the glyph back from the next note by the force-0 right gap (SpacingRules.MidMeasureChangeGaps, its 'NOT modelled' remark). LilyPond's change column is a NonMusicalPaperColumn with a Note_spacing spring before it (lily/note-spacing.cc:42-115, strengths the duration spring's) and a Staff_spacing spring after it (lily/staff-spacing.cc:117-221: stretch ideal - fixed for extra-space, 0 for shrink-space; compress ideal - fixed), each with its own column rod (lily/spacing-spanner.cc:228-297). EXACT at the baseline: 5.8 at any positive force (shrink-space). PREDICTION: stays 0."
+    },
+    "midmeasure.force.compress.clef.control": {
+      "probe": "midmeasure-force.ly",
+      "score": "MFCC",
+      "lilypond": 2.478786,
+      "residual": -0.045643814,
+      "why": "OPEN since session 810 (read before the port as its baseline). Cause: Lily# carries a mid-measure change column's two gaps on ONE timing spring with the duration spring's strengths, and hangs the glyph back from the next note by the force-0 right gap (SpacingRules.MidMeasureChangeGaps, its 'NOT modelled' remark). LilyPond's change column is a NonMusicalPaperColumn with a Note_spacing spring before it (lily/note-spacing.cc:42-115, strengths the duration spring's) and a Staff_spacing spring after it (lily/staff-spacing.cc:117-221: stretch ideal - fixed for extra-space, 0 for shrink-space; compress ideal - fixed), each with its own column rod (lily/spacing-spanner.cc:228-297). The force's witness on a 36mm line. LilyPond's force is -0.308270 (the control and the left spring both close at the quarter's 1.698045: 3.002245 -> 2.478786, 2.253222 -> 1.729764), and its right spring closes at ideal - fixed = 0.5 (fixed 2.6466 after the :213 correction). PREDICTION: 0."
+    },
+    "midmeasure.force.compress.clef.prev-note-to-clef": {
+      "probe": "midmeasure-force.ly",
+      "score": "MFCC",
+      "lilypond": 1.729764,
+      "residual": 0.004300843,
+      "why": "OPEN since session 810 (read before the port as its baseline). Cause: Lily# carries a mid-measure change column's two gaps on ONE timing spring with the duration spring's strengths, and hangs the glyph back from the next note by the force-0 right gap (SpacingRules.MidMeasureChangeGaps, its 'NOT modelled' remark). LilyPond's change column is a NonMusicalPaperColumn with a Note_spacing spring before it (lily/note-spacing.cc:42-115, strengths the duration spring's) and a Staff_spacing spring after it (lily/staff-spacing.cc:117-221: stretch ideal - fixed for extra-space, 0 for shrink-space; compress ideal - fixed), each with its own column rod (lily/spacing-spanner.cc:228-297). See midmeasure.force.compress.clef.control. PREDICTION: 0."
+    },
+    "midmeasure.force.compress.clef.clef-to-next-note": {
+      "probe": "midmeasure-force.ly",
+      "score": "MFCC",
+      "lilypond": 2.992464,
+      "residual": 0.154136,
+      "why": "OPEN since session 810 (read before the port as its baseline). Cause: Lily# carries a mid-measure change column's two gaps on ONE timing spring with the duration spring's strengths, and hangs the glyph back from the next note by the force-0 right gap (SpacingRules.MidMeasureChangeGaps, its 'NOT modelled' remark). LilyPond's change column is a NonMusicalPaperColumn with a Note_spacing spring before it (lily/note-spacing.cc:42-115, strengths the duration spring's) and a Staff_spacing spring after it (lily/staff-spacing.cc:117-221: stretch ideal - fixed for extra-space, 0 for shrink-space; compress ideal - fixed), each with its own column rod (lily/spacing-spanner.cc:228-297). LilyPond closes the right gap by force x 0.5 (3.146600 -> 2.992464); Lily# hangs the glyph at the force-0 gap. PREDICTION: 0."
+    },
+    "midmeasure.force.compress.key.control": {
+      "probe": "midmeasure-force.ly",
+      "score": "MFKC",
+      "lilypond": 1.604200,
+      "residual": 0,
+      "why": "OPEN since session 810 (read before the port as its baseline). Cause: Lily# carries a mid-measure change column's two gaps on ONE timing spring with the duration spring's strengths, and hangs the glyph back from the next note by the force-0 right gap (SpacingRules.MidMeasureChangeGaps, its 'NOT modelled' remark). LilyPond's change column is a NonMusicalPaperColumn with a Note_spacing spring before it (lily/note-spacing.cc:42-115, strengths the duration spring's) and a Staff_spacing spring after it (lily/staff-spacing.cc:117-221: stretch ideal - fixed for extra-space, 0 for shrink-space; compress ideal - fixed), each with its own column rod (lily/spacing-spanner.cc:228-297). EXACT at the baseline: this quarter is at its floor in both engines on the 36mm line. PREDICTION: stays 0."
+    },
+    "midmeasure.force.compress.key.prev-note-to-key": {
+      "probe": "midmeasure-force.ly",
+      "score": "MFKC",
+      "lilypond": 1.504200,
+      "residual": -1.114597313,
+      "why": "OPEN since session 810 (read before the port as its baseline). Cause: Lily# carries a mid-measure change column's two gaps on ONE timing spring with the duration spring's strengths, and hangs the glyph back from the next note by the force-0 right gap (SpacingRules.MidMeasureChangeGaps, its 'NOT modelled' remark). LilyPond's change column is a NonMusicalPaperColumn with a Note_spacing spring before it (lily/note-spacing.cc:42-115, strengths the duration spring's) and a Staff_spacing spring after it (lily/staff-spacing.cc:117-221: stretch ideal - fixed for extra-space, 0 for shrink-space; compress ideal - fixed), each with its own column rod (lily/spacing-spanner.cc:228-297). LilyPond's left spring stops at its column rod 1.504200 (padding 0.1 over the previous column's right skyline against the key's box, separation-item.cc:47-68); Lily# compresses the whole slot and hangs the key at the force-0 5.8, so the signature is drawn 0.39 after the previous head, over its ink. PREDICTION: 0 - the left part's own rod."
+    },
+    "midmeasure.force.compress.key.key-to-next-note": {
+      "probe": "midmeasure-force.ly",
+      "score": "MFKC",
+      "lilypond": 4.829385,
+      "residual": 0.970615,
+      "why": "OPEN since session 810 (read before the port as its baseline). Cause: Lily# carries a mid-measure change column's two gaps on ONE timing spring with the duration spring's strengths, and hangs the glyph back from the next note by the force-0 right gap (SpacingRules.MidMeasureChangeGaps, its 'NOT modelled' remark). LilyPond's change column is a NonMusicalPaperColumn with a Note_spacing spring before it (lily/note-spacing.cc:42-115, strengths the duration spring's) and a Staff_spacing spring after it (lily/staff-spacing.cc:117-221: stretch ideal - fixed for extra-space, 0 for shrink-space; compress ideal - fixed), each with its own column rod (lily/spacing-spanner.cc:228-297). The other half of midmeasure.force.compress.key.prev-note-to-key: LilyPond's right spring gives 0.970615 (5.8 -> 4.829385). PREDICTION: 0."
+    },
     "midmeasure.clef.clef-to-next-note": {
       "probe": "barline-spacing.ly",
       "score": "MC",

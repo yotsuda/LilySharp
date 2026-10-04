@@ -291,6 +291,24 @@ internal static class LpGeometryProbes
     // stands at the main note's moment, between the grace column and the main note's.
     private static readonly string MCGB = Score("c4 d grace { e,16 } clef bass f, f, |", "MCGB");
 
+    // A mid-measure change on a line NOT at force 0 (probe midmeasure-force.ly, session 810):
+    // LilyPond's change column has a spring on each side, and they stretch and compress on
+    // their own strengths — a clef's right spring stretches (extra-space), a key's does not
+    // (shrink-space). The ragged books above cannot see that. LilyPond twins: MC's / MK's music,
+    // then `| \break R1 |`, on a 100mm (MFCJ / MFKJ) and a 36mm (MFCC / MFKC) line.
+    private static readonly string MFCJ = Score("c4 d clef bass e, f, | break R1 |", "MFCJ");
+    private static readonly string MFKJ = Score("c4 d key a major e f | break R1 |", "MFKJ");
+    private static readonly string MFCC = Score("c4 d clef bass e, f, | break R1 |", "MFCC");
+    private static readonly string MFKC = Score("c4 d key a major e f | break R1 |", "MFKC");
+
+    /// <summary>The 100mm line of MFCJ / MFKJ, widened by the two margins as <see cref="GraceStretchPaper"/> is.</summary>
+    private static readonly LayoutOptions MidMeasureStretchPaper =
+        LayoutOptions.Default with { PageWidth = 100.0 / 1.757299017 + 2 * 8.535827 };
+
+    /// <summary>The 36mm line of MFCC / MFKC, narrower than the bar's natural width.</summary>
+    private static readonly LayoutOptions MidMeasureCompressPaper =
+        LayoutOptions.Default with { PageWidth = 36.0 / 1.757299017 + 2 * 8.535827 };
+
     // LilyPond twin: c'4 d' \key a \major e'4 f'4   — likewise one measure.
     private static readonly string MK = Score("c4 d key a major e f |", "MK");
 
@@ -14207,6 +14225,31 @@ internal static class LpGeometryProbes
             g => g.FirstClefAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1)),
         new("midmeasure.clef.grace-then-clef.clef-to-main-note", MCGB,
             g => g.NoteheadAnchor(3) - g.FirstClefAfter(g.NoteheadAnchor(1))),
+        // The change column's two springs off force 0. See MCJ.
+        new("midmeasure.force.stretch.clef.control", MFCJ,
+            g => g.NoteheadAnchor(1) - g.NoteheadAnchor(0), MidMeasureStretchPaper),
+        new("midmeasure.force.stretch.clef.prev-note-to-clef", MFCJ,
+            g => g.FirstClefAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1), MidMeasureStretchPaper),
+        new("midmeasure.force.stretch.clef.clef-to-next-note", MFCJ,
+            g => g.NoteheadAnchor(2) - g.FirstClefAfter(g.NoteheadAnchor(1)), MidMeasureStretchPaper),
+        new("midmeasure.force.stretch.key.control", MFKJ,
+            g => g.NoteheadAnchor(1) - g.NoteheadAnchor(0), MidMeasureStretchPaper),
+        new("midmeasure.force.stretch.key.prev-note-to-key", MFKJ,
+            g => g.FirstNonNoteheadAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1), MidMeasureStretchPaper),
+        new("midmeasure.force.stretch.key.key-to-next-note", MFKJ,
+            g => g.NoteheadAnchor(2) - g.FirstNonNoteheadAfter(g.NoteheadAnchor(1)), MidMeasureStretchPaper),
+        new("midmeasure.force.compress.clef.control", MFCC,
+            g => g.NoteheadAnchor(1) - g.NoteheadAnchor(0), MidMeasureCompressPaper),
+        new("midmeasure.force.compress.clef.prev-note-to-clef", MFCC,
+            g => g.FirstClefAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1), MidMeasureCompressPaper),
+        new("midmeasure.force.compress.clef.clef-to-next-note", MFCC,
+            g => g.NoteheadAnchor(2) - g.FirstClefAfter(g.NoteheadAnchor(1)), MidMeasureCompressPaper),
+        new("midmeasure.force.compress.key.control", MFKC,
+            g => g.NoteheadAnchor(1) - g.NoteheadAnchor(0), MidMeasureCompressPaper),
+        new("midmeasure.force.compress.key.prev-note-to-key", MFKC,
+            g => g.FirstNonNoteheadAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1), MidMeasureCompressPaper),
+        new("midmeasure.force.compress.key.key-to-next-note", MFKC,
+            g => g.NoteheadAnchor(2) - g.FirstNonNoteheadAfter(g.NoteheadAnchor(1)), MidMeasureCompressPaper),
         new("midmeasure.key.prev-note-to-key", MK,
             g => g.FirstNonNoteheadAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1)),
         new("midmeasure.key.key-to-next-note", MK,
