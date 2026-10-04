@@ -397,7 +397,8 @@ workflow attaches that section to the GitHub Release verbatim.
   height. LilyPond measures it by shape: a clef only clears what stands at its own height, so
   after a high note with its stem down the clef comes 0.59 closer, and a dotted note's dot no
   longer pushes the change away. A key or meter change is unaffected, since its spacing box
-  reaches every neighbour's height.
+  reaches every neighbour's height. And after a lone flagged eighth, a clef or key change now
+  keeps LilyPond's breathing room past the flag (0.18 / 0.13 more).
 - **A line that ends in a courtesy for a key with no signature.** When the next line opens in
   C major or A minor, the end-of-line courtesy is a cancellation with no signature after it —
   or nothing at all, from C major to A minor — and the group was still spaced as

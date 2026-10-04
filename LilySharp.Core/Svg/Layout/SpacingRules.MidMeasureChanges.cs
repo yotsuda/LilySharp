@@ -377,6 +377,16 @@ internal static partial class SpacingRules
         // stem_dir_correction (:111) adds nothing toward a NonMusical column, and the ideal
         // handed in is :77's unclamped one (ApplyLeftHeadWidth), so the clamp lands here.
         leftGap = Math.Max(0.0, leftGap);
+        // …and that wish goes through merge_springs on its own — the LEFT spring, before the
+        // right one is added to it — which keeps the ideal at least 0.3 over the minimum.
+        // LILYPOND-REF: lily/spacing-spanner.cc:380-393 musical_column_spacing — merge_springs is taken for any non-empty wish list, a single wish included.
+        // LILYPOND-REF: lily/spring.cc:122 merge_springs — avg_distance = max (min_distance + 0.3, avg_distance).
+        // ⚠️ MeasureLayouter applies the same headroom to the spring that holds BOTH gaps
+        // (TotalIdeal against the summed minimums), where it never binds; until session 806
+        // that was the only place, and a lone flagged eighth before a change — the one shape
+        // whose :105 floor sits under min + 0.3 — stood 0.18 (clef) / 0.13 (key) short
+        // (ledger midmeasure.*.flagged-eighth). The right gap has its own 0.3 (RightGap).
+        leftGap = Math.Max(leftGap, leftRod + SpringHeadroom);
 
         // --- RIGHT: staff-spacing.cc:166-215 ---
         double rightRod = RightRod(columnItems, columnWidth, lastChange!);
