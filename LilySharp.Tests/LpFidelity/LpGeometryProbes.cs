@@ -10485,6 +10485,84 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A courtesy CANCELLATION and nothing after it: the next line opens in C major, so the
+    /// change prints naturals and no signature, and the cancellation is the group's last member.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (probe courtesy-meter.ly, score CANCONLY):
+    /// <c>\key ees \major \time 4/4 c'1 | \break \key c \major c'1 |</c> — bar line ink right
+    /// edge 30.193507, staff line end 34.093307, so <b>3.899800</b>
+    /// = 1.0 + 2.449800 + 0.5 − 0.05. The KeySignature grob is there with an EMPTY extent, and
+    /// lily/break-alignment-interface.cc:144-156 steps over an empty member, so the
+    /// cancellation → key-signature 0.5 is paid to nobody.
+    /// </remarks>
+    private static readonly string CANCONLY = """
+        octave absolute
+        time 4/4
+        key ees major
+
+        part m { clef treble }
+
+        section A { m { c1 | } }
+        section B { key c major m { c1 | } }
+
+        form main { A break B }
+
+        score main "CANCONLY" { staff m }
+        """;
+
+    /// <summary>
+    /// <see cref="CANCONLY"/> with the METER changing too: cancellation, then the meter, with
+    /// no signature between them.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (probe courtesy-meter.ly, score CANCMETER): cancellation ink right
+    /// 30.788572, meter 32.038572 — <b>1.250000</b>, KeyCancellation's own time-signature entry
+    /// (scm/define-grobs.scm:1941), not 0.5 to a signature that is not there plus the
+    /// signature's 1.15. Bar line ink right 27.338772 → staff line end 34.093307 is
+    /// <b>6.754535</b> = 1.0 + 2.449800 + 1.25 + 1.604735 + 0.5 − 0.05.
+    /// </remarks>
+    private static readonly string CANCMETER = """
+        octave absolute
+        time 4/4
+        key ees major
+
+        part m { clef treble }
+
+        section A { m { c1 | } }
+        section B { time 3/4 key c major m { c2. | } }
+
+        form main { A break B }
+
+        score main "CANCMETER" { staff m }
+        """;
+
+    /// <summary>
+    /// A key change that prints NOTHING (C major → A minor) in front of a courtesy meter: the
+    /// meter stands off the bar line, as if no key had changed.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (probe courtesy-meter.ly, score NOKEYMETER): bar line ink right 31.288572,
+    /// meter 32.038572 — <b>0.750000</b>, BarLine's time-signature entry
+    /// (scm/define-grobs.scm:293); staff line end 34.093307, so the span is <b>2.804735</b>,
+    /// <see cref="CMT3"/>'s number (the same 3/4).
+    /// </remarks>
+    private static readonly string NOKEYMETER = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section A { m { c1 | } }
+        section B { time 3/4 key a minor m { c2. | } }
+
+        form main { A break B }
+
+        score main "NOKEYMETER" { staff m }
+        """;
+
+    /// <summary>
     /// <see cref="CMT"/>'s gap with BOTH glyphs changed — a DOUBLE bar line at the break and a
     /// NUMERAL meter (3/4) instead of the C that <c>\time 4/4</c> prints.
     /// </summary>
@@ -17070,6 +17148,16 @@ internal static class LpGeometryProbes
         // NON-ZERO. See the `why`: the residual is not the right-edge gap but the reserve-vs-
         // draw slack this group has carried since 2026-08-03, now visible for the first time.
         new("courtesy.key.key-to-line-end", CMKO, g => g.BarlineRightToStaffLineEnd(0)),
+        // ...and the three shapes in which the new key prints NO signature (session 804). A
+        // break-align member with an empty extent is stepped over
+        // (lily/break-alignment-interface.cc:144-156), so the cancellation reads its own alist
+        // for whatever prints next — and a change that prints nothing is no member at all.
+        new("courtesy.key.cancellation-to-line-end", CANCONLY, g => g.BarlineRightToStaffLineEnd(0)),
+        new("courtesy.meter.cancellation-and-meter-to-line-end", CANCMETER,
+            g => g.BarlineRightToStaffLineEnd(0)),
+        new("courtesy.meter.barline-to-meter.silent-key", NOKEYMETER, g => g.BarlineRightToNextGlyph(0)),
+        new("courtesy.meter.meter-to-line-end.silent-key", NOKEYMETER,
+            g => g.BarlineRightToStaffLineEnd(0)),
 
         // A mid-line key change column on a GRAND STAFF. The column's item list is aggregated
         // across staves, so the same change arrives once per staff; the width walks added each

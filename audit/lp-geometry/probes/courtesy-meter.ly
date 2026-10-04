@@ -233,3 +233,52 @@ edgesweep =
 %   the 2026-08-03 note above describes, and standing in for this 0.5 badly. It is gone; the
 %   entry is read once, from whichever grob is actually last.
 
+
+% =========================================================================================
+% AND WHEN THE NEW KEY PRINTS NOTHING? (2026-10-04, session 804)
+%
+% Every score above that changes key arrives in a key WITH accidentals, so the group is
+% cancellation -> signature (-> meter). A change INTO C major / A minor prints no signature:
+% the KeySignature grob is there with an empty extent, and
+%   lily/break-alignment-interface.cc:144-146, :154-156 Break_alignment_interface::calc_positioning_done
+% steps over every member whose extent is empty -- so the cancellation's neighbour is whatever
+% prints NEXT (the meter, or right-edge), read off the cancellation's own alist, and a change
+% that prints nothing at all leaves the meter standing off the bar line.
+
+% CANCONLY — the cancellation is LAST: its gap is KeyCancellation's right-edge 0.5 (:1946),
+%        and the cancellation -> key-signature 0.5 (:1944) is paid to nobody.
+\book { \paper { indent = 0 ragged-right = ##f line-width = 60 }
+  \score { \edgesweep "CANCONLY" { \key ees \major \time 4/4 c'1 | \break \key c \major c'1 | }
+           \layout {} } }
+
+% CANCMETER — cancellation, then the meter: KeyCancellation's time-signature 1.25 (:1941),
+%        not 0.5 to an empty signature plus KeySignature's 1.15.
+\book { \paper { indent = 0 ragged-right = ##f line-width = 60 }
+  \score { \edgesweep "CANCMETER" { \key ees \major \time 4/4 c'1 | \break \key c \major \time 3/4 c'2. | }
+           \layout {} } }
+
+% NOKEYMETER — C major -> A minor: no cancellation and no signature, so the meter stands
+%        off the BAR LINE (BarLine's time-signature 0.75, :293) exactly as in NUM.
+\book { \paper { indent = 0 ragged-right = ##f line-width = 60 }
+  \score { \edgesweep "NOKEYMETER" { \key c \major \time 4/4 c'1 | \break \key a \minor \time 3/4 c'2. | }
+           \layout {} } }
+
+% -----------------------------------------------------------------------------------------
+% WHAT THIS SECTION FOUND (2026-10-04, session 804). Line edge 34.143307, staff right 34.093307.
+%
+%   CANCONLY    BAR 30.003507 (ink right 30.193507)   KEYCANCEL 31.193507 ext 2.449800
+%               KEY ext (+inf.0 . -inf.0) — EMPTY     cancellation ink right 33.643307
+%               bar -> cancellation 1.000000          cancellation -> line edge 0.500000
+%               bar ink right -> staff line end       3.899800
+%   CANCMETER   BAR 27.148772 (ink right 27.338772)   KEYCANCEL 28.338772 (ink right 30.788572)
+%               TIME 32.038572                        cancellation -> meter 1.250000
+%               bar ink right -> staff line end       6.754535
+%   NOKEYMETER  BAR 31.098572 (ink right 31.288572)   KEY ext EMPTY, no KEYCANCEL line at all
+%               TIME 32.038572                        bar -> meter 0.750000
+%               bar ink right -> staff line end       2.804735   (CMT3's number: same meter)
+%
+% ⇒ AN EMPTY MEMBER IS NOT A MEMBER. The cancellation -> key-signature 0.5 is paid only when a
+%   signature prints; with none, the cancellation reads its OWN entry for what does stand next
+%   (time-signature 1.25, right-edge 0.5), and a change that prints nothing leaves the group
+%   as if no key had changed. Lily# read all three as "cancellation, 0.5, signature": +0.5,
+%   +0.4 and (reserve) +0.4 / (draw) +1.4 on these three books before the port.
