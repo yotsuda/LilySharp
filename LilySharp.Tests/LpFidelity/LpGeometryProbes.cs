@@ -273,9 +273,10 @@ internal static class LpGeometryProbes
     // LilyPond twin: c'4 d' \clef bass fis4 g4 — the CONTROL: the sharp on the clef's own line,
     // where the two skylines meet and the :213 correction binds.
     private static readonly string MCS = Score("c4 d clef bass fis, g, |", "MCS");
-    // LilyPond twin: c'4 d' \key a \major bes4 c'4 — a flat BELOW the staff after a KEY change:
-    // the key's box reaches the next column's height, so the flat's reach counts.
-    private static readonly string MKL = Score("c4 d key a major bes, c |", "MKL");
+    // LilyPond twin: c'4 d' \key a \major ees4 c'4 — a flat WELL BELOW the staff after a KEY
+    // change (its top under the bottom line): the key's box reaches the next column's height,
+    // so the flat's reach counts.
+    private static readonly string MKL = Score("c4 d key a major ees, c |", "MKL");
 
     // LilyPond twin: c'4 d' \key a \major e'4 f'4   — likewise one measure.
     private static readonly string MK = Score("c4 d key a major e f |", "MK");

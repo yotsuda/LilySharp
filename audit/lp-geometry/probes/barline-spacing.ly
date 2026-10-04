@@ -318,10 +318,12 @@ lay =
 %% MCS — the CONTROL: the same clef, the sharp ON the clef's line (fis, the F line). Here the
 %%       skylines meet at the sharp, and the rod is the box's — the :213 correction binds.
 \score { \new Staff { \time 4/4 c'4 d' \clef bass fis4 g4 } \lay "MCS" }
-%% MKL — a KEY change before a flat BELOW the staff (bes): a KeySignature's box grows to the
-%%       staff and the neighbouring columns' heights (scm/output-lib.scm:976-979), so it meets
-%%       the flat where a clef's would not, and the flat's reach still counts.
-\score { \new Staff { \time 4/4 c'4 d' \key a \major bes4 c'4 } \lay "MKL" }
+%% MKL — a KEY change before a flat WELL BELOW the staff (ees, whose flat's top stays below the
+%%       bottom line): a KeySignature's box grows to the staff and the neighbouring columns'
+%%       heights (scm/output-lib.scm:976-979), so it meets the flat where a clef's would not, and
+%%       the flat's reach still counts. (First written with bes, whose flat reaches into the
+%%       staff — a box limited to the staff met it too, so it observed nothing.)
+\score { \new Staff { \time 4/4 c'4 d' \key a \major ees4 c'4 } \lay "MKL" }
 
 %% NO mid-measure TIME probe. `\time 3/4` inside a 4/4 bar makes LilyPond restructure the
 %% measures rather than engrave a change column, and the resulting dump is not the thing we

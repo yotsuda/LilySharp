@@ -398,7 +398,9 @@ workflow attaches that section to the GitHub Release verbatim.
   after a high note with its stem down the clef comes 0.59 closer, and a dotted note's dot no
   longer pushes the change away. A key or meter change is unaffected, since its spacing box
   reaches every neighbour's height. And after a lone flagged eighth, a clef or key change now
-  keeps LilyPond's breathing room past the flag (0.18 / 0.13 more).
+  keeps LilyPond's breathing room past the flag (0.18 / 0.13 more). On the far side, a sharp or
+  flat on the note after a mid-measure clef no longer pushes it away when it stands above or below
+  the clef: it tucks under the clef as in LilyPond, 1.05 closer.
 - **A line that ends in a courtesy for a key with no signature.** When the next line opens in
   C major or A minor, the end-of-line courtesy is a cancellation with no signature after it —
   or nothing at all, from C major to A minor — and the group was still spaced as

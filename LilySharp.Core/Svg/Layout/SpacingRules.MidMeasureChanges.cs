@@ -389,7 +389,7 @@ internal static partial class SpacingRules
         leftGap = Math.Max(leftGap, leftRod + SpringHeadroom);
 
         // --- RIGHT: staff-spacing.cc:166-215 ---
-        double rightRod = RightRod(columnItems, columnWidth, lastChange!);
+        double rightRod = RightRod(fonts, columnItems, columnWidth, lastChange!);
         double rightGap = RightGap(columnWidth, lastChange!, rightRod);
 
         return new MidMeasureChangeSpacing(leftGap, rightGap, leftRod + rightRod);
@@ -483,6 +483,32 @@ internal static partial class SpacingRules
     /// </remarks>
     private static HorizontalSkyline ChangeColumnLeftSkyline(
         Rendering.ScoreTextMetrics fonts, in ItemColumn columnItems, in ItemColumn prevItems)
+        => HorizontalSkyline.FromBoxes(ChangeColumnBoxes(fonts, columnItems, prevItems), HorizontalDirection.Left);
+
+    /// <summary>
+    /// The RIGHT skyline of a mid-measure change column: the same grob boxes as
+    /// <see cref="ChangeColumnLeftSkyline"/>, facing the next musical column — the left column's
+    /// side of <c>Paper_column::minimum_distance</c> (<see cref="RightRod"/>).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/separation-item.cc:89-110 Separation_item::calc_skylines — one Skyline_pair over the same boxes, a NonMusicalPaperColumn unpadded.
+    /// The neighbour band of a key or meter box is read from THIS column's heights and the
+    /// staff's only; LilyPond's also takes the previous column's. That part of the box can
+    /// only stand where the next column has no ink — its heights are already in the band —
+    /// so the distance to the next column cannot see it, and the renderer's caller
+    /// (<see cref="MidMeasureChangeRightGap"/>), which has no previous column, gets the same
+    /// answer as the spring's.
+    /// </remarks>
+    private static HorizontalSkyline ChangeColumnRightSkyline(
+        Rendering.ScoreTextMetrics fonts, in ItemColumn columnItems)
+        => HorizontalSkyline.FromBoxes(ChangeColumnBoxes(fonts, columnItems, default), HorizontalDirection.Right);
+
+    /// <summary>
+    /// The spacing boxes of a mid-measure change column's grobs — what its two skylines
+    /// (<see cref="ChangeColumnLeftSkyline"/>, <see cref="ChangeColumnRightSkyline"/>) are built from.
+    /// </summary>
+    private static List<(double YBottom, double YTop, double XLeft, double XRight)> ChangeColumnBoxes(
+        Rendering.ScoreTextMetrics fonts, in ItemColumn columnItems, in ItemColumn prevItems)
     {
         // The neighbour-wide band a key or meter box spans: the staff (lines at ±2 about the
         // middle, y down) and the pure heights of the columns on either side.
@@ -536,7 +562,7 @@ internal static partial class SpacingRules
             offset += width;
             last = item;
         }
-        return HorizontalSkyline.FromBoxes(boxes, HorizontalDirection.Left);
+        return boxes;
     }
 
     /// <summary>A mid-line clef's extra-spacing-height, each way.</summary>
@@ -559,7 +585,7 @@ internal static partial class SpacingRules
         var (columnWidth, first, last) = MeasureChangeColumn(fonts, columnItems);
         if (first == null)
             return 0;
-        return RightGap(columnWidth, last!, RightRod(columnItems, columnWidth, last!));
+        return RightGap(columnWidth, last!, RightRod(fonts, columnItems, columnWidth, last!));
     }
 
     /// <summary>
@@ -693,16 +719,61 @@ internal static partial class SpacingRules
 
     /// <summary>
     /// <c>Paper_column::minimum_distance</c> from the change column to the musical one: the
-    /// change column's own reach plus whatever the next column's leftmost ink hangs left.
+    /// SKYLINE distance between the change column's right side (its grobs' spacing boxes,
+    /// <see cref="ChangeColumnRightSkyline"/>) and the musical column's left side with its
+    /// accidentals merged in, clamped at 0.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/staff-spacing.cc:210 Staff_spacing::get_spacing — <c>min_dist = Paper_column::minimum_distance (left_col, right_col)</c>.
+    /// LILYPOND-REF: lily/paper-column.cc:145-164 Paper_column::minimum_distance — the left
+    ///   column's right skyline, the right column's left one merged with its
+    ///   <c>conditional_skyline</c>, <c>max (0.0, distance)</c>. The musical column's view is
+    ///   <see cref="ItemSkylineFactory.SharedLeftSkylineAtColumn"/> (PaperColumn's 0.08 padding,
+    ///   the accidentals unpadded) — the one <see cref="BarlineToColumnMinimum"/> reads for the
+    ///   same LilyPond function at a bar line.
+    /// <para>
+    /// ⚠️ UNTIL SESSION 807 THIS WAS A BOX — the column's width, its last grob's right
+    /// extra-spacing-width and the next column's whole leftward reach
+    /// (<see cref="MusicalColumnLeftReach"/>), whatever their heights. The two agree after a key
+    /// or meter change (their boxes grow to the neighbours' heights, so every height of the next
+    /// column meets them — ledger midmeasure.key.key-to-next-note.flat-below-staff) and after a
+    /// clef whose band the next column's leftmost ink shares. A sharp BELOW a mid-line bass clef
+    /// tucks under it in LilyPond and the space-alist ideal binds (3.146600), where the box
+    /// charged the sharp and :213's 0.3 + rod stood the note 1.05 further right
+    /// (ledger midmeasure.clef.clef-to-next-note.sharp-below-clef, probe barline-spacing.ly MCA).
+    /// </para>
+    /// <para>
+    /// A non-musical item at the column's moment (a spacer, a grace) keeps the X-only reach it
+    /// had: it is not a paper column's skyline — the same split
+    /// <see cref="BarlineToColumnMinimum"/> makes. ⚠️ NOTHING IN THE SUITE OBSERVES THAT ARM: dropping
+    /// it leaves every test green (session 807's poison no. 3) — whether
+    /// LilyPond's grace column would agree is unmeasured. ⚠️ THE PAIRS ARE TAKEN IN ONE STAFF FRAME, as
+    /// on the left side (<see cref="ChangeColumnLeftMinDistance"/>): every staff's change box
+    /// meets every staff's next item at the same height, which can only find more overlap than
+    /// LilyPond does — the answer lies between LilyPond's and the old box.
+    /// </para>
+    /// </remarks>
     private static double RightRod(
-        in ItemColumn columnItems, double columnWidth, MusicItem lastChange)
+        Rendering.ScoreTextMetrics fonts, in ItemColumn columnItems, double columnWidth, MusicItem lastChange)
     {
-        double reach = 0;
+        double rod = 0.0;
+        HorizontalSkyline? changeRight = null;
         for (int q = 0; q < columnItems.Count; q++)
-            if (!IsChangeItem(columnItems[q]))
-                reach = Math.Max(reach, MusicalColumnLeftReach(columnItems[q]));
-        return columnWidth + ChangeItemExtraSpacingWidth(lastChange).Right + reach;
+        {
+            var item = columnItems[q];
+            if (IsChangeItem(item))
+                continue;
+            if (!IsMusicalColumn(item))
+            {
+                rod = Math.Max(rod, columnWidth + ChangeItemExtraSpacingWidth(lastChange).Right
+                                    + MusicalColumnLeftReach(item));
+                continue;
+            }
+            changeRight ??= ChangeColumnRightSkyline(fonts, columnItems);
+            var nextLeft = ItemSkylineFactory.SharedLeftSkylineAtColumn(item, 0.0, staffY: 0.0);
+            rod = Math.Max(rod, changeRight.Distance(nextLeft));
+        }
+        return rod;
     }
 
     /// <summary>
@@ -905,7 +976,7 @@ internal static partial class SpacingRules
         if (first == null)
             return 0;
 
-        double minDist = RightRod(columnItems, columnWidth, last!);
+        double minDist = RightRod(fonts, columnItems, columnWidth, last!);
         double tight = Math.Max(minDist, columnWidth);
         double ideal = Math.Max(minDist + LooseColumnZeroDtSpace, columnWidth);
 
