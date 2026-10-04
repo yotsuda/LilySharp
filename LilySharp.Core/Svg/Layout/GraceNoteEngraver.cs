@@ -270,14 +270,37 @@ internal static class GraceNoteEngraver
         var mainItem = grace.MainNoteItemIndex < measure.Items.Length
             ? measure.Items[grace.MainNoteItemIndex]
             : null;
-        // At the system's force: a justified line stretches the run's own springs too.
-        var columns = SpacingRules.StretchGraceColumns(
-            SpacingRules.GraceColumns(grace.Columns, mainItem), measureLayout.SpringForce);
+        var columns = PlacedColumns(grace.Columns, mainItem, measure, grace.MainNoteItemIndex, measureLayout);
         double scriptOverhang = ScriptOverhangForGrace(
             articulations, grace, measure, columns.Span);
         // The run's FIRST column stands that far in front of the main note's.
         double x = measureLayout.X + mainNoteX - columns.Span - scriptOverhang;
         return (x, measureLayout.X + mainNoteX, columns);
+    }
+
+    /// <summary>
+    /// A grace run's column chain as it stands on the solved line: its springs at the line's
+    /// force, and — when the run ends on a mid-measure change column written after it — its
+    /// last column that far before the main note (<see cref="MeasureLayout.GraceRunToMain"/>).
+    /// The one reading every placer of a run takes (<see cref="RunPlacement"/>,
+    /// ElementCoordinator.GraceGeomOf).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spring.cc:218-237 Spring::length — ideal_distance_ + force × inverse_stretch_strength_ for every spring of the line.
+    /// </remarks>
+    internal static SpacingRules.GraceColumnLayout PlacedColumns(
+        ImmutableArray<GraceColumnInfo> columns, MusicItem? mainItem, Measure measure, int mainItemIndex,
+        MeasureLayout measureLayout)
+    {
+        // At the system's force: a justified line stretches the run's own springs too.
+        var placed = SpacingRules.StretchGraceColumns(
+            SpacingRules.GraceColumns(columns, mainItem), measureLayout.SpringForce);
+        if (measureLayout.GraceRunToMain is not { } toMain)
+            return placed;
+        var timing = Fraction.Zero;
+        for (int k = 0; k < mainItemIndex && k < measure.Items.Length; k++)
+            timing += measure.Items[k].Duration;
+        return toMain.TryGetValue(timing, out var distance) ? placed with { ToMain = distance } : placed;
     }
 
     /// <summary>

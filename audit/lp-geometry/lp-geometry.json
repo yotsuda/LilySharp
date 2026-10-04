@@ -338,8 +338,8 @@
       "probe": "barline-spacing.ly",
       "score": "MCGB",
       "lilypond": 2.900765,
-      "residual": 0.211120,
-      "why": "OPEN since 2026-10-04 (session 809), read before the literal port as its baseline, not predicted digit by digit. Cause: Lily# keeps no column of its own for a mid-measure change (both gaps ride the next note's one timing spring and the grace run hangs off the main note), so the change column's two springs, its rods and lily/spacing-spanner.cc:396-403 / :519-527's 0.8 cannot stand where LilyPond solves them (HANDOFF §2 B, the item filed in session 809). The first, branch-fitted port (d842aecb3, reverted in 5c4887462) took these to 0 for the clef-before-grace order only."
+      "residual": 0,
+      "why": "EXACT since session 811: a change written AFTER a grace stands at the main note's moment, between the last grace column and the main note's - the slot is the grace run as with no change (approach x 0.8, the run's springs) with its last spring split into the last grace -> change (a grace Note_spacing spring into a NonMusical column, lily/note-spacing.cc:103-108, no 0.8) and change -> main (Staff_spacing, no 0.8) (SpacingRules.MidMeasureChangeAfterGraceSeries); the run is placed by them (MeasureLayout.GraceRunToMain, GraceNoteEngraver.PlacedColumns). The PREDICTION (0) was first missed: +0.400 / +1.240, because Lily# engraved the grace in the clef written AFTER it (the grace's body is walked when its main note arrives, after the clef had been applied), so its head met the bass clef's box; LilyPond engraves it in the clef in force where it was written. The collector now walks the grace in that clef (MeasureCollector.OpenSoundingItem). OUTCOME: held, +2.2e-07 (was +0.211120)."
     },
     "midmeasure.clef.grace-then-clef.clef-to-main-note": {
       "probe": "barline-spacing.ly",
@@ -436,15 +436,15 @@
       "probe": "barline-spacing.ly",
       "score": "MCGB",
       "lilypond": 2.201796,
-      "residual": 2.118062,
-      "why": "OPEN since session 811 (read before the port as its baseline). Cause: a change written AFTER a grace stands at the main note's moment in LilyPond, its column between the last grace column and the main note's - prev -> first grace is the approach (x 0.8, lily/spacing-spanner.cc:396-403), the last grace -> change a grace Note_spacing spring into a NonMusical column (lily/note-spacing.cc:103-108, no 0.8), change -> main Staff_spacing (no 0.8) - while Lily# folds both of the change's gaps into one spring and hangs the grace run off the main note by its own span, so the run lands to the RIGHT of the clef. Lily# puts the grace 4.32 after the previous note (the run hung from the main note, the clef's gaps all in the approach). PREDICTION: 0 once the run's last spring is LilyPond's two (grace -> change -> main) and the run is placed by them."
+      "residual": 0,
+      "why": "EXACT since session 811: a change written AFTER a grace stands at the main note's moment, between the last grace column and the main note's - the slot is the grace run as with no change (approach x 0.8, the run's springs) with its last spring split into the last grace -> change (a grace Note_spacing spring into a NonMusical column, lily/note-spacing.cc:103-108, no 0.8) and change -> main (Staff_spacing, no 0.8) (SpacingRules.MidMeasureChangeAfterGraceSeries); the run is placed by them (MeasureLayout.GraceRunToMain, GraceNoteEngraver.PlacedColumns). The PREDICTION (0) was first missed: +0.400 / +1.240, because Lily# engraved the grace in the clef written AFTER it (the grace's body is walked when its main note arrives, after the clef had been applied), so its head met the bass clef's box; LilyPond engraves it in the clef in force where it was written. The collector now walks the grace in that clef (MeasureCollector.OpenSoundingItem). OUTCOME: held, 0 (was +2.118062): the approach x 0.8."
     },
     "midmeasure.clef.grace-then-clef.grace-to-clef": {
       "probe": "barline-spacing.ly",
       "score": "MCGB",
       "lilypond": 0.698969,
-      "residual": -1.906941785,
-      "why": "OPEN since session 811 (read before the port as its baseline). Cause: a change written AFTER a grace stands at the main note's moment in LilyPond, its column between the last grace column and the main note's - prev -> first grace is the approach (x 0.8, lily/spacing-spanner.cc:396-403), the last grace -> change a grace Note_spacing spring into a NonMusical column (lily/note-spacing.cc:103-108, no 0.8), change -> main Staff_spacing (no 0.8) - while Lily# folds both of the change's gaps into one spring and hangs the grace run off the main note by its own span, so the run lands to the RIGHT of the clef. Lily# draws the grace 1.21 to the right of the clef. PREDICTION: 0 (see grace-then-clef.prev-note-to-grace)."
+      "residual": 0,
+      "why": "EXACT since session 811: a change written AFTER a grace stands at the main note's moment, between the last grace column and the main note's - the slot is the grace run as with no change (approach x 0.8, the run's springs) with its last spring split into the last grace -> change (a grace Note_spacing spring into a NonMusical column, lily/note-spacing.cc:103-108, no 0.8) and change -> main (Staff_spacing, no 0.8) (SpacingRules.MidMeasureChangeAfterGraceSeries); the run is placed by them (MeasureLayout.GraceRunToMain, GraceNoteEngraver.PlacedColumns). The PREDICTION (0) was first missed: +0.400 / +1.240, because Lily# engraved the grace in the clef written AFTER it (the grace's body is walked when its main note arrives, after the clef had been applied), so its head met the bass clef's box; LilyPond engraves it in the clef in force where it was written. The collector now walks the grace in that clef (MeasureCollector.OpenSoundingItem). OUTCOME: held, +2.2e-07 (was -1.906942, the grace to the right of the clef): the :105 floor (1.397939 + 0) / 2."
     },
     "midmeasure.clef.clef-to-next-note": {
       "probe": "barline-spacing.ly",

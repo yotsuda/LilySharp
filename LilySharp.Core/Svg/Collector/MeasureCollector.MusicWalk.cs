@@ -1020,7 +1020,7 @@ public sealed partial class MeasureCollector
             case GraceExpressionSyntax grace:
                 // Store grace expression to attach to the next note
                 _pendingGrace = grace;
-                _pendingGraceAt = (builder.CurrentMeasureIndex, builder.CurrentItemCount);
+                _pendingGraceAt = (builder.CurrentMeasureIndex, builder.CurrentItemCount, _meta.Clef);
                 break;
 
             // A cue is a REGION, walked with the ordinary walker so that everything a voice
@@ -2006,7 +2006,21 @@ public sealed partial class MeasureCollector
             // of the grace's items; say so on it (MusicItem.WrittenAfterGrace).
             if (_pendingGraceAt.Measure == builder.CurrentMeasureIndex)
                 builder.MarkChangesWrittenAfterGrace(_pendingGraceAt.ItemCount);
+            // …and the grace is engraved in the clef it was written in: LilyPond's Clef_engraver
+            // has not seen the later \clef when the grace's timestep is engraved, so its heads
+            // take the old clef's staff positions (the cue region's save-and-restore,
+            // ProcessCueRegion, is the same move). ⒝ Only the clef: a key written between the
+            // two does not restore the accidental state the grace reads.
+            // LILYPOND-REF: lily/clef-engraver.cc:139-166 Clef_engraver::inspect_clef_properties — the clef in force at each timestep.
+            string? clefAfterGrace = null;
+            if (_pendingGraceAt.Clef is { } graceClef && graceClef != _meta.Clef)
+            {
+                clefAfterGrace = _meta.Clef;
+                _meta.Clef = graceClef;
+            }
             ProcessGraceRegion(pendingGrace, builder, measureIndex);
+            if (clefAfterGrace != null)
+                _meta.Clef = clefAfterGrace;
             itemIndex = builder.CurrentItemCount;
         }
         if (node is NoteSyntax note && HasCourtesyAnnotation(note))
@@ -2121,7 +2135,7 @@ public sealed partial class MeasureCollector
                 // arm does — until session 397 this arm did not exist, and a grace written
                 // inside a tuplet body was dropped without a word (HANDOFF §2 R3).
                 _pendingGrace = grace;
-                _pendingGraceAt = (builder.CurrentMeasureIndex, builder.CurrentItemCount);
+                _pendingGraceAt = (builder.CurrentMeasureIndex, builder.CurrentItemCount, _meta.Clef);
                 return Fraction.Zero;
             case NoteSyntax note:
             {

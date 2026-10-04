@@ -933,6 +933,16 @@ internal sealed class SvgSystemFragmentCache
                     hc.Add(kv.Value);
                 }
             }
+            if (m.GraceRunToMain != null)
+            {
+                // Where a grace run before a change column stands (GraceNoteEngraver.PlacedColumns).
+                hc.Add(m.GraceRunToMain.Count);
+                foreach (var kv in m.GraceRunToMain.OrderBy(kv => kv.Key))
+                {
+                    hc.Add(kv.Key);
+                    hc.Add(kv.Value);
+                }
+            }
         }
         if (!system.StaffGroups.IsDefaultOrEmpty)
         {

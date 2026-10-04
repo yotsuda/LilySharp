@@ -1004,6 +1004,21 @@ internal sealed class MeasureLayouter
             }
         }
 
+        // A change written AFTER the grace (SpacingRules.ChangeStandsBeforeGrace false) stands at the
+        // main note's moment, between the last grace column and the main note's: the slot is the
+        // grace run exactly as with no change — the approach's 0.8, the stem wishes, the run's own
+        // springs — and only the run's LAST spring is split at the change column, at the end
+        // (SpacingRules.MidMeasureChangeAfterGraceSeries).
+        MusicItem? changeAfterGrace = null;
+        if (changeGaps != null && SpacingRules.LeadingGracePrefixWidth(nextItems) > 0
+            && !SpacingRules.ChangeStandsBeforeGrace(measuresToScan, timings[i])
+            && SpacingRules.WidestLeadingGraceItem(nextItems) is { } afterGraceItem
+            && SpacingRules.CanStandAfterGraceRun(afterGraceItem))
+        {
+            changeAfterGrace = afterGraceItem;
+            changeGaps = null;
+        }
+
         // The wish REPLACES the base spring's increment minimum with the skyline
         // distance — set_min_distance, not ensure — so a pair whose columns never meet
         // in Y carries min 0 and merge_springs' +0.3 headroom is measured from THERE,
@@ -1089,9 +1104,10 @@ internal sealed class MeasureLayouter
             {
                 return maxRod > 0 ? beforeGrace.WithRangeRod(0, beforeGrace.Series.Length, maxRod) : beforeGrace;
             }
-            // ⚠️ A CHANGE WRITTEN AFTER THE GRACE still takes the one spring both gaps were
-            // folded into, with the run hung off it below (HANDOFF §2 B: its column stands
-            // between the last grace column and the main note's).
+            // ⚠️ What is left folds both gaps into one spring with the run hung off it below: a
+            // run with no gaps to stand on (MidMeasureChangeBeforeGraceSeries null). A change
+            // written AFTER the grace never reaches here (changeAfterGrace above) unless its run
+            // ends on a rest or a tab digit (SpacingRules.CanStandAfterGraceRun false).
             spring = new Spring(
                 gaps.TotalIdeal,
                 Math.Max(spring.MinDistance, gaps.MinDistance),
@@ -1122,7 +1138,11 @@ internal sealed class MeasureLayouter
         // …and only NOW the rod, which is a floor on the COMPRESSED length and nothing else:
         // it stands 0.1 above the same skyline distance the headroom just put 0.3 above, so
         // it cannot reach the ideal and cannot move it.
-        return spring.EnsureMinDistance(maxRod);
+        var withRod = spring.EnsureMinDistance(maxRod);
+        return changeAfterGrace != null
+               && SpacingRules.MidMeasureChangeAfterGraceSeries(fonts, nextItems, withRod, changeAfterGrace) is { } split
+            ? split
+            : withRod;
     }
 
     /// <summary>

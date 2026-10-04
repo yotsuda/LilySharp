@@ -359,8 +359,8 @@ internal static partial class SpacingRules
     /// These are the two springs' IDEALS and MINIMUMS. Their strengths and rods are
     /// <see cref="MidMeasureChangeSeries"/>'s, which puts both in the timing slot as one series
     /// spring (session 810: until then one spring carried the pair and the split was exact only
-    /// at force 0). ⚠️ When a GRACE RUN follows the change the slot still folds both into one
-    /// spring (MeasureLayouter.CreateInterColumnSpring), the order HANDOFF §2 B is porting.
+    /// at force 0). With a grace run the order decides the chain (session 811):
+    /// <see cref="MidMeasureChangeBeforeGraceSeries"/> and <see cref="MidMeasureChangeAfterGraceSeries"/>.
     /// </para>
     /// </remarks>
     internal static MidMeasureChangeSpacing? MidMeasureChangeGaps(
@@ -574,6 +574,71 @@ internal static partial class SpacingRules
         double rightRod = SeparationRodPadding + rightDistance;
         if (rightRod > 0)
             series = series.WithPartRod(1, rightRod);
+        return series;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="graceItem"/>'s run can end on a change column written after it —
+    /// the run's last column is one <see cref="GraceIntoChangeColumn"/> prices.
+    /// </summary>
+    internal static bool CanStandAfterGraceRun(MusicItem graceItem)
+    {
+        var grace = GraceNotesOf(graceItem);
+        return !grace.IsDefaultOrEmpty && !grace[^1].IsRest && grace[^1].TabDigitHalfWidth <= 0;
+    }
+
+    /// <summary>
+    /// The slot across a mid-measure change written AFTER a grace run: the run's springs as
+    /// they stand with no change (<paramref name="graceSeries"/>, the approach then one part per
+    /// column) with the LAST one — last grace → main note — split into LilyPond's two: the last
+    /// grace column → the change column (<see cref="GraceIntoChangeColumn"/>) and the change
+    /// column → the main note (Staff_spacing, <see cref="ChangeColumnStaffSpacing"/>), neither
+    /// scaled, each with its column rod. Null when <paramref name="graceSeries"/> is not that
+    /// series.
+    /// </summary>
+    /// <remarks>
+    /// The change column's moment is the main note's (t, 0) (<see cref="ChangeStandsBeforeGrace"/>),
+    /// so it stands between the last grace column and the main note's; the approach keeps its
+    /// 0.8 (its right column is the first grace's).
+    /// LILYPOND-REF: lily/spacing-spanner.cc:322-393 musical_column_spacing — last grace → change, a Note_spacing wish.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:478-536 breakable_column_spacing — change → main, dt == 0, Staff_spacing; no 0.8 (:519-527 asks for a grace_part_ on the right column).
+    /// MEASURED (2.26.0, Lab sessions/p808/gr/lp-probe.ly G2, ledger midmeasure.clef.grace-then-clef.*):
+    /// the grace 2.201796 after the previous note, the clef 0.698969 after the grace — the
+    /// :105 floor (1.397939 + 0) / 2, the grace below the treble staff and the clef's box apart
+    /// in height — and the main note 3.146600 after the clef.
+    /// ⚠️ NOTHING OBSERVES EITHER COLUMN ROD HERE (session 811's poisons no. 14 and 15 dropped
+    /// them: every test green) — no book compresses this slot to its minimums.
+    /// </remarks>
+    internal static Spring? MidMeasureChangeAfterGraceSeries(
+        Rendering.ScoreTextMetrics fonts, in ItemColumn columnItems, Spring graceSeries, MusicItem graceItem)
+    {
+        var grace = GraceNotesOf(graceItem);
+        int n = grace.IsDefaultOrEmpty ? 0 : grace.Length;
+        if (n == 0 || !graceSeries.IsSeries || graceSeries.Series.Length != n + 1)
+            return null;
+        var (columnWidth, _, lastChange) = MeasureChangeColumn(fonts, columnItems);
+        if (lastChange == null
+            || GraceIntoChangeColumn(grace, ChangeColumnLeftSkyline(fonts, columnItems, default), columnWidth)
+               is not { } intoChange)
+            return null;
+        double rightDistance = RightSkylineDistance(fonts, columnItems, columnWidth, lastChange);
+        var outOfChange = ChangeColumnStaffSpacing(columnWidth, lastChange, Math.Max(0.0, rightDistance));
+
+        var parts = new Spring[n + 2];
+        double min = 0;
+        for (int k = 0; k < n; k++)
+        {
+            parts[k] = graceSeries.Series[k];
+            min += parts[k].Length(double.NegativeInfinity);
+        }
+        parts[n] = intoChange.Spring;
+        parts[n + 1] = outOfChange;
+        min += intoChange.Spring.MinDistance + outOfChange.MinDistance;
+        var series = Spring.InSeries(ImmutableArray.Create(parts), min);
+        if (intoChange.Rod > 0)
+            series = series.WithPartRod(n, intoChange.Rod);
+        if (SeparationRodPadding + rightDistance > 0)
+            series = series.WithPartRod(n + 1, SeparationRodPadding + rightDistance);
         return series;
     }
 

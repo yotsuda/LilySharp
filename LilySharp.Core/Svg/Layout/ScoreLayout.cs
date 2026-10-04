@@ -82,6 +82,19 @@ internal sealed record MeasureLayout
     public ImmutableDictionary<Fraction, double>? ChangeColumnHangs { get; init; }
 
     /// <summary>
+    /// For a grace run that ends on a mid-measure change column written after it, keyed by the
+    /// moment of its main note: how far the run's LAST column stands before the main note's on
+    /// the solved line — the last grace → change spring plus the change → main one. Null when
+    /// the measure has none. The run's own gaps are as with no change, so only its distance to
+    /// the main note is replaced (<see cref="GraceNoteEngraver.PlacedColumns"/>).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spring.cc:218-237 Spring::length — ideal_distance_ + force × inverse_stretch_strength_ for the two parts of the slot's series spring at the line's force
+    /// (<see cref="SpacingRules.MidMeasureChangeAfterGraceSeries"/>).
+    /// </remarks>
+    public ImmutableDictionary<Fraction, double>? GraceRunToMain { get; init; }
+
+    /// <summary>
     /// Creates a MeasureLayout with item-based positioning (for single-staff scores).
     /// </summary>
     public MeasureLayout(int measureIndex, double x, double width, ImmutableArray<ItemLayout> items)
@@ -110,7 +123,7 @@ internal sealed record MeasureLayout
     /// per-system memo hands back when it serves a system found under other numbers
     /// (<see cref="SystemLayoutCache"/>).</summary>
     public MeasureLayout WithMeasureIndex(int measureIndex)
-        => new(measureIndex, X, Width, Items, Columns) { ChangeColumnHangs = ChangeColumnHangs };
+        => new(measureIndex, X, Width, Items, Columns) { ChangeColumnHangs = ChangeColumnHangs, GraceRunToMain = GraceRunToMain };
 
     /// <summary>
     /// Gets the X coordinate for a given timing within this measure.

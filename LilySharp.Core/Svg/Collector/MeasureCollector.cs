@@ -593,7 +593,9 @@ public sealed partial class MeasureCollector
     private GraceExpressionSyntax? _pendingGrace = null;
     // Where the measure stood when the grace was written: a change added after this point and
     // before the grace's body is walked was WRITTEN AFTER the grace (MusicItem.WrittenAfterGrace).
-    private (int Measure, int ItemCount) _pendingGraceAt;
+    // The clef too: the grace is engraved in the clef in force where it was WRITTEN, not in a clef
+    // written between it and its main note (OpenSoundingItem).
+    private (int Measure, int ItemCount, string? Clef) _pendingGraceAt;
 
     /// <summary>
     /// How many <c>cue { … }</c> regions enclose the item being collected. A cue is a

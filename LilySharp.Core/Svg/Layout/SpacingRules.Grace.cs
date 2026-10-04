@@ -346,6 +346,59 @@ internal static partial class SpacingRules
                + ItemSkylineFactory.CreateGraceDotRightSkyline(left, beamed).Distance(nextLeft);
     }
 
+    /// <summary>
+    /// The spring from a run's LAST grace column into a mid-measure change column written
+    /// after the grace, and the column rod over the same pair. Null for a run that ends on a
+    /// rest or a tab digit, whose last column this does not price.
+    /// </summary>
+    /// <param name="notes">The run.</param>
+    /// <param name="changeLeft">The change column's left skyline, in its own frame.</param>
+    /// <param name="changeWidth">The change column's extent right of its origin.</param>
+    /// <remarks>
+    /// A Note_spacing spring like the run's others, whose right column is NonMusical:
+    /// LILYPOND-REF: lily/spacing-basic.cc:163-180 Spacing_spanner::note_spacing — the grace branch, Spring (len, increment), stretch increment / 2.
+    /// LILYPOND-REF: lily/note-spacing.cc:42-115 Note_spacing::get_spacing — :77 ideal = base - increment + left_head_end;
+    ///   :78-83 min_dist, the skylines' distance with the NonMusical column's skyline-vertical-padding (none);
+    ///   :103-108 no staff-bar group, so ideal -= the column's extent right, floored at (ideal + min_dist) / 2;
+    ///   :111 stem_dir_correction answers nothing toward a column with no note column; :113 max (0.0, ideal).
+    /// LILYPOND-REF: lily/spring.cc:122 merge_springs — min_distance + 0.3 (one wish); its strengths are the wish's.
+    /// No 0.8: the change column's moment is the main note's, with no grace part
+    /// (lily/spacing-spanner.cc:396-403 musical_column_spacing asks the RIGHT column).
+    /// ⒝ The rod reads the WISH skyline and the dots (<see cref="GraceDotRod"/>'s view) where
+    /// LilyPond reads the grace paper column's — the reading <see cref="GraceColumns"/> takes
+    /// for every gap of a run.
+    /// </remarks>
+    internal static (Spring Spring, double Rod)? GraceIntoChangeColumn(
+        ImmutableArray<GraceColumnInfo> notes, HorizontalSkyline changeLeft, double changeWidth)
+    {
+        if (notes.IsDefaultOrEmpty)
+            return null;
+        var last = notes[^1];
+        if (last.IsRest || last.TabDigitHalfWidth > 0)
+            return null;
+        var gp = GraceSpacingParameters.Default;
+        double dtMin = CalculateGraceGroupShortestDuration(notes);
+        bool beamed = notes.Length - 1 < GraceNoteEngraver.BeamedPrefix(notes);
+        var baseSpring = CreateGraceSpring(last.Length, gp, dtMin);
+
+        double ideal = baseSpring.IdealDistance - gp.SpacingIncrement + GraceHeadEnd(last);
+        var wish = ItemSkylineFactory.CreateGraceWishSkyline(last, beamed, HorizontalDirection.Right);
+        double minDistance = Math.Max(0.0, wish.Distance(changeLeft, NonMusicalColumnSkylineVerticalPadding));
+        double minDesiredSpace = (ideal + minDistance) / 2.0;
+        ideal = Math.Max(ideal - changeWidth, minDesiredSpace);
+        ideal = Math.Max(0.0, ideal);
+        ideal = Math.Max(ideal, minDistance + SpringHeadroom);
+
+        double rod = SeparationRodPadding + wish.Distance(changeLeft);
+        if (last.Dots > 0)
+            rod = Math.Max(rod, SeparationRodPadding
+                + ItemSkylineFactory.CreateGraceDotRightSkyline(last, beamed).Distance(changeLeft));
+
+        var spring = new Spring(ideal, minDistance, GraceSpringInverseStretch(gp),
+            Math.Max(0.0, baseSpring.IdealDistance - gp.SpacingIncrement));
+        return (spring, rod);
+    }
+
     /// <summary>One gap of a grace run — the spring, floored by the skyline distance.</summary>
     private static double GraceColumnGap(GraceColumnInfo left, double dtMin,
                                          GraceSpacingParameters gp, double minDistance,

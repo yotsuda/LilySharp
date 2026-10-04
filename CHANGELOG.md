@@ -405,7 +405,9 @@ workflow attaches that section to the GitHub Release verbatim.
   widens with the line (after a key or meter change it stays put), and on a tight line a key
   change stops at the note before it instead of being drawn over it. A clef written just before
   a grace note now stands where LilyPond puts it, between the note before and the grace, with
-  both gaps shrunk the way a grace's approach is (it stood 1.31 closer to the grace).
+  both gaps shrunk the way a grace's approach is (it stood 1.31 closer to the grace). A clef
+  written just AFTER a grace note now stands after the grace — the grace was drawn to the right
+  of the clef — and the grace keeps the clef it was written in.
 - **A line that ends in a courtesy for a key with no signature.** When the next line opens in
   C major or A minor, the end-of-line courtesy is a cancellation with no signature after it —
   or nothing at all, from C major to A minor — and the group was still spaced as
