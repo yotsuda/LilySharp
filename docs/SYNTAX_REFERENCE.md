@@ -400,6 +400,9 @@ c'4@todo(o1203 "smudged") e'4@todo g'2 |
 ```
 
 `lysc check --todo-as-error` fails while any is left; `--no-todo` stops reporting them.
+When an OMR reader wrote the file, its side file `x.omr.json` (beside `x.lys`) may list
+candidates for a keyed mark; each is a quick fix that writes it over the marked item,
+the mark with it.
 
 ## Ornaments
 

@@ -400,7 +400,8 @@ workflow attaches that section to the GitHub Release verbatim.
   memo, a bare word the key — what a tool such as an OMR reader links its own data to; the
   SVG carries it as `data-todo` on the head. `lysc check --todo-as-error` fails while any is
   left, `--no-todo` stops reporting them. A malformed argument is LYS4027, a key written
-  twice LYS4028.
+  twice LYS4028. When an OMR reader wrote the file, the candidates its side file
+  `x.omr.json` lists for a keyed mark are quick fixes that write the item over it.
 
 ### Fixes
 

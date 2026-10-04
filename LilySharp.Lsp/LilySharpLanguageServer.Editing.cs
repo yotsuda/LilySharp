@@ -357,6 +357,7 @@ public sealed partial class LilySharpLanguageServer
                 if (diagnostic.Code == DiagnosticCodes.TodoMark && !todoOffered)
                 {
                     todoOffered = true;
+                    actions.AddRange(OmrCandidateActions(doc, uri, diagnostic));
                     actions.AddRange(ResolveTodoActions(doc, uri, diagnostic, semantic));
                 }
             }
@@ -518,6 +519,49 @@ public sealed partial class LilySharpLanguageServer
                     Changes = new Dictionary<string, TextEdit[]> { [uri.ToString()] = marks.Select(Delete).ToArray() },
                 },
             };
+    }
+
+    /// <summary>
+    /// The OMR reader's candidates for a <c>@todo(key …)</c> (LilySharp-Omr proposal B2): the
+    /// side file <c>x.omr.json</c> beside <c>x.lys</c> lists, per key, what the mark's item
+    /// might be — <c>todos[].candidates[] = { label, text }</c>, <c>text</c> being the item as
+    /// it would be written without the mark. Each becomes a quick fix that writes it over the
+    /// whole item, which removes the mark with it. The reader writes the file and Lily# only
+    /// reads it; a missing or unreadable file, or a key it does not list, offers nothing.
+    /// </summary>
+    private static IEnumerable<CodeAction> OmrCandidateActions(Document doc, Uri uri, CoreDiagnostic diagnostic)
+    {
+        if (!uri.IsFile)
+            return [];
+        var mark = doc.Tree.GetRoot().DescendantNodes()
+            .FirstOrDefault(n => n is ArticulationSyntax or MusicMarkSyntax && n.Span.Start == diagnostic.Span.Start);
+        if (mark?.Parent is not { } host || TodoAnnotation.Of(mark) is not { Key: { } key })
+            return [];
+        var candidates = OmrSideFile.Candidates(System.IO.Path.ChangeExtension(uri.LocalPath, ".omr.json"), key);
+        if (candidates.Count == 0)
+            return [];
+        var (sl, sc) = GetLineAndCharacter(doc.Text, host.Span.Start);
+        var (el, ec) = GetLineAndCharacter(doc.Text, host.Span.End);
+        var range = new LspRange
+        {
+            Start = new Position { Line = sl, Character = sc },
+            End = new Position { Line = el, Character = ec },
+        };
+        return candidates.Select(c => new CodeAction
+        {
+            Title = c.Label is { Length: > 0 } label && label != c.Text
+                ? $"Write {label}: {c.Text} (resolves the TODO)"
+                : $"Write {c.Text} (resolves the TODO)",
+            Kind = CodeActionKind.QuickFix,
+            Diagnostics = [ConvertDiagnostic(diagnostic, doc.Text, uri)],
+            Edit = new WorkspaceEdit
+            {
+                Changes = new Dictionary<string, TextEdit[]>
+                {
+                    [uri.ToString()] = [new TextEdit { Range = range, NewText = c.Text }],
+                },
+            },
+        }).ToList();
     }
 
     /// <summary>The spelling a case hint names: "Names / Values / Keys are case-sensitive: write 'X'."</summary>

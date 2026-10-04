@@ -118,10 +118,10 @@ public class TodoAnnotationTests
 
     // ---- the quick fix ----
 
-    private static CodeAction[] ActionsAt(string text, int offset)
+    private static CodeAction[] ActionsAt(string text, int offset, string path = "/todo.lys")
     {
         var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
-        var uri = new System.Uri("file:///todo.lys");
+        var uri = new System.Uri(Path.IsPathRooted(path) && path.Length > 1 && path[1] == ':' ? path : "file://" + path);
         server.DidOpen(new DidOpenTextDocumentParams
         {
             TextDocument = new TextDocumentItem { Uri = uri, Text = text, LanguageId = "lilysharp", Version = 1 },
@@ -166,5 +166,35 @@ public class TodoAnnotationTests
         string clean = Apply(text, all);
         Assert.Equal(Book("c'4 d'4 e'4 f'4 |"), clean);
         Assert.DoesNotContain(Diagnostics(clean), d => d.Code == DiagnosticCodes.TodoMark);
+    }
+
+    /// <summary>
+    /// The OMR reader's candidates (proposal B2): <c>x.omr.json</c> beside <c>x.lys</c> lists,
+    /// per key, what the marked item might be; each is a quick fix that writes it over the
+    /// item, the mark with it. A key the file does not list, and a mark without a key, get none.
+    /// </summary>
+    [Fact]
+    public void TheReadersCandidates_AreQuickFixes_ThatWriteTheItemWithoutTheMark()
+    {
+        string dir = Directory.CreateTempSubdirectory("lys-omr-").FullName;
+        string lys = Path.Combine(dir, "x.lys");
+        File.WriteAllText(Path.ChangeExtension(lys, ".omr.json"), """
+            { "version": 1, "todos": [
+              { "key": "o12", "kind": "note", "candidates": [
+                { "label": "F♯", "text": "fis'8" }, { "label": "F♮", "text": "f'8" }, { "text": "" } ] },
+              { "key": "o13", "candidates": [] } ] }
+            """);
+        string text = Book("c'4 fis'8@todo(o12 \"faint\")@staccato e'8 g'4@todo(o13) a'4@todo |");
+
+        var actions = ActionsAt(text, text.IndexOf("@todo(o12", System.StringComparison.Ordinal) + 2, lys);
+        var writes = actions.Where(a => a.Title.StartsWith("Write ", System.StringComparison.Ordinal)).ToList();
+        Assert.Equal(["Write F♯: fis'8 (resolves the TODO)", "Write F♮: f'8 (resolves the TODO)"],
+            writes.Select(a => a.Title));
+        Assert.Equal(Book("c'4 f'8 e'8 g'4@todo(o13) a'4@todo |"), Apply(text, writes[1]));
+
+        Assert.DoesNotContain(ActionsAt(text, text.IndexOf("@todo(o13", System.StringComparison.Ordinal) + 2, lys),
+            a => a.Title.StartsWith("Write ", System.StringComparison.Ordinal));
+        Assert.DoesNotContain(ActionsAt(text, text.LastIndexOf("@todo", System.StringComparison.Ordinal) + 2, lys),
+            a => a.Title.StartsWith("Write ", System.StringComparison.Ordinal));
     }
 }
