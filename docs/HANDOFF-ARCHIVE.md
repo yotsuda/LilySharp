@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第791セッションの経緯
+
+### 1.1 第791セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザー「続けて」→ AskUserQuestion で ⒜ **lead sheet の grid の残り ⒝⒠** を選択。`-Start p791`（HEAD `2543f5a8`・未 push 25）＝full **10991 / 0 / 2 / 10993**。§7 3.5 で第789 を ARCHIVE へ。
+- **⒠ は staff との食い違い**: probe（Lab `sessions/p791/probes/grid-probe*.lys`＝Intro `partial 4`・A・Free `time none`・B）を staff 付きと grid で描くと、staff は B で C を描き直す（`RevertMeterToHome`）が grid は何も描かない。原因は `FitRowsToMusicBars` の meter run が `time none` の null meter を「run を切る」と読んでいたこと＝null の前小節は変化と数えるよう直した（`time none` 自身は従来どおり無印）。網 `RowsOnlyMeterChangeTests.AfterATimeNoneSection_TheReturningMeterIsEngraved`（staff との差分＝glyph 列一致・位置は F と G の間）。
+- **⒝ はユーザー決定（2026-10-04・before／after の絵＝`probes/before|after/amazing-grace-grid.png`）「割合の床にする」**: `EnsureLeadSheetBarWidth(springs, share)`＝床 10.0 × share、share は `MultiStaffLayouter.LeadSheetFloorShare`＝弱起なら長さ÷その小節の拍子（`PrevailingMeters`）・他は 1。和音名の幅は `ApplyChordRowSpacing` が先に確保するので切れない。空の小節の経路（`EmptyBarSprings` 側）にも同じ share。網 `APickupCell_IsHeldToItsShareOfTheGridFloor`（grid の弱起セル 5.86 対 満幅 10.49・staff 付きも短い側）。
+- CHANGELOG Fixes 2 本。棚卸し `APPROXIMATIONS.md` 行番号・csv +2（`return 1.0` ×2・Yellow・file-level REF）。snapshot 不動（fixture に弱起の grid も time none の rows-only も無い）。
+- 掃き（`sessions/p791/svg/sweep789.ps1` の写し・base＝`sessions/p790/exe-head`＝HEAD のコード・head＝`sessions/p791/exe-head`・`sweep.log`）: main 998 冊 svg **差 3 / 1199**＝弱起を持つ grid の全部（samples の amazing-grace grid・greensleeves grid・corpora の amazing-grace grid）／dogfood **差 1 / 195**＝choir-chorale の words-only sheet（弱起 `The4 |`・`probes/after/choir-chorale-choir-words.png`＝短いセル）。time none の rows-only はコーパス 0（第783 と同じ）。full **10993 / 0 / 2 / 10995**（網 +2）。
+★ `-End p791 -DiffBase 2543f5a8`（`end.log`）＝full **10993 / 0 / 2 / 10995**・門 全 OK。7.5: Core **`+` 44** 行・REF 0・OWN 1（`LeadSheetFloorShare` の註＝床 10.0 と同じ出所・数値は share 1.0 だけ）。7.6: ⒞ 既存 OWN（grid の床）の中の規則＋⒟ staff の既存規則（`RevertMeterToHome`）の指し直し。7.7: 匂いなし（guard なし・sentinel なし）。commit `a8583c9d`（code・網・CHANGELOG・棚卸し）＋ docs の commit。push はユーザー。
+判定: lead sheet の grid の残り ⒝⒠ は閉じた（⒜〜⒠ 全部＝§1.0 から落とした）。次の一手: 跳躍 ⑴（tie を segno の section へ）／⑶（music 中の跳躍文は追わないと文書に明記）か ⑼ の残り＝ユーザー判断。会話を区切るか: (b) 便が 3 つ続いて読み直しが増えてきた＝**区切ってよい**（続けるなら `-Start p792`）。
+
 ## 以下は第790セッションの経緯
 
 ### 1.1 第790セッション（2026-10-04・YT-DELL2）
