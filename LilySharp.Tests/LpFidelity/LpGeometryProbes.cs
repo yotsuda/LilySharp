@@ -7991,6 +7991,54 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A DOWN-stem flag's room in the staff gap: the upper staff's C4 with its stem forced
+    /// down (the flag rises off the stem's lower end, to the right), over the lower staff's
+    /// C4 with its stem forced up — the lower stem stands at the head's RIGHT, under the
+    /// flag's far end, and the upper stem at the head's LEFT, so the two stems never meet in X
+    /// and the flag is the only ink between them.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's Flag declares <c>grob::always-vertical-skylines-from-stencil</c>
+    /// (scm/define-grobs.scm Flag), so the gap reads the glyph's traced outline; Lily#'s
+    /// SkylineBuilder seeds a nominal 1.2 × 2.5 box at the stem's tip
+    /// (EngravingDefaults.FlagWidth — LILYSHARP-OWN, with no LilyPond counterpart).
+    /// The control <see cref="FDC"/> is the same book with a quarter (no flag); FDL16 a
+    /// sixteenth's.
+    /// LilyPond twin: score FDL of audit/lp-geometry/probes/flag-staff-gap.ly.
+    /// </remarks>
+    private static readonly string FDL = FlagStaffGapScore("FDL", "c8@stemDown r8 r4 r2");
+
+    /// <summary>The control — <see cref="FDL"/> with a quarter, so no flag: the gap rests on
+    /// the heads and stems alone. Mirror of book FDC.</summary>
+    private static readonly string FDC = FlagStaffGapScore("FDC", "c4@stemDown r4 r2");
+
+    /// <summary><see cref="FDL"/> with a sixteenth's flag. Mirror of book FDL16.</summary>
+    private static readonly string FDL16 = FlagStaffGapScore("FDL16", "c16@stemDown r16 r8 r4 r2");
+
+    private static string FlagStaffGapScore(string name, string upper) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part rh { clef treble }
+        part lh { clef bass }
+
+        section Main {
+          rh { {{upper}} | }
+          lh { c4@stemUp r4 r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          grandStaff {
+            staff rh
+            staff lh
+          }
+        }
+        """;
+
+    /// <summary>
     /// <see cref="RSTD"/> with the rest going the OTHER WAY — a rest pushed UP out of the
     /// lower staff, against the upper staff's bottom line.
     /// </summary>
@@ -16695,6 +16743,11 @@ internal static class LpGeometryProbes
         // symbol on ours. See probes RSTU and RSTUC.
         new("staff.staff.rest-over-notes", RSTU, g => g.StaffGap()),
         new("staff.staff.rest-over-notes-control", RSTUC, g => g.StaffGap()),
+        // A down-stem FLAG between the staves: its outline against Lily#'s nominal box.
+        // See probes FDL / FDC / FDL16 (flag-staff-gap.ly).
+        new("staff.staff.flag-down.eighth", FDL, g => g.StaffGap()),
+        new("staff.staff.flag-down.control", FDC, g => g.StaffGap()),
+        new("staff.staff.flag-down.sixteenth", FDL16, g => g.StaffGap()),
 
         // The same gap again, shaped so a DYNAMIC under a stemless whole note is what binds
         // it — the first ledger point that reaches DynamicEngraver. See probe DY.

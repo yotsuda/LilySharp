@@ -4720,6 +4720,27 @@
       "residual": 0.0,
       "why": "EXACT -- RSTU with spacer rests in voice one, the same one-token control RSTC is for RSTD. It lands on 9.595000, book P and Q's own number for the 6.545 + 2.05 + 1 construction, which is the cross-check that this book measures what it claims. ⚠️ THE PAIR OF CONTROLS IS ALSO A CHECK ON EACH OTHER: RSTC and RSTUC are different music (the protrusion is on opposite sides) and must still agree to the digit, because both reduce to the same staff-line-against-notehead geometry. A port that moved one and not the other would have broken something neither rest entry could see."
     },
+    "staff.staff.flag-down.eighth": {
+      "probe": "flag-staff-gap.ly",
+      "score": "FDL",
+      "lilypond": 10.626974290,
+      "residual": 1.87302571,
+      "why": "OPEN since session 812 (read before the port as its baseline). Cause: Lily#'s SkylineBuilder seeds an ordinary flag as a nominal box (EngravingDefaults.FlagWidth 1.2 x FlagBaseHeight 2.5, LILYSHARP-OWN, no LilyPond counterpart) flat at the stem's tip, where LilyPond's Flag declares grob::always-vertical-skylines-from-stencil (scm/define-grobs.scm Flag) and the gap reads the glyph's traced outline (lily/stencil-integral.cc:535-563 add_named_glyph_segments). The down flag's outline rises off the stem's end as it runs right, so it is high above the lower staff's up stem at the head's right; the box is not, and reaches over that stem. READING: Lily# 12.500000 = the upper stem's tip 6.0 + the lower stem's tip 5.5 + padding 1, exactly - the box binds the two stem tips. PREDICTION was about +1.37 (12.0) and missed by 0.5: the flagged stem is longer than the quarter's, because an unnatural-direction stem is shortened by stem-shorten (1.0 0.5 0.25) indexed by flag count (LilyPond's own extent says so: -6.025 for FDL against -5.5 for FDC), and Lily# shortens it the same way. PREDICTION for the port: 0 once the flag is seeded as its glyph's outline at the point the renderer draws it, as the grace flag already is (SkylineBuilder.MergeGraceFlagInk)."
+    },
+    "staff.staff.flag-down.control": {
+      "probe": "flag-staff-gap.ly",
+      "score": "FDC",
+      "lilypond": 10.045,
+      "residual": 0,
+      "why": "EXACT, and the reason the flag points beside it can be read as the flag (PREDICTION, written before Lily# was read: 0 - held). FDL with a quarter - no flag - so the gap rests on the heads and stems alone, which both engines seed as LilyPond does."
+    },
+    "staff.staff.flag-down.sixteenth": {
+      "probe": "flag-staff-gap.ly",
+      "score": "FDL16",
+      "lilypond": 10.795,
+      "residual": 1.955,
+      "why": "OPEN since session 812 (read before the port as its baseline). Cause: see staff.staff.flag-down.eighth - the nominal flag box is flat at the stem's tip whatever the flag count. READING: Lily# 12.750000 = the upper stem's tip 6.25 (stem-shorten 0.25 for two flags) + 5.5 + 1, exactly. PREDICTION was about +1.2 and missed by the same stem-shorten term as the eighth's. PREDICTION for the port: 0."
+    },
     "hara-kiri.wide-ink.lone-staff-to-next-system": {
       "probe": "page-vertical.ly",
       "score": "HKW",
