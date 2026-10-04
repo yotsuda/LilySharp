@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text.RegularExpressions;
 using LilySharp.Core.Semantics;
@@ -230,6 +231,60 @@ public class SectionBoundarySplitBarTests
         Assert.True(control[2].ContinuesBar);
         Assert.False(control[4].ContinuesBar);
         Assert.Equal(new[] { 1, 2, 2, 3, 4, 5 }, BarNumberEngraver.NumberMeasures(control, 0));
+    }
+
+    /// <summary>
+    /// A section's DECLARED pickup that completes the short bar before it is that bar's other
+    /// half for the numbering too: 1 2 2 3, as LilyPond numbers a mid-piece <c>\partial</c>
+    /// after an incomplete bar (MEASURED 2.26.0, Lab sessions/p761/lp: 1 2 3) and as the page
+    /// already numbered the undeclared half bar. Until session 795 the page counted the
+    /// declared pickup as a bar of its own (1 2 3 4). The controls: a declared pickup after a
+    /// FULL bar is a bar of its own (1 2 3 4 — nothing to finish), and a predecessor full
+    /// under its OWN meter (a 2/4 bar before a section reopening in 4/4) completes nothing.
+    /// </summary>
+    [Fact]
+    public void ThePage_ADeclaredPickupCompletingTheBarBefore_IsOneBar()
+    {
+        static ImmutableArray<Measure> Measures(string book)
+        {
+            var tree = SyntaxTree.Parse(book);
+            return SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)).PrimaryContentStaff.PrimaryVoice.Measures;
+        }
+        const string head = """
+            octave absolute
+            time 4/4
+            part m { clef treble }
+            """;
+        var split = Measures(head + """
+            section A { m { c'1 | c'2 | } }
+            section B { partial 2  m { d'2 | e'1 | } }
+            form main { A B }
+            score main { staff m }
+            """);
+        Assert.True(split[2].IsPickup);
+        Assert.True(split[2].ContinuesBar);
+        Assert.Equal(new[] { 1, 2, 2, 3 }, BarNumberEngraver.NumberMeasures(split, 0));
+
+        var afterFull = Measures(head + """
+            section A { m { c'1 | c'1 | } }
+            section B { partial 2  m { d'2 | e'1 | } }
+            form main { A B }
+            score main { staff m }
+            """);
+        Assert.True(afterFull[2].IsPickup);
+        Assert.False(afterFull[2].ContinuesBar);
+        Assert.Equal(new[] { 1, 2, 3, 4 }, BarNumberEngraver.NumberMeasures(afterFull, 0));
+
+        // A bar full under its own meter leaves nothing open, whatever the next section
+        // reopens in: 2/4 `g'2` before a 4/4 section whose pickup is a half bar.
+        var ownMeter = Measures(head + """
+            section A { m { c'1 | time 2/4 g'2 | } }
+            section B { partial 2  m { d'2 | e'1 | } }
+            form main { A B }
+            score main { staff m }
+            """);
+        Assert.False(ownMeter[2].ContinuesBar);
+        Assert.Equal(new[] { 1, 2, 3, 4 }, BarNumberEngraver.NumberMeasures(ownMeter, 0));
     }
 
     [Fact]

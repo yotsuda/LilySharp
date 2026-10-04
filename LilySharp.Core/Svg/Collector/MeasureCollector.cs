@@ -1241,8 +1241,14 @@ public sealed partial class MeasureCollector
     /// second and later volta endings of one repeat, whose predecessor is the bar the
     /// BODY left short (the measure before the first ending) — the play puts the body
     /// before every ending, and LilyPond's <c>alternativeRestores</c> puts measurePosition
-    /// back there at each alternative. A pickup (<c>partial</c>), an unmetered bar, an empty
-    /// placeholder and a bar already split by a mid-bar break complete nothing.
+    /// back there at each alternative. A section's declared pickup (<c>partial</c>) completes
+    /// the bar before it like any first bar — the upbeat finishes the incomplete bar it
+    /// follows, which is what LilyPond's <c>\partial</c> does mid-piece (MEASURED 2.26.0,
+    /// Lab sessions/p761/lp: <c>c'2 |</c> then <c>\partial 2 d'2 |</c> numbers 1 2 3; until
+    /// session 795 the page counted the pickup as a bar of its own, 1 2 3 4; owner's
+    /// decision: musical validity, RULES §5.2). A predecessor that is itself a pickup, a bar
+    /// full under its OWN meter (a 2/4 bar before a section reopening in 4/4), an unmetered
+    /// bar, an empty placeholder and a bar already split by a mid-bar break complete nothing.
     /// </summary>
     private List<(int Index, int From)> SectionBoundaryContinuations(IReadOnlyList<Measure> measures)
     {
@@ -1277,13 +1283,14 @@ public sealed partial class MeasureCollector
                 continue;
             var prev = measures[from];
             var cur = measures[i];
-            if (prev.Unmetered || cur.Unmetered || cur.IsPickup || prev.IsPickup
+            if (prev.Unmetered || cur.Unmetered || prev.IsPickup
                 || prev.IsEmptyPlaceholder || cur.IsEmptyPlaceholder
                 || prev.BreaksMidBar || cur.ContinuesBar || cur.BreaksMidBar)
                 continue;
             var head = prev.TotalDuration;
             var tail = cur.TotalDuration;
-            if (head <= Fraction.Zero || tail <= Fraction.Zero || head >= meters[i] || head + tail != meters[i])
+            if (head <= Fraction.Zero || tail <= Fraction.Zero || head >= meters[from] || head >= meters[i]
+                || head + tail != meters[i])
                 continue;
             result.Add((i, from));
         }

@@ -567,9 +567,15 @@ workflow attaches that section to the GitHub Release verbatim.
   shape a repeat sign or a volta bracket standing mid-bar is written in, `|: A [1. B] :| [2. C]`
   — now gives that first bar the number of the bar it completes, as an implicit measure
   (readers display no number on it), and numbers on from there: 1, 2, 2, 3 where the export
-  wrote 1, 2, 3, 4. A declared `partial` stays a pickup bar of its own, as on the page. Three
-  of the 1,199 exports in the reference corpus change (`Disco Inferno`), in their `number`
-  and `implicit` attributes only.
+  wrote 1, 2, 3, 4. Three of the 1,199 exports in the reference corpus change
+  (`Disco Inferno`), in their `number` and `implicit` attributes only.
+- **A section's declared pickup that completes the short bar before it is that bar's other
+  half.** `section A { … c'2 | }` followed by `section B { partial 2  … d'2 | … }`: the upbeat
+  finishes the incomplete bar it follows, so the page and the MusicXML number the two as one
+  bar — 1 2 2 3, as LilyPond numbers a mid-piece `\partial` after an incomplete bar — where
+  they counted the pickup as a bar of its own (1 2 3 4). A pickup after a full bar, or after
+  a bar full under its own meter, is still a bar of its own. No book on disk is written this
+  way (the reference corpus and the owner's books: 0 of 1,199 exports).
 - **MusicXML measure numbers no longer skip one after a `voice { } { }` span that ends on a
   bar line.** The empty measure that bar line opened was never written but kept its number,
   so the bar after the span came out as 4 after 1, 2. Ten of the 1,199 exports in the

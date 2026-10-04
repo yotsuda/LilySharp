@@ -92,16 +92,56 @@ public class MusicXmlMeasureNumberingTests
         Assert.Equal(new[] { (1, false), (2, false), (3, false), (4, false) }, m);
     }
 
-    /// <summary>The control: a DECLARED pickup is a pickup bar of its own and counts, on the
-    /// page (1, 2, 3, 4) as here — only its number is hidden (implicit).</summary>
+    /// <summary>A DECLARED pickup that completes the short bar before it is that bar's
+    /// other half too: the upbeat finishes the incomplete bar it follows (LilyPond's
+    /// mid-piece <c>\partial</c> numbers this 1 2 3; Lab sessions/p761/lp), so it takes the
+    /// number of that bar, implicit as every pickup is, and the next bar is 3 — the page's
+    /// 1 2 2 3. Until session 795 it was a bar of its own: 1, 2, 3i, 4 (owner's decision for
+    /// musical validity over the old count).</summary>
     [Fact]
-    public void ADeclaredPickupAfterAShortBar_IsABarOfItsOwn()
+    public void ADeclaredPickupAfterAShortBar_CompletesIt()
     {
         var m = NumbersAndImplicit("""
             octave absolute
             time 4/4
             part m { clef treble }
             section A { m { c'1 | c'2 | } }
+            section B { partial 2  m { d'2 | e'1 | } }
+            form main { A B }
+            score main { staff m }
+            """);
+        Assert.Equal(new[] { (1, false), (2, false), (2, true), (3, false) }, m);
+    }
+
+    /// <summary>The control: a declared pickup after a FULL bar is a pickup bar of its own
+    /// and counts (1, 2, 3i, 4), as the page and LilyPond count it — there is no incomplete
+    /// bar for it to finish.</summary>
+    [Fact]
+    public void ADeclaredPickupAfterAFullBar_IsABarOfItsOwn()
+    {
+        var m = NumbersAndImplicit("""
+            octave absolute
+            time 4/4
+            part m { clef treble }
+            section A { m { c'1 | c'1 | } }
+            section B { partial 2  m { d'2 | e'1 | } }
+            form main { A B }
+            score main { staff m }
+            """);
+        Assert.Equal(new[] { (1, false), (2, false), (3, true), (4, false) }, m);
+    }
+
+    /// <summary>The other control: a bar full under its OWN meter leaves nothing open — a
+    /// 2/4 bar before a section reopening in 4/4 with a half-bar pickup adds up to the new
+    /// meter's bar, and is still two bars (1, 2, 3i, 4), as on the page.</summary>
+    [Fact]
+    public void ADeclaredPickupAfterABarFullUnderItsOwnMeter_IsABarOfItsOwn()
+    {
+        var m = NumbersAndImplicit("""
+            octave absolute
+            time 4/4
+            part m { clef treble }
+            section A { m { c'1 | time 2/4 g'2 | } }
             section B { partial 2  m { d'2 | e'1 | } }
             form main { A B }
             score main { staff m }

@@ -282,7 +282,7 @@
 - **:91** LILYSHARP-OWN: LilyPond has no chord-from-a-shape item.
 ### `LilySharp.Core/MusicXml/MusicXmlExporter.cs`
 - **:1096** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
-- **:5455** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
+- **:5463** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
 ### `LilySharp.Core/MusicXmlImport/LysWriter.cs`
 - **:347** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision; the twin omits it too).
 ### `LilySharp.Core/Parser/Parser.Music.cs`
@@ -344,8 +344,8 @@
 ### `LilySharp.Core/Svg/Collector/MeasureBuilder.cs`
 - **:421** LILYSHARP-OWN (owner's decisions, 2026-10-02, HANDOFF §1.1 第737): a time, key
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:3265** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:5684** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:3272** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:5691** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Form.cs`
 - **:567** `time!` (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so
 - **:837** is not drawn unless written `key!` (MeasureBuilder.SectionHead, LILYSHARP-OWN). At a

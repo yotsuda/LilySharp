@@ -1943,6 +1943,9 @@ public sealed class MusicXmlExporter
         // this exporter kept the previous section's mid-music change instead: measured
         // 2026-08-31, `section A { … time 3/4 … } section B { … }` exported every one of
         // B's bars in 3/4 while the page draws them in 4/4.
+        // The bar the play BEFORE this one closed in — a bar full under its own meter leaves
+        // nothing for this play's first bar to complete (ContinueSplitBar).
+        int barTicksBefore = _bars.SenzaMisura ? 0 : 4 * DivisionsPerQuarter * _bars.Meter.Beats / _bars.Meter.BeatType;
         if (_sectionTime is null)
             _bars.RevertToHome();
         // ⚠️ AND A RESTORE HAS TO BE *WRITTEN*, not merely held. Both reverts above only
@@ -2009,7 +2012,7 @@ public sealed class MusicXmlExporter
         // A hairpin the carry rule cuts stops at this play's end, before the bar is flushed.
         CloseCutWedge();
         FlushCurrentMeasure();
-        ContinueSplitBar(measuresBefore, barTicksAtStart);
+        ContinueSplitBar(measuresBefore, barTicksAtStart, barTicksBefore);
         AttachLyrics(_currentPart!, measuresBefore, lyricsBlocks);
 
         // The block's first onset (what a tie carried into this play stops on), and what it
@@ -2256,30 +2259,35 @@ public sealed class MusicXmlExporter
     /// <summary>
     /// The bar a section boundary splits is ONE bar for the numbering: a play whose first bar
     /// is the rest of the bar the play before it left short — the two together exactly one
-    /// bar of the meter the play opens in, neither a declared pickup — takes the number of
+    /// bar of the meter the play opens in, the bar before it no pickup — takes the number of
     /// that bar and is implicit (a reader displays no number on it), and the play's later
     /// bars follow from there. The page's rule (MeasureCollector.SectionBoundaryContinuations,
     /// BarNumberEngraver.NumberMeasures: <c>ContinuesBar</c>): written that way when a repeat
     /// sign or a volta bracket stands mid-bar — <c>|: A [1. B] :| [2. C]</c> where A ends on
-    /// the half bar and every ending opens with the other half. A declared <c>partial</c> is a
-    /// pickup bar of its own and counts, as it does on the page. A second ending's first bar
+    /// the half bar and every ending opens with the other half. The play's declared
+    /// <c>partial</c> completes the bar before it the same way (the upbeat finishes the
+    /// incomplete bar it follows, LilyPond's mid-piece <c>\partial</c>; until session 795 it
+    /// was a pickup bar of its own, 1, 2, 3i, 4 for the page's 1 2 3 4 — now 1, 2, 2i, 3 for
+    /// 1 2 2 3, the owner's decision for musical validity). A second ending's first bar
     /// follows the FIRST ending's last bar in this document (the body is written once, under
     /// repeat bar lines), which is a full bar, so it is numbered on — as the page numbers it
     /// ("bar numbers continue through alternatives"). Until 2026-10-03 (p759, owner's GO) the
     /// MusicXML numbered both halves: 1, 2, 3 where the page prints 1, 2, 2 and the twin's
     /// LilyPond 1, 2, 3.
     /// </summary>
-    private void ContinueSplitBar(int firstIndex, int barTicks)
+    private void ContinueSplitBar(int firstIndex, int barTicks, int prevBarTicks)
     {
         var measures = _currentPart!.Measures;
-        if (barTicks <= 0 || firstIndex <= 0 || firstIndex >= measures.Count)
+        if (barTicks <= 0 || prevBarTicks <= 0 || firstIndex <= 0 || firstIndex >= measures.Count)
             return;
         var prev = measures[firstIndex - 1];
         var first = measures[firstIndex];
-        if (prev.Implicit || first.Implicit)
+        if (prev.Implicit)
             return;
         int head = ElapsedTicks(prev), tail = ElapsedTicks(first);
-        if (head <= 0 || tail <= 0 || head >= barTicks || head + tail != barTicks)
+        // The bar before is short under ITS meter (a 2/4 bar before a play in 4/4 is full,
+        // whatever the halves add up to), and the halves make one bar of THIS play's.
+        if (head <= 0 || tail <= 0 || head >= prevBarTicks || head >= barTicks || head + tail != barTicks)
             return;
         first.Implicit = true;
         for (int i = firstIndex; i < measures.Count; i++)
