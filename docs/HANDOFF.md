@@ -93,7 +93,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **LP を `-dbackend=svg` で描く計器は `lysc ly --pin-fonts` 必須**（第690〜第695 の 6 本は無しで、数字の幅・高さが汎用 serif だった＝第736 ⑴⑵）。tab の tuplet の残差は全部 beam の決定（`uniformBeamedLength`）の帰結＝第737
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
-- ★ **跳躍（D.C./D.S.）の経路を読まない 3 軒（第775・ユーザー判断）**: `Semantics/FormRoute.cs` は MIDI だけが読む。page の tie carry（`SectionPlayCarry.PlayedOrder`＝stamp から組む）・`SectionBoundaryBars.Expand`（小節補完の隣接）・XML（`<sound dalsegno>` の宣言のみ）は跳躍を追わない（`FormRoute` の註に名指し）。候補: ⑴ tie を segno の section へ運ぶ（stamp に跳躍を足す配管・LYS4007 の的が増える・跳躍文を持つ form はディスク上 8 冊）／⑵ 診断「`ds` に `segno` が無い」「`al coda` に `coda` が無い」（新 LYS・今は絵のまま＝`FormJumpMidiTests` が観測）／⑶ music 中の跳躍文は追わない（コーパス 0・文書に明記）。
+- ★ **跳躍（D.C./D.S.）の経路を読まない 3 軒（第775・ユーザー判断）**: `Semantics/FormRoute.cs` は MIDI だけが読む。page の tie carry（`SectionPlayCarry.PlayedOrder`＝stamp から組む）・`SectionBoundaryBars.Expand`（小節補完の隣接）・XML（`<sound dalsegno>` の宣言のみ）は跳躍を追わない（`FormRoute` の註に名指し）。候補: ⑴ tie を segno の section へ運ぶ（stamp に跳躍を足す配管・LYS4007 の的が増える・跳躍文を持つ form はディスク上 8 冊）／⑶ music 中の跳躍文は追わない（コーパス 0・文書に明記）。⑵ の診断（segno／fine／to coda／coda の無い跳躍文＝LYS4025）は第790 が閉じた。
 - ⚠️ **U11（`Hold the Line` の page1 が LP 8 系・Lily# 7 系）＝第547 が「移植できる欠陥は無い」と確定・第573 が lead を閉じた（頁 DP の僅差 0.030576 対 0.031049＝1e-3 級の差でどちらにも倒れる）＝提案しない**（全文は §1.1 第547・第573＝ARCHIVE・Lab `sessions/p547/`・`sessions/p573/u11/`）。重複 mark は第558 が畳んだ（LYS4021）＝page 割りは動かない
 - ★★★ **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す**（0.074% ＋ 1 ULP の尾）
 - ★★ **⒵⁴ `prefixMarkAnchorX` の解き直し 0.338%**＝**memo は反証済み**（hit 率 0.53%）
@@ -118,6 +118,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第790セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザー「続けて」→ AskUserQuestion で ⒝ 跳躍の候補 **⑵ 診断** を選択。`-Start p790`（HEAD `e73f5519`・未 push 23）＝full **10973 / 0 / 2 / 10975**。§7 3.5 で第788 を ARCHIVE へ。
+- **設計＝規則を 2 度綴らない**: `FormRoute.Of(items, faults)` が自分の 4 つの fallback（`ds` に `segno` 無し＝追わない／`al fine` に `fine` 無し＝跳躍まで再生して終わる／`al coda` に `to coda` 無し＝跳躍まで再生／`al coda` の後ろに `coda` 無し＝跳躍の直後から再開）を踏むたびに `Fault(jump, JumpFault)` を積む。新 `FormJumpTargetValidator`（LYS4025・warning・跳躍文の位置・書いた綴りで「'ds al coda' has no 'segno' before it, so …」と fallback を名指す）はそれを言葉にするだけ＝MIDI と食い違えない。`ds` に segno が無いときは segno だけ報告（al 側は無意味）。起票は segno・coda の 2 つだったが同じ族の fine・to coda も 1 コードに入れた（ONE CODE の前例 LYS4018／4023）。
+- 網 `FormJumpTargetValidatorTests` 18 本（完全な form は無音・6 つの欠落・両方欠けた al coda は 2 本・二路 form は各路 1 本・位置と綴り・`SemanticValidation.Run` が運ぶ）。`FormJumpMidiTests` の二路 form `segno A ds al coda coda B segno C ds al fine` は to coda と fine を書いていない＝MIDI は両路を追い診断は 2 本＝矛盾しない。
+- 文書: `Diagnostic.cs` の LYS4025 の註・CHANGELOG「Navigation marks」・SYNTAX_REFERENCE／GRAMMAR／GRAMMAR_FOR_LLM の NavMark の註。棚卸し `APPROXIMATIONS.md` 1 行・csv 不変。
+- 掃き（`sessions/p790/check/sweep-check790.ps1`＝`lysc check --batch` を side ごとに 1 process・p753 の型は本ごとに起動していた・base＝`sessions/p789/exe-head`＝HEAD のコード・head＝`sessions/p790/exe-head`・`sweep.log`・`*-diff.txt`）: main 998 冊 **差 0**（jump を持つ blogger と fixture 2 冊は landmark が揃っている）／dogfood 177 冊 **差 2**＝`bare-dsc.lys`・`uxeval2/05-form.lys` の `ds al coda` に `segno` 無し＝本の側（Lab の本の修正はユーザー）。full **10991 / 0 / 2 / 10993**（網 +18）。
+★ `-End p790 -DiffBase e73f5519`（`end.log`）＝full **10991 / 0 / 2 / 10993**・門 全 OK。7.5: Core **`+` 183** 行・REF 0・OWN 0＝数値なし・LP に対応物なし（`FormRoute` の既存 OWN の註に従属＝LP の `\jump` は印だけ）。7.6: ⒞ 新しい OWN なし＝既存 OWN（`FormRoute`）の fallback を言葉にしただけ。7.7: 匂いなし（guard なし・sentinel なし）。commit `f5f73782`（code・網・CHANGELOG・docs 3 枚・棚卸し）＋ docs の commit。push はユーザー。
+判定: ⒝ 跳躍の ⑵ は閉じた（§1.0 の候補から落とした）。⑴（tie を segno の section へ）と ⑶（music 中の跳躍文は追わない＝文書に明記）はユーザー判断のまま。次の一手: ⑴／⑶ か ⒜ の小物（lead sheet の grid の残り ⒝⒠・⑼ の残り）＝ユーザー判断。会話を区切るか: (b) 便は 2 つ・文脈はまだ軽い＝**続けてよい**（続けるなら `-Start p791`）。
+
+## 以下は第789セッションの経緯
+
 ### 1.1 第789セッション（2026-10-04・YT-DELL2）
 
 新しい会話・ユーザー「HANDOFF を読んで着手」→ AskUserQuestion で ⒜ の **mid-line prefix 後の和音の X**（第788 起票）を選択。`-Start p789`（HEAD `2d056809`・未 push 21）＝full **10968 / 0 / 2 / 10970**。§7 3.5 で第787 を ARCHIVE へ。
@@ -128,20 +140,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 掃き（`sessions/p789/svg/sweep789.ps1`＝p723 の型＋dogfood 177 冊を別母集団・base＝`sessions/p788/exe-head`＝HEAD のコード・head＝`sessions/p789/exe-head`・`sweep.log`）: main 998 冊 svg **差 0 / 1199**（追跡＋実コーパスに `barNumbers every` は無い）／dogfood **差 13 / 195**＝`barNumbers every` を持つ 7 冊ちょうど: mid-line の番号が全部 0.095 左へ。右端が 0.095 縮んで次の列の ink を踏まなくなった番号は lift が消えて 3.05 に降りる（piano-sonatina の 6・8 が 0.31 下）＝その system の skyline が下がり段が 0.05〜0.29 動く（quartet-collide・bigband-swing）。全部 X anchor の帰結。
 ★ `-End p789 -DiffBase 2d056809`（`end.log`）＝full **10973 / 0 / 2 / 10975**（台帳 +5）・門 全 OK。7.5: Core **`+` 125** 行・REF +3（`RowExtents` の axis-group-interface.cc:178-182・`MidLineRowAnchor` の interval.hh:212・x の define-grobs.scm:334-337）・OWN 0＝足した数値なし（1.0 は既存 REF・0.095／0.545 は `BarlineAnchorFromInkLeft` の既存の家）。7.6: ⒜ union の試験と anchor は LP の字面／⒟ x は mark の家の指し直し／⒞ 新しい OWN なし（FretBoards 群・lyrics 行は未移植・名指し据え置き）。7.7: 匂いなし（guard なし・sentinel なし・床は LP の規則）。commit `2e509001`（code・probe・台帳・読み手・CHANGELOG・棚卸し）＋ docs の commit。push はユーザー。
 判定: ⒜ の「mid-line prefix 後の和音の X」は閉じた（前提は外れ・原因は番号の reach の読みと anchor＝§1.0 から消した）。次の一手: ⒝ 跳躍の 3 軒（候補 ⑴〜⑶ はユーザー判断）か ⒜ の小物（lead sheet の grid の残り ⒝⒠・⑼ の残り）＝ユーザー判断。会話を区切るか: (a) 次の一手は本便の文脈を使わない・(b) 便は 1 つで文脈は軽い＝**続けてよい**（続けるなら `-Start p790`・跳躍は候補の選択をユーザーに訊いてから）。
-
-## 以下は第788セッションの経緯
-
-### 1.1 第788セッション（2026-10-04・YT-DELL2）
-
-同じ会話の続き・ユーザー「続けて」＝§1.0 ⒝ の **小節番号と和音行**（第767 起票）に着手。`-Start p788`（HEAD `ce6cc10c`・未 push 19）＝full **10965 / 0 / 2 / 10967**。§7 3.5 で第786 を ARCHIVE へ。
-- **処方箋を測り直した（5.0）**: 起票は「段途中の番号の support に和音行の up-skyline を足す」と書いたが、LP の絵（`sessions/p767/twin/…/out-page1.png`）の番号は diagram の**上**ではなく**和音名の脇**（左）＝機構は `move_to_extremal_staff`（side-position-interface.cc:513-547・staff-grouper-interface.cc:31-56）: mid-line の番号は bar line に立ち、その小節の和音が X±1.0 の reach に入るので **ChordNames 群に付け替わり**、support の staff が落ちて（:549-562）空の support から **refpoint（和音の baseline）＋1.0** を払う。行頭の番号は左余白に下がるので届かず staff に残る（既存 `barnumber.chord-row.*`＝3.05）。
-- **probe `barnumber-mid-line.ly` 3 冊（PROBEN・`sessions/p788/lp-barnumber-mid-line.txt`）**: BNM（毎小節に和音）＝番号「2」の ink 下端 − 和音 baseline **1.000000**（「3」「4」も）・staff refpoint からは 6.045／BNT（全部♯・行が descender ぶん上がる）＝**1.000000**（同一性成立＝高さは入らない）／BNE（bar 1 だけ和音）＝「2」「4」は **staff から 3.050000**（reach 外＝staff に戻る・「3」は符尾を避けて 4.56）。予測 3 つとも HELD。Lily#（直す前）: BNM/BNT は番号が和音行の**下**（読み手が throw）・BNE 3.05。
-- **直した（commit 下記）**: `BarNumberEngraver.Calculate` に `chordNames` を渡し、mid-line の番号は **`MidLineRowAnchor`**＝anchor staff より上の行のうち、symbol の ink が番号の X±`ExtremalStaffReach`(1.0) に届く最上の行に乗る: 床は **その行の symbol の baseline＋1.0**、X で重なる symbol があればその ink 上端＋0.46（outside-staff pass の分・BNM では発火しない）、anchor index は行。行ごとの symbol は system ごとに 1 回 bucket（`RowSymbolsBySystem`）。⚠️ **1 稿目は 3.36 と読んだ**＝stacker `PlaceBarNumbers` が行の room に置き直していた: staff の上の行の room は**帯の上端の flat base＋profile なし**（`AboveTrackers` の `FlatBase`＝Lily# の帯の模型）なので帯上端＋0.46 へ 2.36 持ち上げた（計器で実測＝entry0 高さ 0・profile 無）⇒ 行に乗った番号は **top staff の room に `Reserve`**（新・動かさず登録＝後の volta/mark が避ける）。結果 BNM/BNT **1.000000000**・BNE 3.050000000（残差 0・3 点とも exact）。
-- 台帳 +3（`barnumber.mid-line.chord-row.row-to-ink-bottom`・`.tall`・`barnumber.mid-line.no-chord-near.staff-to-ink-bottom`）・読み手 `BarNumberInkBottomAboveChordRow`／`BarNumberInkBottomAboveStaff`（名前で選ぶ）。CHANGELOG Fixes。棚卸し `APPROXIMATIONS.md` 行番号・csv +1（`Reserve` の 0.0・Yellow）。full **10968 / 0 / 2 / 10970**（台帳 +3）・snapshot 不動（`barNumbers every` の fixture に和音行付きは無い）。
-- **絵（dogfood leadsheet-collide・`sessions/p788/probes/…page1.png`）**: 2・5・6・9・12・13 は和音名の脇＝LP と同じ段・diagram の運指との衝突は消えた。⚠️ 観察: **3・11 は staff に残る**（LP は和音名の脇）＝その小節の和音が `|:` や調号＋拍子の prefix の後ろに立ち、番号（bar line）から reach 1.0 を超える。LP の twin では和音がもっと番号寄りに立つ（prefix の幅の差＝X の島）。起票は §1.0 ⒜。
-- 掃き（998 冊・base＝`sessions/p787/exe-head`＝HEAD のコード・head＝p788・`sessions/p788/svg/sweep.log`・`sweep-ly.log`）: svg **差 0 / 1199**・ly **差 0**＝追跡の本と実コーパスに「和音行＋`barNumbers every`」は無い。母集団の外の Lab `corpora/dogfood/` 177 冊（194 svg）を別に掃いた（`dogfood-base`／`dogfood-head`）: **差 3**＝leadsheet-collide・guitar-tab-song の 2 score＝mid-line の番号が和音名の脇へ。
-★ `-End p788 -DiffBase ce6cc10c`（`end.log`）＝full **10968 / 0 / 2 / 10970**（台帳 +3）・門 全 OK（HANDOFF 残り 4,730 B・§1 残り 9,304 字・棚卸し差分なし）。7.5: Core **`+` 187** 行・REF +3（`ExtremalStaffReach` の side-position-interface.cc:521-523・`MidLineRowAnchor` の :513-547／:549-562／:347-351 と staff-grouper-interface.cc:31-56）・OWN 0＝足した数値は reach の 1.0（REF）だけ・`Reserve` の 0.0 は horizon padding の空値。7.6: ⒜ reach の試験と「refpoint＋1.0」は LP の字面／⒝ 行の room を使わず top staff の room に Reserve するのは Lily# の帯の模型（行の room が flat base）への適応＝腕に理由と実測を書いた／⒞ 新しい OWN なし（diagram の FretBoards 群と lyrics 行は「未移植・名指し」）。7.7: 匂いなし（guard でなく reach の試験・sentinel なし・床は LP の規則）。commit `29b66746`（code・probe・台帳・読み手・CHANGELOG・棚卸し 2 枚）＋ docs の commit。push はユーザー。
-判定: ⒝ の「小節番号と和音行」は閉じた（§1.0 から消し、残差の X の観察を ⒜ に起票）。次の一手: ⒝ の残り＝跳躍の 3 軒（候補 ⑴〜⑶ はユーザー判断）か、⒜ の小物（mid-line prefix 後の和音の X・lead sheet の grid の残り・⑼ の残り）＝ユーザー判断。会話を区切るか: (b) 便が 3 つ続き読み直しも増えてきた＝**区切ってよい**（続けるなら `-Start p789`・跳躍は候補の選択をユーザーに訊いてから）。
 
 ## 2. 開いている作業
 

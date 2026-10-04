@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第788セッションの経緯
+
+### 1.1 第788セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザー「続けて」＝§1.0 ⒝ の **小節番号と和音行**（第767 起票）に着手。`-Start p788`（HEAD `ce6cc10c`・未 push 19）＝full **10965 / 0 / 2 / 10967**。§7 3.5 で第786 を ARCHIVE へ。
+- **処方箋を測り直した（5.0）**: 起票は「段途中の番号の support に和音行の up-skyline を足す」と書いたが、LP の絵（`sessions/p767/twin/…/out-page1.png`）の番号は diagram の**上**ではなく**和音名の脇**（左）＝機構は `move_to_extremal_staff`（side-position-interface.cc:513-547・staff-grouper-interface.cc:31-56）: mid-line の番号は bar line に立ち、その小節の和音が X±1.0 の reach に入るので **ChordNames 群に付け替わり**、support の staff が落ちて（:549-562）空の support から **refpoint（和音の baseline）＋1.0** を払う。行頭の番号は左余白に下がるので届かず staff に残る（既存 `barnumber.chord-row.*`＝3.05）。
+- **probe `barnumber-mid-line.ly` 3 冊（PROBEN・`sessions/p788/lp-barnumber-mid-line.txt`）**: BNM（毎小節に和音）＝番号「2」の ink 下端 − 和音 baseline **1.000000**（「3」「4」も）・staff refpoint からは 6.045／BNT（全部♯・行が descender ぶん上がる）＝**1.000000**（同一性成立＝高さは入らない）／BNE（bar 1 だけ和音）＝「2」「4」は **staff から 3.050000**（reach 外＝staff に戻る・「3」は符尾を避けて 4.56）。予測 3 つとも HELD。Lily#（直す前）: BNM/BNT は番号が和音行の**下**（読み手が throw）・BNE 3.05。
+- **直した（commit 下記）**: `BarNumberEngraver.Calculate` に `chordNames` を渡し、mid-line の番号は **`MidLineRowAnchor`**＝anchor staff より上の行のうち、symbol の ink が番号の X±`ExtremalStaffReach`(1.0) に届く最上の行に乗る: 床は **その行の symbol の baseline＋1.0**、X で重なる symbol があればその ink 上端＋0.46（outside-staff pass の分・BNM では発火しない）、anchor index は行。行ごとの symbol は system ごとに 1 回 bucket（`RowSymbolsBySystem`）。⚠️ **1 稿目は 3.36 と読んだ**＝stacker `PlaceBarNumbers` が行の room に置き直していた: staff の上の行の room は**帯の上端の flat base＋profile なし**（`AboveTrackers` の `FlatBase`＝Lily# の帯の模型）なので帯上端＋0.46 へ 2.36 持ち上げた（計器で実測＝entry0 高さ 0・profile 無）⇒ 行に乗った番号は **top staff の room に `Reserve`**（新・動かさず登録＝後の volta/mark が避ける）。結果 BNM/BNT **1.000000000**・BNE 3.050000000（残差 0・3 点とも exact）。
+- 台帳 +3（`barnumber.mid-line.chord-row.row-to-ink-bottom`・`.tall`・`barnumber.mid-line.no-chord-near.staff-to-ink-bottom`）・読み手 `BarNumberInkBottomAboveChordRow`／`BarNumberInkBottomAboveStaff`（名前で選ぶ）。CHANGELOG Fixes。棚卸し `APPROXIMATIONS.md` 行番号・csv +1（`Reserve` の 0.0・Yellow）。full **10968 / 0 / 2 / 10970**（台帳 +3）・snapshot 不動（`barNumbers every` の fixture に和音行付きは無い）。
+- **絵（dogfood leadsheet-collide・`sessions/p788/probes/…page1.png`）**: 2・5・6・9・12・13 は和音名の脇＝LP と同じ段・diagram の運指との衝突は消えた。⚠️ 観察: **3・11 は staff に残る**（LP は和音名の脇）＝その小節の和音が `|:` や調号＋拍子の prefix の後ろに立ち、番号（bar line）から reach 1.0 を超える。LP の twin では和音がもっと番号寄りに立つ（prefix の幅の差＝X の島）。起票は §1.0 ⒜。
+- 掃き（998 冊・base＝`sessions/p787/exe-head`＝HEAD のコード・head＝p788・`sessions/p788/svg/sweep.log`・`sweep-ly.log`）: svg **差 0 / 1199**・ly **差 0**＝追跡の本と実コーパスに「和音行＋`barNumbers every`」は無い。母集団の外の Lab `corpora/dogfood/` 177 冊（194 svg）を別に掃いた（`dogfood-base`／`dogfood-head`）: **差 3**＝leadsheet-collide・guitar-tab-song の 2 score＝mid-line の番号が和音名の脇へ。
+★ `-End p788 -DiffBase ce6cc10c`（`end.log`）＝full **10968 / 0 / 2 / 10970**（台帳 +3）・門 全 OK（HANDOFF 残り 4,730 B・§1 残り 9,304 字・棚卸し差分なし）。7.5: Core **`+` 187** 行・REF +3（`ExtremalStaffReach` の side-position-interface.cc:521-523・`MidLineRowAnchor` の :513-547／:549-562／:347-351 と staff-grouper-interface.cc:31-56）・OWN 0＝足した数値は reach の 1.0（REF）だけ・`Reserve` の 0.0 は horizon padding の空値。7.6: ⒜ reach の試験と「refpoint＋1.0」は LP の字面／⒝ 行の room を使わず top staff の room に Reserve するのは Lily# の帯の模型（行の room が flat base）への適応＝腕に理由と実測を書いた／⒞ 新しい OWN なし（diagram の FretBoards 群と lyrics 行は「未移植・名指し」）。7.7: 匂いなし（guard でなく reach の試験・sentinel なし・床は LP の規則）。commit `29b66746`（code・probe・台帳・読み手・CHANGELOG・棚卸し 2 枚）＋ docs の commit。push はユーザー。
+判定: ⒝ の「小節番号と和音行」は閉じた（§1.0 から消し、残差の X の観察を ⒜ に起票）。次の一手: ⒝ の残り＝跳躍の 3 軒（候補 ⑴〜⑶ はユーザー判断）か、⒜ の小物（mid-line prefix 後の和音の X・lead sheet の grid の残り・⑼ の残り）＝ユーザー判断。会話を区切るか: (b) 便が 3 つ続き読み直しも増えてきた＝**区切ってよい**（続けるなら `-Start p789`・跳躍は候補の選択をユーザーに訊いてから）。
+
 ## 以下は第787セッションの経緯
 
 ### 1.1 第787セッション（2026-10-04・YT-DELL2）
