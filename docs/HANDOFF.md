@@ -115,6 +115,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第806セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き。ユーザー「a」＝第805 の次の候補 ⒜（単独の旗付き 8 分の直後の行中 change）。`-Start p806`（HEAD `2681f0c5`・未 push 22）＝full **11057 / 0 / 2 / 11059**。§7 3.5 で第804 を ARCHIVE へ（moved 15 lines）。
+- §2 B の第805 起票（旗付き 8 分の直後の行中 clef／調号が LP より約 0.3 狭い）＝**閉じた**。LP に 3 冊を通して割った（Lab `sessions/p806/flag`）: 旗あり 2.5674・旗の stencil を消すと 2.0042・clef なしの次の音まで 2.5042。床の式 (ideal＋min)/2 から ideal 2.5042 が出て、旗ありは**ちょうど min（旗の右端 2.0674＋0.2）＋0.3**＝`merge_springs` の頭上余白（spring.cc:122）。Lily# はこれを `MeasureLayouter` で左右を足した spring に掛けていた（足した最小に対して効かない）。前便の「min_dist だけでは説明できない」は正しく、残りは spring の合成の側だった。
+- §5.0 の型: **`a11bc5c79`（出力不変）**＝probe `barline-spacing.ly` に MCF／MKE＋台帳 2 点（−0.181600 は予測の数どおり・−0.131600 は形だけ予測＝調号の左 esw 0 のぶん床も 0.05 下がる）。**`d8c2a8221`（移植）**＝`MidMeasureChangeGaps` が左の間隔を自分の min＋0.3 で床張り（`SpringHeadroom`＝LP の 0.3 の 2 か所が共有する定数）。2 点とも 0・他の midmeasure 点は不動。毒 1 本（Lab `sessions/p806/poisons.ps1`）＝その 2 点だけが赤。計器に `RenderedGeometry.FirstAccidentalAfter`。
+- 掃き（`p806/sweep/`・base＝`p805/exe-head`）: **998 冊・1,199 svg・差 0**＝今の母集団にこの形は無い（snapshot も不動）。第805 の 2 小節の双子は LP と 2 桁で一致（clef 45.27／45.26・調号 45.17／45.16）。CHANGELOG は第805 の項に 1 文。
+- 触っていない: `MeasureLayouter` の合成 spring への頭上余白は残した（左右とも各自の 0.3 を持つので合成側では効かない＝消す根拠は「効かない」だけ。消すと wish の無い対の扱いの註ごと書き直しになる）。
+★ `-End p806 -DiffBase 2681f0c5`（`end1.log`）＝full **11059 / 0 / 2 / 11061**（網 +2＝台帳点 2）・門 全 OK（HANDOFF 439,640 B・残り 10,360）。台帳 981 → 983 点・exact 784 → 786・OPEN 0。7.5: Core `+` 10 行・REF 2（spacing-spanner.cc:380-393・spring.cc:122）・OWN 0。7.6: ⒜ 字面＝`max(min + 0.3, ideal)` を LP と同じ spring（左）に。7.7: 同じ 0.3 を合成 spring にも掛けたまま＝効かない 2 つ目の適用（触っていない理由は上）／guard・fallback なし。7.9 perf: change 列ごとに Math.Max 1 回。commit `a11bc5c79`（点）・`d8c2a8221`（移植・CHANGELOG）＋ docs の commit。Lab は sessions/p806 を commit。push はユーザー。
+判定: §2 B の旗付き 8 分は閉じた（第805 の測り直しの副産物が 1 便で閉じた）。行中の change の左側は、LP の 3 つの量（skyline の min・:105 の床・merge_springs の余白）が全部揃った。次の候補: ⒜ 同じ島の残り＝change 列の**右の rod**（`RightRod`＝Paper_column::minimum_distance を箱で作っている・第805 が名指した）を双子で測る／⒝ §2 C・D・E の古い起票の測り直し／⒞ H の束（設計）。会話を区切るか: (a) ⒜ は今の計器（`pair.ps1`・barline-spacing の probe）の上に立つ＝続ける側／(b) この会話は RULES 通読＋4 便で長い。圧縮はまだ起きていないが重い／(c) ⒝⒞ は別の島。⇒ **⒜ なら続けてよいが、重さを考えると新しい会話でも損は小さい**。
+
+## 以下は第805セッションの経緯
+
 ### 1.1 第805セッション（2026-10-04・YT-DELL2）
 
 同じ会話の続き。ユーザー「承認する。(a)」＝第804 の出力変更（`eed3a3bc6`・Endless Story の tab の 1 段）を承認、次は §2 の古い起票の測り直し。`-Start p805`（HEAD `d815eee4`・未 push 19）＝full **11052 / 0 / 2 / 11054**。§7 3.5 で第803 を ARCHIVE へ（moved 15 lines）。
@@ -126,20 +138,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 触っていない: 多段譜の change 列は 1 つの譜の枠で読む（他の譜の音も同じ高さで当てる＝LP と旧い箱のあいだに落ち、LP より狭くはならない・註に書いた）。右の rod（`RightRod`＝Paper_column::minimum_distance）は箱のまま。拍子の Y extent は Lily# のモデルに無い（LP: C 記号 ±1.0・数字 ±2.0）が、帯が隣の高さまで伸びる規則なので答えには効かない。
 ★ `-End p805 -DiffBase d815eee4`（`end1.log`）＝full **11057 / 0 / 2 / 11059**（網 +5＝台帳点 5）・門 全 OK（HANDOFF 441,826 B・残り 8,174）。台帳 976 → 981 点・exact 779 → 784・OPEN 0。7.5: Core `+` 199 行・REF 8・OWN 0＝足した規則は 1 つ（change 列への min_dist は skyline 距離）で、REF は note-spacing.cc:78-82・separation-item.cc:150-187・output-lib.scm:929-932／:976-979・define-grobs NonMusicalPaperColumn・parser-clef.scm・clef.cc。7.6: ⒜ 字面＝min_dist の式と箱の作り（Separation_item::boxes）／⒝ 列の枠＝LP は譜ごとの separation item、Lily# は 1 つの譜の枠（多段譜は LP と旧い箱のあいだ・註）。7.7: ⑴ 同じ量の 2 つ目の綴りを 2 つ畳んだ（clef の線・`_change` の箱）／⑵ guard・fallback なし（skyline が重ならなければ max(0, −∞)＝0 は LP の max そのもの）／⑶ 右の rod は箱のまま（名指した）。7.9 perf: 行中の change 列ごとに 1〜3 箱の skyline 1 枚と前の item ごとの距離 1 回・skyline は render memo 共有＝新しい歩きなし。commit `1b8b17904`（点）・`403dd3e4c`（移植・網・snapshot 1 枚・CHANGELOG・棚卸し）＋ docs の commit。Lab は sessions/p805（`findings.md`・毒・掃き・双子）を commit。push はユーザー。
 判定: §2 B の「行中 clef の origin」は閉じた。教訓: 第804 と同じく、**「閉じていた」を確かめる texture の掃き（音域・付点・旗を振った双子）が開いた形を見つけた**。そして**1 回目の毒で観測者 0 が 3 本＝移植した規則の部品ごとに点が要った**（RULES §5.4「網は毒で赤くなるまで」の再演）。次の候補: ⒜ §2 B の旗付き 8 分（この便の計器と LP の Note_spacing の文脈をそのまま使う＝LP に ideal／min を吐かせる 1 手から）／⒝ §2 の古い起票の測り直しを続ける（C・D・E）／⒞ H の束（設計）。会話を区切るか: (a) ⒜ は今の文脈の上に立つ＝続ける側／(b) この会話は RULES 通読＋3 便で長いが、圧縮はまだ起きていない／(c) ⒝⒞ は別の島。⇒ **⒜ ならこの会話で `-Start p806`、⒝⒞ なら新しい会話でも差は小さい**。
-
-## 以下は第804セッションの経緯
-
-### 1.1 第804セッション（2026-10-04・YT-DELL2）
-
-新しい会話・ユーザー「HANDOFF を読んで作業に着手して」。`-Start p804`（HEAD `ac560a8d`・未 push 16）＝full **11041 / 0 / 2 / 11043**。§7 3.5 で第802 を ARCHIVE へ（moved 15 lines）。
-- **候補 ⒞′（双子が chords／lyrics 行を出せない 5 冊）＝既に閉じていた**（`7b5ec5557`・2026-09-08）: 6 冊とも双子が ChordNames／Lyrics を出し LP が描く（Lab `sessions/p804/twin/`）。残る LP の警告 2 種は欠陥ではない（§2 F の該当行を ✅ に書き換えた）。
-- **候補 H の束 ⑷「courtesy 拍子の右側 0.455」（第131 起票）＝これも閉じていた**（上の §2 H ⑷）。ただし texture を振った 12 冊のうち**取消だけの courtesy 1 形が 0.50 ずれていた**＝新しい欠陥。根は 1 つ: LP は C major／A minor への変更でも KeySignature を**空の extent の grob**として持ち、`Break_alignment_interface::calc_positioning_done`（break-alignment-interface.cc:144-156）が空の member を飛ばす。Lily# の行末の群は全部を「取消・0.5・調号」と読んでいた。3 形: ⑴ 取消が最後＝右端まで 1.0（LP 0.5）／⑵ 取消の次に拍子＝1.65（LP は KeyCancellation 自身の 1.25）／⑶ 何も刷らない変更（C→Am）の次に拍子＝予約 +0.4・描画 +1.4＝**拍子が五線の右端からはみ出す**。行中は元から正しい（`KeyChangeGrobWidths` が歩きの advance を最後のナチュラルで切っていた）。
-- 進め方は §5.0 の型: **commit 1 `5efb24756`（出力不変）**＝probe `courtesy-meter.ly` に CANCONLY／CANCMETER／NOKEYMETER の 3 冊（LP 2.26 実測 0.500000／1.250000／0.750000）＋台帳 4 点を予測つきで起票（+0.5／+0.4／+1.4／+0.4＝4 点とも予測どおり開いた）。**commit 2 `eed3a3bc6`（移植）**＝⑴ `SharedRenderer.KeyChangeGeometry` は取消→調号の 0.5 を調号が続くときだけ書く（標準・custom の両枝）／⑵ `SpacingRules.KeyCourtesyClosingSymbol`（新設・描いた歩きの最後の glyph から＝調号／取消／null）で拍子までの gap を引く。gap は key の suffix が持ち、`TimeCourtesySuffixWidth` は key の群が刷られないときだけ小節線の 0.75 を払う（調号で閉じる群は従来と同じ和）／⑶ 描画は何も刷らない変更に群を開かない・予約 2 軒（`LineEndCourtesyWidth`・`StaffRightEdges`）は「key の item が在るか」ではなく「key が幅を取ったか」を訊く。**4 点とも 0 に閉じた**。
-- 網: `CourtesyMeterTests` +7（fact 4・theory 3）。毒 7 本（Lab `sessions/p804/poisons.ps1`・`poisons.out`）＝7 つの編集を 1 つずつ戻すと台帳点と fact の 1〜5 本が赤。**毒 7（layout 側の予約）は 1 回目 観測者 0**（読みが全部「小節線から」で、小節線は誤った予約と一緒に動く）→ `TheLineCarryingTheCourtesy_EndsWhereTheNextLineEnds`（courtesy を持つ段の五線の右端＝次の段の右端）を書いて赤を確かめた（`poisons-run2.out`）。⚠️ 毒 7 は `MagicConstantInventoryTests` も 1 赤にする（毒自身のリテラル＝観測者ではない）。
-- 掃き（`p804/sweep/`・base＝`p803/exe-head`・head＝`p804/exe-head`）: **998 冊・1,199 svg・差 1**＝`Endless Story` の tab だけの score の 1 段（調と拍子が変わる改行）。tab は調号を刷らない＝⑶ の形で、最後の小節線→五線の右端が 3.30 → **2.90**＝台帳 `courtesy.meter.meter-to-line-end` の LP 値。同じ本の staff／staff＋tab の score は不動。snapshot 不動。
-- 触っていない: 譜ごとに違う調の群（移調譜）は LP が列で揃え、Lily# は譜ごとに自分のインクから鎖でつなぐ＝§2 H の paper column の束のまま。CHANGELOG Fixes 1 項。棚卸し 2 枚は行番号。
-★ `-End p804 -DiffBase ac560a8d`（`end2.log`）＝full **11052 / 0 / 2 / 11054**（網 +11＝台帳点 4・fact 4・theory 3）・門 全 OK（HANDOFF 442,300 B・残り 7,700）。台帳 972 → 976 点・exact 775 → 779・OPEN 0。1 回目の `-End` は 1 赤（`HandoffLedgerCitationTests`＝§2 に台帳点の名前を書いて札 `<!-- ledger: … -->` を付けなかった）→ 札を足して緑。7.5: Core `+` 109 行・REF 3・OWN 0＝足した規則は 1 つ（空の member は飛ばす）で 3 か所とも同じ住所。7.6: ⒝ LP 由来・字面でない＝LP は群の列を歩いて空の extent を飛ばすが、Lily# の行末は譜ごとに描いたインクから鎖でつなぐ（`SolveColumns` を通らない＝既存の註）。だから「最後に刷った glyph は何か」で読む。字面にするには行末の群を列として持つこと＝§2 H の束。7.7: ⑴ `keySuffix > 0.0`／`width > 0.0`＝「key が刷られたか」を幅で訊く代理（opener の 1.0 が在るので幅 0 ⇔ 何も刷らない）・観測者は毒 6・7／⑵ 予約 2 軒（layout と五線の右端）は同じ和の 2 綴りのまま＝3 形での一致は新しい theory が見る／⑶ null を返す `KeyCourtesyClosingSymbol` は握りつぶす既定値ではなく LP の規則（台帳 2 点と fact が観測）。7.9 perf: 歩きは足していない（行末の key courtesy ごとに null 判定 1 つ）。commit `5efb24756`（点）・`eed3a3bc6`（移植・網・CHANGELOG・棚卸し）＋ docs の commit。Lab は sessions/p804 を commit（計器 `courtesy/pair.ps1`＝.lys 1 冊を Lily# と LP 双子の SVG で並べる・2 桁の go／no-go 用）。push はユーザー。⚠️ **出力が変わる変更＝ユーザーの承認待ち**（snapshot 不動・実コーパス 1 冊 1 段・LP の台帳値と一致）。
-判定: 候補 2 つ（⒞′・H ⑷）は実コードで測ると閉じていて、測り直しが新しい欠陥 1 つを出して閉じた。教訓は第798 と同じ（§2 の古い起票は着手前に今の木で再現する）＋**「閉じていた」を確かめる texture の掃きが、隣の開いた形を見つける**。次の候補: ⒜ §2 の古い起票の測り直しを続ける（B・C・D・E の「伝聞」＝`pair.ps1` で 1 件数分）／⒝ H の束の本体（行末・行頭の群を列として持つ＝設計・移調譜の courtesy が観測点になる）／⒞ T7 の残り（計器）。会話を区切るか: (a) ⒜ は今便の計器と break-align の文脈を使う＝続ける側／(b) RULES 通読＋1 便で圧縮はまだ／(c) ⒝⒞ は別の島。⇒ **⒜ ならこの会話で `-Start p805`、⒝⒞ は新しい会話でも差は小さい**。
 
 ## 2. 開いている作業
 
@@ -1172,7 +1170,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   `IsCrossStaff` は到達不能（`@cross` は描画側にしか流れない）。skyline 方針（＝LP は除外）は
   `72905813` でピン済み。**機能が届いてから** E2E の対を起票する。
 - ✅ **mid-line clef change の origin＝第805 が測って閉じた**（`1b8b17904` 点・`403dd3e4c` 移植）: 譜の中・譜の下の音の後、小節頭の clef は元から LP と一致。ずれていたのは**譜の上の音（符尾下）の直後の行中 clef**だけで、根は「行中の change 列への rod（Note_spacing の min_dist）を箱で作っていた」＝skyline に移植（台帳 5 点・snapshot `test/clef-change` 1 枚・実コーパス 0 冊）。<!-- ledger: midmeasure.clef.prev-note-to-clef.head-above-clef = 0 -->
-- **単独の旗付き 8 分の直後の行中 change が LP より狭い**（第805 起票・Lab `sessions/p805/clef` の k-dot-clef／n-dot-key・`findings.md`）: `g4. a8 |`＋change で clef は LP 2.56・Lily# 2.19（移植前 1.80）、調号は LP 2.46・Lily# 2.17（前 1.75）。連桁の 8 分では一致＝旗だけが効く。旗が wish の skyline に入ったぶんは近づいたが、残り約 0.3 は別の機構（旗の到達 1.07 を足しても 2.33＝min_dist だけでは説明できない）。次の一手: LP に Note_spacing の ideal／min を吐かせる。台帳点はまだ無い。
+- ✅ **単独の旗付き 8 分の直後の行中 change が LP より狭い（第805 起票）＝第806 が閉じた**（`a11bc5c79` 点・`d8c2a8221` 移植）: 根は `merge_springs` の min＋0.3（spring.cc:122）を、LP は change 列の**左の spring だけ**に掛けるのに、Lily# は左右を足した spring に掛けていたこと（効かない）。旗が clef／調号の帯に入ると min が ideal に近づき、:105 の床が min＋0.3 を下回る＝この形だけで割れる。台帳 `midmeasure.*.flagged-eighth` 2 点が 0・snapshot 不動・998 冊で動いた本 0。<!-- ledger: midmeasure.clef.prev-note-to-clef.flagged-eighth = 0 -->
 - ~~★★ **ビーム数が端で変わるビームの傾き**~~ — **閉じた**（第57セッション・`4b78405b`＋`5df1b0e1`・
   §1 ①②）。**`beamCount` はステム自身の多重度ではなく、その向きの最大値**
   （`stem.cc:1158` → `beam.cc:1517-1532`）。★ **残す教訓は 3 つ**: ⑴ **LP のソースが

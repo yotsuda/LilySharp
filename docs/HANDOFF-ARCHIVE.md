@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第804セッションの経緯
+
+### 1.1 第804セッション（2026-10-04・YT-DELL2）
+
+新しい会話・ユーザー「HANDOFF を読んで作業に着手して」。`-Start p804`（HEAD `ac560a8d`・未 push 16）＝full **11041 / 0 / 2 / 11043**。§7 3.5 で第802 を ARCHIVE へ（moved 15 lines）。
+- **候補 ⒞′（双子が chords／lyrics 行を出せない 5 冊）＝既に閉じていた**（`7b5ec5557`・2026-09-08）: 6 冊とも双子が ChordNames／Lyrics を出し LP が描く（Lab `sessions/p804/twin/`）。残る LP の警告 2 種は欠陥ではない（§2 F の該当行を ✅ に書き換えた）。
+- **候補 H の束 ⑷「courtesy 拍子の右側 0.455」（第131 起票）＝これも閉じていた**（上の §2 H ⑷）。ただし texture を振った 12 冊のうち**取消だけの courtesy 1 形が 0.50 ずれていた**＝新しい欠陥。根は 1 つ: LP は C major／A minor への変更でも KeySignature を**空の extent の grob**として持ち、`Break_alignment_interface::calc_positioning_done`（break-alignment-interface.cc:144-156）が空の member を飛ばす。Lily# の行末の群は全部を「取消・0.5・調号」と読んでいた。3 形: ⑴ 取消が最後＝右端まで 1.0（LP 0.5）／⑵ 取消の次に拍子＝1.65（LP は KeyCancellation 自身の 1.25）／⑶ 何も刷らない変更（C→Am）の次に拍子＝予約 +0.4・描画 +1.4＝**拍子が五線の右端からはみ出す**。行中は元から正しい（`KeyChangeGrobWidths` が歩きの advance を最後のナチュラルで切っていた）。
+- 進め方は §5.0 の型: **commit 1 `5efb24756`（出力不変）**＝probe `courtesy-meter.ly` に CANCONLY／CANCMETER／NOKEYMETER の 3 冊（LP 2.26 実測 0.500000／1.250000／0.750000）＋台帳 4 点を予測つきで起票（+0.5／+0.4／+1.4／+0.4＝4 点とも予測どおり開いた）。**commit 2 `eed3a3bc6`（移植）**＝⑴ `SharedRenderer.KeyChangeGeometry` は取消→調号の 0.5 を調号が続くときだけ書く（標準・custom の両枝）／⑵ `SpacingRules.KeyCourtesyClosingSymbol`（新設・描いた歩きの最後の glyph から＝調号／取消／null）で拍子までの gap を引く。gap は key の suffix が持ち、`TimeCourtesySuffixWidth` は key の群が刷られないときだけ小節線の 0.75 を払う（調号で閉じる群は従来と同じ和）／⑶ 描画は何も刷らない変更に群を開かない・予約 2 軒（`LineEndCourtesyWidth`・`StaffRightEdges`）は「key の item が在るか」ではなく「key が幅を取ったか」を訊く。**4 点とも 0 に閉じた**。
+- 網: `CourtesyMeterTests` +7（fact 4・theory 3）。毒 7 本（Lab `sessions/p804/poisons.ps1`・`poisons.out`）＝7 つの編集を 1 つずつ戻すと台帳点と fact の 1〜5 本が赤。**毒 7（layout 側の予約）は 1 回目 観測者 0**（読みが全部「小節線から」で、小節線は誤った予約と一緒に動く）→ `TheLineCarryingTheCourtesy_EndsWhereTheNextLineEnds`（courtesy を持つ段の五線の右端＝次の段の右端）を書いて赤を確かめた（`poisons-run2.out`）。⚠️ 毒 7 は `MagicConstantInventoryTests` も 1 赤にする（毒自身のリテラル＝観測者ではない）。
+- 掃き（`p804/sweep/`・base＝`p803/exe-head`・head＝`p804/exe-head`）: **998 冊・1,199 svg・差 1**＝`Endless Story` の tab だけの score の 1 段（調と拍子が変わる改行）。tab は調号を刷らない＝⑶ の形で、最後の小節線→五線の右端が 3.30 → **2.90**＝台帳 `courtesy.meter.meter-to-line-end` の LP 値。同じ本の staff／staff＋tab の score は不動。snapshot 不動。
+- 触っていない: 譜ごとに違う調の群（移調譜）は LP が列で揃え、Lily# は譜ごとに自分のインクから鎖でつなぐ＝§2 H の paper column の束のまま。CHANGELOG Fixes 1 項。棚卸し 2 枚は行番号。
+★ `-End p804 -DiffBase ac560a8d`（`end2.log`）＝full **11052 / 0 / 2 / 11054**（網 +11＝台帳点 4・fact 4・theory 3）・門 全 OK（HANDOFF 442,300 B・残り 7,700）。台帳 972 → 976 点・exact 775 → 779・OPEN 0。1 回目の `-End` は 1 赤（`HandoffLedgerCitationTests`＝§2 に台帳点の名前を書いて札 `<!-- ledger: … -->` を付けなかった）→ 札を足して緑。7.5: Core `+` 109 行・REF 3・OWN 0＝足した規則は 1 つ（空の member は飛ばす）で 3 か所とも同じ住所。7.6: ⒝ LP 由来・字面でない＝LP は群の列を歩いて空の extent を飛ばすが、Lily# の行末は譜ごとに描いたインクから鎖でつなぐ（`SolveColumns` を通らない＝既存の註）。だから「最後に刷った glyph は何か」で読む。字面にするには行末の群を列として持つこと＝§2 H の束。7.7: ⑴ `keySuffix > 0.0`／`width > 0.0`＝「key が刷られたか」を幅で訊く代理（opener の 1.0 が在るので幅 0 ⇔ 何も刷らない）・観測者は毒 6・7／⑵ 予約 2 軒（layout と五線の右端）は同じ和の 2 綴りのまま＝3 形での一致は新しい theory が見る／⑶ null を返す `KeyCourtesyClosingSymbol` は握りつぶす既定値ではなく LP の規則（台帳 2 点と fact が観測）。7.9 perf: 歩きは足していない（行末の key courtesy ごとに null 判定 1 つ）。commit `5efb24756`（点）・`eed3a3bc6`（移植・網・CHANGELOG・棚卸し）＋ docs の commit。Lab は sessions/p804 を commit（計器 `courtesy/pair.ps1`＝.lys 1 冊を Lily# と LP 双子の SVG で並べる・2 桁の go／no-go 用）。push はユーザー。⚠️ **出力が変わる変更＝ユーザーの承認待ち**（snapshot 不動・実コーパス 1 冊 1 段・LP の台帳値と一致）。
+判定: 候補 2 つ（⒞′・H ⑷）は実コードで測ると閉じていて、測り直しが新しい欠陥 1 つを出して閉じた。教訓は第798 と同じ（§2 の古い起票は着手前に今の木で再現する）＋**「閉じていた」を確かめる texture の掃きが、隣の開いた形を見つける**。次の候補: ⒜ §2 の古い起票の測り直しを続ける（B・C・D・E の「伝聞」＝`pair.ps1` で 1 件数分）／⒝ H の束の本体（行末・行頭の群を列として持つ＝設計・移調譜の courtesy が観測点になる）／⒞ T7 の残り（計器）。会話を区切るか: (a) ⒜ は今便の計器と break-align の文脈を使う＝続ける側／(b) RULES 通読＋1 便で圧縮はまだ／(c) ⒝⒞ は別の島。⇒ **⒜ ならこの会話で `-Start p805`、⒝⒞ は新しい会話でも差は小さい**。
+
 ## 以下は第803セッションの経緯
 
 ### 1.1 第803セッション（2026-10-04・YT-DELL2）
