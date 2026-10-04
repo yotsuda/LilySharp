@@ -257,7 +257,7 @@
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:519** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
 - **:1231** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
-- **:2770** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+- **:2772** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ArpeggioSpread.cs`
 - **:30** LILYSHARP-OWN: the owner's decision (2026-09-30) — &lt;&lt; chord(C x32010) &gt;&gt;2
 ### `LilySharp.Core/Music/BarRest.cs`

@@ -1770,7 +1770,9 @@ public sealed class MidiExporter
             // sees the whole piece and the parser guarantees a form repeat block closes at
             // form level. A one-sided ':|' written inside section music is therefore still
             // not played — measured 2026-08-15: ZERO of the 133 books on disk that contain a
-            // repeat barline spell one.
+            // repeat barline spell one. Since 2026-08-31 a repeat barline in section music is
+            // an ERROR anyway (LYS1034, RepeatStructureScopeValidator: repeats are written in
+            // the form); this arm only keeps an error book's MIDI whole.
             ProcessNode(items[i], track, conductorTrack);
         }
     }
