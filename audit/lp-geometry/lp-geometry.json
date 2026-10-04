@@ -4739,7 +4739,7 @@
       "score": "FDL16",
       "lilypond": 10.795,
       "residual": 0,
-      "why": "EXACT since session 812 (see staff.staff.flag-down.eighth). PREDICTION (written before the port, commit e3f6d0aa1): 0. OUTCOME: held, 0.000000000 (was +1.955). The account of the defect follows. Cause: see staff.staff.flag-down.eighth - the nominal flag box is flat at the stem's tip whatever the flag count. READING: Lily# 12.750000 = the upper stem's tip 6.25 (stem-shorten 0.25 for two flags) + 5.5 + 1, exactly. PREDICTION was about +1.2 and missed by the same stem-shorten term as the eighth's. PREDICTION for the port: 0."
+      "why": "EXACT since session 812 (see staff.staff.flag-down.eighth). ⚠️ THIS POINT DOES NOT OBSERVE THE FLAG'S OUTLINE, only the box's absence: the poison that drops the flag from the down skyline left it green (Lab sessions/p812/poisons.log, poison 4) - the sixteenth's longer stem (stem-shorten 0.25) binds against the lower head before the outline can, so LilyPond's 10.795 is a stem number. PREDICTION (written before the port, commit e3f6d0aa1): 0. OUTCOME: held, 0.000000000 (was +1.955). The account of the defect follows. Cause: see staff.staff.flag-down.eighth - the nominal flag box is flat at the stem's tip whatever the flag count. READING: Lily# 12.750000 = the upper stem's tip 6.25 (stem-shorten 0.25 for two flags) + 5.5 + 1, exactly. PREDICTION was about +1.2 and missed by the same stem-shorten term as the eighth's. PREDICTION for the port: 0."
     },
     "hara-kiri.wide-ink.lone-staff-to-next-system": {
       "probe": "page-vertical.ly",

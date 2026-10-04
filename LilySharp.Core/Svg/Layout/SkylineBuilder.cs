@@ -1346,6 +1346,8 @@ internal sealed class SkylineBuilder
                     {
                         var (flagUp, flagDown) = TextOutlineSkylines.MusicGlyphProfile(
                             flagGlyph, Rendering.SharedRenderer.FontSize);
+                        // ⚠️ The half-blot Y has no observer (session 812): the tab test reads
+                        // the outline's shape, and an up flag's outline tops out under the tip.
                         double flagX = x + halfStem;
                         double flagUpY = yTip - (stemUp ? 1 : -1) * EngravingDefaults.BlotDiameter / 2;
                         if (flagUp.Count > 0 || flagDown.Count > 0)
@@ -3200,6 +3202,10 @@ internal sealed class SkylineBuilder
             //   (its vertical-skylines entry), walked by
             //   lily/stencil-integral.cc:535-563 add_named_glyph_segments
             //   (TextOutlineSkylines.MusicGlyphProfile is that walk).
+            // ⚠️ NO OBSERVER for this arm's half-blot Y nor its up-skyline merge (poisons,
+            // session 812): an up flag's outline tops out at its origin, 0.05 under the stem's
+            // own tip, so every reader that sees the flag also sees the stem binding above it.
+            // The down arm's twin terms are held by staff.staff.flag-down.eighth.
             if (noteValue >= 8)
             {
                 double flagOriginX = stemCentre + size.Span(EngravingDefaults.StemThickness / 2);

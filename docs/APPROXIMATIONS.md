@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 61 | 観測者がゼロだと自認しているもの |
+| `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
 | `OWN` | 215 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **336** | |
+| **計** | **338** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -29,10 +29,10 @@
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 7 |
+| `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
-| `LilySharp.Core/Rendering/SharedRenderer.Beams.cs` | 5 |
 
 ## APPROX — LP に対応物はあるが、形が違うと自認しているもの（60 件）
 
@@ -133,7 +133,7 @@
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **:272** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（61 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（63 件）
 
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:691** no observer; add the paren widths when a book brings one. The unpacked
@@ -214,6 +214,9 @@
 - **:1945** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **:502** same part (leftHand). No book reaches the configuration, so no ledger point and
+### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
+- **:1349** ⚠️ The half-blot Y has no observer (session 812): the tab test reads
+- **:3205** ⚠️ NO OBSERVER for this arm's half-blot Y nor its up-skyline merge (poisons,
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
 - **:56** the distance is taken at — and NO ledger point moves with it. An output change no point
 ### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
@@ -504,7 +507,7 @@
 - **:129** ⚠️ LILYSHARP-OWN: THE TWO-EDGE MODEL ITSELF. LilyPond has no such pair —
 - **:297** ⚠️ LILYSHARP-OWN: THE SELECTION IS DELIBERATELY THE OLD ONE, and it is a KNOWN
 - **:383** ⚠️ LILYSHARP-OWN: THE FALLBACK TO THE DERIVED VALUE IS A SECOND ANSWER FOR ONE
-- **:1642** LILYSHARP-OWN (2026-09-28). Until then the diagram was merged with the other scripts at
+- **:1644** LILYSHARP-OWN (2026-09-28). Until then the diagram was merged with the other scripts at
 ### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
 - **:324** LILYSHARP-OWN: the bar line's box is grown toward THIS column only. LilyPond grows it
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
