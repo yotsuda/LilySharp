@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第799セッションの経緯
+
+### 1.1 第799セッション（2026-10-04・YT-DELL2）
+
+新しい会話。ユーザー「HANDOFF を読んで作業に着手して」＝候補の指定なし → 第798 の 3 候補のうちユーザー判断が要らない ⒞ F ⒨ から。`-Start p799`（HEAD `e1c99153`・未 push 6）＝full **11023 / 0 / 2 / 11025**。§7 3.5 で第797 を ARCHIVE へ。
+- **F ⒨ `lysc svg --combined` の例外＝直した**（起票第298）。probe（Lab `sessions/p799/probe/c-oldchords.lys`＝退役した `a:m` 綴りの chords 行＋staff score＋grid score）で逐語再現。例外は `SvgGenerator.ExtractSvgContent` の `IndexOf('>', IndexOf("<svg"))`——描く物の無い score（LYS1028 で chords 行が全部落ちた grid）は頁 0＝`SvgDocumentContext.Assemble` が `""` を返し、その `""` に `IndexOf("<svg")` が −1 を返して startIndex で投げていた。既定モードは同じ score を 0 バイトの svg に書く（`c-oldchords-grid.svg` 0 B＝recover の設計のまま・触っていない）。
+- 直し: `GenerateMultiMovement` が `svg.Length == 0` の score を movement に数えない（title も空帯も無し＝単独なら空ファイルの score は stack では何も無い）＋`ExtractSvgContent` は `<svg` 無しを「`>`・`</svg>` 無し」と同じく Empty に。probe a（phrase の構文エラー）・b（無い part）は 2 score とも頁が出るので例外にならず＝起票の「構文エラーを持つ本」は条件が広すぎ、正しくは「**頁 0 の score を含む複数 score の本**」。
+- 網 `IntegrationTests.GenerateMultiMovement_AScoreWithNothingToDrawIsNoMovement`（毒 A＝skip だけ外す→`grid` の title が出て :317 赤／毒 B＝guard も外す→旧行で投げて :312 赤・Lab `sessions/p799/poison.ps1`）。`CliBestEffortOutputTests` ほか 9 本緑。
+- 射程: `ExtractSvgContent`／`CombineMovements` の呼び手は `GenerateMultiMovement` だけ＝既定の `lysc svg`・preview・snapshot は 1 行も通らない＝掃き不要・snapshot 不動・棚卸し差分なし（`APPROXIMATIONS.md` は SvgGenerator.cs を引いていない）。CHANGELOG Fixes 1 項。commit `svg --combined: a score with nothing to draw is no movement in the stack`。
+- ⒞ の後半「双子が chords／lyrics 行を出せない 5 冊」は別の島（ly exporter の設計＝§2 F「`PartReferenceFinder` に無い」と同根）＝触っていない・§2 に残る。
+- 罠 1 つ（Lab OPERATIONS §1 に足した）: `cmd /d /s /c "dotnet test … --filter "A|B" < NUL …"` は内側の `"` で引用が切れて `|` がパイプになる（`'B' is not recognized as an internal or external command`・test は走らず log 2 行）＝`^|` でエスケープし filter は引用符なしで書く。
+★ `-End p799 -DiffBase e1c99153`（`end1.log`）＝full **11024 / 0 / 2 / 11026**（網 +1）・門 全 OK（HANDOFF 436,725 B・残り 13,275）。7.5: Core `+` 14 行・REF 0・OWN 0＝監査対象だが、足したのは「文書が空文字列なら movement に数えない」の分岐と `<svg` 無しの Empty 返しだけ（数値定数なし・LP の量を綴っていない）。7.6: ⒟ 何も足していない側（book.cc の空 score の扱いは読んでいない＝新しい REF は要らない・`GenerateMultiMovement` の既存 REF が住所）。7.7: `svg.Length == 0` の skip は「fallback で握りつぶす」の顔だが、空文字列は `SvgDocumentContext.Assemble` が頁 0 に返す*定義済みの答え*で、観測者は新しい網＝黙った既定値ではない。commit `37663beac`（code・網・CHANGELOG）＋ docs の commit。Lab は sessions/p799 と notes/CLAUDE-OPERATIONS.md を commit。push はユーザー。
+判定: ⒞ の前半（例外）は閉じた。次の候補（第798 の一覧の残り・着手前に実コードで確認）: ⒜ H の 3 つ（旗の reach −0.18・`ChordNameEngraver` の幅の床 `Math.Max(2.0)`・beam-auto の 1 段目の改行位置）／⒝ F ⑷ `lyrics NAME`＝error か warning かユーザー判断／⒞′ 双子の chords／lyrics 行（5 冊・exporter の設計）。会話を区切るか: (a) 次の島はこの便の文脈（`SvgGenerator`・CLI の stack）を使わない／(b) 会話はまだ軽い＝**既定どおり続ける**（`-Start p800`）。
+
 ## 以下は第798セッションの経緯
 
 ### 1.1 第798セッション（2026-10-04・YT-DELL2）

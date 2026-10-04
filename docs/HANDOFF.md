@@ -115,6 +115,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第801セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザー「H」＝H の残り 2 つ。`-Start p801`（HEAD `d3995c93`・未 push 10・1 度目は接続断で test の途中で切れた＝アーカイブ前だったので回し直しただけ）＝full **11024 / 0 / 2 / 11026**。§7 3.5 で第799 を ARCHIVE へ。
+- **H 旗の reach の残 −0.18＝既に閉じていた**: `p359/lp/flag-low.lys` を今の木と LP 2.26.0 に通すと、cadenza の 8 分 8 対は**全部 2.567 で LP と一致**（`p801/pair3.log`・head の x が 29.98〜51.61 まで 0.005 以内）。どの便が閉じたかは追っていない（第358 以後の grace／skyline の spacing の便のどれか）。§2 H の行に印。
+- **H beam-auto の 1 段目の改行位置（縦線 3 対 5）＝既に閉じていた**: `audit/lp-regression/lys/beam-auto.lys` の段割りは **20 段とも LP と同じ**（3 6 2 2 4 2 1 1 2 3 3 2 4 3 2 1 1 1 1 1・`pair-beamauto.log`）。§2 H の行に印。
+- **副産物＝新しい差を 1 つ見つけ、意図した逸脱として名前を付けた**: flag-low の最後の c1 が LP より +1.0。正体は `full-measure-extra-space`——LP の `fills_measure` は左の列に `measure-length` が無いと false（spacing-spanner.cc:459-461）で、その property は `measureStartNow` の列にしか書かれず（paper-column-engraver.cc:181-194）、Timing_translator は `timing` が off の間と `\cadenzaOff` の瞬間には立てない（timing-translator.cc:476-515）。⇒ 双子では **`time none` の 2 小節目以降と、明けた最初の小節だけ**、1 音の小節が余白を貰わない（実測 `q5-cadenza-wholes`: 小節線→頭 2.09・**1.09**・拍子→頭 **3.70**（普通の拍子替えは 4.70＝`q3`））。section の 1 小節目は貰う＝LP の中でも不揃い。**cadenza の拍位置の帳簿の副産物で spacing の規則ではない**＝Lily# はどの小節も小節の頭だと知っている（意味論は本のもの・RULES §5.2・第751）ので**変えない**。`SpacingRules.FillsMeasure` の remark に LILYSHARP-OWN として書き（OWN 215→216）、`SkipColumnSpacingTests.ALoneNoteInAFreeTimeBar_EarnsFullMeasureExtraSpaceLikeAnyBar` で pin（毒は当てていない＝既存の挙動の pin・拍子替えの対照との差分で書いた）。⚠️ 双子の掃きでこの形（`time none` の中か直後の 1 音の小節）が 1.0 ずれて見えたら、これ。
+- 計器: Lab `sessions/p801/pair801.ps1`（今の lysc の CLI と Lab のパスで書き直した p359 の pair・小節線／拍子／頭を x 順に並べる・`-SystemsOnly` は段ごとの小節線数）＋`settings.ly`（自立。⚠️ **p351→p354→p359 の settings.ly は `scratch/` の include が切れていて、LP は `fatal error: failed files` を刷りつつ LPEXIT=0 で頭だけ出す**＝小節線が 1 本も出ない計器は include を疑う）。⚠️ pwsh では関数名 `R` は `Invoke-History` の別名に負ける（「ID 17 の履歴が見つかりません」）。
+- 出力不変（remark と pin だけ）・掃き不要・snapshot 不動。CHANGELOG なし。
+★ `-End p801 -DiffBase d3995c93`（`end1.log`）＝full **11025 / 0 / 2 / 11027**（網 +1）・門 全 OK（HANDOFF 437,623 B・残り 12,377）。7.5: Core `+` 17 行・REF 0・OWN 1＝全部 `FillsMeasure` の remark（LP の 3 か所は住所つきの散文で引いた＝移植ではなく「移植しない理由」なので REF にしていない）。7.6: ⒞ LP に対応物が無い側（どの LP 行から外れたか＝spacing-spanner.cc:459-461・いつ消えるか＝消えない・観測者＝台帳なし／pin 1 本）。7.7: 新しい guard／fallback なし（コードは 1 行も動いていない）。commit `cb6ba729f`（remark・pin・棚卸し 2 枚）＋ docs の commit。Lab は sessions/p801 を commit。push はユーザー。
+判定: **§2 H の「残っている発明」は尽きた**（床＝第800 で消した・旗と beam-auto＝既に閉じていた）。H に残るのは paper column モデルの束（行頭 wish の `ownFixedFloor`・和音行の command 列・mid-measure の clef/key/time・行末の courtesy 群の右側 0.455）＝設計級で 1 便では閉じない。次の候補: ⒝ F ⑷ `lyrics NAME`＝error か warning かユーザー判断／⒞′ 双子の chords／lyrics 行（5 冊・exporter の設計）／H の束（設計）。会話を区切るか: (a) どれもこの便の文脈を使わない／(b) 接続断を 1 度挟んだが文脈は残っている＝どちらでもよい・**新しい島に入るなら新しい会話が僅かに有利**。
+
+## 以下は第800セッションの経緯
+
 ### 1.1 第800セッション（2026-10-04・YT-DELL2）
 
 同じ会話の続き・ユーザー「続けて」。第799 の候補 ⒜ H の 3 つのうち、計器も直し方も分かっている `ChordNameEngraver` の幅の床から。`-Start p800`（HEAD `8dad58a0`・未 push 8）＝full **11024 / 0 / 2 / 11026**。§7 3.5 で第798 を ARCHIVE へ。
@@ -125,20 +138,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - H の残り 2 つは未着手: 旗の reach −0.18（LP 側の機構が未特定＝`pcdump.ily` で旗付き対の WISH/min_dist を吐かせるのが次）・beam-auto の 1 段目の改行位置（縦線 3 対 5＝計器から）。
 ★ `-End p800 -DiffBase 8dad58a0`（`end1.log`）＝full **11024 / 0 / 2 / 11026**（網 ±0）・門 全 OK（HANDOFF 437,165 B・残り 12,835）。7.5: Core `+` 15 行・REF 0・OWN 0＝足したのは doc コメント（`FootprintWidth` の summary に「床は無い・第800 までは 2 綴り」）と呼び手の綴り替えだけ・新しい定数なし。7.6: ⒟ 発明の削除（許可した観測者＝掃き 1 冊の向き＋snapshot 247）。7.7: 「同じ量の 2 つ目の綴り」を 1 つに畳んだ側＝匂いは消えた方向・guard／sentinel／fallback なし。commit `5d20ce08b`（code・CHANGELOG・棚卸し）＋ docs の commit。Lab は sessions/p800 を commit。push はユーザー。
 判定: H の床は閉じた。次の候補（着手前に実コードで確認）: ⒜ H の残り 2 つ（旗の reach −0.18＝LP の機構が未特定・計器が先／beam-auto の 1 段目の改行位置＝計器が先）／⒝ F ⑷ `lyrics NAME`＝error か warning かユーザー判断／⒞′ 双子の chords／lyrics 行（5 冊・exporter の設計）。どれも「小さく閉じる」型ではない＝次は計器か設計かユーザー判断。会話を区切るか: (a) H の残りは今便の文脈（ChordNameEngraver）を使わない／(b) 会話はまだ軽い＝**既定どおり続ける**（`-Start p801`）。
-
-## 以下は第799セッションの経緯
-
-### 1.1 第799セッション（2026-10-04・YT-DELL2）
-
-新しい会話。ユーザー「HANDOFF を読んで作業に着手して」＝候補の指定なし → 第798 の 3 候補のうちユーザー判断が要らない ⒞ F ⒨ から。`-Start p799`（HEAD `e1c99153`・未 push 6）＝full **11023 / 0 / 2 / 11025**。§7 3.5 で第797 を ARCHIVE へ。
-- **F ⒨ `lysc svg --combined` の例外＝直した**（起票第298）。probe（Lab `sessions/p799/probe/c-oldchords.lys`＝退役した `a:m` 綴りの chords 行＋staff score＋grid score）で逐語再現。例外は `SvgGenerator.ExtractSvgContent` の `IndexOf('>', IndexOf("<svg"))`——描く物の無い score（LYS1028 で chords 行が全部落ちた grid）は頁 0＝`SvgDocumentContext.Assemble` が `""` を返し、その `""` に `IndexOf("<svg")` が −1 を返して startIndex で投げていた。既定モードは同じ score を 0 バイトの svg に書く（`c-oldchords-grid.svg` 0 B＝recover の設計のまま・触っていない）。
-- 直し: `GenerateMultiMovement` が `svg.Length == 0` の score を movement に数えない（title も空帯も無し＝単独なら空ファイルの score は stack では何も無い）＋`ExtractSvgContent` は `<svg` 無しを「`>`・`</svg>` 無し」と同じく Empty に。probe a（phrase の構文エラー）・b（無い part）は 2 score とも頁が出るので例外にならず＝起票の「構文エラーを持つ本」は条件が広すぎ、正しくは「**頁 0 の score を含む複数 score の本**」。
-- 網 `IntegrationTests.GenerateMultiMovement_AScoreWithNothingToDrawIsNoMovement`（毒 A＝skip だけ外す→`grid` の title が出て :317 赤／毒 B＝guard も外す→旧行で投げて :312 赤・Lab `sessions/p799/poison.ps1`）。`CliBestEffortOutputTests` ほか 9 本緑。
-- 射程: `ExtractSvgContent`／`CombineMovements` の呼び手は `GenerateMultiMovement` だけ＝既定の `lysc svg`・preview・snapshot は 1 行も通らない＝掃き不要・snapshot 不動・棚卸し差分なし（`APPROXIMATIONS.md` は SvgGenerator.cs を引いていない）。CHANGELOG Fixes 1 項。commit `svg --combined: a score with nothing to draw is no movement in the stack`。
-- ⒞ の後半「双子が chords／lyrics 行を出せない 5 冊」は別の島（ly exporter の設計＝§2 F「`PartReferenceFinder` に無い」と同根）＝触っていない・§2 に残る。
-- 罠 1 つ（Lab OPERATIONS §1 に足した）: `cmd /d /s /c "dotnet test … --filter "A|B" < NUL …"` は内側の `"` で引用が切れて `|` がパイプになる（`'B' is not recognized as an internal or external command`・test は走らず log 2 行）＝`^|` でエスケープし filter は引用符なしで書く。
-★ `-End p799 -DiffBase e1c99153`（`end1.log`）＝full **11024 / 0 / 2 / 11026**（網 +1）・門 全 OK（HANDOFF 436,725 B・残り 13,275）。7.5: Core `+` 14 行・REF 0・OWN 0＝監査対象だが、足したのは「文書が空文字列なら movement に数えない」の分岐と `<svg` 無しの Empty 返しだけ（数値定数なし・LP の量を綴っていない）。7.6: ⒟ 何も足していない側（book.cc の空 score の扱いは読んでいない＝新しい REF は要らない・`GenerateMultiMovement` の既存 REF が住所）。7.7: `svg.Length == 0` の skip は「fallback で握りつぶす」の顔だが、空文字列は `SvgDocumentContext.Assemble` が頁 0 に返す*定義済みの答え*で、観測者は新しい網＝黙った既定値ではない。commit `37663beac`（code・網・CHANGELOG）＋ docs の commit。Lab は sessions/p799 と notes/CLAUDE-OPERATIONS.md を commit。push はユーザー。
-判定: ⒞ の前半（例外）は閉じた。次の候補（第798 の一覧の残り・着手前に実コードで確認）: ⒜ H の 3 つ（旗の reach −0.18・`ChordNameEngraver` の幅の床 `Math.Max(2.0)`・beam-auto の 1 段目の改行位置）／⒝ F ⑷ `lyrics NAME`＝error か warning かユーザー判断／⒞′ 双子の chords／lyrics 行（5 冊・exporter の設計）。会話を区切るか: (a) 次の島はこの便の文脈（`SvgGenerator`・CLI の stack）を使わない／(b) 会話はまだ軽い＝**既定どおり続ける**（`-Start p800`）。
 
 ## 2. 開いている作業
 
@@ -2225,7 +2224,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 **残っている発明**:
 
 - ✅ **歌詞の小節線またぎ＝barline-split モデル＝第223 で移植完了**（`3a635a6d`・ → **本文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の同じ見出し**（第351 が落とした）
-- ✅ **閉じた（第358 第 2〜3 便・ユーザー承認「リベースしてコミットして」）＝機構は 2 つ: `NoteHead.extra-spacing-height = include-ledger-line-height`（譜外の符頭の spacing box は最初の加線まで）と `Separation_item::calc_skylines` の内在 padding 0.15（`NoteColumn.skyline-vertical-padding`）。Lily# は箱をそのまま skyline にしていた→ `ItemSkylineFactory.WithLedgerReach`＋`CreateRight/LeftSkyline.PaddedCopy(0.15)`・番人 `LedgerHeadSpacingTests`・65 冊移動・snapshot 4 枚再ベース。残 −0.18（flag-low の d→c／c→b が 2.48 対 2.567）は §1 第358 ⑺⒜″。** 下は第 1 便の起票（「機構未特定」は古い）: ~~上向き符尾の旗の右 reach は LP では*符尾の全高*に効き、Lily# では旗の Y 帯にしか効かない~~（2026-09-09・第358 起票・`scratch/p359/lp/flag-{low,high,metered,metered2}.lys`＋`ledger-beamed.lys`・LP 2.26.0 実測）: 加線域で下降する旗付き 8 分（`g,,8 a b c d c b a` を `time none` で・stem 全部 up）の列間が **LP は 8 対とも 2.567**、Lily# は上昇 4 対 2.57／下降 3 対 **2.11**・最後の音→小節線 1.27（LP 2.567）＝小節幅 **21.629 対 20.24（−1.39）**。**譜内の同じ音型（`g'8 …`）は exact 19.313**（下降側が下向き符尾＝旗が左下に居て reach 無し・LP も 2.104）。**拍のある本では見えない**: 旗付き 8 分→低い音（`f4. e8 d4. c8` 段下・3 度下・同音・3 度上）は 4 小節とも exact＝gs 1/8 では 8 分の duration space 2.5 が旗 reach 2.567 とほぼ同じで差 0.06 の桁・**gs が 3/16（cadenza の本・4 分主体の本）で 8 分の理想が 2.1 に落ちて初めて 0.46/対が露出**。梁付き加線 8 分（`c8 b a g f e d c |`）は exact 21.303／加線 rod（`LedgerLineSpanner.springs-and-rods = ##f`）を切っても LP は不動＝rod ではない。**LP 側の機構は未特定**（Stem::width は thickness だけ・Flag の box が次の符頭の Y に届く理由が説明できていない＝`pcdump.ily` の WISH/min_dist を旗付き対で吐かせるのが次）。観測者: 追跡 0・ユーザー本は gs≥3/16 かつ旗付き 8 分下降の site＝未計数。台帳点は起票していない（LP の机上値が確定してから）。
+- ✅ **閉じた（第358 第 2〜3 便・ユーザー承認「リベースしてコミットして」）＝機構は 2 つ: `NoteHead.extra-spacing-height = include-ledger-line-height`（譜外の符頭の spacing box は最初の加線まで）と `Separation_item::calc_skylines` の内在 padding 0.15（`NoteColumn.skyline-vertical-padding`）。Lily# は箱をそのまま skyline にしていた→ `ItemSkylineFactory.WithLedgerReach`＋`CreateRight/LeftSkyline.PaddedCopy(0.15)`・番人 `LedgerHeadSpacingTests`・65 冊移動・snapshot 4 枚再ベース。残 −0.18（flag-low の d→c／c→b が 2.48 対 2.567）は §1 第358 ⑺⒜″。✅ **第801 実測: この残差は既に閉じている**（flag-low の 8 対とも 2.567 で LP と一致・Lab `sessions/p801/pair3.log`）。** 下は第 1 便の起票（「機構未特定」は古い）: ~~上向き符尾の旗の右 reach は LP では*符尾の全高*に効き、Lily# では旗の Y 帯にしか効かない~~（2026-09-09・第358 起票・`scratch/p359/lp/flag-{low,high,metered,metered2}.lys`＋`ledger-beamed.lys`・LP 2.26.0 実測）: 加線域で下降する旗付き 8 分（`g,,8 a b c d c b a` を `time none` で・stem 全部 up）の列間が **LP は 8 対とも 2.567**、Lily# は上昇 4 対 2.57／下降 3 対 **2.11**・最後の音→小節線 1.27（LP 2.567）＝小節幅 **21.629 対 20.24（−1.39）**。**譜内の同じ音型（`g'8 …`）は exact 19.313**（下降側が下向き符尾＝旗が左下に居て reach 無し・LP も 2.104）。**拍のある本では見えない**: 旗付き 8 分→低い音（`f4. e8 d4. c8` 段下・3 度下・同音・3 度上）は 4 小節とも exact＝gs 1/8 では 8 分の duration space 2.5 が旗 reach 2.567 とほぼ同じで差 0.06 の桁・**gs が 3/16（cadenza の本・4 分主体の本）で 8 分の理想が 2.1 に落ちて初めて 0.46/対が露出**。梁付き加線 8 分（`c8 b a g f e d c |`）は exact 21.303／加線 rod（`LedgerLineSpanner.springs-and-rods = ##f`）を切っても LP は不動＝rod ではない。**LP 側の機構は未特定**（Stem::width は thickness だけ・Flag の box が次の符頭の Y に届く理由が説明できていない＝`pcdump.ily` の WISH/min_dist を旗付き対で吐かせるのが次）。観測者: 追跡 0・ユーザー本は gs≥3/16 かつ旗付き 8 分下降の site＝未計数。台帳点は起票していない（LP の机上値が確定してから）。
 - **行頭 wish の `ownFixedFloor` ガード**（`LineStartSpringForLine` → `LineStartColumn.LineStartSpring`）
   — LP は leading grace と lyrics を**独立した paper column** にするので min_dist がそこまで測る。
   Lily# は spring に畳み込んでいる＝**「今の構造では表現できないから畳み込む」型**（§5.2 が
@@ -2276,7 +2275,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   ⚠️ **台帳に「courtesy 拍子の右側」を測る点は 1 つも無い**。§5.0 のとおり**点が先**。
   ⚠️ **定数で埋めないこと**（ユーザー判断 2026-08-10）。この ⑷ は⑴⑵⑶ と同じ
   「paper column モデルの欠落」なので、1 件だけ定数化すると**同じ量の 2 つ目の綴り**を作る。
-  ★ 併せて**別件の起票**: `beam-auto` の 1 段目は LP と Lily# で**改行位置が違う**（縦線 3 対 5）。
+  ✅ ~~併せて別件の起票: `beam-auto` の 1 段目は LP と Lily# で改行位置が違う（縦線 3 対 5）~~＝**第801 実測: 20 段とも LP と同じ割り**（Lab `sessions/p801/pair-beamauto.log`）。
   同じ段に別の音楽が載るので、**あの本で行末の x を比べてはいけない**。
   ⚠️ ~~ただし**数値の乖離は現状ゼロ**（合成が厳密なので）——着手根拠は点が出た regime だけ~~
   ★★★ **2026-08-01（第59セッション）に⑴に点が出た**＝`grace.column.approach` **+0.850449**。
