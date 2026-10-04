@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第812セッションの経緯
+
+### 1.1 第812セッション（2026-10-04・YT-DELL2）
+
+新しい会話（HANDOFF・CLAUDE-OPERATIONS 通読、RULES は読んでいない）。第811 の次の一手 ⒜＝§2 C・D・E の古い起票の測り直し（第805 の型）。`-Start p812`（HEAD `33a3f509`・未 push 42）＝full **11089 / 0 / 2 / 11091**。§7 3.5 で第810 を ARCHIVE へ（moved 13 lines）。
+- 起票の裏取り: §2 E の ⑴ tuplet の on-line・⑵ volta shorten-pair・⑶ volta の範囲畳みは既に移植済み（`TupletBracketEngraver`:1293・`VoltaBracketEngraver`:418・`SyntaxFacts`:186＝§2 E の行は stale）。§2 C「同じ半分が Flag / Accidental / Rest に」のうち **Accidental は既に輪郭、Flag は名目の箱（`EngravingDefaults.FlagWidth` 1.2×2.5・LILYSHARP-OWN）のまま、Rest は輪郭の箱**＝Flag を選んだ。
+- §5.0 の型: **`e3f6d0aa1`（出力不変）**＝probe `audit/lp-geometry/probes/flag-staff-gap.ly`（上の譜の符尾下向き C4 の旗 対 下の譜の符尾上向き C4＝符尾どうしは X で出会わず旗だけが下の符尾に届きうる形）＋台帳 3 点: 8 分 **+1.873026**・16 分 **+1.955**・4 分の対照 0。予測（+1.37／+1.2）は **stem-shorten（旗 1 本 0.5・2 本 0.25）の分だけ外れた**＝Lily# 12.500／12.750 は「上の符尾の先＋下の符尾の先 5.5＋padding 1」ちょうど＝箱が 2 本の符尾の先を縛っていた。
+- **`49f438341`（移植）**: `MergeGraceFlagInk` → `MergeFlagInk`（grace は自分の design と倍率・普通の旗は score の design）を両方の腕と tab の旗（`\tabFullNotation`）に、描画と同じ点（`FlagDrawX`・`FlagPlacementY`）で。名目の 3 定数と `CalculateFlagHeight` は読み手が消えたので削除。**8 分・16 分とも予測どおり 0、他の点は不動**。snapshot `test/scripts-stem-support` が動いた（系全体が 0.05 上＝32 分の旗の箱が系を押し下げていた）＝**LP の双子の最上線 13.5754 に対し 13.58（前 13.63）＝ユーザー承認（2026-10-04）を得て再ベース**。tab の試験は輪郭の形（旗の下は符尾の先より低く、旗の外より高い）に書き直し、`internal_print|lily/flag.cc` が未検証の棚から外れた。CHANGELOG Fixes 1 項。
+- 掃き（`p812/sweep`・base＝HEAD の worktree build）: **998 冊・1,199 svg・差 5**＝上の snapshot・`samples/greensleeves`（頁 −0.07・譜 → 歌詞は LP の 7.02 に一致、前 7.07。テンポ記号 → 譜は LP 1.455 に前 1.49・後 1.42＝テンポ記号の X が LP と別物で下に来る音が違う・別の差）・`site/ode-to-joy`（歌詞の伸ばし線 0.01）・実コーパス 2 冊（It's Not Unusual ±0.01・Listen To The Music-tab は段ごとに最大 0.4 累積・段割れも頁割れも同じ＝絵で確かめた）。
+- 網: 毒 7 本（`p812/poisons.ps1`・各 full）: 下の腕の半 blot の Y・符尾の右端の X・下向きの merge → 8 分の点が赤／tab の merge → tab の試験が赤／**観測者 0 は 3 本＝上の腕の半 blot の Y・上向きの merge・tab の Y**（上向きの旗の輪郭の天辺は起点＝符尾の先より 0.05 下＝旗を見る読み手は必ず符尾も見る）＝註に名指した（`bca88f8f7`）。網を足そうと mark-grace.ly に MFU（2 段目冒頭の符尾上向き 8 分の上の mark）を試したが、mark の窓が音に届かず戻した。16 分の点は旗を観測しない（下向きの merge を消しても緑＝長い符尾が先に縛る）＝`why` に書いた。
+
+★ `-End p812 -DiffBase 33a3f509`（`end1.log`）＝full **11092 / 0 / 2 / 11094**（網 +3＝台帳点）・門 全 OK（HANDOFF 442,727 B）。台帳 1009 → 1012 点・exact 812 → 815・OPEN 0。7.5: Core `+` 61 行・REF 1・OWN 0（足した規則は「旗の skyline はグリフの輪郭」1 つ＝REF は既存の註の define-grobs Flag／stencil-integral.cc を tab の分岐にも引いた）。7.6: ⒜ 字面＝輪郭の歩き（`MusicGlyphProfile`）と起点（flag.cc:183-196）は描画と同じ式／⒝ 普通の旗は score の design（倍率の小さい音符＝cue も 20 の輪郭＝頭と符尾の seed と同じ単純化）。7.7: 名目の 3 定数と `CalculateFlagHeight` を消した（2 つ目の綴りが 1 つ減った）・音楽フォントが見つからないときだけ LILC の箱（旧の grace 経路と同じ）。7.9 perf: 旗ごとに箱 1 枚 → 輪郭 12〜13 棟の merge（`MusicGlyphProfile` は cache 済み）。commit `e3f6d0aa1`（点）・`49f438341`（移植・snapshot 1 枚・CHANGELOG）・`bca88f8f7`（毒の註）＋docs。Lab は sessions/p812。push はユーザー。
+判定: §2 C の「Flag の半分」は閉じた（Accidental は既に済み・残るのは Rest の多角形だけ）。教訓: **起票の 3 つの grob を裏取りしたら 1 つは既に閉じていて 1 つは別の形だった**（§2 E の 3 行も stale）＝古い起票は「測り直す」前に「読み直す」。そして**名目の箱は「天辺は符尾の先」だから既存の読み手（符尾も見る mark）では見えず、符尾どうしが X で出会わない形を作って初めて 1.87 が出た**。次の一手: ⒜ §2 C の Rest（同じ型・点が先）／⒝ §2 D・E の残り（`PageLayouter` の `i == 0` の spec 食い違い・冗長アクセサ）の裏取り／⒞ §2 H の束（設計）。会話を区切るか: (a) ⒜ はこの便の計器（flag-staff-gap.ly の形・`MusicGlyphProfile`）の上に立つ／(b) この会話は 1 便で、大きなファイルは HANDOFF の一部しか読んでいない＝重くない／(c) ⒜ は同じ島。⇒ **続ける側が有利（この会話で `-Start p813`）**。
+
 ## 以下は第811セッションの経緯
 
 ### 1.1 第811セッション（2026-10-04・YT-DELL2）

@@ -115,6 +115,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第814セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き。ユーザー「続けて」＝第813 の次の一手 ⒜（§2 D・E の残りの裏取り）。`-Start p814`（HEAD `92a678dd`・未 push 50）＝full **11096 / 0 / 2 / 11098**。§7 3.5 で第812 を ARCHIVE へ（moved 15 lines）。
+- **§2 D「`PageLayouter` の `i == 0` で `SystemSystem`／配置側 `TopSystem` の食い違い」＝欠陥ではなかった**: LP の `fill_line_details`（constrained-breaking.cc:548-555）は行の位置によらず system-system で値付けし、top-system は配置の鎖の spring だけ。score の最後の行の score-system 分岐は `prev.padding_`（page-breaking.cc:1166＝行の**後**）で、Lily# の score は 1 つずつ頁割りする＝届かない。Lily# の 2 分岐（`SystemSystem`／`SelectSpec(false,…)`）は同じ値の 2 綴り＝1 行に畳み、使われなくなった `systemIndex` 引数を 5 か所から外した。
+- **§2 E「冗長アクセサ 6 つ」**: 5 つは既に消えていた。`PaperSettings.GetRightMargin` は両面の余白の島（`TwoSided` ほか 4 プロパティ・`GetLeftMargin`）ごと読み手 0＝言語から設定できず描画も読まない・試験 1 本が唯一の書き手兼読み手＝削除（試験も）。§2 E の ⑴⑵⑶（tuplet の on-line・volta の shorten-pair・範囲畳み）は既に移植済み（第812 の裏取り）と §2 E に書いた。
+- `5dfc2f994`（出力は構成上不変＝同じ値・読み手 0 の削除のみ・掃きは省いた）。full **11095 / 0 / 2 / 11097**（消した試験 1 本）。
+- **§2 D「単一ページ経路の二重実装」**は再確認だけ: crop（LILYSHARP-OWN, DECLARED）と組の独自経路で、鎖に畳むのは設計級＝提案だけ（§2 D に追記）。
+
+★ `-End p814 -DiffBase 92a678dd`（`end1.log`）＝full **11095 / 0 / 2 / 11097**・門 全 OK（HANDOFF 441,024 B）。台帳 1016 点のまま・exact 819・OPEN 0。7.5: Core `+` 17 行（ほぼ註）・REF 1（constrained-breaking.cc:548-555）・OWN 0。7.6: ⒜ 字面＝改頁器の行の spec は system-system 1 本／⒝ score の最後の行の score-system は「行の後」で Lily# に届かない（註）。7.7: 同じ値の 2 綴りを 1 つに・読み手 0 の島を削除＝減っただけ。7.9 perf: 変化なし。commit `5dfc2f994`＋docs。Lab は sessions/p814。push はユーザー。
+判定: §2 D・E の「裏取りすれば閉じる」項は尽きた（第812〜第814 で §2 C 全部・§2 D の spec・§2 E の ⑴⑵⑶ とアクセサ）。教訓: **古い起票の 3 件に 2 件は「既に直っている」か「LP どおりを食い違いと読んだ」もの**だった＝起票の文言ではなく LP の字面と今のコードを並べて読む。次の一手（どれもユーザー判断が要る）: ⒜ §2 E の ⑷ hairpin の niente の円・⑹ 開いた和音入力・⑺ Ignatzek（言語の設計）／⒝ §2 H の束（音符間 spacing の発明・設計）／⒞ §2 D の単一ページ経路を鎖に畳む（crop の扱いの判断・snapshot 大）。会話を区切るか: (a) どれも今の文脈を使わない／(b) この会話は 3 便で長くなってきた（圧縮は起きていない）／(c) 無関係な島。⇒ **どれを選ぶかの判断を先にユーザーに仰ぐ。着手は新しい会話でも損は小さい**。
+
+## 以下は第813セッションの経緯
+
 ### 1.1 第813セッション（2026-10-04・YT-DELL2）
 
 同じ会話の続き。ユーザー「続けて」＝第812 の次の一手 ⒜（§2 C の残り＝Rest）。`-Start p813`（HEAD `80b34698`・未 push 46）＝full **11092 / 0 / 2 / 11094**。§7 3.5 で第811 を ARCHIVE へ（moved 12 lines）。
@@ -125,20 +138,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 ★ `-End p813 -DiffBase 80b34698`（`end1.log`）＝full **11096 / 0 / 2 / 11098**（網 +4＝台帳点）・門 全 OK（HANDOFF 442,250 B）。台帳 1012 → 1016 点・exact 815 → 819・OPEN 0。7.5: Core `+` 30 行・REF 1・OWN 0（足した規則は「休符の skyline はグリフの輪郭」1 つ＝define-grobs Rest／stencil-integral.cc）。7.6: ⒜ 字面＝第812 の旗と同じ歩き・起点は描画と同じ（`NeutralRestPosition`＋衝突シフト）／⒝ 加線つきのグリフ（`rests.0o`／`1o`）でなく加線なしを歩く＝旧の箱と同じ選択・未測定（註）。7.7: 新しい分岐はフォントが無いときの箱だけ。7.9 perf: 休符ごとに箱 1 枚 → 輪郭 5〜17 棟の merge（cache 済み）。commit `6810ac7cb`（点）・`19592a84e`（移植）・`6893bed38`（毒の註）＋docs。Lab は sessions/p813。push はユーザー。
 判定: §2 C の「Flag / Accidental / Rest の残り半分」は 3 つとも閉じた（第812・第813）。教訓: **輪郭の箱と輪郭の差は「最下点が狭い」グリフでしか出ず、読み手がその最下点を外れた X に立つ形を作らないと 0 に見える**——8 分・4 分の点は移植の前から 0 で、差が出たのは箱が下の符尾に届く 16 分だけだった（予測は 8 分・4 分で外れた）。次の一手: ⒜ §2 D・E の残りの裏取り（`PageLayouter` の `i == 0` で `SystemSystem`／配置側 `TopSystem` の食い違い・冗長アクセサ 6 つ・`LayoutEngine` の単一ページ経路の二重実装）／⒝ §2 H の束（設計）。会話を区切るか: (a) ⒜⒝ とも skyline の島から離れる＝今の文脈はあまり効かない／(b) この会話は 2 便で、圧縮は起きていない・大きなファイルは部分しか読んでいない／(c) 無関係な島＝差は小さい・既定は続ける。⇒ **続けてよい（この会話で `-Start p814`）。新しい会話でも損は小さい**。
-
-## 以下は第812セッションの経緯
-
-### 1.1 第812セッション（2026-10-04・YT-DELL2）
-
-新しい会話（HANDOFF・CLAUDE-OPERATIONS 通読、RULES は読んでいない）。第811 の次の一手 ⒜＝§2 C・D・E の古い起票の測り直し（第805 の型）。`-Start p812`（HEAD `33a3f509`・未 push 42）＝full **11089 / 0 / 2 / 11091**。§7 3.5 で第810 を ARCHIVE へ（moved 13 lines）。
-- 起票の裏取り: §2 E の ⑴ tuplet の on-line・⑵ volta shorten-pair・⑶ volta の範囲畳みは既に移植済み（`TupletBracketEngraver`:1293・`VoltaBracketEngraver`:418・`SyntaxFacts`:186＝§2 E の行は stale）。§2 C「同じ半分が Flag / Accidental / Rest に」のうち **Accidental は既に輪郭、Flag は名目の箱（`EngravingDefaults.FlagWidth` 1.2×2.5・LILYSHARP-OWN）のまま、Rest は輪郭の箱**＝Flag を選んだ。
-- §5.0 の型: **`e3f6d0aa1`（出力不変）**＝probe `audit/lp-geometry/probes/flag-staff-gap.ly`（上の譜の符尾下向き C4 の旗 対 下の譜の符尾上向き C4＝符尾どうしは X で出会わず旗だけが下の符尾に届きうる形）＋台帳 3 点: 8 分 **+1.873026**・16 分 **+1.955**・4 分の対照 0。予測（+1.37／+1.2）は **stem-shorten（旗 1 本 0.5・2 本 0.25）の分だけ外れた**＝Lily# 12.500／12.750 は「上の符尾の先＋下の符尾の先 5.5＋padding 1」ちょうど＝箱が 2 本の符尾の先を縛っていた。
-- **`49f438341`（移植）**: `MergeGraceFlagInk` → `MergeFlagInk`（grace は自分の design と倍率・普通の旗は score の design）を両方の腕と tab の旗（`\tabFullNotation`）に、描画と同じ点（`FlagDrawX`・`FlagPlacementY`）で。名目の 3 定数と `CalculateFlagHeight` は読み手が消えたので削除。**8 分・16 分とも予測どおり 0、他の点は不動**。snapshot `test/scripts-stem-support` が動いた（系全体が 0.05 上＝32 分の旗の箱が系を押し下げていた）＝**LP の双子の最上線 13.5754 に対し 13.58（前 13.63）＝ユーザー承認（2026-10-04）を得て再ベース**。tab の試験は輪郭の形（旗の下は符尾の先より低く、旗の外より高い）に書き直し、`internal_print|lily/flag.cc` が未検証の棚から外れた。CHANGELOG Fixes 1 項。
-- 掃き（`p812/sweep`・base＝HEAD の worktree build）: **998 冊・1,199 svg・差 5**＝上の snapshot・`samples/greensleeves`（頁 −0.07・譜 → 歌詞は LP の 7.02 に一致、前 7.07。テンポ記号 → 譜は LP 1.455 に前 1.49・後 1.42＝テンポ記号の X が LP と別物で下に来る音が違う・別の差）・`site/ode-to-joy`（歌詞の伸ばし線 0.01）・実コーパス 2 冊（It's Not Unusual ±0.01・Listen To The Music-tab は段ごとに最大 0.4 累積・段割れも頁割れも同じ＝絵で確かめた）。
-- 網: 毒 7 本（`p812/poisons.ps1`・各 full）: 下の腕の半 blot の Y・符尾の右端の X・下向きの merge → 8 分の点が赤／tab の merge → tab の試験が赤／**観測者 0 は 3 本＝上の腕の半 blot の Y・上向きの merge・tab の Y**（上向きの旗の輪郭の天辺は起点＝符尾の先より 0.05 下＝旗を見る読み手は必ず符尾も見る）＝註に名指した（`bca88f8f7`）。網を足そうと mark-grace.ly に MFU（2 段目冒頭の符尾上向き 8 分の上の mark）を試したが、mark の窓が音に届かず戻した。16 分の点は旗を観測しない（下向きの merge を消しても緑＝長い符尾が先に縛る）＝`why` に書いた。
-
-★ `-End p812 -DiffBase 33a3f509`（`end1.log`）＝full **11092 / 0 / 2 / 11094**（網 +3＝台帳点）・門 全 OK（HANDOFF 442,727 B）。台帳 1009 → 1012 点・exact 812 → 815・OPEN 0。7.5: Core `+` 61 行・REF 1・OWN 0（足した規則は「旗の skyline はグリフの輪郭」1 つ＝REF は既存の註の define-grobs Flag／stencil-integral.cc を tab の分岐にも引いた）。7.6: ⒜ 字面＝輪郭の歩き（`MusicGlyphProfile`）と起点（flag.cc:183-196）は描画と同じ式／⒝ 普通の旗は score の design（倍率の小さい音符＝cue も 20 の輪郭＝頭と符尾の seed と同じ単純化）。7.7: 名目の 3 定数と `CalculateFlagHeight` を消した（2 つ目の綴りが 1 つ減った）・音楽フォントが見つからないときだけ LILC の箱（旧の grace 経路と同じ）。7.9 perf: 旗ごとに箱 1 枚 → 輪郭 12〜13 棟の merge（`MusicGlyphProfile` は cache 済み）。commit `e3f6d0aa1`（点）・`49f438341`（移植・snapshot 1 枚・CHANGELOG）・`bca88f8f7`（毒の註）＋docs。Lab は sessions/p812。push はユーザー。
-判定: §2 C の「Flag の半分」は閉じた（Accidental は既に済み・残るのは Rest の多角形だけ）。教訓: **起票の 3 つの grob を裏取りしたら 1 つは既に閉じていて 1 つは別の形だった**（§2 E の 3 行も stale）＝古い起票は「測り直す」前に「読み直す」。そして**名目の箱は「天辺は符尾の先」だから既存の読み手（符尾も見る mark）では見えず、符尾どうしが X で出会わない形を作って初めて 1.87 が出た**。次の一手: ⒜ §2 C の Rest（同じ型・点が先）／⒝ §2 D・E の残り（`PageLayouter` の `i == 0` の spec 食い違い・冗長アクセサ）の裏取り／⒞ §2 H の束（設計）。会話を区切るか: (a) ⒜ はこの便の計器（flag-staff-gap.ly の形・`MusicGlyphProfile`）の上に立つ／(b) この会話は 1 便で、大きなファイルは HANDOFF の一部しか読んでいない＝重くない／(c) ⒜ は同じ島。⇒ **続ける側が有利（この会話で `-Start p813`）**。
 
 ## 2. 開いている作業
 
@@ -1321,9 +1320,8 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   残差 **−0.000042**（＝符頭インク族。§1 の非ゼロ表）。**乖離ではない**
   ⚠️ **その −0.000042 も当時の値**——**今は −4.46e-07＝許容差（1e-06）以下**。
   <!-- ledger: page.stretched.first-staff-refpoint = -4.46e-07 -->
-- **`PageLayouter` は systemDetails の `i == 0` で `vs.SystemSystem`、配置側は `vs.TopSystem`**＝
-  ブレーカーと配置で spec が食い違う（本数見積りにしか効かない）
-- **`LayoutEngine` の単一ページ経路が今も自前で積む**（二重実装）。⚠️ **「force 0 なので鎖と一致する」は嘘だった**——帯の床を `SysHeight`（trailing 行の描画帯を含む）から測っていて、**行を挟む本で帯を二重計上**（第218 実測: rowgap probe 19.836 vs LP 12.000・Twinkle 23.500 vs 12.225）。**frame は `969061de` で直した**（帯の項はアンカー譜の外側線から＝PageLayouter の `HalfLast` と同型）。**二重実装そのものは残っている。**
+- ✅ **`PageLayouter` の `i == 0` で `SystemSystem`／配置側 `TopSystem`＝欠陥ではなかった（第814・`5dfc2f994`）**: LP の改頁器は行の位置によらず system-system で値付けする（constrained-breaking.cc:548-555・top-system は配置の鎖だけ）。Lily# の 2 分岐は同じ値の 2 綴りだった＝1 行に畳んで出典を書いた。score の最後の行の score-system 分岐は「行の後」の間隔（page-breaking.cc:1166）で、Lily# の score は 1 つずつ頁割りする＝届かない。
+- **`LayoutEngine` の単一ページ経路が今も自前で積む**（二重実装・第814 に再確認＝`LayoutEngine.Pages.cs` の単一ページの積み上げは crop〈LILYSHARP-OWN, DECLARED〉と組の独自経路で、鎖の経路に畳むのは設計級＝提案だけ）。⚠️ **「force 0 なので鎖と一致する」は嘘だった**——帯の床を `SysHeight`（trailing 行の描画帯を含む）から測っていて、**行を挟む本で帯を二重計上**（第218 実測: rowgap probe 19.836 vs LP 12.000・Twinkle 23.500 vs 12.225）。**frame は `969061de` で直した**（帯の項はアンカー譜の外側線から＝PageLayouter の `HalfLast` と同型）。**二重実装そのものは残っている。**
 - ✅ **歌詞帯のスカラー床は X 盲目 — 閉じた**（第221・`785ade3c`。起票 `90833c84`＋対の修理 `053e2674`）。 → **本文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の同じ見出し**（第351 が落とした）
 - **Y コーパスの拡張**（`page.top-margin` / `page.bottom-margin` / `page.last-page-gap` 等）
 - ✅ ★ ~~**歌詞行が譜間の「中で」LP と別の位置に立つ**~~（2026-08-14 起票・**未着手のまま 60 便**） → **本文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の同じ見出し**（第351 が落とした）
@@ -1349,9 +1347,8 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 ### E. 未移植の LP 計算・座標系の島2
 
-- **未移植 LP 計算**（2026-07-19 監査時点の出典・**伝聞なので着手前に実コードで裏取り**・~~ledger~~ は済み）: ⑴ **tuplet on-staff-line 回避**＝`tuplet-bracket.cc:721-746`（|dy|<0.01 のとき offset を rint し、on_line なら dir へ押し出す）・小。⑵ **volta shorten-pair**＝当時の `VoltaBracketEngraver` は固定 0.3、LP は repeat barline のグリフ依存（`bar-line.scm:1134+` calc-shorten-pair／`volta-bracket.cc:86`）・中。⑶ **volta range-collapse**＝LP `output-lib.scm:2256 group-into-ranges`（threshold 3・自動連番を範囲に畳む）、Lily# は作者入力を素通し・小〜中。⑷ **hairpin al/del niente の円**（circled-tip）＝入力構文・model・描画すべて無し・中。⑸ **brace**。⑹ **開いた和音入力**＝`ChordStructure` は閉じた 18 品質 enum ＋ `ByToken` 表で、add/remove/degree alter/真の転回が無い（LP `chord-entry.scm`）・大・設計合意要。⑺ **Ignatzek 例外表＋上付き**・中。旧出典 `HANDOFF-lp-calc-incorporation.md`（Lab `notes/`）。
-- **冗長アクセサ整理（未着手）**: `BeamConfiguration.GetSlope`／`CalculateRightExtent`／`CrossStaffEngraver.GetTargetStaffIndex`／`GrobProperty.IsOverridden`／`PageBreaker.CreateFromLayout`／`PaperSettings.GetRightMargin`（2026-07-20 に writer-without-reader の掃きで挙がった。**冗長かどうかは未裏取り**）。
-  **伝聞なので着手前に実コードで裏取り。**
+- **未移植 LP 計算**（2026-07-19 監査時点の出典・**伝聞なので着手前に実コードで裏取り**・~~ledger~~ は済み）。▶ **第812 の裏取り: ⑴⑵⑶ は既に移植済み**（`TupletBracketEngraver`・`VoltaBracketEngraver` calc-shorten-pair・`SyntaxFacts` group-into-ranges）＝残るのは ⑷〜⑺: ⑴ **tuplet on-staff-line 回避**＝`tuplet-bracket.cc:721-746`（|dy|<0.01 のとき offset を rint し、on_line なら dir へ押し出す）・小。⑵ **volta shorten-pair**＝当時の `VoltaBracketEngraver` は固定 0.3、LP は repeat barline のグリフ依存（`bar-line.scm:1134+` calc-shorten-pair／`volta-bracket.cc:86`）・中。⑶ **volta range-collapse**＝LP `output-lib.scm:2256 group-into-ranges`（threshold 3・自動連番を範囲に畳む）、Lily# は作者入力を素通し・小〜中。⑷ **hairpin al/del niente の円**（circled-tip）＝入力構文・model・描画すべて無し・中。⑸ **brace**。⑹ **開いた和音入力**＝`ChordStructure` は閉じた 18 品質 enum ＋ `ByToken` 表で、add/remove/degree alter/真の転回が無い（LP `chord-entry.scm`）・大・設計合意要。⑺ **Ignatzek 例外表＋上付き**・中。旧出典 `HANDOFF-lp-calc-incorporation.md`（Lab `notes/`）。
+- ✅ **冗長アクセサ整理＝閉じた（第814・`5dfc2f994`）**: 6 つのうち 5 つは既に消えていた。残る `PaperSettings.GetRightMargin` は両面の余白の島（`TwoSided`・`InnerMargin`・`OuterMargin`・`BindingOffset`・`GetLeftMargin`）ごと読み手 0（言語から設定できず描画も読まない・試験 1 本だけが書き手で読み手）＝削除。LP の両面は page.scm:272-280。
 - ~~**brace は `SystemStartBar` に対して置かれる**~~ — **閉じた（第376 第 3 便・ユーザー承認）**＝
   `MultiStaffLayouter.SystemStartBraceRightEdge`（indent − (−0.1) − 0.16 − 0.3 ＝ indent − 0.36）・
   網は `SystemStartBracePlacementTests`（LP の 8.175827）・snapshot 16 枚（brace 18 行・名前 2 行が各 −0.06 だけ）。
