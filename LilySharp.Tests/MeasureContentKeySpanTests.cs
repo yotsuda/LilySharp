@@ -42,13 +42,18 @@ namespace LilySharp.Tests;
 /// whose bracket runs bar 3 to bar 22: deleting the release leaves 1 hit / 12 misses clean and
 /// 5 hits / 8 misses poisoned, i.e. four systems served stale — and the SVG is byte-identical
 /// anyway. A middle measure's fold is <c>(role, content-without-absolute-indices)</c>, a
-/// constant, and nothing a system caches depends on a bracket that merely crosses it: the ink
-/// is re-solved every pass from the live score (<c>PedalEngraver.SolveAndSeed</c>). The
-/// measures whose brackets DO reach a cached value are the ones holding its ENDS — and those
-/// carry a mark, so their buckets already exist.</item>
+/// constant, and on THAT book nothing a system caches depends on a bracket that merely
+/// crosses it: the ink is re-solved every pass from the live score
+/// (<c>PedalEngraver.SolveAndSeed</c>).</item>
 /// </list>
-/// ⇒ The fold over-invalidates, soundly, and no rendered book can observe it. So the observer
-/// is put where the quantity is: on the key itself.
+/// ⚠️ "No rendered book can observe it" was the bare book talking (session 796, HANDOFF §1.0
+/// ⒳⁶, which had proposed folding the ends only): put a lyric row under the pedal line, or a
+/// second staff under a hairpin's wedge, and the crossed systems' cached values — the lyric
+/// bands, the staff skylines — DO depend on the spanner. Under the poison that drops the
+/// middle fold, deleting either end of such a spanner leaves the crossed systems stale, 4 of
+/// 11 shapes (<c>SpannerCrossedSystemsTests</c>, the rendered observer this remark used to say
+/// could not exist). The fold into every crossed measure is load-bearing, and this test keeps
+/// watching the key itself for the bare shape the picture cannot see.
 /// </remarks>
 [Trait("Category", "Unit")]
 public class MeasureContentKeySpanTests
