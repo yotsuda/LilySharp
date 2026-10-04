@@ -115,6 +115,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第803セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き（第802 の判定 ⒜）。`-Start p803`（HEAD `deab87ef`・未 push 14）＝full **11035 / 0 / 2 / 11037**。§7 3.5 で第801 を ARCHIVE へ（moved 14 lines）。
+- **第802 が起票した `sings VOICE`＝閉じた。ただし根は起票より 1 段下に在った**: 着手の 1 手目で読み手を数えると、歌詞を結ぶのは collector だけ（双子と MusicXML は `score.Lyrics`＝ページのモデルを読む）。直しを入れて単一譜の経路は通ったが多段譜の網が赤のまま＝**多段譜の経路（`CollectMultiStaff`）は voice 名の表 `_voiceMeasuresByName` を 1 度も埋めていなかった**（埋めるのは単一譜の `BuildMultiVoiceScore` だけ）。⇒ **2 譜以上の score では、名前で結ぶ `voice alt { }`＋`lyrics alt { }` も第 1 声部のリズムに立っていた**（実測・第802 の exe・Lab `sessions/p803/ms/two-staves.lys`＝`test/named-voice-lyrics` に 2 段目を足した本: `part` 23.04・`deep` 28.61。単一譜は 24.87・30.44）。RULES §5.0「起票が外すのは形」の例＝起票は「`sings` の宛先を読まない」と書き、実物は「多段譜では name も読めていない」を含んでいた。
+- 入れたもの（commit 1 本・依存があるので同時）: ⑴ `StaffSpec.VerseVoices`（畳んだ verse のうち `sings` が part の voice を名指すものだけ・track→voice の疎な表）。書き手は 2 つの fold が共有する `RenderSpecParser.WithFoldedVerse` 1 軒（`WithLyrics` と一緒に書く）。⑵ `LyricsCollector.CollectNoteBound` は `voiceOfTrack` が在ればそれで voice を引く（無ければ従来どおり track 名）。⑶ 多段譜: `MeasureCollector.NamedVoiceTracks`＝slot は構文から（`LyricBindings.VoiceSlotsOfPart`・新設＝span の中の位置・無名も数える）、track は出来上がった staff から（resume で歩きを飛ばしても同じ答え）。⑷ 譜から離れた bound row（`staff m  staff n  lyrics en sings alt`）は `EngravedVoiceNamed` でその voice の小節を melody にする（以前は「`alt` という part は無い」→均等割り）。⑸ LYS6013 の文面に `sings VOICE` を足した。
+- 網: `SingsLyricsTests` +6（theory 3＝行の `sings`・定義の `sings`・group の中。どれも「name で結んだ対照と同じ・かつ絶対に 0, 1/2, 3/4」／単一譜の経路／離れた row／`sings PART` は記録せず第 1 声部のまま）。毒 4 本（Lab `sessions/p803/poison-*.log`・baseline 28 緑）: fold が voice を記録しない→4 赤／collector が `voiceOfTrack` を無視→4 赤／多段譜の表を空に→3 赤（単一譜の fact は緑のまま＝予測どおり）／row の voice を見つけない→1 赤。
+- 掃き（`p723/svg2/sweep-all.ps1` を `p803/sweep/` に写した・base＝`p802/exe-head`・head＝`p803/exe-head`）: **998 冊・1,199 svg・差 0**＝実の本は 1 冊も動かない（snapshot の `test/named-voice-lyrics` は単一譜なので不動）。陽性対照 `two-staves.lys` は head で `part` 24.87・`deep` 30.44。
+- **残り（測っていない・起票しない理由つき）**: この score が**描かない** part の voice を `sings` する row（`CollectMelodyFor` はその part の第 1 声部しか返さない）＝均等割りに落ちる。実の本 0 冊（第802 の census で `sings` が voice を指す行は自作の 1 冊だけ）なので網も足していない＝書く人が出たら `CollectMelodyFor` に slot を通す。
+- GRAMMAR.md・GRAMMAR_FOR_LLM.md に `sings VOICE` の 1 文・CHANGELOG Fixes 1 項（第802 の項の文面も `sings VOICE` に）。棚卸し `APPROXIMATIONS.md` は行番号 3 行。
+★ `-End p803 -DiffBase deab87ef`（`end1.log`）＝full **11041 / 0 / 2 / 11043**（網 +6）・門 全 OK（HANDOFF 438,738 B・残り 11,262）。7.5: Core `+` 176 行・REF 0・OWN 0＝歌詞をどの voice に結ぶかは意味論の側（RULES §5.2 第751）で、描画・配置の式は 1 行も動いていない（`CollectNoteBound` の既存の REF は「結んだあと音符にどう付けるか」で、今回触ったのは「どの voice か」）。7.6: ⒞ 設計の側（観測者＝`SingsLyricsTests` の 6 本＋掃き）。7.7: ⑴ `VerseVoices` は `WithLyrics` の隣の疎な表＝verse についての 2 つ目の配列だが、書き手は `WithFoldedVerse` 1 軒・読み手は `VerseVoiceMapOf` 1 軒／⑵ **黙る fallback が 1 つ在る**: `NamedVoiceTracks` と `EngravedVoiceNamed` の `slot < voices.Length`（名前付き voice の slot に track が無いとき第 1 声部／均等割りへ落ちる）＝構文の slot と collector の track の数が食い違う本は見つけていない（網の 4 形は全部一致）・観測者なし。7.9 perf: 足した計算は「attached verse を持つ staff ごとに 1 回」の `VerseVoiceMapOf`（items を 1 回歩く）と、**part が名前付き voice を持つときだけ** voice ごとの `Measures.ToList()`＝多段譜でその形を書く本は 998 冊中 0 なので測っていない（回数は読んだ数であって測った数ではない）。commit `c93db6c2a`（code・網・GRAMMAR 2 文書・CHANGELOG・棚卸し）＋ docs の commit。Lab は sessions/p803 を commit。push はユーザー。
+判定: `sings VOICE` と多段譜の name 結びは閉じた。次の候補: ⒞′ 双子の chords／lyrics 行（5 冊・exporter の設計）／H の束（paper column・設計）／§1.0 ⒜ の T7 の残り（計器）。どれも設計か計器が先で、ユーザー判断 1 つで閉じる小物は §2 F に残っていない（F の残りは Dead-code 監査の手動分と REF 行番号の再採番＝島2 に紐づく繰延）。会話を区切るか: (a) 次の候補はどれもこの 2 便の文脈（歌詞の結び）を使わない／(b) RULES 通読＋2 便で会話は重い／(c) 無関係な島＝**新しい会話が有利**。
+
+## 以下は第802セッションの経緯
+
 ### 1.1 第802セッション（2026-10-04・YT-DELL2）
 
 新しい会話・ユーザー「HANDOFF を読んで作業に着手して」。`-Start p802`（HEAD `04413199`・未 push 12）＝full **11025 / 0 / 2 / 11027**。§7 3.5 で第800 を ARCHIVE へ（moved 14 lines）。第801 の候補のうち、ユーザー判断 1 つで閉じる ⒝ F ⑷ から。
@@ -126,19 +140,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - GRAMMAR.md・GRAMMAR_FOR_LLM.md に 1 文ずつ・CHANGELOG Fixes 1 項。棚卸し 2 枚は再生成して差分なし。
 ★ `-End p802 -DiffBase 04413199`（`end1.log`）＝full **11035 / 0 / 2 / 11037**（網 +10＝fact 2・theory 8）・門 全 OK（HANDOFF 439,278 B・残り 10,722）。7.5: Core `+` 80 行・REF 0・OWN 0＝全部が検証器と診断コードの doc（描画・配置の式は 1 行も無い＝意味論の側・RULES §5.2 第751）。7.6: ⒞ LP に対応物が無い側（診断。観測者＝`SingsLyricsTests` の 3 本＋掃き）。7.7: **畳みの窓を検証器がもう 1 度綴っている**（`FoldAdjacentRows` と同じ開閉＝同じ量の 2 つ目の綴り。group の側の LYS6012 が先例で、畳めないのは parser の側が span を持たない spec を歩くから）＝窓の 3 つの閉じ方（tab のあと・staff の前・結び損ねた行のあと）は theory と `OneMisspelling_IsOneWarning` が見ている。guard／fallback なし。commit `a48d93689`（検証器・網・GRAMMAR 2 文書・CHANGELOG）＋ docs の commit。Lab は sessions/p802 を commit。push はユーザー。
 判定: F ⑷ は閉じた。次の候補: ⒜ **§2 F の新規 `sings VOICE`**（この便の文脈＝`RowBindsToPart`・`CollectNoteBound`・`WithLyrics` の上に立つ。読み手は collector と 3 つの exporter＝着手前に数える・実の本 0 冊なので絵は動かないはず）／⒞′ 双子の chords／lyrics 行（5 冊・exporter の設計）／H の束（設計）。会話を区切るか: (a) ⒜ はこの便で読んだコードをそのまま使う＝**続ける側**／(b) 通読（RULES 全文）で会話は重めだが圧縮はまだ起きていない／(c) ⒞′ と H は無関係な島＝どちらでも。⇒ **⒜ ならこの会話で `-Start p803`**。
-
-## 以下は第801セッションの経緯
-
-### 1.1 第801セッション（2026-10-04・YT-DELL2）
-
-同じ会話の続き・ユーザー「H」＝H の残り 2 つ。`-Start p801`（HEAD `d3995c93`・未 push 10・1 度目は接続断で test の途中で切れた＝アーカイブ前だったので回し直しただけ）＝full **11024 / 0 / 2 / 11026**。§7 3.5 で第799 を ARCHIVE へ。
-- **H 旗の reach の残 −0.18＝既に閉じていた**: `p359/lp/flag-low.lys` を今の木と LP 2.26.0 に通すと、cadenza の 8 分 8 対は**全部 2.567 で LP と一致**（`p801/pair3.log`・head の x が 29.98〜51.61 まで 0.005 以内）。どの便が閉じたかは追っていない（第358 以後の grace／skyline の spacing の便のどれか）。§2 H の行に印。
-- **H beam-auto の 1 段目の改行位置（縦線 3 対 5）＝既に閉じていた**: `audit/lp-regression/lys/beam-auto.lys` の段割りは **20 段とも LP と同じ**（3 6 2 2 4 2 1 1 2 3 3 2 4 3 2 1 1 1 1 1・`pair-beamauto.log`）。§2 H の行に印。
-- **副産物＝新しい差を 1 つ見つけ、意図した逸脱として名前を付けた**: flag-low の最後の c1 が LP より +1.0。正体は `full-measure-extra-space`——LP の `fills_measure` は左の列に `measure-length` が無いと false（spacing-spanner.cc:459-461）で、その property は `measureStartNow` の列にしか書かれず（paper-column-engraver.cc:181-194）、Timing_translator は `timing` が off の間と `\cadenzaOff` の瞬間には立てない（timing-translator.cc:476-515）。⇒ 双子では **`time none` の 2 小節目以降と、明けた最初の小節だけ**、1 音の小節が余白を貰わない（実測 `q5-cadenza-wholes`: 小節線→頭 2.09・**1.09**・拍子→頭 **3.70**（普通の拍子替えは 4.70＝`q3`））。section の 1 小節目は貰う＝LP の中でも不揃い。**cadenza の拍位置の帳簿の副産物で spacing の規則ではない**＝Lily# はどの小節も小節の頭だと知っている（意味論は本のもの・RULES §5.2・第751）ので**変えない**。`SpacingRules.FillsMeasure` の remark に LILYSHARP-OWN として書き（OWN 215→216）、`SkipColumnSpacingTests.ALoneNoteInAFreeTimeBar_EarnsFullMeasureExtraSpaceLikeAnyBar` で pin（毒は当てていない＝既存の挙動の pin・拍子替えの対照との差分で書いた）。⚠️ 双子の掃きでこの形（`time none` の中か直後の 1 音の小節）が 1.0 ずれて見えたら、これ。
-- 計器: Lab `sessions/p801/pair801.ps1`（今の lysc の CLI と Lab のパスで書き直した p359 の pair・小節線／拍子／頭を x 順に並べる・`-SystemsOnly` は段ごとの小節線数）＋`settings.ly`（自立。⚠️ **p351→p354→p359 の settings.ly は `scratch/` の include が切れていて、LP は `fatal error: failed files` を刷りつつ LPEXIT=0 で頭だけ出す**＝小節線が 1 本も出ない計器は include を疑う）。⚠️ pwsh では関数名 `R` は `Invoke-History` の別名に負ける（「ID 17 の履歴が見つかりません」）。
-- 出力不変（remark と pin だけ）・掃き不要・snapshot 不動。CHANGELOG なし。
-★ `-End p801 -DiffBase d3995c93`（`end1.log`）＝full **11025 / 0 / 2 / 11027**（網 +1）・門 全 OK（HANDOFF 437,623 B・残り 12,377）。7.5: Core `+` 17 行・REF 0・OWN 1＝全部 `FillsMeasure` の remark（LP の 3 か所は住所つきの散文で引いた＝移植ではなく「移植しない理由」なので REF にしていない）。7.6: ⒞ LP に対応物が無い側（どの LP 行から外れたか＝spacing-spanner.cc:459-461・いつ消えるか＝消えない・観測者＝台帳なし／pin 1 本）。7.7: 新しい guard／fallback なし（コードは 1 行も動いていない）。commit `cb6ba729f`（remark・pin・棚卸し 2 枚）＋ docs の commit。Lab は sessions/p801 を commit。push はユーザー。
-判定: **§2 H の「残っている発明」は尽きた**（床＝第800 で消した・旗と beam-auto＝既に閉じていた）。H に残るのは paper column モデルの束（行頭 wish の `ownFixedFloor`・和音行の command 列・mid-measure の clef/key/time・行末の courtesy 群の右側 0.455）＝設計級で 1 便では閉じない。次の候補: ⒝ F ⑷ `lyrics NAME`＝error か warning かユーザー判断／⒞′ 双子の chords／lyrics 行（5 冊・exporter の設計）／H の束（設計）。会話を区切るか: (a) どれもこの便の文脈を使わない／(b) 接続断を 1 度挟んだが文脈は残っている＝どちらでもよい・**新しい島に入るなら新しい会話が僅かに有利**。
 
 ## 2. 開いている作業
 
@@ -2037,7 +2038,6 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 - ✅✅ ★★★ **「自分の名乗る機構を 1 ピクセルも観測していない fixture」は第183 で 2 冊とも閉じた** → **本文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の同じ見出し**（第351 が落とした）
 - ✅✅ ★★★ **score 単位の `transpose` が 3 通りの答えを返す件は第182 で閉じた**（`077e5c98`）。 → **本文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の同じ見出し**（第351 が落とした）
 - ✅✅ ★★★ **`lysc ly` が `transpose` を 3 綴りとも落としていた件は第194 で閉じた**（`087d1e53`）。 → **本文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の同じ見出し**（第351 が落とした）
-- ★★ **新規（第802 実測）＝`sings VOICE` は受理されて譜の下に畳まれるのに、音節は第 1 声部のリズムに付く**。`voice sop { } voice alt { }` を持つ part `m` の下の `lyrics allt sings alt` は LYS7004 を通り（voice も宛先）、`RenderSpecParser.RowBindsToPart` が畳む。だが畳んだ verse を voice に結ぶのは `LyricsCollector.CollectNoteBound` の **track 名 == voice 名**だけ＝`sings` の宛先を読まない（同じ量の 2 つ目の綴り・RULES §7.7）。実測（Lab `sessions/p802/f4/sings-voice.lys`）: `part@23.04・deep@28.61`＝`sings m` と同じ（alt のリズムなら 24.87・30.44）。**同じ voice に 2 本目の歌詞（2 言語）を付ける綴りはこれしか無い**（voice 名になれる track は 1 本）。**実の本 0 冊**（ディスク上 46,384 冊・`f4/census2.txt` の SINGSVOICE は自作の 1 冊だけ）。直し方: 畳むときに行の解決済み宛先を運ぶ（`StaffSpec.WithLyrics` は track 名だけ＝書き手 `AddFoldedVerse`・`ParseGrandStaff`、読み手は collector のほか双子・MIDI・XML の歌詞の結び＝着手前に読み手を数える）。⚠️ LYS6013（第802・旧 §2 F ⑷ を閉じた警告）の文面は `sings VOICE` を勧めていない（今は効かない）＝直したら文面に足す。
 - ~~**対応の取れないスラーが無警告で消える**~~ — **完了**（**LYS4010**・ユーザー判断で master 直）。
   ペアリング規則は**レンダラのものを読む**（`SlurPairingScanner` が collector の副作用として記録し
   `SlurPairingValidator` が出す＝タイ LYS4007 と同じ形）。描かれる結果と食い違う警告を出さないため、

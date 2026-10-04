@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第801セッションの経緯
+
+### 1.1 第801セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザー「H」＝H の残り 2 つ。`-Start p801`（HEAD `d3995c93`・未 push 10・1 度目は接続断で test の途中で切れた＝アーカイブ前だったので回し直しただけ）＝full **11024 / 0 / 2 / 11026**。§7 3.5 で第799 を ARCHIVE へ。
+- **H 旗の reach の残 −0.18＝既に閉じていた**: `p359/lp/flag-low.lys` を今の木と LP 2.26.0 に通すと、cadenza の 8 分 8 対は**全部 2.567 で LP と一致**（`p801/pair3.log`・head の x が 29.98〜51.61 まで 0.005 以内）。どの便が閉じたかは追っていない（第358 以後の grace／skyline の spacing の便のどれか）。§2 H の行に印。
+- **H beam-auto の 1 段目の改行位置（縦線 3 対 5）＝既に閉じていた**: `audit/lp-regression/lys/beam-auto.lys` の段割りは **20 段とも LP と同じ**（3 6 2 2 4 2 1 1 2 3 3 2 4 3 2 1 1 1 1 1・`pair-beamauto.log`）。§2 H の行に印。
+- **副産物＝新しい差を 1 つ見つけ、意図した逸脱として名前を付けた**: flag-low の最後の c1 が LP より +1.0。正体は `full-measure-extra-space`——LP の `fills_measure` は左の列に `measure-length` が無いと false（spacing-spanner.cc:459-461）で、その property は `measureStartNow` の列にしか書かれず（paper-column-engraver.cc:181-194）、Timing_translator は `timing` が off の間と `\cadenzaOff` の瞬間には立てない（timing-translator.cc:476-515）。⇒ 双子では **`time none` の 2 小節目以降と、明けた最初の小節だけ**、1 音の小節が余白を貰わない（実測 `q5-cadenza-wholes`: 小節線→頭 2.09・**1.09**・拍子→頭 **3.70**（普通の拍子替えは 4.70＝`q3`））。section の 1 小節目は貰う＝LP の中でも不揃い。**cadenza の拍位置の帳簿の副産物で spacing の規則ではない**＝Lily# はどの小節も小節の頭だと知っている（意味論は本のもの・RULES §5.2・第751）ので**変えない**。`SpacingRules.FillsMeasure` の remark に LILYSHARP-OWN として書き（OWN 215→216）、`SkipColumnSpacingTests.ALoneNoteInAFreeTimeBar_EarnsFullMeasureExtraSpaceLikeAnyBar` で pin（毒は当てていない＝既存の挙動の pin・拍子替えの対照との差分で書いた）。⚠️ 双子の掃きでこの形（`time none` の中か直後の 1 音の小節）が 1.0 ずれて見えたら、これ。
+- 計器: Lab `sessions/p801/pair801.ps1`（今の lysc の CLI と Lab のパスで書き直した p359 の pair・小節線／拍子／頭を x 順に並べる・`-SystemsOnly` は段ごとの小節線数）＋`settings.ly`（自立。⚠️ **p351→p354→p359 の settings.ly は `scratch/` の include が切れていて、LP は `fatal error: failed files` を刷りつつ LPEXIT=0 で頭だけ出す**＝小節線が 1 本も出ない計器は include を疑う）。⚠️ pwsh では関数名 `R` は `Invoke-History` の別名に負ける（「ID 17 の履歴が見つかりません」）。
+- 出力不変（remark と pin だけ）・掃き不要・snapshot 不動。CHANGELOG なし。
+★ `-End p801 -DiffBase d3995c93`（`end1.log`）＝full **11025 / 0 / 2 / 11027**（網 +1）・門 全 OK（HANDOFF 437,623 B・残り 12,377）。7.5: Core `+` 17 行・REF 0・OWN 1＝全部 `FillsMeasure` の remark（LP の 3 か所は住所つきの散文で引いた＝移植ではなく「移植しない理由」なので REF にしていない）。7.6: ⒞ LP に対応物が無い側（どの LP 行から外れたか＝spacing-spanner.cc:459-461・いつ消えるか＝消えない・観測者＝台帳なし／pin 1 本）。7.7: 新しい guard／fallback なし（コードは 1 行も動いていない）。commit `cb6ba729f`（remark・pin・棚卸し 2 枚）＋ docs の commit。Lab は sessions/p801 を commit。push はユーザー。
+判定: **§2 H の「残っている発明」は尽きた**（床＝第800 で消した・旗と beam-auto＝既に閉じていた）。H に残るのは paper column モデルの束（行頭 wish の `ownFixedFloor`・和音行の command 列・mid-measure の clef/key/time・行末の courtesy 群の右側 0.455）＝設計級で 1 便では閉じない。次の候補: ⒝ F ⑷ `lyrics NAME`＝error か warning かユーザー判断／⒞′ 双子の chords／lyrics 行（5 冊・exporter の設計）／H の束（設計）。会話を区切るか: (a) どれもこの便の文脈を使わない／(b) 接続断を 1 度挟んだが文脈は残っている＝どちらでもよい・**新しい島に入るなら新しい会話が僅かに有利**。
+
 ## 以下は第800セッションの経緯
 
 ### 1.1 第800セッション（2026-10-04・YT-DELL2）
