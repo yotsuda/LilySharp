@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第797セッションの経緯
+
+### 1.1 第797セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザー「機能・レイアウトの修正が残っているなら先に。無ければ perf」→ §2 の棚卸し（K・S・T は自分で、A〜R は subagent の要約）→ 着手できる候補を提示 → ユーザー「GO」＝E 節のタイ 2 件から。`-Start p797`（HEAD `2642b0f6`・未 push 2）＝full **11021 / 0 / 2 / 11023**。§7 3.5 で第795 を ARCHIVE へ。
+- **E ⑴ 「tie が小節線をまたぐと臨時記号を刷り直す」は既に閉じていた**（`d4ecf4d2`・2026-09-27「a tie's right head keeps its accidental for a line start only」＝`MeasureBuilder.TiesInto`＋`MarkAccidentalTied`）。probe（Lab `sessions/p797/before/tma.png`・`tmc.png`）: `cis1~ | cis1` は ♯ 1 つ・`cis'1~ | cis'4 c' cis' c'` は到着側に無く次の c' に ♮＝LP と同じ。§2 E の起票は stale だった＝落とした。
+- **E ⑵ tie の照合が音高ではなく位置＝直した**（`TieDetector.SamePitch`）: MIDI 番号が同じで、位置が同じか 7 の倍数（ottava）離れている対だけを結ぶ（unpitched＝midi 0 は位置だけ）。`<c e>2~ <c ees>2` は tie 2 本 → **1 本**（LP の Tie grob 1 個＝第452 実測・`after/tmb-TMB.png`）。`cis~ c`・`fis~ ges` は結ばない。MIDI（`ExtendTied`）と MusicXML（`SameNotehead`）は元から音高で対にしていた＝頁だけが違っていた。**`TieTargetScanner.AnyPitchMatches`（LYS4007）の自前の綴りを `SamePitch` に畳んだ**（§7.7 の 2 綴り。ottava の 4 形で旧綴りも警告なし＝観測者なし・網は答えの pin）。
+- **網**: `TieDetectionTests.Tie_JoinsTheSamePitch_NotTheSameStaffPosition`（毒＝旧綴り で 1 赤・`poison-tie.log`）・`OttavaBoundaryTieTests.ATieIntoTheBracketsEnd_IsNoPitchMismatch`。`~Tie` 276・`~Bow` 36・`~SectionCarry` 17・`~Midi` 245・`~Ottava` 57 緑。
+- **掃き**（`sweep/run-sweeps.ps1`＝全 svg・base＝p795 の exe-head・head＝`exe-head`）: 998 冊 1,199 枚 **差 0**＝ディスク上に「同じ線で別の変化記号へ結ぶ tie」は無い。census: tie が小節線をまたぐ本 196・たいだ音に変化記号の綴りがある本 92（`check-user4` と同じ母集団・E ⑴ の射程の参考）。
+- CHANGELOG Fixes 1 項。棚卸し差分なし。snapshot 不動。
+★ `-End p797 -DiffBase 2642b0f6`（`end.log`）＝full **11023 / 0 / 2 / 11025**（網 +2）・門 全 OK（HANDOFF 436,612 B・残り 13,388）。7.5: Core **`+` 21** 行（numstat 16＋5・`-End` は commit 前で 0 と刷った）・REF 0（既存の REF の下の式の形を変えた＝tie-engraver.cc の「pitch が等しい」のほうへ寄せた・新しい LP 行は読んでいない）・OWN 0。7.6: ⒝ 既存 REF の射程＝字面ではなく等価（ly:pitch の比較を MIDI＋位置で綴る・enharmonic は位置で切る）。7.7: 2 綴りを 1 つに畳んだ（scanner）・guard／sentinel なし（midi 0 は unpitched の既存の意味）。commit `889022a71`（code・網・CHANGELOG）＋ docs の commit。Lab は sessions/p797 だけ commit。push はユーザー。
+判定: E のタイ 2 件は閉じた（⑴ は既に閉じていた・⑵ を直した）。次の一手（GO の順）: **F 繰り返し⑹ section の音楽中の片側 `:|` を MIDI が鳴らさない**（§2 F・伝聞＝先に実コードで確認）→ **E 加線（LedgerLineSpanner の短縮・新 engraver）**。会話を区切るか: (b) 便が 4 つ・文脈はまだ軽い／(a) 次の島は無関係＝**続ける**（`-Start p798`）。
+
 ## 以下は第796セッションの経緯
 
 ### 1.1 第796セッション（2026-10-04・YT-DELL2）

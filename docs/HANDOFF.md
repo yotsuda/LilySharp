@@ -115,6 +115,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第799セッション（2026-10-04・YT-DELL2）
+
+新しい会話。ユーザー「HANDOFF を読んで作業に着手して」＝候補の指定なし → 第798 の 3 候補のうちユーザー判断が要らない ⒞ F ⒨ から。`-Start p799`（HEAD `e1c99153`・未 push 6）＝full **11023 / 0 / 2 / 11025**。§7 3.5 で第797 を ARCHIVE へ。
+- **F ⒨ `lysc svg --combined` の例外＝直した**（起票第298）。probe（Lab `sessions/p799/probe/c-oldchords.lys`＝退役した `a:m` 綴りの chords 行＋staff score＋grid score）で逐語再現。例外は `SvgGenerator.ExtractSvgContent` の `IndexOf('>', IndexOf("<svg"))`——描く物の無い score（LYS1028 で chords 行が全部落ちた grid）は頁 0＝`SvgDocumentContext.Assemble` が `""` を返し、その `""` に `IndexOf("<svg")` が −1 を返して startIndex で投げていた。既定モードは同じ score を 0 バイトの svg に書く（`c-oldchords-grid.svg` 0 B＝recover の設計のまま・触っていない）。
+- 直し: `GenerateMultiMovement` が `svg.Length == 0` の score を movement に数えない（title も空帯も無し＝単独なら空ファイルの score は stack では何も無い）＋`ExtractSvgContent` は `<svg` 無しを「`>`・`</svg>` 無し」と同じく Empty に。probe a（phrase の構文エラー）・b（無い part）は 2 score とも頁が出るので例外にならず＝起票の「構文エラーを持つ本」は条件が広すぎ、正しくは「**頁 0 の score を含む複数 score の本**」。
+- 網 `IntegrationTests.GenerateMultiMovement_AScoreWithNothingToDrawIsNoMovement`（毒 A＝skip だけ外す→`grid` の title が出て :317 赤／毒 B＝guard も外す→旧行で投げて :312 赤・Lab `sessions/p799/poison.ps1`）。`CliBestEffortOutputTests` ほか 9 本緑。
+- 射程: `ExtractSvgContent`／`CombineMovements` の呼び手は `GenerateMultiMovement` だけ＝既定の `lysc svg`・preview・snapshot は 1 行も通らない＝掃き不要・snapshot 不動・棚卸し差分なし（`APPROXIMATIONS.md` は SvgGenerator.cs を引いていない）。CHANGELOG Fixes 1 項。commit `svg --combined: a score with nothing to draw is no movement in the stack`。
+- ⒞ の後半「双子が chords／lyrics 行を出せない 5 冊」は別の島（ly exporter の設計＝§2 F「`PartReferenceFinder` に無い」と同根）＝触っていない・§2 に残る。
+- 罠 1 つ（Lab OPERATIONS §1 に足した）: `cmd /d /s /c "dotnet test … --filter "A|B" < NUL …"` は内側の `"` で引用が切れて `|` がパイプになる（`'B' is not recognized as an internal or external command`・test は走らず log 2 行）＝`^|` でエスケープし filter は引用符なしで書く。
+★ `-End p799 -DiffBase e1c99153`（`end1.log`）＝full **11024 / 0 / 2 / 11026**（網 +1）・門 全 OK（HANDOFF 436,725 B・残り 13,275）。7.5: Core `+` 14 行・REF 0・OWN 0＝監査対象だが、足したのは「文書が空文字列なら movement に数えない」の分岐と `<svg` 無しの Empty 返しだけ（数値定数なし・LP の量を綴っていない）。7.6: ⒟ 何も足していない側（book.cc の空 score の扱いは読んでいない＝新しい REF は要らない・`GenerateMultiMovement` の既存 REF が住所）。7.7: `svg.Length == 0` の skip は「fallback で握りつぶす」の顔だが、空文字列は `SvgDocumentContext.Assemble` が頁 0 に返す*定義済みの答え*で、観測者は新しい網＝黙った既定値ではない。commit `37663beac`（code・網・CHANGELOG）＋ docs の commit。Lab は sessions/p799 と notes/CLAUDE-OPERATIONS.md を commit。push はユーザー。
+判定: ⒞ の前半（例外）は閉じた。次の候補（第798 の一覧の残り・着手前に実コードで確認）: ⒜ H の 3 つ（旗の reach −0.18・`ChordNameEngraver` の幅の床 `Math.Max(2.0)`・beam-auto の 1 段目の改行位置）／⒝ F ⑷ `lyrics NAME`＝error か warning かユーザー判断／⒞′ 双子の chords／lyrics 行（5 冊・exporter の設計）。会話を区切るか: (a) 次の島はこの便の文脈（`SvgGenerator`・CLI の stack）を使わない／(b) 会話はまだ軽い＝**既定どおり続ける**（`-Start p800`）。
+
+## 以下は第798セッションの経緯
+
 ### 1.1 第798セッション（2026-10-04・YT-DELL2）
 
 同じ会話の続き・GO の順の 3 つ目と 4 つ目。`-Start p798`（HEAD `c98bfa3f`・未 push 4）＝full **11023 / 0 / 2 / 11025**。§7 3.5 で第796 を ARCHIVE へ。
@@ -124,19 +138,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 出力不変（註と docs だけ）・掃き不要・snapshot 不動。棚卸し `APPROXIMATIONS.md` 行番号 1 行（註 3 行で MidiExporter の OWN が動いた＝1 度目の `-End` が `TheInventoryIsNotStale` で 1 赤・再生成して 2 度目で緑）。
 ★ `-End p798 -DiffBase c98bfa3f`（`end2.log`）＝full **11023 / 0 / 2 / 11025**（網 ±0）・門 全 OK（HANDOFF 436,162 B・残り 13,838）。7.5: Core `+` 3 行（註だけ）・REF 0・OWN 0。7.6／7.7: 該当なし。commit `0d0d6079c`（註＋棚卸し）＋ docs の commit。Lab は sessions/p798 だけ commit。push はユーザー。
 判定: GO の 4 件は全部閉じた。次の候補（第797 の棚卸しから・どれも着手前に実コードで確認）: ⒜ H の 3 つ（旗の reach −0.18・`ChordNameEngraver` の幅の床 `Math.Max(2.0)`・beam-auto の 1 段目の改行位置）／⒝ F ⑷ `lyrics NAME` の名指し損ねが黙って第 1 声部に付く＝error か warning かユーザー判断／⒞ F ⒨ `lysc svg --combined` の例外・双子が chords／lyrics 行を出せない 5 冊。どれも小さい島＝ユーザーの指定待ち。会話を区切るか: (b) 便が 5 つ続き文脈が重い＝**区切る側**（続けるなら `-Start p799`）。
-
-## 以下は第797セッションの経緯
-
-### 1.1 第797セッション（2026-10-04・YT-DELL2）
-
-同じ会話の続き・ユーザー「機能・レイアウトの修正が残っているなら先に。無ければ perf」→ §2 の棚卸し（K・S・T は自分で、A〜R は subagent の要約）→ 着手できる候補を提示 → ユーザー「GO」＝E 節のタイ 2 件から。`-Start p797`（HEAD `2642b0f6`・未 push 2）＝full **11021 / 0 / 2 / 11023**。§7 3.5 で第795 を ARCHIVE へ。
-- **E ⑴ 「tie が小節線をまたぐと臨時記号を刷り直す」は既に閉じていた**（`d4ecf4d2`・2026-09-27「a tie's right head keeps its accidental for a line start only」＝`MeasureBuilder.TiesInto`＋`MarkAccidentalTied`）。probe（Lab `sessions/p797/before/tma.png`・`tmc.png`）: `cis1~ | cis1` は ♯ 1 つ・`cis'1~ | cis'4 c' cis' c'` は到着側に無く次の c' に ♮＝LP と同じ。§2 E の起票は stale だった＝落とした。
-- **E ⑵ tie の照合が音高ではなく位置＝直した**（`TieDetector.SamePitch`）: MIDI 番号が同じで、位置が同じか 7 の倍数（ottava）離れている対だけを結ぶ（unpitched＝midi 0 は位置だけ）。`<c e>2~ <c ees>2` は tie 2 本 → **1 本**（LP の Tie grob 1 個＝第452 実測・`after/tmb-TMB.png`）。`cis~ c`・`fis~ ges` は結ばない。MIDI（`ExtendTied`）と MusicXML（`SameNotehead`）は元から音高で対にしていた＝頁だけが違っていた。**`TieTargetScanner.AnyPitchMatches`（LYS4007）の自前の綴りを `SamePitch` に畳んだ**（§7.7 の 2 綴り。ottava の 4 形で旧綴りも警告なし＝観測者なし・網は答えの pin）。
-- **網**: `TieDetectionTests.Tie_JoinsTheSamePitch_NotTheSameStaffPosition`（毒＝旧綴り で 1 赤・`poison-tie.log`）・`OttavaBoundaryTieTests.ATieIntoTheBracketsEnd_IsNoPitchMismatch`。`~Tie` 276・`~Bow` 36・`~SectionCarry` 17・`~Midi` 245・`~Ottava` 57 緑。
-- **掃き**（`sweep/run-sweeps.ps1`＝全 svg・base＝p795 の exe-head・head＝`exe-head`）: 998 冊 1,199 枚 **差 0**＝ディスク上に「同じ線で別の変化記号へ結ぶ tie」は無い。census: tie が小節線をまたぐ本 196・たいだ音に変化記号の綴りがある本 92（`check-user4` と同じ母集団・E ⑴ の射程の参考）。
-- CHANGELOG Fixes 1 項。棚卸し差分なし。snapshot 不動。
-★ `-End p797 -DiffBase 2642b0f6`（`end.log`）＝full **11023 / 0 / 2 / 11025**（網 +2）・門 全 OK（HANDOFF 436,612 B・残り 13,388）。7.5: Core **`+` 21** 行（numstat 16＋5・`-End` は commit 前で 0 と刷った）・REF 0（既存の REF の下の式の形を変えた＝tie-engraver.cc の「pitch が等しい」のほうへ寄せた・新しい LP 行は読んでいない）・OWN 0。7.6: ⒝ 既存 REF の射程＝字面ではなく等価（ly:pitch の比較を MIDI＋位置で綴る・enharmonic は位置で切る）。7.7: 2 綴りを 1 つに畳んだ（scanner）・guard／sentinel なし（midi 0 は unpitched の既存の意味）。commit `889022a71`（code・網・CHANGELOG）＋ docs の commit。Lab は sessions/p797 だけ commit。push はユーザー。
-判定: E のタイ 2 件は閉じた（⑴ は既に閉じていた・⑵ を直した）。次の一手（GO の順）: **F 繰り返し⑹ section の音楽中の片側 `:|` を MIDI が鳴らさない**（§2 F・伝聞＝先に実コードで確認）→ **E 加線（LedgerLineSpanner の短縮・新 engraver）**。会話を区切るか: (b) 便が 4 つ・文脈はまだ軽い／(a) 次の島は無関係＝**続ける**（`-Start p798`）。
 
 ## 2. 開いている作業
 
@@ -1657,7 +1658,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 > 設計から——**判断だけで閉じる型ではなく設計資産が要る**（第215 骨 1 の区別）。着手はユーザー決定から。
 > ⇒ ✅ **ユーザー決定 2026-09-08＝⒝ `removeEmpty` は score 項目へ・`pedal` は part のまま。綴りは `as` 1 つに列挙＝`staff m as lines 1 removeEmpty all`**（`as` の反復ではない・ossia にも許す＝`lines` と同じ・2 つの綴りは持たない RULES §5.2.1⑤）。**根拠**: LP の `\RemoveEmptyStaves` は `\with { \override VerticalAxisGroup.remove-empty = ##t }` の context mod（`ly/context-mods-init.ly:52-64`・`RemoveAllEmptyStaves` は `remove-first` を足す）で、**書ける場所は score の `\layout { \context { \Staff … } }` か譜の `\with` だけ＝音楽の属性ではない**。動作は段ごとの hara-kiri（`keepAliveInterfaces` の grob＝符頭・タブ数字・歌詞・和音名・強弱・数字付き低音・フレット図・percent・stanza が 1 つも無い段で譜が消える・休符／clef／key だけでは生きない・`remove-first` 偽なら最初の段は全譜）。典型は総譜で休む楽器を落とし、パート譜では落とさない＝`lines` を移した論法がそのまま当たる。**`pedal` は `pedalSustainStyle` という context property で `\set` により音楽にも書ける**＝家風で score ごとに変える需要が無い。**Lily# 側**: `HaraKiri.cs` が同じ規則を移植済み（値は `Staff.RemoveEmpty`）なので動くのは綴りと配線だけ（`RenderSpecParser`・`StaffRender`・LSP 補完・TextMate・GRAMMAR §3／§7・`DocKeywordListTests`）。**射程**: 追跡 `test/hara-kiri.lys`・`audit/lpreg/harakiri-percent{,-ctrl}.lys`・`audit/lp-regression/lys/hara-kiri-percent-repeat.lys`・`hairpin-spanbar.lys`／ユーザー実コーパス 0 冊。part ヘッダの `removeEmpty` は既存の unknown-property 網が拒む（`lines` と同じ・新 code 0 の見込み）。
 
-> ## ▶ **⒨ `lysc svg --combined` は構文エラーを持つ本で例外を投げて出力を作らない**（第298 起票・**掃きの副産物**）
+> ## ✅ **⒨ `lysc svg --combined` は構文エラーを持つ本で例外を投げて出力を作らない＝第799 で閉じた**（第298 起票・**掃きの副産物**）。正体は「頁 0 の score を含む複数 score の本」（`SvgGenerator.ExtractSvgContent` の `IndexOf(-1)`）＝§1.1 第799。下段の双子の 5 冊は別の島で開いたまま。起票時の本文:
 > **`Index was out of range. Must be non-negative and less than or equal to the size of the
 > collection. (Parameter 'startIndex')`**——**エラー行を全部出したあと、既定モードなら
 > 「written anyway, from the part of the file that parsed」で出す版面を、`--combined` は出さない。**
