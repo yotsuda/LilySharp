@@ -95,7 +95,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **U11（`Hold the Line` の page1 が LP 8 系・Lily# 7 系）＝第547 が「移植できる欠陥は無い」と確定・第573 が lead を閉じた（頁 DP の僅差 0.030576 対 0.031049＝1e-3 級の差でどちらにも倒れる）＝提案しない**（全文は §1.1 第547・第573＝ARCHIVE・Lab `sessions/p547/`・`sessions/p573/u11/`）。重複 mark は第558 が畳んだ（LYS4021）＝page 割りは動かない
 - ★★★ **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す**（0.074% ＋ 1 ULP の尾）
 - ★★ **⒵⁴ `prefixMarkAnchorX` の解き直し 0.338%**＝**memo は反証済み**（hit 率 0.53%）
-- ★★ **⒳⁶ span の fold が*跨がれた全小節*に入る＝健全側への過剰無効化**（第453 起票・実測: 24 小節・括弧 3→22・解放を消す 1 編集で fold を落とすと hit 1 / miss 12 → hit 5 / miss 8＝4 系ぶん・SVG はバイト同一）。`MeasureContentKey.BucketSpan` が括弧の覆う全小節に `(role, content)` を畳むが、まん中を横切るだけの括弧に依存する cache 値は無い。直すなら**端だけに fold**（`role` 0／1／3 の小節だけ）＝網 `MeasureContentKeySpanTests` は端だけにすると赤＝一緒に書き換える。⚠️ cache の健全性に触る（RULES §5.0）ので、値段（1 打鍵あたりの系の再計算数）を測る前にまず判断
 
 - ★ **⒵ perf は第615 で区切り（ユーザー判断）**: render −24%・割当 −31%（第598〜第615＝ARCHIVE）。照合の基準は `SvgGenerator.Generate`（Lab `sessions/p611/verify-all.ps1`）・打鍵ごとの計器は Lab `sessions/p613/lathost`。残る大物は設計級＝長い score の段ごと引き継ぎと collect の尾の `_tieTargetWarnings` abort（第613 ⒝）。⚠️ 弱参照の表で全 item を memo する形は GC で負ける（第602）
 
@@ -116,6 +115,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第796セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザー「次便は (b) をやって」＝⒝ のうち値段の分かっている ⒳⁶ から（他は「提案しない」か perf 一時停止）。`-Start p796`（HEAD `f04054c0`・**未 push 0＝ユーザーが push した**）＝full **11010 / 0 / 2 / 11012**。§7 3.5 で第794 を ARCHIVE へ。
+- **⒳⁶ の前提を毒で反証した＝閉じた（直さない）**。前提「まん中を横切るだけの括弧に依存する cache 値は無い」（第453・素の 1 段 24 小節で SVG 同一）は、**括弧の下に何かが在ると成り立たない**: 毒（`BucketSpan` の role 2 を畳まない）の下で、24 小節・4 小節ごと `break`・spanner 3→22 小節の本に production 配線（`IncrementalCompiler.RenderIncremental` 対 full）で端の 1 打鍵を当てると、**pedal（歌詞つき）の解放／開始の削除・hairpin（2 段）の `@f`／`@cresc` の削除＝4 形が stale**（lyric band・staff skyline の cache 値が横切る spanner に依存する＝`PedalEngraver.SolveAndSeed`・`SkylineBuilder.AddHairpinsToSkyline` の註どおり）。trill（1 段）と volta（1 段）の 7 形は同一（`x6-poison.log`・`probe.txt`）。⇒ **端だけに fold する直しは不健全**。volta／trill だけ端に畳む案は、多段で未測定のうえ端の編集が稀で賞金が無い＝追わない。
+- **網**: `SpannerCrossedSystemsTests`（11 形・毒で 4 赤＝`net-poison.log`）。`MeasureContentKeySpanTests` の remark「rendered observer は存在しえない」を訂正（素の本の話だった）。Core は 1 行も動いていない＝出力不変・掃き不要。
+- §1.0 ⒝ から ⒳⁶ を落とした。
+★ `-End p796 -DiffBase f04054c0`（`end.log`）＝full **11021 / 0 / 2 / 11023**（網 +11）・門 全 OK（HANDOFF 438,779 B・残り 11,221）。7.5: Core **`+` 0** 行（`git diff -- LilySharp.Core` が空＝出力同一は構成から）・REF 0・OWN 0。7.6: ⒟ 何も足していない（反証＝網と remark の訂正だけ）。7.7: 当たる面なし。commit `531ac4d63`（網 2 ファイル）＋ docs の commit。Lab は sessions/p796 だけ commit。push はユーザー。
+判定: ⒳⁶ は反証して閉じた（Core 不変）。§1.0 ⒝ に残るのは ⒡′（bow の採点枠 0.074%）・⒵⁴（`prefixMarkAnchorX` 0.338%）＝どちらも perf の島（第615 の一時停止の下）・設計級、ほかは「提案しない」。次の一手: ユーザーが perf の一時停止を解くなら ⒡′ か ⒵⁴（値段は §1.0 の分母つきの数字・計器は Lab `sessions/p613/lathost`）、解かないなら手の動く島は無い＝指示待ち。会話を区切るか: (b) 便が 3 つ続き文脈はまだ軽い／(c) 次は未定＝**続ける**（指示が出れば `-Start p797`）。
+
+## 以下は第795セッションの経緯
+
 ### 1.1 第795セッション（2026-10-04・YT-DELL2）
 
 同じ会話の続き・ユーザー決定「1 (8)」（本 4 冊は放置・v0.10.0 はまだ）。`-Start p795`（HEAD `8ca1e118`・未 push 36）＝full **11006 / 1 / 2 / 11009**＝赤 1 は `HistoryCitationTests.DeadCitationsDoNotGrow`（947→948・第794 の語りに Lab の commit SHA を書いた＝本体に無い引用）→ 語りの SHA を消して緑（`dead.log`）。§7 3.5 で第793 を ARCHIVE へ。
@@ -126,19 +136,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - CHANGELOG: p759 の項の「宣言した partial は独立」の文を落とし、Fixes に 1 項。棚卸し `APPROXIMATIONS.md` 行番号 3 行・csv 不変。snapshot 不動。
 ★ `-End p795 -DiffBase 8ca1e118`（`end.log`）＝full **11010 / 0 / 2 / 11012**（網 +3）・門 全 OK（HANDOFF 441,345 B・残り 8,655）。7.5: Core **`+` 27** 行（`-End` は commit 前で 0 と刷った・numstat 16＋11）・REF 0・OWN 0（ユーザー決定の意味論＝第753 と同じ扱い・LP の `\partial` は実測で裏取り・式は写していない）。7.6: 該当なし（新しい定数なし・既存の規則の射程を広げ、門を 1 つ足した）。7.7: 匂いなし（門は「自分の拍子で満杯」という意味の門で、観測者は毒 c／d の 2 網）。commit `8e9ad797`（code・網・CHANGELOG・棚卸し）＋ docs の commit。Lab は sessions/p795 だけ commit。push はユーザー。
 判定: ⑻ は閉じた＝⑼ は全部閉じた（§1.0 の一覧を 1 行の指標に畳んだ）。次の一手: §1.0 ⒜ に手の動く島は無い（残りは VS Code の手動確認・v0.10.0 の時期＝ユーザー判断・本 4 冊は放置の決定）＝指示待ち。⒝ の設計級（値段の分かっている順に ⒳⁶ span の fold の端だけ化）はユーザーの GO が要る。会話を区切るか: (b) 便が 2 つ・文脈は軽い／(c) 次の島は未定＝**続ける**（指示が出れば `-Start p796`）。
-
-## 以下は第794セッションの経緯
-
-### 1.1 第794セッション（2026-10-04・YT-DELL2）
-
-新しい会話（HANDOFF を読んで着手＝⑼ の残りの ⑺）。`-Start p794`（HEAD `1204565c`・未 push 34）＝full **10994 / 0 / 2 / 10996**（`run1.trx`）。§7 3.5 で第792 を ARCHIVE へ。ユーザーの本 4 冊（LYS1034）は未修正＝`lysc check` で 4 冊とも error のまま（`sessions/p794/check-user4.log`）。Lab の作業ツリーにはユーザーの未 commit の本の変更が多数＝触らない・commit に混ぜない。
-- **⑺ の穴を実測**（捨てた probe・`probe1.log`）: by-part の本で standalone header（`section A { key g major }`）を part の**下**に置き、header の 1 打鍵を production 配線（`IncrementalCompiler.RenderIncremental` 対 `SvgGenerator.Generate`）で比べると **4 形中 4 形が stale**（key の値・長さの変わる key・別 section の key・header に `partial` を打つ）。header が part の**上**なら 4 形とも一致（読み extent が編集を覆う）。原因: prologue の key／time／tempo／partial は `SectionHeaders`（名前で引く registry＝同名の全宣言から）だが、record mode の header read は**演奏中の node だけ**＝`MeasureCollector.Form.cs` の註が書いていた穴そのもの。
-- **直し（`RecordRegistrySourcesOf`）**: section を演奏するたび、同名の他の宣言（registry に渡した集合＝grouped track の cell を除く）を structure read に、inline music を持たない宣言は**全文を位置依存の read**に（directive だけの箱・どの directive も prologue が使いうる・隣に directive を打っても shape には見えない＝run は 1 kind に畳まれる）。**`ShapeWalk` は directive だけの run と音のある run を別の kind で刷る**（`KeySignature` 対 `Note`）＝他 part の同名 cell が最後の音を失って header になる（registry に載る）形が shape の変化になる。音のある run に directive を打つのは従来どおり walk の仕事＝値段なし。
-- **値段**: 読みは「その header を読む play から後」＝B の header に `partial` を打つと A の 2 小節は残る（adopted 2）・A の key を変えると 0。part の**上**の header は下の編集で動かない（値段 0）。part の**下**の header は上の長さの変わる編集で prefix を断る＝**ディスク上 891 冊中 0 冊がその形（上に置く本は 17 冊）**（`sessions/p794/census-headers.ps1`）。record mode の回数: section play ごとに宣言表を 1 周（文字列比較だけ）。
-- **網**（`CollectEditResumeTests`）: `AKeystrokeInAStandaloneHeaderBelowThePart_ReachesTheResumedCollect` 10 形（header 7＝key 3 種・partial／time／tempo を打つ・header を空に／cell 3＝音を全部消して header 化・どちらかの part の cell に小節を足す）・`…_KeepsTheBarsBeforeItsSection` 3（adopted 2／2／0）。毒 A（`RecordRegistrySourcesOf` を呼ばない）**11 赤**／毒 B（`ShapeWalk` の分類を戻す）**1 赤**（header 化の形だけ＝load-bearing は 1 形）（`poisonA.log`・`poisonB.log`）。cell の header 化は実機では `CollectResumeAbortException`（journal の鍵数が合わない）→ `IncrementalCompiler` が受けて full collect＝健全。`~Resume` 78 本緑。
-- CHANGELOG Fixes 1 項。棚卸し `APPROXIMATIONS.md` 行番号 2 行・csv 不変。snapshot 不動（出力は変わらない＝resume の再利用の判定だけ・掃きは不要）。
-★ `-End p794 -DiffBase 1204565c`（`end.log`）＝full **11007 / 0 / 2 / 11009**（網 +13）・門 全 OK（HANDOFF 442,083 B・残り 7,917）。7.5: Core **`+` 72** 行（作業ツリーの diff＝`-End` は commit 前で 0 と刷った）・REF 0・OWN 0（LP に対応物なし＝resume の基盤・数値なし・第522 と同じ扱い）。7.6: ⒞ 既存の resume の基盤の射程を広げただけ＝新しい出所なし。7.7: `ShapeWalk` が `KeySignature` を「directive だけの run」の印に使う＝kind の二重使用だが、collectable kind は run に畳まれるので素の child がその kind で立つことは無い＝衝突なし（remarks に書いた）・観測者は毒 B の 1 形。commit `fcb3c845`（code・網・CHANGELOG・棚卸し）＋ docs の commit。Lab の commit（sessions/p794 だけ・ユーザーの本の変更は混ぜていない）。push はユーザー。
-判定: ⑺ は閉じた（§1.0 から落とした）。§1.0 ⒜ の残りは ⑻（観察・優先低・ユーザー判断）・VS Code の手動確認・v0.10.0 の時期・ユーザーの本 4 冊＝全部ユーザー判断＝次の一手は指示待ち。会話を区切るか: (c) 次の島は未定・この便は 1 便で文脈は軽い＝**続ける**（指示が出れば `-Start p795`）。
 
 ## 2. 開いている作業
 

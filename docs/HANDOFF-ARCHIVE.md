@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第794セッションの経緯
+
+### 1.1 第794セッション（2026-10-04・YT-DELL2）
+
+新しい会話（HANDOFF を読んで着手＝⑼ の残りの ⑺）。`-Start p794`（HEAD `1204565c`・未 push 34）＝full **10994 / 0 / 2 / 10996**（`run1.trx`）。§7 3.5 で第792 を ARCHIVE へ。ユーザーの本 4 冊（LYS1034）は未修正＝`lysc check` で 4 冊とも error のまま（`sessions/p794/check-user4.log`）。Lab の作業ツリーにはユーザーの未 commit の本の変更が多数＝触らない・commit に混ぜない。
+- **⑺ の穴を実測**（捨てた probe・`probe1.log`）: by-part の本で standalone header（`section A { key g major }`）を part の**下**に置き、header の 1 打鍵を production 配線（`IncrementalCompiler.RenderIncremental` 対 `SvgGenerator.Generate`）で比べると **4 形中 4 形が stale**（key の値・長さの変わる key・別 section の key・header に `partial` を打つ）。header が part の**上**なら 4 形とも一致（読み extent が編集を覆う）。原因: prologue の key／time／tempo／partial は `SectionHeaders`（名前で引く registry＝同名の全宣言から）だが、record mode の header read は**演奏中の node だけ**＝`MeasureCollector.Form.cs` の註が書いていた穴そのもの。
+- **直し（`RecordRegistrySourcesOf`）**: section を演奏するたび、同名の他の宣言（registry に渡した集合＝grouped track の cell を除く）を structure read に、inline music を持たない宣言は**全文を位置依存の read**に（directive だけの箱・どの directive も prologue が使いうる・隣に directive を打っても shape には見えない＝run は 1 kind に畳まれる）。**`ShapeWalk` は directive だけの run と音のある run を別の kind で刷る**（`KeySignature` 対 `Note`）＝他 part の同名 cell が最後の音を失って header になる（registry に載る）形が shape の変化になる。音のある run に directive を打つのは従来どおり walk の仕事＝値段なし。
+- **値段**: 読みは「その header を読む play から後」＝B の header に `partial` を打つと A の 2 小節は残る（adopted 2）・A の key を変えると 0。part の**上**の header は下の編集で動かない（値段 0）。part の**下**の header は上の長さの変わる編集で prefix を断る＝**ディスク上 891 冊中 0 冊がその形（上に置く本は 17 冊）**（`sessions/p794/census-headers.ps1`）。record mode の回数: section play ごとに宣言表を 1 周（文字列比較だけ）。
+- **網**（`CollectEditResumeTests`）: `AKeystrokeInAStandaloneHeaderBelowThePart_ReachesTheResumedCollect` 10 形（header 7＝key 3 種・partial／time／tempo を打つ・header を空に／cell 3＝音を全部消して header 化・どちらかの part の cell に小節を足す）・`…_KeepsTheBarsBeforeItsSection` 3（adopted 2／2／0）。毒 A（`RecordRegistrySourcesOf` を呼ばない）**11 赤**／毒 B（`ShapeWalk` の分類を戻す）**1 赤**（header 化の形だけ＝load-bearing は 1 形）（`poisonA.log`・`poisonB.log`）。cell の header 化は実機では `CollectResumeAbortException`（journal の鍵数が合わない）→ `IncrementalCompiler` が受けて full collect＝健全。`~Resume` 78 本緑。
+- CHANGELOG Fixes 1 項。棚卸し `APPROXIMATIONS.md` 行番号 2 行・csv 不変。snapshot 不動（出力は変わらない＝resume の再利用の判定だけ・掃きは不要）。
+★ `-End p794 -DiffBase 1204565c`（`end.log`）＝full **11007 / 0 / 2 / 11009**（網 +13）・門 全 OK（HANDOFF 442,083 B・残り 7,917）。7.5: Core **`+` 72** 行（作業ツリーの diff＝`-End` は commit 前で 0 と刷った）・REF 0・OWN 0（LP に対応物なし＝resume の基盤・数値なし・第522 と同じ扱い）。7.6: ⒞ 既存の resume の基盤の射程を広げただけ＝新しい出所なし。7.7: `ShapeWalk` が `KeySignature` を「directive だけの run」の印に使う＝kind の二重使用だが、collectable kind は run に畳まれるので素の child がその kind で立つことは無い＝衝突なし（remarks に書いた）・観測者は毒 B の 1 形。commit `fcb3c845`（code・網・CHANGELOG・棚卸し）＋ docs の commit。Lab の commit（sessions/p794 だけ・ユーザーの本の変更は混ぜていない）。push はユーザー。
+判定: ⑺ は閉じた（§1.0 から落とした）。§1.0 ⒜ の残りは ⑻（観察・優先低・ユーザー判断）・VS Code の手動確認・v0.10.0 の時期・ユーザーの本 4 冊＝全部ユーザー判断＝次の一手は指示待ち。会話を区切るか: (c) 次の島は未定・この便は 1 便で文脈は軽い＝**続ける**（指示が出れば `-Start p795`）。
+
 ## 以下は第793セッションの経緯
 
 ### 1.1 第793セッション（2026-10-04・YT-DELL2）
