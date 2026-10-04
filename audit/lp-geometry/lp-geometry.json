@@ -285,6 +285,27 @@
       "residual": 0,
       "why": "An OBSERVER for the right side of a mid-measure KEY change (session 807), predicted EXACT before and after the port: a flat WELL BELOW the staff (ees, the flat's top under the bottom line) after a change to A major (probe barline-spacing.ly, score MKL). First written with bes, whose flat reaches into the staff: a poison that kept the right-side box to the staff (Lab sessions/p807/poisons.ps1 no. 2) left it green, so it observed nothing; ees turns that poison red. A KeySignature's box is pure-from-neighbor-interface::extra-spacing-height-including-staff (scm/output-lib.scm:976-979): it grows to the staff and the neighbouring columns' pure heights, so — unlike MCA's clef — it meets the flat below the staff and the flat's whole reach enters the rod (6.07 against MK's 5.80). What turns this red: a key box limited to the staff on the right side."
     },
+    "midmeasure.clef.prev-note-to-clef.before-grace": {
+      "probe": "barline-spacing.ly",
+      "score": "MCG",
+      "lilypond": 1.802578,
+      "residual": 1.309307,
+      "why": "OPEN since 2026-10-04 (session 808), opened with its cause named and predicted to the digit before reading (+1.309307, on the assumption — confirmed by midmeasure.clef.prev-note-to-main-note.across-grace — that the main note already stands where LilyPond puts it). A mid-measure bass clef before a GRACE note (probe barline-spacing.ly, score MCG: c'4 d' \\clef bass \\grace e16 f4): LilyPond 1.802578 = MC's 2.253222 * 0.8. The clef is set at the grace's moment, so the clef column's right neighbour is the GRACE column, and lily/spacing-spanner.cc:396-403 musical_column_spacing scales the spring into it by 0.8 (Spring::operator*=, after merge_springs) — and :519-527 breakable_column_spacing does the same to the clef -> grace spring (3.146600 * 0.8 = 2.517280, measured to the GRACE head). Lily# prices the two gaps as one timing spring (SpacingRules.MidMeasureChangeGaps), and SpringIntoGraceRun scales that whole spring by 0.8 and adds the run, so the MAIN note lands on LilyPond's 6.258485 — but the renderer hangs the clef from the main note by the UNSCALED right gap (SpacingRules.MidMeasureChangeRightGap, 3.146600), counting neither the 0.8 nor the grace run between: 17.845730 - 3.146600 = 14.699130, 1.309307 right of LilyPond's 13.389823. Twins (Lab sessions/p808/gr): the same 1.31 with the grace on or below the staff, with an eighth grace, and 2.2 with two graces; with no grace the clef agrees. PREDICTION for the port (each gap scaled by 0.8 on its own as Spring::operator*= does, and the renderer's hang = the scaled right gap + the grace run's span): 0."
+    },
+    "midmeasure.clef.clef-to-grace": {
+      "probe": "barline-spacing.ly",
+      "score": "MCG",
+      "lilypond": 2.517280,
+      "residual": -1.309307,
+      "why": "OPEN since 2026-10-04 (session 808), the other side of midmeasure.clef.prev-note-to-clef.before-grace, predicted to the digit (-1.309307): LilyPond's clef -> grace head is Staff_spacing's 3.146600 scaled by lily/spacing-spanner.cc:519-527's 0.8 = 2.517280; Lily# hangs the clef 1.309307 too far right, so this gap is that much short. PREDICTION for the port: 0."
+    },
+    "midmeasure.clef.prev-note-to-main-note.across-grace": {
+      "probe": "barline-spacing.ly",
+      "score": "MCG",
+      "lilypond": 6.258485,
+      "residual": 0,
+      "why": "The CONTROL of midmeasure.clef.prev-note-to-clef.before-grace (session 808), predicted EXACT before and after the port: the previous note -> main note across the clef and the grace. Lily# already lands it (6.258485, the last-digit 2e-7 of MC's own): SpringIntoGraceRun scales the change column's one timing spring by 0.8 and adds the run. It says the open residual is where the CLEF hangs, not how wide the pair is; after the port, which scales each gap on its own, it holds as long as neither gap's rod binds (Spring::operator*= floors each at its own minimum)."
+    },
     "midmeasure.clef.clef-to-next-note": {
       "probe": "barline-spacing.ly",
       "score": "MC",

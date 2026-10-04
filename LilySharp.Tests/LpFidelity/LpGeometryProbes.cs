@@ -278,6 +278,11 @@ internal static class LpGeometryProbes
     // so the flat's reach counts.
     private static readonly string MKL = Score("c4 d key a major ees, c |", "MKL");
 
+    // LilyPond twin: c'4 d' \clef bass \grace e16 f4 f4 — a mid-measure clef before a GRACE:
+    // both springs around the clef column take the grace's 0.8 (lily/spacing-spanner.cc:396-403
+    // and :519-527), and the right one ends at the grace head, not the main note.
+    private static readonly string MCG = Score("c4 d clef bass grace { e,16 } f, f, |", "MCG");
+
     // LilyPond twin: c'4 d' \key a \major e'4 f'4   — likewise one measure.
     private static readonly string MK = Score("c4 d key a major e f |", "MK");
 
@@ -14176,6 +14181,12 @@ internal static class LpGeometryProbes
             g => g.NoteheadAnchor(2) - g.FirstNonNoteheadAfter(g.NoteheadAnchor(1))),
         new("midmeasure.key.key-to-next-note.flat-below-staff", MKL,
             g => g.NoteheadAnchor(2) - g.FirstNonNoteheadAfter(g.NoteheadAnchor(1))),
+        new("midmeasure.clef.prev-note-to-clef.before-grace", MCG,
+            g => g.FirstClefAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1)),
+        new("midmeasure.clef.clef-to-grace", MCG,
+            g => g.NoteheadAnchor(2) - g.FirstClefAfter(g.NoteheadAnchor(1))),
+        new("midmeasure.clef.prev-note-to-main-note.across-grace", MCG,
+            g => g.NoteheadAnchor(3) - g.NoteheadAnchor(1)),
         new("midmeasure.key.prev-note-to-key", MK,
             g => g.FirstNonNoteheadAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1)),
         new("midmeasure.key.key-to-next-note", MK,

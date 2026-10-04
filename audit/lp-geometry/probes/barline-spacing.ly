@@ -325,6 +325,14 @@ lay =
 %%       staff — a box limited to the staff met it too, so it observed nothing.)
 \score { \new Staff { \time 4/4 c'4 d' \key a \major ees4 c'4 } \lay "MKL" }
 
+%% MCG — a mid-measure clef before a GRACE note (session 808). The clef is set at the grace's
+%%       moment, so the clef column's right neighbour is the grace column and BOTH springs
+%%       around it take the grace's 0.8: the left one (lily/spacing-spanner.cc:396-403
+%%       musical_column_spacing, MC's 2.253222 * 0.8 = 1.802578) and the right one
+%%       (:519-527 breakable_column_spacing, MC's 3.146600 * 0.8 = 2.517280, measured to the
+%%       grace head, not the main note).
+\score { \new Staff { \time 4/4 c'4 d' \clef bass \grace e16 f4 f4 } \lay "MCG" }
+
 %% NO mid-measure TIME probe. `\time 3/4` inside a 4/4 bar makes LilyPond restructure the
 %% measures rather than engrave a change column, and the resulting dump is not the thing we
 %% would be comparing against. An uninterpretable probe is worse than no probe: it would
