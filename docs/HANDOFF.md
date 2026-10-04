@@ -115,6 +115,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第807セッション（2026-10-04・YT-DELL2）
+
+新しい会話（HANDOFF・RULES 通読・CLAUDE-OPERATIONS 通読）。第806 の次の候補 ⒜（change 列の右の rod）に着手。`-Start p807`（HEAD `534eb9c3`・未 push 25）＝full **11059 / 0 / 2 / 11061**。§7 3.5 で第805 を ARCHIVE へ（moved 15 lines）。
+- 双子（Lab `sessions/p807/rod`・`pair.ps1`）: 行中 bass clef の直後の音に `#`。**clef の帯の外（下 `cis,,`・上 `gis`）だけ Lily# が 1.05 右**、帯の中（`fis,`）と臨時記号なしは 2 桁で一致。LP の `#` は clef の下に潜り込む（インクが clef の右端より 0.45 左から始まる）。根: staff-spacing.cc:210 の min_dist＝Paper_column::minimum_distance（paper-column.cc:145-164）＝**skyline 距離**を、`SpacingRules.RightRod` は「列の幅＋最後の grob の右 esw＋次の列の左への到達」の**箱**で作っていた。第805 が左側で直したのと同じ病の右側。
+- §5.0 の型: **`1c918366c`（出力不変）**＝probe `barline-spacing.ly` に MCA（帯の外の `#`）・MCS（対照・帯の中）・MKL（調号の後の譜の下の♭）＋台帳 3 点（MCA +1.050000 は予測の桁どおり・他 2 点 0）。**`c631cfc86`（移植）**＝`ChangeColumnBoxes` を左 skyline から切り出し、`ChangeColumnRightSkyline`（同じ箱の右向き）対 `ItemSkylineFactory.SharedLeftSkylineAtColumn`（小節線の `BarlineToColumnMinimum` が同じ LP 関数に読む view）。3 人の呼び手（spring・renderer・loose）が同じ答え。MCA → 0、MCS・MKL 不動。CHANGELOG は第805 の項に 1 文。
+- 網: 毒 4 本（Lab `sessions/p807/poisons.ps1`）の 1 回目で ⑵（右の帯から次の列の高さを外す）が 0 赤＝**MKL の `bes` は♭が譜の中に届くので観測者でなかった** → `ees` に替えて ⑵ は MKL だけ赤。⑷（wish の左 view）は**恒等写像**（その view も臨時記号を含む＝RULES §5.4 の 3 つ目の顔）→「次の列を頭だけの箱にする」に差し替えて MCS・MKL・MKA・`test/keysig-change` が赤。⑴（箱に戻す）＝MCA だけ赤。⑶（非音楽 item の X だけの腕）は全緑＝観測者 0（註と §2 B に名指し）。
+- 掃き（`p807/sweep/`・base＝`p806/exe-head`）: **998 冊・1,199 svg・差 0**＝この形は母集団に無い。snapshot 不動。副産物: grace の形（`h-grace-lo`）は主音符が LP に揃った（約 0.27 右 → 47.49 対 47.48）が、**clef 自体は 0.26 右のまま**＝左の量（§2 B に起票）。
+- 触っていない: 右側の調号／拍子の帯は前の列の高さを読まない（次の列の高さが帯に入っているので距離には届かない＝註）。多段譜の 1 枠の読みは左と同じ。
+★ `-End p807 -DiffBase 534eb9c3`（`end1.log`）＝full **11062 / 0 / 2 / 11064**（網 +3＝台帳点 3）・門 全 OK（HANDOFF 439,264 B・残り 10,736）。台帳 983 → 986 点・exact 786 → 789・OPEN 0。7.5: Core `+` 81 行・REF 3（staff-spacing.cc:210・paper-column.cc:145-164・separation-item.cc:89-110）・OWN 0。7.6: ⒜ 字面＝min_dist は 2 つの skyline の距離・max(0, …)・次の列は PaperColumn の 0.08 と臨時記号の無 padding（小節線側と同じ view）／⒝ 右の帯は前の列を読まない（距離に届かない・註）・多段譜は 1 枠。7.7: ⑴ 非音楽 item の旧い X だけの腕を残した＝観測者 0（註と §2 B）／⑵ 同じ箱の 2 つ目の綴りは作らず `ChangeColumnBoxes` 1 軒に畳んだ／⑶ guard・fallback なし。7.9 perf: change 列の右の距離 1 回ごとに箱 1〜3 の skyline 1 枚＋次の item の左 skyline（render memo 共有）＝change 列の数だけ。commit `1c918366c`（点）・`c631cfc86`（移植・CHANGELOG）＋ docs の commit。Lab は sessions/p807 を commit。push はユーザー。
+判定: 行中の change 列は左右とも LP の skyline 距離になった（左＝第805・余白＝第806・右＝第807）。教訓: **毒の 1 回目で 2 本が空振り**——⑵ は観測者のつもりの点が観測していなかった（♭の上端が譜に届く）、⑷ は毒が恒等写像だった。どちらも 2 回目で直った（RULES §5.4「網は毒で赤くなるまで」・「緑の毒の 3 つ目の顔」の再演）。次の候補: ⒜ §2 B の新しい起票＝行中 clef の直後に grace が付くと clef が 0.26 右（この便の双子と計器の上に立つ・LP に grace 列と clef 列の spring を吐かせる 1 手から）／⒝ §2 C・D・E の古い起票の測り直し／⒞ H の束（設計）。会話を区切るか: (a) ⒜ は今の計器（`rod/pair.ps1`・probe）と読んだコード（`MidMeasureChanges`・LP の staff-spacing／paper-column）の上に立つ＝続ける側／(b) この会話は RULES 通読＋1 便で、圧縮は起きていない／(c) ⒝⒞ は別の島。⇒ **⒜ ならこの会話で `-Start p808` が有利、⒝⒞ でも新しい会話にする理由は小さい（既定は続ける）**。
+
+## 以下は第806セッションの経緯
+
 ### 1.1 第806セッション（2026-10-04・YT-DELL2）
 
 同じ会話の続き。ユーザー「a」＝第805 の次の候補 ⒜（単独の旗付き 8 分の直後の行中 change）。`-Start p806`（HEAD `2681f0c5`・未 push 22）＝full **11057 / 0 / 2 / 11059**。§7 3.5 で第804 を ARCHIVE へ（moved 15 lines）。
@@ -124,20 +137,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 触っていない: `MeasureLayouter` の合成 spring への頭上余白は残した（左右とも各自の 0.3 を持つので合成側では効かない＝消す根拠は「効かない」だけ。消すと wish の無い対の扱いの註ごと書き直しになる）。
 ★ `-End p806 -DiffBase 2681f0c5`（`end1.log`）＝full **11059 / 0 / 2 / 11061**（網 +2＝台帳点 2）・門 全 OK（HANDOFF 439,640 B・残り 10,360）。台帳 981 → 983 点・exact 784 → 786・OPEN 0。7.5: Core `+` 10 行・REF 2（spacing-spanner.cc:380-393・spring.cc:122）・OWN 0。7.6: ⒜ 字面＝`max(min + 0.3, ideal)` を LP と同じ spring（左）に。7.7: 同じ 0.3 を合成 spring にも掛けたまま＝効かない 2 つ目の適用（触っていない理由は上）／guard・fallback なし。7.9 perf: change 列ごとに Math.Max 1 回。commit `a11bc5c79`（点）・`d8c2a8221`（移植・CHANGELOG）＋ docs の commit。Lab は sessions/p806 を commit。push はユーザー。
 判定: §2 B の旗付き 8 分は閉じた（第805 の測り直しの副産物が 1 便で閉じた）。行中の change の左側は、LP の 3 つの量（skyline の min・:105 の床・merge_springs の余白）が全部揃った。次の候補: ⒜ 同じ島の残り＝change 列の**右の rod**（`RightRod`＝Paper_column::minimum_distance を箱で作っている・第805 が名指した）を双子で測る／⒝ §2 C・D・E の古い起票の測り直し／⒞ H の束（設計）。会話を区切るか: (a) ⒜ は今の計器（`pair.ps1`・barline-spacing の probe）の上に立つ＝続ける側／(b) この会話は RULES 通読＋4 便で長い。圧縮はまだ起きていないが重い／(c) ⒝⒞ は別の島。⇒ **⒜ なら続けてよいが、重さを考えると新しい会話でも損は小さい**。
-
-## 以下は第805セッションの経緯
-
-### 1.1 第805セッション（2026-10-04・YT-DELL2）
-
-同じ会話の続き。ユーザー「承認する。(a)」＝第804 の出力変更（`eed3a3bc6`・Endless Story の tab の 1 段）を承認、次は §2 の古い起票の測り直し。`-Start p805`（HEAD `d815eee4`・未 push 19）＝full **11052 / 0 / 2 / 11054**。§7 3.5 で第803 を ARCHIVE へ（moved 15 lines）。
-- §2 B「mid-line clef change の origin」（台帳点なし・未着手）を双子で測った（Lab `sessions/p805/clef`）: 譜の中・譜の下の音の直後、小節頭の clef、percussion を除く 3 種は LP と一致。**ずれたのは「譜の上の音（符尾下）の直後の行中 clef」だけ**（Lily# 2.25 対 LP 1.67）。予測「音域で答えが変わる＝skyline」が当たった。根: LP は行中の change 列への最小距離を Note_spacing の skyline 距離で取り（note-spacing.cc:78-82）、その値が `(ideal + min)/2` の床に入る。Lily# は同じ式の min を「頭（＋付点）の横の到達＋esw」の**箱**で作っていた（註は「pure skyline distance」と書いていた）。LP の数で裏: MCH は min ＝ 0.33 ＝下向き符尾の幅 0.13＋0.1＋0.1。
-- 進め方は §5.0 の型: **`1b8b17904`（出力不変）**＝probe `barline-spacing.ly` に MCH＋台帳 2 点（+0.587100／対照 0・どちらも予測どおり）。**`403dd3e4c`（移植）**＝`SpacingRules.ChangeColumnLeftMinDistance`／`ChangeColumnLeftSkyline`（新設）: wish の右 skyline 対 change 列の grob の箱（行中の clef は `_change` グリフ ±0.1＝output-lib.scm:929-932、調号と拍子は譜と隣の列の高さまで＝:976-979 `-including-staff`）を NonMusical の padding 0 で。箱が要った 2 つの綴りを 1 軒に畳んだ（`SharedRenderer.ClefLineBelowTopLine`＝clef が立つ線の switch 2 つ・`GlyphMetrics.ClefChangeBBox`＝幅の関数の別 switch）。
-- 網: 毒 6 本（Lab `sessions/p805/poisons.ps1`）の 1 回目で 3 本に観測者 0（clef が立つ線の符号・調号／拍子の帯・付点を含む rod 用 skyline）→ 予測 0 の点を 3 つ足した（MKH＝調号は譜の上の頭も覆う・MCW＝符尾のない頭と clef の線・MCD＝付点は wish に入らない・3 点とも予測どおり 0）→ 2 回目で 3 本ともそれぞれの点 1 本だけが赤。計器に `RenderedGeometry.FirstClefAfter` を足した（付点を拾わない）。
-- 掃き（`p805/sweep/`・base＝`p804/exe-head`）: **998 冊・1,199 svg・差 1＝`test/clef-change` だけ**（a'' の直後の bass clef）。LP の双子と並べて小節全体が 2 桁で一致（clef 43.95 → 43.36・LP 43.36）＝**ユーザー承認（2026-10-04）を得て再ベース**。実コーパスは不動。CHANGELOG Fixes 1 項。
-- 測り直しの副産物 2 つ: ⑴ 単独の旗付き 8 分の直後の行中 change は移植後も LP より約 0.3 狭い（§2 B に起票）／⑵ 行中の `clef treble_8` は描画だけで MIDI と双子が part 宣言の規則に従わない＝意味論の設計判断（ユーザー「今は決めない」・§2 F 冒頭に起票）。
-- 触っていない: 多段譜の change 列は 1 つの譜の枠で読む（他の譜の音も同じ高さで当てる＝LP と旧い箱のあいだに落ち、LP より狭くはならない・註に書いた）。右の rod（`RightRod`＝Paper_column::minimum_distance）は箱のまま。拍子の Y extent は Lily# のモデルに無い（LP: C 記号 ±1.0・数字 ±2.0）が、帯が隣の高さまで伸びる規則なので答えには効かない。
-★ `-End p805 -DiffBase d815eee4`（`end1.log`）＝full **11057 / 0 / 2 / 11059**（網 +5＝台帳点 5）・門 全 OK（HANDOFF 441,826 B・残り 8,174）。台帳 976 → 981 点・exact 779 → 784・OPEN 0。7.5: Core `+` 199 行・REF 8・OWN 0＝足した規則は 1 つ（change 列への min_dist は skyline 距離）で、REF は note-spacing.cc:78-82・separation-item.cc:150-187・output-lib.scm:929-932／:976-979・define-grobs NonMusicalPaperColumn・parser-clef.scm・clef.cc。7.6: ⒜ 字面＝min_dist の式と箱の作り（Separation_item::boxes）／⒝ 列の枠＝LP は譜ごとの separation item、Lily# は 1 つの譜の枠（多段譜は LP と旧い箱のあいだ・註）。7.7: ⑴ 同じ量の 2 つ目の綴りを 2 つ畳んだ（clef の線・`_change` の箱）／⑵ guard・fallback なし（skyline が重ならなければ max(0, −∞)＝0 は LP の max そのもの）／⑶ 右の rod は箱のまま（名指した）。7.9 perf: 行中の change 列ごとに 1〜3 箱の skyline 1 枚と前の item ごとの距離 1 回・skyline は render memo 共有＝新しい歩きなし。commit `1b8b17904`（点）・`403dd3e4c`（移植・網・snapshot 1 枚・CHANGELOG・棚卸し）＋ docs の commit。Lab は sessions/p805（`findings.md`・毒・掃き・双子）を commit。push はユーザー。
-判定: §2 B の「行中 clef の origin」は閉じた。教訓: 第804 と同じく、**「閉じていた」を確かめる texture の掃き（音域・付点・旗を振った双子）が開いた形を見つけた**。そして**1 回目の毒で観測者 0 が 3 本＝移植した規則の部品ごとに点が要った**（RULES §5.4「網は毒で赤くなるまで」の再演）。次の候補: ⒜ §2 B の旗付き 8 分（この便の計器と LP の Note_spacing の文脈をそのまま使う＝LP に ideal／min を吐かせる 1 手から）／⒝ §2 の古い起票の測り直しを続ける（C・D・E）／⒞ H の束（設計）。会話を区切るか: (a) ⒜ は今の文脈の上に立つ＝続ける側／(b) この会話は RULES 通読＋3 便で長いが、圧縮はまだ起きていない／(c) ⒝⒞ は別の島。⇒ **⒜ ならこの会話で `-Start p806`、⒝⒞ なら新しい会話でも差は小さい**。
 
 ## 2. 開いている作業
 
@@ -1171,6 +1170,8 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   `72905813` でピン済み。**機能が届いてから** E2E の対を起票する。
 - ✅ **mid-line clef change の origin＝第805 が測って閉じた**（`1b8b17904` 点・`403dd3e4c` 移植）: 譜の中・譜の下の音の後、小節頭の clef は元から LP と一致。ずれていたのは**譜の上の音（符尾下）の直後の行中 clef**だけで、根は「行中の change 列への rod（Note_spacing の min_dist）を箱で作っていた」＝skyline に移植（台帳 5 点・snapshot `test/clef-change` 1 枚・実コーパス 0 冊）。<!-- ledger: midmeasure.clef.prev-note-to-clef.head-above-clef = 0 -->
 - ✅ **単独の旗付き 8 分の直後の行中 change が LP より狭い（第805 起票）＝第806 が閉じた**（`a11bc5c79` 点・`d8c2a8221` 移植）: 根は `merge_springs` の min＋0.3（spring.cc:122）を、LP は change 列の**左の spring だけ**に掛けるのに、Lily# は左右を足した spring に掛けていたこと（効かない）。旗が clef／調号の帯に入ると min が ideal に近づき、:105 の床が min＋0.3 を下回る＝この形だけで割れる。台帳 `midmeasure.*.flagged-eighth` 2 点が 0・snapshot 不動・998 冊で動いた本 0。<!-- ledger: midmeasure.clef.prev-note-to-clef.flagged-eighth = 0 -->
+- ✅ **行中の change 列 → 次の音の rod（`RightRod`）が箱だった＝第807 が閉じた**（`1c918366c` 点・`c631cfc86` 移植）: LP は Paper_column::minimum_distance＝change 列の右 skyline 対 次の列の左 skyline（臨時記号込み）。行中の bass clef の下・上に立つ `#` は clef の下に潜り込み、Lily# は 1.05 右だった。台帳 `midmeasure.clef.clef-to-next-note.sharp-below-clef` +1.05 → 0・対照 MCS／観測者 MKL は 0・snapshot 不動・998 冊で動いた本 0。<!-- ledger: midmeasure.clef.clef-to-next-note.sharp-below-clef = 0 -->
+- **行中 clef の直後の音に grace が付くと、clef が LP より 0.26 右（第807 の双子で見つけた・未着手）**: `g' a' clef bass grace { cis,,16 } d,,`（Lab `sessions/p807/rod/h-grace-lo`）で Lily# の clef 43.29・LP 43.03、主音符は移植後 47.49 対 47.48 で一致＝**左の間隔（前の音 → clef）か grace 列の扱いの量**。あわせて `RightRod` の**非音楽 item（spacer・grace）の X だけの腕には観測者 0**（第807 の毒 3 が全緑・コードに註）＝この形を測るときに一緒に読む。
 - ~~★★ **ビーム数が端で変わるビームの傾き**~~ — **閉じた**（第57セッション・`4b78405b`＋`5df1b0e1`・
   §1 ①②）。**`beamCount` はステム自身の多重度ではなく、その向きの最大値**
   （`stem.cc:1158` → `beam.cc:1517-1532`）。★ **残す教訓は 3 つ**: ⑴ **LP のソースが

@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第805セッションの経緯
+
+### 1.1 第805セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き。ユーザー「承認する。(a)」＝第804 の出力変更（`eed3a3bc6`・Endless Story の tab の 1 段）を承認、次は §2 の古い起票の測り直し。`-Start p805`（HEAD `d815eee4`・未 push 19）＝full **11052 / 0 / 2 / 11054**。§7 3.5 で第803 を ARCHIVE へ（moved 15 lines）。
+- §2 B「mid-line clef change の origin」（台帳点なし・未着手）を双子で測った（Lab `sessions/p805/clef`）: 譜の中・譜の下の音の直後、小節頭の clef、percussion を除く 3 種は LP と一致。**ずれたのは「譜の上の音（符尾下）の直後の行中 clef」だけ**（Lily# 2.25 対 LP 1.67）。予測「音域で答えが変わる＝skyline」が当たった。根: LP は行中の change 列への最小距離を Note_spacing の skyline 距離で取り（note-spacing.cc:78-82）、その値が `(ideal + min)/2` の床に入る。Lily# は同じ式の min を「頭（＋付点）の横の到達＋esw」の**箱**で作っていた（註は「pure skyline distance」と書いていた）。LP の数で裏: MCH は min ＝ 0.33 ＝下向き符尾の幅 0.13＋0.1＋0.1。
+- 進め方は §5.0 の型: **`1b8b17904`（出力不変）**＝probe `barline-spacing.ly` に MCH＋台帳 2 点（+0.587100／対照 0・どちらも予測どおり）。**`403dd3e4c`（移植）**＝`SpacingRules.ChangeColumnLeftMinDistance`／`ChangeColumnLeftSkyline`（新設）: wish の右 skyline 対 change 列の grob の箱（行中の clef は `_change` グリフ ±0.1＝output-lib.scm:929-932、調号と拍子は譜と隣の列の高さまで＝:976-979 `-including-staff`）を NonMusical の padding 0 で。箱が要った 2 つの綴りを 1 軒に畳んだ（`SharedRenderer.ClefLineBelowTopLine`＝clef が立つ線の switch 2 つ・`GlyphMetrics.ClefChangeBBox`＝幅の関数の別 switch）。
+- 網: 毒 6 本（Lab `sessions/p805/poisons.ps1`）の 1 回目で 3 本に観測者 0（clef が立つ線の符号・調号／拍子の帯・付点を含む rod 用 skyline）→ 予測 0 の点を 3 つ足した（MKH＝調号は譜の上の頭も覆う・MCW＝符尾のない頭と clef の線・MCD＝付点は wish に入らない・3 点とも予測どおり 0）→ 2 回目で 3 本ともそれぞれの点 1 本だけが赤。計器に `RenderedGeometry.FirstClefAfter` を足した（付点を拾わない）。
+- 掃き（`p805/sweep/`・base＝`p804/exe-head`）: **998 冊・1,199 svg・差 1＝`test/clef-change` だけ**（a'' の直後の bass clef）。LP の双子と並べて小節全体が 2 桁で一致（clef 43.95 → 43.36・LP 43.36）＝**ユーザー承認（2026-10-04）を得て再ベース**。実コーパスは不動。CHANGELOG Fixes 1 項。
+- 測り直しの副産物 2 つ: ⑴ 単独の旗付き 8 分の直後の行中 change は移植後も LP より約 0.3 狭い（§2 B に起票）／⑵ 行中の `clef treble_8` は描画だけで MIDI と双子が part 宣言の規則に従わない＝意味論の設計判断（ユーザー「今は決めない」・§2 F 冒頭に起票）。
+- 触っていない: 多段譜の change 列は 1 つの譜の枠で読む（他の譜の音も同じ高さで当てる＝LP と旧い箱のあいだに落ち、LP より狭くはならない・註に書いた）。右の rod（`RightRod`＝Paper_column::minimum_distance）は箱のまま。拍子の Y extent は Lily# のモデルに無い（LP: C 記号 ±1.0・数字 ±2.0）が、帯が隣の高さまで伸びる規則なので答えには効かない。
+★ `-End p805 -DiffBase d815eee4`（`end1.log`）＝full **11057 / 0 / 2 / 11059**（網 +5＝台帳点 5）・門 全 OK（HANDOFF 441,826 B・残り 8,174）。台帳 976 → 981 点・exact 779 → 784・OPEN 0。7.5: Core `+` 199 行・REF 8・OWN 0＝足した規則は 1 つ（change 列への min_dist は skyline 距離）で、REF は note-spacing.cc:78-82・separation-item.cc:150-187・output-lib.scm:929-932／:976-979・define-grobs NonMusicalPaperColumn・parser-clef.scm・clef.cc。7.6: ⒜ 字面＝min_dist の式と箱の作り（Separation_item::boxes）／⒝ 列の枠＝LP は譜ごとの separation item、Lily# は 1 つの譜の枠（多段譜は LP と旧い箱のあいだ・註）。7.7: ⑴ 同じ量の 2 つ目の綴りを 2 つ畳んだ（clef の線・`_change` の箱）／⑵ guard・fallback なし（skyline が重ならなければ max(0, −∞)＝0 は LP の max そのもの）／⑶ 右の rod は箱のまま（名指した）。7.9 perf: 行中の change 列ごとに 1〜3 箱の skyline 1 枚と前の item ごとの距離 1 回・skyline は render memo 共有＝新しい歩きなし。commit `1b8b17904`（点）・`403dd3e4c`（移植・網・snapshot 1 枚・CHANGELOG・棚卸し）＋ docs の commit。Lab は sessions/p805（`findings.md`・毒・掃き・双子）を commit。push はユーザー。
+判定: §2 B の「行中 clef の origin」は閉じた。教訓: 第804 と同じく、**「閉じていた」を確かめる texture の掃き（音域・付点・旗を振った双子）が開いた形を見つけた**。そして**1 回目の毒で観測者 0 が 3 本＝移植した規則の部品ごとに点が要った**（RULES §5.4「網は毒で赤くなるまで」の再演）。次の候補: ⒜ §2 B の旗付き 8 分（この便の計器と LP の Note_spacing の文脈をそのまま使う＝LP に ideal／min を吐かせる 1 手から）／⒝ §2 の古い起票の測り直しを続ける（C・D・E）／⒞ H の束（設計）。会話を区切るか: (a) ⒜ は今の文脈の上に立つ＝続ける側／(b) この会話は RULES 通読＋3 便で長いが、圧縮はまだ起きていない／(c) ⒝⒞ は別の島。⇒ **⒜ ならこの会話で `-Start p806`、⒝⒞ なら新しい会話でも差は小さい**。
+
 ## 以下は第804セッションの経緯
 
 ### 1.1 第804セッション（2026-10-04・YT-DELL2）
