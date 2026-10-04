@@ -188,7 +188,6 @@ internal sealed class PageLayouter
     /// system-count loop (estimated candidate lines, LayoutEngine.ChooseSystemCount), so the
     /// two cannot price the same line differently.
     /// </summary>
-    /// <param name="systemIndex">The system's index, which selects the spacing spec.</param>
     /// <param name="staffHeight">The system BODY height.</param>
     /// <param name="topExtent">Ink above the body.</param>
     /// <param name="bottomExtent">Ink below the body.</param>
@@ -196,31 +195,24 @@ internal sealed class PageLayouter
     /// line's extents on both sides.</param>
     /// <param name="pagePermission">The page-break permission AFTER this system.</param>
     internal SystemDetails BuildSystemDetails(
-        int systemIndex, double staffHeight, double topExtent, double bottomExtent,
+        double staffHeight, double topExtent, double bottomExtent,
         LineShape? shape, BreakPermission pagePermission,
         BreakerRefpointFrame? frame = null)
     {
         var vs = _options.VerticalSpacing;
 
-        // LILYPOND-REF: lily/page-layout-problem.cc:488-535
-        // Select spacing spec based on pair context.
-        // Title/markup distinction is handled via SystemDetails.IsTitle when
-        // the caller provides it (future extension).
-        // For now, determine spec from the pair relationship:
-        VerticalSpacingSpec spec;
-        if (systemIndex == 0)
-        {
-            // First system uses top-system spec (applied during positioning)
-            spec = vs.SystemSystem;
-        }
-        else
-        {
-            spec = vs.SelectSpec(
-                isFirstOnPage: false,
-                prevIsTitle: false,
-                currentIsTitle: false,
-                currentIsNewScore: false);
-        }
+        // A LINE IS PRICED BY system-system-spacing WHATEVER ITS INDEX — the spec a line
+        // carries into the breaker is not the one the page later places it by (the first
+        // system's top-system spring is the placement chain's, CreateTopSystemSpring).
+        // LILYPOND-REF: lily/constrained-breaking.cc:548-555 fill_line_details —
+        //   padding_ / min_distance_ are system-system-spacing's except on a score's LAST
+        //   line (score-system-spacing's), space_ is system-system's basic-distance always.
+        // ⚠️ The `last` arm is not modelled, and needs no model here: page-breaking.cc:1166
+        //   reads it as the space AFTER the line (prev.padding_), i.e. before a following
+        //   score on the same page flow, and every Lily# score is paginated on its own.
+        // (Until session 814 this read `systemIndex == 0 ? SystemSystem : SelectSpec(...)`,
+        // two spellings of the same answer, which HANDOFF §2 D had taken for a disagreement.)
+        var spec = vs.SystemSystem;
 
         // THE BREAKER'S FRAME IS THE PURE ONE. LilyPond prices a line at its staves'
         // MINIMUM translations — refpoint_extent_ and full_height () both come from
@@ -357,7 +349,7 @@ internal sealed class PageLayouter
         }
 
         // Create SystemDetails for each system using per-system skyline extents
-        // and context-dependent spacing specs
+        // (every line on system-system-spacing — see BuildSystemDetails).
         // One entry a system, so the list is sized to them: its growth ladder was 382 B a
         // keystroke (session 475's census, waste column).
         var systemDetails = new List<SystemDetails>(systems.Length);
@@ -371,7 +363,7 @@ internal sealed class PageLayouter
                 ? systemBodyHeights[i]
                 : _options.StaffHeight;
             systemDetails.Add(BuildSystemDetails(
-                i, staffHeight, systemExtents[i].upExtent, systemExtents[i].downExtent,
+                staffHeight, systemExtents[i].upExtent, systemExtents[i].downExtent,
                 systemShapes is { } sh && i < sh.Length ? sh[i] : null,
                 systemPagePermissions is { } pp && i < pp.Length ? pp[i] : BreakPermission.Allow,
                 systemBreakerFrames is { } bf && i < bf.Length ? bf[i] : null));

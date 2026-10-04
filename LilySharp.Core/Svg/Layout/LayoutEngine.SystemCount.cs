@@ -386,7 +386,7 @@ internal sealed partial class LayoutEngine
                 }
             }
             var fresh = _pageLayouter.BuildSystemDetails(
-                i, inputs.Body, inputs.Up, inputs.Down, inputs.Shape, permission, frame);
+                inputs.Body, inputs.Up, inputs.Down, inputs.Shape, permission, frame);
             details.Add(fresh);
             if (memo)
             {

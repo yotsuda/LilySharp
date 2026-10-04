@@ -367,7 +367,7 @@ internal sealed partial class LayoutEngine
                 var placedDetails = new List<SystemDetails>(systems.Length);
                 for (int i = 0; i < systems.Length; i++)
                     placedDetails.Add(_pageLayouter.BuildSystemDetails(
-                        i, SysHeight(i), perSystemExtents[i].upExtent, perSystemExtents[i].downExtent,
+                        SysHeight(i), perSystemExtents[i].upExtent, perSystemExtents[i].downExtent,
                         shapes is { } sh && i < sh.Length ? sh[i] : null,
                         perSystemPagePermissions is { } pp && i < pp.Length ? pp[i] : BreakPermission.Allow,
                         frames[i]));

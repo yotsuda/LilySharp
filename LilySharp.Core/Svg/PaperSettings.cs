@@ -85,26 +85,6 @@ internal class PaperSettings
     public double ShortIndent { get; set; } = 0.0;
 
     /// <summary>
-    /// Whether to use two-sided layout (different margins for odd/even pages).
-    /// </summary>
-    public bool TwoSided { get; set; } = false;
-
-    /// <summary>
-    /// Inner margin for two-sided printing in mm. Default: 15mm.
-    /// </summary>
-    public double InnerMargin { get; set; } = 15.0;
-
-    /// <summary>
-    /// Outer margin for two-sided printing in mm. Default: 15mm.
-    /// </summary>
-    public double OuterMargin { get; set; } = 15.0;
-
-    /// <summary>
-    /// Binding offset added to inner margin in mm. Default: 5mm.
-    /// </summary>
-    public double BindingOffset { get; set; } = 5.0;
-
-    /// <summary>
     /// Staff size in points. Default: 20pt.
     /// </summary>
     public double StaffSize { get; set; } = 20.0;
@@ -171,39 +151,6 @@ internal class PaperSettings
         LeftMargin = 15.0 * widthRatio;
         RightMargin = 15.0 * widthRatio;
         Indent = 15.0 * widthRatio;
-        InnerMargin = 15.0 * widthRatio;
-        OuterMargin = 15.0 * widthRatio;
-        BindingOffset = 5.0 * widthRatio;
-    }
-
-    /// <summary>
-    /// Gets the effective left margin for a given page number.
-    /// </summary>
-    public double GetLeftMargin(int pageNumber)
-    {
-        if (!TwoSided)
-            return LeftMargin;
-
-        // Odd pages: outer margin on left
-        // Even pages: inner margin + binding offset on left
-        return (pageNumber % 2 == 1)
-            ? OuterMargin
-            : InnerMargin + BindingOffset;
-    }
-
-    /// <summary>
-    /// Gets the effective right margin for a given page number.
-    /// </summary>
-    public double GetRightMargin(int pageNumber)
-    {
-        if (!TwoSided)
-            return RightMargin;
-
-        // Odd pages: inner margin + binding offset on right
-        // Even pages: outer margin on right
-        return (pageNumber % 2 == 1)
-            ? InnerMargin + BindingOffset
-            : OuterMargin;
     }
 
     /// <summary>

@@ -86,22 +86,4 @@ public class LayoutTests
         Assert.Equal(expectedWidth, paper.PaperWidth);
         Assert.Equal(expectedHeight, paper.PaperHeight);
     }
-
-    [Fact]
-    public void PaperSettings_TwoSided_OddPageHasOuterMarginLeft()
-    {
-        var paper = new PaperSettings
-        {
-            TwoSided = true,
-            InnerMargin = 20,
-            OuterMargin = 15,
-            BindingOffset = 5
-        };
-
-        // Odd page (1): outer margin on left
-        Assert.Equal(15.0, paper.GetLeftMargin(1));
-        // Even page (2): inner margin + binding offset on left
-        Assert.Equal(25.0, paper.GetLeftMargin(2)); // 20 + 5
-    }
-
 }

@@ -79,7 +79,7 @@ public class PageLayouterTests
         var frame = new BreakerRefpointFrame(ToFirst: 2.0, ToLastAtMinimum: 10.0, StaffCompression: 1.0);
 
         var d = layouter.BuildSystemDetails(
-            1, staffHeight: 14.0, topExtent: 2.311, bottomExtent: 0.54,
+            staffHeight: 14.0, topExtent: 2.311, bottomExtent: 0.54,
             shape: null, BreakPermission.Allow, frame);
 
         Assert.Equal(13.0, d.StaffHeight, 9);            // 14 drawn, pair squeezed 9 → 8
@@ -93,7 +93,7 @@ public class PageLayouterTests
         // Without a frame the nominal five-line reading stands, as every hand-built detail
         // in PageBreakerTests assumes.
         var nominal = layouter.BuildSystemDetails(
-            1, staffHeight: 14.0, topExtent: 2.311, bottomExtent: 0.54, shape: null, BreakPermission.Allow);
+            staffHeight: 14.0, topExtent: 2.311, bottomExtent: 0.54, shape: null, BreakPermission.Allow);
         Assert.Equal(14.0, nominal.StaffHeight, 9);
         Assert.Equal(0.0, nominal.StaffCompression, 9);
         Assert.Equal(-2.0, nominal.RefpointExtentUp, 9);
