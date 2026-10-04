@@ -92,7 +92,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **LP を `-dbackend=svg` で描く計器は `lysc ly --pin-fonts` 必須**（第690〜第695 の 6 本は無しで、数字の幅・高さが汎用 serif だった＝第736 ⑴⑵）。tab の tuplet の残差は全部 beam の決定（`uniformBeamedLength`）の帰結＝第737
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
-- ★ **跳躍（D.C./D.S.）の経路を読まない 3 軒（第775・ユーザー判断）**: `Semantics/FormRoute.cs` は MIDI だけが読む。page の tie carry（`SectionPlayCarry.PlayedOrder`＝stamp から組む）・`SectionBoundaryBars.Expand`（小節補完の隣接）・XML（`<sound dalsegno>` の宣言のみ）は跳躍を追わない（`FormRoute` の註に名指し）。候補: ⑴ tie を segno の section へ運ぶ（stamp に跳躍を足す配管・LYS4007 の的が増える・跳躍文を持つ form はディスク上 8 冊）／⑶ music 中の跳躍文は追わない（コーパス 0・文書に明記）。⑵ の診断（segno／fine／to coda／coda の無い跳躍文＝LYS4025）は第790 が閉じた。
+- ★ **跳躍（D.C./D.S.）の経路（第775・ユーザー判断）**: `Semantics/FormRoute.cs` が唯一の読み手。⑴ 頁の tie carry・XML・twin・小節補完の隣接は第792 が `PlayedOrder`（stamp の印 `SectionPlayMarksBefore/After`）経由で route を追うようにした／⑵ 診断 LYS4025 は第790。残り ⑶ **music 中の跳躍文は追わない**（コーパス 0・文書に明記するだけ＝小）。
 - ⚠️ **U11（`Hold the Line` の page1 が LP 8 系・Lily# 7 系）＝第547 が「移植できる欠陥は無い」と確定・第573 が lead を閉じた（頁 DP の僅差 0.030576 対 0.031049＝1e-3 級の差でどちらにも倒れる）＝提案しない**（全文は §1.1 第547・第573＝ARCHIVE・Lab `sessions/p547/`・`sessions/p573/u11/`）。重複 mark は第558 が畳んだ（LYS4021）＝page 割りは動かない
 - ★★★ **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す**（0.074% ＋ 1 ULP の尾）
 - ★★ **⒵⁴ `prefixMarkAnchorX` の解き直し 0.338%**＝**memo は反証済み**（hit 率 0.53%）
@@ -117,6 +117,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第792セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザー「1」＝⒝ 跳躍の候補 **⑴ tie を segno の section へ運ぶ**。`-Start p792`（HEAD `1a095d0d`・未 push 27）＝full **10993 / 0 / 2 / 10995**。§7 3.5 で第790 を ARCHIVE へ。
+- **設計＝4 つの読み手を 1 つの展開に**: 頁の tie carry（`SectionPlayGraph`＝stamp から）・XML の tie stop・twin の `\repeatTie`・小節補完の隣接（`SectionBoundaryBars`）は form の play 列を各自展開し、どれも `dc`／`ds` で止まっていた（MIDI は第775 から追う）。`Score` は構築箇所 14＝form を通す配管は不可。代わりに **stamp に印を足した**: play の先頭 item に `SectionPlayMarksBefore`（前の play との間の form-level の navigation mark・`NavMarkStamp`＝名前を `|` で結んだ文字列＝位置に依らない content）、最後の play に `SectionPlayMarksAfter`（form 末尾の印・voice を finish するとき `StampTrailingMarks` が刷る）。`PlayedOrder.Expand` が stamp から印の列を組み直し、`FormRoute.Of(marks)`（印の列に一般化・FormWalk 版は wrapper）で route を取り、replay は MIDI と同じ（run は最後の pass だけ 1 回・一側 `:|` は巻き戻さない）。stamp を持たない読み手（twin・隣接）は新 `PlayedOrder.PlaysOf(items)` で同じ play 列と印を form から読む（twin の `RepeatTiePlays` の自前の歩きと `SectionBoundaryBars.Expand/ExpandRepeat` は消えた）。XML は `_xmlPendingMarks` で同じ印を自分の play 列に足す。
+- 網 `FormJumpTieCarryTests` 6（`I segno A fine B ds al fine`＝B 末尾の tie が replay の A の頭に repeat tie・B の音に hanging tie・A の arc は従来どおり・MIDI は 7 音を 5 音に鳴らす／XML stop 2・let-ring 1・twin `\repeatTie` 1／別音高は LYS4007／stamp からの順と form からの順＝`[0,1,2,1]`・`[0,1,0,2,3,0,2,4]`／跳躍を跨ぐ割れた小節は route の隣接で判定＝LYS2006 が消える）。`MeasureCollectorResetTests` が `_pendingMarks` の reset 漏れを 1 回捕まえた。
+- CHANGELOG Navigation marks。棚卸し `APPROXIMATIONS.md` 行番号 9 行・csv 不変。snapshot 不動。
+- 掃き（`sessions/p792/sweep/sweep792.ps1`＝svg・ly・xml を 2 母集団・base＝`sessions/p791/exe-head`＝HEAD のコード・head＝p792・`sweep.log`／`check/`＝診断）: main 998 冊 svg・ly・xml **全部差 0**・dogfood 177 冊 **差 0**・診断も差 0＝ディスク上の 8 冊の jump form に section 末尾の tie は無い（観測者は網だけ）。full **10999 / 0 / 2 / 11001**（網 +6）。
+★ `-End p792 -DiffBase 1a095d0d`（`end.log`）＝full **10999 / 0 / 2 / 11001**・門 全 OK。7.5: Core **`+` 352** 行・REF 0・OWN 0（LP に対応物なし＝`FormRoute` の既存 OWN に従属・数値なし）。7.6: ⒞ 既存 OWN の射程を広げただけ＝新しい出所なし／⒟ 隣接と twin は共有の家への指し直し。7.7: 匂いなし（guard なし・sentinel なし・stamp は content＝`MeasureContentKey` の規律どおり）。commit `9d0433d2`（code・網・CHANGELOG・棚卸し）＋ docs の commit。push はユーザー。
+判定: ⒝ 跳躍の ⑴ は閉じた。残りは ⑶（music 中の跳躍文は追わない＝文書に明記・コーパス 0）だけ＝小。次の一手: ⑶ か ⑼ の残り＝ユーザー判断。会話を区切るか: (b) 便が 4 つ続き、この便は配管の読みが多く文脈が重い＝**区切る側**（続けるなら `-Start p793`・⑶ は 1 便未満）。
+
+## 以下は第791セッションの経緯
+
 ### 1.1 第791セッション（2026-10-04・YT-DELL2）
 
 同じ会話の続き・ユーザー「続けて」→ AskUserQuestion で ⒜ **lead sheet の grid の残り ⒝⒠** を選択。`-Start p791`（HEAD `2543f5a8`・未 push 25）＝full **10991 / 0 / 2 / 10993**。§7 3.5 で第789 を ARCHIVE へ。
@@ -126,18 +138,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 掃き（`sessions/p791/svg/sweep789.ps1` の写し・base＝`sessions/p790/exe-head`＝HEAD のコード・head＝`sessions/p791/exe-head`・`sweep.log`）: main 998 冊 svg **差 3 / 1199**＝弱起を持つ grid の全部（samples の amazing-grace grid・greensleeves grid・corpora の amazing-grace grid）／dogfood **差 1 / 195**＝choir-chorale の words-only sheet（弱起 `The4 |`・`probes/after/choir-chorale-choir-words.png`＝短いセル）。time none の rows-only はコーパス 0（第783 と同じ）。full **10993 / 0 / 2 / 10995**（網 +2）。
 ★ `-End p791 -DiffBase 2543f5a8`（`end.log`）＝full **10993 / 0 / 2 / 10995**・門 全 OK。7.5: Core **`+` 44** 行・REF 0・OWN 1（`LeadSheetFloorShare` の註＝床 10.0 と同じ出所・数値は share 1.0 だけ）。7.6: ⒞ 既存 OWN（grid の床）の中の規則＋⒟ staff の既存規則（`RevertMeterToHome`）の指し直し。7.7: 匂いなし（guard なし・sentinel なし）。commit `a8583c9d`（code・網・CHANGELOG・棚卸し）＋ docs の commit。push はユーザー。
 判定: lead sheet の grid の残り ⒝⒠ は閉じた（⒜〜⒠ 全部＝§1.0 から落とした）。次の一手: 跳躍 ⑴（tie を segno の section へ）／⑶（music 中の跳躍文は追わないと文書に明記）か ⑼ の残り＝ユーザー判断。会話を区切るか: (b) 便が 3 つ続いて読み直しが増えてきた＝**区切ってよい**（続けるなら `-Start p792`）。
-
-## 以下は第790セッションの経緯
-
-### 1.1 第790セッション（2026-10-04・YT-DELL2）
-
-同じ会話の続き・ユーザー「続けて」→ AskUserQuestion で ⒝ 跳躍の候補 **⑵ 診断** を選択。`-Start p790`（HEAD `e73f5519`・未 push 23）＝full **10973 / 0 / 2 / 10975**。§7 3.5 で第788 を ARCHIVE へ。
-- **設計＝規則を 2 度綴らない**: `FormRoute.Of(items, faults)` が自分の 4 つの fallback（`ds` に `segno` 無し＝追わない／`al fine` に `fine` 無し＝跳躍まで再生して終わる／`al coda` に `to coda` 無し＝跳躍まで再生／`al coda` の後ろに `coda` 無し＝跳躍の直後から再開）を踏むたびに `Fault(jump, JumpFault)` を積む。新 `FormJumpTargetValidator`（LYS4025・warning・跳躍文の位置・書いた綴りで「'ds al coda' has no 'segno' before it, so …」と fallback を名指す）はそれを言葉にするだけ＝MIDI と食い違えない。`ds` に segno が無いときは segno だけ報告（al 側は無意味）。起票は segno・coda の 2 つだったが同じ族の fine・to coda も 1 コードに入れた（ONE CODE の前例 LYS4018／4023）。
-- 網 `FormJumpTargetValidatorTests` 18 本（完全な form は無音・6 つの欠落・両方欠けた al coda は 2 本・二路 form は各路 1 本・位置と綴り・`SemanticValidation.Run` が運ぶ）。`FormJumpMidiTests` の二路 form `segno A ds al coda coda B segno C ds al fine` は to coda と fine を書いていない＝MIDI は両路を追い診断は 2 本＝矛盾しない。
-- 文書: `Diagnostic.cs` の LYS4025 の註・CHANGELOG「Navigation marks」・SYNTAX_REFERENCE／GRAMMAR／GRAMMAR_FOR_LLM の NavMark の註。棚卸し `APPROXIMATIONS.md` 1 行・csv 不変。
-- 掃き（`sessions/p790/check/sweep-check790.ps1`＝`lysc check --batch` を side ごとに 1 process・p753 の型は本ごとに起動していた・base＝`sessions/p789/exe-head`＝HEAD のコード・head＝`sessions/p790/exe-head`・`sweep.log`・`*-diff.txt`）: main 998 冊 **差 0**（jump を持つ blogger と fixture 2 冊は landmark が揃っている）／dogfood 177 冊 **差 2**＝`bare-dsc.lys`・`uxeval2/05-form.lys` の `ds al coda` に `segno` 無し＝本の側（Lab の本の修正はユーザー）。full **10991 / 0 / 2 / 10993**（網 +18）。
-★ `-End p790 -DiffBase e73f5519`（`end.log`）＝full **10991 / 0 / 2 / 10993**・門 全 OK。7.5: Core **`+` 183** 行・REF 0・OWN 0＝数値なし・LP に対応物なし（`FormRoute` の既存 OWN の註に従属＝LP の `\jump` は印だけ）。7.6: ⒞ 新しい OWN なし＝既存 OWN（`FormRoute`）の fallback を言葉にしただけ。7.7: 匂いなし（guard なし・sentinel なし）。commit `f5f73782`（code・網・CHANGELOG・docs 3 枚・棚卸し）＋ docs の commit。push はユーザー。
-判定: ⒝ 跳躍の ⑵ は閉じた（§1.0 の候補から落とした）。⑴（tie を segno の section へ）と ⑶（music 中の跳躍文は追わない＝文書に明記）はユーザー判断のまま。次の一手: ⑴／⑶ か ⒜ の小物（lead sheet の grid の残り ⒝⒠・⑼ の残り）＝ユーザー判断。会話を区切るか: (b) 便は 2 つ・文脈はまだ軽い＝**続けてよい**（続けるなら `-Start p791`）。
 
 ## 2. 開いている作業
 

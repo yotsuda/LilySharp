@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第790セッションの経緯
+
+### 1.1 第790セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザー「続けて」→ AskUserQuestion で ⒝ 跳躍の候補 **⑵ 診断** を選択。`-Start p790`（HEAD `e73f5519`・未 push 23）＝full **10973 / 0 / 2 / 10975**。§7 3.5 で第788 を ARCHIVE へ。
+- **設計＝規則を 2 度綴らない**: `FormRoute.Of(items, faults)` が自分の 4 つの fallback（`ds` に `segno` 無し＝追わない／`al fine` に `fine` 無し＝跳躍まで再生して終わる／`al coda` に `to coda` 無し＝跳躍まで再生／`al coda` の後ろに `coda` 無し＝跳躍の直後から再開）を踏むたびに `Fault(jump, JumpFault)` を積む。新 `FormJumpTargetValidator`（LYS4025・warning・跳躍文の位置・書いた綴りで「'ds al coda' has no 'segno' before it, so …」と fallback を名指す）はそれを言葉にするだけ＝MIDI と食い違えない。`ds` に segno が無いときは segno だけ報告（al 側は無意味）。起票は segno・coda の 2 つだったが同じ族の fine・to coda も 1 コードに入れた（ONE CODE の前例 LYS4018／4023）。
+- 網 `FormJumpTargetValidatorTests` 18 本（完全な form は無音・6 つの欠落・両方欠けた al coda は 2 本・二路 form は各路 1 本・位置と綴り・`SemanticValidation.Run` が運ぶ）。`FormJumpMidiTests` の二路 form `segno A ds al coda coda B segno C ds al fine` は to coda と fine を書いていない＝MIDI は両路を追い診断は 2 本＝矛盾しない。
+- 文書: `Diagnostic.cs` の LYS4025 の註・CHANGELOG「Navigation marks」・SYNTAX_REFERENCE／GRAMMAR／GRAMMAR_FOR_LLM の NavMark の註。棚卸し `APPROXIMATIONS.md` 1 行・csv 不変。
+- 掃き（`sessions/p790/check/sweep-check790.ps1`＝`lysc check --batch` を side ごとに 1 process・p753 の型は本ごとに起動していた・base＝`sessions/p789/exe-head`＝HEAD のコード・head＝`sessions/p790/exe-head`・`sweep.log`・`*-diff.txt`）: main 998 冊 **差 0**（jump を持つ blogger と fixture 2 冊は landmark が揃っている）／dogfood 177 冊 **差 2**＝`bare-dsc.lys`・`uxeval2/05-form.lys` の `ds al coda` に `segno` 無し＝本の側（Lab の本の修正はユーザー）。full **10991 / 0 / 2 / 10993**（網 +18）。
+★ `-End p790 -DiffBase e73f5519`（`end.log`）＝full **10991 / 0 / 2 / 10993**・門 全 OK。7.5: Core **`+` 183** 行・REF 0・OWN 0＝数値なし・LP に対応物なし（`FormRoute` の既存 OWN の註に従属＝LP の `\jump` は印だけ）。7.6: ⒞ 新しい OWN なし＝既存 OWN（`FormRoute`）の fallback を言葉にしただけ。7.7: 匂いなし（guard なし・sentinel なし）。commit `f5f73782`（code・網・CHANGELOG・docs 3 枚・棚卸し）＋ docs の commit。push はユーザー。
+判定: ⒝ 跳躍の ⑵ は閉じた（§1.0 の候補から落とした）。⑴（tie を segno の section へ）と ⑶（music 中の跳躍文は追わない＝文書に明記）はユーザー判断のまま。次の一手: ⑴／⑶ か ⒜ の小物（lead sheet の grid の残り ⒝⒠・⑼ の残り）＝ユーザー判断。会話を区切るか: (b) 便は 2 つ・文脈はまだ軽い＝**続けてよい**（続けるなら `-Start p791`）。
+
 ## 以下は第789セッションの経緯
 
 ### 1.1 第789セッション（2026-10-04・YT-DELL2）
