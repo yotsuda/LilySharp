@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 60 | 観測者がゼロだと自認しているもの |
-| `OWN` | 216 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **336** | |
+| `OWN` | 215 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **335** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -26,11 +26,11 @@
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 11 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 10 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 9 |
-| `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 7 |
+| `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
 | `LilySharp.Core/Rendering/SharedRenderer.Beams.cs` | 5 |
 
@@ -237,7 +237,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（216 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（215 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **:90** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
@@ -398,8 +398,7 @@
 - **:154** ⚠️ LILYSHARP-OWN. LilyPond cannot spell the configuration: a `ChordNames` context is its
 - **:227** ⚠️ LILYSHARP-OWN, all of it. LilyPond cannot spell the configuration: a
 - **:877** LILYSHARP-OWN: LilyPond does not shift a ChordName off its column at all — a
-- **:999** LILYSHARP-OWN: the 2.0 floor has no LilyPond source. It is inherited (it was a 1.0
-- **:1043** ⚠️ LILYSHARP-OWN, THE DIAGRAM'S X: its box stands with its LEFT edge on the symbol's
+- **:1031** ⚠️ LILYSHARP-OWN, THE DIAGRAM'S X: its box stands with its LEFT edge on the symbol's
 ### `LilySharp.Core/Svg/Layout/CustomTextEngraver.cs`
 - **:118** LILYSHARP-OWN, two declared bridges inside that rule (HANDOFF 5.2):
 ### `LilySharp.Core/Svg/Layout/DotColumn.cs`

@@ -314,12 +314,12 @@ internal static class ChordNameEngraver
         double step = 0;
         foreach (var (x, c) in rowSyms)
         {
-            double w = SymbolWidth(fonts, c);
+            double w = FootprintWidth(fonts,c);
             var cs = DisplaySymbol(c);
             double bottom = SymbolInk(fonts, cs.Text, cs.SuperFrom, cs.BracketSuperFrom).Bottom;
             foreach (var (ix, ic) in inline)
             {
-                if (!Meets(x, w, ix, SymbolWidth(fonts, ic)))
+                if (!Meets(x, w, ix, FootprintWidth(fonts,ic)))
                     continue;
                 lifted.Add(c);
                 blocked.Add(ic);
@@ -407,7 +407,7 @@ internal static class ChordNameEngraver
     /// skyline under its own footprint plus <see cref="RelatedStaffPadding"/> less its ink
     /// bottom, the diagram term included, maxed over the line — plus the highest ink top over
     /// the line. The symbols' X, footprint and ink come from the same readings the placement
-    /// and the drawing use (<see cref="SymbolX"/>, <see cref="SymbolWidth"/>,
+    /// and the drawing use (<see cref="SymbolX"/>, <see cref="FootprintWidth"/>,
     /// <see cref="SymbolInk(Rendering.ScoreTextMetrics, ChordNameItem)"/> through
     /// <c>DisplaySymbol</c>), so the reservation and the ink cannot drift apart.
     /// <para>
@@ -473,7 +473,7 @@ internal static class ChordNameEngraver
         double floor = double.NegativeInfinity, top = double.NegativeInfinity;
         foreach (var (x, c) in placed)
         {
-            double peak = Math.Max(up.MaxProtrusionInRange(x, x + SymbolWidth(fonts, c)), staffTopEdge);
+            double peak = Math.Max(up.MaxProtrusionInRange(x, x + FootprintWidth(fonts,c)), staffTopEdge);
             var (b, t) = SymbolInk(fonts, c);
             floor = Math.Max(floor, peak + RelatedStaffPadding - b);
             top = Math.Max(top, t);
@@ -643,11 +643,11 @@ internal static class ChordNameEngraver
                 up = lowerStaffUpSkyline?.Invoke(p.sysIdx, p.chord.StaffIndex);
             if (up == null || up.IsEmpty)
                 continue;
-            // The symbol's footprint (see SymbolWidth): the text runs RIGHT from its
+            // The symbol's footprint (see FootprintWidth): the text runs RIGHT from its
             // column. Measured, not guessed — a wide "Gm7♭5" reaches over the NEXT beat's
             // tall chord, which a narrow per-character estimate missed.
             double peak = Math.Max(
-                up.MaxProtrusionInRange(p.x, p.x + SymbolWidth(fonts, p.chord)),
+                up.MaxProtrusionInRange(p.x, p.x + FootprintWidth(fonts,p.chord)),
                 EngravingDefaults.StaffLineThickness / 2.0);
             var symbol = DisplaySymbol(p.chord);
             double floor = peak + RelatedStaffPadding
@@ -988,24 +988,6 @@ internal static class ChordNameEngraver
         SymbolInkWidth(fonts, placed.ChordText, placed.SuperFrom, placed.BracketSuperFrom);
 
 
-    /// <summary>
-    /// The reserved width of a chord symbol — its ink
-    /// (<see cref="SymbolInkWidth(Rendering.ScoreTextMetrics, string, int, int)"/>) under
-    /// a floor. The symbol occupies <c>(x . x + width)</c>: LilyPond's ChordName declares
-    /// no X-offset and no self-alignment-interface (scm/define-grobs.scm:837-855), so its
-    /// reference point is its ink LEFT and it stands ON its column.
-    /// </summary>
-    /// <remarks>
-    /// LILYSHARP-OWN: the 2.0 floor has no LilyPond source. It is inherited (it was a 1.0
-    /// floor on the HALF width before the anchor port doubled the quantity) and it BINDS —
-    /// a one-letter symbol like "C" measures 1.888937, so the floor overrides it. LilyPond
-    /// has no such floor: a ChordName's extent is its stencil's. It survives here only
-    /// because removing it moves output for a reason unrelated to the anchor; it belongs
-    /// with the other named inventions in docs/HANDOFF.md section 2H.
-    /// </remarks>
-    private static double SymbolWidth(Rendering.ScoreTextMetrics fonts, ChordNameItem c) =>
-        Math.Max(2.0, FootprintWidth(fonts, c));
-
     // ========== THE CHORD DIAGRAM UNDER A ROW SYMBOL (a written shape, HANDOFF §2 K) ==========
     //
     // Owner's design (HANDOFF §2 K, 2026-09-28): in a score that asks for chord diagrams, every
@@ -1037,7 +1019,13 @@ internal static class ChordNameEngraver
 
     /// <summary>
     /// The width a chord symbol occupies from its column: its ink, or the diagram under it when
-    /// that is wider. The one width the spacing and the neighbour clearance price.
+    /// that is wider. The ONE width every reader prices — the spacing, the neighbour clearance,
+    /// the lift over an inline symbol, the line's floor over the staff and the line's skyline.
+    /// The symbol occupies <c>(x . x + width)</c>: LilyPond's ChordName declares no X-offset
+    /// and no self-alignment-interface (scm/define-grobs.scm:837-855), so its reference point
+    /// is its ink LEFT and it stands ON its column; its extent is its stencil's, with no floor
+    /// under it (a one-letter "C" is 1.888937 wide — until session 800 the engraver's readers
+    /// put a 2.0 floor under this width that the spacing never saw: two spellings).
     /// </summary>
     /// <remarks>
     /// ⚠️ LILYSHARP-OWN, THE DIAGRAM'S X: its box stands with its LEFT edge on the symbol's
@@ -1120,7 +1108,7 @@ internal static class ChordNameEngraver
         // Inline @chord symbols (UseTiming false) stay anchored to their note.
         if (!cur.UseTiming || !prev.UseTiming)
             return curX;
-        double minX = prevX + SymbolWidth(fonts, prev) + SymbolGap;
+        double minX = prevX + FootprintWidth(fonts,prev) + SymbolGap;
         return curX < minX ? minX : curX;
     }
 
@@ -1233,7 +1221,7 @@ internal static class ChordNameEngraver
             // SymbolInk and ChordNameGlyphRun.
             var ds = DisplaySymbol(chord);
         var (bottom, top) = SymbolInk(fonts, ds.Text, ds.SuperFrom);
-            double right = x + SymbolWidth(fonts, chord);
+            double right = x + FootprintWidth(fonts,chord);
             up.MergeBox(x, right, bottom + lift, top + lift);
             down.MergeBox(x, right, bottom + lift, top + lift);
         }

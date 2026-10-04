@@ -392,6 +392,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A short chord name reserves only its own width.** The chord-name line's readers put a
+  floor of two staff spaces under every symbol's width (a "C" is 1.89 wide) while the spacing
+  priced the ink, so a one-letter name could hold its line off a neighbour the name never
+  reached. The floor is gone — LilyPond's ChordName has none — and one width serves every
+  reader. One book in a thousand moves, by 0.04 staff spaces.
 - **`lysc svg --combined` stacks what did draw.** A book whose chord row failed to parse
   (the retired `a:m` spelling, say) has a grid score with nothing on it; the plain command
   wrote the staff score anyway, but `--combined` threw an index error and wrote nothing. An
