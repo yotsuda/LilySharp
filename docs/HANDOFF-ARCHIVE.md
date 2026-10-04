@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第792セッションの経緯
+
+### 1.1 第792セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザー「1」＝⒝ 跳躍の候補 **⑴ tie を segno の section へ運ぶ**。`-Start p792`（HEAD `1a095d0d`・未 push 27）＝full **10993 / 0 / 2 / 10995**。§7 3.5 で第790 を ARCHIVE へ。
+- **設計＝4 つの読み手を 1 つの展開に**: 頁の tie carry（`SectionPlayGraph`＝stamp から）・XML の tie stop・twin の `\repeatTie`・小節補完の隣接（`SectionBoundaryBars`）は form の play 列を各自展開し、どれも `dc`／`ds` で止まっていた（MIDI は第775 から追う）。`Score` は構築箇所 14＝form を通す配管は不可。代わりに **stamp に印を足した**: play の先頭 item に `SectionPlayMarksBefore`（前の play との間の form-level の navigation mark・`NavMarkStamp`＝名前を `|` で結んだ文字列＝位置に依らない content）、最後の play に `SectionPlayMarksAfter`（form 末尾の印・voice を finish するとき `StampTrailingMarks` が刷る）。`PlayedOrder.Expand` が stamp から印の列を組み直し、`FormRoute.Of(marks)`（印の列に一般化・FormWalk 版は wrapper）で route を取り、replay は MIDI と同じ（run は最後の pass だけ 1 回・一側 `:|` は巻き戻さない）。stamp を持たない読み手（twin・隣接）は新 `PlayedOrder.PlaysOf(items)` で同じ play 列と印を form から読む（twin の `RepeatTiePlays` の自前の歩きと `SectionBoundaryBars.Expand/ExpandRepeat` は消えた）。XML は `_xmlPendingMarks` で同じ印を自分の play 列に足す。
+- 網 `FormJumpTieCarryTests` 6（`I segno A fine B ds al fine`＝B 末尾の tie が replay の A の頭に repeat tie・B の音に hanging tie・A の arc は従来どおり・MIDI は 7 音を 5 音に鳴らす／XML stop 2・let-ring 1・twin `\repeatTie` 1／別音高は LYS4007／stamp からの順と form からの順＝`[0,1,2,1]`・`[0,1,0,2,3,0,2,4]`／跳躍を跨ぐ割れた小節は route の隣接で判定＝LYS2006 が消える）。`MeasureCollectorResetTests` が `_pendingMarks` の reset 漏れを 1 回捕まえた。
+- CHANGELOG Navigation marks。棚卸し `APPROXIMATIONS.md` 行番号 9 行・csv 不変。snapshot 不動。
+- 掃き（`sessions/p792/sweep/sweep792.ps1`＝svg・ly・xml を 2 母集団・base＝`sessions/p791/exe-head`＝HEAD のコード・head＝p792・`sweep.log`／`check/`＝診断）: main 998 冊 svg・ly・xml **全部差 0**・dogfood 177 冊 **差 0**・診断も差 0＝ディスク上の 8 冊の jump form に section 末尾の tie は無い（観測者は網だけ）。full **10999 / 0 / 2 / 11001**（網 +6）。
+★ `-End p792 -DiffBase 1a095d0d`（`end.log`）＝full **10999 / 0 / 2 / 11001**・門 全 OK。7.5: Core **`+` 352** 行・REF 0・OWN 0（LP に対応物なし＝`FormRoute` の既存 OWN に従属・数値なし）。7.6: ⒞ 既存 OWN の射程を広げただけ＝新しい出所なし／⒟ 隣接と twin は共有の家への指し直し。7.7: 匂いなし（guard なし・sentinel なし・stamp は content＝`MeasureContentKey` の規律どおり）。commit `9d0433d2`（code・網・CHANGELOG・棚卸し）＋ docs の commit。push はユーザー。
+判定: ⒝ 跳躍の ⑴ は閉じた。残りは ⑶（music 中の跳躍文は追わない＝文書に明記・コーパス 0）だけ＝小。次の一手: ⑶ か ⑼ の残り＝ユーザー判断。会話を区切るか: (b) 便が 4 つ続き、この便は配管の読みが多く文脈が重い＝**区切る側**（続けるなら `-Start p793`・⑶ は 1 便未満）。
+
 ## 以下は第791セッションの経緯
 
 ### 1.1 第791セッション（2026-10-04・YT-DELL2）
