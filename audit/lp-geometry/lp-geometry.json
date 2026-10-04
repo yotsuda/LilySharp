@@ -215,6 +215,20 @@
       "residual": 0.0,
       "why": ""
     },
+    "midmeasure.clef.prev-note-to-clef.head-above-clef": {
+      "probe": "barline-spacing.ly",
+      "score": "MCH",
+      "lilypond": 1.666122,
+      "residual": 0.587100500,
+      "why": "OPEN: +0.587100 since 2026-10-04 (session 805), opened with its cause named and predicted before reading (prediction: about +0.58, read off a twin the day before; the clef-to-next-note point of the same book: 0). MC with the note before the clef ABOVE the staff and its stem DOWN. LilyPond (probe barline-spacing.ly, score MCH): head 11.730102 -> clef 13.396225 = 1.666122, against MC's 2.253222. lily/note-spacing.cc:78-82 Note_spacing::get_spacing takes the rod into the NonMusical change column as the SKYLINE distance between the two columns (Spacing_interface::skylines, with the right column's skyline-vertical-padding), and :105-107 floors the ideal at (ideal + min_dist) / 2 -- the branch that binds for a mid-measure clef. Here the clef's ink stands below the head, and the stem hangs at the head's LEFT, so the skylines meet only far down and the rod is small; in MC the stem is UP at the head's right edge and runs through the clef's band, so the skyline distance equals the horizontal reach. Lily# (SpacingRules.MidMeasureChangeGaps) builds the rod as the previous items' horizontal ink reach plus the two extra-spacing-widths -- a BOX -- whatever their heights, so it answers MC's 2.253222 to both books. The same box sits in front of a mid-measure key or meter change. Measured on twins (Lab sessions/p805/clef): every in-staff and below-staff note before a clef, and a clef opening a bar, agree with LilyPond to the SVG's two digits; only a head above the clef's ink opens. PREDICTION for the port (the rod read off the previous column's right skyline and the change column's left skyline): 0, with MC unchanged."
+    },
+    "midmeasure.clef.clef-to-next-note.head-above-clef": {
+      "probe": "barline-spacing.ly",
+      "score": "MCH",
+      "lilypond": 3.146600,
+      "residual": 0,
+      "why": "EXACT from its first reading (session 805), as predicted: the clef -> next note gap is Staff_spacing's (lily/staff-spacing.cc:166-215), which reads the NEXT column and not the previous one, so moving the previous note above the staff changes nothing here -- 3.146600 on both sides, MC's number. It is the control that says the open residual on midmeasure.clef.prev-note-to-clef.head-above-clef belongs to the LEFT gap alone."
+    },
     "midmeasure.clef.clef-to-next-note": {
       "probe": "barline-spacing.ly",
       "score": "MC",

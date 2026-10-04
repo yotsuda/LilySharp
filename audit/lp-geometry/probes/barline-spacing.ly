@@ -273,6 +273,15 @@ lay =
 %%       MK cannot see that branch: its next note is a bare head, so the ideal wins there.
 \score { \new Staff { \key g \major \time 4/4 c'4 d' \key c \major fis'4 g'4 } \lay "MKA" }
 
+%% MCH — MC with the note BEFORE the change above the staff, its stem DOWN (session 805). The
+%%       prev-note -> clef rod is lily/note-spacing.cc:78-82's SKYLINE distance, and here the
+%%       clef's ink stands below the head and right of a stem that hangs at the head's LEFT:
+%%       the two columns' skylines do not meet at the head's height, so the rod — and with it
+%%       the :105 floor (ideal + min_dist) / 2 that binds in MC — is smaller. A rod read as a
+%%       horizontal reach (a box) cannot see that; MC, whose stem is UP at the head's right
+%%       and runs into the clef's band, cannot tell the two apart.
+\score { \new Staff { \time 4/4 c'4 a'' \clef bass e4 f4 } \lay "MCH" }
+
 %% NO mid-measure TIME probe. `\time 3/4` inside a 4/4 bar makes LilyPond restructure the
 %% measures rather than engrave a change column, and the resulting dump is not the thing we
 %% would be comparing against. An uninterpretable probe is worse than no probe: it would

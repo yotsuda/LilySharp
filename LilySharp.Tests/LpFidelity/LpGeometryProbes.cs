@@ -239,6 +239,12 @@ internal static class LpGeometryProbes
     // LilyPond twin: c'4 d' \clef bass e4 f4   — ONE 4/4 measure, change in the middle.
     private static readonly string MC = Score("c4 d clef bass e, f, |", "MC");
 
+    // LilyPond twin: c'4 a'' \clef bass e4 f4   — MC with the note before the change ABOVE the
+    // staff and its stem DOWN, so the clef's ink and the previous column's never share a height
+    // there. The rod into the change column is a SKYLINE distance (lily/note-spacing.cc:78-82),
+    // which MC's up-stem — at the head's right, inside the clef's band — cannot tell from a box.
+    private static readonly string MCH = Score("c4 a' clef bass e, f, |", "MCH");
+
     // LilyPond twin: c'4 d' \key a \major e'4 f'4   — likewise one measure.
     private static readonly string MK = Score("c4 d key a major e f |", "MK");
 
@@ -14116,6 +14122,10 @@ internal static class LpGeometryProbes
         new("midmeasure.clef.prev-note-to-clef", MC,
             g => g.FirstNonNoteheadAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1)),
         new("midmeasure.clef.clef-to-next-note", MC,
+            g => g.NoteheadAnchor(2) - g.FirstNonNoteheadAfter(g.NoteheadAnchor(1))),
+        new("midmeasure.clef.prev-note-to-clef.head-above-clef", MCH,
+            g => g.FirstNonNoteheadAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1)),
+        new("midmeasure.clef.clef-to-next-note.head-above-clef", MCH,
             g => g.NoteheadAnchor(2) - g.FirstNonNoteheadAfter(g.NoteheadAnchor(1))),
         new("midmeasure.key.prev-note-to-key", MK,
             g => g.FirstNonNoteheadAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1)),
