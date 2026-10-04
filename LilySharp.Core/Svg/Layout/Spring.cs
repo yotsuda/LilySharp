@@ -194,17 +194,56 @@ internal sealed record Spring
     /// <remarks>
     /// LILYPOND-REF: lily/simple-spacer.cc:124-126 add_rod — set_blocking_force (max (block_force, …)) on every spring of the range.
     /// LILYPOND-REF: lily/spring.cc:183-195 set_blocking_force — min_distance_ = length (f); :218-237 length picks inv_k by the force's sign.
-    /// ⒝ A SERIES spring takes the raised minimum on its approach alone
-    /// (<see cref="WithMinDistance"/>), not on each part at the force as LilyPond would.
-    /// POISONED (session 732): raising each part instead moved no page and no test — no book
-    /// has a rod binding across a grace run — so the per-part branch was not kept.
+    /// A SERIES spring stands for several of LilyPond's springs, and the rod's range covers
+    /// all of them, so EACH PART takes the force on its own (session 809; until then the
+    /// raised minimum went to the approach alone — a ⒝ that session 732's poison found no
+    /// observer for). The rigid minimum follows: the series' length at that force.
     /// </remarks>
     internal Spring RaisedToBlockingForce(double force)
     {
+        if (IsSeries)
+        {
+            if (!(force > BlockingForce))
+                return this;
+            var parts = new Spring[Series.Length];
+            for (int i = 0; i < parts.Length; i++)
+                parts[i] = Series[i].RaisedToBlockingForce(force);
+            var raised = ImmutableArray.Create(parts);
+            return InSeries(raised, Math.Max(MinDistance, LengthOf(raised, force)));
+        }
         if (!(force > BlockingForce))
             return this;
         return WithMinDistance(Math.Max(MinDistance,
             IdealDistance + force * (force < 0 ? InverseCompressStrength : InverseStretchStrength)));
+    }
+
+    private static double LengthOf(ImmutableArray<Spring> parts, double force)
+    {
+        double sum = 0;
+        for (int i = 0; i < parts.Length; i++)
+            sum += parts[i].Length(force);
+        return sum;
+    }
+
+    /// <summary>
+    /// A rod between the two ends of ONE part of this series spring — LilyPond's rod between
+    /// two ADJACENT columns, which in Lily# can stand inside one timing slot (a mid-measure
+    /// change column's springs, a grace run's).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/simple-spacer.cc:89-127 Simple_spacer::add_rod — over the range [l, l + 1), one spring:
+    /// dropped when that spring's minimum already exceeds the distance, otherwise the spring's
+    /// blocking force is raised to the force at which it reaches the distance. The arithmetic is
+    /// <see cref="SpringSolver.ApplyRods"/>'s, over the one part.
+    /// </remarks>
+    internal Spring WithPartRod(int part, double distance)
+    {
+        var rodded = SpringSolver.ApplyRods(
+            ImmutableArray.Create(Series[part]), new[] { (0, 1, distance) })[0];
+        if (ReferenceEquals(rodded, Series[part]))
+            return this;
+        var parts = Series.SetItem(part, rodded);
+        return InSeries(parts, Math.Max(MinDistance, LengthOf(parts, double.NegativeInfinity)));
     }
 
     /// <summary>
