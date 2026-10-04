@@ -581,7 +581,9 @@ words, at the melody's rhythm, without engraving the melody. Multiple tracks may
 sing one part (two languages = two names). A track named after the part or one of
 its voices is bound by the name. An unbound row is the even-spread lead-sheet row
 (directly below a staff whose part has named voices it is still drawn, with warning
-LYS6013: name the track after the voice, or write `sings PART`);
+LYS6013: name the track after the voice, or write `sings VOICE`). A track that
+`sings` a named voice follows that voice's rhythm whatever the track is called - the
+way to put a second verse or language under one voice (`lyrics en sings alt`);
 inside a staff group a row must sing the staff directly above it (LYS6012).
 
 A `lyrics NAME { … }` track sits in a section next to the part it sings; the score

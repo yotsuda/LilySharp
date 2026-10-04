@@ -339,7 +339,7 @@ public static class RenderSpecParser
                 && PartOfFoldTarget(items[open]) is { Length: > 0 } part
                 && RowBindsToPart(root, row.PartName, row.Sings, part))
             {
-                items[open] = AddFoldedVerse(items[open], row.PartName);
+                items[open] = AddFoldedVerse(root, items[open], row.PartName, row.Sings);
                 items.RemoveAt(i);
                 i--;
                 continue;
@@ -380,22 +380,42 @@ public static class RenderSpecParser
             : string.Equals(track, part, StringComparison.Ordinal) || voices.Contains(track);
     }
 
-    private static RenderItemSpec AddFoldedVerse(RenderItemSpec item, string track)
-    {
-        static ImmutableArray<string> Append(ImmutableArray<string> a, string s)
-            => (a.IsDefault ? ImmutableArray<string>.Empty : a).Add(s);
-        return item switch
+    private static RenderItemSpec AddFoldedVerse(SyntaxNode root, RenderItemSpec item, string track, string? rowSings)
+        => item switch
         {
-            SingleStaffSpec s => new SingleStaffSpec(
-                s.Staff with { WithLyrics = Append(s.Staff.WithLyrics, track) }),
+            SingleStaffSpec s => new SingleStaffSpec(WithFoldedVerse(root, s.Staff, track, rowSings)),
             GrandStaffRenderSpec g when g.GrandStaff.Members is { Length: > 0 } ms
                 && ms[^1] is SingleStaffSpec last => new GrandStaffRenderSpec(g.GrandStaff with
             {
-                Members = ms.SetItem(ms.Length - 1, new SingleStaffSpec(
-                    last.Staff with { WithLyrics = Append(last.Staff.WithLyrics, track) })),
+                Members = ms.SetItem(ms.Length - 1,
+                    new SingleStaffSpec(WithFoldedVerse(root, last.Staff, track, rowSings))),
             }),
             _ => item,
         };
+
+    /// <summary>
+    /// The staff with one more folded verse — the ONE writer of
+    /// <see cref="StaffSpec.WithLyrics"/> for both folds (top level and inside a group),
+    /// so the verse and the voice it sings are recorded together. A row whose resolved
+    /// <c>sings</c> (<see cref="Music.LyricBindings.TargetOfRow"/>) names one of the
+    /// part's VOICES is that voice's verse (<see cref="StaffSpec.VerseVoices"/>): the same
+    /// answer <see cref="RowBindsToPart"/> folded it by. Until session 803 only the fold
+    /// read the target and the collector bound the verse by track name alone, so
+    /// <c>lyrics en sings alt</c> stood under the staff at the FIRST voice's rhythm.
+    /// </summary>
+    private static StaffSpec WithFoldedVerse(SyntaxNode root, StaffSpec staff, string track, string? rowSings)
+    {
+        var verses = (staff.WithLyrics.IsDefault ? ImmutableArray<string>.Empty : staff.WithLyrics).Add(track);
+        return Music.LyricBindings.TargetOfRow(root, track, rowSings) is { } sings
+            && Music.LyricBindings.VoicesOfPart(root, staff.VoiceName).Contains(sings)
+            ? staff with
+            {
+                WithLyrics = verses,
+                VerseVoices = (staff.VerseVoices.IsDefault
+                    ? ImmutableArray<(string Track, string Voice)>.Empty
+                    : staff.VerseVoices).Add((track, sings)),
+            }
+            : staff with { WithLyrics = verses };
     }
 
     /// <summary>
@@ -687,12 +707,8 @@ public static class RenderSpecParser
                 case LyricsRowRenderSyntax row when members.Count > 0
                     && members[^1] is SingleStaffSpec above
                     && RowBindsToPart(grandStaff, row.PartName, row.SingsTarget, above.Staff.VoiceName):
-                    members[^1] = new SingleStaffSpec(above.Staff with
-                    {
-                        WithLyrics = (above.Staff.WithLyrics.IsDefault
-                            ? ImmutableArray<string>.Empty
-                            : above.Staff.WithLyrics).Add(row.PartName),
-                    });
+                    members[^1] = new SingleStaffSpec(
+                        WithFoldedVerse(grandStaff, above.Staff, row.PartName, row.SingsTarget));
                     break;
             }
         }

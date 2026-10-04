@@ -228,6 +228,86 @@ public class SingsLyricsTests
         Assert.Single(diags, d => d.Code == DiagnosticCodes.RowNamesNoVoiceOfStaffAbove);
     }
 
+    // ── `sings VOICE`: the verse follows the voice it sings, whatever the track is called ──
+
+    private static string TwoVoices(string lyricsHeader, string scoreItems) => $$"""
+        time 4/4
+        section A {
+          m { voice sop { c'4 d' e' f' | } voice alt { e2 f4 g | } }
+          n { c1 | }
+          {{lyricsHeader}} { Low part deep | }
+        }
+        form main { A }
+        score main { {{scoreItems}} }
+        """;
+
+    private static readonly Fraction[] AltOnsets = [new(0, 1), new(1, 2), new(3, 4)];
+
+    private static List<Core.Svg.Model.LyricItem> Words(string src)
+    {
+        var tree = SyntaxTree.Parse(src);
+        Assert.DoesNotContain(SemanticValidation.Run(tree), d => d.Severity == DiagnosticSeverity.Error);
+        var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+        return score.Lyrics.OrderBy(l => l.Timing).ToList();
+    }
+
+    [Theory]
+    // The row says it, the definition says it, and inside a group's braces.
+    [InlineData("lyrics en", "staff m  lyrics en sings alt")]
+    [InlineData("lyrics en sings alt", "staff m  lyrics en")]
+    [InlineData("lyrics en", "grandStaff { staff n  staff m  lyrics en sings alt }")]
+    public void AVerseThatSingsAVoice_StandsAtThatVoicesRhythm(string lyricsHeader, string scoreItems)
+    {
+        // The control: the same words bound by NAME (`lyrics alt`), the one spelling that
+        // reached the alto before session 803 — `sings alt` folded the row under the staff
+        // and then set it at the soprano's quarters (0, 1/4, 1/2).
+        var byName = Words(TwoVoices("lyrics alt", scoreItems.Replace("lyrics en sings alt", "lyrics alt")
+            .Replace("lyrics en", "lyrics alt")));
+        var bySings = Words(TwoVoices(lyricsHeader, scoreItems));
+
+        // …and the name itself reached it only on the single-staff road: collected as a
+        // multi-staff score (this is one, of one staff or three) it too stood at the soprano's.
+        Assert.Equal(AltOnsets, byName.Select(l => l.Timing).ToArray());
+        Assert.Equal(AltOnsets, bySings.Select(l => l.Timing).ToArray());
+        Assert.Equal(byName.Select(l => (l.Text, l.MeasureIndex, l.Timing, l.VoiceId, l.StaffIndex)),
+            bySings.Select(l => (l.Text, l.MeasureIndex, l.Timing, l.VoiceId, l.StaffIndex)));
+        Assert.All(bySings, l => Assert.False(l.IsLyricsRow));
+    }
+
+    [Fact]
+    public void AVerseThatSingsAVoice_OnTheSingleStaffPath()
+    {
+        // A one-staff score is collected by Collect, not CollectMultiStaff: the same answer.
+        var tree = SyntaxTree.Parse(TwoVoices("lyrics en", "staff m  lyrics en sings alt"));
+        var spec = RenderSpecParser.FindFirst(tree)!;
+        var staff = Assert.IsType<SingleStaffSpec>(spec.Items[0]).Staff;
+        Assert.Equal(new[] { ("en", "alt") }, staff.VerseVoices);
+        var score = new MeasureCollector().Collect(tree, "m", attachedLyricParts: staff.WithLyrics, renderSpec: spec);
+        Assert.Equal(AltOnsets, score.Lyrics.OrderBy(l => l.Timing).Select(l => l.Timing).ToArray());
+    }
+
+    [Fact]
+    public void ARowThatSingsAVoice_AwayFromItsStaff_IsThatVoicesRow()
+    {
+        // Not directly below the staff, so an independent row — at the alto's rhythm, where
+        // it used to be the even spread (0, 1/3, 2/3): no PART is called `alt`.
+        var row = Words(TwoVoices("lyrics en", "staff m  staff n  lyrics en sings alt"));
+        Assert.Equal(AltOnsets, row.Select(l => l.Timing).ToArray());
+        Assert.All(row, l => Assert.True(l.IsLyricsRow));
+    }
+
+    [Fact]
+    public void AVerseThatSingsThePart_KeepsTheNameRule()
+    {
+        // `sings m` names the part, not a voice: nothing is recorded, and the first voice
+        // (the soprano's quarters) carries the words as before.
+        var tree = SyntaxTree.Parse(TwoVoices("lyrics en", "staff m  lyrics en sings m"));
+        Assert.True(Assert.IsType<SingleStaffSpec>(RenderSpecParser.FindFirst(tree)!.Items[0])
+            .Staff.VerseVoices.IsDefaultOrEmpty);
+        Assert.Equal(new Fraction[] { new(0, 1), new(1, 4), new(1, 2) },
+            Words(TwoVoices("lyrics en", "staff m  lyrics en sings m")).Select(l => l.Timing).ToArray());
+    }
+
     // ── the ROW spelling: the score row states the same track property ──
 
     [Fact]

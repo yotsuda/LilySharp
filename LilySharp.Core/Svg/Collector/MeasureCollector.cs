@@ -1152,7 +1152,8 @@ public sealed partial class MeasureCollector
         // LYS4006 error (a scoreless loose-music file simply cannot show lyrics).
         if (attachedLyricParts is { Count: > 0 })
             _lyricsCollector.CollectAttached(tree.GetRoot(), attachedLyricParts, measures, 0,
-                _lyricsRowNames, _voiceMeasuresByName, _sectionState.StartMeasure, _sectionState.AllStarts);
+                _lyricsRowNames, _voiceMeasuresByName, _sectionState.StartMeasure, _sectionState.AllStarts,
+                voiceName == null ? null : renderSpec?.VerseVoiceMapOf(voiceName));
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
         // (The nameless `chords { }` auto-attach is gone — LYS0032. A chord part
@@ -1786,9 +1787,14 @@ public sealed partial class MeasureCollector
                 // row's own `sings` wins over the track's default.
                 if (Music.LyricBindings.TargetOfRow(tree.GetRoot(), name, rowSings) is { } sings)
                 {
+                    // The target is a part this score engraves, else a named VOICE of one
+                    // (`lyrics en sings alt` — the validator and the fold both take a voice
+                    // for a target, so the row does too), else a part it does not engrave.
                     var melody = staffVoices.TryGetValue(sings, out var mv)
                         && mv.Length > 0 && mv[0].Measures.Length > 0
                         ? mv[0].Measures
+                        : EngravedVoiceNamed(tree.GetRoot(), sings, staffVoices) is { IsDefaultOrEmpty: false } sungVoice
+                        ? sungVoice
                         : CollectMelodyFor(tree, renderSpec, sings);
                     if (!melody.IsDefaultOrEmpty)
                     {
@@ -1942,8 +1948,9 @@ public sealed partial class MeasureCollector
                 _lyricsCollector.CollectAttached(
                     tree.GetRoot(), group.Select(a => a.PartName).ToList(),
                     lyStaffVoices[0].Measures.ToList(), group.Key.StaffIndex,
-                    _lyricsRowNames, _voiceMeasuresByName,
-                    _sectionState.StartMeasure, _sectionState.AllStarts);
+                    _lyricsRowNames, NamedVoiceTracks(tree.GetRoot(), group.Key.StaffVoice, lyStaffVoices),
+                    _sectionState.StartMeasure, _sectionState.AllStarts,
+                    renderSpec.VerseVoiceMapOf(group.Key.StaffVoice));
         }
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
@@ -2422,7 +2429,8 @@ public sealed partial class MeasureCollector
         // name is a `voice NAME` bind to that voice; the rest align to voice 1.
         if (attachedLyricParts is { Count: > 0 })
             _lyricsCollector.CollectAttached(root, attachedLyricParts, track0, 0,
-                _lyricsRowNames, _voiceMeasuresByName, _sectionState.StartMeasure, _sectionState.AllStarts);
+                _lyricsRowNames, _voiceMeasuresByName, _sectionState.StartMeasure, _sectionState.AllStarts,
+                voiceName == null ? null : renderSpec?.VerseVoiceMapOf(voiceName));
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
         // Attached chords on a multi-voice single staff — collected here because
@@ -2582,6 +2590,47 @@ public sealed partial class MeasureCollector
                 return;
             }
         }
+    }
+
+    /// <summary>
+    /// The named voices of one part of a multi-staff score, each with its slot and its
+    /// measure track among <paramref name="partVoices"/> (<see cref="CollectStaffVoices"/>:
+    /// the part's own stream, then the extra tracks) — what a <c>lyrics sop { }</c> verse
+    /// binds to. The single-staff road fills <see cref="_voiceMeasuresByName"/> as it
+    /// builds its tracks (<see cref="BuildMultiVoiceScore"/>); this road had no such table
+    /// until session 803, so a verse named after a voice — or singing one — stood at the
+    /// part's FIRST voice in any score of two staves or more (MEASURED, Lab
+    /// sessions/p803/ms: test/named-voice-lyrics with a second staff, "part" 24.87 → 23.04).
+    /// The slots are read off the syntax (<see cref="Music.LyricBindings.VoiceSlotsOfPart"/>)
+    /// and the tracks off the FINISHED staff, so the answer does not depend on which
+    /// collect walked the part (a resumed one skips the walk).
+    /// </summary>
+    private static IReadOnlyDictionary<string, (int Index, List<Measure> Measures)> NamedVoiceTracks(
+        SyntaxNode root, string partName, ImmutableArray<Voice> partVoices)
+    {
+        var slots = Music.LyricBindings.VoiceSlotsOfPart(root, partName);
+        if (slots.Count == 0)
+            return NoNamedVoiceTracks;
+        var tracks = new Dictionary<string, (int Index, List<Measure> Measures)>(StringComparer.Ordinal);
+        foreach (var (name, slot) in slots)
+            if (slot < partVoices.Length)
+                tracks[name] = (slot, partVoices[slot].Measures.ToList());
+        return tracks;
+    }
+
+    private static readonly Dictionary<string, (int Index, List<Measure> Measures)> NoNamedVoiceTracks = new();
+
+    /// <summary>The measures of the named VOICE <paramref name="voice"/> of a part this
+    /// score engraves, or default when no engraved part has a voice of that name — the
+    /// melody of a row that <c>sings</c> a voice.</summary>
+    private static ImmutableArray<Measure> EngravedVoiceNamed(
+        SyntaxNode root, string voice, Dictionary<string, ImmutableArray<Voice>> staffVoices)
+    {
+        foreach (var (part, voices) in staffVoices)
+            if (Music.LyricBindings.VoiceSlotsOfPart(root, part).TryGetValue(voice, out int slot)
+                && slot < voices.Length)
+                return voices[slot].Measures;
+        return default;
     }
 
     /// <summary>

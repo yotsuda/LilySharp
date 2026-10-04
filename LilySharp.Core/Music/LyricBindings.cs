@@ -120,7 +120,7 @@ public static class LyricBindings
         return map;
     }
 
-    private static readonly ConditionalWeakTable<SyntaxNode, Dictionary<string, HashSet<string>>> VoiceMaps = new();
+    private static readonly ConditionalWeakTable<SyntaxNode, Dictionary<string, Dictionary<string, int>>> VoiceMaps = new();
 
     /// <summary>
     /// The named voices written inside the named part's music (section cells and
@@ -129,7 +129,22 @@ public static class LyricBindings
     /// these voices (<c>voice sop { } + lyrics sop { }</c>). One walk per tree,
     /// shared by the validator and the score-row folding in RenderSpecParser.
     /// </summary>
-    public static IReadOnlySet<string> VoicesOfPart(SyntaxNode root, string partName)
+    public static IReadOnlyCollection<string> VoicesOfPart(SyntaxNode root, string partName)
+        => SlotsOf(root, partName).Keys;
+
+    /// <summary>
+    /// The same named voices with the SLOT each takes on its part's staff: its position
+    /// among the voices of the simultaneous span that names it, unnamed ones counted
+    /// (<c>voice sop { } { }  voice alt { }</c> → sop 0, alt 2) — the index of the voice's
+    /// measure track in the collector (the part's own stream, then the extra tracks in
+    /// order). The first span to name a voice decides. It is what lets a collector that
+    /// holds a staff's tracks find the one a verse sings, on the multi-staff road as on
+    /// the single-staff one.
+    /// </summary>
+    public static IReadOnlyDictionary<string, int> VoiceSlotsOfPart(SyntaxNode root, string partName)
+        => SlotsOf(root, partName);
+
+    private static Dictionary<string, int> SlotsOf(SyntaxNode root, string partName)
     {
         while (root.Parent != null)
             root = root.Parent;
@@ -137,11 +152,11 @@ public static class LyricBindings
         return map.TryGetValue(partName, out var voices) ? voices : EmptyVoices;
     }
 
-    private static readonly HashSet<string> EmptyVoices = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, int> EmptyVoices = new(StringComparer.Ordinal);
 
-    private static Dictionary<string, HashSet<string>> BuildVoiceMap(SyntaxNode root)
+    private static Dictionary<string, Dictionary<string, int>> BuildVoiceMap(SyntaxNode root)
     {
-        var map = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        var map = new Dictionary<string, Dictionary<string, int>>(StringComparer.Ordinal);
         // The two spellings that declare a part, asked of the index by the kind list that
         // stands beside PartReferenceFinder.DeclaredName (the same switch as below, pinned
         // to that list by SymbolKindsTests). The walk INSIDE each part stays a subtree walk.
@@ -155,13 +170,19 @@ public static class LyricBindings
             };
             if (part == null) continue;
             foreach (var par in n.DescendantNodes().OfType<ParallelExpressionSyntax>())
+            {
+                int slot = 0;
                 foreach (var (vn, _) in par.NamedVoices)
+                {
                     if (vn is { Length: > 0 })
                     {
-                        if (!map.TryGetValue(part, out var set))
-                            map[part] = set = new HashSet<string>(StringComparer.Ordinal);
-                        set.Add(vn);
+                        if (!map.TryGetValue(part, out var slots))
+                            map[part] = slots = new Dictionary<string, int>(StringComparer.Ordinal);
+                        slots.TryAdd(vn, slot);
                     }
+                    slot++;
+                }
+            }
         }
         return map;
     }

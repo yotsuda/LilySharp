@@ -56,9 +56,28 @@ public sealed record StaffSpec(
     // item names only the part and Clef came from the part header. Kept apart from Clef
     // because the collector reads its clef off the part: without this it cannot tell an
     // override from the part's own answer, and the override was dropped on the page.
-    ClefType? WrittenClef = null
+    ClefType? WrittenClef = null,
+    // The folded verses whose row SINGS one of this part's named voices
+    // (`staff m  lyrics en sings alt`): track → that voice. Sparse — a verse bound by
+    // its NAME (`lyrics alt`), or singing the part itself, has no entry and keeps the
+    // name rule (LyricsCollector.CollectNoteBound). Written with WithLyrics by the two
+    // folds (RenderSpecParser.WithFoldedVerse), read through VerseVoiceMap.
+    ImmutableArray<(string Track, string Voice)> VerseVoices = default
 )
 {
+    /// <summary>The voice each folded verse sings by its <c>sings</c> (see
+    /// <see cref="VerseVoices"/>), keyed by track, or null when no verse of this staff
+    /// names one — the common case, which then allocates nothing.</summary>
+    public IReadOnlyDictionary<string, string>? VerseVoiceMap()
+    {
+        if (VerseVoices.IsDefaultOrEmpty)
+            return null;
+        var map = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (track, voice) in VerseVoices)
+            map[track] = voice;
+        return map;
+    }
+
     /// <summary>Fewest staff lines a written <c>lines N</c> may ask for.</summary>
     public const int MinLines = 1;
 
@@ -449,6 +468,34 @@ public sealed record RenderSpec(
         foreach (var item in OrderedItems())
             AddBindingsOf(item, bindings);
         return bindings;
+    }
+
+    /// <summary>The voices the folded verses of <paramref name="partName"/>'s staff sing by
+    /// their <c>sings</c> (<see cref="StaffSpec.VerseVoices"/>), or null when none names
+    /// one. Asked by the collector once per staff that HAS attached verses, beside the
+    /// track names <see cref="GetVoiceBindings"/> hands it.</summary>
+    public IReadOnlyDictionary<string, string>? VerseVoiceMapOf(string partName)
+    {
+        foreach (var item in Items)
+            if (Find(item) is { } map)
+                return map;
+        return null;
+
+        IReadOnlyDictionary<string, string>? Find(RenderItemSpec item)
+        {
+            switch (item)
+            {
+                case SingleStaffSpec s when s.Staff.VoiceName == partName:
+                    return s.Staff.VerseVoiceMap();
+                case GrandStaffRenderSpec g:
+                    foreach (var member in g.GrandStaff.Members)
+                        if (Find(member) is { } inner)
+                            return inner;
+                    return null;
+                default:
+                    return null;
+            }
+        }
     }
 
     /// <summary>Whether <paramref name="voiceName"/> is among <see cref="GetVoiceNames"/> — the

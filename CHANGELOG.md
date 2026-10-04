@@ -396,8 +396,15 @@ workflow attaches that section to the GitHub Release verbatim.
   (`voice sop { … } voice alt { … }`), a row spelled `lyrics allt` binds to nothing: it is the
   even-spread lead-sheet row, drawn off the alto's rhythm, and nothing said so. A new warning,
   LYS6013, names the part's voices and the two ways to bind the row — name the track after the
-  voice, or write `sings PART`. The page is drawn as before; a row under a part with no named
+  voice, or write `sings VOICE`. The page is drawn as before; a row under a part with no named
   voice, or one that says what it `sings`, is not warned about.
+- **Words follow the voice they sing.** `lyrics en sings alt`, where `alt` is a named voice,
+  was accepted and placed under the staff, then set at the part's first voice: only a track
+  NAMED after the voice reached it, so a second verse or language under one voice had no
+  spelling. A track that sings a voice now follows it, as a verse under the staff and as a
+  row standing elsewhere. And in a score of two or more staves even the name did not bind —
+  `voice alt { … }` + `lyrics alt { … }` stood at the first voice's rhythm there (a one-staff
+  score was right); both roads now give the voice's rhythm.
 - **A short chord name reserves only its own width.** The chord-name line's readers put a
   floor of two staff spaces under every symbol's width (a "C" is 1.89 wide) while the spacing
   priced the ink, so a one-letter name could hold its line off a neighbour the name never

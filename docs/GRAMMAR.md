@@ -1131,7 +1131,9 @@ PartBlock      = PartName , MusicBlock ;
    one verse is placed under every staff of a chorale
    ('staff sop  lyrics verse  staff alt  lyrics verse sings alt  …' — user
    decision, 2026-09-02; before it the row spelling was the same single track
-   property and a second target was LYS7005). With no 'sings' anywhere the NAME
+   property and a second target was LYS7005). A target may be a part's named
+   VOICE ('lyrics en sings alt' over 'voice alt { }'): the words then follow that
+   voice's rhythm, under its staff or as a row. With no 'sings' anywhere the NAME
    can be the binding — the part itself, or one of that part's voices
    ('voice sop { }' + 'lyrics sop { }') — and a track that binds to nothing
    placed as a row keeps the even-spread lead-sheet reading (§7) — drawn the

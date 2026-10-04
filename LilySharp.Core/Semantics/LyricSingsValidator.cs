@@ -161,7 +161,8 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                                 $"lyrics '{row.PartName}' names none of the voices of '{partAbove}', the staff "
                                 + $"directly above it ({names}), so its syllables are spread evenly across each "
                                 + "bar instead of following a voice. Name the track after the voice it sings, "
-                                + $"or write 'lyrics {row.PartName} sings {partAbove}' to follow the part.");
+                                + $"or say it on the row: 'lyrics {row.PartName} sings VOICE' "
+                                + $"(or 'sings {partAbove}' to follow the part's first voice).");
                         }
                         partAbove = null;
                         break;

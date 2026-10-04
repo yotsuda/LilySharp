@@ -102,9 +102,11 @@ internal sealed class LyricsCollector
         IReadOnlySet<string> lyricsRowNames,
         IReadOnlyDictionary<string, (int Index, List<Measure> Measures)> voiceMeasuresByName,
         IReadOnlyDictionary<string, int> sectionStartMeasure,
-        IReadOnlyDictionary<string, List<int>>? sectionAllStarts = null)
+        IReadOnlyDictionary<string, List<int>>? sectionAllStarts = null,
+        IReadOnlyDictionary<string, string>? voiceOfTrack = null)
         => CollectNoteBound(root, measures, lyricsRowNames, voiceMeasuresByName,
-            sectionStartMeasure, sectionAllStarts, onlyBlocks: blockNames, staffIndex: staffIndex);
+            sectionStartMeasure, sectionAllStarts, onlyBlocks: blockNames, staffIndex: staffIndex,
+            voiceOfTrack: voiceOfTrack);
 
     /// <summary>
     /// Collects note-bound lyrics from every <c>lyrics { … }</c> block (skipping the
@@ -130,7 +132,8 @@ internal sealed class LyricsCollector
         IReadOnlyDictionary<string, List<int>>? sectionAllStarts = null,
         IReadOnlyList<string>? onlyBlocks = null,
         int staffIndex = 0,
-        bool asRow = false)
+        bool asRow = false,
+        IReadOnlyDictionary<string, string>? voiceOfTrack = null)
     {
         var lyricsBlocks = root.KindSites(SyntaxKind.LyricsBlock).OfType<LyricsBlockSyntax>().ToList();
         if (lyricsBlocks.Count == 0)
@@ -157,11 +160,15 @@ internal sealed class LyricsCollector
             // `lyrics sop { … }` aligns to the same-named voice's notes; an unnamed
             // block uses the default (first) voice. The note count AND columns then come
             // from the right voice (the voice index drives timing-based X), so a voice
-            // with its own rhythm matches.
+            // with its own rhythm matches. A verse that SINGS a voice (`lyrics en sings alt`,
+            // StaffSpec.VerseVoices) is that voice's whatever the track is called — the name
+            // is the binding only where no `sings` names a voice.
             var indices = defaultIndices;
             int voiceId = 0;
             if (lyricsBlock.VoiceName is { } vn
-                && voiceMeasuresByName.TryGetValue(vn, out var bound))
+                && voiceMeasuresByName.TryGetValue(
+                    voiceOfTrack != null && voiceOfTrack.TryGetValue(vn, out var sung) ? sung : vn,
+                    out var bound))
             {
                 indices = BuildNoteIndices(bound.Measures);
                 voiceId = bound.Index;
