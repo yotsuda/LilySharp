@@ -115,9 +115,13 @@ public sealed class LyricSingsWalkTests
             Assert.Contains(kind, root.DescendantNodes().Select(n => n.Kind));
 
         // … and it is a book the validator accepts, so a diagnostic below is the walk's.
+        // Its one remark is the warning the plain row earns by standing under a part that
+        // names a voice (LYS6013): the row is legal and drawn, which is what a warning says.
         var validator = new LyricSingsValidator();
         validator.Validate(tree);
-        Assert.Empty(validator.Diagnostics);
+        var only = Assert.Single(validator.Diagnostics);
+        Assert.Equal(DiagnosticCodes.RowNamesNoVoiceOfStaffAbove, only.Code);
+        Assert.Equal(DiagnosticSeverity.Warning, only.Severity);
     }
 
     [Fact]

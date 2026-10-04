@@ -34,6 +34,9 @@ namespace LilySharp.Core.Semantics;
 /// Rows never conflict: each binds only its own placement.</item>
 /// <item>LYS6012 — a row inside a staff group that does not sing the staff
 /// directly above it (a group has no independent band to fall back to).</item>
+/// <item>LYS6013 (warning) — a top-level row that binds to nothing, directly below a
+/// staff whose part has named voices: drawn as the even-spread row it is, and named
+/// as the probable misspelling of a voice.</item>
 /// </list>
 /// (LYS6009/LYS6010 guarded the <c>with lyrics</c> clause against unbound and
 /// wrong-staff tracks; both RETIRED with the clause — LYS0031. At top level a
@@ -117,6 +120,70 @@ internal sealed class LyricSingsValidator : ISemanticValidator
         // clause, LYS0031: a bound row folds only onto the staff it sings, so a
         // wrong-staff or unbound attachment can no longer be SPELLED at top level;
         // what remains checkable is the group case below.)
+
+        // Top-level rows: an unbound row is the even-spread lead-sheet row, and stays one.
+        // Under a staff whose part NAMES its voices, though, a row that names none of them
+        // is more likely a misspelled voice than a lead-sheet row, and nothing else says so:
+        // the page draws, with the syllables off the voice's rhythm. The walk mirrors
+        // RenderSpecParser.FoldAdjacentRows' window — a staff (or a group's last plain
+        // staff) opens it, a row that folds keeps it open, anything else closes it — so
+        // the warning fires only where a correctly named row WOULD have become the verse.
+        // (The voices come from LyricBindings.VoicesOfPart, the per-tree map the fold
+        // itself asks for every row under a staff: no walk is added to the keystroke.)
+        foreach (var render in root.DescendantNodes<RenderDeclarationSyntax>())
+        {
+            string? partAbove = null;
+            foreach (var member in render.ChildNodes())
+            {
+                switch (member)
+                {
+                    case StaffRenderSyntax st:
+                        partAbove = RenderSpecParser.ParseStaffSpec(st)?.VoiceName;
+                        break;
+                    case GrandStaffRenderSyntax group:
+                        partAbove = LastStaffLikeMember(group) is StaffRenderSyntax last
+                            ? RenderSpecParser.ParseStaffSpec(last)?.VoiceName
+                            : null;
+                        break;
+                    case LyricsRowRenderSyntax row when partAbove != null
+                        && RenderSpecParser.RowBindsToPart(root, row.PartName, row.SingsTarget, partAbove):
+                        break;
+                    case LyricsRowRenderSyntax row:
+                        if (partAbove != null
+                            && LyricBindings.TargetOfRow(root, row.PartName, row.SingsTarget) == null
+                            && LyricBindings.VoicesOfPart(root, partAbove) is { Count: > 0 } voices)
+                        {
+                            var names = string.Join(", ", voices.OrderBy(v => v, StringComparer.Ordinal)
+                                .Select(v => $"'{v}'"));
+                            _diagnostics.Warning(
+                                row.LyricsKeyword.Span,
+                                DiagnosticCodes.RowNamesNoVoiceOfStaffAbove,
+                                $"lyrics '{row.PartName}' names none of the voices of '{partAbove}', the staff "
+                                + $"directly above it ({names}), so its syllables are spread evenly across each "
+                                + "bar instead of following a voice. Name the track after the voice it sings, "
+                                + $"or write 'lyrics {row.PartName} sings {partAbove}' to follow the part.");
+                        }
+                        partAbove = null;
+                        break;
+                    // A token (the score's own keyword, name and braces) is not an item.
+                    case SyntaxTokenNode:
+                        break;
+                    default:
+                        partAbove = null;
+                        break;
+                }
+            }
+        }
+
+        static SyntaxNode? LastStaffLikeMember(GrandStaffRenderSyntax group)
+        {
+            SyntaxNode? last = null;
+            foreach (var m in group.ChildNodes())
+                if (m is StaffRenderSyntax or CondensedStaffRenderSyntax
+                    or CombinedStaffRenderSyntax or GrandStaffRenderSyntax)
+                    last = m;
+            return last;
+        }
 
         // Rows inside a staff group: inside the braces a row IS the staff above's
         // attached verse (score = a vertical stack of bands), so a row that sings

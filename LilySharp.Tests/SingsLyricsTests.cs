@@ -169,6 +169,65 @@ public class SingsLyricsTests
         Assert.DoesNotContain(Validate(src), d => d.Code == DiagnosticCodes.SingsConflict);
     }
 
+    // ── LYS6013: an unbound row under a part that names its voices (user decision, 2026-10-04) ──
+
+    private static string VoicedBook(string scoreItems, string track = "allt") => $$"""
+        section A {
+          m { voice sop { c'4 d' e' f' | } voice alt { e2 f4 g | } }
+          n { c1 | }
+          lyrics sop { Sing a love song | }
+          lyrics {{track}} { Low part deep | }
+          lyrics free { la la | }
+        }
+        form main { A }
+        score main { {{scoreItems}} }
+        """;
+
+    [Fact]
+    public void AnUnboundRowUnderAPartWithNamedVoices_IsWarnedAbout_AndStillDrawn()
+    {
+        // `allt` for `alt`: the row binds to nothing, so it is the even-spread row —
+        // legal, drawn, and until session 802 silent.
+        var diags = Validate(VoicedBook("staff m  lyrics sop  lyrics allt"));
+        var d = Assert.Single(diags, d => d.Code == DiagnosticCodes.RowNamesNoVoiceOfStaffAbove);
+        Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
+        Assert.Contains("'allt'", d.Message);
+        Assert.Contains("'alt', 'sop'", d.Message);
+        Assert.DoesNotContain(diags, x => x.Severity == DiagnosticSeverity.Error);
+
+        // …under a group's last staff too: a top-level row after the braces folds there.
+        Assert.Contains(Validate(VoicedBook("grandStaff { staff n  staff m }  lyrics allt")),
+            x => x.Code == DiagnosticCodes.RowNamesNoVoiceOfStaffAbove);
+    }
+
+    [Theory]
+    // The row names a voice, or the part: the name is the binding.
+    [InlineData("staff m  lyrics sop  lyrics alt", "alt")]
+    [InlineData("staff m  lyrics m", "m")]
+    // The row says what it sings, on the row or at the definition.
+    [InlineData("staff m  lyrics allt sings m", "allt")]
+    [InlineData("staff m  lyrics allt sings alt", "allt")]
+    // …even another part: a row bound elsewhere is that melody's independent band here.
+    [InlineData("staff m  lyrics allt sings n", "allt")]
+    // The part above names no voice: the plain lead-sheet row, as ever.
+    [InlineData("staff n  lyrics free", "allt")]
+    // Not directly below the staff: the row after an unbound row, after a chords row,
+    // and before any staff, has no staff whose verse it could have been.
+    [InlineData("lyrics free  staff m", "allt")]
+    [InlineData("staff m  tab n  lyrics free", "allt")]
+    public void TheRowsThatAreNotThatMistake_AreNotWarnedAbout(string scoreItems, string track)
+        => Assert.DoesNotContain(Validate(VoicedBook(scoreItems, track)),
+            d => d.Code == DiagnosticCodes.RowNamesNoVoiceOfStaffAbove);
+
+    [Fact]
+    public void OneMisspelling_IsOneWarning()
+    {
+        // The window closes on the row that failed to bind (RenderSpecParser.FoldAdjacentRows
+        // closes it the same way), so the rows after it are plain bands, not more warnings.
+        var diags = Validate(VoicedBook("staff m  lyrics allt  lyrics free"));
+        Assert.Single(diags, d => d.Code == DiagnosticCodes.RowNamesNoVoiceOfStaffAbove);
+    }
+
     // ── the ROW spelling: the score row states the same track property ──
 
     [Fact]

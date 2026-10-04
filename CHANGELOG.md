@@ -392,6 +392,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A lyrics row that misses its voice is said.** Under a staff whose part names its voices
+  (`voice sop { … } voice alt { … }`), a row spelled `lyrics allt` binds to nothing: it is the
+  even-spread lead-sheet row, drawn off the alto's rhythm, and nothing said so. A new warning,
+  LYS6013, names the part's voices and the two ways to bind the row — name the track after the
+  voice, or write `sings PART`. The page is drawn as before; a row under a part with no named
+  voice, or one that says what it `sings`, is not warned about.
 - **A short chord name reserves only its own width.** The chord-name line's readers put a
   floor of two staff spaces under every symbol's width (a "C" is 1.89 wide) while the spacing
   priced the ink, so a one-letter name could hold its line off a neighbour the name never

@@ -1590,6 +1590,19 @@ public static class DiagnosticCodes
     /// it.</summary>
     public const string GroupRowNotBoundToStaffAbove = "LYS6012";
 
+    /// <summary>Render warning: a top-level <c>lyrics NAME</c> row that binds to nothing
+    /// (no <c>sings</c> on the row or the definition, and NAME is neither the part nor one
+    /// of its voices) standing directly below a staff whose part HAS named voices —
+    /// <c>voice sop { } voice alt { }</c> … <c>staff m  lyrics allt</c>. An unbound row is
+    /// the legal even-spread lead-sheet row, so the page is drawn as before; but under a
+    /// part that names its voices the likelier reading is a misspelled voice, and the
+    /// syllables silently leave the voice's rhythm (MEASURED, session 802,
+    /// test/named-voice-lyrics with <c>alt</c> respelled <c>allt</c>: "part" 24.87 → 23.07,
+    /// "deep" 30.44 → 28.84, no diagnostic). A warning and not an error (user decision,
+    /// 2026-10-04): the even spread stays writable. Written by 0 of the 46,384 books on
+    /// disk when it was added.</summary>
+    public const string RowNamesNoVoiceOfStaffAbove = "LYS6013";
+
     // Structure / section-part grid errors (LYS7xxx)
 
     /// <summary>Structure error: a section-part grid cell was declared more than once.</summary>

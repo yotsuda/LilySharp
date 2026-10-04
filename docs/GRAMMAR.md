@@ -1134,7 +1134,9 @@ PartBlock      = PartName , MusicBlock ;
    property and a second target was LYS7005). With no 'sings' anywhere the NAME
    can be the binding — the part itself, or one of that part's voices
    ('voice sop { }' + 'lyrics sop { }') — and a track that binds to nothing
-   placed as a row keeps the even-spread lead-sheet reading (§7). A row without
+   placed as a row keeps the even-spread lead-sheet reading (§7) — drawn the
+   same, but warned about (LYS6013), when it stands directly below a staff whose
+   part names its voices: there the likelier reading is a misspelled voice. A row without
    its own 'sings' cannot re-decide the association by position: after a staff
    it does not sing it simply stays an independent band. *)
 LyricsBlock    = 'lyrics' , Identifier , [ 'sings' , PartRef ] , '{' , { LyricMeasure | LyricVolta } , '}' ;
