@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第808セッションの経緯
+
+### 1.1 第808セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き。ユーザー「続けて」＝第807 の次の候補 ⒜（行中 clef の直後の音に grace が付くと clef が LP より 0.26 右）。`-Start p808`（HEAD `ae0d4b54`・未 push 28）＝full **11062 / 0 / 2 / 11064**。§7 3.5 で第806 を ARCHIVE へ（moved 13 lines）。
+- 双子（Lab `sessions/p808/gr`）: grace の高さ・音価・数を振ると、**grace と主音は LP どおり、clef だけ** 1.31 右（grace 2 つで 2.2）。第807 の 0.26 は譜の上の前の音（MCH 型）との相殺だった。LP に列をダンプ（`gr/lp-probe.ly`）: 前の音 → clef **1.802578 = MC の 2.253222 × 0.8**、clef → grace **2.517280 = 3.1466 × 0.8**。根: `\clef` は grace の moment に立つ＝change 列の右隣は最初の grace 列で、spacing-spanner.cc:396-403（左）と :519-527（右）が**それぞれ**×0.8（Spring::operator*=＝各自の min で床）。
+- §5.0 の型: **`2fdb02f28`（出力不変）**＝probe MCG＋台帳 3 点（+1.309307／−1.309307 は予測の桁どおり・前の音 → 主音の対照 0）。**`d842aecb3`（移植）**＝`MidMeasureChangeGaps` が左右を個別に縮め（`ScaledIntoGrace`）、MeasureLayouter は `SpringIntoGraceRun(approachIdealScaled)` で理想を二重に縮めない。renderer の `MidMeasureChangeRightGap` は「縮めた右間隔＋grace run の幅」。
+- **1 回目の移植は台帳が 1 点も動かなかった**: `SharedRenderer.ChangeColumnItems` が clef の後の**最初の grace item で列を閉じ**、主音（`LeadingGrace` を持つ）を見ていなかった＝spring と renderer が別の列を読む 2 つ目の答え（第807 の観測者 0 の腕もこれ）。grace item を飛ばすようにして 2 点とも 0。
+- 双子の 2 巡目で**主音に `#`（g-main-sharp）が 1.38 右に悪化**＝右の rod を主音の `#` で読み、新しい床がそれで効いた。LP の右の rod は grace 列まで → `RightRod` に grace の腕（`CreateGraceLeftSkyline`）。**grace に `#`（h）は 0.10 不足**＝0.8 で理想が min まで落ちると列 rod（set_column_rods の padding 0.1）が効く → `RightGapIntoGrace`。あわせて change 列のときは run の左インクを min に二重に足さず、前の音 → grace の床も使わない。観測者 4 点（MCGA・MCGM）は初回から 0。
+- 網: 毒 10 本（`p808/poisons.ps1`・3 回）＝8 本がそれぞれの点だけ赤。⑹（自分の min の床）と ⑽（change 列をまたぐ前の音 → grace の床）は 0 赤＝註に名指し。掃き（`p808/sweep/`・base＝`p807/exe-head`）: **998 冊・1,199 svg・差 0**。snapshot 不動。CHANGELOG は第805 の項に 1 文。
+- 触っていない: 左の列 rod（別の skyline view・0.8 がまだ届いた本なし）／右の rod を理想に畳んだのは ⒝（力 0 と圧縮では同じ）／grace の手前の調号の帯は主音の高さを読む。
+★ `-End p808 -DiffBase ae0d4b54`（`end1.log`）＝full **11069 / 0 / 2 / 11071**（網 +7＝台帳点 7）・門 全 OK（HANDOFF 441,422 B・残り 8,578）。台帳 986 → 993 点・exact 789 → 796・OPEN 0。7.5: Core `+` 134 行・REF 8（spacing-spanner.cc:396-403／:519-527／:478-517／:228-297・spring.cc:87-93 ×2・separation-item.cc:47-68）・OWN 0。7.6: ⒜ 字面＝左右それぞれ max(min, 0.8×ideal)・右の rod は grace 列の skyline・列 rod＝距離＋0.1／⒝ 列 rod を右の理想に畳んだ（1 本の timing spring が別の床を運べない・註）。7.7: ⑴ renderer と spring が別の列を読んでいた 2 つ目の答えを 1 つに（`ChangeColumnItems` が grace を飛ばす）／⑵ guard・fallback なし／⑶ 観測者 0 の腕 3 つを註で名指し。7.9 perf: change 列が grace の手前のときだけ grace 列の左 skyline 1 枚と乗算 2 回。commit `2fdb02f28`（点）・`d842aecb3`（移植・CHANGELOG・棚卸し）＋ docs の commit。Lab は sessions/p808 を commit。push はユーザー。
+判定: 行中の change 列は grace の手前まで LP と同じ式になった（第805〜第808 で左・余白・右・grace）。教訓: **移植して台帳が 1 点も動かなかったのは反証**（RULES §5.0「出力が動かない修正は no-op ではなく反証」）——renderer が別の列を読んでいた。そして**2 巡目の双子（臨時記号を振る）が 1 巡目の移植の悪化を見つけた**。次の候補: ⒜ §2 C・D・E の古い起票の測り直し（第805 の型）／⒝ H の束（設計）／⒞ 観測者 0 の 3 つの腕に網を張る（spacer＋change・圧縮した grace の手前の change）。会話を区切るか: (a) ⒜⒝ は別の島＝今の文脈は効かない、⒞ は今の文脈の上／(b) この会話は RULES 通読＋2 便で、圧縮は起きていない／(c) 既定は続ける。⇒ **⒞ ならこの会話で `-Start p809`。⒜⒝ でも新しい会話にする理由は小さい（既定は続ける）**。
+
 ## 以下は第807セッションの経緯
 
 ### 1.1 第807セッション（2026-10-04・YT-DELL2）
