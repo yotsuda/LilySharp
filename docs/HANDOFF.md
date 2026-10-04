@@ -1,4 +1,4 @@
-# Lily# 開発ハンドオフ（常設・単一）
+﻿# Lily# 開発ハンドオフ（常設・単一）
 
 > **このファイルが唯一の引継ぎ先。新しい `handoff-*.md` を作らないこと。**
 > 引継ぎは §1「現在地」を**書き換えて**行う（追記しない）。恒久的な知識は §4 の表に従って
@@ -78,7 +78,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。→ **第751（2026-10-02・ユーザー決定）「LP 忠実にこだわるより音楽的な妥当性を重視。LP から引き継ぐのはレンダリングとレイアウトの美しさだけ。ユーザーがまだ少ないので過去のしがらみに縛られない」＝意味論（拍子・弱起・反復・強弱・検査・出力の意味）の裁定者は音楽的妥当性、LP は描画と配置の裁定者（RULES §5.2 に規則として置いた）。
 
-**★★★★ 第815（2026-10-05）ユーザー指示「OMR の提案を優先度順に着手」＝次の会話はここから**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`。OMR は別プログラム・Lily# は子プロセスで呼びファイルを読むだけ＝コードを混ぜない）: 0（#17〜#20）と A1 `@todo` は閉じた（第815）。配布の取り決め `..\LilySharp-Omr\docs\repro\lilysharp-omr-distribution-2026-10-05.md`（同梱しない・`lilysharp.omr.path` は使わない・L1〜L11）。**B1 の枠＝L1・L7 は実装済み**（`93e1477e8`: `LILYSHARP_OMR_PATH` か globalStorage の版・見つかるときだけメニューに出る・**OMR 側の `omr read` が無いので実物では未試験**）。**B2（`x.omr.json` の候補をクイックフィックスに）も済み**（`f5a3d3142`・`LilySharp.Lsp.OmrSideFile` が唯一の読み手）。残りの順: ③ C1（LSP `lilysharp/todos`）・C2（小節の番号を SVG に・`data-todo` は済み）・B3 元画像のビュー → ④ B4・C3（`--breaks-only`）→ ⑤ B5・B6 → ⑥ 10-02 提案の P1〜P6（学習データ・並行でよい）。配布の L2〜L6・L9（一覧・同意・取得・署名とハッシュ・配置）は OMR の最初の発行と合わせて、L8・L10・L11 はその後。第814 末の決定（下）はこの後。
+**★★★★ 第815〜816（2026-10-05）ユーザー指示「OMR の提案を優先度順に着手」＝次の会話はここから**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`。OMR は別プログラム・Lily# は子プロセスで呼びファイルを読むだけ＝コードを混ぜない）: 0（#17〜#20）・A1 `@todo`・B1 の枠（L1・L7＝`93e1477e8`）・B2（`f5a3d3142`）・**C1・C2・B3（第816＝`de68612c4`・`7002ba6b4`）は閉じた**。配布の取り決め `..\LilySharp-Omr\docs\repro\lilysharp-omr-distribution-2026-10-05.md`（同梱しない・L1〜L11）。⚠️ **B1・B3 は VS Code で未確認**（OMR の `omr read` は第 1 歩が動く＝`OmrProto.exe` を `LILYSHARP_OMR_PATH` で指せば試せる）。残りの順: ④ B4（見比べ）・C3（`--breaks-only`）→ ⑤ B5・B6 → ⑥ 10-02 提案の P1〜P6（並行でよい）。配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後。第814 末の決定（下）はこの後。
 
 **★★★★ 第814 末のユーザー決定（2026-10-04）＝次の会話はここから**（判断の基準は音楽的妥当性。**手元のコーパスは偏っているので「コーパスで困ったか」を判断材料にしない**）:
 - §2 E ⑷ hairpin の niente の円・⑹ 開いた和音入力・⑺ Ignatzek＝**実装する**。⑷⑹ は文法の提案をユーザーに出した（第814 の返答・要旨は下）＝**承認を得てから実装**。⑺ の残りは LP の例外表の 2 つ（パワーコード `<c g>`→上付き「5」・オルタード `<c e g bes des' ees' fis' aes'>`→上付き「alt」＝ly/chord-modifiers-init.ly:54-58）。°・+・ø・°7・△・上付きは 2026-09-11 に移植済み。
@@ -125,6 +125,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第816セッション（2026-10-05・YT-DELL2）
+
+新しい会話。§1.0 の ③。`-Start p816`（HEAD `aaaa46bc`）＝full **11115 / 0 / 2 / 11117**。§7 3.5 で第814 を ARCHIVE へ（moved 14 lines）。
+- **C1**: `TodoIndex`（Core/Editing）＝描画経路と同じ collect で item→（印刷される小節番号・パート）の表 `Places`・`Find`（`@todo` の位置）・`PlaceAt`（カーソルの行の音）。LSP `lilysharp/todos`・`lilysharp/placeAt`（表は版ごとに cache）。
+- **C2**: `IDrawingContext.DrawBarBox`＝対話 SVG だけ `<rect class="bar-box" data-bar>`。fragment の capture の外で描く（前に小節が増えた段の replay でも今の番号）。書き出しは構成上不変（既定は no-op）。
+- **B3**: `omrScanCore.ts`（npm 試験）・`omrScan.ts`＝「Show Original Scan」。⚠️ **小節は番号ではなく OMR が書いた `line` で結ぶ**: OMR の実物 3 冊で side file と `PlaceAt` を突き合わせたら、長すぎる小節（Chopin bar 19＝2160/1920）から先で印刷番号が OMR の番号より 1 大きい（Lily# は拍子で割る）＝行の錨を編集に合わせて動かす。`@todo` はキーで結ぶ。`dl-ms-01` は `part voice`＝LYS0002（OMR 側の誤り）。OMR 提案書に C1・C2・B3 の形とお願い 3 つ（TIFF 用の PNG・`voice` の名前・box の無い todo）を書いた（OMR repo は未 commit）。
+- full **11124 / 0 / 2 / 11126**・npm 202/202。svg の掃きは省いた（静的出力は構成上不変・snapshot 全緑）。
+
+★ `-End p816 -DiffBase aaaa46bc6`（`end1.log`）＝full **11124 / 0 / 2 / 11126**・門 全 OK（HANDOFF 444,624 B）。台帳 1016 点のまま。7.5: Core `+` 228 行・REF 0・OWN 0＝エディタ向けの情報（LP に無い）。7.6: 印刷番号は `BarNumberEngraver.NumberMeasures` の 1 か所を読む。7.7: B3 用に足した `lilysharp/positionOf` は錨に替えた時点で外した＝匂い無し。commit `de68612c4`・`7002ba6b4`＋docs。push はユーザー。
+判定: 次は ④ B4（見比べ）・C3。(a) 今の文脈（scan view・bar-box・OMR の side file）の上に立つ＝続ける側／(b) 圧縮は起きていない／(c) 同じ島。⇒ **続けてよい。ただし先に B3 を VS Code で見てもらうのが安い**（B4 は B3 の上に建つ）。
+
+## 以下は第815セッションの経緯
+
 ### 1.1 第815セッション（2026-10-05・YT-DELL2）
 
 新しい会話。ユーザー指示「OMR の開発を進めるための提案を優先度順に着手」（上の §1.0 の先頭）。`-Start p815`（HEAD `1ddc2c4c`・未 push 53）＝full **11095 / 0 / 2 / 11097**（ユーザーは開始の呼び出しを拒否したが別コンソールで走っていた＝止めずに完走させた）。§7 3.5 で第813 を ARCHIVE へ（moved 14 lines）。
@@ -134,19 +147,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 ★ `-End p815 -DiffBase 1ddc2c4c`（`end1.log`）＝full **11114 / 0 / 2 / 11116**・門 全 OK（HANDOFF 444,907 B）。台帳 1016 点のまま。7.5: Core `+` 514 行・REF 0・OWN 0＝LP に無い言語機能（`@todo`）と出力の意味（MusicXML・隠れ譜・声の拍子）＝裁定者は音楽的妥当性（RULES §5.2）。7.6: ⒜ 隠れ譜の中身は描かない＝LP の hara-kiri と同じ結論／⒝ `<pitch>` は記号の下で読む＝MusicXML の clef-octave-change の意味。7.7: 旧書式の分岐は外した（ユーザー決定）＝匂い無し。commit `2254a4331`・`5b539e83e`・`6352e71bd`・`8fd7f255d`＋docs。Lab は sessions/p815（omr/ の repro・掃き 3 つ）。push はユーザー。
 判定: 次の一手 ① B1 は OMR の CLI（引数・出力の名前・進み具合の出し方）が決まっていない＝ユーザーに確かめてから。会話を区切るか: (a) B1 は拡張機能の仕事で今の文脈（OMR 提案・`@todo` の実装）を使う＝続ける側／(b) この会話は長くなったが圧縮は起きていない／(c) 同じ島。⇒ **続けてよい。OMR の CLI 仕様の返事待ち**。
-
-## 以下は第814セッションの経緯
-
-### 1.1 第814セッション（2026-10-04・YT-DELL2）
-
-同じ会話の続き。ユーザー「続けて」＝第813 の次の一手 ⒜（§2 D・E の残りの裏取り）。`-Start p814`（HEAD `92a678dd`・未 push 50）＝full **11096 / 0 / 2 / 11098**。§7 3.5 で第812 を ARCHIVE へ（moved 15 lines）。
-- **§2 D「`PageLayouter` の `i == 0` で `SystemSystem`／配置側 `TopSystem` の食い違い」＝欠陥ではなかった**: LP の `fill_line_details`（constrained-breaking.cc:548-555）は行の位置によらず system-system で値付けし、top-system は配置の鎖の spring だけ。score の最後の行の score-system 分岐は `prev.padding_`（page-breaking.cc:1166＝行の**後**）で、Lily# の score は 1 つずつ頁割りする＝届かない。Lily# の 2 分岐（`SystemSystem`／`SelectSpec(false,…)`）は同じ値の 2 綴り＝1 行に畳み、使われなくなった `systemIndex` 引数を 5 か所から外した。
-- **§2 E「冗長アクセサ 6 つ」**: 5 つは既に消えていた。`PaperSettings.GetRightMargin` は両面の余白の島（`TwoSided` ほか 4 プロパティ・`GetLeftMargin`）ごと読み手 0＝言語から設定できず描画も読まない・試験 1 本が唯一の書き手兼読み手＝削除（試験も）。§2 E の ⑴⑵⑶（tuplet の on-line・volta の shorten-pair・範囲畳み）は既に移植済み（第812 の裏取り）と §2 E に書いた。
-- `5dfc2f994`（出力は構成上不変＝同じ値・読み手 0 の削除のみ・掃きは省いた）。full **11095 / 0 / 2 / 11097**（消した試験 1 本）。
-- **§2 D「単一ページ経路の二重実装」**は再確認だけ: crop（LILYSHARP-OWN, DECLARED）と組の独自経路で、鎖に畳むのは設計級＝提案だけ（§2 D に追記）。
-
-★ `-End p814 -DiffBase 92a678dd`（`end1.log`）＝full **11095 / 0 / 2 / 11097**・門 全 OK（HANDOFF 441,024 B）。台帳 1016 点のまま・exact 819・OPEN 0。7.5: Core `+` 17 行（ほぼ註）・REF 1（constrained-breaking.cc:548-555）・OWN 0。7.6: ⒜ 字面＝改頁器の行の spec は system-system 1 本／⒝ score の最後の行の score-system は「行の後」で Lily# に届かない（註）。7.7: 同じ値の 2 綴りを 1 つに・読み手 0 の島を削除＝減っただけ。7.9 perf: 変化なし。commit `5dfc2f994`＋docs。Lab は sessions/p814。push はユーザー。
-判定: §2 D・E の「裏取りすれば閉じる」項は尽きた（第812〜第814 で §2 C 全部・§2 D の spec・§2 E の ⑴⑵⑶ とアクセサ）。教訓: **古い起票の 3 件に 2 件は「既に直っている」か「LP どおりを食い違いと読んだ」もの**だった＝起票の文言ではなく LP の字面と今のコードを並べて読む。次の一手（どれもユーザー判断が要る）: ⒜ §2 E の ⑷ hairpin の niente の円・⑹ 開いた和音入力・⑺ Ignatzek（言語の設計）／⒝ §2 H の束（音符間 spacing の発明・設計）／⒞ §2 D の単一ページ経路を鎖に畳む（crop の扱いの判断・snapshot 大）。会話を区切るか: (a) どれも今の文脈を使わない／(b) この会話は 3 便で長くなってきた（圧縮は起きていない）／(c) 無関係な島。⇒ **どれを選ぶかの判断を先にユーザーに仰ぐ。着手は新しい会話でも損は小さい**。
 
 ## 2. 開いている作業
 

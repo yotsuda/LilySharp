@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第814セッションの経緯
+
+### 1.1 第814セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き。ユーザー「続けて」＝第813 の次の一手 ⒜（§2 D・E の残りの裏取り）。`-Start p814`（HEAD `92a678dd`・未 push 50）＝full **11096 / 0 / 2 / 11098**。§7 3.5 で第812 を ARCHIVE へ（moved 15 lines）。
+- **§2 D「`PageLayouter` の `i == 0` で `SystemSystem`／配置側 `TopSystem` の食い違い」＝欠陥ではなかった**: LP の `fill_line_details`（constrained-breaking.cc:548-555）は行の位置によらず system-system で値付けし、top-system は配置の鎖の spring だけ。score の最後の行の score-system 分岐は `prev.padding_`（page-breaking.cc:1166＝行の**後**）で、Lily# の score は 1 つずつ頁割りする＝届かない。Lily# の 2 分岐（`SystemSystem`／`SelectSpec(false,…)`）は同じ値の 2 綴り＝1 行に畳み、使われなくなった `systemIndex` 引数を 5 か所から外した。
+- **§2 E「冗長アクセサ 6 つ」**: 5 つは既に消えていた。`PaperSettings.GetRightMargin` は両面の余白の島（`TwoSided` ほか 4 プロパティ・`GetLeftMargin`）ごと読み手 0＝言語から設定できず描画も読まない・試験 1 本が唯一の書き手兼読み手＝削除（試験も）。§2 E の ⑴⑵⑶（tuplet の on-line・volta の shorten-pair・範囲畳み）は既に移植済み（第812 の裏取り）と §2 E に書いた。
+- `5dfc2f994`（出力は構成上不変＝同じ値・読み手 0 の削除のみ・掃きは省いた）。full **11095 / 0 / 2 / 11097**（消した試験 1 本）。
+- **§2 D「単一ページ経路の二重実装」**は再確認だけ: crop（LILYSHARP-OWN, DECLARED）と組の独自経路で、鎖に畳むのは設計級＝提案だけ（§2 D に追記）。
+
+★ `-End p814 -DiffBase 92a678dd`（`end1.log`）＝full **11095 / 0 / 2 / 11097**・門 全 OK（HANDOFF 441,024 B）。台帳 1016 点のまま・exact 819・OPEN 0。7.5: Core `+` 17 行（ほぼ註）・REF 1（constrained-breaking.cc:548-555）・OWN 0。7.6: ⒜ 字面＝改頁器の行の spec は system-system 1 本／⒝ score の最後の行の score-system は「行の後」で Lily# に届かない（註）。7.7: 同じ値の 2 綴りを 1 つに・読み手 0 の島を削除＝減っただけ。7.9 perf: 変化なし。commit `5dfc2f994`＋docs。Lab は sessions/p814。push はユーザー。
+判定: §2 D・E の「裏取りすれば閉じる」項は尽きた（第812〜第814 で §2 C 全部・§2 D の spec・§2 E の ⑴⑵⑶ とアクセサ）。教訓: **古い起票の 3 件に 2 件は「既に直っている」か「LP どおりを食い違いと読んだ」もの**だった＝起票の文言ではなく LP の字面と今のコードを並べて読む。次の一手（どれもユーザー判断が要る）: ⒜ §2 E の ⑷ hairpin の niente の円・⑹ 開いた和音入力・⑺ Ignatzek（言語の設計）／⒝ §2 H の束（音符間 spacing の発明・設計）／⒞ §2 D の単一ページ経路を鎖に畳む（crop の扱いの判断・snapshot 大）。会話を区切るか: (a) どれも今の文脈を使わない／(b) この会話は 3 便で長くなってきた（圧縮は起きていない）／(c) 無関係な島。⇒ **どれを選ぶかの判断を先にユーザーに仰ぐ。着手は新しい会話でも損は小さい**。
+
 ## 以下は第813セッションの経緯
 
 ### 1.1 第813セッション（2026-10-04・YT-DELL2）
