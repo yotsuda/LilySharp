@@ -392,8 +392,72 @@ internal static partial class SpacingRules
         double rightRod = RightRod(fonts, columnItems, columnWidth, lastChange!);
         double rightGap = RightGap(columnWidth, lastChange!, rightRod);
 
+        // --- into a GRACE run: both springs take the grace's 0.8, each on its own ---
+        if (ChangeColumnLeadsIntoGrace(columnItems))
+        {
+            leftGap = ScaledIntoGrace(leftGap, leftRod);
+            rightGap = RightGapIntoGrace(rightGap, rightRod);
+        }
+
         return new MidMeasureChangeSpacing(leftGap, rightGap, leftRod + rightRod);
     }
+
+    /// <summary>
+    /// Whether the change column's musical side leads with a grace run — the change is then
+    /// set at the GRACE's moment, and the column's right neighbour is the first grace column.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, probe barline-spacing.ly MCG: <c>c'4 d' \clef bass \grace e16 f4</c>):
+    /// the clef stands 1.802578 after d' (MC's 2.253222 × 0.8) and 2.517280 before the grace
+    /// head (MC's 3.146600 × 0.8) — both springs around the column are scaled.
+    /// </remarks>
+    private static bool ChangeColumnLeadsIntoGrace(in ItemColumn columnItems)
+    {
+        for (int q = 0; q < columnItems.Count; q++)
+            if (!IsChangeItem(columnItems[q]) && HasLeadingGraceColumn(columnItems[q]))
+                return true;
+        return false;
+    }
+
+    /// <summary>
+    /// One of the change column's gaps when its right neighbour is a grace column: the gap
+    /// times the grace's 0.8, never below its own minimum.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:396-403 musical_column_spacing — the LEFT spring, when_mom (right_col).grace_part_ and not the left's, spring *= 0.8 (after merge_springs).
+    /// LILYPOND-REF: lily/spacing-spanner.cc:519-527 breakable_column_spacing — the RIGHT spring, when_mom (r).grace_part_, spring *= 0.8.
+    /// LILYPOND-REF: lily/spring.cc:87-93 Spring::operator*= — ideal_distance_ = max (min_distance_, ideal_distance_ * r).
+    /// The two are scaled apart because LilyPond's are two springs, each floored at its own
+    /// minimum. Lily# carries them as one timing spring, so MeasureLayouter tells
+    /// <see cref="SpringIntoGraceRun"/> the approach's ideal is already scaled (it still
+    /// scales the stretch, which operator*= does too).
+    /// ⚠️ NO OBSERVER for the own-minimum floor (session 808's poison no. 6 left the suite green):
+    /// on the right the column rod's floor (<see cref="RightGapIntoGrace"/>) stands above it, and
+    /// no measured left gap is scaled down to its minimum.
+    /// </remarks>
+    private static double ScaledIntoGrace(double gap, double minDistance)
+        => Math.Max(minDistance, gap * GraceApproachScale);
+
+    /// <summary>
+    /// The RIGHT gap into a grace run: scaled (<see cref="ScaledIntoGrace"/>), then held at the
+    /// column rod between the change column and the grace column — the same skylines'
+    /// distance plus the spacing spanner's padding.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods — every adjacent pair, the change column and the grace column included.
+    /// LILYPOND-REF: lily/separation-item.cc:47-68 Separation_item::set_distance — dist = padding + the horizontal-skylines' distance (the same skylines the minimum reads).
+    /// The 0.8 can take the ideal down to the bare minimum, and then the rod, 0.1 above it,
+    /// is what holds: MEASURED (2.26.0, Lab sessions/p808/gr lp-probe G4,
+    /// <c>\clef bass \grace fis16 e4</c>) the grace head stands 3.589557 after the clef =
+    /// its minimum 3.489557 + 0.1. ⒝ A rod is a floor on the SOLVED distance; folding it into
+    /// the ideal is the same at force 0 and under compression, and stands up to the rod's
+    /// slack wider under stretch (one timing spring cannot carry the separate floor). The LEFT
+    /// gap's rod is not folded: it is taken off the rod view of the previous column (dots in,
+    /// 0.08), not the wish view the left minimum reads, and the 0.8 has not reached it in any
+    /// measured book.
+    /// </remarks>
+    private static double RightGapIntoGrace(double rightGap, double rightRod)
+        => Math.Max(ScaledIntoGrace(rightGap, rightRod), rightRod + SeparationRodPadding);
 
     /// <summary>
     /// <c>Note_spacing</c>'s <c>min_dist</c> from the previous musical column to a change
@@ -579,13 +643,25 @@ internal static partial class SpacingRules
     /// position the change column by hanging it back from the next musical column. That is
     /// also what keeps a change glyph clear of a wide accidental at any line width — the
     /// accidental enters through the rod, exactly as in LilyPond.
+    /// <para>
+    /// Before a GRACE run the column's right neighbour is the first grace column, so the gap
+    /// is the right spring scaled by the grace's 0.8 (<see cref="ScaledIntoGrace"/>, the same
+    /// number <see cref="MidMeasureChangeGaps"/> carries) PLUS the run's anchor-to-anchor span
+    /// to the main note (<see cref="LeadingGraceRun"/>, the span SpringIntoGraceRun adds to the
+    /// timing spring). Until session 808 this was the unscaled gap alone, and a clef before a
+    /// grace hung 1.309307 right of LilyPond (ledger midmeasure.clef.prev-note-to-clef.before-grace).
+    /// </para>
     /// </remarks>
     internal static double MidMeasureChangeRightGap(Rendering.ScoreTextMetrics fonts, in ItemColumn columnItems)
     {
         var (columnWidth, first, last) = MeasureChangeColumn(fonts, columnItems);
         if (first == null)
             return 0;
-        return RightGap(columnWidth, last!, RightRod(fonts, columnItems, columnWidth, last!));
+        double rightRod = RightRod(fonts, columnItems, columnWidth, last!);
+        double rightGap = RightGap(columnWidth, last!, rightRod);
+        if (!ChangeColumnLeadsIntoGrace(columnItems))
+            return rightGap;
+        return RightGapIntoGrace(rightGap, rightRod) + LeadingGraceRun(columnItems).Span;
     }
 
     /// <summary>
@@ -743,11 +819,13 @@ internal static partial class SpacingRules
     /// (ledger midmeasure.clef.clef-to-next-note.sharp-below-clef, probe barline-spacing.ly MCA).
     /// </para>
     /// <para>
-    /// A non-musical item at the column's moment (a spacer, a grace) keeps the X-only reach it
-    /// had: it is not a paper column's skyline — the same split
-    /// <see cref="BarlineToColumnMinimum"/> makes. ⚠️ NOTHING IN THE SUITE OBSERVES THAT ARM: dropping
-    /// it leaves every test green (session 807's poison no. 3) — whether
-    /// LilyPond's grace column would agree is unmeasured. ⚠️ THE PAIRS ARE TAKEN IN ONE STAFF FRAME, as
+    /// A non-musical item at the column's moment (a spacer) keeps the X-only reach it had: it
+    /// is not a paper column's skyline — the same split <see cref="BarlineToColumnMinimum"/>
+    /// makes. (A GRACE item no longer reaches it: since session 808 the renderer's column
+    /// steps over grace items to the main note, and the grace arm above reads the run.)
+    /// ⚠️ NOTHING IN THE SUITE OBSERVES THAT ARM: dropping it leaves every test green
+    /// (session 807's poison no. 3) — whether a spacer's
+    /// column would agree with LilyPond's is unmeasured. ⚠️ THE PAIRS ARE TAKEN IN ONE STAFF FRAME, as
     /// on the left side (<see cref="ChangeColumnLeftMinDistance"/>): every staff's change box
     /// meets every staff's next item at the same height, which can only find more overlap than
     /// LilyPond does — the answer lies between LilyPond's and the old box.
@@ -758,11 +836,26 @@ internal static partial class SpacingRules
     {
         double rod = 0.0;
         HorizontalSkyline? changeRight = null;
+        // Before a grace run the column's right neighbour is the FIRST GRACE column, and the
+        // rod is to it — its heads and accidentals out of the grace fonts — not to the main
+        // note, which stands a whole run further on (session 808: a sharp on the main note
+        // was charged here, and a sharp on the grace was not).
+        // LILYPOND-REF: lily/spacing-spanner.cc:478-517 breakable_column_spacing — Staff_spacing::get_spacing (spacing_grob, r, …) with r the next column, the grace's.
+        bool intoGrace = ChangeColumnLeadsIntoGrace(columnItems);
         for (int q = 0; q < columnItems.Count; q++)
         {
             var item = columnItems[q];
             if (IsChangeItem(item))
                 continue;
+            if (intoGrace)
+            {
+                var grace = GraceNotesOf(item);
+                if (grace.IsDefaultOrEmpty)
+                    continue;
+                changeRight ??= ChangeColumnRightSkyline(fonts, columnItems);
+                rod = Math.Max(rod, changeRight.Distance(ItemSkylineFactory.CreateGraceLeftSkyline(grace[0])));
+                continue;
+            }
             if (!IsMusicalColumn(item))
             {
                 rod = Math.Max(rod, columnWidth + ChangeItemExtraSpacingWidth(lastChange).Right

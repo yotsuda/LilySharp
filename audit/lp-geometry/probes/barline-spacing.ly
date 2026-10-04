@@ -332,6 +332,13 @@ lay =
 %%       (:519-527 breakable_column_spacing, MC's 3.146600 * 0.8 = 2.517280, measured to the
 %%       grace head, not the main note).
 \score { \new Staff { \time 4/4 c'4 d' \clef bass \grace e16 f4 f4 } \lay "MCG" }
+%% MCGA / MCGM — MCG with a sharp on the GRACE / on the MAIN note. The clef column's right rod
+%%       is Paper_column::minimum_distance to the GRACE column (its own sharp in), never to the
+%%       main note; and once the 0.8 takes the ideal down to that minimum, the column rod
+%%       (lily/spacing-spanner.cc:228-297, the same distance + 0.1) holds: MCGA's grace head
+%%       stands 3.589557 after the clef = 3.489557 + 0.1.
+\score { \new Staff { \time 4/4 c'4 d' \clef bass \grace fis16 e4 e4 } \lay "MCGA" }
+\score { \new Staff { \time 4/4 c'4 d' \clef bass \grace e16 fis4 fis4 } \lay "MCGM" }
 
 %% NO mid-measure TIME probe. `\time 3/4` inside a 4/4 bar makes LilyPond restructure the
 %% measures rather than engrave a change column, and the resulting dump is not the thing we

@@ -445,6 +445,13 @@ internal static partial class SharedRenderer
         var items = new List<MusicItem>();
         for (int k = start; k < measure.Items.Length; k++)
         {
+            // A grace run between the change and its note is the NOTE's (its LeadingGrace,
+            // the run the spring prices — MeasureLayouter's column holds the main note, not
+            // the grace items), so step over it: closing the column on the first grace item
+            // read the change's right gap against a grace instead of the note, a second
+            // answer to the spring's (session 808, ledger midmeasure.clef.clef-to-grace).
+            if (measure.Items[k].GraceTime)
+                continue;
             items.Add(measure.Items[k]);
             if (!IsChangeItem(measure.Items[k]))
                 break;      // the musical item that closes the moment
