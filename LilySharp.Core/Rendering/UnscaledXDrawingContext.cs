@@ -107,6 +107,9 @@ internal sealed class UnscaledXDrawingContext : IDrawingContext
     public void DrawHitRect(double x, double y, double width, double height)
         => _inner.DrawHitRect(X(x), y, width * _invScaleX, height);
 
+    public void DrawBarBox(int barNumber, double x, double y, double width, double height)
+        => _inner.DrawBarBox(barNumber, X(x), y, width * _invScaleX, height);
+
     public void DrawText(
         string text, double x, double y, double fontSize,
         TextRole role, FontStyle style = FontStyle.Regular,

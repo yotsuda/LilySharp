@@ -495,6 +495,43 @@ public class FactsForRangeResponse
     public string? Error { get; set; }
 }
 
+/// <summary>Parameters for lilysharp/todos: the document whose <c>@todo</c> marks are listed.</summary>
+public class TodosParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+}
+
+/// <summary>One <c>@todo</c> of lilysharp/todos (LilySharp-Omr proposal C1). Offsets are
+/// 0-based characters into the text of <see cref="TodosResponse.Version"/>.</summary>
+public class TodoInfo
+{
+    /// <summary>The key (<c>@todo(o1203 …)</c>), or null.</summary>
+    public string? Key { get; set; }
+    /// <summary>The memo without its quotes, or null.</summary>
+    public string? Memo { get; set; }
+    /// <summary>Start of the <c>@todo</c> annotation (its <c>@</c>).</summary>
+    public int Start { get; set; }
+    /// <summary>End of the annotation (exclusive).</summary>
+    public int End { get; set; }
+    /// <summary>Start of the note, rest or chord the mark is on.</summary>
+    public int HostStart { get; set; }
+    /// <summary>End of that host, its annotations included (exclusive).</summary>
+    public int HostEnd { get; set; }
+    /// <summary>The bar number the page prints for the host's bar; null when no score plays it.</summary>
+    public int? Measure { get; set; }
+    /// <summary>The part whose staff draws the host; null with <see cref="Measure"/>.</summary>
+    public string? Part { get; set; }
+}
+
+/// <summary>Response for lilysharp/todos: the marks in source order.</summary>
+public class TodosResponse
+{
+    public TodoInfo[] Todos { get; set; } = System.Array.Empty<TodoInfo>();
+    /// <summary>The document version the offsets index into.</summary>
+    public int Version { get; set; }
+    public string? Error { get; set; }
+}
+
 /// <summary>One selection of lilysharp/step, as 0-based character offsets into the document
 /// text (<c>Start == End</c> is a caret).</summary>
 public class StepSelection

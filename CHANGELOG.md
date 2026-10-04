@@ -402,6 +402,11 @@ workflow attaches that section to the GitHub Release verbatim.
   left, `--no-todo` stops reporting them. A malformed argument is LYS4027, a key written
   twice LYS4028. When an OMR reader wrote the file, the candidates its side file
   `x.omr.json` lists for a keyed mark are quick fixes that write the item over it.
+- **Where a mark is on the page.** The language server lists a file's marks
+  (`lilysharp/todos`: key, memo, where each is written, the bar number the page prints for it
+  and its part), and the preview's page carries an invisible box over every bar of every
+  system with that bar's number (`<rect class="bar-box" data-bar="12">`) — what an editor lines
+  the page up with a scanned original by. Exported SVG is unchanged.
 
 ### Fixes
 

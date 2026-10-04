@@ -1255,6 +1255,38 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
+    /// The document's <c>@todo</c> marks with the bar and the part the score draws each in
+    /// (LilySharp-Omr proposal C1): the editor's list of marks, and the way from a mark — or
+    /// the caret on one — to the bar of the scanned page. See <see cref="TodoIndex"/>.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/todos", UseSingleObjectParameterDeserialization = true)]
+    public Task<TodosResponse> TodosAsync(TodosParams @params, CancellationToken token)
+        => OffDispatch(() => Todos(@params), token);
+
+    public TodosResponse Todos(TodosParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new TodosResponse { Error = "Document not found" };
+        try
+        {
+            return new TodosResponse
+            {
+                Todos = TodoIndex.Find(doc.Tree).Select(t => new TodoInfo
+                {
+                    Key = t.Key, Memo = t.Memo, Start = t.Start, End = t.End,
+                    HostStart = t.HostStart, HostEnd = t.HostEnd, Measure = t.Measure, Part = t.Part,
+                }).ToArray(),
+                Version = doc.Version,
+            };
+        }
+        catch (Exception ex)
+        {
+            return new TodosResponse { Error = ex.Message, Version = doc.Version };
+        }
+    }
+
+    /// <summary>
     /// The resolved pitches of a range of an arbitrary source — a candidate the AI transform
     /// has not applied yet. The transform checks the OCTAVES of its candidate with it: the
     /// first answer to "harmonize a third above" put its harmony line in the wrong octave and

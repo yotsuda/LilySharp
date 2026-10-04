@@ -358,6 +358,21 @@ internal sealed class SvgDrawingContext : IDrawingContext
         HitRect(x, y, width, height);
     }
 
+    public void DrawBarBox(int barNumber, double x, double y, double width, double height)
+    {
+        // Interactive preview only, and no data-pos: it is not a click target, and the
+        // highlight recolor must never find it.
+        if (!_interactive) return;
+        _sb.Append("  <rect class=\"bar-box\" data-bar=\"");
+        AppendInt(barNumber);
+        _sb.Append('"');
+        Attr("x", x);
+        Attr("y", y);
+        Attr("width", width);
+        Attr("height", height);
+        _sb.Append(" fill=\"none\" pointer-events=\"none\"/>").AppendLine();
+    }
+
     public void DrawAttachedGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
     {
         // Static output: identical to DrawGlyph.

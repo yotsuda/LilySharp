@@ -126,6 +126,7 @@ internal static partial class SharedRenderer
         // filter over the whole array was O(pages × fingerings) and measured as the
         // drawer's dominant term (session 160).
         var fingeringsByPage = GroupFingeringsByPage(layout);
+        var barNumbers = PrintedBarNumbers(score);
         bool firstPage = true;
         int pageIndex = -1;
         foreach (var page in layout.Pages)
@@ -196,12 +197,14 @@ internal static partial class SharedRenderer
                     }
                     try
                     {
-                        if (fragHost != null && fragments!.TryReplay(score, drawn, fragHost, flipBase))
-                            continue;
-                        using (fragHost != null
-                            ? fragments!.BeginCapture(score, drawn, fragHost, flipBase)
-                            : null)
-                            DrawSystem(score, layout, drawn, resolver, beamedItems, systemGc, flipBase);
+                        if (fragHost == null || !fragments!.TryReplay(score, drawn, fragHost, flipBase))
+                            using (fragHost != null
+                                ? fragments!.BeginCapture(score, drawn, fragHost, flipBase)
+                                : null)
+                                DrawSystem(score, layout, drawn, resolver, beamedItems, systemGc, flipBase);
+                        // OUTSIDE the capture: a replayed system stands at other bar numbers
+                        // once a bar is added before it, and its boxes must say so.
+                        DrawBarBoxes(drawn, barNumbers, systemGc);
                     }
                     finally
                     {
@@ -255,6 +258,40 @@ internal static partial class SharedRenderer
             doc.EndPage();
         }
         GiveBeamedItems(beamedItems);
+    }
+
+    /// <summary>The number the page prints for each measure, by measure index — the bar
+    /// number engraver's own count (<see cref="BarNumberEngraver.NumberMeasures"/>, a leading
+    /// pickup being bar 0), so a box and the printed number never disagree.</summary>
+    private static ImmutableArray<int> PrintedBarNumbers(MultiStaffScore score)
+    {
+        var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
+        return measures.IsDefaultOrEmpty
+            ? ImmutableArray<int>.Empty
+            : BarNumberEngraver.NumberMeasures(measures, measures[0].IsPickup ? -1 : 0);
+    }
+
+    /// <summary>One <see cref="IDrawingContext.DrawBarBox"/> per bar of the system: the bar's
+    /// own X range, from the top line of the system's highest shown staff to the bottom line
+    /// of its lowest.</summary>
+    private static void DrawBarBoxes(SystemLayout system, ImmutableArray<int> barNumbers, IDrawingContext gc)
+    {
+        if (system.StaffGroups.IsDefaultOrEmpty)
+            return;
+        double top = double.NegativeInfinity, bottom = double.PositiveInfinity;
+        foreach (var group in system.StaffGroups)
+            foreach (var staff in group.Staves)
+                if (!staff.IsHidden)
+                {
+                    top = Math.Max(top, staff.Y);
+                    bottom = Math.Min(bottom, staff.Y - staff.Height);
+                }
+        if (double.IsInfinity(top))
+            return;
+        foreach (var measure in system.Measures)
+            if (measure.MeasureIndex >= 0 && measure.MeasureIndex < barNumbers.Length && measure.Width > 0)
+                gc.DrawBarBox(barNumbers[measure.MeasureIndex], measure.X, system.Y + top,
+                    measure.Width, top - bottom);
     }
 
     // ---------- Header ----------

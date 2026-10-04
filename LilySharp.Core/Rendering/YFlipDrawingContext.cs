@@ -141,6 +141,10 @@ internal sealed class YFlipDrawingContext : IDrawingContext
         // y is the Y-up top edge; height is a size (extends downward), unchanged.
         => _inner.DrawHitRect(x, F(y), width, height);
 
+    public void DrawBarBox(int barNumber, double x, double y, double width, double height)
+        // As DrawHitRect: y is the Y-up top edge, height a size.
+        => _inner.DrawBarBox(barNumber, x, F(y), width, height);
+
     public IDisposable BeginGroup(DrawingTransform transform)
     {
         // Conjugate the Y-up transform into its device-space equivalent so the

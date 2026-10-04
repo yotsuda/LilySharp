@@ -269,6 +269,15 @@ public interface IDrawingContext
     void DrawHitRect(double x, double y, double width, double height) { }
 
     /// <summary>
+    /// In interactive SVG, an invisible box over one bar of one system — from the bar's start
+    /// to its end, from the system's top staff line to its bottom one — carrying the bar
+    /// number the page prints (<c>data-bar</c>). A viewer finds a bar's place on the page by
+    /// it (LilySharp-Omr proposal C2: the scan and the page side by side, bar by bar). Draws
+    /// nothing; static backends emit nothing.
+    /// </summary>
+    void DrawBarBox(int barNumber, double x, double y, double width, double height) { }
+
+    /// <summary>
     /// Begins a transformed group scope. Subsequent draw operations have the
     /// transform applied (in document order, after any enclosing groups).
     /// Dispose the returned token to end the scope.
