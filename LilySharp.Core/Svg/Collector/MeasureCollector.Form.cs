@@ -379,9 +379,7 @@ public sealed partial class MeasureCollector
         // reference, so a scalar max would reject every checkpoint of every
         // phrase-style book. Recorded as discrete header-read spans instead; the
         // planner validates each checkpoint's read prefix span-by-span
-        // (VoiceWalkRecording.HeaderReads). ⚠️ A standalone same-named header node
-        // (`section A { key g }` beside a music-bearing `section A { … }`) would be
-        // a SECOND source this does not see; today Sections maps one node per name.
+        // (VoiceWalkRecording.HeaderReads).
         if (_probeRecording != null)
         {
             _walkHeaderReads.Add(new HeaderRead(section.Name.Span, ValueOnly: false));
@@ -394,6 +392,23 @@ public sealed partial class MeasureCollector
                     or PartialDeclarationSyntax or ClefDeclarationSyntax or OctaveDirectiveSyntax
                     or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax)
                     _walkHeaderReads.Add(new HeaderRead(child.FullSpan, ValueOnly: false));
+            // THE SECOND SOURCE: the prologue's key / time / tempo / partial come from the
+            // header REGISTRY (Semantics.SectionHeaders, keyed by NAME), which is read off
+            // EVERY declaration of the name the definitions walk offered it — a standalone
+            // header (`section A { key g major }`) beside this by-part body is one. Until
+            // session 794 only the node being played was read, so a keystroke inside a
+            // header standing BELOW the part (where no checkpoint's read extent reaches)
+            // resumed every bar of the play with the old key (MEASURED: 4 of 4 shapes
+            // stale — key value, key value with a length change, a second section's key,
+            // a `partial` typed into the header). Each other declaration of the name is a
+            // structure read (a directive typed in or taken out, a body turned inline or
+            // back, changes what the registry holds) and, when it registers, its first
+            // key / time / tempo / partial a position-sensitive read like the node's own
+            // (KeyDataPos and the tempo's PiecePositions burn their positions). A header
+            // ABOVE the part costs nothing (stable under every edit below it); one BELOW
+            // the part rejects the prefix under a length-changing edit above it — 0 of
+            // 891 books on disk stand that way (p794's census; 17 stand above).
+            RecordRegistrySourcesOf(section);
         }
         if (_resumePending is { } plan)
         {
@@ -882,6 +897,30 @@ public sealed partial class MeasureCollector
         return false;
     }
 
+    /// <summary>Record mode: the header reads of every OTHER declaration of
+    /// <paramref name="played"/>'s name that <c>CollectDefinitions</c> offered the header
+    /// registry (<see cref="Semantics.SectionHeaders"/>) — the registry's input set, a
+    /// grouped track's cells left out as the registry leaves them out. Each is a structure
+    /// read (a cell that loses its last note and starts registering is a shape change —
+    /// <c>CollectResumePlanner.ShapeWalk</c> tells a directive-only run from one with
+    /// music); one that registers (no inline music) is read whole, position-sensitive: it
+    /// holds nothing but directives, every one of which the prologue may apply, and a
+    /// directive typed beside another is invisible to the shape (both runs collapse to one
+    /// kind). Walk-order count: one pass over the file's declarations per section play,
+    /// string compares only.</summary>
+    private void RecordRegistrySourcesOf(SectionDeclarationSyntax played)
+    {
+        string name = played.SectionName;
+        foreach (var decl in _sectionDeclarationsInOrder)
+        {
+            if (ReferenceEquals(decl, played) || decl.SectionName != name || IsInsideGroupedByPartTrack(decl))
+                continue;
+            _walkHeaderReads.Add(new HeaderRead(decl.FullSpan, ValueOnly: true, Structure: decl));
+            if (!SectionHasInlineMusic(decl))
+                _walkHeaderReads.Add(new HeaderRead(decl.FullSpan, ValueOnly: false));
+        }
+    }
+
     /// <summary>True for a STANDALONE HEADER: a section declaration holding only header
     /// directives — no part, chord or lyrics block and no inline music (<c>section A { partial 2 }</c>
     /// beside the cells or the by-part bodies that play A). Its directives reach every play of
@@ -904,7 +943,7 @@ public sealed partial class MeasureCollector
 
     /// <summary>The direct-child kinds that do NOT make a section inline music: its part,
     /// chord and lyrics blocks and its header directives.</summary>
-    private static bool IsSectionBlockOrDirectiveKind(SyntaxKind kind) => kind is
+    internal static bool IsSectionBlockOrDirectiveKind(SyntaxKind kind) => kind is
         SyntaxKind.PartBlock or SyntaxKind.ChordPartBlock or SyntaxKind.LyricsBlock
             or SyntaxKind.KeySignature or SyntaxKind.TimeSignature or SyntaxKind.TempoDeclaration
             or SyntaxKind.PartialDeclaration or SyntaxKind.ClefDeclaration or SyntaxKind.OctaveDirective

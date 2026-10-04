@@ -796,6 +796,18 @@ internal static class CollectResumePlanner
         public bool CurrentMissing { get; private set; }
 
         /// <summary>Advances to the next kind of the shape.</summary>
+        /// <remarks>
+        /// A run holding only header directives (<c>key g major</c>, <c>partial 4</c> — the
+        /// kinds <see cref="MeasureCollector.IsSectionBlockOrDirectiveKind"/> names) reads
+        /// as <see cref="SyntaxKind.KeySignature"/>, a run with a note or bar line in it as
+        /// <see cref="SyntaxKind.Note"/>: a section with inline music and one without are
+        /// different shapes (<see cref="MeasureCollector.SectionHasInlineMusic"/> is the
+        /// line), because only the latter registers its directives for every part playing
+        /// the name (<see cref="Semantics.SectionHeaders"/>). Until session 794 both runs
+        /// collapsed to one kind, so a same-named cell in another part that lost its last
+        /// note and became a header was no change to this walk's shape read. A directive
+        /// typed into a run that already holds music stays the walk's business, as before.
+        /// </remarks>
         public bool MoveNext()
         {
             int count = _green.SlotCount;
@@ -810,7 +822,21 @@ internal static class CollectResumePlanner
                     _inMusic = true;
                     if (!opensRun)
                         continue;
-                    Current = SyntaxKind.Note;
+                    // Classify the whole run before yielding it — its kind is one answer for
+                    // the run, read from every member (a key typed after the notes is still
+                    // a run with music).
+                    bool music = !MeasureCollector.IsSectionBlockOrDirectiveKind(child.Kind);
+                    Current = music ? SyntaxKind.Note : SyntaxKind.KeySignature;
+                    for (int look = _slot; look < count && !music; look++)
+                    {
+                        var ahead = _green.GetSlot(look);
+                        if (ahead is null)
+                            continue;
+                        if (!MeasureCollector.IsCollectableMusicKind(ahead.Kind))
+                            break;
+                        if (!MeasureCollector.IsSectionBlockOrDirectiveKind(ahead.Kind))
+                            Current = SyntaxKind.Note;
+                    }
                     CurrentMissing = false;
                     return true;
                 }

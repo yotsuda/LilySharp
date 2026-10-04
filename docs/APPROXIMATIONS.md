@@ -347,8 +347,8 @@
 - **:3265** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
 - **:5684** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Form.cs`
-- **:552** `time!` (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so
-- **:822** is not drawn unless written `key!` (MeasureBuilder.SectionHead, LILYSHARP-OWN). At a
+- **:567** `time!` (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so
+- **:837** is not drawn unless written `key!` (MeasureBuilder.SectionHead, LILYSHARP-OWN). At a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.MusicWalk.cs`
 - **:1584** not against the reset the head already stands on (LILYSHARP-OWN): a
 - **:1663** (MeasureBuilder.SectionHead, LILYSHARP-OWN).

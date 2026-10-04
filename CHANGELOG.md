@@ -392,6 +392,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **The preview follows a section header written below the part.** With the parts first
+  and the headers after them (`section A { key g major }` under `part melody { section A
+  { … } }`), a change to the header — another key, a `partial`, `time` or `tempo` typed in —
+  left the editor's preview on the old header until the music itself was touched: the
+  incremental collect reused the bars it had already walked, having read only the section
+  cell being played, not the header the registry hands every part. Every declaration of
+  the name is read now; a header above the part costs nothing it did not before.
 - **A chord grid's pickup cell is a short cell.** On a chords-only or chords-and-lyrics
   sheet the one-beat upbeat (`partial 4`) was as wide as the full bars beside it — the grid's
   minimum cell width applied to it whole. It is now held to its share of that width (a

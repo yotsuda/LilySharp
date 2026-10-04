@@ -1218,6 +1218,84 @@ section S {
         AssertKeystrokeMatchesFull(source, "a' | }\n}", "a' | }\n c'4 }");
     }
 
+    // A by-part book whose section headers stand BELOW the part — the layout the header
+    // registry (Semantics.SectionHeaders) exists for, and the one no read extent reaches.
+    private const string HeadersBelowThePart = """
+        octave absolute
+        part melody {
+          clef treble
+          section A { c'4 d' e' f' | g'1 | }
+          section B { e'4 d' c' d' | e'1 | }
+        }
+        section A { key g major }
+        section B { key d major }
+        form main { A B A B }
+        score main { staff melody }
+        """;
+
+    // Two parts whose A cells share a name; the bass cell carries a key of its own.
+    private const string TwoPartsWithAKeyedCell = """
+        octave absolute
+        part melody {
+          clef treble
+          section A { c'4 d' e' f' | g'1 | }
+          section B { e'4 d' c' d' | e'1 | }
+        }
+        part bass {
+          clef bass
+          section A { key g major c4 d e f | g1 | }
+          section B { e4 d c d | e1 | }
+        }
+        form main { A B A B }
+        score main { staff melody  staff bass }
+        """;
+
+    /// <summary>THE SECOND-SOURCE HOLE (session 794, the §1.0 ⑺ item): the prologue's key /
+    /// time / tempo / partial come from the header registry, read off EVERY declaration of
+    /// the name, but the walk recorded the header reads of the node being PLAYED alone. A
+    /// keystroke inside a standalone header standing below the part — a changed key, a
+    /// `partial` or `time` or `tempo` typed in, the header emptied — resumed every bar of
+    /// the play with the old header (4 of 4 shapes stale through the production wiring).
+    /// Each other declaration of the name is now a structure read, and one that registers
+    /// is read whole. The cell shapes: a same-named cell in another part that loses its
+    /// last note becomes a header and starts registering — a shape change now that
+    /// <c>ShapeWalk</c> tells a directive-only run from one with music — and an extra bar
+    /// typed into either part's cell still resumes the other part.</summary>
+    [Theory]
+    [InlineData(HeadersBelowThePart, "key g major", "key d major")]
+    [InlineData(HeadersBelowThePart, "key g major", "key bes major")]
+    [InlineData(HeadersBelowThePart, "key d major", "key d minor")]
+    [InlineData(HeadersBelowThePart, "section B { key d major }", "section B { key d major partial 4 }")]
+    [InlineData(HeadersBelowThePart, "section B { key d major }", "section B { key d major time 3/4 }")]
+    [InlineData(HeadersBelowThePart, "section B { key d major }", "section B { key d major tempo 4 = 90 }")]
+    [InlineData(HeadersBelowThePart, "section B { key d major }", "section B { }")]
+    [InlineData(TwoPartsWithAKeyedCell, "key g major c4 d e f | g1 | }", "key g major }")]
+    [InlineData(TwoPartsWithAKeyedCell, "key g major c4 d e f | g1 | }", "key g major c4 d e f | g1 | g1 | }")]
+    [InlineData(TwoPartsWithAKeyedCell, "e4 d c d | e1 | }", "e4 d c d | e1 | e1 | }")]
+    public void AKeystrokeInAStandaloneHeaderBelowThePart_ReachesTheResumedCollect(string source, string find, string replacement)
+        => AssertKeystrokeMatchesFull(source, find, replacement);
+
+    /// <summary>The price of the read above is the play that reads the header, not the walk:
+    /// a `partial` typed into B's header keeps A's two bars (the reads are appended in walk
+    /// order, and A's prologue read nothing of B's), and a changed key in A's header — the
+    /// first play — keeps nothing. A header ABOVE the part is stable under every edit below
+    /// it; one below the part rejects the prefix under a length-changing edit above it, a
+    /// layout 0 of 891 books on disk use (session 794's census; 17 stand above).</summary>
+    [Theory]
+    [InlineData("section B { key d major }", "section B { key d major partial 4 }", 2)]
+    [InlineData("key d major", "key d minor", 2)]
+    [InlineData("key g major", "key d major", 0)]
+    public void AKeystrokeInAStandaloneHeaderBelowThePart_KeepsTheBarsBeforeItsSection(string find, string replacement, int kept)
+    {
+        var oldText = HeadersBelowThePart.Replace("\r\n", "\n");
+        var newText = oldText.Replace(find, replacement);
+        Assert.NotEqual(oldText, newText);
+        var (full, resumed, plan) = ResumeAcross(oldText, newText);
+        AssertSameModel(full, resumed);
+        Assert.Equal(kept, AdoptedMeasures(plan));
+        Assert.Equal(0, SplicedMeasures(plan));
+    }
+
     /// <summary>The edge the audit's reading named and its sweep could not reach: a
     /// form whose play order is not the file order (B before A, A written first), A
     /// written as phrase references, and an edit in A's reference text. A candidate in
