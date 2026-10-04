@@ -257,6 +257,13 @@ internal static class LpGeometryProbes
     // Note_spacing's skyline.
     private static readonly string MCD = Score("c'2. clef bass e, |", "MCD");
 
+    // LilyPond twins (MCF / MKE): c'4 g'4. a'8 \clef bass c4 / … \key a \major c'4 — a lone FLAGGED eighth
+    // before the change. Its min_dist is the flag's reach, and merge_springs (spring.cc:122)
+    // lifts the left spring to min + 0.3 above the :105 floor — the LEFT spring alone, before
+    // the right one is added to it.
+    private static readonly string MCF = Score("c4 g4. a8 clef bass c,4 |", "MCF");
+    private static readonly string MKE = Score("c4 g4. a8 key a major c4 |", "MKE");
+
     // LilyPond twin: c'4 d' \key a \major e'4 f'4   — likewise one measure.
     private static readonly string MK = Score("c4 d key a major e f |", "MK");
 
@@ -14145,6 +14152,10 @@ internal static class LpGeometryProbes
             g => g.FirstClefAfter(g.NoteheadAnchor(0)) - g.NoteheadAnchor(0)),
         new("midmeasure.clef.prev-note-to-clef.dotted", MCD,
             g => g.FirstClefAfter(g.NoteheadAnchor(0)) - g.NoteheadAnchor(0)),
+        new("midmeasure.clef.prev-note-to-clef.flagged-eighth", MCF,
+            g => g.FirstClefAfter(g.NoteheadAnchor(2)) - g.NoteheadAnchor(2)),
+        new("midmeasure.key.prev-note-to-key.flagged-eighth", MKE,
+            g => g.FirstAccidentalAfter(g.NoteheadAnchor(2)) - g.NoteheadAnchor(2)),
         new("midmeasure.key.prev-note-to-key", MK,
             g => g.FirstNonNoteheadAfter(g.NoteheadAnchor(1)) - g.NoteheadAnchor(1)),
         new("midmeasure.key.key-to-next-note", MK,

@@ -296,6 +296,15 @@ lay =
 %%       over the wish's left-items).
 \score { \new Staff { \time 4/4 c''2. \clef bass e4 } \lay "MCD" }
 
+%% MCF / MKE — a lone FLAGGED eighth (stem up) before a mid-measure clef / key (session 806). The
+%%       flag is in the clef's band, so Note_spacing's min_dist is the flag's reach (2.2674 from
+%%       the head) and :105's floor (ideal + min_dist) / 2 is 2.3858 — but the spring then goes
+%%       through merge_springs even as a single wish (lily/spacing-spanner.cc:380-393), whose
+%%       lily/spring.cc:122 lifts the ideal to min_distance + 0.3 = 2.5674. MC/MCH never see it:
+%%       their floor stands above min + 0.3.
+\score { \new Staff { \time 4/4 c'4 g'4. a'8 \clef bass c4 } \lay "MCF" }
+\score { \new Staff { \time 4/4 c'4 g'4. a'8 \key a \major c'4 } \lay "MKE" }
+
 %% NO mid-measure TIME probe. `\time 3/4` inside a 4/4 bar makes LilyPond restructure the
 %% measures rather than engrave a change column, and the resulting dump is not the thing we
 %% would be comparing against. An uninterpretable probe is worse than no probe: it would

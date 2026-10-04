@@ -250,6 +250,20 @@
       "residual": 0,
       "why": "EXACT from its first reading (session 805), as predicted — an OBSERVER of WHICH skyline the left column contributes. A dotted half c'' before a bass clef (probe barline-spacing.ly, score MCD): LilyPond 3.277400. The dot is the PAPER column's element, not the NoteColumn's, so it is outside the Note_spacing wish's left-items (lily/note-spacing.cc:78, Spacing_interface::skylines) and the min_dist is the head's reach alone (ItemSkylineFactory.SharedWishRightSkylineAtColumn). Before session 805 the box read CalculateNoteheadRightExtent, which carries the dot, and this book would have stood the clef further right. What turns this red: the rod view (dots in) in place of the wish view."
     },
+    "midmeasure.clef.prev-note-to-clef.flagged-eighth": {
+      "probe": "barline-spacing.ly",
+      "score": "MCF",
+      "lilypond": 2.567400,
+      "residual": -0.181600000,
+      "why": "OPEN: -0.181600 since 2026-10-04 (session 806), opened with its cause named and predicted to the digit before reading (-0.1816). A lone FLAGGED eighth (stem up) before a mid-measure bass clef (probe barline-spacing.ly, score MCF): LilyPond 2.567400. The flag stands in the clef's band, so Note_spacing's min_dist is the flag's reach — its ink right 2.067400 from the head's left plus the two extra-spacing-widths, 2.267400 — and lily/note-spacing.cc:105-107 floors the ideal (2.504200, read off the same book with the flag's stencil omitted: 2.004200 = (2.5042 + 1.5042) / 2) at (2.5042 + 2.2674) / 2 = 2.385800, which is Lily#'s answer. LilyPond then sends this LEFT spring through merge_springs even as a single wish (lily/spacing-spanner.cc:380-393), and lily/spring.cc:122 lifts it to min_distance + 0.3 = 2.567400. Lily# applies that headroom (SpacingRules.ApplyMergeSpringsHeadroom, MeasureLayouter) to the spring that ALREADY holds both gaps of the change column (TotalIdeal against the summed minimums), where it can never bind. MC/MCH/MCD/MCW never see it: their floor stands above min + 0.3. PREDICTION for the port (MidMeasureChangeGaps floors the left gap at its own min + 0.3): 0, every other midmeasure point unchanged."
+    },
+    "midmeasure.key.prev-note-to-key.flagged-eighth": {
+      "probe": "barline-spacing.ly",
+      "score": "MKE",
+      "lilypond": 2.467400,
+      "residual": -0.131600000,
+      "why": "OPEN: -0.131600 since 2026-10-04 (session 806), the same defect as midmeasure.clef.prev-note-to-clef.flagged-eighth before a mid-measure KEY (score MKE): LilyPond 2.467400. The key's box reaches the neighbours' heights, so min_dist is the flag's reach 2.067400 plus the eighth's 0.1 and the KeySignature's LEFT extra-spacing-width 0 = 2.167400; the floor gives Lily#'s 2.335800 and merge_springs' min + 0.3 gives LilyPond's 2.467400. (The prediction named the shape, not this number: the key's esw of 0 lowers both min and floor against the clef's.) PREDICTION for the port: 0."
+    },
     "midmeasure.clef.clef-to-next-note": {
       "probe": "barline-spacing.ly",
       "score": "MC",

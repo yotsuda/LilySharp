@@ -5600,6 +5600,19 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The first ACCIDENTAL glyph's anchor right of <paramref name="x"/> — a key change's first
+    /// accidental, for a book whose previous column draws a flag or a dot.
+    /// </summary>
+    public double FirstAccidentalAfter(double x)
+    {
+        foreach (var g in Glyphs)
+            if (g.X > x + 1e-9 && IsAccidental(g.Glyph))
+                return g.X;
+        throw new InvalidOperationException(
+            $"no accidental glyph is drawn right of x={x:F6}.\nDrawn geometry:\n" + Describe());
+    }
+
+    /// <summary>
     /// The last music glyph's anchor before bar line <paramref name="barIndex"/> → that bar
     /// line's LEFT edge. The closing side of a measure, in the same anchor frame.
     /// </summary>
