@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第796セッションの経緯
+
+### 1.1 第796セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・ユーザー「次便は (b) をやって」＝⒝ のうち値段の分かっている ⒳⁶ から（他は「提案しない」か perf 一時停止）。`-Start p796`（HEAD `f04054c0`・**未 push 0＝ユーザーが push した**）＝full **11010 / 0 / 2 / 11012**。§7 3.5 で第794 を ARCHIVE へ。
+- **⒳⁶ の前提を毒で反証した＝閉じた（直さない）**。前提「まん中を横切るだけの括弧に依存する cache 値は無い」（第453・素の 1 段 24 小節で SVG 同一）は、**括弧の下に何かが在ると成り立たない**: 毒（`BucketSpan` の role 2 を畳まない）の下で、24 小節・4 小節ごと `break`・spanner 3→22 小節の本に production 配線（`IncrementalCompiler.RenderIncremental` 対 full）で端の 1 打鍵を当てると、**pedal（歌詞つき）の解放／開始の削除・hairpin（2 段）の `@f`／`@cresc` の削除＝4 形が stale**（lyric band・staff skyline の cache 値が横切る spanner に依存する＝`PedalEngraver.SolveAndSeed`・`SkylineBuilder.AddHairpinsToSkyline` の註どおり）。trill（1 段）と volta（1 段）の 7 形は同一（`x6-poison.log`・`probe.txt`）。⇒ **端だけに fold する直しは不健全**。volta／trill だけ端に畳む案は、多段で未測定のうえ端の編集が稀で賞金が無い＝追わない。
+- **網**: `SpannerCrossedSystemsTests`（11 形・毒で 4 赤＝`net-poison.log`）。`MeasureContentKeySpanTests` の remark「rendered observer は存在しえない」を訂正（素の本の話だった）。Core は 1 行も動いていない＝出力不変・掃き不要。
+- §1.0 ⒝ から ⒳⁶ を落とした。
+★ `-End p796 -DiffBase f04054c0`（`end.log`）＝full **11021 / 0 / 2 / 11023**（網 +11）・門 全 OK（HANDOFF 438,779 B・残り 11,221）。7.5: Core **`+` 0** 行（`git diff -- LilySharp.Core` が空＝出力同一は構成から）・REF 0・OWN 0。7.6: ⒟ 何も足していない（反証＝網と remark の訂正だけ）。7.7: 当たる面なし。commit `531ac4d63`（網 2 ファイル）＋ docs の commit。Lab は sessions/p796 だけ commit。push はユーザー。
+判定: ⒳⁶ は反証して閉じた（Core 不変）。§1.0 ⒝ に残るのは ⒡′（bow の採点枠 0.074%）・⒵⁴（`prefixMarkAnchorX` 0.338%）＝どちらも perf の島（第615 の一時停止の下）・設計級、ほかは「提案しない」。次の一手: ユーザーが perf の一時停止を解くなら ⒡′ か ⒵⁴（値段は §1.0 の分母つきの数字・計器は Lab `sessions/p613/lathost`）、解かないなら手の動く島は無い＝指示待ち。会話を区切るか: (b) 便が 3 つ続き文脈はまだ軽い／(c) 次は未定＝**続ける**（指示が出れば `-Start p797`）。
+
 ## 以下は第795セッションの経緯
 
 ### 1.1 第795セッション（2026-10-04・YT-DELL2）

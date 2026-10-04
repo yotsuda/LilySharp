@@ -115,6 +115,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第798セッション（2026-10-04・YT-DELL2）
+
+同じ会話の続き・GO の順の 3 つ目と 4 つ目。`-Start p798`（HEAD `c98bfa3f`・未 push 4）＝full **11023 / 0 / 2 / 11025**。§7 3.5 で第796 を ARCHIVE へ。
+- **F 繰り返し⑹「section 音楽中の片側 `:|` を MIDI が鳴らさない」＝問いが消えていた**: probe（Lab `sessions/p798/probe/a..d.lys`）を `lysc midi` に通すと 4 形とも **LYS1034 error**＝2026-08-31（`78a2ef89`）から反復縦線は form にしか書けない。起票は第174（2026-08-15）で、その 2 週間後に綴りごと退いていた。§2 F の ⑹ を ✅ に・`MidiExporter.ProcessSequence` の註に「以後はエラー本の MIDI のために残る腕」と追記（Core は註だけ）。
+- **E 加線「`LedgerLineSpanner` の短縮が未移植・新しい engraver が要る」＝既に移植済み**: 第564（`dc3928e4`・2026-09-24）が `SharedRenderer.Noteheads.cs` の `CollectLedgerRequest`／`DrawPlannedLedgers` に `ledger-line-spanner.cc:216-408` を字面移植（隣接列の短縮・gap 0.1・臨時記号の glyph 固有の短縮範囲・同列の結合・Lab `p564` で LP と一致）。§2 E の行（第39 起票）は stale＝✅ に書き換えた。残るのは `ledger_positions`（線位置を変えた譜）だけ（本 0）。
+- ⇒ **GO の 4 件の内訳: 直した 1（tie の音高照合・第797）・既に閉じていた 2（tie の臨時記号＝第658 `d4ecf4d2`・加線＝第564）・言語が退けた 1（片側 `:|`＝LYS1034）**。教訓: §2 の「伝聞」の札は本物で、着手前の実コード確認（probe 1 本＋`git log -S`）で 3 件が 1 便未満で畳めた。subagent の §2 要約も stale をそのまま拾う＝要約は候補の列挙にだけ使い、着手判断は実コードで。
+- 出力不変（註と docs だけ）・掃き不要・snapshot 不動。棚卸し `APPROXIMATIONS.md` 行番号 1 行（註 3 行で MidiExporter の OWN が動いた＝1 度目の `-End` が `TheInventoryIsNotStale` で 1 赤・再生成して 2 度目で緑）。
+★ `-End p798 -DiffBase c98bfa3f`（`end2.log`）＝full **11023 / 0 / 2 / 11025**（網 ±0）・門 全 OK（HANDOFF 436,162 B・残り 13,838）。7.5: Core `+` 3 行（註だけ）・REF 0・OWN 0。7.6／7.7: 該当なし。commit `0d0d6079c`（註＋棚卸し）＋ docs の commit。Lab は sessions/p798 だけ commit。push はユーザー。
+判定: GO の 4 件は全部閉じた。次の候補（第797 の棚卸しから・どれも着手前に実コードで確認）: ⒜ H の 3 つ（旗の reach −0.18・`ChordNameEngraver` の幅の床 `Math.Max(2.0)`・beam-auto の 1 段目の改行位置）／⒝ F ⑷ `lyrics NAME` の名指し損ねが黙って第 1 声部に付く＝error か warning かユーザー判断／⒞ F ⒨ `lysc svg --combined` の例外・双子が chords／lyrics 行を出せない 5 冊。どれも小さい島＝ユーザーの指定待ち。会話を区切るか: (b) 便が 5 つ続き文脈が重い＝**区切る側**（続けるなら `-Start p799`）。
+
+## 以下は第797セッションの経緯
+
 ### 1.1 第797セッション（2026-10-04・YT-DELL2）
 
 同じ会話の続き・ユーザー「機能・レイアウトの修正が残っているなら先に。無ければ perf」→ §2 の棚卸し（K・S・T は自分で、A〜R は subagent の要約）→ 着手できる候補を提示 → ユーザー「GO」＝E 節のタイ 2 件から。`-Start p797`（HEAD `2642b0f6`・未 push 2）＝full **11021 / 0 / 2 / 11023**。§7 3.5 で第795 を ARCHIVE へ。
@@ -125,17 +137,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - CHANGELOG Fixes 1 項。棚卸し差分なし。snapshot 不動。
 ★ `-End p797 -DiffBase 2642b0f6`（`end.log`）＝full **11023 / 0 / 2 / 11025**（網 +2）・門 全 OK（HANDOFF 436,612 B・残り 13,388）。7.5: Core **`+` 21** 行（numstat 16＋5・`-End` は commit 前で 0 と刷った）・REF 0（既存の REF の下の式の形を変えた＝tie-engraver.cc の「pitch が等しい」のほうへ寄せた・新しい LP 行は読んでいない）・OWN 0。7.6: ⒝ 既存 REF の射程＝字面ではなく等価（ly:pitch の比較を MIDI＋位置で綴る・enharmonic は位置で切る）。7.7: 2 綴りを 1 つに畳んだ（scanner）・guard／sentinel なし（midi 0 は unpitched の既存の意味）。commit `889022a71`（code・網・CHANGELOG）＋ docs の commit。Lab は sessions/p797 だけ commit。push はユーザー。
 判定: E のタイ 2 件は閉じた（⑴ は既に閉じていた・⑵ を直した）。次の一手（GO の順）: **F 繰り返し⑹ section の音楽中の片側 `:|` を MIDI が鳴らさない**（§2 F・伝聞＝先に実コードで確認）→ **E 加線（LedgerLineSpanner の短縮・新 engraver）**。会話を区切るか: (b) 便が 4 つ・文脈はまだ軽い／(a) 次の島は無関係＝**続ける**（`-Start p798`）。
-
-## 以下は第796セッションの経緯
-
-### 1.1 第796セッション（2026-10-04・YT-DELL2）
-
-同じ会話の続き・ユーザー「次便は (b) をやって」＝⒝ のうち値段の分かっている ⒳⁶ から（他は「提案しない」か perf 一時停止）。`-Start p796`（HEAD `f04054c0`・**未 push 0＝ユーザーが push した**）＝full **11010 / 0 / 2 / 11012**。§7 3.5 で第794 を ARCHIVE へ。
-- **⒳⁶ の前提を毒で反証した＝閉じた（直さない）**。前提「まん中を横切るだけの括弧に依存する cache 値は無い」（第453・素の 1 段 24 小節で SVG 同一）は、**括弧の下に何かが在ると成り立たない**: 毒（`BucketSpan` の role 2 を畳まない）の下で、24 小節・4 小節ごと `break`・spanner 3→22 小節の本に production 配線（`IncrementalCompiler.RenderIncremental` 対 full）で端の 1 打鍵を当てると、**pedal（歌詞つき）の解放／開始の削除・hairpin（2 段）の `@f`／`@cresc` の削除＝4 形が stale**（lyric band・staff skyline の cache 値が横切る spanner に依存する＝`PedalEngraver.SolveAndSeed`・`SkylineBuilder.AddHairpinsToSkyline` の註どおり）。trill（1 段）と volta（1 段）の 7 形は同一（`x6-poison.log`・`probe.txt`）。⇒ **端だけに fold する直しは不健全**。volta／trill だけ端に畳む案は、多段で未測定のうえ端の編集が稀で賞金が無い＝追わない。
-- **網**: `SpannerCrossedSystemsTests`（11 形・毒で 4 赤＝`net-poison.log`）。`MeasureContentKeySpanTests` の remark「rendered observer は存在しえない」を訂正（素の本の話だった）。Core は 1 行も動いていない＝出力不変・掃き不要。
-- §1.0 ⒝ から ⒳⁶ を落とした。
-★ `-End p796 -DiffBase f04054c0`（`end.log`）＝full **11021 / 0 / 2 / 11023**（網 +11）・門 全 OK（HANDOFF 438,779 B・残り 11,221）。7.5: Core **`+` 0** 行（`git diff -- LilySharp.Core` が空＝出力同一は構成から）・REF 0・OWN 0。7.6: ⒟ 何も足していない（反証＝網と remark の訂正だけ）。7.7: 当たる面なし。commit `531ac4d63`（網 2 ファイル）＋ docs の commit。Lab は sessions/p796 だけ commit。push はユーザー。
-判定: ⒳⁶ は反証して閉じた（Core 不変）。§1.0 ⒝ に残るのは ⒡′（bow の採点枠 0.074%）・⒵⁴（`prefixMarkAnchorX` 0.338%）＝どちらも perf の島（第615 の一時停止の下）・設計級、ほかは「提案しない」。次の一手: ユーザーが perf の一時停止を解くなら ⒡′ か ⒵⁴（値段は §1.0 の分母つきの数字・計器は Lab `sessions/p613/lathost`）、解かないなら手の動く島は無い＝指示待ち。会話を区切るか: (b) 便が 3 つ続き文脈はまだ軽い／(c) 次は未定＝**続ける**（指示が出れば `-Start p797`）。
 
 ## 2. 開いている作業
 
@@ -1373,12 +1374,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   **加線インクは最初から staff skyline に入っている**（`SkylineBuilder.AddNoteBoxToSkylines`・
   `LedgerLengthFraction * headWidth` で左右に広げ厚みは `LegerLineThickness`）。
   第38セッションが TXW を「加線が支持に入る」と誤読したのは**この事実を知らなかったから**でもある。
-  **本当に未移植なのは `LedgerLineSpanner` 自身の計算**: 隣接加線が近いときの
-  `max_ledger_extent` 短縮と `ledger_shortening_range`（`ledger-line-spanner.cc:279-330`）、
-  `Staff_symbol::ledger_positions`（線位置を変えた譜）。⚠️ そして
-  **`LedgerLineSpannerEngraver` の出力（`LedgerLineSpan`）は `ScoreLayout` に載るだけで
-  誰も描かない**（描くのは符頭経路）＝**加算メタデータのまま**だった。**第523 がユーザー決定で engraver ごと削除**
-  （`MergeThreshold 1.5` の独自装置も消えた）＝**短縮を移植する人は新しい engraver を書く**（符頭経路の加線が読み手）。
+  ✅ **LedgerLineSpanner の短縮は第564（dc3928e4・2026-09-24）が符頭経路に字面移植した**＝SharedRenderer.Noteheads.cs の CollectLedgerRequest／DrawPlannedLedgers（隣接列の短縮・gap 0.1・臨時記号の短縮範囲は glyph 固有・同列の結合＝ledger-line-spanner.cc:216-408・Lab sessions/p564/ で LP と一致）。この行は第798 まで「未移植・新しい engraver が要る」のまま stale だった。残るのは Staff_symbol::ledger_positions（線位置を変えた譜）の 5 線譜の前提だけ（本 0）。
 - ✅ **閉じた（第379 第 4 便・ユーザー承認・commit `c6f716e8`・§1 ⑽）＝加線の spacing rod（`Ledger_line_spanner::set_spacing_rods`）を移植**＝`SpacingRules.LedgerRods`・台帳 `ledger.rod.thirty-second`／`.no-ledger` が EXACT・追跡 599 冊中 9 冊が動き LP に近づいた（`multivoice-tuplet-beams` の残る +0.65 は 3 連符列の別の差）。⚠️ **残した範囲外**: 改行 gate は小節線をまたぐ対を値付けしない・grace の頭は rod に入らない・5 線譜の前提（LP の `ledger_positions` は譜の線位置に従う）。以下は起票時の記録: **加線の spacing rod（`Ledger_line_spanner::set_spacing_rods`）が未移植＝要ユーザー判断・未着手**（第379 第 3 便起票・§1 ⑼）。**LP**（`lily/ledger-line-spanner.cc:39-140`）: Staff の LedgerLineSpanner の頭を右から左へ歩き、**同じ側（UP／DOWN）に加線付きの頭を持つ隣接 2 列**の間に rod **`2 × head_width × minimum-length-fraction(0.25) − 右列 head extent[LEFT] + 左列 head extent[RIGHT]`**＝黒符頭で **1.9563**。**実測**（`scratch/p380/incr/cols.ps1`・`floor2.lys`＝32 分 a''〜d''' の加線付きの並び）: **LP 1.9563／Lily# 1.80**（skyline min 1.5042＋0.3）・increment 1.0〜1.5 で不変・加線の無い g''→a'' は一致。**Lily# は `LedgerLineSpannerEngraver` が annotation pass で span を作るだけ**（:48 はこの関数を REF で名指すが spacing に rod は出ない）。**射程は未数**: 動くのは「加線付きの短い音価が隣り合い、duration の ideal と skyline+0.3 が 1.9563 を割る」所（32 分、common shortest が八分なら 16 分、和音・加線 2 本の大きい頭幅）。**実装するなら**: ⒜ rod は Staff 単位の「加線付きの頭を持つ列」の隣接対＝**他の譜の列を挟めば複数 spring をまたぐ**（`MeasureLayouter` の `looseRods` → `SpringSolver.ApplyRods` の形）⒝ **小節線をまたぐ対**にも立つ（LP の spanner は小節で切れない）⒞ item 側 estimate（`SpacingRules.CreateSpringsForMeasure`）と改行 gate にも同じ量（`SpacingInvariantTests` の 2 系統一致）⒟ 網＝`floor2.lys` の 3 間隔を LP の 1.9563 で・射程は patch を当てて追跡 599 冊を `scratch/p380/incr/sweep-floor.ps1`（base＝worktree）で数える。 → **本文は `HANDOFF-ARCHIVE.md`「閉じた §2 の本文」の同じ見出し**（2026-09-15 に落とした）<!-- ledger: ledger.rod.thirty-second = 0 -->
 - ✅ **閉じた（第379 第 6 便・ユーザー承認・commit `6ccbd3e8`・§1 ⑿）＝rod の view だけ縦 padding 0.08**＝台帳 `cross-voice.rod.paper-column-padding` が EXACT（0.80）・追跡 599 冊中 3 冊が動き悪化 0（`multivoice-tuplet-beams` +0.64 → 0.00）。以下は起票時の記録: **rod を読む paper column の skyline の縦 padding が NoteColumn の 0.15 で組まれている（LP は PaperColumn の 0.08）＝要ユーザー判断・未着手**（第379 第 5 便起票・§1 ⑾）。**LP**: `scm/define-grobs.scm:2577` NoteColumn `skyline-vertical-padding` 0.15／`:2747` PaperColumn 0.08・`lily/separation-item.cc:94-110 calc_skylines` が各 grob の値で intrinsic に padded。**rod（`Separation_item::set_distance`）は PaperColumn の skyline**、**wish の min（`note-spacing.cc:78-83`）は NoteColumn の skyline**。**Lily#**: `ItemSkylineFactory.Build`（:213）が view を問わず `NoteColumnSkylineVerticalPadding` で padded＝**rod の view（`ColumnElements.Elements`／`All`＝`CreateRightSkylineAtColumn`／`CreateLeftSkylineAtColumn`／`CreateRightSkyline`／`CreateLeftSkyline`）も 0.15**。**実測**（`test/multivoice-tuplet-beams` 1 小節目・voice 2 の f'' → voice 1 の 3 連符 c'''）: **LP 0.80／Lily# 1.45**＝声部をまたぐ rod 1.4492。捨て計器（`scratch/p380/incr/Zz379ProbeTests.cs.txt`）で同じ箱を組み直すと **0.15 で 1.4492（再現）・0.08 で rod 0**。**直すと動くもの**（rod の view を読む所・grep 2026-09-14）: `MeasureLayouter.cs:509`（同じ voice の列対の rod＝`SeparationRodDistance`）・`SpacingRules.BarlineSkyline.cs:278-295`（`SeparationRodDistance` 本体）・`:369`（音符列 → 小節線の floor pair）・`SpacingRules.MeasureSprings.cs:1114-1118`（声部をまたぐ rod）・`:1282`／`:1288`（articulation spacing の距離）。⚠️ **rod は圧縮時と wish の無い対でしか効かない**（wish の対は 0.15 の skyline の min＋0.3 が勝つ）＝**動くのは主に多声の声部またぎと詰めた行**・**射程は未数**。**実装するなら**: `Build` に padding を渡し、rod の view だけ `MusicalColumnSkylineVerticalPadding`（0.08）で組む（wish の view は 0.15 のまま）⇒ 網＝この本の 1/8 → 1/6 を LP の 0.80 で・射程は追跡 599 冊を `sweep-floor.ps1`（base＝worktree）で数え、動いた本を `verify-moved.ps1` で LP と突き合わせる（第 4 便の型）。 → **本文は `HANDOFF-ARCHIVE.md`「閉じた §2 の本文」の同じ見出し**（2026-09-15 に落とした）<!-- ledger: cross-voice.rod.paper-column-padding = 0 -->
 - ✅✅ ★★★ **閉じた（2026-08-03）。タイの列アウトラインは移植済み＝`TieChordOutline`。** → **本文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の同じ見出し**（第351 が落とした）
@@ -1991,14 +1987,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
      貼っていた**——**双子が出す綴りを測っただけ**だった。§5.0「確認済と書いてあっても、
      その確認が何を見たかまで書いていなければ再確認する」の**自分版**。
      ⇒ ★★ **双子の綴りを見て LP の答えを推論しない。LP に訊くのは 1 コマンド。**
-  ⑹ ★ **section 音楽中の片側 `:|` を MIDI が鳴らさない**（**133 冊中 0 冊**が書く）。
-     ⚠️ **第174 第4便の第1版がここを実装して倒れた**——**622 冊で 1 冊のはずが 4 冊動いた**。
-     **ABC／Automatic／Beat It は `|:` を或る section に `] :|` を別の section に書いていて**
-     （**展開後は正しく対**）、**`ProcessSequence` は 1 section しか見えない**ので片側と読み、
-     **曲を丸ごと繰り返した**。⇒ ★★★ **MIDI に片側性は判定できない。**
-     **鳴らすなら MIDI が collector の平らな列を読む形にすること。**
-     ⚠️ **値段の見積りに双子を使えない**——**LP の MIDI は `\repeat volta` を展開しない**
-     （第174 実測・RULES §6）。**この項の効果を測れるのは Lily# の MIDI だけ。**
+  ✅ ⑹ **section 音楽中の片側 :|＝2026-08-31 の LYS1034（78a2ef89・反復は form にしか書けない）で綴り自体がエラーになり、問いが消えた**（第798 が確認・起票は第174 の 2026-08-15）。ProcessSequence の腕はエラー本の MIDI のために残る。
 - ✅✅ ★★★ **cue の島は第178 で閉じた（2026-08-15・実装 3 便）。隣り合う cue は 2 声部になった。** → **本文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の同じ見出し**（第351 が落とした）
 - ✅✅ ~~**fixture が今の文法で parse しない**~~ — **第182 で閉じた**（`d49814a2`・ → **本文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の同じ見出し**（第351 が落とした）
 - ★ **音高付き休符 `a4@rest` は第179 で入った**（LP の `a4\rest`・**綴りはユーザー決定**）。
