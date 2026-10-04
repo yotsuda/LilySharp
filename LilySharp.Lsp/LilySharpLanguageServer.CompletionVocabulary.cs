@@ -4019,6 +4019,7 @@ public sealed partial class LilySharpLanguageServer
         ["glissando"] = "gliss slide",
         ["mark"] = "rehearsal",
         ["text"] = "dolce expressive",
+        ["todo"] = "check fixme review",
         ["ottava"] = "8va octave",
         ["quindicesima"] = "15ma octave",
     };
@@ -4153,6 +4154,14 @@ public sealed partial class LilySharpLanguageServer
                     Detail = "Free expressive text below the note (\"dolce\", \"pizz.\", …); .up for above",
                     InsertText = "text(\"$0\")", InsertTextFormat = InsertTextFormat.Snippet,
                     SortText = "0text",
+                },
+
+                // A mark left to check: no ink, no sound, a warning and a red head in the preview.
+                new CompletionItem
+                {
+                    Label = "todo", Kind = CompletionItemKind.Value,
+                    Detail = "Left to check — a warning and a red head in the preview; @todo(\"memo\") says why",
+                    InsertText = "todo", SortText = "0todo",
                 },
 
                 // Ornaments

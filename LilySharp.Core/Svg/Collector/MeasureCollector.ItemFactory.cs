@@ -195,7 +195,18 @@ public sealed partial class MeasureCollector
             RepeatTieSourcePosition = hasRepeatTie
                 ? NamedArticulationSourceOf(note, "repeatTie") : MusicItem.NoSourcePosition,
             LineStartAccidental = lineStartAccidental,
+            TodoKey = TodoKeyOf(note),
         };
+    }
+
+    /// <summary>The <c>@todo</c> a note, rest or chord carries, as <see cref="MusicItem.TodoKey"/>
+    /// holds it: its key, <c>""</c> without one, null when there is none.</summary>
+    private static string? TodoKeyOf(SyntaxNode node)
+    {
+        foreach (var annotation in ArticulationsOf(node))
+            if (Semantics.TodoAnnotation.Of(annotation) is { } todo)
+                return todo.Key ?? "";
+        return null;
     }
 
     /// <summary>Drum note → NoteItem: placement/notehead/GM key from the
@@ -228,6 +239,7 @@ public sealed partial class MeasureCollector
             Notehead = info.Notehead,
             Midi = info.GmKey,
             ForcedStemUp = GetStemDirectionOverride(drum),
+            TodoKey = TodoKeyOf(drum),
         };
     }
 
@@ -265,6 +277,7 @@ public sealed partial class MeasureCollector
         return new RestItem(Fraction.FromNoteValue(noteValue), dots, note.SourceStart)
         {
             StaffPosition = rp.StaffPosition,
+            TodoKey = TodoKeyOf(note),
         };
     }
 
@@ -279,6 +292,7 @@ public sealed partial class MeasureCollector
             {
                 TimeScale = new Fraction(scale),
                 IsMultiMeasure = true,
+                TodoKey = TodoKeyOf(rest),
             };
         }
         // An arpeggio member has no written duration — the group forces the
@@ -298,7 +312,8 @@ public sealed partial class MeasureCollector
             IsSpacer = rest.RestText == "s",
             // Capital R = explicit multi-measure rest (centred). Lowercase r = plain
             // rest at beat 1, even when it fills the measure.
-            IsMultiMeasure = rest.RestText == "R"
+            IsMultiMeasure = rest.RestText == "R",
+            TodoKey = TodoKeyOf(rest),
         };
     }
 
@@ -810,6 +825,7 @@ public sealed partial class MeasureCollector
             SlurEndHeadPosition = slurEndHead,
             // A chord has ONE stem, so @stemUp / @stemDown on it is the same wish a note's is.
             ForcedStemUp = GetStemDirectionOverride(chord),
+            TodoKey = TodoKeyOf(chord),
             // Read in the FACTORY so every chord-creating walk arm gets it — a walk-arm
             // read is exactly how a chord's @glissando was silently swallowed until
             // 2026-08-07 (regression glissando-accidental.ly: the event parsed, no
@@ -923,6 +939,7 @@ public sealed partial class MeasureCollector
             // The repetition's OWN post-events only — the original's are not copied.
             ForcedStemUp = GetStemDirectionOverride(rep),
             HasGlissando = HasGlissandoArticulation(rep),
+            TodoKey = TodoKeyOf(rep),
         };
     }
 
@@ -1056,6 +1073,7 @@ public sealed partial class MeasureCollector
                 {
                     ForcedStemUp = GetStemDirectionOverride(bare),
                     HasGlissando = HasGlissandoArticulation(bare),
+                    TodoKey = TodoKeyOf(bare),
                 };
             }
 

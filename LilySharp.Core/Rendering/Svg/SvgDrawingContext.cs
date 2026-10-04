@@ -454,6 +454,28 @@ internal sealed class SvgDrawingContext : IDrawingContext
         return _sourceRestore ??= new SourceRestore(this);
     }
 
+    // The current @todo key (data-todo), restored from a stack as the source scope is.
+    private string? _currentTodo;
+    private readonly List<string?> _savedTodos = [];
+    private TodoRestore? _todoRestore;
+
+    public IDisposable Todo(string key)
+    {
+        _savedTodos.Add(_currentTodo);
+        _currentTodo = key;
+        return _todoRestore ??= new TodoRestore(this);
+    }
+
+    private sealed class TodoRestore(SvgDrawingContext owner) : IDisposable
+    {
+        public void Dispose()
+        {
+            var saved = owner._savedTodos;
+            owner._currentTodo = saved[^1];
+            saved.RemoveAt(saved.Count - 1);
+        }
+    }
+
     public IDisposable MusicFace(int rounded)
     {
         _savedDesigns.Add(_musicDesign);
@@ -528,6 +550,12 @@ internal sealed class SvgDrawingContext : IDrawingContext
     /// </summary>
     private void AppendSource()
     {
+        if (_currentTodo is { } todo)
+        {
+            // A key is a letter then letters, digits, '_' and '-' (TodoAnnotation.IsKey):
+            // nothing in it needs escaping.
+            _sb.Append(" data-todo=\"").Append(todo).Append('"');
+        }
         if (!_currentSourcePosition.HasValue)
             return;
         int pos = _currentSourcePosition.Value;

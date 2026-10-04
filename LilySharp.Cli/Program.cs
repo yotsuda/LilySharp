@@ -751,8 +751,12 @@ static int RunCheck(string[] args)
 
     var r = new CliParser(maxPositionals: 1)
         .Flag("pitches", "-p", "--pitches")
+        .Flag("todo-as-error", "--todo-as-error")
+        .Flag("no-todo", "--no-todo")
         .Parse(args);
     if (r.Error != null) return OptionError(r.Error, "check");
+    if (r.Has("todo-as-error") && r.Has("no-todo"))
+        return OptionError("--todo-as-error and --no-todo cannot be used together", "check");
 
     if (r.Positionals.Count == 0)
         return OptionError("Input file required", "check");
@@ -764,7 +768,8 @@ static int RunCheck(string[] args)
         return 1;
     }
 
-    return ExecuteCheck(inputPath, r.Has("pitches"));
+    return ExecuteCheck(inputPath, r.Has("pitches"),
+        r.Has("todo-as-error") ? TodoReport.AsError : r.Has("no-todo") ? TodoReport.Silent : TodoReport.AsWarning);
 }
 
 static void ShowCheckHelp()
@@ -781,20 +786,29 @@ static void ShowCheckHelp()
           -p, --pitches    Also print each note's resolved absolute pitch
                            (written -> resolved), so relative-octave mistakes
                            are visible before rendering
+          --todo-as-error  Report each @todo mark as an error (exit code 1
+                           while any is left)
+          --no-todo        Do not report @todo marks
           -h, --help       Show this help
 
         Examples:
           lysc check score.lys
           lysc check score.lys --pitches
+          lysc check score.lys --todo-as-error
         """);
 }
 
-static int ExecuteCheck(string inputPath, bool showPitches = false)
+static int ExecuteCheck(string inputPath, bool showPitches = false, TodoReport todos = TodoReport.AsWarning)
 {
     try
     {
         var (source, tree, usingDiagnostics) = LoadAndParse(inputPath);
         var allDiagnostics = CollectDiagnostics(tree, usingDiagnostics);
+        // The @todo marks themselves (LYS4026), not a malformed or repeated one.
+        if (todos == TodoReport.Silent)
+            allDiagnostics = allDiagnostics.Where(d => d.Code != DiagnosticCodes.TodoMark).ToList();
+        bool IsError(Diagnostic d) => d.Severity == DiagnosticSeverity.Error
+                                      || (todos == TodoReport.AsError && d.Code == DiagnosticCodes.TodoMark);
 
         if (showPitches)
             PrintResolvedPitches(source, tree);
@@ -809,13 +823,12 @@ static int ExecuteCheck(string inputPath, bool showPitches = false)
         bool hasErrors = false;
         foreach (var diag in allDiagnostics)
         {
-            var severity = diag.Severity switch
+            var severity = IsError(diag) ? "error" : diag.Severity switch
             {
-                DiagnosticSeverity.Error => "error",
                 DiagnosticSeverity.Warning => "warning",
                 _ => "info"
             };
-            if (diag.Severity == DiagnosticSeverity.Error) hasErrors = true;
+            if (IsError(diag)) hasErrors = true;
             Console.WriteLine($"{inputPath}({LineCol(source, diag.Span.Start)}): {severity}: {diag.Message}");
             // The places the diagnostic is about besides its own (Diagnostic.Related), as
             // `note:` lines under it — indented, and never counted as a warning of their own.
@@ -1224,3 +1237,7 @@ static string LineCol(string text, int offset)
 /// input's own stem) — what ScoreExport.Write takes.</summary>
 sealed record ScoreOutput(string Path,
     (LilySharp.Core.Syntax.RenderDeclarationSyntax Declaration, LilySharp.Core.Svg.Collector.RenderSpec Spec)? Score);
+
+/// <summary>What <c>lysc check</c> does with a <c>@todo</c> mark (LYS4026):
+/// <c>--todo-as-error</c>, <c>--no-todo</c>, or the warning it is.</summary>
+enum TodoReport { AsWarning, AsError, Silent }

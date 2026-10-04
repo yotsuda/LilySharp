@@ -384,6 +384,23 @@ c4@staccato.up     // staccato forced above
 d4@accent.down     // accent forced below
 ```
 
+### Left to check (`@todo`)
+
+`@todo` marks a note, rest or chord to come back to — a reading you are unsure of, a bar to
+review. It draws nothing and plays nothing: the compiler reports each one as a warning
+(LYS4026, `TODO: memo`), the preview draws the marked head red (the
+`lilysharp.preview.highlightTodos` setting turns that off), and the quick fix *Resolve this
+TODO* deletes it. A quoted argument is a memo; a bare one is a key — a letter, then letters,
+digits, `_` and `-` — which a tool (an OMR reader) links its own data to.
+
+```
+c'4 fis'8@todo("F# or F natural? the sharp is faint") e'8 g'2 |
+r2@todo("bar 12 is only 7/8") d'2 |
+c'4@todo(o1203 "smudged") e'4@todo g'2 |
+```
+
+`lysc check --todo-as-error` fails while any is left; `--no-todo` stops reporting them.
+
 ## Ornaments
 
 ```

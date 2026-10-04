@@ -56,6 +56,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             // this list until 2026-09-27 and so compiled clean while drawing nothing.
             "hammerOn", "pullOff", "tap", "snapPizz", "slide", "stopped",
             "thumb", "heel", "toe", "scoop", "plop",
+            // A mark left to check (TodoAnnotation); '@todo(…)' is its argument form.
+            "todo",
         };
 
     /// <summary>
@@ -374,7 +376,9 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             // "unknown annotation" would send the reader to '@chord' (2026-09-28).
             || ChordAnnotation.Of(mark) is { Symbol: null, QuotedText: null, IsBare: false, Problems.IsEmpty: false }
             || AnnotationValues.Rehearsal(mark, out _) is not null
-            || AnnotationValues.Figures(mark) is not null)
+            || AnnotationValues.Figures(mark) is not null
+            // Malformed arguments too: TodoValidator names the shape (LYS4027).
+            || TodoAnnotation.Of(mark) is not null)
             return true;
 
         // What remains of the dotted name: the compound NAMES (@ds.al.fine, @ottava.bassa).
@@ -650,7 +654,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         // candidate; it is offered only when it would be known. Not @chord (its case is
         // its meaning) nor the free-text annotations.
         if (node is MusicMarkSyntax { HasArgumentList: true } valued
-            && valued.Name is not ("chord" or "text" or "mark" or "textSpan")
+            && valued.Name is not ("chord" or "text" or "mark" or "textSpan" or "todo")
             && AnnotationNames.All.Contains(valued.Name))
         {
             var written = Written(node, name);

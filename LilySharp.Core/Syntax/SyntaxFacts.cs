@@ -601,6 +601,8 @@ internal static class SyntaxFacts
             // the argument form keeps parsing, since the rule below would otherwise
             // hand their '(' to the slur.
             "ottava", "quindicesima", "ds", "dc", "to",
+            // @todo / @todo("memo") — a plain mark too, for the same reason.
+            "todo",
         };
 
     /// <summary>

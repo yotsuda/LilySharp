@@ -380,19 +380,22 @@ Validates syntax without producing output. Reports errors with line and column n
 | Option | Description |
 |--------|-------------|
 | `-p, --pitches` | Also print each note's resolved absolute pitch (written → resolved), so relative-octave mistakes are visible before rendering |
+| `--todo-as-error` | Report each `@todo` mark (LYS4026) as an error, so the check fails while any is left |
+| `--no-todo` | Do not report `@todo` marks (a malformed or repeated one is still reported) |
 | `-h, --help` | Show help |
 
 **Exit Codes:**
 | Code | Meaning |
 |------|---------|
 | 0 | No errors |
-| 1 | Syntax errors found |
+| 1 | Syntax errors found (or a `@todo` left, with `--todo-as-error`) |
 
 **Examples:**
 ```bash
 lysc check score.lys
 # Output: No errors. (12 measures, 48 notes)
 lysc check score.lys --pitches    # also print each note's resolved absolute pitch
+lysc check score.lys --todo-as-error    # fail while a @todo mark is left
 ```
 
 ### layout - Layout Summary

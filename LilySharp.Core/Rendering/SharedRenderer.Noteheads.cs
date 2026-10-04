@@ -742,6 +742,7 @@ internal static partial class SharedRenderer
         char head = EmmentalerGlyphs.GetNotehead(note.Notehead, noteValue);
         if (!headWiped && !headTransparent)
             using (gc.Source(note.SourcePosition))
+            using (TodoScope(gc, note))
             // A cue head is drawn OUT OF ITS OWN DESIGN, paired with the CueFont the
             // reservation measured — see EngravingDefaults.CueDesignSize.
             using (GrobFontSize.IsReduced(note)
@@ -1113,6 +1114,7 @@ internal static partial class SharedRenderer
                        && n.SourcePosition != chord.SourcePosition
                            ? gc.Source(n.SourcePosition, [chord.SourcePosition])
                            : gc.Source(n.SourcePosition >= 0 ? n.SourcePosition : chord.SourcePosition))
+                using (TodoScope(gc, chord))
                     gc.DrawNotehead(memberHead, x + headOffsets[i], y, noteFontSize, noteheadColor,
                         GlyphMetrics.GetNoteheadAdvance(chordHeadFont, noteValue),
                         GlyphMetrics.GetNoteheadBBox(chordHeadFont, noteValue).Height);
@@ -1560,6 +1562,7 @@ internal static partial class SharedRenderer
         int noteValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
         char glyph = EmmentalerGlyphs.GetRest(noteValue, staffPosition, staffLines);
         using (gc.Source(rest.SourcePosition))
+        using (TodoScope(gc, rest))
             gc.DrawGlyph(glyph, x, y, FontSize);
 
         // Augmentation dots: one dot-width right of the rest's ink, at the position the
@@ -1583,4 +1586,8 @@ internal static partial class SharedRenderer
         }
     }
 
+    /// <summary>The <c>data-todo</c> scope of an item marked <c>@todo</c> (its head or rest
+    /// glyph carries it), or nothing.</summary>
+    private static IDisposable TodoScope(IDrawingContext gc, MusicItem item)
+        => item.TodoKey is { } key ? gc.Todo(key) : NullScope.Instance;
 }

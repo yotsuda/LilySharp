@@ -189,6 +189,11 @@
           "default": "auto",
           "description": "The score preview's color scheme. Takes effect immediately in open previews."
         },
+        "lilysharp.preview.highlightTodos": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Draw the notes, chords and rests marked `@todo` in red in the preview. Printing (`lysc png` / `pdf` / `svg`) never does. Takes effect immediately in open previews."
+        },
         "lilysharp.audition.enabled": {
           "type": "boolean",
           "default": true,

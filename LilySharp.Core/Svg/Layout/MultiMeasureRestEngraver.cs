@@ -61,7 +61,10 @@ public readonly record struct MultiMeasureRestLayout(
     // The staff's line spacing (MultiStaffLayouter.LineSpacingOf): LilyPond's `ss` for every
     // vertical measure of the symbol — a staff position is ss/2, the H-bar's thickness and
     // caps scale with it, the count stands above the staff's own top line. 1.5 on a tab.
-    double LineSpacing = 1.0);
+    double LineSpacing = 1.0,
+    // The @todo key of the rest that opens the run (MusicItem.TodoKey): the symbol carries
+    // data-todo as a single rest's glyph does.
+    string? TodoKey = null);
 
 /// <summary>
 /// A run of consecutive measures that EVERY staff rests with an explicit
@@ -368,7 +371,8 @@ internal static class MultiMeasureRestEngraver
                             VoiceDirection: ((RestItem)bar.Items[ri]).VoiceDirection,
                             StaffIndex: si,
                             VoiceIndex: vi,
-                            LineSpacing: spacing));
+                            LineSpacing: spacing,
+                            TodoKey: bar.Items[ri].TodoKey));
                     }
                 }
             }
@@ -422,7 +426,8 @@ internal static class MultiMeasureRestEngraver
                         VoiceDirection: ((RestItem)bar.Items[ri]).VoiceDirection,
                         StaffIndex: si,
                         VoiceIndex: vi,
-                        LineSpacing: spacing));
+                        LineSpacing: spacing,
+                        TodoKey: bar.Items[ri].TodoKey));
                 }
             }
         }

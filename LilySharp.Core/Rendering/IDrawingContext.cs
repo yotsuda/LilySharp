@@ -231,6 +231,14 @@ public interface IDrawingContext
         => Source(sourcePosition);
 
     /// <summary>
+    /// Tags subsequent draw operations (until <see cref="IDisposable.Dispose"/>) as the
+    /// glyphs of an item marked <c>@todo</c>, <paramref name="key"/> being its key (<c>""</c>
+    /// when it names none). SVG backends emit <c>data-todo</c>, which the preview colours and a
+    /// tool finds the mark by; it draws nothing, so the default ignores it.
+    /// </summary>
+    IDisposable Todo(string key) => NullScope.Instance;
+
+    /// <summary>
     /// Draws subsequent MUSIC glyphs (until <see cref="IDisposable.Dispose"/>) from another
     /// Emmentaler DESIGN — <paramref name="rounded"/> is the size in the file name, 20 being
     /// the score's own. Text is unaffected.

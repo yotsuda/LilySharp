@@ -438,6 +438,12 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - Feathered beams: `c16@feather(right) d e f` (accel), `@feather(left)` (rit)
 - Free expressive text: `c4@text("dolce")` (plain italic below the note; `.up` forces
   above: `c4@text("pizz.").up`). Not a dynamic: hairpins run through it.
+- Left to check: `fis'8@todo`, `@todo("F# or F natural?")`, `@todo(o12)`,
+  `@todo(o12 "memo")` on a note, rest or chord — a mark that draws and plays nothing; the
+  compiler reports it (LYS4026) and the preview draws the head red. A quoted argument is the
+  memo, a bare one the key (a letter, then letters, digits, `_`, `-`) a tool links the mark by.
+  **When you rewrite music that carries `@todo`, keep every mark you did not resolve, on the
+  same note; drop a mark only where your change answers it.** Never invent a key.
 
 ```
 c4@staccato d4@accent <e g>4@arpeggio |

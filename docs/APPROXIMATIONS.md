@@ -46,9 +46,9 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:373** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1305** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
-- **:1310** whiteout −1) is not ported.
-- **:1430** NOT ported; this takes the note's own stem direction. No book and
+- **:1308** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
+- **:1313** whiteout −1) is not ported.
+- **:1433** NOT ported; this takes the note's own stem direction. No book and
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
 - **:359** Lily# has not ported; this arrow is its own device.
 - **:823** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
@@ -139,9 +139,9 @@
 - **:691** no observer; add the paren widths when a book brings one. The unpacked
 - **:693** bare glyph width, which is exact for one and unobserved for many.
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1431** no observer reaches that branch yet.
+- **:1434** no observer reaches that branch yet.
 ### `LilySharp.Core/Rendering/SharedRenderer.Noteheads.cs`
-- **:781** observed by: no observer, and none is possible while the term is dominated — it
+- **:782** observed by: no observer, and none is possible while the term is dominated — it
 ### `LilySharp.Core/Semantics/DrummapValidator.cs`
 - **:30** ★ This validator exists because the block had NO observer of any kind. Measured
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
@@ -308,7 +308,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:216** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1424** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
+- **:1427** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
 - **:180** LILYSHARP-OWN: LilyPond has no scoop or plop — no grob and no event spells either in
 - **:229** The bend amount label's ENGRAVING em. LILYSHARP-OWN, as
@@ -324,7 +324,7 @@
 - **:660** ⚠️ LILYSHARP-OWN: the glyphs a missing codepoint falls back to are drawn from a system
 - **:705** LILYSHARP-OWN: a face with no readable extents (none of the bundled ones), so
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
-- **:679** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
+- **:683** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Semantics/CapoAdvisor.cs`
 - **:40** the barres and before the fret itself in the ranking. LILYSHARP-OWN: LilyPond has nothing
 ### `LilySharp.Core/Semantics/ChordAnnotation.cs`

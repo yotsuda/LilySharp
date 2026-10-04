@@ -158,6 +158,7 @@ internal sealed record MusicItemRare
     public int PhrasingSlurEndSourcePosition { get; init; } = MusicItem.NoSourcePosition;
     public int LaissezVibrerSourcePosition { get; init; } = MusicItem.NoSourcePosition;
     public int RepeatTieSourcePosition { get; init; } = MusicItem.NoSourcePosition;
+    public string? TodoKey { get; init; }
 }
 
 /// <summary>
@@ -211,6 +212,18 @@ public abstract record MusicItem
     {
         get => _rareBase?.VoiceContext ?? VoiceContextId.Default;
         init { if (value != VoiceContext) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { VoiceContext = value }; }
+    }
+
+    /// <summary>
+    /// The item's <c>@todo</c> mark: its key, <c>""</c> when the mark names none, or null
+    /// when there is no mark. Engraves nothing and plays nothing; the drawing stamps the
+    /// item's glyphs <c>data-todo</c> with it, which is what the preview colours
+    /// (<c>Semantics.TodoAnnotation</c>).
+    /// </summary>
+    public string? TodoKey
+    {
+        get => _rareBase?.TodoKey;
+        init { if (value != TodoKey) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { TodoKey = value }; }
     }
 
     /// <summary>

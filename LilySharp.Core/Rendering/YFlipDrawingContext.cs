@@ -130,6 +130,9 @@ internal sealed class YFlipDrawingContext : IDrawingContext
     public IDisposable Source(int sourcePosition, IReadOnlyList<int> aliases)
         => _inner.Source(sourcePosition, aliases);
 
+    // Forwarded, NOT left to the interface default (a no-op), or no data-todo is written.
+    public IDisposable Todo(string key) => _inner.Todo(key);
+
     // Forwarded, NOT left to the interface default: the default is a no-op, so a decorated
     // backend would silently keep drawing graces from the 20 face.
     public IDisposable MusicFace(int rounded) => _inner.MusicFace(rounded);

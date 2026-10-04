@@ -2246,6 +2246,15 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
    - Fingering:     <c@finger(1) e@finger(3)>4
    - Rehearsal mark: c4@mark("A")   (label is a quoted string)
    - Free text:      c4@text("dolce") , c4@text("pizz.").up   (italic; below by default)
+   - Left to check:  c4@todo , c4@todo("F# or F natural?") , c4@todo(o12) , c4@todo(o12 "memo")
+                     (* on a note, rest or chord. Draws nothing and plays nothing: the
+                     compiler reports it (LYS4026 "TODO: memo"; 'lysc check --todo-as-error'
+                     makes it an error, '--no-todo' drops it), the preview draws the head red,
+                     and resolving it is deleting it. A QUOTED argument is the memo, a BARE one
+                     the key — a letter, then letters, digits, '_' and '-' — which a tool's
+                     side file links the mark by (an OMR reader's x.omr.json); the SVG carries
+                     it as data-todo on the head. Other arguments: LYS4027; a key twice in a
+                     file: LYS4028. *)
    - Half ties:     c4@laissezVibrer (l.v. into silence) , c4@repeatTie (from a repeat)
    - Effects:       @cross / @dead (x notehead) ,
                     @fall @doit (jazz bends) , @breath @caesura

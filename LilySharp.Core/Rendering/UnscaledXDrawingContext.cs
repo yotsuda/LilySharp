@@ -121,6 +121,9 @@ internal sealed class UnscaledXDrawingContext : IDrawingContext
     public IDisposable Source(int sourcePosition, System.Collections.Generic.IReadOnlyList<int> aliases)
         => _inner.Source(sourcePosition, aliases);
 
+    // Forwarded, NOT left to the interface default (a no-op), or no data-todo is written.
+    public IDisposable Todo(string key) => _inner.Todo(key);
+
     // Forwarded, NOT left to the interface default (which is a no-op): this decorator
     // compensates X only, and the music face has to reach the real backend.
     public IDisposable MusicFace(int rounded) => _inner.MusicFace(rounded);

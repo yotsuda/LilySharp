@@ -1036,10 +1036,13 @@ internal static partial class SharedRenderer
             // the offset (byte-identical to the former pageHeight - absoluteMiddle).
             double cy = syUp - mmr.Y;
             var lines = StaffLinePositionsAt(score, mmr.StaffIndex);
-            if (mmr.UseChurchRest)
-                DrawChurchRest(mmr, cy, lines, gc);
-            else
-                DrawBigRest(mmr, cy, lines, gc);
+            using (mmr.TodoKey is { } todo ? gc.Todo(todo) : NullScope.Instance)
+            {
+                if (mmr.UseChurchRest)
+                    DrawChurchRest(mmr, cy, lines, gc);
+                else
+                    DrawBigRest(mmr, cy, lines, gc);
+            }
         }
     }
 

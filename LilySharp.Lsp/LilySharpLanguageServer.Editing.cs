@@ -340,9 +340,11 @@ public sealed partial class LilySharpLanguageServer
         // Guarded like the publish path: a validator crash must not take the lightbulb down.
         try
         {
-            foreach (var diagnostic in DocumentDiagnostics(doc.Text, doc.Tree,
-                         uri.IsFile ? uri.LocalPath : string.Empty,
-                         p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null))
+            var semantic = DocumentDiagnostics(doc.Text, doc.Tree,
+                uri.IsFile ? uri.LocalPath : string.Empty,
+                p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null).ToList();
+            bool todoOffered = false;
+            foreach (var diagnostic in semantic)
             {
                 if (diagnostic.Span.Start > endOffset || diagnostic.Span.End < startOffset)
                     continue;
@@ -352,6 +354,11 @@ public sealed partial class LilySharpLanguageServer
                     actions.Add(split);
                 if (CaseSpellingAction(doc, uri, diagnostic) is { } spelling)
                     actions.Add(spelling);
+                if (diagnostic.Code == DiagnosticCodes.TodoMark && !todoOffered)
+                {
+                    todoOffered = true;
+                    actions.AddRange(ResolveTodoActions(doc, uri, diagnostic, semantic));
+                }
             }
         }
         catch
@@ -460,6 +467,57 @@ public sealed partial class LilySharpLanguageServer
                 },
             },
         };
+    }
+
+    /// <summary>
+    /// The quick fixes of a <c>@todo</c> mark (LYS4026, whose span is the mark itself, '@'
+    /// included): "resolve" deletes it, and — when the file has more than one — "resolve all"
+    /// deletes every one. A mark is a plain annotation, so deleting its text is the whole edit.
+    /// </summary>
+    private static IEnumerable<CodeAction> ResolveTodoActions(
+        Document doc, Uri uri, CoreDiagnostic diagnostic, IReadOnlyList<CoreDiagnostic> all)
+    {
+        TextEdit Delete(CoreDiagnostic d)
+        {
+            var (sl, sc) = GetLineAndCharacter(doc.Text, d.Span.Start);
+            var (el, ec) = GetLineAndCharacter(doc.Text, d.Span.End);
+            return new TextEdit
+            {
+                Range = new LspRange
+                {
+                    Start = new Position { Line = sl, Character = sc },
+                    End = new Position { Line = el, Character = ec },
+                },
+                NewText = "",
+            };
+        }
+        bool IsMark(CoreDiagnostic d) => d.Code == DiagnosticCodes.TodoMark
+            && d.Span.Start >= 0 && d.Span.End <= doc.Text.Length
+            && doc.Text.AsSpan(d.Span.Start).StartsWith("@todo", StringComparison.Ordinal);
+
+        if (!IsMark(diagnostic))
+            yield break;
+        yield return new CodeAction
+        {
+            Title = "Resolve this TODO (remove @todo)",
+            Kind = CodeActionKind.QuickFix,
+            Diagnostics = [ConvertDiagnostic(diagnostic, doc.Text, uri)],
+            Edit = new WorkspaceEdit
+            {
+                Changes = new Dictionary<string, TextEdit[]> { [uri.ToString()] = [Delete(diagnostic)] },
+            },
+        };
+        var marks = all.Where(IsMark).DistinctBy(d => d.Span.Start).ToList();
+        if (marks.Count > 1)
+            yield return new CodeAction
+            {
+                Title = $"Resolve all {marks.Count} TODOs in this file",
+                Kind = CodeActionKind.QuickFix,
+                Edit = new WorkspaceEdit
+                {
+                    Changes = new Dictionary<string, TextEdit[]> { [uri.ToString()] = marks.Select(Delete).ToArray() },
+                },
+            };
     }
 
     /// <summary>The spelling a case hint names: "Names / Values / Keys are case-sensitive: write 'X'."</summary>

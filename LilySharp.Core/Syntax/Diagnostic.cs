@@ -1357,6 +1357,20 @@ public static class DiagnosticCodes
     /// Scope when written: 0 of the 8 forms on disk with a jump text (2026-10-03's count).
     /// </para></summary>
     public const string JumpTargetMissing = "LYS4025";
+    /// <summary>Warning: a <c>@todo</c> mark — a note, rest or chord the writer (or a tool
+    /// such as an OMR reader) has left to check, with its memo when it has one
+    /// (<c>TODO: …</c>). It changes neither the page nor the playback; the preview shows the
+    /// marked head in red. <c>lysc check --todo-as-error</c> makes it an error and
+    /// <c>--no-todo</c> drops it (<c>Semantics.TodoAnnotation</c>, LilySharp-Omr proposal A1,
+    /// owner's decision 2026-10-05).</summary>
+    public const string TodoMark = "LYS4026";
+    /// <summary>Warning: a <c>@todo(…)</c> whose arguments are not <c>key</c>,
+    /// <c>"memo"</c> or <c>key "memo"</c> — the mark still counts as a todo, its arguments
+    /// are not read.</summary>
+    public const string TodoArgument = "LYS4027";
+    /// <summary>Warning: a <c>@todo</c> key written twice in one file. A key names ONE mark
+    /// (the side file an OMR reader writes is keyed by it), so the second one is ambiguous.</summary>
+    public const string TodoKeyRepeated = "LYS4028";
     /// <summary>A slur, phrasing slur, tie or hairpin — and, since 2026-09-29, a text spanner,
     /// ottava, pedal or trill span — that breaks the SECTION CARRY RULE
     /// (owner's decisions, 2026-09-28): a span open when a section ends is carried into the

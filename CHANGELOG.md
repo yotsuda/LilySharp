@@ -390,6 +390,18 @@ workflow attaches that section to the GitHub Release verbatim.
   note value spells it); the MusicXML import writes every whole-measure rest as `R` / `R*N`.
   An `R` with no duration used to take the running duration.
 
+### Marks left to check (`@todo`)
+
+- **`@todo` marks a note, rest or chord to come back to** — `c4@todo`, `c4@todo("F♯ or F♮?")`,
+  `c4@todo(o12)`, `c4@todo(o12 "memo")`. It draws nothing and plays nothing. The compiler
+  reports each one (LYS4026, `TODO: memo`), the preview draws the marked head red
+  (`lilysharp.preview.highlightTodos` turns that off), and the quick fix *Resolve this TODO*
+  deletes it (*Resolve all N TODOs* deletes every one in the file). A quoted argument is the
+  memo, a bare word the key — what a tool such as an OMR reader links its own data to; the
+  SVG carries it as `data-todo` on the head. `lysc check --todo-as-error` fails while any is
+  left, `--no-todo` stops reporting them. A malformed argument is LYS4027, a key written
+  twice LYS4028.
+
 ### Fixes
 
 - **A staff hidden on a system takes its rests and its lyrics with it.** A voice staff written

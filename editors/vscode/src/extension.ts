@@ -427,6 +427,12 @@ export function activate(context: vscode.ExtensionContext) {
     // without reopening (a new panel reads it when its HTML is built).
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('lilysharp.preview.highlightTodos')) {
+                const on = getHighlightTodos();
+                for (const panel of previewPanels.values()) {
+                    panel.webview.postMessage({ type: 'setHighlightTodos', on });
+                }
+            }
             if (!e.affectsConfiguration('lilysharp.preview.theme')) {
                 return;
             }
@@ -962,7 +968,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     // Set initial HTML structure with font
     outputChannel.appendLine('Setting webview HTML');
     panel.webview.html = getPreviewHtml(fontUri.toString(), braceFontUri.toString(), panel.webview.cspSource, getNonce(), getPreviewTheme(),
-        textFontFaceCss(panel.webview, context.extensionUri));
+        textFontFaceCss(panel.webview, context.extensionUri), getHighlightTodos());
 
     // Then load content
     outputChannel.appendLine('Calling updatePreviewContent');
@@ -2045,8 +2051,15 @@ function getPreviewTheme(): 'auto' | 'light' | 'dark' {
     return v === 'light' || v === 'dark' ? v : 'auto';
 }
 
+/** Whether the preview draws the heads and rests marked `@todo` red
+ *  (`lilysharp.preview.highlightTodos`; the SVG marks them `data-todo`). */
+function getHighlightTodos(): boolean {
+    return vscode.workspace.getConfiguration('lilysharp').get<boolean>('preview.highlightTodos', true);
+}
+
 function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string, nonce: string,
-                        theme: 'auto' | 'light' | 'dark', textFontCss: string): string {
+                        theme: 'auto' | 'light' | 'dark', textFontCss: string,
+                        highlightTodos: boolean = true): string {
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -2063,6 +2076,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const dark = mode === 'dark'
                 || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
             document.documentElement.classList.toggle('theme-dark', dark);
+            document.documentElement.classList.toggle('todo-plain', ${highlightTodos ? 'false' : 'true'});
         })();
     </script>
     <style>
@@ -2215,6 +2229,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         .highlight {
             filter: drop-shadow(0 0 4px #ff6600);
+        }
+        /* A head or rest marked @todo (data-todo) is red unless the
+           lilysharp.preview.highlightTodos setting is off. The dark scheme's
+           invert + hue-rotate(180deg) brings the red back to red. */
+        :root:not(.todo-plain) #svgContainer [data-todo] {
+            fill: #e53935;
         }
         .error {
             color: #f44336;
@@ -3695,6 +3715,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             switch (message.type) {
                 case 'setTheme':
                     applyTheme(message.theme);
+                    break;
+                case 'setHighlightTodos':
+                    document.documentElement.classList.toggle('todo-plain', !message.on);
                     break;
                 case 'updateContent': {
                     updateRenderSelect(message.renders, message.selectedRender);
