@@ -1020,6 +1020,7 @@ public sealed partial class MeasureCollector
             case GraceExpressionSyntax grace:
                 // Store grace expression to attach to the next note
                 _pendingGrace = grace;
+                _pendingGraceAt = (builder.CurrentMeasureIndex, builder.CurrentItemCount);
                 break;
 
             // A cue is a REGION, walked with the ordinary walker so that everything a voice
@@ -2001,6 +2002,10 @@ public sealed partial class MeasureCollector
         if (_pendingGrace is { } pendingGrace)
         {
             _pendingGrace = null;
+            // A change written between the grace and this note is already in the list, ahead
+            // of the grace's items; say so on it (MusicItem.WrittenAfterGrace).
+            if (_pendingGraceAt.Measure == builder.CurrentMeasureIndex)
+                builder.MarkChangesWrittenAfterGrace(_pendingGraceAt.ItemCount);
             ProcessGraceRegion(pendingGrace, builder, measureIndex);
             itemIndex = builder.CurrentItemCount;
         }
@@ -2116,6 +2121,7 @@ public sealed partial class MeasureCollector
                 // arm does — until session 397 this arm did not exist, and a grace written
                 // inside a tuplet body was dropped without a word (HANDOFF §2 R3).
                 _pendingGrace = grace;
+                _pendingGraceAt = (builder.CurrentMeasureIndex, builder.CurrentItemCount);
                 return Fraction.Zero;
             case NoteSyntax note:
             {

@@ -403,7 +403,9 @@ workflow attaches that section to the GitHub Release verbatim.
   the clef: it tucks under the clef as in LilyPond, 1.05 closer. And on a line that is stretched
   or squeezed, the two sides of the change now give the way LilyPond's do: the space after a clef
   widens with the line (after a key or meter change it stays put), and on a tight line a key
-  change stops at the note before it instead of being drawn over it.
+  change stops at the note before it instead of being drawn over it. A clef written just before
+  a grace note now stands where LilyPond puts it, between the note before and the grace, with
+  both gaps shrunk the way a grace's approach is (it stood 1.31 closer to the grace).
 - **A line that ends in a courtesy for a key with no signature.** When the next line opens in
   C major or A minor, the end-of-line courtesy is a cancellation with no signature after it —
   or nothing at all, from C major to A minor — and the group was still spaced as

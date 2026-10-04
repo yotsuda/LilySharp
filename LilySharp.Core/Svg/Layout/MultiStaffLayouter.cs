@@ -2285,15 +2285,20 @@ internal sealed class MultiStaffLayouter
             if (!SpacingRules.IsLooseChangeColumn(fonts, allTimings, ownLeft, changeTiming, columnItems))
             {
                 // In the springs: the slot into this timing is the change column's series
-                // spring (MeasureLayouter.CreateInterColumnSpring — Note_spacing, then
-                // Staff_spacing), unless a grace run follows the change, which still folds
-                // both gaps into one spring and keeps the force-0 hang.
-                if (c < springs.Length
-                    && springs[c] is { IsSeries: true } series && series.Series.Length == 2
-                    && SpacingRules.LeadingGracePrefixWidth(new ItemColumn(columnItems)) <= 0)
+                // spring (MeasureLayouter.CreateInterColumnSpring — Note_spacing into the
+                // column, then everything after it: Staff_spacing, and the grace run's springs
+                // when the change was written before the grace), so the column stands the
+                // parts after the first before the note. A change written AFTER a grace still
+                // folds both gaps into one spring and keeps the force-0 hang.
+                if (c < springs.Length && springs[c] is { IsSeries: true } series
+                    && (SpacingRules.LeadingGracePrefixWidth(new ItemColumn(columnItems)) <= 0
+                        || SpacingRules.ChangeStandsBeforeGrace(allMeasures, changeTiming)))
                 {
+                    double hang = 0;
+                    for (int k = 1; k < series.Series.Length; k++)
+                        hang += series.Series[k].Length(force);
                     hangs ??= ImmutableDictionary.CreateBuilder<Fraction, double>();
-                    hangs[changeTiming] = series.Series[1].Length(force);
+                    hangs[changeTiming] = hang;
                 }
                 continue;
             }

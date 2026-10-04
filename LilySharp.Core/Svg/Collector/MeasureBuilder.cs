@@ -807,6 +807,20 @@ internal sealed class MeasureBuilder
         _currentItems.Insert(at, item);
     }
 
+    /// <summary>
+    /// Stamps <see cref="MusicItem.WrittenAfterGrace"/> on the clef / key / time changes added
+    /// since item <paramref name="fromIndex"/> of this measure — the changes written after a
+    /// pending grace, which reach the list before the grace's own items do.
+    /// </summary>
+    public void MarkChangesWrittenAfterGrace(int fromIndex)
+    {
+        for (int i = Math.Max(0, fromIndex); i < _currentItems.Count; i++)
+        {
+            if (_currentItems[i] is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem)
+                _currentItems[i] = _currentItems[i] with { WrittenAfterGrace = true };
+        }
+    }
+
     private static int BreakAlignRank(MusicItem item) => item switch
     {
         ClefChangeItem => 0,

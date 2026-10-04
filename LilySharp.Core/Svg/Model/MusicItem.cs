@@ -150,6 +150,7 @@ internal sealed record MusicItemRare
     public string? SectionPlayMarksAfter { get; init; }
     public bool GraceSlash { get; init; }
     public bool GraceStemDown { get; init; }
+    public bool WrittenAfterGrace { get; init; }
     public bool HasPhrasingSlurStart { get; init; }
     public bool HasPhrasingSlurEnd { get; init; }
     public int PhrasingSlurDirection { get; init; }
@@ -396,6 +397,25 @@ public abstract record MusicItem
     {
         get => _rareBase?.GraceSlash ?? false;
         init { if (value != GraceSlash) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { GraceSlash = value }; }
+    }
+
+    /// <summary>
+    /// True on a mid-measure clef / key / time change that was written AFTER a <c>grace { }</c>
+    /// whose items stand later in the list — <c>\grace e16 \clef bass f4</c>.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE LIST DOES NOT SAY IT: a grace waits for the next sounding item before its body
+    /// is walked (MeasureCollector.OpenSoundingItem), so a change written between the grace and
+    /// its main note is added FIRST and the two orders produce the same item list. LilyPond
+    /// engraves the change at the moment it was written — after the grace, the main note's
+    /// (t, 0) rather than the grace's — so the change column stands between the last grace
+    /// column and the main note's (SpacingRules.ChangeStandsBeforeGrace reads this).
+    /// LILYPOND-REF: lily/paper-column-engraver.cc:223-234 Paper_column_engraver::stop_translation_timestep — a column's "when" is its timestep's now_mom.
+    /// </remarks>
+    public bool WrittenAfterGrace
+    {
+        get => _rareBase?.WrittenAfterGrace ?? false;
+        init { if (value != WrittenAfterGrace) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { WrittenAfterGrace = value }; }
     }
 
     /// <summary>

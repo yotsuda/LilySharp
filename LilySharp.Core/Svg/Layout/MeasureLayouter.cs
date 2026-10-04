@@ -1079,9 +1079,19 @@ internal sealed class MeasureLayouter
                 var series = SpacingRules.MidMeasureChangeSeries(fonts, nextItems, prevItems, gaps, spring);
                 return maxRod > 0 ? series.WithRangeRod(0, series.Series.Length, maxRod) : series;
             }
-            // ⚠️ A GRACE RUN AFTER THE CHANGE still takes the one spring both gaps were folded
-            // into, with the run hung off it below (HANDOFF §2 B: the clef → grace order puts
-            // LilyPond's 0.8 on both springs and ends the right one at the grace column).
+            // The change written BEFORE the grace stands at the grace's moment, in front of the
+            // grace columns: both of its springs take the 0.8 and the right one ends at the
+            // first grace column, then the run's own springs (SpacingRules.MidMeasureChangeBeforeGraceSeries).
+            if (SpacingRules.ChangeStandsBeforeGrace(measuresToScan, timings[i])
+                && SpacingRules.WidestLeadingGraceItem(nextItems) is { } graceItem
+                && SpacingRules.MidMeasureChangeBeforeGraceSeries(
+                       fonts, nextItems, prevItems, gaps, spring, graceItem) is { } beforeGrace)
+            {
+                return maxRod > 0 ? beforeGrace.WithRangeRod(0, beforeGrace.Series.Length, maxRod) : beforeGrace;
+            }
+            // ⚠️ A CHANGE WRITTEN AFTER THE GRACE still takes the one spring both gaps were
+            // folded into, with the run hung off it below (HANDOFF §2 B: its column stands
+            // between the last grace column and the main note's).
             spring = new Spring(
                 gaps.TotalIdeal,
                 Math.Max(spring.MinDistance, gaps.MinDistance),

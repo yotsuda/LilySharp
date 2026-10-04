@@ -591,6 +591,9 @@ public sealed partial class MeasureCollector
     private readonly Dictionary<int, int> _markHostMeasure = new();
     // Pending grace notes to attach to the next main note
     private GraceExpressionSyntax? _pendingGrace = null;
+    // Where the measure stood when the grace was written: a change added after this point and
+    // before the grace's body is walked was WRITTEN AFTER the grace (MusicItem.WrittenAfterGrace).
+    private (int Measure, int ItemCount) _pendingGraceAt;
 
     /// <summary>
     /// How many <c>cue { … }</c> regions enclose the item being collected. A cue is a

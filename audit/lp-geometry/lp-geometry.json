@@ -289,15 +289,15 @@
       "probe": "barline-spacing.ly",
       "score": "MCG",
       "lilypond": 1.802578,
-      "residual": 1.309307,
-      "why": "OPEN since 2026-10-04 (session 808), opened with its cause named and predicted to the digit before reading (+1.309307, on the assumption — confirmed by midmeasure.clef.prev-note-to-main-note.across-grace — that the main note already stands where LilyPond puts it). A mid-measure bass clef before a GRACE note (probe barline-spacing.ly, score MCG: c'4 d' \\clef bass \\grace e16 f4): LilyPond 1.802578 = MC's 2.253222 * 0.8. The clef is set at the grace's moment, so the clef column's right neighbour is the GRACE column, and lily/spacing-spanner.cc:396-403 musical_column_spacing scales the spring into it by 0.8 (Spring::operator*=, after merge_springs) — and :519-527 breakable_column_spacing does the same to the clef -> grace spring (3.146600 * 0.8 = 2.517280, measured to the GRACE head). Lily# prices the two gaps as one timing spring (SpacingRules.MidMeasureChangeGaps), and SpringIntoGraceRun scales that whole spring by 0.8 and adds the run, so the MAIN note lands on LilyPond's 6.258485 — but the renderer hangs the clef from the main note by the UNSCALED right gap (SpacingRules.MidMeasureChangeRightGap, 3.146600), counting neither the 0.8 nor the grace run between: 17.845730 - 3.146600 = 14.699130, 1.309307 right of LilyPond's 13.389823. Twins (Lab sessions/p808/gr): the same 1.31 with the grace on or below the staff, with an eighth grace, and 2.2 with two graces; with no grace the clef agrees. PREDICTION for the port (each gap scaled by 0.8 on its own as Spring::operator*= does, and the renderer's hang = the scaled right gap + the grace run's span): 0."
+      "residual": 0,
+      "why": "EXACT since session 811: a mid-measure change written BEFORE a grace stands at the grace's moment, so the slot is LilyPond's chain in series - the Note_spacing spring into the change column and the Staff_spacing spring from it to the FIRST grace column, both scaled by 0.8 (lily/spacing-spanner.cc:396-403, :519-527; lily/spring.cc:85-93 Spring::operator*= floors the ideal at the minimum), each with its column rod, then the run's own springs (SpacingRules.MidMeasureChangeBeforeGraceSeries); the glyph hangs back by everything after the left part (MeasureLayout.ChangeColumnHangs). Baseline opened in session 809 (419eeb32d); the port was to bring it to 0. OUTCOME: held, 0 (was +1.309307): 2.253222 x 0.8."
     },
     "midmeasure.clef.clef-to-grace": {
       "probe": "barline-spacing.ly",
       "score": "MCG",
       "lilypond": 2.517280,
-      "residual": -1.309307,
-      "why": "OPEN since 2026-10-04 (session 808), the other side of midmeasure.clef.prev-note-to-clef.before-grace, predicted to the digit (-1.309307): LilyPond's clef -> grace head is Staff_spacing's 3.146600 scaled by lily/spacing-spanner.cc:519-527's 0.8 = 2.517280; Lily# hangs the clef 1.309307 too far right, so this gap is that much short. PREDICTION for the port: 0."
+      "residual": 0,
+      "why": "EXACT since session 811: a mid-measure change written BEFORE a grace stands at the grace's moment, so the slot is LilyPond's chain in series - the Note_spacing spring into the change column and the Staff_spacing spring from it to the FIRST grace column, both scaled by 0.8 (lily/spacing-spanner.cc:396-403, :519-527; lily/spring.cc:85-93 Spring::operator*= floors the ideal at the minimum), each with its column rod, then the run's own springs (SpacingRules.MidMeasureChangeBeforeGraceSeries); the glyph hangs back by everything after the left part (MeasureLayout.ChangeColumnHangs). Baseline opened in session 809 (419eeb32d); the port was to bring it to 0. OUTCOME: held, 0 (was -1.309307): 3.146600 x 0.8."
     },
     "midmeasure.clef.prev-note-to-main-note.across-grace": {
       "probe": "barline-spacing.ly",
@@ -310,29 +310,29 @@
       "probe": "barline-spacing.ly",
       "score": "MCGA",
       "lilypond": 3.589557,
-      "residual": -1.331584,
-      "why": "OPEN since 2026-10-04 (session 809), read before the literal port as its baseline, not predicted digit by digit. Cause: Lily# keeps no column of its own for a mid-measure change (both gaps ride the next note's one timing spring and the grace run hangs off the main note), so the change column's two springs, its rods and lily/spacing-spanner.cc:396-403 / :519-527's 0.8 cannot stand where LilyPond solves them (HANDOFF §2 B, the item filed in session 809). The first, branch-fitted port (d842aecb3, reverted in 5c4887462) took these to 0 for the clef-before-grace order only."
+      "residual": 0,
+      "why": "EXACT since session 811: a mid-measure change written BEFORE a grace stands at the grace's moment, so the slot is LilyPond's chain in series - the Note_spacing spring into the change column and the Staff_spacing spring from it to the FIRST grace column, both scaled by 0.8 (lily/spacing-spanner.cc:396-403, :519-527; lily/spring.cc:85-93 Spring::operator*= floors the ideal at the minimum), each with its column rod, then the run's own springs (SpacingRules.MidMeasureChangeBeforeGraceSeries); the glyph hangs back by everything after the left part (MeasureLayout.ChangeColumnHangs). Baseline opened in session 809 (419eeb32d); the port was to bring it to 0. OUTCOME: held, -4.2e-07 (was -1.331584): the 0.8 drops the ideal to its minimum and the column rod (+0.1) binds."
     },
     "midmeasure.clef.prev-note-to-main-note.across-grace.grace-sharp": {
       "probe": "barline-spacing.ly",
       "score": "MCGA",
       "lilypond": 7.330762,
-      "residual": -0.098378,
-      "why": "OPEN since 2026-10-04 (session 809), read before the literal port as its baseline, not predicted digit by digit. Cause: Lily# keeps no column of its own for a mid-measure change (both gaps ride the next note's one timing spring and the grace run hangs off the main note), so the change column's two springs, its rods and lily/spacing-spanner.cc:396-403 / :519-527's 0.8 cannot stand where LilyPond solves them (HANDOFF §2 B, the item filed in session 809). The first, branch-fitted port (d842aecb3, reverted in 5c4887462) took these to 0 for the clef-before-grace order only."
+      "residual": 0,
+      "why": "EXACT since session 811: a mid-measure change written BEFORE a grace stands at the grace's moment, so the slot is LilyPond's chain in series - the Note_spacing spring into the change column and the Staff_spacing spring from it to the FIRST grace column, both scaled by 0.8 (lily/spacing-spanner.cc:396-403, :519-527; lily/spring.cc:85-93 Spring::operator*= floors the ideal at the minimum), each with its column rod, then the run's own springs (SpacingRules.MidMeasureChangeBeforeGraceSeries); the glyph hangs back by everything after the left part (MeasureLayout.ChangeColumnHangs). Baseline opened in session 809 (419eeb32d); the port was to bring it to 0. OUTCOME: held, -2.1e-07 (was -0.098378)."
     },
     "midmeasure.clef.clef-to-grace.main-sharp": {
       "probe": "barline-spacing.ly",
       "score": "MCGM",
       "lilypond": 2.517280,
-      "residual": -2.859307,
-      "why": "OPEN since 2026-10-04 (session 809), read before the literal port as its baseline, not predicted digit by digit. Cause: Lily# keeps no column of its own for a mid-measure change (both gaps ride the next note's one timing spring and the grace run hangs off the main note), so the change column's two springs, its rods and lily/spacing-spanner.cc:396-403 / :519-527's 0.8 cannot stand where LilyPond solves them (HANDOFF §2 B, the item filed in session 809). The first, branch-fitted port (d842aecb3, reverted in 5c4887462) took these to 0 for the clef-before-grace order only."
+      "residual": 0,
+      "why": "EXACT since session 811: a mid-measure change written BEFORE a grace stands at the grace's moment, so the slot is LilyPond's chain in series - the Note_spacing spring into the change column and the Staff_spacing spring from it to the FIRST grace column, both scaled by 0.8 (lily/spacing-spanner.cc:396-403, :519-527; lily/spring.cc:85-93 Spring::operator*= floors the ideal at the minimum), each with its column rod, then the run's own springs (SpacingRules.MidMeasureChangeBeforeGraceSeries); the glyph hangs back by everything after the left part (MeasureLayout.ChangeColumnHangs). Baseline opened in session 809 (419eeb32d); the port was to bring it to 0. OUTCOME: held, 0 (was -2.859307): the right spring ends at the grace column, so the main note's sharp is not in it."
     },
     "midmeasure.clef.prev-note-to-main-note.across-grace.main-sharp": {
       "probe": "barline-spacing.ly",
       "score": "MCGM",
       "lilypond": 7.808485,
-      "residual": 1.080942,
-      "why": "OPEN since 2026-10-04 (session 809), read before the literal port as its baseline, not predicted digit by digit. Cause: Lily# keeps no column of its own for a mid-measure change (both gaps ride the next note's one timing spring and the grace run hangs off the main note), so the change column's two springs, its rods and lily/spacing-spanner.cc:396-403 / :519-527's 0.8 cannot stand where LilyPond solves them (HANDOFF §2 B, the item filed in session 809). The first, branch-fitted port (d842aecb3, reverted in 5c4887462) took these to 0 for the clef-before-grace order only."
+      "residual": 0,
+      "why": "EXACT since session 811: a mid-measure change written BEFORE a grace stands at the grace's moment, so the slot is LilyPond's chain in series - the Note_spacing spring into the change column and the Staff_spacing spring from it to the FIRST grace column, both scaled by 0.8 (lily/spacing-spanner.cc:396-403, :519-527; lily/spring.cc:85-93 Spring::operator*= floors the ideal at the minimum), each with its column rod, then the run's own springs (SpacingRules.MidMeasureChangeBeforeGraceSeries); the glyph hangs back by everything after the left part (MeasureLayout.ChangeColumnHangs). Baseline opened in session 809 (419eeb32d); the port was to bring it to 0. OUTCOME: held, +2.2e-07 (was +1.080942)."
     },
     "midmeasure.clef.grace-then-clef.prev-note-to-clef": {
       "probe": "barline-spacing.ly",

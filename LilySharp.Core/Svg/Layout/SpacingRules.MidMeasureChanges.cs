@@ -467,6 +467,136 @@ internal static partial class SpacingRules
     }
 
     /// <summary>
+    /// Whether a mid-measure change at <paramref name="timing"/> was written BEFORE a grace run
+    /// of its own voice — <c>\clef bass \grace e16 f4</c> — so that its column stands at the
+    /// grace's moment, in front of the grace columns.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond gives the change the moment it was engraved at: written before the grace that
+    /// is the grace's moment (main part t, a negative grace part), written after it the main
+    /// note's (t, 0). The grace items are measure items at the same onset, AFTER the change in
+    /// the list whichever order was written (a grace's body is walked when its main note
+    /// arrives), so the order is the change's own <see cref="MusicItem.WrittenAfterGrace"/> with
+    /// a grace item after it — read off the measures, since the timing columns drop grace items
+    /// (MeasureLayouter.BuildTimingColumns).
+    /// LILYPOND-REF: lily/paper-column-engraver.cc:223-234 Paper_column_engraver::stop_translation_timestep — both columns of a timestep take its now_mom as "when".
+    /// LILYPOND-REF: lily/spacing-spanner.cc:396-403 musical_column_spacing and :519-527 breakable_column_spacing — a spring INTO a column whose when_mom has a grace_part_ is scaled by 0.8.
+    /// </remarks>
+    internal static bool ChangeStandsBeforeGrace(IReadOnlyList<Measure> measures, Fraction timing)
+    {
+        for (int mi = 0; mi < measures.Count; mi++)
+        {
+            var onset = Fraction.Zero;
+            bool sawChange = false;
+            foreach (var item in measures[mi].Items)
+            {
+                if (onset > timing)
+                    break;
+                if (onset == timing)
+                {
+                    if (IsChangeItem(item) && !item.GraceTime && !item.WrittenAfterGrace)
+                        sawChange = true;
+                    else if (item.GraceTime && sawChange)
+                        return true;
+                }
+                onset += item.Duration;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// The pair across a mid-measure change written BEFORE a grace run
+    /// (<see cref="ChangeStandsBeforeGrace"/>): the Note_spacing spring into the change column,
+    /// the Staff_spacing spring from it to the FIRST grace column — both scaled by 0.8, since
+    /// both end at a column with a grace part — then the run's own springs to the main note,
+    /// in series. Null when the run cannot take part (no gaps to stand on).
+    /// </summary>
+    /// <param name="graceItem">The main item whose leading run is the widest at this moment.</param>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:396-403 musical_column_spacing — the left spring *= 0.8 (the change
+    ///   column has a grace part, the previous column none).
+    /// LILYPOND-REF: lily/spacing-spanner.cc:519-527 breakable_column_spacing — the right spring *= 0.8 (the grace
+    ///   column has a grace part).
+    /// LILYPOND-REF: lily/spring.cc:85-93 Spring::operator*= — ideal_distance_ = max (min_distance_, ideal × r), the compress
+    ///   strength ideal - min, the stretch strength × r (<see cref="Spring.Scale"/>).
+    /// The right spring's <c>min_dist</c> is Paper_column::minimum_distance to the grace column
+    /// (its left skyline with its accidentals, <see cref="ItemSkylineFactory.CreateGraceLeftSkyline"/>),
+    /// and the column rods stand on the same pairs (separation-item.cc:47-68). The run's springs
+    /// are <see cref="GraceColumns"/>' gaps, the parts <see cref="SpringIntoGraceRun"/> puts after
+    /// its approach — the approach itself is gone: the previous column meets the change column,
+    /// not the grace one.
+    /// MEASURED (2.26.0, Lab sessions/p808/gr/lp-probe.ly, ledger midmeasure.clef.*grace*): the
+    /// previous note → clef 1.802578 = 2.253222 × 0.8, clef → grace 2.517280 = 3.146600 × 0.8, and
+    /// with a sharp on the grace the ideal falls to its minimum and the column rod (+0.1) binds.
+    /// ⒝ A key's box reaches the next column's height (<see cref="ChangeColumnBoxes"/>); here the
+    /// next column is the grace column and the band read is the main note's.
+    /// ⚠️ NOTHING OBSERVES THE LEFT COLUMN ROD HERE (session 811's poison no. 4 dropped it:
+    /// every test green) — after the 0.8 the ideal still stands over it in every book measured.
+    /// The right one is observed (ledger midmeasure.clef.clef-to-grace.grace-sharp).
+    /// </remarks>
+    internal static Spring? MidMeasureChangeBeforeGraceSeries(
+        Rendering.ScoreTextMetrics fonts,
+        in ItemColumn columnItems, in ItemColumn prevItems,
+        in MidMeasureChangeSpacing gaps, Spring noteSpring, MusicItem graceItem)
+    {
+        var grace = GraceNotesOf(graceItem);
+        if (grace.IsDefaultOrEmpty)
+            return null;
+        var run = GraceColumns(grace, graceItem);
+        if (run.Offsets.IsDefaultOrEmpty || run.Gaps.IsDefaultOrEmpty)
+            return null;
+
+        var (columnWidth, _, lastChange) = MeasureChangeColumn(fonts, columnItems);
+        var left = new Spring(gaps.LeftGap, gaps.LeftMinDistance,
+                              noteSpring.InverseStretchStrength, noteSpring.InverseCompressStrength)
+            .Scale(GraceApproachScale);
+        double rightDistance = ChangeColumnRightSkyline(fonts, columnItems)
+            .Distance(ItemSkylineFactory.CreateGraceLeftSkyline(grace[0]));
+        var right = ChangeColumnStaffSpacing(columnWidth, lastChange!, Math.Max(0.0, rightDistance))
+            .Scale(GraceApproachScale);
+
+        double gapStretch = GraceSpringInverseStretch();
+        var parts = new Spring[run.Offsets.Length + 2];
+        parts[0] = left;
+        parts[1] = right;
+        double min = left.MinDistance + right.MinDistance;
+        for (int k = 0; k < run.Offsets.Length; k++)
+        {
+            parts[k + 2] = new Spring(run.Gap(k), run.Gaps[k].Rod, gapStretch, run.Gaps[k].InverseCompress);
+            min += parts[k + 2].MinDistance;
+        }
+        var series = Spring.InSeries(ImmutableArray.Create(parts), min);
+
+        double leftRod = SeparationRodPadding + ChangeColumnLeftSeparation(fonts, columnItems, prevItems);
+        if (leftRod > 0)
+            series = series.WithPartRod(0, leftRod);
+        double rightRod = SeparationRodPadding + rightDistance;
+        if (rightRod > 0)
+            series = series.WithPartRod(1, rightRod);
+        return series;
+    }
+
+    /// <summary>The main item at this moment whose leading grace run is the widest — the run the
+    /// slot's springs are built from (<see cref="LeadingGraceRun"/>'s choice). Null when none leads
+    /// with a grace.</summary>
+    internal static MusicItem? WidestLeadingGraceItem(in ItemColumn items)
+    {
+        MusicItem? widest = null;
+        double span = 0;
+        for (int i = 0; i < items.Count; i++)
+        {
+            double s = LeadingGraceRunSpan(items[i]);
+            if (s > span)
+            {
+                span = s;
+                widest = items[i];
+            }
+        }
+        return widest;
+    }
+
+    /// <summary>
     /// The previous column's right skyline against the change column's left one — the distance
     /// <c>Separation_item::set_distance</c> pads into the left column rod. Negative infinity when
     /// no previous item stands in a column.
