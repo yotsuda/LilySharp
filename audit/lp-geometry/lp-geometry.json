@@ -289,15 +289,15 @@
       "probe": "barline-spacing.ly",
       "score": "MCG",
       "lilypond": 1.802578,
-      "residual": 0,
-      "why": "EXACT since 2026-10-04 (session 808): closed by the port its prediction names, plus the second reading it turned up — SpacingRules.MidMeasureChangeGaps scales each gap by the grace's 0.8 on its own (ScaledIntoGrace, Spring::operator*=) and SpringIntoGraceRun no longer scales their sum again; MidMeasureChangeRightGap hangs the clef by the scaled right gap plus the run's span; and SharedRenderer.ChangeColumnItems steps over the grace items to the main note, where it used to close the column on the first grace item (so the renderer read the right gap against a grace, the spring against the note). 1.802578 against 1.802578; the control stayed EXACT. AS OPENED, one commit earlier: +1.309307, opened with its cause named and predicted to the digit before reading (+1.309307, on the assumption — confirmed by midmeasure.clef.prev-note-to-main-note.across-grace — that the main note already stands where LilyPond puts it). A mid-measure bass clef before a GRACE note (probe barline-spacing.ly, score MCG: c'4 d' \\clef bass \\grace e16 f4): LilyPond 1.802578 = MC's 2.253222 * 0.8. The clef is set at the grace's moment, so the clef column's right neighbour is the GRACE column, and lily/spacing-spanner.cc:396-403 musical_column_spacing scales the spring into it by 0.8 (Spring::operator*=, after merge_springs) — and :519-527 breakable_column_spacing does the same to the clef -> grace spring (3.146600 * 0.8 = 2.517280, measured to the GRACE head). Lily# prices the two gaps as one timing spring (SpacingRules.MidMeasureChangeGaps), and SpringIntoGraceRun scales that whole spring by 0.8 and adds the run, so the MAIN note lands on LilyPond's 6.258485 — but the renderer hangs the clef from the main note by the UNSCALED right gap (SpacingRules.MidMeasureChangeRightGap, 3.146600), counting neither the 0.8 nor the grace run between: 17.845730 - 3.146600 = 14.699130, 1.309307 right of LilyPond's 13.389823. Twins (Lab sessions/p808/gr): the same 1.31 with the grace on or below the staff, with an eighth grace, and 2.2 with two graces; with no grace the clef agrees. PREDICTION for the port (each gap scaled by 0.8 on its own as Spring::operator*= does, and the renderer's hang = the scaled right gap + the grace run's span): 0."
+      "residual": 1.309307,
+      "why": "OPEN since 2026-10-04 (session 808), opened with its cause named and predicted to the digit before reading (+1.309307, on the assumption — confirmed by midmeasure.clef.prev-note-to-main-note.across-grace — that the main note already stands where LilyPond puts it). A mid-measure bass clef before a GRACE note (probe barline-spacing.ly, score MCG: c'4 d' \\clef bass \\grace e16 f4): LilyPond 1.802578 = MC's 2.253222 * 0.8. The clef is set at the grace's moment, so the clef column's right neighbour is the GRACE column, and lily/spacing-spanner.cc:396-403 musical_column_spacing scales the spring into it by 0.8 (Spring::operator*=, after merge_springs) — and :519-527 breakable_column_spacing does the same to the clef -> grace spring (3.146600 * 0.8 = 2.517280, measured to the GRACE head). Lily# prices the two gaps as one timing spring (SpacingRules.MidMeasureChangeGaps), and SpringIntoGraceRun scales that whole spring by 0.8 and adds the run, so the MAIN note lands on LilyPond's 6.258485 — but the renderer hangs the clef from the main note by the UNSCALED right gap (SpacingRules.MidMeasureChangeRightGap, 3.146600), counting neither the 0.8 nor the grace run between: 17.845730 - 3.146600 = 14.699130, 1.309307 right of LilyPond's 13.389823. Twins (Lab sessions/p808/gr): the same 1.31 with the grace on or below the staff, with an eighth grace, and 2.2 with two graces; with no grace the clef agrees. PREDICTION for the port (each gap scaled by 0.8 on its own as Spring::operator*= does, and the renderer's hang = the scaled right gap + the grace run's span): 0."
     },
     "midmeasure.clef.clef-to-grace": {
       "probe": "barline-spacing.ly",
       "score": "MCG",
       "lilypond": 2.517280,
-      "residual": 0,
-      "why": "EXACT since 2026-10-04 (session 808), closed with midmeasure.clef.prev-note-to-clef.before-grace (2.517280 against 2.517280). AS OPENED: the other side of midmeasure.clef.prev-note-to-clef.before-grace, predicted to the digit (-1.309307): LilyPond's clef -> grace head is Staff_spacing's 3.146600 scaled by lily/spacing-spanner.cc:519-527's 0.8 = 2.517280; Lily# hangs the clef 1.309307 too far right, so this gap is that much short. PREDICTION for the port: 0."
+      "residual": -1.309307,
+      "why": "OPEN since 2026-10-04 (session 808), the other side of midmeasure.clef.prev-note-to-clef.before-grace, predicted to the digit (-1.309307): LilyPond's clef -> grace head is Staff_spacing's 3.146600 scaled by lily/spacing-spanner.cc:519-527's 0.8 = 2.517280; Lily# hangs the clef 1.309307 too far right, so this gap is that much short. PREDICTION for the port: 0."
     },
     "midmeasure.clef.prev-note-to-main-note.across-grace": {
       "probe": "barline-spacing.ly",
@@ -305,34 +305,6 @@
       "lilypond": 6.258485,
       "residual": 0,
       "why": "The CONTROL of midmeasure.clef.prev-note-to-clef.before-grace (session 808), predicted EXACT before and after the port: the previous note -> main note across the clef and the grace. Lily# already lands it (6.258485, the last-digit 2e-7 of MC's own): SpringIntoGraceRun scales the change column's one timing spring by 0.8 and adds the run. It says the open residual is where the CLEF hangs, not how wide the pair is; after the port, which scales each gap on its own, it holds as long as neither gap's rod binds (Spring::operator*= floors each at its own minimum)."
-    },
-    "midmeasure.clef.clef-to-grace.grace-sharp": {
-      "probe": "barline-spacing.ly",
-      "score": "MCGA",
-      "lilypond": 3.589557,
-      "residual": 0,
-      "why": "EXACT from its first reading (session 808, opened inside the port of midmeasure.clef.prev-note-to-clef.before-grace, which its twin turned up), predicted 0. MCG with a sharp on the GRACE (probe barline-spacing.ly, score MCGA: \\clef bass \\grace fis16 e4): the clef column's right rod is Paper_column::minimum_distance to the GRACE column with its sharp, 3.489557; the 0.8 takes the ideal down to it, and the column rod (lily/spacing-spanner.cc:228-297 set_column_rods, lily/separation-item.cc:56: the same distance + padding 0.1) holds the grace head 3.589557 after the clef. What turns this red: the rod taken to the main note (SpacingRules.RightRod's grace arm), the rod's 0.1 (RightGapIntoGrace), or the grace's leading ink added to the run's minimum a second time (MeasureLayouter's SpringIntoGraceRun call). Before session 808 (twin Lab sessions/p808/gr h-grace-sharp): the clef 0.53 right, the main note 0.8 left."
-    },
-    "midmeasure.clef.prev-note-to-main-note.across-grace.grace-sharp": {
-      "probe": "barline-spacing.ly",
-      "score": "MCGA",
-      "lilypond": 7.330762,
-      "residual": 0,
-      "why": "EXACT from its first reading (session 808), predicted 0 — MCGA's previous note -> main note: the scaled left gap, the right gap held at the column rod, and the grace run's span, with the grace's own sharp counted once (in the change column's right rod) and not again as the run's leading ink."
-    },
-    "midmeasure.clef.clef-to-grace.main-sharp": {
-      "probe": "barline-spacing.ly",
-      "score": "MCGM",
-      "lilypond": 2.517280,
-      "residual": 0,
-      "why": "EXACT from its first reading (session 808), predicted 0. MCG with a sharp on the MAIN note (probe barline-spacing.ly, score MCGM: \\clef bass \\grace e16 fis4): the sharp stands after the grace and is no part of the clef column's right rod, which ends at the grace column — MCG's 2.517280. What turns this red: the right rod taken to the main note (it then reads the sharp and the floor lifts the gap). Before session 808 (twin Lab sessions/p808/gr g-main-sharp) the clef stood 3.7 right; the first cut of the port, which still read the main note, put the main note 1.38 right."
-    },
-    "midmeasure.clef.prev-note-to-main-note.across-grace.main-sharp": {
-      "probe": "barline-spacing.ly",
-      "score": "MCGM",
-      "lilypond": 7.808485,
-      "residual": 0,
-      "why": "EXACT from its first reading (session 808), predicted 0 — MCGM's previous note -> main note, the main note's sharp entering only the grace -> main spacing (the run's own springs)."
     },
     "midmeasure.clef.clef-to-next-note": {
       "probe": "barline-spacing.ly",

@@ -638,26 +638,15 @@ internal static partial class SpacingRules
     /// strength, and its rod. Null where no previous note column is known (a run opening a
     /// line), which keeps the approach's minimum the main note's plus the run's left ink.
     /// </param>
-    /// <param name="approachIdealScaled">
-    /// True when the caller has ALREADY taken the 0.8 off the approach's ideal — a mid-measure
-    /// change column, whose two LilyPond springs are scaled apart, each floored at its own
-    /// minimum (SpacingRules.ScaledIntoGrace). Scaling their sum again would take it twice;
-    /// the stretch still takes it here, as <c>Spring::operator*=</c> does.
-    /// LILYPOND-REF: lily/spring.cc:87-93 Spring::operator*= — inverse_stretch_strength_ *= r; inverse_compress_strength_ = max (0.0, ideal_distance_ - min_distance_).
-    /// </param>
     public static Spring SpringIntoGraceRun(
         Spring spring, GraceColumnLayout run, double graceRunClearance, double gapStretch,
-        (double SkyMin, double Rod)? approachFloor = null, bool approachIdealScaled = false)
+        (double SkyMin, double Rod)? approachFloor = null)
     {
         if (graceRunClearance <= 0)
             return spring;
 
         double graceRunSpan = run.Span;
-        var approach = approachIdealScaled
-            ? new Spring(Math.Max(spring.MinDistance, spring.IdealDistance), spring.MinDistance,
-                         spring.InverseStretchStrength * GraceApproachScale,
-                         Math.Max(0, Math.Max(spring.MinDistance, spring.IdealDistance) - spring.MinDistance))
-            : spring.Scale(GraceApproachScale);
+        var approach = spring.Scale(GraceApproachScale);
         double newMin = approach.MinDistance + graceRunClearance;
         double newIdeal = Math.Max(approach.IdealDistance + graceRunSpan, newMin);
         int columns = run.Offsets.IsDefaultOrEmpty ? 0 : run.Offsets.Length;

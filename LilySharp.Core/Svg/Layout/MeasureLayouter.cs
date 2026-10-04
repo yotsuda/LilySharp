@@ -1072,24 +1072,12 @@ internal sealed class MeasureLayouter
         // Leading grace on the next note hangs left of that column; reserve its width here
         // so the renderer's hung glyphs have room — and shrink the APPROACH by LilyPond's
         // 0.8 first, which is the half this used to skip (SpacingRules.SpringIntoGraceRun).
-        // ⚠️ After a CHANGE column the approach's minimum is already the change column's two
-        // rods, the right one taken to the first grace column's origin with that grace's own
-        // ink (SpacingRules.RightRod) — so the run adds only its anchor-to-anchor span, not
-        // its leading ink again, and the previous note → first grace floor (graceFloor, a
-        // pair the change column stands between) does not apply. ⚠️ The floor only sets the
-        // approach's compress strength, which no ragged probe reads: passing it here anyway leaves the
-        // suite green (session 808's poison no. 10).
-        // LILYPOND-REF: lily/spacing-spanner.cc:478-517 breakable_column_spacing — the change column's spring ends at the grace column, and its min is the column distance to it.
-        var graceRun = SpacingRules.LeadingGraceRun(nextItems);
         spring = SpacingRules.SpringIntoGraceRun(
             spring,
-            graceRun,
-            changeGaps != null ? graceRun.Span : SpacingRules.LeadingGracePrefixWidth(nextItems),
+            SpacingRules.LeadingGraceRun(nextItems),
+            SpacingRules.LeadingGracePrefixWidth(nextItems),
             SpacingRules.GraceSpringInverseStretch(),
-            changeGaps != null ? null : graceFloor,
-            // A change column's two gaps were scaled apart, each at its own minimum
-            // (SpacingRules.ScaledIntoGrace); only the stretch is left to scale.
-            approachIdealScaled: changeGaps != null);
+            graceFloor);
 
         // LilyPond merges every wish through merge_springs, which floors the ideal at
         // min + 0.3. A no-op for an ordinary note-to-note ideal (~3.0 vs a ~1.8 floor)

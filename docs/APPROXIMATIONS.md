@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 62 | 観測者がゼロだと自認しているもの |
+| `UNWATCHED` | 61 | 観測者がゼロだと自認しているもの |
 | `OWN` | 216 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **338** | |
+| **計** | **337** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -133,7 +133,7 @@
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **:272** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（62 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（61 件）
 
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:691** no observer; add the paren widths when a book brings one. The unpacked
@@ -141,7 +141,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:1431** no observer reaches that branch yet.
 ### `LilySharp.Core/Rendering/SharedRenderer.Noteheads.cs`
-- **:788** observed by: no observer, and none is possible while the term is dominated — it
+- **:781** observed by: no observer, and none is possible while the term is dominated — it
 ### `LilySharp.Core/Semantics/DrummapValidator.cs`
 - **:30** ★ This validator exists because the block had NO observer of any kind. Measured
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
@@ -223,8 +223,6 @@
 - **:932** constant with a name, and no ledger point reached it.
 ### `LilySharp.Core/Svg/Layout/SpacingRules.Grace.cs`
 - **:415** observed by: NOTHING. No ledger point covers a grace spacer, and the drawn
-### `LilySharp.Core/Svg/Layout/SpacingRules.MidMeasureChanges.cs`
-- **:434** ⚠️ NO OBSERVER for the own-minimum floor (session 808's poison no. 6 left the suite green):
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
 - **:418** rest. No point observes it — see the branch below.
 ### `LilySharp.Core/Svg/Layout/TrillSpannerEngraver.cs`
