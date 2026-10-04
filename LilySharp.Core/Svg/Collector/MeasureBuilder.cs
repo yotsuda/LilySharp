@@ -493,14 +493,6 @@ internal sealed class MeasureBuilder
     /// within the piece, so it collapses into the initial signature / mark.</summary>
     public bool AtPieceOpening => _measures.Count == 0 && !_hasMeasureContent;
 
-    /// <summary>True at a measure boundary: no items yet in the current measure (just
-    /// after a barline, or the very start), or the measure is already full (a mark
-    /// written right before its barline). A navigation landmark belongs at such a
-    /// boundary; anything else is mid-measure. Under <c>time none</c> a measure is never
-    /// "full" — only its written barline ends it.</summary>
-    public bool AtMeasureBoundary
-        => _currentItems.Count == 0 || (!_bars.SenzaMisura && _currentDuration == _bars.BarLength);
-
     /// <summary>True when the current span holds measure-worthy content — something with
     /// duration (a note/rest/chord) — as opposed to only zero-duration directives (a
     /// leading <c>clef</c>/<c>key</c>/<c>time</c>). A bare or leading <c>|</c> CLOSES a

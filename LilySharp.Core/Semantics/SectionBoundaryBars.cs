@@ -35,10 +35,12 @@ namespace LilySharp.Core.Semantics;
 /// and both warnings stand — this exempts the split bar, not short bars in general.
 /// </para>
 /// <para>
-/// The play order comes from <see cref="FormWalk"/> (the one reader of a form's spellings);
-/// a repeat block plays its body once per turn with the turn's ending after it — the ending
-/// whose numbers name the turn, and as many turns as the written <c>:|*N</c>, else the highest
-/// number named (<see cref="RepeatPasses"/>, the MIDI's rule).
+/// The play order comes from <see cref="FormWalk"/> (the one reader of a form's spellings)
+/// through <c>Svg.Collector.PlayedOrder</c>, the one expansion every reader of a form's
+/// played order shares (session 792): a repeat block plays its body once per turn with the
+/// turn's ending after it — the ending whose numbers name the turn, and as many turns as the
+/// written <c>:|*N</c>, else the highest number named (<see cref="RepeatPasses"/>, the MIDI's
+/// rule) — and the jump texts are followed along <see cref="FormRoute"/>.
 /// The bar lengths come from <see cref="MeasureModel.Split"/> over the neighbour's cell for
 /// the same part, under the meter of the bar being judged; a section that has no cell for
 /// the part is padded by the collector and completes nothing.

@@ -100,8 +100,8 @@ public class MeasureCollectorResetTests
     //
     // The collector's output lists used to be enumerated BY HAND in three places
     // (Reset / CumulativeSideTables / CaptureScoreContent), and the Reset copy had
-    // drifted: _musicMarks, _customTexts, _voltaBrackets, _tupletBrackets and
-    // _navPlacementWarnings were missing, so a reused instance carried the previous
+    // drifted: _musicMarks, _customTexts, _voltaBrackets, _tupletBrackets and the
+    // since-retired _navPlacementWarnings were missing, so a reused instance carried the previous
     // collect's marks and warnings (2026-08-26 review, §4a-⑪). Reset now clears the
     // cumulative set FROM the CumulativeSideTables registry; this net holds the
     // other direction: every collection-typed field of the collector (and of its

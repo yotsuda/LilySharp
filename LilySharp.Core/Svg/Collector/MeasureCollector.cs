@@ -3341,7 +3341,7 @@ public sealed partial class MeasureCollector
         // (CumulativeSideTables) — a table added there is reset here by construction,
         // instead of joining a second hand-written enumeration that historically
         // drifted (before this fold, _musicMarks/_customTexts/_voltaBrackets/
-        // _tupletBrackets/_navPlacementWarnings were absent from Reset).
+        // _tupletBrackets and the since-retired _navPlacementWarnings were absent from Reset).
         // MeasureCollectorResetTests holds the reverse direction: no collection
         // field of this class escapes Reset entirely.
         foreach (var table in CumulativeSideTables())
