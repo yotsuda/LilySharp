@@ -81,6 +81,8 @@ internal static class MusicXmlReader
             Subtitle = Els(root, "credit")
                 .FirstOrDefault(c => Local(c, "credit-type")?.Value.Trim() == "subtitle")
                 is { } credit ? Local(credit, "credit-words")?.Value.Trim() : null,
+            EncodedByLilySharp = Els(Local(Local(root, "identification"), "encoding"), "software")
+                .Any(s => s.Value.Trim().StartsWith("Lily#", StringComparison.Ordinal)),
         };
         doc.Paper = ReadPageLayout(root, report);
 
@@ -373,7 +375,9 @@ internal static class MusicXmlReader
                 host.Articulations.Add(end);
 
         part.Clef = clefSet ?? "treble";
-        part.TranspositionSemitones = TranspositionBeyondClef(transposeSet, part.Clef);
+        bool ours = doc.EncodedByLilySharp;
+        bool restated = ClefOctaveRestated(transposeSet, part.Clef, ours);
+        part.TranspositionSemitones = TranspositionBeyondClef(transposeSet, part.Clef, ours);
 
         // A part whose voices span more than one staff (a piano grand staff) splits
         // into one Lily# part per staff, grouped into a grandStaff by the score.
@@ -391,32 +395,80 @@ internal static class MusicXmlReader
             staves.RemoveAll(tabStaves.Contains);
         }
         if (staves.Count <= 1)
+        {
+            if (!restated)
+                ToPlainClefOctave(part.Measures, part.Clef);
             return new List<ImportPart> { part };
-        return SplitByStaff(part, staves, voiceStaff, staffClefs, transposeSet);
+        }
+        return SplitByStaff(part, staves, voiceStaff, staffClefs, transposeSet, ours);
     }
 
     /// <summary>
-    /// What the part's <c>transposition</c> property must state, given the document's whole
-    /// <c>&lt;transpose&gt;</c> and the clef word being written for it: the remainder, since
-    /// an octave clef word (<c>treble_8</c>) already carries its own share.
+    /// Whether a document states the octave clef's octave AGAIN in its <c>&lt;transpose&gt;</c>
+    /// — the other spelling of an octave-clef part in circulation (Lily#'s own export wrote it
+    /// from 2026-08-17 to 2026-10-05, without naming itself): the pitches written as on the
+    /// plain clef, the clef's 8 and <c>&lt;transpose&gt;</c> both saying the octave. Such a part
+    /// is read as it was written — pitches as they stand, the clef's share taken out of
+    /// <c>&lt;transpose&gt;</c> once — and every other part reads its pitches under the clef
+    /// (<see cref="ToPlainClefOctave"/>). A document Lily# names itself the encoder of is the
+    /// other kind by construction, which is what tells an instrument's own octave on an octave
+    /// clef (<c>instrument bass clef bass_8</c>) from a restated one.
+    /// </summary>
+    private static bool ClefOctaveRestated(int? transposeTotal, string clefWord, bool encodedByLilySharp)
+    {
+        int clef = Tablature.Tunings.ClefOctaveShift(PartHeaderDefaults.ParseClefWord(clefWord));
+        return !encodedByLilySharp && clef != 0 && transposeTotal is { } total
+               && Math.Sign(total) == Math.Sign(clef) && Math.Abs(total) >= Math.Abs(clef);
+    }
+
+    /// <summary>
+    /// What the part's <c>transposition</c> property states: the document's
+    /// <c>&lt;transpose&gt;</c> as it stands, less the clef's octave when the document
+    /// restates it there (<see cref="ClefOctaveRestated"/>), since the clef word written
+    /// (<c>treble_8</c>) carries that share. Null in, null out.
+    /// </summary>
+    private static int? TranspositionBeyondClef(int? transposeTotal, string clefWord, bool encodedByLilySharp)
+        => transposeTotal is { } total && ClefOctaveRestated(transposeTotal, clefWord, encodedByLilySharp)
+            ? total - Tablature.Tunings.ClefOctaveShift(PartHeaderDefaults.ParseClefWord(clefWord))
+            : transposeTotal;
+
+    /// <summary>
+    /// Moves the pitches of a staff whose clef carries an octave (<c>treble_8</c>) from where
+    /// MusicXML reads them — under the clef, <c>&lt;clef-octave-change&gt;</c> included, so a
+    /// <c>treble_8</c> staff's middle line is B3 — to where Lily# writes them: as on the plain
+    /// clef, the clef word adding the octave (<c>b</c> on the middle line, sounding B3).
     /// </summary>
     /// <remarks>
-    /// The two halves of the round trip are this and
-    /// <c>MusicXmlExporter.ApplyPartHeader</c>, which writes clef octave + instrument as one
-    /// number. Change either alone and a guitar moves an octave in one direction or two in
-    /// the other. Null in, null out — a part with no <c>&lt;transpose&gt;</c> states nothing.
+    /// The inverse of <c>MusicXmlExporter.ApplyPartHeader</c> / <c>MusicXmlPart.PitchOctaveShift</c>,
+    /// and with it <c>&lt;transpose&gt;</c> is the instrument's share alone, taken as it stands.
+    /// Until 2026-10-05 both sides read a guitar as "written on the plain clef, the clef's octave
+    /// in <c>&lt;transpose&gt;</c> too", which a reader that honours the clef drew an octave high
+    /// (LilySharp-Omr feedback #17); a tenor part written the usual way (<c>treble_8</c>,
+    /// sounding pitches, no <c>&lt;transpose&gt;</c>) came in an octave low.
     /// </remarks>
-    private static int? TranspositionBeyondClef(int? transposeTotal, string clefWord)
-        => transposeTotal is { } total
-            ? total - Tablature.Tunings.ClefOctaveShift(PartHeaderDefaults.ParseClefWord(clefWord))
-            : null;
+    private static void ToPlainClefOctave(IEnumerable<ImportMeasure> measures, string clefWord)
+    {
+        int octaves = Tablature.Tunings.ClefOctaveShift(PartHeaderDefaults.ParseClefWord(clefWord)) / 12;
+        if (octaves == 0)
+            return;
+        foreach (var measure in measures)
+            foreach (var items in measure.VoiceItems.Values)
+                foreach (var item in items)
+                    if (item is ImportNote note)
+                    {
+                        if (!note.IsRest)
+                            note.Octave -= octaves;
+                        foreach (var grace in note.LeadingGrace)
+                            grace.Octave -= octaves;
+                    }
+    }
 
     /// <summary>Splits a multi-staff part into one part per staff (grouped as a grand
     /// staff), each keeping only the voices that sit on it, with its own clef.</summary>
     private static List<ImportPart> SplitByStaff(
         ImportPart part, List<int> staves,
         Dictionary<int, int> voiceStaff, Dictionary<int, string> staffClefs,
-        int? transposeTotal)
+        int? transposeTotal, bool encodedByLilySharp)
     {
         var result = new List<ImportPart>();
         foreach (int staff in staves)
@@ -432,8 +484,8 @@ internal static class MusicXmlReader
                 Clef = staffClef,
                 // ⚠️ <transpose> is the PART's, so every staff of a split part keeps it —
                 // the split used to drop it and a transposing grand staff came back at
-                // written pitch. Each staff subtracts its OWN clef's share.
-                TranspositionSemitones = TranspositionBeyondClef(transposeTotal, staffClef),
+                // written pitch. Each staff reads it against its OWN clef.
+                TranspositionSemitones = TranspositionBeyondClef(transposeTotal, staffClef, encodedByLilySharp),
             };
             foreach (var measure in part.Measures)
             {
@@ -452,6 +504,8 @@ internal static class MusicXmlReader
                         m.Voice(voice).AddRange(items);
                 sub.Measures.Add(m);
             }
+            if (!ClefOctaveRestated(transposeTotal, staffClef, encodedByLilySharp))
+                ToPlainClefOctave(sub.Measures, staffClef);
             result.Add(sub);
         }
         return result;

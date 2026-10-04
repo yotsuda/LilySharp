@@ -47,6 +47,9 @@ public sealed class MusicXmlExporter
     // rule — only an explicit `octave N` moves it.
     private int _partAnchorOctave = 4;
     private int _partTransposeSemitones;
+    // …and the share of it the document's <transpose> states: the instrument's alone, the
+    // header clef's octave being in the pitches (MusicXmlPart.PitchOctaveShift).
+    private int _partTransposeWritten;
     private bool _initialOctaveAbsolute; // file-level default, restored per part
     private bool _tieToNextNote;      // a tie was seen; the next note/chord ends it (gets tie-stop)
     private Fraction _defaultDuration = Fraction.Quarter;
@@ -389,6 +392,7 @@ public sealed class MusicXmlExporter
         WriteCapo();
         WriteBeams(tree, hasSections);
         WriteTab(tree);
+        WriteStaffLines();
         WriteTrackLyrics(tree);
         if (hasSections)
             WriteSectionLabels(tree);
@@ -639,6 +643,30 @@ public sealed class MusicXmlExporter
     /// fretboard, which the page hides on its tab staff, carries no fret.
     /// </para>
     /// </remarks>
+    private void WriteStaffLines()
+    {
+        // A staff the score draws with other than five lines (`as lines N`) says so, or a
+        // reader opens a one-line percussion staff with five (LilySharp-Omr feedback #18).
+        // A part merged with its grand-staff partner has two staves and is left alone.
+        void Walk(Svg.Collector.RenderItemSpec item)
+        {
+            switch (item)
+            {
+                case Svg.Collector.SingleStaffSpec s when s.Staff.Lines != 5:
+                    if (_partsByName.TryGetValue(s.Staff.VoiceName, out var part)
+                        && Document.Parts.Contains(part) && !_mergedInto.ContainsValue(part))
+                        part.StaffLines = s.Staff.Lines;
+                    break;
+                case Svg.Collector.GrandStaffRenderSpec g:
+                    foreach (var m in g.GrandStaff.Members) Walk(m);
+                    break;
+            }
+        }
+        if (_playedSpec is { } spec)
+            foreach (var item in spec.Items)
+                Walk(item);
+    }
+
     private void WriteTab(SyntaxTree tree)
     {
         var spec = _playedSpec;
@@ -2344,8 +2372,8 @@ public sealed class MusicXmlExporter
                 ClefSign = _clefSign,
                 ClefLine = _clefLine > 0 ? _clefLine : null,
                 ClefOctaveChange = _clefOctaveChange,
-                TransposeSemitones = _partTransposeSemitones != 0
-                    ? _partTransposeSemitones
+                TransposeSemitones = _partTransposeWritten != 0
+                    ? _partTransposeWritten
                     : null
             };
 
@@ -3104,16 +3132,19 @@ public sealed class MusicXmlExporter
         if (_currentPart != null)
             _currentPart.MidiProgram = header.MidiProgram;
 
-        // ⚠️ THE WHOLE written→sounding distance goes in <transpose>, the clef's octave
-        // included. MusicXML's <pitch> is the WRITTEN pitch and <transpose> is what turns it
-        // into the sounding one; <clef-octave-change> is notation — it says where the written
-        // pitch is DRAWN — so a reader that plays the document has nothing else to read.
-        // Until 2026-08-17 only the instrument's share went here, and a guitar part sounded
-        // an octave high in every program but this one (44 books; decided, HANDOFF §3).
-        // ⚠️ The importer subtracts the clef's share again on the way back in, because the
-        // clef WORD it writes carries it (`clef treble_8`). Both halves move together or a
-        // guitar drops two octaves — MusicXmlReader.ReadPart.
+        // The whole written→sounding distance, which the chord shapes are fretted through…
         _partTransposeSemitones = header.SoundingShiftSemitones;
+        // …but the document splits it: the header clef's octave goes INTO the pitches
+        // (MusicXML reads a <pitch> under its clef, <clef-octave-change> included — a
+        // `treble_8` staff's middle line is B3, which is what the page draws there and what it
+        // sounds), and <transpose> states only the instrument's share. From 2026-08-17 to
+        // 2026-10-05 the pitches stayed as written on the plain clef and <transpose> carried the
+        // clef's octave too: the sound was right, but a reader that honours the clef (MuseScore)
+        // drew the staff and fretted the TAB an octave high (LilySharp-Omr feedback #17).
+        // ⚠️ The importer undoes the same split — MusicXmlReader.ReadPart.
+        _partTransposeWritten = header.TranspositionSemitones;
+        if (_currentPart != null)
+            _currentPart.PitchOctaveShift = header.ClefOctaveSemitones / 12;
     }
 
     private void ProcessClef(ClefDeclarationSyntax clef)
@@ -5698,6 +5729,7 @@ public sealed class MusicXmlExporter
         EnsurePart(pending.Row + " (chords)");
         _currentTranspose = null;
         _partTransposeSemitones = 0;
+        _partTransposeWritten = 0;
         SetClef("treble");
         _keyFifths = pending.Key.Fifths;
         _keyMode = pending.Key.Mode;

@@ -61,30 +61,29 @@ public class MusicXmlRoundTripTests
     /// MusicXML asks for — and the two ways a part can sound an octave low stay apart.
     /// </summary>
     /// <remarks>
-    /// ⚠️ THE TWO ELEMENTS ANSWER DIFFERENT QUESTIONS, so a guitar carries BOTH.
-    /// <c>clef-octave-change</c> is NOTATION — where the written pitch is drawn (a treble
-    /// clef with an 8 under it) — and <c>transpose</c> is what that written pitch SOUNDS.
-    /// A reader playing the document has nothing but <c>transpose</c> to read, so an octave
-    /// left out of it is an octave the piece sounds wrong in every other program; this is
-    /// also how every publisher writes a guitar. Until 2026-08-17 Lily# wrote only the
-    /// instrument's own share and 20 books of the corpus sounded an octave high (decided,
-    /// HANDOFF §3).
+    /// ⚠️ AN OCTAVE CLEF'S OCTAVE IS IN THE PITCH, NOT IN <c>transpose</c>. MusicXML reads a
+    /// <c>&lt;pitch&gt;</c> under its clef, <c>clef-octave-change</c> included: a
+    /// <c>treble_8</c> staff's middle line is B3, which is where the page draws a Lily# <c>b</c>
+    /// and what it sounds. So the clef's octave moves the pitches, and <c>transpose</c> carries
+    /// the INSTRUMENT's share alone (a bass, a piccolo). From 2026-08-17 to 2026-10-05 the
+    /// pitches stayed as on the plain clef and <c>transpose</c> restated the clef's octave: the
+    /// sound was right, but MuseScore — which honours the clef — drew a guitar's staff and
+    /// fretted its TAB an octave high (LilySharp-Omr feedback #17). Before 2026-08-17 neither
+    /// was there, and the guitar sounded an octave high everywhere.
     /// <para>
-    /// Both directions are checked because the pair has to agree: the importer subtracts the
-    /// share the clef WORD it writes already carries (<c>clef treble_8</c>), and re-exporting
-    /// the imported source has to produce the same attributes. Move one half alone and a
-    /// guitar shifts an octave one way or two the other.
+    /// Both directions are checked because the pair has to agree: the importer moves the
+    /// pitches back by the clef's octave, and re-exporting the imported source has to produce
+    /// the same attributes.
     /// </para>
     /// </remarks>
     [Theory]
     // header, expected written pitch, expected clef-octave-change, expected transpose
     [InlineData("instrument bass", "C3", null, -1)]      // the 8vb is the INSTRUMENT's
-    [InlineData("instrument guitar", "C4", -1, -1)]      // …and here the CLEF shows it too
-    [InlineData("clef treble_8", "C4", -1, -1)]
+    [InlineData("instrument guitar", "C3", -1, null)]    // …and here the CLEF's: in the pitch
+    [InlineData("clef treble_8", "C3", -1, null)]
     [InlineData("instrument piccolo", "C5", null, 1)]    // the other direction
-    // Both sources at once — the case the import subtraction has to get exactly right,
-    // because the clef word carries one octave of the two and the property the other.
-    [InlineData("instrument bass clef bass_8", "C3", -1, -2)]
+    // Both sources at once: the clef's octave in the pitch, the instrument's in transpose.
+    [InlineData("instrument bass clef bass_8", "C2", -1, -1)]
     [InlineData("clef bass", "C4", null, null)]           // the clef moves no pitch
     [InlineData("clef bass octave 3", "C3", null, null)]  // …the part's `octave` does
     [InlineData("clef treble", "C4", null, null)]
@@ -119,8 +118,9 @@ public class MusicXmlRoundTripTests
     }
 
     /// <summary>
-    /// A guitar part as OTHER programs publish it — an octave clef and a <c>transpose</c>
-    /// stating the same octave — imports as <c>clef treble_8</c> and nothing else.
+    /// A guitar part spelled the OTHER way in circulation — an octave clef and a
+    /// <c>transpose</c> restating the same octave, the pitches as on the plain clef (Lily#'s
+    /// own export wrote it until 2026-10-05) — imports as <c>clef treble_8</c> and nothing else.
     /// </summary>
     /// <remarks>
     /// ⚠️ THE FALSIFIER IS A DOCUMENT LILY# DID NOT WRITE, which is why the round-trip
@@ -170,16 +170,79 @@ public class MusicXmlRoundTripTests
         Assert.Contains("clef bass transposition 8vb", lys);
 
         // The proof is what it SOUNDS: both parts are written C and both sound an octave
-        // below it. Asked of the re-export rather than of the header, so the two halves of
-        // the reading have to agree.
+        // below it — the guitar's C3 written under its clef (no transpose), the bass's C3
+        // with its transpose. Asked of the re-export rather than of the header, so the two
+        // halves of the reading have to agree.
         var doc = XDocument.Parse(
             new MusicXmlExporter().Export(SyntaxTree.Parse(lys)).ToXml().ToString());
-        Assert.Equal(
-            new[] { -1, -1 },
-            doc.Descendants().Where(e => e.Name.LocalName == "transpose")
-               .Select(t => int.Parse(t.Elements()
-                   .First(e => e.Name.LocalName == "octave-change").Value))
-               .ToArray());
+        var parts = doc.Descendants().Where(e => e.Name.LocalName == "part").ToList();
+        int? Transpose(XElement part) => part.Descendants().FirstOrDefault(e => e.Name.LocalName == "transpose")
+            is { } t ? int.Parse(t.Elements().First(e => e.Name.LocalName == "octave-change").Value) : null;
+        string FirstPitch(XElement part) => string.Concat(part.Descendants()
+            .First(e => e.Name.LocalName == "pitch").Elements().Select(e => e.Value));
+        Assert.Equal(("C3", (int?)null), (FirstPitch(parts[0]), Transpose(parts[0])));
+        Assert.Equal(("C3", (int?)-1), (FirstPitch(parts[1]), Transpose(parts[1])));
+    }
+
+    /// <summary>
+    /// A staff the score draws with one line says so, and its notes stand on that line
+    /// (LilySharp-Omr feedback #18: MuseScore opened it with five lines, the notes under them).
+    /// </summary>
+    [Fact]
+    public void AOneLineStaff_WritesItsLinesAndPutsItsNotesOnTheLine()
+    {
+        const string lys = """
+            part perc { clef percussion }
+            section A { perc { bd4 sn4 bd4 sn4 | } }
+            form main { A }
+            score main { staff perc as lines 1 }
+            """;
+        var doc = XDocument.Parse(new MusicXmlExporter().Export(SyntaxTree.Parse(lys)).ToXml().ToString());
+
+        Assert.Equal("1", doc.Descendants().Single(e => e.Name.LocalName == "staff-lines").Value);
+        var unpitched = doc.Descendants().Where(e => e.Name.LocalName == "unpitched").ToList();
+        Assert.Equal(4, unpitched.Count);
+        Assert.All(unpitched, u => Assert.Equal("B4", string.Concat(u.Elements().Select(e => e.Value))));
+        // The control: five lines write no staff-details.
+        var five = XDocument.Parse(new MusicXmlExporter().Export(
+            SyntaxTree.Parse(lys.Replace(" as lines 1", ""))).ToXml().ToString());
+        Assert.DoesNotContain(five.Descendants(), e => e.Name.LocalName == "staff-lines");
+    }
+
+    /// <summary>
+    /// A part spelled the way MuseScore reads and writes an octave clef — the pitches under
+    /// the clef, no <c>transpose</c> (a tenor line, a guitar) — imports with its notes where
+    /// the page draws them: C3 under <c>treble_8</c> is a Lily# <c>c</c> on that clef
+    /// (LilySharp-Omr feedback #17; it used to come in an octave low).
+    /// </summary>
+    [Fact]
+    public void OctaveClefPart_WithThePitchUnderTheClef_ImportsAtThePlainClefsOctave()
+    {
+        const string xml = """
+            <score-partwise version="4.0">
+              <part-list><score-part id="P1"><part-name>Tenor</part-name></score-part></part-list>
+              <part id="P1">
+                <measure number="1">
+                  <attributes>
+                    <divisions>1</divisions>
+                    <clef><sign>G</sign><line>2</line><clef-octave-change>-1</clef-octave-change></clef>
+                  </attributes>
+                  <note><pitch><step>B</step><octave>3</octave></pitch><duration>4</duration><type>whole</type></note>
+                </measure>
+              </part>
+            </score-partwise>
+            """;
+
+        var (lys, _) = new MusicXmlImporter().Import(xml);
+
+        Assert.Contains("clef treble_8", lys);
+        Assert.DoesNotContain("transposition", lys);
+        // Re-exported, the same B3 under the same clef, nothing restated.
+        var doc = XDocument.Parse(
+            new MusicXmlExporter().Export(SyntaxTree.Parse(lys)).ToXml().ToString());
+        Assert.Equal("B3", string.Concat(doc.Descendants().First(e => e.Name.LocalName == "pitch")
+            .Elements().Select(e => e.Value)));
+        Assert.DoesNotContain(doc.Descendants(), e => e.Name.LocalName == "transpose");
     }
 
     [Fact]

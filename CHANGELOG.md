@@ -397,6 +397,15 @@ workflow attaches that section to the GitHub Release verbatim.
   below it (the piano's right hand), and a lyrics row under a voice hidden on the first system
   hung under the last staff of every system after it. Both now follow the voice: nothing is
   drawn where the staff is hidden, and the words stand under the voice where it is shown.
+- **MusicXML: an octave clef's octave is in the pitches.** A `treble_8` part (a guitar, a tenor)
+  is written as MusicXML reads it — each pitch under the clef, so the `b` on the middle line is
+  B3, which is where the page draws it and what it sounds — and `<transpose>` states only the
+  instrument's own shift. The file used to keep the pitches as on the plain clef and restate the
+  clef's octave in `<transpose>`: it sounded right, but MuseScore drew the staff and fretted the
+  TAB an octave high. Import reads both spellings, and the file now names Lily# as its encoder.
+- **MusicXML: a staff drawn with other than five lines says so** (`as lines N` →
+  `<staff-lines>`), and the notes of a one-line staff stand on its line; a one-line
+  percussion staff used to open with five.
 - **The second voice of a bar after a meter change measures the new meter.** After `time 4/4`
   ... `time 12/8`, a `voice { } { }` bar cut its lower voice at the old bar's length (its last
   note vanished) and turned the upper voice's later stems down; both voices now keep the bar.

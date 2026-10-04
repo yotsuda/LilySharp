@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Globalization;
 using System.Xml.Linq;
 
 namespace LilySharp.Core.MusicXml;
@@ -52,14 +53,16 @@ internal sealed class MusicXmlDocument
                 new XElement("work-title", Title)));
         }
 
-        // Identification: one <creator> per credited person, typed.
-        if (!string.IsNullOrEmpty(Composer) || !string.IsNullOrEmpty(Poet))
+        // Identification: one <creator> per credited person, typed, and the encoder — which the
+        // importer reads to tell this file's octave clefs from the spelling Lily# wrote before
+        // 2026-10-05 without naming itself (MusicXmlReader.ClefOctaveRestated).
         {
             var identification = new XElement("identification");
             if (!string.IsNullOrEmpty(Composer))
                 identification.Add(new XElement("creator", new XAttribute("type", "composer"), Composer));
             if (!string.IsNullOrEmpty(Poet))
                 identification.Add(new XElement("creator", new XAttribute("type", "poet"), Poet));
+            identification.Add(new XElement("encoding", new XElement("software", "Lily#")));
             scorePartwise.Add(identification);
         }
 
@@ -171,12 +174,53 @@ internal sealed class MusicXmlPart
     /// <summary>The part's tablature staff, or null when the score shows it on none.</summary>
     public MusicXmlTab? Tab { get; set; }
 
+    /// <summary>
+    /// The octaves the part's header clef carries (<c>treble_8</c> → −1), added to every
+    /// written pitch on the way out. MusicXML positions a <c>&lt;pitch&gt;</c> under its clef,
+    /// <c>&lt;clef-octave-change&gt;</c> included — a <c>treble_8</c> staff's middle line is
+    /// B3 — while a Lily# note is written as on the plain clef (the page draws <c>b</c> on the
+    /// middle line, and it sounds B3). Until 2026-10-05 the file wrote B4 and put the clef's
+    /// octave in <c>&lt;transpose&gt;</c> as well, which every reader that honours the clef
+    /// (MuseScore) drew an octave high, TAB frets included (LilySharp-Omr
+    /// docs/repro/lilysharp-feedback-2026-10-01.md #17). The notes keep their Lily# octave in
+    /// the model (<c>WrittenMidi</c> reads them); only the document is shifted.
+    /// </summary>
+    public int PitchOctaveShift { get; set; }
+
+    /// <summary>The notation staff's line count when the score draws it other than 5
+    /// (<c>as lines N</c>), written as <c>&lt;staff-details&gt;&lt;staff-lines&gt;</c>; null
+    /// for five (feedback #18: a one-line percussion staff opened with five).</summary>
+    public int? StaffLines { get; set; }
+
     public XElement ToXml(string id)
     {
         var part = new XElement("part", new XAttribute("id", id));
         for (int i = 0; i < Measures.Count; i++)
         {
+            if (i == 0 && Measures[0].Attributes is { } opening)
+                opening.StaffLines = StaffLines;
             part.Add(Measures[i].ToXml(Tab, first: i == 0));
+        }
+
+        if (PitchOctaveShift != 0)
+        {
+            // A rest's and an unpitched note's display position is read under the clef too.
+            foreach (var octave in part.Descendants("octave")
+                         .Where(o => o.Parent?.Name == "pitch")
+                         .Concat(part.Descendants("display-octave")))
+                if (int.TryParse(octave.Value, out int o))
+                    octave.Value = (o + PitchOctaveShift).ToString(CultureInfo.InvariantCulture);
+        }
+
+        // On a one-line staff every note stands ON the line, which MusicXML reads as the
+        // clef's middle line (B4 under a treble or percussion clef).
+        if (StaffLines == 1)
+        {
+            foreach (var unpitched in part.Descendants("unpitched"))
+            {
+                unpitched.SetElementValue("display-step", "B");
+                unpitched.SetElementValue("display-octave", 4);
+            }
         }
         return part;
     }
@@ -493,6 +537,10 @@ internal sealed class MusicXmlAttributes
     /// what tells a reader so. Null when there is none.</summary>
     public int? Capo { get; set; }
 
+    /// <summary>The notation staff's line count when it is not five (<c>as lines N</c>), set on
+    /// the opening attributes by <see cref="MusicXmlPart.ToXml"/>; null writes none.</summary>
+    public int? StaffLines { get; set; }
+
     public XElement ToXml(MusicXmlTab? tab = null, bool first = false)
     {
         var attrs = new XElement("attributes",
@@ -564,8 +612,14 @@ internal sealed class MusicXmlAttributes
                 lower.Line is { } lowerLine ? new XElement("line", lowerLine) : null,
                 lower.OctaveChange is { } lowerOctave ? new XElement("clef-octave-change", lowerOctave) : null));
         if (tab != null && first)
-        {
             attrs.Add(tab.Clef());
+        // Every clef before any staff-details (schema order).
+        if (StaffLines is { } lines && tab is not { WithNotation: false })
+            attrs.Add(new XElement("staff-details",
+                tab != null ? new XAttribute("number", 1) : null,
+                new XElement("staff-lines", lines)));
+        if (tab != null && first)
+        {
             attrs.Add(tab.Details(Capo));
         }
         else if (Capo is { } capo && capo > 0 && tab == null)

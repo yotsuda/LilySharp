@@ -277,11 +277,12 @@ public class ShapeChordItemTests
         int[] fixedPlayed = MidiPitches(absolute);
         Assert.Equal(new[] { 48, 52, 55, 60, 67 }, fixedPlayed[..5]);
         Assert.Equal(62 - 12, fixedPlayed[^1]);   // d = D4 written, D3 sounding
-        // The page and MusicXML read the same frame.
+        // The page and MusicXML read the same frame (MusicXML writes it under the guitar's
+        // treble_8 clef, which is the octave it sounds: D3).
         Assert.Equal("D4", (ResolvedPitches.ForFile(SyntaxTree.Parse(relative)) ?? [])[^1].Pitch);
         string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(relative)).ToXml().ToString();
         var last = Regex.Matches(xml, @"<step>(\w)</step>\s*<octave>(\d)</octave>").Last();
-        Assert.Equal(("D", "4"), (last.Groups[1].Value, last.Groups[2].Value));
+        Assert.Equal(("D", "3"), (last.Groups[1].Value, last.Groups[2].Value));
     }
 
     /// <summary>Owner's decision 2026-09-30: a phrase whose body OPENS with the item hands on the
@@ -303,11 +304,12 @@ public class ShapeChordItemTests
             return ((ResolvedPitches.ForFile(tree) ?? [])[^1].Pitch, MidiPitches(book)[^1],
                 xml.Groups[1].Value + xml.Groups[2].Value);
         }
-        // The item's lowest note is written C4 on a guitar part: g reads G3 (sounding G2, 43).
+        // The item's lowest note is written C4 on a guitar part: g reads G3 (sounding G2, 43,
+        // which is what MusicXML writes under the treble_8 clef).
         foreach (string second in new[] { "a'1", "e'1", "f''1", "r1" })
-            Assert.Equal(("G3", 43, "G3"), After(Song(second)));
-        Assert.Equal(("G3", 43, "G3"), After(Song("e'1", "P'")));
-        Assert.Equal(("G3", 43, "G3"), After(Song("e'1", "P,")));
+            Assert.Equal(("G3", 43, "G2"), After(Song(second)));
+        Assert.Equal(("G3", 43, "G2"), After(Song("e'1", "P'")));
+        Assert.Equal(("G3", 43, "G2"), After(Song("e'1", "P,")));
         // A grace body naming such a phrase hands the same note on to the grace after it.
         string grace = Book("instrument guitar", "g''1 | grace { Q g16 } c1 |",
             top: "phrase Q { chord(C x32013)16 e'16 }");
@@ -465,7 +467,8 @@ public class ShapeChordItemTests
             Book("instrument guitar", "chord(Cm7 x3x546)1 |"))).ToXml().ToString();
         Assert.Equal(new[] { "5", "3", "2", "1" },
             Regex.Matches(xml, @"<string>(\d)</string>").Select(m => m.Groups[1].Value));
-        Assert.Equal(new[] { "C4", "C5", "E-15", "B-15" },
+        // Under the guitar's treble_8 clef: the pitches it sounds (Spelling_FollowsTheSymbolThenTheKey).
+        Assert.Equal(new[] { "C3", "C4", "E-14", "B-14" },
             Regex.Matches(xml, @"<step>(\w)</step>(?:\s*<alter>(-?\d)</alter>)?\s*<octave>(\d)</octave>")
                 .Select(m => m.Groups[1].Value + m.Groups[2].Value + m.Groups[3].Value));
         Assert.Equal(3, Regex.Matches(xml, "<chord ?/>").Count);
