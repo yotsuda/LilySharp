@@ -948,26 +948,4 @@ internal static class MultiMeasureRestEngraver
             && m.Items[i] is RestItem { IsMultiMeasure: true, IsSpacer: false }
             ? i : -1;
     }
-
-    /// <summary>
-    /// True iff the measure contains exactly one <see cref="RestItem"/> filling
-    /// (or longer than) the bar — the canonical "rest the whole measure".
-    /// </summary>
-    /// <remarks>
-    /// The bar is <paramref name="meter"/>, the prevailing time signature — NOT a whole
-    /// note. A full-measure rest creates no musical column in LilyPond, and that is just
-    /// as true of a 2/4 bar's half rest as of a 4/4 bar's whole rest; flooring at a whole
-    /// note counted the former and dropped the latter. Use <see cref="PrevailingMeters"/>
-    /// to obtain the per-bar meter.
-    /// </remarks>
-    internal static bool IsFullMeasureRest(Measure measure, Fraction meter)
-    {
-        if (measure.Items.Length != 1)
-            return false;
-        if (measure.Items[0] is not RestItem rest)
-            return false;
-        if (rest.IsSpacer)
-            return false; // invisible chord-row filler — not a real rest
-        return rest.Duration >= meter;
-    }
 }
