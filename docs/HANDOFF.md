@@ -78,7 +78,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。→ **第751（2026-10-02・ユーザー決定）「LP 忠実にこだわるより音楽的な妥当性を重視。LP から引き継ぐのはレンダリングとレイアウトの美しさだけ。ユーザーがまだ少ないので過去のしがらみに縛られない」＝意味論（拍子・弱起・反復・強弱・検査・出力の意味）の裁定者は音楽的妥当性、LP は描画と配置の裁定者（RULES §5.2 に規則として置いた）。
 
-**★★★★ 第815〜816（2026-10-05）ユーザー指示「OMR の提案を優先度順に着手」＝次の会話はここから**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`。OMR は別プログラム・Lily# は子プロセスで呼びファイルを読むだけ＝コードを混ぜない）: 0（#17〜#20）・A1 `@todo`・B1 の枠（L1・L7＝`93e1477e8`）・B2（`f5a3d3142`）・**C1・C2・B3（第816）・B4・C3（第817＝`7b0da314b`・`1aa5dbaf1`＝`paper { breaksOnly }`）は閉じた**。配布の取り決め `..\LilySharp-Omr\docs\repro\lilysharp-omr-distribution-2026-10-05.md`（同梱しない・L1〜L11）。⚠️ **B1・B3・B4 は VS Code で未確認**（OMR の `omr read` は第 1 歩が動く＝`OmrProto.exe` を `LILYSHARP_OMR_PATH` で指せば試せる）。残りの順: ⑤ B5（保存で `--verify` を呼び直す）・B6（AI 変換に `@todo` と候補を渡す）→ ⑥ 10-02 提案の P1〜P6（並行でよい）。OMR 側へのお願い（`breaksOnly` を書く・`part voice` をやめる・TIFF 用の PNG）は OMR の提案書に書いた。配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後。第814 末の決定（下）はこの後。
+**★★★★ 第815〜816（2026-10-05）ユーザー指示「OMR の提案を優先度順に着手」＝次の会話はここから**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`。OMR は別プログラム・Lily# は子プロセスで呼びファイルを読むだけ＝コードを混ぜない）: 0（#17〜#20）・A1 `@todo`・B1 の枠（L1・L7＝`93e1477e8`）・B2（`f5a3d3142`）・**C1・C2・B3（第816）・B4・C3（第817＝`paper { breaksOnly }`）・B5・B6（第818＝`0de6d924a`・`e1796b14c`）は閉じた**。配布の取り決め `..\LilySharp-Omr\docs\repro\lilysharp-omr-distribution-2026-10-05.md`（同梱しない・L1〜L11）。⚠️ **B1〜B6 は VS Code で未確認**（OMR の `omr read` は第 1 歩が動く＝`OmrProto.exe` を `LILYSHARP_OMR_PATH` で指せば試せる）。残り: ⑥ 10-02 提案の P1〜P6（学習データ）。**B5 は OMR の `omr verify`（第818 が提案）が出るまで動かない**。OMR 側へのお願い（`breaksOnly` を書く・`part voice` をやめる・TIFF 用の PNG・`omr verify`・記号単位の `confidence`/`candidates`）は OMR の提案書に書いた。配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後。第814 末の決定（下）はこの後。
 
 **★★★★ 第814 末のユーザー決定（2026-10-04）＝次の会話はここから**（判断の基準は音楽的妥当性。**手元のコーパスは偏っているので「コーパスで困ったか」を判断材料にしない**）:
 - §2 E ⑷ hairpin の niente の円・⑹ 開いた和音入力・⑺ Ignatzek＝**実装する**。⑷⑹ は文法の提案をユーザーに出した（第814 の返答・要旨は下）＝**承認を得てから実装**。⑺ の残りは LP の例外表の 2 つ（パワーコード `<c g>`→上付き「5」・オルタード `<c e g bes des' ees' fis' aes'>`→上付き「alt」＝ly/chord-modifiers-init.ly:54-58）。°・+・ø・°7・△・上付きは 2026-09-11 に移植済み。
@@ -125,6 +125,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第818セッション（2026-10-05・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝§1.0 の ⑤）。`-Start p818`（HEAD `c9d58097`）＝full **11128 / 0 / 2 / 11130**。§7 3.5 で第816 を ARCHIVE へ（moved 14 lines）。
+- **B6**（`e1796b14c`）: AI 変換の `taskPrompt` に選択内の `@todo`（`lilysharp/todos`）を、書かれた音・メモ・side file の `confidence`・`candidates`（`omrScanCore.markFactsOf`＝box の無い todo も読む）つきで足した（`aiTransformCore.marksContext`）。持ち運びの規則は GRAMMAR_FOR_LLM に既にあった。
+- **B5**（`0de6d924a`）: OMR には `omr read … --verify` しか無い＝**編集後の `.lys` を照合するコマンドが無い**。`omr verify <x.lys> [--lysc] [--progress json]`（side file の todos と line だけを書き直す・`.lys` に触らない・`--version --json` の `commands` で名乗る）を OMR 提案書に提案し、Lily# 側は設定 `lilysharp.omr.verifyOnSave`（既定は切）で名乗る reader にだけ呼ぶ（古い保存の照合は止める）。scan view は side file の書き直しを既に読み直す。`@todo` の無い todo の枠はその小節の行へ飛ぶ。
+- C# は不変（HANDOFF の継ぎ目だけ）・npm **211/211**。
+
+★ `-End p818 -DiffBase c9d580976`（`end1.log`）＝full **11128 / 0 / 2 / 11130**・門 全 OK（HANDOFF 443,064 B）。7.5: Core `+` 0 行（拡張機能だけ）。7.6・7.7: 該当なし。commit `e1796b14c`・`0de6d924a`＋docs。push はユーザー。
+判定: 次は ⑥ 10-02 提案の P1（`lysc --set key=value` で paper の値を上書き＝C3 で触った `PaperPlanReader` の上）→ P5（記号の外接枠）→ P2〜P4・P6。(a) P1 は今の文脈（paper の読み手）を使う／(b) 圧縮は起きていないが会話は長い／(c) OMR 連携の別の島（学習データ）。⇒ **続けてよい**（新しい会話でも損は小さい）。B1〜B6 の VS Code での確認はユーザー。
+
+## 以下は第817セッションの経緯
+
 ### 1.1 第817セッション（2026-10-05・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」＝§1.0 の ④）。`-Start p817`（HEAD `548717b3`）＝full **11124 / 0 / 2 / 11126**。§7 3.5 で第815 を ARCHIVE へ（moved 13 lines）。
@@ -134,19 +146,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 ★ `-End p817 -DiffBase 548717b35`（`end2.log`）＝full **11128 / 0 / 2 / 11130**・門 全 OK（HANDOFF 443,050 B）。7.5: Core `+` 95 行・REF 1（line-/page-break-permission）・OWN 0＝`breaksOnly` は LP の permission ##f と同じ意味。7.6: 閉じるのは Allow だけ・Force（書いた break）と最後の小節は残す。7.7: 匂い無し。⚠️ `-End` の 1 回目は §1 の継ぎ目の見出しを置換の組の `,`/`+` の罠でまた消していた（`TheHandoffKeepsExactlyOnePredecessorBlock` が赤で捕まえた＝直して 2 回目 OK）。commit `7b0da314b`・`1aa5dbaf1`＋docs。push はユーザー。
 判定: 次は ⑤ B5（保存で `omr --verify` を呼び直して side file を更新＝scan view は既に side file の書き直しを読み直す）・B6。(a) omrCore の起動と scan view の上に立つ＝続ける側／(b) 圧縮なし／(c) 同じ島。⇒ **続けてよい。ただし B1〜B4 を VS Code で一度見てもらうのが先**（実物の OMR で未試験）。
-
-## 以下は第816セッションの経緯
-
-### 1.1 第816セッション（2026-10-05・YT-DELL2）
-
-新しい会話。§1.0 の ③。`-Start p816`（HEAD `aaaa46bc`）＝full **11115 / 0 / 2 / 11117**。§7 3.5 で第814 を ARCHIVE へ（moved 14 lines）。
-- **C1**: `TodoIndex`（Core/Editing）＝描画経路と同じ collect で item→（印刷される小節番号・パート）の表 `Places`・`Find`（`@todo` の位置）・`PlaceAt`（カーソルの行の音）。LSP `lilysharp/todos`・`lilysharp/placeAt`（表は版ごとに cache）。
-- **C2**: `IDrawingContext.DrawBarBox`＝対話 SVG だけ `<rect class="bar-box" data-bar>`。fragment の capture の外で描く（前に小節が増えた段の replay でも今の番号）。書き出しは構成上不変（既定は no-op）。
-- **B3**: `omrScanCore.ts`（npm 試験）・`omrScan.ts`＝「Show Original Scan」。⚠️ **小節は番号ではなく OMR が書いた `line` で結ぶ**: OMR の実物 3 冊で side file と `PlaceAt` を突き合わせたら、長すぎる小節（Chopin bar 19＝2160/1920）から先で印刷番号が OMR の番号より 1 大きい（Lily# は拍子で割る）＝行の錨を編集に合わせて動かす。`@todo` はキーで結ぶ。`dl-ms-01` は `part voice`＝LYS0002（OMR 側の誤り）。OMR 提案書に C1・C2・B3 の形とお願い 3 つ（TIFF 用の PNG・`voice` の名前・box の無い todo）を書いた（OMR repo は未 commit）。
-- full **11124 / 0 / 2 / 11126**・npm 202/202。svg の掃きは省いた（静的出力は構成上不変・snapshot 全緑）。
-
-★ `-End p816 -DiffBase aaaa46bc6`（`end1.log`）＝full **11124 / 0 / 2 / 11126**・門 全 OK（HANDOFF 444,624 B）。台帳 1016 点のまま。7.5: Core `+` 228 行・REF 0・OWN 0＝エディタ向けの情報（LP に無い）。7.6: 印刷番号は `BarNumberEngraver.NumberMeasures` の 1 か所を読む。7.7: B3 用に足した `lilysharp/positionOf` は錨に替えた時点で外した＝匂い無し。commit `de68612c4`・`7002ba6b4`＋docs。push はユーザー。
-判定: 次は ④ B4（見比べ）・C3。(a) 今の文脈（scan view・bar-box・OMR の side file）の上に立つ＝続ける側／(b) 圧縮は起きていない／(c) 同じ島。⇒ **続けてよい。ただし先に B3 を VS Code で見てもらうのが安い**（B4 は B3 の上に建つ）。
 
 ## 2. 開いている作業
 

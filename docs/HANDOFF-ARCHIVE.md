@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第816セッションの経緯
+
+### 1.1 第816セッション（2026-10-05・YT-DELL2）
+
+新しい会話。§1.0 の ③。`-Start p816`（HEAD `aaaa46bc`）＝full **11115 / 0 / 2 / 11117**。§7 3.5 で第814 を ARCHIVE へ（moved 14 lines）。
+- **C1**: `TodoIndex`（Core/Editing）＝描画経路と同じ collect で item→（印刷される小節番号・パート）の表 `Places`・`Find`（`@todo` の位置）・`PlaceAt`（カーソルの行の音）。LSP `lilysharp/todos`・`lilysharp/placeAt`（表は版ごとに cache）。
+- **C2**: `IDrawingContext.DrawBarBox`＝対話 SVG だけ `<rect class="bar-box" data-bar>`。fragment の capture の外で描く（前に小節が増えた段の replay でも今の番号）。書き出しは構成上不変（既定は no-op）。
+- **B3**: `omrScanCore.ts`（npm 試験）・`omrScan.ts`＝「Show Original Scan」。⚠️ **小節は番号ではなく OMR が書いた `line` で結ぶ**: OMR の実物 3 冊で side file と `PlaceAt` を突き合わせたら、長すぎる小節（Chopin bar 19＝2160/1920）から先で印刷番号が OMR の番号より 1 大きい（Lily# は拍子で割る）＝行の錨を編集に合わせて動かす。`@todo` はキーで結ぶ。`dl-ms-01` は `part voice`＝LYS0002（OMR 側の誤り）。OMR 提案書に C1・C2・B3 の形とお願い 3 つ（TIFF 用の PNG・`voice` の名前・box の無い todo）を書いた（OMR repo は未 commit）。
+- full **11124 / 0 / 2 / 11126**・npm 202/202。svg の掃きは省いた（静的出力は構成上不変・snapshot 全緑）。
+
+★ `-End p816 -DiffBase aaaa46bc6`（`end1.log`）＝full **11124 / 0 / 2 / 11126**・門 全 OK（HANDOFF 444,624 B）。台帳 1016 点のまま。7.5: Core `+` 228 行・REF 0・OWN 0＝エディタ向けの情報（LP に無い）。7.6: 印刷番号は `BarNumberEngraver.NumberMeasures` の 1 か所を読む。7.7: B3 用に足した `lilysharp/positionOf` は錨に替えた時点で外した＝匂い無し。commit `de68612c4`・`7002ba6b4`＋docs。push はユーザー。
+判定: 次は ④ B4（見比べ）・C3。(a) 今の文脈（scan view・bar-box・OMR の side file）の上に立つ＝続ける側／(b) 圧縮は起きていない／(c) 同じ島。⇒ **続けてよい。ただし先に B3 を VS Code で見てもらうのが安い**（B4 は B3 の上に建つ）。
+
 ## 以下は第815セッションの経緯
 
 ### 1.1 第815セッション（2026-10-05・YT-DELL2）
