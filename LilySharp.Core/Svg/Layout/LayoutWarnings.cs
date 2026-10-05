@@ -34,18 +34,45 @@ namespace LilySharp.Core.Svg.Layout;
 /// </remarks>
 internal static class LayoutWarnings
 {
-    /// <summary>Tells <paramref name="sink"/> about each over-full page of
-    /// <paramref name="layout"/>; nothing when the sink is null.</summary>
-    internal static void Report(ScoreLayout layout, Action<string>? sink)
+    /// <summary>Tells <paramref name="sink"/> about each over-full page and system of
+    /// <paramref name="layout"/>, laid out on <paramref name="paper"/>; nothing when the sink
+    /// is null.</summary>
+    /// <remarks>
+    /// An over-full SYSTEM is one whose bars, at their stiffest, still run past the right
+    /// margin — reached when the breaks are not the breaker's to choose
+    /// (<c>lysc --set measuresPerSystem=N</c>, <c>paper { breaksOnly }</c>, a written
+    /// <c>break</c>). LilyPond draws such a line past the margin too, and says nothing; here
+    /// the ink beyond the paper's edge would be cut from a PNG while the SVG still holds it,
+    /// which is exactly what a training run must hear about.
+    /// </remarks>
+    internal static void Report(ScoreLayout layout, LayoutOptions paper, Action<string>? sink)
     {
         if (sink is null)
             return;
+        double right = paper.PageWidth - paper.MarginRight;
+        int systemNumber = 0;
         foreach (var page in layout.Pages)
         {
             if (page.Overflow > 0)
                 sink(string.Format(CultureInfo.InvariantCulture,
                     "page {0} is over-full by {1:F1} staff spaces: its systems were pressed together to fit it",
                     page.PageIndex + 1, page.Overflow));
+            foreach (var system in page.Systems)
+            {
+                systemNumber++;
+                if (system.Measures.IsDefaultOrEmpty)
+                    continue;
+                var last = system.Measures[^1];
+                double over = last.X + last.Width - right;
+                if (over > OverflowTolerance)
+                    sink(string.Format(CultureInfo.InvariantCulture,
+                        "system {0} (page {1}) is over-full by {2:F1} staff spaces: its bars run past the right margin",
+                        systemNumber, page.PageIndex + 1, over));
+            }
         }
     }
+
+    /// <summary>How far past the margin a system may end before it is said to be over-full —
+    /// above the solver's arithmetic noise, below anything a reader can see.</summary>
+    private const double OverflowTolerance = 0.01;
 }

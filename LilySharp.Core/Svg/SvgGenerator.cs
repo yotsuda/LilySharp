@@ -62,7 +62,7 @@ public static class SvgGenerator
     {
         options ??= SvgRenderOptions.Default;
         var (multiScore, layout) = BuildLayout(tree, renderSpec, PaperBaseOf(options), options.PaperOverrides);
-        LayoutWarnings.Report(layout, options.LayoutWarning);
+        LayoutWarnings.Report(layout, multiScore.Paper, options.LayoutWarning);
         return RenderToSvg(multiScore, layout, options);
     }
 
@@ -99,7 +99,7 @@ public static class SvgGenerator
         foreach (var spec in allSpecs)
         {
             var (multiScore, layout) = BuildLayout(tree, spec, settings: options.PaperOverrides);
-            LayoutWarnings.Report(layout, options.LayoutWarning);
+            LayoutWarnings.Report(layout, multiScore.Paper, options.LayoutWarning);
             var svg = RenderToSvg(multiScore, layout, options);
             var filename = inputStem != null ? spec.ResolveOutputStem(inputStem) : spec.OutputFile;
             results.Add((filename, svg));
@@ -130,7 +130,7 @@ public static class SvgGenerator
         foreach (var spec in allSpecs)
         {
             var (multiScore, layout) = BuildLayout(tree, spec, settings: options.PaperOverrides);
-            LayoutWarnings.Report(layout, options.LayoutWarning);
+            LayoutWarnings.Report(layout, multiScore.Paper, options.LayoutWarning);
             var svg = RenderToSvg(multiScore, layout, options);
             // A score with nothing to draw renders to NO page, and the document reads as
             // the empty string (SvgDocumentContext.Assemble). On its own such a score is

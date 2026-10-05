@@ -44,7 +44,9 @@ namespace LilySharp.Core.Semantics;
 /// <para>
 /// And keys that are settings ONLY, not paper keys (<see cref="SettingOnlyKeys"/> — P2, the
 /// owner's decision 2026-10-05: knobs for varying training data stay out of the language, so
-/// a <c>paper { }</c> that writes one is still refused). The four are LilyPond's
+/// a <c>paper { }</c> that writes one is still refused). <c>measuresPerSystem=N</c> is N bars to
+/// every system (<see cref="LayoutOptions.MeasuresPerSystem"/>; LilyPond has no such variable).
+/// The other four are LilyPond's
 /// <c>shortest-duration-space</c> and its <c>\paper</c> <c>systems-per-page</c> /
 /// <c>min-systems-per-page</c> / <c>max-systems-per-page</c>, with LilyPond's meaning:
 /// <c>systemsPerPage=6</c> on 17 systems' worth of music re-breaks the lines into 18 and pages
@@ -60,7 +62,7 @@ public sealed class PaperOverrides
 
     /// <summary>The keys only a setting can carry, in documentation order.</summary>
     internal static readonly string[] SettingOnlyKeys =
-        ["shortestDurationSpace", "systemsPerPage", "minSystemsPerPage", "maxSystemsPerPage"];
+        ["shortestDurationSpace", "measuresPerSystem", "systemsPerPage", "minSystemsPerPage", "maxSystemsPerPage"];
 
     private readonly PaperDeclarationSyntax? _block;
     private readonly string[] _flagsOff;
@@ -93,11 +95,12 @@ public sealed class PaperOverrides
         if (!int.TryParse(value, System.Globalization.NumberStyles.None,
                 System.Globalization.CultureInfo.InvariantCulture, out int n) || n < 1)
         {
-            error = $"'{key}' takes a whole number of systems, 1 or more: {key}=4.";
+            error = $"'{key}' takes a whole number, 1 or more: {key}=4.";
             return null;
         }
         return key switch
         {
+            "measuresPerSystem" => paper => paper with { MeasuresPerSystem = n },
             "systemsPerPage" => paper => paper with
             {
                 PageBreaking = paper.PageBreaking with { SystemsPerPage = n },

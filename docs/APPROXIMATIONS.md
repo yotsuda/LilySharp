@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 215 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **339** | |
+| `OWN` | 216 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **340** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -242,7 +242,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（215 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（216 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **:90** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
@@ -446,6 +446,7 @@
 - **:1512** LILYSHARP-OWN: the shift itself. LilyPond has no counterpart, because it has no second
 ### `LilySharp.Core/Svg/Layout/LayoutOptions.cs`
 - **:122** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
+- **:170** LILYSHARP-OWN: LilyPond has no such variable (its spelling is a \break every N bars beside the ##f permissions); 0 leaves the breaks to the breaker.
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
 - **:897** (the chain's last node — see its LILYSHARP-OWN remark), the single-page path
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`

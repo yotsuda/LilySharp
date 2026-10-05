@@ -39,18 +39,58 @@ internal static class BreaksOnly
     /// not ask for it.</summary>
     public static MultiStaffScore Apply(MultiStaffScore score)
     {
-        if (!score.Paper.BreaksOnly || score.StaffGroups.IsDefaultOrEmpty)
+        if (score.StaffGroups.IsDefaultOrEmpty)
             return score;
-        return score with
+        if (score.Paper.MeasuresPerSystem > 0)
+            return Rewrite(score, measures => EveryNth(measures, score.Paper.MeasuresPerSystem));
+        if (score.Paper.BreaksOnly)
+            return Rewrite(score, Close);
+        return score;
+    }
+
+    private static MultiStaffScore Rewrite(MultiStaffScore score,
+        System.Func<ImmutableArray<Measure>, ImmutableArray<Measure>> rewrite)
+        => score with
         {
             StaffGroups = score.StaffGroups.Select(g => g with
             {
                 Staves = g.Staves.Select(s => s with
                 {
-                    Voices = s.Voices.Select(v => v with { Measures = Close(v.Measures) }).ToImmutableArray(),
+                    Voices = s.Voices.Select(v => v with { Measures = rewrite(v.Measures) }).ToImmutableArray(),
                 }).ToImmutableArray(),
             }).ToImmutableArray(),
         };
+
+    /// <summary>
+    /// <c>lysc --set measuresPerSystem=N</c> (<see cref="LayoutOptions.MeasuresPerSystem"/>): a
+    /// line break forced after every Nth bar, every other bar line closed to line and page
+    /// breaks — the written <c>break</c> / <c>pageBreak</c> give way, since the count decides
+    /// every system. A page may break only where a line does, so the forced bars keep the
+    /// page permission they had (a written <c>pageBreak</c> there stays one). The last bar is
+    /// left alone, as in <see cref="Close"/>. Bars are counted as collected: a pickup is one.
+    /// </summary>
+    private static ImmutableArray<Measure> EveryNth(ImmutableArray<Measure> measures, int n)
+    {
+        if (measures.Length < 2)
+            return measures;
+        var builder = measures.ToBuilder();
+        for (int i = 0; i < builder.Count - 1; i++)
+        {
+            var m = builder[i];
+            builder[i] = (i + 1) % n == 0
+                ? m with
+                {
+                    LineBreakPermission = BreakPermission.Force,
+                    PageBreakPermission = m.PageBreakPermission == BreakPermission.Forbid
+                        ? BreakPermission.Allow : m.PageBreakPermission,
+                }
+                : m with
+                {
+                    LineBreakPermission = BreakPermission.Forbid,
+                    PageBreakPermission = BreakPermission.Forbid,
+                };
+        }
+        return builder.MoveToImmutable();
     }
 
     private static ImmutableArray<Measure> Close(ImmutableArray<Measure> measures)

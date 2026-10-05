@@ -108,6 +108,7 @@ public class PaperOverridesTests
         Assert.Equal(4, p.PageBreaking.MaxSystemsPerPage);
         Assert.Equal(2, p.PageBreaking.MinSystemsPerPage);
         Assert.Equal(6, Over(LayoutOptions.Default, "systemsPerPage=6").PageBreaking.SystemsPerPage);
+        Assert.Equal(4, Over(LayoutOptions.Default, "measuresPerSystem=4").MeasuresPerSystem);
     }
 
     [Theory]
@@ -116,6 +117,7 @@ public class PaperOverridesTests
     [InlineData("systemsPerPage=2.5")]
     [InlineData("systemsPerPage=0")]
     [InlineData("maxSystemsPerPage=-1")]
+    [InlineData("measuresPerSystem=0")]
     public void ASettingOnlyKeyThatDoesNotRead_IsRefused(string setting)
     {
         Assert.Null(PaperOverrides.Parse([setting], out var error));
@@ -227,6 +229,44 @@ public class PaperOverridesTests
     /// over-full page by 14.6 staff-spaces", "page 1 has been compressed" — the same twin at 20).
     /// The systems stay on the paper, and the layout says so.
     /// </summary>
+    /// <summary>measuresPerSystem: N bars a system, however many the breaker would have put
+    /// there (12 systems of 5 by default).</summary>
+    [Theory]
+    [InlineData(2, 30)]
+    [InlineData(4, 15)]
+    [InlineData(8, 8)]
+    public void MeasuresPerSystem_FixesTheBarsOfEverySystem(int bars, int systems)
+    {
+        var (perPage, warnings) = Paged("measuresPerSystem=" + bars);
+        Assert.Equal(systems, perPage.Sum());
+        Assert.Empty(warnings);
+    }
+
+    /// <summary>
+    /// Bars that cannot fit a system run past the margin — LilyPond's forced <c>\break</c> does
+    /// the same and says nothing; here the layout says which system, since a PNG cuts that ink.
+    /// </summary>
+    [Fact]
+    public void BarsThatCannotFitTheSystem_AreSaidSo()
+    {
+        string dense = "octave absolute\npart m { clef treble\n  section A { "
+            + string.Concat(Enumerable.Repeat("cis''16 d'' ees'' fis'' g'' aes'' b'' c''' d'''4 bes'' | ", 16))
+            + "}\n}\nform main { A }\nscore main { staff m }\n";
+        var warnings = new List<string>();
+        SvgGenerator.Generate(SyntaxTree.Parse(dense), new SvgRenderOptions
+        {
+            EmbedFont = false, PaperOverrides = PaperOverrides.Parse(["measuresPerSystem=8"], out _),
+            LayoutWarning = warnings.Add,
+        });
+        Assert.Equal(2, warnings.Count);
+        Assert.StartsWith("system 1 (page 1) is over-full by ", warnings[0]);
+        Assert.StartsWith("system 2 (page 1) is over-full by ", warnings[1]);
+
+        warnings.Clear();
+        SvgGenerator.Generate(SyntaxTree.Parse(dense), new SvgRenderOptions { EmbedFont = false, LayoutWarning = warnings.Add });
+        Assert.Empty(warnings);
+    }
+
     [Fact]
     public void TooManySystemsForThePage_AreCompressedOntoIt_AndSaidSo()
     {

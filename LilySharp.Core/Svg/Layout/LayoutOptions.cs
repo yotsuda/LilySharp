@@ -159,6 +159,21 @@ internal sealed record LayoutOptions
     public bool BreaksOnly { get; init; } = false;
 
     /// <summary>
+    /// N bars to every system (0 = the breaker chooses): a line break forced after every Nth
+    /// bar and closed everywhere else, the written <c>break</c> / <c>pageBreak</c> included
+    /// (<c>Collector.BreaksOnly.ApplyMeasuresPerSystem</c>). ⚠️ NOT A PAPER KEY: only
+    /// <c>lysc --set measuresPerSystem=N</c> sets it (LilySharp-Omr's proposal of 2026-10-02
+    /// P2, the owner's decision 2026-10-05) — a fixed bar count a line, the lead-sheet layout,
+    /// for an OMR reader's training data.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond has no such variable (its spelling is a \break every N bars beside the ##f permissions); 0 leaves the breaks to the breaker.
+    /// A line that cannot hold its bars runs past the margin, as there, and the layout says so
+    /// (<see cref="LayoutWarnings"/>).
+    /// </remarks>
+    public int MeasuresPerSystem { get; init; } = 0;
+
+    /// <summary>
     /// If true, uses Knuth-Plass optimal line breaking algorithm.
     /// Otherwise uses greedy first-fit algorithm.
     /// </summary>
