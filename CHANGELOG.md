@@ -417,6 +417,10 @@ workflow attaches that section to the GitHub Release verbatim.
   scan and the score preview scroll together bar by bar (a bar the page splits in two — one the
   reader wrote too long — keeps the scan on the bar it came from), and the preview frames the
   bars that carry a mark.
+- **The AI transform sees the marks it is asked about.** For each `@todo` in the selection the
+  prompt lists the item, its memo and — when an OMR reader wrote the file — how sure the reader
+  was and the readings it offers (`x.omr.json`), so "fix the doubtful notes" chooses among them
+  by what fits the music; a mark it resolves loses its `@todo`, the others keep theirs.
 - **`paper { breaksOnly }` breaks lines and pages only where the music says.** Every bar line
   other than a written `break` / `pageBreak` is closed to both (a plain `break` is then not a
   page break either), so a score copied from a page — an OMR reader writes the original's

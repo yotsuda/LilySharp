@@ -150,3 +150,47 @@ export function octaveOutliers(original: readonly ResolvedPitch[], candidate: re
 export function isUnchanged<S extends SpanLike>(edit: CandidateEdit<S>): boolean {
     return edit.text === edit.snap.origSelectedText;
 }
+
+/** A `@todo` mark inside the selection, as the prompt shows it. */
+export interface MarkInSelection {
+    /** The 0-based line of its note, rest or chord. */
+    readonly line: number;
+    /** The item as written, mark included (`fis'8@todo(o1203 "F# or F?")`). */
+    readonly written: string;
+    readonly key?: string | null;
+    readonly memo?: string | null;
+}
+
+/** What an OMR reader's side file says about a keyed mark (omrScanCore.markFactsOf). */
+export interface MarkReadings {
+    readonly confidence?: number;
+    readonly candidates: readonly { readonly label?: string; readonly text: string }[];
+}
+
+/**
+ * The marks left to check inside the selection, for the prompt (LilySharp-Omr proposal B6):
+ * each one's memo and — when an OMR reader wrote the file — how sure it was and the readings it
+ * offers, so "fix the doubtful notes" can choose among them by what makes sense musically.
+ * Null when the selection carries no mark.
+ */
+export function marksContext(marks: readonly MarkInSelection[], readings: ReadonlyMap<string, MarkReadings>): string | null {
+    if (marks.length === 0) {
+        return null;
+    }
+    const lines = marks.map(m => {
+        const r = m.key ? readings.get(m.key) : undefined;
+        const facts: string[] = [];
+        if (m.memo) { facts.push(`memo: ${m.memo}`); }
+        if (r?.confidence !== undefined) { facts.push(`reader's confidence ${r.confidence.toFixed(2)}`); }
+        if (r && r.candidates.length > 0) {
+            facts.push('readings: ' + r.candidates.map(c => c.label ? `${c.text} (${c.label})` : c.text).join(', '));
+        }
+        return `  - line ${m.line + 1}: ${m.written}${facts.length ? ' — ' + facts.join('; ') : ''}`;
+    });
+    return [
+        'Marks left to check in the selection (@todo; an OMR reader writes them where it was unsure of the page):',
+        ...lines,
+        'A reading replaces the marked item. Where you resolve a mark — with one of its readings, or as the',
+        'music around it requires — write the item without its @todo; keep the @todo of every mark you leave.',
+    ].join('\n');
+}

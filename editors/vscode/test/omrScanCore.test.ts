@@ -23,7 +23,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
 import {
-    anchorsOf, barOnLine, parseSideFile, scanBarForPrinted, shiftAnchors, shownImage, sideFileOf, todoTarget,
+    anchorsOf, barOnLine, markFactsOf, parseSideFile, scanBarForPrinted, shiftAnchors, shownImage, sideFileOf, todoTarget,
 } from '../src/omrScanCore';
 
 // Absolute on whichever OS runs the tests.
@@ -95,6 +95,27 @@ describe('the side file', () => {
         assert.equal(shownImage(side.pages[0]), path.join(SCANS, 'p01.png'));
         assert.equal(shownImage(side.pages[1]), undefined);
         assert.equal(shownImage({ ...side.pages[1], annotated: 'C:\\o\\x.omr-p02.png' }), 'C:\\o\\x.omr-p02.png');
+    });
+});
+
+describe('the readings of a mark (B6)', () => {
+    it('reads each keyed todo\'s confidence and candidates, boxed or not', () => {
+        const facts = markFactsOf(JSON.stringify({
+            version: 1,
+            todos: [
+                { key: 'o1203', confidence: 0.62, candidates: [{ label: 'F♯', text: "fis'8" }, { text: "f'8" }, { label: 'x' }] },
+                { key: 'b9', page: null, box: null, candidates: [] },
+                { candidates: [{ text: 'c4' }] },
+            ],
+        }));
+        assert.deepEqual([...facts.keys()], ['o1203', 'b9']);
+        assert.deepEqual(facts.get('o1203'), { confidence: 0.62, candidates: [{ label: 'F♯', text: "fis'8" }, { text: "f'8" }] });
+        assert.deepEqual(facts.get('b9'), { candidates: [] });
+    });
+
+    it('is nothing for what is not a side file', () => {
+        assert.equal(markFactsOf('{').size, 0);
+        assert.equal(markFactsOf(JSON.stringify({ version: 9, todos: [{ key: 'a' }] })).size, 0);
     });
 });
 

@@ -22,7 +22,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
-    SEL_CLOSE, SEL_OPEN, isUnchanged, octaveOutliers, pitchToMidi, toCandidateEdit,
+    SEL_CLOSE, SEL_OPEN, isUnchanged, marksContext, octaveOutliers, pitchToMidi, toCandidateEdit,
 } from '../src/aiTransformCore';
 
 const FILE = 'part m { clef treble }\npart h { clef treble }\n\nsection A {\n  m { c4 d e f | }\n}\n\nscore main {\n  staff m\n}\n';
@@ -127,5 +127,21 @@ describe('the octave check', () => {
 
     it('says nothing when there was no register to measure by', () => {
         assert.deepEqual(octaveOutliers([], at(['C1'])), []);
+    });
+});
+
+describe('the marks left to check (B6)', () => {
+    it('says nothing when the selection carries none', () => {
+        assert.equal(marksContext([], new Map()), null);
+    });
+
+    it('lists each mark with its memo, and an OMR reader\'s confidence and readings', () => {
+        const text = marksContext([
+            { line: 11, written: "fis'8@todo(o1203 \"F# or F?\")", key: 'o1203', memo: 'F# or F?' },
+            { line: 13, written: 'c4@todo', key: null, memo: null },
+        ], new Map([['o1203', { confidence: 0.62, candidates: [{ label: 'F#', text: "fis'8" }, { text: "f'8" }] }]]))!;
+        assert.match(text, /line 12: fis'8@todo\(o1203 "F# or F\?"\) — memo: F# or F\?; reader's confidence 0\.62; readings: fis'8 \(F#\), f'8/);
+        assert.match(text, /line 14: c4@todo$/m);
+        assert.match(text, /keep the @todo of every mark you leave/);
     });
 });

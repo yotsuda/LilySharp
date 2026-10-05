@@ -36,7 +36,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import { ChatClient, ChatMessage, resolveChatClient } from './modelClient';
-import { CandidateEdit as CoreCandidateEdit, SEL_CLOSE, SEL_OPEN, cleanCandidate, octaveOutliers, toCandidateEdit } from './aiTransformCore';
+import {
+    CandidateEdit as CoreCandidateEdit, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate, marksContext,
+    octaveOutliers, toCandidateEdit,
+} from './aiTransformCore';
+import { markFactsOf, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 export { cleanCandidate }; // aiComplete reads it from here
 
@@ -215,6 +219,8 @@ async function drive(
     // Resolved facts of the selection (§5): un-blindfold the model. Best-effort.
     progress.report({ message: 'reading resolved facts…' });
     const facts = await getFacts(client, snapshot, token);
+    // The @todo marks in the selection and an OMR reader's readings of them (B6).
+    const marks = await getMarks(client, snapshot);
 
     // The compiler's verdict on the untouched document: shown to the model up front (what is
     // wrong NOW is often exactly what the instruction is about — "fix the bar lengths"), and
@@ -230,7 +236,7 @@ async function drive(
     // Conversation seed.
     const messages: ChatMessage[] = [
         { role: 'system', content: systemPrompt(grammar) },
-        { role: 'user', content: taskPrompt(snapshot, facts, baseline, instruction) },
+        { role: 'user', content: taskPrompt(snapshot, facts, baseline, instruction, marks) },
     ];
 
     let iterate = true;
@@ -500,7 +506,8 @@ function diagnosticsContext(snapshot: Snapshot, baseline: CandidateDiagnostic[])
     return lines.join('\n');
 }
 
-function taskPrompt(snapshot: Snapshot, facts: ResolvedPitchFact[], baseline: CandidateDiagnostic[], instruction: string): string {
+function taskPrompt(snapshot: Snapshot, facts: ResolvedPitchFact[], baseline: CandidateDiagnostic[], instruction: string,
+    marks: string | null = null): string {
     const parts: string[] = [];
     parts.push(`The file being edited, with the selection marked ${SEL_OPEN} … ${SEL_CLOSE} `
         + '(read the key, meter, parts and neighbouring bars from it; the markers are not part of the file):');
@@ -523,6 +530,10 @@ function taskPrompt(snapshot: Snapshot, facts: ResolvedPitchFact[], baseline: Ca
         parts.push('');
         parts.push('Resolved absolute pitches of the selection (written -> resolved), from the compiler:');
         parts.push(facts.map(f => `  ${f.Written} -> ${f.Resolved}`).join('\n'));
+    }
+    if (marks) {
+        parts.push('');
+        parts.push(marks);
     }
     parts.push('');
     parts.push(`Instruction: ${instruction}`);
@@ -637,6 +648,32 @@ async function getFacts(client: LanguageClient, snapshot: Snapshot, token: vscod
         return resp.Error ? [] : (resp.Pitches ?? []);
     } catch {
         return [];
+    }
+}
+
+interface TodosResponse { Todos?: { Key?: string | null; Memo?: string | null; HostStart: number; HostEnd: number }[]; Error?: string | null }
+
+/** The selection's @todo marks (lilysharp/todos) with the readings an OMR reader's side file
+ *  offers for them, as the prompt's section; null when the selection carries none. Best-effort. */
+async function getMarks(client: LanguageClient, snapshot: Snapshot): Promise<string | null> {
+    try {
+        const resp = await client.sendRequest<TodosResponse>('lilysharp/todos', { textDocument: { uri: snapshot.uri.toString() } });
+        const text = snapshot.origFullText;
+        const marks: MarkInSelection[] = (resp.Todos ?? [])
+            .filter(t => t.HostStart < snapshot.endOffset && t.HostEnd > snapshot.startOffset)
+            .map(t => ({
+                line: text.slice(0, t.HostStart).split('\n').length - 1,
+                written: text.slice(t.HostStart, t.HostEnd).trim(),
+                key: t.Key, memo: t.Memo,
+            }));
+        let readings = new Map<string, MarkReadings>();
+        const side = snapshot.uri.scheme === 'file' ? sideFileOf(snapshot.uri.fsPath) : undefined;
+        if (side && marks.some(m => m.key) && fs.existsSync(side)) {
+            readings = markFactsOf(fs.readFileSync(side, 'utf8'));
+        }
+        return marksContext(marks, readings);
+    } catch {
+        return null;
     }
 }
 

@@ -143,6 +143,43 @@ export function parseSideFile(text: string, sideFilePath: string): ScanSideFile 
     return { pages, measures, todos };
 }
 
+/** One reading the reader offers for a mark: `text` replaces the marked item (without the mark). */
+export interface OmrCandidate { readonly label?: string; readonly text: string }
+
+/** What the side file says about a keyed mark, beyond its box (B6: the AI transform reads it). */
+export interface OmrMarkFacts {
+    readonly confidence?: number;
+    readonly candidates: readonly OmrCandidate[];
+}
+
+/** Each keyed todo's confidence and candidates, from the side file's text; empty when it is
+ *  not a side file this reads. A todo need not have a box for this (a bar the reader could not
+ *  place still has its readings). */
+export function markFactsOf(text: string): Map<string, OmrMarkFacts> {
+    const facts = new Map<string, OmrMarkFacts>();
+    let root: any;
+    try {
+        root = JSON.parse(text.replace(/^﻿/, ''));
+    } catch {
+        return facts;
+    }
+    const version = int(root?.version);
+    if (version === undefined || version < SCAN_SIDE_FILE_VERSIONS.min || version > SCAN_SIDE_FILE_VERSIONS.max
+        || !Array.isArray(root.todos)) {
+        return facts;
+    }
+    for (const t of root.todos) {
+        const key = str(t?.key);
+        if (!key || facts.has(key)) { continue; }
+        const candidates = (Array.isArray(t.candidates) ? t.candidates : [])
+            .filter((c: any) => str(c?.text))
+            .map((c: any) => (str(c.label) ? { label: c.label, text: c.text } : { text: c.text }));
+        const confidence = typeof t.confidence === 'number' && Number.isFinite(t.confidence) ? t.confidence : undefined;
+        facts.set(key, confidence === undefined ? { candidates } : { confidence, candidates });
+    }
+    return facts;
+}
+
 /** A mark as the language server lists it (`lilysharp/todos`, PascalCase on the wire), the
  *  fields this reads. */
 export interface ServerTodo {
