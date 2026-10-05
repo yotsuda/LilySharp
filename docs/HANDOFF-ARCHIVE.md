@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第823セッションの経緯
+
+### 1.1 第823セッション（2026-10-05・YT-DELL2）
+
+同じ会話の続き。`-Start p823`（HEAD `6da8d732`）＝full **11194 / 0 / 2 / 11196**。§7 3.5 で第821 を ARCHIVE へ（moved 12 lines）。
+- **ユーザー決定（2026-10-05）＝P2〜P4 の設定を言語に入れる**（「補完に出なければユーザーは気づかない」→ 私の意見を求められ「LP では全部入力言語の一部」と答え、ユーザー「1」＝全部・`score {}` の中で上書きできる方が良い）。**10-05 朝の「言語に入れない」を覆した**。綴りはユーザー「LP にとらわれず分かりやすい方を」→ 私が決めた: 点つき（`layout { Stem.thickness 1.5 }`＝`--set`・`override` と同じ綴り）・名前を `StaffLine.thickness`／`LedgerLine.thickness A B`／`Beam.thickness`／`BarLine.thinThickness` に改名（第822 の `StaffSymbol.*`・`beamThickness`・`hairThickness` は消えた・単位は LP のまま）。
+- `paper`: `staffSpace`（単位必須・**ブロックの他の項目より先に読む**＝`StaffSpaceOf` の先読み・参照の上書きブロックも・`--set` は `LayoutOptions.StaffSpaceFromSetting` で優先）・`shortestDurationSpace`・`systemsPerPage`/`min`/`max`（1 ブロックに併記は誤り・後のブロックが片方を書けば他方を消す）・`measuresPerSystem`。`layout`: 8 キー（`LayoutPlanReader.NumberKeys`＝既定と例の表 1 か所・`LayoutPlan.Style`→ collector が `Paper.Style` へ渡す）。構文: 点を語に挟まれ隙間なしのときだけ通す（`Parser.Declarations`）・entry walker が 3 トークンを 1 キーに。`PaperOverrides` は両ブロックの文として書いて言語の読み手に読ませる形に作り直し（setting 専用の表は消えた・`--set barNumbers=none` も通る）。楽譜ごとの上書きは既存の名前つきブロック参照（`score { paper NAME { … } }`）＝無名ブロックを score 内に書く形は今も拒否。
+- エディタ: 補完は語彙表から自動・数値キーは既定値を placeholder で挿入・直後は `AfterLayoutNumberKey`（空）・最上位の `layout` 下書きに 8 キー・説明文・TextMate 文法。双子: `\Score` の `\override` と `line-thickness = N\pt`（`\layout` 内で `staff-space` は Scheme 変数でない＝実測）・既定では何も書かない。LP 双子で 30 本の符幹が第822 と同じ差（0.027〜0.036）。
+- 試験の網の更新: 語を持たない数値キー（LayoutBlockTests・ValueContextCompletionTests・EditorColouringTests の点のエスケープ）・`VocabularyPerturbationTests` のページ系の値（`minSystemsPerPage` は最後のページに効かない＝2 頁の `FilledPageBook` で 1 対 22）。毒 3 本（点の受理→6 赤・Style の受け渡し→5 赤・`--set` の staffSpace 優先→5 赤）。文書: GRAMMAR §2.5/§2.6・SYNTAX_REFERENCE・CLI_REFERENCE（節を書き直し・アンカー変更）・CHANGELOG・OMR §6。⚠️ GRAMMAR の §2.6 の段落は PowerShell の二重引用符でバッククォートが落ちた（制御文字は 0 を確認・散文として読める）。
+
+★ `-End p823 -DiffBase 6da8d7329`（`end.log`）＝full **11206 / 0 / 2 / 11208**・門 全 OK。7.5: Core `+` 400 行・REF 3・OWN 0＝言語の読み手・構文・補完・双子の配管（描画の意味は第821〜822 のまま）。7.6: 綴りと名前は私の判断（ユーザーが委ねた）・意味は LP。7.7: GRAMMAR の落ちたバッククォート（上）。commit `cc38f6d67`＋docs。push はユーザー。
+判定: 次は P4 の残り（項目の順はユーザーに訊く）。(a) style の配管は使える／(b) **この会話は 4 便ぶんで長い**／(c) 同じ島 ⇒ **新しい会話が有利**（(b) による）。
+
 ## 以下は第822セッションの経緯
 
 ### 1.1 第822セッション（2026-10-05・YT-DELL2）
