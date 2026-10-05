@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第822セッションの経緯
+
+### 1.1 第822セッション（2026-10-05・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝P4）。`-Start p822`（HEAD `7fe5ca03`）＝full **11180 / 0 / 2 / 11182**。§7 3.5 で第820 を ARCHIVE へ（moved 12 lines）。
+- **P4 第 1 弾＝線の太さと符幹の長さ**: ユーザー決定（2026-10-05）＝**4 群すべて・LP の名前と単位・`--set` 専用**。キー `lineThickness`・`StaffSymbol.thickness`・`StaffSymbol.ledgerLineThickness=A,B`・`Stem.thickness`・`Stem.lengthFraction`・`Beam.beamThickness`・`BarLine.hairThickness`・`BarLine.thickThickness`（`PaperOverrides.StyleKeys`）。配管: `Svg/EngravingStyle`（record・`LayoutOptions.Style`）を `LayoutEngine.Layout` と `SharedRenderer.RenderTo` が `[ThreadStatic]` のスコープで持ち、`EngravingDefaults` の const を style を読むプロパティに（`LineThickness`＝五線の線の太さ＝`StaffSymbol.thickness × line-thickness`・新設 `PaperLineThickness`＝小節線・kern・小節休符・歌詞の延長線＝LP の layout-line-thickness）。`StemDetails.Default` は style の length-fraction つき（既定は 1 つの共有インスタンス `EngravingStyle.DefaultStemDetails`）。const の連鎖 17 か所を property／局所変数に・`BeamScoringProblem` の既定引数を nullable に・静的に一度だけ作る表（tab の `s_uniformBeamedDetails`・`LyricHyphenParameters.Default`）を style に追従させた（`static readonly` の初期化子を走査して他に無いことを確認）。
+- LP 双子（Lab `sessions/p822/p4`）: 太さ（五線 0.15・符幹 0.30・加線 0.40・小節線 0.45）が一致。連桁つきの符幹 30 本は Lily# − LP が既定でも設定下でも 0.027〜0.036（描き方の約束の差）＝連桁の位置が LP と同じ。掃き（`sessions/p822/sweep`・base は p821 の exe）998 冊 1199 svg で差 0。毒 3 本（レイアウトのスコープ→1 赤・length-fraction→2 赤・小節線を五線の太さに→1 赤）。CLI_REFERENCE・CHANGELOG・OMR の `lilysharp-implemented-2026-10-05.md` §6（提案書の間隔の値からの換算式つき）を更新。
+
+★ `-End p822 -DiffBase 7fe5ca03d`（`end.log`）＝full **11194 / 0 / 2 / 11196**・門 全 OK。途中の full で `CitationsThatNameNothing` 1 赤（`Stem::thickness` は下線が無く名前に数えられない・範囲も 905→908）＝直して緑。7.5: Core `+` 293 行・REF 10・OWN 0＝const を style のプロパティにする配管と LP の各プロパティの出所。7.6: 太さの基準（五線の線か用紙の line-thickness か）は grob ごとに LP のソースで確かめた（stem.cc・staff-symbol.cc・bar-line.scm・multi-measure-rest.cc・lyric-extender.cc）。7.7: markup の線（練習記号の枠）は LP では用紙の太さ・ここは五線の太さ（APPROXIMATION の註）。commit `c5d3f0130`＋docs。push はユーザー。
+判定: 次は P4 の残り（`LedgerLine.length` は小・`Dots.distance`/`Accidental.padding` は中・`NoteHead.scale` は字形の寸法全部で大）。(a) 今便の style の配管にそのまま足せる＝**今の文脈を使う**／(b) 圧縮はまだ／(c) 同じ島 ⇒ **この会話で続けてよい**（`-Start p823` から。項目の順はユーザーに訊く）。
+
 ## 以下は第821セッションの経緯
 
 ### 1.1 第821セッション（2026-10-05・YT-DELL2）
