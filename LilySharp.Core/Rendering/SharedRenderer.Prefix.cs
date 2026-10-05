@@ -73,7 +73,7 @@ internal static partial class SharedRenderer
     /// <paramref name="firstMeasureIndex"/> — the index form of
     /// <see cref="ResolveClef(Staff, SystemLayout)"/>, for
     /// the layouter, which has no <c>SystemLayout</c> yet while it is computing one. ONE walk:
-    /// the end-of-line courtesy key reservation (SpacingRules.KeyCourtesySuffixWidthForStaff)
+    /// the end-of-line courtesy key reservation (SpacingRules.EndOfLineKeyChange)
     /// must read the SAME clef the draw passes to KeyChangeGeometry, or the reserved and drawn
     /// cancellation kerns diverge by clef.
     /// </summary>

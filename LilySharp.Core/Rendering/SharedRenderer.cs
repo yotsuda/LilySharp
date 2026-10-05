@@ -337,23 +337,9 @@ internal static partial class SharedRenderer
         double tabStaffRight = staffRight;
         if (system.Measures.Length > 0)
         {
-            var eolCourtesy = GetSystemEndKeyChange(score.PrimaryContentStaff, system);
-            var eolTime = GetSystemEndTimeChange(score.PrimaryContentStaff, system);
-            // 0 when the change prints nothing — then no key group stands there, and the meter
-            // measures off the bar line (SpacingRules.KeyCourtesyClosingSymbol).
-            double keySuffix = eolCourtesy is not null
-                ? SpacingRules.KeyCourtesySuffixWidth(
-                    score, system.Measures[0].MeasureIndex,
-                    system.Measures[^1].MeasureIndex + 1, meterFollows: eolTime is not null)
-                : 0.0;
-            notationStaffRight += keySuffix;
-            if (eolTime is { } eolMeter)
-            {
-                notationStaffRight += SpacingRules.TimeCourtesySuffixWidth(
-                    score.TextMetrics, eolMeter, afterCourtesyKey: keySuffix > 0.0);
-                tabStaffRight += SpacingRules.TimeCourtesySuffixWidth(
-                    score.TextMetrics, eolMeter, afterCourtesyKey: false);
-            }
+            // The whole group, every staff's columns (SpacingRules.LineEndCourtesy) — the width
+            // the layout reserved, so the lines end where the room does.
+            notationStaffRight += LineEndCourtesyOf(score, system).Width;
             // …and a tab's string lines run on to the SYSTEM's end, whether or not the tab
             // draws anything there: every staff's StaffSymbol spans the system to its last
             // (breakable) column, whose width is the widest staff's suffix. MEASURED, 2.26.0
@@ -366,6 +352,15 @@ internal static partial class SharedRenderer
         }
         return (staffRight, notationStaffRight, tabStaffRight);
     }
+
+    /// <summary>The end-of-line courtesy group of <paramref name="system"/> — the columns every
+    /// staff's members stand in (SpacingRules.LineEndCourtesy), with the meter the primary staff's
+    /// next line opens with.</summary>
+    internal static SpacingRules.LineEndCourtesyColumns LineEndCourtesyOf(MultiStaffScore score, SystemLayout system)
+        => system.Measures.Length == 0
+            ? default
+            : SpacingRules.LineEndCourtesy(score, system.Measures[^1].MeasureIndex + 1,
+                GetSystemEndTimeChange(score.PrimaryContentStaff, system));
 
     private static void DrawHeader(
         MultiStaffScore score, PageLayout page, LayoutOptions options, IDrawingContext gc)
@@ -1005,7 +1000,6 @@ internal static partial class SharedRenderer
                     // lastMl.X + lastMl.Width is the final barline's RIGHT edge (measured:
                     // the barline rect ends there), which is what both courtesies hang off.
                     double barlineRight = lastMl.X + lastMl.Width;
-                    double? meterX = null;
 
                     // LilyPond's END-OF-LINE break-align order
                     // (LILYPOND-REF: scm/define-grobs.scm:632-648 BreakAlignment.break-align-orders)
@@ -1014,20 +1008,14 @@ internal static partial class SharedRenderer
                     // line-START prefix walks. There is ONE break-align group at each end of a
                     // line; until 2026-08-03 this end read three hand-written constants instead.
                     //
-                    // ⚠️ THE TABLE IS SHARED, THE WALK IS NOT — say so rather than let
-                    // "runs through BreakAlignSpacing" be read off the call. This chains each
-                    // member off the PREVIOUS ONE'S DRAWN INK RIGHT EDGE plus its gap, which is
+                    // The members' places are SpacingRules.LineEndCourtesy's columns, each the
+                    // previous column's right edge plus the left grob's entry —
                     // LILYPOND-REF: lily/break-alignment-interface.cc:241-243 Break_alignment_interface::calc_positioning_done
                     //   — offsets[r] = extents[l][RIGHT] + distance − extents[r][LEFT], with
-                    //   both extents cancelling: the same arithmetic SolveColumns does.
-                    // SolveColumns is NOT called because it wants a WIDTH for each member, and
-                    // the drawn key's real right edge is what extents[l][RIGHT] actually is:
-                    // feeding it a modelled width would be a second spelling of that edge. The
-                    // reservation (SpacingRules.KeyCourtesySuffixWidth) reads the SAME walk
-                    // (KeyChangeGeometry) since 2026-08-19, so reserved and drawn agree to the
-                    // digit — it was an upper bound on the kerning before that, and the slack
-                    // landed after the group (ledger courtesy.key.key-to-line-end, 0.150198).
-                    //   departs from: nothing in the arithmetic; only in WHERE it lives.
+                    //   both extents cancelling, so each gap is ink to ink.
+                    // The columns' extents are the drawn walk's ink (KeyChangeGeometry, split by
+                    // SpacingRules.KeyChangeParts), so reserved and drawn agree to the digit —
+                    // ledger courtesy.key.key-to-line-end opened 0.150198 when they did not.
                     //   observed by: audit/lp-geometry courtesy.* — including the line-end
                     //     spans, which see the whole suffix from the bar line's ink to the
                     //     staff line's end.
@@ -1038,28 +1026,16 @@ internal static partial class SharedRenderer
                     // the meter 1.0 + 1.15 out, past the room reserved and past the staff's
                     // end (ledger courtesy.meter.barline-to-meter.silent-key, +1.400000).
                     // LILYPOND-REF: lily/break-alignment-interface.cc:144-156 Break_alignment_interface::calc_positioning_done
-                    if (SpacingRules.ContributesToKeyColumnWidth(staff)
-                        && GetSystemEndKeyChange(staff, system) is { } eolKeyChange
-                        && KeyChangeGeometry(eolKeyChange).Glyphs is var eolKeyGlyphs
-                        && SpacingRules.KeyCourtesyClosingSymbol(eolKeyGlyphs) is { } eolKeyCloser)
-                    {
-                        // Which symbol OPENS the group decides which entry the bar line's alist
-                        // is keyed by — a cancellation and a signature are different break-align
-                        // symbols even where BarLine happens to declare 1.0 for both. Read off
-                        // the drawn walk's first glyph, the same read the reservation does
-                        // (SpacingRules.KeyCourtesyOpeningGap), so the two sides cannot
-                        // disagree about the opener — custom keys included.
-                        double groupLeft = barlineRight + SpacingRules.KeyCourtesyOpeningGap(
-                            eolKeyGlyphs);
-                        // A meter after a key stands off the KEY's real right edge, which is
-                        // what the draw returns — not off a width computed a second time — by
-                        // the entry of the grob that CLOSES the key group: the signature's
-                        // 1.15, or the cancellation's 1.25 when the new key prints none
-                        // (SpacingRules.KeyCourtesyClosingSymbol, the reservation's read).
-                        meterX = DrawKeySignatureChange(eolKeyChange, groupLeft, localStaffY, sgc)
-                            + SpacingRules.BreakAlignGap(
-                                eolKeyCloser, BreakAlignSymbol.TimeSignature);
-                    }
+                    // ★ THE COLUMNS ARE EVERY STAFF'S (session 830): each member stands at the
+                    // left edge of its break-align group, whose extent is the union of every
+                    // staff's member — so a staff whose change is narrower than another's still
+                    // starts its signature, and its meter, where the widest staff's do
+                    // (SpacingRules.LineEndCourtesy, which the layout reserved from).
+                    var eolColumns = LineEndCourtesyOf(score, system);
+                    if (SpacingRules.EndOfLineKeyChange(staff, lastMl.MeasureIndex + 1) is { } eolKeyChange)
+                        DrawKeySignatureChangeInColumns(eolKeyChange,
+                            barlineRight + (eolColumns.CancellationX ?? 0),
+                            barlineRight + (eolColumns.KeyX ?? 0), localStaffY, sgc);
 
                     if (GetSystemEndTimeChange(staff, system) is { } eolTimeChange)
                         using (sgc.Source(eolTimeChange.SourcePosition))
@@ -1067,9 +1043,10 @@ internal static partial class SharedRenderer
                                 eolTimeChange.NewTime,
                                 // Alone, the meter takes its OWN entry off the bar line — not the
                                 // key's. LilyPond's two are 0.750000 and 1.150000, so one number
-                                // for both would be wrong on one side by construction.
-                                meterX ?? barlineRight + SpacingRules.BreakAlignGap(
-                                    BreakAlignSymbol.StaffBar, BreakAlignSymbol.TimeSignature),
+                                // for both would be wrong on one side by construction. A staff
+                                // whose meter the primary staff does not share has no column.
+                                barlineRight + (eolColumns.TimeX ?? SpacingRules.BreakAlignGap(
+                                    BreakAlignSymbol.StaffBar, BreakAlignSymbol.TimeSignature)),
                                 localStaffY, sgc);
                 }
             }

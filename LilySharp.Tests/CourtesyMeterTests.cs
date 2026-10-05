@@ -389,8 +389,10 @@ public sealed class CourtesyMeterTests
             Assert.NotEmpty(glyphs);
             Assert.All(glyphs, x => Assert.Equal("natural", x.Kind));
             Assert.Equal(glyphs[^1].Dx + NaturalWidth, width, 6);
-            Assert.Equal(LilySharp.Core.Svg.Layout.BreakAlignSymbol.KeyCancellation,
-                LilySharp.Core.Svg.Layout.SpacingRules.KeyCourtesyClosingSymbol(glyphs));
+            // The whole change is the cancellation column's: no signature part to align.
+            var parts = LilySharp.Core.Svg.Layout.SpacingRules.KeyChangeParts(change);
+            Assert.Equal(width, parts.CancellationWidth, 9);
+            Assert.Equal(0, parts.KeyWidth);
         }
     }
 }

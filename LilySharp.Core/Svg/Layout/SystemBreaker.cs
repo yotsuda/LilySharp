@@ -482,7 +482,7 @@ internal sealed class SystemBreaker
     /// opening i + 1 (<c>SpacingRules.BoundaryClefAllowance</c>), a beam continuing across
     /// either bar line, the run membership and count. <c>LineEndCourtesyWidth(i − 1, i)</c>
     /// passes i − 1 but reads only measure i (the courtesy walks i's leading items; the clef
-    /// argument is not read by <c>SpacingRules.KeyCourtesySuffixWidth</c>).
+    /// argument is not read by <c>SpacingRules.LineEndCourtesy</c>).
     /// ⚠️ A NEW NEIGHBOUR READ IN THE LOOP BODY MUST BE FOLDED HERE, or the memo serves a
     /// stale entry. <c>SpringEdgeKeyTests</c> changes each fact above alone in a neighbour
     /// and asserts the measure beside it is rebuilt.

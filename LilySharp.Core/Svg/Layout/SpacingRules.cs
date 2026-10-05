@@ -742,141 +742,141 @@ internal static partial class SpacingRules
         });
 
     /// <summary>
-    /// Width reserved at the END of a line for the courtesy cancellation + new key signature
-    /// when the NEXT line opens with a key change (drawn after the line's final barline) —
-    /// the widest staff's group, mirroring <see cref="WidestActiveKeyInk"/> for the
-    /// line-start column: the break-align COLUMN is shared, the grob in it is each staff's
-    /// own (a transposed part carries its own key, a tab staff engraves none).
+    /// Where the members of the END-of-line courtesy group stand, as offsets from the final bar
+    /// line's right edge — the cancellation column, the key column and the meter column, each
+    /// null when no staff prints into it — and the group's whole width, the right-edge gap
+    /// included: what the line reserves and what the staff lines run over.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/key-engraver.cc + explicitKeySignatureVisibility
-    /// (default all-visible) — a changed signature prints on BOTH sides of
-    /// the break: courtesy at the old line's end, real one in the new
-    /// line's prefix.
     /// <para>
-    /// ⚠️ ONE MODEL WITH THE DRAW. The middle of the group is
-    /// <c>SharedRenderer.KeyChangeGeometry</c>'s width — the walk the drawer consumes glyph
-    /// by glyph — so the reserved width IS the drawn width, custom keys and clef-dependent
-    /// kerning included. Until 2026-08-19 the cancellation half was a hand-summed UPPER
-    /// BOUND on the natural kerning (0.3 per pair, where the drawn walk kerns 0.3 / 0.15 / 0
-    /// by vertical overlap), and the surplus had nowhere to go but after the group — ledger
-    /// <c>courtesy.key.key-to-line-end</c> opened 0.150198 on exactly that slack.
+    /// ★ A COLUMN PER BREAK-ALIGN SYMBOL, ACROSS THE STAVES (session 830). LilyPond's
+    /// Break_align_engraver lives in the Score: every staff's KeyCancellation goes into ONE
+    /// BreakAlignGroup, every KeySignature into another, every TimeSignature into a third, and
+    /// the groups are spaced off each other's extents — the union of their members'
+    /// (ly/engraver-init.ly:769 consists it in the Score; lily/break-align-engraver.cc:141-163
+    /// Break_align_engraver::add_to_group;
+    /// lily/break-alignment-interface.cc:180-243 calc_positioning_done). So where the staves
+    /// change key differently — a transposed part, a transposing instrument — the key and the
+    /// meter of every staff stand in the same column. Until this session each staff walked its
+    /// own group off the bar line, and a staff with a narrower change drew its meter early.
+    /// MEASURED, 2.26.0 (Lab sessions/p830/ck, the `lysc ly` twins): `transpose d` over a
+    /// concert part, C→G with a 3/4 — the lower staff's meter 2.2 left of LilyPond's; A→G over
+    /// G→F — the lower staff's flat 0.78 left (it waits for the upper staff's two naturals) and
+    /// its meter 0.84 left. Both exact after.
+    /// </para>
+    /// <para>
+    /// ⚠️ ONE MODEL WITH THE DRAW. Each staff's change is split out of the walk the drawer
+    /// consumes (<see cref="KeyChangeParts"/>), so the column widths are its glyphs' ink.
+    /// A change that prints nothing (C major → A minor) is no member of either column, and a
+    /// meter after it stands off the bar line (lily/break-alignment-interface.cc:144-156 — an
+    /// empty extent is stepped over).
     /// </para>
     /// </remarks>
-    /// <param name="startMeasureIndex">The line's first measure — where the clef the draw
-    /// will use is resolved (SharedRenderer.ResolveClefAt; the courtesy is drawn with the
-    /// system-START clef).</param>
-    /// <param name="nextMeasureIndex">The first measure of the NEXT line, whose leading
-    /// key change triggers the courtesy.</param>
-    /// <param name="meterFollows">
-    /// True when a courtesy METER stands after this key in the same end-of-line group. Then
-    /// the key is not the group's last member and does NOT pay the gap to the right edge —
-    /// the meter does, out of its own alist — and pays the gap to the METER instead, out of
-    /// the alist of the grob that closes it (<see cref="KeyCourtesyClosingSymbol"/>), which
-    /// <see cref="TimeCourtesySuffixWidth"/> then does not charge again. Getting this wrong
-    /// charges a gap twice or not at all, and both look like a spacing bug rather than a
-    /// double-count.
-    /// </param>
-    /// <returns>0 when no staff prints a glyph for the change — then there is no key group,
-    /// and a meter after it stands off the bar line.</returns>
-    public static double KeyCourtesySuffixWidth(
-        MultiStaffScore score, int startMeasureIndex, int nextMeasureIndex, bool meterFollows)
+    /// <param name="nextMeasureIndex">The first measure of the NEXT line, whose leading changes
+    /// trigger the courtesies.</param>
+    /// <param name="meter">The courtesy meter, or null when the next line keeps its meter.</param>
+    internal static LineEndCourtesyColumns LineEndCourtesy(
+        MultiStaffScore score, int nextMeasureIndex, TimeSignatureChangeItem? meter)
     {
-        double widest = 0.0;
+        double cancellation = 0, key = 0;
         foreach (var staffGroup in score.StaffGroups)
             foreach (var staff in staffGroup.Staves)
-                widest = Math.Max(widest, KeyCourtesySuffixWidthForStaff(
-                    staff, startMeasureIndex, nextMeasureIndex, meterFollows));
-        return widest;
+                if (EndOfLineKeyChange(staff, nextMeasureIndex) is { } change)
+                {
+                    var parts = KeyChangeParts(change);
+                    cancellation = Math.Max(cancellation, parts.CancellationWidth);
+                    key = Math.Max(key, parts.KeyWidth);
+                }
+        double x = 0;
+        var last = BreakAlignSymbol.StaffBar;
+        double? cancellationX = null, keyX = null, timeX = null;
+        if (cancellation > 0)
+        {
+            cancellationX = x + BreakAlignGap(last, BreakAlignSymbol.KeyCancellation);
+            x = cancellationX.Value + cancellation;
+            last = BreakAlignSymbol.KeyCancellation;
+        }
+        if (key > 0)
+        {
+            keyX = x + BreakAlignGap(last, BreakAlignSymbol.KeySignature);
+            x = keyX.Value + key;
+            last = BreakAlignSymbol.KeySignature;
+        }
+        if (meter is { } m)
+        {
+            timeX = x + BreakAlignGap(last, BreakAlignSymbol.TimeSignature);
+            x = timeX.Value + GlyphMetrics.GetTimeSigWidth(score.TextMetrics,
+                m.NewTime.NumeratorText, m.NewTime.DenominatorText);
+            last = BreakAlignSymbol.TimeSignature;
+        }
+        // A break-align group has a member to the RIGHT of its last grob — `right-edge` — and
+        // every member here declares 0.5 for it (scm/define-grobs.scm:1946, :1995, :3951).
+        return last == BreakAlignSymbol.StaffBar
+            ? default
+            : new LineEndCourtesyColumns(cancellationX, keyX, timeX,
+                x + BreakAlignGap(last, BreakAlignSymbol.RightEdge));
     }
 
     /// <summary>
-    /// The per-staff half of <see cref="KeyCourtesySuffixWidth"/> — 0 for a staff that
-    /// engraves no key (<see cref="ContributesToKeyColumnWidth"/>) or whose next line opens
-    /// with no key change.
+    /// The key change a staff prints at the END of the line before
+    /// <paramref name="nextMeasureIndex"/> — its next line's leading change — or null when the
+    /// staff engraves no key (<see cref="ContributesToKeyColumnWidth"/>), its next line opens
+    /// with none, or the change prints nothing. The same walk as
+    /// SharedRenderer.GetSystemEndKeyChange, which decides what the staff DRAWS.
     /// </summary>
-    private static double KeyCourtesySuffixWidthForStaff(
-        Staff staff, int startMeasureIndex, int nextMeasureIndex, bool meterFollows)
+    internal static KeySignatureChangeItem? EndOfLineKeyChange(Staff staff, int nextMeasureIndex)
     {
         if (!ContributesToKeyColumnWidth(staff))
-            return 0.0;
+            return null;
         var voice = staff.PrimaryVoice;
         if (nextMeasureIndex >= voice.Measures.Length)
-            return 0.0;
-        // The staff's own leading key change — the same walk as
-        // SharedRenderer.GetSystemEndKeyChange, which decides what this staff DRAWS.
-        KeySignatureChangeItem? change = null;
+            return null;
         foreach (var item in voice.Measures[nextMeasureIndex].Items)
         {
-            if (item is KeySignatureChangeItem kc) { change = kc; break; }
-            if (item.Duration > Fraction.Zero) break;
+            if (item is KeySignatureChangeItem kc)
+                return Rendering.SharedRenderer.KeyChangeGeometry(kc).Glyphs.Count > 0 ? kc : null;
+            if (item.Duration > Fraction.Zero)
+                break;
         }
-        if (change is null)
-            return 0.0;
-
-        var (glyphs, ink) = Rendering.SharedRenderer.KeyChangeGeometry(change);
-        if (KeyCourtesyClosingSymbol(glyphs) is not { } closer)
-            return 0.0;
-        // The key group's last grob owes a gap to whatever stands after it — the courtesy
-        // meter, or `right-edge` — and which grob that is depends on what the change prints: a
-        // signature when the new key has accidentals, otherwise the bare cancellation. To the
-        // edge both declare 0.5; to the meter they do NOT (1.15 against 1.25), so the entry is
-        // read off the grob that is actually last.
-        return KeyCourtesyOpeningGap(glyphs) + ink
-            + BreakAlignGap(closer,
-                meterFollows ? BreakAlignSymbol.TimeSignature : BreakAlignSymbol.RightEdge);
+        return null;
     }
 
     /// <summary>
-    /// The break-align symbol of the grob that CLOSES an end-of-line courtesy key group — the
-    /// signature when the change prints one, the cancellation when it prints only naturals —
-    /// or null when the change prints nothing (C major → A minor), which is then no member of
-    /// the group at all.
+    /// A key change's walk (SharedRenderer.KeyChangeGeometry) split at its two break-aligned
+    /// grobs: the cancellation naturals' ink width, where the new signature starts in the walk,
+    /// and the signature's ink width from there — 0 for a part that prints nothing.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/break-alignment-interface.cc:144-156 Break_alignment_interface::calc_positioning_done
-    ///   — a member whose extent is empty is stepped over, on both sides of every gap: the
-    ///   KeySignature of a change into C major is such a member, so the cancellation's alist
-    ///   is keyed by what prints NEXT (time-signature 1.25, right-edge 0.5 —
-    ///   scm/define-grobs.scm:1941, :1946), and with no cancellation either the bar line's is
-    ///   (time-signature 0.75, :293).
-    /// Read off the DRAWN walk's last glyph, as <see cref="KeyCourtesyOpeningGap"/> reads its
-    /// first, so the reservation and the draw cannot disagree about it.
-    /// MEASURED 2.26.0 (probe courtesy-meter.ly, scores CANCONLY / CANCMETER / NOKEYMETER;
-    /// ledger courtesy.key.cancellation-to-line-end and its three neighbours, session 804).
+    /// LilyPond keeps the KeyCancellation and the KeySignature as separate grobs in separate
+    /// break-align groups (scm/define-grobs.scm:1930 KeyCancellation, :1972 KeySignature), which lets the
+    /// two columns of <see cref="LineEndCourtesy"/> differ per staff. The walk joins them with
+    /// the cancellation's own gap to the signature, so the signature starts that gap after the
+    /// last natural's right edge — read back here, not restated.
     /// </remarks>
-    public static BreakAlignSymbol? KeyCourtesyClosingSymbol(
-        List<(string Kind, double Dx, int StaffPosition)> keyChangeGlyphs) =>
-        keyChangeGlyphs.Count == 0 ? null
-        : keyChangeGlyphs[^1].Kind != "natural" ? BreakAlignSymbol.KeySignature
-        : BreakAlignSymbol.KeyCancellation;
-
-    /// <summary>
-    /// The bar line's gap to whichever grob OPENS the end-of-line courtesy key group —
-    /// LilyPond keys the left grob's alist by the RIGHT grob's break-align-symbol, so a group
-    /// that opens with the cancellation and one that opens with the signature read different
-    /// entries (both 1.0 as it happens, and reading the right one is what keeps that a fact
-    /// rather than luck). Which grob opens is read off the DRAWN walk's first glyph, so the
-    /// reservation and the draw cannot disagree about it — custom keys included, where the
-    /// standard-count test (<see cref="CancellationNaturalCount"/>) does not apply.
-    /// </summary>
-    public static double KeyCourtesyOpeningGap(
-        List<(string Kind, double Dx, int StaffPosition)> keyChangeGlyphs) =>
-        BreakAlignGap(BreakAlignSymbol.StaffBar,
-            keyChangeGlyphs.Count > 0 && keyChangeGlyphs[0].Kind == "natural"
-                ? BreakAlignSymbol.KeyCancellation
-                : BreakAlignSymbol.KeySignature);
-
+    internal static (double CancellationWidth, double KeyStart, double KeyWidth) KeyChangeParts(
+        KeySignatureChangeItem change)
+    {
+        var (glyphs, width) = Rendering.SharedRenderer.KeyChangeGeometry(change);
+        int naturals = 0;
+        while (naturals < glyphs.Count && glyphs[naturals].Kind == "natural")
+            naturals++;
+        if (naturals == 0)
+            return (0, 0, width);
+        double cancellation = glyphs[naturals - 1].Dx + GlyphMetrics.AccidentalNatural.Width;
+        if (naturals == glyphs.Count)
+            return (cancellation, cancellation, 0);
+        double keyStart = cancellation
+            + BreakAlignGap(BreakAlignSymbol.KeyCancellation, BreakAlignSymbol.KeySignature);
+        return (cancellation, keyStart, width - keyStart);
+    }
     /// <summary>
     /// How many cancellation naturals a key change from <paramref name="prevSharps"/> to
     /// <paramref name="nextSharps"/> prints — 0 when the new signature cancels nothing.
     /// </summary>
     /// <remarks>
-    /// ⚠️ ONE HOUSE, because the answer decides two things that must agree: how much room
-    /// <see cref="KeyCourtesySuffixWidth"/> reserves, and which space-alist entry opens the
-    /// group (a cancellation and a signature are different break-align symbols). It was spelled
-    /// twice — here and in SharedRenderer.DrawKeySignatureChange — which is the shape §7.7 keeps
-    /// naming.
+    /// ⚠️ NO READER SINCE AT LEAST SESSION 830 (the end-of-line reservation reads the drawn walk,
+    /// SharedRenderer.KeyChangeGeometry, through <see cref="KeyChangeParts"/>); kept as the
+    /// stated rule.
     /// LILYPOND-REF: lily/key-engraver.cc — the cancellation is the previous signature's
     /// alterations that the new one no longer makes.
     /// </remarks>
@@ -933,38 +933,11 @@ internal static partial class SpacingRules
     // The full account, with both engines measured, is in audit/lp-geometry ledger entries
     // courtesy.meter.barline-to-{meter,cancellation} and courtesy.key.cancellation-to-key.
 
-    /// <summary>
-    /// Width reserved at the END of a line for the courtesy meter when the NEXT line opens
-    /// with a time-signature change, given whether a courtesy KEY is already standing there.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm:3922-3953 TimeSignature's break-align-anchor and break-visibility — the TimeSignature
-    ///   grob's is <c>all-visible</c>, so a CHANGED meter prints on both
-    ///   sides of the break. See SharedRenderer.GetSystemEndTimeChange for why only a
-    ///   changed one does.
-    /// </remarks>
-    /// <param name="afterCourtesyKey">True when a courtesy key group that PRINTS stands
-    /// before the meter (<see cref="KeyCourtesySuffixWidth"/> returned more than 0). The
-    /// gap between the two is then already in the key's width — read off the grob that closes
-    /// the key group — and is not charged here.</param>
-    public static double TimeCourtesySuffixWidth(
-        Rendering.ScoreTextMetrics fonts, TimeSignatureChangeItem change, bool afterCourtesyKey)
-        // The meter's gap is measured off whatever stands to its LEFT in the group — the key
-        // group's last grob when one prints, otherwise the bar line — and those are different
-        // alist entries (signature 1.15, cancellation 1.25, bar line 0.75), which is why one
-        // "space after the bar line" cannot cover them. The key's two are the key suffix's to
-        // pay (it knows which grob closes it); the bar line's is paid here.
-        => (afterCourtesyKey
-               ? 0.0
-               : BreakAlignGap(BreakAlignSymbol.StaffBar, BreakAlignSymbol.TimeSignature))
-           + GlyphMetrics.GetTimeSigWidth(fonts,
-               change.NewTime.NumeratorText, change.NewTime.DenominatorText)
-           // ⚠️ AND THE GAP TO THE EDGE ITSELF. A break-align group has a member to the RIGHT
-           // of its last grob — `right-edge` — and the meter declares 0.5 for it. Without this
-           // the staff line stopped at the meter's advance edge: 0.07 ss of white on the
-           // owner's book, which reads as the line running into the signature.
-           + BreakAlignGap(BreakAlignSymbol.TimeSignature, BreakAlignSymbol.RightEdge);
-
+    /// <summary>The END-of-line courtesy group's columns (<see cref="LineEndCourtesy"/>):
+    /// each member column's left edge as an offset from the final bar line's right edge, null
+    /// when no staff prints into it, and the group's whole width — 0 for no group.</summary>
+    internal readonly record struct LineEndCourtesyColumns(
+        double? CancellationX, double? KeyX, double? TimeX, double Width);
     /// <summary>
     /// Gets the width of a barline type.
     /// </summary>

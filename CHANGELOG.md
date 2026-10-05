@@ -470,6 +470,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **At a line end, every staff's courtesy key and meter stand in one column.** Where the staves
+  change key differently — a transposed part over a concert one — each staff's cancellation,
+  new signature and new meter now line up across the system, as LilyPond lays them out: a
+  staff whose change was narrower drew its meter early, up to two staff spaces left of the
+  others'.
 - **A score that fits one page only by leaving no room under its last system takes two, as in
   LilyPond.** A page that fits is laid out by the same page spacing as every other page now, and
   that spacing keeps the bottom distance under the last system that LilyPond keeps; a score just

@@ -63,7 +63,7 @@ internal enum OverlayDrawerId
 /// context, folded into EVERY key (the ⒟⁗ inventory).</item>
 /// <item>NEIGHBOUR reads, folded as what is read (SliceFor's LeftEdgeRead /
 /// RightEdgeRead), not as the neighbours' whole keys: GetSystemEndKeyChange /
-/// GetSystemEndTimeChange (and KeyCourtesySuffixWidth, for the staff lines' extent) read
+/// GetSystemEndTimeChange (and LineEndCourtesy, for the staff lines' extent) read
 /// the OPENING items of the measure after the system's last — the end-of-line courtesy;
 /// DrawnLineStartBarline reads the END bar line of the measure before the system's first —
 /// a `:|:` there opens the line with `.|:`. Nothing else of either neighbour reaches the
@@ -864,7 +864,7 @@ internal sealed class SvgSystemFragmentCache
     /// <summary>What a system ending at <c>m − 1</c> draws from measure <paramref name="m"/>:
     /// the items that OPEN it, up to its first sounding one — where the end-of-line courtesy
     /// key and meter come from (<c>SharedRenderer.GetSystemEndKeyChange</c> /
-    /// <c>GetSystemEndTimeChange</c>, and <c>SpacingRules.KeyCourtesySuffixWidth</c> for how
+    /// <c>GetSystemEndTimeChange</c>, and <c>SpacingRules.LineEndCourtesy</c> for how
     /// far the staff lines run past the bar). Each item by content, its source offset out:
     /// the courtesy's data-pos is an anchor-and-slot matter like every other offset.</summary>
     private long RightEdgeRead(int m)

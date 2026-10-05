@@ -808,6 +808,29 @@ internal static partial class SharedRenderer
     }
 
     /// <summary>
+    /// Draws an END-of-line courtesy key change split across the group's two columns: its
+    /// cancellation naturals from <paramref name="cancellationX"/>, its new signature from
+    /// <paramref name="keyX"/> (SpacingRules.LineEndCourtesy) — each part keeps its own walk.
+    /// </summary>
+    private static void DrawKeySignatureChangeInColumns(KeySignatureChangeItem change,
+        double cancellationX, double keyX, double staffY, IDrawingContext gc)
+    {
+        var (glyphs, _) = KeyChangeGeometry(change);
+        double keyStart = SpacingRules.KeyChangeParts(change).KeyStart;
+        int naturals = 0;
+        while (naturals < glyphs.Count && glyphs[naturals].Kind == "natural")
+            naturals++;
+        for (int i = 0; i < glyphs.Count; i++)
+        {
+            var (kind, dx, staffPosition) = glyphs[i];
+            double y = (staffY - StaffHeight / 2) + staffPosition / 2.0;
+            double x = i < naturals ? cancellationX + dx : keyX + dx - keyStart;
+            using (gc.Source(change.SourcePosition))
+                gc.DrawGlyph(EmmentalerGlyphs.AccidentalGlyph(kind), x, y, FontSize);
+        }
+    }
+
+    /// <summary>
     /// The glyphs a mid-measure key change engraves — cancellation naturals, then the
     /// new signature — as (glyph kind, dx from the change's left edge, staff position
     /// about the middle line — <see cref="KeySignatureGlyphs"/>' frame). Width is the
@@ -920,7 +943,7 @@ internal static partial class SharedRenderer
             //   LilyPond measured 0.500000 on probe courtesy-meter.ly (score CMK: the
             //   cancellation's ink ends 26.993307, the key starts 27.493307). Ledger
             //   courtesy.key.cancellation-to-key opened at -0.100000 and closes here.
-            // ⚠️ THE RESERVATION READS THE SAME ENTRY (SpacingRules.KeyCourtesySuffixWidth),
+            // ⚠️ THE RESERVATION READS THE SAME ENTRY (SpacingRules.LineEndCourtesy),
             //   so the room widens by exactly what this moves. It was the same 0.4 spelled
             //   twice, which is why both had to change in one commit.
             // ⚠️ ONLY WHEN A SIGNATURE FOLLOWS. A change into C major / A minor prints no

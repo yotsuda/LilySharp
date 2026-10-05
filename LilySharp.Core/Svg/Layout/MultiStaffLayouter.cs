@@ -1557,33 +1557,26 @@ internal sealed class MultiStaffLayouter
     /// LILYPOND-REF: explicitKeySignatureVisibility default all-visible;
     ///   scm/define-grobs.scm:3922-3953 TimeSignature break-visibility all-visible.
     /// </remarks>
-    /// <param name="startMeasureIndex">The line's first measure — where the key courtesy
-    /// resolves the clef it is drawn with (<see cref="SpacingRules.KeyCourtesySuffixWidth"/>).</param>
+    /// <param name="startMeasureIndex">The line's first measure. Unread since session 830: each
+    /// key change carries the clef it is drawn with (KeySignatureChangeItem.Clef).</param>
     internal static double LineEndCourtesyWidth(
         MultiStaffScore score, int startMeasureIndex, int nextMeasureIndex)
     {
         var primaryVoice = score.PrimaryContentStaff.PrimaryVoice;
         if (nextMeasureIndex >= primaryVoice.Measures.Length)
             return 0.0;
-        KeySignatureChangeItem? leadKey = null;
         TimeSignatureChangeItem? leadTime = null;
         foreach (var lead in primaryVoice.Measures[nextMeasureIndex].Items)
         {
-            if (lead is KeySignatureChangeItem kcNext) leadKey ??= kcNext;
-            else if (lead is TimeSignatureChangeItem tcNext) leadTime ??= tcNext;
+            if (lead is TimeSignatureChangeItem tcNext) leadTime ??= tcNext;
             if (lead.Duration > Fraction.Zero)
                 break;
         }
-        // 0 when the change prints nothing (then the meter measures off the bar line) — the
-        // same reading SharedRenderer.StaffRightEdges makes for the drawn staff line.
-        double width = leadKey is not null
-            ? SpacingRules.KeyCourtesySuffixWidth(
-                score, startMeasureIndex, nextMeasureIndex, meterFollows: leadTime is not null)
-            : 0.0;
-        if (leadTime is { } t)
-            width += SpacingRules.TimeCourtesySuffixWidth(
-                score.TextMetrics, t, afterCourtesyKey: width > 0.0);
-        return width;
+        // The group's columns across every staff (SpacingRules.LineEndCourtesy) — the same
+        // reading SharedRenderer.StaffRightEdges makes for the drawn staff line and the draw for
+        // each member. ⚠️ THE KEY IS EVERY STAFF'S, not the primary staff's: a transposed part's
+        // change prints even where the primary staff's prints nothing.
+        return SpacingRules.LineEndCourtesy(score, nextMeasureIndex, leadTime).Width;
     }
 
     internal static LineStartPrefix SolveLineStartPrefix(
@@ -1612,7 +1605,7 @@ internal sealed class MultiStaffLayouter
         // A key change that OPENS a continuation system is likewise engraved break-aligned in
         // the prefix — the NEW signature there, the cancellation as a courtesy at the end of
         // the PREVIOUS line (SharedRenderer.GetSystemStartKeyChange / GetSystemEndKeyChange,
-        // and KeyCourtesySuffixWidth for the suffix). It is therefore not a column inside bar
+        // and LineEndCourtesy for the suffix). It is therefore not a column inside bar
         // one, exactly as the meter change is not.
         KeySignatureChangeItem? leadingKeyChange = null;
         if (!isFirstSystem && startMeasureIndex < primaryVoice.Measures.Length)
