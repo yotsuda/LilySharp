@@ -319,7 +319,8 @@ internal sealed class PageLayouter
             systemAnchors = null,
         ImmutableArray<LineShape?>? systemShapes = null,
         ImmutableArray<BreakPermission>? systemPagePermissions = null,
-        ImmutableArray<BreakerRefpointFrame>? systemBreakerFrames = null)
+        ImmutableArray<BreakerRefpointFrame>? systemBreakerFrames = null,
+        bool onePage = false)
     {
         if (systems.Length == 0)
         {
@@ -394,7 +395,13 @@ internal sealed class PageLayouter
         // IsTitle, never a tallness — so the breaker's copy of every detail (one a system, once a
         // keystroke) said the same numbers. The title is line 0 here as in the count loop's
         // lists, so its tallness is the same whichever list writes it.
-        var breakPoints = breaker.BreakIntoPagesOfLines(PageBreaker.CalcLineHeightsInPlace(lines));
+        // ONE PAGE (a snippet, LayoutOptions.Snippet): every line on it, no breaker asked —
+        // LilyPond's ly:one-page-breaking, which places the whole book on one page as tall as
+        // it needs (lily/one-page-breaking.cc:63-183 One_page_breaking::solve — the paper is
+        // made 1e6 tall for the solve, then cut to the content; LayoutEngine.CreatePages cuts).
+        var breakPoints = onePage
+            ? new List<int> { lines.Count }
+            : breaker.BreakIntoPagesOfLines(PageBreaker.CalcLineHeightsInPlace(lines));
         if (header is not null)
         {
             // Each break point is one more than the system index it ends at; a break at the
@@ -482,7 +489,8 @@ internal sealed class PageLayouter
                 Systems: pageSystems,
                 Header: pageHeader,
                 HeaderTop: headerTop,
-                Overflow: overflow));
+                Overflow: overflow,
+                Force: pageForce));
 
             systemStart = systemEnd;
         }
@@ -699,13 +707,12 @@ internal sealed class PageLayouter
                     bandUpNext: systemBandUps is { } bands && sysIdx + 1 < bands.Length
                         ? bands[sysIdx + 1]
                         : 0,
-                    // The rows-only scalar floor is the single-page path's arm
-                    // (divergence ⑵ in the helper's remarks): unmeasured on this
-                    // chain, so deliberately not extended here.
-                    scalarFloorForSpaceablelessPrev: false,
-                    // Divergence ⑴: this chain's empty-silhouette fallback converts
-                    // with HalfFirst; the single-page path's with ToFirst.
-                    emptySilhouetteHalfFirstFallback: true);
+                    // A system with no spaceable staff has no down silhouette, so the scalar
+                    // sum floors the pair (the helper's remarks). It was the single-page
+                    // loop's arm alone until session 829 folded that loop into this chain
+                    // (RowsOnlySystemGapTests), and a multi-page lead sheet had the hole.
+                    scalarFloorForSpaceablelessPrev:
+                        LayoutEngine.HasNoSpaceableStaff(allSystems[sysIdx].StaffGroups));
 
                 // LILYPOND-REF: lily/page-layout-problem.cc:625-632 append_system —
                 // the inter-system minimum distance is the skyline distance plus

@@ -814,9 +814,10 @@ internal static class LayoutUtilities
     /// distance LilyPond floors the system-system spring with, for the pair
     /// (prev, next): the X-aware skyline distance converted out of the origin
     /// frame, floored by the whole-line chord-row band, with the scalar sum as
-    /// the fallback where a silhouette cannot answer. One home for what
-    /// LayoutEngine.CreatePages (single-page stack) and
-    /// PageLayouter.PositionSystemsOnPage (spring chain) each spelled locally.
+    /// the fallback where a silhouette cannot answer. Read by the page chain
+    /// (PageLayouter.PositionSystemsOnPage); it was the one home for what that chain and
+    /// LayoutEngine.CreatePages' single-page stack each spelled locally until the stack
+    /// folded into the chain (session 829).
     /// LILYPOND-REF: lily/page-layout-problem.cc:625-632 append_system — the
     ///   skyline distance plus padding reaches the spring as a floor (padding is
     ///   added by the callers, not here).
@@ -858,51 +859,23 @@ internal static class LayoutUtilities
     /// +0.01 on every return moved 0/81). What sees this function is the ledger's
     /// multi-system points (23 went red under the same poison, Release build) and
     /// the full-tree sweep's multi-system books.
-    /// The inventory of REAL divergences (not just association):
-    /// ⑴ THE EMPTY-SILHOUETTE FALLBACK CONVERTS DIFFERENTLY PER CALLER
-    /// (<paramref name="emptySilhouetteHalfFirstFallback"/>): the single-page path
-    /// converts the origin-measured extents with ToFirst, the spring chain with
-    /// HalfFirst — for a system led by a loose row (chords/lyrics) the two differ
-    /// by the row band, so this is a different NUMBER, not a different rounding.
-    /// (The no-skyline case uses ToFirst on both paths — the extents are
-    /// origin-measured, and the anchors' own remark says origin-measured terms take
-    /// ToFirst.) ★ REACHABILITY MEASURED 2026-08-27 (session 266): the branch fired
-    /// on NONE of 612 books (the 82-book corpus, the user's lead sheets, the p257
-    /// variants) nor on any adversarial construction (rows-only scores, hara-kiri'd
-    /// rows-only systems, single- and multi-page, titles) — a staffed edge seeds
-    /// staff-symbol ink, and even an all-rows system's silhouette is fed by the
-    /// paging augment families. Unreachable today, so no observer CAN be built; the
-    /// first book that reaches it brings its observer with it
-    /// (audit/lp-geometry/probes/rows-only-page.ly is where that pair would be
-    /// refereed, and its header carries this audit).
-    /// ⑵ THE ROWS-ONLY SCALAR FLOOR EXISTS ONLY ON THE SINGLE-PAGE PATH
-    /// (<paramref name="scalarFloorForSpaceablelessPrev"/>): a system with no
-    /// spaceable staff has no down silhouette to refine, so Distance() under-answers
-    /// and the scalar stands (measured session 240, scratch/ベースタブLy/Untitled-6.lys
-    /// — 6.395 against a true 14.900). The spring chain never grew the arm; its
-    /// caller passes false, and extending the fix there is its own measured change.
-    /// ★ MEASURED 2026-08-27 (session 266): on every constructible rows-only book
-    /// the un-floored chain and the floored single-page path answer the SAME number
-    /// — the rows-only silhouette degrades to exactly the scalar extents
-    /// (skylineDistance == inkBelowLastRefpoint + nextUpExtent + prevOriginToLast,
-    /// one- and two-row shapes alike) — so the missing arm is value-inert today.
-    /// An LP referee for the pair was built and its ledgering DECLINED: LilyPond's
-    /// own default output for the shape is dominated by its loose-line
-    /// redistribution (the next system's chord rows laid onto that system's staff,
-    /// page-layout-problem.cc:860-880), the subsystem Lily# does not have (HANDOFF
-    /// 2D) — a residual would price that absence, not this floor. The committed,
-    /// re-runnable evidence is audit/lp-geometry/probes/rows-only-page.ly.
-    /// ⑶ WHAT "prev's last refpoint" MEANS differs at the callers:
-    /// the spring chain answers ToFirst when the system carries no staff springs
-    /// (the chain's last node — see its LILYSHARP-OWN remark), the single-page path
-    /// always answers ToLast; equal today because springs are empty exactly when the
-    /// system has at most one spaceable staff, where ToFirst == ToLast
+    /// ★ ONE CALLER SINCE SESSION 829: the single-page stack that was the other one folded into
+    /// the chain (LayoutEngine.CreatePages), and with it the inventory of divergences between
+    /// them closed — ⑴ the empty-silhouette fallback converts with HalfFirst (the chain's; the
+    /// stack's ToFirst was measured unreachable on 612 books in session 266); ⑵ the rows-only
+    /// scalar floor (<paramref name="scalarFloorForSpaceablelessPrev"/>, measured session 240 on
+    /// scratch/ベースタブLy/Untitled-6.lys — 6.395 against a true 14.900) is the chain's too now,
+    /// so a multi-page lead sheet of that shape has it (RowsOnlySystemGapTests);
+    /// ⑶ prev's last refpoint is the chain's, equal to the stack's wherever both existed
     /// (InterSystemFloorTests.EverySystemWithTwoSpaceableStaves_CarriesAStaffSpring).
+    /// The LilyPond referee for the rows-only shape stays declined
+    /// (audit/lp-geometry/probes/rows-only-page.ly: its default output is dominated by the
+    /// loose-line redistribution Lily# does not have, page-layout-problem.cc:860-880).
     /// </remarks>
     /// <param name="hasSkylines">False when the caller has no per-system skylines at
     /// all (preliminary pass) — distinct from an EMPTY silhouette, which arrives as
-    /// a negative-infinity <paramref name="skylineDistance"/> and falls back
-    /// differently on the spring chain (divergence ⑴).</param>
+    /// a negative-infinity <paramref name="skylineDistance"/> and falls back with
+    /// <paramref name="nextHalfFirst"/>.</param>
     /// <param name="skylineDistance">VerticalSkyline.Distance(next.up, prev.down,
     /// SystemSkylineHorizontalPadding) — origin-to-origin; negative infinity when a
     /// silhouette is empty. Ignored when <paramref name="hasSkylines"/> is false.</param>
@@ -910,17 +883,14 @@ internal static class LayoutUtilities
     /// <param name="prevDownExtent">prev's scalar downward protrusion below its body.</param>
     /// <param name="nextUpExtent">next's scalar upward protrusion above its origin.</param>
     /// <param name="prevOriginToLast">prev's origin-to-last-refpoint span — the
-    /// caller's own answer (divergence ⑶).</param>
+    /// caller's own answer.</param>
     /// <param name="nextToFirst">next's origin-to-first-refpoint span (converts
     /// origin-measured terms).</param>
     /// <param name="nextHalfFirst">next's first staff's own half span (converts
     /// staff-measured terms — the band).</param>
     /// <param name="bandUpNext">the whole-line chord-row band above next (0 = none).</param>
-    /// <param name="scalarFloorForSpaceablelessPrev">single-page only (divergence ⑵):
-    /// true when prev has no spaceable staff, so the scalar sum floors the answer.</param>
-    /// <param name="emptySilhouetteHalfFirstFallback">divergence ⑴: the spring chain
-    /// converts the empty-silhouette fallback with HalfFirst (true), the single-page
-    /// path with ToFirst (false).</param>
+    /// <param name="scalarFloorForSpaceablelessPrev">true when prev has no spaceable staff,
+    /// so the scalar sum floors the answer.</param>
     public static double InterSystemPairMinimum(
         bool hasSkylines,
         double skylineDistance,
@@ -931,8 +901,7 @@ internal static class LayoutUtilities
         double nextToFirst,
         double nextHalfFirst,
         double bandUpNext,
-        bool scalarFloorForSpaceablelessPrev,
-        bool emptySilhouetteHalfFirstFallback)
+        bool scalarFloorForSpaceablelessPrev)
     {
         // How far prev's ink reaches below the staff its spring attaches to — the
         // term the scalar fallbacks and the band floor are written from.
@@ -941,7 +910,7 @@ internal static class LayoutUtilities
             return inkBelowLastRefpoint + nextUpExtent + nextToFirst;
         if (double.IsNegativeInfinity(skylineDistance))
             return inkBelowLastRefpoint + nextUpExtent
-                + (emptySilhouetteHalfFirstFallback ? nextHalfFirst : nextToFirst);
+                + nextHalfFirst;
         double dist = skylineDistance + (nextToFirst - prevOriginToLast);
         if (bandUpNext > 0)
             dist = Math.Max(dist, inkBelowLastRefpoint + nextHalfFirst + bandUpNext);

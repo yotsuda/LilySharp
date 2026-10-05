@@ -3154,8 +3154,8 @@ internal sealed class MultiStaffLayouter
                     // slack over its three springs — no step exact, every step inherited it.
                     // ⚠️ THE SAME SPEC AND THE SAME BLOCKS AS StaffSprings.AddSpring, or the
                     // spring's floor and the drawn distance describe different alignments
-                    // and RespaceStaves moves what the single-page path left alone — the two
-                    // page paths must read one geometry.
+                    // and RespaceStaves moves what the page chain left alone — the two must
+                    // read one geometry.
                     if (staffSkylines is not null
                         && rowsSinceSpaceable is { Count: > 0 }
                         && lastSpaceable is { } upper)

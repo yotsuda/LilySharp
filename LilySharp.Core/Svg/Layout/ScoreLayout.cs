@@ -266,7 +266,11 @@ internal sealed record PageLayout(
     // How far the page's chain overran it at its stiffest, taken out of the gaps so the
     // systems overlap on the page (PageLayouter.PositionSystemsOnPage, LilyPond's
     // "compressing over-full page by %.1f staff-spaces"); 0 when it fits.
-    double Overflow = 0
+    double Overflow = 0,
+    // The force the page's chain solved to: 0 at rest (a ragged page that fits), above 0
+    // stretched, below 0 compressed, −∞ over-full. LayoutEngine crops a lone page only at
+    // or above rest.
+    double Force = 0
 );
 
 /// <summary>

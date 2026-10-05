@@ -290,22 +290,6 @@ internal sealed partial class LayoutEngine
             perSystemCropDown != null && i >= 0 && i < perSystemCropDown.Count
                 ? Math.Max(perSystemExtents[i].downExtent, perSystemCropDown[i])
                 : perSystemExtents[i].downExtent;
-        // Whole-line CHORD-SYMBOL row band above a system. It lays out only after the page
-        // Y is fixed, so it is absent from the skylines — the skyline distance must be
-        // floored by it or adjacent systems overprint it (found by the Greensleeves
-        // sample). Local annotations (dynamics, ties, …) are NOT banded: the X-aware
-        // skyline distance is the better model for those.
-        // ⚠️ THE LYRIC BAND BELOW IS NOT HERE ANY MORE (2026-08-20): its minimum profile is
-        // IN the paging skylines (LyricReservationBelowSystem → AddLyricBand), so the
-        // X-aware Distance() below reads it the way LilyPond's floor does
-        // (page-layout-problem.cc:593-599 build_system_skyline's minimum translations,
-        // :625-632 append_system's distance floor) — the scalar spread it under every X
-        // (audit/lp-geometry lyrics.band-floor.*). The chord row keeps this shape until a
-        // point measures it the same way.
-        double BandUp(int i) =>
-            perSystemBandUps == null || i >= perSystemBandUps.Count
-                ? 0
-                : perSystemBandUps[i];
         // Per-system body height, defaulting to the scalar systemHeight when the
         // caller has none (single-staff path, or no hara-kiri) — in that case every
         // entry equals systemHeight, so the result is byte-identical.
@@ -313,30 +297,6 @@ internal sealed partial class LayoutEngine
             perSystemHeights != null && i >= 0 && i < perSystemHeights.Count
                 ? perSystemHeights[i]
                 : systemHeight;
-        // Origin to the staff the spring LEAVES this system from — its LAST spaceable staff.
-        // LILYPOND-REF: lily/page-layout-problem.cc:936-939 distribute_loose_lines — its two
-        // positions are `last_spaceable_line_translation` and `-solution_[spring_idx]`, so the
-        // inter-system distance runs from `last_spaceable_line` to the next system's first,
-        // and that line is a fact about the system's ALIGNMENT (:943-944 records it as the
-        // walk passes each spaceable staff). Nothing there consults a spring.
-        // ★ IT USED TO FORK ON THE SPRING LIST (2026-08-26): `StaffSprings.IsDefaultOrEmpty
-        // ? ToFirst : ToLast`, on the account that "a system contributes one chain node per
-        // staff SPRING, so one with no springs left never reached its last staff" — measured,
-        // it said, on hara-kiri'd book LYRHKG.
-        // ⚠️ THAT ACCOUNT NEVER DESCRIBED THE FORK IT GUARDED. Hara-kiri leaves ONE surviving
-        // staff, and there the first spaceable staff IS the last, so ToFirst and ToLast are
-        // the same number and the branch changes nothing. The branch could only ever differ
-        // where a system had TWO spaceable staves and no spring — which is not a hara-kiri
-        // state at all, but the state MultiStaffLayouter.StaffSprings' own decline used to
-        // produce for `staff / chords / lyrics / staff`. So the fork silently answered in the
-        // ORIGIN frame for exactly the books the decline broke, and its remark pointed at a
-        // book that never exercised it.
-        // ⇒ Now that every consecutive spaceable pair is sprung, `StaffSprings` is empty
-        // exactly when the system has at most one spaceable staff, where the two are equal.
-        // The fork is gone rather than corrected: a conditional that can only fire on a state
-        // the port no longer produces is a trap, not a guard. The invariant it rested on is
-        // ASSERTED — InterSystemFloorTests.EverySystemWithTwoSpaceableStaves_CarriesAStaffSpring.
-        double OriginToChainEnd(int i) => PageAnchorOffsets(systems[i].StaffGroups).ToLast;
         // An empty score (no systems) has nothing to page; return empty rather than
         // indexing perSystemExtents[0] below.
         if (systems.IsDefaultOrEmpty || perSystemExtents.Count == 0)
@@ -344,7 +304,8 @@ internal sealed partial class LayoutEngine
 
         // LILYPOND-REF: lily/page-layout-problem.cc:1070-1127 build_system_skyline
         // Pass per-system skylines for X-dependent inter-system collision detection
-        (ImmutableArray<PageLayout>, ImmutableArray<SystemLayout>) OptimalPages()
+        (ImmutableArray<PageLayout>, ImmutableArray<SystemLayout>) OptimalPages(
+            PageLayouter? layouter = null, bool onePage = false)
         {
             var skylines = perSystemSkylines != null
                 ? (ImmutableArray<(VerticalSkyline, VerticalSkyline)>?)perSystemSkylines.ToImmutableArray()
@@ -375,209 +336,71 @@ internal sealed partial class LayoutEngine
                 for (int i = 0; i < stacked.Count; i++)
                     debug($"  placed sys {i + 1}: {DescribeDetails(stacked[i])}");
             }
-            var pages = _pageLayouter.CreatePagesWithOptimalBreaking(
+            var pages = (layouter ?? _pageLayouter).CreatePagesWithOptimalBreaking(
                 systems, header, perSystemExtents.ToImmutableArray(), skylines,
                 perSystemBandUps?.ToImmutableArray(), perSystemHeights, anchors,
                 shapes,
+                // One page asks no breaker, so a snippet's pageBreak is a line break and a
+                // systemsPerPage cap has nothing to cap (SnippetLayoutTests).
                 perSystemPagePermissions,
-                frames);
+                frames,
+                onePage);
             return (pages, pages.SelectMany(p => p.Systems).ToImmutableArray());
         }
+
+        // LilyPond's one-page breaking (lily/one-page-breaking.cc:63-183 One_page_breaking::solve):
+        // the paper made 1e6 tall for the solve, ragged, every system on the one page — the crop
+        // below cuts it to the music.
+        (ImmutableArray<PageLayout>, ImmutableArray<SystemLayout>) OnePage()
+            => OptimalPages(new PageLayouter(_options with
+            {
+                PageHeight = 1e6,
+                PageBreaking = _options.PageBreaking with { RaggedBottom = true },
+            }), onePage: true);
 
         if (_options.UseOptimalPageBreaking && _options.PageHeight > 0)
             return OptimalPages();
 
-        // A FORCED page break (`pageBreak`) after any system but the last is a page count
-        // the single-page stack below cannot honour: it stacks everything on one page and
-        // only overflows into the breaker. The breaker is the one reader of page
-        // permissions (SystemDetails.PagePermission → PageBreaker.IsValidBreak), so the
-        // book goes there whether or not it would have fit.
-        if (_options.PageHeight > 0 && perSystemPagePermissions is { } permissions)
-        {
-            for (int i = 0; i + 1 < systems.Length && i < permissions.Length; i++)
-                if (permissions[i] == BreakPermission.Force)
-                    return OptimalPages();
-        }
+        // ONE PAGE OR THE PAPER — and the page chain places the systems either way
+        // (PageLayouter.CreatePagesWithOptimalBreaking).
+        // ★ UNTIL SESSION 829 A SCORE THAT FIT ONE PAGE TOOK A SECOND ROUTE: a loop here stacked
+        // its systems at force 0 itself, and only an overflow went to the chain — two
+        // implementations of one page (HANDOFF §2 D). MEASURED before folding it (Lab
+        // sessions/p829/chain, 998 books, each score the loop placed solved both ways): 682 of 682
+        // one-page scores came out of the chain with every system where the loop had put it
+        // (|d| < 1e-6), and the one difference was audit/lpreg/perf-sd40, which the loop fitted
+        // 0.55 inside the paper while the chain's breaker, pricing the last-bottom spring the loop
+        // never had, made two pages — as LilyPond 2.26.0 does (12 systems and 1). A snippet (no
+        // paper height) is LilyPond's one-page breaking through the same chain (OnePage).
+        var (pages, placed) = _options.PageHeight > 0 ? OptimalPages() : OnePage();
 
-        // The same for a cap on a page's systems (`lysc --set systemsPerPage|maxSystemsPerPage`,
-        // LilySharp-Omr's proposal of 2026-10-02 P2): more systems than it allows cannot be one
-        // page however well they fit, and the breaker is its one reader.
-        var paging = _options.PageBreaking;
-        int cap = paging.SystemsPerPage > 0 ? paging.SystemsPerPage : paging.MaxSystemsPerPage;
-        if (_options.PageHeight > 0 && cap > 0 && systems.Length > cap)
-            return OptimalPages();
-
-        // Recalculate Y positions using skyline extents to avoid overlaps
-        var pageAnchor = PageAnchorOffsets(systems[0].StaffGroups);
-        double skylineY = LayoutUtilities.CalculateFirstSystemY(
-            _options.MarginTop, header, perSystemExtents[0].upExtent,
-            pageAnchor.ToFirst, _options.VerticalSpacing);
-
-        // ⚠️ THE SINGLE-PAGE STACK IS THROWN AWAY WHEN THE SCORE OVERFLOWS (the check below
-        // hands the whole thing to OptimalPages), and it is not cheap to build: the loop
-        // measures each adjacent pair with a horizon padding, and padding a SYSTEM skyline
-        // copies the whole silhouette. So decide the overflow FIRST, from a bound that needs
-        // no skyline at all.
-        // The bound is sound because every increment the loop adds is
-        // max(BasicDistance, max(MinimumDistance, …)) — never less than
-        // max(BasicDistance, MinimumDistance) whatever the skylines say. If even that
-        // minimal stacking does not fit, no skyline reading can make it fit.
-        // ⚠️ ONE-SIDED ON PURPOSE: exceeding the bound proves overflow, but not exceeding it
-        // proves nothing, so the loop still runs and the real check below still decides.
-        // MEASURED (session 191, Release, keystroke allocation): the discarded loop was
-        // 249 MB of perf-scripts1k's 337 MB keystroke and 285 MB of perf-fingstack1k's 525 MB
-        // — every multi-page book paid for a single-page layout it could never use.
-        if (_options.PageHeight > 0 && systems.Length > 1)
-        {
-            var floorSpec = _options.VerticalSpacing.SystemSystem;
-            double floorGap = Math.Max(floorSpec.BasicDistance, floorSpec.MinimumDistance);
-            double floorHeight = skylineY + (systems.Length - 1) * floorGap
-                + SysHeight(systems.Length - 1)
-                + CropDown(systems.Length - 1) + _options.MarginBottom;
-            if (floorHeight > _options.PageHeight)
-                return OptimalPages();
-        }
-
-        var updatedSystems = new List<SystemLayout>();
-        for (int i = 0; i < systems.Length; i++)
-        {
-            updatedSystems.Add(systems[i] with { Y = skylineY });
-            if (i < systems.Length - 1)
-            {
-                // LILYPOND-REF: ly/paper-defaults-init.ly:62-65 system-system-spacing —
-                // the pair's padding is 1, its minimum-distance 8 and its basic-distance
-                // 12, and page-layout-problem.cc:625-632 uses exactly those. This path
-                // used to invent `SystemSpacing * 0.5` (= 4) instead, four times
-                // LilyPond's padding, which made the skyline term bind on scores where
-                // LilyPond's does not — it was invisible while the skylines were thin,
-                // and surfaced the moment the clef joined them.
-                var pairSpec = _options.VerticalSpacing.SystemSystem;
-
-                // Reference-to-reference distance to the next system, through the ONE
-                // home for the pair minimum — LayoutUtilities.InterSystemPairMinimum
-                // (the spring chain's refpoint-frame composition; this path's old
-                // origin-frame association was collapsed onto it after the 2026-08-27
-                // corpus A/B measured the difference at zero everywhere). Its remarks
-                // carry the shared frame prose and the divergence inventory; what
-                // stays here is this path's own history and the arguments' whys.
-                // ⚠️ UNTIL 2026-08-25 THIS PATH FLOORED IN THE ORIGIN FRAME, and the floor
-                // therefore stopped flooring as soon as a system was taller than the numbers
-                // themselves: with two staves SysHeight is 13.000000 and BasicDistance is
-                // 12.000000, so `Math.Max(12, …)` could not bind and nothing stood under the
-                // skyline term at all. A one-staff system hid it exactly — its body is
-                // 4.000000 and 12.000000 - 4.000000 is the 8.000000 LilyPond draws — which is
-                // why 572 books never moved. MEASURED on the reported book
-                // (scratch/ベースタブLy/Untitled-6.lys, `staff melody` twice, user report
-                // 2026-08-25): the first system pair read Distance() 15.045000 against a
-                // scalar 20.205000 — the next system's rehearsal mark rises into the INDENT
-                // column, where the first system has no staff and so no silhouette, which
-                // LilyPond does too — and the gap collapsed to 3.050000, printing the mark's
-                // box through the instrument name. The same A→B pair later in the same score
-                // read 8.200000. LilyPond 2.26.0 answers 8.000000 for that pair and does so
-                // at one, two and three staves alike (probes/system-indent-floor.ly).
-                bool hasSkylines = perSystemSkylines != null
-                    && i + 1 < perSystemSkylines.Count;
-                // LILYPOND-REF: lily/page-layout-problem.cc:618-629 — measured
-                // with the System grob's skyline-horizontal-padding (1.0), through
-                // the pair memo the spring-chain path already stands on (finding
-                // 4-6): the skyline instances are the cache's own, so an unchanged
-                // pair replays its number instead of re-walking the buildings.
-                double dist = hasSkylines
-                    ? PageLayouter.InterSystemSkylineDistance(
-                        perSystemSkylines![i + 1].up, perSystemSkylines[i].down)
-                    : double.NegativeInfinity;
-                var aNext = PageAnchorOffsets(systems[i + 1].StaffGroups);
-                double originToLastHere = OriginToChainEnd(i);
-                double toStaffFrame = aNext.ToFirst - originToLastHere;
-                double staffToStaff = LayoutUtilities.InterSystemPairMinimum(
-                    hasSkylines, dist,
-                    prevBodyHeight: SysHeight(i),
-                    prevDownExtent: perSystemExtents[i].downExtent,
-                    nextUpExtent: perSystemExtents[i + 1].upExtent,
-                    prevOriginToLast: originToLastHere,
-                    nextToFirst: aNext.ToFirst,
-                    nextHalfFirst: aNext.HalfFirst,
-                    // The chord-row band above the NEXT system clears against this
-                    // system's full extent (the band spans every X, so the X-disjoint
-                    // argument for preferring Distance() does not apply to it).
-                    // ⚠️ A BAND IS MEASURED FROM THE STAFF IT HANGS OFF (see
-                    // PageAnchorOffsets' remark). The lyric band's mirror-image floor
-                    // stood here until 2026-08-20; it is in the skylines now, so
-                    // Distance() already prices it — see BandUp's remark.
-                    bandUpNext: BandUp(i + 1),
-                    // ⚠️ A SYSTEM WITH NO SPACEABLE STAFF HAS NO DOWN SILHOUETTE TO REFINE.
-                    // BuildSystemSkylines seeds the down side from the BOTTOM STAFF'S INK,
-                    // and a rows-only lead sheet (chords row + lyrics row, no staff) has
-                    // none — its content is text the lyric and chord engravers draw. The
-                    // lyric reservation does not cover it either: that profile is the rows
-                    // hanging BELOW the last spaceable staff, and here there is no such
-                    // staff for them to hang below. MEASURED on the reported book
-                    // (scratch/ベースタブLy/Untitled-6.lys, user report session 240): the
-                    // down skyline reached 1.900 under a body of 10.300, so Distance()
-                    // answered 6.395 where the true origin-to-origin need was 14.900, the
-                    // 12.000 basic distance won the max below, and the next system's
-                    // section label and bar number printed 1.8 into the system above.
-                    // ⇒ The SCALAR sum floors the answer for such a system: Distance() is
-                    // a refinement of that sum and cannot refine what it cannot see.
-                    // ⚠️ This CANNOT reach a book with a staff: the test is exactly
-                    // PageAnchorOffsets' own fallback condition, whose remark already says
-                    // the nominal anchor stands there only until a corpus point measures
-                    // it. This is that point, for the silhouette half of the same hole.
-                    scalarFloorForSpaceablelessPrev:
-                        ClassifySystem(systems[i].StaffGroups).FirstSpaceable is null,
-                    // Divergence ⑴: this path's empty-silhouette fallback converts
-                    // with ToFirst (the extents are origin-measured); the chain's
-                    // converts with HalfFirst — a different number for a row-led
-                    // next system, unmeasured, so each keeps its own.
-                    emptySilhouetteHalfFirstFallback: false);
-
-                // LILYPOND-REF: lily/page-layout-problem.cc:625-632 + spring.cc:219-237 —
-                // the ink is a FLOOR under the spring, and at force 0 (which is what an
-                // unjustified single page runs at) the spring is
-                // max(min_distance, ideal_distance). Same shape as PageLayouter's chain.
-                double minDistance = Math.Max(
-                    pairSpec.MinimumDistance, staffToStaff + pairSpec.Padding);
-                skylineY += Math.Max(pairSpec.BasicDistance, minDistance) - toStaffFrame;
-            }
-        }
-        // LILYSHARP-OWN, DECLARED: the CROP. LilyPond always engraves onto the paper; a
-        // single Lily# page is sized to its content and only switches to the paper when the
-        // content overflows (a deliberate choice — see the page.height note in
-        // LpGeometryProbes, where it is a recorded -109.468268 that is not going to close).
-        // ⚠️ IT READS `CropDown`, NOT THE DOWN EXTENT, and the difference is the whole of
-        // this line's history. The extent reserves a below-system lyric block at its
-        // ALIGNMENT MINIMUM (LyricReservationBelowSystem, which is what LilyPond reserves
-        // too), while the chain that DRAWS it has been solved into the PAPER since session
-        // 291 and comes to rest at the spring's ideal (BuildLooseChainEnds' page-edge
-        // branch). Between 2026-08-29 and this line's fix the syllables sat up to
-        // (ideal - floor) below the height computed here and the page's bottom white shrank
-        // by exactly that: 1.130041 on the ledger's book TBL2, 0.139 on test/lyrics.
-        // ⚠️ IT COULD NEVER CLIP, WHICH IS WHY IT WAS A CROP BUG AND NOT A LAYOUT ONE: the
-        // growth is bounded by the first spring's ideal 5.5 less its own floor, and every
-        // later spring in such a chain has basic-distance 0, so its ideal IS its minimum.
-        // ⚠️ AND IT COULD NOT BE CLOSED BY RESERVING THE IDEAL IN THE EXTENT: that same
-        // extent is the system's DOWN skyline for system-system spacing, where LilyPond's
-        // reservation really is the minimum (page-layout-problem.cc:593-599 hands the
-        // skyline builder the minimum translations). One quantity, two consumers that want
-        // different numbers — so the producer answers both (LooseBlockProfiles) and only
-        // this line reads the second.
-        double totalHeight = skylineY + SysHeight(systems.Length - 1)
-            + CropDown(systems.Length - 1) + _options.MarginBottom;
-
-        // Auto-pagination: a score that FITS one page keeps this simple layout
-        // (byte-identical to the historical single-page output); one that
-        // overflows the paper height re-runs through the optimal page breaker
-        // and splits across real pages, like LilyPond always does.
-        if (_options.PageHeight > 0 && totalHeight > _options.PageHeight)
-            return OptimalPages();
-
-        // Stage-4 W2-core: the loop above accumulated each system's top DOWNWARD
-        // (device) to size the page; store the final origins as page Y-up (UP from
-        // the page bottom) by reflecting through the now-known totalHeight. This is
-        // the single-page producer seam — after it, SystemLayout.Y is Y-up and the
-        // renderer's YFlip is the only device conversion left.
-        var systemsArray = updatedSystems
-            .Select(s => s with { Y = totalHeight - s.Y })
+        // LILYSHARP-OWN, DECLARED: the CROP. LilyPond always engraves onto the paper; a lone Lily#
+        // page the chain laid out at rest is cut to its content, and one it had to compress keeps
+        // the paper, as before the fold (the loop handed exactly those to the chain). LilyPond's
+        // one-page breaking cuts too, but under its last-bottom spacing
+        // (lily/one-page-breaking.cc:125-176 One_page_breaking::solve); this cut is the margin's.
+        // See the page.height note in LpGeometryProbes (−109.468268, not going to close).
+        if (pages.Length != 1 || !(pages[0].Force >= 0))
+            return (pages, placed);
+        var onPaper = pages[0];
+        int last = onPaper.Systems.Length - 1;
+        // ⚠️ THE CUT READS `CropDown`, NOT THE DOWN EXTENT, and the difference is the whole of
+        // this line's history. The extent reserves a below-system lyric block at its ALIGNMENT
+        // MINIMUM (LyricReservationBelowSystem, which is what LilyPond reserves too), while the
+        // chain that DRAWS it comes to rest at the spring's ideal (BuildLooseChainEnds'
+        // page-edge branch). Between 2026-08-29 and the fix the syllables sat up to
+        // (ideal − floor) below the cut and the page's bottom white shrank by exactly that:
+        // 1.130041 on the ledger's book TBL2, 0.139 on test/lyrics. It could not be closed by
+        // reserving the ideal in the extent: that extent is the system's DOWN skyline for
+        // system-system spacing, where LilyPond's reservation really is the minimum
+        // (page-layout-problem.cc:593-599) — so the producer answers both (LooseBlockProfiles)
+        // and only this line reads the second.
+        // The chain's Y is Y-up from the paper's bottom; the cut keeps the top, so each system
+        // keeps its distance below it and the page ends under the last one.
+        double totalHeight = onPaper.Height - onPaper.Systems[last].Y + SysHeight(last)
+            + CropDown(last) + _options.MarginBottom;
+        var systemsArray = onPaper.Systems
+            .Select(s => s with { Y = totalHeight - (onPaper.Height - s.Y) })
             .ToImmutableArray();
         // The snippet page (LayoutOptions.CropWidth) is as wide as its widest system's
         // drawn staff — the final barline or the courtesy suffix past it, the ONE reading
@@ -596,16 +419,9 @@ internal sealed partial class LayoutEngine
             }
             pageWidth = _options.MarginLeft + widest + _options.MarginRight;
         }
-        // A single page runs at force 0, so the title column's top is the top-markup
-        // spring's own length below the margin (4 at rest — LayoutUtilities.TitleTopSpring).
-        var page = new PageLayout(0, pageWidth, totalHeight, header?.Depth ?? 0, systemsArray,
-            Header: header,
-            HeaderTop: header is null
-                ? 0
-                : _options.MarginTop + LayoutUtilities.TitleTopSpring(_options.VerticalSpacing).Length(0));
+        var page = onPaper with { Width = pageWidth, Height = totalHeight, Systems = systemsArray };
         return (ImmutableArray.Create(page), systemsArray);
     }
-
     /// <summary>
     /// One system's alignment as the loose-line pass needs to see it: the two spaceable
     /// staves that bracket everything, the non-spaceable lines it OPENS with, and the ones
@@ -653,6 +469,13 @@ internal sealed partial class LayoutEngine
         ImmutableArray<StaffLayout> Leading,
         ImmutableArray<int> Trailing,
         ImmutableArray<(int Anchor, int Row)> Between);
+
+    /// <summary>True when a system has no spaceable staff — a rows-only lead sheet (chords and
+    /// lyrics rows, no staff) — so it has no down silhouette for the next pair to read.</summary>
+    /// <remarks>A system built without its groups (a unit test's) answers no: nothing says it
+    /// lacks a staff, and its anchors are the nominal staff's (<see cref="PageAnchorOffsets"/>).</remarks>
+    internal static bool HasNoSpaceableStaff(ImmutableArray<StaffGroupLayout> groups)
+        => !groups.IsDefaultOrEmpty && ClassifySystem(groups).FirstSpaceable is null;
 
     /// <summary>Cuts one system's placed staves into that classification.</summary>
     private static SystemAlignment ClassifySystem(ImmutableArray<StaffGroupLayout> groups)

@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 216 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **340** | |
+| `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
+| `OWN` | 215 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **338** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -133,7 +133,7 @@
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **:275** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（64 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（63 件）
 
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:693** no observer; add the paren widths when a book brings one. The unpacked
@@ -186,11 +186,9 @@
 - **:2454** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
 - **:2476** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
-- **:927** THE CLEAR HAS NO OBSERVER HERE, and that was measured rather than assumed. Session 457's
+- **:750** THE CLEAR HAS NO OBSERVER HERE, and that was measured rather than assumed. Session 457's
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
 - **:562** ⚠️ NO POINT OBSERVES THE FOLD: audit/lp-geometry hairpin.page.quiet reads the
-### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
-- **:874** paging augment families. Unreachable today, so no observer CAN be built; the
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
 - **:370** ⚠️ THE CLEAR BEFORE EACH STAFF had no observer until session 478 (session 467, by poison):
 ### `LilySharp.Core/Svg/Layout/LyricHyphen.cs`
@@ -242,7 +240,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（216 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（215 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **:90** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
@@ -435,9 +433,9 @@
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
 - **:843** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
-- **:543** LILYSHARP-OWN, DECLARED: the CROP. LilyPond always engraves onto the paper; a
-- **:779** ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only
-- **:791** ⚠️ LILYSHARP-OWN: THE SECOND PAIR HAS NO LILYPOND COUNTERPART, and it exists because a
+- **:377** LILYSHARP-OWN, DECLARED: the CROP. LilyPond always engraves onto the paper; a lone Lily#
+- **:602** ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only
+- **:614** ⚠️ LILYSHARP-OWN: THE SECOND PAIR HAS NO LILYPOND COUNTERPART, and it exists because a
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
 - **:438** ⚠️ A LYRICS ROW KEEPS ITS DRAWN EXTENT, AND THAT IS LILYSHARP-OWN, not a second
 - **:555** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
@@ -447,8 +445,6 @@
 ### `LilySharp.Core/Svg/Layout/LayoutOptions.cs`
 - **:170** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
 - **:218** LILYSHARP-OWN: LilyPond has no such variable (its spelling is a \break every N bars beside the ##f permissions); 0 leaves the breaks to the breaker.
-### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
-- **:897** (the chain's last node — see its LILYSHARP-OWN remark), the single-page path
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
 - **:690** This is Lily#'s own (LILYSHARP-OWN), not LilyPond's: LilyPond puts a leading
 - **:772** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
@@ -504,7 +500,7 @@
 - **:100** ⚠️ LILYSHARP-OWN: THE NULLABILITY. LilyPond's Line_details ALWAYS carries a shape —
 - **:154** LILYSHARP-OWN: the number itself has no LilyPond counterpart, because LilyPond's
 ### `LilySharp.Core/Svg/Layout/PageLayouter.cs`
-- **:623** ⚠️ LILYSHARP-OWN: THE CHAIN'S LAST NODE, WHICH IS NOT ALWAYS THE LAST STAFF.
+- **:631** ⚠️ LILYSHARP-OWN: THE CHAIN'S LAST NODE, WHICH IS NOT ALWAYS THE LAST STAFF.
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
 - **:129** ⚠️ LILYSHARP-OWN: THE TWO-EDGE MODEL ITSELF. LilyPond has no such pair —
 - **:297** ⚠️ LILYSHARP-OWN: THE SELECTION IS DELIBERATELY THE OLD ONE, and it is a KNOWN

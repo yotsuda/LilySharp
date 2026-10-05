@@ -140,8 +140,6 @@ public class BoxesTests
             score main { staff up  staff down }
             """;
         var page = Pages(two)[0];
-        int StaffOf(string kind, char written) =>
-            page.Symbols.First(s => s.Kind == kind && s.Pos >= 0 && two[s.Pos] == written).Staff;
         Assert.Equal([0, 1, 1], page.Symbols.Where(s => s.Kind == "dynamics").OrderBy(s => s.Pos).Select(s => s.Staff));
         Assert.Equal(0, page.Symbols.First(s => s.Kind == "fermata").Staff);
         Assert.All(page.Symbols.Where(s => s.Kind == "articulation"),

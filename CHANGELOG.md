@@ -470,6 +470,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A score that fits one page only by leaving no room under its last system takes two, as in
+  LilyPond.** A page that fits is laid out by the same page spacing as every other page now, and
+  that spacing keeps the bottom distance under the last system that LilyPond keeps; a score just
+  that much too tall (13 one-staff systems on A4, say) was drawn on one page cut to its music and
+  is now 12 systems and 1, as LilyPond lays it out. Every other one-page score is where it was.
 - **A staff hidden on a system takes its rests and its lyrics with it.** A voice staff written
   `as removeEmpty` that rested through a system had its whole-bar rests drawn on the staff
   below it (the piano's right hand), and a lyrics row under a voice hidden on the first system
