@@ -402,8 +402,7 @@ internal static partial class SpacingRules
     public static double CalculateCommonShortestDuration(Model.MultiStaffScore score)
         => CommonShortestDuration(
             score.EnumerateStaves().SelectMany(t =>
-                t.Staff.Voices.Select(v => (v.Measures, t.Staff.IsTextRow, t.Staff.IsLyricsTextRow))),
-            score.TimeSignature.MeasureDuration);
+                t.Staff.Voices.Select(v => (v.Measures, t.Staff.IsTextRow, t.Staff.IsLyricsTextRow))));
 
     /// <summary>
     /// Calculates the common shortest duration across all voices in a single-staff score.
@@ -413,15 +412,10 @@ internal static partial class SpacingRules
     /// </remarks>
     public static double CalculateCommonShortestDuration(Model.Score score)
         => CommonShortestDuration(
-            score.Voices.Select(v => (v.Measures, IsTextRow: false, IsLyricsRow: false)),
-            score.TimeSignature.MeasureDuration);
-
-    // The meter table the vote below reads and drops (see ScratchArray).
-    [ThreadStatic] private static Fraction[]? t_metersShortest;
+            score.Voices.Select(v => (v.Measures, IsTextRow: false, IsLyricsRow: false)));
 
     private static double CommonShortestDuration(
-        IEnumerable<(ImmutableArray<Model.Measure> Measures, bool IsTextRow, bool IsLyricsRow)> voiceMeasures,
-        Fraction initialMeasureDuration)
+        IEnumerable<(ImmutableArray<Model.Measure> Measures, bool IsTextRow, bool IsLyricsRow)> voiceMeasures)
     {
         // A LYRIC row casts no vote at all. Its slots stand for lyric syllables, and a
         // LyricText — a rhythmic grob (scm/define-grobs.scm:2213-2236) the spacing engraver
@@ -439,12 +433,6 @@ internal static partial class SpacingRules
         var voices = voiceMeasures.Where(v => !v.IsLyricsRow).ToList();
         int measureCount = voices.Count == 0 ? 0 : voices.Max(m => m.Measures.Length);
 
-        // A full-measure rest is measured against the PREVAILING meter, so a 2/4 bar's
-        // half rest is dropped from the vote just like a 4/4 bar's whole rest.
-        var meters = MultiMeasureRestEngraver.PrevailingMeters(
-            voices.Select(v => v.Measures).ToList(), measureCount, initialMeasureDuration,
-            into: ScratchArray.Take(ref t_metersShortest, measureCount));
-
         // Per-measure shortest across all voices, then count occurrences.
         var counts = new Dictionary<double, int>();
         for (int m = 0; m < measureCount; m++)
@@ -455,13 +443,22 @@ internal static partial class SpacingRules
                 if (m >= measures.Length)
                     continue;
 
-                // Full-measure rests create no musical columns in LilyPond and
-                // therefore never contribute to the common shortest duration.
-                if (MultiMeasureRestEngraver.IsFullMeasureRest(measures[m], meters[m]))
-                    continue;
-
+                // A MULTI-MEASURE rest (`R1`) casts no vote: add_starter_duration returns early
+                // for a multi-measure-interface grob. A plain `r1` is an ordinary Rest — a
+                // rhythmic grob in a musical column — and votes its whole bar like any note.
+                // ⚠️ Until session 839 every full-bar rest was dropped here, `r1` included,
+                // under a remark that "full-measure rests create no musical columns": a book of
+                // `r1` bars and a few bars of sixteenths then spaced on the sixteenth where
+                // LilyPond's mode is the whole (capped to base-shortest-duration 3/16).
+                // MEASURED (2.26.0, Lab sessions/p839/vk p6): `r1 | r1 | <16ths> | <8ths> | … | r1`
+                // — LilyPond's first line 50.00 to its bar line whatever the second line holds,
+                // Lily#'s 50.60 / 50.27 / 50.00 as the line after it held sixteenths / eighths /
+                // a whole note.
+                // LILYPOND-REF: lily/spacing-engraver.cc:176-183 Spacing_engraver::add_starter_duration — the multi-measure-interface early return.
                 foreach (var item in measures[m].Items)
                 {
+                    if (item is RestItem { IsMultiMeasure: true })
+                        continue;
                     // A SKIP casts no vote: the starter durations a column votes with are
                     // read off the rhythmic grobs the spacing engraver acknowledges, and a
                     // skip engraves none — so a bar of `s1` under a piece of eighths does

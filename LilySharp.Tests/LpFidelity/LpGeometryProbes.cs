@@ -13208,6 +13208,26 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// <c>r1 | r1</c> on a justified first line, a line of a sixteenth bar and an eighth bar,
+    /// then <c>r1</c>. A plain <c>r1</c> votes its whole for the common shortest duration (only a
+    /// multi-measure rest does not), so the mode is the whole, capped to 3/16: the first line's
+    /// bar line 51.475997 after the clef (CLEF 0.8, BAR 52.275997), the second line's
+    /// 57.888303. Lily# dropped every full-bar rest from the vote until session 839 and spaced
+    /// the book on the sixteenth.
+    /// </summary>
+    /// <remarks>LilyPond twin: audit/lp-geometry/probes/rest-bar-vote.ly RBV.</remarks>
+    private static readonly string RBV = """
+        octave absolute
+        time 4/4
+        part p { }
+        section A {
+          p { r1 | r1 | break c'16 d' e' f' g' a' b' c'' c'' b' a' g' f' e' d' c' | c'8 d' e' f' g' a' b' c'' | break r1 | }
+        }
+        form main { A }
+        score main "RBV" { staff p }
+        """;
+
+    /// <summary>
     /// A chord diagram on the first quarter after a bar line. Its box — the twin's TextScript
     /// with \textLengthOn's extra-spacing-width (-0.0 . 0.4) and infinite extra-spacing-height —
     /// joins the column's skyline at every height, so it is in the bar line's Staff_spacing
@@ -17909,6 +17929,9 @@ internal static class LpGeometryProbes
         new("mark-column.fills-measure.bar", MKC, g => g.ClefToBarlineByClefRank(0, 1) - g.ClefToBarlineByClefRank(0, 0)),
         new("mark-column.tacet.box-centre", MKC, g => g.MusicMarkBoxCenterFromClefLeft("Tacet")),
         new("mark-column.quarter.box-centre", MKC, g => g.MusicMarkBoxCenterFromClefLeft("X")),
+        // A plain whole-bar rest votes for the common shortest duration (RBV's remarks).
+        new("common-shortest.rest-bar-votes.first-line", RBV, g => g.ClefToBarlineByClefRank(0, 0)),
+        new("common-shortest.rest-bar-votes.sixteenths", RBV, g => g.ClefToBarlineByClefRank(1, 0)),
         // A diagram's box against the columns beside it (DN1's, DN2's remarks).
         new("diagram.barline-to-note", DN1, g => g.BarlineRightToNextNotehead(0)),
         new("diagram.note-to-next-note", DN1, g => g.NoteheadAnchorStep(1)),

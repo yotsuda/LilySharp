@@ -106,6 +106,26 @@ public class CommonShortestDurationTests
         Assert.Equal(0.125, shortest, 4);
     }
 
+    [Fact]
+    public void APlainWholeBarRest_Votes_OnlyTheMultiMeasureRestDoesNot()
+    {
+        // `r1` is an ordinary Rest — a rhythmic grob in a musical column — and votes its
+        // whole; only `R1`'s MultiMeasureRest is turned away (add_starter_duration's
+        // multi-measure-interface return). Three `r1` bars and one bar of sixteenths: the mode
+        // is the whole, capped to 3/16. Under `R1` the sixteenth is the only vote. Until
+        // session 839 both read 1/16 (Lab sessions/p839/vk p6: LilyPond's line of `r1` bars
+        // stood 0.60 off when the next line held sixteenths).
+        // LILYPOND-REF: lily/spacing-engraver.cc:176-183 Spacing_engraver::add_starter_duration — the multi-measure-interface early return.
+        const string book = """
+            part melody
+            section Main { melody { r1 | r1 | c16 d e f g a b c' c' b a g f e d c | r1 | } }
+            form main { Main }
+            score main "x" { staff melody }
+            """;
+        Assert.Equal(0.1875, ShortestOf(book), 4);
+        Assert.Equal(0.0625, ShortestOf(book.Replace("r1", "R1")), 4);
+    }
+
     /// <summary>The multi-staff collect of a whole book, the way the page reads it.</summary>
     private static double ShortestOf(string source)
     {

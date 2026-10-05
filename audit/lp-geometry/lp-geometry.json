@@ -3180,6 +3180,20 @@
       "residual": 0.0,
       "why": "OPENED AND CLOSED IN SESSION 838. MKC's \"Tacet\" box, its centre after the clef's left (CLEF 0.8, MARK ext 37.676849 .. 45.346052; the centre, because the box's own width is not this point's business): the mark is centred on its own column, 0.5 (at the line's force) before the a4 it was written on. Lily# drew it centred over the bar line opening the bar, 13.6 further left (MusicMarkEngraver.CalculateXPosition)."
     },
+    "common-shortest.rest-bar-votes.first-line": {
+      "probe": "rest-bar-vote.ly",
+      "score": "RBV",
+      "lilypond": 51.475997,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 839. `r1 | r1` on a justified first line (CLEF 0.8, BAR 52.275997), a line of sixteenths and eighths after it, then `r1`. calc_common_shortest_duration takes the MODE of the bars' shortest durations (lily/spacing-spanner.cc:92-173), and add_starter_duration refuses only a multi-measure-interface grob (lily/spacing-engraver.cc:176-183): a plain `r1` votes its whole, so three whole votes beat one sixteenth and one eighth and the basis is base-shortest-duration 3/16. Lily#'s SpacingRules.CommonShortestDuration dropped every full-bar rest (MultiMeasureRestEngraver.IsFullMeasureRest), spaced the book on the sixteenth, and this bar line moved with what the NEXT line held (Lab sessions/p839/vk p6: 50.60 / 50.27 / 50.00 for sixteenths / eighths / a whole note there; LilyPond 50.00 throughout)."
+    },
+    "common-shortest.rest-bar-votes.sixteenths": {
+      "probe": "rest-bar-vote.ly",
+      "score": "RBV",
+      "lilypond": 57.888303,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 839. RBV's second line, a bar of sixteenths then a bar of eighths (CLEF 0.8, BAR 58.688303): the sixteenths spaced on the 3/16 basis the `r1` bars vote for. See common-shortest.rest-bar-votes.first-line."
+    },
     "mark-column.quarter.box-centre": {
       "probe": "mark-column.ly",
       "score": "MKC",
