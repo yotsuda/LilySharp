@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第836セッションの経緯
+
+### 1.1 第836セッション（2026-10-06・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。`-Start p836`（HEAD `e9dfd705`）＝full **11255 / 0 / 2 / 11257**。§7 3.5 で第834 を ARCHIVE へ。**§2 H ⒡ 調号＋tab の行頭の空の小節**。
+- pk1 の段を全部 LP と並べると、⒡ は行頭だけの話ではなかった（Lab `sessions/p836/pk`）: **両端揃えの段の %% の対**が LP 10.26／11.76・Lily# 11.14／10.90（逆向き）。単一譜の probe は ragged で伸びないので見えていなかった。LP の dump（`dp.ly`）: %% 記号は小節線と同じ break-align 群（staff-bar）で**譜ごと**・列原点は一番広い記号（tab の 1.5 倍＝半幅 2.818）の左端＝小節線より 2.818 前。対の中の小節線は改行禁止なので両小節とも dt≠0 の枝＝stretch は**列原点から列原点の ideal**。Lily# は小節線→小節線に枠を移した ideal を stretch にしていた。**直した**: `EmptyBarSprings` の stretch を ideal − 右半幅＋左半幅に。
+- 行頭（⒡ そのもの）は 2 つ: `EmptyBarLineStartSpring` が breakable の `space` を仮定（対の右が改行禁止なら ideal で伸びる＝2 つの最小の差を持たせた）・`MinimumDistanceToBarAtLineStart` が全譜に一番広い記号を当てた（譜の調号が tab の記号と当たる＝`ScoreSideTables.DoublePercentHalfWidthOn` で譜ごとに）。pk1／pk2／pk4 の両段の全小節線が LP と 0.07 以内。
+- 台帳 3 点（`probes/double-percent-stretch.ly` DPK・`RenderedGeometry.ClefToBarlineByClefRank`）: `double-percent.justified.first-bar` 11.082153・`.second-bar` 13.358627・`line-start.empty-bar.key-tab.clef-to-bar` 19.411221＝残差 0.008／0.016／0.045（未分解）。毒 3 本とも赤。掃き 998 冊: **59 svg・段割れ 0**・大きく動いた 10 冊の LP 双子（`twinlines.ps1`）で最悪の小節線が全部縮んだ（Time After Time 2.64→0.06・Get Ready 3.00→0.13・Video Killed 3.55→1.22・Smooth Operator 2.45→1.00＝この 2 冊は別の 1 が残る）。snapshot `system-count-line-start-ink`（Le Freak）を再ベース（ユーザー GO・88.43→87.67・LP 87.62）。commit `683a74845`。
+
+★ `-End p836 -DiffBase e9dfd7053`（`end.log`）＝full **11258 / 0 / 2 / 11260**・門 全 OK。台帳 1032 点。棚卸し: 差分なし。7.5: Core `+` 81 行・REF 2（spring.cc Spring::Spring・spacing-basic.cc の dt≠0 の枝）・OWN 0。7.6: 意味は LP（列原点の ideal・譜ごとの break-align）。7.7: 残差 0.008〜0.045・Video Killed／Smooth Operator の残り 1。push はユーザー。
+判定: §2 H の行頭の島は ⒜〜⒟ を残すのみ（⒜ 行末の ×0.8 の列原点・⒝ 小節頭の調号変更の後の grace・⒞ grace-lower-staff・⒟ 註の書き直し）。または Video Killed／Smooth Operator の残り 1（今便の双子 `tw` の上に立つ）。①② は文法の承認待ち、P6 はユーザー判断。(a) 双子と計器が手元にある／(b) 会話は 3 便ぶん・圧縮なし／(c) 同じ島 ⇒ **この会話で続けてよい**（`-Start p837` から）。
+
 ## 以下は第835セッションの経緯
 
 ### 1.1 第835セッション（2026-10-05・YT-DELL2）
