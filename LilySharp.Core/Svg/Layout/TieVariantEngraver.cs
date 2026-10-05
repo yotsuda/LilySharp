@@ -106,7 +106,7 @@ internal static class TieVariantEngraver
     /// MEASURED (2.26.0, audit/lp-geometry/probes/semi-tie-spacing.ly book LVA): the l.v.
     /// tie's X-extent is head right + 0.16 .. + 1.34 for a curve spanning + 0.2 .. + 1.3.
     /// </remarks>
-    internal const double LineThickness = 0.8 * EngravingDefaults.LineThickness;
+    internal static double LineThickness => 0.8 * EngravingDefaults.LineThickness;
 
     /// <summary>The half-tie's <c>extra-spacing-height</c>: its spacing box reaches half a
     /// staff space above and below its stencil.</summary>

@@ -554,7 +554,7 @@ internal static partial class SharedRenderer
         Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.VoltaBracketLayouts.IsDefaultOrEmpty) return;
-        const double thickness = VoltaBracketEngraver.LineThickness;
+        double thickness = VoltaBracketEngraver.LineThickness;
         double edgeHeight = VoltaBracketEngraver.GetEdgeHeight();
         double numberSize = VoltaBracketEngraver.NumberEm(fonts);
         var numberStyle = VoltaBracketEngraver.NumberStyle(fonts);
@@ -624,7 +624,7 @@ internal static partial class SharedRenderer
         // has carried LilyPond's own 1.6 x line-thickness = 0.16, with its LILYPOND-REF,
         // all along and simply had no reader. Drawing and reserving must come from ONE
         // constant or they drift, so both now read that one.
-        const double thickness = EngravingDefaults.TupletBracketThickness;
+        double thickness = EngravingDefaults.TupletBracketThickness;
 
         foreach (var b in layout.TupletBracketLayouts)
         {

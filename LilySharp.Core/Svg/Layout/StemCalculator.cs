@@ -37,8 +37,9 @@ namespace LilySharp.Core.Svg.Layout;
 /// </remarks>
 public sealed record StemDetails
 {
-    /// <summary>Default parameters matching LilyPond defaults.</summary>
-    public static StemDetails Default { get; } = new();
+    /// <summary>LilyPond's defaults at the running layout's <c>Stem.length-fraction</c>
+    /// (<see cref="EngravingStyle.CurrentStem"/>; one shared instance at the default).</summary>
+    public static StemDetails Default => EngravingStyle.CurrentStem;
 
     /// <summary>
     /// Base stem lengths by duration log (index = durationLog - 2).

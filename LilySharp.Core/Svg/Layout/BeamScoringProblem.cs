@@ -269,9 +269,9 @@ internal sealed class BeamScoringProblem
         IReadOnlyList<BeamCollision>? collisions = null,
         IReadOnlyList<int>? stemPositions = null,
         double lengthFraction = 1.0,
-        double beamThickness = EngravingDefaults.BeamThickness,
+        double? beamThickness = null,
         GlyphMetrics.DesignMetrics? headFont = null,
-        double lineThickness = EngravingDefaults.StaffLineThickness,
+        double? lineThickness = null,
         int staffLineCount = 5,
         double? beamLengthFraction = null,
         IReadOnlyList<double>? restXPositions = null,
@@ -279,8 +279,10 @@ internal sealed class BeamScoringProblem
         bool uniformBeamedLength = false)
         : this()
     {
+        // The defaults are the running style's (EngravingStyle — lysc --set Beam.beamThickness=…).
         Bind(group, itemXPositions, parameters, collisions, stemPositions, lengthFraction,
-            beamThickness, headFont, lineThickness, staffLineCount, beamLengthFraction,
+            beamThickness ?? EngravingDefaults.BeamThickness, headFont,
+            lineThickness ?? EngravingDefaults.StaffLineThickness, staffLineCount, beamLengthFraction,
             restXPositions, noStemExtend, uniformBeamedLength);
     }
 
@@ -320,7 +322,7 @@ internal sealed class BeamScoringProblem
     /// <summary>The default stem details with the one-beam length raised to the two-beam one —
     /// every tab beam's, built once (the constructor's <c>uniformBeamedLength</c>).</summary>
     private static readonly StemDetails s_uniformBeamedDetails =
-        StemDetails.Default with { BeamedLengths = OneBeamAtTwoBeams(StemDetails.Default.BeamedLengths) };
+        EngravingStyle.DefaultStemDetails with { BeamedLengths = OneBeamAtTwoBeams(EngravingStyle.DefaultStemDetails.BeamedLengths) };
 
     /// <summary><c>beamed-lengths</c> with its first entry (one beam) replaced by its second
     /// (two beams).</summary>
@@ -344,22 +346,24 @@ internal sealed class BeamScoringProblem
         IReadOnlyList<BeamCollision>? collisions = null,
         IReadOnlyList<int>? stemPositions = null,
         double lengthFraction = 1.0,
-        double beamThickness = EngravingDefaults.BeamThickness,
+        double? beamThickness = null,
         GlyphMetrics.DesignMetrics? headFont = null,
-        double lineThickness = EngravingDefaults.StaffLineThickness,
+        double? lineThickness = null,
         int staffLineCount = 5,
         double? beamLengthFraction = null,
         IReadOnlyList<double>? restXPositions = null,
         bool noStemExtend = false,
         bool uniformBeamedLength = false)
     {
+        double beamThick = beamThickness ?? EngravingDefaults.BeamThickness;
+        double lineThick = lineThickness ?? EngravingDefaults.StaffLineThickness;
         s_solved.TryGetValue(group, out var solved);
         if (solved != null)
         {
             foreach (var entry in solved)
             {
                 if (entry.Matches(group, itemXPositions, parameters, collisions, stemPositions,
-                        lengthFraction, beamThickness, headFont, lineThickness, staffLineCount,
+                        lengthFraction, beamThick, headFont, lineThick, staffLineCount,
                         beamLengthFraction, restXPositions, noStemExtend, uniformBeamedLength))
                 {
                     t_solvedHits++;
@@ -371,7 +375,7 @@ internal sealed class BeamScoringProblem
         var problem = t_problem ?? new BeamScoringProblem();
         t_problem = null;
         problem.Bind(group, itemXPositions, parameters, collisions, stemPositions, lengthFraction,
-            beamThickness, headFont, lineThickness, staffLineCount, beamLengthFraction,
+            beamThick, headFont, lineThick, staffLineCount, beamLengthFraction,
             restXPositions, noStemExtend, uniformBeamedLength);
         var (leftY, rightY) = problem.Solve();
         var outer = problem.OuterMemberStemXs;
@@ -380,7 +384,7 @@ internal sealed class BeamScoringProblem
 
         var answer = (leftY, rightY, outer);
         var solvedEntry = new SolvedBeam(group, itemXPositions, parameters, collisions, stemPositions,
-            lengthFraction, beamThickness, headFont, lineThickness, staffLineCount,
+            lengthFraction, beamThick, headFont, lineThick, staffLineCount,
             beamLengthFraction, restXPositions, noStemExtend, uniformBeamedLength, answer);
         // The newest two inputs of this group: the prelim pass and the staff skylines ask
         // the same one, and a third input evicts the oldest. A new array each time, so a
@@ -790,7 +794,7 @@ internal sealed class BeamScoringProblem
               };
         // A tab beam's one-beam stems take the two-beam length (see the parameter's remark).
         if (uniformBeamedLength)
-            _stemDetails = ReferenceEquals(_stemDetails, StemDetails.Default)
+            _stemDetails = ReferenceEquals(_stemDetails, EngravingStyle.DefaultStemDetails)
                 ? s_uniformBeamedDetails
                 : _stemDetails with { BeamedLengths = OneBeamAtTwoBeams(_stemDetails.BeamedLengths) };
         // LILYPOND-REF: lily/beam-quanting.cc:301-303 stem_infos_.push_back — one

@@ -95,7 +95,7 @@ internal static class VoltaBracketEngraver
     /// where nothing reserved room for it.
     /// </para>
     /// </remarks>
-    internal const double LineThickness = 1.6 * EngravingDefaults.LineThickness;
+    internal static double LineThickness => 1.6 * EngravingDefaults.LineThickness;
 
     /// <summary>Where the bracket sits when nothing above the staff pushes it: its lowest ink
     /// one <c>padding</c> above the staff's own, expressed as the LINE's centre.</summary>
@@ -121,7 +121,7 @@ internal static class VoltaBracketEngraver
     /// where the clearance binds and this floor is slack.
     /// </para>
     /// </remarks>
-    private const double YOffsetYUp =
+    private static double YOffsetYUp =>
         EngravingDefaults.StaffLineThickness / 2.0   // the staff's ink above its top line
         + StaffPadding                               // VoltaBracketSpanner (padding . 1)
         + EdgeHeight                                 // VoltaBracket edge-height
@@ -434,7 +434,7 @@ internal static class VoltaBracketEngraver
     private static (double Left, double Right) ShortenPair(BarWalk bars, VoltaBracketItem bracket,
         int systemIndex, Bound leftBound)
     {
-        const double voltaHalfLineThickness = LineThickness / 2.0;
+        double voltaHalfLineThickness = LineThickness / 2.0;
 
         BarPiece? leftBar = null;
         for (int k = bracket.StartMeasureIndex; k <= bracket.EndMeasureIndex && leftBar is null; k++)
@@ -612,7 +612,7 @@ internal static class VoltaBracketEngraver
             _ => 0.0,
         };
 
-        private const double Kern = EngravingDefaults.BarlineSeparation;
+        private static double Kern => EngravingDefaults.BarlineSeparation;
 
         /// <summary>The bar line's own stencil extent.</summary>
         /// <remarks>

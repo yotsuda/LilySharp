@@ -113,7 +113,7 @@ internal static class FingeringEngraver
     /// LILYPOND-REF: lily/side-position-interface.cc:323-329 — the staff's own EXTENT, and
     /// probes/glyph-skyline.ly dumps that extent as (−2.05 . 2.05).
     /// </remarks>
-    private const double StaffInk =
+    private static double StaffInk =>
         EngravingDefaults.StaffMiddle + EngravingDefaults.StaffLineThickness / 2.0;
 
     /// <summary>

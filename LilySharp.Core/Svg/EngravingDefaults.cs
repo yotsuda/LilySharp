@@ -37,7 +37,13 @@ internal static class EngravingDefaults
     /// mirroring LilyPond's structure (stems 1.3×, staff lines 1.0×, …).
     /// </summary>
     /// <remarks>LILYPOND-REF: scm/paper.scm:52-66 calc-line-thickness.</remarks>
-    public const double LineThickness = 0.1;
+    public static double LineThickness => EngravingStyle.Current.StaffLineThickness;
+
+    /// <summary>The PAPER's <c>line-thickness</c> alone — what LilyPond's bar lines and multi-measure
+    /// rests read (<see cref="EngravingStyle"/>); the same 0.1 as <see cref="LineThickness"/> until
+    /// <c>StaffSymbol.thickness</c> is set.</summary>
+    /// <remarks>LILYPOND-REF: scm/bar-line.scm:227-238 make-simple-bar-line (layout-line-thickness).</remarks>
+    public static double PaperLineThickness => EngravingStyle.Current.LineThickness;
 
     /// <summary>Whether a rounded staff position sits ON a real line of the five-line
     /// staff: even, and within the outer lines (|pos| ≤ 4).</summary>
@@ -158,7 +164,7 @@ internal static class EngravingDefaults
     /// LILYPOND-REF: lily/staff-symbol.cc — StaffSymbol thickness default 1.0
     /// (in line-thickness units).
     /// </remarks>
-    public const double StaffLineThickness = 1.0 * LineThickness;
+    public static double StaffLineThickness => 1.0 * LineThickness;
 
     /// <summary>The width of a system-start BRACKET's vertical stroke.</summary>
     /// <remarks>
@@ -192,7 +198,8 @@ internal static class EngravingDefaults
     /// LILYPOND-REF: lily/staff-symbol.cc:337-344 get_ledger_line_thickness;
     /// scm/define-grobs.scm StaffSymbol (ledger-line-thickness . (1.0 . 0.1)).
     /// </remarks>
-    public const double LegerLineThickness = 1.0 * StaffLineThickness + 0.1 * 1.0;
+    public static double LegerLineThickness =>
+        EngravingStyle.Current.LedgerLineThicknessLines * StaffLineThickness + EngravingStyle.Current.LedgerLineThicknessSpaces * 1.0;
 
     /// <summary>
     /// Ledger lines extend beyond the notehead by this FRACTION of the head's
@@ -210,7 +217,7 @@ internal static class EngravingDefaults
 
     /// <summary>Stem thickness: 1.3 × line-thickness = 0.13 staff space.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm (Stem (thickness . 1.3)).</remarks>
-    public const double StemThickness = 1.3 * LineThickness;
+    public static double StemThickness => EngravingStyle.Current.StemThickness * LineThickness;
 
     /// <summary>
     /// The paper's blot diameter — the rounding of every drawn corner — in staff spaces:
@@ -240,11 +247,11 @@ internal static class EngravingDefaults
 
     // === Beams ===
     // LILYPOND-REF: scm/define-grobs.scm Beam (beam-thickness . 0.48) — in staff-space.
-    public const double BeamThickness = 0.48;
+    public static double BeamThickness => EngravingStyle.Current.BeamThickness;
     /// <summary>Distance between beam centers for multiple beams.</summary>
     // LILYPOND-REF: lily/beam.cc Beam::get_beam_translation — for <4 beams,
     // (2·ss + line − beam-thickness)/2 (ss = staff-space = 1.0 here).
-    public const double BeamTranslation = (2.0 + LineThickness - BeamThickness) / 2.0;
+    public static double BeamTranslation => (2.0 + LineThickness - BeamThickness) / 2.0;
     /// <summary>How far a GAPPED tremolo-pair beam stops short of each stem —
     /// the visual break that keeps the repeat symbol from reading as an
     /// ordinary beam.</summary>
@@ -312,10 +319,10 @@ internal static class EngravingDefaults
     /// against the notation staff's 0.81.
     /// </param>
     public static double BeamTranslationOf(double beamThickness, double lengthFraction, int beamCount,
-                                           double lineThickness = LineThickness) =>
+                                           double? lineThickness = null) =>
         beamCount < 4
-            ? (2.0 * lengthFraction + lineThickness * lengthFraction - beamThickness) / 2.0
-            : (3.0 * lengthFraction + lineThickness * lengthFraction - beamThickness) / 3.0;
+            ? (2.0 * lengthFraction + (lineThickness ?? LineThickness) * lengthFraction - beamThickness) / 2.0
+            : (3.0 * lengthFraction + (lineThickness ?? LineThickness) * lengthFraction - beamThickness) / 3.0;
     /// <summary>Length of a beamlet (partial beam).</summary>
     // LILYPOND-REF: scm/define-grobs.scm Beam (beamlet-default-length . (1.1 . 1.1)) —
     public const double BeamletLength = 1.1;
@@ -334,11 +341,11 @@ internal static class EngravingDefaults
 
     /// <summary>Thin barline: hair-thickness 1.9 × line-thickness = 0.19.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm BarLine (hair-thickness . 1.9).</remarks>
-    public const double ThinBarlineThickness = 1.9 * LineThickness;
+    public static double ThinBarlineThickness => EngravingStyle.Current.BarLineHairThickness * PaperLineThickness;
 
     /// <summary>Thick barline: thick-thickness 6.0 × line-thickness = 0.6.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm BarLine (thick-thickness . 6.0).</remarks>
-    public const double ThickBarlineThickness = 6.0 * LineThickness;
+    public static double ThickBarlineThickness => EngravingStyle.Current.BarLineThickThickness * PaperLineThickness;
 
     /// <summary>
     /// Ink gap between the segments of a compound barline:
@@ -349,7 +356,7 @@ internal static class EngravingDefaults
     /// scm/bar-line.scm:766-801 — compound bars stack their glyph stencils
     /// with spacing <c>kern</c> between every pair.
     /// </remarks>
-    public const double BarlineSeparation = 3.0 * LineThickness;
+    public static double BarlineSeparation => 3.0 * PaperLineThickness;
 
     /// <summary>
     /// Gap between the repeat dots and the adjacent bar segment — the same
@@ -357,7 +364,7 @@ internal static class EngravingDefaults
     /// compound bar).
     /// </summary>
     /// <remarks>LILYPOND-REF: scm/bar-line.scm:766-801.</remarks>
-    public const double RepeatBarlineDotSeparation = BarlineSeparation;
+    public static double RepeatBarlineDotSeparation => BarlineSeparation;
 
     // === Other elements ===
     // (Hairpins draw at StaffLineThickness — LP Hairpin (thickness . 1.0)
@@ -365,21 +372,21 @@ internal static class EngravingDefaults
 
     /// <summary>Tuplet bracket: thickness 1.6 × line-thickness = 0.16.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm TupletBracket (thickness . 1.6).</remarks>
-    public const double TupletBracketThickness = 1.6 * LineThickness;
+    public static double TupletBracketThickness => 1.6 * LineThickness;
 
     /// <summary>Multi-measure-rest block bar thickness: thick-thickness 6.6 ×
     /// line-thickness = 0.66 staff space.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm MultiMeasureRest
     /// (thick-thickness . 6.6); lily/multi-measure-rest.cc:203 big_rest
     /// <c>y = line-thickness·thick-thickness·ss / 2</c> (full height = 2y).</remarks>
-    public const double MultiMeasureRestThickThickness = 6.6 * LineThickness;
+    public static double MultiMeasureRestThickThickness => 6.6 * PaperLineThickness;
 
     /// <summary>Multi-measure-rest end serifs: hair-thickness 2.0 ×
     /// line-thickness = 0.2 staff space.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm MultiMeasureRest
     /// (hair-thickness . 2.0); lily/multi-measure-rest.cc:204
     /// <c>ythick = hair-thickness·line-thickness·ss</c>.</remarks>
-    public const double MultiMeasureRestHairThickness = 2.0 * LineThickness;
+    public static double MultiMeasureRestHairThickness => 2.0 * PaperLineThickness;
 
     // LILYPOND-REF: scm/lily-library.scm (magstep s) = 2^(s/6), over the ossia's font-size −3.
     /// <summary>
@@ -744,10 +751,10 @@ internal static class EngravingDefaults
     // 1.377400), so this constant is that house's answer for a QUARTER at scale 1 and nothing
     // wider. Nothing computes with it — it survives as the documented black-head reading, and
     // a caller that needs "where does this stem stand" must go through the house.
-    public static readonly double StemUpAttachX =
+    public static double StemUpAttachX =>
         LilySharp.Core.Svg.Layout.GlyphMetrics.NoteheadBlackStemAttachment.X
         - StemThickness / 2;
-    public const double StemDownAttachX = StemThickness / 2;
+    public static double StemDownAttachX => StemThickness / 2;
     // ⚠️ StemUpAttachY = 0.168 and StemDownAttachY = -0.168 stood here with no explanation
     //   and no reader. Deleted 2026-08-04 rather than given one: HANDOFF 5.2.1⑥ says an
     //   argument a port stopped using is dropped where it is found, because leaving it is
@@ -1300,7 +1307,7 @@ internal static class EngravingDefaults
     /// </summary>
     /// <remarks>LILYPOND-REF: scm/bar-line.scm:766-801 — the colon glyph is
     /// stacked with the same kern as the line segments.</remarks>
-    public const double RepeatDotsOffset = 2 * RepeatDotRadius + RepeatBarlineDotSeparation;
+    public static double RepeatDotsOffset => 2 * RepeatDotRadius + RepeatBarlineDotSeparation;
 
     /// <summary>
     /// The bar line a measure's END prints when that measure closes a SYSTEM — its
@@ -1379,17 +1386,17 @@ internal static class EngravingDefaults
 
     /// <summary>Bow middle thickness (arc separation) = Tie/Slur thickness 1.2 × line-thickness.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3902 Tie (thickness . 1.2).</remarks>
-    public const double TieMidThickness = 1.2 * LineThickness;
+    public static double TieMidThickness => 1.2 * LineThickness;
 
     /// <summary>Bow middle thickness (arc separation) = Slur thickness 1.2 × line-thickness.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3180 Slur (thickness . 1.2).</remarks>
-    public const double SlurMidThickness = 1.2 * LineThickness;
+    public static double SlurMidThickness => 1.2 * LineThickness;
 
     /// <summary>Round-cap pen that strokes the bow outline (its tapered ends read as rounded,
     /// and it is the bow's thickness at the endpoints) = Slur/Tie line-thickness 0.8 × line-thickness.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3175/3898 (line-thickness . 0.8);
     /// lily/lookup.cc:415 bezier_sandwich(back, curve, linethick).</remarks>
-    public const double BowEndRounding = 0.8 * LineThickness;
+    public static double BowEndRounding => 0.8 * LineThickness;
 
 
     // === Conversion helpers ===

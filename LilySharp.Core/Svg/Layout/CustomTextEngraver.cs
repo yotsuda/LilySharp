@@ -66,7 +66,7 @@ internal static class CustomTextEngraver
     /// LILYPOND-REF: lily/side-position-interface.cc:401-453 aligned_side — staff_padding floors total_off at staff_extent[dir] + staff_padding
     /// LILYPOND-REF: scm/define-grobs.scm:3800-3833 TextScript — padding 0.3 against its side-position-interface supports, staff-padding 0.5, outside-staff-priority 450
     /// </summary>
-    internal const double AlignedSideBaselineYUp =
+    internal static double AlignedSideBaselineYUp =>
         2.0 + EngravingDefaults.StaffLineThickness / 2.0 + EngravingDefaults.TextScriptStaffPadding;
 
     /// <summary>

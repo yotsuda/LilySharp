@@ -44,7 +44,7 @@ internal static class BendAfterGeometry
 
     /// <summary>The stroke, in line thicknesses.
     /// LILYPOND-REF: scm/define-grobs.scm:551-559 BendAfter — thickness 2.0 (bend-after-interface), times line-thickness in bend::print.</summary>
-    public const double Thickness = 2.0 * EngravingDefaults.LineThickness;
+    public static double Thickness => 2.0 * EngravingDefaults.LineThickness;
 
     /// <summary>
     /// The interval a fall drops and a doit rises, in staff POSITIONS. LILYSHARP-OWN:

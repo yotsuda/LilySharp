@@ -210,7 +210,7 @@ ways, kept out of the language. The last three are LilyPond's, with LilyPond's m
 
 | Setting | Means |
 |---------|-------|
-| `staffSpace=1.5mm` | the staff's size: the distance between two staff lines on the paper (mm, cm or in; LilyPond's default 20pt staff is 1.757299mm, `#(set-global-staff-size 17)` is 1.493704mm). The paper keeps its millimetres — the page, the margins, the indent and every length the file writes in mm / cm / in — so a smaller staff space puts more music on the same page. The outputs keep the paper's size too: the PNG, the PDF page and the SVG's `width` are as large as before, with the staff smaller on them. Lengths written as bare numbers are staff spaces and scale with the staff. Line thickness keeps its proportion to the staff (LilyPond thickens the lines of a small staff slightly and swaps in the music font cut for that size) |
+| `staffSpace=1.5mm` | the staff's size: the distance between two staff lines on the paper (mm, cm or in; LilyPond's default 20pt staff is 1.757299mm, `#(set-global-staff-size 17)` is 1.493704mm). The paper keeps its millimetres — the page, the margins, the indent and every length the file writes in mm / cm / in — so a smaller staff space puts more music on the same page. The outputs keep the paper's size too: the PNG, the PDF page and the SVG's `width` are as large as before, with the staff smaller on them. Lengths written as bare numbers are staff spaces and scale with the staff. Line thickness keeps its proportion to the staff (LilyPond thickens the lines of a small staff slightly — `lineThickness` below can do the same — and swaps in the music font cut for that size) |
 | `measuresPerSystem=4` | exactly 4 bars on every system (the lead-sheet layout): a line break after every 4th bar and nowhere else — written `break` / `pageBreak` give way. A pickup counts as a bar. LilyPond has no such variable (its spelling is a `\break` every 4 bars) |
 | `shortestDurationSpace=2.5` | the space the score's shortest note gets, in spacing increments (LilyPond's `shortest-duration-space`, default 2); a positive number, no unit |
 | `systemsPerPage=4` | exactly 4 systems on every page (LilyPond's `systems-per-page`): the lines are re-broken so the pages fill — 12 systems' worth under 5 becomes 15, paged 5/5/5 |
@@ -231,6 +231,29 @@ lysc png --set spacingIncrement=1.6 --set staffStaffSpacing.basicDistance=9 song
 lysc svg --set raggedRight=false --set leftMargin=25mm song.lys
 lysc png --set shortestDurationSpace=3 --set systemsPerPage=4 song.lys
 lysc png --set staffSpace=1.4mm song.lys
+```
+
+Eight more keys set how thick the lines are and how long the stems — LilyPond's own
+properties under its names and in its units, so a value means what it means in a
+LilyPond `\override` (also settings only):
+
+| Setting | LilyPond | Default | Means |
+|---------|----------|---------|-------|
+| `lineThickness=0.12` | the paper's `line-thickness` | 0.1 | the line every other one is a multiple of, in staff spaces: staff lines, stems, ledger lines, bar lines, ties, slurs, hairpins and brackets all follow it |
+| `StaffSymbol.thickness=1.2` | `StaffSymbol.thickness` | 1.0 | the staff's lines, in line thicknesses — and, as in LilyPond, every line stated in the staff's thickness with them (stems, ledger lines, ties, …); bar lines and multi-measure rests read the paper's `lineThickness` and stay |
+| `StaffSymbol.ledgerLineThickness=1.0,0.1` | `StaffSymbol.ledger-line-thickness` | 1.0,0.1 | ledger lines: staff line thicknesses plus staff spaces |
+| `Stem.thickness=1.5` | `Stem.thickness` | 1.3 | stems, in staff line thicknesses |
+| `Stem.lengthFraction=1.1` | `Stem.length-fraction` | 1.0 | every stem's length, beamed or not, times this (grace and cue notes keep their own) |
+| `Beam.beamThickness=0.5` | `Beam.beam-thickness` | 0.48 | beams, in staff spaces — the gap between beams and where the beam is placed follow, as in LilyPond |
+| `BarLine.hairThickness=2.5` | `BarLine.hair-thickness` | 1.9 | thin bar lines, in line thicknesses |
+| `BarLine.thickThickness=7` | `BarLine.thick-thickness` | 6.0 | thick bar lines, in line thicknesses |
+
+The values are positive numbers without a unit (`ledgerLineThickness` takes two, not both 0).
+The layout uses them, not only the drawing: a thicker beam or longer stems move the beams
+where LilyPond moves them.
+
+```bash
+lysc png --set lineThickness=0.13 --set Stem.thickness=1.6 --set Beam.beamThickness=0.52 song.lys
 ```
 
 ### boxes - Every drawn symbol's box, as JSON

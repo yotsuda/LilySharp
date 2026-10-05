@@ -57,7 +57,7 @@ internal sealed class RenderedGeometry
     /// 0.1 thicker (EngravingDefaults.LegerLineThickness), so the thickness alone separates
     /// them; the span check below is a second, independent guard.
     /// </summary>
-    private const double StaffLineThickness = EngravingDefaults.StaffLineThickness;
+    private static double StaffLineThickness => EngravingDefaults.StaffLineThickness;
 
     /// <summary>A horizontal rule must reach at least this far to count as a staff line.</summary>
     private const double MinStaffLineSpan = 10.0;

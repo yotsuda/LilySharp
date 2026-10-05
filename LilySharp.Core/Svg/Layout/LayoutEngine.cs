@@ -111,6 +111,9 @@ internal sealed partial class LayoutEngine
         // measure's springs in the gate and again in the layout; one render-scoped memo
         // serves both (ItemSkylineFactory.BeginRenderMemo — a scope already open is joined).
         using var skylineMemo = ItemSkylineFactory.BeginRenderMemo();
+        // The score's line thicknesses and stem length (`lysc --set Stem.thickness=…`), read
+        // through EngravingDefaults by every engraver below.
+        using var style = EngravingStyle.Use(score.Paper.Style);
 
         // The faces this score reserves against — see the field's remark for why the
         // builder cannot be given them in the constructor.

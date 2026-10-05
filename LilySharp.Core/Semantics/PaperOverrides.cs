@@ -46,7 +46,10 @@ namespace LilySharp.Core.Semantics;
 /// owner's decision 2026-10-05: knobs for varying training data stay out of the language, so
 /// a <c>paper { }</c> that writes one is still refused). <c>measuresPerSystem=N</c> is N bars to
 /// every system (<see cref="LayoutOptions.MeasuresPerSystem"/>; LilyPond has no such variable).
-/// <c>staffSpace=1.5mm</c> is the staff's size on the paper (P3; <see cref="StaffSpaceMm"/>).
+/// <c>staffSpace=1.5mm</c> is the staff's size on the paper (P3; <see cref="StaffSpaceMm"/>), and
+/// <see cref="StyleKeys"/> — <c>lineThickness=0.12</c>, <c>Stem.thickness=1.5</c>,
+/// <c>StaffSymbol.ledgerLineThickness=1.0,0.1</c>, … — LilyPond's line thicknesses and stem
+/// length under its own names and units (P4; <see cref="Svg.EngravingStyle"/>).
 /// The other four are LilyPond's
 /// <c>shortest-duration-space</c> and its <c>\paper</c> <c>systems-per-page</c> /
 /// <c>min-systems-per-page</c> / <c>max-systems-per-page</c>, with LilyPond's meaning:
@@ -64,6 +67,58 @@ public sealed class PaperOverrides
     /// <summary>The keys only a setting can carry, in documentation order.</summary>
     internal static readonly string[] SettingOnlyKeys =
         ["staffSpace", "shortestDurationSpace", "measuresPerSystem", "systemsPerPage", "minSystemsPerPage", "maxSystemsPerPage"];
+
+    /// <summary>The keys that set the engraving style (<see cref="Svg.EngravingStyle"/> — P4, the
+    /// owner's decision 2026-10-05: LilyPond's grob properties under LilyPond's names and units),
+    /// in documentation order.</summary>
+    internal static readonly string[] StyleKeys =
+    [
+        "lineThickness", "StaffSymbol.thickness", "StaffSymbol.ledgerLineThickness",
+        "Stem.thickness", "Stem.lengthFraction", "Beam.beamThickness",
+        "BarLine.hairThickness", "BarLine.thickThickness",
+    ];
+
+    /// <summary>One style key read into the change it makes, or null with <paramref name="error"/>.</summary>
+    private static Func<LayoutOptions, LayoutOptions>? ReadStyle(string key, string value, out string? error)
+    {
+        error = null;
+        static bool Number(string s, out double v) =>
+            double.TryParse(s, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out v) && !double.IsInfinity(v) && !double.IsNaN(v);
+        if (key == "StaffSymbol.ledgerLineThickness")
+        {
+            // LilyPond's pair (ledger-line-thickness . (1.0 . 0.1)): staff line thicknesses, plus staff spaces.
+            var parts = value.Split(',');
+            if (parts.Length != 2 || !Number(parts[0].Trim(), out double lines) || !Number(parts[1].Trim(), out double spaces)
+                || lines < 0 || spaces < 0 || lines + spaces <= 0)
+            {
+                error = $"'{key}' takes two numbers, staff line thicknesses and staff spaces, not both 0: {key}=1.0,0.1.";
+                return null;
+            }
+            return paper => paper with { Style = paper.Style with { LedgerLineThicknessLines = lines, LedgerLineThicknessSpaces = spaces } };
+        }
+        if (!Number(value, out double n) || !(n > 0))
+        {
+            error = $"'{key}' takes a positive number (no unit): {key}=" + key switch
+            {
+                "lineThickness" => "0.12.",
+                "Stem.lengthFraction" => "1.1.",
+                "Beam.beamThickness" => "0.5.",
+                _ => "1.5.",
+            };
+            return null;
+        }
+        return key switch
+        {
+            "lineThickness" => paper => paper with { Style = paper.Style with { LineThickness = n } },
+            "StaffSymbol.thickness" => paper => paper with { Style = paper.Style with { StaffSymbolThickness = n } },
+            "Stem.thickness" => paper => paper with { Style = paper.Style with { StemThickness = n } },
+            "Stem.lengthFraction" => paper => paper with { Style = paper.Style with { StemLengthFraction = n } },
+            "Beam.beamThickness" => paper => paper with { Style = paper.Style with { BeamThickness = n } },
+            "BarLine.hairThickness" => paper => paper with { Style = paper.Style with { BarLineHairThickness = n } },
+            _ => paper => paper with { Style = paper.Style with { BarLineThickThickness = n } },
+        };
+    }
 
     private readonly PaperDeclarationSyntax? _block;
     private readonly string[] _flagsOff;
@@ -194,6 +249,13 @@ public sealed class PaperOverrides
             {
                 error = $"'{key}' needs a value: {key}=VALUE.";
                 return null;
+            }
+            if (StyleKeys.Contains(key))
+            {
+                if (ReadStyle(key, value, out error) is not { } styleChange)
+                    return null;
+                settingOnly.Add(styleChange);
+                continue;
             }
             if (key == "staffSpace")
             {

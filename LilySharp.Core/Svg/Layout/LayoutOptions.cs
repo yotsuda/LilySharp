@@ -131,6 +131,14 @@ internal sealed record LayoutOptions
     /// pixels (points) per staff space by, so the paper keeps its size. Exactly 1 by default.</summary>
     public double StaffSpaceScale => StaffSpaceMm / DefaultStaffSpaceMm;
 
+    /// <summary>
+    /// The line thicknesses and the stem length the score is engraved with — LilyPond's
+    /// defaults unless <c>lysc --set lineThickness=…</c>, <c>Stem.thickness=…</c> and their
+    /// kin say otherwise (<see cref="EngravingStyle"/>; not paper keys). Held on the thread by
+    /// <c>LayoutEngine.Layout</c> and <c>SharedRenderer.RenderTo</c>.
+    /// </summary>
+    internal EngravingStyle Style { get; init; } = EngravingStyle.Default;
+
     // === Staff Dimensions (in staff spaces) ===
 
     /// <summary>

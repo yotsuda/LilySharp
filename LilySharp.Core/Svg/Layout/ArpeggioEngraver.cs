@@ -230,7 +230,7 @@ internal static class ArpeggioEngraver
     /// the StaffSymbol's own <c>thickness</c> of 1. Two grobs arriving at one value is not one
     /// quantity, and spelling it through the staff would put a false address on it.
     /// </remarks>
-    internal const double BracketThickness = 1.0 * EngravingDefaults.LineThickness;
+    internal static double BracketThickness => 1.0 * EngravingDefaults.LineThickness;
 
     /// <summary>
     /// The bracket's own X extent about its ORIGIN — negative to the left. This is the one

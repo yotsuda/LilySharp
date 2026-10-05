@@ -119,7 +119,7 @@ internal static class OttavaBracketEngraver
     /// ottava.floor.staff-to-line: 4.050000 = 2.05 + 2.0); the bare
     /// <c>StaffPadding</c> here read 4.000000, half a line thickness low.
     /// </remarks>
-    private const double AboveStaffYUp =
+    private static double AboveStaffYUp =>
         StaffPadding + EngravingDefaults.StaffLineThickness / 2.0;
 
     /// <summary>
@@ -132,7 +132,7 @@ internal static class OttavaBracketEngraver
     /// the below-staff regime; this moves with the above side because splitting one
     /// claim's two halves is how HANDOFF 5.0's cap/baseline trap fires.
     /// </remarks>
-    private const double BelowStaffYUp =
+    private static double BelowStaffYUp =>
         -(4.0 + StaffPadding + EngravingDefaults.StaffLineThickness / 2.0);
 
     /// <summary>

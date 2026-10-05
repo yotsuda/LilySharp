@@ -436,6 +436,13 @@ workflow attaches that section to the GitHub Release verbatim.
   `measuresPerSystem` (exactly N bars a system, the lead-sheet layout) and, with LilyPond's meaning, `shortestDurationSpace` (the
   shortest note's space), `systemsPerPage` (exactly N systems a page — the lines are re-broken
   so the pages fill, as LilyPond does), `maxSystemsPerPage` and `minSystemsPerPage`.
+- **`--set` takes LilyPond's line thicknesses and stem length.** `lineThickness`,
+  `StaffSymbol.thickness`, `StaffSymbol.ledgerLineThickness`, `Stem.thickness`,
+  `Stem.lengthFraction`, `Beam.beamThickness`, `BarLine.hairThickness` and
+  `BarLine.thickThickness`, under LilyPond's names and in its units, for one run. The layout
+  follows them as LilyPond's does — a thicker beam or a longer stem moves the beams where
+  LilyPond moves them — and every line stated in the staff's thickness follows
+  `StaffSymbol.thickness`, while the bar lines keep the paper's.
 - **`lysc boxes` writes every drawn symbol's box as JSON.** Page by page, each symbol the SVG
   and the PNG draw — its kind (`notehead`, `stem`, `staffLine`, `beam`, `tie`, `lyricText`,
   …), its ink box in staff spaces, its source offset and its staff — and each bar's printed

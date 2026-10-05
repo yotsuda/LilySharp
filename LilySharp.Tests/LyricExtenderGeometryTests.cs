@@ -46,7 +46,7 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public sealed class LyricExtenderGeometryTests
 {
-    private const double H = 0.8 * EngravingDefaults.LineThickness;   // 0.08
+    private static double H => 0.8 * EngravingDefaults.LineThickness;   // 0.08
 
     private static LyricLayout Syllable(string text, double x, double width, LyricConnectorType type,
         int measureIndex = 0, int itemIndex = 0)

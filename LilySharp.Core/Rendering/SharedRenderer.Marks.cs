@@ -1313,7 +1313,7 @@ internal static partial class SharedRenderer
         // end is a knowing form divergence, not a Lily#-own quantity (§5.2 audit,
         // session 158). The whiteout branch (:135-153, default OFF at
         // whiteout −1) is not ported.
-        const double thickness = 1.3 * EngravingDefaults.LineThickness;
+        double thickness = 1.3 * EngravingDefaults.LineThickness;
         // The extender's line is the LyricExtender's own thickness (0.8 line-thicknesses),
         // read from the one home the layout placed it with; it was a flat 0.1 until session
         // 565. LILYPOND-REF: lily/lyric-extender.cc:86 Lyric_extender::print — h = sl × thickness.
@@ -1493,7 +1493,7 @@ internal static partial class SharedRenderer
         if (beamCount <= 0) return;
         double dir = stemUp ? 1 : -1;
         double beamWidth = (stemUp && hasFlag) ? 1.0 : 1.5;
-        const double beamThickness = EngravingDefaults.BeamThickness;
+        double beamThickness = EngravingDefaults.BeamThickness;
         const double translation = 0.81;
         double slope = (!stemUp && hasFlag) ? 0.40 : 0.25;
 

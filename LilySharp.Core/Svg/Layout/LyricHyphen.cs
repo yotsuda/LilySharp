@@ -87,14 +87,14 @@ internal sealed record LyricHyphenParameters
     /// scm/define-grobs.scm:2138-2147 LyricExtender lyric-extender-interface —
     /// <c>(thickness . 0.8)</c>. Until session 565 the draw used 0.1 and this 0.08 had no
     /// reader.</remarks>
-    public double ExtenderThickness { get; init; } = 0.8 * EngravingDefaults.LineThickness;
+    public double ExtenderThickness { get; init; } = 0.8 * EngravingDefaults.PaperLineThickness;
 
     /// <summary>The extender's padding from the syllable it leaves and the syllable it
     /// meets, in staff spaces — LilyPond's <c>left-padding</c> / <c>right-padding</c>, which
     /// default to the line's own thickness.</summary>
     /// <remarks>LILYPOND-REF: lily/lyric-extender.cc:87-89 Lyric_extender::print — the paddings read
     /// <c>h</c> when unset. It was a Lily#-own 0.2 until session 565.</remarks>
-    public double ExtenderPadding { get; init; } = 0.8 * EngravingDefaults.LineThickness;
+    public double ExtenderPadding { get; init; } = 0.8 * EngravingDefaults.PaperLineThickness;
 
     /// <summary>How far past the syllable the extender reaches at least, in staff spaces —
     /// LilyPond's <c>minimum-length</c>: the right point starts at the left point plus this
@@ -118,7 +118,12 @@ internal sealed record LyricHyphenParameters
     /// baseline until session 565 (a Lily#-own offset).</remarks>
     public double ExtenderCentreBelowBaseline => -ExtenderThickness / 2;
 
-    public static LyricHyphenParameters Default { get; } = new();
+    /// <summary>LilyPond's defaults at the running style's line thickness (<see cref="EngravingStyle"/>):
+    /// one shared instance at the default style, a fresh one under another.</summary>
+    public static LyricHyphenParameters Default =>
+        ReferenceEquals(EngravingStyle.Current, EngravingStyle.Default) ? s_default : new();
+
+    private static readonly LyricHyphenParameters s_default = new();
 }
 
 /// <summary>
