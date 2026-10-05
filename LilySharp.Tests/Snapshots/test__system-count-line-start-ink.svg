@@ -170,12 +170,12 @@
   <text class="music" x="71.62" y="61.67" font-size="4.00" data-pos="1483"></text>
   <rect x="39.50" y="57.67" width="0.19" height="4.00" data-pos="1429"/>
   <rect x="75.99" y="57.67" width="0.19" height="4.00" data-pos="1488"/>
-  <rect x="89.23" y="57.67" width="0.19" height="4.00" data-pos="1355"/>
+  <rect x="88.47" y="57.67" width="0.19" height="4.00" data-pos="1355"/>
   <rect x="102.24" y="57.67" width="0.19" height="4.00" data-pos="1355"/>
   <text class="music" x="0.80" y="68.10" font-size="4.00"></text>
   <rect x="39.50" y="65.85" width="0.19" height="4.50" data-pos="1429"/>
   <rect x="75.99" y="65.85" width="0.19" height="4.50" data-pos="1488"/>
-  <rect x="89.23" y="65.85" width="0.19" height="4.50" data-pos="1355"/>
+  <rect x="88.47" y="65.85" width="0.19" height="4.50" data-pos="1355"/>
   <rect x="102.24" y="65.85" width="0.19" height="4.50" data-pos="1355"/>
   <text x="6.55" y="71.31" font-size="2.80" text-anchor="middle" data-pos="1373">5</text>
   <text x="16.39" y="71.31" font-size="2.80" text-anchor="middle" data-pos="1394">3</text>
@@ -665,10 +665,10 @@
   <path d="M 25.93,33.93 C 27.71,33.93 31.27,35.25 31.27,35.93" fill="none" stroke="#000000" stroke-width="0.200" stroke-linecap="round" stroke-linejoin="round" data-pos="1203"/>
   <path d="M 7.84,52.07 C 9.59,52.07 13.10,53.39 13.10,54.07" fill="none" stroke="#000000" stroke-width="0.200" stroke-linecap="round" stroke-linejoin="round" data-pos="1268"/>
   <path d="M 7.84,106.62 C 9.59,106.62 13.10,107.94 13.10,108.62" fill="none" stroke="#000000" stroke-width="0.200" stroke-linecap="round" stroke-linejoin="round" data-pos="1508"/>
-  <polygon points="87.36,60.67 88.03,60.67 90.03,58.67 89.36,58.67" data-pos="1354"/>
-  <polygon points="88.43,60.67 89.11,60.67 91.11,58.67 90.43,58.67" data-pos="1354"/>
-  <circle cx="87.88" cy="59.17" r="0.23" data-pos="1354"/>
-  <circle cx="90.59" cy="60.17" r="0.23" data-pos="1354"/>
+  <polygon points="86.59,60.67 87.27,60.67 89.27,58.67 88.59,58.67" data-pos="1354"/>
+  <polygon points="87.67,60.67 88.35,60.67 90.35,58.67 89.67,58.67" data-pos="1354"/>
+  <circle cx="87.11" cy="59.17" r="0.23" data-pos="1354"/>
+  <circle cx="89.82" cy="60.17" r="0.23" data-pos="1354"/>
   <polygon points="9.86,78.81 10.54,78.81 12.54,76.81 11.86,76.81" data-pos="1354"/>
   <polygon points="10.94,78.81 11.62,78.81 13.62,76.81 12.94,76.81" data-pos="1354"/>
   <circle cx="10.39" cy="77.31" r="0.23" data-pos="1354"/>
@@ -713,10 +713,10 @@
   <polygon points="93.53,151.63 94.21,151.63 96.21,149.63 95.53,149.63" data-pos="1873"/>
   <circle cx="92.98" cy="150.13" r="0.23" data-pos="1873"/>
   <circle cx="95.69" cy="151.13" r="0.23" data-pos="1873"/>
-  <polygon points="86.42,69.60 87.43,69.60 90.43,66.60 89.42,66.60" data-pos="1354"/>
-  <polygon points="88.03,69.60 89.05,69.60 92.05,66.60 91.03,66.60" data-pos="1354"/>
-  <circle cx="87.32" cy="67.35" r="0.23" data-pos="1354"/>
-  <circle cx="91.15" cy="68.85" r="0.23" data-pos="1354"/>
+  <polygon points="85.65,69.60 86.67,69.60 89.67,66.60 88.65,66.60" data-pos="1354"/>
+  <polygon points="87.27,69.60 88.28,69.60 91.28,66.60 90.27,66.60" data-pos="1354"/>
+  <circle cx="86.55" cy="67.35" r="0.23" data-pos="1354"/>
+  <circle cx="90.38" cy="68.85" r="0.23" data-pos="1354"/>
   <polygon points="8.92,87.73 9.94,87.73 12.94,84.73 11.92,84.73" data-pos="1354"/>
   <polygon points="10.54,87.73 11.56,87.73 14.56,84.73 13.54,84.73" data-pos="1354"/>
   <circle cx="9.82" cy="85.48" r="0.23" data-pos="1354"/>

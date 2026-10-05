@@ -1259,10 +1259,16 @@ internal sealed class MultiStaffLayouter
             && startMeasureIndex >= 0 && startMeasureIndex < usedBars.Count && !usedBars[startMeasureIndex])
         {
             var signHalf = ScoreSideTables.DoublePercentHalfWidths(score);
+            // The closing pair is a breakable one unless its right bar line forbids a break
+            // (the middle of a double percent pair) — EmptyBarSprings' own branch.
+            bool closingBreakable = startMeasureIndex == measures.Length - 1
+                || measures[startMeasureIndex].LineBreakPermission != BreakPermission.Forbid;
             return LineStartColumn.EmptyBarLineStartSpring(
                 score, prefix.Columns, SpacingRules.ClefGroupInkLeft(score), timeInkWidth,
                 startMeasureIndex, measureStartBarWidth, closing,
-                startMeasureIndex + 1 < signHalf.Count ? signHalf[startMeasureIndex + 1] : 0.0);
+                startMeasureIndex + 1 < signHalf.Count ? signHalf[startMeasureIndex + 1] : 0.0,
+                closingBreakable,
+                SpacingRules.GetBarlineWidth(SpacingRules.RunLeftBoundBarline(measures, startMeasureIndex)));
         }
 
         // ONE Staff_spacing wish per staff, merged — spacing-spanner.cc:492-517. The staves

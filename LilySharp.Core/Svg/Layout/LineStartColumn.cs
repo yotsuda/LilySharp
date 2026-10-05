@@ -390,17 +390,27 @@ internal static class LineStartColumn
             new ColumnBox(-SharedBand, SharedBand,
                 -SpacingRules.DefaultExtraSpacingWidth, SpacingRules.DefaultExtraSpacingWidth),
         };
-        // …and a double percent sign straddling that bar line, whose left half reaches back
-        // into the bar (BoundaryColumn.DoublePercentBox, as the bar-to-bar pair reads it).
-        if (doublePercentHalfWidth > 0)
-        {
-            var sign = BoundaryColumn.DoublePercentBox(doublePercentHalfWidth);
-            bar.Add(new ColumnBox(-SharedBand, SharedBand, sign.XLeft, sign.XRight));
-        }
-        foreach (var (_, staff, _) in score.EnumerateStaves())
+        foreach (var (_, staff, staffIndex) in score.EnumerateStaves())
         {
             if (staff.IsTextRow)
                 continue;
+            // …and the double percent sign THIS staff draws straddling that bar line, whose
+            // left half reaches back into the bar (BoundaryColumn.DoublePercentBox, as the
+            // bar-to-bar pair reads it). Per staff: break alignment is, so a staff's prefix
+            // meets its own sign — a tab's is half as wide again as the staff's above it.
+            // MEASURED (2.26.0, Lab sessions/p836/pk pk1 / dp.ly, E-flat major over a 5-string
+            // tab): giving every staff the tab's sign set the staff's key signature against
+            // it and stood the first bar line 1.07 right of LilyPond's.
+            if (bar.Count > 1)
+                bar.RemoveAt(1);
+            double ownHalf = doublePercentHalfWidth > 0
+                ? ScoreSideTables.DoublePercentHalfWidthOn(score, startMeasureIndex + 1, staffIndex)
+                : 0;
+            if (ownHalf > 0)
+            {
+                var sign = BoundaryColumn.DoublePercentBox(ownHalf);
+                bar.Add(new ColumnBox(-SharedBand, SharedBand, sign.XLeft, sign.XRight));
+            }
             boxes.Clear();
             foreach (var g in PrefatoryGrobs(
                          score, staff, columns, clefGroupLeft, timeInkWidth, startMeasureIndex))
@@ -440,13 +450,27 @@ internal static class LineStartColumn
         int startMeasureIndex,
         double measureStartBarWidth,
         Spring closingPair,
-        double doublePercentHalfWidth)
+        double doublePercentHalfWidth,
+        bool closingBreakable = true,
+        double closingLeftBarWidth = 0.0)
     {
         double minDistance = MinimumDistanceToBarAtLineStart(
             score, columns, clefGroupLeft, timeInkWidth, startMeasureIndex, doublePercentHalfWidth);
         double frame = columns.Right + measureStartBarWidth;
         double length = Math.Max(0.0, minDistance - frame - closingPair.MinDistance);
-        return new Spring(length, length, 0.0, 0.0);
+        // A breakable pair stretches by `space` alone, which the closing pair already carries.
+        // Where the closing bar line forbids a break (the middle of a double percent pair) the
+        // spring is standard_breakable_column_spacing's other branch, whose stretch is its
+        // IDEAL, prefix column to column: the closing pair (EmptyBarSprings) stretches by the
+        // bar-to-bar one, so this leg carries the difference of the two minima.
+        // MEASURED (2.26.0, Lab sessions/p836/pk pk1, a continuation line opening on the first
+        // bar of a double percent pair over a tab): the first bar line 19.41 after the clef.
+        // LILYPOND-REF: lily/spacing-basic.cc:68-83 standard_breakable_column_spacing — the
+        //   dt != 0 branch, Spring (ideal, min_dist) with its default strengths.
+        double stretch = closingBreakable
+            ? 0.0
+            : Math.Max(0.0, minDistance - (closingPair.MinDistance + closingLeftBarWidth));
+        return new Spring(length, length, stretch, 0.0);
     }
 
     /// <summary>

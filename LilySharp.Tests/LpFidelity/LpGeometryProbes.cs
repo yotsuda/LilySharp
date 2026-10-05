@@ -13162,6 +13162,30 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// Eight double percent repeats of two empty bars, E-flat major, a bass staff over a
+    /// 5-string bass TAB, then a break. The pair's middle bar line forbids a break, so both bars
+    /// stretch by their ideal column to column, and the sign column's origin stands half the
+    /// TAB's sign (1.5 times the staff's) before its bar line: on the justified first line a
+    /// pair measures 11.082153 / 13.358627 bar to bar (BARs 28.831537, 39.913691, 53.272318).
+    /// The continuation line opens on a pair's first bar, its staff's key signature against
+    /// its OWN sign: the first bar line 19.411221 after the clef (CLEF 0.8, BAR 20.211221).
+    /// Lily# stretched both bars by the bar-to-bar ideal and gave every staff the widest sign
+    /// until session 836.
+    /// </summary>
+    /// <remarks>LilyPond twin: audit/lp-geometry/probes/double-percent-stretch.ly DPK.</remarks>
+    private static readonly string DPK = """
+        octave absolute
+        time 4/4
+        key ees major
+        part m { clef bass tuning bass5 }
+        section A {
+          m { repeat percent 8 { r1 | r1 } break c,1 | }
+        }
+        form main { A }
+        score main "DPK" { staff m  tab m }
+        """;
+
+    /// <summary>
     /// A chord diagram on the first quarter after a bar line. Its box — the twin's TextScript
     /// with \textLengthOn's extra-spacing-width (-0.0 . 0.4) and infinite extra-spacing-height —
     /// joins the column's skyline at every height, so it is in the bar line's Staff_spacing
@@ -17855,6 +17879,10 @@ internal static class LpGeometryProbes
         // What the first column owes the prefix: a diagram's box, a tab's digits (LSD's, LST's remarks).
         new("line-start.clef-to-first-note.diagram", LSD, g => g.ClefToFirstNoteByClefRank(0)),
         new("line-start.clef-to-first-note.tab-continuation", LST, g => g.ClefToFirstNoteByClefRank(1)),
+        // A double percent pair on a justified line over a tab, and a line opening on one (DPK's remarks).
+        new("double-percent.justified.first-bar", DPK, g => g.ClefToBarlineByClefRank(0, 2) - g.ClefToBarlineByClefRank(0, 1)),
+        new("double-percent.justified.second-bar", DPK, g => g.ClefToBarlineByClefRank(0, 3) - g.ClefToBarlineByClefRank(0, 2)),
+        new("line-start.empty-bar.key-tab.clef-to-bar", DPK, g => g.ClefToBarlineByClefRank(1, 0)),
         // A diagram's box against the columns beside it (DN1's, DN2's remarks).
         new("diagram.barline-to-note", DN1, g => g.BarlineRightToNextNotehead(0)),
         new("diagram.note-to-next-note", DN1, g => g.NoteheadAnchorStep(1)),

@@ -232,6 +232,21 @@ internal static partial class SpacingRules
             leftBound, leadingItems, leftDoublePercentHalfWidth, rightDoublePercentHalfWidth);
         var pair = StandardBreakableColumnSpacing(
             minimumDistance, bothBreakable, measureLength, dt, spacing);
+        // The default stretch strength is the IDEAL — in LilyPond's frame, column origin to
+        // column origin. A column carrying a double percent sign has its origin at the
+        // break-aligned group's left edge, the widest sign's half BEFORE the bar line, so its
+        // ideal is the bar-line one less the right half plus the left: the bar after the sign
+        // stretches by the whole sign's width more than the bar before it. The pair's middle
+        // bar line is never breakable, so this is the branch both its bars take.
+        // MEASURED (2.26.0, Lab sessions/p836/pk dp.ly, a staff over a 5-string tab whose
+        // signs are 1.5 times the staff's): the bar line stands 2.818 right of its column, the
+        // tab sign's half; on a justified line the pair measured 10.26 / 11.76 bar to bar where
+        // Lily# drew 11.14 / 10.90 until session 836 (a ragged line hides it — it is all stretch).
+        // LILYPOND-REF: lily/spring.cc:49-60 Spring::Spring (dist, min_dist) — the default strengths.
+        if (!bothBreakable && (leftDoublePercentHalfWidth > 0 || rightDoublePercentHalfWidth > 0))
+            pair = new Spring(pair.IdealDistance, pair.MinDistance,
+                Math.Max(0.0, pair.IdealDistance - rightDoublePercentHalfWidth + leftDoublePercentHalfWidth),
+                pair.InverseCompressStrength);
 
         // Re-frame: the left bar line's drawn width is the layout's, not this chain's.
         double leftBarlineWidth = GetBarlineWidth(leftBound);

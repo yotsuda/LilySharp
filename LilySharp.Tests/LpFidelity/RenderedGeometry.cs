@@ -5489,6 +5489,31 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The clef anchor → the left edge of the <paramref name="barIndex"/>-th bar line (0-based,
+    /// left to right) on the staff of the <paramref name="clefRank"/>-th line-start clef down the
+    /// page — <see cref="ClefToFirstBarlineOnSystem"/> for a staff over a TAB, read by clef as
+    /// <see cref="ClefToFirstNoteByClefRank"/> is. A bar line belongs to the staff whose middle
+    /// it straddles (within 3 ss of the clef's line).
+    /// </summary>
+    public double ClefToBarlineByClefRank(int clefRank, int barIndex)
+    {
+        var clefs = Glyphs.Where(g => IsClef(g.Glyph)).OrderBy(g => g.Y).ToList();
+        if (clefRank < 0 || clefRank >= clefs.Count)
+            throw new InvalidOperationException(
+                $"wanted clef #{clefRank} but the probe drew {clefs.Count} clef(s).\n"
+                + "Drawn geometry:\n" + Describe());
+        var clef = clefs[clefRank];
+        var bars = Barlines
+            .Where(b => b.X > clef.X + 1e-9 && Math.Abs(b.Y + b.Height / 2 - clef.Y) <= 3.0)
+            .OrderBy(b => b.X).ToList();
+        if (barIndex < 0 || barIndex >= bars.Count)
+            throw new InvalidOperationException(
+                $"wanted bar line #{barIndex} after clef #{clefRank} but found {bars.Count}.\n"
+                + "Drawn geometry:\n" + Describe());
+        return bars[barIndex].X - clef.X;
+    }
+
+    /// <summary>
     /// The clef anchor → line-start time-signature anchor on the first system. The meter binds
     /// to the clef through Clef.space-alist (time-signature . extra-space 1.52), measured off
     /// the clef's own ink right edge, so this distance rides on the clef ink WIDTH — the

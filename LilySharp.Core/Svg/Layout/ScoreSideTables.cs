@@ -372,6 +372,31 @@ internal static class ScoreSideTables
     internal static IReadOnlyList<double> DoublePercentHalfWidths(MultiStaffScore score)
         => _doublePercentHalfWidthsByScore.GetValue(score, ComputeDoublePercentHalfWidths);
 
+    /// <summary>
+    /// Half the ink width of the double percent sign staff <paramref name="staffIndex"/> itself
+    /// draws on the bar line opening bar <paramref name="measureIndex"/>, 0 where it draws none —
+    /// <see cref="DoublePercentHalfWidths"/> before the widest is taken. Break alignment is per
+    /// staff, so a staff's prefix meets its OWN sign; the widest only decides where the column's
+    /// origin stands.
+    /// </summary>
+    internal static double DoublePercentHalfWidthOn(MultiStaffScore score, int measureIndex, int staffIndex)
+    {
+        if (score.PercentRepeats.IsDefaultOrEmpty)
+            return 0;
+        double half = 0;
+        foreach (var pr in score.PercentRepeats)
+        {
+            if (!pr.IsDouble || pr.MeasureIndex != measureIndex || pr.StaffIndex != staffIndex)
+                continue;
+            double ss = 1.0;
+            foreach (var (_, staff, index) in score.EnumerateStaves())
+                if (index == staffIndex && staff.Tuning is { } tuning)
+                    ss = EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuning));
+            half = Math.Max(half, PercentRepeatEngraver.DoublePercentInkWidth(ss) / 2);
+        }
+        return half;
+    }
+
     private static double[] ComputeDoublePercentHalfWidths(MultiStaffScore score)
     {
         int n = score.MeasureCount;

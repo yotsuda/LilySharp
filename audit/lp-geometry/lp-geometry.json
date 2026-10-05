@@ -3145,6 +3145,27 @@
       "residual": 0.0,
       "why": "OPENED IN SESSION 834 (+0.12 with the floor; +0.47 with the box but the old centring; -0.003639 at the end of 834), CLOSED IN SESSION 835: the last 0.0036 was the box's ends -- LilyPond's extent is the union of what stands on each END string, an X / O by its text box (half its advance, not half its ink) or a dot's ring (FretFrameGeometry.Measure's EndReach; x02010 reads (-1.689495 . 3.942156) about the head, Lab sessions/p834/tw/ll/lp-ext.log). A chord diagram on the first note of a first line (`e'4@chord(C x32010)`): the prefix's Staff_spacing wish is floored at 0.3 + min_dist (lily/staff-spacing.cc:210-215), and min_dist (Paper_column::minimum_distance) reaches the diagram, which the twin writes as a TextScript with \\textLengthOn's two tweaks. CLEF 0.8, HEAD 9.374495. Two Lily# faults met here: the line-start wish was floored at the opening bar's own spring minimum (ownFixedFloor, Lily#'s stand-in for every first-column grob it did not price), and the grid was drawn centred on the head where LilyPond aligns the stencil at align-dir -0.4 (scm/fret-diagrams.scm make-fret-diagram) with the TextScript's origin on the head's (both alignments #f) -- 0.45 left. LineStartColumn.AddFirstColumnDiagrams puts the box in min_dist, and FretFrameGeometry.GridCentreFromColumnOrigin places it for the drawing, the bar's diagram rods and this box alike."
     },
+    "double-percent.justified.first-bar": {
+      "probe": "double-percent-stretch.ly",
+      "score": "DPK",
+      "lilypond": 11.082153,
+      "residual": 0.008279,
+      "why": "OPENED AND CLOSED IN SESSION 836. A double percent pair's FIRST bar on a justified line (BAR 28.831537 -> 39.913691), a staff over a 5-string tab. The pair's middle bar line forbids a break (lily/double-percent-repeat-engraver.cc:68-70), so both bars take standard_breakable_column_spacing's dt != 0 branch, Spring (ideal, min_dist) with the default stretch = the ideal, COLUMN ORIGIN to column origin (lily/spacing-basic.cc:68-83). The DoublePercentRepeat is break-aligned with the bar line (staff-bar), per staff, so the sign column's origin stands at the widest sign's left edge -- the tab's, 2.818 before the bar line (Lab sessions/p836/pk dp.ly). Lily#'s EmptyBarSprings took the stretch from the bar-to-bar ideal, the same for both bars: 11.14 / 10.90 where LilyPond has the first bar narrower. Hidden on a ragged line, where nothing stretches. The last hundredths are not split (the line is justified, so every spring on it shares them)."
+    },
+    "double-percent.justified.second-bar": {
+      "probe": "double-percent-stretch.ly",
+      "score": "DPK",
+      "lilypond": 13.358627,
+      "residual": 0.016207,
+      "why": "OPENED AND CLOSED IN SESSION 836. DPK's pair's SECOND bar (BAR 39.913691 -> 53.272318): its column-to-column ideal holds the whole sign, so it stretches by that much more than the first. See double-percent.justified.first-bar. The last hundredths are not split (the line is justified, so every spring on it shares them)."
+    },
+    "line-start.empty-bar.key-tab.clef-to-bar": {
+      "probe": "double-percent-stretch.ly",
+      "score": "DPK",
+      "lilypond": 19.411221,
+      "residual": 0.044869,
+      "why": "OPENED AND CLOSED IN SESSION 836 (-0.39 at the end of 833, +1.07 midway). A continuation line opening on the first bar of a double percent pair, E-flat major, over a tab (CLEF 0.8, BAR 20.211221) -- HANDOFF 2 H (f). Two faults: the prefix-to-bar spring is the dt != 0 branch here (the closing bar line forbids a break), whose stretch is its ideal, where LineStartColumn.EmptyBarLineStartSpring assumed the breakable pair's `space`; and min_dist set every staff's prefix against the WIDEST sign, so the staff's key signature met the tab's 1.5-size sign (break alignment is per staff: ScoreSideTables.DoublePercentHalfWidthOn). The last hundredths are not split (the line is justified, so every spring on it shares them)."
+    },
     "diagram.barline-to-note": {
       "probe": "diagram-neighbours.ly",
       "score": "DN1",
