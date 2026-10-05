@@ -46,6 +46,7 @@ namespace LilySharp.Core.Semantics;
 /// owner's decision 2026-10-05: knobs for varying training data stay out of the language, so
 /// a <c>paper { }</c> that writes one is still refused). <c>measuresPerSystem=N</c> is N bars to
 /// every system (<see cref="LayoutOptions.MeasuresPerSystem"/>; LilyPond has no such variable).
+/// <c>staffSpace=1.5mm</c> is the staff's size on the paper (P3; <see cref="StaffSpaceMm"/>).
 /// The other four are LilyPond's
 /// <c>shortest-duration-space</c> and its <c>\paper</c> <c>systems-per-page</c> /
 /// <c>min-systems-per-page</c> / <c>max-systems-per-page</c>, with LilyPond's meaning:
@@ -62,18 +63,54 @@ public sealed class PaperOverrides
 
     /// <summary>The keys only a setting can carry, in documentation order.</summary>
     internal static readonly string[] SettingOnlyKeys =
-        ["shortestDurationSpace", "measuresPerSystem", "systemsPerPage", "minSystemsPerPage", "maxSystemsPerPage"];
+        ["staffSpace", "shortestDurationSpace", "measuresPerSystem", "systemsPerPage", "minSystemsPerPage", "maxSystemsPerPage"];
 
     private readonly PaperDeclarationSyntax? _block;
     private readonly string[] _flagsOff;
     private readonly List<Func<LayoutOptions, LayoutOptions>> _settingOnly;
 
     private PaperOverrides(PaperDeclarationSyntax? block, string[] flagsOff,
-        List<Func<LayoutOptions, LayoutOptions>> settingOnly)
+        List<Func<LayoutOptions, LayoutOptions>> settingOnly, double? staffSpaceMm)
     {
         _block = block;
         _flagsOff = flagsOff;
         _settingOnly = settingOnly;
+        StaffSpaceMm = staffSpaceMm;
+    }
+
+    /// <summary>
+    /// <c>staffSpace=1.5mm</c>: the staff space on the paper, in millimetres (null = LilyPond's,
+    /// <see cref="LayoutOptions.DefaultStaffSpaceMm"/>) — LilySharp-Omr's proposal of 2026-10-02
+    /// P3, the owner's decision 2026-10-05. Unlike every other setting it is laid UNDER the
+    /// file's paper (<see cref="OnBase"/>), since the file's millimetres are read through it.
+    /// </summary>
+    internal double? StaffSpaceMm { get; }
+
+    /// <summary>The paper a book starts from, on the setting's staff space — before the file's
+    /// <c>paper { }</c>, whose millimetres it converts (<see cref="PaperPlanReader.AtStaffSpace"/>).</summary>
+    internal LayoutOptions OnBase(LayoutOptions @base)
+        => StaffSpaceMm is { } mm ? PaperPlanReader.AtStaffSpace(@base, mm) : @base;
+
+    /// <summary><c>staffSpace</c>'s value: a positive length with its unit, mm / cm / in — a
+    /// bare number would be staff spaces, the unit it sets.</summary>
+    private static double? ReadStaffSpace(string value, out string? error)
+    {
+        error = null;
+        var m = System.Text.RegularExpressions.Regex.Match(value, @"^(\d+(?:\.\d+)?|\.\d+)(mm|cm|in)$");
+        double length = m.Success
+            ? double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture)
+            : 0;
+        if (!(length > 0))
+        {
+            error = "'staffSpace' takes a positive length with its unit (mm, cm or in): staffSpace=1.5mm.";
+            return null;
+        }
+        return m.Groups[2].Value switch
+        {
+            "cm" => length * 10.0,
+            "in" => length * 25.4,
+            _ => length,
+        };
     }
 
     /// <summary>One setting-only key read into the change it makes, or null with
@@ -126,6 +163,7 @@ public sealed class PaperOverrides
         var entries = new List<string>();
         var flagsOff = new List<string>();
         var settingOnly = new List<Func<LayoutOptions, LayoutOptions>>();
+        double? staffSpaceMm = null;
         var flags = PaperPlanReader.FlagKeySpellings();
         foreach (var setting in settings)
         {
@@ -156,6 +194,13 @@ public sealed class PaperOverrides
             {
                 error = $"'{key}' needs a value: {key}=VALUE.";
                 return null;
+            }
+            if (key == "staffSpace")
+            {
+                if (ReadStaffSpace(value, out error) is not { } mm)
+                    return null;
+                staffSpaceMm = mm;
+                continue;
             }
             if (SettingOnlyKeys.Contains(key))
             {
@@ -202,7 +247,7 @@ public sealed class PaperOverrides
                 + $"'maxSystemsPerPage={paging.MaxSystemsPerPage}'.";
             return null;
         }
-        return new PaperOverrides(block, [.. flagsOff], settingOnly);
+        return new PaperOverrides(block, [.. flagsOff], settingOnly, staffSpaceMm);
     }
 
     /// <summary>The settings laid over <paramref name="paper"/>.</summary>

@@ -31,7 +31,8 @@ namespace LilySharp.Core.Rendering.Boxes;
 /// <remarks>
 /// The same collection, layout and renderer as the SVG and the PNG (and the same
 /// <c>--set</c> settings), so the boxes are those pictures' symbols: page coordinates in staff
-/// spaces, origin top-left, Y down — an SVG unit, and <c>10 × --scale</c> PNG pixels.
+/// spaces, origin top-left, Y down — an SVG unit, and <c>10 × --scale</c> PNG pixels (times the
+/// staff space's ratio to LilyPond's under <c>--set staffSpace=…</c>, <see cref="ToJson"/>).
 /// </remarks>
 public static class BoxesGenerator
 {
@@ -53,8 +54,15 @@ public static class BoxesGenerator
     }
 
     /// <summary>The pages as the JSON document <c>lysc boxes</c> writes.</summary>
-    public static string ToJson(IReadOnlyList<BoxPage> pages)
-        => JsonSerializer.Serialize(new { version = FormatVersion, unit = "staffSpace", pages }, Json);
+    /// <param name="pages">The pages.</param>
+    /// <param name="staffSpaceMm">The staff space on the paper (<c>--set staffSpace=…</c>), written
+    /// as <c>staffSpaceMm</c>: a PNG of the same settings has <c>10 × --scale × staffSpaceMm /
+    /// 1.757299</c> pixels to the unit, since the paper keeps its size.</param>
+    public static string ToJson(IReadOnlyList<BoxPage> pages, double staffSpaceMm = LayoutOptions.DefaultStaffSpaceMm)
+        => JsonSerializer.Serialize(new
+        {
+            version = FormatVersion, unit = "staffSpace", staffSpaceMm = Math.Round(staffSpaceMm, 6), pages,
+        }, Json);
 
     private static readonly JsonSerializerOptions Json = new()
     {

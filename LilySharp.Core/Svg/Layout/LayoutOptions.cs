@@ -95,6 +95,42 @@ internal sealed record LayoutOptions
     /// </remarks>
     public double PageHeight { get; init; } = 169.009370;
 
+    /// <summary>
+    /// How long one staff space is on the paper, in millimetres — the one conversion above
+    /// (<see cref="DefaultStaffSpaceMm"/>) unless <c>lysc --set staffSpace=1.5mm</c> says
+    /// otherwise. Every physical length (the paper, its margins, the indent, a <c>paper</c>
+    /// entry written in mm / cm / in) is read through it; the music is in staff spaces and
+    /// does not move. The outputs keep the paper's physical size, so a smaller staff space is
+    /// a smaller staff on the same page.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/paper.scm:100-119 set-global-staff-size — through
+    /// layout-set-absolute-staff-size-in-module (:68-88) the staff size sets the staff space
+    /// and the text size with it (text-font-size 11 × factor, the same size in staff spaces),
+    /// and the paper's millimetres stay millimetres.
+    /// ⚠️ APPROXIMATION, two of LilyPond's: there the line thickness is not proportional
+    /// (calc-line-thickness, :52-66 — 0.5pt at a 20pt staff, 0.47pt at 16.5pt, so a smaller staff
+    /// has relatively thicker lines) and the music font is the optical size cut for the staff
+    /// (emmentaler-11 … -26). Here every line keeps its thickness in staff spaces and the one
+    /// Emmentaler is scaled.
+    /// ⚠️ NOT A PAPER KEY: only the setting sets it (LilySharp-Omr's proposal of 2026-10-02 P3,
+    /// the owner's decision 2026-10-05 — the staff's size stays out of the language, whose unit
+    /// IS the staff space).
+    /// </remarks>
+    public double StaffSpaceMm { get; init; } = DefaultStaffSpaceMm;
+
+    /// <summary>LilyPond's default staff space: a 20pt staff's quarter, 5 TeX points =
+    /// 127 / 72.27 mm (the header above).</summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/paper-defaults-init.ly:39 layout-set-absolute-staff-size — the staff-size
+    /// option (20) in points; lily/include/dimensions.hh:27 INCH_TO_PT = 72.270.
+    /// </remarks>
+    public const double DefaultStaffSpaceMm = 127.0 / 72.27;
+
+    /// <summary><see cref="StaffSpaceMm"/> over LilyPond's: what an output multiplies its
+    /// pixels (points) per staff space by, so the paper keeps its size. Exactly 1 by default.</summary>
+    public double StaffSpaceScale => StaffSpaceMm / DefaultStaffSpaceMm;
+
     // === Staff Dimensions (in staff spaces) ===
 
     /// <summary>

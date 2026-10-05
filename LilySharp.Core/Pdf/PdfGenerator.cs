@@ -63,7 +63,8 @@ public static class PdfGenerator
 
         var docOptions = new PdfDocumentOptions
         {
-            PointsPerSpace = options.StaffSpacePt,
+            // The paper keeps its size on another staff space (`--set staffSpace=…`).
+            PointsPerSpace = options.StaffSpacePt * multiScore.Paper.StaffSpaceScale,
             AutoSizePages = true,
             FontDirectory = options.FontDirectory,
             // The `font` directive travels ON THE SCORE and reaches the document through

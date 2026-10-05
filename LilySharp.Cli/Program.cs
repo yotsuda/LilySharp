@@ -262,7 +262,7 @@ static void ShowSvgHelp()
           --combined             Stack every score into ONE <input>.svg (like a \book)
           --set <KEY=VALUE>      Override a paper value (repeatable): spacingIncrement=1.6,
                                  staffStaffSpacing.basicDistance=9, leftMargin=20mm, raggedRight=false,
-                                 shortestDurationSpace=3, systemsPerPage=4 (CLI_REFERENCE)
+                                 shortestDurationSpace=3, systemsPerPage=4, staffSpace=1.5mm (CLI_REFERENCE)
           -h, --help             Show this help
 
         Examples:
@@ -356,7 +356,7 @@ static void ShowPdfHelp()
           --score <name>         Write only the named score
           --set <KEY=VALUE>      Override a paper value (repeatable): spacingIncrement=1.6,
                                  staffStaffSpacing.basicDistance=9, leftMargin=20mm, raggedRight=false,
-                                 shortestDurationSpace=3, systemsPerPage=4 (CLI_REFERENCE)
+                                 shortestDurationSpace=3, systemsPerPage=4, staffSpace=1.5mm (CLI_REFERENCE)
           -h, --help             Show this help
 
         Examples:
@@ -463,7 +463,7 @@ static void ShowPngHelp()
           --crop                 Trim whitespace to the content bounding box
           --set <KEY=VALUE>      Override a paper value (repeatable): spacingIncrement=1.6,
                                  staffStaffSpacing.basicDistance=9, leftMargin=20mm, raggedRight=false,
-                                 shortestDurationSpace=3, systemsPerPage=4 (CLI_REFERENCE)
+                                 shortestDurationSpace=3, systemsPerPage=4, staffSpace=1.5mm (CLI_REFERENCE)
           -h, --help             Show this help
 
         Examples:

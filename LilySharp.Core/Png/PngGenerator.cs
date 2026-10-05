@@ -69,7 +69,8 @@ public static class PngGenerator
             // PngRenderOptions.Scale is "× SVG-baseline DPI"; SharedRenderer
             // works in staff-spaces. Map: 10 px per staff-space at scale 1.0
             // (matches the existing SvgGenerator's PixelsPerSpace = 10).
-            PixelsPerSpace = options.Scale * 10.0,
+            // The paper keeps its size on another staff space (`--set staffSpace=…`).
+            PixelsPerSpace = options.Scale * 10.0 * multiScore.Paper.StaffSpaceScale,
             Quality = options.Quality,
             FontDirectory = fontDir,
         };
@@ -102,7 +103,7 @@ public static class PngGenerator
         var fontDir = options.FontDirectory ?? FontLocator.Find();
         var docOptions = new PngDocumentOptions
         {
-            PixelsPerSpace = options.Scale * 10.0,
+            PixelsPerSpace = options.Scale * 10.0 * multiScore.Paper.StaffSpaceScale,
             Quality = options.Quality,
             FontDirectory = fontDir,
             SeparatePages = true,

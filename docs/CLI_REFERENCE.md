@@ -205,11 +205,12 @@ data does exactly that).
 
 A key or value the paper block would refuse is an error, with the block's message.
 
-Five keys exist only here, not in `paper { }` — knobs for engraving the same music many
+Six keys exist only here, not in `paper { }` — knobs for engraving the same music many
 ways, kept out of the language. The last three are LilyPond's, with LilyPond's meaning:
 
 | Setting | Means |
 |---------|-------|
+| `staffSpace=1.5mm` | the staff's size: the distance between two staff lines on the paper (mm, cm or in; LilyPond's default 20pt staff is 1.757299mm, `#(set-global-staff-size 17)` is 1.493704mm). The paper keeps its millimetres — the page, the margins, the indent and every length the file writes in mm / cm / in — so a smaller staff space puts more music on the same page. The outputs keep the paper's size too: the PNG, the PDF page and the SVG's `width` are as large as before, with the staff smaller on them. Lengths written as bare numbers are staff spaces and scale with the staff. Line thickness keeps its proportion to the staff (LilyPond thickens the lines of a small staff slightly and swaps in the music font cut for that size) |
 | `measuresPerSystem=4` | exactly 4 bars on every system (the lead-sheet layout): a line break after every 4th bar and nowhere else — written `break` / `pageBreak` give way. A pickup counts as a bar. LilyPond has no such variable (its spelling is a `\break` every 4 bars) |
 | `shortestDurationSpace=2.5` | the space the score's shortest note gets, in spacing increments (LilyPond's `shortest-duration-space`, default 2); a positive number, no unit |
 | `systemsPerPage=4` | exactly 4 systems on every page (LilyPond's `systems-per-page`): the lines are re-broken so the pages fill — 12 systems' worth under 5 becomes 15, paged 5/5/5 |
@@ -229,6 +230,7 @@ every page uncluttered should drop the pages and systems these name.
 lysc png --set spacingIncrement=1.6 --set staffStaffSpacing.basicDistance=9 song.lys
 lysc svg --set raggedRight=false --set leftMargin=25mm song.lys
 lysc png --set shortestDurationSpace=3 --set systemsPerPage=4 song.lys
+lysc png --set staffSpace=1.4mm song.lys
 ```
 
 ### boxes - Every drawn symbol's box, as JSON
@@ -251,7 +253,7 @@ from Lily# rather than guessed back out of the SVG. Same collection, layout and 
 `svg` / `png`, and the same `--set`, so the boxes are those pictures' symbols.
 
 ```json
-{ "version": 1, "unit": "staffSpace", "pages": [
+{ "version": 1, "unit": "staffSpace", "staffSpaceMm": 1.757299, "pages": [
   { "page": 1, "width": 119.5016, "height": 169.0094,
     "symbols": [
       { "kind": "notehead", "glyph": "NoteheadBlack", "codepoint": 57598,
@@ -262,7 +264,8 @@ from Lily# rather than guessed back out of the SVG. Same collection, layout and 
 ```
 
 - **Coordinates** are page staff spaces, origin top-left, Y down — one SVG unit, and
-  `10 × --scale` PNG pixels. A box is the INK: a glyph's or a text's outline as the PNG draws
+  `10 × --scale` PNG pixels (times `staffSpaceMm / 1.757299` under `--set staffSpace=…`,
+  since the PNG keeps the paper's size). A box is the INK: a glyph's or a text's outline as the PNG draws
   it, a line's or a beam's stroked shape, a curve's sampled outline.
 - **`kind`**: a music glyph's comes from its glyph (`notehead`, `rest`, `accidental`, `clef`,
   `flag`, `dot`, `articulation`, `timeSignature`, … — `glyph` for one with no class), a

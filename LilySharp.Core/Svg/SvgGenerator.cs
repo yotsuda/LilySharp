@@ -174,7 +174,8 @@ public static class SvgGenerator
             {
                 ScoreTranspose = renderSpec?.ScoreTranspose,
                 ScoreConcert = renderSpec?.ScoreConcert ?? false,
-                PaperBase = paperBase ?? LayoutOptions.Default,
+                // `--set staffSpace=…` goes under the file's paper, which is read through it.
+                PaperBase = settings?.OnBase(paperBase ?? LayoutOptions.Default) ?? paperBase ?? LayoutOptions.Default,
                 PaperOverrides = settings,
             },
             tree, renderSpec);
@@ -265,6 +266,8 @@ public static class SvgGenerator
     {
         var docOptions = new SvgDocumentOptions
         {
+            // The paper keeps its size on another staff space (`--set staffSpace=…`).
+            PixelsPerSpace = 10.0 * score.Paper.StaffSpaceScale,
             EmbedFont = options.EmbedFont,
             OmitFontFace = options.OmitFontFace,
             FontDirectory = options.FontDirectory,

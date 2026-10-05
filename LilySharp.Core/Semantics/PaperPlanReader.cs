@@ -61,7 +61,41 @@ internal static class PaperPlanReader
     private const double MmPerCm = 10.0;
     private const double MmPerInch = 25.4;
 
-    private static double MmToSs(double mm) => Math.Round(mm * 72.27 / 127.0, 6);
+    // A staff space other than LilyPond's (`lysc --set staffSpace=1.5mm`) scales the result;
+    // at the default the factor is exactly 1, so every default stays the number it was.
+    private static double MmToSs(double mm, double staffSpaceMm) =>
+        Math.Round(mm * 72.27 / 127.0 * (LayoutOptions.DefaultStaffSpaceMm / staffSpaceMm), 6);
+
+    /// <summary>
+    /// <paramref name="base"/> on a staff space of <paramref name="staffSpaceMm"/> millimetres:
+    /// the paper keeps its millimetres, so its staff-space lengths — the page, the margins, the
+    /// indents — are read again through the new staff space (<see cref="LayoutOptions.StaffSpaceMm"/>).
+    /// A paper block read over the result converts its own millimetres the same way.
+    /// </summary>
+    /// <remarks>
+    /// The a4 defaults are re-read from their millimetres, so a block that writes them
+    /// (<c>paperWidth 210mm</c>, <c>size a4</c>) is still the default; any other length (a
+    /// base's 0 — the snippet's content-driven page height) is scaled.
+    /// </remarks>
+    internal static LayoutOptions AtStaffSpace(LayoutOptions @base, double staffSpaceMm)
+    {
+        var d = LayoutOptions.Default;
+        double ratio = LayoutOptions.DefaultStaffSpaceMm / staffSpaceMm;
+        double Again(double v, double defaultSs, double defaultMm) =>
+            v == defaultSs ? MmToSs(defaultMm, staffSpaceMm) : Math.Round(v * ratio, 6);
+        return @base with
+        {
+            StaffSpaceMm = staffSpaceMm,
+            PageWidth = Again(@base.PageWidth, d.PageWidth, A4WidthMm),
+            PageHeight = Again(@base.PageHeight, d.PageHeight, A4HeightMm),
+            MarginLeft = Again(@base.MarginLeft, d.MarginLeft, SideMarginDefaultMm),
+            MarginRight = Again(@base.MarginRight, d.MarginRight, SideMarginDefaultMm),
+            MarginTop = Again(@base.MarginTop, d.MarginTop, VerticalMarginDefaultMm),
+            MarginBottom = Again(@base.MarginBottom, d.MarginBottom, VerticalMarginDefaultMm),
+            Indent = Again(@base.Indent, d.Indent, SideMarginDefaultMm),
+            ShortIndent = Math.Round(@base.ShortIndent * ratio, 6),
+        };
+    }
 
     /// <summary>The scalar length keys, canonical spellings, in documentation order.</summary>
     private static readonly string[] ScalarKeys =
@@ -316,7 +350,7 @@ internal static class PaperPlanReader
             }
 
             if (!TryReadLength(entry.MinusToken, entry.NumberToken, entry.UnitToken,
-                    unitless: false, span, key, found, out double v))
+                    unitless: false, span, key, options.StaffSpaceMm, found, out double v))
                 continue;
             options = key switch
             {
@@ -395,21 +429,22 @@ internal static class PaperPlanReader
         }
         double sideMm = Math.Round(widthMm * SideMarginDefaultMm / A4WidthMm);
         double verticalMm = Math.Round(heightMm * VerticalMarginDefaultMm / A4HeightMm);
+        double staffSpaceMm = options.StaffSpaceMm;
         return options with
         {
-            PageWidth = MmToSs(widthMm),
-            PageHeight = MmToSs(heightMm),
-            MarginLeft = MmToSs(sideMm),
-            MarginRight = MmToSs(sideMm),
-            MarginTop = MmToSs(verticalMm),
-            MarginBottom = MmToSs(verticalMm),
+            PageWidth = MmToSs(widthMm, staffSpaceMm),
+            PageHeight = MmToSs(heightMm, staffSpaceMm),
+            MarginLeft = MmToSs(sideMm, staffSpaceMm),
+            MarginRight = MmToSs(sideMm, staffSpaceMm),
+            MarginTop = MmToSs(verticalMm, staffSpaceMm),
+            MarginBottom = MmToSs(verticalMm, staffSpaceMm),
             // indent-default is 15mm like the side margins, and scaled and rounded the same
             // way; short-indent-default is 0mm, which scales to 0.
             // LILYPOND-REF: scm/paper.scm:315-323 set-paper-dimensions (scalable-values).
             // (a4 lands on the default itself, which is LilyPond's own reading and not the
             // six-place conversion — `size a4` stays the identity.)
-            Indent = sideMm == SideMarginDefaultMm
-                ? LayoutOptions.LilyPondDefaultIndent : MmToSs(sideMm),
+            Indent = sideMm == SideMarginDefaultMm && staffSpaceMm == LayoutOptions.DefaultStaffSpaceMm
+                ? LayoutOptions.LilyPondDefaultIndent : MmToSs(sideMm, staffSpaceMm),
             ShortIndent = 0,
         };
     }
@@ -443,26 +478,26 @@ internal static class PaperPlanReader
         var ss = options.StaffSpacing;
         return key switch
         {
-            "systemSystemSpacing" => options with { VerticalSpacing = vs with { SystemSystem = ReadSpec(vs.SystemSystem, entry, found) } },
-            "scoreSystemSpacing" => options with { VerticalSpacing = vs with { ScoreSystem = ReadSpec(vs.ScoreSystem, entry, found) } },
-            "markupSystemSpacing" => options with { VerticalSpacing = vs with { MarkupSystem = ReadSpec(vs.MarkupSystem, entry, found) } },
-            "scoreMarkupSpacing" => options with { VerticalSpacing = vs with { ScoreMarkup = ReadSpec(vs.ScoreMarkup, entry, found) } },
-            "markupMarkupSpacing" => options with { VerticalSpacing = vs with { MarkupMarkup = ReadSpec(vs.MarkupMarkup, entry, found) } },
-            "topSystemSpacing" => options with { VerticalSpacing = vs with { TopSystem = ReadSpec(vs.TopSystem, entry, found) } },
-            "lastBottomSpacing" => options with { VerticalSpacing = vs with { LastBottom = ReadSpec(vs.LastBottom, entry, found) } },
-            "staffStaffSpacing" => options with { StaffSpacing = ss with { StaffStaff = ReadSpec(ss.StaffStaff, entry, found) } },
-            "staffGroupStaffSpacing" => options with { StaffSpacing = ss with { StaffGroupStaff = ReadSpec(ss.StaffGroupStaff, entry, found) } },
-            "defaultStaffStaffSpacing" => options with { StaffSpacing = ss with { DefaultStaffStaff = ReadSpec(ss.DefaultStaffStaff, entry, found) } },
-            "nonStaffRelatedStaffSpacing" => options with { StaffSpacing = ss with { NonStaffRelatedStaff = ReadSpec(ss.NonStaffRelatedStaff, entry, found) } },
-            "nonStaffUnrelatedStaffSpacing" => options with { StaffSpacing = ss with { NonStaffUnrelatedStaff = ReadSpec(ss.NonStaffUnrelatedStaff, entry, found) } },
-            "nonStaffNonStaffSpacing" => options with { StaffSpacing = ss with { NonStaffNonStaff = ReadSpec(ss.NonStaffNonStaff, entry, found) } },
+            "systemSystemSpacing" => options with { VerticalSpacing = vs with { SystemSystem = ReadSpec(vs.SystemSystem, entry, options.StaffSpaceMm, found) } },
+            "scoreSystemSpacing" => options with { VerticalSpacing = vs with { ScoreSystem = ReadSpec(vs.ScoreSystem, entry, options.StaffSpaceMm, found) } },
+            "markupSystemSpacing" => options with { VerticalSpacing = vs with { MarkupSystem = ReadSpec(vs.MarkupSystem, entry, options.StaffSpaceMm, found) } },
+            "scoreMarkupSpacing" => options with { VerticalSpacing = vs with { ScoreMarkup = ReadSpec(vs.ScoreMarkup, entry, options.StaffSpaceMm, found) } },
+            "markupMarkupSpacing" => options with { VerticalSpacing = vs with { MarkupMarkup = ReadSpec(vs.MarkupMarkup, entry, options.StaffSpaceMm, found) } },
+            "topSystemSpacing" => options with { VerticalSpacing = vs with { TopSystem = ReadSpec(vs.TopSystem, entry, options.StaffSpaceMm, found) } },
+            "lastBottomSpacing" => options with { VerticalSpacing = vs with { LastBottom = ReadSpec(vs.LastBottom, entry, options.StaffSpaceMm, found) } },
+            "staffStaffSpacing" => options with { StaffSpacing = ss with { StaffStaff = ReadSpec(ss.StaffStaff, entry, options.StaffSpaceMm, found) } },
+            "staffGroupStaffSpacing" => options with { StaffSpacing = ss with { StaffGroupStaff = ReadSpec(ss.StaffGroupStaff, entry, options.StaffSpaceMm, found) } },
+            "defaultStaffStaffSpacing" => options with { StaffSpacing = ss with { DefaultStaffStaff = ReadSpec(ss.DefaultStaffStaff, entry, options.StaffSpaceMm, found) } },
+            "nonStaffRelatedStaffSpacing" => options with { StaffSpacing = ss with { NonStaffRelatedStaff = ReadSpec(ss.NonStaffRelatedStaff, entry, options.StaffSpaceMm, found) } },
+            "nonStaffUnrelatedStaffSpacing" => options with { StaffSpacing = ss with { NonStaffUnrelatedStaff = ReadSpec(ss.NonStaffUnrelatedStaff, entry, options.StaffSpaceMm, found) } },
+            "nonStaffNonStaffSpacing" => options with { StaffSpacing = ss with { NonStaffNonStaff = ReadSpec(ss.NonStaffNonStaff, entry, options.StaffSpaceMm, found) } },
             _ => options,
         };
     }
 
     /// <summary>Overlays one spacing block's lines onto <paramref name="current"/>.</summary>
     private static VerticalSpacingSpec ReadSpec(
-        VerticalSpacingSpec current, PaperDeclarationSyntax.Entry entry, List<Problem> found)
+        VerticalSpacingSpec current, PaperDeclarationSyntax.Entry entry, double staffSpaceMm, List<Problem> found)
     {
         var bound = new Dictionary<string, TextSpan>(StringComparer.Ordinal);
         foreach (var sub in entry.SubEntries)
@@ -492,7 +527,7 @@ internal static class PaperPlanReader
             bound[key] = span;
 
             if (!TryReadLength(sub.MinusToken, sub.NumberToken, sub.UnitToken,
-                    unitless: key == "stretchability", span, key, found, out double v))
+                    unitless: key == "stretchability", span, key, staffSpaceMm, found, out double v))
                 continue;
             current = key switch
             {
@@ -514,7 +549,7 @@ internal static class PaperPlanReader
     /// </summary>
     private static bool TryReadLength(
         SyntaxTokenNode? minus, SyntaxTokenNode? number, SyntaxTokenNode? unit,
-        bool unitless, TextSpan keySpan, string key, List<Problem> found, out double value)
+        bool unitless, TextSpan keySpan, string key, double staffSpaceMm, List<Problem> found, out double value)
     {
         value = 0;
         if (number == null)
@@ -553,9 +588,9 @@ internal static class PaperPlanReader
         }
         value = u switch
         {
-            "mm" => MmToSs(v),
-            "cm" => MmToSs(v * MmPerCm),
-            "in" => MmToSs(v * MmPerInch),
+            "mm" => MmToSs(v, staffSpaceMm),
+            "cm" => MmToSs(v * MmPerCm, staffSpaceMm),
+            "in" => MmToSs(v * MmPerInch, staffSpaceMm),
             _ => v,
         };
         return true;

@@ -275,4 +275,133 @@ public class PaperOverridesTests
         Assert.Single(warnings);
         Assert.StartsWith("page 1 is over-full by ", warnings[0]);
     }
+
+    // ---- P3 (session 821): staffSpace=1.5mm, the staff's size on the paper — LilyPond's
+    // set-global-staff-size. A setting only (the owner's decision 2026-10-05); the paper keeps
+    // its millimetres and every output keeps the paper's size.
+
+    [Theory]
+    [InlineData("staffSpace=1.5mm", 1.5)]
+    [InlineData("staffSpace=0.2cm", 2.0)]
+    [InlineData("staffSpace=.1in", 2.54)]
+    public void StaffSpace_IsASetting(string setting, double mm)
+    {
+        var parsed = PaperOverrides.Parse([setting], out var error);
+        Assert.Null(error);
+        Assert.Equal(mm, parsed!.StaffSpaceMm!.Value, 9);
+        Assert.Null(PaperOverrides.Parse(["spacingIncrement=1.6"], out _)!.StaffSpaceMm);
+    }
+
+    [Theory]
+    [InlineData("staffSpace=1.5")]     // a bare number would be staff spaces — the unit it sets
+    [InlineData("staffSpace=1.5pt")]
+    [InlineData("staffSpace=0mm")]
+    [InlineData("staffSpace=-1mm")]
+    [InlineData("staffSpace=mm")]
+    public void AStaffSpaceThatDoesNotRead_IsRefused(string setting)
+    {
+        Assert.Null(PaperOverrides.Parse([setting], out var error));
+        Assert.False(string.IsNullOrEmpty(error));
+    }
+
+    private static LayoutOptions PaperOf(string book, params string[] settings)
+    {
+        var tree = SyntaxTree.Parse(book);
+        return SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree),
+            settings: PaperOverrides.Parse(settings, out _)).Paper;
+    }
+
+    private const string OneBar = """
+        part m { }
+        section A { m { c'1 | } }
+        form main { A }
+        score main { staff m }
+        """;
+
+    /// <summary>
+    /// The paper keeps its millimetres: a4 on a 1.5mm staff space is 140 × 198 spaces, its 15mm
+    /// margins 10. The file's millimetres are read through the same staff space; its bare
+    /// numbers are staff spaces and stay as written.
+    /// </summary>
+    [Fact]
+    public void ThePapersMillimetres_AreReadThroughTheStaffSpace()
+    {
+        var p = PaperOf(OneBar, "staffSpace=1.5mm");
+        Assert.Equal(1.5, p.StaffSpaceMm);
+        Assert.Equal(140, p.PageWidth);
+        Assert.Equal(198, p.PageHeight);
+        Assert.Equal(10, p.MarginLeft);
+        Assert.Equal(10, p.MarginRight);
+        Assert.Equal(6.666667, p.MarginTop);
+        Assert.Equal(10, p.Indent);
+        Assert.Equal(p.ContentWidth, PaperOf("paper { paperWidth 210mm }\n" + OneBar, "staffSpace=1.5mm").ContentWidth);
+
+        var written = PaperOf("paper { leftMargin 30mm  indent 5  staffStaffSpacing { basicDistance 12mm } }\n" + OneBar,
+            "staffSpace=1.5mm");
+        Assert.Equal(20, written.MarginLeft);
+        Assert.Equal(5, written.Indent);
+        Assert.Equal(8, written.StaffSpacing.StaffStaff.BasicDistance);
+        Assert.Equal(98.666667, PaperOf("paper { size a5 }\n" + OneBar, "staffSpace=1.5mm").PageWidth);
+        // A setting's millimetres too, read over the file's paper.
+        Assert.Equal(20, PaperOf(OneBar, "staffSpace=1.5mm", "leftMargin=30mm").MarginLeft);
+
+        // No setting, no change: LilyPond's staff space and the defaults' numbers.
+        var plain = PaperOf(OneBar);
+        Assert.Equal(LayoutOptions.DefaultStaffSpaceMm, plain.StaffSpaceMm);
+        Assert.Equal(1.0, plain.StaffSpaceScale);
+        Assert.Equal(LayoutOptions.Default, plain with { });
+    }
+
+    /// <summary>
+    /// The systems LilyPond 2.26.0 makes of 40 bars under <c>#(set-global-staff-size N)</c> (Lab
+    /// sessions/p821/p3, the <c>lysc ly --pin-fonts</c> twin): 6 / 8 / 10 systems at 15 / 20 / 26pt,
+    /// the full ones 136.451 / 102.33 / 78.707 long — the same 180mm line in its staff spaces
+    /// (LilyPond's line starts half its thickness in, and its thickness is 0.122 / 0.1 / 0.085 there).
+    /// </summary>
+    [Theory]
+    [InlineData(15, 6, 136.451)]
+    [InlineData(20, 8, 102.33)]
+    [InlineData(26, 10, 78.707)]
+    public void TheSystems_AreLilyPondsAtItsStaffSize(int points, int systems, double fullLine)
+    {
+        string forty = "octave absolute\npart m { clef treble\n  section A { "
+            + string.Concat(Enumerable.Repeat("c'8 d' e' f' g'4 a' | ", 40))
+            + "}\n}\nform main { A }\nscore main { staff m }\n";
+        double mm = points / 4.0 * 25.4 / 72.27;
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(forty), new SvgRenderOptions
+        {
+            EmbedFont = false,
+            PaperOverrides = PaperOverrides.Parse([string.Format(CultureInfo.InvariantCulture, "staffSpace={0:F6}mm", mm)], out _),
+        });
+        var lengths = Regex.Matches(svg, "<line x1=\"([-\\d.]+)\" y1=\"([-\\d.]+)\" x2=\"([-\\d.]+)\" y2=\"([-\\d.]+)\"[^>]*stroke-width=\"0.100\"")
+            .Where(m => m.Groups[2].Value == m.Groups[4].Value)
+            .Select(m => double.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture)
+                         - double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture))
+            .ToList();
+        Assert.Equal(systems * 5, lengths.Count);
+        Assert.Equal(fullLine, lengths[^1], 1);
+    }
+
+    /// <summary>Every output keeps the paper's size: a smaller staff space is a smaller staff on
+    /// the same page, not a bigger picture. The boxes say which staff space they are in.</summary>
+    [Fact]
+    public void TheOutputs_KeepThePapersSize()
+    {
+        var tree = SyntaxTree.Parse(OneBar);
+        var small = PaperOverrides.Parse(["staffSpace=1.2mm"], out _);
+        static string Width(string svg) => Regex.Match(svg, "<svg [^>]*width=\"([\\d.]+)\"").Groups[1].Value;
+        string plain = SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
+        string set = SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false, PaperOverrides = small });
+        Assert.Equal("1195.0", Width(plain));
+        Assert.Equal(Width(plain), Width(set));
+        Assert.Contains("viewBox=\"0 0 175.00 ", set);   // 210mm / 1.2mm
+
+        static int PngWidth(byte[] png) { using var b = SkiaSharp.SKBitmap.Decode(png); return b.Width; }
+        Assert.Equal(PngWidth(LilySharp.Core.Png.PngGenerator.Generate(tree)),
+            PngWidth(LilySharp.Core.Png.PngGenerator.Generate(tree, new LilySharp.Core.Png.PngRenderOptions { PaperOverrides = small })));
+
+        var pages = LilySharp.Core.Rendering.Boxes.BoxesGenerator.GeneratePages(tree, RenderSpecParser.FindFirst(tree), small);
+        Assert.Contains("\"staffSpaceMm\":1.2,", LilySharp.Core.Rendering.Boxes.BoxesGenerator.ToJson(pages, small!.StaffSpaceMm!.Value));
+        Assert.Contains("\"staffSpaceMm\":1.757299,", LilySharp.Core.Rendering.Boxes.BoxesGenerator.ToJson(pages));
+    }
 }

@@ -159,7 +159,8 @@ public static class ScoreExport
             {
                 var pages = Rendering.Boxes.BoxesGenerator.GeneratePages(tree, spec, options.PaperOverrides,
                     layoutWarnings.Add);
-                File.WriteAllText(outputPath, Rendering.Boxes.BoxesGenerator.ToJson(pages));
+                File.WriteAllText(outputPath, Rendering.Boxes.BoxesGenerator.ToJson(pages,
+                    options.PaperOverrides?.StaffSpaceMm ?? Svg.Layout.LayoutOptions.DefaultStaffSpaceMm));
                 return new ExportResult([outputPath],
                     [$"Pages: {pages.Count}", $"Symbols: {pages.Sum(p => p.Symbols.Count)}"], layoutWarnings);
             }

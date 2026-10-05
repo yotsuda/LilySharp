@@ -430,8 +430,10 @@ workflow attaches that section to the GitHub Release verbatim.
   entry — `spacingIncrement=1.6`, `leftMargin=20mm`, `staffStaffSpacing.basicDistance=9`, a
   flag on or `=false` — laid over what the file says, which stays as it is; repeat it as
   needed. A key or value the paper block would refuse is an error with the block's message.
-  Five keys exist only there, not in `paper { }`: `measuresPerSystem` (exactly N bars a
-  system, the lead-sheet layout) and, with LilyPond's meaning, `shortestDurationSpace` (the
+  Six keys exist only there, not in `paper { }`: `staffSpace` (the staff's size on the paper,
+  `staffSpace=1.5mm` — the page keeps its millimetres and every output its size, so a smaller
+  staff puts more music on the same page, as LilyPond's `set-global-staff-size`),
+  `measuresPerSystem` (exactly N bars a system, the lead-sheet layout) and, with LilyPond's meaning, `shortestDurationSpace` (the
   shortest note's space), `systemsPerPage` (exactly N systems a page — the lines are re-broken
   so the pages fill, as LilyPond does), `maxSystemsPerPage` and `minSystemsPerPage`.
 - **`lysc boxes` writes every drawn symbol's box as JSON.** Page by page, each symbol the SVG
