@@ -3103,6 +3103,34 @@
       "residual": 0.0,
       "why": "OPENED EXACT as the cut-common half of the C-glyph width pair (with line-start.time-to-first-note.standard-key). LilyPond's default style prints ONLY 2/2 and 4/4 as glyphs (timesig.C22/C44, make-c-time-signature-markup); C22's LILC ink is 1.700000 like C44's, so time -> first note is 3.700000 for BOTH -- the pair's equality is the cross-check that the two C widths ride one (glyph) path while every other fraction stays on the Pango digit path. Lily# reserved 2/2 from the digit table too (GetTimeSigWidth max digit '2' = 1.4657 Pango) under a drawn cut-C glyph; the same fix (GetTimeSigWidth's LP-style branch) closes both."
     },
+    "line-start.time-to-first-grace": {
+      "probe": "line-start-grace.ly",
+      "score": "LSG1",
+      "lilypond": 2.700000,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 832 (-0.800000 -> 0). A grace run opening the FIRST line: the first grace column is the prefatory column's right neighbour, so the meter's Staff_spacing wish ends there, min_dist is measured to the grace head, and because that column has a grace part the whole spring -- column origin to column origin -- is scaled by 0.8 (lily/spacing-spanner.cc:519-527). 8.585 x 0.8 = 6.868 falls below the column rod (lily/spacing-spanner.cc:228-297 set_column_rods: min_dist + 0.1), so the rod holds it: the meter's ink right 6.585 + its extra-spacing-width 0.8 + the grace head's 0.1 + the rod's 0.1 = 7.585 off the column, 2.700000 off the meter's anchor (TIME 13.420827, first grace 16.120827). Lily# priced the line start as the spring to the MAIN note, floored at the bar-line spring's minimum (the run's width: ownFixedFloor), and hung the run left of the main note -- no 0.8, no column of its own -- so the first grace stood 0.80 left. LineStartColumn.IntoGraceRun now builds LilyPond's pair: min_dist to the grace column (MinimumDistanceToGraceAtLineStart), the merged wish scaled, the run's own springs in series after it, the rod on the approach. The continuation-line twin is line-start.clef-to-first-grace.continuation, where the scaled ideal stands above the rod instead."
+    },
+    "line-start.clef-to-first-grace.continuation": {
+      "probe": "line-start-grace.ly",
+      "score": "LSG2",
+      "lilypond": 3.840000,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 832 (-1.080000 -> 0). The twin of line-start.time-to-first-grace on a CONTINUATION line, whose prefix is the clef alone: the clef's plain first-note spring (5.8 off the column, line-start.clef-to-first-note.treble) is scaled by 0.8 to 4.64, which stands ABOVE the rod here, so the first grace is the clef anchor 0.8 + 3.840000 -- the ideal branch where the first line's point is the rod branch, the pair covering both halves of Spring::operator*= (lily/spring.cc:85-93, ideal = max (min, ideal x 0.8)). Lily# drew it 1.08 left (see the first line's point for the mechanism)."
+    },
+    "barline.before-grace.whole": {
+      "probe": "line-start-grace.ly",
+      "score": "LSG3",
+      "lilypond": 4.848036,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 832 (+1.212009 -> 0). Mid-line, a bar OPENING with a grace run: the bar line in front of it stands at the grace's moment (the bar starts there), so the spring from the whole note INTO the bar line has a right column with a grace part and is scaled by 0.8 (lily/spacing-spanner.cc:396-403 musical_column_spacing, after merge_springs, before the column rod): the plain 6.060045 (barline-spacing's whole-note-to-bar) becomes 4.848036 (HEAD 17.120827, BAR 21.968863). Lily# scaled only the spring OUT of the bar line (bar line -> first grace, MidMeasureChanges' grace-run branch) and kept this one plain, so every bar after a grace-opened one stood 1.21 right; it was hidden on the test fixtures by the line-start grace drawn 0.80 left (line-start.time-to-first-grace), the two cancelling over a line. SpacingRules.IntoBarBeforeGrace scales it in both spring systems; the break gate's SpringEdgeKey carries the next bar's grace. The twin is barline.before-grace.half. NOT PORTED: at a LINE END LilyPond's column origin is the end-of-line group's right edge (bar 0.19; a courtesy key or meter's ink right + its right-edge extra-space 0.5), so it scales (d + o) and takes o back: 0.038 shorter after a plain bar (Lab sessions/p832 g5, g11), about 0.6 after a courtesy (g7, g10)."
+    },
+    "barline.before-grace.half": {
+      "probe": "line-start-grace.ly",
+      "score": "LSG4",
+      "lilypond": 3.292299,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 832. The twin of barline.before-grace.whole after a HALF note: the plain 4.115374 x 0.8 = 3.292299 (HEAD 21.396272, BAR 24.688571) -- a second duration on the same 0.8, so a fix that adds a constant instead of scaling would split the pair. See the whole-note point for the mechanism."
+    },
     "line-start.time-to-first-note.initial-repeat": {
       "probe": "initial-repeat-bar.ly",
       "score": "IR",

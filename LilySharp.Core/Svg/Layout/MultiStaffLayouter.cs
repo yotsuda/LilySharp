@@ -1765,7 +1765,8 @@ internal sealed class MultiStaffLayouter
                 springs = _measureLayouter.CreateTimingSprings(
                     score.TextMetrics, primaryMeasure, allTimings, spacing, allMeasures, nextMeasure,
                     SpacingRules.RunLeftBoundBarline(primaryVoice.Measures, i),
-                    CollectStavesOfMeasuresAtIndex(score, i));
+                    CollectStavesOfMeasuresAtIndex(score, i),
+                    BarOpensWithLeadingGrace(score, i + 1));
 
                 // An empty placeholder measure (`| |`) has no timing springs at all —
                 // without a floor it collapses to its barlines and reads as a double
@@ -2774,6 +2775,22 @@ internal sealed class MultiStaffLayouter
         }
 
         return measures;
+    }
+
+    /// <summary>
+    /// Whether bar <paramref name="measureIndex"/> opens with a grace run on ANY staff — the bar
+    /// line in front of it is one column across the staves, standing at the grace's moment
+    /// (<see cref="SpacingRules.IntoBarBeforeGrace"/>). False past the last bar.
+    /// </summary>
+    internal static bool BarOpensWithLeadingGrace(MultiStaffScore score, int measureIndex)
+    {
+        foreach (var staffGroup in score.StaffGroups)
+            foreach (var staff in staffGroup.Staves)
+                foreach (var voice in staff.Voices)
+                    if (measureIndex >= 0 && measureIndex < voice.Measures.Length
+                        && SpacingRules.OpensWithLeadingGrace(voice.Measures[measureIndex]))
+                        return true;
+        return false;
     }
 
     /// <summary>

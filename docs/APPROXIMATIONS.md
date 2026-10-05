@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
 | `OWN` | 215 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **338** | |
+| **計** | **339** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -34,7 +34,7 @@
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（60 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（61 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **:345** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
@@ -93,9 +93,9 @@
 - **:508** ⚠️ NOT PORTED — the bound extent: the barline's ink width is taken
 - **:524** ⚠️ NOT PORTED — the boundary-column regime: the left bound is the
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:3215** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
-- **:3267** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
-- **:4272** same approximation the scripts' own remark records for the movers; the books that
+- **:3232** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
+- **:3284** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
+- **:4289** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1212** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
 - **:2332** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
@@ -116,6 +116,8 @@
 - **:1309** approximation there); RIGHT wins when both edges match, as LP's
 ### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
 - **:429** NOT PORTED HERE: the box's reach toward the OTHER neighbour. LilyPond grows it from
+### `LilySharp.Core/Svg/Layout/SpacingRules.Grace.cs`
+- **:890** about 0.6 after a courtesy key or meter (g7, g10). Not ported: the spring does not know
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
 - **:329** ⚠️ THIS IS A DERIVATION, NOT A TRANSCRIPTION, and it rests on one premise worth
 ### `LilySharp.Core/Svg/Layout/StaffAffinity.cs`
@@ -196,8 +198,8 @@
 ### `LilySharp.Core/Svg/Layout/LyricSpacing.cs`
 - **:152** is measured-exact there, and no ledger point prices replacing it.
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:3823** staff down, and this reserves it on the hidden one. No book reaches that.
-- **:5192** company on a row whose symbols sit closer than its spec's 1.0. No point measures
+- **:3840** staff down, and this reserves it on the hidden one. No book reaches that.
+- **:5209** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:854** does not spell a per-type padding — no point observes a segno/coda over a
 - **:1054** X extent per mark -- and reproduce both pictures. No ledger point is
@@ -447,8 +449,8 @@
 - **:218** LILYSHARP-OWN: LilyPond has no such variable (its spelling is a \break every N bars beside the ##f permissions); 0 leaves the breaks to the breaker.
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
 - **:690** This is Lily#'s own (LILYSHARP-OWN), not LilyPond's: LilyPond puts a leading
-- **:772** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
-- **:780** LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
+- **:782** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
+- **:790** LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
 ### `LilySharp.Core/Svg/Layout/LyricEngraver.cs`
 - **:213** ⚠️ LILYSHARP-OWN, AND IT IS LOAD BEARING NOW THAT NOTHING ELSE IS. LilyPond has no
 - **:297** LILYSHARP-OWN: the CJK term. The bundled face has no CJK glyphs, so the outline is
@@ -460,17 +462,17 @@
 - **:197** Leading extent: LILYSHARP-OWN, keepEdgeHalves only — on a LEAD SHEET the line's
 - **:412** leading/trailing halves (LILYSHARP-OWN, a user decision — see
 ### `LilySharp.Core/Svg/Layout/MeasureLayouter.cs`
-- **:350** LILYSHARP-OWN: the walk stops four items back (LilyPond's overhang test runs until no
+- **:354** LILYSHARP-OWN: the walk stops four items back (LilyPond's overhang test runs until no
 ### `LilySharp.Core/Svg/Layout/MeterGlyphRun.cs`
 - **:108** LILYSHARP-OWN, a text character LilyPond spells with markup.
 - **:143** ⚠️ LILYSHARP-OWN: the fallback branch. The only non-digit that reaches here is the
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **:422** ⚠️ LILYSHARP-OWN, AND IT HAS ONE HOME ON PURPOSE. LilyPond has no band: a Lyrics or
 - **:523** ⚠️ LILYSHARP-OWN, AND IT IS NOW THE LAST FLAT VERSE STEP LEFT. Where the row is an
-- **:1899** LILYSHARP-OWN, the lead-sheet grid's line-start bar (user request
-- **:2336** wide as its 3/4 bars for one beat). LILYSHARP-OWN like the floor itself: LilyPond has
-- **:2572** timing-placed chord symbol and a beat slash do. LILYSHARP-OWN: the filler-slot keep.
-- **:4883** LILYSHARP-OWN: the band is Lily#'s model of a line LilyPond walks as a loose line
+- **:1900** LILYSHARP-OWN, the lead-sheet grid's line-start bar (user request
+- **:2337** wide as its 3/4 bars for one beat). LILYSHARP-OWN like the floor itself: LilyPond has
+- **:2573** timing-placed chord symbol and a beat slash do. LILYSHARP-OWN: the filler-slot keep.
+- **:4900** LILYSHARP-OWN: the band is Lily#'s model of a line LilyPond walks as a loose line
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:152** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **:178** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN
@@ -514,8 +516,8 @@
 ### `LilySharp.Core/Svg/Layout/SpacingRules.EmptyBar.cs`
 - **:242** LILYSHARP-OWN: LilyPond has no such spring because it has no such column — the
 ### `LilySharp.Core/Svg/Layout/SpacingRules.MeasureSprings.cs`
-- **:791** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
-- **:1392** ⚠️ LILYSHARP-OWN by the owner's decision (session 646: "コード図は、横に並べてほしい。
+- **:796** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
+- **:1397** ⚠️ LILYSHARP-OWN by the owner's decision (session 646: "コード図は、横に並べてほしい。
 ### `LilySharp.Core/Svg/Layout/StaffSize.cs`
 - **:62** ⚠️ LILYSHARP-OWN: THIS LINE IS A TYPE ENUMERATION, and it is the one part of this file
 ### `LilySharp.Core/Svg/Layout/StanzaNumberEngraver.cs`

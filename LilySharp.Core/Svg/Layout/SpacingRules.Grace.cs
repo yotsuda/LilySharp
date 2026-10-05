@@ -526,7 +526,7 @@ internal static partial class SpacingRules
     /// accidental on the SECOND grace of a pair pushes that gap from 1.417939 to 2.560895,
     /// which is 1.017939 + (1.042957 + 0.2) + 0.3.
     /// </remarks>
-    private static double GraceColumnLeftReach(GraceColumnInfo column)
+    internal static double GraceColumnLeftReach(GraceColumnInfo column)
     {
         // A rest carries no accidental, so its column reaches left by the default box alone.
         if (column.IsRest)
@@ -830,7 +830,7 @@ internal static partial class SpacingRules
     }
 
     /// <summary>The leading grace notes hanging left of an item's column, if any.</summary>
-    private static ImmutableArray<GraceColumnInfo> GraceNotesOf(MusicItem item) => item switch
+    internal static ImmutableArray<GraceColumnInfo> GraceNotesOf(MusicItem item) => item switch
     {
         NoteItem n => n.LeadingGrace,
         ChordItem c => c.LeadingGrace,
@@ -850,6 +850,47 @@ internal static partial class SpacingRules
     /// </remarks>
     internal static bool HasLeadingGraceColumn(MusicItem? item) =>
         item != null && !GraceNotesOf(item).IsDefaultOrEmpty;
+
+    /// <summary>
+    /// Whether <paramref name="measure"/> OPENS with a grace run: its first musical column, at the
+    /// bar's onset, leads with one. The bar line in front of it then stands at the grace's moment.
+    /// </summary>
+    /// <remarks>See <see cref="IntoBarBeforeGrace"/>.</remarks>
+    internal static bool OpensWithLeadingGrace(Measure? measure)
+    {
+        if (measure == null)
+            return false;
+        var t = Fraction.Zero;
+        foreach (var item in measure.Items)
+        {
+            if (t > Fraction.Zero)
+                return false;
+            if (IsMusicalColumn(item))
+                return HasLeadingGraceColumn(item);
+            t += item.Duration;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// The spring from a bar's last column into its closing bar line when the NEXT bar opens with
+    /// a grace run: scaled by 0.8 like any spring into a column with a grace part — the bar line's
+    /// column stands at the grace's moment, since the bar starts there.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:396-403 musical_column_spacing — spring *= 0.8 when the right column has a grace part and the left none.
+    /// LILYPOND-REF: lily/spring.cc:85-93 Spring::operator*= (<see cref="Spring.Scale"/>).
+    /// Applied after merge_springs (:380-393), before the column rod, as LilyPond orders them.
+    /// MEASURED (2.26.0, Lab sessions/p832/lsg m1/m3, mid-line, ragged): `c'1 | \grace {d'16 e'}
+    /// f'4` puts the bar line 4.848 after the whole note — its plain 6.06 × 0.8 — and `c'2 c' |`
+    /// the same bar 3.292 after the half, 4.115 × 0.8. Lily# kept the plain spring until session
+    /// 832. ⚠️ At a LINE END LilyPond's column origin is the end-of-line group's right edge, not the
+    /// bar line's left (m1's twin across a break, g5: 4.810 = (6.06 + 0.19) × 0.8 − 0.19), so
+    /// scaling the bar-line-framed spring leaves 0.2 × that offset — 0.038 after a plain bar line,
+    /// about 0.6 after a courtesy key or meter (g7, g10). Not ported: the spring does not know
+    /// whether a line ends here.
+    /// </remarks>
+    internal static Spring IntoBarBeforeGrace(Spring spring) => spring.Scale(GraceApproachScale);
 
     // ========================================
     // Mid-measure change items (the missing non-musical column)

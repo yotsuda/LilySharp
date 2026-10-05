@@ -351,6 +351,35 @@ public class SpacingInvariantTests
     }
 
     [Fact]
+    public void BothSpringSystems_ScaleTheSpringIntoABarThatOpensWithAGrace()
+    {
+        // The bar line before a grace-opened bar stands at the grace's moment, so the spring
+        // INTO it takes LilyPond's 0.8 (SpacingRules.IntoBarBeforeGrace) — in both systems, which
+        // read the next bar from their own arguments. Ledger barline.before-grace.* watches the
+        // drawn one; this watches that the item system does the same.
+        // LILYPOND-REF: lily/spacing-spanner.cc:396-403 musical_column_spacing.
+        var (timings, allMeasures, primary, score) = Collect("""
+            time 4/4
+            octave absolute
+            part melody
+            section Main { melody { c'2 c'2 | grace { d'16 e' } f'4 g'2 r4 | } }
+            form main { Main }
+            score main "x" { staff melody }
+            """);
+        var next = score.StaffGroups[0].PrimaryStaff.PrimaryVoice.Measures[1];
+        var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
+        var spacing = SpacingOptions.Default.WithShortest(0.25);
+        var columnSprings = new MeasureLayouter()
+            .CreateTimingSprings(fonts, primary, timings, spacing, allMeasures, next);
+        var itemSprings = SpacingRules.CreateSpringsForMeasure(fonts, primary, spacing, next);
+        var plain = SpacingRules.CreateSpringsForMeasure(fonts, primary, spacing);
+
+        Assert.Equal(columnSprings[^1].IdealDistance, itemSprings[^1].IdealDistance, 9);
+        Assert.Equal(plain[^1].IdealDistance * SpacingRules.GraceApproachScale,
+            itemSprings[^1].IdealDistance, 9);
+    }
+
+    [Fact]
     public void BothSpringSystems_AgreeAcrossAMidMeasureChangeColumn()
     {
         // The measure in BothSpringSystems_AgreeOnEveryMusicalSpring has no change item, so

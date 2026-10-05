@@ -184,6 +184,8 @@ internal sealed class MeasureLayouter
     /// line, a single line standing in where it declares none — the single-measure callers.</param>
     /// <param name="fonts">The score's text metrics — a mid-measure meter change's column
     /// reads the plan for a compound numerator's <c>+</c> (SpacingRules.GetTimeSignatureChangeWidth).</param>
+    /// <param name="nextOpensWithGrace">Whether the next bar opens with a grace run on ANY staff
+    /// (SpacingRules.IntoBarBeforeGrace); null reads <paramref name="nextMeasure"/> alone.</param>
     public ImmutableArray<Spring> CreateTimingSprings(
         Rendering.ScoreTextMetrics fonts,
         Measure measure, List<Fraction> timings,
@@ -191,7 +193,8 @@ internal sealed class MeasureLayouter
         IReadOnlyList<Measure>? allMeasures = null,
         Measure? nextMeasure = null,
         BarlineType? leftBound = null,
-        IReadOnlyList<Staff>? stavesOfMeasures = null)
+        IReadOnlyList<Staff>? stavesOfMeasures = null,
+        bool? nextOpensWithGrace = null)
     {
         if (timings.Count == 0)
             return ImmutableArray<Spring>.Empty;
@@ -301,7 +304,8 @@ internal sealed class MeasureLayouter
 
         // End spring: last column → barline (see CreateLastToBarlineSpring).
         springs[timings.Count] = CreateLastToBarlineSpring(fonts, timings, columns, measuresToScan, totalDuration,
-            so, SpacingRules.BoundaryClefAllowance(fonts, measure.EndBarline, nextMeasure), stavesOfMeasures);
+            so, SpacingRules.BoundaryClefAllowance(fonts, measure.EndBarline, nextMeasure), stavesOfMeasures,
+            nextOpensWithGrace ?? SpacingRules.OpensWithLeadingGrace(nextMeasure));
 
         AddColumnReachRods(fonts, measuresToScan, timings, stavesOfMeasures, looseRods);
 
@@ -1156,7 +1160,8 @@ internal sealed class MeasureLayouter
         Rendering.ScoreTextMetrics fonts,
         List<Fraction> timings, ItemColumn[] columns,
         IReadOnlyList<Measure> measuresToScan, Fraction totalDuration, SpacingOptions spacing,
-        double boundaryClefAllowance = 0, IReadOnlyList<Staff>? stavesOfMeasures = null)
+        double boundaryClefAllowance = 0, IReadOnlyList<Staff>? stavesOfMeasures = null,
+        bool nextOpensWithGrace = false)
     {
         var endDuration = totalDuration - timings[^1];
         var endShortestPlaying = SpacingRules.ComputeShortestPlayingAt(timings[^1], measuresToScan);
@@ -1252,6 +1257,11 @@ internal sealed class MeasureLayouter
         // LILYPOND-REF: lily/note-spacing.cc:78-83 — the spring MINIMUM is the
         //   padding-free skyline distance, which is what the 0.3 is measured from.
         endSpring = SpacingRules.ApplyMergeSpringsHeadroom(endSpring);
+
+        // The NEXT bar opening with a grace puts this bar line at the grace's moment, and a
+        // spring into a column with a grace part takes LilyPond's 0.8 (SpacingRules.IntoBarBeforeGrace).
+        if (nextOpensWithGrace)
+            endSpring = SpacingRules.IntoBarBeforeGrace(endSpring);
 
         // …and only now the rod — the same order as CreateInterColumnSpring, and for the
         // same reason: it stands 0.1 above the skyline distance the headroom put 0.3

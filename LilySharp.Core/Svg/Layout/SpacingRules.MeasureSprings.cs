@@ -309,6 +309,11 @@ internal static partial class SpacingRules
         //   lily/note-spacing.cc:78-83 for the padding-free minimum it floors from.
         lastSpring = ApplyMergeSpringsHeadroom(lastSpring);
 
+        // Mirror of MeasureLayouter.CreateLastToBarlineSpring: the next bar opening with a grace
+        // puts this bar line at the grace's moment (IntoBarBeforeGrace).
+        if (OpensWithLeadingGrace(nextMeasure))
+            lastSpring = IntoBarBeforeGrace(lastSpring);
+
         // …and the column rod last, a floor on the compressed length only — mirror of
         // MeasureLayouter.CreateLastToBarlineSpring.
         // LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods.

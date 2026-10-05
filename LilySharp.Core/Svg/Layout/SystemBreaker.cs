@@ -260,7 +260,8 @@ internal sealed class SystemBreaker
                 score.TextMetrics, primaryMeasure, allTimings, spacing, allMeasures,
                 i + 1 < measures.Length ? measures[i + 1] : null,
                 SpacingRules.RunLeftBoundBarline(measures, i),
-                MultiStaffLayouter.CollectStavesOfMeasuresAtIndex(score, i));
+                MultiStaffLayouter.CollectStavesOfMeasuresAtIndex(score, i),
+                MultiStaffLayouter.BarOpensWithLeadingGrace(score, i + 1));
 
             // The shared-column reservations (lyrics, chords, tab digits, wide
             // scripts) — the SAME list the system layout applies, from the one home
@@ -473,9 +474,10 @@ internal sealed class SystemBreaker
     /// secondary voice is in no entry context).</item>
     /// <item>i + 1: whether it is swallowed by a multi-measure-rest run
     /// (<see cref="MmrRunMap.ForbidsBreakAfter"/> of i is exactly that); which lyric lines
-    /// have a syllable there (the closing half); and the double-percent sign on its opening
+    /// have a syllable there (the closing half); the double-percent sign on its opening
     /// bar line (<c>ScoreSideTables.DoublePercentHalfWidths</c>, which reaches into an empty
-    /// bar i).</item>
+    /// bar i); and whether it opens with a grace run on any staff, which scales bar i's closing
+    /// spring (<c>SpacingRules.IntoBarBeforeGrace</c>).</item>
     /// </list>
     /// Everything else a neighbour contributes is already folded into key i itself: the
     /// entry context (clef, key, time carried in from the bars before), the clef change
@@ -534,6 +536,9 @@ internal sealed class SystemBreaker
             previous.Add(runMap.IsInterior(i));
             previous.Add(lineHash.ToHashCode());
             previous.Add(i < signHalf.Count ? signHalf[i] : 0.0);
+            // A grace run opening bar i scales the closing spring of bar i − 1
+            // (SpacingRules.IntoBarBeforeGrace).
+            previous.Add(MultiStaffLayouter.BarOpensWithLeadingGrace(score, i));
             builder.Add(new SpringEdgeKey(next.ToHashCode(), previous.ToHashCode(),
                 i == 0 ? 0.0 : MultiStaffLayouter.LineEndCourtesyWidth(score, i - 1, i)));
         }

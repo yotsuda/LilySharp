@@ -708,12 +708,22 @@ internal static class LineStartColumn
         double? ownFixedFloor,
         double measureStartBarWidth = 0.0)
     {
-        double minDistance = MinimumDistanceAtLineStart(
-            score, columns, clefGroupLeft, timeInkWidth, startMeasureIndex);
+        // A grace run opening the line puts its first grace column next to the prefatory one,
+        // so min_dist is measured to THAT column, the floor below has nothing left to carry
+        // (the run is priced as columns here, and a syllable under the main note meets the
+        // grace column, not the prefix) and the merged spring runs into the run (IntoGraceRun).
+        var openingGrace = OpeningGraceRun(score, startMeasureIndex);
+        double minDistance = openingGrace != null
+            ? MinimumDistanceToGraceAtLineStart(
+                score, columns, clefGroupLeft, timeInkWidth, startMeasureIndex)
+            : MinimumDistanceAtLineStart(
+                score, columns, clefGroupLeft, timeInkWidth, startMeasureIndex);
         // The caller's frame starts where the measure's own start bar line ENDS (see the
         // remarks): prefix right + the inserted bar width. The floor is stated there.
         double frame = columns.Right + measureStartBarWidth;
-        double floor = ownFixedFloor is { } f ? frame + f : double.NegativeInfinity;
+        double floor = openingGrace == null && ownFixedFloor is { } f
+            ? frame + f
+            : double.NegativeInfinity;
 
         // Lent, and given back at both exits below (see SpacingRules.RentWishes).
         var wishes = SpacingRules.RentWishes();
@@ -808,9 +818,146 @@ internal static class LineStartColumn
         var merged = Spring.MergeSprings(wishes);
         SpacingRules.GiveWishes(wishes);
 
+        if (openingGrace is { } run)
+        {
+            // A series spring keeps its run's parts through the shift: only the approach moves.
+            var series = IntoGraceRun(merged, run, minDistance);
+            return series.WithIdealDistance(series.IdealDistance - frame)
+                .WithMinDistance(Math.Max(0.0, series.MinDistance - frame));
+        }
+
         return new Spring(
             merged.IdealDistance - frame, merged.MinDistance - frame,
             merged.InverseStretchStrength, merged.InverseCompressStrength);
+    }
+
+    /// <summary>
+    /// The line-start spring when a grace run opens the line: the prefatory column's merged
+    /// wish ENDS AT THE FIRST GRACE COLUMN and is scaled by 0.8, then the run's own springs
+    /// follow it in series to the main note. COLUMN frame, like the wish.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:519-527 Spacing_spanner::breakable_column_spacing — spring *= 0.8 when the right column has a grace part.
+    /// LILYPOND-REF: lily/spring.cc:85-93 Spring::operator*= — ideal = max (min, ideal × 0.8) (<see cref="Spring.Scale"/>).
+    /// LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods — the rod over the pair, min_dist + padding.
+    /// The same shape a grace run opening a bar mid-line takes off its bar line
+    /// (<see cref="SpacingRules.BarlineToFirstColumnSpring"/>) and a change written before a grace
+    /// (<see cref="SpacingRules.MidMeasureChangeBeforeGraceSeries"/>).
+    /// MEASURED (2.26.0, Lab sessions/p832/lsg, treble staff, ragged, column origin to the first
+    /// grace head): a continuation line (clef only) 4.640000 = 5.8 × 0.8, the plain first note's
+    /// 5.8 scaled; a first line in 4/4 7.585 = 6.585 + 0.8 + 0.1 + 0.1 — the meter's ink right,
+    /// its extra-spacing-width, the grace head's and the rod's padding — where 8.585 × 0.8 = 6.868
+    /// falls below the rod. Lily# drew the first grace 0.80 and 1.08 left of those until session
+    /// 832: it floored the spring to the MAIN note at the bar-line spring's minimum (the run's
+    /// width) and hung the run off it, with no 0.8 and no column of its own.
+    /// </remarks>
+    private static Spring IntoGraceRun(Spring merged, SpacingRules.GraceColumnLayout run, double minDistance)
+    {
+        var approach = merged.Scale(SpacingRules.GraceApproachScale);
+        int columns = run.Offsets.IsDefaultOrEmpty ? 0 : run.Offsets.Length;
+        if (columns == 0 || run.Gaps.IsDefaultOrEmpty)
+            return new Spring(approach.IdealDistance + run.Span, approach.MinDistance + run.Span,
+                approach.InverseStretchStrength);
+
+        double gapStretch = SpacingRules.GraceSpringInverseStretch();
+        var parts = new Spring[columns + 1];
+        parts[0] = approach;
+        double min = approach.MinDistance;
+        for (int k = 0; k < columns; k++)
+        {
+            parts[k + 1] = new Spring(run.Gap(k), run.Gaps[k].Rod, gapStretch, run.Gaps[k].InverseCompress);
+            min += parts[k + 1].MinDistance;
+        }
+        return Spring.InSeries(System.Collections.Immutable.ImmutableArray.Create(parts), min)
+            .WithPartRod(0, minDistance + SpacingRules.SeparationRodPadding);
+    }
+
+    /// <summary>
+    /// The widest leading grace run on the first musical column of the line's opening measure,
+    /// across every staff and voice, as it is PLACED (<see cref="SpacingRules.LeadingGraceRun"/>'s
+    /// reading) — or null when no item there leads with a grace.
+    /// </summary>
+    private static SpacingRules.GraceColumnLayout? OpeningGraceRun(
+        Model.MultiStaffScore score, int startMeasureIndex)
+    {
+        SpacingRules.GraceColumnLayout? widest = null;
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+        {
+            if (staff.IsTextRow)
+                continue;
+            foreach (var voice in staff.Voices)
+            {
+                if (FirstMusicalItem(voice, startMeasureIndex) is not { } item)
+                    continue;
+                var grace = SpacingRules.GraceNotesOf(item);
+                if (grace.IsDefaultOrEmpty)
+                    continue;
+                var run = SpacingRules.GraceColumns(grace, item);
+                if (widest is not { } w || run.Span > w.Span)
+                    widest = run;
+            }
+        }
+        return widest;
+    }
+
+    private static Model.MusicItem? FirstMusicalItem(Model.Voice voice, int measureIndex)
+    {
+        if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
+            return null;
+        foreach (var item in voice.Measures[measureIndex].Items)
+            if (SpacingRules.IsMusicalColumn(item))
+                return item;
+        return null;
+    }
+
+    /// <summary>
+    /// <c>min_dist</c> from a line start's prefatory column to the FIRST GRACE column a grace
+    /// run opening the line stands in — <see cref="MinimumDistanceAtLineStart"/> with the grace
+    /// heads (and their accidentals) as the right column. A staff with no grace there has nothing
+    /// in that column and constrains nothing.
+    /// </summary>
+    /// <remarks>
+    /// The grace column's left reach is <see cref="SpacingRules.GraceColumnLeftReach"/>, the
+    /// reading the run's own gaps take.
+    /// LILYPOND-REF: lily/paper-column.cc Paper_column::minimum_distance — the two columns' skylines.
+    /// </remarks>
+    private static double MinimumDistanceToGraceAtLineStart(
+        Model.MultiStaffScore score,
+        BreakAlignSpacing.PrefixColumns columns,
+        double clefGroupLeft,
+        double timeInkWidth,
+        int startMeasureIndex)
+    {
+        double worst = 0.0;
+        var boxes = new List<ColumnBox>();
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+        {
+            if (staff.IsTextRow)
+                continue;
+            double reachLeft = double.NegativeInfinity;
+            foreach (var voice in staff.Voices)
+            {
+                if (FirstMusicalItem(voice, startMeasureIndex) is not { } item)
+                    continue;
+                var grace = SpacingRules.GraceNotesOf(item);
+                if (!grace.IsDefaultOrEmpty)
+                    reachLeft = Math.Max(reachLeft, SpacingRules.GraceColumnLeftReach(grace[0]));
+            }
+            if (double.IsNegativeInfinity(reachLeft))
+                continue;
+
+            boxes.Clear();
+            foreach (var g in PrefatoryGrobs(
+                         score, staff, columns, clefGroupLeft, timeInkWidth, startMeasureIndex))
+                boxes.Add(new ColumnBox(-SharedBand, SharedBand,
+                    g.InkLeft + g.EswLeft, g.InkRight + g.EswRight));
+            var grace0 = new List<ColumnBox>
+            {
+                new ColumnBox(-SharedBand, SharedBand, -reachLeft, SpacingRules.DefaultExtraSpacingWidth),
+            };
+            worst = Math.Max(worst, MinimumDistance(boxes, grace0));
+        }
+        return worst;
     }
 
     /// <summary>

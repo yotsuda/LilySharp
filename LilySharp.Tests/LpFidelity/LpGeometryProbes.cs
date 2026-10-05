@@ -13061,6 +13061,41 @@ internal static class LpGeometryProbes
     private static readonly string KCS = Score("d4 e fis g | a b cis' d' |", "KCS", "d major");
 
     /// <summary>
+    /// A grace run OPENING the first line: the meter → the first grace head. The first grace
+    /// column is the prefatory column's right neighbour and has a grace part, so the meter's
+    /// wish (8.585 off the column) is scaled by 0.8 (lily/spacing-spanner.cc:519-527) to 6.868,
+    /// below the column rod — the meter's ink right + its extra-spacing-width 0.8 + the grace
+    /// head's 0.1 + the rod's 0.1 — which holds it: TIME 13.420827, first grace 16.120827.
+    /// Lily# floored the spring to the MAIN note at the run's width and hung the run off it,
+    /// 0.80 too far left, until session 832 (LineStartColumn.IntoGraceRun).
+    /// </summary>
+    /// <remarks>LilyPond twin: audit/lp-geometry/probes/line-start-grace.ly LSG1.</remarks>
+    private static readonly string LSG1 = Score("grace { d'16 e' } f'4 g'2 r4 |", "LSG1");
+
+    /// <summary>
+    /// <see cref="LSG1"/> on a CONTINUATION line, whose prefix is the clef alone: the clef's
+    /// plain 5.8 off the column scaled by 0.8 is 4.64 and stands above the rod, so the first
+    /// grace is the clef anchor (0.8) + 3.84. Lily# drew it 1.08 too far left.
+    /// </summary>
+    /// <remarks>LilyPond twin: audit/lp-geometry/probes/line-start-grace.ly LSG2.</remarks>
+    private static readonly string LSG2 = Score("c'1 | break grace { d'16 e' } f'4 g'2 r4 |", "LSG2");
+
+    /// <summary>
+    /// Mid-line, a bar OPENING with a grace run: the bar line in front of it stands at the
+    /// grace's moment, so the whole note's spring INTO the bar line is scaled by 0.8 like any
+    /// spring into a column with a grace part (lily/spacing-spanner.cc:396-403): its plain
+    /// 6.060045 becomes 4.848036 (HEAD 17.120827, BAR 21.968863). Lily# kept the plain spring
+    /// until session 832 (SpacingRules.IntoBarBeforeGrace).
+    /// </summary>
+    /// <remarks>LilyPond twin: audit/lp-geometry/probes/line-start-grace.ly LSG3.</remarks>
+    private static readonly string LSG3 = Score("c'1 | grace { d'16 e' } f'4 g'2 r4 |", "LSG3");
+
+    /// <summary><see cref="LSG3"/> after a HALF note — a second duration on the same rule:
+    /// 3.292299 (HEAD 21.396272, BAR 24.688571).</summary>
+    /// <remarks>LilyPond twin: audit/lp-geometry/probes/line-start-grace.ly LSG4.</remarks>
+    private static readonly string LSG4 = Score("c'2 c' | grace { d'16 e' } f'4 g'2 r4 |", "LSG4");
+
+    /// <summary>
     /// The SAME two sharps as a CUSTOM (non-traditional) signature. LilyPond has only one
     /// key model — keyAlterations — so its KCC dump is byte-identical to KCS; the pair's
     /// disagreement on the Lily# side isolates the custom-key reserve/draw split
@@ -17689,6 +17724,13 @@ internal static class LpGeometryProbes
         new("line-start.time-to-first-note.standard-key", KCS, g => g.TimeSignatureToFirstNotehead()),
         new("line-start.time-to-first-note.custom-key", KCC, g => g.TimeSignatureToFirstNotehead()),
         new("line-start.time-to-first-note.cut-common", KC2, g => g.TimeSignatureToFirstNotehead()),
+        // A grace run opening the line: the prefix's spring ends at the first GRACE column and
+        // takes its 0.8 (LSG1's remark) — the first notehead after the meter / clef is the grace.
+        new("line-start.time-to-first-grace", LSG1, g => g.TimeSignatureToFirstNotehead()),
+        new("line-start.clef-to-first-grace.continuation", LSG2, g => g.ClefToFirstNoteOnSystem(1)),
+        // …and mid-line, the spring INTO the bar line before such a bar (LSG3's remark).
+        new("barline.before-grace.whole", LSG3, g => g.LastGlyphToBarlineLeft(0)),
+        new("barline.before-grace.half", LSG4, g => g.LastGlyphToBarlineLeft(0)),
         // The repeat bar line that opens the piece, PRINTED on both sides (see IRB's
         // remark). The pair is the reading: IRB opens with `|:`, IRN is the same music
         // without it, and their difference is the opener's column; the third point splits

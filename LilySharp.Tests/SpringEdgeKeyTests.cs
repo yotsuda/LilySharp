@@ -124,6 +124,18 @@ public class SpringEdgeKeyTests
         Assert.NotEqual(a[sign].ReadByPrevious, b[sign].ReadByPrevious);
     }
 
+    [Fact]
+    public void AGraceOpeningTheBar_MovesWhatThePreviousBarReads()
+    {
+        // The bar before it closes on a spring scaled by 0.8 (SpacingRules.IntoBarBeforeGrace).
+        var (a, sa) = Edges(Book(Plain));
+        var (b, sb) = Edges(Book(Plain.Replace("| g4 a b c |", "| grace { f16 } g4 a b c |")));
+        Assert.False(MultiStaffLayouter.BarOpensWithLeadingGrace(sa, 1));
+        Assert.True(MultiStaffLayouter.BarOpensWithLeadingGrace(sb, 1));
+        Assert.NotEqual(a[1].ReadByPrevious, b[1].ReadByPrevious);
+        Assert.Equal(a[1].ReadByNext, b[1].ReadByNext);
+    }
+
     private const string Sung = "lyrics words sings melody { la la la la | la la la la | la la la la | la la la la | }";
 
     [Fact]
