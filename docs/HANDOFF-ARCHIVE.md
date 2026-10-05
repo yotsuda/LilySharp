@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第829セッションの経緯
+
+### 1.1 第829セッション（2026-10-05・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。`-Start p829`（HEAD `9fb186af`）＝full **11228 / 0 / 2 / 11230**。§7 3.5 で第827 を ARCHIVE へ。①② は文法の承認待ち＝**③ §2 D に着手**（第814 の決定「成功の見込みが高ければ作り直しに着手」）。
+- **調べた**（Lab `sessions/p829/chain`・使い捨ての `LILYSHARP_ZZ829` 計器＝収まる score を鎖でも解いて system ごとの差を書く・998 冊を 1 本ずつ）: 1 頁の **682/682 score で全 system が |d|<1e-6**。違いは `audit/lpreg/perf-sd40` 1 冊＝積み上げは A4 に 0.55 余して 1 頁・鎖の breaker は last-bottom を値付けして 2 頁＝**LP 2.26.0 も 12＋1**（`sessions/p829/sd40`）。積み上げが溢れて鎖へ渡す本のうち 6 score は鎖が 1 頁に圧縮（今も紙のまま）。
+- **畳んだ**: `CreatePages` の積み上げループ（約 200 行）を消し、頁の高さがあれば `OptimalPages()`・snippet は **`OnePage()`＝LP の one-page-breaking**（one-page-breaking.cc:63-183・紙を 1e6 にして breaker を呼ばない＝`CreatePagesWithOptimalBreaking(onePage)`）。残るのは crop だけ＝**1 頁で `PageLayout.Force >= 0`（新設）なら内容の高さに切る・圧縮した頁は紙のまま**（畳む前と同じ）。`InterSystemPairMinimum` は呼び手 1 つ＝divergence ⑴⑵⑶ を畳んだ（⑴ HalfFirst に固定・⑵ rows-only の scalar 床を鎖にも＝複数頁の lead sheet の穴も閉じた・`RowsOnlySystemGapTests` が捕まえた）。
+- 網: `SinglePageChainTests`（perf-sd40 が 12＋1・圧縮した 1 頁は紙・収まる頁は切る・snippet は `systemsPerPage` でも 1 頁）。毒 4 本（圧縮でも切る→1 赤・rows-only の床を外す→2 赤・onePage で breaker を呼ぶ→2 赤・permissions の null 化は onePage と二重＝消した）。掃き（`sessions/p829/svg2`）998 冊 1199 svg で差 1＝perf-sd40 だけ。⚠️ perf は測っていない（1 頁の本も breaker の DP を通るようになった・perf の島は一時停止中）。
+
+★ `-End p829 -DiffBase 9fb186afb`（`end.log`）＝full **11232 / 0 / 2 / 11234**・門 全 OK。棚卸し: APPROXIMATIONS 2 点減（`InterSystemPairMinimum` の divergence ⑴⑶ の札＝呼び手が 1 つになって消えた）・crop の札は書き直し（LILYSHARP-OWN, DECLARED のまま）・magic は行番号だけ。7.5: Core `+` 109・`-` 299 行・OWN は crop 1 本に。7.6: 意味は LP（page-breaking の鎖・one-page-breaking.cc）・crop だけ Lily# 独自。7.7: perf 未測定（上）。commit `5a36dedf5`＋docs。push はユーザー。
+判定: §2 D は閉じた。次は第814 末の決定 ④ §2 H ⑷（譜ごとに違う調の行末 courtesy・まず LP 双子）か ⑤ §2 H ⑴、①② は文法の承認待ち、P6 はユーザー判断。(a) 今便の文脈は使わない／(b) 会話は 3 便ぶん・まだ取り違えは無い／(c) 別の島 ⇒ **この会話で続けてよい**（`-Start p830` から）。
 ## 以下は第828セッションの経緯
 
 ### 1.1 第828セッション（2026-10-05・YT-DELL2）

@@ -125,6 +125,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第831セッション（2026-10-05・YT-DELL2）
+
+同じ会話の続き。第830 が見つけた**フラットの調号の 0.117** をユーザーに諮り「直す」（LP 照合→直す→動いた snapshot を見せて再ベース）。`-Start p831`（HEAD `86eaacaa`）＝full **11234 / 0 / 2 / 11236**。§7 3.5 で第829 を ARCHIVE へ。
+- **原因**: `KeySignatureGlyphs` は原点 0 から送り幅（フラットはインク幅 0.92＝0.8＋左のはみ出し 0.12）で並べる＝幅は正しいがインクが −0.12 から始まる。LP の KeySignature の stencil は grob の X からインクが始まる（extent (0 . 1.84)・Lab `sessions/p831/okn`）。**直した**: `InkFromTheLeftEdge`＝walk 全体を −min(dx＋箱の左) だけ右へ（フラット調だけ 0.12・幅は不変＝後ろは動かない）。行頭・行中の変化・行末・skyline の種が同じ walk を読む＝全部一緒に動く。
+- LP 双子（`sessions/p830/ck` dflat／dbes／dsharp／b）: F・B♭・G major の行頭と twin b の行末が 0.003／0.009 内。
+- ⚠️ 台帳 `line-start.ossia-key-alignment.flats` が −0.035 で赤＝**計器の読み違い**: LP 側は anchor（＝インクの左）で 0、Lily# 側は字形の原点を比べていた（ossia のフラットのはみ出しは小さく描かれる・LP の小さい設計では 0.108・20 の縮小では 0.085）。抽出 `OssiaKeyAlignmentOffset` をインクの左に直した＝0 のまま。
+- snapshot 11 枚を再ベース（ユーザー GO）: 差分 24 行＝**全部フラットの字形が +0.12・他 0**。掃き 998 冊 1199 svg で 163 枚・9692 行＝**全部フラット（重フラット含む）+0.12・他 0**。網 `KeySignatureInkTests`（LP の clef→最初の臨時記号 3.505／3.385）。毒（ずらさない）→13 赤。
+
+★ `-End p831 -DiffBase 86eaacaa4`（`end.log`）＝full **11237 / 0 / 2 / 11239**・門 全 OK。棚卸し: 差分なし。7.5: Core は `InkFromTheLeftEdge` 1 本（REF 1＝break-alignment-interface.cc:241-243）・OWN 0。7.6: 意味は LP（KeySignature の extent が 0 から）。7.7: ossia のフラットのはみ出しは 20 の縮小（LP は小さい設計）＝原点で 0.023 違う（インクの左は一致）。commit `f0f24f676`＋docs。push はユーザー。
+判定: 次は ⑤ §2 H ⑴（行頭の grace／歌詞の独立列）、①② は文法の承認待ち、P6 はユーザー判断。(a) 今便の文脈は使わない／(b) 会話は 5 便ぶん・まだ取り違えは無いが長い／(c) 別の島 ⇒ **新しい会話でもこの会話でもよい＝(b) を重く見て新しい会話を勧める**（`-Start p832` から）。
+## 以下は第830セッションの経緯
+
 ### 1.1 第830セッション（2026-10-05・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。`-Start p830`（HEAD `8361735b`）＝full **11232 / 0 / 2 / 11234**。§7 3.5 で第828 を ARCHIVE へ。**④ §2 H ⑷**（譜ごとに違う調の行末 courtesy）。
@@ -135,17 +147,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 ★ `-End p830 -DiffBase 8361735b2`（`end.log`）＝full **11234 / 0 / 2 / 11236**・門 全 OK。棚卸し: magic 8 点減（消した 2 関数の 0.0 と旧 reservation の式・うち Red 6）・APPROX は行番号だけ。7.5: Core `+` 179・`-` 213 行・REF は新しい札に break-align-engraver.cc／engraver-init.ly・OWN 0。7.6: 意味は LP（Score の Break_align_engraver）。7.7: フラットの調号の 0.117（上・別件）。commit `4fad17b84`＋docs。push はユーザー。
 判定: §2 H ⑷ は閉じた。次は**フラットの調号の位置（承認が要る＝snapshot 多数）**か ⑤ §2 H ⑴、①② は文法の承認待ち、P6 はユーザー判断。(a) フラットは今便の計器（`sessions/p830/ck`）の上に立つ／(b) 会話は 4 便ぶん・まだ取り違えは無い／(c) ⇒ **この会話で続けてよい**（`-Start p831` から）。
-## 以下は第829セッションの経緯
-
-### 1.1 第829セッション（2026-10-05・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」）。`-Start p829`（HEAD `9fb186af`）＝full **11228 / 0 / 2 / 11230**。§7 3.5 で第827 を ARCHIVE へ。①② は文法の承認待ち＝**③ §2 D に着手**（第814 の決定「成功の見込みが高ければ作り直しに着手」）。
-- **調べた**（Lab `sessions/p829/chain`・使い捨ての `LILYSHARP_ZZ829` 計器＝収まる score を鎖でも解いて system ごとの差を書く・998 冊を 1 本ずつ）: 1 頁の **682/682 score で全 system が |d|<1e-6**。違いは `audit/lpreg/perf-sd40` 1 冊＝積み上げは A4 に 0.55 余して 1 頁・鎖の breaker は last-bottom を値付けして 2 頁＝**LP 2.26.0 も 12＋1**（`sessions/p829/sd40`）。積み上げが溢れて鎖へ渡す本のうち 6 score は鎖が 1 頁に圧縮（今も紙のまま）。
-- **畳んだ**: `CreatePages` の積み上げループ（約 200 行）を消し、頁の高さがあれば `OptimalPages()`・snippet は **`OnePage()`＝LP の one-page-breaking**（one-page-breaking.cc:63-183・紙を 1e6 にして breaker を呼ばない＝`CreatePagesWithOptimalBreaking(onePage)`）。残るのは crop だけ＝**1 頁で `PageLayout.Force >= 0`（新設）なら内容の高さに切る・圧縮した頁は紙のまま**（畳む前と同じ）。`InterSystemPairMinimum` は呼び手 1 つ＝divergence ⑴⑵⑶ を畳んだ（⑴ HalfFirst に固定・⑵ rows-only の scalar 床を鎖にも＝複数頁の lead sheet の穴も閉じた・`RowsOnlySystemGapTests` が捕まえた）。
-- 網: `SinglePageChainTests`（perf-sd40 が 12＋1・圧縮した 1 頁は紙・収まる頁は切る・snippet は `systemsPerPage` でも 1 頁）。毒 4 本（圧縮でも切る→1 赤・rows-only の床を外す→2 赤・onePage で breaker を呼ぶ→2 赤・permissions の null 化は onePage と二重＝消した）。掃き（`sessions/p829/svg2`）998 冊 1199 svg で差 1＝perf-sd40 だけ。⚠️ perf は測っていない（1 頁の本も breaker の DP を通るようになった・perf の島は一時停止中）。
-
-★ `-End p829 -DiffBase 9fb186afb`（`end.log`）＝full **11232 / 0 / 2 / 11234**・門 全 OK。棚卸し: APPROXIMATIONS 2 点減（`InterSystemPairMinimum` の divergence ⑴⑶ の札＝呼び手が 1 つになって消えた）・crop の札は書き直し（LILYSHARP-OWN, DECLARED のまま）・magic は行番号だけ。7.5: Core `+` 109・`-` 299 行・OWN は crop 1 本に。7.6: 意味は LP（page-breaking の鎖・one-page-breaking.cc）・crop だけ Lily# 独自。7.7: perf 未測定（上）。commit `5a36dedf5`＋docs。push はユーザー。
-判定: §2 D は閉じた。次は第814 末の決定 ④ §2 H ⑷（譜ごとに違う調の行末 courtesy・まず LP 双子）か ⑤ §2 H ⑴、①② は文法の承認待ち、P6 はユーザー判断。(a) 今便の文脈は使わない／(b) 会話は 3 便ぶん・まだ取り違えは無い／(c) 別の島 ⇒ **この会話で続けてよい**（`-Start p830` から）。
 ## 2. 開いている作業
 
 ### U. ユーザー報告（2026-08-29・第286 起票）← **順に着手。ユーザーが優先度を与えた**
