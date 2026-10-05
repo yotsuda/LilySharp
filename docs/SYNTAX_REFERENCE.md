@@ -1677,6 +1677,7 @@ keys (`--set Stem.thickness=1.5`, and `LedgerLine.thickness=1.0,0.1` with a comm
 | `lineThickness` | 0.1 | the line every other one is a multiple of, in staff spaces |
 | `StaffLine.thickness` | 1.0 | the staff's lines, in line thicknesses — and, as in LilyPond, every line stated in them follows: stems, ledger lines, ties, slurs, hairpins, brackets. The bar lines read `lineThickness` alone and stay |
 | `LedgerLine.thickness` | 1.0 0.1 | ledger lines: staff line thicknesses, plus staff spaces |
+| `LedgerLine.lengthFraction` | 0.25 | how far a ledger line reaches past its note head on each side, in that head's widths (a black head's ledger is 1.96 staff spaces long, at 0.4 it is 2.35). The notes are spaced as before, as in LilyPond |
 | `Stem.thickness` | 1.3 | stems, in staff line thicknesses |
 | `Stem.lengthFraction` | 1.0 | every stem's length, beamed or not, times this (a grace note's and a cue's keep their own) |
 | `Beam.thickness` | 0.48 | beams, in staff spaces — the beams are placed for it, as LilyPond places them |

@@ -665,8 +665,8 @@ LayoutEntry    = 'markTempo' , MarkArrangement
                | 'voltaBracket' , VoltaLength        (* VoltaLength: 'all' | 'line' | Integer >= 1 — §6 StructureVolta *)
                | StyleKey , Number                     (* > 0, no unit *)
                | 'LedgerLine.thickness' , Number , Number ;   (* >= 0, not both 0 *)
-StyleKey       = 'lineThickness' | 'StaffLine.thickness' | 'Stem.thickness'
-               | 'Stem.lengthFraction' | 'Beam.thickness'
+StyleKey       = 'lineThickness' | 'StaffLine.thickness' | 'LedgerLine.lengthFraction'
+               | 'Stem.thickness' | 'Stem.lengthFraction' | 'Beam.thickness'
                | 'BarLine.thinThickness' | 'BarLine.thickThickness' ;   (* a dotted key is a word, a
                                                    dot and a word with nothing between *)
 ChordNameMode  = 'shape' | 'sounding' | 'both' ;
@@ -701,7 +701,9 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
    space) is the line every other is a multiple of; StaffLine.thickness (1.0) the staff's
    lines, and every line stated in them follows (stems, ledger lines, ties, slurs, hairpins,
    brackets) while the bar lines read lineThickness alone, as LilyPond's do;
-   LedgerLine.thickness 1.0 0.1 staff line thicknesses plus staff spaces; Stem.thickness
+   LedgerLine.thickness 1.0 0.1 staff line thicknesses plus staff spaces;
+   LedgerLine.lengthFraction (0.25) how far a ledger line reaches past its head on each
+   side, in head widths — the spacing does not move, as LilyPond's; Stem.thickness
    (1.3) in staff line thicknesses; Stem.lengthFraction (1.0) every stem's length, a grace's
    and a cue's keep their own; Beam.thickness (0.48) in staff spaces — the beams are placed
    for it; BarLine.thinThickness (1.9) and BarLine.thickThickness (6.0) in line

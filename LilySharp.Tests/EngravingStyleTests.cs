@@ -45,12 +45,13 @@ public class EngravingStyleTests
     public void TheKeys_SetLilyPondsProperties()
     {
         var s = StyleOf("lineThickness=0.15", "StaffLine.thickness=1.2", "LedgerLine.thickness=2,0.05",
-            "Stem.thickness=2", "Stem.lengthFraction=1.2", "Beam.thickness=0.6",
+            "LedgerLine.lengthFraction=0.4", "Stem.thickness=2", "Stem.lengthFraction=1.2", "Beam.thickness=0.6",
             "BarLine.thinThickness=3", "BarLine.thickThickness=7");
         Assert.Equal(0.15, s.LineThickness);
         Assert.Equal(1.2, s.StaffSymbolThickness);
         Assert.Equal(2, s.LedgerLineThicknessLines);
         Assert.Equal(0.05, s.LedgerLineThicknessSpaces);
+        Assert.Equal(0.4, s.LedgerLengthFraction);
         Assert.Equal(2, s.StemThickness);
         Assert.Equal(1.2, s.StemLengthFraction);
         Assert.Equal(0.6, s.BeamThickness);
@@ -67,6 +68,7 @@ public class EngravingStyleTests
     [InlineData("LedgerLine.thickness=1")]
     [InlineData("LedgerLine.thickness=0,0")]
     [InlineData("LedgerLine.thickness=1,-0.1")]
+    [InlineData("LedgerLine.lengthFraction=0")]
     [InlineData("Stem.length=3.5")]
     public void AValueThatDoesNotRead_IsRefused(string setting)
     {
@@ -146,6 +148,39 @@ public class EngravingStyleTests
         string set = Svg(Book, "StaffLine.thickness=2");
         Assert.Equal(["0.200", "0.260", "0.300"], StrokeWidths(set));      // staff, 1.3 × 0.2, 0.2 + 0.1
         Assert.Equal(["0.19"], BarWidths(set));
+    }
+
+    private static double[] LedgerLengths(string svg) =>
+        [.. Regex.Matches(svg, "<line x1=\"([-\\d.]+)\" y1=\"[-\\d.]+\" x2=\"([-\\d.]+)\"[^>]*stroke-width=\"0.200\"")
+            .Select(m => double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture)
+                         - double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture))
+            .Order()];
+
+    /// <summary>
+    /// The 27 ledger lines LilyPond 2.26.0 draws for the same book at its default and under
+    /// <c>\override LedgerLineSpanner.length-fraction = #0.4</c> (Lab sessions/p824/ledger, the
+    /// <c>lysc ly --pin-fonts</c> twin): black heads 1.9563 → 2.3476, half 2.0661 → 2.4793, whole
+    /// 2.9430 → 3.5316 — each head's width × (1 + 2 × length-fraction). LilyPond's spacing rods
+    /// read minimum-length-fraction, so nothing else on the page moves, as there.
+    /// </summary>
+    [Fact]
+    public void TheLedgerLength_IsLilyPonds_AndMovesNothingElse()
+    {
+        string book = Book.Replace("e2 c''2 |", "e2 c''2 | a,1 |", StringComparison.Ordinal);
+        string plain = Svg(book);
+        string set = Svg(book, "LedgerLine.lengthFraction=0.4");
+        void AreLilyPonds(double black, double half, double whole, double[] drawn)
+        {
+            double[] lilyPond = [.. Enumerable.Repeat(black, 22).Concat(Enumerable.Repeat(half, 3))
+                .Concat(Enumerable.Repeat(whole, 2)).Order()];
+            Assert.Equal(lilyPond.Length, drawn.Length);
+            for (int i = 0; i < drawn.Length; i++)
+                Assert.InRange(drawn[i] - lilyPond[i], -0.015, 0.015);   // the svg's two decimals
+        }
+        AreLilyPonds(1.9563, 2.0661, 2.9430, LedgerLengths(plain));
+        AreLilyPonds(2.3476, 2.4793, 3.5316, LedgerLengths(set));
+        static string Rest(string svg) => Regex.Replace(svg, "<line[^>]*stroke-width=\"0.200\"/>", "");
+        Assert.Equal(Rest(plain), Rest(set));
     }
 
     private const string Beamed = """
@@ -235,11 +270,12 @@ public class EngravingStyleTests
         string Twin(string layout) => new Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(
             layout + "part m { }\nsection A { m { c'1 | } }\nform main { A }\nscore main { staff m }\n"));
         string styled = Twin("layout { lineThickness 0.15  StaffLine.thickness 1.2  LedgerLine.thickness 2 0.1  "
-            + "Stem.thickness 2  Stem.lengthFraction 1.2  Beam.thickness 0.6  BarLine.thinThickness 3  BarLine.thickThickness 7 }\n");
+            + "LedgerLine.lengthFraction 0.4  Stem.thickness 2 Stem.lengthFraction 1.2  Beam.thickness 0.6  BarLine.thinThickness 3  BarLine.thickThickness 7 }\n");
         foreach (string line in new[]
         {
             "line-thickness = 0.75\\pt", "\\override StaffSymbol.thickness = #1.2",
-            "\\override StaffSymbol.ledger-line-thickness = #'(2 . 0.1)", "\\override Stem.thickness = #2",
+            "\\override StaffSymbol.ledger-line-thickness = #'(2 . 0.1)",
+            "\\override LedgerLineSpanner.length-fraction = #0.4", "\\override Stem.thickness = #2",
             "\\override Stem.length-fraction = #1.2", "\\override Beam.beam-thickness = #0.6",
             "\\override BarLine.hair-thickness = #3", "\\override BarLine.thick-thickness = #7",
         })

@@ -211,7 +211,7 @@ internal static class EngravingDefaults
     /// ledger_extent = head_extent widened by length-fraction·head_width;
     /// (length-fraction . 0.25) per scm/define-grobs.scm LedgerLineSpanner.
     /// </remarks>
-    public const double LedgerLengthFraction = 0.25;
+    public static double LedgerLengthFraction => EngravingStyle.Current.LedgerLengthFraction;
 
     // === Stems ===
 

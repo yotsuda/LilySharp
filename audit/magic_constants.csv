@@ -962,7 +962,6 @@
 "Svg/EngravingDefaults.cs","176","0.45","public const double SystemStartBracketThickness = 0.45;","LILYPOND-REF: scm/define-grobs.scm:3685-3699 ly:system-start-delimiter::print — SystemStartBracket's (thickness . 0.45), read by","Green"
 "Svg/EngravingDefaults.cs","191","1.0","public const double SystemSkylineHorizontalPadding = 1.0;","LILYPOND-REF: lily/page-layout-problem.cc:618-629 append_system —","Green"
 "Svg/EngravingDefaults.cs","202","1.0","EngravingStyle.Current.LedgerLineThicknessLines * StaffLineThickness + EngravingStyle.Current.LedgerLineThicknessSpaces * 1.0;","LILYPOND-REF: lily/staff-symbol.cc:337-344 get_ledger_line_thickness;","Green"
-"Svg/EngravingDefaults.cs","214","0.25","public const double LedgerLengthFraction = 0.25;","LILYPOND-REF: lily/ledger-line-spanner.cc:204-233 —","Green"
 "Svg/EngravingDefaults.cs","234","0.08","public const double BlotDiameter = 0.08;","LILYPOND-REF: lily/flag.cc:183-196 Flag::internal_calc_y_offset — <c>stem_extent[d] - d * blot / 2</c>.","Green"
 "Svg/EngravingDefaults.cs","245","2.5","public const double MinStemLength = 2.5;","LILYPOND-REF: lily/stem.cc:481-596 internal_calc_stem_end_position.","Green"
 "Svg/EngravingDefaults.cs","246","3.5","public const double DefaultStemLength = 3.5;","LILYPOND-REF: lily/stem.cc:481-596 internal_calc_stem_end_position.","Green"

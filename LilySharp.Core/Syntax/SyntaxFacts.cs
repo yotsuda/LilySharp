@@ -386,7 +386,7 @@ internal static class SyntaxFacts
          "chordQualities", "minorChords", "chordDiagrams", "chordNames", "chordList", "voltaBracket",
          // The engraving style (Svg.EngravingStyle, 2026-10-05): a number each, the dotted ones
          // a grob's property (`Stem.thickness 1.5`), cut by the entry walker as one key.
-         "lineThickness", "StaffLine.thickness", "LedgerLine.thickness",
+         "lineThickness", "StaffLine.thickness", "LedgerLine.thickness", "LedgerLine.lengthFraction",
          "Stem.thickness", "Stem.lengthFraction", "Beam.thickness",
          "BarLine.thinThickness", "BarLine.thickThickness"];
 

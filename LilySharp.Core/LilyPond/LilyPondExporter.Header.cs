@@ -79,6 +79,7 @@ public sealed partial class LilyPondExporter
         Line(s.StaffSymbolThickness != d.StaffSymbolThickness, "StaffSymbol.thickness = #" + N(s.StaffSymbolThickness));
         Line(s.LedgerLineThicknessLines != d.LedgerLineThicknessLines || s.LedgerLineThicknessSpaces != d.LedgerLineThicknessSpaces,
             "StaffSymbol.ledger-line-thickness = #'(" + N(s.LedgerLineThicknessLines) + " . " + N(s.LedgerLineThicknessSpaces) + ")");
+        Line(s.LedgerLengthFraction != d.LedgerLengthFraction, "LedgerLineSpanner.length-fraction = #" + N(s.LedgerLengthFraction));
         Line(s.StemThickness != d.StemThickness, "Stem.thickness = #" + N(s.StemThickness));
         Line(s.StemLengthFraction != d.StemLengthFraction, "Stem.length-fraction = #" + N(s.StemLengthFraction));
         Line(s.BeamThickness != d.BeamThickness, "Beam.beam-thickness = #" + N(s.BeamThickness));

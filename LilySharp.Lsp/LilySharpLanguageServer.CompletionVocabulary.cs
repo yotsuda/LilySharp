@@ -810,6 +810,7 @@ public sealed partial class LilySharpLanguageServer
         "lineThickness" => "The line every other line is a multiple of, in staff spaces (default 0.1)",
         "StaffLine.thickness" => "Staff lines, in line thicknesses (default 1.0); stems, ledger lines, ties and slurs follow, bar lines do not",
         "LedgerLine.thickness" => "Ledger lines: staff line thicknesses, then staff spaces added (default 1.0 0.1)",
+        "LedgerLine.lengthFraction" => "How far a ledger line reaches past its head on each side, in head widths (default 0.25); spacing does not change",
         "Stem.thickness" => "Stems, in staff line thicknesses (default 1.3)",
         "Stem.lengthFraction" => "Every stem's length times this, beamed or not (default 1.0)",
         "Beam.thickness" => "Beams, in staff spaces (default 0.48); the beams are placed for it",

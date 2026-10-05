@@ -214,7 +214,7 @@ file's millimetres are read through it — and a `systemsPerPage` setting clears
 The keys that came in for training data are the page's (`staffSpace`, `systemsPerPage`,
 `minSystemsPerPage`, `maxSystemsPerPage`, `measuresPerSystem`, `shortestDurationSpace`) and
 the engraving style's (`lineThickness`, `StaffLine.thickness`, `LedgerLine.thickness`,
-`Stem.thickness`, `Stem.lengthFraction`, `Beam.thickness`, `BarLine.thinThickness`,
+`LedgerLine.lengthFraction`, `Stem.thickness`, `Stem.lengthFraction`, `Beam.thickness`, `BarLine.thinThickness`,
 `BarLine.thickThickness`) — the language documents what each means. Two notes for a reader
 of the pictures:
 

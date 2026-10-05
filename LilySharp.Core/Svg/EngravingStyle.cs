@@ -72,6 +72,14 @@ public sealed record EngravingStyle
     /// <remarks>LILYPOND-REF: lily/staff-symbol.cc:338-344 Staff_symbol::get_ledger_line_thickness.</remarks>
     public double LedgerLineThicknessSpaces { get; init; } = 0.1;
 
+    /// <summary><c>LedgerLineSpanner.length-fraction</c>: how far a ledger line reaches past its
+    /// head on each side, in that head's widths.</summary>
+    /// <remarks>LILYPOND-REF: lily/ledger-line-spanner.cc:205-230 Ledger_line_spanner::print —
+    /// <c>ledger_extent.widen (length_fraction * head_extent.length ())</c>; scm/define-grobs.scm
+    /// LedgerLineSpanner (length-fraction . 0.25). The spacing rods read the separate
+    /// <c>minimum-length-fraction</c>, so this moves no column, as there.</remarks>
+    public double LedgerLengthFraction { get; init; } = 0.25;
+
     /// <summary><c>Stem.thickness</c>, in staff line thicknesses.</summary>
     /// <remarks>LILYPOND-REF: lily/stem.cc:908-913 Stem::thickness, through Staff_symbol_referencer::line_thickness —
     /// <c>thickness × line_thickness</c>; scm/define-grobs.scm Stem (thickness . 1.3).</remarks>
