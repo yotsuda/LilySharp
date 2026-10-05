@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第825セッションの経緯
+
+### 1.1 第825セッション（2026-10-05・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。`-Start p825`（HEAD `20f5ff2b`）＝full **11208 / 0 / 2 / 11210**。§7 3.5 で第823 を ARCHIVE へ（moved 14 lines）。
+- **連桁の傾き＝`layout { Beam.damping 1 }`**（LP の `Beam.damping`）。提案書の `Beam.maxSlope` は LP に無い＝傾きを縛るのは slope_damping の `0.6·tanh(s)/(damping＋凹み)`（上限 ≈ 0.6/damping・量子化の前）。名前は私が決めた（maxSlope と名乗ると嘘になる）。0（弱めない）を許す唯一のキー（`ReadStyle` の `zeroReads`）。
+- 配管: damping は既に `BeamQuantParameters.Damping` に移植済み（読み手は `ApplySlopeDamping` だけ）。**beam の memo `s_solved` は parameters を参照で鍵にし「スレッドの状態は solve に届かない」が健全性の前提**＝style を直接読むと別の style の答えが当たる。⇒ style のスコープが damping つきの `BeamQuantParameters` を持ち（`EngravingStyle.CurrentBeamParameters`・同じ damping は同じ参照＝layout と render のスコープで memo が当たる）、`SolveLent` は memo を引く前に null を解決、`Bind` と `BeamEngraver`（`ElementCoordinator` が長く持つ）は solve のたびに読む。
+- LP 双子（Lab `sessions/p825/damp`・damping 0/1/3/10000）: 35 本の符幹が全部 Lily# − LP＝0.027〜0.036（第822 と同じ描き方の差）。網: `EngravingStyleTests.TheBeamDamping_IsLilyPonds`（3 値）・`BeamSolveMemoTests.AQuestionUnderAnotherDamping_IsSolvedAfresh`。毒 2 本（memo の前の解決を外す→1 赤＝memo の網だけが捕まえる・Bind を既定に→6 赤）。⚠️ 使い捨ての `IncrementalCompiler` プローブ（style だけを変えて再描画）は第822〜823 の `Stem.lengthFraction`・`Beam.thickness`・`lineThickness` も含め緑＝**layout ブロックを変えると増分の memo は効かない**（毒 1 も捕まえなかった）＝今の実害は無い。文書: GRAMMAR・SYNTAX_REFERENCE・CLI_REFERENCE・CHANGELOG・OMR §6（`maxSlope` → `damping ≈ 0.6/maxSlope`・水平は 10000）。
+
+★ `-End p825 -DiffBase 20f5ff2be`（`end.log`）＝full **11213 / 0 / 2 / 11215**・門 全 OK。棚卸し: 行番号の移動だけ（magic_constants・APPROXIMATIONS）。7.5: Core `+` 約 45 行・REF 1（`Beam.damping`）・OWN 0。7.6: 意味は LP（beam-quanting.cc:745-775）。7.7: 無し。commit `29ec722c4`＋docs。push はユーザー。
+判定: 次は `Dots.distance`・`Accidental.padding`（付点と臨時記号の間＝間隔の側に入る＝中）。(a) style の配管と LP 双子の計器がそのまま使える／(b) 会話は 2 便ぶん・まだ取り違えは無い／(c) 同じ島 ⇒ **この会話で続けてよい**（`-Start p826` から）。
+
 ## 以下は第824セッションの経緯
 
 ### 1.1 第824セッション（2026-10-05・YT-DELL2）
