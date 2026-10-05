@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第833セッションの経緯
+
+### 1.1 第833セッション（2026-10-05・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。`-Start p833`（HEAD `69ba114f`）＝full **11246 / 0 / 2 / 11248**。§7 3.5 で第831 を ARCHIVE へ。**床の撤去**（§2 H ⑴ の残り）。
+- 床が持つ物を LP 双子で切り分けた（Lab `sessions/p833/ch`）: **和音名だけは床の有無で同じ・LP と一致**。持つのは**ダイアグラム**と tab の数字。ダイアグラムを `MinimumDistanceAtLineStart` に入れる版を作った（双子は TextScript に esw (0 . 0.4)・esh ±inf＝min_dist に入る・`FretFrameGeometry.Box` は格子中心が原点）が、c5・chord-notes は Lily# がダイアグラムを LP より 0.47 左に描くぶん悪化＝**床の撤去は保留**（差分 `floor-removal-with-diagrams.diff`）。
+- 掃きで大きく動いた %% 反復の本を追うと、**行頭の空の小節**の別の欠陥だった: % 反復の小節は休符も描かず列が全部 unused＝LP は前置き列→小節線の 1 本の breakable pair（spacing-basic.cc:40-66・`Spring (min_dist + space, min_dist)`・伸びは space だけ）。Lily# は先頭の音への行頭 spring＋小節線同士の pair の 2 本で、両端揃えの続きの段で約 +2.0 右（pw1〜pw4・pk4）。**直した**: `LineStartColumn.EmptyBarLineStartSpring`（spring 0 を剛く min_dist − frame − pair.min にして直列が LP の 1 本と全量で一致）。台帳 `line-start.empty-bar.clef-to-bar` 8.677558（`probes/line-start-empty-bar.ly`・`RenderedGeometry.ClefToFirstBarlineOnSystem`）。毒→1 赤。掃き 998 冊で 29 svg・段割れが変わる 3 冊のうち **Le Freak の A1 が 4+12・カムフラージュの 1 段目が 6,7＝T7 ⒟⒣ が LP の割りに**。snapshot 1 枚を再ベース（ユーザー GO）。commit `641bcc171`。残り: 調号＋tab で −0.39（pk1・§2 H ⒡）。
+
+★ `-End p833 -DiffBase 69ba114f6`（`end.log`）＝full **11247 / 0 / 2 / 11249**・門 全 OK。棚卸し: 差分なし。7.5: Core `+` 75 行・REF 1（spacing-basic.cc:40-66）・OWN 0。7.6: 意味は LP（breakable pair の 1 本）。7.7: %% 記号の箱を min_dist に入れた分は観測者なし（ESB は 1 小節の %）・調号＋tab の −0.39（⒡）。commit `641bcc171`＋docs。push はユーザー。
+判定: 次は**床の撤去の掃き直し**（`sessions/p833/floor-removal-with-diagrams.diff` を今の HEAD に当てて 998 冊を掃く＝%% の本の動きは消えるはず・残る悪化は ⒠ ダイアグラムの描画位置）か ⒠ そのもの、①② は文法の承認待ち、P6 はユーザー判断。(a) 今便の差分と双子の上に立つ／(b) 会話は 2 便ぶん・圧縮は無いが文脈は重い／(c) 同じ島 ⇒ **この会話で続けてよい**（`-Start p834` から）。
+
 ## 以下は第832セッションの経緯
 
 ### 1.1 第832セッション（2026-10-05・YT-DELL2）
