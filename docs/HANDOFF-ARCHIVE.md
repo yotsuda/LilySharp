@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第831セッションの経緯
+
+### 1.1 第831セッション（2026-10-05・YT-DELL2）
+
+同じ会話の続き。第830 が見つけた**フラットの調号の 0.117** をユーザーに諮り「直す」（LP 照合→直す→動いた snapshot を見せて再ベース）。`-Start p831`（HEAD `86eaacaa`）＝full **11234 / 0 / 2 / 11236**。§7 3.5 で第829 を ARCHIVE へ。
+- **原因**: `KeySignatureGlyphs` は原点 0 から送り幅（フラットはインク幅 0.92＝0.8＋左のはみ出し 0.12）で並べる＝幅は正しいがインクが −0.12 から始まる。LP の KeySignature の stencil は grob の X からインクが始まる（extent (0 . 1.84)・Lab `sessions/p831/okn`）。**直した**: `InkFromTheLeftEdge`＝walk 全体を −min(dx＋箱の左) だけ右へ（フラット調だけ 0.12・幅は不変＝後ろは動かない）。行頭・行中の変化・行末・skyline の種が同じ walk を読む＝全部一緒に動く。
+- LP 双子（`sessions/p830/ck` dflat／dbes／dsharp／b）: F・B♭・G major の行頭と twin b の行末が 0.003／0.009 内。
+- ⚠️ 台帳 `line-start.ossia-key-alignment.flats` が −0.035 で赤＝**計器の読み違い**: LP 側は anchor（＝インクの左）で 0、Lily# 側は字形の原点を比べていた（ossia のフラットのはみ出しは小さく描かれる・LP の小さい設計では 0.108・20 の縮小では 0.085）。抽出 `OssiaKeyAlignmentOffset` をインクの左に直した＝0 のまま。
+- snapshot 11 枚を再ベース（ユーザー GO）: 差分 24 行＝**全部フラットの字形が +0.12・他 0**。掃き 998 冊 1199 svg で 163 枚・9692 行＝**全部フラット（重フラット含む）+0.12・他 0**。網 `KeySignatureInkTests`（LP の clef→最初の臨時記号 3.505／3.385）。毒（ずらさない）→13 赤。
+
+★ `-End p831 -DiffBase 86eaacaa4`（`end.log`）＝full **11237 / 0 / 2 / 11239**・門 全 OK。棚卸し: 差分なし。7.5: Core は `InkFromTheLeftEdge` 1 本（REF 1＝break-alignment-interface.cc:241-243）・OWN 0。7.6: 意味は LP（KeySignature の extent が 0 から）。7.7: ossia のフラットのはみ出しは 20 の縮小（LP は小さい設計）＝原点で 0.023 違う（インクの左は一致）。commit `f0f24f676`＋docs。push はユーザー。
+判定: 次は ⑤ §2 H ⑴（行頭の grace／歌詞の独立列）、①② は文法の承認待ち、P6 はユーザー判断。(a) 今便の文脈は使わない／(b) 会話は 5 便ぶん・まだ取り違えは無いが長い／(c) 別の島 ⇒ **新しい会話でもこの会話でもよい＝(b) を重く見て新しい会話を勧める**（`-Start p832` から）。
 ## 以下は第830セッションの経緯
 
 ### 1.1 第830セッション（2026-10-05・YT-DELL2）
