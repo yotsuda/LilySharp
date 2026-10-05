@@ -395,9 +395,23 @@ internal static class FretFrameGeometry
 
         // The box: the strings' own reach (half a thickness past the end strings, the overhang
         // and half a thickness under the last fret), the X / O row, the label, the fingers.
-        double reach = System.Math.Max(half, xoHalfWidth);
-        double left = -reach;
-        double right = (n - 1) * s + reach;
+        // Each END string reaches by what stands on it: its X / O, or a dot's ring (the radius
+        // and half the ring's line), at least half a string. The stencil's extent is the union.
+        // LILYPOND-REF: scm/fret-diagrams.scm:648-735 draw-dots — make-circle-stencil dot-radius sth.
+        // MEASURED (2.26.0, Lab sessions/p835/fb ext2): 1;3;3;2;1;1; reaches (-1.665 . 3.885)
+        // about the head, a dot on either end string; until session 835 the box took only the
+        // widest X / O for both ends and lost the ring's 0.25 there.
+        // An X / O is a centred TEXT stencil, so it reaches half its advance, not half its ink.
+        double EndReach(int i)
+        {
+            int f = FretAt(spec, i);
+            var mark = f < 0 ? x : f == 0 ? o : null;
+            return System.Math.Max(half, mark is { } m
+                ? fonts.Advance(m.Text, m.Em, TextRole.FretFrame, style) / 2
+                : DotRadius * s + half);
+        }
+        double left = -EndReach(0);
+        double right = (n - 1) * s + EndReach(n - 1);
         if (fretLabel is { } fl2)
             right = System.Math.Max(right, labelCentreX + fl2.Width / 2);
         double top = xoCentre is { } xc ? xc + xoHeight / 2 : gridTop + aboveTop;

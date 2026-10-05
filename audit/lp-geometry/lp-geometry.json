@@ -3142,8 +3142,50 @@
       "probe": "line-start-diagram.ly",
       "score": "LSD",
       "lilypond": 8.574495,
-      "residual": -0.003639,
-      "why": "OPENED AND CLOSED IN SESSION 834 (+0.12 with the floor; +0.47 with the box but the old centring; -0.003639 now). The last 0.0036 is not split: it is where Lily#'s box (FretFrameGeometry.Box) and LilyPond's stencil extent disagree on this diagram's left or right edge (LilyPond reads (-1.689495 . 3.942156) about the head for x02010, Lab sessions/p834/tw/ll/lp-ext.log). A chord diagram on the first note of a first line (`e'4@chord(C x32010)`): the prefix's Staff_spacing wish is floored at 0.3 + min_dist (lily/staff-spacing.cc:210-215), and min_dist (Paper_column::minimum_distance) reaches the diagram, which the twin writes as a TextScript with \\textLengthOn's two tweaks. CLEF 0.8, HEAD 9.374495. Two Lily# faults met here: the line-start wish was floored at the opening bar's own spring minimum (ownFixedFloor, Lily#'s stand-in for every first-column grob it did not price), and the grid was drawn centred on the head where LilyPond aligns the stencil at align-dir -0.4 (scm/fret-diagrams.scm make-fret-diagram) with the TextScript's origin on the head's (both alignments #f) -- 0.45 left. LineStartColumn.AddFirstColumnDiagrams puts the box in min_dist, and FretFrameGeometry.GridCentreFromColumnOrigin places it for the drawing, the bar's diagram rods and this box alike."
+      "residual": 0.0,
+      "why": "OPENED IN SESSION 834 (+0.12 with the floor; +0.47 with the box but the old centring; -0.003639 at the end of 834), CLOSED IN SESSION 835: the last 0.0036 was the box's ends -- LilyPond's extent is the union of what stands on each END string, an X / O by its text box (half its advance, not half its ink) or a dot's ring (FretFrameGeometry.Measure's EndReach; x02010 reads (-1.689495 . 3.942156) about the head, Lab sessions/p834/tw/ll/lp-ext.log). A chord diagram on the first note of a first line (`e'4@chord(C x32010)`): the prefix's Staff_spacing wish is floored at 0.3 + min_dist (lily/staff-spacing.cc:210-215), and min_dist (Paper_column::minimum_distance) reaches the diagram, which the twin writes as a TextScript with \\textLengthOn's two tweaks. CLEF 0.8, HEAD 9.374495. Two Lily# faults met here: the line-start wish was floored at the opening bar's own spring minimum (ownFixedFloor, Lily#'s stand-in for every first-column grob it did not price), and the grid was drawn centred on the head where LilyPond aligns the stencil at align-dir -0.4 (scm/fret-diagrams.scm make-fret-diagram) with the TextScript's origin on the head's (both alignments #f) -- 0.45 left. LineStartColumn.AddFirstColumnDiagrams puts the box in min_dist, and FretFrameGeometry.GridCentreFromColumnOrigin places it for the drawing, the bar's diagram rods and this box alike."
+    },
+    "diagram.barline-to-note": {
+      "probe": "diagram-neighbours.ly",
+      "score": "DN1",
+      "lilypond": 2.089495,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 835 (-0.30 -> 0; the last 0.0036 was the box's left edge, see line-start.clef-to-first-note.diagram). x02010 on the first quarter after a bar line. The twin's TextScript carries \\textLengthOn's two tweaks, so its box (-1.6895 . 3.9422 + 0.4) is in the bar line -> note Staff_spacing's min_dist = the bar's own 0.1 + 1.6895, and fixed is lifted to min_dist + 0.3 (lily/staff-spacing.cc:210-215): BAR 14.645045 (+0.19 ink), HEAD 16.924540. Lily#'s BarlineToFirstColumnSpring never saw the diagram, and SpacingRules.ApplyFretFrameSpacing laid only a rod from the bar edge, short of the bar's 0.1; it now lifts spring 0 as Staff_spacing does."
+    },
+    "diagram.note-to-next-note": {
+      "probe": "diagram-neighbours.ly",
+      "score": "DN1",
+      "lilypond": 4.542156,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 835 (-1.54 -> 0; the last 0.0085 was the box's right edge -- the O over the top string by half its advance). DN1's diagram against the NEXT quarter: the box's extra-spacing-height is infinite, so it meets the next column's whole skyline -- 3.9422 + 0.4 + the head's own 0.1 + the rod padding 0.1 (HEAD 16.924540 -> 21.466696), where a bare quarter pair is 3.002245. Lily# rodded a diagram only against another diagram and the bar edges; ApplyFretFrameSpacing now rods it against the note columns either side, off their skylines."
+    },
+    "diagram.note-before-to-note": {
+      "probe": "diagram-neighbours.ly",
+      "score": "DN2",
+      "lilypond": 3.193695,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 835 (-0.19 -> 0). x02010 on a bar's last quarter, against the quarter BEFORE it: that column's right skyline (head + 0.1) + the box's 1.6895 + 0.1 (HEAD 14.589490 -> 17.783185). The mirror of diagram.note-to-next-note."
+    },
+    "diagram.note-to-barline": {
+      "probe": "diagram-neighbours.ly",
+      "score": "DN2",
+      "lilypond": 4.542156,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 835 (-0.11 -> 0). DN2's diagram against the closing bar line: 3.9422 + 0.4 + the bar line's own extra-spacing-width 0.1 + the rod padding 0.1 (HEAD 17.783185 -> BAR 22.325341). Lily#'s bar-edge rod left out the bar's 0.1."
+    },
+    "diagram.dot-ends.note-before-to-note": {
+      "probe": "diagram-neighbours.ly",
+      "score": "DN3",
+      "lilypond": 3.169200,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 835. 133211 on a bar's last quarter: no X / O row, a dot on the LOW end string, so the box's left end is the dot's ring -- radius 0.25 + half the ring's line 0.025 past the string (scm/fret-diagrams.scm draw-dots, make-circle-stencil). HEAD 14.589490 -> 17.758690. FretFrameGeometry.Measure's box took half a string there (the widest X / O for both ends, and none here)."
+    },
+    "diagram.dot-ends.note-to-barline": {
+      "probe": "diagram-neighbours.ly",
+      "score": "DN3",
+      "lilypond": 4.485000,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 835. DN3's right end, a dot on the top string: 3.885 + 0.4 + the bar line's 0.1 + the rod padding 0.1 (HEAD 17.758690 -> BAR 22.243690). The mirror of diagram.dot-ends.note-before-to-note."
     },
     "line-start.clef-to-first-note.tab-continuation": {
       "probe": "line-start-diagram.ly",

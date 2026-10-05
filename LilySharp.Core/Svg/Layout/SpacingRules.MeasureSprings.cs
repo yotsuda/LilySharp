@@ -1406,7 +1406,19 @@ internal static partial class SpacingRules
     ///   every rod carries.
     /// ⚠️ The rods are priced to the BAR EDGES (springs 0 and Count), as the chord row's are
     /// (<see cref="ApplyChordRowSpacing"/>): the springs are per measure, so no rod spans the
-    /// bar column, and two diagrams either side of a bar line clear it each.
+    /// bar column, and two diagrams either side of a bar line clear it each. The bar line
+    /// reaches its own 0.1 toward the box, and a diagram on the bar's first column is in the
+    /// bar line's Staff_spacing min_dist, lifted by 0.3 (lily/staff-spacing.cc:210-215).
+    /// <para>
+    /// Being unbounded in height, the box meets the neighbouring NOTE columns too, whatever
+    /// their ink's height: rods to the column before and after it off their whole skylines.
+    /// MEASURED (2.26.0, Lab sessions/p835/fb, x02010 on a quarter): the bar line → that note
+    /// 2.2795 (0.19 + 0.1 + 1.6895 + 0.3), the note → the next quarter 4.542 (3.942 + 0.4 +
+    /// 0.1 + 0.1) where a bare pair is 3.002, and on the bar's last quarter the note → the bar
+    /// line 4.542 and the quarter before → it 3.194. Until session 835 only the diagram-to-diagram
+    /// and bar-edge rods were laid, short of the bar's 0.1, and every one of these stood 0.19 to
+    /// 1.54 short. Rodded on this staff's columns: LilyPond's box meets every staff's.
+    /// </para>
     /// </remarks>
     public static ImmutableArray<Spring> ApplyFretFrameSpacing(
         Rendering.ScoreTextMetrics fonts,
@@ -1424,6 +1436,7 @@ internal static partial class SpacingRules
         const double TextLengthRightExtra = 0.4;
         // Per column: how far its diagram reaches left and right of the column (0 = none).
         double[]? left = null, right = null;
+        bool[]? has = null;
         var voices = staff.Voices;
         foreach (var art in articulations)
         {
@@ -1452,29 +1465,104 @@ internal static partial class SpacingRules
             double centre = FretFrameGeometry.GridCentreFromColumnOrigin(box);
             left ??= new double[timings.Count];
             right ??= new double[timings.Count];
+            has ??= new bool[timings.Count];
+            has[t] = true;
             left[t] = Math.Max(left[t], -(centre + box.Left));
             right[t] = Math.Max(right[t], centre + box.Right + TextLengthRightExtra);
         }
-        if (left is null || right is null)
+        if (left is null || right is null || has is null)
             return springs;
 
         const double rodPadding = 0.1;
+        // A bar line's own reach past its ink toward either neighbour: the default
+        // extra-spacing-width (BarlineToColumnMinimum's box).
+        const double barReach = DefaultExtraSpacingWidth;
         var rods = new List<(int Left, int Right, double Distance)>();
         int prev = -1;
-        for (int t = 0; t < timings.Count; t++)
+        int count = timings.Count;
+        for (int t = 0; t < count; t++)
         {
-            if (left[t] <= 0 && right[t] <= 0)
+            if (!has[t])
                 continue;
             // spring s spans column s−1 → column s, so columns a → b are springs a+1 … b, and
             // the bar's left edge → column b is springs 0 … b.
             rods.Add(prev < 0
-                ? (0, t + 1, left[t] + rodPadding)
+                ? (0, t + 1, barReach + left[t] + rodPadding)
                 : (prev + 1, t + 1, right[prev] + left[t] + rodPadding));
+            // The box's height is infinite, so it meets the NEIGHBOURING note columns too, at
+            // whatever height their ink stands — not only another diagram.
+            if (t > 0 && !has[t - 1] && ColumnItems(t - 1) is { } before)
+                rods.Add((t, t + 1, RightSkylineToBox(before, left[t]) + rodPadding));
+            if (t + 1 < count && !has[t + 1] && ColumnItems(t + 1) is { } after)
+                rods.Add((t + 1, t + 2, BoxToLeftSkyline(right[t], after) + rodPadding));
             prev = t;
         }
-        rods.Add((prev + 1, timings.Count + 1, right[prev] + rodPadding));
-        return SpringSolver.ApplyRods(springs, rods);
+        rods.Add((prev + 1, count + 1, right[prev] + barReach + rodPadding));
+        var result = SpringSolver.ApplyRods(springs, rods);
+
+        // A diagram on the bar's FIRST column is in the bar line → note Staff_spacing's min_dist,
+        // whose fixed distance is then lifted to min_dist + 0.3 (BarlineToFirstColumnSpring's
+        // Wish, which never saw the diagram). The spring starts at the bar line's ink right edge.
+        if (has[0])
+        {
+            var s0 = result[0];
+            double minDist = barReach + left[0];
+            double fixedDistance = Math.Max(s0.IdealDistance - s0.InverseCompressStrength,
+                minDist + StaffSpacingFixedHeadroom);
+            double ideal = Math.Max(s0.IdealDistance, fixedDistance);
+            result = result.SetItem(0, new Spring(ideal, s0.MinDistance,
+                s0.InverseStretchStrength, ideal - fixedDistance));
+        }
+        return result;
+
+        // Everything starting at column t on this staff that engraves a grob (a spacer does not).
+        List<MusicItem>? ColumnItems(int t)
+        {
+            List<MusicItem>? found = null;
+            foreach (var voice in voices)
+            {
+                if (measureIndex >= voice.Measures.Length)
+                    continue;
+                var onset = Fraction.Zero;
+                foreach (var item in voice.Measures[measureIndex].Items)
+                {
+                    if (onset == timings[t] && item is not RestItem { IsSpacer: true })
+                        (found ??= new List<MusicItem>()).Add(item);
+                    onset += item.Duration;
+                }
+            }
+            return found;
+        }
+
+        // The box against a column's whole skyline, origin to origin (the box is unbounded in Y).
+        double RightSkylineToBox(List<MusicItem> items, double boxLeftReach)
+        {
+            var box = HorizontalSkyline.RentBox(-InfiniteBoxHalfHeight, InfiniteBoxHalfHeight,
+                -boxLeftReach, 0.0, HorizontalDirection.Left);
+            double d = 0;
+            foreach (var item in items)
+                d = Math.Max(d, ItemSkylineFactory.SharedRightSkylineAtColumn(item, 0, staffY: 0, staff.Lines)
+                    .Distance(box));
+            HorizontalSkyline.GiveBox(box);
+            return d;
+        }
+
+        double BoxToLeftSkyline(double boxRightReach, List<MusicItem> items)
+        {
+            var box = HorizontalSkyline.RentBox(-InfiniteBoxHalfHeight, InfiniteBoxHalfHeight,
+                0.0, boxRightReach, HorizontalDirection.Right);
+            double d = 0;
+            foreach (var item in items)
+                d = Math.Max(d, box.Distance(
+                    ItemSkylineFactory.SharedLeftSkylineAtColumn(item, 0, staffY: 0, staff.Lines)));
+            HorizontalSkyline.GiveBox(box);
+            return d;
+        }
     }
+
+    /// <summary>Half the height of a box that stands for <c>extra-spacing-height (-inf . +inf)</c>
+    /// — far past any staff.</summary>
+    private const double InfiniteBoxHalfHeight = 1e4;
 
 
     // ========================================

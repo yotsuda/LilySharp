@@ -13162,6 +13162,59 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A chord diagram on the first quarter after a bar line. Its box — the twin's TextScript
+    /// with \textLengthOn's extra-spacing-width (-0.0 . 0.4) and infinite extra-spacing-height —
+    /// joins the column's skyline at every height, so it is in the bar line's Staff_spacing
+    /// min_dist (lifted by 0.3, lily/staff-spacing.cc:210-215) and rods against the next
+    /// quarter: bar ink right → head 2.089495 (BAR 14.645045, HEAD 16.924540), head → next head
+    /// 4.542156 (HEAD 21.466696). Lily# rodded the box only against diagrams and bar edges until
+    /// session 835: 1.79 and 3.00.
+    /// </summary>
+    /// <remarks>LilyPond twin: audit/lp-geometry/probes/diagram-neighbours.ly DN1.</remarks>
+    private static readonly string DN1 = """
+        paper { raggedRight }
+        octave absolute
+        time 4/4
+        part m { clef treble }
+        section A { m { e'1 | c'4@diagram(x02010) c' c' c' | } }
+        form main { A }
+        score main "DN1" { staff m }
+        """;
+
+    /// <summary>
+    /// <see cref="DN1"/>'s diagram on a bar's LAST quarter: the quarter before → it 3.193695
+    /// (HEAD 14.589490, 17.783185), it → the bar line 4.542156 (BAR 22.325341). Lily# read 3.00
+    /// and 4.43 until session 835.
+    /// </summary>
+    /// <remarks>LilyPond twin: audit/lp-geometry/probes/diagram-neighbours.ly DN2.</remarks>
+    private static readonly string DN2 = """
+        paper { raggedRight }
+        octave absolute
+        time 4/4
+        part m { clef treble }
+        section A { m { c'4 c' c' c'@diagram(x02010) | e'1 | } }
+        form main { A }
+        score main "DN2" { staff m }
+        """;
+
+    /// <summary>
+    /// <see cref="DN2"/> with <c>133211</c>: no X / O row, a dot on both END strings, so the box
+    /// ends at the dots' rings (radius 0.25 + half the ring's line), (-1.665 . 3.885) about the
+    /// head — the quarter before → it 3.169200, it → the bar line 4.485000. Lily#'s box took
+    /// half a string at those ends until session 835 (FretFrameGeometry.Measure's EndReach).
+    /// </summary>
+    /// <remarks>LilyPond twin: audit/lp-geometry/probes/diagram-neighbours.ly DN3.</remarks>
+    private static readonly string DN3 = """
+        paper { raggedRight }
+        octave absolute
+        time 4/4
+        part m { clef treble }
+        section A { m { c'4 c' c' c'@diagram(133211) | e'1 | } }
+        form main { A }
+        score main "DN3" { staff m }
+        """;
+
+    /// <summary>
     /// The SAME two sharps as a CUSTOM (non-traditional) signature. LilyPond has only one
     /// key model — keyAlterations — so its KCC dump is byte-identical to KCS; the pair's
     /// disagreement on the Lily# side isolates the custom-key reserve/draw split
@@ -17802,6 +17855,13 @@ internal static class LpGeometryProbes
         // What the first column owes the prefix: a diagram's box, a tab's digits (LSD's, LST's remarks).
         new("line-start.clef-to-first-note.diagram", LSD, g => g.ClefToFirstNoteByClefRank(0)),
         new("line-start.clef-to-first-note.tab-continuation", LST, g => g.ClefToFirstNoteByClefRank(1)),
+        // A diagram's box against the columns beside it (DN1's, DN2's remarks).
+        new("diagram.barline-to-note", DN1, g => g.BarlineRightToNextNotehead(0)),
+        new("diagram.note-to-next-note", DN1, g => g.NoteheadAnchorStep(1)),
+        new("diagram.note-before-to-note", DN2, g => g.NoteheadAnchorStep(2)),
+        new("diagram.note-to-barline", DN2, g => g.BarlineLeft(0) - g.NoteheadAnchor(3)),
+        new("diagram.dot-ends.note-before-to-note", DN3, g => g.NoteheadAnchorStep(2)),
+        new("diagram.dot-ends.note-to-barline", DN3, g => g.BarlineLeft(0) - g.NoteheadAnchor(3)),
         // The repeat bar line that opens the piece, PRINTED on both sides (see IRB's
         // remark). The pair is the reading: IRB opens with `|:`, IRN is the same music
         // without it, and their difference is the opener's column; the third point splits

@@ -113,13 +113,15 @@ public class FretFrameTests
     [Fact]
     public void ADefaultFrame_IsLilyPondsSize_OneStaffSpaceAStringAndAFret()
     {
-        // Six strings one staff space apart (5 wide) plus the X / O glyphs' reach each side; four
+        // Six strings one staff space apart (5 wide) plus what stands on each END string — here a
+        // dot on both, its ring 0.25 + half its 0.05 line past the string (LilyPond's extent of
+        // 3;2;o;o;o;3; is (-1.665 . 3.885), 5.55 wide; Lab sessions/p835/fb ext2); four
         // frets one space deep, the nut's box over the top line (three line thicknesses less the
         // half under the line), the X / O row xo-padding over it; the strings one fret past the
         // last row and half a line thickness more. LILYPOND-REF: scm/fret-diagrams.scm make-fret-diagram.
         var ink = Frames(Pair)[0].Ink;                       // 320003: three open, none muted
         var m = FretFrameGeometry.Measure("320003", Fonts);
-        Assert.Equal(5.0 + 2 * m.XoHalfWidth, ink.Right - ink.Left, 9);
+        Assert.Equal(5.0 + 2 * (FretFrameGeometry.DotRadius + 0.025), ink.Right - ink.Left, 9);
         Assert.Equal(4.0 + (3 * 0.05 - 0.025) + 0.2 + m.XoHeight, ink.Top, 9);
         Assert.Equal(-(1.0 + 0.025), ink.Bottom, 9);
         // The O is the text font's em at magnification 0.4: 2.2 × 0.4.
