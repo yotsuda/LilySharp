@@ -85,8 +85,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   - ⑹ の提案: 閉じた 18＋品質の表（`ChordQualityRegistry.ByToken`）を**組み立て式**に＝根音［品質 m／dim／aug／maj］［伸張 5／6／69／7／9／11／13］｛変化 `-5 +5 -9 +9 +11 -13`（今の「#/b は根音とベース専用」を保つ)｝｛`addN`｝｛`omit3`／`omit5`｝［`sus2`／`sus4`（`9sus4` 等とも組む）］［`alt`］［`/ベース`＝和音の音なら転回（その音を最低音へ）・でなければ付加ベース＝LP の `/` と `/+` を音楽的に自動判別］。表示は Ignatzek の順で上付き。Roman 行（`Imaj7`）も同じ接尾辞。
   - ⑷ の提案: 強弱 `@niente` を足す＝無音の強弱。hairpin は今どおり「次の強弱まで」で、**細い端が `@niente` に触れたら円**（`c4@decresc … g@niente`＝al niente・`c4@niente@cresc … g@f`＝dal niente）。単独なら斜体の niente。MIDI は 0 へ／0 から。太い端が niente なら警告。
 - §2 H ⑴（行頭の grace／歌詞の独立列＝`ownFixedFloor`）・⑷（譜ごとに違う調の行末 courtesy＝移調譜を列で揃える）＝**実装する**（⑷ はまず LP と双子で測る）。⑵⑶ は「内部は直列合成だが LP の出力と厳密に一致」で閉じたまま（ユーザーの理解どおり）。
-- §2 D 単一ページ経路を鎖に畳む＝**調べる**（crop を鎖で表せるか・1 頁の本がどれだけ動くかを先に測る）。土台の作り直しは「成功の見込みが高ければ着手」（保守性を高く保つ）。
-- **優先順位**: ① ⑹＋⑺（文法の承認後・⑺ は ⑹ の品質の一部）→ ② ⑷ niente（承認後）→ ③ §2 D の調査（承認待ちのあいだに着手してよい）→ ④ §2 H ⑷ の測定と移植 → ⑤ §2 H ⑴ paper column。
+- §2 D 単一ページ経路を鎖に畳む＝**畳んだ（第829）**。
+- **優先順位**: ① ⑹＋⑺（文法の承認後・⑺ は ⑹ の品質の一部）→ ② ⑷ niente（承認後）→ ③ §2 D（第829 で閉じた）→ ④ §2 H ⑷ の測定と移植 → ⑤ §2 H ⑴ paper column。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - **⑼（第762 起票・dogfood の大きい本 4 冊）は全部閉じた**（最後の 2 つ: ⑺ resume の 2 つ目の出所＝第794・⑻ 宣言した弱起の併合＝第795）。経緯は **ARCHIVE 第740〜第795 の各便**（第783 が列挙を畳んだ）。計器: Lab `sessions/p742/`（ly／midi／xml／svg の掃き）・`sessions/p753/sweep-check.ps1`（診断の掃き）・`sessions/p762/run-big.ps1`（4 冊の check＋4 出力＋LP）・`sessions/p723/svg2/sweep-all.ps1`（全 svg・p795 の `sweep/run-sweeps.ps1` が svg＋xml を束ねる）
@@ -125,6 +125,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第829セッション（2026-10-05・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。`-Start p829`（HEAD `9fb186af`）＝full **11228 / 0 / 2 / 11230**。§7 3.5 で第827 を ARCHIVE へ。①② は文法の承認待ち＝**③ §2 D に着手**（第814 の決定「成功の見込みが高ければ作り直しに着手」）。
+- **調べた**（Lab `sessions/p829/chain`・使い捨ての `LILYSHARP_ZZ829` 計器＝収まる score を鎖でも解いて system ごとの差を書く・998 冊を 1 本ずつ）: 1 頁の **682/682 score で全 system が |d|<1e-6**。違いは `audit/lpreg/perf-sd40` 1 冊＝積み上げは A4 に 0.55 余して 1 頁・鎖の breaker は last-bottom を値付けして 2 頁＝**LP 2.26.0 も 12＋1**（`sessions/p829/sd40`）。積み上げが溢れて鎖へ渡す本のうち 6 score は鎖が 1 頁に圧縮（今も紙のまま）。
+- **畳んだ**: `CreatePages` の積み上げループ（約 200 行）を消し、頁の高さがあれば `OptimalPages()`・snippet は **`OnePage()`＝LP の one-page-breaking**（one-page-breaking.cc:63-183・紙を 1e6 にして breaker を呼ばない＝`CreatePagesWithOptimalBreaking(onePage)`）。残るのは crop だけ＝**1 頁で `PageLayout.Force >= 0`（新設）なら内容の高さに切る・圧縮した頁は紙のまま**（畳む前と同じ）。`InterSystemPairMinimum` は呼び手 1 つ＝divergence ⑴⑵⑶ を畳んだ（⑴ HalfFirst に固定・⑵ rows-only の scalar 床を鎖にも＝複数頁の lead sheet の穴も閉じた・`RowsOnlySystemGapTests` が捕まえた）。
+- 網: `SinglePageChainTests`（perf-sd40 が 12＋1・圧縮した 1 頁は紙・収まる頁は切る・snippet は `systemsPerPage` でも 1 頁）。毒 4 本（圧縮でも切る→1 赤・rows-only の床を外す→2 赤・onePage で breaker を呼ぶ→2 赤・permissions の null 化は onePage と二重＝消した）。掃き（`sessions/p829/svg2`）998 冊 1199 svg で差 1＝perf-sd40 だけ。⚠️ perf は測っていない（1 頁の本も breaker の DP を通るようになった・perf の島は一時停止中）。
+
+★ `-End p829 -DiffBase 9fb186afb`（`end.log`）＝full **11232 / 0 / 2 / 11234**・門 全 OK。棚卸し: APPROXIMATIONS 2 点減（`InterSystemPairMinimum` の divergence ⑴⑶ の札＝呼び手が 1 つになって消えた）・crop の札は書き直し（LILYSHARP-OWN, DECLARED のまま）・magic は行番号だけ。7.5: Core `+` 109・`-` 299 行・OWN は crop 1 本に。7.6: 意味は LP（page-breaking の鎖・one-page-breaking.cc）・crop だけ Lily# 独自。7.7: perf 未測定（上）。commit `5a36dedf5`＋docs。push はユーザー。
+判定: §2 D は閉じた。次は第814 末の決定 ④ §2 H ⑷（譜ごとに違う調の行末 courtesy・まず LP 双子）か ⑤ §2 H ⑴、①② は文法の承認待ち、P6 はユーザー判断。(a) 今便の文脈は使わない／(b) 会話は 3 便ぶん・まだ取り違えは無い／(c) 別の島 ⇒ **この会話で続けてよい**（`-Start p830` から）。
+## 以下は第828セッションの経緯
+
 ### 1.1 第828セッション（2026-10-05・YT-DELL2）
 
 同じ会話の続き。ユーザー「すぐ実装できる訓練用の機能は全部できた？」→ 10-02 提案の残りを洗い、「価値が無い・代替があるなら作らない」（ユーザー）で振り分けた: `--batch` の行ごとの `--set`＝**作らない**（生成する `.lys` に `paper { }`／`layout { }` を書けば同じ）・boxes の音高／音価／声部＝**作らない**（生成器の `.notes` と `pos` で突き合わせられる）・黒玉より短い加線＝**作らない**（提案書の 1.3 は 0.0016 相当・今の下限で 1.307）・`minimumNoteDistance`／`measureMinimumWidth` は第818〜821 が見送り済み（LP に無い）。
@@ -133,19 +144,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 ★ `-End p828 -DiffBase 2ef342dab`（`end.log`）＝full **11228 / 0 / 2 / 11230**・門 全 OK。棚卸し: 行番号の移動だけ。7.5: Core `+` 26 行・REF 0・OWN 0（描画ループの頭のスコープだけ）。7.6・7.7: 無し。commit `59a647dd4`＋docs。push はユーザー。
 判定: 10-02 の提案は P6 を除いて閉じた。次は P6（ユーザー判断）か第814 末の決定 ①／③。(a) 今便の文脈は使わない／(b) 会話は 2 便ぶん・まだ取り違えは無い／(c) 別の島 ⇒ **この会話で続けてよい**（`-Start p829` から）。
-## 以下は第827セッションの経緯
-
-### 1.1 第827セッション（2026-10-05・YT-DELL2）
-
-新しい会話。`-Start p827`（HEAD `e47680d3`）＝full **11218 / 0 / 2 / 11220**。§7 3.5 で第825 を ARCHIVE へ。
-- **`layout { NoteHead.scale 1.1 }`＝LP の `NoteHead.font-size` を倍率で**（段数＝6·log2・負の数は `layout { }` の字句にならないので倍率にした＝名前は提案書のまま・双子は `#(magnification->font-size …)`）。grace は自分の −3 で置き換え・cue は足す（LP と同じ合成）。
-- 配管: ⑴ `GrobFontSize.StepOf` に style の段・`IsReduced` も style を見る（描画の face・大きさ・click 枠・符幹 x）／⑵ 間隔と skyline の「cue だけ」の家 `SpacingRules.CueFontOf` の横に **`HeadFontOf`**（符頭用・臨時記号は `CueFontOf` のまま）＝ItemSkylineFactory・Springs・TimingSprings・LedgerRods・`BeamGroup.HeadFont`・ElementCoordinator・`StaffAccidentalColumns` が読む／⑶ **font を渡さない読み手 25 か所**は `GlyphMetrics.StaffHeadFont`（font なしの overload と `StemAttachX(…, null)` の既定）が style を読む＝既定は Design20 そのもの／⑷ 定数の読み手（`GetColumnNoteheadWidth`・breve・スラーの基点）は `StaffHeadMagnification`。tab の dead head の static は Design20 を名指しした（TabNoteHead は別の grob・static は最初の style を掴む）。符幹の頭側の手の規則（0.15・既知の 0.036）も倍率に比例。
-- ★ **既定でも出力が動く 1 点＝cue の和音の符頭が 13 の設計で描かれる**（`DrawChord` に face の切り替えが無かった＝単音の cue は 13・和音は 20 の輪郭・位置は同じ）。LP も cue の和音を cue の設計で描く（Lab `sessions/p827/cuechord`）。snapshot `test/cue-accidentals` 1 枚を再ベース＝**ユーザー GO（第827）**。
-- LP 双子（Lab `sessions/p827/nh`・`run.ps1`・本 a/b/c×0/+1.2/−0.9）: 符頭・列・符幹 x・加線・付点・臨時記号・タイとスラーの端・強弱の動き・段の自然長が 0.01 内。残差: grace の前の小節線までの間が LP より +0.035/−0.025（既定でも 0.85 ずれている箇所）・符幹の頭側 +1.2 で 0.009。網 4 本（`TheNoteHeadScale_IsLilyPonds`・`_LineIsLilyPonds`・`_ReachesTheHeadsOnly`・キー/拒否/双子）。毒 5 本が全部赤。掃き 998 冊 1199 svg で差 3＝全部 cue の和音の face だけ。
-
-★ `-End p827 -DiffBase e47680d38`（`end.log`）＝full **11227 / 0 / 2 / 11229**・門 全 OK。棚卸し: 行番号の移動＋magic 1 点増（`StaffHeadMagnification` の 1.0・出典は file-level REF）・`slurOffset` の行の書き換え。7.5: Core `+` 約 190 行・REF 3（`magnification->font-size`・`Font_size_engraver::acknowledge_font` 2）・OWN 0。7.6: 意味は LP（font-size の合成＝font-size-engraver.cc・face の選択＝font-select.cc）。7.7: grace の前の 0.035・符幹の頭側の手の規則（どちらも既定で既にある差の拡大）。commit `9a13dfab6`＋docs。push はユーザー。
-判定: P4 は閉じた。次は P6（SMuFL・ユーザー判断）か第814 末の決定の ①（⑹＋⑺・文法の承認待ち）／③ §2 D の調査。(a) 今便の配管は使わない／(b) 会話は 1 便ぶん・重くない／(c) 別の島 ⇒ **この会話で続けてよい**（`-Start p828` から）。
-
 ## 2. 開いている作業
 
 ### U. ユーザー報告（2026-08-29・第286 起票）← **順に着手。ユーザーが優先度を与えた**
@@ -1328,7 +1326,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   ⚠️ **その −0.000042 も当時の値**——**今は −4.46e-07＝許容差（1e-06）以下**。
   <!-- ledger: page.stretched.first-staff-refpoint = -4.46e-07 -->
 - ✅ **`PageLayouter` の `i == 0` で `SystemSystem`／配置側 `TopSystem`＝欠陥ではなかった（第814・`5dfc2f994`）**: LP の改頁器は行の位置によらず system-system で値付けする（constrained-breaking.cc:548-555・top-system は配置の鎖だけ）。Lily# の 2 分岐は同じ値の 2 綴りだった＝1 行に畳んで出典を書いた。score の最後の行の score-system 分岐は「行の後」の間隔（page-breaking.cc:1166）で、Lily# の score は 1 つずつ頁割りする＝届かない。
-- **`LayoutEngine` の単一ページ経路が今も自前で積む**（二重実装・第814 に再確認＝`LayoutEngine.Pages.cs` の単一ページの積み上げは crop〈LILYSHARP-OWN, DECLARED〉と組の独自経路で、鎖の経路に畳むのは設計級＝提案だけ）。⚠️ **「force 0 なので鎖と一致する」は嘘だった**——帯の床を `SysHeight`（trailing 行の描画帯を含む）から測っていて、**行を挟む本で帯を二重計上**（第218 実測: rowgap probe 19.836 vs LP 12.000・Twinkle 23.500 vs 12.225）。**frame は `969061de` で直した**（帯の項はアンカー譜の外側線から＝PageLayouter の `HalfLast` と同型）。**二重実装そのものは残っている。**
+- ✅ ~~**`LayoutEngine` の単一ページ経路が今も自前で積む**（二重実装）~~ — **閉じた（第829）**: 1 頁に収まる score も頁の鎖で解き、crop だけを `CreatePages` に残した（snippet は LP の one-page-breaking＝鎖の `onePage`）。畳む前に測った: 682/682 score で全 system が |d|<1e-6・違いは `perf-sd40` 1 冊（鎖は last-bottom を値付けして 2 頁＝LP と同じ 12＋1）。旧文（第218 の帯の二重計上・`969061de` の経緯）は `9fb186afb` の HANDOFF §2 D にある。
 - ✅ **歌詞帯のスカラー床は X 盲目 — 閉じた**（第221・`785ade3c`。起票 `90833c84`＋対の修理 `053e2674`）。 → **本文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の同じ見出し**（第351 が落とした）
 - **Y コーパスの拡張**（`page.top-margin` / `page.bottom-margin` / `page.last-page-gap` 等）
 - ✅ ★ ~~**歌詞行が譜間の「中で」LP と別の位置に立つ**~~（2026-08-14 起票・**未着手のまま 60 便**） → **本文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の同じ見出し**（第351 が落とした）

@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第827セッションの経緯
+
+### 1.1 第827セッション（2026-10-05・YT-DELL2）
+
+新しい会話。`-Start p827`（HEAD `e47680d3`）＝full **11218 / 0 / 2 / 11220**。§7 3.5 で第825 を ARCHIVE へ。
+- **`layout { NoteHead.scale 1.1 }`＝LP の `NoteHead.font-size` を倍率で**（段数＝6·log2・負の数は `layout { }` の字句にならないので倍率にした＝名前は提案書のまま・双子は `#(magnification->font-size …)`）。grace は自分の −3 で置き換え・cue は足す（LP と同じ合成）。
+- 配管: ⑴ `GrobFontSize.StepOf` に style の段・`IsReduced` も style を見る（描画の face・大きさ・click 枠・符幹 x）／⑵ 間隔と skyline の「cue だけ」の家 `SpacingRules.CueFontOf` の横に **`HeadFontOf`**（符頭用・臨時記号は `CueFontOf` のまま）＝ItemSkylineFactory・Springs・TimingSprings・LedgerRods・`BeamGroup.HeadFont`・ElementCoordinator・`StaffAccidentalColumns` が読む／⑶ **font を渡さない読み手 25 か所**は `GlyphMetrics.StaffHeadFont`（font なしの overload と `StemAttachX(…, null)` の既定）が style を読む＝既定は Design20 そのもの／⑷ 定数の読み手（`GetColumnNoteheadWidth`・breve・スラーの基点）は `StaffHeadMagnification`。tab の dead head の static は Design20 を名指しした（TabNoteHead は別の grob・static は最初の style を掴む）。符幹の頭側の手の規則（0.15・既知の 0.036）も倍率に比例。
+- ★ **既定でも出力が動く 1 点＝cue の和音の符頭が 13 の設計で描かれる**（`DrawChord` に face の切り替えが無かった＝単音の cue は 13・和音は 20 の輪郭・位置は同じ）。LP も cue の和音を cue の設計で描く（Lab `sessions/p827/cuechord`）。snapshot `test/cue-accidentals` 1 枚を再ベース＝**ユーザー GO（第827）**。
+- LP 双子（Lab `sessions/p827/nh`・`run.ps1`・本 a/b/c×0/+1.2/−0.9）: 符頭・列・符幹 x・加線・付点・臨時記号・タイとスラーの端・強弱の動き・段の自然長が 0.01 内。残差: grace の前の小節線までの間が LP より +0.035/−0.025（既定でも 0.85 ずれている箇所）・符幹の頭側 +1.2 で 0.009。網 4 本（`TheNoteHeadScale_IsLilyPonds`・`_LineIsLilyPonds`・`_ReachesTheHeadsOnly`・キー/拒否/双子）。毒 5 本が全部赤。掃き 998 冊 1199 svg で差 3＝全部 cue の和音の face だけ。
+
+★ `-End p827 -DiffBase e47680d38`（`end.log`）＝full **11227 / 0 / 2 / 11229**・門 全 OK。棚卸し: 行番号の移動＋magic 1 点増（`StaffHeadMagnification` の 1.0・出典は file-level REF）・`slurOffset` の行の書き換え。7.5: Core `+` 約 190 行・REF 3（`magnification->font-size`・`Font_size_engraver::acknowledge_font` 2）・OWN 0。7.6: 意味は LP（font-size の合成＝font-size-engraver.cc・face の選択＝font-select.cc）。7.7: grace の前の 0.035・符幹の頭側の手の規則（どちらも既定で既にある差の拡大）。commit `9a13dfab6`＋docs。push はユーザー。
+判定: P4 は閉じた。次は P6（SMuFL・ユーザー判断）か第814 末の決定の ①（⑹＋⑺・文法の承認待ち）／③ §2 D の調査。(a) 今便の配管は使わない／(b) 会話は 1 便ぶん・重くない／(c) 別の島 ⇒ **この会話で続けてよい**（`-Start p828` から）。
+
 ## 以下は第826セッションの経緯
 
 ### 1.1 第826セッション（2026-10-05・YT-DELL2）
