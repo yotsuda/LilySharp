@@ -325,7 +325,8 @@ internal static class LineStartColumn
         BreakAlignSpacing.PrefixColumns columns,
         double clefGroupLeft,
         double timeInkWidth,
-        int startMeasureIndex)
+        int startMeasureIndex,
+        double doublePercentHalfWidth = 0.0)
     {
         double worst = 0.0;
         // Lent, and given back cleared below (see t_prefatoryBoxes).
@@ -338,6 +339,13 @@ internal static class LineStartColumn
             new ColumnBox(-SharedBand, SharedBand,
                 -SpacingRules.DefaultExtraSpacingWidth, SpacingRules.DefaultExtraSpacingWidth),
         };
+        // …and a double percent sign straddling that bar line, whose left half reaches back
+        // into the bar (BoundaryColumn.DoublePercentBox, as the bar-to-bar pair reads it).
+        if (doublePercentHalfWidth > 0)
+        {
+            var sign = BoundaryColumn.DoublePercentBox(doublePercentHalfWidth);
+            bar.Add(new ColumnBox(-SharedBand, SharedBand, sign.XLeft, sign.XRight));
+        }
         foreach (var (_, staff, _) in score.EnumerateStaves())
         {
             if (staff.IsTextRow)
@@ -352,6 +360,42 @@ internal static class LineStartColumn
         boxes.Clear();
         t_prefatoryBoxes = boxes;
         return worst;
+    }
+
+    /// <summary>
+    /// Spring 0 of an EMPTY bar that opens a line — every column of it unused, so its two
+    /// columns are the prefatory column and its closing bar line. Rigid, sized so that it and
+    /// the bar's closing pair spring <paramref name="closingPair"/> (SpacingRules.EmptyBarSprings,
+    /// bar line to bar line) add up to LilyPond's one spring between those two columns.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-basic.cc:40-66 standard_breakable_column_spacing — both columns
+    ///   breakable: <c>Spring (min_dist + space, min_dist)</c>, inverse stretch <c>space</c>; its
+    ///   own comment names this case ("an empty first measure on a line (which has a large
+    ///   min_dist because of the clef)").
+    /// The closing pair is the same breakable-pair spring with the bar-to-bar <c>min_dist</c>,
+    /// so its ideal − min is the same <c>space</c> and its strengths are LilyPond's: a rigid
+    /// spring of <c>min_dist − frame − closingPair.min</c> in front of it makes every reading of
+    /// the series the prefix-to-bar spring's. MEASURED (2.26.0, Lab sessions/p833/pr pw2, a
+    /// continuation line opening on the empty first bar of a double-percent pair): LilyPond's
+    /// first bar line stands 2.0 left of where Lily# drew it until session 833, which priced
+    /// the line start as if a first NOTE followed the clef and then the pair after it.
+    /// </remarks>
+    public static Spring EmptyBarLineStartSpring(
+        Model.MultiStaffScore score,
+        BreakAlignSpacing.PrefixColumns columns,
+        double clefGroupLeft,
+        double timeInkWidth,
+        int startMeasureIndex,
+        double measureStartBarWidth,
+        Spring closingPair,
+        double doublePercentHalfWidth)
+    {
+        double minDistance = MinimumDistanceToBarAtLineStart(
+            score, columns, clefGroupLeft, timeInkWidth, startMeasureIndex, doublePercentHalfWidth);
+        double frame = columns.Right + measureStartBarWidth;
+        double length = Math.Max(0.0, minDistance - frame - closingPair.MinDistance);
+        return new Spring(length, length, 0.0, 0.0);
     }
 
     /// <summary>

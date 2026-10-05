@@ -5442,6 +5442,29 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The clef anchor → the first bar line's left edge on system <paramref name="systemIndex"/>
+    /// (0-based, one staff a system) — the width an EMPTY bar opening a continuation line takes,
+    /// prefix included. Same ±6 ss band as <see cref="ClefToFirstNoteOnSystem"/>.
+    /// </summary>
+    public double ClefToFirstBarlineOnSystem(int systemIndex)
+    {
+        var refs = StaffRefpoints();
+        if (systemIndex < 0 || systemIndex >= refs.Count)
+            throw new InvalidOperationException(
+                $"wanted system #{systemIndex} but the probe drew {refs.Count} system(s).\n"
+                + "Drawn geometry:\n" + Describe());
+        double mid = refs[systemIndex];
+        const double band = 6.0;
+        var clef = Glyphs.Where(g => Math.Abs(g.Y - mid) <= band).ToList().FirstOrDefault(g => IsClef(g.Glyph),
+            throw_: $"no clef on system {systemIndex}.\nDrawn geometry:\n" + Describe());
+        foreach (var bar in Barlines)   // left to right
+            if (bar.X > clef.X + 1e-9 && Math.Abs(bar.Y + bar.Height / 2 - mid) <= band)
+                return bar.X - clef.X;
+        throw new InvalidOperationException(
+            $"no bar line after the clef on system {systemIndex}.\nDrawn geometry:\n" + Describe());
+    }
+
+    /// <summary>
     /// The clef anchor → line-start time-signature anchor on the first system. The meter binds
     /// to the clef through Clef.space-alist (time-signature . extra-space 1.52), measured off
     /// the clef's own ink right edge, so this distance rides on the clef ink WIDTH — the

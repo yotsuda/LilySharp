@@ -1223,8 +1223,12 @@ internal sealed class MultiStaffLayouter
     /// next system under "lyrically" with its first note at the plain 5.8 (session 357,
     /// LyricSpacing.ReserveLyricLine's remarks); the keep-inside-line rod alone holds the
     /// syllable, from the line's left edge.</param>
+    /// <param name="closingSpring">The opening measure's LAST spring — into its closing bar
+    /// line — read when the bar is EMPTY (LineStartColumn.EmptyBarLineStartSpring); null when
+    /// the measure has a single spring.</param>
     internal static Spring LineStartSpringForLine(
-        MultiStaffScore score, int startMeasureIndex, bool isFirstSystem, Spring measureSpring0)
+        MultiStaffScore score, int startMeasureIndex, bool isFirstSystem, Spring measureSpring0,
+        Spring? closingSpring = null)
     {
         var prefix = SolveLineStartPrefix(score, startMeasureIndex, isFirstSystem);
 
@@ -1260,16 +1264,33 @@ internal sealed class MultiStaffLayouter
         // stands above the row now — owner's decision 2026-10-04 — and the row's symbols
         // owe it nothing.)
 
+        double timeInkWidth = prefix.HasTime
+            ? GlyphMetrics.GetTimeSigWidth(score.TextMetrics, prefix.Numerator, prefix.Denominator)
+            : 0.0;
+
+        // An EMPTY bar opening the line has no first column for a Staff_spacing wish to reach:
+        // its columns are the prefix and its closing bar line, one breakable pair. Its chain is
+        // the deleted onsets' zero legs and the bar-to-bar pair spring (EmptyBarSprings), so
+        // spring 0 becomes the rigid rest of LilyPond's prefix-to-bar spring. A lead sheet's
+        // empty bars keep the grid's own floor (EnsureLeadSheetBarWidth) and are left alone.
+        var usedBars = ScoreSideTables.UsedBars(score);
+        if (closingSpring is { } closing && !score.IsLeadSheet
+            && startMeasureIndex >= 0 && startMeasureIndex < usedBars.Count && !usedBars[startMeasureIndex])
+        {
+            var signHalf = ScoreSideTables.DoublePercentHalfWidths(score);
+            return LineStartColumn.EmptyBarLineStartSpring(
+                score, prefix.Columns, SpacingRules.ClefGroupInkLeft(score), timeInkWidth,
+                startMeasureIndex, measureStartBarWidth, closing,
+                startMeasureIndex + 1 < signHalf.Count ? signHalf[startMeasureIndex + 1] : 0.0);
+        }
+
         // ONE Staff_spacing wish per staff, merged — spacing-spanner.cc:492-517. The staves
         // need NOT agree: a NUMBERS-ONLY tab staff ends its prefix on the TAB clef
         // (minimum-fixed-space 5.0) where its notation neighbour ends on the meter
         // (semi-shrink-space 2.0), and merge_springs averages the two ideals. A full-notation
         // tab engraves the meter too and wishes the same as its neighbour.
         return LineStartColumn.LineStartSpring(
-            score, prefix.Columns, SpacingRules.ClefGroupInkLeft(score),
-            prefix.HasTime
-                ? GlyphMetrics.GetTimeSigWidth(score.TextMetrics, prefix.Numerator, prefix.Denominator)
-                : 0.0,
+            score, prefix.Columns, SpacingRules.ClefGroupInkLeft(score), timeInkWidth,
             startMeasureIndex, ownFixedFloor, measureStartBarWidth);
     }
 
@@ -1831,7 +1852,8 @@ internal sealed class MultiStaffLayouter
                 // shared with the break gate so both price a line start identically
                 // (section 5.4). systemIndex == 0 is the first line, which carries the meter.
                 springs = springs.SetItem(0, LineStartSpringForLine(
-                    score, startMeasureIndex, isFirstSystem: systemIndex == 0, springs[0]));
+                    score, startMeasureIndex, isFirstSystem: systemIndex == 0, springs[0],
+                    springs.Length > 1 ? springs[^1] : null));
             }
             measureSprings.Add(springs);
             measureTimings.Add(allTimings);

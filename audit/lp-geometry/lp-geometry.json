@@ -3131,6 +3131,13 @@
       "residual": 0.0,
       "why": "OPENED AND CLOSED IN SESSION 832. The twin of barline.before-grace.whole after a HALF note: the plain 4.115374 x 0.8 = 3.292299 (HEAD 21.396272, BAR 24.688571) -- a second duration on the same 0.8, so a fix that adds a constant instead of scaling would split the pair. See the whole-note point for the mechanism."
     },
+    "line-start.empty-bar.clef-to-bar": {
+      "probe": "line-start-empty-bar.ly",
+      "score": "ESB",
+      "lilypond": 8.677558,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 833 (+2.18 -> 0). An EMPTY bar opening a continuation line -- a percent repeat's bars draw no rest, so every column inside is unused and the bar's two columns are the prefatory column and its closing bar line: one breakable pair, standard_breakable_column_spacing (lily/spacing-basic.cc:40-66) Spring (min_dist + space, min_dist) with inverse stretch `space` (its own comment names this case: an empty first measure on a line, large min_dist because of the clef). Justified, so the stretch shows: CLEF 0.8, BAR 9.477558. Lily# replaced the empty bar's spring 0 with a line-start wish to a first NOTE (the clef's minimum-fixed-space 5.0) and kept the bar-to-bar pair spring after it (EmptyBarSprings), two springs where LilyPond has one. LineStartColumn.EmptyBarLineStartSpring makes spring 0 rigid at min_dist(prefix -> bar, a straddling double percent sign included) - frame - the pair's minimum, so the series reads exactly LilyPond's spring. The same fault was T7's Le Freak A1 (now 4 + 12 as LilyPond) and Camouflage's first line (now 6, 7)."
+    },
     "line-start.time-to-first-note.initial-repeat": {
       "probe": "initial-repeat-bar.ly",
       "score": "IR",

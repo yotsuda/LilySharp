@@ -13096,6 +13096,26 @@ internal static class LpGeometryProbes
     private static readonly string LSG4 = Score("c'2 c' | grace { d'16 e' } f'4 g'2 r4 |", "LSG4");
 
     /// <summary>
+    /// An EMPTY bar opening a continuation line: a percent repeat's bars draw nothing, so the
+    /// bar's columns are the prefatory column and its closing bar line — one breakable pair,
+    /// <c>Spring (min_dist + space, min_dist)</c> stretched by <c>space</c> alone
+    /// (lily/spacing-basic.cc:40-66). Justified, so the stretch shows: LilyPond's first bar
+    /// line stands 8.677558 after the clef (CLEF 0.8, BAR 9.477558). Lily# priced a wish to a
+    /// first note and then the bar-to-bar pair, 2.18 wider, until session 833
+    /// (LineStartColumn.EmptyBarLineStartSpring).
+    /// </summary>
+    /// <remarks>LilyPond twin: audit/lp-geometry/probes/line-start-empty-bar.ly ESB.</remarks>
+    private static readonly string ESB = """
+        octave absolute
+        time 4/4
+        key c major
+        part melody { clef bass }
+        section Main { melody { c1 | repeat percent 30 { r1 } } }
+        form main { Main }
+        score main "ESB" { staff melody }
+        """;
+
+    /// <summary>
     /// The SAME two sharps as a CUSTOM (non-traditional) signature. LilyPond has only one
     /// key model — keyAlterations — so its KCC dump is byte-identical to KCS; the pair's
     /// disagreement on the Lily# side isolates the custom-key reserve/draw split
@@ -17731,6 +17751,8 @@ internal static class LpGeometryProbes
         // …and mid-line, the spring INTO the bar line before such a bar (LSG3's remark).
         new("barline.before-grace.whole", LSG3, g => g.LastGlyphToBarlineLeft(0)),
         new("barline.before-grace.half", LSG4, g => g.LastGlyphToBarlineLeft(0)),
+        // An empty bar opening a continuation line: one breakable pair (ESB's remark).
+        new("line-start.empty-bar.clef-to-bar", ESB, g => g.ClefToFirstBarlineOnSystem(1)),
         // The repeat bar line that opens the piece, PRINTED on both sides (see IRB's
         // remark). The pair is the reading: IRB opens with `|:`, IRN is the same music
         // without it, and their difference is the opener's column; the third point splits

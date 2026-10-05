@@ -368,7 +368,8 @@ internal sealed class SystemBreaker
             // continuation — built by the SAME implementation the layout uses, so the gate
             // prices a candidate line start exactly as it will be laid out (section 5.4).
             var lineStartSpring = s0 is { } spring0
-                ? MultiStaffLayouter.LineStartSpringForLine(score, i, isFirstSystem: i == 0, spring0)
+                ? MultiStaffLayouter.LineStartSpringForLine(score, i, isFirstSystem: i == 0, spring0,
+                    springs.Length > 1 ? springs[^1] : null)
                 : null;
             // A run opening a line is rodded from the prefix (lineStartRod), so its sums there
             // are max(its springs with the line-start spring swapped in, that rod) — not the
