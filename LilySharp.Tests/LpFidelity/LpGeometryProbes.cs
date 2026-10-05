@@ -13116,6 +13116,52 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A chord DIAGRAM on the first note of a first line: the prefix's wish is floored at
+    /// 0.3 + min_dist (lily/staff-spacing.cc:210-215), and min_dist reaches the diagram's box —
+    /// the twin's TextScript carries \textLengthOn's two tweaks — so the head stands where the
+    /// box clears the meter: 8.574495 after the clef (CLEF 0.8, HEAD 9.374495). The box stands
+    /// where LilyPond aligns the stencil (FretFrameGeometry.GridCentreFromColumnOrigin). Lily#
+    /// floored the wish at the bar's own spring minimum instead, and drew the grid centred on the
+    /// head, 0.45 left, until session 834.
+    /// </summary>
+    /// <remarks>LilyPond twin: audit/lp-geometry/probes/line-start-diagram.ly LSD.</remarks>
+    private static readonly string LSD = """
+        paper { raggedRight }
+        octave absolute
+        time 4/4
+        key c major
+        part m { clef treble }
+        section A {
+          m { e'4@chord(C x32010) d' e' f' | }
+        }
+        form main { A }
+        score main "LSD" { staff m }
+        """;
+
+    /// <summary>
+    /// A staff over a 4-string bass TAB, a continuation line in A major opening on a chord: the
+    /// clef's wish to the first note, nothing of the tab's digit column but its box in min_dist.
+    /// LilyPond's head stands 8.870000 after the clef (CLEF 0.8, HEAD 9.67). Lily# floored the
+    /// wish at the opening bar's own spring minimum until session 834 — 1.29 too far right here
+    /// (the owner's Green-Tinted Sixties Mind), 0.09 to 0.30 on the other tab books.
+    /// </summary>
+    /// <remarks>LilyPond twin: audit/lp-geometry/probes/line-start-diagram.ly LST.</remarks>
+    private static readonly string LST = """
+        paper { raggedRight }
+        octave absolute
+        key a major
+        time 4/4
+        part b { clef bass
+          tuning bass }
+        section A {
+          b { r1 | break <e gis>4. <e a>8~ <e a>2 | }
+        }
+        form main { A }
+        score main "LST" { staff b
+          tab b }
+        """;
+
+    /// <summary>
     /// The SAME two sharps as a CUSTOM (non-traditional) signature. LilyPond has only one
     /// key model — keyAlterations — so its KCC dump is byte-identical to KCS; the pair's
     /// disagreement on the Lily# side isolates the custom-key reserve/draw split
@@ -17753,6 +17799,9 @@ internal static class LpGeometryProbes
         new("barline.before-grace.half", LSG4, g => g.LastGlyphToBarlineLeft(0)),
         // An empty bar opening a continuation line: one breakable pair (ESB's remark).
         new("line-start.empty-bar.clef-to-bar", ESB, g => g.ClefToFirstBarlineOnSystem(1)),
+        // What the first column owes the prefix: a diagram's box, a tab's digits (LSD's, LST's remarks).
+        new("line-start.clef-to-first-note.diagram", LSD, g => g.ClefToFirstNoteByClefRank(0)),
+        new("line-start.clef-to-first-note.tab-continuation", LST, g => g.ClefToFirstNoteByClefRank(1)),
         // The repeat bar line that opens the piece, PRINTED on both sides (see IRB's
         // remark). The pair is the reading: IRB opens with `|:`, IRN is the same music
         // without it, and their difference is the opener's column; the third point splits

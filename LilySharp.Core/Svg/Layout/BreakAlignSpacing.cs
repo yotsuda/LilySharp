@@ -556,8 +556,8 @@ internal static class BreakAlignSpacing
         // (LILYPOND-REF LeftEdge.space-alist (clef . (extra-space . 0.8))); with no clef
         // there is no such gap, and break-alignment-interface.cc:145-146,155-156 skips the
         // empty group rather than spacing past it. Returning 0.8 here made the line-start
-        // spring measure from ink nobody draws, which is what forced the ownFixedFloor
-        // fallback in LineStartColumn.LineStartSpring (its label lives there).
+        // spring measure from ink nobody draws (a floor in LineStartColumn.LineStartSpring
+        // covered for it until session 832).
         double right = 0.0;
         foreach (var col in placed)
         {

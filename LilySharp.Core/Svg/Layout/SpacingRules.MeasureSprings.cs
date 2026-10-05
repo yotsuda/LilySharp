@@ -1446,11 +1446,14 @@ internal static partial class SpacingRules
                 }
             if (t < 0)
                 continue;
+            // About the column's origin, where the drawing stands the grid
+            // (FretFrameGeometry.GridCentreFromColumnOrigin).
             var box = FretFrameGeometry.Box(art.FrameSpec, fonts);
+            double centre = FretFrameGeometry.GridCentreFromColumnOrigin(box);
             left ??= new double[timings.Count];
             right ??= new double[timings.Count];
-            left[t] = Math.Max(left[t], -box.Left);
-            right[t] = Math.Max(right[t], box.Right + TextLengthRightExtra);
+            left[t] = Math.Max(left[t], -(centre + box.Left));
+            right[t] = Math.Max(right[t], centre + box.Right + TextLengthRightExtra);
         }
         if (left is null || right is null)
             return springs;

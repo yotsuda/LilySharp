@@ -3138,6 +3138,20 @@
       "residual": 0.0,
       "why": "OPENED AND CLOSED IN SESSION 833 (+2.18 -> 0). An EMPTY bar opening a continuation line -- a percent repeat's bars draw no rest, so every column inside is unused and the bar's two columns are the prefatory column and its closing bar line: one breakable pair, standard_breakable_column_spacing (lily/spacing-basic.cc:40-66) Spring (min_dist + space, min_dist) with inverse stretch `space` (its own comment names this case: an empty first measure on a line, large min_dist because of the clef). Justified, so the stretch shows: CLEF 0.8, BAR 9.477558. Lily# replaced the empty bar's spring 0 with a line-start wish to a first NOTE (the clef's minimum-fixed-space 5.0) and kept the bar-to-bar pair spring after it (EmptyBarSprings), two springs where LilyPond has one. LineStartColumn.EmptyBarLineStartSpring makes spring 0 rigid at min_dist(prefix -> bar, a straddling double percent sign included) - frame - the pair's minimum, so the series reads exactly LilyPond's spring. The same fault was T7's Le Freak A1 (now 4 + 12 as LilyPond) and Camouflage's first line (now 6, 7)."
     },
+    "line-start.clef-to-first-note.diagram": {
+      "probe": "line-start-diagram.ly",
+      "score": "LSD",
+      "lilypond": 8.574495,
+      "residual": -0.003639,
+      "why": "OPENED AND CLOSED IN SESSION 834 (+0.12 with the floor; +0.47 with the box but the old centring; -0.003639 now). The last 0.0036 is not split: it is where Lily#'s box (FretFrameGeometry.Box) and LilyPond's stencil extent disagree on this diagram's left or right edge (LilyPond reads (-1.689495 . 3.942156) about the head for x02010, Lab sessions/p834/tw/ll/lp-ext.log). A chord diagram on the first note of a first line (`e'4@chord(C x32010)`): the prefix's Staff_spacing wish is floored at 0.3 + min_dist (lily/staff-spacing.cc:210-215), and min_dist (Paper_column::minimum_distance) reaches the diagram, which the twin writes as a TextScript with \\textLengthOn's two tweaks. CLEF 0.8, HEAD 9.374495. Two Lily# faults met here: the line-start wish was floored at the opening bar's own spring minimum (ownFixedFloor, Lily#'s stand-in for every first-column grob it did not price), and the grid was drawn centred on the head where LilyPond aligns the stencil at align-dir -0.4 (scm/fret-diagrams.scm make-fret-diagram) with the TextScript's origin on the head's (both alignments #f) -- 0.45 left. LineStartColumn.AddFirstColumnDiagrams puts the box in min_dist, and FretFrameGeometry.GridCentreFromColumnOrigin places it for the drawing, the bar's diagram rods and this box alike."
+    },
+    "line-start.clef-to-first-note.tab-continuation": {
+      "probe": "line-start-diagram.ly",
+      "score": "LST",
+      "lilypond": 8.870000,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 834 (+1.29 -> 0). A staff over a 4-string bass TAB, a continuation line in A major opening on `<e gis>4.`: the clef's wish to the first note, floored at 0.3 + min_dist, where nothing of the tab's digit column binds. CLEF 0.8, HEAD 9.67. Lily# floored the wish at the opening bar's own spring minimum (ownFixedFloor), which carried the digits' reserve: 1.29 too far right on this shape (the owner's Green-Tinted Sixties Mind), 0.09 to 0.30 on 33 more tab svgs of the 998-book sweep. The floor is gone (MultiStaffLayouter.LineStartSpringForLine); every one of those books' moves lands on LilyPond's twin (Lab sessions/p834/tw)."
+    },
     "line-start.time-to-first-note.initial-repeat": {
       "probe": "initial-repeat-bar.ly",
       "score": "IR",

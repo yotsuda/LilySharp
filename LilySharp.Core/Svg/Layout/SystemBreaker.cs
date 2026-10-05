@@ -367,8 +367,8 @@ internal sealed class SystemBreaker
             // measure 0 on the first system (which carries the meter), any later measure on a
             // continuation — built by the SAME implementation the layout uses, so the gate
             // prices a candidate line start exactly as it will be laid out (section 5.4).
-            var lineStartSpring = s0 is { } spring0
-                ? MultiStaffLayouter.LineStartSpringForLine(score, i, isFirstSystem: i == 0, spring0,
+            var lineStartSpring = s0 is not null
+                ? MultiStaffLayouter.LineStartSpringForLine(score, i, isFirstSystem: i == 0,
                     springs.Length > 1 ? springs[^1] : null)
                 : null;
             // A run opening a line is rodded from the prefix (lineStartRod), so its sums there

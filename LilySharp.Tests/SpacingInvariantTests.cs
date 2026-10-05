@@ -185,14 +185,12 @@ public class SpacingInvariantTests
     }
 
     /// <summary>
-    /// The other half: a hoisted change is not charged to bar one. <c>ownFixedFloor</c> is
-    /// Lily#'s own device — the measure's spring-0 minimum folds in leading grace / lyric
-    /// widths that LilyPond keeps in separate paper columns — but a change engraved in the
-    /// PREFIX is not in the measure at all, so it must not floor the line-start spring.
-    /// Asserted by PERTURBING the floor rather than by pinning a number: with the change
-    /// hoisted the floor is ignored, without it the floor bites. Leaving it in charged the
-    /// cancellation+signature a second time and pushed the first note 5.51 ss right on
-    /// scratch/repro.lys bar 9.
+    /// The other half: a hoisted change is not charged to bar one — the first note after it
+    /// stands where it stands after a reprinted signature, as LilyPond's two probes put it.
+    /// Until session 832 the spring was floored at the opening measure's own spring-0 minimum,
+    /// which carried the change's column when it was NOT hoisted, so the hoist had to skip the
+    /// floor (leaving it in pushed the first note 5.51 ss right on scratch/repro.lys bar 9);
+    /// the floor is gone, and the spring reads nothing of the measure's own spring 0.
     /// </summary>
     [Fact]
     public void AHoistedChange_DoesNotChargeBarOneForItsColumn()
@@ -200,18 +198,11 @@ public class SpacingInvariantTests
         var (_, _, _, changed) = Collect(KeyChangeOpensSystemTwo);
         var (_, _, _, control) = Collect(SameKeyThroughout);
 
-        // ownFixedFloor is a lower bound on each wish's FIXED distance, so it lands on the
-        // spring's IDEAL — not on its minimum, which MinimumDistanceAtLineStart owns.
-        static double IdealFor(MultiStaffScore score, double floor) =>
-            MultiStaffLayouter.LineStartSpringForLine(
-                score, 4, isFirstSystem: false, new Spring(0.0, floor, 1.0)).IdealDistance;
-
-        // Hoisted: the measure's own minimum is not consulted, so moving it changes nothing.
-        Assert.Equal(IdealFor(changed, 0.0), IdealFor(changed, 40.0), precision: 9);
-
-        // Not hoisted: the same perturbation DOES move the spring — proof the assertion above
-        // is about the hoist and not about an inert parameter.
-        Assert.NotEqual(IdealFor(control, 0.0), IdealFor(control, 40.0), precision: 9);
+        var a = MultiStaffLayouter.LineStartSpringForLine(changed, 4, isFirstSystem: false);
+        var b = MultiStaffLayouter.LineStartSpringForLine(control, 4, isFirstSystem: false);
+        Assert.NotNull(MultiStaffLayouter.SolveLineStartPrefix(changed, 4, isFirstSystem: false).LeadingKeyChange);
+        Assert.Equal(b.IdealDistance, a.IdealDistance, precision: 9);
+        Assert.Equal(b.MinDistance, a.MinDistance, precision: 9);
     }
 
     /// <summary>

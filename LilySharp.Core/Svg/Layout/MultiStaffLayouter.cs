@@ -1209,46 +1209,27 @@ internal sealed class MultiStaffLayouter
     ///   PREBROKEN pieces of a column, so a candidate line start is priced with the spring it
     ///   would really get. The spring itself is staff-spacing.cc:210-220 via
     ///   <see cref="LineStartColumn.SpringWithMinimumDistanceFloor"/>.
+    /// <para>
+    /// The opening measure's own spring 0 plays no part: it is replaced whole. Until session
+    /// 834 its minimum floored the FIXED distance — Lily#'s stand-in for the leading grace,
+    /// lyric and diagram columns LilyPond keeps apart, skipped when a change was hoisted (it
+    /// charged the change's column a second time: 5.51 ss on scratch/repro.lys bar 9). The
+    /// grace is priced as LilyPond's columns now (LineStartColumn.IntoGraceRun), a diagram
+    /// reaches min_dist (LineStartColumn.AddFirstColumnDiagrams), and a lyric line — opening
+    /// or continuing — reaches the line start through LyricSpacing and the keep-inside-line
+    /// rod (session 357, LyricSpacing.ReserveLyricLine's remarks).
+    /// </para>
     /// </remarks>
     /// <param name="isFirstSystem">systemIndex == 0. The first line carries the opening meter
     /// in its prefix; a continuation hoists only a meter CHANGE that opens it.</param>
-    /// <param name="measureSpring0">The opening measure's own spring 0 — the bar-line spring
-    /// the substitution replaces, whose minimum still floors the FIXED distance (the leading
-    /// grace / lyric widths Lily# prices here that LilyPond puts in separate paper columns;
-    /// MEASURED 2026-07-25: dropping it moves 21 snapshots — grace-notes, lyric-break-pricing,
-    /// lead-sheet-lyrics, chorale, ornaments — and is inert on a plain line start).
-    /// A lyric line that CONTINUES from the previous measure adds nothing here: its
-    /// column-0 leading half left spring 0 with the cross-bar rod port (2026-08-20), and the
-    /// line-start floor that re-supplied it was retired once measured — LilyPond opens the
-    /// next system under "lyrically" with its first note at the plain 5.8 (session 357,
-    /// LyricSpacing.ReserveLyricLine's remarks); the keep-inside-line rod alone holds the
-    /// syllable, from the line's left edge.</param>
     /// <param name="closingSpring">The opening measure's LAST spring — into its closing bar
     /// line — read when the bar is EMPTY (LineStartColumn.EmptyBarLineStartSpring); null when
     /// the measure has a single spring.</param>
     internal static Spring LineStartSpringForLine(
-        MultiStaffScore score, int startMeasureIndex, bool isFirstSystem, Spring measureSpring0,
+        MultiStaffScore score, int startMeasureIndex, bool isFirstSystem,
         Spring? closingSpring = null)
     {
         var prefix = SolveLineStartPrefix(score, startMeasureIndex, isFirstSystem);
-
-        // When an opening CHANGE is hoisted into the prefix, its hang-left width is no
-        // longer reserved in the measure, so the bare space-alist fixed distance holds;
-        // otherwise the measure's own spring-0 minimum still floors it (min_dist does not
-        // cover the leading grace / lyric widths — LilyPond puts those in their own paper
-        // columns; an accidental on the first note DOES reach min_dist, probe TKA +1.55).
-        // A KEY change hoists exactly like a meter change: it is drawn in the prefix and, as
-        // a courtesy, after the previous line's final bar line, so leaving the measure's
-        // spring-0 minimum in place charged its column width A SECOND time and pushed the
-        // first note right by the whole cancellation+signature (measured: 5.51 ss on
-        // scratch/repro.lys bar 9, where the courtesy is 3 naturals + 3 flats = 5.39 ink).
-        // The hoisted-change branch stays null — the pre-port behaviour, where the whole
-        // spring-0 minimum (lyric bump included) was ignored to avoid double-charging the
-        // change.
-        double? ownFixedFloor =
-            prefix.LeadingTimeChange != null || prefix.LeadingKeyChange != null
-                ? null
-                : measureSpring0.MinDistance;
 
         // The width the measure frame inserts before spring 0 — the opening measure's OWN
         // start bar line (MeasureLayouter: x = startBarlineWidth + positions[i + 1]). The
@@ -1291,7 +1272,7 @@ internal sealed class MultiStaffLayouter
         // tab engraves the meter too and wishes the same as its neighbour.
         return LineStartColumn.LineStartSpring(
             score, prefix.Columns, SpacingRules.ClefGroupInkLeft(score), timeInkWidth,
-            startMeasureIndex, ownFixedFloor, measureStartBarWidth);
+            startMeasureIndex, measureStartBarWidth);
     }
 
     /// <summary>
@@ -1852,7 +1833,7 @@ internal sealed class MultiStaffLayouter
                 // shared with the break gate so both price a line start identically
                 // (section 5.4). systemIndex == 0 is the first line, which carries the meter.
                 springs = springs.SetItem(0, LineStartSpringForLine(
-                    score, startMeasureIndex, isFirstSystem: systemIndex == 0, springs[0],
+                    score, startMeasureIndex, isFirstSystem: systemIndex == 0,
                     springs.Length > 1 ? springs[^1] : null));
             }
             measureSprings.Add(springs);

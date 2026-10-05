@@ -277,7 +277,7 @@ internal static class LineStartColumn
         // Lent, and given back cleared below (see t_prefatoryBoxes).
         var boxes = t_prefatoryBoxes ?? new List<ColumnBox>();
         t_prefatoryBoxes = null;
-        foreach (var (_, staff, _) in score.EnumerateStaves())
+        foreach (var (_, staff, staffIndex) in score.EnumerateStaves())
         {
             // A lyric / chord row engraves no prefatory grob, and its text does not join the
             // horizontal skylines at all.
@@ -285,6 +285,7 @@ internal static class LineStartColumn
                 continue;
 
             var notes = FirstNoteBoxes(score.TextMetrics, staff, startMeasureIndex);
+            AddFirstColumnDiagrams(score, staff, staffIndex, startMeasureIndex, notes);
             if (notes.Count == 0)
                 continue;
 
@@ -299,6 +300,56 @@ internal static class LineStartColumn
         boxes.Clear();
         t_prefatoryBoxes = boxes;
         return worst;
+    }
+
+    /// <summary>
+    /// Adds to <paramref name="notes"/> the box of every chord DIAGRAM standing on
+    /// <paramref name="staff"/>'s first musical column — the same box the bar's own diagram
+    /// spacing reads (<see cref="SpacingRules.ApplyFretFrameSpacing"/>): its frame, the
+    /// <c>textLengthOn</c> extra-spacing-width (-0.0 . 0.4), and an extra-spacing-height of
+    /// (-inf . +inf), so it meets the prefatory boxes whatever their height.
+    /// </summary>
+    /// <remarks>
+    /// The twin writes the diagram as a TextScript with exactly those two tweaks, so LilyPond's
+    /// min_dist reaches it (lily/paper-column.cc Paper_column::minimum_distance — the column's
+    /// whole skyline). MEASURED (2.26.0, Lab sessions/p833/ch c5, `e'4@chord(C x32010)` opening
+    /// a first line): the head stands 0.79 right of where a bare one does. Until session 834
+    /// the line-start spring reached it only through the floor of the bar-line spring's minimum
+    /// (ownFixedFloor), 0.12 too far — and the grid was drawn centred on the head, 0.45 left of
+    /// LilyPond's (<see cref="FretFrameGeometry.GridCentreFromColumnOrigin"/>), which is why
+    /// this box could not replace the floor until the drawing moved.
+    /// </remarks>
+    private static void AddFirstColumnDiagrams(
+        Model.MultiStaffScore score, Model.Staff staff, int staffIndex, int measureIndex,
+        List<ColumnBox> notes)
+    {
+        if (score.Articulations.IsDefaultOrEmpty)
+            return;
+        var voices = staff.Voices;
+        foreach (var art in score.Articulations)
+        {
+            if (art.Type != Syntax.ArticulationType.FretFrame || art.StaffIndex != staffIndex
+                || art.MeasureIndex != measureIndex || art.VoiceIndex >= voices.Length
+                || art.FrameSpec is null
+                || measureIndex >= voices[art.VoiceIndex].Measures.Length)
+                continue;
+            var items = voices[art.VoiceIndex].Measures[measureIndex].Items;
+            // On the bar's opening column — a note's, or a spacer's that the diagram alone keeps.
+            if (art.ItemIndex >= items.Length || !OpensTheBar(items, art.ItemIndex))
+                continue;
+            // The box is about the grid's centre; the column's origin is the head's left edge.
+            var box = FretFrameGeometry.Box(art.FrameSpec, score.TextMetrics);
+            double centre = FretFrameGeometry.GridCentreFromColumnOrigin(box);
+            notes.Add(new ColumnBox(-SharedBand, SharedBand, centre + box.Left, centre + box.Right + 0.4));
+        }
+    }
+
+    private static bool OpensTheBar(System.Collections.Immutable.ImmutableArray<Model.MusicItem> items, int index)
+    {
+        var onset = Semantics.Fraction.Zero;
+        for (int i = 0; i < index; i++)
+            onset += items[i].Duration;
+        return onset == Semantics.Fraction.Zero;
     }
 
     /// <summary>
@@ -651,8 +702,7 @@ internal static class LineStartColumn
     /// <param name="ideal">The space-alist ideal
     /// (<see cref="BreakAlignSpacing.SpaceAlistDistances"/>'s <c>Ideal</c>).</param>
     /// <param name="fixed_">The space-alist FIXED distance (that same helper's <c>Fixed</c>,
-    /// which is LilyPond's <c>fixed</c> and not its <c>min_dist</c>) — <see cref="WishFrom"/>
-    /// passes it already raised to the caller's floor.</param>
+    /// which is LilyPond's <c>fixed</c> and not its <c>min_dist</c>).</param>
     /// <param name="stretchability">
     /// <c>is_stretchable ? ideal - fixed : 0</c> (staff-spacing.cc:200). Zero for all three
     /// line-start entries: Clef's <c>minimum-fixed-space</c> leaves ideal == fixed, and
@@ -729,21 +779,6 @@ internal static class LineStartColumn
     /// <c>StartBarline</c>. Usually equal to <c>columns.BarWidth</c>; 0 when the measure
     /// record says None but a <c>|:</c> is still drawn (the begin-of-line piece of a
     /// predecessor's <c>:|:</c>), where the whole column is priced through this spring.</param>
-    /// <param name="ownFixedFloor">A LOWER BOUND on each wish's FIXED distance, expressed
-    /// like everything the caller hands in — see the frame note below — or null for none.
-    /// This is Lily#'s own (<c>LILYSHARP-OWN</c>), not LilyPond's: LilyPond's <c>min_dist</c>
-    /// reaches every grob of the first column, where Lily#'s reaches the note column alone and
-    /// this floor — the measure's bar-line spring minimum — stands in for the rest. It is
-    /// applied to every wish, so it survives the merge (a mean of values each at least the
-    /// floor is at least the floor). Not applied when a grace run opens the line (that is
-    /// LilyPond's columns, <see cref="IntoGraceRun"/>). MEASURED (session 832, Lab
-    /// sessions/p832/flr and the 998-book sweep: dropping it moves 48 svg by up to 2.32):
-    /// it carries a chord name or diagram over the first note, in LilyPond's direction
-    /// (chord-notes' first note +0.12 against LilyPond with it, −2.20 without), and
-    /// over-reserves a numbers tab's digits (tabnum, tabdot +0.30 with it, 0.00 without); a
-    /// lyric reaches the prefix through LyricSpacing either way. Retiring it means putting
-    /// those grobs into <see cref="MinimumDistanceAtLineStart"/> first (the removal itself is
-    /// Lab sessions/p832/floor-removal.diff).</param>
     /// <returns>The merged spring in the caller's MEASURE frame (0 = where the prefix ink
     /// ends, <see cref="BreakAlignSpacing.PrefixColumns.Right"/>, plus the opening measure's
     /// own start bar line width, <paramref name="measureStartBarWidth"/>), which the
@@ -757,13 +792,16 @@ internal static class LineStartColumn
         double clefGroupLeft,
         double timeInkWidth,
         int startMeasureIndex,
-        double? ownFixedFloor,
         double measureStartBarWidth = 0.0)
     {
         // A grace run opening the line puts its first grace column next to the prefatory one,
-        // so min_dist is measured to THAT column, the floor below has nothing left to carry
-        // (the run is priced as columns here, and a syllable under the main note meets the
-        // grace column, not the prefix) and the merged spring runs into the run (IntoGraceRun).
+        // so min_dist is measured to THAT column and the merged spring runs into the run
+        // (IntoGraceRun).
+        // (Until session 832 every wish's FIXED distance was also floored at the opening
+        // measure's bar-line spring minimum — Lily#'s own stand-in for the grace and lyric
+        // columns. With the grace priced as columns it bound only a tab's zigzag digits, by
+        // 0.03; a syllable reaches the prefix through LyricSpacing, and LilyPond twins of eleven
+        // lyric line starts match with or without it — Lab sessions/p832/lsg.)
         var openingGrace = OpeningGraceRun(score, startMeasureIndex);
         double minDistance = openingGrace != null
             ? MinimumDistanceToGraceAtLineStart(
@@ -771,11 +809,8 @@ internal static class LineStartColumn
             : MinimumDistanceAtLineStart(
                 score, columns, clefGroupLeft, timeInkWidth, startMeasureIndex);
         // The caller's frame starts where the measure's own start bar line ENDS (see the
-        // remarks): prefix right + the inserted bar width. The floor is stated there.
+        // remarks): prefix right + the inserted bar width.
         double frame = columns.Right + measureStartBarWidth;
-        double floor = openingGrace == null && ownFixedFloor is { } f
-            ? frame + f
-            : double.NegativeInfinity;
 
         // Lent, and given back at both exits below (see SpacingRules.RentWishes).
         var wishes = SpacingRules.RentWishes();
@@ -802,7 +837,7 @@ internal static class LineStartColumn
                 : ColumnOptical(score, startMeasureIndex, SpacingRules.BarHalfSpaces(staff));
 
             wishes.Add(WishFrom(
-                last.Symbol, last.InkLeft, last.InkRight, floor, minDistance, optical));
+                last.Symbol, last.InkLeft, last.InkRight, minDistance, optical));
         }
 
         // No Staff_spacing wish at all — a system made only of chord / lyric rows. Neither
@@ -837,8 +872,7 @@ internal static class LineStartColumn
             // SAME wish a staff whose prefix ends on the meter would (semi-shrink off
             // the meter's ink), not LilyPond's bare standard spacing: LilyPond has no
             // meter here at all, so its measured 0.5 is the meterless regime's number
-            // and cannot price a column the decision added. The floor still carries the
-            // first syllable's leading reach (ownFixedFloor), exactly as on a staff.
+            // and cannot price a column the decision added.
             // LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
             // line its measure opens with (DrawBarlines runs on the grid row), so with a
             // `|:` in the column the row wishes off the BAR's ink — the grob the column
@@ -850,12 +884,12 @@ internal static class LineStartColumn
                 minDistance = Math.Max(minDistance,
                     columns.BarX + columns.BarWidth + 2 * SpacingRules.DefaultExtraSpacingWidth);
                 wishes.Add(WishFrom(BreakAlignSymbol.StaffBar,
-                    columns.BarX, columns.BarX + columns.BarWidth, floor, minDistance));
+                    columns.BarX, columns.BarX + columns.BarWidth, minDistance));
             }
             else if (columns.HasTime && timeInkWidth > 0.0)
             {
                 wishes.Add(WishFrom(BreakAlignSymbol.TimeSignature,
-                    columns.TimeX, columns.TimeX + timeInkWidth, floor, minDistance));
+                    columns.TimeX, columns.TimeX + timeInkWidth, minDistance));
             }
             else
             {
@@ -1043,7 +1077,7 @@ internal static class LineStartColumn
 
     /// <summary>
     /// One staff's <c>Staff_spacing</c> wish: its extremal prefatory grob's
-    /// <c>first-note</c> space-alist entry against that grob's own ink, floored.
+    /// <c>first-note</c> space-alist entry against that grob's own ink.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/staff-spacing.cc:143-220 — the alist lookup
     /// (<see cref="BreakAlignSpacing.SpaceAlistDistances"/>), the optical correction
@@ -1052,15 +1086,14 @@ internal static class LineStartColumn
     /// that ends it.</remarks>
     private static Spring WishFrom(
         BreakAlignSymbol symbol, double inkLeft, double inkRight,
-        double fixedFloor, double minDistance, double opticalCorrection = 0.0)
+        double minDistance, double opticalCorrection = 0.0)
     {
         var entry = BreakAlignSpacing.GetSpacing(symbol, BreakAlignSymbol.FirstNote);
         var (fixed_, ideal, stretchability) =
             BreakAlignSpacing.SpaceAlistDistances(entry, inkLeft, inkRight);
         fixed_ += opticalCorrection;
         ideal += opticalCorrection;
-        return SpringWithMinimumDistanceFloor(
-            ideal, Math.Max(fixed_, fixedFloor), stretchability, minDistance);
+        return SpringWithMinimumDistanceFloor(ideal, fixed_, stretchability, minDistance);
     }
 
     /// <summary>

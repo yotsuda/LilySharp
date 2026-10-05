@@ -420,4 +420,22 @@ internal static class FretFrameGeometry
     /// </summary>
     internal static GlyphMetrics.BBox Box(string? spec, ScoreTextMetrics fonts, bool fingers = false)
         => Measure(spec, fonts, fingers).Box;
+
+    /// <summary>
+    /// How far right of the note column's origin (the head's LEFT edge) a markup diagram's grid
+    /// centre stands, given its <see cref="Box"/> (about that centre): the point 30% across the
+    /// diagram's whole extent sits on the origin.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/fret-diagrams.scm:905 make-fret-diagram — the stencil is
+    ///   <c>ly:stencil-aligned-to … X alignment</c>, alignment the align-dir property, −0.4 by
+    ///   default, and Interval::linear_combination(−0.4) is 0.7 left + 0.3 right.
+    /// LILYPOND-REF: scm/define-grobs.scm TextScript self-alignment-X / parent-alignment-X #f —
+    ///   lily/self-alignment-interface.cc:150-175 aligned_on_parent adds nothing for either, so
+    ///   the stencil's origin is the note column's.
+    /// MEASURED (2.26.0, Lab sessions/p834/tw/ll c5, x32010 over e'4): LilyPond's grid left edge
+    /// stands 1.40 left of the head's; centring the grid on the head put it 1.85 left.
+    /// </remarks>
+    internal static double GridCentreFromColumnOrigin(GlyphMetrics.BBox box)
+        => -(0.7 * box.Left + 0.3 * box.Right);
 }

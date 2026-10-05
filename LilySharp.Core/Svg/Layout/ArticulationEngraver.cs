@@ -1226,6 +1226,10 @@ internal static class ArticulationEngraver
             // carries no plan — a stepped diagram / tabTechnique was measured at the default
             // size and drawn at the stepped one (Lab sessions/p646 fr3, 2026-09-26).
             var seedBBox = GetSeedBBoxFor(effArt, fonts);
+            // A chord diagram is a TextScript markup, not a centred script: its grid centre
+            // stands where LilyPond's fret-diagram alignment puts it off the column's origin.
+            if (effArt.Type == ArticulationType.FretFrame)
+                x += FretFrameGeometry.GridCentreFromColumnOrigin(seedBBox) - NoteheadHalfWidth(item);
             var layout = new ArticulationLayout(
                 effArt.MeasureIndex,
                 effArt.ItemIndex,

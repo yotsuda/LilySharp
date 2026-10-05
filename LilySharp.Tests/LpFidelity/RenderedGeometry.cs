@@ -5465,6 +5465,30 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The clef anchor → the first notehead after it, for the <paramref name="clefRank"/>-th
+    /// line-start clef down the page (0-based) — <see cref="ClefToFirstNoteOnSystem"/> for a
+    /// system that is a staff over a TAB: the tab's strings are not 5-line staves, so
+    /// <see cref="StaffRefpoints"/> cannot find the systems, and its clef is no clef glyph, so
+    /// counting clefs counts the notation staves. Heads within ±6 ss of the clef (a fret digit is
+    /// no notehead, so the tab under it is not read).
+    /// </summary>
+    public double ClefToFirstNoteByClefRank(int clefRank)
+    {
+        var clefs = Glyphs.Where(g => IsClef(g.Glyph)).OrderBy(g => g.Y).ToList();
+        if (clefRank < 0 || clefRank >= clefs.Count)
+            throw new InvalidOperationException(
+                $"wanted clef #{clefRank} but the probe drew {clefs.Count} clef(s).\n"
+                + "Drawn geometry:\n" + Describe());
+        var clef = clefs[clefRank];
+        const double band = 6.0;
+        foreach (var g in Glyphs)   // left to right
+            if (g.X > clef.X + 1e-9 && Math.Abs(g.Y - clef.Y) <= band && IsNotehead(g.Glyph))
+                return g.X - clef.X;
+        throw new InvalidOperationException(
+            $"no notehead after clef #{clefRank}.\nDrawn geometry:\n" + Describe());
+    }
+
+    /// <summary>
     /// The clef anchor → line-start time-signature anchor on the first system. The meter binds
     /// to the clef through Clef.space-alist (time-signature . extra-space 1.52), measured off
     /// the clef's own ink right edge, so this distance rides on the clef ink WIDTH — the
