@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第824セッションの経緯
+
+### 1.1 第824セッション（2026-10-05・YT-DELL2）
+
+新しい会話。`-Start p824`（HEAD `9d6ecf68`）＝full **11206 / 0 / 2 / 11208**。§7 3.5 で第822 を ARCHIVE へ（moved 12 lines）。P4 の残りの順をユーザーに訊いた＝「小さい順」（加線の長さ → `Beam.maxSlope` → 付点・臨時記号の間 → 符頭の大きさ）。
+- **加線の長さ＝`layout { LedgerLine.lengthFraction 0.25 }`**（LP の `LedgerLineSpanner.length-fraction`・符頭の幅の何倍を両側へ伸ばすか）。`EngravingStyle.LedgerLengthFraction`・`EngravingDefaults.LedgerLengthFraction` を const から style を読むプロパティに（読み手は描画 `CollectLedgerRequest` と skyline の 2 つ）。間隔の rod は LP と同じく別の `minimum-length-fraction`（`SpacingRules.LedgerRods` の const）を読む＝**動かさない**。語彙・読み手・補完の説明・TextMate・双子の `\override LedgerLineSpanner.length-fraction`。
+- LP 双子（Lab `sessions/p824/ledger`・`--pin-fonts`）: 加線 27 本が既定 1.9563/2.0661/2.9430 → 0.4 で 2.3476/2.4793/3.5316（黒玉・2 分・全音符＝幅 ×(1＋2f)）、符幹は全部同じ。Lily# も同じ幅で、加線以外の svg は data-pos を除き同一。網 `EngravingStyleTests.TheLedgerLength_IsLilyPonds_AndMovesNothingElse`（毒＝0.25 の const に戻す→1 赤）。掃きは回していない（既定の値の経路は同じ 0.25）。文書: GRAMMAR・SYNTAX_REFERENCE・CLI_REFERENCE・CHANGELOG・OMR `lilysharp-implemented-2026-10-05.md` §6（提案書の長さからの換算・未追跡のまま）。
+
+★ `-End p824 -DiffBase 9d6ecf685`（`end.log`）＝full **11208 / 0 / 2 / 11210**・門 全 OK。棚卸し: magic_constants から const 0.25 の 1 行が消えた。7.5: Core `+` 約 12 行・REF 1（style のプロパティ）。7.6: 意味は LP（ledger-line-spanner.cc:205-230）。7.7: 無し。commit `6ffc3f0c8`＋docs。push はユーザー。
+判定: 次は `Beam.maxSlope`。(a) 同じ style の配管に足すだけ＝今の文脈が効く／(b) 会話はまだ軽い／(c) 同じ島 ⇒ **この会話で続けてよい**（`-Start p825` から）。
+
 ## 以下は第823セッションの経緯
 
 ### 1.1 第823セッション（2026-10-05・YT-DELL2）
