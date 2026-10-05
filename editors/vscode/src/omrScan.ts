@@ -280,7 +280,16 @@ async function goToTodo(view: ScanView, key: string, deps: OmrScanDeps): Promise
     const editor = await editorOf(view);
     const mark = (await todosOf(view, editor.document, deps)).find(t => t.Key === key);
     if (!mark) {
-        vscode.window.showInformationMessage(`Lily#: the mark @todo(${key}) is no longer in ${path.basename(view.lys.fsPath)}.`);
+        // No mark with that key in the text — one the reader found on a check after the read
+        // (B5 writes the side file, never the .lys), or one already resolved: its bar's line.
+        const todo = view.side.todos.find(t => t.key === key);
+        const index = todo?.measure === undefined ? -1 : view.side.measures.findIndex(m =>
+            m.measure === todo.measure && (todo.part === undefined || m.part === todo.part));
+        if (index >= 0) {
+            await goToBar(view, index);
+            return;
+        }
+        vscode.window.showInformationMessage(`Lily#: the mark @todo(${key}) is not in ${path.basename(view.lys.fsPath)}.`);
         return;
     }
     select(editor, mark.HostStart);

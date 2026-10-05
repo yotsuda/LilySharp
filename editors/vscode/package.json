@@ -194,6 +194,11 @@
           "default": true,
           "markdownDescription": "Draw the notes, chords and rests marked `@todo` in red in the preview. Printing (`lysc png` / `pdf` / `svg`) never does. Takes effect immediately in open previews."
         },
+        "lilysharp.omr.verifyOnSave": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "When a `.lys` read from a scan (its `x.omr.json` beside it) is saved, have the OMR reader engrave it again and compare it with the scanned pages, bar by bar; the scan view and the `@todo` quick fixes then show what still differs. Takes a few seconds; needs a reader that has `omr verify`."
+        },
         "lilysharp.audition.enabled": {
           "type": "boolean",
           "default": true,

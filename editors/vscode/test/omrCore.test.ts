@@ -25,7 +25,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import {
     OMR_PATH_VARIABLE, exitMeaning, launchOf, locateOmr, omrRid, parseEvent, parseVersion,
-    readArguments, runOmr, speaksProtocol,
+    canVerify, readArguments, runOmr, speaksProtocol, verifyArguments,
 } from '../src/omrCore';
 
 describe('the core is editor-free', () => {
@@ -119,6 +119,20 @@ fs.writeFileSync(lys, 'part m { }\\n');
 console.log('not json');
 console.log(JSON.stringify({event:'done',lys,annotated:[],todos:2}));
 `;
+
+describe('checking an edited score against the scan (B5)', () => {
+    it('asks `omr verify` of the .lys, with progress, and the lysc when there is one', () => {
+        assert.deepEqual(verifyArguments('C:\\a b\\曲.lys', 'C:\\x\\lysc.exe'),
+            ['verify', 'C:\\a b\\曲.lys', '--progress', 'json', '--lysc', 'C:\\x\\lysc.exe']);
+        assert.deepEqual(verifyArguments('s.lys'), ['verify', 's.lys', '--progress', 'json']);
+    });
+
+    it('asks only a reader that says it has the command', () => {
+        assert.equal(canVerify({ version: '0.3.0', protocol: 1, commands: ['read', 'verify'] }), true);
+        assert.equal(canVerify({ version: '0.3.0', protocol: 1, commands: ['read'] }), false);
+        assert.equal(canVerify({ version: '0.2.0', protocol: 1 }), false);   // today's reader
+    });
+});
 
 describe('a run (L7)', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lys-omr-'));

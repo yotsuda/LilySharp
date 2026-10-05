@@ -34,6 +34,7 @@ import { registerExportBatch } from './exportBatch';
 import { importFromImage } from './omrImport';
 import { locateOmr } from './omrCore';
 import { OmrScanDeps, hasScan, previewReady, previewShowsBar, registerScanFollow, showScan } from './omrScan';
+import { registerVerifyOnSave } from './omrVerify';
 import { markdownItExtensionApi } from './markdownFence';
 import { svgPostKey, pagesSummary, SvgPages } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
@@ -453,6 +454,14 @@ export function activate(context: vscode.ExtensionContext) {
     updateHasScan();
     scanDeps = deps;
     registerScanFollow(context, deps);
+    // The lysc the reader engraves with when it verifies: the one beside the bundled server, if
+    // any (else the reader looks beside itself, then on PATH).
+    const bundledLysc = () => {
+        const p = path.join(context.extensionPath, 'server', process.platform === 'win32' ? 'lysc.exe' : 'lysc');
+        return fs.existsSync(p) ? p : undefined;
+    };
+    // Check on save against the scan (B5, lilysharp.omr.verifyOnSave).
+    registerVerifyOnSave(context, { output: outputChannel, lysc: bundledLysc });
     context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(updateHasScan));
 
     // Push preview.theme changes to every open preview, so the setting takes effect
@@ -554,12 +563,7 @@ export function activate(context: vscode.ExtensionContext) {
             importFromImage(context, {
                 output: outputChannel,
                 openPreview: column => openPreview(context, column),
-                // The lysc the reader verifies with: the one beside the bundled server, if any
-                // (else the reader looks beside itself, then on PATH).
-                lysc: () => {
-                    const p = path.join(context.extensionPath, 'server', process.platform === 'win32' ? 'lysc.exe' : 'lysc');
-                    return fs.existsSync(p) ? p : undefined;
-                },
+                lysc: bundledLysc,
                 showScan: lys => showScan(context, deps, lys, vscode.ViewColumn.Three),
             }, uri, uris)),
         vscode.commands.registerCommand('lilysharp.showScan', (uri?: vscode.Uri) =>

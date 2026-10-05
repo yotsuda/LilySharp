@@ -421,6 +421,11 @@ workflow attaches that section to the GitHub Release verbatim.
   prompt lists the item, its memo and — when an OMR reader wrote the file — how sure the reader
   was and the readings it offers (`x.omr.json`), so "fix the doubtful notes" chooses among them
   by what fits the music; a mark it resolves loses its `@todo`, the others keep theirs.
+- **Check on save against the scan** (`lilysharp.omr.verifyOnSave`, off by default). Saving a
+  `.lys` an OMR reader wrote has the reader engrave it again and compare it with the scanned
+  pages; the scan view and the quick fixes pick up what it finds. The `.lys` is not touched.
+  Needs a reader with `omr verify` (asked only when its `--version --json` lists it). In the
+  scan view, a box whose mark is not in the text goes to its bar's line.
 - **`paper { breaksOnly }` breaks lines and pages only where the music says.** Every bar line
   other than a written `break` / `pageBreak` is closed to both (a plain `break` is then not a
   page break either), so a score copied from a page — an OMR reader writes the original's

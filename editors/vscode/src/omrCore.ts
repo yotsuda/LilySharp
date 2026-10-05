@@ -107,11 +107,29 @@ export function readArguments(inputs: readonly string[], outDir: string, lysc?: 
     return args;
 }
 
+/** The arguments of `omr verify` (B5, proposed to LilySharp-Omr 2026-10-05): engrave the
+ *  .lys again, compare it bar by bar with the pages its side file lists, and write the side
+ *  file's todos anew — the .lys itself is not touched. An ARRAY, as readArguments'. */
+export function verifyArguments(lys: string, lysc?: string): string[] {
+    const args = ['verify', lys, '--progress', 'json'];
+    if (lysc) {
+        args.push('--lysc', lysc);
+    }
+    return args;
+}
+
 /** What `omr --version --json` answers. */
 export interface OmrVersion {
     readonly version: string;
     readonly protocol: number;
     readonly inputs?: readonly string[];
+    /** The commands it has beyond `read` (`verify`); absent in a reader that has only `read`. */
+    readonly commands?: readonly string[];
+}
+
+/** Whether the reader says it has `omr verify` (B5 asks it only then). */
+export function canVerify(v: OmrVersion): boolean {
+    return Array.isArray(v.commands) && v.commands.includes('verify');
 }
 
 /** Reads `omr --version --json`'s output, or undefined when it is not that. */
