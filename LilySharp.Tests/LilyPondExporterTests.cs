@@ -2292,6 +2292,9 @@ public class LilyPondExporterTests
     [InlineData("drums", "percussion", "hh8 hh bd4 sn4 r", "drumsVarTwo")]
     [InlineData("name", "treble", "c'4 d' e' f'", "nameVarTwo")]    // free in Lily#, a LilyPond keyword
     [InlineData("bar", "treble", "c'4 d' e' f'", "barVarTwo")]
+    [InlineData("b", "bass", "c4 d e f", "bVarTwo")]               // a note name: NOTENAME_PITCH
+    [InlineData("fis", "treble", "c'4 d' e' f'", "fisVarTwo")]
+    [InlineData("as", "treble", "c'4 d' e' f'", "asVarTwo")]
     public void APartNamedAfterALilyPondWord_GetsAnotherVariable(string part, string clef, string music, string variable)
     {
         var ly = Export($$"""

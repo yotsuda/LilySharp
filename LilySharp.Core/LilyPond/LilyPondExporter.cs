@@ -861,10 +861,24 @@ public sealed partial class LilyPondExporter
         }
         string baseName = sb.Length == 0 ? "music" : sb.ToString();
         string candidate = baseName;
-        for (int n = 2; !_usedVarNames.Add(candidate); n++)
+        for (int n = 2; IsPitchName(candidate) || !_usedVarNames.Add(candidate); n++)
             candidate = baseName + "Var" + NumberWord(n);
         return candidate;
     }
+
+    /// <summary>
+    /// Whether <paramref name="name"/> is a note name of LilyPond's default (nederlands) input
+    /// language — <c>b</c>, <c>fis</c>, <c>es</c>, <c>aes</c>, <c>ceh</c> — which the lexer reads
+    /// as a pitch even at the top level, so it cannot be a variable: a part named <c>b</c> gave
+    /// `b = \fixed c' { … }` and LilyPond refused it ("syntax error, unexpected NOTENAME_PITCH";
+    /// found exporting a two-staff probe, session 832).
+    /// The table is exactly each of <c>a</c>…<c>g</c> bare or with <c>is isis es eses ih eh isih
+    /// eseh</c>, plus the short <c>as ases es eses</c> — so <c>bs</c> is a free name.
+    /// LILYPOND-REF: scm/define-note-names.scm — the nederlands pitch names.
+    /// </summary>
+    private static bool IsPitchName(string name) =>
+        System.Text.RegularExpressions.Regex.IsMatch(
+            name, "^(?:[a-g](?:is|isis|es|eses|ih|eh|isih|eseh)?|as|ases|es|eses)$");
 
     private static readonly string[] DigitWords =
         ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
