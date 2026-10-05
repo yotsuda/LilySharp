@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第838セッションの経緯
+
+### 1.1 第838セッション（2026-10-06・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで着手」）。`-Start p838`（HEAD `356b0283`）＝full **11258 / 0 / 2 / 11260**。§7 3.5 で第836 を ARCHIVE へ。**§2 H ⒢ 小節の途中の印の列＝閉じた（`c2758ad56`）**。
+- LP の列の dump（Lab `sessions/p838/mk` m0〜m7・`probe.ps1`）: 印あり−なしは `r2. a4@mark` +1.20・`c4 d4@mark` +0.39・`c2 d2@mark` +0.33（dt がちょうど半分＝fills なし）・行頭の小節 +0.20（行頭は fills なし）。**印は列に中央揃え**（m1 17.70..25.37 の中心＝列 21.535）。**Lily# は途中の `@mark` を小節線の上に描いていた**（rehearsal mark に `anchorTiming` を渡していなかった＝spacing の +1.2 より大きい差）。m5 では節ラベルと同じ小節の途中の印を LYS4021 が落としていた（LP は両方描く）。
+- 直し: `Measure.MarkColumnTimings`（collector が両方の道で全 voice に刻む）・`SpacingRules.MarkColumnSeries`（前の音→印の列＝素の duration spring、印の列→音＝`Spring(0.5, 0)` の既定の強さ、rod は両部分にまたがる）を `MeasureLayouter.CreateInterColumnSpring` と `CreateSpringsForMeasure` に・`MarkColumnFillsMeasure`（＋間の未使用列 `UnusedOnsetBetween`）・`MusicMarkEngraver` は列の X＝音の列−印の spring の長さ（行の force で）・`ShadowedBySectionLabel` は途中の印を除く。
+- 台帳 3 点（`probes/mark-column.ly` MKC・両端揃え）全部 exact。毒 8 本すべて赤（`sessions/p838/poisons.ps1`）。掃き 998 冊: **70 svg・段割れ 0**。双子（`twinlines.ps1`）: Smooth Operator 1.00→0.17・Le Freak 0.40→0.05・My Girl 0.67→0.03・Video Killed 1.22→0.98。
+- ★ **Video Killed の残り 0.98 は別の差**（段 0 小節 3 +0.78・段 6 小節 0 +0.63・段 18 小節 1 +0.98＝base と同じ値・未調査・`sessions/p838/twinsys.ps1` が段ごとに刷る）。The Hustle 7.44・Honesty 20.23 も base と同じ（別の既存の差・未調査）。
+
+★ `-End p838 -DiffBase 356b02833`（`end2.log`・1 回目の `end.log` は test の後で出力が途切れた＝再実行で完走）＝full **11264 / 0 / 2 / 11266**・門 全 OK。台帳 1035 点。7.5: Core `+` 325 行・REF 9・OWN 0。7.6: 意味は LP（列の 2 本の spring・fills_measure の次の rank・印の中央揃え）。7.7: 測っていない 2 形（変更列と同じ時刻の印・grace の前の印）は今までどおり＝コードの註に書いた。content key の印の時刻と `UnusedOnsetBetween` は毒で見ていない。push はユーザー。
+判定: 次は **§2 H の ⒜〜⒟** か **Video Killed の残り（段 0・6・18）**。(a) 今便の双子と計器（`twinlines.ps1`／`twinsys.ps1`・`mk/probe.ps1` の列の dump）の上に立つ＝続ける側／(b) 会話は 1 便ぶん・圧縮なし／(c) 同じ島（LP 双子との spacing）⇒ **この会話で続けてよい**（`-Start p839` から）。
+
 ## 以下は第837セッションの経緯
 
 ### 1.1 第837セッション（2026-10-06・YT-DELL2）
