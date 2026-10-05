@@ -667,7 +667,7 @@ internal static partial class SharedRenderer
                 dx += GlyphMetrics.GetKeySignatureAccidentalWidth(alter);
             }
             width = dx;
-            return glyphs;
+            return InkFromTheLeftEdge(glyphs);
         }
 
         if (key.Sharps == 0) { width = 0; return glyphs; }
@@ -687,6 +687,36 @@ internal static partial class SharedRenderer
             dx += GlyphMetrics.GetKeySignatureAccidentalWidth(alter);
         }
         width = dx;
+        return InkFromTheLeftEdge(glyphs);
+    }
+
+    /// <summary>
+    /// Moves a signature's glyphs right by however far their ink reaches LEFT of the walk's
+    /// origin, so the signature's INK starts at its left edge — the edge its break-align
+    /// column is placed by. A flat's box starts 0.12 left of its origin
+    /// (GlyphMetrics.AccidentalFlat), a sharp's and a natural's at it, so a flat key moves 0.12
+    /// and every other key not at all. The width does not move: each advance is a glyph's ink
+    /// width, so the walk's sum already ends at the last glyph's ink right once its first
+    /// starts at 0.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:241-243 Break_alignment_interface::calc_positioning_done
+    ///   — offsets[r] = extents[l][RIGHT] + distance − extents[r][LEFT]: the KeySignature is
+    ///   placed by its stencil's extent, whose LEFT is the first flat's ink, not its origin.
+    /// MEASURED, 2.26.0 (Lab sessions/p830/ck dflat / dbes, one staff after a treble clef): the
+    /// flats of F and B♭ major stood 0.117 right of where Lily# drew them, a G major's sharp
+    /// where Lily# drew it, and the meter after either key where Lily# drew it — the column was
+    /// right, the glyphs in it were not. Until session 831 every flat signature was drawn so.
+    /// </remarks>
+    private static List<(string Kind, double Dx, int StaffPosition)> InkFromTheLeftEdge(
+        List<(string Kind, double Dx, int StaffPosition)> glyphs)
+    {
+        double inkLeft = 0;
+        foreach (var (kind, dx, _) in glyphs)
+            inkLeft = Math.Min(inkLeft, dx + GlyphMetrics.GetAccidentalBBox(kind).Left);
+        if (inkLeft < 0)
+            for (int i = 0; i < glyphs.Count; i++)
+                glyphs[i] = (glyphs[i].Kind, glyphs[i].Dx - inkLeft, glyphs[i].StaffPosition);
         return glyphs;
     }
 

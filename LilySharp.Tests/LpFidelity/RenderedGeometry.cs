@@ -5538,9 +5538,14 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
-    /// The ossia staff's first key-signature accidental X minus the main staff's, on a
+    /// The ossia staff's first key-signature accidental's INK left minus the main staff's, on a
     /// probe whose only accidentals are the two line-start key signatures. Metric-free:
-    /// two glyph anchors in the SAME render. LilyPond break-aligns the ossia's
+    /// two glyphs in the SAME render. ⚠️ INK, NOT THE GLYPH ORIGIN (session 831): LilyPond's
+    /// KeySignature stencil starts its ink at the grob's X (extent (0 . 1.84) — Lab
+    /// sessions/p831/okn), so its anchors are ink edges; a flat's origin sits right of its ink
+    /// by its overhang, which an ossia draws smaller (and LilyPond, out of its small design,
+    /// differently again: 0.108 against the twenty's scaled 0.085), so origins would compare
+    /// overhangs, not columns. LilyPond break-aligns the ossia's
     /// KeySignature into the ONE key column spanning the system — the ossia has no clef,
     /// yet its key prints at the main staff's key X — so the offset there is 0
     /// (break-alignment-interface.cc:141-142, group extent = union across staves; probe
@@ -5565,8 +5570,19 @@ internal sealed class RenderedGeometry
             throw new InvalidOperationException(
                 "no scaled (ossia) accidentals in the probe — the ossia key signature "
                 + "was not drawn.\nDrawn geometry:\n" + Describe());
-        return ossia.Min(g => g.X) - main.Min(g => g.X);
+        return ossia.Min(InkLeft) - main.Min(InkLeft);
     }
+
+    /// <summary>Where an accidental glyph's INK starts: its origin plus its box's left edge at
+    /// the size it is drawn (a flat's box starts 0.12 left of its origin at full size).</summary>
+    private static double InkLeft(DrawnGlyph g) => g.X + GlyphMetrics.GetAccidentalBBox(g.Glyph switch
+    {
+        EmmentalerGlyphs.AccidentalSharp => "sharp",
+        EmmentalerGlyphs.AccidentalFlat => "flat",
+        EmmentalerGlyphs.AccidentalDoubleSharp => "doubleSharp",
+        EmmentalerGlyphs.AccidentalDoubleFlat => "doubleFlat",
+        _ => "natural",
+    }).Left * g.FontSize / 4.0;
 
     /// <summary>
     /// The anchor of the first NON-notehead music glyph right of <paramref name="x"/> — the

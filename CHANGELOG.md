@@ -470,6 +470,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **Flat key signatures stand where LilyPond puts them.** Every flat (and double flat) in a key
+  signature was drawn 0.12 staff spaces left of LilyPond's — at the start of each line, in a
+  change and at a line end alike — because the flat's ink reaches left of its glyph origin and
+  the key was placed by the origin; the signature's ink now starts at the edge of its column, as
+  in LilyPond. Nothing else on the line moves.
 - **At a line end, every staff's courtesy key and meter stand in one column.** Where the staves
   change key differently — a transposed part over a concert one — each staff's cancellation,
   new signature and new meter now line up across the system, as LilyPond lays them out: a
