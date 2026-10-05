@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第820セッションの経緯
+
+### 1.1 第820セッション（2026-10-05・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝P5）。`-Start p820`（HEAD `754784e3`）＝full **11155 / 0 / 2 / 11157**。§7 3.5 で第818 を ARCHIVE へ（moved 14 lines）。
+- **P5 `lysc boxes`**（`3095bd0bc`）: 描かない描画先 `Rendering/Boxes`（`BoxesDocumentContext`/`BoxesDrawingContext`）が `SharedRenderer.RenderTo` の Y 反転の後で全プリミティブの枠を記録＝SVG と同じ座標。字形と文字の枠は**描かない `PngDrawingContext` に訊く**（`MeasureGlyphInk`/`MeasureTextInk`・`DrawText` の位置決めを `PlaceText` に切り出して描く側と共用＝PNG 40 冊 225 枚でバイト不変）。⚠️ Skia の `GetGlyphWidths` の bounds は余白つき（noteheads.s0 で 2.0625×1.125・輪郭は 1.962×1.09＝PNG の画素も同じ）＝`GetGlyphPath().TightBounds` を使う。種類は字形名（`EmmentalerGlyphs` の定数名を反射で逆引き・fontTools はこの PC に無い）・`TextRole`・新しいスコープ `IDrawingContext.Kind`/`Staff`（既定は何もしない・YFlip と UnscaledX が素通し）。JSON は version 1・`bars`（`DrawBarBox` の印刷番号と枠）。掃き: SVG 1199 枚 差 0・`boxes --batch` 998 冊で 1199 ファイル（失敗 10 は svg と同じ本）。毒（YFlip の Kind を外す→3 赤）。full **11167 / 0 / 2 / 11169**。残り: 種類の無い `line` 386・`rect` 342（練習記号の枠・volta・ペダル・オッターヴァ等）・頁の上乗せ（強弱・歌詞）の `staff` は −1・音高と音価は出さない（`pos` で引ける）。
+
+★ `-End p820 -DiffBase 754784e3c`（`end.log`）＝full **11167 / 0 / 2 / 11169**・門 全 OK（HANDOFF 445,563 B）。7.5: Core `+` 719 行・REF 0・OWN 1＝描画の意味は変えない道具（boxes の描画先・CLI・改行の許可の書き換え）。OWN 1 は `MeasuresPerSystem`（LP に変数が無い）。7.6: 字形と文字の枠は PNG の描画と同じ計算（1 か所）・線の種類はレンダラーの呼び出し箇所が名乗る。7.7: 種類の無い `line`/`rect` が残る（上）。commit `338f18d42`・`3095bd0bc`＋docs。push はユーザー。
+判定: 次は P3（`--staff-space`）。(a) 今の文脈は使わない／(b) 会話はかなり長い（圧縮はまだ）／(c) 別の島 ⇒ **新しい会話が有利**（(b) による）。
+- **`measuresPerSystem`**（`338f18d42`）: ユーザーの問い「あれば OMR に役立つか」→ 役立つ（行を揃える組み方では間隔のつまみを変えても仕上がりの密度が戻る・リードシートの 1 段 4 小節は実物に多い）→ ユーザー決定「`--set` 専用で入れる」。`Collector.BreaksOnly` の出口で N 小節ごとに Force・他は Forbid（書いた break/pageBreak より優先・強制した小節は頁の許可を保つ・弱起も 1 小節）。LP に同じ変数は無い＝LILYSHARP-OWN。入りきらない段は右余白の外へ（LP と同じ・LP は黙る）＝`LayoutWarnings` が `system N (page P) is over-full …` を出す（PNG はそこを切る）。998 冊の `--batch` で警告 0＝既存の本には出ない。毒 2 本（4 赤・1 赤）。full **11160 / 0 / 2 / 11162**。OMR 側のメモも更新。
+
 ## 以下は第819セッションの経緯
 
 ### 1.1 第819セッション（2026-10-05・YT-DELL2）
