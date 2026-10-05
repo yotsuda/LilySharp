@@ -687,11 +687,19 @@ internal static class LineStartColumn
     /// predecessor's <c>:|:</c>), where the whole column is priced through this spring.</param>
     /// <param name="ownFixedFloor">A LOWER BOUND on each wish's FIXED distance, expressed
     /// like everything the caller hands in — see the frame note below — or null for none.
-    /// This is Lily#'s own (<c>LILYSHARP-OWN</c>), not LilyPond's: LilyPond puts a leading
-    /// grace and the lyrics in their OWN paper columns so <c>min_dist</c> reaches them,
-    /// where Lily# folds their widths into the measure's spring 0. It is applied to every
-    /// wish, so it survives the merge (a mean of values each at least the floor is at least
-    /// the floor).</param>
+    /// This is Lily#'s own (<c>LILYSHARP-OWN</c>), not LilyPond's: LilyPond's <c>min_dist</c>
+    /// reaches every grob of the first column, where Lily#'s reaches the note column alone and
+    /// this floor — the measure's bar-line spring minimum — stands in for the rest. It is
+    /// applied to every wish, so it survives the merge (a mean of values each at least the
+    /// floor is at least the floor). Not applied when a grace run opens the line (that is
+    /// LilyPond's columns, <see cref="IntoGraceRun"/>). MEASURED (session 832, Lab
+    /// sessions/p832/flr and the 998-book sweep: dropping it moves 48 svg by up to 2.32):
+    /// it carries a chord name or diagram over the first note, in LilyPond's direction
+    /// (chord-notes' first note +0.12 against LilyPond with it, −2.20 without), and
+    /// over-reserves a numbers tab's digits (tabnum, tabdot +0.30 with it, 0.00 without); a
+    /// lyric reaches the prefix through LyricSpacing either way. Retiring it means putting
+    /// those grobs into <see cref="MinimumDistanceAtLineStart"/> first (the removal itself is
+    /// Lab sessions/p832/floor-removal.diff).</param>
     /// <returns>The merged spring in the caller's MEASURE frame (0 = where the prefix ink
     /// ends, <see cref="BreakAlignSpacing.PrefixColumns.Right"/>, plus the opening measure's
     /// own start bar line width, <paramref name="measureStartBarWidth"/>), which the

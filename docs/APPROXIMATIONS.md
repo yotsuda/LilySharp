@@ -448,9 +448,9 @@
 - **:170** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
 - **:218** LILYSHARP-OWN: LilyPond has no such variable (its spelling is a \break every N bars beside the ##f permissions); 0 leaves the breaks to the breaker.
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
-- **:690** This is Lily#'s own (LILYSHARP-OWN), not LilyPond's: LilyPond puts a leading
-- **:782** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
-- **:790** LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
+- **:690** This is Lily#'s own (LILYSHARP-OWN), not LilyPond's: LilyPond's min_dist
+- **:790** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
+- **:798** LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
 ### `LilySharp.Core/Svg/Layout/LyricEngraver.cs`
 - **:213** ⚠️ LILYSHARP-OWN, AND IT IS LOAD BEARING NOW THAT NOTHING ELSE IS. LilyPond has no
 - **:297** LILYSHARP-OWN: the CJK term. The bundled face has no CJK glyphs, so the outline is
