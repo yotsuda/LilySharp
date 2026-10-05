@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第817セッションの経緯
+
+### 1.1 第817セッション（2026-10-05・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝§1.0 の ④）。`-Start p817`（HEAD `548717b3`）＝full **11124 / 0 / 2 / 11126**。§7 3.5 で第815 を ARCHIVE へ（moved 13 lines）。
+- **B4**（`7b0da314b`）: scan view と preview が小節ごとに一緒にスクロール（各 webview が上端の小節を報告・相手に `showBar`・頼まれたスクロールは折り返さない）。OMR の小節（行の錨）→ 印刷番号は `lilysharp/placeAt` の `Offsets` 一括で引き、印刷にしか無い小節（長すぎる小節の後半）は元の小節に留まる（`scanBarForPrinted`）。`@todo` のある小節は preview の bar-box を赤い破線に。scan の webview の script も npm で構文を試験。⚠️ 置換の組で `,` が `+` より先に結ぶ罠（CLAUDE-OPERATIONS §1）を踏んで preview の message ハンドラの頭 3 行を消した＝preview の script の構文試験が赤で捕まえた。
+- **C3**（`1aa5dbaf1`）: ユーザー決定＝**`paper { breaksOnly }`**（裸の flag・案の 3 つから選んだ）。`Collector.BreaksOnly` が `CollectScore` の出口で全譜の Allow を Forbid に（最後の小節は残す）＝full・incremental・全出力が同じ measure を読む。毒 1 本（Apply を外す→1 赤）。`VocabularyPerturbationTests` は filled-page の本で問う。ユーザー: OMR が出す `.lys` に書かせればよい＝OMR 提案書にお願いとして書いた。
+- full **11128 / 0 / 2 / 11130**・npm 205/205。
+
+★ `-End p817 -DiffBase 548717b35`（`end2.log`）＝full **11128 / 0 / 2 / 11130**・門 全 OK（HANDOFF 443,050 B）。7.5: Core `+` 95 行・REF 1（line-/page-break-permission）・OWN 0＝`breaksOnly` は LP の permission ##f と同じ意味。7.6: 閉じるのは Allow だけ・Force（書いた break）と最後の小節は残す。7.7: 匂い無し。⚠️ `-End` の 1 回目は §1 の継ぎ目の見出しを置換の組の `,`/`+` の罠でまた消していた（`TheHandoffKeepsExactlyOnePredecessorBlock` が赤で捕まえた＝直して 2 回目 OK）。commit `7b0da314b`・`1aa5dbaf1`＋docs。push はユーザー。
+判定: 次は ⑤ B5（保存で `omr --verify` を呼び直して side file を更新＝scan view は既に side file の書き直しを読み直す）・B6。(a) omrCore の起動と scan view の上に立つ＝続ける側／(b) 圧縮なし／(c) 同じ島。⇒ **続けてよい。ただし B1〜B4 を VS Code で一度見てもらうのが先**（実物の OMR で未試験）。
+
 ## 以下は第816セッションの経緯
 
 ### 1.1 第816セッション（2026-10-05・YT-DELL2）
