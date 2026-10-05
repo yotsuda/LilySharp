@@ -56,7 +56,8 @@ internal static partial class SharedRenderer
             if (!inSystem) continue;
             if (percentByStaff.Contains((Math.Max(0, beam.StaffIndex), beam.Group.MeasureIndex)))
                 continue;
-            DrawBeam(score, system, gc, pageHeight, beam);
+            using (gc.Staff(beam.StaffIndex))
+                DrawBeam(score, system, gc, pageHeight, beam);
         }
         percentByStaff.Clear();
         t_percentByStaff = percentByStaff;
@@ -506,8 +507,9 @@ internal static partial class SharedRenderer
             int stemRank = beamRanks[memberWalkIndex[i]].Multiplicity(up ? 1 : -1);
             double beamY = primaryBeamY
                 + beamTranslation * stemRank * FeatherFactorAt(stemX);
-            bgc.DrawLine(stemX, headY, stemX, beamY,
-                Color.Black, EngravingDefaults.StemThickness);
+            using (bgc.Kind("stem"))
+                bgc.DrawLine(stemX, headY, stemX, beamY,
+                    Color.Black, EngravingDefaults.StemThickness);
 
             // A single-note tremolo on a BEAMED stem — drawn here, because the unbeamed
             // DrawTremolo is never reached for a stem the beam owns (HANDOFF §2 R9⒢).
@@ -732,6 +734,7 @@ internal static partial class SharedRenderer
         //   thickness `thick`, sloped by `slope`, corners offset so the ends stay
         //   vertical; called from lily/beam.cc:794 Beam::print.
         double beamHalf = thickness / 2;
+        using var kind = gc.Kind("beam");
         gc.DrawFilledQuad(
             (x1, y1 + beamHalf), (x2, y2 + beamHalf),
             (x2, y2 - beamHalf), (x1, y1 - beamHalf), Color.Black);

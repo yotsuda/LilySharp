@@ -41,17 +41,17 @@
 ### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
 - **:333** ⚠️ NOT PORTED — backend-blocked: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
-- **:270** fans twice. Not ported; no book in the corpus has one.
-- **:688** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
+- **:271** fans twice. Not ported; no book in the corpus has one.
+- **:690** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:373** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1308** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
-- **:1313** whiteout −1) is not ported.
-- **:1433** NOT ported; this takes the note's own stem direction. No book and
+- **:1310** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
+- **:1315** whiteout −1) is not ported.
+- **:1435** NOT ported; this takes the note's own stem direction. No book and
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
 - **:359** Lily# has not ported; this arrow is its own device.
-- **:823** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
+- **:826** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:301** ⚠️ subdivide_beams (:186-188) is not ported: it is gated on
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
@@ -136,10 +136,10 @@
 ## UNWATCHED — 観測者がゼロだと自認しているもの（64 件）
 
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
-- **:691** no observer; add the paren widths when a book brings one. The unpacked
-- **:693** bare glyph width, which is exact for one and unobserved for many.
+- **:693** no observer; add the paren widths when a book brings one. The unpacked
+- **:695** bare glyph width, which is exact for one and unobserved for many.
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1434** no observer reaches that branch yet.
+- **:1436** no observer reaches that branch yet.
 ### `LilySharp.Core/Rendering/SharedRenderer.Noteheads.cs`
 - **:782** observed by: no observer, and none is possible while the term is dominated — it
 ### `LilySharp.Core/Semantics/DrummapValidator.cs`
@@ -302,13 +302,13 @@
 ### `LilySharp.Core/Rendering/Pdf/PdfReproducibility.cs`
 - **:41** LILYSHARP-OWN: the convention is reproducible-builds.org's, not LilyPond's (its PDFs
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
-- **:417** LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
+- **:418** LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
-- **:695** prefix — LILYSHARP-OWN, a decided divergence (user decision
+- **:697** prefix — LILYSHARP-OWN, a decided divergence (user decision
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:216** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1427** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
+- **:1429** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
 - **:180** LILYSHARP-OWN: LilyPond has no scoop or plop — no grob and no event spells either in
 - **:229** The bend amount label's ENGRAVING em. LILYSHARP-OWN, as
@@ -316,9 +316,9 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Prefix.cs`
 - **:582** LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
 ### `LilySharp.Core/Rendering/SharedRenderer.Tab.cs`
-- **:425** LILYSHARP-OWN: LilyPond has no pitchless note — its slash is a style on
-- **:443** ⚠️ LILYSHARP-OWN on a FULL tab, and deliberately so (USER DECISION,
-- **:990** ⚠️ LILYSHARP-OWN, the other half: which x IS the centre when the digits do not
+- **:426** LILYSHARP-OWN: LilyPond has no pitchless note — its slash is a style on
+- **:444** ⚠️ LILYSHARP-OWN on a FULL tab, and deliberately so (USER DECISION,
+- **:993** ⚠️ LILYSHARP-OWN, the other half: which x IS the centre when the digits do not
 ### `LilySharp.Core/Rendering/TextFontMetrics.cs`
 - **:543** LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
 - **:660** ⚠️ LILYSHARP-OWN: the glyphs a missing codepoint falls back to are drawn from a system

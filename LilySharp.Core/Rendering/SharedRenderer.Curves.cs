@@ -119,6 +119,8 @@ internal static partial class SharedRenderer
             // for ties; the sentinel is what says so) must stay unaddressed, or the
             // webview's position index gains a -1 the source has no character for.
             using (tie.Tie.SourcePosition is var tiePos and >= 0 ? gc.Source(tiePos) : null)
+            using (gc.Kind("tie"))
+            using (gc.Staff(tie.StaffIndex))
             {
                 DrawBow(tie.StartX, syUp + tie.StartYUp, tie.EndX, syUp + tie.EndYUp,
                     (tie.Control1.X, syUp + tie.Control1.Y), (tie.Control2.X, syUp + tie.Control2.Y),
@@ -194,6 +196,8 @@ internal static partial class SharedRenderer
             using (open < 0 ? null
                 : close < 0 ? gc.Source(open)
                 : gc.Source(open, ImmutableArray.Create(close)))
+            using (gc.Kind("slur"))
+            using (gc.Staff(slur.StaffIndex))
             {
                 DrawBow(slur.StartX, syUp + slur.StartYUp, slur.EndX, syUp + slur.EndYUp,
                     (slur.Control1.X, syUp + slur.Control1.Y), (slur.Control2.X, syUp + slur.Control2.Y),

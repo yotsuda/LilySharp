@@ -434,6 +434,11 @@ workflow attaches that section to the GitHub Release verbatim.
   system, the lead-sheet layout) and, with LilyPond's meaning, `shortestDurationSpace` (the
   shortest note's space), `systemsPerPage` (exactly N systems a page — the lines are re-broken
   so the pages fill, as LilyPond does), `maxSystemsPerPage` and `minSystemsPerPage`.
+- **`lysc boxes` writes every drawn symbol's box as JSON.** Page by page, each symbol the SVG
+  and the PNG draw — its kind (`notehead`, `stem`, `staffLine`, `beam`, `tie`, `lyricText`,
+  …), its ink box in staff spaces, its source offset and its staff — and each bar's printed
+  number and box. The same layout and `--set` as `svg` / `png`, so an OMR reader can take its
+  training truth from Lily# instead of guessing it back out of the SVG.
 - **A page that cannot hold its systems is compressed onto the paper, and said so.** As in
   LilyPond, the overflow is taken out of the gaps so the systems overlap on the page instead
   of running off its bottom, and `svg` / `png` / `pdf` print

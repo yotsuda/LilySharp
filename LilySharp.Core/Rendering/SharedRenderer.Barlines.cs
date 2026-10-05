@@ -232,6 +232,8 @@ internal static partial class SharedRenderer
         double? dashSpace = null)
     {
         if (type == BarlineType.None) return;
+        // A repeat sign's dots are drawn inside it and so are part of the bar line (lysc boxes).
+        using var kind = gc.Kind("barLine");
 
         double thin = EngravingDefaults.ThinBarlineThickness;
         double thick = EngravingDefaults.ThickBarlineThickness;

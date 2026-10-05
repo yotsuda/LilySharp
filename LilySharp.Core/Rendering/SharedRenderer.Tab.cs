@@ -347,6 +347,7 @@ internal static partial class SharedRenderer
             end++;
         int from = run;
         run = end;
+        using var kind = gc.Kind("staffLine");
 
         double x = left;
         for (int k = from; k < end; k++)
@@ -581,11 +582,13 @@ internal static partial class SharedRenderer
             // (the :107 fallback). Measured on 2.26.0: stem-line centres exactly 0.5 apart
             // (tablature-double-stem-tremolo twin, 17.44/17.94).
             const double halfGap = EngravingDefaults.TabDoubleStemSeparation / 2;
+            using var kind = gc.Kind("stem");
             gc.DrawLine(stemX - halfGap, nearY, stemX - halfGap, farY, Color.Black, EngravingDefaults.StemThickness);
             gc.DrawLine(stemX + halfGap, nearY, stemX + halfGap, farY, Color.Black, EngravingDefaults.StemThickness);
         }
         else
         {
+            using var kind = gc.Kind("stem");
             gc.DrawLine(stemX, nearY, stemX, farY, Color.Black, EngravingDefaults.StemThickness);
         }
 

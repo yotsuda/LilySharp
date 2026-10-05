@@ -133,6 +133,12 @@ internal sealed class YFlipDrawingContext : IDrawingContext
     // Forwarded, NOT left to the interface default (a no-op), or no data-todo is written.
     public IDisposable Todo(string key) => _inner.Todo(key);
 
+    // Forwarded like Todo: the interface default is a no-op, so a decorated backend would
+    // otherwise never hear what a primitive is or which staff it is on (lysc boxes).
+    public IDisposable Kind(string kind) => _inner.Kind(kind);
+
+    public IDisposable Staff(int staffIndex) => _inner.Staff(staffIndex);
+
     // Forwarded, NOT left to the interface default: the default is a no-op, so a decorated
     // backend would silently keep drawing graces from the 20 face.
     public IDisposable MusicFace(int rounded) => _inner.MusicFace(rounded);

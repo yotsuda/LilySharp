@@ -645,6 +645,8 @@ internal static partial class SharedRenderer
             // print nothing for the system.
             if (!StaffPresentInSystem(system, globalIdx))
                 continue;
+            // Everything this iteration draws belongs to this staff (lysc boxes).
+            using var staffScope = gc.Staff(globalIdx);
 
             // Device staff-top Y for the ossia group transform below (an inherently
             // device-frame affine): FindStaffYInSystem is now page Y-up (W2-core), so
@@ -1131,6 +1133,7 @@ internal static partial class SharedRenderer
         // readers cannot disagree about a line.
         // LILYPOND-REF: StaffSymbol line-positions — percussion/timbales styles.
         var positions = EngravingDefaults.StaffLinePositions(lines);
+        using var kind = gc.Kind("staffLine");
         // Top line first, as the rows were always emitted (the table ascends).
         for (int i = positions.Length - 1; i >= 0; i--)
         {

@@ -464,6 +464,8 @@ internal static partial class SharedRenderer
             double rightTop = absY + endOpening;
             double rightBottom = absY - endOpening;
             using (gc.Source(h.SourcePosition))
+            using (gc.Kind("hairpin"))
+            using (gc.Staff(h.StaffIndex))
             {
                 // Round caps so the two arms close cleanly at the wedge apex
                 // (where StartOpening or EndOpening is 0): butt caps left a
@@ -658,6 +660,7 @@ internal static partial class SharedRenderer
                     double reach = TupletBracketLayout.BracketOutwardReach * b.LineSpacing;
                     double lx = b.StartX - reach * ux, ly = startY - reach * uy;
                     double rx = b.EndX + reach * ux, ry = endY + reach * uy;
+                    using var bracketKind = gc.Kind("tupletBracket");
                     gc.DrawLine(lx, ly, lx, ly - edgeHeight * hookDir, Color.Black, thickness);
                     if (!string.IsNullOrEmpty(b.NumberText))
                     {

@@ -72,6 +72,7 @@ static int Dispatch(string command, string[] args) => command switch
     "svg" => RunSvg(args),
     "pdf" => RunPdf(args),
     "png" => RunPng(args),
+    "boxes" => RunBoxes(args),
     "midi" => RunMidi(args),
     "xml" => RunXml(args),
     "ly" => RunLy(args),
@@ -100,6 +101,7 @@ static void ShowHelp()
           svg        Convert to SVG (sheet music)
           pdf        Convert to PDF (sheet music)
           png        Convert to PNG (raster image)
+          boxes      Write every drawn symbol's box as JSON (for OMR training data)
           midi       Convert to MIDI (audio)
           vsqx       Convert to VOCALOID sequence (vocal part + lyrics)
 
@@ -364,7 +366,55 @@ static void ShowPdfHelp()
         """);
 }
 
-// ============ PNG Command ============
+// ============ Boxes Command ============
+
+// LilySharp-Omr's proposal of 2026-10-02, P5: every drawn symbol's ink box, page by page.
+static int RunBoxes(string[] args)
+{
+    if (WantsHelp(args))
+    {
+        ShowBoxesHelp();
+        return 0;
+    }
+
+    var r = OutputOptions()
+        .Value("score", "--score requires a score name", "--score")
+        .Value("set", "--set requires KEY=VALUE", "--set")
+        .Parse(args);
+    if (r.Error != null) return OptionError(r.Error, "boxes");
+    var settings = PaperOverridesOf(r, out var setError);
+    if (setError != null) return OptionError("--set: " + setError, "boxes");
+    var options = new ExportOptions { PaperOverrides = settings };
+    return RunScoreOutputs("boxes", r, ".boxes.json",
+        (tree, output) => Report(ScoreExport.Write(tree, "boxes", output.Path, output.Score, options)));
+}
+
+static void ShowBoxesHelp()
+{
+    Console.WriteLine("""
+        Write every drawn symbol's box as JSON
+
+        Usage: lysc boxes [options] <input.lys>
+
+        Writes <input>.boxes.json for the main score and <input>-<alias>.boxes.json for
+        each other one: per page, every symbol the SVG/PNG draws — its kind (notehead,
+        stem, staffLine, tie, lyric, ...), its ink box in staff spaces (origin top-left,
+        Y down), its source offset (data-pos) and staff — and each bar's printed number
+        and box. Takes the same --set as svg/png, so the boxes match those pictures.
+
+        Options:
+          -d, --out-dir <folder> Write into this folder (default: the input's folder)
+          --score <name>         Write only the named score
+          --set <KEY=VALUE>      Override a paper value (repeatable), as for svg/png
+          -h, --help             Show this help
+
+        Examples:
+          lysc boxes song.lys
+          lysc boxes --set systemsPerPage=4 song.lys
+        """);
+}
+
+
 
 static int RunPng(string[] args)
 {

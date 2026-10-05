@@ -836,9 +836,10 @@ internal static partial class SharedRenderer
                 deviceNoteY, stemUp, deviceStaffTop, durLog, note.StaffPosition,
                 StemDetailsOf(note));
             if (!stemTransparent)
-                gc.DrawLine(stemX, noteY - StemAttachYOffset(note.Notehead, stemUp, noteValue),
-                    stemX, stemEndY,
-                    stemColor ?? Color.Black, EngravingDefaults.StemThickness);
+                using (gc.Kind("stem"))
+                    gc.DrawLine(stemX, noteY - StemAttachYOffset(note.Notehead, stemUp, noteValue),
+                        stemX, stemEndY,
+                        stemColor ?? Color.Black, EngravingDefaults.StemThickness);
 
             // The stem as a dot support — its own X extent's RIGHT edge, over the seven
             // positions LilyPond walks from the head it stands on. Transparency does not
@@ -1253,8 +1254,9 @@ internal static partial class SharedRenderer
             double stemStartY = (stemUp ? bottomY : topY)
                 - StemAttachYOffset(chord.Notehead, stemUp, noteValue);
             if (!stemTransparent)
-                gc.DrawLine(stemX, stemStartY, stemX, stemEndY,
-                    stemColor ?? Color.Black, EngravingDefaults.StemThickness);
+                using (gc.Kind("stem"))
+                    gc.DrawLine(stemX, stemStartY, stemX, stemEndY,
+                        stemColor ?? Color.Black, EngravingDefaults.StemThickness);
 
             // The flag is the STEM's grob, indifferent to how many heads hang on it —
             // LilyPond makes one Flag per stem and the flag reads only its stem, so a
@@ -1513,6 +1515,7 @@ internal static partial class SharedRenderer
         }
 
         double thickness = EngravingDefaults.LegerLineThickness;
+        using var kind = gc.Kind("ledgerLine");
         foreach (var (_, line) in lines)
             gc.DrawLine(line.Left, line.Y, line.Right, line.Y, Color.Black, thickness);
     }

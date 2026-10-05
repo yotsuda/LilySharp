@@ -239,6 +239,23 @@ public interface IDrawingContext
     IDisposable Todo(string key) => NullScope.Instance;
 
     /// <summary>
+    /// Names WHAT subsequent draw operations (until <see cref="IDisposable.Dispose"/>) are — a
+    /// stem, a staff line, a tie — where the primitive cannot say it (a line is a line). Read
+    /// by <c>lysc boxes</c> (BoxesDrawingContext: one box per symbol, by kind, for an OMR
+    /// reader's training truth — LilySharp-Omr proposal of 2026-10-02, P5); a glyph's kind
+    /// comes from the glyph and a text's from its <see cref="TextRole"/>, so those need no
+    /// scope. It draws nothing, so the default ignores it.
+    /// </summary>
+    IDisposable Kind(string kind) => NullScope.Instance;
+
+    /// <summary>
+    /// Tags subsequent draw operations (until <see cref="IDisposable.Dispose"/>) with the
+    /// staff they belong to — the score's <c>EnumerateStaves</c> index. Read by
+    /// <c>lysc boxes</c> like <see cref="Kind"/>; the default ignores it.
+    /// </summary>
+    IDisposable Staff(int staffIndex) => NullScope.Instance;
+
+    /// <summary>
     /// Draws subsequent MUSIC glyphs (until <see cref="IDisposable.Dispose"/>) from another
     /// Emmentaler DESIGN — <paramref name="rounded"/> is the size in the file name, 20 being
     /// the score's own. Text is unaffected.

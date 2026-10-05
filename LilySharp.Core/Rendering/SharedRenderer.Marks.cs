@@ -312,6 +312,8 @@ internal static partial class SharedRenderer
             double lowerDotCx = left + groupWidth - g.DotKern + dotRadius;
             double dotDy = g.DotDy;
             using (gc.Source(pr.SourcePosition))
+            using (gc.Kind("percentRepeat"))
+            using (gc.Staff(pr.StaffIndex))
             {
                 // Bottom-left to top-right, with a dot in each pocket the slash leaves —
                 // upper-LEFT and lower-RIGHT, like the "%" glyph. The double sign draws the

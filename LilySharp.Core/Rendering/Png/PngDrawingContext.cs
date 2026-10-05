@@ -214,6 +214,119 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
         TextAnchor anchor = TextAnchor.Start, Color? fill = null,
         VerticalAnchor verticalAnchor = VerticalAnchor.Baseline)
     {
+        using var paint = new SKPaint
+        {
+            Color = ToSKColor(fill),
+            Style = SKPaintStyle.Fill,
+            IsAntialias = true,
+            SubpixelText = true,
+        };
+        var placed = PlaceText(text, x, y, fontSize, role, style, anchor, verticalAnchor, paint);
+        float cx = placed.X;
+        foreach (var (segment, typeface) in placed.Runs)
+        {
+            paint.Typeface = typeface;
+            using var runFont = new SKFont(typeface, T(fontSize)) { Edging = SKFontEdging.SubpixelAntialias };
+            if (ReferenceEquals(typeface, placed.Reserved) && placed.Measured is TextFace shaped)
+                DrawShaped(segment, cx, placed.Y, fontSize, shaped, runFont, paint);
+            else
+                _canvas.DrawText(segment, cx, placed.Y, runFont, paint);
+            cx += RunWidth(segment, typeface, placed.Reserved, placed.Measured, fontSize, paint);
+        }
+    }
+
+    /// <summary>
+    /// The ink box of a <see cref="DrawText"/> call, in this context's pixels — the glyphs at
+    /// the very positions <see cref="DrawText"/> draws them (one placement, <see cref="PlaceText"/>).
+    /// Empty when the text has no ink. For <c>lysc boxes</c> (BoxesDrawingContext).
+    /// </summary>
+    internal SKRect MeasureTextInk(string text, double x, double y, double fontSize,
+        TextRole role, FontStyle style, TextAnchor anchor, VerticalAnchor verticalAnchor)
+    {
+        using var paint = new SKPaint { SubpixelText = true };
+        var placed = PlaceText(text, x, y, fontSize, role, style, anchor, verticalAnchor, paint);
+        var ink = SKRect.Empty;
+        float cx = placed.X;
+        foreach (var (segment, typeface) in placed.Runs)
+        {
+            paint.Typeface = typeface;
+            using var runFont = new SKFont(typeface, T(fontSize));
+            if (ReferenceEquals(typeface, placed.Reserved) && placed.Measured is TextFace shaped)
+            {
+                var glyphs = TextFontMetrics.ShapeRun(segment, fontSize, shaped);
+                if (glyphs.Count > 0)
+                {
+                    for (int i = 0; i < glyphs.Count; i++)
+                        ink = Union(ink, Offset(OutlineBounds(runFont, glyphs[i].GlyphId), cx + T(glyphs[i].X), placed.Y));
+                }
+            }
+            else
+            {
+                // Unshaped, as DrawText draws it: each glyph at the sum of the advances before it.
+                var ids = GlyphIds(runFont, segment);
+                var advances = new float[ids.Length];
+                runFont.GetGlyphWidths(ids, advances, null);
+                float pen = cx;
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    ink = Union(ink, Offset(OutlineBounds(runFont, ids[i]), pen, placed.Y));
+                    pen += advances[i];
+                }
+            }
+            cx += RunWidth(segment, typeface, placed.Reserved, placed.Measured, fontSize, paint);
+        }
+        return ink;
+    }
+
+    /// <summary>The ink box of a <see cref="DrawGlyph"/> call, in this context's pixels, from
+    /// the face <see cref="DrawGlyph"/> draws it in. For <c>lysc boxes</c>.</summary>
+    internal SKRect MeasureGlyphInk(char glyph, double x, double y, double fontSize)
+    {
+        var font = _fonts.GetFont(EmmentalerFaces.Family(_musicDesign), T(fontSize), FontStyle.Regular);
+        var ids = GlyphIds(font, glyph.ToString());
+        if (ids.Length == 0)
+            return SKRect.Empty;
+        var ink = SKRect.Empty;
+        foreach (var id in ids)
+            ink = Union(ink, Offset(OutlineBounds(font, id), X(x), X(y)));
+        return ink;
+    }
+
+    /// <summary>A glyph's OUTLINE box at the origin — tight. ⚠️ Not GetGlyphWidths' bounds:
+    /// those are padded (measured 2026-10-05: noteheads.s0 2.0625 × 1.125 staff spaces against
+    /// an outline of 1.962 × 1.09, which is also what the PNG's pixels show).</summary>
+    private static SKRect OutlineBounds(SKFont font, ushort id)
+    {
+        using var path = font.GetGlyphPath(id);
+        return path is null || path.IsEmpty ? SKRect.Empty : path.TightBounds;
+    }
+
+    private static ushort[] GlyphIds(SKFont font, string text)
+    {
+        var ids = new ushort[font.CountGlyphs(text)];
+        font.GetGlyphs(text, ids);
+        return ids;
+    }
+
+    private static SKRect Offset(SKRect r, float dx, float dy)
+        => r.IsEmpty ? r : new SKRect(r.Left + dx, r.Top + dy, r.Right + dx, r.Bottom + dy);
+
+    private static SKRect Union(SKRect a, SKRect b)
+        => a.IsEmpty ? b : b.IsEmpty ? a
+            : new SKRect(Math.Min(a.Left, b.Left), Math.Min(a.Top, b.Top), Math.Max(a.Right, b.Right), Math.Max(a.Bottom, b.Bottom));
+
+    /// <summary>Where <see cref="DrawText"/> puts a string: its typeface runs, the reserved
+    /// face and the measured one, and the pen's start (anchor and vertical anchor applied).</summary>
+    private readonly record struct PlacedText(
+        List<(string Segment, SKTypeface Typeface)> Runs, SKTypeface? Reserved, TextFace? Measured,
+        float X, float Y);
+
+    /// <summary>The placement half of <see cref="DrawText"/> — ONE home for it, so the box
+    /// <see cref="MeasureTextInk"/> reports is the ink <see cref="DrawText"/> lays down.
+    /// <paramref name="paint"/> carries the text size the fallback runs are measured at.</summary>
+    private PlacedText PlaceText(string text, double x, double y, double fontSize,
+        TextRole role, FontStyle style, TextAnchor anchor, VerticalAnchor verticalAnchor, SKPaint paint)
+    {
         // WHICH FILE, not which family name. The reservation resolved a role and a style to
         // one font PROGRAM (ScoreTextMetrics.Face, walking the score's chain and taking the
         // first face this machine can read); this asks it the same question and draws from
@@ -250,13 +363,6 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
         // for the brace, which no reservation measures.
         SKTypeface? reserved = measured is null ? null : baseTypeface;
 
-        using var paint = new SKPaint
-        {
-            Color = ToSKColor(fill),
-            Style = SKPaintStyle.Fill,
-            IsAntialias = true,
-            SubpixelText = true,
-        };
         paint.TextSize = T(fontSize);
 
         float tx = X(x);
@@ -282,18 +388,7 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
                 _ => 0,
             };
         }
-
-        float cx = tx;
-        foreach (var (segment, typeface) in runs)
-        {
-            paint.Typeface = typeface;
-            using var runFont = new SKFont(typeface, T(fontSize)) { Edging = SKFontEdging.SubpixelAntialias };
-            if (ReferenceEquals(typeface, reserved) && measured is TextFace shaped)
-                DrawShaped(segment, cx, ty, fontSize, shaped, runFont, paint);
-            else
-                _canvas.DrawText(segment, cx, ty, runFont, paint);
-            cx += RunWidth(segment, typeface, reserved, measured, fontSize, paint);
-        }
+        return new PlacedText(runs, reserved, measured, tx, ty);
     }
 
     /// <summary>

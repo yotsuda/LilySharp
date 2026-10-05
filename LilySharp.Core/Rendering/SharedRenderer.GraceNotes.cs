@@ -432,8 +432,9 @@ internal static partial class SharedRenderer
         double beamSlope = span > 0.001 ? (beamRightY - beamLeftY) / span : 0.0;
         double BeamY(double x) => beamLeftY + beamSlope * (x - edgeL);
 
-        for (int i = 0; i < beamedCount; i++)
-            gc.DrawLine(StemX(i), StemFootY(i), StemX(i), BeamY(StemX(i)), Color.Black, stemThick);
+        using (gc.Kind("stem"))
+            for (int i = 0; i < beamedCount; i++)
+                gc.DrawLine(StemX(i), StemFootY(i), StemX(i), BeamY(StemX(i)), Color.Black, stemThick);
 
         // A grace beam's thickness is DECLARED, not scaled: scm/music-functions.scm:635-648
         // general-grace-settings has (Voice Beam beam-thickness 0.384) where
@@ -473,6 +474,7 @@ internal static partial class SharedRenderer
             double yL = BeamY(xL) + off, yR = BeamY(xR) + off;
             // Quad corner offsets flip with the Y-up frame so each vertex keeps its
             // original device Y (and emit slot).
+            using var kind = gc.Kind("beam");
             gc.DrawFilledQuad(
                 (xL, yL + beamHalf), (xR, yR + beamHalf),
                 (xR, yR - beamHalf), (xL, yL - beamHalf), Color.Black);
@@ -538,6 +540,7 @@ internal static partial class SharedRenderer
         double y1 = stemEndY - sign * footDepth * hipDepthRatio * scale;   // the foot, toward the head
         double x2 = stemX + hipWidth * scale;
         double y2 = stemEndY - sign * flare * scale;                       // the hip, at the flag
+        using var kind = gc.Kind("graceSlash");
         gc.DrawLine(x1, y1, x2, y2, Color.Black, 1.5 * EngravingDefaults.StemThickness * scale);
     }
 

@@ -231,6 +231,56 @@ lysc svg --set raggedRight=false --set leftMargin=25mm song.lys
 lysc png --set shortestDurationSpace=3 --set systemsPerPage=4 song.lys
 ```
 
+### boxes - Every drawn symbol's box, as JSON
+
+```bash
+lysc boxes [options] <input.lys>
+```
+
+**Options:**
+| Option | Description |
+|--------|-------------|
+| `-d, --out-dir <folder>` | Write into this folder (default: the input's folder) |
+| `--score <name>` | Write only the named score |
+| `--set <KEY=VALUE>` | Override a paper value for this run (repeatable; see [Paper settings](#paper-settings---set)) |
+| `-h, --help` | Show help |
+
+Writes `<input>.boxes.json` (and `<input>-<alias>.boxes.json` for each other score): every
+symbol the SVG and the PNG draw, page by page, for an OMR reader's training truth — read
+from Lily# rather than guessed back out of the SVG. Same collection, layout and renderer as
+`svg` / `png`, and the same `--set`, so the boxes are those pictures' symbols.
+
+```json
+{ "version": 1, "unit": "staffSpace", "pages": [
+  { "page": 1, "width": 119.5016, "height": 169.0094,
+    "symbols": [
+      { "kind": "notehead", "glyph": "NoteheadBlack", "codepoint": 57598,
+        "box": [25.5614, 11.2221, 26.9364, 12.3471], "pos": 60, "staff": 0 },
+      { "kind": "tie", "box": [...], "pos": 71, "staff": 0, "ends": [x0, y0, x1, y1] },
+      { "kind": "lyricText", "text": "la", "box": [...], "pos": 120, "staff": -1 } ],
+    "bars": [ { "bar": 1, "box": [23.5614, 10.2846, 45.2224, 14.2846] } ] } ] }
+```
+
+- **Coordinates** are page staff spaces, origin top-left, Y down — one SVG unit, and
+  `10 × --scale` PNG pixels. A box is the INK: a glyph's or a text's outline as the PNG draws
+  it, a line's or a beam's stroked shape, a curve's sampled outline.
+- **`kind`**: a music glyph's comes from its glyph (`notehead`, `rest`, `accidental`, `clef`,
+  `flag`, `dot`, `articulation`, `timeSignature`, … — `glyph` for one with no class), a
+  text's from its role (`lyricText`, `chordName`, `tuplet`, `tabFret`, `title`, …), and lines
+  and shapes are named by the renderer: `staffLine` (tab strings too), `ledgerLine`, `stem`,
+  `beam`, `barLine` (a repeat sign's dots included), `tie`, `slur`, `hairpin`,
+  `tupletBracket`, `percentRepeat`, `graceSlash`. Anything else keeps its primitive's name
+  (`line`, `rect`, `quad`, `ellipse`, `circle`, `curve`).
+- **`glyph`** is Lily#'s name for a music glyph (`U+XXXX` where it has none) and
+  **`codepoint`** its slot in the bundled Emmentaler.
+- **`pos`** is the source offset the symbol was drawn under (the SVG's `data-pos`, −1 for
+  none); **`staff`** the staff it was drawn on (−1 where the renderer draws it outside any
+  one staff — dynamics, lyrics and other page overlays); **`todo`** the `@todo` key of its item.
+- **`bars`**: each bar of each system with the number the page prints, from the system's top
+  staff line to its bottom one.
+
+The layout warnings of `svg` / `png` (an over-full page or system) are printed here too.
+
 ### midi - Export to MIDI
 
 ```bash

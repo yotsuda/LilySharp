@@ -127,6 +127,12 @@ internal sealed class UnscaledXDrawingContext : IDrawingContext
     // Forwarded, NOT left to the interface default (a no-op), or no data-todo is written.
     public IDisposable Todo(string key) => _inner.Todo(key);
 
+    // Forwarded like Todo: the interface default is a no-op, so a decorated backend would
+    // otherwise never hear what a primitive is or which staff it is on (lysc boxes).
+    public IDisposable Kind(string kind) => _inner.Kind(kind);
+
+    public IDisposable Staff(int staffIndex) => _inner.Staff(staffIndex);
+
     // Forwarded, NOT left to the interface default (which is a no-op): this decorator
     // compensates X only, and the music face has to reach the real backend.
     public IDisposable MusicFace(int rounded) => _inner.MusicFace(rounded);

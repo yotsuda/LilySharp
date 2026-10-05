@@ -155,6 +155,15 @@ public static class ScoreExport
                     layoutWarnings);
             }
 
+            case "boxes":
+            {
+                var pages = Rendering.Boxes.BoxesGenerator.GeneratePages(tree, spec, options.PaperOverrides,
+                    layoutWarnings.Add);
+                File.WriteAllText(outputPath, Rendering.Boxes.BoxesGenerator.ToJson(pages));
+                return new ExportResult([outputPath],
+                    [$"Pages: {pages.Count}", $"Symbols: {pages.Sum(p => p.Symbols.Count)}"], layoutWarnings);
+            }
+
             case "pdf":
             {
                 var bytes = PdfGenerator.GenerateScore(tree, spec, new PdfRenderOptions
