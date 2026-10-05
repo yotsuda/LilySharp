@@ -67,6 +67,8 @@ internal static class LayoutPlanReader
             ["Stem.lengthFraction"] = ("1.0", "1.1"),
             ["Beam.thickness"] = ("0.48", "0.5"),
             ["Beam.damping"] = ("1.0", "2"),
+            ["Dots.padding"] = ("0.45", "0.6"),
+            ["Accidental.rightPadding"] = ("0.15", "0.25"),
             ["BarLine.thinThickness"] = ("1.9", "2.5"),
             ["BarLine.thickThickness"] = ("6.0", "7"),
         };
@@ -291,6 +293,8 @@ internal static class LayoutPlanReader
                 "Stem.lengthFraction" => ReadStyle(plan, entry, span, found, (s, v) => s with { StemLengthFraction = v[0] }),
                 "Beam.thickness" => ReadStyle(plan, entry, span, found, (s, v) => s with { BeamThickness = v[0] }),
                 "Beam.damping" => ReadStyle(plan, entry, span, found, (s, v) => s with { BeamDamping = v[0] }),
+                "Dots.padding" => ReadStyle(plan, entry, span, found, (s, v) => s with { DotPadding = v[0] }),
+                "Accidental.rightPadding" => ReadStyle(plan, entry, span, found, (s, v) => s with { AccidentalRightPadding = v[0] }),
                 "BarLine.thinThickness" => ReadStyle(plan, entry, span, found, (s, v) => s with { BarLineHairThickness = v[0] }),
                 "BarLine.thickThickness" => ReadStyle(plan, entry, span, found, (s, v) => s with { BarLineThickThickness = v[0] }),
                 // ⚠️ A key published in SyntaxFacts.LayoutKeyVocabulary with no arm here
@@ -307,7 +311,8 @@ internal static class LayoutPlanReader
     /// <summary>
     /// One engraving-style key (<c>Stem.thickness 1.5</c>): as many plain numbers as its
     /// <see cref="NumberKeys"/> default has, each positive — <c>LedgerLine.thickness</c>' two may
-    /// be 0 but not both, and <c>Beam.damping</c> may be 0 (no damping, as LilyPond's). No unit:
+    /// be 0 but not both, and <c>Beam.damping</c> (no damping, as LilyPond's) and the two gaps
+    /// <c>Dots.padding</c> and <c>Accidental.rightPadding</c> may be 0. No unit:
     /// each is a multiple of a line thickness, staff spaces or a factor (Svg.EngravingStyle says
     /// which).
     /// </summary>
@@ -316,7 +321,7 @@ internal static class LayoutPlanReader
     {
         string example = NumberKeys[entry.Key].Example;
         int count = example.Split(' ').Length;
-        bool zeroReads = entry.Key == "Beam.damping";
+        bool zeroReads = entry.Key is "Beam.damping" or "Dots.padding" or "Accidental.rightPadding";
         string takes = count == 1
             ? $"'{entry.Key}' takes a {(zeroReads ? "number, 0 or more" : "positive number")}, no unit: {entry.Key} {example}."
             : $"'{entry.Key}' takes {count} numbers, not both 0 and none below 0: {entry.Key} {example}.";

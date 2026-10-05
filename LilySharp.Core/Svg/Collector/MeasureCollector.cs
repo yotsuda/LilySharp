@@ -2470,8 +2470,17 @@ public sealed partial class MeasureCollector
     /// <see cref="Layout.NoteCollision"/> which head sits where, and that answer is read off
     /// the stem directions this bakes first.
     /// </remarks>
-    private static ImmutableArray<Voice> ResolveStaffColumns(ImmutableArray<Voice> voices)
-        => StaffAccidentalColumns.Resolve(ResolveVoiceStemDirections(voices));
+    /// <remarks>
+    /// The packing is the layout's own (AccidentalPlacement, NoteCollision's dot column), so
+    /// it runs under the score's engraving style — <c>Accidental.rightPadding</c> and
+    /// <c>Dots.padding</c> move what it bakes — which the collect, unlike the layout and the
+    /// renderer, does not otherwise hold.
+    /// </remarks>
+    private ImmutableArray<Voice> ResolveStaffColumns(ImmutableArray<Voice> voices)
+    {
+        using var style = EngravingStyle.Use(_meta.Paper.Style);
+        return StaffAccidentalColumns.Resolve(ResolveVoiceStemDirections(voices));
+    }
 
     /// <summary>
     /// Builds the measure tracks for voices 1..N-1 of a <c>&lt;&lt; \\ &gt;&gt;</c> mixed stream

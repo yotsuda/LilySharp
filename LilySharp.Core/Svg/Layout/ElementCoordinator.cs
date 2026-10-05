@@ -2712,7 +2712,7 @@ internal sealed class ElementCoordinator
                 : tie.StartNote.BaseDuration.Denominator;
             double outlineRight = GlyphMetrics.GetNoteheadAdvance(noteValue);
             if (startDots > 0)
-                outlineRight += 2 * startDots * GlyphMetrics.AugmentationDot.Width;
+                outlineRight += EngravingDefaults.DotRowReach(startDots, GlyphMetrics.AugmentationDot.Width);
             segStartX = startBase + outlineRight;
         }
         else
@@ -2823,7 +2823,7 @@ internal sealed class ElementCoordinator
                 // digit edge and steps 2 per dot), so this is no longer a second spelling of
                 // where they end — it is the same arithmetic.
                 segStartX = startAxis + startDigit.Dx + startDigit.HalfWidth
-                          + 2 * startDots * GlyphMetrics.AugmentationDot.Width;
+                          + EngravingDefaults.DotRowReach(startDots, GlyphMetrics.AugmentationDot.Width);
             }
             if (segment.IsLast)
                 segEndX = endAxis + endDigit.Dx - endDigit.HalfWidth;

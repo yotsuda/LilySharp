@@ -895,6 +895,23 @@ internal static class EngravingDefaults
     // since session 314); Svg/Layout/DotColumn.cs `Reserved` is the one house now, and its
     // remarks carry the ledger points that retired the constant.
 
+    /// <summary>The gap between a dot column and what it stands right of: one dot width — the
+    /// width of THIS column's dots, so a grace's is its own — unless the style sets
+    /// <c>Dots.padding</c>, a length in staff spaces for every column alike.</summary>
+    /// <remarks>LILYPOND-REF: scm/output-lib.scm:692-704 dot-column-interface::pad-by-one-dot-width
+    /// is DotColumn's padding default; an <c>\override DotColumn.padding = #x</c> replaces the
+    /// procedure with the number (lily/dot-column.cc:229-232 reads it raw).</remarks>
+    public static double DotPadding(double dotWidth) => EngravingStyle.Current.DotPadding ?? dotWidth;
+
+    /// <summary>How far a row of <paramref name="dots"/> dots reaches past what it stands right
+    /// of: the padding, then the dots two dot widths apart, to the last one's right edge.</summary>
+    /// <remarks>At the default padding it is <c>2 × dots × dotWidth</c>, the same product as
+    /// before the padding could be set, bit for bit.</remarks>
+    public static double DotRowReach(int dots, double dotWidth)
+        => dots <= 0 ? 0
+            : EngravingStyle.Current.DotPadding is { } padding ? padding + (2 * dots - 1) * dotWidth
+            : 2 * dots * dotWidth;
+
     // === Repeat dots ===
     // LILYPOND-REF: scm/bar-line.scm:296-368 make-colon-bar-line — LilyPond does not
     //   declare dot positions. It folds the staff about its centre, finds the first space

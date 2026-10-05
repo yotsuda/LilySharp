@@ -225,7 +225,7 @@ internal static class DotColumn
                     off = Math.Max(off, s.XRight);
             }
         }
-        return off + dotWidth;
+        return off + EngravingDefaults.DotPadding(dotWidth);
     }
 
     /// <summary>
@@ -282,7 +282,7 @@ internal static class DotColumn
             // A rest's dots: one dot width past its glyph, in the space above the middle line
             // (a whole rest hangs one space up and its dot one row DOWN off that — the same
             // row; SharedRenderer.DrawRest, ElementCoordinator.RestDotDefaultOffset).
-            return (headInkRight + dotWidth, new[] { 1 });
+            return (headInkRight + EngravingDefaults.DotPadding(dotWidth), new[] { 1 });
 
         // At most two: the stem, and the flag hung off it (see OffsetX's remarks).
         Span<Support> supports = stackalloc Support[2];

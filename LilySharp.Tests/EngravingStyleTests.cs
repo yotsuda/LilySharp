@@ -46,7 +46,8 @@ public class EngravingStyleTests
     {
         var s = StyleOf("lineThickness=0.15", "StaffLine.thickness=1.2", "LedgerLine.thickness=2,0.05",
             "LedgerLine.lengthFraction=0.4", "Stem.thickness=2", "Stem.lengthFraction=1.2", "Beam.thickness=0.6",
-            "Beam.damping=0", "BarLine.thinThickness=3", "BarLine.thickThickness=7");
+            "Beam.damping=0", "Dots.padding=0.6", "Accidental.rightPadding=0",
+            "BarLine.thinThickness=3", "BarLine.thickThickness=7");
         Assert.Equal(0.15, s.LineThickness);
         Assert.Equal(1.2, s.StaffSymbolThickness);
         Assert.Equal(2, s.LedgerLineThicknessLines);
@@ -56,6 +57,9 @@ public class EngravingStyleTests
         Assert.Equal(1.2, s.StemLengthFraction);
         Assert.Equal(0.6, s.BeamThickness);
         Assert.Equal(0, s.BeamDamping);
+        Assert.Equal(0.6, s.DotPadding);
+        Assert.Equal(0, s.AccidentalRightPadding);
+        Assert.Null(EngravingStyle.Default.DotPadding);   // one dot's own width
         Assert.Equal(3, s.BarLineHairThickness);
         Assert.Equal(7, s.BarLineThickThickness);
         Assert.Equal(EngravingStyle.Default, StyleOf("spacingIncrement=1.6"));
@@ -71,6 +75,8 @@ public class EngravingStyleTests
     [InlineData("LedgerLine.thickness=1,-0.1")]
     [InlineData("LedgerLine.lengthFraction=0")]
     [InlineData("Beam.damping=-1")]
+    [InlineData("Dots.padding=-0.1")]
+    [InlineData("Accidental.rightPadding=x")]
     [InlineData("Stem.length=3.5")]
     public void AValueThatDoesNotRead_IsRefused(string setting)
     {
@@ -272,6 +278,86 @@ public class EngravingStyleTests
         Assert.NotEqual(Svg(book), svg);
     }
 
+    private const string DottedAndSharp = """
+        octave absolute
+        part m { clef treble
+          section A { c'4. d'8 e'4.. f'16 | r4. g'8 <c' e' g'>4. r8 | fis'4 bes' <cis'' e'' gis''>2 | aes'2. b'4 | }
+        }
+        form main { A }
+        score main { staff m }
+        """;
+
+    private static double[] GlyphXs(string svg, params char[] glyphs) =>
+        [.. Regex.Matches(svg, "<text class=\"music\" x=\"([-\\d.]+)\" y=\"[-\\d.]+\" font-size=\"4.00\"[^>]*>(.)</text>")
+            .Where(m => glyphs.Contains(m.Groups[2].Value[0]))
+            .Select(m => double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture)).Order()];
+
+    /// <summary>
+    /// <c>Dots.padding</c> and <c>Accidental.rightPadding</c> against LilyPond 2.26.0 (Lab
+    /// sessions/p826/dotacc, the <c>lysc ly --pin-fonts</c> twin) at its defaults and under
+    /// <c>\override DotColumn.padding = #0.7</c>, <c>\override AccidentalPlacement.right-padding = #0.4</c>:
+    /// each dot's distance from the head or rest before it, each accidental's from the head after
+    /// it, and the columns — the accidentals' wider reach moves the bars after them, as there.
+    /// </summary>
+    [Theory]
+    [InlineData(false, new[] { 1.754, 1.754, 2.654, 1.400, 1.754, 1.754, 1.754, 1.827 },
+        new[] { 1.450, 1.150, 2.514, 1.450, 1.150 },
+        new[] { 0.00, 3.70, 5.81, 9.78, 12.67, 16.02, 18.13, 21.83, 25.87, 28.90, 33.31, 39.51, 44.48 })]
+    [InlineData(true, new[] { 2.004, 2.004, 2.904, 1.650, 2.004, 2.004, 2.004, 2.077 },
+        new[] { 1.700, 1.400, 2.764, 1.700, 1.400 },
+        new[] { 0.00, 3.70, 5.81, 9.78, 12.67, 16.02, 18.13, 21.83, 26.12, 29.40, 34.06, 40.51, 45.48 })]
+    public void TheDotAndAccidentalGaps_AreLilyPonds(bool set, double[] dotGaps, double[] accidentalGaps, double[] columns)
+    {
+        // A default render first, on this thread: the placement kept in static fields must not
+        // carry its padding into the next score (it did, session 826 — the accidentals stayed
+        // where the default put them while the bars moved for the new gap).
+        string plain = Svg(DottedAndSharp);
+        string svg = set ? Svg(DottedAndSharp, "Dots.padding=0.7", "Accidental.rightPadding=0.4") : plain;
+        // Emmentaler: the dot, the black and half heads, the quarter and eighth rests, ♯ and ♭.
+        double[] heads = GlyphXs(svg, '\uE0FE', '\uE0FD', '\uE008', '\uE00B');
+        double[] dots = GlyphXs(svg, '\uE038');
+        double[] accidentals = GlyphXs(svg, '\uE013', '\uE021');
+        static void Near(double[] lilyPond, double[] drawn)
+        {
+            Assert.Equal(lilyPond.Length, drawn.Length);
+            for (int i = 0; i < drawn.Length; i++)
+                Assert.InRange(drawn[i] - lilyPond[i], -0.011, 0.011);   // the svg's two decimals
+        }
+        Near(dotGaps, [.. dots.Select(d => d - heads.Where(h => h < d).Max())]);
+        Near(accidentalGaps, [.. accidentals.Select(a => heads.Where(h => h > a).Min() - a)]);
+        Near(columns, [.. heads.Distinct().Select(h => h - heads[0])]);
+    }
+
+    /// <summary>
+    /// Two voices' accidentals on one column are packed at COLLECT time
+    /// (<c>StaffAccidentalColumns</c>), which holds no style of its own: the collector opens the
+    /// score's for it, so the packed flats move with <c>Accidental.rightPadding</c> exactly as a
+    /// single note's does — 0.25 further left for 0.4 against 0.15.
+    /// </summary>
+    [Fact]
+    public void TwoVoicesPackedAccidentals_FollowTheRightPadding()
+    {
+        const string book = """
+            octave absolute
+            part m { clef treble
+              section A { << { aes'2 bes'2 } \\ { ges'2 ees'2 } >> | }
+            }
+            form main { A }
+            score main { staff m }
+            """;
+        double[] Gaps(string svg)
+        {
+            double[] heads = GlyphXs(svg, '');
+            return [.. GlyphXs(svg, '').Select(a => heads.Where(h => h > a).Min() - a)];
+        }
+        double[] plain = Gaps(Svg(book));
+        double[] set = Gaps(Svg(book, "Accidental.rightPadding=0.4"));
+        Assert.Equal(4, plain.Length);
+        Assert.Equal(4, set.Length);
+        for (int i = 0; i < 4; i++)
+            Assert.InRange(set[i] - plain[i], 0.24, 0.26);
+    }
+
     /// <summary>
     /// The keys are the language's (owner's decision 2026-10-05): the file writes them in
     /// <c>layout { }</c>, a score overrides them through a named block, and <c>--set</c> wins
@@ -309,14 +395,15 @@ public class EngravingStyleTests
         string Twin(string layout) => new Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(
             layout + "part m { }\nsection A { m { c'1 | } }\nform main { A }\nscore main { staff m }\n"));
         string styled = Twin("layout { lineThickness 0.15  StaffLine.thickness 1.2  LedgerLine.thickness 2 0.1  "
-            + "LedgerLine.lengthFraction 0.4  Stem.thickness 2 Stem.lengthFraction 1.2  Beam.thickness 0.6  Beam.damping 3  BarLine.thinThickness 3  BarLine.thickThickness 7 }\n");
+            + "LedgerLine.lengthFraction 0.4  Stem.thickness 2 Stem.lengthFraction 1.2  Beam.thickness 0.6  Beam.damping 3  Dots.padding 0.7  Accidental.rightPadding 0.4  BarLine.thinThickness 3  BarLine.thickThickness 7 }\n");
         foreach (string line in new[]
         {
             "line-thickness = 0.75\\pt", "\\override StaffSymbol.thickness = #1.2",
             "\\override StaffSymbol.ledger-line-thickness = #'(2 . 0.1)",
             "\\override LedgerLineSpanner.length-fraction = #0.4", "\\override Stem.thickness = #2",
             "\\override Stem.length-fraction = #1.2", "\\override Beam.beam-thickness = #0.6",
-            "\\override Beam.damping = #3",
+            "\\override Beam.damping = #3", "\\override DotColumn.padding = #0.7",
+            "\\override AccidentalPlacement.right-padding = #0.4",
             "\\override BarLine.hair-thickness = #3", "\\override BarLine.thick-thickness = #7",
         })
             Assert.Contains(line, styled, StringComparison.Ordinal);

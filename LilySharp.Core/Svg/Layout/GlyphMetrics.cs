@@ -186,7 +186,12 @@ internal static partial class GlyphMetrics
     /// barline.next.accidental-to-notehead.
     /// </para>
     /// </remarks>
-    public const double AccidentalNoteGap = 0.35;
+    /// <remarks>The style's <c>Accidental.rightPadding</c> (<see cref="EngravingStyle.AccidentalRightPadding"/>)
+    /// replaces the 0.15; at the default it is exactly 0.35, the number it always was.</remarks>
+    public static double AccidentalNoteGap =>
+        EngravingStyle.Current.AccidentalRightPadding is var rp && rp == EngravingStyle.Default.AccidentalRightPadding
+            ? 0.35
+            : AccidentalPlacementParameters.Default.Padding + rp;
 
     /// <summary>
     /// LILYSHARP-OWN: the gap Lily# leaves between a LYRIC syllable and its neighbour.

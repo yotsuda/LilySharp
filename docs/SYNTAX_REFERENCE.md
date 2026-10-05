@@ -1682,11 +1682,13 @@ keys (`--set Stem.thickness=1.5`, and `LedgerLine.thickness=1.0,0.1` with a comm
 | `Stem.lengthFraction` | 1.0 | every stem's length, beamed or not, times this (a grace note's and a cue's keep their own) |
 | `Beam.thickness` | 0.48 | beams, in staff spaces — the beams are placed for it, as LilyPond places them |
 | `Beam.damping` | 1 | how much a beam's slope is flattened, as LilyPond's: the slope stays under 0.6 / this (staff spaces per staff space); 0 leaves it undamped, 10000 or more lays every beam flat |
+| `Dots.padding` | one dot's width (0.45) | the gap between a note or rest and its first dot, in staff spaces; set, it is the same for a grace note's smaller dots. The notes make room for it, as in LilyPond |
+| `Accidental.rightPadding` | 0.15 | the gap an accidental keeps from its note head beyond a fixed 0.2, in staff spaces (0.35 in all by default); chords' and two voices' accidentals too. The notes make room for it |
 | `BarLine.thinThickness` | 1.9 | thin bar lines, in line thicknesses |
 | `BarLine.thickThickness` | 6.0 | thick bar lines, in line thicknesses |
 
 Each takes a positive number with no unit (`LedgerLine.thickness` two, not both 0;
-`Beam.damping` may be 0). The
+`Beam.damping`, `Dots.padding` and `Accidental.rightPadding` may be 0). The
 `.ly` twin writes them as those overrides (`\override Stem.thickness = #1.5`,
 `line-thickness = 0.6\pt`).
 

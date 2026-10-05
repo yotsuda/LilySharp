@@ -1579,7 +1579,7 @@ internal static partial class SharedRenderer
         if (rest.Dots > 0)
         {
             double dotWidth = GlyphMetrics.AugmentationDot.Width;
-            double dotStartX = x + GlyphMetrics.GetRestBBox(noteValue).Right + dotWidth;
+            double dotStartX = x + GlyphMetrics.GetRestBBox(noteValue).Right + EngravingDefaults.DotPadding(dotWidth);
             double dotY = y
                 + (dotOffset ?? LilySharp.Core.Svg.Layout.ElementCoordinator.RestDotDefaultOffset(noteValue)) * 0.5;
             for (int d = 0; d < rest.Dots; d++)

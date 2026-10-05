@@ -58,7 +58,7 @@
 - **:172** ⚠️ WHAT IS NOT PORTED, and why it cannot be reached rather than was skipped:
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
 - **:535** ⚠️ What is NOT ported is the semibreve exception: the beam covered-grob booking
-- **:918** ⚠️ NOT PORTED: the fold-and-search itself. `dist` is a per-staff search over
+- **:935** ⚠️ NOT PORTED: the fold-and-search itself. `dist` is a per-staff search over
 ### `LilySharp.Core/Svg/Layout/AccidentalPlacement.cs`
 - **:67** NOT PORTED: the stem's real end (its pure height). The far end is taken at
 ### `LilySharp.Core/Svg/Layout/AlignmentWalk.cs`
@@ -349,8 +349,8 @@
 ### `LilySharp.Core/Svg/Collector/MeasureBuilder.cs`
 - **:421** LILYSHARP-OWN (owner's decisions, 2026-10-02, HANDOFF §1.1 第737): a time, key
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:3330** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:5749** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:3339** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:5758** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Form.cs`
 - **:567** `time!` (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so
 - **:837** is not drawn unless written `key!` (MeasureBuilder.SectionHead, LILYSHARP-OWN). At a
@@ -376,7 +376,7 @@
 - **:795** LILYSHARP-OWN: a frame, not a quantity. LilyPond has no counterpart to look up
 - **:806** ⚠️ LILYSHARP-OWN: A NOMINAL HALF-HEAD, NOT THE GLYPH'S. LilyPond has no such constant —
 - **:837** ⚠️ LILYSHARP-OWN: ONE NOMINAL BOX FOR EVERY REST, WHICH LILYPOND DOES NOT HAVE. There a
-- **:937** a LILYSHARP-OWN divergence that had been measured and left because closing it redraws
+- **:954** a LILYSHARP-OWN divergence that had been measured and left because closing it redraws
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **:127** LILYSHARP-OWN: the bend-up is Lily#'s own arrow-and-label device — LilyPond's guitar
 - **:133** X offset of a bend-up's curve from the fret digit on a TAB staff. LILYSHARP-OWN (above).
@@ -420,7 +420,7 @@
 ### `LilySharp.Core/Svg/Layout/GlissandoEngraver.cs`
 - **:160** ⚠️ LILYSHARP-OWN (disclosed 2026-08-07, session 109 audit): Y at the
 ### `LilySharp.Core/Svg/Layout/GlyphMetrics.cs`
-- **:192** LILYSHARP-OWN: the gap Lily# leaves between a LYRIC syllable and its neighbour.
+- **:197** LILYSHARP-OWN: the gap Lily# leaves between a LYRIC syllable and its neighbour.
 ### `LilySharp.Core/Svg/Layout/HairpinEngraver.cs`
 - **:484** ⚠️ LILYSHARP-OWN, DECLARED: the voice a hairpin supports off. LilyPond's
 ### `LilySharp.Core/Svg/Layout/HeaderBand.cs`

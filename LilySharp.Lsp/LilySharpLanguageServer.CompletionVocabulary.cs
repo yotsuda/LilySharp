@@ -815,7 +815,9 @@ public sealed partial class LilySharpLanguageServer
         "Stem.lengthFraction" => "Every stem's length times this, beamed or not (default 1.0)",
         "Beam.thickness" => "Beams, in staff spaces (default 0.48); the beams are placed for it",
         "Beam.damping" => "How much beams' slopes are flattened (default 1; 0 none, 10000 flat): a beam's slope stays under 0.6 / this",
-        "BarLine.thinThickness" =>"Thin bar lines, in line thicknesses (default 1.9)",
+        "Dots.padding" => "The gap between a note or rest and its first dot, in staff spaces (default one dot's width, 0.45; a grace note's smaller)",
+        "Accidental.rightPadding" => "The gap an accidental keeps from its note head beyond 0.2, in staff spaces (default 0.15: 0.35 in all)",
+        "BarLine.thinThickness" => "Thin bar lines, in line thicknesses (default 1.9)",
         "BarLine.thickThickness" => "Thick bar lines, in line thicknesses (default 6.0)",
         _ => "Layout key",
     };

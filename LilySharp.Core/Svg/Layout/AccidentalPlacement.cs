@@ -180,12 +180,21 @@ internal sealed record AccidentalPlacementParameters
 /// </remarks>
 internal sealed class AccidentalPlacement
 {
-    private readonly AccidentalPlacementParameters _params;
+    private readonly AccidentalPlacementParameters? _stated;
 
+    /// <param name="parameters">The placement's parameters; null reads the running style's
+    /// right-padding (<c>Accidental.rightPadding</c>) at each placement — several callers keep
+    /// one instance in a static field, which outlives every style.</param>
     public AccidentalPlacement(AccidentalPlacementParameters? parameters = null)
     {
-        _params = parameters ?? AccidentalPlacementParameters.Default;
+        _stated = parameters;
     }
+
+    private AccidentalPlacementParameters _params =>
+        _stated ?? (EngravingStyle.Current.AccidentalRightPadding is var rp
+                && rp != AccidentalPlacementParameters.Default.RightPadding
+            ? AccidentalPlacementParameters.Default with { RightPadding = rp }
+            : AccidentalPlacementParameters.Default);
 
     /// <summary>Internal entry for positioning calculations.</summary>
     private readonly record struct PlacementEntry(

@@ -387,7 +387,7 @@ internal static class SyntaxFacts
          // The engraving style (Svg.EngravingStyle, 2026-10-05): a number each, the dotted ones
          // a grob's property (`Stem.thickness 1.5`), cut by the entry walker as one key.
          "lineThickness", "StaffLine.thickness", "LedgerLine.thickness", "LedgerLine.lengthFraction",
-         "Stem.thickness", "Stem.lengthFraction", "Beam.thickness", "Beam.damping",
+         "Stem.thickness", "Stem.lengthFraction", "Beam.thickness", "Beam.damping", "Dots.padding", "Accidental.rightPadding",
          "BarLine.thinThickness", "BarLine.thickThickness"];
 
     /// <summary>True when <paramref name="word"/> is a layout key as written — keys are

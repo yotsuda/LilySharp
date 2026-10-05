@@ -748,7 +748,7 @@ internal static partial class SharedRenderer
     {
         if (dots <= 0) return;
         double dotWidth = GlyphMetrics.AugmentationDot.Width;
-        double dotStartX = digitCenterX + digitWidth / 2 + dotWidth;
+        double dotStartX = digitCenterX + digitWidth / 2 + EngravingDefaults.DotPadding(dotWidth);
         // One position off the line = half a staff space; on a tab the staff space is
         // the string gap. UP is larger Y-up.
         double dotY = noteY + stringSpace / 2;

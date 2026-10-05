@@ -97,6 +97,19 @@ public sealed record EngravingStyle
     /// lily/beam.cc:130-145 Beam::get_beam_translation and the quanter.</remarks>
     public double BeamThickness { get; init; } = 0.48;
 
+    /// <summary><c>DotColumn.padding</c>: the gap between a note (or rest) and its first dot, in
+    /// staff spaces — null for LilyPond's default, one dot's own width
+    /// (<see cref="EngravingDefaults.DotPadding"/>).</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm DotColumn (padding .
+    /// dot-column-interface::pad-by-one-dot-width).</remarks>
+    public double? DotPadding { get; init; }
+
+    /// <summary><c>AccidentalPlacement.right-padding</c>: the gap an accidental keeps from its
+    /// note head beyond <c>padding</c>'s 0.2, in staff spaces — the gap is the two summed.</summary>
+    /// <remarks>LILYPOND-REF: lily/accidental-placement.cc:398-400 position_apes raises the heads'
+    /// skyline by it; scm/define-grobs.scm AccidentalPlacement (right-padding . 0.15).</remarks>
+    public double AccidentalRightPadding { get; init; } = 0.15;
+
     /// <summary><c>Beam.damping</c>: how much a beam's slope is flattened — 0 none, 10000 or
     /// more a horizontal beam.</summary>
     /// <remarks>LILYPOND-REF: lily/beam-quanting.cc:745-775 Beam_scoring_problem::slope_damping —
