@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第832セッションの経緯
+
+### 1.1 第832セッション（2026-10-05・YT-DELL2）
+
+新しい会話。`-Start p832`（HEAD `3470f58f`）＝full **11237 / 0 / 2 / 11239**。§7 3.5 で第830 を ARCHIVE へ。**⑤ §2 H ⑴**（行頭の grace／歌詞の独立列）。
+- **LP 双子 21 形で測った**（Lab `sessions/p832/lsg`・grace／歌詞／両方・1 段目と続きの段・調号・hoist した変更・2 段・`|:`）: 歌詞だけの形は全部すでに 0.01 内。**行頭の grace は最初の grace が 0.80（続きの段 1.08）左**＝LP は前置き列の右隣を最初の grace 列にし、spring 全体（列原点から列原点）を ×0.8（spacing-spanner.cc:519-527）・rod（min_dist＋0.1）が床。Lily# は主音符までの spring を床（`ownFixedFloor`）で持ち上げ run を左に吊っていた。**直した**: `LineStartColumn.IntoGraceRun`・`MinimumDistanceToGraceAtLineStart`。
+- 直すと別の欠陥が見えた: **grace で始まる小節の前の小節線への spring にも ×0.8**（その小節線は grace の時刻に立つ・:396-403）。段頭の −0.80 と相殺して fixture では見えていなかった。**直した**: `SpacingRules.IntoBarBeforeGrace`（両方のばね系・gate の `SpringEdgeKey` に次の小節の grace）。行末は LP の列原点が行末群の右端なので 0.038（courtesy 付き約 0.6）残る＝§2 H ⒜。
+- 台帳 4 点（`line-start.time-to-first-grace` 2.700000・`.clef-to-first-grace.continuation` 3.840000・`barline.before-grace.whole` 4.848036・`.half` 3.292299・`probes/line-start-grace.ly`）。毒: 列の移植を無効→2 赤・rod だけ→LSG1 だけ赤・×0.8 無効→2 赤・edge key→1 赤・列系の鏡→新しい網 1 赤。snapshot 7 枚を再ベース（ユーザー GO）。掃き 998 冊 1199 svg で 32 枚（全部 grace を含む）・段割れ 0。commit `3b526939a`。
+- **床を外すのはユーザー GO を得たが撤回した**: 試験では tab-chord-spacing の 0.03 だけに見えたが、掃きで 48 svg・最大 2.32 動いた。LP 双子で和音名・ダイアグラムは床ありが LP に近い（chord-notes +0.12 対 −2.20）・数字だけの tab は床なしが近い（0.30 対 0.00）＝**床は和音名を正しい向きに持っている**。外す差分は Lab `sessions/p832/floor-removal.diff`。註だけ直した（`34e1fd380`）。⚠️ 教訓: **「効いているのは試験の 1 枚だけ」は掃きを見るまで言わない**（試験の母集団は偏っている）。
+- 別件: `lysc ly` が音名と同じ part 名（`b`）をそのまま変数にして LP が構文で落ちた＝`VarName` が LP の音名表を避ける（`f1aa52133`）。
+
+★ `-End p832 -DiffBase 3470f58fc`（`end.log`）＝full **11246 / 0 / 2 / 11248**・門 全 OK。棚卸し: 差分なし。7.5: Core `+` 265 行・REF 7（spacing-spanner.cc:396-403・:519-527・:228-297、spring.cc:85-93、paper-column.cc、define-note-names.scm）・OWN 1（床の註を測った事実で書き直した）。7.6: 意味は LP（grace 列・×0.8・rod）。7.7: 行末の ×0.8 の列原点（§2 H ⒜）・`LeadingGracePrefixWidth(includeMainAccidental)` の旧説明（⒟）・床が和音名を持つ（OWN）。commit `3b526939a`・`f1aa52133`・`34e1fd380`＋docs。push はユーザー。
+判定: 次は**床の撤去**（和音名・ダイアグラム・tab の数字を `MinimumDistanceAtLineStart` に入れる＝LP 双子 `sessions/p832/flr` と `floor-removal.diff` の上に立つ）か §2 H ⒜〜⒞、①② は文法の承認待ち、P6 はユーザー判断。(a) 床は今便の計器と所見の上に立つ／(b) 会話は 1 便ぶん・圧縮も取り違えも無い／(c) 同じ島 ⇒ **この会話で続けてよい**（`-Start p833` から）。
+
 ## 以下は第831セッションの経緯
 
 ### 1.1 第831セッション（2026-10-05・YT-DELL2）

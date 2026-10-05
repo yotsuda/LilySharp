@@ -84,9 +84,9 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - §2 E ⑷ hairpin の niente の円・⑹ 開いた和音入力・⑺ Ignatzek＝**実装する**。⑷⑹ は文法の提案をユーザーに出した（第814 の返答・要旨は下）＝**承認を得てから実装**。⑺ の残りは LP の例外表の 2 つ（パワーコード `<c g>`→上付き「5」・オルタード `<c e g bes des' ees' fis' aes'>`→上付き「alt」＝ly/chord-modifiers-init.ly:54-58）。°・+・ø・°7・△・上付きは 2026-09-11 に移植済み。
   - ⑹ の提案: 閉じた 18＋品質の表（`ChordQualityRegistry.ByToken`）を**組み立て式**に＝根音［品質 m／dim／aug／maj］［伸張 5／6／69／7／9／11／13］｛変化 `-5 +5 -9 +9 +11 -13`（今の「#/b は根音とベース専用」を保つ)｝｛`addN`｝｛`omit3`／`omit5`｝［`sus2`／`sus4`（`9sus4` 等とも組む）］［`alt`］［`/ベース`＝和音の音なら転回（その音を最低音へ）・でなければ付加ベース＝LP の `/` と `/+` を音楽的に自動判別］。表示は Ignatzek の順で上付き。Roman 行（`Imaj7`）も同じ接尾辞。
   - ⑷ の提案: 強弱 `@niente` を足す＝無音の強弱。hairpin は今どおり「次の強弱まで」で、**細い端が `@niente` に触れたら円**（`c4@decresc … g@niente`＝al niente・`c4@niente@cresc … g@f`＝dal niente）。単独なら斜体の niente。MIDI は 0 へ／0 から。太い端が niente なら警告。
-- §2 H ⑴（行頭の grace／歌詞の独立列＝`ownFixedFloor`）＝**第832 で grace を LP の列に移植**（床は残した＝和音名・tab の数字を min_dist に入れてから外す・§2 H）・⑷（譜ごとに違う調の行末 courtesy）＝**第830 で閉じた**。⑵⑶ は「内部は直列合成だが LP の出力と厳密に一致」で閉じたまま（ユーザーの理解どおり）。
+- §2 H ⑴（行頭の grace／歌詞の独立列＝`ownFixedFloor`）＝**第832 で grace を LP の列に移植**（床は第834 で撤去）・⑷（譜ごとに違う調の行末 courtesy）＝**第830 で閉じた**。⑵⑶ は「内部は直列合成だが LP の出力と厳密に一致」で閉じたまま（ユーザーの理解どおり）。
 - §2 D 単一ページ経路を鎖に畳む＝**畳んだ（第829）**。
-- **優先順位**: ① ⑹＋⑺（文法の承認後・⑺ は ⑹ の品質の一部）→ ② ⑷ niente（承認後）→ ③ §2 D（第829 で閉じた）→ ④ §2 H ⑷（第830 で閉じた）→ ⑤ §2 H ⑴（第832 で grace・第833 で行頭の空の小節を閉じた・残りは床の撤去と §2 H の ⒜〜⒡）。
+- **優先順位**: ① ⑹＋⑺（文法の承認後・⑺ は ⑹ の品質の一部）→ ② ⑷ niente（承認後）→ ③ §2 D（第829 で閉じた）→ ④ §2 H ⑷（第830 で閉じた）→ ⑤ §2 H ⑴（第832 で grace・第833 で行頭の空の小節・第834 で床とダイアグラムの位置を閉じた・残りは §2 H の ⒜〜⒟・⒠′・⒡）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - **⑼（第762 起票・dogfood の大きい本 4 冊）は全部閉じた**（最後の 2 つ: ⑺ resume の 2 つ目の出所＝第794・⑻ 宣言した弱起の併合＝第795）。経緯は **ARCHIVE 第740〜第795 の各便**（第783 が列挙を畳んだ）。計器: Lab `sessions/p742/`（ly／midi／xml／svg の掃き）・`sessions/p753/sweep-check.ps1`（診断の掃き）・`sessions/p762/run-big.ps1`（4 冊の check＋4 出力＋LP）・`sessions/p723/svg2/sweep-all.ps1`（全 svg・p795 の `sweep/run-sweeps.ps1` が svg＋xml を束ねる）
@@ -125,6 +125,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第834セッション（2026-10-05・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで着手」）。`-Start p834`（HEAD `bd45be60`）＝full **11247 / 0 / 2 / 11249**。§7 3.5 で第832 を ARCHIVE へ。**床の撤去の掃き直し**（§2 H ⑴ の残り）。
+- p833 の差分を今の HEAD に当てて 998 冊を掃いた（Lab `sessions/p834/sweep`）: **37 svg・最大 1.30・段割れ 0**（p832 の 48・2.32 から %% の本が消えた）。35 は staff＋tab／tab の行頭（0.09・0.12・0.19・0.30・Green-Tinted の続きの段 1.29）、2 は site のダイアグラムの例。LP 双子 9 形（`sessions/p834/tw`・`twin.ps1`）で **tab の動きは全部 LP と一致**（例 Green-Tinted の形: base 10.16・LP 8.87・head 8.87）。0.12 の族（Beat It ほか）は双子を取っていない。
+- 残る悪化はダイアグラム＝⒠。LP は fret-diagram の stencil を align-dir −0.4 で揃え（fret-diagrams.scm make-fret-diagram＝範囲の 0.7 左＋0.3 右が原点）、TextScript の alignment は両方 #f＝原点は符頭の左端。Lily# は格子を符頭の中心に置いていた（0.45 左）。**直した**: `FretFrameGeometry.GridCentreFromColumnOrigin` を描画（`ArticulationEngraver`）・小節の rod（`ApplyFretFrameSpacing`）・行頭の箱が読む。chord-on-note／chord-notes の最初の音: 床あり +0.12／+0.11・箱だけ +0.14／+0.36・今 0.00／−0.01。
+- 台帳 2 点（`probes/line-start-diagram.ly`・`RenderedGeometry.ClefToFirstNoteByClefRank`＝bass tab の 4 線は 5 線の譜ではない）: `line-start.clef-to-first-note.diagram` 8.574495（残差 −0.003639＝箱の端・未分解）・`.tab-continuation` 8.870000。毒: HEAD の Core→2 赤・旧い中心合わせだけ→diagram 1 赤。snapshot `tab-chord-spacing` を再ベース（ユーザー GO・0.04 で LP の 7.62 に）。commit `189d37ac5`。
+- 見つけた: **⒠′ 小節線の後の最初の音のダイアグラムが LP より 0.19 左**（LP は小節線→音の Staff_spacing の min_dist＝小節線 0.19＋ダイアグラムの左 1.69＋0.10 に +0.3・Lily# は 0.1 の rod だけ＝§2 H）。
+
+★ `-End p834 -DiffBase bd45be60e`（`end.log`）＝full **11249 / 0 / 2 / 11251**・門 全 OK。台帳 1023 点。棚卸し: 差分なし。7.5: Core `+` 112 行・REF 2（fret-diagrams.scm make-fret-diagram・self-alignment-interface.cc aligned_on_parent）・OWN 0。7.6: 意味は LP（min_dist＋0.3・stencil の揃え）。7.7: 残差 0.0036（箱の端）・⒠′・0.12 の族は双子なし。commit `189d37ac5`＋docs。push はユーザー。
+判定: 次は **⒠′**（小節線→音の spring の min_dist にダイアグラムの左を入れる＝今便の双子 `tw/ll/ext.ly`・chord-on-note の上に立つ）か §2 H ⒜〜⒟・⒡、①② は文法の承認待ち、P6 はユーザー判断。(a) 今便の計器と所見の上に立つ／(b) 会話は 1 便ぶん・圧縮なし／(c) 同じ島 ⇒ **この会話で続けてよい**（`-Start p835` から）。
+
+## 以下は第833セッションの経緯
+
 ### 1.1 第833セッション（2026-10-05・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。`-Start p833`（HEAD `69ba114f`）＝full **11246 / 0 / 2 / 11248**。§7 3.5 で第831 を ARCHIVE へ。**床の撤去**（§2 H ⑴ の残り）。
@@ -133,20 +146,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 ★ `-End p833 -DiffBase 69ba114f6`（`end.log`）＝full **11247 / 0 / 2 / 11249**・門 全 OK。棚卸し: 差分なし。7.5: Core `+` 75 行・REF 1（spacing-basic.cc:40-66）・OWN 0。7.6: 意味は LP（breakable pair の 1 本）。7.7: %% 記号の箱を min_dist に入れた分は観測者なし（ESB は 1 小節の %）・調号＋tab の −0.39（⒡）。commit `641bcc171`＋docs。push はユーザー。
 判定: 次は**床の撤去の掃き直し**（`sessions/p833/floor-removal-with-diagrams.diff` を今の HEAD に当てて 998 冊を掃く＝%% の本の動きは消えるはず・残る悪化は ⒠ ダイアグラムの描画位置）か ⒠ そのもの、①② は文法の承認待ち、P6 はユーザー判断。(a) 今便の差分と双子の上に立つ／(b) 会話は 2 便ぶん・圧縮は無いが文脈は重い／(c) 同じ島 ⇒ **この会話で続けてよい**（`-Start p834` から）。
-
-## 以下は第832セッションの経緯
-
-### 1.1 第832セッション（2026-10-05・YT-DELL2）
-
-新しい会話。`-Start p832`（HEAD `3470f58f`）＝full **11237 / 0 / 2 / 11239**。§7 3.5 で第830 を ARCHIVE へ。**⑤ §2 H ⑴**（行頭の grace／歌詞の独立列）。
-- **LP 双子 21 形で測った**（Lab `sessions/p832/lsg`・grace／歌詞／両方・1 段目と続きの段・調号・hoist した変更・2 段・`|:`）: 歌詞だけの形は全部すでに 0.01 内。**行頭の grace は最初の grace が 0.80（続きの段 1.08）左**＝LP は前置き列の右隣を最初の grace 列にし、spring 全体（列原点から列原点）を ×0.8（spacing-spanner.cc:519-527）・rod（min_dist＋0.1）が床。Lily# は主音符までの spring を床（`ownFixedFloor`）で持ち上げ run を左に吊っていた。**直した**: `LineStartColumn.IntoGraceRun`・`MinimumDistanceToGraceAtLineStart`。
-- 直すと別の欠陥が見えた: **grace で始まる小節の前の小節線への spring にも ×0.8**（その小節線は grace の時刻に立つ・:396-403）。段頭の −0.80 と相殺して fixture では見えていなかった。**直した**: `SpacingRules.IntoBarBeforeGrace`（両方のばね系・gate の `SpringEdgeKey` に次の小節の grace）。行末は LP の列原点が行末群の右端なので 0.038（courtesy 付き約 0.6）残る＝§2 H ⒜。
-- 台帳 4 点（`line-start.time-to-first-grace` 2.700000・`.clef-to-first-grace.continuation` 3.840000・`barline.before-grace.whole` 4.848036・`.half` 3.292299・`probes/line-start-grace.ly`）。毒: 列の移植を無効→2 赤・rod だけ→LSG1 だけ赤・×0.8 無効→2 赤・edge key→1 赤・列系の鏡→新しい網 1 赤。snapshot 7 枚を再ベース（ユーザー GO）。掃き 998 冊 1199 svg で 32 枚（全部 grace を含む）・段割れ 0。commit `3b526939a`。
-- **床を外すのはユーザー GO を得たが撤回した**: 試験では tab-chord-spacing の 0.03 だけに見えたが、掃きで 48 svg・最大 2.32 動いた。LP 双子で和音名・ダイアグラムは床ありが LP に近い（chord-notes +0.12 対 −2.20）・数字だけの tab は床なしが近い（0.30 対 0.00）＝**床は和音名を正しい向きに持っている**。外す差分は Lab `sessions/p832/floor-removal.diff`。註だけ直した（`34e1fd380`）。⚠️ 教訓: **「効いているのは試験の 1 枚だけ」は掃きを見るまで言わない**（試験の母集団は偏っている）。
-- 別件: `lysc ly` が音名と同じ part 名（`b`）をそのまま変数にして LP が構文で落ちた＝`VarName` が LP の音名表を避ける（`f1aa52133`）。
-
-★ `-End p832 -DiffBase 3470f58fc`（`end.log`）＝full **11246 / 0 / 2 / 11248**・門 全 OK。棚卸し: 差分なし。7.5: Core `+` 265 行・REF 7（spacing-spanner.cc:396-403・:519-527・:228-297、spring.cc:85-93、paper-column.cc、define-note-names.scm）・OWN 1（床の註を測った事実で書き直した）。7.6: 意味は LP（grace 列・×0.8・rod）。7.7: 行末の ×0.8 の列原点（§2 H ⒜）・`LeadingGracePrefixWidth(includeMainAccidental)` の旧説明（⒟）・床が和音名を持つ（OWN）。commit `3b526939a`・`f1aa52133`・`34e1fd380`＋docs。push はユーザー。
-判定: 次は**床の撤去**（和音名・ダイアグラム・tab の数字を `MinimumDistanceAtLineStart` に入れる＝LP 双子 `sessions/p832/flr` と `floor-removal.diff` の上に立つ）か §2 H ⒜〜⒞、①② は文法の承認待ち、P6 はユーザー判断。(a) 床は今便の計器と所見の上に立つ／(b) 会話は 1 便ぶん・圧縮も取り違えも無い／(c) 同じ島 ⇒ **この会話で続けてよい**（`-Start p833` から）。
 
 ## 2. 開いている作業
 
@@ -2219,8 +2218,8 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 - ✅ **歌詞の小節線またぎ＝barline-split モデル＝第223 で移植完了**（`3a635a6d`・ → **本文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の同じ見出し**（第351 が落とした）
 - ✅ **閉じた（第358 第 2〜3 便・ユーザー承認「リベースしてコミットして」）＝機構は 2 つ: `NoteHead.extra-spacing-height = include-ledger-line-height`（譜外の符頭の spacing box は最初の加線まで）と `Separation_item::calc_skylines` の内在 padding 0.15（`NoteColumn.skyline-vertical-padding`）。Lily# は箱をそのまま skyline にしていた→ `ItemSkylineFactory.WithLedgerReach`＋`CreateRight/LeftSkyline.PaddedCopy(0.15)`・番人 `LedgerHeadSpacingTests`・65 冊移動・snapshot 4 枚再ベース。残 −0.18（flag-low の d→c／c→b が 2.48 対 2.567）は §1 第358 ⑺⒜″。✅ **第801 実測: この残差は既に閉じている**（flag-low の 8 対とも 2.567 で LP と一致・Lab `sessions/p801/pair3.log`）。** 下は第 1 便の起票（「機構未特定」は古い）: ~~上向き符尾の旗の右 reach は LP では*符尾の全高*に効き、Lily# では旗の Y 帯にしか効かない~~（2026-09-09・第358 起票・`scratch/p359/lp/flag-{low,high,metered,metered2}.lys`＋`ledger-beamed.lys`・LP 2.26.0 実測）: 加線域で下降する旗付き 8 分（`g,,8 a b c d c b a` を `time none` で・stem 全部 up）の列間が **LP は 8 対とも 2.567**、Lily# は上昇 4 対 2.57／下降 3 対 **2.11**・最後の音→小節線 1.27（LP 2.567）＝小節幅 **21.629 対 20.24（−1.39）**。**譜内の同じ音型（`g'8 …`）は exact 19.313**（下降側が下向き符尾＝旗が左下に居て reach 無し・LP も 2.104）。**拍のある本では見えない**: 旗付き 8 分→低い音（`f4. e8 d4. c8` 段下・3 度下・同音・3 度上）は 4 小節とも exact＝gs 1/8 では 8 分の duration space 2.5 が旗 reach 2.567 とほぼ同じで差 0.06 の桁・**gs が 3/16（cadenza の本・4 分主体の本）で 8 分の理想が 2.1 に落ちて初めて 0.46/対が露出**。梁付き加線 8 分（`c8 b a g f e d c |`）は exact 21.303／加線 rod（`LedgerLineSpanner.springs-and-rods = ##f`）を切っても LP は不動＝rod ではない。**LP 側の機構は未特定**（Stem::width は thickness だけ・Flag の box が次の符頭の Y に届く理由が説明できていない＝`pcdump.ily` の WISH/min_dist を旗付き対で吐かせるのが次）。観測者: 追跡 0・ユーザー本は gs≥3/16 かつ旗付き 8 分下降の site＝未計数。台帳点は起票していない（LP の机上値が確定してから）。
 - ✅ **行頭の grace／歌詞の独立列（⑴・`ownFixedFloor`）＝第832 で grace を LP の列に移植**（`LineStartColumn.IntoGraceRun`: 前置き列の wish は最初の grace 列で終わり・min_dist も grace まで・×0.8・rod・run を直列）。行頭の最初の grace が LP より 0.80（続きの段 1.08）左だった。<!-- ledger: line-start.time-to-first-grace = 0 --><!-- ledger: line-start.clef-to-first-grace.continuation = 0 --> 併せて grace で始まる小節の前の小節線への spring にも ×0.8（spacing-spanner.cc:396-403・`SpacingRules.IntoBarBeforeGrace`）。<!-- ledger: barline.before-grace.whole = 0 --><!-- ledger: barline.before-grace.half = 0 --> 歌詞は LP 双子 11 形で床の有無に関わらず一致（LyricSpacing が持つ）。
-  ⚠️ **床（`ownFixedFloor`）はまだ残っている**。第833 が測った: 和音名だけは床と無関係（LP と一致）・床が持つのは**ダイアグラム**（`FretFrameGeometry.Box` は格子中心が原点＝列原点へは符頭の半幅ずらす）と tab の数字（0.30 取りすぎ）。ダイアグラムを `MinimumDistanceAtLineStart` に入れて床を外す差分は Lab `sessions/p833/floor-removal-with-diagrams.diff`（tabnum・tabdot 0.00・c6 +0.12 に良化、c5・chord-notes は +0.47・+0.37 に悪化＝⒠）。第832 の掃きで大きく動いた %% 反復の本は**行頭の空の小節（第833 で直した）**の帰結で、床とは別だった＝**次はこの差分を今の HEAD で掃き直して床を外す**。<!-- ledger: line-start.empty-bar.clef-to-bar = 0 -->
-  ⚠️ **残り（第832 が測った・未着手）**: ⒜ 行末の小節線への ×0.8 は LP の列原点が行末群の右端（小節線 0.19・courtesy の調号／拍子はインク右＋right-edge 0.5）＝平の小節線で 0.038・courtesy 付きで約 0.6 残る（Lab `sessions/p832/lsg` g5・g11・g7・g10）／⒝ 小節頭の調号変更の後の grace が LP より 0.92 右（m2・`MidMeasureChanges` の grace 枝の「Not measured here」）／⒞ grace-lower-staff は LP と最大 5.4 違う（前から・未調査）／⒟ fixture `grace-accidental-line-start.lys` の註と `LeadingGracePrefixWidth(includeMainAccidental)` は旧機構の説明のまま／⒠ Lily# はダイアグラムの格子を符頭の中心に描くが、双子の LP は約 0.47 右に描く（Lab `sessions/p833/ch` c5）／⒡ 行頭の空の小節で、前置きに調号があり tab 譜を伴うと最初の小節線が LP より 0.39 左（`sessions/p833/pr` pk1）。
+  ✅ **床（`ownFixedFloor`）は第834 で撤去**（`189d37ac5`）: ダイアグラムは `AddFirstColumnDiagrams` で min_dist に入り、tab の数字の取りすぎ（0.09〜1.29・35 svg）は消えた。行頭の空の小節は第833。<!-- ledger: line-start.empty-bar.clef-to-bar = 0 --><!-- ledger: line-start.clef-to-first-note.tab-continuation = 0 -->
+  ⚠️ **残り（第832 が測った・未着手）**: ⒜ 行末の小節線への ×0.8 は LP の列原点が行末群の右端（小節線 0.19・courtesy の調号／拍子はインク右＋right-edge 0.5）＝平の小節線で 0.038・courtesy 付きで約 0.6 残る（Lab `sessions/p832/lsg` g5・g11・g7・g10）／⒝ 小節頭の調号変更の後の grace が LP より 0.92 右（m2・`MidMeasureChanges` の grace 枝の「Not measured here」）／⒞ grace-lower-staff は LP と最大 5.4 違う（前から・未調査）／⒟ fixture `grace-accidental-line-start.lys` の註と `LeadingGracePrefixWidth(includeMainAccidental)` は旧機構の説明のまま／~~⒠ ダイアグラムの格子の位置~~＝**第834 で LP に**（align-dir −0.4・`FretFrameGeometry.GridCentreFromColumnOrigin`）<!-- ledger: line-start.clef-to-first-note.diagram = -0.003639 -->／⒠′ **小節線の後の最初の音のダイアグラムが LP より 0.19 左**（LP は小節線の Staff_spacing の min_dist にダイアグラムの左を入れて +0.3・Lily# は 0.1 の rod だけ＝`ApplyFretFrameSpacing`・Lab `sessions/p834/tw/ll/lp-ext.log`・chord-on-note の 2〜4 小節目）／⒡ 行頭の空の小節で、前置きに調号があり tab 譜を伴うと最初の小節線が LP より 0.39 左（`sessions/p833/pr` pk1）。
   ⑵ 和音行の command 列・⑶ mid-measure の clef/key/time は「内部は直列合成だが LP の出力と厳密に一致」で閉じたまま。⑷ 行末の courtesy 群は第830 で閉じた（`SpacingRules.LineEndCourtesy`）。<!-- ledger: courtesy.meter.barline-to-cancellation = 0 --><!-- ledger: courtesy.meter.barline-to-meter = 0 --><!-- ledger: courtesy.key.cancellation-to-line-end = 0 --> 旧 ⑴ の点 `grace.column.approach` は第59 で閉じた。<!-- ledger: grace.column.approach = 0 --><!-- ledger: grace.column.approach.main-control = 0 --> 経緯の全文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の末尾（第832 が逐語で落とした）。
 - ~~**中心合わせされた 2 つの text grob**~~ — **両方とも片付いた**（和音記号 `7e7fe5cb`・
   音節 `df8fb3e4`）。✅ `ChordNameEngraver` の `Math.Max(2.0, …)` 幅の床は**第800 で消した**
