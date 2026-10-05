@@ -1479,6 +1479,38 @@ internal static partial class SpacingRules
     ///   full-measure-extra-space is `situational_space` on THIS spring, keyed on the
     ///   measure AFTER the bar line, so the caller decides and passes it in.
     /// </remarks>
+    /// <summary>
+    /// The bar line's column (a key or meter opening the bar) → a grace run → its main note:
+    /// the approach <paramref name="approach"/>, whose minimum is min_dist to the first grace
+    /// column, scaled by 0.8, then the run's own springs, in series. Null when the run has no
+    /// gaps to stand on.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:519-527 Spacing_spanner::breakable_column_spacing — spring *= 0.8 on a grace_part_ right column.
+    /// LILYPOND-REF: lily/spring.cc:85-93 Spring::operator*= — ideal_distance_ = max (min_distance_, ideal × r).
+    /// The run's parts are <see cref="GraceColumns"/>' gaps, as in <see cref="MidMeasureChangeBeforeGraceSeries"/>.
+    /// </remarks>
+    private static Spring? BoundaryGraceSeries(Spring approach, ImmutableArray<GraceColumnInfo> grace, MusicItem item)
+    {
+        var run = GraceColumns(grace, item);
+        if (run.Offsets.IsDefaultOrEmpty || run.Gaps.IsDefaultOrEmpty)
+            return null;
+        double gapStretch = GraceSpringInverseStretch();
+        var parts = new Spring[run.Offsets.Length + 1];
+        parts[0] = approach.Scale(GraceApproachScale);
+        double min = parts[0].MinDistance;
+        for (int k = 0; k < run.Offsets.Length; k++)
+        {
+            parts[k + 1] = new Spring(run.Gap(k), run.Gaps[k].Rod, gapStretch, run.Gaps[k].InverseCompress);
+            min += parts[k + 1].MinDistance;
+        }
+        // The column rod over the approach pair: the spanner's padding over the same skyline
+        // distance min_dist is — it binds wherever min_dist does, 0.1 further on.
+        // LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods; lily/separation-item.cc:47-68 Separation_item::set_distance.
+        return Spring.InSeries(ImmutableArray.Create(parts), min)
+            .WithPartRod(0, approach.MinDistance + SeparationRodPadding);
+    }
+
     internal static Spring BarlineToFirstColumnSpring(
         Rendering.ScoreTextMetrics fonts, ItemColumn firstItems, bool fillsMeasure,
         IReadOnlyList<IReadOnlyList<MusicItem>>? staffFirstItems = null,
@@ -1516,10 +1548,24 @@ internal static partial class SpacingRules
                 // box reaches the full height of the columns beside it, uncapped, so every part
                 // of the note column meets it (that method's remarks carry the measurement).
                 // LILYPOND-REF: scm/output-lib.scm:976-979 pure-from-neighbor-interface::extra-spacing-height-including-staff
+                // ⚠️ A GRACE RUN opening the bar puts ITS first column next to the change: that
+                // column's left skyline (the grace head and its grace-size accidental) is the
+                // reach, not the main note's. Until session 840 the main note's was read, so a
+                // natural on `f'4` after `key d major grace { d'16 e' }` pushed the whole run 0.92
+                // right and a sharp on the GRACE was not seen at all (-0.12). MEASURED (2.26.0,
+                // Lab sessions/p840/kg k1 / k5 / k7; k6, no accidental on either, was exact).
+                // LILYPOND-REF: lily/paper-column.cc:144-164 Paper_column::minimum_distance — the skylines of the two ADJACENT columns.
                 double reach = 0;
                 for (int i = 0; i < firstItems.Count; i++)
-                    if (!IsChangeItem(firstItems[i]))
-                        reach = Math.Max(reach, MusicalColumnLeftReach(firstItems[i]));
+                {
+                    var item = firstItems[i];
+                    if (IsChangeItem(item))
+                        continue;
+                    var grace = GraceNotesOf(item);
+                    reach = Math.Max(reach, grace.IsDefaultOrEmpty
+                        ? MusicalColumnLeftReach(item)
+                        : GraceColumnLeftReach(grace[0]));
+                }
                 minDistance = bPrefix + ChangeItemExtraSpacingWidth(bLast).Right + reach;
             }
             else
@@ -1612,7 +1658,19 @@ internal static partial class SpacingRules
                 };
                 if (grace.IsDefaultOrEmpty)
                     continue;
-                var run = AdjustSpringForGraceNotes(inColumnFrame, grace, GraceSpacingParameters.Default, item);
+                // With a key or meter opening the bar, min_dist above is the boundary column's to
+                // the FIRST GRACE column (its accidental included), so the spring is LilyPond's own
+                // shape: the approach scaled by 0.8 against ITS minimum (Spring::operator*= —
+                // max (min_dist, 0.8 × ideal)), then the run's springs, in series — as
+                // MidMeasureChangeBeforeGraceSeries builds it mid-bar. SpringIntoGraceRun floors
+                // the approach-plus-run TOTAL instead, which agrees only while the run's span does
+                // not depend on the main note (an accidental on it does).
+                // MEASURED (2.26.0, Lab sessions/p840/kg): bar line → first grace 4.712 (k1, k6)
+                // and 5.733 (k7, k10: a sharp on the grace, min_dist binds).
+                // LILYPOND-REF: lily/spring.cc:85-93 Spring::operator*= — ideal_distance_ = max (min_distance_, ideal × r).
+                var run = boundary.HasValue && BoundaryGraceSeries(inColumnFrame, grace, item) is { } series
+                    ? series
+                    : AdjustSpringForGraceNotes(inColumnFrame, grace, GraceSpacingParameters.Default, item);
                 if (widest == null || run.IdealDistance > widest.IdealDistance)
                     widest = run;
             }

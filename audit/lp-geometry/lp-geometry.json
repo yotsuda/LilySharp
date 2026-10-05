@@ -3194,6 +3194,20 @@
       "residual": 0.0,
       "why": "OPENED AND CLOSED IN SESSION 839. RBV's second line, a bar of sixteenths then a bar of eighths (CLEF 0.8, BAR 58.688303): the sixteenths spaced on the 3/16 basis the `r1` bars vote for. See common-shortest.rest-bar-votes.first-line."
     },
+    "key-change.grace.main-natural.bar": {
+      "probe": "key-change-grace.ly",
+      "score": "KG1",
+      "lilypond": 18.619612,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 840 -- HANDOFF 2 H (b). `key d major grace { d'16 e' } f'4 g'2 r4` after `c'1` (BARs 13.433036 -> 32.052648). The key's column meets the FIRST GRACE column, so Staff_spacing's min_dist (and its fixed + 0.3 floor) reaches the grace head, not the main note's natural (lily/paper-column.cc minimum_distance); the approach is 0.8 of the ideal against its own minimum (lily/spacing-spanner.cc:519-527, lily/spring.cc Spring::operator*=): bar line -> first grace 4.712. SpacingRules.BarlineToFirstColumnSpring read the main note's MusicalColumnLeftReach, its natural lifted the wish's fixed, and the whole run stood 0.92 right (Lab sessions/p840/kg k1)."
+    },
+    "key-change.grace.grace-sharp.bar": {
+      "probe": "key-change-grace.ly",
+      "score": "KG10",
+      "lilypond": 19.640569,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 840. KG1 with a sharp on the first grace (BAR 33.073605): min_dist reaches the grace's sharp and the column rod over the approach pair (min_dist + 0.1, set_column_rods) places the grace, 5.733 off the bar line. SpacingRules.BoundaryGraceSeries builds LilyPond's shape -- the approach scaled against its own minimum, then the run's springs, in series; SpringIntoGraceRun floored the approach-plus-run TOTAL, which agrees only while the run's span is independent of the main note (-0.99 here with the natural on f'4, Lab sessions/p840/kg k10)."
+    },
     "mark-column.quarter.box-centre": {
       "probe": "mark-column.ly",
       "score": "MKC",

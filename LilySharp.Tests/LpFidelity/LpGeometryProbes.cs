@@ -13228,6 +13228,42 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A bar opening with <c>key d major</c> and a grace run <c>d'16 e'</c> before a natural
+    /// <c>f'4</c>. The key's column meets the FIRST GRACE column, so min_dist reaches the grace,
+    /// not the main note's natural; the approach is 0.8 of Staff_spacing's ideal against its own
+    /// minimum: the bar 18.619612 bar to bar (BARs 13.433036, 32.052648). Lily# read the main
+    /// note's natural into min_dist until session 840 and drew the run 0.92 right.
+    /// </summary>
+    /// <remarks>LilyPond twin: audit/lp-geometry/probes/key-change-grace.ly KG1.</remarks>
+    private static readonly string KG1 = """
+        paper { raggedRight }
+        octave absolute
+        time 4/4
+        key c major
+        part m { clef treble }
+        section A { m { c'1 | key d major grace { d'16 e' } f'4 g'2 r4 | } }
+        form main { A }
+        score main "KG1" { staff m }
+        """;
+
+    /// <summary>
+    /// <see cref="KG1"/> with a sharp on the first grace: min_dist reaches the grace's sharp and
+    /// its column rod (min_dist + 0.1) places the grace — the bar 19.640569 (BAR 33.073605).
+    /// Lily# floored the approach-plus-run total, not the approach, until session 840 (-0.99).
+    /// </summary>
+    /// <remarks>LilyPond twin: audit/lp-geometry/probes/key-change-grace.ly KG10.</remarks>
+    private static readonly string KG10 = """
+        paper { raggedRight }
+        octave absolute
+        time 4/4
+        key c major
+        part m { clef treble }
+        section A { m { c'1 | key d major grace { dis'16 e' } f'4 g'2 r4 | } }
+        form main { A }
+        score main "KG10" { staff m }
+        """;
+
+    /// <summary>
     /// A chord diagram on the first quarter after a bar line. Its box — the twin's TextScript
     /// with \textLengthOn's extra-spacing-width (-0.0 . 0.4) and infinite extra-spacing-height —
     /// joins the column's skyline at every height, so it is in the bar line's Staff_spacing
@@ -17932,6 +17968,9 @@ internal static class LpGeometryProbes
         // A plain whole-bar rest votes for the common shortest duration (RBV's remarks).
         new("common-shortest.rest-bar-votes.first-line", RBV, g => g.ClefToBarlineByClefRank(0, 0)),
         new("common-shortest.rest-bar-votes.sixteenths", RBV, g => g.ClefToBarlineByClefRank(1, 0)),
+        // A grace run after a key change opening the bar (KG1's, KG10's remarks).
+        new("key-change.grace.main-natural.bar", KG1, g => g.ClefToBarlineByClefRank(0, 1) - g.ClefToBarlineByClefRank(0, 0)),
+        new("key-change.grace.grace-sharp.bar", KG10, g => g.ClefToBarlineByClefRank(0, 1) - g.ClefToBarlineByClefRank(0, 0)),
         // A diagram's box against the columns beside it (DN1's, DN2's remarks).
         new("diagram.barline-to-note", DN1, g => g.BarlineRightToNextNotehead(0)),
         new("diagram.note-to-next-note", DN1, g => g.NoteheadAnchorStep(1)),
