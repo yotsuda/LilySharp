@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第821セッションの経緯
+
+### 1.1 第821セッション（2026-10-05・YT-DELL2）
+
+新しい会話（HANDOFF を読んで着手）。`-Start p821`（HEAD `7f92e353`）＝full **11167 / 0 / 2 / 11169**。§7 3.5 で第819 を ARCHIVE へ（moved 13 lines）。
+- **P3 `--set staffSpace=1.5mm`**: ユーザー決定（2026-10-05）＝**`--set` 専用キー（単位 mm/cm/in 必須）・出力は用紙の物理寸法を保つ**。`LayoutOptions.StaffSpaceMm`（既定 127/72.27）と `StaffSpaceScale`。`PaperPlanReader.MmToSs` が紙の staff space で割る（既定では係数がちょうど 1＝既定値は不変）・`AtStaffSpace` が土台の A4・余白・字下げを mm から読み直す。設定は**ファイルの paper の下**に敷く（`PaperOverrides.OnBase`＝`SvgGenerator.CollectScore` の `PaperBase`）＝ファイルの mm も新しい間隔で読み、裸の数（ss）はそのまま。SVG の `width`・PNG の画素・PDF の頁は `StaffSpaceScale` 倍の px/ss で同じ大きさ。boxes の JSON に `staffSpaceMm`。LP 双子（`set-global-staff-size` 15/20/26・Lab `sessions/p821/p3`）と段数 6/8/10・段の長さ（180mm の線）が一致。⚠️ LP は小さい五線ほど線を相対的に太くし（`calc-line-thickness`＝15pt で 0.122 ss）光学サイズの Emmentaler に替える＝**ここは比例のまま**（APPROXIMATION の註・線の太さの定数は 32 ファイル 64 箇所＝P4 の仕事）。
+- 掃き（`sessions/p821/sweep`・base は worktree の HEAD）998 冊 1199 svg で差 0。毒 2 本（mm の係数を外す→4 赤・SVG の尺度を外す→1 赤）。CLI_REFERENCE・CHANGELOG・OMR 側の `lilysharp-implemented-2026-10-05.md` §6 を更新。
+
+★ `-End p821 -DiffBase 7f92e353a`（`end.log`）＝full **11180 / 0 / 2 / 11182**・門 全 OK。初回の `-End` は `LpProvenanceTests` 1 赤（`DefaultStaffSpaceMm` に出所が無い）＝LILYPOND-REF を足して緑。7.5: Core `+` 170 行・REF 2・OWN 0＝紙の mm と出力の尺度の配管（音楽の配置は変えない）。7.6: 間隔の意味は LP の `set-global-staff-size`（paper.scm）、出力の物理寸法を保つのはユーザー決定。7.7: 線の太さは比例のまま（上の ⚠️）。commit `cb2c3bbc8`＋docs。push はユーザー。
+判定: 次は P4（字形の太さ・長さの値）。(a) 線の太さの定数の散らばりを今便で数えた＝少し使う／(b) 会話は軽い／(c) 同じ OMR の島 ⇒ **この会話で続けてよい**（`-Start p822` から。P4 は項目と綴りをユーザーに訊いてから）。
+
 ## 以下は第820セッションの経緯
 
 ### 1.1 第820セッション（2026-10-05・YT-DELL2）

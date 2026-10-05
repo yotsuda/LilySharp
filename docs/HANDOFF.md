@@ -78,7 +78,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。→ **第751（2026-10-02・ユーザー決定）「LP 忠実にこだわるより音楽的な妥当性を重視。LP から引き継ぐのはレンダリングとレイアウトの美しさだけ。ユーザーがまだ少ないので過去のしがらみに縛られない」＝意味論（拍子・弱起・反復・強弱・検査・出力の意味）の裁定者は音楽的妥当性、LP は描画と配置の裁定者（RULES §5.2 に規則として置いた）。
 
-**★★★★ 第815〜816（2026-10-05）ユーザー指示「OMR の提案を優先度順に着手」＝次の会話はここから**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`。OMR は別プログラム・Lily# は子プロセスで呼びファイルを読むだけ＝コードを混ぜない）: 0（#17〜#20）・A1 `@todo`・B1 の枠（L1・L7＝`93e1477e8`）・B2（`f5a3d3142`）・**C1・C2・B3（第816）・B4・C3（第817＝`paper { breaksOnly }`）・B5・B6（第818＝`0de6d924a`・`e1796b14c`）は閉じた**。配布の取り決め `..\LilySharp-Omr\docs\repro\lilysharp-omr-distribution-2026-10-05.md`（同梱しない・L1〜L11）。⚠️ **B1〜B6 は VS Code で未確認**（OMR の `omr read` は第 1 歩が動く＝`OmrProto.exe` を `LILYSHARP_OMR_PATH` で指せば試せる）。残り: ⑥ 10-02 提案（学習データ）: **P1（第818）・P2（第819＝`83df0e317`＋第820 の `measuresPerSystem`＝`338f18d42`）・P5（第820＝`3095bd0bc`・`lysc boxes`）・P3（第821＝`--set staffSpace=1.5mm`）・P4 の線の太さと符幹の長さ（第822＝`lineThickness` ほか 8 キー）は閉じた**、次は P4 の残り（`LedgerLine.length`・`NoteHead.scale`・`Dots.distance`・`Accidental.padding`・`Beam.maxSlope`）→ P6（SMuFL＝大・別に判断）。**B5 は OMR の `omr verify`（第818 が提案）が出るまで動かない**。OMR 側へのお願い（`breaksOnly` を書く・`part voice` をやめる・TIFF 用の PNG・`omr verify`・記号単位の `confidence`/`candidates`）は OMR の提案書に書いた。配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後。第814 末の決定（下）はこの後。
+**★★★★ 第815〜816（2026-10-05）ユーザー指示「OMR の提案を優先度順に着手」＝次の会話はここから**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`。OMR は別プログラム・Lily# は子プロセスで呼びファイルを読むだけ＝コードを混ぜない）: 0（#17〜#20）・A1 `@todo`・B1 の枠（L1・L7＝`93e1477e8`）・B2（`f5a3d3142`）・**C1・C2・B3（第816）・B4・C3（第817＝`paper { breaksOnly }`）・B5・B6（第818＝`0de6d924a`・`e1796b14c`）は閉じた**。配布の取り決め `..\LilySharp-Omr\docs\repro\lilysharp-omr-distribution-2026-10-05.md`（同梱しない・L1〜L11）。⚠️ **B1〜B6 は VS Code で未確認**（OMR の `omr read` は第 1 歩が動く＝`OmrProto.exe` を `LILYSHARP_OMR_PATH` で指せば試せる）。残り: ⑥ 10-02 提案（学習データ）: **P1（第818）・P2（第819＝`83df0e317`＋第820 の `measuresPerSystem`＝`338f18d42`）・P5（第820＝`3095bd0bc`・`lysc boxes`）・P3（第821＝`--set staffSpace=1.5mm`）・P4 の線の太さと符幹の長さ（第822）は閉じた＝**第823 で言語に入った**（ページ系は `paper { }`・線の太さは `layout { }`・`--set` は上書き）**、次は P4 の残り（`LedgerLine.length`・`NoteHead.scale`・`Dots.distance`・`Accidental.padding`・`Beam.maxSlope`）→ P6（SMuFL＝大・別に判断）。**B5 は OMR の `omr verify`（第818 が提案）が出るまで動かない**。OMR 側へのお願い（`breaksOnly` を書く・`part voice` をやめる・TIFF 用の PNG・`omr verify`・記号単位の `confidence`/`candidates`）は OMR の提案書に書いた。配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後。第814 末の決定（下）はこの後。
 
 **★★★★ 第814 末のユーザー決定（2026-10-04）＝次の会話はここから**（判断の基準は音楽的妥当性。**手元のコーパスは偏っているので「コーパスで困ったか」を判断材料にしない**）:
 - §2 E ⑷ hairpin の niente の円・⑹ 開いた和音入力・⑺ Ignatzek＝**実装する**。⑷⑹ は文法の提案をユーザーに出した（第814 の返答・要旨は下）＝**承認を得てから実装**。⑺ の残りは LP の例外表の 2 つ（パワーコード `<c g>`→上付き「5」・オルタード `<c e g bes des' ees' fis' aes'>`→上付き「alt」＝ly/chord-modifiers-init.ly:54-58）。°・+・ø・°7・△・上付きは 2026-09-11 に移植済み。
@@ -125,6 +125,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第823セッション（2026-10-05・YT-DELL2）
+
+同じ会話の続き。`-Start p823`（HEAD `6da8d732`）＝full **11194 / 0 / 2 / 11196**。§7 3.5 で第821 を ARCHIVE へ（moved 12 lines）。
+- **ユーザー決定（2026-10-05）＝P2〜P4 の設定を言語に入れる**（「補完に出なければユーザーは気づかない」→ 私の意見を求められ「LP では全部入力言語の一部」と答え、ユーザー「1」＝全部・`score {}` の中で上書きできる方が良い）。**10-05 朝の「言語に入れない」を覆した**。綴りはユーザー「LP にとらわれず分かりやすい方を」→ 私が決めた: 点つき（`layout { Stem.thickness 1.5 }`＝`--set`・`override` と同じ綴り）・名前を `StaffLine.thickness`／`LedgerLine.thickness A B`／`Beam.thickness`／`BarLine.thinThickness` に改名（第822 の `StaffSymbol.*`・`beamThickness`・`hairThickness` は消えた・単位は LP のまま）。
+- `paper`: `staffSpace`（単位必須・**ブロックの他の項目より先に読む**＝`StaffSpaceOf` の先読み・参照の上書きブロックも・`--set` は `LayoutOptions.StaffSpaceFromSetting` で優先）・`shortestDurationSpace`・`systemsPerPage`/`min`/`max`（1 ブロックに併記は誤り・後のブロックが片方を書けば他方を消す）・`measuresPerSystem`。`layout`: 8 キー（`LayoutPlanReader.NumberKeys`＝既定と例の表 1 か所・`LayoutPlan.Style`→ collector が `Paper.Style` へ渡す）。構文: 点を語に挟まれ隙間なしのときだけ通す（`Parser.Declarations`）・entry walker が 3 トークンを 1 キーに。`PaperOverrides` は両ブロックの文として書いて言語の読み手に読ませる形に作り直し（setting 専用の表は消えた・`--set barNumbers=none` も通る）。楽譜ごとの上書きは既存の名前つきブロック参照（`score { paper NAME { … } }`）＝無名ブロックを score 内に書く形は今も拒否。
+- エディタ: 補完は語彙表から自動・数値キーは既定値を placeholder で挿入・直後は `AfterLayoutNumberKey`（空）・最上位の `layout` 下書きに 8 キー・説明文・TextMate 文法。双子: `\Score` の `\override` と `line-thickness = N\pt`（`\layout` 内で `staff-space` は Scheme 変数でない＝実測）・既定では何も書かない。LP 双子で 30 本の符幹が第822 と同じ差（0.027〜0.036）。
+- 試験の網の更新: 語を持たない数値キー（LayoutBlockTests・ValueContextCompletionTests・EditorColouringTests の点のエスケープ）・`VocabularyPerturbationTests` のページ系の値（`minSystemsPerPage` は最後のページに効かない＝2 頁の `FilledPageBook` で 1 対 22）。毒 3 本（点の受理→6 赤・Style の受け渡し→5 赤・`--set` の staffSpace 優先→5 赤）。文書: GRAMMAR §2.5/§2.6・SYNTAX_REFERENCE・CLI_REFERENCE（節を書き直し・アンカー変更）・CHANGELOG・OMR §6。⚠️ GRAMMAR の §2.6 の段落は PowerShell の二重引用符でバッククォートが落ちた（制御文字は 0 を確認・散文として読める）。
+
+★ `-End p823 -DiffBase 6da8d7329`（`end.log`）＝full **11206 / 0 / 2 / 11208**・門 全 OK。7.5: Core `+` 400 行・REF 3・OWN 0＝言語の読み手・構文・補完・双子の配管（描画の意味は第821〜822 のまま）。7.6: 綴りと名前は私の判断（ユーザーが委ねた）・意味は LP。7.7: GRAMMAR の落ちたバッククォート（上）。commit `cc38f6d67`＋docs。push はユーザー。
+判定: 次は P4 の残り（項目の順はユーザーに訊く）。(a) style の配管は使える／(b) **この会話は 4 便ぶんで長い**／(c) 同じ島 ⇒ **新しい会話が有利**（(b) による）。
+
+## 以下は第822セッションの経緯
+
 ### 1.1 第822セッション（2026-10-05・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」＝P4）。`-Start p822`（HEAD `7fe5ca03`）＝full **11180 / 0 / 2 / 11182**。§7 3.5 で第820 を ARCHIVE へ（moved 12 lines）。
@@ -133,17 +146,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 ★ `-End p822 -DiffBase 7fe5ca03d`（`end.log`）＝full **11194 / 0 / 2 / 11196**・門 全 OK。途中の full で `CitationsThatNameNothing` 1 赤（`Stem::thickness` は下線が無く名前に数えられない・範囲も 905→908）＝直して緑。7.5: Core `+` 293 行・REF 10・OWN 0＝const を style のプロパティにする配管と LP の各プロパティの出所。7.6: 太さの基準（五線の線か用紙の line-thickness か）は grob ごとに LP のソースで確かめた（stem.cc・staff-symbol.cc・bar-line.scm・multi-measure-rest.cc・lyric-extender.cc）。7.7: markup の線（練習記号の枠）は LP では用紙の太さ・ここは五線の太さ（APPROXIMATION の註）。commit `c5d3f0130`＋docs。push はユーザー。
 判定: 次は P4 の残り（`LedgerLine.length` は小・`Dots.distance`/`Accidental.padding` は中・`NoteHead.scale` は字形の寸法全部で大）。(a) 今便の style の配管にそのまま足せる＝**今の文脈を使う**／(b) 圧縮はまだ／(c) 同じ島 ⇒ **この会話で続けてよい**（`-Start p823` から。項目の順はユーザーに訊く）。
-
-## 以下は第821セッションの経緯
-
-### 1.1 第821セッション（2026-10-05・YT-DELL2）
-
-新しい会話（HANDOFF を読んで着手）。`-Start p821`（HEAD `7f92e353`）＝full **11167 / 0 / 2 / 11169**。§7 3.5 で第819 を ARCHIVE へ（moved 13 lines）。
-- **P3 `--set staffSpace=1.5mm`**: ユーザー決定（2026-10-05）＝**`--set` 専用キー（単位 mm/cm/in 必須）・出力は用紙の物理寸法を保つ**。`LayoutOptions.StaffSpaceMm`（既定 127/72.27）と `StaffSpaceScale`。`PaperPlanReader.MmToSs` が紙の staff space で割る（既定では係数がちょうど 1＝既定値は不変）・`AtStaffSpace` が土台の A4・余白・字下げを mm から読み直す。設定は**ファイルの paper の下**に敷く（`PaperOverrides.OnBase`＝`SvgGenerator.CollectScore` の `PaperBase`）＝ファイルの mm も新しい間隔で読み、裸の数（ss）はそのまま。SVG の `width`・PNG の画素・PDF の頁は `StaffSpaceScale` 倍の px/ss で同じ大きさ。boxes の JSON に `staffSpaceMm`。LP 双子（`set-global-staff-size` 15/20/26・Lab `sessions/p821/p3`）と段数 6/8/10・段の長さ（180mm の線）が一致。⚠️ LP は小さい五線ほど線を相対的に太くし（`calc-line-thickness`＝15pt で 0.122 ss）光学サイズの Emmentaler に替える＝**ここは比例のまま**（APPROXIMATION の註・線の太さの定数は 32 ファイル 64 箇所＝P4 の仕事）。
-- 掃き（`sessions/p821/sweep`・base は worktree の HEAD）998 冊 1199 svg で差 0。毒 2 本（mm の係数を外す→4 赤・SVG の尺度を外す→1 赤）。CLI_REFERENCE・CHANGELOG・OMR 側の `lilysharp-implemented-2026-10-05.md` §6 を更新。
-
-★ `-End p821 -DiffBase 7f92e353a`（`end.log`）＝full **11180 / 0 / 2 / 11182**・門 全 OK。初回の `-End` は `LpProvenanceTests` 1 赤（`DefaultStaffSpaceMm` に出所が無い）＝LILYPOND-REF を足して緑。7.5: Core `+` 170 行・REF 2・OWN 0＝紙の mm と出力の尺度の配管（音楽の配置は変えない）。7.6: 間隔の意味は LP の `set-global-staff-size`（paper.scm）、出力の物理寸法を保つのはユーザー決定。7.7: 線の太さは比例のまま（上の ⚠️）。commit `cb2c3bbc8`＋docs。push はユーザー。
-判定: 次は P4（字形の太さ・長さの値）。(a) 線の太さの定数の散らばりを今便で数えた＝少し使う／(b) 会話は軽い／(c) 同じ OMR の島 ⇒ **この会話で続けてよい**（`-Start p822` から。P4 は項目と綴りをユーザーに訊いてから）。
 
 ## 2. 開いている作業
 
