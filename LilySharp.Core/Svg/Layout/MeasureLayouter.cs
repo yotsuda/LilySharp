@@ -285,6 +285,12 @@ internal sealed class MeasureLayouter
             if (droppedOnsetFollows) break;
         }
 
+        // A mid-bar rehearsal mark's column (Measure.MarkColumnTimings) — a score fact, stamped on
+        // every staff's measure, so any one carries it.
+        var markColumns = measure.MarkColumnTimings;
+        for (int mi = 0; markColumns.IsDefaultOrEmpty && mi < measuresToScan.Count; mi++)
+            markColumns = measuresToScan[mi].MarkColumnTimings;
+
         // Spring 0: barline → first column (see CreateBarlineToFirstSpring), one Staff_spacing
         // wish per staff when the caller says which staff each measure belongs to.
         var staffFirstItems = StaffItemsAt(measuresToScan, stavesOfMeasures, timings[0]);
@@ -294,13 +300,14 @@ internal sealed class MeasureLayouter
             droppedOnsetFollows, so, staffFirstItems,
             timings[0] == Fraction.Zero
                 ? SpacingRules.TabBarlineToNextNotesCorrections(measuresToScan, stavesOfMeasures)
-                : default);
+                : default,
+            markColumns, totalDuration, measuresToScan);
         GiveStaffItems(staffFirstItems);
 
         // Springs between adjacent timing columns (see CreateInterColumnSpring).
         for (int i = 1; i < timings.Count; i++)
             springs[i] = CreateInterColumnSpring(fonts, i, timings, columns, measuresToScan,
-                so, looseRods, stavesOfMeasures);
+                so, looseRods, stavesOfMeasures, markColumns);
 
         // End spring: last column → barline (see CreateLastToBarlineSpring).
         springs[timings.Count] = CreateLastToBarlineSpring(fonts, timings, columns, measuresToScan, totalDuration,
@@ -644,7 +651,9 @@ internal sealed class MeasureLayouter
         List<Fraction> timings, ItemColumn[] columns,
         Measure measure, BarlineType leftBound, bool droppedOnsetFollows,
         SpacingOptions spacing, IReadOnlyList<IReadOnlyList<MusicItem>>? staffFirstItems,
-        ReadOnlySpan<double> opticalByStaff = default)
+        ReadOnlySpan<double> opticalByStaff = default,
+        ImmutableArray<Fraction> markColumns = default, Fraction measureLength = default,
+        IReadOnlyList<Measure>? measuresToScan = null)
     {
         var firstItems = columns[0];
         // A bar that opens with a skip: the bar line's neighbour is a column at a later
@@ -661,14 +670,53 @@ internal sealed class MeasureLayouter
             anyMusical |= SpacingRules.IsMusicalColumn(firstItems[q]);
             anyLeadingGrace |= SpacingRules.HasLeadingGraceColumn(firstItems[q]);
         }
+        // …or the column after the first is a mid-bar mark's, over half a bar on, with no unused
+        // column between them (SpacingRules.MarkColumnFillsMeasure).
         bool fillsMeasure =
-            timings.Count == 1
-            && !droppedOnsetFollows
+            (timings.Count == 1 && !droppedOnsetFollows
+             || timings.Count >= 2
+                && SpacingRules.MarkColumnFillsMeasure(timings[0], timings[1], measureLength, markColumns)
+                && !(measuresToScan is { } scanned && UnusedOnsetBetween(scanned, timings, timings[0], timings[1])))
             && anyMusical
             && !anyLeadingGrace
             && !(staffFirstItems?.Any(items => items.Any(SpacingRules.HasLeadingGraceColumn)) ?? false);
         return SpacingRules.BarlineToFirstColumnSpring(fonts, firstItems, fillsMeasure, staffFirstItems, leftBound,
             opticalByStaff);
+    }
+
+    /// <summary>Whether a mid-measure clef / key / time change stands in this column.</summary>
+    private static bool HasChangeItem(in ItemColumn items)
+    {
+        for (int q = 0; q < items.Count; q++)
+            if (SpacingRules.IsMidMeasureChangeColumn(items[q]))
+                return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Whether an UNUSED column — a skip's onset, or the end of an event where nothing kept
+    /// starts — stands strictly between <paramref name="from"/> and <paramref name="to"/>: the
+    /// column of the next rank is then that one, and fills_measure reads it as unused.
+    /// </summary>
+    /// <remarks>The spelling of the <c>droppedOnsetFollows</c> scan in
+    /// <see cref="CreateTimingSprings"/>, over one interval.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:446-472 Spacing_spanner::fills_measure — !is_used (next).</remarks>
+    private static bool UnusedOnsetBetween(
+        IReadOnlyList<Measure> measures, List<Fraction> timings, Fraction from, Fraction to)
+    {
+        for (int mi = 0; mi < measures.Count; mi++)
+        {
+            var t = Fraction.Zero;
+            foreach (var item in measures[mi].Items)
+            {
+                var end = t + item.Duration;
+                if ((item is RestItem { IsSpacer: true } && t > from && t < to && !timings.Contains(t))
+                    || (item.Duration > Fraction.Zero && end > from && end < to && !timings.Contains(end)))
+                    return true;
+                t = end;
+            }
+        }
+        return false;
     }
 
     /// <summary>
@@ -782,7 +830,8 @@ internal sealed class MeasureLayouter
         ItemColumn[] columns,
         IReadOnlyList<Measure> measuresToScan, SpacingOptions spacing,
         List<(int Left, int Right, double Distance)> looseRods,
-        IReadOnlyList<Staff>? stavesOfMeasures = null)
+        IReadOnlyList<Staff>? stavesOfMeasures = null,
+        ImmutableArray<Fraction> markColumns = default)
     {
         // This spring connects timings[i-1] → timings[i]; its duration is
         // THAT segment. (A previous off-by-one used the FOLLOWING segment's
@@ -803,6 +852,9 @@ internal sealed class MeasureLayouter
         var spring = SpacingRules.CreateTimingSpringMultiVoice(
             segmentDuration, shortestPlaying, spacing,
             measureLength: measureLength > Fraction.Zero ? measureLength : null);
+        // The duration spring as Spacing_spanner::note_spacing hands it over — what a pair into
+        // a mid-bar mark's column keeps, having no wish (SpacingRules.MarkColumnSeries).
+        var baseSpring = spring;
 
         var prevItems = columns[i - 1];
         var nextItems = columns[i];
@@ -1022,6 +1074,17 @@ internal sealed class MeasureLayouter
             changeAfterGrace = afterGraceItem;
             changeGaps = null;
         }
+
+        // A mid-bar rehearsal mark's column at this moment: the pair is its two springs, the
+        // duration spring into it (no wish reaches it) and its own 0.5 out of it, under the two
+        // note columns' rod (SpacingRules.MarkColumnSeries). With a change at the same moment the
+        // mark only joins the change's column, which is already priced; a grace run before the
+        // note is left as it is (the mark column's place among the grace columns is not measured).
+        if (!markColumns.IsDefaultOrEmpty && markColumns.Contains(timings[i])
+            && changeGaps is null && changeAfterGrace is null
+            && !HasChangeItem(nextItems)
+            && SpacingRules.LeadingGracePrefixWidth(nextItems) <= 0)
+            return SpacingRules.MarkColumnSeries(baseSpring, maxRod);
 
         // The wish REPLACES the base spring's increment minimum with the skyline
         // distance — set_min_distance, not ensure — so a pair whose columns never meet

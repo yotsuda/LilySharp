@@ -222,7 +222,13 @@ internal static partial class SpacingRules
                 measure.StartBarline == BarlineType.None ? BarlineType.Single : measure.StartBarline,
                 measure.Items, new ItemColumn(firstItem), firstOnset,
                 spacing ?? SpacingOptions.Default)
-            : BarlineToFirstColumnSpring(fonts, new ItemColumn(firstItem), FillsMeasure(measure),
+            : BarlineToFirstColumnSpring(fonts, new ItemColumn(firstItem),
+                FillsMeasure(measure)
+                // …or a mid-bar mark's column follows over half a bar on — mirror of
+                // MeasureLayouter.CreateBarlineToFirstSpring (MarkColumnFillsMeasure).
+                || kept.Count >= 2 && IsMusicalColumn(firstItem)
+                   && MarkColumnFillsMeasure(firstOnset, kept[1].Onset, totalDuration, measure.MarkColumnTimings)
+                   && !SkipStartsBetween(measure.Items, firstOnset, kept[1].Onset),
                 leftBound: measure.StartBarline == BarlineType.None ? BarlineType.Single : measure.StartBarline);
         springs.Add(firstSpring);
 
@@ -235,6 +241,19 @@ internal static partial class SpacingRules
         {
             var (prevItem, prevOnset) = kept[i];
             var (nextItem, nextOnset) = kept[i + 1];
+            // A mid-bar mark's column at the next item's moment — mirror of
+            // MeasureLayouter.CreateInterColumnSpring (MarkColumnSeries).
+            if (!measure.MarkColumnTimings.IsDefaultOrEmpty && measure.MarkColumnTimings.Contains(nextOnset)
+                && !IsChangeItem(nextItem) && !IsChangeItem(prevItem)
+                && GraceNotesOf(nextItem).IsDefaultOrEmpty)
+            {
+                springs.Add(MarkColumnSeries(
+                    CreateTimingSpringMultiVoice(nextOnset - prevOnset, prevItem.Duration, spacing,
+                        measureLength: totalDuration),
+                    Math.Max(SeparationRodDistance(fonts, prevItem, nextItem, staffY: 0),
+                        Math.Max(TremoloPairRod(prevItem, nextItem), SlurPairRod(prevItem, nextItem)))));
+                continue;
+            }
             var spring = CreateSpring(fonts, prevItem, nextItem, nextOnset - prevOnset,
                 spacing: spacing,
                 shortestPlaying: prevItem.Duration);

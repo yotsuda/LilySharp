@@ -124,6 +124,21 @@ public sealed class ShadowedRehearsalMarkTests
         Assert.Empty(AllMarks(book).Where(m => m.Type == MusicMarkType.Rehearsal && m.Text == "Solo"));
     }
 
+    /// <summary>A mark LATER in the bar a label opens is another moment — its own column
+    /// (Measure.MarkColumnTimings) — so both are engraved and nothing is reported. MEASURED
+    /// (2.26.0, Lab sessions/p838/mk m5): the label "A" at the bar, "Tacet" on its fourth beat,
+    /// no "discarding event". The label shadowed it until session 838.</summary>
+    [Fact]
+    public void AMarkLaterInTheBarALabelOpens_IsEngraved_AndNothingIsReported()
+    {
+        string book = Book.Replace("c'1@mark(\"Solo\")", "r2. c'4@mark(\"Tacet\")");
+        var bar = AllMarks(book).Where(m => m.MeasureIndex == 0).ToList();
+        Assert.Contains(bar, m => m.Type == MusicMarkType.SectionLabel && m.Text == "Solo");
+        Assert.Contains(bar, m => m.Type == MusicMarkType.Rehearsal && m.Text == "Tacet");
+        Assert.Empty(Shadowed(book));
+        Assert.Equal(1, CountOf(LiveRender.Svg(book), ">Tacet</text>"));
+    }
+
     private static int CountOf(string text, string needle)
     {
         int n = 0;

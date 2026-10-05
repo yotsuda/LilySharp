@@ -329,6 +329,10 @@ public readonly record struct MeasureContentKey(long Hash)
         hc.Add(measure.Unmetered);
         hc.Add(measure.BreaksMidBar);
         hc.Add(measure.ContinuesBar);
+        // A mid-bar rehearsal mark's column moves the bar's springs (Measure.MarkColumnTimings).
+        hc.Add(measure.MarkColumnTimings.Length);
+        foreach (var t in measure.MarkColumnTimings)
+            hc.Add(t);
 
         foreach (var item in measure.Items)
             hc.Add(HashContent(item, ItemExclusions));

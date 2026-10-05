@@ -409,6 +409,40 @@ public class SpacingInvariantTests
                      SpacingRules.MidMeasureChangeRightGap(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, clefColumn), 9);
     }
 
+    [Theory]
+    [InlineData("r2. a4@mark(\"T\")")]
+    [InlineData("c'4 d'4@mark(\"T\") e'4 f'4")]
+    public void BothSpringSystems_AgreeAcrossAMidBarMarkColumn(string bar)
+    {
+        // A mid-bar rehearsal mark is a column of its own (Measure.MarkColumnTimings): the pair
+        // across it is SpacingRules.MarkColumnSeries in both systems, and a rest over half the
+        // bar before it earns full-measure-extra-space on the bar line's spring in both. The
+        // ledger's mark-column.* points watch the drawn bar; this watches that the line breaker's
+        // estimate prices the same bar (session 838). Both topologies are one slot per column here.
+        var (timings, allMeasures, primary, _) = Collect($$"""
+            time 4/4
+            octave absolute
+            part melody
+            section Main { melody { {{bar}} | } }
+            form main { Main }
+            score main "x" { staff melody }
+            """);
+        Assert.False(primary.MarkColumnTimings.IsDefaultOrEmpty);
+        var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
+        var spacing = SpacingOptions.Default.WithShortest(0.25);
+        var columnSprings = new MeasureLayouter().CreateTimingSprings(fonts, primary, timings, spacing, allMeasures);
+        var itemSprings = SpacingRules.CreateSpringsForMeasure(fonts, primary, spacing);
+
+        Assert.Equal(columnSprings.Length, itemSprings.Length);
+        for (int i = 0; i < columnSprings.Length; i++)
+        {
+            Assert.Equal(columnSprings[i].IdealDistance, itemSprings[i].IdealDistance, 9);
+            Assert.Equal(columnSprings[i].IsSeries, itemSprings[i].IsSeries);
+        }
+        Assert.Contains(columnSprings, s => s.IsSeries
+            && s.Series[^1].IdealDistance == SpacingRules.MarkColumnToNoteIdeal);
+    }
+
     [Fact]
     public void MmrRodMinimumDistance_ReservesBreakAlignedChangeAtRunBound()
     {

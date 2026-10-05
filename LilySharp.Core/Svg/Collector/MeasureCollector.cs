@@ -1126,6 +1126,10 @@ public sealed partial class MeasureCollector
         foreach (var (i, from) in SectionBoundaryContinuations(measures))
             measures[i] = measures[i] with { ContinuesBar = true, ContinuedFromMeasure = from == i - 1 ? -1 : from };
 
+        // A mid-bar rehearsal mark's column (Measure.MarkColumnTimings).
+        if (MarkColumnTimingsByMeasure() is { } markColumns)
+            StampMarkColumns(measures, markColumns);
+
         // Clef changes written at one moment fold into the last of them (ClefChangeCollapse —
         // the multi-staff road applies it in CollectStaffVoices).
         ClefChangeCollapse.Apply(measures, ParseClefType(_meta.InitialClef));
@@ -1241,6 +1245,39 @@ public sealed partial class MeasureCollector
                 return b == null ? v : v with { Measures = b.ToImmutable() };
             }).ToImmutableArray();
         }
+    }
+
+    /// <summary>
+    /// The mid-bar moments of the rehearsal marks written on notes, by measure index — what
+    /// <see cref="Measure.MarkColumnTimings"/> carries. Null when there are none (almost every
+    /// book).
+    /// </summary>
+    private Dictionary<int, ImmutableArray<Fraction>>? MarkColumnTimingsByMeasure()
+    {
+        Dictionary<int, ImmutableArray<Fraction>>? byMeasure = null;
+        foreach (var mark in _musicMarks)
+        {
+            if (mark.Type != MusicMarkType.Rehearsal
+                || mark.AnchorTiming.Denominator == 0 || mark.AnchorTiming <= Fraction.Zero)
+                continue;
+            byMeasure ??= [];
+            var at = byMeasure.TryGetValue(mark.MeasureIndex, out var list) ? list : ImmutableArray<Fraction>.Empty;
+            if (at.Contains(mark.AnchorTiming))
+                continue;
+            int k = 0;
+            while (k < at.Length && at[k] < mark.AnchorTiming)
+                k++;
+            byMeasure[mark.MeasureIndex] = at.Insert(k, mark.AnchorTiming);
+        }
+        return byMeasure;
+    }
+
+    /// <summary>Stamps <see cref="MarkColumnTimingsByMeasure"/> on <paramref name="measures"/> in place.</summary>
+    private static void StampMarkColumns(IList<Measure> measures, Dictionary<int, ImmutableArray<Fraction>> byMeasure)
+    {
+        foreach (var (i, timings) in byMeasure)
+            if (i >= 0 && i < measures.Count)
+                measures[i] = measures[i] with { MarkColumnTimings = timings };
     }
 
     /// <summary>
@@ -1945,6 +1982,17 @@ public sealed partial class MeasureCollector
         // the rest of that bar — is one bar of the music: its second half continues the bar
         // for the numbering (Measure.ContinuesBar), as the second half of a mid-bar break does.
         MarkBarsSplitBySectionBoundaries(staffVoices, rowNames);
+
+        // A mid-bar rehearsal mark's column is the SCORE's (Measure.MarkColumnTimings): every
+        // voice of every staff carries it, as every staff shares LilyPond's paper column.
+        if (MarkColumnTimingsByMeasure() is { } markColumns)
+            foreach (var key in staffVoices.Keys.ToArray())
+                staffVoices[key] = staffVoices[key].Select(v =>
+                {
+                    var b = v.Measures.ToBuilder();
+                    StampMarkColumns(b, markColumns);
+                    return v with { Measures = b.ToImmutable() };
+                }).ToImmutableArray();
 
         // Note-bound lyrics attach EXPLICITLY via `staff NAME with lyrics L` — there is
         // NO implicit auto-attach (an unreferenced `lyrics {}` block is a LYS4006 error).

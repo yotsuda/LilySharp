@@ -98,7 +98,7 @@
 - **:4298** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1212** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
-- **:2332** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
+- **:2339** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:180** non-default merge-differently-* switches. dot_wipe_head is NOT ported (no channel).
 - **:571** ⚠️ NOT PORTED — dot_wipe_head: LilyPond also kills the down head's DOT on
@@ -349,8 +349,8 @@
 ### `LilySharp.Core/Svg/Collector/MeasureBuilder.cs`
 - **:421** LILYSHARP-OWN (owner's decisions, 2026-10-02, HANDOFF §1.1 第737): a time, key
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:3339** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:5758** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:3387** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:5806** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Form.cs`
 - **:567** `time!` (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so
 - **:837** is not drawn unless written `key!` (MeasureBuilder.SectionHead, LILYSHARP-OWN). At a
@@ -461,7 +461,7 @@
 - **:197** Leading extent: LILYSHARP-OWN, keepEdgeHalves only — on a LEAD SHEET the line's
 - **:412** leading/trailing halves (LILYSHARP-OWN, a user decision — see
 ### `LilySharp.Core/Svg/Layout/MeasureLayouter.cs`
-- **:354** LILYSHARP-OWN: the walk stops four items back (LilyPond's overhang test runs until no
+- **:361** LILYSHARP-OWN: the walk stops four items back (LilyPond's overhang test runs until no
 ### `LilySharp.Core/Svg/Layout/MeterGlyphRun.cs`
 - **:108** LILYSHARP-OWN, a text character LilyPond spells with markup.
 - **:143** ⚠️ LILYSHARP-OWN: the fallback branch. The only non-digit that reaches here is the
@@ -480,15 +480,15 @@
 - **:1692** (a sign the player must not miss). LILYSHARP-OWN with the composition.
 - **:1713** The air between the "To" advance and the coda sign's ink. LILYSHARP-OWN with the
 - **:1730** shares the rehearsal line with. LILYSHARP-OWN with the arrangement itself
-- **:2137** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-11, session 368): a Lily# `form'
-- **:2238** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26: "Bridge"'s B stood too high — above
-- **:2263** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26): with equal margins round the ink, a
-- **:2282** LILYSHARP-OWN with LabelBoxBottomMargin.
-- **:2290** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26: "the margins inside the frame should be
-- **:2528** ⚠️ Until session 735 such a mark took the musical-column arm — a LILYSHARP-OWN limit
-- **:2630** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
-- **:2641** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
-- **:2690** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
+- **:2144** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-11, session 368): a Lily# `form'
+- **:2245** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26: "Bridge"'s B stood too high — above
+- **:2270** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26): with equal margins round the ink, a
+- **:2289** LILYSHARP-OWN with LabelBoxBottomMargin.
+- **:2297** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26: "the margins inside the frame should be
+- **:2541** ⚠️ Until session 735 such a mark took the musical-column arm — a LILYSHARP-OWN limit
+- **:2669** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
+- **:2680** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
+- **:2729** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:296** too (LILYSHARP-OWN, the remark at the meshing branch). Kept as LilyPond's number.
 - **:499** LILYSHARP-OWN (user decision 2026-09-26): ONE meshing shift, dotted or not.
@@ -515,8 +515,8 @@
 ### `LilySharp.Core/Svg/Layout/SpacingRules.EmptyBar.cs`
 - **:257** LILYSHARP-OWN: LilyPond has no such spring because it has no such column — the
 ### `LilySharp.Core/Svg/Layout/SpacingRules.MeasureSprings.cs`
-- **:796** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
-- **:1397** ⚠️ LILYSHARP-OWN by the owner's decision (session 646: "コード図は、横に並べてほしい。
+- **:815** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
+- **:1416** ⚠️ LILYSHARP-OWN by the owner's decision (session 646: "コード図は、横に並べてほしい。
 ### `LilySharp.Core/Svg/Layout/StaffSize.cs`
 - **:62** ⚠️ LILYSHARP-OWN: THIS LINE IS A TYPE ENUMERATION, and it is the one part of this file
 ### `LilySharp.Core/Svg/Layout/StanzaNumberEngraver.cs`

@@ -13186,6 +13186,28 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// Four bars on a justified line, then a break: bar 2 <c>r2. a4</c> with "Tacet" on its
+    /// fourth beat, bar 4 <c>c4 d4 e4 f4</c> with "X" on its second. A mid-bar mark is a column
+    /// of its own: the previous note → it is the bare duration spring, it → its note is 0.5
+    /// (stretching with the line), and the rest filling over half the bar before it earns
+    /// full-measure-extra-space — bar 2 is 25.875728 bar to bar (BARs 24.692143, 50.567871).
+    /// Each mark is centred on its column: box centre 40.711450 ("Tacet") and 78.454854 ("X")
+    /// after the clef's left (CLEF 0.8). Lily# drew both over the bar line and spaced the bars
+    /// as if the marks were not there until session 838.
+    /// </summary>
+    /// <remarks>LilyPond twin: audit/lp-geometry/probes/mark-column.ly MKC.</remarks>
+    private static readonly string MKC = """
+        octave absolute
+        time 4/4
+        part p { }
+        section A {
+          p { c'1 | r2. a4@mark("Tacet") | c'1 | c'4 d'4@mark("X") e'4 f'4 | break c'1 | }
+        }
+        form main { A }
+        score main "MKC" { staff p }
+        """;
+
+    /// <summary>
     /// A chord diagram on the first quarter after a bar line. Its box — the twin's TextScript
     /// with \textLengthOn's extra-spacing-width (-0.0 . 0.4) and infinite extra-spacing-height —
     /// joins the column's skyline at every height, so it is in the bar line's Staff_spacing
@@ -17883,6 +17905,10 @@ internal static class LpGeometryProbes
         new("double-percent.justified.first-bar", DPK, g => g.ClefToBarlineByClefRank(0, 2) - g.ClefToBarlineByClefRank(0, 1)),
         new("double-percent.justified.second-bar", DPK, g => g.ClefToBarlineByClefRank(0, 3) - g.ClefToBarlineByClefRank(0, 2)),
         new("line-start.empty-bar.key-tab.clef-to-bar", DPK, g => g.ClefToBarlineByClefRank(1, 0)),
+        // A mid-bar mark's own column: the bar it fills, and each mark centred on it (MKC's remarks).
+        new("mark-column.fills-measure.bar", MKC, g => g.ClefToBarlineByClefRank(0, 1) - g.ClefToBarlineByClefRank(0, 0)),
+        new("mark-column.tacet.box-centre", MKC, g => g.MusicMarkBoxCenterFromClefLeft("Tacet")),
+        new("mark-column.quarter.box-centre", MKC, g => g.MusicMarkBoxCenterFromClefLeft("X")),
         // A diagram's box against the columns beside it (DN1's, DN2's remarks).
         new("diagram.barline-to-note", DN1, g => g.BarlineRightToNextNotehead(0)),
         new("diagram.note-to-next-note", DN1, g => g.NoteheadAnchorStep(1)),

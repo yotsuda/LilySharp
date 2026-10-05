@@ -3166,6 +3166,27 @@
       "residual": 0.044869,
       "why": "OPENED AND CLOSED IN SESSION 836 (-0.39 at the end of 833, +1.07 midway). A continuation line opening on the first bar of a double percent pair, E-flat major, over a tab (CLEF 0.8, BAR 20.211221) -- HANDOFF 2 H (f). Two faults: the prefix-to-bar spring is the dt != 0 branch here (the closing bar line forbids a break), whose stretch is its ideal, where LineStartColumn.EmptyBarLineStartSpring assumed the breakable pair's `space`; and min_dist set every staff's prefix against the WIDEST sign, so the staff's key signature met the tab's 1.5-size sign (break alignment is per staff: ScoreSideTables.DoublePercentHalfWidthOn). The last hundredths are not split (the line is justified, so every spring on it shares them)."
     },
+    "mark-column.fills-measure.bar": {
+      "probe": "mark-column.ly",
+      "score": "MKC",
+      "lilypond": 25.875728,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 838 -- HANDOFF 2 H (g). A bar `r2. a4` with a rehearsal mark on its fourth beat, on a justified line (BARs 24.692143 -> 50.567871). A mid-bar \\mark is a RehearsalMark in the non-musical column of its moment, so the mark alone makes a column: the rest -> the mark column is the bare duration spring (no Note_spacing wish names it, lily/spacing-spanner.cc musical_column_spacing), the mark column -> a4 is standard_breakable_column_spacing's dt == 0 spring min_dist + 0.5 (lily/spacing-basic.cc), and fills_measure gives the bar line -> rest spring full-measure-extra-space (the next column is used, non-musical and over half a bar on, lily/spacing-spanner.cc). Lily# had no column: the bar was 1.20 narrower on a ragged line (Lab sessions/p838/mk m1). SpacingRules.MarkColumnSeries / MarkColumnFillsMeasure."
+    },
+    "mark-column.tacet.box-centre": {
+      "probe": "mark-column.ly",
+      "score": "MKC",
+      "lilypond": 40.71145,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 838. MKC's \"Tacet\" box, its centre after the clef's left (CLEF 0.8, MARK ext 37.676849 .. 45.346052; the centre, because the box's own width is not this point's business): the mark is centred on its own column, 0.5 (at the line's force) before the a4 it was written on. Lily# drew it centred over the bar line opening the bar, 13.6 further left (MusicMarkEngraver.CalculateXPosition)."
+    },
+    "mark-column.quarter.box-centre": {
+      "probe": "mark-column.ly",
+      "score": "MKC",
+      "lilypond": 78.454854,
+      "residual": -0.000001,
+      "why": "OPENED AND CLOSED IN SESSION 838. MKC's \"X\" box on the second quarter of `c4 d4 e4 f4` (MARK ext 77.929785 .. 80.579922): centred on its column, whose spring to the d4 stretches with the line (its stretch strength is its ideal 0.5, Spring (ideal, min) defaults), and no full-measure-extra-space (a quarter is not over half the bar). See mark-column.fills-measure.bar."
+    },
     "diagram.barline-to-note": {
       "probe": "diagram-neighbours.ly",
       "score": "DN1",

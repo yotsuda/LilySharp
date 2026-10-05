@@ -1035,6 +1035,22 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The drawn BOX's CENTRE of the boxed mark reading <paramref name="label"/>, from its own
+    /// system's clef left — <see cref="MusicMarkBoxLeftFromClefLeft"/> plus half the box. For a
+    /// mark CENTRED on its column (a mid-bar mark's own column, LilyPond's RehearsalMark with
+    /// self-alignment-X CENTER), where the centre is what the column places and the box's width
+    /// is the frame's own business.
+    /// </summary>
+    public double MusicMarkBoxCenterFromClefLeft(string label, int page = 0)
+    {
+        double left = MusicMarkBoxLeftFromClefLeft(label, page);
+        var t = _pages[page].Texts.Single(x => x.Role == TextRole.Mark && x.Text == label);
+        var box = _pages[page].Rects.Single(r => r.X <= t.X && t.X <= r.X + r.Width
+                                                 && r.Y <= t.Y && t.Y <= r.Y + r.Height);
+        return left + box.Width / 2;
+    }
+
+    /// <summary>
     /// The boxed mark reading <paramref name="label"/>: its drawn BOX's centre minus the
     /// <c>break-align-anchor</c> of the bar line nearest it — the centre of that bar line's
     /// STROKES, repeat dots excluded. Mid-line LilyPond centres a RehearsalMark on exactly

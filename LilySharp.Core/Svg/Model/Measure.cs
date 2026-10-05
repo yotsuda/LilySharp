@@ -289,6 +289,22 @@ public sealed record Measure
     /// </summary>
     public bool IsTrailingClefColumn { get; init; }
 
+    /// <summary>
+    /// The moments inside this bar (after its first) at which a rehearsal mark written on a
+    /// note stands — <c>r2. a4@mark("Tacet")</c> — ascending, one entry per moment. Empty for
+    /// almost every bar. It is a SCORE-level fact, stamped on every voice of every staff.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond engraves a mid-bar <c>\mark</c> as a RehearsalMark in the NON-musical paper
+    /// column of that moment, which otherwise stays unused there and leaves the spacing, so the
+    /// mark alone puts a column between the previous musical column and the note's
+    /// (<see cref="Layout.SpacingRules.MarkColumnSeries"/>), and a long first note before it can
+    /// earn full-measure-extra-space (<see cref="Layout.SpacingRules.MarkColumnFillsMeasure"/>).
+    /// LILYPOND-REF: scm/define-grobs.scm:2876-2899 RehearsalMark — <c>(non-musical . #t)</c>, a break-alignable-interface grob.
+    /// LILYPOND-REF: lily/paper-column.cc:115-136 Paper_column::is_used — a column with an element in it stays.
+    /// </remarks>
+    public ImmutableArray<Fraction> MarkColumnTimings { get; init; } = ImmutableArray<Fraction>.Empty;
+
     /// <summary>Creates a measure from its items, barlines, and break/pickup metadata.</summary>
     public Measure(
         ImmutableArray<MusicItem> items,

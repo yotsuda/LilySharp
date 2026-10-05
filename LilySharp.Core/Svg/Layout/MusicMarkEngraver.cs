@@ -1841,16 +1841,23 @@ internal static class MusicMarkEngraver
     /// is dropped with "discarding event", which is the warning
     /// <c>Semantics.ShadowedRehearsalMarkValidator</c> raises (LYS4021).
     /// <para>
-    /// ⚠️ A <c>@mark</c> is built with no anchor (MeasureCollector.MusicWalk: the mark is the
-    /// SCORE's, and stands at the bar whichever note carries it), so "the same moment" is the
-    /// same MEASURE; and the measures asked are the primary staff's, which is where every
-    /// reader of <see cref="BuildAllMarks"/> takes the labels from. Under
+    /// ⚠️ A <c>@mark</c> on the bar's first note is built with no anchor (the mark is the
+    /// SCORE's, and stands at the bar), so "the same moment" is the same MEASURE; and the
+    /// measures asked are the primary staff's, which is where every reader of
+    /// <see cref="BuildAllMarks"/> takes the labels from. Under
     /// <c>layout { sectionLabels none }</c> no label is engraved, and the caller does not
     /// come here at all.
+    /// </para>
+    /// <para>
+    /// A <c>@mark</c> later in the bar (<see cref="IsMidBarMark"/>, session 838) is ANOTHER
+    /// moment, so the label does not shadow it and both are engraved. MEASURED (2.26.0, Lab
+    /// sessions/p838/mk m5): the label "A" at the bar and "Tacet" on its fourth beat, no
+    /// "discarding event".
     /// </para>
     /// </remarks>
     internal static bool ShadowedBySectionLabel(MusicMarkItem mark, ImmutableArray<Measure> measures)
         => mark.Type == MusicMarkType.Rehearsal
+           && !IsMidBarMark(mark)
            && (uint)mark.MeasureIndex < (uint)measures.Length
            && measures[mark.MeasureIndex].SectionLabel != null;
 
@@ -2456,6 +2463,12 @@ internal static class MusicMarkEngraver
     internal static bool IsMeasureStartTempo(MusicMarkItem mark)
         => mark.AnchorItemIndex <= 0 || mark.AnchorTiming == Semantics.Fraction.Zero;
 
+    /// <summary>A mark that stands after its bar's first moment (a default timing, 0/0, is the
+    /// bar's own) — for a rehearsal mark, one in its own mark column
+    /// (<see cref="Measure.MarkColumnTimings"/>).</summary>
+    internal static bool IsMidBarMark(MusicMarkItem mark)
+        => mark.AnchorTiming.Denominator != 0 && mark.AnchorTiming > Semantics.Fraction.Zero;
+
     private static double CalculateXPosition(
         ScoreTextMetrics fonts,
         MusicMarkItem mark, MeasureLayout measureLayout,
@@ -2573,6 +2586,32 @@ internal static class MusicMarkEngraver
                 return measureLayout.X + measureLayout.GetXForTiming(mark.AnchorTiming);
             if (mark.AnchorItemIndex < measureLayout.Items.Length)
                 return measureLayout.X + measureLayout.Items[mark.AnchorItemIndex].X;
+        }
+
+        // A rehearsal mark written on a note after the bar's first moment stands in LilyPond's own
+        // non-musical column at that moment, CENTRED on it (the X returned here is the box centre):
+        // the column stands the mark column's spring before the note's column, at the line's force
+        // (SpacingRules.MarkColumnToNoteSpring — the spacing side of the same column).
+        // LILYPOND-REF: scm/define-grobs.scm:2876-2899 RehearsalMark — non-musical, break-alignable-interface; self-alignment-X
+        //   break-alignable-interface::self-alignment-opposite-of-anchor, CENTER off a break-aligned group.
+        // MEASURED (2.26.0, Lab sessions/p838/mk): the mark's X extent is centred on the mark column to
+        // the digit — r2. a4@mark 17.700..25.370 about 21.535, c4 d4@mark 17.440..20.090 about 18.765.
+        if (mark.Type == MusicMarkType.Rehearsal && IsMidBarMark(mark))
+        {
+            double hang = SpacingRules.MarkColumnToNoteSpring().Length(measureLayout.SpringForce);
+            if (!measureLayout.Columns.IsDefaultOrEmpty)
+                return measureLayout.X + measureLayout.GetXForTiming(mark.AnchorTiming) - hang;
+            if (!measures.IsDefault && measureLayout.MeasureIndex < measures.Length)
+            {
+                var onset = Semantics.Fraction.Zero;
+                var items = measures[measureLayout.MeasureIndex].Items;
+                for (int k = 0; k < items.Length && k < measureLayout.Items.Length; k++)
+                {
+                    if (onset == mark.AnchorTiming && !items[k].GraceTime)
+                        return measureLayout.X + measureLayout.Items[k].X - hang;
+                    onset += items[k].Duration;
+                }
+            }
         }
 
         if (mark.Position != MusicMarkPosition.Beginning)

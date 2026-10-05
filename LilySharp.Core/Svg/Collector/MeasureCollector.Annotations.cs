@@ -987,9 +987,17 @@ public sealed partial class MeasureCollector
                     // The statement handler keeps its own copy of this guard, so a mark
                     // that reaches BOTH paths is still built once, and its fallback stays
                     // for a mark that rode no note at all.
+                    // ⚠️ EXCEPT MID-BAR (session 838): a mark on a note after the bar's first
+                    // moment is LilyPond's own non-musical column at that moment, and the
+                    // mark is centred on that column, not on the bar line — so it keeps the
+                    // note's moment (still no itemIndex: it is not the note's grob). A mark at
+                    // the bar's first moment keeps the default timing and stays the bar's.
+                    // LILYPOND-REF: scm/define-grobs.scm:2876-2899 RehearsalMark — non-musical, break-alignable-interface.
                     if (!MusicMarkExistsAt(markSyntax.SourceStart))
                         _musicMarks.Add(new MusicMarkItem(
-                            MusicMarkType.Rehearsal, rehearsalLabel, measureIndex, markSyntax.SourceStart));
+                            MusicMarkType.Rehearsal, rehearsalLabel, measureIndex, markSyntax.SourceStart,
+                            anchorTiming: anchorTiming.Denominator != 0 && anchorTiming > Fraction.Zero
+                                ? anchorTiming : default));
                 }
                 else
                 {
