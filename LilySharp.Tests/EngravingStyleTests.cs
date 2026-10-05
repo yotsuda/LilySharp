@@ -46,7 +46,7 @@ public class EngravingStyleTests
     {
         var s = StyleOf("lineThickness=0.15", "StaffLine.thickness=1.2", "LedgerLine.thickness=2,0.05",
             "LedgerLine.lengthFraction=0.4", "Stem.thickness=2", "Stem.lengthFraction=1.2", "Beam.thickness=0.6",
-            "BarLine.thinThickness=3", "BarLine.thickThickness=7");
+            "Beam.damping=0", "BarLine.thinThickness=3", "BarLine.thickThickness=7");
         Assert.Equal(0.15, s.LineThickness);
         Assert.Equal(1.2, s.StaffSymbolThickness);
         Assert.Equal(2, s.LedgerLineThicknessLines);
@@ -55,6 +55,7 @@ public class EngravingStyleTests
         Assert.Equal(2, s.StemThickness);
         Assert.Equal(1.2, s.StemLengthFraction);
         Assert.Equal(0.6, s.BeamThickness);
+        Assert.Equal(0, s.BeamDamping);
         Assert.Equal(3, s.BarLineHairThickness);
         Assert.Equal(7, s.BarLineThickThickness);
         Assert.Equal(EngravingStyle.Default, StyleOf("spacingIncrement=1.6"));
@@ -69,6 +70,7 @@ public class EngravingStyleTests
     [InlineData("LedgerLine.thickness=0,0")]
     [InlineData("LedgerLine.thickness=1,-0.1")]
     [InlineData("LedgerLine.lengthFraction=0")]
+    [InlineData("Beam.damping=-1")]
     [InlineData("Stem.length=3.5")]
     public void AValueThatDoesNotRead_IsRefused(string setting)
     {
@@ -234,6 +236,43 @@ public class EngravingStyleTests
     }
 
     /// <summary>
+    /// The 35 stems LilyPond 2.26.0 draws (sorted; Lab sessions/p825/damp, the
+    /// <c>lysc ly --pin-fonts</c> twin, stem rects) for a book whose beams leap, under
+    /// <c>\override Beam.damping</c> = 0 (no damping), 3 and 10000 (flat). The beams follow
+    /// LilyPond's to the drawing's 0.03 at each (as <see cref="TheBeamedStems_AreLilyPondsUnderTheSettings"/>),
+    /// and the three are three different pages.
+    /// </summary>
+    [Theory]
+    [InlineData("0", new[]
+    {
+        2.4926, 2.4926, 2.5007, 2.5137, 2.5401, 2.5401, 2.5875, 2.5875, 2.6139, 2.6350, 2.6350, 2.8009,
+        2.8761, 2.9128, 3.0248, 3.0671, 3.1367, 3.2515, 3.2976, 3.3084, 3.3138, 3.3192, 3.3300, 3.6269,
+        3.8138, 4.3138, 4.3138, 4.8138, 4.8138, 5.3138, 5.8138, 5.9948, 6.0605, 6.1328, 8.2756,
+    })]
+    [InlineData("3", new[]
+    {
+        2.4956, 2.5007, 2.5007, 2.5023, 2.8108, 2.8117, 2.8117, 2.8761, 2.8761, 2.9400, 3.1268, 3.2498,
+        3.2498, 3.2515, 3.2515, 3.3138, 3.3776, 3.6269, 3.6269, 3.6878, 3.6878, 3.8138, 3.8153, 4.1259,
+        4.1259, 4.3138, 4.3138, 4.8138, 4.8138, 5.3138, 5.8138, 5.9993, 6.3183, 7.6320, 8.7071,
+    })]
+    [InlineData("10000", new[]
+    {
+        2.3138, 2.3138, 2.3138, 2.5038, 2.6238, 2.6238, 2.6238, 2.8138, 2.8138, 2.8138, 3.1238, 3.1238,
+        3.1238, 3.3138, 3.3138, 3.3138, 3.3138, 3.6238, 3.6238, 3.8138, 3.8138, 3.8138, 3.8138, 4.1238,
+        4.1238, 4.3138, 4.3138, 4.8138, 4.8138, 5.3138, 5.8138, 5.8138, 6.3138, 8.0038, 8.6238,
+    })]
+    public void TheBeamDamping_IsLilyPonds(string damping, double[] lilyPond)
+    {
+        string book = Beamed.Replace("a''8 g'' | }", "a''8 g'' | c'8 g'' d'16 b'' e'8 | }", StringComparison.Ordinal);
+        string svg = Svg(book, "Beam.damping=" + damping);
+        var drawn = StemLengths(svg, "0.130");
+        Assert.Equal(lilyPond.Length, drawn.Length);
+        for (int i = 0; i < drawn.Length; i++)
+            Assert.InRange(drawn[i] - lilyPond[i], 0.02, 0.045);
+        Assert.NotEqual(Svg(book), svg);
+    }
+
+    /// <summary>
     /// The keys are the language's (owner's decision 2026-10-05): the file writes them in
     /// <c>layout { }</c>, a score overrides them through a named block, and <c>--set</c> wins
     /// over both — and each reaches the page.
@@ -270,13 +309,14 @@ public class EngravingStyleTests
         string Twin(string layout) => new Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(
             layout + "part m { }\nsection A { m { c'1 | } }\nform main { A }\nscore main { staff m }\n"));
         string styled = Twin("layout { lineThickness 0.15  StaffLine.thickness 1.2  LedgerLine.thickness 2 0.1  "
-            + "LedgerLine.lengthFraction 0.4  Stem.thickness 2 Stem.lengthFraction 1.2  Beam.thickness 0.6  BarLine.thinThickness 3  BarLine.thickThickness 7 }\n");
+            + "LedgerLine.lengthFraction 0.4  Stem.thickness 2 Stem.lengthFraction 1.2  Beam.thickness 0.6  Beam.damping 3  BarLine.thinThickness 3  BarLine.thickThickness 7 }\n");
         foreach (string line in new[]
         {
             "line-thickness = 0.75\\pt", "\\override StaffSymbol.thickness = #1.2",
             "\\override StaffSymbol.ledger-line-thickness = #'(2 . 0.1)",
             "\\override LedgerLineSpanner.length-fraction = #0.4", "\\override Stem.thickness = #2",
             "\\override Stem.length-fraction = #1.2", "\\override Beam.beam-thickness = #0.6",
+            "\\override Beam.damping = #3",
             "\\override BarLine.hair-thickness = #3", "\\override BarLine.thick-thickness = #7",
         })
             Assert.Contains(line, styled, StringComparison.Ordinal);

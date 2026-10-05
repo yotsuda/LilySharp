@@ -66,6 +66,7 @@ internal static class LayoutPlanReader
             ["Stem.thickness"] = ("1.3", "1.5"),
             ["Stem.lengthFraction"] = ("1.0", "1.1"),
             ["Beam.thickness"] = ("0.48", "0.5"),
+            ["Beam.damping"] = ("1.0", "2"),
             ["BarLine.thinThickness"] = ("1.9", "2.5"),
             ["BarLine.thickThickness"] = ("6.0", "7"),
         };
@@ -289,6 +290,7 @@ internal static class LayoutPlanReader
                 "Stem.thickness" => ReadStyle(plan, entry, span, found, (s, v) => s with { StemThickness = v[0] }),
                 "Stem.lengthFraction" => ReadStyle(plan, entry, span, found, (s, v) => s with { StemLengthFraction = v[0] }),
                 "Beam.thickness" => ReadStyle(plan, entry, span, found, (s, v) => s with { BeamThickness = v[0] }),
+                "Beam.damping" => ReadStyle(plan, entry, span, found, (s, v) => s with { BeamDamping = v[0] }),
                 "BarLine.thinThickness" => ReadStyle(plan, entry, span, found, (s, v) => s with { BarLineHairThickness = v[0] }),
                 "BarLine.thickThickness" => ReadStyle(plan, entry, span, found, (s, v) => s with { BarLineThickThickness = v[0] }),
                 // ⚠️ A key published in SyntaxFacts.LayoutKeyVocabulary with no arm here
@@ -305,16 +307,18 @@ internal static class LayoutPlanReader
     /// <summary>
     /// One engraving-style key (<c>Stem.thickness 1.5</c>): as many plain numbers as its
     /// <see cref="NumberKeys"/> default has, each positive — <c>LedgerLine.thickness</c>' two may
-    /// be 0 but not both. No unit: each is a multiple of a line thickness, or staff spaces
-    /// (Svg.EngravingStyle says which).
+    /// be 0 but not both, and <c>Beam.damping</c> may be 0 (no damping, as LilyPond's). No unit:
+    /// each is a multiple of a line thickness, staff spaces or a factor (Svg.EngravingStyle says
+    /// which).
     /// </summary>
     private static LayoutPlan ReadStyle(LayoutPlan plan, LayoutDeclarationSyntax.Entry entry, TextSpan keySpan,
         List<Problem> found, Func<Svg.EngravingStyle, double[], Svg.EngravingStyle> set)
     {
         string example = NumberKeys[entry.Key].Example;
         int count = example.Split(' ').Length;
+        bool zeroReads = entry.Key == "Beam.damping";
         string takes = count == 1
-            ? $"'{entry.Key}' takes a positive number, no unit: {entry.Key} {example}."
+            ? $"'{entry.Key}' takes a {(zeroReads ? "number, 0 or more" : "positive number")}, no unit: {entry.Key} {example}."
             : $"'{entry.Key}' takes {count} numbers, not both 0 and none below 0: {entry.Key} {example}.";
         var values = new double[entry.Values.Count];
         bool numbers = entry.Values.Count == count;
@@ -322,7 +326,7 @@ internal static class LayoutPlanReader
             numbers = entry.Values[i].Kind is SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral
                 && double.TryParse(entry.Values[i].Text, NumberStyles.Float, CultureInfo.InvariantCulture, out values[i]);
         if (numbers)
-            numbers = count == 1 ? values[0] > 0 : values.All(v => v >= 0) && values.Any(v => v > 0);
+            numbers = count == 1 ? values[0] > 0 || (zeroReads && values[0] == 0) : values.All(v => v >= 0) && values.Any(v => v > 0);
         if (!numbers)
         {
             found.Add(new Problem(entry.Values.Count > 0 ? entry.Values[0].Span : keySpan,

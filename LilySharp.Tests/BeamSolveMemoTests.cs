@@ -88,6 +88,38 @@ public class BeamSolveMemoTests
         Assert.Equal(before + 1, BeamScoringProblem.t_solvedHits);
     }
 
+    /// <summary>
+    /// The running style's <c>Beam.damping</c> reaches the solve through the parameters, which
+    /// the memo keys by reference — so a group asked again under another damping is solved
+    /// afresh, not answered with the default's slope (session 825).
+    /// </summary>
+    [Fact]
+    public void AQuestionUnderAnotherDamping_IsSolvedAfresh()
+    {
+        var group = new BeamGroup(ImmutableArray.Create(
+                new BeamMember(Note(-4), 1, 0, 1, -4, 0),
+                new BeamMember(Note(4), 1, 1, 0, 4, 2)),
+            0, 0, stemUp: true);
+        List<double> close = [0.0, 1.5, 3.0];   // a leap of eight positions over three spaces
+        var damped = BeamScoringProblem.SolveLent(group, close);
+        foreach (double damping in new[] { 0.0, 10000.0 })
+        {
+            using (EngravingStyle.Use(EngravingStyle.Default with { BeamDamping = damping }))
+            {
+                var fresh = new BeamScoringProblem(group, close).Solve();
+                Assert.True(Math.Abs((fresh.rightY - fresh.leftY) - (damped.RightY - damped.LeftY)) > 0.01,
+                    "the damping does not move the beam — the net cannot tell a wrong answer");
+                long before = BeamScoringProblem.t_solvedHits;
+                var asked = BeamScoringProblem.SolveLent(group, close);
+                Assert.Equal(before, BeamScoringProblem.t_solvedHits);
+                Assert.Equal((fresh.leftY, fresh.rightY), (asked.LeftY, asked.RightY));
+            }
+        }
+        // Back at the default, the default's answer (the memo keeps two questions a group, so
+        // this one may be solved again — the answer is what the net reads).
+        Assert.Equal(damped, BeamScoringProblem.SolveLent(group, close));
+    }
+
     [Fact]
     public void AQuestionDifferingInOneMemberX_IsSolvedAfresh()
     {

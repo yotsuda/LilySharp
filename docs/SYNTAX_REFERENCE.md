@@ -1681,10 +1681,12 @@ keys (`--set Stem.thickness=1.5`, and `LedgerLine.thickness=1.0,0.1` with a comm
 | `Stem.thickness` | 1.3 | stems, in staff line thicknesses |
 | `Stem.lengthFraction` | 1.0 | every stem's length, beamed or not, times this (a grace note's and a cue's keep their own) |
 | `Beam.thickness` | 0.48 | beams, in staff spaces — the beams are placed for it, as LilyPond places them |
+| `Beam.damping` | 1 | how much a beam's slope is flattened, as LilyPond's: the slope stays under 0.6 / this (staff spaces per staff space); 0 leaves it undamped, 10000 or more lays every beam flat |
 | `BarLine.thinThickness` | 1.9 | thin bar lines, in line thicknesses |
 | `BarLine.thickThickness` | 6.0 | thick bar lines, in line thicknesses |
 
-Each takes a positive number with no unit (`LedgerLine.thickness` two, not both 0). The
+Each takes a positive number with no unit (`LedgerLine.thickness` two, not both 0;
+`Beam.damping` may be 0). The
 `.ly` twin writes them as those overrides (`\override Stem.thickness = #1.5`,
 `line-thickness = 0.6\pt`).
 

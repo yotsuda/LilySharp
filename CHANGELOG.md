@@ -433,13 +433,14 @@ workflow attaches that section to the GitHub Release verbatim.
   cap a page's systems with LilyPond's meaning (the lines are re-broken so the pages fill),
   `measuresPerSystem` puts exactly N bars on every system (the lead-sheet layout), and
   `shortestDurationSpace` sets the shortest note's space. Completion offers them.
-- **`layout { }` sets the line thicknesses, the ledger lines' length and the stem length.**
-  `lineThickness`, `StaffLine.thickness`, `LedgerLine.thickness`, `LedgerLine.lengthFraction`,
-  `Stem.thickness`, `Stem.lengthFraction`, `Beam.thickness`, `BarLine.thinThickness` and
-  `BarLine.thickThickness`, each a number in LilyPond's units (`layout { Stem.thickness 1.5 }`),
-  score-wide, and per score through a named block. The layout follows them as LilyPond's
-  does — a thicker beam or a longer stem moves the beams where LilyPond moves them, a longer
-  ledger line moves nothing — and the `.ly` twin writes them as LilyPond's overrides.
+- **`layout { }` sets the line thicknesses, the ledger lines' length, the stem length and
+  how steep beams may be.** `lineThickness`, `StaffLine.thickness`, `LedgerLine.thickness`,
+  `LedgerLine.lengthFraction`, `Stem.thickness`, `Stem.lengthFraction`, `Beam.thickness`,
+  `Beam.damping`, `BarLine.thinThickness` and `BarLine.thickThickness`, each a number in
+  LilyPond's units (`layout { Stem.thickness 1.5 }`), score-wide, and per score through a
+  named block. The layout follows them as LilyPond's does — a thicker beam, a longer stem or
+  another damping moves the beams where LilyPond moves them, a longer ledger line moves
+  nothing — and the `.ly` twin writes them as LilyPond's overrides.
   Completion offers them with their defaults.
 - **`lysc svg|png|pdf|boxes --set KEY=VALUE` overrides a `paper` or `layout` value for one
   run.** Any entry of either block — `spacingIncrement=1.6`, `leftMargin=20mm`,

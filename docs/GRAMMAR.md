@@ -664,6 +664,7 @@ LayoutEntry    = 'markTempo' , MarkArrangement
                | 'chordList' , Boolean
                | 'voltaBracket' , VoltaLength        (* VoltaLength: 'all' | 'line' | Integer >= 1 — §6 StructureVolta *)
                | StyleKey , Number                     (* > 0, no unit *)
+               | 'Beam.damping' , Number               (* >= 0 *)
                | 'LedgerLine.thickness' , Number , Number ;   (* >= 0, not both 0 *)
 StyleKey       = 'lineThickness' | 'StaffLine.thickness' | 'LedgerLine.lengthFraction'
                | 'Stem.thickness' | 'Stem.lengthFraction' | 'Beam.thickness'
@@ -706,7 +707,8 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
    side, in head widths — the spacing does not move, as LilyPond's; Stem.thickness
    (1.3) in staff line thicknesses; Stem.lengthFraction (1.0) every stem's length, a grace's
    and a cue's keep their own; Beam.thickness (0.48) in staff spaces — the beams are placed
-   for it; BarLine.thinThickness (1.9) and BarLine.thickThickness (6.0) in line
+   for it; Beam.damping (1) how much a beam's slope is flattened, LilyPond's: the slope
+   stays under 0.6 / damping, 0 leaves it undamped and 10000 or more lays the beam flat; BarLine.thinThickness (1.9) and BarLine.thickThickness (6.0) in line
    thicknesses. The twin writes them as those overrides.
    indent / raggedRight / spacingIncrement stay in paper on that
    rule (LilyPond accepts them in \paper too). NOT an 'override': an override reads a

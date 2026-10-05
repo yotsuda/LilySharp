@@ -83,6 +83,7 @@ public sealed partial class LilyPondExporter
         Line(s.StemThickness != d.StemThickness, "Stem.thickness = #" + N(s.StemThickness));
         Line(s.StemLengthFraction != d.StemLengthFraction, "Stem.length-fraction = #" + N(s.StemLengthFraction));
         Line(s.BeamThickness != d.BeamThickness, "Beam.beam-thickness = #" + N(s.BeamThickness));
+        Line(s.BeamDamping != d.BeamDamping, "Beam.damping = #" + N(s.BeamDamping));
         Line(s.BarLineHairThickness != d.BarLineHairThickness, "BarLine.hair-thickness = #" + N(s.BarLineHairThickness));
         Line(s.BarLineThickThickness != d.BarLineThickThickness, "BarLine.thick-thickness = #" + N(s.BarLineThickThickness));
         return lines.ToString();

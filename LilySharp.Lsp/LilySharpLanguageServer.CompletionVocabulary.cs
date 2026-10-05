@@ -814,7 +814,8 @@ public sealed partial class LilySharpLanguageServer
         "Stem.thickness" => "Stems, in staff line thicknesses (default 1.3)",
         "Stem.lengthFraction" => "Every stem's length times this, beamed or not (default 1.0)",
         "Beam.thickness" => "Beams, in staff spaces (default 0.48); the beams are placed for it",
-        "BarLine.thinThickness" => "Thin bar lines, in line thicknesses (default 1.9)",
+        "Beam.damping" => "How much beams' slopes are flattened (default 1; 0 none, 10000 flat): a beam's slope stays under 0.6 / this",
+        "BarLine.thinThickness" =>"Thin bar lines, in line thicknesses (default 1.9)",
         "BarLine.thickThickness" => "Thick bar lines, in line thicknesses (default 6.0)",
         _ => "Layout key",
     };

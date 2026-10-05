@@ -357,6 +357,9 @@ internal sealed class BeamScoringProblem
     {
         double beamThick = beamThickness ?? EngravingDefaults.BeamThickness;
         double lineThick = lineThickness ?? EngravingDefaults.StaffLineThickness;
+        // Resolved before the memo is asked: the style's damping lives in the parameters, which
+        // the memo keys by reference — a null would match a null solved under another style.
+        parameters ??= EngravingStyle.CurrentBeamParameters;
         s_solved.TryGetValue(group, out var solved);
         if (solved != null)
         {
@@ -570,7 +573,7 @@ internal sealed class BeamScoringProblem
     {
         _group = group;
         _memberCount = group.Members.Length;
-        _parameters = parameters ?? BeamQuantParameters.Default;
+        _parameters = parameters ?? EngravingStyle.CurrentBeamParameters;
         var suppliedCollisions = collisions ?? Array.Empty<BeamCollision>();
 
         // Compute basic values. LILYPOND-REF: lily/beam-quanting.cc:419 x_span_ =

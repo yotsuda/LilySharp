@@ -30,11 +30,14 @@ namespace LilySharp.Core.Svg.Layout;
 /// </remarks>
 internal sealed class BeamEngraver
 {
-    private readonly BeamQuantParameters _parameters;
+    private readonly BeamQuantParameters? _parameters;
 
+    /// <param name="parameters">The quanting's parameters; null reads the running style's
+    /// (<see cref="EngravingStyle.CurrentBeamParameters"/>) at each solve, as the engraver can
+    /// outlive one layout.</param>
     public BeamEngraver(BeamQuantParameters? parameters = null)
     {
-        _parameters = parameters ?? BeamQuantParameters.Default;
+        _parameters = parameters;
     }
 
     /// <summary>The parameters this engraver will score with.</summary>
@@ -45,7 +48,7 @@ internal sealed class BeamEngraver
     /// than let the collector reach for <see cref="BeamQuantParameters.Default"/>, so a
     /// caller that passes its own parameters gets them on both sides.
     /// </remarks>
-    public BeamQuantParameters Parameters => _parameters;
+    public BeamQuantParameters Parameters => _parameters ?? EngravingStyle.CurrentBeamParameters;
 
     /// <summary>
     /// Calculates the layout for a beam group.
@@ -112,7 +115,7 @@ internal sealed class BeamEngraver
         // cue heads (BeamGroup.IsCue) — LilyPond's CueVoice states all three
         // (ly/engraver-init.ly CueVoice). A full-size group passes the defaults.
         var (leftY, rightY, (leftStemX, rightStemX)) = BeamScoringProblem.SolveLent(
-            group, itemXPositions, _parameters, collisions,
+            group, itemXPositions, Parameters, collisions,
             lengthFraction: group.LengthFraction, beamThickness: group.Thickness,
             headFont: group.HeadFont,
             restXPositions: restXPositions);

@@ -97,6 +97,14 @@ public sealed record EngravingStyle
     /// lily/beam.cc:130-145 Beam::get_beam_translation and the quanter.</remarks>
     public double BeamThickness { get; init; } = 0.48;
 
+    /// <summary><c>Beam.damping</c>: how much a beam's slope is flattened — 0 none, 10000 or
+    /// more a horizontal beam.</summary>
+    /// <remarks>LILYPOND-REF: lily/beam-quanting.cc:745-775 Beam_scoring_problem::slope_damping —
+    /// <c>slope = 0.6 * tanh (slope) / (damping + concaveness)</c>, so the damped slope stays under
+    /// 0.6 / damping; scm/define-grobs.scm Beam (damping . 1). Held as the beam quanting's
+    /// parameters (<see cref="CurrentBeamParameters"/>), which the beam memo keys by reference.</remarks>
+    public double BeamDamping { get; init; } = 1.0;
+
     /// <summary><c>BarLine.hair-thickness</c>, in staff line thicknesses.</summary>
     /// <remarks>LILYPOND-REF: scm/bar-line.scm:227-238 make-simple-bar-line reads it times the
     /// paper's line-thickness; scm/define-grobs.scm BarLine (hair-thickness . 1.9).</remarks>
@@ -112,6 +120,7 @@ public sealed record EngravingStyle
 
     [System.ThreadStatic] private static EngravingStyle? t_current;
     [System.ThreadStatic] private static StemDetails? t_stem;
+    [System.ThreadStatic] private static BeamQuantParameters? t_beam;
 
     /// <summary>The style of the layout or render running on this thread (the default
     /// outside one).</summary>
@@ -125,6 +134,11 @@ public sealed record EngravingStyle
     /// <see cref="CurrentStem"/> answers at the default length-fraction.</summary>
     internal static readonly StemDetails DefaultStemDetails = new();
 
+    /// <summary>The beam quanting's parameters at <see cref="Current"/>'s damping — one instance
+    /// per scope, <see cref="BeamQuantParameters.Default"/> at the default, so a beam solved
+    /// under another style is another question to the memo (it keys the parameters by reference).</summary>
+    internal static BeamQuantParameters CurrentBeamParameters => t_beam ?? BeamQuantParameters.Default;
+
     /// <summary>Holds <paramref name="style"/> until the scope is disposed; scopes nest.</summary>
     internal static Scope Use(EngravingStyle style) => new(style);
 
@@ -133,16 +147,33 @@ public sealed record EngravingStyle
     {
         private readonly EngravingStyle? _previous;
         private readonly StemDetails? _previousStem;
+        private readonly BeamQuantParameters? _previousBeam;
 
         internal Scope(EngravingStyle style)
         {
             _previous = t_current;
             _previousStem = t_stem;
+            _previousBeam = t_beam;
             bool isDefault = style.Equals(Default);
             t_current = isDefault ? null : style;
             t_stem = isDefault || style.StemLengthFraction == 1.0
                 ? null
                 : DefaultStemDetails with { LengthFraction = style.StemLengthFraction };
+            t_beam = isDefault || style.BeamDamping == BeamQuantParameters.Default.Damping
+                ? null
+                : BeamParametersAt(style.BeamDamping);
+        }
+
+        // The last damping's parameters, kept so the layout's scope and the render's ask the
+        // memo with the same reference (a new instance per scope would miss it every time).
+        private static BeamQuantParameters? s_lastBeam;
+
+        private static BeamQuantParameters BeamParametersAt(double damping)
+        {
+            var last = s_lastBeam;
+            if (last != null && last.Damping == damping)
+                return last;
+            return s_lastBeam = BeamQuantParameters.Default with { Damping = damping };
         }
 
         /// <summary>Restores the style that was current before.</summary>
@@ -150,6 +181,7 @@ public sealed record EngravingStyle
         {
             t_current = _previous;
             t_stem = _previousStem;
+            t_beam = _previousBeam;
         }
     }
 }
