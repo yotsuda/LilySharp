@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第826セッションの経緯
+
+### 1.1 第826セッション（2026-10-05・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。`-Start p826`（HEAD `85ccdb6e`）＝full **11213 / 0 / 2 / 11215**。§7 3.5 で第824 を ARCHIVE へ。
+- **`layout { Dots.padding 0.45 }`（LP の `DotColumn.padding`・既定は付点 1 個の幅＝null）と `Accidental.rightPadding 0.15`（`AccidentalPlacement.right-padding`・符頭との間は 0.2＋これ）**。名前は私が決めた（提案書の `Dots.distance`・`Accidental.padding`）。どちらも 0 を許す。
+- 付点: 手書きの「＋付点の幅」を `EngravingDefaults.DotPadding(w)` に集めた（`DotColumn.OffsetX`・休符・tab・`NoteCollision` 2・skyline 3）。タイの外形の `2·n·w` は `DotRowReach`（既定はビット同一）。臨時記号: `GlyphMetrics.AccidentalNoteGap` を style を読むプロパティに（既定は 0.35 ちょうど）。
+- ★ **捕まえた欠陥 2 つ**: ⑴ `AccidentalPlacement` は static readonly のインスタンスが 4 つ（renderer・ElementCoordinator・glissando・skyline）＝構築時に style を読むと**最初の描画の style が残る**（既定の後に設定すると間隔は動くのに臨時記号は元の位置）⇒ 使うたびに読む。⑵ 2 声の臨時記号の列は**collect 時**に詰める（`StaffAccidentalColumns`）が collect は style のスコープ外 ⇒ `ResolveStaffColumns` がスコープを開く。
+- LP 双子（Lab `sessions/p826/dotacc`・`measure.ps1`）: 付点 8・臨時記号 5 の間と全列の位置（臨時記号で伸びる間隔も）が既定・`0.7`/`0.4` とも SVG の丸め内で一致。網: `TheDotAndAccidentalGaps_AreLilyPonds`（既定を先に描く＝⑴の網）・`TwoVoicesPackedAccidentals_FollowTheRightPadding`（⑵の網）。毒 3 本（構築時に読む→1 赤・付点が style を無視→1 赤・collect のスコープを外す→1 赤）。掃き（`sessions/p826/svg2`）998 冊 1199 svg で差 0。文書: GRAMMAR・SYNTAX_REFERENCE・CLI_REFERENCE・CHANGELOG・OMR §6（±30% の換算）。ついでに第825 の補完の説明の `=>"` の空白落ちを直した。
+
+★ `-End p826 -DiffBase 85ccdb6e3`（`end.log`）＝full **11218 / 0 / 2 / 11220**・門 全 OK。棚卸し: 行番号の移動だけ。7.5: Core `+` 約 70 行・REF 2（`DotColumn.padding`・`right-padding`）・OWN 0。7.6: 意味は LP（dot-column.cc:229-232・:252-257 休符も padding・accidental-placement.cc:398-400）。7.7: 設定した `Dots.padding` は装飾音符にも同じ長さ（LP の override と同じ）・双子で測ったのは普通の大きさだけ。commit `1ef57e48d`＋docs。push はユーザー。
+判定: 次は P4 の最後 `NoteHead.scale`（LP に同名は無い＝`NoteHead.font-size` に当たる・字形の寸法・符幹の付き方・間隔の全部に効く大物）。(a) style の配管は使えるが触る場所は今便と別／(b) **この会話は 4 便ぶんで重い**／(c) 同じ島 ⇒ **新しい会話が有利**（(b) による・`-Start p827` から）。
+
 ## 以下は第825セッションの経緯
 
 ### 1.1 第825セッション（2026-10-05・YT-DELL2）

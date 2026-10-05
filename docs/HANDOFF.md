@@ -78,7 +78,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。→ **第751（2026-10-02・ユーザー決定）「LP 忠実にこだわるより音楽的な妥当性を重視。LP から引き継ぐのはレンダリングとレイアウトの美しさだけ。ユーザーがまだ少ないので過去のしがらみに縛られない」＝意味論（拍子・弱起・反復・強弱・検査・出力の意味）の裁定者は音楽的妥当性、LP は描画と配置の裁定者（RULES §5.2 に規則として置いた）。
 
-**★★★★ 第815〜816（2026-10-05）ユーザー指示「OMR の提案を優先度順に着手」＝次の会話はここから**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`。OMR は別プログラム・Lily# は子プロセスで呼びファイルを読むだけ＝コードを混ぜない）: 0（#17〜#20）・A1 `@todo`・B1 の枠（L1・L7＝`93e1477e8`）・B2（`f5a3d3142`）・**C1・C2・B3（第816）・B4・C3（第817＝`paper { breaksOnly }`）・B5・B6（第818＝`0de6d924a`・`e1796b14c`）は閉じた**。配布の取り決め `..\LilySharp-Omr\docs\repro\lilysharp-omr-distribution-2026-10-05.md`（同梱しない・L1〜L11）。⚠️ **B1〜B6 は VS Code で未確認**（OMR の `omr read` は第 1 歩が動く＝`OmrProto.exe` を `LILYSHARP_OMR_PATH` で指せば試せる）。残り: ⑥ 10-02 提案（学習データ）: **P1・P2・P3・P5（第818〜821）と P4 の線の太さ・符幹（第822）・加線の長さ（第824）・連桁の傾き（第825＝`Beam.damping`）・付点と臨時記号の間（第826）・符頭の大きさ（第827＝`NoteHead.scale`）は閉じた＝P4 は全部・全部 `paper { }`／`layout { }` の言語のキー（第823・`--set` は上書き）**。次は P6（SMuFL＝大・別に判断）。**B5 は OMR の `omr verify`（第818 が提案）が出るまで動かない**。OMR 側へのお願い（`breaksOnly` を書く・`part voice` をやめる・TIFF 用の PNG・`omr verify`・記号単位の `confidence`/`candidates`）は OMR の提案書に書いた。配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後。第814 末の決定（下）はこの後。
+**★★★★ 第815〜816（2026-10-05）ユーザー指示「OMR の提案を優先度順に着手」＝次の会話はここから**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`。OMR は別プログラム・Lily# は子プロセスで呼びファイルを読むだけ＝コードを混ぜない）: 0（#17〜#20）・A1 `@todo`・B1 の枠（L1・L7＝`93e1477e8`）・B2（`f5a3d3142`）・**C1・C2・B3（第816）・B4・C3（第817＝`paper { breaksOnly }`）・B5・B6（第818＝`0de6d924a`・`e1796b14c`）は閉じた**。配布の取り決め `..\LilySharp-Omr\docs\repro\lilysharp-omr-distribution-2026-10-05.md`（同梱しない・L1〜L11）。⚠️ **B1〜B6 は VS Code で未確認**（OMR の `omr read` は第 1 歩が動く＝`OmrProto.exe` を `LILYSHARP_OMR_PATH` で指せば試せる）。残り: ⑥ 10-02 提案（学習データ）: **P1・P2・P3・P5（第818〜821）と P4 の線の太さ・符幹（第822）・加線の長さ（第824）・連桁の傾き（第825＝`Beam.damping`）・付点と臨時記号の間（第826）・符頭の大きさ（第827＝`NoteHead.scale`）は閉じた＝P4 は全部・boxes の `staff` を強弱・スクリプト等にも（第828）・残りは作らないと決めた（第828）・全部 `paper { }`／`layout { }` の言語のキー（第823・`--set` は上書き）**。次は P6（SMuFL＝大・別に判断）。**B5 は OMR の `omr verify`（第818 が提案）が出るまで動かない**。OMR 側へのお願い（`breaksOnly` を書く・`part voice` をやめる・TIFF 用の PNG・`omr verify`・記号単位の `confidence`/`candidates`）は OMR の提案書に書いた。配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後。第814 末の決定（下）はこの後。
 
 **★★★★ 第814 末のユーザー決定（2026-10-04）＝次の会話はここから**（判断の基準は音楽的妥当性。**手元のコーパスは偏っているので「コーパスで困ったか」を判断材料にしない**）:
 - §2 E ⑷ hairpin の niente の円・⑹ 開いた和音入力・⑺ Ignatzek＝**実装する**。⑷⑹ は文法の提案をユーザーに出した（第814 の返答・要旨は下）＝**承認を得てから実装**。⑺ の残りは LP の例外表の 2 つ（パワーコード `<c g>`→上付き「5」・オルタード `<c e g bes des' ees' fis' aes'>`→上付き「alt」＝ly/chord-modifiers-init.ly:54-58）。°・+・ø・°7・△・上付きは 2026-09-11 に移植済み。
@@ -125,6 +125,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第828セッション（2026-10-05・YT-DELL2）
+
+同じ会話の続き。ユーザー「すぐ実装できる訓練用の機能は全部できた？」→ 10-02 提案の残りを洗い、「価値が無い・代替があるなら作らない」（ユーザー）で振り分けた: `--batch` の行ごとの `--set`＝**作らない**（生成する `.lys` に `paper { }`／`layout { }` を書けば同じ）・boxes の音高／音価／声部＝**作らない**（生成器の `.notes` と `pos` で突き合わせられる）・黒玉より短い加線＝**作らない**（提案書の 1.3 は 0.0016 相当・今の下限で 1.307）・`minimumNoteDistance`／`measureMinimumWidth` は第818〜821 が見送り済み（LP に無い）。
+- **作ったのは 1 つ＝boxes の `staff` を音符にぶら下がる記号にも**（提案書の「要るのは 4 つ」の 4 つ目が欠けていた）。fixture 278 冊の census（Lab `sessions/p828/boxes`）で articulation・fermata・ornament・dynamics・tuplet／tupletBracket・arpeggio・fingering・figuredBass・ottava・tabTechnique・text が全部 −1 だった。13 の描画ループの頭で `gc.Staff(x.StaffIndex)`（SVG／PNG／PDF の `Staff` は no-op＝絵は動かない）。残る −1 は五線に属さないもの（歌詞・コードネーム・mark・tempo・小節番号・題・volta・span bar）と pedal（`PedalBracketLayout` が段を持たない＝要望が出たら）。
+- 網 `BoxesTests.WhatHangsOnANote_NamesItsStaff`（2 段・下の段の強弱と accent と運指は 1）。毒 1 本（強弱のスコープを外す→1 赤）。文書: CLI_REFERENCE（`staff` の説明）・CHANGELOG・OMR §6。
+
+★ `-End p828 -DiffBase 2ef342dab`（`end.log`）＝full **11228 / 0 / 2 / 11230**・門 全 OK。棚卸し: 行番号の移動だけ。7.5: Core `+` 26 行・REF 0・OWN 0（描画ループの頭のスコープだけ）。7.6・7.7: 無し。commit `59a647dd4`＋docs。push はユーザー。
+判定: 10-02 の提案は P6 を除いて閉じた。次は P6（ユーザー判断）か第814 末の決定 ①／③。(a) 今便の文脈は使わない／(b) 会話は 2 便ぶん・まだ取り違えは無い／(c) 別の島 ⇒ **この会話で続けてよい**（`-Start p829` から）。
+## 以下は第827セッションの経緯
+
 ### 1.1 第827セッション（2026-10-05・YT-DELL2）
 
 新しい会話。`-Start p827`（HEAD `e47680d3`）＝full **11218 / 0 / 2 / 11220**。§7 3.5 で第825 を ARCHIVE へ。
@@ -135,19 +145,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 ★ `-End p827 -DiffBase e47680d38`（`end.log`）＝full **11227 / 0 / 2 / 11229**・門 全 OK。棚卸し: 行番号の移動＋magic 1 点増（`StaffHeadMagnification` の 1.0・出典は file-level REF）・`slurOffset` の行の書き換え。7.5: Core `+` 約 190 行・REF 3（`magnification->font-size`・`Font_size_engraver::acknowledge_font` 2）・OWN 0。7.6: 意味は LP（font-size の合成＝font-size-engraver.cc・face の選択＝font-select.cc）。7.7: grace の前の 0.035・符幹の頭側の手の規則（どちらも既定で既にある差の拡大）。commit `9a13dfab6`＋docs。push はユーザー。
 判定: P4 は閉じた。次は P6（SMuFL・ユーザー判断）か第814 末の決定の ①（⑹＋⑺・文法の承認待ち）／③ §2 D の調査。(a) 今便の配管は使わない／(b) 会話は 1 便ぶん・重くない／(c) 別の島 ⇒ **この会話で続けてよい**（`-Start p828` から）。
-
-## 以下は第826セッションの経緯
-
-### 1.1 第826セッション（2026-10-05・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」）。`-Start p826`（HEAD `85ccdb6e`）＝full **11213 / 0 / 2 / 11215**。§7 3.5 で第824 を ARCHIVE へ。
-- **`layout { Dots.padding 0.45 }`（LP の `DotColumn.padding`・既定は付点 1 個の幅＝null）と `Accidental.rightPadding 0.15`（`AccidentalPlacement.right-padding`・符頭との間は 0.2＋これ）**。名前は私が決めた（提案書の `Dots.distance`・`Accidental.padding`）。どちらも 0 を許す。
-- 付点: 手書きの「＋付点の幅」を `EngravingDefaults.DotPadding(w)` に集めた（`DotColumn.OffsetX`・休符・tab・`NoteCollision` 2・skyline 3）。タイの外形の `2·n·w` は `DotRowReach`（既定はビット同一）。臨時記号: `GlyphMetrics.AccidentalNoteGap` を style を読むプロパティに（既定は 0.35 ちょうど）。
-- ★ **捕まえた欠陥 2 つ**: ⑴ `AccidentalPlacement` は static readonly のインスタンスが 4 つ（renderer・ElementCoordinator・glissando・skyline）＝構築時に style を読むと**最初の描画の style が残る**（既定の後に設定すると間隔は動くのに臨時記号は元の位置）⇒ 使うたびに読む。⑵ 2 声の臨時記号の列は**collect 時**に詰める（`StaffAccidentalColumns`）が collect は style のスコープ外 ⇒ `ResolveStaffColumns` がスコープを開く。
-- LP 双子（Lab `sessions/p826/dotacc`・`measure.ps1`）: 付点 8・臨時記号 5 の間と全列の位置（臨時記号で伸びる間隔も）が既定・`0.7`/`0.4` とも SVG の丸め内で一致。網: `TheDotAndAccidentalGaps_AreLilyPonds`（既定を先に描く＝⑴の網）・`TwoVoicesPackedAccidentals_FollowTheRightPadding`（⑵の網）。毒 3 本（構築時に読む→1 赤・付点が style を無視→1 赤・collect のスコープを外す→1 赤）。掃き（`sessions/p826/svg2`）998 冊 1199 svg で差 0。文書: GRAMMAR・SYNTAX_REFERENCE・CLI_REFERENCE・CHANGELOG・OMR §6（±30% の換算）。ついでに第825 の補完の説明の `=>"` の空白落ちを直した。
-
-★ `-End p826 -DiffBase 85ccdb6e3`（`end.log`）＝full **11218 / 0 / 2 / 11220**・門 全 OK。棚卸し: 行番号の移動だけ。7.5: Core `+` 約 70 行・REF 2（`DotColumn.padding`・`right-padding`）・OWN 0。7.6: 意味は LP（dot-column.cc:229-232・:252-257 休符も padding・accidental-placement.cc:398-400）。7.7: 設定した `Dots.padding` は装飾音符にも同じ長さ（LP の override と同じ）・双子で測ったのは普通の大きさだけ。commit `1ef57e48d`＋docs。push はユーザー。
-判定: 次は P4 の最後 `NoteHead.scale`（LP に同名は無い＝`NoteHead.font-size` に当たる・字形の寸法・符幹の付き方・間隔の全部に効く大物）。(a) style の配管は使えるが触る場所は今便と別／(b) **この会話は 4 便ぶんで重い**／(c) 同じ島 ⇒ **新しい会話が有利**（(b) による・`-Start p827` から）。
 
 ## 2. 開いている作業
 
