@@ -119,6 +119,10 @@ internal sealed record LayoutOptions
     /// </remarks>
     public double StaffSpaceMm { get; init; } = DefaultStaffSpaceMm;
 
+    /// <summary>True when <see cref="StaffSpaceMm"/> came from <c>lysc --set staffSpace=…</c>,
+    /// which wins over a <c>staffSpace</c> the file's paper writes (PaperPlanReader).</summary>
+    internal bool StaffSpaceFromSetting { get; init; }
+
     /// <summary>LilyPond's default staff space: a 20pt staff's quarter, 5 TeX points =
     /// 127 / 72.27 mm (the header above).</summary>
     /// <remarks>

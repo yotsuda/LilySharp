@@ -500,6 +500,12 @@ public sealed partial class MeasureCollector
         // incremental reason (MetaMatchesShifted compares it).
         if (LayoutOverride is { } layoutRef)
             _meta.LayoutPlan = Semantics.LayoutPlanReader.ReadReference(root, layoutRef, _meta.LayoutPlan);
+        // `lysc … --set Stem.thickness=1.5`: the caller's layout values, over everything the file says.
+        if (PaperOverrides is { } layoutSettings)
+            _meta.LayoutPlan = layoutSettings.ApplyLayout(_meta.LayoutPlan);
+        // The layout's line thicknesses and stem length ride on the paper, which is what the
+        // layout engine and the renderer hold the engraving style from (Svg.EngravingStyle).
+        _meta.Paper = _meta.Paper with { Style = _meta.LayoutPlan.EngravingStyle };
         // …and the one switch the MUSIC WALK reads rather than the layout: which notes
         // carry a printed accidental. Every walk runs after this, so reading it once here
         // is reading it before the first note.

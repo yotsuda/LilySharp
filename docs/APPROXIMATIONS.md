@@ -335,9 +335,9 @@
 ### `LilySharp.Core/Semantics/FormRoute.cs`
 - **:79** LILYSHARP-OWN: LilyPond's \jump (lily/jump-engraver.cc) is a mark only — its MIDI
 ### `LilySharp.Core/Semantics/LayoutPlan.cs`
-- **:264** LILYSHARP-OWN: LilyPond 2.26 has no capo property on its ChordNames context (its
-- **:285** LILYSHARP-OWN: LilyPond has no such list; the twin writes a \markup line of
-- **:420** LILYSHARP-OWN: LilyPond's FretBoards context carries its own stringTunings
+- **:272** LILYSHARP-OWN: LilyPond 2.26 has no capo property on its ChordNames context (its
+- **:293** LILYSHARP-OWN: LilyPond has no such list; the twin writes a \markup line of
+- **:428** LILYSHARP-OWN: LilyPond's FretBoards context carries its own stringTunings
 ### `LilySharp.Core/Semantics/RepeatPasses.cs`
 - **:115** LILYSHARP-OWN: a pass no ending names replays the LAST ending — |: A [1. B] :|*3 [2. C]
 ### `LilySharp.Core/Svg/Collector/BeamDetector.cs`
@@ -445,8 +445,8 @@
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Prelim.cs`
 - **:1512** LILYSHARP-OWN: the shift itself. LilyPond has no counterpart, because it has no second
 ### `LilySharp.Core/Svg/Layout/LayoutOptions.cs`
-- **:166** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
-- **:214** LILYSHARP-OWN: LilyPond has no such variable (its spelling is a \break every N bars beside the ##f permissions); 0 leaves the breaks to the breaker.
+- **:170** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
+- **:218** LILYSHARP-OWN: LilyPond has no such variable (its spelling is a \break every N bars beside the ##f permissions); 0 leaves the breaks to the breaker.
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
 - **:897** (the chain's last node — see its LILYSHARP-OWN remark), the single-page path
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`

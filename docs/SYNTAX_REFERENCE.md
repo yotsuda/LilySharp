@@ -863,6 +863,10 @@ paper {
                                // (default: only the last page does, as in LilyPond)
   breaksOnly                   // bare flag: break lines and pages only at break / pageBreak
   spacingIncrement 1.2         // horizontal note-spacing unit
+  shortestDurationSpace 2      // the shortest note's space, in spacing increments
+  staffSpace 1.757299mm        // the staff's size: the distance between two staff lines
+  systemsPerPage 4             // exactly 4 systems on every page (or min/maxSystemsPerPage)
+  measuresPerSystem 4          // exactly 4 bars on every system
   systemSystemSpacing { basicDistance 12  minimumDistance 8  padding 1  stretchability 60 }
   staffStaffSpacing   { basicDistance 9 }
 }
@@ -912,9 +916,29 @@ on grobs (`StaffGrouper.staff-staff-spacing`): these quantities are applied scor
 one pass, and `paper { }` is the spelling whose meaning is score-wide — an override would
 parse a scope (`once`, staff tags) and then silently not apply it.
 
-There is deliberately **no staff-size key** (the staff space is the unit itself; scaling
-it is a different feature) and **no algorithm switch** (line/page-breaking strategy is
-engine tuning, not a dimension of the picture).
+**The staff's size, the page counts and the shortest note's space** (in the language since
+2026-10-05; `lysc --set` takes the same keys):
+
+- `staffSpace 1.5mm` — the distance between two staff lines on the paper (LilyPond's
+  `set-global-staff-size`; the default 20pt staff is `1.757299mm`, `#(set-global-staff-size 17)`
+  is `1.493704mm`). The page keeps its millimetres — the paper, the margins, the indents and
+  every length written in mm / cm / in — so a smaller staff puts more music on the page, and
+  the SVG, PNG and PDF keep the paper's size with the staff smaller on it. It needs its unit
+  (a bare number would be staff spaces, the unit it sets) and applies to the whole block
+  wherever it is written. Lengths written as bare numbers are staff spaces and scale with it.
+- `systemsPerPage 4` — exactly 4 systems on every page: the lines are re-broken so the pages
+  fill, as LilyPond's `systems-per-page` does. `minSystemsPerPage` / `maxSystemsPerPage` are a
+  floor (not binding the last page) and a cap. One block may not write `systemsPerPage` beside
+  either of the others; a later block (a score's, a `--set`) writing one clears the other.
+  More systems than a page can hold are pressed together on it, with a warning.
+- `measuresPerSystem 4` — exactly 4 bars on every system (the lead-sheet layout); written
+  `break` / `pageBreak` give way, and a pickup counts as a bar. Lily#-own (LilyPond's spelling
+  is a `\break` every N bars). Bars that cannot fit run past the margin, with a warning.
+- `shortestDurationSpace 2` — the space the score's shortest note gets, in spacing increments
+  (LilyPond's `SpacingSpanner.shortest-duration-space`); no unit.
+
+There is deliberately **no algorithm switch** (line/page-breaking strategy is engine
+tuning, not a dimension of the picture).
 
 Unknown keys are an error, a key set twice in one block is a warning and the last wins,
 and a second unnamed `paper { }` block warns like every repeated global setting.
@@ -1618,6 +1642,7 @@ layout {
   chordDiagrams guitar     // written chord shapes draw as guitar diagrams (unset: the part's instrument)
                            // (`chordDiagrams guitar all` / `chordDiagrams all`: EVERY chord draws one)
   voltaBracket all         // the default: an ending's bracket covers every bar of it
+  Stem.thickness 1.3       // the default: the line thicknesses and stem length (below)
 }
 layout chart {
   markTempo beside         // the chart's: "[Chorus] ♩ = 132" on one line
@@ -1640,6 +1665,27 @@ references (and may override in part: `layout chart { barNumbers none }` inside 
 It is not an `override` (which reads a `once` / section scope a whole-score switch would
 silently ignore) and not `paper` (a quantity with a unit — a length, `raggedRight` — is the
 page's and stays there).
+
+**The line thicknesses and the stem length** (2026-10-05) — the block's one family of
+NUMBERS: how the score is engraved rather than which drawing it picks, score-wide like
+LilyPond's `\layout { \context { \Score \override … } }`. The dotted keys name a grob and
+its property, glued (`Stem.thickness`, not `Stem . thickness`); `lysc --set` takes the same
+keys (`--set Stem.thickness=1.5`, and `LedgerLine.thickness=1.0,0.1` with a comma).
+
+| Key | Default | Means |
+|-----|---------|-------|
+| `lineThickness` | 0.1 | the line every other one is a multiple of, in staff spaces |
+| `StaffLine.thickness` | 1.0 | the staff's lines, in line thicknesses — and, as in LilyPond, every line stated in them follows: stems, ledger lines, ties, slurs, hairpins, brackets. The bar lines read `lineThickness` alone and stay |
+| `LedgerLine.thickness` | 1.0 0.1 | ledger lines: staff line thicknesses, plus staff spaces |
+| `Stem.thickness` | 1.3 | stems, in staff line thicknesses |
+| `Stem.lengthFraction` | 1.0 | every stem's length, beamed or not, times this (a grace note's and a cue's keep their own) |
+| `Beam.thickness` | 0.48 | beams, in staff spaces — the beams are placed for it, as LilyPond places them |
+| `BarLine.thinThickness` | 1.9 | thin bar lines, in line thicknesses |
+| `BarLine.thickThickness` | 6.0 | thick bar lines, in line thicknesses |
+
+Each takes a positive number with no unit (`LedgerLine.thickness` two, not both 0). The
+`.ly` twin writes them as those overrides (`\override Stem.thickness = #1.5`,
+`line-thickness = 0.6\pt`).
 
 **`markTempo`** — a boxed section label (a `form` section's name, a `@mark`) and the metronome
 mark standing at the **same bar** are arranged one of two ways. `stacked` is LilyPond's:

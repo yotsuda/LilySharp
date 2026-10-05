@@ -135,20 +135,52 @@ public class PaperOverridesTests
         Assert.False(string.IsNullOrEmpty(error));
     }
 
-    /// <summary>Not a paper key: the file cannot write one.</summary>
+    /// <summary>A paper key since the owner's decision of 2026-10-05: the file writes it as the
+    /// setting does, and the setting wins.</summary>
     [Fact]
-    public void ASettingOnlyKey_IsNotAPaperKey()
+    public void ThePageKeys_AreInTheLanguage_AndTheSettingWins()
     {
-        var tree = SyntaxTree.Parse("""
-            paper { shortestDurationSpace 3 }
+        const string book = """
+            paper { shortestDurationSpace 3  systemsPerPage 4  measuresPerSystem 2  staffSpace 1.5mm  leftMargin 30mm }
             part m { }
             section A { m { c'1 | } }
             form main { A }
             score main { staff m }
-            """);
+            """;
+        var tree = SyntaxTree.Parse(book);
         var paper = tree.GetRoot().DescendantNodes<PaperDeclarationSyntax>().First();
         PaperPlanReader.Read(paper, out var problems);
-        Assert.Contains(problems, p => p.Code == DiagnosticCodes.UnknownPaperKey);
+        Assert.Empty(problems);
+
+        var p = PaperOf(book);
+        Assert.Equal(3, p.ShortestDurationSpace);
+        Assert.Equal(4, p.PageBreaking.SystemsPerPage);
+        Assert.Equal(2, p.MeasuresPerSystem);
+        Assert.Equal(1.5, p.StaffSpaceMm);
+        Assert.Equal(20, p.MarginLeft);   // 30mm on the file's own staff space, wherever it is written
+
+        var set = PaperOf(book, "staffSpace=2mm", "maxSystemsPerPage=3");
+        Assert.Equal(2, set.StaffSpaceMm);
+        Assert.Equal(15, set.MarginLeft);
+        Assert.Equal(0, set.PageBreaking.SystemsPerPage);   // a later max clears the file's fixed count
+        Assert.Equal(3, set.PageBreaking.MaxSystemsPerPage);
+    }
+
+    /// <summary>A score overrides the page keys as it overrides any other: a named block,
+    /// referenced and overridden in part.</summary>
+    [Fact]
+    public void AScore_OverridesThePageKeys()
+    {
+        var tree = SyntaxTree.Parse("""
+            paper small { staffSpace 1.4mm  systemsPerPage 6 }
+            part m { }
+            section A { m { c'1 | } }
+            form main { A }
+            score main { paper small { staffSpace 1.6mm }  staff m }
+            """);
+        var p = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)).Paper;
+        Assert.Equal(1.6, p.StaffSpaceMm);
+        Assert.Equal(6, p.PageBreaking.SystemsPerPage);
     }
 
     /// <summary>
@@ -283,7 +315,7 @@ public class PaperOverridesTests
     [Theory]
     [InlineData("staffSpace=1.5mm", 1.5)]
     [InlineData("staffSpace=0.2cm", 2.0)]
-    [InlineData("staffSpace=.1in", 2.54)]
+    [InlineData("staffSpace=0.1in", 2.54)]
     public void StaffSpace_IsASetting(string setting, double mm)
     {
         var parsed = PaperOverrides.Parse([setting], out var error);

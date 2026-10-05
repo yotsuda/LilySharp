@@ -23,40 +23,31 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// <c>paper</c> values given from outside the file — <c>lysc svg|png|pdf --set KEY=VALUE</c>
-/// (LilySharp-Omr's proposal of 2026-10-02, P1: the same music engraved with other spacing
-/// for training data, the <c>.lys</c> untouched). They overlay the score's paper LAST: after
-/// the file's <c>paper { }</c> and the score's <c>paper NAME</c>.
+/// <c>paper</c> and <c>layout</c> values given from outside the file —
+/// <c>lysc svg|png|pdf|boxes --set KEY=VALUE</c> (LilySharp-Omr's proposal of 2026-10-02, P1: the
+/// same music engraved another way for training data, the <c>.lys</c> untouched). They overlay
+/// the score's own LAST: after the file's <c>paper { }</c> / <c>layout { }</c> and the score's
+/// <c>paper NAME</c> / <c>layout NAME</c>.
 /// </summary>
 /// <remarks>
 /// <para>
-/// A setting is a paper entry spelled <c>KEY=VALUE</c>: <c>spacingIncrement=1.6</c>,
-/// <c>leftMargin=20mm</c>, <c>size=a5</c>, <c>staffStaffSpacing.basicDistance=9</c> (a spacing
-/// block's sub-key), and a bare flag as <c>raggedRight</c> or <c>raggedRight=true</c>. The
-/// entries are read by <see cref="PaperPlanReader"/> itself — written out as a
-/// <c>paper { }</c> block and parsed — so every key, unit and refusal is the language's, and a
-/// key the language gains is a setting with no change here.
+/// A setting is an entry of either block spelled <c>KEY=VALUE</c>: <c>spacingIncrement=1.6</c>,
+/// <c>leftMargin=20mm</c>, <c>size=a5</c>, <c>systemsPerPage=4</c>,
+/// <c>staffStaffSpacing.basicDistance=9</c> (a spacing block's sub-key), <c>Stem.thickness=1.5</c>,
+/// <c>LedgerLine.thickness=1.0,0.1</c> (a comma for the space between two numbers),
+/// <c>barNumbers=none</c>, and a bare flag as <c>raggedRight</c> or <c>raggedRight=true</c>. The
+/// entries are read by <see cref="PaperPlanReader"/> and <see cref="LayoutPlanReader"/>
+/// themselves — written out as a block and parsed — so every key, unit and refusal is the
+/// language's, and a key the language gains is a setting with no change here.
 /// </para>
 /// <para>
-/// One spelling the block has no shape for: a flag turned OFF (<c>raggedRight=false</c>), so
-/// a setting can undo what the file turns on. Those are applied after the block.
+/// One spelling a block has no shape for: a flag turned OFF (<c>raggedRight=false</c>), so a
+/// setting can undo what the file turns on. Those are applied after the block.
 /// </para>
 /// <para>
-/// And keys that are settings ONLY, not paper keys (<see cref="SettingOnlyKeys"/> — P2, the
-/// owner's decision 2026-10-05: knobs for varying training data stay out of the language, so
-/// a <c>paper { }</c> that writes one is still refused). <c>measuresPerSystem=N</c> is N bars to
-/// every system (<see cref="LayoutOptions.MeasuresPerSystem"/>; LilyPond has no such variable).
-/// <c>staffSpace=1.5mm</c> is the staff's size on the paper (P3; <see cref="StaffSpaceMm"/>), and
-/// <see cref="StyleKeys"/> — <c>lineThickness=0.12</c>, <c>Stem.thickness=1.5</c>,
-/// <c>StaffSymbol.ledgerLineThickness=1.0,0.1</c>, … — LilyPond's line thicknesses and stem
-/// length under its own names and units (P4; <see cref="Svg.EngravingStyle"/>).
-/// The other four are LilyPond's
-/// <c>shortest-duration-space</c> and its <c>\paper</c> <c>systems-per-page</c> /
-/// <c>min-systems-per-page</c> / <c>max-systems-per-page</c>, with LilyPond's meaning:
-/// <c>systemsPerPage=6</c> on 17 systems' worth of music re-breaks the lines into 18 and pages
-/// them 6/6/6, and N systems that do not fit a page overflow it (PageBreaker's
-/// SpaceWithFixedNumberPerPage). Where LilyPond warns and ignores — systems-per-page beside
-/// min/max, or min above max (lily/page-breaking.cc:297-308 min_systems_per_page_) — a setting is refused.
+/// ⚠️ ONE KEY IS LAID UNDER THE FILE, not over it: <c>staffSpace</c> (<see cref="OnBase"/>),
+/// since the file's millimetres are read through it — and it wins over a <c>staffSpace</c> the
+/// file writes.
 /// </para>
 /// </remarks>
 public sealed class PaperOverrides
@@ -64,162 +55,44 @@ public sealed class PaperOverrides
     /// <summary>The flags <see cref="Apply"/> knows how to turn off.</summary>
     private static readonly string[] FlagsWithOff = ["raggedRight", "raggedBottom", "breaksOnly"];
 
-    /// <summary>The keys only a setting can carry, in documentation order.</summary>
-    internal static readonly string[] SettingOnlyKeys =
-        ["staffSpace", "shortestDurationSpace", "measuresPerSystem", "systemsPerPage", "minSystemsPerPage", "maxSystemsPerPage"];
-
-    /// <summary>The keys that set the engraving style (<see cref="Svg.EngravingStyle"/> — P4, the
-    /// owner's decision 2026-10-05: LilyPond's grob properties under LilyPond's names and units),
-    /// in documentation order.</summary>
-    internal static readonly string[] StyleKeys =
-    [
-        "lineThickness", "StaffSymbol.thickness", "StaffSymbol.ledgerLineThickness",
-        "Stem.thickness", "Stem.lengthFraction", "Beam.beamThickness",
-        "BarLine.hairThickness", "BarLine.thickThickness",
-    ];
-
-    /// <summary>One style key read into the change it makes, or null with <paramref name="error"/>.</summary>
-    private static Func<LayoutOptions, LayoutOptions>? ReadStyle(string key, string value, out string? error)
-    {
-        error = null;
-        static bool Number(string s, out double v) =>
-            double.TryParse(s, System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out v) && !double.IsInfinity(v) && !double.IsNaN(v);
-        if (key == "StaffSymbol.ledgerLineThickness")
-        {
-            // LilyPond's pair (ledger-line-thickness . (1.0 . 0.1)): staff line thicknesses, plus staff spaces.
-            var parts = value.Split(',');
-            if (parts.Length != 2 || !Number(parts[0].Trim(), out double lines) || !Number(parts[1].Trim(), out double spaces)
-                || lines < 0 || spaces < 0 || lines + spaces <= 0)
-            {
-                error = $"'{key}' takes two numbers, staff line thicknesses and staff spaces, not both 0: {key}=1.0,0.1.";
-                return null;
-            }
-            return paper => paper with { Style = paper.Style with { LedgerLineThicknessLines = lines, LedgerLineThicknessSpaces = spaces } };
-        }
-        if (!Number(value, out double n) || !(n > 0))
-        {
-            error = $"'{key}' takes a positive number (no unit): {key}=" + key switch
-            {
-                "lineThickness" => "0.12.",
-                "Stem.lengthFraction" => "1.1.",
-                "Beam.beamThickness" => "0.5.",
-                _ => "1.5.",
-            };
-            return null;
-        }
-        return key switch
-        {
-            "lineThickness" => paper => paper with { Style = paper.Style with { LineThickness = n } },
-            "StaffSymbol.thickness" => paper => paper with { Style = paper.Style with { StaffSymbolThickness = n } },
-            "Stem.thickness" => paper => paper with { Style = paper.Style with { StemThickness = n } },
-            "Stem.lengthFraction" => paper => paper with { Style = paper.Style with { StemLengthFraction = n } },
-            "Beam.beamThickness" => paper => paper with { Style = paper.Style with { BeamThickness = n } },
-            "BarLine.hairThickness" => paper => paper with { Style = paper.Style with { BarLineHairThickness = n } },
-            _ => paper => paper with { Style = paper.Style with { BarLineThickThickness = n } },
-        };
-    }
-
-    private readonly PaperDeclarationSyntax? _block;
+    private readonly PaperDeclarationSyntax? _paper;
+    private readonly LayoutDeclarationSyntax? _layout;
     private readonly string[] _flagsOff;
-    private readonly List<Func<LayoutOptions, LayoutOptions>> _settingOnly;
 
-    private PaperOverrides(PaperDeclarationSyntax? block, string[] flagsOff,
-        List<Func<LayoutOptions, LayoutOptions>> settingOnly, double? staffSpaceMm)
+    private PaperOverrides(PaperDeclarationSyntax? paper, LayoutDeclarationSyntax? layout, string[] flagsOff)
     {
-        _block = block;
+        _paper = paper;
+        _layout = layout;
         _flagsOff = flagsOff;
-        _settingOnly = settingOnly;
-        StaffSpaceMm = staffSpaceMm;
+        StaffSpaceMm = paper != null ? PaperPlanReader.StaffSpaceOf(paper) : null;
     }
 
     /// <summary>
-    /// <c>staffSpace=1.5mm</c>: the staff space on the paper, in millimetres (null = LilyPond's,
-    /// <see cref="LayoutOptions.DefaultStaffSpaceMm"/>) — LilySharp-Omr's proposal of 2026-10-02
-    /// P3, the owner's decision 2026-10-05. Unlike every other setting it is laid UNDER the
-    /// file's paper (<see cref="OnBase"/>), since the file's millimetres are read through it.
+    /// <c>staffSpace=1.5mm</c>: the staff space on the paper, in millimetres (null = the file's,
+    /// else LilyPond's <see cref="LayoutOptions.DefaultStaffSpaceMm"/>).
     /// </summary>
     internal double? StaffSpaceMm { get; }
 
     /// <summary>The paper a book starts from, on the setting's staff space — before the file's
-    /// <c>paper { }</c>, whose millimetres it converts (<see cref="PaperPlanReader.AtStaffSpace"/>).</summary>
+    /// <c>paper { }</c>, whose millimetres it converts (<see cref="PaperPlanReader.AtStaffSpace"/>),
+    /// and marked so the file's own <c>staffSpace</c> gives way.</summary>
     internal LayoutOptions OnBase(LayoutOptions @base)
-        => StaffSpaceMm is { } mm ? PaperPlanReader.AtStaffSpace(@base, mm) : @base;
-
-    /// <summary><c>staffSpace</c>'s value: a positive length with its unit, mm / cm / in — a
-    /// bare number would be staff spaces, the unit it sets.</summary>
-    private static double? ReadStaffSpace(string value, out string? error)
-    {
-        error = null;
-        var m = System.Text.RegularExpressions.Regex.Match(value, @"^(\d+(?:\.\d+)?|\.\d+)(mm|cm|in)$");
-        double length = m.Success
-            ? double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture)
-            : 0;
-        if (!(length > 0))
-        {
-            error = "'staffSpace' takes a positive length with its unit (mm, cm or in): staffSpace=1.5mm.";
-            return null;
-        }
-        return m.Groups[2].Value switch
-        {
-            "cm" => length * 10.0,
-            "in" => length * 25.4,
-            _ => length,
-        };
-    }
-
-    /// <summary>One setting-only key read into the change it makes, or null with
-    /// <paramref name="error"/>.</summary>
-    private static Func<LayoutOptions, LayoutOptions>? ReadSettingOnly(string key, string value, out string? error)
-    {
-        error = null;
-        if (key == "shortestDurationSpace")
-        {
-            if (!double.TryParse(value, System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out double space)
-                || !(space > 0) || double.IsInfinity(space))
-            {
-                error = $"'{key}' takes a positive number of spacing increments (unitless): {key}=2.5.";
-                return null;
-            }
-            return paper => paper with { ShortestDurationSpace = space };
-        }
-        if (!int.TryParse(value, System.Globalization.NumberStyles.None,
-                System.Globalization.CultureInfo.InvariantCulture, out int n) || n < 1)
-        {
-            error = $"'{key}' takes a whole number, 1 or more: {key}=4.";
-            return null;
-        }
-        return key switch
-        {
-            "measuresPerSystem" => paper => paper with { MeasuresPerSystem = n },
-            "systemsPerPage" => paper => paper with
-            {
-                PageBreaking = paper.PageBreaking with { SystemsPerPage = n },
-            },
-            "minSystemsPerPage" => paper => paper with
-            {
-                PageBreaking = paper.PageBreaking with { MinSystemsPerPage = n },
-            },
-            _ => paper => paper with
-            {
-                PageBreaking = paper.PageBreaking with { MaxSystemsPerPage = n },
-            },
-        };
-    }
+        => StaffSpaceMm is { } mm
+            ? PaperPlanReader.AtStaffSpace(@base, mm) with { StaffSpaceFromSetting = true }
+            : @base;
 
     /// <summary>
     /// Reads <c>KEY=VALUE</c> settings, or null with <paramref name="error"/> saying which one
-    /// does not read (as the paper block would refuse it).
+    /// does not read (as the block would refuse it).
     /// </summary>
     public static PaperOverrides? Parse(IEnumerable<string> settings, out string? error)
     {
         error = null;
-        var entries = new List<string>();
+        var paperEntries = new List<string>();
+        var layoutEntries = new List<string>();
         var flagsOff = new List<string>();
-        var settingOnly = new List<Func<LayoutOptions, LayoutOptions>>();
-        double? staffSpaceMm = null;
         var flags = PaperPlanReader.FlagKeySpellings();
+        var layoutKeys = LayoutPlanReader.AllKeySpellings();
         foreach (var setting in settings)
         {
             int eq = setting.IndexOf('=');
@@ -234,7 +107,7 @@ public sealed class PaperOverrides
             {
                 switch (value.ToLowerInvariant())
                 {
-                    case "" or "true": entries.Add(key); break;
+                    case "" or "true": paperEntries.Add(key); break;
                     case "false" when FlagsWithOff.Contains(key): flagsOff.Add(key); break;
                     case "false":
                         error = $"'{key}=false' is not supported yet; leave the flag out instead.";
@@ -250,73 +123,67 @@ public sealed class PaperOverrides
                 error = $"'{key}' needs a value: {key}=VALUE.";
                 return null;
             }
-            if (StyleKeys.Contains(key))
+            if (layoutKeys.Contains(key))
             {
-                if (ReadStyle(key, value, out error) is not { } styleChange)
-                    return null;
-                settingOnly.Add(styleChange);
-                continue;
-            }
-            if (key == "staffSpace")
-            {
-                if (ReadStaffSpace(value, out error) is not { } mm)
-                    return null;
-                staffSpaceMm = mm;
-                continue;
-            }
-            if (SettingOnlyKeys.Contains(key))
-            {
-                if (ReadSettingOnly(key, value, out error) is not { } change)
-                    return null;
-                settingOnly.Add(change);
+                // Two numbers are written with a comma, which a shell keeps in one argument.
+                layoutEntries.Add($"{key} {value.Replace(',', ' ')}");
                 continue;
             }
             // A spacing block's sub-key: staffStaffSpacing.basicDistance=9.
             int dot = key.IndexOf('.');
-            entries.Add(dot < 0 ? $"{key} {value}" : $"{key[..dot]} {{ {key[(dot + 1)..]} {value} }}");
+            paperEntries.Add(dot < 0 ? $"{key} {value}" : $"{key[..dot]} {{ {key[(dot + 1)..]} {value} }}");
         }
 
-        PaperDeclarationSyntax? block = null;
-        if (entries.Count > 0)
+        PaperDeclarationSyntax? paper = null;
+        if (paperEntries.Count > 0)
         {
-            var tree = SyntaxTree.Parse("paper { " + string.Join("\n", entries) + " }");
-            block = tree.GetRoot().DescendantNodes<PaperDeclarationSyntax>().FirstOrDefault();
-            if (block == null || tree.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
-            {
-                error = "the settings do not read as paper entries: "
-                    + string.Join("; ", tree.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Select(d => d.Message));
+            paper = ParseBlock<PaperDeclarationSyntax>("paper", paperEntries, out error);
+            if (paper == null)
                 return null;
-            }
-            PaperPlanReader.Read(block, LayoutOptions.Default, out var problems);
+            PaperPlanReader.Read(paper, LayoutOptions.Default, out var problems);
             if (problems.FirstOrDefault(p => p.IsError) is { Message: { } message })
             {
                 error = message;
                 return null;
             }
         }
-        // LILYPOND-REF: lily/page-breaking.cc:297-308 systems_per_page_ — the combinations LilyPond warns about and
-        // drops; a setting says what it means or is refused.
-        var paging = settingOnly.Aggregate(LayoutOptions.Default, (p, change) => change(p)).PageBreaking;
-        if (paging.SystemsPerPage > 0 && (paging.MinSystemsPerPage > 0 || paging.MaxSystemsPerPage > 0))
+        LayoutDeclarationSyntax? layout = null;
+        if (layoutEntries.Count > 0)
         {
-            error = "'systemsPerPage' fixes every page; it does not combine with "
-                + "'minSystemsPerPage' or 'maxSystemsPerPage'.";
-            return null;
+            layout = ParseBlock<LayoutDeclarationSyntax>("layout", layoutEntries, out error);
+            if (layout == null)
+                return null;
+            LayoutPlanReader.Read(layout, out var problems);
+            if (problems.FirstOrDefault(p => p.IsError) is { Message: { } message })
+            {
+                error = message;
+                return null;
+            }
         }
-        if (paging.MaxSystemsPerPage > 0 && paging.MinSystemsPerPage > paging.MaxSystemsPerPage)
-        {
-            error = $"'minSystemsPerPage={paging.MinSystemsPerPage}' is more than "
-                + $"'maxSystemsPerPage={paging.MaxSystemsPerPage}'.";
-            return null;
-        }
-        return new PaperOverrides(block, [.. flagsOff], settingOnly, staffSpaceMm);
+        return new PaperOverrides(paper, layout, [.. flagsOff]);
     }
 
-    /// <summary>The settings laid over <paramref name="paper"/>.</summary>
+    /// <summary>The entries written out as one block and parsed, or null with
+    /// <paramref name="error"/> when they do not parse.</summary>
+    private static T? ParseBlock<T>(string keyword, List<string> entries, out string? error) where T : SyntaxNode
+    {
+        error = null;
+        var tree = SyntaxTree.Parse(keyword + " { " + string.Join("\n", entries) + " }");
+        var block = tree.GetRoot().DescendantNodes<T>().FirstOrDefault();
+        if (block == null || tree.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
+        {
+            error = $"the settings do not read as {keyword} entries: "
+                + string.Join("; ", tree.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Select(d => d.Message));
+            return null;
+        }
+        return block;
+    }
+
+    /// <summary>The paper settings laid over <paramref name="paper"/>.</summary>
     internal LayoutOptions Apply(LayoutOptions paper)
     {
-        if (_block != null)
-            paper = PaperPlanReader.Read(_block, paper, out _);
+        if (_paper != null)
+            paper = PaperPlanReader.Read(_paper, paper, out _);
         foreach (var flag in _flagsOff)
             paper = flag switch
             {
@@ -324,10 +191,11 @@ public sealed class PaperOverrides
                 "raggedBottom" => paper with { PageBreaking = paper.PageBreaking with { RaggedBottom = false } },
                 "breaksOnly" => paper with { BreaksOnly = false },
                 _ => paper,   // Parse admits only FlagsWithOff
-
             };
-        foreach (var change in _settingOnly)
-            paper = change(paper);
         return paper;
     }
+
+    /// <summary>The layout settings laid over <paramref name="plan"/>.</summary>
+    internal LayoutPlan ApplyLayout(LayoutPlan plan)
+        => _layout != null ? LayoutPlanReader.Read(_layout, plan, out _) : plan;
 }

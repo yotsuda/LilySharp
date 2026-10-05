@@ -55,6 +55,50 @@ public sealed partial class LilyPondExporter
         _ => "",
     };
 
+    /// <summary>
+    /// The <c>\Score</c> overrides the plan's engraving style spells in LilyPond — one per
+    /// property that is not LilyPond's default, so a book that writes none twins as before.
+    /// LilyPond's property names, one line each (Svg.EngravingStyle says which is which).
+    /// </summary>
+    /// <remarks>
+    /// An override in the <c>\Score</c> context is every staff's and voice's default, and a grace
+    /// or a cue keeps its own <c>length-fraction</c> (scm/music-functions.scm general-grace-settings,
+    /// ly/engraver-init.ly CueVoice) — as here.
+    /// </remarks>
+    private string EngravingStyleContextLines()
+    {
+        var s = _layoutPlan.EngravingStyle;
+        var d = Svg.EngravingStyle.Default;
+        var lines = new StringBuilder();
+        void Line(bool differs, string text)
+        {
+            if (differs)
+                lines.Append("      \\override ").Append(text).Append('\n');
+        }
+        static string N(double v) => v.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture);
+        Line(s.StaffSymbolThickness != d.StaffSymbolThickness, "StaffSymbol.thickness = #" + N(s.StaffSymbolThickness));
+        Line(s.LedgerLineThicknessLines != d.LedgerLineThicknessLines || s.LedgerLineThicknessSpaces != d.LedgerLineThicknessSpaces,
+            "StaffSymbol.ledger-line-thickness = #'(" + N(s.LedgerLineThicknessLines) + " . " + N(s.LedgerLineThicknessSpaces) + ")");
+        Line(s.StemThickness != d.StemThickness, "Stem.thickness = #" + N(s.StemThickness));
+        Line(s.StemLengthFraction != d.StemLengthFraction, "Stem.length-fraction = #" + N(s.StemLengthFraction));
+        Line(s.BeamThickness != d.BeamThickness, "Beam.beam-thickness = #" + N(s.BeamThickness));
+        Line(s.BarLineHairThickness != d.BarLineHairThickness, "BarLine.hair-thickness = #" + N(s.BarLineHairThickness));
+        Line(s.BarLineThickThickness != d.BarLineThickThickness, "BarLine.thick-thickness = #" + N(s.BarLineThickThickness));
+        return lines.ToString();
+    }
+
+    /// <summary>The <c>\layout</c> variable the plan's <c>lineThickness</c> spells — empty at
+    /// LilyPond's default — in points: the twin's staff is LilyPond's default 20pt one (no
+    /// <c>paper { }</c> reaches the twin, EmitHeader's warning), whose staff space is 5pt.</summary>
+    /// <remarks>LILYPOND-REF: scm/paper.scm:68-88 layout-set-absolute-staff-size-in-module sets
+    /// line-thickness, an absolute length, beside staff-space. ⚠️ <c>staff-space</c> is not a
+    /// Scheme variable inside <c>\layout { }</c> (measured: "Unbound variable"), so the
+    /// multiple cannot be spelled there.</remarks>
+    private string LineThicknessVariable()
+        => _layoutPlan.EngravingStyle.LineThickness is var lt && lt != Svg.EngravingStyle.Default.LineThickness
+            ? " line-thickness = " + (lt * 5).ToString("0.######", System.Globalization.CultureInfo.InvariantCulture) + "\\pt"
+            : "";
+
     private Rendering.TextFontPlan ResolveFontPlan(SyntaxTree tree, SyntaxNode root, RenderDeclarationSyntax? render)
     {
         if (render != null && PageModel(tree, render) is { } page)

@@ -424,9 +424,16 @@ public class ValueContextCompletionTests
         Assert.Equal("layout $0", inScore.InsertText);
         Assert.Equal("editor.action.triggerSuggest", inScore.Command?.CommandIdentifier);
 
-        // The keys re-open the popup on their own words, which come from the compiler.
+        // The word keys re-open the popup on their own words, which come from the compiler; a
+        // NUMBER key (the line thicknesses, 2026-10-05) inserts its default as the placeholder
+        // and opens nothing.
         var keys = LilySharpLanguageServer.GetLayoutBlockCompletions().Items;
-        Assert.All(keys, k => Assert.Equal("editor.action.triggerSuggest", k.Command?.CommandIdentifier));
+        Assert.All(keys.Where(k => LanguageVocabulary.LayoutNumberKeyDefault(k.Label) == null),
+            k => Assert.Equal("editor.action.triggerSuggest", k.Command?.CommandIdentifier));
+        var stem = keys.Single(k => k.Label == "Stem.thickness");
+        Assert.Null(stem.Command);
+        Assert.Equal("Stem.thickness ${1:1.3}", stem.InsertText);
+        Assert.Contains("Stem.thickness ${", top.InsertText, StringComparison.Ordinal);
         Assert.Equal(new[] { "stacked", "beside" },
             LilySharpLanguageServer.GetMarkArrangementCompletions().Items.Select(i => i.Label));
         Assert.Equal(new[] { "lines", "none", "every" },
@@ -447,6 +454,9 @@ public class ValueContextCompletionTests
     [InlineData("layout { markTempo be", "AfterLayoutMarks")]
     [InlineData("layout { barNumbers ", "AfterLayoutBarNumbers")]
     [InlineData("layout { markTempo beside  barNumbers ev", "AfterLayoutBarNumbers")]
+    [InlineData("layout { Stem.thickness ", "AfterLayoutNumberKey")]
+    [InlineData("layout { lineThickness ", "AfterLayoutNumberKey")]
+    [InlineData("layout { Stem.thickness 1.5\n  ", "LayoutBlock")]
     public void TheLayoutBlock_ServesItsKeysAndTheirWords(string text, string expected)
         => Assert.Equal(expected, ContextOf(text).ToString());
 

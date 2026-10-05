@@ -181,9 +181,12 @@ public sealed partial class LilyPondExporter
         // (BarNumberContextLines): `none` removes the engraver, `every N` sets the
         // visibility function — the same context, so the twin's numbers stand where the
         // page's do. `lines` is LilyPond's default and writes nothing.
-        string overrides = BarNumberContextLines() + FontOverrideLines();
+        // …and the layout's engraving style (`Stem.thickness 1.5`, …) as the same \Score's
+        // overrides, `lineThickness` as the \layout variable it is in LilyPond
+        // (EngravingStyleContextLines / LineThicknessVariable) — nothing at the defaults.
+        string overrides = BarNumberContextLines() + FontOverrideLines() + EngravingStyleContextLines();
         string initialRepeatBar = _rewindOpensThePiece ? "##f" : "##t";
-        _sb.Append("  \\layout { indent = 15\\mm");
+        _sb.Append("  \\layout { indent = 15\\mm").Append(LineThicknessVariable());
         if (overrides.Length == 0)
             _sb.Append(" \\context { \\Score printInitialRepeatBar = ").Append(initialRepeatBar)
                .Append(" } }\n}\n");

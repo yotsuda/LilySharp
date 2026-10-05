@@ -426,23 +426,25 @@ workflow attaches that section to the GitHub Release verbatim.
   pages; the scan view and the quick fixes pick up what it finds. The `.lys` is not touched.
   Needs a reader with `omr verify` (asked only when its `--version --json` lists it). In the
   scan view, a box whose mark is not in the text goes to its bar's line.
-- **`lysc svg|png|pdf --set KEY=VALUE` overrides a paper value for one run.** Any `paper { }`
-  entry — `spacingIncrement=1.6`, `leftMargin=20mm`, `staffStaffSpacing.basicDistance=9`, a
-  flag on or `=false` — laid over what the file says, which stays as it is; repeat it as
-  needed. A key or value the paper block would refuse is an error with the block's message.
-  Six keys exist only there, not in `paper { }`: `staffSpace` (the staff's size on the paper,
-  `staffSpace=1.5mm` — the page keeps its millimetres and every output its size, so a smaller
-  staff puts more music on the same page, as LilyPond's `set-global-staff-size`),
-  `measuresPerSystem` (exactly N bars a system, the lead-sheet layout) and, with LilyPond's meaning, `shortestDurationSpace` (the
-  shortest note's space), `systemsPerPage` (exactly N systems a page — the lines are re-broken
-  so the pages fill, as LilyPond does), `maxSystemsPerPage` and `minSystemsPerPage`.
-- **`--set` takes LilyPond's line thicknesses and stem length.** `lineThickness`,
-  `StaffSymbol.thickness`, `StaffSymbol.ledgerLineThickness`, `Stem.thickness`,
-  `Stem.lengthFraction`, `Beam.beamThickness`, `BarLine.hairThickness` and
-  `BarLine.thickThickness`, under LilyPond's names and in its units, for one run. The layout
-  follows them as LilyPond's does — a thicker beam or a longer stem moves the beams where
-  LilyPond moves them — and every line stated in the staff's thickness follows
-  `StaffSymbol.thickness`, while the bar lines keep the paper's.
+- **`paper { }` sets the staff's size and the page counts.** `staffSpace 1.5mm` is the
+  distance between two staff lines on the paper, as LilyPond's `set-global-staff-size`: the
+  page keeps its millimetres and every output its size, so a smaller staff puts more music on
+  the same page. `systemsPerPage`, `minSystemsPerPage` and `maxSystemsPerPage` fix, floor and
+  cap a page's systems with LilyPond's meaning (the lines are re-broken so the pages fill),
+  `measuresPerSystem` puts exactly N bars on every system (the lead-sheet layout), and
+  `shortestDurationSpace` sets the shortest note's space. Completion offers them.
+- **`layout { }` sets the line thicknesses and the stem length.** `lineThickness`,
+  `StaffLine.thickness`, `LedgerLine.thickness`, `Stem.thickness`, `Stem.lengthFraction`,
+  `Beam.thickness`, `BarLine.thinThickness` and `BarLine.thickThickness`, each a number in
+  LilyPond's units (`layout { Stem.thickness 1.5 }`), score-wide, and per score through a
+  named block. The layout follows them as LilyPond's does — a thicker beam or a longer stem
+  moves the beams where LilyPond moves them — and the `.ly` twin writes them as LilyPond's
+  overrides. Completion offers them with their defaults.
+- **`lysc svg|png|pdf|boxes --set KEY=VALUE` overrides a `paper` or `layout` value for one
+  run.** Any entry of either block — `spacingIncrement=1.6`, `leftMargin=20mm`,
+  `staffStaffSpacing.basicDistance=9`, `systemsPerPage=4`, `Stem.thickness=1.5`, a flag on or
+  `=false` — laid over what the file says, which stays as it is; repeat it as needed. A key or
+  value the block would refuse is an error with the block's message.
 - **`lysc boxes` writes every drawn symbol's box as JSON.** Page by page, each symbol the SVG
   and the PNG draw — its kind (`notehead`, `stem`, `staffLine`, `beam`, `tie`, `lyricText`,
   …), its ink box in staff spaces, its source offset and its staff — and each bar's printed

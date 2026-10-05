@@ -117,7 +117,7 @@ Writes every score: `score.svg` for the main one, `score-<alias>.svg` for each o
 | `--score <name>` | Write only the named score |
 | `-n, --no-embed-font` | Don't embed Emmentaler font (smaller file, requires font installed) |
 | `--combined` | Stack every score into ONE `score.svg` (like a `\book`) |
-| `--set <KEY=VALUE>` | Override a `paper` value for this run, over what the file says (repeatable; see [Paper settings](#paper-settings---set)) |
+| `--set <KEY=VALUE>` | Override a `paper` or `layout` value for this run, over what the file says (repeatable; see [Paper and layout settings](#paper-and-layout-settings---set)) |
 | `-h, --help` | Show help |
 
 `--combined` and `--score` are mutually exclusive.
@@ -142,7 +142,7 @@ lysc pdf [options] <input.lys>
 |--------|-------------|
 | `-d, --out-dir <folder>` | Write into this folder (default: the input's folder) |
 | `--score <name>` | Write only the named score |
-| `--set <KEY=VALUE>` | Override a `paper` value for this run, over what the file says (repeatable; see [Paper settings](#paper-settings---set)) |
+| `--set <KEY=VALUE>` | Override a `paper` or `layout` value for this run, over what the file says (repeatable; see [Paper and layout settings](#paper-and-layout-settings---set)) |
 | `-h, --help` | Show help |
 
 **Examples:**
@@ -169,7 +169,7 @@ lysc png [options] <input.lys>
 | `--score <name>` | Write only the named score |
 | `--scale <factor>` | Scale factor for resolution (default: 2.0 = 192 DPI) |
 | `--crop` | Crop each page to its ink instead of keeping the page box |
-| `--set <KEY=VALUE>` | Override a `paper` value for this run, over what the file says (repeatable; see [Paper settings](#paper-settings---set)) |
+| `--set <KEY=VALUE>` | Override a `paper` or `layout` value for this run, over what the file says (repeatable; see [Paper and layout settings](#paper-and-layout-settings---set)) |
 | `-h, --help` | Show help |
 
 A score of more than one page writes `NAME-page1.png`, `NAME-page2.png`, … (LilyPond's
@@ -189,71 +189,54 @@ lysc png --scale 3.0 score.lys       # High DPI output
 lysc png --scale 1.0 score.lys       # Standard DPI
 ```
 
-#### Paper settings (`--set`)
+#### Paper and layout settings (`--set`)
 
-`svg`, `png` and `pdf` take `--set KEY=VALUE`, as many as needed: a `paper` entry
-([GRAMMAR §2.4](GRAMMAR.md)) given for this run and laid over the paper the file says
-(its `paper { }` and the score's `paper NAME`). The `.lys` is not changed — the same
-music can be engraved with other spacing, margins or paper (an OMR reader's training
-data does exactly that).
+`svg`, `png`, `pdf` and `boxes` take `--set KEY=VALUE`, as many as needed: a `paper` or
+`layout` entry ([SYNTAX_REFERENCE](SYNTAX_REFERENCE.md) — Paper, and Display switches)
+given for this run and laid over what the file says (its `paper { }` / `layout { }` and the
+score's `paper NAME` / `layout NAME`). The `.lys` is not changed — the same music can be
+engraved with other spacing, margins, paper, staff size or line thicknesses (an OMR
+reader's training data does exactly that).
 
 | Spelling | Means |
 |----------|-------|
-| `spacingIncrement=1.6`, `leftMargin=20mm`, `size=a5` | a key and its value, as written in `paper { }` |
+| `spacingIncrement=1.6`, `leftMargin=20mm`, `size=a5`, `systemsPerPage=4`, `staffSpace=1.4mm` | a paper key and its value, as written in `paper { }` |
 | `staffStaffSpacing.basicDistance=9` | a sub-key of a spacing block |
 | `raggedRight`, `raggedRight=true`, `raggedRight=false` | a flag on, or off (off undoes the file's) |
+| `Stem.thickness=1.5`, `lineThickness=0.12`, `barNumbers=none` | a layout key and its value, as written in `layout { }` |
+| `LedgerLine.thickness=1.0,0.1` | two numbers, with a comma for the space |
 
-A key or value the paper block would refuse is an error, with the block's message.
+A key or value the block would refuse is an error, with the block's message. A setting
+wins over the file — `staffSpace` too, though it is laid under the file's paper so the
+file's millimetres are read through it — and a `systemsPerPage` setting clears the file's
+`min-`/`maxSystemsPerPage` (and the other way round).
 
-Six keys exist only here, not in `paper { }` — knobs for engraving the same music many
-ways, kept out of the language. The last three are LilyPond's, with LilyPond's meaning:
+The keys that came in for training data are the page's (`staffSpace`, `systemsPerPage`,
+`minSystemsPerPage`, `maxSystemsPerPage`, `measuresPerSystem`, `shortestDurationSpace`) and
+the engraving style's (`lineThickness`, `StaffLine.thickness`, `LedgerLine.thickness`,
+`Stem.thickness`, `Stem.lengthFraction`, `Beam.thickness`, `BarLine.thinThickness`,
+`BarLine.thickThickness`) — the language documents what each means. Two notes for a reader
+of the pictures:
 
-| Setting | Means |
-|---------|-------|
-| `staffSpace=1.5mm` | the staff's size: the distance between two staff lines on the paper (mm, cm or in; LilyPond's default 20pt staff is 1.757299mm, `#(set-global-staff-size 17)` is 1.493704mm). The paper keeps its millimetres — the page, the margins, the indent and every length the file writes in mm / cm / in — so a smaller staff space puts more music on the same page. The outputs keep the paper's size too: the PNG, the PDF page and the SVG's `width` are as large as before, with the staff smaller on them. Lengths written as bare numbers are staff spaces and scale with the staff. Line thickness keeps its proportion to the staff (LilyPond thickens the lines of a small staff slightly — `lineThickness` below can do the same — and swaps in the music font cut for that size) |
-| `measuresPerSystem=4` | exactly 4 bars on every system (the lead-sheet layout): a line break after every 4th bar and nowhere else — written `break` / `pageBreak` give way. A pickup counts as a bar. LilyPond has no such variable (its spelling is a `\break` every 4 bars) |
-| `shortestDurationSpace=2.5` | the space the score's shortest note gets, in spacing increments (LilyPond's `shortest-duration-space`, default 2); a positive number, no unit |
-| `systemsPerPage=4` | exactly 4 systems on every page (LilyPond's `systems-per-page`): the lines are re-broken so the pages fill — 12 systems' worth under 5 becomes 15, paged 5/5/5 |
-| `maxSystemsPerPage=4`, `minSystemsPerPage=2` | a cap and a floor on a page's systems (`max-` / `min-systems-per-page`) |
-
-The counts are whole numbers from 1. `systemsPerPage` does not combine with the other two,
-and the floor may not exceed the cap — LilyPond warns and ignores both; here they are errors.
-More systems than a page can hold are placed anyway and pressed together on the page, and
-the command says so: `warning: page 1 is over-full by 11.3 staff spaces: its systems were
-pressed together to fit it` (LilyPond's "compressing over-full page"). Bars that cannot fit
-the system `measuresPerSystem` (or a written `break`) gives them run past the right margin,
-as in LilyPond, and are named too: `warning: system 1 (page 1) is over-full by 7.7 staff
-spaces: its bars run past the right margin` — a PNG cuts that ink off. A reader that needs
-every page uncluttered should drop the pages and systems these name.
+- Under `staffSpace` the SVG's `width`, the PNG's pixels and the PDF page keep the paper's
+  size, with the staff smaller on them: a PNG has `10 × --scale × staffSpaceMm / 1.757299`
+  pixels to a staff space (`boxes` writes `staffSpaceMm`). Line thickness keeps its
+  proportion to the staff — LilyPond thickens a small staff's lines slightly, which
+  `lineThickness` can do — and the one Emmentaler is scaled where LilyPond swaps in the cut
+  for that size.
+- More systems than a page can hold are placed anyway and pressed together on the page, and
+  the command says so: `warning: page 1 is over-full by 11.3 staff spaces: its systems were
+  pressed together to fit it` (LilyPond's "compressing over-full page"). Bars that cannot
+  fit the system `measuresPerSystem` (or a written `break`) gives them run past the right
+  margin, as in LilyPond, and are named too: `warning: system 1 (page 1) is over-full by
+  7.7 staff spaces: its bars run past the right margin` — a PNG cuts that ink off. A reader
+  that needs every page uncluttered should drop the pages and systems these name.
 
 ```bash
 lysc png --set spacingIncrement=1.6 --set staffStaffSpacing.basicDistance=9 song.lys
 lysc svg --set raggedRight=false --set leftMargin=25mm song.lys
-lysc png --set shortestDurationSpace=3 --set systemsPerPage=4 song.lys
-lysc png --set staffSpace=1.4mm song.lys
-```
-
-Eight more keys set how thick the lines are and how long the stems — LilyPond's own
-properties under its names and in its units, so a value means what it means in a
-LilyPond `\override` (also settings only):
-
-| Setting | LilyPond | Default | Means |
-|---------|----------|---------|-------|
-| `lineThickness=0.12` | the paper's `line-thickness` | 0.1 | the line every other one is a multiple of, in staff spaces: staff lines, stems, ledger lines, bar lines, ties, slurs, hairpins and brackets all follow it |
-| `StaffSymbol.thickness=1.2` | `StaffSymbol.thickness` | 1.0 | the staff's lines, in line thicknesses — and, as in LilyPond, every line stated in the staff's thickness with them (stems, ledger lines, ties, …); bar lines and multi-measure rests read the paper's `lineThickness` and stay |
-| `StaffSymbol.ledgerLineThickness=1.0,0.1` | `StaffSymbol.ledger-line-thickness` | 1.0,0.1 | ledger lines: staff line thicknesses plus staff spaces |
-| `Stem.thickness=1.5` | `Stem.thickness` | 1.3 | stems, in staff line thicknesses |
-| `Stem.lengthFraction=1.1` | `Stem.length-fraction` | 1.0 | every stem's length, beamed or not, times this (grace and cue notes keep their own) |
-| `Beam.beamThickness=0.5` | `Beam.beam-thickness` | 0.48 | beams, in staff spaces — the gap between beams and where the beam is placed follow, as in LilyPond |
-| `BarLine.hairThickness=2.5` | `BarLine.hair-thickness` | 1.9 | thin bar lines, in line thicknesses |
-| `BarLine.thickThickness=7` | `BarLine.thick-thickness` | 6.0 | thick bar lines, in line thicknesses |
-
-The values are positive numbers without a unit (`ledgerLineThickness` takes two, not both 0).
-The layout uses them, not only the drawing: a thicker beam or longer stems move the beams
-where LilyPond moves them.
-
-```bash
-lysc png --set lineThickness=0.13 --set Stem.thickness=1.6 --set Beam.beamThickness=0.52 song.lys
+lysc png --set shortestDurationSpace=3 --set systemsPerPage=4 --set staffSpace=1.4mm song.lys
+lysc png --set lineThickness=0.13 --set Stem.thickness=1.6 --set Beam.thickness=0.52 song.lys
 ```
 
 ### boxes - Every drawn symbol's box, as JSON
@@ -267,7 +250,7 @@ lysc boxes [options] <input.lys>
 |--------|-------------|
 | `-d, --out-dir <folder>` | Write into this folder (default: the input's folder) |
 | `--score <name>` | Write only the named score |
-| `--set <KEY=VALUE>` | Override a paper value for this run (repeatable; see [Paper settings](#paper-settings---set)) |
+| `--set <KEY=VALUE>` | Override a `paper` or `layout` value for this run (repeatable; see [Paper and layout settings](#paper-and-layout-settings---set)) |
 | `-h, --help` | Show help |
 
 Writes `<input>.boxes.json` (and `<input>-<alias>.boxes.json` for each other score): every

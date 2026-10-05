@@ -97,14 +97,27 @@ internal static class PaperPlanReader
         };
     }
 
-    /// <summary>The scalar length keys, canonical spellings, in documentation order.</summary>
+    /// <summary>The scalar keys, canonical spellings, in documentation order: the lengths, then
+    /// the numbers that are not (<see cref="CountKeys"/>, <c>shortestDurationSpace</c>,
+    /// <c>staffSpace</c> — LilySharp-Omr's proposals P2 / P3, in the language since the owner's
+    /// decision of 2026-10-05).</summary>
     private static readonly string[] ScalarKeys =
     [
         "paperWidth", "paperHeight",
         "leftMargin", "rightMargin", "topMargin", "bottomMargin",
         "indent", "shortIndent",
-        "spacingIncrement",
+        "spacingIncrement", "shortestDurationSpace",
+        "staffSpace",
+        "systemsPerPage", "minSystemsPerPage", "maxSystemsPerPage", "measuresPerSystem",
     ];
+
+    /// <summary>The keys that take a whole number of systems or bars, 1 or more.</summary>
+    private static readonly string[] CountKeys =
+        ["systemsPerPage", "minSystemsPerPage", "maxSystemsPerPage", "measuresPerSystem"];
+
+    /// <summary>The key that sets the staff's size on the paper — read before every other
+    /// entry of its block (<see cref="StaffSpaceOf"/>), since their millimetres are read through it.</summary>
+    internal const string StaffSpaceKey = "staffSpace";
 
     /// <summary>The nested spacing-block keys, canonical spellings.</summary>
     private static readonly string[] SpecKeys =
@@ -196,7 +209,44 @@ internal static class PaperPlanReader
             return @base;
         }
 
-        return ReadEntriesInto(@base, paper, found);
+        return ReadEntriesInto(OnStaffSpace(@base, StaffSpaceOf(paper)), paper, found);
+    }
+
+    /// <summary>
+    /// The millimetres a block's <c>staffSpace</c> asks for (the last one written), or null —
+    /// read AHEAD of the block's other entries, whose millimetres it converts wherever it
+    /// stands. A value that does not read is null here and refused where it stands.
+    /// </summary>
+    internal static double? StaffSpaceOf(PaperDeclarationSyntax paper)
+    {
+        double? mm = null;
+        foreach (var entry in paper.Entries)
+            if (entry.Key == StaffSpaceKey && StaffSpaceMillimetres(entry) is { } m)
+                mm = m;
+        return mm;
+    }
+
+    /// <summary><paramref name="base"/> on the staff space <paramref name="mm"/> asks for — unless
+    /// <c>lysc --set staffSpace=…</c> already set it, which wins over the file
+    /// (<see cref="LayoutOptions.StaffSpaceFromSetting"/>).</summary>
+    private static LayoutOptions OnStaffSpace(LayoutOptions @base, double? mm)
+        => mm is { } m && !@base.StaffSpaceFromSetting ? AtStaffSpace(@base, m) : @base;
+
+    /// <summary>A <c>staffSpace</c> entry's millimetres, or null: a positive length WITH its unit
+    /// — a bare number would be staff spaces, the unit it sets.</summary>
+    private static double? StaffSpaceMillimetres(PaperDeclarationSyntax.Entry entry)
+    {
+        if (entry.HasBlock || entry.MinusToken != null || entry.NumberToken == null || entry.UnitToken == null)
+            return null;
+        double v = double.Parse(entry.NumberToken.Text, CultureInfo.InvariantCulture);
+        double? mm = entry.UnitToken.Text switch
+        {
+            "mm" => v,
+            "cm" => v * MmPerCm,
+            "in" => v * MmPerInch,
+            _ => null,
+        };
+        return mm > 0 ? mm : null;
     }
 
     /// <summary>Every named top-level paper declaration, in document order.</summary>
@@ -249,7 +299,9 @@ internal static class PaperPlanReader
         if (!TryResolve(root, reference, out var declaration, out _))
             return fallback;
         var discard = new List<Problem>();
-        var options = ReadEntriesInto(@base ?? LayoutOptions.Default, declaration!, discard);
+        // The staff space either block writes (the override's first) goes under both.
+        double? staffSpace = (reference.IsBlock ? StaffSpaceOf(reference) : null) ?? StaffSpaceOf(declaration!);
+        var options = ReadEntriesInto(OnStaffSpace(@base ?? LayoutOptions.Default, staffSpace), declaration!, discard);
         if (reference.IsBlock)
             options = ReadEntriesInto(options, reference, discard);
         return options;
@@ -346,6 +398,43 @@ internal static class PaperPlanReader
                     },
                     _ => options,
                 };
+                continue;
+            }
+
+            if (key == StaffSpaceKey)
+            {
+                // Applied ahead of the block (StaffSpaceOf); here it is only checked.
+                if (StaffSpaceMillimetres(entry) == null)
+                    found.Add(new Problem(span, DiagnosticCodes.PaperEntryMissingValue,
+                        "'staffSpace' takes a positive length with its unit (mm, cm or in) — the distance "
+                        + "between two staff lines on the paper: staffSpace 1.5mm.", IsError: true));
+                continue;
+            }
+            if (Exact(key, CountKeys) != null)
+            {
+                options = ReadCount(options, key, entry, span, boundKeys, found);
+                continue;
+            }
+            if (key == "shortestDurationSpace")
+            {
+                // LILYPOND-REF: scm/define-grobs.scm SpacingSpanner (shortest-duration-space . 2.0),
+                // read by lily/spacing-options.cc:30-53 Spacing_options::init_from_grob — in
+                // spacing increments, so it takes no unit.
+                if (entry.UnitToken != null)
+                {
+                    found.Add(new Problem(entry.UnitToken.Span, DiagnosticCodes.PaperUnitOnUnitless,
+                        "'shortestDurationSpace' counts spacing increments; write a bare number: "
+                        + "shortestDurationSpace 2.5.", IsError: true));
+                    continue;
+                }
+                if (entry.NumberToken == null || entry.MinusToken != null
+                    || !(double.Parse(entry.NumberToken.Text, CultureInfo.InvariantCulture) is > 0 and var space))
+                {
+                    found.Add(new Problem(span, DiagnosticCodes.PaperEntryMissingValue,
+                        "'shortestDurationSpace' takes a positive number: shortestDurationSpace 2.5.", IsError: true));
+                    continue;
+                }
+                options = options with { ShortestDurationSpace = space };
                 continue;
             }
 
@@ -447,6 +536,62 @@ internal static class PaperPlanReader
                 ? LayoutOptions.LilyPondDefaultIndent : MmToSs(sideMm, staffSpaceMm),
             ShortIndent = 0,
         };
+    }
+
+    /// <summary>
+    /// One count key: <c>systemsPerPage</c> / <c>minSystemsPerPage</c> / <c>maxSystemsPerPage</c>
+    /// (LilyPond's <c>\paper</c> variables, with LilyPond's meaning — the lines are re-broken to
+    /// fill the pages) or <c>measuresPerSystem</c> (Lily#'s: N bars to every system). A whole
+    /// number, 1 or more.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-breaking.cc:297-308 Page_breaking::Page_breaking reads
+    /// systems_per_page_, min_systems_per_page_ and max_systems_per_page_, and warns and drops
+    /// systems-per-page beside either of the other two. Here ONE block writing both is an error;
+    /// a later block (a score's reference, a <c>--set</c>) writing one CLEARS the other, so the
+    /// last word wins as for every key.
+    /// </remarks>
+    private static LayoutOptions ReadCount(LayoutOptions options, string key, PaperDeclarationSyntax.Entry entry,
+        TextSpan span, Dictionary<string, TextSpan> boundKeys, List<Problem> found)
+    {
+        if (entry.MinusToken != null || entry.UnitToken != null || entry.NumberToken == null
+            || !int.TryParse(entry.NumberToken.Text, NumberStyles.None, CultureInfo.InvariantCulture, out int n)
+            || n < 1)
+        {
+            found.Add(new Problem(span, DiagnosticCodes.PaperEntryMissingValue,
+                $"'{key}' takes a whole number, 1 or more: {key} 4.", IsError: true));
+            return options;
+        }
+        bool fixedCount = key == "systemsPerPage";
+        if (key != "measuresPerSystem"
+            && (fixedCount ? boundKeys.ContainsKey("minSystemsPerPage") || boundKeys.ContainsKey("maxSystemsPerPage")
+                           : boundKeys.ContainsKey("systemsPerPage")))
+        {
+            found.Add(new Problem(span, DiagnosticCodes.PaperEntryMissingValue,
+                "'systemsPerPage' fixes every page; it does not combine with 'minSystemsPerPage' or "
+                + "'maxSystemsPerPage' in one block.", IsError: true));
+            return options;
+        }
+        var paging = options.PageBreaking;
+        var next = key switch
+        {
+            "measuresPerSystem" => options with { MeasuresPerSystem = n },
+            "systemsPerPage" => options with
+            {
+                PageBreaking = paging with { SystemsPerPage = n, MinSystemsPerPage = 0, MaxSystemsPerPage = 0 },
+            },
+            "minSystemsPerPage" => options with { PageBreaking = paging with { MinSystemsPerPage = n, SystemsPerPage = 0 } },
+            _ => options with { PageBreaking = paging with { MaxSystemsPerPage = n, SystemsPerPage = 0 } },
+        };
+        var p = next.PageBreaking;
+        if (p.MaxSystemsPerPage > 0 && p.MinSystemsPerPage > p.MaxSystemsPerPage)
+        {
+            found.Add(new Problem(span, DiagnosticCodes.PaperEntryMissingValue,
+                $"'minSystemsPerPage {p.MinSystemsPerPage}' is more than 'maxSystemsPerPage {p.MaxSystemsPerPage}'.",
+                IsError: true));
+            return options;
+        }
+        return next;
     }
 
     /// <summary>The canonical spelling <paramref name="word"/> matches in

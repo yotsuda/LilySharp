@@ -205,6 +205,7 @@ public sealed partial class LilySharpLanguageServer
             // `layout |` / inside `layout { … }` / `score { layout |` / after a layout key.
             CompletionContext.AfterLayoutKeyword => GetLayoutDeclarationCompletions(),
             CompletionContext.LayoutBlock => GetLayoutBlockCompletions(),
+            CompletionContext.AfterLayoutNumberKey => new CompletionList { Items = [] },
             CompletionContext.AfterLayoutBlockRef => GetDeclaredNameCompletions(doc.Text, "layout", "Layout block"),
             CompletionContext.AfterLayoutMarks => GetMarkArrangementCompletions(),
             CompletionContext.AfterLayoutBarNumbers => GetBarNumberPolicyCompletions(),

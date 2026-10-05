@@ -871,6 +871,17 @@ internal sealed partial class Parser
                 tokens.Add(Advance());
                 continue;
             }
+            // `Stem.thickness 1.5` — a GROB'S PROPERTY, the one dotted key shape: the dot glued
+            // to a word on each side. The entry walker (LayoutDeclarationSyntax.Entries) reads
+            // the three tokens back as one key.
+            if (Check(SyntaxKind.Dot) && tokens.Count > 0 && tokens[^1] is SyntaxToken before
+                && IsWordLikeToken(before) && before.TrailingTriviaWidth == 0
+                && Current.LeadingTriviaWidth == 0 && Current.TrailingTriviaWidth == 0
+                && IsWordLikeToken(Peek()) && Peek().LeadingTriviaWidth == 0)
+            {
+                tokens.Add(Advance());
+                continue;
+            }
             // Anything else is refused where it stands, and skipped, so one stray token
             // does not swallow the rest of the score.
             var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));

@@ -260,9 +260,9 @@ static void ShowSvgHelp()
           --score <name>         Write only the named score
           -n, --no-embed-font    Don't embed font (smaller file, requires font installed)
           --combined             Stack every score into ONE <input>.svg (like a \book)
-          --set <KEY=VALUE>      Override a paper value (repeatable): spacingIncrement=1.6,
+          --set <KEY=VALUE>      Override a paper or layout value (repeatable): spacingIncrement=1.6,
                                  staffStaffSpacing.basicDistance=9, leftMargin=20mm, raggedRight=false,
-                                 shortestDurationSpace=3, systemsPerPage=4, staffSpace=1.5mm (CLI_REFERENCE)
+                                 systemsPerPage=4, staffSpace=1.5mm, Stem.thickness=1.5 (CLI_REFERENCE)
           -h, --help             Show this help
 
         Examples:
@@ -354,9 +354,9 @@ static void ShowPdfHelp()
         Options:
           -d, --out-dir <folder> Write into this folder (default: the input's folder)
           --score <name>         Write only the named score
-          --set <KEY=VALUE>      Override a paper value (repeatable): spacingIncrement=1.6,
+          --set <KEY=VALUE>      Override a paper or layout value (repeatable): spacingIncrement=1.6,
                                  staffStaffSpacing.basicDistance=9, leftMargin=20mm, raggedRight=false,
-                                 shortestDurationSpace=3, systemsPerPage=4, staffSpace=1.5mm (CLI_REFERENCE)
+                                 systemsPerPage=4, staffSpace=1.5mm, Stem.thickness=1.5 (CLI_REFERENCE)
           -h, --help             Show this help
 
         Examples:
@@ -405,7 +405,7 @@ static void ShowBoxesHelp()
         Options:
           -d, --out-dir <folder> Write into this folder (default: the input's folder)
           --score <name>         Write only the named score
-          --set <KEY=VALUE>      Override a paper value (repeatable), as for svg/png
+          --set <KEY=VALUE>      Override a paper or layout value (repeatable), as for svg/png
           -h, --help             Show this help
 
         Examples:
@@ -461,9 +461,9 @@ static void ShowPngHelp()
           --score <name>         Write only the named score
           --scale <factor>       Scale factor (default: 2.0 = 192 DPI)
           --crop                 Trim whitespace to the content bounding box
-          --set <KEY=VALUE>      Override a paper value (repeatable): spacingIncrement=1.6,
+          --set <KEY=VALUE>      Override a paper or layout value (repeatable): spacingIncrement=1.6,
                                  staffStaffSpacing.basicDistance=9, leftMargin=20mm, raggedRight=false,
-                                 shortestDurationSpace=3, systemsPerPage=4, staffSpace=1.5mm (CLI_REFERENCE)
+                                 systemsPerPage=4, staffSpace=1.5mm, Stem.thickness=1.5 (CLI_REFERENCE)
           -h, --help             Show this help
 
         Examples:

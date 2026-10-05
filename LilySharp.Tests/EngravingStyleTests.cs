@@ -26,7 +26,8 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// <c>lysc --set lineThickness=… / StaffSymbol.thickness=… / Stem.thickness=… / …</c>
+/// <c>layout { lineThickness … StaffLine.thickness … Stem.thickness … }</c> and the same keys as
+/// <c>lysc --set lineThickness=…</c>
 /// (LilySharp-Omr's proposal of 2026-10-02 P4, session 822): LilyPond's line thicknesses and
 /// stem length under its own names and units, held by <see cref="EngravingStyle"/>.
 /// </summary>
@@ -37,15 +38,15 @@ public class EngravingStyleTests
     {
         var parsed = PaperOverrides.Parse(settings, out var error);
         Assert.Null(error);
-        return parsed!.Apply(Core.Svg.Layout.LayoutOptions.Default).Style;
+        return parsed!.ApplyLayout(LayoutPlan.Default).EngravingStyle;
     }
 
     [Fact]
     public void TheKeys_SetLilyPondsProperties()
     {
-        var s = StyleOf("lineThickness=0.15", "StaffSymbol.thickness=1.2", "StaffSymbol.ledgerLineThickness=2,0.05",
-            "Stem.thickness=2", "Stem.lengthFraction=1.2", "Beam.beamThickness=0.6",
-            "BarLine.hairThickness=3", "BarLine.thickThickness=7");
+        var s = StyleOf("lineThickness=0.15", "StaffLine.thickness=1.2", "LedgerLine.thickness=2,0.05",
+            "Stem.thickness=2", "Stem.lengthFraction=1.2", "Beam.thickness=0.6",
+            "BarLine.thinThickness=3", "BarLine.thickThickness=7");
         Assert.Equal(0.15, s.LineThickness);
         Assert.Equal(1.2, s.StaffSymbolThickness);
         Assert.Equal(2, s.LedgerLineThicknessLines);
@@ -63,9 +64,9 @@ public class EngravingStyleTests
     [InlineData("lineThickness=0.1mm")]
     [InlineData("Stem.thickness=-1")]
     [InlineData("Stem.lengthFraction=x")]
-    [InlineData("StaffSymbol.ledgerLineThickness=1")]
-    [InlineData("StaffSymbol.ledgerLineThickness=0,0")]
-    [InlineData("StaffSymbol.ledgerLineThickness=1,-0.1")]
+    [InlineData("LedgerLine.thickness=1")]
+    [InlineData("LedgerLine.thickness=0,0")]
+    [InlineData("LedgerLine.thickness=1,-0.1")]
     [InlineData("Stem.length=3.5")]
     public void AValueThatDoesNotRead_IsRefused(string setting)
     {
@@ -128,8 +129,8 @@ public class EngravingStyleTests
         Assert.Equal(["0.100", "0.130", "0.200"], StrokeWidths(plain));   // staff, stem, ledger
         Assert.Equal(["0.19"], BarWidths(plain));
 
-        string set = Svg(Book, "lineThickness=0.15", "Stem.thickness=2", "BarLine.hairThickness=3",
-            "StaffSymbol.ledgerLineThickness=2,0.1");
+        string set = Svg(Book, "lineThickness=0.15", "Stem.thickness=2", "BarLine.thinThickness=3",
+            "LedgerLine.thickness=2,0.1");
         Assert.Equal(["0.150", "0.300", "0.400"], StrokeWidths(set));
         Assert.Equal(["0.45"], BarWidths(set));
     }
@@ -142,7 +143,7 @@ public class EngravingStyleTests
     [Fact]
     public void TheStaffsThickness_MovesTheStemsAndNotTheBarLines()
     {
-        string set = Svg(Book, "StaffSymbol.thickness=2");
+        string set = Svg(Book, "StaffLine.thickness=2");
         Assert.Equal(["0.200", "0.260", "0.300"], StrokeWidths(set));      // staff, 1.3 × 0.2, 0.2 + 0.1
         Assert.Equal(["0.19"], BarWidths(set));
     }
@@ -187,7 +188,7 @@ public class EngravingStyleTests
         ];
         var plain = StemLengths(Svg(Beamed), "0.130");
         var set = StemLengths(Svg(Beamed, "lineThickness=0.15", "Stem.thickness=2", "Stem.lengthFraction=1.2",
-            "Beam.beamThickness=0.6"), "0.300");
+            "Beam.thickness=0.6"), "0.300");
         Assert.Equal(30, plain.Length);
         Assert.Equal(30, set.Length);
         for (int i = 0; i < 30; i++)
@@ -195,6 +196,57 @@ public class EngravingStyleTests
             Assert.InRange(plain[i] - lilyPondDefault[i], 0.02, 0.045);
             Assert.InRange(set[i] - lilyPondSet[i], 0.02, 0.045);
         }
+    }
+
+    /// <summary>
+    /// The keys are the language's (owner's decision 2026-10-05): the file writes them in
+    /// <c>layout { }</c>, a score overrides them through a named block, and <c>--set</c> wins
+    /// over both — and each reaches the page.
+    /// </summary>
+    [Fact]
+    public void TheFile_WritesTheStyle_AScoreOverridesIt_AndTheSettingWins()
+    {
+        const string music = """
+            octave absolute
+            part m { clef treble
+              section A { c'8 d' e' f' g'4 a'' | b16 c' d' e' f'8 g' a'2 | }
+            }
+            form main { A }
+            """;
+        string file = "layout { lineThickness 0.15  Stem.thickness 2 }\n" + music + "score main { staff m }\n";
+        Assert.Equal(["0.150", "0.250", "0.300"], StrokeWidths(Svg(file)));                // ledger 0.15 + 0.1
+        Assert.Equal(["0.150", "0.250", "0.450"], StrokeWidths(Svg(file, "Stem.thickness=3")));
+
+        string scored = "layout thin { lineThickness 0.08 }\n" + music
+            + "score main { layout thin { Stem.thickness 1.0 }  staff m }\n";
+        Assert.Equal(["0.080", "0.180"], StrokeWidths(Svg(scored)));                        // stem 1.0 × 0.08 joins the staff
+
+        var tree = SyntaxTree.Parse(file);
+        var layout = tree.GetRoot().DescendantNodes<LayoutDeclarationSyntax>().First();
+        LayoutPlanReader.Read(layout, out var problems);
+        Assert.Empty(problems);
+    }
+
+    /// <summary>The <c>lysc ly</c> twin writes the style in LilyPond's words — and nothing at the
+    /// defaults, so a book that writes none twins as before.</summary>
+    [Fact]
+    public void TheTwin_SpellsTheStyleInLilyPond()
+    {
+        string Twin(string layout) => new Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(
+            layout + "part m { }\nsection A { m { c'1 | } }\nform main { A }\nscore main { staff m }\n"));
+        string styled = Twin("layout { lineThickness 0.15  StaffLine.thickness 1.2  LedgerLine.thickness 2 0.1  "
+            + "Stem.thickness 2  Stem.lengthFraction 1.2  Beam.thickness 0.6  BarLine.thinThickness 3  BarLine.thickThickness 7 }\n");
+        foreach (string line in new[]
+        {
+            "line-thickness = 0.75\\pt", "\\override StaffSymbol.thickness = #1.2",
+            "\\override StaffSymbol.ledger-line-thickness = #'(2 . 0.1)", "\\override Stem.thickness = #2",
+            "\\override Stem.length-fraction = #1.2", "\\override Beam.beam-thickness = #0.6",
+            "\\override BarLine.hair-thickness = #3", "\\override BarLine.thick-thickness = #7",
+        })
+            Assert.Contains(line, styled, StringComparison.Ordinal);
+        string plain = Twin("");
+        Assert.DoesNotContain("line-thickness", plain, StringComparison.Ordinal);
+        Assert.Equal(plain, Twin("layout { Stem.thickness 1.3  lineThickness 0.1 }\n"));
     }
 
     /// <summary>A setting reaches the PNG and the PDF as well: the same layout, drawn.</summary>

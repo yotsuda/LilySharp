@@ -568,7 +568,7 @@ public class VocabularyPerturbationTests
     /// <remarks>See <see cref="FilledPageBook"/> for why a one-page fixture can say nothing
     /// about any of them.</remarks>
     private static readonly string[] PaperKeysThatNeedAJustifiedPage =
-        ["topSystemSpacing", "lastBottomSpacing"];
+        ["topSystemSpacing", "lastBottomSpacing", "minSystemsPerPage"];
 
     /// <summary>
     /// The keys that want a line which is NOT stretched — asked on <see cref="PaperBook"/> with
@@ -582,14 +582,27 @@ public class VocabularyPerturbationTests
     /// ones. That is the fixture, not a dead word — the key is wired and reaches LilyPond's
     /// lengths (<see cref="SpacingIncrementTests"/>).
     /// </remarks>
-    private static readonly string[] PaperKeysThatNeedARaggedLine = ["spacingIncrement"];
+    private static readonly string[] PaperKeysThatNeedARaggedLine = ["spacingIncrement", "shortestDurationSpace"];
 
     public static TheoryData<string, string, string> PaperEntries()
     {
         var data = new TheoryData<string, string, string>();
         data.Add("size", "size a4", "size a6");
         foreach (string key in LanguageVocabulary.PaperScalarKeys)
-            data.Add(key, $"{key} 5mm", $"{key} 25mm");
+        {
+            // The keys that are not lengths take their own two values (2026-10-05: the page
+            // counts and the shortest note's space came into the language from `--set`).
+            var (small, large) = key switch
+            {
+                "shortestDurationSpace" => ("shortestDurationSpace 1.5", "shortestDurationSpace 4"),
+                "systemsPerPage" or "maxSystemsPerPage" or "measuresPerSystem" => ($"{key} 1", $"{key} 2"),
+                // A floor binds no LAST page — a one-page book is its last page — so it is asked
+                // on FilledPageBook's two pages (24 forced systems), above the first page's own count.
+                "minSystemsPerPage" => ("minSystemsPerPage 1", "minSystemsPerPage 22"),
+                _ => ($"{key} 5mm", $"{key} 25mm"),
+            };
+            data.Add(key, small, large);
+        }
         foreach (string key in LanguageVocabulary.PaperSpacingKeys)
             data.Add(key, key + " { basicDistance 2 }", key + " { basicDistance 30 }");
         return data;

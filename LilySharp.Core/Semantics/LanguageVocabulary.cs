@@ -142,6 +142,16 @@ public static class LanguageVocabulary
     /// its reader share.</summary>
     public static IReadOnlyCollection<string> LayoutKeys => SyntaxFacts.LayoutKeyVocabulary;
 
+    /// <summary>The default a <c>layout { }</c> key that takes NUMBERS writes out
+    /// (<c>Stem.thickness</c> → <c>1.3</c>), or null for a key that takes words.</summary>
+    public static string? LayoutNumberKeyDefault(string key)
+        => LayoutPlanReader.NumberKeys.TryGetValue(key, out var v) ? v.Default : null;
+
+    /// <summary>A value of a number key that is NOT its default (<c>Stem.thickness</c> →
+    /// <c>1.5</c>), or null for a key that takes words.</summary>
+    public static string? LayoutNumberKeyExample(string key)
+        => LayoutPlanReader.NumberKeys.TryGetValue(key, out var v) ? v.Example : null;
+
     /// <summary>The three kinds <c>repeat</c> takes in music (<c>repeat unfold 2 { … }</c>),
     /// in the order the parser's own message names them.</summary>
     public static IReadOnlyCollection<string> RepeatKinds => Syntax.SyntaxFacts.RepeatKindVocabulary;

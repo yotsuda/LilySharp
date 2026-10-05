@@ -517,6 +517,9 @@ PaperDecl      = 'paper' , [ Identifier ] , PaperBlock ;
 PaperBlock     = '{' , { PaperEntry } , '}' ;
 PaperEntry     = 'size' , ( SizeName | String ) (* a whole page by name - see below *)
                | PaperScalarKey , Length
+               | 'staffSpace' , Number , LengthUnit           (* the unit is required - see below *)
+               | 'shortestDurationSpace' , Number             (* unitless, > 0 *)
+               | PageCountKey , Integer                        (* >= 1 *)
                | 'raggedRight' | 'raggedBottom' | 'breaksOnly'   (* bare flags - see below *)
                | SpacingKey , SpacingBlock ;
 SizeName       = Word-run ;                     (* the GLUED tokens after 'size' read
@@ -528,6 +531,8 @@ PaperScalarKey = 'paperWidth' | 'paperHeight'
                | 'leftMargin' | 'rightMargin' | 'topMargin' | 'bottomMargin'
                | 'indent' | 'shortIndent'
                | 'spacingIncrement' ;
+PageCountKey   = 'systemsPerPage' | 'minSystemsPerPage' | 'maxSystemsPerPage'
+               | 'measuresPerSystem' ;
 SpacingKey     = 'systemSystemSpacing' | 'scoreSystemSpacing' | 'markupSystemSpacing'
                | 'scoreMarkupSpacing' | 'markupMarkupSpacing' | 'topSystemSpacing'
                | 'lastBottomSpacing'
@@ -595,10 +600,24 @@ SignedNumber   = [ '-' ] , ( Integer | Decimal ) ;
    staff tags) that would parse and then silently not apply (user decision
    2026-08-23, GRAMMAR_AUDIT 2.1/2.2).
 
-   NOT HERE, deliberately: a staff-size knob (the staff space is the unit itself —
-   scaling it is a different feature, LilyPond's set-global-staff-size), and the
-   line/page-breaking algorithm switches (engine tuning, not a dimension of the
-   picture). `raggedRight` and `raggedBottom` are bare flags — writing one turns it on.
+   THE STAFF'S SIZE, THE PAGE COUNTS AND THE SHORTEST NOTE'S SPACE (owner's decision
+   2026-10-05; they came in from `lysc --set`, LilySharp-Omr's proposals P2/P3):
+   `staffSpace 1.5mm` is the distance between two staff lines on the paper (LilyPond's
+   set-global-staff-size; the default 20pt staff is 1.757299mm). The page keeps its
+   millimetres — the paper, the margins, the indents, every length written in mm/cm/in —
+   so a smaller staff puts more music on the page, and the outputs keep the paper's size.
+   It needs its unit (a bare number would be staff spaces, the unit it sets) and is read
+   AHEAD of its block's other entries, whose millimetres it converts wherever it stands.
+   `systemsPerPage N` / `minSystemsPerPage N` / `maxSystemsPerPage N` are LilyPond's
+   \paper variables with LilyPond's meaning (the lines are re-broken to fill the pages; a
+   floor binds no last page); one block writing systemsPerPage beside either of the others
+   is an error, and a later block writing one clears the other. `measuresPerSystem N` is
+   Lily#-own: exactly N bars to every system, the written break / pageBreak giving way.
+   `shortestDurationSpace` is LilyPond's SpacingSpanner.shortest-duration-space, in spacing
+   increments, beside spacingIncrement.
+
+   NOT HERE, deliberately: the line/page-breaking algorithm switches (engine tuning, not a
+   dimension of the picture). `raggedRight` and `raggedBottom` are bare flags — writing one turns it on.
    `raggedRight` keeps every line at its ideal width (LilyPond's ragged-right);
    `raggedBottom` keeps every PAGE's systems at their natural spacing (LilyPond's
    ragged-bottom). Without it only the LAST page is ragged (LilyPond's ragged-last-bottom
@@ -643,7 +662,13 @@ LayoutEntry    = 'markTempo' , MarkArrangement
                | 'chordDiagrams' , ( 'none' | [ TuningName ] , [ 'capo' , Integer ] , [ 'all' ] , [ ShapeTable ] )   (* TuningName: the tab's 'tuning' words; at least one of the four; the capo's Integer 1..11 *)
                | 'chordNames' , ChordNameMode
                | 'chordList' , Boolean
-               | 'voltaBracket' , VoltaLength ;       (* VoltaLength: 'all' | 'line' | Integer >= 1 — §6 StructureVolta *)
+               | 'voltaBracket' , VoltaLength        (* VoltaLength: 'all' | 'line' | Integer >= 1 — §6 StructureVolta *)
+               | StyleKey , Number                     (* > 0, no unit *)
+               | 'LedgerLine.thickness' , Number , Number ;   (* >= 0, not both 0 *)
+StyleKey       = 'lineThickness' | 'StaffLine.thickness' | 'Stem.thickness'
+               | 'Stem.lengthFraction' | 'Beam.thickness'
+               | 'BarLine.thinThickness' | 'BarLine.thickThickness' ;   (* a dotted key is a word, a
+                                                   dot and a word with nothing between *)
 ChordNameMode  = 'shape' | 'sounding' | 'both' ;
 MarkArrangement = 'stacked' | 'beside' ;
 BarNumberPolicy = 'lines' | 'none' | 'every' , Integer ;
@@ -669,7 +694,19 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
 
    THE LINE AGAINST 'paper' (user decision 2026-09-11): a quantity with a UNIT — a
    length, a justification flag — is the page's and lives in paper; a switch among a few
-   drawings lives here. indent / raggedRight / spacingIncrement stay in paper on that
+   drawings lives here. The one family of NUMBERS here is the engraving style (owner's
+   decision 2026-10-05): how thick the lines are and how long the stems — LilyPond's
+   \layout { \context { \Score \override Stem.thickness = … } }, score-wide — each a multiple
+   of a line thickness or staff spaces, never a page length. lineThickness (0.1 staff
+   space) is the line every other is a multiple of; StaffLine.thickness (1.0) the staff's
+   lines, and every line stated in them follows (stems, ledger lines, ties, slurs, hairpins,
+   brackets) while the bar lines read lineThickness alone, as LilyPond's do;
+   LedgerLine.thickness 1.0 0.1 staff line thicknesses plus staff spaces; Stem.thickness
+   (1.3) in staff line thicknesses; Stem.lengthFraction (1.0) every stem's length, a grace's
+   and a cue's keep their own; Beam.thickness (0.48) in staff spaces — the beams are placed
+   for it; BarLine.thinThickness (1.9) and BarLine.thickThickness (6.0) in line
+   thicknesses. The twin writes them as those overrides.
+   indent / raggedRight / spacingIncrement stay in paper on that
    rule (LilyPond accepts them in \paper too). NOT an 'override': an override reads a
    once / section scope that a whole-score switch would silently ignore.
 

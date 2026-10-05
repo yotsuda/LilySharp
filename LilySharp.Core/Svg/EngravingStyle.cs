@@ -46,7 +46,7 @@ namespace LilySharp.Core.Svg;
 /// paper's line-thickness too; here they follow the staff's.
 /// </para>
 /// </remarks>
-internal sealed record EngravingStyle
+public sealed record EngravingStyle
 {
     /// <summary>LilyPond's defaults.</summary>
     public static EngravingStyle Default { get; } = new();
@@ -107,7 +107,7 @@ internal sealed record EngravingStyle
 
     /// <summary>The style of the layout or render running on this thread (the default
     /// outside one).</summary>
-    public static EngravingStyle Current => t_current ?? Default;
+    internal static EngravingStyle Current => t_current ?? Default;
 
     /// <summary>The stem table at <see cref="Current"/>'s length-fraction — the one
     /// <see cref="StemDetails.Default"/> answers.</summary>
@@ -118,10 +118,10 @@ internal sealed record EngravingStyle
     internal static readonly StemDetails DefaultStemDetails = new();
 
     /// <summary>Holds <paramref name="style"/> until the scope is disposed; scopes nest.</summary>
-    public static Scope Use(EngravingStyle style) => new(style);
+    internal static Scope Use(EngravingStyle style) => new(style);
 
     /// <summary>The scope <see cref="Use"/> opens.</summary>
-    public readonly struct Scope : System.IDisposable
+    internal readonly struct Scope : System.IDisposable
     {
         private readonly EngravingStyle? _previous;
         private readonly StemDetails? _previousStem;

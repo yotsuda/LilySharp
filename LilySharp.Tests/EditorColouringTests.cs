@@ -850,7 +850,9 @@ public class EditorColouringTests
         string keyRule = Assert.Single(rules, r => r.StartsWith("\\b(", StringComparison.Ordinal)
             && !r.Contains("\\s+", StringComparison.Ordinal) && r.Contains("markTempo", StringComparison.Ordinal));
         Assert.Equal(LanguageVocabulary.LayoutKeys.OrderBy(k => k, StringComparer.Ordinal),
-            Regex.Match(keyRule, @"\(([^)]+)\)").Groups[1].Value.Split('|').OrderBy(k => k, StringComparer.Ordinal));
+            // A dotted key (`Stem.thickness`) is written with its dot escaped.
+            Regex.Match(keyRule, @"\(([^)]+)\)").Groups[1].Value.Split('|').Select(k => k.Replace("\\.", "."))
+                .OrderBy(k => k, StringComparer.Ordinal));
 
         // …and the whole block is painted, keys alone and keys with their words.
         foreach (string key in LanguageVocabulary.LayoutKeys)

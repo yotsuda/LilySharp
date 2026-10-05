@@ -76,8 +76,16 @@ public sealed record LayoutPlan(
     Music.ChordShapeTable? ChordDiagramTable = null,
     // `chordList true|false` — the chords the score uses, each with its diagram, at the head of
     // the score under the title (ChordListKey; HANDOFF §2 K5 ⑤, 2026-09-29).
-    bool ChordList = false)
+    bool ChordList = false,
+    // `lineThickness 0.12`, `Stem.thickness 1.5`, … — the line thicknesses and the stem length
+    // (Svg.EngravingStyle; owner's decision 2026-10-05, LilySharp-Omr's proposal P4). Null is
+    // LilyPond's defaults. NUMBERS, the one exception to "no unit" above: each is a multiple of a
+    // line thickness or a staff space, never a page length, and score-wide.
+    Svg.EngravingStyle? Style = null)
 {
+    /// <summary>The engraving style this plan asks for, never null.</summary>
+    public Svg.EngravingStyle EngravingStyle => Style ?? Svg.EngravingStyle.Default;
+
     /// <summary>The tuning a chord diagram of this score draws on, given the fretted tuning
     /// of the part it belongs to (<paramref name="partTuning"/>, null for none) — or null
     /// when the score writes <c>chordDiagrams none</c> (<see cref="ChordDiagramsKey.Resolve"/>).</summary>

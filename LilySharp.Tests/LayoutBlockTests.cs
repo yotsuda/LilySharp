@@ -160,19 +160,22 @@ public class LayoutBlockTests
         foreach (string key in LanguageVocabulary.LayoutKeys)
         {
             var words = LayoutPlanReader.ValueWords(key);
-            Assert.True(words.Count > 0,
+            // A key that takes NUMBERS (the engraving style) offers a value that is not its
+            // default instead of words.
+            string? example = LanguageVocabulary.LayoutNumberKeyExample(key);
+            Assert.True(words.Count > 0 || example != null,
                 $"'{key}' is published as a layout key and the reader offers no words for it");
 
             // A word may need an argument (`every N`); try the bare form, then the counted
             // one, so the question stays generic over the keys.
             bool moved = false;
-            foreach (string word in words)
-                foreach (string written in new[] { word, word + " 4" })
-                {
-                    var plan = Read($"layout {{ {key} {written} }}", out var problems);
-                    if (problems.Length == 0 && plan != LayoutPlan.Default)
-                        moved = true;
-                }
+            IEnumerable<string> values = example != null ? new[] { example } : words.SelectMany(word => new[] { word, word + " 4" });
+            foreach (string written in values)
+            {
+                var plan = Read($"layout {{ {key} {written} }}", out var problems);
+                if (problems.Length == 0 && plan != LayoutPlan.Default)
+                    moved = true;
+            }
             Assert.True(moved,
                 $"'{key}' is published as a layout key and NO value of it changes the plan — "
                 + "its arm in LayoutPlanReader.ReadEntriesInto is missing, so the key binds "
@@ -214,7 +217,9 @@ public class LayoutBlockTests
     {
         Assert.Equal(
             new[] { "markTempo", "barNumbers", "accidentals", "sectionLabels", "partCombineText",
-                    "chordQualities", "minorChords", "chordDiagrams", "chordNames", "chordList", "voltaBracket" },
+                    "chordQualities", "minorChords", "chordDiagrams", "chordNames", "chordList", "voltaBracket",
+                    "lineThickness", "StaffLine.thickness", "LedgerLine.thickness", "Stem.thickness",
+                    "Stem.lengthFraction", "Beam.thickness", "BarLine.thinThickness", "BarLine.thickThickness" },
             LanguageVocabulary.LayoutKeys);
         Assert.Equal(LanguageVocabulary.LayoutKeys, LayoutPlanReader.AllKeySpellings());
         Assert.Equal(new[] { "lines", "none", "every" }, LanguageVocabulary.BarNumberPolicies);

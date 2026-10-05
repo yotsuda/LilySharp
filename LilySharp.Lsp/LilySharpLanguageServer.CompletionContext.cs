@@ -605,6 +605,9 @@ public sealed partial class LilySharpLanguageServer
     internal enum CompletionContext
     {
         Unknown,
+        /// <summary><c>layout { Stem.thickness |</c> — a key that takes a NUMBER: nothing to
+        /// list (the key's completion already inserted its default as the placeholder).</summary>
+        AfterLayoutNumberKey,
         TopLevel,
         MusicBlock,
         FormBlock,
@@ -817,6 +820,19 @@ public sealed partial class LilySharpLanguageServer
             i++;
         }
         return lastKey;
+    }
+
+    /// <summary><see cref="WordBeforeCursor"/> with a dot counted as part of the word — the
+    /// layout block's grob keys (<c>Stem.thickness</c>).</summary>
+    internal static string DottedWordBeforeCursor(string text, int offset)
+    {
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '-' || c == '.';
+        int i = offset;
+        while (i > 0 && IsWordChar(text[i - 1])) i--;        // skip the partial word
+        while (i > 0 && char.IsWhiteSpace(text[i - 1])) i--; // skip whitespace
+        int end = i;
+        while (i > 0 && IsWordChar(text[i - 1])) i--;        // the preceding word
+        return text.Substring(i, end - i);
     }
 
     internal static string WordBeforeCursor(string text, int offset)
@@ -1090,6 +1106,9 @@ public sealed partial class LilySharpLanguageServer
                 return CompletionContext.AfterLayoutChordList;
             if (prevWord.Equals(VoltaBracketLength.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutVoltaBracket;
+            // `Stem.thickness |` — the word before the caret read WITH its dot.
+            if (LanguageVocabulary.LayoutNumberKeyDefault(DottedWordBeforeCursor(text, offset)) != null)
+                return CompletionContext.AfterLayoutNumberKey;
             return CompletionContext.LayoutBlock;
         }
 

@@ -921,13 +921,15 @@ public sealed class LayoutDeclarationSyntax : SyntaxNode
                 return [];
             var entries = new List<Entry>();
             SyntaxTokenNode? keyToken = null;
+            string? dottedKey = null;   // `Stem.thickness`: the key's whole name, when dotted
             var values = new List<SyntaxTokenNode>();
 
             void Flush()
             {
                 if (keyToken != null)
-                    entries.Add(new Entry(keyToken.Text, keyToken, [.. values]));
+                    entries.Add(new Entry(dottedKey ?? keyToken.Text, keyToken, [.. values]));
                 keyToken = null;
+                dottedKey = null;
                 values.Clear();
             }
 
@@ -963,6 +965,20 @@ public sealed class LayoutDeclarationSyntax : SyntaxNode
                 }
 
                 bool isWord = token.Text.Length > 0 && char.IsLetter(token.Text[0]);
+                // `Stem.thickness` — a word, a glued dot and a word (the parser lets the dot in
+                // only so): ONE key, a grob's property, cut whether or not it is known so the
+                // reader refuses an unknown one by its whole name. The key token is the grob's.
+                if (isWord && i + 2 < SlotCount
+                    && GetChild(i + 1) is SyntaxTokenNode { Kind: SyntaxKind.Dot }
+                    && GetChild(i + 2) is SyntaxTokenNode property
+                    && property.Text.Length > 0 && char.IsLetter(property.Text[0]))
+                {
+                    Flush();
+                    keyToken = token;
+                    dottedKey = token.Text + "." + property.Text;
+                    i += 2;
+                    continue;
+                }
                 // A key written in the wrong case cuts too, so it is refused as a key (with
                 // its right spelling) rather than read as the previous entry's value.
                 if (isWord && (keyToken == null || SyntaxFacts.IsLayoutKey(token.Text)

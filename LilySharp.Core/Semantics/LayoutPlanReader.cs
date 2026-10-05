@@ -51,6 +51,24 @@ internal static class LayoutPlanReader
     /// cuts entries by.</summary>
     internal static IReadOnlyList<string> AllKeySpellings() => SyntaxFacts.LayoutKeyVocabulary;
 
+    /// <summary>
+    /// The keys that take NUMBERS rather than words — the engraving style
+    /// (<see cref="Svg.EngravingStyle"/>) — with the default each writes out and a value that
+    /// is not the default, for messages, for completion and for the checks that every key binds.
+    /// </summary>
+    internal static readonly IReadOnlyDictionary<string, (string Default, string Example)> NumberKeys =
+        new Dictionary<string, (string, string)>(StringComparer.Ordinal)
+        {
+            ["lineThickness"] = ("0.1", "0.12"),
+            ["StaffLine.thickness"] = ("1.0", "1.2"),
+            ["LedgerLine.thickness"] = ("1.0 0.1", "1.0 0.15"),
+            ["Stem.thickness"] = ("1.3", "1.5"),
+            ["Stem.lengthFraction"] = ("1.0", "1.1"),
+            ["Beam.thickness"] = ("0.48", "0.5"),
+            ["BarLine.thinThickness"] = ("1.9", "2.5"),
+            ["BarLine.thickThickness"] = ("6.0", "7"),
+        };
+
     /// <summary>The words each key takes, for messages and for completion.</summary>
     internal static IReadOnlyList<string> ValueWords(string key) => Canonical(key) switch
     {
@@ -261,6 +279,16 @@ internal static class LayoutPlanReader
                     ChordListKey.Words, w => ChordListKey.Find(w) is { } on
                         ? plan with { ChordList = on } : null),
                 VoltaBracketLength.Key => ReadVoltaBracket(plan, entry, span, found),
+                // The engraving style (Svg.EngravingStyle): a number each, LedgerLine two.
+                "lineThickness" => ReadStyle(plan, entry, span, found, (s, v) => s with { LineThickness = v[0] }),
+                "StaffLine.thickness" => ReadStyle(plan, entry, span, found, (s, v) => s with { StaffSymbolThickness = v[0] }),
+                "LedgerLine.thickness" => ReadStyle(plan, entry, span, found,
+                    (s, v) => s with { LedgerLineThicknessLines = v[0], LedgerLineThicknessSpaces = v[1] }),
+                "Stem.thickness" => ReadStyle(plan, entry, span, found, (s, v) => s with { StemThickness = v[0] }),
+                "Stem.lengthFraction" => ReadStyle(plan, entry, span, found, (s, v) => s with { StemLengthFraction = v[0] }),
+                "Beam.thickness" => ReadStyle(plan, entry, span, found, (s, v) => s with { BeamThickness = v[0] }),
+                "BarLine.thinThickness" => ReadStyle(plan, entry, span, found, (s, v) => s with { BarLineHairThickness = v[0] }),
+                "BarLine.thickThickness" => ReadStyle(plan, entry, span, found, (s, v) => s with { BarLineThickThickness = v[0] }),
                 // ⚠️ A key published in SyntaxFacts.LayoutKeyVocabulary with no arm here
                 // lands on the default below and binds NOTHING, in silence — "a switch
                 // nobody reads looks exactly like one that works", the sentence the
@@ -270,6 +298,36 @@ internal static class LayoutPlanReader
             };
         }
         return plan;
+    }
+
+    /// <summary>
+    /// One engraving-style key (<c>Stem.thickness 1.5</c>): as many plain numbers as its
+    /// <see cref="NumberKeys"/> default has, each positive — <c>LedgerLine.thickness</c>' two may
+    /// be 0 but not both. No unit: each is a multiple of a line thickness, or staff spaces
+    /// (Svg.EngravingStyle says which).
+    /// </summary>
+    private static LayoutPlan ReadStyle(LayoutPlan plan, LayoutDeclarationSyntax.Entry entry, TextSpan keySpan,
+        List<Problem> found, Func<Svg.EngravingStyle, double[], Svg.EngravingStyle> set)
+    {
+        string example = NumberKeys[entry.Key].Example;
+        int count = example.Split(' ').Length;
+        string takes = count == 1
+            ? $"'{entry.Key}' takes a positive number, no unit: {entry.Key} {example}."
+            : $"'{entry.Key}' takes {count} numbers, not both 0 and none below 0: {entry.Key} {example}.";
+        var values = new double[entry.Values.Count];
+        bool numbers = entry.Values.Count == count;
+        for (int i = 0; numbers && i < count; i++)
+            numbers = entry.Values[i].Kind is SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral
+                && double.TryParse(entry.Values[i].Text, NumberStyles.Float, CultureInfo.InvariantCulture, out values[i]);
+        if (numbers)
+            numbers = count == 1 ? values[0] > 0 : values.All(v => v >= 0) && values.Any(v => v > 0);
+        if (!numbers)
+        {
+            found.Add(new Problem(entry.Values.Count > 0 ? entry.Values[0].Span : keySpan,
+                DiagnosticCodes.LayoutEntryBadValue, takes, IsError: true));
+            return plan;
+        }
+        return plan with { Style = set(plan.EngravingStyle, values) };
     }
 
     // markTempo stacked | beside — exactly one word.

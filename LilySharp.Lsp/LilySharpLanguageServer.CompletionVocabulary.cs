@@ -734,7 +734,7 @@ public sealed partial class LilySharpLanguageServer
                         // `guitar`, not the absent key's "the part's instrument, else guitar"
                         // (no word says that): the same page unless a part is a ukulele,
                         // a mandolin, a bass… (owner's rule 2026-09-28, ChordDiagramsKey.Resolve).
-                        + "\n  chordDiagrams ${8:guitar}\n  chordNames ${9:shape}\n  chordList ${10:false}\n  voltaBracket ${11:all}$0\n}",
+                        + "\n  chordDiagrams ${8:guitar}\n  chordNames ${9:shape}\n  chordList ${10:false}\n  voltaBracket ${11:all}" + LayoutNumberLines("  ") + "$0\n}",
                     Preselect = true,
                     SortText = "0",
                     Detail = "Set the score's display switches (pre-filled with LilyPond's defaults)",
@@ -753,6 +753,19 @@ public sealed partial class LilySharpLanguageServer
             ]
         };
 
+    /// <summary>The number keys' lines of the pre-filled <c>layout</c> snippet, each at its
+    /// default (<see cref="LanguageVocabulary.LayoutNumberKeyDefault"/>), its tab stops after the
+    /// eleven word keys'.</summary>
+    private static string LayoutNumberLines(string indent)
+    {
+        var sb = new System.Text.StringBuilder();
+        int stop = 12;
+        foreach (string key in LanguageVocabulary.LayoutKeys)
+            if (LanguageVocabulary.LayoutNumberKeyDefault(key) is { } value)
+                sb.Append('\n').Append(indent).Append(key).Append(" ${").Append(stop++).Append(':').Append(value).Append('}');
+        return sb.ToString();
+    }
+
     /// <summary>The keys a <c>layout { }</c> body takes, READ FROM THE COMPILER
     /// (<see cref="LanguageVocabulary.LayoutKeys"/>); each re-opens the popup on its own
     /// words. This file supplies only the prose.</summary>
@@ -766,12 +779,19 @@ public sealed partial class LilySharpLanguageServer
                 Label = key,
                 Kind = CompletionItemKind.Property,
                 InsertTextFormat = InsertTextFormat.Snippet,
-                InsertText = key + " $0",
+                // A number key inserts its default as the placeholder (there are no words to
+                // suggest); a word key re-opens the popup on its words.
+                InsertText = LayoutKeyDefault(key) is { } number ? key + " ${1:" + number + "}" : key + " $0",
                 Detail = LayoutKeyDetail(key),
                 SortText = i.ToString(),
-                Command = new Command { Title = "Suggest layout value", CommandIdentifier = "editor.action.triggerSuggest" },
+                Command = LayoutKeyDefault(key) != null ? null
+                    : new Command { Title = "Suggest layout value", CommandIdentifier = "editor.action.triggerSuggest" },
             }).ToArray()
         };
+
+    /// <summary>The default a NUMBER layout key inserts, read from the compiler
+    /// (<see cref="LanguageVocabulary.LayoutNumberKeyDefault"/>), or null for a key that takes words.</summary>
+    private static string? LayoutKeyDefault(string key) => LanguageVocabulary.LayoutNumberKeyDefault(key);
 
     /// <summary>One line of help per layout key — what the key switches, and its default.</summary>
     private static string LayoutKeyDetail(string key) => key switch
@@ -787,6 +807,14 @@ public sealed partial class LilySharpLanguageServer
         "chordNames" => "What a chord name shows under a capo: shape (default, the pressed chord's) | sounding | both",
         "chordList" => "The chords the score uses, each with its diagram, under the title: true | false (default)",
         "voltaBracket" => "How far an ending's bracket reaches: all (default) | line | N bars; an ending's own @voltaBracket(…) overrides it",
+        "lineThickness" => "The line every other line is a multiple of, in staff spaces (default 0.1)",
+        "StaffLine.thickness" => "Staff lines, in line thicknesses (default 1.0); stems, ledger lines, ties and slurs follow, bar lines do not",
+        "LedgerLine.thickness" => "Ledger lines: staff line thicknesses, then staff spaces added (default 1.0 0.1)",
+        "Stem.thickness" => "Stems, in staff line thicknesses (default 1.3)",
+        "Stem.lengthFraction" => "Every stem's length times this, beamed or not (default 1.0)",
+        "Beam.thickness" => "Beams, in staff spaces (default 0.48); the beams are placed for it",
+        "BarLine.thinThickness" => "Thin bar lines, in line thicknesses (default 1.9)",
+        "BarLine.thickThickness" => "Thick bar lines, in line thicknesses (default 6.0)",
         _ => "Layout key",
     };
 
@@ -1279,6 +1307,12 @@ public sealed partial class LilySharpLanguageServer
         "indent" => "First system's indent (default 0 = from instrument names)",
         "shortIndent" => "Later systems' indent (default 0)",
         "spacingIncrement" => "Horizontal note-spacing unit (default 1.2 staff spaces)",
+        "shortestDurationSpace" => "Space the score's shortest note gets, in spacing increments (default 2)",
+        "staffSpace" => "The staff's size: distance between two staff lines on the paper (default 1.757299mm, LilyPond's 20pt staff); the page keeps its millimetres",
+        "systemsPerPage" => "Exactly N systems on every page; the lines are re-broken to fill them",
+        "minSystemsPerPage" => "At least N systems on a page",
+        "maxSystemsPerPage" => "At most N systems on a page",
+        "measuresPerSystem" => "Exactly N bars on every system (written break / pageBreak give way)",
         "raggedRight" => "Do not justify lines; measures sit at their ideal width",
         "raggedBottom" => "Do not justify pages; systems keep their natural spacing on every page, not only the last",
         "breaksOnly" => "Break lines and pages only at the written break / pageBreak (a score copied from a page)",
@@ -3455,7 +3489,7 @@ public sealed partial class LilySharpLanguageServer
                 // ⚠️ Pre-filled with the DEFAULTS (stacked, lines), the paper snippet's rule:
                 // accepting the completion and changing nothing does not move the page — save
                 // chordDiagrams, whose default no word spells (see GetLayoutDeclarationCompletions).
-                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {\n\tmarkTempo ${1:stacked}\n\tbarNumbers ${2:lines}\n\taccidentals ${3:default}\n\tsectionLabels ${4:boxed}\n\tpartCombineText ${5:true}\n\tchordQualities ${6:symbols}\n\tminorChords ${7:upper}\n\tchordDiagrams ${8:guitar}\n\tchordNames ${9:shape}\n\tchordList ${10:false}\n\tvoltaBracket ${11:all}$0\n}", Detail = "Display switches (marks, barNumbers, accidentals, sectionLabels, partCombineText, chordQualities, minorChords, chordDiagrams, chordNames, chordList, voltaBracket), pre-filled with LilyPond's defaults" },
+                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {\n\tmarkTempo ${1:stacked}\n\tbarNumbers ${2:lines}\n\taccidentals ${3:default}\n\tsectionLabels ${4:boxed}\n\tpartCombineText ${5:true}\n\tchordQualities ${6:symbols}\n\tminorChords ${7:upper}\n\tchordDiagrams ${8:guitar}\n\tchordNames ${9:shape}\n\tchordList ${10:false}\n\tvoltaBracket ${11:all}" + LayoutNumberLines("\t") + "$0\n}", Detail = "Display switches (marks, barNumbers, accidentals, sectionLabels, partCombineText, chordQualities, minorChords, chordDiagrams, chordNames, chordList, voltaBracket) and the line thicknesses and stem length, pre-filled with LilyPond's defaults" },
                 // `override` is a valid global default; `revert` / `once` are NOT offered at
                 // the top level — they only work in a music stream (LYS1023 otherwise).
                 // `partial` is likewise NOT offered here — a pickup belongs to a section, not
