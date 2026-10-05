@@ -284,8 +284,11 @@ from Lily# rather than guessed back out of the SVG. Same collection, layout and 
 - **`glyph`** is Lily#'s name for a music glyph (`U+XXXX` where it has none) and
   **`codepoint`** its slot in the bundled Emmentaler.
 - **`pos`** is the source offset the symbol was drawn under (the SVG's `data-pos`, −1 for
-  none); **`staff`** the staff it was drawn on (−1 where the renderer draws it outside any
-  one staff — dynamics, lyrics and other page overlays); **`todo`** the `@todo` key of its item.
+  none); **`staff`** the staff it was drawn on — for what hangs on a note outside the staff
+  (dynamics, scripts and fermatas, fingering, tuplets, arpeggios, ottava, figured bass, text
+  and text spanners) the staff of that note — and −1 for what belongs to no one staff (lyrics,
+  chord names, marks, tempo, bar numbers, titles, voltas, span bar lines, the pedal); **`todo`**
+  the `@todo` key of its item.
 - **`bars`**: each bar of each system with the number the page prints, from the system's top
   staff line to its bottom one.
 

@@ -186,6 +186,8 @@ internal static partial class SharedRenderer
         using var face = gc.MusicFace(FiguredBassGlyphRun.Design(fonts));
         foreach (var fb in layout.FiguredBassLayouts)
         {
+            // Which staff it hangs on, for lysc boxes (a no-op in every picture).
+            using var staffScope = gc.Staff(fb.StaffIndex);
             if (!sysTopYUp.ContainsKey(fb.MeasureIndex)) continue;
             // Page Y-up against this figure's own staff middle; figures then stack
             // downward from the topmost baseline (device down = smaller Y-up).
@@ -552,6 +554,8 @@ internal static partial class SharedRenderer
         using var face = gc.MusicFace(FingeringGlyphRun.Design(fonts));
         foreach (var f in pageItems)
         {
+            // Which staff it hangs on, for lysc boxes (a no-op in every picture).
+            using var staffScope = gc.Staff(f.StaffIndex);
             // Frame B -> device: reflect the Y-up baseline against this fingering's
             // own staff middle (the shared per-grob draw boundary), then apply ossia.
             double midYup = os.StaffMiddleYUp(f.StaffIndex, f.MeasureIndex, StaffHeight);
@@ -898,6 +902,8 @@ internal static partial class SharedRenderer
         var style = CustomTextEngraver.Style(fonts);
         foreach (var t in layout.CustomTextLayouts)
         {
+            // Which staff it hangs on, for lysc boxes (a no-op in every picture).
+            using var staffScope = gc.Staff(t.StaffIndex);
             if (!sysTopYUp.ContainsKey(t.MeasureIndex)) continue; // other page
             // Page Y-up against the (top) staff middle this text resolves — through the
             // SCORE-GROB resolution, as the stacker prices it: the raw -1 read the system
@@ -936,6 +942,8 @@ internal static partial class SharedRenderer
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var s in layout.TextSpannerLayouts)
         {
+            // Which staff it hangs on, for lysc boxes (a no-op in every picture).
+            using var staffScope = gc.Staff(s.StaffIndex);
             if (!sysTopYUp.TryGetValue(s.StartMeasureIndex, out var syUp)) continue; // other page
             // Page Y-up: system top plus the stored offset, then ossia.
             double absY = os.YUp(syUp + s.YUp, s.StaffIndex, s.StartMeasureIndex);
@@ -1031,6 +1039,8 @@ internal static partial class SharedRenderer
         if (layout.MultiMeasureRestLayouts.IsDefaultOrEmpty) return;
         foreach (var mmr in layout.MultiMeasureRestLayouts)
         {
+            // Which staff it hangs on, for lysc boxes (a no-op in every picture).
+            using var staffScope = gc.Staff(mmr.StaffIndex);
             if (!sysTopYUp.TryGetValue(mmr.StartMeasureIndex, out double syUp))
                 continue; // other page
             // mmr.Y is the within-system offset of the staff middle; syUp is this
@@ -1387,6 +1397,8 @@ internal static partial class SharedRenderer
         var style = PartCombineAnalyzer.LabelStyle(fonts);
         foreach (var pc in layout.PartCombineLayouts)
         {
+            // Which staff it hangs on, for lysc boxes (a no-op in every picture).
+            using var staffScope = gc.Staff(pc.StaffIndex);
             if (!sysTopYUp.TryGetValue(pc.MeasureIndex, out var syUp)) continue; // other page
             // Page Y-up: system top plus the stored offset.
             double y = syUp + pc.YUp;

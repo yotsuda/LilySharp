@@ -50,6 +50,8 @@ internal static partial class SharedRenderer
         // same 2.0, `FontSize * 0.5`, until 2026-09-08), through the score's plan.
         foreach (var d in layout.DynamicLayouts)
         {
+            // Which staff it hangs on, for lysc boxes (a no-op in every picture).
+            using var staffScope = gc.Staff(d.StaffIndex);
             string text = NormalizeDynamicText(d.Text);
             if (!sysTopYUp.ContainsKey(d.MeasureIndex)) continue; // other page
             // A dynamic on an ossia staff shrinks with its staff's notation —
@@ -92,6 +94,8 @@ internal static partial class SharedRenderer
         if (layout.ArticulationLayouts.IsDefaultOrEmpty) return;
         foreach (var a in layout.ArticulationLayouts)
         {
+            // Which staff it hangs on, for lysc boxes (a no-op in every picture).
+            using var staffScope = gc.Staff(a.StaffIndex);
             if (string.IsNullOrEmpty(a.Glyph)) continue;
             if (!sysTopYUp.ContainsKey(a.MeasureIndex)) continue; // other page
             // A script on an ossia staff shrinks with its staff's notation —
@@ -495,6 +499,8 @@ internal static partial class SharedRenderer
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var b in layout.OttavaBracketLayouts)
         {
+            // Which staff it hangs on, for lysc boxes (a no-op in every picture).
+            using var staffScope = gc.Staff(b.StaffIndex);
             if (!sysTopYUp.TryGetValue(b.StartMeasureIndex, out var syUp)) continue; // other page
             // Page Y-up: lift the system top and add the stored offset, then ossia.
             double absY = os.YUp(syUp + b.YUp, b.StaffIndex, b.StartMeasureIndex);
@@ -628,6 +634,8 @@ internal static partial class SharedRenderer
 
         foreach (var b in layout.TupletBracketLayouts)
         {
+            // Which staff it hangs on, for lysc boxes (a no-op in every picture).
+            using var staffScope = gc.Staff(b.StaffIndex);
             if (!sysTopYUp.TryGetValue(b.MeasureIndex, out var syUp)) continue; // other page
             // The hook's height is edge-height × the staff's ss (1.05 on a tab), as the
             // reach past the bound is (TupletBracketLayout.LineSpacing).
@@ -716,6 +724,8 @@ internal static partial class SharedRenderer
         if (layout.TrillSpannerLayouts.IsDefaultOrEmpty) return;
         foreach (var s in layout.TrillSpannerLayouts)
         {
+            // Which staff it hangs on, for lysc boxes (a no-op in every picture).
+            using var staffScope = gc.Staff(s.StaffIndex);
             if (!sysTopYUp.TryGetValue(s.StartMeasureIndex, out var syUp)) continue; // other page
             // Page Y-up: lift the system top, add the stored offset, then ossia.
             double absY = os.YUp(syUp + s.YUp, s.StaffIndex, s.StartMeasureIndex);
@@ -768,6 +778,8 @@ internal static partial class SharedRenderer
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var g in layout.GlissandoLayouts)
         {
+            // Which staff it hangs on, for lysc boxes (a no-op in every picture).
+            using var staffScope = gc.Staff(g.StaffIndex);
             // MeasureIndex -1 = direct unit-test construction: no page identity,
             // draw unconditionally.
             if (g.MeasureIndex >= 0 && !sysTopYUp.ContainsKey(g.MeasureIndex))
@@ -798,6 +810,8 @@ internal static partial class SharedRenderer
         if (layout.ArpeggioLayouts.IsDefaultOrEmpty) return;
         foreach (var a in layout.ArpeggioLayouts)
         {
+            // Which staff it hangs on, for lysc boxes (a no-op in every picture).
+            using var staffScope = gc.Staff(a.StaffIndex);
             // MeasureIndex -1 = direct unit-test construction: no page identity,
             // draw unconditionally.
             if (a.MeasureIndex >= 0 && !sysTopYUp.ContainsKey(a.MeasureIndex))

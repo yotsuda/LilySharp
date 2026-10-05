@@ -453,7 +453,8 @@ workflow attaches that section to the GitHub Release verbatim.
   value the block would refuse is an error with the block's message.
 - **`lysc boxes` writes every drawn symbol's box as JSON.** Page by page, each symbol the SVG
   and the PNG draw — its kind (`notehead`, `stem`, `staffLine`, `beam`, `tie`, `lyricText`,
-  …), its ink box in staff spaces, its source offset and its staff — and each bar's printed
+  …), its ink box in staff spaces, its source offset and its staff (for a dynamic, a script, a
+  fingering or a tuplet, the staff of the note it hangs on) — and each bar's printed
   number and box. The same layout and `--set` as `svg` / `png`, so an OMR reader can take its
   training truth from Lily# instead of guessing it back out of the SVG.
 - **A page that cannot hold its systems is compressed onto the paper, and said so.** As in

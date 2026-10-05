@@ -46,12 +46,12 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:373** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1310** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
-- **:1315** whiteout −1) is not ported.
-- **:1435** NOT ported; this takes the note's own stem direction. No book and
+- **:1320** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
+- **:1325** whiteout −1) is not ported.
+- **:1447** NOT ported; this takes the note's own stem direction. No book and
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
-- **:359** Lily# has not ported; this arrow is its own device.
-- **:826** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
+- **:363** Lily# has not ported; this arrow is its own device.
+- **:840** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:301** ⚠️ subdivide_beams (:186-188) is not ported: it is gated on
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
@@ -139,7 +139,7 @@
 - **:693** no observer; add the paren widths when a book brings one. The unpacked
 - **:695** bare glyph width, which is exact for one and unobserved for many.
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1436** no observer reaches that branch yet.
+- **:1448** no observer reaches that branch yet.
 ### `LilySharp.Core/Rendering/SharedRenderer.Noteheads.cs`
 - **:788** observed by: no observer, and none is possible while the term is dominated — it
 ### `LilySharp.Core/Semantics/DrummapValidator.cs`
@@ -308,11 +308,11 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:216** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1429** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
+- **:1441** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
-- **:180** LILYSHARP-OWN: LilyPond has no scoop or plop — no grob and no event spells either in
-- **:229** The bend amount label's ENGRAVING em. LILYSHARP-OWN, as
-- **:357** LILYSHARP-OWN: LilyPond's guitar bend is the BendSpanner (`\^`) — a line and curve to
+- **:184** LILYSHARP-OWN: LilyPond has no scoop or plop — no grob and no event spells either in
+- **:233** The bend amount label's ENGRAVING em. LILYSHARP-OWN, as
+- **:361** LILYSHARP-OWN: LilyPond's guitar bend is the BendSpanner (`\^`) — a line and curve to
 ### `LilySharp.Core/Rendering/SharedRenderer.Prefix.cs`
 - **:582** LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
 ### `LilySharp.Core/Rendering/SharedRenderer.Tab.cs`
