@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第819セッションの経緯
+
+### 1.1 第819セッション（2026-10-05・YT-DELL2）
+
+新しい会話（HANDOFF を読んで着手）。`-Start p819`（HEAD `59a48494`）＝full **11136 / 0 / 2 / 11138**。§7 3.5 で第817 を ARCHIVE へ（moved 13 lines）。
+- **P2**（`83df0e317`）: ユーザー決定（2026-10-05）＝**`shortestDurationSpace`・`systemsPerPage` 系だけ・`--set` 専用（paper のキーにしない）・OMR 学習の要件を満たす**。`minimumNoteDistance`・`measureMinimumWidth`・`measuresPerSystem` は採らない（LP に同じ値が無い）。`PaperOverrides.SettingOnlyKeys`（`paper { }` に書けば LYS9001 のまま）。⑴ `SpacingOptions.ShortestSpace`＝LP 双子で 1.5/2/3 が 68.509/74.953/88.153・Lily# 68.50/74.95/88.15。⑵ **`systemsPerPage` は LP の意味で移植**: `space_systems_with_fixed_number_per_page`（採点と頁割りの両経路）・`system_count_status_`（両 DP）・`Optimal_page_breaking::solve` の 2 つの status の門（`LayoutEngine.SystemCount` が「常に OK」と畳んでいた）・`max/min_systems_per_page` の読み口・`line_count_penalty` の段数比例＝**行数の選び直しで頁を埋める**（60 小節で 3/5/7/max4 が LP と同じ 3,3,3,3/5,5,5/7,7/4,4）。旧の厳密フィルタは割り切れないと頁割り 0 で 1 頁に落ちていた（`LpGeometryProbes` の SixSystemsPerPage の註）。上限があれば単一ページの積みを通さない（`LayoutEngine.Pages`）。⑶ **溢れた頁の圧縮を移植**（`solve_rod_spring_problem` :806-822＝隙間から溢れを抜いて段を重ね頁に収める・force −∞・次頁は固定 force を使わない）＝それまで最後の段が紙の外へ出ていた。`PageLayout.Overflow` → `LayoutWarnings` → svg/png/pdf が `warning: page N is over-full by X staff spaces`（OMR はその頁を捨てる）。LP も同じ 20 段の頁を圧縮（14.6・Lily# 11.3＝縦の見積もりの差）。⑷ 組み合わせの矛盾（systemsPerPage と min/max・min>max）は LP は警告して無視・ここは拒否。
+- 掃き（`sessions/p819/sweep`・p723 の型・base は worktree の HEAD）998 冊 1199 svg で差 0＝設定の無い本は不変。毒 2 本（固定段数の経路を外す→3 赤・圧縮を外す→1 赤）。`LpReferenceCitationTests` の名無し引用で 1 度赤（新しい引用 10 本に記号を書いた）。OMR 側の `docs/repro/lilysharp-implemented-2026-10-05.md` §6 を現状に直した（未追跡のファイル・OMR の repo は別の会話が作業中＝commit していない）。
+- C#: full **11155 / 0 / 2 / 11157**。
+
+★ `-End p819 -DiffBase 59a48494b`（`end.log`）＝full **11155 / 0 / 2 / 11157**・門 全 OK（HANDOFF 445,023 B）。7.5: Core `+` 393 行・REF 16・OWN 0＝頁割りと頁の解の LP 移植（固定段数・status・読み口・罰点の比例・圧縮）＋ CLI の配管。7.6: 意味はすべて LP（page-breaking.cc・optimal-page-breaking.cc・page-layout-problem.cc）、組み合わせの拒否だけが CLI の判断（LP は警告して無視）。7.7: 匂い無し。commit `83df0e317`＋docs。push はユーザー。
+判定: 次は P5（`lysc boxes`＝記号ごとの外接枠の JSON・言語は変えない）。(a) 今の文脈（頁割り）は使わない／(b) 圧縮なし・重くない／(c) 別の島＝差は小さい ⇒ **既定どおり続けてよい**（この会話で `-Start p820`＝HANDOFF の残り 4,977 B は便を区切る理由で、会話を区切る理由ではない）。
+
 ## 以下は第818セッションの経緯
 
 ### 1.1 第818セッション（2026-10-05・YT-DELL2）
