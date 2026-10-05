@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第828セッションの経緯
+
+### 1.1 第828セッション（2026-10-05・YT-DELL2）
+
+同じ会話の続き。ユーザー「すぐ実装できる訓練用の機能は全部できた？」→ 10-02 提案の残りを洗い、「価値が無い・代替があるなら作らない」（ユーザー）で振り分けた: `--batch` の行ごとの `--set`＝**作らない**（生成する `.lys` に `paper { }`／`layout { }` を書けば同じ）・boxes の音高／音価／声部＝**作らない**（生成器の `.notes` と `pos` で突き合わせられる）・黒玉より短い加線＝**作らない**（提案書の 1.3 は 0.0016 相当・今の下限で 1.307）・`minimumNoteDistance`／`measureMinimumWidth` は第818〜821 が見送り済み（LP に無い）。
+- **作ったのは 1 つ＝boxes の `staff` を音符にぶら下がる記号にも**（提案書の「要るのは 4 つ」の 4 つ目が欠けていた）。fixture 278 冊の census（Lab `sessions/p828/boxes`）で articulation・fermata・ornament・dynamics・tuplet／tupletBracket・arpeggio・fingering・figuredBass・ottava・tabTechnique・text が全部 −1 だった。13 の描画ループの頭で `gc.Staff(x.StaffIndex)`（SVG／PNG／PDF の `Staff` は no-op＝絵は動かない）。残る −1 は五線に属さないもの（歌詞・コードネーム・mark・tempo・小節番号・題・volta・span bar）と pedal（`PedalBracketLayout` が段を持たない＝要望が出たら）。
+- 網 `BoxesTests.WhatHangsOnANote_NamesItsStaff`（2 段・下の段の強弱と accent と運指は 1）。毒 1 本（強弱のスコープを外す→1 赤）。文書: CLI_REFERENCE（`staff` の説明）・CHANGELOG・OMR §6。
+
+★ `-End p828 -DiffBase 2ef342dab`（`end.log`）＝full **11228 / 0 / 2 / 11230**・門 全 OK。棚卸し: 行番号の移動だけ。7.5: Core `+` 26 行・REF 0・OWN 0（描画ループの頭のスコープだけ）。7.6・7.7: 無し。commit `59a647dd4`＋docs。push はユーザー。
+判定: 10-02 の提案は P6 を除いて閉じた。次は P6（ユーザー判断）か第814 末の決定 ①／③。(a) 今便の文脈は使わない／(b) 会話は 2 便ぶん・まだ取り違えは無い／(c) 別の島 ⇒ **この会話で続けてよい**（`-Start p829` から）。
 ## 以下は第827セッションの経緯
 
 ### 1.1 第827セッション（2026-10-05・YT-DELL2）

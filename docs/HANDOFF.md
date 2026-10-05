@@ -84,9 +84,9 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - §2 E ⑷ hairpin の niente の円・⑹ 開いた和音入力・⑺ Ignatzek＝**実装する**。⑷⑹ は文法の提案をユーザーに出した（第814 の返答・要旨は下）＝**承認を得てから実装**。⑺ の残りは LP の例外表の 2 つ（パワーコード `<c g>`→上付き「5」・オルタード `<c e g bes des' ees' fis' aes'>`→上付き「alt」＝ly/chord-modifiers-init.ly:54-58）。°・+・ø・°7・△・上付きは 2026-09-11 に移植済み。
   - ⑹ の提案: 閉じた 18＋品質の表（`ChordQualityRegistry.ByToken`）を**組み立て式**に＝根音［品質 m／dim／aug／maj］［伸張 5／6／69／7／9／11／13］｛変化 `-5 +5 -9 +9 +11 -13`（今の「#/b は根音とベース専用」を保つ)｝｛`addN`｝｛`omit3`／`omit5`｝［`sus2`／`sus4`（`9sus4` 等とも組む）］［`alt`］［`/ベース`＝和音の音なら転回（その音を最低音へ）・でなければ付加ベース＝LP の `/` と `/+` を音楽的に自動判別］。表示は Ignatzek の順で上付き。Roman 行（`Imaj7`）も同じ接尾辞。
   - ⑷ の提案: 強弱 `@niente` を足す＝無音の強弱。hairpin は今どおり「次の強弱まで」で、**細い端が `@niente` に触れたら円**（`c4@decresc … g@niente`＝al niente・`c4@niente@cresc … g@f`＝dal niente）。単独なら斜体の niente。MIDI は 0 へ／0 から。太い端が niente なら警告。
-- §2 H ⑴（行頭の grace／歌詞の独立列＝`ownFixedFloor`）・⑷（譜ごとに違う調の行末 courtesy＝移調譜を列で揃える）＝**実装する**（⑷ はまず LP と双子で測る）。⑵⑶ は「内部は直列合成だが LP の出力と厳密に一致」で閉じたまま（ユーザーの理解どおり）。
+- §2 H ⑴（行頭の grace／歌詞の独立列＝`ownFixedFloor`）＝**実装する**・⑷（譜ごとに違う調の行末 courtesy）＝**第830 で閉じた**。⑵⑶ は「内部は直列合成だが LP の出力と厳密に一致」で閉じたまま（ユーザーの理解どおり）。
 - §2 D 単一ページ経路を鎖に畳む＝**畳んだ（第829）**。
-- **優先順位**: ① ⑹＋⑺（文法の承認後・⑺ は ⑹ の品質の一部）→ ② ⑷ niente（承認後）→ ③ §2 D（第829 で閉じた）→ ④ §2 H ⑷ の測定と移植 → ⑤ §2 H ⑴ paper column。
+- **優先順位**: ① ⑹＋⑺（文法の承認後・⑺ は ⑹ の品質の一部）→ ② ⑷ niente（承認後）→ ③ §2 D（第829 で閉じた）→ ④ §2 H ⑷（第830 で閉じた）→ ⑤ §2 H ⑴ paper column。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - **⑼（第762 起票・dogfood の大きい本 4 冊）は全部閉じた**（最後の 2 つ: ⑺ resume の 2 つ目の出所＝第794・⑻ 宣言した弱起の併合＝第795）。経緯は **ARCHIVE 第740〜第795 の各便**（第783 が列挙を畳んだ）。計器: Lab `sessions/p742/`（ly／midi／xml／svg の掃き）・`sessions/p753/sweep-check.ps1`（診断の掃き）・`sessions/p762/run-big.ps1`（4 冊の check＋4 出力＋LP）・`sessions/p723/svg2/sweep-all.ps1`（全 svg・p795 の `sweep/run-sweeps.ps1` が svg＋xml を束ねる）
@@ -125,6 +125,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第830セッション（2026-10-05・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。`-Start p830`（HEAD `8361735b`）＝full **11232 / 0 / 2 / 11234**。§7 3.5 で第828 を ARCHIVE へ。**④ §2 H ⑷**（譜ごとに違う調の行末 courtesy）。
+- **LP 双子で測った**（Lab `sessions/p830/ck`・`transpose d` の譜と実音の譜）: a＝C→G＋3/4＝下の譜の拍子が LP より **2.2 左**（自分の 1 シャープの後に立つ・LP は上の 3 シャープの後）／b＝A→G over G→F＝下の譜のフラットが 0.78 左（自分のナチュラルの後・LP は上の 2 ナチュラルの後の調号列）・拍子 0.84 左。LP は `Break_align_engraver` を Score に置き（engraver-init.ly:769）、記号ごとに 1 つの `BreakAlignGroup` へ全譜の grob を集める（break-align-engraver.cc:141-163）＝**取消・調号・拍子が譜をまたいだ列**。
+- **直した**: `SpacingRules.LineEndCourtesy`＝3 列（各列の幅は全譜の最大・列間は space-alist）＋右端。各譜の変化は `KeyChangeParts` で walk を取消と調号に割る（描画の walk そのもの）。予約（`LineEndCourtesyWidth`）・譜線の右端（`StaffRightEdges`）・描画（`DrawKeySignatureChangeInColumns`・拍子）が 1 つの答えを読む。`KeyCourtesySuffixWidth`／`TimeCourtesySuffixWidth`／`KeyCourtesyOpeningGap`／`KeyCourtesyClosingSymbol` を消した。双子 a は 44 字形が 0.009 内・b は 1 字形を除いて一致。
+- ★ **見つけた別件（未着手・承認待ち）: フラットの調号が LP より 0.117 左に描かれる**（行頭も行末も・1 譜でも・`sessions/p830/ck/dflat`・`dbes`）。フラットの字形の箱は左 −0.12＝LP は列の左端に調号の**インク**を揃え、Lily# は**原点**を揃えている。列の幅と後続（拍子・音符）は LP と一致＝描く位置だけ。直すと全てのフラット調の本の調号が 0.12 右へ動く（snapshot 多数）。
+- 網 `LineEndCourtesyColumnTests`（拍子が 1 列・LP の小節線から 5.78・取消が 1 列・下の譜のフラットが調号列）。毒 3 本が全部赤。掃き 998 冊 1199 svg で差 0（コーパスに該当する本が無い）。
+
+★ `-End p830 -DiffBase 8361735b2`（`end.log`）＝full **11234 / 0 / 2 / 11236**・門 全 OK。棚卸し: magic 8 点減（消した 2 関数の 0.0 と旧 reservation の式・うち Red 6）・APPROX は行番号だけ。7.5: Core `+` 179・`-` 213 行・REF は新しい札に break-align-engraver.cc／engraver-init.ly・OWN 0。7.6: 意味は LP（Score の Break_align_engraver）。7.7: フラットの調号の 0.117（上・別件）。commit `4fad17b84`＋docs。push はユーザー。
+判定: §2 H ⑷ は閉じた。次は**フラットの調号の位置（承認が要る＝snapshot 多数）**か ⑤ §2 H ⑴、①② は文法の承認待ち、P6 はユーザー判断。(a) フラットは今便の計器（`sessions/p830/ck`）の上に立つ／(b) 会話は 4 便ぶん・まだ取り違えは無い／(c) ⇒ **この会話で続けてよい**（`-Start p831` から）。
+## 以下は第829セッションの経緯
+
 ### 1.1 第829セッション（2026-10-05・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。`-Start p829`（HEAD `9fb186af`）＝full **11228 / 0 / 2 / 11230**。§7 3.5 で第827 を ARCHIVE へ。①② は文法の承認待ち＝**③ §2 D に着手**（第814 の決定「成功の見込みが高ければ作り直しに着手」）。
@@ -134,16 +146,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 ★ `-End p829 -DiffBase 9fb186afb`（`end.log`）＝full **11232 / 0 / 2 / 11234**・門 全 OK。棚卸し: APPROXIMATIONS 2 点減（`InterSystemPairMinimum` の divergence ⑴⑶ の札＝呼び手が 1 つになって消えた）・crop の札は書き直し（LILYSHARP-OWN, DECLARED のまま）・magic は行番号だけ。7.5: Core `+` 109・`-` 299 行・OWN は crop 1 本に。7.6: 意味は LP（page-breaking の鎖・one-page-breaking.cc）・crop だけ Lily# 独自。7.7: perf 未測定（上）。commit `5a36dedf5`＋docs。push はユーザー。
 判定: §2 D は閉じた。次は第814 末の決定 ④ §2 H ⑷（譜ごとに違う調の行末 courtesy・まず LP 双子）か ⑤ §2 H ⑴、①② は文法の承認待ち、P6 はユーザー判断。(a) 今便の文脈は使わない／(b) 会話は 3 便ぶん・まだ取り違えは無い／(c) 別の島 ⇒ **この会話で続けてよい**（`-Start p830` から）。
-## 以下は第828セッションの経緯
-
-### 1.1 第828セッション（2026-10-05・YT-DELL2）
-
-同じ会話の続き。ユーザー「すぐ実装できる訓練用の機能は全部できた？」→ 10-02 提案の残りを洗い、「価値が無い・代替があるなら作らない」（ユーザー）で振り分けた: `--batch` の行ごとの `--set`＝**作らない**（生成する `.lys` に `paper { }`／`layout { }` を書けば同じ）・boxes の音高／音価／声部＝**作らない**（生成器の `.notes` と `pos` で突き合わせられる）・黒玉より短い加線＝**作らない**（提案書の 1.3 は 0.0016 相当・今の下限で 1.307）・`minimumNoteDistance`／`measureMinimumWidth` は第818〜821 が見送り済み（LP に無い）。
-- **作ったのは 1 つ＝boxes の `staff` を音符にぶら下がる記号にも**（提案書の「要るのは 4 つ」の 4 つ目が欠けていた）。fixture 278 冊の census（Lab `sessions/p828/boxes`）で articulation・fermata・ornament・dynamics・tuplet／tupletBracket・arpeggio・fingering・figuredBass・ottava・tabTechnique・text が全部 −1 だった。13 の描画ループの頭で `gc.Staff(x.StaffIndex)`（SVG／PNG／PDF の `Staff` は no-op＝絵は動かない）。残る −1 は五線に属さないもの（歌詞・コードネーム・mark・tempo・小節番号・題・volta・span bar）と pedal（`PedalBracketLayout` が段を持たない＝要望が出たら）。
-- 網 `BoxesTests.WhatHangsOnANote_NamesItsStaff`（2 段・下の段の強弱と accent と運指は 1）。毒 1 本（強弱のスコープを外す→1 赤）。文書: CLI_REFERENCE（`staff` の説明）・CHANGELOG・OMR §6。
-
-★ `-End p828 -DiffBase 2ef342dab`（`end.log`）＝full **11228 / 0 / 2 / 11230**・門 全 OK。棚卸し: 行番号の移動だけ。7.5: Core `+` 26 行・REF 0・OWN 0（描画ループの頭のスコープだけ）。7.6・7.7: 無し。commit `59a647dd4`＋docs。push はユーザー。
-判定: 10-02 の提案は P6 を除いて閉じた。次は P6（ユーザー判断）か第814 末の決定 ①／③。(a) 今便の文脈は使わない／(b) 会話は 2 便ぶん・まだ取り違えは無い／(c) 別の島 ⇒ **この会話で続けてよい**（`-Start p829` から）。
 ## 2. 開いている作業
 
 ### U. ユーザー報告（2026-08-29・第286 起票）← **順に着手。ユーザーが優先度を与えた**
@@ -2246,7 +2248,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   自己監査で自白）。**1.15 は 2 か所独立一致で交差検証済み**。⇒ **0.75 には texture を変えた 2 冊目**
   （行末が `|.` や複縦線／拍子が C や 3/4）**が要る。観測は `courtesy.meter.barline-to-meter` 1 点だけ。**
   モデルに列を足す日はこの 4 つを一緒に見ること（⑵ grouper・⑸ 倍率と同じ「モデル追加が先」型）。
-  ✅ **⑷ の「拍子の右側 0.455」（第131 起票）は閉じていた＝第804 が今の木で測り直した**: 起票の本（Lab `probes/beamskip/courtesy.lys`・今の文法では `c1 | c1 | break`）で行末の縦線 107.93／拍子 108.87／五線の右端 110.92＝LP 107.92／108.86／110.92。texture を変えた 5 冊（3/4・複縦線・調号・調号＋拍子・2/2）と行中 3 冊も SVG の 2 桁で LP の双子と一致（Lab `sessions/p804/courtesy/tex`）＝第206 の right-edge 0.5 と第376 の五線の inset が閉じていた。**その測り直しで出た唯一の食い違い（取消だけの courtesy）は第804 が直した**（§1.1 第804・台帳 `courtesy.key.cancellation-to-line-end` ほか 3 点）。<!-- ledger: courtesy.key.cancellation-to-line-end = 0 -->⑷ に残るのは譜ごとに違う調の群（移調譜）を列で揃えない件だけ＝⑴⑵⑶ と同じ paper column の束。
+  ✅ **⑷ の「拍子の右側 0.455」（第131 起票）は閉じていた＝第804 が今の木で測り直した**: 起票の本（Lab `probes/beamskip/courtesy.lys`・今の文法では `c1 | c1 | break`）で行末の縦線 107.93／拍子 108.87／五線の右端 110.92＝LP 107.92／108.86／110.92。texture を変えた 5 冊（3/4・複縦線・調号・調号＋拍子・2/2）と行中 3 冊も SVG の 2 桁で LP の双子と一致（Lab `sessions/p804/courtesy/tex`）＝第206 の right-edge 0.5 と第376 の五線の inset が閉じていた。**その測り直しで出た唯一の食い違い（取消だけの courtesy）は第804 が直した**（§1.1 第804・台帳 `courtesy.key.cancellation-to-line-end` ほか 3 点）。<!-- ledger: courtesy.key.cancellation-to-line-end = 0 -->✅ ⑷ の最後（譜ごとに違う調の群を列で揃えない）は**第830 で閉じた**（`SpacingRules.LineEndCourtesy`＝取消・調号・拍子の列を譜をまたいで揃える・LP 双子 2 冊が 0.01 内・Lab `sessions/p830/ck`）。
   ✅ ~~併せて別件の起票: `beam-auto` の 1 段目は LP と Lily# で改行位置が違う（縦線 3 対 5）~~＝**第801 実測: 20 段とも LP と同じ割り**（Lab `sessions/p801/pair-beamauto.log`）。
   同じ段に別の音楽が載るので、**あの本で行末の x を比べてはいけない**。
   ⚠️ ~~ただし**数値の乖離は現状ゼロ**（合成が厳密なので）——着手根拠は点が出た regime だけ~~
