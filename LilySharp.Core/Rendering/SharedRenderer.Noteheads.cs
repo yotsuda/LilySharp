@@ -606,13 +606,19 @@ internal static partial class SharedRenderer
     /// grob's font. A CUE styled head is the only reader of the difference and no
     /// book measures one; ticketed with the default-head regime above.
     /// </para>
+    /// <para>
+    /// <c>NoteHead.scale</c> magnifies either answer by the heads' size, as LilyPond's attachment
+    /// is read from the head's font (exactly 1 at the default; MEASURED against 2.26.0 at
+    /// <c>font-size</c> +1.2 and −0.9, Lab sessions/p827/nh: the hand rule's 0.036 grows with the
+    /// head and no further).
+    /// </para>
     /// </remarks>
     private static double StemAttachYOffset(NoteheadStyle style, bool stemUp, int noteValue) => style switch
     {
         NoteheadStyle.Default when noteValue >= 4 => stemUp ? -StemHeadInset : StemHeadInset,
         NoteheadStyle.Default => 0,
-        _ => -GlyphMetrics.GetNoteheadStemAttachment(style, stemUp, noteValue).Y,
-    };
+        _ => -GlyphMetrics.GetNoteheadStemAttachment(GlyphMetrics.Design20, style, stemUp, noteValue).Y,
+    } * GlyphMetrics.StaffHeadMagnification;
 
     /// <summary>How far a filled round head recesses the stem's start toward the far
     /// end so the join clears the head's slanted corner.</summary>
@@ -1116,6 +1122,11 @@ internal static partial class SharedRenderer
                            ? gc.Source(n.SourcePosition, [chord.SourcePosition])
                            : gc.Source(n.SourcePosition >= 0 ? n.SourcePosition : chord.SourcePosition))
                 using (TodoScope(gc, chord))
+                // Out of the head's own design, as DrawNote draws a single head — a cue chord's
+                // and one under NoteHead.scale (it read the twenty's outline until session 827).
+                using (GrobFontSize.IsReduced(chord)
+                       ? gc.MusicFace(GrobFontSize.DesignOf(chord, SizedGrob.NoteHead))
+                       : NullScope.Instance)
                     gc.DrawNotehead(memberHead, x + headOffsets[i], y, noteFontSize, noteheadColor,
                         GlyphMetrics.GetNoteheadAdvance(chordHeadFont, noteValue),
                         GlyphMetrics.GetNoteheadBBox(chordHeadFont, noteValue).Height);

@@ -388,7 +388,7 @@ internal static class SyntaxFacts
          // a grob's property (`Stem.thickness 1.5`), cut by the entry walker as one key.
          "lineThickness", "StaffLine.thickness", "LedgerLine.thickness", "LedgerLine.lengthFraction",
          "Stem.thickness", "Stem.lengthFraction", "Beam.thickness", "Beam.damping", "Dots.padding", "Accidental.rightPadding",
-         "BarLine.thinThickness", "BarLine.thickThickness"];
+         "NoteHead.scale", "BarLine.thinThickness", "BarLine.thickThickness"];
 
     /// <summary>True when <paramref name="word"/> is a layout key as written — keys are
     /// case-sensitive, like a paper key's (owner's decision 2026-09-27).</summary>

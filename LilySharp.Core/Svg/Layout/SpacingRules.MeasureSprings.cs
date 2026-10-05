@@ -709,7 +709,7 @@ internal static partial class SpacingRules
             return (restBox.Left, restBox.Right);
         }
 
-        var head = GlyphMetrics.GetNoteheadBBox(noteValue);
+        var head = ScaledHeadBBox(item, noteValue);
         // A chord contributes only its MAIN notehead, not the union with reversed
         // (suspended) heads: the aligning grobs (LyricText, TextScript) declare
         // X-align-on-main-noteheads #t, which swaps the note column's extent for

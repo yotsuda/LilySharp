@@ -433,9 +433,10 @@ internal static class ItemSkylineFactory
     private static GlyphMetrics.DesignMetrics? CueFontOf(MusicItem item)
         => SpacingRules.CueFontOf(item);
 
-    /// <summary>The item's head box — the cue font's for a cue note (<see cref="CueFontOf"/>).</summary>
+    /// <summary>The item's head box — the cue font's for a cue note, and either magnified by
+    /// <c>NoteHead.scale</c> (<see cref="SpacingRules.HeadFontOf"/>).</summary>
     private static GlyphMetrics.BBox HeadBox(MusicItem item, int noteValue)
-        => CueFontOf(item) is { } cue
+        => SpacingRules.HeadFontOf(item) is { } cue
             ? GlyphMetrics.GetNoteheadBBox(cue, noteValue)
             : GlyphMetrics.GetNoteheadBBox(noteValue);
 
@@ -762,6 +763,7 @@ internal static class ItemSkylineFactory
 
         int noteValue = SpacingRules.GetNoteValue(item);
         var cueFont = CueFontOf(item);
+        var headFont = SpacingRules.HeadFontOf(item);
         var noteheadBBox = HeadBox(item, noteValue);
         double noteheadLeftX = referenceX - noteheadBBox.CenterX;
         double noteheadWidth = noteheadBBox.Width;
@@ -776,7 +778,7 @@ internal static class ItemSkylineFactory
             // diverged) mispredicted the skyline.
             // LILYPOND-REF: lily/stem.cc:606-760 calc_positioning_done.
             double[] headOffsets = ChordHeadPositioning.CalculateOffsets(
-                chord.Notes, chord.StemUp, noteValue, cueFont);
+                chord.Notes, chord.StemUp, noteValue, headFont);
 
             for (int i = 0; i < chord.Notes.Length; i++)
             {
@@ -788,7 +790,7 @@ internal static class ItemSkylineFactory
                 maxNoteheadRightX = Math.Max(maxNoteheadRightX, thisRightX);
             }
 
-            AddAccidentals(parts, chord, noteheadLeftX, staffY, headOffsets, noteValue, cueFont);
+            AddAccidentals(parts, chord, noteheadLeftX, staffY, headOffsets, noteValue, cueFont, headFont);
             AddArpeggio(parts, chord, noteheadLeftX, staffY);
         }
         else if (item is RestItem { PureBeamShift: not 0.0 } beamedRest)
@@ -924,11 +926,11 @@ internal static class ItemSkylineFactory
                     noteheadLeftX, noteheadLeftX + noteheadWidth));
 
             if (item is NoteItem note)
-                AddAccidental(parts, note, noteheadLeftX, staffY, cueFont);
+                AddAccidental(parts, note, noteheadLeftX, staffY, cueFont, headFont);
         }
 
-        AddStem(parts, item, noteheadLeftX, staffY, cueFont);
-        AddFlag(parts, item, noteheadLeftX, staffY, noteValue, cueFont);
+        AddStem(parts, item, noteheadLeftX, staffY, headFont);
+        AddFlag(parts, item, noteheadLeftX, staffY, noteValue, cueFont, headFont);
         AddDots(parts, item, noteheadLeftX, maxNoteheadRightX, staffY, noteValue);
         AddSemiTies(parts, item, noteheadLeftX, staffY, noteValue);
 
@@ -1064,7 +1066,7 @@ internal static class ItemSkylineFactory
     /// </remarks>
     private static void AddFlag(List<ColumnPart> parts, MusicItem item,
                                 double noteheadLeftX, double staffY, int noteValue,
-                                GlyphMetrics.DesignMetrics? font = null)
+                                GlyphMetrics.DesignMetrics? font = null, GlyphMetrics.DesignMetrics? headFont = null)
     {
         // A flag is the STEM's, indifferent to how many heads hang on it (LilyPond
         // makes one Flag per Stem), so a chord's flag boxes exactly like a note's,
@@ -1154,7 +1156,7 @@ internal static class ItemSkylineFactory
         // MEASURED: routing both directions through the one house took it to
         //   +0.100000, so all three flag points now read ONE number.
         double stemX = LayoutUtilities.StemX(noteheadLeftX, stemUp, noteValue,
-            LayoutUtilities.NoteheadStyleOf(item), font);
+            LayoutUtilities.NoteheadStyleOf(item), headFont);
 
         var (flagYMin, flagYMax) = FlagInkBand(stemEndY, stemUp, flagBBox);
         parts.Add(ColumnPart.Ink(flagYMin, flagYMax, stemX, stemX + flagBBox.Width));
@@ -1270,7 +1272,7 @@ internal static class ItemSkylineFactory
     /// </remarks>
     private static void AddAccidental(List<ColumnPart> parts, NoteItem note,
                                       double noteheadLeftX, double staffY,
-                                      GlyphMetrics.DesignMetrics? font = null)
+                                      GlyphMetrics.DesignMetrics? font = null, GlyphMetrics.DesignMetrics? headFont = null)
     {
         if (note.Accidental == null)
             return;
@@ -1282,7 +1284,7 @@ internal static class ItemSkylineFactory
         if (offset is null)
         {
             var placement = new AccidentalPlacement();
-            offset = placement.CalculateSinglePosition(note, font, font)?.XOffset;
+            offset = placement.CalculateSinglePosition(note, font, headFont)?.XOffset;
         }
         if (offset is not { } layoutX)
             return;
@@ -1301,9 +1303,9 @@ internal static class ItemSkylineFactory
     private static void AddAccidentals(List<ColumnPart> parts, ChordItem chord,
                                        double noteheadLeftX, double staffY,
                                        double[] headOffsets, int noteValue,
-                                       GlyphMetrics.DesignMetrics? font = null)
+                                       GlyphMetrics.DesignMetrics? font = null, GlyphMetrics.DesignMetrics? headFont = null)
     {
-        foreach (var (accidental, position, offset) in ChordAccidentalXs(chord, headOffsets, font))
+        foreach (var (accidental, position, offset) in ChordAccidentalXs(chord, headOffsets, font, headFont))
         {
             var accBBox = font is { } accFont
                 ? GlyphMetrics.GetAccidentalBBox(accFont, accidental)
@@ -1323,7 +1325,8 @@ internal static class ItemSkylineFactory
     /// <c>position_apes</c> solve, which is the same thing when it stands alone.
     /// </summary>
     private static IEnumerable<(string Accidental, int StaffPosition, double X)> ChordAccidentalXs(
-        ChordItem chord, double[] headOffsets, GlyphMetrics.DesignMetrics? font = null)
+        ChordItem chord, double[] headOffsets, GlyphMetrics.DesignMetrics? font = null,
+        GlyphMetrics.DesignMetrics? headFont = null)
     {
         if (chord.HasPackedAccidentals)
         {
@@ -1335,7 +1338,7 @@ internal static class ItemSkylineFactory
 
         var placement = new AccidentalPlacement();
         foreach (var layout in placement.CalculatePositions(chord.Notes, headOffsets,
-                     font, font, stem: AccidentalStem.Of(chord, chord.StemUp, font)))
+                     font, headFont, stem: AccidentalStem.Of(chord, chord.StemUp, headFont)))
             yield return (layout.Accidental, layout.StaffPosition, layout.XOffset);
     }
 

@@ -221,7 +221,8 @@ internal sealed class ElementCoordinator
                 if (width > maxWidth) maxWidth = width;
             }
         }
-        return maxWidth;
+        // The heads' size (NoteHead.scale) on the full-size advances above.
+        return maxWidth * GlyphMetrics.StaffHeadMagnification;
     }
 
     /// <summary>
@@ -1992,8 +1993,7 @@ internal sealed class ElementCoordinator
         int noteValue = GlyphMetrics.NoteValueOf(chord.BaseDuration);
         // The head's own FONT, not the twenty's box times a scale — see ChordHeadPositioning.
         var offsets = ChordHeadPositioning.CalculateOffsets(
-            chord.Notes, chord.StemUp, noteValue,
-            chord.IsCue ? EngravingDefaults.CueFont : null);
+            chord.Notes, chord.StemUp, noteValue, SpacingRules.HeadFontOf(chord));
         for (int i = 0; i < chord.Notes.Length; i++)
             if (chord.Notes[i].StaffPosition == staffPosition)
                 return offsets[i];
@@ -2055,8 +2055,7 @@ internal sealed class ElementCoordinator
             // The OFFSETS come out of the cue's own font, as headBBox above does since session
             // 656 (BowHeadBox) — a cue chord's tie column reads one size.
             var chordOffsets = ChordHeadPositioning.CalculateOffsets(
-                chord.Notes, chord.StemUp, noteValue,
-                chord.IsCue ? EngravingDefaults.CueFont : null);
+                chord.Notes, chord.StemUp, noteValue, SpacingRules.HeadFontOf(chord));
             for (int i = 0; i < chord.Notes.Length; i++)
             {
                 positions.Add(chord.Notes[i].StaffPosition);
@@ -3319,7 +3318,7 @@ internal sealed class ElementCoordinator
             // A grace column — the start of a grace slur (SlurItem.StartGraceGroup): its head
             // is set at general-grace-settings' NoteHead font-size −3, as the renderer draws it.
             ? GrobFontSize.FontOf(item, SizedGrob.NoteHead)
-            : SpacingRules.CueFontOf(item);
+            : SpacingRules.HeadFontOf(item);
 
     /// <summary>
     /// Device-Y of the slur attachment when the endpoint note's stem joins a beam — LP's
@@ -4487,7 +4486,7 @@ internal sealed class ElementCoordinator
         // starts AT this base with no further lift of its own.
         // LILYPOND-REF: lily/slur-scoring.cc:556-557 get_base_attachments —
         //   y = head->extent(Y)[dir]; y += dir * 0.5 * staff_space.
-        double slurOffset = GlyphMetrics.NoteheadBlack.Top + 0.5; // 0.545 + 0.5 = 1.045 ss
+        double slurOffset = GlyphMetrics.StaffHeadFont.NoteheadBlack.Top + 0.5; // 0.545 + 0.5 = 1.045 ss
 
         // The note-collision shift of a voice's column — the table the beams stand their stems
         // on (ApplyVoiceCollisionShifts) and the renderer draws the heads by. A slur's bound is

@@ -118,6 +118,19 @@ public sealed record EngravingStyle
     /// parameters (<see cref="CurrentBeamParameters"/>), which the beam memo keys by reference.</remarks>
     public double BeamDamping { get; init; } = 1.0;
 
+    /// <summary>The note heads' size, a factor — LilyPond's <c>NoteHead.font-size</c> as the
+    /// magnification it asks for (<see cref="NoteHeadFontSizeStep"/>).</summary>
+    /// <remarks>LILYPOND-REF: scm/music-functions.scm magnification-&gt;font-size —
+    /// <c>6 × log2 (magnification)</c>; scm/define-grobs.scm NoteHead states no font-size (0). A
+    /// grace states its own (−3, scm/music-functions.scm general-grace-settings), which replaces
+    /// this one there; a cue's context fontSize adds to it (lily/font-size-engraver.cc:47-62
+    /// Font_size_engraver::acknowledge_font).</remarks>
+    public double NoteHeadScale { get; init; } = 1.0;
+
+    /// <summary><see cref="NoteHeadScale"/> as LilyPond's <c>font-size</c>, in sixths of an
+    /// octave — exactly 0 at the default.</summary>
+    public double NoteHeadFontSizeStep => NoteHeadScale == 1.0 ? 0 : 6 * System.Math.Log2(NoteHeadScale);
+
     /// <summary><c>BarLine.hair-thickness</c>, in staff line thicknesses.</summary>
     /// <remarks>LILYPOND-REF: scm/bar-line.scm:227-238 make-simple-bar-line reads it times the
     /// paper's line-thickness; scm/define-grobs.scm BarLine (hair-thickness . 1.9).</remarks>

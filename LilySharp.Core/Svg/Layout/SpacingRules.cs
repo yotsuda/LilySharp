@@ -1327,7 +1327,7 @@ internal static partial class SpacingRules
 
         // Get notehead metrics (note value determines which notehead glyph)
         int noteValue = GetNoteValue(item);
-        var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
+        var noteheadBBox = ScaledHeadBBox(item, noteValue);
 
         // A notehead is drawn glyph-left-aligned at its column (the same convention the
         // rest branch below relies on, and the one LilyPond uses — a note column's
@@ -1402,8 +1402,7 @@ internal static partial class SpacingRules
                 // A cue note's accidental is the cue font's, placed against the cue head —
                 // the solve the renderer draws by (MEASURED, Lab sessions/p691/cuespace b8:
                 // `| cue { fis4 …` stood 0.407 further from the bar line than LilyPond's).
-                var cue = CueFontOf(note);
-                x = placement.CalculateSinglePosition(note, cue, cue)?.XOffset;
+                x = placement.CalculateSinglePosition(note, CueFontOf(note), HeadFontOf(note))?.XOffset;
             }
             if (x is { } offset && offset < 0)
                 extent = Math.Max(extent, -offset);
@@ -1437,15 +1436,40 @@ internal static partial class SpacingRules
     internal static GlyphMetrics.DesignMetrics? CueFontOf(MusicItem item)
         => item is NoteItem { IsCue: true } or ChordItem { IsCue: true } ? EngravingDefaults.CueFont : null;
 
+    /// <summary>The font a note's or chord's HEADS are read from — the cue font, magnified
+    /// again by <c>NoteHead.scale</c> (<see cref="EngravingStyle.NoteHeadFontSizeStep"/>), and
+    /// null (the twenty) at the staff's own size. <see cref="CueFontOf"/> stays the accidentals',
+    /// which the head's size does not reach.</summary>
+    /// <remarks>LILYPOND-REF: lily/font-size-engraver.cc:47-62 Font_size_engraver::acknowledge_font —
+    /// the context's fontSize (a cue's −4) is added to the NoteHead's own font-size.</remarks>
+    internal static GlyphMetrics.DesignMetrics? HeadFontOf(MusicItem item)
+    {
+        double step = EngravingStyle.Current.NoteHeadFontSizeStep;
+        if (step == 0 || item.GraceTime || item is not (NoteItem or ChordItem))
+            return CueFontOf(item);
+        return GlyphMetrics.AtFontSize(step + (CueFontOf(item) is null ? 0 : EngravingDefaults.CueFontSizeStep));
+    }
+
+    /// <summary>The head box of a reader that has always measured the twenty, cue or not —
+    /// still the twenty's at the default, <see cref="HeadFontOf"/>'s under <c>NoteHead.scale</c>.</summary>
+    /// <remarks>⚠️ A CUE head here reads the twenty's box at the default, an older gap these
+    /// readers carry (the bar line's reach, the lyric's main-head extent, the column's left
+    /// extent); the head's scale is not what closes it.</remarks>
+    internal static GlyphMetrics.BBox ScaledHeadBBox(MusicItem item, int noteValue)
+        => EngravingStyle.Current.NoteHeadFontSizeStep == 0
+            ? GlyphMetrics.GetNoteheadBBox(noteValue)
+            : GlyphMetrics.GetNoteheadBBox(HeadFontOf(item) ?? GlyphMetrics.Design20, noteValue);
+
     internal static double ChordSupportLeftReach(ChordItem chord)
     {
         int noteValue = GetNoteValue(chord);
         // A cue chord's heads and accidentals are the cue font's (CueFontOf).
         var cue = CueFontOf(chord);
+        var head = HeadFontOf(chord);
         // Within-chord seconds: a head reversed to the LEFT of the stem (stem down)
         // extends the column's left ink even without accidentals.
         double[] headOffsets = ChordHeadPositioning.CalculateOffsets(
-            chord.Notes, chord.StemUp, noteValue, cue);
+            chord.Notes, chord.StemUp, noteValue, head);
         double reach = 0;
         // The reversed head sits `minHeadOffset` (negative) from the column, so its
         // leftward reach is that offset's magnitude — measured from the column, not from
@@ -1466,7 +1490,7 @@ internal static partial class SpacingRules
         {
             var placement = new AccidentalPlacement();
             var layouts = placement.CalculatePositions(chord.Notes, headOffsets,
-                cue, cue, stem: AccidentalStem.Of(chord, chord.StemUp, cue));
+                cue, head, stem: AccidentalStem.Of(chord, chord.StemUp, head));
             if (layouts.Length > 0)
                 // XOffset is negative, representing distance to the left of notehead
                 leftmost = layouts.Min(l => l.XOffset);

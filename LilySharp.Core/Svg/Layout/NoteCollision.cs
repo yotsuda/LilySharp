@@ -626,7 +626,7 @@ internal sealed class NoteCollision
     /// </remarks>
     private static double HeadWidth(int noteValue) => noteValue switch
     {
-        <= 0 => EngravingDefaults.NoteheadDoubleWholeWidth, // breve or longer
+        <= 0 => EngravingDefaults.NoteheadDoubleWholeWidth * GlyphMetrics.StaffHeadMagnification, // breve or longer
         _ => GlyphMetrics.GetNoteheadBBox(noteValue).Width, // whole / half / black ink
     };
 

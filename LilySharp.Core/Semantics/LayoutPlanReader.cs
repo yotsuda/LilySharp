@@ -69,6 +69,7 @@ internal static class LayoutPlanReader
             ["Beam.damping"] = ("1.0", "2"),
             ["Dots.padding"] = ("0.45", "0.6"),
             ["Accidental.rightPadding"] = ("0.15", "0.25"),
+            ["NoteHead.scale"] = ("1.0", "1.1"),
             ["BarLine.thinThickness"] = ("1.9", "2.5"),
             ["BarLine.thickThickness"] = ("6.0", "7"),
         };
@@ -295,6 +296,7 @@ internal static class LayoutPlanReader
                 "Beam.damping" => ReadStyle(plan, entry, span, found, (s, v) => s with { BeamDamping = v[0] }),
                 "Dots.padding" => ReadStyle(plan, entry, span, found, (s, v) => s with { DotPadding = v[0] }),
                 "Accidental.rightPadding" => ReadStyle(plan, entry, span, found, (s, v) => s with { AccidentalRightPadding = v[0] }),
+                "NoteHead.scale" => ReadStyle(plan, entry, span, found, (s, v) => s with { NoteHeadScale = v[0] }),
                 "BarLine.thinThickness" => ReadStyle(plan, entry, span, found, (s, v) => s with { BarLineHairThickness = v[0] }),
                 "BarLine.thickThickness" => ReadStyle(plan, entry, span, found, (s, v) => s with { BarLineThickThickness = v[0] }),
                 // ⚠️ A key published in SyntaxFacts.LayoutKeyVocabulary with no arm here

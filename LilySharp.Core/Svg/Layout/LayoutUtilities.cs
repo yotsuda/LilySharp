@@ -106,7 +106,7 @@ internal static class LayoutUtilities
     public static double StemAttachX(bool up, int noteValue, NoteheadStyle style,
         GlyphMetrics.DesignMetrics? font) =>
         GlyphMetrics.GetNoteheadStemAttachment(
-            font ?? GlyphMetrics.Design20, style, up, noteValue).X
+            font ?? GlyphMetrics.StaffHeadFont, style, up, noteValue).X
         + (up ? -1 : 1) * EngravingDefaults.StemThickness / 2;
 
     /// <summary>The head STYLE of the item a stem attaches to — Default for anything

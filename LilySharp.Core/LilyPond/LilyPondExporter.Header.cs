@@ -87,6 +87,7 @@ public sealed partial class LilyPondExporter
         Line(s.DotPadding is not null, "DotColumn.padding = #" + N(s.DotPadding ?? 0));
         Line(s.AccidentalRightPadding != d.AccidentalRightPadding,
             "AccidentalPlacement.right-padding = #" + N(s.AccidentalRightPadding));
+        Line(s.NoteHeadScale != d.NoteHeadScale, "NoteHead.font-size = #(magnification->font-size " + N(s.NoteHeadScale) + ")");
         Line(s.BarLineHairThickness != d.BarLineHairThickness, "BarLine.hair-thickness = #" + N(s.BarLineHairThickness));
         Line(s.BarLineThickThickness != d.BarLineThickThickness, "BarLine.thick-thickness = #" + N(s.BarLineThickThickness));
         return lines.ToString();

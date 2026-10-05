@@ -134,9 +134,12 @@ public sealed record BeamGroup
     /// beam, else 1.</summary>
     public double LengthFraction => IsCue ? Svg.EngravingDefaults.CueBeamLengthFraction : 1.0;
 
-    /// <summary>The font the stems' heads are read from — the cue font for a cue beam, null
-    /// (the staff's own twenty) otherwise.</summary>
-    internal Layout.GlyphMetrics.DesignMetrics? HeadFont =>IsCue ? Svg.EngravingDefaults.CueFont : null;
+    /// <summary>The font the stems' heads are read from — the cue font for a cue beam, either
+    /// magnified by <c>NoteHead.scale</c>, null (the staff's own twenty) otherwise
+    /// (<see cref="Layout.SpacingRules.HeadFontOf"/>, asked of the first member as
+    /// <see cref="IsCue"/> is).</summary>
+    internal Layout.GlyphMetrics.DesignMetrics? HeadFont
+        => Members.Length > 0 ? Layout.SpacingRules.HeadFontOf(ItemOf(0)) : null;
 
     /// <summary>The distance between this beam's stacked lines (staff spaces) —
     /// <see cref="Svg.EngravingDefaults.BeamTranslationOf"/> with this beam's thickness and

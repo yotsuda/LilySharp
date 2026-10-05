@@ -46,7 +46,7 @@ public class EngravingStyleTests
     {
         var s = StyleOf("lineThickness=0.15", "StaffLine.thickness=1.2", "LedgerLine.thickness=2,0.05",
             "LedgerLine.lengthFraction=0.4", "Stem.thickness=2", "Stem.lengthFraction=1.2", "Beam.thickness=0.6",
-            "Beam.damping=0", "Dots.padding=0.6", "Accidental.rightPadding=0",
+            "Beam.damping=0", "Dots.padding=0.6", "Accidental.rightPadding=0", "NoteHead.scale=1.2599210498948732",
             "BarLine.thinThickness=3", "BarLine.thickThickness=7");
         Assert.Equal(0.15, s.LineThickness);
         Assert.Equal(1.2, s.StaffSymbolThickness);
@@ -60,6 +60,8 @@ public class EngravingStyleTests
         Assert.Equal(0.6, s.DotPadding);
         Assert.Equal(0, s.AccidentalRightPadding);
         Assert.Null(EngravingStyle.Default.DotPadding);   // one dot's own width
+        Assert.Equal(2, s.NoteHeadFontSizeStep, 12);       // 2^(2/6): LilyPond's font-size 2
+        Assert.Equal(0, EngravingStyle.Default.NoteHeadFontSizeStep);
         Assert.Equal(3, s.BarLineHairThickness);
         Assert.Equal(7, s.BarLineThickThickness);
         Assert.Equal(EngravingStyle.Default, StyleOf("spacingIncrement=1.6"));
@@ -77,6 +79,8 @@ public class EngravingStyleTests
     [InlineData("Beam.damping=-1")]
     [InlineData("Dots.padding=-0.1")]
     [InlineData("Accidental.rightPadding=x")]
+    [InlineData("NoteHead.scale=0")]
+    [InlineData("NoteHead.scale=-1.1")]
     [InlineData("Stem.length=3.5")]
     public void AValueThatDoesNotRead_IsRefused(string setting)
     {
@@ -328,6 +332,130 @@ public class EngravingStyleTests
         Near(columns, [.. heads.Distinct().Select(h => h - heads[0])]);
     }
 
+    private const string HeadBook = """
+        paper { raggedRight }
+        octave absolute
+        part m { clef treble
+          section A { c'1 | d'2. g''4 | <c' d' f'>4 <f'' g''>8 a'' e'4. f'8 | b4~ b8 c''( d'' e'') a4 | }
+        }
+        form main { A }
+        score main { staff m }
+        """;
+
+    // Every music glyph, whatever face and size it is drawn at: (char, x, font-size, face or "").
+    private static (char Glyph, double X, string Size, string Face)[] Glyphs(string svg) =>
+        [.. Regex.Matches(svg, "<text class=\"music\"(?: font-family=\"([^\"]*)\")? x=\"([-\\d.]+)\" y=\"[-\\d.]+\" font-size=\"([\\d.]+)\"[^>]*>(.)</text>")
+            .Select(m => (m.Groups[4].Value[0], double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture),
+                m.Groups[3].Value, m.Groups[1].Value))];
+
+    /// <summary>
+    /// <c>NoteHead.scale</c> against LilyPond 2.26.0's <c>\override NoteHead.font-size</c> (Lab
+    /// sessions/p827/nh, the <c>lysc ly --pin-fonts</c> twin, ragged right) at 0, +1.2 and −0.9 —
+    /// <c>NoteHead.scale</c> 2^(1.2/6) and 2^(−0.9/6): the heads are drawn at that size out of the
+    /// design LilyPond picks (the 23 for +1.2, the 18 for −0.9), and the columns, which the wider
+    /// heads push apart, the ledger lines, which reach a quarter of a head past it, and the stems,
+    /// which stand on its attachment point, are LilyPond's.
+    /// </summary>
+    [Theory]
+    [InlineData("1", "4.00", "", new[] { 0.00, 8.01, 13.94, 18.19, 19.43, 22.14, 23.38, 25.89, 28.14, 32.55, 36.25, 39.95, 42.70, 45.21, 47.71, 49.79 },
+        new[] { 1.956, 3.196 }, new[] { 8.07, 14.00, 19.49, 23.45, 25.95, 28.21, 32.61, 36.31, 40.01, 42.77, 45.27, 47.78, 51.03 })]
+    [InlineData("1.148698", "4.59", "Emmentaler-23", new[] { 0.00, 8.31, 14.45, 18.89, 20.33, 23.04, 24.47, 27.17, 29.62, 34.22, 38.12, 42.01, 44.96, 47.66, 50.36, 52.63 },
+        new[] { 2.249, 3.683 }, new[] { 8.38, 14.51, 20.39, 24.54, 27.24, 29.69, 34.29, 38.18, 42.08, 45.03, 47.73, 50.43, 54.07 })]
+    [InlineData("0.901250", "3.60", "Emmentaler-18", new[] { 0.00, 7.80, 13.60, 17.72, 18.83, 21.54, 22.65, 25.03, 27.15, 31.43, 35.00, 38.57, 41.19, 43.57, 45.94, 47.89 },
+        new[] { 1.761, 2.870 }, new[] { 7.87, 13.66, 18.89, 22.72, 25.09, 27.22, 31.49, 35.06, 38.64, 41.26, 43.63, 46.01, 49.00 })]
+    public void TheNoteHeadScale_IsLilyPonds(string scale, string size, string face, double[] columns, double[] ledgerWidths, double[] stems)
+    {
+        // A default render first, on this thread: nothing read at the first style may stay.
+        Svg(HeadBook);
+        string svg = Svg(HeadBook, "NoteHead.scale=" + scale);
+        // Emmentaler: the black, half and whole heads.
+        var heads = Glyphs(svg).Where(g => g.Glyph is '' or '' or '').ToArray();
+        Assert.Equal(17, heads.Length);
+        Assert.All(heads, h => Assert.Equal(size, h.Size));
+        Assert.All(heads, h => Assert.StartsWith(face, h.Face, StringComparison.Ordinal));
+        double[] xs = [.. heads.Select(h => h.X).Distinct().Order()];
+        Assert.Equal(columns.Length, xs.Length);
+        for (int i = 0; i < xs.Length; i++)
+            Assert.InRange(xs[i] - xs[0] - columns[i], -0.011, 0.011);   // the svg's two decimals
+        // Each drawn ledger is one of LilyPond's lengths (its two ends rounded apart: ±0.011), and
+        // each of LilyPond's is drawn.
+        double[] ledgers = LedgerLengths(svg);
+        Assert.All(ledgers, w => Assert.Contains(ledgerWidths, lp => Math.Abs(w - lp) <= 0.011));
+        Assert.All(ledgerWidths, lp => Assert.Contains(ledgers, w => Math.Abs(w - lp) <= 0.011));
+        // Each stem stands on its head's attachment point, which the head's font answers.
+        double[] stemXs = [.. Regex.Matches(svg, "<line x1=\"([-\\d.]+)\" y1=\"[-\\d.]+\" x2=\"\\1\"[^>]*stroke-width=\"0.130\"")
+            .Select(m => double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture)).Order()];
+        Assert.Equal(stems.Length, stemXs.Length);
+        for (int i = 0; i < stemXs.Length; i++)
+            Assert.InRange(stemXs[i] - xs[0] - stems[i], -0.011, 0.011);
+    }
+
+    /// <summary>
+    /// The whole line's natural length (ragged right) under <c>NoteHead.scale</c> against the twin
+    /// (Lab sessions/p827/nh, book c): ties, a slur, scripts, dynamics, a tuplet, two voices and a
+    /// dotted chord — every column whose readers never named a font, and read the twenty's head
+    /// until the font-less overloads answered the staff's (<c>GlyphMetrics.StaffHeadFont</c>; 0.1
+    /// short at +1.2 without it).
+    /// </summary>
+    [Theory]
+    [InlineData("1", 72.658)]
+    [InlineData("1.148698", 76.475)]
+    [InlineData("0.901250", 70.114)]
+    public void TheNoteHeadScale_LineIsLilyPonds(string scale, double lilyPond)
+    {
+        const string book = """
+            paper { raggedRight }
+            octave absolute
+            part m { clef treble
+              section A { <e' g'>4~ <e' g'>8 a'8@staccato b'4@accent c''8( b' | a'4)@p g'4@f tuplet 3/2 { f'8 e' d' } c'4@fermata | voice { e'4 f' g' a' } { e'4 e' g'8 f' e'4 } | <f' g'>2.. r8 | }
+            }
+            form main { A }
+            score main { staff m }
+            """;
+        var line = Regex.Match(Svg(book, "NoteHead.scale=" + scale),
+            "<line x1=\"([-\\d.]+)\" y1=\"[-\\d.]+\" x2=\"([-\\d.]+)\"[^>]*stroke-width=\"0.100\"");
+        double length = double.Parse(line.Groups[2].Value, CultureInfo.InvariantCulture)
+            - double.Parse(line.Groups[1].Value, CultureInfo.InvariantCulture);
+        Assert.InRange(length - lilyPond, -0.011, 0.011);
+    }
+
+    /// <summary>
+    /// What <c>NoteHead.scale</c> does not reach, as LilyPond's <c>\override NoteHead.font-size</c>
+    /// in the <c>\Score</c> context does not (the twin, Lab sessions/p827/nh): a grace head states
+    /// its own −3, which replaces it (2.83 either way); the accidental, the dot, the flag and the
+    /// clef keep their size; a cue head adds the two (−4 + the scale's step).
+    /// </summary>
+    [Fact]
+    public void TheNoteHeadScale_ReachesTheHeadsOnly()
+    {
+        const string book = """
+            octave absolute
+            part m { clef treble
+              section A { grace { d''16 } c''4 fis'8. g'16 cue { a'4 } r4 | }
+            }
+            form main { A }
+            score main { staff m }
+            """;
+        var plain = Glyphs(Svg(book));
+        var set = Glyphs(Svg(book, "NoteHead.scale=1.148698"));
+        Assert.Equal(plain.Length, set.Length);
+        int heads = 0;
+        for (int i = 0; i < plain.Length; i++)
+        {
+            Assert.Equal(plain[i].Glyph, set[i].Glyph);
+            bool head = plain[i].Glyph is '' or '' or '';
+            if (!head || plain[i].Size == "2.83")             // not a head, or the grace's
+            {
+                Assert.Equal(plain[i].Size, set[i].Size);
+                continue;
+            }
+            heads++;
+            string expected = plain[i].Size == "4.00" ? "4.59" : "2.89";   // magstep(1.2), magstep(1.2 − 4)
+            Assert.Equal(expected, set[i].Size);
+        }
+        Assert.Equal(4, heads);
+    }
+
     /// <summary>
     /// Two voices' accidentals on one column are packed at COLLECT time
     /// (<c>StaffAccidentalColumns</c>), which holds no style of its own: the collector opens the
@@ -395,7 +523,7 @@ public class EngravingStyleTests
         string Twin(string layout) => new Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(
             layout + "part m { }\nsection A { m { c'1 | } }\nform main { A }\nscore main { staff m }\n"));
         string styled = Twin("layout { lineThickness 0.15  StaffLine.thickness 1.2  LedgerLine.thickness 2 0.1  "
-            + "LedgerLine.lengthFraction 0.4  Stem.thickness 2 Stem.lengthFraction 1.2  Beam.thickness 0.6  Beam.damping 3  Dots.padding 0.7  Accidental.rightPadding 0.4  BarLine.thinThickness 3  BarLine.thickThickness 7 }\n");
+            + "LedgerLine.lengthFraction 0.4  Stem.thickness 2 Stem.lengthFraction 1.2  Beam.thickness 0.6  Beam.damping 3  Dots.padding 0.7  Accidental.rightPadding 0.4  NoteHead.scale 1.1  BarLine.thinThickness 3  BarLine.thickThickness 7 }\n");
         foreach (string line in new[]
         {
             "line-thickness = 0.75\\pt", "\\override StaffSymbol.thickness = #1.2",
@@ -404,6 +532,7 @@ public class EngravingStyleTests
             "\\override Stem.length-fraction = #1.2", "\\override Beam.beam-thickness = #0.6",
             "\\override Beam.damping = #3", "\\override DotColumn.padding = #0.7",
             "\\override AccidentalPlacement.right-padding = #0.4",
+            "\\override NoteHead.font-size = #(magnification->font-size 1.1)",
             "\\override BarLine.hair-thickness = #3", "\\override BarLine.thick-thickness = #7",
         })
             Assert.Contains(line, styled, StringComparison.Ordinal);

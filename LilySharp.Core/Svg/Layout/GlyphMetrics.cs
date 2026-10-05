@@ -713,7 +713,24 @@ internal static partial class GlyphMetrics
     /// Gets the notehead bounding box for a given note value.
     /// </summary>
     /// <param name="noteValue">1=whole, 2=half, 4=quarter, etc.</param>
-    public static BBox GetNoteheadBBox(int noteValue) => GetNoteheadBBox(Design20, noteValue);
+    public static BBox GetNoteheadBBox(int noteValue) => GetNoteheadBBox(StaffHeadFont, noteValue);
+
+    /// <summary>
+    /// The font a full-size note head is read from when the caller names none — <see cref="Design20"/>
+    /// at the default, the design and size <c>NoteHead.scale</c> asks for otherwise
+    /// (<see cref="EngravingStyle.NoteHeadFontSizeStep"/>). Every font-less head overload here and
+    /// <see cref="LayoutUtilities.StemAttachX(bool, int, Model.NoteheadStyle, DesignMetrics?)"/> read it,
+    /// so a reader that never named a font follows the heads' size.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm NoteHead — every head-hung grob (stem, dots,
+    /// ledger, script, tie) reads the HEAD's extent, which its font-size decides.</remarks>
+    public static DesignMetrics StaffHeadFont
+        => EngravingStyle.Current.NoteHeadFontSizeStep is var step && step == 0 ? Design20 : AtFontSize(step);
+
+    /// <summary>The magnification <see cref="StaffHeadFont"/> is read at — exactly 1 at the
+    /// default — for the few readers that hold a full-size head's number as a constant.</summary>
+    public static double StaffHeadMagnification
+        => EngravingStyle.Current.NoteHeadFontSizeStep is var step && step == 0 ? 1.0 : EmmentalerDesignSize.Magstep(step);
 
     /// <summary>
     /// The same lookup asked of ONE font — the design a grob's <c>font-size</c> selected,
@@ -811,7 +828,7 @@ internal static partial class GlyphMetrics
 
     /// <summary>Gets the notehead advance width for a given note value.</summary>
     public static double GetNoteheadAdvance(int noteValue)
-        => GetNoteheadAdvance(Design20, noteValue);
+        => GetNoteheadAdvance(StaffHeadFont, noteValue);
 
     /// <summary>The same lookup asked of ONE font — see
     /// <see cref="GetNoteheadBBox(DesignMetrics, int)"/>.</summary>
@@ -857,7 +874,7 @@ internal static partial class GlyphMetrics
     /// </para>
     /// </remarks>
     public static (double X, double Y) GetNoteheadStemAttachment(int noteValue)
-        => GetNoteheadStemAttachment(Design20, noteValue);
+        => GetNoteheadStemAttachment(StaffHeadFont, noteValue);
 
     /// <summary>The same lookup asked of ONE font — see
     /// <see cref="GetNoteheadBBox(DesignMetrics, int)"/>.</summary>
@@ -892,7 +909,7 @@ internal static partial class GlyphMetrics
     /// </remarks>
     public static (double X, double Y) GetNoteheadStemAttachment(
         Model.NoteheadStyle style, bool up, int noteValue)
-        => GetNoteheadStemAttachment(Design20, style, up, noteValue);
+        => GetNoteheadStemAttachment(StaffHeadFont, style, up, noteValue);
 
     /// <summary>The same lookup asked of ONE font — see
     /// <see cref="GetNoteheadBBox(DesignMetrics, int)"/>.</summary>

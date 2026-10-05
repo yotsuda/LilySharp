@@ -103,6 +103,10 @@ internal static class StaffAccidentalColumns
             // (ChordHeadPositioning, measured against 2.26.0).
             bool isCue = IsCue(column.Entries[0]);
             var font = isCue ? EngravingDefaults.CueFont : (GlyphMetrics.DesignMetrics?)null;
+            // The heads' own size (NoteHead.scale) on top — the accidentals keep theirs.
+            double headStep = EngravingStyle.Current.NoteHeadFontSizeStep;
+            var headFont = headStep == 0 ? font
+                : GlyphMetrics.AtFontSize(headStep + (isCue ? EngravingDefaults.CueFontSizeStep : 0));
 
             var offsets = collision.CalculateVoiceOffsets(column);
 
@@ -136,14 +140,14 @@ internal static class StaffAccidentalColumns
                         slots.Add((entry.VoiceId, entry.ItemIndex, 0));
                         stems.Add(AccidentalStem.Of(entry.ForcedStemUp ?? note.StemUp,
                             GlyphMetrics.NoteValueOf(note.BaseDuration), note.Notehead,
-                            note.StaffPosition, note.StaffPosition, voiceX, font));
+                            note.StaffPosition, note.StaffPosition, voiceX, headFont));
                         break;
 
                     case ChordItem chord:
                         int noteValue = LayoutUtilities.GetNoteValueFromFraction(chord.BaseDuration);
                         bool stemUp = entry.ForcedStemUp ?? chord.StemUp;
                         var within = ChordHeadPositioning.CalculateOffsets(
-                            chord.Notes, stemUp, noteValue, font);
+                            chord.Notes, stemUp, noteValue, headFont);
                         for (int i = 0; i < chord.Notes.Length; i++)
                         {
                             notes.Add(chord.Notes[i]);
@@ -151,7 +155,7 @@ internal static class StaffAccidentalColumns
                             slots.Add((entry.VoiceId, entry.ItemIndex, i));
                         }
                         stems.Add(AccidentalStem.Of(stemUp, noteValue, chord.Notehead,
-                            chord.Notes, voiceX, font));
+                            chord.Notes, voiceX, headFont));
                         break;
                 }
             }
@@ -159,7 +163,7 @@ internal static class StaffAccidentalColumns
             if (notes.Count == 0)
                 continue;
 
-            var layouts = placement.CalculatePositions(notes, headOffsets, font, font,
+            var layouts = placement.CalculatePositions(notes, headOffsets, font, headFont,
                 stems: stems);
             if (layouts.Length == 0)
                 continue;

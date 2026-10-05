@@ -538,7 +538,7 @@ internal static partial class SpacingRules
         }
         else
         {
-            var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
+            var noteheadBBox = ScaledHeadBBox(item, noteValue);
             // The column sits at the head's LEFT edge (see the remarks above and
             // CalculateLeftExtent, which returns 0 leftward for the same reason), so the
             // rightward reach is the head's own right edge — mirroring the rest branch.
@@ -578,7 +578,7 @@ internal static partial class SpacingRules
             foreach (var m in lvChord.Notes)
                 if (m.HasLaissezVibrer) { hasLv = true; break; }
         if (hasLv)
-            extent = Math.Max(extent, GlyphMetrics.GetNoteheadBBox(noteValue).Right
+            extent = Math.Max(extent, ScaledHeadBBox(item, noteValue).Right
                 + TieVariantEngraver.OpenReach - TieDetails.Default.XGap);
 
         return extent;

@@ -215,7 +215,7 @@ The keys that came in for training data are the page's (`staffSpace`, `systemsPe
 `minSystemsPerPage`, `maxSystemsPerPage`, `measuresPerSystem`, `shortestDurationSpace`) and
 the engraving style's (`lineThickness`, `StaffLine.thickness`, `LedgerLine.thickness`,
 `LedgerLine.lengthFraction`, `Stem.thickness`, `Stem.lengthFraction`, `Beam.thickness`,
-`Beam.damping`, `Dots.padding`, `Accidental.rightPadding`, `BarLine.thinThickness`,
+`Beam.damping`, `Dots.padding`, `Accidental.rightPadding`, `NoteHead.scale`, `BarLine.thinThickness`,
 `BarLine.thickThickness`) — the language documents what each means. Two notes for a reader
 of the pictures:
 

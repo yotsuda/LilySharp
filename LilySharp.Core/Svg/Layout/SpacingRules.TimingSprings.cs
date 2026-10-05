@@ -417,7 +417,7 @@ internal static partial class SpacingRules
                 //   so there is nothing to ask; LilyPond's left grob would be the cue-sized
                 //   rest. No point observes it — see the branch below.
                 NoteItem or ChordItem => GlyphMetrics.GetNoteheadBBox(
-                    IsCueItem(p) ? EngravingDefaults.CueFont : GlyphMetrics.Design20,
+                    HeadFontOf(p) ?? GlyphMetrics.Design20,
                     GetNoteValue(p)).Right,
                 // A rest is drawn glyph-left-aligned at its column, so its right
                 // extent from the column origin is the rest stencil's right edge.

@@ -74,10 +74,10 @@
 ### `LilySharp.Core/Svg/Layout/DynamicAlignEngraver.cs`
 - **:49** ⚠️ NOT PORTED, DISCLOSED (no pair measures either) — both are LP behaviours this
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
-- **:1347** ⚠️ NOT PORTED, and named rather than left to be discovered: the ONLY-RESTS
-- **:1567** ⚠️ NOT PORTED: another VOICE's notes at that moment (a grace rest under polyphony);
-- **:2343** ⚠️ NOT PORTED — LP's solve-once-then-break order: A BROKEN COLUMN IS SOLVED
-- **:4232** ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
+- **:1348** ⚠️ NOT PORTED, and named rather than left to be discovered: the ONLY-RESTS
+- **:1568** ⚠️ NOT PORTED: another VOICE's notes at that moment (a grace rest under polyphony);
+- **:2342** ⚠️ NOT PORTED — LP's solve-once-then-break order: A BROKEN COLUMN IS SOLVED
+- **:4231** ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
 ### `LilySharp.Core/Svg/Layout/FiguredBassEngraver.cs`
 - **:142** spells it after the digit — the order FiguredBassGlyphRun names as not ported. The box
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
@@ -131,7 +131,7 @@
 - **:842** ⚠️ Disclosed, not ported: LilyPond also requires the last column's stem to share a
 - **:1503** inner tuplets' boxes, :646-680 — not ported; no pinned point).
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
-- **:272** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
+- **:275** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
 ## UNWATCHED — 観測者がゼロだと自認しているもの（64 件）
 
@@ -141,7 +141,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:1436** no observer reaches that branch yet.
 ### `LilySharp.Core/Rendering/SharedRenderer.Noteheads.cs`
-- **:782** observed by: no observer, and none is possible while the term is dominated — it
+- **:788** observed by: no observer, and none is possible while the term is dominated — it
 ### `LilySharp.Core/Semantics/DrummapValidator.cs`
 - **:30** ★ This validator exists because the block had NO observer of any kind. Measured
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
@@ -167,7 +167,7 @@
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:111** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
-- **:2769** observed by: NOTHING. There is no ledger point on a tab tie's width,
+- **:2768** observed by: NOTHING. There is no ledger point on a tab tie's width,
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
 - **:63** moving output no observer can check.
 - **:140** ⚠️ NOTHING WATCHES THIS WIDTH. Since the figure was left-aligned on its column
@@ -180,8 +180,8 @@
 ### `LilySharp.Core/Svg/Layout/HorizontalSkyline.cs`
 - **:178** outline. So the clearing is right and unobserved: a forgotten Clear here would
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
-- **:863** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
-- **:1140** NOT MEASURED — no ledger point reads a flag's draw x, and the last
+- **:865** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
+- **:1142** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
 - **:2454** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
 - **:2476** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
@@ -318,7 +318,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Tab.cs`
 - **:426** LILYSHARP-OWN: LilyPond has no pitchless note — its slash is a style on
 - **:444** ⚠️ LILYSHARP-OWN on a FULL tab, and deliberately so (USER DECISION,
-- **:993** ⚠️ LILYSHARP-OWN, the other half: which x IS the centre when the digits do not
+- **:995** ⚠️ LILYSHARP-OWN, the other half: which x IS the centre when the digits do not
 ### `LilySharp.Core/Rendering/TextFontMetrics.cs`
 - **:543** LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
 - **:660** ⚠️ LILYSHARP-OWN: the glyphs a missing codepoint falls back to are drawn from a system
@@ -411,8 +411,8 @@
 - **:122** ⚠️ LILYSHARP-OWN: a string the bundled face cannot spell (CJK — TextFontMetrics reports
 - **:445** ⚠️ LILYSHARP-OWN: the number is a support of THIS text alone, not ink of the staff's
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
-- **:2758** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
-- **:2807** ⚠️ LILYSHARP-OWN, and LilyPond cannot be asked: MEASURED on 2.26.0, all three
+- **:2757** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
+- **:2806** ⚠️ LILYSHARP-OWN, and LilyPond cannot be asked: MEASURED on 2.26.0, all three
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
 - **:133** ⚠️ LILYSHARP-OWN: the fallback branch. A character with no bass-figure glyph is
 ### `LilySharp.Core/Svg/Layout/FingeringGlyphRun.cs`

@@ -1684,13 +1684,15 @@ keys (`--set Stem.thickness=1.5`, and `LedgerLine.thickness=1.0,0.1` with a comm
 | `Beam.damping` | 1 | how much a beam's slope is flattened, as LilyPond's: the slope stays under 0.6 / this (staff spaces per staff space); 0 leaves it undamped, 10000 or more lays every beam flat |
 | `Dots.padding` | one dot's width (0.45) | the gap between a note or rest and its first dot, in staff spaces; set, it is the same for a grace note's smaller dots. The notes make room for it, as in LilyPond |
 | `Accidental.rightPadding` | 0.15 | the gap an accidental keeps from its note head beyond a fixed 0.2, in staff spaces (0.35 in all by default); chords' and two voices' accidentals too. The notes make room for it |
+| `NoteHead.scale` | 1.0 | the note heads' size, a factor (1.15 is 15% larger). Everything that hangs on a head follows it, as in LilyPond: stems stand on its edge, ledger lines reach past it, dots, accidentals, ties and slurs keep their gaps from it, and the notes make room for it. A grace note's head keeps its own size; a cue's is both smaller and scaled. Stems, flags, beams, dots, accidentals and rests keep their size |
 | `BarLine.thinThickness` | 1.9 | thin bar lines, in line thicknesses |
 | `BarLine.thickThickness` | 6.0 | thick bar lines, in line thicknesses |
 
 Each takes a positive number with no unit (`LedgerLine.thickness` two, not both 0;
 `Beam.damping`, `Dots.padding` and `Accidental.rightPadding` may be 0). The
 `.ly` twin writes them as those overrides (`\override Stem.thickness = #1.5`,
-`line-thickness = 0.6\pt`).
+`line-thickness = 0.6\pt`; `NoteHead.scale 1.1` as
+`\override NoteHead.font-size = #(magnification->font-size 1.1)`).
 
 **`markTempo`** — a boxed section label (a `form` section's name, a `@mark`) and the metronome
 mark standing at the **same bar** are arranged one of two ways. `stacked` is LilyPond's:

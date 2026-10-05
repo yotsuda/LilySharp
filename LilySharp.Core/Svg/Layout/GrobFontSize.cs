@@ -173,8 +173,21 @@ internal static class GrobFontSize
     /// measures the −7 head and flag ink to 3.4e-6.
     /// </remarks>
     internal static double StepOf(MusicItem item, SizedGrob grob)
-        => (item.GraceTime ? GraceStep(grob) : 0)
+        => (item.GraceTime ? GraceStep(grob) : StyleStep(grob))
            + (IsCue(item) ? EngravingDefaults.CueFontSizeStep : 0);
+
+    /// <summary>
+    /// The <c>font-size</c> the score's engraving style states for <paramref name="grob"/> —
+    /// <c>NoteHead.scale</c> (<see cref="EngravingStyle.NoteHeadFontSizeStep"/>) for the head, 0
+    /// for the rest.
+    /// </summary>
+    /// <remarks>
+    /// It is an override in the <c>\Score</c> context, so a grace's own row REPLACES it (the grace
+    /// override is the voice's, nearer the grob) and a cue's context <c>fontSize</c> ADDS to it,
+    /// as <see cref="StepOf"/> composes them.
+    /// </remarks>
+    private static double StyleStep(SizedGrob grob)
+        => grob == SizedGrob.NoteHead ? EngravingStyle.Current.NoteHeadFontSizeStep : 0;
 
     /// <summary>
     /// The FONT <paramref name="grob"/> reads its glyph dimensions from — the design its
@@ -225,8 +238,18 @@ internal static class GrobFontSize
         return step == 0 ? 1.0 : EmmentalerDesignSize.Magstep(step);
     }
 
-    /// <summary>True when this item states a size other than the staff's own.</summary>
-    internal static bool IsReduced(MusicItem item) => item.GraceTime || IsCue(item);
+    /// <summary>True when one of this item's grobs is sized other than the staff's own — a
+    /// grace, a cue, or a head under <c>NoteHead.scale</c>. Its other grobs then read
+    /// <see cref="FontOf"/> at step 0, the staff's own numbers.</summary>
+    internal static bool IsReduced(MusicItem item)
+        => item.GraceTime || IsCue(item) || EngravingStyle.Current.NoteHeadFontSizeStep != 0;
+
+    /// <summary>
+    /// The font an item's NOTE HEAD reads, or null when it is the staff's own — the one house
+    /// for every reader that used to ask only whether the item was a cue.
+    /// </summary>
+    internal static GlyphMetrics.DesignMetrics? HeadFontOrNull(MusicItem item)
+        => StepOf(item, SizedGrob.NoteHead) == 0 ? null : FontOf(item, SizedGrob.NoteHead);
 
     /// <summary>
     /// One row of <c>general-grace-settings</c>.

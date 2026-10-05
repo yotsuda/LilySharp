@@ -342,8 +342,8 @@ internal static partial class SpacingRules
     /// </remarks>
     private static double? SupportHeadRightExtent(MusicItem? item) => item switch
     {
-        // A cue head's own box (CueFontOf), as every other reader of a cue column's head.
-        NoteItem or ChordItem => (CueFontOf(item) is { } cue
+        // A cue head's own box, and NoteHead.scale's (HeadFontOf), as every other reader of a column's head.
+        NoteItem or ChordItem => (HeadFontOf(item) is { } cue
             ? GlyphMetrics.GetNoteheadBBox(cue, GetNoteValue(item))
             : GlyphMetrics.GetNoteheadBBox(GetNoteValue(item))).Right,
         _ => null,
@@ -1017,7 +1017,7 @@ internal static partial class SpacingRules
                 // The stem's y-extent runs from where it MEETS THE HEAD (not the head
                 // centre) to the tip; the head-side end sits a stem-attachment offset
                 // off centre. LILYPOND-REF: lily/stem.cc:934-963.
-                double beginPos = StemBeginPosition(n.StaffPosition, stemUp, noteValue, n.IsCue);
+                double beginPos = StemBeginPosition(n.StaffPosition, stemUp, noteValue, HeadFontOf(n));
                 double endPos = StemEndPosition(n.StaffPosition, stemUp, noteValue, n.StaffPosition, n.IsCue);
                 // A beamed stem's band is the PURE beamed one: the tip carries the beam
                 // group's united reach (baked at collect time), the head side stays this
@@ -1049,7 +1049,7 @@ internal static partial class SpacingRules
                 // Head-side end: the reference head is the one the stem starts from
                 // (lowest for an up stem, highest for a down stem), offset by the
                 // stem attachment. LILYPOND-REF: lily/stem.cc:934-963.
-                double beginPos = StemBeginPosition(stemUp ? minPos : maxPos, stemUp, noteValue, c.IsCue);
+                double beginPos = StemBeginPosition(stemUp ? minPos : maxPos, stemUp, noteValue, HeadFontOf(c));
                 double endPos = StemEndPosition(tipPos, stemUp, noteValue, tipPos, c.IsCue);
                 // The PURE beamed tip, exactly as in the NoteItem arm above.
                 // LILYPOND-REF: lily/stem.cc:387-447 Stem::internal_pure_height.
@@ -1199,9 +1199,9 @@ internal static partial class SpacingRules
     /// </para>
     /// </remarks>
     private static double StemBeginPosition(int headPosition, bool stemUp, int noteValue,
-        bool isCue = false)
+        GlyphMetrics.DesignMetrics? headFont = null)
     {
-        var font = isCue ? EngravingDefaults.CueFont : GlyphMetrics.Design20;
+        var font = headFont ?? GlyphMetrics.Design20;
         int dir = stemUp ? 1 : -1;
         return headPosition
                + dir * GlyphMetrics.GetNoteheadStemAttachment(font, noteValue).Y * 2.0;

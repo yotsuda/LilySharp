@@ -434,14 +434,16 @@ workflow attaches that section to the GitHub Release verbatim.
   `measuresPerSystem` puts exactly N bars on every system (the lead-sheet layout), and
   `shortestDurationSpace` sets the shortest note's space. Completion offers them.
 - **`layout { }` sets the line thicknesses, the ledger lines' length, the stem length, how
-  steep beams may be and how far dots and accidentals stand from their notes.**
+  steep beams may be, how far dots and accidentals stand from their notes and how large the
+  note heads are.**
   `lineThickness`, `StaffLine.thickness`, `LedgerLine.thickness`, `LedgerLine.lengthFraction`,
   `Stem.thickness`, `Stem.lengthFraction`, `Beam.thickness`, `Beam.damping`, `Dots.padding`,
-  `Accidental.rightPadding`, `BarLine.thinThickness` and `BarLine.thickThickness`, each a
+  `Accidental.rightPadding`, `NoteHead.scale`, `BarLine.thinThickness` and `BarLine.thickThickness`, each a
   number in LilyPond's units (`layout { Stem.thickness 1.5 }`), score-wide, and per score
   through a named block. The layout follows them as LilyPond's does — a thicker beam, a longer
   stem or another damping moves the beams where LilyPond moves them, wider dot and accidental
-  gaps move the notes apart, a longer ledger line moves nothing — and the `.ly` twin writes
+  gaps move the notes apart, larger heads carry their stems, ledger lines, dots and ties with
+  them and the notes make room, a longer ledger line moves nothing — and the `.ly` twin writes
   them as LilyPond's overrides.
   Completion offers them with their defaults.
 - **`lysc svg|png|pdf|boxes --set KEY=VALUE` overrides a `paper` or `layout` value for one

@@ -667,7 +667,7 @@ LayoutEntry    = 'markTempo' , MarkArrangement
                | ( 'Beam.damping' | 'Dots.padding' | 'Accidental.rightPadding' ) , Number   (* >= 0 *)
                | 'LedgerLine.thickness' , Number , Number ;   (* >= 0, not both 0 *)
 StyleKey       = 'lineThickness' | 'StaffLine.thickness' | 'LedgerLine.lengthFraction'
-               | 'Stem.thickness' | 'Stem.lengthFraction' | 'Beam.thickness'
+               | 'Stem.thickness' | 'Stem.lengthFraction' | 'Beam.thickness' | 'NoteHead.scale'
                | 'BarLine.thinThickness' | 'BarLine.thickThickness' ;   (* a dotted key is a word, a
                                                    dot and a word with nothing between *)
 ChordNameMode  = 'shape' | 'sounding' | 'both' ;
@@ -711,7 +711,10 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
    stays under 0.6 / damping, 0 leaves it undamped and 10000 or more lays the beam flat;
    Dots.padding (one dot's width, 0.45) the gap before a note's or rest's first dot, in staff
    spaces; Accidental.rightPadding (0.15) the gap an accidental keeps from its head beyond
-   LilyPond's fixed 0.2 — both reach the spacing, as LilyPond's do; BarLine.thinThickness (1.9) and BarLine.thickThickness (6.0) in line
+   LilyPond's fixed 0.2 — both reach the spacing, as LilyPond's do; NoteHead.scale (1.0) the
+   note heads' size, a factor — LilyPond's NoteHead.font-size, 6·log2 of it: the stems, ledger
+   lines, dots, accidentals, ties and the spacing follow the heads, a grace head keeps its own
+   size and a cue head takes both; BarLine.thinThickness (1.9) and BarLine.thickThickness (6.0) in line
    thicknesses. The twin writes them as those overrides.
    indent / raggedRight / spacingIncrement stay in paper on that
    rule (LilyPond accepts them in \paper too). NOT an 'override': an override reads a
