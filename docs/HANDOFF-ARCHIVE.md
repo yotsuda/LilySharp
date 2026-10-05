@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第834セッションの経緯
+
+### 1.1 第834セッション（2026-10-05・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで着手」）。`-Start p834`（HEAD `bd45be60`）＝full **11247 / 0 / 2 / 11249**。§7 3.5 で第832 を ARCHIVE へ。**床の撤去の掃き直し**（§2 H ⑴ の残り）。
+- p833 の差分を今の HEAD に当てて 998 冊を掃いた（Lab `sessions/p834/sweep`）: **37 svg・最大 1.30・段割れ 0**（p832 の 48・2.32 から %% の本が消えた）。35 は staff＋tab／tab の行頭（0.09・0.12・0.19・0.30・Green-Tinted の続きの段 1.29）、2 は site のダイアグラムの例。LP 双子 9 形（`sessions/p834/tw`・`twin.ps1`）で **tab の動きは全部 LP と一致**（例 Green-Tinted の形: base 10.16・LP 8.87・head 8.87）。0.12 の族（Beat It ほか）は双子を取っていない。
+- 残る悪化はダイアグラム＝⒠。LP は fret-diagram の stencil を align-dir −0.4 で揃え（fret-diagrams.scm make-fret-diagram＝範囲の 0.7 左＋0.3 右が原点）、TextScript の alignment は両方 #f＝原点は符頭の左端。Lily# は格子を符頭の中心に置いていた（0.45 左）。**直した**: `FretFrameGeometry.GridCentreFromColumnOrigin` を描画（`ArticulationEngraver`）・小節の rod（`ApplyFretFrameSpacing`）・行頭の箱が読む。chord-on-note／chord-notes の最初の音: 床あり +0.12／+0.11・箱だけ +0.14／+0.36・今 0.00／−0.01。
+- 台帳 2 点（`probes/line-start-diagram.ly`・`RenderedGeometry.ClefToFirstNoteByClefRank`＝bass tab の 4 線は 5 線の譜ではない）: `line-start.clef-to-first-note.diagram` 8.574495（残差 −0.003639＝箱の端・未分解）・`.tab-continuation` 8.870000。毒: HEAD の Core→2 赤・旧い中心合わせだけ→diagram 1 赤。snapshot `tab-chord-spacing` を再ベース（ユーザー GO・0.04 で LP の 7.62 に）。commit `189d37ac5`。
+- 見つけた: **⒠′ 小節線の後の最初の音のダイアグラムが LP より 0.19 左**（LP は小節線→音の Staff_spacing の min_dist＝小節線 0.19＋ダイアグラムの左 1.69＋0.10 に +0.3・Lily# は 0.1 の rod だけ＝§2 H）。
+
+★ `-End p834 -DiffBase bd45be60e`（`end.log`）＝full **11249 / 0 / 2 / 11251**・門 全 OK。台帳 1023 点。棚卸し: 差分なし。7.5: Core `+` 112 行・REF 2（fret-diagrams.scm make-fret-diagram・self-alignment-interface.cc aligned_on_parent）・OWN 0。7.6: 意味は LP（min_dist＋0.3・stencil の揃え）。7.7: 残差 0.0036（箱の端）・⒠′・0.12 の族は双子なし。commit `189d37ac5`＋docs。push はユーザー。
+判定: 次は **⒠′**（小節線→音の spring の min_dist にダイアグラムの左を入れる＝今便の双子 `tw/ll/ext.ly`・chord-on-note の上に立つ）か §2 H ⒜〜⒟・⒡、①② は文法の承認待ち、P6 はユーザー判断。(a) 今便の計器と所見の上に立つ／(b) 会話は 1 便ぶん・圧縮なし／(c) 同じ島 ⇒ **この会話で続けてよい**（`-Start p835` から）。
+
 ## 以下は第833セッションの経緯
 
 ### 1.1 第833セッション（2026-10-05・YT-DELL2）
