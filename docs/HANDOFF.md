@@ -125,6 +125,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第839セッション（2026-10-06・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。`-Start p839`（HEAD `d29d3a76`）＝full **11264 / 0 / 2 / 11266**。§7 3.5 で第837 を ARCHIVE へ。**Video Killed の残り（段 0・6・18）**。
+- **3 段とも F9（§3 既決＝Lily# の tab の数字は LP より大きい）の族＝直さない**（Lab `sessions/p839/vk`・`cmp.ps1` が probe の段ごとの小節線を LP と並べる）: 段 0 は 2 桁のフレット（15〜18）の小節（譜だけ・低い音なら LP と一致・tab だけで 4 分の歩幅 3.44 対 3.282）、段 6・18 は percent 行の手書きの 2 小節（8 分が LP では 1.68 まで詰まる行で、大きい数字の rod が詰まらせない）。
+- ★ **途中で見つけて直した（`1ef7650c9`）: common shortest の票で `r1` を落としていた**。LP の `add_starter_duration` が断るのは multi-measure-interface（`R1`）だけで、`r1` は全音符で 1 票（spacing-engraver.cc:176-183）。Lily# は「全小節の休符 1 つの小節」を丸ごと除外していた＝`r1` の多い本で 16 分が最頻値に化ける。probe p6 では `r1 | r1` の行の小節線が次の行の中身で 0.60／0.27／0.00 動いていた（LP は常に 50.00）。台帳 2 点（`probes/rest-bar-vote.ly` RBV）exact・毒で 3 本赤・試験 1 本。掃き 998 冊で動いたのは **1 svg**（A Thousand Miles の「イントロだけ」＝双子と 0.01 以内に・base は 0.43／5.2 ずれ）。呼び手の無くなった `IsFullMeasureRest` は消した（`ebcf3cd5a`）。
+- ⚠️ 全 probe で**行末の小節が LP より 0.19 狭い**（ragged の 1 段でも両端揃えでも・base も同じ）＝未調査の別件。
+
+★ `-End p839 -DiffBase d29d3a761`（`end.log`）＝full **11267 / 0 / 2 / 11269**・門 全 OK。7.5: Core `+` 17 行・REF 1（spacing-engraver.cc の multi-measure の return）・OWN 0。7.6: 意味は LP（票を断るのは multi-measure-interface だけ）。7.7: 匂いなし。push はユーザー。
+判定: 次は **行末の小節の −0.19**（どの probe にも出る＝射程が広い・`vk/cmp.ps1` と `vk/probe.ps1` の列の dump がそのまま使える）か §2 H の ⒜〜⒟。(a) 今便の計器の上に立つ＝続ける側／(b) 会話は 2 便ぶん・圧縮なし／(c) 同じ島（LP 双子との spacing）⇒ **この会話で続けてよい**（`-Start p840` から）。
+
+## 以下は第838セッションの経緯
+
 ### 1.1 第838セッション（2026-10-06・YT-DELL2）
 
 新しい会話（ユーザー「HANDOFF を読んで着手」）。`-Start p838`（HEAD `356b0283`）＝full **11258 / 0 / 2 / 11260**。§7 3.5 で第836 を ARCHIVE へ。**§2 H ⒢ 小節の途中の印の列＝閉じた（`c2758ad56`）**。
@@ -135,18 +147,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 ★ `-End p838 -DiffBase 356b02833`（`end2.log`・1 回目の `end.log` は test の後で出力が途切れた＝再実行で完走）＝full **11264 / 0 / 2 / 11266**・門 全 OK。台帳 1035 点。7.5: Core `+` 325 行・REF 9・OWN 0。7.6: 意味は LP（列の 2 本の spring・fills_measure の次の rank・印の中央揃え）。7.7: 測っていない 2 形（変更列と同じ時刻の印・grace の前の印）は今までどおり＝コードの註に書いた。content key の印の時刻と `UnusedOnsetBetween` は毒で見ていない。push はユーザー。
 判定: 次は **§2 H の ⒜〜⒟** か **Video Killed の残り（段 0・6・18）**。(a) 今便の双子と計器（`twinlines.ps1`／`twinsys.ps1`・`mk/probe.ps1` の列の dump）の上に立つ＝続ける側／(b) 会話は 1 便ぶん・圧縮なし／(c) 同じ島（LP 双子との spacing）⇒ **この会話で続けてよい**（`-Start p839` から）。
-
-## 以下は第837セッションの経緯
-
-### 1.1 第837セッション（2026-10-06・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」）。`-Start p837`（HEAD `b896b4d4`）＝full **11258 / 0 / 2 / 11260**。§7 3.5 で第835 を ARCHIVE へ。**Video Killed／Smooth Operator に残る 1**（第836 の双子）。
-- 2 冊の残りは**どちらも小節の途中の `@mark`**（Video Killed 段 16 `r2. aes,4\3@fall@mark("Tacet")`・Smooth Operator 段 0 `r4 c8@mark("Intro")`・段 14 `r8 d4\2@mark("E1")`）。最小形（Lab `sessions/p837/vk` v1〜v4・`@fall` は無関係）で LP は小節を **+1.20** 広げ、Lily# は 0。
-- LP の列の dump（`c-v3.log`／`c-v4.log`）: 途中の `\mark` は**その時刻に非音楽列を 1 本作る**。⑴ 前の音→印の列は音→小節線と同じ Note_spacing（4.80・印なしの音→音は 5.10）⑵ 印の列→音は dt=0・Staff_spacing の wish なし＝`standard_breakable_column_spacing` の `min_dist + 0.5`＝0.50 ⑶ **`fills_measure`**（spacing-spanner.cc:446-472）が「音楽列の次が使われた非音楽列で、半小節より後」を満たし、小節線→最初の列に full-measure-extra-space 1.0（小節線→`r2.` が 1.09→2.09）。
-- 射程: コーパス 332 冊のうち約 150 冊が小節の途中に `@mark` を持つ（粗い数え・弱起の音に付けた印を含む）。**次便の仕事＝§2 H ⒢**（設計は §2 H に書いた）。コードの変更は無し。
-
-★ `-End p837 -DiffBase b896b4d43`（`end.log`）＝full **11257 / 1 / 2 / 11260**・門 全 OK。赤 1 は `ChordVoicingTests.TheWalk_IsCheapEnoughForAKeystroke`（時間の試験・421.7 ms＝機械の負荷・単独で再実行して 80/80 緑）。コード無変更（Core `+` 0 行）＝計器と所見だけ。台帳 1032 点。push はユーザー。
-判定: 次は **§2 H ⒢ 小節の途中の印の列**。(a) 今便の dump（`sessions/p837/vk`）と第836 の双子（`twinlines.ps1`）の上に立つ＝続ける側／(b) **この会話は 4 便ぶんで非常に長い**・⒢ は新しい列の型（measure springs・break gate・印の配置）に触る設計級＝読み直しが要るが、文脈の重さで取り違える危険のほうが大きい／(c) 同じ島 ⇒ **新しい会話で `-Start p838` から**（(b) で決めた。残り字数は理由ではない）。
 
 ## 2. 開いている作業
 

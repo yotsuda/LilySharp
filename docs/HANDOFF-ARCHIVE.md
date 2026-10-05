@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第837セッションの経緯
+
+### 1.1 第837セッション（2026-10-06・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。`-Start p837`（HEAD `b896b4d4`）＝full **11258 / 0 / 2 / 11260**。§7 3.5 で第835 を ARCHIVE へ。**Video Killed／Smooth Operator に残る 1**（第836 の双子）。
+- 2 冊の残りは**どちらも小節の途中の `@mark`**（Video Killed 段 16 `r2. aes,4\3@fall@mark("Tacet")`・Smooth Operator 段 0 `r4 c8@mark("Intro")`・段 14 `r8 d4\2@mark("E1")`）。最小形（Lab `sessions/p837/vk` v1〜v4・`@fall` は無関係）で LP は小節を **+1.20** 広げ、Lily# は 0。
+- LP の列の dump（`c-v3.log`／`c-v4.log`）: 途中の `\mark` は**その時刻に非音楽列を 1 本作る**。⑴ 前の音→印の列は音→小節線と同じ Note_spacing（4.80・印なしの音→音は 5.10）⑵ 印の列→音は dt=0・Staff_spacing の wish なし＝`standard_breakable_column_spacing` の `min_dist + 0.5`＝0.50 ⑶ **`fills_measure`**（spacing-spanner.cc:446-472）が「音楽列の次が使われた非音楽列で、半小節より後」を満たし、小節線→最初の列に full-measure-extra-space 1.0（小節線→`r2.` が 1.09→2.09）。
+- 射程: コーパス 332 冊のうち約 150 冊が小節の途中に `@mark` を持つ（粗い数え・弱起の音に付けた印を含む）。**次便の仕事＝§2 H ⒢**（設計は §2 H に書いた）。コードの変更は無し。
+
+★ `-End p837 -DiffBase b896b4d43`（`end.log`）＝full **11257 / 1 / 2 / 11260**・門 全 OK。赤 1 は `ChordVoicingTests.TheWalk_IsCheapEnoughForAKeystroke`（時間の試験・421.7 ms＝機械の負荷・単独で再実行して 80/80 緑）。コード無変更（Core `+` 0 行）＝計器と所見だけ。台帳 1032 点。push はユーザー。
+判定: 次は **§2 H ⒢ 小節の途中の印の列**。(a) 今便の dump（`sessions/p837/vk`）と第836 の双子（`twinlines.ps1`）の上に立つ＝続ける側／(b) **この会話は 4 便ぶんで非常に長い**・⒢ は新しい列の型（measure springs・break gate・印の配置）に触る設計級＝読み直しが要るが、文脈の重さで取り違える危険のほうが大きい／(c) 同じ島 ⇒ **新しい会話で `-Start p838` から**（(b) で決めた。残り字数は理由ではない）。
+
 ## 以下は第836セッションの経緯
 
 ### 1.1 第836セッション（2026-10-06・YT-DELL2）
