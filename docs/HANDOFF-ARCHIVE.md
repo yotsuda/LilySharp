@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第830セッションの経緯
+
+### 1.1 第830セッション（2026-10-05・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。`-Start p830`（HEAD `8361735b`）＝full **11232 / 0 / 2 / 11234**。§7 3.5 で第828 を ARCHIVE へ。**④ §2 H ⑷**（譜ごとに違う調の行末 courtesy）。
+- **LP 双子で測った**（Lab `sessions/p830/ck`・`transpose d` の譜と実音の譜）: a＝C→G＋3/4＝下の譜の拍子が LP より **2.2 左**（自分の 1 シャープの後に立つ・LP は上の 3 シャープの後）／b＝A→G over G→F＝下の譜のフラットが 0.78 左（自分のナチュラルの後・LP は上の 2 ナチュラルの後の調号列）・拍子 0.84 左。LP は `Break_align_engraver` を Score に置き（engraver-init.ly:769）、記号ごとに 1 つの `BreakAlignGroup` へ全譜の grob を集める（break-align-engraver.cc:141-163）＝**取消・調号・拍子が譜をまたいだ列**。
+- **直した**: `SpacingRules.LineEndCourtesy`＝3 列（各列の幅は全譜の最大・列間は space-alist）＋右端。各譜の変化は `KeyChangeParts` で walk を取消と調号に割る（描画の walk そのもの）。予約（`LineEndCourtesyWidth`）・譜線の右端（`StaffRightEdges`）・描画（`DrawKeySignatureChangeInColumns`・拍子）が 1 つの答えを読む。`KeyCourtesySuffixWidth`／`TimeCourtesySuffixWidth`／`KeyCourtesyOpeningGap`／`KeyCourtesyClosingSymbol` を消した。双子 a は 44 字形が 0.009 内・b は 1 字形を除いて一致。
+- ★ **見つけた別件（未着手・承認待ち）: フラットの調号が LP より 0.117 左に描かれる**（行頭も行末も・1 譜でも・`sessions/p830/ck/dflat`・`dbes`）。フラットの字形の箱は左 −0.12＝LP は列の左端に調号の**インク**を揃え、Lily# は**原点**を揃えている。列の幅と後続（拍子・音符）は LP と一致＝描く位置だけ。直すと全てのフラット調の本の調号が 0.12 右へ動く（snapshot 多数）。
+- 網 `LineEndCourtesyColumnTests`（拍子が 1 列・LP の小節線から 5.78・取消が 1 列・下の譜のフラットが調号列）。毒 3 本が全部赤。掃き 998 冊 1199 svg で差 0（コーパスに該当する本が無い）。
+
+★ `-End p830 -DiffBase 8361735b2`（`end.log`）＝full **11234 / 0 / 2 / 11236**・門 全 OK。棚卸し: magic 8 点減（消した 2 関数の 0.0 と旧 reservation の式・うち Red 6）・APPROX は行番号だけ。7.5: Core `+` 179・`-` 213 行・REF は新しい札に break-align-engraver.cc／engraver-init.ly・OWN 0。7.6: 意味は LP（Score の Break_align_engraver）。7.7: フラットの調号の 0.117（上・別件）。commit `4fad17b84`＋docs。push はユーザー。
+判定: §2 H ⑷ は閉じた。次は**フラットの調号の位置（承認が要る＝snapshot 多数）**か ⑤ §2 H ⑴、①② は文法の承認待ち、P6 はユーザー判断。(a) フラットは今便の計器（`sessions/p830/ck`）の上に立つ／(b) 会話は 4 便ぶん・まだ取り違えは無い／(c) ⇒ **この会話で続けてよい**（`-Start p831` から）。
 ## 以下は第829セッションの経緯
 
 ### 1.1 第829セッション（2026-10-05・YT-DELL2）
@@ -45070,6 +45082,58 @@ Lily# はそれを **4 か所**で外していた。
 - **R11 renderer の残り**＝⒜ ✅ 第561 が閉じた（破線小節線＝各線に 0.6 を中心合わせ・`gap` 0.4・外側は譜表の縁で切る・tab は弦間隔・span bar は 1.0＝`DrawDashedBarline`・LP 双子で実測一致・網 `DashedBarlineTests` 2 本）／⒝ ✅ 第564 が閉じた（範囲は glyph ごとの `ledger-shortening-range`・右端は描いた accidental・和音は符頭ごとの request の和＝双子実測一致・網 4 本・コーパス 90 冊が動いた）／⒞ ✅ 第563 が閉じた（em 2.2 × magstep(−4)・clef-alignments・support は clef 自身・staff-padding 0.7＝双子実測一致・網 3 本）／⒟ ✅ 第562 が閉じた（dead ＝ cross style・譜表は s<log>cross・tab は s2cross を fs −2・双子実測一致・網 3 本・コーパス 30 冊が動いた）／⒠ ✅ 第566 が閉じた（fall／doit は LP の BendAfter＝`bend::print` を移植: 符頭の ink 右 + 0.5 … 次の column の ink 左 − 0.5・最短 0.5・Δ ±2・太さ 0.2＝双子実測一致・網 `BendAfterGeometryTests` 5 本・コーパス 87 冊が動いた。scoop／plop（LP に無い）と bend-up（`bend-spanner::print` 未移植）は OWN 札）／⒡ ✅ 第566 が閉じた（読み手 0＝void・`+0.4` 撤去）／⒢ ✅ 第566 が閉じた（face の hhea 実 metrics＝`TextFontMetrics.FontExtents`・PNG と同じ量）。**R11 は全項 ✅**
 
 - **R12 言語層の残り**＝⒜ ✅ 第571 が閉じた＝LYS0020 は 1 ファイル 1 回・最初の top-level music にだけ付くので 2 つ目以降は診断なし＝adopt され、最初を消すと増分だけ消えていた。未報告のあいだは top-level music を adopt しない（`Parser.ParseCompilationUnit`）・網 `WithChange_TopLevelMusicReportedOnce_SurvivesRemovingTheFirst`（直す前に赤: 期待 1 実際 0）／⒝ ✅ 第571（`9f70c6f8`）＝本体が素の音楽の phrase 参照は `MeasureValidator` の小節勘定を流れる（本体の拍が小節に入り、本体の `|` が小節を閉じ、音価は入口で 4 分に戻り出口の値が続く＝collector どおり）。構造を持つ本体（拍子変更・入れ子参照・repeat 等）は従来どおり不透明。参照を含む cue も中を歩く。phrase を持つ 1426 冊の掃き＝偽の警告 4 件が消え、新規 6 件はすべて頁どおりの真・網 `PhraseReferenceBarFlowTests`（毒 5 本赤）／⒞ ✅ 第570 が閉じた（`f08ddf4c`）＝`ScoreHomeKey.Read/Declaration` は part header を除き（`PartHeaderDeclaration` が別に読む）、双子は part 頭で part header の key を書き section 境界でそこへ戻す（無ければファイル先頭の key）。phrase 自動移調の ambient は頁どおりファイル先頭のまま。part header の `time` は LYS1026 なので meter 側は対象外。MIDI の `ScoreHomeKey.Sharps` は part header を含むまま（別問）・`PartHeaderKeyTwinTests`／⒟ ✅ 第571 が閉じた（`365f460b`）＝LP の nederlands どおり `eses`/`ases`＝E𝄫/A𝄫 を lexer が受け `NameOf`・`TonicFifths` が `eeses`/`aeses` に正規化（`eseh`/`aseh` は LP にも無い）・コーパスに使用 0 件／⒠ `MeasureModel` と collector の予算の単位違い／⒡ ✅ 第571（`d7feeec9`）＝`IsArticulationName` の 3 腕は到達不能で撤去。`ExpectMarkName` の 3 腕は*生きていた*が部分的（`@!f` は validator の警告、`@!mf`/`@!p`/`@!r` は「Expected Identifier」）＝「`@`/`@!`/`.` に接した語は名前」に一般化・網 `MarkNameWordTests`（毒 3 本赤）。`Validate(tree)` の Lazy は単体経路（テストが使う）で死んでいない。`LYS1012` のリネームは GRAMMAR_AUDIT §1.2 どおりユーザーが MSVS で＝触らない。
+
+#### **行頭 wish の `ownFixedFloor` ガード**（`LineStartSpringForLine` → `LineStartColumn.LineStartSpring`）（第832 が逐語で落とした）
+
+  — LP は leading grace と lyrics を**独立した paper column** にするので min_dist がそこまで測る。
+  Lily# は spring に畳み込んでいる＝**「今の構造では表現できないから畳み込む」型**（§5.2 が
+  名指す形）。本来の移植は **paper column 表現の導入**で、実測: 外すと snapshot 21 枚が動く
+  ★ **これは単独の島ではない（2026-07-29 に束ねた）**——**同じ「paper column モデルの欠落」を
+  指す件が 3 つある**: ⑴ この `ownFixedFloor`（grace/歌詞の独立列）⑵ **和音行の command 列**
+  （第28セッションで発見・`ApplyRowCommandColumnSprings` は 2 本のばねの**直列合成**で数値は
+  厳密だが、LP は空の command 列を実体として持つ）⑶ **mid-measure clef/key/time**（LP はそれを
+  command 列に載せる。Lily# は `MidMeasureChangeGaps` が代役・§2B の mid-line clef 残件と同根）
+  ⑷ ★ **行末の courtesy 群**（2026-08-02・第75セッションで**点が出た**）。**LP は行の両端に
+  break-align 群を 1 つずつ持つ**のに、Lily# は**行頭だけ `BreakAlignSpacing` に通し、行末は定数
+  3 本**（`SpacingRules.BarlineToCourtesyKey` 0.8 / `BarlineToCourtesyTime` 0.75 /
+  `CourtesyKeyToTimeGap` 1.15）で綴っている。**⑵ と同じ「合成が厳密なら乖離ゼロ」ではない**——
+  `courtesy.meter.barline-to-cancellation` が **−0.2**（LP は取消まで 1.00、拍子単独なら 0.75。
+  **小節線からの間隔は 1 つの数ではない**＝grob ごとの `space-alist`）。
+  ✅ ★★★ **この −0.2 は閉じた（2026-08-03・ユーザー承認）**。<!-- ledger: courtesy.meter.barline-to-cancellation = 0 -->
+  <!-- ledger: courtesy.meter.barline-to-meter = 0 -->
+  `SpacingRules.BarlineToCourtesyKey` は **1.0**（`define-grobs.scm:296`/`:297` は
+  key-signature と key-cancellation の**両方**に `extra-space . 1.0` を宣言しているので、
+  **courtesy 群が取消で開いても新調号で開いても 1 つの定数で正しい**）。
+  ⚠️ **下の警告は無視ではなく*尊重*して閉じた**——「予約 `KeyCourtesySuffixWidth` が同じ定数を読む」
+  はまさに**安全な理由**だった（**定数は 1 つで、描画も予約もそれを読む**ので一緒に動く）。
+  ⇒ ★★ **「2 か所が同じ定数を読む」は危険の印ではなく*安全*の印**——危険なのは**2 か所が同じ量を
+  別々に綴っている**とき（§2 A）。**着手前にどちらかを見分けること。**
+  ⚠️ **以下の ⑷ の残りは*別の乖離*で、今も開いている**（第131 起票・点は 1 つも無い）。
+  ⚠️ **出所は 1 軒**＝`SpacingRules.BarlineToCourtesyKey` の remarks（`break-alignment-interface.cc:228-243`）。
+  **space-alist の値を写したのではない**——宣言は `extra-space 1.0` なのに印字は 0.750000（walk は
+  group extent で回り `break-align-anchor` が後で動かす）。**「宣言値＝定数」と書けば偽の住所になる。**
+  ⚠️⚠️ **0.75 は 1 冊でしか測っていない**（§7.7 の「1 冊の texture で定数化しない」に触れる・第75セッションの
+  自己監査で自白）。**1.15 は 2 か所独立一致で交差検証済み**。⇒ **0.75 には texture を変えた 2 冊目**
+  （行末が `|.` や複縦線／拍子が C や 3/4）**が要る。観測は `courtesy.meter.barline-to-meter` 1 点だけ。**
+  モデルに列を足す日はこの 4 つを一緒に見ること（⑵ grouper・⑸ 倍率と同じ「モデル追加が先」型）。
+  ✅ **⑷ の「拍子の右側 0.455」（第131 起票）は閉じていた＝第804 が今の木で測り直した**: 起票の本（Lab `probes/beamskip/courtesy.lys`・今の文法では `c1 | c1 | break`）で行末の縦線 107.93／拍子 108.87／五線の右端 110.92＝LP 107.92／108.86／110.92。texture を変えた 5 冊（3/4・複縦線・調号・調号＋拍子・2/2）と行中 3 冊も SVG の 2 桁で LP の双子と一致（Lab `sessions/p804/courtesy/tex`）＝第206 の right-edge 0.5 と第376 の五線の inset が閉じていた。**その測り直しで出た唯一の食い違い（取消だけの courtesy）は第804 が直した**（§1.1 第804・台帳 `courtesy.key.cancellation-to-line-end` ほか 3 点）。<!-- ledger: courtesy.key.cancellation-to-line-end = 0 -->✅ ⑷ の最後（譜ごとに違う調の群を列で揃えない）は**第830 で閉じた**（`SpacingRules.LineEndCourtesy`＝取消・調号・拍子の列を譜をまたいで揃える・LP 双子 2 冊が 0.01 内・Lab `sessions/p830/ck`）。
+  ✅ ~~併せて別件の起票: `beam-auto` の 1 段目は LP と Lily# で改行位置が違う（縦線 3 対 5）~~＝**第801 実測: 20 段とも LP と同じ割り**（Lab `sessions/p801/pair-beamauto.log`）。
+  同じ段に別の音楽が載るので、**あの本で行末の x を比べてはいけない**。
+  ⚠️ ~~ただし**数値の乖離は現状ゼロ**（合成が厳密なので）——着手根拠は点が出た regime だけ~~
+  ★★★ **2026-08-01（第59セッション）に⑴に点が出た**＝`grace.column.approach` **+0.850449**。
+  **「合成が厳密だから乖離ゼロ」は grace については偽**だった: **LP は前のばねを*縮める***
+  （`spring *= 0.8`・`lily/spacing-spanner.cc:396-403`）のに、**Lily# は run の幅を前のばねの
+  min に*足す***（`AdjustSpringForGraceNotes`）。**足すと引くでは、run の幅が動いても
+  `前の音符 → 最初の grace` が動かない**——実際この点は列の幅を 46% 変えても 1 桁も動かなかった。
+  ⇒ **⑴ は「表現できないから畳み込んだ」だけでなく「畳み込んだせいで別の機構になっている」。**
+  ✅ ★★★ **その +0.850449 は閉じた（2026-08-02・2 段の移植）**。<!-- ledger: grace.column.approach = 0 -->
+  <!-- ledger: grace.column.approach.main-control = 0 -->
+  `SpacingRules.SpringIntoGraceRun` が **先に縮めてから run を足す**（`Spring.Scale`＝
+  `Spring::operator*=` なので **ideal を rod の下へ押し込まない**）。⚠️ **移植は*両方*のばね系に
+  要った**——片方だけ直すと同じ量の 2 綴りになる。
+  ⇒ ★★ **対照 `grace.column.approach.main-control` は当時も今も exact**＝**普通の音符間は無罪**で、
+  **発散側だけが動いた**＝**恒等の対が「修理が形の項に効いた」ことを言っている**（§5.0）。
+  ⚠️ **⑴ の*モデル*の話（独立列を持たない）は残っている**——**閉じたのは点であって列ではない。**
 
 ## 閉じた §3 の根拠（HANDOFF §3 の表から逐語で落とした根拠セル。見出しは決定セル・ポインタは §3 に残る）
 
