@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第839セッションの経緯
+
+### 1.1 第839セッション（2026-10-06・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。`-Start p839`（HEAD `d29d3a76`）＝full **11264 / 0 / 2 / 11266**。§7 3.5 で第837 を ARCHIVE へ。**Video Killed の残り（段 0・6・18）**。
+- **3 段とも F9（§3 既決＝Lily# の tab の数字は LP より大きい）の族＝直さない**（Lab `sessions/p839/vk`・`cmp.ps1` が probe の段ごとの小節線を LP と並べる）: 段 0 は 2 桁のフレット（15〜18）の小節（譜だけ・低い音なら LP と一致・tab だけで 4 分の歩幅 3.44 対 3.282）、段 6・18 は percent 行の手書きの 2 小節（8 分が LP では 1.68 まで詰まる行で、大きい数字の rod が詰まらせない）。
+- ★ **途中で見つけて直した（`1ef7650c9`）: common shortest の票で `r1` を落としていた**。LP の `add_starter_duration` が断るのは multi-measure-interface（`R1`）だけで、`r1` は全音符で 1 票（spacing-engraver.cc:176-183）。Lily# は「全小節の休符 1 つの小節」を丸ごと除外していた＝`r1` の多い本で 16 分が最頻値に化ける。probe p6 では `r1 | r1` の行の小節線が次の行の中身で 0.60／0.27／0.00 動いていた（LP は常に 50.00）。台帳 2 点（`probes/rest-bar-vote.ly` RBV）exact・毒で 3 本赤・試験 1 本。掃き 998 冊で動いたのは **1 svg**（A Thousand Miles の「イントロだけ」＝双子と 0.01 以内に・base は 0.43／5.2 ずれ）。呼び手の無くなった `IsFullMeasureRest` は消した（`ebcf3cd5a`）。
+- ⚠️ 全 probe で**行末の小節が LP より 0.19 狭い**（ragged の 1 段でも両端揃えでも・base も同じ）＝未調査の別件。
+
+★ `-End p839 -DiffBase d29d3a761`（`end.log`）＝full **11267 / 0 / 2 / 11269**・門 全 OK。7.5: Core `+` 17 行・REF 1（spacing-engraver.cc の multi-measure の return）・OWN 0。7.6: 意味は LP（票を断るのは multi-measure-interface だけ）。7.7: 匂いなし。push はユーザー。
+判定: 次は **行末の小節の −0.19**（どの probe にも出る＝射程が広い・`vk/cmp.ps1` と `vk/probe.ps1` の列の dump がそのまま使える）か §2 H の ⒜〜⒟。(a) 今便の計器の上に立つ＝続ける側／(b) 会話は 2 便ぶん・圧縮なし／(c) 同じ島（LP 双子との spacing）⇒ **この会話で続けてよい**（`-Start p840` から）。
+
 ## 以下は第838セッションの経緯
 
 ### 1.1 第838セッション（2026-10-06・YT-DELL2）
