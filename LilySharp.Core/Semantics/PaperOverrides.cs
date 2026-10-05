@@ -41,19 +41,76 @@ namespace LilySharp.Core.Semantics;
 /// One spelling the block has no shape for: a flag turned OFF (<c>raggedRight=false</c>), so
 /// a setting can undo what the file turns on. Those are applied after the block.
 /// </para>
+/// <para>
+/// And keys that are settings ONLY, not paper keys (<see cref="SettingOnlyKeys"/> — P2, the
+/// owner's decision 2026-10-05: knobs for varying training data stay out of the language, so
+/// a <c>paper { }</c> that writes one is still refused). The four are LilyPond's
+/// <c>shortest-duration-space</c> and its <c>\paper</c> <c>systems-per-page</c> /
+/// <c>min-systems-per-page</c> / <c>max-systems-per-page</c>, with LilyPond's meaning:
+/// <c>systemsPerPage=6</c> on 17 systems' worth of music re-breaks the lines into 18 and pages
+/// them 6/6/6, and N systems that do not fit a page overflow it (PageBreaker's
+/// SpaceWithFixedNumberPerPage). Where LilyPond warns and ignores — systems-per-page beside
+/// min/max, or min above max (lily/page-breaking.cc:297-308 min_systems_per_page_) — a setting is refused.
+/// </para>
 /// </remarks>
 public sealed class PaperOverrides
 {
     /// <summary>The flags <see cref="Apply"/> knows how to turn off.</summary>
     private static readonly string[] FlagsWithOff = ["raggedRight", "raggedBottom", "breaksOnly"];
 
+    /// <summary>The keys only a setting can carry, in documentation order.</summary>
+    internal static readonly string[] SettingOnlyKeys =
+        ["shortestDurationSpace", "systemsPerPage", "minSystemsPerPage", "maxSystemsPerPage"];
+
     private readonly PaperDeclarationSyntax? _block;
     private readonly string[] _flagsOff;
+    private readonly List<Func<LayoutOptions, LayoutOptions>> _settingOnly;
 
-    private PaperOverrides(PaperDeclarationSyntax? block, string[] flagsOff)
+    private PaperOverrides(PaperDeclarationSyntax? block, string[] flagsOff,
+        List<Func<LayoutOptions, LayoutOptions>> settingOnly)
     {
         _block = block;
         _flagsOff = flagsOff;
+        _settingOnly = settingOnly;
+    }
+
+    /// <summary>One setting-only key read into the change it makes, or null with
+    /// <paramref name="error"/>.</summary>
+    private static Func<LayoutOptions, LayoutOptions>? ReadSettingOnly(string key, string value, out string? error)
+    {
+        error = null;
+        if (key == "shortestDurationSpace")
+        {
+            if (!double.TryParse(value, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out double space)
+                || !(space > 0) || double.IsInfinity(space))
+            {
+                error = $"'{key}' takes a positive number of spacing increments (unitless): {key}=2.5.";
+                return null;
+            }
+            return paper => paper with { ShortestDurationSpace = space };
+        }
+        if (!int.TryParse(value, System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out int n) || n < 1)
+        {
+            error = $"'{key}' takes a whole number of systems, 1 or more: {key}=4.";
+            return null;
+        }
+        return key switch
+        {
+            "systemsPerPage" => paper => paper with
+            {
+                PageBreaking = paper.PageBreaking with { SystemsPerPage = n },
+            },
+            "minSystemsPerPage" => paper => paper with
+            {
+                PageBreaking = paper.PageBreaking with { MinSystemsPerPage = n },
+            },
+            _ => paper => paper with
+            {
+                PageBreaking = paper.PageBreaking with { MaxSystemsPerPage = n },
+            },
+        };
     }
 
     /// <summary>
@@ -65,6 +122,7 @@ public sealed class PaperOverrides
         error = null;
         var entries = new List<string>();
         var flagsOff = new List<string>();
+        var settingOnly = new List<Func<LayoutOptions, LayoutOptions>>();
         var flags = PaperPlanReader.FlagKeySpellings();
         foreach (var setting in settings)
         {
@@ -96,6 +154,13 @@ public sealed class PaperOverrides
                 error = $"'{key}' needs a value: {key}=VALUE.";
                 return null;
             }
+            if (SettingOnlyKeys.Contains(key))
+            {
+                if (ReadSettingOnly(key, value, out error) is not { } change)
+                    return null;
+                settingOnly.Add(change);
+                continue;
+            }
             // A spacing block's sub-key: staffStaffSpacing.basicDistance=9.
             int dot = key.IndexOf('.');
             entries.Add(dot < 0 ? $"{key} {value}" : $"{key[..dot]} {{ {key[(dot + 1)..]} {value} }}");
@@ -119,7 +184,22 @@ public sealed class PaperOverrides
                 return null;
             }
         }
-        return new PaperOverrides(block, [.. flagsOff]);
+        // LILYPOND-REF: lily/page-breaking.cc:297-308 systems_per_page_ — the combinations LilyPond warns about and
+        // drops; a setting says what it means or is refused.
+        var paging = settingOnly.Aggregate(LayoutOptions.Default, (p, change) => change(p)).PageBreaking;
+        if (paging.SystemsPerPage > 0 && (paging.MinSystemsPerPage > 0 || paging.MaxSystemsPerPage > 0))
+        {
+            error = "'systemsPerPage' fixes every page; it does not combine with "
+                + "'minSystemsPerPage' or 'maxSystemsPerPage'.";
+            return null;
+        }
+        if (paging.MaxSystemsPerPage > 0 && paging.MinSystemsPerPage > paging.MaxSystemsPerPage)
+        {
+            error = $"'minSystemsPerPage={paging.MinSystemsPerPage}' is more than "
+                + $"'maxSystemsPerPage={paging.MaxSystemsPerPage}'.";
+            return null;
+        }
+        return new PaperOverrides(block, [.. flagsOff], settingOnly);
     }
 
     /// <summary>The settings laid over <paramref name="paper"/>.</summary>
@@ -136,6 +216,8 @@ public sealed class PaperOverrides
                 _ => paper,   // Parse admits only FlagsWithOff
 
             };
+        foreach (var change in _settingOnly)
+            paper = change(paper);
         return paper;
     }
 }

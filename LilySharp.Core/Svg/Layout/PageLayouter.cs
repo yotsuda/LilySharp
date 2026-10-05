@@ -467,7 +467,7 @@ internal sealed class PageLayouter
                 systems, systemExtents, systemDetails, systemStart, systemEnd,
                 pageHeader, isRagged, useFixedForce, lastPageForce,
                 vs, systemSkylines, systemBandUps, Anchor, out double pageForce,
-                out double headerTop);
+                out double headerTop, out double overflow);
 
             // LILYPOND-REF: lily/page-breaking.cc:577-582 — the force is carried forward
             // after every page, so "the previous page" always means the immediately
@@ -481,7 +481,8 @@ internal sealed class PageLayouter
                 HeaderHeight: pageHeader?.Depth ?? 0,
                 Systems: pageSystems,
                 Header: pageHeader,
-                HeaderTop: headerTop));
+                HeaderTop: headerTop,
+                Overflow: overflow));
 
             systemStart = systemEnd;
         }
@@ -514,7 +515,8 @@ internal sealed class PageLayouter
         ImmutableArray<double>? systemBandUps,
         Func<int, (double ToFirst, double ToLast, double HalfFirst, double HalfLast)> anchor,
         out double pageForce,
-        out double headerTop)
+        out double headerTop,
+        out double overflow)
     {
         // Lent, and given back once copied out at the end — this method's only return.
         var pageSystems = ListPool<SystemLayout>.Rent();
@@ -751,22 +753,50 @@ internal sealed class PageLayouter
 
         // LILYPOND-REF: lily/page-layout-problem.cc:780-804 solve_rod_spring_problem
         ImmutableArray<double> positions;
-        if (useFixedForce)
+        (double Force, bool Fits) solution;
+        // :788 — `ragged && !isinf (fixed_force)`: a previous page that had to be compressed
+        // (force −∞, below) hands its successor no force to reuse.
+        if (useFixedForce && !double.IsInfinity(fixedForce))
         {
             // fixed_force_solution (:1057-1061) — solve_rod_spring_problem (true, force).
             // The spacer is told it is NOT ragged, "otherwise it will refuse to stretch",
             // and the handed-in force is used only if the page still fits at it.
-            var sol = solver.Solve(pageHeight, ragged: false);
-            pageForce = solver.TotalLength(fixedForce) <= pageHeight ? fixedForce : sol.Force;
+            solution = solver.Solve(pageHeight, ragged: false);
+            pageForce = solver.TotalLength(fixedForce) <= pageHeight ? fixedForce : solution.Force;
             positions = solver.GetPositions(pageForce);
         }
         else
         {
-            var sol = solver.Solve(pageHeight, isRagged);
-            pageForce = sol.Force;
+            solution = solver.Solve(pageHeight, isRagged);
+            pageForce = solution.Force;
             // LILYPOND-REF: lily/simple-spacer.cc:301-303 — a ragged configuration is laid
             // out at force 0 even when the solve reported a positive one.
             positions = solver.GetPositions(isRagged && pageForce > 0 ? 0.0 : pageForce);
+        }
+
+        // LILYPOND-REF: lily/page-layout-problem.cc:806-822 solve_rod_spring_problem — a page whose
+        // springs cannot
+        // compress into it ("compressing over-full page by %.1f staff-spaces"): its force is −∞
+        // and the overflow is taken out of the gaps, the k-th position from the third on moved
+        // up by (k − 1) × overflow / (count − 2), so the last element lands on the page bottom
+        // and the systems overlap rather than run off the paper. Reached by a page that holds
+        // one system too tall for it, or by `lysc --set systemsPerPage=N` with N more than fit
+        // (LilyPond places N regardless — page-breaking.cc:1426-1474). The positions are the
+        // chain's, staves included, as LilyPond's are every live VerticalAxisGroup (:832).
+        overflow = 0;
+        if (!solution.Fits)
+        {
+            double over = solver.TotalLength(solution.Force) - pageHeight;
+            if (!(isRagged && over < 1e-6) && positions.Length > 2)
+            {
+                overflow = over;
+                pageForce = double.NegativeInfinity;
+                var squeezed = positions.ToBuilder();
+                double increment = over / (positions.Length - 2);
+                for (int k = 2; k < squeezed.Count; k++)
+                    squeezed[k] -= (k - 1) * increment;
+                positions = squeezed.MoveToImmutable();
+            }
         }
 
         // THE CHAIN, SPRING BY SPRING, once the page has solved. The question this answers is

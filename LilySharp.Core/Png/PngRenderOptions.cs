@@ -25,6 +25,9 @@ public sealed class PngRenderOptions
     /// paper the file says (<see cref="Semantics.PaperOverrides"/>).</summary>
     public Semantics.PaperOverrides? PaperOverrides { get; init; }
 
+    /// <summary>Told what the layout had to give up (<see cref="Svg.Layout.LayoutWarnings"/>).</summary>
+    public System.Action<string>? LayoutWarning { get; init; }
+
     /// <summary>
     /// Scale factor for output resolution. 1.0 = 96 DPI, 2.0 = 192 DPI, 3.0 = 288 DPI.
     /// </summary>

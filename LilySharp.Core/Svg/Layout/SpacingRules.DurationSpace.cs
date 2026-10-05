@@ -65,12 +65,12 @@ internal static partial class SpacingRules
         if (ratio < 1.0)
         {
             // Linear scaling for very short notes
-            spaceFactor = EngravingDefaults.ShortestDurationSpace + ratio - 1.0;
+            spaceFactor = spacing.ShortestSpace + ratio - 1.0;
         }
         else
         {
             // Logarithmic scaling (Gourlay algorithm)
-            spaceFactor = EngravingDefaults.ShortestDurationSpace + Math.Log2(ratio);
+            spaceFactor = spacing.ShortestSpace + Math.Log2(ratio);
         }
 
         // Result in staff spaces: spaceFactor * increment

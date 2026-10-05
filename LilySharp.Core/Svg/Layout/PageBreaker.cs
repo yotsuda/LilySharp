@@ -615,6 +615,23 @@ internal sealed record PageBreakResult
     /// </summary>
     public ImmutableArray<int> SystemsPerPage { get; init; }
 
+    /// <summary>
+    /// Whether some page holds more systems than max-systems-per-page allows
+    /// (<see cref="TooManySystems"/>) or fewer than min-systems-per-page asks
+    /// (<see cref="TooFewSystems"/>), OR-ed over the pages.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/include/page-spacing-result.hh:32-45 system_count_status_;
+    /// lily/page-spacing.cc:391-393 system_count_status_ (the unconstrained DP's),
+    /// lily/page-breaking.cc:1466-1469 system_count_status_
+    /// (the fixed number per page's).</remarks>
+    public int SystemCountStatus { get; init; }
+
+    /// <summary>LILYPOND-REF: lily/include/page-spacing-result.hh:35 SYSTEM_COUNT_TOO_MANY.</summary>
+    public const int TooManySystems = 1;
+
+    /// <summary>LILYPOND-REF: lily/include/page-spacing-result.hh:36 SYSTEM_COUNT_TOO_FEW.</summary>
+    public const int TooFewSystems = 2;
+
     /// <summary>LILYPOND-REF: lily/page-spacing-result.cc:32-36 page_count.</summary>
     public int PageCount => SystemsPerPage.IsDefault ? 0 : SystemsPerPage.Length;
 
@@ -781,6 +798,18 @@ internal sealed class PageBreaker
         if (lines.Count == 1)
             return new List<int> { 1 };
 
+        // LILYPOND-REF: lily/optimal-page-breaking.cc:253 make_pages (best.systems_per_page_) —
+        // the pages ARE the fixed-number spacing's: FindOptimalBreaks' exact filter found no
+        // paging at all when the count did not divide (LpGeometryProbes' SixSystemsPerPage).
+        if (_params.SystemsPerPage > 0)
+        {
+            var breaks = new List<int>();
+            int end = 0;
+            foreach (int count in SpaceWithFixedNumberPerPage(lines).SystemsPerPage)
+                breaks.Add(end += count);
+            return breaks;
+        }
+
         // Use dynamic programming to find optimal breaks
         return FindOptimalBreaks(lines);
     }
@@ -836,8 +865,86 @@ internal sealed class PageBreaker
                 SystemsPerPage = ImmutableArray<int>.Empty,
             };
         }
+        // LILYPOND-REF: lily/page-breaking.cc:1416-1418 space_systems_on_best_pages — with
+        // systems-per-page set, the pages are not optimised at all.
+        if (_params.SystemsPerPage > 0)
+            return SpaceWithFixedNumberPerPage(lines);
         return SolveUnconstrained(lines);
     }
+
+    /// <summary>
+    /// systems-per-page: N systems to each page in order, whatever they weigh, each page that
+    /// does not hold N charged for every system it is off by.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-breaking.cc:1426-1474 space_systems_with_fixed_number_per_page,
+    /// transcribed (finalize_spacing_result's share is <see cref="Demerits"/>). A page also ends
+    /// at a forced page break (:1453-1454). ⚠️ No height is checked: N systems that do not fit
+    /// the page overflow it, in LilyPond as here — the price is the page's force alone.
+    /// ⚠️ The penalty is what makes the system-count loop RE-BREAK THE LINES: 17 systems under 6
+    /// leave the last page one short (1e8), so the loop takes 18 and pages them 6/6/6 — LilyPond's
+    /// answer (LpGeometryProbes' SixSystemsPerPage). The title line counts no system
+    /// (compressed_nontitle_lines_count_, :1449-1450).
+    /// </remarks>
+    private PageBreakResult SpaceWithFixedNumberPerPage(IReadOnlyList<SystemDetails> lines)
+    {
+        int n = lines.Count;
+        int target = _params.SystemsPerPage;
+        var space = Take(ref _scoredSpacing, _topMargin);
+        var forces = new List<double>();
+        var perPage = new List<int>();
+        double penalty = 0;
+        int status = 0;
+        int line = 0;
+        while (line < n)
+        {
+            space.Reset(perPage.Count == 0 ? _topMargin + _headerHeight : _topMargin);
+            int pageFirstLine = line;
+            int systemsOnThisPage = 0;
+            while (systemsOnThisPage < target && line < n)
+            {
+                var cur = lines[line];
+                space.AppendSystem(cur);
+                if (!cur.IsTitle)
+                    systemsOnThisPage++;
+                line++;
+                if (cur.PagePermission == BreakPermission.Force)
+                    break;
+            }
+            perPage.Add(line - pageFirstLine);
+            forces.Add(space.Force);
+            penalty += lines[line - 1].PagePenalty;
+            if (systemsOnThisPage != target)
+            {
+                penalty += Math.Abs(systemsOnThisPage - target) * TerribleSpacingPenalty;
+                status |= systemsOnThisPage < target
+                    ? PageBreakResult.TooFewSystems : PageBreakResult.TooManySystems;
+            }
+        }
+        return new PageBreakResult
+        {
+            Penalty = penalty,
+            Forces = [.. forces],
+            SystemsPerPage = [.. perPage],
+            SystemCountStatus = status,
+        };
+    }
+
+    /// <summary>The cap on a page's systems: systems-per-page when set, else
+    /// max-systems-per-page (0 = none).</summary>
+    /// <remarks>LILYPOND-REF: lily/page-breaking.cc:336-342 max_systems_per_page.</remarks>
+    private int MaxSystems => _params.SystemsPerPage > 0 ? _params.SystemsPerPage : _params.MaxSystemsPerPage;
+
+    /// <summary>The floor on a page's systems: systems-per-page when set, else
+    /// min-systems-per-page (0 = none).</summary>
+    /// <remarks>LILYPOND-REF: lily/page-breaking.cc:344-350 min_systems_per_page.</remarks>
+    private int MinSystems => _params.SystemsPerPage > 0 ? _params.SystemsPerPage : _params.MinSystemsPerPage;
+
+    /// <summary>LILYPOND-REF: lily/page-breaking.cc:417-426 line_count_status.</summary>
+    private int LineCountStatus(int lineCount)
+        => MaxSystems > 0 && lineCount > MaxSystems ? PageBreakResult.TooManySystems
+         : lineCount < MinSystems ? PageBreakResult.TooFewSystems
+         : 0;
 
     /// <summary>
     /// LilyPond's unconstrained page DP: for each line, the cheapest way to end a page on
@@ -964,15 +1071,22 @@ internal sealed class PageBreaker
         var forces = new double[pageCount];
         var perPage = new int[pageCount];
         int system = n - 1;
+        // LILYPOND-REF: lily/page-spacing.cc:391-393 system_count_status_ — each state's status is its page's
+        // line_count_status OR-ed with its predecessor's, so the last state's is the OR over the
+        // chosen pages: taken here on the walk back rather than carried in a fifth row.
+        int status = 0;
         for (int page = pageCount - 1; page >= 0; page--)
         {
             int p = prev[system];
             forces[page] = force[system];
             perPage[page] = system - p;
+            int titles = p < 0 && lines[0].IsTitle ? 1 : 0;
+            status |= LineCountStatus(system - p - titles);
             system = p;
         }
         return new PageBreakResult
         {
+            SystemCountStatus = status,
             Penalty = penalty[n - 1] + lines[n - 1].PagePenalty + lines[n - 1].TurnPenalty,
             Forces = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(forces),
             SystemsPerPage = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(perPage),
@@ -1057,10 +1171,11 @@ internal sealed class PageBreaker
             _vs.TopSystem, _vs.LastBottom, _vs.TopMarkup);
         double FirstBand() => _pageHeight - (_topMargin + _headerHeight) - _bottomMargin;
         double RestBand() => _pageHeight - _topMargin - _bottomMargin;
-        bool TooFewLines(int lineCount) =>
-            _params.MinSystemsPerPage > 0 && lineCount < _params.MinSystemsPerPage;
-        bool TooManyLines(int lineCount) =>
-            _params.MaxSystemsPerPage > 0 && lineCount > _params.MaxSystemsPerPage;
+        // LILYPOND-REF: lily/page-breaking.cc:394-404 too_many_lines / too_few_lines — through
+        // the accessors, so systems-per-page is both.
+        int maxSystems = MaxSystems, minSystems = MinSystems;
+        bool TooFewLines(int lineCount) => lineCount < minSystems;
+        bool TooManyLines(int lineCount) => maxSystems > 0 && lineCount > maxSystems;
         bool ragged = _params.RaggedBottom;
 
         int ret = 1;
@@ -1579,28 +1694,18 @@ internal sealed class PageBreaker
     /// Calculates penalty for having too few or too many systems on a page.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/page-breaking.cc:407 line_count_penalty()
+    /// LILYPOND-REF: lily/page-breaking.cc:406-415 line_count_penalty, transcribed: TERRIBLE
+    /// for every system over the cap or under the floor (<see cref="MaxSystems"/> /
+    /// <see cref="MinSystems"/>, which read systems-per-page first). ⚠️ It was a flat TERRIBLE
+    /// however far off, and an exact systems-per-page test of its own, until session 819.
     /// </remarks>
     private double CalculateLineCountPenalty(int systemCount)
     {
-        if (_params.SystemsPerPage > 0 && systemCount != _params.SystemsPerPage)
-        {
-            return TerribleSpacingPenalty;
-        }
-
-        double penalty = 0;
-
-        if (_params.MaxSystemsPerPage > 0 && systemCount > _params.MaxSystemsPerPage)
-        {
-            penalty += TerribleSpacingPenalty;
-        }
-
-        if (_params.MinSystemsPerPage > 0 && systemCount < _params.MinSystemsPerPage)
-        {
-            penalty += TerribleSpacingPenalty;
-        }
-
-        return penalty;
+        if (MaxSystems > 0 && systemCount > MaxSystems)
+            return (systemCount - MaxSystems) * TerribleSpacingPenalty;
+        if (systemCount < MinSystems)
+            return (MinSystems - systemCount) * TerribleSpacingPenalty;
+        return 0;
     }
 
     /// <summary>

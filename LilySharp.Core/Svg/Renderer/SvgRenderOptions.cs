@@ -60,6 +60,12 @@ public sealed class SvgRenderOptions
     public Semantics.PaperOverrides? PaperOverrides { get; init; }
 
     /// <summary>
+    /// Told what the layout had to give up (<see cref="Layout.LayoutWarnings"/> — an over-full
+    /// page). Null: nobody is told, the picture is the same.
+    /// </summary>
+    public System.Action<string>? LayoutWarning { get; init; }
+
+    /// <summary>
     /// Default options (reference font by name, requires font installed on system).
     /// </summary>
     public static SvgRenderOptions Default => new();

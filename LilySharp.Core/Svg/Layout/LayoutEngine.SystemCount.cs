@@ -404,8 +404,9 @@ internal sealed partial class LayoutEngine
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/optimal-page-breaking.cc:41-254 Optimal_page_breaking::solve,
-    /// transcribed (the branches for a forced <c>page-count</c> and <c>systems-per-page</c>
-    /// are not modelled — Lily# has neither variable at this seam):
+    /// transcribed (the branch for a forced <c>page-count</c> is not modelled — Lily# has no
+    /// such variable; <c>systems-per-page</c> without it lives in the breaker,
+    /// <see cref="PageBreaker.BreakIntoPagesScoredOfLines"/>):
     /// <list type="number">
     /// <item>:48-59 — start from the line DP's ideal configuration and count.</item>
     /// <item>:111-128 — price it on its best pages; <c>min_sys_count</c> is the ideal count
@@ -425,12 +426,12 @@ internal sealed partial class LayoutEngine
     /// the SAME estimate, so the comparison is between counts and not between an estimate
     /// and a placement.
     /// <para>
-    /// <c>system_count_status_</c> is always <c>SYSTEM_COUNT_OK</c> here: it is set by the
-    /// <c>systems-per-page</c> spacer (page-breaking.cc:1461-1470) and by
-    /// <c>line_count_status</c> under min/max-systems-per-page, neither of which Lily#'s
-    /// breaker reports as a status (it prices them as penalties). The two early exits that
-    /// read it therefore take their unconditional arm: :181 tests <c>!(TOO_MANY)</c>, :244
-    /// <c>!(TOO_FEW)</c>.
+    /// <c>system_count_status_</c> (<see cref="PageBreakResult.SystemCountStatus"/>) is the
+    /// best result's: :181 keeps reducing the count past the two early exits while the best
+    /// pages hold TOO MANY systems, and :244 keeps adding systems past an infinitely bad count
+    /// while they hold TOO FEW and the count still grows. ⚠️ Until session 819 the breaker
+    /// reported no status and both exits took their unconditional arm — harmless without the
+    /// min/max/systems-per-page settings, which nothing could set before `lysc --set`.
     /// </para>
     /// <para>
     /// MEASURED on scratch/p321/fx/bis-v6-proper-rests-first.lys (session 322): LilyPond
@@ -551,6 +552,7 @@ internal sealed partial class LayoutEngine
         }
         double bestDemerits = best.demerits;
         List<int> bestBreaks = best.breaks;
+        int bestStatus = best.pages.SystemCountStatus;
         bool changed = false;
         int pageCount = best.pages.PageCount;
 
@@ -588,14 +590,18 @@ internal sealed partial class LayoutEngine
             {
                 bestDemerits = demerits;
                 bestBreaks = cur!.Value.breaks;
+                bestStatus = cur.Value.pages.SystemCountStatus;
                 changed = true;
             }
-            // :181-189 — under !(best.system_count_status_ & SYSTEM_COUNT_TOO_MANY), which
-            // always holds here (see the remarks).
-            if (cur is { } c && c.pages.PageCount < pageCount && c.pages.AverageForce > 0)
-                break;
-            if (demerits >= PageBreaker.BadSpacingPenalty)
-                break;
+            // :181-189 — under !(best.system_count_status_ & SYSTEM_COUNT_TOO_MANY): while the
+            // best pages hold too many systems, fewer are still worth trying.
+            if ((bestStatus & PageBreakResult.TooManySystems) == 0)
+            {
+                if (cur is { } c && c.pages.PageCount < pageCount && c.pages.AverageForce > 0)
+                    break;
+                if (demerits >= PageBreaker.BadSpacingPenalty)
+                    break;
+            }
         }
 
         // LILYPOND-REF: :192-248 — "try a larger number of systems than the ideal line
@@ -622,6 +628,7 @@ internal sealed partial class LayoutEngine
                     {
                         bestDemerits = demerits;
                         bestBreaks = candidate.Breaks;
+                        bestStatus = pages.SystemCountStatus;
                         changed = true;
                     }
                     bestDemeritsForThisCount = demerits;
@@ -642,10 +649,9 @@ internal sealed partial class LayoutEngine
             }
 
             // :234-247 — stop on an infinitely bad count unless we have too few systems and
-            // adding one still changes the count; the status is never TOO_FEW here, so the
-            // first arm decides.
+            // adding one still changes the count.
             int actualCount = bestBreaks.Count;
-            const bool tooFewSystems = false;
+            bool tooFewSystems = (bestStatus & PageBreakResult.TooFewSystems) != 0;
             if (bestDemeritsForThisCount >= PageBreaker.BadSpacingPenalty
                 && (!tooFewSystems || actualCount == prevActualCount))
                 break;

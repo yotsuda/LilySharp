@@ -25,6 +25,9 @@ public sealed class PdfRenderOptions
     /// paper the file says (<see cref="Semantics.PaperOverrides"/>).</summary>
     public Semantics.PaperOverrides? PaperOverrides { get; init; }
 
+    /// <summary>Told what the layout had to give up (<see cref="Svg.Layout.LayoutWarnings"/>).</summary>
+    public System.Action<string>? LayoutWarning { get; init; }
+
     /// <summary>Page size in points (1 point = 1/72 inch).</summary>
     public double PageWidthPt { get; init; } = 595.28; // A4
 

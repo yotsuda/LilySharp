@@ -259,7 +259,8 @@ static void ShowSvgHelp()
           -n, --no-embed-font    Don't embed font (smaller file, requires font installed)
           --combined             Stack every score into ONE <input>.svg (like a \book)
           --set <KEY=VALUE>      Override a paper value (repeatable): spacingIncrement=1.6,
-                                 staffStaffSpacing.basicDistance=9, leftMargin=20mm, raggedRight=false
+                                 staffStaffSpacing.basicDistance=9, leftMargin=20mm, raggedRight=false,
+                                 shortestDurationSpace=3, systemsPerPage=4 (CLI_REFERENCE)
           -h, --help             Show this help
 
         Examples:
@@ -352,7 +353,8 @@ static void ShowPdfHelp()
           -d, --out-dir <folder> Write into this folder (default: the input's folder)
           --score <name>         Write only the named score
           --set <KEY=VALUE>      Override a paper value (repeatable): spacingIncrement=1.6,
-                                 staffStaffSpacing.basicDistance=9, leftMargin=20mm, raggedRight=false
+                                 staffStaffSpacing.basicDistance=9, leftMargin=20mm, raggedRight=false,
+                                 shortestDurationSpace=3, systemsPerPage=4 (CLI_REFERENCE)
           -h, --help             Show this help
 
         Examples:
@@ -410,7 +412,8 @@ static void ShowPngHelp()
           --scale <factor>       Scale factor (default: 2.0 = 192 DPI)
           --crop                 Trim whitespace to the content bounding box
           --set <KEY=VALUE>      Override a paper value (repeatable): spacingIncrement=1.6,
-                                 staffStaffSpacing.basicDistance=9, leftMargin=20mm, raggedRight=false
+                                 staffStaffSpacing.basicDistance=9, leftMargin=20mm, raggedRight=false,
+                                 shortestDurationSpace=3, systemsPerPage=4 (CLI_REFERENCE)
           -h, --help             Show this help
 
         Examples:

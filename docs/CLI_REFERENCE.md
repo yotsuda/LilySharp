@@ -205,9 +205,26 @@ data does exactly that).
 
 A key or value the paper block would refuse is an error, with the block's message.
 
+Four keys exist only here, not in `paper { }` — knobs for engraving the same music many
+ways, kept out of the language. They are LilyPond's, with LilyPond's meaning:
+
+| Setting | Means |
+|---------|-------|
+| `shortestDurationSpace=2.5` | the space the score's shortest note gets, in spacing increments (LilyPond's `shortest-duration-space`, default 2); a positive number, no unit |
+| `systemsPerPage=4` | exactly 4 systems on every page (LilyPond's `systems-per-page`): the lines are re-broken so the pages fill — 12 systems' worth under 5 becomes 15, paged 5/5/5 |
+| `maxSystemsPerPage=4`, `minSystemsPerPage=2` | a cap and a floor on a page's systems (`max-` / `min-systems-per-page`) |
+
+The counts are whole numbers from 1. `systemsPerPage` does not combine with the other two,
+and the floor may not exceed the cap — LilyPond warns and ignores both; here they are errors.
+More systems than a page can hold are placed anyway and pressed together on the page, and
+the command says so: `warning: page 1 is over-full by 11.3 staff spaces: its systems were
+pressed together to fit it` (LilyPond's "compressing over-full page"). A reader that needs
+every page uncluttered should drop the pages it names.
+
 ```bash
 lysc png --set spacingIncrement=1.6 --set staffStaffSpacing.basicDistance=9 song.lys
 lysc svg --set raggedRight=false --set leftMargin=25mm song.lys
+lysc png --set shortestDurationSpace=3 --set systemsPerPage=4 song.lys
 ```
 
 ### midi - Export to MIDI

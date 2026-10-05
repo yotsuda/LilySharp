@@ -207,6 +207,19 @@ internal sealed record LayoutOptions
     /// </remarks>
     public double SpacingIncrement { get; init; } = EngravingDefaults.SpacingIncrement;
 
+    /// <summary>
+    /// The space the common shortest duration starts from, in spacing increments.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm SpacingSpanner.shortest-duration-space (2.0), read by
+    /// lily/spacing-options.cc:30-53 into get_duration_space (:72-107). Carried with the
+    /// increment by <see cref="SpacingOptions.For"/>. ⚠️ NOT A PAPER KEY: only
+    /// <c>lysc --set shortestDurationSpace=N</c> sets it (<see cref="Semantics.PaperOverrides"/> —
+    /// LilySharp-Omr's proposal of 2026-10-02 P2, the owner's decision 2026-10-05 to keep the
+    /// training-data knobs out of the language).
+    /// </remarks>
+    public double ShortestDurationSpace { get; init; } = EngravingDefaults.ShortestDurationSpace;
+
     // === Indent (in staff spaces) ===
 
     /// <summary>

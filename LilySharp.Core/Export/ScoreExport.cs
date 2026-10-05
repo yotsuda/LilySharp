@@ -99,10 +99,11 @@ public static class ScoreExport
     /// <summary>The SVG options an export uses: the bundled font embedded as base64 so the
     /// file stands alone, or a bare reference to it when the caller asks for the smaller
     /// file. The combined (<c>\book</c>-like) SVG the command line stacks uses the same.</summary>
-    public static SvgRenderOptions SvgOptions(bool embedFont, Semantics.PaperOverrides? paperSettings = null)
+    public static SvgRenderOptions SvgOptions(bool embedFont, Semantics.PaperOverrides? paperSettings = null,
+        Action<string>? layoutWarning = null)
         => embedFont
-            ? new SvgRenderOptions { EmbedFont = true, FontDirectory = FontLocator.Find(), PaperOverrides = paperSettings }
-            : new SvgRenderOptions { PaperOverrides = paperSettings };
+            ? new SvgRenderOptions { EmbedFont = true, FontDirectory = FontLocator.Find(), PaperOverrides = paperSettings, LayoutWarning = layoutWarning }
+            : new SvgRenderOptions { PaperOverrides = paperSettings, LayoutWarning = layoutWarning };
 
     /// <summary>
     /// Writes <paramref name="score"/> (null: a file with no <c>score</c> block — its one
@@ -126,17 +127,21 @@ public static class ScoreExport
         options ??= ExportOptions.Default;
         var spec = score?.Spec;
         var form = spec?.Form;
+        // What the visual formats' layout had to give up (LayoutWarnings — an over-full page).
+        var layoutWarnings = new List<string>();
         switch (format)
         {
             case "svg":
-                File.WriteAllText(outputPath, SvgGenerator.GenerateScore(tree, spec, SvgOptions(options.EmbedFont, options.PaperOverrides)));
-                return Plain(outputPath);
+                File.WriteAllText(outputPath, SvgGenerator.GenerateScore(tree, spec,
+                    SvgOptions(options.EmbedFont, options.PaperOverrides, layoutWarnings.Add)));
+                return new ExportResult([outputPath], [], layoutWarnings);
 
             case "png":
             {
                 var pngOptions = new PngRenderOptions
                 {
                     Scale = options.PngScale, FontDirectory = FontLocator.Find(), PaperOverrides = options.PaperOverrides,
+                    LayoutWarning = layoutWarnings.Add,
                 };
                 var rendered = PngGenerator.GenerateScorePages(tree, spec, pngOptions);
                 var pages = options.CropPng
@@ -147,14 +152,17 @@ public static class ScoreExport
                     File.WriteAllBytes(files[p], pages[p]);
                 return new ExportResult(files,
                     ["Size: " + string.Join(", ", pages.Select(Kilobytes)), $"Scale: {options.PngScale:F1}x"],
-                    []);
+                    layoutWarnings);
             }
 
             case "pdf":
             {
-                var bytes = PdfGenerator.GenerateScore(tree, spec, new PdfRenderOptions { PaperOverrides = options.PaperOverrides });
+                var bytes = PdfGenerator.GenerateScore(tree, spec, new PdfRenderOptions
+                {
+                    PaperOverrides = options.PaperOverrides, LayoutWarning = layoutWarnings.Add,
+                });
                 File.WriteAllBytes(outputPath, bytes);
-                return new ExportResult([outputPath], [$"Size: {Kilobytes(bytes)}"], []);
+                return new ExportResult([outputPath], [$"Size: {Kilobytes(bytes)}"], layoutWarnings);
             }
 
             case "midi":

@@ -426,6 +426,27 @@ public class PageBreakerTests
         Assert.Equal(4, result[1]); // 2 systems on page 2
     }
 
+    /// <summary>
+    /// A count that does not divide still pages — N to a page, the rest on the last, charged
+    /// TERRIBLE per missing system and marked TOO_FEW (lily/page-breaking.cc:1426-1474
+    /// space_systems_with_fixed_number_per_page). The
+    /// exact filter this replaced found no paging at all and fell back to one page.
+    /// </summary>
+    [Fact]
+    public void SystemsPerPage_ACountThatDoesNotDivide_StillPages()
+    {
+        var systems = Enumerable.Range(0, 5).Select(_ => CreateSystem(height: 10)).ToArray();
+        var breaker = new PageBreaker(
+            pageHeight: 200, topMargin: 5, bottomMargin: 5, headerHeight: 5,
+            parameters: new PageBreakingParameters { SystemsPerPage = 2 });
+
+        Assert.Equal([2, 4, 5], breaker.BreakIntoPages(systems));
+        var scored = breaker.BreakIntoPagesScored(systems);
+        Assert.Equal([2, 2, 1], scored.SystemsPerPage);
+        Assert.Equal(PageBreakResult.TooFewSystems, scored.SystemCountStatus);
+        Assert.True(scored.Penalty >= 1e8);
+    }
+
     // --- Break permission tests ---
 
     [Fact]

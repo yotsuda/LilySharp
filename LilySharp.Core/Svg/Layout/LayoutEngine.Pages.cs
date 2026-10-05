@@ -399,6 +399,14 @@ internal sealed partial class LayoutEngine
                     return OptimalPages();
         }
 
+        // The same for a cap on a page's systems (`lysc --set systemsPerPage|maxSystemsPerPage`,
+        // LilySharp-Omr's proposal of 2026-10-02 P2): more systems than it allows cannot be one
+        // page however well they fit, and the breaker is its one reader.
+        var paging = _options.PageBreaking;
+        int cap = paging.SystemsPerPage > 0 ? paging.SystemsPerPage : paging.MaxSystemsPerPage;
+        if (_options.PageHeight > 0 && cap > 0 && systems.Length > cap)
+            return OptimalPages();
+
         // Recalculate Y positions using skyline extents to avoid overlaps
         var pageAnchor = PageAnchorOffsets(systems[0].StaffGroups);
         double skylineY = LayoutUtilities.CalculateFirstSystemY(

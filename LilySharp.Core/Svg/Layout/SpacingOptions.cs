@@ -43,9 +43,12 @@ namespace LilySharp.Core.Svg.Layout;
 /// <param name="GlobalShortest">The common shortest duration in whole notes —
 /// <c>global_shortest_</c>.</param>
 /// <param name="Increment">The spacing increment in staff spaces — <c>increment_</c>.</param>
-internal readonly record struct SpacingOptions(double GlobalShortest, double Increment)
+/// <param name="ShortestSpace">The shortest duration's space in increments —
+/// <c>shortest_duration_space_</c> (spacing-options.cc:36).</param>
+internal readonly record struct SpacingOptions(double GlobalShortest, double Increment,
+    double ShortestSpace = EngravingDefaults.ShortestDurationSpace)
 {
-    /// <summary>LilyPond's defaults: a 3/16 shortest and the 1.2 increment.</summary>
+    /// <summary>LilyPond's defaults: a 3/16 shortest, the 1.2 increment and the 2.0 shortest space.</summary>
     public static SpacingOptions Default { get; } =
         new(EngravingDefaults.BaseShortestDuration, EngravingDefaults.SpacingIncrement);
 
@@ -59,7 +62,8 @@ internal readonly record struct SpacingOptions(double GlobalShortest, double Inc
     /// (<see cref="SystemBreaker.ComputeMultiStaffSpringData"/>) has only the score to ask.
     /// </remarks>
     public static SpacingOptions For(Model.MultiStaffScore score, double? globalShortest)
-        => new(globalShortest ?? EngravingDefaults.BaseShortestDuration, score.Paper.SpacingIncrement);
+        => new(globalShortest ?? EngravingDefaults.BaseShortestDuration, score.Paper.SpacingIncrement,
+            score.Paper.ShortestDurationSpace);
 
     /// <summary>These options with another shortest duration and the same increment.</summary>
     public SpacingOptions WithShortest(double? globalShortest)

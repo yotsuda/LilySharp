@@ -262,7 +262,11 @@ internal sealed record PageLayout(
     // book-title paper system (HeaderBand) — and how far below the page's top edge its top
     // sits: the page chain's top-markup spring solved with the rest of the page.
     HeaderBand? Header = null,
-    double HeaderTop = 0
+    double HeaderTop = 0,
+    // How far the page's chain overran it at its stiffest, taken out of the gaps so the
+    // systems overlap on the page (PageLayouter.PositionSystemsOnPage, LilyPond's
+    // "compressing over-full page by %.1f staff-spaces"); 0 when it fits.
+    double Overflow = 0
 );
 
 /// <summary>

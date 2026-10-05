@@ -61,6 +61,7 @@ public static class PngGenerator
         // the PNG of a score could differ from its SVG.
         MultiStaffScore multiScore = SvgGenerator.CollectScore(tree, renderSpec, settings: options.PaperOverrides);
         ScoreLayout layout = new LayoutEngine(multiScore.Paper).Layout(multiScore);
+        LayoutWarnings.Report(layout, options.LayoutWarning);
 
         var fontDir = options.FontDirectory ?? FontLocator.Find();
         var docOptions = new PngDocumentOptions
@@ -96,6 +97,7 @@ public static class PngGenerator
 
         MultiStaffScore multiScore = SvgGenerator.CollectScore(tree, renderSpec, settings: options.PaperOverrides);
         ScoreLayout layout = new LayoutEngine(multiScore.Paper).Layout(multiScore);
+        LayoutWarnings.Report(layout, options.LayoutWarning);
 
         var fontDir = options.FontDirectory ?? FontLocator.Find();
         var docOptions = new PngDocumentOptions
