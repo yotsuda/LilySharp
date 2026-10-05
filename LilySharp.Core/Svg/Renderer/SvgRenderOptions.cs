@@ -54,6 +54,12 @@ public sealed class SvgRenderOptions
     public bool Snippet { get; init; }
 
     /// <summary>
+    /// Paper values from outside the file (<c>lysc … --set KEY=VALUE</c>), laid over the paper
+    /// the file says (<see cref="Semantics.PaperOverrides"/>). Null for every caller but the CLI.
+    /// </summary>
+    public Semantics.PaperOverrides? PaperOverrides { get; init; }
+
+    /// <summary>
     /// Default options (reference font by name, requires font installed on system).
     /// </summary>
     public static SvgRenderOptions Default => new();

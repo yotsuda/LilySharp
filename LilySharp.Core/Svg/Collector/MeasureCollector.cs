@@ -82,6 +82,10 @@ public sealed partial class MeasureCollector
     /// sets it from the render options). Read once by <see cref="CollectDefinitions"/>.</summary>
     internal Layout.LayoutOptions PaperBase { get; init; } = Layout.LayoutOptions.Default;
 
+    /// <summary>The caller's paper values (<c>lysc … --set</c>), laid over everything the file
+    /// says — its <c>paper { }</c> and the score's <c>paper NAME</c>. Null: none.</summary>
+    internal Semantics.PaperOverrides? PaperOverrides { get; init; }
+
     /// <summary>The score's <c>layout NAME [{ … }]</c> reference, same contract as
     /// <see cref="PaperOverride"/> — resolved by <see cref="CollectDefinitions"/> into
     /// <c>MetadataState.LayoutPlan</c> (Semantics.LayoutPlanReader).</summary>

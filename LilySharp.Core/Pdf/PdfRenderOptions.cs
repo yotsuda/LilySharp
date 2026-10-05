@@ -21,6 +21,10 @@ namespace LilySharp.Core.Pdf;
 /// </summary>
 public sealed class PdfRenderOptions
 {
+    /// <summary>Paper values from outside the file (<c>lysc … --set KEY=VALUE</c>), laid over the
+    /// paper the file says (<see cref="Semantics.PaperOverrides"/>).</summary>
+    public Semantics.PaperOverrides? PaperOverrides { get; init; }
+
     /// <summary>Page size in points (1 point = 1/72 inch).</summary>
     public double PageWidthPt { get; init; } = 595.28; // A4
 

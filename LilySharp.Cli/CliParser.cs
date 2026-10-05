@@ -56,11 +56,15 @@ internal sealed class CliParser
     {
         public List<string> Positionals { get; } = new();
         public Dictionary<string, string> Values { get; } = new();
+        // Every occurrence of a value option, in order — for one that may be repeated
+        // (--set K=V --set K2=V2); Values keeps the last, as before.
+        public Dictionary<string, List<string>> AllValues { get; } = new();
         public HashSet<string> Flags { get; } = new();
         public string? Error { get; set; }
 
         public bool Has(string canonical) => Flags.Contains(canonical);
         public string? Get(string canonical) => Values.TryGetValue(canonical, out var v) ? v : null;
+        public IReadOnlyList<string> GetAll(string canonical) => AllValues.TryGetValue(canonical, out var v) ? v : [];
     }
 
     /// <summary>
@@ -78,6 +82,9 @@ internal sealed class CliParser
             {
                 if (i + 1 >= args.Length) { r.Error = vo.MissingMsg; return r; }
                 r.Values[vo.Canon] = args[++i];
+                if (!r.AllValues.TryGetValue(vo.Canon, out var all))
+                    r.AllValues[vo.Canon] = all = new List<string>();
+                all.Add(r.Values[vo.Canon]);
             }
             else if (_boolFlags.TryGetValue(arg, out var fcanon))
             {

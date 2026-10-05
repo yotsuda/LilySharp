@@ -426,6 +426,10 @@ workflow attaches that section to the GitHub Release verbatim.
   pages; the scan view and the quick fixes pick up what it finds. The `.lys` is not touched.
   Needs a reader with `omr verify` (asked only when its `--version --json` lists it). In the
   scan view, a box whose mark is not in the text goes to its bar's line.
+- **`lysc svg|png|pdf --set KEY=VALUE` overrides a paper value for one run.** Any `paper { }`
+  entry — `spacingIncrement=1.6`, `leftMargin=20mm`, `staffStaffSpacing.basicDistance=9`, a
+  flag on or `=false` — laid over what the file says, which stays as it is; repeat it as
+  needed. A key or value the paper block would refuse is an error with the block's message.
 - **`paper { breaksOnly }` breaks lines and pages only where the music says.** Every bar line
   other than a written `break` / `pageBreak` is closed to both (a plain `break` is then not a
   page break either), so a score copied from a page — an OMR reader writes the original's

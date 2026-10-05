@@ -52,6 +52,10 @@ public sealed class ExportOptions
     /// (<c>lysc ly --pin-fonts</c>; the twin's help says when).</summary>
     public bool PinFonts { get; init; }
 
+    /// <summary>SVG, PNG, PDF: paper values laid over the paper the file says
+    /// (<c>lysc svg|png|pdf --set KEY=VALUE</c>; <see cref="Semantics.PaperOverrides"/>).</summary>
+    public Semantics.PaperOverrides? PaperOverrides { get; init; }
+
     public static ExportOptions Default { get; } = new();
 }
 
@@ -95,8 +99,10 @@ public static class ScoreExport
     /// <summary>The SVG options an export uses: the bundled font embedded as base64 so the
     /// file stands alone, or a bare reference to it when the caller asks for the smaller
     /// file. The combined (<c>\book</c>-like) SVG the command line stacks uses the same.</summary>
-    public static SvgRenderOptions SvgOptions(bool embedFont)
-        => embedFont ? SvgRenderOptions.Export(FontLocator.Find()) : SvgRenderOptions.Default;
+    public static SvgRenderOptions SvgOptions(bool embedFont, Semantics.PaperOverrides? paperSettings = null)
+        => embedFont
+            ? new SvgRenderOptions { EmbedFont = true, FontDirectory = FontLocator.Find(), PaperOverrides = paperSettings }
+            : new SvgRenderOptions { PaperOverrides = paperSettings };
 
     /// <summary>
     /// Writes <paramref name="score"/> (null: a file with no <c>score</c> block — its one
@@ -123,12 +129,15 @@ public static class ScoreExport
         switch (format)
         {
             case "svg":
-                File.WriteAllText(outputPath, SvgGenerator.GenerateScore(tree, spec, SvgOptions(options.EmbedFont)));
+                File.WriteAllText(outputPath, SvgGenerator.GenerateScore(tree, spec, SvgOptions(options.EmbedFont, options.PaperOverrides)));
                 return Plain(outputPath);
 
             case "png":
             {
-                var pngOptions = new PngRenderOptions { Scale = options.PngScale, FontDirectory = FontLocator.Find() };
+                var pngOptions = new PngRenderOptions
+                {
+                    Scale = options.PngScale, FontDirectory = FontLocator.Find(), PaperOverrides = options.PaperOverrides,
+                };
                 var rendered = PngGenerator.GenerateScorePages(tree, spec, pngOptions);
                 var pages = options.CropPng
                     ? rendered.Select(p => PngGenerator.CropToContent(p)).ToList()
@@ -143,7 +152,7 @@ public static class ScoreExport
 
             case "pdf":
             {
-                var bytes = PdfGenerator.GenerateScore(tree, spec);
+                var bytes = PdfGenerator.GenerateScore(tree, spec, new PdfRenderOptions { PaperOverrides = options.PaperOverrides });
                 File.WriteAllBytes(outputPath, bytes);
                 return new ExportResult([outputPath], [$"Size: {Kilobytes(bytes)}"], []);
             }

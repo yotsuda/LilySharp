@@ -992,7 +992,7 @@ public sealed class IncrementalCompiler
     }
 
     /// <summary>
-    /// Collects <paramref name="tree"/> the way <see cref="SvgGenerator.CollectScore(SyntaxTree, RenderSpec?, Layout.LayoutOptions?)"/>
+    /// Collects <paramref name="tree"/> the way <see cref="SvgGenerator.CollectScore(SyntaxTree, RenderSpec?, Layout.LayoutOptions?, Semantics.PaperOverrides?)"/>
     /// does, resuming the collect walks from the recorded baseline when the edit
     /// window allows it (see <see cref="CollectResumePlanner"/>). Any resume path —
     /// planned or bailed — produces a score identical to a full collect of

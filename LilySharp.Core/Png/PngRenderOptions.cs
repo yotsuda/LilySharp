@@ -21,6 +21,10 @@ namespace LilySharp.Core.Png;
 /// </summary>
 public sealed class PngRenderOptions
 {
+    /// <summary>Paper values from outside the file (<c>lysc … --set KEY=VALUE</c>), laid over the
+    /// paper the file says (<see cref="Semantics.PaperOverrides"/>).</summary>
+    public Semantics.PaperOverrides? PaperOverrides { get; init; }
+
     /// <summary>
     /// Scale factor for output resolution. 1.0 = 96 DPI, 2.0 = 192 DPI, 3.0 = 288 DPI.
     /// </summary>

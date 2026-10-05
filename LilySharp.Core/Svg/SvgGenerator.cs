@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -61,7 +61,7 @@ public static class SvgGenerator
     public static string GenerateScore(SyntaxTree tree, RenderSpec? renderSpec, SvgRenderOptions? options = null)
     {
         options ??= SvgRenderOptions.Default;
-        var (multiScore, layout) = BuildLayout(tree, renderSpec, PaperBaseOf(options));
+        var (multiScore, layout) = BuildLayout(tree, renderSpec, PaperBaseOf(options), options.PaperOverrides);
         return RenderToSvg(multiScore, layout, options);
     }
 
@@ -97,7 +97,7 @@ public static class SvgGenerator
         var results = new List<(string, string)>();
         foreach (var spec in allSpecs)
         {
-            var (multiScore, layout) = BuildLayout(tree, spec);
+            var (multiScore, layout) = BuildLayout(tree, spec, settings: options.PaperOverrides);
             var svg = RenderToSvg(multiScore, layout, options);
             var filename = inputStem != null ? spec.ResolveOutputStem(inputStem) : spec.OutputFile;
             results.Add((filename, svg));
@@ -127,7 +127,7 @@ public static class SvgGenerator
 
         foreach (var spec in allSpecs)
         {
-            var (multiScore, layout) = BuildLayout(tree, spec);
+            var (multiScore, layout) = BuildLayout(tree, spec, settings: options.PaperOverrides);
             var svg = RenderToSvg(multiScore, layout, options);
             // A score with nothing to draw renders to NO page, and the document reads as
             // the empty string (SvgDocumentContext.Assemble). On its own such a score is
@@ -146,9 +146,10 @@ public static class SvgGenerator
     }
 
     private static (MultiStaffScore Score, ScoreLayout Layout) BuildLayout(
-        SyntaxTree tree, RenderSpec? renderSpec, LayoutOptions? paperBase = null)
+        SyntaxTree tree, RenderSpec? renderSpec, LayoutOptions? paperBase = null,
+        Semantics.PaperOverrides? settings = null)
     {
-        var multiScore = CollectScore(tree, renderSpec, paperBase);
+        var multiScore = CollectScore(tree, renderSpec, paperBase, settings);
         // score.Paper is the base (LayoutOptions.Default, or the snippet layout) unless
         // the book wrote `paper { … }`, so a book without one lays out exactly as before.
         return (multiScore, new LayoutEngine(multiScore.Paper).Layout(multiScore));
@@ -162,13 +163,16 @@ public static class SvgGenerator
     /// <paramref name="paperBase"/> is the paper a book without a <c>paper { }</c> lays out
     /// on (null = <see cref="LayoutOptions.Default"/>; the snippet layout for a fence).
     /// </summary>
+    /// <paramref name="settings"/> are the caller's paper values (<c>lysc … --set</c>), laid
+    /// over the paper the file says (<see cref="Semantics.PaperOverrides"/>).
     internal static MultiStaffScore CollectScore(SyntaxTree tree, RenderSpec? renderSpec,
-        LayoutOptions? paperBase = null)
+        LayoutOptions? paperBase = null, Semantics.PaperOverrides? settings = null)
         => CollectScore(new MeasureCollector
             {
                 ScoreTranspose = renderSpec?.ScoreTranspose,
                 ScoreConcert = renderSpec?.ScoreConcert ?? false,
                 PaperBase = paperBase ?? LayoutOptions.Default,
+                PaperOverrides = settings,
             },
             tree, renderSpec);
 

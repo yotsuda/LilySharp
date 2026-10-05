@@ -349,8 +349,8 @@
 ### `LilySharp.Core/Svg/Collector/MeasureBuilder.cs`
 - **:421** LILYSHARP-OWN (owner's decisions, 2026-10-02, HANDOFF §1.1 第737): a time, key
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:3326** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:5745** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:3330** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:5749** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Form.cs`
 - **:567** `time!` (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so
 - **:837** is not drawn unless written `key!` (MeasureBuilder.SectionHead, LILYSHARP-OWN). At a

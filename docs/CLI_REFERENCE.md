@@ -117,6 +117,7 @@ Writes every score: `score.svg` for the main one, `score-<alias>.svg` for each o
 | `--score <name>` | Write only the named score |
 | `-n, --no-embed-font` | Don't embed Emmentaler font (smaller file, requires font installed) |
 | `--combined` | Stack every score into ONE `score.svg` (like a `\book`) |
+| `--set <KEY=VALUE>` | Override a `paper` value for this run, over what the file says (repeatable; see [Paper settings](#paper-settings---set)) |
 | `-h, --help` | Show help |
 
 `--combined` and `--score` are mutually exclusive.
@@ -141,6 +142,7 @@ lysc pdf [options] <input.lys>
 |--------|-------------|
 | `-d, --out-dir <folder>` | Write into this folder (default: the input's folder) |
 | `--score <name>` | Write only the named score |
+| `--set <KEY=VALUE>` | Override a `paper` value for this run, over what the file says (repeatable; see [Paper settings](#paper-settings---set)) |
 | `-h, --help` | Show help |
 
 **Examples:**
@@ -167,6 +169,7 @@ lysc png [options] <input.lys>
 | `--score <name>` | Write only the named score |
 | `--scale <factor>` | Scale factor for resolution (default: 2.0 = 192 DPI) |
 | `--crop` | Crop each page to its ink instead of keeping the page box |
+| `--set <KEY=VALUE>` | Override a `paper` value for this run, over what the file says (repeatable; see [Paper settings](#paper-settings---set)) |
 | `-h, --help` | Show help |
 
 A score of more than one page writes `NAME-page1.png`, `NAME-page2.png`, … (LilyPond's
@@ -184,6 +187,27 @@ own naming), where `NAME` is the score's fixed name.
 lysc png score.lys                    # Creates score.png at 2x scale
 lysc png --scale 3.0 score.lys       # High DPI output
 lysc png --scale 1.0 score.lys       # Standard DPI
+```
+
+#### Paper settings (`--set`)
+
+`svg`, `png` and `pdf` take `--set KEY=VALUE`, as many as needed: a `paper` entry
+([GRAMMAR §2.4](GRAMMAR.md)) given for this run and laid over the paper the file says
+(its `paper { }` and the score's `paper NAME`). The `.lys` is not changed — the same
+music can be engraved with other spacing, margins or paper (an OMR reader's training
+data does exactly that).
+
+| Spelling | Means |
+|----------|-------|
+| `spacingIncrement=1.6`, `leftMargin=20mm`, `size=a5` | a key and its value, as written in `paper { }` |
+| `staffStaffSpacing.basicDistance=9` | a sub-key of a spacing block |
+| `raggedRight`, `raggedRight=true`, `raggedRight=false` | a flag on, or off (off undoes the file's) |
+
+A key or value the paper block would refuse is an error, with the block's message.
+
+```bash
+lysc png --set spacingIncrement=1.6 --set staffStaffSpacing.basicDistance=9 song.lys
+lysc svg --set raggedRight=false --set leftMargin=25mm song.lys
 ```
 
 ### midi - Export to MIDI
