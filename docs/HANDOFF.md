@@ -78,7 +78,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。→ **第751（2026-10-02・ユーザー決定）「LP 忠実にこだわるより音楽的な妥当性を重視。LP から引き継ぐのはレンダリングとレイアウトの美しさだけ。ユーザーがまだ少ないので過去のしがらみに縛られない」＝意味論（拍子・弱起・反復・強弱・検査・出力の意味）の裁定者は音楽的妥当性、LP は描画と配置の裁定者（RULES §5.2 に規則として置いた）。
 
-**★★★★ 第815〜816（2026-10-05）ユーザー指示「OMR の提案を優先度順に着手」＝次の会話はここから**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`。OMR は別プログラム・Lily# は子プロセスで呼びファイルを読むだけ＝コードを混ぜない）: 0（#17〜#20）・A1 `@todo`・B1 の枠（L1・L7＝`93e1477e8`）・B2（`f5a3d3142`）・**C1・C2・B3（第816）・B4・C3（第817＝`paper { breaksOnly }`）・B5・B6（第818＝`0de6d924a`・`e1796b14c`）は閉じた**。配布の取り決め `..\LilySharp-Omr\docs\repro\lilysharp-omr-distribution-2026-10-05.md`（同梱しない・L1〜L11）。⚠️ **B1〜B6 は VS Code で未確認**（OMR の `omr read` は第 1 歩が動く＝`OmrProto.exe` を `LILYSHARP_OMR_PATH` で指せば試せる）。残り: ⑥ 10-02 提案（学習データ）: **P1（第818＝`8a54bb0de`）・P2（第819＝`83df0e317`・`--set` 専用の 4 キー）は閉じた**、次は P5（記号の外接枠＝`lysc boxes`・言語は変えない）→ P3・P4・P6。**B5 は OMR の `omr verify`（第818 が提案）が出るまで動かない**。OMR 側へのお願い（`breaksOnly` を書く・`part voice` をやめる・TIFF 用の PNG・`omr verify`・記号単位の `confidence`/`candidates`）は OMR の提案書に書いた。配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後。第814 末の決定（下）はこの後。
+**★★★★ 第815〜816（2026-10-05）ユーザー指示「OMR の提案を優先度順に着手」＝次の会話はここから**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`。OMR は別プログラム・Lily# は子プロセスで呼びファイルを読むだけ＝コードを混ぜない）: 0（#17〜#20）・A1 `@todo`・B1 の枠（L1・L7＝`93e1477e8`）・B2（`f5a3d3142`）・**C1・C2・B3（第816）・B4・C3（第817＝`paper { breaksOnly }`）・B5・B6（第818＝`0de6d924a`・`e1796b14c`）は閉じた**。配布の取り決め `..\LilySharp-Omr\docs\repro\lilysharp-omr-distribution-2026-10-05.md`（同梱しない・L1〜L11）。⚠️ **B1〜B6 は VS Code で未確認**（OMR の `omr read` は第 1 歩が動く＝`OmrProto.exe` を `LILYSHARP_OMR_PATH` で指せば試せる）。残り: ⑥ 10-02 提案（学習データ）: **P1（第818）・P2（第819＝`83df0e317`＋第820 の `measuresPerSystem`＝`338f18d42`）・P5（第820＝`3095bd0bc`・`lysc boxes`）は閉じた**、次は P3（五線の大きさ＝`--staff-space`・言語は変えない）→ P4（字形の太さ・長さの値＝項目ごと）→ P6（SMuFL＝大・別に判断）。**B5 は OMR の `omr verify`（第818 が提案）が出るまで動かない**。OMR 側へのお願い（`breaksOnly` を書く・`part voice` をやめる・TIFF 用の PNG・`omr verify`・記号単位の `confidence`/`candidates`）は OMR の提案書に書いた。配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後。第814 末の決定（下）はこの後。
 
 **★★★★ 第814 末のユーザー決定（2026-10-04）＝次の会話はここから**（判断の基準は音楽的妥当性。**手元のコーパスは偏っているので「コーパスで困ったか」を判断材料にしない**）:
 - §2 E ⑷ hairpin の niente の円・⑹ 開いた和音入力・⑺ Ignatzek＝**実装する**。⑷⑹ は文法の提案をユーザーに出した（第814 の返答・要旨は下）＝**承認を得てから実装**。⑺ の残りは LP の例外表の 2 つ（パワーコード `<c g>`→上付き「5」・オルタード `<c e g bes des' ees' fis' aes'>`→上付き「alt」＝ly/chord-modifiers-init.ly:54-58）。°・+・ø・°7・△・上付きは 2026-09-11 に移植済み。
@@ -125,6 +125,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第820セッション（2026-10-05・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝P5）。`-Start p820`（HEAD `754784e3`）＝full **11155 / 0 / 2 / 11157**。§7 3.5 で第818 を ARCHIVE へ（moved 14 lines）。
+- **P5 `lysc boxes`**（`3095bd0bc`）: 描かない描画先 `Rendering/Boxes`（`BoxesDocumentContext`/`BoxesDrawingContext`）が `SharedRenderer.RenderTo` の Y 反転の後で全プリミティブの枠を記録＝SVG と同じ座標。字形と文字の枠は**描かない `PngDrawingContext` に訊く**（`MeasureGlyphInk`/`MeasureTextInk`・`DrawText` の位置決めを `PlaceText` に切り出して描く側と共用＝PNG 40 冊 225 枚でバイト不変）。⚠️ Skia の `GetGlyphWidths` の bounds は余白つき（noteheads.s0 で 2.0625×1.125・輪郭は 1.962×1.09＝PNG の画素も同じ）＝`GetGlyphPath().TightBounds` を使う。種類は字形名（`EmmentalerGlyphs` の定数名を反射で逆引き・fontTools はこの PC に無い）・`TextRole`・新しいスコープ `IDrawingContext.Kind`/`Staff`（既定は何もしない・YFlip と UnscaledX が素通し）。JSON は version 1・`bars`（`DrawBarBox` の印刷番号と枠）。掃き: SVG 1199 枚 差 0・`boxes --batch` 998 冊で 1199 ファイル（失敗 10 は svg と同じ本）。毒（YFlip の Kind を外す→3 赤）。full **11167 / 0 / 2 / 11169**。残り: 種類の無い `line` 386・`rect` 342（練習記号の枠・volta・ペダル・オッターヴァ等）・頁の上乗せ（強弱・歌詞）の `staff` は −1・音高と音価は出さない（`pos` で引ける）。
+
+★ `-End p820 -DiffBase 754784e3c`（`end.log`）＝full **11167 / 0 / 2 / 11169**・門 全 OK（HANDOFF 445,563 B）。7.5: Core `+` 719 行・REF 0・OWN 1＝描画の意味は変えない道具（boxes の描画先・CLI・改行の許可の書き換え）。OWN 1 は `MeasuresPerSystem`（LP に変数が無い）。7.6: 字形と文字の枠は PNG の描画と同じ計算（1 か所）・線の種類はレンダラーの呼び出し箇所が名乗る。7.7: 種類の無い `line`/`rect` が残る（上）。commit `338f18d42`・`3095bd0bc`＋docs。push はユーザー。
+判定: 次は P3（`--staff-space`）。(a) 今の文脈は使わない／(b) 会話はかなり長い（圧縮はまだ）／(c) 別の島 ⇒ **新しい会話が有利**（(b) による）。
+- **`measuresPerSystem`**（`338f18d42`）: ユーザーの問い「あれば OMR に役立つか」→ 役立つ（行を揃える組み方では間隔のつまみを変えても仕上がりの密度が戻る・リードシートの 1 段 4 小節は実物に多い）→ ユーザー決定「`--set` 専用で入れる」。`Collector.BreaksOnly` の出口で N 小節ごとに Force・他は Forbid（書いた break/pageBreak より優先・強制した小節は頁の許可を保つ・弱起も 1 小節）。LP に同じ変数は無い＝LILYSHARP-OWN。入りきらない段は右余白の外へ（LP と同じ・LP は黙る）＝`LayoutWarnings` が `system N (page P) is over-full …` を出す（PNG はそこを切る）。998 冊の `--batch` で警告 0＝既存の本には出ない。毒 2 本（4 赤・1 赤）。full **11160 / 0 / 2 / 11162**。OMR 側のメモも更新。
+
+## 以下は第819セッションの経緯
+
 ### 1.1 第819セッション（2026-10-05・YT-DELL2）
 
 新しい会話（HANDOFF を読んで着手）。`-Start p819`（HEAD `59a48494`）＝full **11136 / 0 / 2 / 11138**。§7 3.5 で第817 を ARCHIVE へ（moved 13 lines）。
@@ -134,19 +145,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 ★ `-End p819 -DiffBase 59a48494b`（`end.log`）＝full **11155 / 0 / 2 / 11157**・門 全 OK（HANDOFF 445,023 B）。7.5: Core `+` 393 行・REF 16・OWN 0＝頁割りと頁の解の LP 移植（固定段数・status・読み口・罰点の比例・圧縮）＋ CLI の配管。7.6: 意味はすべて LP（page-breaking.cc・optimal-page-breaking.cc・page-layout-problem.cc）、組み合わせの拒否だけが CLI の判断（LP は警告して無視）。7.7: 匂い無し。commit `83df0e317`＋docs。push はユーザー。
 判定: 次は P5（`lysc boxes`＝記号ごとの外接枠の JSON・言語は変えない）。(a) 今の文脈（頁割り）は使わない／(b) 圧縮なし・重くない／(c) 別の島＝差は小さい ⇒ **既定どおり続けてよい**（この会話で `-Start p820`＝HANDOFF の残り 4,977 B は便を区切る理由で、会話を区切る理由ではない）。
-
-## 以下は第818セッションの経緯
-
-### 1.1 第818セッション（2026-10-05・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」＝§1.0 の ⑤）。`-Start p818`（HEAD `c9d58097`）＝full **11128 / 0 / 2 / 11130**。§7 3.5 で第816 を ARCHIVE へ（moved 14 lines）。
-- **B6**（`e1796b14c`）: AI 変換の `taskPrompt` に選択内の `@todo`（`lilysharp/todos`）を、書かれた音・メモ・side file の `confidence`・`candidates`（`omrScanCore.markFactsOf`＝box の無い todo も読む）つきで足した（`aiTransformCore.marksContext`）。持ち運びの規則は GRAMMAR_FOR_LLM に既にあった。
-- **B5**（`0de6d924a`）: OMR には `omr read … --verify` しか無い＝**編集後の `.lys` を照合するコマンドが無い**。`omr verify <x.lys> [--lysc] [--progress json]`（side file の todos と line だけを書き直す・`.lys` に触らない・`--version --json` の `commands` で名乗る）を OMR 提案書に提案し、Lily# 側は設定 `lilysharp.omr.verifyOnSave`（既定は切）で名乗る reader にだけ呼ぶ（古い保存の照合は止める）。scan view は side file の書き直しを既に読み直す。`@todo` の無い todo の枠はその小節の行へ飛ぶ。
-- **P1**（`8a54bb0de`・10-02 提案）: `lysc svg|png|pdf --set KEY=VALUE`（何度でも）。`Semantics.PaperOverrides` が設定を `paper { }` の文として書き出して `PaperPlanReader` 自身に読ませる（キー・単位・拒否はすべて言語のもの・`staffStaffSpacing.basicDistance=9`）＋ 文に形の無い `FLAG=false`。collector がファイルの paper と score の参照の**後**に重ねる。Svg／Png／Pdf／ScoreExport・`CliParser.GetAll`。名前は既存の `Svg.PaperSettings`（寸法）と衝突して `PaperOverrides` に。⚠️ 置換の組の `,`/`+` の罠を 3 度目に踏んだ（旧の側＝一致 0 で止まった）。`--batch` の行ごとの `--set` は未。
-- C#: full **11136 / 0 / 2 / 11138**（B5・B6 は拡張機能だけ）・npm **211/211**。
-
-★ `-End p818 -DiffBase c9d580976`（`end2.log`）＝full **11136 / 0 / 2 / 11138**・門 全 OK（HANDOFF 444,769 B）。7.5: Core `+` 191 行・REF 0・OWN 0＝CLI の設定の配管（描画の意味は変えない＝設定が無ければバイト不変を試験が見る）。7.6: `--set` は paper の文として読む＝言語と同じ裁定。7.7: 匂い無し。commit `e1796b14c`・`0de6d924a`・`8a54bb0de`＋docs。push はユーザー。
-判定: 次は P2（`shortestDurationSpace`・`minimumNoteDistance`・`measureMinimumWidth`・`measuresPerSystem`/`systemsPerPage` を paper のキーにするか＝**文法と LP 忠実度の判断がユーザー**）。判断待ちのあいだは P5（`lysc boxes`＝記号の外接枠の JSON・言語は変えない）に着手してよい。(a) P5 は新しい描画の書き出し＝今の文脈は薄い／(b) 会話は長い（圧縮はまだ）／(c) 別の島。⇒ **新しい会話が有利**。B1〜B6 の VS Code での確認はユーザー。
 
 ## 2. 開いている作業
 

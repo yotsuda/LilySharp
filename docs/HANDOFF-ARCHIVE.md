@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第818セッションの経緯
+
+### 1.1 第818セッション（2026-10-05・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝§1.0 の ⑤）。`-Start p818`（HEAD `c9d58097`）＝full **11128 / 0 / 2 / 11130**。§7 3.5 で第816 を ARCHIVE へ（moved 14 lines）。
+- **B6**（`e1796b14c`）: AI 変換の `taskPrompt` に選択内の `@todo`（`lilysharp/todos`）を、書かれた音・メモ・side file の `confidence`・`candidates`（`omrScanCore.markFactsOf`＝box の無い todo も読む）つきで足した（`aiTransformCore.marksContext`）。持ち運びの規則は GRAMMAR_FOR_LLM に既にあった。
+- **B5**（`0de6d924a`）: OMR には `omr read … --verify` しか無い＝**編集後の `.lys` を照合するコマンドが無い**。`omr verify <x.lys> [--lysc] [--progress json]`（side file の todos と line だけを書き直す・`.lys` に触らない・`--version --json` の `commands` で名乗る）を OMR 提案書に提案し、Lily# 側は設定 `lilysharp.omr.verifyOnSave`（既定は切）で名乗る reader にだけ呼ぶ（古い保存の照合は止める）。scan view は side file の書き直しを既に読み直す。`@todo` の無い todo の枠はその小節の行へ飛ぶ。
+- **P1**（`8a54bb0de`・10-02 提案）: `lysc svg|png|pdf --set KEY=VALUE`（何度でも）。`Semantics.PaperOverrides` が設定を `paper { }` の文として書き出して `PaperPlanReader` 自身に読ませる（キー・単位・拒否はすべて言語のもの・`staffStaffSpacing.basicDistance=9`）＋ 文に形の無い `FLAG=false`。collector がファイルの paper と score の参照の**後**に重ねる。Svg／Png／Pdf／ScoreExport・`CliParser.GetAll`。名前は既存の `Svg.PaperSettings`（寸法）と衝突して `PaperOverrides` に。⚠️ 置換の組の `,`/`+` の罠を 3 度目に踏んだ（旧の側＝一致 0 で止まった）。`--batch` の行ごとの `--set` は未。
+- C#: full **11136 / 0 / 2 / 11138**（B5・B6 は拡張機能だけ）・npm **211/211**。
+
+★ `-End p818 -DiffBase c9d580976`（`end2.log`）＝full **11136 / 0 / 2 / 11138**・門 全 OK（HANDOFF 444,769 B）。7.5: Core `+` 191 行・REF 0・OWN 0＝CLI の設定の配管（描画の意味は変えない＝設定が無ければバイト不変を試験が見る）。7.6: `--set` は paper の文として読む＝言語と同じ裁定。7.7: 匂い無し。commit `e1796b14c`・`0de6d924a`・`8a54bb0de`＋docs。push はユーザー。
+判定: 次は P2（`shortestDurationSpace`・`minimumNoteDistance`・`measureMinimumWidth`・`measuresPerSystem`/`systemsPerPage` を paper のキーにするか＝**文法と LP 忠実度の判断がユーザー**）。判断待ちのあいだは P5（`lysc boxes`＝記号の外接枠の JSON・言語は変えない）に着手してよい。(a) P5 は新しい描画の書き出し＝今の文脈は薄い／(b) 会話は長い（圧縮はまだ）／(c) 別の島。⇒ **新しい会話が有利**。B1〜B6 の VS Code での確認はユーザー。
+
 ## 以下は第817セッションの経緯
 
 ### 1.1 第817セッション（2026-10-05・YT-DELL2）
