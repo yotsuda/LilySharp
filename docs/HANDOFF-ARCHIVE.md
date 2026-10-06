@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第842セッションの経緯
+
+### 1.1 第842セッション（2026-10-06・YT-DELL2）
+
+同じ会話の続き（ユーザー「あなたの提案通りに進めて」＝§2 H ⒜・⒟ → F-gracesync）。`-Start p842`（HEAD `245f9a9e`）＝full **11269 / 0 / 2 / 11271**。§7 3.5 で第840 を ARCHIVE へ。
+- **§2 H ⒜ を閉じた（`2e86147e8`）**: 次の行が grace で始まる行末の小節線（Lab `sessions/p842/le`・p832 の g5／g7／g10／g11 の .ly＝手で `ragged-right` を足した版を使う＝`lysc ly` は `paper { }` を渡さない仕様・`LilyPondExporter.Score.cs:154`）。LP の ×0.8 は列の原点まで＝行末群の右端（小節線 0.19・courtesy なら right-edge 0.5 まで）。O だけ長いばねに掛けるので `max(min, 0.8·ideal − 0.2·O)`。+0.04／+0.77／+0.61 → 0.01 以内。導出に使わない 3 形（打ち消しの ♮ 付き courtesy・両端揃え・2 段）も一致。行は `LayoutMeasures` の最後の小節、改行は `SystemBreaker` の `LineEndSprings`（keep-inside の rod の前・reach は補正前のばね＝layout と同じ順）。memo の `SpringEdgeKey` の ReadByPrevious に次の小節の courtesy 幅を畳んだ。台帳 3 点 exact（`probes/line-end-grace.ly`・試験の描画は options で ragged＝`RaggedRightPaper`）。毒 3 本: 補正なし→3 点赤／O に courtesy なし→2 点赤／**改行側だけ外す→何も赤くならなかった＝`SpacingInvariantTests.BreakGate_PricesTheLineEndBeforeAGraceRun` を足して赤に**。掃き 998 冊で 3 svg（audit/lpreg の grace の本・どれも双子へ。perf-grace200 は 40 段の行末が全部一致に）。
+- **§2 H ⒟ を閉じた（`20e08c755`）**: `startLeadGrace` は `> 0` しか読まれていなかった＝bool に・`includeMainAccidental` と旧註を消した・fixture の註を列の機構に。snapshot は data-pos だけ（註が 2 行長い・絵は同一）。**§2 H の行頭の島はこれで全部閉じた**。
+- 便の途中でユーザーが push した＝`origin/master` は `245f9a9ed`（第841 の handoff）。
+
+★ `-End p842 -DiffBase 245f9a9ed`（`end.log`）＝full **11273 / 0 / 2 / 11275**（+4＝台帳 3・試験 1）・門 全 OK。7.5: Core `+` 99 行・REF 2（spacing-spanner.cc:396-403・spring.cc:85-93）・OWN 0。7.6: 意味は LP（列の原点まで掛ける `operator*=`・行末群の right-edge）。7.7: 匂いなし（補正は完成したばねから読む式で、導出に使わない 3 形でも一致）。push はユーザー。
+判定: 次は **§2 F-gracesync**（ユーザー承認済み）。(a) 今便の文脈（grace・行末）は使わない＝書き出し（`LilyPondExporter`）は新しく読むコード／(b) 会話は 3 便ぶん（p841・p842）で、`HANDOFF` を何度も読み直してはいない／(c) 島が違う＝差は小さい ⇒ 既定どおり**この会話で続けてよい**（`-Start p843` から）。ただし書き出しは段をまたぐ時刻の前処理という設計の仕事＝着手前に設計をユーザーに見せる。
+
 ## 以下は第841セッションの経緯
 
 ### 1.1 第841セッション（2026-10-06・YT-DELL2）
