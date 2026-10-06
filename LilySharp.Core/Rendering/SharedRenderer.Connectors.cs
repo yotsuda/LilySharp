@@ -221,10 +221,12 @@ internal static partial class SharedRenderer
             double top = systemYUp + allStaves[0].Y;
             double bottom = systemYUp + allStaves[^1].Y - allStaves[^1].Height;
             // LilyPond's bar sits LEFT of the staff start, indent - 0.06 .. indent + 0.10, not
-            // centred on it; the stroke is drawn on its centre.
+            // centred on it; the stroke is drawn on its centre. Its height is LilyPond's `len`,
+            // half a line thickness past the outer lines (DrawSystemStartDelimiters says why).
+            double edge = EngravingDefaults.StaffLineThickness / 2.0;
             DrawSystemStartBarLine(
                 MultiStaffLayouter.SystemStartBarLeftEdge(systemStartX) + SystemStartBarThickness / 2.0,
-                top, bottom, gc);
+                top + edge, bottom - edge, gc);
         }
 
         // Span bars inside delimited groups. Barline types come from a content
@@ -665,6 +667,14 @@ internal static partial class SharedRenderer
         if (system.StaffGroups.IsDefaultOrEmpty) return;
         double systemYUp = LayoutUtilities.SystemTopYUp(system);
         var placed = PlacedDelimiters(system, out var outers);
+        // The bracket, line bracket and bar are drawn over LilyPond's `len`, not the
+        // line-to-line span: the staves' StaffSymbol extents, half a line thickness past the
+        // outer lines (SystemStartDelimiterLength — staff_bracket, line_bracket and simple_bar
+        // all take that height, lily/system-start-delimiter.cc:36-95). MEASURED, LilyPond
+        // 2.26.0: a three-staff StaffGroup's bracket and test/choir-staff's take len 22.1 and
+        // 13.1 over spans of 22.0 and 13.0 (Lab sessions/p850/br); Lily# drew them 0.05 short
+        // at each end until 2026-10-06. The brace asks for that length itself.
+        double edge = EngravingDefaults.StaffLineThickness / 2.0;
         foreach (var delim in placed)
         {
             double top = systemYUp + delim.BraceTop;
@@ -674,14 +684,14 @@ internal static partial class SharedRenderer
             {
                 case SystemStartDelimiterType.Bracket:
                     if (shown)
-                        DrawSystemStartBracket(delim.BraceX, top, bottom, gc);
+                        DrawSystemStartBracket(delim.BraceX, top + edge, bottom - edge, gc);
                     break;
                 case SystemStartDelimiterType.LineBracket:
                     if (shown)
-                        DrawSystemStartLineBracket(delim.BraceX, top, bottom, gc);
+                        DrawSystemStartLineBracket(delim.BraceX, top + edge, bottom - edge, gc);
                     break;
                 case SystemStartDelimiterType.BarLine:
-                    DrawSystemStartBarLine(delim.BraceX, top, bottom, gc);
+                    DrawSystemStartBarLine(delim.BraceX, top + edge, bottom - edge, gc);
                     break;
                 case SystemStartDelimiterType.Brace:
                     if (shown)
@@ -698,7 +708,7 @@ internal static partial class SharedRenderer
             if (o.Delimiter.DelimiterType == SystemStartDelimiterType.Brace)
                 DrawSystemStartBrace(o.Delimiter.BraceX, top, bottom, gc);
             else
-                DrawSystemStartBracket(o.Delimiter.BraceX, top, bottom, gc);
+                DrawSystemStartBracket(o.Delimiter.BraceX, top + edge, bottom - edge, gc);
         }
     }
 

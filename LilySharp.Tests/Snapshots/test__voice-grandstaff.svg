@@ -9,7 +9,7 @@
   <text x="110.97" y="15.76" font-size="2.20" text-anchor="end" data-pos="343">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <text x="8.18" y="30.46" font-size="4.00" font-family="Emmentaler-Brace" text-anchor="end"></text>
-  <line x1="8.56" y1="23.96" x2="8.56" y2="36.96" stroke="#000000" stroke-width="0.160"/>
+  <line x1="8.56" y1="23.91" x2="8.56" y2="37.01" stroke="#000000" stroke-width="0.160"/>
   <rect x="29.04" y="27.96" width="0.19" height="5.00"/>
   <rect x="42.13" y="27.96" width="0.19" height="5.00"/>
   <rect x="55.21" y="27.96" width="0.19" height="5.00"/>

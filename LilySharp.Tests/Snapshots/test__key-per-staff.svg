@@ -8,7 +8,7 @@
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <text x="7.61" y="12.28" font-size="2.20" text-anchor="end" dominant-baseline="central">Melody</text>
   <text x="8.18" y="21.28" font-size="2.20" text-anchor="end" dominant-baseline="central">Melody2</text>
-  <line x1="8.56" y1="10.28" x2="8.56" y2="23.28" stroke="#000000" stroke-width="0.160"/>
+  <line x1="8.56" y1="10.23" x2="8.56" y2="23.33" stroke="#000000" stroke-width="0.160"/>
   <line x1="8.59" y1="10.28" x2="27.41" y2="10.28" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="11.28" x2="27.41" y2="11.28" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="12.28" x2="27.41" y2="12.28" stroke="#000000" stroke-width="0.100"/>
