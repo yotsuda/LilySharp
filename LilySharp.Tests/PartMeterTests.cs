@@ -165,6 +165,28 @@ public class PartMeterTests
         Assert.False(SectionMeterPlan.Build(SyntaxTree.Parse(Silent).GetRoot()).IsEmpty);
     }
 
+    [Fact]
+    public void ABareBarRestUnderTheOtherPartsMeter_IsNotAMismatch()
+    {
+        var diags = Validate(Section("top { e'2. | R | } bot { time 3/4 g2. | a2. | }"));
+        Assert.DoesNotContain(diags, d => d.Code is DiagnosticCodes.MeasureDurationMismatch
+            or DiagnosticCodes.MeasureIncomplete or DiagnosticCodes.MeasureOverflow);
+    }
+
+    // A book whose B is written as given (Lab sessions/p849/pm), A and C as above.
+    private static string Section(string b, string before = "") => $$"""
+        octave absolute
+        time 4/4
+        part top { clef treble }
+        part bot { clef bass }
+        {{before}}
+        section A { top { c'1 | } bot { c1 | } }
+        section B { {{b}} }
+        section C { top { g'1 | } bot { c1 | } }
+        form main { A B C }
+        score main { staff top staff bot }
+        """;
+
     // ---------------------------------------------------------------- the exporters
 
     [Fact]
@@ -208,6 +230,37 @@ public class PartMeterTests
         var lastStarts = file.Tracks.Where(t => t.Notes.Count > 0)
             .Select(t => t.Notes.Max(n => n.StartTick) / file.TicksPerQuarterNote).ToList();
         Assert.Equal(new[] { 10, 10 }, lastStarts);
+    }
+
+    [Theory]
+    [InlineData("top { e'2. | | } bot { time 3/4 g2. | a2. | }")]
+    [InlineData("top { e'2. | R | } bot { time 3/4 g2. | a2. | }")]
+    public void TheMidi_PlaysAWritingPartsEmptyBarInThatMeter(string b)
+    {
+        // An empty `| |` bar and a bare `R` in the part that writes B are bars of 3/4: C
+        // opens at 4 + 3 + 3 quarters on both parts.
+        var file = new MidiExporter().Export(SyntaxTree.Parse(Section(b)));
+        var lastStarts = file.Tracks.Where(t => t.Notes.Count > 0)
+            .Select(t => t.Notes.Max(n => n.StartTick) / file.TicksPerQuarterNote).ToList();
+        Assert.Equal(new[] { 10, 10 }, lastStarts);
+    }
+
+    [Theory]
+    [InlineData("top { repeat unfold 2 { e'2. | } } bot { time 3/4 g2. | a2. | }", "")]
+    [InlineData("top { hook } bot { time 3/4 g2. | a2. | }", "phrase hook { e'2. | f'2. | }")]
+    [InlineData("top { voice up { e'2. | f'2. | } down { c'2. | d'2. | } } bot { time 3/4 g2. | a2. | }", "")]
+    public void TheMusicXml_WritesTheOtherPartsTimeIntoBarsNotWrittenAtTheTop(string b, string before)
+    {
+        // The bars come from a repeat, a phrase reference or a voice span: the part's
+        // <time> is still the score's at each bar (asked as the bar opens).
+        var xml = new MusicXmlExporter().Export(SyntaxTree.Parse(Section(b, before))).ToXml();
+        Assert.All(xml.Descendants("part"), p =>
+        {
+            var measures = p.Elements("measure").ToList();
+            Assert.Equal(4, measures.Count);
+            Assert.Equal("3", measures[1].Descendants("beats").Single().Value);
+            Assert.Equal("4", measures[3].Descendants("beats").Single().Value);
+        });
     }
 
     [Fact]

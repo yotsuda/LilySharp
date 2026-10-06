@@ -667,7 +667,9 @@ public sealed class MidiExporter
                 break;
 
             case MusicBlockSyntax block:
-                ProcessSequence(block.Items.ToList(), track, conductorTrack);
+                ProcessSequence(block.Parent is PartBlockSyntax { Parent: SectionDeclarationSyntax planned } cell
+                    ? WithPlannedMeters(planned.SectionName, cell, block.Items.ToList())
+                    : block.Items.ToList(), track, conductorTrack);
                 break;
 
             case NoteSyntax note:
@@ -1026,7 +1028,8 @@ public sealed class MidiExporter
         {
             if (p is PartDeclarationSyntax owner)
             {
-                PlayInPart(owner.Name.Text, () => ProcessChildren(section, track, conductorTrack),
+                PlayInPart(owner.Name.Text, () => ProcessSequence(
+                        WithPlannedMeters(section.SectionName, section, ChildrenOf(section)), track, conductorTrack),
                     octaveOffset);
                 return;
             }
@@ -1692,6 +1695,9 @@ public sealed class MidiExporter
             : Semantics.PartHeaderDefaults.Empty;
 
     private void ProcessChildren(SyntaxNode node, MidiTrack track, MidiTrack conductorTrack)
+        => ProcessSequence(ChildrenOf(node), track, conductorTrack);
+
+    private static List<SyntaxNode> ChildrenOf(SyntaxNode node)
     {
         var children = new List<SyntaxNode>();
         for (int i = 0; i < node.SlotCount; i++)
@@ -1700,8 +1706,17 @@ public sealed class MidiExporter
             if (child != null && child is not SyntaxTokenNode)
                 children.Add(child);
         }
-        ProcessSequence(children, track, conductorTrack);
+        return children;
     }
+
+    /// <summary>A part's own items of <paramref name="section"/> with each <c>time</c> another
+    /// part writes at a bar's start put in front of that bar (<see cref="Svg.Collector.SectionMeterPlan"/>,
+    /// HANDOFF §2 F-partmeter ⒜): an empty <c>| |</c> bar or a bare <c>R</c> this part writes
+    /// there is a bar of the score's meter — they were a bar of the part's own until
+    /// 2026-10-06 (Lab sessions/p849/pm). A stream whose bars are not all at its top level
+    /// (a repeat, a phrase reference, a voice span) is played as written.</summary>
+    private List<SyntaxNode> WithPlannedMeters(string section, SyntaxNode container, List<SyntaxNode> items)
+        => _meterPlan.IsEmpty ? items : _meterPlan.WithForeignChanges(section, container, items).ToList();
 
     /// <summary>
     /// Processes a sibling sequence, expanding symbolic repeats: the span between

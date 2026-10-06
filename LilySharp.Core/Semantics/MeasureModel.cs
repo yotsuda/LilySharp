@@ -65,8 +65,13 @@ internal static class MeasureModel
     /// of the bar it stands in (a repeat's turns each report theirs) and whether music of that
     /// bar came before it — what <see cref="Svg.Collector.SectionMeterPlan"/> folds into the
     /// score's meters.</param>
+    /// <param name="plannedMeterAt">When given, the <c>time</c> the score's meter puts at the
+    /// start of a bar this scope does not write one for (<see cref="Svg.Collector.SectionMeterPlan.ForeignChangeAt"/>),
+    /// by bar index — adopted as the bar opens, so a bare <c>R</c> or an empty <c>| |</c>
+    /// there is a bar of that meter, as the collector draws it.</param>
     public static List<Bar> Split(SyntaxNode scope, IReadOnlyDictionary<string, SyntaxNode> phraseBodies,
-        Fraction? initialMeter = null, List<(int Bar, TimeSignatureSyntax Time, bool MidBar)>? meterChanges = null)
+        Fraction? initialMeter = null, List<(int Bar, TimeSignatureSyntax Time, bool MidBar)>? meterChanges = null,
+        Func<int, TimeSignatureSyntax?>? plannedMeterAt = null)
     {
         var stream = new List<object>();
         Flatten(scope, stream, new HashSet<string>(), phraseBodies);
@@ -86,6 +91,7 @@ internal static class MeasureModel
         var meter = initialMeter ?? DurationCalculator.ParseTimeSignature(4, 4);
         bool senzaMisura = false; // time none: no auto-complete boundary exists
         int repeatFlow = 0;       // depth of percent/unfold expansions in flight
+        int plannedFor = -1;      // the bar plannedMeterAt was last asked for
 
         void FlushMusic()
         {
@@ -126,6 +132,15 @@ internal static class MeasureModel
                 continue;
             }
             var node = (SyntaxNode)entry;
+            if (plannedMeterAt != null && current.Count == 0 && plannedFor != bars.Count)
+            {
+                plannedFor = bars.Count;
+                if (plannedMeterAt(bars.Count) is { } planned)
+                {
+                    if (planned.IsSenzaMisura) senzaMisura = true;
+                    else { senzaMisura = false; meter = DurationCalculator.ParseTimeSignature(planned.Beats, planned.BeatType); }
+                }
+            }
             if (node is TimeSignatureSyntax time)
             {
                 // A directive: it re-arms the meter but carries no duration and is not

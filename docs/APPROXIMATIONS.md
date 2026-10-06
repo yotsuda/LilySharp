@@ -259,8 +259,8 @@
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:520** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
-- **:1251** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
-- **:2792** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+- **:1254** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
+- **:2807** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ArpeggioSpread.cs`
 - **:30** LILYSHARP-OWN: the owner's decision (2026-09-30) — &lt;&lt; chord(C x32010) &gt;&gt;2
 ### `LilySharp.Core/Music/BarRest.cs`
@@ -287,7 +287,7 @@
 - **:91** LILYSHARP-OWN: LilyPond has no chord-from-a-shape item.
 ### `LilySharp.Core/MusicXml/MusicXmlExporter.cs`
 - **:1125** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
-- **:5591** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
+- **:5605** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
 ### `LilySharp.Core/MusicXmlImport/LysWriter.cs`
 - **:347** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision; the twin omits it too).
 ### `LilySharp.Core/Parser/Parser.Music.cs`

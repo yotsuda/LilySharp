@@ -49,12 +49,17 @@ internal sealed class CrossPartMeasureValidator
     /// pass does not walk the whole tree a second time to build the same dictionary.
     /// </summary>
     public CrossPartMeasureValidator(DiagnosticBag diagnostics, HashSet<(int Start, int Length)> warnedSpans,
-        IReadOnlyDictionary<string, SyntaxNode> phraseBodies)
+        IReadOnlyDictionary<string, SyntaxNode> phraseBodies, Svg.Collector.SectionMeterPlan? meterPlan = null)
     {
         _diagnostics = diagnostics;
         _warnedSpans = warnedSpans;
         _phraseBodies = phraseBodies;
+        _meterPlan = meterPlan ?? Svg.Collector.SectionMeterPlan.Empty;
     }
+
+    // The meters other parts write into each section's bars (HANDOFF §2 F-partmeter ⒜): a part
+    // block's bars are measured in them, as MeasureValidator measures their fill.
+    private readonly Svg.Collector.SectionMeterPlan _meterPlan;
 
     public void Validate(SyntaxNode root)
     {
@@ -288,7 +293,12 @@ internal sealed class CrossPartMeasureValidator
         // ValidateGroupedByPartSections).
         var parts = new List<(string Name, Fraction Time, TextSpan TimeSpan, List<MeasureModel.Bar> Measures)>(blocks.Count);
         foreach (var (name, blockTime, span, block) in blocks)
-            parts.Add((name, blockTime, span, BuildPartMeasures(block, blockTime)));
+            parts.Add((name, blockTime, span, _meterPlan.IsEmpty
+                ? BuildPartMeasures(block, blockTime)
+                // A bare `R` or an empty bar under another part's `time` is a bar of that
+                // meter (Lab sessions/p849/pm/r-bareR.lys: "lasts 3/4 but part 'top' has 1").
+                : MeasureModel.Split(block, _phraseBodies, blockTime, null,
+                    bar => _meterPlan.ForeignChangeAt(section.SectionName, bar, block))));
         if (parts.Count < 2)
         {
             // One part beside chord rows: nothing to compare per measure, only the count.

@@ -1867,17 +1867,9 @@ public sealed class MusicXmlExporter
     private void ProcessPartBlock(PartBlockSyntax partBlock)
     {
         // The score's meter (SectionMeterPlan): another part's `time` at a bar's start is this
-        // part's <time> there too.
-        IEnumerable<SyntaxNode> children = DirectChildren(partBlock);
-        if (!_meterPlan.IsEmpty && partBlock.Parent is SectionDeclarationSyntax section
-            && partBlock.ChildNodes().OfType<MusicBlockSyntax>().FirstOrDefault() is { } body)
-        {
-            var items = body.Items.ToList();
-            var withChanges = _meterPlan.WithForeignChanges(section.SectionName, partBlock, items);
-            if (withChanges.Count != items.Count)
-                children = withChanges;
-        }
-        EmitPartMusic(partBlock.Name, children);
+        // part's <time> there too (StartNewMeasure).
+        EmitPartMusic(partBlock.Name, DirectChildren(partBlock),
+            (partBlock.Parent as SectionDeclarationSyntax)?.SectionName, partBlock);
         PadVoice(partBlock);
     }
 
@@ -1933,6 +1925,13 @@ public sealed class MusicXmlExporter
     // The meters other parts write into each section's bars (SectionMeterPlan), read once per Export.
     private Svg.Collector.SectionMeterPlan _meterPlan = Svg.Collector.SectionMeterPlan.Empty;
 
+    // The play StartNewMeasure asks the plan for: its section (null: none), the voice
+    // container whose own changes the plan leaves to it, the part and its first bar.
+    private string? _planSection;
+    private SyntaxNode? _planContainer;
+    private MusicXmlPart? _planPart;
+    private int _planFirstMeasure;
+
     /// <summary>A by-part section (<c>part m { section A { … } }</c>) holds its music
     /// INLINE — not in a nested part block — so it is emitted here under the ENCLOSING
     /// part's name (and clef/transpose), exactly like the by-section
@@ -1947,12 +1946,10 @@ public sealed class MusicXmlExporter
     /// </remarks>
     private void EmitGroupedByPartSection(SectionDeclarationSyntax section)
     {
-        IEnumerable<SyntaxNode> children = DirectChildren(section);
-        if (!_meterPlan.IsEmpty && section.Parent is PartDeclarationSyntax)
-            children = _meterPlan.WithForeignChanges(section.SectionName, section, children.ToList());
         EmitPartMusic(
             EnclosingPartName(section) ?? _bareSectionOwner ?? "Part 1",
-            children);
+            DirectChildren(section),
+            section.Parent is PartDeclarationSyntax ? section.SectionName : null, section);
         PadVoice(section);
     }
 
@@ -1978,9 +1975,15 @@ public sealed class MusicXmlExporter
     /// by-part section's inline body) under <paramref name="partName"/>: sets up the
     /// part (clef / transpose / fresh frame), processes the music children, and maps any
     /// lyrics onto the notes just emitted.</summary>
-    private void EmitPartMusic(string partName, IEnumerable<SyntaxNode> children)
+    private void EmitPartMusic(string partName, IEnumerable<SyntaxNode> children,
+        string? planSection = null, SyntaxNode? planContainer = null)
     {
         EnsurePart(partName);
+        // The play's place in the score's meter (SectionMeterPlan): read by StartNewMeasure.
+        _planSection = _meterPlan.IsEmpty ? null : planSection;
+        _planContainer = planContainer;
+        _planPart = _currentPart;
+        _planFirstMeasure = _currentPart!.Measures.Count;
         _currentTranspose = _root != null ? PartTranspose.Read(_root, partName) : null;
         ApplyPartHeader(partName);
         _lastPitchedNote = null; // ho/po never pairs across parts
@@ -2393,6 +2396,17 @@ public sealed class MusicXmlExporter
 
     private void StartNewMeasure(bool addAttributes = false)
     {
+        // The score's meter (SectionMeterPlan, HANDOFF §2 F-partmeter ⒜): a `time` another part
+        // writes at the start of this bar of the play's section is this part's meter from here.
+        // Asked as each bar opens — not by rewriting the written items — so the bars a repeat,
+        // a phrase reference or a voice span writes take it too (Lab sessions/p849/pm: those
+        // three wrote the other part's 3/4 bars as 4/4 until 2026-10-06).
+        if (_planSection != null && ReferenceEquals(_currentPart, _planPart)
+            && _meterPlan.ForeignChangeAt(_planSection, _planPart!.Measures.Count - _planFirstMeasure, _planContainer) is { } foreign)
+        {
+            _bars.SetTime(foreign);
+            _attributesDirty = true;
+        }
         _currentMeasure = new MusicXmlMeasure { Number = _measureNumber++ };
 
         if (addAttributes)
