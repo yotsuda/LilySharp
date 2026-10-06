@@ -447,6 +447,24 @@ c4@p @cresc d e f |
 g4@f @decresc a b c |
 ```
 
+A hairpin runs to the next dynamic (or the next hairpin) on its staff.
+
+#### Niente (al niente / dal niente)
+
+`@niente` is the silent dynamic. A hairpin whose thin end touches it gets a small circle at
+its tip and the word is not printed:
+
+```
+c4@mf@decresc d e f | g1@niente |     // decrescendo al niente: fades to nothing
+c4@niente@cresc d e f | g1@f |        // crescendo dal niente: grows from nothing
+c4@p@decresc d e@niente@cresc f | g1@f |   // both on one note share one circle
+```
+
+Alone, `@niente` prints the word *niente* in italic. At a hairpin's thick end (a crescendo
+ending on it, a decrescendo starting from it) it warns (LYS4029) and the wedge is drawn
+plain. In MIDI it is the quietest level (velocity 1); in MusicXML it is the wedge's
+`niente="yes"` or the `<n/>` dynamic, and LilyPond writes the hairpin with `circled-tip`.
+
 `.up` / `.down` cannot be applied to `@cresc` / `@decresc` / `@dim` — a hairpin is
 always engraved below the staff, so a placement suffix there is rejected as an error
 rather than silently ignored. (Placement works on dynamic *levels* like `@f.up`.)

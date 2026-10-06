@@ -28,6 +28,7 @@
 
 using System.Collections.Immutable;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Svg.Layout;
 
@@ -64,7 +65,11 @@ public readonly record struct HairpinLayout(
     // so a reused layout re-derives data-pos from the live score. -1 = unresolved.
     int SourceIndex = -1,
     // Which staff this wedge hangs under (per-staff stacking).
-    int StaffIndex = 0
+    int StaffIndex = 0,
+    // X of the CENTRE of the circle drawn at a niente tip (al / dal niente), or NaN for none.
+    // StartX / EndX are then the ARMS' ends, already short of the circle.
+    // LILYPOND-REF: lily/hairpin.cc:323-355 Hairpin::print — circled_tip
+    double CircleX = double.NaN
 );
 
 /// <summary>
@@ -349,6 +354,23 @@ internal static class HairpinEngraver
                     ownEndX = measureLayouts[hairpin.EndMeasureIndex].X - BoundPadding;
                 }
             }
+            else if (hairpin.NienteAtEnd != null
+                     && ColumnExtent(hairpin.EndMeasureIndex, hairpin.EndItemIndex, hpMeasures,
+                         measureLayouts) is { } endColumn)
+            {
+                // A niente is no DynamicText — the twin ends the hairpin with \! — so the bound
+                // is the note column: its right edge (the default endpoint alignment), a rest's
+                // left edge, or, where a crescendo dal niente starts on the same note, just
+                // right of the column's centre, so that the two circles fall on one place.
+                // LILYPOND-REF: lily/dynamic-engraver.cc:246-249 acknowledge_note_column —
+                //   finished_spanner_->set_bound (RIGHT, info.grob ())
+                // LILYPOND-REF: lily/hairpin.cc:243-281 Hairpin::print — x_points: the adjacent circled
+                //   tip e.center () + d * (rad - thick / 2.0); a rest's e[-d]; else e[d] for
+                //   endpoint_alignments[RIGHT] == RIGHT
+                ownEndX = hairpin.TipAdjacent && hairpin.Direction == HairpinDirection.Decrescendo
+                    ? (endColumn.Left + endColumn.Right) / 2 + (CircleRadius - CircleThickness / 2.0)
+                    : endColumn.IsRest ? endColumn.Left : endColumn.Right;
+            }
             else if (dynamicAt.TryGetValue(
                          (hairpin.EndMeasureIndex, hairpin.EndItemIndex, hairpin.StaffIndex),
                          out var endDyn)
@@ -370,7 +392,16 @@ internal static class HairpinEngraver
         // LILYPOND-REF: lily/hairpin.cc:214-218 — Text_interface bound.
         //   Measured: probe-hairpin-bounds line 2, start = p-right + 1.0 = 8.186.
         double ownStartX = 0.0;
-        if (segment.IsFirst)
+        if (segment.IsFirst && hairpin.TipAdjacent
+            && hairpin.Direction == HairpinDirection.Crescendo
+            && ColumnExtent(hairpin.StartMeasureIndex, hairpin.StartItemIndex, hpMeasures,
+                measureLayouts) is { } startColumn)
+            // A crescendo dal niente from the note a decrescendo al niente ends on: just left of
+            // the column's centre, the mirror of that decrescendo's end.
+            // LILYPOND-REF: lily/hairpin.cc:243-252 Hairpin::print — x_points[LEFT] =
+            //   e.center () - (rad - thick / 2.0)
+            ownStartX = (startColumn.Left + startColumn.Right) / 2 - (CircleRadius - CircleThickness / 2.0);
+        else if (segment.IsFirst)
             ownStartX =
                 dynamicAt.TryGetValue(
                     (hairpin.StartMeasureIndex, hairpin.StartItemIndex, hairpin.StaffIndex),
@@ -434,6 +465,32 @@ internal static class HairpinEngraver
                 if (segEndX < segStartX)
                     segEndX = segStartX;
 
+                // The circle at a niente tip, on the piece that holds the tip: the arms give it
+                // room — a crescendo's start 2·rad right, a decrescendo's width 2·rad shorter —
+                // and it is set at their edge, beyond the arms' half thickness. The width is not
+                // clamped again, as LilyPond does not.
+                // LILYPOND-REF: lily/hairpin.cc:323-355 Hairpin::print, add_at_edge — "Compensate for size of
+                //   circle": if (circled_tip && !broken[tip_dir]) x = rad * 2.0 (BIGGER) /
+                //   width -= rad * 2.0 (SMALLER); then mol.add_at_edge (X_AXIS, tip_dir, circle, 0)
+                // LILYPOND-REF: lily/line-interface.cc:177-191 Line_interface::make_line — the
+                //   arm's box is widened by th / 2, the edge add_at_edge sets the circle against
+                double circleX = double.NaN;
+                bool tipBroken = hairpin.Direction == HairpinDirection.Crescendo
+                    ? !segment.IsFirst : !segment.IsLast;
+                if (hairpin.CircledTip && !tipBroken)
+                {
+                    if (hairpin.Direction == HairpinDirection.Crescendo)
+                    {
+                        segStartX += CircleRadius * 2.0;
+                        circleX = segStartX - CircleThickness / 2.0 - CircleRadius;
+                    }
+                    else
+                    {
+                        segEndX -= CircleRadius * 2.0;
+                        circleX = segEndX + CircleThickness / 2.0 + CircleRadius;
+                    }
+                }
+
                 double startOpening, endOpening;
                 if (hairpin.Direction == HairpinDirection.Crescendo)
                 {
@@ -467,7 +524,7 @@ internal static class HairpinEngraver
                     (vi, mi, ii) => beamMembers.TryGetValue((staffIdx, vi, mi, ii), out var b)
                         ? b : null);
                 double spannerY = DynamicEngraver.SpannerOffsetY(dir: -1.0, support,
-                    WedgeSkylines(segStartX, segEndX, startOpening, endOpening, 0.0));
+                    WedgeSkylines(segStartX, segEndX, startOpening, endOpening, 0.0, circleX));
                 // spannerY is Y-up about the staff middle; the layout frame is Y-up from
                 // the SYSTEM top, and staffOffset is a within-system downward offset.
                 double hairpinYUp = spannerY - StaffMiddleBelowSystemTop - staffOffset;
@@ -475,7 +532,7 @@ internal static class HairpinEngraver
                 return new HairpinLayout(
                     segment.StartMeasureIndex, segStartX, segEndX, hairpinYUp,
                     startOpening, endOpening, hairpin.Direction, hairpin.SourcePosition,
-                    hairpin.SourceIndex, hairpin.StaffIndex);
+                    hairpin.SourceIndex, hairpin.StaffIndex, circleX);
             }
         }
     }
@@ -516,18 +573,107 @@ internal static class HairpinEngraver
     ///   :304-309 <c>starth</c> / <c>endh</c>) — the arms are straight lines from ±starth to
     ///   ±endh, and the rule is centred on them at <c>thickness</c>.
     /// </remarks>
+    /// <param name="circleX">The centre of the niente circle (<see cref="HairpinLayout.CircleX"/>),
+    /// or NaN: the circle's box joins both sides of the profile.</param>
+    /// <remarks>
+    /// LILYPOND-REF: lily/hairpin.cc:342-355 Hairpin::print — circled_tip: the circle stencil's extent is
+    ///   <c>Box extent (Interval (-rad, rad), Interval (-rad, rad))</c>, added to the wedge's.
+    /// </remarks>
     internal static (VerticalSkyline Up, VerticalSkyline Down) WedgeSkylines(
-        double startX, double endX, double startOpening, double endOpening, double centreYUp)
+        double startX, double endX, double startOpening, double endOpening, double centreYUp,
+        double circleX = double.NaN)
     {
         double half = EngravingDefaults.StaffLineThickness / 2.0;
-        return (VerticalSkyline.FromSlope(
-                    startX, centreYUp + startOpening + half,
-                    endX, centreYUp + endOpening + half,
-                    thickness: 0, VerticalDirection.Up),
-                VerticalSkyline.FromSlope(
-                    startX, centreYUp - startOpening - half,
-                    endX, centreYUp - endOpening - half,
-                    thickness: 0, VerticalDirection.Down));
+        var up = VerticalSkyline.FromSlope(
+            startX, centreYUp + startOpening + half,
+            endX, centreYUp + endOpening + half,
+            thickness: 0, VerticalDirection.Up);
+        var down = VerticalSkyline.FromSlope(
+            startX, centreYUp - startOpening - half,
+            endX, centreYUp - endOpening - half,
+            thickness: 0, VerticalDirection.Down);
+        if (!double.IsNaN(circleX))
+        {
+            up.MergeBox(circleX - CircleRadius, circleX + CircleRadius,
+                centreYUp - CircleRadius, centreYUp + CircleRadius);
+            down.MergeBox(circleX - CircleRadius, circleX + CircleRadius,
+                centreYUp - CircleRadius, centreYUp + CircleRadius);
+        }
+        return (up, down);
+    }
+
+    /// <summary>
+    /// The radius of the circle at a niente tip: the hairpin's <c>height</c> × 0.525, which
+    /// LilyPond itself calls a guess.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/hairpin.cc:150-160 Hairpin::print — circled_tip; Real rad = height * 0.525
+    ///   ("FIXME: 0.525 is still just a guess... same method is used in `circle-radius' of
+    ///   scm/output-lib.scm"), height = the grob's height × staff_space
+    /// </remarks>
+    internal const double CircleRadius = Height * 0.525;
+
+    /// <summary>
+    /// The circle's line, and the arms' (whose half widens the edge the circle is set against):
+    /// the hairpin's <c>thickness</c> 1.0 × the staff's line thickness.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/hairpin.cc:161-164 Hairpin::print — thick = thickness × line_thickness
+    ///   when circled_tip
+    /// LILYPOND-REF: scm/define-grobs.scm Hairpin (thickness . 1.0)
+    /// </remarks>
+    internal static readonly double CircleThickness = 1.0 * EngravingDefaults.StaffLineThickness;
+
+    /// <summary>
+    /// The X extent of the note column at (<paramref name="measure"/>, <paramref name="item"/>)
+    /// on the hairpin's own staff, as a hairpin bound sees it — its heads united with its stem;
+    /// a rest's own glyph box — or null when no such column is there.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:111-135 Axis_group_interface::generic_bound_extent
+    ///   — the elements with a <c>bound-alignment-interfaces</c> interface
+    /// LILYPOND-REF: scm/define-grobs.scm:2574 NoteColumn (bound-alignment-interfaces .
+    ///   (rhythmic-head-interface stem-interface))
+    /// ⚠️ A chord's second-clash head on the far side of the stem is not in this extent (the
+    ///   column's head box is the normal-side one) — the bracket bound's
+    ///   (TupletBracketEngraver.BoundEdgeOffset) reading, and no pair measures it.
+    /// </remarks>
+    private static (double Left, double Right, bool IsRest)? ColumnExtent(
+        int measure, int item, ImmutableArray<Measure> staffMeasures,
+        ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        if (staffMeasures.IsDefaultOrEmpty || measure >= staffMeasures.Length
+            || measure >= measureLayouts.Length || measureLayouts[measure] is not { } layout
+            || item < 0 || item >= staffMeasures[measure].Items.Length)
+            return null;
+        double x = layout.X + LayoutUtilities.GetItemXOffset(staffMeasures, measure, item, layout);
+        double halfStem = EngravingDefaults.StemThickness / 2;
+        switch (staffMeasures[measure].Items[item])
+        {
+            case RestItem { IsSpacer: false } rest:
+            {
+                var box = GlyphMetrics.GetRestBBox(GlyphMetrics.NoteValueOf(rest.BaseDuration));
+                return (x + box.Left, x + box.Right, true);
+            }
+            case NoteItem or ChordItem:
+            {
+                var music = staffMeasures[measure].Items[item];
+                int value = GlyphMetrics.NoteValueOf(music);
+                var head = GlyphMetrics.GetNoteheadBBox(value);
+                double left = head.Left, right = head.Right;
+                // LILYPOND-REF: lily/stem.cc Stem::is_normal_stem — a whole or a breve has no stem.
+                if (value >= 2)
+                {
+                    bool up = music is NoteItem n ? n.StemUp : ((ChordItem)music).StemUp;
+                    double stemX = LayoutUtilities.StemAttachX(up, value, LayoutUtilities.NoteheadStyleOf(music));
+                    left = Math.Min(left, stemX - halfStem);
+                    right = Math.Max(right, stemX + halfStem);
+                }
+                return (x + left, x + right, false);
+            }
+            default:
+                return null;
+        }
     }
 
     /// <summary>
@@ -766,13 +912,20 @@ internal static class HairpinEngraver
             // End at whichever comes first: next dynamic or next cresc/decresc
             int endMeasure;
             int endItem;
+            DynamicItem? endDynamic = null;
 
+            // The dynamic ends it when it stands at or before the next mark. ⚠️ Until session 847
+            // only a dynamic at the bar's head beat a mark in the same bar, so `c@p@cresc d@f
+            // e@decresc` ended the crescendo at the mark — whose end is its bar's head, before
+            // the start — and drew neither hairpin (LilyPond draws both, the f between).
             if (nextDynamic != null && (nextMark == null ||
                 nextDynamic.MeasureIndex < nextMark.MeasureIndex ||
-                (nextDynamic.MeasureIndex == nextMark.MeasureIndex && nextDynamic.ItemIndex <= 0)))
+                (nextDynamic.MeasureIndex == nextMark.MeasureIndex
+                 && nextDynamic.ItemIndex <= Math.Max(0, nextMark.AnchorItemIndex))))
             {
                 endMeasure = nextDynamic.MeasureIndex;
                 endItem = nextDynamic.ItemIndex;
+                endDynamic = nextDynamic;
             }
             else if (nextMark != null)
             {
@@ -797,6 +950,7 @@ internal static class HairpinEngraver
                     plays.NameOf(ownPlay + 1), Play: ownPlay));
                 endMeasure = plays.StartOf(ownPlay + 1);
                 endItem = 0;
+                endDynamic = null;
             }
 
             // Only add if there's actually a span
@@ -812,10 +966,94 @@ internal static class HairpinEngraver
                     SourcePosition: mark.SourcePosition,
                     SourceIndex: srcIndex,
                     StaffIndex: mark.StaffIndex
-                ));
+                )
+                {
+                    // The dynamic at the start moment is this hairpin's opening text (the
+                    // terminator search above passes over it); a niente there is where a
+                    // crescendo grows from.
+                    NienteAtStart = sortedDynamics.FirstOrDefault(d =>
+                        d.Level == DynamicLevel.Niente && d.StaffIndex == mark.StaffIndex
+                        && d.MeasureIndex == mark.MeasureIndex && d.ItemIndex == startItem),
+                    NienteAtEnd = endDynamic is { Level: DynamicLevel.Niente } ? endDynamic : null,
+                });
             }
         }
 
+        return MarkAdjacentTips(hairpins);
+    }
+
+    /// <summary>
+    /// Marks the circled tips two hairpins share (<see cref="HairpinItem.TipAdjacent"/>): a
+    /// decrescendo to a niente from which a crescendo starts. A book without a niente returns
+    /// the list as it is.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/dynamic-engraver.cc:155-165 process_music — the hairpin ending and
+    ///   the one starting at the same timestep are each other's adjacent-spanners.
+    /// </remarks>
+    private static ImmutableArray<HairpinItem> MarkAdjacentTips(ImmutableArray<HairpinItem>.Builder hairpins)
+    {
+        // ⚠️ Not at a bar's head: there the decrescendo's right bound is rewritten to the bar
+        // line (to-barline), which is not the column the crescendo starts on, so LilyPond
+        // finds no adjacent hairpin and draws two circles.
+        // LILYPOND-REF: lily/hairpin.cc:232-235 — adjacent->get_bound (-d)->get_column () ==
+        //   b->get_column (); lily/bar-engraver.cc:579-587 acknowledge_end_spanner
+        HashSet<DynamicItem>? growsFrom = null;
+        foreach (var h in hairpins)
+            if (h.Direction == HairpinDirection.Crescendo && h.NienteAtStart is { ItemIndex: > 0 } n)
+                (growsFrom ??= new HashSet<DynamicItem>()).Add(n);
+        if (growsFrom == null)
+            return hairpins.ToImmutable();
+        var fadesTo = new HashSet<DynamicItem>();
+        for (int i = 0; i < hairpins.Count; i++)
+            if (hairpins[i].Direction == HairpinDirection.Decrescendo
+                && hairpins[i].NienteAtEnd is { } n && growsFrom.Contains(n))
+            {
+                fadesTo.Add(n);
+                hairpins[i] = hairpins[i] with { TipAdjacent = true };
+            }
+        for (int i = 0; i < hairpins.Count; i++)
+            if (hairpins[i].Direction == HairpinDirection.Crescendo
+                && hairpins[i].NienteAtStart is { } n && fadesTo.Contains(n))
+                hairpins[i] = hairpins[i] with { TipAdjacent = true };
         return hairpins.ToImmutable();
+    }
+
+    /// <summary>
+    /// The niente dynamics a circled hairpin tip stands for (<see cref="HairpinItem.CircledNiente"/>):
+    /// they are not printed as words. Empty when the dynamics hold no niente, without pairing.
+    /// </summary>
+    /// <remarks>
+    /// Keyed by where the niente stands (<see cref="NienteKey"/>), not by the item: a layout
+    /// pass may hold the score's dynamics re-addressed into other items (a multi-staff score's
+    /// tables), and the question is the same one.
+    /// </remarks>
+    internal static HashSet<(int Staff, int Measure, int Item, int Source)> CircledNientes(
+        ImmutableArray<MusicMarkItem> musicMarks, ImmutableArray<DynamicItem> dynamics,
+        Collector.SectionPlays? plays = null)
+    {
+        var circled = new HashSet<(int, int, int, int)>();
+        if (!HasNiente(dynamics))
+            return circled;
+        foreach (var h in DetectHairpins(musicMarks, dynamics, plays))
+            if (h.CircledNiente is { } n)
+                circled.Add(NienteKey(n));
+        return circled;
+    }
+
+    /// <summary>The key <see cref="CircledNientes"/> answers by.</summary>
+    internal static (int Staff, int Measure, int Item, int Source) NienteKey(DynamicItem d)
+        => (d.StaffIndex, d.MeasureIndex, d.ItemIndex, d.SourcePosition);
+
+    /// <summary>Whether any of <paramref name="dynamics"/> is a niente — the cheap gate in front
+    /// of <see cref="CircledNientes"/>, so a book without one pairs nothing more.</summary>
+    internal static bool HasNiente(ImmutableArray<DynamicItem> dynamics)
+    {
+        if (dynamics.IsDefaultOrEmpty)
+            return false;
+        foreach (var d in dynamics)
+            if (d.Level == DynamicLevel.Niente)
+                return true;
+        return false;
     }
 }

@@ -565,6 +565,7 @@ internal static class SyntaxFacts
             ["fffff"] = DynamicLevel.FFFFF,
             ["ffff"] = DynamicLevel.FFFF,
             ["fff"] = DynamicLevel.FFF,
+            ["niente"] = DynamicLevel.Niente,
         };
 
     /// <summary>True if <paramref name="text"/> is a fixed-level dynamic name (see

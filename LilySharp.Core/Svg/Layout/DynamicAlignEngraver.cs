@@ -210,7 +210,7 @@ internal static class DynamicAlignEngraver
                         continue;
                     sysWedges.Add((pi, hi));
                     Fold(HairpinEngraver.WedgeSkylines(piece.StartX, piece.EndX,
-                        piece.StartOpening, piece.EndOpening, 0.0));
+                        piece.StartOpening, piece.EndOpening, 0.0, piece.CircleX));
                 }
                 if (myDim is not { } my)
                     continue;

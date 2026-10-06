@@ -775,7 +775,7 @@ public static class SectionSplitter
         private static readonly Regex AnnotationAt = new(@"\G@(!?)([A-Za-z]+)", RegexOptions.Compiled);
         private static readonly HashSet<string> DynamicNames = new(StringComparer.Ordinal)
             { "ppppp", "pppp", "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "ffff", "fffff",
-              "sfz", "sf", "sff", "sfp", "sp", "spp", "fp", "rfz", "rf", "fz" };
+              "sfz", "sf", "sff", "sfp", "sp", "spp", "fp", "rfz", "rf", "fz", "niente" };
         private static readonly Dictionary<string, string> SpanFamilies = new(StringComparer.Ordinal)
         {
             ["cresc"] = "hairpin", ["decresc"] = "hairpin", ["dim"] = "hairpin",

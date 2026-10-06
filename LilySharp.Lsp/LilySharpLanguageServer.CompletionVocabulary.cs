@@ -4232,6 +4232,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "rf", Kind = CompletionItemKind.Value, Detail = "Rinforzando accent dynamic", SortText = "2rf" },
                 new CompletionItem { Label = "rfz", Kind = CompletionItemKind.Value, Detail = "Rinforzando accent dynamic (rfz)", SortText = "2rfz" },
                 new CompletionItem { Label = "fp", Kind = CompletionItemKind.Value, Detail = "Forte-piano accent dynamic", SortText = "2fp" },
+                new CompletionItem { Label = "niente", Kind = CompletionItemKind.Value, Detail = "Niente (nothing) - a hairpin's thin end touching it is drawn as a circle", SortText = "2niente" },
                 new CompletionItem { Label = "cresc", Kind = CompletionItemKind.Value, Detail = "Crescendo hairpin", SortText = "2cresc" },
                 new CompletionItem { Label = "decresc", Kind = CompletionItemKind.Value, Detail = "Decrescendo hairpin", SortText = "2decresc" },
                 new CompletionItem { Label = "dim", Kind = CompletionItemKind.Value, Detail = "Diminuendo", SortText = "2dim" },

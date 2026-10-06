@@ -1704,17 +1704,19 @@ public sealed partial class LilyPondExporter
     /// <c>DynamicSyntax.ForcedAbove</c>). Until 2026-09-26 it was dropped, so the twin drew
     /// `@f.up` below the staff (Lab sessions/p644 x4).
     /// </remarks>
-    private static string EmitDynamic(DynamicSyntax d) => IsSecondDynamicLevel(d) ? "" : (d.ForcedAbove switch
-    {
-        true => "^",
-        false => "_",
-        null => "",
-    }) + d.DynamicToken.Text switch
-    {
-        "cresc" => "\\<",
-        "decresc" or "dim" => "\\>",
-        var level => "\\" + level,
-    };
+    private string EmitDynamic(DynamicSyntax d) => IsSecondDynamicLevel(d) ? ""
+        : d.Level == DynamicLevel.Niente ? EmitNiente(d)
+        : (d.ForcedAbove switch
+        {
+            true => "^",
+            false => "_",
+            null => "",
+        }) + d.DynamicToken.Text switch
+        {
+            "cresc" => CircledTipTweak(d) + "\\<",
+            "decresc" or "dim" => CircledTipTweak(d) + "\\>",
+            var level => "\\" + level,
+        };
 
     /// <summary>Whether <paramref name="d"/> is a dynamic LEVEL after the first on its note —
     /// not printed on the page (LYS4022), and not written to the twin either, where LilyPond

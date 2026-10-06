@@ -91,6 +91,7 @@ public static class SemanticValidation
         new RehearsalMarkEngravedValidator(),// a written '@mark("A")' this score does not print
         new ShadowedRehearsalMarkValidator(),// a '@mark' at a bar a section label opens (the label is printed)
         new DoubleDynamicValidator(),       // a second dynamic on one note (the first is printed)
+        new NienteHairpinValidator(),       // a '@niente' at a hairpin's thick end
         new CondensedStaffChangeValidator(),// a later part's differing key/time/clef on a condensed staff (the first part's stands)
         new ChordRowGridValidator(),        // a chord-row bar off the beat grid / a bar-head '.'
         new ChordDisplayModeValidator(),    // `chords X as WORD` where WORD is not a display

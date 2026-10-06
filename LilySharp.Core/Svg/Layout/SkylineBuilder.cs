@@ -2049,7 +2049,7 @@ internal sealed class SkylineBuilder
         {
             var my = HairpinEngraver.WedgeSkylines(
                 hp.StartX, hp.EndX, hp.StartOpening, hp.EndOpening,
-                hp.YUp + EngravingDefaults.StaffMiddle);
+                hp.YUp + EngravingDefaults.StaffMiddle, hp.CircleX);
             double move = DynamicEngraver.BelowCollisionMove(downSkyline, my.Up, OutsideStaffPadding);
             if (move != 0)
             {

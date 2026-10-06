@@ -178,7 +178,8 @@ internal static class DynamicEngraver
         ImmutableArray<Voice> voices = default,
         Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
-        ImmutableArray<BeamLayout> beamLayouts = default)
+        ImmutableArray<BeamLayout> beamLayouts = default,
+        HashSet<(int Staff, int Measure, int Item, int Source)>? circled = null)
     {
         if (dynamics.IsDefaultOrEmpty)
             return ImmutableArray<DynamicLayout>.Empty;
@@ -197,9 +198,23 @@ internal static class DynamicEngraver
         // below, each stacking AWAY from the staff independently.
         var stackAt = new Dictionary<(int, int, int, bool), int>();
 
+        // A niente a hairpin's circled tip stands for is not printed as a word (al / dal
+        // niente). Asked of the whole score's tables, as the hairpins are paired, so a subset
+        // of the dynamics (one system's) pairs as the page does.
+        // LILYPOND-REF: lily/hairpin.cc:153 Hairpin::print reads circled_tip (the circled-tip of scm/define-grob-properties.scm) — the circle IS the
+        //   niente; the twin ends such a hairpin with \! and prints no dynamic.
+        var circledNientes = circled
+            ?? (HairpinEngraver.HasNiente(dynamics)
+                ? HairpinEngraver.CircledNientes(score.MusicMarks, score.Dynamics,
+                    Collector.SectionPlays.For(score))
+                : null);
+
         for (int di = 0; di < dynamics.Length; di++)
         {
             var dynamic = dynamics[di];
+            if (circledNientes != null && dynamic.Level == DynamicLevel.Niente
+                && circledNientes.Contains(HairpinEngraver.NienteKey(dynamic)))
+                continue;
             // Find the measure layout
             if (dynamic.MeasureIndex >= measureLayouts.Length)
                 continue;
@@ -253,7 +268,12 @@ internal static class DynamicEngraver
             double xColumn = measureLayout.X + LayoutUtilities.GetItemXOffset(
                 dynMeasures, dynamic.MeasureIndex, dynamic.ItemIndex, measureLayout);
             string labelText = dynamic.Text ?? string.Empty;
-            double x = xColumn + (dynamic.IsExpressiveText
+            // A niente no hairpin's circle stands for is the WORD, printed as free expressive
+            // text is: plain italic, LilyPond's TextScript (the twin writes it as \markup
+            // \italic) — it has no dynamic letters. It still ends a hairpin and sets the MIDI
+            // level, which is what keeps it a DynamicItem.
+            bool expressive = dynamic.IsExpressiveText || dynamic.Level == DynamicLevel.Niente;
+            double x = xColumn + (expressive
                 ? LabelHalfWidth(score.TextMetrics, labelText, expressive: true)
                 : DynamicAnchorCentreOffset(
                     dynVoices, dynamic.VoiceIndex, dynamic.MeasureIndex, dynamic.ItemIndex));
@@ -269,7 +289,7 @@ internal static class DynamicEngraver
             int staffIdx = dynamic.StaffIndex;
             int mi = dynamic.MeasureIndex, ii = dynamic.ItemIndex;
             double y = PointwiseBaselineY(score.TextMetrics, dynamic.IsAbove, dynVoices, dynamic.VoiceIndex,
-                mi, ii, xColumn, x, dynamic.Text, dynamic.IsExpressiveText,
+                mi, ii, xColumn, x, dynamic.Text, expressive,
                 vi => beamMembers.TryGetValue((staffIdx, vi, mi, ii), out var b) ? b : null);
 
             var key = (dynamic.MeasureIndex, dynamic.ItemIndex, dynamic.StaffIndex, dynamic.IsAbove);
@@ -294,7 +314,7 @@ internal static class DynamicEngraver
                 di,
                 dynamic.IsAbove,
                 dynamic.StaffIndex,
-                dynamic.IsExpressiveText,
+                expressive,
                 dynamic.OnMultiMeasureRest
             ));
         }

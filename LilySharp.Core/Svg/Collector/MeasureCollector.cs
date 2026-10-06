@@ -415,6 +415,29 @@ public sealed partial class MeasureCollector
         }
     }
 
+    /// <summary>The hairpins this collect pairs with a <c>@niente</c> at their THICK end
+    /// (<see cref="HairpinItem.NienteAtThickEnd"/>): the hairpin mark's and the niente's source
+    /// positions, and whether the hairpin is a crescendo. Surfaced by
+    /// <c>NienteHairpinValidator</c> (LYS4029).</summary>
+    /// <remarks>Through the same call the page pairs by (<c>HairpinEngraver.DetectHairpins</c>),
+    /// over the collect's own tables, and only when a niente was collected.</remarks>
+    public IReadOnlyList<(int Mark, int Niente, bool Crescendo)> NienteAtThickEndHairpins
+    {
+        get
+        {
+            var dynamics = _dynamics.ToImmutableArray();
+            if (!Layout.HairpinEngraver.HasNiente(dynamics))
+                return [];
+            return Layout.HairpinEngraver.DetectHairpins(_musicMarks.ToImmutableArray(), dynamics,
+                    SectionPlays.Of(_sanityScannedVoiceList))
+                .Where(h => h.NienteAtThickEnd != null)
+                .Select(h => (h.SourcePosition, h.NienteAtThickEnd!.SourcePosition,
+                    h.Direction == HairpinDirection.Crescendo))
+                .Distinct()
+                .ToList();
+        }
+    }
+
     /// <summary>The source position of every REHEARSAL mark this collect produced, so a
     /// caller holding the tree can name the written marks that are not among them.
     /// Surfaced by <c>RehearsalMarkEngravedValidator</c>.</summary>

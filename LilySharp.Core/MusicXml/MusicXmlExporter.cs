@@ -5081,13 +5081,30 @@ public sealed class MusicXmlExporter
     /// mark closes any open wedge, then emits as a dynamics direction.</summary>
     private void HandleDynamicText(string text, int position = -1)
     {
+        if (text == "niente")
+        {
+            HandleNiente();
+            return;
+        }
         if (text is "cresc" or "decresc" or "dim")
         {
-            AddDirection(new MusicXmlDirection
+            var wedge = new MusicXmlDirection
             {
                 WedgeType = text == "cresc" ? "crescendo" : "diminuendo",
                 Placement = "below",
-            });
+            };
+            // A crescendo from a niente on the same note grows from nothing: the circle is the
+            // wedge's own niente="yes", and the <n/> written for it goes.
+            if (text == "cresc" && _niente is { } n && n.Measure == _currentMeasure
+                && n.Offset == CurrentMeasurePosition(_currentMeasure!))
+            {
+                wedge.WedgeNiente = true;
+                if (n.Word != null)
+                    _currentMeasure!.Directions.Remove(n.Word);
+                _niente = null;
+            }
+            AddDirection(wedge);
+            _openWedge = wedge;
             _wedgeOpen = true;
             // The rule cuts this one at its section's end (CloseCutWedge), whatever dynamic
             // follows in the next section.
@@ -5107,6 +5124,48 @@ public sealed class MusicXmlExporter
         // is added) — rather than held for the next note: a dynamic on a bar's last note used
         // to be written at the next bar's head, and one on a part's last note never (2026-09-29).
         AddDirection(new MusicXmlDirection { DynamicType = text, Placement = "below" });
+    }
+
+    /// <summary>The open wedge's start direction, while <see cref="_wedgeOpen"/>.</summary>
+    private MusicXmlDirection? _openWedge;
+
+    /// <summary>The last niente seen — its measure and offset, and the <c>&lt;n/&gt;</c> written
+    /// for it if one was — so a crescendo starting on the same note takes it as its circle.</summary>
+    private (MusicXmlMeasure Measure, int Offset, MusicXmlDirection? Word)? _niente;
+
+    /// <summary>
+    /// A <c>@niente</c>, as the page reads it (HairpinEngraver.DetectHairpins): it ends an open
+    /// wedge — a diminuendo AL NIENTE, whose stop carries <c>niente="yes"</c> and stands for the
+    /// niente; a crescendo just started on this same note grows FROM it (dal niente, the
+    /// start's <c>niente="yes"</c>); otherwise it is the dynamic <c>&lt;n/&gt;</c>.
+    /// </summary>
+    private void HandleNiente()
+    {
+        if (_currentMeasure == null)
+            return;
+        int offset = CurrentMeasurePosition(_currentMeasure);
+        if (_wedgeOpen && _openWedge is { WedgeType: "crescendo" } started
+            && _currentMeasure.Directions.Contains(started) && started.Offset == offset)
+        {
+            started.WedgeNiente = true;
+            return;
+        }
+        bool consumed = false;
+        if (_wedgeOpen)
+        {
+            bool alNiente = _openWedge?.WedgeType == "diminuendo";
+            AddDirection(new MusicXmlDirection { WedgeType = "stop", Placement = "below", WedgeNiente = alNiente });
+            _wedgeOpen = false;
+            _openWedge = null;
+            consumed = alNiente;
+        }
+        MusicXmlDirection? word = null;
+        if (!consumed)
+        {
+            word = new MusicXmlDirection { DynamicType = "n", Placement = "below" };
+            AddDirection(word);
+        }
+        _niente = (_currentMeasure, offset, word);
     }
 
     /// <summary>

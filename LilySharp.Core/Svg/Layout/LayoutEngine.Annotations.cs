@@ -722,7 +722,14 @@ internal sealed partial class LayoutEngine
         // so text spanners can be placed below dynamics.
 
         // Dynamics first (outside-staff-priority: 250)
-        var dynamicLayouts = score != null ? DynamicEngraver.Calculate(score, dynamics, ml, staffVoices, voicesByStaff, measuresByStaff, beamLayouts ?? default) : ImmutableArray<DynamicLayout>.Empty;
+        // The section carry rule's plays — the hairpin's since 2026-09-28, the text spanner's,
+        // ottava's and pedal's since 2026-09-29 (the same calls the collector reports by).
+        var sectionPlays = ctx.MultiScore is { } playsScore ? Collector.SectionPlays.For(playsScore)
+            : score is not null ? Collector.SectionPlays.For(score) : null;
+        // The niente words a circled hairpin tip stands for, paired as the hairpins below are.
+        var circledNientes = HairpinEngraver.HasNiente(dynamics)
+            ? HairpinEngraver.CircledNientes(musicMarks, dynamics, sectionPlays) : null;
+        var dynamicLayouts = score != null ? DynamicEngraver.Calculate(score, dynamics, ml, staffVoices, voicesByStaff, measuresByStaff, beamLayouts ?? default, circledNientes) : ImmutableArray<DynamicLayout>.Empty;
         // …minus the ones a tab staff blanks. LILYPOND-REF:
         // ly/engraver-init.ly:1280-1285 Tab_staff_symbol_engraver — that context's
         // \override DynamicText.stencil = ##f / \override TextScript.stencil = ##f — one
@@ -741,11 +748,7 @@ internal sealed partial class LayoutEngine
             dynamicLayouts = DynamicEngraver.PlaceOnMultiMeasureRests(ctx.Fonts, dynamicLayouts,
                 PassMmrLayouts());
 
-        // Detect and layout hairpins from cresc/decresc marks
-        // The section carry rule's plays — the hairpin's since 2026-09-28, the text spanner's,
-        // ottava's and pedal's since 2026-09-29 (the same calls the collector reports by).
-        var sectionPlays = ctx.MultiScore is { } playsScore ? Collector.SectionPlays.For(playsScore)
-            : score is not null ? Collector.SectionPlays.For(score) : null;
+        // Detect and layout hairpins from cresc/decresc marks (the plays are read above).
         var hairpinItems = HairpinEngraver.DetectHairpins(musicMarks, dynamics, sectionPlays);
         // A tab staff blanks the wedge too, and the ITEM carries its own SourceIndex, so
         // this one is cut before the layout is built rather than after.

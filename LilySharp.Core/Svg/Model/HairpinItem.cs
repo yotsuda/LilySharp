@@ -57,6 +57,48 @@ public sealed record HairpinItem(
     int StaffIndex = 0
 )
 {
+    /// <summary>The <c>@niente</c> at the hairpin's start moment (<c>c@niente@cresc</c>), or null.</summary>
+    public DynamicItem? NienteAtStart { get; init; }
+
+    /// <summary>The <c>@niente</c> that ends the hairpin (<c>… g@niente</c>), or null.</summary>
+    public DynamicItem? NienteAtEnd { get; init; }
+
+    /// <summary>
+    /// The hairpin's THIN end touches a niente — a crescendo from it (dal niente) or a
+    /// decrescendo to it (al niente) — so that end is drawn as a circle and the niente is not
+    /// printed as a word. A niente at the THICK end is a contradiction (LYS4029): the wedge is
+    /// drawn plain and the word is printed.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/hairpin.cc:153 Hairpin::print reads circled_tip (the circled-tip of scm/define-grob-properties.scm) — "Put a circle at
+    ///   start/end of hairpins (al/del niente)", the end being the tip.
+    /// </remarks>
+    public bool CircledTip => Direction == HairpinDirection.Crescendo
+        ? NienteAtStart != null
+        : NienteAtEnd != null;
+
+    /// <summary>The niente the circle stands for (and that is therefore not printed), or null.</summary>
+    public DynamicItem? CircledNiente => Direction == HairpinDirection.Crescendo
+        ? NienteAtStart
+        : NienteAtEnd;
+
+    /// <summary>The niente at the THICK end, or null — the one LYS4029 reports.</summary>
+    public DynamicItem? NienteAtThickEnd => Direction == HairpinDirection.Crescendo
+        ? NienteAtEnd
+        : NienteAtStart;
+
+    /// <summary>
+    /// The circled tip is shared: a decrescendo al niente and a crescendo dal niente meet on one
+    /// note (<c>… g@niente@cresc …</c>), so both tips hang on the note's centre and their two
+    /// circles fall on one place.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/hairpin.cc:243-252 Hairpin::print, x_points — "Handle back-to-back hairpins with
+    ///   a circle in the middle": with an adjacent hairpin on the same column and the circled
+    ///   tip on this side, <c>x_points[d] = e.center () + d * (rad - thick / 2.0)</c>.
+    /// </remarks>
+    public bool TipAdjacent { get; init; }
+
     // Identity, not value equality: see ModelIdentity.
     public bool Equals(HairpinItem? other) => ReferenceEquals(this, other);
 

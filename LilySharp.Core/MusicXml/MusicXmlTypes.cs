@@ -692,6 +692,9 @@ internal sealed class MusicXmlDirection
     public string? Placement { get; set; }
     /// <summary>Hairpin: "crescendo" / "diminuendo" / "stop".</summary>
     public string? WedgeType { get; set; }
+    /// <summary>The wedge's <c>niente="yes"</c>: a circle at its tip — on a crescendo's start
+    /// (dal niente) or on the stop of a diminuendo (al niente), as MusicXML 4.0 defines it.</summary>
+    public bool WedgeNiente { get; set; }
     /// <summary>Pedal mark: "start" / "stop" / "sostenuto".</summary>
     public string? PedalType { get; set; }
     /// <summary>Ottava line: "down" (8va) / "up" (8vb) / "stop".</summary>
@@ -741,7 +744,8 @@ internal sealed class MusicXmlDirection
         if (WedgeType != null)
             direction.Add(new XElement("direction-type",
                 new XElement("wedge", new XAttribute("type", WedgeType),
-                    Number is { } wedgeNumber ? new XAttribute("number", wedgeNumber) : null)));
+                    Number is { } wedgeNumber ? new XAttribute("number", wedgeNumber) : null,
+                    WedgeNiente ? new XAttribute("niente", "yes") : null)));
 
         if (PedalType != null)
             direction.Add(new XElement("direction-type",

@@ -2281,6 +2281,8 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
    - Ornaments:     @trill @mordent @prall @turn @reverseTurn
    - Dynamics:      @ppp @pp @p @mp @mf @f @ff @fff @sfz @sf @fp @rfz @fz   (default below; @f.up forces side)
    - Hairpins:      @cresc @decresc @dim  (start note → next dynamic; .up/.down REJECTED)
+   - Niente:        @niente  (a hairpin's thin end on it is a circle: @decresc … @niente,
+                    @niente@cresc; alone the italic word; at the thick end LYS4029)
    - Stem:          @stemUp @stemDown      (a beam's shared direction wins)
    - Accidental:    @courtesy (cautionary) @editorial (musica ficta)
    - Arpeggio:      <c e g>4@arpeggio

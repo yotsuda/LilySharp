@@ -468,7 +468,21 @@ workflow attaches that section to the GitHub Release verbatim.
   breaks and this flag — keeps its systems and pages where the original had them. A line that
   cannot hold its bars is squeezed, as in LilyPond with the same permissions.
 
+### Niente (`@niente`)
+
+- **`@niente`, the silent dynamic.** A hairpin's thin end that touches it is drawn as a small
+  circle — `c4@mf@decresc … g1@niente` fades *al niente*, `c4@niente@cresc …` grows *dal
+  niente*, and a decrescendo to and a crescendo from the same note share one circle — and the
+  word is not printed. Alone it prints *niente* in italic; at a hairpin's loud end it warns
+  (LYS4029). MIDI plays it at velocity 1; MusicXML writes the wedge's `niente="yes"` (or `<n/>`)
+  and reads both back; the LilyPond twin writes `\!` and `-\tweak circled-tip ##t`, and draws
+  the same circles.
+
 ### Fixes
+
+- **A hairpin ended by a dynamic in the same bar as the next hairpin is drawn.** In
+  `c4@p@cresc d@f e@decresc f` neither hairpin was drawn: a later hairpin mark in the same bar
+  took the end from the dynamic before it. LilyPond draws both, and now Lily# does.
 
 - **Flat key signatures stand where LilyPond puts them.** Every flat (and double flat) in a key
   signature was drawn 0.12 staff spaces left of LilyPond's — at the start of each line, in a

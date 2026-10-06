@@ -477,6 +477,14 @@ internal static partial class SharedRenderer
                 // line ends. LILYPOND-REF: lily/hairpin.cc — Round_ blot.
                 gc.DrawLine(h.StartX, leftTop, h.EndX, rightTop, Color.Black, thickness, cap: LineCap.Round);
                 gc.DrawLine(h.StartX, leftBottom, h.EndX, rightBottom, Color.Black, thickness, cap: LineCap.Round);
+                // The circle at a niente tip: an open circle of the hairpin's own line.
+                // LILYPOND-REF: lily/hairpin.cc:342-355 Hairpin::print — circled_tip: (circle rad thick #f)
+                if (!double.IsNaN(h.CircleX))
+                {
+                    double r = os.Size(LilySharp.Core.Svg.Layout.HairpinEngraver.CircleRadius, h.StaffIndex);
+                    gc.DrawEllipse(h.CircleX, absY, r, r, fill: null, stroke: Color.Black,
+                        strokeWidth: LilySharp.Core.Svg.Layout.HairpinEngraver.CircleThickness);
+                }
             }
         }
     }

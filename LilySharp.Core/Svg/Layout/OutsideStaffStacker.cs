@@ -514,7 +514,7 @@ internal static class OutsideStaffStacker
                     //   drawn wedge.
                     var hp = hpB![hi];
                     Fold(HairpinEngraver.WedgeSkylines(
-                        hp.StartX, hp.EndX, hp.StartOpening, hp.EndOpening, hp.YUp));
+                        hp.StartX, hp.EndX, hp.StartOpening, hp.EndOpening, hp.YUp, hp.CircleX));
                 }
                 if (dim is not { } my)
                     continue;
@@ -605,7 +605,7 @@ internal static class OutsideStaffStacker
                 // The LilyPond address is the one WedgeSkylines already carries — this is a
                 // re-pointing at that house, not a second citation of it (HANDOFF §7.6 ⒟).
                 var (wedgeUp, wedgeDown) = HairpinEngraver.WedgeSkylines(
-                    hp.StartX, hp.EndX, hp.StartOpening, hp.EndOpening, hp.YUp);
+                    hp.StartX, hp.EndX, hp.StartOpening, hp.EndOpening, hp.YUp, hp.CircleX);
                 double move = tracker.Place(wedgeUp, wedgeDown, OutsideStaffPadding);
                 if (move != 0)
                     builder[i] = hp with { YUp = hp.YUp + move };

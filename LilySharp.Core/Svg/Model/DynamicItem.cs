@@ -136,6 +136,7 @@ public sealed record DynamicItem
         DynamicLevel.FFF => "fff",
         DynamicLevel.FFFF => "ffff",
         DynamicLevel.FFFFF => "fffff",
+        DynamicLevel.Niente => "niente",
         _ => ""
     };
 }

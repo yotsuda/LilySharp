@@ -787,7 +787,7 @@ internal static class MusicXmlReader
 
     /// <summary>Dynamic mark names from a &lt;direction&gt;: each &lt;dynamics&gt; level
     /// (f, ff, p, mf, …) and an OPENING hairpin wedge (crescendo → cresc, diminuendo →
-    /// decresc). A wedge stop is not a mark.</summary>
+    /// decresc). A wedge stop is not a mark, unless it is a diminuendo's al niente stop.</summary>
     private static IEnumerable<string> ReadDirectionDynamics(XElement dir)
     {
         var dt = Local(dir, "direction-type");
@@ -796,13 +796,25 @@ internal static class MusicXmlReader
         foreach (var dyn in Els(dt, "dynamics"))
             foreach (var level in dyn.Elements())
                 if (level.Name.LocalName != "other-dynamics")
-                    yield return level.Name.LocalName;
+                    // <n/> is MusicXML's niente.
+                    yield return level.Name.LocalName == "n" ? "niente" : level.Name.LocalName;
         foreach (var wedge in Els(dt, "wedge"))
+        {
+            // niente="yes" is the circle at the tip: a crescendo from nothing, or the stop of
+            // a diminuendo to nothing — Lily#'s @niente at that end.
+            bool niente = (string?)wedge.Attribute("niente") == "yes";
             switch ((string?)wedge.Attribute("type"))
             {
-                case "crescendo": yield return "cresc"; break;
+                case "crescendo":
+                    if (niente) yield return "niente";
+                    yield return "cresc";
+                    break;
                 case "diminuendo": yield return "decresc"; break;
+                case "stop":
+                    if (niente) yield return "niente";
+                    break;
             }
+        }
     }
 
     /// <summary>

@@ -397,6 +397,13 @@ public sealed partial class LilyPondExporter
         public readonly Dictionary<(string Part, string Key), int> GraceSyncEmptyBarsSeen = new();
         public readonly Dictionary<object, string> PaddingBarSections = new(ReferenceEqualityComparer.Instance);
 
+        /// <summary>What the page pairs with a <c>@niente</c> (<see cref="CollectNiente"/>), by
+        /// source position: the hairpin marks whose tip is circled, the nientes such a circle
+        /// stands for, and the nientes that end a hairpin.</summary>
+        public readonly HashSet<int> CircledHairpinMarks = new();
+        public readonly HashSet<int> CircledNientes = new();
+        public readonly HashSet<int> NienteEnds = new();
+
         /// <summary>Diagnostics collected while exporting (constructs dropped because they
         /// are deprecated or out of scope, and the like). Not fatal.</summary>
         public readonly List<string> Warnings = new();
@@ -581,6 +588,8 @@ public sealed partial class LilyPondExporter
         // Before the part variables: every event a grace on another voice stands beside owes
         // a grace skip, which the music walk writes in front of it (EmitItemCore).
         CollectGraceSync(tree, render);
+        // Before the part variables too: a niente's hairpin is written with its circled tip.
+        CollectNiente(tree, render);
 
         // One music variable per part. A by-part score keeps its sections inside
         // the part block; the form orders them.

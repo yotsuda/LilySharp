@@ -51,7 +51,7 @@
 - **:1447** NOT ported; this takes the note's own stem direction. No book and
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
 - **:363** Lily# has not ported; this arrow is its own device.
-- **:840** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
+- **:848** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:301** ⚠️ subdivide_beams (:186-188) is not ported: it is gated on
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
@@ -183,8 +183,8 @@
 - **:865** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
 - **:1142** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
-- **:2454** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
-- **:2476** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
+- **:2457** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
+- **:2479** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
 - **:750** THE CLEAR HAS NO OBSERVER HERE, and that was measured rather than assumed. Session 457's
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
@@ -245,7 +245,7 @@
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **:90** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:734** ⚠️ LILYSHARP-OWN: carrying AbsoluteBaseOctave is correct by construction. A degree
+- **:743** ⚠️ LILYSHARP-OWN: carrying AbsoluteBaseOctave is correct by construction. A degree
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Form.cs`
 - **:960** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Marks.cs`
@@ -287,7 +287,7 @@
 - **:91** LILYSHARP-OWN: LilyPond has no chord-from-a-shape item.
 ### `LilySharp.Core/MusicXml/MusicXmlExporter.cs`
 - **:1124** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
-- **:5494** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
+- **:5553** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
 ### `LilySharp.Core/MusicXmlImport/LysWriter.cs`
 - **:347** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision; the twin omits it too).
 ### `LilySharp.Core/Parser/Parser.Music.cs`
@@ -349,8 +349,8 @@
 ### `LilySharp.Core/Svg/Collector/MeasureBuilder.cs`
 - **:421** LILYSHARP-OWN (owner's decisions, 2026-10-02, HANDOFF §1.1 第737): a time, key
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:3387** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:5806** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:3410** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:5829** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Form.cs`
 - **:567** `time!` (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so
 - **:845** is not drawn unless written `key!` (MeasureBuilder.SectionHead, LILYSHARP-OWN). At a
@@ -409,7 +409,7 @@
 - **:266** ⚠️ LILYSHARP-OWN: the dots' preferred DIRECTION is not read here. LilyPond's
 ### `LilySharp.Core/Svg/Layout/DynamicEngraver.cs`
 - **:122** ⚠️ LILYSHARP-OWN: a string the bundled face cannot spell (CJK — TextFontMetrics reports
-- **:445** ⚠️ LILYSHARP-OWN: the number is a support of THIS text alone, not ink of the staff's
+- **:465** ⚠️ LILYSHARP-OWN: the number is a support of THIS text alone, not ink of the staff's
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
 - **:2757** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
 - **:2806** ⚠️ LILYSHARP-OWN, and LilyPond cannot be asked: MEASURED on 2.26.0, all three
@@ -422,16 +422,16 @@
 ### `LilySharp.Core/Svg/Layout/GlyphMetrics.cs`
 - **:197** LILYSHARP-OWN: the gap Lily# leaves between a LYRIC syllable and its neighbour.
 ### `LilySharp.Core/Svg/Layout/HairpinEngraver.cs`
-- **:484** ⚠️ LILYSHARP-OWN, DECLARED: the voice a hairpin supports off. LilyPond's
+- **:541** ⚠️ LILYSHARP-OWN, DECLARED: the voice a hairpin supports off. LilyPond's
 ### `LilySharp.Core/Svg/Layout/HeaderBand.cs`
 - **:85** LILYSHARP-OWN: LilyPond has no chord list; the gap is Lily#'s, a little more
 - **:183** LILYSHARP-OWN (user decision 2026-09-26): LilyPond stacks the rows with ZERO padding
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
 - **:456** ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's mark aligns to the BreakAlignGroup,
 - **:487** LILYSHARP-OWN (2026-09-28): see for
-- **:1079** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
-- **:1867** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
-- **:2162** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
+- **:1082** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
+- **:1870** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
+- **:2165** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
 - **:843** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`

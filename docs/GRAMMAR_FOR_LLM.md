@@ -379,6 +379,8 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - Ornaments: `@trill @mordent @prall @turn @reverseTurn`
 - Dynamics: `@ppp @pp @p @mp @mf @f @ff @fff` and the accent dynamics `@sfz @sf @fp @rfz @fz` (default below the staff; `.up` / `.down`
   forces the side, e.g. `@f.up`)
+- Niente: `@niente` — `c4@p@decresc d e f | g1@niente` fades to nothing (circled tip), `c4@niente@cresc …` grows
+  from nothing; never at a hairpin's loud end (LYS4029)
 - Accidental style: `@courtesy` (cautionary, parenthesized), `@editorial` (musica ficta)
 - Arpeggio: `<c e g>4@arpeggio`
 - Glissando: `c4@glissando d` (line from this note to the next)

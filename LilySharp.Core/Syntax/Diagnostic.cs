@@ -1371,6 +1371,12 @@ public static class DiagnosticCodes
     /// <summary>Warning: a <c>@todo</c> key written twice in one file. A key names ONE mark
     /// (the side file an OMR reader writes is keyed by it), so the second one is ambiguous.</summary>
     public const string TodoKeyRepeated = "LYS4028";
+    /// <summary>Warning: a <c>@niente</c> at a hairpin's THICK end — a crescendo that ends on
+    /// it, or a decrescendo that starts from it. Niente is the silence a hairpin's thin end
+    /// fades to (<c>@decresc … @niente</c>) or grows from (<c>@niente@cresc</c>), where the tip
+    /// is drawn as a circle; at the loud end it contradicts the wedge. The wedge is drawn plain
+    /// and the word printed (owner's decision, 2026-10-06).</summary>
+    public const string NienteAtThickEnd = "LYS4029";
     /// <summary>A slur, phrasing slur, tie or hairpin — and, since 2026-09-29, a text spanner,
     /// ottava, pedal or trill span — that breaks the SECTION CARRY RULE
     /// (owner's decisions, 2026-09-28): a span open when a section ends is carried into the

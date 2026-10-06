@@ -78,7 +78,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         "staccato", "accent", "tenuto", "marcato", "fermata", "portato",
         "staccatissimo", "upBow", "downBow", "harmonic", "flageolet",
         "sfz", "sf", "fp", "rf", "rfz", "fz", "sffz",
-        "pppp", "ppppp", "ffff", "fffff",
+        "pppp", "ppppp", "ffff", "fffff", "niente",
         "trill", "mordent", "prall", "turn", "reverseTurn", "pralltriller",
         "startTrillSpan", "stopTrillSpan", "courtesy", "editorial", "glissando",
         // ⚠️ The navigation marks (segno, coda, fine, ds, dc, to coda) are NOT

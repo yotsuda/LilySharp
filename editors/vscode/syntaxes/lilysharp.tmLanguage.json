@@ -701,7 +701,7 @@
                 {
                     "comment": "@-prefixed dynamics ('f' bare is a PITCH; @f is the dynamic). Backslash dynamics (\\p, \\f) are rejected by the parser — not highlighted as valid.",
                     "name": "keyword.other.dynamic.lilysharp",
-                    "match": "@(ppppp|pppp|ppp|pp|mp|mf|p|fffff|ffff|fff|ff|sffz|sfz|sfp|sf|fp|rfz|rf|fz|f|cresc|decresc|dim)\\b"
+                    "match": "@(ppppp|pppp|ppp|pp|mp|mf|p|fffff|ffff|fff|ff|sffz|sfz|sfp|sf|fp|rfz|rf|fz|f|niente|cresc|decresc|dim)\\b"
                 }
             ]
         },
