@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第845セッションの経緯
+
+### 1.1 第845セッション（2026-10-06・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。`-Start p845`（HEAD `0988d4e5`）＝full **11282 / 0 / 2 / 11284**。§7 3.5 で第843 を ARCHIVE へ。**§2 F-gracesync の残りを閉じた（`0e19bcba6`）**。
+- **形**: 書き出しが 1 つの spacer（`s1 |`）で書く無音の小節（part が書かない section＝`AppendSilentPlay`・短い play の詰め＝`PaddingBars`・作者の `| |`）は音が無いので、第843 の「書かれた音の位置×演奏の回数」の鍵に乗らない。LP 2.26.0 実測（Lab `sessions/p845/gs`）: 下の段の小節頭の grace で、無音の上の段に**印 B が 2 つ**・header の `time` があれば **3/4 が 2 回**。
+- **直し方**: ページの無音の小節（時価のある item が全部 spacer）を **part × 鍵** で数える（`EmptyBarKey`）: section の詰め＝`§名`（spacer は section の宣言の位置を持つ）・作者の空の小節＝`@`＋小節の `SourceEnd`（閉じる `|` の位置＝書き出しが spacer を書く `|`）。書き出しは合成の `|` を green で section 名に結び（`SectionPaddingBar`）、`EmitMusicStream` の空の小節の spacer の前で `EmptyBarGracePad` が演奏の回数順に引く。
+- 計測: 4 形（無音 section・`time` の頭つき・短い play・`| |`）とも LP の重複が消え、**ページと LP の小節線が 0.01 以内**（s1 は前が 0.37 ずれ）。試験 `LilyPondExporterGraceSyncTests` に 5 本。毒 3 本: 空白なし→5 赤／合成の `|` に名前なし→4 赤／回数を数えない→3 赤。掃き（`sweep/sweep-ly.ps1`・base は p844 の exe-head）998 冊 1199 score で .ly の差 0・陽性対照 s1 は 0 → 2 本。full **11287 / 0 / 2 / 11289**（+5）。
+- **途中で見つけた（新規 §2 F-partmeter）**: 前便の c7＝ある part の音楽の中の `time` は、その section を書かない part に効かない（ページは上の段に 3/4 を描かず、双子の `s1` が 4/4 のまま＝LP の bar check failed）。
+
+★ `-End p845 -DiffBase 0988d4e52`（`end.log`）＝full **11287 / 0 / 2 / 11289**（+5＝試験）・門 全 OK。7.5: Core `+` 95 行・REF 0／OWN 0＝出典は第843 の `CollectGraceSync` の LILYPOND-REF（同じ仕組みの続き・`EmptyBarKey` の註は MEASURED）。7.6: 意味は LP 文書の作法（他の段に同じ長さの grace の空白）・鍵はページのモデル。7.7: 匂い＝**合成の `|` を green の参照で覚える**（volta の ending を作り直す `CreateEnding` が子の green を作り直せば鍵が外れ、空白が書かれないだけ＝壊れはしない・未測）。push はユーザー。
+判定: 次の一手は**どれもユーザー判断が先**（① ⑹＋⑺ 和音の文法・② ⑷ niente の文法の承認／§2 F-partmeter の ⒜⒝）。承認が来たら (a) 和音の文法は今便の文脈を使わない／(b) 会話は 2 便ぶんでまだ軽い／(c) 島は違う＝差は小さい ⇒ **既定どおりこの会話で続けてよい**（`-Start p846` から）。
+
 ## 以下は第844セッションの経緯
 
 ### 1.1 第844セッション（2026-10-06・YT-DELL2）
@@ -45795,4 +45808,14 @@ LP は声部ごとの wish を平均し、tab の wish は数字を頭に読む�
 #### ★★ 1 段目の indent は LP の 15mm＝楽器名の有無にかかわらず（2026-09-25・第586・ユーザー決定「楽器名の無い score の 1 段目の字下げを LP と合わせて」）
 
 `LayoutOptions.Indent` の既定が `LilyPondDefaultIndent`（8.535827）。紙の `indent`（0 も）はそのまま、`size` は側余白と同じく拡縮（`scm/paper.scm` の scalable-values）。双子は常に `indent = 15\mm`。**LP 実測の網は測った紙を言う**: 台帳は `RenderedGeometry.ProbePaper`（名前の無い probe は indent 0＝probe の `.ly` と同じ）、単体テストは `TestPaper`（`paper { indent 0 }` を本に足す）
+
+#### [H] ✅ 行頭の grace／歌詞の独立列（⑴・`ownFixedFloor`）＝第832 で grace を LP の列に移植（`LineStartColumn.IntoGraceRun`: 前置き列の wish は最初の …
+
+  ✅ **床（`ownFixedFloor`）は第834 で撤去**（`189d37ac5`）: ダイアグラムは `AddFirstColumnDiagrams` で min_dist に入り、tab の数字の取りすぎ（0.09〜1.29・35 svg）は消えた。行頭の空の小節は第833。<!-- ledger: line-start.empty-bar.clef-to-bar = 0 --><!-- ledger: line-start.clef-to-first-note.tab-continuation = 0 -->
+  ✅ **残りは全部閉じた（第842）**: ~~⒜ 行末の小節線への ×0.8~~＝**第842 で LP に**（`2e86147e8`・LP の列原点は行末群の右端＝O だけ長いばねに 0.8＝`max(min, 0.8·ideal − 0.2·O)`・`SpacingRules.IntoLineEndBeforeGrace`／`MultiStaffLayouter.LineEndBeforeGraceSprings`・改行の値付けも `LineEndSprings` で同じ）<!-- ledger: line-end.before-grace.plain-bar = 0 --><!-- ledger: line-end.before-grace.courtesy-key = 0 --><!-- ledger: line-end.before-grace.courtesy-meter = 0 -->／~~⒝ 小節頭の調号変更の後の grace~~＝**第840 で閉じた**（`c730116a5`・`BoundaryGraceSeries`：min_dist は最初の grace 列まで・近づきは自分の min に対して ×0.8＋列の rod・grace の列と直列）<!-- ledger: key-change.grace.main-natural.bar = 0 --><!-- ledger: key-change.grace.grace-sharp.bar = 0 -->／~~⒞ grace-lower-staff は LP と最大 5.4 違う~~＝**第841: 計器の差**（双子が LP の grace の同期の不具合を踏んでいた＝拍子が 2 回・偽の小節線。上の段に `\grace { s16 s16 }` を足した双子と小節線 20.99／33.10 対 20.99／33.11・Lab `sessions/p841/gl`。書き出しの側は §2 F-gracesync）／~~⒟ 註の書き直し~~＝**第842 で閉じた**（`20e08c755`・`startLeadGrace` は有無だけ読まれていた＝bool に・旗と旧註を消した・fixture の註は列の機構に）／~~⒠ ダイアグラムの格子の位置~~＝**第834 で LP に**（align-dir −0.4・`FretFrameGeometry.GridCentreFromColumnOrigin`）・残差 0.0036 も第835 で 0（箱の端＝端の弦の X／O は送り幅の半分・点は輪）<!-- ledger: line-start.clef-to-first-note.diagram = 0 -->／~~⒠′ 小節線の後のダイアグラム~~＝**第835 で LP に**（箱は高さ無限＝両隣の音の列とも rod・小節線側は 0.1＋Staff_spacing の +0.3・`ApplyFretFrameSpacing`）<!-- ledger: diagram.note-to-next-note = 0 -->／~~⒢ 小節の途中の `@mark` の列~~＝**第838 で閉じた**（`c2758ad56`）: `Measure.MarkColumnTimings`・`SpacingRules.MarkColumnSeries`（前の音→印の列は素の duration spring＝wish なし、印の列→音は 0.5・2 系統とも直列）・`MarkColumnFillsMeasure`・印は列に中央揃え。LYS4021 は途中の印を影にしない。残し: 変更列と同じ時刻の印・grace の前の印（測っていない）<!-- ledger: mark-column.fills-measure.bar = 0 --><!-- ledger: mark-column.tacet.box-centre = 0 --><!-- ledger: mark-column.quarter.box-centre = -0.000001 -->／~~⒡ 行頭の空の小節（調号＋tab）~~＝**第836 で閉じた**（正体は %% の対の伸び＝`EmptyBarSprings` の stretch を列原点の ideal に・行頭は対の右が改行禁止の枝・記号は譜ごと）<!-- ledger: line-start.empty-bar.key-tab.clef-to-bar = 0.044869 -->。
+  ⑵ 和音行の command 列・⑶ mid-measure の clef/key/time は「内部は直列合成だが LP の出力と厳密に一致」で閉じたまま。⑷ 行末の courtesy 群は第830 で閉じた（`SpacingRules.LineEndCourtesy`）。<!-- ledger: courtesy.meter.barline-to-cancellation = 0 --><!-- ledger: courtesy.meter.barline-to-meter = 0 --><!-- ledger: courtesy.key.cancellation-to-line-end = 0 --> 旧 ⑴ の点 `grace.column.approach` は第59 で閉じた。<!-- ledger: grace.column.approach = 0 --><!-- ledger: grace.column.approach.main-control = 0 --> 経緯の全文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の末尾（第832 が逐語で落とした）。
+
+#### ★★★ staff の無い sheet（chords／lyrics だけ）の section label は行の上の帯に置く＝LP と同じ（probes/mark-chord-row.ly MKT/MKS/MKV＝行の …
+
+線上の規則は grid が同じ線に拍子を描くようになって（第781・第783）箱が拍子と押し合う形になった。X 側（window・spring floor・staff-bar 列）は規則と一緒に落とした（HANDOFF 5.3）
 
