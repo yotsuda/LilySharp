@@ -390,6 +390,13 @@ public sealed partial class LilyPondExporter
         public readonly Dictionary<int, List<Fraction>> GraceSyncPads = new();
         public readonly Dictionary<int, int> GraceSyncSeen = new();
 
+        /// <summary>The same for a bar of silence the twin writes as one spacer, by part and
+        /// <see cref="EmptyBarKey"/>; and which section each padding bar line the form walk
+        /// makes stands for (<see cref="AppendSilentPlay"/>, <see cref="PaddingBars"/>), by its green.</summary>
+        public readonly Dictionary<(string Part, string Key), List<Fraction>> GraceSyncEmptyBars = new();
+        public readonly Dictionary<(string Part, string Key), int> GraceSyncEmptyBarsSeen = new();
+        public readonly Dictionary<object, string> PaddingBarSections = new(ReferenceEqualityComparer.Instance);
+
         /// <summary>Diagnostics collected while exporting (constructs dropped because they
         /// are deprecated or out of scope, and the like). Not fatal.</summary>
         public readonly List<string> Warnings = new();

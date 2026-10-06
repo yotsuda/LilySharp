@@ -440,7 +440,16 @@ public sealed partial class LilyPondExporter
         if (headers != null)
             result.AddRange(headers);
         for (int i = 0; i < bars; i++)
-            result.Add(CreateBarline(SyntaxKind.Bar, "|", 0, 0));
+            result.Add(SectionPaddingBar(name, 0));
+    }
+
+    /// <summary>A bare <c>|</c> the twin writes an empty bar of <paramref name="section"/>'s play at,
+    /// remembered as that section's so the bar can be asked for its grace skip (<see cref="EmptyBarGracePad"/>).</summary>
+    private BarlineSyntax SectionPaddingBar(string section, int position)
+    {
+        var bar = CreateBarline(SyntaxKind.Bar, "|", position, 0);
+        _shared.PaddingBarSections[bar.Green] = section;
+        return bar;
     }
 
     // The book's section voices (SectionBarCounts.BuildSemanticIndex), read once per Export.
@@ -515,8 +524,9 @@ public sealed partial class LilyPondExporter
         // sessions/p585). The marker states the index's answer to the stream.
         if (!open)
             yield return new ClosedBarMarker();
+        var name = SectionOf(container)?.SectionName;
         for (int i = 0; i < missing + (open ? 1 : 0); i++)
-            yield return CreateBarline(SyntaxKind.Bar, "|", position, 0);
+            yield return name != null ? SectionPaddingBar(name, position) : CreateBarline(SyntaxKind.Bar, "|", position, 0);
     }
 
     /// <summary>

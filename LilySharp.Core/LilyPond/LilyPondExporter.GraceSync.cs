@@ -85,6 +85,10 @@ public sealed partial class LilyPondExporter
         // that shows a part another staff already showed (a tab under its notation) is the
         // same written music, so its plays are not counted twice.
         var pads = _shared.GraceSyncPads;
+        var emptyBars = _shared.GraceSyncEmptyBars;
+        var sectionAt = new Dictionary<int, string>();
+        foreach (var section in tree.GetRoot().DescendantNodes<SectionDeclarationSyntax>())
+            sectionAt.TryAdd(section.SourceStart, section.SectionName);
         var seenParts = new HashSet<string>(StringComparer.Ordinal);
         foreach (var (_, staff, idx) in score.EnumerateStaves())
         {
@@ -95,6 +99,15 @@ public sealed partial class LilyPondExporter
                 var measures = staff.Voices[v].Measures;
                 for (int m = 0; m < measures.Length; m++)
                 {
+                    // A bar of silence the twin writes as one spacer of its own (`s1 |`) has no
+                    // written event to key on — see EmptyBarKey.
+                    if (v == 0 && EmptyBarKey(measures[m], sectionAt) is { } barKey)
+                    {
+                        var k = (staff.PrimaryVoice.Name, barKey);
+                        if (!emptyBars.TryGetValue(k, out var bars))
+                            emptyBars[k] = bars = new List<Fraction>();
+                        bars.Add(longest.TryGetValue((m, Fraction.Zero), out var lb) ? lb : Fraction.Zero);
+                    }
                     var at = Fraction.Zero;
                     var items = measures[m].Items;
                     for (int i = 0; i < items.Length; i++)
@@ -123,6 +136,62 @@ public sealed partial class LilyPondExporter
         // Positions that never owe anything are not asked about again.
         foreach (var position in pads.Where(p => p.Value.All(f => f <= Fraction.Zero)).Select(p => p.Key).ToList())
             pads.Remove(position);
+        foreach (var key in emptyBars.Where(p => p.Value.All(f => f <= Fraction.Zero)).Select(p => p.Key).ToList())
+            emptyBars.Remove(key);
+    }
+
+    /// <summary>
+    /// The key a bar of pure silence is asked by, or null when the bar holds anything else:
+    /// <c>§name</c> for a bar the page pads a section's play with (a part that does not write the
+    /// section, or writes fewer bars of it — the spacer cites the section's declaration, and the
+    /// twin writes the bar from <see cref="AppendSilentPlay"/> / <see cref="PaddingBars"/>), and
+    /// <c>@N</c> for the author's own empty bar (<c>| |</c>), N the source end the page gives that
+    /// bar — the bar line that closes it, which is the one the twin writes the spacer at.
+    /// </summary>
+    /// <remarks>
+    /// Keyed by part and counted by play like the events (<see cref="GraceSyncPad"/>): a padded
+    /// section has no written event, so the page's own order of its silent bars is the only
+    /// thing the two walks share. MEASURED (2.26.0, Lab sessions/p845/gs): without the skip, a
+    /// grace on the lower staff at a bar the upper staff is silent in drew the upper staff's
+    /// section mark twice, and its `\time` twice when the section opened with one.
+    /// </remarks>
+    private static string? EmptyBarKey(Measure measure, Dictionary<int, string> sectionAt)
+    {
+        MusicItem? first = null;
+        foreach (var item in measure.Items)
+        {
+            if (item.Duration <= Fraction.Zero)
+                continue;
+            if (item is not RestItem { IsSpacer: true })
+                return null;
+            first ??= item;
+        }
+        if (first == null)
+            return null;
+        if (measure.IsEmptyPlaceholder)
+            return "@" + measure.SourceEnd;
+        return sectionAt.TryGetValue(first.SourcePosition, out var name) ? "§" + name : null;
+    }
+
+    /// <summary>
+    /// The grace skip the empty bar <paramref name="bar"/> closes owes (<see cref="EmptyBarKey"/>),
+    /// as <c>\grace { sN }</c>, or "". Counts the occurrence either way.
+    /// </summary>
+    private string EmptyBarGracePad(BarlineSyntax bar)
+    {
+        var bars = _shared.GraceSyncEmptyBars;
+        if (bars.Count == 0 || _currentPartName is not { } part)
+            return "";
+        var key = _shared.PaddingBarSections.TryGetValue(bar.Green, out var section)
+            ? "§" + section
+            : "@" + bar.SourceStart;
+        if (!bars.TryGetValue((part, key), out var plays))
+            return "";
+        var seen = _shared.GraceSyncEmptyBarsSeen;
+        seen.TryGetValue((part, key), out int k);
+        seen[(part, key)] = k + 1;
+        var owed = plays[Math.Min(k, plays.Count - 1)];
+        return owed <= Fraction.Zero ? "" : "\\grace { s" + ChordModeDuration(owed) + " }";
     }
 
     /// <summary>The grace time a run spends: its columns' written lengths, dots included.</summary>

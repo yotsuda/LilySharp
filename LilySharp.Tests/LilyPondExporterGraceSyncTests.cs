@@ -136,6 +136,67 @@ public class LilyPondExporterGraceSyncTests
         Assert.Contains(@"\grace { s16 } c1", Body(ly, "bot"));
     }
 
+    // A bar of silence is written as one spacer of its own (`s1 |`), with no event to carry the
+    // skip: it goes in front of the spacer (session 845, Lab sessions/p845/gs — without it the
+    // silent staff drew its section mark twice, and its `\time` twice under a header).
+    [Theory]
+    [InlineData("", "s1")]
+    [InlineData("time 3/4", "s2.")]
+    public void ASectionThePartDoesNotWrite_OwesTheSkipInItsSilentBars(string header, string bar)
+    {
+        string body = bar == "s1" ? "1" : "2.";
+        string ly = Twin(Header + $$"""
+            section A {
+              top { c'1 | }
+              bot { c1 | }
+            }
+            section B {
+              {{header}}
+              bot { grace { e16 f } g{{body}} | grace { e16 } g{{body}} | }
+            }
+            form main { A B }
+
+            """ + TwoStaves);
+        string top = Body(ly, "top");
+        Assert.Contains(@"\grace { s8 } " + bar + " |", top);
+        Assert.Contains(@"\grace { s16 } " + bar + " |", top);
+        Assert.DoesNotContain(@"\grace { s", Body(ly, "bot"));
+    }
+
+    /// <summary>The silent bars are counted per play like the events: a section played twice
+    /// owes the skip in its second bar on both plays, and never in its first.</summary>
+    [Fact]
+    public void SilentBars_AreCountedPerPlay()
+    {
+        string ly = Twin(Header + """
+            section B {
+              bot { g1 | grace { e16 } g1 | }
+            }
+            form main { B B }
+
+            """ + TwoStaves);
+        Assert.Equal(2, Regex.Matches(Body(ly, "top"), @"\bs1 \|\s*\\grace \{ s16 \} s1 \|").Count);
+        Assert.Equal(2, Regex.Matches(Body(ly, "top"), @"\\grace \{ s16 \}").Count);
+    }
+
+    [Theory]
+    // The part writes the section, but a bar short: the padding bar.
+    [InlineData("top { c'1 | }", "bot { c1 | grace { e16 } g1 | }")]
+    // The author's own empty bar, `| |`.
+    [InlineData("top { c'1 | | }", "bot { c1 | grace { e16 } g1 | }")]
+    public void APaddingBarOrAnEmptyBar_OwesTheSkipToo(string top, string bot)
+    {
+        string ly = Twin(Header + $$"""
+            section A {
+              {{top}}
+              {{bot}}
+            }
+            form main { A }
+
+            """ + TwoStaves);
+        Assert.Contains(@"\grace { s16 } s1 |", Body(ly, "top"));
+    }
+
     [Fact]
     public void WithoutAGrace_NothingIsWritten()
     {

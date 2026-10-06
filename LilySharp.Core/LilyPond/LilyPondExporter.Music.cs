@@ -322,7 +322,14 @@ public sealed partial class LilyPondExporter
                 bool pairsHere = kind == SyntaxKind.Bar
                     || (kind == SyntaxKind.RepeatStartBar && !atScopeStart && !opensASectionPlay);
                 if (pairsHere && !_timeSinceBoundary)
+                {
+                    // A grace another voice opens this bar with (CollectGraceSync): the empty
+                    // bar has no event of its own to carry the skip, so it goes before the spacer.
+                    string gracePad = EmptyBarGracePad(gapBar);
+                    if (gracePad.Length > 0)
+                        AppendToken(line, gracePad, indent);
                     AppendToken(line, "s" + ChordModeDuration(_bars.BarLength), indent);
+                }
                 // The bar behind this bar line closed (or was the empty bar just written), so
                 // a pending pickup is spent — as the page's MeasureBuilder.ResetPerMeasureState does.
                 if (pairsHere || _timeSinceBoundary)
