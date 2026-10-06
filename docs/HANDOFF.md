@@ -125,6 +125,12 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第850セッション（2026-10-06・YT-DELL2）
+
+同じ会話のまま（第849 の判定どおり・HANDOFF の枠のため）。`-Start p850`（HEAD `acc695f9d`）＝full **11358 / 0 / 2 / 11360**。§7 3.5 で第848 を ARCHIVE へ。ユーザー「続けて」＝F-twinhk と bracket の `len` から。
+
+## 以下は第849セッションの経緯
+
 ### 1.1 第849セッション（2026-10-06・YT-DELL2）
 
 新しい会話。`-Start p849`（HEAD `cb5dc56e6`）＝full **11346 / 0 / 2 / 11348**（第848 末と一致）。§7 3.5 で第847 を ARCHIVE へ。ユーザーの選択「F-partmeter の残り（小）」＝**`f26d74583`**。
@@ -138,20 +144,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **続き（ユーザー「brace から」）＝§2 E ⑸ を閉じた（`c246ba7e6`）**: LP 2.26.0 で双子 8 冊の SystemStartBrace の extent を刷ると、普通の大譜表は rung 177（13.0924）・Lily# は 176。原因 2 つ＝LP の `len` は StaffSymbol の extent の和（線の太さを含む＝span＋0.1・staff-symbol.cc:358-361）／`binary-search` の既定は last-less-than-or-equal（Lily# は nearest）。`SystemStartDelimiterLength`（collapse も `len > 5`）・`BraceLadder.LastAtOrBelow`。直した後 8 冊とも LP と同じ rung。網 `BraceLadderTests`（毒 2 本）・snapshot 17 枚（brace の行だけ）・svg の掃き 1199 score 中 32 が brace の行だけ動く。full **11358 / 0 / 2 / 11360**。
 - **見つけた（未着手）**: §2 F-twinhk（下）／hara-kiri の 3 系目は LP より譜の間隔が 0.06 以上狭い（2 声で残る下の譜・Lab `sessions/p849/brace/r-hara-kiri-x.ly`）／bracket の高さも同じ `len` のはず（未測定）。
 判定: 次の一手はユーザー判断（F-twinhk・bracket の `len`・OMR P6）。F-twinhk と bracket は (a) 今の文脈を使う ⇒ この会話で続けるのが有利。HANDOFF の残りが少ないので、続けるなら先に `-End` と `-Start p850`。
-
-## 以下は第848セッションの経緯
-
-### 1.1 第848セッション（2026-10-06・YT-DELL2）
-
-新しい会話（第847 の判定どおり）。`-Start p848`（HEAD `ff04acd95`）＝full **11335 / 0 / 2 / 11337**。§7 3.5 で第846 を ARCHIVE へ。**F-partmeter ⒜ を実装（`d67d3e278`）**＝音楽の中の `time` は score の拍子。
-- **形**: `Svg/Collector/SectionMeterPlan`＝section ごとに「小節 k の頭で誰かが書いた `time`」（`MeasureModel.Split` が `time` と小節番号を報告）。同じ小節で違う拍子は文書順の先が立ち、後は LYS2005。**全 part が自分で書く変化しか無ければ Empty**（単一 part の shorthand はその part の声）＝掃き前の測定で `time` を音楽に持つ 83 冊のうち効くのは 0 冊（壊れた dogfood `trio.lys` の 1 件だけ）。
-- **読み手**: ページ＝`ApplyPlannedMeter`（walk の各 node 前と詰めの各小節前・小節の頭で 1 回・旧 case 本体は `ApplyMeterChange`）。plan のある本は resume しない（`VoiceWalkRecording.HadMeterPlan`・`CollectResumeAbortException`→full）。検査＝`ValidateMeasures` が他 part の拍子で測る。双子＝書かない声・詰め・書く声の流れ（`WithForeignChanges`）に `\time` を書く／chord 行の無音 play は `SectionBarMeters`（plan を重ねる）。MIDI＝詰めの tick を plan の拍子で。XML＝各 part に `<time>`。
-- 計測: LP 2.26.0（Lab `sessions/p848/pm`: 無音・書く・短い・chord の 4 冊）で bar check 失敗なし・ページと同じ絵。試験 `PartMeterTests` 10 本・毒 5 本（ページ 3 赤／双子 1／衝突 1／MIDI 1／検査 1）。掃き 998 冊 1199 score で svg・xml・midi・ly とも差 0（陽性対照: 旧 exe の `s1` が `s2.` に）。⚠️ 掃きは shorthand の修正（Empty が増えるだけ）の前の exe。full **11345 / 0 / 2 / 11347**（+10）→ 補完の修正後 **11346 / 0 / 2 / 11348**（1 回目は resume の網 2 本が shorthand の本で赤＝同じ commit で直した）。
-- **残り（小）**: `WithForeignChanges` は流れの頂に反復・phrase 参照・`voice` があれば何もしない（XML の `<time>`・双子の自前の拍子が欠ける＝LP は Timing で正しく描く）／MIDI の書く声の中の空の小節・裸の `R` は自分の拍子のまま／小節の途中の `time` は書いた part だけ。
-
-★ `-End p848 -DiffBase ff04acd95`（`end.log`）＝門 全 OK。7.5: Core `+` 530 行・REF 1（移した time-signature-engraver の註）・OWN 1。7.6: 意味（score の拍子・先勝ち・LYS2005）はユーザー決定＝音楽的妥当性（RULES §5.2）・LP の Timing が同じ形。7.7: 匂い＝①resume を切るのは plan のある本だけ（コーパス 0 冊）だが perf の計器は回していない ②`GRAMMAR.md` の `partial` は「part ごと」のまま（2026-09-08 の決定・今回は触らない）。push はユーザー。
-- **続き（ユーザー報告）**: `score { lyrics ▮ }` の補完が空＝名前の一覧が `KEYWORD name {` の正規表現で、`lyrics words sings melody {`（定義で束縛を書く綴り）を `sings` の宣言と読んでいた。`LyricsTrackNamesOf` が `lyrics NAME [sings PART] {` を読む（`802bcfe46`・`SingsCompletionTests` +1・毒 1 赤・補完/LSP 1018 緑）。
-判定: §1.0 の決定の列は閉じた＝**次の一手はユーザー判断**（OMR P6 SMuFL・§2 E の残り等）。(a) 次の島は今の文脈を使わない／(c) 無関係 ⇒ 既定は続けるが、選ぶのはユーザー。
 
 ## 2. 開いている作業
 
