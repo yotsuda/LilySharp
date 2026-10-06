@@ -2720,7 +2720,11 @@ internal sealed class SkylineBuilder
                 // The SKYLINE box, not the LILC one: LilyPond's vertical-skylines are the
                 // traced outline and its extent is the metric box, and for a quarter rest
                 // they differ by 0.030000 at the bottom. See GetRestSkylineBBox.
-                var restBox = size.Ink(GlyphMetrics.GetRestSkylineBBox(restValue));
+                var restGlyph = EmmentalerGlyphs.GetRest(restValue,
+                    ElementCoordinator.NeutralRestPosition(staffLines, restValue) + restShiftUp * 2.0, staffLines);
+                var restBox = size.Ink(GlyphMetrics.GetRestSkylineBBox(restValue,
+                    ledgered: restGlyph is EmmentalerGlyphs.RestWholeLedgered or EmmentalerGlyphs.RestHalfLedgered
+                        or EmmentalerGlyphs.RestDoubleWholeLedgered));
                 // Y-up of the glyph's own origin, in this skyline's frame: the middle line is
                 // this frame's zero, and the neutral letter is so many half spaces above it.
                 double restOriginUp = staffMiddleUp
@@ -2734,13 +2738,20 @@ internal sealed class SkylineBuilder
                 // LILYPOND-REF: scm/define-grobs.scm Rest
                 //   grob::unpure-vertical-skylines-from-stencil, walked by
                 //   lily/stencil-integral.cc:535-563 add_named_glyph_segments.
-                // ⚠️ The UNLEDGERED glyph, as the box was: whether a ledgered whole / half
-                // rest's skyline carries its ledger is not measured here.
+                // ⚠️ THE GLYPH AT THE REST'S OWN POSITION, ledger included: a breve, whole or
+                // half rest pushed off the staff lines prints its "o" cut, and LilyPond's
+                // skyline is that stencil's outline — the ledger reaches 0.1 above a whole
+                // rest's line and 0.624 to each side. MEASURED, LilyPond 2.26.0 (Lab
+                // sessions/p850/hk3, test/hara-kiri's third system): the staves' skylines
+                // touch at a whole rest pushed to +10, upper down -3.333 against lower up 5.1,
+                // distance 8.433 + padding 1 = 9.433; this read the unledgered glyph (position
+                // 0 always) until 2026-10-06 and set the staves 9.34 apart. The position is
+                // the renderer's (DrawRest's staffPosition: the neutral letter plus the shift).
                 // ⚠️ NO OBSERVER for the X origin (poisons, session 813): shifting it by the
                 // outline's own bearing (≤ 0.104) moves no point — the sixteenth's high right
                 // end stays clear of the next staff's stem either way.
                 var (restUp, restDown) = TextOutlineSkylines.MusicGlyphProfile(
-                    EmmentalerGlyphs.GetRest(restValue, 0), size.Span(Rendering.SharedRenderer.FontSize));
+                    restGlyph, size.Span(Rendering.SharedRenderer.FontSize));
                 if (restUp.Count > 0 || restDown.Count > 0)
                 {
                     upSkyline.Merge(restUp, x, restOriginUp);

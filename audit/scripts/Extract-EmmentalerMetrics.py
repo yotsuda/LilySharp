@@ -201,6 +201,13 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("Rest32nd",    "rests.5", "32nd rest",    "mf/feta-rests.mf — rests.5"),
     GlyphSpec("Rest64th",    "rests.6", "64th rest",    "mf/feta-rests.mf — rests.6"),
     GlyphSpec("Rest128th",   "rests.7", "128th rest",   "mf/feta-rests.mf — rests.7"),
+    # The ledgered cuts a breve, whole or half rest prints off the staff lines (Rest::glyph_name
+    # adds "o"). Their EXTENT is not read — LilyPond keeps the bare bar's — but their SKYLINE is
+    # built from this outline, ledger included: a whole rest's ink reaches 0.1 above the line it
+    # hangs from (LilyPond 2.26.0, Lab sessions/p850/hk3: a hara-kiri staff one rest apart).
+    GlyphSpec("RestDoubleWholeLedgered", "rests.M1o", "Double-whole rest with its ledger", "mf/feta-rests.mf — rests.M1o"),
+    GlyphSpec("RestWholeLedgered", "rests.0o", "Whole rest with its ledger", "mf/feta-rests.mf — rests.0o"),
+    GlyphSpec("RestHalfLedgered",  "rests.1o", "Half rest with its ledger",  "mf/feta-rests.mf — rests.1o"),
     # Articulations
     GlyphSpec("ArticStaccato",      "scripts.staccato", "Staccato dot articulation",       "mf/feta-scripts.mf — scripts.staccato"),
     GlyphSpec("ArticAccent",        "scripts.sforzato", "Accent / sforzato articulation",  "mf/feta-scripts.mf — scripts.sforzato"),

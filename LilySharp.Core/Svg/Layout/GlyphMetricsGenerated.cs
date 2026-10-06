@@ -470,6 +470,33 @@ internal static partial class GlyphMetrics
     /// <summary>128th rest — advance width (next-glyph horizontal feed).</summary>
     public const double Rest128thAdvance = 1.500000;
 
+    /// <summary>Double-whole rest with its ledger — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.M1o (rests.M1o = U+E007 in this build)</remarks>
+    public static readonly BBox RestDoubleWholeLedgered = new(0.000000, -0.100000, 0.600000, 1.000000);
+    /// <summary>Double-whole rest with its ledger — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox RestDoubleWholeLedgeredOutline = new(-0.500000, -0.100000, 1.100000, 1.100000);
+    /// <summary>Double-whole rest with its ledger — advance width (next-glyph horizontal feed).</summary>
+    public const double RestDoubleWholeLedgeredAdvance = 0.600000;
+
+    /// <summary>Whole rest with its ledger — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.0o (rests.0o = U+E002 in this build)</remarks>
+    public static readonly BBox RestWholeLedgered = new(0.000000, -0.625000, 1.500000, 0.100000);
+    /// <summary>Whole rest with its ledger — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox RestWholeLedgeredOutline = new(-0.624000, -0.624000, 2.124000, 0.100000);
+    /// <summary>Whole rest with its ledger — advance width (next-glyph horizontal feed).</summary>
+    public const double RestWholeLedgeredAdvance = 1.500000;
+
+    /// <summary>Half rest with its ledger — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.1o (rests.1o = U+E003 in this build)</remarks>
+    public static readonly BBox RestHalfLedgered = new(0.000000, -0.100000, 1.500000, 0.625000);
+    /// <summary>Half rest with its ledger — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox RestHalfLedgeredOutline = new(-0.624000, -0.100000, 2.124000, 0.624000);
+    /// <summary>Half rest with its ledger — advance width (next-glyph horizontal feed).</summary>
+    public const double RestHalfLedgeredAdvance = 1.500000;
+
     /// <summary>Staccato dot articulation — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.staccato (scripts.staccato = U+E04A in this build)</remarks>
     public static readonly BBox ArticStaccato = new(-0.200000, -0.200000, 0.200000, 0.200000);
@@ -1432,6 +1459,24 @@ internal static partial class GlyphMetrics
         public BBox Rest128thOutline { get; init; }
         /// <summary>128th rest — advance width (next-glyph horizontal feed).</summary>
         public double Rest128thAdvance { get; init; }
+        /// <summary>Double-whole rest with its ledger — BBox (LILC bbox).</summary>
+        public BBox RestDoubleWholeLedgered { get; init; }
+        /// <summary>Double-whole rest with its ledger — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox RestDoubleWholeLedgeredOutline { get; init; }
+        /// <summary>Double-whole rest with its ledger — advance width (next-glyph horizontal feed).</summary>
+        public double RestDoubleWholeLedgeredAdvance { get; init; }
+        /// <summary>Whole rest with its ledger — BBox (LILC bbox).</summary>
+        public BBox RestWholeLedgered { get; init; }
+        /// <summary>Whole rest with its ledger — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox RestWholeLedgeredOutline { get; init; }
+        /// <summary>Whole rest with its ledger — advance width (next-glyph horizontal feed).</summary>
+        public double RestWholeLedgeredAdvance { get; init; }
+        /// <summary>Half rest with its ledger — BBox (LILC bbox).</summary>
+        public BBox RestHalfLedgered { get; init; }
+        /// <summary>Half rest with its ledger — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox RestHalfLedgeredOutline { get; init; }
+        /// <summary>Half rest with its ledger — advance width (next-glyph horizontal feed).</summary>
+        public double RestHalfLedgeredAdvance { get; init; }
         /// <summary>Staccato dot articulation — BBox (LILC bbox).</summary>
         public BBox ArticStaccato { get; init; }
         /// <summary>Staccato dot articulation — the box its SKYLINE is built from (glyph outline).</summary>
@@ -2043,6 +2088,21 @@ internal static partial class GlyphMetrics
             Rest128thOutline = new(Rest128thOutline.Left * magnification, Rest128thOutline.Bottom * magnification,
                 Rest128thOutline.Right * magnification, Rest128thOutline.Top * magnification),
             Rest128thAdvance = Rest128thAdvance * magnification,
+            RestDoubleWholeLedgered = new(RestDoubleWholeLedgered.Left * magnification, RestDoubleWholeLedgered.Bottom * magnification,
+                RestDoubleWholeLedgered.Right * magnification, RestDoubleWholeLedgered.Top * magnification),
+            RestDoubleWholeLedgeredOutline = new(RestDoubleWholeLedgeredOutline.Left * magnification, RestDoubleWholeLedgeredOutline.Bottom * magnification,
+                RestDoubleWholeLedgeredOutline.Right * magnification, RestDoubleWholeLedgeredOutline.Top * magnification),
+            RestDoubleWholeLedgeredAdvance = RestDoubleWholeLedgeredAdvance * magnification,
+            RestWholeLedgered = new(RestWholeLedgered.Left * magnification, RestWholeLedgered.Bottom * magnification,
+                RestWholeLedgered.Right * magnification, RestWholeLedgered.Top * magnification),
+            RestWholeLedgeredOutline = new(RestWholeLedgeredOutline.Left * magnification, RestWholeLedgeredOutline.Bottom * magnification,
+                RestWholeLedgeredOutline.Right * magnification, RestWholeLedgeredOutline.Top * magnification),
+            RestWholeLedgeredAdvance = RestWholeLedgeredAdvance * magnification,
+            RestHalfLedgered = new(RestHalfLedgered.Left * magnification, RestHalfLedgered.Bottom * magnification,
+                RestHalfLedgered.Right * magnification, RestHalfLedgered.Top * magnification),
+            RestHalfLedgeredOutline = new(RestHalfLedgeredOutline.Left * magnification, RestHalfLedgeredOutline.Bottom * magnification,
+                RestHalfLedgeredOutline.Right * magnification, RestHalfLedgeredOutline.Top * magnification),
+            RestHalfLedgeredAdvance = RestHalfLedgeredAdvance * magnification,
             ArticStaccato = new(ArticStaccato.Left * magnification, ArticStaccato.Bottom * magnification,
                 ArticStaccato.Right * magnification, ArticStaccato.Top * magnification),
             ArticStaccatoOutline = new(ArticStaccatoOutline.Left * magnification, ArticStaccatoOutline.Bottom * magnification,
@@ -2469,6 +2529,15 @@ internal static partial class GlyphMetrics
         Rest128th = new(0.000000, -3.075568, 1.500173, 2.819954),
         Rest128thOutline = new(-0.264000, -3.060000, 1.500000, 2.820000),
         Rest128thAdvance = 1.500000,
+        RestDoubleWholeLedgered = new(0.000000, -0.151515, 0.599998, 0.999996),
+        RestDoubleWholeLedgeredOutline = new(-0.500000, -0.152000, 1.100000, 1.152000),
+        RestDoubleWholeLedgeredAdvance = 0.596000,
+        RestWholeLedgered = new(0.000000, -0.624953, 1.500173, 0.151515),
+        RestWholeLedgeredOutline = new(-0.624000, -0.624000, 2.124000, 0.152000),
+        RestWholeLedgeredAdvance = 1.500000,
+        RestHalfLedgered = new(0.000000, -0.151515, 1.500173, 0.624953),
+        RestHalfLedgeredOutline = new(-0.624000, -0.152000, 2.124000, 0.624000),
+        RestHalfLedgeredAdvance = 1.500000,
         ArticStaccato = new(-0.199999, -0.199999, 0.199999, 0.199999),
         ArticStaccatoOutline = new(-0.200000, -0.200000, 0.200000, 0.200000),
         ArticStaccatoAdvance = 0.196000,
@@ -2796,6 +2865,15 @@ internal static partial class GlyphMetrics
         Rest128th = new(0.000000, -3.069197, 1.499995, 2.819991),
         Rest128thOutline = new(-0.260000, -3.056000, 1.500000, 2.820000),
         Rest128thAdvance = 1.500000,
+        RestDoubleWholeLedgered = new(0.000000, -0.138730, 0.599998, 0.999997),
+        RestDoubleWholeLedgeredOutline = new(-0.500000, -0.140000, 1.100000, 1.140000),
+        RestDoubleWholeLedgeredAdvance = 0.596000,
+        RestWholeLedgered = new(0.000000, -0.625077, 1.499995, 0.138730),
+        RestWholeLedgeredOutline = new(-0.624000, -0.624000, 2.124000, 0.140000),
+        RestWholeLedgeredAdvance = 1.500000,
+        RestHalfLedgered = new(0.000000, -0.138730, 1.499995, 0.625077),
+        RestHalfLedgeredOutline = new(-0.624000, -0.140000, 2.124000, 0.624000),
+        RestHalfLedgeredAdvance = 1.500000,
         ArticStaccato = new(-0.199999, -0.199999, 0.199999, 0.199999),
         ArticStaccatoOutline = new(-0.200000, -0.200000, 0.200000, 0.200000),
         ArticStaccatoAdvance = 0.196000,
@@ -3123,6 +3201,15 @@ internal static partial class GlyphMetrics
         Rest128th = new(0.000000, -3.063649, 1.500141, 2.820085),
         Rest128thOutline = new(-0.252000, -3.052000, 1.500000, 2.820000),
         Rest128thAdvance = 1.496000,
+        RestDoubleWholeLedgered = new(0.000000, -0.127298, 0.600000, 1.000000),
+        RestDoubleWholeLedgeredOutline = new(-0.500000, -0.128000, 1.100000, 1.128000),
+        RestDoubleWholeLedgeredAdvance = 0.596000,
+        RestWholeLedgered = new(0.000000, -0.624894, 1.500141, 0.127298),
+        RestWholeLedgeredOutline = new(-0.624000, -0.624000, 2.124000, 0.128000),
+        RestWholeLedgeredAdvance = 1.496000,
+        RestHalfLedgered = new(0.000000, -0.127298, 1.500141, 0.624894),
+        RestHalfLedgeredOutline = new(-0.624000, -0.128000, 2.124000, 0.624000),
+        RestHalfLedgeredAdvance = 1.496000,
         ArticStaccato = new(-0.200000, -0.200000, 0.200000, 0.200000),
         ArticStaccatoOutline = new(-0.200000, -0.200000, 0.200000, 0.200000),
         ArticStaccatoAdvance = 0.196000,
@@ -3450,6 +3537,15 @@ internal static partial class GlyphMetrics
         Rest128th = new(0.000000, -3.058601, 1.499937, 2.819912),
         Rest128thOutline = new(-0.248000, -3.048000, 1.500000, 2.820000),
         Rest128thAdvance = 1.496000,
+        RestDoubleWholeLedgered = new(0.000000, -0.117202, 0.600126, 0.999874),
+        RestDoubleWholeLedgeredOutline = new(-0.500000, -0.116000, 1.100000, 1.116000),
+        RestDoubleWholeLedgeredAdvance = 0.596000,
+        RestWholeLedgered = new(0.000000, -0.625079, 1.499937, 0.117202),
+        RestWholeLedgeredOutline = new(-0.624000, -0.624000, 2.124000, 0.116000),
+        RestWholeLedgeredAdvance = 1.496000,
+        RestHalfLedgered = new(0.000000, -0.117202, 1.499937, 0.625079),
+        RestHalfLedgeredOutline = new(-0.624000, -0.116000, 2.124000, 0.624000),
+        RestHalfLedgeredAdvance = 1.496000,
         ArticStaccato = new(-0.199874, -0.199874, 0.199874, 0.199874),
         ArticStaccatoOutline = new(-0.200000, -0.200000, 0.200000, 0.200000),
         ArticStaccatoAdvance = 0.196000,
@@ -3777,6 +3873,15 @@ internal static partial class GlyphMetrics
         Rest128th = new(0.000000, -3.054097, 1.500112, 2.819978),
         Rest128thOutline = new(-0.244000, -3.044000, 1.500000, 2.820000),
         Rest128thAdvance = 1.500000,
+        RestDoubleWholeLedgered = new(0.000000, -0.107969, 0.600000, 1.000000),
+        RestDoubleWholeLedgeredOutline = new(-0.500000, -0.108000, 1.100000, 1.108000),
+        RestDoubleWholeLedgeredAdvance = 0.600000,
+        RestWholeLedgered = new(0.000000, -0.624916, 1.500112, 0.107969),
+        RestWholeLedgeredOutline = new(-0.624000, -0.624000, 2.124000, 0.108000),
+        RestWholeLedgeredAdvance = 1.500000,
+        RestHalfLedgered = new(0.000000, -0.107969, 1.500112, 0.624916),
+        RestHalfLedgeredOutline = new(-0.624000, -0.108000, 2.124000, 0.624000),
+        RestHalfLedgeredAdvance = 1.500000,
         ArticStaccato = new(-0.200000, -0.200000, 0.200000, 0.200000),
         ArticStaccatoOutline = new(-0.200000, -0.200000, 0.200000, 0.200000),
         ArticStaccatoAdvance = 0.196000,
@@ -4106,6 +4211,15 @@ internal static partial class GlyphMetrics
         Rest128th = Rest128th,
         Rest128thOutline = Rest128thOutline,
         Rest128thAdvance = Rest128thAdvance,
+        RestDoubleWholeLedgered = RestDoubleWholeLedgered,
+        RestDoubleWholeLedgeredOutline = RestDoubleWholeLedgeredOutline,
+        RestDoubleWholeLedgeredAdvance = RestDoubleWholeLedgeredAdvance,
+        RestWholeLedgered = RestWholeLedgered,
+        RestWholeLedgeredOutline = RestWholeLedgeredOutline,
+        RestWholeLedgeredAdvance = RestWholeLedgeredAdvance,
+        RestHalfLedgered = RestHalfLedgered,
+        RestHalfLedgeredOutline = RestHalfLedgeredOutline,
+        RestHalfLedgeredAdvance = RestHalfLedgeredAdvance,
         ArticStaccato = ArticStaccato,
         ArticStaccatoOutline = ArticStaccatoOutline,
         ArticStaccatoAdvance = ArticStaccatoAdvance,
@@ -4433,6 +4547,15 @@ internal static partial class GlyphMetrics
         Rest128th = new(0.000000, -3.046414, 1.500045, 2.819955),
         Rest128thOutline = new(-0.240000, -3.036000, 1.500000, 2.820000),
         Rest128thAdvance = 1.496000,
+        RestDoubleWholeLedgered = new(0.000000, -0.092829, 0.600089, 0.999911),
+        RestDoubleWholeLedgeredOutline = new(-0.500000, -0.092000, 1.100000, 1.092000),
+        RestDoubleWholeLedgeredAdvance = 0.596000,
+        RestWholeLedgered = new(0.000000, -0.625033, 1.500045, 0.092829),
+        RestWholeLedgeredOutline = new(-0.624000, -0.624000, 2.124000, 0.092000),
+        RestWholeLedgeredAdvance = 1.496000,
+        RestHalfLedgered = new(0.000000, -0.092829, 1.500045, 0.625033),
+        RestHalfLedgeredOutline = new(-0.624000, -0.092000, 2.124000, 0.624000),
+        RestHalfLedgeredAdvance = 1.496000,
         ArticStaccato = new(-0.199911, -0.199911, 0.199911, 0.199911),
         ArticStaccatoOutline = new(-0.200000, -0.200000, 0.200000, 0.200000),
         ArticStaccatoAdvance = 0.196000,
@@ -4760,6 +4883,15 @@ internal static partial class GlyphMetrics
         Rest128th = new(0.000000, -3.043175, 1.500000, 2.820000),
         Rest128thOutline = new(-0.236000, -3.036000, 1.500000, 2.820000),
         Rest128thAdvance = 1.500000,
+        RestDoubleWholeLedgered = new(0.000000, -0.086508, 0.600000, 1.000000),
+        RestDoubleWholeLedgeredOutline = new(-0.500000, -0.088000, 1.100000, 1.088000),
+        RestDoubleWholeLedgeredAdvance = 0.596000,
+        RestWholeLedgered = new(0.000000, -0.625079, 1.500000, 0.086508),
+        RestWholeLedgeredOutline = new(-0.624000, -0.624000, 2.124000, 0.088000),
+        RestWholeLedgeredAdvance = 1.500000,
+        RestHalfLedgered = new(0.000000, -0.086508, 1.500000, 0.625079),
+        RestHalfLedgeredOutline = new(-0.624000, -0.088000, 2.124000, 0.624000),
+        RestHalfLedgeredAdvance = 1.500000,
         ArticStaccato = new(-0.200000, -0.200000, 0.200000, 0.200000),
         ArticStaccatoOutline = new(-0.200000, -0.200000, 0.200000, 0.200000),
         ArticStaccatoAdvance = 0.196000,

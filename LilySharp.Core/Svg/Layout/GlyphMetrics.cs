@@ -603,6 +603,20 @@ internal static partial class GlyphMetrics
         _ => RestQuarterOutline
     };
 
+    /// <summary>The skyline box of the rest glyph actually printed: a breve, whole or half
+    /// rest off the staff lines prints its ledgered ("o") cut, whose outline carries the
+    /// ledger (<c>RestWholeLedgeredOutline</c> reaches 0.1 above the line and 0.624 to each
+    /// side). See SkylineBuilder's rest seed for the measurement.</summary>
+    public static BBox GetRestSkylineBBox(int noteValue, bool ledgered) => !ledgered
+        ? GetRestSkylineBBox(noteValue)
+        : noteValue switch
+        {
+            0 => RestDoubleWholeLedgeredOutline,
+            1 => RestWholeLedgeredOutline,
+            2 => RestHalfLedgeredOutline,
+            _ => GetRestSkylineBBox(noteValue),
+        };
+
     /// <summary>
     /// The gap between the prepended natural and the main glyph of a RESTORE-FIRST
     /// accidental — the ♮♯ / ♮♭ a step down within the same sign (𝄪→♯, 𝄫→♭) prints.
