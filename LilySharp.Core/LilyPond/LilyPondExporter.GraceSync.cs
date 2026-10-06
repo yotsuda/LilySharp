@@ -34,9 +34,8 @@ public sealed partial class LilyPondExporter
     /// LilyPond keeps grace time per voice, and whatever a context engraves at a moment —
     /// a bar line, a meter, a key, a mark — it engraves at that VOICE's first moment there: the
     /// grace's on a staff that leads with one, the main moment on a staff that does not. So
-    /// a grace on one staff alone draws the other staff's meter and bar line a second time
-    /// (LilyPond's documented remedy is "grace skips of the corresponding durations in the other
-    /// staves": Documentation/en/notation/rhythms.itely, Grace notes, Known issues).
+    /// a grace on one staff alone draws the other staff's meter and bar line a second time.
+    /// LILYPOND-REF: Documentation/en/notation/rhythms.itely:4632-4659 Grace notes, Known issues — "inserting grace skips of the corresponding durations in the other staves", with `\grace` (not `\acciaccatura`) for the skip.
     /// MEASURED (2.26.0, Lab sessions/p841/gl/ext): a grace on the lower staff at the score's
     /// start drew the meter twice and a stray bar line; at a `\time` change the meter twice; at
     /// `\bar "||"` two double bars; at a `\key` change the upper key at the grace's place. The
