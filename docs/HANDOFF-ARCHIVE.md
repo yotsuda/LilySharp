@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第844セッションの経緯
+
+### 1.1 第844セッション（2026-10-06・YT-DELL2）
+
+新しい会話。`-Start p844`（HEAD `cbd2d841`）＝full **11279 / 0 / 2 / 11281**。§7 3.5 で第842 を ARCHIVE へ。**§2 F-hdrsilent を閉じた（`f3cc4a1c1`）**。
+- **原因**: `MeasureCollector.Form.cs` `ProcessSectionBody` の詰め（part が書かない／短い section を spacer で埋める）が `builder.CurrentItemCount == 0` を「小節の頭」の判定にしていた。section の頭の `time`／`key` は prologue が変更の item をその小節に置く＝item は 1 つ＝**詰めが丸ごと飛ぶ**（c9: top 4 小節・bot 6 小節＝ページは 4 小節）。⇒ 判定を「時価のある内容が無い」（`MeasureBuilder.HasMeasureContent`・private を public に）へ。**ついでに空白の長さ**も `TimeSignatureFraction`（`_meta`＝score の拍子・header の `time` は `_meta` を書かない）から `builder.CurrentMeasureLength`（`BarLength`＝弱起→拍子）へ＝3/4 の小節に 4/4 の spacer が入っていた（既存の「短い section」の詰めも同じ）。
+- 計測（Lab `sessions/p844/hs`）: c9・`key` の頭・単独 header（by-part）・`time 3/4 partial 4` の頭＝**全部 6／6・4／4・5／5 小節で段が揃う**（絵で確認）。試験 `MissingSectionSpacerFillTests` に 3 本（`time`／`key` の Theory・弱起と拍子の空白の長さ 1/4・3/4・3/4）。毒 2 本: 判定を戻す→3 赤／長さを戻す→1 赤。掃き（`sweep/run-sweeps.ps1`＝svg・xml・midi・ly）998 冊 1199 score で**4 種とも差 0**（この形はコーパスに無い）・陽性対照 c9 は base 4 → head 6。full **11282 / 0 / 2 / 11284**（+3）。
+
+★ `-End p844 -DiffBase cbd2d8417`（`end.log`）＝full **11282 / 0 / 2 / 11284**（+3＝試験）・門 全 OK。7.5: Core `+` 11 行・REF 0／OWN 0＝LP の移植ではなく Lily# のモデルの詰めの欠陥（双子は元から 6 小節＝裁定は音楽的妥当性）。7.6: 判定と長さは既存の定義（`HasMeasureContent`＝時価のある内容・`BarContext.BarLength`＝空の小節の値打ち）に寄せただけ。7.7: 匂い＝**volta の終わりの小節（`MeasureCollector.Form.cs:244`・`MeasureCollector.cs:4577`）も `CurrentItemCount > 0` を「小節の途中」と読む**＝指示だけの小節で 1 つ先まで伸び得る（未測・起票せず）。push はユーザー。
+判定: 次は **⑧ §2 F-gracesync の残り**（part が書かない section の空の小節にも grace の空白）。(a) **今便の文脈を使う**＝その空の小節はまさに今便が直した詰めの spacer（section の位置を持つ）／(b) 会話は 1 便ぶんで軽い／(c) 同じ島 ⇒ **この会話で続けてよい**（`-Start p845` から）。
+
 ## 以下は第843セッションの経緯
 
 ### 1.1 第843セッション（2026-10-06・YT-DELL2）

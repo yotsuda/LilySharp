@@ -86,7 +86,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   - ⑷ の提案: 強弱 `@niente` を足す＝無音の強弱。hairpin は今どおり「次の強弱まで」で、**細い端が `@niente` に触れたら円**（`c4@decresc … g@niente`＝al niente・`c4@niente@cresc … g@f`＝dal niente）。単独なら斜体の niente。MIDI は 0 へ／0 から。太い端が niente なら警告。
 - §2 H ⑴（行頭の grace／歌詞の独立列＝`ownFixedFloor`）＝**第832 で grace を LP の列に移植**（床は第834 で撤去）・⑷（譜ごとに違う調の行末 courtesy）＝**第830 で閉じた**。⑵⑶ は「内部は直列合成だが LP の出力と厳密に一致」で閉じたまま（ユーザーの理解どおり）。
 - §2 D 単一ページ経路を鎖に畳む＝**畳んだ（第829）**。
-- **優先順位**: ① ⑹＋⑺（文法の承認後・⑺ は ⑹ の品質の一部）→ ② ⑷ niente（承認後）→ ③ §2 D（第829 で閉じた）→ ④ §2 H ⑷（第830 で閉じた）→ ⑤ §2 H ⑴（第832 で grace・第833 で行頭の空の小節・第834 で床とダイアグラムの位置を閉じた・第835 でダイアグラムの両隣・第836 で %% の対の伸び＝⒡・第838 で ⒢ 小節の途中の印の列・**§2 H の行頭の島は第842 で全部閉じた**（⒜ ⒟＝第842・⒝＝第840・⒞＝第841 で計器の差））→ ⑥ §2 F-gracesync（書き出し）＝**第843 で本体を実装**（残りは part が書かない section の空の小節）→ ⑦ §2 F-hdrsilent＝**第844 で閉じた**（`f3cc4a1c1`）→ ⑧ §2 F-gracesync の残り＝**第845 で閉じた**（`0e19bcba6`）。**次は ① ② の文法の承認待ち（ユーザー判断）**／新規 §2 F-partmeter（意味論＝ユーザー判断）。
+- **優先順位**: ① ⑹＋⑺＝**第846 で実装**（`a978b3062`）→ ② ⑷ niente（承認後）→ ③ §2 D（第829 で閉じた）→ ④ §2 H ⑷（第830 で閉じた）→ ⑤ §2 H ⑴（第832 で grace・第833 で行頭の空の小節・第834 で床とダイアグラムの位置を閉じた・第835 でダイアグラムの両隣・第836 で %% の対の伸び＝⒡・第838 で ⒢ 小節の途中の印の列・**§2 H の行頭の島は第842 で全部閉じた**（⒜ ⒟＝第842・⒝＝第840・⒞＝第841 で計器の差））→ ⑥ §2 F-gracesync（書き出し）＝**第843 で本体を実装**（残りは part が書かない section の空の小節）→ ⑦ §2 F-hdrsilent＝**第844 で閉じた**（`f3cc4a1c1`）→ ⑧ §2 F-gracesync の残り＝**第845 で閉じた**（`0e19bcba6`）。**第845 末のユーザー決定（2026-10-06）: ① ⑹＋⑺ と ② ⑷ の文法を*承認*・§2 F-partmeter は ⒜（音楽の中の `time` も score 全体の拍子＝「part を分割して書けるようにするには受け入れないといけない」）**＝① → ② → F-partmeter の順に実装。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - **⑼（第762 起票・dogfood の大きい本 4 冊）は全部閉じた**（最後の 2 つ: ⑺ resume の 2 つ目の出所＝第794・⑻ 宣言した弱起の併合＝第795）。経緯は **ARCHIVE 第740〜第795 の各便**（第783 が列挙を畳んだ）。計器: Lab `sessions/p742/`（ly／midi／xml／svg の掃き）・`sessions/p753/sweep-check.ps1`（診断の掃き）・`sessions/p762/run-big.ps1`（4 冊の check＋4 出力＋LP）・`sessions/p723/svg2/sweep-all.ps1`（全 svg・p795 の `sweep/run-sweeps.ps1` が svg＋xml を束ねる）
@@ -125,6 +125,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第846セッション（2026-10-06・YT-DELL2）
+
+同じ会話の続き（ユーザー決定は §1.0 ①②・F-partmeter）。`-Start p846`（HEAD `83bbb0c8`）＝full **11287 / 0 / 2 / 11289**。§7 3.5 で第844 を ARCHIVE へ。**① ⑹＋⑺ 和音の組み立て式を実装（`a978b3062`）**。
+- **設計**: 29 品質の表（`ChordQualityRegistry`）は残し、表に無い綴りだけを新しい `Music/ChordFormula.cs` が組み立てる＝`ChordQuality.Composed`＋`ChordStructure.Formula`。**組み立てた音が表の品質と同じならその品質に解く**（`C7+9`＝表の 7♯9）＝既存の全出力は不変。下流（ダイアグラム・ボイシング・フレットボード）は `ChordStructure.ToneSpecs`／`HasMinorThird` を読む。文法は GRAMMAR の `AssembledQuality`（品質語・`maj`・伸張・`-5 +5 -9 +9 +11 -13`・`addN`・`omit3/5`・`sus2/4`・`alt`、順不同・各 1 回）。
+- **名前**: LP の `ignatzek-chord-names` を音の集合から移植（sus の接尾・m の前置・主名・3 度積みの分割・自然 7 は最上音で呼ぶ・例外表 + ° ø °7 alt 5）。双子は全音を明示（`c:1.4.5.7.9`）＝LP が同じ名前を付ける。**LP 2.26.0 実測（Lab `sessions/p846/ch/open.lys`）16 和音すべて一致**（`Cadd2`→`sus2 add3`・`C13sus4`→`9 sus4 add13` も LP どおり）。⚠️ 初回は `7alt` だけ不一致: LP の例外表は ♯9 を**短 10 度**（`ees'`）で綴り、`.9+` は `.9-` を置き換える（replace-step）＝alt の ♯9 を 10 度に。alt 以外の `-9+9` は拒否。
+- 試験 `ChordFormulaTests` 36 本（名前・上付きの位置・`\chordmode`・音・表への解決・拒否 9 形・words・小文字・slash・ローマ数字 `V9sus4`・等価・音名）。LP 出典は camelCase の名前を行範囲と並べない形に（`CitationsThatNameNothing_DoNotGrow`）。掃き（svg・xml・midi・ly）998 冊で**4 種とも差 0**・陽性対照 `open.lys` は p845 で 16 和音が無音（raw suffix）→ p846 で鳴る。full **11323 / 0 / 2 / 11325**（+36）。
+- **残り（未着手・小）**: MusicXML の `Composed` は `kind="other"`＋文字（`<degree>` を出していない＝既存の 16 種以外も同じ）／`/ベース`の転回と付加の自動判別は双子では LP の `/` がそのまま行う（非構成音は付加ベース）＝ページの MIDI のボイシングは未確認。
+
+★ `-End p846 -DiffBase 83bbb0c80`（`end.log`）＝full **11323 / 0 / 2 / 11325**（+36）・門 全 OK。7.5: Core `+` 442 行・REF 7（ignatzek の 2 関数・例外表・engraver-init の 3 プロパティ・chord-name の自然変化・chord-entry の加算）・OWN 1（words の語は Lily# の表に合わせる）。7.6: 名前は LP の算法・音の意味（13 は 11 を省く・`maj` 単独は maj7）は既存の Lily# の規則。7.7: 匂い＝毒は回していない（試験が値を直接見る＝例外表・分割・`:1.` の綴りを外せば赤くなる形だが未確認）。push はユーザー。
+判定: 次は **② ⑷ niente**（承認済み）。(a) 今便の文脈（和音）は使わない／(b) 会話は 4 便ぶん（p843 末〜p846）で長くなってきた／(c) 島が違う ⇒ **新しい会話で `-Start p847` から**（(b) で決めた）。
+
+## 以下は第845セッションの経緯
+
 ### 1.1 第845セッション（2026-10-06・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。`-Start p845`（HEAD `0988d4e5`）＝full **11282 / 0 / 2 / 11284**。§7 3.5 で第843 を ARCHIVE へ。**§2 F-gracesync の残りを閉じた（`0e19bcba6`）**。
@@ -135,17 +148,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 ★ `-End p845 -DiffBase 0988d4e52`（`end.log`）＝full **11287 / 0 / 2 / 11289**（+5＝試験）・門 全 OK。7.5: Core `+` 95 行・REF 0／OWN 0＝出典は第843 の `CollectGraceSync` の LILYPOND-REF（同じ仕組みの続き・`EmptyBarKey` の註は MEASURED）。7.6: 意味は LP 文書の作法（他の段に同じ長さの grace の空白）・鍵はページのモデル。7.7: 匂い＝**合成の `|` を green の参照で覚える**（volta の ending を作り直す `CreateEnding` が子の green を作り直せば鍵が外れ、空白が書かれないだけ＝壊れはしない・未測）。push はユーザー。
 判定: 次の一手は**どれもユーザー判断が先**（① ⑹＋⑺ 和音の文法・② ⑷ niente の文法の承認／§2 F-partmeter の ⒜⒝）。承認が来たら (a) 和音の文法は今便の文脈を使わない／(b) 会話は 2 便ぶんでまだ軽い／(c) 島は違う＝差は小さい ⇒ **既定どおりこの会話で続けてよい**（`-Start p846` から）。
-
-## 以下は第844セッションの経緯
-
-### 1.1 第844セッション（2026-10-06・YT-DELL2）
-
-新しい会話。`-Start p844`（HEAD `cbd2d841`）＝full **11279 / 0 / 2 / 11281**。§7 3.5 で第842 を ARCHIVE へ。**§2 F-hdrsilent を閉じた（`f3cc4a1c1`）**。
-- **原因**: `MeasureCollector.Form.cs` `ProcessSectionBody` の詰め（part が書かない／短い section を spacer で埋める）が `builder.CurrentItemCount == 0` を「小節の頭」の判定にしていた。section の頭の `time`／`key` は prologue が変更の item をその小節に置く＝item は 1 つ＝**詰めが丸ごと飛ぶ**（c9: top 4 小節・bot 6 小節＝ページは 4 小節）。⇒ 判定を「時価のある内容が無い」（`MeasureBuilder.HasMeasureContent`・private を public に）へ。**ついでに空白の長さ**も `TimeSignatureFraction`（`_meta`＝score の拍子・header の `time` は `_meta` を書かない）から `builder.CurrentMeasureLength`（`BarLength`＝弱起→拍子）へ＝3/4 の小節に 4/4 の spacer が入っていた（既存の「短い section」の詰めも同じ）。
-- 計測（Lab `sessions/p844/hs`）: c9・`key` の頭・単独 header（by-part）・`time 3/4 partial 4` の頭＝**全部 6／6・4／4・5／5 小節で段が揃う**（絵で確認）。試験 `MissingSectionSpacerFillTests` に 3 本（`time`／`key` の Theory・弱起と拍子の空白の長さ 1/4・3/4・3/4）。毒 2 本: 判定を戻す→3 赤／長さを戻す→1 赤。掃き（`sweep/run-sweeps.ps1`＝svg・xml・midi・ly）998 冊 1199 score で**4 種とも差 0**（この形はコーパスに無い）・陽性対照 c9 は base 4 → head 6。full **11282 / 0 / 2 / 11284**（+3）。
-
-★ `-End p844 -DiffBase cbd2d8417`（`end.log`）＝full **11282 / 0 / 2 / 11284**（+3＝試験）・門 全 OK。7.5: Core `+` 11 行・REF 0／OWN 0＝LP の移植ではなく Lily# のモデルの詰めの欠陥（双子は元から 6 小節＝裁定は音楽的妥当性）。7.6: 判定と長さは既存の定義（`HasMeasureContent`＝時価のある内容・`BarContext.BarLength`＝空の小節の値打ち）に寄せただけ。7.7: 匂い＝**volta の終わりの小節（`MeasureCollector.Form.cs:244`・`MeasureCollector.cs:4577`）も `CurrentItemCount > 0` を「小節の途中」と読む**＝指示だけの小節で 1 つ先まで伸び得る（未測・起票せず）。push はユーザー。
-判定: 次は **⑧ §2 F-gracesync の残り**（part が書かない section の空の小節にも grace の空白）。(a) **今便の文脈を使う**＝その空の小節はまさに今便が直した詰めの spacer（section の位置を持つ）／(b) 会話は 1 便ぶんで軽い／(c) 同じ島 ⇒ **この会話で続けてよい**（`-Start p845` から）。
 
 ## 2. 開いている作業
 
