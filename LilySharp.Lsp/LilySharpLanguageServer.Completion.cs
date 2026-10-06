@@ -65,6 +65,11 @@ public sealed partial class LilySharpLanguageServer
     [GeneratedRegex(@"\b(\w+)\s+(\w+)\s*\{")]
     private static partial Regex DeclaredNameRegex();
 
+    // A lyrics track's declaration, with or without its binding: `lyrics NAME {` and
+    // `lyrics NAME sings PART {` — group 1 is the track name (LyricsTrackNamesOf).
+    [GeneratedRegex(@"\blyrics\s+(\w+)(?:\s+sings\s+\w+)?\s*\{")]
+    private static partial Regex LyricsTrackDeclarationRegex();
+
     [GeneratedRegex(@"\s+")]
     private static partial Regex WhitespaceRunRegex();
 

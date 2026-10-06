@@ -99,6 +99,29 @@ public class SingsCompletionTests
     public void AScoreRowsSings_OffersTheBindingTargets(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterSingsTarget, Ctx(text));
 
+    /// <summary>`score { lyrics ▮ }` offers the declared lyrics TRACKS — those that state
+    /// their binding at the definition too (`lyrics words sings melody { … }`), which the
+    /// plain `KEYWORD name {` scan read as a declaration of `sings` (reported 2026-10-06:
+    /// the row offered nothing). Parts are not tracks and are not offered.</summary>
+    [Fact]
+    public void AScoreRowsName_OffersEveryDeclaredTrack_BoundOrNot()
+    {
+        const string head = """
+            part melody { clef treble }
+            part bass { clef bass }
+            lyrics words sings melody { section A { la la | } }
+            lyrics verse2 { section A { lo lo | } }
+            section A { melody { c4 d | } bass { c2 | } lyrics cell sings bass { do | } }
+            score main { staff melody  lyrics
+            """ + " ";
+        string text = head + " }";
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterLyricsRef,
+            LilySharpLanguageServer.GetCompletionContext(text, head.Length));
+        var labels = LilySharpLanguageServer.GetDeclaredNameCompletions(text, "lyrics", "Lyrics part")
+            .Items.Select(i => i.Label).ToArray();
+        Assert.Equal(new[] { "words", "verse2", "cell" }, labels);
+    }
+
     [Fact]
     public void RowAttachCompletions_LeadWithSings()
     {

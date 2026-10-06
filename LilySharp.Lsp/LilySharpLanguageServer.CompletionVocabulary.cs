@@ -2298,15 +2298,7 @@ public sealed partial class LilySharpLanguageServer
     /// (parts, chord parts, lyrics parts), offered where a score references them.</summary>
     internal static CompletionList GetDeclaredNameCompletions(string text, string keyword, string detail)
     {
-        var names = new System.Collections.Generic.List<string>();
-        var seen = new System.Collections.Generic.HashSet<string>();
-        foreach (Match m in DeclaredNameRegex().Matches(text))
-        {
-            if (m.Groups[1].Value != keyword) continue;
-            var name = m.Groups[2].Value;
-            if (seen.Add(name))
-                names.Add(name);
-        }
+        var names = keyword == "lyrics" ? LyricsTrackNamesOf(text) : DeclaredNamesOf(text, keyword);
         return new CompletionList
         {
             Items = names.Select((n, i) => new CompletionItem
@@ -4553,6 +4545,22 @@ public sealed partial class LilySharpLanguageServer
         foreach (Match m in DeclaredNameRegex().Matches(text))
             if (m.Groups[1].Value == keyword && seen.Add(m.Groups[2].Value))
                 names.Add(m.Groups[2].Value);
+        return names;
+    }
+
+    /// <summary>The lyrics tracks the document declares, in order, deduplicated — a
+    /// <c>lyrics NAME {</c> and a <c>lyrics NAME sings PART {</c> alike. The second is the
+    /// binding spelled at the definition (user decision 2026-08-19), and the plain
+    /// <c>KEYWORD name {</c> scan read it as a declaration of <c>sings</c>: a score's
+    /// <c>lyrics ▮</c> row offered no track at all for a book whose tracks all state what
+    /// they sing (reported 2026-10-06).</summary>
+    internal static IReadOnlyList<string> LyricsTrackNamesOf(string text)
+    {
+        var names = new System.Collections.Generic.List<string>();
+        var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+        foreach (Match m in LyricsTrackDeclarationRegex().Matches(text))
+            if (seen.Add(m.Groups[1].Value))
+                names.Add(m.Groups[1].Value);
         return names;
     }
 
