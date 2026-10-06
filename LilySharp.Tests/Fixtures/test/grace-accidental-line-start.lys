@@ -1,7 +1,9 @@
-// A grace before an accidental note/chord at the LINE START must reserve the
-// grace group AND the main item's accidental in the prefix->first-note spring,
-// or the grace hangs left into the clef/key/time. The front spring adds the
-// main accidental to the leading-grace reservation (only at a line start).
+// A grace before an accidental note/chord at the LINE START must not hang left
+// into the clef/key/time. LilyPond gives the grace its own column: the prefix's
+// spring ends at that FIRST GRACE column (its accidental in that column's own
+// skyline) and is scaled by 0.8, and the run follows in series to the main
+// chord, whose accidentals sit in the grace->main gap (LineStartColumn.IntoGraceRun,
+// session 832).
 octave absolute
 key c major
 

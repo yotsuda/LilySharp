@@ -1366,8 +1366,7 @@ internal static partial class SpacingRules
     /// plus the grace→main rod), the same measure GraceNoteEngraver uses to PLACE
     /// the group, so reserved space and drawn space agree.
     /// </remarks>
-    internal static double LeadingGracePrefixWidth(ItemColumn items,
-        bool includeMainAccidental = false)
+    internal static double LeadingGracePrefixWidth(ItemColumn items)
     {
         double w = 0;
         for (int i = 0; i < items.Count; i++)
@@ -1381,21 +1380,7 @@ internal static partial class SpacingRules
             };
             if (grace.IsDefaultOrEmpty)
                 continue;
-            double hang = CalculateGraceGroupSpringWidth(grace);
-            // At a LINE START the grace hangs left of the main item's OWN left ink
-            // (its accidental) with nothing before it, so the front spring must
-            // reserve grace + accidental, not their max — otherwise the grace
-            // overflows into the clef/key/time prefix. (Mid-line the previous note
-            // already provides that room, so the accidental is left out there.)
-            bool hasAccidental = item switch
-            {
-                NoteItem n => n.Accidental != null,
-                ChordItem c => c.Notes.Any(cn => cn.Accidental != null),
-                _ => false
-            };
-            if (includeMainAccidental && hasAccidental)
-                hang += CalculateLeftExtent(item);
-            w = Math.Max(w, hang);
+            w = Math.Max(w, CalculateGraceGroupSpringWidth(grace));
         }
         return w;
     }
@@ -1534,7 +1519,7 @@ internal static partial class SpacingRules
         // LILYPOND-REF: lily/staff-spacing.cc:210.
         double minDistance = 0;
 
-        double startLeadGrace = 0;
+        bool opensWithGrace = false;
         if (firstItems.Count > 0)
         {
             if (boundary is var (bPrefix, bLast) && boundary.HasValue)
@@ -1593,11 +1578,11 @@ internal static partial class SpacingRules
                 }
             }
 
-            // Leading grace notes on the first note hang left of its column, after
-            // the bar line (LilyPond gives the grace its own column between the
-            // bar line and the main note).
-            startLeadGrace = LeadingGracePrefixWidth(
-                firstItems, includeMainAccidental: true);
+            // A grace run on the first note: LilyPond gives it its own columns between the bar
+            // line and the main note, and the spring below runs into the first of them. Only
+            // WHETHER one opens the bar is read here — the run is priced as columns below
+            // (BoundaryGraceSeries / AdjustSpringForGraceNotes), not as a width.
+            opensWithGrace = LeadingGracePrefixWidth(firstItems) > 0;
         }
 
         // ONE Staff_spacing WISH PER STAFF, merged. The left column's spacing-wishes hold a
@@ -1641,7 +1626,7 @@ internal static partial class SpacingRules
         // (the run's 1.9386 after it, ledger grace.column.single.to-main); the page drew 0.80 / 2.74.
         // Not measured here: a clef before the bar line (it moves the column origin too), an
         // accidental on the main note, grace runs on several staves (the widest run is taken).
-        if (startLeadGrace > 0 && firstItems.Count > 0)
+        if (opensWithGrace && firstItems.Count > 0)
         {
             double origin = EngravingDefaults.BarlineDrawnWidth(leftBound);
             var inColumnFrame = new Spring(spring.IdealDistance + origin, spring.MinDistance + origin,
@@ -1752,7 +1737,7 @@ internal static partial class SpacingRules
             // grace (session 726: the two that write one put it mid-bar).
             double opticalCorrection = own.HasValue
                 ? 0.0
-                : startLeadGrace > 0
+                : opensWithGrace
                     ? LeadGraceOpticalCorrection(firstItems)
                     // Beside a tab, each staff's own: every column against ITS bar
                     // (TabBarlineToNextNotesCorrections).
