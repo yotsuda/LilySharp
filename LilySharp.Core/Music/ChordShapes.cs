@@ -544,10 +544,10 @@ public static class ChordShapes
         var missing = ImmutableArray.CreateBuilder<(int, string)>();
         int rootPc = Mod12(Semantics.RelativeOctave.StepSemitoneOf(Mod7(chord.RootStep)) + chord.RootAlter);
         int optional = 1 << rootPc, listed = 0;
-        foreach (var tone in ChordQualityRegistry.GetTones(chord.Quality))
+        foreach (var tone in chord.ToneSpecs)
             if (ChordVoicings.IsPerfectFifth(tone))
                 optional |= 1 << Mod12(rootPc + tone.Semitone);
-        foreach (var tone in ChordQualityRegistry.GetTones(chord.Quality))
+        foreach (var tone in chord.ToneSpecs)
         {
             int pc = Mod12(rootPc + tone.Semitone);
             if (tone.DiatonicStep == 0 || ChordVoicings.IsPerfectFifth(tone)
@@ -615,7 +615,7 @@ public static class ChordShapes
     {
         int[] fifths = [0, 2, 4, -1, 1, 3, 5];   // C D E F G A B on the circle of fifths
         int k = fifths[Mod7(chord.RootStep)] + 7 * chord.RootAlter
-                - (chord.RawSuffix == null && ChordQualityRegistry.HasMinorThird(chord.Quality) ? 3 : 0);
+                - (chord.HasMinorThird ? 3 : 0);
         return System.Math.Clamp(k, -7, 7);
     }
 
@@ -626,7 +626,7 @@ public static class ChordShapes
     {
         if (chord.RawSuffix != null || System.Math.Abs(chord.RootAlter) > 1 || System.Math.Abs(chord.BassAlter ?? 0) > 1)
             return null;
-        string token = chord.Quality == ChordQuality.Major ? ""
+        string token = chord.Formula is { } formula ? formula.Source : chord.Quality == ChordQuality.Major ? ""
             : ChordQualityRegistry.Tokens.First(t => ChordQualityRegistry.TryResolve(t, out var q) && q == chord.Quality);
         string symbol = SourcePitch(chord.RootStep, chord.RootAlter) + token;
         if (chord.BassStep is int bs)

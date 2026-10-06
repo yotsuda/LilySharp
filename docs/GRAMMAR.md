@@ -1240,8 +1240,26 @@ ChordRowEntry  = ( ChordEntry | RomanEntry ) , [ '(' , ShapeWords , ')' ] ;   (*
 ChordEntry     = ChordRoot , [ Quality ] , [ '/' , ChordRoot ] ;
 ChordRoot      = ( 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' ) , [ '#' | 'b' ] ;
 ChordExtend    = '.' ;
-Quality        = { 'm' | 'maj' | 'dim' | 'aug' | 'sus' | 'add' | Integer
-                 | ( '+' | '-' ) , Integer | '+' | '-' } ;
+Quality        = RegisteredQuality | AssembledQuality ;
+                 (* RegisteredQuality: m min dim aug + 7 maj7 maj m7 min7 mmaj7 dim7
+                    m7-5 6 m6 9 maj9 m9 sus2 sus4 sus 7sus4 7-5 7+5 7-9 7+9 7+11
+                    add9 11 13 m11 m13 maj13 (and min6 min9 min11 min13). *)
+AssembledQuality = [ 'm' | 'min' | 'dim' | 'aug' ] , [ 'maj' ]
+                 , [ '5' | '6' | '69' | '7' | '9' | '11' | '13' ]
+                 , { '-5' | '+5' | '-9' | '+9' | '+11' | '-13'
+                   | 'add2' | 'add4' | 'add6' | 'add9' | 'add11' | 'add13'
+                   | 'omit3' | 'omit5' | 'sus2' | 'sus4' | 'sus' | 'alt' } ;
+                 (* THE OPEN ENTRY (2026-10-06, HANDOFF §2 E ⑹): C9sus4, Cm7-5-9,
+                    Cmaj7+11, C7alt, C5, C69, Cadd2, C7omit3, Cmmaj9. The modifiers
+                    come in any order, each once. '5' alone is the power chord;
+                    'alt' (or '7alt') is the altered dominant, LilyPond's own
+                    <c e g bes des' ees' fis' aes'>; a 13 leaves out the 11 unless
+                    'add11' asks; 'maj' alone is the major seventh; '-9' with '+9'
+                    is 'alt''s (refused alone). A spelling whose tones are a
+                    registered quality's IS that quality (C7+9 = the table's 7+9).
+                    The NAME is LilyPond's Ignatzek name computed from the tones
+                    (C9sus4 prints C⁹ˢᵘˢ⁴, Cadd2 prints Cˢᵘˢ²ᵃᵈᵈ³ as LilyPond does),
+                    and 'lysc ly' writes every tone explicitly (c:1.4.5.7.9). *)
                  (* THE ENTRY IS THE SYMBOL AS IT PRINTS (decided 2026-08-21,
                     GRAMMAR_AUDIT 8.1): C, Am, G7, F#m, Bb7, Gm7-5, Cmaj7/E. The
                     case is the grammar — an UPPERCASE letter is a root, so 'R'

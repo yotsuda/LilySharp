@@ -761,7 +761,7 @@ public class LayoutBlockTests
     public void NoMinorThirdQuality_SpellsItsSuffixSoTheMinorModifierEatsAWord()
     {
         int asked = 0;
-        foreach (ChordQuality q in System.Enum.GetValues<ChordQuality>())
+        foreach (ChordQuality q in System.Enum.GetValues<ChordQuality>().Where(q => q != ChordQuality.Composed))
         {
             if (!ChordQualityRegistry.HasMinorThird(q))
                 continue;
@@ -804,7 +804,7 @@ public class LayoutBlockTests
     public void TheRomanDegreeCannotFollowTheChordVocabulary()
     {
         int overridden = 0, triangles = 0;
-        foreach (ChordQuality q in System.Enum.GetValues<ChordQuality>())
+        foreach (ChordQuality q in System.Enum.GetValues<ChordQuality>().Where(q => q != ChordQuality.Composed))
         {
             string words = ChordQualityRegistry.GetSuffix(q, ChordQualityStyle.Words);
             string symbols = ChordQualityRegistry.GetSuffix(q, ChordQualityStyle.Symbols);

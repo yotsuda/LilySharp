@@ -193,7 +193,7 @@ public static partial class PredefinedFretboards
     {
         var wanted = intervals.Split(' ').Select(s => int.Parse(s, CultureInfo.InvariantCulture))
             .OrderBy(s => s).ToArray();
-        foreach (var q in System.Enum.GetValues<ChordQuality>())
+        foreach (var q in System.Enum.GetValues<ChordQuality>().Where(q => q != ChordQuality.Composed))
             if (ChordQualityRegistry.GetTones(q).Select(t => t.Semitone).OrderBy(s => s).SequenceEqual(wanted))
                 return q;
         return null;

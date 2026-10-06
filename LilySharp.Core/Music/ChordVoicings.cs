@@ -163,7 +163,7 @@ public static class ChordVoicings
         if (chord.RawSuffix != null)
             return false;
         int rootPc = Mod12(Semantics.RelativeOctave.StepSemitoneOf(Mod7(chord.RootStep)) + chord.RootAlter);
-        foreach (var tone in ChordQualityRegistry.GetTones(chord.Quality))
+        foreach (var tone in chord.ToneSpecs)
         {
             int bit = 1 << Mod12(rootPc + tone.Semitone);
             allowed |= bit;

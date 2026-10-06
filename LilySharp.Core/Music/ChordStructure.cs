@@ -108,6 +108,11 @@ public enum ChordQuality
     Minor13,
     /// <summary>Major thirteenth, without the eleventh; suffix <c>maj13</c>.</summary>
     Major13,
+
+    /// <summary>A quality assembled from its parts whose tones no registered quality has
+    /// (<c>C9sus4</c>, <c>C7alt</c>, <c>C5</c>): the tones, name and LilyPond spelling are the
+    /// chord's own <see cref="ChordStructure.Formula"/>, never a table of this registry.</summary>
+    Composed,
 }
 
 /// <summary>
@@ -458,13 +463,35 @@ public static class ChordQualityRegistry
     /// for an unknown token. An empty/absent token is a plain major triad.
     /// </summary>
     public static bool TryResolve(string? token, out ChordQuality quality)
+        => TryResolve(token, out quality, out var formula) && formula is null;
+
+    /// <summary>
+    /// Resolves a quality token, registered or ASSEMBLED (<see cref="ChordFormula"/>): a
+    /// registered token, else an assembled one whose tones are a registered quality's (that
+    /// quality, <paramref name="formula"/> null — <c>C7+9</c> is the table's 7♯9 however it is
+    /// spelled), else <see cref="ChordQuality.Composed"/> with the formula.
+    /// </summary>
+    public static bool TryResolve(string? token, out ChordQuality quality, out ChordFormula? formula)
     {
+        formula = null;
         if (string.IsNullOrEmpty(token))
         {
             quality = ChordQuality.Major;
             return true;
         }
-        return ByToken.TryGetValue(token, out quality);
+        if (ByToken.TryGetValue(token, out quality))
+            return true;
+        if (!ChordFormula.TryParse(token, out var assembled))
+            return false;
+        foreach (var (registered, tones) in Tones)
+            if (tones.SequenceEqual(assembled.Tones))
+            {
+                quality = registered;
+                return true;
+            }
+        quality = ChordQuality.Composed;
+        formula = assembled;
+        return true;
     }
 
     /// <summary>All recognized quality tokens (for tooling / completion).</summary>
@@ -541,14 +568,26 @@ public sealed record ChordStructure(
     // slash pitch degrades to a plain bass.
     // LILYPOND-REF: scm/chord-entry.scm:46-50 interpret-bass — the /+FOO part
     // always sets a plain bass (never an inversion).
-    bool BassIsAdded = false)
+    bool BassIsAdded = false,
+    // The assembled quality of a Composed chord (ChordFormula): its tones, name and
+    // LilyPond spelling. Null for every registered quality.
+    ChordFormula? Formula = null)
 {
     // Diatonic-step semitones come from RelativeOctave.StepSemitoneOf (single source).
 
+    /// <summary>The chord's tone specs: the assembled formula's, else the registered quality's.
+    /// Empty for a raw suffix.</summary>
+    public IReadOnlyList<ChordToneSpec> ToneSpecs =>
+        RawSuffix != null ? []
+        : Formula is { } f ? f.Tones
+        : ChordQualityRegistry.GetTones(Quality);
+
+    /// <summary>True when the chord's third is minor (<see cref="ChordQualityRegistry.HasMinorThird"/>).</summary>
+    public bool HasMinorThird =>
+        RawSuffix == null && (Formula is { } f ? f.HasMinorThird : ChordQualityRegistry.HasMinorThird(Quality));
+
     /// <summary>Semitone offsets of the chord tones above the root (the pitch set).</summary>
-    public ImmutableArray<int> Intervals =>
-        RawSuffix != null ? ImmutableArray<int>.Empty
-        : [.. ChordQualityRegistry.GetTones(Quality).Select(t => t.Semitone)];
+    public ImmutableArray<int> Intervals => [.. ToneSpecs.Select(t => t.Semitone)];
 
     /// <summary>
     /// The spelled chord tones (letter step, accidental, octave above the root).
@@ -563,7 +602,7 @@ public sealed record ChordStructure(
             if (RawSuffix != null)
                 return ImmutableArray<ChordTone>.Empty;
             var b = ImmutableArray.CreateBuilder<ChordTone>();
-            foreach (var spec in ChordQualityRegistry.GetTones(Quality))
+            foreach (var spec in ToneSpecs)
             {
                 int absStep = RootStep + spec.DiatonicStep;
                 int letterStep = ((absStep % 7) + 7) % 7;
@@ -655,12 +694,12 @@ public sealed record ChordStructure(
                     : offset + pressed.SuperFrom);
         }
 
-        bool lower = spelling.LowercaseMinor && RawSuffix == null
-                     && ChordQualityRegistry.HasMinorThird(Quality);
+        bool lower = spelling.LowercaseMinor && HasMinorThird;
         var sb = new StringBuilder();
         sb.Append(SpellPitch(RootStep, RootAlter, lower));
 
-        string suffix = RawSuffix ?? ChordQualityRegistry.GetSuffix(Quality, spelling.Qualities);
+        var assembled = Formula?.Name(spelling.Qualities);
+        string suffix = RawSuffix ?? assembled?.Suffix ?? ChordQualityRegistry.GetSuffix(Quality, spelling.Qualities);
         string printed = lower ? DropMinorModifier(suffix) : suffix;
         // How much of the PRINTED suffix stays DOWN with the root. LilyPond's minor modifier
         // is a prefix on the baseline, and the exception table's `+` and `°` are drawn there
@@ -675,7 +714,7 @@ public sealed record ChordStructure(
         // at all), so the case cannot move it.
         int down = RawSuffix != null
             ? 0
-            : ChordQualityRegistry.BaselineSuffixLength(Quality, spelling.Qualities)
+            : (assembled?.Baseline ?? ChordQualityRegistry.BaselineSuffixLength(Quality, spelling.Qualities))
               - (printed.Length == suffix.Length ? 0 : 1);
         sb.Append(printed);
 
@@ -876,7 +915,9 @@ public sealed record ChordStructure(
         }
 
         var sb = new StringBuilder(Degree(RootStep, RootAlter, tonicStep, keySharps));
-        sb.Append(RawSuffix ?? RomanSuffix(Quality));
+        sb.Append(RawSuffix ?? (Formula is { } f
+            ? f.Name(Semantics.ChordQualityStyle.Words).Suffix
+            : RomanSuffix(Quality)));
         if (BassStep is int bs)
             sb.Append('/').Append(Degree(bs, BassAlter ?? 0, tonicStep, keySharps));
         return sb.ToString();
@@ -973,7 +1014,7 @@ public sealed record ChordStructure(
 
         if (!TryParseDegree(main, tonicStep, keySharps, out int step, out int alter, out string qualStr))
             return false;
-        if (!TryResolveRomanQuality(qualStr, out var quality))
+        if (!TryResolveRomanQuality(qualStr, out var quality, out var formula))
             return false;
 
         int? bassStep = null, bassAlter = null;
@@ -986,7 +1027,7 @@ public sealed record ChordStructure(
             bassAlter = ba;
         }
 
-        result = new ChordStructure(step, alter, quality, bassStep, bassAlter);
+        result = new ChordStructure(step, alter, quality, bassStep, bassAlter, Formula: formula);
         return true;
     }
 
@@ -1029,15 +1070,16 @@ public sealed record ChordStructure(
 
     /// <summary>The quality of a roman entry: the printed roman-only spellings first,
     /// then the ordinary name-style registry.</summary>
-    private static bool TryResolveRomanQuality(string suffix, out ChordQuality quality)
+    private static bool TryResolveRomanQuality(string suffix, out ChordQuality quality, out ChordFormula? formula)
     {
+        formula = null;
         switch (suffix)
         {
             case "°": quality = ChordQuality.Diminished; return true;      // °
             case "°7": quality = ChordQuality.Diminished7; return true;    // °7
             case "ø7": quality = ChordQuality.HalfDiminished7; return true; // ø7
             case "+": quality = ChordQuality.Augmented; return true;
-            default: return ChordQualityRegistry.TryResolve(suffix, out quality);
+            default: return ChordQualityRegistry.TryResolve(suffix, out quality, out formula);
         }
     }
 
@@ -1076,7 +1118,7 @@ public sealed record ChordStructure(
         var sb = new StringBuilder();
         sb.Append(SpellLilyPitch(RootStep, RootAlter)).Append(duration);
         if (RawSuffix == null)
-            sb.Append(ChordQualityRegistry.LilyPondModifier(Quality));
+            sb.Append(Formula?.LilyPondModifier() ?? ChordQualityRegistry.LilyPondModifier(Quality));
         if (BassStep is int bs)
             sb.Append(BassIsAdded ? "/+" : "/").Append(SpellLilyPitch(bs, BassAlter ?? 0));
         return sb.ToString();
@@ -1150,7 +1192,7 @@ public sealed record ChordStructure(
 
         if (!TryParseSymbolPitch(main, out int step, out int alter, out string qualStr))
             return false;
-        if (!ChordQualityRegistry.TryResolve(qualStr, out var quality))
+        if (!ChordQualityRegistry.TryResolve(qualStr, out var quality, out var formula))
             return false;
 
         int? bassStep = null, bassAlter = null;
@@ -1163,7 +1205,7 @@ public sealed record ChordStructure(
             bassAlter = ba;
         }
 
-        result = new ChordStructure(step, alter, quality, bassStep, bassAlter);
+        result = new ChordStructure(step, alter, quality, bassStep, bassAlter, Formula: formula);
         return true;
     }
 

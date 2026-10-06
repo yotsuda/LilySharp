@@ -252,7 +252,7 @@ public class LpFidelityFaceGuardTests
                     vocabulary.Add(c);
         }
 
-        foreach (ChordQuality quality in System.Enum.GetValues<ChordQuality>())
+        foreach (ChordQuality quality in System.Enum.GetValues<ChordQuality>().Where(q => q != ChordQuality.Composed))
             for (int rootStep = 0; rootStep < 7; rootStep++)
                 for (int rootAlter = -2; rootAlter <= 2; rootAlter++)
                 {
