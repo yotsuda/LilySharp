@@ -884,13 +884,42 @@ internal static partial class SpacingRules
     /// MEASURED (2.26.0, Lab sessions/p832/lsg m1/m3, mid-line, ragged): `c'1 | \grace {d'16 e'}
     /// f'4` puts the bar line 4.848 after the whole note — its plain 6.06 × 0.8 — and `c'2 c' |`
     /// the same bar 3.292 after the half, 4.115 × 0.8. Lily# kept the plain spring until session
-    /// 832. ⚠️ At a LINE END LilyPond's column origin is the end-of-line group's right edge, not the
-    /// bar line's left (m1's twin across a break, g5: 4.810 = (6.06 + 0.19) × 0.8 − 0.19), so
-    /// scaling the bar-line-framed spring leaves 0.2 × that offset — 0.038 after a plain bar line,
-    /// about 0.6 after a courtesy key or meter (g7, g10). Not ported: the spring does not know
-    /// whether a line ends here.
+    /// 832. ⚠️ At a LINE END the scale is taken in another frame — <see cref="IntoLineEndBeforeGrace"/>,
+    /// which the line applies, since the spring does not know whether a line ends here.
     /// </remarks>
     internal static Spring IntoBarBeforeGrace(Spring spring) => spring.Scale(GraceApproachScale);
+
+    /// <summary>
+    /// <see cref="IntoBarBeforeGrace"/>'s spring re-scaled for a bar line that ENDS a line: the
+    /// 0.8 taken against the end-of-line column's origin, <paramref name="originOffset"/> right
+    /// of the bar line's left edge (the bar line's width, and the courtesy group's when one is
+    /// drawn).
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's spring runs to the column's origin, and at a line end that origin is the
+    /// end-of-line break-align group's right edge — the bar line's, or past a courtesy key or
+    /// meter, the group's right-edge member (scm/define-grobs.scm:1946, :1995, :3951). The spring
+    /// Lily# builds runs to the bar line's left edge, O shorter, with the same minimum in its own
+    /// frame, so Spring::operator*= in LilyPond's frame is max (min + O, 0.8 (ideal + O)) − O =
+    /// max (min, 0.8 ideal − 0.2 O): the bar-line-framed scale less 0.2 O, floored at the minimum
+    /// — which the column rod after the scale floors as well, so it is read off the finished
+    /// spring.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:396-403 musical_column_spacing — the 0.8.
+    /// LILYPOND-REF: lily/spring.cc:85-93 Spring::operator*= — max (min_distance, factor × distance).
+    /// MEASURED (2.26.0, Lab sessions/p832/lsg + p842/le, ragged, `c'1 | \break \grace {d'16 e'}
+    /// f'4`): the bar line ending the line stands 4.810 after the whole note — (6.06 + 0.19) × 0.8
+    /// − 0.19 — where the bar-line-framed scale gave 4.848 (+0.038); with a courtesy key (D major,
+    /// O = 3.88) 4.08 where Lily# stood +0.77, with a courtesy 3/4 +0.61.
+    /// </remarks>
+    internal static Spring IntoLineEndBeforeGrace(Spring scaled, double originOffset)
+    {
+        if (scaled.IsSeries || originOffset <= 0)
+            return scaled;
+        double ideal = Math.Max(scaled.MinDistance,
+            scaled.IdealDistance - (1 - GraceApproachScale) * originOffset);
+        return new Spring(ideal, scaled.MinDistance, scaled.InverseStretchStrength,
+            Math.Max(0, ideal - scaled.MinDistance));
+    }
 
     // ========================================
     // Mid-measure change items (the missing non-musical column)

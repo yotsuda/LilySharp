@@ -3208,6 +3208,27 @@
       "residual": 0.0,
       "why": "OPENED AND CLOSED IN SESSION 840. KG1 with a sharp on the first grace (BAR 33.073605): min_dist reaches the grace's sharp and the column rod over the approach pair (min_dist + 0.1, set_column_rods) places the grace, 5.733 off the bar line. SpacingRules.BoundaryGraceSeries builds LilyPond's shape -- the approach scaled against its own minimum, then the run's springs, in series; SpringIntoGraceRun floored the approach-plus-run TOTAL, which agrees only while the run's span is independent of the main note (-0.99 here with the natural on f'4, Lab sessions/p840/kg k10)."
     },
+    "line-end.before-grace.plain-bar": {
+      "probe": "line-end-grace.ly",
+      "score": "LEG1",
+      "lilypond": 12.595036,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 842 -- HANDOFF 2 H (a). `c'1 |` ending a line before `\\grace { d'16 e' } f'4` (CLEF 0.8, BAR 13.395036). The spring into the bar line's column takes the 0.8 of a column with a grace part (lily/spacing-spanner.cc musical_column_spacing, lily/spring.cc Spring::operator*=), and a spring runs to the column's origin: at a line end, the end-of-line group's right edge, here the bar line's (O = 0.19). So max (min, 0.8 (ideal + O)) - O, 4.810 after the whole note; Lily# scaled the spring to the bar line's left edge, 4.848 (+0.038). SpacingRules.IntoLineEndBeforeGrace, applied by the line (MultiStaffLayouter.LineEndBeforeGraceSprings)."
+    },
+    "line-end.before-grace.courtesy-key": {
+      "probe": "line-end-grace.ly",
+      "score": "LEG2",
+      "lilypond": 11.855036,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 842. LEG1 with `\\key d \\major` opening the second line (BAR 12.655036): the courtesy key's group puts the column's origin at its right-edge member, O = 0.19 + 1.0 + the key's ink + 0.5 = 3.88, and the 0.8 against it stands the bar line 0.77 left of the bar-line-framed scale. See line-end.before-grace.plain-bar."
+    },
+    "line-end.before-grace.courtesy-meter": {
+      "probe": "line-end-grace.ly",
+      "score": "LEG3",
+      "lilypond": 12.024089,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 842. LEG1 with `\\time 3/4` opening the second line (BAR 12.824089): the courtesy meter's group, 0.61 left of the bar-line-framed scale. See line-end.before-grace.plain-bar."
+    },
     "mark-column.quarter.box-centre": {
       "probe": "mark-column.ly",
       "score": "MKC",

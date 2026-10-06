@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
 | `OWN` | 214 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **338** | |
+| **計** | **337** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -34,7 +34,7 @@
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（61 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（60 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **:345** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
@@ -93,9 +93,9 @@
 - **:508** ⚠️ NOT PORTED — the bound extent: the barline's ink width is taken
 - **:524** ⚠️ NOT PORTED — the boundary-column regime: the left bound is the
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:3241** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
-- **:3293** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
-- **:4298** same approximation the scripts' own remark records for the movers; the books that
+- **:3268** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
+- **:3320** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
+- **:4325** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1212** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
 - **:2339** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
@@ -116,8 +116,6 @@
 - **:1309** approximation there); RIGHT wins when both edges match, as LP's
 ### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
 - **:429** NOT PORTED HERE: the box's reach toward the OTHER neighbour. LilyPond grows it from
-### `LilySharp.Core/Svg/Layout/SpacingRules.Grace.cs`
-- **:890** about 0.6 after a courtesy key or meter (g7, g10). Not ported: the spring does not know
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
 - **:329** ⚠️ THIS IS A DERIVATION, NOT A TRANSCRIPTION, and it rests on one premise worth
 ### `LilySharp.Core/Svg/Layout/StaffAffinity.cs`
@@ -198,8 +196,8 @@
 ### `LilySharp.Core/Svg/Layout/LyricSpacing.cs`
 - **:152** is measured-exact there, and no ledger point prices replacing it.
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:3849** staff down, and this reserves it on the hidden one. No book reaches that.
-- **:5218** company on a row whose symbols sit closer than its spec's 1.0. No point measures
+- **:3876** staff down, and this reserves it on the hidden one. No book reaches that.
+- **:5245** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:854** does not spell a per-type padding — no point observes a segno/coda over a
 - **:1054** X extent per mark -- and reproduce both pictures. No ledger point is
@@ -468,10 +466,10 @@
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **:422** ⚠️ LILYSHARP-OWN, AND IT HAS ONE HOME ON PURPOSE. LilyPond has no band: a Lyrics or
 - **:523** ⚠️ LILYSHARP-OWN, AND IT IS NOW THE LAST FLAT VERSE STEP LEFT. Where the row is an
-- **:1909** LILYSHARP-OWN, the lead-sheet grid's line-start bar (user request
-- **:2346** wide as its 3/4 bars for one beat). LILYSHARP-OWN like the floor itself: LilyPond has
-- **:2582** timing-placed chord symbol and a beat slash do. LILYSHARP-OWN: the filler-slot keep.
-- **:4909** LILYSHARP-OWN: the band is Lily#'s model of a line LilyPond walks as a loose line
+- **:1915** LILYSHARP-OWN, the lead-sheet grid's line-start bar (user request
+- **:2352** wide as its 3/4 bars for one beat). LILYSHARP-OWN like the floor itself: LilyPond has
+- **:2588** timing-placed chord symbol and a beat slash do. LILYSHARP-OWN: the filler-slot keep.
+- **:4936** LILYSHARP-OWN: the band is Lily#'s model of a line LilyPond walks as a loose line
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:152** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **:178** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN

@@ -7718,6 +7718,11 @@ internal static class LpGeometryProbes
     private static readonly LayoutOptions NarrowPaper =
         LayoutOptions.Default with { PageWidth = 30.0 / 1.757299017 + 2 * 8.535827 };
 
+    /// <summary>Default paper with <c>ragged-right = ##t</c> — a line that is not the last one
+    /// stands at its natural length (the LEG probes' line ends).</summary>
+    private static readonly LayoutOptions RaggedRightPaper =
+        LayoutOptions.Default with { RaggedRight = true };
+
     /// <summary>
     /// EIGHT QUARTERS IN ONE BAR, to be squeezed. The mirror of compressed-note-spacing.ly.
     /// </summary>
@@ -13264,6 +13269,59 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// <c>c'1</c> ending a line before a bar that opens with the grace run <c>d'16 e'</c>. The
+    /// spring into the bar line takes the 0.8 against the end-of-line column's origin, the bar
+    /// line's right edge: the bar line 12.595036 after the clef (CLEF 0.8, BAR 13.395036), where
+    /// the bar-line-framed scale Lily# took until session 842 put it 0.038 right.
+    /// </summary>
+    /// <remarks>LilyPond twin: audit/lp-geometry/probes/line-end-grace.ly LEG1.</remarks>
+    private static readonly string LEG1 = """
+        paper { raggedRight }
+        octave absolute
+        time 4/4
+        key c major
+        part m { clef treble }
+        section A { m { c'1 | break grace { d'16 e' } f'4 g'2 r4 | } }
+        form main { A }
+        score main "LEG1" { staff m }
+        """;
+
+    /// <summary>
+    /// <see cref="LEG1"/> with <c>key d major</c> opening the second line: the courtesy key
+    /// moves the end-of-line column's origin 3.88 right of the bar line, and the 0.8 taken
+    /// against it puts the bar line 11.855036 after the clef (BAR 12.655036) — 0.77 left of
+    /// where Lily# stood until session 842.
+    /// </summary>
+    /// <remarks>LilyPond twin: audit/lp-geometry/probes/line-end-grace.ly LEG2.</remarks>
+    private static readonly string LEG2 = """
+        paper { raggedRight }
+        octave absolute
+        time 4/4
+        key c major
+        part m { clef treble }
+        section A { m { c'1 | break key d major grace { d'16 e' } f'4 g'2 r4 | } }
+        form main { A }
+        score main "LEG2" { staff m }
+        """;
+
+    /// <summary>
+    /// <see cref="LEG1"/> with <c>time 3/4</c> opening the second line: the courtesy meter's
+    /// group, the bar line 12.024089 after the clef (BAR 12.824089) — 0.61 left of where Lily#
+    /// stood until session 842.
+    /// </summary>
+    /// <remarks>LilyPond twin: audit/lp-geometry/probes/line-end-grace.ly LEG3.</remarks>
+    private static readonly string LEG3 = """
+        paper { raggedRight }
+        octave absolute
+        time 4/4
+        key c major
+        part m { clef treble }
+        section A { m { c'1 | break time 3/4 grace { d'16 e' } f'4 g'2 | } }
+        form main { A }
+        score main "LEG3" { staff m }
+        """;
+
+    /// <summary>
     /// A chord diagram on the first quarter after a bar line. Its box — the twin's TextScript
     /// with \textLengthOn's extra-spacing-width (-0.0 . 0.4) and infinite extra-spacing-height —
     /// joins the column's skyline at every height, so it is in the bar line's Staff_spacing
@@ -17971,6 +18029,11 @@ internal static class LpGeometryProbes
         // A grace run after a key change opening the bar (KG1's, KG10's remarks).
         new("key-change.grace.main-natural.bar", KG1, g => g.ClefToBarlineByClefRank(0, 1) - g.ClefToBarlineByClefRank(0, 0)),
         new("key-change.grace.grace-sharp.bar", KG10, g => g.ClefToBarlineByClefRank(0, 1) - g.ClefToBarlineByClefRank(0, 0)),
+        // A line ending before a bar that opens with a grace run (LEG1's, LEG2's, LEG3's remarks).
+        // The probe renders from options, not from the book's paper block: ragged, as the twin.
+        new("line-end.before-grace.plain-bar", LEG1, g => g.ClefToBarlineByClefRank(0, 0), RaggedRightPaper),
+        new("line-end.before-grace.courtesy-key", LEG2, g => g.ClefToBarlineByClefRank(0, 0), RaggedRightPaper),
+        new("line-end.before-grace.courtesy-meter", LEG3, g => g.ClefToBarlineByClefRank(0, 0), RaggedRightPaper),
         // A diagram's box against the columns beside it (DN1's, DN2's remarks).
         new("diagram.barline-to-note", DN1, g => g.BarlineRightToNextNotehead(0)),
         new("diagram.note-to-next-note", DN1, g => g.NoteheadAnchorStep(1)),

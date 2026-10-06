@@ -351,10 +351,19 @@ internal sealed class SystemBreaker
             // (a long mark on the penultimate bar) is held by the layout and not priced here.
             // And a one-bar line prices a measure-start mark the layout stands on the prefix's
             // meter (ColumnOverhangs' tempoOnPrefix), which keeps nothing inside.
+            // …and, before those rods as the layout orders them, the closing spring re-scaled
+            // when the next bar opens with a grace run (MultiStaffLayouter.LineEndBeforeGraceSprings).
             ImmutableArray<Spring> lineEndSprings = default;
-            if (!runRod && springs.Length > 1)
-                lineEndSprings = LineEndSprings(score, i, springs, allTimings, allMeasures,
-                    SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline));
+            if (!runRod && springs.Length > 0)
+            {
+                var ending = MultiStaffLayouter.LineEndBeforeGraceSprings(score, i, springs);
+                if (springs.Length > 1
+                    && LineEndSprings(score, i, springs, ending, allTimings, allMeasures,
+                        SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline)) is { IsDefault: false } rodded)
+                    ending = rodded;
+                if (ending != springs)
+                    lineEndSprings = ending;
+            }
 
             double barlines = SpacingRules.GetBarlineWidth(primaryMeasure.StartBarline)
                             + SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline);
@@ -413,11 +422,14 @@ internal sealed class SystemBreaker
     }
 
     /// <summary>
-    /// The measure's springs with its columns' keep-inside-line rods to the line's end applied
-    /// (see the caller), or default when none binds.
+    /// The measure's line-end springs (<paramref name="springs"/>) with its columns'
+    /// keep-inside-line rods to the line's end applied (see the caller), or default when none
+    /// binds. The reaches are read off <paramref name="reachSprings"/>, the measure's springs
+    /// before any line-end change, as the layout reads them.
     /// </summary>
     private static ImmutableArray<Spring> LineEndSprings(
-        MultiStaffScore score, int measureIndex, ImmutableArray<Spring> springs,
+        MultiStaffScore score, int measureIndex, ImmutableArray<Spring> reachSprings,
+        ImmutableArray<Spring> springs,
         List<Fraction> allTimings, List<Measure> allMeasures, double endBarInk)
     {
         int columnCount = allTimings.Count;
@@ -426,7 +438,7 @@ internal sealed class SystemBreaker
         var left = new double[columnCount];
         var right = new double[columnCount];
         var ownEdge = score.Lyrics.IsDefaultOrEmpty ? null : LyricSpacing.OwnVoiceEdgeProvider(score);
-        double startReach = MultiStaffLayouter.ColumnOverhangs(score, measureIndex, springs,
+        double startReach = MultiStaffLayouter.ColumnOverhangs(score, measureIndex, reachSprings,
             allTimings, allMeasures, ScoreSideTables.Lyrics(score), ScoreSideTables.ChordNames(score),
             SpacingRules.ParentAlignmentEdgesPerColumn(allMeasures, allTimings), ownEdge,
             tempoOnPrefix: false, left, right);
@@ -478,7 +490,9 @@ internal sealed class SystemBreaker
     /// have a syllable there (the closing half); the double-percent sign on its opening
     /// bar line (<c>ScoreSideTables.DoublePercentHalfWidths</c>, which reaches into an empty
     /// bar i); and whether it opens with a grace run on any staff, which scales bar i's closing
-    /// spring (<c>SpacingRules.IntoBarBeforeGrace</c>).</item>
+    /// spring (<c>SpacingRules.IntoBarBeforeGrace</c>), with the courtesy group a line ending
+    /// before it draws (<c>LineEndCourtesyWidth(i, i + 1)</c>), against whose right edge bar i's
+    /// line-end springs take that scale (<c>MultiStaffLayouter.LineEndBeforeGraceSprings</c>).</item>
     /// </list>
     /// Everything else a neighbour contributes is already folded into key i itself: the
     /// entry context (clef, key, time carried in from the bars before), the clef change
@@ -540,8 +554,12 @@ internal sealed class SystemBreaker
             // A grace run opening bar i scales the closing spring of bar i − 1
             // (SpacingRules.IntoBarBeforeGrace).
             previous.Add(MultiStaffLayouter.BarOpensWithLeadingGrace(score, i));
-            builder.Add(new SpringEdgeKey(next.ToHashCode(), previous.ToHashCode(),
-                i == 0 ? 0.0 : MultiStaffLayouter.LineEndCourtesyWidth(score, i - 1, i)));
+            // …and, with it, the courtesy group a line ending before bar i draws: bar i − 1's
+            // line-end springs take that 0.8 against the group's right edge
+            // (MultiStaffLayouter.LineEndBeforeGraceSprings).
+            double courtesy = i == 0 ? 0.0 : MultiStaffLayouter.LineEndCourtesyWidth(score, i - 1, i);
+            previous.Add(courtesy);
+            builder.Add(new SpringEdgeKey(next.ToHashCode(), previous.ToHashCode(), courtesy));
         }
         return builder.MoveToImmutable();
     }

@@ -814,6 +814,39 @@ public class SpacingInvariantTests
         Assert.Equal(2, endSqueezed.Count);
     }
 
+    /// <summary>
+    /// A bar ending a line before a bar that opens with a grace run is priced by the break gate
+    /// with the spring the line gives it: the 0.8 taken against the end-of-line column's origin
+    /// (MultiStaffLayouter.LineEndBeforeGraceSprings, session 842), 0.2 × O shorter than the
+    /// mid-line spring — O the end bar line and the courtesy key the next line opens with.
+    /// The ledger's line-end.before-grace points watch the layout; this watches the gate, which
+    /// nothing else does (a poison that dropped it there turned no test red).
+    /// </summary>
+    [Fact]
+    public void BreakGate_PricesTheLineEndBeforeAGraceRun()
+    {
+        var (_, _, _, score) = Collect("""
+            octave absolute
+            time 4/4
+            key c major
+            part m { clef treble }
+            section A { m { c'1 | key d major grace { d'16 e' } f'4 g'2 r4 | } }
+            form main { A }
+            score main "x" { staff m }
+            """);
+        double shortest = SpacingRules.CalculateCommonShortestDuration(score);
+        var gate = SystemBreaker.ComputeMultiStaffSpringData(score, shortest);
+
+        Assert.False(gate[0].LineEndSprings.IsDefault,
+            "the bar before a grace run must carry its line-end springs");
+        double origin = SpacingRules.GetBarlineWidth(
+                score.PrimaryContentStaff.PrimaryVoice.Measures[0].EndBarline)
+            + MultiStaffLayouter.LineEndCourtesyWidth(score, 0, 1);
+        Assert.True(origin > 3.0, $"precondition: the courtesy key must widen the group (O={origin:F3})");
+        double shortened = gate[0].Springs[^1].IdealDistance - gate[0].LineEndSprings[^1].IdealDistance;
+        Assert.Equal((1 - SpacingRules.GraceApproachScale) * origin, shortened, 6);
+    }
+
     /// <summary>The three-voice book of test/dot-cross-voice-spacing — a dotted half in
     /// voice three under eighths in voice two, the two mechanisms of that fixture.</summary>
     private const string DottedThirdVoice = """

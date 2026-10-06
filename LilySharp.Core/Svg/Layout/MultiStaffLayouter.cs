@@ -1842,6 +1842,12 @@ internal sealed class MultiStaffLayouter
                     score, startMeasureIndex, isFirstSystem: systemIndex == 0,
                     springs.Length > 1 ? springs[^1] : null));
             }
+            // The LINE-END measure before a bar opening with a grace run: the closing spring's
+            // 0.8 taken against the end-of-line column's origin (LineEndBeforeGraceSprings — the
+            // break gate's line-end springs read the same). A multi-measure-rest run's rod sets
+            // its bar instead, and the gate prices none there.
+            if (i == endMeasureIndex - 1 && !runMap.TryGetRunStartingAt(i, out _))
+                springs = LineEndBeforeGraceSprings(score, i, springs);
             measureSprings.Add(springs);
             measureTimings.Add(allTimings);
             measureAllMeasures.Add(allMeasures);
@@ -2800,6 +2806,27 @@ internal sealed class MultiStaffLayouter
                         && SpacingRules.OpensWithLeadingGrace(voice.Measures[measureIndex]))
                         return true;
         return false;
+    }
+
+    /// <summary>
+    /// Measure <paramref name="measureIndex"/>'s springs when it ENDS a line and the next bar
+    /// opens with a grace run: its closing spring's 0.8 re-taken against the end-of-line
+    /// column's origin (<see cref="SpacingRules.IntoLineEndBeforeGrace"/>) — the end bar line's
+    /// width and the courtesy group's (<see cref="LineEndCourtesyWidth"/>) right of the bar
+    /// line's left edge. <paramref name="springs"/> unchanged otherwise. ONE home for the line
+    /// layout and the break gate's line-end springs (RULES §5.4).
+    /// </summary>
+    internal static ImmutableArray<Spring> LineEndBeforeGraceSprings(
+        MultiStaffScore score, int measureIndex, ImmutableArray<Spring> springs)
+    {
+        var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
+        if (springs.IsDefaultOrEmpty || measureIndex + 1 >= measures.Length
+            || !BarOpensWithLeadingGrace(score, measureIndex + 1))
+            return springs;
+        double originOffset = SpacingRules.GetBarlineWidth(measures[measureIndex].EndBarline)
+            + LineEndCourtesyWidth(score, measureIndex, measureIndex + 1);
+        return springs.SetItem(springs.Length - 1,
+            SpacingRules.IntoLineEndBeforeGrace(springs[^1], originOffset));
     }
 
     /// <summary>
