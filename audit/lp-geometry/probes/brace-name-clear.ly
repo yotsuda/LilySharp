@@ -40,7 +40,7 @@
 %%
 %% 2. THE BRACE'S OWN WIDTH, which is the cross-check on the ladder port: the
 %%    brace picked for this four-staff span is 8.1758 - 6.8024 = 1.3734 wide,
-%%    and the glyph BraceLadder.NearestIndex picks for the same span carries the
+%%    and the glyph BraceLadder.LastAtOrBelow picks for the same span carries the
 %%    same width in brace-ladder.ly's dump. That is the only confirmation the
 %%    drawing side's "one em is four staff spaces" has (see
 %%    SharedRenderer.DrawSystemStartBrace, which says so). Still 1.373400 on the

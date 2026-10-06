@@ -79,12 +79,14 @@ public class BraceLadderTests
     }
 
     /// <summary>
-    /// The selection is NEAREST, not next-below or next-above: no other rung may be closer
-    /// to the wanted span than the one returned. Asserted over the whole ladder and the
-    /// midpoints between rungs, which is where a next-below/next-above bug hides.
+    /// The selection is the LAST rung not taller than the size — LilyPond's
+    /// <c>binary-search</c> in its default <c>'last-less-than-or-equal</c> mode
+    /// (scm/lily-library.scm:1460-1497 binary-search, last-less-than-or-equal) — never the nearer rung above. Asserted on every rung
+    /// and at a quarter and three quarters of the way to the next, where a nearest-rung
+    /// reading (this method's spelling until 2026-10-06) answers the rung above.
     /// </summary>
     [Fact]
-    public void NearestIndex_ReturnsTheClosestRung()
+    public void LastAtOrBelow_ReturnsTheLastRungNotAboveTheSize()
     {
         var h = BraceLadder.Heights;
         var wanted = h.SelectMany((v, i) => i + 1 < h.Length
@@ -94,12 +96,35 @@ public class BraceLadderTests
 
         foreach (double w in wanted)
         {
-            int got = BraceLadder.NearestIndex(w);
-            double gotErr = Math.Abs(h[got] - w);
-            for (int i = 0; i < h.Length; i++)
-                Assert.True(Math.Abs(h[i] - w) >= gotErr - 1e-12,
-                    $"span {w}: rung {i} ({h[i]}) is closer than the returned rung {got} ({h[got]})");
+            int got = BraceLadder.LastAtOrBelow(w);
+            Assert.True(h[got] <= w, $"size {w}: rung {got} ({h[got]}) is above it");
+            if (got < h.Length - 1)
+                Assert.True(h[got + 1] > w,
+                    $"size {w}: rung {got + 1} ({h[got + 1]}) is not above it, and comes later");
         }
+    }
+
+    /// <summary>
+    /// What LilyPond 2.26.0 draws for a grand staff: rung 177 (13.0924 tall, 0.8098 wide) —
+    /// the stencil extents dumped from the twin of <c>test/grandstaff-repeat</c> (and six more
+    /// books with the same span, Lab sessions/p849/brace). The span between the outer staff
+    /// lines is 13.0; LilyPond asks for 13.1 (the StaffSymbol extents reach half a line
+    /// thickness past them) and takes the last rung not above it. Lily# drew rung 176
+    /// (13.0116) until 2026-10-06: the bare span, and the nearest rung.
+    /// </summary>
+    [Fact]
+    public void AGrandStaffBrace_IsTheRungLilyPondDraws()
+    {
+        var dir = AppContext.BaseDirectory;
+        while (dir != null && !System.IO.Directory.Exists(System.IO.Path.Combine(dir, "LilySharp.Tests", "Fixtures")))
+            dir = System.IO.Path.GetDirectoryName(dir);
+        Assert.NotNull(dir);
+        string source = System.IO.File.ReadAllText(System.IO.Path.Combine(dir!, "LilySharp.Tests", "Fixtures", "test", "grandstaff-repeat.lys"));
+        var braces = Regex.Matches(LiveRender.SvgFromRenderSpec(source),
+                @"font-family=""Emmentaler-Brace""[^>]*>(?<ch>.)</text>")
+            .Select(m => m.Groups["ch"].Value[0] - 0xE000).ToList();
+        Assert.NotEmpty(braces);
+        Assert.All(braces, rung => Assert.Equal(177, rung));
     }
 
     /// <summary>A span outside the ladder clamps to an end rather than throwing.</summary>
@@ -113,15 +138,15 @@ public class BraceLadderTests
     [InlineData(1.0, 0)]
     [InlineData(1000.0, 575)]
     public void SpansOutsideTheLadderClampToAnEnd(double span, int expected)
-        => Assert.Equal(expected, BraceLadder.NearestIndex(span));
+        => Assert.Equal(expected, BraceLadder.LastAtOrBelow(span));
 
     /// <summary>
-    /// The drawn brace: the rung nearest the group's span, emitted at the font's natural
+    /// The drawn brace: the rung LilyPond's search picks for the group's span, emitted at the font's natural
     /// size. Both halves are read off the SVG, because both were wrong together before —
     /// the index was clamped to the top of the ladder AND the size was fitted to make it fit.
     /// </summary>
     [Fact]
-    public void GrandStaffBrace_IsTheNearestRungAtNaturalSize()
+    public void GrandStaffBrace_IsItsRungAtNaturalSize()
     {
         string svg = LiveRender.SvgFromRenderSpec(
             "part sop { section A { c4 d e f } }\n" +
@@ -156,7 +181,8 @@ public class BraceLadderTests
         Assert.Equal(20, lineYs.Count);          // four five-line staves
         double span = lineYs[^1] - lineYs[0];
 
-        int expected = BraceLadder.NearestIndex(span);
+        // LilyPond's length: the span plus a line thickness (SystemStartDelimiterLength).
+        int expected = BraceLadder.LastAtOrBelow(span + 0.1);
         int drawn = brace.Groups["ch"].Value[0] - 0xE000;
         Assert.Equal(expected, drawn);
 

@@ -175,35 +175,38 @@ internal static class BraceLadder
     };
 
     /// <summary>
-    /// The index of the brace whose own height is NEAREST <paramref name="height"/> staff
+    /// The index of the LAST brace whose own height is at most <paramref name="size"/> staff
     /// spaces — LilyPond's <c>binary-search</c> over the ladder, and the whole of its
     /// selection.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: scm/define-markup-commands.scm:5082-5085 <c>get-y-from-brace</c> —
     /// called as <c>(binary-search 0 glyph-count get-y-from-brace scaled-size)</c>, i.e. the
-    /// search runs over the glyph's own Y extent length.
+    /// search runs over the glyph's own Y extent length, in its default mode.
+    /// LILYPOND-REF: scm/lily-library.scm:1460-1497 <c>binary-search</c>, mode <c>last-less-than-or-equal</c> —
+    /// the default: the last rung not taller than the size, never one
+    /// above it. This read NEAREST until 2026-10-06, which took the rung above whenever it
+    /// was closer (LilyPond 2.26.0, Lab sessions/p849/brace: 7 of 8 grand-staff books one rung
+    /// apart — together with the size the caller asked for, see
+    /// <c>SharedRenderer.SystemStartDelimiterLength</c>).
     /// <para>
-    /// A wanted height outside the ladder clamps to an end. That is not an error in
-    /// LilyPond either: the guard that follows the search warns and returns the end glyph
-    /// anyway, so the clamped result is the same picture.
+    /// A size below the ladder's first rung returns it (the search's <c>start</c>), and one
+    /// above the last returns the last. That is not an error in LilyPond either: the guard
+    /// that follows the search warns and returns the glyph it found anyway.
     /// </para>
     /// </remarks>
-    public static int NearestIndex(double height)
+    public static int LastAtOrBelow(double size)
     {
         var h = Heights;
         int lo = 0, hi = h.Length - 1;
         while (lo < hi)
         {
-            int mid = (lo + hi) / 2;
-            if (h[mid] < height)
-                lo = mid + 1;
+            int mid = (lo + hi + 1) / 2;
+            if (h[mid] <= size)
+                lo = mid;
             else
-                hi = mid;
+                hi = mid - 1;
         }
-        // lo is the first entry >= height; the one below it may be closer.
-        if (lo > 0 && height - h[lo - 1] < h[lo] - height)
-            lo--;
         return lo;
     }
 }

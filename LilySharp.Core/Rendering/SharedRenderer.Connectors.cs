@@ -549,6 +549,32 @@ internal static partial class SharedRenderer
     /// SystemStartBracket.</remarks>
     private const double SystemStartCollapseHeight = 5.0;
 
+    /// <summary>
+    /// LilyPond's <c>len</c> for a system-start delimiter over the staff lines
+    /// <paramref name="top"/>..<paramref name="bottom"/>: the union of the spanned staves'
+    /// StaffSymbol extents, which reach half a line thickness past the outer lines — so the
+    /// span plus one line thickness.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/system-start-delimiter.cc:106-124 System_start_delimiter::print —
+    /// <c>ext.unite (sp-&gt;extent (common, Y_AXIS))</c> over the StaffSymbol elements, and
+    /// <c>len = ext.length ()</c> is what the brace's rung is searched for and the collapse
+    /// is tested on (:127-133).
+    /// LILYPOND-REF: lily/staff-symbol.cc:346-369 Staff_symbol::height —
+    /// <c>y_ext.widen (t / 2)</c> with <c>t</c> the line thickness.
+    /// Lily# passed the bare line-to-line span until 2026-10-06, and with the search's
+    /// nearest-rung reading it drew the grand-staff brace one rung short (13.0116 where
+    /// LilyPond 2.26.0 draws 13.0924; Lab sessions/p849/brace).
+    /// </remarks>
+    private static double SystemStartDelimiterLength(double span)
+        => span + EngravingDefaults.StaffLineThickness;
+
+    /// <summary>A delimiter is drawn only when its <see cref="SystemStartDelimiterLength"/>
+    /// exceeds the collapse height — LilyPond suicides it at <c>collapse-height &gt;= len</c>
+    /// (lily/system-start-delimiter.cc:127-133 System_start_delimiter::print), so equal is collapsed.</summary>
+    private static bool SystemStartDelimiterShown(double span)
+        => SystemStartDelimiterLength(span) > SystemStartCollapseHeight;
+
     /// <summary>How thick Lily# draws a system-start bracket's vertical stroke.</summary>
     /// <remarks>
     /// LILYPOND-REF: scm/define-grobs.scm:3685-3693 ly:system-start-delimiter::print — the
@@ -610,7 +636,7 @@ internal static partial class SharedRenderer
     /// </remarks>
     private static double? SystemStartDelimiterInkLeft(GrandStaffLayout delim, double height)
     {
-        bool shown = height >= SystemStartCollapseHeight;
+        bool shown = SystemStartDelimiterShown(height);
         return delim.DelimiterType switch
         {
             SystemStartDelimiterType.Bracket when shown
@@ -629,7 +655,7 @@ internal static partial class SharedRenderer
             SystemStartDelimiterType.BarLine
                 => delim.BraceX - SystemStartBarThickness / 2.0,
             SystemStartDelimiterType.Brace when shown
-                => delim.BraceX - BraceLadder.Widths[BraceLadder.NearestIndex(height)],
+                => delim.BraceX - BraceLadder.Widths[BraceLadder.LastAtOrBelow(SystemStartDelimiterLength(height))],
             _ => null,
         };
     }
@@ -643,8 +669,7 @@ internal static partial class SharedRenderer
         {
             double top = systemYUp + delim.BraceTop;
             double bottom = systemYUp + delim.BraceBottom;
-            double height = top - bottom;
-            bool shown = height >= SystemStartCollapseHeight;
+            bool shown = SystemStartDelimiterShown(top - bottom);
             switch (delim.DelimiterType)
             {
                 case SystemStartDelimiterType.Bracket:
@@ -668,7 +693,7 @@ internal static partial class SharedRenderer
         {
             double top = systemYUp + o.Delimiter.BraceTop;
             double bottom = systemYUp + o.Delimiter.BraceBottom;
-            if (top - bottom < SystemStartCollapseHeight)
+            if (!SystemStartDelimiterShown(top - bottom))
                 continue;
             if (o.Delimiter.DelimiterType == SystemStartDelimiterType.Brace)
                 DrawSystemStartBrace(o.Delimiter.BraceX, top, bottom, gc);
@@ -979,18 +1004,21 @@ internal static partial class SharedRenderer
     }
 
     /// <summary>
-    /// The curly brace of a grand staff, as the one Emmentaler-Brace glyph whose OWN height
-    /// is nearest the span — drawn at the font's natural size, never fitted to the span.
+    /// The curly brace of a grand staff, as the last Emmentaler-Brace glyph whose OWN height
+    /// is not above the delimiter's length — drawn at the font's natural size, never fitted
+    /// to the span.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/system-start-delimiter.cc:150-160 <c>staff_brace</c> and
     /// scm/define-markup-commands.scm:5072-5099 <c>get-y-from-brace</c>, the comparator the
     /// <c>left-brace</c> command searches the ladder on. The two conversions
     /// there cancel (<c>y * output_scale / point_constant</c> then
-    /// <c>(ly:pt size) / scale</c>), so the size asked for is the span in staff spaces;
-    /// <c>left-brace</c> binary searches the ladder for the nearest glyph and returns it
-    /// UNSCALED. The ladder's granularity IS the error LilyPond accepts — 0.0464 staff
-    /// spaces at the bottom of the ladder, 0.2800 at the top.
+    /// <c>(ly:pt size) / scale</c>), so the size asked for is the delimiter's length in staff
+    /// spaces — the staves' StaffSymbol extents, i.e. the span plus a line thickness
+    /// (<see cref="SystemStartDelimiterLength"/>); <c>left-brace</c> binary searches the
+    /// ladder for the last glyph not taller than that (<see cref="BraceLadder.LastAtOrBelow"/>)
+    /// and returns it UNSCALED. The ladder's granularity IS the error LilyPond accepts —
+    /// 0.0464 staff spaces at the bottom of the ladder, 0.2800 at the top.
     /// <para>
     /// ⚠️ NOTHING IS FITTED TO <paramref name="top"/>/<paramref name="bottom"/> BUT THE
     /// CENTRE, and that is the whole shape of this grob. What stood here before fitted a
@@ -1021,10 +1049,9 @@ internal static partial class SharedRenderer
     /// </remarks>
     private static void DrawSystemStartBrace(double x, double top, double bottom, IDrawingContext gc)
     {
-        double height = top - bottom;
         double yMid = (top + bottom) / 2;
 
-        int glyphIndex = BraceLadder.NearestIndex(height);
+        int glyphIndex = BraceLadder.LastAtOrBelow(SystemStartDelimiterLength(top - bottom));
         char braceChar = (char)(BraceGlyphStart + glyphIndex);
         gc.DrawText(braceChar.ToString(), x, yMid, FontSize, TextRole.SystemBrace,
             FontStyle.Regular, TextAnchor.End, Color.Black);
