@@ -54,7 +54,8 @@ public sealed partial class LilyPondExporter
                         break;
                     case StaffRenderSyntax st:
                         AddInlineChordRow(rows, RenderPartName(st), "    ");
-                        rows.Add(EmitStaff(RenderPartName(st), parts, partVars, tab: false, "    ", writtenClef: StaffClefWord(st)));
+                        rows.Add(EmitStaff(RenderPartName(st), parts, partVars, tab: false, "    ", writtenClef: StaffClefWord(st),
+                            selectors: RenderSpecParser.ParseStaffSpec(st)));
                         AddFiguredBassRow(rows, RenderPartName(st), "    ");
                         AddLyricRows(rows, RenderPartName(st), "    ", asRow: false);
                         lastMainStaffPart = RenderPartName(st) ?? lastMainStaffPart;
@@ -255,7 +256,8 @@ public sealed partial class LilyPondExporter
             var groupRows = new List<string>(1);
             AddInlineChordRow(groupRows, RenderPartName(staff), memberIndent);
             foreach (var r in groupRows) sb.Append(r);
-            sb.Append(EmitStaff(RenderPartName(staff), parts, partVars, tab: false, memberIndent, writtenClef: StaffClefWord(staff)));
+            sb.Append(EmitStaff(RenderPartName(staff), parts, partVars, tab: false, memberIndent, writtenClef: StaffClefWord(staff),
+                selectors: RenderSpecParser.ParseStaffSpec(staff)));
             groupRows.Clear();
             AddFiguredBassRow(groupRows, RenderPartName(staff), memberIndent);
             AddLyricRows(groupRows, RenderPartName(staff), memberIndent, asRow: false);
@@ -532,9 +534,12 @@ public sealed partial class LilyPondExporter
             : "midiInstrument = " + QuoteLilyPondString(Midi.GeneralMidi.InstrumentNames[program]);
     }
 
+    /// <param name="selectors">The staff item's own <c>as lines N removeEmpty V</c>, read by
+    /// the renderer's scan (<see cref="RenderSpecParser.ParseStaffSpec"/>); null for a staff
+    /// no score item names (the fallback row).</param>
     private string EmitStaff(string? partName, List<PartDeclarationSyntax> parts,
         Dictionary<string, string> partVars, bool tab, string indent,
-        bool tabNumbersOnly = false, string? writtenClef = null)
+        bool tabNumbersOnly = false, string? writtenClef = null, StaffSpec? selectors = null)
     {
         string varName = partName != null && partVars.TryGetValue(partName, out var v)
             ? v : partVars.Values.FirstOrDefault() ?? "music";
@@ -602,6 +607,17 @@ public sealed partial class LilyPondExporter
             // notation staff never draws one (see _stringNumberParts).
             if (partName != null && _stringNumberParts.Contains(partName))
                 staffWith.Add("\\omit StringNumber");
+            // The score item's selectors are LilyPond's own context mods (HANDOFF §2 F-twinhk):
+            // the twin wrote neither until 2026-10-06, so LilyPond drew every staff a
+            // `removeEmpty` hides, and the brace beside it (Lab sessions/p849/brace,
+            // test/hara-kiri). LILYPOND-REF: ly/context-mods-init.ly — RemoveEmptyStaves /
+            // RemoveAllEmptyStaves set VerticalAxisGroup.remove-empty (+ remove-first).
+            if (selectors is { RemoveEmpty: true })
+                staffWith.Add(selectors.RemoveFirst ? "\\RemoveAllEmptyStaves" : "\\RemoveEmptyStaves");
+            // LILYPOND-REF: scm/define-grobs.scm StaffSymbol — line-count, the property the
+            // page's `as lines N` is (StaffSpec.Lines).
+            if (selectors is { } spec && spec.Lines != StaffSpec.MaxLines)
+                staffWith.Add("\\override StaffSymbol.line-count = #" + spec.Lines);
             if (staffWith.Count > 0)
                 sb.Append(" \\with { ").Append(string.Join(" ", staffWith)).Append(" }");
             sb.Append(" { ");
