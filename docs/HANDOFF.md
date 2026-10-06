@@ -125,6 +125,12 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第849セッション（2026-10-06・YT-DELL2）
+
+新しい会話。`-Start p849`（HEAD `cb5dc56e6`）＝full **11346 / 0 / 2 / 11348**（第848 末と一致）。§7 3.5 で第847 を ARCHIVE へ。次の一手はユーザー判断（第848 の判定）＝訊いた。
+
+## 以下は第848セッションの経緯
+
 ### 1.1 第848セッション（2026-10-06・YT-DELL2）
 
 新しい会話（第847 の判定どおり）。`-Start p848`（HEAD `ff04acd95`）＝full **11335 / 0 / 2 / 11337**。§7 3.5 で第846 を ARCHIVE へ。**F-partmeter ⒜ を実装（`d67d3e278`）**＝音楽の中の `time` は score の拍子。
@@ -136,20 +142,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ `-End p848 -DiffBase ff04acd95`（`end.log`）＝門 全 OK。7.5: Core `+` 530 行・REF 1（移した time-signature-engraver の註）・OWN 1。7.6: 意味（score の拍子・先勝ち・LYS2005）はユーザー決定＝音楽的妥当性（RULES §5.2）・LP の Timing が同じ形。7.7: 匂い＝①resume を切るのは plan のある本だけ（コーパス 0 冊）だが perf の計器は回していない ②`GRAMMAR.md` の `partial` は「part ごと」のまま（2026-09-08 の決定・今回は触らない）。push はユーザー。
 - **続き（ユーザー報告）**: `score { lyrics ▮ }` の補完が空＝名前の一覧が `KEYWORD name {` の正規表現で、`lyrics words sings melody {`（定義で束縛を書く綴り）を `sings` の宣言と読んでいた。`LyricsTrackNamesOf` が `lyrics NAME [sings PART] {` を読む（`802bcfe46`・`SingsCompletionTests` +1・毒 1 赤・補完/LSP 1018 緑）。
 判定: §1.0 の決定の列は閉じた＝**次の一手はユーザー判断**（OMR P6 SMuFL・§2 E の残り等）。(a) 次の島は今の文脈を使わない／(c) 無関係 ⇒ 既定は続けるが、選ぶのはユーザー。
-
-## 以下は第847セッションの経緯
-
-### 1.1 第847セッション（2026-10-06・YT-DELL2）
-
-新しい会話（第846 の判定どおり）。`-Start p847`（HEAD `8f900f93`）＝full **11323 / 0 / 2 / 11325**。§7 3.5 で第845 を ARCHIVE へ・Fold で §2 の 1 項と §3 の根拠 1 つ。**② ⑷ niente を実装（`624731a14`）**。
-- **形**: `@niente`＝`DynamicLevel.Niente`（値 1＝MIDI の velocity 1・0 は note-off・MIDI は hairpin を ramp しないので各音は最後の強弱）。対は `HairpinEngraver.DetectHairpins` が `HairpinItem.NienteAtStart/End` を持ち、細い端なら `CircledTip`（niente は語を描かない＝`CircledNientes` を位置の鍵で・LayoutEngine が対にしたものを `DynamicEngraver.Calculate` へ渡す。⚠️ 初回は `score.Dynamics` と別の item で照合が外れ語が残った）。太い端は LYS4029（`NienteHairpinValidator`・collect の対）。単独の niente は自由文と同じ斜体の TextScript。
-- **幾何（LP の字面）**: rad＝height×0.525・thick＝1.0×線（hairpin.cc:150-164）・腕は 2rad 空け円は腕の箱（th/2 広い）の縁に（:323-355・line-interface.cc:177-191）・小節の途中で niente に終わる hairpin は note column が bound（`\!`＝右端・休符は左端）・同じ音で al→dal は柱の中心 ±(rad−th/2) で円が 1 つ（:243-252・小節頭は bar line が bound＝2 つ）。円は skyline に箱で入る（`WedgeSkylines` の `circleX`・呼び手 5 か所）。
-- **出力**: 双子＝`\!`・`-\tweak circled-tip ##t \>`・`\markup \italic "niente"`（`LilyPondExporter.Niente.cs`・ページの対を読む）／XML＝wedge の `niente="yes"`・単独は `<n/>`・読み戻しも。
-- **途中で見つけた（同じ commit で直した）**: 次の hairpin 記号が同じ小節にあると、その前の強弱で終わらず両方の hairpin が消えていた（`c4@p@cresc d@f e@decresc`・LP は両方描く）。
-- 計測: LP 2.26.0（Lab `sessions/p847/ni`）で同じ円・同じ段割れ・r 0.35／線 0.1 一致・1 段目の円の間隔 0.01 以内。試験 `NienteTests` 10 本・毒 3 本（共有の円なし 1 赤／旧い同小節の規則 3 赤／語を消さない 1 赤）。掃き 998 冊 1199 score で svg・xml・midi・ly とも差 0（陽性対照 2 冊は動く）。full **11335 / 0 / 2 / 11337**（+12）。
-
-★ `-End p847 -DiffBase 8f900f930`（`end.log`）＝門 全 OK。7.5: Core `+` 626 行・REF 22・OWN 0。7.6: 円・bound・腕は LP の字面（REF）／意味（太い端の警告・単独は斜体・velocity 1・同小節の終わり）は音楽的妥当性（RULES §5.2）。7.7: 匂い＝①ページの 2 段目の円の x は音符との相対で未比較（高さは一致）②MIDI は hairpin を ramp しない（niente の dal は次の強弱まで velocity 1）＝承認時の「0 へ／0 から」と違う・報告済み。push はユーザー。
-判定: 次は **F-partmeter ⒜**（承認済み）。(a) 今便の文脈（強弱・hairpin）は使わない／(b) 会話は画像と大きな読みが多く重くなった／(c) 島が違う ⇒ **新しい会話で `-Start p848` から**（(b) で決めた）。
 
 ## 2. 開いている作業
 
