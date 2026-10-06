@@ -136,7 +136,10 @@ public class CueRegionTests
         var bare = SemanticValidation.Run(SyntaxTree.Parse(Book("phrase ph { e'4 f' }", "c'4 d' ph |")))
             .Select(d => d.Code).OrderBy(c => c).ToList();
         Assert.Equal(bare, inCue);
-        var inline = SemanticValidation.Run(SyntaxTree.Parse(Book("phrase ph { e'4 f' }", "c'4 d' e'4 f' |")))
+        // The inline book declares no phrase: since 2026-10-06 a body that flows in place is
+        // checked where it is played (HANDOFF §2 F-phrasemeter), and an UNUSED `ph` is still
+        // checked on its own — its half bar would be the one LYS2006 here.
+        var inline = SemanticValidation.Run(SyntaxTree.Parse(Book("", "c'4 d' e'4 f' |")))
             .Select(d => d.Code).OrderBy(c => c).ToList();
         Assert.Equal(inline, bare);
     }

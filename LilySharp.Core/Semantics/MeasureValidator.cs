@@ -111,6 +111,17 @@ internal sealed class MeasureValidator : ISemanticValidator
         foreach (var node in root.DescendantNodesOfKinds(WorkKinds))
             if (!IsInsidePrunedContainer(node))
                 ValidateWorkNode(node);
+        // A phrase body no stream played in place is checked on its own, in the meter that
+        // stood at its declaration (HANDOFF §2 F-phrasemeter).
+        foreach (var (block, meter) in _heldPhraseBodies)
+        {
+            if (block.Parent is PhraseDeclarationSyntax { Name.Text: var name } && _phrasesCheckedInPlace.Contains(name))
+                continue;
+            var now = _bars.Save();
+            _bars.Restore(meter);
+            ValidateMusicBlock(block);
+            _bars.Restore(now);
+        }
         // (An empty `| |` placeholder is NOT reported. It was, over every defined scope,
         // until 2026-08-28: the owner asked for `| |` to be written without a complaint
         // and for the engine to supply the bar's contents itself, which
@@ -175,6 +186,13 @@ internal sealed class MeasureValidator : ISemanticValidator
     // play order, per part; see SectionBoundaryBars.
     private SectionBoundaryBars? _boundaries;
     private Svg.Collector.SectionMeterPlan _meterPlan = Svg.Collector.SectionMeterPlan.Empty;
+
+    // HANDOFF §2 F-phrasemeter: the phrase bodies the walk met, with the meter at their
+    // declaration, and the phrases some stream checked in place where it plays them. A body
+    // was checked only at its declaration, in the document's meter, until 2026-10-06 — so a
+    // phrase of 3/4 bars used under a section's `time 3/4` read short (LYS2006 / LYS2001).
+    private readonly List<(MusicBlockSyntax Block, BarContext.MeterState Meter)> _heldPhraseBodies = new();
+    private readonly HashSet<string> _phrasesCheckedInPlace = new(StringComparer.Ordinal);
 
     /// <remarks>
     /// The kinds come from <see cref="PhraseCycleValidator.DeclaringKinds"/> — the SAME
@@ -294,6 +312,12 @@ internal sealed class MeasureValidator : ISemanticValidator
     {
         switch (node)
         {
+            case MusicBlockSyntax { Parent: PhraseDeclarationSyntax } phraseBody:
+                // Held until the walk is done: a body that flows in place is checked where it
+                // is played, in the meter there (the PhraseSpan arm of ValidateMeasures).
+                _heldPhraseBodies.Add((phraseBody, _bars.Save()));
+                break;
+
             case MusicBlockSyntax block:
                 ValidateMusicBlock(block);
                 break;
@@ -537,7 +561,7 @@ internal sealed class MeasureValidator : ISemanticValidator
             // Voice spans and repeats, merged in item order: count up to each address,
             // snapshot, then carry on — one spelling of the beat count
             // (MeasureDurations), just read in segments.
-            var cuts = new List<(int ItemIndex, ParallelExpressionSyntax? Span, RepeatExpressionSyntax? Rep, List<SyntaxNode>? Phrase)>();
+            var cuts = new List<(int ItemIndex, ParallelExpressionSyntax? Span, RepeatExpressionSyntax? Rep, PhraseSpan? Phrase)>();
             foreach (var vs in voiceSpans)
                 if (vs.MeasureIndex == i)
                     cuts.Add((vs.ItemIndex, vs.Span, null, null));
@@ -546,7 +570,7 @@ internal sealed class MeasureValidator : ISemanticValidator
                     cuts.Add((rs.ItemIndex, null, rs.Rep, null));
             foreach (var ps in phraseSpans)
                 if (ps.MeasureIndex == i)
-                    cuts.Add((ps.ItemIndex, null, null, ps.Body));
+                    cuts.Add((ps.ItemIndex, null, null, ps));
             cuts.Sort((a, b) => a.ItemIndex.CompareTo(b.ItemIndex));
             int from = 0;
             foreach (var (itemIndex, span, rep, phrase) in cuts)
@@ -569,12 +593,24 @@ internal sealed class MeasureValidator : ISemanticValidator
                 // enclosing music goes on to fill. The note value restarts at a quarter (the
                 // collector's EnterDefaultFrame) and the body's exit value carries on after it.
                 // As an opaque zero-duration item 'riff e f |' with riff = 'c4 d' read as a
-                // half bar (HANDOFF §2 R12⒝, session 571). The bar a body barline closes is not
-                // re-judged here — the phrase's own block is validated where it is declared.
-                if (phrase != null)
+                // half bar (HANDOFF §2 R12⒝, session 571). The bars a body barline closes are
+                // judged HERE, as a repeat body's are — in the frame the reference opens in: the
+                // bar's elapsed beats, the meter just adopted, a fresh quarter; the body's last
+                // chunk is open (the enclosing music goes on to fill it). It was judged only at
+                // its declaration, in the document's meter, until 2026-10-06 (HANDOFF §2
+                // F-phrasemeter: 3/4 bars used under `time 3/4` read short there).
+                if (phrase is { } played)
                 {
+                    var phraseFront = itemIndex > 0
+                        ? MeasureDurations.GetSpan(barItems.GetRange(0, itemIndex))
+                        : (TextSpan?)null;
+                    ValidateItemsScoped(played.Block.Items, played.Block.Position,
+                        total == Fraction.Zero ? null : total, Fraction.Quarter, openTail: true,
+                        leadInSpan: UnionSpans(i == 0 ? leadInSpan : null, phraseFront),
+                        inheritedPickup: i == 0 ? partialLength : null);
+                    _phrasesCheckedInPlace.Add(played.Name);
                     var phraseDefault = Fraction.Quarter;
-                    foreach (var bodyItem in phrase)
+                    foreach (var bodyItem in played.Body)
                     {
                         if (bodyItem is BarlineSyntax)
                         {
@@ -1203,7 +1239,7 @@ internal sealed class MeasureValidator : ISemanticValidator
 
     /// <summary>A phrase reference whose body flows through the bar accounting (see
     /// <see cref="FlowingPhraseBody"/>) — same address scheme as <see cref="VoiceSpan"/>.</summary>
-    private readonly record struct PhraseSpan(int MeasureIndex, int ItemIndex, List<SyntaxNode> Body);
+    private readonly record struct PhraseSpan(int MeasureIndex, int ItemIndex, List<SyntaxNode> Body, string Name, MusicBlockSyntax Block);
 
     /// <summary>The body items of the phrase <paramref name="reference"/> names, when every one
     /// is priced exactly by <see cref="MeasureDurations.ItemDuration"/> or occupies no time
@@ -1327,7 +1363,8 @@ internal sealed class MeasureValidator : ISemanticValidator
                     if (item is RepeatExpressionSyntax rep && rep.RepeatType.Text != "tremolo")
                         repeats.Add(new RepeatSpan(measures.Count, currentItems.Count, rep));
                     else if (item is VariableReferenceSyntax reference && FlowingPhraseBody(reference) is { } body)
-                        phrases.Add(new PhraseSpan(measures.Count, currentItems.Count, body));
+                        phrases.Add(new PhraseSpan(measures.Count, currentItems.Count, body, reference.Name.Text,
+                            (MusicBlockSyntax)_phraseBodies[reference.Name.Text]));
                     currentItems.Add(item);
                 }
             }
