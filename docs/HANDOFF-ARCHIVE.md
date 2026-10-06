@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第843セッションの経緯
+
+### 1.1 第843セッション（2026-10-06・YT-DELL2）
+
+同じ会話の続き。`-Start p843`（HEAD `e22d04ef`）＝full **11273 / 0 / 2 / 11275**。§7 3.5 で第841 を ARCHIVE へ。**§2 F-gracesync**。ユーザー決定（第842 末）:「なるべく .lys に記述された情報が落ちない形で .ly に書き出したい」＝**範囲を絞らず、どこかの段に grace がある時刻はすべて、他の段に同じ長さの grace の空白を置く**（段ごとに長さが違えば最長に揃える）。export の速度は問題にしない。
+- **F-gracesync の本体（`ec713db26`）**: 書き出しは段ごとの構文木を歩くだけで時刻を持たない（調べは Explore agent）⇒ **ページのモデル**（`PageModel`＝`MultiStaffScore`）から読む。`LilyPondExporter.CollectGraceSync`: `GraceNoteItem`（段・声・小節・主音）で各時刻の最長の grace を取り、全段全声の「その時刻に始まる音」に足りない長さを**書かれた音の source position × 演奏の何回目か**で記録（section の再演・phrase の再参照・volta はモデルが書き出しと同じ順に並べる）。自分の grace がある音は grace の位置に（短い grace は最長に詰める）。`EmitItemCore` が `\grace { sN }` を前に書き、次の音の長さを書かせる（LP では grace の長さが持ち越される）。入れ子（tuplet・並列声・phrase の体）も `SharedState` の数え手を共有。
+- 計測（Lab `sessions/p843/gs`・`check.ps1`＝書き出し→LP→段ごとの小節線）: 曲頭・拍子の変更・小節の途中・section の再演・同じ段の別の声＝**ページと 0.01 以内**。⚠️ 段ごとに長さの違う grace（c3）は .ly は LP の作法どおりだが**ページが LP より 0.53 左**＝Lily# の配置の別件（未起票・小さい）。掃き（`sweep-ly.ps1`）998 冊で .ly が変わるのは 8 枚・LP の警告は 8 枚とも 0 のまま・`grace-lower-staff` は LP とページの差の合計 14.38 → 0.02。試験 `LilyPondExporterGraceSyncTests` 6 本・毒 3 本（空白なし→5 赤／位置だけで数える→phrase の 1 赤／短い grace を詰めない→2 赤）。
+- **途中で見つけた（ページの欠陥・新規 §2 F-hdrsilent）**: section の頭に `time`／`key` があり、ある part がその section を書かないと、ページがその part からその section を落とす（c9: 6 小節のはずが 4 小節・`lysc check` は無言）。⚠️ もう 1 つ（既存・書き出し）: part が書かない section の中で拍子を変えると、空の part の `s1` が 4/4 のまま＝LP が bar check failed（c7・前の版でも同じ）。
+
+★ `-End p843 -DiffBase e22d04ef2`（`end.log`）＝full **11279 / 0 / 2 / 11281**（+6＝試験）・門 全 OK。7.5: Core `+` 196 行・**REF 0 を見て LP 文書の出典を `LILYPOND-REF` で足した**（rhythms.itely:4632-4659・空白は `\grace` で書く）・OWN 0。7.6: 意味は LP 文書の作法（grace の同期は段の記号も揃える・他の段に同じ長さの grace の空白）。7.7: 匂い＝**モデルの小節番号が段で揃っている前提**（F-hdrsilent で崩れる）。push はユーザー。
+判定: 次は **§2 F-hdrsilent**（ページの欠陥・score の末尾が欠ける＝優先度が高い・ユーザーに確認）。(a) 今便の文脈（書き出し）は使わない＝読むのは collector の section の詰め／(b) **この会話は 4 便ぶん（p841〜p843）で長い**／(c) 島が違う ⇒ **新しい会話で `-Start p844` から**（(b) で決めた。残り字数は理由ではない）。
+
 ## 以下は第842セッションの経緯
 
 ### 1.1 第842セッション（2026-10-06・YT-DELL2）
