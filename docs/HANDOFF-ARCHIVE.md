@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第846セッションの経緯
+
+### 1.1 第846セッション（2026-10-06・YT-DELL2）
+
+同じ会話の続き（ユーザー決定は §1.0 ①②・F-partmeter）。`-Start p846`（HEAD `83bbb0c8`）＝full **11287 / 0 / 2 / 11289**。§7 3.5 で第844 を ARCHIVE へ。**① ⑹＋⑺ 和音の組み立て式を実装（`a978b3062`）**。
+- **設計**: 29 品質の表（`ChordQualityRegistry`）は残し、表に無い綴りだけを新しい `Music/ChordFormula.cs` が組み立てる＝`ChordQuality.Composed`＋`ChordStructure.Formula`。**組み立てた音が表の品質と同じならその品質に解く**（`C7+9`＝表の 7♯9）＝既存の全出力は不変。下流（ダイアグラム・ボイシング・フレットボード）は `ChordStructure.ToneSpecs`／`HasMinorThird` を読む。文法は GRAMMAR の `AssembledQuality`（品質語・`maj`・伸張・`-5 +5 -9 +9 +11 -13`・`addN`・`omit3/5`・`sus2/4`・`alt`、順不同・各 1 回）。
+- **名前**: LP の `ignatzek-chord-names` を音の集合から移植（sus の接尾・m の前置・主名・3 度積みの分割・自然 7 は最上音で呼ぶ・例外表 + ° ø °7 alt 5）。双子は全音を明示（`c:1.4.5.7.9`）＝LP が同じ名前を付ける。**LP 2.26.0 実測（Lab `sessions/p846/ch/open.lys`）16 和音すべて一致**（`Cadd2`→`sus2 add3`・`C13sus4`→`9 sus4 add13` も LP どおり）。⚠️ 初回は `7alt` だけ不一致: LP の例外表は ♯9 を**短 10 度**（`ees'`）で綴り、`.9+` は `.9-` を置き換える（replace-step）＝alt の ♯9 を 10 度に。alt 以外の `-9+9` は拒否。
+- 試験 `ChordFormulaTests` 36 本（名前・上付きの位置・`\chordmode`・音・表への解決・拒否 9 形・words・小文字・slash・ローマ数字 `V9sus4`・等価・音名）。LP 出典は camelCase の名前を行範囲と並べない形に（`CitationsThatNameNothing_DoNotGrow`）。掃き（svg・xml・midi・ly）998 冊で**4 種とも差 0**・陽性対照 `open.lys` は p845 で 16 和音が無音（raw suffix）→ p846 で鳴る。full **11323 / 0 / 2 / 11325**（+36）。
+- **残り（未着手・小）**: MusicXML の `Composed` は `kind="other"`＋文字（`<degree>` を出していない＝既存の 16 種以外も同じ）／`/ベース`の転回と付加の自動判別は双子では LP の `/` がそのまま行う（非構成音は付加ベース）＝ページの MIDI のボイシングは未確認。
+
+★ `-End p846 -DiffBase 83bbb0c80`（`end.log`）＝full **11323 / 0 / 2 / 11325**（+36）・門 全 OK。7.5: Core `+` 442 行・REF 7（ignatzek の 2 関数・例外表・engraver-init の 3 プロパティ・chord-name の自然変化・chord-entry の加算）・OWN 1（words の語は Lily# の表に合わせる）。7.6: 名前は LP の算法・音の意味（13 は 11 を省く・`maj` 単独は maj7）は既存の Lily# の規則。7.7: 匂い＝毒は回していない（試験が値を直接見る＝例外表・分割・`:1.` の綴りを外せば赤くなる形だが未確認）。push はユーザー。
+判定: 次は **② ⑷ niente**（承認済み）。(a) 今便の文脈（和音）は使わない／(b) 会話は 4 便ぶん（p843 末〜p846）で長くなってきた／(c) 島が違う ⇒ **新しい会話で `-Start p847` から**（(b) で決めた）。
+
 ## 以下は第845セッションの経緯
 
 ### 1.1 第845セッション（2026-10-06・YT-DELL2）
