@@ -182,6 +182,11 @@ continues in E♭ must say `key ees major` again, and that line is not engraved)
 anyway, put `!` right after the keyword: `key! ees major`, `time! 3/4`, `clef! bass`. A `!`
 after the value is the dashed barline (`key ees major !` = a key, then a dashed bar).
 
+A mid-music `time` is the **score's** meter, not just its part's: written at the start of a bar
+in one part, it holds for every part to the end of the section, so the other parts need not
+restate it — a part that writes nothing there is padded with bars of that meter. Two parts
+writing different meters at the same bar warn (LYS2005; the first in the file stands).
+
 Below, a code block that is only music (no `part`/`section`/`score`) is showing a **section
 body** — the four lines above are omitted so each example shows just what it teaches. To run
 one, put it where `c4 d e f |` sits in the minimal document.

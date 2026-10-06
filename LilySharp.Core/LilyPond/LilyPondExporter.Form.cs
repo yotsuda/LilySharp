@@ -142,7 +142,11 @@ public sealed partial class LilyPondExporter
                     headerMusic.Any(h => h is KeySignatureSyntax),
                     headerMusic.Any(h => h is TimeSignatureSyntax)));
                 result.AddRange(headerMusic);
-                result.AddRange(ContainerMusic(entry.Container));
+                if (_meterPlan.IsEmpty)
+                    result.AddRange(ContainerMusic(entry.Container));
+                else
+                    result.AddRange(_meterPlan.WithForeignChanges(entry.Section.SectionName,
+                        entry.Container, ContainerMusic(entry.Container).ToList()));
                 result.AddRange(PaddingBars(entry.Container));
             }
         }
@@ -392,7 +396,13 @@ public sealed partial class LilyPondExporter
             result.AddRange(headers);
         if (_repeatTiePlays.Contains(playIndex))
             result.Add(new RepeatTieMarker());
-        result.AddRange(ContainerMusic(entry.Container));
+        // The score's meter (SectionMeterPlan): another part's `time` at a bar's start is written
+        // in this voice too. LilyPond would apply it anyway (Timing is the Score's); writing it
+        // keeps this stream's own meter — the length of its padding and empty bars — right.
+        if (_meterPlan.IsEmpty)
+            result.AddRange(ContainerMusic(entry.Container));
+        else
+            result.AddRange(_meterPlan.WithForeignChanges(name, entry.Container, ContainerMusic(entry.Container).ToList()));
         result.AddRange(PaddingBars(entry.Container));
     }
 
@@ -425,9 +435,15 @@ public sealed partial class LilyPondExporter
                 ? new Fraction(t.Beats, t.BeatType)
                 : _bars.HomeMeter.Length;
             var pickup = ChordPickupFor(name);
+            // Each bar as long as the MUSIC's bar there (SectionBarMeters — what a row that
+            // writes the section is measured by): a `time` in the section's music is the
+            // score's meter (HANDOFF §2 F-partmeter ⒜), and a row silent under a 3/4 bar wrote `s1`.
+            var meters = _allSections.FirstOrDefault(s => s.SectionName == name) is { } declaration
+                ? SectionBarMeters(declaration, name) : null;
             for (int i = 0; i < bars; i++)
             {
-                result.Add(new ChordBarMarker("s" + ChordModeDuration(i == 0 && pickup is { } p ? p : meter)));
+                var barMeter = meters is { Count: > 0 } ? meters[Math.Min(i, meters.Count - 1)] : meter;
+                result.Add(new ChordBarMarker("s" + ChordModeDuration(i == 0 && pickup is { } p ? p : barMeter)));
                 result.Add(CreateBarline(SyntaxKind.Bar, "|", 0, 0));
             }
             return;
@@ -440,8 +456,18 @@ public sealed partial class LilyPondExporter
         if (headers != null)
             result.AddRange(headers);
         for (int i = 0; i < bars; i++)
+        {
+            // The score's meter there (SectionMeterPlan): a `time` another part writes at
+            // this bar's start is written here too, so the spacer is that long — LilyPond's
+            // Timing is the Score's, and an `s1` under another staff's 3/4 failed its bar check.
+            if (_meterPlan.ForeignChangeAt(name, i, null) is { } time)
+                result.Add(time);
             result.Add(SectionPaddingBar(name, 0));
+        }
     }
+
+    // The meters other parts write into each section's bars (SectionMeterPlan), read once per Export.
+    private Svg.Collector.SectionMeterPlan _meterPlan = Svg.Collector.SectionMeterPlan.Empty;
 
     /// <summary>A bare <c>|</c> the twin writes an empty bar of <paramref name="section"/>'s play at,
     /// remembered as that section's so the bar can be asked for its grace skip (<see cref="EmptyBarGracePad"/>).</summary>
@@ -495,6 +521,7 @@ public sealed partial class LilyPondExporter
         if (missing <= 0)
             yield break;
         int position = container.Position;
+        int written = WrittenBars(container);
         if (_chordTrack)
         {
             if (open)
@@ -503,12 +530,12 @@ public sealed partial class LilyPondExporter
             // (SectionBarMeters: the header's meter, moved by any `time` the music writes) —
             // not the score's, which a row short of a 3/4 section was padded with until
             // 2026-10-03 (`s1` beside `c2.`, the same family as the bars it did write).
-            var meter = _bars.HomeMeter.Length;
-            if (SectionOf(container) is { } section
-                && SectionBarMeters(section, section.SectionName) is { Count: > 0 } meters)
-                meter = meters[^1];
+            var meters = SectionOf(container) is { } section
+                ? SectionBarMeters(section, section.SectionName) : null;
             for (int i = 0; i < missing; i++)
             {
+                var meter = meters is { Count: > 0 }
+                    ? meters[Math.Min(written + i, meters.Count - 1)] : _bars.HomeMeter.Length;
                 yield return new ChordBarMarker("s" + ChordModeDuration(meter));
                 yield return CreateBarline(SyntaxKind.Bar, "|", position, 0);
             }
@@ -526,7 +553,23 @@ public sealed partial class LilyPondExporter
             yield return new ClosedBarMarker();
         var name = SectionOf(container)?.SectionName;
         for (int i = 0; i < missing + (open ? 1 : 0); i++)
+        {
+            // The bar this `|` writes empty (with an open last bar, the first `|` only closes
+            // it) is in the score's meter there (SectionMeterPlan) — see AppendSilentPlay.
+            int bar = written + i - (open ? 1 : 0);
+            if (name != null && bar >= written && _meterPlan.ForeignChangeAt(name, bar, container) is { } time)
+                yield return time;
             yield return name != null ? SectionPaddingBar(name, position) : CreateBarline(SyntaxKind.Bar, "|", position, 0);
+        }
+    }
+
+    /// <summary>The bars a voice container writes (the semantic count), 0 when the index
+    /// does not hold it.</summary>
+    private int WrittenBars(SyntaxNode container)
+    {
+        if (container is MusicBlockSyntax { Parent: PartBlockSyntax block })
+            container = block;
+        return _sectionBars.ByContainer.TryGetValue(container, out var voice) ? voice.Bars : 0;
     }
 
     /// <summary>

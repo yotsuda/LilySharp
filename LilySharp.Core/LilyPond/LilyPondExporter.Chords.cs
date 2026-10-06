@@ -548,7 +548,28 @@ public sealed partial class LilyPondExporter
         Walk(part);
         if (pendingNotes)
             meters.Add(current);
-        return meters.Count > 0 ? meters : [start];
+        if (meters.Count == 0)
+            meters.Add(start);
+        // The score's meter (SectionMeterPlan): a `time` ANY part writes at a bar's start is
+        // that bar's meter, over the section's whole length — the first part may write fewer
+        // bars than the section, or none of the changes.
+        if (_meterPlan.ChangesOf(sectionName) is { } changes)
+        {
+            int length = Math.Max(meters.Count, _sectionBars.Canonical.GetValueOrDefault(sectionName));
+            var own = meters;
+            var merged = new List<Fraction>(length);
+            var running = own[0];
+            for (int i = 0; i < length; i++)
+            {
+                if (i < own.Count && (i == 0 || own[i] != own[i - 1]))
+                    running = own[i];   // the first part's own change
+                if (changes.TryGetValue(i, out var t) && !t.IsSenzaMisura)
+                    running = new Fraction(t.Beats, t.BeatType);
+                merged.Add(running);
+            }
+            return merged;
+        }
+        return meters;
     }
 
     private static PartBlockSyntax? FirstPartBlock(SectionDeclarationSyntax section)

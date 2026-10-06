@@ -664,6 +664,11 @@ public sealed partial class MeasureCollector
         Action<MusicSiteList> processNodes, MeasureBuilder builder, int startMeasure)
     {
         bool matched = false;
+        // The score's meter in this section (SectionMeterPlan): armed for the play, so the
+        // walk and the padding below apply what other parts write at each bar's start.
+        var meterChanges = _voiceName != null ? MeterPlan().ChangesOf(section.SectionName) : null;
+        if (meterChanges != null)
+            _meterCursor = new MeterCursor(section.SectionName, VoiceContainerOf(section), builder.LogicalMeasureIndex, -1);
         // Direct children only: a PartBlockSyntax is produced exclusively by
         // ParseSectionItem (Parser.Sections.cs — the Identifier and clef-keyword arms),
         // so every part block is a DIRECT child of its section declaration. The old
@@ -783,8 +788,32 @@ public sealed partial class MeasureCollector
             if (_probeRecording != null)
                 _walkCanonicalReads.Add((section.SectionName, canonical));
             for (int i = produced; i < canonical; i++)
+            {
+                // A padding bar is a bar of the score's meter there (SectionMeterPlan).
+                ApplyPlannedMeter(builder);
                 builder.AddItem(new RestItem(builder.CurrentMeasureLength, 0, section.SourceStart) { IsSpacer = true });
+            }
         }
+        _meterCursor = null;
+    }
+
+    /// <summary>The voice's place in a section play under <see cref="SectionMeterPlan"/>: the
+    /// section, the container this voice writes it in (null when it writes none), the bar
+    /// the play began at and the last bar the plan was applied to.</summary>
+    private readonly record struct MeterCursor(string Section, SyntaxNode? Container, int StartBar, int AppliedBar);
+
+    private MeterCursor? _meterCursor;
+
+    /// <summary>The container this collect's voice writes <paramref name="section"/> in — its
+    /// part block, its by-part cell — or null when it writes none.</summary>
+    private SyntaxNode? VoiceContainerOf(SectionDeclarationSyntax section)
+    {
+        foreach (var child in section.ChildNodes())
+            if (child is PartBlockSyntax block && block.Name == _voiceName)
+                return block;
+        return _voiceName != null
+            && _sectionState.GroupedByPartCells.TryGetValue((section.SectionName, _voiceName), out var cell)
+            ? cell : null;
     }
 
     /// <summary>
@@ -1057,6 +1086,14 @@ public sealed partial class MeasureCollector
     /// <summary>The page's canonical bar counts as this collect computes them — for the net
     /// that holds them equal to the whole-tree count on every book.</summary>
     internal Dictionary<string, int> CanonicalByNameForTest() => CanonicalByName();
+
+    // The score's meter in each section (SectionMeterPlan): built on first use per collect,
+    // cleared with _canonicalByName (Reset). Empty — one walk over the book's `time` nodes —
+    // unless some `time` stands inside music.
+    private SectionMeterPlan? _meterPlan;
+
+    private SectionMeterPlan MeterPlan()
+        => _meterPlan ??= _root != null ? SectionMeterPlan.Build(_root) : SectionMeterPlan.Empty;
 
     /// <summary>
     /// Bar count of a music scope (a part block or a by-part section cell),

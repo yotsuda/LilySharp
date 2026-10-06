@@ -976,6 +976,8 @@ public sealed partial class MeasureCollector
         // (⒝2), this method loses the gate rather than gaining arms.
         if (_graceDepth > 0 && !CanStandInGraceTime(node))
             return;
+        if (_meterCursor != null)
+            ApplyPlannedMeter(builder);
 
         // THE TIE AND MANUAL-BEAM MARKERS WRITTEN ON WHAT DOES COME THROUGH ARE DROPPED, not
         // carried onto the item: both are on LYS4020's drop list, and letting the flag ride
@@ -1640,61 +1642,7 @@ public sealed partial class MeasureCollector
                 break;
 
             case TimeSignatureSyntax timeSigChange:
-                {
-                    // LilyPond's Time_signature_engraver makes ONE TimeSignature
-                    // grob per timestep, reflecting the CURRENT value, and the very
-                    // first timestep compares against last_spec_ = null. So a
-                    // \time before any note collapses INTO the initial signature
-                    // (only the new value prints) — the default 4/4 never gets its
-                    // own grob. A \time at the first moment of the piece therefore
-                    // REPLACES the initial signature rather than printing a separate
-                    // change grob on top of it ("C 3/4").
-                    // LILYPOND-REF: lily/time-signature-engraver.cc:94-122
-                    //   process_music — `if (time_signature_) return;` (one per
-                    //   timestep) and the last_spec_ comparison.
-                    if (builder.AtPieceOpening)
-                    {
-                        _meta.TimeBeats = timeSigChange.Beats;
-                        _meta.TimeBeatsText = timeSigChange.BeatsText;
-                        _meta.TimeBeatType = timeSigChange.BeatType;
-                        _meta.TimeSenzaMisura = timeSigChange.IsSenzaMisura;
-                        builder.SetMeter(new Meter(timeSigChange.Beats, timeSigChange.BeatType, timeSigChange.BeatsText),
-                            timeSigChange.IsSenzaMisura);
-                        builder.MeterInForce = new TimeSignature(timeSigChange.Beats,
-                            timeSigChange.BeatType, timeSigChange.BeatsText, timeSigChange.IsSenzaMisura);
-                    }
-                    else
-                    {
-                        // Mid-piece change: a zero-duration grob printed at the
-                        // change point, re-arming the following measures' length.
-                        // `time none` carries no ink and no width (LilyPond's \cadenzaOn is
-                        // a property set, not a grob) — see TimeSignatureChangeItem.Blanked.
-                        var newTime = new TimeSignature(timeSigChange.Beats, timeSigChange.BeatType,
-                            timeSigChange.BeatsText, timeSigChange.IsSenzaMisura);
-                        // A meter that changes nothing is not drawn unless written `time!`: at a
-                        // section head compared with what the section before left (the reset
-                        // standing there is withdrawn too), elsewhere with the meter in force
-                        // (MeasureBuilder.SectionHead, LILYSHARP-OWN).
-                        var head = builder.SectionHead;
-                        bool unchanged = head is { } h
-                            ? h.SameMeter(newTime)
-                            : MeasureBuilder.SameMeter(builder.MeterInForce, newTime);
-                        if (unchanged && !timeSigChange.IsForced)
-                        {
-                            if (head != null)
-                                builder.WithdrawStanding<TimeSignatureChangeItem>();
-                            builder.SetMeter(new Meter(newTime.Beats, newTime.BeatType, newTime.BeatsText),
-                                newTime.SenzaMisura);
-                            builder.MeterInForce = newTime;
-                            break;
-                        }
-                        // The numerator, not the keyword — see TimeDataPos.
-                        builder.AddItem(new TimeSignatureChangeItem(newTime, TimeDataPos(timeSigChange))
-                        {
-                            Blanked = timeSigChange.IsSenzaMisura,
-                        });
-                    }
-                }
+                ApplyMeterChange(timeSigChange, builder);
                 break;
 
             case TempoDeclarationSyntax tempoChange:
@@ -1798,6 +1746,82 @@ public sealed partial class MeasureCollector
     /// itself drawn small.
     /// </para>
     /// </remarks>
+    /// <summary>A <c>time</c> taking effect here — written in this voice's music, or written in
+    /// another part's at the start of this bar (<see cref="ApplyPlannedMeter"/>).</summary>
+    private void ApplyMeterChange(TimeSignatureSyntax timeSigChange, MeasureBuilder builder)
+    {
+        // LilyPond's Time_signature_engraver makes ONE TimeSignature
+        // grob per timestep, reflecting the CURRENT value, and the very
+        // first timestep compares against last_spec_ = null. So a
+        // \time before any note collapses INTO the initial signature
+        // (only the new value prints) — the default 4/4 never gets its
+        // own grob. A \time at the first moment of the piece therefore
+        // REPLACES the initial signature rather than printing a separate
+        // change grob on top of it ("C 3/4").
+        // LILYPOND-REF: lily/time-signature-engraver.cc:94-122
+        //   process_music — `if (time_signature_) return;` (one per
+        //   timestep) and the last_spec_ comparison.
+        if (builder.AtPieceOpening)
+        {
+            _meta.TimeBeats = timeSigChange.Beats;
+            _meta.TimeBeatsText = timeSigChange.BeatsText;
+            _meta.TimeBeatType = timeSigChange.BeatType;
+            _meta.TimeSenzaMisura = timeSigChange.IsSenzaMisura;
+            builder.SetMeter(new Meter(timeSigChange.Beats, timeSigChange.BeatType, timeSigChange.BeatsText),
+                timeSigChange.IsSenzaMisura);
+            builder.MeterInForce = new TimeSignature(timeSigChange.Beats,
+                timeSigChange.BeatType, timeSigChange.BeatsText, timeSigChange.IsSenzaMisura);
+            return;
+        }
+        // Mid-piece change: a zero-duration grob printed at the
+        // change point, re-arming the following measures' length.
+        // `time none` carries no ink and no width (LilyPond's \cadenzaOn is
+        // a property set, not a grob) — see TimeSignatureChangeItem.Blanked.
+        var newTime = new TimeSignature(timeSigChange.Beats, timeSigChange.BeatType,
+            timeSigChange.BeatsText, timeSigChange.IsSenzaMisura);
+        // A meter that changes nothing is not drawn unless written `time!`: at a
+        // section head compared with what the section before left (the reset
+        // standing there is withdrawn too), elsewhere with the meter in force
+        // (MeasureBuilder.SectionHead, LILYSHARP-OWN).
+        var head = builder.SectionHead;
+        bool unchanged = head is { } h
+            ? h.SameMeter(newTime)
+            : MeasureBuilder.SameMeter(builder.MeterInForce, newTime);
+        if (unchanged && !timeSigChange.IsForced)
+        {
+            if (head != null)
+                builder.WithdrawStanding<TimeSignatureChangeItem>();
+            builder.SetMeter(new Meter(newTime.Beats, newTime.BeatType, newTime.BeatsText),
+                newTime.SenzaMisura);
+            builder.MeterInForce = newTime;
+            return;
+        }
+        // The numerator, not the keyword — see TimeDataPos.
+        builder.AddItem(new TimeSignatureChangeItem(newTime, TimeDataPos(timeSigChange))
+        {
+            Blanked = timeSigChange.IsSenzaMisura,
+        });
+    }
+
+    /// <summary>
+    /// THE SCORE'S METER (<see cref="SectionMeterPlan"/>, HANDOFF §2 F-partmeter ⒜): at the
+    /// start of a bar of the section being played, a <c>time</c> another part writes there and
+    /// this voice does not is applied here as if written — the bar takes its length and the
+    /// staff shows the change. Called before each node of the walk and before each padding
+    /// bar; acts once per bar, and only while the bar holds nothing timed yet.
+    /// </summary>
+    private void ApplyPlannedMeter(MeasureBuilder builder)
+    {
+        if (_meterCursor is not { } cursor || builder.HasMeasureContent)
+            return;
+        int bar = builder.LogicalMeasureIndex - cursor.StartBar;
+        if (bar == cursor.AppliedBar)
+            return;
+        _meterCursor = cursor with { AppliedBar = bar };
+        if (MeterPlan().ForeignChangeAt(cursor.Section, bar, cursor.Container) is { } time)
+            ApplyMeterChange(time, builder);
+    }
+
     private void ProcessCueRegion(CueExpressionSyntax cue, MeasureBuilder builder)
     {
         string? outerClef = null;

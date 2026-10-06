@@ -230,6 +230,12 @@ internal sealed class VoiceWalkRecording
     /// (<c>MeasureCollector.PrefixTargetWithStableCanonicalBars</c>).</summary>
     public List<(string Section, int Bars)>? CanonicalReads;
 
+    /// <summary>The book had a <see cref="SectionMeterPlan"/> when this walk was recorded: its
+    /// bars took meters from other parts' music, text anywhere in the file. A resume is refused
+    /// whenever the recording or the edited text has one (the walk runs live) — such books are
+    /// few (a <c>time</c> inside music) and the plan is not a value the checkpoints carry.</summary>
+    public bool HadMeterPlan;
+
     public List<WalkCheckpoint> Checkpoints { get; } = new();
 
     /// <summary>The walk's measures BEFORE <c>FinalizeMeasures</c> mutates them

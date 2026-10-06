@@ -351,7 +351,8 @@ internal static class SectionBarCounts
 
     /// <summary>True for a node outside every part / section / music body — the score level,
     /// where a <c>time</c> declaration arms the whole document after it (LP's Timing is
-    /// Score-level; Lily# part-local changes are restated per part and stay local).</summary>
+    /// Score-level; a change inside one part's music reaches the other parts at its bar
+    /// through <see cref="SectionMeterPlan"/>, not through this walk).</summary>
     public static bool IsScoreLevel(SyntaxNode node)
     {
         for (var p = node.Parent; p != null; p = p.Parent)

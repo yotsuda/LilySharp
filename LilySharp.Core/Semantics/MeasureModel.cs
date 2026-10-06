@@ -61,8 +61,12 @@ internal static class MeasureModel
     /// the empty-placeholder pass may omit it. A <c>time</c> written inside the scope
     /// (or inside a repeat body — the expansion replays it per turn, exactly as the
     /// collector walks it) updates the running meter from that point.</param>
+    /// <param name="meterChanges">When given, every <c>time</c> the walk meets, with the index
+    /// of the bar it stands in (a repeat's turns each report theirs) and whether music of that
+    /// bar came before it — what <see cref="Svg.Collector.SectionMeterPlan"/> folds into the
+    /// score's meters.</param>
     public static List<Bar> Split(SyntaxNode scope, IReadOnlyDictionary<string, SyntaxNode> phraseBodies,
-        Fraction? initialMeter = null)
+        Fraction? initialMeter = null, List<(int Bar, TimeSignatureSyntax Time, bool MidBar)>? meterChanges = null)
     {
         var stream = new List<object>();
         Flatten(scope, stream, new HashSet<string>(), phraseBodies);
@@ -129,6 +133,7 @@ internal static class MeasureModel
                 // this class promises).
                 if (time.IsSenzaMisura) senzaMisura = true;
                 else { senzaMisura = false; meter = DurationCalculator.ParseTimeSignature(time.Beats, time.BeatType); }
+                meterChanges?.Add((bars.Count, time, current.Count > 0));
                 continue;
             }
             if (node is BarlineSyntax bar)

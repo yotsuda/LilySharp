@@ -92,6 +92,16 @@ internal sealed class MeasureValidator : ISemanticValidator
         // The split-bar exemption reads the header pickups: a predecessor whose only bar is its
         // declared pickup leaves the PICKUP open, not a bar of the meter (p753).
         _boundaries = new SectionBoundaryBars(root, _phraseBodies, _sectionHeaders);
+        // The meters other parts write into each section's bars (HANDOFF §2 F-partmeter ⒜).
+        _meterPlan = Svg.Collector.SectionMeterPlan.Build(root, _phraseBodies);
+        // A score has one meter at a time: where two parts write different ones at the start
+        // of the same bar, the first in the file stands for every part and the other is named.
+        foreach (var (lost, standing, section, bar) in _meterPlan.Conflicts)
+            if (_warnedSpans.Add((lost.Span.Start, lost.Span.Length)))
+                _diagnostics.Warning(lost.Span, DiagnosticCodes.ConflictingTimeSignatures,
+                    $"'{TimeText(lost)}' is not the meter of bar {bar + 1} of section '{section}': another part writes "
+                    + $"'{TimeText(standing)}' there first, and a score has one meter at a time — that one stands for every part");
+        static string TimeText(TimeSignatureSyntax t) => t.IsSenzaMisura ? "time none" : $"time {t.Beats}/{t.BeatType}";
         // The nodes the walk does something at, in document order — asked of the tree's
         // descendant index rather than found by walking the book. The recursion this
         // replaces entered every non-token node (65,009 of them on perf-fingbeam1k, each
@@ -164,6 +174,7 @@ internal sealed class MeasureValidator : ISemanticValidator
     // bar completes (a repeat sign or a volta bracket standing mid-bar). Asked of the form's
     // play order, per part; see SectionBoundaryBars.
     private SectionBoundaryBars? _boundaries;
+    private Svg.Collector.SectionMeterPlan _meterPlan = Svg.Collector.SectionMeterPlan.Empty;
 
     /// <remarks>
     /// The kinds come from <see cref="PhraseCycleValidator.DeclaringKinds"/> — the SAME
@@ -379,11 +390,11 @@ internal sealed class MeasureValidator : ISemanticValidator
         TextSpan? leadInSpan = null, Fraction? inheritedPickup = null, Fraction? spanEnd = null)
     {
         // A mid-music `time` re-arms the meter for the rest of THIS block/section
-        // only — the state must not leak into the next part's block (each part
-        // restates its own changes), or every 4/4 bar of the following part gets
-        // flagged against the previous part's 3/4.
-        // LILYPOND-REF: Timing is Score-level in LP, but Lily# parts restate
-        // meter changes per part; validation follows the per-block timeline.
+        // only — the running state must not leak into the next part's block, or every
+        // 4/4 bar of the following part gets flagged against the previous part's 3/4.
+        // The OTHER parts take the change at its bar through the section's meter plan
+        // (SectionMeterPlan, read in ValidateMeasures) — Timing is the Score's, in LP
+        // and, since 2026-10-06, in Lily# (HANDOFF §2 F-partmeter ⒜).
         var saved = _bars.Save();
         try
         {
@@ -409,6 +420,12 @@ internal sealed class MeasureValidator : ISemanticValidator
         var cell = leadIn is null && !openTail && _boundaries != null
             ? SectionBoundaryBars.CellOf(items.FirstOrDefault())
             : null;
+        SyntaxNode? cellContainer = null;
+        if (cell != null)
+            for (var n = items.FirstOrDefault(); n != null && cellContainer == null; n = n.Parent)
+                if (n is PartBlockSyntax { Parent: SectionDeclarationSyntax }
+                    or SectionDeclarationSyntax { Parent: PartDeclarationSyntax })
+                    cellContainer = n;
 
         // The declared pickup of this stream's FIRST bar: its section header's `partial`
         // when the stream is a section's own music, else the one the enclosing bar hands
@@ -481,6 +498,11 @@ internal sealed class MeasureValidator : ISemanticValidator
             }
             if (partialLength == null && i == 0 && streamPickup is { } pickup)
                 partialLength = pickup;
+            // The score's meter (SectionMeterPlan, HANDOFF §2 F-partmeter ⒜): a `time` another
+            // part writes at the start of this bar of the section is this bar's meter too.
+            if (cell is { } planCell && cellContainer != null
+                && _meterPlan.ForeignChangeAt(planCell.Section, i, cellContainer) is { } foreignTime)
+                _bars.SetTime(foreignTime);
             // ⚠️ The meter is adopted IN ITEM ORDER, segment by segment around the repeat
             // cuts below — not for the whole written bar up front. A `repeat percent`
             // body closes its own rendered bars, so the enclosing written bar can hold

@@ -348,6 +348,7 @@ public sealed class MusicXmlExporter
         // counter): a part voice that writes fewer bars than its section-mates is padded
         // with silent measures when its span ends (PadVoice), as the page pads its staff.
         _sectionBars = Svg.Collector.SectionBarCounts.BuildSemanticIndex(root);
+        _meterPlan = Svg.Collector.SectionMeterPlan.Build(root);
         _bareSectionOwner = RenderSpecParser.SingleEngravedPart(tree, Score, Form);
         _playedSpec = RenderSpecParser.PlayedSpec(tree, Score, Form);
         _placedChordRows = RenderSpecParser.PlacedChordRows(_playedSpec);
@@ -1525,7 +1526,16 @@ public sealed class MusicXmlExporter
             // gives each a bar of silence (AddSilentBar), as PadVoice's padding does.
             var bar = new BarlineSyntax(new Syntax.InternalSyntax.BarlineGreen(
                 new Syntax.InternalSyntax.SyntaxToken(SyntaxKind.Bar, "|"), null, null), null, 0);
-            EmitPartMusic(partName, Enumerable.Repeat<SyntaxNode>(bar, bars));
+            // Each bar in the score's meter there: another part's `time` at a bar's start is
+            // written before it (SectionMeterPlan, HANDOFF §2 F-partmeter ⒜).
+            var items = new List<SyntaxNode>(bars);
+            for (int i = 0; i < bars; i++)
+            {
+                if (_meterPlan.ForeignChangeAt(sectionName, i, null) is { } time)
+                    items.Add(time);
+                items.Add(bar);
+            }
+            EmitPartMusic(partName, items);
         }
     }
 
@@ -1856,7 +1866,18 @@ public sealed class MusicXmlExporter
 
     private void ProcessPartBlock(PartBlockSyntax partBlock)
     {
-        EmitPartMusic(partBlock.Name, DirectChildren(partBlock));
+        // The score's meter (SectionMeterPlan): another part's `time` at a bar's start is this
+        // part's <time> there too.
+        IEnumerable<SyntaxNode> children = DirectChildren(partBlock);
+        if (!_meterPlan.IsEmpty && partBlock.Parent is SectionDeclarationSyntax section
+            && partBlock.ChildNodes().OfType<MusicBlockSyntax>().FirstOrDefault() is { } body)
+        {
+            var items = body.Items.ToList();
+            var withChanges = _meterPlan.WithForeignChanges(section.SectionName, partBlock, items);
+            if (withChanges.Count != items.Count)
+                children = withChanges;
+        }
+        EmitPartMusic(partBlock.Name, children);
         PadVoice(partBlock);
     }
 
@@ -1894,9 +1915,23 @@ public sealed class MusicXmlExporter
         }
         var bar = new BarlineSyntax(new Syntax.InternalSyntax.BarlineGreen(
             new Syntax.InternalSyntax.SyntaxToken(SyntaxKind.Bar, "|"), null, null), null, voice.Position);
+        var key = voice is MusicBlockSyntax { Parent: PartBlockSyntax block } ? block : voice;
+        var written = _sectionBars.ByContainer.GetValueOrDefault(key);
         for (int i = 0; i < missing + (open ? 1 : 0); i++)
+        {
+            // The bar this bar line writes empty is in the score's meter there
+            // (SectionMeterPlan, HANDOFF §2 F-partmeter ⒜): another part's `time` at its start
+            // is written here too, as PadPartsSilentInThisPlay does.
+            int at = (written?.Bars ?? 0) + i - (open ? 1 : 0);
+            if (written != null && at >= written.Bars
+                && _meterPlan.ForeignChangeAt(written.SectionName, at, key) is { } time)
+                ProcessNode(time);
             ProcessNode(bar);
+        }
     }
+
+    // The meters other parts write into each section's bars (SectionMeterPlan), read once per Export.
+    private Svg.Collector.SectionMeterPlan _meterPlan = Svg.Collector.SectionMeterPlan.Empty;
 
     /// <summary>A by-part section (<c>part m { section A { … } }</c>) holds its music
     /// INLINE — not in a nested part block — so it is emitted here under the ENCLOSING
@@ -1912,9 +1947,12 @@ public sealed class MusicXmlExporter
     /// </remarks>
     private void EmitGroupedByPartSection(SectionDeclarationSyntax section)
     {
+        IEnumerable<SyntaxNode> children = DirectChildren(section);
+        if (!_meterPlan.IsEmpty && section.Parent is PartDeclarationSyntax)
+            children = _meterPlan.WithForeignChanges(section.SectionName, section, children.ToList());
         EmitPartMusic(
             EnclosingPartName(section) ?? _bareSectionOwner ?? "Part 1",
-            DirectChildren(section));
+            children);
         PadVoice(section);
     }
 

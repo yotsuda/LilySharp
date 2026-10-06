@@ -3524,6 +3524,7 @@ public sealed partial class MeasureCollector
         _condensedStaffChangeWarnings.Clear();
         _canonicalSectionBars.Clear();
         _canonicalByName = null;
+        _meterPlan = null;
         // The definitions walk's own gatherings (its fields say what for): cleared here as
         // every collection field is, and refilled by CollectDefinitions right after.
         _sectionDeclarationsInOrder.Clear();
@@ -3578,6 +3579,7 @@ public sealed partial class MeasureCollector
         _parallelSpans.Clear();
         _walkHeaderReads.Clear();
         _walkCanonicalReads.Clear();
+        _meterCursor = null;
         _resolvedSpellingLog.Clear();
         _repetitionOriginalReads.Clear();
         _formRepeatDepth = 0;
@@ -3779,6 +3781,7 @@ public sealed partial class MeasureCollector
         _walkMaxSourceRead = 0;
         _walkHeaderReads.Clear();
         _walkCanonicalReads.Clear();
+        _meterCursor = null;
         _resolvedSpellingLog.Clear();
         _repetitionOriginalReads.Clear();
         _formRepeatDepth = 0;
@@ -3796,6 +3799,7 @@ public sealed partial class MeasureCollector
                     StartTableCounts = startCounts,
                     StartKeyLogCount = _keyByMeasureLog.Count,
                     StartSectionStartLogCount = _sectionStartLog.Count,
+                    HadMeterPlan = _voiceName != null && !MeterPlan().IsEmpty,
                 };
                 probe.Recordings[walkOrdinal] = _probeRecording;
                 // The part-level config reads that seeded this walk's entry state —
@@ -3835,6 +3839,10 @@ public sealed partial class MeasureCollector
                 if (!string.Equals(resume.Recording.VoiceName, _voiceName, StringComparison.Ordinal))
                     throw new CollectResumeAbortException(
                         $"collect resume walk #{walkOrdinal} is now voice '{_voiceName}', recorded '{resume.Recording.VoiceName}'");
+                // The score's meter (SectionMeterPlan) reaches this walk from every part's
+                // music: no checkpoint carries it, so a book with one walks live.
+                if (resume.Recording.HadMeterPlan || (_voiceName != null && !MeterPlan().IsEmpty))
+                    throw new CollectResumeAbortException("collect resume: the book has a section meter plan");
                 var tables = CumulativeSideTables();
                 var startCounts = resume.Recording.StartTableCounts;
                 if (startCounts == null || startCounts.Length != tables.Length)

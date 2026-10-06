@@ -533,6 +533,9 @@ public sealed partial class LilyPondExporter
         // silent bars when its play is appended (PaddingBars), as the page pads its staff.
         _sectionBars = Svg.Collector.SectionBarCounts.BuildSemanticIndex(root);
         _phraseBodies = Svg.Collector.SectionBarCounts.PhraseBodies(root);
+        // The meters other parts write into each section's bars (HANDOFF §2 F-partmeter ⒜):
+        // a voice's silent bars are written in them (AppendSilentPlay, PaddingBars).
+        _meterPlan = Svg.Collector.SectionMeterPlan.Build(root, _phraseBodies);
 
         // Octave mode is a file-level directive; default is relative (Lily#'s default).
         var octaveDir = root.DescendantNodes<OctaveDirectiveSyntax>().FirstOrDefault();

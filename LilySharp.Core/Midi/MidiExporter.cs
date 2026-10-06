@@ -427,6 +427,7 @@ public sealed class MidiExporter
         // counter): a part voice that writes fewer bars than its section-mates is padded
         // with silence when its play ends (PaddingTicks), as the page pads its staff.
         _sectionBars = Svg.Collector.SectionBarCounts.BuildSemanticIndex(_root);
+        _meterPlan = Svg.Collector.SectionMeterPlan.Build(_root);
         _phraseBodies = new Dictionary<string, SyntaxNode>();
         _sections = new Dictionary<string, List<SectionDeclarationSyntax>>();
         _partDecls = new Dictionary<string, PartDeclarationSyntax>();
@@ -1155,8 +1156,27 @@ public sealed class MidiExporter
     /// 2026-09-10). Part-against-part already aligned through the lanes (the section's end is
     /// the longest lane) — this is what a chord row, which has no lane, adds.
     /// </summary>
+    /// <remarks>Each missing bar is worth the score's meter at that bar of the section
+    /// (<see cref="Svg.Collector.SectionMeterPlan"/>, HANDOFF §2 F-partmeter ⒜) when another
+    /// part's <c>time</c> stands there — a 4/4 bar padding a part short of a 3/4 section ran
+    /// the section a quarter past its longest lane.</remarks>
     private int PaddingTicks(SyntaxNode voice)
-        => _sectionBars.Missing(voice, out _) * FractionToTicks(_bars.MeterLength);
+    {
+        int missing = _sectionBars.Missing(voice, out _);
+        if (missing <= 0)
+            return 0;
+        var key = voice is MusicBlockSyntax { Parent: PartBlockSyntax block } ? block : voice;
+        if (_meterPlan.IsEmpty || !_sectionBars.ByContainer.TryGetValue(key, out var written))
+            return missing * FractionToTicks(_bars.MeterLength);
+        int ticks = 0;
+        for (int bar = written.Bars; bar < written.Bars + missing; bar++)
+            ticks += FractionToTicks(_meterPlan.MeterAt(written.SectionName, bar) is { IsSenzaMisura: false } t
+                ? DurationCalculator.ParseTimeSignature(t.Beats, t.BeatType) : _bars.MeterLength);
+        return ticks;
+    }
+
+    // The meters other parts write into each section's bars (SectionMeterPlan), read once per Export.
+    private Svg.Collector.SectionMeterPlan _meterPlan = Svg.Collector.SectionMeterPlan.Empty;
 
     /// <summary>Sounds every chord-track cell written directly in <paramref name="section"/>
     /// whose row the score places, each from the current tick (the section's start), and

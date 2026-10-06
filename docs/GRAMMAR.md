@@ -228,8 +228,9 @@ PartialDecl    = 'partial' , DurationToken ;
                     (§8.1) it shortens the bar it stands in, mid-section
                     (`… | partial 2. r2. | …`), written at the bar's start and in EVERY
                     part sharing the bar — LilyPond's \partial moves one clock for all
-                    staves (Timing = Score), Lily# keeps a bar length per voice, as it
-                    does for a mid-music `time` (owner's decision 2026-09-08). At the top
+                    staves (Timing = Score), Lily# keeps a bar length per voice (owner's
+                    decision 2026-09-08; a mid-music `time` is the score's since
+                    2026-10-06, TimeDecl below). At the top
                     level of a structured file, or in a part header, there is no bar for
                     it and it is refused (LYS1024); in a bare note stream a leading
                     `partial` is that music's pickup. A bare underfull first bar gets a
@@ -297,10 +298,21 @@ TimeDecl       = 'time' , [ '!' ] , Integer , '/' , Integer
                     they are (LilyPond's Timing.timing = ##f freezes currentBarNumber;
                     measured on 2.26.0, session 353). Written here it is the file default,
                     in a section header the section's meter, in the music a mid-piece
-                    change — per part, like any 'time'. The twin writes \cadenzaOn, a
+                    change — the SCORE's, like any 'time' (below). The twin writes \cadenzaOn, a
                     '|' inside it as \bar "|", and \cadenzaOff before the returning \time
                     — followed by \partial <bar> when the span opened mid-bar, since
                     LilyPond's frozen measurePosition is not reset by \cadenzaOff. *)
+                 (* A 'time' IN THE MUSIC IS THE SCORE'S METER (owner's decision 2026-10-06):
+                    written at the start of a bar in ONE part, it is the meter of every part
+                    from that bar to the end of the section (the next section starts on its
+                    own header's meter, or the score's, as before) — LilyPond's Timing, which
+                    lives in the Score. So a part can be written in pieces: a part that writes
+                    nothing in the bar, or is short of the section, is padded with bars of
+                    that meter and shows the change on its staff, and a part that writes
+                    music there is measured against it (no need to restate it). Where two
+                    parts write DIFFERENT meters at the start of the same bar, the first in
+                    the file stands for every part and the other warns (LYS2005). A 'time'
+                    written after music in its bar stays its own part's. *)
 KeyDecl        = 'key' , [ '!' ] , PitchBase , [ Accidental-text ] , Mode ;
                  (* A 'time', 'key' or 'clef' that changes nothing draws nothing — at a
                     section's start, compared with what the section before it left
