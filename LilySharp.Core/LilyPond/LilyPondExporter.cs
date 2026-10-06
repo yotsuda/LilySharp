@@ -382,6 +382,14 @@ public sealed partial class LilyPondExporter
         public readonly HashSet<int> InlineChordMarks = new();
         public readonly HashSet<int> FigureMarks = new();
 
+        /// <summary>The grace skips every voice owes LilyPond's grace synchronisation
+        /// (<see cref="CollectGraceSync"/>): by a written event's source position, one entry per
+        /// time the page plays it, in the page's order — the length of the skip to write in
+        /// front of it (zero where none is owed). <see cref="GraceSyncSeen"/> counts the
+        /// occurrences written so far, across every nested body.</summary>
+        public readonly Dictionary<int, List<Fraction>> GraceSyncPads = new();
+        public readonly Dictionary<int, int> GraceSyncSeen = new();
+
         /// <summary>Diagnostics collected while exporting (constructs dropped because they
         /// are deprecated or out of scope, and the like). Not fatal.</summary>
         public readonly List<string> Warnings = new();
@@ -563,6 +571,9 @@ public sealed partial class LilyPondExporter
         EmitFiguredBassTracks(tree, render);
         EmitLyricTracks(tree, render);
         EmitLeadSheetTiming(tree, render);
+        // Before the part variables: every event a grace on another voice stands beside owes
+        // a grace skip, which the music walk writes in front of it (EmitItemCore).
+        CollectGraceSync(tree, render);
 
         // One music variable per part. A by-part score keeps its sections inside
         // the part block; the form orders them.

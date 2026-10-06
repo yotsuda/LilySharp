@@ -245,14 +245,14 @@
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **:90** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:716** ⚠️ LILYSHARP-OWN: carrying AbsoluteBaseOctave is correct by construction. A degree
+- **:727** ⚠️ LILYSHARP-OWN: carrying AbsoluteBaseOctave is correct by construction. A degree
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Form.cs`
 - **:950** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Marks.cs`
 - **:933** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Music.cs`
 - **:640** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision 2026-10-02). Any other
-- **:1390** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
+- **:1399** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Streams.cs`
 - **:411** LILYSHARP-OWN: LilyPond has no lead sheet — a staff-less score prints no bar line,
 ### `LilySharp.Core/Midi/GeneralMidi.cs`

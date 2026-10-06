@@ -720,7 +720,16 @@ public sealed partial class LilyPondExporter
         return mark;
     }
 
-    private string EmitItemCore(SyntaxNode item) => item switch
+    private string EmitItemCore(SyntaxNode item)
+    {
+        // The grace skip this occurrence owes goes FIRST: it forces the event's duration out,
+        // so it must be decided before the event is written (GraceSyncPad).
+        string pad = GraceSyncPad(item);
+        string written = EmitItemBody(item);
+        return pad.Length == 0 ? written : written.Length == 0 ? pad : pad + " " + written;
+    }
+
+    private string EmitItemBody(SyntaxNode item) => item switch
     {
         NoteSyntax n => CloseImprovisation() + EmitNote(n) + TakeRepeatTie(n.Articulations),
         DrumNoteSyntax dn => CloseImprovisation() + EmitDrumNote(dn),
