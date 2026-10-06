@@ -751,7 +751,15 @@ public sealed partial class MeasureCollector
             _resumeRestoredSectionStart = null;
         }
 
-        if (_voiceName != null && builder.CurrentItemCount == 0)
+        // "A clean bar boundary" is a bar with nothing TIMED in it yet — not a bar with no
+        // items: the prologue's own `time` / `key` change items stand there for a part that
+        // writes nothing in the section. Until session 844 this asked CurrentItemCount == 0,
+        // so a section opening with `time 3/4` or `key …` was not padded at all in a part
+        // that did not write it — the page lost the whole section from that staff and every
+        // later bar slid left (HANDOFF §2 F-hdrsilent: 4 bars drawn of 6, `lysc check`
+        // silent). Each filler bar is worth what an empty bar is worth HERE (BarLength: the
+        // header's meter, its pickup first), not the score meter in _meta.
+        if (_voiceName != null && !builder.HasMeasureContent)
         {
             // Record mode: the canonical bar count is a function of EVERY part's
             // music for this section — and of the phrase bodies they reference — and
@@ -775,7 +783,7 @@ public sealed partial class MeasureCollector
             if (_probeRecording != null)
                 _walkCanonicalReads.Add((section.SectionName, canonical));
             for (int i = produced; i < canonical; i++)
-                builder.AddItem(new RestItem(TimeSignatureFraction, 0, section.SourceStart) { IsSpacer = true });
+                builder.AddItem(new RestItem(builder.CurrentMeasureLength, 0, section.SourceStart) { IsSpacer = true });
         }
     }
 

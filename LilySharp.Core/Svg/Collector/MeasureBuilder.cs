@@ -499,7 +499,7 @@ internal sealed class MeasureBuilder
     /// span with content; a directive-only span it merely CONFIRMS, carrying the
     /// directive into the first real measure so no spurious directive-only empty bar is
     /// drawn (the <c>clef treble x | …</c> case).</summary>
-    private bool HasMeasureContent => _hasMeasureContent;
+    public bool HasMeasureContent => _hasMeasureContent;
 
     public string? SectionLabel
     {

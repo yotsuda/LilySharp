@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Linq;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
@@ -184,5 +185,85 @@ public class MissingSectionSpacerFillTests
         var melody = VoiceOf(score, 0);
         Assert.Equal(3, melody.Measures.Length);
         Assert.DoesNotContain(melody.Measures.SelectMany(m => m.Items), i => i is RestItem { IsSpacer: true });
+    }
+
+    // HANDOFF §2 F-hdrsilent (session 844): a section that OPENS with its own `time` /
+    // `key` puts that change item in the bar before any music, so the old "no items yet"
+    // test read the bar as dirty and a part that does not write the section was not
+    // padded at all — the page drew 4 bars of 6 and the later sections slid left.
+    [Theory]
+    [InlineData("time 3/4", "2.")]
+    [InlineData("key g major", "1")]
+    public void SectionHeader_MissingSection_StillFilled(string header, string bar)
+    {
+        var score = Collect($$"""
+            octave absolute
+            time 4/4
+            part melody { clef treble }
+            part bass { clef bass }
+            section A {
+              melody { c'1 | }
+              bass { c1 | }
+            }
+            section B {
+              {{header}}
+              bass { g{{bar}} | g{{bar}} | }
+            }
+            section C {
+              {{header}}
+              melody { c'{{bar}} | }
+              bass { g{{bar}} | }
+            }
+            form main { A B C }
+            score main "s" { staff melody staff bass }
+            """);
+
+        var melody = VoiceOf(score, 0);
+        var bass = VoiceOf(score, 1);
+        // A(1) + B(2) + C(1) = 4 bars on BOTH staves (the melody had 2).
+        Assert.Equal(4, bass.Measures.Length);
+        Assert.Equal(4, melody.Measures.Length);
+        foreach (var idx in new[] { 1, 2 })
+        {
+            Assert.Contains(melody.Measures[idx].Items, i => i is RestItem { IsSpacer: true });
+            Assert.DoesNotContain(melody.Measures[idx].Items, i => i is NoteItem);
+        }
+        // C's note is in C's bar, not in B's.
+        Assert.Contains(melody.Measures[3].Items, i => i is NoteItem);
+    }
+
+    // The filler bar is worth what an empty bar is worth THERE — the header's meter, and
+    // its pickup first — not the score's 4/4 (a whole-note spacer stood in a 3/4 bar).
+    [Fact]
+    public void SectionHeader_FillerBarsTakeTheHeadersMeterAndPickup()
+    {
+        var score = Collect("""
+            octave absolute
+            time 4/4
+            part melody {
+              clef treble
+              section A { c'1 | }
+              section C { c'1 | }
+            }
+            part bass {
+              clef bass
+              section A { c1 | }
+              section B { g4 | g2. | g2. | }
+              section C { c1 | }
+            }
+            section B { time 3/4  partial 4 }
+            form main { A B C }
+            score main "s" { staff melody staff bass }
+            """);
+
+        var melody = VoiceOf(score, 0);
+        Assert.Equal(VoiceOf(score, 1).Measures.Length, melody.Measures.Length);
+        Assert.Equal(5, melody.Measures.Length);
+        Fraction SpacerLength(int idx) => melody.Measures[idx].Items
+            .OfType<RestItem>().Single(r => r.IsSpacer).Duration;
+        Assert.Equal(Fraction.Quarter, SpacerLength(1));
+        Assert.Equal(new Fraction(3, 4), SpacerLength(2));
+        Assert.Equal(new Fraction(3, 4), SpacerLength(3));
+        Assert.Contains(melody.Measures[4].Items, i => i is NoteItem);
     }
 }
