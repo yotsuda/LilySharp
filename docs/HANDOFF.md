@@ -86,7 +86,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   - ⑷ の提案: 強弱 `@niente` を足す＝無音の強弱。hairpin は今どおり「次の強弱まで」で、**細い端が `@niente` に触れたら円**（`c4@decresc … g@niente`＝al niente・`c4@niente@cresc … g@f`＝dal niente）。単独なら斜体の niente。MIDI は 0 へ／0 から。太い端が niente なら警告。
 - §2 H ⑴（行頭の grace／歌詞の独立列＝`ownFixedFloor`）＝**第832 で grace を LP の列に移植**（床は第834 で撤去）・⑷（譜ごとに違う調の行末 courtesy）＝**第830 で閉じた**。⑵⑶ は「内部は直列合成だが LP の出力と厳密に一致」で閉じたまま（ユーザーの理解どおり）。
 - §2 D 単一ページ経路を鎖に畳む＝**畳んだ（第829）**。
-- **優先順位**: ① ⑹＋⑺（文法の承認後・⑺ は ⑹ の品質の一部）→ ② ⑷ niente（承認後）→ ③ §2 D（第829 で閉じた）→ ④ §2 H ⑷（第830 で閉じた）→ ⑤ §2 H ⑴（第832 で grace・第833 で行頭の空の小節・第834 で床とダイアグラムの位置を閉じた・第835 でダイアグラムの両隣・第836 で %% の対の伸び＝⒡・第838 で ⒢ 小節の途中の印の列・**§2 H の行頭の島は第842 で全部閉じた**（⒜ ⒟＝第842・⒝＝第840・⒞＝第841 で計器の差））→ ⑥ **§2 F-gracesync（第841 起票・書き出し）＝第842 でユーザー「提案通りに進めて」＝次の着手**。
+- **優先順位**: ① ⑹＋⑺（文法の承認後・⑺ は ⑹ の品質の一部）→ ② ⑷ niente（承認後）→ ③ §2 D（第829 で閉じた）→ ④ §2 H ⑷（第830 で閉じた）→ ⑤ §2 H ⑴（第832 で grace・第833 で行頭の空の小節・第834 で床とダイアグラムの位置を閉じた・第835 でダイアグラムの両隣・第836 で %% の対の伸び＝⒡・第838 で ⒢ 小節の途中の印の列・**§2 H の行頭の島は第842 で全部閉じた**（⒜ ⒟＝第842・⒝＝第840・⒞＝第841 で計器の差））→ ⑥ §2 F-gracesync（書き出し）＝**第843 で本体を実装**（残りは part が書かない section の空の小節）→ ⑦ **★★★ §2 F-hdrsilent（第843 起票・ページの欠陥＝section の頭の `time`／`key` で、それを書かない part の小節が落ちる）＝次の着手候補（ユーザーに確認）**。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - **⑼（第762 起票・dogfood の大きい本 4 冊）は全部閉じた**（最後の 2 つ: ⑺ resume の 2 つ目の出所＝第794・⑻ 宣言した弱起の併合＝第795）。経緯は **ARCHIVE 第740〜第795 の各便**（第783 が列挙を畳んだ）。計器: Lab `sessions/p742/`（ly／midi／xml／svg の掃き）・`sessions/p753/sweep-check.ps1`（診断の掃き）・`sessions/p762/run-big.ps1`（4 冊の check＋4 出力＋LP）・`sessions/p723/svg2/sweep-all.ps1`（全 svg・p795 の `sweep/run-sweeps.ps1` が svg＋xml を束ねる）
@@ -125,6 +125,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第843セッション（2026-10-06・YT-DELL2）
+
+同じ会話の続き。`-Start p843`（HEAD `e22d04ef`）＝full **11273 / 0 / 2 / 11275**。§7 3.5 で第841 を ARCHIVE へ。**§2 F-gracesync**。ユーザー決定（第842 末）:「なるべく .lys に記述された情報が落ちない形で .ly に書き出したい」＝**範囲を絞らず、どこかの段に grace がある時刻はすべて、他の段に同じ長さの grace の空白を置く**（段ごとに長さが違えば最長に揃える）。export の速度は問題にしない。
+- **F-gracesync の本体（`ec713db26`）**: 書き出しは段ごとの構文木を歩くだけで時刻を持たない（調べは Explore agent）⇒ **ページのモデル**（`PageModel`＝`MultiStaffScore`）から読む。`LilyPondExporter.CollectGraceSync`: `GraceNoteItem`（段・声・小節・主音）で各時刻の最長の grace を取り、全段全声の「その時刻に始まる音」に足りない長さを**書かれた音の source position × 演奏の何回目か**で記録（section の再演・phrase の再参照・volta はモデルが書き出しと同じ順に並べる）。自分の grace がある音は grace の位置に（短い grace は最長に詰める）。`EmitItemCore` が `\grace { sN }` を前に書き、次の音の長さを書かせる（LP では grace の長さが持ち越される）。入れ子（tuplet・並列声・phrase の体）も `SharedState` の数え手を共有。
+- 計測（Lab `sessions/p843/gs`・`check.ps1`＝書き出し→LP→段ごとの小節線）: 曲頭・拍子の変更・小節の途中・section の再演・同じ段の別の声＝**ページと 0.01 以内**。⚠️ 段ごとに長さの違う grace（c3）は .ly は LP の作法どおりだが**ページが LP より 0.53 左**＝Lily# の配置の別件（未起票・小さい）。掃き（`sweep-ly.ps1`）998 冊で .ly が変わるのは 8 枚・LP の警告は 8 枚とも 0 のまま・`grace-lower-staff` は LP とページの差の合計 14.38 → 0.02。試験 `LilyPondExporterGraceSyncTests` 6 本・毒 3 本（空白なし→5 赤／位置だけで数える→phrase の 1 赤／短い grace を詰めない→2 赤）。
+- **途中で見つけた（ページの欠陥・新規 §2 F-hdrsilent）**: section の頭に `time`／`key` があり、ある part がその section を書かないと、ページがその part からその section を落とす（c9: 6 小節のはずが 4 小節・`lysc check` は無言）。⚠️ もう 1 つ（既存・書き出し）: part が書かない section の中で拍子を変えると、空の part の `s1` が 4/4 のまま＝LP が bar check failed（c7・前の版でも同じ）。
+
+★ `-End p843 -DiffBase e22d04ef2`（`end.log`）＝full **11279 / 0 / 2 / 11281**（+6＝試験）・門 全 OK。7.5: Core `+` 196 行・**REF 0 を見て LP 文書の出典を `LILYPOND-REF` で足した**（rhythms.itely:4632-4659・空白は `\grace` で書く）・OWN 0。7.6: 意味は LP 文書の作法（grace の同期は段の記号も揃える・他の段に同じ長さの grace の空白）。7.7: 匂い＝**モデルの小節番号が段で揃っている前提**（F-hdrsilent で崩れる）。push はユーザー。
+判定: 次は **§2 F-hdrsilent**（ページの欠陥・score の末尾が欠ける＝優先度が高い・ユーザーに確認）。(a) 今便の文脈（書き出し）は使わない＝読むのは collector の section の詰め／(b) **この会話は 4 便ぶん（p841〜p843）で長い**／(c) 島が違う ⇒ **新しい会話で `-Start p844` から**（(b) で決めた。残り字数は理由ではない）。
+
+## 以下は第842セッションの経緯
+
 ### 1.1 第842セッション（2026-10-06・YT-DELL2）
 
 同じ会話の続き（ユーザー「あなたの提案通りに進めて」＝§2 H ⒜・⒟ → F-gracesync）。`-Start p842`（HEAD `245f9a9e`）＝full **11269 / 0 / 2 / 11271**。§7 3.5 で第840 を ARCHIVE へ。
@@ -134,17 +146,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 ★ `-End p842 -DiffBase 245f9a9ed`（`end.log`）＝full **11273 / 0 / 2 / 11275**（+4＝台帳 3・試験 1）・門 全 OK。7.5: Core `+` 99 行・REF 2（spacing-spanner.cc:396-403・spring.cc:85-93）・OWN 0。7.6: 意味は LP（列の原点まで掛ける `operator*=`・行末群の right-edge）。7.7: 匂いなし（補正は完成したばねから読む式で、導出に使わない 3 形でも一致）。push はユーザー。
 判定: 次は **§2 F-gracesync**（ユーザー承認済み）。(a) 今便の文脈（grace・行末）は使わない＝書き出し（`LilyPondExporter`）は新しく読むコード／(b) 会話は 3 便ぶん（p841・p842）で、`HANDOFF` を何度も読み直してはいない／(c) 島が違う＝差は小さい ⇒ 既定どおり**この会話で続けてよい**（`-Start p843` から）。ただし書き出しは段をまたぐ時刻の前処理という設計の仕事＝着手前に設計をユーザーに見せる。
-
-## 以下は第841セッションの経緯
-
-### 1.1 第841セッション（2026-10-06・YT-DELL2）
-
-新しい会話。`-Start p841`（HEAD `df4b57f7`）＝full **11269 / 0 / 2 / 11271**。§7 3.5 で第839 を ARCHIVE へ。
-- **§2 H ⒞ を閉じた＝計器の差・コード変更なし**（Lab `sessions/p841/gl`・`p840/kg` の `probe.ps1`／`cmp.ps1` の写し）: `lysc ly` の双子では下の段だけが曲頭に grace を持ち、LP は上の段の拍子を主の時刻・下の段を grace の時刻に置いて拍子を 2 回描き、偽の小節線を引いた（LP の既知の不具合）。印を消しても不変（g0a・g0b）。LP 文書の回避（上の段に `\grace { s16 s16 }`＝g0c）を入れた双子とは小節線 20.99／33.10 対 20.99／33.11＝一致。
-- **新規起票 §2 F-gracesync**: 書き出しが段ごとに違う grace を同期しない＝`\time` の変更・`\bar "||"`・曲頭で LP の絵が崩れる（`ext` v2〜v6 の 5 形）。段をまたぐ時刻の前処理が要る＝ユーザー判断。
-
-★ `-End p841 -DiffBase df4b57f7e`（`end.log`）＝full **11269 / 0 / 2 / 11271**・門 全 OK。7.5: Core `+` 0 行。7.6: 該当なし（コード変更なし）。7.7: 匂いなし。push はユーザー。
-判定: 次は §2 H ⒜（行末の ×0.8 の列原点・courtesy 付きで約 0.6）・⒟（註の書き直し）か、ユーザーが選べば F-gracesync。(a) ⒜ は p832 の `lsg` の計器の上に立つ・今便の文脈は薄い／(b) 会話は軽い／(c) 同じ島 ⇒ **この会話で続けてよい**（`-Start p842` から）。
 
 ## 2. 開いている作業
 
@@ -1419,7 +1420,8 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 - ✅ **F-midi. `.mid` に GM 音色を書く＝パートごとにトラックとチャンネル・チャンネルごとにプログラムチェンジ・`midiInstrument "…"` で上書き**（2026-09-15・第385 起票・**ユーザー承認「良い」**・`## 0.8.0`）。**出荷（第385 続き）**: `LilySharp.Core/Midi/GeneralMidi.cs`（LP の 128 名・0 始まり・`PreviewTimbreFamily`）／`InstrumentDefaults.GetMidiProgram`／`PartHeaderDefaults.MidiProgram`（`midiInstrument` ＞ プリセット ＞ 0）／`SymbolCaseValidator` が未知名・裸の値をエラー／`MidiExporter.SplitIntoPartTracks`（音符に `Part` を持たせて後で分割・初めて鳴った順・歌詞は先頭トラック）／`MidiFile` の `ProgramChange`（tick 0・ch 9 除外）／双子は既定（0）以外で `midiInstrument =`／MusicXML `<midi-instrument>`／補完・tmLanguage・GRAMMAR。テスト `MidiInstrumentTests`。**名前の整理も同便で実施**: `midiInstrument` で音色は書けるので `acoustic-guitar`/`electric-guitar`/`electric-bass` も削除（ユーザー「削除する（推奨）」）＝`uke` と合わせて別名 14 個が退役。以下は起票時の記録。**発端**: 楽器プリセットの別名の整理（`uke` 退役の続き）で「別名は MIDI に効かないか」を測った——**実測（`lysc midi` のバイト）: format 1・2 トラック（"Tempo"＋"Track 1"）・全パートの音程音符がチャンネル 0・ドラムだけチャンネル 9・プログラムチェンジ 0 個**＝**どの楽器も一般の MIDI プレイヤーでは GM 1（ピアノ）で鳴る**。楽器名が効くのは記譜（音部記号・オクターブ・移調）と、エディタのプレビュー合成の音色系統（`MidiExporter.TimbreFamily`＝名前の部分一致・`.mid` には入らない）だけ。**設計（承認済み）**: ⑴ 1 パート＝1 トラック（トラック名＝パート名）・音程パートに ch 0〜15（9 を除く）を順に・ドラムは 9 のまま・**16 に収まらなければ同じ音色のパートでチャンネル共有、それでも足りなければ警告**・4 分音の補助チャンネル（`MidiFile.PlanQuarterToneChannels`）は残りから（足りなければ既存の同一チャンネル内ベンドに落ちる）。⑵ 既定の音色＝プリセットの GM 番号（`guitar` 25 nylon・`acoustic-guitar` 26 steel・`electric-guitar` 28 clean・`bass`/`electric-bass` 34 finger・`contrabass` 44・`ukulele` 25・`mandolin` 26・`banjo` 106・弦 41〜43・木管 69/71/72/73/74・サックス 65〜68・金管 57/58/59/61・声 53 choir aahs・ピアノ 1）、プリセットなし＝1（LP の既定 "acoustic grand"）。⑶ **上書き＝part header の `midiInstrument "electric guitar (clean)"`**（LP の `midiInstrument` と同名・値は LP の 128 名＝`C:\bin\lilypond-2.26.0\share\lilypond\2.26.0\scm\lily\midi.scm` の `instrument-names-alist`・未知名はエラーで一覧）。⑷ 出力: `.mid` のプログラムチェンジ／双子の `\with { midiInstrument = "…" }`／MusicXML の `<score-instrument>`＋`<midi-instrument>`（`<midi-channel>`・`<midi-program>`）／プレビュー合成の音色系統は GM 番号から引く（部分一致をやめる＝`double-bass`・`piano-bass` の誤判定も消える）。⑸ **名前の整理はこの後にまとめて**＝純粋な別名 10 個（`bass-guitar`・`5-string-bass`・`6-string-bass`・`french-horn`・`piano-treble`・`voice-soprano`/`voice-alto`/`voice-tenor`・`double-bass`・`piano-bass`）は削除で決定済み（ユーザー: 声は `soprano`/`alto`/`tenor`＋`voice-bass`・`contrabass` を残す・`piano-bass` 削除）。`acoustic-guitar`/`electric-guitar`/`electric-bass` は「音色が違い得る名前は残す」決定——`midiInstrument` が入った時点で残す理由を再確認する。**影響**: 全 `.mid` の中身が変わる（トラック分割とプログラムチェンジ）＝MIDI のテストは書き直し・言語は追加だけ。
 
-- **F-gracesync. `lysc ly` は段ごとに違う装飾音を LP の「grace の同期」に合わせない**（2026-10-06・第841 起票・**第842 でユーザーが着手を承認＝§2 H の後に**）: LP は装飾音のある段の拍子・小節線・調号・印を grace の時刻に置き、無い段は主の時刻に置く（NR「Grace notes」の Known issues・回避は他の段に `\grace { s16 s16 }`）。**LP 2.26.0 実測**（Lab `sessions/p841/gl/ext`・下の段だけ小節頭に grace）: 曲頭は拍子が 2 回・偽の小節線（`test/grace-lower-staff` の双子）／`\time` の変更は拍子が 2 回／`\bar "||"` は二重線が 2 本／`\key` は上の段の調号が grace の位置へずれる／平の小節頭と `\clef` は崩れない。セクションの `\mark` も grace の前に入るので印が 2 つ。**書き出しは段ごとの構文木を歩くだけで段をまたぐ時刻を持たない**（`LilyPondExporter.Music.cs` `EmitGrace`）＝直すには段をまたぐ時刻の前処理が要る。⚠️ **LP 双子の計器（コーパスの双子・`kg/probe.ps1`）もこれを踏む**＝段ごとに違う grace の本の双子は手で `\grace { s… }` を足してから比べる。
+- ★★★ **F-hdrsilent. section の頭に `time`／`key` の指示があり、ある part がその section を書かないと、ページはその part からその section を丸ごと落とす＝段がずれ、score の末尾が欠ける**（2026-10-06・第843 起票・**未着手＝次の着手候補・ページ側の欠陥**）: Lab `sessions/p843/gs/c9-spacers.lys`（A 2 小節・B は `time 3/4` の頭＋bot だけ 2 小節・C は `time 3/4`＋top 1／bot 2）＝**ページは 4 小節（正しくは 6）**: top の bar 3 に C の音、bot の C が消え、B の印も無い。頭が無い版（`zz-v-no-header.lys`）は 6 小節で正しい・`key` の頭（`zz-v-key-header.lys`）でも 4 小節。モデル（`MeasureCollector.CollectMultiStaff`）の段ごとの小節数が食い違う（top 4・bot 6）。書き出しの `AppendSilentPlay` は頭を書く（`_sectionHeaders.DirectivesOf`）ので .ly は 6 小節＝ページだけの欠陥。⚠️ `lysc check` は何も言わない。
+- **F-gracesync. `lysc ly` は段ごとに違う装飾音を LP の「grace の同期」に合わせない**（2026-10-06・第841 起票・**第843 で本体を実装＝`ec713db26`**・残り: part が書かない section／短い play の詰めの小節（`s1`＝鍵にする音が無い・モデルでは section の位置を持つ spacer で、part をまたいで同じ位置）には空白を置けていない＝F-hdrsilent の後に。モデルの小節番号が段で揃っていることに依存する）: LP は装飾音のある段の拍子・小節線・調号・印を grace の時刻に置き、無い段は主の時刻に置く（NR「Grace notes」の Known issues・回避は他の段に `\grace { s16 s16 }`）。**LP 2.26.0 実測**（Lab `sessions/p841/gl/ext`・下の段だけ小節頭に grace）: 曲頭は拍子が 2 回・偽の小節線（`test/grace-lower-staff` の双子）／`\time` の変更は拍子が 2 回／`\bar "||"` は二重線が 2 本／`\key` は上の段の調号が grace の位置へずれる／平の小節頭と `\clef` は崩れない。セクションの `\mark` も grace の前に入るので印が 2 つ。**書き出しは段ごとの構文木を歩くだけで段をまたぐ時刻を持たない**（`LilyPondExporter.Music.cs` `EmitGrace`）＝直すには段をまたぐ時刻の前処理が要る。⚠️ **LP 双子の計器（コーパスの双子・`kg/probe.ps1`）もこれを踏む**＝段ごとに違う grace の本の双子は手で `\grace { s… }` を足してから比べる。
 
 - ✅ **F-export. Explorer の右クリックから複数の `.lys` をまとめて書き出す**（2026-09-09・第359 起票・**ユーザー要件 4 つ**・✅ **同便で実装＝§1 第359**。残り＝HTML 形式（後日・ユーザー指示）と、CLI の `lysc pdf/png` に `--all` が無い非対称（未起票のまま・LSP 側だけが全 score を書ける）） → **本文は `HANDOFF-ARCHIVE.md`「閉じた §2 の本文」の同じ見出し**（2026-09-12 に落とした）
 
