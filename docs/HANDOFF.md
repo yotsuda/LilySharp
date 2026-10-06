@@ -130,10 +130,11 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 新しい会話（第847 の判定どおり）。`-Start p848`（HEAD `ff04acd95`）＝full **11335 / 0 / 2 / 11337**。§7 3.5 で第846 を ARCHIVE へ。**F-partmeter ⒜ を実装（`d67d3e278`）**＝音楽の中の `time` は score の拍子。
 - **形**: `Svg/Collector/SectionMeterPlan`＝section ごとに「小節 k の頭で誰かが書いた `time`」（`MeasureModel.Split` が `time` と小節番号を報告）。同じ小節で違う拍子は文書順の先が立ち、後は LYS2005。**全 part が自分で書く変化しか無ければ Empty**（単一 part の shorthand はその part の声）＝掃き前の測定で `time` を音楽に持つ 83 冊のうち効くのは 0 冊（壊れた dogfood `trio.lys` の 1 件だけ）。
 - **読み手**: ページ＝`ApplyPlannedMeter`（walk の各 node 前と詰めの各小節前・小節の頭で 1 回・旧 case 本体は `ApplyMeterChange`）。plan のある本は resume しない（`VoiceWalkRecording.HadMeterPlan`・`CollectResumeAbortException`→full）。検査＝`ValidateMeasures` が他 part の拍子で測る。双子＝書かない声・詰め・書く声の流れ（`WithForeignChanges`）に `\time` を書く／chord 行の無音 play は `SectionBarMeters`（plan を重ねる）。MIDI＝詰めの tick を plan の拍子で。XML＝各 part に `<time>`。
-- 計測: LP 2.26.0（Lab `sessions/p848/pm`: 無音・書く・短い・chord の 4 冊）で bar check 失敗なし・ページと同じ絵。試験 `PartMeterTests` 10 本・毒 5 本（ページ 3 赤／双子 1／衝突 1／MIDI 1／検査 1）。掃き 998 冊 1199 score で svg・xml・midi・ly とも差 0（陽性対照: 旧 exe の `s1` が `s2.` に）。⚠️ 掃きは shorthand の修正（Empty が増えるだけ）の前の exe。full **11345 / 0 / 2 / 11347**（+10・1 回目は resume の網 2 本が shorthand の本で赤＝同じ commit で直した）。
+- 計測: LP 2.26.0（Lab `sessions/p848/pm`: 無音・書く・短い・chord の 4 冊）で bar check 失敗なし・ページと同じ絵。試験 `PartMeterTests` 10 本・毒 5 本（ページ 3 赤／双子 1／衝突 1／MIDI 1／検査 1）。掃き 998 冊 1199 score で svg・xml・midi・ly とも差 0（陽性対照: 旧 exe の `s1` が `s2.` に）。⚠️ 掃きは shorthand の修正（Empty が増えるだけ）の前の exe。full **11345 / 0 / 2 / 11347**（+10）→ 補完の修正後 **11346 / 0 / 2 / 11348**（1 回目は resume の網 2 本が shorthand の本で赤＝同じ commit で直した）。
 - **残り（小）**: `WithForeignChanges` は流れの頂に反復・phrase 参照・`voice` があれば何もしない（XML の `<time>`・双子の自前の拍子が欠ける＝LP は Timing で正しく描く）／MIDI の書く声の中の空の小節・裸の `R` は自分の拍子のまま／小節の途中の `time` は書いた part だけ。
 
 ★ `-End p848 -DiffBase ff04acd95`（`end.log`）＝門 全 OK。7.5: Core `+` 530 行・REF 1（移した time-signature-engraver の註）・OWN 1。7.6: 意味（score の拍子・先勝ち・LYS2005）はユーザー決定＝音楽的妥当性（RULES §5.2）・LP の Timing が同じ形。7.7: 匂い＝①resume を切るのは plan のある本だけ（コーパス 0 冊）だが perf の計器は回していない ②`GRAMMAR.md` の `partial` は「part ごと」のまま（2026-09-08 の決定・今回は触らない）。push はユーザー。
+- **続き（ユーザー報告）**: `score { lyrics ▮ }` の補完が空＝名前の一覧が `KEYWORD name {` の正規表現で、`lyrics words sings melody {`（定義で束縛を書く綴り）を `sings` の宣言と読んでいた。`LyricsTrackNamesOf` が `lyrics NAME [sings PART] {` を読む（`802bcfe46`・`SingsCompletionTests` +1・毒 1 赤・補完/LSP 1018 緑）。
 判定: §1.0 の決定の列は閉じた＝**次の一手はユーザー判断**（OMR P6 SMuFL・§2 E の残り等）。(a) 次の島は今の文脈を使わない／(c) 無関係 ⇒ 既定は続けるが、選ぶのはユーザー。
 
 ## 以下は第847セッションの経緯
