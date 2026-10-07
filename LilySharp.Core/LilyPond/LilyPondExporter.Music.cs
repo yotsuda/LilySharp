@@ -1563,10 +1563,29 @@ public sealed partial class LilyPondExporter
         // either (SpacingRules.ClefEngravesKey). Until 2026-09-26 a keyed book with a drum
         // part exported a twin LilyPond refused (a big-band probe in F).
         if (_drumMode) return "";
-        if (k.IsCustom) { _warnings.Add("custom key signature emitted as \\key c \\major (unsupported)"); return "\\key c \\major"; }
+        // A custom signature is LilyPond's own: the Staff's keyAlterations, (step . alteration)
+        // in print order — the alteration in whole tones, so a sharp is 1/2 — which the
+        // Key_engraver draws whenever it differs from the last one it drew.
+        // LILYPOND-REF: lily/key-engraver.cc:146-151 Key_engraver::process_music — create_key
+        //   when keyAlterations is not lastKeyAlterations.
+        // It was written as `\key c \major` with a warning until 2026-10-07, so the twin of
+        // test/custom-key printed no signature and an accidental on every F and C (Lab
+        // sessions/p851, the twin sweep).
+        if (k.IsCustom)
+            return "\\set Staff.keyAlterations = #`("
+                + string.Join(" ", k.CustomAlterations.Select(a => $"({a.Step} . {LyAlteration(a.Alter)})"))
+                + ")";
         string mode = k.IsMajor ? "major" : k.Mode.Text.ToLowerInvariant();
         return "\\key " + EmitPitch(k.Pitch) + " \\" + mode;
     }
+
+    /// <summary>A semitone alteration as LilyPond's whole-tone rational: 1 → 1/2, −2 → −1.</summary>
+    private static string LyAlteration(int semitones) => semitones switch
+    {
+        0 => "0",
+        _ when semitones % 2 == 0 => (semitones / 2).ToString(System.Globalization.CultureInfo.InvariantCulture),
+        _ => semitones.ToString(System.Globalization.CultureInfo.InvariantCulture) + "/2",
+    };
 
     /// <summary>
     /// A written meter, and the one place the RUNNING meter advances — so a section
