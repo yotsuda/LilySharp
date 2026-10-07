@@ -177,7 +177,16 @@ gh release view v0.4.0 --json isDraft,isPrerelease,assets
 
 ### 8. If targets are missing
 
-Publish the stragglers by hand, **one at a time**, from a machine logged in with the PAT:
+⚠️ **First read where the red legs died.** In 0.11.0 (2026-10-08, run `37654241335`) five of
+the eight `vsix` legs failed at *Upload release asset* — `Found release v0.11.0` followed by
+`Unexpected error fetching GitHub release for tag refs/tags/v0.11.0: HttpError` — which is
+**before** the Marketplace step, so those five targets were simply not published (`vsce show`
+listed the other three, and the Release held 7 of its 12 assets). `gh run rerun <run> --failed`
+ran the five again, serialised as before, and all five uploaded and published: 12 assets and
+8 of 8 targets. A leg that died *before* *Publish to VS Code Marketplace* is safe to re-run; one
+that died at or after it may already be live, and re-running it fails on the version.
+
+Otherwise, publish the stragglers by hand, **one at a time**, from a machine logged in with the PAT:
 
 ```powershell
 cd editors\vscode
