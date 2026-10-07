@@ -65,9 +65,18 @@ internal sealed partial class LayoutEngine
     /// <param name="Count">The measures the six tables are filled for. ⚠️ THE BOUND, not any
     /// table's <c>Length</c>: the tables are lent from the thread's drawer (ScratchArray) and
     /// may be longer than this estimate, holding the previous estimate's numbers past it.</param>
+    /// <param name="StaffUp">Per measure, the staves' own pure top over it (no System grob,
+    /// no excess) — what a line's <see cref="BreakerRefpointFrame.PureTopUp"/> is the max of.</param>
+    /// <param name="SystemRel">Per measure, the System's grobs over it (marks, bar numbers) as
+    /// their top over the bar's staff top, the excess included — a line lifts them onto its own
+    /// staff top (<see cref="PagingAugmentProgram.ExecuteForBreaker"/>); −∞ where there are none.</param>
+    /// <param name="BeginStaffAt">Per line start, the begin bucket's staff part (no excess).</param>
+    /// <param name="BeginSystemRelAt">Per line start, the begin bucket's System grobs, as
+    /// <paramref name="SystemRel"/>.</param>
     private readonly record struct MeasureHeightEstimate(
         double[] UpRest, double[] DownRest, double[] Body, double[] BeginUpAt, double[] BeginDownAt,
-        BreakerRefpointFrame?[] Frame, int Count);
+        BreakerRefpointFrame?[] Frame, int Count,
+        double[] StaffUp, double[] SystemRel, double[] BeginStaffAt, double[] BeginSystemRelAt);
 
     /// <summary>
     /// Slices the ideal placement's paging silhouettes by bar, so that any candidate line —
@@ -135,6 +144,11 @@ internal sealed partial class LayoutEngine
     [ThreadStatic] private static double[]? t_beginUpAt;
     [ThreadStatic] private static double[]? t_beginDownAt;
     [ThreadStatic] private static BreakerRefpointFrame?[]? t_frame;
+    [ThreadStatic] private static double[]? t_staffUp;
+    [ThreadStatic] private static double[]? t_systemRel;
+    [ThreadStatic] private static double[]? t_beginStaffAt;
+    [ThreadStatic] private static double[]? t_beginSystemRelAt;
+    [ThreadStatic] private static double[]? t_measureSystemRel;
     // ChooseSystemCount's (start, end) → line memo, lent from the thread and given back
     // FULL (session 554): an entry keeps the line's inputs beside the SystemDetails it built,
     // and a later keystroke that finds the same (start, end) with EQUAL inputs reuses the
@@ -191,10 +205,22 @@ internal sealed partial class LayoutEngine
         // construction, not because a net holds it.
         Array.Fill(beginUpAt, double.NaN, 0, measureCount);
         Array.Fill(beginDownAt, double.NaN, 0, measureCount);
+        // The staves' part and the System grobs' part (PagingAugmentProgram.ExecuteForBreaker),
+        // so a line over other bars than a placed one lifts the grobs onto ITS staff top.
+        var staffUpTable = ScratchArray.Take(ref t_staffUp, measureCount);
+        var systemRel = ScratchArray.Take(ref t_systemRel, measureCount);
+        var beginStaffAt = ScratchArray.Take(ref t_beginStaffAt, measureCount);
+        var beginSystemRelAt = ScratchArray.Take(ref t_beginSystemRelAt, measureCount);
+        Array.Clear(staffUpTable, 0, measureCount);
+        Array.Fill(systemRel, double.NegativeInfinity, 0, measureCount);
+        Array.Fill(beginStaffAt, double.NaN, 0, measureCount);
+        Array.Fill(beginSystemRelAt, double.NaN, 0, measureCount);
         // The bare continuation prefix: the smallest begin bucket a continuation system
         // showed. A book of one system has no continuation and lends that system's.
         double bareUp = double.PositiveInfinity, bareDown = double.PositiveInfinity;
         double firstUp = 0, firstDown = 0;
+        double bareStaff = double.PositiveInfinity, bareSystemRel = double.PositiveInfinity;
+        double firstStaff = 0, firstSystemRel = double.NegativeInfinity;
         var skylines = pass.Prelim.PagingSkylines;
 
         for (int s = 0; s < pass.Systems.Count; s++)
@@ -216,7 +242,13 @@ internal sealed partial class LayoutEngine
             // so that arm clears them.
             var measureUp = ScratchArray.Take(ref t_measureUp, count);
             var measureDown = ScratchArray.Take(ref t_measureDown, count);
+            // ...and the System grobs over each bar, as their top over the bar's staff top.
+            var measureSystemRel = ScratchArray.Take(ref t_measureSystemRel, count);
+            Array.Fill(measureSystemRel, double.NegativeInfinity, 0, count);
             double sysBeginUp = 0, sysBeginDown = 0, sysRestUp = 0, sysRestDown = 0;
+            double beginSystemRel = double.NegativeInfinity;
+            // The staves' pure top over the placed line, where its System grobs stand lifted.
+            double pureTop = 0;
 
             if (skylines == null || s >= skylines.Count)
             {
@@ -226,8 +258,13 @@ internal sealed partial class LayoutEngine
             else
             {
                 var (up, down) = skylines[s];
-                up = pass.Prelim.BreakerUp(s, up);
+                // The breaker's silhouette in its two parts: the staves' own, and the System's
+                // grobs set aside (PagingAugmentProgram.ExecuteForBreaker). Where no breaker
+                // silhouette was built there is no System grob in the paging one to set aside.
+                var split = pass.Prelim.BreakerSplitOf(s);
+                up = split?.StaffUp ?? pass.Prelim.BreakerUp(s, up);
                 down = pass.Prelim.BreakerDown(s, down);
+                pureTop = Math.Max(0, split?.PureTopUp ?? (up.IsEmpty ? 0 : up.MaxHeight()));
                 // Where the line's first bar begins in the silhouette's own X frame; left of
                 // it is the line-start prefix — BuildLineShapes' begin bucket.
                 double xSplit = sys.Measures[0].X;
@@ -251,28 +288,55 @@ internal sealed partial class LayoutEngine
                     sysRestUp = Math.Max(sysRestUp, measureUp[k]);
                     sysRestDown = Math.Max(sysRestDown, measureDown[k]);
                 }
+                if (split is { Boxes: var boxes })
+                {
+                    for (int b = 0; b + 3 < boxes.Length; b += 4)
+                    {
+                        double rel = boxes[b + 2];
+                        int bar = (int)boxes[b + 3];
+                        if (double.IsNaN(rel))
+                            continue;
+                        if (bar < 0)
+                            beginSystemRel = Math.Max(beginSystemRel, rel);
+                        else if (bar < count)
+                            measureSystemRel[bar] = Math.Max(measureSystemRel[bar], rel);
+                    }
+                }
             }
 
+            // The placed line's System grobs, lifted onto its staff top: the silhouette the
+            // excess is measured against is the breaker's whole one.
+            double liftedBegin = Math.Max(sysBeginUp, beginSystemRel + pureTop);
+            double liftedRest = sysRestUp;
+            for (int k = 0; k < count; k++)
+                liftedRest = Math.Max(liftedRest, measureSystemRel[k] + pureTop);
             // What the silhouette could not account for belongs to every bucket.
-            double excessUp = Math.Max(0, ext.upExtent - Math.Max(sysBeginUp, sysRestUp));
+            double excessUp = Math.Max(0, ext.upExtent - Math.Max(liftedBegin, liftedRest));
             double excessDown = Math.Max(0, ext.downExtent - Math.Max(sysBeginDown, sysRestDown));
             double lineBeginUp = sysBeginUp + excessUp;
             double lineBeginDown = sysBeginDown + excessDown;
+            double lineBeginSystemRel = beginSystemRel + excessUp;
             int firstMeasure = sys.Measures[0].MeasureIndex;
             if (firstMeasure >= 0 && firstMeasure < measureCount)
             {
                 beginUpAt[firstMeasure] = lineBeginUp;
                 beginDownAt[firstMeasure] = lineBeginDown;
+                beginStaffAt[firstMeasure] = sysBeginUp;
+                beginSystemRelAt[firstMeasure] = lineBeginSystemRel;
             }
             if (s == 0)
             {
                 firstUp = lineBeginUp;
                 firstDown = lineBeginDown;
+                firstStaff = sysBeginUp;
+                firstSystemRel = lineBeginSystemRel;
             }
             else
             {
                 bareUp = Math.Min(bareUp, lineBeginUp);
                 bareDown = Math.Min(bareDown, lineBeginDown);
+                bareStaff = Math.Min(bareStaff, sysBeginUp);
+                bareSystemRel = Math.Min(bareSystemRel, lineBeginSystemRel);
             }
             // The breaker's frame of the system this bar was placed in — the same
             // BreakerFrame the paging path hands the placed systems' details, so an
@@ -285,6 +349,8 @@ internal sealed partial class LayoutEngine
                     continue;
                 upRest[mi] = measureUp[k] + excessUp;
                 downRest[mi] = measureDown[k] + excessDown;
+                staffUpTable[mi] = measureUp[k];
+                systemRel[mi] = measureSystemRel[k] + excessUp;
                 body[mi] = h;
                 frame[mi] = sysFrame;
             }
@@ -293,6 +359,8 @@ internal sealed partial class LayoutEngine
         {
             bareUp = firstUp;
             bareDown = firstDown;
+            bareStaff = firstStaff;
+            bareSystemRel = firstSystemRel;
         }
         for (int m = 0; m < measureCount; m++)
         {
@@ -300,9 +368,13 @@ internal sealed partial class LayoutEngine
                 beginUpAt[m] = bareUp;
             if (double.IsNaN(beginDownAt[m]))
                 beginDownAt[m] = bareDown;
+            if (double.IsNaN(beginStaffAt[m]))
+                beginStaffAt[m] = bareStaff;
+            if (double.IsNaN(beginSystemRelAt[m]))
+                beginSystemRelAt[m] = bareSystemRel;
         }
         return new MeasureHeightEstimate(upRest, downRest, body, beginUpAt, beginDownAt, frame,
-            measureCount);
+            measureCount, staffUpTable, systemRel, beginStaffAt, beginSystemRelAt);
     }
 
     /// <summary>
@@ -348,16 +420,25 @@ internal sealed partial class LayoutEngine
             // is the tallest lends the line its body AND its refpoints, so the two never
             // come from different systems.
             BreakerRefpointFrame? frame = null;
+            // The line's staff top, and its System grobs at their height over their bars'
+            // (PagingAugmentProgram.ExecuteForBreaker).
+            double staffTop = start < estimate.Count ? estimate.BeginStaffAt[start] : 0;
+            double systemRel = double.NegativeInfinity;
             for (int m = start; m < end; m++)
             {
                 restUp = Math.Max(restUp, estimate.UpRest[m]);
                 restDown = Math.Max(restDown, estimate.DownRest[m]);
+                staffTop = Math.Max(staffTop, estimate.StaffUp[m]);
+                systemRel = Math.Max(systemRel, estimate.SystemRel[m]);
                 if (estimate.Body[m] > body)
                 {
                     body = estimate.Body[m];
                     frame = estimate.Frame[m];
                 }
             }
+            restUp = Math.Max(restUp, systemRel + staffTop);
+            if (frame is { } f)
+                frame = f with { PureTopUp = staffTop };
             if (body <= 0)
             {
                 body = _options.StaffHeight;
@@ -369,7 +450,9 @@ internal sealed partial class LayoutEngine
             // The begin bucket of a line starting HERE (LilyPond's begin_line_heights at
             // this line's start rank), not one bucket for every line.
             // Bounded by the estimate's Count, not the table's Length (see MeasureHeightEstimate).
-            double beginUp = start < estimate.Count ? estimate.BeginUpAt[start] : 0;
+            double beginUp = start < estimate.Count
+                ? Math.Max(estimate.BeginUpAt[start], estimate.BeginSystemRelAt[start] + staffTop)
+                : 0;
             double beginDown = start < estimate.Count ? estimate.BeginDownAt[start] : 0;
             // The memo answers by VALUE (see t_builtLines): the same line with the same
             // inputs — this keystroke's other candidates, or the last keystroke's when the
@@ -694,7 +777,8 @@ internal sealed partial class LayoutEngine
             ? $"begin {s.BeginUp:F6}/{s.BeginDown:F6} rest {s.RestUp:F6}/{s.RestDown:F6}"
             : "-";
         return $"top {d.TopExtent:F6} body {d.StaffHeight:F6} bottom {d.BottomExtent:F6} "
-            + $"height {d.Height:F6} shape {shape} tallness {d.Tallness:F6} perm {d.PagePermission}";
+            + $"height {d.Height:F6} shape {shape} tallness {d.Tallness:F6} perm {d.PagePermission} "
+            + $"refpoints {d.RefpointExtentUp:F6}/{d.RefpointExtentDown:F6} origin {d.AlignmentOriginUp:F6}";
     }
 
     /// <summary>Line sizes (bars per line) of a breaking, for the scoring report.</summary>

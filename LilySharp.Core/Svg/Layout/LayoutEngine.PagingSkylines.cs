@@ -920,7 +920,8 @@ internal sealed partial class LayoutEngine
         IReadOnlyList<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>>? pedalLines = null,
         List<VerticalSkyline?>? breakerUps = null,
         List<VerticalSkyline?>? breakerDowns = null,
-        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? breakerBases = null)
+        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? breakerBases = null,
+        List<BreakerSplit?>? breakerSplits = null)
     {
         if (skylines == null)
             return null;
@@ -1553,11 +1554,17 @@ internal sealed partial class LayoutEngine
                 var breakerBase = breakerBases is not null && s < breakerBases.Count
                     ? breakerBases[s]
                     : skylines[s];
+                // The System's grobs lifted over the staves' pure heights, the volta brackets
+                // left out (PagingAugmentProgram.ExecuteForBreaker).
+                var measures = s < systems.Length ? systems[s].Measures : default;
                 if (builders[s] is { HasBreakerSteps: true } b)
                 {
-                    var (bUp, bDown) = b.Build().Execute(breakerBase, forBreaker: true);
+                    var boxes = breakerSplits is null ? null : new List<double>();
+                    var (bUp, bDown) = b.Build().ExecuteForBreaker(breakerBase, measures,
+                        out double pureTop, out var staffUp, boxes);
                     breakerUps.Add(bUp);
                     breakerDowns?.Add(bDown);
+                    breakerSplits?.Add(new BreakerSplit(pureTop, staffUp, boxes!.ToArray()));
                 }
                 else if (!ReferenceEquals(breakerBase.up, skylines[s].up))
                 {
@@ -1568,11 +1575,13 @@ internal sealed partial class LayoutEngine
                         : breakerBase;
                     breakerUps.Add(bUp);
                     breakerDowns?.Add(bDown);
+                    breakerSplits?.Add(new BreakerSplit(bUp.IsEmpty ? 0 : bUp.MaxHeight(), bUp, []));
                 }
                 else
                 {
                     breakerUps.Add(null);
                     breakerDowns?.Add(null);
+                    breakerSplits?.Add(null);
                 }
             }
 

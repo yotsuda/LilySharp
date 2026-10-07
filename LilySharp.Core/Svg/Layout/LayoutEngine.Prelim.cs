@@ -69,6 +69,16 @@ internal sealed partial class LayoutEngine
     /// placement and the page writes to that list; the systems paging moves are new objects in
     /// the array <c>CreatePages</c> returns.
     /// </remarks>
+    /// <summary>
+    /// One system's PAGE-BREAKER silhouette in LilyPond's two parts
+    /// (<see cref="PagingAugmentProgram.ExecuteForBreaker"/>): the staves' pure top over the
+    /// line, the staves' own up silhouette, and the System's grobs (marks, bar numbers) as
+    /// boxes standing over their bars' staff tops — x0, x1, top over the bar's staff top, bar
+    /// (−1 left of the first) — so that a line over other bars can be priced from them
+    /// (<c>EstimateMeasureHeights</c>).
+    /// </summary>
+    private sealed record BreakerSplit(double PureTopUp, VerticalSkyline StaffUp, double[] Boxes);
+
     private readonly record struct PreliminaryPass(
         List<(VerticalSkyline up, VerticalSkyline down)>? PagingSkylines,
         Dictionary<int, ImmutableArray<BeamLayout>> BeamsByStaff,
@@ -80,8 +90,25 @@ internal sealed partial class LayoutEngine
         List<VerticalSkyline?>? BreakerUpSkylines,
         List<VerticalSkyline?>? BreakerDownSkylines,
         double[]? BreakerAnnotationUps,
-        double[]? BreakerAnnotationDowns)
+        double[]? BreakerAnnotationDowns,
+        List<BreakerSplit?>? BreakerSplits = null)
     {
+        /// <summary>System <paramref name="i"/>'s staves' pure top, Y-up from its origin
+        /// (<see cref="SystemDetails.AlignmentOriginUp"/>): the breaker silhouette's before the
+        /// System's grobs joined it — or the paging silhouette's own top where no breaker
+        /// silhouette was built, which then holds no System grob to leave out.</summary>
+        /// <remarks>Floored at 0, as the count loop's per-bar heights are
+        /// (<c>EstimateMeasureHeights</c>), so a line is in the same frame on both paths.</remarks>
+        public double BreakerPureTop(int i, VerticalSkyline pagingUp)
+            => Math.Max(0, BreakerSplits is { } b && i < b.Count && b[i] is { } split
+                ? split.PureTopUp
+                : pagingUp.IsEmpty ? 0 : pagingUp.MaxHeight());
+
+        /// <summary>System <paramref name="i"/>'s breaker silhouette in its two parts, or null
+        /// where none was built.</summary>
+        public BreakerSplit? BreakerSplitOf(int i)
+            => BreakerSplits is { } b && i < b.Count ? b[i] : null;
+
         /// <summary>System <paramref name="i"/>'s up silhouette as the PAGE BREAKER reads it —
         /// LilyPond's pure heights: the staves without their drawn beams, so every beamed stem
         /// stands at its unbeamed length (lily/stem.cc:387-447 — a beamed stem's pure height is
@@ -348,6 +375,7 @@ internal sealed partial class LayoutEngine
         int sysCount = perSystemSkylines?.Count ?? 0;
         var breakerUps = new List<VerticalSkyline?>(sysCount);
         var breakerDowns = new List<VerticalSkyline?>(sysCount);
+        var breakerSplits = new List<BreakerSplit?>(sysCount);
         var pagingSkylines = AugmentSkylinesForPaging(
             score.TextMetrics,
             perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
@@ -356,7 +384,8 @@ internal sealed partial class LayoutEngine
             prelimAnn.Dynamics,
             prelimAnn.BarNumbers, prelimAnn.TupletBrackets, allPrelimSlurs,
             allPrelimTies, prelimAnn.TextSpanners,
-            systemCache, lyricBands, pedalLines, breakerUps, breakerDowns, breakerBases);
+            systemCache, lyricBands, pedalLines, breakerUps, breakerDowns, breakerBases,
+            breakerSplits);
         return new PreliminaryPass(
             pagingSkylines,
             prelimBeamsByStaff,
@@ -368,7 +397,8 @@ internal sealed partial class LayoutEngine
             breakerUps,
             breakerDowns,
             annotationUps,
-            annotationDowns);
+            annotationDowns,
+            breakerSplits);
     }
 
     /// <summary>

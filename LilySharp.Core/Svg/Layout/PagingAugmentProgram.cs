@@ -141,6 +141,123 @@ internal sealed class PagingAugmentProgram
     /// pure steps, which it skips without touching a side.</param>
     public (VerticalSkyline up, VerticalSkyline down) Execute(
         (VerticalSkyline up, VerticalSkyline down) baseline, bool forBreaker = false)
+        => Replay(baseline, forBreaker, systemBoxes: null);
+
+    /// <summary>
+    /// The PAGE BREAKER's replay, in LilyPond's two parts: the staves' own pure heights (every
+    /// step but the System's grobs), and the System's grobs — music marks and bar numbers —
+    /// united with them LIFTED by how far the line's staff top stands over the staff top of the
+    /// bar each was priced in. Volta brackets are not priced at all.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/system.cc:893-923 System::part_of_line_pure_height — the staves'
+    /// begin/rest heights are translated by the LINE's pure minimum translations, the System's
+    /// own elements (<c>other_elements</c>) are united untranslated; and those were taken per bar
+    /// (lily/axis-group-interface.cc:359-474 adjacent_pure_heights, one interval of break ranks at
+    /// a time), i.e. with the staff at THAT bar's translation (lily/align-interface.cc:215-219:
+    /// the first element is put at −(its pure top)). So a mark, a tempo or a bar number stands as
+    /// high over the line's staff top as it stood over its own bar's — a bar with a low staff
+    /// top under a line with a high one lifts it. A grob over several bars is in each bar's
+    /// heights, and the union keeps the highest: the lift of the bar with the LOWEST staff top.
+    /// LILYPOND-REF: lily/system.cc:940-967 System::calc_pure_relevant_grobs — an axis group
+    /// among the System's elements is not pure-relevant, and the VoltaBracketSpanner is one
+    /// (scm/define-grobs.scm VoltaBracketSpanner: axis-group-interface), so a volta bracket is
+    /// in no line's pure height.
+    /// MEASURED (2.26.0, Lab sessions/p853, Boogie Oogie Oogie): the System's begin/mid heights
+    /// over the two volta bars are empty, and LilyPond's page-1 decision is reproduced to 0.05 mm
+    /// of paper height only with the lift (302.23 mm against 296.89 without it).
+    /// <para>
+    /// The staff top of a bar is the staves' silhouette over the bar's X span united with the
+    /// line's prefix (the clef and key LilyPond would print were the line to start at that bar —
+    /// its begin heights at the bar's break rank); a box left of the first bar is the first bar's.
+    /// </para>
+    /// </remarks>
+    /// <param name="measures">The system's bars, for their X spans.</param>
+    /// <param name="pureTopUp">The line's staff top (Y-up from the system origin): the staves'
+    /// pure heights' top over the whole line — <see cref="SystemDetails.AlignmentOriginUp"/>.</param>
+    /// <param name="staffUp">The staves' own up silhouette, before the System's grobs joined it.</param>
+    /// <param name="liftedBoxes">The System's grobs as boxes relative to their bars' staff tops:
+    /// x0, x1, (top − the bar's staff top), the index of the bar (−1 left of the first bar) —
+    /// four numbers a box, for an estimate that prices other lines over the same bars.</param>
+    public (VerticalSkyline up, VerticalSkyline down) ExecuteForBreaker(
+        (VerticalSkyline up, VerticalSkyline down) baseline, ImmutableArray<MeasureLayout> measures,
+        out double pureTopUp, out VerticalSkyline staffUp, List<double>? liftedBoxes = null)
+    {
+        var boxes = new List<double>();
+        var staves = Replay(baseline, forBreaker: true, boxes);
+        staffUp = staves.up;
+        var up = staves.up;
+        pureTopUp = up.IsEmpty ? 0 : up.MaxHeight();
+        if (boxes.Count == 0)
+            return staves;
+
+        double x0Line = measures.IsDefaultOrEmpty ? double.NegativeInfinity : measures[0].X;
+        double prefixTop = up.IsEmpty || measures.IsDefaultOrEmpty
+            ? double.NegativeInfinity
+            : up.MaxHeightsSplitAt(x0Line).Left;
+        // A bar's staff top: its own span's silhouette under the line's prefix.
+        double BarTop(int k)
+        {
+            double x0 = k == 0 ? x0Line : measures[k].X;
+            double x1 = k == measures.Length - 1 ? double.PositiveInfinity : measures[k + 1].X;
+            double top = up.IsEmpty ? double.NegativeInfinity : up.MaxHeightInRange(x0, x1);
+            return Math.Max(prefixTop, top);
+        }
+
+        var outUp = new VerticalSkyline(VerticalDirection.Up);
+        outUp.Merge(staves.up);
+        VerticalSkyline? outDown = null;
+        for (int i = 0; i < boxes.Count; i += SystemBoxArgs)
+        {
+            double bx0 = boxes[i], bx1 = boxes[i + 1], bottom = boxes[i + 2], top = boxes[i + 3];
+            bool mark = boxes[i + 4] != 0;
+            // The bars the box is priced in, and the lowest staff top among them.
+            int firstBar = -1;
+            double barTop = double.PositiveInfinity;
+            if (measures.IsDefaultOrEmpty || bx1 < x0Line)
+            {
+                if (!measures.IsDefaultOrEmpty)
+                    barTop = BarTop(0);
+            }
+            else
+            {
+                for (int k = 0; k < measures.Length; k++)
+                {
+                    double x0 = k == 0 ? x0Line : measures[k].X;
+                    double x1 = k == measures.Length - 1 ? double.PositiveInfinity : measures[k + 1].X;
+                    if (bx1 < x0 || bx0 >= x1)
+                        continue;
+                    double t = BarTop(k);
+                    if (t < barTop)
+                    {
+                        barTop = t;
+                        firstBar = k;
+                    }
+                }
+            }
+            double lift = double.IsFinite(barTop) && double.IsFinite(pureTopUp)
+                ? Math.Max(0, pureTopUp - barTop)
+                : 0;
+            liftedBoxes?.AddRange([bx0, bx1, double.IsFinite(barTop) ? top - barTop : double.NaN, firstBar]);
+            outUp.MergeBox(bx0, bx1, bottom + lift, top + lift);
+            if (mark)
+            {
+                if (outDown is null)
+                {
+                    outDown = new VerticalSkyline(VerticalDirection.Down);
+                    outDown.Merge(staves.down);
+                }
+                outDown.MergeBox(bx0, bx1, bottom + lift, top + lift);
+            }
+        }
+        return (outUp, outDown ?? staves.down);
+    }
+
+    // x0, x1, bottom, top, and whether the box is a music mark (merged on both sides).
+    private const int SystemBoxArgs = 5;
+
+    private (VerticalSkyline up, VerticalSkyline down) Replay(
+        (VerticalSkyline up, VerticalSkyline down) baseline, bool forBreaker, List<double>? systemBoxes)
     {
         var cur = baseline;
         bool ownUp = false, ownDown = false;
@@ -263,6 +380,15 @@ internal sealed class PagingAugmentProgram
                 case Kind.VoltaBox:
                 case Kind.BarNumberBox:
                 {
+                    // The breaker's split replay (ExecuteForBreaker): a volta bracket has no pure
+                    // height there, and a bar number is the System's — set aside to be lifted.
+                    if (systemBoxes is not null)
+                    {
+                        if (kind == Kind.BarNumberBox)
+                            systemBoxes.AddRange([_args[a], _args[a + 1], _args[a + 2], _args[a + 3], 0]);
+                        a += BoxArgs;
+                        break;
+                    }
                     Up().MergeBox(
                         _args[a], _args[a + 1], _args[a + 2], _args[a + 3]);
                     a += BoxArgs;
@@ -280,7 +406,9 @@ internal sealed class PagingAugmentProgram
                 case Kind.StackedMusicMarkBox:
                 case Kind.PureMusicMarkBox:
                 {
-                    if (forBreaker == (kind == Kind.PureMusicMarkBox))
+                    if (systemBoxes is not null && kind == Kind.PureMusicMarkBox)
+                        systemBoxes.AddRange([_args[a], _args[a + 1], _args[a + 2], _args[a + 3], 1]);
+                    else if (forBreaker == (kind == Kind.PureMusicMarkBox))
                     {
                         Up().MergeBox(
                             _args[a], _args[a + 1], _args[a + 2], _args[a + 3]);
@@ -394,14 +522,22 @@ internal sealed class PagingAugmentProgram
         public void AddFiguredBassBox(double xLeft, double xRight, double bottom, double top)
             => AddBox(Kind.FiguredBassBox, xLeft, xRight, bottom, top);
 
+        // A volta bracket and a bar number are priced differently by the breaker
+        // (ExecuteForBreaker), so either makes the system's breaker silhouette its own.
         public void AddVoltaBox(double xLeft, double xRight, double bottom, double top)
-            => AddBox(Kind.VoltaBox, xLeft, xRight, bottom, top);
+        {
+            AddBox(Kind.VoltaBox, xLeft, xRight, bottom, top);
+            HasBreakerSteps = true;
+        }
 
         public void AddMarkBox(double xLeft, double xRight, double bottom, double top)
             => AddBox(Kind.MarkBox, xLeft, xRight, bottom, top);
 
         public void AddBarNumberBox(double xLeft, double xRight, double bottom, double top)
-            => AddBox(Kind.BarNumberBox, xLeft, xRight, bottom, top);
+        {
+            AddBox(Kind.BarNumberBox, xLeft, xRight, bottom, top);
+            HasBreakerSteps = true;
+        }
 
         /// <summary>
         /// A music mark (tempo, rehearsal mark, section label, …) as two boxes: where the

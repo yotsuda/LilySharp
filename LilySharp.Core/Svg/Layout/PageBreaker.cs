@@ -77,8 +77,11 @@ internal readonly record struct LineShape(
 /// <c>LayoutEngine.PageAnchorOffsets</c>, the squeeze from its staff springs
 /// (drawn refpoint distance − <see cref="StaffSpring.MinimumDistance"/>, summed).
 /// </remarks>
+/// <param name="PureTopUp">How far ABOVE the system's origin LilyPond's alignment puts the line's
+/// own origin: the top of its staves' pure heights over the line — see
+/// <see cref="SystemDetails.AlignmentOriginUp"/>.</param>
 internal readonly record struct BreakerRefpointFrame(
-    double ToFirst, double ToLastAtMinimum, double StaffCompression);
+    double ToFirst, double ToLastAtMinimum, double StaffCompression, double PureTopUp = 0);
 
 /// <summary>
 /// Vertical spacing details for a single system (line of music).
@@ -284,6 +287,28 @@ internal sealed record SystemDetails
     /// </summary>
     public double RefpointExtentDown { get; init; }
 
+    /// <summary>
+    /// How far ABOVE this system's origin LilyPond's own origin for the line sits: the top of
+    /// the staves' pure heights over the line, where the VerticalAlignment puts the line's first
+    /// element. Read by <see cref="SpringLengthTo"/> alone.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:215-219 internal_get_minimum_translations — the
+    /// first non-empty element is translated DOWN by its skyline's max height, so in LilyPond's
+    /// frame <c>refpoint_extent_</c> (lily/system.cc:864-890 pure_refpoint_extent) is the staff
+    /// refpoints BELOW that top, a different number for every line. Every formula of the breaker
+    /// reads a line's refpoints together with its own shape, where a common shift of both cancels
+    /// — except <c>Line_details::spring_length</c>, which subtracts the NEXT line's refpoint from
+    /// this one's (lily/constrained-breaking.cc:657-667). Lily#'s frame is the top staff's top
+    /// line for every line, so the difference of the two lines' frames is put back there.
+    /// MEASURED (2.26.0, Lab sessions/p853): the VerticalAlignment's minimum-translations-alist
+    /// is −(the staff's pure top) for each of Boogie Oogie Oogie's 24 lines, and transcribing it
+    /// moves the paper height at which page 1 takes its 13th system from Lily#'s 290.55 mm to
+    /// 296.89 (LilyPond: 302.23; the rest is <c>PagingAugmentProgram.ExecuteForBreaker</c>'s lift).
+    /// Zero (a title, hand-built details) is Lily#'s frame itself.
+    /// </remarks>
+    public double AlignmentOriginUp { get; init; }
+
     /// <summary>How many of the caller's lines this one stands for — more than 1 once
     /// <see cref="PageBreaker.CompressLines"/> has merged the lines a forbidden page break
     /// joins.</summary>
@@ -324,7 +349,9 @@ internal sealed record SystemDetails
     /// </remarks>
     public double SpringLengthTo(SystemDetails next)
     {
-        double refpointDist = Tallness + RefpointExtentDown - next.RefpointExtentUp;
+        // The refpoints in LilyPond's frames, each line's own (AlignmentOriginUp).
+        double refpointDist = Tallness + (RefpointExtentDown - AlignmentOriginUp)
+            - (next.RefpointExtentUp - next.AlignmentOriginUp);
         return Math.Max(0.0, SpringLength - refpointDist);
     }
 }

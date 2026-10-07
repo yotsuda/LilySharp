@@ -278,6 +278,9 @@ internal sealed class PageLayouter
             // (1.0 from this pair, 1.0 from the body above) and turned the page on.
             RefpointExtentUp = -toFirst,
             RefpointExtentDown = -toLast,
+            // ...and where LilyPond's own frame for the line stands over them (the staves'
+            // pure top, BreakerRefpointFrame.PureTopUp) — read by the spring alone.
+            AlignmentOriginUp = frame?.PureTopUp ?? 0,
             // LILYPOND-REF: lily/constrained-breaking.cc:555 —
             //   out->inverse_hooke_ = out->full_height () + system_system_space_;
             // where system_system_space_ is system-system-spacing's BASIC-DISTANCE

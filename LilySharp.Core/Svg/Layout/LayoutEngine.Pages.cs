@@ -329,7 +329,14 @@ internal sealed partial class LayoutEngine
                 .ToImmutableArray();
             // ...and the BREAKER's frame, per system: the same anchors with the last one
             // taken back up to the pairs' alignment minimum (BreakerFrame).
-            var frames = systems.Select(BreakerFrame).ToImmutableArray();
+            // With LilyPond's own origin for each line over it: its staves' pure top
+            // (SystemDetails.AlignmentOriginUp).
+            var frames = systems.Select((s, i) => BreakerFrame(s) with
+            {
+                PureTopUp = breakerView is { } bv && perSystemSkylines is { } ps && i < ps.Count
+                    ? bv.BreakerPureTop(i, ps[i].up)
+                    : 0,
+            }).ToImmutableArray();
             var shapes = BuildLineShapes(systems, perSystemSkylines, perSystemExtents, SysHeight,
                 breakerView);
             double BreakerUpExtent(int i) =>

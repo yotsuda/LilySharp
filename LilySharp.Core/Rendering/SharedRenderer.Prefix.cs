@@ -213,6 +213,23 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/break-align-engraver.cc — KeySignature is
     /// break-aligned at every line start.
     /// </summary>
+    /// <summary>
+    /// The key signature a system opening at <paramref name="measures"/>' first measure prints
+    /// at its head, and the clef it is positioned by — what <c>DrawSystem</c> draws there
+    /// (<see cref="ResolveKeySignature(Staff, SystemLayout, MultiStaffScore)"/>, then a key
+    /// change opening the line), for the skyline seed of that signature
+    /// (<c>SkylineBuilder.SeedLineStartKey</c>), which has the measures but no SystemLayout.
+    /// </summary>
+    internal static (KeySignature Key, ClefType Clef) LineStartKey(
+        Staff staff, ImmutableArray<MeasureLayout> measures, bool isFirstSystem, MultiStaffScore score)
+    {
+        var probe = new SystemLayout(isFirstSystem ? 0 : 1, 0, 0, 0, measures);
+        var key = ResolveKeySignature(staff, probe, score);
+        if (GetSystemStartKeyChange(staff, probe) is { } startKeyChange)
+            key = startKeyChange.NewKey;
+        return (key, ResolveClef(staff, probe));
+    }
+
     private static KeySignatureChangeItem? GetSystemStartKeyChange(Staff staff, SystemLayout system)
     {
         if (system.SystemIndex == 0 || system.Measures.IsDefaultOrEmpty || system.Measures.Length == 0)

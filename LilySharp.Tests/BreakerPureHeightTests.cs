@@ -105,6 +105,55 @@ public class BreakerPureHeightTests
     }
 
     [Fact]
+    public void TheLineStartKeySignature_IsInTheStavesPureTop()
+    {
+        // MEASURED (2.26.0, Lab sessions/p853, もう恋なんてしない's twin, E major in the bass
+        // clef): the staff's begin heights stand 1.0 over its top line at every bar — the
+        // sharps. A line whose notes stay inside the staff therefore has its staves' pure top
+        // (the line's origin in LilyPond's frame, SystemDetails.AlignmentOriginUp) there.
+        const string source = """
+            octave absolute
+            time 4/4
+            key e major
+
+            part p {
+              clef bass
+              section S {
+                e,4 e, e, e, | e,1 | break e,4 e, e, e, | e,1 |
+              }
+            }
+
+            form main { S }
+
+            score main {
+              staff p
+            }
+            """;
+        var tree = SyntaxTree.Parse(source);
+        var spec = RenderSpecParser.FindAll(tree).First();
+        var score = SvgGenerator.CollectScore(tree, spec);
+        var log = new List<string>();
+        int mine = Environment.CurrentManagedThreadId;
+        LayoutEngine.DebugPageBreakingScoring = s =>
+        {
+            if (Environment.CurrentManagedThreadId == mine)
+                log.Add(s);
+        };
+        try
+        {
+            new LayoutEngine(score.Paper).Layout(score);
+        }
+        finally
+        {
+            LayoutEngine.DebugPageBreakingScoring = null;
+        }
+        var row = log.First(l => l.Contains("placed sys 2:", StringComparison.Ordinal));
+        var m = Regex.Match(row, @"origin ([-\d.]+)");
+        Assert.True(m.Success, row);
+        Assert.Equal(1.0, double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture), 2);
+    }
+
+    [Fact]
     public void ATabBeamsStems_ArePricedUnbeamed_InTheGroupsDirection()
     {
         // MEASURED (2.26.0, Lab sessions/p852/pr/tab, Billie Jean's riff on a four-string

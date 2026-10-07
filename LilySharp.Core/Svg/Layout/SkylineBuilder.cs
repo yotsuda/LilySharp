@@ -100,6 +100,8 @@ internal sealed class SkylineBuilder
         AddEdgeStaffInk(firstStaff, measureLayouts, firstStaffMiddleUp, firstStaffBeams,
             systemLeft, upSkyline, downSkyline,
             EdgeGraceSeeds(score, firstStaff, measureLayouts), pureBeams);
+        SeedLineStartKey(score, firstStaff, measureLayouts, firstStaffMiddleUp, systemLeft,
+            upSkyline, downSkyline);
 
         // Process bottommost staff for DOWN skyline (elements below the system)
         // LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline
@@ -143,6 +145,9 @@ internal sealed class SkylineBuilder
             AddEdgeStaffInk(lastStaff, measureLayouts, lastStaffMiddleUp, lastStaffBeams,
                 systemLeft, upSkyline, downSkyline,
                 EdgeGraceSeeds(score, lastStaff, measureLayouts), pureBeams);
+        if (twoEnds)
+            SeedLineStartKey(score, lastStaff, measureLayouts, lastStaffMiddleUp, systemLeft,
+                upSkyline, downSkyline);
 
         // ★ EACH EDGE STAFF SEEDS ITS OWN STAFF SYMBOL — BOTH its lines, not one each
         // (2026-07-28). It used to seed the outer pair, the first staff's TOP and the last
@@ -467,6 +472,52 @@ internal sealed class SkylineBuilder
     /// bass F = +2, alto C = 0). Keeping the two in one shape is the point — a skyline
     /// that anchors the clef anywhere else reserves space where no ink is.
     /// </remarks>
+    /// <summary>
+    /// Seeds the key signature a system prints at its head into both skylines, where the
+    /// renderer draws it (the shared key column, <c>SharedRenderer.DrawSystem</c>).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-940 skyline_spacing — a KeySignature is
+    /// an inside-staff grob like the Clef beside it, so it is in the staff's skyline; and it is
+    /// in the staff's begin-of-line pure heights at EVERY bar
+    /// (lily/axis-group-interface.cc:359-474 adjacent_pure_heights — the Key_engraver prints a
+    /// begin-of-line-visible signature at each bar line), which is where the page breaker reads
+    /// a bar's staff top (<c>PagingAugmentProgram.ExecuteForBreaker</c>). Only a mid-measure
+    /// key change was seeded until session 853. MEASURED (2.26.0, Lab sessions/p853,
+    /// もう恋なんてしない in E major): the staff's begin heights stand 1.0 over the top line
+    /// at every bar — the sharps — where Lily#'s line-start silhouette read 0.05, so the
+    /// breaker lifted every mark 0.9 too high and put one system less on page 1 than LilyPond.
+    /// The glyphs are the drawer's own walk (<c>SharedRenderer.KeySignatureGlyphs</c>), at the
+    /// positions the mid-measure arm reads (AddMusicItemToSkylines).
+    /// ⚠️ An ossia's signature is not seeded (it is drawn scaled, from the ossia's own column
+    /// rule), nor a staff without a key column (a tab, a drum or one-line staff).
+    /// </remarks>
+    private void SeedLineStartKey(
+        MultiStaffScore score, Staff? staff, ImmutableArray<MeasureLayout> measureLayouts,
+        double staffMiddleUp, double systemLeft,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        if (staff is null || double.IsNaN(systemLeft) || measureLayouts.IsDefaultOrEmpty
+            || staff.IsTextRow || staff.IsOssia
+            || !SpacingRules.EngravesClef(staff) || !SpacingRules.ContributesToKeyColumnWidth(staff))
+            return;
+        bool isFirstSystem = measureLayouts[0].MeasureIndex == 0;
+        var (key, clef) = Rendering.SharedRenderer.LineStartKey(staff, measureLayouts, isFirstSystem, score);
+        if (SpacingRules.KeySignatureInkWidth(key) <= 0.0)
+            return;
+        double keyX = systemLeft + EngravingDefaults.ClefGlyphXOffset + SpacingRules.MaxClefWidth(score)
+            + BreakAlignSpacing.GetSpacing(BreakAlignSymbol.Clef, BreakAlignSymbol.KeySignature).Value;
+        var size = StaffSize.Of(staff);
+        foreach (var (kind, dx, pos) in Rendering.SharedRenderer.KeySignatureGlyphs(key, clef, out _))
+        {
+            double originX = keyX + dx;
+            double glyphY = staffMiddleUp + size.Span(pos * 0.5);
+            MergeAccidentalInk(kind,
+                originX + size.Ink(GlyphMetrics.GetAccidentalSkylineBBox(kind)).Left,
+                glyphY, size, upSkyline, downSkyline);
+        }
+    }
+
     private void SeedClef(
         Staff staff, double staffMiddleUp, double systemLeft,
         StaffSize size,
