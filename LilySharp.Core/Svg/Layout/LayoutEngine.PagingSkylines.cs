@@ -1138,8 +1138,14 @@ internal sealed partial class LayoutEngine
         // and 19 off it, against 51 and 19 without the raise).
         // How far left of a line's first bar a begin-bucket box ends.
         const double BreakerBucketEpsilon = 1e-6;
+        // The padding is over the staff symbol's EXTENT, its top line's upper edge — half a line
+        // thickness over the top line Lily#'s staff top stands at. MEASURED (2.26.0, Lab
+        // sessions/p854): a boxed "B" opening a line of Final Fantasy V Main Theme's twin has
+        // its pure top at 3.555 over the top line = 0.85 + its box 2.705 (Lily# read 3.505), and
+        // ひまわりの約束 line 3's 6.808 is the lifted "C1" over 0.85 the same way.
         double PureMarkBottomUp(MusicMarkLayout m, double staffTopUp)
-            => staffTopUp + (m.MarkType == MusicMarkType.Coda ? 0.4 : 0.8);
+            => staffTopUp + EngravingDefaults.StaffLineThickness / 2
+               + (m.MarkType == MusicMarkType.Coda ? 0.4 : 0.8);
         // The bar the mark stands at, within its system, or −1.
         int BarOf(MusicMarkLayout m, int s)
         {

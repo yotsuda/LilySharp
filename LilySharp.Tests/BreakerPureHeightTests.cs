@@ -106,6 +106,20 @@ public class BreakerPureHeightTests
     }
 
     [Fact]
+    public void AMark_RestsItsPaddingOverTheStaffSymbolsExtent_NotItsTopLine()
+    {
+        // LILYPOND-REF: lily/side-position-interface.cc aligned_side — the mark's support is the
+        //   staff symbol, whose extent reaches half a line thickness (0.05) over the top line;
+        //   scm/define-grobs.scm RehearsalMark padding 0.8.
+        // MEASURED (2.26.0, Lab sessions/p854: Final Fantasy V Main Theme's twin, a line opening
+        //   on a boxed "B" over notes inside the staff): the line's pure top is 3.555 over the top
+        //   line = 0.85 + the box's 2.705 (Lab sessions/p854/mark: "B" (−0.352 . 2.353)). Lily#
+        //   read 3.505 while the padding stood on the top line.
+        var shape = FirstLine(Book("""e,1 | e,1@mark("B") |"""));
+        Assert.Equal(3.555, shape.RestUp, 3);
+    }
+
+    [Fact]
     public void TheLineStartKeySignature_IsInTheStavesPureTop()
     {
         // MEASURED (2.26.0, Lab sessions/p853, もう恋なんてしない's twin, E major in the bass
