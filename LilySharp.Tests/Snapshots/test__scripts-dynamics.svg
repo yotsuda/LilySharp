@@ -6,11 +6,11 @@
 </style>
   <rect x="0" y="0" width="119.50" height="26.92" fill="#FFFFFF"/>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="8.59" y1="12.12" x2="83.08" y2="12.12" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="13.12" x2="83.08" y2="13.12" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="14.12" x2="83.08" y2="14.12" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="15.12" x2="83.08" y2="15.12" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="16.12" x2="83.08" y2="16.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="12.12" x2="83.02" y2="12.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="13.12" x2="83.02" y2="13.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="14.12" x2="83.02" y2="14.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="15.12" x2="83.02" y2="15.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="16.12" x2="83.02" y2="16.12" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="9.34" y="15.12" font-size="4.00" data-pos="218"></text>
   <text class="music" x="13.42" y="14.12" font-size="4.00"></text>
   <line x1="16.79" y1="17.12" x2="18.75" y2="17.12" stroke="#000000" stroke-width="0.200"/>
@@ -63,7 +63,7 @@
   <rect x="55.73" y="12.12" width="0.19" height="4.00" data-pos="395"/>
   <rect x="65.60" y="12.12" width="0.19" height="4.00" data-pos="437"/>
   <rect x="73.75" y="12.12" width="0.19" height="4.00" data-pos="454"/>
-  <rect x="82.94" y="12.12" width="0.19" height="4.00" data-pos="497"/>
+  <rect x="82.88" y="12.12" width="0.19" height="4.00" data-pos="497"/>
   <text x="17.77" y="20.16" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="260">sfz</text>
   <text x="20.78" y="20.54" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="266">fp</text>
   <text x="23.78" y="18.90" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="271">sf</text>

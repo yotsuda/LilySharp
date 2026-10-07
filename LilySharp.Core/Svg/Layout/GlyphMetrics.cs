@@ -762,6 +762,51 @@ internal static partial class GlyphMetrics
         _ => font.NoteheadBlack
     };
 
+    /// <summary>
+    /// The box of the head a given (style, note value) pair DRAWS — the glyph
+    /// <see cref="EmmentalerGlyphs.GetNotehead(Model.NoteheadStyle, int)"/> picks, so a styled head
+    /// is measured as the shape it is: a black slash is 1.7152 wide, not the plain head's 1.3042.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-head.cc:37-120 internal_print — the stencil is the font's glyph for
+    ///   "noteheads.s" + log + style;
+    /// LILYPOND-REF: scm/define-grobs.scm NoteHead — no X-extent of its own, so
+    /// LILYPOND-REF: lily/grob.cc:75 Grob::stencil_width_proc is its X extent, the stencil's: what
+    ///   Note_spacing's left_head_end and every column extent read.
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p851, test/rhythm-slashes's twin): with the plain
+    ///   head's width every slash bar came out 0.2–0.8 narrower than LilyPond's.
+    /// </remarks>
+    public static BBox GetNoteheadBBox(DesignMetrics font, Model.NoteheadStyle style, int noteValue)
+        => style switch
+    {
+        Model.NoteheadStyle.Cross => noteValue switch
+        {
+            0 or 1 => font.NoteheadCrossWhole, 2 => font.NoteheadCrossHalf, _ => font.NoteheadCrossBlack
+        },
+        Model.NoteheadStyle.Diamond => noteValue switch
+        {
+            0 or 1 => font.NoteheadDiamondWhole, 2 => font.NoteheadDiamondHalf, _ => font.NoteheadDiamondBlack
+        },
+        Model.NoteheadStyle.Triangle => noteValue switch
+        {
+            0 or 1 => font.NoteheadTriangleWhole, 2 => font.NoteheadTriangleHalf, _ => font.NoteheadTriangleBlack
+        },
+        Model.NoteheadStyle.Slash => noteValue switch
+        {
+            0 or 1 => font.NoteheadSlashWhole, 2 => font.NoteheadSlashHalf, _ => font.NoteheadSlashBlack
+        },
+        Model.NoteheadStyle.XCircle => font.NoteheadXCircle,
+        _ => GetNoteheadBBox(font, noteValue),
+    };
+
+    /// <summary>The head style an item draws — a note's or a chord's, the default for the rest.</summary>
+    public static Model.NoteheadStyle HeadStyleOf(Model.MusicItem? item) => item switch
+    {
+        Model.NoteItem n => n.Notehead,
+        Model.ChordItem c => c.Notehead,
+        _ => Model.NoteheadStyle.Default,
+    };
+
     // ========== The boxes a SKYLINE is built from ==========
     // A grob's skyline is NOT always its extent, and WHICH it is, is declared per grob.
     // LILYPOND-REF: scm/define-grobs.scm — Clef:902 and Flag:1625 take

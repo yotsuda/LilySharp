@@ -1430,8 +1430,9 @@ internal static partial class SpacingRules
     /// extent); the head's scale is not what closes it.</remarks>
     internal static GlyphMetrics.BBox ScaledHeadBBox(MusicItem item, int noteValue)
         => EngravingStyle.Current.NoteHeadFontSizeStep == 0
-            ? GlyphMetrics.GetNoteheadBBox(noteValue)
-            : GlyphMetrics.GetNoteheadBBox(HeadFontOf(item) ?? GlyphMetrics.Design20, noteValue);
+            ? GlyphMetrics.GetNoteheadBBox(GlyphMetrics.StaffHeadFont, GlyphMetrics.HeadStyleOf(item), noteValue)
+            : GlyphMetrics.GetNoteheadBBox(HeadFontOf(item) ?? GlyphMetrics.Design20,
+                GlyphMetrics.HeadStyleOf(item), noteValue);
 
     internal static double ChordSupportLeftReach(ChordItem chord)
     {

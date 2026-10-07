@@ -1244,7 +1244,12 @@ internal sealed class MeasureLayouter
                 // line is 4.9062 = (staff 5.0828 + numbers-only tab 4.7297) / 2.
                 ? SpacingRules.ApplyLeftHeadWidth(endSpring, tabWishes.Items, spacing.Increment,
                     mergeWishAverage: true, headOverrides: tabWishes.HeadOverrides)
-                : SpacingRules.ApplyLeftHeadWidth(endSpring, lastItems, spacing.Increment);
+                // Every other closing column too: one wish per voice, averaged. MEASURED
+                // (2.26.0, Lab sessions/p851, test/rhythm-slashes's twin): the last bar's three
+                // wholes — two slash heads 3.0152 and a plain 1.962 — close 0.70 wider than
+                // three plain wholes, the MEAN's +0.702; the max's +1.053 drew it 0.38 wide.
+                : SpacingRules.ApplyLeftHeadWidth(endSpring, lastItems, spacing.Increment,
+                    mergeWishAverage: true);
 
             // The column's whole skyline — flag included — against the bar line's box:
             // the spring minimum now, the rod after the headroom.

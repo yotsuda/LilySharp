@@ -434,11 +434,11 @@ internal static class ItemSkylineFactory
         => SpacingRules.CueFontOf(item);
 
     /// <summary>The item's head box — the cue font's for a cue note, and either magnified by
-    /// <c>NoteHead.scale</c> (<see cref="SpacingRules.HeadFontOf"/>).</summary>
+    /// <c>NoteHead.scale</c> (<see cref="SpacingRules.HeadFontOf"/>), in the head's own style.</summary>
     private static GlyphMetrics.BBox HeadBox(MusicItem item, int noteValue)
-        => SpacingRules.HeadFontOf(item) is { } cue
-            ? GlyphMetrics.GetNoteheadBBox(cue, noteValue)
-            : GlyphMetrics.GetNoteheadBBox(noteValue);
+        => GlyphMetrics.GetNoteheadBBox(
+            SpacingRules.HeadFontOf(item) ?? GlyphMetrics.StaffHeadFont,
+            GlyphMetrics.HeadStyleOf(item), noteValue);
 
     /// <summary>
     /// Creates the left skyline for a music item.

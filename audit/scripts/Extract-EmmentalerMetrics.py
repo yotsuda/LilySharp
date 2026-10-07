@@ -114,6 +114,21 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("NoteheadWhole",       "noteheads.s0", "Whole notehead",         "mf/feta-noteheads.mf — noteheads.s0"),
     GlyphSpec("NoteheadHalf",        "noteheads.s1", "Half (hollow) notehead", "mf/feta-noteheads.mf — noteheads.s1"),
     GlyphSpec("NoteheadBlack",       "noteheads.s2", "Black (filled) notehead", "mf/feta-noteheads.mf — noteheads.s2"),
+    # The styled heads NoteheadStyle offers (EmmentalerGlyphs.GetNotehead): each is
+    # spaced and collided by its OWN box, as LilyPond's NoteHead extent is its stencil's.
+    GlyphSpec("NoteheadCrossWhole",    "noteheads.s0cross",    "Whole cross notehead",    "mf/feta-noteheads.mf — noteheads.s0cross"),
+    GlyphSpec("NoteheadCrossHalf",     "noteheads.s1cross",    "Half cross notehead",     "mf/feta-noteheads.mf — noteheads.s1cross"),
+    GlyphSpec("NoteheadCrossBlack",    "noteheads.s2cross",    "Black cross notehead",    "mf/feta-noteheads.mf — noteheads.s2cross"),
+    GlyphSpec("NoteheadDiamondWhole",  "noteheads.s0diamond",  "Whole diamond notehead",  "mf/feta-noteheads.mf — noteheads.s0diamond"),
+    GlyphSpec("NoteheadDiamondHalf",   "noteheads.s1diamond",  "Half diamond notehead",   "mf/feta-noteheads.mf — noteheads.s1diamond"),
+    GlyphSpec("NoteheadDiamondBlack",  "noteheads.s2diamond",  "Black diamond notehead",  "mf/feta-noteheads.mf — noteheads.s2diamond"),
+    GlyphSpec("NoteheadTriangleWhole", "noteheads.s0triangle", "Whole triangle notehead", "mf/feta-noteheads.mf — noteheads.s0triangle"),
+    GlyphSpec("NoteheadTriangleHalf",  "noteheads.s1triangle", "Half triangle notehead",  "mf/feta-noteheads.mf — noteheads.s1triangle"),
+    GlyphSpec("NoteheadTriangleBlack", "noteheads.s2triangle", "Black triangle notehead", "mf/feta-noteheads.mf — noteheads.s2triangle"),
+    GlyphSpec("NoteheadSlashWhole",    "noteheads.s0slash",    "Whole slash notehead",    "mf/feta-noteheads.mf — noteheads.s0slash"),
+    GlyphSpec("NoteheadSlashHalf",     "noteheads.s1slash",    "Half slash notehead",     "mf/feta-noteheads.mf — noteheads.s1slash"),
+    GlyphSpec("NoteheadSlashBlack",    "noteheads.s2slash",    "Black slash notehead",    "mf/feta-noteheads.mf — noteheads.s2slash"),
+    GlyphSpec("NoteheadXCircle",       "noteheads.s2xcircle",  "Circled-cross notehead",  "mf/feta-noteheads.mf — noteheads.s2xcircle"),
     # Accidentals
     GlyphSpec("AccidentalSharp",       "accidentals.sharp", "Sharp accidental",        "mf/feta-accidentals.mf — accidentals.sharp"),
     GlyphSpec("AccidentalFlat",        "accidentals.flat", "Flat accidental",         "mf/feta-flats.mf — accidentals.flat"),

@@ -416,8 +416,10 @@ internal static partial class SpacingRules
                 //   ⚠️ A REST INSIDE A CUE STILL PRICES FULL SIZE. RestItem carries no IsCue,
                 //   so there is nothing to ask; LilyPond's left grob would be the cue-sized
                 //   rest. No point observes it — see the branch below.
+                // ...and of the head's own SHAPE: a slash head's right edge, not a plain one's.
                 NoteItem or ChordItem => GlyphMetrics.GetNoteheadBBox(
                     HeadFontOf(p) ?? GlyphMetrics.Design20,
+                    GlyphMetrics.HeadStyleOf(p),
                     GetNoteValue(p)).Right,
                 // A rest is drawn glyph-left-aligned at its column, so its right
                 // extent from the column origin is the rest stencil's right edge.

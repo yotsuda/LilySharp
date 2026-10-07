@@ -83,6 +83,123 @@ internal static partial class GlyphMetrics
     /// <summary>Black (filled) notehead — advance width (next-glyph horizontal feed).</summary>
     public const double NoteheadBlackAdvance = 1.304000;
 
+    /// <summary>Whole cross notehead — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s0cross (noteheads.s0cross = U+E108 in this build)</remarks>
+    public static readonly BBox NoteheadCrossWhole = new(0.000000, -0.595000, 1.704200, 0.595000);
+    /// <summary>Whole cross notehead — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox NoteheadCrossWholeOutline = new(0.000000, -0.596000, 1.704000, 0.596000);
+    /// <summary>Whole cross notehead — advance width (next-glyph horizontal feed).</summary>
+    public const double NoteheadCrossWholeAdvance = 1.704000;
+
+    /// <summary>Half cross notehead — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s1cross (noteheads.s1cross = U+E109 in this build)</remarks>
+    public static readonly BBox NoteheadCrossHalf = new(0.000000, -0.570000, 1.504200, 0.570000);
+    /// <summary>Half cross notehead — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox NoteheadCrossHalfOutline = new(0.000000, -0.568000, 1.504000, 0.572000);
+    /// <summary>Half cross notehead — advance width (next-glyph horizontal feed).</summary>
+    public const double NoteheadCrossHalfAdvance = 1.504000;
+
+    /// <summary>Black cross notehead — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s2cross (noteheads.s2cross = U+E10A in this build)</remarks>
+    public static readonly BBox NoteheadCrossBlack = new(0.000000, -0.545000, 1.304200, 0.545000);
+    /// <summary>Black cross notehead — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox NoteheadCrossBlackOutline = new(0.000000, -0.544000, 1.304000, 0.544000);
+    /// <summary>Black cross notehead — advance width (next-glyph horizontal feed).</summary>
+    public const double NoteheadCrossBlackAdvance = 1.304000;
+
+    /// <summary>Whole diamond notehead — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s0diamond (noteheads.s0diamond = U+E0FF in this build)</remarks>
+    public static readonly BBox NoteheadDiamondWhole = new(0.000000, -0.545000, 1.962000, 0.545000);
+    /// <summary>Whole diamond notehead — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox NoteheadDiamondWholeOutline = new(0.000000, -0.544000, 1.964000, 0.544000);
+    /// <summary>Whole diamond notehead — advance width (next-glyph horizontal feed).</summary>
+    public const double NoteheadDiamondWholeAdvance = 1.960000;
+
+    /// <summary>Half diamond notehead — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s1diamond (noteheads.s1diamond = U+E100 in this build)</remarks>
+    public static readonly BBox NoteheadDiamondHalf = new(0.000000, -0.545000, 1.443400, 0.545000);
+    /// <summary>Half diamond notehead — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox NoteheadDiamondHalfOutline = new(0.000000, -0.544000, 1.444000, 0.544000);
+    /// <summary>Half diamond notehead — advance width (next-glyph horizontal feed).</summary>
+    public const double NoteheadDiamondHalfAdvance = 1.440000;
+
+    /// <summary>Black diamond notehead — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s2diamond (noteheads.s2diamond = U+E101 in this build)</remarks>
+    public static readonly BBox NoteheadDiamondBlack = new(0.000000, -0.545000, 1.461600, 0.545000);
+    /// <summary>Black diamond notehead — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox NoteheadDiamondBlackOutline = new(0.000000, -0.544000, 1.460000, 0.544000);
+    /// <summary>Black diamond notehead — advance width (next-glyph horizontal feed).</summary>
+    public const double NoteheadDiamondBlackAdvance = 1.460000;
+
+    /// <summary>Whole triangle notehead — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s0triangle (noteheads.s0triangle = U+E102 in this build)</remarks>
+    public static readonly BBox NoteheadTriangleWhole = new(0.000000, -0.868200, 2.295800, 0.726200);
+    /// <summary>Whole triangle notehead — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox NoteheadTriangleWholeOutline = new(0.000000, -0.872000, 2.296000, 0.728000);
+    /// <summary>Whole triangle notehead — advance width (next-glyph horizontal feed).</summary>
+    public const double NoteheadTriangleWholeAdvance = 2.292000;
+
+    /// <summary>Half triangle notehead — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s1triangle (noteheads.s1triangle = U+E103 in this build)</remarks>
+    public static readonly BBox NoteheadTriangleHalf = new(0.000000, -0.782800, 1.659200, 0.656600);
+    /// <summary>Half triangle notehead — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox NoteheadTriangleHalfOutline = new(0.000000, -0.788000, 1.660000, 0.660000);
+    /// <summary>Half triangle notehead — advance width (next-glyph horizontal feed).</summary>
+    public const double NoteheadTriangleHalfAdvance = 1.656000;
+
+    /// <summary>Black triangle notehead — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s2triangle (noteheads.s2triangle = U+E104 in this build)</remarks>
+    public static readonly BBox NoteheadTriangleBlack = new(0.000000, -0.782800, 1.382800, 0.656600);
+    /// <summary>Black triangle notehead — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox NoteheadTriangleBlackOutline = new(0.000000, -0.780000, 1.380000, 0.656000);
+    /// <summary>Black triangle notehead — advance width (next-glyph horizontal feed).</summary>
+    public const double NoteheadTriangleBlackAdvance = 1.380000;
+
+    /// <summary>Whole slash notehead — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s0slash (noteheads.s0slash = U+E105 in this build)</remarks>
+    public static readonly BBox NoteheadSlashWhole = new(0.000000, -1.050000, 3.015200, 1.050000);
+    /// <summary>Whole slash notehead — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox NoteheadSlashWholeOutline = new(0.000000, -1.052000, 3.016000, 1.052000);
+    /// <summary>Whole slash notehead — advance width (next-glyph horizontal feed).</summary>
+    public const double NoteheadSlashWholeAdvance = 3.012000;
+
+    /// <summary>Half slash notehead — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s1slash (noteheads.s1slash = U+E106 in this build)</remarks>
+    public static readonly BBox NoteheadSlashHalf = new(0.000000, -1.050000, 2.345200, 1.050000);
+    /// <summary>Half slash notehead — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox NoteheadSlashHalfOutline = new(0.000000, -1.052000, 2.344000, 1.052000);
+    /// <summary>Half slash notehead — advance width (next-glyph horizontal feed).</summary>
+    public const double NoteheadSlashHalfAdvance = 2.344000;
+
+    /// <summary>Black slash notehead — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s2slash (noteheads.s2slash = U+E107 in this build)</remarks>
+    public static readonly BBox NoteheadSlashBlack = new(0.000000, -1.050000, 1.715200, 1.050000);
+    /// <summary>Black slash notehead — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox NoteheadSlashBlackOutline = new(0.000000, -1.052000, 1.716000, 1.052000);
+    /// <summary>Black slash notehead — advance width (next-glyph horizontal feed).</summary>
+    public const double NoteheadSlashBlackAdvance = 1.712000;
+
+    /// <summary>Circled-cross notehead — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s2xcircle (noteheads.s2xcircle = U+E10B in this build)</remarks>
+    public static readonly BBox NoteheadXCircle = new(0.000000, -0.648200, 1.551000, 0.648200);
+    /// <summary>Circled-cross notehead — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox NoteheadXCircleOutline = new(0.000000, -0.684000, 1.552000, 0.684000);
+    /// <summary>Circled-cross notehead — advance width (next-glyph horizontal feed).</summary>
+    public const double NoteheadXCircleAdvance = 1.548000;
+
     /// <summary>Sharp accidental — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-accidentals.mf — accidentals.sharp (accidentals.sharp = U+E013 in this build)</remarks>
     public static readonly BBox AccidentalSharp = new(0.000000, -1.500000, 1.100000, 1.500000);
@@ -1219,6 +1336,84 @@ internal static partial class GlyphMetrics
         public BBox NoteheadBlackOutline { get; init; }
         /// <summary>Black (filled) notehead — advance width (next-glyph horizontal feed).</summary>
         public double NoteheadBlackAdvance { get; init; }
+        /// <summary>Whole cross notehead — BBox (LILC bbox).</summary>
+        public BBox NoteheadCrossWhole { get; init; }
+        /// <summary>Whole cross notehead — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox NoteheadCrossWholeOutline { get; init; }
+        /// <summary>Whole cross notehead — advance width (next-glyph horizontal feed).</summary>
+        public double NoteheadCrossWholeAdvance { get; init; }
+        /// <summary>Half cross notehead — BBox (LILC bbox).</summary>
+        public BBox NoteheadCrossHalf { get; init; }
+        /// <summary>Half cross notehead — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox NoteheadCrossHalfOutline { get; init; }
+        /// <summary>Half cross notehead — advance width (next-glyph horizontal feed).</summary>
+        public double NoteheadCrossHalfAdvance { get; init; }
+        /// <summary>Black cross notehead — BBox (LILC bbox).</summary>
+        public BBox NoteheadCrossBlack { get; init; }
+        /// <summary>Black cross notehead — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox NoteheadCrossBlackOutline { get; init; }
+        /// <summary>Black cross notehead — advance width (next-glyph horizontal feed).</summary>
+        public double NoteheadCrossBlackAdvance { get; init; }
+        /// <summary>Whole diamond notehead — BBox (LILC bbox).</summary>
+        public BBox NoteheadDiamondWhole { get; init; }
+        /// <summary>Whole diamond notehead — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox NoteheadDiamondWholeOutline { get; init; }
+        /// <summary>Whole diamond notehead — advance width (next-glyph horizontal feed).</summary>
+        public double NoteheadDiamondWholeAdvance { get; init; }
+        /// <summary>Half diamond notehead — BBox (LILC bbox).</summary>
+        public BBox NoteheadDiamondHalf { get; init; }
+        /// <summary>Half diamond notehead — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox NoteheadDiamondHalfOutline { get; init; }
+        /// <summary>Half diamond notehead — advance width (next-glyph horizontal feed).</summary>
+        public double NoteheadDiamondHalfAdvance { get; init; }
+        /// <summary>Black diamond notehead — BBox (LILC bbox).</summary>
+        public BBox NoteheadDiamondBlack { get; init; }
+        /// <summary>Black diamond notehead — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox NoteheadDiamondBlackOutline { get; init; }
+        /// <summary>Black diamond notehead — advance width (next-glyph horizontal feed).</summary>
+        public double NoteheadDiamondBlackAdvance { get; init; }
+        /// <summary>Whole triangle notehead — BBox (LILC bbox).</summary>
+        public BBox NoteheadTriangleWhole { get; init; }
+        /// <summary>Whole triangle notehead — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox NoteheadTriangleWholeOutline { get; init; }
+        /// <summary>Whole triangle notehead — advance width (next-glyph horizontal feed).</summary>
+        public double NoteheadTriangleWholeAdvance { get; init; }
+        /// <summary>Half triangle notehead — BBox (LILC bbox).</summary>
+        public BBox NoteheadTriangleHalf { get; init; }
+        /// <summary>Half triangle notehead — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox NoteheadTriangleHalfOutline { get; init; }
+        /// <summary>Half triangle notehead — advance width (next-glyph horizontal feed).</summary>
+        public double NoteheadTriangleHalfAdvance { get; init; }
+        /// <summary>Black triangle notehead — BBox (LILC bbox).</summary>
+        public BBox NoteheadTriangleBlack { get; init; }
+        /// <summary>Black triangle notehead — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox NoteheadTriangleBlackOutline { get; init; }
+        /// <summary>Black triangle notehead — advance width (next-glyph horizontal feed).</summary>
+        public double NoteheadTriangleBlackAdvance { get; init; }
+        /// <summary>Whole slash notehead — BBox (LILC bbox).</summary>
+        public BBox NoteheadSlashWhole { get; init; }
+        /// <summary>Whole slash notehead — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox NoteheadSlashWholeOutline { get; init; }
+        /// <summary>Whole slash notehead — advance width (next-glyph horizontal feed).</summary>
+        public double NoteheadSlashWholeAdvance { get; init; }
+        /// <summary>Half slash notehead — BBox (LILC bbox).</summary>
+        public BBox NoteheadSlashHalf { get; init; }
+        /// <summary>Half slash notehead — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox NoteheadSlashHalfOutline { get; init; }
+        /// <summary>Half slash notehead — advance width (next-glyph horizontal feed).</summary>
+        public double NoteheadSlashHalfAdvance { get; init; }
+        /// <summary>Black slash notehead — BBox (LILC bbox).</summary>
+        public BBox NoteheadSlashBlack { get; init; }
+        /// <summary>Black slash notehead — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox NoteheadSlashBlackOutline { get; init; }
+        /// <summary>Black slash notehead — advance width (next-glyph horizontal feed).</summary>
+        public double NoteheadSlashBlackAdvance { get; init; }
+        /// <summary>Circled-cross notehead — BBox (LILC bbox).</summary>
+        public BBox NoteheadXCircle { get; init; }
+        /// <summary>Circled-cross notehead — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox NoteheadXCircleOutline { get; init; }
+        /// <summary>Circled-cross notehead — advance width (next-glyph horizontal feed).</summary>
+        public double NoteheadXCircleAdvance { get; init; }
         /// <summary>Sharp accidental — BBox (LILC bbox).</summary>
         public BBox AccidentalSharp { get; init; }
         /// <summary>Sharp accidental — the box its SKYLINE is built from (glyph outline).</summary>
@@ -1903,6 +2098,71 @@ internal static partial class GlyphMetrics
             NoteheadBlackOutline = new(NoteheadBlackOutline.Left * magnification, NoteheadBlackOutline.Bottom * magnification,
                 NoteheadBlackOutline.Right * magnification, NoteheadBlackOutline.Top * magnification),
             NoteheadBlackAdvance = NoteheadBlackAdvance * magnification,
+            NoteheadCrossWhole = new(NoteheadCrossWhole.Left * magnification, NoteheadCrossWhole.Bottom * magnification,
+                NoteheadCrossWhole.Right * magnification, NoteheadCrossWhole.Top * magnification),
+            NoteheadCrossWholeOutline = new(NoteheadCrossWholeOutline.Left * magnification, NoteheadCrossWholeOutline.Bottom * magnification,
+                NoteheadCrossWholeOutline.Right * magnification, NoteheadCrossWholeOutline.Top * magnification),
+            NoteheadCrossWholeAdvance = NoteheadCrossWholeAdvance * magnification,
+            NoteheadCrossHalf = new(NoteheadCrossHalf.Left * magnification, NoteheadCrossHalf.Bottom * magnification,
+                NoteheadCrossHalf.Right * magnification, NoteheadCrossHalf.Top * magnification),
+            NoteheadCrossHalfOutline = new(NoteheadCrossHalfOutline.Left * magnification, NoteheadCrossHalfOutline.Bottom * magnification,
+                NoteheadCrossHalfOutline.Right * magnification, NoteheadCrossHalfOutline.Top * magnification),
+            NoteheadCrossHalfAdvance = NoteheadCrossHalfAdvance * magnification,
+            NoteheadCrossBlack = new(NoteheadCrossBlack.Left * magnification, NoteheadCrossBlack.Bottom * magnification,
+                NoteheadCrossBlack.Right * magnification, NoteheadCrossBlack.Top * magnification),
+            NoteheadCrossBlackOutline = new(NoteheadCrossBlackOutline.Left * magnification, NoteheadCrossBlackOutline.Bottom * magnification,
+                NoteheadCrossBlackOutline.Right * magnification, NoteheadCrossBlackOutline.Top * magnification),
+            NoteheadCrossBlackAdvance = NoteheadCrossBlackAdvance * magnification,
+            NoteheadDiamondWhole = new(NoteheadDiamondWhole.Left * magnification, NoteheadDiamondWhole.Bottom * magnification,
+                NoteheadDiamondWhole.Right * magnification, NoteheadDiamondWhole.Top * magnification),
+            NoteheadDiamondWholeOutline = new(NoteheadDiamondWholeOutline.Left * magnification, NoteheadDiamondWholeOutline.Bottom * magnification,
+                NoteheadDiamondWholeOutline.Right * magnification, NoteheadDiamondWholeOutline.Top * magnification),
+            NoteheadDiamondWholeAdvance = NoteheadDiamondWholeAdvance * magnification,
+            NoteheadDiamondHalf = new(NoteheadDiamondHalf.Left * magnification, NoteheadDiamondHalf.Bottom * magnification,
+                NoteheadDiamondHalf.Right * magnification, NoteheadDiamondHalf.Top * magnification),
+            NoteheadDiamondHalfOutline = new(NoteheadDiamondHalfOutline.Left * magnification, NoteheadDiamondHalfOutline.Bottom * magnification,
+                NoteheadDiamondHalfOutline.Right * magnification, NoteheadDiamondHalfOutline.Top * magnification),
+            NoteheadDiamondHalfAdvance = NoteheadDiamondHalfAdvance * magnification,
+            NoteheadDiamondBlack = new(NoteheadDiamondBlack.Left * magnification, NoteheadDiamondBlack.Bottom * magnification,
+                NoteheadDiamondBlack.Right * magnification, NoteheadDiamondBlack.Top * magnification),
+            NoteheadDiamondBlackOutline = new(NoteheadDiamondBlackOutline.Left * magnification, NoteheadDiamondBlackOutline.Bottom * magnification,
+                NoteheadDiamondBlackOutline.Right * magnification, NoteheadDiamondBlackOutline.Top * magnification),
+            NoteheadDiamondBlackAdvance = NoteheadDiamondBlackAdvance * magnification,
+            NoteheadTriangleWhole = new(NoteheadTriangleWhole.Left * magnification, NoteheadTriangleWhole.Bottom * magnification,
+                NoteheadTriangleWhole.Right * magnification, NoteheadTriangleWhole.Top * magnification),
+            NoteheadTriangleWholeOutline = new(NoteheadTriangleWholeOutline.Left * magnification, NoteheadTriangleWholeOutline.Bottom * magnification,
+                NoteheadTriangleWholeOutline.Right * magnification, NoteheadTriangleWholeOutline.Top * magnification),
+            NoteheadTriangleWholeAdvance = NoteheadTriangleWholeAdvance * magnification,
+            NoteheadTriangleHalf = new(NoteheadTriangleHalf.Left * magnification, NoteheadTriangleHalf.Bottom * magnification,
+                NoteheadTriangleHalf.Right * magnification, NoteheadTriangleHalf.Top * magnification),
+            NoteheadTriangleHalfOutline = new(NoteheadTriangleHalfOutline.Left * magnification, NoteheadTriangleHalfOutline.Bottom * magnification,
+                NoteheadTriangleHalfOutline.Right * magnification, NoteheadTriangleHalfOutline.Top * magnification),
+            NoteheadTriangleHalfAdvance = NoteheadTriangleHalfAdvance * magnification,
+            NoteheadTriangleBlack = new(NoteheadTriangleBlack.Left * magnification, NoteheadTriangleBlack.Bottom * magnification,
+                NoteheadTriangleBlack.Right * magnification, NoteheadTriangleBlack.Top * magnification),
+            NoteheadTriangleBlackOutline = new(NoteheadTriangleBlackOutline.Left * magnification, NoteheadTriangleBlackOutline.Bottom * magnification,
+                NoteheadTriangleBlackOutline.Right * magnification, NoteheadTriangleBlackOutline.Top * magnification),
+            NoteheadTriangleBlackAdvance = NoteheadTriangleBlackAdvance * magnification,
+            NoteheadSlashWhole = new(NoteheadSlashWhole.Left * magnification, NoteheadSlashWhole.Bottom * magnification,
+                NoteheadSlashWhole.Right * magnification, NoteheadSlashWhole.Top * magnification),
+            NoteheadSlashWholeOutline = new(NoteheadSlashWholeOutline.Left * magnification, NoteheadSlashWholeOutline.Bottom * magnification,
+                NoteheadSlashWholeOutline.Right * magnification, NoteheadSlashWholeOutline.Top * magnification),
+            NoteheadSlashWholeAdvance = NoteheadSlashWholeAdvance * magnification,
+            NoteheadSlashHalf = new(NoteheadSlashHalf.Left * magnification, NoteheadSlashHalf.Bottom * magnification,
+                NoteheadSlashHalf.Right * magnification, NoteheadSlashHalf.Top * magnification),
+            NoteheadSlashHalfOutline = new(NoteheadSlashHalfOutline.Left * magnification, NoteheadSlashHalfOutline.Bottom * magnification,
+                NoteheadSlashHalfOutline.Right * magnification, NoteheadSlashHalfOutline.Top * magnification),
+            NoteheadSlashHalfAdvance = NoteheadSlashHalfAdvance * magnification,
+            NoteheadSlashBlack = new(NoteheadSlashBlack.Left * magnification, NoteheadSlashBlack.Bottom * magnification,
+                NoteheadSlashBlack.Right * magnification, NoteheadSlashBlack.Top * magnification),
+            NoteheadSlashBlackOutline = new(NoteheadSlashBlackOutline.Left * magnification, NoteheadSlashBlackOutline.Bottom * magnification,
+                NoteheadSlashBlackOutline.Right * magnification, NoteheadSlashBlackOutline.Top * magnification),
+            NoteheadSlashBlackAdvance = NoteheadSlashBlackAdvance * magnification,
+            NoteheadXCircle = new(NoteheadXCircle.Left * magnification, NoteheadXCircle.Bottom * magnification,
+                NoteheadXCircle.Right * magnification, NoteheadXCircle.Top * magnification),
+            NoteheadXCircleOutline = new(NoteheadXCircleOutline.Left * magnification, NoteheadXCircleOutline.Bottom * magnification,
+                NoteheadXCircleOutline.Right * magnification, NoteheadXCircleOutline.Top * magnification),
+            NoteheadXCircleAdvance = NoteheadXCircleAdvance * magnification,
             AccidentalSharp = new(AccidentalSharp.Left * magnification, AccidentalSharp.Bottom * magnification,
                 AccidentalSharp.Right * magnification, AccidentalSharp.Top * magnification),
             AccidentalSharpOutline = new(AccidentalSharpOutline.Left * magnification, AccidentalSharpOutline.Bottom * magnification,
@@ -2440,6 +2700,45 @@ internal static partial class GlyphMetrics
         NoteheadBlack = new(0.000000, -0.568269, 1.289478, 0.568269),
         NoteheadBlackOutline = new(0.000000, -0.568000, 1.288000, 0.568000),
         NoteheadBlackAdvance = 1.288000,
+        NoteheadCrossWhole = new(0.000000, -0.643848, 1.895180, 0.643848),
+        NoteheadCrossWholeOutline = new(0.000000, -0.644000, 1.896000, 0.644000),
+        NoteheadCrossWholeAdvance = 1.892000,
+        NoteheadCrossHalf = new(0.000000, -0.606058, 1.592151, 0.606058),
+        NoteheadCrossHalfOutline = new(0.000000, -0.604000, 1.592000, 0.604000),
+        NoteheadCrossHalfAdvance = 1.592000,
+        NoteheadCrossBlack = new(0.000000, -0.568269, 1.289478, 0.568269),
+        NoteheadCrossBlackOutline = new(0.000000, -0.568000, 1.288000, 0.568000),
+        NoteheadCrossBlackAdvance = 1.288000,
+        NoteheadDiamondWhole = new(0.000000, -0.568269, 2.045269, 0.568269),
+        NoteheadDiamondWholeOutline = new(0.000000, -0.568000, 2.044000, 0.568000),
+        NoteheadDiamondWholeAdvance = 2.044000,
+        NoteheadDiamondHalf = new(0.000000, -0.568269, 1.504807, 0.568269),
+        NoteheadDiamondHalfOutline = new(0.000000, -0.568000, 1.504000, 0.568000),
+        NoteheadDiamondHalfAdvance = 1.504000,
+        NoteheadDiamondBlack = new(0.000000, -0.568269, 1.523702, 0.568269),
+        NoteheadDiamondBlackOutline = new(0.000000, -0.568000, 1.524000, 0.568000),
+        NoteheadDiamondBlackAdvance = 1.520000,
+        NoteheadTriangleWhole = new(0.000000, -0.926556, 2.457745, 0.778607),
+        NoteheadTriangleWholeOutline = new(0.000000, -0.928000, 2.456000, 0.780000),
+        NoteheadTriangleWholeAdvance = 2.456000,
+        NoteheadTriangleHalf = new(0.000000, -0.837430, 1.781099, 0.705880),
+        NoteheadTriangleHalfOutline = new(0.000000, -0.844000, 1.780000, 0.712000),
+        NoteheadTriangleHalfAdvance = 1.780000,
+        NoteheadTriangleBlack = new(0.000000, -0.837430, 1.484487, 0.705880),
+        NoteheadTriangleBlackOutline = new(0.000000, -0.836000, 1.480000, 0.704000),
+        NoteheadTriangleBlackAdvance = 1.484000,
+        NoteheadSlashWhole = new(0.000000, -1.075575, 3.045622, 1.075575),
+        NoteheadSlashWholeOutline = new(0.000000, -1.076000, 3.044000, 1.076000),
+        NoteheadSlashWholeAdvance = 3.044000,
+        NoteheadSlashHalf = new(0.000000, -1.075575, 2.375393, 1.075575),
+        NoteheadSlashHalfOutline = new(0.000000, -1.076000, 2.376000, 1.076000),
+        NoteheadSlashHalfAdvance = 2.372000,
+        NoteheadSlashBlack = new(0.000000, -1.075575, 1.745448, 1.075575),
+        NoteheadSlashBlackOutline = new(0.000000, -1.076000, 1.744000, 1.076000),
+        NoteheadSlashBlackAdvance = 1.744000,
+        NoteheadXCircle = new(0.000000, -0.675577, 1.533328, 0.675577),
+        NoteheadXCircleOutline = new(0.000000, -0.732000, 1.532000, 0.732000),
+        NoteheadXCircleAdvance = 1.532000,
         AccidentalSharp = new(0.000000, -1.500173, 1.100174, 1.500173),
         AccidentalSharpOutline = new(0.000000, -1.500000, 1.100000, 1.500000),
         AccidentalSharpAdvance = 1.100000,
@@ -2782,6 +3081,45 @@ internal static partial class GlyphMetrics
         NoteheadBlack = new(0.000000, -0.562220, 1.294282, 0.562220),
         NoteheadBlackOutline = new(0.000000, -0.564000, 1.296000, 0.564000),
         NoteheadBlackAdvance = 1.292000,
+        NoteheadCrossWhole = new(0.000000, -0.631744, 1.848883, 0.631744),
+        NoteheadCrossWholeOutline = new(0.000000, -0.632000, 1.848000, 0.632000),
+        NoteheadCrossWholeAdvance = 1.848000,
+        NoteheadCrossHalf = new(0.000000, -0.597141, 1.571424, 0.597141),
+        NoteheadCrossHalfOutline = new(0.000000, -0.596000, 1.572000, 0.596000),
+        NoteheadCrossHalfAdvance = 1.568000,
+        NoteheadCrossBlack = new(0.000000, -0.562220, 1.294282, 0.562220),
+        NoteheadCrossBlackOutline = new(0.000000, -0.564000, 1.296000, 0.564000),
+        NoteheadCrossBlackAdvance = 1.292000,
+        NoteheadDiamondWhole = new(0.000000, -0.562220, 2.024438, 0.562220),
+        NoteheadDiamondWholeOutline = new(0.000000, -0.564000, 2.024000, 0.564000),
+        NoteheadDiamondWholeAdvance = 2.024000,
+        NoteheadDiamondHalf = new(0.000000, -0.562220, 1.489519, 0.562220),
+        NoteheadDiamondHalfOutline = new(0.000000, -0.564000, 1.488000, 0.564000),
+        NoteheadDiamondHalfAdvance = 1.488000,
+        NoteheadDiamondBlack = new(0.000000, -0.562220, 1.508249, 0.562220),
+        NoteheadDiamondBlackOutline = new(0.000000, -0.564000, 1.508000, 0.564000),
+        NoteheadDiamondBlackAdvance = 1.508000,
+        NoteheadTriangleWhole = new(0.000000, -0.912061, 2.417453, 0.765394),
+        NoteheadTriangleWholeOutline = new(0.000000, -0.916000, 2.416000, 0.768000),
+        NoteheadTriangleWholeAdvance = 2.416000,
+        NoteheadTriangleHalf = new(0.000000, -0.823807, 1.750788, 0.693649),
+        NoteheadTriangleHalfOutline = new(0.000000, -0.828000, 1.752000, 0.700000),
+        NoteheadTriangleHalfAdvance = 1.748000,
+        NoteheadTriangleBlack = new(0.000000, -0.823807, 1.459043, 0.693649),
+        NoteheadTriangleBlackOutline = new(0.000000, -0.820000, 1.456000, 0.692000),
+        NoteheadTriangleBlackAdvance = 1.456000,
+        NoteheadSlashWhole = new(0.000000, -1.069203, 3.038086, 1.069203),
+        NoteheadSlashWholeOutline = new(0.000000, -1.068000, 3.040000, 1.068000),
+        NoteheadSlashWholeAdvance = 3.036000,
+        NoteheadSlashHalf = new(0.000000, -1.069203, 2.367929, 1.069203),
+        NoteheadSlashHalfOutline = new(0.000000, -1.068000, 2.368000, 1.068000),
+        NoteheadSlashHalfAdvance = 2.368000,
+        NoteheadSlashBlack = new(0.000000, -1.069203, 1.738090, 1.069203),
+        NoteheadSlashBlackOutline = new(0.000000, -1.068000, 1.740000, 1.068000),
+        NoteheadSlashBlackAdvance = 1.736000,
+        NoteheadXCircle = new(0.000000, -0.668887, 1.539360, 0.668887),
+        NoteheadXCircleOutline = new(0.000000, -0.720000, 1.540000, 0.720000),
+        NoteheadXCircleAdvance = 1.536000,
         AccidentalSharp = new(0.000000, -1.499995, 1.099997, 1.499995),
         AccidentalSharpOutline = new(0.000000, -1.500000, 1.100000, 1.500000),
         AccidentalSharpAdvance = 1.100000,
@@ -3124,6 +3462,45 @@ internal static partial class GlyphMetrics
         NoteheadBlack = new(0.000000, -0.557284, 1.298161, 0.557284),
         NoteheadBlackOutline = new(0.000000, -0.556000, 1.300000, 0.556000),
         NoteheadBlackAdvance = 1.296000,
+        NoteheadCrossWhole = new(0.000000, -0.620934, 1.807072, 0.620934),
+        NoteheadCrossWholeOutline = new(0.000000, -0.620000, 1.808000, 0.620000),
+        NoteheadCrossWholeAdvance = 1.804000,
+        NoteheadCrossHalf = new(0.000000, -0.588967, 1.552475, 0.588967),
+        NoteheadCrossHalfOutline = new(0.000000, -0.588000, 1.552000, 0.588000),
+        NoteheadCrossHalfAdvance = 1.552000,
+        NoteheadCrossBlack = new(0.000000, -0.557284, 1.298161, 0.557284),
+        NoteheadCrossBlackOutline = new(0.000000, -0.556000, 1.300000, 0.556000),
+        NoteheadCrossBlackAdvance = 1.296000,
+        NoteheadDiamondWhole = new(0.000000, -0.557284, 2.006223, 0.557284),
+        NoteheadDiamondWholeOutline = new(0.000000, -0.556000, 2.008000, 0.556000),
+        NoteheadDiamondWholeAdvance = 2.004000,
+        NoteheadDiamondHalf = new(0.000000, -0.557284, 1.475813, 0.557284),
+        NoteheadDiamondHalfOutline = new(0.000000, -0.556000, 1.476000, 0.556000),
+        NoteheadDiamondHalfAdvance = 1.472000,
+        NoteheadDiamondBlack = new(0.000000, -0.557284, 1.494484, 0.557284),
+        NoteheadDiamondBlackOutline = new(0.000000, -0.556000, 1.496000, 0.556000),
+        NoteheadDiamondBlackAdvance = 1.492000,
+        NoteheadTriangleWhole = new(0.000000, -0.899010, 2.381612, 0.753890),
+        NoteheadTriangleWholeOutline = new(0.000000, -0.900000, 2.380000, 0.756000),
+        NoteheadTriangleWholeAdvance = 2.380000,
+        NoteheadTriangleHalf = new(0.000000, -0.811881, 1.723904, 0.682885),
+        NoteheadTriangleHalfOutline = new(0.000000, -0.816000, 1.724000, 0.688000),
+        NoteheadTriangleHalfAdvance = 1.720000,
+        NoteheadTriangleBlack = new(0.000000, -0.811881, 1.436492, 0.682885),
+        NoteheadTriangleBlackOutline = new(0.000000, -0.808000, 1.432000, 0.680000),
+        NoteheadTriangleBlackAdvance = 1.436000,
+        NoteheadSlashWhole = new(0.000000, -1.063649, 3.031400, 1.063649),
+        NoteheadSlashWholeOutline = new(0.000000, -1.064000, 3.032000, 1.064000),
+        NoteheadSlashWholeAdvance = 3.028000,
+        NoteheadSlashHalf = new(0.000000, -1.063649, 2.361245, 1.063649),
+        NoteheadSlashHalfOutline = new(0.000000, -1.064000, 2.360000, 1.064000),
+        NoteheadSlashHalfAdvance = 2.360000,
+        NoteheadSlashBlack = new(0.000000, -1.063649, 1.731259, 1.063649),
+        NoteheadSlashBlackOutline = new(0.000000, -1.064000, 1.732000, 1.064000),
+        NoteheadSlashBlackAdvance = 1.728000,
+        NoteheadXCircle = new(0.000000, -0.662801, 1.543706, 0.662801),
+        NoteheadXCircleOutline = new(0.000000, -0.708000, 1.544000, 0.708000),
+        NoteheadXCircleAdvance = 1.540000,
         AccidentalSharp = new(0.000000, -1.500141, 1.100141, 1.500141),
         AccidentalSharpOutline = new(0.000000, -1.500000, 1.100000, 1.500000),
         AccidentalSharpAdvance = 1.096000,
@@ -3466,6 +3843,45 @@ internal static partial class GlyphMetrics
         NoteheadBlack = new(0.000000, -0.552741, 1.300819, 0.552741),
         NoteheadBlackOutline = new(0.000000, -0.552000, 1.300000, 0.552000),
         NoteheadBlackAdvance = 1.300000,
+        NoteheadCrossWhole = new(0.000000, -0.611216, 1.769376, 0.611216),
+        NoteheadCrossWholeOutline = new(0.000000, -0.612000, 1.768000, 0.612000),
+        NoteheadCrossWholeAdvance = 1.768000,
+        NoteheadCrossHalf = new(0.000000, -0.581979, 1.534972, 0.581979),
+        NoteheadCrossHalfOutline = new(0.000000, -0.580000, 1.536000, 0.580000),
+        NoteheadCrossHalfAdvance = 1.532000,
+        NoteheadCrossBlack = new(0.000000, -0.552741, 1.300819, 0.552741),
+        NoteheadCrossBlackOutline = new(0.000000, -0.552000, 1.300000, 0.552000),
+        NoteheadCrossBlackAdvance = 1.300000,
+        NoteheadDiamondWhole = new(0.000000, -0.552741, 1.989666, 0.552741),
+        NoteheadDiamondWholeOutline = new(0.000000, -0.552000, 1.988000, 0.552000),
+        NoteheadDiamondWholeAdvance = 1.988000,
+        NoteheadDiamondHalf = new(0.000000, -0.552741, 1.463894, 0.552741),
+        NoteheadDiamondHalfOutline = new(0.000000, -0.552000, 1.464000, 0.552000),
+        NoteheadDiamondHalfAdvance = 1.460000,
+        NoteheadDiamondBlack = new(0.000000, -0.552741, 1.482294, 0.552741),
+        NoteheadDiamondBlackOutline = new(0.000000, -0.552000, 1.484000, 0.552000),
+        NoteheadDiamondBlackAdvance = 1.480000,
+        NoteheadTriangleWhole = new(0.000000, -0.887713, 2.349590, 0.743541),
+        NoteheadTriangleWholeOutline = new(0.000000, -0.888000, 2.348000, 0.744000),
+        NoteheadTriangleWholeAdvance = 2.348000,
+        NoteheadTriangleHalf = new(0.000000, -0.801008, 1.699811, 0.672968),
+        NoteheadTriangleHalfOutline = new(0.000000, -0.808000, 1.700000, 0.676000),
+        NoteheadTriangleHalfAdvance = 1.696000,
+        NoteheadTriangleBlack = new(0.000000, -0.801008, 1.416509, 0.672968),
+        NoteheadTriangleBlackOutline = new(0.000000, -0.800000, 1.412000, 0.672000),
+        NoteheadTriangleBlackAdvance = 1.416000,
+        NoteheadSlashWhole = new(0.000000, -1.058601, 3.025331, 1.058601),
+        NoteheadSlashWholeOutline = new(0.000000, -1.060000, 3.024000, 1.060000),
+        NoteheadSlashWholeAdvance = 3.024000,
+        NoteheadSlashHalf = new(0.000000, -1.058601, 2.355388, 1.058601),
+        NoteheadSlashHalfOutline = new(0.000000, -1.060000, 2.356000, 1.060000),
+        NoteheadSlashHalfAdvance = 2.352000,
+        NoteheadSlashBlack = new(0.000000, -1.058601, 1.725268, 1.058601),
+        NoteheadSlashBlackOutline = new(0.000000, -1.060000, 1.724000, 1.060000),
+        NoteheadSlashBlackAdvance = 1.724000,
+        NoteheadXCircle = new(0.000000, -0.657341, 1.547070, 0.657341),
+        NoteheadXCircleOutline = new(0.000000, -0.700000, 1.548000, 0.700000),
+        NoteheadXCircleAdvance = 1.544000,
         AccidentalSharp = new(0.000000, -1.499937, 1.099937, 1.499937),
         AccidentalSharpOutline = new(0.000000, -1.500000, 1.100000, 1.500000),
         AccidentalSharpAdvance = 1.100000,
@@ -3808,6 +4224,45 @@ internal static partial class GlyphMetrics
         NoteheadBlack = new(0.000000, -0.548597, 1.302806, 0.548597),
         NoteheadBlackOutline = new(0.000000, -0.548000, 1.304000, 0.548000),
         NoteheadBlackAdvance = 1.300000,
+        NoteheadCrossWhole = new(0.000000, -0.602694, 1.734905, 0.602694),
+        NoteheadCrossWholeOutline = new(0.000000, -0.604000, 1.736000, 0.604000),
+        NoteheadCrossWholeAdvance = 1.732000,
+        NoteheadCrossHalf = new(0.000000, -0.575533, 1.518967, 0.575533),
+        NoteheadCrossHalfOutline = new(0.000000, -0.576000, 1.520000, 0.576000),
+        NoteheadCrossHalfAdvance = 1.516000,
+        NoteheadCrossBlack = new(0.000000, -0.548597, 1.302806, 0.548597),
+        NoteheadCrossBlackOutline = new(0.000000, -0.548000, 1.304000, 0.548000),
+        NoteheadCrossBlackAdvance = 1.300000,
+        NoteheadDiamondWhole = new(0.000000, -0.548597, 1.975084, 0.548597),
+        NoteheadDiamondWholeOutline = new(0.000000, -0.548000, 1.976000, 0.548000),
+        NoteheadDiamondWholeAdvance = 1.972000,
+        NoteheadDiamondHalf = new(0.000000, -0.548597, 1.452974, 0.548597),
+        NoteheadDiamondHalfOutline = new(0.000000, -0.548000, 1.452000, 0.548000),
+        NoteheadDiamondHalfAdvance = 1.452000,
+        NoteheadDiamondBlack = new(0.000000, -0.548597, 1.471380, 0.548597),
+        NoteheadDiamondBlackOutline = new(0.000000, -0.548000, 1.472000, 0.548000),
+        NoteheadDiamondBlackAdvance = 1.468000,
+        NoteheadTriangleWhole = new(0.000000, -0.877441, 2.321212, 0.734456),
+        NoteheadTriangleWholeOutline = new(0.000000, -0.880000, 2.320000, 0.736000),
+        NoteheadTriangleWholeAdvance = 2.320000,
+        NoteheadTriangleHalf = new(0.000000, -0.791470, 1.678339, 0.664422),
+        NoteheadTriangleHalfOutline = new(0.000000, -0.796000, 1.680000, 0.668000),
+        NoteheadTriangleHalfAdvance = 1.676000,
+        NoteheadTriangleBlack = new(0.000000, -0.791470, 1.398653, 0.664422),
+        NoteheadTriangleBlackOutline = new(0.000000, -0.788000, 1.396000, 0.664000),
+        NoteheadTriangleBlackAdvance = 1.396000,
+        NoteheadSlashWhole = new(0.000000, -1.054097, 3.019978, 1.054097),
+        NoteheadSlashWholeOutline = new(0.000000, -1.056000, 3.020000, 1.056000),
+        NoteheadSlashWholeAdvance = 3.020000,
+        NoteheadSlashHalf = new(0.000000, -1.054097, 2.349944, 1.054097),
+        NoteheadSlashHalfOutline = new(0.000000, -1.056000, 2.352000, 1.056000),
+        NoteheadSlashHalfAdvance = 2.348000,
+        NoteheadSlashBlack = new(0.000000, -1.054097, 1.720090, 1.054097),
+        NoteheadSlashBlackOutline = new(0.000000, -1.056000, 1.720000, 1.056000),
+        NoteheadSlashBlackAdvance = 1.720000,
+        NoteheadXCircle = new(0.000000, -0.652525, 1.549270, 0.652525),
+        NoteheadXCircleOutline = new(0.000000, -0.692000, 1.548000, 0.692000),
+        NoteheadXCircleAdvance = 1.548000,
         AccidentalSharp = new(0.000000, -1.500112, 1.100112, 1.500112),
         AccidentalSharpOutline = new(0.000000, -1.500000, 1.100000, 1.500000),
         AccidentalSharpAdvance = 1.100000,
@@ -4152,6 +4607,45 @@ internal static partial class GlyphMetrics
         NoteheadBlack = NoteheadBlack,
         NoteheadBlackOutline = NoteheadBlackOutline,
         NoteheadBlackAdvance = NoteheadBlackAdvance,
+        NoteheadCrossWhole = NoteheadCrossWhole,
+        NoteheadCrossWholeOutline = NoteheadCrossWholeOutline,
+        NoteheadCrossWholeAdvance = NoteheadCrossWholeAdvance,
+        NoteheadCrossHalf = NoteheadCrossHalf,
+        NoteheadCrossHalfOutline = NoteheadCrossHalfOutline,
+        NoteheadCrossHalfAdvance = NoteheadCrossHalfAdvance,
+        NoteheadCrossBlack = NoteheadCrossBlack,
+        NoteheadCrossBlackOutline = NoteheadCrossBlackOutline,
+        NoteheadCrossBlackAdvance = NoteheadCrossBlackAdvance,
+        NoteheadDiamondWhole = NoteheadDiamondWhole,
+        NoteheadDiamondWholeOutline = NoteheadDiamondWholeOutline,
+        NoteheadDiamondWholeAdvance = NoteheadDiamondWholeAdvance,
+        NoteheadDiamondHalf = NoteheadDiamondHalf,
+        NoteheadDiamondHalfOutline = NoteheadDiamondHalfOutline,
+        NoteheadDiamondHalfAdvance = NoteheadDiamondHalfAdvance,
+        NoteheadDiamondBlack = NoteheadDiamondBlack,
+        NoteheadDiamondBlackOutline = NoteheadDiamondBlackOutline,
+        NoteheadDiamondBlackAdvance = NoteheadDiamondBlackAdvance,
+        NoteheadTriangleWhole = NoteheadTriangleWhole,
+        NoteheadTriangleWholeOutline = NoteheadTriangleWholeOutline,
+        NoteheadTriangleWholeAdvance = NoteheadTriangleWholeAdvance,
+        NoteheadTriangleHalf = NoteheadTriangleHalf,
+        NoteheadTriangleHalfOutline = NoteheadTriangleHalfOutline,
+        NoteheadTriangleHalfAdvance = NoteheadTriangleHalfAdvance,
+        NoteheadTriangleBlack = NoteheadTriangleBlack,
+        NoteheadTriangleBlackOutline = NoteheadTriangleBlackOutline,
+        NoteheadTriangleBlackAdvance = NoteheadTriangleBlackAdvance,
+        NoteheadSlashWhole = NoteheadSlashWhole,
+        NoteheadSlashWholeOutline = NoteheadSlashWholeOutline,
+        NoteheadSlashWholeAdvance = NoteheadSlashWholeAdvance,
+        NoteheadSlashHalf = NoteheadSlashHalf,
+        NoteheadSlashHalfOutline = NoteheadSlashHalfOutline,
+        NoteheadSlashHalfAdvance = NoteheadSlashHalfAdvance,
+        NoteheadSlashBlack = NoteheadSlashBlack,
+        NoteheadSlashBlackOutline = NoteheadSlashBlackOutline,
+        NoteheadSlashBlackAdvance = NoteheadSlashBlackAdvance,
+        NoteheadXCircle = NoteheadXCircle,
+        NoteheadXCircleOutline = NoteheadXCircleOutline,
+        NoteheadXCircleAdvance = NoteheadXCircleAdvance,
         AccidentalSharp = AccidentalSharp,
         AccidentalSharpOutline = AccidentalSharpOutline,
         AccidentalSharpAdvance = AccidentalSharpAdvance,
@@ -4494,6 +4988,45 @@ internal static partial class GlyphMetrics
         NoteheadBlack = new(0.000000, -0.541826, 1.305122, 0.541826),
         NoteheadBlackOutline = new(0.000000, -0.540000, 1.304000, 0.540000),
         NoteheadBlackAdvance = 1.304000,
+        NoteheadCrossWhole = new(0.000000, -0.588151, 1.676615, 0.588151),
+        NoteheadCrossWholeOutline = new(0.000000, -0.588000, 1.676000, 0.588000),
+        NoteheadCrossWholeAdvance = 1.676000,
+        NoteheadCrossHalf = new(0.000000, -0.564989, 1.490958, 0.564989),
+        NoteheadCrossHalfOutline = new(0.000000, -0.564000, 1.492000, 0.564000),
+        NoteheadCrossHalfAdvance = 1.488000,
+        NoteheadCrossBlack = new(0.000000, -0.541826, 1.305122, 0.541826),
+        NoteheadCrossBlackOutline = new(0.000000, -0.540000, 1.304000, 0.540000),
+        NoteheadCrossBlackAdvance = 1.304000,
+        NoteheadDiamondWhole = new(0.000000, -0.541826, 1.950468, 0.541826),
+        NoteheadDiamondWholeOutline = new(0.000000, -0.540000, 1.952000, 0.540000),
+        NoteheadDiamondWholeAdvance = 1.948000,
+        NoteheadDiamondHalf = new(0.000000, -0.541826, 1.435011, 0.541826),
+        NoteheadDiamondHalfOutline = new(0.000000, -0.540000, 1.436000, 0.540000),
+        NoteheadDiamondHalfAdvance = 1.432000,
+        NoteheadDiamondBlack = new(0.000000, -0.541826, 1.453007, 0.541826),
+        NoteheadDiamondBlackOutline = new(0.000000, -0.540000, 1.452000, 0.540000),
+        NoteheadDiamondBlackAdvance = 1.452000,
+        NoteheadTriangleWhole = new(0.000000, -0.860045, 2.273318, 0.718931),
+        NoteheadTriangleWholeOutline = new(0.000000, -0.868000, 2.272000, 0.724000),
+        NoteheadTriangleWholeAdvance = 2.272000,
+        NoteheadTriangleHalf = new(0.000000, -0.775234, 1.642227, 0.649800),
+        NoteheadTriangleHalfOutline = new(0.000000, -0.780000, 1.644000, 0.652000),
+        NoteheadTriangleHalfAdvance = 1.640000,
+        NoteheadTriangleBlack = new(0.000000, -0.775234, 1.368552, 0.649800),
+        NoteheadTriangleBlackOutline = new(0.000000, -0.772000, 1.364000, 0.648000),
+        NoteheadTriangleBlackAdvance = 1.368000,
+        NoteheadSlashWhole = new(0.000000, -1.046414, 3.011136, 1.046414),
+        NoteheadSlashWholeOutline = new(0.000000, -1.048000, 3.012000, 1.048000),
+        NoteheadSlashWholeAdvance = 3.008000,
+        NoteheadSlashHalf = new(0.000000, -1.046414, 2.341024, 1.046414),
+        NoteheadSlashHalfOutline = new(0.000000, -1.048000, 2.340000, 1.048000),
+        NoteheadSlashHalfAdvance = 2.340000,
+        NoteheadSlashBlack = new(0.000000, -1.046414, 1.711180, 1.046414),
+        NoteheadSlashBlackOutline = new(0.000000, -1.048000, 1.712000, 1.048000),
+        NoteheadSlashBlackAdvance = 1.708000,
+        NoteheadXCircle = new(0.000000, -0.644276, 1.552071, 0.644276),
+        NoteheadXCircleOutline = new(0.000000, -0.676000, 1.552000, 0.676000),
+        NoteheadXCircleAdvance = 1.552000,
         AccidentalSharp = new(0.000000, -1.500045, 1.100045, 1.500045),
         AccidentalSharpOutline = new(0.000000, -1.500000, 1.100000, 1.500000),
         AccidentalSharpAdvance = 1.096000,
@@ -4836,6 +5369,45 @@ internal static partial class GlyphMetrics
         NoteheadBlack = new(0.000000, -0.538889, 1.305873, 0.538889),
         NoteheadBlackOutline = new(0.000000, -0.540000, 1.304000, 0.540000),
         NoteheadBlackAdvance = 1.304000,
+        NoteheadCrossWhole = new(0.000000, -0.582063, 1.651587, 0.582063),
+        NoteheadCrossWholeOutline = new(0.000000, -0.584000, 1.652000, 0.584000),
+        NoteheadCrossWholeAdvance = 1.648000,
+        NoteheadCrossHalf = new(0.000000, -0.560476, 1.478730, 0.560476),
+        NoteheadCrossHalfOutline = new(0.000000, -0.560000, 1.480000, 0.560000),
+        NoteheadCrossHalfAdvance = 1.476000,
+        NoteheadCrossBlack = new(0.000000, -0.538889, 1.305873, 0.538889),
+        NoteheadCrossBlackOutline = new(0.000000, -0.540000, 1.304000, 0.540000),
+        NoteheadCrossBlackAdvance = 1.304000,
+        NoteheadDiamondWhole = new(0.000000, -0.538889, 1.940000, 0.538889),
+        NoteheadDiamondWholeOutline = new(0.000000, -0.540000, 1.940000, 0.540000),
+        NoteheadDiamondWholeAdvance = 1.940000,
+        NoteheadDiamondHalf = new(0.000000, -0.538889, 1.427302, 0.538889),
+        NoteheadDiamondHalfOutline = new(0.000000, -0.540000, 1.428000, 0.540000),
+        NoteheadDiamondHalfAdvance = 1.424000,
+        NoteheadDiamondBlack = new(0.000000, -0.538889, 1.445238, 0.538889),
+        NoteheadDiamondBlackOutline = new(0.000000, -0.540000, 1.444000, 0.540000),
+        NoteheadDiamondBlackAdvance = 1.444000,
+        NoteheadTriangleWhole = new(0.000000, -0.852857, 2.253175, 0.712540),
+        NoteheadTriangleWholeOutline = new(0.000000, -0.860000, 2.252000, 0.720000),
+        NoteheadTriangleWholeAdvance = 2.252000,
+        NoteheadTriangleHalf = new(0.000000, -0.768413, 1.627143, 0.643651),
+        NoteheadTriangleHalfOutline = new(0.000000, -0.772000, 1.628000, 0.648000),
+        NoteheadTriangleHalfAdvance = 1.624000,
+        NoteheadTriangleBlack = new(0.000000, -0.768413, 1.356032, 0.643651),
+        NoteheadTriangleBlackOutline = new(0.000000, -0.768000, 1.352000, 0.644000),
+        NoteheadTriangleBlackAdvance = 1.352000,
+        NoteheadSlashWhole = new(0.000000, -1.043175, 3.007302, 1.043175),
+        NoteheadSlashWholeOutline = new(0.000000, -1.044000, 3.008000, 1.044000),
+        NoteheadSlashWholeAdvance = 3.004000,
+        NoteheadSlashHalf = new(0.000000, -1.043175, 2.337302, 1.043175),
+        NoteheadSlashHalfOutline = new(0.000000, -1.044000, 2.336000, 1.044000),
+        NoteheadSlashHalfAdvance = 2.336000,
+        NoteheadSlashBlack = new(0.000000, -1.043175, 1.707302, 1.043175),
+        NoteheadSlashBlackOutline = new(0.000000, -1.044000, 1.708000, 1.044000),
+        NoteheadSlashBlackAdvance = 1.704000,
+        NoteheadXCircle = new(0.000000, -0.640794, 1.552857, 0.640794),
+        NoteheadXCircleOutline = new(0.000000, -0.672000, 1.552000, 0.672000),
+        NoteheadXCircleAdvance = 1.552000,
         AccidentalSharp = new(0.000000, -1.500000, 1.100000, 1.500000),
         AccidentalSharpOutline = new(0.000000, -1.500000, 1.100000, 1.500000),
         AccidentalSharpAdvance = 1.100000,
