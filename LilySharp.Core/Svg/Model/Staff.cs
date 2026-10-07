@@ -262,10 +262,21 @@ public sealed record Staff(
     /// it is not decoration: it is what puts the row into the loose-line chain instead of
     /// the page's own spring chain.
     /// </para>
+    /// <para>
+    /// A row is removed on every system it has nothing on, the first one included: both
+    /// contexts set <c>remove-empty</c> and <c>remove-first</c>
+    /// (the last two overrides of each context:
+    /// LILYPOND-REF: ly/engraver-init.ly:632-647 Lyrics, with Lyric_engraver;
+    /// LILYPOND-REF: ly/engraver-init.ly:705-720 ChordNames, with Chord_name_engraver). What keeps
+    /// a row alive is read by <c>HaraKiri.IsStaffEmpty</c> — its syllables or chord names.
+    /// MEASURED (2.26.0, Lab sessions/p855/lyr): a staff with a lyrics row empty on its first
+    /// two systems prices those lines at 4.0 between refpoints (the staff alone), not 8.37.
+    /// </para>
     /// </remarks>
     public static Staff CreateTextRow(Voice voice)
         => new(ClefType.Treble, ImmutableArray.Create(voice), IsTextRow: true,
-            StaffAffinity: Layout.StaffAffinityDirection.Down);
+            StaffAffinity: Layout.StaffAffinityDirection.Down,
+            RemoveEmpty: true, RemoveFirst: true);
 
     /// <summary>Parses a pedal-style string; unknown/empty falls back to the default Bracket.</summary>
     public static PedalStyle ParsePedalStyle(string? style) => style switch

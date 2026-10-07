@@ -145,6 +145,44 @@ public sealed class PageBreakTests
         Assert.Equal(2, with.Pages[1].Systems[0].Measures[0].MeasureIndex);
     }
 
+    /// <summary>
+    /// A lyrics row with nothing on a system is removed from it, so the breaker prices that
+    /// line as the staff alone: thirteen one-staff lines whose words come only on the last
+    /// fit one page, as LilyPond's twin does. Priced with the empty row, the twelfth line
+    /// filled the page and the thirteenth went to a second.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:632-647 Lyrics, with Lyric_engraver — the context's
+    /// remove-first and remove-empty. MEASURED (2.26.0, Lab sessions/p855/lyr/gen.ps1): the
+    /// twin puts 12, 13, 13+1 and 13+3 lines on its pages for 12, 13, 14 and 16 lines.
+    /// </remarks>
+    [Fact]
+    public void ALyricsRowEmptyOnALine_IsNotPricedOnIt()
+    {
+        string bars = string.Join(" ", Enumerable.Repeat("c4 c c c | c c c c | break", 13));
+        string skips = string.Join(" ", Enumerable.Repeat("|", 24));
+        var layout = LayoutOf($$"""
+            octave absolute
+            key c major
+            time 4/4
+            part bass { clef bass section S { {{bars}} } }
+            lyrics verse { section S { {{skips}} la la la la | la la la la | } }
+            form main { S }
+            score main {
+              staff bass
+              lyrics verse sings bass
+            }
+            """);
+        Assert.Equal(13, layout.AllSystems.Length);
+        Assert.Single(layout.Pages);
+        // The row is gone where it is empty and kept where it has words.
+        var first = layout.AllSystems[0].StaffGroups.SelectMany(g => g.Staves).ToList();
+        var last = layout.AllSystems[^1].StaffGroups.SelectMany(g => g.Staves).ToList();
+        Assert.Equal(2, first.Count);
+        Assert.Equal([false, true], first.Select(s => s.IsHidden));
+        Assert.Equal([false, false], last.Select(s => s.IsHidden));
+    }
+
     [Fact]
     public void NoPageBreak_DoesNotMoveAOnePageBook()
     {

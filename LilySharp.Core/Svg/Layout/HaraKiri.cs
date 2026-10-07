@@ -135,12 +135,13 @@ internal static class HaraKiri
     /// side tables, each entry carrying the global staff index it hangs on. Until session
     /// 395 only the heads counted, so a rest-only bar carrying a dynamic, a chord symbol or
     /// a figure was hidden where LilyPond keeps the staff.
-    /// ⚠️ Lyrics are NOT consulted: <see cref="LyricItem.StaffIndex"/> is the global index of
-    /// an independent lyrics ROW and 0 for lyrics under a staff whichever staff that is, so
-    /// it cannot say which staff a syllable keeps alive. A staff with syllables has the notes
-    /// they are sung to, which keep it alive anyway; the row case (a lyrics-only row is not a
-    /// removeEmpty staff) does not arise. Clusters, fret diagrams and stanza numbers have no
-    /// separate grob here.
+    /// ⚠️ Lyrics count for a lyrics ROW only: <see cref="LyricItem.StaffIndex"/> is the global
+    /// index of an independent lyrics row and 0 for lyrics under a staff whichever staff that
+    /// is, so it cannot say which STAFF a syllable keeps alive (a staff with syllables has the
+    /// notes they are sung to, which keep it alive anyway). A row is kept alive by a syllable
+    /// in the range (lyric-syllable-interface) or by the extender of an earlier syllable that
+    /// runs into it (lyric-interface: the extender's broken piece on this system).
+    /// Clusters, fret diagrams and stanza numbers have no separate grob here.
     /// </remarks>
     public static bool IsStaffEmpty(Staff staff, int staffIndex, MultiStaffScore? score,
         int startMeasure, int endMeasure)
@@ -177,6 +178,12 @@ internal static class HaraKiri
         foreach (var p in score.PercentRepeats)
             if (p.StaffIndex == staffIndex && p.MeasureIndex >= startMeasure && p.MeasureIndex < endMeasure)
                 return false;
+        // lyric-syllable-interface / lyric-interface, on a lyrics row
+        if (staff.IsLyricsTextRow)
+            foreach (var l in score.Lyrics)
+                if (l.IsLyricsRow && l.StaffIndex == staffIndex && l.MeasureIndex < endMeasure
+                    && (l.MeasureIndex >= startMeasure || l.MelismaEndMeasureIndex >= startMeasure))
+                    return false;
 
         return true;
     }
