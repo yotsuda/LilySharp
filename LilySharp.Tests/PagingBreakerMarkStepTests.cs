@@ -31,7 +31,8 @@ public sealed class PagingBreakerMarkStepTests
     private static PagingAugmentProgram Program()
     {
         var b = new PagingAugmentProgram.Builder();
-        b.AddMusicMarkBoxes(0, 4, stackedBottom: 5, stackedTop: 8, pureBottom: 1, pureTop: 3);
+        b.AddMusicMarkBoxes(0, 4, stackedBottom: 5, stackedTop: 8, pureBottom: 1, pureTop: 3,
+            pureXLeft: 0, pureXRight: 4);
         b.AddBreakerOnlyMarkBox(10, 12, bottom: 1, top: 3);
         Assert.True(b.HasBreakerSteps);
         return b.Build();

@@ -227,7 +227,8 @@ internal sealed partial class LayoutEngine
             if (breakerView is { } bv)
             {
                 up = bv.BreakerUp(i, up);
-                ext = (bv.BreakerUpExtent(i, ext.upExtent), ext.downExtent);
+                down = bv.BreakerDown(i, down);
+                ext = (bv.BreakerUpExtent(i, ext.upExtent), bv.BreakerDownExtent(i, ext.downExtent, h));
             }
 
             // ONE walk per direction. max(begin, rest) is the whole skyline's own extent, so
@@ -334,6 +335,22 @@ internal sealed partial class LayoutEngine
             double BreakerUpExtent(int i) =>
                 breakerView?.BreakerUpExtent(i, perSystemExtents[i].upExtent)
                 ?? perSystemExtents[i].upExtent;
+            double BreakerDownExtent(int i) =>
+                breakerView?.BreakerDownExtent(i, perSystemExtents[i].downExtent, SysHeight(i))
+                ?? perSystemExtents[i].downExtent;
+            // The extents the breaker prices each line by (PreliminaryPass.BreakerUpExtent).
+            double[]? breakerUpExtents = null, breakerDownExtents = null;
+            if (breakerView is not null)
+            {
+                int n = Math.Min(systems.Length, perSystemExtents.Count);
+                breakerUpExtents = new double[n];
+                breakerDownExtents = new double[n];
+                for (int i = 0; i < n; i++)
+                {
+                    breakerUpExtents[i] = BreakerUpExtent(i);
+                    breakerDownExtents[i] = BreakerDownExtent(i);
+                }
+            }
             if (DebugPageBreakingScoring is { } debug)
             {
                 // The placed systems' own details — what the page is really broken from —
@@ -341,7 +358,7 @@ internal sealed partial class LayoutEngine
                 var placedDetails = new List<SystemDetails>(systems.Length);
                 for (int i = 0; i < systems.Length; i++)
                     placedDetails.Add(_pageLayouter.BuildSystemDetails(
-                        SysHeight(i), BreakerUpExtent(i), perSystemExtents[i].downExtent,
+                        SysHeight(i), BreakerUpExtent(i), BreakerDownExtent(i),
                         shapes is { } sh && i < sh.Length ? sh[i] : null,
                         perSystemPagePermissions is { } pp && i < pp.Length ? pp[i] : BreakPermission.Allow,
                         frames[i]));
@@ -359,7 +376,8 @@ internal sealed partial class LayoutEngine
                 frames,
                 onePage,
                 score.TextMetrics,
-                breakerView?.BreakerUpExtents);
+                breakerUpExtents,
+                breakerDownExtents);
             return (pages, pages.SelectMany(p => p.Systems).ToImmutableArray());
         }
 

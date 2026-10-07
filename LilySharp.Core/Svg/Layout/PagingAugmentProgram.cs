@@ -76,6 +76,9 @@ internal sealed class PagingAugmentProgram
         // the breaker's replay) — see Builder.AddMusicMarkBoxes.
         StackedMusicMarkBox,
         PureMusicMarkBox,
+        // A tie family's bows: merged by the layout's replay like BowGroup, skipped by the
+        // breaker's (a tie has no pure height).
+        TieGroup,
     }
 
     private readonly Kind[] _kinds;
@@ -192,13 +195,52 @@ internal sealed class PagingAugmentProgram
                     var group = _tupletGroups[tg++];
                     a += 1 + group.Length * TupletArgsPerItem;
                     t += group.Length;
+                    // No pure height: the bracket's Y-extent is its stencil's, an unpure
+                    // callback, which a pure read answers #f (lily/grob-property.cc:357-360).
+                    if (forBreaker)
+                        break;
                     SkylineBuilder.AddTupletBracketsToSkyline(Rendering.ScoreTextMetrics.Bundled, 
                         group, staffTopUp: 0, StaffSize.FullSize, Up(), Down());
                     break;
                 }
                 case Kind.BowGroup:
+                case Kind.TieGroup:
                 {
                     int count = (int)_args[a++];
+                    // A tie has no pure height (no Y-extent of its own, so a pure read finds
+                    // none — lily/grob-property.cc:357-360); a slur's is ly:slur::pure-height.
+                    if (forBreaker && kind == Kind.TieGroup)
+                    {
+                        a += count * BowArgsPerItem;
+                        break;
+                    }
+                    // A slur's PURE height is not its curve: the encompassed note columns'
+                    // extreme on its side plus half a space, read here off the breaker's base
+                    // silhouette over the slur's span.
+                    // LILYPOND-REF: lily/slur.cc:74-130 Slur::pure_height — "a rote add-on of
+                    //   0.5 to the highest encompassed note-head".
+                    if (forBreaker)
+                    {
+                        for (int i = 0; i < count; i++, a += BowArgsPerItem)
+                        {
+                            double x0 = Math.Min(_args[a], _args[a + 6]);
+                            double x1 = Math.Max(_args[a], _args[a + 6]);
+                            bool above = _args[a + 3] + _args[a + 5] > _args[a + 1] + _args[a + 7];
+                            if (above)
+                            {
+                                double top = baseline.up.MaxHeightInRange(x0, x1);
+                                if (double.IsFinite(top))
+                                    Up().MergeBox(x0, x1, top, top + PureSlurPadding);
+                            }
+                            else
+                            {
+                                double bottom = baseline.down.MaxHeightInRange(x0, x1);
+                                if (double.IsFinite(bottom))
+                                    Down().MergeBox(x0, x1, bottom - PureSlurPadding, bottom);
+                            }
+                        }
+                        break;
+                    }
                     var up = Up();
                     var down = Down();
                     for (int i = 0; i < count; i++, a += BowArgsPerItem)
@@ -267,6 +309,10 @@ internal sealed class PagingAugmentProgram
         return cur;
     }
 
+    // LILYPOND-REF: lily/slur.cc:123-128 Slur::pure_height — "we try to place a slur 0.5
+    //   staff spaces from the note-head".
+    private const double PureSlurPadding = 0.5;
+
     private const int ScriptArgs = 8;        // anchorY, X, FontSizeStep, pad, Ink L/B/R/T
     private const int TupletArgsPerItem = 12;
     private const int BowArgsPerItem = 8;
@@ -301,6 +347,7 @@ internal sealed class PagingAugmentProgram
         public void AddTupletGroup(ImmutableArray<TupletBracketLayout> group)
         {
             _kinds.Add(Kind.TupletGroup);
+            HasBreakerSteps = true;
             _args.Add(group.Length);
             foreach (var b in group)
             {
@@ -326,7 +373,10 @@ internal sealed class PagingAugmentProgram
         /// bow are exactly <c>SeedBowInk</c>'s inputs.</summary>
         public void AddBowGroup<T>(List<T> bows) where T : BowLayout
         {
-            _kinds.Add(Kind.BowGroup);
+            bool ties = typeof(T) == typeof(TieLayout);
+            _kinds.Add(ties ? Kind.TieGroup : Kind.BowGroup);
+            if (ties)
+                HasBreakerSteps = true;
             _args.Add(bows.Count);
             foreach (var b in bows)
             {
@@ -370,10 +420,11 @@ internal sealed class PagingAugmentProgram
         /// PureMarkBottomUp for the move it does not make, and why.
         /// </remarks>
         public void AddMusicMarkBoxes(double xLeft, double xRight,
-            double stackedBottom, double stackedTop, double pureBottom, double pureTop)
+            double stackedBottom, double stackedTop, double pureBottom, double pureTop,
+            double pureXLeft, double pureXRight)
         {
             AddBox(Kind.StackedMusicMarkBox, xLeft, xRight, stackedBottom, stackedTop);
-            AddBox(Kind.PureMusicMarkBox, xLeft, xRight, pureBottom, pureTop);
+            AddBox(Kind.PureMusicMarkBox, pureXLeft, pureXRight, pureBottom, pureTop);
             HasBreakerSteps = true;
         }
 

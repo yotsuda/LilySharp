@@ -78,18 +78,40 @@ internal sealed partial class LayoutEngine
         Dictionary<int, ImmutableArray<SlurLayout>> SlursByStaff,
         ImmutableArray<SystemLayout> Systems,
         List<VerticalSkyline?>? BreakerUpSkylines,
-        double[]? BreakerUpExtents)
+        List<VerticalSkyline?>? BreakerDownSkylines,
+        double[]? BreakerAnnotationUps,
+        double[]? BreakerAnnotationDowns)
     {
         /// <summary>System <paramref name="i"/>'s up silhouette as the PAGE BREAKER reads it —
-        /// above-staff music marks at their pure heights, not stacked (PagingAugmentProgram's
-        /// pure mark step) — or the paging silhouette's own where nothing differs.</summary>
+        /// LilyPond's pure heights: the staves without their drawn beams, so every beamed stem
+        /// stands at its unbeamed length (lily/stem.cc:387-447 — a beamed stem's pure height is
+        /// its group's unbeamed ones united, and the Beam has none), slurs as their notes plus
+        /// half a space, above-staff music marks resting on the staff rather than stacked, no
+        /// tuplets and no ties — or the
+        /// paging silhouette's own where none was built.</summary>
         public VerticalSkyline BreakerUp(int i, VerticalSkyline pagingUp)
             => BreakerUpSkylines is { } b && i < b.Count && b[i] is { } up ? up : pagingUp;
 
-        /// <summary>System <paramref name="i"/>'s up extent as the PAGE BREAKER reads it (see
-        /// <see cref="BreakerUp"/>), or <paramref name="extent"/> where nothing differs.</summary>
+        /// <summary>The down half of <see cref="BreakerUp"/>.</summary>
+        public VerticalSkyline BreakerDown(int i, VerticalSkyline pagingDown)
+            => BreakerDownSkylines is { } b && i < b.Count && b[i] is { } down ? down : pagingDown;
+
+        /// <summary>System <paramref name="i"/>'s up extent as the PAGE BREAKER reads it: its
+        /// silhouette's (<see cref="BreakerUp"/>) and the annotations' that silhouette does not
+        /// carry — or the layout's <paramref name="extent"/> where no silhouette was built.</summary>
         public double BreakerUpExtent(int i, double extent)
-            => BreakerUpExtents is { } e && i < e.Length ? e[i] : extent;
+            => BreakerUpSkylines is { } b && i < b.Count && b[i] is { } up
+                ? Math.Max(LayoutUtilities.CalculateUpExtent(up),
+                    BreakerAnnotationUps is { } a && i < a.Length ? a[i] : double.NegativeInfinity)
+                : extent;
+
+        /// <summary>The down half of <see cref="BreakerUpExtent"/>, below a body of
+        /// <paramref name="body"/>.</summary>
+        public double BreakerDownExtent(int i, double extent, double body)
+            => BreakerDownSkylines is { } b && i < b.Count && b[i] is { } down
+                ? Math.Max(LayoutUtilities.CalculateDownExtent(down, body),
+                    BreakerAnnotationDowns is { } a && i < a.Length ? a[i] : 0)
+                : extent;
     }
 
     /// <summary>
@@ -120,7 +142,8 @@ internal sealed partial class LayoutEngine
         IReadOnlyList<double> rowsAboveFirstStaff,
         List<VerticalSkyline?>? lyricBands = null,
         List<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>>? pedalLines = null,
-        List<List<ImmutableArray<PedalEngraver.SolvedPedalRow>>>? pedalRows = null)
+        List<List<ImmutableArray<PedalEngraver.SolvedPedalRow>>>? pedalRows = null,
+        List<(VerticalSkyline up, VerticalSkyline down)>? breakerBases = null)
     {
         var (prelimStaff, prelimStaffIndex) = score.PrimaryContentStaffWithIndex();
         var prelimScore = new Score(
@@ -315,19 +338,16 @@ internal sealed partial class LayoutEngine
             LyricChains = systemCache?.PreliminaryLyricChains,
         });
         GivePrelimBeams(prelimBeams);
-        var upWithoutMarks = EnrichExtentsWithAnnotationProtrusions(score.TextMetrics,
+        var (annotationUps, annotationDowns) = EnrichExtentsWithAnnotationProtrusions(score.TextMetrics,
             perSystemExtents, prelimSystems, prelimAnn, allPrelimTies, allPrelimSlurs,
             rowsAboveFirstStaff, pedalLines);
-        // The page breaker's view, only when a music mark stands above a staff: the marks at
-        // their pure heights (AugmentSkylinesForPaging) instead of where they were stacked.
-        List<VerticalSkyline?>? breakerUps = null;
-        double[]? pureMarkTops = null;
-        if (upWithoutMarks is not null)
-        {
-            breakerUps = new List<VerticalSkyline?>(perSystemSkylines.Count);
-            pureMarkTops = new double[perSystemSkylines.Count];
-            Array.Fill(pureMarkTops, double.NegativeInfinity);
-        }
+        // The page breaker's view — LilyPond's pure heights (PreliminaryPass.BreakerUp): the
+        // staves without their drawn beams, every beam's stems at their pure (unbeamed) reach,
+        // the music marks above a staff resting on it instead of stacked, and no tuplets or
+        // ties (AugmentSkylinesForPaging).
+        int sysCount = perSystemSkylines?.Count ?? 0;
+        var breakerUps = new List<VerticalSkyline?>(sysCount);
+        var breakerDowns = new List<VerticalSkyline?>(sysCount);
         var pagingSkylines = AugmentSkylinesForPaging(
             score.TextMetrics,
             perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
@@ -336,16 +356,7 @@ internal sealed partial class LayoutEngine
             prelimAnn.Dynamics,
             prelimAnn.BarNumbers, prelimAnn.TupletBrackets, allPrelimSlurs,
             allPrelimTies, prelimAnn.TextSpanners,
-            systemCache, lyricBands, pedalLines, breakerUps, pureMarkTops);
-        double[]? breakerUpExtents = null;
-        if (upWithoutMarks is not null)
-        {
-            breakerUpExtents = new double[upWithoutMarks.Length];
-            for (int i = 0; i < upWithoutMarks.Length; i++)
-                breakerUpExtents[i] = i < pureMarkTops!.Length
-                    ? Math.Max(upWithoutMarks[i], pureMarkTops[i])
-                    : upWithoutMarks[i];
-        }
+            systemCache, lyricBands, pedalLines, breakerUps, breakerDowns, breakerBases);
         return new PreliminaryPass(
             pagingSkylines,
             prelimBeamsByStaff,
@@ -355,7 +366,9 @@ internal sealed partial class LayoutEngine
             prelimSlursByStaff,
             prelimSystems,
             breakerUps,
-            breakerUpExtents);
+            breakerDowns,
+            annotationUps,
+            annotationDowns);
     }
 
     /// <summary>

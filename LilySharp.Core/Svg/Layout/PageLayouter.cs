@@ -340,7 +340,8 @@ internal sealed class PageLayouter
         ImmutableArray<BreakerRefpointFrame>? systemBreakerFrames = null,
         bool onePage = false,
         Rendering.ScoreTextMetrics? fonts = null,
-        IReadOnlyList<double>? systemBreakerUpExtents = null)
+        IReadOnlyList<double>? systemBreakerUpExtents = null,
+        IReadOnlyList<double>? systemBreakerDownExtents = null)
     {
         if (systems.Length == 0)
         {
@@ -389,8 +390,12 @@ internal sealed class PageLayouter
             double breakerUp = systemBreakerUpExtents is { } bu && i < bu.Count
                 ? bu[i]
                 : systemExtents[i].upExtent;
+            // ...and the down extent, where a beamed stem's pure height reaches past the ink.
+            double breakerDown = systemBreakerDownExtents is { } bd && i < bd.Count
+                ? bd[i]
+                : systemExtents[i].downExtent;
             systemDetails.Add(BuildSystemDetails(
-                staffHeight, breakerUp, systemExtents[i].downExtent,
+                staffHeight, breakerUp, breakerDown,
                 systemShapes is { } sh && i < sh.Length ? sh[i] : null,
                 systemPagePermissions is { } pp && i < pp.Length ? pp[i] : BreakPermission.Allow,
                 systemBreakerFrames is { } bf && i < bf.Length ? bf[i] : null));

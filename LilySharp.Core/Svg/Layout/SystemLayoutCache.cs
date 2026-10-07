@@ -93,6 +93,7 @@ internal sealed class SystemLayoutCache
     // shift is the identity.
     private readonly TypedCache<ImmutableArray<MeasureLayout>> _measures = new(ShiftMeasures);
     private readonly TypedCache<(VerticalSkyline up, VerticalSkyline down)> _skylines = new(Unstamped);
+    private readonly TypedCache<(VerticalSkyline up, VerticalSkyline down)> _breakerSkylines = new(Unstamped);
     private readonly TypedCache<MultiStaffLayouter.StaffSkylineSet> _staffSkylines = new(ShiftStaffSkylines);
     private readonly TypedCache<ImmutableArray<BeamLayout>> _staffSystemBeams = new(ShiftBeams, ShiftBeamSystems);
     private readonly TypedCache<ImmutableArray<TieLayout>> _staffSystemTies = new(ShiftTies, Unstamped);
@@ -105,7 +106,7 @@ internal sealed class SystemLayoutCache
     public enum Store
     {
         Measures, Skylines, StaffSkylines, StaffSystemBeams, StaffSystemTies, StaffSystemSlurs,
-        LyricBands, LooseLines, VoiceCollisions,
+        LyricBands, LooseLines, VoiceCollisions, BreakerSkylines,
     }
 
     /// <summary>How one store paid for the CURRENT pass's lookups (since the last
@@ -123,6 +124,7 @@ internal sealed class SystemLayoutCache
         Store.LyricBands => _lyricBands.Pass,
         Store.LooseLines => _looseLines.Pass,
         Store.VoiceCollisions => _voiceCollisions.Pass,
+        Store.BreakerSkylines => _breakerSkylines.Pass,
         _ => throw new ArgumentOutOfRangeException(nameof(store)),
     };
 
@@ -130,7 +132,7 @@ internal sealed class SystemLayoutCache
     public MemoCounters PassCountersTotal =>
         _measures.Pass + _skylines.Pass + _staffSkylines.Pass + _staffSystemBeams.Pass
         + _staffSystemTies.Pass + _staffSystemSlurs.Pass + _lyricBands.Pass + _looseLines.Pass
-        + _voiceCollisions.Pass;
+        + _voiceCollisions.Pass + _breakerSkylines.Pass;
 
     /// <summary>Refreshes the per-measure content keys for the current edit. Must be
     /// called before the layout consults the cache. Also marks the edit boundary for
@@ -143,6 +145,7 @@ internal sealed class SystemLayoutCache
         _edges = edges;
         _measures.NextGeneration();
         _skylines.NextGeneration();
+        _breakerSkylines.NextGeneration();
         _staffSkylines.NextGeneration();
         _staffSystemBeams.NextGeneration();
         _staffSystemTies.NextGeneration();
@@ -464,6 +467,17 @@ internal sealed class SystemLayoutCache
         double indent, double commonShortestDuration, double systemHeight,
         TState state, Func<TState, (VerticalSkyline up, VerticalSkyline down)> compute)
         => _skylines.GetOrCompute(_keys, ContextOf(firstMeasureIndex, measureCount), firstMeasureIndex, measureCount, isFirstSystem,
+            isLastSystem, indent, commonShortestDuration, extra: systemHeight, state, compute, out _);
+
+    /// <summary>The same for the system's silhouette WITHOUT its drawn beams — the page
+    /// breaker's base (<c>LayoutEngine</c>'s perSystemBreakerBases). The key is
+    /// <see cref="GetOrComputeSkyline{TState}"/>'s, for the same inputs less the beams, which
+    /// are themselves a function of those inputs.</summary>
+    public (VerticalSkyline up, VerticalSkyline down) GetOrComputeBreakerSkyline<TState>(
+        int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
+        double indent, double commonShortestDuration, double systemHeight,
+        TState state, Func<TState, (VerticalSkyline up, VerticalSkyline down)> compute)
+        => _breakerSkylines.GetOrCompute(_keys, ContextOf(firstMeasureIndex, measureCount), firstMeasureIndex, measureCount, isFirstSystem,
             isLastSystem, indent, commonShortestDuration, extra: systemHeight, state, compute, out _);
 
     /// <summary>Reuses or computes ONE staff's laid-out beams for ONE system — the

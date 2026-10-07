@@ -219,10 +219,11 @@ internal sealed partial class LayoutEngine
     /// TOP STAFF's middle line; this is what puts that middle where the alignment actually
     /// placed it instead of at the nominal device 2.
     /// </param>
-    /// <returns>Per system, the up extent WITHOUT the above-staff music marks' stacked ink —
-    /// the base the page breaker adds them to at their pure heights — or null when no mark
-    /// stands above a staff.</returns>
-    private static double[]? EnrichExtentsWithAnnotationProtrusions(
+    /// <returns>Per system, the annotations' share of the page BREAKER's extents: their up
+    /// and down reach alone, WITHOUT the above-staff music marks' stacked ink (the breaker
+    /// adds them at their pure heights) and without the grobs that have no pure height
+    /// (tuplets, ties).</returns>
+    private static (double[]? BreakerUp, double[]? BreakerDown) EnrichExtentsWithAnnotationProtrusions(
         ScoreTextMetrics fonts,
         List<(double upExtent, double downExtent)> perSystemExtents,
         ImmutableArray<SystemLayout> systems,
@@ -271,6 +272,15 @@ internal sealed partial class LayoutEngine
             }
         }
 
+        // The grobs with NO PURE HEIGHT (tuplet brackets and numbers, ties) — and the slurs,
+        // whose pure height the breaker estimates itself — are kept apart while noPure is
+        // set: the layout's extents take them, the page BREAKER's do not.
+        // LILYPOND-REF: lily/grob-property.cc:357-360 call_pure_function — a Y-extent that is
+        //   a plain (unpure) callback or none at all reads #f in a pure query, and
+        //   lily/axis-group-interface.cc:438-439 adjacent_pure_heights skips the empty dims.
+        bool noPure = false;
+        double[]? npUp = null, npDown = null;
+
         void Add(int measureIndex, double topRel, double bottomRel)
         {
             if (!measureToSystem.TryGetValue(measureIndex, out int s))
@@ -282,8 +292,24 @@ internal sealed partial class LayoutEngine
         // pedal lines arrive per system, not per measure).
         void AddAt(int s, double topRel, double bottomRel)
         {
+            if (noPure)
+            {
+                InitNoPure();
+                npUp![s] = Math.Max(npUp[s], -topRel);
+                npDown![s] = Math.Max(npDown[s], bottomRel - bottoms[s]);
+                return;
+            }
             up[s] = Math.Max(up[s], -topRel);
             down[s] = Math.Max(down[s], bottomRel - bottoms[s]);
+        }
+
+        void InitNoPure()
+        {
+            if (npUp is not null)
+                return;
+            npUp = new double[n];
+            Array.Fill(npUp, upSeed);
+            npDown = new double[n];
         }
 
         // The up half alone — for a grob whose DOWN reservation is somebody else's
@@ -296,6 +322,7 @@ internal sealed partial class LayoutEngine
             up[s] = Math.Max(up[s], -topRel);
         }
 
+        noPure = true;
         foreach (var t in ann.TupletBrackets)
         {
             // t.*YUp is Y-up from the system top; this pass is system-relative device.
@@ -337,6 +364,7 @@ internal sealed partial class LayoutEngine
             }
             Add(t.MeasureIndex, top, bottom);
         }
+        noPure = false;
         foreach (var v in ann.VoltaBrackets)
         {
             // YUp is Y-up from the system top; this extent pass is system-relative
@@ -639,10 +667,10 @@ internal sealed partial class LayoutEngine
             // Curve extreme ~ 3/4 of the way from endpoints to controls.
             double topRel = Math.Min(Math.Min(y0, y1), Math.Min(y0, y1) * 0.25 + Math.Min(c1, c2) * 0.75);
             double botRel = Math.Max(Math.Max(y0, y1), Math.Max(y0, y1) * 0.25 + Math.Max(c1, c2) * 0.75);
-            up[s] = Math.Max(up[s], -topRel);
-            down[s] = Math.Max(down[s], botRel - bottoms[s]);
+            AddAt(s, topRel, botRel);
         }
 
+        noPure = true;
         foreach (var t in ties)
         {
             // A broken tie's continuation piece (IsBrokenLeft) lives on a LATER
@@ -653,24 +681,34 @@ internal sealed partial class LayoutEngine
             // Bow Y is now page Y-up (= -device); reflect back for this device extent pass.
             AddCurve(mi, -t.StartYUp, -t.EndYUp, -t.Control1.Y, -t.Control2.Y);
         }
+        // A slur's curve is not its pure height either (lily/slur.cc:74-130, an estimate off
+        // its notes) — the breaker reads that estimate from its own silhouette
+        // (PagingAugmentProgram's slur group, breaker replay).
         foreach (var sl in slurs)
         {
             int mi = sl.IsBrokenLeft ? sl.Slur.EndMeasureIndex : sl.Slur.StartMeasureIndex;
             AddCurve(mi, -sl.StartYUp, -sl.EndYUp, -sl.Control1.Y, -sl.Control2.Y);
         }
+        noPure = false;
 
-        var upWithoutMarks = markUp is null ? null : new double[n];
+        // The breaker's share: the annotations alone, without the above-staff marks and the
+        // grobs with no pure height — the breaker adds the staves' own ink from its own
+        // silhouette (PreliminaryPass.BreakerUpExtent / BreakerDownExtent).
+        var breakerUp = new double[n];
+        var breakerDown = new double[n];
         for (int i = 0; i < n; i++)
         {
             var ext = perSystemExtents[i];
+            breakerUp[i] = up[i];
+            breakerDown[i] = down[i];
             double withoutMarks = Math.Max(ext.upExtent, up[i]);
-            if (upWithoutMarks is not null)
-                upWithoutMarks[i] = withoutMarks;
+            double downPure = Math.Max(ext.downExtent, down[i]);
+            double upAll = npUp is null ? withoutMarks : Math.Max(withoutMarks, npUp[i]);
             perSystemExtents[i] = (
-                markUp is null ? withoutMarks : Math.Max(withoutMarks, markUp![i]),
-                Math.Max(ext.downExtent, down[i]));
+                markUp is null ? upAll : Math.Max(upAll, markUp[i]),
+                npDown is null ? downPure : Math.Max(downPure, npDown[i]));
         }
-        return upWithoutMarks;
+        return (breakerUp, breakerDown);
     }
 
     /// <summary>
@@ -856,10 +894,11 @@ internal sealed partial class LayoutEngine
     /// v2bow1k keystroke, ~all of it in unchanged systems' bow re-seeding.
     /// </remarks>
     /// <param name="breakerUps">Filled, one entry a system, with the PAGE BREAKER's up
-    /// silhouette where it differs from the returned one (an above-staff music mark at its
-    /// pure height), else null.</param>
-    /// <param name="pureMarkTops">Per system, raised to the highest such mark's pure top
-    /// (Y-up from the system origin).</param>
+    /// silhouette (LilyPond's pure heights — <c>PreliminaryPass.BreakerUp</c>) where it differs
+    /// from the returned one, else null.</param>
+    /// <param name="breakerDowns">Its down half, entry for entry.</param>
+    /// <param name="breakerBases">Per system, the silhouette WITHOUT the drawn beams the
+    /// breaker's replay starts from (absent: the given skylines).</param>
     private static List<(VerticalSkyline up, VerticalSkyline down)>? AugmentSkylinesForPaging(
         ScoreTextMetrics fonts,
         List<(VerticalSkyline up, VerticalSkyline down)>? skylines,
@@ -880,7 +919,8 @@ internal sealed partial class LayoutEngine
         IReadOnlyList<VerticalSkyline?>? lyricBands = null,
         IReadOnlyList<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>>? pedalLines = null,
         List<VerticalSkyline?>? breakerUps = null,
-        double[]? pureMarkTops = null)
+        List<VerticalSkyline?>? breakerDowns = null,
+        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? breakerBases = null)
     {
         if (skylines == null)
             return null;
@@ -1095,6 +1135,8 @@ internal sealed partial class LayoutEngine
         // a tab staff stands 0.73 over the drawn beam), and raising over the drawn ink instead
         // was MEASURED worse (svg sweep against the twins' page splits: 43 books to LilyPond's
         // and 19 off it, against 51 and 19 without the raise).
+        // How far left of a line's first bar a begin-bucket box ends.
+        const double BreakerBucketEpsilon = 1e-6;
         double PureMarkBottomUp(MusicMarkLayout m, double staffTopUp)
             => staffTopUp + (m.MarkType == MusicMarkType.Coda ? 0.4 : 0.8);
         // The bar the mark stands at, within its system, or −1.
@@ -1178,10 +1220,25 @@ internal sealed partial class LayoutEngine
                 {
                     double pureBottom = PureMarkBottomUp(m, ScoreGrobStaffTopUp(ms, m.StaffIndex));
                     double pureTop = pureBottom + mTop + mBottom;
+                    // A mark OPENING its line is in that line's BEGIN heights alone: it hangs
+                    // off the line's first breakable column, and LilyPond puts a grob in an
+                    // interval's mid heights only when it spans past the interval's start.
+                    // The breaker splits a silhouette into its two buckets at the first bar's
+                    // X (LayoutEngine.BuildLineShapes), so the pure box is moved left of it.
+                    // LILYPOND-REF: lily/axis-group-interface.cc:441-458 adjacent_pure_heights
+                    //   — rank_span[LEFT] <= start → begin_line_heights, rank_span[RIGHT] >
+                    //   start → mid_line_heights. MEASURED (2.26.0, Lab sessions/p852/mk): a
+                    //   mark at the first bar is in the System's begin heights of that bar
+                    //   only, and the mark at the second bar in its begin heights and the
+                    //   first bar's mid heights.
+                    double pureX0 = mx0 - margin, pureX1 = mx1 + margin;
+                    if (BarOf(m, ms) == 0)
+                    {
+                        pureX1 = systems[ms].Measures[0].X - BreakerBucketEpsilon;
+                        pureX0 = pureX1 - (mx1 - mx0) - 2 * margin;
+                    }
                     BuilderAt(ms).AddMusicMarkBoxes(mx0 - margin, mx1 + margin,
-                        mY - mBottom, mY + mTop, pureBottom, pureTop);
-                    if (pureMarkTops is not null && ms < pureMarkTops.Length)
-                        pureMarkTops[ms] = Math.Max(pureMarkTops[ms], pureTop);
+                        mY - mBottom, mY + mTop, pureBottom, pureTop, pureX0, pureX1);
                     // A mark OPENING a line is also priced on the line before it: its bar's
                     // column is that line's end, and LilyPond counts a grob there in the
                     // interval before it, "visible with respect to a slightly longer line".
@@ -1200,8 +1257,6 @@ internal sealed partial class LayoutEngine
                         double prevTop = prevBottom + mTop + mBottom;
                         BuilderAt(ms - 1).AddBreakerOnlyMarkBox(
                             lastX, lastX + (mx1 - mx0) + 2 * margin, prevBottom, prevTop);
-                        if (pureMarkTops is not null && ms - 1 < pureMarkTops.Length)
-                            pureMarkTops[ms - 1] = Math.Max(pureMarkTops[ms - 1], prevTop);
                     }
                 }
                 else
@@ -1492,9 +1547,34 @@ internal sealed partial class LayoutEngine
         // memoized — a marked system is a few a score.
         if (breakerUps is not null)
             for (int s = 0; s < systemCount; s++)
-                breakerUps.Add(builders[s] is { HasBreakerSteps: true } b
-                    ? b.Build().Execute(skylines[s], forBreaker: true).up
-                    : null);
+            {
+                // The breaker's base is the silhouette without the drawn beams, where one was
+                // built (LayoutEngine's perSystemBreakerBases).
+                var breakerBase = breakerBases is not null && s < breakerBases.Count
+                    ? breakerBases[s]
+                    : skylines[s];
+                if (builders[s] is { HasBreakerSteps: true } b)
+                {
+                    var (bUp, bDown) = b.Build().Execute(breakerBase, forBreaker: true);
+                    breakerUps.Add(bUp);
+                    breakerDowns?.Add(bDown);
+                }
+                else if (!ReferenceEquals(breakerBase.up, skylines[s].up))
+                {
+                    // No breaker step, but a base of its own: the breaker reads the layout's
+                    // steps over it.
+                    var (bUp, bDown) = builders[s] is { IsEmpty: false } lb
+                        ? lb.Build().Execute(breakerBase, forBreaker: true)
+                        : breakerBase;
+                    breakerUps.Add(bUp);
+                    breakerDowns?.Add(bDown);
+                }
+                else
+                {
+                    breakerUps.Add(null);
+                    breakerDowns?.Add(null);
+                }
+            }
 
         // Every program built owns copies of its steps; give the builders back cleared.
         for (int s = 0; s < systemCount; s++)

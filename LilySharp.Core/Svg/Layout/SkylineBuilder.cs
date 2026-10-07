@@ -66,7 +66,8 @@ internal sealed class SkylineBuilder
         ImmutableArray<BeamLayout> firstStaffBeams = default,
         ImmutableArray<BeamLayout> lastStaffBeams = default,
         ImmutableArray<StaffGroupLayout> placed = default,
-        IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines = null)
+        IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines = null,
+        bool pureBeams = false)
     {
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
@@ -98,7 +99,7 @@ internal sealed class SkylineBuilder
         // page's silhouette carries a grace's flag exactly as the staff's own profile does.
         AddEdgeStaffInk(firstStaff, measureLayouts, firstStaffMiddleUp, firstStaffBeams,
             systemLeft, upSkyline, downSkyline,
-            EdgeGraceSeeds(score, firstStaff, measureLayouts));
+            EdgeGraceSeeds(score, firstStaff, measureLayouts), pureBeams);
 
         // Process bottommost staff for DOWN skyline (elements below the system)
         // LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline
@@ -141,7 +142,7 @@ internal sealed class SkylineBuilder
         if (twoEnds)
             AddEdgeStaffInk(lastStaff, measureLayouts, lastStaffMiddleUp, lastStaffBeams,
                 systemLeft, upSkyline, downSkyline,
-                EdgeGraceSeeds(score, lastStaff, measureLayouts));
+                EdgeGraceSeeds(score, lastStaff, measureLayouts), pureBeams);
 
         // ★ EACH EDGE STAFF SEEDS ITS OWN STAFF SYMBOL — BOTH its lines, not one each
         // (2026-07-28). It used to seed the outer pair, the first staff's TOP and the last
@@ -249,7 +250,7 @@ internal sealed class SkylineBuilder
         Staff? staff, ImmutableArray<MeasureLayout> measureLayouts, double staffMiddleUp,
         ImmutableArray<BeamLayout> beams, double systemLeft,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline,
-        GraceSeeds? graceSeeds = null)
+        GraceSeeds? graceSeeds = null, bool pureBeams = false)
     {
         // ★ THE STAFF'S OWN SIZE, asked for once and carried into the seeds, so that every
         // quantity BELONGING to this staff arrives already at its size and no seed multiplies
@@ -267,7 +268,9 @@ internal sealed class SkylineBuilder
         // the tab's own geometry, so the page spaces against the beam the tab really draws.
         if (staff is { IsTab: true })
             AddTabStemsAndBeamsToSkylines(staff, measureLayouts, staffMiddleUp, beams,
-                upSkyline, downSkyline);
+                upSkyline, downSkyline, pureBeams);
+        else if (pureBeams)
+            AddPureBeamStemsToSkyline(beams, staffMiddleUp, size, upSkyline, downSkyline);
         else
             AddBeamsToSkyline(beams, staffMiddleUp, size, upSkyline, downSkyline);
     }
@@ -1266,7 +1269,7 @@ internal sealed class SkylineBuilder
     private void AddTabStemsAndBeamsToSkylines(
         Staff staff, ImmutableArray<MeasureLayout> measureLayouts, double staffMiddleUp,
         ImmutableArray<BeamLayout> beams,
-        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline, bool pureBeams = false)
     {
         if (staff.TabNumbersOnly || staff.Tuning is not { } tuning)
             return;
@@ -1292,6 +1295,27 @@ internal sealed class SkylineBuilder
                 if (xRight <= xLeft)
                     continue;
                 bool up = geom.GroupStemUp(g.MemberItems());
+                if (pureBeams)
+                {
+                    // The page breaker's silhouette: each member's UNBEAMED stem in the
+                    // group's direction, no beam (see AddPureBeamStemsToSkyline).
+                    double half = EngravingDefaults.StemThickness / 2;
+                    for (int i = 0; i < g.Members.Length; i++)
+                    {
+                        var item = g.ItemOf(i);
+                        int headString = geom.StemHeadString(item, up);
+                        if (geom.UnbeamedStemTipY(item, up, headString) is not { } pureTip)
+                            continue;
+                        double sx = b.MemberXPositions[i] + EngravingDefaults.TabHeadCenterOffset;
+                        double yHead = YUp(geom.StringY(headString));
+                        double yTip = YUp(pureTip);
+                        if (up)
+                            upSkyline.MergeBox(sx - half, sx + half, yHead, yTip);
+                        else
+                            downSkyline.MergeBox(sx - half, sx + half, yTip, yHead);
+                    }
+                    continue;
+                }
                 double yLeft = YUp(ArticulationEngraver.TabBeamOuterEdgeY(b, geom, xLeft));
                 double yRight = YUp(ArticulationEngraver.TabBeamOuterEdgeY(b, geom, xRight));
                 var sky = up ? upSkyline : downSkyline;
@@ -1902,6 +1926,55 @@ internal sealed class SkylineBuilder
             var direction = stemUp ? VerticalDirection.Up : VerticalDirection.Down;
             var sky = stemUp ? upSkyline : downSkyline;
             sky.MergeSlope(xLeft, yLeft, xRight, yRight, thickness: 0);
+        }
+    }
+
+    /// <summary>
+    /// The PURE twin of <see cref="AddBeamsToSkyline"/>, for the page breaker's silhouette:
+    /// no beam, and every member's stem at its UNBEAMED length in the beam's direction.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc:387-447 Stem::internal_pure_height — a beamed stem's pure
+    /// height is its own unbeamed one (pure-calc-stem-end-position, :470-478) united with the
+    /// beam's other same-direction stems; the Beam has no pure Y-extent (scm/define-grobs.scm
+    /// Beam). The union adds nothing a line's or a bar's maximum can see, so each member
+    /// stands for itself. The skips are <see cref="AddBeamsToSkyline"/>'s: a cross-staff beam
+    /// (lily/axis-group-interface.cc:383-384 adjacent_pure_heights skips cross-staff grobs)
+    /// and a kneed one, whose members keep their per-note stems.
+    /// MEASURED (2.26.0, Lab sessions/p852/nb): 3.375 over the middle line where the drawn
+    /// beam stood at 3.72 (BreakerPureHeightTests).
+    /// </remarks>
+    internal static void AddPureBeamStemsToSkyline(
+        ImmutableArray<BeamLayout> beams, double staffMiddleUp, StaffSize size,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        if (beams.IsDefaultOrEmpty)
+            return;
+        double halfStem = size.Span(EngravingDefaults.StemThickness / 2);
+        foreach (var b in beams)
+        {
+            var g = b.Group;
+            if (g.IsCrossStaff || g.IsKnee)
+                continue;
+            bool stemUp = g.StemUp;
+            for (int i = 0; i < g.Members.Length; i++)
+            {
+                var m = g.Members[i];
+                var item = g.ItemOf(i);
+                int noteValue = GlyphMetrics.NoteValueOf(item);
+                if (noteValue < 2)
+                    continue;
+                int head = stemUp ? m.HeadPositionMax : m.HeadPositionMin;
+                double end = StemCalculator.CalculateStemEndPosition(
+                    stemUp, StemCalculator.GetDurationLog(noteValue), head);
+                double x = b.MemberStemX(i);
+                double headUp = size.Span(head / 2.0) + staffMiddleUp;
+                double tipUp = size.Span(end / 2.0) + staffMiddleUp;
+                if (stemUp)
+                    upSkyline.MergeBox(x - halfStem, x + halfStem, headUp, tipUp);
+                else
+                    downSkyline.MergeBox(x - halfStem, x + halfStem, tipUp, headUp);
+            }
         }
     }
 

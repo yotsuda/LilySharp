@@ -465,7 +465,8 @@ internal sealed partial class LayoutEngine
             score, multiStaffLayouter, systems.ToImmutableArray(), perSystemExtents,
             perSystemSkylines, multiStaffLayouter.RestCollisionsOfDelegate, systemCache,
             commonShortestDuration, placed.StaffSpanners, placed.StaffInside,
-            rowsAboveFirstStaff, placed.LyricBands, placed.PedalLines, placed.PedalRows);
+            rowsAboveFirstStaff, placed.LyricBands, placed.PedalLines, placed.PedalRows,
+            placed.BreakerBases);
 
         return new SystemPass(systems, perSystemExtents, perSystemSkylines, perSystemHeights,
             perSystemBandUps, systemHeight, placed, prelim);
@@ -721,7 +722,8 @@ internal sealed partial class LayoutEngine
         List<List<(VerticalSkyline Up, VerticalSkyline Down)>> StaffInside,
         List<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>> PedalLines,
         List<List<ImmutableArray<PedalEngraver.SolvedPedalRow>>> PedalRows,
-        List<MultiStaffLayouter.PairRunSources> RunSources);
+        List<MultiStaffLayouter.PairRunSources> RunSources,
+        List<(VerticalSkyline up, VerticalSkyline down)> BreakerBases);
 
     /// <summary>
     /// Lays out every system: its measures, its staves, its height and its skyline.
@@ -758,6 +760,14 @@ internal sealed partial class LayoutEngine
         var systems = new List<SystemLayout>(systemCount);
         var perSystemExtents = new List<(double upExtent, double downExtent)>(systemCount);
         var perSystemSkylines = new List<(VerticalSkyline up, VerticalSkyline down)>(systemCount);
+        // ...and the same silhouette WITHOUT the drawn beams, which the page BREAKER starts
+        // from (PreliminaryPass.BreakerUp/BreakerDown): a beam has no pure height, and a
+        // beamed stem's is its group's unbeamed ones united (lily/stem.cc:387-447) — with no
+        // beams handed in, BuildSystemSkylines reserves every stem at its unbeamed length, and
+        // the group's union adds no height a line or a bar is priced by beyond its tallest.
+        // MEASURED (2.26.0, Lab sessions/p852/nb): 3.375 over the middle line where the drawn
+        // beam stood at 3.72 (BreakerPureHeightTests).
+        var perSystemBreakerBases = new List<(VerticalSkyline up, VerticalSkyline down)>(systemCount);
         // Per-system body height. Equals the scalar systemHeight for every system
         // unless hara-kiri hides different staves per system (then each system is as
         // tall as its OWN surviving staves). CreatePages spaces systems by this so a
@@ -856,6 +866,25 @@ internal sealed partial class LayoutEngine
                         edgeBeams.first, edgeBeams.last, s.Groups, s.Room.Skylines);
                 });
             perSystemSkylines.Add((upSky, downSky));
+            var breakerBaseState = (EdgeStaffBeams, Builder: _skylineBuilder, Score: score,
+                Room: sysStaffSkylines, Measures: measureLayouts, SysIdx: sysIdx, Height: sysHeight,
+                Indent: sysIndent, Groups: sysStaffGroups);
+            static (VerticalSkyline, VerticalSkyline) BuildBreakerBase(
+                (Func<MultiStaffLayouter.StaffSkylineSet, ImmutableArray<MeasureLayout>, int,
+                    (ImmutableArray<BeamLayout> first, ImmutableArray<BeamLayout> last)> EdgeStaffBeams,
+                    SkylineBuilder Builder, MultiStaffScore Score, MultiStaffLayouter.StaffSkylineSet Room,
+                    ImmutableArray<MeasureLayout> Measures, int SysIdx, double Height, double Indent,
+                    ImmutableArray<StaffGroupLayout> Groups) s)
+            {
+                var edgeBeams = s.EdgeStaffBeams(s.Room, s.Measures, s.SysIdx);
+                return s.Builder.BuildSystemSkylines(s.Score, s.Measures, s.Height, s.Indent,
+                    edgeBeams.first, edgeBeams.last, s.Groups, s.Room.Skylines, pureBeams: true);
+            }
+            perSystemBreakerBases.Add(systemCache is null
+                ? BuildBreakerBase(breakerBaseState)
+                : systemCache.GetOrComputeBreakerSkyline(firstMeasureIndex, measureCount,
+                    isFirstSystem, sysIdx == systemMeasures.Count - 1, sysIndent,
+                    commonShortestDuration, sysHeight, breakerBaseState, BuildBreakerBase));
             // The loose block's two profiles, in the system-origin frame. The MINIMUM's
             // deepest point joins the down EXTENT here (the page-fill and fallback
             // arithmetic are scalars); the profile itself joins the paging silhouette as a
@@ -948,7 +977,7 @@ internal sealed partial class LayoutEngine
             systems, perSystemExtents, perSystemSkylines, perSystemHeights,
             perSystemLyricBands, perSystemCropDown, perSystemStaffSkylines,
             perSystemStaffSpanners, perSystemStaffInside, perSystemPedalLines,
-            perSystemPedalRows, perSystemRunSources);
+            perSystemPedalRows, perSystemRunSources, perSystemBreakerBases);
     }
 
 

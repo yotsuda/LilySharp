@@ -205,8 +205,9 @@ internal sealed partial class LayoutEngine
             double h = s < pass.Heights.Count ? pass.Heights[s] : fallbackBody;
             // The BREAKER's up half (PreliminaryPass.BreakerUpExtent / BreakerUp): above-staff
             // marks at their pure heights, as the placed lines are priced (BuildLineShapes).
+            // ...and its down half: beamed stems at their pure heights.
             var ext = (upExtent: pass.Prelim.BreakerUpExtent(s, pass.Extents[s].upExtent),
-                pass.Extents[s].downExtent);
+                downExtent: pass.Prelim.BreakerDownExtent(s, pass.Extents[s].downExtent, h));
             int count = sys.Measures.Length;
             // This system's per-bar heights, lent from the thread's drawer (ScratchArray) —
             // read only by the copy into upRest/downRest below, 23.7 systems a keystroke
@@ -226,6 +227,7 @@ internal sealed partial class LayoutEngine
             {
                 var (up, down) = skylines[s];
                 up = pass.Prelim.BreakerUp(s, up);
+                down = pass.Prelim.BreakerDown(s, down);
                 // Where the line's first bar begins in the silhouette's own X frame; left of
                 // it is the line-start prefix — BuildLineShapes' begin bucket.
                 double xSplit = sys.Measures[0].X;
