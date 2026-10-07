@@ -84,7 +84,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
-- ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**
+- ⚠️ **v0.11.0 は `release: 0.11.0` の commit まで済んだ（第854・ユーザー指示）＝push・CI の緑・タグ（`docs/RELEASING.md` 5〜7）はユーザー**。⚠️ v0.10.0（2026-09-28）は `## Unreleased` のまま打たれ、版の 7 か所も 0.9.0 のままだった＝第854 が両方の CHANGELOG を `## 0.11.0`／`## 0.10.0`（タグの文面）に分け直した（Lab `p854/release/build.ps1`）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
 - **T7 の残り（双子と段割れが違う 22 score＝双子の既定の数字と比べる限り残る差）**: ⒜ staff＋tab で Lily# が段を増やす族（Amanda・Butterfly ほか）＝**第583 が F9 の帰結と確定**（Lily# の数字の rod は LP の font-size 2〜3 の間＝§1.1 第583）／⒣ ~~カムフラージュ 1 段目 LP 6,7・Lily# 7,6~~＝**第833 で LP の 6,7 に**（行頭の空の小節＝`641bcc171`）／⒡ **小節の合計が合わない score（Disco Inferno ほか＝22 の外）は計器**（LP の小節番号の数え方）／⒞ tab だけの Lily# が段を増やす 5／⒟ ~~Le Freak は A1 の僅差が逆に倒れた~~＝**第833 で LP の 4+12 に**（同じ修正）。閉じた分（merge・Universe・奏・rod・小節線のばね・first_head）は第576〜第661 の §1.1（ARCHIVE）
 - ⚠️ **双子の計器の残り**: 小節数の違う 14 score は計器（LP の小節番号の数え方＝途中の弱起・反復）／署名なし 21 は 1 段だけの試験ファイル（段中の番号が無い）／LP 失敗 2（Mandy・You're the One That I Want (-1)）＝本の側（第737 で読んだ: 4 弦 bass の最低弦より下の音＝Lily# は 1 音ずつ「tab から省いた・1 オクターブ低いのでは」と警告・LP は弦の無い TabNoteHead で自分の Guile が落ちる＝LP の不具合。Mandy は 13/16 の小節も本の側＝LYS2001）。**比較の基準は双子の既定の数字**（`TabNoteHead.font-size` 2・3 を足すと一致が 413 → 409 → 394 に減る）
@@ -130,6 +130,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **閉じた（`dc6758f08`）FF V**: 印の pure の下端は譜線の範囲（上の線＋線の太さの半分 0.05）の 0.8 上（LP: "B" で始まる行の上端 3.555＝0.85＋2.705・Lily# 3.505）＝`PureMarkBottomUp` に `StaffLineThickness / 2`。網 `AMark_RestsItsPaddingOverTheStaffSymbolsExtent_NotItsTopLine`・毒 赤。sweep 9/1199: 寄った 7（FF V・Xanadu ×2・DADDY! DADDY! DO!・Reelin' In the Years・Soul Man・群青）・離れた 2（OH NO, OH YES!・Are You Gonna Go My Way-tab＝印の低さが tab の数字の大きさを打ち消していた。後者は line 20/22 にも別の差）。full **11398 / 0 / 2 / 11400**。
 - **閉じた（`d72cecb26`）まちぶせ**: 行の最初の小節の*途中*の印（`r4 d,@mark("B1")`）を行を開く印として扱い、begin と前の行の末尾に入れていた。LP は musical column の上＝その小節の mid だけ（line 7 LP 3.825/5.075・前の行の末尾 0.05）。`MusicMarkItem.IsMidMeasure`（tempo の後ろの anchor item・rehearsal mark の後ろの anchor timing）→ `MusicMarkLayout.MidMeasure`。sweep 1/1199＝その 1 冊が双子と同じ頁割りに。網 `AMarkInsideALinesFirstBar_…`・毒 赤。full **11399 / 0 / 2 / 11401**。
 - **census**（全 1193 score・`p854/census`）: 一致 1128・違う 65＝試験の譜 約 35（行割りから違う）・実の本で行は同じで頁割りだけ違う 13（tab の数字の族が多い）・残りは行割りの差。
+- **リリース準備（ユーザー「v0.11.0 をリリースしたい」）**: `release: 0.11.0` の commit＝`docs/RELEASING.md` の 7 か所（props・package.json・lock ×2・README・DEPLOY・両 CHANGELOG）。CHANGELOG は Unreleased を塊ごとにタグの文面と照らし、公開済み 41 塊を `## 0.10.0` に戻し（後の手直しのうち backtick だけの 3 つはその文面で）、リリース後に足された 5 つの挙動は 0.11.0 の独立した項目にした。`lysc --version` 0.11.0・full **11399 / 0 / 2 / 11401**。VS Code の CHANGELOG には editor 側の 11 項目を足した（ユーザー指示・`@todo` と OMR の 4 つ・航行記号の Breaking・Fixes 6 つ）。
 
 ## 以下は第853セッションの経緯
 

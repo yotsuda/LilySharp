@@ -4,7 +4,7 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
-## Unreleased
+## 0.11.0
 
 ### Breaking changes
 
@@ -49,206 +49,21 @@ workflow attaches that section to the GitHub Release verbatim.
   doubled the backslashes. A backslash written for its own sake (`"\^{~}3"`) is now LYS0036
   — write `"\\^{~}3"` or `@"\^{~}3"`. The MusicXML import writes values back in the same
   escapes, and the editor colours both forms and marks an invalid escape.
-- **An ending's range, end shape and length are three separate settings.** The `]` ends an
-  ending; it may be left off only right before a `:|` (`|: A [1. B C :| [2. D]` — the `:|`
-  closes it, and its bracket now hooks). An **unclosed last ending is now a syntax error**
-  ("Expected 'CloseBracket'"): `:| [2. C D E` used to hold C alone and draw an open
-  bracket, with D E playing after the repeat. Write `[2. C -]` for that open look — `-]` ends
-  an ending with a straight right end, `]` hooks it down — and move D E out of the brackets.
-  The length is new: `layout { voltaBracket all|line|N }` (`all`, the default, covers the
-  whole ending; `line` stops at the end of the system the bracket starts in; `N` covers its
-  first N bars), and one ending overrides it with `[1. B C]@voltaBracket(2)`. A bracket cut
-  short always ends straight. The `.ly` twin now draws what the page draws — a hooked last
-  ending re-sets LilyPond's hook, `-]` zeroes it, N sets `VoltaBracket.musical-length`, `line`
-  drops the later pieces — and MusicXML writes `<ending type="stop">` for a hook and
-  `"discontinue"` for a straight end or at the cut (a closed last ending was always
-  `"discontinue"` before). Completion and hover know the key, the annotation and `-]`.
-- **The old form-ending spellings are gone.** `|: A [1. D] [2. O] :|` (the repeat bar after
-  both endings) and the bracketless `:| 2. O` / `|: A | 1. D :| 2. O` were refused (LYS1010,
-  LYS1011) but still built endings, so they kept rendering. They now get the ordinary
-  errors — the first ending must be followed by its `:|` ("Expected 'RepeatEndBar'"), and a
-  bare `2.` is a stray form item (LYS0030) — and nothing is engraved as an ending. Write
-  `|: A [1. D] :| [2. O]`. LYS1010 and LYS1011 are retired.
-- **Figured bass is written `@figuredBass(…)`.** The abbreviation `@fig(…)` told a reader
-  nothing; the new name is the term itself and matches the `fonts { figuredBass … }` role.
-  The figures are written as before (`c4@figuredBass(6 4)`). `@fig(6)` is now an unknown
-  annotation — it warns and draws nothing.
-- **A chord diagram is written `@diagram(x32010)`.** It was `@frame(…)`, MusicXML's element
-  name, which no player uses; guitarists call it a chord diagram. The position string and
-  `.down` are unchanged. `@frame(…)` is now an unknown annotation.
-- **`fonts { }` keys are spelled as the source writes what they style.** `chordName` →
-  `chord`, `fretFrame` → `diagram`, `fingering` → `finger`, `barNumber` → `barNumbers`,
-  `partCombine` → `partCombineText`, `meter` → `time`, `tabFret` → `tab`. `lyricText` is
-  gone: `lyrics` binds the syllables (with the stanza numbers), and `lyrics "X"  stanza "Y"`
-  still sets the two apart. An old key is refused as unknown (LYS8004), and the message
-  lists the keys.
-- **`layout { marks stacked|beside }` is `layout { markTempo stacked|beside }`.** It
-  arranges a boxed label and the metronome mark at the same bar; `marks` read like the
-  `fonts` group of the same name. The old key is refused (LYS9101).
-- **`@ho` and `@po` warn as unknown annotations.** They were retired before 0.3.0, but the
-  checker still accepted them, so `c4@ho` compiled without a word and drew no H — nor did
-  the `.ly` twin or MusicXML carry it. Write `@hammerOn` / `@pullOff`.
-- **Names are case-sensitive.** Every annotation name and every `fonts` / `layout` /
-  `paper` key (and the fonts words `as step size bold italic regular serif sans`) has one
-  spelling: `@hammeron`, `@Staccato`, `@FiguredBass(6)` and `barnumbers` used to be read,
-  and are now refused as unknown — nothing drawn or exported — with the right spelling in
-  the message (`Names are case-sensitive: write '@hammerOn'.`).
-- **A name of several words is camelCase, even where LilyPond's is not.** `@upbow`,
-  `@downbow`, `@shortfermata`, `@longfermata` and `@reverseturn` are now `@upBow`,
-  `@downBow`, `@shortFermata`, `@longFermata` and `@reverseTurn`, like `@laissezVibrer` and
-  `@hammerOn` beside them. The old spellings are told the new one. The `.ly` twin still
-  writes LilyPond's `\upbow`.
-- **Value words are case-sensitive too.** The words inside an annotation's parentheses
-  (`@notehead(triangle)`, `@bend(full)`, `@pluck(p)`, `@feather(right)`,
-  `@arpeggio(bracket)`, the `x` / `o` of `@diagram(x32010)`, the `s` / `f` / `n` of
-  `@figuredBass(6 s)`), paper size names (`size a4`) and units (`210mm`) are lowercase
-  only; `@notehead(TRIANGLE)`, `size A4` and `210MM` are refused with the spelling to
-  write. Free text (`@text("Dolce")`) and chord symbols (`@chord(Dm)`) keep their case.
-- **`@chord`'s argument is read as words: `@chord(C 7)` is C followed by a shape, not C7.**
-  The words after the symbol are its chord diagram's shapes (below), so a space no longer joins
-  the symbol back together — write `@chord(C7)`. `@chord(C 7)` names C and warns (LYS1038) that
-  `7` is a shape no tuning has strings for; `@chord(C m7)` warns that `m7` is neither a shape
-  nor a tuning. No book in the repository or the test corpora wrote a spaced `@chord(…)`.
 
 ### Chord diagrams
 
-- **A chord whose shape is written draws a chord diagram under its name**: `c4@chord(Cm7 x3x546)`
-  on a note, `F(133211)` in a `chords` row (over a staff, or on a lead sheet with no staff),
-  `@chord(x32010)` (the name derived from its notes) — between the name and the staff, side by
-  side, with the row's spacing and the bars widened for them. A name alone (`@chord(G)`, a row's
-  `G`) draws none. A shape is one character per string from the low string (`x` muted, `o` or
-  `0` open, a digit the fret); it goes to the tuning with as many strings, so one chord can
-  carry several: `F(133211 2010)`; a tuning word binds a shape by name when two tunings have
-  the same string count: `F(guitar 133211 guitardropd 333211)`. `@diagram(…)` is unchanged and
-  always draws.
-- **Frets 10–15: a shape writes a two-digit fret with a `-` on each side** — `8xx88-11`,
-  `xx-10-12-13-11`, `8-10-10-888`: `@chord(Cm xx-10-12-13-11)`, `@chord(8-10-10-888)` (named
-  from its frets), `Cm(8xx88-11)`, `@diagram(x-15-13-12-13-x)`. A shape holding `-` is read in
-  segments (the parts between the dashes): exactly two digits are ONE fret, 10–15; any other
-  segment is one character per string — so the chord-chart spelling with a `-` between every
-  string reads the same (`x-x-10-12-13-11`, `F(1-3-3-2-1-1 2-0-1-0)`). Frets 10, 9, 9 are
-  `10-9-9`: a `99` segment is fret 99 and `09` no fret, and both warn naming the split. A shape
-  routes by its string count (`8xx88-11` is six); one without `-` is one character per string,
-  as before. Lower case only; a leading, trailing or doubled `-`, a fret above 15 and an
-  upper-case shape warn (LYS1038 / the case fix), naming the fix. The page, the twin (terse
-  markup and `FretBoards` tables) and MusicXML carry the two-digit frets. The editor's step now
-  walks shapes at frets 10–15 too (it used to skip them) and writes a `-` only around the
-  two-digit frets (and between two lone single digits: `10-9-9`), and only when a fret needs it.
-- **The diagram's tuning** is the score's `layout { chordDiagrams TUNING }` — a tuning word,
-  the ones a tab's `tuning` takes (`guitar`, `ukulele`, `mandolin`, `guitardropd`, …) — else
-  the instrument of the part when it is fretted (the part an `@chord`'s note is in; for a row,
-  the staff it stands directly above), else the guitar. `chordDiagrams none` draws no diagram
-  at all, so one source makes a piano score and a guitar score, or a guitar score and a
-  ukulele score.
-- **`chordDiagrams all` draws a diagram for EVERY chord.** The scope word `all`, after the
-  tuning (`chordDiagrams guitar all`, `chordDiagrams ukulele all`) or alone (`chordDiagrams all`:
-  the tuning as when unset), makes every chord name in the score draw one — the `chords` rows'
-  entries and every `@chord`, a bare `@chord` by the name it derives: the shape written for the
-  tuning, else the usual shape (below). A chord with no shape at all on the tuning (C13 on the
-  ukulele) draws none and warns once per chord and tuning (write its shape). `none all`, `all
-  guitar` (the tuning comes first) and a word written twice are errors. Without `all`, only
-  written shapes draw, as before. The twin writes a `FretBoards` entry for every chord of such a
-  score (one-shape tables, so LilyPond draws exactly the page's shape) and the `@chord` markup
-  for every name; MusicXML a `<frame>` for every drawn diagram.
-- **A shape table in the layout lists the chords that draw.** After the `chordDiagrams` words,
-  a table in braces — `layout { chordDiagrams guitar { Cm7 x35343  G  section Chorus { C x35553
-  } } }` — names the chords that draw a diagram wherever they are named (a `chords` row, an
-  `@chord`, a bare `@chord` by the name it derives) and the shape each draws, written as a row
-  writes shapes after its symbol (`F 133211 2010`, `F guitar 133211 ukulele 2010`); a name
-  alone draws the usual shape. A `section NAME { … }` block's entries apply to the chords
-  written in that section (an `@chord`'s note, a row's bar, a by-part row's inner section), the
-  rest to the whole score. Strongest first: the shape written at the chord, the section's entry,
-  the song's, then — under `all` — the usual shape. The table follows `all` (`chordDiagrams all
-  { F xx3211 }`) or stands alone (`chordDiagrams { C }`); `none` takes none. A symbol that is no
-  chord, a bad shape, a shape before any symbol and a chord listed twice (the last wins) are
-  warnings and the rest of the table stands; a section nothing declares warns; a table shape
-  that disagrees with its chord is LYS1039; a chord listed alone with no shape on the tuning
-  warns as in an `all` score. The twin's `FretBoards` context now appears under a row when some
-  entry DRAWS (written or listed) and is left out when none does — a row with a written shape
-  whose symbol is a degree or does not parse used to get a context of silent slots; MusicXML
-  nests the listed shape's `<frame>`. Inside the table the editor's completion offers the chords the
-  file names that the table does not list yet, then the key's, and `section` (then the file's
-  section names); until now it offered the notes of a music block there.
-- **A capo: `chordDiagrams guitar capo 3`.** The music still writes the sounding chords (`Eb`,
-  `@chord(Eb)`), and everything a player reads follows the capo: every shape is the shape
-  PRESSED above it (`Eb(x32010)` is the C shape, and LYS1039 checks it against the pressed
-  chord; the usual shape is the pressed chord's; the table's shapes are pressed shapes); the
-  printed name is the pressed chord's — `C` for `Eb`, `G` for `Bb` — spelled in the key that
-  many semitones below the key at the bar (in E major at capo 3 a sounding `G#m` prints `Fm`);
-  "Capo 3" stands at the score's head on the header's instrument line; a `chord(Eb x32010)`
-  item sounds three semitones higher. `capo 0`, a fret above 11, `none capo 3` and `all capo 3`
-  (the capo comes first) are errors. New key **`chordNames shape | sounding | both`**: what a
-  name shows under the capo — the pressed chord's (default), the sounding chord's, or both,
-  `E♭m7 (Cm7)`, each name with its own raised quality. The `.ly` twin writes the pressed chords
-  into `\chordmode` and `instrument = "Capo 3"` in its `\header` (under `sounding` the sounding
-  chords; under `both` each name is set by a small `chordNameFunction` that names the sounding
-  chord and then, in brackets, the pressed one, so LilyPond prints `E♭m7 (Cm7)` too);
-  MusicXML's `<harmony>` stays the sounding chord, its `<frame>` the pressed shape; the MIDI
-  plays the sounding music.
-- **The chord list: `layout { chordList true }`.** Every chord the score names — its `chords`
-  rows and every `@chord` — once, in order of first appearance, at the head of the score under
-  the title, each as the name the score prints over the diagram it draws there (a chord that
-  draws none in the score shows its usual shape; `chordDiagrams none` lists the names alone;
-  under a capo the pressed names and shapes). The cells stand in the fewest rows that fit the
-  line with as nearly equal counts as those rows allow (16 chords where 12 fit a row make 8 +
-  8), each row centred on the page. The `.ly` twin writes the rows as `\markup` lines of
-  `\center-column { "NAME" \fret-diagram-terse … }` before the score.
-- **The ukulele's shapes beyond LilyPond's table.** Lily#'s order now lists shapes on the
-  re-entrant tunings too (the ukulele's high G, a banjo's drone) — the same rules less "the
-  lowest note is the root", which the lowest string cannot promise there. Measured: with that,
-  the order opens on LilyPond's own ukulele shape for every chord tried (C `0003` of 39, Am
-  `2000` of 38, F `2010` of 23, G7 `0212` of 19). So a chord the ukulele table lacks now has a
-  usual shape (Cmaj9 `4203`), `Ctrl+Shift+Up`/`Down` steps on a ukulele part, and the hover
-  counts the order there; a chord no rule can voice on four strings (C13) still has none.
-- **Warnings (LYS1038)** about written shapes: a shape of the wrong length, a word that is
-  neither a shape nor a tuning, two unnamed shapes of one length, a tuning given two shapes; a
-  symbol-less `@chord` whose shape is miswritten (`@chord(x3a010)`) now gets that warning rather
-  than "unknown annotation". A name with no shape is not warned about (save in a
-  `chordDiagrams … all` score, above).
-- **A written shape is checked against its symbol (LYS1039).** `@chord(C x02210)` warns
-  *'x02210' sounds A C E, which is Am, not C (A is not a tone of C) - write `@chord(Am x02210)` or
-  another shape*; `@chord(C7 x3201x)` *lacks B♭ (the 7th) - fret B♭ or write another shape* —
-  one warning per shape listing every problem, in `@chord` and in rows, on the tuning each score
-  routes the shape to (a shape no score uses is not checked). Two rules: only chord tones (for
-  X/Y, plus Y), and every tone but the root and the perfect fifth (for X/Y, a Y that is
-  neither). The bass is not checked — an inversion is an ordinary shape. A symbol-less
-  `@chord(x32010)`, `@diagram` and a Roman degree in a row are not checked.
-- **Nine of LilyPond's predefined shapes are left out** of Lily#'s tables because they would
-  warn — seven sound a note outside their chord (guitar D♯m/E♭m `xx4341`, Faug `xx1443`, Baug
-  `x3200x`; ukulele Bsus2 `5122`; mandolin C♯aug/D♭aug `x630`), two lack the diminished fifth
-  (mandolin C♯dim7/D♭dim7 `3210`, only B♭ and E). Those chords take the first shape of Lily#'s
-  order instead (the ukulele's Bsus2 has no usual shape), on the page and in the `.ly` twin.
-  Every other predefined shape passes the check.
-- **The editor writes the shapes** (see the VS Code extension's changelog): `Ctrl+Shift+Up` on
-  a chord adds its usual shape — LilyPond's predefined one (the guitar's 136 and 17 ninth
-  chords, the ukulele's 306, the mandolin's 204, less the nine above: C `x32010`, F `133211`, Cm7 `x35343`; ukulele
-  C `0003`), else the first of Lily#'s order (at least three strings, chord tones only, the
-  root lowest, a span of four frets, four fingers — *Chord Diagrams* in the syntax reference).
-- **A diagram reaching past the 4th fret is shifted as LilyPond shifts it.** `x35343` is drawn
-  from the 3rd fret with a `3fr` label; the grid used to stay at the nut and drop its 5th-fret
-  dots. A shape spanning five frets draws five rows.
-- **The twin and MusicXML carry them**: under a `chords` row with a written shape the `.ly`
-  twin writes a `FretBoards` context over the same chord music (each written shape as a
-  one-shape table, a silent slot for every chord without one, `stringTunings` for a tuning
-  other than the guitar's); an `@chord`'s diagram is the note's `\fret-diagram-terse`, under
-  the name.
-  MusicXML nests an `@chord`'s `<frame>` — with `<first-fret>` when shifted — in its
-  `<harmony>` (MusicXML does not export `chords` rows yet). The MIDI is unchanged.
-- **`chord(SYMBOL SHAPE)` writes a shape's notes.** `chord(C x32013)1` is a chord of each
-  string's open pitch plus its fret — C3 E3 G3 C4 G4 on a guitar — on the tuning of the part
-  that plays it (its fretted instrument, else the guitar), every note with its string number so
-  a `tab` shows the shape. The pitches are absolute (octave marks after the `)` are an error,
-  LYS0035) and written the way the part writes a sounding pitch (a guitar part an octave up);
-  the note after it reads its lowest note. It takes a chord's tail (duration, dots, ties,
-  slurs, beams, scripts, dynamics, tuplets, grace). Chord tones are spelled from the symbol
-  (Cm7's E♭ and B♭). It draws no name itself; a bare `@chord` on it names the item and draws
-  its shape. The shape is required: `chord(C)` warns (LYS1040) and keeps its time as a spacer.
-  The MIDI plays it, MusicXML writes each note's `<string>`, the `.ly` twin writes the chord
-  out with `\5`…`\1`. `chord` is now reserved in music — a phrase cannot be named it (none in
-  the repo's or the Lab corpora's 1,206 books was). A phrase whose body opens with the item
-  hands its lowest note on after the reference, as the item does (the reference's marks do not
-  move it); it used to anchor on the body's next note, so editing the phrase moved the music
-  after it.
+- **Completion inside a chord-shape table.** Inside `layout { chordDiagrams … { … } }` the
+  editor's completion offers the chords the file names that the table does not list yet, then
+  the key's, and `section` (then the file's section names); until now it offered the notes of a
+  music block there.
+- **The `.ly` twin prints `chordNames both`.** Under a capo with `chordNames both`, each name is
+  set by a small `chordNameFunction` that names the sounding chord and then, in brackets, the
+  pressed one, so LilyPond prints `E♭m7 (Cm7)` as Lily# does; the twin used to leave those
+  names unspelled and warn.
+- **A phrase that opens with a `chord(…)` item hands its lowest note on.** After the phrase's
+  reference the next note reads the item's lowest note, as after the item itself (the
+  reference's marks do not move it); it used to anchor on the body's next note, so editing the
+  phrase moved the music after it.
 - **`chord(…)` in `<< >>` is spread.** `<< chord(C x32010) >>2` plays the shape's notes one
   after another, lowest first, dividing the half into five (5:4) — a written-out broken chord
   of a guitar shape — and mixed with other members (`<< c chord(G 320003) e >>`) its notes
@@ -259,57 +74,12 @@ workflow attaches that section to the GitHub Release verbatim.
   error. The chord-track harmonizer also counts a shape's (and a degree chord's) notes now —
   a bar of them used to read as a rest.
 
-### Editor
-
-- **Split Sections to Match a Part.** When one part of a file grouped by part has cut a
-  section into several (`vn1: section A` of 16 bars + `section B` of 121) while the others
-  still write the passage in one `section A` of 137 — the "not the same length everywhere"
-  warning (LYS2007) — the new editor command, also that warning's quick fix, cuts the other
-  parts' `A` (and the section's chord rows and lyrics tracks) at the same bars into the same
-  sections and makes every form play `A B` where it played `A`, inside repeats too. When two
-  parts subdivide the section differently it asks which to follow. It carries on to every
-  section still split differently — a part holding several of the followed part's sections in
-  one (a double bass with all of `A`…`H` in `A`) is cut too, from whichever warning it was
-  started — and refuses the whole plan if any part of it is refused, so no split that leaves
-  a section long in one part is offered; anything still not the same length is named. At each cut the new
-  section's first note gets the octave marks and the note value the section boundary would
-  otherwise reset, and the meter, key and clef in force are restated. The rewrite is compiled
-  and checked before it is offered — every part it cuts sounds exactly as before (MIDI, part
-  by part) and writes as many bars, the warning is gone, no error is new — and one
-  confirmation shows the plan (*Follow vn1: A 16 + B 121 bars. Split A in vn2, va, vc and cb
-  after bar 16 → A, B. Form main: A → A B.*). A slur, phrasing slur, tie or hairpin across a
-  cut is kept — carried into the new section, which every form plays next — unless it is still
-  open at that section's end. A manual beam, a pedal or other span across a cut, a cut that
-  falls mid-bar, or the section played as a repeat ending is reported with where, and nothing
-  changes. A file grouped by section is not supported yet (regroup it by part first).
-- **Typing aids: a digit typed on a note, rest, chord or slash note always leaves a valid
-  duration** (1 2 4 8 16 32 64 128). It extends the digits there only when that makes a
-  duration (`c1|` + `6` → `c16`) and replaces them otherwise: `c1|` + `2` is now `c2`, no
-  longer `c12` (a 128th is pasted, typed with the aids off, or finished by typing `8` after a
-  `12`). A `3` or `6` that extends into nothing completes to 32 or 64 (`c4|` + `6` → `c64`).
-  `5`, `7`, `9` and `0` leave the note unchanged, with a status-bar hint, where they used to
-  write `c45`. Slash notes take the aids too (`/4|` + `8` → `/8`, was `/48`). With several
-  cursors, an octave mark, digit, dot, `\` or `@` is applied at each cursor on its own note,
-  in one undo step. A new setting, `lilysharp.typingAids.enabled` (default on), turns every
-  typing aid off.
-
 ### Form endings
 
-- **An ending may hold several sections.** `form main { |: A [1. B C] :| [2. D] }` plays
-  A B C, then A D: the sections play in order under one bracket, which spans all of them.
-  Each is written as in the form body (`[1. ~B C']`), ranges and lists stay (`[1-2. B C]`),
-  and the MIDI, MusicXML (one `<ending>` from the first section to the last) and the
-  LilyPond twin (one `\alternative` branch) follow. A slur may run from one section of an
-  ending into the next. Without its `]` an ending runs up to the `:|` after it (see the
-  breaking change on unclosed endings above). Split Sections now splits a section
-  played as an ending (`[1. A]` → `[1. A B]`) instead of refusing. An undeclared section
-  named in an ending is now reported as undefined (it was dropped in silence).
 - **An ending's list runs past two numbers.** `|: A [1,3,5. B] :| [2,4. C]` plays B on passes
   1, 3 and 5 and C on 2 and 4; the bracket prints "1. 3. 5.", MusicXML writes
   `number="1,3,5"` and the LilyPond twin `\volta 1,3,5`. The same holds for an ending in the
   music. A list stopped at two numbers, and `[1,3,5.` was a string of syntax errors.
-- **A repeat needs a body.** `|: [1. B] :| [2. C]` (nothing before the first ending),
-  `|: :|` and an empty run after `:|:` are errors (**LYS1041**) — they compiled in silence.
 
 ### Navigation marks
 
@@ -341,29 +111,6 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Spans across a section boundary
 
-- **A slur, phrasing slur, tie or hairpin may run from one section into the next.** One still
-  open when a section ends is carried into the section the form plays next and must end there
-  (`section C { … f( || } section D { g4) … }`). It is checked per form, per part and per
-  play, in every form a score plays — so `form main { C D C E }` carries C's slur into D the
-  first time and into E the second — and a span that breaks the rule draws nothing (a hairpin
-  is cut at its own section's end) and is reported, **LYS4023**: carried in and not ended in
-  that next section, a close at a section's start with nothing carried in, or carried into a
-  section the part plays nothing in (warnings); a slur, phrasing slur or hairpin carried over a
-  repeat sign, into or out of a volta ending, or over a jump mark (an error). Until now such a
-  span was paired silently in printed order, over whole sections and repeats, and a reordered
-  form drew it between the wrong notes. The running state a section starts from (octaves, note
-  value, meter, key, clef, overrides) still resets at the boundary.
-- **A tie may cross any repeat sign or ending.** It is carried to the first note of every
-  section PLAYED after its own — the order the MIDI plays: the body again at each pass, that
-  pass's ending, what follows the block — and each such note must repeat the tied pitch
-  (LYS4007 otherwise). Where the section played next is also printed next the tie is an arc, as
-  before; where it is not (back to `|:`, into a later ending) the tied note gets a hanging tie
-  and the target an automatic repeat tie — drawn once, and not doubled where `@repeatTie` is
-  written. The MIDI sustains the note on the passes the tie is carried on, MusicXML writes the
-  stop on every note it reaches, and the LilyPond twin writes `\repeatTie`.
-- **Other scores' forms are checked.** An unpaired slur, phrasing slur or tie in a form only a
-  second score plays is now reported too, naming the form (`(in form 'other')`); only the first
-  score's form was checked before.
 - **A restatement draws nothing; `key!`, `time!`, `clef!` draw it anyway.** A `time`, `key` or
   `clef` that changes nothing (the key with its tonic) is no longer engraved, and the LilyPond
   twin omits it too. At a section's start it is compared with what the section before it left
@@ -1092,6 +839,281 @@ workflow attaches that section to the GitHub Release verbatim.
   writes such endings with their `\volta 1,2 { … }`, and Split Sections counts a `[1,3. B]`
   play twice. A pass past every number replays the last ending, as it always has inline
   (`|: A [1. B] :|*3 [2. C]` plays C on passes 2 and 3).
+
+## 0.10.0
+
+### Breaking changes
+
+- **An ending's range, end shape and length are three separate settings.** The `]` ends an
+  ending; it may be left off only right before a `:|` (`|: A [1. B C :| [2. D]` — the `:|`
+  closes it, and its bracket now hooks). An **unclosed last ending is now a syntax error**
+  ("Expected 'CloseBracket'"): `:| [2. C D E` used to hold C alone and draw an open
+  bracket, with D E playing after the repeat. Write `[2. C -]` for that open look — `-]` ends
+  an ending with a straight right end, `]` hooks it down — and move D E out of the brackets.
+  The length is new: `layout { voltaBracket all|line|N }` (`all`, the default, covers the
+  whole ending; `line` stops at the end of the system the bracket starts in; `N` covers its
+  first N bars), and one ending overrides it with `[1. B C]@voltaBracket(2)`. A bracket cut
+  short always ends straight. The `.ly` twin now draws what the page draws — a hooked last
+  ending re-sets LilyPond's hook, `-]` zeroes it, N sets `VoltaBracket.musical-length`, `line`
+  drops the later pieces — and MusicXML writes `<ending type="stop">` for a hook and
+  `"discontinue"` for a straight end or at the cut (a closed last ending was always
+  `"discontinue"` before). Completion and hover know the key, the annotation and `-]`.
+- **The old form-ending spellings are gone.** `|: A [1. D] [2. O] :|` (the repeat bar after
+  both endings) and the bracketless `:| 2. O` / `|: A | 1. D :| 2. O` were refused (LYS1010,
+  LYS1011) but still built endings, so they kept rendering. They now get the ordinary
+  errors — the first ending must be followed by its `:|` ("Expected 'RepeatEndBar'"), and a
+  bare `2.` is a stray form item (LYS0030) — and nothing is engraved as an ending. Write
+  `|: A [1. D] :| [2. O]`. LYS1010 and LYS1011 are retired.
+- **Figured bass is written `@figuredBass(…)`.** The abbreviation `@fig(…)` told a reader
+  nothing; the new name is the term itself and matches the `fonts { figuredBass … }` role.
+  The figures are written as before (`c4@figuredBass(6 4)`). `@fig(6)` is now an unknown
+  annotation — it warns and draws nothing.
+- **A chord diagram is written `@diagram(x32010)`.** It was `@frame(…)`, MusicXML's element
+  name, which no player uses; guitarists call it a chord diagram. The position string and
+  `.down` are unchanged. `@frame(…)` is now an unknown annotation.
+- **`fonts { }` keys are spelled as the source writes what they style.** `chordName` →
+  `chord`, `fretFrame` → `diagram`, `fingering` → `finger`, `barNumber` → `barNumbers`,
+  `partCombine` → `partCombineText`, `meter` → `time`, `tabFret` → `tab`. `lyricText` is
+  gone: `lyrics` binds the syllables (with the stanza numbers), and `lyrics "X"  stanza "Y"`
+  still sets the two apart. An old key is refused as unknown (LYS8004), and the message
+  lists the keys.
+- **`layout { marks stacked|beside }` is `layout { markTempo stacked|beside }`.** It
+  arranges a boxed label and the metronome mark at the same bar; `marks` read like the
+  `fonts` group of the same name. The old key is refused (LYS9101).
+- **`@ho` and `@po` warn as unknown annotations.** They were retired before 0.3.0, but the
+  checker still accepted them, so `c4@ho` compiled without a word and drew no H — nor did
+  the `.ly` twin or MusicXML carry it. Write `@hammerOn` / `@pullOff`.
+- **Names are case-sensitive.** Every annotation name and every `fonts` / `layout` /
+  `paper` key (and the fonts words `as step size bold italic regular serif sans`) has one
+  spelling: `@hammeron`, `@Staccato`, `@FiguredBass(6)` and `barnumbers` used to be read,
+  and are now refused as unknown — nothing drawn or exported — with the right spelling in
+  the message (`Names are case-sensitive: write '@hammerOn'.`).
+- **A name of several words is camelCase, even where LilyPond's is not.** `@upbow`,
+  `@downbow`, `@shortfermata`, `@longfermata` and `@reverseturn` are now `@upBow`,
+  `@downBow`, `@shortFermata`, `@longFermata` and `@reverseTurn`, like `@laissezVibrer` and
+  `@hammerOn` beside them. The old spellings are told the new one. The `.ly` twin still
+  writes LilyPond's `\upbow`.
+- **Value words are case-sensitive too.** The words inside an annotation's parentheses
+  (`@notehead(triangle)`, `@bend(full)`, `@pluck(p)`, `@feather(right)`,
+  `@arpeggio(bracket)`, the `x` / `o` of `@diagram(x32010)`, the `s` / `f` / `n` of
+  `@figuredBass(6 s)`), paper size names (`size a4`) and units (`210mm`) are lowercase
+  only; `@notehead(TRIANGLE)`, `size A4` and `210MM` are refused with the spelling to
+  write. Free text (`@text("Dolce")`) and chord symbols (`@chord(Dm)`) keep their case.
+- **`@chord`'s argument is read as words: `@chord(C 7)` is C followed by a shape, not C7.**
+  The words after the symbol are its chord diagram's shapes (below), so a space no longer joins
+  the symbol back together — write `@chord(C7)`. `@chord(C 7)` names C and warns (LYS1038) that
+  `7` is a shape no tuning has strings for; `@chord(C m7)` warns that `m7` is neither a shape
+  nor a tuning. No book in the repository or the test corpora wrote a spaced `@chord(…)`.
+
+### Chord diagrams
+
+- **A chord whose shape is written draws a chord diagram under its name**: `c4@chord(Cm7 x3x546)`
+  on a note, `F(133211)` in a `chords` row (over a staff, or on a lead sheet with no staff),
+  `@chord(x32010)` (the name derived from its notes) — between the name and the staff, side by
+  side, with the row's spacing and the bars widened for them. A name alone (`@chord(G)`, a row's
+  `G`) draws none. A shape is one character per string from the low string (`x` muted, `o` or
+  `0` open, a digit the fret); it goes to the tuning with as many strings, so one chord can
+  carry several: `F(133211 2010)`; a tuning word binds a shape by name when two tunings have
+  the same string count: `F(guitar 133211 guitardropd 333211)`. `@diagram(…)` is unchanged and
+  always draws.
+- **Frets 10–15: a shape writes a two-digit fret with a `-` on each side** — `8xx88-11`,
+  `xx-10-12-13-11`, `8-10-10-888`: `@chord(Cm xx-10-12-13-11)`, `@chord(8-10-10-888)` (named
+  from its frets), `Cm(8xx88-11)`, `@diagram(x-15-13-12-13-x)`. A shape holding `-` is read in
+  segments (the parts between the dashes): exactly two digits are ONE fret, 10–15; any other
+  segment is one character per string — so the chord-chart spelling with a `-` between every
+  string reads the same (`x-x-10-12-13-11`, `F(1-3-3-2-1-1 2-0-1-0)`). Frets 10, 9, 9 are
+  `10-9-9`: a `99` segment is fret 99 and `09` no fret, and both warn naming the split. A shape
+  routes by its string count (`8xx88-11` is six); one without `-` is one character per string,
+  as before. Lower case only; a leading, trailing or doubled `-`, a fret above 15 and an
+  upper-case shape warn (LYS1038 / the case fix), naming the fix. The page, the twin (terse
+  markup and `FretBoards` tables) and MusicXML carry the two-digit frets. The editor's step now
+  walks shapes at frets 10–15 too (it used to skip them) and writes a `-` only around the
+  two-digit frets (and between two lone single digits: `10-9-9`), and only when a fret needs it.
+- **The diagram's tuning** is the score's `layout { chordDiagrams TUNING }` — a tuning word,
+  the ones a tab's `tuning` takes (`guitar`, `ukulele`, `mandolin`, `guitardropd`, …) — else
+  the instrument of the part when it is fretted (the part an `@chord`'s note is in; for a row,
+  the staff it stands directly above), else the guitar. `chordDiagrams none` draws no diagram
+  at all, so one source makes a piano score and a guitar score, or a guitar score and a
+  ukulele score.
+- **`chordDiagrams all` draws a diagram for EVERY chord.** The scope word `all`, after the
+  tuning (`chordDiagrams guitar all`, `chordDiagrams ukulele all`) or alone (`chordDiagrams all`:
+  the tuning as when unset), makes every chord name in the score draw one — the `chords` rows'
+  entries and every `@chord`, a bare `@chord` by the name it derives: the shape written for the
+  tuning, else the usual shape (below). A chord with no shape at all on the tuning (C13 on the
+  ukulele) draws none and warns once per chord and tuning (write its shape). `none all`, `all
+  guitar` (the tuning comes first) and a word written twice are errors. Without `all`, only
+  written shapes draw, as before. The twin writes a `FretBoards` entry for every chord of such a
+  score (one-shape tables, so LilyPond draws exactly the page's shape) and the `@chord` markup
+  for every name; MusicXML a `<frame>` for every drawn diagram.
+- **A shape table in the layout lists the chords that draw.** After the `chordDiagrams` words,
+  a table in braces — `layout { chordDiagrams guitar { Cm7 x35343  G  section Chorus { C x35553
+  } } }` — names the chords that draw a diagram wherever they are named (a `chords` row, an
+  `@chord`, a bare `@chord` by the name it derives) and the shape each draws, written as a row
+  writes shapes after its symbol (`F 133211 2010`, `F guitar 133211 ukulele 2010`); a name
+  alone draws the usual shape. A `section NAME { … }` block's entries apply to the chords
+  written in that section (an `@chord`'s note, a row's bar, a by-part row's inner section), the
+  rest to the whole score. Strongest first: the shape written at the chord, the section's entry,
+  the song's, then — under `all` — the usual shape. The table follows `all` (`chordDiagrams all
+  { F xx3211 }`) or stands alone (`chordDiagrams { C }`); `none` takes none. A symbol that is no
+  chord, a bad shape, a shape before any symbol and a chord listed twice (the last wins) are
+  warnings and the rest of the table stands; a section nothing declares warns; a table shape
+  that disagrees with its chord is LYS1039; a chord listed alone with no shape on the tuning
+  warns as in an `all` score. The twin's `FretBoards` context now appears under a row when some
+  entry DRAWS (written or listed) and is left out when none does — a row with a written shape
+  whose symbol is a degree or does not parse used to get a context of silent slots; MusicXML
+  nests the listed shape's `<frame>`.
+- **A capo: `chordDiagrams guitar capo 3`.** The music still writes the sounding chords (`Eb`,
+  `@chord(Eb)`), and everything a player reads follows the capo: every shape is the shape
+  PRESSED above it (`Eb(x32010)` is the C shape, and LYS1039 checks it against the pressed
+  chord; the usual shape is the pressed chord's; the table's shapes are pressed shapes); the
+  printed name is the pressed chord's — `C` for `Eb`, `G` for `Bb` — spelled in the key that
+  many semitones below the key at the bar (in E major at capo 3 a sounding `G#m` prints `Fm`);
+  "Capo 3" stands at the score's head on the header's instrument line; a `chord(Eb x32010)`
+  item sounds three semitones higher. `capo 0`, a fret above 11, `none capo 3` and `all capo 3`
+  (the capo comes first) are errors. New key **`chordNames shape | sounding | both`**: what a
+  name shows under the capo — the pressed chord's (default), the sounding chord's, or both,
+  `E♭m7 (Cm7)`, each name with its own raised quality. The `.ly` twin writes the pressed chords
+  into `\chordmode` and `instrument = "Capo 3"` in its `\header` (under `sounding` the sounding
+  chords; `both` it cannot spell, and warns); MusicXML's `<harmony>` stays the sounding chord,
+  its `<frame>` the pressed shape; the MIDI plays the sounding music.
+- **The chord list: `layout { chordList true }`.** Every chord the score names — its `chords`
+  rows and every `@chord` — once, in order of first appearance, at the head of the score under
+  the title, each as the name the score prints over the diagram it draws there (a chord that
+  draws none in the score shows its usual shape; `chordDiagrams none` lists the names alone;
+  under a capo the pressed names and shapes). The cells stand in the fewest rows that fit the
+  line with as nearly equal counts as those rows allow (16 chords where 12 fit a row make 8 +
+  8), each row centred on the page. The `.ly` twin writes the rows as `\markup` lines of
+  `\center-column { "NAME" \fret-diagram-terse … }` before the score.
+- **The ukulele's shapes beyond LilyPond's table.** Lily#'s order now lists shapes on the
+  re-entrant tunings too (the ukulele's high G, a banjo's drone) — the same rules less "the
+  lowest note is the root", which the lowest string cannot promise there. Measured: with that,
+  the order opens on LilyPond's own ukulele shape for every chord tried (C `0003` of 39, Am
+  `2000` of 38, F `2010` of 23, G7 `0212` of 19). So a chord the ukulele table lacks now has a
+  usual shape (Cmaj9 `4203`), `Ctrl+Shift+Up`/`Down` steps on a ukulele part, and the hover
+  counts the order there; a chord no rule can voice on four strings (C13) still has none.
+- **Warnings (LYS1038)** about written shapes: a shape of the wrong length, a word that is
+  neither a shape nor a tuning, two unnamed shapes of one length, a tuning given two shapes; a
+  symbol-less `@chord` whose shape is miswritten (`@chord(x3a010)`) now gets that warning rather
+  than "unknown annotation". A name with no shape is not warned about (save in a
+  `chordDiagrams … all` score, above).
+- **A written shape is checked against its symbol (LYS1039).** `@chord(C x02210)` warns
+  *'x02210' sounds A C E, which is Am, not C (A is not a tone of C) - write `@chord(Am x02210)` or
+  another shape*; `@chord(C7 x3201x)` *lacks B♭ (the 7th) - fret B♭ or write another shape* —
+  one warning per shape listing every problem, in `@chord` and in rows, on the tuning each score
+  routes the shape to (a shape no score uses is not checked). Two rules: only chord tones (for
+  X/Y, plus Y), and every tone but the root and the perfect fifth (for X/Y, a Y that is
+  neither). The bass is not checked — an inversion is an ordinary shape. A symbol-less
+  `@chord(x32010)`, `@diagram` and a Roman degree in a row are not checked.
+- **Nine of LilyPond's predefined shapes are left out** of Lily#'s tables because they would
+  warn — seven sound a note outside their chord (guitar D♯m/E♭m `xx4341`, Faug `xx1443`, Baug
+  `x3200x`; ukulele Bsus2 `5122`; mandolin C♯aug/D♭aug `x630`), two lack the diminished fifth
+  (mandolin C♯dim7/D♭dim7 `3210`, only B♭ and E). Those chords take the first shape of Lily#'s
+  order instead (the ukulele's Bsus2 has no usual shape), on the page and in the `.ly` twin.
+  Every other predefined shape passes the check.
+- **The editor writes the shapes** (see the VS Code extension's changelog): `Ctrl+Shift+Up` on
+  a chord adds its usual shape — LilyPond's predefined one (the guitar's 136 and 17 ninth
+  chords, the ukulele's 306, the mandolin's 204, less the nine above: C `x32010`, F `133211`, Cm7 `x35343`; ukulele
+  C `0003`), else the first of Lily#'s order (at least three strings, chord tones only, the
+  root lowest, a span of four frets, four fingers — *Chord Diagrams* in the syntax reference).
+- **A diagram reaching past the 4th fret is shifted as LilyPond shifts it.** `x35343` is drawn
+  from the 3rd fret with a `3fr` label; the grid used to stay at the nut and drop its 5th-fret
+  dots. A shape spanning five frets draws five rows.
+- **The twin and MusicXML carry them**: under a `chords` row with a written shape the `.ly`
+  twin writes a `FretBoards` context over the same chord music (each written shape as a
+  one-shape table, a silent slot for every chord without one, `stringTunings` for a tuning
+  other than the guitar's); an `@chord`'s diagram is the note's `\fret-diagram-terse`, under
+  the name.
+  MusicXML nests an `@chord`'s `<frame>` — with `<first-fret>` when shifted — in its
+  `<harmony>` (MusicXML does not export `chords` rows yet). The MIDI is unchanged.
+- **`chord(SYMBOL SHAPE)` writes a shape's notes.** `chord(C x32013)1` is a chord of each
+  string's open pitch plus its fret — C3 E3 G3 C4 G4 on a guitar — on the tuning of the part
+  that plays it (its fretted instrument, else the guitar), every note with its string number so
+  a `tab` shows the shape. The pitches are absolute (octave marks after the `)` are an error,
+  LYS0035) and written the way the part writes a sounding pitch (a guitar part an octave up);
+  the note after it reads its lowest note. It takes a chord's tail (duration, dots, ties,
+  slurs, beams, scripts, dynamics, tuplets, grace). Chord tones are spelled from the symbol
+  (Cm7's E♭ and B♭). It draws no name itself; a bare `@chord` on it names the item and draws
+  its shape. The shape is required: `chord(C)` warns (LYS1040) and keeps its time as a spacer.
+  The MIDI plays it, MusicXML writes each note's `<string>`, the `.ly` twin writes the chord
+  out with `\5`…`\1`. `chord` is now reserved in music — a phrase cannot be named it (none in
+  the repo's or the Lab corpora's 1,206 books was).
+
+### Editor
+
+- **Split Sections to Match a Part.** When one part of a file grouped by part has cut a
+  section into several (`vn1: section A` of 16 bars + `section B` of 121) while the others
+  still write the passage in one `section A` of 137 — the "not the same length everywhere"
+  warning (LYS2007) — the new editor command, also that warning's quick fix, cuts the other
+  parts' `A` (and the section's chord rows and lyrics tracks) at the same bars into the same
+  sections and makes every form play `A B` where it played `A`, inside repeats too. When two
+  parts subdivide the section differently it asks which to follow. It carries on to every
+  section still split differently — a part holding several of the followed part's sections in
+  one (a double bass with all of `A`…`H` in `A`) is cut too, from whichever warning it was
+  started — and refuses the whole plan if any part of it is refused, so no split that leaves
+  a section long in one part is offered; anything still not the same length is named. At each cut the new
+  section's first note gets the octave marks and the note value the section boundary would
+  otherwise reset, and the meter, key and clef in force are restated. The rewrite is compiled
+  and checked before it is offered — every part it cuts sounds exactly as before (MIDI, part
+  by part) and writes as many bars, the warning is gone, no error is new — and one
+  confirmation shows the plan (*Follow vn1: A 16 + B 121 bars. Split A in vn2, va, vc and cb
+  after bar 16 → A, B. Form main: A → A B.*). A slur, phrasing slur, tie or hairpin across a
+  cut is kept — carried into the new section, which every form plays next — unless it is still
+  open at that section's end. A manual beam, a pedal or other span across a cut, a cut that
+  falls mid-bar, or the section played as a repeat ending is reported with where, and nothing
+  changes. A file grouped by section is not supported yet (regroup it by part first).
+- **Typing aids: a digit typed on a note, rest, chord or slash note always leaves a valid
+  duration** (1 2 4 8 16 32 64 128). It extends the digits there only when that makes a
+  duration (`c1|` + `6` → `c16`) and replaces them otherwise: `c1|` + `2` is now `c2`, no
+  longer `c12` (a 128th is pasted, typed with the aids off, or finished by typing `8` after a
+  `12`). A `3` or `6` that extends into nothing completes to 32 or 64 (`c4|` + `6` → `c64`).
+  `5`, `7`, `9` and `0` leave the note unchanged, with a status-bar hint, where they used to
+  write `c45`. Slash notes take the aids too (`/4|` + `8` → `/8`, was `/48`). With several
+  cursors, an octave mark, digit, dot, `\` or `@` is applied at each cursor on its own note,
+  in one undo step. A new setting, `lilysharp.typingAids.enabled` (default on), turns every
+  typing aid off.
+
+### Form endings
+
+- **An ending may hold several sections.** `form main { |: A [1. B C] :| [2. D] }` plays
+  A B C, then A D: the sections play in order under one bracket, which spans all of them.
+  Each is written as in the form body (`[1. ~B C']`), ranges and lists stay (`[1-2. B C]`),
+  and the MIDI, MusicXML (one `<ending>` from the first section to the last) and the
+  LilyPond twin (one `\alternative` branch) follow. A slur may run from one section of an
+  ending into the next. Without its `]` an ending runs up to the `:|` after it (see the
+  breaking change on unclosed endings above). Split Sections now splits a section
+  played as an ending (`[1. A]` → `[1. A B]`) instead of refusing. An undeclared section
+  named in an ending is now reported as undefined (it was dropped in silence).
+- **A repeat needs a body.** `|: [1. B] :| [2. C]` (nothing before the first ending),
+  `|: :|` and an empty run after `:|:` are errors (**LYS1041**) — they compiled in silence.
+
+### Spans across a section boundary
+
+- **A slur, phrasing slur, tie or hairpin may run from one section into the next.** One still
+  open when a section ends is carried into the section the form plays next and must end there
+  (`section C { … f( || } section D { g4) … }`). It is checked per form, per part and per
+  play, in every form a score plays — so `form main { C D C E }` carries C's slur into D the
+  first time and into E the second — and a span that breaks the rule draws nothing (a hairpin
+  is cut at its own section's end) and is reported, **LYS4023**: carried in and not ended in
+  that next section, a close at a section's start with nothing carried in, or carried into a
+  section the part plays nothing in (warnings); a slur, phrasing slur or hairpin carried over a
+  repeat sign, into or out of a volta ending, or over a jump mark (an error). Until now such a
+  span was paired silently in printed order, over whole sections and repeats, and a reordered
+  form drew it between the wrong notes. The running state a section starts from (octaves, note
+  value, meter, key, clef, overrides) still resets at the boundary.
+- **A tie may cross any repeat sign or ending.** It is carried to the first note of every
+  section PLAYED after its own — the order the MIDI plays: the body again at each pass, that
+  pass's ending, what follows the block — and each such note must repeat the tied pitch
+  (LYS4007 otherwise). Where the section played next is also printed next the tie is an arc, as
+  before; where it is not (back to `|:`, into a later ending) the tied note gets a hanging tie
+  and the target an automatic repeat tie — drawn once, and not doubled where `@repeatTie` is
+  written. The MIDI sustains the note on the passes the tie is carried on, MusicXML writes the
+  stop on every note it reaches, and the LilyPond twin writes `\repeatTie`.
+- **Other scores' forms are checked.** An unpaired slur, phrasing slur or tie in a form only a
+  second score plays is now reported too, naming the form (`(in form 'other')`); only the first
+  score's form was checked before.
+
+### Fixes
+
 - **A tuplet — and everything else tied to a bar — in a lower voice of a later bar lands
   in its own bar.** In
   `voice { … } { tuplet 3/2 { … } … }` written anywhere but the first bar, the tuplet in voice

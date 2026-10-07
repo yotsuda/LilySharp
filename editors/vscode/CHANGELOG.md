@@ -2,13 +2,74 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
-## Unreleased
+## 0.11.0
 
 ### Breaking changes
 
 - **Strings follow C#'s grammar.** `"…"` decodes C#'s escapes (`\"`, `\\`, `\n`, `\uXXXX`…) and
   any other backslash is an error (LYS0036); `@"…"` is verbatim (`""` is a quote). Both forms
   are coloured, escapes included, and an escaped quote no longer ends the string's colour.
+- **A navigation mark is written in the `form` and nowhere else** (LYS1034). `segno`, `coda`,
+  `fine`, `to coda`, `dc`, `ds` and their `al` forms in a section's music are errors, and the
+  music completion no longer offers them; write them between the section names in the `form`.
+
+### Marks left to check (`@todo`) and scanned originals
+
+- **`@todo` marks a note, rest or chord to come back to** (`c4@todo`, `c4@todo("F♯ or F♮?")`).
+  Each is listed in Problems (LYS4026), the preview draws its head red
+  (`lilysharp.preview.highlightTodos` turns that off), and the quick fixes *Resolve this TODO* /
+  *Resolve all N TODOs* delete them. When an OMR reader wrote the file, the readings its
+  `x.omr.json` offers for a mark are quick fixes too.
+- **Lily#: Show Original Scan.** On a `.lys` an OMR reader wrote, the scanned pages open beside
+  the score with the marks the reader was unsure of boxed in red. A click on a mark goes to its
+  `@todo`, a click on a bar to the line it is written on, and the caret lights its mark or bar —
+  through any edit since. With *Scroll with the preview* on, the scan and the preview scroll
+  together bar by bar.
+- **The AI transform sees the marks it is asked about.** For each `@todo` in the selection the
+  prompt carries its memo and, from an OMR reader, how sure the reader was and the readings it
+  offers; a mark it resolves loses its `@todo`.
+- **Check on save against the scan** (`lilysharp.omr.verifyOnSave`, off by default). Saving a
+  `.lys` an OMR reader wrote has the reader engrave it again and compare it with the scan; the
+  scan view and the quick fixes pick up what it finds. Needs a reader with `omr verify`.
+
+### Chord diagrams
+
+- **Completion and colours inside a chord-shape table.** Inside the table the completion offers
+  the chords the file names that the table does not list yet, then the key's, and `section` —
+  then the file's section names after it. The table is coloured — `section NAME`, the tuning
+  words and the shapes — and its closing brace no longer ends the layout block's colours (the
+  keys after a table used to go plain).
+- **A `chord(…)` item reads each score's capo.** Its hover lists each score's capo when the
+  scores playing the part differ, and names the notes it sounds under the capo (it used to read
+  the first score's capo, and under any capo named the notes as if there were none). The item's
+  shape check reads each score's capo too.
+
+### Fixes
+
+- **The preview's Export button writes the selected score's own form** to MIDI, MusicXML
+  and LilyPond source. With the picker on `score practice` whose `form practice` starts at
+  section B, the .mid began with section A (the file's primary form); it now begins at B,
+  as `lysc midi --score practice` does.
+- **The preview's Export button and the Explorer's batch export write what `lysc` writes.** The
+  button's PDF or PNG of a score whose name no longer matched drew the file's scoreless picture,
+  and its SVG could leave the font out; a MIDI or LilyPond export's warnings now reach the editor.
+- **The preview plays the score it shows.** With a score of one part picked, Play and the
+  audition keys sounded every part of the file; they now sound that score's parts and form.
+- **An edit in a section the form plays again reaches every play in the preview.** Stepping a
+  `chord(…)`'s shape (Ctrl+Shift+↑) or typing a note in a section played six times redrew only
+  the first play.
+- **The preview follows a section header written below the part.** A key, `partial`, `time` or
+  `tempo` typed into such a header left the preview on the old header until the music was
+  touched.
+- **A half-typed `key` no longer stops the preview,** and a click on a line's key signature goes
+  where the key was set after any edit.
+- **The outline and breadcrumbs work in a book with a custom key** (`key custom fis cis` made
+  them fail for the whole book).
+
+## 0.10.0
+
+### Breaking changes
+
 - **An unclosed last ending is a syntax error.** `:| [2. C D E` no longer holds C alone;
   write `[2. C -]` for the open (straight-ended) bracket, `[2. C]` for a hooked one. The
   `]` may still be left off right before a `:|`. New: `layout { voltaBracket all|line|N }`
@@ -61,10 +122,6 @@ All notable changes to the Lily# VS Code extension are documented here.
   listed name shows the shape it draws — `guitar: xx3211 (layout)` — and `Ctrl+Shift+Up` /
   `Down` count from it as in an `all` score. A bad symbol or shape in the table, a chord
   listed twice and a section nothing declares are warnings at the word.
-  Inside the table the completion offers the chords the file names that the table does not
-  list yet, then the key's, and `section` — then the file's section names after it.
-  The table is coloured — `section NAME`, the tuning words and the shapes — and its closing
-  brace no longer ends the layout block's colours (the keys after a table used to go plain).
 - **A capo: `chordDiagrams guitar capo 3`** — the shapes, the names (`chordNames shape |
   sounding | both`, a new key) and "Capo 3" at the score's head follow the capo, and the
   hover, `Ctrl+Shift+Up`/`Down` and the shape check read the pressed chord. **The capo
@@ -72,10 +129,6 @@ All notable changes to the Lily# VS Code extension are documented here.
   file's chords would take a barre there (`capo 3: 0 barre chords of 3` first, `capo 0: 2
   barre chords of 3 (F 133211, Bb x13331)`), and hovering `capo` or its fret shows the same
   ranking. `capo`, `chordNames` and their words are completed and coloured.
-  A `chord(…)` item's hover lists each score's capo when the scores playing the part
-  differ, and names the notes it sounds under the capo (it used to read the first score's
-  capo, and under any capo named the notes as if there were none). The item's shape check
-  reads each score's capo too.
 - **The chord list: `layout { chordList true }`** — every chord the score uses, with its
   diagram, under the title in centred rows; completed and coloured.
 - **`Ctrl+Shift+Up`/`Down` step on a ukulele part too**: past LilyPond's ukulele table the
@@ -176,10 +229,6 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Fixes
 
-- **The preview's Export button writes the selected score's own form** to MIDI, MusicXML
-  and LilyPond source. With the picker on `score practice` whose `form practice` starts at
-  section B, the .mid began with section A (the file's primary form); it now begins at B,
-  as `lysc midi --score practice` does.
 - **A tie into the next section sounds as one note in the preview's playback** in a book of
   more than one part (it was played twice).
 - **An `@chord` on a rest or a spacer draws in the preview** (`r1@chord(C x32013)`,
