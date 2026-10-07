@@ -289,6 +289,17 @@ internal static class LineStartColumn
             if (notes.Count == 0)
                 continue;
 
+            // A line start AFTER A BREAK: its prefatory grobs are the broken copies, which have
+            // no neighbours, so each box keeps its own ink's Y (BrokenLineStartDistance). A tab
+            // staff (whose TAB clef spans it) and a column carrying a chord diagram (whose box
+            // spans every Y) keep the shared band, which those boxes face anyway.
+            if (startMeasureIndex > 0 && !staff.IsTab && notes.Count == 1)
+            {
+                worst = Math.Max(worst, BrokenLineStartDistance(
+                    score, staff, columns, clefGroupLeft, timeInkWidth, startMeasureIndex));
+                continue;
+            }
+
             boxes.Clear();
             foreach (var g in PrefatoryGrobs(
                          score, staff, columns, clefGroupLeft, timeInkWidth, startMeasureIndex))
@@ -648,6 +659,142 @@ internal static class LineStartColumn
             }
         }
         return max;
+    }
+
+    /// <summary>
+    /// <c>min_dist</c> of ONE staff at a line start that follows a break: each prefatory grob
+    /// at its own ink's Y, against the first musical column's real left skyline.
+    /// </summary>
+    /// <remarks>
+    /// The grobs a continuation line opens with are the BROKEN copies of the break column's
+    /// items, and the neighbours Pure_from_neighbor_engraver gave the original stay with it:
+    /// the copies have none, so <c>extra-spacing-height</c> stretches nothing — the clef's box is
+    /// its ink (…-at-beginning-of-line takes the neighbours alone), the key's and the meter's
+    /// their ink and the staff (…-including-staff). A first note far outside the staff then
+    /// passes under or over the key, and what meets it is its stem.
+    /// LILYPOND-REF: lily/pure-from-neighbor-engraver.cc:110-137 Pure_from_neighbor_engraver::finalize — the neighbors
+    ///   pointers; scm/output-lib.scm:929-932 extra-spacing-height-at-beginning-of-line and
+    ///   :976-979 extra-spacing-height-including-staff;
+    /// LILYPOND-REF: scm/define-grobs.scm NonMusicalPaperColumn — no skyline-vertical-padding of
+    ///   its own (0), PaperColumn 0.08 (the first column's skyline, ItemSkylineFactory's rod view).
+    /// MEASURED (2.26.0, Lab sessions/p851/tie, a bass staff over a 5-string tab in E-flat, the
+    /// second line opening on E-flat 2): the line-start key's esh (0 . 0) with 0 neighbours (the
+    /// first line's: 22), its band facing the stem, min_dist 7.105 and the first column 8.542;
+    /// with the band stretched over the head Lily# put it at 9.13. On the first line the
+    /// stretch stands (MinimumDistanceAtLineStart's shared band).
+    /// </remarks>
+    private static double BrokenLineStartDistance(
+        Model.MultiStaffScore score, Model.Staff staff,
+        BreakAlignSpacing.PrefixColumns columns,
+        double clefGroupLeft, double timeInkWidth, int startMeasureIndex)
+    {
+        // Device frame (y down) about the staff's middle line, the ItemSkylineFactory frame.
+        double half = (Math.Max(staff.Lines, 1) - 1) / 2.0;
+        var clef = Rendering.SharedRenderer.ResolveClefAt(staff, startMeasureIndex);
+        var boxes = new List<ColumnBox>();
+        var (clefChange, keyChange) = OpeningChanges(staff, startMeasureIndex);
+        foreach (var g in PrefatoryGrobs(score, staff, columns, clefGroupLeft, timeInkWidth, startMeasureIndex))
+        {
+            // A CHANGE engraved at this break — a meter (a continuation line prints one only
+            // as a change), or a key or clef written at the line's first moment — is created
+            // at the break column, keeps its neighbours, and stretches over the first column
+            // as on the first line. MEASURED (2.26.0, Lab sessions/p851, Desperado's twin): the
+            // 2/4 → 4/4 that opens its third line reports 7 / 12 neighbours and esh
+            // (-2.545 . 1.5), where the reprinted clef and key beside it report 0 and their ink.
+            bool change = g.Symbol switch
+            {
+                BreakAlignSymbol.TimeSignature => true,
+                BreakAlignSymbol.KeySignature => keyChange,
+                BreakAlignSymbol.Clef => clefChange,
+                _ => false,
+            };
+            (double Bottom, double Top) up = change ? (-StretchedBand, StretchedBand) : g.Symbol switch
+            {
+                // The clef's own ink, about the line it names.
+                BreakAlignSymbol.Clef => ClefInkUp(clef),
+                // The key's accidentals at their positions, and the staff.
+                BreakAlignSymbol.KeySignature => Union(KeyInkUp(score, staff, clef, startMeasureIndex), (-half, half)),
+                // The meter's digits (two staff spaces each side of the middle) and the staff.
+                BreakAlignSymbol.TimeSignature => Union((-2.0, 2.0), (-half, half)),
+                _ => (-half, half),
+            };
+            boxes.Add(new ColumnBox(-up.Top, -up.Bottom, g.InkLeft + g.EswLeft, g.InkRight + g.EswRight));
+        }
+        if (boxes.Count == 0)
+            return 0.0;
+
+        var right = Skyline(ref t_prefatorySkyline, boxes, HorizontalDirection.Right);
+        double worst = 0.0;
+        foreach (var voice in staff.Voices)
+        {
+            if (startMeasureIndex >= voice.Measures.Length)
+                continue;
+            foreach (var raw in voice.Measures[startMeasureIndex].Items)
+            {
+                if (!SpacingRules.IsMusicalColumn(raw))
+                    continue;
+                var item = Model.TiedAccidentals.LineStartView(raw);
+                var left = ItemSkylineFactory.CreateLeftSkylineAtColumn(item, 0.0, 0.0);
+                worst = Math.Max(worst, right.Distance(left));
+                break;
+            }
+        }
+        right.Clear();
+        t_prefatorySkyline = right;
+        return Math.Max(0.0, worst);
+
+        static (double, double) Union((double B, double T) a, (double B, double T) b)
+            => (Math.Min(a.B, b.B), Math.Max(a.T, b.T));
+    }
+
+    /// <summary>A stretched box's band in the Y-aware frame: wide enough to face any first
+    /// column, as the neighbours' union does.</summary>
+    private const double StretchedBand = 1000.0;
+
+    /// <summary>Whether a clef change and a key change are written at the first moment of
+    /// <paramref name="staff"/>'s measure <paramref name="measureIndex"/> — engraved in the
+    /// line-start prefix as changes rather than reprints.</summary>
+    private static (bool Clef, bool Key) OpeningChanges(Model.Staff staff, int measureIndex)
+    {
+        bool clef = false, key = false;
+        foreach (var voice in staff.Voices)
+        {
+            if (measureIndex >= voice.Measures.Length)
+                continue;
+            foreach (var item in voice.Measures[measureIndex].Items)
+            {
+                if (item.Duration > Semantics.Fraction.Zero)
+                    break;
+                clef |= item is Model.ClefChangeItem;
+                key |= item is Model.KeySignatureChangeItem;
+            }
+        }
+        return (clef, key);
+    }
+
+    /// <summary>The line-start clef's ink, Y-up about the staff's middle line.</summary>
+    private static (double Bottom, double Top) ClefInkUp(Model.ClefType clef)
+    {
+        var box = GlyphMetrics.LineStartClefBBox(clef);
+        double line = 2.0 - Rendering.SharedRenderer.ClefLineBelowTopLine(clef);
+        return (line + box.Bottom, line + box.Top);
+    }
+
+    /// <summary>The engraved key signature's ink, Y-up about the staff's middle line —
+    /// (0, 0) for none.</summary>
+    private static (double Bottom, double Top) KeyInkUp(
+        Model.MultiStaffScore score, Model.Staff staff, Model.ClefType clef, int startMeasureIndex)
+    {
+        if (SpacingRules.ActiveKeyForStaff(score, staff, startMeasureIndex) is not { } key)
+            return (0.0, 0.0);
+        double bottom = double.PositiveInfinity, top = double.NegativeInfinity;
+        foreach (var (kind, _, pos) in Rendering.SharedRenderer.KeySignatureGlyphs(key, clef, out _))
+        {
+            var b = GlyphMetrics.GetAccidentalBBox(kind);
+            bottom = Math.Min(bottom, pos / 2.0 + b.Bottom);
+            top = Math.Max(top, pos / 2.0 + b.Top);
+        }
+        return double.IsInfinity(bottom) ? (0.0, 0.0) : (bottom, top);
     }
 
     /// <summary>

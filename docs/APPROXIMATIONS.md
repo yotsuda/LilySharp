@@ -194,7 +194,7 @@
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
 - **:562** ⚠️ NO POINT OBSERVES THE FOLD: audit/lp-geometry hairpin.page.quiet reads the
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
-- **:489** ⚠️ THE CLEAR BEFORE EACH STAFF had no observer until session 478 (session 467, by poison):
+- **:500** ⚠️ THE CLEAR BEFORE EACH STAFF had no observer until session 478 (session 467, by poison):
 ### `LilySharp.Core/Svg/Layout/LyricHyphen.cs`
 - **:340** an unverified edge of this proxy (no point observes it).
 ### `LilySharp.Core/Svg/Layout/LyricSpacing.cs`
@@ -226,7 +226,7 @@
 - **:433** the distance only through the 0.08 padding at that band's edge. No ledger point
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
 - **:168** prices every lone note alike. No ledger point watches the difference;
-- **:947** constant with a name, and no ledger point reached it.
+- **:956** constant with a name, and no ledger point reached it.
 ### `LilySharp.Core/Svg/Layout/SpacingRules.Grace.cs`
 - **:468** observed by: NOTHING. No ledger point covers a grace spacer, and the drawn
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
@@ -452,8 +452,8 @@
 - **:170** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
 - **:218** LILYSHARP-OWN: LilyPond has no such variable (its spelling is a \break every N bars beside the ##f permissions); 0 leaves the breaks to the breaker.
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
-- **:892** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
-- **:899** LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
+- **:1039** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
+- **:1046** LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
 ### `LilySharp.Core/Svg/Layout/LyricEngraver.cs`
 - **:213** ⚠️ LILYSHARP-OWN, AND IT IS LOAD BEARING NOW THAT NOTHING ELSE IS. LilyPond has no
 - **:297** LILYSHARP-OWN: the CJK term. The bundled face has no CJK glyphs, so the outline is

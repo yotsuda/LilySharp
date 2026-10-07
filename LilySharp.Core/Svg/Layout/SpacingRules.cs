@@ -694,9 +694,18 @@ internal static partial class SpacingRules
     /// </remarks>
     public static double ActiveKeyInkForStaff(
         MultiStaffScore score, Staff staff, int startMeasureIndex)
+        => ActiveKeyForStaff(score, staff, startMeasureIndex) is { } key
+            ? EngravedKeyInkWidth(staff, key)
+            : 0.0;
+
+    /// <summary>The key signature <paramref name="staff"/> engraves at the head of a system
+    /// starting at <paramref name="startMeasureIndex"/> — null for a staff with no
+    /// Key_engraver. The one walk <see cref="ActiveKeyInkForStaff"/> reads.</summary>
+    public static KeySignature? ActiveKeyForStaff(
+        MultiStaffScore score, Staff staff, int startMeasureIndex)
     {
         if (!ContributesToKeyColumnWidth(staff))
-            return 0.0;
+            return null;
 
         var key = staff.PerStaffKeySignature ?? score.KeySignature;
         var pv = staff.PrimaryVoice;
@@ -718,7 +727,7 @@ internal static partial class SpacingRules
                 if (item.Duration > Fraction.Zero) break;
             }
 
-        return EngravedKeyInkWidth(staff, key);
+        return key;
     }
 
     /// <summary>

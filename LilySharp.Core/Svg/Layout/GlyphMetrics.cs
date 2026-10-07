@@ -339,6 +339,10 @@ internal static partial class GlyphMetrics
     /// </summary>
     public static double ClefInkLeft(Model.ClefType clef) => ClefBBox(clef).Left;
 
+    /// <summary>The line-start clef's whole stencil box — staff spaces, Y-up about the line the
+    /// clef names (<c>SharedRenderer.ClefLineBelowTopLine</c>).</summary>
+    public static BBox LineStartClefBBox(Model.ClefType clef) => ClefBBox(clef);
+
     /// <summary>
     /// The clef stencil's RIGHT ink edge relative to its grob origin (2.565 for the G clef,
     /// 2.0 for the percussion clef whose ink is only 1.33 wide).
