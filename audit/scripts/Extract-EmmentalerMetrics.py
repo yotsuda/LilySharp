@@ -208,6 +208,10 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("RestDoubleWholeLedgered", "rests.M1o", "Double-whole rest with its ledger", "mf/feta-rests.mf — rests.M1o"),
     GlyphSpec("RestWholeLedgered", "rests.0o", "Whole rest with its ledger", "mf/feta-rests.mf — rests.0o"),
     GlyphSpec("RestHalfLedgered",  "rests.1o", "Half rest with its ledger",  "mf/feta-rests.mf — rests.1o"),
+    # Breathing signs (BreathingSign is a break-aligned column of its own: its LILC width is
+    # the column's extent, which the next note is spaced from — first-note fixed-space 1.0).
+    GlyphSpec("BreathComma",     "scripts.rcomma",           "Breathing sign (comma)", "mf/feta-scripts.mf — scripts.rcomma"),
+    GlyphSpec("CaesuraStraight", "scripts.caesura.straight", "Caesura (straight)",     "mf/feta-scripts.mf — scripts.caesura.straight"),
     # Articulations
     GlyphSpec("ArticStaccato",      "scripts.staccato", "Staccato dot articulation",       "mf/feta-scripts.mf — scripts.staccato"),
     GlyphSpec("ArticAccent",        "scripts.sforzato", "Accent / sforzato articulation",  "mf/feta-scripts.mf — scripts.sforzato"),

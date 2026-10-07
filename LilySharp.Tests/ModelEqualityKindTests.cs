@@ -53,7 +53,7 @@ public class ModelEqualityKindTests
     [
         // the MusicItem hierarchy — identity comes from the abstract base
         "ChordItem", "ClefChangeItem", "KeySignatureChangeItem", "NoteItem", "RestItem",
-        "TimeSignatureChangeItem",
+        "TimeSignatureChangeItem", "BreathingSignItem",
         // one written mark each
         "ArticulationItem", "ChordNameItem", "CrossStaffItem", "CustomTextItem",
         "DynamicItem", "FiguredBassItem", "GraceNoteItem", "HairpinItem", "LyricItem",

@@ -53,13 +53,14 @@ internal static partial class SpacingRules
     private static double ChangeItemColumnWidth(Rendering.ScoreTextMetrics fonts, MusicItem item) => item switch
     {
         ClefChangeItem cc => GetClefChangeWidth(cc.NewClef),
+        BreathingSignItem bs => bs.InkWidth,
         KeySignatureChangeItem kc => GetKeySignatureChangeWidth(kc),
         TimeSignatureChangeItem tc => GetTimeSignatureChangeWidth(fonts, tc),
         _ => 0
     };
 
     private static bool IsChangeItem(MusicItem item) =>
-        item is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem;
+        item is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem or BreathingSignItem;
 
     /// <summary>
     /// Whether this change grob puts INK in the non-musical column — i.e. whether the column
@@ -128,7 +129,7 @@ internal static partial class SpacingRules
     /// <returns>
     /// <c>Distance</c>, plus the two flags that say which arm consumes it.
     /// <para>
-    /// <c>SplitsFixed</c> is semi-shrink-space, which puts HALF the distance into
+    /// <c>FixedShare</c> is the part of the distance <c>fixed</c> takes — half for semi-shrink-space, which puts HALF the distance into
     /// <c>fixed</c> before the ideal (staff-spacing.cc:193-198). extra-space and shrink-space
     /// leave <c>fixed</c> alone, so they differ from it under compression even though all
     /// three put the ideal at <c>last_ext[RIGHT] + distance</c>.
@@ -138,16 +139,20 @@ internal static partial class SpacingRules
     /// <c>is_stretchable</c> (:191, :197); extra-space does not.
     /// </para>
     /// </returns>
-    private static (double Distance, bool SplitsFixed, bool Stretchable)
+    private static (double Distance, double FixedShare, bool Stretchable)
         ChangeItemSpaceDef(MusicItem item) => item switch
         {
             // (next-note . (extra-space . 1.0))            scm/define-grobs.scm:924
-            ClefChangeItem => (1.0, false, true),
+            ClefChangeItem => (1.0, 0.0, true),
             // (first-note . (shrink-space . 2.5))          scm/define-grobs.scm:1947
-            KeySignatureChangeItem => (2.5, false, false),
+            KeySignatureChangeItem => (2.5, 0.0, false),
             // (first-note . (semi-shrink-space . 2.0))     scm/define-grobs.scm:3948
-            TimeSignatureChangeItem => (2.0, true, false),
-            _ => (0, false, true)
+            TimeSignatureChangeItem => (2.0, 0.5, false),
+            // (first-note . (fixed-space . 1.0))           scm/define-grobs.scm:715 BreathingSign space-alist
+            // — fixed = ideal = width + 1.0 (staff-spacing.cc:169-173), so the spring neither
+            // stretches nor compresses.
+            BreathingSignItem => (1.0, 1.0, true),
+            _ => (0, 0.0, true)
         };
 
     /// <summary>
@@ -215,6 +220,7 @@ internal static partial class SpacingRules
         ClefChangeItem => 0,
         KeySignatureChangeItem => 1,
         TimeSignatureChangeItem => 2,
+        BreathingSignItem => 3,
         _ => throw new ArgumentOutOfRangeException(
             nameof(item), item?.GetType().Name, "not a change item"),
     };
@@ -707,16 +713,12 @@ internal static partial class SpacingRules
     /// </remarks>
     private static Spring ChangeColumnStaffSpacing(double columnWidth, MusicItem lastChange, double minDistance)
     {
-        var (distance, splitsFixed, stretchable) = ChangeItemSpaceDef(lastChange);
-        double fixedDistance = columnWidth;
-        double ideal;
-        if (splitsFixed)
-        {
-            fixedDistance += distance / 2;
-            ideal = fixedDistance + distance / 2;
-        }
-        else
-            ideal = fixedDistance + distance;
+        // fixed opens at the column's own width and takes the entry's share of the distance
+        // (fixed-space all of it, semi-*-space half, extra/shrink-space none); the ideal is
+        // the width plus the whole distance either way (staff-spacing.cc:166-198).
+        var (distance, fixedShare, stretchable) = ChangeItemSpaceDef(lastChange);
+        double fixedDistance = columnWidth + distance * fixedShare;
+        double ideal = columnWidth + distance;
 
         double stretchability = stretchable ? ideal - fixedDistance : 0;
 
@@ -889,6 +891,26 @@ internal static partial class SpacingRules
                                xLeft, xRight));
                 }
             }
+            else if (item is BreathingSignItem)
+            {
+                // A breathing sign is a glyph hung on the staff's TOP line, not a neighbour-wide
+                // band: its box is the glyph's own, so a note whose ink stays below it (a
+                // down-stemmed eighth) does not reach it and the left gap keeps Note_spacing's
+                // `ideal - width` (MEASURED, Lab sessions/p851/breath: c'8\breathe gives 0.2934
+                // from the head, where e'8 up-stemmed under it gives the half-way floor).
+                // LILYPOND-REF: lily/breathing-sign.cc:262-277 offset_callback — Y-offset is
+                //   the staff's line span on the sign's side, the top line for UP.
+                for (int j = 0; j < columnItems.Count; j++)
+                {
+                    if (columnItems[j] is not BreathingSignItem sign)
+                        continue;
+                    var b = sign.Type == LilySharp.Core.Syntax.ArticulationType.Caesura
+                        ? GlyphMetrics.CaesuraStraight
+                        : GlyphMetrics.BreathComma;
+                    boxes.Add((-(BreathingSignLineUp + b.Top), -(BreathingSignLineUp + b.Bottom),
+                               xLeft, xRight));
+                }
+            }
             else
             {
                 boxes.Add((bandTop, bandBottom, xLeft, xRight));
@@ -898,6 +920,11 @@ internal static partial class SpacingRules
         }
         return boxes;
     }
+
+    /// <summary>Where a breathing sign's origin stands, up from the staff middle: the top line
+    /// of the five-line staff (lily/breathing-sign.cc:262-277 offset_callback — the line span's
+    /// UP end).</summary>
+    internal const double BreathingSignLineUp = 2.0;
 
     /// <summary>A mid-line clef's extra-spacing-height, each way.</summary>
     /// <remarks>LILYPOND-REF: scm/output-lib.scm:929-932 pure-from-neighbor-interface::extra-spacing-height-at-beginning-of-line — <c>(cons -0.1 0.1)</c> off the line start.</remarks>
@@ -1772,7 +1799,7 @@ internal static partial class SpacingRules
                 // fixed opens at last_ext[RIGHT] — in this spring's frame, the bar line's own
                 // width is already behind us, so that is the prefix.
                 // LILYPOND-REF: lily/staff-spacing.cc:166.
-                return (def.Distance, prefix + (def.SplitsFixed ? def.Distance / 2 : 0), def.Stretchable);
+                return (def.Distance, prefix + def.Distance * def.FixedShare, def.Stretchable);
             }
             // semi-fixed-space: fixed += d/2, ideal = fixed + d/2. `is_stretchable` stays
             // TRUE — only shrink-space and semi-shrink-space clear it, so the resulting

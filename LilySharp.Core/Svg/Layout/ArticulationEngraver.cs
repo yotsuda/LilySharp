@@ -170,12 +170,14 @@ internal static class ArticulationEngraver
     // Staff middle line position (see EngravingDefaults.StaffMiddle).
     private const double StaffMiddle = EngravingDefaults.StaffMiddle;
 
-    // Breathing-sign placement: gap to the RIGHT of the note's right edge, and the
-    // Y at the top of the staff (the comma straddles the top line). Tuned to
-    // LilyPond's \breathe (scripts.rcomma at the staff top).
-    // LILYPOND-REF: lily/breathing-sign.cc offset-callback (top of staff).
+    // Breathing-sign placement on the bar's LAST note (a sign between two notes is placed at
+    // its own column instead — BreathingSignItem): gap to the RIGHT of the note's right edge.
     private const double BreathGap = 0.55;
-    private const double BreathStaffY = -0.5;
+    // The glyph's origin on the staff's TOP line, as LilyPond's offset callback puts it — it
+    // was 0.5 above it until 2026-10-07 (MEASURED, Lab sessions/p851/breath: LilyPond's comma
+    // and caesura paths are translated to the top line itself).
+    // LILYPOND-REF: lily/breathing-sign.cc:262-277 offset_callback — the line span's UP end.
+    private const double BreathStaffY = 0.0;
 
     /// <summary>
     /// Calculates layout for all articulations in a score.
@@ -977,7 +979,34 @@ internal static class ArticulationEngraver
             // the engraver emits the sign after the note it follows.
             if (articulation.Type is ArticulationType.Breath or ArticulationType.Caesura)
             {
-                double bx = measureLayout.X
+                // A sign between two notes of a bar is a COLUMN of its own (the collector put a
+                // BreathingSignItem right after the note): its glyph stands at that column's
+                // origin — the ink left — where the springs priced it, read the way the
+                // renderer reads a mid-measure clef's (the musical column hung back by the
+                // solved hang, then the offset within the column).
+                // LILYPOND-REF: scm/define-grobs.scm:697-731 BreathingSign (break-align-symbol breathing-sign,
+                //   non-musical); lily/staff-spacing.cc:166-215 Staff_spacing::get_spacing, the column → next note spring.
+                // A sign on the bar's LAST note keeps the old offset below (no column here).
+                double bx;
+                int signIndex = articulation.ItemIndex + 1;
+                if (signIndex < measure.Items.Length && measure.Items[signIndex] is BreathingSignItem sign)
+                {
+                    double columnX = LayoutUtilities.GetItemXOffset(
+                        artMeasures, articulation.MeasureIndex, signIndex, measureLayout);
+                    if (!measureLayout.Columns.IsDefaultOrEmpty)
+                    {
+                        var columnItems = Rendering.SharedRenderer.ChangeColumnItems(measure, signIndex);
+                        var signTiming = LayoutUtilities.ItemOnset(measure, signIndex);
+                        columnX += SpacingRules.MidMeasureChangeOffsetWithin(fonts, columnItems, sign)
+                            - (measureLayout.ChangeColumnHangs != null
+                               && measureLayout.ChangeColumnHangs.TryGetValue(signTiming, out var signHang)
+                                ? signHang
+                                : SpacingRules.MidMeasureChangeRightGap(fonts, columnItems));
+                    }
+                    bx = measureLayout.X + columnX;
+                }
+                else
+                    bx = measureLayout.X
                     + LayoutUtilities.GetItemXOffset(artMeasures,
                         articulation.MeasureIndex, articulation.ItemIndex, measureLayout)
                     + 2.0 * NoteheadHalfWidth(item)  // twice the half-extent → the head's right edge

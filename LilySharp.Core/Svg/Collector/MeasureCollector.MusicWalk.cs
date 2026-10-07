@@ -1135,6 +1135,7 @@ public sealed partial class MeasureCollector
                         CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, hasGliss, featherDir, isCue, builder),
                         note, isCue);
                     builder.AddItem(WithBowSources(noteItem, m));
+                    AddBreathingSignColumn(note.Articulations, builder, measureIndex);
                     CollectDynamics(note, measureIndex, itemIndex);
                     CollectArticulations(note, measureIndex, itemIndex, noteItem.StemUp,
                         noteItem.EditorialAccidental, noteAnchorTiming);
@@ -1360,6 +1361,7 @@ public sealed partial class MeasureCollector
                     if (arpBracket)
                         chordItem = chordItem with { HasArpeggioBracket = true };
                     builder.AddItem(WithBowSources(chordItem, m));
+                    AddBreathingSignColumn(chord.Articulations, builder, measureIndex);
                     CollectDynamics(chord, measureIndex, itemIndex);
                     // Use chord stem direction for articulation placement
                     CollectArticulations(chord, measureIndex, itemIndex, chordItem.StemUp, anchorTiming: chordAnchorTiming);
@@ -1801,6 +1803,34 @@ public sealed partial class MeasureCollector
         {
             Blanked = timeSigChange.IsSenzaMisura,
         });
+    }
+
+    /// <summary>
+    /// The breathing sign or caesura written on the item just added, as a column of its own
+    /// between that item and the next (<see cref="BreathingSignItem"/>) — when the item did
+    /// not close its measure.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:697-731 BreathingSign (break-align-symbol breathing-sign) — a break-aligned non-musical
+    ///   grob; mid-measure it is a column of its own between the two notes.
+    /// A breath on the item that FILLS its bar stands in the bar line's column instead
+    /// (break-align-orders puts breathing-sign before staff-bar, scm/define-grobs.scm:650-664),
+    /// which this column model does not hold: that one keeps the old placement (the
+    /// articulation's own offset) — named, not ported.
+    /// </remarks>
+    private void AddBreathingSignColumn(IEnumerable<SyntaxNode> articulations, MeasureBuilder builder, int measureIndex)
+    {
+        if (builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset != measureIndex
+            || builder.CurrentItemCount == 0)
+            return;
+        foreach (var a in articulations)
+        {
+            if (a is ArticulationSyntax { Type: ArticulationType.Breath or ArticulationType.Caesura } sign)
+            {
+                builder.AddItem(new BreathingSignItem(sign.Type, sign.SourceStart));
+                return;
+            }
+        }
     }
 
     /// <summary>

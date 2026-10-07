@@ -552,8 +552,8 @@ internal static partial class SharedRenderer
     private const double SystemStartCollapseHeight = 5.0;
 
     /// <summary>
-    /// LilyPond's <c>len</c> for a system-start delimiter over the staff lines
-    /// <paramref name="top"/>..<paramref name="bottom"/>: the union of the spanned staves'
+    /// LilyPond's <c>len</c> for a system-start delimiter whose outer staff lines are
+    /// <paramref name="span"/> apart: the union of the spanned staves'
     /// StaffSymbol extents, which reach half a line thickness past the outer lines — so the
     /// span plus one line thickness.
     /// </summary>

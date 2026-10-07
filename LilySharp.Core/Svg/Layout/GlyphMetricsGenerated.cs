@@ -497,6 +497,24 @@ internal static partial class GlyphMetrics
     /// <summary>Half rest with its ledger — advance width (next-glyph horizontal feed).</summary>
     public const double RestHalfLedgeredAdvance = 1.500000;
 
+    /// <summary>Breathing sign (comma) — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.rcomma (scripts.rcomma = U+E069 in this build)</remarks>
+    public static readonly BBox BreathComma = new(0.000000, -0.373400, 0.506600, 0.613400);
+    /// <summary>Breathing sign (comma) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox BreathCommaOutline = new(0.000000, -0.372000, 0.508000, 0.612000);
+    /// <summary>Breathing sign (comma) — advance width (next-glyph horizontal feed).</summary>
+    public const double BreathCommaAdvance = 0.504000;
+
+    /// <summary>Caesura (straight) — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.caesura.straight (scripts.caesura.straight = U+E080 in this build)</remarks>
+    public static readonly BBox CaesuraStraight = new(0.000000, -0.800000, 2.000000, 1.200000);
+    /// <summary>Caesura (straight) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox CaesuraStraightOutline = new(0.032000, -0.800000, 1.816000, 1.200000);
+    /// <summary>Caesura (straight) — advance width (next-glyph horizontal feed).</summary>
+    public const double CaesuraStraightAdvance = 2.000000;
+
     /// <summary>Staccato dot articulation — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.staccato (scripts.staccato = U+E04A in this build)</remarks>
     public static readonly BBox ArticStaccato = new(-0.200000, -0.200000, 0.200000, 0.200000);
@@ -1477,6 +1495,18 @@ internal static partial class GlyphMetrics
         public BBox RestHalfLedgeredOutline { get; init; }
         /// <summary>Half rest with its ledger — advance width (next-glyph horizontal feed).</summary>
         public double RestHalfLedgeredAdvance { get; init; }
+        /// <summary>Breathing sign (comma) — BBox (LILC bbox).</summary>
+        public BBox BreathComma { get; init; }
+        /// <summary>Breathing sign (comma) — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox BreathCommaOutline { get; init; }
+        /// <summary>Breathing sign (comma) — advance width (next-glyph horizontal feed).</summary>
+        public double BreathCommaAdvance { get; init; }
+        /// <summary>Caesura (straight) — BBox (LILC bbox).</summary>
+        public BBox CaesuraStraight { get; init; }
+        /// <summary>Caesura (straight) — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox CaesuraStraightOutline { get; init; }
+        /// <summary>Caesura (straight) — advance width (next-glyph horizontal feed).</summary>
+        public double CaesuraStraightAdvance { get; init; }
         /// <summary>Staccato dot articulation — BBox (LILC bbox).</summary>
         public BBox ArticStaccato { get; init; }
         /// <summary>Staccato dot articulation — the box its SKYLINE is built from (glyph outline).</summary>
@@ -2103,6 +2133,16 @@ internal static partial class GlyphMetrics
             RestHalfLedgeredOutline = new(RestHalfLedgeredOutline.Left * magnification, RestHalfLedgeredOutline.Bottom * magnification,
                 RestHalfLedgeredOutline.Right * magnification, RestHalfLedgeredOutline.Top * magnification),
             RestHalfLedgeredAdvance = RestHalfLedgeredAdvance * magnification,
+            BreathComma = new(BreathComma.Left * magnification, BreathComma.Bottom * magnification,
+                BreathComma.Right * magnification, BreathComma.Top * magnification),
+            BreathCommaOutline = new(BreathCommaOutline.Left * magnification, BreathCommaOutline.Bottom * magnification,
+                BreathCommaOutline.Right * magnification, BreathCommaOutline.Top * magnification),
+            BreathCommaAdvance = BreathCommaAdvance * magnification,
+            CaesuraStraight = new(CaesuraStraight.Left * magnification, CaesuraStraight.Bottom * magnification,
+                CaesuraStraight.Right * magnification, CaesuraStraight.Top * magnification),
+            CaesuraStraightOutline = new(CaesuraStraightOutline.Left * magnification, CaesuraStraightOutline.Bottom * magnification,
+                CaesuraStraightOutline.Right * magnification, CaesuraStraightOutline.Top * magnification),
+            CaesuraStraightAdvance = CaesuraStraightAdvance * magnification,
             ArticStaccato = new(ArticStaccato.Left * magnification, ArticStaccato.Bottom * magnification,
                 ArticStaccato.Right * magnification, ArticStaccato.Top * magnification),
             ArticStaccatoOutline = new(ArticStaccatoOutline.Left * magnification, ArticStaccatoOutline.Bottom * magnification,
@@ -2538,6 +2578,12 @@ internal static partial class GlyphMetrics
         RestHalfLedgered = new(0.000000, -0.151515, 1.500173, 0.624953),
         RestHalfLedgeredOutline = new(-0.624000, -0.152000, 2.124000, 0.624000),
         RestHalfLedgeredAdvance = 1.500000,
+        BreathComma = new(0.000000, -0.445275, 0.604276, 0.731548),
+        BreathCommaOutline = new(0.000000, -0.444000, 0.604000, 0.732000),
+        BreathCommaAdvance = 0.604000,
+        CaesuraStraight = new(0.000000, -0.799997, 1.999993, 1.199996),
+        CaesuraStraightOutline = new(0.056000, -0.800000, 1.940000, 1.200000),
+        CaesuraStraightAdvance = 1.996000,
         ArticStaccato = new(-0.199999, -0.199999, 0.199999, 0.199999),
         ArticStaccatoOutline = new(-0.200000, -0.200000, 0.200000, 0.200000),
         ArticStaccatoAdvance = 0.196000,
@@ -2874,6 +2920,12 @@ internal static partial class GlyphMetrics
         RestHalfLedgered = new(0.000000, -0.138730, 1.499995, 0.625077),
         RestHalfLedgeredOutline = new(-0.624000, -0.140000, 2.124000, 0.624000),
         RestHalfLedgeredAdvance = 1.500000,
+        BreathComma = new(0.000000, -0.427300, 0.579998, 0.702220),
+        BreathCommaOutline = new(0.000000, -0.428000, 0.580000, 0.704000),
+        BreathCommaAdvance = 0.576000,
+        CaesuraStraight = new(0.000000, -0.799997, 1.999994, 1.199996),
+        CaesuraStraightOutline = new(0.048000, -0.800000, 1.912000, 1.200000),
+        CaesuraStraightAdvance = 2.000000,
         ArticStaccato = new(-0.199999, -0.199999, 0.199999, 0.199999),
         ArticStaccatoOutline = new(-0.200000, -0.200000, 0.200000, 0.200000),
         ArticStaccatoAdvance = 0.196000,
@@ -3210,6 +3262,12 @@ internal static partial class GlyphMetrics
         RestHalfLedgered = new(0.000000, -0.127298, 1.500141, 0.624894),
         RestHalfLedgeredOutline = new(-0.624000, -0.128000, 2.124000, 0.624000),
         RestHalfLedgeredAdvance = 1.496000,
+        BreathComma = new(0.000000, -0.411315, 0.558416, 0.676096),
+        BreathCommaOutline = new(0.000000, -0.412000, 0.560000, 0.676000),
+        BreathCommaAdvance = 0.556000,
+        CaesuraStraight = new(0.000000, -0.800000, 2.000000, 1.200000),
+        CaesuraStraightOutline = new(0.044000, -0.800000, 1.884000, 1.200000),
+        CaesuraStraightAdvance = 1.996000,
         ArticStaccato = new(-0.200000, -0.200000, 0.200000, 0.200000),
         ArticStaccatoOutline = new(-0.200000, -0.200000, 0.200000, 0.200000),
         ArticStaccatoAdvance = 0.196000,
@@ -3546,6 +3604,12 @@ internal static partial class GlyphMetrics
         RestHalfLedgered = new(0.000000, -0.117202, 1.499937, 0.625079),
         RestHalfLedgeredOutline = new(-0.624000, -0.116000, 2.124000, 0.624000),
         RestHalfLedgeredAdvance = 1.496000,
+        BreathComma = new(0.000000, -0.397227, 0.539130, 0.652804),
+        BreathCommaOutline = new(0.000000, -0.396000, 0.540000, 0.652000),
+        BreathCommaAdvance = 0.536000,
+        CaesuraStraight = new(0.000000, -0.800000, 2.000000, 1.200000),
+        CaesuraStraightOutline = new(0.040000, -0.800000, 1.860000, 1.200000),
+        CaesuraStraightAdvance = 1.996000,
         ArticStaccato = new(-0.199874, -0.199874, 0.199874, 0.199874),
         ArticStaccatoOutline = new(-0.200000, -0.200000, 0.200000, 0.200000),
         ArticStaccatoAdvance = 0.196000,
@@ -3882,6 +3946,12 @@ internal static partial class GlyphMetrics
         RestHalfLedgered = new(0.000000, -0.107969, 1.500112, 0.624916),
         RestHalfLedgeredOutline = new(-0.624000, -0.108000, 2.124000, 0.624000),
         RestHalfLedgeredAdvance = 1.500000,
+        BreathComma = new(0.000000, -0.384512, 0.521886, 0.631874),
+        BreathCommaOutline = new(0.000000, -0.384000, 0.520000, 0.632000),
+        BreathCommaAdvance = 0.520000,
+        CaesuraStraight = new(0.000000, -0.800000, 2.000000, 1.200000),
+        CaesuraStraightOutline = new(0.036000, -0.800000, 1.836000, 1.200000),
+        CaesuraStraightAdvance = 1.996000,
         ArticStaccato = new(-0.200000, -0.200000, 0.200000, 0.200000),
         ArticStaccatoOutline = new(-0.200000, -0.200000, 0.200000, 0.200000),
         ArticStaccatoAdvance = 0.196000,
@@ -4220,6 +4290,12 @@ internal static partial class GlyphMetrics
         RestHalfLedgered = RestHalfLedgered,
         RestHalfLedgeredOutline = RestHalfLedgeredOutline,
         RestHalfLedgeredAdvance = RestHalfLedgeredAdvance,
+        BreathComma = BreathComma,
+        BreathCommaOutline = BreathCommaOutline,
+        BreathCommaAdvance = BreathCommaAdvance,
+        CaesuraStraight = CaesuraStraight,
+        CaesuraStraightOutline = CaesuraStraightOutline,
+        CaesuraStraightAdvance = CaesuraStraightAdvance,
         ArticStaccato = ArticStaccato,
         ArticStaccatoOutline = ArticStaccatoOutline,
         ArticStaccatoAdvance = ArticStaccatoAdvance,
@@ -4556,6 +4632,12 @@ internal static partial class GlyphMetrics
         RestHalfLedgered = new(0.000000, -0.092829, 1.500045, 0.625033),
         RestHalfLedgeredOutline = new(-0.624000, -0.092000, 2.124000, 0.624000),
         RestHalfLedgeredAdvance = 1.496000,
+        BreathComma = new(0.000000, -0.363296, 0.493007, 0.596882),
+        BreathCommaOutline = new(0.000000, -0.364000, 0.492000, 0.596000),
+        BreathCommaAdvance = 0.492000,
+        CaesuraStraight = new(0.000000, -0.800000, 2.000000, 1.200000),
+        CaesuraStraightOutline = new(0.028000, -0.800000, 1.800000, 1.200000),
+        CaesuraStraightAdvance = 1.996000,
         ArticStaccato = new(-0.199911, -0.199911, 0.199911, 0.199911),
         ArticStaccatoOutline = new(-0.200000, -0.200000, 0.200000, 0.200000),
         ArticStaccatoAdvance = 0.196000,
@@ -4892,6 +4974,12 @@ internal static partial class GlyphMetrics
         RestHalfLedgered = new(0.000000, -0.086508, 1.500000, 0.625079),
         RestHalfLedgeredOutline = new(-0.624000, -0.088000, 2.124000, 0.624000),
         RestHalfLedgeredAdvance = 1.500000,
+        BreathComma = new(0.000000, -0.354444, 0.480952, 0.582222),
+        BreathCommaOutline = new(0.000000, -0.356000, 0.480000, 0.584000),
+        BreathCommaAdvance = 0.480000,
+        CaesuraStraight = new(0.000000, -0.800000, 2.000000, 1.200000),
+        CaesuraStraightOutline = new(0.024000, -0.800000, 1.784000, 1.200000),
+        CaesuraStraightAdvance = 2.000000,
         ArticStaccato = new(-0.200000, -0.200000, 0.200000, 0.200000),
         ArticStaccatoOutline = new(-0.200000, -0.200000, 0.200000, 0.200000),
         ArticStaccatoAdvance = 0.196000,

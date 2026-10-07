@@ -1661,6 +1661,48 @@ public sealed record ClefChangeItem : MusicItem
 }
 
 /// <summary>
+/// A breathing sign or caesura standing BETWEEN two notes of a measure — a column of its own
+/// that takes horizontal room. Zero duration: it sits at the moment the next note starts,
+/// after the note it follows, as a mid-measure clef change does.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: scm/define-grobs.scm:697-731 BreathingSign, break-align-symbol breathing-sign —
+///   breathing-sign, non-musical #t: a NON-MUSICAL column between the two musical ones, spaced
+///   like a mid-measure clef (the note before it by Note_spacing, the note after it by its
+///   space-alist's first-note fixed-space 1.0).
+/// MEASURED, LilyPond 2.26.0 (Lab sessions/p851/breath): c'4\breathe d'4 puts the comma's ink
+/// 1.1915 right of the c's head and the d's head exactly 1.0 right of the comma; Lily# drew
+/// the comma 0.55 past the head and reserved nothing, so a caesura ran into the next stem.
+/// <para>
+/// This item carries the SPACING only. The glyph is still drawn by the note's
+/// <see cref="ArticulationItem"/> (its Y and its skyline as before), placed at this column
+/// by <c>ArticulationEngraver</c>. A breath on the LAST note of a measure belongs to the bar
+/// line's column in LilyPond (before staff-bar) and does not create this item.
+/// </para>
+/// </remarks>
+public sealed record BreathingSignItem : MusicItem
+{
+    /// <summary>Breath or caesura.</summary>
+    public LilySharp.Core.Syntax.ArticulationType Type { get; }
+
+    /// <summary>Always <c>Fraction.Zero</c> — the sign takes room but no time.</summary>
+    protected override Fraction SoundingDuration => Fraction.Zero;
+
+    /// <summary>The glyph's ink width — the column's extent (the LILC box LilyPond reads:
+    /// the comma 0.5066, the straight caesura 2.0).</summary>
+    public double InkWidth => Type == LilySharp.Core.Syntax.ArticulationType.Caesura
+        ? Layout.GlyphMetrics.CaesuraStraight.Width
+        : Layout.GlyphMetrics.BreathComma.Width;
+
+    /// <summary>Initializes a new <see cref="BreathingSignItem"/>.</summary>
+    public BreathingSignItem(LilySharp.Core.Syntax.ArticulationType type, int sourcePosition)
+    {
+        Type = type;
+        SourcePosition = sourcePosition;
+    }
+}
+
+/// <summary>
 /// A mid-measure key signature change. Has zero duration — occupies horizontal space
 /// but does not advance the timing position.
 /// </summary>

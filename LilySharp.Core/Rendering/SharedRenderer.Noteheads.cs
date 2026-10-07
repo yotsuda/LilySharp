@@ -452,7 +452,7 @@ internal static partial class SharedRenderer
         return items;
 
         static bool IsChangeItem(MusicItem item) =>
-            item is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem;
+            item is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem or BreathingSignItem;
     }
 
 
