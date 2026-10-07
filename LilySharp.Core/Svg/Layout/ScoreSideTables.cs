@@ -211,6 +211,17 @@ internal static class ScoreSideTables
                 s => IndexBuckets<ArticulationItem>.Build(s.Articulations, a => a.StaffIndex));
 
     private static readonly System.Runtime.CompilerServices
+        .ConditionalWeakTable<MultiStaffScore, IndexBuckets<TrillSpannerItem>> _trillsByScore = new();
+
+    /// <summary>The score's TRILL SPANNERS bucketed by global staff index (memoized per
+    /// score) — the staff-skyline pass reserves each staff's trills on every system.</summary>
+    internal static IndexBuckets<TrillSpannerItem> TrillSpannersByStaff(MultiStaffScore score)
+        => score.TrillSpanners.IsDefaultOrEmpty
+            ? IndexBuckets<TrillSpannerItem>.Empty
+            : _trillsByScore.GetValue(score,
+                s => IndexBuckets<TrillSpannerItem>.Build(s.TrillSpanners, t => t.StaffIndex));
+
+    private static readonly System.Runtime.CompilerServices
         .ConditionalWeakTable<MultiStaffScore, IndexBuckets<HairpinItem>> _hairpinsByScore = new();
 
     /// <summary>

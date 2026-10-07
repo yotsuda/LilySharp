@@ -95,7 +95,7 @@
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **:3268** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
 - **:3320** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
-- **:4325** same approximation the scripts' own remark records for the movers; the books that
+- **:4424** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1212** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
 - **:2339** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
@@ -196,8 +196,8 @@
 ### `LilySharp.Core/Svg/Layout/LyricSpacing.cs`
 - **:152** is measured-exact there, and no ledger point prices replacing it.
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:3876** staff down, and this reserves it on the hidden one. No book reaches that.
-- **:5245** company on a row whose symbols sit closer than its spec's 1.0. No point measures
+- **:3886** staff down, and this reserves it on the hidden one. No book reaches that.
+- **:5344** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:854** does not spell a per-type padding — no point observes a segno/coda over a
 - **:1054** X extent per mark -- and reproduce both pictures. No ledger point is
@@ -471,7 +471,7 @@
 - **:1915** LILYSHARP-OWN, the lead-sheet grid's line-start bar (user request
 - **:2352** wide as its 3/4 bars for one beat). LILYSHARP-OWN like the floor itself: LilyPond has
 - **:2588** timing-placed chord symbol and a beat slash do. LILYSHARP-OWN: the filler-slot keep.
-- **:4936** LILYSHARP-OWN: the band is Lily#'s model of a line LilyPond walks as a loose line
+- **:5035** LILYSHARP-OWN: the band is Lily#'s model of a line LilyPond walks as a loose line
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:152** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **:178** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN

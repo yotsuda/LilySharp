@@ -1075,7 +1075,7 @@ internal static class OutsideStaffStacker
     ///   ("straight line as the vertical skyline"), :4085 vertical-skylines from the
     ///   stencil.
     /// </summary>
-    private static (VerticalSkyline Up, VerticalSkyline Down) TrillProfileSkylines(
+    internal static (VerticalSkyline Up, VerticalSkyline Down) TrillProfileSkylines(
         in TrillSpannerLayout t)
     {
         bool hasGlyph = t.GlyphX < t.LineStartX;

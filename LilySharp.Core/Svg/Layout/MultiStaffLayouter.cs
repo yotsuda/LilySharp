@@ -3829,6 +3829,16 @@ internal sealed class MultiStaffLayouter
                 var sky = skylineBuilder.PlaceDynamicsOn(
                     insideSky, staff, dynamics, measureLayouts, beams,
                     articulationLayouts: articulations);
+                // ...and this staff's TRILL SPANNERS (priority 50, placed against the inside
+                // profile before every other mover) — outside-staff ink the staff above is
+                // spaced off (StaffTrillInk). ⚠️ The dynamics just placed did not see them; a
+                // forced-above dynamic under a trill on the same staff is not reserved apart.
+                if (StaffTrillInk(score, staff, thisStaff, measureLayouts, beams,
+                        insideSky.Up, insideSky.Down) is { } trillInk)
+                {
+                    sky.Up.Merge(trillInk.Up);
+                    sky.Down.Merge(trillInk.Down);
+                }
                 // ...and this staff's HAIRPINS, which ride the same DynamicLineSpanner as
                 // the texts just placed (priority 250): outside-staff ink that LilyPond
                 // leaves IN the axis group's skyline once it is placed, so the staff below
@@ -4156,6 +4166,95 @@ internal sealed class MultiStaffLayouter
             // A rest column is an encompass point, read where Rest_collision put the rest
             // — the room's memo, the same table the skyline seed and the renderer read.
             restShiftsOf: _ => RestCollisionsOf(staff));
+    }
+
+    /// <summary>
+    /// This staff's TRILL SPANNERS on one system as outside-staff ink about its MIDDLE line —
+    /// placed by the engraver's own aligned_side, then raised over the staff's inside profile
+    /// by the outside-staff-padding the stacker pays (<c>OutsideStaffStacker.PlaceTrills</c>,
+    /// priority 50, the first mover) — so the staff ABOVE is spaced off them.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:952-972 add_grobs_of_one_priority — a placed
+    ///   outside-staff grob's skyline stays in its VerticalAxisGroup's, which is what
+    ///   lily/align-interface.cc walks between staves.
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p851, test/trillspan-lower-staff's twin): a
+    /// trill above the LOWER staff, its line 4.1 over that staff's middle, opens the two
+    /// staves to 9.6 where nothing else asks more than the basic 9.0; Lily# drew the trill at
+    /// the same height and left the staves 9.0 apart — the room held no trill, so the upper
+    /// staff's down-stems ran into the "tr".
+    /// Entered on the same one-staff system at offset 0 the hairpin seed uses, with the
+    /// measures re-keyed by index (<see cref="StaffHairpinLayouts"/>).
+    /// ⚠️ ONLY A TRILL THAT STARTS AND ENDS ON THIS SYSTEM is reserved: the engraver reads a
+    /// broken piece's bounds from the whole score's systems, which do not exist yet here.
+    /// A trill crossing a line break is placed and drawn as before but holds no room —
+    /// named, not measured.
+    /// </remarks>
+    private (VerticalSkyline Up, VerticalSkyline Down)? StaffTrillInk(
+        MultiStaffScore score, Staff staff, int staffIndex,
+        ImmutableArray<MeasureLayout> measureLayouts, ImmutableArray<BeamLayout> beamLayouts,
+        VerticalSkyline insideUp, VerticalSkyline insideDown)
+    {
+        var staffTrills = ScoreSideTables.TrillSpannersByStaff(score).At(staffIndex);
+        if (staffTrills.IsEmpty || measureLayouts.IsDefaultOrEmpty)
+            return null;
+
+        int firstMeasure = int.MaxValue, maxMeasureIndex = -1;
+        foreach (var ml in measureLayouts)
+        {
+            firstMeasure = Math.Min(firstMeasure, ml.MeasureIndex);
+            maxMeasureIndex = Math.Max(maxMeasureIndex, ml.MeasureIndex);
+        }
+        var onThisSystem = ImmutableArray.CreateBuilder<TrillSpannerItem>();
+        foreach (var t in staffTrills)
+            if (t.StartMeasureIndex >= firstMeasure && t.EndMeasureIndex <= maxMeasureIndex)
+                onThisSystem.Add(t);
+        if (onThisSystem.Count == 0)
+            return null;
+
+        var byMeasureIndex = new MeasureLayout[maxMeasureIndex + 1];
+        foreach (var ml in measureLayouts)
+            byMeasureIndex[ml.MeasureIndex] = ml;
+        var keyed = System.Runtime.InteropServices.ImmutableCollectionsMarshal
+            .AsImmutableArray(byMeasureIndex);
+        var staffLayout = new StaffLayout(
+            0, staff.Clef, Y: 0, Height: _options.StaffHeight,
+            StaffAffinity: staff.StaffAffinity);
+        var system = new SystemLayout(
+            SystemIndex: 0, Y: 0,
+            Width: _options.ContentWidth,
+            PrefixWidth: 0,
+            Measures: measureLayouts,
+            StaffGroups: ImmutableArray.Create(StaffGroupLayout.CreateSingle(staffLayout, 0, _options.StaffHeight)),
+            Indent: 0);
+
+        var layouts = TrillSpannerEngraver.Calculate(
+            onThisSystem.ToImmutable(), ImmutableArray.Create(system), keyed,
+            staffYAt: null,
+            voicesByStaff: new Dictionary<int, ImmutableArray<Voice>> { [staffIndex] = staff.Voices },
+            beamLayouts: RestampedToStaff(beamLayouts, staffIndex));
+        if (layouts.IsDefaultOrEmpty)
+            return null;
+
+        var up = new VerticalSkyline(VerticalDirection.Up);
+        var down = new VerticalSkyline(VerticalDirection.Down);
+        foreach (var t in layouts)
+        {
+            // The engraver's YUp is about the staff's TOP line (its frame, offset 0 here);
+            // this profile's frame is the MIDDLE line.
+            var placed = t with { YUp = t.YUp + EngravingDefaults.StaffMiddle };
+            var (qUp, qDown) = OutsideStaffStacker.TrillProfileSkylines(placed);
+            // The stacker's move against the one entry a first mover meets — the support:
+            // the nearest allowed move clear of it by outside-staff-padding.
+            double move = placed.Direction < 0
+                ? -Math.Max(0.0, qUp.Distance(insideDown) + OutsideStaffStacker.OutsideStaffPadding)
+                : Math.Max(0.0, qDown.Distance(insideUp) + OutsideStaffStacker.OutsideStaffPadding);
+            if (move != 0.0)
+                (qUp, qDown) = OutsideStaffStacker.TrillProfileSkylines(placed with { YUp = placed.YUp + move });
+            up.Merge(qUp);
+            down.Merge(qDown);
+        }
+        return (up, down);
     }
 
     /// <summary>
