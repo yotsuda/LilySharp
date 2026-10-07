@@ -129,6 +129,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第853セッションの経緯
+
+### 1.1 第853セッション（2026-10-07・YT-DELL2）
+
+新しい会話。`-Start p853`（HEAD `b2091e0c4`）＝full **11387 / 0 / 2 / 11389**。§7 3.5 で第851 を ARCHIVE へ。第852 の残り（1 頁目 +1 系＝行の形の外の小さな和）から。
+- **原因（計器 Lab `p853/flip-both.ps1`＝1 頁目が 1 系増える紙の高さを LP と Lily# で二分探索・`pageforce2.ps1`＝LP の改ページを LP の枠で書き写したモデル・`lp-lines2.ps1`＝LP の行の pure の形を列の rank で行に対応・多段可）**: LP の改ページだけにある 2 つの性質を Lily# が持たない。⑴ 行の refpoint は「譜の pure の上端」を原点にした値（align-interface.cc:215-219）＝`spring_length` が次の行との差を拾う（constrained-breaking.cc:657-667）⑵ System の要素（印・小節番号・テンポ）は小節ごとの枠で測られ、行の枠へ移さずに合わされる（system.cc:893-923）＝行の譜の上端と小節の譜の上端の差だけ持ち上がる。⑶ volta は改ページの高さを持たない（system.cc:940-967）。モデルは Boogie の 4 変種で LP と 0.05 mm 以内（Lily# は最大 12 mm ずれていた）。詳細 Lab `p853/notes.md`。
+- **閉じた（`a8fee10e6`）**: `SystemDetails.AlignmentOriginUp`＋`SpringLengthTo`（⑴）／`PagingAugmentProgram.ExecuteForBreaker`（⑵⑶・`BreakerSplit`）／count loop の見積もりも譜と System に分けて候補の行ごとに持ち上げ直す／**行頭の調号を skyline に**（`SkylineBuilder.SeedLineStartKey`・LP は各小節の begin の高さに調号を含む＝無いと小節の譜の上端が低く印を持ち上げすぎた）。Boogie 302.49 mm（LP 302.23）・A4 で LP と同じ 12/12。網 `BreakerAlignmentFrameTests` 7 本・`BreakerPureHeightTests` +1・毒 7 本すべて赤（Lab `p853/poisons.ps1`）。`-End p853 -DiffBase b2091e0c4`＝門 全 OK・full **11395 / 0 / 2 / 11397**（+8）・棚卸し 2 表は行番号だけ。
+- **sweep**（svg 75/1199）: LP 双子との頁割り 寄った 38・離れた 19。**離れた 19 のうち 17 は日本語の title/composer の本**＝Lily# の CJK の題の帯が LP より高い（もう恋なんてしない: 9.12 vs 6.59＝フォントの族・§1.0 ⒠ と同じ族）。残り 2 は譜＋tab で**Lily# の大きい tab の数字**（`FretDigitHeight` 2.013・LP 1.236・最下線の下に 0.377 多い）＝**ユーザー決定（2026-10-07）「(b)＝描く数字のとおりに値付け」**＝改ページだけ LP の数字の高さを使うことはしない・提案しない。
+
 ## 以下は第852セッションの経緯
 
 ### 1.1 第852セッション（2026-10-07・YT-DELL2）
