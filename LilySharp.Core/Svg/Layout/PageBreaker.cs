@@ -284,6 +284,23 @@ internal sealed record SystemDetails
     /// </summary>
     public double RefpointExtentDown { get; init; }
 
+    /// <summary>How many of the caller's lines this one stands for — more than 1 once
+    /// <see cref="PageBreaker.CompressLines"/> has merged the lines a forbidden page break
+    /// joins.</summary>
+    /// <remarks>LILYPOND-REF: lily/include/constrained-breaking.hh compressed_lines_count_.</remarks>
+    public int CompressedLinesCount { get; init; } = 1;
+
+    /// <summary>How many of those lines are music systems rather than titles — what the
+    /// min/max-systems-per-page rules count.</summary>
+    /// <remarks>LILYPOND-REF: lily/include/constrained-breaking.hh
+    /// compressed_nontitle_lines_count_.</remarks>
+    public int NonTitleLinesCount => _nonTitleLinesCount ?? (IsTitle ? 0 : 1);
+
+    private int? _nonTitleLinesCount;
+
+    /// <summary>Sets <see cref="NonTitleLinesCount"/> on a merged line.</summary>
+    internal int NonTitleLinesCountInit { init => _nonTitleLinesCount = value; }
+
     /// <summary>
     /// The stretchable space between the bottom of this system's extent and the top of
     /// <paramref name="next"/>'s — the part of the ideal distance that
@@ -813,6 +830,28 @@ internal sealed class PageBreaker
     /// </summary>
     internal List<int> BreakIntoPagesOfLines(IReadOnlyList<SystemDetails> lines)
     {
+        // LILYPOND-REF: lily/page-breaking.cc:1044-1081 cache_line_details — the lines are
+        // compressed (compress_lines) and only then stacked (calc_line_heights); the pages come
+        // back in the caller's lines (uncompress_solution).
+        if (CompressLines(lines) is { } compressed)
+        {
+            var stacked = CalcLineHeights(compressed);
+            var breaks = BreakIntoPagesOfCompressed(stacked);
+            var mapped = new List<int>(breaks.Count);
+            int k = 0, lineEnd = 0;
+            foreach (int b in breaks)
+            {
+                for (; k < b; k++)
+                    lineEnd += stacked[k].CompressedLinesCount;
+                mapped.Add(lineEnd);
+            }
+            return mapped;
+        }
+        return BreakIntoPagesOfCompressed(lines);
+    }
+
+    private List<int> BreakIntoPagesOfCompressed(IReadOnlyList<SystemDetails> lines)
+    {
         if (lines.Count == 0)
             return new List<int>();
 
@@ -887,6 +926,17 @@ internal sealed class PageBreaker
                 SystemsPerPage = ImmutableArray<int>.Empty,
             };
         }
+        if (CompressLines(lines) is { } compressed)
+        {
+            var stacked = CalcLineHeights(compressed);
+            var result = ScoreCompressed(stacked);
+            return result with { SystemsPerPage = Uncompress(result.SystemsPerPage, stacked) };
+        }
+        return ScoreCompressed(lines);
+    }
+
+    private PageBreakResult ScoreCompressed(IReadOnlyList<SystemDetails> lines)
+    {
         // LILYPOND-REF: lily/page-breaking.cc:1416-1418 space_systems_on_best_pages — with
         // systems-per-page set, the pages are not optimised at all.
         if (_params.SystemsPerPage > 0)
@@ -927,8 +977,7 @@ internal sealed class PageBreaker
             {
                 var cur = lines[line];
                 space.AppendSystem(cur);
-                if (!cur.IsTitle)
-                    systemsOnThisPage++;
+                systemsOnThisPage += cur.NonTitleLinesCount;
                 line++;
                 if (cur.PagePermission == BreakPermission.Force)
                     break;
@@ -1048,8 +1097,7 @@ internal sealed class PageBreaker
                 // compressed_nontitle_lines_count_, which is 0 for a title line
                 // (constrained-breaking.cc:632): the book title does not count against
                 // min/max-systems-per-page.
-                if (!lines[pageStart].IsTitle)
-                    lineCount++;
+                lineCount += lines[pageStart].NonTitleLinesCount;
                 bool prevReachable = prevIdx < 0 || !double.IsPositiveInfinity(demerits[prevIdx]);
                 if (!endsOnForbid && prevReachable)
                 {
@@ -1109,8 +1157,10 @@ internal sealed class PageBreaker
             int p = prev[system];
             forces[page] = force[system];
             perPage[page] = system - p;
-            int titles = p < 0 && lines[0].IsTitle ? 1 : 0;
-            status |= LineCountStatus(system - p - titles);
+            int nonTitle = 0;
+            for (int k = p + 1; k <= system; k++)
+                nonTitle += lines[k].NonTitleLinesCount;
+            status |= LineCountStatus(nonTitle);
             system = p;
         }
         return new PageBreakResult
@@ -1195,6 +1245,10 @@ internal sealed class PageBreaker
     {
         if (lines.Count == 0)
             return 0;
+        // LILYPOND-REF: lily/page-breaking.cc:1186-1278 min_page_count reads the compressed
+        // cached_line_details_, as every page DP does (see BreakIntoPagesOfLines).
+        if (CompressLines(lines) is { } compressed)
+            lines = CalcLineHeights(compressed);
         // Only its two whitespace readers are used here — nothing accumulates, so no reset.
         var whitespace = _whitespace ??= new PageSpacing(_pageHeight, _topMargin, _bottomMargin,
             _vs.TopSystem, _vs.LastBottom, _vs.TopMarkup);
@@ -1225,13 +1279,13 @@ internal sealed class PageBreaker
                                 + whitespace.MinWhitespaceAtBottomOfPage(cur);
             // LILYPOND-REF: lily/page-breaking.cc:1216 — line_count sums
             // compressed_nontitle_lines_count_; a title line counts 0.
-            int nextLineCount = lineCount + (cur.IsTitle ? 0 : 1);
+            int nextLineCount = lineCount + cur.NonTitleLinesCount;
 
             if ((!TooFewLines(lineCount) && nextHeight > curPageHeight && curRodHeight > 0)
                 || TooManyLines(nextLineCount)
                 || (prev != null && prev.PagePermission == BreakPermission.Force))
             {
-                lineCount = 1;
+                lineCount = cur.NonTitleLinesCount;
                 curRodHeight = cur.Height;
                 curSpringHeight = 0;
                 pageStarter = i;
@@ -1323,13 +1377,15 @@ internal sealed class PageBreaker
             // TIE — toward LilyPond's, which keeps the largest page_start (:386 keeps the
             // earlier candidate too). Ties are what the corpus run has to answer for.
             var pageSpacing = Take(ref _pagingSpacing, _topMargin);
+            int nonTitleSpan = 0;
             for (int i = j - 1; i >= 0; i--)
             {
                 // The lines on this candidate page, and the MUSIC systems among them: the
                 // min/max-systems-per-page filters count the latter (LilyPond's
                 // compressed_nontitle_lines_count_, 0 for the book title at line 0).
                 int lineSpan = j - i;
-                int systemCount = lineSpan - (i == 0 && systems[0].IsTitle ? 1 : 0);
+                nonTitleSpan += systems[i].NonTitleLinesCount;
+                int systemCount = nonTitleSpan;
 
                 // LILYPOND-REF: lily/page-spacing.cc:337 space.prepend_system (lines_[page_start])
                 // — unconditional, BEFORE any of the filters below, because the accumulator
@@ -1374,7 +1430,7 @@ internal sealed class PageBreaker
                 // three filters above; LilyPond needs no such test because an unset
                 // min-systems-per-page is 0 and `line_count < 0` is already false.
                 bool tooFewLines = _params.MinSystemsPerPage > 0
-                    && systemCount - 1 < _params.MinSystemsPerPage;
+                    && systemCount - systems[i].NonTitleLinesCount < _params.MinSystemsPerPage;
                 if (!tooFewLines && lineSpan > 1 && Overfull(pageSpacing))
                     break;
 
@@ -1607,7 +1663,9 @@ internal sealed class PageBreaker
         // is a line that counts 0 towards min/max-systems-per-page (LilyPond's
         // compressed_nontitle_lines_count_).
         int lineSpan = endIdx - startIdx;
-        int systemCount = lineSpan - (startIdx == 0 && systems[0].IsTitle ? 1 : 0);
+        int systemCount = 0;
+        for (int k = startIdx; k < endIdx; k++)
+            systemCount += systems[k].NonTitleLinesCount;
         double force = spacing.Force;
         bool overfull = double.IsNegativeInfinity(force);
 
@@ -1796,6 +1854,88 @@ internal sealed class PageBreaker
     internal static IReadOnlyList<SystemDetails> CalcLineHeights(
         IReadOnlyList<SystemDetails> lines)
         => Stack(lines, inPlace: false)!;
+
+    /// <summary>
+    /// The lines a forbidden page break joins, merged into one — LilyPond's line list as its
+    /// page DPs price it; null when no page break is forbidden (the list stands as it is).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-breaking.cc:152-210 compress_lines, transcribed — the merged line
+    /// is the LOWER line's details with: the shape <c>old.shape_.piggyback (orig[i].shape_,
+    /// padding)</c> (lily/constrained-breaking.cc:676-685 Line_shape::piggyback, which stands the
+    /// lower line's shape ON the upper one's — the source's own FIXME doubts the orientation,
+    /// and the port keeps it, since the pages are priced by it), the upper line's top refpoint,
+    /// the bottom refpoint moved by the shape's rise, the two springs and stiffnesses summed,
+    /// the counts carried and the title flag the upper line's. The padding is the upper line's
+    /// (a title's being its markup-system padding).
+    /// The book title is always such a line (its Prob carries no page-break permission, so the
+    /// page cannot end between it and the first system), and Lily# used to keep the two apart
+    /// and refuse the break instead — the same SET of pages, priced differently: MEASURED
+    /// (2.26.0, Lab sessions/p851/ws) LilyPond pages audit/tabfingering/automatic's 22 systems
+    /// 13 + 9, Lily# put 12 + 10 (TitleCompressedPagingTests); over the svg sweep six books
+    /// moved to LilyPond's split and one borderline book moved off it (Your Smiling Face's
+    /// tab twin, page 1 at force −0.02 either way).
+    /// </remarks>
+    internal static List<SystemDetails>? CompressLines(IReadOnlyList<SystemDetails> lines)
+    {
+        List<SystemDetails>? ret = null;
+        for (int i = 0; i < lines.Count; i++)
+        {
+            if (i > 0 && (ret?[^1] ?? lines[i - 1]).PagePermission == BreakPermission.Forbid)
+            {
+                ret ??= new List<SystemDetails>(lines.Take(i));
+                var old = ret[^1];
+                var cur = lines[i];
+                double padding = old.Padding;
+                var o = old.Shape ?? new LineShape(old.TopExtent, old.BottomExtent, old.TopExtent, old.BottomExtent);
+                var m = cur.Shape ?? new LineShape(cur.TopExtent, cur.BottomExtent, cur.TopExtent, cur.BottomExtent);
+                // LilyPond's intervals, Y-up about the line's origin: DOWN = −(body + down).
+                double elevation = Math.Max(o.BeginUp + cur.StaffHeight + m.BeginDown,
+                                            o.RestUp + cur.StaffHeight + m.RestDown);
+                double beginUp = elevation + m.BeginUp + padding;
+                double restUp = elevation + m.RestUp + padding;
+                double topExtent = Math.Max(beginUp, restUp);
+                ret[^1] = cur with
+                {
+                    Shape = new LineShape(beginUp, o.BeginDown, restUp, o.RestDown),
+                    TopExtent = topExtent,
+                    BottomExtent = old.BottomExtent,
+                    StaffHeight = old.StaffHeight,
+                    Height = topExtent + old.StaffHeight + old.BottomExtent,
+                    RefpointExtentUp = old.RefpointExtentUp,
+                    RefpointExtentDown = cur.RefpointExtentDown + (restUp - o.RestUp),
+                    SpringLength = cur.SpringLength + old.SpringLength,
+                    InverseHooke = cur.InverseHooke + old.InverseHooke,
+                    CompressedLinesCount = old.CompressedLinesCount + 1,
+                    NonTitleLinesCountInit = old.NonTitleLinesCount + (cur.IsTitle ? 0 : 1),
+                    IsTitle = old.IsTitle,
+                    FootnoteHeight = cur.FootnoteHeight + old.FootnoteHeight,
+                };
+            }
+            else
+                ret?.Add(lines[i]);
+        }
+        return ret;
+    }
+
+    /// <summary>Lines per page over compressed lines, as the caller's lines.</summary>
+    /// <remarks>LILYPOND-REF: lily/page-breaking.cc:215-232 uncompress_solution.</remarks>
+    private static ImmutableArray<int> Uncompress(ImmutableArray<int> perPage, IReadOnlyList<SystemDetails> compressed)
+    {
+        if (perPage.IsDefaultOrEmpty)
+            return perPage;
+        var b = ImmutableArray.CreateBuilder<int>(perPage.Length);
+        int start = 0;
+        foreach (int count in perPage)
+        {
+            int lines = 0;
+            for (int j = start; j < start + count && j < compressed.Count; j++)
+                lines += compressed[j].CompressedLinesCount;
+            b.Add(lines);
+            start += count;
+        }
+        return b.MoveToImmutable();
+    }
 
     /// <summary>
     /// <see cref="CalcLineHeights"/> written INTO <paramref name="owned"/>'s details rather than

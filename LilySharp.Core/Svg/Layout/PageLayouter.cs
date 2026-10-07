@@ -168,12 +168,11 @@ internal sealed class PageLayouter
     /// / space from markup-system-spacing (:578-590), inverse_hooke 1.0 (:622). The stencil
     /// is top-aligned (paper-book.cc:443), so its extent is (−Depth . 0): the body IS the
     /// depth and nothing stands above or below it.
-    /// ⚠️ THE PERMISSION IS FORBID, and it stands for a mechanism Lily# does not model:
-    /// LilyPond's title Prob has no page-break-permission symbol, and
-    /// lily/page-breaking.cc:155-190 compress_lines therefore MERGES it with the following
-    /// system into one Line_details, so no page can end between the two. Lily# keeps the two
-    /// lines apart (the breaker's counts and the chain's springs want them apart) and refuses
-    /// the break instead (IsValidBreak), which is the same set of pages.
+    /// ⚠️ THE PERMISSION IS FORBID: LilyPond's title Prob has no page-break-permission
+    /// symbol, and lily/page-breaking.cc:155-190 compress_lines therefore MERGES it with the
+    /// following system into one Line_details, so no page can end between the two. The page
+    /// DPs price that merged line (PageBreaker.CompressLines); the chain still places the two
+    /// apart.
     /// </remarks>
     internal SystemDetails BuildTitleDetails(HeaderBand header)
     {
