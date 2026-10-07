@@ -219,7 +219,10 @@ internal sealed partial class LayoutEngine
     /// TOP STAFF's middle line; this is what puts that middle where the alignment actually
     /// placed it instead of at the nominal device 2.
     /// </param>
-    private static void EnrichExtentsWithAnnotationProtrusions(
+    /// <returns>Per system, the up extent WITHOUT the above-staff music marks' stacked ink —
+    /// the base the page breaker adds them to at their pure heights — or null when no mark
+    /// stands above a staff.</returns>
+    private static double[]? EnrichExtentsWithAnnotationProtrusions(
         ScoreTextMetrics fonts,
         List<(double upExtent, double downExtent)> perSystemExtents,
         ImmutableArray<SystemLayout> systems,
@@ -341,6 +344,7 @@ internal sealed partial class LayoutEngine
             double vY = -v.YUp;
             Add(v.StartMeasureIndex, vY - 0.1, vY + 1.6);
         }
+        double[]? markUp = null;
         foreach (var m in ann.MusicMarks)
         {
             if (MusicMarkItem.IsSpannerHandled(m.MarkType))
@@ -361,7 +365,21 @@ internal sealed partial class LayoutEngine
             // 0.022688 is the DRAW's own top against LilyPond's stencil, a different
             // island).
             var (_, _, emTop, emBottom) = OutsideStaffStacker.MusicMarkExtents(fonts, m);
-            Add(m.MeasureIndex, mY - emTop, mY + emBottom);
+            // An above-staff mark's up half is kept apart (markUp) so the page breaker can be
+            // handed the extent WITHOUT the stacked marks (upWithoutMarks below), to which it
+            // adds them at their pure heights — see AugmentSkylinesForPaging's PureMarkBottomUp.
+            if (m.YUp > 0)
+            {
+                if (markUp is null)
+                {
+                    markUp = new double[n];
+                    Array.Fill(markUp, upSeed);
+                }
+                markUp[ms] = Math.Max(markUp[ms], -(mY - emTop));
+                down[ms] = Math.Max(down[ms], mY + emBottom - bottoms[ms]);
+            }
+            else
+                Add(m.MeasureIndex, mY - emTop, mY + emBottom);
         }
         foreach (var ct in ann.CustomTexts)
         {
@@ -641,13 +659,18 @@ internal sealed partial class LayoutEngine
             AddCurve(mi, -sl.StartYUp, -sl.EndYUp, -sl.Control1.Y, -sl.Control2.Y);
         }
 
+        var upWithoutMarks = markUp is null ? null : new double[n];
         for (int i = 0; i < n; i++)
         {
             var ext = perSystemExtents[i];
+            double withoutMarks = Math.Max(ext.upExtent, up[i]);
+            if (upWithoutMarks is not null)
+                upWithoutMarks[i] = withoutMarks;
             perSystemExtents[i] = (
-                Math.Max(ext.upExtent, up[i]),
+                markUp is null ? withoutMarks : Math.Max(withoutMarks, markUp![i]),
                 Math.Max(ext.downExtent, down[i]));
         }
+        return upWithoutMarks;
     }
 
     /// <summary>
@@ -832,6 +855,11 @@ internal sealed partial class LayoutEngine
     /// re-merge. MEASURED (session 142, Release): the merge was 209.5 ms of a 746.9 ms
     /// v2bow1k keystroke, ~all of it in unchanged systems' bow re-seeding.
     /// </remarks>
+    /// <param name="breakerUps">Filled, one entry a system, with the PAGE BREAKER's up
+    /// silhouette where it differs from the returned one (an above-staff music mark at its
+    /// pure height), else null.</param>
+    /// <param name="pureMarkTops">Per system, raised to the highest such mark's pure top
+    /// (Y-up from the system origin).</param>
     private static List<(VerticalSkyline up, VerticalSkyline down)>? AugmentSkylinesForPaging(
         ScoreTextMetrics fonts,
         List<(VerticalSkyline up, VerticalSkyline down)>? skylines,
@@ -850,7 +878,9 @@ internal sealed partial class LayoutEngine
         ImmutableArray<TextSpannerLayout> textSpanners = default,
         SystemLayoutCache? systemCache = null,
         IReadOnlyList<VerticalSkyline?>? lyricBands = null,
-        IReadOnlyList<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>>? pedalLines = null)
+        IReadOnlyList<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>>? pedalLines = null,
+        List<VerticalSkyline?>? breakerUps = null,
+        double[]? pureMarkTops = null)
     {
         if (skylines == null)
             return null;
@@ -1049,6 +1079,33 @@ internal sealed partial class LayoutEngine
         double ScoreGrobStaffTopUp(int s, int staffIndex)
             => LayoutUtilities.StaffOffsetInSystemUp(
                 systems[s], LayoutUtilities.ResolveScoreGrobStaff(systems[s], staffIndex));
+        // Where the page BREAKER stands an above-staff mark's ink bottom (Y-up from the system
+        // origin): its side-position padding over the staff — its pure extent — and never on
+        // another mark.
+        // LILYPOND-REF: lily/side-position-interface.cc aligned_side, pure — the mark's
+        //   supports are the staff symbol; MEASURED (2.26.0, Lab sessions/p851/pg1): a tempo's
+        //   and a rehearsal mark's pure extents both start 0.8 over the staff's top, the same
+        //   whether they share a bar or not.
+        // LILYPOND-REF: scm/define-grobs.scm MetronomeMark / RehearsalMark / SectionLabel /
+        //   TextMark / JumpScript / SegnoMark padding 0.8, CodaMark 0.4.
+        // ⚠️ NOT PORTED: adjacent_pure_heights (lily/axis-group-interface.cc:443-455) then
+        // moves an outside-staff grob clear of the interval's inside-staff PURE heights by its
+        // outside-staff-padding. Those pure heights are not Lily#'s drawn ink (a beamed stem is
+        // priced at its UNBEAMED length — lily/stem.cc:387-447 internal_pure_height — which on
+        // a tab staff stands 0.73 over the drawn beam), and raising over the drawn ink instead
+        // was MEASURED worse (svg sweep against the twins' page splits: 43 books to LilyPond's
+        // and 19 off it, against 51 and 19 without the raise).
+        double PureMarkBottomUp(MusicMarkLayout m, double staffTopUp)
+            => staffTopUp + (m.MarkType == MusicMarkType.Coda ? 0.4 : 0.8);
+        // The bar the mark stands at, within its system, or −1.
+        int BarOf(MusicMarkLayout m, int s)
+        {
+            var measures = systems[s].Measures;
+            for (int i = 0; i < measures.Length; i++)
+                if (measures[i].MeasureIndex == m.MeasureIndex)
+                    return i;
+            return -1;
+        }
         if (!musicMarks.IsDefaultOrEmpty)
         {
             foreach (var m in musicMarks)
@@ -1114,7 +1171,41 @@ internal sealed partial class LayoutEngine
                 // port is to stop having one. The X half made this same move in session 204
                 // (MarkXExtent); this is the Y half.
                 var (_, _, mTop, mBottom) = OutsideStaffStacker.MusicMarkExtents(fonts, m);
-                AddMarkBox(m.MeasureIndex, mx0 - margin, mx1 + margin, mY + mTop, mY - mBottom);
+                // …and a mark above the staff is ALSO given the box the page BREAKER prices it
+                // by (PagingAugmentProgram.Builder.AddMusicMarkBoxes): not stacked on the
+                // others, resting on the staff (PureMarkBottomUp).
+                if (m.YUp > 0)
+                {
+                    double pureBottom = PureMarkBottomUp(m, ScoreGrobStaffTopUp(ms, m.StaffIndex));
+                    double pureTop = pureBottom + mTop + mBottom;
+                    BuilderAt(ms).AddMusicMarkBoxes(mx0 - margin, mx1 + margin,
+                        mY - mBottom, mY + mTop, pureBottom, pureTop);
+                    if (pureMarkTops is not null && ms < pureMarkTops.Length)
+                        pureMarkTops[ms] = Math.Max(pureMarkTops[ms], pureTop);
+                    // A mark OPENING a line is also priced on the line before it: its bar's
+                    // column is that line's end, and LilyPond counts a grob there in the
+                    // interval before it, "visible with respect to a slightly longer line".
+                    // LILYPOND-REF: lily/axis-group-interface.cc:417-458 adjacent_pure_heights
+                    //   — j runs from the break BEFORE the grob's column (first_break−−), and
+                    //   rank_span[RIGHT] > start puts it in mid_line_heights[j]; :429-435
+                    //   visibility_end = ranks[j + 2], so the unbroken mark is the piece found.
+                    //   MEASURED (2.26.0, Lab sessions/p851/pg1/mk): a boxed mark opening the
+                    //   second line is in the System's begin heights of its bar AND the mid
+                    //   heights of the bar before.
+                    if (BarOf(m, ms) == 0 && ms > 0
+                        && systems[ms - 1].Measures is { IsDefaultOrEmpty: false } prev)
+                    {
+                        double lastX = prev[^1].X;
+                        double prevBottom = PureMarkBottomUp(m, ScoreGrobStaffTopUp(ms - 1, m.StaffIndex));
+                        double prevTop = prevBottom + mTop + mBottom;
+                        BuilderAt(ms - 1).AddBreakerOnlyMarkBox(
+                            lastX, lastX + (mx1 - mx0) + 2 * margin, prevBottom, prevTop);
+                        if (pureMarkTops is not null && ms - 1 < pureMarkTops.Length)
+                            pureMarkTops[ms - 1] = Math.Max(pureMarkTops[ms - 1], prevTop);
+                    }
+                }
+                else
+                    AddMarkBox(m.MeasureIndex, mx0 - margin, mx1 + margin, mY + mTop, mY - mBottom);
             }
         }
         if (!customTexts.IsDefaultOrEmpty)
@@ -1397,6 +1488,13 @@ internal sealed partial class LayoutEngine
                 ? builder.Build().Execute(skylines[s])
                 : systemCache.GetOrComputePagingAugment(s, skylines[s], builder));
         }
+        // The page breaker's up silhouettes, where they differ (a mark above the staff); not
+        // memoized — a marked system is a few a score.
+        if (breakerUps is not null)
+            for (int s = 0; s < systemCount; s++)
+                breakerUps.Add(builders[s] is { HasBreakerSteps: true } b
+                    ? b.Build().Execute(skylines[s], forBreaker: true).up
+                    : null);
 
         // Every program built owns copies of its steps; give the builders back cleared.
         for (int s = 0; s < systemCount; s++)

@@ -197,7 +197,8 @@ internal sealed partial class LayoutEngine
         ImmutableArray<SystemLayout> systems,
         List<(VerticalSkyline up, VerticalSkyline down)>? perSystemSkylines,
         List<(double upExtent, double downExtent)> perSystemExtents,
-        Func<int, double> sysHeight)
+        Func<int, double> sysHeight,
+        PreliminaryPass? breakerView = null)
     {
         if (perSystemSkylines == null)
             return null;
@@ -221,6 +222,13 @@ internal sealed partial class LayoutEngine
             var (up, down) = perSystemSkylines[i];
             double h = sysHeight(i);
             var ext = perSystemExtents[i];
+            // The BREAKER's up half: above-staff marks at their pure heights, not stacked
+            // (PreliminaryPass.BreakerUp) — these shapes are read by the breaker alone.
+            if (breakerView is { } bv)
+            {
+                up = bv.BreakerUp(i, up);
+                ext = (bv.BreakerUpExtent(i, ext.upExtent), ext.downExtent);
+            }
 
             // ONE walk per direction. max(begin, rest) is the whole skyline's own extent, so
             // the union below costs no further pass — see MaxHeightsSplitAt.
@@ -275,7 +283,8 @@ internal sealed partial class LayoutEngine
         List<double>? perSystemHeights = null,
         List<double>? perSystemBandUps = null,
         List<double>? perSystemCropDown = null,
-        ImmutableArray<BreakPermission>? perSystemPagePermissions = null)
+        ImmutableArray<BreakPermission>? perSystemPagePermissions = null,
+        PreliminaryPass? breakerView = null)
     {
         // The down extent the CROP reads: the system's own, raised to clear its loose block
         // standing at REST rather than at its alignment minimum
@@ -320,7 +329,11 @@ internal sealed partial class LayoutEngine
             // ...and the BREAKER's frame, per system: the same anchors with the last one
             // taken back up to the pairs' alignment minimum (BreakerFrame).
             var frames = systems.Select(BreakerFrame).ToImmutableArray();
-            var shapes = BuildLineShapes(systems, perSystemSkylines, perSystemExtents, SysHeight);
+            var shapes = BuildLineShapes(systems, perSystemSkylines, perSystemExtents, SysHeight,
+                breakerView);
+            double BreakerUpExtent(int i) =>
+                breakerView?.BreakerUpExtent(i, perSystemExtents[i].upExtent)
+                ?? perSystemExtents[i].upExtent;
             if (DebugPageBreakingScoring is { } debug)
             {
                 // The placed systems' own details — what the page is really broken from —
@@ -328,7 +341,7 @@ internal sealed partial class LayoutEngine
                 var placedDetails = new List<SystemDetails>(systems.Length);
                 for (int i = 0; i < systems.Length; i++)
                     placedDetails.Add(_pageLayouter.BuildSystemDetails(
-                        SysHeight(i), perSystemExtents[i].upExtent, perSystemExtents[i].downExtent,
+                        SysHeight(i), BreakerUpExtent(i), perSystemExtents[i].downExtent,
                         shapes is { } sh && i < sh.Length ? sh[i] : null,
                         perSystemPagePermissions is { } pp && i < pp.Length ? pp[i] : BreakPermission.Allow,
                         frames[i]));
@@ -345,7 +358,8 @@ internal sealed partial class LayoutEngine
                 perSystemPagePermissions,
                 frames,
                 onePage,
-                score.TextMetrics);
+                score.TextMetrics,
+                breakerView?.BreakerUpExtents);
             return (pages, pages.SelectMany(p => p.Systems).ToImmutableArray());
         }
 

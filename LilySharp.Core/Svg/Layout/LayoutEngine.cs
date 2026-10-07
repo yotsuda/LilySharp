@@ -235,7 +235,7 @@ internal sealed partial class LayoutEngine
         var (pages, systemsArray) = CreatePages(
             score, prelim.Systems, header, perSystemExtents, systemHeight,
             prelim.PagingSkylines, perSystemHeights, perSystemBandUps, placed.CropDown,
-            PagePermissionsAfterSystems(score, systems));
+            PagePermissionsAfterSystems(score, systems), prelim);
 
         return FinishLayout(score, systemCache, multiStaffLayouter, textRowStaves,
             systems, perSystemExtents, perSystemSkylines, placed, prelim, pages, systemsArray,

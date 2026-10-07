@@ -323,6 +323,9 @@ internal sealed class PageLayouter
     /// the measurement). Absent, a nominal half staff stands in, which is right only for a
     /// one-staff system of five lines; the product path always supplies it.
     /// </param>
+    /// <param name="systemBreakerUpExtents">Per system, the up extent the page BREAKER
+    /// prices the line by, where it differs from <paramref name="systemExtents"/>' (absent:
+    /// the same).</param>
     public ImmutableArray<PageLayout> CreatePagesWithOptimalBreaking(
         ImmutableArray<SystemLayout> systems,
         HeaderBand? header,
@@ -336,7 +339,8 @@ internal sealed class PageLayouter
         ImmutableArray<BreakPermission>? systemPagePermissions = null,
         ImmutableArray<BreakerRefpointFrame>? systemBreakerFrames = null,
         bool onePage = false,
-        Rendering.ScoreTextMetrics? fonts = null)
+        Rendering.ScoreTextMetrics? fonts = null,
+        IReadOnlyList<double>? systemBreakerUpExtents = null)
     {
         if (systems.Length == 0)
         {
@@ -379,8 +383,14 @@ internal sealed class PageLayouter
             double staffHeight = systemBodyHeights != null && i < systemBodyHeights.Count
                 ? systemBodyHeights[i]
                 : _options.StaffHeight;
+            // The up extent the BREAKER prices (LayoutEngine.PreliminaryPass.BreakerUpExtent:
+            // above-staff marks at their pure heights); a SystemDetails' up half is read by
+            // the breaker alone, the page below being spaced by systemExtents.
+            double breakerUp = systemBreakerUpExtents is { } bu && i < bu.Count
+                ? bu[i]
+                : systemExtents[i].upExtent;
             systemDetails.Add(BuildSystemDetails(
-                staffHeight, systemExtents[i].upExtent, systemExtents[i].downExtent,
+                staffHeight, breakerUp, systemExtents[i].downExtent,
                 systemShapes is { } sh && i < sh.Length ? sh[i] : null,
                 systemPagePermissions is { } pp && i < pp.Length ? pp[i] : BreakPermission.Allow,
                 systemBreakerFrames is { } bf && i < bf.Length ? bf[i] : null));

@@ -28,14 +28,21 @@ namespace LilySharp.Tests;
 /// The book title and the first system are ONE line to LilyPond's page breaker: the title
 /// carries no page-break permission, so compress_lines merges the two (PageBreaker.CompressLines)
 /// and the merged line is priced by its piggybacked shape and padding, not by the
-/// markup-system spring between two lines.
+/// markup-system spring between two lines. And the breaker prices a line's tempo and
+/// rehearsal mark at their PURE heights — each resting on the staff, united rather than
+/// stacked (PagingAugmentProgram.Builder.AddMusicMarkBoxes) — while the page is spaced by
+/// the stacked ones.
 /// MEASURED, LilyPond 2.26.0 on these books' twins (Lab sessions/p851/pg1 and ws): the
-/// systems per page below. With the title kept apart Lily# put one system less on page 1.
+/// systems per page below. With the title kept apart Lily# put one system less on page 1
+/// of automatic; with the marks stacked, one less on page 1 of amanda (a tempo and a
+/// rehearsal mark over its first system: LilyPond's pure tops 3.985 and 3.375 over the
+/// staff, which Lily# had priced 7.76 by stacking them).
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class TitleCompressedPagingTests
 {
     [Theory]
+    [InlineData("amanda.lys", new[] { 13, 5 })]
     [InlineData("automatic.lys", new[] { 13, 9 })]
     public void TheTitledFirstPage_HoldsWhatLilyPondsDoes(string book, int[] lilyPond)
     {

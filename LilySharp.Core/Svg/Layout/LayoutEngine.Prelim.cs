@@ -76,7 +76,21 @@ internal sealed partial class LayoutEngine
         ImmutableArray<BeamGroup> AnnotationBeamGroups,
         Dictionary<int, ImmutableArray<TieLayout>> TiesByStaff,
         Dictionary<int, ImmutableArray<SlurLayout>> SlursByStaff,
-        ImmutableArray<SystemLayout> Systems);
+        ImmutableArray<SystemLayout> Systems,
+        List<VerticalSkyline?>? BreakerUpSkylines,
+        double[]? BreakerUpExtents)
+    {
+        /// <summary>System <paramref name="i"/>'s up silhouette as the PAGE BREAKER reads it —
+        /// above-staff music marks at their pure heights, not stacked (PagingAugmentProgram's
+        /// pure mark step) — or the paging silhouette's own where nothing differs.</summary>
+        public VerticalSkyline BreakerUp(int i, VerticalSkyline pagingUp)
+            => BreakerUpSkylines is { } b && i < b.Count && b[i] is { } up ? up : pagingUp;
+
+        /// <summary>System <paramref name="i"/>'s up extent as the PAGE BREAKER reads it (see
+        /// <see cref="BreakerUp"/>), or <paramref name="extent"/> where nothing differs.</summary>
+        public double BreakerUpExtent(int i, double extent)
+            => BreakerUpExtents is { } e && i < e.Length ? e[i] : extent;
+    }
 
     /// <summary>
     /// The PRELIMINARY annotation pass: lays the annotations out against provisional system
@@ -301,25 +315,47 @@ internal sealed partial class LayoutEngine
             LyricChains = systemCache?.PreliminaryLyricChains,
         });
         GivePrelimBeams(prelimBeams);
-        EnrichExtentsWithAnnotationProtrusions(score.TextMetrics, perSystemExtents, prelimSystems,
-            prelimAnn, allPrelimTies, allPrelimSlurs,
+        var upWithoutMarks = EnrichExtentsWithAnnotationProtrusions(score.TextMetrics,
+            perSystemExtents, prelimSystems, prelimAnn, allPrelimTies, allPrelimSlurs,
             rowsAboveFirstStaff, pedalLines);
+        // The page breaker's view, only when a music mark stands above a staff: the marks at
+        // their pure heights (AugmentSkylinesForPaging) instead of where they were stacked.
+        List<VerticalSkyline?>? breakerUps = null;
+        double[]? pureMarkTops = null;
+        if (upWithoutMarks is not null)
+        {
+            breakerUps = new List<VerticalSkyline?>(perSystemSkylines.Count);
+            pureMarkTops = new double[perSystemSkylines.Count];
+            Array.Fill(pureMarkTops, double.NegativeInfinity);
+        }
+        var pagingSkylines = AugmentSkylinesForPaging(
+            score.TextMetrics,
+            perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
+            prelimAnn.VoltaBrackets, prelimSystems,
+            prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames,
+            prelimAnn.Dynamics,
+            prelimAnn.BarNumbers, prelimAnn.TupletBrackets, allPrelimSlurs,
+            allPrelimTies, prelimAnn.TextSpanners,
+            systemCache, lyricBands, pedalLines, breakerUps, pureMarkTops);
+        double[]? breakerUpExtents = null;
+        if (upWithoutMarks is not null)
+        {
+            breakerUpExtents = new double[upWithoutMarks.Length];
+            for (int i = 0; i < upWithoutMarks.Length; i++)
+                breakerUpExtents[i] = i < pureMarkTops!.Length
+                    ? Math.Max(upWithoutMarks[i], pureMarkTops[i])
+                    : upWithoutMarks[i];
+        }
         return new PreliminaryPass(
-            AugmentSkylinesForPaging(
-                score.TextMetrics,
-                perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
-                prelimAnn.VoltaBrackets, prelimSystems,
-                prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames,
-                prelimAnn.Dynamics,
-                prelimAnn.BarNumbers, prelimAnn.TupletBrackets, allPrelimSlurs,
-                allPrelimTies, prelimAnn.TextSpanners,
-                systemCache, lyricBands, pedalLines),
+            pagingSkylines,
             prelimBeamsByStaff,
             allBeams,
             annotationBeamGroups,
             prelimTiesByStaff,
             prelimSlursByStaff,
-            prelimSystems);
+            prelimSystems,
+            breakerUps,
+            breakerUpExtents);
     }
 
     /// <summary>

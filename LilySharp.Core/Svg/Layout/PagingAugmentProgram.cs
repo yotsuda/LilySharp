@@ -71,6 +71,11 @@ internal sealed class PagingAugmentProgram
         MarkBox,
         BarNumberBox,
         LyricBand,
+        // A music mark's two boxes, one step each: where the layout STACKS it (merged by
+        // the plain replay) and where the page breaker's pure height puts it (merged only by
+        // the breaker's replay) — see Builder.AddMusicMarkBoxes.
+        StackedMusicMarkBox,
+        PureMusicMarkBox,
     }
 
     private readonly Kind[] _kinds;
@@ -126,8 +131,13 @@ internal sealed class PagingAugmentProgram
     /// <c>SystemLayoutCache.GetOrComputePagingAugment</c>'s reference-equality key rests on.
     /// </para>
     /// </remarks>
+    /// <param name="baseline">The system's base paging silhouette.</param>
+    /// <param name="forBreaker">Replay for the PAGE BREAKER: a music mark is merged where its
+    /// pure height stands (<see cref="Kind.PureMusicMarkBox"/>) instead of where the layout
+    /// stacked it. The layout's replay (false) is byte-identical to the program without the
+    /// pure steps, which it skips without touching a side.</param>
     public (VerticalSkyline up, VerticalSkyline down) Execute(
-        (VerticalSkyline up, VerticalSkyline down) baseline)
+        (VerticalSkyline up, VerticalSkyline down) baseline, bool forBreaker = false)
     {
         var cur = baseline;
         bool ownUp = false, ownDown = false;
@@ -222,6 +232,19 @@ internal sealed class PagingAugmentProgram
                         _args[a], _args[a + 1], _args[a + 2], _args[a + 3]);
                     Down().MergeBox(
                         _args[a], _args[a + 1], _args[a + 2], _args[a + 3]);
+                    a += BoxArgs;
+                    break;
+                }
+                case Kind.StackedMusicMarkBox:
+                case Kind.PureMusicMarkBox:
+                {
+                    if (forBreaker == (kind == Kind.PureMusicMarkBox))
+                    {
+                        Up().MergeBox(
+                            _args[a], _args[a + 1], _args[a + 2], _args[a + 3]);
+                        Down().MergeBox(
+                            _args[a], _args[a + 1], _args[a + 2], _args[a + 3]);
+                    }
                     a += BoxArgs;
                     break;
                 }
@@ -330,6 +353,43 @@ internal sealed class PagingAugmentProgram
         public void AddBarNumberBox(double xLeft, double xRight, double bottom, double top)
             => AddBox(Kind.BarNumberBox, xLeft, xRight, bottom, top);
 
+        /// <summary>
+        /// A music mark (tempo, rehearsal mark, section label, …) as two boxes: where the
+        /// layout stacked it, and where LilyPond's page breaker prices it.
+        /// </summary>
+        /// <remarks>
+        /// LILYPOND-REF: lily/axis-group-interface.cc:395-458 adjacent_pure_heights — an
+        /// outside-staff grob's pure height is its own pure extent (for a mark, side-position
+        /// against the staff) moved clear of the inside-staff heights by its
+        /// outside-staff-padding (Interval::union_disjoint), and UNITED with the others: "the
+        /// outside-staff approximation that we use here doesn't consider any collisions that
+        /// might occur between outside-staff grobs". The breaker reads those heights
+        /// (lily/constrained-breaking.cc:512-547 fill_line_details); the page is then spaced by
+        /// the real, stacked stencils (lily/page-layout-problem.cc:1070-1127). Lily#'s pure
+        /// box rests on the staff alone — see LayoutEngine.AugmentSkylinesForPaging's
+        /// PureMarkBottomUp for the move it does not make, and why.
+        /// </remarks>
+        public void AddMusicMarkBoxes(double xLeft, double xRight,
+            double stackedBottom, double stackedTop, double pureBottom, double pureTop)
+        {
+            AddBox(Kind.StackedMusicMarkBox, xLeft, xRight, stackedBottom, stackedTop);
+            AddBox(Kind.PureMusicMarkBox, xLeft, xRight, pureBottom, pureTop);
+            HasBreakerSteps = true;
+        }
+
+        /// <summary>A music mark's pure box ALONE, read by the breaker's replay only — for a
+        /// mark the breaker counts on a line the layout does not draw it on (the line BEFORE
+        /// a mark that opens one: LayoutEngine.AugmentSkylinesForPaging).</summary>
+        public void AddBreakerOnlyMarkBox(double xLeft, double xRight, double bottom, double top)
+        {
+            AddBox(Kind.PureMusicMarkBox, xLeft, xRight, bottom, top);
+            HasBreakerSteps = true;
+        }
+
+        /// <summary>A step only the breaker's replay reads has been added since the last
+        /// clear.</summary>
+        public bool HasBreakerSteps { get; private set; }
+
         private void AddBox(Kind kind, double xLeft, double xRight, double bottom, double top)
         {
             _kinds.Add(kind);
@@ -416,6 +476,7 @@ internal sealed class PagingAugmentProgram
             _scripts.Clear();
             _tupletGroups.Clear();
             _lyricBands.Clear();
+            HasBreakerSteps = false;
         }
     }
 }
