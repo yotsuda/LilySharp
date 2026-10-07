@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="390.2" viewBox="0 0 119.50 39.02" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="392.3" viewBox="0 0 119.50 39.23" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="39.02" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="39.23" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="249">Mid-Piece Voice Dynamics</text>
   <text x="110.97" y="15.76" font-size="2.20" text-anchor="end" data-pos="285">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
@@ -55,8 +55,8 @@
   <rect x="28.89" y="23.96" width="0.19" height="4.00" data-pos="379"/>
   <rect x="38.56" y="23.96" width="0.19" height="4.00" data-pos="411"/>
   <rect x="49.91" y="23.96" width="0.19" height="4.00" data-pos="422"/>
-  <text x="30.80" y="30.51" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="392">f</text>
-  <text x="30.80" y="32.75" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="403">p</text>
+  <text x="30.80" y="32.85" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="392">f</text>
+  <text x="30.80" y="30.67" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="403">p</text>
   <text class="music" x="13.42" y="22.60" font-size="3.56" data-pos="299"></text>
   <line x1="14.52" y1="22.43" x2="14.52" y2="19.92" stroke="#000000" stroke-width="0.116" data-pos="299"/>
   <text x="15.20" y="23.08" font-size="2.20" data-pos="299">= 96</text>

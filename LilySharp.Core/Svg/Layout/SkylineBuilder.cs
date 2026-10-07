@@ -2397,7 +2397,7 @@ internal sealed class SkylineBuilder
         // Same-column dynamics stack AWAY from the staff (see DynamicEngraver); track
         // depth per side so the reservation reflects the outermost stacked glyph.
         var stackAt = new Dictionary<(int, int, bool), int>();
-        foreach (var dyn in dynamics)
+        foreach (var dyn in InTurnOrder())
         {
             int layoutIdx = -1;
             for (int i = 0; i < measureLayouts.Length; i++)
@@ -2451,7 +2451,6 @@ internal sealed class SkylineBuilder
             }
             else
             {
-                baselineUp -= depth * DynamicEngraver.StackStep;
                 // The outside-staff collision pass over the ACCUMULATED down profile
                 // (staff symbol, clef, notes, real stems, scripts, brackets, bows,
                 // beams — everything merged before this call): the quiet side-position
@@ -2480,6 +2479,7 @@ internal sealed class SkylineBuilder
                 }
                 else
                 {
+                    baselineUp -= depth * DynamicEngraver.StackStep;
                     double bottomUp = size.Span(baselineUp - descent) + staffMiddleUp;
                     double dynamicWidth = size.Span(1.3);
                     var box = VerticalSkyline.FromBox(
@@ -2488,6 +2488,47 @@ internal sealed class SkylineBuilder
                     downSkyline.Merge(box);
                 }
             }
+        }
+
+        // The order the drawing's outside-staff pass places them in (OutsideStaffStacker's
+        // 250 turn): above ones as they come, then the below dynamics by their LEFT edge,
+        // then the below free texts (TextScript's 450) by theirs.
+        // LILYPOND-REF: lily/axis-group-interface.cc:880-907 skyline_spacing — Skyline_key
+        //   (priority, left_extent), std::stable_sort.
+        IEnumerable<DynamicItem> InTurnOrder()
+        {
+            List<(int Stage, double Left, int Seq, DynamicItem D)>? below = null;
+            foreach (var d in dynamics)
+            {
+                if (d.IsAbove)
+                {
+                    yield return d;
+                    continue;
+                }
+                double left = double.PositiveInfinity;
+                foreach (var ml in measureLayouts)
+                {
+                    if (ml.MeasureIndex != d.MeasureIndex)
+                        continue;
+                    double xColumn = ml.X + LayoutUtilities.GetItemXOffset(
+                        primaryMeasures, d.MeasureIndex, d.ItemIndex, ml);
+                    double half = DynamicEngraver.LabelHalfWidth(_fonts, d.Text ?? string.Empty, d.IsExpressiveText);
+                    double xLabel = xColumn + (d.IsExpressiveText
+                        ? half
+                        : DynamicEngraver.DynamicAnchorCentreOffset(
+                            voices, d.VoiceIndex, d.MeasureIndex, d.ItemIndex));
+                    left = xLabel - half;
+                    break;
+                }
+                below ??= new();
+                below.Add((d.IsExpressiveText ? 1 : 0, left, below.Count, d));
+            }
+            if (below is null)
+                yield break;
+            below.Sort(static (a, b) => a.Stage != b.Stage ? a.Stage.CompareTo(b.Stage)
+                : a.Left != b.Left ? a.Left.CompareTo(b.Left) : a.Seq.CompareTo(b.Seq));
+            foreach (var b in below)
+                yield return b.D;
         }
     }
 

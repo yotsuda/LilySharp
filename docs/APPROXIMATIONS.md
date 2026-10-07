@@ -211,13 +211,13 @@
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
 - **:131** staff_extent[DOWN], which is the ink edge too. ⚠️ No ledger point measures
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
-- **:1945** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
+- **:1980** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **:502** same part (leftHand). No book reaches the configuration, so no ledger point and
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
 - **:1349** ⚠️ The half-blot Y has no observer (session 812): the tab test reads
-- **:2750** ⚠️ NO OBSERVER for the X origin (poisons, session 813): shifting it by the
-- **:3240** ⚠️ NO OBSERVER for this arm's half-blot Y nor its up-skyline merge (poisons,
+- **:2791** ⚠️ NO OBSERVER for the X origin (poisons, session 813): shifting it by the
+- **:3281** ⚠️ NO OBSERVER for this arm's half-blot Y nor its up-skyline merge (poisons,
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
 - **:56** the distance is taken at — and NO ledger point moves with it. An output change no point
 ### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
@@ -411,7 +411,7 @@
 - **:266** ⚠️ LILYSHARP-OWN: the dots' preferred DIRECTION is not read here. LilyPond's
 ### `LilySharp.Core/Svg/Layout/DynamicEngraver.cs`
 - **:122** ⚠️ LILYSHARP-OWN: a string the bundled face cannot spell (CJK — TextFontMetrics reports
-- **:465** ⚠️ LILYSHARP-OWN: the number is a support of THIS text alone, not ink of the staff's
+- **:470** ⚠️ LILYSHARP-OWN: the number is a support of THIS text alone, not ink of the staff's
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
 - **:2757** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
 - **:2806** ⚠️ LILYSHARP-OWN, and LilyPond cannot be asked: MEASURED on 2.26.0, all three
@@ -497,8 +497,8 @@
 ### `LilySharp.Core/Svg/Layout/NoteSpacingParameters.cs`
 - **:69** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
-- **:1197** system would hand back marks placed without the labels under them. LILYSHARP-OWN
-- **:3436** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
+- **:1232** system would hand back marks placed without the labels under them. LILYSHARP-OWN
+- **:3471** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
 ### `LilySharp.Core/Svg/Layout/PageBreaker.cs`
 - **:100** ⚠️ LILYSHARP-OWN: THE NULLABILITY. LilyPond's Line_details ALWAYS carries a shape —
 - **:154** LILYSHARP-OWN: the number itself has no LilyPond counterpart, because LilyPond's

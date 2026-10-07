@@ -51,9 +51,11 @@ public class OutsideStaffStackerTests
         var dynamics = ImmutableArray.Create(
             new DynamicLayout(MeasureIndex: 0, ItemIndex: 0, X: 20, YUp: -4.0, Text: "f", SourcePosition: 0));
 
-        // Hairpin spanning X=[18, 25], initially at device BaseY=5.2 (YUp = -5.2).
+        // Hairpin spanning X=[20, 25], initially at device BaseY=5.2 (YUp = -5.2). It starts
+        // at the f's centre — right of the f's left edge, so the f is placed first (the
+        // turn's left-edge order, OutsideStaffStacker) — and still runs under its right half.
         var hairpins = ImmutableArray.Create(
-            new HairpinLayout(StartMeasureIndex: 0, StartX: 18, EndX: 25,
+            new HairpinLayout(StartMeasureIndex: 0, StartX: 20, EndX: 25,
                 YUp: -5.2, StartOpening: 0, EndOpening: 0.333,
                 Direction: HairpinDirection.Crescendo, SourcePosition: 0));
 
@@ -62,11 +64,39 @@ public class OutsideStaffStackerTests
 
         // Hairpin should be pushed below the dynamic's bottom extent (down = smaller
         // YUp). Dynamic bottom = 6.0 + 0.3 (descent) = 6.3; required device Y =
-        // 6.3 + 0.46 (padding) + 0.333 (half height) ≈ 7.09 → YUp ≈ -7.09.
+        // 6.3 + 0.46 (padding) + 0.333 (half height) ≈ 7.09 → YUp ≈ -7.09 for a flat box; the
+        // wedge's real sloped outline is narrower under the f (it opens from its start at the
+        // f's centre), so it clears a little higher: -6.95.
         Assert.True(adjHairpins[0].YUp < -5.2,
             $"Hairpin YUp ({adjHairpins[0].YUp:F2}) should be pushed below original -5.2");
-        Assert.True(adjHairpins[0].YUp <= -7.0,
+        Assert.True(adjHairpins[0].YUp <= -6.9,
             $"Hairpin YUp ({adjHairpins[0].YUp:F2}) should clear dynamic bottom + padding");
+    }
+
+    /// <summary>
+    /// The 250 turn places its grobs by LEFT edge, not by family: a hairpin starting left of
+    /// a dynamic is placed first, and the dynamic goes under it.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/axis-group-interface.cc:880-907 skyline_spacing — Skyline_key
+    /// (priority, left_extent), std::stable_sort.</remarks>
+    [Fact]
+    public void HairpinStartingLeftOfADynamic_IsPlacedFirst()
+    {
+        var systems = CreateSingleSystem();
+        var dynamics = ImmutableArray.Create(
+            new DynamicLayout(MeasureIndex: 0, ItemIndex: 0, X: 20, YUp: -4.0, Text: "f", SourcePosition: 0));
+        var hairpins = ImmutableArray.Create(
+            new HairpinLayout(StartMeasureIndex: 0, StartX: 18, EndX: 25,
+                YUp: -4.4, StartOpening: 0, EndOpening: 0.333,
+                Direction: HairpinDirection.Crescendo, SourcePosition: 0));
+
+        var (adjDynamics, adjHairpins, _, _) = OutsideStaffStacker.StackBelowStaff(ScoreTextMetrics.Bundled,
+            systems, dynamics, hairpins);
+
+        Assert.True(adjDynamics[0].YUp < -4.0,
+            $"the f ({adjDynamics[0].YUp:F2}) should go under the hairpin placed before it");
+        Assert.True(adjDynamics[0].YUp < adjHairpins[0].YUp,
+            $"f {adjDynamics[0].YUp:F2} should stand below the hairpin {adjHairpins[0].YUp:F2}");
     }
 
     [Fact]

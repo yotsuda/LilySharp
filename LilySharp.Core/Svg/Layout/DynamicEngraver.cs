@@ -292,12 +292,17 @@ internal static class DynamicEngraver
                 mi, ii, xColumn, x, dynamic.Text, expressive,
                 vi => beamMembers.TryGetValue((staffIdx, vi, mi, ii), out var b) ? b : null);
 
-            var key = (dynamic.MeasureIndex, dynamic.ItemIndex, dynamic.StaffIndex, dynamic.IsAbove);
-            int depth = stackAt.GetValueOrDefault(key, 0);
-            stackAt[key] = depth + 1;
-            // Stack each successive same-column dynamic AWAY from the staff. In the
-            // native Y-up frame that is up (+) for above and down (−) for below.
-            y += (dynamic.IsAbove ? depth : -depth) * StackStep;
+            // Stack each successive same-column dynamic ABOVE the staff away from it (+ in
+            // the native Y-up frame). BELOW, no step: each stays at its own side-position and
+            // OutsideStaffStacker's 250 turn separates them, in LilyPond's left-edge order —
+            // a fixed 2.0 in source order put the wrong one by the staff (Lab sessions/p851/dyn).
+            if (dynamic.IsAbove)
+            {
+                var key = (dynamic.MeasureIndex, dynamic.ItemIndex, dynamic.StaffIndex, dynamic.IsAbove);
+                int depth = stackAt.GetValueOrDefault(key, 0);
+                stackAt[key] = depth + 1;
+                y += depth * StackStep;
+            }
 
             // y is already in the LilyPond-native Y-up frame (staff-spaces above the
             // staff middle); no staff offset is baked — the renderer/stacker resolve

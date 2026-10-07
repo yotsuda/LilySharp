@@ -76,7 +76,8 @@ public class OutsideStaffStackLiveSubsetTests
     }
 
     /// <summary>One dynamic and one hairpin per system, in that order: index 0 in system 0,
-    /// index 1 in system 1.</summary>
+    /// index 1 in system 1. The hairpin starts at the dynamic's centre, right of its left edge,
+    /// so the 250 turn's left-edge order places the dynamic first.</summary>
     private static (ImmutableArray<DynamicLayout> Dynamics, ImmutableArray<HairpinLayout> Hairpins)
         Inputs()
     {
@@ -86,10 +87,10 @@ public class OutsideStaffStackLiveSubsetTests
             new DynamicLayout(MeasureIndex: 2, ItemIndex: 0, X: 20, YUp: -4.0, Text: "p",
                 SourcePosition: 1));
         var hairpins = ImmutableArray.Create(
-            new HairpinLayout(StartMeasureIndex: 0, StartX: 18, EndX: 25, YUp: -5.2,
+            new HairpinLayout(StartMeasureIndex: 0, StartX: 20, EndX: 25, YUp: -5.2,
                 StartOpening: 0, EndOpening: 0.333, Direction: HairpinDirection.Crescendo,
                 SourcePosition: 0),
-            new HairpinLayout(StartMeasureIndex: 2, StartX: 18, EndX: 25, YUp: -5.2,
+            new HairpinLayout(StartMeasureIndex: 2, StartX: 20, EndX: 25, YUp: -5.2,
                 StartOpening: 0, EndOpening: 0.333, Direction: HairpinDirection.Crescendo,
                 SourcePosition: 1));
         return (dynamics, hairpins);
