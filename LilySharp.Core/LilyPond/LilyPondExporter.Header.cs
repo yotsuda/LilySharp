@@ -276,7 +276,13 @@ public sealed partial class LilyPondExporter
                .Append("\\paper {\n")
                .Append("  property-defaults.fonts.serif = \"LilyPond Serif\"\n")
                .Append("  property-defaults.fonts.sans = \"LilyPond Sans Serif\"\n")
-               .Append("}\n\n");
+               .Append("}\n\n")
+               // …and no tagline: LilyPond's default footer on the last page ("Music engraving
+               // by LilyPond") takes that page's height (scm/page.scm:303-321 calc-printable-height
+               // less the foot-stencil) where Lily# prints nothing, so a measured last page would
+               // differ for a line no Lily# page has (Lab sessions/p851, the twin sweep).
+               // LILYPOND-REF: ly/titling-init.ly oddFooterMarkup — \fromproperty #'header:tagline.
+               .Append("\\header { tagline = ##f }\n\n");
 
         // ⚠️ `paper { }` is NOT exported, and unlike the font omission above this one is
         // a drummap-shaped hole, not a knowing equivalence: paper DOES move Lily#'s

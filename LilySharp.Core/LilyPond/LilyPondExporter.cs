@@ -504,7 +504,9 @@ public sealed partial class LilyPondExporter
 
     /// <summary>
     /// Write a <c>\paper</c> block pinning the twin's serif and sans faces to LilyPond's
-    /// bundled ones (<c>lysc ly --pin-fonts</c>). Off by default: the twin is a control
+    /// bundled ones (<c>lysc ly --pin-fonts</c>), and turn LilyPond's tagline off — the one
+    /// footer a measured page would carry that no Lily# page has (session 851). Off by
+    /// default: the twin is a control
     /// laid out on LilyPond's own paper, and the corpus's twins must not all move for a
     /// measuring convenience.
     /// </summary>
