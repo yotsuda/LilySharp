@@ -78,6 +78,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。→ **第751（2026-10-02・ユーザー決定）「LP 忠実にこだわるより音楽的な妥当性を重視。LP から引き継ぐのはレンダリングとレイアウトの美しさだけ。ユーザーがまだ少ないので過去のしがらみに縛られない」＝意味論（拍子・弱起・反復・強弱・検査・出力の意味）の裁定者は音楽的妥当性、LP は描画と配置の裁定者（RULES §5.2 に規則として置いた）。
 
+**★★★★ 第850〜851（2026-10-06〜07）ユーザー決定＝次の会話はここから**: OMR P6（SMuFL）は「描画だけの差し替え」ではなく**寸法まで SMuFL から**（ユーザー利便性）。形は**内部の共通語を SMuFL にし、Emmentaler も SMuFL の形で包む**（字形は SMuFL 名・寸法は metadata の形＋LP 固有の拡張＝LILC の箱と輪郭の箱・サイズ別設計・brace の段・付け点。Emmentaler の出力はバイト不変が条件）。**ただし先に LP 忠実度の総点検**（台帳は OPEN 0 だが、第849〜850 の 3 件＝brace の段・bracket の長さ・加線つき休符の skyline はどれも台帳の外で、本を LP と並べて見つかった）: ① 広い計器＝コーパス全冊の双子を LP で描き、系ごとの譜の間隔と小節線の x を Lily# と自動で突き合わせ、差を種類ごとに束ねる → ② 効く順に直す → ③ 新しい種類が出なくなったら区切り、SMuFL の土台（3〜4 便）→ 取り込み → 出力 → 仕上げ（計 7〜10 便）。フォントの入手（同梱か）と書き方（`paper { musicFont … }`）は取り込みの段までに決める。
+
 **★★★★ 第815〜816（2026-10-05）ユーザー指示「OMR の提案を優先度順に着手」＝次の会話はここから**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`。OMR は別プログラム・Lily# は子プロセスで呼びファイルを読むだけ＝コードを混ぜない）: 0（#17〜#20）・A1 `@todo`・B1 の枠（L1・L7＝`93e1477e8`）・B2（`f5a3d3142`）・**C1・C2・B3（第816）・B4・C3（第817＝`paper { breaksOnly }`）・B5・B6（第818＝`0de6d924a`・`e1796b14c`）は閉じた**。配布の取り決め `..\LilySharp-Omr\docs\repro\lilysharp-omr-distribution-2026-10-05.md`（同梱しない・L1〜L11）。⚠️ **B1〜B6 は VS Code で未確認**（OMR の `omr read` は第 1 歩が動く＝`OmrProto.exe` を `LILYSHARP_OMR_PATH` で指せば試せる）。残り: ⑥ 10-02 提案（学習データ）: **P1・P2・P3・P5（第818〜821）と P4 の線の太さ・符幹（第822）・加線の長さ（第824）・連桁の傾き（第825＝`Beam.damping`）・付点と臨時記号の間（第826）・符頭の大きさ（第827＝`NoteHead.scale`）は閉じた＝P4 は全部・boxes の `staff` を強弱・スクリプト等にも（第828）・残りは作らないと決めた（第828）・全部 `paper { }`／`layout { }` の言語のキー（第823・`--set` は上書き）**。次は P6（SMuFL＝大・別に判断）。**B5 は OMR の `omr verify`（第818 が提案）が出るまで動かない**。OMR 側へのお願い（`breaksOnly` を書く・`part voice` をやめる・TIFF 用の PNG・`omr verify`・記号単位の `confidence`/`candidates`）は OMR の提案書に書いた。配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後。第814 末の決定（下）はこの後。
 
 **★★★★ 第814 末のユーザー決定（2026-10-04）＝次の会話はここから**（判断の基準は音楽的妥当性。**手元のコーパスは偏っているので「コーパスで困ったか」を判断材料にしない**）:
@@ -125,6 +127,12 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第851セッション（2026-10-07・YT-DELL2）
+
+同じ会話のまま。`-Start p851`（HEAD `f177ba71b`）＝full **11364 / 0 / 2 / 11366**。§7 3.5 で第849 を ARCHIVE へ。ユーザー「始めて」＝§1.0 の忠実度の総点検 ① 広い計器から。
+
+## 以下は第850セッションの経緯
+
 ### 1.1 第850セッション（2026-10-06・YT-DELL2）
 
 同じ会話のまま（第849 の判定どおり・HANDOFF の枠のため）。`-Start p850`（HEAD `acc695f9d`）＝full **11358 / 0 / 2 / 11360**。§7 3.5 で第848 を ARCHIVE へ。ユーザー「続けて」＝F-twinhk と bracket の `len`。
@@ -132,22 +140,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **bracket・系頭の bar も LP の `len`（`f332e8d04`）**: `staff_bracket`／`line_bracket`／`simple_bar` も高さは `len`（span＋線の太さ）。LP 実測（Lab `sessions/p850/br`）＝3 段 StaffGroup の bracket の箱 22.19・Score の SystemStartBar 22.1・choir-staff の bracket 13.19＝Lily# は 0.1 短かった→一致。試験 `SystemStartDelimiterLengthTests`（毒 赤）・snapshot 70 枚・svg の掃き 1199 中 416（変わった行は bar・bracket の線と先端だけ）。`-End p850 -DiffBase acc695f9d`＝門 全 OK・Core `+` 35 行（REF 2）・full **11363 / 0 / 2 / 11365**（+5）。
 - **ユーザー「ハラキリ」＝3 系目の譜の間隔を閉じた（`4dad5b3ae`）**: LP の `ly:skyline-distance`／`ly:skyline-touching-point` で、二つの譜の skyline が触れるのは 2 小節目の頭＝上の b4 の符幹（−3.333）と、下の 2 声目に +10 へ押し上げられた全休符の加線（5.1＝線の 0.1 上）。Lily# の `SkylineBuilder` は休符の輪郭を `GetRest(値, 0)`＝いつも加線なしの glyph で作っていた（註も「未測定」）→ 実際の位置（`NeutralRestPosition`＋ずれ）の glyph に。生成器 `Extract-EmmentalerMetrics.py` に `rests.M1o/0o/1o` を足した（輪郭は加線込み＝全休符は上 0.1・左右 0.624 広い・fonttools を入れて冪等を確かめてから）。間隔 5.34 → 5.44（LP 5.4333）。試験 `LedgeredRestSkylineTests`（毒 赤）・snapshot は hara-kiri 1 枚・svg の掃き 1199 中 1（その本だけ）・full **11364 / 0 / 2 / 11366**。
 判定: 次の一手はユーザー判断（OMR P6 等）。(c) 無関係 ⇒ 既定は続ける。
-
-## 以下は第849セッションの経緯
-
-### 1.1 第849セッション（2026-10-06・YT-DELL2）
-
-新しい会話。`-Start p849`（HEAD `cb5dc56e6`）＝full **11346 / 0 / 2 / 11348**（第848 末と一致）。§7 3.5 で第847 を ARCHIVE へ。ユーザーの選択「F-partmeter の残り（小）」＝**`f26d74583`**。
-- **測った**（Lab `sessions/p849/pm`・`r-*.lys`）: ページは全形で正しい。欠けていたのは ⑴ XML＝書く part の小節が反復（`repeat unfold`）・phrase 参照・`voice` の中だと `<time>` が 4/4 のまま（戻りの 4/4 も無し）⑵ MIDI＝書く part の `| |`・裸の `R` が自分の拍子 ⑶ 検査＝裸の `R` に LYS2004 の偽陽性（cross-part が plan を見ない）。双子は LP の Timing が正しく描くので触らない。
-- **直し**: XML＝`StartNewMeasure` が小節を開くたびに `ForeignChangeAt`（play の section・容器・先頭小節を `EmitPartMusic` が持つ）＝`WithForeignChanges` の呼び出しは XML から消えた。MIDI＝part block／by-part section の items に `WithForeignChanges`（反復等の中の空小節は未対応のまま＝実害の形は未観測）。検査＝`MeasureModel.Split` に `plannedMeterAt`（小節が開くとき）・`CrossPartMeasureValidator` が plan を受ける。
-- 試験 `PartMeterTests` +6・毒 3 本（XML 4 赤／MIDI 2／cross 1）。掃き 998 冊 1199 score で svg・xml・midi・ly とも差 0（陽性対照は probe）。full **11352 / 0 / 2 / 11354**（+6）。
-- **見つけた（別の島・未着手）**: §2 F-phrasemeter（下）。
-
-★ `-End p849 -DiffBase cb5dc56e6`（`end.log`）＝門 全 OK。7.5: Core `+` 77 行・REF 0・OWN 0（LP の字面は無い＝意味は第848 のユーザー決定・RULES §5.2）。7.6: 全部 SectionMeterPlan の読み手を増やしただけ（新しい規則は無い）。7.7: 匂い＝①MIDI は反復・phrase・voice の中の空小節／裸の `R` を自分の拍子のまま（`WithForeignChanges` の限界・観測なし）②`MeasureModel.Split` の `plannedMeterAt` は `R1*N` の展開の途中の小節では問わない。push はユーザー。
-- **続き（ユーザー「続けて」）＝F-phrasemeter を閉じた（`716cdccd4`）**: `ValidateMeasures` の PhraseSpan の腕が、本体を repeat の本体と同じ形で検査する（小節の経過拍を lead-in・その場の拍子・四分から・最後の塊は開いたまま）。宣言の単独検査は walk の後まで保留し、どの流れも in-place で検査しなかった phrase だけ宣言時の拍子で回す（`_heldPhraseBodies`・`_phrasesCheckedInPlace`）。ついでに閉じた偽陽性: 小節の途中で使う断片（`e'2 hook …`・hook＝`c'4 |`）の LYS2006。試験 `PhraseMeterTests` 5 本・毒 2 本（各 4 赤）。`CueRegionTests` の inline の本は使わない phrase を宣言しない形に（使わない半小節の phrase は今も LYS2006）。`lysc check` の掃き 998 冊＝1955 行で両側同じ・差 0（Lab `sessions/p849/check`）。`-End`（`end2.log`）＝門 全 OK・Core `+` 122 行（REF 0・OWN 0＝LP の字面なし）・full **11357 / 0 / 2 / 11359**（+5）。⚠️ 掃きの head は 1 回目、毒の build の dll を写していた（ソースを戻しても bin は毒のまま）＝止めて build し直して取り直した。
-- **続き（ユーザー「brace から」）＝§2 E ⑸ を閉じた（`c246ba7e6`）**: LP 2.26.0 で双子 8 冊の SystemStartBrace の extent を刷ると、普通の大譜表は rung 177（13.0924）・Lily# は 176。原因 2 つ＝LP の `len` は StaffSymbol の extent の和（線の太さを含む＝span＋0.1・staff-symbol.cc:358-361）／`binary-search` の既定は last-less-than-or-equal（Lily# は nearest）。`SystemStartDelimiterLength`（collapse も `len > 5`）・`BraceLadder.LastAtOrBelow`。直した後 8 冊とも LP と同じ rung。網 `BraceLadderTests`（毒 2 本）・snapshot 17 枚（brace の行だけ）・svg の掃き 1199 score 中 32 が brace の行だけ動く。full **11358 / 0 / 2 / 11360**。
-- **見つけた（未着手）**: §2 F-twinhk（下）／hara-kiri の 3 系目は LP より譜の間隔が 0.06 以上狭い（2 声で残る下の譜・Lab `sessions/p849/brace/r-hara-kiri-x.ly`）／bracket の高さも同じ `len` のはず（未測定）。
-判定: 次の一手はユーザー判断（F-twinhk・bracket の `len`・OMR P6）。F-twinhk と bracket は (a) 今の文脈を使う ⇒ この会話で続けるのが有利。HANDOFF の残りが少ないので、続けるなら先に `-End` と `-Start p850`。
 
 ## 2. 開いている作業
 

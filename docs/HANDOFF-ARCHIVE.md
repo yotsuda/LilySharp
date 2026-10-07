@@ -129,6 +129,22 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第849セッションの経緯
+
+### 1.1 第849セッション（2026-10-06・YT-DELL2）
+
+新しい会話。`-Start p849`（HEAD `cb5dc56e6`）＝full **11346 / 0 / 2 / 11348**（第848 末と一致）。§7 3.5 で第847 を ARCHIVE へ。ユーザーの選択「F-partmeter の残り（小）」＝**`f26d74583`**。
+- **測った**（Lab `sessions/p849/pm`・`r-*.lys`）: ページは全形で正しい。欠けていたのは ⑴ XML＝書く part の小節が反復（`repeat unfold`）・phrase 参照・`voice` の中だと `<time>` が 4/4 のまま（戻りの 4/4 も無し）⑵ MIDI＝書く part の `| |`・裸の `R` が自分の拍子 ⑶ 検査＝裸の `R` に LYS2004 の偽陽性（cross-part が plan を見ない）。双子は LP の Timing が正しく描くので触らない。
+- **直し**: XML＝`StartNewMeasure` が小節を開くたびに `ForeignChangeAt`（play の section・容器・先頭小節を `EmitPartMusic` が持つ）＝`WithForeignChanges` の呼び出しは XML から消えた。MIDI＝part block／by-part section の items に `WithForeignChanges`（反復等の中の空小節は未対応のまま＝実害の形は未観測）。検査＝`MeasureModel.Split` に `plannedMeterAt`（小節が開くとき）・`CrossPartMeasureValidator` が plan を受ける。
+- 試験 `PartMeterTests` +6・毒 3 本（XML 4 赤／MIDI 2／cross 1）。掃き 998 冊 1199 score で svg・xml・midi・ly とも差 0（陽性対照は probe）。full **11352 / 0 / 2 / 11354**（+6）。
+- **見つけた（別の島・未着手）**: §2 F-phrasemeter（下）。
+
+★ `-End p849 -DiffBase cb5dc56e6`（`end.log`）＝門 全 OK。7.5: Core `+` 77 行・REF 0・OWN 0（LP の字面は無い＝意味は第848 のユーザー決定・RULES §5.2）。7.6: 全部 SectionMeterPlan の読み手を増やしただけ（新しい規則は無い）。7.7: 匂い＝①MIDI は反復・phrase・voice の中の空小節／裸の `R` を自分の拍子のまま（`WithForeignChanges` の限界・観測なし）②`MeasureModel.Split` の `plannedMeterAt` は `R1*N` の展開の途中の小節では問わない。push はユーザー。
+- **続き（ユーザー「続けて」）＝F-phrasemeter を閉じた（`716cdccd4`）**: `ValidateMeasures` の PhraseSpan の腕が、本体を repeat の本体と同じ形で検査する（小節の経過拍を lead-in・その場の拍子・四分から・最後の塊は開いたまま）。宣言の単独検査は walk の後まで保留し、どの流れも in-place で検査しなかった phrase だけ宣言時の拍子で回す（`_heldPhraseBodies`・`_phrasesCheckedInPlace`）。ついでに閉じた偽陽性: 小節の途中で使う断片（`e'2 hook …`・hook＝`c'4 |`）の LYS2006。試験 `PhraseMeterTests` 5 本・毒 2 本（各 4 赤）。`CueRegionTests` の inline の本は使わない phrase を宣言しない形に（使わない半小節の phrase は今も LYS2006）。`lysc check` の掃き 998 冊＝1955 行で両側同じ・差 0（Lab `sessions/p849/check`）。`-End`（`end2.log`）＝門 全 OK・Core `+` 122 行（REF 0・OWN 0＝LP の字面なし）・full **11357 / 0 / 2 / 11359**（+5）。⚠️ 掃きの head は 1 回目、毒の build の dll を写していた（ソースを戻しても bin は毒のまま）＝止めて build し直して取り直した。
+- **続き（ユーザー「brace から」）＝§2 E ⑸ を閉じた（`c246ba7e6`）**: LP 2.26.0 で双子 8 冊の SystemStartBrace の extent を刷ると、普通の大譜表は rung 177（13.0924）・Lily# は 176。原因 2 つ＝LP の `len` は StaffSymbol の extent の和（線の太さを含む＝span＋0.1・staff-symbol.cc:358-361）／`binary-search` の既定は last-less-than-or-equal（Lily# は nearest）。`SystemStartDelimiterLength`（collapse も `len > 5`）・`BraceLadder.LastAtOrBelow`。直した後 8 冊とも LP と同じ rung。網 `BraceLadderTests`（毒 2 本）・snapshot 17 枚（brace の行だけ）・svg の掃き 1199 score 中 32 が brace の行だけ動く。full **11358 / 0 / 2 / 11360**。
+- **見つけた（未着手）**: §2 F-twinhk（下）／hara-kiri の 3 系目は LP より譜の間隔が 0.06 以上狭い（2 声で残る下の譜・Lab `sessions/p849/brace/r-hara-kiri-x.ly`）／bracket の高さも同じ `len` のはず（未測定）。
+判定: 次の一手はユーザー判断（F-twinhk・bracket の `len`・OMR P6）。F-twinhk と bracket は (a) 今の文脈を使う ⇒ この会話で続けるのが有利。HANDOFF の残りが少ないので、続けるなら先に `-End` と `-Start p850`。
+
 ## 以下は第848セッションの経緯
 
 ### 1.1 第848セッション（2026-10-06・YT-DELL2）
