@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第850セッションの経緯
+
+### 1.1 第850セッション（2026-10-06・YT-DELL2）
+
+同じ会話のまま（第849 の判定どおり・HANDOFF の枠のため）。`-Start p850`（HEAD `acc695f9d`）＝full **11358 / 0 / 2 / 11360**。§7 3.5 で第848 を ARCHIVE へ。ユーザー「続けて」＝F-twinhk と bracket の `len`。
+- **F-twinhk を閉じた（`31195a9f1`）**: 双子の `EmitStaff` が staff 行の `as removeEmpty V`／`as lines N` を `\RemoveEmptyStaves`／`\RemoveAllEmptyStaves`／`\override StaffSymbol.line-count` で書く（`RenderSpecParser.ParseStaffSpec` を読む）。`test/hara-kiri` の双子で LP の brace が なし/177/182/なし（第849 の手直し版と同じ）。追跡の 8 冊は LP が警告なく描く。試験 `TwinStaffSelectorTests` 4 本（毒 3 赤）・ly の掃き 1199 中 10＝selector を書く本だけ。
+- **bracket・系頭の bar も LP の `len`（`f332e8d04`）**: `staff_bracket`／`line_bracket`／`simple_bar` も高さは `len`（span＋線の太さ）。LP 実測（Lab `sessions/p850/br`）＝3 段 StaffGroup の bracket の箱 22.19・Score の SystemStartBar 22.1・choir-staff の bracket 13.19＝Lily# は 0.1 短かった→一致。試験 `SystemStartDelimiterLengthTests`（毒 赤）・snapshot 70 枚・svg の掃き 1199 中 416（変わった行は bar・bracket の線と先端だけ）。`-End p850 -DiffBase acc695f9d`＝門 全 OK・Core `+` 35 行（REF 2）・full **11363 / 0 / 2 / 11365**（+5）。
+- **ユーザー「ハラキリ」＝3 系目の譜の間隔を閉じた（`4dad5b3ae`）**: LP の `ly:skyline-distance`／`ly:skyline-touching-point` で、二つの譜の skyline が触れるのは 2 小節目の頭＝上の b4 の符幹（−3.333）と、下の 2 声目に +10 へ押し上げられた全休符の加線（5.1＝線の 0.1 上）。Lily# の `SkylineBuilder` は休符の輪郭を `GetRest(値, 0)`＝いつも加線なしの glyph で作っていた（註も「未測定」）→ 実際の位置（`NeutralRestPosition`＋ずれ）の glyph に。生成器 `Extract-EmmentalerMetrics.py` に `rests.M1o/0o/1o` を足した（輪郭は加線込み＝全休符は上 0.1・左右 0.624 広い・fonttools を入れて冪等を確かめてから）。間隔 5.34 → 5.44（LP 5.4333）。試験 `LedgeredRestSkylineTests`（毒 赤）・snapshot は hara-kiri 1 枚・svg の掃き 1199 中 1（その本だけ）・full **11364 / 0 / 2 / 11366**。
+判定: 次の一手はユーザー判断（OMR P6 等）。(c) 無関係 ⇒ 既定は続ける。
+
 ## 以下は第849セッションの経緯
 
 ### 1.1 第849セッション（2026-10-06・YT-DELL2）
