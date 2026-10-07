@@ -92,7 +92,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⏸ **perf の島（⒭⁸・⒮*・⒩⁴・⒨・⒯ …）は第615 で区切り＝一時停止（ユーザー判断・忠実度が先）**。本文と掃き終わった島（第434〜第456）の教訓は `HANDOFF-ARCHIVE.md`「§1.0 から移した perf の島」（第660）・閉じた島の一覧は第654 が畳んだ（各便の §1＝ARCHIVE・RULES §5.4 末尾）
 - ★★ **U10 ユーザーのコーパスに*効いていない弦番号*が 473 件（39 冊）**（第486・LYS5003・Lab `sessions/p486/lys5003-corpus.txt`）: 書いた `\N` の弦では弾けない音＝Lily# は黙って別の弦に描く（LP も同じ）。**ユーザー決定「放置」（第523）＝本は直さない・描画は今までと同じ**
 
-- ★ **次の候補（第854）: 系そのものの高さの不足**＝題を外しても Lily# が LP より少ない紙で 1 頁目に 1 系多く入る本（`Final Fantasy V Main Theme` −0.82 mm・`ひまわりの約束` −3.01 mm＝計器 Lab `p853/flip-both.ps1`・題なしの版は `p854/cjk/nt-*.lys`）。CJK の帯を直す前は大きすぎる帯がこれを隠していた。双子と頁割りが違う残り 16（`p854/svg2/split.txt`）も同じ計器で題あり／なしに分けて読む
+- ★ **次の候補（第854）: 双子と頁割りが違う残り**（`p854/svg2/split.txt` の 16 から第854 が 9 冊を寄せた残り）を `p853/flip-both.ps1`（題あり／なし）と `p853/lp-lines2.ps1`＋`Zz853PageDump.cs.txt`（行ごとの形を LP と並べる）で読む。既知の族: ⑴ tab の数字（下 1.007 vs LP 0.630＝ユーザー決定で描くとおり・提案しない）⑵ **スラーの pure の高さ**＝LP は包む音符列の端＋0.5（slur.cc:101-128）・Lily# は弧の x 範囲の輪郭の最大＋0.5（`PagingAugmentProgram` の BowGroup）＝ひまわりの約束 line 3 で +0.528（帯の中の別の物を拾う）・前の行から来るスラーは行頭の音部記号と調号を拾って +1.5（Lab `p854/slur`）⑶ Are You Gonna Go My Way-tab の line 20/22 の ±1.13（未調査・`p854/aygg/lines.txt`）
 - ⚠️ **LP を `-dbackend=svg` で描く計器は `lysc ly --pin-fonts` 必須**（第690〜第695 の 6 本は無しで、数字の幅・高さが汎用 serif だった＝第736 ⑴⑵）。tab の tuplet の残差は全部 beam の決定（`uniformBeamedLength`）の帰結＝第737
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
@@ -125,6 +125,9 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **ユーザー決定（2026-10-07）「固定の CJK 箱」**＝機械に依存しない配置を代替フォントの正確な ink より優先（案 2＝`MatchCharacter` を測る、は配置が機械と SVG の表示側で変わり CI の ubuntu とも割れるので採らない）。
 - **閉じた（`c28c42ade`）**: 欠字のうち CJK（`IsCjk`）は ideographic em box（0.88/−0.12 em）・それ以外は従来どおり書体の箱。帯 6.835（LP 6.585）。網 `HeaderBand_ReservesTheIdeographicEmBox_ForCjkTheFaceCannotSpell`・`ASubtitleTheFaceCannotSpell` は箱の上端を 0.88 に。毒 2 本とも赤。full **11396 / 0 / 2 / 11398**（+1）。⚠️ 途中の full で `PageChainDebugTests.EverySpringOfThePage_IsNamedInTheChainsOwnOrder` が 1 度だけ赤（単独と次の full は緑）。
 - **sweep**（svg 160/1199）: LP 双子との頁割り 寄った 16・離れた 2（FF V・ひまわりの約束＝上の §1.0 の候補。題なしでも同じ不足＝帯の差は +0.07／+0.35 mm だけ）・変わらず一致 126・変わらず不一致 16。`-End p854 -DiffBase 3ca19ce3b`＝門 全 OK・Core `+` 67 行（既存の LILYSHARP-OWN の註の下）・full **11396 / 0 / 2 / 11398**。
+- **続き（同じ会話・ユーザー「続けて」）**: 題を外しても足りない 2 冊を行ごとの形で LP と並べた（Lab `p854/cjk/*-lines.txt`）。
+- **閉じた（`1f5d1b990`）ひまわりの約束**: line 4 を開く印 C1 は LP では line 3 の最後の小節の中の高さにも入る（axis-group-interface.cc:429-458・既に `AddBreakerOnlyMarkBox` が持つ）。その持ち上げを測る小節の譜の上端が、行頭に来たスラーの片を前置きとして拾って 3.045（LP 0.33）＝印が 2.5 低かった。`ExecuteForBreaker` の前置きを置き換え前の基の輪郭から読む。sweep 1/1199・その 1 冊が LP の 7/8/8/1 に。網 `ABarsStaffTop_TakesTheClefAndKey_…`・毒 赤。**ついで**: `DebugPageBreakingScoring`（static）を set／clear する 3 クラスが並走して `PageChainDebugTests` が今日 4 回中 2 回赤だった＝xUnit の collection を 1 つに（`PageChainDebugTests.HookCollection`）。
+- **閉じた（`dc6758f08`）FF V**: 印の pure の下端は譜線の範囲（上の線＋線の太さの半分 0.05）の 0.8 上（LP: "B" で始まる行の上端 3.555＝0.85＋2.705・Lily# 3.505）＝`PureMarkBottomUp` に `StaffLineThickness / 2`。網 `AMark_RestsItsPaddingOverTheStaffSymbolsExtent_NotItsTopLine`・毒 赤。sweep 9/1199: 寄った 7（FF V・Xanadu ×2・DADDY! DADDY! DO!・Reelin' In the Years・Soul Man・群青）・離れた 2（OH NO, OH YES!・Are You Gonna Go My Way-tab＝印の低さが tab の数字の大きさを打ち消していた。後者は line 20/22 にも別の差）。full **11398 / 0 / 2 / 11400**。
 
 ## 以下は第853セッションの経緯
 
