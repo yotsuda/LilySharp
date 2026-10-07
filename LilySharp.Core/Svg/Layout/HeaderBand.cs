@@ -297,7 +297,8 @@ internal sealed record HeaderBand(
             if (text is null)
                 return null;
             // A string the face cannot spell (CJK) is drawn from a fallback face this layout
-            // never measures — reserve the face's own box for it (InkOrFallbackBox).
+            // never measures — reserve a box for it (InkOrFallbackBox: the ideographic em
+            // box for CJK, the face's own box otherwise).
             var (inkBottom, inkTop) = fonts.InkOrFallbackBox(text, size, role, style);
             return Stack(inkBottom, inkTop, fonts.Advance(text, size, role, style));
         }

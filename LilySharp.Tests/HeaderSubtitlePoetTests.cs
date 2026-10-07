@@ -155,9 +155,10 @@ public sealed class HeaderSubtitlePoetTests
 
     /// <summary>
     /// A row the bundled face cannot spell (CJK, drawn from a fallback face the layout never
-    /// measures) reserves the face's own ascender box, not only the ink of the glyphs the
-    /// face has — "ホ短調 in E minor" used to be measured as "in E minor" and its kanji ran
-    /// into the title (2026-09-26).
+    /// measures) reserves the ideographic em box for its CJK glyphs, not only the ink of the
+    /// glyphs the face has — "ホ短調 in E minor" used to be measured as "in E minor" and its
+    /// kanji ran into the title (2026-09-26). The box was the face's own ascender box until
+    /// 2026-10-07 (TextFontMetrics.InkOrFallbackBox).
     /// </summary>
     [Fact]
     public void ASubtitleTheFaceCannotSpell_KeepsClearOfTheTitle()
@@ -168,8 +169,8 @@ public sealed class HeaderSubtitlePoetTests
         var subtitle = Attrs(svg, "ホ短調 Sbt");
         var fonts = ScoreTextMetrics.Bundled;
         var titleInk = fonts.Ink("Ttl", Num(title, "font-size"), TextRole.Title, FontStyle.Bold);
-        var (ascender, _) = TextFontMetrics.FontExtents(fonts.Face(TextRole.Subtitle, FontStyle.Bold));
-        double subtitleTop = Num(subtitle, "y") - ascender * Num(subtitle, "font-size");
+        // ⚠️ A literal, not TextFontMetrics.IdeographicEmBoxTop — see the padding above.
+        double subtitleTop = Num(subtitle, "y") - 0.88 * Num(subtitle, "font-size");
 
         // 0.02 of slack: the SVG writes y and font-size to two decimals.
         Assert.True(subtitleTop - (Num(title, "y") - titleInk.Bottom) >= 0.5 - 0.02,

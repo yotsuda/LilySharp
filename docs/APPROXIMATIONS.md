@@ -327,8 +327,8 @@
 - **:995** ⚠️ LILYSHARP-OWN, the other half: which x IS the centre when the digits do not
 ### `LilySharp.Core/Rendering/TextFontMetrics.cs`
 - **:543** LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
-- **:660** ⚠️ LILYSHARP-OWN: the glyphs a missing codepoint falls back to are drawn from a system
-- **:705** LILYSHARP-OWN: a face with no readable extents (none of the bundled ones), so
+- **:662** ⚠️ LILYSHARP-OWN: the glyphs a missing codepoint falls back to are drawn from a system
+- **:760** LILYSHARP-OWN: a face with no readable extents (none of the bundled ones), so
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
 - **:683** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Semantics/CapoAdvisor.cs`

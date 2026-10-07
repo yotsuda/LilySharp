@@ -653,26 +653,81 @@ public static class TextFontMetrics
     }
 
     /// <summary>
-    /// <see cref="Ink(string, double, TextFace)"/>, widened to the face's own
-    /// ascender/descender box when the face cannot spell the whole string.
+    /// <see cref="Ink(string, double, TextFace)"/>, widened by a reserved box for every glyph
+    /// the face cannot spell: the ideographic em box for a CJK one
+    /// (<see cref="IdeographicEmBoxTop"/>, <see cref="IdeographicEmBoxBottom"/>), the face's
+    /// own ascender/descender box for any other.
     /// </summary>
     /// <remarks>
     /// ⚠️ LILYSHARP-OWN: the glyphs a missing codepoint falls back to are drawn from a system
     /// face the layout never sees, so their ink does not exist here and the measured ink is
-    /// only the glyphs the face HAS — "ホ短調 in E minor" measured as "in E minor". Such a
-    /// string is reserved as the face's own ascender/descender box, the answer
-    /// DynamicEngraver.InkOf gives free expressive text.
-    ///   departs from: LilyPond's Pango shapes the fallback face and reads its glyphs.
+    /// only the glyphs the face HAS — "ホ短調 in E minor" measured as "in E minor". The
+    /// fallback face is the machine's (and, in an SVG, the viewer's), so the layout reserves a
+    /// box no machine changes (owner's decision 2026-10-07: the same layout everywhere over the
+    /// fallback face's exact ink). A CJK glyph gets the OpenType ideographic em box, the frame
+    /// every CJK face designs its ideographs in; the Latin face's box (the answer
+    /// DynamicEngraver.InkOf gives free expressive text) is far taller and deeper — the band of
+    /// "もう恋なんてしない" over "槇原敬之" came to 9.12 against LilyPond's 6.59.
+    ///   departs from: LilyPond's Pango shapes the fallback face and reads its glyphs (on the
+    ///   reference machine 0.835 / −0.058 em for that title).
     ///   goes away when: the layout measures the fallback face the renderer draws with.
     /// </remarks>
     public static (double Bottom, double Top) InkOrFallbackBox(string text, double fontSize, TextFace face)
     {
         var (bottom, top) = Ink(text, fontSize, face);
-        if (!HasMissingGlyph(text, fontSize, face))
-            return (bottom, top);
-        var (ascender, descender) = FontExtents(face);
-        return (Math.Min(bottom, descender * fontSize), Math.Max(top, ascender * fontSize));
+        bool cjk = false, other = false;
+        foreach (var g in ShapeRun(text, fontSize, face))
+            if (g.MissingCodepoint is int cp)
+            {
+                if (IsCjk(cp))
+                    cjk = true;
+                else
+                    other = true;
+            }
+        if (cjk)
+        {
+            bottom = Math.Min(bottom, IdeographicEmBoxBottom * fontSize);
+            top = Math.Max(top, IdeographicEmBoxTop * fontSize);
+        }
+        if (other)
+        {
+            var (ascender, descender) = FontExtents(face);
+            bottom = Math.Min(bottom, descender * fontSize);
+            top = Math.Max(top, ascender * fontSize);
+        }
+        return (bottom, top);
     }
+
+    /// <summary>The top of the ideographic em box over the Roman baseline, per em.</summary>
+    /// <remarks>OpenType's default ideographic embox: the em square with its bottom
+    /// (<c>ideo</c> baseline) 0.12 em under the Roman baseline (OpenType BASE table, the
+    /// <c>ideo</c> and <c>idtp</c> baseline tags).</remarks>
+    public const double IdeographicEmBoxTop = 0.88;
+
+    /// <summary>The bottom of the ideographic em box, per em, up-positive — see
+    /// <see cref="IdeographicEmBoxTop"/>.</summary>
+    public const double IdeographicEmBoxBottom = -0.12;
+
+    /// <summary>Is <paramref name="codepoint"/> one a CJK face sets in its ideographic em
+    /// box — kana, ideographs, Hangul, CJK punctuation and the full-width forms?</summary>
+    internal static bool IsCjk(int codepoint) => codepoint switch
+    {
+        >= 0x1100 and <= 0x11FF => true,   // Hangul Jamo
+        >= 0x2E80 and <= 0x2FDF => true,   // CJK radicals, Kangxi radicals
+        >= 0x3000 and <= 0x303F => true,   // CJK symbols and punctuation
+        >= 0x3040 and <= 0x30FF => true,   // Hiragana, Katakana
+        >= 0x3100 and <= 0x31FF => true,   // Bopomofo, Hangul compatibility Jamo, Kanbun, strokes, Katakana extensions
+        >= 0x3200 and <= 0x33FF => true,   // enclosed CJK, CJK compatibility
+        >= 0x3400 and <= 0x4DBF => true,   // CJK unified ideographs extension A
+        >= 0x4E00 and <= 0x9FFF => true,   // CJK unified ideographs
+        >= 0xA960 and <= 0xA97F => true,   // Hangul Jamo extended-A
+        >= 0xAC00 and <= 0xD7FF => true,   // Hangul syllables, Jamo extended-B
+        >= 0xF900 and <= 0xFAFF => true,   // CJK compatibility ideographs
+        >= 0xFE30 and <= 0xFE4F => true,   // CJK compatibility forms
+        >= 0xFF00 and <= 0xFFEF => true,   // half-width and full-width forms
+        >= 0x20000 and <= 0x3FFFF => true, // CJK unified ideographs extensions B and on
+        _ => false,
+    };
 
     /// <summary>Ink height (<c>Top - Bottom</c>) of <paramref name="text"/> in staff spaces.</summary>
     public static double InkHeight(string text, double fontSize, bool sans = false,

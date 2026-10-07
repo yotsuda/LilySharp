@@ -244,6 +244,41 @@ public class LeadSheetHeaderClearanceTests
         Assert.Equal(Math.Max(byInk, bySkip), deep.ComposerBaseline!.Value, 9);
     }
 
+    /// <summary>
+    /// A CJK header the bundled faces cannot spell is reserved as the ideographic em box
+    /// (0.88 over, 0.12 under the baseline per em), not the Latin face's ascender/descender
+    /// box — so the composer stands baseline-skip under the title, as LilyPond's does.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED against LilyPond 2.26.0 (Lab sessions/p854/cjk): the title column of
+    /// "もう恋なんてしない" over "槇原敬之" is 6.585 tall (−3.669 . 2.916), the skip binding;
+    /// Lily# reserved 9.12 with the Latin box (the composer 4.29 under the title), and pages
+    /// split off LilyPond's on 17 Japanese books. The em box gives 6.835. A glyph that is not
+    /// CJK still gets the face's own box (owner's decision 2026-10-07 —
+    /// TextFontMetrics.InkOrFallbackBox).
+    /// </remarks>
+    [Fact]
+    public void HeaderBand_ReservesTheIdeographicEmBox_ForCjkTheFaceCannotSpell()
+    {
+        var fonts = ScoreTextMetrics.Bundled;
+        var band = HeaderBand.Build("もう恋なんてしない", "槇原敬之", fonts)!;
+        double title = HeaderBand.TitleFontSize, composer = HeaderBand.ComposerFontSize;
+        // Literals, not TextFontMetrics.IdeographicEmBox*: the constants are compiled into this
+        // assembly, so reading them would move the expected value with the code under test.
+        Assert.Equal(0.88 * title, band.TitleBaseline!.Value, 9);
+        Assert.Equal(band.TitleBaseline!.Value + HeaderBand.BaselineSkip, band.ComposerBaseline!.Value, 9);
+        Assert.Equal(band.ComposerBaseline!.Value + 0.12 * composer, band.Depth, 9);
+
+        // A missing glyph that is not CJK keeps the face's own box.
+        var face = TextFace.Bundled(false, FontStyle.Regular);
+        Assert.True(TextFontMetrics.HasMissingGlyph("नमस्ते", composer, face),
+            "the bundled face spells Devanagari now — pick another script it lacks, or this arm is vacuous");
+        var (ascender, descender) = TextFontMetrics.FontExtents(face);
+        var box = TextFontMetrics.InkOrFallbackBox("नमस्ते", composer, face);
+        Assert.Equal(descender * composer, box.Bottom, 9);
+        Assert.Equal(ascender * composer, box.Top, 9);
+    }
+
     /// <summary>The same book twice, one word apart: a ROUND capital against a FLAT one.</summary>
     private static string ChordRowOverAStaff(string chord) => $$"""
         key c major
