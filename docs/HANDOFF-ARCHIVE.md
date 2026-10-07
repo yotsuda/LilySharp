@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第852セッションの経緯
+
+### 1.1 第852セッション（2026-10-07・YT-DELL2）
+
+新しい会話。`-Start p852`（HEAD `693346e35`）＝full **11382 / 0 / 2 / 11384**。§7 3.5 で第850 を ARCHIVE へ。第851 の残り（1 頁目の系の数）から。途中でユーザー判断「続ける」。
+- **前提の訂正**: LP の System の pure heights は区間ごとに譜の位置が違う枠（その区間の譜の pure の上端で Align が置く）。それで読むと**印は常に譜の上 0.8**（第851 の実装どおり）＝「中の pure の高さの上へ持ち上げる」は誤読。差の源は譜の側の pure の高さ。
+- **閉じた（`c7b556da1`）**: 改ページの高さを LP の pure height に。⑴ 連桁は高さなし・連桁の符幹は連桁なしの長さで連桁の向き（stem.cc:387-447）＝改ページ用の系の輪郭を `BuildSystemSkylines(pureBeams: true)` で別に作る（TAB は群の向き・memo `GetOrComputeBreakerSkyline`）⑵ スラーは音符＋0.5（slur.cc:74-130）⑶ 連符・タイは高さなし（grob-property.cc:357-360）⑷ 行頭の印は begin だけ（axis-group-interface.cc:441-458）。スカラーも改ページ用は注釈だけを別に持つ（`PreliminaryPass.BreakerUpExtent`）。LP 実測と一致: 連桁 3.375・スラー 6.545・連符 3.0/−3.333・TAB 5.625（`BreakerPureHeightTests` 5 本・毒 8 本すべて赤＝Lab `p852/poisons.ps1`）。計器: 行ごとの形 Lab `p852/pure-lines.ps1`（小節≠区間の本＝反復記号などは崩れる）・頁の形 `page-geom.ps1`・改ページの dump は `Zz852PageDump.cs.txt`（Tests に置いて回し、消す）。
+- **sweep**: svg 120/1199（頁割りだけ）。双子と頁割りが一致する score は変わった 120 中 81→78。悪化 9 はすべて TAB（双子は LP の弦の選び方＝pure の符幹が弦で変わる＝計器の汚れ）・譜だけの本は +2/−0。snapshot 1 枚（programmatic/hara-kiri-paged）。`-End p852 -DiffBase 693346e35`＝門 全 OK・Core `+` 359 行（REF 5）・full **11387 / 0 / 2 / 11389**（+5）。
+- **残り＝1 頁目 +1 系**: 行の形が LP と一致しても Boogie Oogie Oogie は LP 12/12・Lily# 13/11。Lily# の見積もりは 1 頁目 13 系で force −0.014（約 11 不足＝刃の上）・実際の頁は −0.325。差は行の形の外の小さな和（タイトル帯 0.17 ほか）。次はこの和の内訳を LP で測る。
+
 ## 以下は第851セッションの経緯
 
 ### 1.1 第851セッション（2026-10-07・YT-DELL2）

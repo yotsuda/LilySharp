@@ -92,7 +92,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⏸ **perf の島（⒭⁸・⒮*・⒩⁴・⒨・⒯ …）は第615 で区切り＝一時停止（ユーザー判断・忠実度が先）**。本文と掃き終わった島（第434〜第456）の教訓は `HANDOFF-ARCHIVE.md`「§1.0 から移した perf の島」（第660）・閉じた島の一覧は第654 が畳んだ（各便の §1＝ARCHIVE・RULES §5.4 末尾）
 - ★★ **U10 ユーザーのコーパスに*効いていない弦番号*が 473 件（39 冊）**（第486・LYS5003・Lab `sessions/p486/lys5003-corpus.txt`）: 書いた `\N` の弦では弾けない音＝Lily# は黙って別の弦に描く（LP も同じ）。**ユーザー決定「放置」（第523）＝本は直さない・描画は今までと同じ**
 
-- ★ **次の候補（第853）: 日本語の title/composer の帯が LP より高い**（もう恋なんてしない 9.12 vs 6.59）＝改ページの LP 忠実化の後、頁割りが LP から離れた 19 冊中 17 冊がこれ。フォントの族の問題か配置かを先に測る（計器 Lab `p853/flip-both.ps1`・題の高さは `bookTitleMarkup` を `measure` で包む＝`p853/notes.md`）
+- ★ **次の候補（第854）: 系そのものの高さの不足**＝題を外しても Lily# が LP より少ない紙で 1 頁目に 1 系多く入る本（`Final Fantasy V Main Theme` −0.82 mm・`ひまわりの約束` −3.01 mm＝計器 Lab `p853/flip-both.ps1`・題なしの版は `p854/cjk/nt-*.lys`）。CJK の帯を直す前は大きすぎる帯がこれを隠していた。双子と頁割りが違う残り 16（`p854/svg2/split.txt`）も同じ計器で題あり／なしに分けて読む
 - ⚠️ **LP を `-dbackend=svg` で描く計器は `lysc ly --pin-fonts` 必須**（第690〜第695 の 6 本は無しで、数字の幅・高さが汎用 serif だった＝第736 ⑴⑵）。tab の tuplet の残差は全部 beam の決定（`uniformBeamedLength`）の帰結＝第737
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
@@ -118,22 +118,22 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第854セッション（2026-10-07・YT-DELL2）
+
+新しい会話。`-Start p854`（HEAD `3ca19ce3b`）＝full **11395 / 0 / 2 / 11397**。§7 3.5 で第852 を ARCHIVE へ。第853 の次の候補（日本語の title/composer の帯が LP より高い）から。
+- **原因**: CJK の題は Lily# の書体に字形が無く（描画は機械の代替フォント）、`TextFontMetrics.InkOrFallbackBox` が Latin の書体の ascender/descender の箱を予約していた。LP の帯（`bookTitleMarkup` を `measure` で包む＝Lab `p854/cjk`）は 6.585・Lily# 9.12。LP の代替の ink は 0.835/−0.058 em（候補 11 書体のどれとも一致しない）。
+- **ユーザー決定（2026-10-07）「固定の CJK 箱」**＝機械に依存しない配置を代替フォントの正確な ink より優先（案 2＝`MatchCharacter` を測る、は配置が機械と SVG の表示側で変わり CI の ubuntu とも割れるので採らない）。
+- **閉じた（`c28c42ade`）**: 欠字のうち CJK（`IsCjk`）は ideographic em box（0.88/−0.12 em）・それ以外は従来どおり書体の箱。帯 6.835（LP 6.585）。網 `HeaderBand_ReservesTheIdeographicEmBox_ForCjkTheFaceCannotSpell`・`ASubtitleTheFaceCannotSpell` は箱の上端を 0.88 に。毒 2 本とも赤。full **11396 / 0 / 2 / 11398**（+1）。⚠️ 途中の full で `PageChainDebugTests.EverySpringOfThePage_IsNamedInTheChainsOwnOrder` が 1 度だけ赤（単独と次の full は緑）。
+- **sweep**（svg 160/1199）: LP 双子との頁割り 寄った 16・離れた 2（FF V・ひまわりの約束＝上の §1.0 の候補。題なしでも同じ不足＝帯の差は +0.07／+0.35 mm だけ）・変わらず一致 126・変わらず不一致 16。`-End p854 -DiffBase 3ca19ce3b`＝門 全 OK・Core `+` 67 行（既存の LILYSHARP-OWN の註の下）・full **11396 / 0 / 2 / 11398**。
+
+## 以下は第853セッションの経緯
+
 ### 1.1 第853セッション（2026-10-07・YT-DELL2）
 
 新しい会話。`-Start p853`（HEAD `b2091e0c4`）＝full **11387 / 0 / 2 / 11389**。§7 3.5 で第851 を ARCHIVE へ。第852 の残り（1 頁目 +1 系＝行の形の外の小さな和）から。
 - **原因（計器 Lab `p853/flip-both.ps1`＝1 頁目が 1 系増える紙の高さを LP と Lily# で二分探索・`pageforce2.ps1`＝LP の改ページを LP の枠で書き写したモデル・`lp-lines2.ps1`＝LP の行の pure の形を列の rank で行に対応・多段可）**: LP の改ページだけにある 2 つの性質を Lily# が持たない。⑴ 行の refpoint は「譜の pure の上端」を原点にした値（align-interface.cc:215-219）＝`spring_length` が次の行との差を拾う（constrained-breaking.cc:657-667）⑵ System の要素（印・小節番号・テンポ）は小節ごとの枠で測られ、行の枠へ移さずに合わされる（system.cc:893-923）＝行の譜の上端と小節の譜の上端の差だけ持ち上がる。⑶ volta は改ページの高さを持たない（system.cc:940-967）。モデルは Boogie の 4 変種で LP と 0.05 mm 以内（Lily# は最大 12 mm ずれていた）。詳細 Lab `p853/notes.md`。
 - **閉じた（`a8fee10e6`）**: `SystemDetails.AlignmentOriginUp`＋`SpringLengthTo`（⑴）／`PagingAugmentProgram.ExecuteForBreaker`（⑵⑶・`BreakerSplit`）／count loop の見積もりも譜と System に分けて候補の行ごとに持ち上げ直す／**行頭の調号を skyline に**（`SkylineBuilder.SeedLineStartKey`・LP は各小節の begin の高さに調号を含む＝無いと小節の譜の上端が低く印を持ち上げすぎた）。Boogie 302.49 mm（LP 302.23）・A4 で LP と同じ 12/12。網 `BreakerAlignmentFrameTests` 7 本・`BreakerPureHeightTests` +1・毒 7 本すべて赤（Lab `p853/poisons.ps1`）。`-End p853 -DiffBase b2091e0c4`＝門 全 OK・full **11395 / 0 / 2 / 11397**（+8）・棚卸し 2 表は行番号だけ。
 - **sweep**（svg 75/1199）: LP 双子との頁割り 寄った 38・離れた 19。**離れた 19 のうち 17 は日本語の title/composer の本**＝Lily# の CJK の題の帯が LP より高い（もう恋なんてしない: 9.12 vs 6.59＝フォントの族・§1.0 ⒠ と同じ族）。残り 2 は譜＋tab で**Lily# の大きい tab の数字**（`FretDigitHeight` 2.013・LP 1.236・最下線の下に 0.377 多い）＝**ユーザー決定（2026-10-07）「(b)＝描く数字のとおりに値付け」**＝改ページだけ LP の数字の高さを使うことはしない・提案しない。
-
-## 以下は第852セッションの経緯
-
-### 1.1 第852セッション（2026-10-07・YT-DELL2）
-
-新しい会話。`-Start p852`（HEAD `693346e35`）＝full **11382 / 0 / 2 / 11384**。§7 3.5 で第850 を ARCHIVE へ。第851 の残り（1 頁目の系の数）から。途中でユーザー判断「続ける」。
-- **前提の訂正**: LP の System の pure heights は区間ごとに譜の位置が違う枠（その区間の譜の pure の上端で Align が置く）。それで読むと**印は常に譜の上 0.8**（第851 の実装どおり）＝「中の pure の高さの上へ持ち上げる」は誤読。差の源は譜の側の pure の高さ。
-- **閉じた（`c7b556da1`）**: 改ページの高さを LP の pure height に。⑴ 連桁は高さなし・連桁の符幹は連桁なしの長さで連桁の向き（stem.cc:387-447）＝改ページ用の系の輪郭を `BuildSystemSkylines(pureBeams: true)` で別に作る（TAB は群の向き・memo `GetOrComputeBreakerSkyline`）⑵ スラーは音符＋0.5（slur.cc:74-130）⑶ 連符・タイは高さなし（grob-property.cc:357-360）⑷ 行頭の印は begin だけ（axis-group-interface.cc:441-458）。スカラーも改ページ用は注釈だけを別に持つ（`PreliminaryPass.BreakerUpExtent`）。LP 実測と一致: 連桁 3.375・スラー 6.545・連符 3.0/−3.333・TAB 5.625（`BreakerPureHeightTests` 5 本・毒 8 本すべて赤＝Lab `p852/poisons.ps1`）。計器: 行ごとの形 Lab `p852/pure-lines.ps1`（小節≠区間の本＝反復記号などは崩れる）・頁の形 `page-geom.ps1`・改ページの dump は `Zz852PageDump.cs.txt`（Tests に置いて回し、消す）。
-- **sweep**: svg 120/1199（頁割りだけ）。双子と頁割りが一致する score は変わった 120 中 81→78。悪化 9 はすべて TAB（双子は LP の弦の選び方＝pure の符幹が弦で変わる＝計器の汚れ）・譜だけの本は +2/−0。snapshot 1 枚（programmatic/hara-kiri-paged）。`-End p852 -DiffBase 693346e35`＝門 全 OK・Core `+` 359 行（REF 5）・full **11387 / 0 / 2 / 11389**（+5）。
-- **残り＝1 頁目 +1 系**: 行の形が LP と一致しても Boogie Oogie Oogie は LP 12/12・Lily# 13/11。Lily# の見積もりは 1 頁目 13 系で force −0.014（約 11 不足＝刃の上）・実際の頁は −0.325。差は行の形の外の小さな和（タイトル帯 0.17 ほか）。次はこの和の内訳を LP で測る。
 
 ## 2. 開いている作業
 
