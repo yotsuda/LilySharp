@@ -63,6 +63,10 @@ public enum TextRole
     /// <summary>An instrument name at a system's left edge (<c>DrawInstrumentNames</c>).
     /// LilyPond grob: <c>InstrumentName</c>.</summary>
     Instrument,
+    /// <summary>The page number in a page's header (<c>DrawPageNumber</c>) — LilyPond's
+    /// <c>oddHeaderMarkup</c> / <c>evenHeaderMarkup</c>. ⚠️ No <c>fonts { }</c> key of its own
+    /// (<see cref="TextRoles.IsWritable"/>): the <c>header</c> group and the families reach it.</summary>
+    PageNumber,
 
     // ---- lyrics -------------------------------------------------------------------
     /// <summary>A syllable under a staff (<c>DrawLyrics</c>). LilyPond grob:
@@ -215,7 +219,7 @@ public static class TextRoles
     public static TextRoleGroup? GroupOf(TextRole role) => role switch
     {
         TextRole.Title or TextRole.Composer or TextRole.Subtitle or TextRole.Poet
-            or TextRole.Instrument => TextRoleGroup.Header,
+            or TextRole.Instrument or TextRole.PageNumber => TextRoleGroup.Header,
         TextRole.LyricText or TextRole.Stanza => TextRoleGroup.Lyrics,
         TextRole.ChordName or TextRole.FretFrame or TextRole.FiguredBass => TextRoleGroup.Chords,
         TextRole.Tempo or TextRole.Mark or TextRole.Pedal or TextRole.Navigation
@@ -301,6 +305,8 @@ public static class TextRoles
         TextRole.Subtitle => "subtitle",
         TextRole.Poet => "poet",
         TextRole.Instrument => "instrument",
+        // Not a key (IsWritable); the spelling is for diagnostics only.
+        TextRole.PageNumber => "pageNumber",
         TextRole.LyricText => "lyrics",
         TextRole.Stanza => "stanza",
         TextRole.ChordName => "chord",
@@ -439,7 +445,7 @@ public static class TextRoles
     /// see the remark on <see cref="Spelling(TextRole)"/>.
     /// </summary>
     public static bool IsWritable(TextRole role)
-        => role is not (TextRole.SystemBrace or TextRole.LyricText);
+        => role is not (TextRole.SystemBrace or TextRole.LyricText or TextRole.PageNumber);
 
     /// <summary>
     /// The words an entry may carry AFTER its key besides quoted face names: the redirect
@@ -527,7 +533,7 @@ public static class TextRoles
     public static PlanReach PlanReachOf(TextRole role) => role switch
     {
         TextRole.Title or TextRole.Composer or TextRole.Subtitle or TextRole.Poet
-            or TextRole.Instrument
+            or TextRole.Instrument or TextRole.PageNumber
             or TextRole.LyricText or TextRole.Stanza
             or TextRole.ChordName or TextRole.FretFrame
             or TextRole.Tempo or TextRole.Mark or TextRole.Pedal or TextRole.Navigation

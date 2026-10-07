@@ -421,7 +421,7 @@ public class FontAttributeTests
         // The validator and the page read ONE table (TextRoles.PlanReachOf); this pins the
         // validator's half to it so the two cannot drift — for the size and for the style
         // separately, since a music-font digit run follows one and not the other.
-        foreach (var role in TextRoles.All.Where(r => r != TextRole.SystemBrace))
+        foreach (var role in TextRoles.All.Where(HasAKey))
         {
             bool warnedSize = Check($"fonts {{ {TextRoles.Spelling(role)} step +1 }}\n" + Book)
                 .Any(x => x.Code == DiagnosticCodes.FontAttributeNotFollowed);
@@ -450,8 +450,13 @@ public class FontAttributeTests
         }
     }
 
+    /// <summary>The roles a `fonts { }` entry can name by their own spelling — not the brace (not
+    /// text), and not the page number, which only the `header` group reaches
+    /// (PageNumberTests.AHeaderStep_ReachesThePageNumber holds that one).</summary>
+    private static bool HasAKey(TextRole r) => r is not (TextRole.SystemBrace or TextRole.PageNumber);
+
     public static IEnumerable<object[]> EveryRole()
-        => TextRoles.All.Where(r => r != TextRole.SystemBrace).Select(r => new object[] { r });
+        => TextRoles.All.Where(HasAKey).Select(r => new object[] { r });
 
     [Theory]
     [MemberData(nameof(EveryRole))]

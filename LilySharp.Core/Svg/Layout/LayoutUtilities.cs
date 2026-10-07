@@ -537,18 +537,23 @@ internal static class LayoutUtilities
     /// lyric rows are exactly the case where they part (see
     /// <see cref="CalculateFirstStaffRefpoint"/>'s remark for the measurement).
     /// </param>
+    /// <param name="headerHeight">The page header's height — the page number's on page 2 and
+    /// later (<see cref="PageNumbers.HeaderHeight"/>), 0 on the first page.</param>
     public static Spring CreateTopSystemSpring(
-        double systemUpExtent, double originToRefpoint, VerticalSpacingSpec topSpec)
+        double systemUpExtent, double originToRefpoint, VerticalSpacingSpec topSpec,
+        double headerHeight = 0)
     {
         // Lily#'s up extent is the ink above the system's ORIGIN; LilyPond's up_skyline is
         // measured from the first spaceable staff's REFPOINT and always contains the staff
         // symbol itself, so the same quantity is originToRefpoint more there.
-        // ★ THE HEADER LEFT THIS FLOOR IN SESSION 336. LilyPond's header_height_ (:435, :444)
-        // is the PAGE header — oddHeaderMarkup, which Lily# does not print — and the book
+        // THE PAGE HEADER is in the floor and not in the anchor: LilyPond's header_height_
+        // (:435, :444) is the PAGE header — oddHeaderMarkup, the page number Lily# prints since
+        // session 851 (PageNumbers) — and the first system's skyline is kept that far below the
+        // top of the printable area, where the spring itself is anchored (:471-473). The book
         // TITLE is not in it: it is a paper system of its own at the head of the chain
-        // (TitleTopSpring / TitleToSystemSpring), which is where Lily#'s title went too.
+        // (TitleTopSpring / TitleToSystemSpring), which is where Lily#'s title went in session 336.
         double inkAboveRefpoint = systemUpExtent + originToRefpoint;
-        return CreateSpring(topSpec, inkAboveRefpoint + topSpec.Padding);
+        return CreateSpring(topSpec, headerHeight + inkAboveRefpoint + topSpec.Padding);
     }
 
     /// <summary>

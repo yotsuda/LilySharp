@@ -149,6 +149,7 @@ internal static partial class SharedRenderer
             if (firstPage)
                 DrawHeader(score, page, options, gc);
             firstPage = false;
+            DrawPageNumber(score, page, pageIndex, options, gc);
             var marginScope = options.MarginLeft != 0
                 ? gc.BeginGroup(DrawingTransform.Translate(options.MarginLeft, 0))
                 : null;
@@ -437,6 +438,34 @@ internal static partial class SharedRenderer
                     DrawFretFrame(fonts, cell.GridCentreX, page.Height - (top + cell.GridBottom), spec, gc);
             }
         }
+    }
+
+    /// <summary>
+    /// The page's header: its number, on every page after the first — at the right margin on
+    /// an odd page and the left on an even one, the top of its ink on the top margin.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/page.scm:221-228 make-page-stencil — the header is translated so "the
+    ///   top of the header just touches the top margin";
+    /// LILYPOND-REF: ly/titling-init.ly:108-121 page:page-number-string — its \fill-line (the
+    ///   rules are <see cref="PageNumbers"/>'). The right end is the composer's
+    ///   (<c>DrawHeader</c>), the \fill-line's own edge.
+    /// MEASURED (2.26.0, Lab sessions/p851/ws, test/multi-page-vertical's twin): page 2's "2" at
+    ///   the left margin, page 3's "3" ending 1.2292 short of the right one, both baselines
+    ///   1.5488 under the top margin. ⚠️ Lily#'s right end is the digit's ADVANCE (1.2232 for a
+    ///   "3"), LilyPond's 0.006 wider — a Pango measure not ported.
+    /// </remarks>
+    private static void DrawPageNumber(
+        MultiStaffScore score, PageLayout page, int pageIndex, LayoutOptions options, IDrawingContext gc)
+    {
+        if (PageNumbers.Text(pageIndex) is not { } text)
+            return;
+        var fonts = score.TextMetrics;
+        double baseline = options.MarginTop + PageNumbers.Ink(fonts, pageIndex).Top;
+        bool right = PageNumbers.AtRight(pageIndex);
+        gc.DrawText(text, right ? page.Width - options.MarginLeft : options.MarginLeft,
+            page.Height - baseline, PageNumbers.Em(fonts), TextRole.PageNumber,
+            PageNumbers.Style(fonts), right ? TextAnchor.End : TextAnchor.Start);
     }
 
     /// <summary>Opens a data-pos source scope for a header grob, or a no-op scope

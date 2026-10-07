@@ -133,13 +133,29 @@ internal sealed class PageLayouter
     /// header: it is a line of the page (<see cref="BuildTitleDetails"/>), which is how
     /// LilyPond pages it (paper-book.cc:570-580 get_system_specs puts it first).
     /// </remarks>
-    internal PageBreaker CreateBreaker() => new(
+    /// <param name="fonts">The score's text metrics, which measure the page number every page
+    /// after the first prints in its header (<see cref="PageNumbers"/>); null prices no number.</param>
+    internal PageBreaker CreateBreaker(Rendering.ScoreTextMetrics? fonts = null) => new(
         pageHeight: _options.PageHeight,
         topMargin: _options.MarginTop,
         bottomMargin: _options.MarginBottom,
         headerHeight: 0,
         parameters: _options.PageBreaking,
-        verticalSpacing: _options.VerticalSpacing);
+        verticalSpacing: _options.VerticalSpacing,
+        laterHeaderHeight: fonts is null ? null : HeaderHeights(fonts));
+
+    /// <summary>The page-number header's height by page index, each measured once — the page
+    /// DP asks for a page's height at every step of its walk.</summary>
+    private static Func<int, double> HeaderHeights(Rendering.ScoreTextMetrics fonts)
+    {
+        var heights = new List<double>();
+        return pageIndex =>
+        {
+            while (heights.Count <= pageIndex)
+                heights.Add(PageNumbers.HeaderHeight(fonts, heights.Count));
+            return heights[pageIndex];
+        };
+    }
 
     /// <summary>
     /// The page breaker's line for the book title — the <see cref="SystemDetails"/> LilyPond
@@ -320,7 +336,8 @@ internal sealed class PageLayouter
         ImmutableArray<LineShape?>? systemShapes = null,
         ImmutableArray<BreakPermission>? systemPagePermissions = null,
         ImmutableArray<BreakerRefpointFrame>? systemBreakerFrames = null,
-        bool onePage = false)
+        bool onePage = false,
+        Rendering.ScoreTextMetrics? fonts = null)
     {
         if (systems.Length == 0)
         {
@@ -377,7 +394,7 @@ internal sealed class PageLayouter
         // runs over its lines (the book title is line 0, paper-book.cc:570-580). The break
         // points come back as line indices; with a title in front, each is one more than
         // the system index it ends at.
-        var breaker = CreateBreaker();
+        var breaker = CreateBreaker(onePage ? null : fonts);
         List<SystemDetails> lines;
         if (header is null)
         {
@@ -473,7 +490,9 @@ internal sealed class PageLayouter
             var pageSystems = PositionSystemsOnPage(
                 systems, systemExtents, systemDetails, systemStart, systemEnd,
                 pageHeader, isRagged, useFixedForce, lastPageForce,
-                vs, systemSkylines, systemBandUps, Anchor, out double pageForce,
+                vs, systemSkylines, systemBandUps, Anchor,
+                onePage || fonts is null ? 0.0 : PageNumbers.HeaderHeight(fonts, pageIdx),
+                out double pageForce,
                 out double headerTop, out double overflow);
 
             // LILYPOND-REF: lily/page-breaking.cc:577-582 — the force is carried forward
@@ -522,6 +541,7 @@ internal sealed class PageLayouter
         ImmutableArray<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
         ImmutableArray<double>? systemBandUps,
         Func<int, (double ToFirst, double ToLast, double HalfFirst, double HalfLast)> anchor,
+        double pageHeaderHeight,
         out double pageForce,
         out double headerTop,
         out double overflow)
@@ -584,7 +604,8 @@ internal sealed class PageLayouter
         else
         {
             springs.Add(LayoutUtilities.CreateTopSystemSpring(
-                systemExtents[startIdx].upExtent, anchor(startIdx).ToFirst, vs.TopSystem));
+                systemExtents[startIdx].upExtent, anchor(startIdx).ToFirst, vs.TopSystem,
+                pageHeaderHeight));
             springLabels?.Add($"top-system → sys {startIdx + 1} refpoint "
                 + $"(up {systemExtents[startIdx].upExtent:F3} + toFirst {anchor(startIdx).ToFirst:F3})");
         }

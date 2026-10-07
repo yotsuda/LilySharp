@@ -5,7 +5,7 @@
 // Three is the smallest count that separates the three cases the page breaker treats
 // differently:
 //   page 1      -- filled by the breaker, gaps stretched to the force it solved for
-//   page 2      -- a middle page, same force, but no header reserved above it
+//   page 2      -- a middle page, same force, under its page number's header
 //   page 3      -- the LAST page, which ragged-last-bottom hands the force of the page
 //                  BEFORE it rather than the natural distance
 //                  (LILYPOND-REF: lily/page-breaking.cc:570-573 fixed_force_solution,

@@ -344,7 +344,8 @@ internal sealed partial class LayoutEngine
                 // systemsPerPage cap has nothing to cap (SnippetLayoutTests).
                 perSystemPagePermissions,
                 frames,
-                onePage);
+                onePage,
+                score.TextMetrics);
             return (pages, pages.SelectMany(p => p.Systems).ToImmutableArray());
         }
 

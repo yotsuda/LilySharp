@@ -408,12 +408,12 @@ internal sealed class PageSpacing
 
     /// <summary>
     /// Re-seats the page this accumulator is priced against — the walk of the unconstrained
-    /// page DP learns which page a configuration lands on only as it goes, and the first
-    /// page's band is shorter by the title header.
+    /// page DP learns which page a configuration lands on only as it goes, and each page's band
+    /// is shorter by that page's header (the page number from page 2 on — <see cref="PageNumbers"/>).
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/page-spacing.cc:43-48 Page_spacing::resize — a new
-    /// page_height_, then calc_force (). Lily#'s pages differ only in the first page's
-    /// header, so what is re-seated is the top margin.</remarks>
+    /// page_height_, then calc_force (). Lily#'s pages differ only in their headers, so what
+    /// is re-seated is the top margin (the margin and the header).</remarks>
     internal void Resize(double topMargin)
     {
         _topMargin = topMargin;
@@ -693,6 +693,7 @@ internal sealed class PageBreaker
     [ThreadStatic] private static double[]? t_force;
     [ThreadStatic] private static double[]? t_penalty;
     [ThreadStatic] private static int[]? t_prev;
+    [ThreadStatic] private static int[]? t_pageOf;
     [ThreadStatic] private static double[]? t_dp;
     [ThreadStatic] private static int[]? t_dpPrev;
     [ThreadStatic] private static int[]? t_minPageCount;
@@ -754,16 +755,37 @@ internal sealed class PageBreaker
         return drawer;
     }
 
+    /// <param name="headerHeight">The FIRST page's header height.</param>
+    /// <param name="laterHeaderHeight">Every later page's, by its 0-based index — the page
+    /// number's (<see cref="PageNumbers.HeaderHeight"/>); null for none.</param>
     public PageBreaker(double pageHeight, double topMargin, double bottomMargin, double headerHeight,
-        PageBreakingParameters? parameters = null, VerticalSpacingParameters? verticalSpacing = null)
+        PageBreakingParameters? parameters = null, VerticalSpacingParameters? verticalSpacing = null,
+        Func<int, double>? laterHeaderHeight = null)
     {
         _pageHeight = pageHeight;
         _topMargin = topMargin;
         _bottomMargin = bottomMargin;
         _headerHeight = headerHeight;
+        _laterHeaderHeight = laterHeaderHeight;
         _params = parameters ?? PageBreakingParameters.Default;
         _vs = verticalSpacing ?? new VerticalSpacingParameters();
     }
+
+    private readonly Func<int, double>? _laterHeaderHeight;
+
+    /// <summary>
+    /// Where the page at <paramref name="pageIndex"/> (0-based) can start setting systems: the
+    /// top margin and that page's header. The band a page is priced against is the paper less
+    /// this and the bottom margin.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-breaking.cc:513-541 Page_breaking::page_height (page_num, last) —
+    ///   per page, through scm/page.scm:303-321 calc-printable-height, which takes the page's
+    ///   own head-stencil out of it; the number printed on page 2 and later is such a header
+    ///   (<see cref="PageNumbers"/>).
+    /// </remarks>
+    private double TopOf(int pageIndex)
+        => _topMargin + (pageIndex == 0 ? _headerHeight : _laterHeaderHeight?.Invoke(pageIndex) ?? 0.0);
 
     /// <summary>
     /// Breaks systems into pages optimally.
@@ -898,7 +920,7 @@ internal sealed class PageBreaker
         int line = 0;
         while (line < n)
         {
-            space.Reset(perPage.Count == 0 ? _topMargin + _headerHeight : _topMargin);
+            space.Reset(TopOf(perPage.Count));
             int pageFirstLine = line;
             int systemsOnThisPage = 0;
             while (systemsOnThisPage < target && line < n)
@@ -956,8 +978,8 @@ internal sealed class PageBreaker
     /// the source:
     /// <list type="bullet">
     /// <item>:312-314, :324-332 — the page's height is re-seated as the walk learns which
-    /// page the configuration lands on (<see cref="PageSpacing.Resize"/>); Lily#'s pages
-    /// differ only in the first page's header, so page_start == 0 is the first page.</item>
+    /// page the configuration lands on (<see cref="PageSpacing.Resize"/>): page_start == 0 is
+    /// the first page, any other the page after its predecessor's, each band less ITS header.</item>
     /// <item>:337-349 — prepend, then the overfull exit that spares a page holding one system
     /// (the same exit <see cref="FindOptimalBreaks"/> takes, and the same hedge).</item>
     /// <item>:357-358 — a ragged LAST page that would stretch is priced at force 0.</item>
@@ -986,10 +1008,13 @@ internal sealed class PageBreaker
         var force = ScratchArray.Take(ref t_force, n);
         var penalty = ScratchArray.Take(ref t_penalty, n);
         var prev = ScratchArray.Take(ref t_prev, n);
+        // The 0-based page each line's best configuration ENDS on (LilyPond's Page_spacing_node::page_).
+        var pageOf = ScratchArray.Take(ref t_pageOf, n);
         Array.Fill(demerits, double.PositiveInfinity, 0, n);
         Array.Fill(force, double.PositiveInfinity, 0, n);
         Array.Fill(penalty, double.PositiveInfinity, 0, n);
         Array.Fill(prev, -1, 0, n);
+        Array.Fill(pageOf, 0, 0, n);
 
         // ONE accumulator for every line, cleared per line — LilyPond constructs a fresh
         // Page_spacing per line (page-spacing.cc:311), and Clear puts this one back in the
@@ -1008,7 +1033,10 @@ internal sealed class PageBreaker
             for (int pageStart = line; pageStart >= 0; pageStart--)
             {
                 int prevIdx = pageStart - 1;
-                space.Resize(pageStart == 0 ? _topMargin + _headerHeight : _topMargin);
+                // LILYPOND-REF: lily/page-spacing.cc:324-332 calc_subproblem — the page is the predecessor's
+                // next one, and its height is that page's (page_height (prev->page_ + 1, last)).
+                int pageIndex = pageStart == 0 ? 0 : pageOf[prevIdx] + 1;
+                space.Resize(TopOf(pageIndex));
                 space.PrependSystem(lines[pageStart]);
 
                 bool overfull = Overfull(space);
@@ -1040,6 +1068,7 @@ internal sealed class PageBreaker
                         force[line] = f;
                         penalty[line] = pen + (prevIdx >= 0 ? penalty[prevIdx] : 0);
                         prev[line] = prevIdx;
+                        pageOf[line] = pageIndex;
                     }
                 }
 
@@ -1150,9 +1179,9 @@ internal sealed class PageBreaker
     /// stack overflows it and holds more than that page's last system alone (:1257-1275).
     /// <para>
     /// LilyPond's <c>page_height (num, last)</c> varies per page with headers and footers;
-    /// Lily#'s pages differ only in the first page's title header, so the first page's band
-    /// is the printable height less the header and every other page's is the printable
-    /// height — the same two bands <see cref="CalculatePagePenalty"/> prices with. The
+    /// Lily#'s with the header alone — the page number from page 2 on — so each page's band is
+    /// the printable height less its own header, the bands <see cref="CalculatePagePenalty"/>
+    /// prices with. The
     /// <c>compressed_nontitle_lines_count_</c> of a line is 1 here, as everywhere in this
     /// breaker (see FindOptimalBreaks' remark on too_few_lines).
     /// </para>
@@ -1169,8 +1198,7 @@ internal sealed class PageBreaker
         // Only its two whitespace readers are used here — nothing accumulates, so no reset.
         var whitespace = _whitespace ??= new PageSpacing(_pageHeight, _topMargin, _bottomMargin,
             _vs.TopSystem, _vs.LastBottom, _vs.TopMarkup);
-        double FirstBand() => _pageHeight - (_topMargin + _headerHeight) - _bottomMargin;
-        double RestBand() => _pageHeight - _topMargin - _bottomMargin;
+        double Band(int pageIndex) => _pageHeight - TopOf(pageIndex) - _bottomMargin;
         // LILYPOND-REF: lily/page-breaking.cc:394-404 too_many_lines / too_few_lines — through
         // the accessors, so systems-per-page is both.
         int maxSystems = MaxSystems, minSystems = MinSystems;
@@ -1182,7 +1210,7 @@ internal sealed class PageBreaker
         int pageStarter = 0;
         double curRodHeight = 0;
         double curSpringHeight = 0;
-        double curPageHeight = FirstBand() - whitespace.MinWhitespaceAtTopOfPage(lines[0]);
+        double curPageHeight = Band(0) - whitespace.MinWhitespaceAtTopOfPage(lines[0]);
         int lineCount = 0;
 
         for (int i = 0; i < lines.Count; i++)
@@ -1207,7 +1235,7 @@ internal sealed class PageBreaker
                 curRodHeight = cur.Height;
                 curSpringHeight = 0;
                 pageStarter = i;
-                curPageHeight = RestBand() - whitespace.MinWhitespaceAtTopOfPage(cur);
+                curPageHeight = Band(ret) - whitespace.MinWhitespaceAtTopOfPage(cur);
                 ret++;
             }
             else
@@ -1219,7 +1247,7 @@ internal sealed class PageBreaker
         }
 
         // LILYPOND-REF: :1257-1275 — is_last (): the last page at its own height.
-        double lastPageHeight = (ret == 1 ? FirstBand() : RestBand())
+        double lastPageHeight = Band(ret - 1)
             - whitespace.MinWhitespaceAtTopOfPage(lines[pageStarter])
             - whitespace.MinWhitespaceAtBottomOfPage(lines[^1]);
         if (!TooFewLines(lineCount - 1)
@@ -1376,20 +1404,20 @@ internal sealed class PageBreaker
                 bool isRagged = _params.RaggedBottom
                     || (isLastPage && _params.RaggedLastBottom);
 
-                // The page's demerits do not depend on WHICH page it is, only on whether it
-                // is the first one (which loses the header's height from its available
-                // space) — CalculatePagePenalty's other inputs are the system range and the
-                // two flags above, all fixed for this (i, j). So the p loop below asks for
-                // at most TWO distinct numbers, and it used to recompute one of them for
+                // The page's demerits depend on WHICH page it is only through its header's
+                // height (none on the first; the page number's, its digits' ink, after it) —
+                // CalculatePagePenalty's other inputs are the system range and the two flags
+                // above, all fixed for this (i, j). So the p loop below asks for a handful of
+                // distinct numbers, and it used to recompute one of them for
                 // every page count: with maxPages = n that is an O(n) factor on top of the
                 // O(n²) (i, j) pairs, each costing another O(j - i) to append the systems.
                 // MEASURED on a 200-system book: 1,265,322 penalty calls / 64,068,701 system
                 // appends per break, against 12,926 / 146,896 for a 43-system one — 4.65x the
-                // systems for 436x the work, i.e. the fourth power. Memoising the two values
+                // systems for 436x the work, i.e. the fourth power. Memoising the values
                 // is arithmetically identical (the function is pure: it builds its own
                 // PageSpacing and reads only readonly configuration).
-                double firstPenalty = 0, restPenalty = 0;
-                bool haveFirst = false, haveRest = false;
+                double firstPenalty = 0, restPenalty = 0, restTop = double.NaN;
+                bool haveFirst = false;
 
                 // Predecessor states live at (i, p - 1): walk the band shifted by one.
                 // The guard stays — the band brackets the reachable set, no more.
@@ -1404,23 +1432,27 @@ internal sealed class PageBreaker
                         if (!haveFirst)
                         {
                             firstPenalty = CalculatePagePenalty(
-                                systems, i, j, isFirstPage: true, isLastPage, isRagged);
+                                systems, i, j, pageIndex: 0, isLastPage, isRagged);
                             haveFirst = true;
                         }
                         penalty = firstPenalty;
                     }
                     else
                     {
-                        if (!haveRest)
+                        // A later page's band is the paper less ITS header — the page number's,
+                        // which only the digits' ink varies — so the memo is keyed by the top.
+                        double top = TopOf(p - 1);
+                        if (top != restTop)
                         {
                             // ...and this is the page the walk has been accumulating, so it
                             // is priced rather than rebuilt. The first-page arm above still
                             // builds its own, because its top margin carries the header —
                             // and it is reachable only at i == 0 (p == 1 needs dp[i][0],
                             // which is finite only for i == 0), i.e. once per j.
+                            pageSpacing.Resize(top);
                             restPenalty = DemeritsOf(
                                 pageSpacing, systems, i, j, isLastPage, isRagged);
-                            haveRest = true;
+                            restTop = top;
                         }
                         penalty = restPenalty;
                     }
@@ -1541,12 +1573,12 @@ internal sealed class PageBreaker
         IReadOnlyList<SystemDetails> systems,
         int startIdx,
         int endIdx,
-        bool isFirstPage,
+        int pageIndex,
         bool isLastPage,
         bool isRagged)
     {
         // Calculate available height
-        double topMargin = isFirstPage ? _topMargin + _headerHeight : _topMargin;
+        double topMargin = TopOf(pageIndex);
         var spacing = Take(ref _penaltySpacing, topMargin);
 
         // Add systems to page

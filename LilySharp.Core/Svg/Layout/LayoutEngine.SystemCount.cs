@@ -458,7 +458,7 @@ internal sealed partial class LayoutEngine
         if (built.Count > 4 * measures.Length + 64)
             built.Clear();
         void GiveBuilt() => t_builtLines = built;
-        var breaker = _pageLayouter.CreateBreaker();
+        var breaker = _pageLayouter.CreateBreaker(score.TextMetrics);
         // The book title is the page's first LINE (paper-book.cc:570-580), priced by the
         // same DP as the systems; the page loop below sees it in front of every candidate.
         var title = header is null ? null : _pageLayouter.BuildTitleDetails(header);
