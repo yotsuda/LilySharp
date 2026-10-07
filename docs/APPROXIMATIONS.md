@@ -515,8 +515,8 @@
 ### `LilySharp.Core/Svg/Layout/SpacingRules.EmptyBar.cs`
 - **:257** LILYSHARP-OWN: LilyPond has no such spring because it has no such column — the
 ### `LilySharp.Core/Svg/Layout/SpacingRules.MeasureSprings.cs`
-- **:815** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
-- **:1416** ⚠️ LILYSHARP-OWN by the owner's decision (session 646: "コード図は、横に並べてほしい。
+- **:818** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
+- **:1419** ⚠️ LILYSHARP-OWN by the owner's decision (session 646: "コード図は、横に並べてほしい。
 ### `LilySharp.Core/Svg/Layout/StaffSize.cs`
 - **:62** ⚠️ LILYSHARP-OWN: THIS LINE IS A TYPE ENUMERATION, and it is the one part of this file
 ### `LilySharp.Core/Svg/Layout/StanzaNumberEngraver.cs`

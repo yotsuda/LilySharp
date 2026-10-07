@@ -369,6 +369,9 @@ internal static partial class SpacingRules
     /// symbol's reach to the bar EDGE instead (the bar line clears it), which is stronger:
     /// the springs are per measure and no rod spans the bar column. Same answer where the
     /// natural spacing already clears; wider bars where it does not.
+    /// ★ OWNER'S DECISION (2026-10-07): KEEP IT — a chord name does not overhang into the next
+    /// bar. The twin sweep (Lab sessions/p851) measured what it costs: the owner's corpus books
+    /// bench / chord / blogger stand 5–9 staff spaces wider than LilyPond's.
     /// </para>
     /// </remarks>
     public static ImmutableArray<Spring> ApplyChordRowSpacing(
