@@ -226,7 +226,7 @@
 - **:433** the distance only through the 0.08 padding at that band's edge. No ledger point
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
 - **:168** prices every lone note alike. No ledger point watches the difference;
-- **:932** constant with a name, and no ledger point reached it.
+- **:947** constant with a name, and no ledger point reached it.
 ### `LilySharp.Core/Svg/Layout/SpacingRules.Grace.cs`
 - **:468** observed by: NOTHING. No ledger point covers a grace spacer, and the drawn
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
@@ -452,8 +452,8 @@
 - **:170** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
 - **:218** LILYSHARP-OWN: LilyPond has no such variable (its spelling is a \break every N bars beside the ##f permissions); 0 leaves the breaks to the breaker.
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
-- **:893** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
-- **:900** LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
+- **:892** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
+- **:899** LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
 ### `LilySharp.Core/Svg/Layout/LyricEngraver.cs`
 - **:213** ⚠️ LILYSHARP-OWN, AND IT IS LOAD BEARING NOW THAT NOTHING ELSE IS. LilyPond has no
 - **:297** LILYSHARP-OWN: the CJK term. The bundled face has no CJK glyphs, so the outline is
@@ -515,7 +515,7 @@
 - **:324** LILYSHARP-OWN: the bar line's box is grown toward THIS column only. LilyPond grows it
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
 - **:155** ⚠️ LILYSHARP-OWN, WHERE THE DIRECT FORM PARTS FROM LILYPOND: free time. fills_measure
-- **:570** LILYSHARP-OWN, a DECIDED divergence (user decision 2026-08-20, HANDOFF §3):
+- **:585** LILYSHARP-OWN, a DECIDED divergence (user decision 2026-08-20, HANDOFF §3):
 ### `LilySharp.Core/Svg/Layout/SpacingRules.EmptyBar.cs`
 - **:257** LILYSHARP-OWN: LilyPond has no such spring because it has no such column — the
 ### `LilySharp.Core/Svg/Layout/SpacingRules.MeasureSprings.cs`

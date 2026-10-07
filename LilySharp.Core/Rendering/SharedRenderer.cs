@@ -765,7 +765,8 @@ internal static partial class SharedRenderer
                             SpacingRules.WidestActiveKeyInk(
                                 score, system.Measures.Length > 0 ? system.Measures[0].MeasureIndex : 0),
                             includeTimeSignature: true,
-                            pm.NumeratorText, pm.DenominatorText);
+                            pm.NumeratorText, pm.DenominatorText,
+                            leadSheetGrid: score.IsLeadSheet);
                         using (SourceScope(gc, isFirstSystem ? score.Header.Time : startTimeChange!.SourcePosition))
                             DrawTimeSignature(score.TextMetrics, pm, systemStartX + pc.TimeX, meterY, gc);
                     }
@@ -893,7 +894,7 @@ internal static partial class SharedRenderer
                 // and keep both.
                 // LILYPOND-REF: ly/engraver-init.ly \context RhythmicStaff — \remove
                 // Clef_engraver, \remove Key_engraver.
-                bool prefatoryStaff = staff.Lines > 1 && !staff.IsTextRow;
+                bool prefatoryStaff = SpacingRules.EngravesClef(staff);
                 bool drawClef = prefatoryStaff
                     && (!isOssia
                         || (ossiaAtSystemStart && OssiaAppearedBefore(layout, staff, system, globalIdx)));

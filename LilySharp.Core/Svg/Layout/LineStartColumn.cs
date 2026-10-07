@@ -571,14 +571,13 @@ internal static class LineStartColumn
             : SpacingRules.ClefStencil(staff.Clef);
         double anchor = columns.ClefX - clefGroupLeft;
 
-        var grobs = new List<PrefatoryGrob>
-        {
-            // Clef declares no extra-spacing-width, so it takes separation-item.cc:166-167's
-            // default (-0.1 . 0.1).
-            new PrefatoryGrob(BreakAlignSymbol.Clef,
+        var grobs = new List<PrefatoryGrob>();
+        // Clef declares no extra-spacing-width, so it takes separation-item.cc:166-167's
+        // default (-0.1 . 0.1). A one-line (rhythm) staff engraves none (EngravesClef).
+        if (SpacingRules.EngravesClef(staff))
+            grobs.Add(new PrefatoryGrob(BreakAlignSymbol.Clef,
                 anchor + stencil.Left, anchor + stencil.Right,
-                -SpacingRules.DefaultExtraSpacingWidth, SpacingRules.DefaultExtraSpacingWidth),
-        };
+                -SpacingRules.DefaultExtraSpacingWidth, SpacingRules.DefaultExtraSpacingWidth));
 
         double keyInkWidth = SpacingRules.ActiveKeyInkForStaff(score, staff, startMeasureIndex);
         if (columns.HasKey && keyInkWidth > 0.0)

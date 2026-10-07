@@ -1643,7 +1643,7 @@ internal sealed class MultiStaffLayouter
         // column's X to place the prefatory boxes (staff-spacing.cc:210).
         var prefixColumns = BreakAlignSpacing.SolvePrefixColumns(
             score.TextMetrics, maxClefWidth, activeKeyInk, prefixHasTime, prefixNumerator, prefixDenominator,
-            staffBarWidth);
+            staffBarWidth, leadSheetGrid: score.IsLeadSheet);
         return new LineStartPrefix(
             prefixColumns, leadingTimeChange, prefixHasTime, prefixNumerator, prefixDenominator,
             leadingKeyChange);

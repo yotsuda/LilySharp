@@ -389,7 +389,7 @@ internal static partial class SpacingRules
                 while (_staves.MoveNext())
                 {
                     var staff = _staves.Current.Staff;
-                    if (staff.IsTextRow || staff.IsOssia)
+                    if (!EngravesClef(staff) || staff.IsOssia)
                         continue;
                     Current = staff.IsTab ? TabClefStencil : ClefStencil(staff.Clef);
                     return true;
@@ -493,7 +493,22 @@ internal static partial class SpacingRules
     /// spaced from, while LilyPond's two twins are geometrically identical.
     /// </remarks>
     public static bool ContributesToKeyColumnWidth(Staff staff) =>
-        ClefEngravesKey(staff.Clef) && !staff.IsTextRow;
+        ClefEngravesKey(staff.Clef) && EngravesClef(staff);
+
+    /// <summary>
+    /// Whether this staff engraves a clef (and, with it, a key signature) at all: not a lyric /
+    /// chord row, and not a ONE-LINE staff — <c>as lines 1</c> is how a rhythm staff is written,
+    /// and it is LilyPond's RhythmicStaff, which removes both engravers. The one predicate the
+    /// Clef group's extent, each staff's own prefatory grobs and the drawing read.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly \context RhythmicStaff — \remove "Clef_engraver",
+    ///   \remove "Key_engraver".
+    /// MEASURED (2.26.0, Lab sessions/p851/ws, corpora oneline-rest's twin, whose one-line staff
+    ///   has neither engraver since cbd901d13): the first bar line 14.64 from the staff's left;
+    ///   Lily# drew no clef there yet booked one, 18.52.
+    /// </remarks>
+    public static bool EngravesClef(Staff staff) => !staff.IsTextRow && staff.Lines > 1;
 
     /// <summary>
     /// Whether a staff of this clef has a <c>Key_engraver</c> at all: not a tab staff and not

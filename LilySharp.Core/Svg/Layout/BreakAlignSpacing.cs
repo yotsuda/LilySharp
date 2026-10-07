@@ -477,6 +477,10 @@ internal static class BreakAlignSpacing
         public double BarGap => HasBar ? BarX - Right : 0.0;
     }
 
+    /// <summary>LeftEdge's space-alist distance to a time signature (extra-space 1.0) — where
+    /// a meter that opens a line with no clef and no key in front of it stands.</summary>
+    internal const double LeftEdgeToTimeSignature = 1.0;
+
     /// <summary>
     /// Solves the line-start break-align column table — LilyPond's
     /// <c>Break_alignment_interface::calc_positioning_done</c>, ported as a pure forward walk.
@@ -504,13 +508,16 @@ internal static class BreakAlignSpacing
     /// opening measure draws none — which is every ordinary line start.</param>
     /// <param name="fonts">The score's text metrics — the meter row's width reads the plan
     /// for a compound numerator's <c>+</c> (<see cref="GlyphMetrics.GetTimeSigWidth(Rendering.ScoreTextMetrics, string, string)"/>).</param>
+    /// <param name="leadSheetGrid">The system is a lead sheet's grid (no staff), whose meter is
+    /// Lily#'s own and keeps the clef's start.</param>
     public static PrefixColumns SolvePrefixColumns(
         Rendering.ScoreTextMetrics fonts,
         double clefWidth,
         double keyInkWidth,
         bool includeTimeSignature,
         string timeSigNumerator = "4", string timeSigDenominator = "4",
-        double staffBarWidth = 0.0)
+        double staffBarWidth = 0.0,
+        bool leadSheetGrid = false)
     {
         bool hasKey = keyInkWidth > 0.0;
 
@@ -540,8 +547,21 @@ internal static class BreakAlignSpacing
         // sits on the left edge — not the clef's 0.8:
         // LILYPOND-REF: scm/define-grobs.scm:2080-2104 LeftEdge, break-align-symbol left-edge,
         //   whose space-alist has (staff-bar . (extra-space . 0.0)) at :2094.
+        // …and with no CLEF (a one-line rhythm staff, EngravesClef) the first present grob is
+        // spaced in by LeftEdge's own entry for IT: a key 0.8, a meter 1.0 — LilyPond skips the
+        // empty clef group (break-alignment-interface.cc:145-146,155-156) and measures from the
+        // left edge. MEASURED (2.26.0, Lab sessions/p851/ws, corpora oneline-rest's twin): the
+        // meter 1.0 in, the first bar line 14.64; at the clef's 0.8 Lily# drew 14.45.
+        // ⚠️ The lead-sheet GRID keeps the clef's 0.8: its meter is Lily#'s own (a decided
+        // divergence, SpacingRules.AnyStaffEngravesTime) and LilyPond has no grob to measure.
+        // LILYPOND-REF: scm/define-grobs.scm:2080-2104 LeftEdge, break-align-symbol left-edge — (clef . (extra-space .
+        //   0.8)), (key-signature . (extra-space . 0.8)), (time-signature . (extra-space . 1.0)).
         var placed = scratch.Placed;
-        SolveColumns(items, prefatory ? EngravingDefaults.ClefGlyphXOffset : 0.0, placed);
+        double startLeft = !prefatory ? 0.0
+            : clefWidth > 0.0 || leadSheetGrid || hasKey ? EngravingDefaults.ClefGlyphXOffset
+            : includeTimeSignature ? LeftEdgeToTimeSignature
+            : EngravingDefaults.ClefGlyphXOffset;
+        SolveColumns(items, startLeft, placed);
 
         // An absent column's X is 0 (see PrefixColumns) — including the clef's, which a
         // system of chord / lyric rows does not have at all.
