@@ -51,8 +51,17 @@ public class TwinStaffSelectorTests
     public void LinesAndRemoveEmpty_OnAStaffOfItsOwn()
     {
         string twin = Twin("staff rh staff lh as lines 1 removeEmpty true");
-        Assert.Contains("\\RemoveEmptyStaves \\override StaffSymbol.line-count = #1 } { \\clef \"bass\" \\lh }", twin);
+        Assert.Contains("\\RemoveEmptyStaves \\override StaffSymbol.line-count = #1 \\remove \"Clef_engraver\" \\remove \"Key_engraver\" } { \\clef \"bass\" \\lh }", twin);
         Assert.Contains("\\new Staff \\with { instrumentName = \"Rh\" } {", twin);
+    }
+
+    /// <summary>A ONE-line staff prints no clef and no key, as the page draws it
+    /// (LilyPond's RhythmicStaff removes the same two engravers); two lines keep both.</summary>
+    [Fact]
+    public void OneLine_RemovesTheClefAndKeyEngravers_TwoLinesKeepThem()
+    {
+        Assert.Contains("\\remove \"Clef_engraver\" \\remove \"Key_engraver\"", Twin("staff rh as lines 1"));
+        Assert.DoesNotContain("Clef_engraver", Twin("staff rh as lines 2"));
     }
 
     [Fact]

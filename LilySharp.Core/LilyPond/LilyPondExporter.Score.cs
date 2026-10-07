@@ -618,6 +618,16 @@ public sealed partial class LilyPondExporter
             // page's `as lines N` is (StaffSpec.Lines).
             if (selectors is { } spec && spec.Lines != StaffSpec.MaxLines)
                 staffWith.Add("\\override StaffSymbol.line-count = #" + spec.Lines);
+            // ...and a ONE-line staff prints no clef and no key signature, as the page draws it
+            // (SharedRenderer: `as lines 1` is a rhythm staff, LilyPond's RhythmicStaff without
+            // its pitch squash). The twin printed both until 2026-10-07, so LilyPond's system
+            // head stood a clef's width wider and every bar line of test/rhythm-slashes moved
+            // (Lab sessions/p851, the twin sweep). The `\clef` in the music still sets where
+            // pitches sit; only the engravers that draw are removed.
+            // LILYPOND-REF: ly/engraver-init.ly \context RhythmicStaff — \remove
+            //   Clef_engraver, \remove Key_engraver.
+            if (selectors is { Lines: 1 })
+                staffWith.Add("\\remove \"Clef_engraver\" \\remove \"Key_engraver\"");
             if (staffWith.Count > 0)
                 sb.Append(" \\with { ").Append(string.Join(" ", staffWith)).Append(" }");
             sb.Append(" { ");
