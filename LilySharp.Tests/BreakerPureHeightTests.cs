@@ -120,6 +120,24 @@ public class BreakerPureHeightTests
     }
 
     [Fact]
+    public void AMarkInsideALinesFirstBar_IsInItsMidHeightsAlone_NotOnTheLineBefore()
+    {
+        // LILYPOND-REF: lily/axis-group-interface.cc:417-458 adjacent_pure_heights — a grob on a
+        //   musical column inside the bar has rank_span[LEFT] > start: no begin heights, and no
+        //   interval of the line before reaches it.
+        // MEASURED (2.26.0, Lab sessions/p854/fam1, まちぶせ line 7 `r4 d,@mark("B1")`):
+        //   LilyPond's line 6 rest top 0.05, line 7 begin 3.825 / rest 5.075; Lily# priced the
+        //   mark as opening line 7 (begin 5.100 / rest 2.545) and over line 6's end (3.555).
+        const string music = """e,1 | e,1 | break r4 e,2.@mark("B") | e,1 |""";
+        var first = Line(Book(music), 1);
+        var second = Line(Book(music), 2);
+        Assert.True(first.RestUp < 1.0, $"line 1 carries line 2's mid-bar mark: rest up {first.RestUp}");
+        // The begin heights are the clef's (2.31); the mark would stand at 3.555.
+        Assert.True(second.BeginUp < 3.0, $"the mid-bar mark is in line 2's begin heights: {second.BeginUp}");
+        Assert.Equal(3.555, second.RestUp, 3);
+    }
+
+    [Fact]
     public void TheLineStartKeySignature_IsInTheStavesPureTop()
     {
         // MEASURED (2.26.0, Lab sessions/p853, もう恋なんてしない's twin, E major in the bass

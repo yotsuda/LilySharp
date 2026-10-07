@@ -60,9 +60,12 @@ public readonly record struct MusicMarkLayout(
                               //   engraver — the draw, the stacker's extents, the paging
                               //   silhouette — asks the same bit instead of re-deriving it
                               //   from the score, which is the only place that knows it.
-    TempoPiecePositions TempoPieces = default // Tempo marks only: the note / "= N" / swing
+    TempoPiecePositions TempoPieces = default, // Tempo marks only: the note / "= N" / swing
                               //   equation's own source offsets (MusicMarkItem.TempoPieces),
                               //   re-derived with SourcePosition on a reused layout.
+    bool MidMeasure = false   // Hung on a moment INSIDE its bar (MusicMarkItem.IsMidMeasure),
+                              //   not on the bar's start — the page breaker prices it in the
+                              //   bar's mid heights only (LayoutEngine.AugmentSkylinesForPaging).
 );
 
 /// <summary>
@@ -1137,7 +1140,8 @@ internal static class MusicMarkEngraver
                         tMark.MeasureIndex, tX, tBaseUp, tMark.Type, tMark.Text,
                         tMark.IsSymbol, tMark.SourcePosition, tSi, tMark.SwingSubdivision,
                         tMark.TempoText, tMark.TempoBeatUnit, tMark.TempoDots,
-                        BesideOfSourceIndex: si, Boxed: BoxedOf(tMark.Type))
+                        BesideOfSourceIndex: si, Boxed: BoxedOf(tMark.Type),
+                        MidMeasure: tMark.IsMidMeasure)
                         { TempoPieces = tMark.TempoPieces });
                 }
 
@@ -1147,7 +1151,7 @@ internal static class MusicMarkEngraver
                     mark.MeasureIndex, x, yUp, mark.Type, mark.Text,
                     mark.IsSymbol, mark.SourcePosition, si, mark.SwingSubdivision,
                     mark.TempoText, mark.TempoBeatUnit, mark.TempoDots,
-                    Boxed: BoxedOf(mark.Type))
+                    Boxed: BoxedOf(mark.Type), MidMeasure: mark.IsMidMeasure)
                     { TempoPieces = mark.TempoPieces });
             }
 
@@ -1343,7 +1347,7 @@ internal static class MusicMarkEngraver
                     // A solved pedal row's yUp is about ITS OWN staff's middle; the
                     // legacy stack stays in the top-staff frame (StaffIndex −1).
                     StaffIndex: solvedPedalRow ? mark.StaffIndex : -1,
-                    Boxed: BoxedOf(mark.Type)));
+                    Boxed: BoxedOf(mark.Type), MidMeasure: mark.IsMidMeasure));
             }
         }
 

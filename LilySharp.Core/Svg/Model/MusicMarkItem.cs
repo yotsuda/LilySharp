@@ -266,6 +266,12 @@ public sealed record MusicMarkItem
     /// </summary>
     public Fraction AnchorTiming { get; }
 
+    /// <summary>Hung on a moment INSIDE its bar — a tempo on a later note
+    /// (<see cref="AnchorItemIndex"/> &gt; 0) or a rehearsal mark at a later moment
+    /// (<see cref="AnchorTiming"/> &gt; 0) — rather than on the bar's start.</summary>
+    public bool IsMidMeasure => AnchorItemIndex > 0
+        || (AnchorTiming.Denominator != 0 && AnchorTiming > Fraction.Zero);
+
     /// <summary>Creates a music mark of the given type with standard text.</summary>
     public MusicMarkItem(MusicMarkType type, int measureIndex, int sourcePosition,
         int anchorItemIndex = -1, Fraction anchorTiming = default)

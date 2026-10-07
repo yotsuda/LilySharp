@@ -1239,7 +1239,14 @@ internal sealed partial class LayoutEngine
                     //   only, and the mark at the second bar in its begin heights and the
                     //   first bar's mid heights.
                     double pureX0 = mx0 - margin, pureX1 = mx1 + margin;
-                    if (BarOf(m, ms) == 0)
+                    // ⚠️ Only a mark AT the bar's start opens the line: one hung on a note
+                    // inside the bar (MusicMarkLayout.MidMeasure) stands on a musical column
+                    // past the break, so it is in the bar's mid heights alone, and in no
+                    // heights of the line before. MEASURED (2.26.0, Lab sessions/p854/fam1,
+                    // まちぶせ line 7 `r4 d,@mark("B1")`): LilyPond's begin 3.825 / rest
+                    // 5.075, and nothing on line 6's end (rest 0.05); Lily# had 5.100 / 2.545
+                    // and the mark over line 6's last bar (3.555).
+                    if (BarOf(m, ms) == 0 && !m.MidMeasure)
                     {
                         pureX1 = systems[ms].Measures[0].X - BreakerBucketEpsilon;
                         pureX0 = pureX1 - (mx1 - mx0) - 2 * margin;
@@ -1256,7 +1263,7 @@ internal sealed partial class LayoutEngine
                     //   MEASURED (2.26.0, Lab sessions/p851/pg1/mk): a boxed mark opening the
                     //   second line is in the System's begin heights of its bar AND the mid
                     //   heights of the bar before.
-                    if (BarOf(m, ms) == 0 && ms > 0
+                    if (BarOf(m, ms) == 0 && !m.MidMeasure && ms > 0
                         && systems[ms - 1].Measures is { IsDefaultOrEmpty: false } prev)
                     {
                         double lastX = prev[^1].X;
