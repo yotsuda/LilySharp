@@ -42,6 +42,7 @@ namespace LilySharp.Tests;
 /// "placed sys" row, which prints the breaker's own <c>LineShape</c>.
 /// </remarks>
 [Trait("Category", "Unit")]
+[Collection(PageChainDebugTests.HookCollection)]
 public class BreakerPureHeightTests
 {
     private static string Book(string music) => $$"""

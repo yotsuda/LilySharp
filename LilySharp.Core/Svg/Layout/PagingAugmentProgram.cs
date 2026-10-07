@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -170,6 +170,10 @@ internal sealed class PagingAugmentProgram
     /// The staff top of a bar is the staves' silhouette over the bar's X span united with the
     /// line's prefix (the clef and key LilyPond would print were the line to start at that bar —
     /// its begin heights at the bar's break rank); a box left of the first bar is the first bar's.
+    /// The prefix is read off the BASE silhouette, before the replayed steps: a slur coming in
+    /// from the line before has a piece over the prefix, and that piece is no later bar's begin
+    /// height (MEASURED, 2.26.0, Lab sessions/p854/cjk, ひまわりの約束 line 3: the bar under the
+    /// mark that opens line 4 has its staff top at 0.05, where the slur's piece read 3.045).
     /// </para>
     /// </remarks>
     /// <param name="measures">The system's bars, for their X spans.</param>
@@ -192,9 +196,9 @@ internal sealed class PagingAugmentProgram
             return staves;
 
         double x0Line = measures.IsDefaultOrEmpty ? double.NegativeInfinity : measures[0].X;
-        double prefixTop = up.IsEmpty || measures.IsDefaultOrEmpty
+        double prefixTop = baseline.up.IsEmpty || measures.IsDefaultOrEmpty
             ? double.NegativeInfinity
-            : up.MaxHeightsSplitAt(x0Line).Left;
+            : baseline.up.MaxHeightsSplitAt(x0Line).Left;
         // A bar's staff top: its own span's silhouette under the line's prefix.
         double BarTop(int k)
         {

@@ -31,6 +31,7 @@ namespace LilySharp.Tests;
 /// Lily# put a system more on page 1 than LilyPond (13/11 against 12/12 at A4).
 /// </summary>
 [Trait("Category", "Unit")]
+[Collection(PageChainDebugTests.HookCollection)]
 public sealed class BreakerAlignmentFrameTests
 {
     private static SystemDetails Line(double up, double origin) => new()
@@ -110,6 +111,26 @@ public sealed class BreakerAlignmentFrameTests
         var (up, _) = b.Build().ExecuteForBreaker(Baseline(), Bars, out double pureTop, out var staffUp);
         Assert.Equal(3.0, pureTop, 9);
         Assert.Equal(3.0, staffUp.MaxHeight(), 9);
+        Assert.Equal(2.85 + (3.0 - 0.05), up.MaxHeightInRange(12, 16), 9);
+    }
+
+    [Fact]
+    public void ABarsStaffTop_TakesTheClefAndKey_NotWhatTheLineCarriesInFromTheLineBefore()
+    {
+        // LILYPOND-REF: lily/axis-group-interface.cc:417-458 adjacent_pure_heights — a bar's
+        //   begin heights hold what LilyPond would print were a line to START at that bar (clef,
+        //   key); a slur coming in from the line before spans only the line's first bars.
+        // MEASURED (2.26.0, Lab sessions/p854/cjk, ひまわりの約束 line 3): the line opens on a
+        //   slur from line 2, and the mark opening line 4 is priced over its last bar, whose
+        //   staff top LilyPond reads at 0.05 (+ the key) — Lily# read 3.045 off the slur's piece
+        //   over the line's prefix and lifted the mark 2.5 too little; LilyPond 7/8/8/1, Lily#
+        //   8/8/8 until this. A replayed step over the prefix stands in for the slur's piece here.
+        var b = new PagingAugmentProgram.Builder();
+        b.AddMarkBox(2, 8, 0, 2.5);
+        b.AddMusicMarkBoxes(12, 16, 1, 3, pureBottom: 0.85, pureTop: 2.85, pureXLeft: 12, pureXRight: 16);
+        var (up, _) = b.Build().ExecuteForBreaker(Baseline(), Bars, out double pureTop, out _);
+        Assert.Equal(3.0, pureTop, 9);
+        // Bar 0's staff top is the base's prefix (0.05), not the step's 2.5.
         Assert.Equal(2.85 + (3.0 - 0.05), up.MaxHeightInRange(12, 16), 9);
     }
 

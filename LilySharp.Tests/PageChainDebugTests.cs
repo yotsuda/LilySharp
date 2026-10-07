@@ -41,8 +41,16 @@ namespace LilySharp.Tests;
 /// actually placed.
 /// </remarks>
 [Trait("Category", "Unit")]
+[Collection(PageChainDebugTests.HookCollection)]
 public class PageChainDebugTests
 {
+    /// <summary>The collection every class that sets <c>LayoutEngine.DebugPageBreakingScoring</c>
+    /// runs in: the hook is ONE static field, and a class that clears it in its <c>finally</c>
+    /// while another's layout runs drops that layout's lines (PageChainDebugTests failed one
+    /// run in three on 2026-10-07, once BreakerPureHeightTests and BreakerAlignmentFrameTests
+    /// had joined it in parallel).</summary>
+    public const string HookCollection = "DebugPageBreakingScoring";
+
     /// <summary>
     /// A titled grand-staff book long enough to need several pages, so the chain is reported
     /// for a page that opens with the title AND for pages that do not.
@@ -281,3 +289,6 @@ public class PageChainDebugTests
                 $"count {m.Groups[1].Value}: the loop scored {m.Groups[2].Value}, fresh lines score {m.Groups[3].Value}");
     }
 }
+
+[CollectionDefinition(PageChainDebugTests.HookCollection)]
+public class DebugPageBreakingScoringCollection { }
