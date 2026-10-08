@@ -57,7 +57,7 @@ internal enum MusicGlyph : ushort
     // ---- accidentals ----
     AccidentalFlat, AccidentalNatural, AccidentalSharp, AccidentalDoubleSharp, AccidentalDoubleFlat,
     AccidentalQuarterToneSharpStein, AccidentalThreeQuarterTonesSharpStein,
-    FetaAccidentalsFlatSlash, FetaAccidentalsFlatFlatSlash,
+    AccidentalQuarterToneFlatStein, AccidentalThreeQuarterTonesFlatZimmermann,
     AccidentalParensLeft, AccidentalParensRight,
 
     // ---- flags ----
@@ -115,12 +115,8 @@ internal enum MusicGlyph : ushort
 /// one the generators resolve (audit/scripts/Extract-Emmentaler*.py).</param>
 /// <param name="EmmentalerCode">The character Emmentaler draws it with — today's private-use slot,
 /// or ASCII for the fetaText digits and dynamic letters (<see cref="EmmentalerGlyphs"/>).</param>
-/// <param name="Unverified">True while the SMuFL name is a reading of the descriptions and not yet
-/// a drawing compared by eye (docs/smufl-design.md §4). A SMuFL font is not drawn through such a
-/// row until it is settled.</param>
 internal readonly record struct MusicGlyphEntry(
-    MusicGlyph Glyph, string SmuflName, int SmuflCodepoint, string FetaName, char EmmentalerCode,
-    bool Unverified = false);
+    MusicGlyph Glyph, string SmuflName, int SmuflCodepoint, string FetaName, char EmmentalerCode);
 
 /// <summary>The <see cref="MusicGlyph"/> table — the one home of the feta ↔ SMuFL mapping.</summary>
 /// <remarks>
@@ -132,11 +128,16 @@ internal readonly record struct MusicGlyphEntry(
 /// ⚠️ TWO ROWS MAY SHARE AN EMMENTALER GLYPH: <see cref="MusicGlyph.RepeatDot"/> is
 /// <c>dots.dot</c>, the augmentation dot, because LilyPond draws both with it; SMuFL has two.
 /// </para>
+/// <para>
+/// Every row was drawn in Emmentaler beside Bravura, Petaluma and Leland and compared by eye
+/// (session 867, docs/smufl-design.md §4). That pass found the portato pair crossed — feta's
+/// <c>dportato</c> is SMuFL's <c>articTenutoStaccatoAbove</c> — and the quarter-tone accidentals
+/// drawn from the wrong Emmentaler glyphs (scm/output-lib.scm:1136-1149 names the 3/4 sharp
+/// <c>sharp.slashslash.stemstemstem</c> and the flats <c>mirroredflat</c>, <c>mirroredflat.flat</c>).
+/// </para>
 /// </remarks>
 internal static class MusicGlyphs
 {
-    private const bool U = true; // Unverified — see MusicGlyphEntry.Unverified
-
     /// <summary>Every row, one per <see cref="MusicGlyph"/> member.</summary>
     public static readonly ImmutableArray<MusicGlyphEntry> Table =
     [
@@ -149,7 +150,7 @@ internal static class MusicGlyphs
         new(MusicGlyph.CClefChange, "cClefChange", 0xE07B, "clefs.C_change", EmmentalerGlyphs.CClefChange),
         new(MusicGlyph.UnpitchedPercussionClef1, "unpitchedPercussionClef1", 0xE069, "clefs.percussion", EmmentalerGlyphs.PercussionClef),
         new(MusicGlyph.FetaClefsPercussionChange, "feta.clefs.percussion_change", 0, "clefs.percussion_change", EmmentalerGlyphs.PercussionClefChange),
-        new(MusicGlyph.SixStringTabClef, "6stringTabClef", 0xE06D, "clefs.tab", EmmentalerGlyphs.TabClef, U),
+        new(MusicGlyph.SixStringTabClef, "6stringTabClef", 0xE06D, "clefs.tab", EmmentalerGlyphs.TabClef),
         new(MusicGlyph.FetaClefsTabChange, "feta.clefs.tab_change", 0, "clefs.tab_change", EmmentalerGlyphs.TabClefChange),
 
         // ---- noteheads ----
@@ -157,15 +158,15 @@ internal static class MusicGlyphs
         new(MusicGlyph.NoteheadWhole, "noteheadWhole", 0xE0A2, "noteheads.s0", EmmentalerGlyphs.NoteheadWhole),
         new(MusicGlyph.NoteheadHalf, "noteheadHalf", 0xE0A3, "noteheads.s1", EmmentalerGlyphs.NoteheadHalf),
         new(MusicGlyph.NoteheadBlack, "noteheadBlack", 0xE0A4, "noteheads.s2", EmmentalerGlyphs.NoteheadBlack),
-        new(MusicGlyph.NoteheadDiamondWhole, "noteheadDiamondWhole", 0xE0D8, "noteheads.s0diamond", EmmentalerGlyphs.NoteheadDiamondWhole, U),
-        new(MusicGlyph.NoteheadDiamondHalf, "noteheadDiamondHalf", 0xE0D9, "noteheads.s1diamond", EmmentalerGlyphs.NoteheadDiamondHalf, U),
-        new(MusicGlyph.NoteheadDiamondBlack, "noteheadDiamondBlack", 0xE0DB, "noteheads.s2diamond", EmmentalerGlyphs.NoteheadDiamondBlack, U),
-        new(MusicGlyph.NoteheadTriangleUpWhole, "noteheadTriangleUpWhole", 0xE0BB, "noteheads.s0triangle", EmmentalerGlyphs.NoteheadTriangleWhole, U),
-        new(MusicGlyph.NoteheadTriangleUpHalf, "noteheadTriangleUpHalf", 0xE0BC, "noteheads.s1triangle", EmmentalerGlyphs.NoteheadTriangleHalf, U),
-        new(MusicGlyph.NoteheadTriangleUpBlack, "noteheadTriangleUpBlack", 0xE0BE, "noteheads.s2triangle", EmmentalerGlyphs.NoteheadTriangleBlack, U),
-        new(MusicGlyph.NoteheadSlashWhiteWhole, "noteheadSlashWhiteWhole", 0xE102, "noteheads.s0slash", EmmentalerGlyphs.NoteheadSlashWhole, U),
-        new(MusicGlyph.NoteheadSlashWhiteHalf, "noteheadSlashWhiteHalf", 0xE103, "noteheads.s1slash", EmmentalerGlyphs.NoteheadSlashHalf, U),
-        new(MusicGlyph.NoteheadSlashHorizontalEnds, "noteheadSlashHorizontalEnds", 0xE101, "noteheads.s2slash", EmmentalerGlyphs.NoteheadSlashBlack, U),
+        new(MusicGlyph.NoteheadDiamondWhole, "noteheadDiamondWhole", 0xE0D8, "noteheads.s0diamond", EmmentalerGlyphs.NoteheadDiamondWhole),
+        new(MusicGlyph.NoteheadDiamondHalf, "noteheadDiamondHalf", 0xE0D9, "noteheads.s1diamond", EmmentalerGlyphs.NoteheadDiamondHalf),
+        new(MusicGlyph.NoteheadDiamondBlack, "noteheadDiamondBlack", 0xE0DB, "noteheads.s2diamond", EmmentalerGlyphs.NoteheadDiamondBlack),
+        new(MusicGlyph.NoteheadTriangleUpWhole, "noteheadTriangleUpWhole", 0xE0BB, "noteheads.s0triangle", EmmentalerGlyphs.NoteheadTriangleWhole),
+        new(MusicGlyph.NoteheadTriangleUpHalf, "noteheadTriangleUpHalf", 0xE0BC, "noteheads.s1triangle", EmmentalerGlyphs.NoteheadTriangleHalf),
+        new(MusicGlyph.NoteheadTriangleUpBlack, "noteheadTriangleUpBlack", 0xE0BE, "noteheads.s2triangle", EmmentalerGlyphs.NoteheadTriangleBlack),
+        new(MusicGlyph.NoteheadSlashWhiteWhole, "noteheadSlashWhiteWhole", 0xE102, "noteheads.s0slash", EmmentalerGlyphs.NoteheadSlashWhole),
+        new(MusicGlyph.NoteheadSlashWhiteHalf, "noteheadSlashWhiteHalf", 0xE103, "noteheads.s1slash", EmmentalerGlyphs.NoteheadSlashHalf),
+        new(MusicGlyph.NoteheadSlashHorizontalEnds, "noteheadSlashHorizontalEnds", 0xE101, "noteheads.s2slash", EmmentalerGlyphs.NoteheadSlashBlack),
         new(MusicGlyph.NoteheadXWhole, "noteheadXWhole", 0xE0A7, "noteheads.s0cross", EmmentalerGlyphs.NoteheadCrossWhole),
         new(MusicGlyph.NoteheadXHalf, "noteheadXHalf", 0xE0A8, "noteheads.s1cross", EmmentalerGlyphs.NoteheadCrossHalf),
         new(MusicGlyph.NoteheadXBlack, "noteheadXBlack", 0xE0A9, "noteheads.s2cross", EmmentalerGlyphs.NoteheadCrossBlack),
@@ -194,9 +195,9 @@ internal static class MusicGlyphs
         new(MusicGlyph.AccidentalDoubleSharp, "accidentalDoubleSharp", 0xE263, "accidentals.doublesharp", EmmentalerGlyphs.AccidentalDoubleSharp),
         new(MusicGlyph.AccidentalDoubleFlat, "accidentalDoubleFlat", 0xE264, "accidentals.flatflat", EmmentalerGlyphs.AccidentalDoubleFlat),
         new(MusicGlyph.AccidentalQuarterToneSharpStein, "accidentalQuarterToneSharpStein", 0xE282, "accidentals.sharp.slashslash.stem", EmmentalerGlyphs.AccidentalQuarterSharp),
-        new(MusicGlyph.AccidentalThreeQuarterTonesSharpStein, "accidentalThreeQuarterTonesSharpStein", 0xE283, "accidentals.sharp.slashslashslash.stemstem", EmmentalerGlyphs.AccidentalThreeQuarterSharp, U),
-        new(MusicGlyph.FetaAccidentalsFlatSlash, "feta.accidentals.flat.slash", 0, "accidentals.flat.slash", EmmentalerGlyphs.AccidentalQuarterFlat),
-        new(MusicGlyph.FetaAccidentalsFlatFlatSlash, "feta.accidentals.flatflat.slash", 0, "accidentals.flatflat.slash", EmmentalerGlyphs.AccidentalThreeQuarterFlat),
+        new(MusicGlyph.AccidentalThreeQuarterTonesSharpStein, "accidentalThreeQuarterTonesSharpStein", 0xE283, "accidentals.sharp.slashslash.stemstemstem", EmmentalerGlyphs.AccidentalThreeQuarterSharp),
+        new(MusicGlyph.AccidentalQuarterToneFlatStein, "accidentalQuarterToneFlatStein", 0xE280, "accidentals.mirroredflat", EmmentalerGlyphs.AccidentalQuarterFlat),
+        new(MusicGlyph.AccidentalThreeQuarterTonesFlatZimmermann, "accidentalThreeQuarterTonesFlatZimmermann", 0xE281, "accidentals.mirroredflat.flat", EmmentalerGlyphs.AccidentalThreeQuarterFlat),
         new(MusicGlyph.AccidentalParensLeft, "accidentalParensLeft", 0xE26A, "accidentals.leftparen", EmmentalerGlyphs.AccidentalLeftParen),
         new(MusicGlyph.AccidentalParensRight, "accidentalParensRight", 0xE26B, "accidentals.rightparen", EmmentalerGlyphs.AccidentalRightParen),
 
@@ -269,24 +270,24 @@ internal static class MusicGlyphs
         new(MusicGlyph.ArticAccentAbove, "articAccentAbove", 0xE4A0, "scripts.sforzato", EmmentalerGlyphs.ArticAccentAbove),
         new(MusicGlyph.ArticStaccatoAbove, "articStaccatoAbove", 0xE4A2, "scripts.staccato", EmmentalerGlyphs.ArticStaccatoAbove),
         new(MusicGlyph.ArticTenutoAbove, "articTenutoAbove", 0xE4A4, "scripts.tenuto", EmmentalerGlyphs.ArticTenutoAbove),
-        new(MusicGlyph.ArticTenutoStaccatoAbove, "articTenutoStaccatoAbove", 0xE4B2, "scripts.uportato", EmmentalerGlyphs.ArticPortatoAbove, U),
-        new(MusicGlyph.ArticTenutoStaccatoBelow, "articTenutoStaccatoBelow", 0xE4B3, "scripts.dportato", EmmentalerGlyphs.ArticPortatoBelow, U),
-        new(MusicGlyph.ArticStaccatissimoAbove, "articStaccatissimoAbove", 0xE4A6, "scripts.ustaccatissimo", EmmentalerGlyphs.ArticStaccatissimoAbove, U),
-        new(MusicGlyph.ArticStaccatissimoBelow, "articStaccatissimoBelow", 0xE4A7, "scripts.dstaccatissimo", EmmentalerGlyphs.ArticStaccatissimoBelow, U),
+        new(MusicGlyph.ArticTenutoStaccatoAbove, "articTenutoStaccatoAbove", 0xE4B2, "scripts.dportato", EmmentalerGlyphs.ArticPortatoBelow),
+        new(MusicGlyph.ArticTenutoStaccatoBelow, "articTenutoStaccatoBelow", 0xE4B3, "scripts.uportato", EmmentalerGlyphs.ArticPortatoAbove),
+        new(MusicGlyph.ArticStaccatissimoAbove, "articStaccatissimoAbove", 0xE4A6, "scripts.ustaccatissimo", EmmentalerGlyphs.ArticStaccatissimoAbove),
+        new(MusicGlyph.ArticStaccatissimoBelow, "articStaccatissimoBelow", 0xE4A7, "scripts.dstaccatissimo", EmmentalerGlyphs.ArticStaccatissimoBelow),
         new(MusicGlyph.ArticMarcatoAbove, "articMarcatoAbove", 0xE4AC, "scripts.umarcato", EmmentalerGlyphs.ArticMarcatoAbove),
         new(MusicGlyph.ArticMarcatoBelow, "articMarcatoBelow", 0xE4AD, "scripts.dmarcato", EmmentalerGlyphs.ArticMarcatoBelow),
         new(MusicGlyph.StringsUpBow, "stringsUpBow", 0xE612, "scripts.uupbow", EmmentalerGlyphs.ArticUpBowAbove),
-        new(MusicGlyph.StringsUpBowTurned, "stringsUpBowTurned", 0xE613, "scripts.dupbow", EmmentalerGlyphs.ArticUpBowBelow, U),
+        new(MusicGlyph.StringsUpBowTurned, "stringsUpBowTurned", 0xE613, "scripts.dupbow", EmmentalerGlyphs.ArticUpBowBelow),
         new(MusicGlyph.StringsDownBow, "stringsDownBow", 0xE610, "scripts.udownbow", EmmentalerGlyphs.ArticDownBowAbove),
-        new(MusicGlyph.StringsDownBowTurned, "stringsDownBowTurned", 0xE611, "scripts.ddownbow", EmmentalerGlyphs.ArticDownBowBelow, U),
+        new(MusicGlyph.StringsDownBowTurned, "stringsDownBowTurned", 0xE611, "scripts.ddownbow", EmmentalerGlyphs.ArticDownBowBelow),
         new(MusicGlyph.StringsHarmonic, "stringsHarmonic", 0xE614, "scripts.flageolet", EmmentalerGlyphs.ArticFlageolet),
         new(MusicGlyph.StringsThumbPosition, "stringsThumbPosition", 0xE624, "scripts.thumb", EmmentalerGlyphs.ArticThumb),
-        new(MusicGlyph.BrassMuteClosed, "brassMuteClosed", 0xE5E5, "scripts.stopped", EmmentalerGlyphs.ArticStopped, U),
-        new(MusicGlyph.PluckedSnapPizzicatoAbove, "pluckedSnapPizzicatoAbove", 0xE631, "scripts.snappizzicato", EmmentalerGlyphs.ScriptSnappizzicato, U),
-        new(MusicGlyph.KeyboardPedalHeel1, "keyboardPedalHeel1", 0xE661, "scripts.upedalheel", EmmentalerGlyphs.PedalHeelUp, U),
-        new(MusicGlyph.KeyboardPedalHeel2, "keyboardPedalHeel2", 0xE662, "scripts.dpedalheel", EmmentalerGlyphs.PedalHeelDown, U),
-        new(MusicGlyph.KeyboardPedalToe1, "keyboardPedalToe1", 0xE664, "scripts.upedaltoe", EmmentalerGlyphs.PedalToeUp, U),
-        new(MusicGlyph.KeyboardPedalToe2, "keyboardPedalToe2", 0xE665, "scripts.dpedaltoe", EmmentalerGlyphs.PedalToeDown, U),
+        new(MusicGlyph.BrassMuteClosed, "brassMuteClosed", 0xE5E5, "scripts.stopped", EmmentalerGlyphs.ArticStopped),
+        new(MusicGlyph.PluckedSnapPizzicatoAbove, "pluckedSnapPizzicatoAbove", 0xE631, "scripts.snappizzicato", EmmentalerGlyphs.ScriptSnappizzicato),
+        new(MusicGlyph.KeyboardPedalHeel1, "keyboardPedalHeel1", 0xE661, "scripts.upedalheel", EmmentalerGlyphs.PedalHeelUp),
+        new(MusicGlyph.KeyboardPedalHeel2, "keyboardPedalHeel2", 0xE662, "scripts.dpedalheel", EmmentalerGlyphs.PedalHeelDown),
+        new(MusicGlyph.KeyboardPedalToe1, "keyboardPedalToe1", 0xE664, "scripts.upedaltoe", EmmentalerGlyphs.PedalToeUp),
+        new(MusicGlyph.KeyboardPedalToe2, "keyboardPedalToe2", 0xE665, "scripts.dpedaltoe", EmmentalerGlyphs.PedalToeDown),
         new(MusicGlyph.KeyboardPedalPed, "keyboardPedalPed", 0xE650, "pedal.Ped", EmmentalerGlyphs.PedalPed),
         new(MusicGlyph.KeyboardPedalDot, "keyboardPedalDot", 0xE654, "pedal..", EmmentalerGlyphs.PedalDot),
         new(MusicGlyph.KeyboardPedalUp, "keyboardPedalUp", 0xE655, "pedal.*", EmmentalerGlyphs.PedalStar),
@@ -298,7 +299,7 @@ internal static class MusicGlyphs
         new(MusicGlyph.OrnamentTurnInverted, "ornamentTurnInverted", 0xE568, "scripts.reverseturn", EmmentalerGlyphs.OrnReverseTurn),
         new(MusicGlyph.OrnamentShortTrill, "ornamentShortTrill", 0xE56C, "scripts.prall", EmmentalerGlyphs.OrnPrall),
         new(MusicGlyph.OrnamentMordent, "ornamentMordent", 0xE56D, "scripts.mordent", EmmentalerGlyphs.OrnMordent),
-        new(MusicGlyph.OrnamentTremblement, "ornamentTremblement", 0xE56E, "scripts.prallprall", EmmentalerGlyphs.OrnPrallPrall, U),
+        new(MusicGlyph.OrnamentTremblement, "ornamentTremblement", 0xE56E, "scripts.prallprall", EmmentalerGlyphs.OrnPrallPrall),
         new(MusicGlyph.WiggleArpeggiatoUp, "wiggleArpeggiatoUp", 0xEAA9, "scripts.arpeggio", EmmentalerGlyphs.Arpeggio),
         new(MusicGlyph.Segno, "segno", 0xE047, "scripts.segno", EmmentalerGlyphs.MarkSegno),
         new(MusicGlyph.Coda, "coda", 0xE048, "scripts.coda", EmmentalerGlyphs.MarkCoda),
@@ -356,8 +357,8 @@ internal static class MusicGlyphs
         "doubleFlat" => MusicGlyph.AccidentalDoubleFlat,
         "quarterSharp" => MusicGlyph.AccidentalQuarterToneSharpStein,
         "threeQuarterSharp" => MusicGlyph.AccidentalThreeQuarterTonesSharpStein,
-        "quarterFlat" => MusicGlyph.FetaAccidentalsFlatSlash,
-        "threeQuarterFlat" => MusicGlyph.FetaAccidentalsFlatFlatSlash,
+        "quarterFlat" => MusicGlyph.AccidentalQuarterToneFlatStein,
+        "threeQuarterFlat" => MusicGlyph.AccidentalThreeQuarterTonesFlatZimmermann,
         _ => MusicGlyph.AccidentalNatural,
     };
 

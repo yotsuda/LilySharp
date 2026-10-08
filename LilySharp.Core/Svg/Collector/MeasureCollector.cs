@@ -5179,7 +5179,8 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>Display accidental kind for a quarter-tone pitch (ih/eh/isih/eseh).
-    /// LILYPOND-REF: quarter-tone note names; glyphs = accidentals.*.slash*.</summary>
+    /// LILYPOND-REF: scm/output-lib.scm:1136-1149 standard-alteration-glyph-name-alist — the glyphs
+    /// sharp.slashslash.stem, sharp.slashslash.stemstemstem, mirroredflat and mirroredflat.flat.</summary>
     private static string? QuarterToneAccidental(PitchSyntax pitch, string? fallback)
         => QuarterToneAccidental(pitch.AccidentalOffset, pitch.QuarterOffset, fallback);
 

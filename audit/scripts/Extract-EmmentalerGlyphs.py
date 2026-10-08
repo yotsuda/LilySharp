@@ -126,9 +126,9 @@ GLYPHS: list[tuple[str, str, str]] = [
     ("AccidentalDoubleSharp", "accidentals.doublesharp", ""),
     ("AccidentalDoubleFlat", "accidentals.flatflat", ""),
     ("AccidentalQuarterSharp", "accidentals.sharp.slashslash.stem", "quarter sharp"),
-    ("AccidentalThreeQuarterSharp", "accidentals.sharp.slashslashslash.stemstem", "three-quarter sharp"),
-    ("AccidentalQuarterFlat", "accidentals.flat.slash", "quarter flat"),
-    ("AccidentalThreeQuarterFlat", "accidentals.flatflat.slash", "three-quarter flat"),
+    ("AccidentalThreeQuarterSharp", "accidentals.sharp.slashslash.stemstemstem", "three-quarter sharp"),
+    ("AccidentalQuarterFlat", "accidentals.mirroredflat", "quarter flat"),
+    ("AccidentalThreeQuarterFlat", "accidentals.mirroredflat.flat", "three-quarter flat"),
 
     ("#", "Accidental parentheses (for courtesy/cautionary accidentals)", ""),
     ("AccidentalLeftParen", "accidentals.leftparen", "ink left of origin, advance 0"),

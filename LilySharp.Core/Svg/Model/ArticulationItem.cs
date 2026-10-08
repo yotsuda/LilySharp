@@ -159,10 +159,10 @@ public sealed record ArticulationItem
         // The staccato DOT sits adjacent to the notehead, the tenuto LINE outside it
         // (LILYPOND-REF: LilyPond portato output — dot nearest the head). Emmentaler's
         // uportato (E04E) has the dot on the baseline-far side and dportato (E04F) the
-        // near side, so to get a dot-adjacent mark the ABOVE case wants dportato and the
-        // BELOW case uportato — the opposite of the naive name. Paired with the flipped
-        // Portato box in ArticulationEngraver.GetGlyphBBox.
-        ArticulationType.Portato => isAbove ? MusicGlyph.ArticTenutoStaccatoBelow : MusicGlyph.ArticTenutoStaccatoAbove,
+        // near side, so the ABOVE case draws dportato and the BELOW case uportato — the
+        // opposite of feta's names, and exactly SMuFL's: articTenutoStaccatoAbove is the
+        // line over the dot (docs/smufl-design.md §4, compared by eye in session 867).
+        ArticulationType.Portato => isAbove ? MusicGlyph.ArticTenutoStaccatoAbove : MusicGlyph.ArticTenutoStaccatoBelow,
         ArticulationType.Staccatissimo => isAbove ? MusicGlyph.ArticStaccatissimoAbove : MusicGlyph.ArticStaccatissimoBelow,
         // LilyPond 2.26.0 gives the bowing marks a direction pair — scm/script.scm:453
         // (dupbow . uupbow) and :88 (ddownbow . udownbow) — where 2.24.4 drew the one

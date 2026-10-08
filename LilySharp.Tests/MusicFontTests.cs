@@ -346,8 +346,8 @@ public class MusicFontTests
                  })
             Assert.Equal(full.Metrics(sixteenth), full.Metrics(shorter));
         // The portato's box belongs to the glyph: dportato (drawn above) has its dot at the bottom.
-        Assert.Equal(new GlyphMetrics.BBox(-0.6, -0.82, 0.6, 0.07), full.Box(MusicGlyph.ArticTenutoStaccatoBelow));
-        Assert.Equal(new GlyphMetrics.BBox(-0.6, -0.07, 0.6, 0.82), full.Box(MusicGlyph.ArticTenutoStaccatoAbove));
+        Assert.Equal(new GlyphMetrics.BBox(-0.6, -0.82, 0.6, 0.07), full.Box(MusicGlyph.ArticTenutoStaccatoAbove));
+        Assert.Equal(new GlyphMetrics.BBox(-0.6, -0.07, 0.6, 0.82), full.Box(MusicGlyph.ArticTenutoStaccatoBelow));
         // A sized design scales the hand rows as it scales the generated ones.
         var grace = font.SizedAt(-3);
         Assert.Equal(2.296 * grace.Magnification, grace.Box(MusicGlyph.NoteheadDoubleWhole).Width, 12);

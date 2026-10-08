@@ -819,8 +819,8 @@ internal sealed class EmmentalerMusicFont : MusicFont
             => new(d.FermataBelowGlyph, d.FermataBelowGlyphOutline, d.FermataBelowGlyphAdvance),
         // The portato: dportato (drawn ABOVE a note, ArticulationItem.GlyphOf) has its dot at
         // the bottom, uportato at the top.
-        MusicGlyph.ArticTenutoStaccatoBelow => new(HandMeasured.Portato(dotAtBottom: true, d.Magnification), null, null),
-        MusicGlyph.ArticTenutoStaccatoAbove => new(HandMeasured.Portato(dotAtBottom: false, d.Magnification), null, null),
+        MusicGlyph.ArticTenutoStaccatoAbove => new(HandMeasured.Portato(dotAtBottom: true, d.Magnification), null, null),
+        MusicGlyph.ArticTenutoStaccatoBelow => new(HandMeasured.Portato(dotAtBottom: false, d.Magnification), null, null),
 
         _ => default,
     };

@@ -135,12 +135,12 @@ internal static partial class EmmentalerGlyphs
     public const char AccidentalDoubleFlat = '\uE02A';
     /// <summary>accidentals.sharp.slashslash.stem (quarter sharp)</summary>
     public const char AccidentalQuarterSharp = '\uE017';
-    /// <summary>accidentals.sharp.slashslashslash.stemstem (three-quarter sharp)</summary>
-    public const char AccidentalThreeQuarterSharp = '\uE018';
-    /// <summary>accidentals.flat.slash (quarter flat)</summary>
-    public const char AccidentalQuarterFlat = '\uE025';
-    /// <summary>accidentals.flatflat.slash (three-quarter flat)</summary>
-    public const char AccidentalThreeQuarterFlat = '\uE02B';
+    /// <summary>accidentals.sharp.slashslash.stemstemstem (three-quarter sharp)</summary>
+    public const char AccidentalThreeQuarterSharp = '\uE01B';
+    /// <summary>accidentals.mirroredflat (quarter flat)</summary>
+    public const char AccidentalQuarterFlat = '\uE028';
+    /// <summary>accidentals.mirroredflat.flat (three-quarter flat)</summary>
+    public const char AccidentalThreeQuarterFlat = '\uE027';
 
     // === Accidental parentheses (for courtesy/cautionary accidentals) ===
     /// <summary>accidentals.leftparen (ink left of origin, advance 0)</summary>
