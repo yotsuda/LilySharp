@@ -92,7 +92,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⏸ **perf の島（⒭⁸・⒮*・⒩⁴・⒨・⒯ …）は第615 で区切り＝一時停止（ユーザー判断・忠実度が先）**。本文と掃き終わった島（第434〜第456）の教訓は `HANDOFF-ARCHIVE.md`「§1.0 から移した perf の島」（第660）・閉じた島の一覧は第654 が畳んだ（各便の §1＝ARCHIVE・RULES §5.4 末尾）
 - ★★ **U10 ユーザーのコーパスに*効いていない弦番号*が 473 件（39 冊）**（第486・LYS5003・Lab `sessions/p486/lys5003-corpus.txt`）: 書いた `\N` の弦では弾けない音＝Lily# は黙って別の弦に描く（LP も同じ）。**ユーザー決定「放置」（第523）＝本は直さない・描画は今までと同じ**
 
-- ★ **次の候補（第855）: 双子と頁割りが違う実の本 13 冊の残り**（計器 Lab `p855/bodies.ps1`＝`lp-lines3.ps1`（第853 の `lp-lines2` の数の読み方を直した版）＋`Zz855PageDump.cs.txt`（Tests に写して build・終わったら消す）→ `bodies-sum.ps1` が列ごとの差を刷る）。⚠️ **第854 の所見 ⑴ 行頭の小節番号の持ち上げ・⑵ outside-staff の順序は計器の読み違い**（`-5.497659181403769e-4` の指数を読めず以後の SBEGIN が 1 つずれた）＝直すと You're So Vain の begin は 9 行とも LP と一致。残る差: ⒜ **tab の数字**（下 +0.377〜0.389・tab だけの score の行頭の小節番号 −0.396 も Lily# の数字の上端が barTop になる同じ族）＝ユーザー決定 (b) で触らない。譜＋tab の 7/8 族（I Should Be So Lucky・あなたに会えてよかった ほか）の主因 ⒝ **譜と譜の間（body）を LP は pure で測る**＝タイ・tuplet は pure の高さを持たない（align-interface.cc:94-123 get_skylines・PagingAugmentProgram は外枠だけ pure）: I'll Be Over You 行 7 +0.78（低い音のタイ）・You're So Vain 行 1・2 +0.52（tuplet の「5」）・OH NO 行 10 +0.31。直すなら per-staff の skyline をタイ・tuplet 抜きでもう 1 本作り（`MultiStaffLayouter.BuildAllStaffSkylines`:3743 → `BuildInsideStaffSkylines` の合流で外す）`AlignmentMinimumWithSkylines` に通す＝設計 1〜2 便・数字の族と混ざるので頁割りが寄るかは未値付け ⒞ 個別: Sweet Child line 40・奏-tab・Something That I Want line 14（begin −1.4）は未読
+- ★ **次の候補（第856）: 双子と頁割りが違う実の本の残り 11 冊**（第856 で I'll Be Over You・You're So Vain が LP に一致＝`c406ab2d2`。計器 Lab `p856/bodies.ps1 -List`＝`p855/lp-lines3.ps1`＋`Zz855PageDump.cs.txt`（Tests に写して build・終わったら消す）・段ごとの pure の箱は `p856/lp-staves.ps1`・掃きの値付けは `p856/price.ps1`（動いた svg の頁ごとの系の数を base／head／LP で並べる））。残る差: ⒜ **tab の数字**（下 +0.377〜0.389・行頭の小節番号 −0.396 も同じ族）＝ユーザー決定 (b) で触らない ⒝ **LP の pure は箱**（行頭と行の残りの 2 区間）＝Lily# は skyline のまま（LILYSHARP-OWN・箱にすると tab の数字の差が行全体に乗り 7 枚が LP から離れた）。まちぶせ line 9 −0.38・OH NO line 13 −0.20 はこの族 ⒞ 個別: Sweet Child line 40・奏-tab・Something That I Want line 14（begin −1.4）は未読 ⒟ pure の 2 回目の積みの値段は未測（staff 対のある score でタイか tuplet のある段だけ・perf は一時停止中）
 - ⚠️ **LP を `-dbackend=svg` で描く計器は `lysc ly --pin-fonts` 必須**（第690〜第695 の 6 本は無しで、数字の幅・高さが汎用 serif だった＝第736 ⑴⑵）。tab の tuplet の残差は全部 beam の決定（`uniformBeamedLength`）の帰結＝第737
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
@@ -118,28 +118,22 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第856セッション（2026-10-08・YT-DELL2）
+
+新しい会話。`-Start p856`（HEAD `37fff9ead`）＝full **11400 / 0 / 2 / 11402**。§7 3.5 で第854 を ARCHIVE へ。第855 の次の候補（双子と頁割りが違う実の本 13 冊の残り）から。
+- **LP の改ページの body は pure の箱**（align-interface.cc:94-123: 段ごとに行頭の箱 x<−1 と行の残りの箱 x≥0）。キミ、メグル、ボク line 28 で 4.500＋2.872＋padding 1.0＝8.372 が LP の pure の間隔に一致（`p856/lp-staves.ps1`）。Lily# は `StaffSpringCompression` が layout の floor（タイ・tuplet 入りの skyline）を引いていた。
+- **値付け（試作 3 通り・全 1199 svg）**: v1 箱＋伸び無し＝7 枚動き LP へ 2・離れ 5／v2 箱＋伸びも許す＝11 枚・LP へ 2・離れ 7（離れたのは staff＋tab＝Lily# の数字が 0.385 高く箱で行全体に乗る）／v3 skyline のままタイ・tuplet を抜く＝**2 枚・2 枚とも LP へ・離れ 0**。
+- **閉じた（`c406ab2d2`）**: v3 を本実装。`BuildAllStaffSkylines` が外側の積みを 2 回まわす（2 回目はタイ・tuplet 抜きの inside から・staff 対のある score でタイか tuplet のある段だけ）→ `StaffSkylineSet.Pure` → `StaffSpring.PureMinimumDistance` → `StaffSpringCompression`。配置は不変。I'll Be Over You 7/8/5 → 8/8/4・You're So Vain 7/2 → 8/1（どちらも LP）。箱は LILYSHARP-OWN として註に実測を残した。網 `PageBreakTests.ATieBetweenTwoStaves_IsNotPricedByTheBreaker`（8 行・LP は 1 頁に 8・Lily# は 7+1 だった・`p856/tie/gen.ps1`）・毒 2 本とも赤。full **11401 / 0 / 2 / 11403**（+1）。
+- ⚠️ 道具: `refactor1.ps1` が BOM 無しのファイルを BOM 付きと決めつけ先頭の `// ` を削った（CS1040 で気づいた）＝BOM は読んで判定する（`p856/rep.ps1` の形）。`[string]$Log` の型つき引数に配列を代入すると 1 本の文字列になる。
+
+## 以下は第855セッションの経緯
+
 ### 1.1 第855セッション（2026-10-08・YT-DELL2）
 
 新しい会話。`-Start p855`（HEAD `67fd7b017`）＝full **11399 / 0 / 2 / 11401**。§7 3.5 で第853 を ARCHIVE へ。第854 の次の候補（System の pure の高さの細部）から。
 - **第854 の ⑴⑵ は計器の読み違い**: `p853/lp-lines2.ps1` と私の `sbegin.ps1` の数の正規表現 `[-+0-9.inf]+` が指数（2.26 は `-5.497659181403769e-4` と刷る）を読めず、その組を落として以後の SBEGIN が 1 つずれていた。直した `p855/lp-lines3.ps1` で You're So Vain の begin は 9 行とも LP と一致（4.044/4.041・3.594/3.594 …）。小さな譜でも `\tempo` は印を消さない（`p855/mk`）。
 - **広い計器**（`p855/bodies.ps1`・14 冊）: 列ごとの差の内訳は §1.0 の次の候補。dump は score の別名で選ぶ（`main` という名前は全 score に当たる＝最初の 1 回はそれで汚れた）。
 - **閉じた（`3f828a4e1`）She Bangs-tab-unfold**: LP の Lyrics と ChordNames は `remove-empty`・`remove-first`（engraver-init.ly:646-647・:719-720）＝語の無い系では行ごと消え、改ページはその行を譜だけで値付けする。Lily# の text row は消えなかった（最小の譜で body 8.9 対 LP 4.0）。text row を RemoveEmpty/RemoveFirst にし、`HaraKiri.IsStaffEmpty` が歌詞の行の音節（と前から続く延長線）を数える。sweep **1/1199**＝その 1 枚が 5/5/10/10/10 → 10/10/10/10（LP 10/10/11/9）。網 `PageBreakTests.ALyricsRowEmptyOnALine_IsNotPricedOnIt`（13 行＝LP と同じ 1 頁・最初の系で行が消え最後の系で残る）・毒 2 本とも赤。full **11400 / 0 / 2 / 11402**（+1）。⚠️ 延長線の規則は LP で測っていない（keepAliveInterfaces の lyric-interface から）。
-
-## 以下は第854セッションの経緯
-
-### 1.1 第854セッション（2026-10-07・YT-DELL2）
-
-新しい会話。`-Start p854`（HEAD `3ca19ce3b`）＝full **11395 / 0 / 2 / 11397**。§7 3.5 で第852 を ARCHIVE へ。第853 の次の候補（日本語の title/composer の帯が LP より高い）から。
-- **原因**: CJK の題は Lily# の書体に字形が無く（描画は機械の代替フォント）、`TextFontMetrics.InkOrFallbackBox` が Latin の書体の ascender/descender の箱を予約していた。LP の帯（`bookTitleMarkup` を `measure` で包む＝Lab `p854/cjk`）は 6.585・Lily# 9.12。LP の代替の ink は 0.835/−0.058 em（候補 11 書体のどれとも一致しない）。
-- **ユーザー決定（2026-10-07）「固定の CJK 箱」**＝機械に依存しない配置を代替フォントの正確な ink より優先（案 2＝`MatchCharacter` を測る、は配置が機械と SVG の表示側で変わり CI の ubuntu とも割れるので採らない）。
-- **閉じた（`c28c42ade`）**: 欠字のうち CJK（`IsCjk`）は ideographic em box（0.88/−0.12 em）・それ以外は従来どおり書体の箱。帯 6.835（LP 6.585）。網 `HeaderBand_ReservesTheIdeographicEmBox_ForCjkTheFaceCannotSpell`・`ASubtitleTheFaceCannotSpell` は箱の上端を 0.88 に。毒 2 本とも赤。full **11396 / 0 / 2 / 11398**（+1）。⚠️ 途中の full で `PageChainDebugTests.EverySpringOfThePage_IsNamedInTheChainsOwnOrder` が 1 度だけ赤（単独と次の full は緑）。
-- **sweep**（svg 160/1199）: LP 双子との頁割り 寄った 16・離れた 2（FF V・ひまわりの約束＝上の §1.0 の候補。題なしでも同じ不足＝帯の差は +0.07／+0.35 mm だけ）・変わらず一致 126・変わらず不一致 16。`-End p854 -DiffBase 3ca19ce3b`＝門 全 OK・Core `+` 67 行（既存の LILYSHARP-OWN の註の下）・full **11396 / 0 / 2 / 11398**。
-- **続き（同じ会話・ユーザー「続けて」）**: 題を外しても足りない 2 冊を行ごとの形で LP と並べた（Lab `p854/cjk/*-lines.txt`）。
-- **閉じた（`1f5d1b990`）ひまわりの約束**: line 4 を開く印 C1 は LP では line 3 の最後の小節の中の高さにも入る（axis-group-interface.cc:429-458・既に `AddBreakerOnlyMarkBox` が持つ）。その持ち上げを測る小節の譜の上端が、行頭に来たスラーの片を前置きとして拾って 3.045（LP 0.33）＝印が 2.5 低かった。`ExecuteForBreaker` の前置きを置き換え前の基の輪郭から読む。sweep 1/1199・その 1 冊が LP の 7/8/8/1 に。網 `ABarsStaffTop_TakesTheClefAndKey_…`・毒 赤。**ついで**: `DebugPageBreakingScoring`（static）を set／clear する 3 クラスが並走して `PageChainDebugTests` が今日 4 回中 2 回赤だった＝xUnit の collection を 1 つに（`PageChainDebugTests.HookCollection`）。
-- **閉じた（`dc6758f08`）FF V**: 印の pure の下端は譜線の範囲（上の線＋線の太さの半分 0.05）の 0.8 上（LP: "B" で始まる行の上端 3.555＝0.85＋2.705・Lily# 3.505）＝`PureMarkBottomUp` に `StaffLineThickness / 2`。網 `AMark_RestsItsPaddingOverTheStaffSymbolsExtent_NotItsTopLine`・毒 赤。sweep 9/1199: 寄った 7（FF V・Xanadu ×2・DADDY! DADDY! DO!・Reelin' In the Years・Soul Man・群青）・離れた 2（OH NO, OH YES!・Are You Gonna Go My Way-tab＝印の低さが tab の数字の大きさを打ち消していた。後者は line 20/22 にも別の差）。full **11398 / 0 / 2 / 11400**。
-- **閉じた（`d72cecb26`）まちぶせ**: 行の最初の小節の*途中*の印（`r4 d,@mark("B1")`）を行を開く印として扱い、begin と前の行の末尾に入れていた。LP は musical column の上＝その小節の mid だけ（line 7 LP 3.825/5.075・前の行の末尾 0.05）。`MusicMarkItem.IsMidMeasure`（tempo の後ろの anchor item・rehearsal mark の後ろの anchor timing）→ `MusicMarkLayout.MidMeasure`。sweep 1/1199＝その 1 冊が双子と同じ頁割りに。網 `AMarkInsideALinesFirstBar_…`・毒 赤。full **11399 / 0 / 2 / 11401**。
-- **census**（全 1193 score・`p854/census`）: 一致 1128・違う 65＝試験の譜 約 35（行割りから違う）・実の本で行は同じで頁割りだけ違う 13（tab の数字の族が多い）・残りは行割りの差。
-- **リリース準備（ユーザー「v0.11.0 をリリースしたい」）**: `release: 0.11.0` の commit＝`docs/RELEASING.md` の 7 か所（props・package.json・lock ×2・README・DEPLOY・両 CHANGELOG）。CHANGELOG は Unreleased を塊ごとにタグの文面と照らし、公開済み 41 塊を `## 0.10.0` に戻し（後の手直しのうち backtick だけの 3 つはその文面で）、リリース後に足された 5 つの挙動は 0.11.0 の独立した項目にした。`lysc --version` 0.11.0・full **11399 / 0 / 2 / 11401**。VS Code の CHANGELOG には editor 側の 11 項目を足した（ユーザー指示・`@todo` と OMR の 4 つ・航行記号の Breaking・Fixes 6 つ）。
 
 ## 2. 開いている作業
 

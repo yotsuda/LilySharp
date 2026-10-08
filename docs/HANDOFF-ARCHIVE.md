@@ -129,6 +129,22 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第854セッションの経緯
+
+### 1.1 第854セッション（2026-10-07・YT-DELL2）
+
+新しい会話。`-Start p854`（HEAD `3ca19ce3b`）＝full **11395 / 0 / 2 / 11397**。§7 3.5 で第852 を ARCHIVE へ。第853 の次の候補（日本語の title/composer の帯が LP より高い）から。
+- **原因**: CJK の題は Lily# の書体に字形が無く（描画は機械の代替フォント）、`TextFontMetrics.InkOrFallbackBox` が Latin の書体の ascender/descender の箱を予約していた。LP の帯（`bookTitleMarkup` を `measure` で包む＝Lab `p854/cjk`）は 6.585・Lily# 9.12。LP の代替の ink は 0.835/−0.058 em（候補 11 書体のどれとも一致しない）。
+- **ユーザー決定（2026-10-07）「固定の CJK 箱」**＝機械に依存しない配置を代替フォントの正確な ink より優先（案 2＝`MatchCharacter` を測る、は配置が機械と SVG の表示側で変わり CI の ubuntu とも割れるので採らない）。
+- **閉じた（`c28c42ade`）**: 欠字のうち CJK（`IsCjk`）は ideographic em box（0.88/−0.12 em）・それ以外は従来どおり書体の箱。帯 6.835（LP 6.585）。網 `HeaderBand_ReservesTheIdeographicEmBox_ForCjkTheFaceCannotSpell`・`ASubtitleTheFaceCannotSpell` は箱の上端を 0.88 に。毒 2 本とも赤。full **11396 / 0 / 2 / 11398**（+1）。⚠️ 途中の full で `PageChainDebugTests.EverySpringOfThePage_IsNamedInTheChainsOwnOrder` が 1 度だけ赤（単独と次の full は緑）。
+- **sweep**（svg 160/1199）: LP 双子との頁割り 寄った 16・離れた 2（FF V・ひまわりの約束＝上の §1.0 の候補。題なしでも同じ不足＝帯の差は +0.07／+0.35 mm だけ）・変わらず一致 126・変わらず不一致 16。`-End p854 -DiffBase 3ca19ce3b`＝門 全 OK・Core `+` 67 行（既存の LILYSHARP-OWN の註の下）・full **11396 / 0 / 2 / 11398**。
+- **続き（同じ会話・ユーザー「続けて」）**: 題を外しても足りない 2 冊を行ごとの形で LP と並べた（Lab `p854/cjk/*-lines.txt`）。
+- **閉じた（`1f5d1b990`）ひまわりの約束**: line 4 を開く印 C1 は LP では line 3 の最後の小節の中の高さにも入る（axis-group-interface.cc:429-458・既に `AddBreakerOnlyMarkBox` が持つ）。その持ち上げを測る小節の譜の上端が、行頭に来たスラーの片を前置きとして拾って 3.045（LP 0.33）＝印が 2.5 低かった。`ExecuteForBreaker` の前置きを置き換え前の基の輪郭から読む。sweep 1/1199・その 1 冊が LP の 7/8/8/1 に。網 `ABarsStaffTop_TakesTheClefAndKey_…`・毒 赤。**ついで**: `DebugPageBreakingScoring`（static）を set／clear する 3 クラスが並走して `PageChainDebugTests` が今日 4 回中 2 回赤だった＝xUnit の collection を 1 つに（`PageChainDebugTests.HookCollection`）。
+- **閉じた（`dc6758f08`）FF V**: 印の pure の下端は譜線の範囲（上の線＋線の太さの半分 0.05）の 0.8 上（LP: "B" で始まる行の上端 3.555＝0.85＋2.705・Lily# 3.505）＝`PureMarkBottomUp` に `StaffLineThickness / 2`。網 `AMark_RestsItsPaddingOverTheStaffSymbolsExtent_NotItsTopLine`・毒 赤。sweep 9/1199: 寄った 7（FF V・Xanadu ×2・DADDY! DADDY! DO!・Reelin' In the Years・Soul Man・群青）・離れた 2（OH NO, OH YES!・Are You Gonna Go My Way-tab＝印の低さが tab の数字の大きさを打ち消していた。後者は line 20/22 にも別の差）。full **11398 / 0 / 2 / 11400**。
+- **閉じた（`d72cecb26`）まちぶせ**: 行の最初の小節の*途中*の印（`r4 d,@mark("B1")`）を行を開く印として扱い、begin と前の行の末尾に入れていた。LP は musical column の上＝その小節の mid だけ（line 7 LP 3.825/5.075・前の行の末尾 0.05）。`MusicMarkItem.IsMidMeasure`（tempo の後ろの anchor item・rehearsal mark の後ろの anchor timing）→ `MusicMarkLayout.MidMeasure`。sweep 1/1199＝その 1 冊が双子と同じ頁割りに。網 `AMarkInsideALinesFirstBar_…`・毒 赤。full **11399 / 0 / 2 / 11401**。
+- **census**（全 1193 score・`p854/census`）: 一致 1128・違う 65＝試験の譜 約 35（行割りから違う）・実の本で行は同じで頁割りだけ違う 13（tab の数字の族が多い）・残りは行割りの差。
+- **リリース準備（ユーザー「v0.11.0 をリリースしたい」）**: `release: 0.11.0` の commit＝`docs/RELEASING.md` の 7 か所（props・package.json・lock ×2・README・DEPLOY・両 CHANGELOG）。CHANGELOG は Unreleased を塊ごとにタグの文面と照らし、公開済み 41 塊を `## 0.10.0` に戻し（後の手直しのうち backtick だけの 3 つはその文面で）、リリース後に足された 5 つの挙動は 0.11.0 の独立した項目にした。`lysc --version` 0.11.0・full **11399 / 0 / 2 / 11401**。VS Code の CHANGELOG には editor 側の 11 項目を足した（ユーザー指示・`@todo` と OMR の 4 つ・航行記号の Breaking・Fixes 6 つ）。
+
 ## 以下は第853セッションの経緯
 
 ### 1.1 第853セッション（2026-10-07・YT-DELL2）
