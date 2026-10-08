@@ -1,6 +1,6 @@
 # 音楽フォント（SMuFL）— 設計
 
-**状態**: **文法は決定**（2026-10-08・第857・ユーザー承認）。**実装は §6 ①（土台）の途中**（第857〜・✅ の行が閉じた分）。
+**状態**: **文法は決定**（2026-10-08・第857・ユーザー承認）。**実装は §6 ①（土台）の ⑴〜⑸ が閉じた**（第857〜第860・✅ の行）。残りは §3 #16・#17 の手書き定数。**②（取り込み）の前に §7 C（同梱）のユーザー判断**。
 段取りは §6（土台 3〜4 便 → 取り込み → 出力 → 仕上げ＝計 7〜10 便）。
 **根拠**: ユーザー決定（第850〜851・第857）と、第857 の棚卸し（§3 の表・file:line は 2026-10-08 時点）。
 
@@ -154,10 +154,21 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
    - ✅ **設計番号の読み手（第859・`3c6bca578`）**: `EmmentalerDesignSize.ForFontSizeStep(step).Rounded` を輪郭 skyline・`MusicFace`
      の鍵にしていた 11 か所 → `MusicFont.Current.DesignAt(step).Rounded`。Emmentaler は同じ数・1 設計のフォントは自分の 1 つ
      （⑷ の面の選択はそれを受ける）。`EmmentalerDesignSize.ForFontSizeStep` の読み手は `GlyphMetrics.ForFontSizeStep` と包みだけ。掃き 1199 枚・差 0。
-   - 残り（族ごと）: ⑶ 文字をキーにした表（`SkylineBuilder`・`GlyphSkylinesGenerated` のカーニングとペダルの skyline・
-     `TextOutlineSkylines`＝字と設計番号で引く cache は、取り込みの段でフォントも鍵に）⑷ 面の選択（`MusicFace(rounded)`・SVG の WOFF2・
-     PDF・PNG の Emmentaler 固定の名前＝`MusicFont` が face の名前と埋め込むフォントを答える形に）⑸ brace の段（`BraceLadderGenerated`＝
-     §3 #10 の拡張欄）。
+   - ✅ **文字をキーにした表（第860・`b1c4e0b4c`）**: 骨格 skyline の表（臨時記号と括弧の左右の対＝設計ごと・音部記号／強弱の字／
+     トリルの波／ペダルの上下の quad＝20 だけ）は `MusicFontDesign.HorizontalSkylinePair`／`VerticalSkylineQuads`、GPOS のカーニング
+     （§3 #7）は `MusicFont.Kern`、輪郭の walk は `MusicFont.OutlinePath`（1000 units/em）。`TextOutlineSkylines` の cache の鍵は字から
+     `MusicGlyph` に（フォントは取り込みの段で鍵に足す＝`MusicFont.Current` の註）。層が字を運ぶ所（`ArticulationLayout.Glyph`）は
+     `MusicFont.GlyphOf(char)` で引き戻す（dots.dot を共有する 2 行は表の先の行）。ペダルの piece は `MusicGlyph` と字の両方を持つ。
+     網: 全表・全カーニング対が参照同一で届く（8 設計）。掃き 1199 枚・差 0。
+   - ✅ **面の選択（第860・`3a930a7d4`）**: `MusicFont.DefaultDesign`／`FaceFamily`／`FaceFile`／`WebFaceFile`／`TryParseFamily`。
+     SVG の `.music` と `font-family`・`@font-face`・PDF の resolver（⚠️ global＝問われたスレッドの `Current` に答える＝取り込みの段で
+     全フォントの面を教える）・PNG の loader が通る。`EmmentalerFaces` は Emmentaler の名前付けとして残る。掃き 1199 枚・差 0。
+   - ✅ **brace の段（第860・`ad1cba936`）**: `MusicFont.Brace(length)` → `SystemBrace(Codepoint, Width)`。Emmentaler は段の rung
+     （U+E000+N・幅は同じ dump）。描画と楽器名の錨の 2 読み手。brace の面（`Emmentaler-Brace`・`TextRole.SystemBrace`）はそのまま。
+     SMuFL フォントは 1 つの `brace` を span に拡縮する＝record に size が生える所。掃き 1199 枚・差 0。
+   - **残り**: §3 #16・#17 の手書き定数を包んだ metadata の拡張欄へ（`GlyphMetrics.StemUpSE`／`StemDownNW`／`RestMaximaWidth`・
+     `EngravingDefaults` の breve／maxima・`AccidentalPlacement` の 0.375・`ChordNameGlyphRun` の 3 定数・`SkylineBuilder` の打楽器＝C 記号の借用）。
+     ⚠️ 字や kind 文字列を鍵にした cache（`TextOutlineSkylines`・`DynamicOutline`・`AccidentalPlacement.t_glyphPairs`）はフォントを鍵に足す＝②。
 2. **取り込み**: metadata の JSON と OTF を読む・§1 の解決順・文法（GRAMMAR §2.4・SYNTAX_REFERENCE・LSP の補完・
    TextMate）・診断・`--set music=`。**同梱するか（§7 C）はこの段の前に決める。**
 3. **出力**: 埋め込み・`boxes.json`・双子の警告。

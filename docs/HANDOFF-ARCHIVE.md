@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第858セッションの経緯
+
+### 1.1 第858セッション（2026-10-08・YT-DELL2）
+
+同じ会話（ユーザー「続けて」）。`-End p857`（門は全部 OK）→ `-Start p858`（HEAD `a6f1c90d`）＝full **11416 / 0 / 2 / 11418**。§7 3.5 で第856 を ARCHIVE へ。§1.0 の総点検の段落（閉じた）を 1 行に畳んだ。
+- **閉じた（`5333b691f`）描画の口**: グリフの決め方を `MusicGlyphs`（`Notehead`／`Rest`／`Flag`／`Accidental`／`TimeSigDigit`）へ移し、`MusicFont.Current`（`EngravingStyle` と同じくスレッドに保持・今は常に Emmentaler）が文字に変える。`SharedRenderer` の 50 か所が `Music(glyph)` を通る。`EmmentalerGlyphs.Get*` は配置の表（Emmentaler の文字がキー）のために薄い包みで残す。掃き 998 冊 1199 枚・差 0（base は HEAD の worktree から）。棚卸しは行番号だけ・census は旧 dispatch の音価の 5 行が消えた（定数ではない）。full **11416 / 0 / 2 / 11418**。
+- **閉じた（`2efa60218`）寸法の読み手の型と最初の族**: `MusicFont.SizedAt(step)`／`FullSize`（`AtFontSize` に委ねる）と `Box`／`Outline`／`Advance`。音部記号の箱の全読み手（`ClefBBox`・`ClefChangeBBox`・変更記号の幅 3・8 の位置の箱・変更の列の箱・積みの突き出し・tab 記号）と bracket の先端。`MusicGlyphs.Clef` に決め方を 1 か所（3 重の switch を畳んだ）。網 `TheFullSizeDesign_IsTheFlatConstants`（全項目ビット一致）。掃き 1199・差 0・census は 1091 行のまま（`var full` の 1 行で出典の窓が外れ Green→Yellow になったので腕に行を足さない形に直した）。full **11418 / 0 / 2 / 11420**（+2）。
+- **閉じた（`54d124b37`）寸法の全読み手**: `DesignMetrics` を包みの外から消した（型の参照 75・`AtFontSize`／`ForFontSizeStep`／`ForDesign`／`Design20` → `SizedAt`／`DesignAt`／`Design`／`DesignAt(0)`）。プロパティ読み 146 件はコンパイラの CS1061 の位置で書き換えた（Lab `p858/fix-cs1061.ps1`・対応表は `MetricsOf` から生成）。`MusicFontDesign` に `Rounded`・`Magnification`・`Unscaled`・`Scaled`、計量は設計ごとの配列。⚠️ **付け点 22 が包みから漏れていた**（`(double X, double Y)` 型＝第857 の網は BBox と double しか見ていなかった）→ `StemUp`／`StemDown` を足し網はタプルも数える。
+- **閉じた（`06511c079`）平らな定数**: GlyphMetrics.cs の外の `GlyphMetrics.X` 112 件を `FullSize` へ。中の 66 行（静的初期化の順序の罠）と `EngravingDefaults` の `const` 3 行は残した。前の commit に壊れた cref の警告 CS1658 が入っていた＝ここで Core 0 警告に戻した（`Design20` の一括置換が doc コメントの cref も書き換えた）。どちらも掃き 1199・差 0・census 1091 行のまま・full **11418 / 0 / 2 / 11420**。
+- ⚠️ 道具: 一括置換を `[IO.File]::ReadAllText` → `WriteAllBytes(UTF8Encoding(false))` で書くと BOM を落とす（Prefix.cs で踏んだ・`git cat-file -p HEAD:path` と比べて戻した）。
+
 ## 以下は第857セッションの経緯
 
 ### 1.1 第857セッション（2026-10-08・YT-DELL2）

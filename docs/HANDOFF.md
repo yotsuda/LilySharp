@@ -78,7 +78,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。→ **第751（2026-10-02・ユーザー決定）「LP 忠実にこだわるより音楽的な妥当性を重視。LP から引き継ぐのはレンダリングとレイアウトの美しさだけ。ユーザーがまだ少ないので過去のしがらみに縛られない」＝意味論（拍子・弱起・反復・強弱・検査・出力の意味）の裁定者は音楽的妥当性、LP は描画と配置の裁定者（RULES §5.2 に規則として置いた）。
 
-**★★★★ 第857（2026-10-08）ユーザー決定＝総点検は区切った・SMuFL に着手**: 文法は `fonts { music "…" }` で承認・**Emmentaler は SMuFL の形に包み、SMuFL に無い Emmentaler のパラメータは失わない**。設計と棚卸しは **`docs/smufl-design.md`**（§3 の 17 行＝失わないもの・§6 の段取り）。**§6 ① の第 1 歩（第857・`9c61c361e`）と描画の口（第858・`5333b691f`）・寸法の読み手の型（`2efa60218`）・寸法の全読み手（`54d124b37`＋`06511c079`）は閉じた（第858）＝次は残りの族**（⑶ 文字キーの表＝`SkylineBuilder`・`GlyphSkylinesGenerated` のカーニングとペダルの skyline・`TextOutlineSkylines`／⑷ 面の選択＝`MusicFace(rounded)`・SVG の WOFF2・PDF・PNG の Emmentaler 固定の名前／⑸ brace の段。第859 が閉じた分: GlyphMetrics.cs 内の読み手と `const`＝`668153917`・`char` で運ぶモデル＝`d74a5566d`・設計番号の読み手 11 か所＝`3c6bca578`）（`docs/smufl-design.md` §6 ① の ⑴〜⑸・門は全 svg の掃きで動いた svg 0＝Lab `p858/sweep/`：base は HEAD の worktree を build して `exe-base` へ写す）。
+**★★★★ 第857（2026-10-08）ユーザー決定＝総点検は区切った・SMuFL に着手**: 文法は `fonts { music "…" }` で承認・**Emmentaler は SMuFL の形に包み、SMuFL に無い Emmentaler のパラメータは失わない**。設計と棚卸しは **`docs/smufl-design.md`**（§3 の 17 行＝失わないもの・§6 の段取り）。**§6 ① の ⑴〜⑸ は第857〜第860 で閉じた**（✅ の行と SHA は smufl-design §6 ①・門は毎回「全 svg の掃きで動いた svg 0 ＋ full 緑」＝Lab `p8NN/sweep/`・base は HEAD の bin を `exe-base` へ写す）。**① に残るのは §3 #16・#17 の手書き定数を包んだ metadata の拡張欄へ移すこと**（`GlyphMetrics.StemUpSE`／`StemDownNW`／`RestMaximaWidth`・`EngravingDefaults` の breve／maxima・`AccidentalPlacement` の 0.375・`ChordNameGlyphRun`・`SkylineBuilder` の打楽器＝C 記号の借用）。**§6 ②（取り込み）の前にユーザー判断: §7 C 同梱するか**（A・B は推奨あり）。
 **第850〜851（2026-10-06〜07）ユーザー決定**: OMR P6（SMuFL）は「描画だけの差し替え」ではなく**寸法まで SMuFL から**（ユーザー利便性）。形は**内部の共通語を SMuFL にし、Emmentaler も SMuFL の形で包む**（字形は SMuFL 名・寸法は metadata の形＋LP 固有の拡張＝LILC の箱と輪郭の箱・サイズ別設計・brace の段・付け点。Emmentaler の出力はバイト不変が条件）。**ただし先に LP 忠実度の総点検**（台帳は OPEN 0 だが、第849〜850 の 3 件＝brace の段・bracket の長さ・加線つき休符の skyline はどれも台帳の外で、本を LP と並べて見つかった）: ① 広い計器＝コーパス全冊の双子を LP で描き、系ごとの譜の間隔と小節線の x を Lily# と自動で突き合わせ、差を種類ごとに束ねる → ② 効く順に直す → ③ 新しい種類が出なくなったら区切り、SMuFL の土台（3〜4 便）→ 取り込み → 出力 → 仕上げ（計 7〜10 便）。フォントの入手（同梱か）と書き方（`paper { musicFont … }`）は取り込みの段までに決める。
 
 **★★★★ 第815〜816（2026-10-05）ユーザー指示「OMR の提案を優先度順に着手」＝次の会話はここから**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`。OMR は別プログラム・Lily# は子プロセスで呼びファイルを読むだけ＝コードを混ぜない）: 0・A1・B1〜B6・C1〜C3 は**閉じた**（第815〜818・経緯は ARCHIVE）。配布の取り決め `..\LilySharp-Omr\docs\repro\lilysharp-omr-distribution-2026-10-05.md`（同梱しない・L1〜L11）。⚠️ **B1〜B6 は VS Code で未確認**（OMR の `omr read` は第 1 歩が動く＝`OmrProto.exe` を `LILYSHARP_OMR_PATH` で指せば試せる）。残り: ⑥ 10-02 提案（学習データ）: **P1〜P5 は閉じた（第818〜828・全部 `paper { }`／`layout { }` の言語のキー・`--set` は上書き）・残りは作らないと決めた（第828）**。次は P6（SMuFL＝大・別に判断）。**B5 は OMR の `omr verify`（第818 が提案）が出るまで動かない**。OMR 側へのお願い（`breaksOnly` を書く・`part voice` をやめる・TIFF 用の PNG・`omr verify`・記号単位の `confidence`/`candidates`）は OMR の提案書に書いた。配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後。第814 末の決定（下）はこの後。
@@ -93,7 +93,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⏸ **perf の島（⒭⁸・⒮*・⒩⁴・⒨・⒯ …）は第615 で区切り＝一時停止（ユーザー判断・忠実度が先）**。本文と掃き終わった島（第434〜第456）の教訓は `HANDOFF-ARCHIVE.md`「§1.0 から移した perf の島」（第660）・閉じた島の一覧は第654 が畳んだ（各便の §1＝ARCHIVE・RULES §5.4 末尾）
 - ★★ **U10 ユーザーのコーパスに*効いていない弦番号*が 473 件（39 冊）**（第486・LYS5003・Lab `sessions/p486/lys5003-corpus.txt`）: 書いた `\N` の弦では弾けない音＝Lily# は黙って別の弦に描く（LP も同じ）。**ユーザー決定「放置」（第523）＝本は直さない・描画は今までと同じ**
 
-- ✅ **双子と頁割りが違う実の本の残り 10 冊＝すべて決定済みの族に帰着（第856）・第857 のユーザー決定で総点検は区切った**。族（tab の数字・LP の pure は箱・タイの行き先・tab の弦の選び方）と計器（Lab `p856/bodies.ps1`・`lp-staves.ps1`・`price.ps1`）・LP の `Item::pure_y_extent` のキャッシュの欠陥は ARCHIVE の第856
 - ⚠️ **LP を `-dbackend=svg` で描く計器は `lysc ly --pin-fonts` 必須**（第690〜第695 の 6 本は無しで、数字の幅・高さが汎用 serif だった＝第736 ⑴⑵）。tab の tuplet の残差は全部 beam の決定（`uniformBeamedLength`）の帰結＝第737
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
@@ -119,6 +118,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第860セッション（2026-10-08・YT-DELL2）
+
+新しい会話。`-Start p860`（HEAD `8c5bce8c9`）＝full **11418 / 0 / 2 / 11420**。§7 3.5 で第858 を ARCHIVE へ。
+- **閉じた（`b1c4e0b4c`）§6 ① ⑶＝文字をキーにした表**: `GlyphSkylinesGenerated` の表（臨時記号・括弧の左右の対＝設計ごと／音部記号・強弱の字・トリルの波・ペダルの上下の quad＝20 だけ）は `MusicFontDesign.HorizontalSkylinePair`／`VerticalSkylineQuads`、GPOS の kern 2 表は `MusicFont.Kern`、輪郭の walk は `MusicFont.OutlinePath`。読み手: `AccidentalPlacement`（箱と同じ設計から・括弧も）・`SkylineBuilder`（`ClefGlyph` は `MusicGlyph`・臨時記号／旗／休符の種は字でなくグリフを渡す）・`DynamicOutline`・`MeterGlyphRun.DigitKern`（`+` は数字でない＝0）・`PedalEngraver`（`PedalGlyphPlacement` は `Glyph` と `Codepoint`）・`TrillWaveOutline`・`OutsideStaffStacker`（`MetronomeMarkGeometry.Head`）・`ArticulationEngraver`（層が運ぶ字は `MusicFont.GlyphOf(char)` で引き戻す＝dots.dot は表の先の行）。`TextOutlineSkylines` の cache の鍵は `MusicGlyph`（フォントは取り込みで）。網 `EveryBakedSkylineAndKern_IsReachedByAGlyph`（8 設計・参照同一・kern 全対）。掃き 998 冊 1199 枚・差 0（Lab `p860/sweep/`）。census: 住所と `ClefGlyph` の腕の字面だけ（37 行・増減 0）。
+- **閉じた（`3a930a7d4`）⑷＝面の選択**: `MusicFont.DefaultDesign`（`DesignAt(0).Rounded`＝`EmmentalerFaces.DefaultDesign` と同じ規則）・`FaceFamily`／`FaceFile`／`WebFaceFile`／`TryParseFamily`。SVG（`.music`・`font-family` と fallback・`@font-face` 2 種）・PDF（context と resolver＝⚠️ global なので問われたスレッドの `Current` に答える＝取り込みで全フォントの面を教える）・PNG（描画・ink・loader）。brace の面は ⑸ へ。掃き 1199 枚・差 0・full 11421 / 0 / 2 / 11423。
+- **閉じた（`ad1cba936`）⑸＝brace の段**: `MusicFont.Brace(length)` → `SystemBrace(Codepoint, Width)`。Emmentaler は `BraceLadder` の rung（U+E000+N は包みの中へ）。読み手は描画と楽器名の錨の 2 つ。網 `TheBrace_IsTheLaddersRung`。掃き 1199 枚・差 0・full **11425 / 0 / 2 / 11427**。
+- 道具: 掃きは `Start-Process pwsh -File sweep-all.ps1 … -RedirectStandardOutput` で隠し窓に逃がし、同じ console で full を並走させた（head は `exe-head` に写してから）＝1 回 4〜5 分。掃きの log は ASCII なので codepage の罠（CLAUDE-OPERATIONS §4）は踏まない。
+- **`-End p860 -DiffBase 8c5bce8c9`（門は全部 OK）＝full **11425 / 0 / 2 / 11427**（+7＝網 3 本 ＋ theory 4 例）。HANDOFF 444,138 B（残り 5,862）・§1 現在便 9,180 字。Core '+' 368 行／LILYPOND-REF 1（`Brace` の get-y-from-brace）／LILYSHARP-OWN 0・足した数値 0（U+E000 は Connectors から包みへ移動）。未 push 27（push はユーザー）。**次は §1.0 の第857 段落＝§3 #16・#17 の手書き定数を拡張欄へ、または §6 ② の前のユーザー判断（§7 C 同梱）**。
+
+## 以下は第859セッションの経緯
+
 ### 1.1 第859セッション（2026-10-08・YT-DELL2）
 
 新しい会話。`-Start p859`（HEAD `7cdf9d3da`）＝full **11417 / 1 / 2 / 11420**。赤 1 は `HistoryCitationTests.DeadCitationsDoNotGrow`＝§1.0 と第858 の語りが第858 の最後の commit を amend 前の SHA で引いていたが、その commit は amend されて `06511c079` になり HEAD から辿れない（`git merge-base --is-ancestor` が 1）→ 2 か所を `06511c079` に直した（commit message `7cdf9d3da` の中の旧 SHA は履歴＝触らない）。§7 3.5 で第857 を ARCHIVE へ。
@@ -128,17 +138,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ 道具: pwsh MCP の console は前の `.ps1` の `Set-Location` を引きずる（sweep-all.ps1 が `$PSScriptRoot` へ移る）＝次の `dotnet test LilySharp.Tests` が Lab の sweep フォルダで走って 1 秒で何も出さず、`git diff` は Lab の repo を見ていた。**長い pipeline の頭に `Set-Location C:\MyProj\LilySharp` を書く**（出力の `Location [FileSystem]:` が合図）。
 - **`-End p859 -DiffBase 7cdf9d3da`（門は全部 OK）＝full **11418 / 0 / 2 / 11420**（開始時の赤 1 は §1 の SHA＝直した）。HANDOFF 444,813 B（残り 5,187）・§1 現在便 10,710 字。Core '+' 262 行／LILYPOND-REF 6／LILYSHARP-OWN 0（足した数値は 0＝全部読み手の置き換え）。未 push 24（push はユーザー）。**次は §6 ① の残り ⑶⑷⑸**（§1.0）。
 - 道具: `git grep -c color.grep=never` と書くと `-c` が count になり `color.grep=never` が*パターン*になる（出力が `<rev>:docs/…:1` の形＝木を検索していたことで気づいた）＝正しくは `git -c color.grep=never grep`。
-
-## 以下は第858セッションの経緯
-
-### 1.1 第858セッション（2026-10-08・YT-DELL2）
-
-同じ会話（ユーザー「続けて」）。`-End p857`（門は全部 OK）→ `-Start p858`（HEAD `a6f1c90d`）＝full **11416 / 0 / 2 / 11418**。§7 3.5 で第856 を ARCHIVE へ。§1.0 の総点検の段落（閉じた）を 1 行に畳んだ。
-- **閉じた（`5333b691f`）描画の口**: グリフの決め方を `MusicGlyphs`（`Notehead`／`Rest`／`Flag`／`Accidental`／`TimeSigDigit`）へ移し、`MusicFont.Current`（`EngravingStyle` と同じくスレッドに保持・今は常に Emmentaler）が文字に変える。`SharedRenderer` の 50 か所が `Music(glyph)` を通る。`EmmentalerGlyphs.Get*` は配置の表（Emmentaler の文字がキー）のために薄い包みで残す。掃き 998 冊 1199 枚・差 0（base は HEAD の worktree から）。棚卸しは行番号だけ・census は旧 dispatch の音価の 5 行が消えた（定数ではない）。full **11416 / 0 / 2 / 11418**。
-- **閉じた（`2efa60218`）寸法の読み手の型と最初の族**: `MusicFont.SizedAt(step)`／`FullSize`（`AtFontSize` に委ねる）と `Box`／`Outline`／`Advance`。音部記号の箱の全読み手（`ClefBBox`・`ClefChangeBBox`・変更記号の幅 3・8 の位置の箱・変更の列の箱・積みの突き出し・tab 記号）と bracket の先端。`MusicGlyphs.Clef` に決め方を 1 か所（3 重の switch を畳んだ）。網 `TheFullSizeDesign_IsTheFlatConstants`（全項目ビット一致）。掃き 1199・差 0・census は 1091 行のまま（`var full` の 1 行で出典の窓が外れ Green→Yellow になったので腕に行を足さない形に直した）。full **11418 / 0 / 2 / 11420**（+2）。
-- **閉じた（`54d124b37`）寸法の全読み手**: `DesignMetrics` を包みの外から消した（型の参照 75・`AtFontSize`／`ForFontSizeStep`／`ForDesign`／`Design20` → `SizedAt`／`DesignAt`／`Design`／`DesignAt(0)`）。プロパティ読み 146 件はコンパイラの CS1061 の位置で書き換えた（Lab `p858/fix-cs1061.ps1`・対応表は `MetricsOf` から生成）。`MusicFontDesign` に `Rounded`・`Magnification`・`Unscaled`・`Scaled`、計量は設計ごとの配列。⚠️ **付け点 22 が包みから漏れていた**（`(double X, double Y)` 型＝第857 の網は BBox と double しか見ていなかった）→ `StemUp`／`StemDown` を足し網はタプルも数える。
-- **閉じた（`06511c079`）平らな定数**: GlyphMetrics.cs の外の `GlyphMetrics.X` 112 件を `FullSize` へ。中の 66 行（静的初期化の順序の罠）と `EngravingDefaults` の `const` 3 行は残した。前の commit に壊れた cref の警告 CS1658 が入っていた＝ここで Core 0 警告に戻した（`Design20` の一括置換が doc コメントの cref も書き換えた）。どちらも掃き 1199・差 0・census 1091 行のまま・full **11418 / 0 / 2 / 11420**。
-- ⚠️ 道具: 一括置換を `[IO.File]::ReadAllText` → `WriteAllBytes(UTF8Encoding(false))` で書くと BOM を落とす（Prefix.cs で踏んだ・`git cat-file -p HEAD:path` と比べて戻した）。
 
 ## 2. 開いている作業
 
