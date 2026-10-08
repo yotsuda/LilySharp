@@ -218,6 +218,10 @@ internal sealed class MusicFontChain : MusicFont
     public override bool LiesDown(MusicGlyph glyph) => OwnerOf(glyph).LiesDown(glyph);
 
     /// <inheritdoc/>
+    public override double TextCutStep(MusicGlyph glyph, double lilyPondStep)
+        => OwnerOf(glyph).TextCutStep(glyph, lilyPondStep);
+
+    /// <inheritdoc/>
     public override double StemSidePaddingFraction(MusicGlyph glyph)
         => OwnerOf(glyph).StemSidePaddingFraction(glyph);
 

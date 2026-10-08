@@ -222,6 +222,18 @@ internal abstract class MusicFont
     /// <c>scripts.arpeggio</c> is designed standing, so it answers false for every glyph.</remarks>
     public virtual bool LiesDown(MusicGlyph glyph) => false;
 
+    /// <summary>
+    /// The font-size step <paramref name="glyph"/> is drawn at where LilyPond's markup sets
+    /// its TEXT CUT at <paramref name="lilyPondStep"/> — the fingering and figured-bass digits,
+    /// whose grobs declare −5.
+    /// </summary>
+    /// <remarks>Emmentaler's <c>fattened</c> cuts are text-scale (a digit's cap is half the em,
+    /// 2 staff spaces) and LilyPond shrinks them to the size they are read at, so Emmentaler
+    /// takes the step as given. A SMuFL font designs <c>fingering*</c> and <c>figbass*</c> AT
+    /// that size (a digit about one staff space tall at the music font's own size), so the
+    /// −5 would shrink them a second time.</remarks>
+    public virtual double TextCutStep(MusicGlyph glyph, double lilyPondStep) => lilyPondStep;
+
     // ---- constants LilyPond wrote for Emmentaler's shapes (docs/smufl-design.md §3 #17) ----
 
     /// <summary>

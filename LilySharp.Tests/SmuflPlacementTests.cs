@@ -102,6 +102,31 @@ public class SmuflPlacementTests
             Assert.Equal(repeatOffset, elements[i].Box[0] - elements[i - 1].Box[0], 2);
     }
 
+    [Theory]
+    [MemberData(nameof(Fonts))]
+    public void FingeringAndFigures_AreReadingSize_InEveryFont(string font)
+    {
+        // LilyPond's −5 brings Emmentaler's 2-space cut to ~1.12; a SMuFL font's digits are
+        // ~1.03 at its own size, and took the −5 a second time (0.58) until p869.
+        var symbols = Symbols(font, "c'4@finger(5) d'@figuredBass(5) e'2");
+        foreach (string kind in new[] { "fingering", "figuredBass" })
+        {
+            var digit = Assert.Single(symbols, s => s.Kind == kind);
+            double height = digit.Box[3] - digit.Box[1];
+            Assert.True(height is > 0.9 and < 1.3, $"{font} {kind}: {height:F3} ss tall");
+        }
+    }
+
+    [Fact]
+    public void AFingering_IsTheScoresFontsDigit_AfterAnotherFontsScore()
+    {
+        // The one-digit runs are memoised: per music font, or a Bravura score drawn after an
+        // Emmentaler one (the preview's whole life) is handed Emmentaler's character.
+        Symbols("Emmentaler", "c'4@finger(1) r2.");
+        var one = Assert.Single(Symbols("Bravura", "c'4@finger(1) r2."), s => s.Kind == "fingering");
+        Assert.Equal(0xED11, one.Codepoint);   // SMuFL fingering1
+    }
+
     [Fact]
     public void Emmentalers_Wiggles_KeepTheirLilcBoxes()
     {

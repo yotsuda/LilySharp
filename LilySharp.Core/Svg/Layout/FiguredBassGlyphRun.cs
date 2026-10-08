@@ -74,7 +74,12 @@ internal static class FiguredBassGlyphRun
     /// scm/translation-functions.scm:468-470 format-bass-figure — see
     /// <see cref="EngravingDefaults.FiguredBassFontSize"/>, where the derivation lives.</remarks>
     internal static double Em(ScoreTextMetrics fonts)
-        => fonts.Size(TextRole.FiguredBass, EngravingDefaults.FiguredBassFontSize);
+        => fonts.Size(TextRole.FiguredBass, EngravingDefaults.FiguredBassFontSize)
+           * EmmentalerDesignSize.Magstep(CutStep - FontSizeStep);
+
+    /// <summary>The −5 as the music font applies it (<see cref="MusicFont.TextCutStep"/>): itself
+    /// for Emmentaler, 0 for a SMuFL font, whose figures are already that size.</summary>
+    private static double CutStep => MusicFont.Current.TextCutStep(MusicGlyph.Figbass0, FontSizeStep);
 
     /// <summary>The <c>font-size</c> a figure is set at, in LilyPond's sixths of an octave.</summary>
     /// <remarks>LILYPOND-REF: scm/translation-functions.scm:468-470 format-bass-figure —
@@ -89,7 +94,7 @@ internal static class FiguredBassGlyphRun
     /// shape <c>FingeringGlyphRun.Step</c> and <c>ChordNameGlyphRun.AccidentalStep</c> share.
     /// </summary>
     internal static double Step(ScoreTextMetrics fonts)
-        => FontSizeStep + fonts.StepOf(TextRole.FiguredBass, EngravingDefaults.FiguredBassFontSize);
+        => CutStep + fonts.StepOf(TextRole.FiguredBass, EngravingDefaults.FiguredBassFontSize);
 
     /// <summary>
     /// The Emmentaler design a figure is drawn from — the PEN needs it as well as the metrics.

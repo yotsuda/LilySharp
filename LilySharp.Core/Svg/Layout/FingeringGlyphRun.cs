@@ -90,8 +90,11 @@ internal static class FingeringGlyphRun
     /// moves the glyph it is drawn from and the box it is reserved in together — the same
     /// shape a chord name's accidental takes (ChordNameGlyphRun.AccidentalStep).
     /// </summary>
+    /// <remarks>The −5 is the music font's to apply (<see cref="MusicFont.TextCutStep"/>): a
+    /// SMuFL font's digits are already that size.</remarks>
     internal static double Step(ScoreTextMetrics fonts)
-        => FontSizeStep + fonts.StepOf(TextRole.Fingering, EngravingEm);
+        => MusicFont.Current.TextCutStep(MusicGlyph.Fingering0, FontSizeStep)
+           + fonts.StepOf(TextRole.Fingering, EngravingEm);
 
     /// <summary>The em a fingering is drawn at for THIS score.</summary>
     internal static double Em(ScoreTextMetrics fonts) => 4.0 * EmmentalerDesignSize.Magstep(Step(fonts));

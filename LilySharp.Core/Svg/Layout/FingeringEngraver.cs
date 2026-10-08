@@ -150,13 +150,20 @@ internal static class FingeringEngraver
         // THE ENGRAVING STEP, so the memo is exact there; a score whose plan steps the
         // digits (the rare book) builds its runs per call rather than growing the table
         // a key.
-        if (number is >= 0 and <= 9 && FingeringGlyphRun.Step(fonts) == FingeringGlyphRun.FontSizeStep)
-            return SingleDigitRuns[number] ??= BuildDigitRun(fonts, number);
+        // …and per MUSIC FONT: the glyphs are the font's characters and the box its metrics,
+        // so a preview that draws a Bravura score after an Emmentaler one must not be handed
+        // Emmentaler's (the §6 ② ⒞ rule for character-keyed caches; Lab sessions/p869).
+        if (number is >= 0 and <= 9 && FingeringGlyphRun.Step(fonts)
+                == MusicFont.Current.TextCutStep(MusicGlyph.Fingering0, FingeringGlyphRun.FontSizeStep))
+        {
+            var runs = SingleDigitRuns.GetOrAdd(MusicFont.Current, static _ => new (string, GlyphMetrics.BBox, double)?[10]);
+            return runs[number] ??= BuildDigitRun(fonts, number);
+        }
         return BuildDigitRun(fonts, number);
     }
 
-    private static readonly (string, GlyphMetrics.BBox, double)?[] SingleDigitRuns =
-        new (string, GlyphMetrics.BBox, double)?[10];
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<MusicFont, (string, GlyphMetrics.BBox, double)?[]>
+        SingleDigitRuns = new();
 
     private static (string Glyphs, GlyphMetrics.BBox Ink, double Width) BuildDigitRun(
         Rendering.ScoreTextMetrics fonts, int number)

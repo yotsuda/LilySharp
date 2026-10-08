@@ -362,6 +362,12 @@ internal sealed class SmuflMusicFont : MusicFont
     public override bool LiesDown(MusicGlyph glyph) => glyph == MusicGlyph.WiggleArpeggiatoUp && Has(glyph);
 
     /// <inheritdoc/>
+    /// <remarks>The font's own size: SMuFL's fingering and figured-bass digits stand about one
+    /// staff space tall there (Bravura's <c>figbass5</c> 1.032), which is about where LilyPond's
+    /// −5 brings Emmentaler's 2-space cut (1.12).</remarks>
+    public override double TextCutStep(MusicGlyph glyph, double lilyPondStep) => 0.0;
+
+    /// <inheritdoc/>
     /// <remarks>LilyPond applies this by the glyph's NAME to whatever font draws it, so a SMuFL
     /// font takes Emmentaler's answer (§3 #17's "輪郭から（要設計）" is the better one).</remarks>
     public override double StemSidePaddingFraction(MusicGlyph glyph)

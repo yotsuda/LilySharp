@@ -88,9 +88,9 @@
 - **:59** ⚠️ NOT PORTED HERE: LilyPond puts the alteration on the LEFT of the digit by default
 ### `LilySharp.Core/Svg/Layout/FingeringEngraver.cs`
 - **:83** ⚠️ avoid-slur #'around is NOT ported: a fingering does not dodge a slur here. It
-- **:522** ⚠️ THE ACCIDENTALS ARE SUPPORTS TOO on a chord (:329-332). Not ported: no point
-- **:545** ⚠️ DERIVATION, NOT A TRANSCRIPTION, and it is the shape of the code that differs:
-- **:552** silently approximated.
+- **:529** ⚠️ THE ACCIDENTALS ARE SUPPORTS TOO on a chord (:329-332). Not ported: no point
+- **:552** ⚠️ DERIVATION, NOT A TRANSCRIPTION, and it is the shape of the code that differs:
+- **:559** silently approximated.
 ### `LilySharp.Core/Svg/Layout/FingScriptMemo.cs`
 - **:79** same order, with the same source indices). Stated rather than silently approximated:
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
@@ -176,11 +176,11 @@
 - **:2769** observed by: NOTHING. There is no ledger point on a tab tie's width,
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
 - **:63** moving output no observer can check.
-- **:140** ⚠️ NOTHING WATCHES THIS WIDTH. Since the figure was left-aligned on its column
+- **:145** ⚠️ NOTHING WATCHES THIS WIDTH. Since the figure was left-aligned on its column
 ### `LilySharp.Core/Svg/Layout/FingeringEngraver.cs`
-- **:551** clears it. No point reaches that texture, and it is named here rather than
-- **:647** own widths of one x. No ledger point measures a chord fingering's X, so this stays as
-- **:648** it was rather than being changed unobserved.
+- **:558** clears it. No point reaches that texture, and it is named here rather than
+- **:654** own widths of one x. No ledger point measures a chord fingering's X, so this stays as
+- **:655** it was rather than being changed unobserved.
 ### `LilySharp.Core/Svg/Layout/GraceNoteEngraver.cs`
 - **:557** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
 ### `LilySharp.Core/Svg/Layout/HorizontalSkyline.cs`
@@ -419,9 +419,9 @@
 - **:2758** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
 - **:2807** ⚠️ LILYSHARP-OWN, and LilyPond cannot be asked: MEASURED on 2.26.0, all three
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
-- **:133** ⚠️ LILYSHARP-OWN: the fallback branch. A character with no bass-figure glyph is
+- **:138** ⚠️ LILYSHARP-OWN: the fallback branch. A character with no bass-figure glyph is
 ### `LilySharp.Core/Svg/Layout/FingeringGlyphRun.cs`
-- **:133** ⚠️ LILYSHARP-OWN: the fallback branch. A fingering is an integer, so the only way a
+- **:136** ⚠️ LILYSHARP-OWN: the fallback branch. A fingering is an integer, so the only way a
 ### `LilySharp.Core/Svg/Layout/GlissandoEngraver.cs`
 - **:160** ⚠️ LILYSHARP-OWN (disclosed 2026-08-07, session 109 audit): Y at the
 ### `LilySharp.Core/Svg/Layout/GlyphMetrics.cs`
@@ -479,8 +479,8 @@
 - **:3750** ⚠️ LILYSHARP-OWN, DECLARED: LilyPond's pure heights are BOXES — the begin-of-line
 - **:5125** LILYSHARP-OWN: the band is Lily#'s model of a line LilyPond walks as a loose line
 ### `LilySharp.Core/Svg/Layout/MusicFont.cs`
-- **:471** LILYSHARP-OWN: hand-tuned, and the only head width that is. ⚠️ NOT because LilyPond
-- **:484** LILYSHARP-OWN: the sM1 advance was never extracted either; 1.30 over the
+- **:483** LILYSHARP-OWN: hand-tuned, and the only head width that is. ⚠️ NOT because LilyPond
+- **:496** LILYSHARP-OWN: the sM1 advance was never extracted either; 1.30 over the
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:155** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **:181** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN
