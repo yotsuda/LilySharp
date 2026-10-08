@@ -364,7 +364,9 @@ internal sealed class SmuflMusicFont : MusicFont
     /// <inheritdoc/>
     /// <remarks>The font's own size: SMuFL's fingering and figured-bass digits stand about one
     /// staff space tall there (Bravura's <c>figbass5</c> 1.032), which is about where LilyPond's
-    /// −5 brings Emmentaler's 2-space cut (1.12).</remarks>
+    /// −5 brings Emmentaler's 2-space cut (1.12).
+    /// LILYSHARP-OWN: LilyPond reads no SMuFL font; the choice is the font designer's size over
+    /// matching Emmentaler's 1.12 exactly (docs/smufl-design.md §0 1 — dimensions from SMuFL).</remarks>
     public override double TextCutStep(MusicGlyph glyph, double lilyPondStep) => 0.0;
 
     /// <inheritdoc/>

@@ -234,6 +234,23 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
      `@font-face` を省くので無ければ豆腐）。⒞ §4 を全部描いて決めた（上の §4）。
      ⒟ **fallback の警告は LSP に出さない**（LSP は描画時の警告を 1 つも出さない＝over-full page も。口を作るのは別の判断）。
 4. **仕上げ**: Bravura・Leland・Petaluma で本を描いて目で見る・§3 の代わりの経路の値付け。
+   - ✅ **第869 に描いて見た**（samples 8 冊・showcase 8 冊・ベースタブ 1 冊・試験譜 2 つを 4 書体で並べた＝Lab `p869/quad2/`・`probe/`・`tabc/`）。
+     **SMuFL が Emmentaler と違う約束で作る字が 5 族、描き崩れていた**（どれも Emmentaler の出力はバイト不変＝掃き 1199 枚・差 0）:
+     ⑴ **script の横位置**（`fe008a24e`）: script を字の原点で置いていた＝Emmentaler の script は原点が中央（箱が −w … +w）だが SMuFL は左端
+     （`bBoxSW` x = 0）＝fermata・accent・turn・bow などが頭の右へ半幅ずれていた。LP どおり**箱の中心**で揃える
+     （`ArticulationEngraver.OriginFromCentre`・define-grobs.scm:3001-3007）。縦の probe・全休符の script・tab の script・間隔の箱にも同じずれを通した。
+     ⑵ **波の歩幅**（同）: `repeatOffset` を持つ字（`wiggleTrill`・`wiggleArpeggiatoUp`）は設計の箱の幅を `repeatOffset` にする＝Emmentaler の
+     LILC の箱の幅が歩幅なのと同じ約束（§3 #11）。トリルの線の隙間が消えた。
+     ⑶ **アルペジオの波は横倒し**（同）: SMuFL は `wiggleArpeggiatoUp` を横に作り立てて使う＝`MusicFont.LiesDown`・
+     `IDrawingContext.DrawGlyphTurned`（SVG の rotate・PDF／Skia の変換・boxes のインクも回す）・`ArpeggioEngraver.WiggleBox`（回した箱で幅・歩幅・原点）。
+     ⑷ **指番号と通奏低音の大きさ**（`b2ebb6d99`）: LP の −5 は Emmentaler のテキスト用の切り方（数字の高さ 2 ss）を縮めるための段＝SMuFL の
+     `fingering*`／`figbass*` は最初からその大きさ（約 1.03 ss）なので −5 で二重に縮んでいた（0.58 ss）。`MusicFont.TextCutStep`（Emmentaler は −5 のまま・SMuFL は 0・
+     chain は持ち主）。⑸ **指番号の 1 桁の memo がフォントを鍵にしていなかった**（同）＝長命のプロセスで Emmentaler の後に Bravura を描くと Emmentaler の字（§6 ② ⒞ の取りこぼし）。
+     網 `SmuflPlacementTests` 17（毒 5 本＝修正ごとに 1 本ずつ戻すと、その網の SMuFL の行だけが赤）。
+     **見たが直さないもの**: Petaluma の拍子の数字が上下で重なる（書体の数字が 3.1 ss と高い＝字形の設計）・Petaluma の `p` が譜から離れる（`dynamicPiano` の箱の上端 2.06＝
+     metadata の箱は 3 書体とも輪郭と 0.05 ss 以内で一致した＝Lab `p869/bbox-audit.txt`）。
+     **§3 の代わりの経路を目で見て崩れなかったもの**: 旗（8〜64 分・上下＝#13）・grace の斜線（#15）・臨時記号の脇の加線の短縮（#3＝SMuFL でも避けている）・
+     brace（#10）・ベースタブ（TAB 記号・数字）（Lab `p869/probe/fl`・`led`・`tabc`）。**数で値付けしたのは #1 の箱だけ**（上の bbox-audit）＝残りの値付け（LP 双子との差を数で）は次の段。
 
 ## 7. 未決（ユーザー判断）→ 第862（2026-10-08）で決まった
 

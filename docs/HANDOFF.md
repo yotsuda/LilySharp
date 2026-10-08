@@ -1,4 +1,4 @@
-﻿﻿# Lily# 開発ハンドオフ（常設・単一）
+﻿# Lily# 開発ハンドオフ（常設・単一）
 
 > **このファイルが唯一の引継ぎ先。新しい `handoff-*.md` を作らないこと。**
 > 引継ぎは §1「現在地」を**書き換えて**行う（追記しない）。恒久的な知識は §4 の表に従って
@@ -78,7 +78,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。→ **第751（2026-10-02・ユーザー決定）「LP 忠実にこだわるより音楽的な妥当性を重視。LP から引き継ぐのはレンダリングとレイアウトの美しさだけ。ユーザーがまだ少ないので過去のしがらみに縛られない」＝意味論（拍子・弱起・反復・強弱・検査・出力の意味）の裁定者は音楽的妥当性、LP は描画と配置の裁定者（RULES §5.2 に規則として置いた）。
 
-**★★★★ 第857（2026-10-08）ユーザー決定＝総点検は区切った・SMuFL に着手**: 文法は `fonts { music "…" }` で承認・**Emmentaler は SMuFL の形に包み、SMuFL に無い Emmentaler のパラメータは失わない**。設計と棚卸しは **`docs/smufl-design.md`**（§3 の 17 行＝失わないもの・§6 の段取り）。**§6 ①（土台）は第857〜第861 で閉じた**（✅ の行と SHA は smufl-design §6 ①・門は毎回「全 svg の掃きで動いた svg 0 ＋ full 緑」＝Lab `p8NN/sweep/`・base は HEAD の bin を `exe-base` へ写す）。**§7 C はユーザー決定「同梱」（第862）・A／B は推奨どおり。②の第 1 歩（同梱・`SmuflMusicFont`・`MusicFonts.Find`＝`f9eccda23`）・⒜（文法・診断・`--set music=`＝`b2f9352f8`）・⒞⒝⒢（cache の鍵・`MusicFont.Use`・brace＝`c658f03a4`）・⒟（グリフ単位の fallback＝`MusicFontChain`・`70abd02a4`）・⒠（GPOS の kern＝`1a91b264e`）・⒡（engravingDefaults＝`d5d10a2a4`）は閉じた＝**② は閉じた: `fonts { music "Bravura" }` の譜は Bravura の字・寸法・線の太さで描かれ、無い字は次の名前か Emmentaler で描かれる**。③ 出力も第867 で閉じた（`boxes.json`・プレビューの font・§4 の 24 行＝`1c5d9b887`／`1f5b91119`）。次は ④ 仕上げ（smufl-design §6 ④）: Bravura・Leland・Petaluma で本を描いて目で見る・§3 の代わりの経路の値付け。⚠️ VS Code のプレビューは拡張を作り直して `server/Fonts` に SMuFL が入ってから実機で見る（ユーザー）**。
+**★★★★ 第857（2026-10-08）ユーザー決定＝総点検は区切った・SMuFL に着手**: 文法は `fonts { music "…" }` で承認・**Emmentaler は SMuFL の形に包み、SMuFL に無い Emmentaler のパラメータは失わない**。設計と棚卸しは **`docs/smufl-design.md`**（§3 の 17 行＝失わないもの・§6 の段取り）。**§6 ①（土台）は第857〜第861 で閉じた**（✅ の行と SHA は smufl-design §6 ①・門は毎回「全 svg の掃きで動いた svg 0 ＋ full 緑」＝Lab `p8NN/sweep/`・base は HEAD の bin を `exe-base` へ写す）。**§7 C はユーザー決定「同梱」（第862）・A／B は推奨どおり。②の第 1 歩（同梱・`SmuflMusicFont`・`MusicFonts.Find`＝`f9eccda23`）・⒜（文法・診断・`--set music=`＝`b2f9352f8`）・⒞⒝⒢（cache の鍵・`MusicFont.Use`・brace＝`c658f03a4`）・⒟（グリフ単位の fallback＝`MusicFontChain`・`70abd02a4`）・⒠（GPOS の kern＝`1a91b264e`）・⒡（engravingDefaults＝`d5d10a2a4`）は閉じた＝**② は閉じた: `fonts { music "Bravura" }` の譜は Bravura の字・寸法・線の太さで描かれ、無い字は次の名前か Emmentaler で描かれる**。③ 出力も第867 で閉じた（`boxes.json`・プレビューの font・§4 の 24 行＝`1c5d9b887`／`1f5b91119`）。④ の目視は第869 で済み、SMuFL が Emmentaler と違う約束で作る字の 5 族を直した（script の横位置・波の歩幅・アルペジオの向き・指番号と通奏低音の大きさ・数字の memo＝`fe008a24e`／`b2ebb6d99`）。残りは **§3 の代わりの経路を数で値付け**（LP 双子との差・smufl-design §6 ④ 末尾）＝**続けるか SMuFL を区切るかはユーザー判断**。⚠️ VS Code のプレビューは拡張を作り直して `server/Fonts` に SMuFL が入ってから実機で見る（ユーザー）**。
 - ✅ 4 分音の臨時記号の寸法（第867 発見）は第868 で閉じた（`1517f4f0b`）。⚠️ **Lab の作業ツリーに*この会話より前からの*未 commit の変更が 138 ファイル（`corpora/` のユーザーの本・`sessions/p739/twin` ほか）＋未追跡多数**＝Claude は `sessions/pNNN` と notes だけを path 指定で commit している。中身はユーザーが判断
 **第850〜851（2026-10-06〜07）ユーザー決定**: OMR P6（SMuFL）は「描画だけの差し替え」ではなく**寸法まで SMuFL から**（ユーザー利便性）。形は**内部の共通語を SMuFL にし、Emmentaler も SMuFL の形で包む**（字形は SMuFL 名・寸法は metadata の形＋LP 固有の拡張＝LILC の箱と輪郭の箱・サイズ別設計・brace の段・付け点。Emmentaler の出力はバイト不変が条件）。**ただし先に LP 忠実度の総点検**（台帳は OPEN 0 だが、第849〜850 の 3 件＝brace の段・bracket の長さ・加線つき休符の skyline はどれも台帳の外で、本を LP と並べて見つかった）: ① 広い計器＝コーパス全冊の双子を LP で描き、系ごとの譜の間隔と小節線の x を Lily# と自動で突き合わせ、差を種類ごとに束ねる → ② 効く順に直す → ③ 新しい種類が出なくなったら区切り、SMuFL の土台（3〜4 便）→ 取り込み → 出力 → 仕上げ（計 7〜10 便）。フォントの入手（同梱か）と書き方（`paper { musicFont … }`）は取り込みの段までに決める。
 
@@ -119,20 +119,23 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第869セッション（2026-10-09・YT-DELL2）
+
+新しい会話。`-Start p869`（HEAD `07a47b13b`）＝full **11498 / 0 / 2 / 11500**。§7 3.5 で第867 を ARCHIVE へ。
+- **④ 仕上げ＝4 書体で本を描いて見た**（samples 8・showcase 8・ベースタブ 1・試験譜 3＝Lab `p869/quad2/`・`probe/`・`tabc/`・並べる道具 `p869/look.ps1`）。**SMuFL が Emmentaler と違う約束で作る字が 5 族、崩れていた**（Emmentaler は毎回掃き 1199 枚・差 0）:
+  - **閉じた（`fe008a24e`）** ⑴ script は字の原点で置かれていた＝Emmentaler の script は原点が中央・SMuFL は左端＝fermata・accent・turn・bow が頭の右へ半幅。LP どおり箱の中心で揃える（`ArticulationEngraver.OriginFromCentre`・縦の probe・全休符・tab・間隔の箱にも）。⑵ `repeatOffset` を持つ字は設計の箱の幅＝歩幅（LILC の約束と同じ・トリルの線の隙間）。⑶ SMuFL のアルペジオの波は横に作られている＝`MusicFont.LiesDown`・`IDrawingContext.DrawGlyphTurned`（SVG／PDF／PNG／boxes の 6 実装）・`ArpeggioEngraver.WiggleBox`。
+  - **閉じた（`b2ebb6d99`）** ⑷ 指番号と通奏低音: LP の −5 は Emmentaler のテキスト用の切り方（高さ 2 ss）を縮める段＝SMuFL の数字は最初から約 1 ss なので二重に縮んで 0.58 ss。`MusicFont.TextCutStep`（SMuFL は 0＝LILYSHARP-OWN）。⑸ `FingeringEngraver` の 1 桁の memo がフォントを鍵にしていなかった（長命のプロセスで Emmentaler の後の Bravura に Emmentaler の字）。
+  - 網 `SmuflPlacementTests` 17・毒 5 本（修正ごとに戻すと、その網の SMuFL 行だけ赤）。metadata の箱は 3 書体とも輪郭と 0.05 ss 以内で一致（`p869/bbox-audit.py`）。直さない: Petaluma の拍子の数字の重なり・`p` の低さ＝字形の設計。
+  - ⚠️ 踏んだ罠: sln は `LilySharp.slnx`（`LilySharp.sln` を build して落ち、`--no-build` の full が**最後の毒入り dll** で走って 3 赤を出した＝CLAUDE-OPERATIONS §1 の「build の exit を読む」）／引用の名前は**同じ行**に無いと ratchet に数えられない。
+- **`-End p869 -DiffBase 07a47b13b`（門は全部 OK）＝full **11515 / 0 / 2 / 11517**（+17）。Core '+' 213 行／LILYPOND-REF 1（define-grobs.scm の Script）／LILYSHARP-OWN 1（その後に足した `TextCutStep`）。未 push 53＋docs（push はユーザー）。
+
+## 以下は第868セッションの経緯
+
 ### 1.1 第868セッション（2026-10-09・YT-DELL2）
 
 同じ会話。`-Start p868`（HEAD `17b9ae7d7`）＝full **11490 / 0 / 2 / 11492**。§7 3.5 で第866 を ARCHIVE へ。
 - **閉じた（`1517f4f0b`）4 分音の臨時記号の寸法**（第867 の目視で発見）: 生成器が 4 字の行を出していなかった＝`GetAccidentalBBox` が**空の箱**を返し、臨時記号の列が幅を取らず符頭（和音では隣の符頭）に重なって描かれていた・skyline は natural の借り物。**生成器を初めてこの機械で回した**（fontTools を scratchpad の venv に・PATH の `python` は LilyPond 同梱なので Python312 で venv＝手順は Lab notes/CLAUDE-OPERATIONS §3）: 未変更の入力で 3 本ともバイト同一を再現（skyline の生成物に手で直した doc 1 行＝`DesignMetrics`→`MusicFontDesign` を生成器へ戻した）→ `sharp.slashslash.stem`・`sharp.slashslash.stemstemstem`・`mirroredflat`・`mirroredflat.flat` を 8 設計ぶん（LILC の箱・輪郭・送り・横の skyline 対）。ledger の短縮は mf の accbot/acctop（mirroredflat は −0.8, 2）。**LP 2.26 で同じ譜を描いて並べた**（Lab `p868/qt/lp.png`）: 同じ字・和音の臨時記号の段違いも同じ。網 `QuarterToneAccidentalTests` 8・`EveryBakedSkylineAndKern` に 4 kind。⚠️ `LpReferenceCitationTests` の「範囲だけで名前なし」の ratchet（681）に 1 度当たった＝mf の範囲には `fet_beginchar` を書く（ドット区切りの glyph 名は名前に数えない）。掃き 1199 枚・差 0（4 分音の本はコーパスに無い）・full 11498 / 0 / 2 / 11500。
 - **`-End p868 -DiffBase 17b9ae7d7`（門は全部 OK）＝full **11498 / 0 / 2 / 11500**（+8）。HANDOFF 442,201 B（残り 7,799）・§1 現在便 8,952 字。Core '+' 2,841 行（うち生成物 2,815）／LILYPOND-REF 8（mf の 4 字・output-lib）／LILYSHARP-OWN 0。未 push 50（push はユーザー）。**次は ④ 仕上げ**（§1.0・smufl-design §6 ④）。
-
-## 以下は第867セッションの経緯
-
-### 1.1 第867セッション（2026-10-09・YT-DELL2）
-
-同じ会話。`-Start p867`（HEAD `cd8ba876a`）＝full **11477 / 0 / 2 / 11479**。§7 3.5 で第865 を ARCHIVE へ。
-- **閉じた（`1c5d9b887`）§6 ③ 出力**: ⒜ `boxes.json` は SMuFL の譜で glyph を Emmentaler の字の表で名指していた＝**Bravura の符頭が `U+E0A4`・kind `glyph`**（OMR の学習データが壊れる）。名前は `MusicFont.GlyphOf` で引き戻した Lily# の名前＝フォントによらず同じ・`codepoint` は描いた字・トップに `musicFont`・fallback の字に `font`（`BoxDocument`／`GenerateDocument`・CLI_REFERENCE）。⒝ VS Code のプレビューは SVG の `@font-face` を省くので `scoreFonts.ts` が Bravura／Petaluma（WOFF2）・Leland（OTF）を `server/Fonts` から宣言（`tsc --noEmit` 緑・実機は未）。⒞ fallback の警告は LSP に出さない（LSP は描画時の警告を 1 つも出さない＝over-full page も＝口は別の判断）。網 3（`SmuflBoxesTests`）。
-- **閉じた（`1f5b91119`）§4 の 24 行を描いて目で決めた**（Lab `p867/unverified.png`・`corrected.png`＝Emmentaler／Bravura／Petaluma／Leland を並べた絵）: ⑴ **portato は交差**＝feta の `dportato`（線が上・点が下）が SMuFL の `articTenutoStaccatoAbove`＝行を入れ替え、`ArticulationItem.GlyphOf`・`MetricsOf`・網を一緒に反転（Emmentaler の字は不変）。⑵ ★ **4 分音の臨時記号は Emmentaler の出力そのものが LP と違っていた**（LP 忠実度の欠陥）: LP（scm/output-lib.scm:1146-1149）は 3/4 sharp を `sharp.slashslash.stemstemstem`（U+E01B）・1/4 flat を `mirroredflat`（U+E028）・3/4 flat を `mirroredflat.flat`（U+E027）で描くが、Lily# は makam 8/9 の `sharp.slashslashslash.stemstem`（U+E018）・`flat.slash`・`flatflat.slash` を描いていた＝**生成器の手書きの表の名前の誤りで、名前と字が互いに一致していたので何も気づかなかった**。直したので 2 つの flat は SMuFL の Stein／Zimmermann 行に。他の 21 行は一致＝`Unverified` の欄を消した。網 `MusicGlyphFetaNameTests`（全行の字の glyph 名をフォントから読んで feta 列と照合＋臨時記号を LP の表に固定＝前者だけでは今回の欠陥は捕まらない）。掃き 998 冊 1199 枚・差 0（4 分音の本はコーパスに無い）・full 11480 + 10。
-- **`-End p867 -DiffBase cd8ba876a`（門は全部 OK・1 回目は boxes の remark の cref が曖昧＝CS0419 で Core 警告 1 → `215b2824e`）＝full **11490 / 0 / 2 / 11492**（+13）。HANDOFF 442,886 B（残り 7,114）・§1 現在便 9,441 字。Core '+' 100 行／LILYPOND-REF 1（4 分音の表＝output-lib.scm）／LILYSHARP-OWN 0。未 push 47（push はユーザー）。**次は ④ 仕上げ か 4 分音の臨時記号の寸法**（§1.0）。
 
 ## 2. 開いている作業
 

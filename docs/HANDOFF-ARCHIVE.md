@@ -129,6 +129,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第867セッションの経緯
+
+### 1.1 第867セッション（2026-10-09・YT-DELL2）
+
+同じ会話。`-Start p867`（HEAD `cd8ba876a`）＝full **11477 / 0 / 2 / 11479**。§7 3.5 で第865 を ARCHIVE へ。
+- **閉じた（`1c5d9b887`）§6 ③ 出力**: ⒜ `boxes.json` は SMuFL の譜で glyph を Emmentaler の字の表で名指していた＝**Bravura の符頭が `U+E0A4`・kind `glyph`**（OMR の学習データが壊れる）。名前は `MusicFont.GlyphOf` で引き戻した Lily# の名前＝フォントによらず同じ・`codepoint` は描いた字・トップに `musicFont`・fallback の字に `font`（`BoxDocument`／`GenerateDocument`・CLI_REFERENCE）。⒝ VS Code のプレビューは SVG の `@font-face` を省くので `scoreFonts.ts` が Bravura／Petaluma（WOFF2）・Leland（OTF）を `server/Fonts` から宣言（`tsc --noEmit` 緑・実機は未）。⒞ fallback の警告は LSP に出さない（LSP は描画時の警告を 1 つも出さない＝over-full page も＝口は別の判断）。網 3（`SmuflBoxesTests`）。
+- **閉じた（`1f5b91119`）§4 の 24 行を描いて目で決めた**（Lab `p867/unverified.png`・`corrected.png`＝Emmentaler／Bravura／Petaluma／Leland を並べた絵）: ⑴ **portato は交差**＝feta の `dportato`（線が上・点が下）が SMuFL の `articTenutoStaccatoAbove`＝行を入れ替え、`ArticulationItem.GlyphOf`・`MetricsOf`・網を一緒に反転（Emmentaler の字は不変）。⑵ ★ **4 分音の臨時記号は Emmentaler の出力そのものが LP と違っていた**（LP 忠実度の欠陥）: LP（scm/output-lib.scm:1146-1149）は 3/4 sharp を `sharp.slashslash.stemstemstem`（U+E01B）・1/4 flat を `mirroredflat`（U+E028）・3/4 flat を `mirroredflat.flat`（U+E027）で描くが、Lily# は makam 8/9 の `sharp.slashslashslash.stemstem`（U+E018）・`flat.slash`・`flatflat.slash` を描いていた＝**生成器の手書きの表の名前の誤りで、名前と字が互いに一致していたので何も気づかなかった**。直したので 2 つの flat は SMuFL の Stein／Zimmermann 行に。他の 21 行は一致＝`Unverified` の欄を消した。網 `MusicGlyphFetaNameTests`（全行の字の glyph 名をフォントから読んで feta 列と照合＋臨時記号を LP の表に固定＝前者だけでは今回の欠陥は捕まらない）。掃き 998 冊 1199 枚・差 0（4 分音の本はコーパスに無い）・full 11480 + 10。
+- **`-End p867 -DiffBase cd8ba876a`（門は全部 OK・1 回目は boxes の remark の cref が曖昧＝CS0419 で Core 警告 1 → `215b2824e`）＝full **11490 / 0 / 2 / 11492**（+13）。HANDOFF 442,886 B（残り 7,114）・§1 現在便 9,441 字。Core '+' 100 行／LILYPOND-REF 1（4 分音の表＝output-lib.scm）／LILYSHARP-OWN 0。未 push 47（push はユーザー）。**次は ④ 仕上げ か 4 分音の臨時記号の寸法**（§1.0）。
+
 ## 以下は第866セッションの経緯
 
 ### 1.1 第866セッション（2026-10-09・YT-DELL2）

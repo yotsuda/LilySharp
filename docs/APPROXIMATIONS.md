@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 218 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **344** | |
+| `OWN` | 219 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **345** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（218 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（219 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **:90** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
@@ -518,6 +518,7 @@
 - **:1743** LILYSHARP-OWN (2026-09-28). Until then the diagram was merged with the other scripts at
 ### `LilySharp.Core/Svg/Layout/SmuflMusicFont.cs`
 - **:277** LILYSHARP-OWN: LilyPond reads no SMuFL font, so this restatement is the engine's own, and
+- **:368** LILYSHARP-OWN: LilyPond reads no SMuFL font; the choice is the font designer's size over
 ### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
 - **:324** LILYSHARP-OWN: the bar line's box is grown toward THIS column only. LilyPond grows it
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
