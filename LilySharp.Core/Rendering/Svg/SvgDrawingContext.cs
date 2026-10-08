@@ -279,17 +279,19 @@ internal sealed class SvgDrawingContext : IDrawingContext
     /// <c>font-family</c> — which overrides the class — for any other design. Also RECORDS
     /// the design, so the document embeds exactly the faces the score drew with.
     /// </summary>
-    private void AppendMusicFace()
+    /// <remarks>The face is a number <see cref="MusicFont.Drawn"/> answered: the scope's design,
+    /// or a later font's face for a glyph the score's first music font lacks.</remarks>
+    private void AppendMusicFace(int face)
     {
-        _usedDesigns?.Add(_musicDesign);
-        DesignLog?.Add(_musicDesign);
+        _usedDesigns?.Add(face);
+        DesignLog?.Add(face);
         // The fallback chain matters: a viewer that has not been given this design's face
         // (the VS Code preview injects Emmentaler itself and omits @font-face entirely) then
         // draws the glyph from the default design instead of showing tofu. It is the wrong
         // OUTLINE by ~0.5% and the right glyph, which is the better of the two failures.
         var font = MusicFont.Current;
-        if (_musicDesign != font.DefaultDesign)
-            _sb.Append(" font-family=\"").Append(font.FaceFamily(_musicDesign))
+        if (face != font.DefaultDesign)
+            _sb.Append(" font-family=\"").Append(font.FaceFamily(face))
                .Append(", ").Append(font.FaceFamily(font.DefaultDesign)).Append(", serif\"");
     }
 
@@ -301,8 +303,10 @@ internal sealed class SvgDrawingContext : IDrawingContext
     private void MusicText(char glyph, double x, double y, double fontSize, Color? fill,
         bool pointerEventsNone)
     {
+        var (code, face) = MusicFont.Current.Drawn(glyph, _musicDesign);
+        glyph = code;
         _sb.Append("  <text class=\"music\"");
-        AppendMusicFace();
+        AppendMusicFace(face);
         if (pointerEventsNone)
             _sb.Append(" pointer-events=\"none\"");
         Attr("x", x);

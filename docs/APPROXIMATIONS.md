@@ -39,7 +39,7 @@
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **:350** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
 ### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
-- **:334** ⚠️ NOT PORTED — backend-blocked: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at
+- **:337** ⚠️ NOT PORTED — backend-blocked: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:271** fans twice. Not ported; no book in the corpus has one.
 - **:690** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
@@ -304,7 +304,7 @@
 ### `LilySharp.Core/Rendering/Pdf/EmmentalerFontResolver.cs`
 - **:76** ⚠️ LILYSHARP-OWN: ONE NAME BOUND TO BOTH FAMILIES keeps the FIRST role's answer.
 ### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
-- **:246** LILYSHARP-OWN: the stand-in case has no LilyPond counterpart, and cannot have one.
+- **:249** LILYSHARP-OWN: the stand-in case has no LilyPond counterpart, and cannot have one.
 ### `LilySharp.Core/Rendering/Pdf/PdfReproducibility.cs`
 - **:41** LILYSHARP-OWN: the convention is reproducible-builds.org's, not LilyPond's (its PDFs
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
@@ -479,8 +479,8 @@
 - **:3750** ⚠️ LILYSHARP-OWN, DECLARED: LilyPond's pure heights are BOXES — the begin-of-line
 - **:5125** LILYSHARP-OWN: the band is Lily#'s model of a line LilyPond walks as a loose line
 ### `LilySharp.Core/Svg/Layout/MusicFont.cs`
-- **:440** LILYSHARP-OWN: hand-tuned, and the only head width that is. ⚠️ NOT because LilyPond
-- **:453** LILYSHARP-OWN: the sM1 advance was never extracted either; 1.30 over the
+- **:451** LILYSHARP-OWN: hand-tuned, and the only head width that is. ⚠️ NOT because LilyPond
+- **:464** LILYSHARP-OWN: the sM1 advance was never extracted either; 1.30 over the
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:155** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **:181** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN

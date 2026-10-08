@@ -274,7 +274,11 @@ public static class SvgGenerator
             Interactive = options.Interactive,
         };
         var doc = new SvgDocumentContext(docOptions, pageBuffers);
-        SharedRenderer.RenderTo(score, layout, doc, resolveDataPos, fragments);
+        using (var fallbacks = MusicFallbackLog.Open())
+        {
+            SharedRenderer.RenderTo(score, layout, doc, resolveDataPos, fragments);
+            fallbacks.Report(options.LayoutWarning);
+        }
         doc.Dispose();
         return doc;
     }

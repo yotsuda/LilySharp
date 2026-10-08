@@ -47,19 +47,33 @@ public static class MusicFonts
     private static readonly ConcurrentDictionary<string, MusicFont?> ByName = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// The music font a score's plan engraves in: the first name of
-    /// <see cref="Rendering.TextFontPlan.Music"/> that is found, else Emmentaler (the default,
+    /// The music font a score's plan engraves in: the names of
+    /// <see cref="Rendering.TextFontPlan.Music"/> that are found, else Emmentaler (the default,
     /// and the answer for a chain in which nothing is found — the diagnostic on the plan has
     /// said so). The scope every layout and render opens
     /// (<see cref="MusicFont.Use"/>; docs/smufl-design.md §6 ② ⒝).
     /// </summary>
+    /// <remarks>
+    /// A SMuFL font is answered as a <see cref="MusicFontChain"/> of every name found, in the
+    /// order written, with Emmentaler last — the glyph-level fallback (§6 ② ⒟): no SMuFL font
+    /// draws Emmentaler's own glyphs (<c>feta.</c>), and Leland lacks 25 more. One chain per
+    /// list of names, kept: the caches keyed by a font are keyed by the instance.
+    /// </remarks>
     internal static MusicFont Of(Rendering.TextFontPlan plan)
     {
+        if (plan.Music.IsDefaultOrEmpty)
+            return EmmentalerMusicFont.Instance;
+        var found = new List<MusicFont>();
         foreach (var name in plan.Music)
             if (ByName.GetOrAdd(name, static n => Find(n, out _)) is { } font)
-                return font;
-        return EmmentalerMusicFont.Instance;
+                found.Add(font);
+        if (found.Count == 0 || ReferenceEquals(found[0], EmmentalerMusicFont.Instance))
+            return EmmentalerMusicFont.Instance;
+        string key = string.Join("\n", found.Select(f => f.Name));
+        return Chains.GetOrAdd(key, static (_, fonts) => new MusicFontChain(fonts), found);
     }
+
+    private static readonly ConcurrentDictionary<string, MusicFontChain> Chains = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// The font named <paramref name="name"/>, or null when none can be found —

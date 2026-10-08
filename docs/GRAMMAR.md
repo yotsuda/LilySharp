@@ -386,7 +386,10 @@ Role           = 'title' | 'subtitle' | 'composer' | 'poet'
    installed. It takes quoted names only: `as`, `step`, `size` and a style on it are refused
    (LYS8015 — a glyph's size is its grob's, `layout { NoteHead.scale }`). A name found
    nowhere WARNS (LYS8019, listing every place looked) and the next name, or Emmentaler,
-   is used. `lysc --set music=NAME` lays a name over the file's. The LilyPond twin cannot
+   is used. SEVERAL NAMES ARE PER GLYPH: each glyph is drawn from the first font that has
+   it, and a glyph none of them has (Leland has no figured-bass digits, styled heads,
+   heel/toe or thumb; no SMuFL font has Emmentaler's own `feta.` shapes) is drawn in
+   Emmentaler, the render warning once per glyph. `lysc --set music=NAME` lays a name over the file's. The LilyPond twin cannot
    follow it (2.26 reads no SMuFL font) and says so. The text that is really notation —
    tab fret numbers, the `treble_8` digit, a compound meter's `+` — stays under `notation`.
 

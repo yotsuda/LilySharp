@@ -76,7 +76,11 @@ public static class PngGenerator
         };
 
         using var doc = new PngDocumentContext(docOptions);
-        SharedRenderer.RenderTo(multiScore, layout, doc);
+        using (var fallbacks = MusicFallbackLog.Open())
+        {
+            SharedRenderer.RenderTo(multiScore, layout, doc);
+            fallbacks.Report(options.LayoutWarning);
+        }
         doc.Dispose();
         return doc.GetBytes();
     }
@@ -110,7 +114,11 @@ public static class PngGenerator
         };
 
         using var doc = new PngDocumentContext(docOptions);
-        SharedRenderer.RenderTo(multiScore, layout, doc);
+        using (var fallbacks = MusicFallbackLog.Open())
+        {
+            SharedRenderer.RenderTo(multiScore, layout, doc);
+            fallbacks.Report(options.LayoutWarning);
+        }
         doc.Dispose();
         return doc.GetPageBytes();
     }

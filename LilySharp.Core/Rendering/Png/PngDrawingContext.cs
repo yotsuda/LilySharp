@@ -199,7 +199,10 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
     {
         // The FACE follows the music-face scope; the SIZE does not change with it — every
         // Emmentaler design's em is four of its own staff spaces (IDrawingContext.MusicFace).
-        var font = _fonts.GetFont(MusicFont.Current.FaceFamily(_musicDesign), T(fontSize), FontStyle.Regular);
+        // A glyph the score's first music font lacks is another font's character in its face.
+        var (code, face) = MusicFont.Current.Drawn(glyph, _musicDesign);
+        glyph = code;
+        var font = _fonts.GetFont(MusicFont.Current.FaceFamily(face), T(fontSize), FontStyle.Regular);
         using var paint = new SKPaint
         {
             Color = ToSKColor(fill),
@@ -283,7 +286,9 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
     /// the face <see cref="DrawGlyph"/> draws it in. For <c>lysc boxes</c>.</summary>
     internal SKRect MeasureGlyphInk(char glyph, double x, double y, double fontSize)
     {
-        var font = _fonts.GetFont(MusicFont.Current.FaceFamily(_musicDesign), T(fontSize), FontStyle.Regular);
+        var (code, face) = MusicFont.Current.Drawn(glyph, _musicDesign);
+        glyph = code;
+        var font = _fonts.GetFont(MusicFont.Current.FaceFamily(face), T(fontSize), FontStyle.Regular);
         var ids = GlyphIds(font, glyph.ToString());
         if (ids.Length == 0)
             return SKRect.Empty;

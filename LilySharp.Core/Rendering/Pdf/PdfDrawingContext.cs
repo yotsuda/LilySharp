@@ -211,7 +211,10 @@ internal sealed class PdfDrawingContext : IDrawingContext
     {
         // The FACE follows the music-face scope; the SIZE does not change with it — every
         // Emmentaler design's em is four of its own staff spaces (IDrawingContext.MusicFace).
-        var font = GetFont(MusicFont.Current.FaceFamily(_musicDesign), T(fontSize));
+        // A glyph the score's first music font lacks is another font's character in its face.
+        var (code, face) = MusicFont.Current.Drawn(glyph, _musicDesign);
+        glyph = code;
+        var font = GetFont(MusicFont.Current.FaceFamily(face), T(fontSize));
         // SVG <text y="..."> places the baseline at y; PdfSharpCore's
         // XStringFormats.BaseLineLeft matches that, so we draw at (x, y).
         _gfx.DrawString(glyph.ToString(), font,

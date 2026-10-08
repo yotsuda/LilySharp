@@ -49,7 +49,11 @@ public static class BoxesGenerator
         var layout = new LayoutEngine(score.Paper).Layout(score);
         LayoutWarnings.Report(layout, score.Paper, layoutWarning);
         using var doc = new BoxesDocumentContext(fontDirectory ?? FontLocator.Find());
-        SharedRenderer.RenderTo(score, layout, doc);
+        using (var fallbacks = MusicFallbackLog.Open())
+        {
+            SharedRenderer.RenderTo(score, layout, doc);
+            fallbacks.Report(layoutWarning);
+        }
         return doc.Pages;
     }
 

@@ -131,6 +131,17 @@ internal abstract class MusicFont
     public abstract MusicGlyph? GlyphOf(char codepoint);
 
     /// <summary>
+    /// What a backend draws for <paramref name="glyph"/> — a character <see cref="Codepoint"/>
+    /// handed out — under the music-face scope <paramref name="design"/>: the character the
+    /// face holds it at, and the face, as a number <see cref="FaceFamily"/>,
+    /// <see cref="FaceFile"/> and <see cref="WebFaceFile"/> read.
+    /// </summary>
+    /// <remarks>A font draws its own characters in its own designs, so the answer is the
+    /// question; a <see cref="MusicFontChain"/> draws a glyph its first font lacks from a later
+    /// one, and answers that font's character and face (docs/smufl-design.md §6 ② ⒟).</remarks>
+    internal virtual (char Code, int Face) Drawn(char glyph, int design) => (glyph, design);
+
+    /// <summary>
     /// The GPOS pair kern between two adjacent glyphs of a text run, in the DESIGN's staff
     /// spaces — 0 for a pair the font does not kern (docs/smufl-design.md §3 #7, an
     /// EXTENSION: SMuFL metadata has no kerning).

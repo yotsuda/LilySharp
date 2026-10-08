@@ -72,7 +72,11 @@ public static class PdfGenerator
             // configures the resolver's embed set — so there is nothing to copy here.
         };
         using var doc = new PdfDocumentContext(docOptions);
-        SharedRenderer.RenderTo(multiScore, layout, doc);
+        using (var fallbacks = MusicFallbackLog.Open())
+        {
+            SharedRenderer.RenderTo(multiScore, layout, doc);
+            fallbacks.Report(options.LayoutWarning);
+        }
         doc.Dispose();
         return doc.GetBytes();
     }

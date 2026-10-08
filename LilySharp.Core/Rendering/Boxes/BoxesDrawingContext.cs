@@ -220,9 +220,13 @@ internal sealed class BoxesDrawingContext : IDrawingContext, IDisposable
         var ink = _measure.MeasureGlyphInk(glyph, x, y, fontSize);
         if (ink.IsEmpty)
             return;
-        string name = GlyphName(glyph);
+        // The character the face holds it at — a glyph the score's first music font lacks is
+        // handed out at a stand-in (MusicFontChain); the design does not change the character.
+        var music = Core.Svg.Layout.MusicFont.Current;
+        char code = music.Drawn(glyph, music.DefaultDesign).Code;
+        string name = GlyphName(code);
         Add(GlyphKind(name), ink.Left / Scale, ink.Top / Scale, ink.Right / Scale, ink.Bottom / Scale,
-            glyph: name, codepoint: glyph);
+            glyph: name, codepoint: code);
     }
 
     public void DrawText(string text, double x, double y, double fontSize,

@@ -196,8 +196,14 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
      `brace` を span に拡縮して music face で描く（Emmentaler は従来の段）。PDF resolver は SMuFL の 1 面を家族名で（`Bravura#`）・SVG は
      WOFF2 の無い Leland を `format('opentype')` で埋め込む。網 7（`SmuflRenderTests`）: Bravura で描く・Emmentaler の譜は前後でバイト同一・
      `--set music=Leland` が file の上・鎖の次／空は Emmentaler・埋め込み・PNG/PDF・grand staff の brace。掃き 1199 枚・差 0。
-   - **残り**: ⒟ グリフ単位の fallback（`Has` が false → Emmentaler で描き名前ごとに 1 回警告＝Leland は figbass・styled head・heel/toe・thumb の
-     25 字が無い。今は `Codepoint` が KeyNotFoundException）／⒠ GPOS の kern（§3 #7）／⒡ `engravingDefaults`（線の太さ＝LP の倍数の依存を
+   - ✅ **⒟ グリフ単位の fallback（第865）**: `MusicFonts.Of` は SMuFL の名前を `MusicFontChain`（見つかった名前を書いた順＋最後に Emmentaler・
+     名前の列ごとに 1 つ）で返す。各グリフは持っている最初のフォントへ（Leland は 29 字＝figbass 13・styled head 7・heel/toe 4・thumb・`feta.` 4、
+     Bravura／Petaluma は `feta.` 4 だけ）。⚠️ **PUA は書体で重なり、層はグリフを字で運ぶ**ので、先頭以外のフォントのグリフは低サロゲート
+     `U+DC00 + MusicGlyph` を代理の字として配り、backend が `MusicFont.Drawn(char, design)` で実の字と面（`k × 100 + design`）に戻す＝
+     SVG の使った面の記録・断片の再生・PDF／PNG の loader はそのまま運ぶ。先頭のフォントの字は不変。後ろのフォントの寸法は先頭の設計番号で
+     magstep 拡縮（描く面と同じ）。Emmentaler に落ちたグリフは `MusicFallbackLog` が描いた所で集め、生成器が LayoutWarning の口で 1 字 1 回言う
+     （LSP には出ない）。網 6（`SmuflFallbackTests`）。掃き 1199 枚・差 0。
+   - **残り**: ⒠ GPOS の kern（§3 #7）／⒡ `engravingDefaults`（線の太さ＝LP の倍数の依存を
      保って換算・`layout { }` が優先）／§4 の「曖昧なものは描いて目で決める」（`Unverified` 24 行）と VS Code のプレビュー（拡張側の font）は ③ 出力で。
 3. **出力**: 埋め込み・`boxes.json`・双子の警告。
 4. **仕上げ**: Bravura・Leland・Petaluma で本を描いて目で見る・§3 の代わりの経路の値付け。
