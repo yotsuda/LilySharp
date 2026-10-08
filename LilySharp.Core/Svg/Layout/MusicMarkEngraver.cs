@@ -423,9 +423,9 @@ internal static class MusicMarkEngraver
     /// mark that reserves nothing.</exception>
     internal static GlyphMetrics.BBox PedalGlyphBox(char glyph) => glyph switch
     {
-        EmmentalerGlyphs.PedalPed => GlyphMetrics.PedalPed,
-        EmmentalerGlyphs.PedalDot => GlyphMetrics.PedalDot,
-        EmmentalerGlyphs.PedalStar => GlyphMetrics.PedalStar,
+        EmmentalerGlyphs.PedalPed => MusicFont.Current.FullSize.Box(MusicGlyph.KeyboardPedalPed),
+        EmmentalerGlyphs.PedalDot => MusicFont.Current.FullSize.Box(MusicGlyph.KeyboardPedalDot),
+        EmmentalerGlyphs.PedalStar => MusicFont.Current.FullSize.Box(MusicGlyph.KeyboardPedalUp),
         _ => throw new ArgumentOutOfRangeException(nameof(glyph), glyph,
             "not a sustain-pedal glyph"),
     };
@@ -1685,7 +1685,7 @@ internal static class MusicMarkEngraver
         // The glyph's ink width at the draw's size. It was an approximate 1.344 until
         // 2026-09-26, under the ink's 1.63, and the renderer set the glyph's CENTRED origin
         // at the text's end, so half of it sat on the "o" of "To".
-        double glyphW = (GlyphMetrics.MarkCoda.Right - GlyphMetrics.MarkCoda.Left) * ToCodaGlyphScale;
+        double glyphW = (MusicFont.Current.FullSize.Box(MusicGlyph.Coda).Right - MusicFont.Current.FullSize.Box(MusicGlyph.Coda).Left) * ToCodaGlyphScale;
         return (textW, glyphW);
     }
 
@@ -1710,8 +1710,8 @@ internal static class MusicMarkEngraver
             TextRole.Navigation, TextStyleOf(fonts, MusicMarkType.ToCoda));
         double lift = ToCodaGlyphLift(fonts);
         return ((textW + glyphW) / 2,
-            Math.Min(textBottom, lift + GlyphMetrics.MarkCoda.Bottom * ToCodaGlyphScale),
-            Math.Max(textTop, lift + GlyphMetrics.MarkCoda.Top * ToCodaGlyphScale));
+            Math.Min(textBottom, lift + MusicFont.Current.FullSize.Box(MusicGlyph.Coda).Bottom * ToCodaGlyphScale),
+            Math.Max(textTop, lift + MusicFont.Current.FullSize.Box(MusicGlyph.Coda).Top * ToCodaGlyphScale));
     }
 
     // The air between the "To" advance and the coda sign's ink. LILYSHARP-OWN with the

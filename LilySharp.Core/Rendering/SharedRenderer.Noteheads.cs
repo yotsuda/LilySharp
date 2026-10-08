@@ -662,7 +662,7 @@ internal static partial class SharedRenderer
     /// 1.090000). Session 314 moved the stem attachment and the flag and dot widths here;
     /// these were the rest of the same table (docs/HANDOFF.md §2 U8c).
     /// <para>
-    /// A full-size item reads <see cref="MusicFont.Current.DesignAt(0)"/> itself rather than the
+    /// A full-size item reads <c>MusicFont.Current.DesignAt(0)</c> itself rather than the
     /// font-size machinery, so nothing at the staff's own size can move.
     /// </para>
     /// </remarks>
@@ -1589,7 +1589,7 @@ internal static partial class SharedRenderer
         // LILYPOND-REF: scm/output-lib.scm:652-664 dots::calc-staff-position.
         if (rest.Dots > 0)
         {
-            double dotWidth = GlyphMetrics.AugmentationDot.Width;
+            double dotWidth = MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width;
             double dotStartX = x + GlyphMetrics.GetRestBBox(noteValue).Right + EngravingDefaults.DotPadding(dotWidth);
             double dotY = y
                 + (dotOffset ?? LilySharp.Core.Svg.Layout.ElementCoordinator.RestDotDefaultOffset(noteValue)) * 0.5;

@@ -1073,7 +1073,7 @@ internal sealed class NoteCollision
                         columnX = Math.Max(columnX, sample);
                     }
 
-                    double minX = columnX + EngravingDefaults.DotPadding(GlyphMetrics.AugmentationDot.Width);
+                    double minX = columnX + EngravingDefaults.DotPadding(MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width);
                     for (int i = 0; i < offsets.Count; i++)
                     {
                         var o = offsets[i];
@@ -1132,7 +1132,7 @@ internal sealed class NoteCollision
         // dot's own (integer) position — the dot's extent plays no part.
         // LILYPOND-REF: lily/dot-column.cc:117-118 calc_positioning_done — Interval (-1.1, 1.1)
         const double headBandHalfPositions = 1.1;
-        double pad = EngravingDefaults.DotPadding(GlyphMetrics.AugmentationDot.Width);
+        double pad = EngravingDefaults.DotPadding(MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width);
 
         var supportPositions = GetStaffPositions(new List<VoiceEntry> { support });
         if (supportPositions.Count == 0)

@@ -2781,7 +2781,7 @@ internal sealed class SkylineBuilder
                     // makes about collision X offsets.
                     int dottedValue = LayoutUtilities.GetNoteValueFromFraction(note.BaseDuration);
                     double noteDotX = x + size.Ink(GlyphMetrics.GetNoteheadBBox(dottedValue)).Right
-                        + size.Span(EngravingDefaults.DotPadding(GlyphMetrics.AugmentationDot.Width));
+                        + size.Span(EngravingDefaults.DotPadding(MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width));
                     int noteDotDir = forcedStemUp switch { true => 1, false => -1, null => 0 };
                     int noteDotPos = DotConfiguration.Resolve(
                         new[] { note.StaffPosition },
@@ -2875,7 +2875,7 @@ internal sealed class SkylineBuilder
                         chord.Notes, chordStemUp, chordNoteValue);
                     double chordDotX = x + size.Ink(GlyphMetrics.GetNoteheadBBox(chordNoteValue)).Right
                         + size.Span(Math.Max(0, chordHeadOffsets.Max()))
-                        + size.Span(EngravingDefaults.DotPadding(GlyphMetrics.AugmentationDot.Width));
+                        + size.Span(EngravingDefaults.DotPadding(MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width));
                     int chordDotDir = forcedStemUp switch { true => 1, false => -1, null => 0 };
                     var chordDotPositions = DotConfiguration.Resolve(
                         chord.Notes.Select(n => n.StaffPosition).ToArray(),
@@ -2969,7 +2969,7 @@ internal sealed class SkylineBuilder
                 if (restItem.Dots > 0)
                 {
                     double restDotX = x + size.Ink(GlyphMetrics.GetRestBBox(restValue)).Right
-                        + size.Span(EngravingDefaults.DotPadding(GlyphMetrics.AugmentationDot.Width));
+                        + size.Span(EngravingDefaults.DotPadding(MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width));
                     double restDotUp = restOriginUp + size.Span(
                         (restDotRel ?? ElementCoordinator.RestDotDefaultOffset(restValue)) * 0.5);
                     MergeDotRow(restItem.Dots, restDotX, restDotUp,
@@ -3006,8 +3006,8 @@ internal sealed class SkylineBuilder
     {
         if (dotCount <= 0)
             return;
-        var dotBox = size.Ink(GlyphMetrics.AugmentationDot);
-        double advance = 2 * size.Span(GlyphMetrics.AugmentationDot.Width);
+        var dotBox = size.Ink(MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot));
+        double advance = 2 * size.Span(MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width);
         double left = dotStartX + dotBox.Left;
         double right = dotStartX + (dotCount - 1) * advance + dotBox.Right;
         upSkyline.MergeBox(left, right, dotUp + dotBox.Bottom, dotUp + dotBox.Top);

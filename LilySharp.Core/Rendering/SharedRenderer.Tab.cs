@@ -749,7 +749,7 @@ internal static partial class SharedRenderer
         double digitWidth, double noteY, double stringSpace, int sourcePosition, IDrawingContext gc)
     {
         if (dots <= 0) return;
-        double dotWidth = GlyphMetrics.AugmentationDot.Width;
+        double dotWidth = MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width;
         double dotStartX = digitCenterX + digitWidth / 2 + EngravingDefaults.DotPadding(dotWidth);
         // One position off the line = half a staff space; on a tab the staff space is
         // the string gap. UP is larger Y-up.

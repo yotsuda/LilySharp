@@ -905,8 +905,8 @@ internal static partial class SpacingRules
                     if (columnItems[j] is not BreathingSignItem sign)
                         continue;
                     var b = sign.Type == LilySharp.Core.Syntax.ArticulationType.Caesura
-                        ? GlyphMetrics.CaesuraStraight
-                        : GlyphMetrics.BreathComma;
+                        ? MusicFont.Current.FullSize.Box(MusicGlyph.Caesura)
+                        : MusicFont.Current.FullSize.Box(MusicGlyph.BreathMarkComma);
                     boxes.Add((-(BreathingSignLineUp + b.Top), -(BreathingSignLineUp + b.Bottom),
                                xLeft, xRight));
                 }

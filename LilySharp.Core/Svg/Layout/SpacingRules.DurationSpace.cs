@@ -127,9 +127,9 @@ internal static partial class SpacingRules
         foreach (var (span, width) in new[]
         {
             (8, GlyphMetrics.RestMaximaWidth),
-            (4, GlyphMetrics.RestLonga.Width),
-            (2, GlyphMetrics.RestDoubleWhole.Width),
-            (1, GlyphMetrics.RestWhole.Width),
+            (4, MusicFont.Current.FullSize.Box(MusicGlyph.RestLonga).Width),
+            (2, MusicFont.Current.FullSize.Box(MusicGlyph.RestDoubleWhole).Width),
+            (1, MusicFont.Current.FullSize.Box(MusicGlyph.RestWhole).Width),
         })
         {
             while (remaining >= span)

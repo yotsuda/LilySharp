@@ -1090,8 +1090,8 @@ internal sealed class ElementCoordinator
         double inkLeft = itemX + layout.XOffset;
         double width = box.Width * scale;
         if (layout.IsCourtesy)
-            width += (GlyphMetrics.AccidentalLeftParen.Width
-                      + GlyphMetrics.AccidentalRightParen.Width) * scale;
+            width += (MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalParensLeft).Width
+                      + MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalParensRight).Width) * scale;
 
         // Y: the glyph box hangs off the note's own position. The note's position is
         // in staff positions, the box is in staff spaces — and staff spaces is what
@@ -2146,7 +2146,7 @@ internal sealed class ElementCoordinator
         int dotCount = SpacingRules.GetDots(item);
         if (isLeftBound && dotCount > 0)
         {
-            var dotBBox = GlyphMetrics.AugmentationDot;
+            var dotBBox = MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot);
             double dotRadius = dotBBox.Height / 2;
             var (dotOffset, rows) = DotColumn.Reserved(item, noteValue, offsets.Max() + headRightInk);
             foreach (int p in rows)
@@ -2712,7 +2712,7 @@ internal sealed class ElementCoordinator
                 : tie.StartNote.BaseDuration.Denominator;
             double outlineRight = GlyphMetrics.GetNoteheadAdvance(noteValue);
             if (startDots > 0)
-                outlineRight += EngravingDefaults.DotRowReach(startDots, GlyphMetrics.AugmentationDot.Width);
+                outlineRight += EngravingDefaults.DotRowReach(startDots, MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width);
             segStartX = startBase + outlineRight;
         }
         else
@@ -2823,7 +2823,7 @@ internal sealed class ElementCoordinator
                 // digit edge and steps 2 per dot), so this is no longer a second spelling of
                 // where they end — it is the same arithmetic.
                 segStartX = startAxis + startDigit.Dx + startDigit.HalfWidth
-                          + EngravingDefaults.DotRowReach(startDots, GlyphMetrics.AugmentationDot.Width);
+                          + EngravingDefaults.DotRowReach(startDots, MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width);
             }
             if (segment.IsLast)
                 segEndX = endAxis + endDigit.Dx - endDigit.HalfWidth;
@@ -3906,7 +3906,7 @@ internal sealed class ElementCoordinator
 
         void AddDotRow(int dotCount, double dotStartX, double dotCenterDeviceY)
         {
-            var dotBox = GlyphMetrics.AugmentationDot;
+            var dotBox = MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot);
             double advance = 2 * dotBox.Width;
             double left = dotStartX + dotBox.Left - slurThickness;
             double right = dotStartX + (dotCount - 1) * advance + dotBox.Right + slurThickness;
@@ -3959,7 +3959,7 @@ internal sealed class ElementCoordinator
                 if (layout.IsCourtesy)
                     width += font is { } pf
                         ? pf.Box(MusicGlyph.AccidentalParensLeft).Width + pf.Box(MusicGlyph.AccidentalParensRight).Width
-                        : GlyphMetrics.AccidentalLeftParen.Width + GlyphMetrics.AccidentalRightParen.Width;
+                        : MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalParensLeft).Width + MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalParensRight).Width;
                 double left = columnX + layout.XOffset;
                 double centreDown = staffMiddleDown - layout.StaffPosition / 2.0;
                 double topDown = centreDown - box.Top, bottomDown = centreDown - box.Bottom;

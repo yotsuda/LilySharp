@@ -94,7 +94,7 @@ internal static class ArpeggioEngraver
     ///   entry declares that callback as the grob's <c>X-extent</c>. So an arpeggio's width
     ///   is a font metric and never a number the engraver chooses.
     /// </remarks>
-    internal static double WiggleWidth => GlyphMetrics.Arpeggio.Right - GlyphMetrics.Arpeggio.Left;
+    internal static double WiggleWidth => MusicFont.Current.FullSize.Box(MusicGlyph.WiggleArpeggiatoUp).Right - MusicFont.Current.FullSize.Box(MusicGlyph.WiggleArpeggiatoUp).Left;
 
     /// <summary>
     /// One wiggle's height — the stacking STEP, since the stencil is whole copies laid edge
@@ -102,7 +102,7 @@ internal static class ArpeggioEngraver
     /// <c>height# := staff_space#</c>), which is why an arpeggio's drawn length always comes
     /// out a whole number of spaces.
     /// </summary>
-    internal static double WiggleHeight => GlyphMetrics.Arpeggio.Top - GlyphMetrics.Arpeggio.Bottom;
+    internal static double WiggleHeight => MusicFont.Current.FullSize.Box(MusicGlyph.WiggleArpeggiatoUp).Top - MusicFont.Current.FullSize.Box(MusicGlyph.WiggleArpeggiatoUp).Bottom;
 
     // LILYPOND-REF: lily/arpeggio.cc:161-181 add_at_edge (Arpeggio::print) — the epsilon the
     // stacking loop tests with, which keeps a chord reaching the centre line from picking up

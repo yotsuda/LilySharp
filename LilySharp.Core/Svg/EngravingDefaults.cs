@@ -752,7 +752,7 @@ internal static class EngravingDefaults
     // wider. Nothing computes with it — it survives as the documented black-head reading, and
     // a caller that needs "where does this stem stand" must go through the house.
     public static double StemUpAttachX =>
-        LilySharp.Core.Svg.Layout.GlyphMetrics.NoteheadBlackStemAttachment.X
+        Layout.MusicFont.Current.FullSize.StemUpAttachment(MusicGlyph.NoteheadBlack).X
         - StemThickness / 2;
     public static double StemDownAttachX => StemThickness / 2;
     // ⚠️ StemUpAttachY = 0.168 and StemDownAttachY = -0.168 stood here with no explanation

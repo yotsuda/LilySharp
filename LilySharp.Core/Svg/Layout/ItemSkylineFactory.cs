@@ -1208,7 +1208,7 @@ internal static class ItemSkylineFactory
         if (dots == 0 || item is RestItem { IsSpacer: true } or RestItem { IsMultiMeasure: true })
             return;
 
-        var dotBBox = GlyphMetrics.AugmentationDot;
+        var dotBBox = MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot);
         double dotWidth = dotBBox.Width;
         double dotRadius = dotBBox.Height / 2;
 

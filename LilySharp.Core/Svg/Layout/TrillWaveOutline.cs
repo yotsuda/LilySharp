@@ -59,19 +59,19 @@ internal static class TrillWaveOutline
     /// <summary>The repetition step: the element's LILC stencil width, LilyPond's
     /// <c>elt_len = elt.extent (X_AXIS).length ()</c>.</summary>
     private static double ElementStep
-        => GlyphMetrics.OrnTrillElementGlyph.Right - GlyphMetrics.OrnTrillElementGlyph.Left;
+        => MusicFont.Current.FullSize.Box(MusicGlyph.WiggleTrill).Right - MusicFont.Current.FullSize.Box(MusicGlyph.WiggleTrill).Left;
 
     /// <summary>The first copy's own length: the element's OUTLINE width, LilyPond's
     /// <c>elt_true_len</c> (taken there from the element stencil's horizontal skylines,
     /// which is the outline).</summary>
     private static double ElementTrueLength
-        => GlyphMetrics.OrnTrillElementGlyphOutline.Right
-           - GlyphMetrics.OrnTrillElementGlyphOutline.Left;
+        => MusicFont.Current.FullSize.Outline(MusicGlyph.WiggleTrill).Right
+           - MusicFont.Current.FullSize.Outline(MusicGlyph.WiggleTrill).Left;
 
     /// <summary>What <c>align_to (Y_AXIS, CENTER)</c> subtracts: the element's stencil
     /// (LILC) extent centre, so the run straddles the line.</summary>
     private static double CentreOffset
-        => (GlyphMetrics.OrnTrillElementGlyph.Bottom + GlyphMetrics.OrnTrillElementGlyph.Top) / 2.0;
+        => (MusicFont.Current.FullSize.Box(MusicGlyph.WiggleTrill).Bottom + MusicFont.Current.FullSize.Box(MusicGlyph.WiggleTrill).Top) / 2.0;
 
     /// <summary>
     /// How many whole elements a line of <paramref name="allotted"/> length carries —
@@ -124,7 +124,7 @@ internal static class TrillWaveOutline
     {
         int n = ElementCount(allotted);
         for (int i = 0; i < n; i++)
-            yield return startX + i * ElementStep - GlyphMetrics.OrnTrillElementGlyphOutline.Left;
+            yield return startX + i * ElementStep - MusicFont.Current.FullSize.Outline(MusicGlyph.WiggleTrill).Left;
     }
 
     /// <summary>
@@ -142,8 +142,8 @@ internal static class TrillWaveOutline
     /// than a profile; anything that places against the line reads <see cref="Place"/>.
     /// </summary>
     public static double InkReach
-        => Math.Max(GlyphMetrics.OrnTrillElementGlyphOutline.Top - CentreOffset,
-                    CentreOffset - GlyphMetrics.OrnTrillElementGlyphOutline.Bottom);
+        => Math.Max(MusicFont.Current.FullSize.Outline(MusicGlyph.WiggleTrill).Top - CentreOffset,
+                    CentreOffset - MusicFont.Current.FullSize.Outline(MusicGlyph.WiggleTrill).Bottom);
 
     // Keyed by element count: the run of that many copies, with the FIRST copy's outline
     // left edge at x = 0 (LilyPond's `line.translate_axis (-elt_true_ext[LEFT], X_AXIS)`)
@@ -170,7 +170,7 @@ internal static class TrillWaveOutline
                 // its own StaffSize.FullSize calls, and it closes for all of them at once
                 // when they do. The ossia shrink is applied at DRAW time, so the reservation
                 // over-reserves there, never under.
-                double origin = i * ElementStep - GlyphMetrics.OrnTrillElementGlyphOutline.Left;
+                double origin = i * ElementStep - MusicFont.Current.FullSize.Outline(MusicGlyph.WiggleTrill).Left;
                 up.Merge(VerticalSkyline.FromGlyphOutline(
                     VerticalDirection.Up, uQuads, StaffSize.FullSize, origin, 0));
                 down.Merge(VerticalSkyline.FromGlyphOutline(

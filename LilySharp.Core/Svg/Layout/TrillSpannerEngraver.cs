@@ -213,7 +213,7 @@ internal static class TrillSpannerEngraver
                 if (segment.IsFirst)
                 {
                     glyphX = glyphOrigin;
-                    lineStartX = glyphX + GlyphMetrics.OrnTrillGlyphOutline.Right;
+                    lineStartX = glyphX + MusicFont.Current.FullSize.Outline(MusicGlyph.OrnamentTrill).Right;
                 }
                 else
                 {
@@ -365,9 +365,9 @@ internal static class TrillSpannerEngraver
         double reach = EngravingDefaults.TrillSpannerTextOffsetDown;
         VerticalSkyline? plateau = segment.IsFirst
             ? VerticalSkyline.FromBox(
-                glyphX + GlyphMetrics.OrnTrillGlyphOutline.Left,
-                glyphX + GlyphMetrics.OrnTrillGlyphOutline.Right,
-                -reach, GlyphMetrics.OrnTrillGlyph.Top - reach, facing)
+                glyphX + MusicFont.Current.FullSize.Outline(MusicGlyph.OrnamentTrill).Left,
+                glyphX + MusicFont.Current.FullSize.Outline(MusicGlyph.OrnamentTrill).Right,
+                -reach, MusicFont.Current.FullSize.Box(MusicGlyph.OrnamentTrill).Top - reach, facing)
             : null;
         // The line's own ink: the run of trill_element glyphs, pointwise.
         var runPair = lineStartX < endX

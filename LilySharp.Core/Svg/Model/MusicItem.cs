@@ -1691,8 +1691,8 @@ public sealed record BreathingSignItem : MusicItem
     /// <summary>The glyph's ink width — the column's extent (the LILC box LilyPond reads:
     /// the comma 0.5066, the straight caesura 2.0).</summary>
     public double InkWidth => Type == LilySharp.Core.Syntax.ArticulationType.Caesura
-        ? Layout.GlyphMetrics.CaesuraStraight.Width
-        : Layout.GlyphMetrics.BreathComma.Width;
+        ? Layout.MusicFont.Current.FullSize.Box(MusicGlyph.Caesura).Width
+        : Layout.MusicFont.Current.FullSize.Box(MusicGlyph.BreathMarkComma).Width;
 
     /// <summary>Initializes a new <see cref="BreathingSignItem"/>.</summary>
     public BreathingSignItem(LilySharp.Core.Syntax.ArticulationType type, int sourcePosition)

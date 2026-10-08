@@ -786,8 +786,8 @@ internal static partial class SharedRenderer
         {
             // Same paren assembly as DrawAccidental, anchored at the ink left.
             // LILYPOND-REF: lily/accidental.cc:35-46 — parenthesize()
-            var leftParen = GlyphMetrics.AccidentalLeftParen;
-            var rightParen = GlyphMetrics.AccidentalRightParen;
+            var leftParen = MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalParensLeft);
+            var rightParen = MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalParensRight);
             double accInkLeft = inkLeftX + leftParen.Width * scale;
             using (gc.Source(sourcePosition))
             {

@@ -1087,9 +1087,9 @@ internal static partial class SharedRenderer
         // rest is 1.5 ss. LILYPOND-REF: lily/multi-measure-rest.cc church_rest.
         var pieces = new List<(int Span, char Glyph, double Width, double Y)>();
         double MaximaWidth = GlyphMetrics.RestMaximaWidth;
-        double LongWidth = GlyphMetrics.RestLonga.Width;
-        double BreveWidth = GlyphMetrics.RestDoubleWhole.Width;
-        double WholeWidth = GlyphMetrics.RestWhole.Width;
+        double LongWidth = MusicFont.Current.FullSize.Box(MusicGlyph.RestLonga).Width;
+        double BreveWidth = MusicFont.Current.FullSize.Box(MusicGlyph.RestDoubleWhole).Width;
+        double WholeWidth = MusicFont.Current.FullSize.Box(MusicGlyph.RestWhole).Width;
         // Vertical placement (dy, in staff spaces below the staff middle cy — device
         // +Y is down). Each church-rest glyph sits at its own natural staff position
         // spi = Rest::staff_position_internal(me, dl, CENTER). For a normal 5-line staff

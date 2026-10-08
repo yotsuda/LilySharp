@@ -902,7 +902,7 @@ internal static partial class SharedRenderer
                 if (newAltered.Contains(step)) continue;
                 int staffPosition = KeySigStaffPositionForStep(clef, alter >= 0, step);
                 if (anyNatural)
-                    dx += GlyphMetrics.AccidentalNatural.Width
+                    dx += MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalNatural).Width
                         + NaturalKernPadding(prevNaturalPos, staffPosition);
                 glyphs.Add(("natural", dx, staffPosition));
                 prevNaturalPos = staffPosition;
@@ -911,7 +911,7 @@ internal static partial class SharedRenderer
             var customNewSig = KeySignatureGlyphs(change.NewKey, clef, out double customKeyWidth);
             if (anyNatural)
             {
-                dx += GlyphMetrics.AccidentalNatural.Width;
+                dx += MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalNatural).Width;
                 // The same cancellation→key entry the standard branch reads — it was the same
                 // 0.4 written a THIRD time (draw, reserve, and here), so it moves with them —
                 // and, as there, only when a signature stands after the cancellation.
@@ -949,12 +949,12 @@ internal static partial class SharedRenderer
             {
                 int staffPosition = KeySigStaffPosition(clef, prev > 0, startAt + i);
                 if (i > 0)
-                    dx += GlyphMetrics.AccidentalNatural.Width
+                    dx += MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalNatural).Width
                         + NaturalKernPadding(prevNatPos, staffPosition);
                 glyphs.Add(("natural", dx, staffPosition));
                 prevNatPos = staffPosition;
             }
-            dx += GlyphMetrics.AccidentalNatural.Width;
+            dx += MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalNatural).Width;
             // Gap before the new signature. LilyPond keeps the KeyCancellation and the
             // following KeySignature as SEPARATE break-aligned grobs, so this is one
             // space-alist entry read like every other in the group.

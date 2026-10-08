@@ -533,7 +533,7 @@ internal sealed partial class LayoutEngine
             double trY = -tr.YUp;
             Add(tr.StartMeasureIndex,
                 trY - (trHasGlyph
-                    ? GlyphMetrics.OrnTrillGlyph.Top - EngravingDefaults.TrillSpannerTextOffsetDown
+                    ? MusicFont.Current.FullSize.Box(MusicGlyph.OrnamentTrill).Top - EngravingDefaults.TrillSpannerTextOffsetDown
                     : trWave),
                 trY + (trHasGlyph ? EngravingDefaults.TrillSpannerTextOffsetDown : trWave));
         }

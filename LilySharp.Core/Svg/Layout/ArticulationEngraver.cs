@@ -870,7 +870,7 @@ internal static class ArticulationEngraver
                         var (dotOffset, rows) = DotColumn.Reserved(item, noteValue, headRight);
                         if (rows.Length > 0 && rows[0] == dotted.StaffPosition)
                             leftInk = Math.Max(leftInk, bendItemX + dotOffset
-                                + (2 * dotted.Dots - 1) * GlyphMetrics.AugmentationDot.Width);
+                                + (2 * dotted.Dots - 1) * MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width);
                     }
                     // Y-up: the gesture hangs at the note's own staff position (pos/2).
                     bendYUp = GetStaffPosition(item) * 0.5;
@@ -2129,9 +2129,9 @@ internal static class ArticulationEngraver
 
         return type switch
         {
-            ArticulationType.Staccato => GlyphMetrics.ArticStaccato,
-            ArticulationType.Accent => GlyphMetrics.ArticAccent,
-            ArticulationType.Tenuto => GlyphMetrics.ArticTenuto,
+            ArticulationType.Staccato => MusicFont.Current.FullSize.Box(MusicGlyph.ArticStaccatoAbove),
+            ArticulationType.Accent => MusicFont.Current.FullSize.Box(MusicGlyph.ArticAccentAbove),
+            ArticulationType.Tenuto => MusicFont.Current.FullSize.Box(MusicGlyph.ArticTenutoAbove),
             // Portato (tenuto line + staccato dot). Its near edge toward the note is
             // only the line's half-thickness (~0.07 ss), NOT the 0.5 ss the generic
             // fallback box assumed — which parked the mark ~0.43 ss too far below the
@@ -2154,16 +2154,16 @@ internal static class ArticulationEngraver
                 ? new GlyphMetrics.BBox(-0.6000, -0.8200, 0.6000, 0.0700)
                 : new GlyphMetrics.BBox(-0.6000, -0.0700, 0.6000, 0.8200),
             ArticulationType.Marcato => isAbove
-                ? GlyphMetrics.ArticMarcatoAbove : GlyphMetrics.ArticMarcatoBelow,
+                ? MusicFont.Current.FullSize.Box(MusicGlyph.ArticMarcatoAbove) : MusicFont.Current.FullSize.Box(MusicGlyph.ArticMarcatoBelow),
             ArticulationType.Fermata or ArticulationType.FermataShort or ArticulationType.FermataLong => isAbove
-                ? GlyphMetrics.FermataAboveGlyph : GlyphMetrics.FermataBelowGlyph,
+                ? MusicFont.Current.FullSize.Box(MusicGlyph.FermataAbove) : MusicFont.Current.FullSize.Box(MusicGlyph.FermataBelow),
             ArticulationType.Staccatissimo => isAbove
-                ? GlyphMetrics.ArticStaccatissimoAboveGlyph : GlyphMetrics.ArticStaccatissimoBelowGlyph,
+                ? MusicFont.Current.FullSize.Box(MusicGlyph.ArticStaccatissimoAbove) : MusicFont.Current.FullSize.Box(MusicGlyph.ArticStaccatissimoBelow),
             ArticulationType.UpBow => isAbove
-                ? GlyphMetrics.ArticUpBowAboveGlyph : GlyphMetrics.ArticUpBowBelowGlyph,
+                ? MusicFont.Current.FullSize.Box(MusicGlyph.StringsUpBow) : MusicFont.Current.FullSize.Box(MusicGlyph.StringsUpBowTurned),
             ArticulationType.DownBow => isAbove
-                ? GlyphMetrics.ArticDownBowAboveGlyph : GlyphMetrics.ArticDownBowBelowGlyph,
-            ArticulationType.Flageolet => GlyphMetrics.ArticFlageoletGlyph,
+                ? MusicFont.Current.FullSize.Box(MusicGlyph.StringsDownBow) : MusicFont.Current.FullSize.Box(MusicGlyph.StringsDownBowTurned),
+            ArticulationType.Flageolet => MusicFont.Current.FullSize.Box(MusicGlyph.StringsHarmonic),
             // Chord diagram: anchored at the grid bottom; a six-string one at the default size
             // (the instance's own box, spec and score size, is FrameBox).
             ArticulationType.FretFrame => FretFrameGeometry.Box(null, ScoreTextMetrics.Bundled),
@@ -2171,14 +2171,14 @@ internal static class ArticulationEngraver
             // (after-line-breaking dump, articulation-snappizzicato book). It used to
             // fall to the half-space fallback below while the renderer drew primitives
             // reaching 1.85 ss — three different answers for one glyph.
-            ArticulationType.SnapPizz => GlyphMetrics.ScriptSnappizzicato,
+            ArticulationType.SnapPizz => MusicFont.Current.FullSize.Box(MusicGlyph.PluckedSnapPizzicatoAbove),
             // The trill's REAL font box: its origin is the ink BOTTOM (Bottom 0.000),
             // not the centre the ornament fallback assumes. The near extent this feeds
             // is what seats the trill: with the fallback's −0.5 the ①-clamp parked it
             // at 2.75; the real box lands 2.25 → the ②-refpoint floor lifts it to
             // 2.30, LilyPond's page exactly (probe-script-y: LP origin 2.30 = Δ0.45
             // of the articulations book closed).
-            ArticulationType.Trill => GlyphMetrics.OrnTrillGlyph,
+            ArticulationType.Trill => MusicFont.Current.FullSize.Box(MusicGlyph.OrnamentTrill),
             _ => new GlyphMetrics.BBox(-0.5, -0.5, 0.5, 0.5) // fallback for the ornament family
         };
     }
@@ -2558,12 +2558,12 @@ internal static class ArticulationEngraver
 
     private static GlyphMetrics.BBox GetSeedBBox(ArticulationType type, bool isAbove = true) => type switch
     {
-        ArticulationType.Trill => GlyphMetrics.OrnTrillGlyph,
-        ArticulationType.Turn => GlyphMetrics.OrnTurnGlyph,
-        ArticulationType.InvertedTurn => GlyphMetrics.OrnReverseTurnGlyph,
-        ArticulationType.Prall => GlyphMetrics.OrnPrallGlyph,
-        ArticulationType.Mordent => GlyphMetrics.OrnMordentGlyph,
-        ArticulationType.PrallTriller => GlyphMetrics.OrnPrallPrallGlyph,
+        ArticulationType.Trill => MusicFont.Current.FullSize.Box(MusicGlyph.OrnamentTrill),
+        ArticulationType.Turn => MusicFont.Current.FullSize.Box(MusicGlyph.OrnamentTurn),
+        ArticulationType.InvertedTurn => MusicFont.Current.FullSize.Box(MusicGlyph.OrnamentTurnInverted),
+        ArticulationType.Prall => MusicFont.Current.FullSize.Box(MusicGlyph.OrnamentShortTrill),
+        ArticulationType.Mordent => MusicFont.Current.FullSize.Box(MusicGlyph.OrnamentMordent),
+        ArticulationType.PrallTriller => MusicFont.Current.FullSize.Box(MusicGlyph.OrnamentTremblement),
         _ => GetGlyphBBox(type, isAbove)
     };
 

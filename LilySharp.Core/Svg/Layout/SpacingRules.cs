@@ -892,7 +892,7 @@ internal static partial class SpacingRules
             naturals++;
         if (naturals == 0)
             return (0, 0, width);
-        double cancellation = glyphs[naturals - 1].Dx + GlyphMetrics.AccidentalNatural.Width;
+        double cancellation = glyphs[naturals - 1].Dx + MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalNatural).Width;
         if (naturals == glyphs.Count)
             return (cancellation, cancellation, 0);
         double keyStart = cancellation
@@ -1277,7 +1277,7 @@ internal static partial class SpacingRules
         int lastNatural = first < 0 ? glyphs.Count - 1 : first - 1;
         double cancellation = lastNatural < 0
             ? 0.0
-            : glyphs[lastNatural].Dx + GlyphMetrics.AccidentalNatural.Width;
+            : glyphs[lastNatural].Dx + MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalNatural).Width;
         if (first < 0)
             return (cancellation, 0.0, cancellation);
         return (cancellation, advance - glyphs[first].Dx, advance);

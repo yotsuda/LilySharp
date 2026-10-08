@@ -1115,13 +1115,13 @@ internal static class OutsideStaffStacker
     {
         bool hasGlyph = t.GlyphX < t.LineStartX;
         double reach = EngravingDefaults.TrillSpannerTextOffsetDown;
-        double top = GlyphMetrics.OrnTrillGlyph.Top - reach;
+        double top = MusicFont.Current.FullSize.Box(MusicGlyph.OrnamentTrill).Top - reach;
         var qUp = new VerticalSkyline(VerticalDirection.Up);
         var qDown = new VerticalSkyline(VerticalDirection.Down);
         if (hasGlyph)
         {
-            double gx0 = t.GlyphX + GlyphMetrics.OrnTrillGlyphOutline.Left;
-            double gx1 = t.GlyphX + GlyphMetrics.OrnTrillGlyphOutline.Right;
+            double gx0 = t.GlyphX + MusicFont.Current.FullSize.Outline(MusicGlyph.OrnamentTrill).Left;
+            double gx1 = t.GlyphX + MusicFont.Current.FullSize.Outline(MusicGlyph.OrnamentTrill).Right;
             qUp.MergeBox(gx0, gx1, t.YUp - reach, t.YUp + top);
             qDown.MergeBox(gx0, gx1, t.YUp - reach, t.YUp + top);
         }
@@ -3054,12 +3054,12 @@ internal static class OutsideStaffStacker
                             centreY + att.Y * noteScale, stemTop);
                         if (tempoLog >= 3)
                             MergeGlyph(EmmentalerGlyphs.Flag8thUp,
-                                stemRight - stemTh / 2, stemTop, GlyphMetrics.Flag8thUp);
+                                stemRight - stemTh / 2, stemTop, MusicFont.Current.FullSize.Box(MusicGlyph.Flag8thUp));
                     }
                     for (int d = 0; d < m.TempoDots; d++)
                         MergeGlyph(EmmentalerGlyphs.AugmentationDot,
                             tx + MetronomeMarkGeometry.DotX(fonts, m.TempoBeatUnit, d), centreY,
-                            GlyphMetrics.AugmentationDot);
+                            MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot));
 
                     double noteRight = MetronomeMarkGeometry.NoteRight(
                         fonts, m.TempoBeatUnit, m.TempoDots);
@@ -3090,9 +3090,9 @@ internal static class OutsideStaffStacker
                         (double l, double rgt, double bot, double tp) = p.Kind switch
                         {
                             MetronomeMarkGeometry.SwingPieceKind.Head => (
-                                px, px + GlyphMetrics.NoteheadBlack.Right * swingScale,
-                                py + GlyphMetrics.NoteheadBlack.Bottom * swingScale,
-                                py + GlyphMetrics.NoteheadBlack.Top * swingScale),
+                                px, px + MusicFont.Current.FullSize.Box(MusicGlyph.NoteheadBlack).Right * swingScale,
+                                py + MusicFont.Current.FullSize.Box(MusicGlyph.NoteheadBlack).Bottom * swingScale,
+                                py + MusicFont.Current.FullSize.Box(MusicGlyph.NoteheadBlack).Top * swingScale),
                             MetronomeMarkGeometry.SwingPieceKind.Flag => FlagBox(p.Glyph, px, py, swingScale),
                             MetronomeMarkGeometry.SwingPieceKind.Rule => (
                                 px, sw0 + p.X1, py, anchor + p.Y1),
@@ -3113,7 +3113,7 @@ internal static class OutsideStaffStacker
                     static (double, double, double, double) FlagBox(char glyph, double x, double y, double s)
                     {
                         var box = glyph == EmmentalerGlyphs.Flag16thUp
-                            ? GlyphMetrics.Flag16thUp : GlyphMetrics.Flag8thUp;
+                            ? MusicFont.Current.FullSize.Box(MusicGlyph.Flag16thUp) : MusicFont.Current.FullSize.Box(MusicGlyph.Flag8thUp);
                         return (x + box.Left * s, x + box.Right * s, y + box.Bottom * s, y + box.Top * s);
                     }
                     static (double, double, double, double) TextBox(
@@ -3230,8 +3230,8 @@ internal static class OutsideStaffStacker
             // Segno/Coda glyphs (U+E062/U+E064), centered on the anchor;
             // ink extents from the font bboxes.
             var box = m.MarkType == MusicMarkType.Segno
-                ? GlyphMetrics.MarkSegno
-                : GlyphMetrics.MarkCoda;
+                ? MusicFont.Current.FullSize.Box(MusicGlyph.Segno)
+                : MusicFont.Current.FullSize.Box(MusicGlyph.Coda);
             double h = Math.Max(-box.Left, box.Right);
             return (-h, h, box.Top, -box.Bottom);
         }

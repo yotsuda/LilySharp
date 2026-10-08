@@ -276,7 +276,7 @@ internal static class DotColumn
     internal static (double OffsetX, int[] Rows) Reserved(
         MusicItem item, int noteValue, double headInkRight)
     {
-        double dotWidth = GlyphMetrics.AugmentationDot.Width;
+        double dotWidth = MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width;
         int[] headPositions = HeadPositions(item);
         if (headPositions.Length == 0)
             // A rest's dots: one dot width past its glyph, in the space above the middle line

@@ -558,7 +558,7 @@ internal static partial class SpacingRules
         int dots = GetDots(item);
         if (dots > 0 && item is not (RestItem { IsSpacer: true } or RestItem { IsMultiMeasure: true }))
         {
-            double dotWidth = GlyphMetrics.AugmentationDot.Width;
+            double dotWidth = MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width;
             extent = DotColumn.Reserved(item, noteValue, extent).OffsetX + (2 * dots - 1) * dotWidth;
         }
 

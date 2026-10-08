@@ -87,9 +87,9 @@ internal static class MetronomeMarkGeometry
     /// <summary>The head glyph's bbox (unscaled, origin at its ink left / centre line).</summary>
     public static GlyphMetrics.BBox HeadBox(int beatUnit) => Log(beatUnit) switch
     {
-        0 => GlyphMetrics.NoteheadWhole,
-        1 => GlyphMetrics.NoteheadHalf,
-        _ => GlyphMetrics.NoteheadBlack,
+        0 => MusicFont.Current.FullSize.Box(MusicGlyph.NoteheadWhole),
+        1 => MusicFont.Current.FullSize.Box(MusicGlyph.NoteheadHalf),
+        _ => MusicFont.Current.FullSize.Box(MusicGlyph.NoteheadBlack),
     };
 
     /// <summary>The head glyph note-by-number engraves for a beat unit: whole (1) =
@@ -127,8 +127,8 @@ internal static class MetronomeMarkGeometry
     //   attach-off for an up stem. lily/note-head.cc:164-196 get_stem_attachment.
     public static (double X, double Y) StemAttachment(int beatUnit) => Log(beatUnit) switch
     {
-        1 => GlyphMetrics.NoteheadHalfStemAttachment,
-        _ => GlyphMetrics.NoteheadBlackStemAttachment,
+        1 => MusicFont.Current.FullSize.StemUpAttachment(MusicGlyph.NoteheadHalf),
+        _ => MusicFont.Current.FullSize.StemUpAttachment(MusicGlyph.NoteheadBlack),
     };
 
     /// <summary>
@@ -145,14 +145,14 @@ internal static class MetronomeMarkGeometry
             return centre + box.Top * scale;
         double top = StemTopAboveCentre(fonts, beatUnit);
         if (Log(beatUnit) >= 3)
-            top += GlyphMetrics.Flag8thUp.Top * scale;
+            top += MusicFont.Current.FullSize.Box(MusicGlyph.Flag8thUp).Top * scale;
         return centre + top;
     }
 
     /// <summary>The dot glyph's ink width (note-by-number's <c>dotwid</c>), scaled.</summary>
     // LILYPOND-REF: scm/define-markup-commands.scm:5607-5608 note-by-number —
     //   dotwid = interval-length (ly:stencil-extent dot X).
-    public static double DotWidth(ScoreTextMetrics fonts) => GlyphMetrics.AugmentationDot.Width * NoteScale(fonts);
+    public static double DotWidth(ScoreTextMetrics fonts) => MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width * NoteScale(fonts);
 
     /// <summary>
     /// X of the k-th augmentation dot's origin from the note's origin: the dot run
@@ -175,7 +175,7 @@ internal static class MetronomeMarkGeometry
         double right = HeadBox(beatUnit).Right * scale;
         if (Log(beatUnit) >= 3)
             right = Math.Max(right,
-                right - StemThickness(fonts) / 2.0 + GlyphMetrics.Flag8thUp.Right * scale);
+                right - StemThickness(fonts) / 2.0 + MusicFont.Current.FullSize.Box(MusicGlyph.Flag8thUp).Right * scale);
         if (dots > 0)
             right = Math.Max(right, DotX(fonts, beatUnit, dots - 1) + DotWidth(fonts));
         return right;
@@ -261,7 +261,7 @@ internal static class MetronomeMarkGeometry
         double r = Math.Pow(2.0, -2.0 / 6.0) * k;          // \rhythm's font-size -2
         double th = 0.13 * k;                               // Stem.thickness 1.3 x line 0.1
         double bracketTh = 0.16 * k;                        // TupletBracket.thickness 1.6 x 0.1
-        var att = GlyphMetrics.NoteheadBlackStemAttachment;
+        var att = MusicFont.Current.FullSize.StemUpAttachment(MusicGlyph.NoteheadBlack);
         double headCentre = 0.5 * r;                        // squashedPosition 1
         var pieces = new List<SwingPiece>(20);
 
@@ -303,7 +303,7 @@ internal static class MetronomeMarkGeometry
         if (sixteenths)
             pieces.Add(new SwingPiece(SwingPieceKind.Flag, StemCentre(t1) + th / 2, FlagOriginU * r,
                 Glyph: EmmentalerGlyphs.Flag8thUp));
-        var lastFlag = sixteenths ? GlyphMetrics.Flag16thUp : GlyphMetrics.Flag8thUp;
+        var lastFlag = sixteenths ? MusicFont.Current.FullSize.Box(MusicGlyph.Flag16thUp) : MusicFont.Current.FullSize.Box(MusicGlyph.Flag8thUp);
         double flagX = StemCentre(t2) + th / 2;
         pieces.Add(new SwingPiece(SwingPieceKind.Flag, flagX, FlagOriginU * r,
             Glyph: sixteenths ? EmmentalerGlyphs.Flag16thUp : EmmentalerGlyphs.Flag8thUp));
@@ -320,7 +320,7 @@ internal static class MetronomeMarkGeometry
 
         double width = Math.Max(bR + bracketTh / 2, flagX + lastFlag.Right * r);
         double top = Math.Max(bY + bracketTh / 2, FlagOriginU * r + lastFlag.Top * r);
-        double bottom = Math.Min(0.0, headCentre + GlyphMetrics.NoteheadBlack.Bottom * r);
+        double bottom = Math.Min(0.0, headCentre + MusicFont.Current.FullSize.Box(MusicGlyph.NoteheadBlack).Bottom * r);
         return new SwingEquation(pieces.ToArray(), SharedRenderer.FontSize * r, bracketTh,
             Em(fonts) * Math.Pow(2.0, -4.0 / 6.0),           // TupletNumber font-size -2 inside -2
             width, top, bottom);
