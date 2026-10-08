@@ -78,7 +78,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。→ **第751（2026-10-02・ユーザー決定）「LP 忠実にこだわるより音楽的な妥当性を重視。LP から引き継ぐのはレンダリングとレイアウトの美しさだけ。ユーザーがまだ少ないので過去のしがらみに縛られない」＝意味論（拍子・弱起・反復・強弱・検査・出力の意味）の裁定者は音楽的妥当性、LP は描画と配置の裁定者（RULES §5.2 に規則として置いた）。
 
-**★★★★ 第857（2026-10-08）ユーザー決定＝総点検は区切った・SMuFL に着手**: 文法は `fonts { music "…" }` で承認・**Emmentaler は SMuFL の形に包み、SMuFL に無い Emmentaler のパラメータは失わない**。設計と棚卸しは **`docs/smufl-design.md`**（§3 の 17 行＝失わないもの・§6 の段取り）。**§6 ①（土台）は第857〜第861 で閉じた**（✅ の行と SHA は smufl-design §6 ①・門は毎回「全 svg の掃きで動いた svg 0 ＋ full 緑」＝Lab `p8NN/sweep/`・base は HEAD の bin を `exe-base` へ写す）。**§7 C はユーザー決定「同梱」（第862）・A／B は推奨どおり。②の第 1 歩（同梱・`SmuflMusicFont`・`MusicFonts.Find`＝`f9eccda23`）・⒜（文法・診断・`--set music=`＝`b2f9352f8`）・⒞⒝⒢（cache の鍵・`MusicFont.Use`・brace＝`c658f03a4`）・⒟（グリフ単位の fallback＝`MusicFontChain`・`70abd02a4`）は閉じた＝**`fonts { music "Bravura" }` の譜は Bravura で描かれ、無い字は次の名前か Emmentaler で描かれる**。次は ② の残り（smufl-design §6 ②）: ⒠ GPOS → ⒡ engravingDefaults → ③ 出力（VS Code プレビューの font・§4 の目視・`boxes.json` の font 名・双子の警告は済）**。
+**★★★★ 第857（2026-10-08）ユーザー決定＝総点検は区切った・SMuFL に着手**: 文法は `fonts { music "…" }` で承認・**Emmentaler は SMuFL の形に包み、SMuFL に無い Emmentaler のパラメータは失わない**。設計と棚卸しは **`docs/smufl-design.md`**（§3 の 17 行＝失わないもの・§6 の段取り）。**§6 ①（土台）は第857〜第861 で閉じた**（✅ の行と SHA は smufl-design §6 ①・門は毎回「全 svg の掃きで動いた svg 0 ＋ full 緑」＝Lab `p8NN/sweep/`・base は HEAD の bin を `exe-base` へ写す）。**§7 C はユーザー決定「同梱」（第862）・A／B は推奨どおり。②の第 1 歩（同梱・`SmuflMusicFont`・`MusicFonts.Find`＝`f9eccda23`）・⒜（文法・診断・`--set music=`＝`b2f9352f8`）・⒞⒝⒢（cache の鍵・`MusicFont.Use`・brace＝`c658f03a4`）・⒟（グリフ単位の fallback＝`MusicFontChain`・`70abd02a4`）・⒠（GPOS の kern＝`1a91b264e`）は閉じた＝**`fonts { music "Bravura" }` の譜は Bravura で描かれ、無い字は次の名前か Emmentaler で描かれる**。次は ② の残り（smufl-design §6 ②）: ⒡ engravingDefaults → ③ 出力（VS Code プレビューの font・§4 の目視・`boxes.json` の font 名・双子の警告は済）**。
 **第850〜851（2026-10-06〜07）ユーザー決定**: OMR P6（SMuFL）は「描画だけの差し替え」ではなく**寸法まで SMuFL から**（ユーザー利便性）。形は**内部の共通語を SMuFL にし、Emmentaler も SMuFL の形で包む**（字形は SMuFL 名・寸法は metadata の形＋LP 固有の拡張＝LILC の箱と輪郭の箱・サイズ別設計・brace の段・付け点。Emmentaler の出力はバイト不変が条件）。**ただし先に LP 忠実度の総点検**（台帳は OPEN 0 だが、第849〜850 の 3 件＝brace の段・bracket の長さ・加線つき休符の skyline はどれも台帳の外で、本を LP と並べて見つかった）: ① 広い計器＝コーパス全冊の双子を LP で描き、系ごとの譜の間隔と小節線の x を Lily# と自動で突き合わせ、差を種類ごとに束ねる → ② 効く順に直す → ③ 新しい種類が出なくなったら区切り、SMuFL の土台（3〜4 便）→ 取り込み → 出力 → 仕上げ（計 7〜10 便）。フォントの入手（同梱か）と書き方（`paper { musicFont … }`）は取り込みの段までに決める。
 
 **★★★★ 第815〜816（2026-10-05）ユーザー指示「OMR の提案を優先度順に着手」＝次の会話はここから**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`。OMR は別プログラム・Lily# は子プロセスで呼びファイルを読むだけ＝コードを混ぜない）: 0・A1・B1〜B6・C1〜C3 は**閉じた**（第815〜818・経緯は ARCHIVE）。配布の取り決め `..\LilySharp-Omr\docs\repro\lilysharp-omr-distribution-2026-10-05.md`（同梱しない・L1〜L11）。⚠️ **B1〜B6 は VS Code で未確認**（OMR の `omr read` は第 1 歩が動く＝`OmrProto.exe` を `LILYSHARP_OMR_PATH` で指せば試せる）。残り: ⑥ 10-02 提案（学習データ）: **P1〜P5 は閉じた（第818〜828・全部 `paper { }`／`layout { }` の言語のキー・`--set` は上書き）・残りは作らないと決めた（第828）**。次は P6（SMuFL＝大・別に判断）。**B5 は OMR の `omr verify`（第818 が提案）が出るまで動かない**。OMR 側へのお願い（`breaksOnly` を書く・`part voice` をやめる・TIFF 用の PNG・`omr verify`・記号単位の `confidence`/`candidates`）は OMR の提案書に書いた。配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後。第814 末の決定（下）はこの後。
@@ -118,20 +118,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第866セッション（2026-10-09・YT-DELL2）
+
+同じ会話。`-Start p866`（HEAD `c082c2021`）＝full **11469 / 0 / 2 / 11471**。§7 3.5 で第864 を ARCHIVE へ。
+- **閉じた（`1a91b264e`）§6 ② ⒠＝GPOS の kern**: `SmuflMusicFont.Kern` は Emmentaler が kern する 2 run（強弱の字どうし・拍子の数字どうし）だけ、OTF を HarfBuzz で 1 対ずつ shape して読む（`TextFontMetrics.MusicGlyphPairKernFromFile`＝1 字目の shape 後の送り − hmtx・既定 feature・ligature は 0・対ごとに覚える）。**検算＝同じ読み手を emmentaler-20.otf に向けると生成表の 74 対と全部の 0 を 5e-4 以内で返す**（`SmuflKernTests` 3 本）。実測: Bravura z→p −0.188 ss・Leland z→p −0.020 ss の各 1 対・Petaluma 0＝**今の強弱の語彙に z→p は無く、描画に効く対は今は無い**（読み手は在る・正直に記録）。掃き 998 冊 1199 枚・差 0（Lab `p866/sweep/`・base は p865 の exe-head）・full 11472 / 0 / 2 / 11474。
+- **`-End p866 -DiffBase c082c2021`（門は全部 OK）＝full **11472 / 0 / 2 / 11474**（+3）。HANDOFF 440,272 B（残り 9,728）・§1 現在便 8,221 字。Core '+' 50 行／LILYPOND-REF 0／LILYSHARP-OWN 0（読み手＝font の GPOS を読むだけ・足した数値 0）。未 push 40（push はユーザー）。**次は ⒡ engravingDefaults**（§1.0・smufl-design §6 ②）。
+
+## 以下は第865セッションの経緯
+
 ### 1.1 第865セッション（2026-10-08・YT-DELL2）
 
 新しい会話。`-Start p865`（HEAD `426ef4b6b`）＝full **11463 / 0 / 2 / 11465**。§7 3.5 で第863 を ARCHIVE へ。
 - **閉じた（`70abd02a4`）§6 ② ⒟＝グリフ単位の fallback**: `MusicFonts.Of` は SMuFL の名前を `MusicFontChain`（見つかった名前を書いた順＋最後に Emmentaler・名前の列ごとに 1 インスタンス＝font で鍵を張る cache のため）で返す。無い字は Leland 29（figbass 13・styled head 7・heel/toe 4・thumb・`feta.` 4）、Bravura／Petaluma は `feta.` 4 だけ。⚠️ **要の設計＝PUA は書体で重なり、層はグリフを字（char）で運ぶ**ので、先頭以外のグリフは低サロゲート `U+DC00 + MusicGlyph` を代理の字にし、backend が `MusicFont.Drawn(char, design)` で（実の字, 面番号 `k × 100 + design`）に戻す＝`FaceFamily`／`FaceFile`／`WebFaceFile`／`TryParseFamily` がその番号を読むので、SVG の `_usedDesigns`・断片の再生・PDF resolver・PNG loader は無改造で後ろの面を運ぶ。後ろのフォントの寸法は先頭の設計番号（20）を magstep で拡縮＝描く面と一致。警告は `MusicFallbackLog`（thread-static・描いた所＝`Drawn` で集める）→ SVG/PDF/PNG/boxes の生成器が LayoutWarning の口で 1 字 1 回（**LSP には出ない**＝③ で）。boxes は代理でなく実の字で名指す。網 6（`SmuflFallbackTests`）・目視（Lab `p865/look/`＝Leland の符頭と Emmentaler の数字）。掃き 998 冊 1199 枚・差 0（Lab `p865/sweep/`・base は p864 の exe-head＝HEAD と同じコード）・full 11469 / 0 / 2 / 11471。
 - 未着手の註: 先頭が `brace` を持たない SMuFL フォントは brace が描かれない（同梱 3 書体は持つ）／fallback の Emmentaler は光学設計を選ばない（grace でも 20 の拡縮）。
 - **`-End p865 -DiffBase 426ef4b6b`（門は全部 OK）＝full **11469 / 0 / 2 / 11471**（+6）。HANDOFF 440,784 B（残り 9,216）・§1 現在便 8,703 字。Core '+' 376 行／LILYPOND-REF 0／LILYSHARP-OWN 0（配管＝字と面の運び・足した数は `FallbackBase`／`FaceStride` の符号化だけで寸法 0）。未 push 38（push はユーザー）。**次は ⒠ GPOS の kern**（§1.0・smufl-design §6 ②）。
-
-## 以下は第864セッションの経緯
-
-### 1.1 第864セッション（2026-10-08・YT-DELL2）
-
-同じ会話。`-Start p864`（HEAD `f2c6d6eaf`）＝full **11456 / 0 / 2 / 11458**。§7 3.5 で第862 を ARCHIVE へ。
-- **閉じた（`c658f03a4`）§6 ② ⒞＋⒝（＋⒢）＝名前を書いた譜がそのフォントで描かれる**: ⒞ `TextOutlineSkylines`・`DynamicOutline`・`TrillWaveOutline`・`AccidentalPlacement.t_glyphPairs` の鍵にフォント（PUA のコードポイントは 2 書体で重なる＝⒝ の前に必須）。⒝ `MusicFonts.Of(plan)`（鎖の先頭で見つかった名前・無ければ Emmentaler・名前ごとの答えを覚えて FS を叩かない）を `LayoutEngine.Layout`／`SharedRenderer.RenderTo`／`IncrementalCompiler` の門／collector の `ResolveStaffColumns` で `MusicFont.Use`。⚠️ SVG の header は頁の後（scope の外）に組む＝`MusicFonts.Of(Fonts)` を読む（thread の current を読んで Emmentaler と書いていた）。⒢ `SystemBrace(Codepoint, Width, FontSize, BaselineAboveMiddle)`: SMuFL は 1 つの `brace`（baseline の上に 1 em）を span に拡縮して music face で、Emmentaler は従来の段を brace face で。PDF resolver は `FaceFamily + "#"` で 1 面を名指し（既定設計でも `FaceFile` を出す）・SVG の埋め込みは拡張子で format（Leland は OTF）。網 7（`SmuflRenderTests`＝Bravura で描く・Emmentaler の譜は Bravura を挟んでもバイト同一・`--set music=Leland`・鎖・埋め込み・PNG/PDF・brace）。掃き 998 冊 1199 枚・差 0（Lab `p864/sweep/`・本に music は無い）・full 11463 / 0 / 2 / 11465。
-- **`-End p864 -DiffBase f2c6d6eaf`（門は全部 OK）＝full **11463 / 0 / 2 / 11465**（+7）。HANDOFF 440,378 B（残り 9,622）・§1 現在便 8,616 字。Core '+' 102 行／LILYPOND-REF 0／LILYSHARP-OWN 0（配管＝scope と鍵・足した数値 0）。未 push 36（push はユーザー）。**次は ⒟ グリフ単位の fallback**（§1.0・smufl-design §6 ②）。
 
 ## 2. 開いている作業
 

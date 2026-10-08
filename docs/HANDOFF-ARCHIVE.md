@@ -129,6 +129,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第864セッションの経緯
+
+### 1.1 第864セッション（2026-10-08・YT-DELL2）
+
+同じ会話。`-Start p864`（HEAD `f2c6d6eaf`）＝full **11456 / 0 / 2 / 11458**。§7 3.5 で第862 を ARCHIVE へ。
+- **閉じた（`c658f03a4`）§6 ② ⒞＋⒝（＋⒢）＝名前を書いた譜がそのフォントで描かれる**: ⒞ `TextOutlineSkylines`・`DynamicOutline`・`TrillWaveOutline`・`AccidentalPlacement.t_glyphPairs` の鍵にフォント（PUA のコードポイントは 2 書体で重なる＝⒝ の前に必須）。⒝ `MusicFonts.Of(plan)`（鎖の先頭で見つかった名前・無ければ Emmentaler・名前ごとの答えを覚えて FS を叩かない）を `LayoutEngine.Layout`／`SharedRenderer.RenderTo`／`IncrementalCompiler` の門／collector の `ResolveStaffColumns` で `MusicFont.Use`。⚠️ SVG の header は頁の後（scope の外）に組む＝`MusicFonts.Of(Fonts)` を読む（thread の current を読んで Emmentaler と書いていた）。⒢ `SystemBrace(Codepoint, Width, FontSize, BaselineAboveMiddle)`: SMuFL は 1 つの `brace`（baseline の上に 1 em）を span に拡縮して music face で、Emmentaler は従来の段を brace face で。PDF resolver は `FaceFamily + "#"` で 1 面を名指し（既定設計でも `FaceFile` を出す）・SVG の埋め込みは拡張子で format（Leland は OTF）。網 7（`SmuflRenderTests`＝Bravura で描く・Emmentaler の譜は Bravura を挟んでもバイト同一・`--set music=Leland`・鎖・埋め込み・PNG/PDF・brace）。掃き 998 冊 1199 枚・差 0（Lab `p864/sweep/`・本に music は無い）・full 11463 / 0 / 2 / 11465。
+- **`-End p864 -DiffBase f2c6d6eaf`（門は全部 OK）＝full **11463 / 0 / 2 / 11465**（+7）。HANDOFF 440,378 B（残り 9,622）・§1 現在便 8,616 字。Core '+' 102 行／LILYPOND-REF 0／LILYSHARP-OWN 0（配管＝scope と鍵・足した数値 0）。未 push 36（push はユーザー）。**次は ⒟ グリフ単位の fallback**（§1.0・smufl-design §6 ②）。
+
 ## 以下は第863セッションの経緯
 
 ### 1.1 第863セッション（2026-10-08・YT-DELL2）
