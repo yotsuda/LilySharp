@@ -102,7 +102,7 @@ internal static class FingeringGlyphRun
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/font-select.cc:41-70 best_rounded_design_size — 20·magstep(−5)
     /// = 11.2246 pt lands on <c>emmentaler-11</c>.</remarks>
-    internal static int Design(ScoreTextMetrics fonts) => EmmentalerDesignSize.ForFontSizeStep(Step(fonts)).Rounded;
+    internal static int Design(ScoreTextMetrics fonts) => MusicFont.Current.DesignAt(Step(fonts)).Rounded;
 
     /// <summary>That design's table, already in the PAGE's staff spaces.</summary>
     private static MusicFontDesign Font(double step) => MusicFont.Current.SizedAt(step);

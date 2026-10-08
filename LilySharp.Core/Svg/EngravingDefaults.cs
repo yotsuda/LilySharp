@@ -468,7 +468,7 @@ internal static class EngravingDefaults
     /// glyph fills.
     /// </remarks>
     internal static int CueDesignSize
-        => Layout.EmmentalerDesignSize.ForFontSizeStep(CueFontSizeStep).Rounded;
+        => Layout.MusicFont.Current.DesignAt(CueFontSizeStep).Rounded;
 
     /// <summary>
     /// The stem parameters a CUE note is measured and drawn with: the ordinary

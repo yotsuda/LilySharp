@@ -212,7 +212,7 @@ internal static class GrobFontSize
     /// <see cref="EmmentalerDesignSize"/>.
     /// </remarks>
     internal static int DesignOf(MusicItem item, SizedGrob grob)
-        => EmmentalerDesignSize.ForFontSizeStep(StepOf(item, grob)).Rounded;
+        => MusicFont.Current.DesignAt(StepOf(item, grob)).Rounded;
 
     /// <summary>
     /// The MAGNIFICATION <paramref name="grob"/>'s <c>font-size</c> asks for —

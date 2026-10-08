@@ -96,7 +96,7 @@ internal static class FiguredBassGlyphRun
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/font-select.cc:41-70 best_rounded_design_size — 20·magstep(−5)
     /// = 11.2246 pt lands on <c>emmentaler-11</c>.</remarks>
-    internal static int Design(ScoreTextMetrics fonts) => EmmentalerDesignSize.ForFontSizeStep(Step(fonts)).Rounded;
+    internal static int Design(ScoreTextMetrics fonts) => MusicFont.Current.DesignAt(Step(fonts)).Rounded;
 
     /// <summary>The glyph lookup at one step — a closure, because <see cref="FetaTextRun"/>
     /// takes a delegate and the design it reads is the step's.</summary>

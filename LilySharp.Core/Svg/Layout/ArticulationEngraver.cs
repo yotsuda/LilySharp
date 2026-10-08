@@ -2272,7 +2272,7 @@ internal static class ArticulationEngraver
         {
             var placed = TextOutlineSkylines.PlaceMusicGlyphSide(
                 a.Glyph[0], WalkSize(a, magnification), a.X, anchorY, direction,
-                EmmentalerDesignSize.ForFontSizeStep(a.FontSizeStep).Rounded,
+                MusicFont.Current.DesignAt(a.FontSizeStep).Rounded,
                 a.SkylineHorizontalPadding, extraPad);
             if (placed != null)
                 return placed;
@@ -2290,7 +2290,7 @@ internal static class ArticulationEngraver
         {
             var (up, down) = TextOutlineSkylines.PlaceMusicGlyph(
                 a.Glyph[0], WalkSize(a, magnification), a.X, anchorY,
-                EmmentalerDesignSize.ForFontSizeStep(a.FontSizeStep).Rounded,
+                MusicFont.Current.DesignAt(a.FontSizeStep).Rounded,
                 a.SkylineHorizontalPadding, extraPad);
             if (!up.IsEmpty || !down.IsEmpty)
                 return (up, down);
@@ -2416,7 +2416,7 @@ internal static class ArticulationEngraver
         {
             var profile = TextOutlineSkylines.MusicGlyphProfile(
                 a.Glyph[0], WalkSize(a, magnification),
-                EmmentalerDesignSize.ForFontSizeStep(a.FontSizeStep).Rounded,
+                MusicFont.Current.DesignAt(a.FontSizeStep).Rounded,
                 a.SkylineHorizontalPadding);
             var resolved = up ? profile.Up : profile.Down;
             if (resolved.Count > 0)

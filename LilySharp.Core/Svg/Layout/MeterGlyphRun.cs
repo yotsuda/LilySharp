@@ -99,7 +99,7 @@ internal static class MeterGlyphRun
     /// as the metrics.</summary>
     /// <remarks>LILYPOND-REF: lily/font-select.cc:41-70 best_rounded_design_size —
     /// 20·magstep(0) = 20 pt lands on <c>emmentaler-20</c>.</remarks>
-    internal static int Design => EmmentalerDesignSize.ForFontSizeStep(FontSizeStep).Rounded;
+    internal static int Design => MusicFont.Current.DesignAt(FontSizeStep).Rounded;
 
     /// <summary>That design's table, already in the PAGE's staff spaces.</summary>
     private static MusicFontDesign Font => MusicFont.Current.SizedAt(FontSizeStep);

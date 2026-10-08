@@ -168,7 +168,7 @@ internal static partial class SharedRenderer
             // profiled), not the 20's drawn small. IDrawingContext.MusicFace.
             using (gc.Source(a.SourcePosition))
             using (gc.MusicFace(
-                EmmentalerDesignSize.ForFontSizeStep(a.FontSizeStep).Rounded))
+                MusicFont.Current.DesignAt(a.FontSizeStep).Rounded))
                 gc.DrawGlyph(a.Glyph[0], a.X, y, FontSize * scale);
         }
     }

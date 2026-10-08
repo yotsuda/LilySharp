@@ -487,7 +487,7 @@ public sealed record GraceNoteItem
     /// <see cref="DesignSize"/> is paired with <see cref="Font"/>.
     /// </summary>
     internal static int AccidentalDesignSize
-        => Svg.Layout.EmmentalerDesignSize.ForFontSizeStep(AccidentalFontSizeStep).Rounded;
+        => Svg.Layout.MusicFont.Current.DesignAt(AccidentalFontSizeStep).Rounded;
 
     /// <summary>
     /// The Emmentaler design a grace is DRAWN from — the rounded size in the file name, the
@@ -499,7 +499,7 @@ public sealed record GraceNoteItem
     /// glyph fills. See <see cref="Svg.Layout.EmmentalerDesignSize"/>'s remarks.
     /// </remarks>
     internal static int DesignSize
-        => Svg.Layout.EmmentalerDesignSize.ForFontSizeStep(FontSizeStep).Rounded;
+        => Svg.Layout.MusicFont.Current.DesignAt(FontSizeStep).Rounded;
 
     /// <summary>
     /// The head FONT the run's group-level geometry reads (its beam, its slur obstacles, its
