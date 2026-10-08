@@ -362,7 +362,9 @@ internal sealed class SvgDocumentContext : IDocumentContext
             sb.AppendLine("  " + fontFaceRule);
         // The class every music glyph carries names the score's own design; a glyph of another
         // design overrides it with its own font-family (SvgDrawingContext.AppendMusicFace).
-        var music = MusicFont.Current;
+        // ⚠️ The header is assembled AFTER the pages, outside the render's MusicFont scope, so
+        // the font is the score's plan's (MusicFonts.Of), not the thread's current one.
+        var music = MusicFonts.Of(Fonts);
         sb.AppendLine($"  .music {{ font-family: '{music.FaceFamily(music.DefaultDesign)}', serif; }}");
         sb.AppendLine("</style>");
         WritePageBackground(sb, widthSpaces, heightSpaces);
@@ -408,9 +410,9 @@ internal sealed class SvgDocumentContext : IDocumentContext
             // brace face the brace glyph renders blank in any viewer that lacks
             // the font installed (the bug that hid it in the VS Code preview).
             var faces = new StringBuilder();
-            var music = MusicFont.Current;
+            var music = MusicFonts.Of(Fonts);   // the plan's font, as for the .music class
             AppendEmbeddedFontFace(faces, music.FaceFamily(music.DefaultDesign),
-                music.WebFaceFile(music.DefaultDesign), "woff2");
+                music.WebFaceFile(music.DefaultDesign), FormatOf(music.WebFaceFile(music.DefaultDesign)));
             AppendEmbeddedFontFace(faces, "Emmentaler-Brace", "emmentaler-brace.woff", "woff");
             // …plus one face per OTHER design this score drew from. Emmentaler is optically
             // sized, so a grace is the 14 design's own outlines, not the 20's scaled down —
@@ -420,11 +422,11 @@ internal sealed class SvgDocumentContext : IDocumentContext
             foreach (var design in _usedDesigns.Where(d => d != music.DefaultDesign)
                                                .OrderBy(d => d))
                 AppendEmbeddedFontFace(faces, music.FaceFamily(design),
-                    music.WebFaceFile(design), "woff2");
+                    music.WebFaceFile(design), FormatOf(music.WebFaceFile(design)));
             if (faces.Length > 0)
                 return faces.ToString().TrimEnd();
         }
-        var font = MusicFont.Current;
+        var font = MusicFonts.Of(Fonts);
         string family0 = font.FaceFamily(font.DefaultDesign);
         var local = new StringBuilder($"@font-face {{ font-family: '{family0}'; src: local('{family0}'); }}");
         foreach (var design in _usedDesigns.Where(d => d != font.DefaultDesign)
@@ -437,6 +439,16 @@ internal sealed class SvgDocumentContext : IDocumentContext
         }
         return local.ToString();
     }
+
+    /// <summary>The <c>@font-face</c> format of a font file by its extension: a font that ships
+    /// no WOFF2 (Leland) is embedded as the OTF it is.</summary>
+    private static string FormatOf(string fileName) => Path.GetExtension(fileName).ToLowerInvariant() switch
+    {
+        ".woff2" => "woff2",
+        ".woff" => "woff",
+        ".ttf" => "truetype",
+        _ => "opentype",
+    };
 
     private void AppendEmbeddedFontFace(StringBuilder sb, string family, string fileName, string format)
     {

@@ -232,10 +232,10 @@ internal sealed class EmmentalerFontResolver : IFontResolver
         // so it answers for MusicFont.Current on THAT thread — Emmentaler, until the import stage
         // teaches it every reachable font's faces.
         var music = MusicFont.Current;
+        // The face name is the family plus '#': "Emmentaler#" for the default design,
+        // "Emmentaler-14#" for another, "Bravura#" for a SMuFL font's one face.
         if (music.TryParseFamily(name, out int design))
-            return new FontResolverInfo(design == music.DefaultDesign
-                ? "Emmentaler#"
-                : music.FaceFamily(design) + "#");
+            return new FontResolverInfo(music.FaceFamily(design) + "#");
         if (name == "emmentaler-brace")
             return new FontResolverInfo("EmmentalerBrace#");
         // SharedRenderer asks for the CSS generics for titles/lyrics/dynamics/chord
@@ -283,8 +283,7 @@ internal sealed class EmmentalerFontResolver : IFontResolver
         // resolver marks its own faces with, so one bundled OTF answers per design.
         var music = MusicFont.Current;
         if (faceName.EndsWith("#", StringComparison.Ordinal)
-            && music.TryParseFamily(faceName[..^1], out int design)
-            && design != music.DefaultDesign)
+            && music.TryParseFamily(faceName[..^1], out int design))
         {
             var designPath = ResolveFontPath(music.FaceFile(design));
             if (designPath != null) return File.ReadAllBytes(designPath);
@@ -294,7 +293,6 @@ internal sealed class EmmentalerFontResolver : IFontResolver
 
         var fileName = faceName switch
         {
-            "Emmentaler#" => music.FaceFile(music.DefaultDesign),
             "EmmentalerBrace#" => "emmentaler-brace.otf",
             "Schola#" => "texgyreschola-regular.otf",
             "ScholaBold#" => "texgyreschola-bold.otf",

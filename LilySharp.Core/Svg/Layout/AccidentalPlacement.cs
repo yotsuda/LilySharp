@@ -417,14 +417,15 @@ internal sealed class AccidentalPlacement
         string accidental, bool isCourtesy, MusicFontDesign font)
     {
         var pairs = t_glyphPairs ??= new();
-        var key = (accidental, isCourtesy, font.Rounded, font.Magnification);
+        // The music font is in the key (§6 ② ⒞): the pair is its outline's.
+        var key = (MusicFont.Current, accidental, isCourtesy, font.Rounded, font.Magnification);
         if (!pairs.TryGetValue(key, out var pair))
             pairs[key] = pair = GlyphSkylinePair(accidental, isCourtesy, font);
         return pair;
     }
 
     [ThreadStatic]
-    private static Dictionary<(string Accidental, bool IsCourtesy, int Design, double Magnification),
+    private static Dictionary<(MusicFont Font, string Accidental, bool IsCourtesy, int Design, double Magnification),
         (HorizontalSkyline Left, HorizontalSkyline Right)>? t_glyphPairs;
 
     /// <summary>Merges one paren glyph's baked outline skylines, translated to

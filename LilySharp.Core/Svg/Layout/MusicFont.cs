@@ -210,9 +210,16 @@ internal abstract class MusicFont
     public abstract (double Kern, double Raise) ChordNameAccidental(MusicGlyph glyph);
 }
 
-/// <summary>What <see cref="MusicFont.Brace"/> answers: the character and its drawn width in
-/// staff spaces.</summary>
-internal readonly record struct SystemBrace(char Codepoint, double Width);
+/// <summary>What <see cref="MusicFont.Brace"/> answers.</summary>
+/// <param name="Codepoint">The character to draw.</param>
+/// <param name="Width">Its drawn width in staff spaces — what the instrument name is placed
+/// against.</param>
+/// <param name="FontSize">The size to draw it at (the music glyphs' 4.0 for a ladder rung at its
+/// natural size; a SMuFL font's one brace scaled to the span).</param>
+/// <param name="BaselineAboveMiddle">Where the glyph's baseline sits, in staff spaces above the
+/// delimiter's middle: 0 for a rung centred on its baseline; below the middle for a glyph
+/// standing on its baseline.</param>
+internal readonly record struct SystemBrace(char Codepoint, double Width, double FontSize, double BaselineAboveMiddle);
 
 /// <summary>One design of a <see cref="MusicFont"/> — the table its dimensions are read from.</summary>
 internal abstract class MusicFontDesign
@@ -383,7 +390,7 @@ internal sealed class EmmentalerMusicFont : MusicFont
     public override SystemBrace Brace(double length)
     {
         int rung = BraceLadder.LastAtOrBelow(length);
-        return new((char) (BraceGlyphStart + rung), BraceLadder.Widths[rung]);
+        return new((char) (BraceGlyphStart + rung), BraceLadder.Widths[rung], Rendering.SharedRenderer.FontSize, 0.0);
     }
 
     /// <summary>The brace ladder's encoding: <c>braceN</c> lives at U+E000+N in

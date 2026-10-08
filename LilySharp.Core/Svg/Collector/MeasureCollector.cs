@@ -2550,6 +2550,9 @@ public sealed partial class MeasureCollector
     private ImmutableArray<Voice> ResolveStaffColumns(ImmutableArray<Voice> voices)
     {
         using var style = EngravingStyle.Use(_meta.Paper.Style);
+        // …and under the score's music font, whose head boxes the packing reads
+        // (StaffAccidentalColumns' sized font; docs/smufl-design.md §6 ② ⒝).
+        using var music = Layout.MusicFont.Use(Layout.MusicFonts.Of(_meta.Fonts));
         return StaffAccidentalColumns.Resolve(ResolveVoiceStemDirections(voices));
     }
 

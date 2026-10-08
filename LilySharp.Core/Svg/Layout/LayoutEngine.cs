@@ -114,6 +114,9 @@ internal sealed partial class LayoutEngine
         // The score's line thicknesses and stem length (`lysc --set Stem.thickness=…`), read
         // through EngravingDefaults by every engraver below.
         using var style = EngravingStyle.Use(score.Paper.Style);
+        // …and its music font (`fonts { music "…" }`), which every glyph's box, outline and
+        // character come from (MusicFont.Current; docs/smufl-design.md §6 ② ⒝).
+        using var music = MusicFont.Use(MusicFonts.Of(score.Fonts));
 
         // The faces this score reserves against — see the field's remark for why the
         // builder cannot be given them in the constructor.

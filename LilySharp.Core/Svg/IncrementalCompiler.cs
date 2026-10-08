@@ -641,6 +641,9 @@ public sealed class IncrementalCompiler
         // ask for the same column skylines: one render-scoped memo serves both (see
         // ItemSkylineFactory.BeginRenderMemo — 1,099,297 same-render rebuilds, session 492).
         using var skylineMemo = ItemSkylineFactory.BeginRenderMemo();
+        // The gate prices springs with the score's music font, as the layout after it does
+        // (LayoutEngine.Layout opens the same scope; docs/smufl-design.md §6 ② ⒝).
+        using var music = MusicFont.Use(MusicFonts.Of(score.Fonts));
         MeasureSpringData[] springs;
         // The shortest duration `springs` is built with. Committed with the vector at the
         // end (a compile given up between here and there must not leave a shortest that

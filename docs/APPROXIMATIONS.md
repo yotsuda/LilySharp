@@ -44,7 +44,7 @@
 - **:271** fans twice. Not ported; no book in the corpus has one.
 - **:690** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
-- **:460** "3"), LilyPond's 0.006 wider — a Pango measure not ported.
+- **:463** "3"), LilyPond's 0.006 wider — a Pango measure not ported.
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:373** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
@@ -310,7 +310,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:418** LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
-- **:728** prefix — LILYSHARP-OWN, a decided divergence (user decision
+- **:731** prefix — LILYSHARP-OWN, a decided divergence (user decision
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:216** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
@@ -355,8 +355,8 @@
 ### `LilySharp.Core/Svg/Collector/MeasureBuilder.cs`
 - **:421** LILYSHARP-OWN (owner's decisions, 2026-10-02, HANDOFF §1.1 第737): a time, key
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:3410** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:5837** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:3413** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:5840** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Form.cs`
 - **:567** `time!` (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so
 - **:874** is not drawn unless written `key!` (MeasureBuilder.SectionHead, LILYSHARP-OWN). At a
@@ -438,7 +438,7 @@
 - **:1870** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
 - **:2165** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
-- **:853** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
+- **:856** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
 - **:417** LILYSHARP-OWN, DECLARED: the CROP. LilyPond always engraves onto the paper; a lone Lily#
 - **:642** ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only
@@ -479,8 +479,8 @@
 - **:3750** ⚠️ LILYSHARP-OWN, DECLARED: LilyPond's pure heights are BOXES — the begin-of-line
 - **:5125** LILYSHARP-OWN: the band is Lily#'s model of a line LilyPond walks as a loose line
 ### `LilySharp.Core/Svg/Layout/MusicFont.cs`
-- **:433** LILYSHARP-OWN: hand-tuned, and the only head width that is. ⚠️ NOT because LilyPond
-- **:446** LILYSHARP-OWN: the sM1 advance was never extracted either; 1.30 over the
+- **:440** LILYSHARP-OWN: hand-tuned, and the only head width that is. ⚠️ NOT because LilyPond
+- **:453** LILYSHARP-OWN: the sM1 advance was never extracted either; 1.30 over the
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:155** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **:181** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN
@@ -553,7 +553,7 @@
 - **:81** LILYSHARP-OWN: an X-axis bound gap. LilyPond's (padding . 0.5)
 - **:502** BoundPadding short of the measure's end — a device, kept (LILYSHARP-OWN,
 ### `LilySharp.Core/Svg/Layout/TrillWaveOutline.cs`
-- **:164** ⚠️ LILYSHARP-OWN: FullSize — and it is the ANNOTATION ISLAND's debt, not
+- **:166** ⚠️ LILYSHARP-OWN: FullSize — and it is the ANNOTATION ISLAND's debt, not
 ### `LilySharp.Core/Svg/Layout/VerticalSkyline.cs`
 - **:216** ⚠️ LILYSHARP-OWN, one deviation, declared rather than hidden: LilyPond flattens each
 - **:1360** ⚠️ LILYSHARP-OWN: THIS EXISTS BECAUSE LILY# SCALES AT DRAW TIME. An ossia is drawn

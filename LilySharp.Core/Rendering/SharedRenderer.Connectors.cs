@@ -1054,9 +1054,18 @@ internal static partial class SharedRenderer
     {
         double yMid = (top + bottom) / 2;
 
-        // The rung is the music font's answer (MusicFont.Brace — Emmentaler's ladder, §3 #10).
-        var brace = MusicFont.Current.Brace(SystemStartDelimiterLength(top - bottom));
-        gc.DrawText(brace.Codepoint.ToString(), x, yMid, FontSize, TextRole.SystemBrace,
-            FontStyle.Regular, TextAnchor.End, Color.Black);
+        // The brace is the music font's answer (MusicFont.Brace, §3 #10).
+        var font = MusicFont.Current;
+        var brace = font.Brace(SystemStartDelimiterLength(top - bottom));
+        if (font is EmmentalerMusicFont)
+        {
+            // Emmentaler's rung, in the brace face, at its natural size (the remarks above).
+            gc.DrawText(brace.Codepoint.ToString(), x, yMid, brace.FontSize, TextRole.SystemBrace,
+                FontStyle.Regular, TextAnchor.End, Color.Black);
+            return;
+        }
+        // A SMuFL font's one brace glyph, scaled to the span: its box's centre on the
+        // delimiter's middle and its right edge at x, in the music face.
+        gc.DrawGlyph(brace.Codepoint, x - brace.Width, yMid + brace.BaselineAboveMiddle, brace.FontSize, Color.Black);
     }
 }

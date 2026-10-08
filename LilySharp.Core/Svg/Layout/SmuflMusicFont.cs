@@ -270,12 +270,16 @@ internal sealed class SmuflMusicFont : MusicFont
     }
 
     /// <inheritdoc/>
-    /// <remarks>The one <c>brace</c> glyph (U+E000) at its natural size, as wide as its box —
-    /// the output stage scales it to the span (§3 #10's "拡縮"); no ladder.</remarks>
+    /// <remarks>The one <c>brace</c> glyph (U+E000), SCALED to the span (§3 #10's "拡縮"): the
+    /// SMuFL brace stands on its baseline one em tall, so the size is the music glyphs' times
+    /// span / box height, and the baseline sits so that the box's centre lands on the
+    /// delimiter's middle. No ladder.</remarks>
     public override SystemBrace Brace(double length)
     {
-        double width = Metadata.GlyphBBoxes.TryGetValue("brace", out var box) ? box.Width : 0.0;
-        return new('', width);
+        if (!Metadata.GlyphBBoxes.TryGetValue("brace", out var box) || box.Height <= 0.0)
+            return new('', 0.0, Rendering.SharedRenderer.FontSize, 0.0);
+        double scale = length / box.Height;
+        return new('', box.Width * scale, Rendering.SharedRenderer.FontSize * scale, -box.CenterY * scale);
     }
 
     /// <inheritdoc/>

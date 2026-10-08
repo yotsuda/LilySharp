@@ -92,6 +92,9 @@ internal static partial class SharedRenderer
         // The score's line thicknesses and stem length (`lysc --set Stem.thickness=…`): the
         // renderer draws with the style the layout reserved with.
         using var style = LilySharp.Core.Svg.EngravingStyle.Use(score.Paper.Style);
+        // …and the music font the layout reserved with: the renderer draws the same glyphs
+        // from the same font (docs/smufl-design.md §6 ② ⒝).
+        using var music = MusicFont.Use(MusicFonts.Of(score.Fonts));
         // F3/B: a layout built from THIS score by a caller with NO SESSION behind it
         // already bakes the correct data-pos, so resolution is a no-op there and the full
         // path (SvgGenerator.Generate) skips it. A session's layout is a different animal:

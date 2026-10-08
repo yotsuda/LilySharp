@@ -128,9 +128,9 @@ internal static class TextOutlineSkylines
     // pieces, the scripts. The DESIGN is in the key because Emmentaler is optically sized:
     // the 16's accidental is not the 20's scaled, so two grobs at different font-sizes walk
     // two different outlines (MusicFontDesign.Rounded).
-    // ⚠️ KEYED BY WHAT THE GLYPH IS (MusicGlyph), not by the character a font draws it with
-    // — and NOT YET BY THE FONT: the outline is MusicFont.Current's, so when a second font
-    // becomes reachable the font joins this key (the checklist on MusicFont.Current).
+    // ⚠️ KEYED BY THE FONT AND WHAT THE GLYPH IS (MusicGlyph), not by the character a font
+    // draws it with: the outline is the font's, and two fonts share the private-use code
+    // points (§6 ② ⒞ — the checklist on MusicFont.Current).
     // ⚠️ The HORIZON PADDING is in the key, and the padding happens INSIDE the cached
     // factory: a grob that declares skyline-horizontal-padding (three scripts do) would
     // otherwise pay pad + merge + resolve on every placement, and a script-dense page places
@@ -149,7 +149,7 @@ internal static class TextOutlineSkylines
     // WHERE the glyph sat, because the resolve's epsilons are absolute (measured: one
     // fermata at x = 0/0.5/1/17.5/100/1000 resolved to 35/37/37/33/39/33 buildings).
     private static readonly ConcurrentDictionary<
-        (MusicGlyph Glyph, double Size, int Design, double Pad, double ExtraPad),
+        (MusicFont Font, MusicGlyph Glyph, double Size, int Design, double Pad, double ExtraPad),
         (SkylineBuilding[] Up, SkylineBuilding[] Down)> MusicProfileCache = new();
 
     /// <summary>
@@ -222,9 +222,9 @@ internal static class TextOutlineSkylines
         if (design == 0)
             design = font.DesignAt(0).Rounded;
         return MusicProfileCache.GetOrAdd(
-            (glyph, fontSize, design, horizonPadding, extraPad), static (key, font) =>
+            (font, glyph, fontSize, design, horizonPadding, extraPad), static key =>
         {
-            var path = font.OutlinePath(key.Glyph, key.Design);
+            var path = key.Font.OutlinePath(key.Glyph, key.Design);
             if (path == null || path.IsEmpty)
                 return (Array.Empty<SkylineBuilding>(), Array.Empty<SkylineBuilding>());
             var (upQuads, downQuads) = FlattenPath(path, key.Size / 1000.0);
@@ -235,7 +235,7 @@ internal static class TextOutlineSkylines
                 Pad(VerticalDirection.Down,
                     Pad(VerticalDirection.Down, Resolve(VerticalDirection.Down, downQuads), key.Pad),
                     key.ExtraPad));
-        }, font);
+        });
     }
 
     /// <summary>

@@ -42,6 +42,25 @@ public static class MusicFonts
     private static readonly ConcurrentDictionary<string, Lazy<SmuflMusicFont?>> Loaded =
         new(StringComparer.OrdinalIgnoreCase);
 
+    // A name's answer, found or not, so a plan that names a missing font does not probe the
+    // file system on every layout and render (Find does, by design, for the diagnostic).
+    private static readonly ConcurrentDictionary<string, MusicFont?> ByName = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The music font a score's plan engraves in: the first name of
+    /// <see cref="Rendering.TextFontPlan.Music"/> that is found, else Emmentaler (the default,
+    /// and the answer for a chain in which nothing is found — the diagnostic on the plan has
+    /// said so). The scope every layout and render opens
+    /// (<see cref="MusicFont.Use"/>; docs/smufl-design.md §6 ② ⒝).
+    /// </summary>
+    internal static MusicFont Of(Rendering.TextFontPlan plan)
+    {
+        foreach (var name in plan.Music)
+            if (ByName.GetOrAdd(name, static n => Find(n, out _)) is { } font)
+                return font;
+        return EmmentalerMusicFont.Instance;
+    }
+
     /// <summary>
     /// The font named <paramref name="name"/>, or null when none can be found —
     /// <paramref name="tried"/> then lists every place looked, for the diagnostic.

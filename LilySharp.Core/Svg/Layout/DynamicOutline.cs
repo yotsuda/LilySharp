@@ -96,7 +96,8 @@ namespace LilySharp.Core.Svg.Layout;
 /// </remarks>
 internal static class DynamicOutline
 {
-    private static readonly ConcurrentDictionary<string,
+    // Keyed by the music font too (§6 ② ⒞): the letters are its.
+    private static readonly ConcurrentDictionary<(MusicFont Font, string Text),
         (SkylineBuilding[] Up, SkylineBuilding[] Down, double Width)?> Cache = new();
 
     /// <summary>
@@ -125,11 +126,9 @@ internal static class DynamicOutline
 
     private static (SkylineBuilding[] Up, SkylineBuilding[] Down, double Width)? Resolved(
         string text)
-        => Cache.GetOrAdd(text, static t =>
+        => Cache.GetOrAdd((MusicFont.Current, text), static key =>
         {
-            // ⚠️ Keyed by the text alone: the letters are the current music font's, so the font
-            // joins this key when a second one becomes reachable (MusicFont.Current's checklist).
-            var font = MusicFont.Current;
+            var (font, t) = key;
             var full = font.FullSize;
             foreach (char c in t)
                 if (MusicGlyphs.DynamicLetter(c) is null)

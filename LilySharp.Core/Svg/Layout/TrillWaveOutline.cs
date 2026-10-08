@@ -148,12 +148,14 @@ internal static class TrillWaveOutline
     // Keyed by element count: the run of that many copies, with the FIRST copy's outline
     // left edge at x = 0 (LilyPond's `line.translate_axis (-elt_true_ext[LEFT], X_AXIS)`)
     // and the glyph baseline at y = 0.
-    private static readonly ConcurrentDictionary<int,
+    // …and by the music font, whose element it is (§6 ② ⒞).
+    private static readonly ConcurrentDictionary<(MusicFont Font, int Count),
         (SkylineBuilding[] Up, SkylineBuilding[] Down)> Cache = new();
 
     private static (SkylineBuilding[] Up, SkylineBuilding[] Down) Resolved(int count)
-        => Cache.GetOrAdd(count, static n =>
+        => Cache.GetOrAdd((MusicFont.Current, count), static key =>
         {
+            int n = key.Count;
             var (dQuads, uQuads) = MusicFont.Current.FullSize.VerticalSkylineQuads(MusicGlyph.WiggleTrill);
             var up = new VerticalSkyline(VerticalDirection.Up);
             var down = new VerticalSkyline(VerticalDirection.Down);
