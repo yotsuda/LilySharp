@@ -44,11 +44,31 @@ export function textFontsRoot(extensionUri: vscode.Uri): vscode.Uri {
     return vscode.Uri.joinPath(extensionUri, 'server', 'Fonts');
 }
 
-/** `@font-face` rules for the score's text faces, as webview URIs. */
+/**
+ * The SMuFL MUSIC fonts the server bundles beside Emmentaler — what a score's `.music` class
+ * names when it writes `fonts { music "Bravura" }` (docs/smufl-design.md §6 ③). The preview
+ * omits the SVG's own `@font-face`, so without these a Bravura score's glyphs would be drawn
+ * from whatever the browser substitutes for an unknown family: private-use slots, so tofu.
+ * Emmentaler itself (and its brace) is declared by each webview, as it always was. Leland
+ * ships no WOFF2, so its OTF is declared as what it is.
+ */
+const MUSIC_FACES: ReadonlyArray<{ family: string; file: string; format: string }> = [
+    { family: 'Bravura', file: 'Bravura.woff2', format: 'woff2' },
+    { family: 'Petaluma', file: 'Petaluma.woff2', format: 'woff2' },
+    { family: 'Leland', file: 'Leland.otf', format: 'opentype' },
+];
+
+/** `@font-face` rules for the score's text faces and the bundled SMuFL music fonts, as
+ * webview URIs. */
 export function textFontFaceCss(webview: vscode.Webview, extensionUri: vscode.Uri): string {
-    return TEXT_FACES.map(f => {
+    const text = TEXT_FACES.map(f => {
         const src = webview.asWebviewUri(vscode.Uri.joinPath(textFontsRoot(extensionUri), f.file));
         return `@font-face { font-family: '${f.family}'; src: url('${src}') format('opentype'); `
             + `font-weight: ${f.weight}; font-style: ${f.style}; }`;
-    }).join('\n');
+    });
+    const music = MUSIC_FACES.map(f => {
+        const src = webview.asWebviewUri(vscode.Uri.joinPath(textFontsRoot(extensionUri), f.file));
+        return `@font-face { font-family: '${f.family}'; src: url('${src}') format('${f.format}'); }`;
+    });
+    return [...text, ...music].join('\n');
 }

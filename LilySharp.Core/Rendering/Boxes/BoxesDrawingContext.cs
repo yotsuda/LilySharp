@@ -26,17 +26,24 @@ namespace LilySharp.Core.Rendering.Boxes;
 /// <param name="Kind">What it is — <c>notehead</c>, <c>stem</c>, <c>staffLine</c>, <c>lyric</c>…
 /// (<see cref="BoxesDrawingContext"/> says where each comes from).</param>
 /// <param name="Glyph">A music glyph's name (Lily#'s <c>EmmentalerGlyphs</c> constant, or
-/// <c>U+XXXX</c> for one it does not name); null for anything else.</param>
-/// <param name="Codepoint">A music glyph's code point in the bundled Emmentaler; null otherwise.</param>
+/// <c>U+XXXX</c> for one it does not name) — the same name in every music font, so a glyph's
+/// kind does not depend on the font; null for anything else.</param>
+/// <param name="Codepoint">A music glyph's code point in the font it was drawn from; null otherwise.</param>
 /// <param name="Text">A text's string; null otherwise.</param>
 /// <param name="Box">The ink box, page coordinates in staff spaces, Y down: x0, y0, x1, y1.</param>
 /// <param name="Pos">The source offset it was drawn under (<c>data-pos</c>), −1 for none.</param>
 /// <param name="Staff">The staff (<c>EnumerateStaves</c> index) it was drawn on, −1 for none.</param>
 /// <param name="Todo">The <c>@todo</c> key of the item it belongs to, null for none.</param>
 /// <param name="Ends">A tie's or slur's two ends (x0, y0, x1, y1), null for anything else.</param>
+/// <param name="Font">The music font a glyph was drawn from when it is not the score's
+/// (<see cref="BoxDocument.MusicFont"/>) — a glyph that font lacks; null otherwise.</param>
 public sealed record BoxSymbol(
     string Kind, string? Glyph, int? Codepoint, string? Text, double[] Box,
-    int Pos, int Staff, string? Todo, double[]? Ends);
+    int Pos, int Staff, string? Todo, double[]? Ends, string? Font = null);
+
+/// <summary>A score's boxes: its pages and the music font its glyphs were drawn in (the first
+/// font of its <c>fonts { music … }</c> found, else Emmentaler).</summary>
+public sealed record BoxDocument(IReadOnlyList<BoxPage> Pages, string MusicFont);
 
 /// <summary>One bar of one system as the page prints it: its number and its box (from the
 /// system's top staff line to its bottom one).</summary>
@@ -127,9 +134,10 @@ internal sealed class BoxesDrawingContext : IDrawingContext, IDisposable
     private static double R(double v) => Math.Round(v, 4);
 
     private void Add(string ownKind, double x0, double y0, double x1, double y1,
-        string? glyph = null, int? codepoint = null, string? text = null, double[]? ends = null)
+        string? glyph = null, int? codepoint = null, string? text = null, double[]? ends = null,
+        string? font = null)
         => _symbols.Add(new BoxSymbol(_kind ?? ownKind, glyph, codepoint, text,
-            Page(x0, y0, x1, y1), _pos, _staff, _todo, ends));
+            Page(x0, y0, x1, y1), _pos, _staff, _todo, ends, font));
 
     private void AddPoints(string ownKind, IEnumerable<(double X, double Y)> points, double pad,
         double[]? ends = null)
@@ -223,10 +231,17 @@ internal sealed class BoxesDrawingContext : IDrawingContext, IDisposable
         // The character the face holds it at — a glyph the score's first music font lacks is
         // handed out at a stand-in (MusicFontChain); the design does not change the character.
         var music = Core.Svg.Layout.MusicFont.Current;
-        char code = music.Drawn(glyph, music.DefaultDesign).Code;
-        string name = GlyphName(code);
+        var (code, face) = music.Drawn(glyph, music.DefaultDesign);
+        // The NAME is the glyph's, not the font's character: Emmentaler's constant for it, in
+        // whatever font it is drawn — so a Bravura note head is a notehead too. A character the
+        // vocabulary does not hold (a SMuFL brace) is named by its code point.
+        string name = music.GlyphOf(glyph) is { } g
+            ? GlyphName(Core.Svg.MusicGlyphs.Of(g).EmmentalerCode)
+            : music is Core.Svg.Layout.EmmentalerMusicFont ? GlyphName(code) : $"U+{(int)code:X4}";
+        string family = music.FaceFamily(face);
         Add(GlyphKind(name), ink.Left / Scale, ink.Top / Scale, ink.Right / Scale, ink.Bottom / Scale,
-            glyph: name, codepoint: code);
+            glyph: name, codepoint: code,
+            font: family == music.FaceFamily(music.DefaultDesign) ? null : family);
     }
 
     public void DrawText(string text, double x, double y, double fontSize,
@@ -355,6 +370,9 @@ internal sealed class BoxesDocumentContext : IDocumentContext
     }
 
     public void EndPage() { }
+
+    /// <summary>The music font the score was drawn in — its plan's (<see cref="Fonts"/>).</summary>
+    public string MusicFont => Core.Svg.Layout.MusicFonts.Of(Fonts).Name;
 
     /// <summary>The pages recorded so far.</summary>
     public IReadOnlyList<BoxPage> Pages

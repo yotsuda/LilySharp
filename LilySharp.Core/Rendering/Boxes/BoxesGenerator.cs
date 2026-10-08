@@ -44,6 +44,12 @@ public static class BoxesGenerator
     public static IReadOnlyList<BoxPage> GeneratePages(SyntaxTree tree, RenderSpec? renderSpec,
         Semantics.PaperOverrides? settings = null, Action<string>? layoutWarning = null,
         string? fontDirectory = null)
+        => GenerateDocument(tree, renderSpec, settings, layoutWarning, fontDirectory).Pages;
+
+    /// <summary>The pages of one score and the music font they were drawn in.</summary>
+    public static BoxDocument GenerateDocument(SyntaxTree tree, RenderSpec? renderSpec,
+        Semantics.PaperOverrides? settings = null, Action<string>? layoutWarning = null,
+        string? fontDirectory = null)
     {
         var score = SvgGenerator.CollectScore(tree, renderSpec, settings: settings);
         var layout = new LayoutEngine(score.Paper).Layout(score);
@@ -54,8 +60,20 @@ public static class BoxesGenerator
             SharedRenderer.RenderTo(score, layout, doc);
             fallbacks.Report(layoutWarning);
         }
-        return doc.Pages;
+        return new BoxDocument(doc.Pages, doc.MusicFont);
     }
+
+    /// <summary>The document as the JSON <c>lysc boxes</c> writes — the pages and, first, the
+    /// music font (<c>musicFont</c>): a reader training on several fonts' pictures splits its
+    /// data by it.</summary>
+    /// <param name="document">The document.</param>
+    /// <param name="staffSpaceMm">As <see cref="ToJson(IReadOnlyList{BoxPage}, double)"/>.</param>
+    public static string ToJson(BoxDocument document, double staffSpaceMm = LayoutOptions.DefaultStaffSpaceMm)
+        => JsonSerializer.Serialize(new
+        {
+            version = FormatVersion, unit = "staffSpace", staffSpaceMm = Math.Round(staffSpaceMm, 6),
+            musicFont = document.MusicFont, pages = document.Pages,
+        }, Json);
 
     /// <summary>The pages as the JSON document <c>lysc boxes</c> writes.</summary>
     /// <param name="pages">The pages.</param>

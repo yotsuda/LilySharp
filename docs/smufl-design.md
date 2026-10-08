@@ -95,6 +95,14 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
 
 ## 4. グリフ名の対応
 
+- ✅ **第867 に全部描いて目で決めた**（Emmentaler・Bravura・Petaluma・Leland を並べた絵＝Lab `p867/unverified.png`・`corrected.png`）。
+  直したのは 2 つ: ⑴ **portato は交差していた**＝feta の `dportato`（線が上・点が下＝音符の上に置く形）が SMuFL の
+  `articTenutoStaccatoAbove`（`ArticulationItem.GlyphOf` も上なら `…Above` に）。⑵ **4 分音の臨時記号は Emmentaler の字そのものが
+  LP と違っていた**（Lily# の Emmentaler 出力の欠陥）: LP（scm/output-lib.scm:1146-1149）は 3/4 sharp を `sharp.slashslash.stemstemstem`
+  （U+E01B）、1/4 flat を `mirroredflat`（U+E028）、3/4 flat を `mirroredflat.flat`（U+E027）で描くが、Lily# は makam の 8/9 sharp
+  `sharp.slashslashslash.stemstem`・`flat.slash`・`flatflat.slash` を描いていた＝生成器の表の名前の誤り。直したので 2 つの flat は
+  `feta.` 行でなくなり SMuFL の `accidentalQuarterToneFlatStein`（U+E280）／`accidentalThreeQuarterTonesFlatZimmermann`（U+E281）。
+  他の 21 行は形が一致（`Unverified` の欄は消した）。以下は着手前の一覧:
 - feta 名 → SMuFL 名の表を 1 枚（約 130 字）。**曖昧なものは描いて目で決める**: スラッシュの符頭 3 種・
   `s2xcircle`・diamond／triangle の系列・`flat.slash`／`flatflat.slash`・Stein の 1/4 音シャープ 2 種・
   `scripts.stopped`・staccatissimo（楔か）・ペダルの踵とつま先・上下で同じ字の script（SMuFL は Above／Below の対）・
@@ -219,6 +227,12 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
    - **② は閉じた**。③ へ持ち越すもの: §4 の「曖昧なものは描いて目で決める」（`Unverified` 24 行）・VS Code のプレビュー（拡張側の font）・
      fallback の警告を LSP にも出す。
 3. **出力**: 埋め込み・`boxes.json`（glyph 名が Emmentaler の名前のまま＝SMuFL 名とフォント名に）・双子の警告・上の持ち越し。
+   - ✅ **第867**: ⒜ `boxes.json` — `glyph` はフォントによらず同じ Lily# の名前（`MusicFont.GlyphOf` で引き戻して Emmentaler の定数名）＝
+     **Bravura の符頭も `notehead`**（それまで SMuFL の譜は Emmentaler の字の表で名指し `U+E0A4`・kind `glyph` になっていた）、`codepoint` は
+     描いたフォントの字、トップに `musicFont`、他のフォントで描いた字は `font`（`BoxDocument`・`BoxesGenerator.GenerateDocument`）。
+     ⒝ VS Code のプレビュー: `scoreFonts.ts` が Bravura／Petaluma（WOFF2）・Leland（OTF）を `server/Fonts` から宣言（プレビューは SVG の
+     `@font-face` を省くので無ければ豆腐）。⒞ §4 を全部描いて決めた（上の §4）。
+     ⒟ **fallback の警告は LSP に出さない**（LSP は描画時の警告を 1 つも出さない＝over-full page も。口を作るのは別の判断）。
 4. **仕上げ**: Bravura・Leland・Petaluma で本を描いて目で見る・§3 の代わりの経路の値付け。
 
 ## 7. 未決（ユーザー判断）→ 第862（2026-10-08）で決まった

@@ -260,7 +260,7 @@ from Lily# rather than guessed back out of the SVG. Same collection, layout and 
 `svg` / `png`, and the same `--set`, so the boxes are those pictures' symbols.
 
 ```json
-{ "version": 1, "unit": "staffSpace", "staffSpaceMm": 1.757299, "pages": [
+{ "version": 1, "unit": "staffSpace", "staffSpaceMm": 1.757299, "musicFont": "Emmentaler", "pages": [
   { "page": 1, "width": 119.5016, "height": 169.0094,
     "symbols": [
       { "kind": "notehead", "glyph": "NoteheadBlack", "codepoint": 57598,
@@ -281,8 +281,12 @@ from Lily# rather than guessed back out of the SVG. Same collection, layout and 
   `beam`, `barLine` (a repeat sign's dots included), `tie`, `slur`, `hairpin`,
   `tupletBracket`, `percentRepeat`, `graceSlash`. Anything else keeps its primitive's name
   (`line`, `rect`, `quad`, `ellipse`, `circle`, `curve`).
-- **`glyph`** is Lily#'s name for a music glyph (`U+XXXX` where it has none) and
-  **`codepoint`** its slot in the bundled Emmentaler.
+- **`musicFont`** is the music font the glyphs were drawn in (`fonts { music … }`; Emmentaler
+  when none is named), for a reader that trains on several fonts' pictures.
+- **`glyph`** is Lily#'s name for a music glyph (`U+XXXX` where it has none) — the same name
+  in every music font, so a glyph's `kind` does not depend on the font — and **`codepoint`**
+  its slot in the font it was drawn from. A glyph the score's font lacks, drawn from another,
+  says which in **`font`** (e.g. Leland's figured-bass digits: `"font": "Emmentaler"`).
 - **`pos`** is the source offset the symbol was drawn under (the SVG's `data-pos`, −1 for
   none); **`staff`** the staff it was drawn on — for what hangs on a note outside the staff
   (dynamics, scripts and fermatas, fingering, tuplets, arpeggios, ottava, figured bass, text
