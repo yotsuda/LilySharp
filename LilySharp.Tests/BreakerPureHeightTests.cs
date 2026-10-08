@@ -120,6 +120,63 @@ public class BreakerPureHeightTests
     }
 
     [Fact]
+    public void AFlag_IsPricedByItsGlyphsBox_NotItsOutline()
+    {
+        // LILYPOND-REF: lily/flag.cc:183-196 Flag::internal_calc_y_offset — the flag's origin
+        //   half a blot inside the stem's end; scm/define-grobs.scm Flag — its Y-extent is the
+        //   stencil's, whose box tops out 0.065 over that origin.
+        // MEASURED (2.26.0, Lab sessions/p856/net/f.lys, a bass tab of an unbeamed eighth on the
+        //   A string): the line's rest top 2.275 over the top line, 0.025 over the stem's end;
+        //   Lily# read 2.250 off the flag's outline. (Alone Again's tab lines: 2.275 / 2.250.)
+        var shape = FirstLine("""
+            octave absolute
+            time 4/4
+
+            part p {
+              clef bass
+              tuning bass
+              section S { a,,8 r8 r4 r2 | a,,8 r8 r4 r2 | }
+            }
+
+            form main { S }
+
+            score main {
+              tab p
+            }
+            """);
+        Assert.Equal(2.275, shape.RestUp, 3);
+    }
+
+    [Fact]
+    public void AVoltaBracket_HasNoPureHeight()
+    {
+        // LILYPOND-REF: lily/system.cc:940-967 System::calc_pure_relevant_grobs — the
+        //   VoltaBracketSpanner is an axis group, so it is in no line's pure heights.
+        // MEASURED (2.26.0, Lab sessions/p856/net/v.lys): the line in the middle of a first
+        //   ending prices the staff alone, rest top 0.050; Lily# gave the breaker the bracket's
+        //   0.994 (ABC's tab lines under "1." and "2.": 0.050 / 1.586, 2.275 / 3.221).
+        var shape = Line("""
+            octave absolute
+            time 4/4
+
+            part p {
+              clef bass
+              section A { e,1 | }
+              section E { e,1 | e,1 | break e,1 | e,1 | break e,1 | e,1 | break }
+              section F { e,1 | e,1 | }
+            }
+
+            form main { |: A [1. E] :| [2. F] }
+
+            score main {
+              staff p
+            }
+            """, 2);
+        Assert.Equal(0.050, shape.RestUp, 3);
+        Assert.True(shape.BeginUp < 2.5, $"the bracket is in line 2's begin heights: {shape.BeginUp}");
+    }
+
+    [Fact]
     public void AMarkInsideALinesFirstBar_IsInItsMidHeightsAlone_NotOnTheLineBefore()
     {
         // LILYPOND-REF: lily/axis-group-interface.cc:417-458 adjacent_pure_heights — a grob on a

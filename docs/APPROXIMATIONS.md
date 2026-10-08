@@ -94,7 +94,7 @@
 ### `LilySharp.Core/Svg/Layout/FingScriptMemo.cs`
 - **:79** same order, with the same source indices). Stated rather than silently approximated:
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
-- **:1132** ⚠️ NOT PORTED: adjacent_pure_heights (lily/axis-group-interface.cc:443-455) then
+- **:1141** ⚠️ NOT PORTED: adjacent_pure_heights (lily/axis-group-interface.cc:443-455) then
 ### `LilySharp.Core/Svg/Layout/LyricHyphen.cs`
 - **:508** ⚠️ NOT PORTED — the bound extent: the barline's ink width is taken
 - **:524** ⚠️ NOT PORTED — the boundary-column regime: the left bound is the
@@ -194,7 +194,7 @@
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
 - **:793** THE CLEAR HAS NO OBSERVER HERE, and that was measured rather than assumed. Session 457's
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
-- **:608** ⚠️ NO POINT OBSERVES THE FOLD: audit/lp-geometry hairpin.page.quiet reads the
+- **:617** ⚠️ NO POINT OBSERVES THE FOLD: audit/lp-geometry hairpin.page.quiet reads the
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
 - **:500** ⚠️ THE CLEAR BEFORE EACH STAFF had no observer until session 478 (session 467, by poison):
 ### `LilySharp.Core/Svg/Layout/LyricHyphen.cs`
@@ -220,8 +220,8 @@
 - **:502** same part (leftHand). No book reaches the configuration, so no ledger point and
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
 - **:1424** ⚠️ The half-blot Y has no observer (session 812): the tab test reads
-- **:2915** ⚠️ NO OBSERVER for the X origin (poisons, session 813): shifting it by the
-- **:3405** ⚠️ NO OBSERVER for this arm's half-blot Y nor its up-skyline merge (poisons,
+- **:2928** ⚠️ NO OBSERVER for the X origin (poisons, session 813): shifting it by the
+- **:3418** ⚠️ NO OBSERVER for this arm's half-blot Y nor its up-skyline merge (poisons,
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
 - **:56** the distance is taken at — and NO ledger point moves with it. An output change no point
 ### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
@@ -445,9 +445,9 @@
 - **:642** ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only
 - **:654** ⚠️ LILYSHARP-OWN: THE SECOND PAIR HAS NO LILYPOND COUNTERPART, and it exists because a
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
-- **:484** ⚠️ A LYRICS ROW KEEPS ITS DRAWN EXTENT, AND THAT IS LILYSHARP-OWN, not a second
-- **:601** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
-- **:1088** LILYSHARP-OWN: the SILHOUETTE margin, not ink. It widens a mark's box before the
+- **:493** ⚠️ A LYRICS ROW KEEPS ITS DRAWN EXTENT, AND THAT IS LILYSHARP-OWN, not a second
+- **:610** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
+- **:1097** LILYSHARP-OWN: the SILHOUETTE margin, not ink. It widens a mark's box before the
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Prelim.cs`
 - **:1591** LILYSHARP-OWN: the shift itself. LilyPond has no counterpart, because it has no second
 ### `LilySharp.Core/Svg/Layout/LayoutOptions.cs`
@@ -513,7 +513,7 @@
 - **:132** ⚠️ LILYSHARP-OWN: THE TWO-EDGE MODEL ITSELF. LilyPond has no such pair —
 - **:305** ⚠️ LILYSHARP-OWN: THE SELECTION IS DELIBERATELY THE OLD ONE, and it is a KNOWN
 - **:391** ⚠️ LILYSHARP-OWN: THE FALLBACK TO THE DERIVED VALUE IS A SECOND ANSWER FOR ONE
-- **:1719** LILYSHARP-OWN (2026-09-28). Until then the diagram was merged with the other scripts at
+- **:1732** LILYSHARP-OWN (2026-09-28). Until then the diagram was merged with the other scripts at
 ### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
 - **:324** LILYSHARP-OWN: the bar line's box is grown toward THIS column only. LilyPond grows it
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`

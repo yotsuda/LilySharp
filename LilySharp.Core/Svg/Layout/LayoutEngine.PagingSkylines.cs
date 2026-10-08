@@ -364,7 +364,15 @@ internal sealed partial class LayoutEngine
             }
             Add(t.MeasureIndex, top, bottom);
         }
-        noPure = false;
+        // ...and a volta bracket has no pure height either: kept apart from the breaker's share
+        // as the tuplets above are.
+        // LILYPOND-REF: lily/system.cc:940-967 System::calc_pure_relevant_grobs — an axis
+        //   group among the System's elements is not pure-relevant, and the
+        //   VoltaBracketSpanner is one (PagingAugmentProgram.ExecuteForBreaker leaves its box
+        //   out of the silhouette for the same reason).
+        // MEASURED (2.26.0, Lab sessions/p856, ABC score "tab"): the lines under the "1." and
+        //   "2." brackets priced at the staff alone (rest up 0.050 / 2.275), where this scalar
+        //   gave the breaker the bracket's 1.586 / 3.221.
         foreach (var v in ann.VoltaBrackets)
         {
             // YUp is Y-up from the system top; this extent pass is system-relative
@@ -372,6 +380,7 @@ internal sealed partial class LayoutEngine
             double vY = -v.YUp;
             Add(v.StartMeasureIndex, vY - 0.1, vY + 1.6);
         }
+        noPure = false;
         double[]? markUp = null;
         foreach (var m in ann.MusicMarks)
         {

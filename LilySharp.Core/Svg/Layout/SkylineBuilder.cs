@@ -1425,7 +1425,20 @@ internal sealed class SkylineBuilder
                         // the outline's shape, and an up flag's outline tops out under the tip.
                         double flagX = x + halfStem;
                         double flagUpY = yTip - (stemUp ? 1 : -1) * EngravingDefaults.BlotDiameter / 2;
-                        if (flagUp.Count > 0 || flagDown.Count > 0)
+                        // The page breaker's silhouette takes the flag's BOX, not its outline:
+                        // a pure height is an interval, the glyph's extent from its origin.
+                        // LILYPOND-REF: lily/flag.cc:183-196 internal_calc_y_offset (pure: the
+                        //   stem's pure extent less half the blot); scm/define-grobs.scm Flag —
+                        //   Y-extent from the stencil, the skyline from its outline.
+                        // MEASURED (2.26.0, Lab sessions/p856, Alone Again score "tab"): an up
+                        //   eighth's flag at 4.525 over the tab's middle where its stem ends at
+                        //   4.5, a down one's at -3.025 under a stem ending at -3.0.
+                        if (pureBeams && GlyphMetrics.GetFlagBBox(noteValue, stemUp) is var pb && pb != default)
+                        {
+                            upSkyline.MergeBox(flagX + pb.Left, flagX + pb.Right, flagUpY + pb.Bottom, flagUpY + pb.Top);
+                            downSkyline.MergeBox(flagX + pb.Left, flagX + pb.Right, flagUpY + pb.Bottom, flagUpY + pb.Top);
+                        }
+                        else if (flagUp.Count > 0 || flagDown.Count > 0)
                         {
                             upSkyline.Merge(flagUp, flagX, flagUpY);
                             downSkyline.Merge(flagDown, flagX, flagUpY);
