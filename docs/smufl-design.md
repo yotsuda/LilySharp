@@ -116,6 +116,13 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
 1. **土台（3〜4 便）**: `MusicFont` の型と SMuFL 名の表 → 生成器が包んだ Emmentaler を出す → 読み手を
    1 族ずつ `MusicFont` に移す（符頭 → 臨時記号 → … → brace）。**門は毎回: 全 svg の掃き（`p723/svg2/sweep-all.ps1`）で
    動いた svg 0・snapshot 不変・full 緑**。手書きの定数（§3 #16・#17）もここで metadata へ移す。
+   - ✅ **第 1 歩（第857）**: `Svg/MusicGlyph.cs`（150 行・SMuFL のコードポイントは glyphnames.json と 0 件の食い違い・
+     `feta.` 4 行・未確認 24 行）と `Svg/Layout/MusicFont.cs`（`MusicFont`／`MusicFontDesign`／`EmmentalerMusicFont`）。
+     網 `MusicFontTests`（生成された寸法が全デザインで何かのグリフから届く＝失わない規則をリフレクションで）。読み手はまだ 0。
+   - **生成器の表に寸法の無いグリフ**（32 分以下の旗・1/4 音の記号・短い／長いフェルマータ・portato・踵とつま先・stopped・
+     thumb・maxima・打楽器と tab の変更記号・拍子の数字の箱）は、読み手が手の規則を持つ＝その族を移すときに §3 #16 として拾う。
+     生成器を回すには fontTools が要る（この機械には無い）。
+   - 次: 読み手を族ごとに移す。最初は描画の口（`IDrawingContext.DrawGlyph(char)` の呼び手が `MusicGlyph` で頼む形）。
 2. **取り込み**: metadata の JSON と OTF を読む・§1 の解決順・文法（GRAMMAR §2.4・SYNTAX_REFERENCE・LSP の補完・
    TextMate）・診断・`--set music=`。**同梱するか（§7 C）はこの段の前に決める。**
 3. **出力**: 埋め込み・`boxes.json`・双子の警告。
