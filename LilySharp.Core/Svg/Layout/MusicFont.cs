@@ -142,6 +142,16 @@ internal abstract class MusicFont
     internal virtual (char Code, int Face) Drawn(char glyph, int design) => (glyph, design);
 
     /// <summary>
+    /// The engraving style a score in this font is engraved with: <paramref name="style"/> —
+    /// LilyPond's defaults with what the score's <c>layout { }</c> and <c>--set</c> wrote — and,
+    /// for each property they did not write, the font's own <c>engravingDefaults</c>
+    /// (docs/smufl-design.md §1 "寸法の優先順", §6 ② ⒡).
+    /// </summary>
+    /// <remarks>Emmentaler's engraving defaults ARE LilyPond's (§3 末尾の註): the style comes back
+    /// as it was, which is what keeps every Emmentaler score byte-identical.</remarks>
+    internal virtual EngravingStyle Engrave(EngravingStyle style) => style;
+
+    /// <summary>
     /// The GPOS pair kern between two adjacent glyphs of a text run, in the DESIGN's staff
     /// spaces — 0 for a pair the font does not kern (docs/smufl-design.md §3 #7, an
     /// EXTENSION: SMuFL metadata has no kerning).

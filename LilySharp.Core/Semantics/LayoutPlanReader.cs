@@ -340,8 +340,23 @@ internal static class LayoutPlanReader
                 DiagnosticCodes.LayoutEntryBadValue, takes, IsError: true));
             return plan;
         }
-        return plan with { Style = set(plan.EngravingStyle, values) };
+        return plan with { Style = set(plan.EngravingStyle, values).Wrote(WrittenKey(entry.Key)) };
     }
+
+    /// <summary>The style property <paramref name="key"/> writes, among those a music font's
+    /// <c>engravingDefaults</c> speaks for — what the font then leaves alone
+    /// (<see cref="Svg.EngravingStyle.Written"/>).</summary>
+    private static Svg.EngravingKeys WrittenKey(string key) => key switch
+    {
+        "StaffLine.thickness" => Svg.EngravingKeys.StaffLineThickness,
+        "LedgerLine.thickness" => Svg.EngravingKeys.LedgerLineThickness,
+        "LedgerLine.lengthFraction" => Svg.EngravingKeys.LedgerLengthFraction,
+        "Stem.thickness" => Svg.EngravingKeys.StemThickness,
+        "Beam.thickness" => Svg.EngravingKeys.BeamThickness,
+        "BarLine.thinThickness" => Svg.EngravingKeys.BarLineThinThickness,
+        "BarLine.thickThickness" => Svg.EngravingKeys.BarLineThickThickness,
+        _ => Svg.EngravingKeys.None,
+    };
 
     // markTempo stacked | beside — exactly one word.
     private static LayoutPlan ReadMarks(

@@ -770,7 +770,9 @@ is its grob's (`layout { NoteHead.scale 1.2 }`), so `step`, `size`, `as` and a s
 are errors. A name found nowhere **warns** (LYS8019, naming every place looked) and the
 next name, or Emmentaler, is used. Each glyph comes from the first named font that has
 it; one that none has (Leland lacks the figured-bass digits, for one) is drawn in
-Emmentaler and the render warns once per glyph. `lysc svg --set music=Bravura` lays a name over the
+Emmentaler and the render warns once per glyph. The first font's own line thicknesses
+(staff line, stem, ledger line, beam, bar lines) are used where `layout { }` and `--set` say
+nothing; whatever they say wins. `lysc svg --set music=Bravura` lays a name over the
 file's. The LilyPond twin stays in Emmentaler (LilyPond 2.26 reads no SMuFL font) and warns.
 
 An entry is a **key followed by attributes**, in any order, and it ends where the next key

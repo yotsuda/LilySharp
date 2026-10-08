@@ -509,7 +509,9 @@ public sealed partial class MeasureCollector
             _meta.LayoutPlan = layoutSettings.ApplyLayout(_meta.LayoutPlan);
         // The layout's line thicknesses and stem length ride on the paper, which is what the
         // layout engine and the renderer hold the engraving style from (Svg.EngravingStyle).
-        _meta.Paper = _meta.Paper with { Style = _meta.LayoutPlan.EngravingStyle };
+        // The music font fills what neither wrote from its engravingDefaults (MusicFont.Engrave;
+        // Emmentaler's are LilyPond's, so its scores take the plan's style as it is).
+        _meta.Paper = _meta.Paper with { Style = Layout.MusicFonts.Of(_meta.Fonts).Engrave(_meta.LayoutPlan.EngravingStyle) };
         // …and the one switch the MUSIC WALK reads rather than the layout: which notes
         // carry a printed accidental. Every walk runs after this, so reading it once here
         // is reading it before the first note.

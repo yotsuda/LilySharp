@@ -18,6 +18,23 @@ using LilySharp.Core.Svg.Layout;
 
 namespace LilySharp.Core.Svg;
 
+/// <summary>The <see cref="EngravingStyle"/> properties a music font's <c>engravingDefaults</c>
+/// speaks for, as flags (<see cref="EngravingStyle.Written"/>). The paper's
+/// <c>lineThickness</c> is not among them: SMuFL has no paper thickness, and the font's lines
+/// are stated as multiples of LilyPond's, so a written one scales them all as it does LilyPond's.</summary>
+[System.Flags]
+internal enum EngravingKeys
+{
+    None = 0,
+    StaffLineThickness = 1 << 1,
+    LedgerLineThickness = 1 << 2,
+    LedgerLengthFraction = 1 << 3,
+    StemThickness = 1 << 4,
+    BeamThickness = 1 << 5,
+    BarLineThinThickness = 1 << 6,
+    BarLineThickThickness = 1 << 7,
+}
+
 /// <summary>
 /// The line thicknesses and the stem length a score is engraved with — LilyPond's own
 /// properties, at LilyPond's defaults unless <c>lysc --set</c> says otherwise
@@ -143,6 +160,16 @@ public sealed record EngravingStyle
     /// <summary>The staff's line thickness in staff spaces — what LilyPond's
     /// <c>Staff_symbol_referencer::line_thickness</c> answers.</summary>
     public double StaffLineThickness => StaffSymbolThickness * LineThickness;
+
+    /// <summary>The properties a <c>layout { }</c> block or a <c>--set</c> wrote — what a music
+    /// font's <c>engravingDefaults</c> does not replace (docs/smufl-design.md §1 "寸法の優先順":
+    /// written ＞ the font's ＞ LilyPond's).</summary>
+    /// <remarks>A flags value rather than a set, so two styles of the same numbers written the
+    /// same way are EQUAL — the incremental gate and the scope's default test compare styles.</remarks>
+    internal EngravingKeys Written { get; init; }
+
+    /// <summary>This style with <paramref name="keys"/> marked written.</summary>
+    internal EngravingStyle Wrote(EngravingKeys keys) => this with { Written = Written | keys };
 
     [System.ThreadStatic] private static EngravingStyle? t_current;
     [System.ThreadStatic] private static StemDetails? t_stem;

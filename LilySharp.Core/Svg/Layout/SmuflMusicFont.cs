@@ -261,6 +261,62 @@ internal sealed class SmuflMusicFont : MusicFont
 
     private readonly ConcurrentDictionary<(MusicGlyph, MusicGlyph), double> _kerns = new();
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// SMuFL states each thickness in staff spaces; the style states LilyPond's — most of them
+    /// multiples of the staff line, which is a multiple of the paper's <c>lineThickness</c>
+    /// (<see cref="EngravingStyle"/>'s remarks). The font's numbers are converted INTO that shape,
+    /// read as drawn on LilyPond's default paper (<c>lineThickness</c> 0.1): the staff line as
+    /// <c>StaffLine.thickness</c>, the stem and the ledger line as multiples of the font's staff
+    /// line, the bar lines as multiples of the paper's. So a written <c>lineThickness</c> still
+    /// moves every line together, and a written <c>StaffLine.thickness</c> carries the stem and
+    /// the ledger lines with it — the dependency LilyPond's units carry (§3 末尾の註).
+    /// </para>
+    /// <para>
+    /// <c>legerLineExtension</c> is a length per side in SMuFL and a fraction of the head in
+    /// LilyPond: it is taken over the font's black note head (<c>noteheadBlack</c>), so a ledger
+    /// line by a wider head reaches proportionally further — the one conversion that is not
+    /// exact.
+    /// </para>
+    /// <para>
+    /// Not read: the keys the style has no property for (slur, tie, hairpin, tuplet bracket,
+    /// bracket, repeat dots, lyric and pedal lines…) — they stay LilyPond's.
+    /// </para>
+    /// </remarks>
+    internal override EngravingStyle Engrave(EngravingStyle style)
+    {
+        var d = Metadata.EngravingDefaults;
+        var written = style.Written;
+        bool Free(EngravingKeys key, string name, out double value)
+            => d.TryGetValue(name, out value) && value > 0 && (written & key) == 0;
+
+        double staffLine = d.TryGetValue("staffLineThickness", out double sl) && sl > 0
+            ? sl
+            : EngravingStyle.Default.StaffLineThickness;
+        var s = style;
+        if (Free(EngravingKeys.StaffLineThickness, "staffLineThickness", out double v))
+            s = s with { StaffSymbolThickness = v / LilyPondLineThickness };
+        if (Free(EngravingKeys.StemThickness, "stemThickness", out v))
+            s = s with { StemThickness = v / staffLine };
+        if (Free(EngravingKeys.LedgerLineThickness, "legerLineThickness", out v))
+            s = s with { LedgerLineThicknessLines = v / staffLine, LedgerLineThicknessSpaces = 0.0 };
+        if (Free(EngravingKeys.LedgerLengthFraction, "legerLineExtension", out v)
+            && Metadata.GlyphBBoxes.TryGetValue("noteheadBlack", out var head) && head.Width > 0)
+            s = s with { LedgerLengthFraction = v / head.Width };
+        if (Free(EngravingKeys.BeamThickness, "beamThickness", out v))
+            s = s with { BeamThickness = v };
+        if (Free(EngravingKeys.BarLineThinThickness, "thinBarlineThickness", out v))
+            s = s with { BarLineHairThickness = v / LilyPondLineThickness };
+        if (Free(EngravingKeys.BarLineThickThickness, "thickBarlineThickness", out v))
+            s = s with { BarLineThickThickness = v / LilyPondLineThickness };
+        return s;
+    }
+
+    /// <summary>LilyPond's paper <c>line-thickness</c> at its default staff, in staff spaces —
+    /// the unit the font's thicknesses are restated in.</summary>
+    private static double LilyPondLineThickness => EngravingStyle.Default.LineThickness;
+
     /// <summary>SMuFL's em: four staff spaces.</summary>
     private const double StaffSpacesPerEm = 4.0;
 

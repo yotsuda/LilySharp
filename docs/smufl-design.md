@@ -208,9 +208,17 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
      ligature になった対は 0・対ごとに覚える）。網: 同じ読み手を emmentaler-20.otf に向けると生成した表の 74 対と 0 を全部返す（5e-4 以内）。
      実測: Bravura は z→p の −0.188 ss・Leland は z→p の −0.020 ss の 1 対だけ・Petaluma は 0＝**今の強弱の語彙（`sfz`・`rfz`・`fp`…）に
      z の後の p は無いので、描画に効く対は今は無い**（読み手は在る）。chain は同じフォントの対だけ kern する。網 3（`SmuflKernTests`）。掃き差 0。
-   - **残り**: ⒡ `engravingDefaults`（線の太さ＝LP の倍数の依存を
-     保って換算・`layout { }` が優先）／§4 の「曖昧なものは描いて目で決める」（`Unverified` 24 行）と VS Code のプレビュー（拡張側の font）は ③ 出力で。
-3. **出力**: 埋め込み・`boxes.json`・双子の警告。
+   - ✅ **⒡ engravingDefaults（第866）**: `MusicFont.Engrave(style)`（Emmentaler は恒等＝バイト不変・chain は先頭のフォント）を collector が
+     `Paper.Style` を決める 1 か所で通す。書いた鍵は `EngravingStyle.Written`（flags＝record の等価を保つ・`ReadStyle` が `layout { }` と `--set` の
+     両方で立てる）が覚え、フォントはそれ以外だけ埋める＝**LP の既定値と同じ数を書いても書いた方が勝つ**。換算は LP の倍数の形に:
+     staff line → `StaffLine.thickness`＝値 / 0.1（LP の既定の paper line-thickness）・stem と ledger → フォントの staff line の倍数
+     （ledger の第 2 項は 0）・bar line の細／太 → paper の倍数・beam はそのまま・`legerLineExtension` → 黒符頭（`noteheadBlack`）の幅の分数
+     （唯一の近似）。⇒ 書いた `lineThickness` はフォントの線も揃えて動かし、書いた `StaffLine.thickness` は stem と ledger を連れて動く。
+     双子は書いた style のまま（LP の形）。**読まない鍵**（style に欄が無い）: slur／tie／hairpin／tuplet・bracket・repeat dots・lyric／pedal 線…
+     ＝LP のまま。網 5（`SmuflEngravingTests`）・目視（Lab `p866/look2/`＝Bravura の ledger が細く長く・終止線が細い）。
+   - **② は閉じた**。③ へ持ち越すもの: §4 の「曖昧なものは描いて目で決める」（`Unverified` 24 行）・VS Code のプレビュー（拡張側の font）・
+     fallback の警告を LSP にも出す。
+3. **出力**: 埋め込み・`boxes.json`（glyph 名が Emmentaler の名前のまま＝SMuFL 名とフォント名に）・双子の警告・上の持ち越し。
 4. **仕上げ**: Bravura・Leland・Petaluma で本を描いて目で見る・§3 の代わりの経路の値付け。
 
 ## 7. 未決（ユーザー判断）→ 第862（2026-10-08）で決まった

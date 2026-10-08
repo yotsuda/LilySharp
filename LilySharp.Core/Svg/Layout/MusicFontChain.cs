@@ -207,6 +207,10 @@ internal sealed class MusicFontChain : MusicFont
     }
 
     /// <inheritdoc/>
+    /// <remarks>The first font's: §1 "engravingDefaults は先頭のフォントだけ".</remarks>
+    internal override EngravingStyle Engrave(EngravingStyle style) => First.Engrave(style);
+
+    /// <inheritdoc/>
     /// <remarks>The first font's (each bundled SMuFL font has its <c>brace</c>).</remarks>
     public override SystemBrace Brace(double length) => First.Brace(length);
 

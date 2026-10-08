@@ -389,7 +389,10 @@ Role           = 'title' | 'subtitle' | 'composer' | 'poet'
    is used. SEVERAL NAMES ARE PER GLYPH: each glyph is drawn from the first font that has
    it, and a glyph none of them has (Leland has no figured-bass digits, styled heads,
    heel/toe or thumb; no SMuFL font has Emmentaler's own `feta.` shapes) is drawn in
-   Emmentaler, the render warning once per glyph. `lysc --set music=NAME` lays a name over the file's. The LilyPond twin cannot
+   Emmentaler, the render warning once per glyph. THE FIRST FONT'S engravingDefaults set the
+   line thicknesses the score does not write (staff line, stem, ledger line and its reach,
+   beam, thin and thick bar line): a `layout { }` key or a `--set` wins, even one written at
+   LilyPond's own value. `lysc --set music=NAME` lays a name over the file's. The LilyPond twin cannot
    follow it (2.26 reads no SMuFL font) and says so. The text that is really notation —
    tab fret numbers, the `treble_8` digit, a compound meter's `+` — stays under `notation`.
 
