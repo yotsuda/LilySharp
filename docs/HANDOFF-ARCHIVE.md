@@ -129,6 +129,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第861セッションの経緯
+
+### 1.1 第861セッション（2026-10-08・YT-DELL2）
+
+同じ会話（ユーザー「続けて」）。`-Start p861`（HEAD `31763249d`）＝full **11425 / 0 / 2 / 11427**。§7 3.5 で第859 を ARCHIVE へ。
+- **閉じた（`3b2db6d57`）§6 ① の残り＝§3 #16・#17 の手書き定数を包みへ**: `EmmentalerMusicFont.HandMeasured`（出典つき・`MetricsOf` が breve／maxima／32 分以下の旗／短い・長い fermata／portato の行を答える＝読み手の規則が font の値に）・`StemSidePaddingFraction`（フラットの 0.375）・`ChordNameAccidental`（0.094725／0.3／0.6）・打楽器記号は C 記号の quad を font が答える。`RepeatDotRadius`／`NoteheadDoubleWholeWidth` は font を読むプロパティ（0.225 はビット同一）・`GetFlagBBox` は `MusicGlyphs.Flag`・`StemUpSE`／`StemDownNW`／`Anchor`／`RestMaximaWidth`／`KernBeforeNarrowGlyph`／`ShortGlyph`／`NarrowGlyph` は消した。⚠️ breve は 2.296（幅）と全音符×1.30（送り）の 2 綴り＝両方残し両方名指し（抽出器が sM1 を出せば閉じる）。census: `MusicFont.cs` を対象に足した（14 行が読み手から消え 15 行が包みに・Red は kern の 0.0 の 2 行だけ）・OWN 216→217（1.30 を LILYSHARP-OWN と印した）。網 `TheHandMeasuredRows_AreTheReadersOldNumbers`。掃き 998 冊 1199 枚・差 0（Lab `p861/sweep/`・base は p860 の head＝HEAD の bin）・full 11423 緑（赤 3 は §1 の継ぎ目＝立てた）。
+- 道具: `LpReferenceCitationTests` の ratchet は**行範囲つきの引用と同じ行**に記号（`_` か `-` で繋いだ名前）が無いと「名指しなし」に数える＝`accidental->markup` は `->` で切れて名指しにならない。0.3／0.6 は chord-name.scm:80-87 `accidental->text-markup` の `make-translate-scaled-markup` が正しい住所（`c8b23f5ff` で直した・コメントだけ）。
+- **`-End p861 -DiffBase 31763249d`（門は全部 OK）＝full **11426 / 0 / 2 / 11428**（+1＝網 1 本）。HANDOFF 441,194 B（残り 8,806）・§1 現在便 8,239 字。Core '+' 233 行／LILYPOND-REF 13／LILYSHARP-OWN 2（1.30 の印と、移した 2.296 の印）・足した数値は 0（全部移動）。未 push 30（push はユーザー）。**§6 ①（土台）は閉じた。次は §6 ②（取り込み）＝その前に §7 C（同梱）のユーザー判断**（§1.0）。
+
 ## 以下は第860セッションの経緯
 
 ### 1.1 第860セッション（2026-10-08・YT-DELL2）

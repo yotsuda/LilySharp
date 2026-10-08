@@ -182,12 +182,17 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
      `TextOutlineSkylines.FlattenPathHorizontal`（path を転置して同じ walk。網: Emmentaler-20 の ♯ の焼いた対と全高で 5 桁一致・
      G 記号の quad は 1e-6 で一致＝生成器と実行時は 1 つの walk））・`MusicFonts.Find(name, out tried)`（§1 の解決順＝
      Emmentaler → 同梱 → SMuFL 仕様の置き場・試した場所を全部返す）。**読み手はまだ Emmentaler を向いたまま**（`MusicFont.Current`）＝絵は不変。
-   - **残り**: ⒜ 文法 `fonts { music "…" }`（GRAMMAR §2.4・SYNTAX_REFERENCE・LSP 補完・TextMate）と診断（見つからない→警告して Emmentaler・
-     試した場所を列挙／`step`・`size` 等の拒否）・`--set music=`／⒝ layout と render を `MusicFont.Use(font)` で包む（1 譜 1 フォント・
-     score ごとの `fonts` 参照）／⒞ 字や kind 文字列を鍵にした cache にフォントを足す（`TextOutlineSkylines`・`DynamicOutline`・
-     `AccidentalPlacement.t_glyphPairs`・`SkylineBuilder.GlyphOutlineCache`）／⒟ グリフ単位の fallback（`Has` が false → Emmentaler で描き
-     名前ごとに 1 回警告＝Leland は figbass・styled head・heel/toe・thumb の 25 字が無い）／⒠ GPOS の kern（§3 #7）／⒡ `engravingDefaults`
-     （線の太さ＝LP の倍数の依存を保って換算・`layout { }` が優先）／⒢ brace の拡縮（§3 #10・出力の段と一緒に）。
+   - ✅ **⒜ 文法と診断と `--set`（第863・`b2f9352f8`）**: `music` は fonts ブロックの鍵（`TextRoles.MusicKey`・`AllKeySpellings` に入る＝
+     LSP の補完・TextMate・診断の語彙が追う）。引用した名前だけ（複数はグリフ単位の fallback の鎖）・属性は LYS8015・名前なしは LYS8006・
+     見つからない名前は **LYS8019（警告）**で試した場所を全部並べて鎖に残す（⒟ が飛ばす）。`TextFontPlan.Music`（Signature と IsDefault に入る＝
+     fragment memo と incremental の門が見る）。`--set music=NAME` は parse 時に解決（無ければ設定の拒否）し file の鎖を上書き。
+     `NamedFaces` は music の名前を外す（LYS8003 と PDF 埋め込みが見ない）。双子は警告（LP 2.26 は SMuFL を読めない）。
+     GRAMMAR §2.4・SYNTAX_REFERENCE に段落。読み手はまだ Emmentaler＝掃き 1199 枚・差 0。
+   - **残り**: ⒝ layout と render を `MusicFont.Use(font)` で包む（1 譜 1 フォント・score ごとの `fonts` 参照・`MusicFonts.Find` の鎖の先頭）／
+     ⒞ 字や kind 文字列を鍵にした cache にフォントを足す（`TextOutlineSkylines`・`DynamicOutline`・`AccidentalPlacement.t_glyphPairs`・
+     `SkylineBuilder.GlyphOutlineCache`）／⒟ グリフ単位の fallback（`Has` が false → Emmentaler で描き名前ごとに 1 回警告＝Leland は
+     figbass・styled head・heel/toe・thumb の 25 字が無い）／⒠ GPOS の kern（§3 #7）／⒡ `engravingDefaults`（線の太さ＝LP の倍数の依存を
+     保って換算・`layout { }` が優先）／⒢ brace の拡縮（§3 #10・出力の段と一緒に）。
 3. **出力**: 埋め込み・`boxes.json`・双子の警告。
 4. **仕上げ**: Bravura・Leland・Petaluma で本を描いて目で見る・§3 の代わりの経路の値付け。
 
