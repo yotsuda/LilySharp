@@ -129,6 +129,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第866セッションの経緯
+
+### 1.1 第866セッション（2026-10-09・YT-DELL2）
+
+同じ会話。`-Start p866`（HEAD `c082c2021`）＝full **11469 / 0 / 2 / 11471**。§7 3.5 で第864 を ARCHIVE へ。
+- **閉じた（`1a91b264e`）§6 ② ⒠＝GPOS の kern**: `SmuflMusicFont.Kern` は Emmentaler が kern する 2 run（強弱の字どうし・拍子の数字どうし）だけ、OTF を HarfBuzz で 1 対ずつ shape して読む（`TextFontMetrics.MusicGlyphPairKernFromFile`＝1 字目の shape 後の送り − hmtx・既定 feature・ligature は 0・対ごとに覚える）。**検算＝同じ読み手を emmentaler-20.otf に向けると生成表の 74 対と全部の 0 を 5e-4 以内で返す**（`SmuflKernTests` 3 本）。実測: Bravura z→p −0.188 ss・Leland z→p −0.020 ss の各 1 対・Petaluma 0＝**今の強弱の語彙に z→p は無く、描画に効く対は今は無い**（読み手は在る・正直に記録）。掃き 998 冊 1199 枚・差 0（Lab `p866/sweep/`・base は p865 の exe-head）・full 11472 / 0 / 2 / 11474。
+- **閉じた（`d5d10a2a4`）§6 ② ⒡＝engravingDefaults・② は閉じた**: `MusicFont.Engrave(style)`（Emmentaler は恒等・chain は先頭）を collector が `Paper.Style` を決める 1 か所で通す。書いた鍵は `EngravingStyle.Written`（**flags＝record の等価と incremental の門を壊さない**・`ReadStyle` が `layout { }` と `--set` の両方で立てる）＝フォントは書いていない欄だけ埋め、**LP の既定値と同じ数を書いても書いた方が勝つ**。換算は LP の倍数の形（staff line＝値/0.1・stem と ledger はフォントの staff line の倍数・bar は paper の倍数・beam はそのまま・ledger の伸びは `noteheadBlack` の幅の分数＝唯一の近似）＝書いた `lineThickness` はフォントの線も動かす。双子は書いた style のまま。style に欄の無い鍵（slur・tie・hairpin・tuplet…）は LP のまま。網 5（`SmuflEngravingTests`）・目視（Lab `p866/look2/` old/new）。掃き 1199 枚・差 0（`p866/sweep2/`）・full 11477 / 0 / 2 / 11479。
+- **`-End p866 -DiffBase c082c2021`（⒠⒡ の後・門は全部 OK）＝full **11477 / 0 / 2 / 11479**（+8）。HANDOFF 441,625 B（残り 8,375）・§1 現在便 9,029 字。Core '+' 167 行／LILYPOND-REF 0／LILYSHARP-OWN 1（SMuFL の太さを LP の単位に言い直す換算＝LP に対応物なし・ledger の伸びが唯一の近似＝`118f2bf5f` で宣言し APPROXIMATIONS の OWN 217→218）。未 push 43（push はユーザー）。⚠️ この便の handoff の 1 回目は置換の誤りで HANDOFF に `PLACEHOLDER` 行を入れ message「x」で commit した＝未 push のうちに直して amend（`436813cb3`）。**次は ③ 出力**（§1.0・smufl-design §6 ③）。
+
 ## 以下は第865セッションの経緯
 
 ### 1.1 第865セッション（2026-10-08・YT-DELL2）
