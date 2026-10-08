@@ -174,12 +174,26 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
    - **① は閉じた。② への註**: 字や kind 文字列を鍵にした cache（`TextOutlineSkylines`・`DynamicOutline`・`AccidentalPlacement.t_glyphPairs`）は
      フォントを鍵に足す。`engravingDefaults`（線の太さ・§3 末尾の註）は metadata を読むときに、LP の倍数の依存を保って換算する。
 2. **取り込み**: metadata の JSON と OTF を読む・§1 の解決順・文法（GRAMMAR §2.4・SYNTAX_REFERENCE・LSP の補完・
-   TextMate）・診断・`--set music=`。**同梱するか（§7 C）はこの段の前に決める。**
+   TextMate）・診断・`--set music=`。**同梱するか（§7 C）はこの段の前に決める**→ 第862 ユーザー決定「同梱」。
+   - ✅ **同梱と読み手（第862・`f9eccda23`）**: Bravura 1.482・Petaluma 1.065・Leland 0.80 を `LilySharp.Core/Fonts/` に
+     （OTF・`<name>_metadata.json`・WOFF2＝Leland は無し・OFL 全文と FONTLOG・`THIRD-PARTY-NOTICES.md`）。`SmuflMetadata`（JSON → 表）・
+     `SmuflMusicFont : MusicFont`（1 設計・`SizedAt` は magstep・箱は metadata（2 つの箱を兼ねる）・送りは metadata か hmtx・
+     付け点は `stemUpSE`／`stemDownNW`・輪郭は同じ HarfBuzz loader・**骨格 skyline は輪郭から実行時に walk**＝
+     `TextOutlineSkylines.FlattenPathHorizontal`（path を転置して同じ walk。網: Emmentaler-20 の ♯ の焼いた対と全高で 5 桁一致・
+     G 記号の quad は 1e-6 で一致＝生成器と実行時は 1 つの walk））・`MusicFonts.Find(name, out tried)`（§1 の解決順＝
+     Emmentaler → 同梱 → SMuFL 仕様の置き場・試した場所を全部返す）。**読み手はまだ Emmentaler を向いたまま**（`MusicFont.Current`）＝絵は不変。
+   - **残り**: ⒜ 文法 `fonts { music "…" }`（GRAMMAR §2.4・SYNTAX_REFERENCE・LSP 補完・TextMate）と診断（見つからない→警告して Emmentaler・
+     試した場所を列挙／`step`・`size` 等の拒否）・`--set music=`／⒝ layout と render を `MusicFont.Use(font)` で包む（1 譜 1 フォント・
+     score ごとの `fonts` 参照）／⒞ 字や kind 文字列を鍵にした cache にフォントを足す（`TextOutlineSkylines`・`DynamicOutline`・
+     `AccidentalPlacement.t_glyphPairs`・`SkylineBuilder.GlyphOutlineCache`）／⒟ グリフ単位の fallback（`Has` が false → Emmentaler で描き
+     名前ごとに 1 回警告＝Leland は figbass・styled head・heel/toe・thumb の 25 字が無い）／⒠ GPOS の kern（§3 #7）／⒡ `engravingDefaults`
+     （線の太さ＝LP の倍数の依存を保って換算・`layout { }` が優先）／⒢ brace の拡縮（§3 #10・出力の段と一緒に）。
 3. **出力**: 埋め込み・`boxes.json`・双子の警告。
 4. **仕上げ**: Bravura・Leland・Petaluma で本を描いて目で見る・§3 の代わりの経路の値付け。
 
-## 7. 未決（ユーザー判断）
+## 7. 未決（ユーザー判断）→ 第862（2026-10-08）で決まった
 
-- **A. パス指定**（`music "Petaluma" file "fonts/Petaluma.otf"`）: 推奨は「出力の段で入れる」。
-- **B. `engravingDefaults` を無視するスイッチ**: 推奨は「作らない」（LP の太さは `layout` に書けば足りる）。
-- **C. 同梱**（Bravura・Leland・Petaluma はどれも OFL）: 文法は変わらない＝取り込みの段までに決める。
+- **A. パス指定**（`music "Petaluma" file "fonts/Petaluma.otf"`）: 推奨「出力の段で入れる」のまま（異論なし）。
+- **B. `engravingDefaults` を無視するスイッチ**: 推奨「作らない」のまま（LP の太さは `layout` に書けば足りる・異論なし）。
+- **C. 同梱**: **ユーザー決定「1＝同梱する。ライセンスに問題がないなら」**。3 書体とも SIL OFL 1.1（配布元の `OFL.txt`／`LICENSE.txt`・
+  GitHub の spdx）＝改名しない限り同梱・埋め込みとも可。同梱した（§6 ②）。

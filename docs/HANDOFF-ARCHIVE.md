@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第860セッションの経緯
+
+### 1.1 第860セッション（2026-10-08・YT-DELL2）
+
+新しい会話。`-Start p860`（HEAD `8c5bce8c9`）＝full **11418 / 0 / 2 / 11420**。§7 3.5 で第858 を ARCHIVE へ。
+- **閉じた（`b1c4e0b4c`）§6 ① ⑶＝文字をキーにした表**: `GlyphSkylinesGenerated` の表（臨時記号・括弧の左右の対＝設計ごと／音部記号・強弱の字・トリルの波・ペダルの上下の quad＝20 だけ）は `MusicFontDesign.HorizontalSkylinePair`／`VerticalSkylineQuads`、GPOS の kern 2 表は `MusicFont.Kern`、輪郭の walk は `MusicFont.OutlinePath`。読み手: `AccidentalPlacement`（箱と同じ設計から・括弧も）・`SkylineBuilder`（`ClefGlyph` は `MusicGlyph`・臨時記号／旗／休符の種は字でなくグリフを渡す）・`DynamicOutline`・`MeterGlyphRun.DigitKern`（`+` は数字でない＝0）・`PedalEngraver`（`PedalGlyphPlacement` は `Glyph` と `Codepoint`）・`TrillWaveOutline`・`OutsideStaffStacker`（`MetronomeMarkGeometry.Head`）・`ArticulationEngraver`（層が運ぶ字は `MusicFont.GlyphOf(char)` で引き戻す＝dots.dot は表の先の行）。`TextOutlineSkylines` の cache の鍵は `MusicGlyph`（フォントは取り込みで）。網 `EveryBakedSkylineAndKern_IsReachedByAGlyph`（8 設計・参照同一・kern 全対）。掃き 998 冊 1199 枚・差 0（Lab `p860/sweep/`）。census: 住所と `ClefGlyph` の腕の字面だけ（37 行・増減 0）。
+- **閉じた（`3a930a7d4`）⑷＝面の選択**: `MusicFont.DefaultDesign`（`DesignAt(0).Rounded`＝`EmmentalerFaces.DefaultDesign` と同じ規則）・`FaceFamily`／`FaceFile`／`WebFaceFile`／`TryParseFamily`。SVG（`.music`・`font-family` と fallback・`@font-face` 2 種）・PDF（context と resolver＝⚠️ global なので問われたスレッドの `Current` に答える＝取り込みで全フォントの面を教える）・PNG（描画・ink・loader）。brace の面は ⑸ へ。掃き 1199 枚・差 0・full 11421 / 0 / 2 / 11423。
+- **閉じた（`ad1cba936`）⑸＝brace の段**: `MusicFont.Brace(length)` → `SystemBrace(Codepoint, Width)`。Emmentaler は `BraceLadder` の rung（U+E000+N は包みの中へ）。読み手は描画と楽器名の錨の 2 つ。網 `TheBrace_IsTheLaddersRung`。掃き 1199 枚・差 0・full **11425 / 0 / 2 / 11427**。
+- 道具: 掃きは `Start-Process pwsh -File sweep-all.ps1 … -RedirectStandardOutput` で隠し窓に逃がし、同じ console で full を並走させた（head は `exe-head` に写してから）＝1 回 4〜5 分。掃きの log は ASCII なので codepage の罠（CLAUDE-OPERATIONS §4）は踏まない。
+- **`-End p860 -DiffBase 8c5bce8c9`（門は全部 OK）＝full **11425 / 0 / 2 / 11427**（+7＝網 3 本 ＋ theory 4 例）。HANDOFF 444,138 B（残り 5,862）・§1 現在便 9,180 字。Core '+' 368 行／LILYPOND-REF 1（`Brace` の get-y-from-brace）／LILYSHARP-OWN 0・足した数値 0（U+E000 は Connectors から包みへ移動）。未 push 27（push はユーザー）。**次は §1.0 の第857 段落＝§3 #16・#17 の手書き定数を拡張欄へ、または §6 ② の前のユーザー判断（§7 C 同梱）**。
+
 ## 以下は第859セッションの経緯
 
 ### 1.1 第859セッション（2026-10-08・YT-DELL2）
