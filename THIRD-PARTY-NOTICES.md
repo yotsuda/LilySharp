@@ -51,6 +51,24 @@ advance measured, so Lily# reserves and draws the same metrics LilyPond
 does without taking on C059's AGPL terms. Heros stands in for Nimbus Sans
 on the same footing.
 
+### Bravura, Petaluma and Leland (SMuFL music fonts)
+
+Bravura: Copyright © 2026 Steinberg Media Technologies GmbH, with Reserved
+Font Name "Bravura" (https://github.com/steinbergmedia/bravura — the SMuFL
+reference font). Petaluma: Copyright © 2018 Steinberg Media Technologies GmbH,
+with Reserved Font Name "Petaluma" (https://github.com/steinbergmedia/petaluma).
+Leland: Copyright (c) 2025 MuseScore BVBA, with Reserved Font Name "Leland"
+(https://github.com/MuseScoreFonts/Leland).
+
+All three are licensed under the SIL Open Font License, Version 1.1. The full
+text ships next to each font as `Fonts/Bravura-LICENSE.txt`,
+`Fonts/Petaluma-LICENSE.txt` and `Fonts/Leland-LICENSE.txt`, with the FONTLOG
+each project publishes. They are redistributed unmodified, under their
+reserved names, together with their SMuFL metadata (`*_metadata.json`), which
+is what `fonts { music "…" }` selects a score's music font from. The OFL
+permits bundling and embedding in documents and forbids selling the fonts by
+themselves, which Lily# does not do.
+
 ## .NET libraries (bundled as DLLs)
 
 Present in the `lysc` archives, in the language server the VS Code extension

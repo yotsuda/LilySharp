@@ -347,6 +347,45 @@ internal static class TextOutlineSkylines
     }
 
     /// <summary>
+    /// The same walk on the OTHER horizon: the (LEFT, RIGHT) horizontal skyline quads of a
+    /// glyph outline — what the accidental placement packs by
+    /// (LILYPOND-REF: lily/accidental.cc:48 horizontal_skylines over skylines_from_stencil) — in
+    /// the sign-framed form <see cref="HorizontalSkyline.FromSignedBuildings"/> takes (the
+    /// horizon is Y; sky −1 LEFT, +1 RIGHT), at <paramref name="k"/> staff spaces per path unit.
+    /// </summary>
+    /// <remarks>
+    /// The path is transposed, (x, y) → (−y, −x) in Skia's Y-down frame, so that
+    /// <see cref="FlattenPath"/>'s own Y-up transform lands the horizon on y-up and the value
+    /// on x; the winding is read off the transposed path, so its UP list is the larger-value
+    /// side — the RIGHT. A transposition keeps every length, so the flattening count is
+    /// LilyPond's. Checked against the baked Emmentaler pairs (<c>SmuflMusicFontTests</c>):
+    /// every building of the 20's sharp to the six decimals the generator writes.
+    /// </remarks>
+    internal static (double[] Left, double[] Right) FlattenPathHorizontal(SKPath path, double k)
+    {
+        using var transposed = new SKPath();
+        var pts = new SKPoint[4];
+        var iter = path.CreateRawIterator();
+        SKPathVerb verb;
+        static SKPoint Tr(SKPoint p) => new(-p.Y, -p.X);
+        while ((verb = iter.Next(pts)) != SKPathVerb.Done)
+        {
+            switch (verb)
+            {
+                case SKPathVerb.Move: transposed.MoveTo(Tr(pts[0])); break;
+                case SKPathVerb.Line: transposed.LineTo(Tr(pts[1])); break;
+                // FlattenPath reads a conic as its quad (the weight is dropped there too).
+                case SKPathVerb.Quad:
+                case SKPathVerb.Conic: transposed.QuadTo(Tr(pts[1]), Tr(pts[2])); break;
+                case SKPathVerb.Cubic: transposed.CubicTo(Tr(pts[1]), Tr(pts[2]), Tr(pts[3])); break;
+                case SKPathVerb.Close: transposed.Close(); break;
+            }
+        }
+        var (up, down) = FlattenPath(transposed, k);
+        return (down, up);
+    }
+
+    /// <summary>
     /// LILYPOND-REF: lily/freetype.cc:128-150 <c>Path_interpreter::curve3to</c> —
     /// <c>max(2, int(|end-start|/0.2))</c> steps, intermediate points as contour
     /// segments, the FINAL sub-segment as a both-sides <c>add_segment</c> (:147).

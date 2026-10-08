@@ -833,17 +833,23 @@ public static class TextFontMetrics
     // Linux through Skia, and the identical -782 on both through HarfBuzz).
     // ⚠️ A Lazy for the same reason ShapingFonts is one — the factory takes native ownership,
     // and a GetOrAdd factory may run on several threads for one cold key. See that field.
-    private static readonly ConcurrentDictionary<int,
-        Lazy<(HarfBuzzSharp.Font Font, uint UnitsPerEm)?>> MusicFaces = new();
+    // Keyed by the FILE: a SMuFL font's outlines come through the same loader
+    // (SmuflMusicFont.OutlinePath), one hb_font_t per font program.
+    private static readonly ConcurrentDictionary<string,
+        Lazy<(HarfBuzzSharp.Font Font, uint UnitsPerEm)?>> MusicFaces = new(StringComparer.OrdinalIgnoreCase);
 
-    private static (HarfBuzzSharp.Font Font, uint UnitsPerEm)? MusicFace(int design) =>
-        MusicFaces.GetOrAdd(design, static d =>
+    private static (HarfBuzzSharp.Font Font, uint UnitsPerEm)? MusicFace(int design)
+        => FontLocator.ResolveFile(EmmentalerFaces.OtfFile(design)) is { } file ? MusicFaceOf(file) : null;
+
+    /// <summary>The music font program at <paramref name="file"/> (an absolute path), loaded
+    /// once; null when the file cannot be read.</summary>
+    private static (HarfBuzzSharp.Font Font, uint UnitsPerEm)? MusicFaceOf(string file) =>
+        MusicFaces.GetOrAdd(file, static f =>
             new Lazy<(HarfBuzzSharp.Font, uint)?>(() =>
             {
-                var file = FontLocator.ResolveFile(EmmentalerFaces.OtfFile(d));
-                if (file == null)
+                if (!System.IO.File.Exists(f))
                     return null;
-                var blob = HarfBuzzSharp.Blob.FromFile(file);
+                var blob = HarfBuzzSharp.Blob.FromFile(f);
                 blob.MakeImmutable();
                 var face = new HarfBuzzSharp.Face(blob, 0);
                 uint upem = (uint)face.UnitsPerEm;
@@ -865,8 +871,15 @@ public static class TextFontMetrics
     /// same check it always was.
     /// </remarks>
     internal static SKPath? MusicGlyphPath(char glyph, int design)
+        => MusicGlyphPathOf(MusicFace(design), glyph);
+
+    /// <summary>The same outline out of the music font FILE at <paramref name="file"/> — any
+    /// font program, a SMuFL one included; null when the file cannot be read.</summary>
+    internal static SKPath? MusicGlyphPathFromFile(string file, char glyph)
+        => MusicGlyphPathOf(MusicFaceOf(file), glyph);
+
+    private static SKPath? MusicGlyphPathOf((HarfBuzzSharp.Font Font, uint UnitsPerEm)? face, char glyph)
     {
-        var face = MusicFace(design);
         if (face == null)
             return null;
         var (font, upem) = face.Value;
@@ -877,6 +890,23 @@ public static class TextFontMetrics
             HarfBuzzOutline.Append(path, font.Handle, gid, 0f, 1000f / upem);
         }
         return path;
+    }
+
+    /// <summary>The hmtx advance of <paramref name="glyph"/> in the music font file at
+    /// <paramref name="file"/>, in EMS (advance over unitsPerEm) — what a SMuFL font without
+    /// <c>glyphAdvanceWidths</c> in its metadata feeds the engine from; null when the file
+    /// cannot be read.</summary>
+    internal static double? MusicGlyphAdvanceFromFile(string file, char glyph)
+    {
+        var face = MusicFaceOf(file);
+        if (face == null)
+            return null;
+        var (font, upem) = face.Value;
+        lock (font)
+        {
+            font.TryGetNominalGlyph(glyph, out uint gid);
+            return font.GetHorizontalGlyphAdvance(gid) / (double)upem;
+        }
     }
 
     /// <summary>
