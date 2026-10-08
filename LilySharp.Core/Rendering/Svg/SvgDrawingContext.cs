@@ -16,6 +16,7 @@
 
 using System.Globalization;
 using System.Text;
+using LilySharp.Core.Svg.Layout;
 
 namespace LilySharp.Core.Rendering.Svg;
 
@@ -42,7 +43,7 @@ internal sealed class SvgDrawingContext : IDrawingContext
     private readonly HashSet<int>? _usedDesigns;
     private int? _currentSourcePosition;
     private IReadOnlyList<int>? _currentAliases;
-    private int _musicDesign = EmmentalerFaces.DefaultDesign;
+    private int _musicDesign = MusicFont.Current.DefaultDesign;
 
     /// <summary>Capture hook for <see cref="SvgSystemFragmentCache"/>: while set, every
     /// source value this context EMITS (each data-pos, then each data-alt member, in
@@ -286,9 +287,10 @@ internal sealed class SvgDrawingContext : IDrawingContext
         // (the VS Code preview injects Emmentaler itself and omits @font-face entirely) then
         // draws the glyph from the default design instead of showing tofu. It is the wrong
         // OUTLINE by ~0.5% and the right glyph, which is the better of the two failures.
-        if (_musicDesign != EmmentalerFaces.DefaultDesign)
-            _sb.Append(" font-family=\"").Append(EmmentalerFaces.Family(_musicDesign))
-               .Append(", Emmentaler, serif\"");
+        var font = MusicFont.Current;
+        if (_musicDesign != font.DefaultDesign)
+            _sb.Append(" font-family=\"").Append(font.FaceFamily(_musicDesign))
+               .Append(", ").Append(font.FaceFamily(font.DefaultDesign)).Append(", serif\"");
     }
 
     /// <summary>

@@ -18,6 +18,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using LilySharp.Core.Svg.Layout;
 
 namespace LilySharp.Core.Rendering.Svg;
 
@@ -359,7 +360,10 @@ internal sealed class SvgDocumentContext : IDocumentContext
         var fontFaceRule = GetFontFaceRule();
         if (!string.IsNullOrEmpty(fontFaceRule))
             sb.AppendLine("  " + fontFaceRule);
-        sb.AppendLine("  .music { font-family: 'Emmentaler', serif; }");
+        // The class every music glyph carries names the score's own design; a glyph of another
+        // design overrides it with its own font-family (SvgDrawingContext.AppendMusicFace).
+        var music = MusicFont.Current;
+        sb.AppendLine($"  .music {{ font-family: '{music.FaceFamily(music.DefaultDesign)}', serif; }}");
         sb.AppendLine("</style>");
         WritePageBackground(sb, widthSpaces, heightSpaces);
     }
@@ -404,26 +408,29 @@ internal sealed class SvgDocumentContext : IDocumentContext
             // brace face the brace glyph renders blank in any viewer that lacks
             // the font installed (the bug that hid it in the VS Code preview).
             var faces = new StringBuilder();
-            AppendEmbeddedFontFace(faces, "Emmentaler",
-                EmmentalerFaces.Woff2File(EmmentalerFaces.DefaultDesign), "woff2");
+            var music = MusicFont.Current;
+            AppendEmbeddedFontFace(faces, music.FaceFamily(music.DefaultDesign),
+                music.WebFaceFile(music.DefaultDesign), "woff2");
             AppendEmbeddedFontFace(faces, "Emmentaler-Brace", "emmentaler-brace.woff", "woff");
             // …plus one face per OTHER design this score drew from. Emmentaler is optically
             // sized, so a grace is the 14 design's own outlines, not the 20's scaled down —
             // without its face the viewer would draw the small glyphs from the 20 and stop
             // matching the boxes the layout reserved (GlyphMetrics.AtFontSize).
             // Sorted so the same score always produces the same bytes.
-            foreach (var design in _usedDesigns.Where(d => d != EmmentalerFaces.DefaultDesign)
+            foreach (var design in _usedDesigns.Where(d => d != music.DefaultDesign)
                                                .OrderBy(d => d))
-                AppendEmbeddedFontFace(faces, EmmentalerFaces.Family(design),
-                    EmmentalerFaces.Woff2File(design), "woff2");
+                AppendEmbeddedFontFace(faces, music.FaceFamily(design),
+                    music.WebFaceFile(design), "woff2");
             if (faces.Length > 0)
                 return faces.ToString().TrimEnd();
         }
-        var local = new StringBuilder("@font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }");
-        foreach (var design in _usedDesigns.Where(d => d != EmmentalerFaces.DefaultDesign)
+        var font = MusicFont.Current;
+        string family0 = font.FaceFamily(font.DefaultDesign);
+        var local = new StringBuilder($"@font-face {{ font-family: '{family0}'; src: local('{family0}'); }}");
+        foreach (var design in _usedDesigns.Where(d => d != font.DefaultDesign)
                                            .OrderBy(d => d))
         {
-            var family = EmmentalerFaces.Family(design);
+            var family = font.FaceFamily(design);
             local.AppendLine();
             local.Append(CultureInfo.InvariantCulture,
                 $"  @font-face {{ font-family: '{family}'; src: local('{family}'); }}");

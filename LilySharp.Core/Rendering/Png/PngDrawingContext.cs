@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using LilySharp.Core.Svg.Layout;
 using SkiaSharp;
 
 namespace LilySharp.Core.Rendering.Png;
@@ -31,7 +32,7 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
 
     /// <summary>The Emmentaler design music glyphs are drawn from — see
     /// <see cref="IDrawingContext.MusicFace"/>.</summary>
-    private int _musicDesign = EmmentalerFaces.DefaultDesign;
+    private int _musicDesign = MusicFont.Current.DefaultDesign;
 
     /// <summary>Which face each text role is drawn in — the score's <c>font</c>
     /// directive, resolved. The document hands its own down at <c>BeginPage</c>.</summary>
@@ -198,7 +199,7 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
     {
         // The FACE follows the music-face scope; the SIZE does not change with it — every
         // Emmentaler design's em is four of its own staff spaces (IDrawingContext.MusicFace).
-        var font = _fonts.GetFont(EmmentalerFaces.Family(_musicDesign), T(fontSize), FontStyle.Regular);
+        var font = _fonts.GetFont(MusicFont.Current.FaceFamily(_musicDesign), T(fontSize), FontStyle.Regular);
         using var paint = new SKPaint
         {
             Color = ToSKColor(fill),
@@ -282,7 +283,7 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
     /// the face <see cref="DrawGlyph"/> draws it in. For <c>lysc boxes</c>.</summary>
     internal SKRect MeasureGlyphInk(char glyph, double x, double y, double fontSize)
     {
-        var font = _fonts.GetFont(EmmentalerFaces.Family(_musicDesign), T(fontSize), FontStyle.Regular);
+        var font = _fonts.GetFont(MusicFont.Current.FaceFamily(_musicDesign), T(fontSize), FontStyle.Regular);
         var ids = GlyphIds(font, glyph.ToString());
         if (ids.Length == 0)
             return SKRect.Empty;
@@ -573,11 +574,12 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
 
         private SKTypeface? TryLoadEmmentaler(string family)
         {
-            // Every Emmentaler DESIGN is its own file — the font is optically sized, so a
-            // grace's 14 is not the 20 scaled (see EmmentalerFaces).
+            // Every music-font DESIGN is its own file — Emmentaler is optically sized, so a
+            // grace's 14 is not the 20 scaled (MusicFont.FaceFile).
+            var music = MusicFont.Current;
             string? fileName =
-                EmmentalerFaces.TryParseFamily(family, out int design)
-                    ? EmmentalerFaces.OtfFile(design)
+                music.TryParseFamily(family, out int design)
+                    ? music.FaceFile(design)
                     : family.ToLowerInvariant() switch
                     {
                         "emmentaler-brace" => "emmentaler-brace.otf",

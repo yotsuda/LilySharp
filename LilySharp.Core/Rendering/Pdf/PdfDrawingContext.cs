@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Concurrent;
+using LilySharp.Core.Svg.Layout;
 using PdfSharpCore.Drawing;
 using SkiaSharp;
 
@@ -36,7 +37,7 @@ internal sealed class PdfDrawingContext : IDrawingContext
 
     /// <summary>The Emmentaler design music glyphs are drawn from — see
     /// <see cref="IDrawingContext.MusicFace"/>.</summary>
-    private int _musicDesign = EmmentalerFaces.DefaultDesign;
+    private int _musicDesign = MusicFont.Current.DefaultDesign;
 
     /// <summary>Which face each text role is drawn in — the score's <c>font</c>
     /// directive, resolved. The document hands its own down at <c>BeginPage</c>.</summary>
@@ -210,7 +211,7 @@ internal sealed class PdfDrawingContext : IDrawingContext
     {
         // The FACE follows the music-face scope; the SIZE does not change with it — every
         // Emmentaler design's em is four of its own staff spaces (IDrawingContext.MusicFace).
-        var font = GetFont(EmmentalerFaces.Family(_musicDesign), T(fontSize));
+        var font = GetFont(MusicFont.Current.FaceFamily(_musicDesign), T(fontSize));
         // SVG <text y="..."> places the baseline at y; PdfSharpCore's
         // XStringFormats.BaseLineLeft matches that, so we draw at (x, y).
         _gfx.DrawString(glyph.ToString(), font,

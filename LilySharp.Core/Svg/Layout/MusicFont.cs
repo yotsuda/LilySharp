@@ -151,6 +151,34 @@ internal abstract class MusicFont
     /// caller's <c>IsEmpty</c> check.
     /// </summary>
     public abstract SkiaSharp.SKPath? OutlinePath(MusicGlyph glyph, int rounded);
+
+    // ---- the faces: which file and which family name draw a design (docs/smufl-design.md §5) ----
+
+    /// <summary>
+    /// The design a glyph at the score's own size is drawn from — the one the bare family
+    /// name (<see cref="FaceFamily"/>) means.
+    /// </summary>
+    /// <remarks>⚠️ It is what every existing SVG, PDF and PNG names, so a score with no small
+    /// glyph in it is byte-identical to what it was before the other designs existed
+    /// (<see cref="Rendering.EmmentalerFaces.DefaultDesign"/>, asked of the same rule).</remarks>
+    public int DefaultDesign => DesignAt(0).Rounded;
+
+    /// <summary>The font family a music glyph of design <paramref name="rounded"/> is drawn
+    /// with — what an SVG writes in <c>font-family</c>, and what the PDF's resolver and the
+    /// PNG's loader look a face up by.</summary>
+    public abstract string FaceFamily(int rounded);
+
+    /// <summary>The font file (OTF) of design <paramref name="rounded"/> — what the PDF embeds,
+    /// the PNG rasterises from and the outline walk reads.</summary>
+    public abstract string FaceFile(int rounded);
+
+    /// <summary>The web font (WOFF2) of design <paramref name="rounded"/> — what the SVG embeds
+    /// as a base64 <c>@font-face</c>.</summary>
+    public abstract string WebFaceFile(int rounded);
+
+    /// <summary>The design <paramref name="family"/> names, when it is one of this font's faces
+    /// (<see cref="FaceFamily"/>'s inverse); false for any other family.</summary>
+    public abstract bool TryParseFamily(string family, out int rounded);
 }
 
 /// <summary>One design of a <see cref="MusicFont"/> — the table its dimensions are read from.</summary>
@@ -299,6 +327,21 @@ internal sealed class EmmentalerMusicFont : MusicFont
     /// loader (<see cref="Rendering.TextFontMetrics.MusicGlyphPath"/>).</remarks>
     public override SkiaSharp.SKPath? OutlinePath(MusicGlyph glyph, int rounded)
         => Rendering.TextFontMetrics.MusicGlyphPath(Codepoint(glyph), rounded);
+
+    // The bundled designs as the three backends name them (Rendering.EmmentalerFaces).
+
+    /// <inheritdoc/>
+    public override string FaceFamily(int rounded) => Rendering.EmmentalerFaces.Family(rounded);
+
+    /// <inheritdoc/>
+    public override string FaceFile(int rounded) => Rendering.EmmentalerFaces.OtfFile(rounded);
+
+    /// <inheritdoc/>
+    public override string WebFaceFile(int rounded) => Rendering.EmmentalerFaces.Woff2File(rounded);
+
+    /// <inheritdoc/>
+    public override bool TryParseFamily(string family, out int rounded)
+        => Rendering.EmmentalerFaces.TryParseFamily(family, out rounded);
 
     /// <inheritdoc/>
     /// <remarks>LILYPOND-REF: lily/font-select.cc:115-186 select_font — ported as

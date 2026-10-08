@@ -288,4 +288,24 @@ public class MusicFontTests
         Assert.Equal(MusicGlyph.AugmentationDot, font.GlyphOf(font.Codepoint(MusicGlyph.RepeatDot)));
         Assert.Null(font.GlyphOf('Q'));
     }
+
+    /// <summary>The faces the backends draw from are the bundled Emmentaler files, named as
+    /// they always were (§6 ① ⑷): the bare family for the score's own design.</summary>
+    [Fact]
+    public void TheFaces_AreTheBundledEmmentalerFiles()
+    {
+        var font = EmmentalerMusicFont.Instance;
+        Assert.Equal(EmmentalerFaces.DefaultDesign, font.DefaultDesign);
+        Assert.Equal("Emmentaler", font.FaceFamily(font.DefaultDesign));
+        foreach (var (r, _) in EmmentalerDesignSize.Designs)
+        {
+            Assert.Equal(EmmentalerFaces.Family(r), font.FaceFamily(r));
+            Assert.Equal(EmmentalerFaces.OtfFile(r), font.FaceFile(r));
+            Assert.Equal(EmmentalerFaces.Woff2File(r), font.WebFaceFile(r));
+            Assert.True(font.TryParseFamily(font.FaceFamily(r), out int back));
+            Assert.Equal(r, back);
+        }
+        Assert.False(font.TryParseFamily("Emmentaler-Brace", out _));
+        Assert.False(font.TryParseFamily("serif", out _));
+    }
 }

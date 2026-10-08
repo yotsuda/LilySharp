@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Concurrent;
+using LilySharp.Core.Svg.Layout;
 using PdfSharpCore.Fonts;
 
 namespace LilySharp.Core.Rendering.Pdf;
@@ -219,18 +220,22 @@ internal sealed class EmmentalerFontResolver : IFontResolver
             _ => "Heros#",
         });
 
-    public string DefaultFontName => "Emmentaler";
+    public string DefaultFontName => MusicFont.Current.FaceFamily(MusicFont.Current.DefaultDesign);
 
     public FontResolverInfo? ResolveTypeface(string familyName, bool isBold, bool isItalic)
     {
         var name = familyName.ToLowerInvariant();
-        // Every Emmentaler DESIGN is its own face — the font is optically sized, so a grace's
-        // 14 is not the 20 scaled (see EmmentalerFaces). The default design keeps the bare
+        // Every music-font DESIGN is its own face — Emmentaler is optically sized, so a grace's
+        // 14 is not the 20 scaled (MusicFont.FaceFamily). The default design keeps the bare
         // "Emmentaler#" face name so existing PDFs are unchanged.
-        if (EmmentalerFaces.TryParseFamily(name, out int design))
-            return new FontResolverInfo(design == EmmentalerFaces.DefaultDesign
+        // ⚠️ THE RESOLVER IS GLOBAL (PdfSharpCore asks it from wherever it builds the document),
+        // so it answers for MusicFont.Current on THAT thread — Emmentaler, until the import stage
+        // teaches it every reachable font's faces.
+        var music = MusicFont.Current;
+        if (music.TryParseFamily(name, out int design))
+            return new FontResolverInfo(design == music.DefaultDesign
                 ? "Emmentaler#"
-                : EmmentalerFaces.Family(design) + "#");
+                : music.FaceFamily(design) + "#");
         if (name == "emmentaler-brace")
             return new FontResolverInfo("EmmentalerBrace#");
         // SharedRenderer asks for the CSS generics for titles/lyrics/dynamics/chord
@@ -276,19 +281,20 @@ internal sealed class EmmentalerFontResolver : IFontResolver
 
         // "Emmentaler-14#" and friends — the face name is the family plus the '#' this
         // resolver marks its own faces with, so one bundled OTF answers per design.
+        var music = MusicFont.Current;
         if (faceName.EndsWith("#", StringComparison.Ordinal)
-            && EmmentalerFaces.TryParseFamily(faceName[..^1], out int design)
-            && design != EmmentalerFaces.DefaultDesign)
+            && music.TryParseFamily(faceName[..^1], out int design)
+            && design != music.DefaultDesign)
         {
-            var designPath = ResolveFontPath(EmmentalerFaces.OtfFile(design));
+            var designPath = ResolveFontPath(music.FaceFile(design));
             if (designPath != null) return File.ReadAllBytes(designPath);
             throw new FileNotFoundException(
-                $"Font file not found: {EmmentalerFaces.OtfFile(design)}");
+                $"Font file not found: {music.FaceFile(design)}");
         }
 
         var fileName = faceName switch
         {
-            "Emmentaler#" => EmmentalerFaces.OtfFile(EmmentalerFaces.DefaultDesign),
+            "Emmentaler#" => music.FaceFile(music.DefaultDesign),
             "EmmentalerBrace#" => "emmentaler-brace.otf",
             "Schola#" => "texgyreschola-regular.otf",
             "ScholaBold#" => "texgyreschola-bold.otf",
