@@ -110,6 +110,10 @@ internal sealed class YFlipDrawingContext : IDrawingContext
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
         => _inner.DrawGlyph(glyph, x, F(y), fontSize, fill);
 
+    // The turn is stated as seen on the page, so it crosses the flip unchanged.
+    public void DrawGlyphTurned(char glyph, double x, double y, double fontSize, Color? fill = null)
+        => _inner.DrawGlyphTurned(glyph, x, F(y), fontSize, fill);
+
     public void DrawNotehead(char glyph, double x, double y, double fontSize, Color? fill,
         double inkWidth, double inkHeight)
         // inkWidth/inkHeight are sizes (the hit rect stays centred on the anchor),

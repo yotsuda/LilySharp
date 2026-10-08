@@ -301,7 +301,7 @@ internal sealed class SvgDrawingContext : IDrawingContext
     /// font size, the fill, the source and the escaped glyph.
     /// </summary>
     private void MusicText(char glyph, double x, double y, double fontSize, Color? fill,
-        bool pointerEventsNone)
+        bool pointerEventsNone, bool turned = false)
     {
         var (code, face) = MusicFont.Current.Drawn(glyph, _musicDesign);
         glyph = code;
@@ -311,6 +311,16 @@ internal sealed class SvgDrawingContext : IDrawingContext
             _sb.Append(" pointer-events=\"none\"");
         Attr("x", x);
         Attr("y", y);
+        if (turned)
+        {
+            // A quarter turn counter-clockwise on the page about the anchor: SVG's Y runs
+            // down, so its positive angle turns clockwise.
+            _sb.Append(" transform=\"rotate(-90 ");
+            F2(x);
+            _sb.Append(' ');
+            F2(y);
+            _sb.Append(")\"");
+        }
         Attr("font-size", fontSize);
         AppendFill(fill);
         AppendSource();
@@ -321,6 +331,9 @@ internal sealed class SvgDrawingContext : IDrawingContext
 
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
         => MusicText(glyph, x, y, fontSize, fill, pointerEventsNone: false);
+
+    public void DrawGlyphTurned(char glyph, double x, double y, double fontSize, Color? fill = null)
+        => MusicText(glyph, x, y, fontSize, fill, pointerEventsNone: false, turned: true);
 
     public void DrawNotehead(char glyph, double x, double y, double fontSize,
         Color? fill, double inkWidth, double inkHeight)

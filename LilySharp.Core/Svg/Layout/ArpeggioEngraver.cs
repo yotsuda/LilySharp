@@ -94,7 +94,29 @@ internal static class ArpeggioEngraver
     ///   entry declares that callback as the grob's <c>X-extent</c>. So an arpeggio's width
     ///   is a font metric and never a number the engraver chooses.
     /// </remarks>
-    internal static double WiggleWidth => MusicFont.Current.FullSize.Box(MusicGlyph.WiggleArpeggiatoUp).Right - MusicFont.Current.FullSize.Box(MusicGlyph.WiggleArpeggiatoUp).Left;
+    internal static double WiggleWidth => WiggleBox.Right - WiggleBox.Left;
+
+    /// <summary>
+    /// The wiggle's box AS DRAWN, about its glyph origin: the font's box, or — for a font that
+    /// designs the wiggle lying down (<see cref="MusicFont.LiesDown"/>) — that box turned a
+    /// quarter counter-clockwise, which takes a glyph point (x, y) to (−y, x).
+    /// </summary>
+    /// <remarks>
+    /// Emmentaler's stands on its baseline from its origin (0 . 0.8) × (0 . 1.0), so its
+    /// <c>Left</c> and <c>Bottom</c> are 0 and the placement below reads exactly as LilyPond's
+    /// does; a SMuFL wiggle turned up has its origin at its RIGHT (the box's x is −top … −bottom)
+    /// and its step is the font's <c>repeatOffset</c> (SmuflMusicFont's design box).
+    /// </remarks>
+    internal static GlyphMetrics.BBox WiggleBox
+    {
+        get
+        {
+            var b = MusicFont.Current.FullSize.Box(MusicGlyph.WiggleArpeggiatoUp);
+            return MusicFont.Current.LiesDown(MusicGlyph.WiggleArpeggiatoUp)
+                ? new GlyphMetrics.BBox(-b.Top, b.Left, -b.Bottom, b.Right)
+                : b;
+        }
+    }
 
     /// <summary>
     /// One wiggle's height — the stacking STEP, since the stencil is whole copies laid edge
@@ -102,7 +124,7 @@ internal static class ArpeggioEngraver
     /// <c>height# := staff_space#</c>), which is why an arpeggio's drawn length always comes
     /// out a whole number of spaces.
     /// </summary>
-    internal static double WiggleHeight => MusicFont.Current.FullSize.Box(MusicGlyph.WiggleArpeggiatoUp).Top - MusicFont.Current.FullSize.Box(MusicGlyph.WiggleArpeggiatoUp).Bottom;
+    internal static double WiggleHeight => WiggleBox.Top - WiggleBox.Bottom;
 
     // LILYPOND-REF: lily/arpeggio.cc:161-181 add_at_edge (Arpeggio::print) — the epsilon the
     // stacking loop tests with, which keeps a chord reaching the centre line from picking up
@@ -130,7 +152,7 @@ internal static class ArpeggioEngraver
     /// </para>
     /// </remarks>
     internal static double WiggleOriginX(double columnLeftX)
-        => columnLeftX - Padding - WiggleWidth;
+        => columnLeftX - Padding - WiggleWidth - WiggleBox.Left;
 
     /// <summary>
     /// How far the grob's ink reaches LEFT past the support it clears: the padding, then its

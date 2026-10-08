@@ -213,6 +213,16 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
         _canvas.DrawText(glyph.ToString(), X(x), X(y), font, paint);
     }
 
+    public void DrawGlyphTurned(char glyph, double x, double y, double fontSize, Color? fill = null)
+    {
+        // A quarter turn counter-clockwise on the page about the anchor: Skia's Y runs down,
+        // so its positive angle turns clockwise.
+        _canvas.Save();
+        _canvas.RotateDegrees(-90, X(x), X(y));
+        DrawGlyph(glyph, x, y, fontSize, fill);
+        _canvas.Restore();
+    }
+
     public void DrawText(string text, double x, double y, double fontSize,
         TextRole role, FontStyle style = FontStyle.Regular,
         TextAnchor anchor = TextAnchor.Start, Color? fill = null,
@@ -296,6 +306,18 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
         foreach (var id in ids)
             ink = Union(ink, Offset(OutlineBounds(font, id), X(x), X(y)));
         return ink;
+    }
+
+    /// <summary>The ink box of a <see cref="DrawGlyphTurned"/> call: <see cref="MeasureGlyphInk"/>'s
+    /// box turned about the anchor — a quarter counter-clockwise in Y-down pixels takes an
+    /// offset (dx, dy) to (dy, −dx).</summary>
+    internal SKRect MeasureGlyphInkTurned(char glyph, double x, double y, double fontSize)
+    {
+        var r = MeasureGlyphInk(glyph, x, y, fontSize);
+        if (r.IsEmpty)
+            return r;
+        float ax = X(x), ay = X(y);
+        return new SKRect(ax + (r.Top - ay), ay - (r.Right - ax), ax + (r.Bottom - ay), ay - (r.Left - ax));
     }
 
     /// <summary>A glyph's OUTLINE box at the origin — tight. ⚠️ Not GetGlyphWidths' bounds:

@@ -39,7 +39,7 @@
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **:350** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
 ### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
-- **:337** ⚠️ NOT PORTED — backend-blocked: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at
+- **:347** ⚠️ NOT PORTED — backend-blocked: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:271** fans twice. Not ported; no book in the corpus has one.
 - **:690** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
@@ -164,12 +164,12 @@
 - **:242** snapshot and no ledger point. What remains is the BEAM quanter's use below, which is a
 - **:817** would be fitting inside a formula that is not yet LilyPond's. No point observes it.
 ### `LilySharp.Core/Svg/Layout/ArpeggioEngraver.cs`
-- **:205** fixture carries one, so there is no ledger point and no twin — it is ported literally
+- **:227** fixture carries one, so there is no ledger point and no twin — it is ported literally
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **:374** hands the scorer the band it would have had without the digit. No book reaches that
-- **:2054** them as markup — so there is no LP geometry to port and no ledger point can observe
-- **:2207** see the difference, and no fixture and no ledger point reaches it.
-- **:3010** box per duration, which Lily# does not read for this purpose. No ledger point observes
+- **:2076** them as markup — so there is no LP geometry to port and no ledger point can observe
+- **:2229** see the difference, and no fixture and no ledger point reaches it.
+- **:3034** box per duration, which Lily# does not read for this purpose. No ledger point observes
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:111** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
@@ -304,7 +304,7 @@
 ### `LilySharp.Core/Rendering/Pdf/EmmentalerFontResolver.cs`
 - **:76** ⚠️ LILYSHARP-OWN: ONE NAME BOUND TO BOTH FAMILIES keeps the FIRST role's answer.
 ### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
-- **:249** LILYSHARP-OWN: the stand-in case has no LilyPond counterpart, and cannot have one.
+- **:259** LILYSHARP-OWN: the stand-in case has no LilyPond counterpart, and cannot have one.
 ### `LilySharp.Core/Rendering/Pdf/PdfReproducibility.cs`
 - **:41** LILYSHARP-OWN: the convention is reproducible-builds.org's, not LilyPond's (its PDFs
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
@@ -387,7 +387,7 @@
 - **:133** X offset of a bend-up's curve from the fret digit on a TAB staff. LILYSHARP-OWN (above).
 - **:135** X gap between a bend-up's curve and the notehead's right edge. LILYSHARP-OWN (above).
 - **:137** X offset for a curve that arrives FROM THE LEFT (scoop/plop). LILYSHARP-OWN (above).
-- **:2503** LILYSHARP-OWN (2026-09-28, defect seen on the owner's "Shape chords" book: the Cm diagram's
+- **:2525** LILYSHARP-OWN (2026-09-28, defect seen on the owner's "Shape chords" book: the Cm diagram's
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:128** LILYSHARP-OWN (owner's decision 2026-09-27: "the diagram stands below the name, between
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
@@ -479,8 +479,8 @@
 - **:3750** ⚠️ LILYSHARP-OWN, DECLARED: LilyPond's pure heights are BOXES — the begin-of-line
 - **:5125** LILYSHARP-OWN: the band is Lily#'s model of a line LilyPond walks as a loose line
 ### `LilySharp.Core/Svg/Layout/MusicFont.cs`
-- **:461** LILYSHARP-OWN: hand-tuned, and the only head width that is. ⚠️ NOT because LilyPond
-- **:474** LILYSHARP-OWN: the sM1 advance was never extracted either; 1.30 over the
+- **:471** LILYSHARP-OWN: hand-tuned, and the only head width that is. ⚠️ NOT because LilyPond
+- **:484** LILYSHARP-OWN: the sM1 advance was never extracted either; 1.30 over the
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:155** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **:181** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN

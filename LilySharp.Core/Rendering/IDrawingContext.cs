@@ -161,6 +161,22 @@ public interface IDrawingContext
         Color? fill = null);
 
     /// <summary>
+    /// Draws a music-font glyph TURNED a quarter turn counter-clockwise about its anchor, as
+    /// seen on the page (whichever Y frame the caller is in).
+    /// </summary>
+    /// <remarks>
+    /// For a glyph its font designs lying down: SMuFL's arpeggio wiggle
+    /// (<c>wiggleArpeggiatoUp</c>) runs left to right with its arrow at the right end and is
+    /// stood up to draw a vertical arpeggio (Emmentaler's <c>scripts.arpeggio</c> is designed
+    /// standing). The default draws it untouched, which only a recorder that wants "there is
+    /// ink here" may keep; every backend and decorator overrides it.
+    /// </remarks>
+    void DrawGlyphTurned(
+        char glyph, double x, double y, double fontSize,
+        Color? fill = null)
+        => DrawGlyph(glyph, x, y, fontSize, fill);
+
+    /// <summary>
     /// Draws a notehead glyph and, in interactive SVG output, a tight
     /// transparent click target the exact size of the notehead ink
     /// (<paramref name="inkWidth"/> × <paramref name="inkHeight"/> staff-spaces,

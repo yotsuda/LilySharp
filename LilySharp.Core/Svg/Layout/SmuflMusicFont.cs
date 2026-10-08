@@ -356,6 +356,12 @@ internal sealed class SmuflMusicFont : MusicFont
     }
 
     /// <inheritdoc/>
+    /// <remarks>The arpeggio wiggle: SMuFL designs <c>wiggleArpeggiatoUp</c> to run left to right
+    /// and to be turned 90° for a vertical arpeggio (the specification's "Multi-segment lines"
+    /// range).</remarks>
+    public override bool LiesDown(MusicGlyph glyph) => glyph == MusicGlyph.WiggleArpeggiatoUp && Has(glyph);
+
+    /// <inheritdoc/>
     /// <remarks>LilyPond applies this by the glyph's NAME to whatever font draws it, so a SMuFL
     /// font takes Emmentaler's answer (§3 #17's "輪郭から（要設計）" is the better one).</remarks>
     public override double StemSidePaddingFraction(MusicGlyph glyph)
@@ -402,7 +408,8 @@ internal sealed class SmuflMusicFont : MusicFont
 
         /// <inheritdoc/>
         /// <remarks>The metadata's box serves as BOTH boxes (a SMuFL font has no LILC box,
-        /// §3 #1); the advance is the metadata's, else the hmtx's; the anchors are
+        /// §3 #1) — but a glyph with a <c>repeatOffset</c> takes it as its design box's width
+        /// (§3 #11); the advance is the metadata's, else the hmtx's; the anchors are
         /// <c>stemUpSE</c> / <c>stemDownNW</c>. All at this design's magnification.</remarks>
         public override MusicGlyphMetrics Metrics(MusicGlyph glyph)
             => _metrics.GetOrAdd(glyph, static (g, self) => self.ReadMetrics(g), this);
@@ -423,12 +430,19 @@ internal sealed class SmuflMusicFont : MusicFont
                     ? ems * StaffSpacesPerEm * m
                     : null;
             (double X, double Y)? up = null, down = null;
+            BBox? designBox = box;
             if (meta.GlyphsWithAnchors.TryGetValue(name, out var anchors))
             {
                 if (anchors.TryGetValue("stemUpSE", out var u)) up = (u.X * m, u.Y * m);
                 if (anchors.TryGetValue("stemDownNW", out var d)) down = (d.X * m, d.Y * m);
+                // A glyph laid end to end (a wiggle) repeats every `repeatOffset`, which is what
+                // Emmentaler's LILC box says of its trill element and arpeggio (their width IS the
+                // step, LilyPond's add_at_edge): the design box is one repetition wide, the
+                // outline box keeps the curves, which overhang it.
+                if (box is { } bb && anchors.TryGetValue("repeatOffset", out var r) && r.X > 0)
+                    designBox = new BBox(bb.Left, bb.Bottom, bb.Left + r.X * m, bb.Top);
             }
-            return new MusicGlyphMetrics(box, box, advance, up, down);
+            return new MusicGlyphMetrics(designBox, box, advance, up, down);
         }
 
         /// <inheritdoc/>

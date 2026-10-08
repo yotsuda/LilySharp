@@ -1,0 +1,116 @@
+// Lily# - Music notation compiler
+// Copyright (C) 2025-2026 Yoshifumi Tsuda
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using LilySharp.Core.Rendering.Boxes;
+using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Syntax;
+using Xunit;
+
+namespace LilySharp.Tests;
+
+/// <summary>
+/// The glyphs a SMuFL font designs to a different convention from Emmentaler's are placed as
+/// LilyPond places Emmentaler's (docs/smufl-design.md §6 ④, Lab sessions/p869): a script is
+/// centred on its head by its BOX, wherever the font puts its origin; a wiggle repeats every
+/// <c>repeatOffset</c>; the arpeggio wiggle, which SMuFL lays down, is stood up.
+/// </summary>
+public class SmuflPlacementTests
+{
+    public static TheoryData<string> Fonts => new() { "Emmentaler", "Bravura", "Leland", "Petaluma" };
+
+    private static IReadOnlyList<BoxSymbol> Symbols(string font, string music)
+    {
+        var tree = SyntaxTree.Parse(
+            $"fonts {{ music \"{font}\" }}\n" +
+            "part m { clef treble }\n" +
+            $"section A {{ m {{ {music} }} }}\n" +
+            "form main { A }\n" +
+            "score main { staff m }\n");
+        return BoxesGenerator.GenerateDocument(tree, RenderSpecParser.FindFirst(tree))
+            .Pages.SelectMany(p => p.Symbols).ToList();
+    }
+
+    private static double CentreX(BoxSymbol s) => (s.Box[0] + s.Box[2]) / 2;
+
+    [Theory]
+    [MemberData(nameof(Fonts))]
+    public void AScript_IsCentredOnItsHead_InEveryFont(string font)
+    {
+        // Half notes, so no stem stands beside the head to pull a script off it.
+        foreach (string script in new[] { "fermata", "accent", "marcato", "turn", "prall", "mordent", "upBow" })
+        {
+            var symbols = Symbols(font, $"b'2@{script} r2");
+            var head = Assert.Single(symbols, s => s.Kind == "notehead");
+            var mark = Assert.Single(symbols, s => s.Kind is "fermata" or "articulation" or "ornament");
+            // The ink's centre is the box's: the metadata box is the outline's (bbox-audit,
+            // Lab sessions/p869) — and Emmentaler's scripts are drawn about their origin.
+            Assert.True(Math.Abs(CentreX(mark) - CentreX(head)) < 0.02,
+                $"{font} @{script}: centre {CentreX(mark):F3}, head {CentreX(head):F3}");
+            // …and it stands clear above the head, not beside it.
+            Assert.True(mark.Box[3] <= head.Box[1] + 1e-6, $"{font} @{script} reaches into the head");
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(Fonts))]
+    public void TheArpeggio_StandsBesideTheChord_AsOneUnbrokenWiggle(string font)
+    {
+        var symbols = Symbols(font, "<c' e' g' c''>2@arpeggio r2");
+        var wiggles = symbols.Where(s => s.Kind == "arpeggio").OrderBy(s => s.Box[1]).ToList();
+        Assert.True(wiggles.Count >= 2, $"{font}: {wiggles.Count} copies");
+        double headLeft = symbols.Where(s => s.Kind == "notehead").Min(s => s.Box[0]);
+        foreach (var w in wiggles)
+        {
+            // Upright: each copy taller than wide, and left of the heads.
+            Assert.True(w.Box[3] - w.Box[1] > w.Box[2] - w.Box[0], $"{font}: a copy lies on its side");
+            Assert.True(w.Box[2] < headLeft, $"{font}: the wiggle reaches into the chord");
+        }
+        // One column, and every copy meets the next (the outlines overhang the step).
+        Assert.True(wiggles.Max(w => w.Box[0]) - wiggles.Min(w => w.Box[0]) < 0.02, $"{font}: the copies are not stacked");
+        for (int i = 1; i < wiggles.Count; i++)
+            Assert.True(wiggles[i].Box[1] <= wiggles[i - 1].Box[3] + 1e-3, $"{font}: a gap between copies {i - 1} and {i}");
+    }
+
+    [Theory]
+    [InlineData("Bravura", 0.948)]
+    [InlineData("Leland", 0.88)]
+    [InlineData("Petaluma", 1.36)]
+    public void TheTrillLine_RepeatsEveryRepeatOffset(string font, double repeatOffset)
+    {
+        var symbols = Symbols(font, "c'4@startTrillSpan d' e' f' | g'1@stopTrillSpan");
+        var elements = symbols.Where(s => s.Kind == "ornament").OrderBy(s => s.Box[0]).Skip(1).ToList();  // past the "tr"
+        Assert.True(elements.Count >= 3, $"{font}: {elements.Count} elements");
+        for (int i = 1; i < elements.Count; i++)
+            Assert.Equal(repeatOffset, elements[i].Box[0] - elements[i - 1].Box[0], 2);
+    }
+
+    [Fact]
+    public void Emmentalers_Wiggles_KeepTheirLilcBoxes()
+    {
+        // The step is LILC's 1.0 / 0.8 and the arpeggio stands from its origin, so the turned
+        // reading is the identity there (the page does not move — the sweep's 0).
+        Assert.False(EmmentalerMusicFont.Instance.LiesDown(MusicGlyph.WiggleArpeggiatoUp));
+        var trill = EmmentalerMusicFont.Instance.FullSize.Box(MusicGlyph.WiggleTrill);
+        Assert.Equal(1.0, trill.Right - trill.Left, 9);
+        using (MusicFont.Use(EmmentalerMusicFont.Instance))
+            Assert.Equal(EmmentalerMusicFont.Instance.FullSize.Box(MusicGlyph.WiggleArpeggiatoUp), ArpeggioEngraver.WiggleBox);
+    }
+}

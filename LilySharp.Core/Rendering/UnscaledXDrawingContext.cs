@@ -90,6 +90,9 @@ internal sealed class UnscaledXDrawingContext : IDrawingContext
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
         => _inner.DrawGlyph(glyph, X(x), y, fontSize, fill);
 
+    public void DrawGlyphTurned(char glyph, double x, double y, double fontSize, Color? fill = null)
+        => _inner.DrawGlyphTurned(glyph, X(x), y, fontSize, fill);
+
     // Forwarded, NOT left to the interface defaults (DrawGlyph / nothing): the
     // interactive backend's tight notehead hit rect, the non-clickable accidental and
     // the barline hit rect must reach it from an ossia staff too — until session 395

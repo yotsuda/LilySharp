@@ -212,6 +212,16 @@ internal abstract class MusicFont
     /// scale to the span, which is where this record grows a size.</remarks>
     public abstract SystemBrace Brace(double length);
 
+    /// <summary>
+    /// Whether this font designs <paramref name="glyph"/> LYING DOWN, to be drawn turned a
+    /// quarter counter-clockwise (<c>IDrawingContext.DrawGlyphTurned</c>) — its box, outline and
+    /// repetition are then the turned glyph's X for Y.
+    /// </summary>
+    /// <remarks>SMuFL draws the arpeggio wiggle horizontally and stands it up to use it
+    /// (<c>wiggleArpeggiatoUp</c>, its arrow at the right end); Emmentaler's
+    /// <c>scripts.arpeggio</c> is designed standing, so it answers false for every glyph.</remarks>
+    public virtual bool LiesDown(MusicGlyph glyph) => false;
+
     // ---- constants LilyPond wrote for Emmentaler's shapes (docs/smufl-design.md §3 #17) ----
 
     /// <summary>

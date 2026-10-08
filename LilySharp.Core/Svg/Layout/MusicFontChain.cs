@@ -215,6 +215,9 @@ internal sealed class MusicFontChain : MusicFont
     public override SystemBrace Brace(double length) => First.Brace(length);
 
     /// <inheritdoc/>
+    public override bool LiesDown(MusicGlyph glyph) => OwnerOf(glyph).LiesDown(glyph);
+
+    /// <inheritdoc/>
     public override double StemSidePaddingFraction(MusicGlyph glyph)
         => OwnerOf(glyph).StemSidePaddingFraction(glyph);
 

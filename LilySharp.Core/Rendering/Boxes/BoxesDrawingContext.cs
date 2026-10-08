@@ -224,8 +224,13 @@ internal sealed class BoxesDrawingContext : IDrawingContext, IDisposable
         => AddPoints("curve", Cubic(p0, c1, c2, p1), strokeWidth / 2, ends: PagePoints(p0.X, p0.Y, p1.X, p1.Y));
 
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
+        => AddGlyph(glyph, _measure.MeasureGlyphInk(glyph, x, y, fontSize));
+
+    public void DrawGlyphTurned(char glyph, double x, double y, double fontSize, Color? fill = null)
+        => AddGlyph(glyph, _measure.MeasureGlyphInkTurned(glyph, x, y, fontSize));
+
+    private void AddGlyph(char glyph, SKRect ink)
     {
-        var ink = _measure.MeasureGlyphInk(glyph, x, y, fontSize);
         if (ink.IsEmpty)
             return;
         // The character the face holds it at — a glyph the score's first music font lacks is

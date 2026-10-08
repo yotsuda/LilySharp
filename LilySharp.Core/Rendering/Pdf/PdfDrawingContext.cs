@@ -222,6 +222,16 @@ internal sealed class PdfDrawingContext : IDrawingContext
             X(x), X(y), XStringFormats.BaseLineLeft);
     }
 
+    public void DrawGlyphTurned(char glyph, double x, double y, double fontSize, Color? fill = null)
+    {
+        // A quarter turn counter-clockwise on the page about the anchor: the page's Y runs
+        // down here, so XGraphics' positive angle turns clockwise.
+        var state = _gfx.Save();
+        _gfx.RotateAtTransform(-90, new XPoint(X(x), X(y)));
+        DrawGlyph(glyph, x, y, fontSize, fill);
+        _gfx.Restore(state);
+    }
+
     public void DrawText(string text, double x, double y, double fontSize,
         TextRole role, FontStyle style = FontStyle.Regular,
         TextAnchor anchor = TextAnchor.Start, Color? fill = null,

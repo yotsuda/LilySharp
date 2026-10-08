@@ -80,7 +80,15 @@ public class SmuflMusicFontTests
             Assert.Equal(e.Glyph, font.GlyphOf(font.Codepoint(e.Glyph)));
             var m = full.Metrics(e.Glyph);
             Assert.NotNull(m.DesignBox);
-            Assert.Equal(m.DesignBox, m.OutlineBox);
+            if (e.Glyph is MusicGlyph.WiggleTrill or MusicGlyph.WiggleArpeggiatoUp)
+            {
+                // A wiggle's design box is one repetition (its repeatOffset) wide — LILC's
+                // trill element — and its outline overhangs it (SmuflPlacementTests).
+                Assert.Equal(m.OutlineBox!.Value with { Right = m.DesignBox!.Value.Right }, m.DesignBox);
+                Assert.True(m.DesignBox.Value.Right < m.OutlineBox.Value.Right, e.SmuflName);
+            }
+            else
+                Assert.Equal(m.DesignBox, m.OutlineBox);
             Assert.NotNull(m.Advance);
         }
         // Bravura's metadata, verbatim: the black head is 1.18 wide and ±0.5 tall, its advance

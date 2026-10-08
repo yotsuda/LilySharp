@@ -886,15 +886,22 @@ internal static partial class SharedRenderer
             // ⚠️ The glyph's box starts at its baseline (0 . 1.0), so copy i's baseline is
             // the pile's bottom raised i heights — no centring term, unlike the trill
             // element's align_to (see TrillWaveOutline.GlyphBaselineOffset).
+            // A font that designs the wiggle lying down (SMuFL) has it stood up a quarter turn,
+            // and its box as drawn (WiggleBox) need not start at the origin.
             double glyphSize = os.Size(FontSize, a.StaffIndex);
+            bool turned = MusicFont.Current.LiesDown(MusicGlyph.WiggleArpeggiatoUp);
+            double bottom = ArpeggioEngraver.WiggleBox.Bottom;
             using (gc.Source(a.SourcePosition))
             {
                 for (int i = 0; i < a.Copies; i++)
                 {
                     double baseline = os.YUp(
-                        midYUp + a.BottomYUp + i * ArpeggioEngraver.WiggleHeight,
+                        midYUp + a.BottomYUp + i * ArpeggioEngraver.WiggleHeight - bottom,
                         a.StaffIndex, a.MeasureIndex);
-                    gc.DrawGlyph(Music(MusicGlyph.WiggleArpeggiatoUp), a.X, baseline, glyphSize);
+                    if (turned)
+                        gc.DrawGlyphTurned(Music(MusicGlyph.WiggleArpeggiatoUp), a.X, baseline, glyphSize);
+                    else
+                        gc.DrawGlyph(Music(MusicGlyph.WiggleArpeggiatoUp), a.X, baseline, glyphSize);
                 }
             }
         }

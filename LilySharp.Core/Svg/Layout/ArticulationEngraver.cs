@@ -1184,7 +1184,7 @@ internal static class ArticulationEngraver
                 // stored value is offset-free (StaffMiddle + staffOffset as the mirror).
                 double tabYUp = (StaffMiddle + staffOffset) - tabY;
                 layouts.Add(new ArticulationLayout(
-                    articulation.MeasureIndex, articulation.ItemIndex, colX, tabYUp,
+                    articulation.MeasureIndex, articulation.ItemIndex, colX + OriginFromCentre(tabGlyph), tabYUp,
                     tabGlyph, tabAbove, articulation.SourcePosition, FontSizeStep: 0.0,
                     GetSeedBBox(articulation.Type), SourceIndex: arti,
                     StaffIndex: articulation.StaffIndex,
@@ -1194,9 +1194,9 @@ internal static class ArticulationEngraver
             }
 
             // Calculate X position (centered on the note).
-            // The item X is the notehead's LEFT edge and articulation glyphs are
-            // origin-centred (symmetric BBox), so add the notehead's half-width to
-            // land the glyph centre on the notehead centre rather than its left edge.
+            // The item X is the notehead's LEFT edge, so add the notehead's half-width to
+            // land the glyph centre on the notehead centre rather than its left edge; the
+            // glyph's own centre is taken off below (OriginFromCentre).
             // LILYPOND-REF: define-grobs.scm:3001 self-alignment-X = CENTER
             double x = measureLayout.X
                 + LayoutUtilities.GetItemXOffset(artMeasures,
@@ -1253,6 +1253,8 @@ internal static class ArticulationEngraver
             // stands where LilyPond's fret-diagram alignment puts it off the column's origin.
             if (effArt.Type == ArticulationType.FretFrame)
                 x += FretFrameGeometry.GridCentreFromColumnOrigin(seedBBox) - NoteheadHalfWidth(item);
+            else if (!effArt.IsEditorialAccidental)
+                x += OriginFromCentre(effArt.GetGlyph());
             var layout = new ArticulationLayout(
                 effArt.MeasureIndex,
                 effArt.ItemIndex,
@@ -2011,6 +2013,26 @@ internal static class ArticulationEngraver
     private static double NoteheadHalfWidth(MusicItem item)
         => GlyphMetrics.GetNoteheadBBox(ScriptHeadNoteValue(item)).CenterX;
 
+    /// <summary>
+    /// Where a script glyph's ORIGIN stands relative to the point its box is centred on —
+    /// minus the box's own X centre; 0 for a glyph the font gives no box, and for a string
+    /// that is no single music glyph (a bend, a fret frame, a tab letter).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:3001-3007 Script — script-interface::calc-x-offset
+    ///   with self-alignment-X CENTER, which centre the grob's X-EXTENT (its stencil's box) on
+    ///   the parent, wherever the glyph's origin lies.
+    /// Emmentaler draws every script about its origin (each box is −w … +w, so this is 0 and
+    /// the page does not move); a SMuFL font draws them from the left (<c>bBoxSW</c> x = 0), and
+    /// placed by the origin they stood half a width right of the head (Lab sessions/p869).
+    /// </remarks>
+    private static double OriginFromCentre(MusicGlyph? glyph)
+        => glyph is { } g && MusicFont.Current.FullSize.Metrics(g).DesignBox is { } box ? -box.CenterX : 0.0;
+
+    /// <inheritdoc cref="OriginFromCentre(MusicGlyph?)"/>
+    private static double OriginFromCentre(string glyph)
+        => glyph.Length == 1 ? OriginFromCentre(MusicFont.Current.GlyphOf(glyph[0])) : 0.0;
+
     /// <summary>The note value whose head a script centres on — one home for its X and
     /// for the head's range in <see cref="HeadRangeAboutScript"/>.</summary>
     private static int ScriptHeadNoteValue(MusicItem item) => item switch
@@ -2341,7 +2363,7 @@ internal static class ArticulationEngraver
 
             double cx = (rest.StartX + rest.EndX) / 2.0;
             double dir = a.IsAbove ? 1.0 : -1.0;
-            var centred = a with { X = cx };
+            var centred = a with { X = cx + OriginFromCentre(a.Glyph) };
             // The side facing the supports: the script's outline placed with its origin at 0.
             var mine = ScriptSkyline(centred, 0.0, a.IsAbove ? VerticalDirection.Down : VerticalDirection.Up);
             var (floorUp, floorDown) = DynamicEngraver.StaffFloorSupport();
@@ -2635,7 +2657,8 @@ internal static class ArticulationEngraver
     {
         if (IsEditorialType(a.Type) || TabTechniqueLetterOf(a) is not null)
             return NearExtentOf(a, isAbove, fonts);
-        var probe = new ArticulationLayout(a.MeasureIndex, a.ItemIndex, 0.0, 0.0, a.GetGlyph(),
+        string glyph = a.GetGlyph();
+        var probe = new ArticulationLayout(a.MeasureIndex, a.ItemIndex, OriginFromCentre(glyph), 0.0, glyph,
             isAbove, a.SourcePosition, 0.0, GetSeedBBox(a.Type, isAbove),
             SkylineHorizontalPadding: ArticulationSpacing.SkylineHorizontalPadding(a.Type));
         var sky = ScriptSkyline(probe, 0.0,
@@ -2899,7 +2922,8 @@ internal static class ArticulationEngraver
         var bbox = GetSeedBBox(articulation.Type, isAbove);
         double yBottom = anchorSky - bbox.Top;
         double yTop = anchorSky - bbox.Bottom;
-        return (yBottom, yTop, bbox.Left, bbox.Right);
+        double origin = OriginFromCentre(ArticulationItem.GlyphOf(articulation.Type, isAbove));
+        return (yBottom, yTop, bbox.Left + origin, bbox.Right + origin);
     }
 
     private static double CalculateYPosition(ArticulationItem articulation, int staffPosition, bool stemUp,
