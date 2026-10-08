@@ -129,6 +129,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第865セッションの経緯
+
+### 1.1 第865セッション（2026-10-08・YT-DELL2）
+
+新しい会話。`-Start p865`（HEAD `426ef4b6b`）＝full **11463 / 0 / 2 / 11465**。§7 3.5 で第863 を ARCHIVE へ。
+- **閉じた（`70abd02a4`）§6 ② ⒟＝グリフ単位の fallback**: `MusicFonts.Of` は SMuFL の名前を `MusicFontChain`（見つかった名前を書いた順＋最後に Emmentaler・名前の列ごとに 1 インスタンス＝font で鍵を張る cache のため）で返す。無い字は Leland 29（figbass 13・styled head 7・heel/toe 4・thumb・`feta.` 4）、Bravura／Petaluma は `feta.` 4 だけ。⚠️ **要の設計＝PUA は書体で重なり、層はグリフを字（char）で運ぶ**ので、先頭以外のグリフは低サロゲート `U+DC00 + MusicGlyph` を代理の字にし、backend が `MusicFont.Drawn(char, design)` で（実の字, 面番号 `k × 100 + design`）に戻す＝`FaceFamily`／`FaceFile`／`WebFaceFile`／`TryParseFamily` がその番号を読むので、SVG の `_usedDesigns`・断片の再生・PDF resolver・PNG loader は無改造で後ろの面を運ぶ。後ろのフォントの寸法は先頭の設計番号（20）を magstep で拡縮＝描く面と一致。警告は `MusicFallbackLog`（thread-static・描いた所＝`Drawn` で集める）→ SVG/PDF/PNG/boxes の生成器が LayoutWarning の口で 1 字 1 回（**LSP には出ない**＝③ で）。boxes は代理でなく実の字で名指す。網 6（`SmuflFallbackTests`）・目視（Lab `p865/look/`＝Leland の符頭と Emmentaler の数字）。掃き 998 冊 1199 枚・差 0（Lab `p865/sweep/`・base は p864 の exe-head＝HEAD と同じコード）・full 11469 / 0 / 2 / 11471。
+- 未着手の註: 先頭が `brace` を持たない SMuFL フォントは brace が描かれない（同梱 3 書体は持つ）／fallback の Emmentaler は光学設計を選ばない（grace でも 20 の拡縮）。
+- **`-End p865 -DiffBase 426ef4b6b`（門は全部 OK）＝full **11469 / 0 / 2 / 11471**（+6）。HANDOFF 440,784 B（残り 9,216）・§1 現在便 8,703 字。Core '+' 376 行／LILYPOND-REF 0／LILYSHARP-OWN 0（配管＝字と面の運び・足した数は `FallbackBase`／`FaceStride` の符号化だけで寸法 0）。未 push 38（push はユーザー）。**次は ⒠ GPOS の kern**（§1.0・smufl-design §6 ②）。
+
 ## 以下は第864セッションの経緯
 
 ### 1.1 第864セッション（2026-10-08・YT-DELL2）
