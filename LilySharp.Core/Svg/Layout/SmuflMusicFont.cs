@@ -274,10 +274,11 @@ internal sealed class SmuflMusicFont : MusicFont
     /// the ledger lines with it — the dependency LilyPond's units carry (§3 末尾の註).
     /// </para>
     /// <para>
-    /// <c>legerLineExtension</c> is a length per side in SMuFL and a fraction of the head in
-    /// LilyPond: it is taken over the font's black note head (<c>noteheadBlack</c>), so a ledger
-    /// line by a wider head reaches proportionally further — the one conversion that is not
-    /// exact.
+    /// LILYSHARP-OWN: LilyPond reads no SMuFL font, so this restatement is the engine's own, and
+    /// its one inexact step is the ledger's reach — <c>legerLineExtension</c> is a length per side
+    /// in SMuFL and a fraction of the head in LilyPond: it is taken over the font's black note head (<c>noteheadBlack</c>), so
+    /// a ledger line by a wider head (a whole note's) reaches proportionally further than the
+    /// font says — the one conversion that is not exact.
     /// </para>
     /// <para>
     /// Not read: the keys the style has no property for (slur, tie, hairpin, tuplet bracket,
