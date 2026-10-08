@@ -32,7 +32,7 @@ namespace LilySharp.Core.Rendering.Boxes;
 /// The same collection, layout and renderer as the SVG and the PNG (and the same
 /// <c>--set</c> settings), so the boxes are those pictures' symbols: page coordinates in staff
 /// spaces, origin top-left, Y down — an SVG unit, and <c>10 × --scale</c> PNG pixels (times the
-/// staff space's ratio to LilyPond's under <c>--set staffSpace=…</c>, <see cref="ToJson"/>).
+/// staff space's ratio to LilyPond's under <c>--set staffSpace=…</c>, <see cref="ToJson(BoxDocument, double)"/>).
 /// </remarks>
 public static class BoxesGenerator
 {
