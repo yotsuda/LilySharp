@@ -128,6 +128,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   - 網 `SmuflPlacementTests` 17・毒 5 本（修正ごとに戻すと、その網の SMuFL 行だけ赤）。metadata の箱は 3 書体とも輪郭と 0.05 ss 以内で一致（`p869/bbox-audit.py`）。直さない: Petaluma の拍子の数字の重なり・`p` の低さ＝字形の設計。
   - ⚠️ 踏んだ罠: sln は `LilySharp.slnx`（`LilySharp.sln` を build して落ち、`--no-build` の full が**最後の毒入り dll** で走って 3 赤を出した＝CLAUDE-OPERATIONS §1 の「build の exit を読む」）／引用の名前は**同じ行**に無いと ratchet に数えられない。
 - **ユーザー「もう少し続けて」＝二巡目**（feature-tour・grammar-tour・試験譜 `misc`／`more`・LP 双子 `p869/probe/lp`）: ⑹ MMR の数字は基線で置かれていた＝SMuFL の `timeSig*` は中心基線で 1 ss 低く Petaluma で休符に重なる（`NumberBaselineAboveInk`）・⑺ `To ⊕` の ⊕ が原点中心の前提で右上へ（`ToCodaGlyphCentre`）＝`5125ebb4c`／⑻ `Ped..`＝SMuFL の `keyboardPedalPed` は点まで含む（`PedalPedCarriesItsPeriod`）＝`32b12029c`。毎回掃き 1199 枚・差 0・毒で網が赤。**LP のまま**: 幅広い装飾記号が短い音符で重なる＝LP も記号どうしの rod を持たない（双子で確認）。full **11524 / 0 / 2 / 11526**。
+- **三巡目＝§3 の代わりの経路の値付け**（Emmentaler に 1 つずつ当てて全 1199 枚を HEAD と比べた＝Lab `p869/price/`）: #1 LILC → 輪郭の箱は**段割れが 16 枚で変わり**・1180 枚が最大 3.13 ss 動く／#4 光学サイズ → 20 の拡縮は 72 枚・最大 0.14／#7 kern → 0 は 11 枚（1 冊で強弱の積み順が入れ替わり 1.02）／#3 加線の短縮 → なしは 112 枚・最大 0.32。表は smufl-design §6 ④。
 - **`-End p869 -DiffBase 07a47b13b`（門は全部 OK）＝full **11515 / 0 / 2 / 11517**（+17）。Core '+' 213 行／LILYPOND-REF 1（define-grobs.scm の Script）／LILYSHARP-OWN 1（その後に足した `TextCutStep`）。未 push 53＋docs（push はユーザー）。
 
 ## 以下は第868セッションの経緯
