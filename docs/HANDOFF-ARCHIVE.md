@@ -129,6 +129,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第862セッションの経緯
+
+### 1.1 第862セッション（2026-10-08・YT-DELL2）
+
+同じ会話。**ユーザー決定（第862）: smufl-design §7 C＝同梱する（ライセンスに問題がなければ）**・A／B は推奨どおり（異論なし）。`-Start p862`（HEAD `4df74e2f0`）＝full **11426 / 0 / 2 / 11428**。§7 3.5 で第860 を ARCHIVE へ。
+- **閉じた（`f9eccda23`）§6 ② の第 1 歩＝同梱と読み手**: Bravura 1.482・Petaluma 1.065・Leland 0.80 を `LilySharp.Core/Fonts/` に同梱（OTF・`<name>_metadata.json`・WOFF2＝Leland は無し・OFL 全文と FONTLOG・`THIRD-PARTY-NOTICES.md` の節）。3 つとも SIL OFL 1.1（配布元の `OFL.txt`／`LICENSE.txt` と GitHub の spdx で確認・Reserved Font Name は改名しない限り可）。`SmuflMetadata`（JSON → 表）・`SmuflMusicFont : MusicFont`（1 設計・`SizedAt` は magstep・箱は metadata が 2 つの箱を兼ねる・送りは metadata か hmtx＝Petaluma／Leland は書いていない・付け点 `stemUpSE`／`stemDownNW`・輪郭は同じ HarfBuzz loader＝`MusicFaces` の鍵をファイルに・骨格 skyline は輪郭から実行時に walk）・`TextOutlineSkylines.FlattenPathHorizontal`（path を (x,y)→(−y,−x) に転置して同じ walk＝網: Emmentaler-20 の ♯ の焼いた対と全高で 5 桁一致・G 記号の quad が 1e-6 で一致＝生成器と実行時は 1 つの walk）・`MusicFonts.Find(name, out tried)`（Emmentaler → 同梱 → SMuFL 仕様の置き場・試した場所を全部返す）。Leland は語彙の 25 字（figbass・styled head・heel/toe・thumb）を持たない＝`Has` false。**読み手はまだ Emmentaler を向いたまま**＝掃き 998 冊 1199 枚・差 0（Lab `p862/sweep/`）。網 10 本（`SmuflMusicFontTests`）。残りは smufl-design §6 ② の ⒜〜⒢。
+- 道具: GitHub の raw は `curl.exe -L` で取れる（.NET の `Invoke-WebRequest` は社内網の TLS で止まる＝CLAUDE-OPERATIONS §3）。`Start-Process cmd … > log` で回した `-Start` の log は codepage が化ける（数字は読める）＝素で回すか `pwsh -File` を直接。
+- **`-End p862 -DiffBase 4df74e2f0`（門は全部 OK）＝full **11438 / 0 / 2 / 11440**（+12＝`SmuflMusicFontTests` の 8 本 ＋ theory 4 例）。HANDOFF 441,166 B（残り 8,834）・§1 現在便 8,760 字。Core '+' 86,584 行（うち 86,000 強は 3 つの metadata JSON）／LILYPOND-REF 1（`FlattenPathHorizontal` の accidental.cc:48）／LILYSHARP-OWN 0・足した数値 0。未 push 32（push はユーザー）。**次は smufl-design §6 ② の ⒜（文法と診断と `--set music=`）から**（§1.0）。
+
 ## 以下は第861セッションの経緯
 
 ### 1.1 第861セッション（2026-10-08・YT-DELL2）

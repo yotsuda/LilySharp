@@ -188,11 +188,17 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
      fragment memo と incremental の門が見る）。`--set music=NAME` は parse 時に解決（無ければ設定の拒否）し file の鎖を上書き。
      `NamedFaces` は music の名前を外す（LYS8003 と PDF 埋め込みが見ない）。双子は警告（LP 2.26 は SMuFL を読めない）。
      GRAMMAR §2.4・SYNTAX_REFERENCE に段落。読み手はまだ Emmentaler＝掃き 1199 枚・差 0。
-   - **残り**: ⒝ layout と render を `MusicFont.Use(font)` で包む（1 譜 1 フォント・score ごとの `fonts` 参照・`MusicFonts.Find` の鎖の先頭）／
-     ⒞ 字や kind 文字列を鍵にした cache にフォントを足す（`TextOutlineSkylines`・`DynamicOutline`・`AccidentalPlacement.t_glyphPairs`・
-     `SkylineBuilder.GlyphOutlineCache`）／⒟ グリフ単位の fallback（`Has` が false → Emmentaler で描き名前ごとに 1 回警告＝Leland は
-     figbass・styled head・heel/toe・thumb の 25 字が無い）／⒠ GPOS の kern（§3 #7）／⒡ `engravingDefaults`（線の太さ＝LP の倍数の依存を
-     保って換算・`layout { }` が優先）／⒢ brace の拡縮（§3 #10・出力の段と一緒に）。
+   - ✅ **⒞⒝⒢ 描く（第864・`c658f03a4`）**: ⒞ 字や kind 文字列を鍵にした cache にフォントを足した（`TextOutlineSkylines`・`DynamicOutline`・
+     `TrillWaveOutline`・`AccidentalPlacement.t_glyphPairs`。`SkylineBuilder.GlyphOutlineCache` は配列の同一性＝フォントごと）＝PUA の
+     コードポイントは 2 書体で重なるので ⒝ の前に。⒝ `MusicFonts.Of(plan)`（鎖の先頭で見つかった名前・無ければ Emmentaler・名前の答えは覚える）
+     を `LayoutEngine.Layout`・`SharedRenderer.RenderTo`・`IncrementalCompiler` の門・collector の臨時記号の列で `MusicFont.Use`。SVG の header は
+     頁の後に組むので thread の current でなく plan の font を読む。⒢ brace: `SystemBrace` に size と baseline を持たせ、SMuFL は 1 つの
+     `brace` を span に拡縮して music face で描く（Emmentaler は従来の段）。PDF resolver は SMuFL の 1 面を家族名で（`Bravura#`）・SVG は
+     WOFF2 の無い Leland を `format('opentype')` で埋め込む。網 7（`SmuflRenderTests`）: Bravura で描く・Emmentaler の譜は前後でバイト同一・
+     `--set music=Leland` が file の上・鎖の次／空は Emmentaler・埋め込み・PNG/PDF・grand staff の brace。掃き 1199 枚・差 0。
+   - **残り**: ⒟ グリフ単位の fallback（`Has` が false → Emmentaler で描き名前ごとに 1 回警告＝Leland は figbass・styled head・heel/toe・thumb の
+     25 字が無い。今は `Codepoint` が KeyNotFoundException）／⒠ GPOS の kern（§3 #7）／⒡ `engravingDefaults`（線の太さ＝LP の倍数の依存を
+     保って換算・`layout { }` が優先）／§4 の「曖昧なものは描いて目で決める」（`Unverified` 24 行）と VS Code のプレビュー（拡張側の font）は ③ 出力で。
 3. **出力**: 埋め込み・`boxes.json`・双子の警告。
 4. **仕上げ**: Bravura・Leland・Petaluma で本を描いて目で見る・§3 の代わりの経路の値付け。
 
