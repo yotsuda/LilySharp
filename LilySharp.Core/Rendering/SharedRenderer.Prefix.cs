@@ -382,14 +382,7 @@ internal static partial class SharedRenderer
     private static double DrawClef(ScoreTextMetrics fonts, ClefType clef, double x, double staffY,
         double clefColumnWidth, double clefGroupInkLeft, IDrawingContext gc)
     {
-        char glyph = clef switch
-        {
-            ClefType.Bass or ClefType.Bass8Below => Music(MusicGlyph.FClef),
-            ClefType.Alto or ClefType.Tenor or ClefType.Soprano
-                or ClefType.MezzoSoprano or ClefType.Baritone => Music(MusicGlyph.CClef),
-            ClefType.Percussion => Music(MusicGlyph.UnpitchedPercussionClef1),
-            _ => Music(MusicGlyph.GClef),
-        };
+        char glyph = Music(MusicGlyphs.Clef(clef));
         double clefY = staffY - ClefLineBelowTopLine(clef);
         // Anchor the clef GROUP's ink-left on the shared LeftEdge->clef column
         // (ClefGlyphXOffset), not each clef's own: break-alignment offsets by
@@ -458,13 +451,13 @@ internal static partial class SharedRenderer
         bool fClef = clef == ClefType.Bass8Below;
         // The clef's ink box, the glyph that was drawn (change clefs have their own; a cue
         // clef is the full glyph at the cue scale).
-        var box = (fClef, kind) switch
+        var box = MusicFont.Current.FullSize.Box((fClef, kind) switch
         {
-            (true, ClefModifierKind.Change) => GlyphMetrics.ClefFChange,
-            (false, ClefModifierKind.Change) => GlyphMetrics.ClefGChange,
-            (true, _) => GlyphMetrics.ClefF,
-            (false, _) => GlyphMetrics.ClefG,
-        };
+            (true, ClefModifierKind.Change) => MusicGlyph.FClefChange,
+            (false, ClefModifierKind.Change) => MusicGlyph.GClefChange,
+            (true, _) => MusicGlyph.FClef,
+            (false, _) => MusicGlyph.GClef,
+        });
         double glyphScale = kind == ClefModifierKind.Cue ? EngravingDefaults.CueScale : 1.0;
         // clef-alignments: the fraction of the clef's half-width the digit's centre sits
         // from the clef's centre — the car below, the cdr above.

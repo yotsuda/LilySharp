@@ -562,7 +562,7 @@ internal sealed class SkylineBuilder
             // INSIDE the strings of every tab of five strings or more, so the approximation
             // reaches no reader on those. On a four-string bass tab (±2.25) the box does
             // protrude, 0.64 each way — exactly as LilyPond's glyph does.
-            var tab = size.Ink(GlyphMetrics.ClefTabOutline);
+            var tab = size.Ink(MusicFont.Current.FullSize.Outline(MusicGlyph.SixStringTabClef));
             double tabX = systemLeft + EngravingDefaults.ClefGlyphXOffset;
             upSkyline.MergeBox(
                 tabX + tab.Left, tabX + tab.Right,

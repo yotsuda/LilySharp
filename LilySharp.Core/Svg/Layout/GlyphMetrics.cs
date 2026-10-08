@@ -257,13 +257,13 @@ internal static partial class GlyphMetrics
     // width from the spacing. A property is evaluated on use, so the order cannot bite.
 
     /// <summary>G clef change width — <c>clefs.G_change</c> ink right edge.</summary>
-    public static double GClefChangeWidth => ClefGChange.Right;
+    public static double GClefChangeWidth => MusicFont.Current.FullSize.Box(MusicGlyph.GClefChange).Right;
 
     /// <summary>F clef change width — <c>clefs.F_change</c> ink right edge.</summary>
-    public static double FClefChangeWidth => ClefFChange.Right;
+    public static double FClefChangeWidth => MusicFont.Current.FullSize.Box(MusicGlyph.FClefChange).Right;
 
     /// <summary>C clef change width — <c>clefs.C_change</c> ink right edge.</summary>
-    public static double CClefChangeWidth => ClefCChange.Right;
+    public static double CClefChangeWidth => MusicFont.Current.FullSize.Box(MusicGlyph.CClefChange).Right;
 
     /// <summary>
     /// The stencil box of the "_change" glyph a mid-measure clef change prints, in staff
@@ -273,13 +273,13 @@ internal static partial class GlyphMetrics
     /// to G, as the width always did.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/clef.cc:29-52 Clef::calc_glyph_name — the "_change" suffix.</remarks>
-    public static BBox ClefChangeBBox(Model.ClefType clef) => clef switch
+    public static BBox ClefChangeBBox(Model.ClefType clef) => MusicFont.Current.FullSize.Box(clef switch
     {
-        Model.ClefType.Bass or Model.ClefType.Bass8Below => ClefFChange,
+        Model.ClefType.Bass or Model.ClefType.Bass8Below => MusicGlyph.FClefChange,
         Model.ClefType.Alto or Model.ClefType.Tenor or Model.ClefType.Soprano
-            or Model.ClefType.MezzoSoprano or Model.ClefType.Baritone => ClefCChange,
-        _ => ClefGChange,
-    };
+            or Model.ClefType.MezzoSoprano or Model.ClefType.Baritone => MusicGlyph.CClefChange,
+        _ => MusicGlyph.GClefChange,
+    });
 
     /// <summary>
     /// The line-start clef's stencil BBox (LILC bbox, staff spaces, Y-up) — the ONE place a
@@ -295,16 +295,8 @@ internal static partial class GlyphMetrics
     /// and the draw-origin correction can never disagree on a clef's ink. Tab clefs never reach
     /// here (filtered out of <see cref="SpacingRules.MaxClefWidth"/>, drawn by DrawTabStaff).
     /// </remarks>
-    private static BBox ClefBBox(Model.ClefType clef) => clef switch
-    {
-        Model.ClefType.Bass or Model.ClefType.Bass8Below => ClefF,
-        Model.ClefType.Alto or Model.ClefType.Tenor or Model.ClefType.Soprano
-            or Model.ClefType.MezzoSoprano or Model.ClefType.Baritone => ClefC,
-        Model.ClefType.Percussion => ClefPercussion,
-        // Treble family (incl. treble_8 — the octave digit is drawn below/above, not on the
-        // clef's horizontal ink).
-        _ => ClefG,
-    };
+    private static BBox ClefBBox(Model.ClefType clef)
+        => MusicFont.Current.FullSize.Box(MusicGlyphs.Clef(clef));
 
     /// <summary>
     /// The clef ink WIDTH the line-start prefix reserves, and the width the drawn key/time

@@ -747,9 +747,9 @@ internal static partial class SharedRenderer
         // thickness to its left. SystemStartDelimiterInkLeft reports the same edge.
         double glyphX = x - thickness / 2.0;
         gc.DrawGlyph(Music(MusicGlyph.BracketTop), glyphX,
-            top - GlyphMetrics.BracketTipUp.Bottom, FontSize);
+            top - MusicFont.Current.FullSize.Box(MusicGlyph.BracketTop).Bottom, FontSize);
         gc.DrawGlyph(Music(MusicGlyph.BracketBottom), glyphX,
-            bottom - GlyphMetrics.BracketTipDown.Top, FontSize);
+            bottom - MusicFont.Current.FullSize.Box(MusicGlyph.BracketBottom).Top, FontSize);
     }
 
     // LILYPOND-REF: lily/system-start-delimiter.cc System_start_delimiter::line_bracket —
@@ -785,14 +785,7 @@ internal static partial class SharedRenderer
         // `glyph=clefs.F fontsize=-4` and its CueEndClef `glyph=clefs.G fontsize=-4`,
         // where an ordinary mid-measure change would read clefs.F_change at full size.
         char glyph = clefChange.IsCue
-            ? clefChange.NewClef switch
-            {
-                ClefType.Bass or ClefType.Bass8Below => Music(MusicGlyph.FClef),
-                ClefType.Alto or ClefType.Tenor or ClefType.Soprano
-                    or ClefType.MezzoSoprano or ClefType.Baritone => Music(MusicGlyph.CClef),
-                ClefType.Percussion => Music(MusicGlyph.UnpitchedPercussionClef1),
-                _ => Music(MusicGlyph.GClef),
-            }
+            ? Music(MusicGlyphs.Clef(clefChange.NewClef))
             : clefChange.NewClef switch
             {
                 ClefType.Bass or ClefType.Bass8Below => Music(MusicGlyph.FClefChange),

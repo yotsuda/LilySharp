@@ -468,6 +468,20 @@ internal static class MusicGlyphs
         _ => MusicGlyph.NoteheadBlack,
     };
 
+    /// <summary>The full-size clef a clef type prints: F for the bass clefs, C for the five C
+    /// clefs, the percussion clef, G otherwise (treble_8 included — its digit is text).</summary>
+    /// <remarks>LILYPOND-REF: lily/clef.cc:29-52 Clef::calc_glyph_name. One home for the choice
+    /// the line-start draw, the cue clef and the clef box used to make three times (第858).
+    /// A tab staff's clef is <see cref="MusicGlyph.SixStringTabClef"/>, drawn by the tab staff.</remarks>
+    public static MusicGlyph Clef(Model.ClefType clef) => clef switch
+    {
+        Model.ClefType.Bass or Model.ClefType.Bass8Below => MusicGlyph.FClef,
+        Model.ClefType.Alto or Model.ClefType.Tenor or Model.ClefType.Soprano
+            or Model.ClefType.MezzoSoprano or Model.ClefType.Baritone => MusicGlyph.CClef,
+        Model.ClefType.Percussion => MusicGlyph.UnpitchedPercussionClef1,
+        _ => MusicGlyph.GClef,
+    };
+
     // LILYPOND-REF: lily/flag.cc Flag::glyph_name — "flags." + (up ? 'u' : 'd') + duration-log.
     /// <summary>The flag for a note value and stem direction; null for a note without one.</summary>
     public static MusicGlyph? Flag(int noteValue, bool stemUp) => noteValue switch

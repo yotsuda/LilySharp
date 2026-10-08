@@ -465,7 +465,13 @@ internal static partial class SpacingRules
 
     /// <summary>The stencil extent the TAB clef contributes to the group.</summary>
     public static (double Left, double Right) TabClefStencil
-        => (GlyphMetrics.ClefTab.Left, GlyphMetrics.ClefTab.Right);
+    {
+        get
+        {
+            var box = MusicFont.Current.FullSize.Box(MusicGlyph.SixStringTabClef);
+            return (box.Left, box.Right);
+        }
+    }
 
     /// <summary>The Clef break-align group's left ink edge —
     /// <see cref="ClefGroupExtent(Model.MultiStaffScore)"/>'s

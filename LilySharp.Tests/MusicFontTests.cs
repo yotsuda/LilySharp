@@ -130,6 +130,39 @@ public class MusicFontTests
         Assert.Empty(orphans);
     }
 
+    /// <summary>
+    /// A reader moved off a flat constant (<c>GlyphMetrics.ClefG</c>, the 20 design) onto
+    /// <c>MusicFont.Current.FullSize</c> reads the same number: every generated metric's flat
+    /// constant equals the full-size design's, bit for bit.
+    /// </summary>
+    [Fact]
+    public void TheFullSizeDesign_IsTheFlatConstants()
+    {
+        var full = GlyphMetrics.AtFontSize(0);
+        var mismatches = new List<string>();
+        foreach (var p in typeof(GlyphMetrics.DesignMetrics).GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                     .Where(p => p.PropertyType == typeof(GlyphMetrics.BBox) || p.PropertyType == typeof(double))
+                     .Where(p => p.Name is not ("DesignSize" or "Magnification")))
+        {
+            var flat = typeof(GlyphMetrics).GetField(p.Name, BindingFlags.Public | BindingFlags.Static);
+            Assert.True(flat != null, $"no flat constant named {p.Name}");
+            object? a = flat!.IsLiteral ? flat.GetRawConstantValue() : flat.GetValue(null);
+            if (!Equals(a, p.GetValue(full)))
+                mismatches.Add(p.Name);
+        }
+        Assert.Empty(mismatches);
+        Assert.Equal(GlyphMetrics.ClefG, EmmentalerMusicFont.Instance.FullSize.Box(MusicGlyph.GClef));
+    }
+
+    [Fact]
+    public void TheCurrentFont_IsEmmentaler_AndAScopeRestoresIt()
+    {
+        Assert.Same(EmmentalerMusicFont.Instance, MusicFont.Current);
+        using (MusicFont.Use(EmmentalerMusicFont.Instance))
+            Assert.Same(EmmentalerMusicFont.Instance, MusicFont.Current);
+        Assert.Same(EmmentalerMusicFont.Instance, MusicFont.Current);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]

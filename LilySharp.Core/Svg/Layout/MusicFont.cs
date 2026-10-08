@@ -95,6 +95,17 @@ internal abstract class MusicFont
     /// <c>magstep(fontSizeStep)</c>, as <see cref="GlyphMetrics.ForFontSizeStep"/> documents.
     /// </remarks>
     public abstract MusicFontDesign DesignAt(double fontSizeStep);
+
+    /// <summary>
+    /// The design a grob carrying <paramref name="fontSizeStep"/> reads, ALREADY in the page's
+    /// staff spaces — nothing read out of it needs scaling.
+    /// </summary>
+    /// <remarks>The shape of <see cref="GlyphMetrics.AtFontSize"/>, which documents why the
+    /// factor is <c>magstep(fontSizeStep)</c> and not the design's own magnification.</remarks>
+    public abstract MusicFontDesign SizedAt(double fontSizeStep);
+
+    /// <summary>The design a full-size grob reads — <see cref="SizedAt"/> at font-size 0.</summary>
+    public MusicFontDesign FullSize => SizedAt(0);
 }
 
 /// <summary>One design of a <see cref="MusicFont"/> — the table its dimensions are read from.</summary>
@@ -105,6 +116,24 @@ internal abstract class MusicFontDesign
 
     /// <summary>The dimensions of <paramref name="glyph"/> in this design's staff spaces.</summary>
     public abstract MusicGlyphMetrics Metrics(MusicGlyph glyph);
+
+    /// <summary>The box the layout places <paramref name="glyph"/> by
+    /// (<see cref="MusicGlyphMetrics.DesignBox"/>).</summary>
+    /// <exception cref="InvalidOperationException">The font has no box for the glyph.</exception>
+    public BBox Box(MusicGlyph glyph) => Metrics(glyph).DesignBox ?? throw Missing(glyph, "box");
+
+    /// <summary>The box of <paramref name="glyph"/>'s curves — what its skyline is built from
+    /// (<see cref="MusicGlyphMetrics.OutlineBox"/>).</summary>
+    /// <exception cref="InvalidOperationException">The font has no outline box for the glyph.</exception>
+    public BBox Outline(MusicGlyph glyph) => Metrics(glyph).OutlineBox ?? throw Missing(glyph, "outline box");
+
+    /// <summary>The horizontal feed after <paramref name="glyph"/>
+    /// (<see cref="MusicGlyphMetrics.Advance"/>).</summary>
+    /// <exception cref="InvalidOperationException">The font has no advance for the glyph.</exception>
+    public double Advance(MusicGlyph glyph) => Metrics(glyph).Advance ?? throw Missing(glyph, "advance");
+
+    private static InvalidOperationException Missing(MusicGlyph glyph, string what)
+        => new($"the music font has no {what} for {MusicGlyphs.SmuflName(glyph)}");
 }
 
 /// <summary>
@@ -140,6 +169,16 @@ internal sealed class EmmentalerMusicFont : MusicFont
     /// <see cref="EmmentalerDesignSize"/>.</remarks>
     public override MusicFontDesign DesignAt(double fontSizeStep)
         => DesignOf(EmmentalerDesignSize.ForFontSizeStep(fontSizeStep).Rounded);
+
+    /// <inheritdoc/>
+    /// <remarks>Wraps <see cref="GlyphMetrics.AtFontSize"/>, so the numbers — and the sized
+    /// tables' own cache — are the ones every unmoved reader still gets.</remarks>
+    public override MusicFontDesign SizedAt(double fontSizeStep)
+        => fontSizeStep == 0 ? FullSizeDesign : Sized.GetOrAdd(fontSizeStep, static s => new EmmentalerDesign(AtFontSize(s)));
+
+    private static readonly EmmentalerDesign FullSizeDesign = new(AtFontSize(0));
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<double, EmmentalerDesign> Sized = new();
 
     /// <summary>The design in <c>emmentaler-&lt;rounded&gt;.otf</c>.</summary>
     public static MusicFontDesign DesignOf(int rounded)

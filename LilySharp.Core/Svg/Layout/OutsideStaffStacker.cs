@@ -2020,13 +2020,14 @@ internal static class OutsideStaffStacker
         // LILYPOND-REF: lily/page-layout-problem.cc:1173-1177 Page_layout_problem::is_spaceable.
         if (!StaffAffinity.IsSpaceable(staff.StaffAffinity))
             return;
-        var (clefBox, anchorLine) = staff.Clef switch
+        var (clefGlyph, anchorLine) = staff.Clef switch
         {
-            ClefType.Bass => (GlyphMetrics.ClefF, 1.0),
-            ClefType.Alto => (GlyphMetrics.ClefC, 2.0),
-            ClefType.Tenor => (GlyphMetrics.ClefC, 1.0),
-            _ => (GlyphMetrics.ClefG, 3.0),
+            ClefType.Bass => (MusicGlyph.FClef, 1.0),
+            ClefType.Alto => (MusicGlyph.CClef, 2.0),
+            ClefType.Tenor => (MusicGlyph.CClef, 1.0),
+            _ => (MusicGlyph.GClef, 3.0),
         };
+        var clefBox = MusicFont.Current.FullSize.Box(clefGlyph);
         double clefProtrusion = clefBox.Top - anchorLine;
         if (clefProtrusion <= 0)
             return;

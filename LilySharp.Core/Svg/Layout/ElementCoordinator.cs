@@ -719,16 +719,17 @@ internal sealed class ElementCoordinator
             {
                 // The glyph's origin is on the line the clef names (scm/parser-clef.scm
                 // supported-clefs — the same positions SharedRenderer.DrawClefChange anchors at).
+                var full = MusicFont.Current.FullSize;
                 (GlyphMetrics.BBox box, int line)? glyph = clef.NewClef switch
                 {
-                    ClefType.Bass or ClefType.Bass8Below => (GlyphMetrics.ClefFChange, 2),
-                    ClefType.Alto => (GlyphMetrics.ClefCChange, 0),
-                    ClefType.Tenor => (GlyphMetrics.ClefCChange, 2),
-                    ClefType.Soprano => (GlyphMetrics.ClefCChange, -4),
-                    ClefType.MezzoSoprano => (GlyphMetrics.ClefCChange, -2),
-                    ClefType.Baritone => (GlyphMetrics.ClefCChange, 4),
+                    ClefType.Bass or ClefType.Bass8Below => (full.Box(MusicGlyph.FClefChange), 2),
+                    ClefType.Alto => (full.Box(MusicGlyph.CClefChange), 0),
+                    ClefType.Tenor => (full.Box(MusicGlyph.CClefChange), 2),
+                    ClefType.Soprano => (full.Box(MusicGlyph.CClefChange), -4),
+                    ClefType.MezzoSoprano => (full.Box(MusicGlyph.CClefChange), -2),
+                    ClefType.Baritone => (full.Box(MusicGlyph.CClefChange), 4),
                     ClefType.Percussion or ClefType.Tab => null,
-                    _ => (GlyphMetrics.ClefGChange, -2),
+                    _ => (full.Box(MusicGlyph.GClefChange), -2),
                 };
                 if (glyph is not { } g)
                     return;
