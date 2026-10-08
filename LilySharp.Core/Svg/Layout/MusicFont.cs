@@ -506,12 +506,11 @@ internal sealed class EmmentalerMusicFont : MusicFont
 
         /// <summary>The lift of a short (flat-family) accidental in a chord name, in its own staff
         /// spaces (<c>\translate-scaled</c>: the caller scales by magstep).</summary>
-        /// <remarks>LILYPOND-REF: scm/chord-name.scm:89-95 accidental->markup —
-        /// <c>translate-scaled (0 . 0.3)</c> for a short-glyph?, <c>(0 . 0.6)</c> otherwise.</remarks>
+        /// <remarks>LILYPOND-REF: scm/chord-name.scm:80-87 accidental->text-markup — make-translate-scaled-markup by (0 . 0.3) for a short-glyph?, (0 . 0.6) otherwise.</remarks>
         public const double ChordNameShortRaise = 0.3;
 
         /// <summary>The lift of any other accidental in a chord name.</summary>
-        /// <remarks>LILYPOND-REF: scm/chord-name.scm:89-95 accidental->markup — the 0.6 arm.</remarks>
+        /// <remarks>LILYPOND-REF: scm/chord-name.scm:80-87 accidental->text-markup — the (0 . 0.6) arm of make-translate-scaled-markup.</remarks>
         public const double ChordNameRaise = 0.6;
     }
 
