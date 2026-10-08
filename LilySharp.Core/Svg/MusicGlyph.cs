@@ -493,4 +493,38 @@ internal static class MusicGlyphs
         128 => stemUp ? MusicGlyph.Flag128thUp : MusicGlyph.Flag128thDown,
         _ => null,
     };
+
+    /// <summary>The dynamic letter a character of a dynamic label spells (<c>\p</c>, <c>\mf</c>,
+    /// <c>\sfz</c> …), or null for a character the fetaText encoding has no dynamic glyph for.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm DynamicText, <c>(font-encoding . fetaText)</c> —
+    /// the label's characters are looked up in the music font's text slots, so an <c>n</c> is
+    /// <c>niente</c> and a <c>c</c> (of <c>cresc.</c>) is nothing.</remarks>
+    public static MusicGlyph? DynamicLetter(char c) => c switch
+    {
+        'p' => MusicGlyph.DynamicPiano,
+        'm' => MusicGlyph.DynamicMezzo,
+        'f' => MusicGlyph.DynamicForte,
+        'r' => MusicGlyph.DynamicRinforzando,
+        's' => MusicGlyph.DynamicSforzando,
+        'z' => MusicGlyph.DynamicZ,
+        'n' => MusicGlyph.DynamicNiente,
+        _ => null,
+    };
+
+    /// <summary>The bass-figure glyph a character of a figure spells — a digit, or the Unicode
+    /// accidental of <c>figbass-accidental-alist</c>; null for anything else (Lily#'s
+    /// continuation dash).</summary>
+    /// <remarks>LILYPOND-REF: scm/translation-functions.scm:338-343 figbass-accidental-alist;
+    /// :349-470 format-bass-figure — the digits through <c>make-number-markup</c> with
+    /// BassFigure's font-features <c>("tnum" "cv47" "ss01")</c>
+    /// (LILYPOND-REF: scm/define-grobs.scm:354-359 BassFigure, bass-figure-interface).</remarks>
+    public static MusicGlyph? Figbass(char c) => c switch
+    {
+        '0' => MusicGlyph.Figbass0, '1' => MusicGlyph.Figbass1, '2' => MusicGlyph.Figbass2,
+        '3' => MusicGlyph.Figbass3, '4' => MusicGlyph.Figbass4, '5' => MusicGlyph.Figbass5,
+        '6' => MusicGlyph.Figbass6, '7' => MusicGlyph.Figbass7, '8' => MusicGlyph.Figbass8,
+        '9' => MusicGlyph.Figbass9,
+        '♭' => MusicGlyph.FigbassFlat, '♮' => MusicGlyph.FigbassNatural, '♯' => MusicGlyph.FigbassSharp,
+        _ => null,
+    };
 }

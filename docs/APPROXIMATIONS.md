@@ -426,7 +426,7 @@
 ### `LilySharp.Core/Svg/Layout/GlissandoEngraver.cs`
 - **:160** ⚠️ LILYSHARP-OWN (disclosed 2026-08-07, session 109 audit): Y at the
 ### `LilySharp.Core/Svg/Layout/GlyphMetrics.cs`
-- **:197** LILYSHARP-OWN: the gap Lily# leaves between a LYRIC syllable and its neighbour.
+- **:195** LILYSHARP-OWN: the gap Lily# leaves between a LYRIC syllable and its neighbour.
 ### `LilySharp.Core/Svg/Layout/HairpinEngraver.cs`
 - **:541** ⚠️ LILYSHARP-OWN, DECLARED: the voice a hairpin supports off. LilyPond's
 ### `LilySharp.Core/Svg/Layout/HeaderBand.cs`

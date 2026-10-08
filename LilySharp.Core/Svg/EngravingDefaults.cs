@@ -715,11 +715,11 @@ internal static class EngravingDefaults
         LilySharp.Core.Rendering.FontStyle.Regular;
 
     // === Notehead dimensions ===
-    // Aliases to the auto-extracted GlyphMetrics constants (Emmentaler advance widths).
-    // Existing call sites use these names; new code should prefer GlyphMetrics directly.
-    public const double NoteheadWholeWidth = LilySharp.Core.Svg.Layout.GlyphMetrics.NoteheadWholeAdvance;
-    public const double NoteheadHalfWidth = LilySharp.Core.Svg.Layout.GlyphMetrics.NoteheadHalfAdvance;
-    public const double NoteheadBlackWidth = LilySharp.Core.Svg.Layout.GlyphMetrics.NoteheadBlackAdvance;
+    // The music font's full-size head advances (Emmentaler's hmtx). Existing call sites use
+    // these names; new code should ask MusicFont.Current directly.
+    public static double NoteheadWholeWidth => Layout.MusicFont.Current.FullSize.Advance(MusicGlyph.NoteheadWhole);
+    public static double NoteheadHalfWidth => Layout.MusicFont.Current.FullSize.Advance(MusicGlyph.NoteheadHalf);
+    public static double NoteheadBlackWidth => Layout.MusicFont.Current.FullSize.Advance(MusicGlyph.NoteheadBlack);
     /// <summary>Double-whole notehead is hand-tuned (no glyph in extracted set).</summary>
     /// <remarks>
     /// LILYSHARP-OWN: hand-tuned, and the only width on this list that is. ⚠️ NOT because
@@ -770,7 +770,7 @@ internal static class EngravingDefaults
     /// StemUpAttachX/StemDownAttachX — lines the two staves' stems up on one x while
     /// keeping the stem attached to the (narrower) digit.
     /// </summary>
-    public const double TabHeadCenterOffset = NoteheadBlackWidth / 2;
+    public static double TabHeadCenterOffset => NoteheadBlackWidth / 2;
 
     /// <summary>Distance between the two stem-line centres of a tab half note's
     /// double stem (staff spaces).</summary>

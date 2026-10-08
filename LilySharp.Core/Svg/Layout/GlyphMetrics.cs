@@ -129,10 +129,8 @@ internal static partial class GlyphMetrics
     /// LILYPOND-REF: mf/feta-parenthesis.mf — accidentals.leftparen/rightparen
     /// LILYPOND-REF: lily/accidental.cc:35-46 — parenthesize() adds parens with 0 padding
     /// </remarks>
-    /// (Computed property: static-field initialization order across partial
-    /// class files is unspecified, and the BBoxes live in the generated file.)
     public static double AccidentalParensInkWidth =>
-        AccidentalLeftParen.Width + AccidentalRightParen.Width;
+        GetAccidentalParensInkWidth(MusicFont.Current.FullSize);
 
     /// <summary>The same width out of a given font, for an accidental whose font-size picked
     /// another design (a grace's is −4, a cue's −4, an editorial one's −2).</summary>
@@ -233,14 +231,14 @@ internal static partial class GlyphMetrics
     // font-size rather than as separate glyphs.
     // LILYPOND-REF: lily/clef.cc:29-52 — "_change" suffix glyphs are ~75% of full size
 
-    /// <summary>G clef advance width (alias for GClefAdvance, kept for source compat).</summary>
-    public const double GClefWidth = GClefAdvance;
+    /// <summary>G clef advance width (the font's <c>gClef</c> advance, kept for source compat).</summary>
+    public static double GClefWidth => MusicFont.Current.FullSize.Advance(MusicGlyph.GClef);
 
-    /// <summary>F clef advance width (alias for FClefAdvance).</summary>
-    public const double FClefWidth = FClefAdvance;
+    /// <summary>F clef advance width.</summary>
+    public static double FClefWidth => MusicFont.Current.FullSize.Advance(MusicGlyph.FClef);
 
-    /// <summary>C clef advance width (alias for CClefAdvance).</summary>
-    public const double CClefWidth = CClefAdvance;
+    /// <summary>C clef advance width.</summary>
+    public static double CClefWidth => MusicFont.Current.FullSize.Advance(MusicGlyph.CClef);
 
     // A change clef is its OWN glyph — clefs.G_change / F_change / C_change — not the full
     // clef scaled down, so `full * 0.75` was an approximation of a metric that is available
@@ -250,11 +248,11 @@ internal static partial class GlyphMetrics
     //
     // The right edge, not the advance: Staff_spacing reads last_ext[RIGHT], a stencil extent.
 
-    // ⚠️ PROPERTIES, not `static readonly` fields. These read a BBox declared in the OTHER
-    // half of this partial class (GlyphMetricsGenerated.cs), and C# does not define the
-    // initialisation order of static fields ACROSS partial parts — as fields these read a
+    // ⚠️ PROPERTIES, not `static readonly` fields. These used to read a BBox declared in the
+    // OTHER half of this partial class (GlyphMetricsGenerated.cs), and C# does not define the
+    // initialisation order of static fields ACROSS partial parts — as fields they read a
     // default-constructed BBox and came out 0, which silently deleted every change glyph's
-    // width from the spacing. A property is evaluated on use, so the order cannot bite.
+    // width from the spacing. They now ask the music font, which is a question put at use.
 
     /// <summary>G clef change width — <c>clefs.G_change</c> ink right edge.</summary>
     public static double GClefChangeWidth => MusicFont.Current.FullSize.Box(MusicGlyph.GClefChange).Right;
@@ -368,17 +366,14 @@ internal static partial class GlyphMetrics
     // numbers (a sharp inks 1.100010 and advances 1.100000, a natural inks 0.666666 and
     // advances 0.664000), and LilyPond's A-major signature measures 3.300030 = 3 x 1.100010.
 
-    // Properties for the same reason as the change-clef widths above: cross-partial static
-    // field initialisation order is undefined.
-
     /// <summary>Width of a sharp accidental in key signature.</summary>
-    public static double KeySignatureSharpWidth => AccidentalSharp.Width;
+    public static double KeySignatureSharpWidth => MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalSharp).Width;
 
     /// <summary>Width of a flat accidental in key signature.</summary>
-    public static double KeySignatureFlatWidth => AccidentalFlat.Width;
+    public static double KeySignatureFlatWidth => MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalFlat).Width;
 
     /// <summary>Width of a natural accidental in key signature (used for cancellation).</summary>
-    public static double KeySignatureNaturalWidth => AccidentalNatural.Width;
+    public static double KeySignatureNaturalWidth => MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalNatural).Width;
 
     /// <summary>Gets the per-accidental width for a key signature based on accidental type.</summary>
     public static double GetKeySignatureAccidentalWidth(bool isSharps) =>
@@ -403,8 +398,8 @@ internal static partial class GlyphMetrics
     /// </remarks>
     public static double GetKeySignatureAccidentalWidth(int alter) => alter switch
     {
-        >= 2 => AccidentalDoubleSharp.Width,
-        <= -2 => AccidentalDoubleFlat.Width,
+        >= 2 => MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalDoubleSharp).Width,
+        <= -2 => MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalDoubleFlat).Width,
         < 0 => KeySignatureFlatWidth,
         > 0 => KeySignatureSharpWidth,
         _ => KeySignatureNaturalWidth,
@@ -513,9 +508,9 @@ internal static partial class GlyphMetrics
         // moves every C-meter book's first note (the whole line-start.time-to-first-note
         // family goes off at once, which is how this was caught).
         if (beats == "4" && beatType == "4")
-            return TimeSigCommon.Width;
+            return MusicFont.Current.FullSize.Box(MusicGlyph.TimeSigCommon).Width;
         if (beats == "2" && beatType == "2")
-            return TimeSigCutCommon.Width;
+            return MusicFont.Current.FullSize.Box(MusicGlyph.TimeSigCutCommon).Width;
         return System.Math.Max(MeterGlyphRun.Width(fonts, beats), MeterGlyphRun.Width(fonts, beatType));
     }
 
@@ -561,17 +556,21 @@ internal static partial class GlyphMetrics
     // ========== Helper methods ==========
 
     /// <summary>Gets the rest glyph bounding box for a given note value.</summary>
-    public static BBox GetRestBBox(int noteValue) => noteValue switch
+    public static BBox GetRestBBox(int noteValue) => MusicFont.Current.FullSize.Box(RestGlyphOf(noteValue));
+
+    /// <summary>The unledgered rest glyph of a note value — a quarter rest for a value the
+    /// readers here never priced on its own (the breve among them).</summary>
+    private static MusicGlyph RestGlyphOf(int noteValue) => noteValue switch
     {
-        1 => RestWhole,
-        2 => RestHalf,
-        4 => RestQuarter,
-        8 => Rest8th,
-        16 => Rest16th,
-        32 => Rest32nd,
-        64 => Rest64th,
-        128 => Rest128th,
-        _ => RestQuarter
+        1 => MusicGlyph.RestWhole,
+        2 => MusicGlyph.RestHalf,
+        4 => MusicGlyph.RestQuarter,
+        8 => MusicGlyph.Rest8th,
+        16 => MusicGlyph.Rest16th,
+        32 => MusicGlyph.Rest32nd,
+        64 => MusicGlyph.Rest64th,
+        128 => MusicGlyph.Rest128th,
+        _ => MusicGlyph.RestQuarter
     };
 
     /// <summary>
@@ -579,25 +578,15 @@ internal static partial class GlyphMetrics
     /// further than the LILC box <see cref="GetRestBBox"/> returns.
     /// </summary>
     /// <remarks>
-    /// The rest twin of <see cref="GetAccidentalSkylineBBox"/>, and the distinction is the one
+    /// The rest twin of <see cref="GetAccidentalSkylineBBox(string?)"/>, and the distinction is the one
     /// audit/lp-geometry keeps meeting: LilyPond's <c>vertical-skylines</c> come from the
     /// glyph's traced outline while its <c>extent</c> comes from the metric box, and for a
     /// quarter rest those differ by exactly 0.030000 at the bottom (-1.280000 against
     /// -1.250000). MEASURED as precisely that: seeding the LILC box left
     /// <c>staff.staff.rest-under-notes</c> at -0.030000 with everything else closed.
     /// </remarks>
-    public static BBox GetRestSkylineBBox(int noteValue) => noteValue switch
-    {
-        1 => RestWholeOutline,
-        2 => RestHalfOutline,
-        4 => RestQuarterOutline,
-        8 => Rest8thOutline,
-        16 => Rest16thOutline,
-        32 => Rest32ndOutline,
-        64 => Rest64thOutline,
-        128 => Rest128thOutline,
-        _ => RestQuarterOutline
-    };
+    public static BBox GetRestSkylineBBox(int noteValue)
+        => MusicFont.Current.FullSize.Outline(RestGlyphOf(noteValue));
 
     /// <summary>The skyline box of the rest glyph actually printed: a breve, whole or half
     /// rest off the staff lines prints its ledgered ("o") cut, whose outline carries the
@@ -607,9 +596,9 @@ internal static partial class GlyphMetrics
         ? GetRestSkylineBBox(noteValue)
         : noteValue switch
         {
-            0 => RestDoubleWholeLedgeredOutline,
-            1 => RestWholeLedgeredOutline,
-            2 => RestHalfLedgeredOutline,
+            0 => MusicFont.Current.FullSize.Outline(MusicGlyph.RestDoubleWholeLegerLine),
+            1 => MusicFont.Current.FullSize.Outline(MusicGlyph.RestWholeLegerLine),
+            2 => MusicFont.Current.FullSize.Outline(MusicGlyph.RestHalfLegerLine),
             _ => GetRestSkylineBBox(noteValue),
         };
 
@@ -831,15 +820,20 @@ internal static partial class GlyphMetrics
     /// LILYPOND-REF: scm/define-grobs.scm:35 Accidental grob::unpure-vertical-skylines-from-stencil.
     /// </remarks>
     public static BBox GetAccidentalSkylineBBox(string? accidental)
+        => GetAccidentalSkylineBBox(MusicFont.Current.FullSize, accidental);
+
+    /// <summary>The same lookup asked of ONE font — see
+    /// <see cref="GetNoteheadBBox(MusicFontDesign, int)"/>.</summary>
+    public static BBox GetAccidentalSkylineBBox(MusicFontDesign font, string? accidental)
     {
         if (RestoreMainOf(accidental) is { } main)
         {
             // The composite's outline: the natural's, united with the main glyph's
             // translated to its place in the composed stencil (same frame as
             // GetAccidentalBBox — origin at the natural's).
-            var nat = AccidentalNaturalOutline;
-            var mainBox = GetAccidentalSkylineBBox(main);
-            double mainOrigin = RestoreMainOffset(MusicFont.Current.DesignAt(0), main);
+            var nat = font.Outline(MusicGlyph.AccidentalNatural);
+            var mainBox = GetAccidentalSkylineBBox(font, main);
+            double mainOrigin = RestoreMainOffset(font, main);
             return new BBox(
                 nat.Left,
                 Math.Min(nat.Bottom, mainBox.Bottom),
@@ -848,11 +842,11 @@ internal static partial class GlyphMetrics
         }
         return accidental switch
         {
-            "sharp" => AccidentalSharpOutline,
-            "flat" => AccidentalFlatOutline,
-            "natural" => AccidentalNaturalOutline,
-            "doubleSharp" => AccidentalDoubleSharpOutline,
-            "doubleFlat" => AccidentalDoubleFlatOutline,
+            "sharp" => font.Outline(MusicGlyph.AccidentalSharp),
+            "flat" => font.Outline(MusicGlyph.AccidentalFlat),
+            "natural" => font.Outline(MusicGlyph.AccidentalNatural),
+            "doubleSharp" => font.Outline(MusicGlyph.AccidentalDoubleSharp),
+            "doubleFlat" => font.Outline(MusicGlyph.AccidentalDoubleFlat),
             _ => default
         };
     }
@@ -1023,34 +1017,16 @@ internal static partial class GlyphMetrics
 
     /// <summary>The bounding box of one fetaText dynamic letter, or default if the
     /// character is not one of the seven the encoding draws dynamics from.</summary>
-    private static BBox GetDynamicLetterBBox(char c) => c switch
-    {
-        'f' => DynamicLetterF,
-        'm' => DynamicLetterM,
-        'n' => DynamicLetterN,
-        'p' => DynamicLetterP,
-        'r' => DynamicLetterR,
-        's' => DynamicLetterS,
-        'z' => DynamicLetterZ,
-        _ => default
-    };
+    private static BBox GetDynamicLetterBBox(char c)
+        => MusicGlyphs.DynamicLetter(c) is { } g ? MusicFont.Current.FullSize.Box(g) : default;
 
     /// <summary>The hmtx advance of one fetaText dynamic letter (staff spaces), or null
     /// when the character is not one of the seven the encoding draws dynamics from —
     /// the letter-feed half of DynamicText's X model (advance + GPOS kern, measured in
     /// audit/lp-geometry/probes/dynamic-text-x.ly; the kerns live in
     /// <see cref="DynamicLetterKern"/>).</summary>
-    public static double? DynamicLetterAdvance(char c) => c switch
-    {
-        'f' => DynamicLetterFAdvance,
-        'm' => DynamicLetterMAdvance,
-        'n' => DynamicLetterNAdvance,
-        'p' => DynamicLetterPAdvance,
-        'r' => DynamicLetterRAdvance,
-        's' => DynamicLetterSAdvance,
-        'z' => DynamicLetterZAdvance,
-        _ => null
-    };
+    public static double? DynamicLetterAdvance(char c)
+        => MusicGlyphs.DynamicLetter(c) is { } g ? MusicFont.Current.FullSize.Advance(g) : null;
 
     /// <summary>
     /// Vertical ink of a dynamic label, in staff spaces from its baseline — the union of
@@ -1123,23 +1099,14 @@ internal static partial class GlyphMetrics
     public static bool TryGetFiguredBassGlyph(char c, out char glyph, out BBox outline,
         out double advance)
     {
-        (glyph, outline, advance) = c switch
+        if (MusicGlyphs.Figbass(c) is not { } g)
         {
-            '0' => (Svg.EmmentalerGlyphs.FigBassDigit0, FigBassDigit0Outline, FigBassDigit0Advance),
-            '1' => (Svg.EmmentalerGlyphs.FigBassDigit1, FigBassDigit1Outline, FigBassDigit1Advance),
-            '2' => (Svg.EmmentalerGlyphs.FigBassDigit2, FigBassDigit2Outline, FigBassDigit2Advance),
-            '3' => (Svg.EmmentalerGlyphs.FigBassDigit3, FigBassDigit3Outline, FigBassDigit3Advance),
-            '4' => (Svg.EmmentalerGlyphs.FigBassDigit4, FigBassDigit4Outline, FigBassDigit4Advance),
-            '5' => (Svg.EmmentalerGlyphs.FigBassDigit5, FigBassDigit5Outline, FigBassDigit5Advance),
-            '6' => (Svg.EmmentalerGlyphs.FigBassDigit6, FigBassDigit6Outline, FigBassDigit6Advance),
-            '7' => (Svg.EmmentalerGlyphs.FigBassDigit7, FigBassDigit7Outline, FigBassDigit7Advance),
-            '8' => (Svg.EmmentalerGlyphs.FigBassDigit8, FigBassDigit8Outline, FigBassDigit8Advance),
-            '9' => (Svg.EmmentalerGlyphs.FigBassDigit9, FigBassDigit9Outline, FigBassDigit9Advance),
-            '♭' => (Svg.EmmentalerGlyphs.FigBassFlat, FigBassFlatOutline, FigBassFlatAdvance),
-            '♮' => (Svg.EmmentalerGlyphs.FigBassNatural, FigBassNaturalOutline, FigBassNaturalAdvance),
-            '♯' => (Svg.EmmentalerGlyphs.FigBassSharp, FigBassSharpOutline, FigBassSharpAdvance),
-            _ => ('\0', default, 0.0),
-        };
-        return glyph != '\0';
+            (glyph, outline, advance) = ('\0', default, 0.0);
+            return false;
+        }
+        var font = MusicFont.Current;
+        var full = font.FullSize;
+        (glyph, outline, advance) = (font.Codepoint(g), full.Outline(g), full.Advance(g));
+        return true;
     }
 }
