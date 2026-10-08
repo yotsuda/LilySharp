@@ -189,7 +189,28 @@ internal readonly record struct StaffSpring(
     int UpperStaffIndex,
     int LowerStaffIndex,
     VerticalSpacingSpec Spec,
-    double MinimumDistance);
+    double MinimumDistance)
+{
+    private readonly double _pureMinimumDistance = double.NaN;
+
+    /// <summary>
+    /// The same floor as the PAGE BREAKER reads it — <see cref="MinimumDistance"/> over the
+    /// staves' pure skylines (<c>MultiStaffLayouter.StaffSkylineSet.Pure</c>), which leave out
+    /// the ties and the tuplet brackets. Unset, it is <see cref="MinimumDistance"/>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:94-123 get_skylines — with <c>pure</c> the
+    /// alignment reads each axis group's PURE heights, and neither Tie nor TupletBracket
+    /// has one (scm/define-grobs.scm Tie, TupletBracket: vertical-skylines from the
+    /// stencil, unpure). The breaker prices a line at those translations
+    /// (<c>LayoutEngine.BreakerFrame</c>); the page then places it with the real skylines.
+    /// </remarks>
+    public double PureMinimumDistance
+    {
+        get => double.IsNaN(_pureMinimumDistance) ? MinimumDistance : _pureMinimumDistance;
+        init => _pureMinimumDistance = value;
+    }
+}
 
 /// <summary>
 /// Layout information for a single system (staff line).

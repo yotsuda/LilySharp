@@ -2973,7 +2973,8 @@ internal sealed class MultiStaffLayouter
     /// <remarks>
     /// One system's staff skylines are the input to both its placement and its page springs
     /// (<see cref="StaffSprings(MultiStaffScore, ImmutableArray{StaffGroupLayout},
-    /// List{ValueTuple{VerticalSkyline, VerticalSkyline}}, PairRunSources)"/>), and
+    /// List{ValueTuple{VerticalSkyline, VerticalSkyline}}, PairRunSources,
+    /// List{ValueTuple{VerticalSkyline, VerticalSkyline}})"/>), and
     /// building them is the
     /// expensive part of laying a system out — measured 2026-07-27 at roughly 5.6 ms per
     /// build on a fifty-system score, which is most of that system's layout cost. Letting
@@ -3327,7 +3328,8 @@ internal sealed class MultiStaffLayouter
     internal ImmutableArray<StaffSpring> StaffSprings(
         MultiStaffScore score, ImmutableArray<StaffGroupLayout> groups,
         List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
-        PairRunSources runSources = default)
+        PairRunSources runSources = default,
+        List<(VerticalSkyline Up, VerticalSkyline Down)>? pureSkylines = null)
     {
         if (groups.IsDefaultOrEmpty)
             return ImmutableArray<StaffSpring>.Empty;
@@ -3474,8 +3476,18 @@ internal sealed class MultiStaffLayouter
             var (spec, minimum) = PairMinimum(
                 up.Group, low.Group, up.Layout.StaffIndex, low.Layout.StaffIndex,
                 staffSkylines, blocks, sp);
+            // ...and the same floor as the PAGE BREAKER reads it: over the pure skylines (no
+            // ties, no tuplet brackets), where this system built any (StaffSkylineSet.Pure).
+            double pureMinimum = pureSkylines is null
+                ? minimum
+                : PairMinimum(
+                    up.Group, low.Group, up.Layout.StaffIndex, low.Layout.StaffIndex,
+                    pureSkylines, blocks, sp).Minimum;
             var spring = new StaffSpring(
-                up.Layout.StaffIndex, low.Layout.StaffIndex, spec, minimum);
+                up.Layout.StaffIndex, low.Layout.StaffIndex, spec, minimum)
+            {
+                PureMinimumDistance = pureMinimum,
+            };
             if (firstSpring is null)
                 firstSpring = spring;
             else
@@ -3717,7 +3729,33 @@ internal sealed class MultiStaffLayouter
         List<(VerticalSkyline Up, VerticalSkyline Down)> Inside,
         List<ImmutableArray<PedalEngraver.SolvedPedalLine>> PedalLines,
         List<ImmutableArray<PedalEngraver.SolvedPedalRow>> PedalRows,
-        List<ImmutableArray<BeamLayout>> Beams);
+        List<ImmutableArray<BeamLayout>> Beams)
+    {
+        /// <summary>
+        /// Per staff, the skylines the PAGE BREAKER spaces the pair by — the same stack as
+        /// <see cref="Skylines"/> over an inside profile without the staff's ties and tuplet
+        /// brackets — or null where no staff of the system has either (every entry would be
+        /// its <see cref="Skylines"/> one). A staff with neither shares its
+        /// <see cref="Skylines"/> entry. Read by <c>StaffSprings</c> for
+        /// <see cref="StaffSpring.PureMinimumDistance"/>.
+        /// </summary>
+        /// <remarks>
+        /// LILYPOND-REF: lily/align-interface.cc:94-123 get_skylines — the breaker's
+        /// minimum translations are taken over the axis groups' PURE heights, which a Tie and
+        /// a TupletBracket do not have (their extents come from the stencil).
+        /// MEASURED (2.26.0, Lab sessions/p855-p856): I'll Be Over You line 7, where a low
+        /// tie under the staff held the pair 0.78 apart beyond LilyPond's 13.595, and You're
+        /// So Vain lines 1-2, where a tuplet's "5" did the same by 0.52; over every book
+        /// (1,199 svg) those two are the only pages that move, and both onto LilyPond's split.
+        /// ⚠️ LILYSHARP-OWN, DECLARED: LilyPond's pure heights are BOXES — the begin-of-line
+        /// part left of the first bar and the rest of the line as one interval
+        /// (:108-123) — and this keeps the skyline. Taking the boxes moved 11 svgs and
+        /// only the same 2 toward LilyPond: Lily#'s tab digits stand 0.377-0.389 higher than
+        /// LilyPond's (a user decision, HANDOFF §1.0), and a box carries that excess to every
+        /// bar of the line, so staff-and-tab books lost a system a page.
+        /// </remarks>
+        public List<(VerticalSkyline Up, VerticalSkyline Down)>? Pure { get; init; }
+    }
 
     /// <summary>
     /// Builds UP/DOWN skylines for every staff in the score.
@@ -3740,6 +3778,18 @@ internal sealed class MultiStaffLayouter
         return -1;
     }
 
+    /// <summary>How many of the score's staves are spaceable — neither a text row nor
+    /// declared non-spaceable (<see cref="TopSpaceableStaffIndex"/>'s predicate).</summary>
+    private static int SpaceableStaffCount(MultiStaffScore score)
+    {
+        int n = 0;
+        foreach (var group in score.StaffGroups)
+            foreach (var staff in group.Staves)
+                if (!staff.IsTextRow && StaffAffinity.IsSpaceable(staff.StaffAffinity))
+                    n++;
+        return n;
+    }
+
     private StaffSkylineSet BuildAllStaffSkylines(
         MultiStaffScore score, SkylineBuilder skylineBuilder,
         ImmutableArray<MeasureLayout> measureLayouts, int systemIndex)
@@ -3750,6 +3800,10 @@ internal sealed class MultiStaffLayouter
         var pedalLines = new List<ImmutableArray<PedalEngraver.SolvedPedalLine>>();
         var pedalRows = new List<ImmutableArray<PedalEngraver.SolvedPedalRow>>();
         var beamsByStaff = new List<ImmutableArray<BeamLayout>>();
+        // Only a system with a staff PAIR has a spring whose floor the page breaker reads
+        // (StaffSprings), so a one-staff score builds no pure skylines at all.
+        List<(VerticalSkyline Up, VerticalSkyline Down)>? pure = null;
+        bool pureSkylinesWanted = SpaceableStaffCount(score) >= 2;
 
         // Each staff's own dynamics (tagged by StaffIndex) hang below it and must
         // widen the gap to the staff below; filter so a staff reserves room only
@@ -3824,220 +3878,256 @@ internal sealed class MultiStaffLayouter
                     staff, measureLayouts, articulations, tupletBrackets, slurs, ties, beams,
                     CurrentIndent, restShifts, fingerings, graceSeeds);
                 inside.Add(insideSky);
-                // ...and the room's own view: the same profile with the priority-250 movers
-                // placed on a COPY, so the shared one stays the inside profile.
-                var sky = skylineBuilder.PlaceDynamicsOn(
-                    insideSky, staff, dynamics, measureLayouts, beams,
-                    articulationLayouts: articulations);
-                // ...and this staff's TRILL SPANNERS (priority 50, placed against the inside
-                // profile before every other mover) — outside-staff ink the staff above is
-                // spaced off (StaffTrillInk). ⚠️ The dynamics just placed did not see them; a
-                // forced-above dynamic under a trill on the same staff is not reserved apart.
-                if (StaffTrillInk(score, staff, thisStaff, measureLayouts, beams,
-                        insideSky.Up, insideSky.Down) is { } trillInk)
-                {
-                    sky.Up.Merge(trillInk.Up);
-                    sky.Down.Merge(trillInk.Down);
-                }
-                // ...and this staff's HAIRPINS, which ride the same DynamicLineSpanner as
-                // the texts just placed (priority 250): outside-staff ink that LilyPond
-                // leaves IN the axis group's skyline once it is placed, so the staff below
-                // is spaced off the wedge exactly as it is off a text. Nothing reserved a
-                // wedge here until 2026-09-23: samples/nocturne.lys's m6 decrescendo ran
-                // through the left hand's beam as soon as the phantom tuplet box
-                // (StaffTupletBracketLayouts) stopped holding the staves apart by accident
-                // — LilyPond opens that system's gap from 5.00 to 6.22 for this wedge, and
-                // the room saw nothing to open it for.
-                // LILYPOND-REF: lily/axis-group-interface.cc:952-972 add_grobs_of_one_priority
-                //   — a placed outside-staff grob's skyline is merged into the group's.
+                // The staff's HAIRPINS, laid out once for both passes below.
                 var hairpins = StaffHairpinLayouts(
                     score, staff, thisStaff, measureLayouts, beams, dynamics);
-                SkylineBuilder.AddHairpinsToSkyline(hairpins, StaffSize.Of(staff), sky.Down);
+                // TWO PASSES OVER THE SAME STACK: the layout's (over the inside profile just
+                // built) and, where the page breaker would read a different one, the PURE one —
+                // the same stack over the inside profile without the staff's ties and tuplet
+                // brackets, which have no pure height in LilyPond (StaffSkylineSet.Pure).
+                // A loop rather than a local function: the stack reads a dozen of this
+                // iteration's locals, and a closure over them would be one more allocation a
+                // (system, staff).
+                var layoutSky = insideSky;
+                bool pureWanted = pureSkylinesWanted
+                    && (!ties.IsDefaultOrEmpty || !tupletBrackets.IsDefaultOrEmpty);
+                for (int pass = 0; pass < (pureWanted ? 2 : 1); pass++)
+                {
+                    bool layoutPass = pass == 0;
+                    var inSky = layoutPass
+                        ? insideSky
+                        : skylineBuilder.BuildInsideStaffSkylines(
+                            staff, measureLayouts, articulations,
+                            ImmutableArray<TupletBracketLayout>.Empty, slurs,
+                            ImmutableArray<TieLayout>.Empty, beams,
+                            CurrentIndent, restShifts, fingerings, graceSeeds);
+                    // ...and the room's own view: the same profile with the priority-250 movers
+                    // placed on a COPY, so the shared one stays the inside profile.
+                    var sky = skylineBuilder.PlaceDynamicsOn(
+                        inSky, staff, dynamics, measureLayouts, beams,
+                        articulationLayouts: articulations);
+                    // ...and this staff's TRILL SPANNERS (priority 50, placed against the inside
+                    // profile before every other mover) — outside-staff ink the staff above is
+                    // spaced off (StaffTrillInk). ⚠️ The dynamics just placed did not see them; a
+                    // forced-above dynamic under a trill on the same staff is not reserved apart.
+                    if (StaffTrillInk(score, staff, thisStaff, measureLayouts, beams,
+                            inSky.Up, inSky.Down) is { } trillInk)
+                    {
+                        sky.Up.Merge(trillInk.Up);
+                        sky.Down.Merge(trillInk.Down);
+                    }
+                    // ...and this staff's HAIRPINS, which ride the same DynamicLineSpanner as
+                    // the texts just placed (priority 250): outside-staff ink that LilyPond
+                    // leaves IN the axis group's skyline once it is placed, so the staff below
+                    // is spaced off the wedge exactly as it is off a text. Nothing reserved a
+                    // wedge here until 2026-09-23: samples/nocturne.lys's m6 decrescendo ran
+                    // through the left hand's beam as soon as the phantom tuplet box
+                    // (StaffTupletBracketLayouts) stopped holding the staves apart by accident
+                    // — LilyPond opens that system's gap from 5.00 to 6.22 for this wedge, and
+                    // the room saw nothing to open it for.
+                    // LILYPOND-REF: lily/axis-group-interface.cc:952-972 add_grobs_of_one_priority
+                    //   — a placed outside-staff grob's skyline is merged into the group's.
+                    SkylineBuilder.AddHairpinsToSkyline(hairpins, StaffSize.Of(staff), sky.Down);
 
-                // The staff's own accel./rit. spanner is OUTSIDE-STAFF INK ABOVE IT, and a
-                // row standing above the staff has to clear it exactly as the staff below a
-                // figure row has to clear that. LilyPond leaves an outside-staff grob IN its
-                // VerticalAxisGroup's skyline once it is placed, and that profile is what the
-                // alignment walks and what the page distributes the loose lines against; Lily#
-                // placed the spanner in the collision pass and then spaced the row against a
-                // silhouette it was not in, so `@rit` printed straight through the chord row
-                // and the lyric row above its staff (reported 2026-08-28, Untitled-6.lys).
-                // ⚠️ AFTER the dynamics and BEFORE the bands below, which is the order the
-                // priorities run in: the spanner (350) stands clear of this staff's dynamics
-                // (250), and the rows are then spaced against the pair of them.
-                // LILYPOND-REF: lily/axis-group-interface.cc:860-985 skyline_spacing;
-                //   lily/page-layout-problem.cc:948-990 loose-line distribution.
-                // The staff's slice, cut once per score (ScoreSideTables) — this runs per
-                // (system, staff) and the derivation walks the whole mark table.
-                var staffSpanners = ScoreSideTables.TextSpannersByStaff(score).At(thisStaff);
-                if (!staffSpanners.IsEmpty)
-                {
-                    var spannerInk = TextSpannerEngraver.InkAboveStaff(
-                        score.TextMetrics, staffSpanners, measureLayouts, sky.Up);
-                    if (!spannerInk.IsEmpty)
-                        sky.Up.Merge(spannerInk);
-                }
-                // …and the form-level texts (TextScript, priority 450), on the staff they
-                // resolve to — the TOP SPACEABLE one, which is what their -1 means
-                // (LayoutUtilities.ResolveScoreGrobStaff) — so a leading chord row clears
-                // them rather than printing on them (CustomTextEngraver.InkAboveStaff).
-                // ⚠️ Resolved from the score's staff order, because the systems do not exist
-                // yet: a system whose top staff hara-kiri hides hangs the text on the next
-                // staff down, and this reserves it on the hidden one. No book reaches that.
-                if (!score.CustomTexts.IsDefaultOrEmpty && thisStaff == TopSpaceableStaffIndex(score))
-                {
-                    var textInk = CustomTextEngraver.InkAboveStaff(
-                        score.TextMetrics, score.CustomTexts, measureLayouts, sky.Up);
-                    if (!textInk.IsEmpty)
-                        sky.Up.Merge(textInk);
-                }
-                // …and a combined staff's "a2" / "Solo" labels (priority 475, after the
-                // spanner's 350), for the same reason: a chord row above the staff has to
-                // clear them (PartCombineAnalyzer.InkAboveStaff).
-                if (!staff.PartCombineMarks.IsDefaultOrEmpty && score.LayoutPlan.PartCombineText)
-                {
-                    var labelInk = PartCombineAnalyzer.InkAboveStaff(
-                        score.TextMetrics, staff.PartCombineMarks, staff.Voices, beams,
-                        measureLayouts, sky.Up);
-                    if (!labelInk.IsEmpty)
-                        sky.Up.Merge(labelInk);
-                }
+                    // The staff's own accel./rit. spanner is OUTSIDE-STAFF INK ABOVE IT, and a
+                    // row standing above the staff has to clear it exactly as the staff below a
+                    // figure row has to clear that. LilyPond leaves an outside-staff grob IN its
+                    // VerticalAxisGroup's skyline once it is placed, and that profile is what the
+                    // alignment walks and what the page distributes the loose lines against; Lily#
+                    // placed the spanner in the collision pass and then spaced the row against a
+                    // silhouette it was not in, so `@rit` printed straight through the chord row
+                    // and the lyric row above its staff (reported 2026-08-28, Untitled-6.lys).
+                    // ⚠️ AFTER the dynamics and BEFORE the bands below, which is the order the
+                    // priorities run in: the spanner (350) stands clear of this staff's dynamics
+                    // (250), and the rows are then spaced against the pair of them.
+                    // LILYPOND-REF: lily/axis-group-interface.cc:860-985 skyline_spacing;
+                    //   lily/page-layout-problem.cc:948-990 loose-line distribution.
+                    // The staff's slice, cut once per score (ScoreSideTables) — this runs per
+                    // (system, staff) and the derivation walks the whole mark table.
+                    var staffSpanners = ScoreSideTables.TextSpannersByStaff(score).At(thisStaff);
+                    if (!staffSpanners.IsEmpty)
+                    {
+                        var spannerInk = TextSpannerEngraver.InkAboveStaff(
+                            score.TextMetrics, staffSpanners, measureLayouts, sky.Up);
+                        if (!spannerInk.IsEmpty)
+                            sky.Up.Merge(spannerInk);
+                    }
+                    // …and the form-level texts (TextScript, priority 450), on the staff they
+                    // resolve to — the TOP SPACEABLE one, which is what their -1 means
+                    // (LayoutUtilities.ResolveScoreGrobStaff) — so a leading chord row clears
+                    // them rather than printing on them (CustomTextEngraver.InkAboveStaff).
+                    // ⚠️ Resolved from the score's staff order, because the systems do not exist
+                    // yet: a system whose top staff hara-kiri hides hangs the text on the next
+                    // staff down, and this reserves it on the hidden one. No book reaches that.
+                    if (!score.CustomTexts.IsDefaultOrEmpty && thisStaff == TopSpaceableStaffIndex(score))
+                    {
+                        var textInk = CustomTextEngraver.InkAboveStaff(
+                            score.TextMetrics, score.CustomTexts, measureLayouts, sky.Up);
+                        if (!textInk.IsEmpty)
+                            sky.Up.Merge(textInk);
+                    }
+                    // …and a combined staff's "a2" / "Solo" labels (priority 475, after the
+                    // spanner's 350), for the same reason: a chord row above the staff has to
+                    // clear them (PartCombineAnalyzer.InkAboveStaff).
+                    if (!staff.PartCombineMarks.IsDefaultOrEmpty && score.LayoutPlan.PartCombineText)
+                    {
+                        var labelInk = PartCombineAnalyzer.InkAboveStaff(
+                            score.TextMetrics, staff.PartCombineMarks, staff.Voices, beams,
+                            measureLayouts, sky.Up);
+                        if (!labelInk.IsEmpty)
+                            sky.Up.Merge(labelInk);
+                    }
 
-                // A staff carrying associated chord names (`staff X with chords ...`)
-                // shows a chord-symbol row just above it. The row shares one baseline
-                // per system, raised to clear THIS staff's own high notes, so it can
-                // rise well above the top line — reserve it in the UP skyline or a low
-                // note in the staff ABOVE overprints the chord symbols. (An independent
-                // chord GRID row, IsChordRow, is its own staff and reserves its own band.)
-                // ★ UNLESS THE LINE IS A RUN ELEMENT (2026-08-26, AttachedChordLineInRun):
-                // the pair above then WALKS the line — its own ink, its own specs
-                // (AttachedChordLine) — and a band here would be the same room a second
-                // time, priced Lily#-shaped (the double-count HANDOFF names as 帯と walk).
-                // The band survives only where no pair walks the line: the system's top
-                // staff, and a staff whose only symbols are note-attached @chord.
-                // ★ ...AND UNLESS THE SYMBOLS HAVE GONE UP ONTO THE ROW ABOVE (owner,
-                // 2026-09-06). When every @chord of this staff prints on the chord row's line
-                // (ChordNameEngraver.StaffKeepsItsOwnChordLine), this band is room nothing
-                // stands in: the reader saw the names on one line with an EMPTY line under
-                // them, which was the second half of the report. ⚠️ The question is asked of
-                // the LINE, not of the item — a `with chords` track never joins a row, and a
-                // staff with no row above it answers true, so every book that had a band
-                // before the rule existed still has one.
-                // ★ ...AND UNLESS THE STAFF PRINTS NO SUCH SYMBOL AT ALL (reader, 2026-09-07):
-                // a numbers-only tab blanks the note-attached @chord it would repeat from the
-                // staff above (TabStaffStencils.BlanksNoteAttachedChord), and a band under a
-                // line nothing is drawn on is the empty room this gate already exists to
-                // avoid. The RESERVATION half of that blanking is this line and the width
-                // table (ScoreSideTables.ChordNames); the INK half is LayoutChordNames.
-                // ★ ...AND THE BAND'S TOP IS THE LINE'S OWN INK TOP ON THIS SYSTEM
-                // (2026-09-29, ChordNameEngraver.OwnLineTop): the engraver's floor over this
-                // very profile, symbol by symbol, plus the highest ink — a raised 7 or a ♭ is
-                // taller than the flat cap this used to book, and a high note in a bar with no
-                // symbol used to lift it. A staff with no symbol in this system's measures
-                // draws no line here and books nothing.
-                // ⚠️ READ LAST, after every gate that can say no: the symbols it measures are
-                // the ones the line then draws, so nothing is measured for a staff whose row
-                // took them (the score-wide `Any` in front keeps its early exit).
-                // ⚠️ THIS STAFF'S OWN HEIGHT for the frame (StaffHeightOf — a tab is 7.5 tall),
-                // the same question the engraver's reflection asks (LowerStaffUpSkylineSupplier).
-                if (!score.ChordNames.IsDefaultOrEmpty
-                    && score.ChordNames.Any(c => c.StaffIndex == thisStaff && !c.IsChordRow
-                        && !TabStaffStencils.BlanksNoteAttachedChord(score, c))
-                    && !AttachedChordLineInRun(score, thisStaff)
-                    && ChordNameEngraver.StaffKeepsItsOwnChordLine(
-                        score.TextMetrics, score.ChordNames, measureLayouts, thisStaff,
-                        ChordRowAbove(score, thisStaff), staff.PrimaryVoice.Measures,
-                        RowStaffMeasures(score, ChordRowAbove(score, thisStaff))))
-                {
-                    double halfStaff = StaffHeightOf(staff, _options.StaffHeight) / 2.0;
-                    if (ChordNameEngraver.OwnLineTop(
+                    // A staff carrying associated chord names (`staff X with chords ...`)
+                    // shows a chord-symbol row just above it. The row shares one baseline
+                    // per system, raised to clear THIS staff's own high notes, so it can
+                    // rise well above the top line — reserve it in the UP skyline or a low
+                    // note in the staff ABOVE overprints the chord symbols. (An independent
+                    // chord GRID row, IsChordRow, is its own staff and reserves its own band.)
+                    // ★ UNLESS THE LINE IS A RUN ELEMENT (2026-08-26, AttachedChordLineInRun):
+                    // the pair above then WALKS the line — its own ink, its own specs
+                    // (AttachedChordLine) — and a band here would be the same room a second
+                    // time, priced Lily#-shaped (the double-count HANDOFF names as 帯と walk).
+                    // The band survives only where no pair walks the line: the system's top
+                    // staff, and a staff whose only symbols are note-attached @chord.
+                    // ★ ...AND UNLESS THE SYMBOLS HAVE GONE UP ONTO THE ROW ABOVE (owner,
+                    // 2026-09-06). When every @chord of this staff prints on the chord row's line
+                    // (ChordNameEngraver.StaffKeepsItsOwnChordLine), this band is room nothing
+                    // stands in: the reader saw the names on one line with an EMPTY line under
+                    // them, which was the second half of the report. ⚠️ The question is asked of
+                    // the LINE, not of the item — a `with chords` track never joins a row, and a
+                    // staff with no row above it answers true, so every book that had a band
+                    // before the rule existed still has one.
+                    // ★ ...AND UNLESS THE STAFF PRINTS NO SUCH SYMBOL AT ALL (reader, 2026-09-07):
+                    // a numbers-only tab blanks the note-attached @chord it would repeat from the
+                    // staff above (TabStaffStencils.BlanksNoteAttachedChord), and a band under a
+                    // line nothing is drawn on is the empty room this gate already exists to
+                    // avoid. The RESERVATION half of that blanking is this line and the width
+                    // table (ScoreSideTables.ChordNames); the INK half is LayoutChordNames.
+                    // ★ ...AND THE BAND'S TOP IS THE LINE'S OWN INK TOP ON THIS SYSTEM
+                    // (2026-09-29, ChordNameEngraver.OwnLineTop): the engraver's floor over this
+                    // very profile, symbol by symbol, plus the highest ink — a raised 7 or a ♭ is
+                    // taller than the flat cap this used to book, and a high note in a bar with no
+                    // symbol used to lift it. A staff with no symbol in this system's measures
+                    // draws no line here and books nothing.
+                    // ⚠️ READ LAST, after every gate that can say no: the symbols it measures are
+                    // the ones the line then draws, so nothing is measured for a staff whose row
+                    // took them (the score-wide `Any` in front keeps its early exit).
+                    // ⚠️ THIS STAFF'S OWN HEIGHT for the frame (StaffHeightOf — a tab is 7.5 tall),
+                    // the same question the engraver's reflection asks (LowerStaffUpSkylineSupplier).
+                    if (!score.ChordNames.IsDefaultOrEmpty
+                        && score.ChordNames.Any(c => c.StaffIndex == thisStaff && !c.IsChordRow
+                            && !TabStaffStencils.BlanksNoteAttachedChord(score, c))
+                        && !AttachedChordLineInRun(score, thisStaff)
+                        && ChordNameEngraver.StaffKeepsItsOwnChordLine(
                             score.TextMetrics, score.ChordNames, measureLayouts, thisStaff,
-                            staff.PrimaryVoice.Measures, sky.Up,
-                            halfStaff + EngravingDefaults.StaffLineThickness / 2.0,
-                            c => TabStaffStencils.BlanksNoteAttachedChord(score, c)) is { } lineTop)
-                        ReserveChordRowBand(sky.Up, measureLayouts, halfStaff, lineTop);
+                            ChordRowAbove(score, thisStaff), staff.PrimaryVoice.Measures,
+                            RowStaffMeasures(score, ChordRowAbove(score, thisStaff))))
+                    {
+                        double halfStaff = StaffHeightOf(staff, _options.StaffHeight) / 2.0;
+                        if (ChordNameEngraver.OwnLineTop(
+                                score.TextMetrics, score.ChordNames, measureLayouts, thisStaff,
+                                staff.PrimaryVoice.Measures, sky.Up,
+                                halfStaff + EngravingDefaults.StaffLineThickness / 2.0,
+                                c => TabStaffStencils.BlanksNoteAttachedChord(score, c)) is { } lineTop)
+                            ReserveChordRowBand(sky.Up, measureLayouts, halfStaff, lineTop);
+                    }
+
+                    // An independent chord ROW is a line of the alignment in its own right, and
+                    // what the lines above and below it are spaced against is its own symbol
+                    // ink. SkylineBuilder cannot see it — a ChordNameItem is not in the staff's
+                    // voices — so it is merged here, from the same X model the row is DRAWN with
+                    // (ChordNameEngraver.RowSkylines).
+                    // LILYPOND-REF: lily/page-layout-problem.cc:948-990 — a ChordNames context
+                    //   goes onto `loose_lines` and is distributed between the two spaceable
+                    //   staves that bracket it, measured by its own skyline.
+                    // ⚠️ THE FRAME IS THE ROW'S TEXT BASELINE (see RowSkylines), which is where
+                    // LilyPond's VerticalAxisGroup reference point is. Every OTHER entry in this
+                    // list is about its staff's MIDDLE LINE. The two agree in kind — both are
+                    // the element's own reference point — and differ from Lily#'s band model,
+                    // whose StaffLayout.Y is the band TOP.
+                    // ★ A LYRICS ROW IS SEEDED THE SAME WAY SINCE 2026-07-27. Its syllables were
+                    // always as real as the chord symbols; what kept them out was that no ledger
+                    // point measured them, so seeding would have moved a quantity nothing could
+                    // check (HANDOFF 1). Book LYRRV measures them now, and with the ink here the
+                    // row is spaced by LilyPond's own spec instead of Lily#'s band — see
+                    // SelectInterGroupSpec.
+                    // ⚠️ THE SAME FRAME AS THE CHORD ROW: the row's TEXT BASELINE, which is what
+                    // RefpointBelowTop returns for a text row and what LilyPond's VerticalAxisGroup
+                    // uses. For a multi-verse row that is VERSE 1's baseline, and the verses below
+                    // it are merged at the step the ALIGNMENT WALKS — the same
+                    // nonstaff-nonstaff-spacing the loose chain steps them by
+                    // (RowSkylinesAboutBaseline), not a flat constant.
+                    if (staff.IsTextRow)
+                    {
+                        var rowInk = staff.IsLyricsTextRow
+                            ? LyricRowInk(score, measureLayouts, thisStaff)
+                            : ChordNameEngraver.RowSkylines(
+                                score.TextMetrics, score.ChordNames, measureLayouts, thisStaff,
+                                staff.PrimaryVoice.Measures,
+                                joinedInline: InlineChordStavesOnRow(score, thisStaff));
+                        sky.Up.Merge(rowInk.Up);
+                        sky.Down.Merge(rowInk.Down);
+                    }
+
+                    // A figure row hangs below its own staff exactly as a chord row sits above
+                    // it, and the staff below has to clear it — LilyPond's
+                    // BassFigureAlignmentPositioning is an outside-staff grob of THIS staff's
+                    // axis group, so its stencil is in the skyline Align_interface walks. Merged
+                    // after the inside-staff profile is complete, because that profile is what
+                    // the row is placed against (the same order the priority passes run in).
+                    // ⚠️ Until 2026-07-30 the row was in the SYSTEM silhouette only, so it was
+                    // reserved between systems and nowhere between staves — measured against
+                    // LilyPond at 2.624795 short (ledger figbass.upper-staff.staff-gap), which is
+                    // the row's whole depth plus the nonstaff-unrelatedstaff padding.
+                    if (!score.FiguredBasses.IsDefaultOrEmpty)
+                    {
+                        var fbInk = FiguredBassEngraver.RowInkBelowStaff(
+                            score.TextMetrics, score.FiguredBasses, measureLayouts, thisStaff,
+                            staff.PrimaryVoice.Measures, sky.Down);
+                        if (!fbInk.IsEmpty)
+                            sky.Down.Merge(fbInk);
+                    }
+
+                    // Pedal brackets and text rows LAST among the below-staff occupants:
+                    // priority 1000 clears the figures (25) and the dynamics (250) already
+                    // merged above, which is LilyPond's ascending-priority order. Each solve
+                    // is the two-step every outside grob runs — its own side-position against
+                    // the INSIDE profile (its support), then the collision pass against the
+                    // accumulated one. The solved lines and rows travel with the set so the
+                    // draw uses the exact Y this profile reserved.
+                    var (bracketLines, mixedRows) = PedalEngraver.SolveAndSeed(
+                        score, staff, thisStaff, measureLayouts, inSky.Down, sky.Down);
+                    if (layoutPass)
+                        pedalLines.Add(bracketLines);
+                    var textRows = PedalEngraver.SolveAndSeedText(
+                        score, staff, thisStaff, measureLayouts, inSky.Down, sky.Down);
+                    // Mutually exclusive by style (mixed emits mixedRows, text emits
+                    // textRows), so the union is whichever is non-empty.
+                    if (layoutPass)
+                        pedalRows.Add(mixedRows.IsDefaultOrEmpty || mixedRows.Length == 0
+                            ? textRows : mixedRows);
+
+                    if (layoutPass)
+                        layoutSky = sky;
+                    else
+                    {
+                        pure ??= new List<(VerticalSkyline Up, VerticalSkyline Down)>(result);
+                        pure.Add(sky);
+                    }
                 }
-
-                // An independent chord ROW is a line of the alignment in its own right, and
-                // what the lines above and below it are spaced against is its own symbol
-                // ink. SkylineBuilder cannot see it — a ChordNameItem is not in the staff's
-                // voices — so it is merged here, from the same X model the row is DRAWN with
-                // (ChordNameEngraver.RowSkylines).
-                // LILYPOND-REF: lily/page-layout-problem.cc:948-990 — a ChordNames context
-                //   goes onto `loose_lines` and is distributed between the two spaceable
-                //   staves that bracket it, measured by its own skyline.
-                // ⚠️ THE FRAME IS THE ROW'S TEXT BASELINE (see RowSkylines), which is where
-                // LilyPond's VerticalAxisGroup reference point is. Every OTHER entry in this
-                // list is about its staff's MIDDLE LINE. The two agree in kind — both are
-                // the element's own reference point — and differ from Lily#'s band model,
-                // whose StaffLayout.Y is the band TOP.
-                // ★ A LYRICS ROW IS SEEDED THE SAME WAY SINCE 2026-07-27. Its syllables were
-                // always as real as the chord symbols; what kept them out was that no ledger
-                // point measured them, so seeding would have moved a quantity nothing could
-                // check (HANDOFF 1). Book LYRRV measures them now, and with the ink here the
-                // row is spaced by LilyPond's own spec instead of Lily#'s band — see
-                // SelectInterGroupSpec.
-                // ⚠️ THE SAME FRAME AS THE CHORD ROW: the row's TEXT BASELINE, which is what
-                // RefpointBelowTop returns for a text row and what LilyPond's VerticalAxisGroup
-                // uses. For a multi-verse row that is VERSE 1's baseline, and the verses below
-                // it are merged at the step the ALIGNMENT WALKS — the same
-                // nonstaff-nonstaff-spacing the loose chain steps them by
-                // (RowSkylinesAboutBaseline), not a flat constant.
-                if (staff.IsTextRow)
-                {
-                    var rowInk = staff.IsLyricsTextRow
-                        ? LyricRowInk(score, measureLayouts, thisStaff)
-                        : ChordNameEngraver.RowSkylines(
-                            score.TextMetrics, score.ChordNames, measureLayouts, thisStaff,
-                            staff.PrimaryVoice.Measures,
-                            joinedInline: InlineChordStavesOnRow(score, thisStaff));
-                    sky.Up.Merge(rowInk.Up);
-                    sky.Down.Merge(rowInk.Down);
-                }
-
-                // A figure row hangs below its own staff exactly as a chord row sits above
-                // it, and the staff below has to clear it — LilyPond's
-                // BassFigureAlignmentPositioning is an outside-staff grob of THIS staff's
-                // axis group, so its stencil is in the skyline Align_interface walks. Merged
-                // after the inside-staff profile is complete, because that profile is what
-                // the row is placed against (the same order the priority passes run in).
-                // ⚠️ Until 2026-07-30 the row was in the SYSTEM silhouette only, so it was
-                // reserved between systems and nowhere between staves — measured against
-                // LilyPond at 2.624795 short (ledger figbass.upper-staff.staff-gap), which is
-                // the row's whole depth plus the nonstaff-unrelatedstaff padding.
-                if (!score.FiguredBasses.IsDefaultOrEmpty)
-                {
-                    var fbInk = FiguredBassEngraver.RowInkBelowStaff(
-                        score.TextMetrics, score.FiguredBasses, measureLayouts, thisStaff,
-                        staff.PrimaryVoice.Measures, sky.Down);
-                    if (!fbInk.IsEmpty)
-                        sky.Down.Merge(fbInk);
-                }
-
-                // Pedal brackets and text rows LAST among the below-staff occupants:
-                // priority 1000 clears the figures (25) and the dynamics (250) already
-                // merged above, which is LilyPond's ascending-priority order. Each solve
-                // is the two-step every outside grob runs — its own side-position against
-                // the INSIDE profile (its support), then the collision pass against the
-                // accumulated one. The solved lines and rows travel with the set so the
-                // draw uses the exact Y this profile reserved.
-                var (bracketLines, mixedRows) = PedalEngraver.SolveAndSeed(
-                    score, staff, thisStaff, measureLayouts, insideSky.Down, sky.Down);
-                pedalLines.Add(bracketLines);
-                var textRows = PedalEngraver.SolveAndSeedText(
-                    score, staff, thisStaff, measureLayouts, insideSky.Down, sky.Down);
-                // Mutually exclusive by style (mixed emits mixedRows, text emits
-                // textRows), so the union is whichever is non-empty.
-                pedalRows.Add(mixedRows.IsDefaultOrEmpty || mixedRows.Length == 0
-                    ? textRows : mixedRows);
-
-                result.Add(sky);
+                if (!pureWanted)
+                    pure?.Add(layoutSky);
+                result.Add(layoutSky);
                 beamsByStaff.Add(beams);
                 staffIndex++;
             }
         }
 
-        return new StaffSkylineSet(result, spanners, inside, pedalLines, pedalRows, beamsByStaff);
+        return new StaffSkylineSet(result, spanners, inside, pedalLines, pedalRows, beamsByStaff)
+        {
+            Pure = pure,
+        };
     }
 
     /// <summary>

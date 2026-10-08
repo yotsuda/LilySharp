@@ -183,6 +183,42 @@ public sealed class PageBreakTests
         Assert.Equal([false, false], last.Select(s => s.IsHidden));
     }
 
+    /// <summary>
+    /// A tie that holds two staves apart is in no pure height, so the breaker prices the line
+    /// without it: eight two-staff lines, each with a low tie in the upper staff over the
+    /// lower staff's high notes, fit one page as LilyPond's twin does. Priced with the tie,
+    /// the eighth line went to a second page.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:94-123 get_skylines (pure). MEASURED (2.26.0,
+    /// Lab sessions/p856/tie/gen.ps1): the twin puts 6, 7, 8, 8+1 and 8+2 lines on its pages
+    /// for 6 to 10 lines; Lily# put 7+1 for 8 before StaffSpring.PureMinimumDistance.
+    /// </remarks>
+    [Fact]
+    public void ATieBetweenTwoStaves_IsNotPricedByTheBreaker()
+    {
+        string up = string.Join(" ", Enumerable.Repeat("c2~ c2 | break", 8));
+        string lo = string.Join(" ", Enumerable.Repeat("e4 e e e |", 8));
+        var layout = LayoutOf($$"""
+            octave absolute
+            key c major
+            time 4/4
+            part up { clef treble section S { {{up}} } }
+            part lo { clef bass section S { {{lo}} } }
+            form main { S }
+            score main {
+              staff up
+              staff lo
+            }
+            """);
+        Assert.Equal(8, layout.AllSystems.Length);
+        Assert.Single(layout.Pages);
+        // The pair is drawn apart by the tie, and the breaker's floor is below that.
+        var spring = Assert.Single(layout.AllSystems[0].StaffSprings);
+        Assert.True(spring.PureMinimumDistance < spring.MinimumDistance - 0.1,
+            $"pure {spring.PureMinimumDistance} layout {spring.MinimumDistance}");
+    }
+
     [Fact]
     public void NoPageBreak_DoesNotMoveAOnePageBook()
     {

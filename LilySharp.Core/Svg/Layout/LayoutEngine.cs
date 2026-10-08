@@ -957,7 +957,8 @@ internal sealed partial class LayoutEngine
                 // (LilyPond's own value: audit/lp-geometry page.compressed.staff-staff-inside).
                 // It is gone; the argument is not nullable.
                 StaffSprings: multiStaffLayouter.StaffSprings(
-                    score, sysStaffGroups, sysStaffSkylines.Skylines, sysRunSources))
+                    score, sysStaffGroups, sysStaffSkylines.Skylines, sysRunSources,
+                    sysStaffSkylines.Pure))
             {
                 LineStartStaffRights = lineStartStaffRights,
                 LineStartSlurRights = MultiStaffLayouter.LineStartSlurRights(

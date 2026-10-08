@@ -739,6 +739,9 @@ internal sealed partial class LayoutEngine
     /// staff-plus-tab system it is 9 − 8 = 1.0 (audit/lp-geometry
     /// page.staff-tab.compressed.staves-on-first-page's other term). Clamped at 0 per pair:
     /// a pair drawn on its floor contributes nothing.
+    /// ★ THE FLOOR IS THE BREAKER'S, <see cref="StaffSpring.PureMinimumDistance"/> (session
+    /// 856): a tie or a tuplet bracket that holds the drawn pair apart is in no pure height, so
+    /// the line is priced without it.
     /// </remarks>
     private static double StaffSpringCompression(SystemLayout system)
     {
@@ -755,7 +758,7 @@ internal sealed partial class LayoutEngine
                 || !byIndex.TryGetValue(spring.LowerStaffIndex, out var lower))
                 continue;
             double drawn = MultiStaffLayouter.StaffRefpoint(upper) - MultiStaffLayouter.StaffRefpoint(lower);
-            total += Math.Max(0, drawn - spring.MinimumDistance);
+            total += Math.Max(0, drawn - spring.PureMinimumDistance);
         }
         GiveStaffIndex(byIndex);
         return total;
