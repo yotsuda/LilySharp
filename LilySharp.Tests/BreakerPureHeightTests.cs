@@ -148,6 +148,16 @@ public class BreakerPureHeightTests
     }
 
     [Fact]
+    public void AStaffsFlag_IsPricedByItsGlyphsBox_Too()
+    {
+        // The same rule on a five-line staff (MergeFlagInk's pureBox). MEASURED (2.26.0, Lab
+        //   sessions/p856/net/n.lys): a down eighth's flag puts the line's rest bottom 1.400
+        //   under the bottom line, 0.025 past the stem's end; the outline gave 1.375.
+        var shape = FirstLine(Book("d,8 r8 r4 r2 | d,8 r8 r4 r2 |"));
+        Assert.Equal(1.400, shape.RestDown, 3);
+    }
+
+    [Fact]
     public void AVoltaBracket_HasNoPureHeight()
     {
         // LILYPOND-REF: lily/system.cc:940-967 System::calc_pure_relevant_grobs — the

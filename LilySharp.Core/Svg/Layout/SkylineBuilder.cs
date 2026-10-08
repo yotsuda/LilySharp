@@ -42,6 +42,10 @@ internal sealed class SkylineBuilder
     /// </summary>
     private readonly Rendering.ScoreTextMetrics _fonts;
 
+    // Set while AddEdgeStaffInk seeds the PAGE BREAKER's silhouette (pureBeams): a flag goes in as
+    // its glyph's box, its pure height, instead of its outline (MergeFlagInk).
+    private bool _pureFlagBoxes;
+
     public SkylineBuilder(double staffHeight, Rendering.ScoreTextMetrics? fonts = null)
     {
         _staffHeight = staffHeight;
@@ -265,8 +269,17 @@ internal sealed class SkylineBuilder
         var size = StaffSize.Of(staff);
         if (staff is not null)
         {
-            AddStaffToSkylines(staff, measureLayouts, staffMiddleUp, upSkyline, downSkyline,
-                beams, graceSeeds: graceSeeds);
+            // The breaker's silhouette prices a flag by its box (MergeFlagInk's pureBox).
+            _pureFlagBoxes = pureBeams;
+            try
+            {
+                AddStaffToSkylines(staff, measureLayouts, staffMiddleUp, upSkyline, downSkyline,
+                    beams, graceSeeds: graceSeeds);
+            }
+            finally
+            {
+                _pureFlagBoxes = false;
+            }
             SeedClef(staff, staffMiddleUp, systemLeft, size, upSkyline, downSkyline);
         }
         // The same fork as BuildInsideStaffSkylines: a tab's stems and beams are seeded from
@@ -3170,10 +3183,22 @@ internal sealed class SkylineBuilder
     private static void MergeFlagInk(
         MusicItem? graceItem, int noteValue, bool stemUp, double originX, double originUp,
         StaffSize size, VerticalSkyline upSkyline, VerticalSkyline downSkyline,
-        GlyphMetrics.DesignMetrics? flagFont)
+        GlyphMetrics.DesignMetrics? flagFont, bool pureBox = false)
     {
         if (EmmentalerGlyphs.GetFlag(noteValue, stemUp) is not { } glyph)
             return;
+        // The page breaker's silhouette: a full-size flag's BOX, its pure height
+        // (AddTabStemsAndBeamsToSkylines carries the same rule and its measurement).
+        // MEASURED (2.26.0, Lab sessions/p856/net/n.lys, a bass-clef d, eighth): the rest-of-line
+        // bottom 1.400 under the bottom line, 0.025 past the stem's end; the outline gave 1.375.
+        if (pureBox && graceItem is null
+            && size.Ink(GlyphMetrics.GetFlagBBox(flagFont ?? GlyphMetrics.Design20, noteValue, stemUp)) is var pb
+            && pb != default)
+        {
+            upSkyline.MergeBox(originX + pb.Left, originX + pb.Right, originUp + pb.Bottom, originUp + pb.Top);
+            downSkyline.MergeBox(originX + pb.Left, originX + pb.Right, originUp + pb.Bottom, originUp + pb.Top);
+            return;
+        }
         var (up, down) = graceItem is { } item
             ? TextOutlineSkylines.MusicGlyphProfile(
                 glyph,
@@ -3424,7 +3449,7 @@ internal sealed class SkylineBuilder
                 double flagOriginX = stemCentre + size.Span(EngravingDefaults.StemThickness / 2);
                 double flagOriginUp = stemTipUp - size.Span(EngravingDefaults.BlotDiameter / 2);
                 MergeFlagInk(graceItem, noteValue, stemUp, flagOriginX,
-                    ToSystemUp(flagOriginUp), size, upSkyline, downSkyline, flagFont);
+                    ToSystemUp(flagOriginUp), size, upSkyline, downSkyline, flagFont, _pureFlagBoxes);
             }
         }
         else
@@ -3443,7 +3468,7 @@ internal sealed class SkylineBuilder
                 double flagOriginX = stemCentre + size.Span(EngravingDefaults.StemThickness / 2);
                 double flagOriginUp = stemTipUp + size.Span(EngravingDefaults.BlotDiameter / 2);
                 MergeFlagInk(graceItem, noteValue, stemUp, flagOriginX,
-                    ToSystemUp(flagOriginUp), size, upSkyline, downSkyline, flagFont);
+                    ToSystemUp(flagOriginUp), size, upSkyline, downSkyline, flagFont, _pureFlagBoxes);
             }
         }
     }
