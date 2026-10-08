@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第859セッションの経緯
+
+### 1.1 第859セッション（2026-10-08・YT-DELL2）
+
+新しい会話。`-Start p859`（HEAD `7cdf9d3da`）＝full **11417 / 1 / 2 / 11420**。赤 1 は `HistoryCitationTests.DeadCitationsDoNotGrow`＝§1.0 と第858 の語りが第858 の最後の commit を amend 前の SHA で引いていたが、その commit は amend されて `06511c079` になり HEAD から辿れない（`git merge-base --is-ancestor` が 1）→ 2 か所を `06511c079` に直した（commit message `7cdf9d3da` の中の旧 SHA は履歴＝触らない）。§7 3.5 で第857 を ARCHIVE へ。
+- **閉じた（`668153917`）§6 ① ⑵ の残り＝GlyphMetrics.cs の中の平らな定数の読み手と `EngravingDefaults` の `const`**: `GClefWidth`／`FClefWidth`／`CClefWidth`（const → `FullSize.Advance`）・`KeySignature*Width`・`GetKeySignatureAccidentalWidth(int)`・`AccidentalParensInkWidth`・C／cut-C の幅・`GetRestBBox`／`GetRestSkylineBBox`（2 本・`RestGlyphOf` に休符の決め方を 1 か所）・`GetAccidentalSkylineBBox`（font 付きの overload を足して `DesignAt(0)` の読みも `font` に）・強弱の字の箱と送り（`MusicGlyphs.DynamicLetter(char)`）・通奏低音の字（`MusicGlyphs.Figbass(char)`＝字は `font.Codepoint`・箱と送りは `FullSize`）。`EngravingDefaults.NoteheadWhole/Half/BlackWidth` と `TabHeadCenterOffset` は const → `FullSize.Advance` のプロパティ（const の読み手は全部式の中＝InlineData や既定引数に無い）。GlyphMetrics.cs に残る生の生成定数は `StemUpSE`／`StemDownNW`（読み手 0・手の 0.168＝§3 #16 の族）だけ。Core 0 警告（cref の曖昧 CS0419 を 1 つ直した）。掃き 998 冊 1199 枚・差 0（Lab `p859/sweep/`・base は -Start の build の bin を写した）。census: 行番号だけ・`magic_constants.csv` は 28 → 24 行（`Rest16thOutline` 等の腕 4 行が消えた＝定数ではない）。
+- **閉じた（`d74a5566d`）§6 ① ⑴＝グリフを `char` で運ぶモデル**: 生成された表と `MusicGlyph` の表の外で `EmmentalerGlyphs.X` を読む行を 0 にした（残るのはコメントだけ）。`ArticulationItem.GlyphOf(type, isAbove)`／`Glyph`（型 → グリフの 1 か所・tab 譜は自分の側で問い直す）・`GetGlyph()` は sentinel か `MusicFont.Current.Codepoint(g)`。glyph run は `MusicGlyphs.Fingering(char)`／`Figbass(char)`／`TimeSigDigit` → `(font.Codepoint, Outline, Advance)`。ペダルは `MusicGlyph` で歩いて置くときに字へ・`PedalGlyphBox(char)` は字を font で引き戻す。メトロノームの頭と swing・和音名の臨時記号・`OutsideStaffStacker` の tempo の旗と付点・`SkylineBuilder` の臨時記号／旗／休符の種（ledgered の判定は `MusicGlyph` の値で）。`EmmentalerGlyphs.Get*` はテストが呼ぶので残す。掃き 1199 枚・差 0・full **11418 / 0 / 2 / 11420**・census は行番号だけ（行番号の列を外して両 inventory を比べた＝差 0）。
+- **閉じた（`3c6bca578`）§6 ① ⑵＝設計番号の読み手 11 か所**: `EmmentalerDesignSize.ForFontSizeStep(step).Rounded` を輪郭 skyline と `MusicFace` の鍵にしていた所（script の skyline 3・overlay の描画・fingering／figbass／meter の run・`GrobFontSize.DesignOf`・cue・grace の 2 つ）を `MusicFont.Current.DesignAt(step).Rounded` に。Emmentaler は同じ数（`DesignAt` がその呼び出し）・1 設計のフォントは自分の 1 つを答える＝面の選択（⑷）はそれを受ける。`EmmentalerDesignSize.ForFontSizeStep` の読み手は `GlyphMetrics.ForFontSizeStep` と包みの `DesignAt` の 2 つだけ。掃き 1199 枚・差 0・full **11418 / 0 / 2 / 11420**・census は行番号だけ。
+- ⚠️ 道具: pwsh MCP の console は前の `.ps1` の `Set-Location` を引きずる（sweep-all.ps1 が `$PSScriptRoot` へ移る）＝次の `dotnet test LilySharp.Tests` が Lab の sweep フォルダで走って 1 秒で何も出さず、`git diff` は Lab の repo を見ていた。**長い pipeline の頭に `Set-Location C:\MyProj\LilySharp` を書く**（出力の `Location [FileSystem]:` が合図）。
+- **`-End p859 -DiffBase 7cdf9d3da`（門は全部 OK）＝full **11418 / 0 / 2 / 11420**（開始時の赤 1 は §1 の SHA＝直した）。HANDOFF 444,813 B（残り 5,187）・§1 現在便 10,710 字。Core '+' 262 行／LILYPOND-REF 6／LILYSHARP-OWN 0（足した数値は 0＝全部読み手の置き換え）。未 push 24（push はユーザー）。**次は §6 ① の残り ⑶⑷⑸**（§1.0）。
+- 道具: `git grep -c color.grep=never` と書くと `-c` が count になり `color.grep=never` が*パターン*になる（出力が `<rev>:docs/…:1` の形＝木を検索していたことで気づいた）＝正しくは `git -c color.grep=never grep`。
+
 ## 以下は第858セッションの経緯
 
 ### 1.1 第858セッション（2026-10-08・YT-DELL2）

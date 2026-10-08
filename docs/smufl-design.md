@@ -1,6 +1,6 @@
 # 音楽フォント（SMuFL）— 設計
 
-**状態**: **文法は決定**（2026-10-08・第857・ユーザー承認）。**実装は §6 ①（土台）の ⑴〜⑸ が閉じた**（第857〜第860・✅ の行）。残りは §3 #16・#17 の手書き定数。**②（取り込み）の前に §7 C（同梱）のユーザー判断**。
+**状態**: **文法は決定**（2026-10-08・第857・ユーザー承認）。**実装は §6 ①（土台）が閉じた**（第857〜第861・✅ の行）。**②（取り込み）の前に §7 C（同梱）のユーザー判断**。
 段取りは §6（土台 3〜4 便 → 取り込み → 出力 → 仕上げ＝計 7〜10 便）。
 **根拠**: ユーザー決定（第850〜851・第857）と、第857 の棚卸し（§3 の表・file:line は 2026-10-08 時点）。
 
@@ -80,8 +80,8 @@ score parts { fonts petaluma  staff melody }
 | 13 | 旗の原点の約束（符尾の右端＋blot/2） | `LayoutUtilities.cs:224,241` | S~ | 旗の anchor に換算して入れる | `stemUpNW`／`stemDownSW` |
 | 14 | 拍子の数字の縦の枠（`digitHalfHeight = 1.0`） | `SharedRenderer.Prefix.cs:573` | S~ | 拡張欄（または anchor） | SMuFL の約束（要確認） |
 | 15 | grace の斜線（グリフでなく feta-flags.mf の定数で線を引く） | `SharedRenderer.GraceNotes.cs:524-545` | E | 拡張欄に線の定数 | `graceNoteSlashStem*` |
-| 16 | 手書きの寸法（maxima 1.8・breve 2.296・breve の送り＝全音符×1.30・32 分以下の旗は 16 分の箱・portato の箱・fermata の箱の流用・付点の半径 0.225・bracket 0.45＝feta の thick_sharp） | `GlyphMetrics.cs:156,901,1026`・`EngravingDefaults.cs:733,968,176`・`ArticulationEngraver.cs:2153-2159` | E | 包んだ metadata に**値として**入れる（コードから定数を消す） | metadata の箱 |
-| 17 | Emmentaler の形に合わせた LP の定数（フラットの skyline を幅の 0.375 で太らせる・和音名の 0.094725／0.3／0.6・打楽器記号は C 記号の skyline を借りる） | `AccidentalPlacement.cs:387-390`・`ChordNameGlyphRun.cs:282,636`・`SkylineBuilder.cs:627,648` | E | 拡張欄（フォントの性質として） | 輪郭から（要設計） |
+| 16 | 手書きの寸法（maxima 1.8・breve 2.296・breve の送り＝全音符×1.30・32 分以下の旗は 16 分の箱・portato の箱・fermata の箱の流用・付点の半径 0.225＝dots.dot の箱） | ✅ `MusicFont.cs` の `EmmentalerMusicFont.HandMeasured`＋`MetricsOf` の手書き行（第861）。bracket 0.45 は LP の grob 既定＝engravingDefaults の族 | E | 包んだ metadata に**値として**入れる（コードから定数を消す）＝済 | metadata の箱 |
+| 17 | Emmentaler の形に合わせた LP の定数（フラットの skyline を幅の 0.375 で太らせる・和音名の 0.094725／0.3／0.6・打楽器記号は C 記号の skyline を借りる） | ✅ `MusicFont.StemSidePaddingFraction`／`ChordNameAccidental`・`VerticalSkylineQuads(UnpitchedPercussionClef1)`（第861） | E | 拡張欄（フォントの性質として）＝済 | 輪郭から（要設計） |
 
 **SMuFL 側で読むだけ・拡張の要らないもの**: 輪郭の箱・hmtx の送り・付点の箱・C／cut-C・加線つき休符・
 実行時の輪郭 skyline（`TextOutlineSkylines`）。**エンジンの側に残すもの**（フォントの性質ではない）:
@@ -166,9 +166,13 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
    - ✅ **brace の段（第860・`ad1cba936`）**: `MusicFont.Brace(length)` → `SystemBrace(Codepoint, Width)`。Emmentaler は段の rung
      （U+E000+N・幅は同じ dump）。描画と楽器名の錨の 2 読み手。brace の面（`Emmentaler-Brace`・`TextRole.SystemBrace`）はそのまま。
      SMuFL フォントは 1 つの `brace` を span に拡縮する＝record に size が生える所。掃き 1199 枚・差 0。
-   - **残り**: §3 #16・#17 の手書き定数を包んだ metadata の拡張欄へ（`GlyphMetrics.StemUpSE`／`StemDownNW`／`RestMaximaWidth`・
-     `EngravingDefaults` の breve／maxima・`AccidentalPlacement` の 0.375・`ChordNameGlyphRun` の 3 定数・`SkylineBuilder` の打楽器＝C 記号の借用）。
-     ⚠️ 字や kind 文字列を鍵にした cache（`TextOutlineSkylines`・`DynamicOutline`・`AccidentalPlacement.t_glyphPairs`）はフォントを鍵に足す＝②。
+   - ✅ **手書きの定数（第861・`3b2db6d57`）**: §3 #16・#17 は `EmmentalerMusicFont.HandMeasured`（出典つき）と `MetricsOf` の手書き行
+     （breve＝幅 2.296・送り＝全音符×1.30 の 2 綴りを両方残し両方名指し・maxima 1.8・32 分以下の旗＝16 分の行・短い／長い fermata＝fermata の行・
+     portato の箱）、`StemSidePaddingFraction`（0.375）・`ChordNameAccidental`（0.094725／0.3／0.6）・打楽器記号＝C 記号の quad。
+     `RepeatDotRadius` は dots.dot の箱の Top（ビット同一）。`StemUpSE`／`StemDownNW`（読み手 0）は消した。census は `MusicFont.cs` を対象に足して追う。
+     bracket 0.45 は LP の grob 既定＝engravingDefaults の族（①ではない）。掃き 1199 枚・差 0。
+   - **① は閉じた。② への註**: 字や kind 文字列を鍵にした cache（`TextOutlineSkylines`・`DynamicOutline`・`AccidentalPlacement.t_glyphPairs`）は
+     フォントを鍵に足す。`engravingDefaults`（線の太さ・§3 末尾の註）は metadata を読むときに、LP の倍数の依存を保って換算する。
 2. **取り込み**: metadata の JSON と OTF を読む・§1 の解決順・文法（GRAMMAR §2.4・SYNTAX_REFERENCE・LSP の補完・
    TextMate）・診断・`--set music=`。**同梱するか（§7 C）はこの段の前に決める。**
 3. **出力**: 埋め込み・`boxes.json`・双子の警告。
