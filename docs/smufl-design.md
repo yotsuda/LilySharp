@@ -126,6 +126,12 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
      フォントから切り離し、`MusicFont.Current`（`EngravingStyle` と同じくスレッドに保持）が文字に変える。
      `SharedRenderer` の 50 か所が `Music(glyph)` を通る。`EmmentalerGlyphs.Get*` は配置の表を引く Emmentaler の文字として残す。
      掃き 1199 枚・差 0。
+   - ✅ **寸法の読み手の形と最初の族（第858）**: `MusicFont.SizedAt(step)`／`FullSize`（ページの staff space に換算済み＝
+     `GlyphMetrics.AtFontSize` の形）と `Box`／`Outline`／`Advance`。音部記号の箱の全読み手と bracket の先端を移した。
+     決め方は `MusicGlyphs.Clef` に 1 か所（描画・cue・箱の 3 重の switch を畳んだ）。網: `FullSize` が平らな定数と全項目で
+     ビット一致（リフレクション）＝平らな定数の読み手は値を変えずに移せる。掃き 1199 枚・差 0。
+     **移し方の型**: `GlyphMetrics.X` → `MusicFont.Current.FullSize.Box(MusicGlyph.Y)`、`AtFontSize(s).X` → `SizedAt(s).Box(..)`。
+     census の色（出典の近さ）を落とさないよう、switch の腕に行を足さない。
    - 残り（族ごと）: ⑴ グリフを `char` で運ぶモデル（数字と強弱の glyph run・`ArticulationItem.Glyph`・ペダル・メトロノーム・
      和音名の臨時記号）⑵ 寸法の読み手（`GlyphMetrics.X` の名前つきの値と `ForFontSizeStep` → `MusicFont.DesignAt(..).Metrics(g)`）
      ⑶ 文字をキーにした表（`SkylineBuilder`・`GlyphSkylinesGenerated` のカーニング）⑷ 面の選択（`MusicFace(rounded)`・
