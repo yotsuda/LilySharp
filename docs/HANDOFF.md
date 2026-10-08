@@ -78,7 +78,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。→ **第751（2026-10-02・ユーザー決定）「LP 忠実にこだわるより音楽的な妥当性を重視。LP から引き継ぐのはレンダリングとレイアウトの美しさだけ。ユーザーがまだ少ないので過去のしがらみに縛られない」＝意味論（拍子・弱起・反復・強弱・検査・出力の意味）の裁定者は音楽的妥当性、LP は描画と配置の裁定者（RULES §5.2 に規則として置いた）。
 
-**★★★★ 第857（2026-10-08）ユーザー決定＝総点検は区切った・SMuFL に着手**: 文法は `fonts { music "…" }` で承認・**Emmentaler は SMuFL の形に包み、SMuFL に無い Emmentaler のパラメータは失わない**。設計と棚卸しは **`docs/smufl-design.md`**（§3 の 17 行＝失わないもの・§6 の段取り）。**§6 ① の第 1 歩（第857・`9c61c361e`）と描画の口（第858・`5333b691f`）・寸法の読み手の型（`2efa60218`）・寸法の全読み手（`54d124b37`＋`74be4daf4`）は閉じた（第858）＝次は残りの族**（GlyphMetrics.cs 内の平らな定数 66 行と `const` 3 行・`char` で運ぶモデル・文字キーの表・面の選択・brace）（`docs/smufl-design.md` §6 ① の ⑴〜⑸・門は全 svg の掃きで動いた svg 0＝Lab `p858/sweep/`：base は HEAD の worktree を build して `exe-base` へ写す）。
+**★★★★ 第857（2026-10-08）ユーザー決定＝総点検は区切った・SMuFL に着手**: 文法は `fonts { music "…" }` で承認・**Emmentaler は SMuFL の形に包み、SMuFL に無い Emmentaler のパラメータは失わない**。設計と棚卸しは **`docs/smufl-design.md`**（§3 の 17 行＝失わないもの・§6 の段取り）。**§6 ① の第 1 歩（第857・`9c61c361e`）と描画の口（第858・`5333b691f`）・寸法の読み手の型（`2efa60218`）・寸法の全読み手（`54d124b37`＋`06511c079`）は閉じた（第858）＝次は残りの族**（`char` で運ぶモデル・設計番号の読み手 11 か所・文字キーの表・面の選択・brace。GlyphMetrics.cs 内の読み手と `const` は第859・`668153917` で閉じた）（`docs/smufl-design.md` §6 ① の ⑴〜⑸・門は全 svg の掃きで動いた svg 0＝Lab `p858/sweep/`：base は HEAD の worktree を build して `exe-base` へ写す）。
 **第850〜851（2026-10-06〜07）ユーザー決定**: OMR P6（SMuFL）は「描画だけの差し替え」ではなく**寸法まで SMuFL から**（ユーザー利便性）。形は**内部の共通語を SMuFL にし、Emmentaler も SMuFL の形で包む**（字形は SMuFL 名・寸法は metadata の形＋LP 固有の拡張＝LILC の箱と輪郭の箱・サイズ別設計・brace の段・付け点。Emmentaler の出力はバイト不変が条件）。**ただし先に LP 忠実度の総点検**（台帳は OPEN 0 だが、第849〜850 の 3 件＝brace の段・bracket の長さ・加線つき休符の skyline はどれも台帳の外で、本を LP と並べて見つかった）: ① 広い計器＝コーパス全冊の双子を LP で描き、系ごとの譜の間隔と小節線の x を Lily# と自動で突き合わせ、差を種類ごとに束ねる → ② 効く順に直す → ③ 新しい種類が出なくなったら区切り、SMuFL の土台（3〜4 便）→ 取り込み → 出力 → 仕上げ（計 7〜10 便）。フォントの入手（同梱か）と書き方（`paper { musicFont … }`）は取り込みの段までに決める。
 
 **★★★★ 第815〜816（2026-10-05）ユーザー指示「OMR の提案を優先度順に着手」＝次の会話はここから**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`。OMR は別プログラム・Lily# は子プロセスで呼びファイルを読むだけ＝コードを混ぜない）: 0・A1・B1〜B6・C1〜C3 は**閉じた**（第815〜818・経緯は ARCHIVE）。配布の取り決め `..\LilySharp-Omr\docs\repro\lilysharp-omr-distribution-2026-10-05.md`（同梱しない・L1〜L11）。⚠️ **B1〜B6 は VS Code で未確認**（OMR の `omr read` は第 1 歩が動く＝`OmrProto.exe` を `LILYSHARP_OMR_PATH` で指せば試せる）。残り: ⑥ 10-02 提案（学習データ）: **P1〜P5 は閉じた（第818〜828・全部 `paper { }`／`layout { }` の言語のキー・`--set` は上書き）・残りは作らないと決めた（第828）**。次は P6（SMuFL＝大・別に判断）。**B5 は OMR の `omr verify`（第818 が提案）が出るまで動かない**。OMR 側へのお願い（`breaksOnly` を書く・`part voice` をやめる・TIFF 用の PNG・`omr verify`・記号単位の `confidence`/`candidates`）は OMR の提案書に書いた。配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後。第814 末の決定（下）はこの後。
@@ -119,23 +119,22 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第859セッション（2026-10-08・YT-DELL2）
+
+新しい会話。`-Start p859`（HEAD `7cdf9d3da`）＝full **11417 / 1 / 2 / 11420**。赤 1 は `HistoryCitationTests.DeadCitationsDoNotGrow`＝§1.0 と第858 の語りが第858 の最後の commit を amend 前の SHA で引いていたが、その commit は amend されて `06511c079` になり HEAD から辿れない（`git merge-base --is-ancestor` が 1）→ 2 か所を `06511c079` に直した（commit message `7cdf9d3da` の中の旧 SHA は履歴＝触らない）。§7 3.5 で第857 を ARCHIVE へ。
+- **閉じた（`668153917`）§6 ① ⑵ の残り＝GlyphMetrics.cs の中の平らな定数の読み手と `EngravingDefaults` の `const`**: `GClefWidth`／`FClefWidth`／`CClefWidth`（const → `FullSize.Advance`）・`KeySignature*Width`・`GetKeySignatureAccidentalWidth(int)`・`AccidentalParensInkWidth`・C／cut-C の幅・`GetRestBBox`／`GetRestSkylineBBox`（2 本・`RestGlyphOf` に休符の決め方を 1 か所）・`GetAccidentalSkylineBBox`（font 付きの overload を足して `DesignAt(0)` の読みも `font` に）・強弱の字の箱と送り（`MusicGlyphs.DynamicLetter(char)`）・通奏低音の字（`MusicGlyphs.Figbass(char)`＝字は `font.Codepoint`・箱と送りは `FullSize`）。`EngravingDefaults.NoteheadWhole/Half/BlackWidth` と `TabHeadCenterOffset` は const → `FullSize.Advance` のプロパティ（const の読み手は全部式の中＝InlineData や既定引数に無い）。GlyphMetrics.cs に残る生の生成定数は `StemUpSE`／`StemDownNW`（読み手 0・手の 0.168＝§3 #16 の族）だけ。Core 0 警告（cref の曖昧 CS0419 を 1 つ直した）。掃き 998 冊 1199 枚・差 0（Lab `p859/sweep/`・base は -Start の build の bin を写した）。census: 行番号だけ・`magic_constants.csv` は 28 → 24 行（`Rest16thOutline` 等の腕 4 行が消えた＝定数ではない）。
+- 道具: `git grep -c color.grep=never` と書くと `-c` が count になり `color.grep=never` が*パターン*になる（出力が `<rev>:docs/…:1` の形＝木を検索していたことで気づいた）＝正しくは `git -c color.grep=never grep`。
+
+## 以下は第858セッションの経緯
+
 ### 1.1 第858セッション（2026-10-08・YT-DELL2）
 
 同じ会話（ユーザー「続けて」）。`-End p857`（門は全部 OK）→ `-Start p858`（HEAD `a6f1c90d`）＝full **11416 / 0 / 2 / 11418**。§7 3.5 で第856 を ARCHIVE へ。§1.0 の総点検の段落（閉じた）を 1 行に畳んだ。
 - **閉じた（`5333b691f`）描画の口**: グリフの決め方を `MusicGlyphs`（`Notehead`／`Rest`／`Flag`／`Accidental`／`TimeSigDigit`）へ移し、`MusicFont.Current`（`EngravingStyle` と同じくスレッドに保持・今は常に Emmentaler）が文字に変える。`SharedRenderer` の 50 か所が `Music(glyph)` を通る。`EmmentalerGlyphs.Get*` は配置の表（Emmentaler の文字がキー）のために薄い包みで残す。掃き 998 冊 1199 枚・差 0（base は HEAD の worktree から）。棚卸しは行番号だけ・census は旧 dispatch の音価の 5 行が消えた（定数ではない）。full **11416 / 0 / 2 / 11418**。
 - **閉じた（`2efa60218`）寸法の読み手の型と最初の族**: `MusicFont.SizedAt(step)`／`FullSize`（`AtFontSize` に委ねる）と `Box`／`Outline`／`Advance`。音部記号の箱の全読み手（`ClefBBox`・`ClefChangeBBox`・変更記号の幅 3・8 の位置の箱・変更の列の箱・積みの突き出し・tab 記号）と bracket の先端。`MusicGlyphs.Clef` に決め方を 1 か所（3 重の switch を畳んだ）。網 `TheFullSizeDesign_IsTheFlatConstants`（全項目ビット一致）。掃き 1199・差 0・census は 1091 行のまま（`var full` の 1 行で出典の窓が外れ Green→Yellow になったので腕に行を足さない形に直した）。full **11418 / 0 / 2 / 11420**（+2）。
 - **閉じた（`54d124b37`）寸法の全読み手**: `DesignMetrics` を包みの外から消した（型の参照 75・`AtFontSize`／`ForFontSizeStep`／`ForDesign`／`Design20` → `SizedAt`／`DesignAt`／`Design`／`DesignAt(0)`）。プロパティ読み 146 件はコンパイラの CS1061 の位置で書き換えた（Lab `p858/fix-cs1061.ps1`・対応表は `MetricsOf` から生成）。`MusicFontDesign` に `Rounded`・`Magnification`・`Unscaled`・`Scaled`、計量は設計ごとの配列。⚠️ **付け点 22 が包みから漏れていた**（`(double X, double Y)` 型＝第857 の網は BBox と double しか見ていなかった）→ `StemUp`／`StemDown` を足し網はタプルも数える。
-- **閉じた（`74be4daf4`）平らな定数**: GlyphMetrics.cs の外の `GlyphMetrics.X` 112 件を `FullSize` へ。中の 66 行（静的初期化の順序の罠）と `EngravingDefaults` の `const` 3 行は残した。前の commit に壊れた cref の警告 CS1658 が入っていた＝ここで Core 0 警告に戻した（`Design20` の一括置換が doc コメントの cref も書き換えた）。どちらも掃き 1199・差 0・census 1091 行のまま・full **11418 / 0 / 2 / 11420**。
+- **閉じた（`06511c079`）平らな定数**: GlyphMetrics.cs の外の `GlyphMetrics.X` 112 件を `FullSize` へ。中の 66 行（静的初期化の順序の罠）と `EngravingDefaults` の `const` 3 行は残した。前の commit に壊れた cref の警告 CS1658 が入っていた＝ここで Core 0 警告に戻した（`Design20` の一括置換が doc コメントの cref も書き換えた）。どちらも掃き 1199・差 0・census 1091 行のまま・full **11418 / 0 / 2 / 11420**。
 - ⚠️ 道具: 一括置換を `[IO.File]::ReadAllText` → `WriteAllBytes(UTF8Encoding(false))` で書くと BOM を落とす（Prefix.cs で踏んだ・`git cat-file -p HEAD:path` と比べて戻した）。
-
-## 以下は第857セッションの経緯
-
-### 1.1 第857セッション（2026-10-08・YT-DELL2）
-
-新しい会話。`-Start p857`（HEAD `85f7d3eee`）＝full **11404 / 0 / 2 / 11406**。§7 3.5 で第855 を ARCHIVE へ。ユーザー「SMuFL に着手・まず文法の提案」。
-- **文法を提案し承認（ユーザー）**: `fonts { music "Bravura" }`（LP も `property-defaults.fonts.music` を同じ alist に持つ・paper-defaults-init.ly:169）。寸法は `layout` ＞ フォントの `engravingDefaults` ＞ LP の既定。見つからなければ警告して Emmentaler。ユーザーの追加: **Emmentaler を SMuFL の形に包んで全音楽フォントを統一的に扱う・SMuFL に無い Emmentaler のパラメータを失わない**。
-- **棚卸し**（subagent・読むだけ）: Emmentaler 由来のデータは生成器 3 本（`audit/scripts/Extract-Emmentaler*.py`）＋brace の段（LP を回して採った）＋実行時の輪郭。SMuFL に無いもの＝LILC の箱・ledger-shortening-range・光学サイズ 8 本・GPOS カーニング・数字の 3 つの切り方・brace の段ほか。表は `docs/smufl-design.md` §3。GRAMMAR へは取り込みの段で入れる（実装の無いキーを載せない）。full **11404 / 0 / 2 / 11406**（docs だけ・`7abd9205c`）。
-- **続き（ユーザー「続けて」）＝土台の第 1 歩（`9c61c361e`）**: `MusicGlyph`（SMuFL 名の enum・150 行の表＝feta 名・SMuFL のコードポイント・Emmentaler の字・未確認の印。コードポイントは glyphnames.json と 0 件の食い違い＝Lab `p857/check-glyphnames.ps1`）と `MusicFont`／`EmmentalerMusicFont`（値は生成された表を参照するだけ＝バイト不変は構成から）。網 `MusicFontTests` 12 本（生成された寸法の全プロパティが 8 デザインで何かのグリフから届く）・毒 2 本とも名指しで赤。読み手はまだ 0＝掃きは要らない（既存の行は 1 行も変えていない）。fontTools がこの機械に無い＝生成器は回せない（`pip install fonttools` はユーザーに訊く）。full **11416 / 0 / 2 / 11418**（+12）。
 
 ## 2. 開いている作業
 

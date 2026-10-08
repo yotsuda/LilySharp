@@ -1,6 +1,6 @@
 # 音楽フォント（SMuFL）— 設計
 
-**状態**: **文法は決定**（2026-10-08・第857・ユーザー承認）。**実装は未着手**。
+**状態**: **文法は決定**（2026-10-08・第857・ユーザー承認）。**実装は §6 ①（土台）の途中**（第857〜・✅ の行が閉じた分）。
 段取りは §6（土台 3〜4 便 → 取り込み → 出力 → 仕上げ＝計 7〜10 便）。
 **根拠**: ユーザー決定（第850〜851・第857）と、第857 の棚卸し（§3 の表・file:line は 2026-10-08 時点）。
 
@@ -140,9 +140,16 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
      ⚠️ **付け点が包みから漏れていた**: `DesignMetrics` は §3 #2 の符尾の付け点を 22 の `(double X, double Y)` で持つが、
      第857 の「全部届く」網は BBox と double しか見ていなかった＝付け点を全部落としても緑だった。`MusicGlyphMetrics` に
      `StemUp`／`StemDown`（SMuFL の `stemUpSE`／`stemDownNW`）を足し、網はタプルも数える（22）。掃き 1199 枚・差 0。
+   - ✅ **GlyphMetrics.cs の中の読み手と `EngravingDefaults` の符頭の幅（第859・`668153917`）**: 内側に残っていた平らな定数の
+     読み手（音部記号の幅の alias＝const → プロパティ・調号の臨時記号の幅・括弧の幅・C／cut-C の幅・休符の箱と輪郭＝`RestGlyphOf`・
+     臨時記号の輪郭＝font 付きの overload・強弱の字の箱と送り・通奏低音の字）と `NoteheadWhole/Half/BlackWidth`・`TabHeadCenterOffset`
+     （const → プロパティ。読み手は全部式の中）。字 → グリフは `MusicGlyphs.DynamicLetter(char)`／`Figbass(char)` の 1 か所。
+     GlyphMetrics.cs に残る生の定数は `StemUpSE`／`StemDownNW`（読み手 0・手の 0.168＝§3 #16）と `RestMaximaWidth`（§3 #16・
+     生成器が rests.M3 を出さない）だけ。掃き 1199 枚・差 0。
    - 残り（族ごと）: ⑴ グリフを `char` で運ぶモデル（数字と強弱の glyph run・`ArticulationItem.Glyph`・ペダル・メトロノーム・
-     和音名の臨時記号）⑵ 寸法の読み手（`GlyphMetrics.X` の名前つきの値と `ForFontSizeStep` → `MusicFont.DesignAt(..).Metrics(g)`）
-     ⑶ 文字をキーにした表（`SkylineBuilder`・`GlyphSkylinesGenerated` のカーニング）⑷ 面の選択（`MusicFace(rounded)`・
+     和音名の臨時記号・`SkylineBuilder` の `EmmentalerGlyphs.Get*`）⑵ 設計番号の読み手（`EmmentalerDesignSize.ForFontSizeStep(..).Rounded`
+     を輪郭 skyline の鍵にする 11 か所 → `MusicFont.DesignAt(step).Rounded`）
+     ⑶ 文字をキーにした表（`SkylineBuilder`・`GlyphSkylinesGenerated` のカーニング・`TextOutlineSkylines`）⑷ 面の選択（`MusicFace(rounded)`・
      SVG の WOFF2・PDF・PNG の Emmentaler 固定の名前）⑸ brace の段。
 2. **取り込み**: metadata の JSON と OTF を読む・§1 の解決順・文法（GRAMMAR §2.4・SYNTAX_REFERENCE・LSP の補完・
    TextMate）・診断・`--set music=`。**同梱するか（§7 C）はこの段の前に決める。**

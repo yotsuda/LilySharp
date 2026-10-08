@@ -129,6 +129,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第857セッションの経緯
+
+### 1.1 第857セッション（2026-10-08・YT-DELL2）
+
+新しい会話。`-Start p857`（HEAD `85f7d3eee`）＝full **11404 / 0 / 2 / 11406**。§7 3.5 で第855 を ARCHIVE へ。ユーザー「SMuFL に着手・まず文法の提案」。
+- **文法を提案し承認（ユーザー）**: `fonts { music "Bravura" }`（LP も `property-defaults.fonts.music` を同じ alist に持つ・paper-defaults-init.ly:169）。寸法は `layout` ＞ フォントの `engravingDefaults` ＞ LP の既定。見つからなければ警告して Emmentaler。ユーザーの追加: **Emmentaler を SMuFL の形に包んで全音楽フォントを統一的に扱う・SMuFL に無い Emmentaler のパラメータを失わない**。
+- **棚卸し**（subagent・読むだけ）: Emmentaler 由来のデータは生成器 3 本（`audit/scripts/Extract-Emmentaler*.py`）＋brace の段（LP を回して採った）＋実行時の輪郭。SMuFL に無いもの＝LILC の箱・ledger-shortening-range・光学サイズ 8 本・GPOS カーニング・数字の 3 つの切り方・brace の段ほか。表は `docs/smufl-design.md` §3。GRAMMAR へは取り込みの段で入れる（実装の無いキーを載せない）。full **11404 / 0 / 2 / 11406**（docs だけ・`7abd9205c`）。
+- **続き（ユーザー「続けて」）＝土台の第 1 歩（`9c61c361e`）**: `MusicGlyph`（SMuFL 名の enum・150 行の表＝feta 名・SMuFL のコードポイント・Emmentaler の字・未確認の印。コードポイントは glyphnames.json と 0 件の食い違い＝Lab `p857/check-glyphnames.ps1`）と `MusicFont`／`EmmentalerMusicFont`（値は生成された表を参照するだけ＝バイト不変は構成から）。網 `MusicFontTests` 12 本（生成された寸法の全プロパティが 8 デザインで何かのグリフから届く）・毒 2 本とも名指しで赤。読み手はまだ 0＝掃きは要らない（既存の行は 1 行も変えていない）。fontTools がこの機械に無い＝生成器は回せない（`pip install fonttools` はユーザーに訊く）。full **11416 / 0 / 2 / 11418**（+12）。
+
 ## 以下は第856セッションの経緯
 
 ### 1.1 第856セッション（2026-10-08・YT-DELL2）
