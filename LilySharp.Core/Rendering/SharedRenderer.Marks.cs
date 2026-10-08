@@ -861,11 +861,13 @@ internal static partial class SharedRenderer
             double left = m.X - (textW + glyphW) / 2;
             gc.DrawText(prefix, left, absY, ts, TextRole.Navigation,
                 style, TextAnchor.Start, Color.Black);
-            // The glyph's origin is its CENTRE, both ways: half its width past the text, and
-            // lifted (up = larger Y-up) to the middle of the "To" ink so the two centre on
-            // one line.
-            gc.DrawGlyph(Music(MusicGlyph.Coda), left + textW + glyphW / 2,
-                absY + MusicMarkEngraver.ToCodaGlyphLift(fonts), gs, Color.Black);
+            // The glyph's BOX centre, both ways: half its width past the text, and lifted
+            // (up = larger Y-up) to the middle of the "To" ink so the two centre on one line.
+            // Emmentaler's coda is drawn about its origin (the box centre is 0); a SMuFL coda
+            // stands on its baseline from its left, so its centre is taken off (Lab sessions/p869).
+            var (cX, cY) = MusicMarkEngraver.ToCodaGlyphCentre;
+            gc.DrawGlyph(Music(MusicGlyph.Coda), left + textW + glyphW / 2 - cX,
+                absY + MusicMarkEngraver.ToCodaGlyphLift(fonts) - cY, gs, Color.Black);
             return;
         }
         // Default text marks (D.S./D.C./Fine/etc.) — size and style from the one home the
@@ -1225,7 +1227,8 @@ internal static partial class SharedRenderer
         double x = cx - totalAdvance / 2;
         // The number sits above the staff (device up = larger Y-up).
         double baseline = cy + topLineOffset + EngravingDefaults.StaffLineThickness / 2.0
-                          + MultiMeasureRestEngraver.NumberStaffPadding;
+                          + MultiMeasureRestEngraver.NumberStaffPadding
+                          + MultiMeasureRestEngraver.NumberBaselineAboveInk(count);
         foreach (var ch in digits)
         {
             gc.DrawGlyph(Music(MusicGlyphs.TimeSigDigit(ch - '0')), x, baseline, FontSize);

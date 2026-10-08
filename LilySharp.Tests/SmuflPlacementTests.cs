@@ -128,6 +128,44 @@ public class SmuflPlacementTests
     }
 
     [Fact]
+    public void TheMultiMeasureRestsCount_ClearsTheStaffByItsInk_InEveryFont()
+    {
+        // LilyPond places the count by its EXTENT; a SMuFL timeSig digit is centred on its
+        // baseline, so placed by the baseline it stood a staff space low (on the rest, in Petaluma).
+        double GapOverRest(string font)
+        {
+            var symbols = Symbols(font, "R1*3");
+            var digit = Assert.Single(symbols, s => s.Glyph == "TimeSig3");
+            double restTop = symbols.Where(s => s.Kind == "rest").Min(s => s.Box[1]);
+            return restTop - digit.Box[3];
+        }
+        double emmentaler = GapOverRest("Emmentaler");
+        foreach (string font in new[] { "Bravura", "Leland", "Petaluma" })
+            Assert.True(Math.Abs(GapOverRest(font) - emmentaler) < 0.15,
+                $"{font}: the count clears the rest by {GapOverRest(font):F3}, Emmentaler's by {emmentaler:F3}");
+    }
+
+    [Theory]
+    [MemberData(nameof(Fonts))]
+    public void ToCoda_SetsTheSignBesideTheWord_CentredOnIt(string font)
+    {
+        var tree = SyntaxTree.Parse(
+            $"fonts {{ music \"{font}\" }}\n" +
+            "part m { clef treble }\n" +
+            "section A { m { c'1 | } }\nsection B { m { d'1 | } }\n" +
+            "form main { segno A to coda B ds al coda coda B }\n" +
+            "score main { staff m }\n");
+        var symbols = BoxesGenerator.GenerateDocument(tree, RenderSpecParser.FindFirst(tree))
+            .Pages.SelectMany(p => p.Symbols).ToList();
+        var word = Assert.Single(symbols, s => s.Text == "To");
+        var sign = symbols.Where(s => s.Glyph == "MarkCoda").OrderBy(s => Math.Abs(s.Box[0] - word.Box[2])).First();
+        double gap = sign.Box[0] - word.Box[2];
+        Assert.True(gap is > 0.0 and < 0.6, $"{font}: the sign stands {gap:F3} past the word");
+        double signMiddle = (sign.Box[1] + sign.Box[3]) / 2, wordMiddle = (word.Box[1] + word.Box[3]) / 2;
+        Assert.True(Math.Abs(signMiddle - wordMiddle) < 0.1, $"{font}: the sign's middle is {signMiddle - wordMiddle:F3} off the word's");
+    }
+
+    [Fact]
     public void Emmentalers_Wiggles_KeepTheirLilcBoxes()
     {
         // The step is LILC's 1.0 / 0.8 and the arpeggio stands from its origin, so the turned

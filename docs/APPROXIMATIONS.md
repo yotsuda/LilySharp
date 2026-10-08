@@ -48,9 +48,9 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:373** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1320** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
-- **:1325** whiteout −1) is not ported.
-- **:1447** NOT ported; this takes the note's own stem direction. No book and
+- **:1323** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
+- **:1328** whiteout −1) is not ported.
+- **:1450** NOT ported; this takes the note's own stem direction. No book and
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
 - **:363** Lily# has not ported; this arrow is its own device.
 - **:848** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
@@ -104,7 +104,7 @@
 - **:4514** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1226** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
-- **:2353** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
+- **:2368** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:180** non-default merge-differently-* switches. dot_wipe_head is NOT ported (no channel).
 - **:571** ⚠️ NOT PORTED — dot_wipe_head: LilyPond also kills the down head's DOT on
@@ -145,7 +145,7 @@
 - **:693** no observer; add the paren widths when a book brings one. The unpacked
 - **:695** bare glyph width, which is exact for one and unobserved for many.
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1448** no observer reaches that branch yet.
+- **:1451** no observer reaches that branch yet.
 ### `LilySharp.Core/Rendering/SharedRenderer.Noteheads.cs`
 - **:788** observed by: no observer, and none is possible while the term is dominated — it
 ### `LilySharp.Core/Semantics/DrummapValidator.cs`
@@ -314,7 +314,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:216** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1441** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
+- **:1444** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
 - **:184** LILYSHARP-OWN: LilyPond has no scoop or plop — no grob and no event spells either in
 - **:233** The bend amount label's ENGRAVING em. LILYSHARP-OWN, as
@@ -487,17 +487,17 @@
 - **:1552** LILYSHARP-OWN: `markTempo beside` is a Lily#-own arrangement (user decision 2026-09-02,
 - **:1587** side-by-side shared line itself is LILYSHARP-OWN: LilyPond prints a boundary
 - **:1706** (a sign the player must not miss). LILYSHARP-OWN with the composition.
-- **:1727** The air between the "To" advance and the coda sign's ink. LILYSHARP-OWN with the
-- **:1744** shares the rehearsal line with. LILYSHARP-OWN with the arrangement itself
-- **:2158** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-11, session 368): a Lily# `form'
-- **:2259** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26: "Bridge"'s B stood too high — above
-- **:2284** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26): with equal margins round the ink, a
-- **:2303** LILYSHARP-OWN with LabelBoxBottomMargin.
-- **:2311** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26: "the margins inside the frame should be
-- **:2555** ⚠️ Until session 735 such a mark took the musical-column arm — a LILYSHARP-OWN limit
-- **:2683** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
-- **:2694** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
-- **:2743** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
+- **:1742** The air between the "To" advance and the coda sign's ink. LILYSHARP-OWN with the
+- **:1759** shares the rehearsal line with. LILYSHARP-OWN with the arrangement itself
+- **:2173** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-11, session 368): a Lily# `form'
+- **:2274** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26: "Bridge"'s B stood too high — above
+- **:2299** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26): with equal margins round the ink, a
+- **:2318** LILYSHARP-OWN with LabelBoxBottomMargin.
+- **:2326** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26: "the margins inside the frame should be
+- **:2570** ⚠️ Until session 735 such a mark took the musical-column arm — a LILYSHARP-OWN limit
+- **:2698** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
+- **:2709** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
+- **:2758** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:296** too (LILYSHARP-OWN, the remark at the meshing branch). Kept as LilyPond's number.
 - **:499** LILYSHARP-OWN (user decision 2026-09-26): ONE meshing shift, dotted or not.

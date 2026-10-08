@@ -1718,10 +1718,25 @@ internal static class MusicMarkEngraver
         var (textW, glyphW) = ToCodaStencilWidths(fonts);
         var (textBottom, textTop) = fonts.Ink("To", PlainMarkEm(fonts, MusicMarkType.ToCoda),
             TextRole.Navigation, TextStyleOf(fonts, MusicMarkType.ToCoda));
-        double lift = ToCodaGlyphLift(fonts);
+        double lift = ToCodaGlyphLift(fonts) - ToCodaGlyphCentre.Y;
         return ((textW + glyphW) / 2,
             Math.Min(textBottom, lift + MusicFont.Current.FullSize.Box(MusicGlyph.Coda).Bottom * ToCodaGlyphScale),
             Math.Max(textTop, lift + MusicFont.Current.FullSize.Box(MusicGlyph.Coda).Top * ToCodaGlyphScale));
+    }
+
+    /// <summary>
+    /// The coda sign's box centre about its glyph origin, at the composition's size — what the
+    /// drawing takes off so that the BOX centre lands where the composition puts the sign.
+    /// (0, 0) for Emmentaler's <c>scripts.coda</c>, drawn about its origin; a SMuFL
+    /// <c>coda</c> stands on its baseline from its left edge.
+    /// </summary>
+    internal static (double X, double Y) ToCodaGlyphCentre
+    {
+        get
+        {
+            var box = MusicFont.Current.FullSize.Box(MusicGlyph.Coda);
+            return (box.CenterX * ToCodaGlyphScale, box.CenterY * ToCodaGlyphScale);
+        }
     }
 
     // The air between the "To" advance and the coda sign's ink. LILYSHARP-OWN with the

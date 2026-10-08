@@ -172,6 +172,23 @@ internal static class MultiMeasureRestEngraver
     internal const double NumberStaffPadding = 0.4;
 
     /// <summary>
+    /// How far the count's BASELINE stands above its ink bottom: minus the lowest box bottom of
+    /// its digits — 0 for Emmentaler's numerals, which stand on the baseline (and carry no box
+    /// of their own), about 1 for a SMuFL font's <c>timeSig*</c> digits, which are centred on it.
+    /// </summary>
+    /// <remarks>LilyPond places the number by its EXTENT (y-aligned-side over the staff), so the
+    /// ink bottom is what clears the staff by the padding, wherever the font puts the baseline;
+    /// a SMuFL count stood a staff space low until Lab sessions/p869 (on the rest, in Petaluma).</remarks>
+    internal static double NumberBaselineAboveInk(int count)
+    {
+        double bottom = 0.0;
+        foreach (char ch in count.ToString(System.Globalization.CultureInfo.InvariantCulture))
+            if (MusicFont.Current.DesignAt(0).Metrics(MusicGlyphs.TimeSigDigit(ch - '0')).DesignBox is { } box)
+                bottom = Math.Min(bottom, box.Bottom);
+        return -bottom;
+    }
+
+    /// <summary>
     /// The count number's ink box, Y-up about the staff middle: centred on <paramref name="cx"/>
     /// at the digits' advances, standing <see cref="NumberStaffPadding"/> over
     /// <paramref name="staffExtent"/> (the staff's outer line ink), as tall as its tallest digit.
@@ -189,7 +206,11 @@ internal static class MultiMeasureRestEngraver
         foreach (char ch in digits)
         {
             width += GlyphMetrics.GetTimeSigDigitWidth(ch - '0');
-            height = Math.Max(height, DigitBox(ch - '0').Top);
+            // The drawn digit's own box when the font gives one (a SMuFL timeSig* digit stands
+            // about its baseline, so its height is Top − Bottom); Emmentaler's numerals have no
+            // box of their own and are read from the fingering cut, which stands on it.
+            height = Math.Max(height, MusicFont.Current.DesignAt(0).Metrics(MusicGlyphs.TimeSigDigit(ch - '0')).DesignBox
+                is { } own ? own.Top - own.Bottom : DigitBox(ch - '0').Top);
         }
         double bottom = staffExtent + NumberStaffPadding;
         return (cx - width / 2.0, cx + width / 2.0, bottom, bottom + height);
