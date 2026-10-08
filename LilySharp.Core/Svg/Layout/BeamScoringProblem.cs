@@ -270,7 +270,7 @@ internal sealed class BeamScoringProblem
         IReadOnlyList<int>? stemPositions = null,
         double lengthFraction = 1.0,
         double? beamThickness = null,
-        GlyphMetrics.DesignMetrics? headFont = null,
+        MusicFontDesign? headFont = null,
         double? lineThickness = null,
         int staffLineCount = 5,
         double? beamLengthFraction = null,
@@ -347,7 +347,7 @@ internal sealed class BeamScoringProblem
         IReadOnlyList<int>? stemPositions = null,
         double lengthFraction = 1.0,
         double? beamThickness = null,
-        GlyphMetrics.DesignMetrics? headFont = null,
+        MusicFontDesign? headFont = null,
         double? lineThickness = null,
         int staffLineCount = 5,
         double? beamLengthFraction = null,
@@ -447,7 +447,7 @@ internal sealed class BeamScoringProblem
         private readonly BeamCollision[] _collisions;
         private readonly int[]? _stemPositions;
         private readonly BeamQuantParameters? _parameters;
-        private readonly GlyphMetrics.DesignMetrics? _headFont;
+        private readonly MusicFontDesign? _headFont;
         private readonly double _lengthFraction;
         private readonly double _beamThickness;
         private readonly double _lineThickness;
@@ -461,7 +461,7 @@ internal sealed class BeamScoringProblem
         public SolvedBeam(
             BeamGroup group, IReadOnlyList<double> itemXPositions, BeamQuantParameters? parameters,
             IReadOnlyList<BeamCollision>? collisions, IReadOnlyList<int>? stemPositions,
-            double lengthFraction, double beamThickness, GlyphMetrics.DesignMetrics? headFont,
+            double lengthFraction, double beamThickness, MusicFontDesign? headFont,
             double lineThickness, int staffLineCount, double? beamLengthFraction,
             IReadOnlyList<double>? restXPositions, bool noStemExtend, bool uniformBeamedLength,
             (double, double, (double, double)) answer)
@@ -487,7 +487,7 @@ internal sealed class BeamScoringProblem
         public bool Matches(
             BeamGroup group, IReadOnlyList<double> itemXPositions, BeamQuantParameters? parameters,
             IReadOnlyList<BeamCollision>? collisions, IReadOnlyList<int>? stemPositions,
-            double lengthFraction, double beamThickness, GlyphMetrics.DesignMetrics? headFont,
+            double lengthFraction, double beamThickness, MusicFontDesign? headFont,
             double lineThickness, int staffLineCount, double? beamLengthFraction,
             IReadOnlyList<double>? restXPositions, bool noStemExtend, bool uniformBeamedLength)
         {
@@ -563,7 +563,7 @@ internal sealed class BeamScoringProblem
         IReadOnlyList<int>? stemPositions,
         double lengthFraction,
         double beamThickness,
-        GlyphMetrics.DesignMetrics? headFont,
+        MusicFontDesign? headFont,
         double lineThickness,
         int staffLineCount,
         double? beamLengthFraction,

@@ -1098,7 +1098,7 @@ internal sealed class SkylineBuilder
     /// a separate island"); folding it in would move every cue book for a reason unrelated
     /// to the grace, and it wants its own measurement.
     /// </remarks>
-    private static (GlyphMetrics.DesignMetrics? Head, StemDetails? Stem, GlyphMetrics.DesignMetrics? Flag)
+    private static (MusicFontDesign? Head, StemDetails? Stem, MusicFontDesign? Flag)
         GraceFontsOf(MusicItem item)
         => item.GraceTime
             ? (GrobFontSize.FontOf(item, SizedGrob.NoteHead), GrobFontSize.GraceStemDetails,
@@ -3110,7 +3110,7 @@ internal sealed class SkylineBuilder
         if (GlyphMetrics.RestoreMainOf(accidental) is { } restoreMain)
         {
             var natBox = GlyphMetrics.GetAccidentalSkylineBBox("natural");
-            double mainOrigin = GlyphMetrics.RestoreMainOffset(GlyphMetrics.Design20, restoreMain);
+            double mainOrigin = GlyphMetrics.RestoreMainOffset(MusicFont.Current.DesignAt(0), restoreMain);
             var mainBox = GlyphMetrics.GetAccidentalSkylineBBox(restoreMain);
             MergeAccidentalInk("natural", inkLeft, headY, size, upSkyline, downSkyline);
             // The main glyph's ink left in the composite, converted through the same
@@ -3183,7 +3183,7 @@ internal sealed class SkylineBuilder
     private static void MergeFlagInk(
         MusicItem? graceItem, int noteValue, bool stemUp, double originX, double originUp,
         StaffSize size, VerticalSkyline upSkyline, VerticalSkyline downSkyline,
-        GlyphMetrics.DesignMetrics? flagFont, bool pureBox = false)
+        MusicFontDesign? flagFont, bool pureBox = false)
     {
         if (EmmentalerGlyphs.GetFlag(noteValue, stemUp) is not { } glyph)
             return;
@@ -3192,7 +3192,7 @@ internal sealed class SkylineBuilder
         // MEASURED (2.26.0, Lab sessions/p856/net/n.lys, a bass-clef d, eighth): the rest-of-line
         // bottom 1.400 under the bottom line, 0.025 past the stem's end; the outline gave 1.375.
         if (pureBox && graceItem is null
-            && size.Ink(GlyphMetrics.GetFlagBBox(flagFont ?? GlyphMetrics.Design20, noteValue, stemUp)) is var pb
+            && size.Ink(GlyphMetrics.GetFlagBBox(flagFont ?? MusicFont.Current.DesignAt(0), noteValue, stemUp)) is var pb
             && pb != default)
         {
             upSkyline.MergeBox(originX + pb.Left, originX + pb.Right, originUp + pb.Bottom, originUp + pb.Top);
@@ -3212,7 +3212,7 @@ internal sealed class SkylineBuilder
             downSkyline.Merge(down, originX, originUp);
             return;
         }
-        if ((flagFont ?? (graceItem is null ? GlyphMetrics.Design20 : null)) is not { } font)
+        if ((flagFont ?? (graceItem is null ? MusicFont.Current.DesignAt(0) : null)) is not { } font)
             return;
         var fb = size.Ink(GlyphMetrics.GetFlagBBox(font, noteValue, stemUp));
         if (fb == default)

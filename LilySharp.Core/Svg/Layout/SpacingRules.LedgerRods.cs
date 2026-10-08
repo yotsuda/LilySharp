@@ -127,7 +127,7 @@ internal static partial class SpacingRules
                     if (t >= 0)
                     {
                         double shift = shifts.ShiftOf(measureIndex, v + 1, oi);
-                        var font = HeadFontOf(item) ?? GlyphMetrics.Design20;
+                        var font = HeadFontOf(item) ?? MusicFont.Current.DesignAt(0);
                         int noteValue = GetNoteValue(item);
                         double width = GlyphMetrics.GetNoteheadBBox(font, noteValue).Width;
                         if (item is NoteItem note)

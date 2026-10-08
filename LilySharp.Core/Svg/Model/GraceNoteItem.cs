@@ -142,17 +142,17 @@ public readonly record struct GraceColumnInfo(
     /// font-size −7 and its head box is 0.574399405; the −7 font's (the ELEVEN design at
     /// magstep −7) is 0.574397149 — the compounding is the addition, and the design follows.
     /// </remarks>
-    internal Svg.Layout.GlyphMetrics.DesignMetrics Font
+    internal Svg.Layout.MusicFontDesign Font
         => ContextFontSizeStep == 0
             ? GraceNoteItem.Font
-            : Svg.Layout.GlyphMetrics.AtFontSize(GraceNoteItem.FontSizeStep + ContextFontSizeStep);
+            : Svg.Layout.MusicFont.Current.SizedAt(GraceNoteItem.FontSizeStep + ContextFontSizeStep);
 
     /// <summary>This column's ACCIDENTAL font — <see cref="GraceNoteItem.AccidentalFont"/>
     /// shifted by <see cref="ContextFontSizeStep"/> the same way <see cref="Font"/> is.</summary>
-    internal Svg.Layout.GlyphMetrics.DesignMetrics AccidentalFont
+    internal Svg.Layout.MusicFontDesign AccidentalFont
         => ContextFontSizeStep == 0
             ? GraceNoteItem.AccidentalFont
-            : Svg.Layout.GlyphMetrics.AtFontSize(GraceNoteItem.AccidentalFontSizeStep + ContextFontSizeStep);
+            : Svg.Layout.MusicFont.Current.SizedAt(GraceNoteItem.AccidentalFontSizeStep + ContextFontSizeStep);
 
     /// <summary>The magnification <see cref="Font"/> was read at — <see cref="GraceNoteItem.ScaleFactor"/>
     /// outside a cue.</summary>
@@ -471,15 +471,15 @@ public sealed record GraceNoteItem
     ///   WHICH file and at WHAT magnification, and hands back a font that has applied the
     ///   second (lily/modified-font-metric.cc:62-68 get_indexed_char_dimensions).
     /// </remarks>
-    internal static Svg.Layout.GlyphMetrics.DesignMetrics Font
-        => Svg.Layout.GlyphMetrics.AtFontSize(FontSizeStep);
+    internal static Svg.Layout.MusicFontDesign Font
+        => Svg.Layout.MusicFont.Current.SizedAt(FontSizeStep);
 
     /// <summary>
     /// The FONT a grace's ACCIDENTAL reads — <see cref="AccidentalFontSizeStep"/>'s design at
     /// its magstep, which is not <see cref="Font"/>.
     /// </summary>
-    internal static Svg.Layout.GlyphMetrics.DesignMetrics AccidentalFont
-        => Svg.Layout.GlyphMetrics.AtFontSize(AccidentalFontSizeStep);
+    internal static Svg.Layout.MusicFontDesign AccidentalFont
+        => Svg.Layout.MusicFont.Current.SizedAt(AccidentalFontSizeStep);
 
     /// <summary>
     /// The Emmentaler design a grace's ACCIDENTAL is DRAWN from — the number a drawing
@@ -507,7 +507,7 @@ public sealed record GraceNoteItem
     /// <see cref="Font"/> for a run of rests. A run is written inside a cue or outside it,
     /// so its columns agree.
     /// </summary>
-    internal static Svg.Layout.GlyphMetrics.DesignMetrics HeadFontOf(ImmutableArray<GraceColumnInfo> columns)
+    internal static Svg.Layout.MusicFontDesign HeadFontOf(ImmutableArray<GraceColumnInfo> columns)
     {
         if (!columns.IsDefaultOrEmpty)
             foreach (var c in columns)
@@ -536,7 +536,7 @@ public sealed record GraceNoteItem
         => columns.IsDefaultOrEmpty || columns[0].StemUp;
 
     /// <summary><see cref="HeadFontOf"/> for this run.</summary>
-    internal Svg.Layout.GlyphMetrics.DesignMetrics HeadFont => HeadFontOf(Columns);
+    internal Svg.Layout.MusicFontDesign HeadFont => HeadFontOf(Columns);
 
     /// <summary><see cref="HeadScaleOf"/> for this run.</summary>
     internal double HeadScale => HeadScaleOf(Columns);

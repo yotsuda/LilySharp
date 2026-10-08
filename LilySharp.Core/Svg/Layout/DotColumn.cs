@@ -390,6 +390,6 @@ internal static class DotColumn
         }
         int[] rows = DotConfiguration.Resolve(headPositions);
         return (OffsetX(GraceColumnHeads.HeadInkRight(column), supports[..supportCount], rows,
-                        font.AugmentationDot.Width), rows);
+                        font.Box(MusicGlyph.AugmentationDot).Width), rows);
     }
 }

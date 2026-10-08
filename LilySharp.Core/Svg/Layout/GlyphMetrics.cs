@@ -136,8 +136,8 @@ internal static partial class GlyphMetrics
 
     /// <summary>The same width out of a given font, for an accidental whose font-size picked
     /// another design (a grace's is −4, a cue's −4, an editorial one's −2).</summary>
-    public static double GetAccidentalParensInkWidth(DesignMetrics font) =>
-        font.AccidentalLeftParen.Width + font.AccidentalRightParen.Width;
+    public static double GetAccidentalParensInkWidth(MusicFontDesign font) =>
+        font.Box(MusicGlyph.AccidentalParensLeft).Width + font.Box(MusicGlyph.AccidentalParensRight).Width;
 
     /// <summary>
     /// Maxima (8-measure) rest ink width, in staff spaces — the church-rest glyph for
@@ -537,25 +537,25 @@ internal static partial class GlyphMetrics
     /// </para>
     /// </remarks>
     public static double GetTimeSigDigitWidth(int digit) =>
-        PangoQuantise(UnquantisedMeterDigitAdvance(Design20, digit));
+        PangoQuantise(UnquantisedMeterDigitAdvance(MusicFont.Current.DesignAt(0), digit));
 
     /// <summary>The same lookup asked of ONE font — the design a grob's <c>font-size</c>
     /// selected, optionally already scaled (<see cref="AtFontSize"/>).</summary>
     /// <remarks>LILYPOND-REF: lily/open-type-font.cc:390-408 get_indexed_char_dimensions — a
     /// dimension is a question put to a FONT, never to a glyph name alone.</remarks>
-    internal static double UnquantisedMeterDigitAdvance(DesignMetrics font, int digit) => digit switch
+    internal static double UnquantisedMeterDigitAdvance(MusicFontDesign font, int digit) => digit switch
     {
-        0 => font.TimeSigDigit0Advance,
-        1 => font.TimeSigDigit1Advance,
-        2 => font.TimeSigDigit2Advance,
-        3 => font.TimeSigDigit3Advance,
-        4 => font.TimeSigDigit4Advance,
-        5 => font.TimeSigDigit5Advance,
-        6 => font.TimeSigDigit6Advance,
-        7 => font.TimeSigDigit7Advance,
-        8 => font.TimeSigDigit8Advance,
-        9 => font.TimeSigDigit9Advance,
-        _ => font.TimeSigDigit0Advance, // fallback to a widest common digit
+        0 => font.Advance(MusicGlyph.TimeSig0),
+        1 => font.Advance(MusicGlyph.TimeSig1),
+        2 => font.Advance(MusicGlyph.TimeSig2),
+        3 => font.Advance(MusicGlyph.TimeSig3),
+        4 => font.Advance(MusicGlyph.TimeSig4),
+        5 => font.Advance(MusicGlyph.TimeSig5),
+        6 => font.Advance(MusicGlyph.TimeSig6),
+        7 => font.Advance(MusicGlyph.TimeSig7),
+        8 => font.Advance(MusicGlyph.TimeSig8),
+        9 => font.Advance(MusicGlyph.TimeSig9),
+        _ => font.Advance(MusicGlyph.TimeSig0), // fallback to a widest common digit
     };
 
     // ========== Helper methods ==========
@@ -648,13 +648,13 @@ internal static partial class GlyphMetrics
     /// origin (= the natural's origin): the main glyph's ink LEFT lands
     /// <see cref="RestoreFirstPad"/> right of the natural's ink RIGHT.
     /// </summary>
-    public static double RestoreMainOffset(DesignMetrics font, string mainName)
-        => font.AccidentalNatural.Right + RestoreFirstPad
+    public static double RestoreMainOffset(MusicFontDesign font, string mainName)
+        => font.Box(MusicGlyph.AccidentalNatural).Right + RestoreFirstPad
            - GetAccidentalBBox(font, mainName).Left;
 
     /// <summary>Gets the bounding box for an accidental by name.</summary>
     public static BBox GetAccidentalBBox(string? accidental)
-        => GetAccidentalBBox(Design20, accidental);
+        => GetAccidentalBBox(MusicFont.Current.DesignAt(0), accidental);
 
     /// <summary>
     /// The vertical range, in staff spaces about the note head, over which an accidental
@@ -693,13 +693,13 @@ internal static partial class GlyphMetrics
     }
 
     /// <summary>The same lookup asked of ONE font — see
-    /// <see cref="GetNoteheadBBox(DesignMetrics, int)"/>.</summary>
-    public static BBox GetAccidentalBBox(DesignMetrics font, string? accidental)
+    /// <see cref="GetNoteheadBBox(MusicFontDesign, int)"/>.</summary>
+    public static BBox GetAccidentalBBox(MusicFontDesign font, string? accidental)
     {
         if (RestoreMainOf(accidental) is { } main)
         {
             // The composed restore-first stencil: natural, pad, main glyph.
-            var nat = font.AccidentalNatural;
+            var nat = font.Box(MusicGlyph.AccidentalNatural);
             var mainBox = GetAccidentalBBox(font, main);
             double mainOrigin = RestoreMainOffset(font, main);
             return new BBox(
@@ -710,11 +710,11 @@ internal static partial class GlyphMetrics
         }
         return accidental switch
         {
-            "sharp" => font.AccidentalSharp,
-            "flat" => font.AccidentalFlat,
-            "natural" => font.AccidentalNatural,
-            "doubleSharp" => font.AccidentalDoubleSharp,
-            "doubleFlat" => font.AccidentalDoubleFlat,
+            "sharp" => font.Box(MusicGlyph.AccidentalSharp),
+            "flat" => font.Box(MusicGlyph.AccidentalFlat),
+            "natural" => font.Box(MusicGlyph.AccidentalNatural),
+            "doubleSharp" => font.Box(MusicGlyph.AccidentalDoubleSharp),
+            "doubleFlat" => font.Box(MusicGlyph.AccidentalDoubleFlat),
             _ => default
         };
     }
@@ -726,16 +726,16 @@ internal static partial class GlyphMetrics
     public static BBox GetNoteheadBBox(int noteValue) => GetNoteheadBBox(StaffHeadFont, noteValue);
 
     /// <summary>
-    /// The font a full-size note head is read from when the caller names none — <see cref="Design20"/>
-    /// at the default, the design and size <c>NoteHead.scale</c> asks for otherwise
+    /// The font a full-size note head is read from when the caller names none — the music font's
+    /// full size at the default, the design and size <c>NoteHead.scale</c> asks for otherwise
     /// (<see cref="EngravingStyle.NoteHeadFontSizeStep"/>). Every font-less head overload here and
-    /// <see cref="LayoutUtilities.StemAttachX(bool, int, Model.NoteheadStyle, DesignMetrics?)"/> read it,
+    /// <see cref="LayoutUtilities.StemAttachX(bool, int, Model.NoteheadStyle, MusicFontDesign?)"/> read it,
     /// so a reader that never named a font follows the heads' size.
     /// </summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm NoteHead — every head-hung grob (stem, dots,
     /// ledger, script, tie) reads the HEAD's extent, which its font-size decides.</remarks>
-    public static DesignMetrics StaffHeadFont
-        => EngravingStyle.Current.NoteHeadFontSizeStep is var step && step == 0 ? Design20 : AtFontSize(step);
+    public static MusicFontDesign StaffHeadFont
+        => MusicFont.Current.SizedAt(EngravingStyle.Current.NoteHeadFontSizeStep);
 
     /// <summary>The magnification <see cref="StaffHeadFont"/> is read at — exactly 1 at the
     /// default — for the few readers that hold a full-size head's number as a constant.</summary>
@@ -751,11 +751,11 @@ internal static partial class GlyphMetrics
     ///   is a question put to a FONT, never to a glyph name alone. The parameterless overload
     ///   is this one asked of <see cref="Design20"/>, which is the score's own size.
     /// </remarks>
-    public static BBox GetNoteheadBBox(DesignMetrics font, int noteValue) => noteValue switch
+    public static BBox GetNoteheadBBox(MusicFontDesign font, int noteValue) => noteValue switch
     {
-        1 => font.NoteheadWhole,
-        2 => font.NoteheadHalf,
-        _ => font.NoteheadBlack
+        1 => font.Box(MusicGlyph.NoteheadWhole),
+        2 => font.Box(MusicGlyph.NoteheadHalf),
+        _ => font.Box(MusicGlyph.NoteheadBlack)
     };
 
     /// <summary>
@@ -772,26 +772,26 @@ internal static partial class GlyphMetrics
     /// MEASURED, LilyPond 2.26.0 (Lab sessions/p851, test/rhythm-slashes's twin): with the plain
     ///   head's width every slash bar came out 0.2–0.8 narrower than LilyPond's.
     /// </remarks>
-    public static BBox GetNoteheadBBox(DesignMetrics font, Model.NoteheadStyle style, int noteValue)
+    public static BBox GetNoteheadBBox(MusicFontDesign font, Model.NoteheadStyle style, int noteValue)
         => style switch
     {
         Model.NoteheadStyle.Cross => noteValue switch
         {
-            0 or 1 => font.NoteheadCrossWhole, 2 => font.NoteheadCrossHalf, _ => font.NoteheadCrossBlack
+            0 or 1 => font.Box(MusicGlyph.NoteheadXWhole), 2 => font.Box(MusicGlyph.NoteheadXHalf), _ => font.Box(MusicGlyph.NoteheadXBlack)
         },
         Model.NoteheadStyle.Diamond => noteValue switch
         {
-            0 or 1 => font.NoteheadDiamondWhole, 2 => font.NoteheadDiamondHalf, _ => font.NoteheadDiamondBlack
+            0 or 1 => font.Box(MusicGlyph.NoteheadDiamondWhole), 2 => font.Box(MusicGlyph.NoteheadDiamondHalf), _ => font.Box(MusicGlyph.NoteheadDiamondBlack)
         },
         Model.NoteheadStyle.Triangle => noteValue switch
         {
-            0 or 1 => font.NoteheadTriangleWhole, 2 => font.NoteheadTriangleHalf, _ => font.NoteheadTriangleBlack
+            0 or 1 => font.Box(MusicGlyph.NoteheadTriangleUpWhole), 2 => font.Box(MusicGlyph.NoteheadTriangleUpHalf), _ => font.Box(MusicGlyph.NoteheadTriangleUpBlack)
         },
         Model.NoteheadStyle.Slash => noteValue switch
         {
-            0 or 1 => font.NoteheadSlashWhole, 2 => font.NoteheadSlashHalf, _ => font.NoteheadSlashBlack
+            0 or 1 => font.Box(MusicGlyph.NoteheadSlashWhiteWhole), 2 => font.Box(MusicGlyph.NoteheadSlashWhiteHalf), _ => font.Box(MusicGlyph.NoteheadSlashHorizontalEnds)
         },
-        Model.NoteheadStyle.XCircle => font.NoteheadXCircle,
+        Model.NoteheadStyle.XCircle => font.Box(MusicGlyph.NoteheadCircleX),
         _ => GetNoteheadBBox(font, noteValue),
     };
 
@@ -839,7 +839,7 @@ internal static partial class GlyphMetrics
             // GetAccidentalBBox — origin at the natural's).
             var nat = AccidentalNaturalOutline;
             var mainBox = GetAccidentalSkylineBBox(main);
-            double mainOrigin = RestoreMainOffset(Design20, main);
+            double mainOrigin = RestoreMainOffset(MusicFont.Current.DesignAt(0), main);
             return new BBox(
                 nat.Left,
                 Math.Min(nat.Bottom, mainBox.Bottom),
@@ -886,14 +886,14 @@ internal static partial class GlyphMetrics
         => GetNoteheadAdvance(StaffHeadFont, noteValue);
 
     /// <summary>The same lookup asked of ONE font — see
-    /// <see cref="GetNoteheadBBox(DesignMetrics, int)"/>.</summary>
-    public static double GetNoteheadAdvance(DesignMetrics font, int noteValue) => noteValue switch
+    /// <see cref="GetNoteheadBBox(MusicFontDesign, int)"/>.</summary>
+    public static double GetNoteheadAdvance(MusicFontDesign font, int noteValue) => noteValue switch
     {
         // Breve: the sM1 glyph is the whole head plus its side bars.
-        0 => font.NoteheadWholeAdvance * 1.30,
-        1 => font.NoteheadWholeAdvance,
-        2 => font.NoteheadHalfAdvance,
-        _ => font.NoteheadBlackAdvance,
+        0 => font.Advance(MusicGlyph.NoteheadWhole) * 1.30,
+        1 => font.Advance(MusicGlyph.NoteheadWhole),
+        2 => font.Advance(MusicGlyph.NoteheadHalf),
+        _ => font.Advance(MusicGlyph.NoteheadBlack),
     };
 
     /// <summary>
@@ -916,9 +916,9 @@ internal static partial class GlyphMetrics
     /// ⚠️ NOT A LITERAL PORT, and the difference is one indirection: LilyPond asks the FONT for
     /// a glyph NAME's attachment at run time, while Lily#'s metrics are extracted per design
     /// ahead of time and keyed by note value — the same shape
-    /// <see cref="GetNoteheadBBox(DesignMetrics, int)"/> already takes, because a name-keyed
+    /// <see cref="GetNoteheadBBox(MusicFontDesign, int)"/> already takes, because a name-keyed
     /// lookup would need the extractor to keep glyph names. Making it literal means giving
-    /// DesignMetrics a name→metric map; nothing needs one yet.
+    /// MusicFontDesign a name→metric map; nothing needs one yet.
     /// </para>
     /// <para>
     /// A WHOLE note (and a breve) falls to the black head here, which is not LilyPond's
@@ -932,12 +932,12 @@ internal static partial class GlyphMetrics
         => GetNoteheadStemAttachment(StaffHeadFont, noteValue);
 
     /// <summary>The same lookup asked of ONE font — see
-    /// <see cref="GetNoteheadBBox(DesignMetrics, int)"/>.</summary>
+    /// <see cref="GetNoteheadBBox(MusicFontDesign, int)"/>.</summary>
     public static (double X, double Y) GetNoteheadStemAttachment(
-        DesignMetrics font, int noteValue) => noteValue switch
+        MusicFontDesign font, int noteValue) => noteValue switch
     {
-        2 => font.NoteheadHalfStemAttachment,
-        _ => font.NoteheadBlackStemAttachment,
+        2 => font.StemUpAttachment(MusicGlyph.NoteheadHalf),
+        _ => font.StemUpAttachment(MusicGlyph.NoteheadBlack),
     };
 
     /// <summary>
@@ -967,34 +967,34 @@ internal static partial class GlyphMetrics
         => GetNoteheadStemAttachment(StaffHeadFont, style, up, noteValue);
 
     /// <summary>The same lookup asked of ONE font — see
-    /// <see cref="GetNoteheadBBox(DesignMetrics, int)"/>.</summary>
+    /// <see cref="GetNoteheadBBox(MusicFontDesign, int)"/>.</summary>
     public static (double X, double Y) GetNoteheadStemAttachment(
-        DesignMetrics font, Model.NoteheadStyle style, bool up, int noteValue)
+        MusicFontDesign font, Model.NoteheadStyle style, bool up, int noteValue)
         => (style, halfHead: noteValue == 2) switch
     {
         (Model.NoteheadStyle.Cross, true) => up
-            ? font.NoteheadCrossHalfStemAttachment : font.NoteheadCrossHalfStemAttachmentDown,
+            ? font.StemUpAttachment(MusicGlyph.NoteheadXHalf) : font.StemDownAttachment(MusicGlyph.NoteheadXHalf),
         (Model.NoteheadStyle.Cross, false) => up
-            ? font.NoteheadCrossBlackStemAttachment : font.NoteheadCrossBlackStemAttachmentDown,
+            ? font.StemUpAttachment(MusicGlyph.NoteheadXBlack) : font.StemDownAttachment(MusicGlyph.NoteheadXBlack),
         (Model.NoteheadStyle.Diamond, true) => up
-            ? font.NoteheadDiamondHalfStemAttachment : font.NoteheadDiamondHalfStemAttachmentDown,
+            ? font.StemUpAttachment(MusicGlyph.NoteheadDiamondHalf) : font.StemDownAttachment(MusicGlyph.NoteheadDiamondHalf),
         (Model.NoteheadStyle.Diamond, false) => up
-            ? font.NoteheadDiamondBlackStemAttachment : font.NoteheadDiamondBlackStemAttachmentDown,
+            ? font.StemUpAttachment(MusicGlyph.NoteheadDiamondBlack) : font.StemDownAttachment(MusicGlyph.NoteheadDiamondBlack),
         (Model.NoteheadStyle.Triangle, true) => up
-            ? font.NoteheadTriangleHalfStemAttachment : font.NoteheadTriangleHalfStemAttachmentDown,
+            ? font.StemUpAttachment(MusicGlyph.NoteheadTriangleUpHalf) : font.StemDownAttachment(MusicGlyph.NoteheadTriangleUpHalf),
         (Model.NoteheadStyle.Triangle, false) => up
-            ? font.NoteheadTriangleBlackStemAttachment : font.NoteheadTriangleBlackStemAttachmentDown,
+            ? font.StemUpAttachment(MusicGlyph.NoteheadTriangleUpBlack) : font.StemDownAttachment(MusicGlyph.NoteheadTriangleUpBlack),
         (Model.NoteheadStyle.Slash, true) => up
-            ? font.NoteheadSlashHalfStemAttachment : font.NoteheadSlashHalfStemAttachmentDown,
+            ? font.StemUpAttachment(MusicGlyph.NoteheadSlashWhiteHalf) : font.StemDownAttachment(MusicGlyph.NoteheadSlashWhiteHalf),
         (Model.NoteheadStyle.Slash, false) => up
-            ? font.NoteheadSlashBlackStemAttachment : font.NoteheadSlashBlackStemAttachmentDown,
+            ? font.StemUpAttachment(MusicGlyph.NoteheadSlashHorizontalEnds) : font.StemDownAttachment(MusicGlyph.NoteheadSlashHorizontalEnds),
         // The xcircle is ONE glyph for every value (EmmentalerGlyphs.GetNotehead).
         (Model.NoteheadStyle.XCircle, _) => up
-            ? font.NoteheadXCircleStemAttachment : font.NoteheadXCircleStemAttachmentDown,
+            ? font.StemUpAttachment(MusicGlyph.NoteheadCircleX) : font.StemDownAttachment(MusicGlyph.NoteheadCircleX),
         (_, true) => up
-            ? font.NoteheadHalfStemAttachment : font.NoteheadHalfStemAttachmentDown,
+            ? font.StemUpAttachment(MusicGlyph.NoteheadHalf) : font.StemDownAttachment(MusicGlyph.NoteheadHalf),
         (_, false) => up
-            ? font.NoteheadBlackStemAttachment : font.NoteheadBlackStemAttachmentDown,
+            ? font.StemUpAttachment(MusicGlyph.NoteheadBlack) : font.StemDownAttachment(MusicGlyph.NoteheadBlack),
     };
 
     /// <summary>
@@ -1004,20 +1004,20 @@ internal static partial class GlyphMetrics
     /// <param name="stemUp">True if stem points upward</param>
     /// <returns>Flag bounding box, or default if no flag needed</returns>
     public static BBox GetFlagBBox(int noteValue, bool stemUp)
-        => GetFlagBBox(Design20, noteValue, stemUp);
+        => GetFlagBBox(MusicFont.Current.DesignAt(0), noteValue, stemUp);
 
     /// <summary>The same lookup asked of ONE font — see
-    /// <see cref="GetNoteheadBBox(DesignMetrics, int)"/>.</summary>
-    public static BBox GetFlagBBox(DesignMetrics font, int noteValue, bool stemUp)
+    /// <see cref="GetNoteheadBBox(MusicFontDesign, int)"/>.</summary>
+    public static BBox GetFlagBBox(MusicFontDesign font, int noteValue, bool stemUp)
         => (noteValue, stemUp) switch
     {
-        (8, true) => font.Flag8thUp,
-        (8, false) => font.Flag8thDown,
-        (16, true) => font.Flag16thUp,
-        (16, false) => font.Flag16thDown,
+        (8, true) => font.Box(MusicGlyph.Flag8thUp),
+        (8, false) => font.Box(MusicGlyph.Flag8thDown),
+        (16, true) => font.Box(MusicGlyph.Flag16thUp),
+        (16, false) => font.Box(MusicGlyph.Flag16thDown),
         // For 32nd, 64th etc., use 16th as approximation (they're similar width)
-        (>= 32, true) => font.Flag16thUp,
-        (>= 32, false) => font.Flag16thDown,
+        (>= 32, true) => font.Box(MusicGlyph.Flag16thUp),
+        (>= 32, false) => font.Box(MusicGlyph.Flag16thDown),
         _ => default
     };
 

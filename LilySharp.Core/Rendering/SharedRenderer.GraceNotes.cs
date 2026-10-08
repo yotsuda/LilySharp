@@ -342,7 +342,7 @@ internal static partial class SharedRenderer
     private static void DrawGraceBeam(
         List<double> xs, List<double> ys, List<double> topYs, List<int> beamCounts,
         double scale,
-        GlyphMetrics.DesignMetrics headFont,
+        MusicFontDesign headFont,
         (double Left, double Right)? beamEnds, int beamedCount, bool stemUp,
         IDrawingContext gc)
     {

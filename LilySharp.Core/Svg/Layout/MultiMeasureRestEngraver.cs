@@ -196,13 +196,13 @@ internal static class MultiMeasureRestEngraver
 
         static GlyphMetrics.BBox DigitBox(int digit)
         {
-            var f = GlyphMetrics.Design20;
+            var f = MusicFont.Current.DesignAt(0);
             return digit switch
             {
-                0 => f.FingeringDigit0, 1 => f.FingeringDigit1, 2 => f.FingeringDigit2,
-                3 => f.FingeringDigit3, 4 => f.FingeringDigit4, 5 => f.FingeringDigit5,
-                6 => f.FingeringDigit6, 7 => f.FingeringDigit7, 8 => f.FingeringDigit8,
-                _ => f.FingeringDigit9,
+                0 => f.Box(MusicGlyph.Fingering0), 1 => f.Box(MusicGlyph.Fingering1), 2 => f.Box(MusicGlyph.Fingering2),
+                3 => f.Box(MusicGlyph.Fingering3), 4 => f.Box(MusicGlyph.Fingering4), 5 => f.Box(MusicGlyph.Fingering5),
+                6 => f.Box(MusicGlyph.Fingering6), 7 => f.Box(MusicGlyph.Fingering7), 8 => f.Box(MusicGlyph.Fingering8),
+                _ => f.Box(MusicGlyph.Fingering9),
             };
         }
     }

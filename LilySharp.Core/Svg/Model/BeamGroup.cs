@@ -138,7 +138,7 @@ public sealed record BeamGroup
     /// magnified by <c>NoteHead.scale</c>, null (the staff's own twenty) otherwise
     /// (<see cref="Layout.SpacingRules.HeadFontOf"/>, asked of the first member as
     /// <see cref="IsCue"/> is).</summary>
-    internal Layout.GlyphMetrics.DesignMetrics? HeadFont
+    internal Layout.MusicFontDesign? HeadFont
         => Members.Length > 0 ? Layout.SpacingRules.HeadFontOf(ItemOf(0)) : null;
 
     /// <summary>The distance between this beam's stacked lines (staff spaces) —

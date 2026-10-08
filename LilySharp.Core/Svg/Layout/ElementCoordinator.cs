@@ -1028,7 +1028,7 @@ internal sealed class ElementCoordinator
     /// for a cue chord, as SharedRenderer.DrawChord solves it; null reads the twenty (the beam
     /// quanter's collision supply still asks this way).</param>
     private static IEnumerable<AccidentalLayout> ChordAccidentalLayouts(
-        ChordItem chord, GlyphMetrics.DesignMetrics? font = null)
+        ChordItem chord, MusicFontDesign? font = null)
     {
         if (chord.HasPackedAccidentals)
         {
@@ -1059,7 +1059,7 @@ internal sealed class ElementCoordinator
     /// Emmentaler is optically sized, so that design's glyphs are drawn differently and not
     /// merely smaller. See <see cref="EngravingDefaults.CueFont"/>.
     /// </remarks>
-    private static GlyphMetrics.DesignMetrics? CueAccidentalFont(bool isCue) =>
+    private static MusicFontDesign? CueAccidentalFont(bool isCue) =>
         isCue ? EngravingDefaults.CueFont : null;
 
     /// <summary>
@@ -1974,7 +1974,7 @@ internal sealed class ElementCoordinator
     /// <paramref name="staffPosition"/> inside the item at <paramref name="itemIndex"/>,
     /// or 0 when the item is a single note or the chord has no second/unison that
     /// reverses a head to the far side of the stem. This mirrors the per-head offset
-    /// the renderer applies (<see cref="ChordHeadPositioning.CalculateOffsets(System.Collections.Generic.IReadOnlyList{LilySharp.Core.Svg.Model.ChordNoteInfo},bool,int,GlyphMetrics.DesignMetrics?)"/>) so a
+    /// the renderer applies (<see cref="ChordHeadPositioning.CalculateOffsets(System.Collections.Generic.IReadOnlyList{LilySharp.Core.Svg.Model.ChordNoteInfo},bool,int,MusicFontDesign?)"/>) so a
     /// tie or slur attaches to the DISPLACED head's edge, not the undisplaced chord
     /// column. Without it, a tie/slur on the reversed head of a seconds chord starts
     /// inside its own head and fails to reach the matching head at the other end.
@@ -3314,7 +3314,7 @@ internal sealed class ElementCoordinator
     /// `cue { e4( a4 d'4 c4) }`'s up slur leaves the e's stem 0.3 right of its right edge;
     /// with the twenty's attachment Lily# started it 0.49 further right.
     /// </remarks>
-    private static GlyphMetrics.DesignMetrics? BowFont(MusicItem item)
+    private static MusicFontDesign? BowFont(MusicItem item)
         => item.GraceTime
             // A grace column — the start of a grace slur (SlurItem.StartGraceGroup): its head
             // is set at general-grace-settings' NoteHead font-size −3, as the renderer draws it.
@@ -3756,7 +3756,7 @@ internal sealed class ElementCoordinator
             double groupX = GraceGroupX(voice, g, geom, ml, slur.VoiceIndex, voiceShifts);
 
             var font = g.HeadFont;
-            double headHalf = font.NoteheadBlack.Top;
+            double headHalf = font.Box(MusicGlyph.NoteheadBlack).Top;
             // The quanted grace beam (null for a lone / unbeamable run): the
             // scored line's staff-position pair at the two OUTER STEMS, exactly
             // what the renderer anchors the drawn beam on.
@@ -3810,7 +3810,7 @@ internal sealed class ElementCoordinator
                 // (scm/music-functions.scm:652-656 score-grace-settings) — DOWN in a lower
                 // voice — so the stem participates only under a slur on its side.
                 double stemY = double.NaN;
-                double obstacleX = hx + font.NoteheadBlackAdvance / 2.0;
+                double obstacleX = hx + font.Advance(MusicGlyph.NoteheadBlack) / 2.0;
                 if (slur.CurveUp == stemUp)
                 {
                     double stemX = StemXAt(k);
@@ -3958,7 +3958,7 @@ internal sealed class ElementCoordinator
                 double width = box.Width;
                 if (layout.IsCourtesy)
                     width += font is { } pf
-                        ? pf.AccidentalLeftParen.Width + pf.AccidentalRightParen.Width
+                        ? pf.Box(MusicGlyph.AccidentalParensLeft).Width + pf.Box(MusicGlyph.AccidentalParensRight).Width
                         : GlyphMetrics.AccidentalLeftParen.Width + GlyphMetrics.AccidentalRightParen.Width;
                 double left = columnX + layout.XOffset;
                 double centreDown = staffMiddleDown - layout.StaffPosition / 2.0;
@@ -4487,7 +4487,7 @@ internal sealed class ElementCoordinator
         // starts AT this base with no further lift of its own.
         // LILYPOND-REF: lily/slur-scoring.cc:556-557 get_base_attachments —
         //   y = head->extent(Y)[dir]; y += dir * 0.5 * staff_space.
-        double slurOffset = GlyphMetrics.StaffHeadFont.NoteheadBlack.Top + 0.5; // 0.545 + 0.5 = 1.045 ss
+        double slurOffset = GlyphMetrics.StaffHeadFont.Box(MusicGlyph.NoteheadBlack).Top + 0.5; // 0.545 + 0.5 = 1.045 ss
 
         // The note-collision shift of a voice's column — the table the beams stand their stems
         // on (ApplyVoiceCollisionShifts) and the renderer draws the heads by. A slur's bound is

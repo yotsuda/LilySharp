@@ -81,7 +81,7 @@ internal readonly record struct AccidentalStem(
     /// </summary>
     public static AccidentalStem Of(
         bool up, int noteValue, NoteheadStyle style, int lowestPosition, int highestPosition,
-        double xOffset = 0, GlyphMetrics.DesignMetrics? headFont = null)
+        double xOffset = 0, MusicFontDesign? headFont = null)
     {
         if (noteValue < 2)
             return default;
@@ -96,7 +96,7 @@ internal readonly record struct AccidentalStem(
     /// <summary>The stem of a chord whose heads are <paramref name="notes"/>.</summary>
     public static AccidentalStem Of(
         bool up, int noteValue, NoteheadStyle style, IReadOnlyList<ChordNoteInfo> notes,
-        double xOffset = 0, GlyphMetrics.DesignMetrics? headFont = null)
+        double xOffset = 0, MusicFontDesign? headFont = null)
     {
         if (notes.Count == 0)
             return default;
@@ -111,7 +111,7 @@ internal readonly record struct AccidentalStem(
 
     /// <summary>A chord's own stem, in the direction <paramref name="up"/> it is drawn.</summary>
     public static AccidentalStem Of(
-        ChordItem chord, bool up, GlyphMetrics.DesignMetrics? headFont = null) =>
+        ChordItem chord, bool up, MusicFontDesign? headFont = null) =>
         Of(up, GlyphMetrics.NoteValueOf(chord.BaseDuration), chord.Notehead, chord.Notes,
             0, headFont);
 }
@@ -233,8 +233,8 @@ internal sealed class AccidentalPlacement
     /// <param name="stems">More stems — a staff column holding several voices has one each.</param>
     public ImmutableArray<AccidentalLayout> CalculatePositions(
         IReadOnlyList<ChordNoteInfo> notes, IReadOnlyList<double>? headOffsets = null,
-        GlyphMetrics.DesignMetrics? accidentalFont = null,
-        GlyphMetrics.DesignMetrics? headFont = null,
+        MusicFontDesign? accidentalFont = null,
+        MusicFontDesign? headFont = null,
         AccidentalStem stem = default,
         IReadOnlyList<AccidentalStem>? stems = null)
     {
@@ -259,7 +259,7 @@ internal sealed class AccidentalPlacement
         // (session 465's census, the first to see a container whose type argument is a
         // tuple); the packer now walks `notes` and skips the bare ones, in the same order.
         return CalculateMultipleAccidentals(accidentalCount, notes, headOffsets,
-            accidentalFont ?? GlyphMetrics.Design20, headFont ?? GlyphMetrics.Design20,
+            accidentalFont ?? MusicFont.Current.DesignAt(0), headFont ?? MusicFont.Current.DesignAt(0),
             stem, stems);
     }
 
@@ -267,8 +267,8 @@ internal sealed class AccidentalPlacement
     /// Calculates position for a single note's accidental.
     /// </summary>
     public AccidentalLayout? CalculateSinglePosition(
-        NoteItem note, GlyphMetrics.DesignMetrics? accidentalFont = null,
-        GlyphMetrics.DesignMetrics? headFont = null)
+        NoteItem note, MusicFontDesign? accidentalFont = null,
+        MusicFontDesign? headFont = null)
         => CalculateSinglePosition(note.StaffPosition, note.Accidental, note.IsCourtesy,
             accidentalFont, headFont,
             AccidentalStem.Of(note.StemUp, GlyphMetrics.NoteValueOf(note.BaseDuration),
@@ -285,8 +285,8 @@ internal sealed class AccidentalPlacement
     /// <remarks>LILYPOND-REF: lily/accidental-placement.cc:391-438 position_apes.</remarks>
     public AccidentalLayout? CalculateSinglePosition(
         int staffPosition, string? accidental, bool isCourtesy,
-        GlyphMetrics.DesignMetrics? accidentalFont = null,
-        GlyphMetrics.DesignMetrics? headFont = null,
+        MusicFontDesign? accidentalFont = null,
+        MusicFontDesign? headFont = null,
         AccidentalStem stem = default)
     {
         if (string.IsNullOrEmpty(accidental))
@@ -305,11 +305,11 @@ internal sealed class AccidentalPlacement
     /// (and is packed) that much further left again.
     /// </summary>
     private static double InkLeft(
-        double offset, double bboxLeft, bool isCourtesy, GlyphMetrics.DesignMetrics font)
+        double offset, double bboxLeft, bool isCourtesy, MusicFontDesign font)
     {
         double inkLeft = offset + bboxLeft;
         if (isCourtesy)
-            inkLeft -= font.AccidentalLeftParen.Width;
+            inkLeft -= font.Box(MusicGlyph.AccidentalParensLeft).Width;
         return inkLeft;
     }
 
@@ -317,7 +317,7 @@ internal sealed class AccidentalPlacement
     /// The accidental glyph's (LEFT, RIGHT) outline skyline pair, freshly cloned so the
     /// caller may mutate it, read from <paramref name="font"/>'s design and magnified by the
     /// same font's magnification — the box
-    /// (<see cref="GlyphMetrics.GetAccidentalBBox(GlyphMetrics.DesignMetrics, string?)"/>) and
+    /// (<see cref="GlyphMetrics.GetAccidentalBBox(MusicFontDesign, string?)"/>) and
     /// this outline are two readings of ONE face and must never come from two. A courtesy
     /// accidental's stencil
     /// embeds the real leftparen/rightparen glyphs at its LILC edges (padding 0), and the
@@ -331,11 +331,11 @@ internal sealed class AccidentalPlacement
     /// :65-82 the flat 0.375 right-skyline merge, guarded on !parenthesized.
     /// </remarks>
     internal static (HorizontalSkyline Left, HorizontalSkyline Right) GlyphSkylinePair(
-        string accidental, bool isCourtesy, GlyphMetrics.DesignMetrics font)
+        string accidental, bool isCourtesy, MusicFontDesign font)
     {
         // The design's UNMAGNIFIED table: this whole composition happens in the design's own
         // staff spaces, so the boxes it butts the parens against must be in them too.
-        var design = GlyphMetrics.ForDesign(font.Rounded);
+        var design = MusicFont.Current.Design(font.Rounded);
         // The baked outlines are in the DESIGN's own staff spaces, like the design's metric
         // table; the magnification is applied at the end, exactly once, as it is to the boxes
         // (lily/modified-font-metric.cc:62-68).
@@ -373,9 +373,9 @@ internal sealed class AccidentalPlacement
             // LILC extent with 0 padding — open's RIGHT at the accidental's LEFT, close's
             // LEFT at its RIGHT. Raise() is the X translation of a horizontal skyline.
             MergeParen(left, right, leftParen: true,
-                bbox.Left - design.AccidentalLeftParen.Right, font.Rounded);
+                bbox.Left - design.Box(MusicGlyph.AccidentalParensLeft).Right, font.Rounded);
             MergeParen(left, right, leftParen: false,
-                bbox.Right - design.AccidentalRightParen.Left, font.Rounded);
+                bbox.Right - design.Box(MusicGlyph.AccidentalParensRight).Left, font.Rounded);
         }
         else if (accidental is "flat" or "doubleFlat" or "naturalFlat")
         {
@@ -411,7 +411,7 @@ internal sealed class AccidentalPlacement
     /// 2,183 B each — 227 KB a keystroke, 8.2% of the render (measured session 491).
     /// </remarks>
     internal static (HorizontalSkyline Left, HorizontalSkyline Right) SharedGlyphSkylinePair(
-        string accidental, bool isCourtesy, GlyphMetrics.DesignMetrics font)
+        string accidental, bool isCourtesy, MusicFontDesign font)
     {
         var pairs = t_glyphPairs ??= new();
         var key = (accidental, isCourtesy, font.Rounded, font.Magnification);
@@ -442,8 +442,8 @@ internal sealed class AccidentalPlacement
         int accidentalCount,
         IReadOnlyList<ChordNoteInfo> allNotes,
         IReadOnlyList<double>? headOffsets,
-        GlyphMetrics.DesignMetrics accidentalFont,
-        GlyphMetrics.DesignMetrics headFont,
+        MusicFontDesign accidentalFont,
+        MusicFontDesign headFont,
         AccidentalStem stem,
         IReadOnlyList<AccidentalStem>? stems)
     {
@@ -519,7 +519,7 @@ internal sealed class AccidentalPlacement
             double yCenterSS = allNotes[i].StaffPosition / 2.0;
             // The HEADS' own font, which is not the accidentals' when the two grobs carry
             // different font-sizes (a grace: −3 against −4).
-            var nhBBox = headFont.NoteheadBlack;
+            var nhBBox = headFont.Box(MusicGlyph.NoteheadBlack);
             // headOffset arrives already scaled (ChordHeadPositioning).
             headBoxes.Add((
                 yCenterSS + nhBBox.Bottom,

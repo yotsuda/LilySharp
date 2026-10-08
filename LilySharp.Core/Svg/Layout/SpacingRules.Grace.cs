@@ -430,7 +430,7 @@ internal static partial class SpacingRules
     /// six places. <see cref="GraceColumnInfo.Font"/> is that font (the −7 one inside a cue),
     /// so this reads a width and multiplies nothing.
     /// </remarks>
-    private static double GraceHeadEnd(GraceColumnInfo column) => column.Font.NoteheadBlack.Width;
+    private static double GraceHeadEnd(GraceColumnInfo column) => column.Font.Box(MusicGlyph.NoteheadBlack).Width;
 
     /// <summary>
     /// How far a grace column's ink reaches RIGHT of its origin, in the separation-skyline

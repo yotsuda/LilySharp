@@ -28,10 +28,17 @@ namespace LilySharp.Core.Svg.Layout;
 /// skyline is built from (lily/stencil-integral.cc:535-563).</param>
 /// <param name="Advance">The horizontal feed to the next glyph — SMuFL's <c>glyphAdvanceWidths</c>,
 /// Emmentaler's hmtx.</param>
+/// <param name="StemUp">Where an UP stem attaches to a note head — SMuFL's <c>stemUpSE</c> anchor;
+/// Emmentaler's LILC <c>attachment</c> (docs/smufl-design.md §3 #2: per design, three decimals of
+/// the METAFONT point).</param>
+/// <param name="StemDown">Where a DOWN stem attaches — SMuFL's <c>stemDownNW</c>; Emmentaler's
+/// <c>attachment-down</c>, which is not the up point mirrored (the triangle's is not).</param>
 /// <remarks>A field the font has nothing for is null: an Emmentaler glyph the generators do not
 /// measure (a 32nd flag, a quarter-tone accidental) has no row, and its readers keep their own
-/// rule until they move onto this type.</remarks>
-internal readonly record struct MusicGlyphMetrics(BBox? DesignBox, BBox? OutlineBox, double? Advance);
+/// rule until they move onto this type; a glyph that takes no stem has no anchors.</remarks>
+internal readonly record struct MusicGlyphMetrics(
+    BBox? DesignBox, BBox? OutlineBox, double? Advance,
+    (double X, double Y)? StemUp = null, (double X, double Y)? StemDown = null);
 
 /// <summary>
 /// A music font in the engine's common shape: glyphs by <see cref="MusicGlyph"/>, dimensions in
@@ -106,6 +113,11 @@ internal abstract class MusicFont
 
     /// <summary>The design a full-size grob reads — <see cref="SizedAt"/> at font-size 0.</summary>
     public MusicFontDesign FullSize => SizedAt(0);
+
+    /// <summary>The optical design numbered <paramref name="rounded"/>
+    /// (<see cref="MusicFontDesign.Rounded"/>), unscaled; a font with one design answers it for
+    /// every number.</summary>
+    public abstract MusicFontDesign Design(int rounded);
 }
 
 /// <summary>One design of a <see cref="MusicFont"/> — the table its dimensions are read from.</summary>
@@ -113,6 +125,24 @@ internal abstract class MusicFontDesign
 {
     /// <summary>The design size in points (Emmentaler's LILY table: 11.22 … 25.20 — §3 #5).</summary>
     public abstract double DesignSize { get; }
+
+    /// <summary>Which optical design this table was read from — the rounded size in the
+    /// Emmentaler file name (11 … 26; §3 #4). A font with one design answers 20, the score's own.</summary>
+    /// <remarks>The key the outline skylines and the per-design caches are looked up by
+    /// (<see cref="GlyphMetrics.AccidentalSkylinePair"/>).</remarks>
+    public abstract int Rounded { get; }
+
+    /// <summary>The magnification the dimensions have ALREADY been read at — 1 for a design's
+    /// own table, magstep(font-size) for one <see cref="MusicFont.SizedAt"/> hands back
+    /// (<see cref="GlyphMetrics.DesignMetrics.Magnification"/>).</summary>
+    public abstract double Magnification { get; }
+
+    /// <summary>This design at magnification 1, in its own staff spaces.</summary>
+    public abstract MusicFontDesign Unscaled { get; }
+
+    /// <summary>This design magnified once more by <paramref name="factor"/> — an ossia's
+    /// scale on top of a grob's font-size (LilyPond's fontSize composes).</summary>
+    public abstract MusicFontDesign Scaled(double factor);
 
     /// <summary>The dimensions of <paramref name="glyph"/> in this design's staff spaces.</summary>
     public abstract MusicGlyphMetrics Metrics(MusicGlyph glyph);
@@ -131,6 +161,18 @@ internal abstract class MusicFontDesign
     /// (<see cref="MusicGlyphMetrics.Advance"/>).</summary>
     /// <exception cref="InvalidOperationException">The font has no advance for the glyph.</exception>
     public double Advance(MusicGlyph glyph) => Metrics(glyph).Advance ?? throw Missing(glyph, "advance");
+
+    /// <summary>Where an up stem attaches to <paramref name="glyph"/>
+    /// (<see cref="MusicGlyphMetrics.StemUp"/>).</summary>
+    /// <exception cref="InvalidOperationException">The font has no up-stem anchor for the glyph.</exception>
+    public (double X, double Y) StemUpAttachment(MusicGlyph glyph)
+        => Metrics(glyph).StemUp ?? throw Missing(glyph, "up-stem anchor");
+
+    /// <summary>Where a down stem attaches to <paramref name="glyph"/>
+    /// (<see cref="MusicGlyphMetrics.StemDown"/>).</summary>
+    /// <exception cref="InvalidOperationException">The font has no down-stem anchor for the glyph.</exception>
+    public (double X, double Y) StemDownAttachment(MusicGlyph glyph)
+        => Metrics(glyph).StemDown ?? throw Missing(glyph, "down-stem anchor");
 
     private static InvalidOperationException Missing(MusicGlyph glyph, string what)
         => new($"the music font has no {what} for {MusicGlyphs.SmuflName(glyph)}");
@@ -168,7 +210,7 @@ internal sealed class EmmentalerMusicFont : MusicFont
     /// <remarks>LILYPOND-REF: lily/font-select.cc:115-186 select_font — ported as
     /// <see cref="EmmentalerDesignSize"/>.</remarks>
     public override MusicFontDesign DesignAt(double fontSizeStep)
-        => DesignOf(EmmentalerDesignSize.ForFontSizeStep(fontSizeStep).Rounded);
+        => DesignByRounded(EmmentalerDesignSize.ForFontSizeStep(fontSizeStep).Rounded);
 
     /// <inheritdoc/>
     /// <remarks>Wraps <see cref="GlyphMetrics.AtFontSize"/>, so the numbers — and the sized
@@ -180,8 +222,11 @@ internal sealed class EmmentalerMusicFont : MusicFont
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<double, EmmentalerDesign> Sized = new();
 
-    /// <summary>The design in <c>emmentaler-&lt;rounded&gt;.otf</c>.</summary>
-    public static MusicFontDesign DesignOf(int rounded)
+    /// <inheritdoc/>
+    /// <remarks>The design in <c>emmentaler-&lt;rounded&gt;.otf</c>.</remarks>
+    public override MusicFontDesign Design(int rounded) => DesignByRounded(rounded);
+
+    private static MusicFontDesign DesignByRounded(int rounded)
     {
         var table = ForDesign(rounded);
         foreach (var d in Designs)
@@ -190,13 +235,33 @@ internal sealed class EmmentalerMusicFont : MusicFont
         throw new ArgumentOutOfRangeException(nameof(rounded), rounded, "not an Emmentaler design size");
     }
 
-    private sealed class EmmentalerDesign(DesignMetrics table) : MusicFontDesign
+    private sealed class EmmentalerDesign : MusicFontDesign
     {
-        public DesignMetrics Table { get; } = table;
+        // Read once: the layout asks a design for a box on every grob it seats.
+        private readonly MusicGlyphMetrics[] _metrics;
+
+        public EmmentalerDesign(DesignMetrics table)
+        {
+            Table = table;
+            var glyphs = Enum.GetValues<MusicGlyph>();
+            _metrics = new MusicGlyphMetrics[glyphs.Length];
+            foreach (var g in glyphs)
+                _metrics[(int) g] = MetricsOf(g, table);
+        }
+
+        public DesignMetrics Table { get; }
 
         public override double DesignSize => Table.DesignSize;
 
-        public override MusicGlyphMetrics Metrics(MusicGlyph glyph) => MetricsOf(glyph, Table);
+        public override int Rounded => Table.Rounded;
+
+        public override double Magnification => Table.Magnification;
+
+        public override MusicFontDesign Unscaled => DesignByRounded(Table.Rounded);
+
+        public override MusicFontDesign Scaled(double factor) => new EmmentalerDesign(Table.Scaled(factor));
+
+        public override MusicGlyphMetrics Metrics(MusicGlyph glyph) => _metrics[(int) glyph];
     }
 
     /// <summary>
@@ -220,21 +285,21 @@ internal sealed class EmmentalerMusicFont : MusicFont
         MusicGlyph.SixStringTabClef => new(d.ClefTab, d.ClefTabOutline, d.ClefTabAdvance),
 
         MusicGlyph.NoteheadWhole => new(d.NoteheadWhole, d.NoteheadWholeOutline, d.NoteheadWholeAdvance),
-        MusicGlyph.NoteheadHalf => new(d.NoteheadHalf, d.NoteheadHalfOutline, d.NoteheadHalfAdvance),
-        MusicGlyph.NoteheadBlack => new(d.NoteheadBlack, d.NoteheadBlackOutline, d.NoteheadBlackAdvance),
+        MusicGlyph.NoteheadHalf => new(d.NoteheadHalf, d.NoteheadHalfOutline, d.NoteheadHalfAdvance, d.NoteheadHalfStemAttachment, d.NoteheadHalfStemAttachmentDown),
+        MusicGlyph.NoteheadBlack => new(d.NoteheadBlack, d.NoteheadBlackOutline, d.NoteheadBlackAdvance, d.NoteheadBlackStemAttachment, d.NoteheadBlackStemAttachmentDown),
         MusicGlyph.NoteheadXWhole => new(d.NoteheadCrossWhole, d.NoteheadCrossWholeOutline, d.NoteheadCrossWholeAdvance),
-        MusicGlyph.NoteheadXHalf => new(d.NoteheadCrossHalf, d.NoteheadCrossHalfOutline, d.NoteheadCrossHalfAdvance),
-        MusicGlyph.NoteheadXBlack => new(d.NoteheadCrossBlack, d.NoteheadCrossBlackOutline, d.NoteheadCrossBlackAdvance),
+        MusicGlyph.NoteheadXHalf => new(d.NoteheadCrossHalf, d.NoteheadCrossHalfOutline, d.NoteheadCrossHalfAdvance, d.NoteheadCrossHalfStemAttachment, d.NoteheadCrossHalfStemAttachmentDown),
+        MusicGlyph.NoteheadXBlack => new(d.NoteheadCrossBlack, d.NoteheadCrossBlackOutline, d.NoteheadCrossBlackAdvance, d.NoteheadCrossBlackStemAttachment, d.NoteheadCrossBlackStemAttachmentDown),
         MusicGlyph.NoteheadDiamondWhole => new(d.NoteheadDiamondWhole, d.NoteheadDiamondWholeOutline, d.NoteheadDiamondWholeAdvance),
-        MusicGlyph.NoteheadDiamondHalf => new(d.NoteheadDiamondHalf, d.NoteheadDiamondHalfOutline, d.NoteheadDiamondHalfAdvance),
-        MusicGlyph.NoteheadDiamondBlack => new(d.NoteheadDiamondBlack, d.NoteheadDiamondBlackOutline, d.NoteheadDiamondBlackAdvance),
+        MusicGlyph.NoteheadDiamondHalf => new(d.NoteheadDiamondHalf, d.NoteheadDiamondHalfOutline, d.NoteheadDiamondHalfAdvance, d.NoteheadDiamondHalfStemAttachment, d.NoteheadDiamondHalfStemAttachmentDown),
+        MusicGlyph.NoteheadDiamondBlack => new(d.NoteheadDiamondBlack, d.NoteheadDiamondBlackOutline, d.NoteheadDiamondBlackAdvance, d.NoteheadDiamondBlackStemAttachment, d.NoteheadDiamondBlackStemAttachmentDown),
         MusicGlyph.NoteheadTriangleUpWhole => new(d.NoteheadTriangleWhole, d.NoteheadTriangleWholeOutline, d.NoteheadTriangleWholeAdvance),
-        MusicGlyph.NoteheadTriangleUpHalf => new(d.NoteheadTriangleHalf, d.NoteheadTriangleHalfOutline, d.NoteheadTriangleHalfAdvance),
-        MusicGlyph.NoteheadTriangleUpBlack => new(d.NoteheadTriangleBlack, d.NoteheadTriangleBlackOutline, d.NoteheadTriangleBlackAdvance),
+        MusicGlyph.NoteheadTriangleUpHalf => new(d.NoteheadTriangleHalf, d.NoteheadTriangleHalfOutline, d.NoteheadTriangleHalfAdvance, d.NoteheadTriangleHalfStemAttachment, d.NoteheadTriangleHalfStemAttachmentDown),
+        MusicGlyph.NoteheadTriangleUpBlack => new(d.NoteheadTriangleBlack, d.NoteheadTriangleBlackOutline, d.NoteheadTriangleBlackAdvance, d.NoteheadTriangleBlackStemAttachment, d.NoteheadTriangleBlackStemAttachmentDown),
         MusicGlyph.NoteheadSlashWhiteWhole => new(d.NoteheadSlashWhole, d.NoteheadSlashWholeOutline, d.NoteheadSlashWholeAdvance),
-        MusicGlyph.NoteheadSlashWhiteHalf => new(d.NoteheadSlashHalf, d.NoteheadSlashHalfOutline, d.NoteheadSlashHalfAdvance),
-        MusicGlyph.NoteheadSlashHorizontalEnds => new(d.NoteheadSlashBlack, d.NoteheadSlashBlackOutline, d.NoteheadSlashBlackAdvance),
-        MusicGlyph.NoteheadCircleX => new(d.NoteheadXCircle, d.NoteheadXCircleOutline, d.NoteheadXCircleAdvance),
+        MusicGlyph.NoteheadSlashWhiteHalf => new(d.NoteheadSlashHalf, d.NoteheadSlashHalfOutline, d.NoteheadSlashHalfAdvance, d.NoteheadSlashHalfStemAttachment, d.NoteheadSlashHalfStemAttachmentDown),
+        MusicGlyph.NoteheadSlashHorizontalEnds => new(d.NoteheadSlashBlack, d.NoteheadSlashBlackOutline, d.NoteheadSlashBlackAdvance, d.NoteheadSlashBlackStemAttachment, d.NoteheadSlashBlackStemAttachmentDown),
+        MusicGlyph.NoteheadCircleX => new(d.NoteheadXCircle, d.NoteheadXCircleOutline, d.NoteheadXCircleAdvance, d.NoteheadXCircleStemAttachment, d.NoteheadXCircleStemAttachmentDown),
 
         MusicGlyph.RestLonga => new(d.RestLonga, d.RestLongaOutline, d.RestLongaAdvance),
         MusicGlyph.RestDoubleWhole => new(d.RestDoubleWhole, d.RestDoubleWholeOutline, d.RestDoubleWholeAdvance),

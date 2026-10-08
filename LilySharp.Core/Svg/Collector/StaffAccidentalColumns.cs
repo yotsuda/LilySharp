@@ -102,11 +102,11 @@ internal static class StaffAccidentalColumns
             // heads it had placed 0.006248 away from where it drew them
             // (ChordHeadPositioning, measured against 2.26.0).
             bool isCue = IsCue(column.Entries[0]);
-            var font = isCue ? EngravingDefaults.CueFont : (GlyphMetrics.DesignMetrics?)null;
+            var font = isCue ? EngravingDefaults.CueFont : (MusicFontDesign?)null;
             // The heads' own size (NoteHead.scale) on top — the accidentals keep theirs.
             double headStep = EngravingStyle.Current.NoteHeadFontSizeStep;
             var headFont = headStep == 0 ? font
-                : GlyphMetrics.AtFontSize(headStep + (isCue ? EngravingDefaults.CueFontSizeStep : 0));
+                : MusicFont.Current.SizedAt(headStep + (isCue ? EngravingDefaults.CueFontSizeStep : 0));
 
             var offsets = collision.CalculateVoiceOffsets(column);
 

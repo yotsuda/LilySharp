@@ -164,8 +164,8 @@ internal static class ArticulationEngraver
     ///   sized, so this is NOT the 20's box scaled: the 16 design's own sharp is drawn
     ///   wider in its own staff spaces. See GlyphMetrics.AtFontSize.
     /// </remarks>
-    private static GlyphMetrics.DesignMetrics EditorialFont
-        => GlyphMetrics.AtFontSize(EditorialFontSizeStep);
+    private static MusicFontDesign EditorialFont
+        => MusicFont.Current.SizedAt(EditorialFontSizeStep);
 
     // Staff middle line position (see EngravingDefaults.StaffMiddle).
     private const double StaffMiddle = EngravingDefaults.StaffMiddle;

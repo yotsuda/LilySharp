@@ -105,7 +105,7 @@ internal static class FingeringGlyphRun
     internal static int Design(ScoreTextMetrics fonts) => EmmentalerDesignSize.ForFontSizeStep(Step(fonts)).Rounded;
 
     /// <summary>That design's table, already in the PAGE's staff spaces.</summary>
-    private static GlyphMetrics.DesignMetrics Font(double step) => GlyphMetrics.AtFontSize(step);
+    private static MusicFontDesign Font(double step) => MusicFont.Current.SizedAt(step);
 
     /// <summary>The glyph lookup at one step — a closure, because <see cref="FetaTextRun"/>
     /// takes a delegate and the design it reads is the step's.</summary>
@@ -183,16 +183,16 @@ internal static class FingeringGlyphRun
         var f = Font(step);
         (glyph, outline, advance) = c switch
         {
-            '0' => (EmmentalerGlyphs.FingeringDigit0, f.FingeringDigit0Outline, f.FingeringDigit0Advance),
-            '1' => (EmmentalerGlyphs.FingeringDigit1, f.FingeringDigit1Outline, f.FingeringDigit1Advance),
-            '2' => (EmmentalerGlyphs.FingeringDigit2, f.FingeringDigit2Outline, f.FingeringDigit2Advance),
-            '3' => (EmmentalerGlyphs.FingeringDigit3, f.FingeringDigit3Outline, f.FingeringDigit3Advance),
-            '4' => (EmmentalerGlyphs.FingeringDigit4, f.FingeringDigit4Outline, f.FingeringDigit4Advance),
-            '5' => (EmmentalerGlyphs.FingeringDigit5, f.FingeringDigit5Outline, f.FingeringDigit5Advance),
-            '6' => (EmmentalerGlyphs.FingeringDigit6, f.FingeringDigit6Outline, f.FingeringDigit6Advance),
-            '7' => (EmmentalerGlyphs.FingeringDigit7, f.FingeringDigit7Outline, f.FingeringDigit7Advance),
-            '8' => (EmmentalerGlyphs.FingeringDigit8, f.FingeringDigit8Outline, f.FingeringDigit8Advance),
-            '9' => (EmmentalerGlyphs.FingeringDigit9, f.FingeringDigit9Outline, f.FingeringDigit9Advance),
+            '0' => (EmmentalerGlyphs.FingeringDigit0, f.Outline(MusicGlyph.Fingering0), f.Advance(MusicGlyph.Fingering0)),
+            '1' => (EmmentalerGlyphs.FingeringDigit1, f.Outline(MusicGlyph.Fingering1), f.Advance(MusicGlyph.Fingering1)),
+            '2' => (EmmentalerGlyphs.FingeringDigit2, f.Outline(MusicGlyph.Fingering2), f.Advance(MusicGlyph.Fingering2)),
+            '3' => (EmmentalerGlyphs.FingeringDigit3, f.Outline(MusicGlyph.Fingering3), f.Advance(MusicGlyph.Fingering3)),
+            '4' => (EmmentalerGlyphs.FingeringDigit4, f.Outline(MusicGlyph.Fingering4), f.Advance(MusicGlyph.Fingering4)),
+            '5' => (EmmentalerGlyphs.FingeringDigit5, f.Outline(MusicGlyph.Fingering5), f.Advance(MusicGlyph.Fingering5)),
+            '6' => (EmmentalerGlyphs.FingeringDigit6, f.Outline(MusicGlyph.Fingering6), f.Advance(MusicGlyph.Fingering6)),
+            '7' => (EmmentalerGlyphs.FingeringDigit7, f.Outline(MusicGlyph.Fingering7), f.Advance(MusicGlyph.Fingering7)),
+            '8' => (EmmentalerGlyphs.FingeringDigit8, f.Outline(MusicGlyph.Fingering8), f.Advance(MusicGlyph.Fingering8)),
+            '9' => (EmmentalerGlyphs.FingeringDigit9, f.Outline(MusicGlyph.Fingering9), f.Advance(MusicGlyph.Fingering9)),
             _ => ('\0', default, 0.0),
         };
         return glyph != '\0';

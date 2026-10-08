@@ -430,7 +430,7 @@ internal static class ItemSkylineFactory
     ///   cue eighths 1.615; with the twenty's boxes Lily# held both at 1.804, and a cue sharp or
     ///   flat widened its gap by up to 0.84.
     /// </remarks>
-    private static GlyphMetrics.DesignMetrics? CueFontOf(MusicItem item)
+    private static MusicFontDesign? CueFontOf(MusicItem item)
         => SpacingRules.CueFontOf(item);
 
     /// <summary>The item's head box — the cue font's for a cue note, and either magnified by
@@ -526,7 +526,7 @@ internal static class ItemSkylineFactory
         if (column.Dots > 0 && !column.IsRest)
         {
             var (offset, _) = DotColumn.ReservedForGrace(column, beamed);
-            var dot = column.Font.AugmentationDot;
+            var dot = column.Font.Box(MusicGlyph.AugmentationDot);
             double reach = dot.Height / 2 + SpacingRules.DotsExtraSpacingHeight;
             foreach (var head in column.Heads)
             {
@@ -1026,7 +1026,7 @@ internal static class ItemSkylineFactory
     /// </remarks>
     private static void AddStem(List<ColumnPart> parts, MusicItem item,
                                 double noteheadLeftX, double staffY,
-                                GlyphMetrics.DesignMetrics? font = null)
+                                MusicFontDesign? font = null)
     {
         // Null is exactly "no Stem grob to walk": rests, whole notes.
         // The SAME range is the stem's y-extent for the optical stem correction — one house,
@@ -1066,7 +1066,7 @@ internal static class ItemSkylineFactory
     /// </remarks>
     private static void AddFlag(List<ColumnPart> parts, MusicItem item,
                                 double noteheadLeftX, double staffY, int noteValue,
-                                GlyphMetrics.DesignMetrics? font = null, GlyphMetrics.DesignMetrics? headFont = null)
+                                MusicFontDesign? font = null, MusicFontDesign? headFont = null)
     {
         // A flag is the STEM's, indifferent to how many heads hang on it (LilyPond
         // makes one Flag per Stem), so a chord's flag boxes exactly like a note's,
@@ -1272,7 +1272,7 @@ internal static class ItemSkylineFactory
     /// </remarks>
     private static void AddAccidental(List<ColumnPart> parts, NoteItem note,
                                       double noteheadLeftX, double staffY,
-                                      GlyphMetrics.DesignMetrics? font = null, GlyphMetrics.DesignMetrics? headFont = null)
+                                      MusicFontDesign? font = null, MusicFontDesign? headFont = null)
     {
         if (note.Accidental == null)
             return;
@@ -1303,7 +1303,7 @@ internal static class ItemSkylineFactory
     private static void AddAccidentals(List<ColumnPart> parts, ChordItem chord,
                                        double noteheadLeftX, double staffY,
                                        double[] headOffsets, int noteValue,
-                                       GlyphMetrics.DesignMetrics? font = null, GlyphMetrics.DesignMetrics? headFont = null)
+                                       MusicFontDesign? font = null, MusicFontDesign? headFont = null)
     {
         foreach (var (accidental, position, offset) in ChordAccidentalXs(chord, headOffsets, font, headFont))
         {
@@ -1325,8 +1325,8 @@ internal static class ItemSkylineFactory
     /// <c>position_apes</c> solve, which is the same thing when it stands alone.
     /// </summary>
     private static IEnumerable<(string Accidental, int StaffPosition, double X)> ChordAccidentalXs(
-        ChordItem chord, double[] headOffsets, GlyphMetrics.DesignMetrics? font = null,
-        GlyphMetrics.DesignMetrics? headFont = null)
+        ChordItem chord, double[] headOffsets, MusicFontDesign? font = null,
+        MusicFontDesign? headFont = null)
     {
         if (chord.HasPackedAccidentals)
         {

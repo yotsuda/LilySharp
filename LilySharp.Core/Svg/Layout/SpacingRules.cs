@@ -1436,7 +1436,7 @@ internal static partial class SpacingRules
     /// </remarks>
     /// <summary>The cue font for a cue note or chord, null (the twenty) otherwise — what a
     /// column's heads and accidentals are read from, as the renderer draws them.</summary>
-    internal static GlyphMetrics.DesignMetrics? CueFontOf(MusicItem item)
+    internal static MusicFontDesign? CueFontOf(MusicItem item)
         => item is NoteItem { IsCue: true } or ChordItem { IsCue: true } ? EngravingDefaults.CueFont : null;
 
     /// <summary>The font a note's or chord's HEADS are read from — the cue font, magnified
@@ -1445,12 +1445,12 @@ internal static partial class SpacingRules
     /// which the head's size does not reach.</summary>
     /// <remarks>LILYPOND-REF: lily/font-size-engraver.cc:47-62 Font_size_engraver::acknowledge_font —
     /// the context's fontSize (a cue's −4) is added to the NoteHead's own font-size.</remarks>
-    internal static GlyphMetrics.DesignMetrics? HeadFontOf(MusicItem item)
+    internal static MusicFontDesign? HeadFontOf(MusicItem item)
     {
         double step = EngravingStyle.Current.NoteHeadFontSizeStep;
         if (step == 0 || item.GraceTime || item is not (NoteItem or ChordItem))
             return CueFontOf(item);
-        return GlyphMetrics.AtFontSize(step + (CueFontOf(item) is null ? 0 : EngravingDefaults.CueFontSizeStep));
+        return MusicFont.Current.SizedAt(step + (CueFontOf(item) is null ? 0 : EngravingDefaults.CueFontSizeStep));
     }
 
     /// <summary>The head box of a reader that has always measured the twenty, cue or not —
@@ -1461,7 +1461,7 @@ internal static partial class SpacingRules
     internal static GlyphMetrics.BBox ScaledHeadBBox(MusicItem item, int noteValue)
         => EngravingStyle.Current.NoteHeadFontSizeStep == 0
             ? GlyphMetrics.GetNoteheadBBox(GlyphMetrics.StaffHeadFont, GlyphMetrics.HeadStyleOf(item), noteValue)
-            : GlyphMetrics.GetNoteheadBBox(HeadFontOf(item) ?? GlyphMetrics.Design20,
+            : GlyphMetrics.GetNoteheadBBox(HeadFontOf(item) ?? MusicFont.Current.DesignAt(0),
                 GlyphMetrics.HeadStyleOf(item), noteValue);
 
     internal static double ChordSupportLeftReach(ChordItem chord)

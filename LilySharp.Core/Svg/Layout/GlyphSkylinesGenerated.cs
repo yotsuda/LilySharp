@@ -5235,9 +5235,9 @@ internal static partial class GlyphMetrics
     /// out of the <paramref name="design"/> design's outline — 20 by default,
     /// which is what a grob with no font-size reads.</summary>
     /// <remarks>⚠️ PASS THE DESIGN THE METRICS CAME FROM. A glyph's box
-    /// (DesignMetrics) and its skyline are two readings of ONE face; taking them from
+    /// (MusicFontDesign) and its skyline are two readings of ONE face; taking them from
     /// different designs is the metric-versus-ink split, and it is invisible in both
-    /// halves separately. DesignMetrics.Rounded is the number to pass.</remarks>
+    /// halves separately. MusicFontDesign.Rounded is the number to pass.</remarks>
     public static (HorizontalSkyline Left, HorizontalSkyline Right) AccidentalSkylinePair(string kind, int design = 20) => design switch
     {
         11 => kind switch

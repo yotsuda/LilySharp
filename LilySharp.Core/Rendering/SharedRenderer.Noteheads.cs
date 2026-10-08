@@ -506,7 +506,7 @@ internal static partial class SharedRenderer
                             is { } al ? x + al.XOffset : null;
                     if (inkLeft is { } left)
                         accRight = left + AccidentalInkWidth(note.Accidental, note.IsCourtesy,
-                            accFont ?? GlyphMetrics.Design20);
+                            accFont ?? MusicFont.Current.DesignAt(0));
                 }
                 CollectLedgerRequest(ledgerPlan, column, note.StaffPosition, x, headWidth,
                     staffMiddleY, accRight, note.Accidental, note.IsCourtesy);
@@ -552,7 +552,7 @@ internal static partial class SharedRenderer
                             if (al.StaffPosition == n.StaffPosition)
                             {
                                 accRight = accOriginX + al.XOffset + AccidentalInkWidth(
-                                    n.Accidental, n.IsCourtesy, chordAccFont ?? GlyphMetrics.Design20);
+                                    n.Accidental, n.IsCourtesy, chordAccFont ?? MusicFont.Current.DesignAt(0));
                                 break;
                             }
                     CollectLedgerRequest(ledgerPlan, column, n.StaffPosition, x + offsets[i],
@@ -571,11 +571,11 @@ internal static partial class SharedRenderer
     /// <remarks>LILYPOND-REF: lily/accidental.cc:33-43 parenthesize — add_at_edge X LEFT /
     /// RIGHT with padding 0.</remarks>
     private static double AccidentalInkWidth(string accidental, bool isCourtesy,
-        GlyphMetrics.DesignMetrics font)
+        MusicFontDesign font)
     {
         double width = GlyphMetrics.GetAccidentalBBox(font, accidental).Width;
         if (isCourtesy)
-            width += font.AccidentalLeftParen.Width + font.AccidentalRightParen.Width;
+            width += font.Box(MusicGlyph.AccidentalParensLeft).Width + font.Box(MusicGlyph.AccidentalParensRight).Width;
         return width;
     }
 
@@ -617,7 +617,7 @@ internal static partial class SharedRenderer
     {
         NoteheadStyle.Default when noteValue >= 4 => stemUp ? -StemHeadInset : StemHeadInset,
         NoteheadStyle.Default => 0,
-        _ => -GlyphMetrics.GetNoteheadStemAttachment(GlyphMetrics.Design20, style, stemUp, noteValue).Y,
+        _ => -GlyphMetrics.GetNoteheadStemAttachment(MusicFont.Current.DesignAt(0), style, stemUp, noteValue).Y,
     } * GlyphMetrics.StaffHeadMagnification;
 
     /// <summary>How far a filled round head recesses the stem's start toward the far
@@ -662,14 +662,14 @@ internal static partial class SharedRenderer
     /// 1.090000). Session 314 moved the stem attachment and the flag and dot widths here;
     /// these were the rest of the same table (docs/HANDOFF.md §2 U8c).
     /// <para>
-    /// A full-size item reads <see cref="GlyphMetrics.Design20"/> itself rather than the
+    /// A full-size item reads <see cref="MusicFont.Current.DesignAt(0)"/> itself rather than the
     /// font-size machinery, so nothing at the staff's own size can move.
     /// </para>
     /// </remarks>
-    private static GlyphMetrics.DesignMetrics HeadFontOf(MusicItem item)
+    private static MusicFontDesign HeadFontOf(MusicItem item)
         => GrobFontSize.IsReduced(item)
             ? GrobFontSize.FontOf(item, SizedGrob.NoteHead)
-            : GlyphMetrics.Design20;
+            : MusicFont.Current.DesignAt(0);
 
     /// <summary>
     /// Draws one note at <paramref name="x"/>, which already carries
@@ -951,7 +951,7 @@ internal static partial class SharedRenderer
         // are stacked one dot WIDTH apart, so measuring a full-size dot for a reduced one
         // spaces the pair for a glyph that is not there. general-grace-settings gives Dots
         // −3 and a cue's context-wide fontSize gives it −4 (GrobFontSize).
-        double dotWidth = GrobFontSize.FontOf(note, SizedGrob.Dots).AugmentationDot.Width;
+        double dotWidth = GrobFontSize.FontOf(note, SizedGrob.Dots).Box(MusicGlyph.AugmentationDot).Width;
         // ⚠️ A GRACE'S DOT IS DRAWN HERE TOO, since session 315 — the second half of HANDOFF
         // §2 U8 ⒝2. Nothing below asks whether the note is a grace: the floor is the head's own
         // font's ink, the flag support hangs off the stem THIS METHOD JUST DREW, and both come
@@ -1207,7 +1207,7 @@ internal static partial class SharedRenderer
         {
             // The head's INK right, and the DOT's own font's dot — see the single-note
             // branch for both, and for the LilyPond citation.
-            double dotWidth = GrobFontSize.FontOf(chord, SizedGrob.Dots).AugmentationDot.Width;
+            double dotWidth = GrobFontSize.FontOf(chord, SizedGrob.Dots).Box(MusicGlyph.AugmentationDot).Width;
             // Two-layer preferred direction, as in the single-note branch: the voice
             // props set Dots.direction voice-wide, a positive-shift collision
             // overrides the down voice's dots to UP.

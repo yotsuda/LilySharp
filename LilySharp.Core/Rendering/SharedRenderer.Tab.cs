@@ -731,7 +731,7 @@ internal static partial class SharedRenderer
     private static readonly double TabDeadHeadWidth =
         // The twenty's, named: a TabNoteHead is not a NoteHead, so NoteHead.scale (the font-less
         // overload's StaffHeadFont) must not reach it — and a static would keep the first style.
-        LilySharp.Core.Svg.Layout.GlyphMetrics.GetNoteheadBBox(LilySharp.Core.Svg.Layout.GlyphMetrics.Design20, 4).Width * TabDeadHeadScale;
+        LilySharp.Core.Svg.Layout.GlyphMetrics.GetNoteheadBBox(MusicFont.Current.DesignAt(0), 4).Width * TabDeadHeadScale;
 
     /// <summary>
     /// Draws a note/chord-row's augmentation dots to the RIGHT of its fret digit,

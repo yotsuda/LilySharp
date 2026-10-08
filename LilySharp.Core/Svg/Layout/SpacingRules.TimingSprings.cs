@@ -418,7 +418,7 @@ internal static partial class SpacingRules
                 //   rest. No point observes it — see the branch below.
                 // ...and of the head's own SHAPE: a slash head's right edge, not a plain one's.
                 NoteItem or ChordItem => GlyphMetrics.GetNoteheadBBox(
-                    HeadFontOf(p) ?? GlyphMetrics.Design20,
+                    HeadFontOf(p) ?? MusicFont.Current.DesignAt(0),
                     GlyphMetrics.HeadStyleOf(p),
                     GetNoteValue(p)).Right,
                 // A rest is drawn glyph-left-aligned at its column, so its right

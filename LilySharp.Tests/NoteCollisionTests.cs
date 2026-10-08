@@ -1223,7 +1223,7 @@ public class NoteCollisionTests
     {
         var offsets = ChordHeadPositioning.CalculateOffsets(
             Infos(0, 1), stemUp: true, noteValue: 4,
-            GlyphMetrics.AtFontSize(GraceNoteItem.FontSizeStep));
+            MusicFont.Current.SizedAt(GraceNoteItem.FontSizeStep));
         Assert.Equal(LpGraceSecond, offsets[1], precision: 4);
         // The control that says the difference is real rather than rounding: the same rule
         // over the TWENTY's box, scaled, is 0.004270 away and would fail the line above.
@@ -1252,7 +1252,7 @@ public class NoteCollisionTests
         foreach (var font in new[]
                  {
                      null,
-                     GlyphMetrics.AtFontSize(GraceNoteItem.FontSizeStep),
+                     MusicFont.Current.SizedAt(GraceNoteItem.FontSizeStep),
                      EngravingDefaults.CueFont,
                  })
             Assert.All(

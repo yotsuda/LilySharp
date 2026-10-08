@@ -16,6 +16,7 @@
 
 using System;
 using System.Linq;
+using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using Xunit;
@@ -255,8 +256,8 @@ public sealed class EmmentalerDesignMetricsTests
         // the gap. Naming the tolerance keeps it a KNOWN residual instead of a fitted digit —
         // the term this test is about is 0.084860, four orders of magnitude larger.
         Assert.True(
-            Math.Abs(GraceNoteItem.AccidentalFont.AccidentalSharp.Width - lilyPondsOwn) < 3e-6,
-            $"grace sharp {GraceNoteItem.AccidentalFont.AccidentalSharp.Width} vs LilyPond's {lilyPondsOwn}");
+            Math.Abs(GraceNoteItem.AccidentalFont.Box(MusicGlyph.AccidentalSharp).Width - lilyPondsOwn) < 3e-6,
+            $"grace sharp {GraceNoteItem.AccidentalFont.Box(MusicGlyph.AccidentalSharp).Width} vs LilyPond's {lilyPondsOwn}");
 
         // The head of the SAME grace is a different design, one step up.
         Assert.Equal(14, GraceNoteItem.Font.Rounded);
@@ -332,12 +333,12 @@ public sealed class EmmentalerDesignMetricsTests
     {
         const double rightPaddingPlusPadding = 0.35;
 
-        double GapToTheHead(GlyphMetrics.DesignMetrics? accFont, GlyphMetrics.DesignMetrics? headFont)
+        double GapToTheHead(MusicFontDesign? accFont, MusicFontDesign? headFont)
         {
             var layout = new AccidentalPlacement().CalculateSinglePosition(
                 staffPosition: 0, "sharp", isCourtesy: false, accFont, headFont);
             Assert.NotNull(layout);
-            var box = GlyphMetrics.GetAccidentalBBox(accFont ?? GlyphMetrics.Design20, "sharp");
+            var box = GlyphMetrics.GetAccidentalBBox(accFont ?? MusicFont.Current.DesignAt(0), "sharp");
             return -(layout!.Value.XOffset + box.Width);   // head's left edge is 0
         }
 

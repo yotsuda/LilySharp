@@ -63,14 +63,14 @@ public static class ChordHeadPositioning
     /// second (<c>\grace { &lt;c' e'&gt;16 }</c>, both heads at 16.120827) is zero either way,
     /// which is why no book without a second could have caught it.
     /// </remarks>
-    // Internal because a FONT is: GlyphMetrics.DesignMetrics is the internal table, the same
+    // Internal because a FONT is: MusicFontDesign is the internal table, the same
     // reason AccidentalPlacement.CalculatePositions takes one internally.
     internal static double[] CalculateOffsets(
         IReadOnlyList<ChordNoteInfo> notes, bool stemUp, int noteValue,
-        GlyphMetrics.DesignMetrics? headFont = null)
+        MusicFontDesign? headFont = null)
         // LILYPOND-REF: stem.cc:684 — ell = head right ink extent.
         => OffsetsForEll(notes, stemUp, noteValue,
-            GlyphMetrics.GetNoteheadBBox(headFont ?? GlyphMetrics.Design20, noteValue).Right);
+            GlyphMetrics.GetNoteheadBBox(headFont ?? MusicFont.Current.DesignAt(0), noteValue).Right);
 
     /// <summary>
     /// Sorts the head indices by staff position in the stem direction.

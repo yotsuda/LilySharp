@@ -254,13 +254,13 @@ internal static class GlissandoEngraver
             // scale — the same design LeftmostAccidentalInkX below hands the accidentals.
             case NoteItem n:
             {
-                var font = n.IsCue ? EngravingDefaults.CueFont : GlyphMetrics.Design20;
+                var font = n.IsCue ? EngravingDefaults.CueFont : MusicFont.Current.DesignAt(0);
                 int noteValue = GlyphMetrics.NoteValueOf(n.BaseDuration);
                 return right ? GlyphMetrics.GetNoteheadBBox(font, noteValue).Right : 0;
             }
             case ChordItem c when c.Notes.Length > 0:
             {
-                var font = c.IsCue ? EngravingDefaults.CueFont : GlyphMetrics.Design20;
+                var font = c.IsCue ? EngravingDefaults.CueFont : MusicFont.Current.DesignAt(0);
                 int noteValue = GlyphMetrics.NoteValueOf(c.BaseDuration);
                 int i = memberIndex >= 0 && memberIndex < c.Notes.Length ? memberIndex : 0;
                 double[] offsets = ChordHeadPositioning.CalculateOffsets(

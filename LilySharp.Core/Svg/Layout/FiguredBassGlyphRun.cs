@@ -119,7 +119,7 @@ internal static class FiguredBassGlyphRun
     /// residual it leaves is the ~9e-5 Pango hinting the whole fetaText family has.
     /// </para>
     /// </remarks>
-    private static GlyphMetrics.DesignMetrics Font(double step) => GlyphMetrics.AtFontSize(step);
+    private static MusicFontDesign Font(double step) => MusicFont.Current.SizedAt(step);
 
     /// <summary>The run's pieces, left to right, with X relative to the run's left edge.</summary>
     /// <remarks>
@@ -163,19 +163,19 @@ internal static class FiguredBassGlyphRun
         var f = Font(step);
         (glyph, outline, advance) = c switch
         {
-            '0' => (EmmentalerGlyphs.FigBassDigit0, f.FigBassDigit0Outline, f.FigBassDigit0Advance),
-            '1' => (EmmentalerGlyphs.FigBassDigit1, f.FigBassDigit1Outline, f.FigBassDigit1Advance),
-            '2' => (EmmentalerGlyphs.FigBassDigit2, f.FigBassDigit2Outline, f.FigBassDigit2Advance),
-            '3' => (EmmentalerGlyphs.FigBassDigit3, f.FigBassDigit3Outline, f.FigBassDigit3Advance),
-            '4' => (EmmentalerGlyphs.FigBassDigit4, f.FigBassDigit4Outline, f.FigBassDigit4Advance),
-            '5' => (EmmentalerGlyphs.FigBassDigit5, f.FigBassDigit5Outline, f.FigBassDigit5Advance),
-            '6' => (EmmentalerGlyphs.FigBassDigit6, f.FigBassDigit6Outline, f.FigBassDigit6Advance),
-            '7' => (EmmentalerGlyphs.FigBassDigit7, f.FigBassDigit7Outline, f.FigBassDigit7Advance),
-            '8' => (EmmentalerGlyphs.FigBassDigit8, f.FigBassDigit8Outline, f.FigBassDigit8Advance),
-            '9' => (EmmentalerGlyphs.FigBassDigit9, f.FigBassDigit9Outline, f.FigBassDigit9Advance),
-            '♭' => (EmmentalerGlyphs.FigBassFlat, f.FigBassFlatOutline, f.FigBassFlatAdvance),
-            '♮' => (EmmentalerGlyphs.FigBassNatural, f.FigBassNaturalOutline, f.FigBassNaturalAdvance),
-            '♯' => (EmmentalerGlyphs.FigBassSharp, f.FigBassSharpOutline, f.FigBassSharpAdvance),
+            '0' => (EmmentalerGlyphs.FigBassDigit0, f.Outline(MusicGlyph.Figbass0), f.Advance(MusicGlyph.Figbass0)),
+            '1' => (EmmentalerGlyphs.FigBassDigit1, f.Outline(MusicGlyph.Figbass1), f.Advance(MusicGlyph.Figbass1)),
+            '2' => (EmmentalerGlyphs.FigBassDigit2, f.Outline(MusicGlyph.Figbass2), f.Advance(MusicGlyph.Figbass2)),
+            '3' => (EmmentalerGlyphs.FigBassDigit3, f.Outline(MusicGlyph.Figbass3), f.Advance(MusicGlyph.Figbass3)),
+            '4' => (EmmentalerGlyphs.FigBassDigit4, f.Outline(MusicGlyph.Figbass4), f.Advance(MusicGlyph.Figbass4)),
+            '5' => (EmmentalerGlyphs.FigBassDigit5, f.Outline(MusicGlyph.Figbass5), f.Advance(MusicGlyph.Figbass5)),
+            '6' => (EmmentalerGlyphs.FigBassDigit6, f.Outline(MusicGlyph.Figbass6), f.Advance(MusicGlyph.Figbass6)),
+            '7' => (EmmentalerGlyphs.FigBassDigit7, f.Outline(MusicGlyph.Figbass7), f.Advance(MusicGlyph.Figbass7)),
+            '8' => (EmmentalerGlyphs.FigBassDigit8, f.Outline(MusicGlyph.Figbass8), f.Advance(MusicGlyph.Figbass8)),
+            '9' => (EmmentalerGlyphs.FigBassDigit9, f.Outline(MusicGlyph.Figbass9), f.Advance(MusicGlyph.Figbass9)),
+            '♭' => (EmmentalerGlyphs.FigBassFlat, f.Outline(MusicGlyph.FigbassFlat), f.Advance(MusicGlyph.FigbassFlat)),
+            '♮' => (EmmentalerGlyphs.FigBassNatural, f.Outline(MusicGlyph.FigbassNatural), f.Advance(MusicGlyph.FigbassNatural)),
+            '♯' => (EmmentalerGlyphs.FigBassSharp, f.Outline(MusicGlyph.FigbassSharp), f.Advance(MusicGlyph.FigbassSharp)),
             _ => ('\0', default, 0.0),
         };
         return glyph != '\0';

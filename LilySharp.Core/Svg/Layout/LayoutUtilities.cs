@@ -104,7 +104,7 @@ internal static class LayoutUtilities
     /// LilyPond draws both at 0.13.
     /// </remarks>
     public static double StemAttachX(bool up, int noteValue, NoteheadStyle style,
-        GlyphMetrics.DesignMetrics? font) =>
+        MusicFontDesign? font) =>
         GlyphMetrics.GetNoteheadStemAttachment(
             font ?? GlyphMetrics.StaffHeadFont, style, up, noteValue).X
         + (up ? -1 : 1) * EngravingDefaults.StemThickness / 2;
@@ -127,9 +127,9 @@ internal static class LayoutUtilities
         columnX + StemAttachX(up, noteValue, style, headScale);
 
     /// <summary>The x a stem stands at, for a head read from <paramref name="font"/>.</summary>
-    /// <remarks>See <see cref="StemAttachX(bool, int, NoteheadStyle, GlyphMetrics.DesignMetrics)"/>.</remarks>
+    /// <remarks>See <see cref="StemAttachX(bool, int, NoteheadStyle, MusicFontDesign)"/>.</remarks>
     public static double StemX(double columnX, bool up, int noteValue, NoteheadStyle style,
-        GlyphMetrics.DesignMetrics? font) =>
+        MusicFontDesign? font) =>
         columnX + StemAttachX(up, noteValue, style, font);
 
     /// <summary>
@@ -166,7 +166,7 @@ internal static class LayoutUtilities
     /// <summary>
     /// The x a BEAM MEMBER's stem stands at, given its column's x: a whole-note display
     /// pair's invisible stem at its head's ink centre (<see cref="InvisibleStemX"/>), any other
-    /// head at its own glyph's attachment point in the MEMBER's direction (<see cref="StemX(double, bool, int, NoteheadStyle, GlyphMetrics.DesignMetrics?)"/>
+    /// head at its own glyph's attachment point in the MEMBER's direction (<see cref="StemX(double, bool, int, NoteheadStyle, MusicFontDesign?)"/>
     /// — a knee's members differ, a tremolo pair's half heads attach 0.073200 further out).
     /// </summary>
     /// <remarks>
@@ -179,7 +179,7 @@ internal static class LayoutUtilities
     /// column anchor and then "corrected" by the attach it had never been off by).
     /// </remarks>
     public static double BeamMemberStemX(BeamGroup group, int memberIndex, double columnX,
-        GlyphMetrics.DesignMetrics? font = null)
+        MusicFontDesign? font = null)
     {
         var item = group.ItemOf(memberIndex);
         int noteValue = GlyphMetrics.NoteValueOf(item);

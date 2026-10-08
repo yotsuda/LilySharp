@@ -1200,9 +1200,9 @@ internal static partial class SpacingRules
     /// </para>
     /// </remarks>
     private static double StemBeginPosition(int headPosition, bool stemUp, int noteValue,
-        GlyphMetrics.DesignMetrics? headFont = null)
+        MusicFontDesign? headFont = null)
     {
-        var font = headFont ?? GlyphMetrics.Design20;
+        var font = headFont ?? MusicFont.Current.DesignAt(0);
         int dir = stemUp ? 1 : -1;
         return headPosition
                + dir * GlyphMetrics.GetNoteheadStemAttachment(font, noteValue).Y * 2.0;

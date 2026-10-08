@@ -772,7 +772,7 @@ internal static partial class SharedRenderer
                 gc.DrawAttachedGlyph(Music(MusicGlyphs.Accidental("natural")),
                     originX, noteheadY, fs);
                 gc.DrawAttachedGlyph(Music(MusicGlyphs.Accidental(main)),
-                    originX + GlyphMetrics.RestoreMainOffset(GlyphMetrics.Design20, main) * scale,
+                    originX + GlyphMetrics.RestoreMainOffset(MusicFont.Current.DesignAt(0), main) * scale,
                     noteheadY, fs);
             }
             else

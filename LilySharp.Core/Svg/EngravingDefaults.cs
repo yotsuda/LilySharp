@@ -455,8 +455,8 @@ internal static class EngravingDefaults
     ///   second (lily/modified-font-metric.cc:62-68 get_indexed_char_dimensions). The same
     ///   pairing <see cref="Svg.Model.GraceNoteItem.Font"/> takes, one grob family over.
     /// </remarks>
-    internal static Layout.GlyphMetrics.DesignMetrics CueFont
-        => Layout.GlyphMetrics.AtFontSize(CueFontSizeStep);
+    internal static Layout.MusicFontDesign CueFont
+        => Layout.MusicFont.Current.SizedAt(CueFontSizeStep);
 
     /// <summary>
     /// The Emmentaler design a cue is DRAWN from — the number a drawing context's music-face

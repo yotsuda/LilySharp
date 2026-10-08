@@ -102,7 +102,7 @@ internal static class MeterGlyphRun
     internal static int Design => EmmentalerDesignSize.ForFontSizeStep(FontSizeStep).Rounded;
 
     /// <summary>That design's table, already in the PAGE's staff spaces.</summary>
-    private static GlyphMetrics.DesignMetrics Font => GlyphMetrics.AtFontSize(FontSizeStep);
+    private static MusicFontDesign Font => MusicFont.Current.SizedAt(FontSizeStep);
 
     /// <summary>The em the compound meter's <c>+</c> is DRAWN at by the engraving —
     /// LILYSHARP-OWN, a text character LilyPond spells with markup.</summary>

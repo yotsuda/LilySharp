@@ -107,9 +107,13 @@ public class MusicFontTests
         var designs = GlyphMetrics.AllDesigns;
         var props = typeof(GlyphMetrics.DesignMetrics)
             .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(p => p.PropertyType == typeof(GlyphMetrics.BBox) || p.PropertyType == typeof(double))
+            .Where(p => p.PropertyType == typeof(GlyphMetrics.BBox) || p.PropertyType == typeof(double)
+                || p.PropertyType == typeof((double, double)))
             .Where(p => p.Name is not ("DesignSize" or "Magnification"))
             .ToList();
+        // The stem anchors are the one tuple-typed family (§3 #2); a test that looked at boxes
+        // and advances only would pass with every anchor dropped — the first version did.
+        Assert.Equal(22, props.Count(p => p.PropertyType == typeof((double, double))));
         var glyphs = Enum.GetValues<MusicGlyph>();
         var answers = glyphs.ToDictionary(
             g => g, g => designs.Select(d => EmmentalerMusicFont.MetricsOf(g, d)).ToArray());
@@ -119,7 +123,9 @@ public class MusicFontTests
         {
             object?[] want = designs.Select(d => p.GetValue(d)).ToArray();
             Func<MusicGlyphMetrics, object?> field =
-                p.Name.EndsWith("Outline", StringComparison.Ordinal) ? m => m.OutlineBox
+                p.Name.EndsWith("StemAttachmentDown", StringComparison.Ordinal) ? m => m.StemDown
+                : p.Name.EndsWith("StemAttachment", StringComparison.Ordinal) ? m => m.StemUp
+                : p.Name.EndsWith("Outline", StringComparison.Ordinal) ? m => m.OutlineBox
                 : p.PropertyType == typeof(double) ? m => m.Advance
                 : m => m.DesignBox;
             bool reached = answers.Values.Any(a =>
@@ -141,7 +147,8 @@ public class MusicFontTests
         var full = GlyphMetrics.AtFontSize(0);
         var mismatches = new List<string>();
         foreach (var p in typeof(GlyphMetrics.DesignMetrics).GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                     .Where(p => p.PropertyType == typeof(GlyphMetrics.BBox) || p.PropertyType == typeof(double))
+                     .Where(p => p.PropertyType == typeof(GlyphMetrics.BBox) || p.PropertyType == typeof(double)
+                         || p.PropertyType == typeof((double, double)))
                      .Where(p => p.Name is not ("DesignSize" or "Magnification")))
         {
             var flat = typeof(GlyphMetrics).GetField(p.Name, BindingFlags.Public | BindingFlags.Static);

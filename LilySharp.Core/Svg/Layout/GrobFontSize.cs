@@ -199,8 +199,8 @@ internal static class GrobFontSize
     ///   WHICH file and at WHAT magnification, and hands back a font that has applied the
     ///   second (lily/modified-font-metric.cc:62-68 get_indexed_char_dimensions).
     /// </remarks>
-    internal static GlyphMetrics.DesignMetrics FontOf(MusicItem item, SizedGrob grob)
-        => GlyphMetrics.AtFontSize(StepOf(item, grob));
+    internal static MusicFontDesign FontOf(MusicItem item, SizedGrob grob)
+        => MusicFont.Current.SizedAt(StepOf(item, grob));
 
     /// <summary>
     /// The Emmentaler design <paramref name="grob"/> is DRAWN from — the number a drawing
@@ -248,7 +248,7 @@ internal static class GrobFontSize
     /// The font an item's NOTE HEAD reads, or null when it is the staff's own — the one house
     /// for every reader that used to ask only whether the item was a cue.
     /// </summary>
-    internal static GlyphMetrics.DesignMetrics? HeadFontOrNull(MusicItem item)
+    internal static MusicFontDesign? HeadFontOrNull(MusicItem item)
         => StepOf(item, SizedGrob.NoteHead) == 0 ? null : FontOf(item, SizedGrob.NoteHead);
 
     /// <summary>
