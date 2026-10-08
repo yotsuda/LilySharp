@@ -677,8 +677,8 @@ internal static partial class SharedRenderer
             // NOTE: the SMuFL codepoints U+E047/E048 map to scripts.thumb /
             // scripts.sforzato here and previously drew the WRONG glyphs.
             char glyph = m.MarkType == MusicMarkType.Segno
-                ? EmmentalerGlyphs.MarkSegno
-                : EmmentalerGlyphs.MarkCoda;
+                ? Music(MusicGlyph.Segno)
+                : Music(MusicGlyph.Coda);
             gc.DrawGlyph(glyph, m.X, absY, FontSize, Color.Black);
             return;
         }
@@ -769,14 +769,14 @@ internal static partial class SharedRenderer
                     + MetronomeMarkGeometry.StemTopAboveCentre(fonts, m.TempoBeatUnit);
                 gc.DrawLine(stemX, stemBottom, stemX, stemTop, Color.Black, stemTh);
                 if (log >= 3)
-                    gc.DrawGlyph(EmmentalerGlyphs.Flag8thUp, stemX, stemTop, noteSize);
+                    gc.DrawGlyph(Music(MusicGlyph.Flag8thUp), stemX, stemTop, noteSize);
             }
             // Dot run per note-by-number: one dotwid past the head's ink right,
             // 2 x dotwid apart, on the head's own line (dots-direction 0); an
             // up-stem flagged unit shifts the run +0.5 to clear the flag. The
             // arithmetic lives in MetronomeMarkGeometry.DotX.
             for (int d = 0; d < m.TempoDots; d++)
-                gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
+                gc.DrawGlyph(Music(MusicGlyph.AugmentationDot),
                     x + MetronomeMarkGeometry.DotX(fonts, m.TempoBeatUnit, d), headY, noteSize);
             // " = N" — one run at the note's ink right; the leading space is the
             // concat's separator, carried as the single-run offset.
@@ -864,7 +864,7 @@ internal static partial class SharedRenderer
             // The glyph's origin is its CENTRE, both ways: half its width past the text, and
             // lifted (up = larger Y-up) to the middle of the "To" ink so the two centre on
             // one line.
-            gc.DrawGlyph(EmmentalerGlyphs.MarkCoda, left + textW + glyphW / 2,
+            gc.DrawGlyph(Music(MusicGlyph.Coda), left + textW + glyphW / 2,
                 absY + MusicMarkEngraver.ToCodaGlyphLift(fonts), gs, Color.Black);
             return;
         }
@@ -1144,10 +1144,10 @@ internal static partial class SharedRenderer
         int remaining = mmr.MeasureCount;
         foreach (var (span, glyph, width, dy) in new[]
         {
-            (8, EmmentalerGlyphs.RestMaxima, MaximaWidth, -half * longSpi - longLift),       // neutral spi 0  → dy 0
-            (4, EmmentalerGlyphs.RestLonga, LongWidth, -half * longSpi - longLift),         // neutral spi 0  → dy 0
-            (2, EmmentalerGlyphs.RestDoubleWhole, BreveWidth, -half * longSpi - longLift),  // neutral spi 0  → dy 0
-            (1, EmmentalerGlyphs.RestWhole, WholeWidth, -half * wholeSpi),                  // neutral spi +2 → dy -1.0
+            (8, Music(MusicGlyph.RestMaxima), MaximaWidth, -half * longSpi - longLift),       // neutral spi 0  → dy 0
+            (4, Music(MusicGlyph.RestLonga), LongWidth, -half * longSpi - longLift),         // neutral spi 0  → dy 0
+            (2, Music(MusicGlyph.RestDoubleWhole), BreveWidth, -half * longSpi - longLift),  // neutral spi 0  → dy 0
+            (1, Music(MusicGlyph.RestWhole), WholeWidth, -half * wholeSpi),                  // neutral spi +2 → dy -1.0
         })
         {
             while (remaining >= span)
@@ -1228,7 +1228,7 @@ internal static partial class SharedRenderer
                           + MultiMeasureRestEngraver.NumberStaffPadding;
         foreach (var ch in digits)
         {
-            gc.DrawGlyph(EmmentalerGlyphs.GetTimeSigDigit(ch - '0'), x, baseline, FontSize);
+            gc.DrawGlyph(Music(MusicGlyphs.TimeSigDigit(ch - '0')), x, baseline, FontSize);
             x += GlyphMetrics.GetTimeSigDigitWidth(ch - '0');
         }
     }

@@ -769,15 +769,15 @@ internal static partial class SharedRenderer
         {
             if (GlyphMetrics.RestoreMainOf(accidentalKind) is { } main)
             {
-                gc.DrawAttachedGlyph(EmmentalerGlyphs.AccidentalGlyph("natural"),
+                gc.DrawAttachedGlyph(Music(MusicGlyphs.Accidental("natural")),
                     originX, noteheadY, fs);
-                gc.DrawAttachedGlyph(EmmentalerGlyphs.AccidentalGlyph(main),
+                gc.DrawAttachedGlyph(Music(MusicGlyphs.Accidental(main)),
                     originX + GlyphMetrics.RestoreMainOffset(GlyphMetrics.Design20, main) * scale,
                     noteheadY, fs);
             }
             else
             {
-                gc.DrawAttachedGlyph(EmmentalerGlyphs.AccidentalGlyph(accidentalKind),
+                gc.DrawAttachedGlyph(Music(MusicGlyphs.Accidental(accidentalKind)),
                     originX, noteheadY, fs);
             }
         }
@@ -791,10 +791,10 @@ internal static partial class SharedRenderer
             double accInkLeft = inkLeftX + leftParen.Width * scale;
             using (gc.Source(sourcePosition))
             {
-                gc.DrawAttachedGlyph(EmmentalerGlyphs.AccidentalLeftParen,
+                gc.DrawAttachedGlyph(Music(MusicGlyph.AccidentalParensLeft),
                     accInkLeft - leftParen.Right * scale, noteheadY, fs);
                 DrawBody(accInkLeft - accBBox.Left * scale);
-                gc.DrawAttachedGlyph(EmmentalerGlyphs.AccidentalRightParen,
+                gc.DrawAttachedGlyph(Music(MusicGlyph.AccidentalParensRight),
                     accInkLeft + accBBox.Width * scale - rightParen.Left * scale, noteheadY, fs);
             }
         }

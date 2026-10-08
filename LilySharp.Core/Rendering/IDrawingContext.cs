@@ -146,10 +146,12 @@ public interface IDrawingContext
     }
 
     /// <summary>
-    /// Draws a music-font glyph (Emmentaler) at the given baseline anchor.
+    /// Draws a music-font glyph at the given baseline anchor.
     /// </summary>
-    /// <param name="glyph">SMuFL Unicode codepoint (e.g.
-    /// <c>EmmentalerGlyphs.GClef</c>).</param>
+    /// <param name="glyph">The character the score's music font draws the glyph with —
+    /// <c>MusicFont.Current.Codepoint(MusicGlyph.GClef)</c>; for Emmentaler that is today's
+    /// private-use slot (or ASCII for its fetaText digits and dynamic letters), not a SMuFL
+    /// code point.</param>
     /// <param name="x">X position of the glyph anchor (staff-spaces).</param>
     /// <param name="y">Y position of the glyph anchor (staff-spaces).</param>
     /// <param name="fontSize">Font size in staff-spaces (typically 4.0).</param>

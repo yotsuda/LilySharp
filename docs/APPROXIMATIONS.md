@@ -44,7 +44,7 @@
 - **:271** fans twice. Not ported; no book in the corpus has one.
 - **:690** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
-- **:456** "3"), LilyPond's 0.006 wider — a Pango measure not ported.
+- **:460** "3"), LilyPond's 0.006 wider — a Pango measure not ported.
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:373** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
@@ -310,7 +310,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:418** LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
-- **:724** prefix — LILYSHARP-OWN, a decided divergence (user decision
+- **:728** prefix — LILYSHARP-OWN, a decided divergence (user decision
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:216** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`

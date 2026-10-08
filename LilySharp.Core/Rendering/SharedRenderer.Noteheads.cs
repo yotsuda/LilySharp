@@ -745,7 +745,7 @@ internal static partial class SharedRenderer
         // LILYPOND-REF: lily/grob-property.cc — NoteHead.transparent
         Color? noteheadColor = ResolveColor(resolver, "NoteHead");
         bool headTransparent = resolver.GetBool("NoteHead", "transparent") == true;
-        char head = EmmentalerGlyphs.GetNotehead(note.Notehead, noteValue);
+        char head = Music(MusicGlyphs.Notehead(note.Notehead, noteValue));
         if (!headWiped && !headTransparent)
             using (gc.Source(note.SourcePosition))
             using (TodoScope(gc, note))
@@ -858,7 +858,7 @@ internal static partial class SharedRenderer
             bool hasFlag = false;
             if (noteValue >= 8)
             {
-                var flag = EmmentalerGlyphs.GetFlag(noteValue, stemUp);
+                var flag = MusicGlyphs.Flag(noteValue, stemUp);
                 if (flag.HasValue)
                 {
                     // The flag INHERITS its transparency from the stem it hangs on
@@ -879,7 +879,7 @@ internal static partial class SharedRenderer
                                : NullScope.Instance)
                             // Half a blot inside the stem's end — LayoutUtilities.FlagPlacementY,
                             // the same term the spacing reserves the flag's ink by.
-                            gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX),
+                            gc.DrawGlyph(Music(flag.Value), LayoutUtilities.FlagDrawX(stemX),
                                 LayoutUtilities.FlagPlacementY(stemEndY, stemUp),
                                 flagFontSize, stemColor);
                     hasFlag = true;
@@ -1013,7 +1013,7 @@ internal static partial class SharedRenderer
                    ? gc.MusicFace(GrobFontSize.DesignOf(note, SizedGrob.Dots))
                    : NullScope.Instance)
                 for (int d = 0; d < note.Dots; d++)
-                    gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
+                    gc.DrawGlyph(Music(MusicGlyph.AugmentationDot),
                         dotStartX + d * 2 * dotWidth, dotY,
                         FontSize * GrobFontSize.ScaleOf(note, SizedGrob.Dots), noteheadColor);
         }
@@ -1027,7 +1027,7 @@ internal static partial class SharedRenderer
         IDrawingContext gc, double pageHeight, DotAdjustment dotAdjust = default, double voiceX = 0)
     {
         int noteValue = GlyphMetrics.NoteValueOf(chord.BaseDuration);
-        char head = EmmentalerGlyphs.GetNotehead(chord.Notehead, noteValue);
+        char head = Music(MusicGlyphs.Notehead(chord.Notehead, noteValue));
         Color? noteheadColor = ResolveColor(resolver, "NoteHead");
         // LILYPOND-REF: lily/grob-property.cc — NoteHead.transparent
         bool headTransparent = resolver.GetBool("NoteHead", "transparent") == true;
@@ -1100,7 +1100,7 @@ internal static partial class SharedRenderer
             double y = staffMiddleY + n.StaffPosition / 2.0;
             // A drum chord mixes heads per member (bd default, hh cross).
             char memberHead = n.Notehead != NoteheadStyle.Default
-                ? EmmentalerGlyphs.GetNotehead(n.Notehead, noteValue)
+                ? Music(MusicGlyphs.Notehead(n.Notehead, noteValue))
                 : head;
             // Each head carries ITS OWN pitch source offset so the interactive
             // preview highlights/selects one chord note at a time and jumps the
@@ -1242,7 +1242,7 @@ internal static partial class SharedRenderer
                     double dotY = staffMiddleY + p / 2.0;
                     for (int d = 0; d < chord.Dots; d++)
                         using (gc.Source(chord.SourcePosition))
-                            gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
+                            gc.DrawGlyph(Music(MusicGlyph.AugmentationDot),
                                 dotStartX + d * 2 * dotWidth, dotY,
                                 FontSize * GrobFontSize.ScaleOf(chord, SizedGrob.Dots),
                                 noteheadColor);
@@ -1281,7 +1281,7 @@ internal static partial class SharedRenderer
             bool hasFlag = false;
             if (noteValue >= 8)
             {
-                var flag = EmmentalerGlyphs.GetFlag(noteValue, stemUp);
+                var flag = MusicGlyphs.Flag(noteValue, stemUp);
                 // The flag inherits the stem's transparency — see DrawNote.
                 // LILYPOND-REF: scm/define-grobs.scm:1631-1632 Flag transparent = grob::inherit-parent-property
                 if (flag.HasValue)
@@ -1291,7 +1291,7 @@ internal static partial class SharedRenderer
                         using (GrobFontSize.IsReduced(chord)
                                ? gc.MusicFace(GrobFontSize.DesignOf(chord, SizedGrob.Flag))
                                : NullScope.Instance)
-                            gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX),
+                            gc.DrawGlyph(Music(flag.Value), LayoutUtilities.FlagDrawX(stemX),
                                 LayoutUtilities.FlagPlacementY(stemEndY, stemUp),
                                 flagFontSize, stemColor);
                     hasFlag = true;
@@ -1574,7 +1574,7 @@ internal static partial class SharedRenderer
         IDrawingContext gc, double staffPosition, int staffLines = 5)
     {
         int noteValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
-        char glyph = EmmentalerGlyphs.GetRest(noteValue, staffPosition, staffLines);
+        char glyph = Music(MusicGlyphs.Rest(noteValue, staffPosition, staffLines));
         using (gc.Source(rest.SourcePosition))
         using (TodoScope(gc, rest))
             gc.DrawGlyph(glyph, x, y, FontSize);
@@ -1595,7 +1595,7 @@ internal static partial class SharedRenderer
                 + (dotOffset ?? LilySharp.Core.Svg.Layout.ElementCoordinator.RestDotDefaultOffset(noteValue)) * 0.5;
             for (int d = 0; d < rest.Dots; d++)
                 using (gc.Source(rest.SourcePosition))
-                    gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
+                    gc.DrawGlyph(Music(MusicGlyph.AugmentationDot),
                         dotStartX + d * 2 * dotWidth, dotY, FontSize);
         }
     }

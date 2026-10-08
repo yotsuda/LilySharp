@@ -748,7 +748,7 @@ internal static partial class SharedRenderer
                     // sitting on it. The layout's YUp is the line; the reservation
                     // (OutsideStaffStacker.PlaceTrills) prices the same offset.
                     // LILYPOND-REF: scm/define-grobs.scm:4068 TrillSpanner stencil-offset, inside its left-bound-info text
-                    gc.DrawGlyph(EmmentalerGlyphs.OrnTrill, s.GlyphX,
+                    gc.DrawGlyph(Music(MusicGlyph.OrnamentTrill), s.GlyphX,
                         absY - os.Size(EngravingDefaults.TrillSpannerTextOffsetDown, s.StaffIndex),
                         os.Size(FontSize, s.StaffIndex));
                 }
@@ -766,7 +766,7 @@ internal static partial class SharedRenderer
                     foreach (double originX in TrillWaveOutline.ElementOrigins(
                                  s.LineStartX, s.LineEndX - s.LineStartX))
                     {
-                        gc.DrawGlyph(EmmentalerGlyphs.OrnTrillElement, originX, baseline, size);
+                        gc.DrawGlyph(Music(MusicGlyph.WiggleTrill), originX, baseline, size);
                     }
                 }
             }
@@ -894,7 +894,7 @@ internal static partial class SharedRenderer
                     double baseline = os.YUp(
                         midYUp + a.BottomYUp + i * ArpeggioEngraver.WiggleHeight,
                         a.StaffIndex, a.MeasureIndex);
-                    gc.DrawGlyph(EmmentalerGlyphs.Arpeggio, a.X, baseline, glyphSize);
+                    gc.DrawGlyph(Music(MusicGlyph.WiggleArpeggiatoUp), a.X, baseline, glyphSize);
                 }
             }
         }

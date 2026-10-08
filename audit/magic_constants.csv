@@ -1089,8 +1089,3 @@
 "Svg/Layout/GlyphMetrics.cs","1027","32","(>= 32, true) => font.Flag16thUp,","(file-level) LILYPOND-REF: lily/font-select.cc:115-186 select_font — the requested size picks the","Yellow"
 "Svg/Layout/GlyphMetrics.cs","1028","32","(>= 32, false) => font.Flag16thDown,","(file-level) LILYPOND-REF: lily/font-select.cc:115-186 select_font — the requested size picks the","Yellow"
 "Svg/Layout/GlyphMetrics.cs","1149","0.0","_ => ('\0', default, 0.0),","(file-level) LILYPOND-REF: lily/font-select.cc:115-186 select_font — the requested size picks the","Yellow"
-"Svg/EmmentalerGlyphs.cs","103","16, 32, 64, 128","16 => Rest16th, 32 => Rest32nd, 64 => Rest64th, 128 => Rest128th,","(file-level) LILYPOND-REF: scm/define-grobs.scm:944-975 (ClefModifier grob)</para>","Yellow"
-"Svg/EmmentalerGlyphs.cs","169","16","16 => stemUp ? Flag16thUp : Flag16thDown,","LILYPOND-REF: lily/flag.cc Flag::glyph_name — ""flags."" + (up ? 'u' : 'd') + duration-log.","Green"
-"Svg/EmmentalerGlyphs.cs","170","32","32 => stemUp ? Flag32ndUp : Flag32ndDown,","(file-level) LILYPOND-REF: scm/define-grobs.scm:944-975 (ClefModifier grob)</para>","Yellow"
-"Svg/EmmentalerGlyphs.cs","171","64","64 => stemUp ? Flag64thUp : Flag64thDown,","(file-level) LILYPOND-REF: scm/define-grobs.scm:944-975 (ClefModifier grob)</para>","Yellow"
-"Svg/EmmentalerGlyphs.cs","172","128","128 => stemUp ? Flag128thUp : Flag128thDown,","(file-level) LILYPOND-REF: scm/define-grobs.scm:944-975 (ClefModifier grob)</para>","Yellow"

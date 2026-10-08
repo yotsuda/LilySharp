@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第856セッションの経緯
+
+### 1.1 第856セッション（2026-10-08・YT-DELL2）
+
+新しい会話。`-Start p856`（HEAD `37fff9ead`）＝full **11400 / 0 / 2 / 11402**。§7 3.5 で第854 を ARCHIVE へ。第855 の次の候補（双子と頁割りが違う実の本 13 冊の残り）から。
+- **LP の改ページの body は pure の箱**（align-interface.cc:94-123: 段ごとに行頭の箱 x<−1 と行の残りの箱 x≥0）。キミ、メグル、ボク line 28 で 4.500＋2.872＋padding 1.0＝8.372 が LP の pure の間隔に一致（`p856/lp-staves.ps1`）。Lily# は `StaffSpringCompression` が layout の floor（タイ・tuplet 入りの skyline）を引いていた。
+- **値付け（試作 3 通り・全 1199 svg）**: v1 箱＋伸び無し＝7 枚動き LP へ 2・離れ 5／v2 箱＋伸びも許す＝11 枚・LP へ 2・離れ 7（離れたのは staff＋tab＝Lily# の数字が 0.385 高く箱で行全体に乗る）／v3 skyline のままタイ・tuplet を抜く＝**2 枚・2 枚とも LP へ・離れ 0**。
+- **閉じた（`c406ab2d2`）**: v3 を本実装。`BuildAllStaffSkylines` が外側の積みを 2 回まわす（2 回目はタイ・tuplet 抜きの inside から・staff 対のある score でタイか tuplet のある段だけ）→ `StaffSkylineSet.Pure` → `StaffSpring.PureMinimumDistance` → `StaffSpringCompression`。配置は不変。I'll Be Over You 7/8/5 → 8/8/4・You're So Vain 7/2 → 8/1（どちらも LP）。箱は LILYSHARP-OWN として註に実測を残した。網 `PageBreakTests.ATieBetweenTwoStaves_IsNotPricedByTheBreaker`（8 行・LP は 1 頁に 8・Lily# は 7+1 だった・`p856/tie/gen.ps1`）・毒 2 本とも赤。full **11401 / 0 / 2 / 11403**（+1）。
+- **続き（同じ会話・ユーザー「続けて」）**: 11 冊の向き＝tab の数字の族（Lily# が高い・Something-both・あなたに会えて・まちぶせ・OH NO・I Should Be）／タイの行き先の族（Sweet Child）／Lily# が低い側（奏-tab・Alone Again・Butterfly・Can't Fight の tab だけ）。未読 3 件を読んだ（§1.0 ⒞）。スラー全体の pure を試作したが戻した（同 ⒞）。続けて奏-tab の行頭の記号を LP で 8 通り測り、記号の規則は一致・差は tab の符尾の向きと判明（同 ⒞）。**双子と頁割りが違う実の本 11 冊は、どれも決定済みの族（tab の数字・タイの行き先）か tab の弦と符尾の向きの族に帰着した**＝§1.0 の方針 ③「新しい種類が出なくなったら区切り」の判断はユーザーへ。→ ユーザー「2」（総点検を続ける）: 奏-tab は運指の計画の決定に帰着、NoteColumn の謎は LP のキャッシュの欠陥と判明（§1.0 ⒞）。続けて tab だけの score の毎行 −0.025 を読んだ:
+- **閉じた（`effefdddb`）旗とかっこ**: LP の Flag の pure は stencil の箱（原点＝先端−blot/2・箱の上端 +0.065 → 先端の 0.025 先・flag.cc:183-196）、Lily# の改ページ用の輪郭は描画の外形（先端の手前で終わる）＝Alone Again-tab の毎行 2.275 対 2.250。tab の `pureBeams` で旗を箱に。旗だけだと ABC-tab が離れた（12/9 対 LP 13/8）＝原因はかっこ: 注記の高さの scalar の経路（`EnrichExtents…`）でかっこが `noPure` の外にあり改ページに入っていた（LP は pure-relevant でない・`ExecuteForBreaker` は箱を既に外していた）＝`noPure` の側へ。掃き 19 枚: 頁割りは Can't Fight This Feeling-tab が LP へ（13/6 → 12/7）・離れ 0・残り 18 は系が 0.01 下がるだけ（段の pure の上端が頁の spring の原点）。網 `BreakerPureHeightTests.AFlag_IsPricedByItsGlyphsBox_NotItsOutline`・`AVoltaBracket_HasNoPureHeight`（双子で実測 `p856/net/`）・毒 2 本とも赤。
+- **閉じた（`982256bcc`）五線の旗も同じ**（低音部の d, の 8 分で LP 1.400・Lily# 1.375）。`AddEdgeStaffInk` が改ページ用の輪郭を作る間だけ `_pureFlagBoxes` を立て `MergeFlagInk` が箱にする（装飾音の旗は外形のまま）。掃き 18 枚・頁割りの変化 0。網 `AStaffsFlag_IsPricedByItsGlyphsBox_Too`・毒 赤。full **11404 / 0 / 2 / 11406**（+3）。
+- 残る総点検の候補は無い（実の本 11 冊→10 冊はすべて決定済みの族）＝区切って SMuFL へ進むかを改めてユーザーへ。
+- ⚠️ 道具: `refactor1.ps1` が BOM 無しのファイルを BOM 付きと決めつけ先頭の `// ` を削った（CS1040 で気づいた）＝BOM は読んで判定する（`p856/rep.ps1` の形）。`[string]$Log` の型つき引数に配列を代入すると 1 本の文字列になる。
+
 ## 以下は第855セッションの経緯
 
 ### 1.1 第855セッション（2026-10-08・YT-DELL2）

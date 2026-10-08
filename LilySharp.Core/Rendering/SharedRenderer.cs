@@ -81,6 +81,10 @@ internal static partial class SharedRenderer
     internal const double FontSize = 4.0;
     private static readonly double OssiaScale = EngravingDefaults.OssiaScale; // magstep(-3), shared with the layouter
 
+    /// <summary>The character the score's music font draws <paramref name="glyph"/> with — what
+    /// a draw site hands <see cref="IDrawingContext.DrawGlyph"/> (docs/smufl-design.md §6 ①).</summary>
+    private static char Music(MusicGlyph glyph) => MusicFont.Current.Codepoint(glyph);
+
     public static void RenderTo(
         MultiStaffScore score, ScoreLayout layout, IDocumentContext doc,
         bool resolveDataPos = false, SvgSystemFragmentCache? fragments = null)

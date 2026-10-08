@@ -94,7 +94,7 @@ internal static partial class SharedRenderer
         // is what lets the TAB clef join the group in SpacingRules.ClefGroupExtent: the
         // width booked there is now the width drawn here.
         double tabCenterY = staffY - tabHeight / 2.0;
-        gc.DrawGlyph(EmmentalerGlyphs.TabClef,
+        gc.DrawGlyph(Music(MusicGlyph.SixStringTabClef),
             systemStartX + EngravingDefaults.ClefGlyphXOffset - clefGroupInkLeft,
             tabCenterY, FontSize);
 
@@ -612,11 +612,11 @@ internal static partial class SharedRenderer
 
         if (noteValue >= 8)
         {
-            var flag = EmmentalerGlyphs.GetFlag(noteValue, stemUp);
+            var flag = MusicGlyphs.Flag(noteValue, stemUp);
             if (flag.HasValue)
                 // Same term as a notation staff's: the Flag grob and its rule do not change
                 // with the staff kind (LayoutUtilities.FlagDrawX).
-                gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX),
+                gc.DrawGlyph(Music(flag.Value), LayoutUtilities.FlagDrawX(stemX),
                     LayoutUtilities.FlagPlacementY(farY, stemUp), FontSize, null);
         }
     }
@@ -756,7 +756,7 @@ internal static partial class SharedRenderer
         double dotY = noteY + stringSpace / 2;
         using (gc.Source(sourcePosition))
             for (int d = 0; d < dots; d++)
-                gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
+                gc.DrawGlyph(Music(MusicGlyph.AugmentationDot),
                     dotStartX + d * 2 * dotWidth, dotY, FontSize, null);
     }
 
@@ -801,7 +801,7 @@ internal static partial class SharedRenderer
                 // The s2cross glyph, its box centred on the column like the digit is: the
                 // glyph's origin is its left edge and its Y extent is symmetric about the
                 // string (the box measured in TabDeadHeadWidth's remarks).
-                gc.DrawGlyph(EmmentalerGlyphs.NoteheadCrossBlack, x - TabDeadHeadWidth / 2, noteY,
+                gc.DrawGlyph(Music(MusicGlyph.NoteheadXBlack), x - TabDeadHeadWidth / 2, noteY,
                     FontSize * TabDeadHeadScale, Color.Black);
                 if (parenthesized)
                     DrawTabFretParens(fonts, stringCount, x, noteY, bgWidth, gc);

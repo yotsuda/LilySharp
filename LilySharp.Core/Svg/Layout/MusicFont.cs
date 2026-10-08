@@ -45,6 +45,35 @@ internal readonly record struct MusicGlyphMetrics(BBox? DesignBox, BBox? Outline
 /// </remarks>
 internal abstract class MusicFont
 {
+    [System.ThreadStatic] private static MusicFont? t_current;
+
+    /// <summary>The music font of the layout or render running on this thread — Emmentaler
+    /// outside one, and (until the import stage of docs/smufl-design.md §6) inside one too.</summary>
+    /// <remarks>Held the way <see cref="EngravingStyle.Current"/> is, so a static helper that
+    /// picks a glyph needs no font threaded through its callers.
+    /// ⚠️ A cache keyed by a glyph's CHARACTER is keyed by this font as well: when a second font
+    /// becomes reachable, such a key must carry the font (the import stage's checklist).</remarks>
+    internal static MusicFont Current => t_current ?? EmmentalerMusicFont.Instance;
+
+    /// <summary>Holds <paramref name="font"/> as <see cref="Current"/> until the scope is
+    /// disposed; scopes nest.</summary>
+    internal static Scope Use(MusicFont font) => new(font);
+
+    /// <summary>The scope <see cref="Use"/> opens.</summary>
+    internal readonly struct Scope : IDisposable
+    {
+        private readonly MusicFont? _previous;
+
+        internal Scope(MusicFont font)
+        {
+            _previous = t_current;
+            t_current = ReferenceEquals(font, EmmentalerMusicFont.Instance) ? null : font;
+        }
+
+        /// <summary>Restores the font that was current before.</summary>
+        public void Dispose() => t_current = _previous;
+    }
+
     /// <summary>The name a score writes for the font (<c>fonts { music "…" }</c>).</summary>
     public abstract string Name { get; }
 

@@ -746,9 +746,9 @@ internal static partial class SharedRenderer
         // tips share that origin; Lily# centres the stroke on x, so the tips go half a
         // thickness to its left. SystemStartDelimiterInkLeft reports the same edge.
         double glyphX = x - thickness / 2.0;
-        gc.DrawGlyph(EmmentalerGlyphs.BracketTipUp, glyphX,
+        gc.DrawGlyph(Music(MusicGlyph.BracketTop), glyphX,
             top - GlyphMetrics.BracketTipUp.Bottom, FontSize);
-        gc.DrawGlyph(EmmentalerGlyphs.BracketTipDown, glyphX,
+        gc.DrawGlyph(Music(MusicGlyph.BracketBottom), glyphX,
             bottom - GlyphMetrics.BracketTipDown.Top, FontSize);
     }
 
@@ -787,19 +787,19 @@ internal static partial class SharedRenderer
         char glyph = clefChange.IsCue
             ? clefChange.NewClef switch
             {
-                ClefType.Bass or ClefType.Bass8Below => EmmentalerGlyphs.FClef,
+                ClefType.Bass or ClefType.Bass8Below => Music(MusicGlyph.FClef),
                 ClefType.Alto or ClefType.Tenor or ClefType.Soprano
-                    or ClefType.MezzoSoprano or ClefType.Baritone => EmmentalerGlyphs.CClef,
-                ClefType.Percussion => EmmentalerGlyphs.PercussionClef,
-                _ => EmmentalerGlyphs.GClef,
+                    or ClefType.MezzoSoprano or ClefType.Baritone => Music(MusicGlyph.CClef),
+                ClefType.Percussion => Music(MusicGlyph.UnpitchedPercussionClef1),
+                _ => Music(MusicGlyph.GClef),
             }
             : clefChange.NewClef switch
             {
-                ClefType.Bass or ClefType.Bass8Below => EmmentalerGlyphs.FClefChange,
+                ClefType.Bass or ClefType.Bass8Below => Music(MusicGlyph.FClefChange),
                 ClefType.Alto or ClefType.Tenor or ClefType.Soprano
-                    or ClefType.MezzoSoprano or ClefType.Baritone => EmmentalerGlyphs.CClefChange,
-                ClefType.Percussion => EmmentalerGlyphs.PercussionClefChange,
-                _ => EmmentalerGlyphs.GClefChange,
+                    or ClefType.MezzoSoprano or ClefType.Baritone => Music(MusicGlyph.CClefChange),
+                ClefType.Percussion => Music(MusicGlyph.FetaClefsPercussionChange),
+                _ => Music(MusicGlyph.GClefChange),
             };
         // The glyph anchors on the line it names (ClefLineBelowTopLine, one home with the
         // line-start clef and the change column's spacing box).
@@ -837,7 +837,7 @@ internal static partial class SharedRenderer
         {
             double y = (staffY - StaffHeight / 2) + staffPosition / 2.0;
             using (gc.Source(change.SourcePosition))
-                gc.DrawGlyph(EmmentalerGlyphs.AccidentalGlyph(kind), x + dx, y, FontSize);
+                gc.DrawGlyph(Music(MusicGlyphs.Accidental(kind)), x + dx, y, FontSize);
         }
         return x + width;
     }
@@ -861,7 +861,7 @@ internal static partial class SharedRenderer
             double y = (staffY - StaffHeight / 2) + staffPosition / 2.0;
             double x = i < naturals ? cancellationX + dx : keyX + dx - keyStart;
             using (gc.Source(change.SourcePosition))
-                gc.DrawGlyph(EmmentalerGlyphs.AccidentalGlyph(kind), x, y, FontSize);
+                gc.DrawGlyph(Music(MusicGlyphs.Accidental(kind)), x, y, FontSize);
         }
     }
 

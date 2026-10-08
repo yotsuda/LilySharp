@@ -384,11 +384,11 @@ internal static partial class SharedRenderer
     {
         char glyph = clef switch
         {
-            ClefType.Bass or ClefType.Bass8Below => EmmentalerGlyphs.FClef,
+            ClefType.Bass or ClefType.Bass8Below => Music(MusicGlyph.FClef),
             ClefType.Alto or ClefType.Tenor or ClefType.Soprano
-                or ClefType.MezzoSoprano or ClefType.Baritone => EmmentalerGlyphs.CClef,
-            ClefType.Percussion => EmmentalerGlyphs.PercussionClef,
-            _ => EmmentalerGlyphs.GClef,
+                or ClefType.MezzoSoprano or ClefType.Baritone => Music(MusicGlyph.CClef),
+            ClefType.Percussion => Music(MusicGlyph.UnpitchedPercussionClef1),
+            _ => Music(MusicGlyph.GClef),
         };
         double clefY = staffY - ClefLineBelowTopLine(clef);
         // Anchor the clef GROUP's ink-left on the shared LeftEdge->clef column
@@ -553,12 +553,12 @@ internal static partial class SharedRenderer
         // LILYPOND-REF: scm/time-signature-settings.scm:954-964,981-982.
         if (ts.Beats == 4 && ts.BeatType == 4)
         {
-            gc.DrawGlyph(EmmentalerGlyphs.TimeSigCommon, x, staffY - StaffMiddleLineDrop, FontSize);
+            gc.DrawGlyph(Music(MusicGlyph.TimeSigCommon), x, staffY - StaffMiddleLineDrop, FontSize);
             return;
         }
         if (ts.Beats == 2 && ts.BeatType == 2)
         {
-            gc.DrawGlyph(EmmentalerGlyphs.TimeSigCutCommon, x, staffY - StaffMiddleLineDrop, FontSize);
+            gc.DrawGlyph(Music(MusicGlyph.TimeSigCutCommon), x, staffY - StaffMiddleLineDrop, FontSize);
             return;
         }
         // Stack numerator over denominator, each centered on the staff like
@@ -642,7 +642,7 @@ internal static partial class SharedRenderer
         foreach (var (kind, dx, staffPosition) in glyphs)
         {
             double y = (staffY - StaffHeight / 2) + staffPosition / 2.0;
-            gc.DrawGlyph(EmmentalerGlyphs.AccidentalGlyph(kind), x + dx * scale, y, FontSize);
+            gc.DrawGlyph(Music(MusicGlyphs.Accidental(kind)), x + dx * scale, y, FontSize);
         }
         return x + width * scale;
     }

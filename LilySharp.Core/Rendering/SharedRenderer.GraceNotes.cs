@@ -373,7 +373,7 @@ internal static partial class SharedRenderer
         // ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
         //   decides where an up stem attaches, and it must follow the head the ordinary pass
         //   actually draws. That pass resolves the glyph from the duration
-        //   (EmmentalerGlyphs.GetNotehead in DrawNote/DrawChord), so a beamed grace whose
+        //   (MusicGlyphs.Notehead in DrawNote/DrawChord), so a beamed grace whose
         //   column is longer than an eighth would attach its stem at a black head's width
         //   while a half head is drawn. Unreachable as it stands — a beam needs two columns
         //   of an eighth or shorter, so every column this method sees is a black head — and

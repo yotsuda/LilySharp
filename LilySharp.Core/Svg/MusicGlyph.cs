@@ -340,4 +340,143 @@ internal static class MusicGlyphs
     /// <summary>The glyph a SMuFL name names, when this vocabulary has it.</summary>
     public static bool TryFromSmuflName(string name, out MusicGlyph glyph)
         => BySmuflName.TryGetValue(name, out glyph);
+
+    // ===== Which glyph a grob draws — the dispatch, font-independent =====
+    // Moved here from EmmentalerGlyphs (第858), whose Get* now answer Emmentaler's character
+    // for the same choice.
+
+    /// <summary>The accidental for a resolved accidental kind ("sharp", "flat",
+    /// "doubleSharp", "doubleFlat", the four quarter-tone kinds); anything else (incl.
+    /// "natural") is the natural sign. Single source for the name-to-glyph switch.</summary>
+    public static MusicGlyph Accidental(string? kind) => kind switch
+    {
+        "doubleSharp" => MusicGlyph.AccidentalDoubleSharp,
+        "sharp" => MusicGlyph.AccidentalSharp,
+        "flat" => MusicGlyph.AccidentalFlat,
+        "doubleFlat" => MusicGlyph.AccidentalDoubleFlat,
+        "quarterSharp" => MusicGlyph.AccidentalQuarterToneSharpStein,
+        "threeQuarterSharp" => MusicGlyph.AccidentalThreeQuarterTonesSharpStein,
+        "quarterFlat" => MusicGlyph.FetaAccidentalsFlatSlash,
+        "threeQuarterFlat" => MusicGlyph.FetaAccidentalsFlatFlatSlash,
+        _ => MusicGlyph.AccidentalNatural,
+    };
+
+    /// <summary>The time signature digit <paramref name="digit"/> (0 for anything outside 0..9).</summary>
+    public static MusicGlyph TimeSigDigit(int digit)
+        => digit is >= 0 and <= 9 ? TimeSigDigits[digit] : MusicGlyph.TimeSig0;
+
+    private static readonly MusicGlyph[] TimeSigDigits =
+    [
+        MusicGlyph.TimeSig0, MusicGlyph.TimeSig1, MusicGlyph.TimeSig2, MusicGlyph.TimeSig3, MusicGlyph.TimeSig4,
+        MusicGlyph.TimeSig5, MusicGlyph.TimeSig6, MusicGlyph.TimeSig7, MusicGlyph.TimeSig8, MusicGlyph.TimeSig9,
+    ];
+
+    /// <summary>The rest for a note value at a staff position.</summary>
+    /// <param name="noteValue">1 = whole, 2 = half, 0 = breve, 4/8/… shorter.</param>
+    /// <param name="staffPosition">Where the rest's ORIGIN was drawn, in staff
+    /// positions about the middle line (LilyPond's <c>get_position</c> — the whole
+    /// rest's +2 already applied, since it is the origin that hangs from that line).</param>
+    /// <param name="staffLines">The staff's line count — the lines the ledger question is
+    /// asked of (<see cref="EngravingDefaults.StaffLinePositions"/>); five by default.</param>
+    /// <remarks>
+    /// LILYPOND-REF: lily/rest.cc:166-227 Rest::glyph_name — "rests." + duration-log,
+    /// plus an "o" suffix for the LEDGERED cut of the glyph. A breve, whole or half
+    /// rest OFF a staff line carries its own ledger line inside the glyph (there is no
+    /// LedgerLineSpanner for rests), so the half rest LilyPond pushes to an odd position
+    /// out of the staff prints as <c>rests.1o</c>, not <c>rests.1</c>.
+    /// LILYPOND-REF: lily/staff-symbol.cc:372-396 Staff_symbol::on_line — with
+    /// <c>allow_ledger</c> false (that is what <c>on_staff_line</c> passes), only the
+    /// REAL lines count, so every position outside the staff is off-line and ledgers.
+    /// <para>⚠️ The ledger changes the INK only. LilyPond keeps it out of the X extent
+    /// on purpose (rest.cc:281-289 asks for the unledgered stencil there, because the
+    /// Y position that decides it is not known until after line breaking), and the Y
+    /// extent it reports is the bare bar's either way (measured: an <c>rests.1o</c> at
+    /// position −11 reports <c>(0 . 0.625)</c>, the same as <c>rests.1</c>). So spacing,
+    /// skylines and the dot column all keep reading the unledgered box.</para>
+    /// </remarks>
+    public static MusicGlyph Rest(int noteValue, double staffPosition, int staffLines = 5)
+    {
+        // LILYPOND-REF: lily/rest.cc:173-174 — int (get_position (me) + offset).
+        // C++ truncates toward zero; so does this cast.
+        int pos = (int) staffPosition;
+        return noteValue switch
+        {
+            0 => IsLedgered(0, pos, staffLines) ? MusicGlyph.RestDoubleWholeLegerLine : MusicGlyph.RestDoubleWhole,
+            1 => IsLedgered(1, pos, staffLines) ? MusicGlyph.RestWholeLegerLine : MusicGlyph.RestWhole,
+            2 => IsLedgered(2, pos, staffLines) ? MusicGlyph.RestHalfLegerLine : MusicGlyph.RestHalf,
+            4 => MusicGlyph.RestQuarter, 8 => MusicGlyph.Rest8th,
+            16 => MusicGlyph.Rest16th, 32 => MusicGlyph.Rest32nd, 64 => MusicGlyph.Rest64th,
+            128 => MusicGlyph.Rest128th,
+            _ => MusicGlyph.RestQuarter,
+        };
+    }
+
+    /// <summary>
+    /// Whether a rest of this note value at this staff position prints the cut of its
+    /// glyph that carries a ledger line.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/rest.cc:170-185 Rest::glyph_name is_ledgered — a half rest
+    /// needs a ledger if it is not LYING on a staff line, a whole rest if it is not
+    /// HANGING from one, a breve if neither (its own line, or the one two positions
+    /// above it, being a staff line spares it).
+    /// <para>The staff's <c>line-positions</c> are the ones it DRAWS
+    /// (<see cref="EngravingDefaults.StaffLinePositions"/>): {−4, −2, 0, 2, 4} on the
+    /// five-line staff, the single middle line on <c>as lines 1</c>, the pair ±2 on
+    /// <c>as lines 2</c>. LILYPOND-REF: scm/define-grobs.scm StaffSymbol — line-count 5.</para>
+    /// </remarks>
+    private static bool IsLedgered(int noteValue, int pos, int staffLines) =>
+        !OnStaffLine(pos, staffLines)
+        && !(noteValue == 0 && OnStaffLine(pos + 2, staffLines));
+
+    /// <summary>Whether a staff position is one of the staff's drawn lines.</summary>
+    /// <remarks>LILYPOND-REF: lily/staff-symbol.cc:372-382 Staff_symbol::on_line —
+    /// the position equals one of <c>line-positions</c>.</remarks>
+    private static bool OnStaffLine(int pos, int staffLines)
+        => EngravingDefaults.OnDrawnStaffLine(pos, staffLines);
+
+    /// <summary>The notehead for a style and note value; the whole-note variants
+    /// serve the breve too (styled breves are not in the font).</summary>
+    public static MusicGlyph Notehead(Model.NoteheadStyle style, int noteValue) => style switch
+    {
+        Model.NoteheadStyle.Cross => noteValue switch
+        {
+            0 or 1 => MusicGlyph.NoteheadXWhole, 2 => MusicGlyph.NoteheadXHalf, _ => MusicGlyph.NoteheadXBlack
+        },
+        Model.NoteheadStyle.Diamond => noteValue switch
+        {
+            0 or 1 => MusicGlyph.NoteheadDiamondWhole, 2 => MusicGlyph.NoteheadDiamondHalf, _ => MusicGlyph.NoteheadDiamondBlack
+        },
+        Model.NoteheadStyle.Triangle => noteValue switch
+        {
+            0 or 1 => MusicGlyph.NoteheadTriangleUpWhole, 2 => MusicGlyph.NoteheadTriangleUpHalf, _ => MusicGlyph.NoteheadTriangleUpBlack
+        },
+        Model.NoteheadStyle.Slash => noteValue switch
+        {
+            0 or 1 => MusicGlyph.NoteheadSlashWhiteWhole, 2 => MusicGlyph.NoteheadSlashWhiteHalf, _ => MusicGlyph.NoteheadSlashHorizontalEnds
+        },
+        Model.NoteheadStyle.XCircle => MusicGlyph.NoteheadCircleX,
+        _ => Notehead(noteValue),
+    };
+
+    // LILYPOND-REF: lily/note-head.cc internal_print — glyph = "noteheads.s" +
+    // min(duration-log, 2) (so quarter and shorter all share the s2 filled head).
+    /// <summary>The plain notehead for a note value.</summary>
+    public static MusicGlyph Notehead(int noteValue) => noteValue switch
+    {
+        0 => MusicGlyph.NoteheadDoubleWhole, 1 => MusicGlyph.NoteheadWhole, 2 => MusicGlyph.NoteheadHalf,
+        _ => MusicGlyph.NoteheadBlack,
+    };
+
+    // LILYPOND-REF: lily/flag.cc Flag::glyph_name — "flags." + (up ? 'u' : 'd') + duration-log.
+    /// <summary>The flag for a note value and stem direction; null for a note without one.</summary>
+    public static MusicGlyph? Flag(int noteValue, bool stemUp) => noteValue switch
+    {
+        8 => stemUp ? MusicGlyph.Flag8thUp : MusicGlyph.Flag8thDown,
+        16 => stemUp ? MusicGlyph.Flag16thUp : MusicGlyph.Flag16thDown,
+        32 => stemUp ? MusicGlyph.Flag32ndUp : MusicGlyph.Flag32ndDown,
+        64 => stemUp ? MusicGlyph.Flag64thUp : MusicGlyph.Flag64thDown,
+        128 => stemUp ? MusicGlyph.Flag128thUp : MusicGlyph.Flag128thDown,
+        _ => null,
+    };
 }
