@@ -308,4 +308,19 @@ public class MusicFontTests
         Assert.False(font.TryParseFamily("Emmentaler-Brace", out _));
         Assert.False(font.TryParseFamily("serif", out _));
     }
+
+    /// <summary>The brace is the ladder's rung (§6 ① ⑸): the character at U+E000 + rung, and
+    /// the rung's own width — for a length inside the ladder and at both ends of it.</summary>
+    [Theory]
+    [InlineData(13.1)]
+    [InlineData(31.0)]
+    [InlineData(0.0)]
+    [InlineData(1000.0)]
+    public void TheBrace_IsTheLaddersRung(double length)
+    {
+        int rung = BraceLadder.LastAtOrBelow(length);
+        var brace = EmmentalerMusicFont.Instance.Brace(length);
+        Assert.Equal(rung, brace.Codepoint - 0xE000);
+        Assert.Equal(BraceLadder.Widths[rung], brace.Width);
+    }
 }

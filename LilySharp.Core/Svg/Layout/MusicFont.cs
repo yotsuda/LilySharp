@@ -179,7 +179,22 @@ internal abstract class MusicFont
     /// <summary>The design <paramref name="family"/> names, when it is one of this font's faces
     /// (<see cref="FaceFamily"/>'s inverse); false for any other family.</summary>
     public abstract bool TryParseFamily(string family, out int rounded);
+
+    /// <summary>
+    /// The curly brace drawn for a system-start delimiter of <paramref name="length"/> staff
+    /// spaces (the staves' StaffSymbol extents — the span plus a line thickness): the character,
+    /// drawn at the music glyphs' size in the face <c>TextRole.SystemBrace</c> resolves to, and
+    /// how wide it draws — what the instrument name is placed against.
+    /// </summary>
+    /// <remarks>Emmentaler answers a rung of its 576-glyph ladder, unscaled (docs/smufl-design.md
+    /// §3 #10 — an EXTENSION, SMuFL has no ladder); a SMuFL font has one <c>brace</c> glyph to
+    /// scale to the span, which is where this record grows a size.</remarks>
+    public abstract SystemBrace Brace(double length);
 }
+
+/// <summary>What <see cref="MusicFont.Brace"/> answers: the character and its drawn width in
+/// staff spaces.</summary>
+internal readonly record struct SystemBrace(char Codepoint, double Width);
 
 /// <summary>One design of a <see cref="MusicFont"/> — the table its dimensions are read from.</summary>
 internal abstract class MusicFontDesign
@@ -342,6 +357,20 @@ internal sealed class EmmentalerMusicFont : MusicFont
     /// <inheritdoc/>
     public override bool TryParseFamily(string family, out int rounded)
         => Rendering.EmmentalerFaces.TryParseFamily(family, out rounded);
+
+    /// <inheritdoc/>
+    /// <remarks>LILYPOND-REF: scm/define-markup-commands.scm:5072-5099 <c>get-y-from-brace</c> —
+    /// the last rung not taller than the length (<see cref="BraceLadder.LastAtOrBelow"/>), drawn
+    /// at its natural size; the rung's width is from the same dump (<see cref="BraceLadder.Widths"/>).</remarks>
+    public override SystemBrace Brace(double length)
+    {
+        int rung = BraceLadder.LastAtOrBelow(length);
+        return new((char) (BraceGlyphStart + rung), BraceLadder.Widths[rung]);
+    }
+
+    /// <summary>The brace ladder's encoding: <c>braceN</c> lives at U+E000+N in
+    /// <c>emmentaler-brace</c>.</summary>
+    private const int BraceGlyphStart = 0xE000;
 
     /// <inheritdoc/>
     /// <remarks>LILYPOND-REF: lily/font-select.cc:115-186 select_font — ported as

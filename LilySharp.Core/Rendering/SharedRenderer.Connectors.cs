@@ -657,7 +657,7 @@ internal static partial class SharedRenderer
             SystemStartDelimiterType.BarLine
                 => delim.BraceX - SystemStartBarThickness / 2.0,
             SystemStartDelimiterType.Brace when shown
-                => delim.BraceX - BraceLadder.Widths[BraceLadder.LastAtOrBelow(SystemStartDelimiterLength(height))],
+                => delim.BraceX - MusicFont.Current.Brace(SystemStartDelimiterLength(height)).Width,
             _ => null,
         };
     }
@@ -1054,12 +1054,9 @@ internal static partial class SharedRenderer
     {
         double yMid = (top + bottom) / 2;
 
-        int glyphIndex = BraceLadder.LastAtOrBelow(SystemStartDelimiterLength(top - bottom));
-        char braceChar = (char)(BraceGlyphStart + glyphIndex);
-        gc.DrawText(braceChar.ToString(), x, yMid, FontSize, TextRole.SystemBrace,
+        // The rung is the music font's answer (MusicFont.Brace — Emmentaler's ladder, §3 #10).
+        var brace = MusicFont.Current.Brace(SystemStartDelimiterLength(top - bottom));
+        gc.DrawText(brace.Codepoint.ToString(), x, yMid, FontSize, TextRole.SystemBrace,
             FontStyle.Regular, TextAnchor.End, Color.Black);
     }
-
-    /// <summary>The brace ladder's encoding: <c>braceN</c> lives at U+E000+N.</summary>
-    private const int BraceGlyphStart = 0xE000;
 }
