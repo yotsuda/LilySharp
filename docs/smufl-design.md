@@ -251,6 +251,14 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
      metadata の箱は 3 書体とも輪郭と 0.05 ss 以内で一致した＝Lab `p869/bbox-audit.txt`）。
      **§3 の代わりの経路を目で見て崩れなかったもの**: 旗（8〜64 分・上下＝#13）・grace の斜線（#15）・臨時記号の脇の加線の短縮（#3＝SMuFL でも避けている）・
      brace（#10）・ベースタブ（TAB 記号・数字）（Lab `p869/probe/fl`・`led`・`tabc`）。**数で値付けしたのは #1 の箱だけ**（上の bbox-audit）＝残りの値付け（LP 双子との差を数で）は次の段。
+   - ✅ **同じ第869 の二巡目**（feature-tour・grammar-tour・試験譜 `misc`／`more`）でさらに 3 つ:
+     ⑹ **連続小節休符の数字**（`5125ebb4c`）: 基線を譜の上 0.4 に置いていた＝Emmentaler の数字が基線に乗る約束でしか LP の「インクで 0.4」にならない。
+     SMuFL の `timeSig*` は基線に中心がある＝1 ss 低く（Petaluma で休符に重なった）。`MultiMeasureRestEngraver.NumberBaselineAboveInk`（数字の箱の最下端・Emmentaler は箱なし＝0）。
+     ⑺ **`To ⊕`**（同）: coda の原点を合成の中心に置いていた＝Emmentaler の coda は原点中心・SMuFL は左下＝⊕ が右上へ浮いた。`MusicMarkEngraver.ToCodaGlyphCentre`。
+     ⑻ **`Ped..`**（`32b12029c`）: SMuFL の `keyboardPedalPed` は点まで含む「Ped.」（点なしは `keyboardPedalPedNoDot` が別に在る）＝LP の組み立て（Ped＋点）が点を二重に。
+     `MusicFont.PedalPedCarriesItsPeriod`。網 `SmuflPlacementTests` 26。
+     **見たが LP の規則のまま**: SMuFL の幅広い装飾記号が短い音符で触れる・重なる＝LP も記号どうしの rod を持たない（LP 双子で Emmentaler の tr と prall が 16 分で触れる＝Lab `p869/probe/lp`）。
+     coda の大きさ（Bravura 3.8×4.2 ss）は書体の設計。和音記号の臨時記号（§3 #17）・スラッシュ符頭・C 音部記号・ブレス・トレモロ・ottava・segno・ペダルの括弧は崩れなし。
 
 ## 7. 未決（ユーザー判断）→ 第862（2026-10-08）で決まった
 
