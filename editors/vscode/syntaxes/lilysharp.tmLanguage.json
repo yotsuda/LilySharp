@@ -203,7 +203,7 @@
                 },
                 {
                     "name": "keyword.other.font-key.lilysharp",
-                    "match": "\\b(sans-serif|serif|sans|header|lyrics|chords|marks|numbers|notation|title|subtitle|composer|poet|instrument|stanza|chord|diagram|figuredBass|tempo|mark|pedal|navigation|text|dynamics|partCombineText|barNumbers|finger|tuplet|volta|ottava|bend|tabTechnique|clefOctave|time|tab)\\b"
+                    "match": "\\b(sans-serif|serif|sans|music|header|lyrics|chords|marks|numbers|notation|title|subtitle|composer|poet|instrument|stanza|chord|diagram|figuredBass|tempo|mark|pedal|navigation|text|dynamics|partCombineText|barNumbers|finger|tuplet|volta|ottava|bend|tabTechnique|clefOctave|time|tab)\\b"
                 },
                 {
                     "comment": "The one entry that is a bare word rather than a key/value pair, and the one word here that IS reserved.",

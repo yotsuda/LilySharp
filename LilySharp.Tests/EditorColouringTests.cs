@@ -1025,7 +1025,8 @@ public class EditorColouringTests
         foreach (string key in FontsBlockWordsInTheGrammar())
         {
             Assert.True(
-                TextRoles.TryParseKey(key, out _, out _, out _) || TextRoles.IsAttributeWord(key),
+                TextRoles.TryParseKey(key, out _, out _, out _) || TextRoles.IsAttributeWord(key)
+                || TextRoles.IsMusicKey(key),
                 $"the fonts block colours `{key}` and the parser does not know it as a key or an attribute");
         }
         //    ⚠️ And the hyphen trap is real, not theoretical: `sans` alone would match the head

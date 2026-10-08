@@ -1739,6 +1739,13 @@ public static class DiagnosticCodes
     /// writer would have no way to tell the attribute from one that works.</summary>
     public const string FontAttributeNotFollowed = "LYS8018";
 
+    /// <summary>Font warning: <c>fonts { music "NAME" }</c> names a music font that is not
+    /// bundled and whose SMuFL metadata is installed nowhere the specification says to look.
+    /// The score is engraved in Emmentaler, and the message lists every place looked —
+    /// a warning, as a missing text face is (<see cref="FontNotFound"/>): the page still
+    /// comes out, in the default font.</summary>
+    public const string MusicFontNotFound = "LYS8019";
+
     // Paper diagnostics (LYS9xxx)
 
     /// <summary>Paper error: a <c>paper { }</c> entry names a key that is not in the paper

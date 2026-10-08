@@ -336,8 +336,8 @@
 ### `LilySharp.Core/Semantics/ChordAnnotation.cs`
 - **:61** LILYSHARP-OWN: LilyPond names a chord in a ChordNames context and draws a diagram in a
 ### `LilySharp.Core/Semantics/FontPlanReader.cs`
-- **:271** LILYSHARP-OWN: a limit of the LANGUAGE, not a geometry — LilyPond's font-size
-- **:279** The range a size may take, in staff spaces. LILYSHARP-OWN, as
+- **:355** LILYSHARP-OWN: a limit of the LANGUAGE, not a geometry — LilyPond's font-size
+- **:363** The range a size may take, in staff spaces. LILYSHARP-OWN, as
 ### `LilySharp.Core/Semantics/FormRoute.cs`
 - **:79** LILYSHARP-OWN: LilyPond's \jump (lily/jump-engraver.cc) is a mark only — its MIDI
 ### `LilySharp.Core/Semantics/LayoutPlan.cs`

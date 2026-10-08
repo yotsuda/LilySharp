@@ -754,6 +754,23 @@ fonts {
 }
 ```
 
+**The music font** — the glyphs rather than the text — is the `music` entry:
+
+```
+fonts {
+  music "Bravura"                 // Emmentaler (LilyPond's own) when not written
+  music "Petaluma" "Bravura"      // a per-glyph fallback chain, most preferred first
+}
+```
+
+Bundled: Emmentaler, Bravura, Petaluma, Leland (the last three are SMuFL fonts; the
+name is compared without regard to case). Another SMuFL font is found where the SMuFL
+specification says its metadata lives. `music` takes quoted names only — a glyph's size
+is its grob's (`layout { NoteHead.scale 1.2 }`), so `step`, `size`, `as` and a style on it
+are errors. A name found nowhere **warns** (LYS8019, naming every place looked) and the
+next name, or Emmentaler, is used. `lysc svg --set music=Bravura` lays a name over the
+file's. The LilyPond twin stays in Emmentaler (LilyPond 2.26 reads no SMuFL font) and warns.
+
 An entry is a **key followed by attributes**, in any order, and it ends where the next key
 begins — there is no separator. The attributes:
 

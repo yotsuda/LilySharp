@@ -159,6 +159,19 @@ internal static class FontPlanReader
         foreach (var entry in font.Entries)
         {
             var span = entry.KeyToken.Span;
+            if (TextRoles.IsMusicKey(entry.Key))
+            {
+                // `music "Bravura" ["Petaluma" …]`: the music font, a chain of names and
+                // nothing else — a glyph has no em of its own to step and no family to follow.
+                if (boundKeys.TryGetValue(TextRoles.MusicKey, out var earlierMusic))
+                    found.Add(new Problem(earlierMusic, DiagnosticCodes.DuplicateFontBinding,
+                        $"This '{TextRoles.MusicKey}' is overwritten by a later '{TextRoles.MusicKey}' in the same " +
+                        "font block; only the last one takes effect.", IsError: false));
+                boundKeys[TextRoles.MusicKey] = span;
+                ReadMusicEntry(builder, entry, found);
+                previousRoleOrGroup = null;
+                continue;
+            }
             if (!TextRoles.TryParseKey(entry.Key, out var role, out var group, out var family))
             {
                 // An attribute word that opened an entry stands before any key
@@ -259,6 +272,77 @@ internal static class FontPlanReader
                 builder.Role(role!.Value, binding);
             }
         }
+    }
+
+    /// <summary>
+    /// Reads a <c>music</c> entry: quoted names only, each one looked up where a music font
+    /// lives (<see cref="Svg.Layout.MusicFonts.Find"/>); a name found nowhere is warned
+    /// about with every place looked and left in the chain for the glyph-level fallback
+    /// to skip, and a chain in which NOTHING is found is Emmentaler (docs/smufl-design.md §1).
+    /// </summary>
+    /// <remarks>
+    /// An attribute on this key is refused the way one on a generic family is
+    /// (<see cref="DiagnosticCodes.FontAttributeMisplaced"/>): <c>music step +1</c> would step
+    /// nothing — a glyph's size is the grob's (<c>layout { NoteHead.scale }</c>), and
+    /// <c>music as serif</c> would point glyphs at a text face.
+    /// </remarks>
+    private static void ReadMusicEntry(TextFontPlan.Builder builder, FontDeclarationSyntax.Entry entry, List<Problem> found)
+    {
+        var span = entry.KeyToken.Span;
+        bool refused = false;
+        var tokens = entry.Attributes;
+        for (int i = 0; i < tokens.Count; i++)
+        {
+            var t = tokens[i];
+            string word = t.Text;
+            if (t.Kind is SyntaxKind.Plus or SyntaxKind.Minus or SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral)
+                continue;   // an operand of a step/size already refused below
+            // The family word after `as` is that attribute's operand, refused with it.
+            if (i > 0 && tokens[i - 1].Text.Equals("as", StringComparison.Ordinal) && TextRoles.TryParseFamily(word, out _))
+                continue;
+            string example = word.Equals("as", StringComparison.Ordinal) ? "chord as sans"
+                : word.Equals("step", StringComparison.Ordinal) ? "layout { NoteHead.scale 1.2 }"
+                : word.Equals("size", StringComparison.Ordinal) ? "layout { NoteHead.scale 1.2 }"
+                : $"tempo {word}";
+            found.Add(new Problem(t.Span, DiagnosticCodes.FontAttributeMisplaced,
+                $"'{word}' is not written on '{TextRoles.MusicKey}', which takes quoted font names only: " +
+                $"{TextRoles.MusicKey} \"Bravura\". " +
+                (word.Equals("step", StringComparison.Ordinal) || word.Equals("size", StringComparison.Ordinal)
+                    ? $"A music glyph's size is its grob's, e.g. {example}."
+                    : word.Equals("as", StringComparison.Ordinal)
+                        ? $"A generic family is a text face; '{TextRoles.MusicKey}' names a music font."
+                        : $"A style belongs to a text role, e.g. {example}."),
+                IsError: true));
+            refused = true;
+        }
+        if (entry.Names.Count == 0)
+        {
+            if (!refused)
+                found.Add(new Problem(span, DiagnosticCodes.FontBindingMissingValue,
+                    $"'{TextRoles.MusicKey}' names nothing. Write one or more quoted music fonts, " +
+                    $"e.g. {TextRoles.MusicKey} \"Bravura\" (bundled: " +
+                    string.Join(", ", Svg.Layout.MusicFonts.BundledNames()) + ").",
+                    IsError: true));
+            return;
+        }
+        if (entry.Names.Any(n => n.Length == 0))
+        {
+            found.Add(new Problem(span, DiagnosticCodes.FontBindingMissingValue,
+                $"'{TextRoles.MusicKey}' has an empty font name.", IsError: true));
+            return;
+        }
+        foreach (var name in entry.Names)
+        {
+            if (Svg.Layout.MusicFonts.Find(name, out var tried) is null)
+                found.Add(new Problem(span, DiagnosticCodes.MusicFontNotFound,
+                    $"No music font named '{name}' was found; " +
+                    (entry.Names.Count > 1 ? "the next name in the chain is used, " : "") +
+                    "Emmentaler is used where none is found. Bundled: " +
+                    string.Join(", ", Svg.Layout.MusicFonts.BundledNames()) +
+                    ". Looked for its SMuFL metadata at: " + string.Join("; ", tried) + ".",
+                    IsError: false));
+        }
+        builder.Music(entry.Names);
     }
 
     /// <summary>What one entry's attribute tokens asked for, once read.</summary>

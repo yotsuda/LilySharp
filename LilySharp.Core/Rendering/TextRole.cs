@@ -427,11 +427,26 @@ public static class TextRoles
         return false;
     }
 
+    /// <summary>
+    /// The key that names the MUSIC font (<c>fonts { music "Bravura" }</c>) — the glyphs, not
+    /// text: note heads, clefs, accidentals, rests, flags, the time signature's digits, the
+    /// dynamics letters, Ped., the brace. Several names are a per-glyph fallback chain. It
+    /// takes quoted names only (no <c>as</c>, size or style — a glyph has no em of its own
+    /// to step), and it is not a <see cref="TextRole"/>: the plan carries it beside the
+    /// roles (<c>TextFontPlan.Music</c>; docs/smufl-design.md §1).
+    /// </summary>
+    public const string MusicKey = "music";
+
+    /// <summary>True when <paramref name="word"/> is <see cref="MusicKey"/> (case-sensitive,
+    /// like every key).</summary>
+    public static bool IsMusicKey(string word) => string.Equals(word, MusicKey, StringComparison.Ordinal);
+
     /// <summary>Every key a score may write, canonically spelled — for diagnostics.</summary>
     public static IEnumerable<string> AllKeySpellings()
     {
         yield return "serif";
         yield return "sans";
+        yield return MusicKey;
         foreach (TextRoleGroup g in Enum.GetValues(typeof(TextRoleGroup)))
             yield return Spelling(g);
         foreach (var r in All)

@@ -493,9 +493,13 @@ public sealed partial class MeasureCollector
             _meta.Fonts = Semantics.FontPlanReader.ReadReference(root, fontsRef, _meta.Fonts);
         if (PaperOverride is { } paperRef)
             _meta.Paper = Semantics.PaperPlanReader.ReadReference(root, paperRef, _meta.Paper, PaperBase);
-        // `lysc … --set KEY=VALUE`: the caller's paper values, over everything the file says.
+        // `lysc … --set KEY=VALUE`: the caller's paper values, over everything the file says —
+        // and `--set music=NAME`, the one fonts key a setting reaches, over the file's chain.
         if (PaperOverrides is { } settings)
+        {
             _meta.Paper = settings.Apply(_meta.Paper);
+            _meta.Fonts = settings.ApplyFonts(_meta.Fonts);
+        }
         // `layout NAME`: the third reference of that shape, landed in _meta for the same
         // incremental reason (MetaMatchesShifted compares it).
         if (LayoutOverride is { } layoutRef)

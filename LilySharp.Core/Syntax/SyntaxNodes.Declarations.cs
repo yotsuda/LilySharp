@@ -498,11 +498,26 @@ public sealed class FontDeclarationSyntax : SyntaxNode
         }
     }
 
-    /// <summary>Every face name this directive asks for, in source order, deduplicated.</summary>
+    /// <summary>Every TEXT face name this directive asks for, in source order, deduplicated.
+    /// The music font's names (<c>music "Bravura"</c>) are not faces — they are neither
+    /// installed nor embedded as text — and are left out; a refused blockless directive
+    /// still yields its strings, so the warning on them can be made.</summary>
     public IReadOnlyList<string> NamedFaces()
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var result = new List<string>();
+        if (IsBlock)
+        {
+            foreach (var entry in Entries)
+            {
+                if (Rendering.TextRoles.IsMusicKey(entry.Key))
+                    continue;
+                foreach (var name in entry.Names)
+                    if (name.Length > 0 && seen.Add(name))
+                        result.Add(name);
+            }
+            return result;
+        }
         for (int i = 1; i < SlotCount; i++)
         {
             if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } token)

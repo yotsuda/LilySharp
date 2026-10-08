@@ -338,6 +338,7 @@ Mode           = 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian'
 FontDecl       = 'fonts' , [ Identifier ] , FontBlock ;
 FontBlock      = '{' , { FontEntry } , '}' ;
 FontEntry      = FontKey , { FontAttribute }
+               | 'music' , String , { String }   (* the MUSIC font, by name; several = a per-glyph fallback chain *)
                | 'embedded' ;
 FontAttribute  = String                          (* a face; several = a fallback chain *)
                | 'as' , GenericFamily            (* follow a generic family instead      *)
@@ -375,6 +376,19 @@ Role           = 'title' | 'subtitle' | 'composer' | 'poet'
 
    THE WHOLE DOCUMENT is step 3 for BOTH generic families — the two bound together:
      fonts { serif "Georgia"  sans "Georgia" }
+
+   THE MUSIC FONT IS THE `music` ENTRY (2026-10-08): `fonts { music "Bravura" }` names the
+   font the GLYPHS are drawn and measured from — note heads, clefs, accidentals, rests,
+   flags, the time signature's digits, the dynamics letters, Ped., the brace — where every
+   other key names a text face. The default is `"Emmentaler"` (LilyPond's own; the name is
+   compared without regard to case). The bundled SMuFL fonts are Bravura, Petaluma and
+   Leland; another SMuFL font is found where the SMuFL specification says its metadata is
+   installed. It takes quoted names only: `as`, `step`, `size` and a style on it are refused
+   (LYS8015 — a glyph's size is its grob's, `layout { NoteHead.scale }`). A name found
+   nowhere WARNS (LYS8019, listing every place looked) and the next name, or Emmentaler,
+   is used. `lysc --set music=NAME` lays a name over the file's. The LilyPond twin cannot
+   follow it (2.26 reads no SMuFL font) and says so. The text that is really notation —
+   tab fret numbers, the `treble_8` digit, a compound meter's `+` — stays under `notation`.
 
    ⚠️ THE KEYWORD IS `fonts`, PLURAL, AND IT TAKES A BLOCK. The block is an alist of
    family -> face, which is what LilyPond calls `fonts` too

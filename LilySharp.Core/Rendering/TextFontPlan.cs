@@ -85,33 +85,50 @@ public sealed class TextFontPlan
     /// <summary>Whether the named faces should be subset-embedded in a PDF.</summary>
     public bool Embed { get; }
 
-    /// <summary>True when the score bound nothing — every role takes the bundled face.</summary>
+    /// <summary>
+    /// The MUSIC font the score names (<c>fonts { music "Bravura" }</c>), most preferred
+    /// first — a per-glyph fallback chain; EMPTY for the default, Emmentaler. Resolved by
+    /// <c>MusicFonts.Find</c>; a name that resolves to nothing is warned about where it is
+    /// written and falls through to the next (docs/smufl-design.md §1).
+    /// </summary>
+    public ImmutableArray<string> Music { get; }
+
+    /// <summary>True when the score bound nothing — every role takes the bundled face, and
+    /// the music font is Emmentaler.</summary>
     /// <remarks>
     /// Used by the SVG fragment memo, which may only reuse a recorded system when the
     /// families in the recorded bytes are still the ones this render would emit.
     /// </remarks>
     public bool IsDefault =>
-        _families.IsEmpty && _groups.IsEmpty && _leaves.IsEmpty;
+        _families.IsEmpty && _groups.IsEmpty && _leaves.IsEmpty && Music.IsEmpty;
 
     /// <summary>The plan of a score with no <c>font</c> directive.</summary>
     public static readonly TextFontPlan Default = new(
         ImmutableDictionary<TextFontFamily, ImmutableArray<string>>.Empty,
         ImmutableDictionary<TextRoleGroup, Binding>.Empty,
         ImmutableDictionary<TextRole, Binding>.Empty,
-        embed: false);
+        embed: false,
+        music: []);
 
     private TextFontPlan(
         ImmutableDictionary<TextFontFamily, ImmutableArray<string>> families,
         ImmutableDictionary<TextRoleGroup, Binding> groups,
         ImmutableDictionary<TextRole, Binding> leaves,
-        bool embed)
+        bool embed,
+        ImmutableArray<string> music)
     {
         _families = families;
         _groups = groups;
         _leaves = leaves;
         Embed = embed;
-        Signature = BuildSignature(families, groups, leaves, embed);
+        Music = music.IsDefault ? [] : music;
+        Signature = BuildSignature(families, groups, leaves, embed, Music);
     }
+
+    /// <summary>This plan with its music font replaced — <c>lysc --set music=NAME</c>, laid
+    /// over whatever the file wrote.</summary>
+    public TextFontPlan WithMusic(IEnumerable<string> names)
+        => new(_families, _groups, _leaves, Embed, [.. names]);
 
     /// <summary>
     /// A canonical, order-independent spelling of every binding — this plan's identity.
@@ -130,9 +147,14 @@ public sealed class TextFontPlan
         ImmutableDictionary<TextFontFamily, ImmutableArray<string>> families,
         ImmutableDictionary<TextRoleGroup, Binding> groups,
         ImmutableDictionary<TextRole, Binding> leaves,
-        bool embed)
+        bool embed,
+        ImmutableArray<string> music)
     {
         var parts = new List<string>();
+        // The music font is part of the identity for the same reason a face is: a change
+        // of it is a change of every glyph's bytes.
+        if (!music.IsEmpty)
+            parts.Add($"~{TextRoles.MusicKey}={string.Join("|", music)}");
         foreach (var (family, names) in families)
             parts.Add($"@{TextRoles.Spelling(family)}={string.Join("|", names)}");
         foreach (var (group, b) in groups)
@@ -395,11 +417,21 @@ public sealed class TextFontPlan
         private readonly Dictionary<TextRoleGroup, Binding> _groups = [];
         private readonly Dictionary<TextRole, Binding> _leaves = [];
         private bool _embed;
+        private ImmutableArray<string> _music = [];
 
         /// <summary>Binds a generic family to a face chain.</summary>
         public Builder Family(TextFontFamily family, IEnumerable<string> names)
         {
             _families[family] = [.. names];
+            return this;
+        }
+
+        /// <summary>Names the music font — a chain, most preferred first
+        /// (<see cref="TextFontPlan.Music"/>). A later entry replaces the whole chain, as
+        /// every repeated key does.</summary>
+        public Builder Music(IEnumerable<string> names)
+        {
+            _music = [.. names];
             return this;
         }
 
@@ -522,6 +554,7 @@ public sealed class TextFontPlan
             _families.ToImmutableDictionary(),
             _groups.ToImmutableDictionary(),
             _leaves.ToImmutableDictionary(),
-            _embed);
+            _embed,
+            _music);
     }
 }

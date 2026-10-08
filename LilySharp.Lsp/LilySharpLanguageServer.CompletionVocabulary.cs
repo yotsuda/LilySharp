@@ -915,6 +915,18 @@ public sealed partial class LilySharpLanguageServer
         {
             "serif" => _serifFaceCompletions ??= FacesOfShape(FontEmbedInfo.FaceShape.Serif),
             "sans" => _sansFaceCompletions ??= FacesOfShape(FontEmbedInfo.FaceShape.Sans),
+            // The music key names a MUSIC font: Emmentaler and the bundled SMuFL fonts, read
+            // from the bundle (MusicFonts.BundledNames) rather than listed here.
+            "music" => _musicFontCompletions ??= new CompletionList
+            {
+                Items = [.. LilySharp.Core.Svg.Layout.MusicFonts.BundledNames().Select((name, i) => new CompletionItem
+                {
+                    Label = name,
+                    Kind = CompletionItemKind.Value,
+                    SortText = i.ToString("D2", System.Globalization.CultureInfo.InvariantCulture),
+                    Detail = i == 0 ? "The default music font (LilyPond's)" : "Bundled SMuFL music font",
+                })],
+            },
             _ => _fontNameCompletions ??= new CompletionList
             {
                 Items = [.. BundledFaceCompletions(),
@@ -924,6 +936,7 @@ public sealed partial class LilySharpLanguageServer
 
     private static CompletionList? _serifFaceCompletions;
     private static CompletionList? _sansFaceCompletions;
+    private static CompletionList? _musicFontCompletions;
 
     /// <summary>
     /// The faces that draw letters of one shape: the bundled face for that family, then the
@@ -1113,7 +1126,9 @@ public sealed partial class LilySharpLanguageServer
             [
                 .. TextRoles.AllKeySpellings().Select(key =>
                 {
-                    bool family = TextRoles.TryParseFamily(key, out _);
+                    // A generic family and the music key take quoted names alone, so they
+                    // insert the quotes and land in the name list straight away.
+                    bool family = TextRoles.TryParseFamily(key, out _) || TextRoles.IsMusicKey(key);
                     return new CompletionItem
                     {
                         Label = key,
@@ -1343,6 +1358,8 @@ public sealed partial class LilySharpLanguageServer
     {
         "serif" => "Generic family: everything except chord symbols falls back here",
         "sans" => "Generic family: chord symbols fall back here",
+        "music" => "The music font (the glyphs, not text): Emmentaler by default, or a bundled "
+                   + "SMuFL font — Bravura, Petaluma, Leland; several names are a per-glyph fallback chain",
         "header" => "Group: title, subtitle, composer, poet, instrument names",
         "lyrics" => "Group: lyric syllables and stanza numbers",
         "chords" => "Group: chord symbols, diagrams, figured bass",
@@ -1390,6 +1407,7 @@ public sealed partial class LilySharpLanguageServer
     /// </remarks>
     private static CompletionList? _fontValuesForRole;
     private static CompletionList? _fontValuesForFamily;
+    private static CompletionList? _fontValuesForMusic;
 
     internal static CompletionList GetFontRoleValueCompletions(string key = "")
     {
@@ -1415,6 +1433,28 @@ public sealed partial class LilySharpLanguageServer
         bool isFamily = TextRoles.TryParseKey(key, out _, out _, out var family) && family != null;
         if (isFamily)
             return _fontValuesForFamily ??= new CompletionList { Items = [quoted] };
+        // The music key takes quoted names alone too — of music fonts, which is what the
+        // string's own list offers (GetFontNameCompletions).
+        if (TextRoles.IsMusicKey(key))
+            return _fontValuesForMusic ??= new CompletionList
+            {
+                Items =
+                [
+                    new CompletionItem
+                    {
+                        Label = "\"…\"",
+                        Kind = CompletionItemKind.Snippet,
+                        InsertTextFormat = InsertTextFormat.Snippet,
+                        InsertText = "\"$0\"",
+                        Detail = "Pick a music font: Emmentaler, or a bundled SMuFL font",
+                        Command = new Command
+                        {
+                            Title = "Suggest font name",
+                            CommandIdentifier = "editor.action.triggerSuggest",
+                        },
+                    },
+                ],
+            };
 
         return _fontValuesForRole ??= new CompletionList
         {

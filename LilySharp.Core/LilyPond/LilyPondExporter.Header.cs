@@ -174,6 +174,11 @@ public sealed partial class LilyPondExporter
     private string FontOverrideLines()
     {
         var sb = new System.Text.StringBuilder();
+        // LilyPond 2.26 reads no SMuFL font: the twin is engraved in Emmentaler whatever the
+        // plan names, and says so — the same treatment as `size` (docs/smufl-design.md §1).
+        if (!_fontPlan.Music.IsEmpty)
+            _warnings.Add($"fonts music {string.Join(" ", _fontPlan.Music.Select(n => "\"" + n + "\""))} "
+                          + "is not exported: LilyPond 2.26 reads no SMuFL font, so the twin is engraved in Emmentaler");
         foreach (var (role, b) in _fontPlan.SizedOrStyledLeaves())
         {
             string spelling = Rendering.TextRoles.Spelling(role);

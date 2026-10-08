@@ -36,7 +36,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// in the system font directories.
 /// </para>
 /// </remarks>
-internal static class MusicFonts
+public static class MusicFonts
 {
     // Keyed by the metadata file: one font per file, however it was asked for.
     private static readonly ConcurrentDictionary<string, Lazy<SmuflMusicFont?>> Loaded =
@@ -46,7 +46,7 @@ internal static class MusicFonts
     /// The font named <paramref name="name"/>, or null when none can be found —
     /// <paramref name="tried"/> then lists every place looked, for the diagnostic.
     /// </summary>
-    public static MusicFont? Find(string name, out IReadOnlyList<string> tried)
+    internal static MusicFont? Find(string name, out IReadOnlyList<string> tried)
     {
         var looked = new List<string>();
         tried = looked;
@@ -74,6 +74,18 @@ internal static class MusicFonts
                 return font;
         }
         return null;
+    }
+
+    /// <summary>The names a score can write without installing anything: Emmentaler and
+    /// every font whose metadata is bundled, by the name the metadata states (the file's
+    /// stem when it cannot be read).</summary>
+    public static IReadOnlyList<string> BundledNames()
+    {
+        var names = new List<string> { EmmentalerMusicFont.Instance.Name };
+        if (FontLocator.Find() is { } bundle)
+            foreach (var f in ExistingFiles(bundle, "*_metadata.json").OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
+                names.Add(NameInMetadata(f));
+        return names;
     }
 
     private static string NameInMetadata(string metadata)

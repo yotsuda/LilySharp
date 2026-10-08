@@ -194,7 +194,9 @@ public class FontBlockCompletionTests
             string inserted = item.InsertText!;
             int caret = inserted.IndexOf("$0", StringComparison.Ordinal);
             string text = "fonts { " + inserted[..caret];
-            var expected = TextRoles.TryParseFamily(item.Label!, out _)
+            // A generic family and the music key take quoted names alone, so both land in
+            // the name list.
+            var expected = TextRoles.TryParseFamily(item.Label!, out _) || TextRoles.IsMusicKey(item.Label!)
                 ? LilySharpLanguageServer.CompletionContext.AfterFontName
                 : LilySharpLanguageServer.CompletionContext.AfterFontRoleKey;
             Assert.Equal(expected, Ctx(text));

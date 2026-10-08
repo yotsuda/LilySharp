@@ -59,13 +59,23 @@ public sealed class PaperOverrides
     private readonly LayoutDeclarationSyntax? _layout;
     private readonly string[] _flagsOff;
 
-    private PaperOverrides(PaperDeclarationSyntax? paper, LayoutDeclarationSyntax? layout, string[] flagsOff)
+    private PaperOverrides(PaperDeclarationSyntax? paper, LayoutDeclarationSyntax? layout, string[] flagsOff,
+        string? music)
     {
         _paper = paper;
         _layout = layout;
         _flagsOff = flagsOff;
+        Music = music;
         StaffSpaceMm = paper != null ? PaperPlanReader.StaffSpaceOf(paper) : null;
     }
+
+    /// <summary>
+    /// <c>music=NAME</c>: the music font, over the file's <c>fonts { music "…" }</c> — the
+    /// name as the font's metadata states it (<c>MusicFonts.Find</c> resolved it at parse
+    /// time, so a name that exists nowhere is a refused setting, not a warning on the page).
+    /// Null when not set. The OMR's door for engraving one score in several fonts.
+    /// </summary>
+    public string? Music { get; }
 
     /// <summary>
     /// <c>staffSpace=1.5mm</c>: the staff space on the paper, in millimetres (null = the file's,
@@ -93,6 +103,7 @@ public sealed class PaperOverrides
         var flagsOff = new List<string>();
         var flags = PaperPlanReader.FlagKeySpellings();
         var layoutKeys = LayoutPlanReader.AllKeySpellings();
+        string? music = null;
         foreach (var setting in settings)
         {
             int eq = setting.IndexOf('=');
@@ -102,6 +113,25 @@ public sealed class PaperOverrides
             {
                 error = $"'{setting}' is not KEY=VALUE.";
                 return null;
+            }
+            if (Rendering.TextRoles.IsMusicKey(key))
+            {
+                // The one fonts { } key a setting reaches: the music font, by name.
+                if (value.Length == 0)
+                {
+                    error = $"'{key}' needs a font name: {key}=Bravura (bundled: "
+                        + string.Join(", ", MusicFonts.BundledNames()) + ").";
+                    return null;
+                }
+                if (MusicFonts.Find(value, out var tried) is not { } font)
+                {
+                    error = $"No music font named '{value}' was found (bundled: "
+                        + string.Join(", ", MusicFonts.BundledNames()) + "). Looked for its SMuFL metadata at: "
+                        + string.Join("; ", tried) + ".";
+                    return null;
+                }
+                music = font.Name;
+                continue;
             }
             if (flags.Contains(key))
             {
@@ -160,8 +190,13 @@ public sealed class PaperOverrides
                 return null;
             }
         }
-        return new PaperOverrides(paper, layout, [.. flagsOff]);
+        return new PaperOverrides(paper, layout, [.. flagsOff], music);
     }
+
+    /// <summary>The music font setting laid over <paramref name="fonts"/> — the file's chain
+    /// replaced by the one name, or the plan untouched when none was set.</summary>
+    internal Rendering.TextFontPlan ApplyFonts(Rendering.TextFontPlan fonts)
+        => Music is { } name ? fonts.WithMusic([name]) : fonts;
 
     /// <summary>The entries written out as one block and parsed, or null with
     /// <paramref name="error"/> when they do not parse.</summary>
