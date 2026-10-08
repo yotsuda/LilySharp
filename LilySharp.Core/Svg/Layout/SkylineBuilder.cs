@@ -624,10 +624,8 @@ internal sealed class SkylineBuilder
     /// where the top line is 2 above the middle, so it is <c>2 - n</c>.
     /// </summary>
     /// <remarks>
-    /// The percussion clef has no outline of its own in the baked skylines, so it borrows the
-    /// C clef's. Both are centred on the middle line and the C clef is the taller, so this
-    /// over-reserves rather than under-reserves — a KNOWN approximation, and the one clef here
-    /// whose silhouette is not the font's own.
+    /// The percussion clef has no baked outline of its own; the font answers the C clef's for
+    /// it (<c>EmmentalerMusicFont.VerticalSkylineQuads</c> — the approximation is named there).
     /// <para>
     /// ⚠️ THE GLYPH, NOT A BOX, because this feeds a SKYLINE. Until 2026-07-28 the caller
     /// seeded the OUTLINE'S BOUNDING BOX, which is right about how far the clef reaches and
@@ -645,7 +643,7 @@ internal sealed class SkylineBuilder
         ClefType.Soprano => (MusicGlyph.CClef, -2.0),
         ClefType.MezzoSoprano => (MusicGlyph.CClef, -1.0),
         ClefType.Baritone => (MusicGlyph.CClef, 2.0),
-        ClefType.Percussion => (MusicGlyph.CClef, 0.0),
+        ClefType.Percussion => (MusicGlyph.UnpitchedPercussionClef1, 0.0),
         _ => (MusicGlyph.GClef, -1.0),
     };
 

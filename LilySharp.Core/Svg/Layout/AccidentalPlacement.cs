@@ -377,17 +377,20 @@ internal sealed class AccidentalPlacement
             MergeParen(left, right, leftParen: false,
                 bbox.Right - design.Box(MusicGlyph.AccidentalParensRight).Left, design);
         }
-        else if (accidental is "flat" or "doubleFlat" or "naturalFlat")
+        else if (MusicFont.Current.StemSidePaddingFraction(
+                     MusicGlyphs.Accidental(GlyphMetrics.RestoreMainOf(accidental) ?? accidental))
+                 is > 0.0 and var fraction)
         {
             // The fattening keys on the grob's GLYPH-NAME, which stays the MAIN glyph
             // under restore-first — so ♮♭ takes it too, over the COMPOSED extent
             // (lily/accidental.cc:65-67: the guard reads glyph_name, the box reads
             // my_stencil's extents, and the stencil already carries the natural).
             // "a bit more padding for the right of the stem" — one box on the RIGHT
-            // skyline at x = stencil-right * 0.375 over the stencil's Y-extent,
-            // NOT applied to a parenthesized accidental.
+            // skyline at x = stencil-right * the font's fraction (0.375 for Emmentaler's
+            // flat family, §3 #17) over the stencil's Y-extent, NOT applied to a
+            // parenthesized accidental.
             var fattening = HorizontalSkyline.RentBox(
-                bbox.Bottom, bbox.Top, bbox.Left, bbox.Right * 0.375,
+                bbox.Bottom, bbox.Top, bbox.Left, bbox.Right * fraction,
                 HorizontalDirection.Right);
             right.Merge(fattening); // copies the building, so the box goes straight back
             HorizontalSkyline.GiveBox(fattening);

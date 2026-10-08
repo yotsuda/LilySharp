@@ -323,4 +323,43 @@ public class MusicFontTests
         Assert.Equal(rung, brace.Codepoint - 0xE000);
         Assert.Equal(BraceLadder.Widths[rung], brace.Width);
     }
+
+    /// <summary>
+    /// The rows the generator does not emit (docs/smufl-design.md §3 #16) and the constants
+    /// LilyPond wrote for Emmentaler's shapes (#17) are the font's answers now — pinned to the
+    /// numbers their readers carried, so a reader moved onto the font reads what it read.
+    /// </summary>
+    [Fact]
+    public void TheHandMeasuredRows_AreTheReadersOldNumbers()
+    {
+        var font = EmmentalerMusicFont.Instance;
+        var full = font.FullSize;
+        Assert.Equal(2.296, full.Box(MusicGlyph.NoteheadDoubleWhole).Width);
+        Assert.Equal(full.Advance(MusicGlyph.NoteheadWhole) * 1.30, full.Advance(MusicGlyph.NoteheadDoubleWhole));
+        Assert.Equal(1.8, full.Box(MusicGlyph.RestMaxima).Width);
+        Assert.Equal(0.225, full.Box(MusicGlyph.RepeatDot).Top);
+        foreach (var (shorter, sixteenth) in new[]
+                 {
+                     (MusicGlyph.Flag32ndUp, MusicGlyph.Flag16thUp), (MusicGlyph.Flag128thUp, MusicGlyph.Flag16thUp),
+                     (MusicGlyph.Flag32ndDown, MusicGlyph.Flag16thDown), (MusicGlyph.Flag64thDown, MusicGlyph.Flag16thDown),
+                     (MusicGlyph.FermataShortAbove, MusicGlyph.FermataAbove), (MusicGlyph.FermataLongBelow, MusicGlyph.FermataBelow),
+                 })
+            Assert.Equal(full.Metrics(sixteenth), full.Metrics(shorter));
+        // The portato's box belongs to the glyph: dportato (drawn above) has its dot at the bottom.
+        Assert.Equal(new GlyphMetrics.BBox(-0.6, -0.82, 0.6, 0.07), full.Box(MusicGlyph.ArticTenutoStaccatoBelow));
+        Assert.Equal(new GlyphMetrics.BBox(-0.6, -0.07, 0.6, 0.82), full.Box(MusicGlyph.ArticTenutoStaccatoAbove));
+        // A sized design scales the hand rows as it scales the generated ones.
+        var grace = font.SizedAt(-3);
+        Assert.Equal(2.296 * grace.Magnification, grace.Box(MusicGlyph.NoteheadDoubleWhole).Width, 12);
+        // The percussion clef answers the C clef's outline.
+        Assert.Same(full.VerticalSkylineQuads(MusicGlyph.CClef).Up, full.VerticalSkylineQuads(MusicGlyph.UnpitchedPercussionClef1).Up);
+        // §3 #17: the flat family's stem fattening and the chord name's kern and lift.
+        Assert.Equal(0.375, font.StemSidePaddingFraction(MusicGlyph.AccidentalFlat));
+        Assert.Equal(0.375, font.StemSidePaddingFraction(MusicGlyph.AccidentalDoubleFlat));
+        Assert.Equal(0.0, font.StemSidePaddingFraction(MusicGlyph.AccidentalSharp));
+        Assert.Equal((0.094725, 0.3), font.ChordNameAccidental(MusicGlyph.AccidentalFlat));
+        Assert.Equal((0.0, 0.3), font.ChordNameAccidental(MusicGlyph.AccidentalDoubleFlat));
+        Assert.Equal((0.0, 0.6), font.ChordNameAccidental(MusicGlyph.AccidentalSharp));
+        Assert.Equal((0.0, 0.6), font.ChordNameAccidental(MusicGlyph.AccidentalDoubleSharp));
+    }
 }

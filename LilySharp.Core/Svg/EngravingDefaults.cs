@@ -720,17 +720,10 @@ internal static class EngravingDefaults
     public static double NoteheadWholeWidth => Layout.MusicFont.Current.FullSize.Advance(MusicGlyph.NoteheadWhole);
     public static double NoteheadHalfWidth => Layout.MusicFont.Current.FullSize.Advance(MusicGlyph.NoteheadHalf);
     public static double NoteheadBlackWidth => Layout.MusicFont.Current.FullSize.Advance(MusicGlyph.NoteheadBlack);
-    /// <summary>Double-whole notehead is hand-tuned (no glyph in extracted set).</summary>
-    /// <remarks>
-    /// LILYSHARP-OWN: hand-tuned, and the only width on this list that is. ⚠️ NOT because
-    /// LilyPond lacks the glyph — it has it (mf/feta-noteheads.mf:240,
-    /// <c>fet_beginchar ("brevis notehead", "sM1")</c>) — but because
-    /// Extract-EmmentalerMetrics.py does not emit it, so GlyphMetricsGenerated has
-    /// <c>RestDoubleWhole*</c> and no notehead counterpart. This number has therefore never
-    /// been checked against the font at all; the neighbours above it are advance widths read
-    /// out of Emmentaler. Closing it is extractor work, not measurement work.
-    /// </remarks>
-    public const double NoteheadDoubleWholeWidth = 2.296;
+    /// <summary>The brevis head's width — a hand-measured row of the music font
+    /// (<c>EmmentalerMusicFont.HandMeasured</c>: the extractor emits no brevis notehead, and
+    /// the remark there says why the number has never been checked against the font).</summary>
+    public static double NoteheadDoubleWholeWidth => Layout.MusicFont.Current.FullSize.Box(MusicGlyph.NoteheadDoubleWhole).Width;
 
     // === Stem attachment points ===
     // The stem centre is shifted by -dir*thickness/2 so the stem EDGE (not its
@@ -947,8 +940,8 @@ internal static class EngravingDefaults
     /// LILYPOND HAS NO RADIUS. It draws a GLYPH — scm/bar-line.scm:298-301
     /// <c>ly:font-get-glyph</c> fetches <c>dots.dot</c>, the same one an augmentation dot
     /// uses — so what corresponds to a radius is that glyph's own half extent. This IS that
-    /// half extent: <c>GlyphMetricsGenerated.AugmentationDot</c> = (0, -0.225)..(0.45, 0.225),
-    /// read out of Emmentaler itself, and the same 0.225 measured on 2.26.0's output.
+    /// half extent, read from the music font: Emmentaler's <c>dots.dot</c> box is
+    /// (0, -0.225)..(0.45, 0.225), and the same 0.225 was measured on 2.26.0's output.
     /// <para>
     /// ⚠️ IT WAS 0.2 UNTIL 2026-08-28 — 0.025 short in radius, 0.45 → 0.40 across, carried as
     /// a LILYSHARP-OWN divergence that had been measured and left because closing it redraws
@@ -965,7 +958,7 @@ internal static class EngravingDefaults
     /// not, and no book in the corpus writes it.
     /// </para>
     /// </remarks>
-    public const double RepeatDotRadius = 0.225;
+    public static double RepeatDotRadius => Layout.MusicFont.Current.FullSize.Box(MusicGlyph.RepeatDot).Top;
 
     /// <summary>
     /// Half the span between the two repeat dots (staff spaces), measured from the CENTRE of
@@ -1001,7 +994,7 @@ internal static class EngravingDefaults
     {
         // The glyph's own height is what the search measures against — the same `dots.dot`
         // whose half extent is RepeatDotRadius.
-        const double dotYLength = 2 * RepeatDotRadius;
+        double dotYLength = 2 * RepeatDotRadius;
         double dist = 4 * dotYLength / staffSpace;
 
         if (lineCount > 0)

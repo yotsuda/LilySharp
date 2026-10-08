@@ -111,6 +111,9 @@ public class MagicConstantInventoryTests
         "Svg/Layout/PageBreaker.cs",
         "Svg/Layout/PageLayouter.cs",
         "Svg/Layout/SkylineBuilder.cs",
+        // The music font's wrap: the hand-measured rows (docs/smufl-design.md §3 #16/#17)
+        // moved here from the readers on 2026-10-08, and the census follows them.
+        "Svg/Layout/MusicFont.cs",
         // Svg/Layout/Skyline.cs left this list in session 315: the simplified flat-segment
         // class was DELETED as dead code once the dot column stopped calling it, so the
         // census loses no coverage. Its merge was not LilyPond's — it folded overlapping

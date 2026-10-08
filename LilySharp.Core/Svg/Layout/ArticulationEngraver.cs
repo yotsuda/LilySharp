@@ -2126,31 +2126,16 @@ internal static class ArticulationEngraver
             ArticulationType.Staccato => MusicFont.Current.FullSize.Box(MusicGlyph.ArticStaccatoAbove),
             ArticulationType.Accent => MusicFont.Current.FullSize.Box(MusicGlyph.ArticAccentAbove),
             ArticulationType.Tenuto => MusicFont.Current.FullSize.Box(MusicGlyph.ArticTenutoAbove),
-            // Portato (tenuto line + staccato dot). Its near edge toward the note is
-            // only the line's half-thickness (~0.07 ss), NOT the 0.5 ss the generic
-            // fallback box assumed — which parked the mark ~0.43 ss too far below the
-            // note. LILYPOND-REF: mf/feta-scripts.mf draw_portato —
-            //   set_char_box(.6 ss, .6 ss, thick/2, .5 ss + .5 dot_size), thick =
-            //   1.4·line-thickness (≈0.14 ss), dot_size ≈ 0.32 ss ⇒ far extent ≈0.66 ss;
-            //   dportato is the y-mirror, so the near (line) edge stays ~0.07 ss.
-            // Box ported straight from feta's draw_portato constants (LILYPOND-REF:
-            // mf/feta-scripts.mf), with line-thickness = 0.1 ss (LilyPond's default):
-            //   dot_size   = 2.4·0.1 + 0.08          = 0.32 ss   (drawdot diameter)
-            //   dot centre = 0.5 + 0.5·dot_size      = 0.66 ss   (drawdot (0, h))
-            //   NEAR edge  = dot centre + dot_size/2 = 0.82 ss   (the dot's outer rim,
-            //                                                      toward the note)
-            //   FAR edge   = thick/2 = 1.4·0.1/2     = 0.07 ss   (the tenuto line)
-            //   half-width = 0.6 ss                              (set_char_box .6, .6)
-            // The rim (0.82), NOT the centre, is what the staff-padding clamp measures —
-            // using the centre seated an in-staff note's dot only ~0.1 ss past a staff
-            // line (nearly touching); the rim clears it by the full staff-padding.
-            ArticulationType.Portato => isAbove
-                ? new GlyphMetrics.BBox(-0.6000, -0.8200, 0.6000, 0.0700)
-                : new GlyphMetrics.BBox(-0.6000, -0.0700, 0.6000, 0.8200),
+            // Portato (tenuto line + staccato dot): the glyph's box is a hand row of the font
+            // (EmmentalerMusicFont.HandMeasured.Portato — its near edge toward the note is the
+            // line's half-thickness, not the generic fallback's 0.5); the short and long
+            // fermatas read the fermata's row (both stand-ins are the font's, no longer a rule
+            // here).
+            ArticulationType.Portato
+                or ArticulationType.Fermata or ArticulationType.FermataShort or ArticulationType.FermataLong
+                => MusicFont.Current.FullSize.Box(ArticulationItem.GlyphOf(type, isAbove)!.Value),
             ArticulationType.Marcato => isAbove
                 ? MusicFont.Current.FullSize.Box(MusicGlyph.ArticMarcatoAbove) : MusicFont.Current.FullSize.Box(MusicGlyph.ArticMarcatoBelow),
-            ArticulationType.Fermata or ArticulationType.FermataShort or ArticulationType.FermataLong => isAbove
-                ? MusicFont.Current.FullSize.Box(MusicGlyph.FermataAbove) : MusicFont.Current.FullSize.Box(MusicGlyph.FermataBelow),
             ArticulationType.Staccatissimo => isAbove
                 ? MusicFont.Current.FullSize.Box(MusicGlyph.ArticStaccatissimoAbove) : MusicFont.Current.FullSize.Box(MusicGlyph.ArticStaccatissimoBelow),
             ArticulationType.UpBow => isAbove

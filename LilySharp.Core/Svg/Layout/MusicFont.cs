@@ -190,6 +190,24 @@ internal abstract class MusicFont
     /// §3 #10 — an EXTENSION, SMuFL has no ladder); a SMuFL font has one <c>brace</c> glyph to
     /// scale to the span, which is where this record grows a size.</remarks>
     public abstract SystemBrace Brace(double length);
+
+    // ---- constants LilyPond wrote for Emmentaler's shapes (docs/smufl-design.md §3 #17) ----
+
+    /// <summary>
+    /// Where <paramref name="glyph"/>'s RIGHT skyline is fattened for its stem: a box over the
+    /// glyph's whole Y extent reaching this fraction of the glyph's right extent — LilyPond's
+    /// "a bit more padding for the right of the stem" (lily/accidental.cc:65-82), a constant
+    /// written for Emmentaler's flat. 0 for a glyph that takes none.
+    /// </summary>
+    public abstract double StemSidePaddingFraction(MusicGlyph glyph);
+
+    /// <summary>
+    /// How a chord name sets <paramref name="glyph"/> (one of its accidentals): the UNSCALED
+    /// kern before it, and the lift in the glyph's own staff spaces (the caller scales it by
+    /// the glyph's magstep) — LilyPond's <c>narrow-glyph?</c> and <c>short-glyph?</c> constants
+    /// (scm/chord-name.scm), written for Emmentaler's shapes.
+    /// </summary>
+    public abstract (double Kern, double Raise) ChordNameAccidental(MusicGlyph glyph);
 }
 
 /// <summary>What <see cref="MusicFont.Brace"/> answers: the character and its drawn width in
@@ -373,6 +391,131 @@ internal sealed class EmmentalerMusicFont : MusicFont
     private const int BraceGlyphStart = 0xE000;
 
     /// <inheritdoc/>
+    /// <remarks>LILYPOND-REF: lily/accidental.cc:65-82 horizontal_skylines — the guard reads
+    /// the grob's glyph-name for <c>accidentals.flat</c> / <c>accidentals.flatflat</c>, and
+    /// the box's right edge is the stencil's right times 0.375.</remarks>
+    public override double StemSidePaddingFraction(MusicGlyph glyph)
+        => glyph is MusicGlyph.AccidentalFlat or MusicGlyph.AccidentalDoubleFlat
+            ? HandMeasured.FlatStemPaddingFraction
+            : 0.0;
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// LILYPOND-REF: scm/chord-name.scm — short-glyph?, whose whole body is `(&lt; alteration 0)'
+    /// (:37-39): the flat family sits lower, so it is lifted 0.3 where the rest take 0.6.
+    /// LILYPOND-REF: scm/chord-name.scm — narrow-glyph? (:41-53), a membership test whose
+    /// western entries are 0 and −1/2: the single FLAT takes the kern and the sharp, the double
+    /// sharp and the DOUBLE FLAT do not (`C♭♭' grows by its box alone; measured on both).
+    /// ⚠️ The two addresses carry no line range on purpose: those lines hold one two-part
+    /// hyphen name and nothing else, so <c>LpReferenceCitationTests</c> cannot tell it from
+    /// English and would count a ranged citation as naming nothing (HANDOFF §5.2.1⑦).
+    /// A natural never reaches here — <c>accidental->markup</c> returns before the kern when
+    /// the alteration is 0, and a chord name spells no natural anyway.
+    /// </remarks>
+    public override (double Kern, double Raise) ChordNameAccidental(MusicGlyph glyph) => glyph switch
+    {
+        MusicGlyph.AccidentalFlat => (HandMeasured.ChordNameNarrowKern, HandMeasured.ChordNameShortRaise),
+        MusicGlyph.AccidentalDoubleFlat => (0.0, HandMeasured.ChordNameShortRaise),
+        _ => (0.0, HandMeasured.ChordNameRaise),
+    };
+
+    /// <summary>
+    /// The numbers the generators do not emit — measured by hand, or taken from LilyPond's own
+    /// output or sources — docs/smufl-design.md §3 #16 and #17: EXTENSIONS the wrapped metadata
+    /// carries that no table in the OTF holds. In the 20 design's staff spaces; a row built
+    /// from them scales by the table's magnification like every generated number, and another
+    /// optical design answers the 20's values (nobody measured them there).
+    /// </summary>
+    internal static class HandMeasured
+    {
+        /// <summary>The brevis head's width.</summary>
+        /// <remarks>
+        /// LILYSHARP-OWN: hand-tuned, and the only head width that is. ⚠️ NOT because LilyPond
+        /// lacks the glyph — it has it (mf/feta-noteheads.mf:240,
+        /// <c>fet_beginchar ("brevis notehead", "sM1")</c>) — but because
+        /// Extract-EmmentalerMetrics.py does not emit it, so GlyphMetricsGenerated has
+        /// <c>RestDoubleWhole*</c> and no notehead counterpart. This number has therefore never
+        /// been checked against the font at all; its neighbours are advance widths read out of
+        /// Emmentaler. Closing it is extractor work, not measurement work.
+        /// LILYPOND-REF: mf/feta-noteheads.mf:240 fet_beginchar ("brevis notehead", "sM1") — the glyph the number stands for.
+        /// </remarks>
+        public const double NoteheadDoubleWholeWidth = 2.296;
+
+        /// <summary>The brevis head's advance over the whole head's: the sM1 glyph is the whole
+        /// head plus its side bars.</summary>
+        /// <remarks>LILYSHARP-OWN: the sM1 advance was never extracted either; 1.30 over the
+        /// whole head's is the rule its reader (<c>GlyphMetrics.GetNoteheadAdvance</c>) carried,
+        /// and it is not the same number as <see cref="NoteheadDoubleWholeWidth"/> (2.300 against
+        /// 2.296) — two hand spellings of one glyph, kept apart because every reader of each is
+        /// a different quantity (advance against ink width). Both close with the extractor.
+        /// LILYPOND-REF: mf/feta-noteheads.mf:240 fet_beginchar ("brevis notehead", "sM1").</remarks>
+        public const double BreveAdvanceOverWhole = 1.30;
+
+        /// <summary>
+        /// The maxima (8-measure) rest's ink width — the church-rest glyph for duration-log −3
+        /// (rests.M3).
+        /// </summary>
+        /// <remarks>
+        /// The extractor does not yet emit rests.M3; this row moves into the generated table
+        /// when it does. The value is not guessed: LilyPond 2.24.4 renders `R1*8` as a SINGLE
+        /// maxima glyph, so the multi-measure rest's own X-extent is that glyph's width — dumped
+        /// via ly:grob-extent it is exactly 1.800. It cross-checks against the run-width model on
+        /// two further independent points: N=8 gives 14.190 and N=10 (maxima + breve) gives
+        /// 16.434, both matching LilyPond to the last digit.
+        /// LILYPOND-REF: mf/feta-rests.mf — rests.M3.
+        /// </remarks>
+        public const double RestMaximaWidth = 1.8;
+
+        /// <summary>
+        /// The portato's box (tenuto line + staccato dot), by which side the DOT is on. Its near
+        /// edge toward the note is only the line's half-thickness (~0.07 ss), NOT the 0.5 ss the
+        /// generic fallback box assumed — which parked the mark ~0.43 ss too far below the note.
+        /// </summary>
+        /// <remarks>
+        /// LILYPOND-REF: mf/feta-scripts.mf draw_portato —
+        ///   set_char_box(.6 ss, .6 ss, thick/2, .5 ss + .5 dot_size), thick =
+        ///   1.4·line-thickness (≈0.14 ss), dot_size ≈ 0.32 ss ⇒ far extent ≈0.66 ss;
+        ///   dportato is the y-mirror, so the near (line) edge stays ~0.07 ss.
+        /// Box ported straight from feta's draw_portato constants, with line-thickness = 0.1 ss
+        /// (LilyPond's default):
+        ///   dot_size   = 2.4·0.1 + 0.08          = 0.32 ss   (drawdot diameter)
+        ///   dot centre = 0.5 + 0.5·dot_size      = 0.66 ss   (drawdot (0, h))
+        ///   dot edge   = dot centre + dot_size/2 = 0.82 ss   (the dot's outer rim)
+        ///   line edge  = thick/2 = 1.4·0.1/2     = 0.07 ss   (the tenuto line)
+        ///   half-width = 0.6 ss                              (set_char_box .6, .6)
+        /// The rim (0.82), NOT the centre, is what the staff-padding clamp measures — using the
+        /// centre seated an in-staff note's dot only ~0.1 ss past a staff line (nearly
+        /// touching); the rim clears it by the full staff-padding.
+        /// </remarks>
+        // LILYPOND-REF: mf/feta-scripts.mf draw_portato — set_char_box (.6 ss, .6 ss, thick/2, .5 ss + .5 dot_size).
+        public static BBox Portato(bool dotAtBottom, double magnification) => dotAtBottom
+            ? new(-0.6 * magnification, -0.82 * magnification, 0.6 * magnification, 0.07 * magnification)
+            : new(-0.6 * magnification, -0.07 * magnification, 0.6 * magnification, 0.82 * magnification);
+
+        /// <summary>The flat family's stem fattening (<see cref="MusicFont.StemSidePaddingFraction"/>).</summary>
+        public const double FlatStemPaddingFraction = 0.375;
+
+        /// <summary>The unscaled kern LilyPond puts before a narrow accidental glyph in a chord name.</summary>
+        /// <remarks>
+        /// LILYPOND-REF: scm/chord-name.scm:89-95 accidental->markup — conditional-kern-before with
+        /// 0.094725 when narrow-glyph? holds. It appears in LilyPond's own markup tree as a plain
+        /// <c>hspace-markup</c>, i.e. it is NOT multiplied by magstep; measured on `C♭', where the
+        /// symbol grows by the flat's scaled box plus this number exactly.
+        /// </remarks>
+        public const double ChordNameNarrowKern = 0.094725;
+
+        /// <summary>The lift of a short (flat-family) accidental in a chord name, in its own staff
+        /// spaces (<c>\translate-scaled</c>: the caller scales by magstep).</summary>
+        /// <remarks>LILYPOND-REF: scm/chord-name.scm:89-95 accidental->markup —
+        /// <c>translate-scaled (0 . 0.3)</c> for a short-glyph?, <c>(0 . 0.6)</c> otherwise.</remarks>
+        public const double ChordNameShortRaise = 0.3;
+
+        /// <summary>The lift of any other accidental in a chord name.</summary>
+        /// <remarks>LILYPOND-REF: scm/chord-name.scm:89-95 accidental->markup — the 0.6 arm.</remarks>
+        public const double ChordNameRaise = 0.6;
+    }
+
+    /// <inheritdoc/>
     /// <remarks>LILYPOND-REF: lily/font-select.cc:115-186 select_font — ported as
     /// <see cref="EmmentalerDesignSize"/>.</remarks>
     public override MusicFontDesign DesignAt(double fontSizeStep)
@@ -459,7 +602,11 @@ internal sealed class EmmentalerMusicFont : MusicFont
         {
             MusicGlyph.GClef => ClefVerticalSkylineQuads("G"),
             MusicGlyph.FClef => ClefVerticalSkylineQuads("F"),
-            MusicGlyph.CClef => ClefVerticalSkylineQuads("C"),
+            // The percussion clef has no baked outline of its own, so it answers the C clef's
+            // (§3 #17). Both are centred on the middle line and the C clef is the taller, so a
+            // seat over-reserves rather than under-reserves — a KNOWN approximation, and the one
+            // clef whose silhouette is not the font's own.
+            MusicGlyph.CClef or MusicGlyph.UnpitchedPercussionClef1 => ClefVerticalSkylineQuads("C"),
             MusicGlyph.WiggleTrill => TrillElementVerticalSkylineQuads(),
             MusicGlyph.KeyboardPedalPed or MusicGlyph.KeyboardPedalDot or MusicGlyph.KeyboardPedalUp
                 => PedalGlyphVerticalSkylineQuads(MusicGlyphs.Of(glyph).EmmentalerCode),
@@ -616,6 +763,37 @@ internal sealed class EmmentalerMusicFont : MusicFont
         MusicGlyph.DynamicSforzando => new(d.DynamicLetterS, d.DynamicLetterSOutline, d.DynamicLetterSAdvance),
         MusicGlyph.DynamicZ => new(d.DynamicLetterZ, d.DynamicLetterZOutline, d.DynamicLetterZAdvance),
         MusicGlyph.DynamicNiente => new(d.DynamicLetterN, d.DynamicLetterNOutline, d.DynamicLetterNAdvance),
+
+        // ---- rows the generator does not emit (docs/smufl-design.md §3 #16): hand-measured
+        // numbers (HandMeasured), or a neighbour's row standing in — each the rule its reader
+        // used to carry, now a value of the font ----
+        // The brevis: its width by hand, its Y the whole head's (the sM1 glyph is the whole head
+        // plus its side bars), its advance the whole's times 1.30.
+        // LILYPOND-REF: mf/feta-noteheads.mf:240 fet_beginchar ("brevis notehead", "sM1").
+        MusicGlyph.NoteheadDoubleWhole => new(
+            new BBox(0.0, d.NoteheadWhole.Bottom, HandMeasured.NoteheadDoubleWholeWidth * d.Magnification, d.NoteheadWhole.Top),
+            null,
+            d.NoteheadWholeAdvance * HandMeasured.BreveAdvanceOverWhole),
+        // The maxima rest: its width by hand, its Y the longa's (rests.M3 is the longa's block
+        // drawn wider); only the X extent has a reader.
+        // LILYPOND-REF: mf/feta-rests.mf — rests.M3.
+        MusicGlyph.RestMaxima => new(
+            new BBox(0.0, d.RestLonga.Bottom, HandMeasured.RestMaximaWidth * d.Magnification, d.RestLonga.Top), null, null),
+        // The 32nd and shorter flags read the 16th's row — similar width; the generator
+        // measures the 8th and 16th only.
+        MusicGlyph.Flag32ndUp or MusicGlyph.Flag64thUp or MusicGlyph.Flag128thUp
+            => new(d.Flag16thUp, d.Flag16thUpOutline, d.Flag16thUpAdvance),
+        MusicGlyph.Flag32ndDown or MusicGlyph.Flag64thDown or MusicGlyph.Flag128thDown
+            => new(d.Flag16thDown, d.Flag16thDownOutline, d.Flag16thDownAdvance),
+        // The short and long fermatas read the fermata's row on their side.
+        MusicGlyph.FermataShortAbove or MusicGlyph.FermataLongAbove
+            => new(d.FermataAboveGlyph, d.FermataAboveGlyphOutline, d.FermataAboveGlyphAdvance),
+        MusicGlyph.FermataShortBelow or MusicGlyph.FermataLongBelow
+            => new(d.FermataBelowGlyph, d.FermataBelowGlyphOutline, d.FermataBelowGlyphAdvance),
+        // The portato: dportato (drawn ABOVE a note, ArticulationItem.GlyphOf) has its dot at
+        // the bottom, uportato at the top.
+        MusicGlyph.ArticTenutoStaccatoBelow => new(HandMeasured.Portato(dotAtBottom: true, d.Magnification), null, null),
+        MusicGlyph.ArticTenutoStaccatoAbove => new(HandMeasured.Portato(dotAtBottom: false, d.Magnification), null, null),
 
         _ => default,
     };

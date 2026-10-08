@@ -47,11 +47,6 @@ internal static partial class GlyphMetrics
     }
 
     /// <summary>
-    /// Anchor point for stem attachment, in staff spaces relative to glyph origin.
-    /// </summary>
-    public readonly record struct Anchor(double X, double Y);
-
-    /// <summary>
     /// The metrics a grob carrying <paramref name="fontSizeStep"/> reads — LilyPond's
     /// <c>font-size</c>, in sixths of an octave (full size 0, a grace −3).
     /// </summary>
@@ -104,19 +99,6 @@ internal static partial class GlyphMetrics
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<double, DesignMetrics>
         _sizedFonts = new();
 
-    // ========== Stem Anchors ==========
-    // Stem attachment uses the notehead's advance width on the X axis (LP convention)
-    // and a small vertical offset to account for the notehead curve. The Y offset is
-    // hand-tuned (font does not expose stem-attach anchors via OTF tables).
-    // LILYPOND-REF: lily/stem.cc — stem attaches at notehead.extent(X_AXIS)[RIGHT]
-
-    /// <summary>Stem attachment point for upward stem (right side of filled notehead).</summary>
-    /// <remarks>X = NoteheadBlackAdvance, Y from Emmentaler stem anchor convention.</remarks>
-    public static readonly Anchor StemUpSE = new(NoteheadBlackAdvance, 0.168);
-
-    /// <summary>Stem attachment point for downward stem (left side of notehead).</summary>
-    public static readonly Anchor StemDownNW = new(0, -0.168);
-
     // ========== Accidental parenthesis ==========
 
     /// <summary>
@@ -136,22 +118,6 @@ internal static partial class GlyphMetrics
     /// another design (a grace's is −4, a cue's −4, an editorial one's −2).</summary>
     public static double GetAccidentalParensInkWidth(MusicFontDesign font) =>
         font.Box(MusicGlyph.AccidentalParensLeft).Width + font.Box(MusicGlyph.AccidentalParensRight).Width;
-
-    /// <summary>
-    /// Maxima (8-measure) rest ink width, in staff spaces — the church-rest glyph for
-    /// duration-log -3 (<see cref="EmmentalerGlyphs.RestMaxima"/>, rests.M3).
-    /// </summary>
-    /// <remarks>
-    /// This is a font metric and belongs in GlyphMetricsGenerated.cs, but the extractor
-    /// does not yet emit rests.M3; move it there when it does. The value is not guessed:
-    /// LilyPond 2.24.4 renders `R1*8` as a SINGLE maxima glyph, so the multi-measure
-    /// rest's own X-extent is that glyph's width — dumped via ly:grob-extent it is
-    /// exactly 1.800. It cross-checks against the run-width model on two further
-    /// independent points: N=8 gives 14.190 and N=10 (maxima + breve) gives 16.434,
-    /// both matching LilyPond to the last digit.
-    /// LILYPOND-REF: mf/feta-rests.mf — rests.M3.
-    /// </remarks>
-    public const double RestMaximaWidth = 1.8;
 
     // ========== Engraving line/stroke thicknesses ==========
     // Line-family thicknesses live in EngravingDefaults, derived from
@@ -883,8 +849,8 @@ internal static partial class GlyphMetrics
     /// <see cref="GetNoteheadBBox(MusicFontDesign, int)"/>.</summary>
     public static double GetNoteheadAdvance(MusicFontDesign font, int noteValue) => noteValue switch
     {
-        // Breve: the sM1 glyph is the whole head plus its side bars.
-        0 => font.Advance(MusicGlyph.NoteheadWhole) * 1.30,
+        // Breve: a hand row of the font (EmmentalerMusicFont.HandMeasured.BreveAdvanceOverWhole).
+        0 => font.Advance(MusicGlyph.NoteheadDoubleWhole),
         1 => font.Advance(MusicGlyph.NoteheadWhole),
         2 => font.Advance(MusicGlyph.NoteheadHalf),
         _ => font.Advance(MusicGlyph.NoteheadBlack),
@@ -1002,18 +968,10 @@ internal static partial class GlyphMetrics
 
     /// <summary>The same lookup asked of ONE font — see
     /// <see cref="GetNoteheadBBox(MusicFontDesign, int)"/>.</summary>
+    /// <remarks>The 32nd and shorter flags read the 16th's row — the font's own stand-in
+    /// (<c>EmmentalerMusicFont.MetricsOf</c>), no longer a rule here.</remarks>
     public static BBox GetFlagBBox(MusicFontDesign font, int noteValue, bool stemUp)
-        => (noteValue, stemUp) switch
-    {
-        (8, true) => font.Box(MusicGlyph.Flag8thUp),
-        (8, false) => font.Box(MusicGlyph.Flag8thDown),
-        (16, true) => font.Box(MusicGlyph.Flag16thUp),
-        (16, false) => font.Box(MusicGlyph.Flag16thDown),
-        // For 32nd, 64th etc., use 16th as approximation (they're similar width)
-        (>= 32, true) => font.Box(MusicGlyph.Flag16thUp),
-        (>= 32, false) => font.Box(MusicGlyph.Flag16thDown),
-        _ => default
-    };
+        => MusicGlyphs.Flag(noteValue, stemUp) is { } flag ? font.Box(flag) : default;
 
     /// <summary>The bounding box of one fetaText dynamic letter, or default if the
     /// character is not one of the seven the encoding draws dynamics from.</summary>

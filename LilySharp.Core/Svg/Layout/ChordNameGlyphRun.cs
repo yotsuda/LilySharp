@@ -37,10 +37,11 @@ namespace LilySharp.Core.Svg.Layout;
 /// (scm/define-markup-commands.scm:6142-6174 translate-scaled-markup), and the font-size it
 /// reads is the one <c>\smaller</c> already lowered. <c>y</c> is 0.3 for a
 /// <c>short-glyph?</c> (alteration &lt; 0, i.e. the flat family) and 0.6 otherwise.</item>
-/// <item>the kern is an unscaled <c>\hspace</c> of <see cref="KernBeforeNarrowGlyph"/> before
-/// a <c>narrow-glyph?</c>, and that predicate lists 0 and −1/2 among the western alterations
-/// — so the single FLAT gets it and the sharp, the double sharp and the DOUBLE FLAT do
-/// not.</item>
+/// <item>the kern is an unscaled <c>\hspace</c> of 0.094725 before a <c>narrow-glyph?</c>, and
+/// that predicate lists 0 and −1/2 among the western alterations — so the single FLAT gets it
+/// and the sharp, the double sharp and the DOUBLE FLAT do not. Both constants and both
+/// predicates are the music font's (<see cref="MusicFont.ChordNameAccidental"/>): LilyPond
+/// wrote them for Emmentaler's shapes.</item>
 /// </list>
 /// <para>
 /// ⚠️ NOT <see cref="FetaTextRun"/>, and the difference is a LilyPond one rather than a
@@ -272,15 +273,6 @@ internal static class ChordNameGlyphRun
     internal static double PolygonBlotHalf
         => PolygonThickness * EngravingDefaults.LineThickness / 2.0;
 
-    /// <summary>The unscaled kern LilyPond puts before a narrow accidental glyph.</summary>
-    /// <remarks>
-    /// LILYPOND-REF: scm/chord-name.scm:89-95 accidental->markup — conditional-kern-before with
-    /// 0.094725 when narrow-glyph? holds. It appears in LilyPond's own markup tree as a plain
-    /// <c>hspace-markup</c>, i.e. it is NOT multiplied by magstep; measured on `C♭', where the
-    /// symbol grows by the flat's scaled box plus this number exactly.
-    /// </remarks>
-    internal const double KernBeforeNarrowGlyph = 0.094725;
-
     /// <summary>
     /// One drawn piece of a chord symbol: a run of sans text, one accidental glyph, or the
     /// major-seventh triangle.
@@ -386,7 +378,7 @@ internal static class ChordNameGlyphRun
     ///   command <c>accidental->text-markup</c> wraps the glyph in, whose body is
     ///   <c>(fontsize-markup -1 arg)</c>: one word off the property, which is
     ///   <see cref="SmallerFontSizeOffset"/>. (The range is in prose because the name is a
-    ///   two-part hyphen word — see <see cref="ShortGlyph"/>.)
+    ///   two-part hyphen word — the remark on <see cref="MusicFont.ChordNameAccidental"/>.)
     /// </remarks>
     internal static double AccidentalStep(ScoreTextMetrics fonts)
         => FontSize(fonts) + SmallerFontSizeOffset;
@@ -411,44 +403,22 @@ internal static class ChordNameGlyphRun
         return (1, sharp ? 1 : -1);
     }
 
-    /// <summary>The glyph and its page-space box for an alteration in half steps.</summary>
+    /// <summary>The accidental glyph for an alteration in half steps.</summary>
+    private static MusicGlyph AccidentalGlyph(int alteration) => alteration switch
+    {
+        >= 2 => MusicGlyph.AccidentalDoubleSharp,
+        1 => MusicGlyph.AccidentalSharp,
+        -1 => MusicGlyph.AccidentalFlat,
+        _ => MusicGlyph.AccidentalDoubleFlat,
+    };
+
+    /// <summary>The glyph's character and its page-space box for an alteration in half steps.</summary>
     private static (char Glyph, GlyphMetrics.BBox Box) GlyphFor(int alteration, double step)
     {
         var font = MusicFont.Current;
-        var g = alteration switch
-        {
-            >= 2 => MusicGlyph.AccidentalDoubleSharp,
-            1 => MusicGlyph.AccidentalSharp,
-            -1 => MusicGlyph.AccidentalFlat,
-            _ => MusicGlyph.AccidentalDoubleFlat,
-        };
+        var g = AccidentalGlyph(alteration);
         return (font.Codepoint(g), font.SizedAt(step).Box(g));
     }
-
-    /// <summary>
-    /// LilyPond's <c>short-glyph?</c> — the flat family sits lower, so it is lifted less.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: scm/chord-name.scm — short-glyph?, whose whole body is `(&lt; alteration 0)'
-    /// (:37-39). ⚠️ THE ADDRESS CARRIES NO LINE RANGE ON PURPOSE: those three lines hold one
-    /// two-part hyphen name and nothing else, so <c>LpReferenceCitationTests</c> cannot tell it
-    /// from English and would count a ranged citation as naming nothing whatever is written
-    /// after it (the <c>misc.hh — intlog2</c> case in HANDOFF §5.2.1⑦).
-    /// </remarks>
-    private static bool ShortGlyph(int alteration) => alteration < 0;
-
-    /// <summary>
-    /// LilyPond's <c>narrow-glyph?</c> for the alterations a chord name can spell.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: scm/chord-name.scm — narrow-glyph? (:41-53; the range is left off the
-    /// address for the reason <see cref="ShortGlyph"/> gives), a membership test whose western
-    /// entries are 0 and −1/2. ⚠️ THE DOUBLE FLAT IS NOT IN IT (−1 does not appear), which is
-    /// why `C♭♭' grows by its box alone while `C♭' also pays the kern; measured on both.
-    /// A natural never reaches here — <c>accidental->markup</c> returns before the kern when
-    /// the alteration is 0, and a chord name spells no natural anyway.
-    /// </remarks>
-    private static bool NarrowGlyph(int alteration) => alteration == -1;
 
     /// <summary>
     /// The pieces of one chord symbol, left to right, with X from its origin.
@@ -633,8 +603,10 @@ internal static class ChordNameGlyphRun
                 (up ? superFontSize : fontSize) + SmallerFontSizeOffset;
             var (glyph, box) = GlyphFor(alteration, glyphFontSize);
             double mag = EmmentalerDesignSize.Magstep(glyphFontSize);
-            double kern = NarrowGlyph(alteration) ? KernBeforeNarrowGlyph : 0;
-            double raise = (ShortGlyph(alteration) ? 0.3 : 0.6) * mag + (up ? superRaise : 0);
+            // The kern (unscaled) and the lift (scaled by the glyph's magstep) are the font's:
+            // LilyPond's narrow-glyph? / short-glyph? constants, written for Emmentaler.
+            var (kern, lift) = MusicFont.Current.ChordNameAccidental(AccidentalGlyph(alteration));
+            double raise = lift * mag + (up ? superRaise : 0);
             pieces.Add(new Piece(
                 Text: "", glyph, ChordPieceKind.Accidental,
                 X: x, Advance: kern + box.Width,

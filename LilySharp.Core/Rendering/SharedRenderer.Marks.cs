@@ -267,7 +267,7 @@ internal static partial class SharedRenderer
         // decimals: the true scale is 0.225/56 = 0.00401786. Reading the size back out of a
         // rendered SVG is one decimal short of the font, and this constant was 0.224 for a
         // few hours on 2026-08-28 because of it.
-        const double dotRadius = EngravingDefaults.RepeatDotRadius;
+        double dotRadius = EngravingDefaults.RepeatDotRadius;
 
         foreach (var pr in layout.PercentRepeatLayouts)
         {
@@ -1086,7 +1086,7 @@ internal static partial class SharedRenderer
         // each symbol. The block longa/breve rests are only ~0.6 ss wide; the whole
         // rest is 1.5 ss. LILYPOND-REF: lily/multi-measure-rest.cc church_rest.
         var pieces = new List<(int Span, char Glyph, double Width, double Y)>();
-        double MaximaWidth = GlyphMetrics.RestMaximaWidth;
+        double MaximaWidth = MusicFont.Current.FullSize.Box(MusicGlyph.RestMaxima).Width;
         double LongWidth = MusicFont.Current.FullSize.Box(MusicGlyph.RestLonga).Width;
         double BreveWidth = MusicFont.Current.FullSize.Box(MusicGlyph.RestDoubleWhole).Width;
         double WholeWidth = MusicFont.Current.FullSize.Box(MusicGlyph.RestWhole).Width;
