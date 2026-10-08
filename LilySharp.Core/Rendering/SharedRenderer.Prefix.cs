@@ -563,7 +563,14 @@ internal static partial class SharedRenderer
         // DrawGlyph y must be lowered by half the digit height to bring the
         // digit's CENTER onto the target line.
         // LILYPOND-REF: mf/feta-numbers.mf — time-signature numbers sit on the baseline.
-        const double digitHalfHeight = 1.0; // feta number glyphs are ~2 ss tall
+        // A row's digits' box centre above the baseline: LilyPond's own model ("Assume that the
+        // normal time-signature digit occupies two staff spaces", scm/time-signature-settings.scm:755-799
+        // format-small-fraction-vert) is Emmentaler's numerals, which stand on the baseline 2 tall
+        // and carry no box here — so 1.0; a SMuFL timeSig* digit is centred on its baseline and
+        // says so in its box. Until Lab sessions/p869 every font took the 1.0, which stood a SMuFL
+        // signature a staff space low (its denominator under the staff).
+        double numCentre = MeterRowCentre(ts.BeatsText ?? ts.Beats.ToString());
+        double denCentre = MeterRowCentre(ts.BeatType.ToString());
         // Additive meters print the numerator AS WRITTEN ("3+2" over 8), the
         // rows centered on each other. LILYPOND-REF: \compoundMeter numerator.
         // ⚠️ THE PEN READS THE RESERVATION'S OWN RUN. Until session 164 this loop stepped a
@@ -585,7 +592,7 @@ internal static partial class SharedRenderer
         {
             if (p.IsGlyph)
             {
-                gc.DrawGlyph(p.Ch, nx + p.X, staffY - 1 - digitHalfHeight, FontSize);
+                gc.DrawGlyph(p.Ch, nx + p.X, staffY - 1 - numCentre, FontSize);
             }
             else
             {
@@ -597,7 +604,7 @@ internal static partial class SharedRenderer
                 // on the numerator row scales with the em (0.55 at the engraving's 2.4).
                 double plusEm = MeterGlyphRun.PlusEm(fonts);
                 gc.DrawText(p.Ch.ToString(), nx + p.X + p.Advance / 2,
-                    staffY - 1 - digitHalfHeight + 0.55 * plusEm / MeterGlyphRun.PlusEngravingEm,
+                    staffY - 1 - numCentre + 0.55 * plusEm / MeterGlyphRun.PlusEngravingEm,
                     plusEm, TextRole.Meter, MeterGlyphRun.PlusStyle(fonts), TextAnchor.Middle, Color.Black);
             }
         }
@@ -605,8 +612,24 @@ internal static partial class SharedRenderer
         foreach (var p in denPieces)
         {
             if (p.IsGlyph)
-                gc.DrawGlyph(p.Ch, dnx + p.X, staffY - 3 - digitHalfHeight, FontSize);
+                gc.DrawGlyph(p.Ch, dnx + p.X, staffY - 3 - denCentre, FontSize);
         }
+    }
+
+    /// <summary>The vertical centre of a meter row's digits above their baseline: the union of
+    /// the drawn digits' boxes where the font gives them, Emmentaler's 2-space numeral's 1.0
+    /// otherwise (<see cref="DrawTimeSignature"/>).</summary>
+    private static double MeterRowCentre(string row)
+    {
+        double bottom = double.PositiveInfinity, top = double.NegativeInfinity;
+        foreach (char ch in row)
+            if (MusicGlyphs.TimeSigDigit(ch) is { } g
+                && LilySharp.Core.Svg.Layout.MusicFont.Current.FullSize.Metrics(g).DesignBox is { } box)
+            {
+                bottom = Math.Min(bottom, box.Bottom);
+                top = Math.Max(top, box.Top);
+            }
+        return bottom <= top ? (bottom + top) / 2 : 1.0;
     }
 
     // ---------- Key signature ----------

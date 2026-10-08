@@ -183,6 +183,25 @@ public class SmuflPlacementTests
         Assert.Equal(glyphs, pedal.Count);
     }
 
+    [Theory]
+    [MemberData(nameof(Fonts))]
+    public void ANumberedMeter_CentresEachRowInItsHalfOfTheStaff(string font)
+    {
+        // LilyPond's model is a 2-space digit on the baseline (Emmentaler's): numerator in the
+        // upper two spaces, denominator in the lower. A SMuFL timeSig digit is centred on its
+        // baseline, and placed by Emmentaler's 1.0 it stood a staff space low until p869.
+        var tree = SyntaxTree.Parse(
+            $"fonts {{ music \"{font}\" }}\ntime 3/4\npart m {{ clef treble }}\n" +
+            "section A { m { c'2. | } }\nform main { A }\nscore main { staff m }\n");
+        var symbols = BoxesGenerator.GenerateDocument(tree, RenderSpecParser.FindFirst(tree))
+            .Pages.SelectMany(p => p.Symbols).ToList();
+        double top = symbols.Where(s => s.Kind == "staffLine").Min(s => s.Box[1]);
+        var three = Assert.Single(symbols, s => s.Glyph == "TimeSig3");
+        var four = Assert.Single(symbols, s => s.Glyph == "TimeSig4");
+        Assert.True(Math.Abs((three.Box[1] + three.Box[3]) / 2 - top - 1.0) < 0.1, $"{font}: the 3's centre {(three.Box[1] + three.Box[3]) / 2 - top:F3} below the top line");
+        Assert.True(Math.Abs((four.Box[1] + four.Box[3]) / 2 - top - 3.0) < 0.1, $"{font}: the 4's centre {(four.Box[1] + four.Box[3]) / 2 - top:F3} below the top line");
+    }
+
     [Fact]
     public void Emmentalers_Wiggles_KeepTheirLilcBoxes()
     {
