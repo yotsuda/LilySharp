@@ -129,7 +129,7 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
      網 `MusicFontTests`（生成された寸法が全デザインで何かのグリフから届く＝失わない規則をリフレクションで）。読み手はまだ 0。
    - **生成器の表に寸法の無いグリフ**（32 分以下の旗・1/4 音の記号・短い／長いフェルマータ・portato・踵とつま先・stopped・
      thumb・maxima・打楽器と tab の変更記号・拍子の数字の箱）は、読み手が手の規則を持つ＝その族を移すときに §3 #16 として拾う。
-     生成器を回すには fontTools が要る（この機械には無い）。
+     生成器を回すには fontTools が要る＝第868 から回せる（PATH の `python` は LilyPond の同梱＝`Python312\python.exe -m venv` に `pip install fonttools brotli`・手順は Lab notes/CLAUDE-OPERATIONS §3）。未変更の入力で 3 本とも既存の生成物をバイト同一に再現した。
    - ✅ **描画の口（第858）**: グリフの決め方（`MusicGlyphs.Notehead`／`Rest`／`Flag`／`Accidental`／`TimeSigDigit`）を
      フォントから切り離し、`MusicFont.Current`（`EngravingStyle` と同じくスレッドに保持）が文字に変える。
      `SharedRenderer` の 50 か所が `Music(glyph)` を通る。`EmmentalerGlyphs.Get*` は配置の表を引く Emmentaler の文字として残す。
