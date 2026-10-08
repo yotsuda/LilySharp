@@ -203,7 +203,12 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
      SVG の使った面の記録・断片の再生・PDF／PNG の loader はそのまま運ぶ。先頭のフォントの字は不変。後ろのフォントの寸法は先頭の設計番号で
      magstep 拡縮（描く面と同じ）。Emmentaler に落ちたグリフは `MusicFallbackLog` が描いた所で集め、生成器が LayoutWarning の口で 1 字 1 回言う
      （LSP には出ない）。網 6（`SmuflFallbackTests`）。掃き 1199 枚・差 0。
-   - **残り**: ⒠ GPOS の kern（§3 #7）／⒡ `engravingDefaults`（線の太さ＝LP の倍数の依存を
+   - ✅ **⒠ GPOS の kern（第866）**: `SmuflMusicFont.Kern` は Emmentaler が kern する 2 つの run（強弱の字どうし・拍子の数字どうし）だけ、
+     OTF を HarfBuzz で 1 対ずつ shape して読む（`TextFontMetrics.MusicGlyphPairKernFromFile`＝1 字目の shape 後の送り − hmtx・既定の feature・
+     ligature になった対は 0・対ごとに覚える）。網: 同じ読み手を emmentaler-20.otf に向けると生成した表の 74 対と 0 を全部返す（5e-4 以内）。
+     実測: Bravura は z→p の −0.188 ss・Leland は z→p の −0.020 ss の 1 対だけ・Petaluma は 0＝**今の強弱の語彙（`sfz`・`rfz`・`fp`…）に
+     z の後の p は無いので、描画に効く対は今は無い**（読み手は在る）。chain は同じフォントの対だけ kern する。網 3（`SmuflKernTests`）。掃き差 0。
+   - **残り**: ⒡ `engravingDefaults`（線の太さ＝LP の倍数の依存を
      保って換算・`layout { }` が優先）／§4 の「曖昧なものは描いて目で決める」（`Unverified` 24 行）と VS Code のプレビュー（拡張側の font）は ③ 出力で。
 3. **出力**: 埋め込み・`boxes.json`・双子の警告。
 4. **仕上げ**: Bravura・Leland・Petaluma で本を描いて目で見る・§3 の代わりの経路の値付け。

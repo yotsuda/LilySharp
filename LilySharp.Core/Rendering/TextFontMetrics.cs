@@ -910,6 +910,36 @@ public static class TextFontMetrics
     }
 
     /// <summary>
+    /// The GPOS pair kern between <paramref name="first"/> and <paramref name="second"/> in the
+    /// music font file at <paramref name="file"/>, in EMS: the first glyph's shaped advance
+    /// beside the second, less its own hmtx advance — what Pango sets a pair at, the default
+    /// features on (LilyPond's <c>number</c> and dynamic markups pass none). 0 when the pair is
+    /// not kerned, and when shaping does not give back the two glyphs it was handed (a ligature
+    /// is no pair); null when the file cannot be read.
+    /// </summary>
+    internal static double? MusicGlyphPairKernFromFile(string file, char first, char second)
+    {
+        var face = MusicFaceOf(file);
+        if (face == null)
+            return null;
+        var (font, upem) = face.Value;
+        using var buffer = new HarfBuzzSharp.Buffer();
+        buffer.AddUtf16(new string([first, second]));
+        buffer.Direction = HarfBuzzSharp.Direction.LeftToRight;
+        buffer.Script = HarfBuzzSharp.Script.Latin;
+        lock (font)
+        {
+            font.TryGetNominalGlyph(first, out uint a);
+            font.TryGetNominalGlyph(second, out uint b);
+            font.Shape(buffer);
+            var infos = buffer.GlyphInfos;
+            if (infos.Length != 2 || infos[0].Codepoint != a || infos[1].Codepoint != b || a == 0 || b == 0)
+                return 0.0;
+            return (buffer.GlyphPositions[0].XAdvance - font.GetHorizontalGlyphAdvance(a)) / (double)upem;
+        }
+    }
+
+    /// <summary>
     /// The bundled face itself, for the RENDERERS — so the engine draws the same font it
     /// reserved for.
     /// </summary>

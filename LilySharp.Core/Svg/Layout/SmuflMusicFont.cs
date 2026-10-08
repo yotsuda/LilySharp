@@ -162,8 +162,7 @@ internal sealed class SmuflMetadata
 /// table and <see cref="SizedAt"/> is that table magnified by LilyPond's magstep — the "1 枚を
 /// magstep で拡縮" column of §3 #4.
 /// <para>
-/// ⚠️ THE IMPORT STAGE'S REMAINDER, named here rather than hidden: <see cref="Kern"/> answers 0
-/// until the font's GPOS is read (§3 #7, "OTF に GPOS が在れば読む"); the §3 #17 constants LilyPond
+/// ⚠️ THE IMPORT STAGE'S REMAINDER, named here rather than hidden: the §3 #17 constants LilyPond
 /// applies by glyph NAME to whatever font it is given, so they are Emmentaler's answers here too;
 /// and <see cref="Brace"/> hands back the one <c>brace</c> glyph at its natural size, which the
 /// output stage scales to the span (§3 #10).
@@ -245,8 +244,25 @@ internal sealed class SmuflMusicFont : MusicFont
     public override MusicFontDesign Design(int rounded) => _design;
 
     /// <inheritdoc/>
-    /// <remarks>0 until the font program's GPOS pair kerning is read (§3 #7).</remarks>
-    public override double Kern(MusicGlyph first, MusicGlyph second) => 0.0;
+    /// <remarks>The font program's own GPOS (§3 #7 "OTF に GPOS が在れば読む・無ければ 0"),
+    /// shaped pair by pair through the one music-face loader, for the pairs Emmentaler kerns:
+    /// the dynamic letters among themselves and the time-signature digits among themselves —
+    /// the two runs the engine sets as text. Read once per pair.</remarks>
+    public override double Kern(MusicGlyph first, MusicGlyph second)
+    {
+        bool letters = MusicGlyphs.IsDynamicLetter(first) && MusicGlyphs.IsDynamicLetter(second);
+        bool digits = MusicGlyphs.IsTimeSigDigit(first) && MusicGlyphs.IsTimeSigDigit(second);
+        if (!(letters || digits) || !Has(first) || !Has(second))
+            return 0.0;
+        return _kerns.GetOrAdd((first, second), static (pair, font) =>
+            TextFontMetrics.MusicGlyphPairKernFromFile(font.FontFile, font.Codepoint(pair.Item1), font.Codepoint(pair.Item2))
+                is { } ems ? ems * StaffSpacesPerEm : 0.0, this);
+    }
+
+    private readonly ConcurrentDictionary<(MusicGlyph, MusicGlyph), double> _kerns = new();
+
+    /// <summary>SMuFL's em: four staff spaces.</summary>
+    private const double StaffSpacesPerEm = 4.0;
 
     /// <inheritdoc/>
     public override SkiaSharp.SKPath? OutlinePath(MusicGlyph glyph, int rounded)
