@@ -132,6 +132,14 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
      ビット一致（リフレクション）＝平らな定数の読み手は値を変えずに移せる。掃き 1199 枚・差 0。
      **移し方の型**: `GlyphMetrics.X` → `MusicFont.Current.FullSize.Box(MusicGlyph.Y)`、`AtFontSize(s).X` → `SizedAt(s).Box(..)`。
      census の色（出典の近さ）を落とさないよう、switch の腕に行を足さない。
+   - ✅ **寸法の全読み手（第858）**: `GlyphMetrics.DesignMetrics` は Emmentaler の包みの外に出ない。運ばれていた「フォント」
+     （符頭・臨時記号・grace・cue・旗・休符・拍子・数字）は全部 `MusicFontDesign`。`AtFontSize`／`ForFontSizeStep`／`ForDesign`
+     → `SizedAt`／`DesignAt`／`Design`、`Design20` → `DesignAt(0)`。平らな定数 `GlyphMetrics.X` の読みも GlyphMetrics.cs の外は
+     `FullSize` へ（中の 66 行は静的初期化の順序の罠があるので残す・`EngravingDefaults` の `const` 3 行も残す＝§3 #16 の族）。
+     `MusicFontDesign` に `Rounded`（光学デザイン＝Emmentaler の拡張）・`Magnification`・`Unscaled`・`Scaled` を足した。
+     ⚠️ **付け点が包みから漏れていた**: `DesignMetrics` は §3 #2 の符尾の付け点を 22 の `(double X, double Y)` で持つが、
+     第857 の「全部届く」網は BBox と double しか見ていなかった＝付け点を全部落としても緑だった。`MusicGlyphMetrics` に
+     `StemUp`／`StemDown`（SMuFL の `stemUpSE`／`stemDownNW`）を足し、網はタプルも数える（22）。掃き 1199 枚・差 0。
    - 残り（族ごと）: ⑴ グリフを `char` で運ぶモデル（数字と強弱の glyph run・`ArticulationItem.Glyph`・ペダル・メトロノーム・
      和音名の臨時記号）⑵ 寸法の読み手（`GlyphMetrics.X` の名前つきの値と `ForFontSizeStep` → `MusicFont.DesignAt(..).Metrics(g)`）
      ⑶ 文字をキーにした表（`SkylineBuilder`・`GlyphSkylinesGenerated` のカーニング）⑷ 面の選択（`MusicFace(rounded)`・
