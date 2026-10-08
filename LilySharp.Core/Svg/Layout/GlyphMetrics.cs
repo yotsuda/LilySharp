@@ -643,6 +643,14 @@ internal static partial class GlyphMetrics
             "natural" => (-1.8, 1.0),
             "doubleSharp" => (-0.8, 0.8),
             "doubleFlat" => (0.0, 0.8),
+            // The quarter tones' glyphs (scm/output-lib.scm:1136-1149 standard-alteration-glyph-name-alist):
+            // mf/feta-sharps.mf:243-280 fet_beginchar sharp.slashslash.stem — −0.8, 1;
+            // mf/feta-sharps.mf:421-471 fet_beginchar sharp.slashslash.stemstemstem — −0.8, 1;
+            // mf/feta-flats.mf:540-555 fet_beginchar mirroredflat — −0.8, 2;
+            // mf/feta-flats.mf:422-536 fet_beginchar mirroredflat.flat — 0, 0.8.
+            "quarterSharp" or "threeQuarterSharp" => (-0.8, 1.0),
+            "quarterFlat" => (-0.8, 2.0),
+            "threeQuarterFlat" => (0.0, 0.8),
             _ => (0.0, 0.0),
         };
     }
@@ -670,6 +678,10 @@ internal static partial class GlyphMetrics
             "natural" => font.Box(MusicGlyph.AccidentalNatural),
             "doubleSharp" => font.Box(MusicGlyph.AccidentalDoubleSharp),
             "doubleFlat" => font.Box(MusicGlyph.AccidentalDoubleFlat),
+            "quarterSharp" => font.Box(MusicGlyph.AccidentalQuarterToneSharpStein),
+            "threeQuarterSharp" => font.Box(MusicGlyph.AccidentalThreeQuarterTonesSharpStein),
+            "quarterFlat" => font.Box(MusicGlyph.AccidentalQuarterToneFlatStein),
+            "threeQuarterFlat" => font.Box(MusicGlyph.AccidentalThreeQuarterTonesFlatZimmermann),
             _ => default
         };
     }
@@ -813,6 +825,10 @@ internal static partial class GlyphMetrics
             "natural" => font.Outline(MusicGlyph.AccidentalNatural),
             "doubleSharp" => font.Outline(MusicGlyph.AccidentalDoubleSharp),
             "doubleFlat" => font.Outline(MusicGlyph.AccidentalDoubleFlat),
+            "quarterSharp" => font.Outline(MusicGlyph.AccidentalQuarterToneSharpStein),
+            "threeQuarterSharp" => font.Outline(MusicGlyph.AccidentalThreeQuarterTonesSharpStein),
+            "quarterFlat" => font.Outline(MusicGlyph.AccidentalQuarterToneFlatStein),
+            "threeQuarterFlat" => font.Outline(MusicGlyph.AccidentalThreeQuarterTonesFlatZimmermann),
             _ => default
         };
     }

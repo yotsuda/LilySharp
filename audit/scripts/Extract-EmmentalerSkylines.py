@@ -129,6 +129,11 @@ ACCIDENTALS = [
     ("natural",     "accidentals.natural"),
     ("doubleSharp", "accidentals.doublesharp"),
     ("doubleFlat",  "accidentals.flatflat"),
+    # The quarter tones, by LilyPond's glyphs (scm/output-lib.scm:1146-1149).
+    ("quarterSharp",      "accidentals.sharp.slashslash.stem"),
+    ("threeQuarterSharp", "accidentals.sharp.slashslash.stemstemstem"),
+    ("quarterFlat",       "accidentals.mirroredflat"),
+    ("threeQuarterFlat",  "accidentals.mirroredflat.flat"),
 ]
 
 # Parenthesis glyphs a courtesy accidental's stencil embeds
@@ -686,9 +691,9 @@ def main():
     L.append(f"    /// out of the <paramref name=\"design\"/> design's outline — {BASE_DESIGN} by default,")
     L.append("    /// which is what a grob with no font-size reads.</summary>")
     L.append("    /// <remarks>⚠️ PASS THE DESIGN THE METRICS CAME FROM. A glyph's box")
-    L.append("    /// (DesignMetrics) and its skyline are two readings of ONE face; taking them from")
+    L.append("    /// (MusicFontDesign) and its skyline are two readings of ONE face; taking them from")
     L.append("    /// different designs is the metric-versus-ink split, and it is invisible in both")
-    L.append("    /// halves separately. DesignMetrics.Rounded is the number to pass.</remarks>")
+    L.append("    /// halves separately. MusicFontDesign.Rounded is the number to pass.</remarks>")
     L.append(f"    public static (HorizontalSkyline Left, HorizontalSkyline Right) AccidentalSkylinePair(string kind, int design = {BASE_DESIGN}) => design switch")
     L.append("    {")
     for rounded in DESIGNS:

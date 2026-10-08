@@ -204,6 +204,10 @@ public class MusicFontTests
             ("sharp", MusicGlyph.AccidentalSharp), ("flat", MusicGlyph.AccidentalFlat),
             ("natural", MusicGlyph.AccidentalNatural), ("doubleSharp", MusicGlyph.AccidentalDoubleSharp),
             ("doubleFlat", MusicGlyph.AccidentalDoubleFlat),
+            ("quarterSharp", MusicGlyph.AccidentalQuarterToneSharpStein),
+            ("threeQuarterSharp", MusicGlyph.AccidentalThreeQuarterTonesSharpStein),
+            ("quarterFlat", MusicGlyph.AccidentalQuarterToneFlatStein),
+            ("threeQuarterFlat", MusicGlyph.AccidentalThreeQuarterTonesFlatZimmermann),
         };
         foreach (var (rounded, _) in EmmentalerDesignSize.Designs)
         {
@@ -224,9 +228,6 @@ public class MusicFontTests
                 Assert.Same(want.Left, got.Left);
                 Assert.Same(want.Right, got.Right);
             }
-            // The quarter-tone accidentals have no baked pair and read the natural's, as before.
-            Assert.Same(GlyphMetrics.AccidentalSkylinePair("natural", rounded).Left,
-                design.HorizontalSkylinePair(MusicGlyph.AccidentalQuarterToneSharpStein).Left);
         }
 
         var full = font.FullSize;

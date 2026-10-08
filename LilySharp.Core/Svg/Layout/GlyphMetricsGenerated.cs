@@ -245,6 +245,42 @@ internal static partial class GlyphMetrics
     /// <summary>Double flat accidental — advance width (next-glyph horizontal feed).</summary>
     public const double AccidentalDoubleFlatAdvance = 1.448000;
 
+    /// <summary>Quarter-tone sharp — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-sharps.mf — accidentals.sharp.slashslash.stem (accidentals.sharp.slashslash.stem = U+E017 in this build)</remarks>
+    public static readonly BBox AccidentalQuarterSharp = new(0.000000, -1.330000, 0.700000, 1.330000);
+    /// <summary>Quarter-tone sharp — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox AccidentalQuarterSharpOutline = new(0.000000, -1.328000, 0.700000, 1.332000);
+    /// <summary>Quarter-tone sharp — advance width (next-glyph horizontal feed).</summary>
+    public const double AccidentalQuarterSharpAdvance = 0.700000;
+
+    /// <summary>Three-quarter-tone sharp — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-sharps.mf — accidentals.sharp.slashslash.stemstemstem (accidentals.sharp.slashslash.stemstemstem = U+E01B in this build)</remarks>
+    public static readonly BBox AccidentalThreeQuarterSharp = new(0.000000, -1.500000, 1.600000, 1.500000);
+    /// <summary>Three-quarter-tone sharp — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox AccidentalThreeQuarterSharpOutline = new(0.000000, -1.500000, 1.600000, 1.500000);
+    /// <summary>Three-quarter-tone sharp — advance width (next-glyph horizontal feed).</summary>
+    public const double AccidentalThreeQuarterSharpAdvance = 1.600000;
+
+    /// <summary>Quarter-tone flat — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-flats.mf — accidentals.mirroredflat (accidentals.mirroredflat = U+E028 in this build)</remarks>
+    public static readonly BBox AccidentalQuarterFlat = new(-0.120000, -0.630000, 0.800000, 1.830000);
+    /// <summary>Quarter-tone flat — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox AccidentalQuarterFlatOutline = new(-0.120000, -0.652000, 0.788000, 1.860000);
+    /// <summary>Quarter-tone flat — advance width (next-glyph horizontal feed).</summary>
+    public const double AccidentalQuarterFlatAdvance = 0.800000;
+
+    /// <summary>Three-quarter-tone flat — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-flats.mf — accidentals.mirroredflat.flat (accidentals.mirroredflat.flat = U+E027 in this build)</remarks>
+    public static readonly BBox AccidentalThreeQuarterFlat = new(0.000000, -0.630000, 1.600000, 1.830000);
+    /// <summary>Three-quarter-tone flat — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox AccidentalThreeQuarterFlatOutline = new(0.000000, -0.652000, 1.600000, 1.860000);
+    /// <summary>Three-quarter-tone flat — advance width (next-glyph horizontal feed).</summary>
+    public const double AccidentalThreeQuarterFlatAdvance = 1.600000;
+
     /// <summary>Left accidental parenthesis (ink left of origin, advance 0) — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-parenthesis.mf — accidentals.leftparen (accidentals.leftparen = U+E02F in this build)</remarks>
     public static readonly BBox AccidentalLeftParen = new(-0.600000, -1.000000, 0.000000, 1.000000);
@@ -1444,6 +1480,30 @@ internal static partial class GlyphMetrics
         public BBox AccidentalDoubleFlatOutline { get; init; }
         /// <summary>Double flat accidental — advance width (next-glyph horizontal feed).</summary>
         public double AccidentalDoubleFlatAdvance { get; init; }
+        /// <summary>Quarter-tone sharp — BBox (LILC bbox).</summary>
+        public BBox AccidentalQuarterSharp { get; init; }
+        /// <summary>Quarter-tone sharp — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox AccidentalQuarterSharpOutline { get; init; }
+        /// <summary>Quarter-tone sharp — advance width (next-glyph horizontal feed).</summary>
+        public double AccidentalQuarterSharpAdvance { get; init; }
+        /// <summary>Three-quarter-tone sharp — BBox (LILC bbox).</summary>
+        public BBox AccidentalThreeQuarterSharp { get; init; }
+        /// <summary>Three-quarter-tone sharp — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox AccidentalThreeQuarterSharpOutline { get; init; }
+        /// <summary>Three-quarter-tone sharp — advance width (next-glyph horizontal feed).</summary>
+        public double AccidentalThreeQuarterSharpAdvance { get; init; }
+        /// <summary>Quarter-tone flat — BBox (LILC bbox).</summary>
+        public BBox AccidentalQuarterFlat { get; init; }
+        /// <summary>Quarter-tone flat — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox AccidentalQuarterFlatOutline { get; init; }
+        /// <summary>Quarter-tone flat — advance width (next-glyph horizontal feed).</summary>
+        public double AccidentalQuarterFlatAdvance { get; init; }
+        /// <summary>Three-quarter-tone flat — BBox (LILC bbox).</summary>
+        public BBox AccidentalThreeQuarterFlat { get; init; }
+        /// <summary>Three-quarter-tone flat — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox AccidentalThreeQuarterFlatOutline { get; init; }
+        /// <summary>Three-quarter-tone flat — advance width (next-glyph horizontal feed).</summary>
+        public double AccidentalThreeQuarterFlatAdvance { get; init; }
         /// <summary>Left accidental parenthesis (ink left of origin, advance 0) — BBox (LILC bbox).</summary>
         public BBox AccidentalLeftParen { get; init; }
         /// <summary>Left accidental parenthesis (ink left of origin, advance 0) — the box its SKYLINE is built from (glyph outline).</summary>
@@ -2188,6 +2248,26 @@ internal static partial class GlyphMetrics
             AccidentalDoubleFlatOutline = new(AccidentalDoubleFlatOutline.Left * magnification, AccidentalDoubleFlatOutline.Bottom * magnification,
                 AccidentalDoubleFlatOutline.Right * magnification, AccidentalDoubleFlatOutline.Top * magnification),
             AccidentalDoubleFlatAdvance = AccidentalDoubleFlatAdvance * magnification,
+            AccidentalQuarterSharp = new(AccidentalQuarterSharp.Left * magnification, AccidentalQuarterSharp.Bottom * magnification,
+                AccidentalQuarterSharp.Right * magnification, AccidentalQuarterSharp.Top * magnification),
+            AccidentalQuarterSharpOutline = new(AccidentalQuarterSharpOutline.Left * magnification, AccidentalQuarterSharpOutline.Bottom * magnification,
+                AccidentalQuarterSharpOutline.Right * magnification, AccidentalQuarterSharpOutline.Top * magnification),
+            AccidentalQuarterSharpAdvance = AccidentalQuarterSharpAdvance * magnification,
+            AccidentalThreeQuarterSharp = new(AccidentalThreeQuarterSharp.Left * magnification, AccidentalThreeQuarterSharp.Bottom * magnification,
+                AccidentalThreeQuarterSharp.Right * magnification, AccidentalThreeQuarterSharp.Top * magnification),
+            AccidentalThreeQuarterSharpOutline = new(AccidentalThreeQuarterSharpOutline.Left * magnification, AccidentalThreeQuarterSharpOutline.Bottom * magnification,
+                AccidentalThreeQuarterSharpOutline.Right * magnification, AccidentalThreeQuarterSharpOutline.Top * magnification),
+            AccidentalThreeQuarterSharpAdvance = AccidentalThreeQuarterSharpAdvance * magnification,
+            AccidentalQuarterFlat = new(AccidentalQuarterFlat.Left * magnification, AccidentalQuarterFlat.Bottom * magnification,
+                AccidentalQuarterFlat.Right * magnification, AccidentalQuarterFlat.Top * magnification),
+            AccidentalQuarterFlatOutline = new(AccidentalQuarterFlatOutline.Left * magnification, AccidentalQuarterFlatOutline.Bottom * magnification,
+                AccidentalQuarterFlatOutline.Right * magnification, AccidentalQuarterFlatOutline.Top * magnification),
+            AccidentalQuarterFlatAdvance = AccidentalQuarterFlatAdvance * magnification,
+            AccidentalThreeQuarterFlat = new(AccidentalThreeQuarterFlat.Left * magnification, AccidentalThreeQuarterFlat.Bottom * magnification,
+                AccidentalThreeQuarterFlat.Right * magnification, AccidentalThreeQuarterFlat.Top * magnification),
+            AccidentalThreeQuarterFlatOutline = new(AccidentalThreeQuarterFlatOutline.Left * magnification, AccidentalThreeQuarterFlatOutline.Bottom * magnification,
+                AccidentalThreeQuarterFlatOutline.Right * magnification, AccidentalThreeQuarterFlatOutline.Top * magnification),
+            AccidentalThreeQuarterFlatAdvance = AccidentalThreeQuarterFlatAdvance * magnification,
             AccidentalLeftParen = new(AccidentalLeftParen.Left * magnification, AccidentalLeftParen.Bottom * magnification,
                 AccidentalLeftParen.Right * magnification, AccidentalLeftParen.Top * magnification),
             AccidentalLeftParenOutline = new(AccidentalLeftParenOutline.Left * magnification, AccidentalLeftParenOutline.Bottom * magnification,
@@ -2754,6 +2834,18 @@ internal static partial class GlyphMetrics
         AccidentalDoubleFlat = new(-0.181818, -0.696967, 1.449906, 1.742596),
         AccidentalDoubleFlatOutline = new(-0.140000, -0.728000, 1.448000, 1.780000),
         AccidentalDoubleFlatAdvance = 1.448000,
+        AccidentalQuarterSharp = new(0.000000, -1.330120, 0.700176, 1.330120),
+        AccidentalQuarterSharpOutline = new(0.000000, -1.328000, 0.700000, 1.332000),
+        AccidentalQuarterSharpAdvance = 0.696000,
+        AccidentalThreeQuarterSharp = new(0.000000, -1.500173, 1.599994, 1.500173),
+        AccidentalThreeQuarterSharpOutline = new(0.000000, -1.500000, 1.600000, 1.500000),
+        AccidentalThreeQuarterSharpAdvance = 1.600000,
+        AccidentalQuarterFlat = new(-0.181818, -0.696967, 0.799997, 1.742596),
+        AccidentalQuarterFlatOutline = new(-0.180000, -0.728000, 0.760000, 1.780000),
+        AccidentalQuarterFlatAdvance = 0.800000,
+        AccidentalThreeQuarterFlat = new(0.000000, -0.696967, 1.599994, 1.742596),
+        AccidentalThreeQuarterFlatOutline = new(0.008000, -0.728000, 1.600000, 1.780000),
+        AccidentalThreeQuarterFlatAdvance = 1.600000,
         AccidentalLeftParen = new(-0.625666, -0.999996, 0.000000, 0.999996),
         AccidentalLeftParenOutline = new(-0.624000, -1.076000, -0.124000, 1.076000),
         AccidentalLeftParenAdvance = 0.000000,
@@ -3135,6 +3227,18 @@ internal static partial class GlyphMetrics
         AccidentalDoubleFlat = new(-0.166349, -0.680315, 1.449837, 1.764439),
         AccidentalDoubleFlatOutline = new(-0.128000, -0.708000, 1.448000, 1.800000),
         AccidentalDoubleFlatAdvance = 1.448000,
+        AccidentalQuarterSharp = new(0.000000, -1.330155, 0.699998, 1.330155),
+        AccidentalQuarterSharpOutline = new(0.000000, -1.332000, 0.700000, 1.332000),
+        AccidentalQuarterSharpAdvance = 0.700000,
+        AccidentalThreeQuarterSharp = new(0.000000, -1.499995, 1.599995, 1.499995),
+        AccidentalThreeQuarterSharpOutline = new(0.000000, -1.500000, 1.600000, 1.500000),
+        AccidentalThreeQuarterSharpAdvance = 1.600000,
+        AccidentalQuarterFlat = new(-0.166349, -0.680315, 0.799997, 1.764439),
+        AccidentalQuarterFlatOutline = new(-0.168000, -0.708000, 0.764000, 1.800000),
+        AccidentalQuarterFlatAdvance = 0.800000,
+        AccidentalThreeQuarterFlat = new(0.000000, -0.680315, 1.599995, 1.764439),
+        AccidentalThreeQuarterFlatOutline = new(0.008000, -0.708000, 1.600000, 1.800000),
+        AccidentalThreeQuarterFlatAdvance = 1.600000,
         AccidentalLeftParen = new(-0.619363, -0.999997, 0.000000, 0.999997),
         AccidentalLeftParenOutline = new(-0.620000, -1.072000, -0.128000, 1.072000),
         AccidentalLeftParenAdvance = 0.000000,
@@ -3516,6 +3620,18 @@ internal static partial class GlyphMetrics
         AccidentalDoubleFlat = new(-0.152758, -0.665347, 1.450071, 1.783593),
         AccidentalDoubleFlatOutline = new(-0.128000, -0.692000, 1.448000, 1.816000),
         AccidentalDoubleFlatAdvance = 1.448000,
+        AccidentalQuarterSharp = new(0.000000, -1.330127, 0.699859, 1.330127),
+        AccidentalQuarterSharpOutline = new(0.000000, -1.328000, 0.700000, 1.328000),
+        AccidentalQuarterSharpAdvance = 0.696000,
+        AccidentalThreeQuarterSharp = new(0.000000, -1.500141, 1.600000, 1.500141),
+        AccidentalThreeQuarterSharpOutline = new(0.000000, -1.500000, 1.600000, 1.500000),
+        AccidentalThreeQuarterSharpAdvance = 1.600000,
+        AccidentalQuarterFlat = new(-0.152758, -0.665347, 0.800000, 1.783593),
+        AccidentalQuarterFlatOutline = new(-0.152000, -0.692000, 0.772000, 1.816000),
+        AccidentalQuarterFlatAdvance = 0.800000,
+        AccidentalThreeQuarterFlat = new(0.000000, -0.665347, 1.600000, 1.783593),
+        AccidentalThreeQuarterFlatOutline = new(0.000000, -0.692000, 1.600000, 1.816000),
+        AccidentalThreeQuarterFlatAdvance = 1.596000,
         AccidentalLeftParen = new(-0.613579, -1.000000, 0.000000, 1.000000),
         AccidentalLeftParenOutline = new(-0.612000, -1.064000, -0.136000, 1.064000),
         AccidentalLeftParenAdvance = 0.000000,
@@ -3897,6 +4013,18 @@ internal static partial class GlyphMetrics
         AccidentalDoubleFlat = new(-0.140643, -0.652300, 1.450032, 1.800882),
         AccidentalDoubleFlatOutline = new(-0.120000, -0.676000, 1.448000, 1.832000),
         AccidentalDoubleFlatAdvance = 1.448000,
+        AccidentalQuarterSharp = new(0.000000, -1.330057, 0.699937, 1.330057),
+        AccidentalQuarterSharpOutline = new(0.000000, -1.328000, 0.700000, 1.328000),
+        AccidentalQuarterSharpAdvance = 0.696000,
+        AccidentalThreeQuarterSharp = new(0.000000, -1.499937, 1.600000, 1.499937),
+        AccidentalThreeQuarterSharpOutline = new(0.000000, -1.500000, 1.600000, 1.500000),
+        AccidentalThreeQuarterSharpAdvance = 1.596000,
+        AccidentalQuarterFlat = new(-0.140643, -0.652300, 0.800000, 1.800882),
+        AccidentalQuarterFlatOutline = new(-0.140000, -0.676000, 0.780000, 1.832000),
+        AccidentalQuarterFlatAdvance = 0.796000,
+        AccidentalThreeQuarterFlat = new(0.000000, -0.652300, 1.600000, 1.800882),
+        AccidentalThreeQuarterFlatOutline = new(0.000000, -0.676000, 1.600000, 1.832000),
+        AccidentalThreeQuarterFlatAdvance = 1.596000,
         AccidentalLeftParen = new(-0.608444, -0.999874, 0.000000, 0.999874),
         AccidentalLeftParenOutline = new(-0.608000, -1.060000, -0.140000, 1.060000),
         AccidentalLeftParenAdvance = 0.000000,
@@ -4278,6 +4406,18 @@ internal static partial class GlyphMetrics
         AccidentalDoubleFlat = new(-0.129742, -0.640404, 1.450056, 1.816386),
         AccidentalDoubleFlatOutline = new(-0.112000, -0.664000, 1.448000, 1.848000),
         AccidentalDoubleFlatAdvance = 1.448000,
+        AccidentalQuarterSharp = new(0.000000, -1.329966, 0.700112, 1.329966),
+        AccidentalQuarterSharpOutline = new(0.000000, -1.332000, 0.700000, 1.332000),
+        AccidentalQuarterSharpAdvance = 0.696000,
+        AccidentalThreeQuarterSharp = new(0.000000, -1.500112, 1.600000, 1.500112),
+        AccidentalThreeQuarterSharpOutline = new(0.000000, -1.500000, 1.600000, 1.500000),
+        AccidentalThreeQuarterSharpAdvance = 1.600000,
+        AccidentalQuarterFlat = new(-0.129742, -0.640404, 0.800000, 1.816386),
+        AccidentalQuarterFlatOutline = new(-0.128000, -0.664000, 0.784000, 1.848000),
+        AccidentalQuarterFlatAdvance = 0.800000,
+        AccidentalThreeQuarterFlat = new(0.000000, -0.640404, 1.600000, 1.816386),
+        AccidentalThreeQuarterFlatOutline = new(0.000000, -0.664000, 1.600000, 1.848000),
+        AccidentalThreeQuarterFlatAdvance = 1.600000,
         AccidentalLeftParen = new(-0.604040, -1.000000, 0.000000, 1.000000),
         AccidentalLeftParenOutline = new(-0.604000, -1.056000, -0.144000, 1.056000),
         AccidentalLeftParenAdvance = 0.000000,
@@ -4661,6 +4801,18 @@ internal static partial class GlyphMetrics
         AccidentalDoubleFlat = AccidentalDoubleFlat,
         AccidentalDoubleFlatOutline = AccidentalDoubleFlatOutline,
         AccidentalDoubleFlatAdvance = AccidentalDoubleFlatAdvance,
+        AccidentalQuarterSharp = AccidentalQuarterSharp,
+        AccidentalQuarterSharpOutline = AccidentalQuarterSharpOutline,
+        AccidentalQuarterSharpAdvance = AccidentalQuarterSharpAdvance,
+        AccidentalThreeQuarterSharp = AccidentalThreeQuarterSharp,
+        AccidentalThreeQuarterSharpOutline = AccidentalThreeQuarterSharpOutline,
+        AccidentalThreeQuarterSharpAdvance = AccidentalThreeQuarterSharpAdvance,
+        AccidentalQuarterFlat = AccidentalQuarterFlat,
+        AccidentalQuarterFlatOutline = AccidentalQuarterFlatOutline,
+        AccidentalQuarterFlatAdvance = AccidentalQuarterFlatAdvance,
+        AccidentalThreeQuarterFlat = AccidentalThreeQuarterFlat,
+        AccidentalThreeQuarterFlatOutline = AccidentalThreeQuarterFlatOutline,
+        AccidentalThreeQuarterFlatAdvance = AccidentalThreeQuarterFlatAdvance,
         AccidentalLeftParen = AccidentalLeftParen,
         AccidentalLeftParenOutline = AccidentalLeftParenOutline,
         AccidentalLeftParenAdvance = AccidentalLeftParenAdvance,
@@ -5042,6 +5194,18 @@ internal static partial class GlyphMetrics
         AccidentalDoubleFlat = new(-0.111359, -0.620757, 1.449978, 1.842138),
         AccidentalDoubleFlatOutline = new(-0.104000, -0.640000, 1.448000, 1.868000),
         AccidentalDoubleFlatAdvance = 1.448000,
+        AccidentalQuarterSharp = new(0.000000, -1.330067, 0.700045, 1.330067),
+        AccidentalQuarterSharpOutline = new(0.000000, -1.328000, 0.700000, 1.328000),
+        AccidentalQuarterSharpAdvance = 0.696000,
+        AccidentalThreeQuarterSharp = new(0.000000, -1.500045, 1.600000, 1.500045),
+        AccidentalThreeQuarterSharpOutline = new(0.000000, -1.500000, 1.600000, 1.500000),
+        AccidentalThreeQuarterSharpAdvance = 1.596000,
+        AccidentalQuarterFlat = new(-0.111359, -0.620757, 0.800000, 1.842138),
+        AccidentalQuarterFlatOutline = new(-0.112000, -0.640000, 0.792000, 1.868000),
+        AccidentalQuarterFlatAdvance = 0.796000,
+        AccidentalThreeQuarterFlat = new(0.000000, -0.620757, 1.600000, 1.842138),
+        AccidentalThreeQuarterFlatOutline = new(0.000000, -0.640000, 1.600000, 1.872000),
+        AccidentalThreeQuarterFlatAdvance = 1.596000,
         AccidentalLeftParen = new(-0.596347, -0.999911, 0.000000, 0.999911),
         AccidentalLeftParenOutline = new(-0.596000, -1.048000, -0.152000, 1.048000),
         AccidentalLeftParenAdvance = 0.000000,
@@ -5423,6 +5587,18 @@ internal static partial class GlyphMetrics
         AccidentalDoubleFlat = new(-0.103810, -0.612381, 1.450000, 1.853016),
         AccidentalDoubleFlatOutline = new(-0.100000, -0.628000, 1.448000, 1.880000),
         AccidentalDoubleFlatAdvance = 1.448000,
+        AccidentalQuarterSharp = new(0.000000, -1.330000, 0.700000, 1.330000),
+        AccidentalQuarterSharpOutline = new(0.000000, -1.328000, 0.700000, 1.332000),
+        AccidentalQuarterSharpAdvance = 0.700000,
+        AccidentalThreeQuarterSharp = new(0.000000, -1.500000, 1.600000, 1.500000),
+        AccidentalThreeQuarterSharpOutline = new(0.000000, -1.500000, 1.600000, 1.500000),
+        AccidentalThreeQuarterSharpAdvance = 1.600000,
+        AccidentalQuarterFlat = new(-0.103810, -0.612381, 0.800000, 1.853016),
+        AccidentalQuarterFlatOutline = new(-0.104000, -0.628000, 0.796000, 1.880000),
+        AccidentalQuarterFlatAdvance = 0.800000,
+        AccidentalThreeQuarterFlat = new(0.000000, -0.612381, 1.600000, 1.853016),
+        AccidentalThreeQuarterFlatOutline = new(0.004000, -0.628000, 1.600000, 1.880000),
+        AccidentalThreeQuarterFlatAdvance = 1.600000,
         AccidentalLeftParen = new(-0.593175, -1.000000, 0.000000, 1.000000),
         AccidentalLeftParenOutline = new(-0.592000, -1.044000, -0.156000, 1.044000),
         AccidentalLeftParenAdvance = 0.000000,

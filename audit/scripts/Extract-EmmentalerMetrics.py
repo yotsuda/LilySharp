@@ -135,6 +135,11 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("AccidentalNatural",     "accidentals.natural", "Natural accidental",      "mf/feta-accidentals.mf — accidentals.natural"),
     GlyphSpec("AccidentalDoubleSharp", "accidentals.doublesharp", "Double sharp accidental", "mf/feta-accidentals.mf — accidentals.doublesharp"),
     GlyphSpec("AccidentalDoubleFlat",  "accidentals.flatflat", "Double flat accidental",  "mf/feta-flats.mf — accidentals.flatflat"),
+    # The quarter tones, by LilyPond's glyphs (scm/output-lib.scm:1146-1149).
+    GlyphSpec("AccidentalQuarterSharp",      "accidentals.sharp.slashslash.stem",      "Quarter-tone sharp",       "mf/feta-sharps.mf — accidentals.sharp.slashslash.stem"),
+    GlyphSpec("AccidentalThreeQuarterSharp", "accidentals.sharp.slashslash.stemstemstem", "Three-quarter-tone sharp", "mf/feta-sharps.mf — accidentals.sharp.slashslash.stemstemstem"),
+    GlyphSpec("AccidentalQuarterFlat",       "accidentals.mirroredflat",               "Quarter-tone flat",        "mf/feta-flats.mf — accidentals.mirroredflat"),
+    GlyphSpec("AccidentalThreeQuarterFlat",  "accidentals.mirroredflat.flat",          "Three-quarter-tone flat",  "mf/feta-flats.mf — accidentals.mirroredflat.flat"),
     # Accidental parentheses: ink-extent glyphs designed for extent
     # juxtaposition (leftparen draws BEHIND its origin with advance 0)
     GlyphSpec("AccidentalLeftParen",  "accidentals.leftparen", "Left accidental parenthesis (ink left of origin, advance 0)",  "mf/feta-parenthesis.mf — accidentals.leftparen"),

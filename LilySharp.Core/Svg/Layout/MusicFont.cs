@@ -35,7 +35,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// <param name="StemDown">Where a DOWN stem attaches — SMuFL's <c>stemDownNW</c>; Emmentaler's
 /// <c>attachment-down</c>, which is not the up point mirrored (the triangle's is not).</param>
 /// <remarks>A field the font has nothing for is null: an Emmentaler glyph the generators do not
-/// measure (a 32nd flag, a quarter-tone accidental) has no row, and its readers keep their own
+/// measure (a 32nd flag, a short fermata) has no row, and its readers keep their own
 /// rule until they move onto this type; a glyph that takes no stem has no anchors.</remarks>
 internal readonly record struct MusicGlyphMetrics(
     BBox? DesignBox, BBox? OutlineBox, double? Advance,
@@ -602,7 +602,7 @@ internal sealed class EmmentalerMusicFont : MusicFont
         /// <inheritdoc/>
         /// <remarks>The baked pairs of this design's number (<c>GlyphSkylinesGenerated.cs</c>).
         /// A glyph the generator bakes no pair for reads the natural's — the generated
-        /// accessor's own fallback, and what the quarter-tone accidentals have always read.</remarks>
+        /// accessor's own fallback (the quarter tones have their own since session 868).</remarks>
         public override (HorizontalSkyline Left, HorizontalSkyline Right) HorizontalSkylinePair(MusicGlyph glyph) => glyph switch
         {
             MusicGlyph.AccidentalParensLeft => AccidentalParenSkylinePair(leftParen: true, Table.Rounded),
@@ -618,6 +618,10 @@ internal sealed class EmmentalerMusicFont : MusicFont
             MusicGlyph.AccidentalFlat => "flat",
             MusicGlyph.AccidentalDoubleSharp => "doubleSharp",
             MusicGlyph.AccidentalDoubleFlat => "doubleFlat",
+            MusicGlyph.AccidentalQuarterToneSharpStein => "quarterSharp",
+            MusicGlyph.AccidentalThreeQuarterTonesSharpStein => "threeQuarterSharp",
+            MusicGlyph.AccidentalQuarterToneFlatStein => "quarterFlat",
+            MusicGlyph.AccidentalThreeQuarterTonesFlatZimmermann => "threeQuarterFlat",
             _ => "natural",
         };
 
@@ -699,6 +703,10 @@ internal sealed class EmmentalerMusicFont : MusicFont
         MusicGlyph.AccidentalNatural => new(d.AccidentalNatural, d.AccidentalNaturalOutline, d.AccidentalNaturalAdvance),
         MusicGlyph.AccidentalDoubleSharp => new(d.AccidentalDoubleSharp, d.AccidentalDoubleSharpOutline, d.AccidentalDoubleSharpAdvance),
         MusicGlyph.AccidentalDoubleFlat => new(d.AccidentalDoubleFlat, d.AccidentalDoubleFlatOutline, d.AccidentalDoubleFlatAdvance),
+        MusicGlyph.AccidentalQuarterToneSharpStein => new(d.AccidentalQuarterSharp, d.AccidentalQuarterSharpOutline, d.AccidentalQuarterSharpAdvance),
+        MusicGlyph.AccidentalThreeQuarterTonesSharpStein => new(d.AccidentalThreeQuarterSharp, d.AccidentalThreeQuarterSharpOutline, d.AccidentalThreeQuarterSharpAdvance),
+        MusicGlyph.AccidentalQuarterToneFlatStein => new(d.AccidentalQuarterFlat, d.AccidentalQuarterFlatOutline, d.AccidentalQuarterFlatAdvance),
+        MusicGlyph.AccidentalThreeQuarterTonesFlatZimmermann => new(d.AccidentalThreeQuarterFlat, d.AccidentalThreeQuarterFlatOutline, d.AccidentalThreeQuarterFlatAdvance),
         MusicGlyph.AccidentalParensLeft => new(d.AccidentalLeftParen, d.AccidentalLeftParenOutline, d.AccidentalLeftParenAdvance),
         MusicGlyph.AccidentalParensRight => new(d.AccidentalRightParen, d.AccidentalRightParenOutline, d.AccidentalRightParenAdvance),
 
