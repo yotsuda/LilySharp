@@ -1,4 +1,4 @@
-﻿# Lily# 開発ハンドオフ（常設・単一）
+﻿﻿# Lily# 開発ハンドオフ（常設・単一）
 
 > **このファイルが唯一の引継ぎ先。新しい `handoff-*.md` を作らないこと。**
 > 引継ぎは §1「現在地」を**書き換えて**行う（追記しない）。恒久的な知識は §4 の表に従って
@@ -78,7 +78,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。→ **第751（2026-10-02・ユーザー決定）「LP 忠実にこだわるより音楽的な妥当性を重視。LP から引き継ぐのはレンダリングとレイアウトの美しさだけ。ユーザーがまだ少ないので過去のしがらみに縛られない」＝意味論（拍子・弱起・反復・強弱・検査・出力の意味）の裁定者は音楽的妥当性、LP は描画と配置の裁定者（RULES §5.2 に規則として置いた）。
 
-**★★★★ 第850〜851（2026-10-06〜07）ユーザー決定＝次の会話はここから**: OMR P6（SMuFL）は「描画だけの差し替え」ではなく**寸法まで SMuFL から**（ユーザー利便性）。形は**内部の共通語を SMuFL にし、Emmentaler も SMuFL の形で包む**（字形は SMuFL 名・寸法は metadata の形＋LP 固有の拡張＝LILC の箱と輪郭の箱・サイズ別設計・brace の段・付け点。Emmentaler の出力はバイト不変が条件）。**ただし先に LP 忠実度の総点検**（台帳は OPEN 0 だが、第849〜850 の 3 件＝brace の段・bracket の長さ・加線つき休符の skyline はどれも台帳の外で、本を LP と並べて見つかった）: ① 広い計器＝コーパス全冊の双子を LP で描き、系ごとの譜の間隔と小節線の x を Lily# と自動で突き合わせ、差を種類ごとに束ねる → ② 効く順に直す → ③ 新しい種類が出なくなったら区切り、SMuFL の土台（3〜4 便）→ 取り込み → 出力 → 仕上げ（計 7〜10 便）。フォントの入手（同梱か）と書き方（`paper { musicFont … }`）は取り込みの段までに決める。
+**★★★★ 第857（2026-10-08）ユーザー決定＝総点検は区切った・SMuFL に着手**: 文法は `fonts { music "…" }` で承認・**Emmentaler は SMuFL の形に包み、SMuFL に無い Emmentaler のパラメータは失わない**。設計と棚卸しは **`docs/smufl-design.md`**（§3 の 17 行＝失わないもの・§6 の段取り）。**次は §6 ① 土台の第 1 歩**（`MusicFont` の型と feta 名 → SMuFL 名の表・門は全 svg の掃きで動いた svg 0）。
+**第850〜851（2026-10-06〜07）ユーザー決定**: OMR P6（SMuFL）は「描画だけの差し替え」ではなく**寸法まで SMuFL から**（ユーザー利便性）。形は**内部の共通語を SMuFL にし、Emmentaler も SMuFL の形で包む**（字形は SMuFL 名・寸法は metadata の形＋LP 固有の拡張＝LILC の箱と輪郭の箱・サイズ別設計・brace の段・付け点。Emmentaler の出力はバイト不変が条件）。**ただし先に LP 忠実度の総点検**（台帳は OPEN 0 だが、第849〜850 の 3 件＝brace の段・bracket の長さ・加線つき休符の skyline はどれも台帳の外で、本を LP と並べて見つかった）: ① 広い計器＝コーパス全冊の双子を LP で描き、系ごとの譜の間隔と小節線の x を Lily# と自動で突き合わせ、差を種類ごとに束ねる → ② 効く順に直す → ③ 新しい種類が出なくなったら区切り、SMuFL の土台（3〜4 便）→ 取り込み → 出力 → 仕上げ（計 7〜10 便）。フォントの入手（同梱か）と書き方（`paper { musicFont … }`）は取り込みの段までに決める。
 
 **★★★★ 第815〜816（2026-10-05）ユーザー指示「OMR の提案を優先度順に着手」＝次の会話はここから**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`。OMR は別プログラム・Lily# は子プロセスで呼びファイルを読むだけ＝コードを混ぜない）: 0・A1・B1〜B6・C1〜C3 は**閉じた**（第815〜818・経緯は ARCHIVE）。配布の取り決め `..\LilySharp-Omr\docs\repro\lilysharp-omr-distribution-2026-10-05.md`（同梱しない・L1〜L11）。⚠️ **B1〜B6 は VS Code で未確認**（OMR の `omr read` は第 1 歩が動く＝`OmrProto.exe` を `LILYSHARP_OMR_PATH` で指せば試せる）。残り: ⑥ 10-02 提案（学習データ）: **P1〜P5 は閉じた（第818〜828・全部 `paper { }`／`layout { }` の言語のキー・`--set` は上書き）・残りは作らないと決めた（第828）**。次は P6（SMuFL＝大・別に判断）。**B5 は OMR の `omr verify`（第818 が提案）が出るまで動かない**。OMR 側へのお願い（`breaksOnly` を書く・`part voice` をやめる・TIFF 用の PNG・`omr verify`・記号単位の `confidence`/`candidates`）は OMR の提案書に書いた。配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後。第814 末の決定（下）はこの後。
 
@@ -92,7 +93,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⏸ **perf の島（⒭⁸・⒮*・⒩⁴・⒨・⒯ …）は第615 で区切り＝一時停止（ユーザー判断・忠実度が先）**。本文と掃き終わった島（第434〜第456）の教訓は `HANDOFF-ARCHIVE.md`「§1.0 から移した perf の島」（第660）・閉じた島の一覧は第654 が畳んだ（各便の §1＝ARCHIVE・RULES §5.4 末尾）
 - ★★ **U10 ユーザーのコーパスに*効いていない弦番号*が 473 件（39 冊）**（第486・LYS5003・Lab `sessions/p486/lys5003-corpus.txt`）: 書いた `\N` の弦では弾けない音＝Lily# は黙って別の弦に描く（LP も同じ）。**ユーザー決定「放置」（第523）＝本は直さない・描画は今までと同じ**
 
-- ★ **双子と頁割りが違う実の本の残り 10 冊＝すべて決定済みの族に帰着（第856）→ 総点検を区切って SMuFL へ進むかはユーザー判断**（第856 で I'll Be Over You・You're So Vain＝`c406ab2d2`、Can't Fight This Feeling-tab＝`effefdddb` が LP に一致。計器 Lab `p856/bodies.ps1 -List`＝`p855/lp-lines3.ps1`＋`Zz855PageDump.cs.txt`（Tests に写して build・終わったら消す）・段ごとの pure の箱は `p856/lp-staves.ps1`・掃きの値付けは `p856/price.ps1`（動いた svg の頁ごとの系の数を base／head／LP で並べる））。残る差: ⒜ **tab の数字**（下 +0.377〜0.389・行頭の小節番号 −0.396 も同じ族）＝ユーザー決定 (b) で触らない ⒝ **LP の pure は箱**（行頭と行の残りの 2 区間）＝Lily# は skyline のまま（LILYSHARP-OWN・箱にすると tab の数字の差が行全体に乗り 7 枚が LP から離れた）。まちぶせ line 9 −0.38・OH NO line 13 −0.20 はこの族 ⒞ 読んだ（第856 続き）: Sweet Child-tab line 28〜40＝LP がタイの行き先を別の弦に取り直して描き（「6~1」）その弦の符尾が上に出る＝**タイの行き先を描かない決定の族・直さない**／Something That I Want line 14＝**LP のスラーの pure は切れる前のスラー全体の最高点＋0.5 を、かかる全区間に置く**（slur.cc:74-130・Lily# は片ごと）。直すと line 14 は LP と一致（3.545）するがコーパスの svg は 0 枚動き、試験譜（Lab `p856/slur/gen.ps1 -Hi "c'''"`）では LP 13 行・base 12/1・head 11/2 と**離れた**＝LP はその譜で行頭直後の c''' の NoteColumn の pure を空にしていた（rank 9・25 は空・41 は 6.545）＝**解けた（第856 続き 3）: LP の欠陥**。`Item::pure_y_extent`（item.cc:241-252）は Item の pure の高さを区間を見ずに最初の 1 回でキャッシュする（註が「Items' pure_heights do not depend on start/end」と仮定を自認）。行をまたぐスラーが前の区間で先に NoteColumn に問うと範囲外で空がキャッシュされ、その音は自分の行でも pure から消える。誰が先に問うかは同じ優先度の要素の `std::sort`（非安定）の順＝移植しない（`p856/slur/n12/pg/nc.ly` が NoteColumn だけ先に問うと rank 9 も (0 . 8.045)）。スラー全体の pure の移植自体は slur.cc に忠実だが、コーパスで 0 枚・欠陥の当たる譜では離れる＝**戻したまま**／奏-tab＝行頭のリハーサル記号の pure（LP 6.300・Lily# 行頭 4.68／前の行の残り 3.555）。**記号の規則は LP と同じ**（LP 2.26.0 で 8 通り測った・Lab `p856/mark/gen.ps1`: 行頭の記号は譜線＋0.85 に乗り、行の上端−その小節区間の上端だけ持ち上がる＝第853 の lift。拍子の変化・TabStaff・前の小節の符尾では変わらない）。差は**小節の上端**: LP は 41・42 小節の段の pure の上端が数字だけ（2.880・2.3＝梁が下向き、`pg/stem2.ly` が Beam dir −1 を名指し）、Lily# は 42 小節を 2.250（上向きの梁）と見て lift が 2.745 → 1.125 に減る＝**tab の弦の選び方の帰結**: `ees8\3 ees ees …` を LP は `\3` の 1 音だけ 3 弦 6・残りを最低フレット（2 弦 1）にし梁が下向き、Lily# は `TabFingeringPlanner`（手の位置から声部を計画・2026-09-14 ユーザー指定の LILYSHARP-OWN）が 3 弦 6 に留め梁が上向き＝**決定済み・直さない**。記号の側も直すものが無い ⒟ pure の 2 回目の積みの値段は未測（staff 対のある score でタイか tuplet のある段だけ・perf は一時停止中）
+- ★ **双子と頁割りが違う実の本の残り 10 冊＝すべて決定済みの族に帰着（第856）＝第857 のユーザー決定で総点検は区切った**（第856 で I'll Be Over You・You're So Vain＝`c406ab2d2`、Can't Fight This Feeling-tab＝`effefdddb` が LP に一致。計器 Lab `p856/bodies.ps1 -List`＝`p855/lp-lines3.ps1`＋`Zz855PageDump.cs.txt`（Tests に写して build・終わったら消す）・段ごとの pure の箱は `p856/lp-staves.ps1`・掃きの値付けは `p856/price.ps1`（動いた svg の頁ごとの系の数を base／head／LP で並べる））。残る差: ⒜ **tab の数字**（下 +0.377〜0.389・行頭の小節番号 −0.396 も同じ族）＝ユーザー決定 (b) で触らない ⒝ **LP の pure は箱**（行頭と行の残りの 2 区間）＝Lily# は skyline のまま（LILYSHARP-OWN・箱にすると tab の数字の差が行全体に乗り 7 枚が LP から離れた）。まちぶせ line 9 −0.38・OH NO line 13 −0.20 はこの族 ⒞ 読んだ（第856 続き）: Sweet Child-tab line 28〜40＝LP がタイの行き先を別の弦に取り直して描き（「6~1」）その弦の符尾が上に出る＝**タイの行き先を描かない決定の族・直さない**／Something That I Want line 14＝**LP のスラーの pure は切れる前のスラー全体の最高点＋0.5 を、かかる全区間に置く**（slur.cc:74-130・Lily# は片ごと）。直すと line 14 は LP と一致（3.545）するがコーパスの svg は 0 枚動き、試験譜（Lab `p856/slur/gen.ps1 -Hi "c'''"`）では LP 13 行・base 12/1・head 11/2 と**離れた**＝LP はその譜で行頭直後の c''' の NoteColumn の pure を空にしていた（rank 9・25 は空・41 は 6.545）＝**解けた（第856 続き 3）: LP の欠陥**。`Item::pure_y_extent`（item.cc:241-252）は Item の pure の高さを区間を見ずに最初の 1 回でキャッシュする（註が「Items' pure_heights do not depend on start/end」と仮定を自認）。行をまたぐスラーが前の区間で先に NoteColumn に問うと範囲外で空がキャッシュされ、その音は自分の行でも pure から消える。誰が先に問うかは同じ優先度の要素の `std::sort`（非安定）の順＝移植しない（`p856/slur/n12/pg/nc.ly` が NoteColumn だけ先に問うと rank 9 も (0 . 8.045)）。スラー全体の pure の移植自体は slur.cc に忠実だが、コーパスで 0 枚・欠陥の当たる譜では離れる＝**戻したまま**／奏-tab＝行頭のリハーサル記号の pure（LP 6.300・Lily# 行頭 4.68／前の行の残り 3.555）。**記号の規則は LP と同じ**（LP 2.26.0 で 8 通り測った・Lab `p856/mark/gen.ps1`: 行頭の記号は譜線＋0.85 に乗り、行の上端−その小節区間の上端だけ持ち上がる＝第853 の lift。拍子の変化・TabStaff・前の小節の符尾では変わらない）。差は**小節の上端**: LP は 41・42 小節の段の pure の上端が数字だけ（2.880・2.3＝梁が下向き、`pg/stem2.ly` が Beam dir −1 を名指し）、Lily# は 42 小節を 2.250（上向きの梁）と見て lift が 2.745 → 1.125 に減る＝**tab の弦の選び方の帰結**: `ees8\3 ees ees …` を LP は `\3` の 1 音だけ 3 弦 6・残りを最低フレット（2 弦 1）にし梁が下向き、Lily# は `TabFingeringPlanner`（手の位置から声部を計画・2026-09-14 ユーザー指定の LILYSHARP-OWN）が 3 弦 6 に留め梁が上向き＝**決定済み・直さない**。記号の側も直すものが無い ⒟ pure の 2 回目の積みの値段は未測（staff 対のある score でタイか tuplet のある段だけ・perf は一時停止中）
 - ⚠️ **LP を `-dbackend=svg` で描く計器は `lysc ly --pin-fonts` 必須**（第690〜第695 の 6 本は無しで、数字の幅・高さが汎用 serif だった＝第736 ⑴⑵）。tab の tuplet の残差は全部 beam の決定（`uniformBeamedLength`）の帰結＝第737
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
@@ -118,6 +119,14 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第857セッション（2026-10-08・YT-DELL2）
+
+新しい会話。`-Start p857`（HEAD `85f7d3eee`）＝full **11404 / 0 / 2 / 11406**。§7 3.5 で第855 を ARCHIVE へ。ユーザー「SMuFL に着手・まず文法の提案」。
+- **文法を提案し承認（ユーザー）**: `fonts { music "Bravura" }`（LP も `property-defaults.fonts.music` を同じ alist に持つ・paper-defaults-init.ly:169）。寸法は `layout` ＞ フォントの `engravingDefaults` ＞ LP の既定。見つからなければ警告して Emmentaler。ユーザーの追加: **Emmentaler を SMuFL の形に包んで全音楽フォントを統一的に扱う・SMuFL に無い Emmentaler のパラメータを失わない**。
+- **棚卸し**（subagent・読むだけ）: Emmentaler 由来のデータは生成器 3 本（`audit/scripts/Extract-Emmentaler*.py`）＋brace の段（LP を回して採った）＋実行時の輪郭。SMuFL に無いもの＝LILC の箱・ledger-shortening-range・光学サイズ 8 本・GPOS カーニング・数字の 3 つの切り方・brace の段ほか。表は `docs/smufl-design.md` §3。GRAMMAR へは取り込みの段で入れる（実装の無いキーを載せない）。full **11404 / 0 / 2 / 11406**（docs だけ）。
+
+## 以下は第856セッションの経緯
+
 ### 1.1 第856セッション（2026-10-08・YT-DELL2）
 
 新しい会話。`-Start p856`（HEAD `37fff9ead`）＝full **11400 / 0 / 2 / 11402**。§7 3.5 で第854 を ARCHIVE へ。第855 の次の候補（双子と頁割りが違う実の本 13 冊の残り）から。
@@ -129,15 +138,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **閉じた（`982256bcc`）五線の旗も同じ**（低音部の d, の 8 分で LP 1.400・Lily# 1.375）。`AddEdgeStaffInk` が改ページ用の輪郭を作る間だけ `_pureFlagBoxes` を立て `MergeFlagInk` が箱にする（装飾音の旗は外形のまま）。掃き 18 枚・頁割りの変化 0。網 `AStaffsFlag_IsPricedByItsGlyphsBox_Too`・毒 赤。full **11404 / 0 / 2 / 11406**（+3）。
 - 残る総点検の候補は無い（実の本 11 冊→10 冊はすべて決定済みの族）＝区切って SMuFL へ進むかを改めてユーザーへ。
 - ⚠️ 道具: `refactor1.ps1` が BOM 無しのファイルを BOM 付きと決めつけ先頭の `// ` を削った（CS1040 で気づいた）＝BOM は読んで判定する（`p856/rep.ps1` の形）。`[string]$Log` の型つき引数に配列を代入すると 1 本の文字列になる。
-
-## 以下は第855セッションの経緯
-
-### 1.1 第855セッション（2026-10-08・YT-DELL2）
-
-新しい会話。`-Start p855`（HEAD `67fd7b017`）＝full **11399 / 0 / 2 / 11401**。§7 3.5 で第853 を ARCHIVE へ。第854 の次の候補（System の pure の高さの細部）から。
-- **第854 の ⑴⑵ は計器の読み違い**: `p853/lp-lines2.ps1` と私の `sbegin.ps1` の数の正規表現 `[-+0-9.inf]+` が指数（2.26 は `-5.497659181403769e-4` と刷る）を読めず、その組を落として以後の SBEGIN が 1 つずれていた。直した `p855/lp-lines3.ps1` で You're So Vain の begin は 9 行とも LP と一致（4.044/4.041・3.594/3.594 …）。小さな譜でも `\tempo` は印を消さない（`p855/mk`）。
-- **広い計器**（`p855/bodies.ps1`・14 冊）: 列ごとの差の内訳は §1.0 の次の候補。dump は score の別名で選ぶ（`main` という名前は全 score に当たる＝最初の 1 回はそれで汚れた）。
-- **閉じた（`3f828a4e1`）She Bangs-tab-unfold**: LP の Lyrics と ChordNames は `remove-empty`・`remove-first`（engraver-init.ly:646-647・:719-720）＝語の無い系では行ごと消え、改ページはその行を譜だけで値付けする。Lily# の text row は消えなかった（最小の譜で body 8.9 対 LP 4.0）。text row を RemoveEmpty/RemoveFirst にし、`HaraKiri.IsStaffEmpty` が歌詞の行の音節（と前から続く延長線）を数える。sweep **1/1199**＝その 1 枚が 5/5/10/10/10 → 10/10/10/10（LP 10/10/11/9）。網 `PageBreakTests.ALyricsRowEmptyOnALine_IsNotPricedOnIt`（13 行＝LP と同じ 1 頁・最初の系で行が消え最後の系で残る）・毒 2 本とも赤。full **11400 / 0 / 2 / 11402**（+1）。⚠️ 延長線の規則は LP で測っていない（keepAliveInterfaces の lyric-interface から）。
 
 ## 2. 開いている作業
 

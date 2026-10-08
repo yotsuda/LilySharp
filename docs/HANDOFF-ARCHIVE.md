@@ -129,6 +129,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第855セッションの経緯
+
+### 1.1 第855セッション（2026-10-08・YT-DELL2）
+
+新しい会話。`-Start p855`（HEAD `67fd7b017`）＝full **11399 / 0 / 2 / 11401**。§7 3.5 で第853 を ARCHIVE へ。第854 の次の候補（System の pure の高さの細部）から。
+- **第854 の ⑴⑵ は計器の読み違い**: `p853/lp-lines2.ps1` と私の `sbegin.ps1` の数の正規表現 `[-+0-9.inf]+` が指数（2.26 は `-5.497659181403769e-4` と刷る）を読めず、その組を落として以後の SBEGIN が 1 つずれていた。直した `p855/lp-lines3.ps1` で You're So Vain の begin は 9 行とも LP と一致（4.044/4.041・3.594/3.594 …）。小さな譜でも `\tempo` は印を消さない（`p855/mk`）。
+- **広い計器**（`p855/bodies.ps1`・14 冊）: 列ごとの差の内訳は §1.0 の次の候補。dump は score の別名で選ぶ（`main` という名前は全 score に当たる＝最初の 1 回はそれで汚れた）。
+- **閉じた（`3f828a4e1`）She Bangs-tab-unfold**: LP の Lyrics と ChordNames は `remove-empty`・`remove-first`（engraver-init.ly:646-647・:719-720）＝語の無い系では行ごと消え、改ページはその行を譜だけで値付けする。Lily# の text row は消えなかった（最小の譜で body 8.9 対 LP 4.0）。text row を RemoveEmpty/RemoveFirst にし、`HaraKiri.IsStaffEmpty` が歌詞の行の音節（と前から続く延長線）を数える。sweep **1/1199**＝その 1 枚が 5/5/10/10/10 → 10/10/10/10（LP 10/10/11/9）。網 `PageBreakTests.ALyricsRowEmptyOnALine_IsNotPricedOnIt`（13 行＝LP と同じ 1 頁・最初の系で行が消え最後の系で残る）・毒 2 本とも赤。full **11400 / 0 / 2 / 11402**（+1）。⚠️ 延長線の規則は LP で測っていない（keepAliveInterfaces の lyric-interface から）。
+
 ## 以下は第854セッションの経緯
 
 ### 1.1 第854セッション（2026-10-07・YT-DELL2）
