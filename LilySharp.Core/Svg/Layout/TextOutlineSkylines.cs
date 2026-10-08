@@ -127,7 +127,10 @@ internal static class TextOutlineSkylines
     // Music-glyph profiles, one per (glyph, size, design) — the metronome mark's note
     // pieces, the scripts. The DESIGN is in the key because Emmentaler is optically sized:
     // the 16's accidental is not the 20's scaled, so two grobs at different font-sizes walk
-    // two different outlines (EmmentalerFaces).
+    // two different outlines (MusicFontDesign.Rounded).
+    // ⚠️ KEYED BY WHAT THE GLYPH IS (MusicGlyph), not by the character a font draws it with
+    // — and NOT YET BY THE FONT: the outline is MusicFont.Current's, so when a second font
+    // becomes reachable the font joins this key (the checklist on MusicFont.Current).
     // ⚠️ The HORIZON PADDING is in the key, and the padding happens INSIDE the cached
     // factory: a grob that declares skyline-horizontal-padding (three scripts do) would
     // otherwise pay pad + merge + resolve on every placement, and a script-dense page places
@@ -146,18 +149,18 @@ internal static class TextOutlineSkylines
     // WHERE the glyph sat, because the resolve's epsilons are absolute (measured: one
     // fermata at x = 0/0.5/1/17.5/100/1000 resolved to 35/37/37/33/39/33 buildings).
     private static readonly ConcurrentDictionary<
-        (char Glyph, double Size, int Design, double Pad, double ExtraPad),
+        (MusicGlyph Glyph, double Size, int Design, double Pad, double ExtraPad),
         (SkylineBuilding[] Up, SkylineBuilding[] Down)> MusicProfileCache = new();
 
     /// <summary>
-    /// One music-font (Emmentaler) glyph's outline skylines at
-    /// <paramref name="fontSize"/> (staff spaces, 4.0 = the nominal staff), in the GLYPH's
-    /// own frame — its origin at 0, unplaced; <see cref="PlaceMusicGlyph"/> is the overload
-    /// that puts it somewhere. The SAME walk as
+    /// One music glyph's outline skylines, out of the current music font
+    /// (<see cref="MusicFont.Current"/>), at <paramref name="fontSize"/> (staff spaces,
+    /// 4.0 = the nominal staff), in the GLYPH's own frame — its origin at 0, unplaced;
+    /// <see cref="PlaceMusicGlyph"/> is the overload that puts it somewhere. The SAME walk as
     /// the text overload — LilyPond's named-glyph skyline runs the same freetype
     /// flattening over the glyph outline, and the flattening happens at the
     /// TRANSFORMED size, which is why the size is in the cache key.
-    /// Returns an EMPTY pair when the bundled music font cannot be located — the
+    /// Returns an EMPTY pair when the music font's file cannot be located — the
     /// caller keeps the glyph's designed box.
     /// </summary>
     /// <remarks>
@@ -171,15 +174,16 @@ internal static class TextOutlineSkylines
     /// font cannot be located.
     /// </summary>
     public static (IReadOnlyList<SkylineBuilding> Up, IReadOnlyList<SkylineBuilding> Down)
-        MusicGlyphProfile(char glyph, double fontSize, int design = 0, double horizonPadding = 0.0)
+        MusicGlyphProfile(MusicGlyph glyph, double fontSize, int design = 0, double horizonPadding = 0.0)
         => ResolvedMusicGlyph(glyph, fontSize, design, horizonPadding);
 
     /// <param name="design">
-    /// The Emmentaler design to walk — 0 (or omitted) for the score's own. A grob that
-    /// states a <c>font-size</c> reads ANOTHER design's outline, not this one scaled.
+    /// The optical design to walk (<see cref="MusicFontDesign.Rounded"/>) — 0 (or omitted)
+    /// for the score's own. A grob that states a <c>font-size</c> reads ANOTHER design's
+    /// outline, not this one scaled.
     /// </param>
     public static (VerticalSkyline Up, VerticalSkyline Down) PlaceMusicGlyph(
-        char glyph, double fontSize, double x, double y, int design = 0,
+        MusicGlyph glyph, double fontSize, double x, double y, int design = 0,
         double horizonPadding = 0.0, double extraPad = 0.0)
     {
         var (up, down) = ResolvedMusicGlyph(glyph, fontSize, design, horizonPadding, extraPad);
@@ -198,7 +202,7 @@ internal static class TextOutlineSkylines
     /// it just does not allocate the drop. Every consumer of the pair uses one side.
     /// </remarks>
     public static VerticalSkyline? PlaceMusicGlyphSide(
-        char glyph, double fontSize, double x, double y, VerticalDirection direction,
+        MusicGlyph glyph, double fontSize, double x, double y, VerticalDirection direction,
         int design = 0, double horizonPadding = 0.0, double extraPad = 0.0)
     {
         var (up, down) = ResolvedMusicGlyph(glyph, fontSize, design, horizonPadding, extraPad);
@@ -211,15 +215,16 @@ internal static class TextOutlineSkylines
     }
 
     private static (SkylineBuilding[] Up, SkylineBuilding[] Down) ResolvedMusicGlyph(
-        char glyph, double fontSize, int design, double horizonPadding = 0.0,
+        MusicGlyph glyph, double fontSize, int design, double horizonPadding = 0.0,
         double extraPad = 0.0)
     {
+        var font = MusicFont.Current;
         if (design == 0)
-            design = Rendering.EmmentalerFaces.DefaultDesign;
+            design = font.DesignAt(0).Rounded;
         return MusicProfileCache.GetOrAdd(
-            (glyph, fontSize, design, horizonPadding, extraPad), static key =>
+            (glyph, fontSize, design, horizonPadding, extraPad), static (key, font) =>
         {
-            var path = TextFontMetrics.MusicGlyphPath(key.Glyph, key.Design);
+            var path = font.OutlinePath(key.Glyph, key.Design);
             if (path == null || path.IsEmpty)
                 return (Array.Empty<SkylineBuilding>(), Array.Empty<SkylineBuilding>());
             var (upQuads, downQuads) = FlattenPath(path, key.Size / 1000.0);
@@ -230,7 +235,7 @@ internal static class TextOutlineSkylines
                 Pad(VerticalDirection.Down,
                     Pad(VerticalDirection.Down, Resolve(VerticalDirection.Down, downQuads), key.Pad),
                     key.ExtraPad));
-        });
+        }, font);
     }
 
     /// <summary>

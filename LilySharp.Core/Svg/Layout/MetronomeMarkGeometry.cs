@@ -85,23 +85,21 @@ internal static class MetronomeMarkGeometry
     };
 
     /// <summary>The head glyph's bbox (unscaled, origin at its ink left / centre line).</summary>
-    public static GlyphMetrics.BBox HeadBox(int beatUnit) => Log(beatUnit) switch
-    {
-        0 => MusicFont.Current.FullSize.Box(MusicGlyph.NoteheadWhole),
-        1 => MusicFont.Current.FullSize.Box(MusicGlyph.NoteheadHalf),
-        _ => MusicFont.Current.FullSize.Box(MusicGlyph.NoteheadBlack),
-    };
+    public static GlyphMetrics.BBox HeadBox(int beatUnit) => MusicFont.Current.FullSize.Box(Head(beatUnit));
 
     /// <summary>The head glyph note-by-number engraves for a beat unit: whole (1) =
     /// stemless whole head; 2 = hollow half; 4 and shorter = black head.</summary>
     // LILYPOND-REF: scm/define-markup-commands.scm:5439-5448 get-glyph-name-candidates
     //   — "noteheads.~a~a" with min(log, 2), the "s" series for the default style.
-    public static char HeadGlyph(int beatUnit) => MusicFont.Current.Codepoint(Log(beatUnit) switch
+    public static MusicGlyph Head(int beatUnit) => Log(beatUnit) switch
     {
         0 => MusicGlyph.NoteheadWhole,
         1 => MusicGlyph.NoteheadHalf,
         _ => MusicGlyph.NoteheadBlack,
-    });
+    };
+
+    /// <summary>The character the music font draws <see cref="Head"/> with.</summary>
+    public static char HeadGlyph(int beatUnit) => MusicFont.Current.Codepoint(Head(beatUnit));
 
     /// <summary>Stem top above the HEAD CENTRE, scaled; 0 for the stemless whole.</summary>
     // LILYPOND-REF: scm/define-markup-commands.scm:5566-5569 note-by-number,

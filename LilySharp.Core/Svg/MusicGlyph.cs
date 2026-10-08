@@ -365,6 +365,25 @@ internal static class MusicGlyphs
     public static MusicGlyph TimeSigDigit(int digit)
         => digit is >= 0 and <= 9 ? TimeSigDigits[digit] : MusicGlyph.TimeSig0;
 
+    /// <summary>The time signature digit a character of a meter row spells, or null for a
+    /// character that is not a digit (the compound meter's <c>+</c>, drawn as text).</summary>
+    public static MusicGlyph? TimeSigDigit(char c)
+        => c is >= '0' and <= '9' ? TimeSigDigits[c - '0'] : null;
+
+    /// <summary>Whether <paramref name="glyph"/> is one of the ten plain time signature digits —
+    /// the cut a font kerns among themselves (docs/smufl-design.md §3 #7).</summary>
+    public static bool IsTimeSigDigit(MusicGlyph glyph) => glyph is
+        MusicGlyph.TimeSig0 or MusicGlyph.TimeSig1 or MusicGlyph.TimeSig2 or MusicGlyph.TimeSig3
+        or MusicGlyph.TimeSig4 or MusicGlyph.TimeSig5 or MusicGlyph.TimeSig6 or MusicGlyph.TimeSig7
+        or MusicGlyph.TimeSig8 or MusicGlyph.TimeSig9;
+
+    /// <summary>Whether <paramref name="glyph"/> is one of the seven dynamic letters — the glyphs
+    /// a dynamic label is spelled from, and the cut a font kerns among themselves.</summary>
+    public static bool IsDynamicLetter(MusicGlyph glyph) => glyph is
+        MusicGlyph.DynamicPiano or MusicGlyph.DynamicMezzo or MusicGlyph.DynamicForte
+        or MusicGlyph.DynamicRinforzando or MusicGlyph.DynamicSforzando or MusicGlyph.DynamicZ
+        or MusicGlyph.DynamicNiente;
+
     private static readonly MusicGlyph[] TimeSigDigits =
     [
         MusicGlyph.TimeSig0, MusicGlyph.TimeSig1, MusicGlyph.TimeSig2, MusicGlyph.TimeSig3, MusicGlyph.TimeSig4,

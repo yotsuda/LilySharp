@@ -2268,10 +2268,12 @@ internal static class ArticulationEngraver
         double magnification = 1.0, double extraPad = 0.0)
     {
         bool up = direction == VerticalDirection.Up;
-        if (a.Glyph.Length == 1)
+        // The layout carries the font's CHARACTER (ArticulationItem.GetGlyph); the font gives
+        // the glyph back, and the outline is asked by the glyph.
+        if (a.Glyph.Length == 1 && MusicFont.Current.GlyphOf(a.Glyph[0]) is { } glyph)
         {
             var placed = TextOutlineSkylines.PlaceMusicGlyphSide(
-                a.Glyph[0], WalkSize(a, magnification), a.X, anchorY, direction,
+                glyph, WalkSize(a, magnification), a.X, anchorY, direction,
                 MusicFont.Current.DesignAt(a.FontSizeStep).Rounded,
                 a.SkylineHorizontalPadding, extraPad);
             if (placed != null)
@@ -2286,10 +2288,10 @@ internal static class ArticulationEngraver
         in ArticulationLayout a, double anchorY, double magnification = 1.0,
         double extraPad = 0.0)
     {
-        if (a.Glyph.Length == 1)
+        if (a.Glyph.Length == 1 && MusicFont.Current.GlyphOf(a.Glyph[0]) is { } glyph)
         {
             var (up, down) = TextOutlineSkylines.PlaceMusicGlyph(
-                a.Glyph[0], WalkSize(a, magnification), a.X, anchorY,
+                glyph, WalkSize(a, magnification), a.X, anchorY,
                 MusicFont.Current.DesignAt(a.FontSizeStep).Rounded,
                 a.SkylineHorizontalPadding, extraPad);
             if (!up.IsEmpty || !down.IsEmpty)
@@ -2412,10 +2414,10 @@ internal static class ArticulationEngraver
         double magnification = 1.0)
     {
         bool up = target.Direction == VerticalDirection.Up;
-        if (a.Glyph.Length == 1)
+        if (a.Glyph.Length == 1 && MusicFont.Current.GlyphOf(a.Glyph[0]) is { } glyph)
         {
             var profile = TextOutlineSkylines.MusicGlyphProfile(
-                a.Glyph[0], WalkSize(a, magnification),
+                glyph, WalkSize(a, magnification),
                 MusicFont.Current.DesignAt(a.FontSizeStep).Rounded,
                 a.SkylineHorizontalPadding);
             var resolved = up ? profile.Up : profile.Down;

@@ -51,7 +51,7 @@ internal static partial class EmmentalerGlyphs
     /// <summary>Emmentaler's accidental for a resolved kind — <see cref="MusicGlyphs.Accidental"/>.</summary>
     public static char AccidentalGlyph(string? kind) => Char(MusicGlyphs.Accidental(kind));
 
-    /// <summary>Emmentaler's time signature digit — <see cref="MusicGlyphs.TimeSigDigit"/>.</summary>
+    /// <summary>Emmentaler's time signature digit — <see cref="MusicGlyphs.TimeSigDigit(int)"/>.</summary>
     public static char GetTimeSigDigit(int digit) => Char(MusicGlyphs.TimeSigDigit(digit));
 
     /// <summary>Emmentaler's rest — <see cref="MusicGlyphs.Rest"/>.</summary>

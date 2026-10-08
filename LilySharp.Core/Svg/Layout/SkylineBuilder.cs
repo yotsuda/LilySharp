@@ -580,7 +580,7 @@ internal sealed class SkylineBuilder
         // Placed through the RESOLVED-buildings cache below — a clef outline is hundreds
         // of contour edges and this seed runs per (staff, skyline build): spacing builds,
         // the below-pass profiles, the chord/lyric lookups all pay it.
-        var (down, up) = GlyphMetrics.ClefVerticalSkylineQuads(glyph);
+        var (down, up) = MusicFont.Current.FullSize.VerticalSkylineQuads(glyph);
         // The line the glyph sits on, through THIS staff's own spaces.
         double aboveMiddle = size.Span(aboveMiddleStaff);
         // ⚠️ X here is the glyph ORIGIN. The outline carries its own left edge from there
@@ -637,16 +637,16 @@ internal sealed class SkylineBuilder
     /// is what the Clef declares, and it is what routes a clef through the outline at all.
     /// </para>
     /// </remarks>
-    private static (string Glyph, double AboveMiddle) ClefGlyph(ClefType clef) => clef switch
+    private static (MusicGlyph Glyph, double AboveMiddle) ClefGlyph(ClefType clef) => clef switch
     {
-        ClefType.Bass or ClefType.Bass8Below => ("F", 1.0),
-        ClefType.Alto => ("C", 0.0),
-        ClefType.Tenor => ("C", 1.0),
-        ClefType.Soprano => ("C", -2.0),
-        ClefType.MezzoSoprano => ("C", -1.0),
-        ClefType.Baritone => ("C", 2.0),
-        ClefType.Percussion => ("C", 0.0),
-        _ => ("G", -1.0),
+        ClefType.Bass or ClefType.Bass8Below => (MusicGlyph.FClef, 1.0),
+        ClefType.Alto => (MusicGlyph.CClef, 0.0),
+        ClefType.Tenor => (MusicGlyph.CClef, 1.0),
+        ClefType.Soprano => (MusicGlyph.CClef, -2.0),
+        ClefType.MezzoSoprano => (MusicGlyph.CClef, -1.0),
+        ClefType.Baritone => (MusicGlyph.CClef, 2.0),
+        ClefType.Percussion => (MusicGlyph.CClef, 0.0),
+        _ => (MusicGlyph.GClef, -1.0),
     };
 
     /// <remarks>
@@ -1131,7 +1131,7 @@ internal sealed class SkylineBuilder
         string kind = GlyphMetrics.RestoreMainOf(accidental) ?? accidental;
         var bbox = GlyphMetrics.GetAccidentalBBox(font, kind);
         var (up, down) = TextOutlineSkylines.MusicGlyphProfile(
-            MusicFont.Current.Codepoint(MusicGlyphs.Accidental(kind)),
+            MusicGlyphs.Accidental(kind),
             size.Span(Rendering.SharedRenderer.FontSize
                       * GrobFontSize.ScaleOf(item, SizedGrob.Accidental)),
             GrobFontSize.DesignOf(item, SizedGrob.Accidental));
@@ -1433,7 +1433,7 @@ internal sealed class SkylineBuilder
                     if (noteValue >= 8 && MusicGlyphs.Flag(noteValue, stemUp) is { } flagGlyph)
                     {
                         var (flagUp, flagDown) = TextOutlineSkylines.MusicGlyphProfile(
-                            MusicFont.Current.Codepoint(flagGlyph), Rendering.SharedRenderer.FontSize);
+                            flagGlyph, Rendering.SharedRenderer.FontSize);
                         // ⚠️ The half-blot Y has no observer (session 812): the tab test reads
                         // the outline's shape, and an up flag's outline tops out under the tip.
                         double flagX = x + halfStem;
@@ -2942,7 +2942,7 @@ internal sealed class SkylineBuilder
                 // outline's own bearing (≤ 0.104) moves no point — the sixteenth's high right
                 // end stays clear of the next staff's stem either way.
                 var (restUp, restDown) = TextOutlineSkylines.MusicGlyphProfile(
-                    MusicFont.Current.Codepoint(restGlyph), size.Span(Rendering.SharedRenderer.FontSize));
+                    restGlyph, size.Span(Rendering.SharedRenderer.FontSize));
                 if (restUp.Count > 0 || restDown.Count > 0)
                 {
                     upSkyline.Merge(restUp, x, restOriginUp);
@@ -3129,7 +3129,7 @@ internal sealed class SkylineBuilder
         // of its own first: an accidental's outline is about eight buildings and a staff
         // carries hundreds of them (see VerticalSkyline.Merge's own remark for the measurement).
         var (up, down) = TextOutlineSkylines.MusicGlyphProfile(
-            MusicFont.Current.Codepoint(MusicGlyphs.Accidental(accidental)),
+            MusicGlyphs.Accidental(accidental),
             size.Span(Rendering.SharedRenderer.FontSize));
         if (up.Count > 0 || down.Count > 0)
         {
@@ -3187,7 +3187,6 @@ internal sealed class SkylineBuilder
     {
         if (MusicGlyphs.Flag(noteValue, stemUp) is not { } flagGlyph)
             return;
-        char glyph = MusicFont.Current.Codepoint(flagGlyph);
         // The page breaker's silhouette: a full-size flag's BOX, its pure height
         // (AddTabStemsAndBeamsToSkylines carries the same rule and its measurement).
         // MEASURED (2.26.0, Lab sessions/p856/net/n.lys, a bass-clef d, eighth): the rest-of-line
@@ -3202,11 +3201,11 @@ internal sealed class SkylineBuilder
         }
         var (up, down) = graceItem is { } item
             ? TextOutlineSkylines.MusicGlyphProfile(
-                glyph,
+                flagGlyph,
                 size.Span(Rendering.SharedRenderer.FontSize * GrobFontSize.ScaleOf(item, SizedGrob.Flag)),
                 GrobFontSize.DesignOf(item, SizedGrob.Flag))
             : TextOutlineSkylines.MusicGlyphProfile(
-                glyph, size.Span(Rendering.SharedRenderer.FontSize));
+                flagGlyph, size.Span(Rendering.SharedRenderer.FontSize));
         if (up.Count > 0 || down.Count > 0)
         {
             upSkyline.Merge(up, originX, originUp);

@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Frozen;
 using static LilySharp.Core.Svg.Layout.GlyphMetrics;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -118,6 +119,38 @@ internal abstract class MusicFont
     /// (<see cref="MusicFontDesign.Rounded"/>), unscaled; a font with one design answers it for
     /// every number.</summary>
     public abstract MusicFontDesign Design(int rounded);
+
+    /// <summary>The glyph the font draws with <paramref name="codepoint"/>, or null for a
+    /// character that is none of its glyphs — the inverse of <see cref="Codepoint"/>.</summary>
+    /// <remarks>For a layout that still carries a glyph as the font's CHARACTER
+    /// (<c>ArticulationLayout.Glyph</c>, written by <c>ArticulationItem.GetGlyph</c> through
+    /// <see cref="Current"/>) and needs the glyph back to ask the font for its outline.
+    /// ⚠️ Two glyphs may share a character (Emmentaler draws the augmentation dot and the repeat
+    /// dot with one <c>dots.dot</c>); the answer is then the first in
+    /// <see cref="MusicGlyphs.Table"/> order — the same drawing either way.</remarks>
+    public abstract MusicGlyph? GlyphOf(char codepoint);
+
+    /// <summary>
+    /// The GPOS pair kern between two adjacent glyphs of a text run, in the DESIGN's staff
+    /// spaces — 0 for a pair the font does not kern (docs/smufl-design.md §3 #7, an
+    /// EXTENSION: SMuFL metadata has no kerning).
+    /// </summary>
+    /// <remarks>A kern adjusts the FIRST glyph's own advance, so it goes inside the per-glyph
+    /// device-pixel snap and never after it (<see cref="FetaTextRun"/>). Emmentaler kerns the
+    /// fetaText dynamic letters among themselves and the plain digits among themselves
+    /// (<see cref="GlyphMetrics.DynamicLetterKern"/>, <see cref="GlyphMetrics.MeterDigitKern"/>);
+    /// a pair across the two cuts is 0.</remarks>
+    public abstract double Kern(MusicGlyph first, MusicGlyph second);
+
+    /// <summary>
+    /// The outline of <paramref name="glyph"/> in the optical design numbered
+    /// <paramref name="rounded"/>, at 1000 units per em — the frame
+    /// <c>TextFontMetrics.OutlinePath</c> serves for text, and what the runtime skyline walk
+    /// flattens (<see cref="TextOutlineSkylines"/>). Null when the font's file cannot be
+    /// located; a glyph the face does not have comes back as its glyph 0, which is the
+    /// caller's <c>IsEmpty</c> check.
+    /// </summary>
+    public abstract SkiaSharp.SKPath? OutlinePath(MusicGlyph glyph, int rounded);
 }
 
 /// <summary>One design of a <see cref="MusicFont"/> — the table its dimensions are read from.</summary>
@@ -174,6 +207,33 @@ internal abstract class MusicFontDesign
     public (double X, double Y) StemDownAttachment(MusicGlyph glyph)
         => Metrics(glyph).StemDown ?? throw Missing(glyph, "down-stem anchor");
 
+    /// <summary>
+    /// The (LEFT, RIGHT) horizontal skyline pair of an accidental or an accidental paren, from
+    /// THIS design's own outline, in the glyph's own frame (X from the glyph origin, Y centred
+    /// on the note) and the DESIGN's own staff spaces — unmagnified even on a
+    /// <see cref="MusicFont.SizedAt"/> design: the caller composes in the design's spaces and
+    /// applies the magnification once at the end, as it does to the boxes
+    /// (<c>AccidentalPlacement.GlyphSkylinePair</c>).
+    /// </summary>
+    /// <remarks>⚠️ THE SAME DESIGN AS THE BOX. A glyph's box and its skyline are two readings of
+    /// ONE face; taking them from different designs is the metric-versus-ink split, invisible
+    /// in both halves separately — which is why the skyline is asked of the design the box
+    /// came from and not of a table by number.</remarks>
+    public abstract (HorizontalSkyline Left, HorizontalSkyline Right) HorizontalSkylinePair(MusicGlyph glyph);
+
+    /// <summary>
+    /// The (DOWN, UP) vertical skyline of <paramref name="glyph"/>, as raw sign-framed
+    /// buildings in the glyph's own frame (X from the glyph origin, Y from the line it sits on
+    /// or its baseline) — the clefs, the dynamic letters, the trill line's element and the
+    /// sustain-pedal pieces, which LilyPond reads from the stencil outline
+    /// (<c>grob::always-vertical-skylines-from-stencil</c>). <c>default</c> when the font
+    /// bakes no outline for the glyph.
+    /// </summary>
+    /// <remarks>Raw rather than a built skyline because every seat wants it at a different x,
+    /// y and staff size, and a <see cref="VerticalSkyline"/> is mutable; the readers resolve
+    /// once per (array, size) and place copies.</remarks>
+    public abstract (double[] Down, double[] Up) VerticalSkylineQuads(MusicGlyph glyph);
+
     private static InvalidOperationException Missing(MusicGlyph glyph, string what)
         => new($"the music font has no {what} for {MusicGlyphs.SmuflName(glyph)}");
 }
@@ -205,6 +265,40 @@ internal sealed class EmmentalerMusicFont : MusicFont
 
     /// <inheritdoc/>
     public override char Codepoint(MusicGlyph glyph) => MusicGlyphs.Of(glyph).EmmentalerCode;
+
+    /// <inheritdoc/>
+    public override MusicGlyph? GlyphOf(char codepoint)
+        => ByCodepoint.TryGetValue(codepoint, out var glyph) ? glyph : null;
+
+    // The first row wins where two share a character (the remark on MusicFont.GlyphOf).
+    private static readonly FrozenDictionary<char, MusicGlyph> ByCodepoint = BuildByCodepoint();
+
+    private static FrozenDictionary<char, MusicGlyph> BuildByCodepoint()
+    {
+        var map = new Dictionary<char, MusicGlyph>();
+        foreach (var e in MusicGlyphs.Table)
+            map.TryAdd(e.EmmentalerCode, e.Glyph);
+        return map.ToFrozenDictionary();
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>The generated GPOS tables (<c>GlyphSkylinesGenerated.cs</c>), keyed by the
+    /// fetaText characters they were extracted for — the dynamic letters' among themselves,
+    /// the plain digits' among themselves.</remarks>
+    public override double Kern(MusicGlyph first, MusicGlyph second)
+    {
+        if (MusicGlyphs.IsDynamicLetter(first) && MusicGlyphs.IsDynamicLetter(second))
+            return DynamicLetterKern(Codepoint(first), Codepoint(second));
+        if (MusicGlyphs.IsTimeSigDigit(first) && MusicGlyphs.IsTimeSigDigit(second))
+            return MeterDigitKern(Codepoint(first), Codepoint(second));
+        return 0.0;
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>The bundled <c>emmentaler-&lt;rounded&gt;.otf</c>, through the one measurement
+    /// loader (<see cref="Rendering.TextFontMetrics.MusicGlyphPath"/>).</remarks>
+    public override SkiaSharp.SKPath? OutlinePath(MusicGlyph glyph, int rounded)
+        => Rendering.TextFontMetrics.MusicGlyphPath(Codepoint(glyph), rounded);
 
     /// <inheritdoc/>
     /// <remarks>LILYPOND-REF: lily/font-select.cc:115-186 select_font — ported as
@@ -262,6 +356,45 @@ internal sealed class EmmentalerMusicFont : MusicFont
         public override MusicFontDesign Scaled(double factor) => new EmmentalerDesign(Table.Scaled(factor));
 
         public override MusicGlyphMetrics Metrics(MusicGlyph glyph) => _metrics[(int) glyph];
+
+        /// <inheritdoc/>
+        /// <remarks>The baked pairs of this design's number (<c>GlyphSkylinesGenerated.cs</c>).
+        /// A glyph the generator bakes no pair for reads the natural's — the generated
+        /// accessor's own fallback, and what the quarter-tone accidentals have always read.</remarks>
+        public override (HorizontalSkyline Left, HorizontalSkyline Right) HorizontalSkylinePair(MusicGlyph glyph) => glyph switch
+        {
+            MusicGlyph.AccidentalParensLeft => AccidentalParenSkylinePair(leftParen: true, Table.Rounded),
+            MusicGlyph.AccidentalParensRight => AccidentalParenSkylinePair(leftParen: false, Table.Rounded),
+            _ => AccidentalSkylinePair(AccidentalKindOf(glyph), Table.Rounded),
+        };
+
+        // The generated accessor is keyed by the resolved accidental kind — the inverse of
+        // MusicGlyphs.Accidental for the five it bakes.
+        private static string AccidentalKindOf(MusicGlyph glyph) => glyph switch
+        {
+            MusicGlyph.AccidentalSharp => "sharp",
+            MusicGlyph.AccidentalFlat => "flat",
+            MusicGlyph.AccidentalDoubleSharp => "doubleSharp",
+            MusicGlyph.AccidentalDoubleFlat => "doubleFlat",
+            _ => "natural",
+        };
+
+        /// <inheritdoc/>
+        /// <remarks>⚠️ Emmentaler bakes these for the 20 design alone (the generator's header:
+        /// nothing selects another design for a clef, a dynamic letter, the trill element or
+        /// the pedal word), so every design answers the 20's — as the flat accessors did.</remarks>
+        public override (double[] Down, double[] Up) VerticalSkylineQuads(MusicGlyph glyph) => glyph switch
+        {
+            MusicGlyph.GClef => ClefVerticalSkylineQuads("G"),
+            MusicGlyph.FClef => ClefVerticalSkylineQuads("F"),
+            MusicGlyph.CClef => ClefVerticalSkylineQuads("C"),
+            MusicGlyph.WiggleTrill => TrillElementVerticalSkylineQuads(),
+            MusicGlyph.KeyboardPedalPed or MusicGlyph.KeyboardPedalDot or MusicGlyph.KeyboardPedalUp
+                => PedalGlyphVerticalSkylineQuads(MusicGlyphs.Of(glyph).EmmentalerCode),
+            _ when MusicGlyphs.IsDynamicLetter(glyph)
+                => DynamicLetterVerticalSkylineQuads(MusicGlyphs.Of(glyph).EmmentalerCode),
+            _ => default,
+        };
     }
 
     /// <summary>

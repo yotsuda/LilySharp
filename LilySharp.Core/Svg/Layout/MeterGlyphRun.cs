@@ -149,7 +149,7 @@ internal static class MeterGlyphRun
     /// </remarks>
     internal static ImmutableArray<Piece> Pieces(ScoreTextMetrics fonts, string text)
     {
-        var run = FetaTextRun.Pieces(text, TryGetDigit, FallbackEm(fonts), GlyphMetrics.MeterDigitKern);
+        var run = FetaTextRun.Pieces(text, TryGetDigit, FallbackEm(fonts), DigitKern);
         var pieces = ImmutableArray.CreateBuilder<Piece>(run.Length);
         foreach (var p in run) pieces.Add(new Piece(p.Ch, p.X, p.Advance, p.IsGlyph));
         return pieces.ToImmutable();
@@ -157,7 +157,15 @@ internal static class MeterGlyphRun
 
     /// <summary>The row's advance width in staff spaces.</summary>
     internal static double Width(ScoreTextMetrics fonts, string text)
-        => FetaTextRun.Width(text, TryGetDigit, FallbackEm(fonts), GlyphMetrics.MeterDigitKern);
+        => FetaTextRun.Width(text, TryGetDigit, FallbackEm(fonts), DigitKern);
+
+    /// <summary>The GPOS kern between two adjacent plain digits of the row, asked of the music
+    /// font (docs/smufl-design.md §3 #7) — 0 when either character is not a digit (the compound
+    /// meter's <c>+</c>, which falls back to text).</summary>
+    private static double DigitKern(char first, char second)
+        => MusicGlyphs.TimeSigDigit(first) is { } a && MusicGlyphs.TimeSigDigit(second) is { } b
+            ? MusicFont.Current.Kern(a, b)
+            : 0.0;
 
     /// <summary>
     /// The glyph, its outline box and its UNHINTED advance for one meter digit.

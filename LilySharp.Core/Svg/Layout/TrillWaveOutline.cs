@@ -154,7 +154,7 @@ internal static class TrillWaveOutline
     private static (SkylineBuilding[] Up, SkylineBuilding[] Down) Resolved(int count)
         => Cache.GetOrAdd(count, static n =>
         {
-            var (dQuads, uQuads) = GlyphMetrics.TrillElementVerticalSkylineQuads();
+            var (dQuads, uQuads) = MusicFont.Current.FullSize.VerticalSkylineQuads(MusicGlyph.WiggleTrill);
             var up = new VerticalSkyline(VerticalDirection.Up);
             var down = new VerticalSkyline(VerticalDirection.Down);
             // The i-th copy's ORIGIN: the run is shifted so copy 0's outline starts at 0,

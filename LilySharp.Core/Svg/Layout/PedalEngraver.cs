@@ -176,7 +176,7 @@ internal static class PedalEngraver
             var down = new VerticalSkyline(VerticalDirection.Down);
             foreach (var g in glyphs)
             {
-                var (dQ, uQ) = GlyphMetrics.PedalGlyphVerticalSkylineQuads(g.Glyph);
+                var (dQ, uQ) = MusicFont.Current.FullSize.VerticalSkylineQuads(g.Glyph);
                 up.Merge(VerticalSkyline.FromGlyphOutline(
                     VerticalDirection.Up, uQ, StaffSize.FullSize, x0 + g.X, 0));
                 down.Merge(VerticalSkyline.FromGlyphOutline(

@@ -331,7 +331,7 @@ internal static class MusicMarkEngraver
 
     /// <summary>One glyph of a sustain-pedal word, and its LEFT edge in staff spaces from
     /// the word's own origin.</summary>
-    internal readonly record struct PedalGlyphPlacement(char Glyph, double X);
+    internal readonly record struct PedalGlyphPlacement(MusicGlyph Glyph, char Codepoint, double X);
 
     /// <summary>
     /// The stencil LilyPond builds for a sustain-pedal word: the glyphs, the total width
@@ -402,7 +402,7 @@ internal static class MusicMarkEngraver
             else continue;
 
             var box = PedalGlyphBox(glyph);
-            into?.Add(new PedalGlyphPlacement(font.Codepoint(glyph), x));
+            into?.Add(new PedalGlyphPlacement(glyph, font.Codepoint(glyph), x));
             x += box.Width;
             top = Math.Max(top, box.Top);
         }

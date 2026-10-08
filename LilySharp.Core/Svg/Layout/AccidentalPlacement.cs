@@ -348,11 +348,11 @@ internal sealed class AccidentalPlacement
             // grob's own stencil) — so its baked outlines are composed here the same way
             // the paren glyphs are composed below, in the same frame GetAccidentalBBox
             // uses (origin at the natural's).
-            var (natLeft, natRight) = GlyphMetrics.AccidentalSkylinePair("natural", font.Rounded);
+            var (natLeft, natRight) = design.HorizontalSkylinePair(MusicGlyph.AccidentalNatural);
             left = natLeft.Clone();
             right = natRight.Clone();
             double dx = GlyphMetrics.RestoreMainOffset(design, restoreMain);
-            var (mainLeft, mainRight) = GlyphMetrics.AccidentalSkylinePair(restoreMain, font.Rounded);
+            var (mainLeft, mainRight) = design.HorizontalSkylinePair(MusicGlyphs.Accidental(restoreMain));
             var ml = mainLeft.Clone();
             ml.Raise(dx);
             left.Merge(ml);
@@ -362,7 +362,7 @@ internal sealed class AccidentalPlacement
         }
         else
         {
-            var (bakedLeft, bakedRight) = GlyphMetrics.AccidentalSkylinePair(accidental, font.Rounded);
+            var (bakedLeft, bakedRight) = design.HorizontalSkylinePair(MusicGlyphs.Accidental(accidental));
             left = bakedLeft.Clone();
             right = bakedRight.Clone();
         }
@@ -373,9 +373,9 @@ internal sealed class AccidentalPlacement
             // LILC extent with 0 padding — open's RIGHT at the accidental's LEFT, close's
             // LEFT at its RIGHT. Raise() is the X translation of a horizontal skyline.
             MergeParen(left, right, leftParen: true,
-                bbox.Left - design.Box(MusicGlyph.AccidentalParensLeft).Right, font.Rounded);
+                bbox.Left - design.Box(MusicGlyph.AccidentalParensLeft).Right, design);
             MergeParen(left, right, leftParen: false,
-                bbox.Right - design.Box(MusicGlyph.AccidentalParensRight).Left, font.Rounded);
+                bbox.Right - design.Box(MusicGlyph.AccidentalParensRight).Left, design);
         }
         else if (accidental is "flat" or "doubleFlat" or "naturalFlat")
         {
@@ -427,9 +427,10 @@ internal sealed class AccidentalPlacement
     /// <summary>Merges one paren glyph's baked outline skylines, translated to
     /// <paramref name="dx"/> in the accidental's frame, into the accidental's pair.</summary>
     private static void MergeParen(
-        HorizontalSkyline left, HorizontalSkyline right, bool leftParen, double dx, int design)
+        HorizontalSkyline left, HorizontalSkyline right, bool leftParen, double dx, MusicFontDesign design)
     {
-        var (parenLeft, parenRight) = GlyphMetrics.AccidentalParenSkylinePair(leftParen, design);
+        var (parenLeft, parenRight) = design.HorizontalSkylinePair(
+            leftParen ? MusicGlyph.AccidentalParensLeft : MusicGlyph.AccidentalParensRight);
         var pl = parenLeft.Clone();
         pl.Raise(dx);
         left.Merge(pl);

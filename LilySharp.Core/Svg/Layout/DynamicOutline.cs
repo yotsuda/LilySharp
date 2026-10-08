@@ -127,8 +127,12 @@ internal static class DynamicOutline
         string text)
         => Cache.GetOrAdd(text, static t =>
         {
+            // ⚠️ Keyed by the text alone: the letters are the current music font's, so the font
+            // joins this key when a second one becomes reachable (MusicFont.Current's checklist).
+            var font = MusicFont.Current;
+            var full = font.FullSize;
             foreach (char c in t)
-                if (GlyphMetrics.DynamicLetterAdvance(c) is null)
+                if (MusicGlyphs.DynamicLetter(c) is null)
                     return null;    // not a fetaText dynamic letter
 
             var up = new VerticalSkyline(VerticalDirection.Up);
@@ -136,8 +140,8 @@ internal static class DynamicOutline
             double pen = 0;
             for (int i = 0; i < t.Length; i++)
             {
-                char c = t[i];
-                var (dQuads, uQuads) = GlyphMetrics.DynamicLetterVerticalSkylineQuads(c);
+                var letter = MusicGlyphs.DynamicLetter(t[i])!.Value;
+                var (dQuads, uQuads) = full.VerticalSkylineQuads(letter);
                 up.Merge(VerticalSkyline.FromGlyphOutline(
                     VerticalDirection.Up, uQuads, StaffSize.FullSize, pen, 0));
                 down.Merge(VerticalSkyline.FromGlyphOutline(
@@ -149,9 +153,9 @@ internal static class DynamicOutline
                 // LILYPOND-REF: lily/pango-font.cc:345-362 Pango_font::pango_item_string_stencil
                 //   takes the X extent from pango_glyph_string_extents' LOGICAL rect over the
                 //   SHAPED run — so kerning and the per-glyph hint are already in it.
-                double advance = GlyphMetrics.DynamicLetterAdvance(c)!.Value;
+                double advance = full.Advance(letter);
                 if (i + 1 < t.Length)
-                    advance += GlyphMetrics.DynamicLetterKern(c, t[i + 1]);
+                    advance += font.Kern(letter, MusicGlyphs.DynamicLetter(t[i + 1])!.Value);
                 pen += Rendering.TextFontMetrics.QuantiseToPangoPixel(advance);
             }
             return (up.Buildings.ToArray(), down.Buildings.ToArray(), pen);

@@ -837,7 +837,7 @@ internal static partial class SharedRenderer
                     MusicMarkEngraver.SustainPedalStencil(m.Text);
                 double pedalLeft = m.X - pedalWidth / 2;   // the mark's anchor is its centre
                 foreach (var g in pedalGlyphs)
-                    gc.DrawGlyph(g.Glyph, pedalLeft + g.X, absY, FontSize, Color.Black);
+                    gc.DrawGlyph(g.Codepoint, pedalLeft + g.X, absY, FontSize, Color.Black);
                 return;
             }
             gc.DrawText(m.Text, m.X, absY, MusicMarkEngraver.PlainMarkEm(fonts, m.MarkType), TextRole.Pedal,

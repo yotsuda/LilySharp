@@ -1675,7 +1675,7 @@ internal sealed class RenderedGeometry
     {
         var wanted = word is null
             ? null
-            : MusicMarkEngraver.SustainPedalStencil(word).Glyphs.Select(g => g.Glyph).ToList();
+            : MusicMarkEngraver.SustainPedalStencil(word).Glyphs.Select(g => g.Codepoint).ToList();
         var pedalGlyphs = Glyphs
             .Where(g => g.Glyph is EmmentalerGlyphs.PedalPed or EmmentalerGlyphs.PedalDot
                                 or EmmentalerGlyphs.PedalStar)

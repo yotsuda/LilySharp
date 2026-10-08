@@ -169,7 +169,7 @@
 - **:374** hands the scorer the band it would have had without the digit. No book reaches that
 - **:2054** them as markup — so there is no LP geometry to port and no ledger point can observe
 - **:2222** see the difference, and no fixture and no ledger point reaches it.
-- **:3023** box per duration, which Lily# does not read for this purpose. No ledger point observes
+- **:3025** box per duration, which Lily# does not read for this purpose. No ledger point observes
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:111** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
@@ -221,7 +221,7 @@
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
 - **:1437** ⚠️ The half-blot Y has no observer (session 812): the tab test reads
 - **:2941** ⚠️ NO OBSERVER for the X origin (poisons, session 813): shifting it by the
-- **:3444** ⚠️ NO OBSERVER for this arm's half-blot Y nor its up-skyline merge (poisons,
+- **:3443** ⚠️ NO OBSERVER for this arm's half-blot Y nor its up-skyline merge (poisons,
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
 - **:56** the distance is taken at — and NO ledger point moves with it. An output change no point
 ### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
@@ -388,7 +388,7 @@
 - **:133** X offset of a bend-up's curve from the fret digit on a TAB staff. LILYSHARP-OWN (above).
 - **:135** X gap between a bend-up's curve and the notehead's right edge. LILYSHARP-OWN (above).
 - **:137** X offset for a curve that arrives FROM THE LEFT (scoop/plop). LILYSHARP-OWN (above).
-- **:2516** LILYSHARP-OWN (2026-09-28, defect seen on the owner's "Shape chords" book: the Cm diagram's
+- **:2518** LILYSHARP-OWN (2026-09-28, defect seen on the owner's "Shape chords" book: the Cm diagram's
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:128** LILYSHARP-OWN (owner's decision 2026-09-27: "the diagram stands below the name, between
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`

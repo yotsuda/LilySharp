@@ -2995,7 +2995,7 @@ internal static class OutsideStaffStacker
 
                 double noteSize = MetronomeMarkGeometry.NoteSize(fonts);
                 double noteScale = MetronomeMarkGeometry.NoteScale(fonts);
-                void MergeGlyph(char g, double gx, double gy, GlyphMetrics.BBox box)
+                void MergeGlyph(MusicGlyph g, double gx, double gy, GlyphMetrics.BBox box)
                 {
                     var (gUp, gDown) = TextOutlineSkylines.PlaceMusicGlyph(
                         g, noteSize, gx, gy);
@@ -3039,7 +3039,7 @@ internal static class OutsideStaffStacker
                     var headBox = MetronomeMarkGeometry.HeadBox(m.TempoBeatUnit);
                     int tempoLog = MetronomeMarkGeometry.Log(m.TempoBeatUnit);
                     double centreY = anchor - headBox.Bottom * noteScale;
-                    MergeGlyph(MetronomeMarkGeometry.HeadGlyph(m.TempoBeatUnit),
+                    MergeGlyph(MetronomeMarkGeometry.Head(m.TempoBeatUnit),
                         tx, centreY, headBox);
                     if (tempoLog > 0)
                     {
@@ -3053,11 +3053,11 @@ internal static class OutsideStaffStacker
                         tDown.MergeBox(stemRight - stemTh, stemRight,
                             centreY + att.Y * noteScale, stemTop);
                         if (tempoLog >= 3)
-                            MergeGlyph(MusicFont.Current.Codepoint(MusicGlyph.Flag8thUp),
+                            MergeGlyph(MusicGlyph.Flag8thUp,
                                 stemRight - stemTh / 2, stemTop, MusicFont.Current.FullSize.Box(MusicGlyph.Flag8thUp));
                     }
                     for (int d = 0; d < m.TempoDots; d++)
-                        MergeGlyph(MusicFont.Current.Codepoint(MusicGlyph.AugmentationDot),
+                        MergeGlyph(MusicGlyph.AugmentationDot,
                             tx + MetronomeMarkGeometry.DotX(fonts, m.TempoBeatUnit, d), centreY,
                             MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot));
 

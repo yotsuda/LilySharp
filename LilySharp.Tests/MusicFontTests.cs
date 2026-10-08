@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using LilySharp.Core.Rendering;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Layout;
 using Xunit;
@@ -186,5 +187,105 @@ public class MusicFontTests
         Assert.Equal(table.NoteheadBlack, design.Metrics(MusicGlyph.NoteheadBlack).DesignBox);
         Assert.Equal(table.NoteheadBlackOutline, design.Metrics(MusicGlyph.NoteheadBlack).OutlineBox);
         Assert.Equal(table.NoteheadBlackAdvance, design.Metrics(MusicGlyph.NoteheadBlack).Advance);
+    }
+
+    /// <summary>
+    /// The baked skylines and GPOS kerns (<c>GlyphSkylinesGenerated.cs</c>) are reached through
+    /// the wrap, table for table — "nothing Emmentaler has is lost" for the outline tables and
+    /// docs/smufl-design.md §3 #7. Reference equality: the wrap hands out the generated arrays
+    /// themselves, which the readers' identity-keyed caches rely on.
+    /// </summary>
+    [Fact]
+    public void EveryBakedSkylineAndKern_IsReachedByAGlyph()
+    {
+        var font = EmmentalerMusicFont.Instance;
+        var accidentals = new[]
+        {
+            ("sharp", MusicGlyph.AccidentalSharp), ("flat", MusicGlyph.AccidentalFlat),
+            ("natural", MusicGlyph.AccidentalNatural), ("doubleSharp", MusicGlyph.AccidentalDoubleSharp),
+            ("doubleFlat", MusicGlyph.AccidentalDoubleFlat),
+        };
+        foreach (var (rounded, _) in EmmentalerDesignSize.Designs)
+        {
+            var design = font.Design(rounded);
+            Assert.Equal(rounded, design.Rounded);
+            foreach (var (kind, glyph) in accidentals)
+            {
+                var want = GlyphMetrics.AccidentalSkylinePair(kind, rounded);
+                var got = design.HorizontalSkylinePair(glyph);
+                Assert.Same(want.Left, got.Left);
+                Assert.Same(want.Right, got.Right);
+            }
+            foreach (var (leftParen, glyph) in new[]
+                     { (true, MusicGlyph.AccidentalParensLeft), (false, MusicGlyph.AccidentalParensRight) })
+            {
+                var want = GlyphMetrics.AccidentalParenSkylinePair(leftParen, rounded);
+                var got = design.HorizontalSkylinePair(glyph);
+                Assert.Same(want.Left, got.Left);
+                Assert.Same(want.Right, got.Right);
+            }
+            // The quarter-tone accidentals have no baked pair and read the natural's, as before.
+            Assert.Same(GlyphMetrics.AccidentalSkylinePair("natural", rounded).Left,
+                design.HorizontalSkylinePair(MusicGlyph.AccidentalQuarterToneSharpStein).Left);
+        }
+
+        var full = font.FullSize;
+        foreach (var (kind, glyph) in new[] { ("G", MusicGlyph.GClef), ("F", MusicGlyph.FClef), ("C", MusicGlyph.CClef) })
+        {
+            var want = GlyphMetrics.ClefVerticalSkylineQuads(kind);
+            var got = full.VerticalSkylineQuads(glyph);
+            Assert.Same(want.Down, got.Down);
+            Assert.Same(want.Up, got.Up);
+        }
+        Assert.Same(GlyphMetrics.TrillElementVerticalSkylineQuads().Up,
+            full.VerticalSkylineQuads(MusicGlyph.WiggleTrill).Up);
+        foreach (char c in "pmfrszn")
+        {
+            var want = GlyphMetrics.DynamicLetterVerticalSkylineQuads(c);
+            var got = full.VerticalSkylineQuads(MusicGlyphs.DynamicLetter(c)!.Value);
+            Assert.NotNull(want.Up);
+            Assert.Same(want.Down, got.Down);
+            Assert.Same(want.Up, got.Up);
+        }
+        foreach (var glyph in new[] { MusicGlyph.KeyboardPedalPed, MusicGlyph.KeyboardPedalDot, MusicGlyph.KeyboardPedalUp })
+        {
+            var want = GlyphMetrics.PedalGlyphVerticalSkylineQuads(font.Codepoint(glyph));
+            var got = full.VerticalSkylineQuads(glyph);
+            Assert.NotNull(want.Up);
+            Assert.Same(want.Down, got.Down);
+            Assert.Same(want.Up, got.Up);
+        }
+        Assert.Equal(default, full.VerticalSkylineQuads(MusicGlyph.NoteheadBlack));
+
+        foreach (char a in "pmfrszn")
+            foreach (char b in "pmfrszn")
+                Assert.Equal(GlyphMetrics.DynamicLetterKern(a, b),
+                    font.Kern(MusicGlyphs.DynamicLetter(a)!.Value, MusicGlyphs.DynamicLetter(b)!.Value));
+        foreach (char a in "0123456789")
+            foreach (char b in "0123456789")
+                Assert.Equal(GlyphMetrics.MeterDigitKern(a, b),
+                    font.Kern(MusicGlyphs.TimeSigDigit(a)!.Value, MusicGlyphs.TimeSigDigit(b)!.Value));
+        // Across the two cuts, and for any other pair, no kern; a non-digit is no digit.
+        Assert.Equal(0.0, font.Kern(MusicGlyph.DynamicForte, MusicGlyph.TimeSig4));
+        Assert.Equal(0.0, font.Kern(MusicGlyph.Fingering1, MusicGlyph.Fingering0));
+        Assert.Null(MusicGlyphs.TimeSigDigit('+'));
+    }
+
+    /// <summary>The outline the skyline walk flattens is the design's own file, and the
+    /// character a layout still carries comes back as its glyph.</summary>
+    [Fact]
+    public void TheOutline_IsTheDesignsOwnFile_AndACharacterComesBackAsItsGlyph()
+    {
+        var font = EmmentalerMusicFont.Instance;
+        var path = font.OutlinePath(MusicGlyph.NoteheadBlack, 20);
+        var want = TextFontMetrics.MusicGlyphPath(font.Codepoint(MusicGlyph.NoteheadBlack), 20);
+        Assert.NotNull(path);
+        Assert.NotNull(want);
+        Assert.Equal(want!.Bounds, path!.Bounds);
+        Assert.Equal(MusicGlyph.NoteheadBlack, font.GlyphOf(font.Codepoint(MusicGlyph.NoteheadBlack)));
+        Assert.Equal(MusicGlyph.DynamicForte, font.GlyphOf('f'));
+        // The two dots share one Emmentaler character; the first row of the table answers.
+        Assert.Equal(MusicGlyph.AugmentationDot, font.GlyphOf(font.Codepoint(MusicGlyph.RepeatDot)));
+        Assert.Null(font.GlyphOf('Q'));
     }
 }
