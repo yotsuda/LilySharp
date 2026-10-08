@@ -146,11 +146,18 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
      （const → プロパティ。読み手は全部式の中）。字 → グリフは `MusicGlyphs.DynamicLetter(char)`／`Figbass(char)` の 1 か所。
      GlyphMetrics.cs に残る生の定数は `StemUpSE`／`StemDownNW`（読み手 0・手の 0.168＝§3 #16）と `RestMaximaWidth`（§3 #16・
      生成器が rests.M3 を出さない）だけ。掃き 1199 枚・差 0。
-   - 残り（族ごと）: ⑴ グリフを `char` で運ぶモデル（数字と強弱の glyph run・`ArticulationItem.Glyph`・ペダル・メトロノーム・
-     和音名の臨時記号・`SkylineBuilder` の `EmmentalerGlyphs.Get*`）⑵ 設計番号の読み手（`EmmentalerDesignSize.ForFontSizeStep(..).Rounded`
-     を輪郭 skyline の鍵にする 11 か所 → `MusicFont.DesignAt(step).Rounded`）
-     ⑶ 文字をキーにした表（`SkylineBuilder`・`GlyphSkylinesGenerated` のカーニング・`TextOutlineSkylines`）⑷ 面の選択（`MusicFace(rounded)`・
-     SVG の WOFF2・PDF・PNG の Emmentaler 固定の名前）⑸ brace の段。
+   - ✅ **グリフを `char` で運ぶモデル（第859・`d74a5566d`）**: 生成された表と `MusicGlyph` の表の外で `EmmentalerGlyphs.X` を
+     読む行は 0（コメントだけ）。型 → グリフは `ArticulationItem.GlyphOf(type, isAbove)`、字 → グリフは `MusicGlyphs.Fingering`／
+     `Figbass`／`DynamicLetter`、字は常に `MusicFont.Current.Codepoint(g)`。モデルは今も `char` を運ぶが、その字は current の
+     フォントのもの＝取り込みの段で「字をキーにした cache はフォントも鍵に」（`MusicFont.Current` の註）を踏む。
+     `EmmentalerGlyphs.Get*` はテストが呼ぶので残る。掃き 1199 枚・差 0。
+   - ✅ **設計番号の読み手（第859・`3c6bca578`）**: `EmmentalerDesignSize.ForFontSizeStep(step).Rounded` を輪郭 skyline・`MusicFace`
+     の鍵にしていた 11 か所 → `MusicFont.Current.DesignAt(step).Rounded`。Emmentaler は同じ数・1 設計のフォントは自分の 1 つ
+     （⑷ の面の選択はそれを受ける）。`EmmentalerDesignSize.ForFontSizeStep` の読み手は `GlyphMetrics.ForFontSizeStep` と包みだけ。掃き 1199 枚・差 0。
+   - 残り（族ごと）: ⑶ 文字をキーにした表（`SkylineBuilder`・`GlyphSkylinesGenerated` のカーニングとペダルの skyline・
+     `TextOutlineSkylines`＝字と設計番号で引く cache は、取り込みの段でフォントも鍵に）⑷ 面の選択（`MusicFace(rounded)`・SVG の WOFF2・
+     PDF・PNG の Emmentaler 固定の名前＝`MusicFont` が face の名前と埋め込むフォントを答える形に）⑸ brace の段（`BraceLadderGenerated`＝
+     §3 #10 の拡張欄）。
 2. **取り込み**: metadata の JSON と OTF を読む・§1 の解決順・文法（GRAMMAR §2.4・SYNTAX_REFERENCE・LSP の補完・
    TextMate）・診断・`--set music=`。**同梱するか（§7 C）はこの段の前に決める。**
 3. **出力**: 埋め込み・`boxes.json`・双子の警告。
