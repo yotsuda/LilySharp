@@ -234,6 +234,16 @@ internal abstract class MusicFont
     /// −5 would shrink them a second time.</remarks>
     public virtual double TextCutStep(MusicGlyph glyph, double lilyPondStep) => lilyPondStep;
 
+    /// <summary>
+    /// Whether the font's <see cref="MusicGlyph.KeyboardPedalPed"/> carries its own period, so
+    /// that the "." after "Ped" in a sustain-pedal word is already drawn.
+    /// </summary>
+    /// <remarks>Emmentaler's <c>pedal.Ped</c> stops at the "d" and LilyPond pastes
+    /// <c>pedal..</c> after it (lily/sustain-pedal.cc:47-76); SMuFL's <c>keyboardPedalPed</c>
+    /// is the whole "Ped." (the dotless form is a glyph of its own,
+    /// <c>keyboardPedalPedNoDot</c>).</remarks>
+    public virtual bool PedalPedCarriesItsPeriod => false;
+
     // ---- constants LilyPond wrote for Emmentaler's shapes (docs/smufl-design.md §3 #17) ----
 
     /// <summary>

@@ -370,6 +370,9 @@ internal sealed class SmuflMusicFont : MusicFont
     public override double TextCutStep(MusicGlyph glyph, double lilyPondStep) => 0.0;
 
     /// <inheritdoc/>
+    public override bool PedalPedCarriesItsPeriod => true;
+
+    /// <inheritdoc/>
     /// <remarks>LilyPond applies this by the glyph's NAME to whatever font draws it, so a SMuFL
     /// font takes Emmentaler's answer (§3 #17's "輪郭から（要設計）" is the better one).</remarks>
     public override double StemSidePaddingFraction(MusicGlyph glyph)

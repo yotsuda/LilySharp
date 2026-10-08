@@ -395,6 +395,10 @@ internal static class MusicMarkEngraver
             {
                 glyph = MusicGlyph.KeyboardPedalPed;
                 i += 2;   // with the loop's own i++ this is LilyPond's `i += 2`
+                // A SMuFL "Ped" glyph is "Ped." whole: its period is not pasted a second time
+                // (MusicFont.PedalPedCarriesItsPeriod; Lab sessions/p869 drew "Ped..").
+                if (font.PedalPedCarriesItsPeriod && i + 1 < text.Length && text[i + 1] == '.')
+                    i++;
             }
             else if (text[i] == '.') glyph = MusicGlyph.KeyboardPedalDot;
             else if (text[i] == '*') glyph = MusicGlyph.KeyboardPedalUp;

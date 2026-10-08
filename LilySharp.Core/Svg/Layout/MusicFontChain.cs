@@ -222,6 +222,9 @@ internal sealed class MusicFontChain : MusicFont
         => OwnerOf(glyph).TextCutStep(glyph, lilyPondStep);
 
     /// <inheritdoc/>
+    public override bool PedalPedCarriesItsPeriod => OwnerOf(MusicGlyph.KeyboardPedalPed).PedalPedCarriesItsPeriod;
+
+    /// <inheritdoc/>
     public override double StemSidePaddingFraction(MusicGlyph glyph)
         => OwnerOf(glyph).StemSidePaddingFraction(glyph);
 

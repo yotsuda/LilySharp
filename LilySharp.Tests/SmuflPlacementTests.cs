@@ -165,6 +165,24 @@ public class SmuflPlacementTests
         Assert.True(Math.Abs(signMiddle - wordMiddle) < 0.1, $"{font}: the sign's middle is {signMiddle - wordMiddle:F3} off the word's");
     }
 
+    [Theory]
+    [InlineData("Emmentaler", 3)]   // pedal.Ped, pedal.. and pedal.*
+    [InlineData("Bravura", 2)]      // keyboardPedalPed is "Ped." whole, then keyboardPedalUp
+    [InlineData("Leland", 2)]
+    [InlineData("Petaluma", 2)]
+    public void ThePedalWord_DrawsItsPeriodOnce(string font, int glyphs)
+    {
+        var tree = SyntaxTree.Parse(
+            $"fonts {{ music \"{font}\" }}\n" +
+            "part m { clef treble pedal text }\n" +
+            "section A { m { c'4@sustain d' e' f'@!sustain | } }\n" +
+            "form main { A }\n" +
+            "score main { staff m }\n");
+        var pedal = BoxesGenerator.GenerateDocument(tree, RenderSpecParser.FindFirst(tree))
+            .Pages.SelectMany(p => p.Symbols).Where(s => s.Kind == "pedal").ToList();
+        Assert.Equal(glyphs, pedal.Count);
+    }
+
     [Fact]
     public void Emmentalers_Wiggles_KeepTheirLilcBoxes()
     {
