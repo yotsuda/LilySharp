@@ -122,7 +122,14 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
    - **生成器の表に寸法の無いグリフ**（32 分以下の旗・1/4 音の記号・短い／長いフェルマータ・portato・踵とつま先・stopped・
      thumb・maxima・打楽器と tab の変更記号・拍子の数字の箱）は、読み手が手の規則を持つ＝その族を移すときに §3 #16 として拾う。
      生成器を回すには fontTools が要る（この機械には無い）。
-   - 次: 読み手を族ごとに移す。最初は描画の口（`IDrawingContext.DrawGlyph(char)` の呼び手が `MusicGlyph` で頼む形）。
+   - ✅ **描画の口（第858）**: グリフの決め方（`MusicGlyphs.Notehead`／`Rest`／`Flag`／`Accidental`／`TimeSigDigit`）を
+     フォントから切り離し、`MusicFont.Current`（`EngravingStyle` と同じくスレッドに保持）が文字に変える。
+     `SharedRenderer` の 50 か所が `Music(glyph)` を通る。`EmmentalerGlyphs.Get*` は配置の表を引く Emmentaler の文字として残す。
+     掃き 1199 枚・差 0。
+   - 残り（族ごと）: ⑴ グリフを `char` で運ぶモデル（数字と強弱の glyph run・`ArticulationItem.Glyph`・ペダル・メトロノーム・
+     和音名の臨時記号）⑵ 寸法の読み手（`GlyphMetrics.X` の名前つきの値と `ForFontSizeStep` → `MusicFont.DesignAt(..).Metrics(g)`）
+     ⑶ 文字をキーにした表（`SkylineBuilder`・`GlyphSkylinesGenerated` のカーニング）⑷ 面の選択（`MusicFace(rounded)`・
+     SVG の WOFF2・PDF・PNG の Emmentaler 固定の名前）⑸ brace の段。
 2. **取り込み**: metadata の JSON と OTF を読む・§1 の解決順・文法（GRAMMAR §2.4・SYNTAX_REFERENCE・LSP の補完・
    TextMate）・診断・`--set music=`。**同梱するか（§7 C）はこの段の前に決める。**
 3. **出力**: 埋め込み・`boxes.json`・双子の警告。
