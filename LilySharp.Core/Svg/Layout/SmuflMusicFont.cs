@@ -311,7 +311,30 @@ internal sealed class SmuflMusicFont : MusicFont
             s = s with { BarLineHairThickness = v / LilyPondLineThickness };
         if (Free(EngravingKeys.BarLineThickThickness, "thickBarlineThickness", out v))
             s = s with { BarLineThickThickness = v / LilyPondLineThickness };
+        // A down flag rises from the stem's end toward the head: what this font's eighth and
+        // sixteenth reach above Emmentaler's lengthens their down stems by as much
+        // (StemDetails.DownFlagExtensions). The 32nd and shorter grow DOWNWARD in SMuFL (their
+        // tops stay the sixteenth's) while LilyPond's lengths grow for Emmentaler's, so they take none.
+        s = s with { DownFlagStemExtension = (FlagExcess(MusicGlyph.Flag8thDown), FlagExcess(MusicGlyph.Flag16thDown)) };
         return s;
+    }
+
+    /// <summary>How much less room this font's <paramref name="flag"/> leaves under a black head
+    /// than Emmentaler's at the same stem length — the flag's outline top above its origin (the
+    /// stem's end) plus the head's depth below its centre, each less Emmentaler's; never below 0.</summary>
+    /// <remarks>The tip-to-head clearance is the stem's length less those two, so a font with a
+    /// taller flag (all three bundled) or a deeper head (Petaluma's ±0.66 against ±0.5) takes their
+    /// sum back.</remarks>
+    private double FlagExcess(MusicGlyph flag)
+    {
+        if (!Has(flag) || !Has(MusicGlyph.NoteheadBlack)
+            || _design.Metrics(flag).OutlineBox is not { } mine
+            || _design.Metrics(MusicGlyph.NoteheadBlack).OutlineBox is not { } head)
+            return 0.0;
+        var emmentaler = EmmentalerMusicFont.Instance.FullSize;
+        double flagExcess = mine.Top - emmentaler.Outline(flag).Top;
+        double headExcess = emmentaler.Outline(MusicGlyph.NoteheadBlack).Bottom - head.Bottom;
+        return Math.Max(0.0, flagExcess + headExcess);
     }
 
     /// <summary>LilyPond's paper <c>line-thickness</c> at its default staff, in staff spaces —

@@ -87,6 +87,19 @@ public sealed record StemDetails
     public double LengthFraction { get; init; } = 1.0;
 
     /// <summary>
+    /// How much longer a DOWN stem carrying a flag is drawn, by duration log − 3 (eighth,
+    /// sixteenth) — empty for LilyPond's own font.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: <c>lengths</c> is LilyPond's table for Emmentaler's flags. A down flag
+    /// rises from the stem's end toward the head, and a SMuFL font's is taller (Bravura's eighth
+    /// reaches 3.23 above it, Emmentaler's 2.80), so at LilyPond's length its tip touched the
+    /// head on a shortened stem (Lab sessions/p869). The font's excess is added so the head keeps
+    /// the clearance LilyPond's own flag leaves (<see cref="EngravingStyle.DownFlagStemExtension"/>).
+    /// </remarks>
+    public double[] DownFlagExtensions { get; init; } = [];
+
+    /// <summary>
     /// Whether this stem REFUSES to be lengthened to reach the middle staff line.
     /// </summary>
     /// <remarks>
@@ -212,6 +225,10 @@ public static class StemCalculator
             double shorten = Math.Clamp(shorteningStep * whichStep, 0, shortenProperty); // half-spaces
             length -= shorten / 2.0; // half-spaces -> staff-spaces
         }
+
+        // A down flag taller than LilyPond's (StemDetails.DownFlagExtensions; empty for Emmentaler).
+        if (!stemUp && durationLog >= 3 && durationLog - 3 < d.DownFlagExtensions.Length)
+            length += d.DownFlagExtensions[durationLog - 3];
 
         // LILYPOND-REF: stem.cc:557 — length *= length-fraction.
         length *= d.LengthFraction;

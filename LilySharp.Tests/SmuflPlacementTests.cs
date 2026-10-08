@@ -202,6 +202,26 @@ public class SmuflPlacementTests
         Assert.True(Math.Abs((four.Box[1] + four.Box[3]) / 2 - top - 3.0) < 0.1, $"{font}: the 4's centre {(four.Box[1] + four.Box[3]) / 2 - top:F3} below the top line");
     }
 
+    [Theory]
+    [InlineData("b'8 r8 r4 r2")]                  // on the middle line: the shortened down stem
+    [InlineData("<g' b' d''>8 r8 r4 r2")]         // a chord: the stem leaves the top head
+    [InlineData("b'16 r16 r8 r4 r2")]
+    public void ADownFlag_KeepsLilyPondsClearanceFromItsHead_InEveryFont(string music)
+    {
+        // A SMuFL down flag rises further than Emmentaler's (Bravura's eighth 3.23 above the
+        // stem's end, Emmentaler's 2.80), and at LilyPond's stem length its tip touched the head.
+        double Gap(string font)
+        {
+            var symbols = Symbols(font, music);
+            var flag = Assert.Single(symbols, s => s.Kind == "flag");
+            double headBottom = symbols.Where(s => s.Kind == "notehead").Max(s => s.Box[3]);
+            return flag.Box[1] - headBottom;
+        }
+        double lilyPond = Gap("Emmentaler");
+        foreach (string font in new[] { "Bravura", "Leland", "Petaluma" })
+            Assert.True(Gap(font) >= lilyPond - 0.05, $"{font}: the flag stands {Gap(font):F3} under the head, Emmentaler's {lilyPond:F3}");
+    }
+
     [Fact]
     public void Emmentalers_Wiggles_KeepTheirLilcBoxes()
     {

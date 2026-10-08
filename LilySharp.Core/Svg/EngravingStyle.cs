@@ -109,6 +109,11 @@ public sealed record EngravingStyle
     /// replaces this one there, as an override in a lower context does in LilyPond.</remarks>
     public double StemLengthFraction { get; init; } = 1.0;
 
+    /// <summary>How much longer a down stem with an eighth's or a sixteenth's flag is drawn, in
+    /// staff spaces — 0 for LilyPond's own font; a music font with taller flags sets it
+    /// (<see cref="Layout.StemDetails.DownFlagExtensions"/>).</summary>
+    internal (double Eighth, double Sixteenth) DownFlagStemExtension { get; init; }
+
     /// <summary><c>Beam.beam-thickness</c>, in staff spaces.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm Beam (beam-thickness . 0.48), read by
     /// lily/beam.cc:130-145 Beam::get_beam_translation and the quanter.</remarks>
@@ -209,9 +214,14 @@ public sealed record EngravingStyle
             _previousBeam = t_beam;
             bool isDefault = style.Equals(Default);
             t_current = isDefault ? null : style;
-            t_stem = isDefault || style.StemLengthFraction == 1.0
+            var flags = style.DownFlagStemExtension;
+            t_stem = isDefault || (style.StemLengthFraction == 1.0 && flags == default)
                 ? null
-                : DefaultStemDetails with { LengthFraction = style.StemLengthFraction };
+                : DefaultStemDetails with
+                {
+                    LengthFraction = style.StemLengthFraction,
+                    DownFlagExtensions = flags == default ? [] : [flags.Eighth, flags.Sixteenth],
+                };
             t_beam = isDefault || style.BeamDamping == BeamQuantParameters.Default.Damping
                 ? null
                 : BeamParametersAt(style.BeamDamping);

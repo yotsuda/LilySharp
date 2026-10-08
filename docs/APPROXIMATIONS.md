@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 219 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **345** | |
+| `OWN` | 220 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **346** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（219 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（220 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **:90** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
@@ -518,7 +518,7 @@
 - **:1743** LILYSHARP-OWN (2026-09-28). Until then the diagram was merged with the other scripts at
 ### `LilySharp.Core/Svg/Layout/SmuflMusicFont.cs`
 - **:277** LILYSHARP-OWN: LilyPond reads no SMuFL font, so this restatement is the engine's own, and
-- **:368** LILYSHARP-OWN: LilyPond reads no SMuFL font; the choice is the font designer's size over
+- **:391** LILYSHARP-OWN: LilyPond reads no SMuFL font; the choice is the font designer's size over
 ### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
 - **:324** LILYSHARP-OWN: the bar line's box is grown toward THIS column only. LilyPond grows it
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
@@ -534,6 +534,8 @@
 ### `LilySharp.Core/Svg/Layout/StanzaNumberEngraver.cs`
 - **:163** LILYSHARP-OWN: LilyPond makes ONE number, where \set stanza changed; Lily# labels
 - **:193** every verse number in the same column, clear of the bar. LILYSHARP-OWN: the
+### `LilySharp.Core/Svg/Layout/StemCalculator.cs`
+- **:94** LILYSHARP-OWN: lengths is LilyPond's table for Emmentaler's flags. A down flag
 ### `LilySharp.Core/Svg/Layout/TabChordColumns.cs`
 - **:39** LILYSHARP-OWN, all of it, and LilyPond cannot be asked: its tab digits are small enough
 - **:72** LILYSHARP-OWN, tuned on request (2026-08-06): each run's zigzag PHASE puts the
