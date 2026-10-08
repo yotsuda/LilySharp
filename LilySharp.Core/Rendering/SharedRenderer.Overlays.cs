@@ -161,7 +161,7 @@ internal static partial class SharedRenderer
                 continue;
             }
             // Bartók (snap) pizzicato takes the ordinary glyph path below: it is the
-            // font's scripts.snappizzicato (EmmentalerGlyphs.ScriptSnappizzicato), not
+            // font's scripts.snappizzicato (MusicGlyph.PluckedSnapPizzicatoAbove), not
             // primitives — see ArticulationItem's SnapPizz mapping.
             // …and from the design that font-size selects: an editorial accidental is the
             // 16 design's own outline (the same one ArticulationEngraver.ScriptSkylines

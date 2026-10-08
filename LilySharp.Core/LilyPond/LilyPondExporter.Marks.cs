@@ -72,7 +72,7 @@ public sealed partial class LilyPondExporter
                 // A NOTEHEAD STYLE is a property of the NoteHead grob, set before the note like
                 // the feathered beam below — `\once`, so it reaches every head of a chord at
                 // this moment and nothing after. The page's glyphs are LilyPond's own
-                // (EmmentalerGlyphs.GetNotehead: noteheads.s2cross, s2diamond, …). Until
+                // (MusicGlyphs.Notehead: noteheads.s2cross, s2diamond, …). Until
                 // 2026-10-02 every @notehead was "dropped (out of scope)".
                 // LILYPOND-REF: lily/note-head.cc internal_print — glyph "noteheads.s" +
                 //   min(duration-log, 2) + the style symbol.

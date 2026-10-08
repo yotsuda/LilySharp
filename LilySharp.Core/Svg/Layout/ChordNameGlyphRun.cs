@@ -414,14 +414,15 @@ internal static class ChordNameGlyphRun
     /// <summary>The glyph and its page-space box for an alteration in half steps.</summary>
     private static (char Glyph, GlyphMetrics.BBox Box) GlyphFor(int alteration, double step)
     {
-        var m = MusicFont.Current.SizedAt(step);
-        return alteration switch
+        var font = MusicFont.Current;
+        var g = alteration switch
         {
-            >= 2 => (EmmentalerGlyphs.AccidentalDoubleSharp, m.Box(MusicGlyph.AccidentalDoubleSharp)),
-            1 => (EmmentalerGlyphs.AccidentalSharp, m.Box(MusicGlyph.AccidentalSharp)),
-            -1 => (EmmentalerGlyphs.AccidentalFlat, m.Box(MusicGlyph.AccidentalFlat)),
-            _ => (EmmentalerGlyphs.AccidentalDoubleFlat, m.Box(MusicGlyph.AccidentalDoubleFlat)),
+            >= 2 => MusicGlyph.AccidentalDoubleSharp,
+            1 => MusicGlyph.AccidentalSharp,
+            -1 => MusicGlyph.AccidentalFlat,
+            _ => MusicGlyph.AccidentalDoubleFlat,
         };
+        return (font.Codepoint(g), font.SizedAt(step).Box(g));
     }
 
     /// <summary>

@@ -96,12 +96,12 @@ internal static class MetronomeMarkGeometry
     /// stemless whole head; 2 = hollow half; 4 and shorter = black head.</summary>
     // LILYPOND-REF: scm/define-markup-commands.scm:5439-5448 get-glyph-name-candidates
     //   — "noteheads.~a~a" with min(log, 2), the "s" series for the default style.
-    public static char HeadGlyph(int beatUnit) => Log(beatUnit) switch
+    public static char HeadGlyph(int beatUnit) => MusicFont.Current.Codepoint(Log(beatUnit) switch
     {
-        0 => EmmentalerGlyphs.NoteheadWhole,
-        1 => EmmentalerGlyphs.NoteheadHalf,
-        _ => EmmentalerGlyphs.NoteheadBlack,
-    };
+        0 => MusicGlyph.NoteheadWhole,
+        1 => MusicGlyph.NoteheadHalf,
+        _ => MusicGlyph.NoteheadBlack,
+    });
 
     /// <summary>Stem top above the HEAD CENTRE, scaled; 0 for the stemless whole.</summary>
     // LILYPOND-REF: scm/define-markup-commands.scm:5566-5569 note-by-number,
@@ -269,7 +269,7 @@ internal static class MetronomeMarkGeometry
         void Note(double head, double stemTopU)
         {
             pieces.Add(new SwingPiece(SwingPieceKind.Head, head, headCentre,
-                Glyph: EmmentalerGlyphs.NoteheadBlack));
+                Glyph: MusicFont.Current.Codepoint(MusicGlyph.NoteheadBlack)));
             double sc = StemCentre(head);
             pieces.Add(new SwingPiece(SwingPieceKind.Rule, sc - th / 2, headCentre + att.Y * r,
                 sc + th / 2, stemTopU * r));
@@ -302,11 +302,11 @@ internal static class MetronomeMarkGeometry
         Note(t2, TupletStemTopU);
         if (sixteenths)
             pieces.Add(new SwingPiece(SwingPieceKind.Flag, StemCentre(t1) + th / 2, FlagOriginU * r,
-                Glyph: EmmentalerGlyphs.Flag8thUp));
+                Glyph: MusicFont.Current.Codepoint(MusicGlyph.Flag8thUp)));
         var lastFlag = sixteenths ? MusicFont.Current.FullSize.Box(MusicGlyph.Flag16thUp) : MusicFont.Current.FullSize.Box(MusicGlyph.Flag8thUp);
         double flagX = StemCentre(t2) + th / 2;
         pieces.Add(new SwingPiece(SwingPieceKind.Flag, flagX, FlagOriginU * r,
-            Glyph: sixteenths ? EmmentalerGlyphs.Flag16thUp : EmmentalerGlyphs.Flag8thUp));
+            Glyph: MusicFont.Current.Codepoint(sixteenths ? MusicGlyph.Flag16thUp : MusicGlyph.Flag8thUp)));
 
         // The bracket spans the stems, its number centred in a gap of the line.
         double bL = StemCentre(t1) - 0.2818 * r, bR = StemCentre(t2) + 0.2818 * r;

@@ -160,25 +160,14 @@ internal static class FiguredBassGlyphRun
     private static bool TryGetFigure(double step, char c, out char glyph, out GlyphMetrics.BBox outline,
         out double advance)
     {
-        var f = Font(step);
-        (glyph, outline, advance) = c switch
+        if (MusicGlyphs.Figbass(c) is not { } g)
         {
-            '0' => (EmmentalerGlyphs.FigBassDigit0, f.Outline(MusicGlyph.Figbass0), f.Advance(MusicGlyph.Figbass0)),
-            '1' => (EmmentalerGlyphs.FigBassDigit1, f.Outline(MusicGlyph.Figbass1), f.Advance(MusicGlyph.Figbass1)),
-            '2' => (EmmentalerGlyphs.FigBassDigit2, f.Outline(MusicGlyph.Figbass2), f.Advance(MusicGlyph.Figbass2)),
-            '3' => (EmmentalerGlyphs.FigBassDigit3, f.Outline(MusicGlyph.Figbass3), f.Advance(MusicGlyph.Figbass3)),
-            '4' => (EmmentalerGlyphs.FigBassDigit4, f.Outline(MusicGlyph.Figbass4), f.Advance(MusicGlyph.Figbass4)),
-            '5' => (EmmentalerGlyphs.FigBassDigit5, f.Outline(MusicGlyph.Figbass5), f.Advance(MusicGlyph.Figbass5)),
-            '6' => (EmmentalerGlyphs.FigBassDigit6, f.Outline(MusicGlyph.Figbass6), f.Advance(MusicGlyph.Figbass6)),
-            '7' => (EmmentalerGlyphs.FigBassDigit7, f.Outline(MusicGlyph.Figbass7), f.Advance(MusicGlyph.Figbass7)),
-            '8' => (EmmentalerGlyphs.FigBassDigit8, f.Outline(MusicGlyph.Figbass8), f.Advance(MusicGlyph.Figbass8)),
-            '9' => (EmmentalerGlyphs.FigBassDigit9, f.Outline(MusicGlyph.Figbass9), f.Advance(MusicGlyph.Figbass9)),
-            '♭' => (EmmentalerGlyphs.FigBassFlat, f.Outline(MusicGlyph.FigbassFlat), f.Advance(MusicGlyph.FigbassFlat)),
-            '♮' => (EmmentalerGlyphs.FigBassNatural, f.Outline(MusicGlyph.FigbassNatural), f.Advance(MusicGlyph.FigbassNatural)),
-            '♯' => (EmmentalerGlyphs.FigBassSharp, f.Outline(MusicGlyph.FigbassSharp), f.Advance(MusicGlyph.FigbassSharp)),
-            _ => ('\0', default, 0.0),
-        };
-        return glyph != '\0';
+            (glyph, outline, advance) = ('\0', default, 0.0);
+            return false;
+        }
+        var f = Font(step);
+        (glyph, outline, advance) = (MusicFont.Current.Codepoint(g), f.Outline(g), f.Advance(g));
+        return true;
     }
 
     /// <summary>The run's advance width in staff spaces.</summary>

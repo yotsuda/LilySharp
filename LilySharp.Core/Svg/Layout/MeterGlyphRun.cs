@@ -180,7 +180,7 @@ internal static class MeterGlyphRun
             advance = 0.0;
             return false;
         }
-        glyph = EmmentalerGlyphs.GetTimeSigDigit(c - '0');
+        glyph = MusicFont.Current.Codepoint(MusicGlyphs.TimeSigDigit(c - '0'));
         advance = GlyphMetrics.UnquantisedMeterDigitAdvance(Font, c - '0');
         return true;
     }

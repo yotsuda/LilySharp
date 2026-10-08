@@ -1131,7 +1131,7 @@ internal sealed class SkylineBuilder
         string kind = GlyphMetrics.RestoreMainOf(accidental) ?? accidental;
         var bbox = GlyphMetrics.GetAccidentalBBox(font, kind);
         var (up, down) = TextOutlineSkylines.MusicGlyphProfile(
-            EmmentalerGlyphs.AccidentalGlyph(kind),
+            MusicFont.Current.Codepoint(MusicGlyphs.Accidental(kind)),
             size.Span(Rendering.SharedRenderer.FontSize
                       * GrobFontSize.ScaleOf(item, SizedGrob.Accidental)),
             GrobFontSize.DesignOf(item, SizedGrob.Accidental));
@@ -1430,10 +1430,10 @@ internal sealed class SkylineBuilder
                     //   grob::always-vertical-skylines-from-stencil;
                     //   lily/flag.cc:183-196 Flag::internal_calc_y_offset.
                     int noteValue = GlyphMetrics.NoteValueOf(item);
-                    if (noteValue >= 8 && EmmentalerGlyphs.GetFlag(noteValue, stemUp) is { } flagGlyph)
+                    if (noteValue >= 8 && MusicGlyphs.Flag(noteValue, stemUp) is { } flagGlyph)
                     {
                         var (flagUp, flagDown) = TextOutlineSkylines.MusicGlyphProfile(
-                            flagGlyph, Rendering.SharedRenderer.FontSize);
+                            MusicFont.Current.Codepoint(flagGlyph), Rendering.SharedRenderer.FontSize);
                         // ⚠️ The half-blot Y has no observer (session 812): the tab test reads
                         // the outline's shape, and an up flag's outline tops out under the tip.
                         double flagX = x + halfStem;
@@ -2911,11 +2911,11 @@ internal sealed class SkylineBuilder
                 // The SKYLINE box, not the LILC one: LilyPond's vertical-skylines are the
                 // traced outline and its extent is the metric box, and for a quarter rest
                 // they differ by 0.030000 at the bottom. See GetRestSkylineBBox.
-                var restGlyph = EmmentalerGlyphs.GetRest(restValue,
+                var restGlyph = MusicGlyphs.Rest(restValue,
                     ElementCoordinator.NeutralRestPosition(staffLines, restValue) + restShiftUp * 2.0, staffLines);
                 var restBox = size.Ink(GlyphMetrics.GetRestSkylineBBox(restValue,
-                    ledgered: restGlyph is EmmentalerGlyphs.RestWholeLedgered or EmmentalerGlyphs.RestHalfLedgered
-                        or EmmentalerGlyphs.RestDoubleWholeLedgered));
+                    ledgered: restGlyph is MusicGlyph.RestWholeLegerLine or MusicGlyph.RestHalfLegerLine
+                        or MusicGlyph.RestDoubleWholeLegerLine));
                 // Y-up of the glyph's own origin, in this skyline's frame: the middle line is
                 // this frame's zero, and the neutral letter is so many half spaces above it.
                 double restOriginUp = staffMiddleUp
@@ -2942,7 +2942,7 @@ internal sealed class SkylineBuilder
                 // outline's own bearing (≤ 0.104) moves no point — the sixteenth's high right
                 // end stays clear of the next staff's stem either way.
                 var (restUp, restDown) = TextOutlineSkylines.MusicGlyphProfile(
-                    restGlyph, size.Span(Rendering.SharedRenderer.FontSize));
+                    MusicFont.Current.Codepoint(restGlyph), size.Span(Rendering.SharedRenderer.FontSize));
                 if (restUp.Count > 0 || restDown.Count > 0)
                 {
                     upSkyline.Merge(restUp, x, restOriginUp);
@@ -3129,7 +3129,7 @@ internal sealed class SkylineBuilder
         // of its own first: an accidental's outline is about eight buildings and a staff
         // carries hundreds of them (see VerticalSkyline.Merge's own remark for the measurement).
         var (up, down) = TextOutlineSkylines.MusicGlyphProfile(
-            EmmentalerGlyphs.AccidentalGlyph(accidental),
+            MusicFont.Current.Codepoint(MusicGlyphs.Accidental(accidental)),
             size.Span(Rendering.SharedRenderer.FontSize));
         if (up.Count > 0 || down.Count > 0)
         {
@@ -3185,8 +3185,9 @@ internal sealed class SkylineBuilder
         StaffSize size, VerticalSkyline upSkyline, VerticalSkyline downSkyline,
         MusicFontDesign? flagFont, bool pureBox = false)
     {
-        if (EmmentalerGlyphs.GetFlag(noteValue, stemUp) is not { } glyph)
+        if (MusicGlyphs.Flag(noteValue, stemUp) is not { } flagGlyph)
             return;
+        char glyph = MusicFont.Current.Codepoint(flagGlyph);
         // The page breaker's silhouette: a full-size flag's BOX, its pure height
         // (AddTabStemsAndBeamsToSkylines carries the same rule and its measurement).
         // MEASURED (2.26.0, Lab sessions/p856/net/n.lys, a bass-clef d, eighth): the rest-of-line

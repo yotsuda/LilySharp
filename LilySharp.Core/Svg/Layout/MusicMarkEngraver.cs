@@ -387,25 +387,42 @@ internal static class MusicMarkEngraver
         string text, ImmutableArray<PedalGlyphPlacement>.Builder? into)
     {
         double x = 0.0, top = 0.0;
+        var font = MusicFont.Current;
         for (int i = 0; i < text.Length; i++)
         {
-            char glyph;
+            MusicGlyph glyph;
             if (i + 3 <= text.Length && text.AsSpan(i, 3) is "Ped")
             {
-                glyph = EmmentalerGlyphs.PedalPed;
+                glyph = MusicGlyph.KeyboardPedalPed;
                 i += 2;   // with the loop's own i++ this is LilyPond's `i += 2`
             }
-            else if (text[i] == '.') glyph = EmmentalerGlyphs.PedalDot;
-            else if (text[i] == '*') glyph = EmmentalerGlyphs.PedalStar;
+            else if (text[i] == '.') glyph = MusicGlyph.KeyboardPedalDot;
+            else if (text[i] == '*') glyph = MusicGlyph.KeyboardPedalUp;
             // find_by_name gave an empty stencil; LilyPond skips it and so do we.
             else continue;
 
             var box = PedalGlyphBox(glyph);
-            into?.Add(new PedalGlyphPlacement(glyph, x));
+            into?.Add(new PedalGlyphPlacement(font.Codepoint(glyph), x));
             x += box.Width;
             top = Math.Max(top, box.Top);
         }
         return (x, top);
+    }
+
+    /// <summary>The LILC box of one sustain-pedal glyph, by what it is.</summary>
+    internal static GlyphMetrics.BBox PedalGlyphBox(MusicGlyph glyph)
+        => MusicFont.Current.FullSize.Box(glyph);
+
+    /// <summary>The sustain-pedal glyph the music font draws with <paramref name="glyph"/>.</summary>
+    /// <exception cref="ArgumentOutOfRangeException">Not one of the three characters the
+    /// sustain pedal is built from.</exception>
+    private static MusicGlyph PedalGlyphOf(char glyph)
+    {
+        var font = MusicFont.Current;
+        if (glyph == font.Codepoint(MusicGlyph.KeyboardPedalPed)) return MusicGlyph.KeyboardPedalPed;
+        if (glyph == font.Codepoint(MusicGlyph.KeyboardPedalDot)) return MusicGlyph.KeyboardPedalDot;
+        if (glyph == font.Codepoint(MusicGlyph.KeyboardPedalUp)) return MusicGlyph.KeyboardPedalUp;
+        throw new ArgumentOutOfRangeException(nameof(glyph), glyph, "not a sustain-pedal glyph");
     }
 
     /// <summary>
@@ -421,14 +438,7 @@ internal static class MusicMarkEngraver
     /// <exception cref="ArgumentOutOfRangeException">The glyph is not one of the three the
     /// sustain pedal is built from. Loud rather than a zero box: a silent 0 here would be a
     /// mark that reserves nothing.</exception>
-    internal static GlyphMetrics.BBox PedalGlyphBox(char glyph) => glyph switch
-    {
-        EmmentalerGlyphs.PedalPed => MusicFont.Current.FullSize.Box(MusicGlyph.KeyboardPedalPed),
-        EmmentalerGlyphs.PedalDot => MusicFont.Current.FullSize.Box(MusicGlyph.KeyboardPedalDot),
-        EmmentalerGlyphs.PedalStar => MusicFont.Current.FullSize.Box(MusicGlyph.KeyboardPedalUp),
-        _ => throw new ArgumentOutOfRangeException(nameof(glyph), glyph,
-            "not a sustain-pedal glyph"),
-    };
+    internal static GlyphMetrics.BBox PedalGlyphBox(char glyph) => PedalGlyphBox(PedalGlyphOf(glyph));
 
     /// <summary>
     /// Baseline for below-staff marks (pedal text etc.): the system's last

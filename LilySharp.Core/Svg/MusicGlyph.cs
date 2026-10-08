@@ -511,6 +511,19 @@ internal static class MusicGlyphs
         _ => null,
     };
 
+    /// <summary>The fingering glyph a character of a fingering spells — a digit; null for
+    /// anything else (a negative number's sign, drawn as text).</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm Fingering font-features <c>("cv47" "ss01")</c>
+    /// — the fattened cut, the .alt four and seven.</remarks>
+    public static MusicGlyph? Fingering(char c) => c switch
+    {
+        '0' => MusicGlyph.Fingering0, '1' => MusicGlyph.Fingering1, '2' => MusicGlyph.Fingering2,
+        '3' => MusicGlyph.Fingering3, '4' => MusicGlyph.Fingering4, '5' => MusicGlyph.Fingering5,
+        '6' => MusicGlyph.Fingering6, '7' => MusicGlyph.Fingering7, '8' => MusicGlyph.Fingering8,
+        '9' => MusicGlyph.Fingering9,
+        _ => null,
+    };
+
     /// <summary>The bass-figure glyph a character of a figure spells — a digit, or the Unicode
     /// accidental of <c>figbass-accidental-alist</c>; null for anything else (Lily#'s
     /// continuation dash).</summary>

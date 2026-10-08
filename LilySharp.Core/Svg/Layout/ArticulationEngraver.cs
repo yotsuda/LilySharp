@@ -1175,16 +1175,10 @@ internal static class ArticulationEngraver
                 double tabY = tabMiddle - scriptUp;
                 // The glyph must match the side chosen HERE (the item's own
                 // IsAbove was resolved with notation-staff logic).
-                string tabGlyph = articulation.Type switch
-                {
-                    ArticulationType.Fermata =>
-                        (tabAbove ? EmmentalerGlyphs.FermataAbove : EmmentalerGlyphs.FermataBelow).ToString(),
-                    ArticulationType.FermataShort =>
-                        (tabAbove ? EmmentalerGlyphs.FermataShortAbove : EmmentalerGlyphs.FermataShortBelow).ToString(),
-                    ArticulationType.FermataLong =>
-                        (tabAbove ? EmmentalerGlyphs.FermataLongAbove : EmmentalerGlyphs.FermataLongBelow).ToString(),
-                    _ => articulation.GetGlyph(),
-                };
+                string tabGlyph = articulation.Type is ArticulationType.Fermata
+                        or ArticulationType.FermataShort or ArticulationType.FermataLong
+                    ? MusicFont.Current.Codepoint(ArticulationItem.GlyphOf(articulation.Type, tabAbove)!.Value).ToString()
+                    : articulation.GetGlyph();
                 // tabY is device with the staff offset baked in (topLine/bottomLine/
                 // geom all carry it); reflect to Y-up about that staff's middle so the
                 // stored value is offset-free (StaffMiddle + staffOffset as the mirror).

@@ -3053,11 +3053,11 @@ internal static class OutsideStaffStacker
                         tDown.MergeBox(stemRight - stemTh, stemRight,
                             centreY + att.Y * noteScale, stemTop);
                         if (tempoLog >= 3)
-                            MergeGlyph(EmmentalerGlyphs.Flag8thUp,
+                            MergeGlyph(MusicFont.Current.Codepoint(MusicGlyph.Flag8thUp),
                                 stemRight - stemTh / 2, stemTop, MusicFont.Current.FullSize.Box(MusicGlyph.Flag8thUp));
                     }
                     for (int d = 0; d < m.TempoDots; d++)
-                        MergeGlyph(EmmentalerGlyphs.AugmentationDot,
+                        MergeGlyph(MusicFont.Current.Codepoint(MusicGlyph.AugmentationDot),
                             tx + MetronomeMarkGeometry.DotX(fonts, m.TempoBeatUnit, d), centreY,
                             MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot));
 
@@ -3112,7 +3112,7 @@ internal static class OutsideStaffStacker
 
                     static (double, double, double, double) FlagBox(char glyph, double x, double y, double s)
                     {
-                        var box = glyph == EmmentalerGlyphs.Flag16thUp
+                        var box = glyph == MusicFont.Current.Codepoint(MusicGlyph.Flag16thUp)
                             ? MusicFont.Current.FullSize.Box(MusicGlyph.Flag16thUp) : MusicFont.Current.FullSize.Box(MusicGlyph.Flag8thUp);
                         return (x + box.Left * s, x + box.Right * s, y + box.Bottom * s, y + box.Top * s);
                     }

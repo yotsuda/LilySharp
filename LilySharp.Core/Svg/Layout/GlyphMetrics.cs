@@ -749,7 +749,7 @@ internal static partial class GlyphMetrics
 
     /// <summary>
     /// The box of the head a given (style, note value) pair DRAWS — the glyph
-    /// <see cref="EmmentalerGlyphs.GetNotehead(Model.NoteheadStyle, int)"/> picks, so a styled head
+    /// <see cref="MusicGlyphs.Notehead(Model.NoteheadStyle, int)"/> picks, so a styled head
     /// is measured as the shape it is: a black slash is 1.7152 wide, not the plain head's 1.3042.
     /// </summary>
     /// <remarks>
@@ -982,7 +982,7 @@ internal static partial class GlyphMetrics
             ? font.StemUpAttachment(MusicGlyph.NoteheadSlashWhiteHalf) : font.StemDownAttachment(MusicGlyph.NoteheadSlashWhiteHalf),
         (Model.NoteheadStyle.Slash, false) => up
             ? font.StemUpAttachment(MusicGlyph.NoteheadSlashHorizontalEnds) : font.StemDownAttachment(MusicGlyph.NoteheadSlashHorizontalEnds),
-        // The xcircle is ONE glyph for every value (EmmentalerGlyphs.GetNotehead).
+        // The xcircle is ONE glyph for every value (MusicGlyphs.Notehead).
         (Model.NoteheadStyle.XCircle, _) => up
             ? font.StemUpAttachment(MusicGlyph.NoteheadCircleX) : font.StemDownAttachment(MusicGlyph.NoteheadCircleX),
         (_, true) => up

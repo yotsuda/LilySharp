@@ -43,7 +43,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// </para>
 /// <para>
 /// The DRAWN line is the same run: <c>SharedRenderer.DrawTrillSpanners</c> places
-/// <c>EmmentalerGlyphs.OrnTrillElement</c> at <see cref="ElementOrigins"/> with the
+/// <c>MusicGlyph.WiggleTrill</c> at <see cref="ElementOrigins"/> with the
 /// baseline at <see cref="GlyphBaselineOffset"/>, so what is reserved and what is inked are
 /// one calculation rather than two models. (Until 2026-07-30 the drawing was a parabolic
 /// polyline with an amplitude of its own.)

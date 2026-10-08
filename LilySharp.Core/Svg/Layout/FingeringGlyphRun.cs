@@ -180,21 +180,13 @@ internal static class FingeringGlyphRun
     private static bool TryGetDigit(double step, char c, out char glyph, out GlyphMetrics.BBox outline,
         out double advance)
     {
-        var f = Font(step);
-        (glyph, outline, advance) = c switch
+        if (MusicGlyphs.Fingering(c) is not { } g)
         {
-            '0' => (EmmentalerGlyphs.FingeringDigit0, f.Outline(MusicGlyph.Fingering0), f.Advance(MusicGlyph.Fingering0)),
-            '1' => (EmmentalerGlyphs.FingeringDigit1, f.Outline(MusicGlyph.Fingering1), f.Advance(MusicGlyph.Fingering1)),
-            '2' => (EmmentalerGlyphs.FingeringDigit2, f.Outline(MusicGlyph.Fingering2), f.Advance(MusicGlyph.Fingering2)),
-            '3' => (EmmentalerGlyphs.FingeringDigit3, f.Outline(MusicGlyph.Fingering3), f.Advance(MusicGlyph.Fingering3)),
-            '4' => (EmmentalerGlyphs.FingeringDigit4, f.Outline(MusicGlyph.Fingering4), f.Advance(MusicGlyph.Fingering4)),
-            '5' => (EmmentalerGlyphs.FingeringDigit5, f.Outline(MusicGlyph.Fingering5), f.Advance(MusicGlyph.Fingering5)),
-            '6' => (EmmentalerGlyphs.FingeringDigit6, f.Outline(MusicGlyph.Fingering6), f.Advance(MusicGlyph.Fingering6)),
-            '7' => (EmmentalerGlyphs.FingeringDigit7, f.Outline(MusicGlyph.Fingering7), f.Advance(MusicGlyph.Fingering7)),
-            '8' => (EmmentalerGlyphs.FingeringDigit8, f.Outline(MusicGlyph.Fingering8), f.Advance(MusicGlyph.Fingering8)),
-            '9' => (EmmentalerGlyphs.FingeringDigit9, f.Outline(MusicGlyph.Fingering9), f.Advance(MusicGlyph.Fingering9)),
-            _ => ('\0', default, 0.0),
-        };
-        return glyph != '\0';
+            (glyph, outline, advance) = ('\0', default, 0.0);
+            return false;
+        }
+        var f = Font(step);
+        (glyph, outline, advance) = (MusicFont.Current.Codepoint(g), f.Outline(g), f.Advance(g));
+        return true;
     }
 }

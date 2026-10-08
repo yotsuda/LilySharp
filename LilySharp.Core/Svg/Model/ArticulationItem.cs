@@ -134,35 +134,77 @@ public sealed record ArticulationItem
     }
 
     /// <summary>
-    /// Gets the Emmentaler font glyph for this articulation.
+    /// The music glyph this articulation draws, by what it is — null for a mark the font has
+    /// no glyph for (a bend curve, a tab technique letter, a chord frame).
+    /// </summary>
+    internal MusicGlyph? Glyph => GlyphOf(Type, IsAbove);
+
+    /// <summary>
+    /// The music glyph an articulation of <paramref name="type"/> draws on the
+    /// <paramref name="isAbove"/> side — the one home of the type → glyph choice, which the
+    /// tab staff asks again with its own side.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: feta-scripts.mf - articulation glyph definitions
-    /// Codepoints verified against emmentaler-20.woff2 cmap table.
+    /// LILYPOND-REF: scm/script.scm — the script alist's <c>script-stencil</c> names.
     /// </remarks>
-    public string GetGlyph() => Type switch
+    internal static MusicGlyph? GlyphOf(ArticulationType type, bool isAbove) => type switch
     {
-        ArticulationType.Staccato => EmmentalerGlyphs.ArticStaccatoAbove.ToString(),
-        ArticulationType.Accent => EmmentalerGlyphs.ArticAccentAbove.ToString(),
-        ArticulationType.Tenuto => EmmentalerGlyphs.ArticTenutoAbove.ToString(),
-        ArticulationType.Marcato => (IsAbove ? EmmentalerGlyphs.ArticMarcatoAbove : EmmentalerGlyphs.ArticMarcatoBelow).ToString(),
-        ArticulationType.Fermata => (IsAbove ? EmmentalerGlyphs.FermataAbove : EmmentalerGlyphs.FermataBelow).ToString(),
-        ArticulationType.FermataShort => (IsAbove ? EmmentalerGlyphs.FermataShortAbove : EmmentalerGlyphs.FermataShortBelow).ToString(),
-        ArticulationType.FermataLong => (IsAbove ? EmmentalerGlyphs.FermataLongAbove : EmmentalerGlyphs.FermataLongBelow).ToString(),
+        ArticulationType.Staccato => MusicGlyph.ArticStaccatoAbove,
+        ArticulationType.Accent => MusicGlyph.ArticAccentAbove,
+        ArticulationType.Tenuto => MusicGlyph.ArticTenutoAbove,
+        ArticulationType.Marcato => isAbove ? MusicGlyph.ArticMarcatoAbove : MusicGlyph.ArticMarcatoBelow,
+        ArticulationType.Fermata => isAbove ? MusicGlyph.FermataAbove : MusicGlyph.FermataBelow,
+        ArticulationType.FermataShort => isAbove ? MusicGlyph.FermataShortAbove : MusicGlyph.FermataShortBelow,
+        ArticulationType.FermataLong => isAbove ? MusicGlyph.FermataLongAbove : MusicGlyph.FermataLongBelow,
         // The staccato DOT sits adjacent to the notehead, the tenuto LINE outside it
         // (LILYPOND-REF: LilyPond portato output — dot nearest the head). Emmentaler's
         // uportato (E04E) has the dot on the baseline-far side and dportato (E04F) the
         // near side, so to get a dot-adjacent mark the ABOVE case wants dportato and the
         // BELOW case uportato — the opposite of the naive name. Paired with the flipped
         // Portato box in ArticulationEngraver.GetGlyphBBox.
-        ArticulationType.Portato => (IsAbove ? EmmentalerGlyphs.ArticPortatoBelow : EmmentalerGlyphs.ArticPortatoAbove).ToString(),
-        ArticulationType.Staccatissimo => (IsAbove ? EmmentalerGlyphs.ArticStaccatissimoAbove : EmmentalerGlyphs.ArticStaccatissimoBelow).ToString(),
+        ArticulationType.Portato => isAbove ? MusicGlyph.ArticTenutoStaccatoBelow : MusicGlyph.ArticTenutoStaccatoAbove,
+        ArticulationType.Staccatissimo => isAbove ? MusicGlyph.ArticStaccatissimoAbove : MusicGlyph.ArticStaccatissimoBelow,
         // LilyPond 2.26.0 gives the bowing marks a direction pair — scm/script.scm:453
         // (dupbow . uupbow) and :88 (ddownbow . udownbow) — where 2.24.4 drew the one
         // glyph both ways.
-        ArticulationType.UpBow => (IsAbove ? EmmentalerGlyphs.ArticUpBowAbove : EmmentalerGlyphs.ArticUpBowBelow).ToString(),
-        ArticulationType.DownBow => (IsAbove ? EmmentalerGlyphs.ArticDownBowAbove : EmmentalerGlyphs.ArticDownBowBelow).ToString(),
-        ArticulationType.Flageolet => EmmentalerGlyphs.ArticFlageolet.ToString(),
+        ArticulationType.UpBow => isAbove ? MusicGlyph.StringsUpBow : MusicGlyph.StringsUpBowTurned,
+        ArticulationType.DownBow => isAbove ? MusicGlyph.StringsDownBow : MusicGlyph.StringsDownBowTurned,
+        ArticulationType.Flageolet => MusicGlyph.StringsHarmonic,
+        ArticulationType.Stopped => MusicGlyph.BrassMuteClosed,
+        ArticulationType.Thumb => MusicGlyph.StringsThumbPosition,
+        ArticulationType.Heel => isAbove ? MusicGlyph.KeyboardPedalHeel1 : MusicGlyph.KeyboardPedalHeel2,
+        ArticulationType.Toe => isAbove ? MusicGlyph.KeyboardPedalToe1 : MusicGlyph.KeyboardPedalToe2,
+        // The font's own scripts.snappizzicato — this was the "snappizz" sentinel with
+        // hand-drawn circle+line primitives ~0.5 ss taller than the glyph, while the
+        // engraver reserved the fallback half-space box: draw and reserve disagreed with
+        // each other AND with LilyPond. LILYPOND-REF: scm/script.scm snappizzicato entry.
+        ArticulationType.SnapPizz => MusicGlyph.PluckedSnapPizzicatoAbove,
+        ArticulationType.Trill => MusicGlyph.OrnamentTrill,
+        ArticulationType.Mordent => MusicGlyph.OrnamentMordent,
+        ArticulationType.Prall => MusicGlyph.OrnamentShortTrill,
+        ArticulationType.Turn => MusicGlyph.OrnamentTurn,
+        ArticulationType.InvertedTurn => MusicGlyph.OrnamentTurnInverted,
+        ArticulationType.PrallTriller => MusicGlyph.OrnamentTremblement,
+        ArticulationType.Breath => MusicGlyph.BreathMarkComma,
+        ArticulationType.Caesura => MusicGlyph.Caesura,
+        ArticulationType.EditorialSharp => MusicGlyph.AccidentalSharp,
+        ArticulationType.EditorialFlat => MusicGlyph.AccidentalFlat,
+        ArticulationType.EditorialNatural => MusicGlyph.AccidentalNatural,
+        ArticulationType.EditorialDoubleSharp => MusicGlyph.AccidentalDoubleSharp,
+        ArticulationType.EditorialDoubleFlat => MusicGlyph.AccidentalDoubleFlat,
+        _ => null,
+    };
+
+    /// <summary>
+    /// The glyph string the layout carries for this articulation: the music font's character
+    /// for <see cref="Glyph"/>, or a layout sentinel for a mark drawn without one.
+    /// </summary>
+    /// <remarks>
+    /// The character is <see cref="Layout.MusicFont.Current"/>'s — Emmentaler's private-use
+    /// slot today (docs/smufl-design.md §6 ①). The sentinels are Lily#'s own.
+    /// </remarks>
+    public string GetGlyph() => Type switch
+    {
         // Fall/Doit carry no font glyph — the layout emits a bend sentinel that the
         // renderer draws as a trailing curve (see ArticulationEngraver), so GetGlyph
         // is never consulted for them.
@@ -172,34 +214,12 @@ public sealed record ArticulationItem
         ArticulationType.HammerOn => "tabtech:H",
         ArticulationType.PullOff => "tabtech:P",
         ArticulationType.Tap => "tabtech:T",
-        ArticulationType.Stopped => EmmentalerGlyphs.ArticStopped.ToString(),
-        ArticulationType.Thumb => EmmentalerGlyphs.ArticThumb.ToString(),
-        ArticulationType.Heel => (IsAbove ? EmmentalerGlyphs.PedalHeelUp : EmmentalerGlyphs.PedalHeelDown).ToString(),
-        ArticulationType.Toe => (IsAbove ? EmmentalerGlyphs.PedalToeUp : EmmentalerGlyphs.PedalToeDown).ToString(),
         ArticulationType.Pluck => $"tabtech:{PluckLetter}",
         ArticulationType.Scoop => "",
         ArticulationType.Plop => "",
-        // The font's own scripts.snappizzicato — this was the "snappizz" sentinel with
-        // hand-drawn circle+line primitives ~0.5 ss taller than the glyph, while the
-        // engraver reserved the fallback half-space box: draw and reserve disagreed with
-        // each other AND with LilyPond. LILYPOND-REF: scm/script.scm snappizzicato entry.
-        ArticulationType.SnapPizz => EmmentalerGlyphs.ScriptSnappizzicato.ToString(),
         ArticulationType.FretFrame => $"frame:{FrameSpec}",
         ArticulationType.Doit => "",
-        ArticulationType.Trill => EmmentalerGlyphs.OrnTrill.ToString(),
-        ArticulationType.Mordent => EmmentalerGlyphs.OrnMordent.ToString(),
-        ArticulationType.Prall => EmmentalerGlyphs.OrnPrall.ToString(),
-        ArticulationType.Turn => EmmentalerGlyphs.OrnTurn.ToString(),
-        ArticulationType.InvertedTurn => EmmentalerGlyphs.OrnReverseTurn.ToString(),
-        ArticulationType.PrallTriller => EmmentalerGlyphs.OrnPrallPrall.ToString(),
-        ArticulationType.Breath => EmmentalerGlyphs.BreathComma.ToString(),
-        ArticulationType.Caesura => EmmentalerGlyphs.CaesuraStraight.ToString(),
-        ArticulationType.EditorialSharp => EmmentalerGlyphs.AccidentalSharp.ToString(),
-        ArticulationType.EditorialFlat => EmmentalerGlyphs.AccidentalFlat.ToString(),
-        ArticulationType.EditorialNatural => EmmentalerGlyphs.AccidentalNatural.ToString(),
-        ArticulationType.EditorialDoubleSharp => EmmentalerGlyphs.AccidentalDoubleSharp.ToString(),
-        ArticulationType.EditorialDoubleFlat => EmmentalerGlyphs.AccidentalDoubleFlat.ToString(),
-        _ => ""
+        _ => Glyph is { } g ? Layout.MusicFont.Current.Codepoint(g).ToString() : "",
     };
 
     /// <summary>

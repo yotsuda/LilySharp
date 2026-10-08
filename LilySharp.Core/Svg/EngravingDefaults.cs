@@ -113,7 +113,7 @@ internal static class EngravingDefaults
     /// table <c>SharedRenderer.DrawStaffLines</c> draws from, and the one every reader of
     /// "is there a line here" consults: the line a whole rest hangs from, the line a half
     /// rest sits on, the ledgered cut of either (<c>ElementCoordinator.NeutralRestPosition</c>,
-    /// <c>EmmentalerGlyphs.GetRest</c>). A reduced staff keeps the five-line frame: one line
+    /// <c>MusicGlyphs.Rest</c>). A reduced staff keeps the five-line frame: one line
     /// is the middle, two are the timbales pair (±2), three and four run contiguously up
     /// from the second space below the middle.
     /// </summary>
