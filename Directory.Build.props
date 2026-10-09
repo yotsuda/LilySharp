@@ -8,4 +8,26 @@
     <Version>0.11.0</Version>
   </PropertyGroup>
 
+  <!-- SixLabors.ImageSharp: IN THE GRAPH, NOT IN ANY OUTPUT (2026-10-09).
+       PdfSharpCore depends on it (and asks for 1.0.4 even at its latest, 1.3.67) to embed
+       raster images; Lily#'s PDF draws vectors and embeds fonts and never constructs an
+       XImage — deleting the DLL from a Release publish renders a byte-identical PDF. Every
+       project reaches PdfSharpCore through LilySharp.Core, so the reference is made here,
+       in every project, where a direct reference governs what that project copies:
+       * the VERSION lifts PdfSharpCore's 1.0.4 floor (seven advisories) to 2.1.11, the
+         last Apache-2.0 line — 3.0 and later are under the Six Labors Split License, whose
+         field-of-use terms cannot travel inside a GPL binary. Do NOT let it drift to 3.x;
+       * ExcludeAssets="runtime": no SixLabors.ImageSharp.dll in any output, archive or VSIX,
+         so the code five newer advisories (3 High, fixed only in the Split-License 4.1.2)
+         live in is not distributed at all. Those five are suppressed by id for that reason;
+         any other advisory on any package still warns. -->
+  <ItemGroup>
+    <PackageReference Include="SixLabors.ImageSharp" Version="2.1.11" ExcludeAssets="runtime" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-gwg2-r3hj-4w44" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j3p4-wp97-rph4" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j9gm-c75j-xc9q" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-jjfr-hcj7-qf5w" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-wmxv-xphr-5c9g" />
+  </ItemGroup>
+
 </Project>

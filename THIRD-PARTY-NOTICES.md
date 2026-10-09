@@ -87,7 +87,6 @@ bundles, or in both.
 | HarfBuzzSharp, HarfBuzzSharp.NativeAssets.{Win32,Linux,macOS} | © Microsoft Corporation | MIT |
 | PdfSharpCore | © 2005-2007 empira Software GmbH, Cologne (Germany); modified work © 2016 David Dunscombe | MIT |
 | SharpZipLib | © 2000-2022 SharpZipLib Contributors | MIT |
-| SixLabors.ImageSharp | © Six Labors | Apache-2.0 |
 | SixLabors.Fonts | © Six Labors | Apache-2.0 |
 | StreamJsonRpc | © Microsoft Corporation | MIT |
 | Microsoft.VisualStudio.Threading | © Microsoft Corporation | MIT |
@@ -99,6 +98,10 @@ bundles, or in both.
 | MessagePack, MessagePack.Annotations | © Yoshifumi Kawai and contributors | MIT |
 | PolyType | © Eirik Tsarpalis | MIT |
 | Newtonsoft.Json | © James Newton-King 2008 | MIT |
+
+SixLabors.ImageSharp, which PdfSharpCore depends on for raster images, is not
+among them: Lily#'s PDFs carry no images, and the package is referenced for its
+version only, with no DLL in any output (`Directory.Build.props`).
 
 The self-contained builds (every `lysc` archive, and the platform-specific
 Marketplace VSIXs) also bundle the **.NET runtime**, © .NET Foundation and

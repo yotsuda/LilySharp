@@ -38,17 +38,9 @@
     <PublishReadyToRun Condition="'$(RuntimeIdentifier)' != ''">true</PublishReadyToRun>
   </PropertyGroup>
 
-  <ItemGroup>
-    <!-- ⚠️ IMAGESHARP IS EXCLUDED, AND IT IS THE WHOLE SIZE STORY. Crossgen expands it from
-         1.7 MB to 30.0 MB on generic instantiations — 28 of the 41 MB a blanket R2R adds to
-         this publish — and it buys 2 ms of the cold start, which is noise. MEASURED (session
-         407, framework-dependent, the shape the dev deploy uses): 50.8 MB / 971 ms with no
-         R2R at all, 63.8 MB / 541 ms with this exclusion, 92.1 MB / 539 ms without it — so
-         the 28 MB buys 2 ms, which is noise. Nothing on the startup path touches ImageSharp;
-         it is reached when a render is exported to a raster. The exclusion applies to the
-         self-contained Marketplace publish too (verified: it stays 1.7 MB there). -->
-    <PublishReadyToRunExclude Include="SixLabors.ImageSharp.dll" />
-  </ItemGroup>
+  <!-- SixLabors.ImageSharp used to be the one assembly excluded from ReadyToRun (crossgen took
+       it from 1.7 MB to 30 MB for 2 ms of cold start, session 407). Since 2026-10-09 it is in
+       no output at all (Directory.Build.props), so there is nothing left to exclude. -->
 
   <ItemGroup>
     <!-- The LSP wire types are Lily#'s own (Protocol/LspTypes.cs). The obvious
