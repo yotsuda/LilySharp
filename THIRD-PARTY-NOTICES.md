@@ -74,7 +74,9 @@ Petaluma's companion text face from the same repository, the same copyright
 holder and the same licence — its `OFL.txt` and `FONTLOG.txt` are the files
 shipped as `Fonts/Petaluma-LICENSE.txt` and `Fonts/Petaluma-FONTLOG.txt`. A
 score in Petaluma draws its chord symbols' letters in it unless the score
-names a face for them; it is redistributed unmodified, under its reserved name.
+names a face for them (and its rehearsal marks); it is redistributed unmodified, under its
+reserved name. `Petaluma.woff2` and `PetalumaScript.woff2` are the `.otf` files wrapped
+in WOFF2 unchanged (fontTools; the format drops only the `DSIG` signature table).
 
 ## .NET libraries (bundled as DLLs)
 
