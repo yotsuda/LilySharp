@@ -107,16 +107,35 @@ public class RenderTextRequestTests
         Assert.Contains("<svg", response.Svg);
     }
 
+    /// <summary>
+    /// A fence holding a whole book — several scores — draws its DEFAULT score, the one the
+    /// preview opens on: the unnamed one wherever it stands, else the first (owner decision
+    /// 2026-10-09: an existing .lys pasted into a fence must not be an error).
+    /// </summary>
     [Fact]
-    public void Fence_WithTwoScores_IsRefused()
+    public void Fence_WithSeveralScores_DrawsTheDefault()
     {
-        var text = TwoPartsNoScore + "\nscore tune { form tune staff melody }\nscore both { form tune staff melody staff bass }";
+        // The unnamed score is declared LAST and is the one drawn; written last, so the music
+        // above it keeps its source positions in both texts and the pictures compare whole.
+        var book = TwoPartsNoScore + "\nscore tune { form tune staff melody }\nscore { form tune staff melody staff bass }";
+        var alone = TwoPartsNoScore + "\nscore { form tune staff melody staff bass }";
+        var named = TwoPartsNoScore + "\nscore tune { form tune staff melody }\nscore both { form tune staff melody staff bass }";
 
-        var response = Server().RenderText(new RenderTextParams { Text = text, Interactive = false, Fence = true });
+        var fence = Server().RenderText(new RenderTextParams { Text = book, Interactive = false, Fence = true });
+        var expected = Server().RenderText(new RenderTextParams { Text = alone, Interactive = false, Fence = true });
+        var first = Server().RenderText(new RenderTextParams { Text = named, Interactive = false, Fence = true });
+        var firstAlone = Server().RenderText(new RenderTextParams
+            { Text = TwoPartsNoScore + "\nscore tune { form tune staff melody }", Interactive = false, Fence = true });
 
-        Assert.Null(response.Svg);
-        Assert.Contains("declares 2", response.Error);
+        Assert.Null(fence.Error);
+        Assert.Equal(MaskDataPos(expected.Svg!), MaskDataPos(fence.Svg!));
+        // With no unnamed score the first one is drawn.
+        Assert.Null(first.Error);
+        Assert.Equal(MaskDataPos(firstAlone.Svg!), MaskDataPos(first.Svg!));
     }
+
+    private static string MaskDataPos(string svg)
+        => System.Text.RegularExpressions.Regex.Replace(svg, "data-pos=\"[^\"]*\"", "");
 
     [Fact]
     public void Fence_WithOneScore_DrawsIt_AsASnippet()

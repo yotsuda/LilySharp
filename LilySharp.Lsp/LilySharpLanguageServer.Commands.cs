@@ -1205,23 +1205,22 @@ public sealed partial class LilySharpLanguageServer
             string svg;
             if (@params.Fence)
             {
-                // A fence draws ONE picture, and says which: exactly one score { }. Two or
-                // more would have to be chosen between; none used to be filled in from the
-                // parts (owner decision 2026-09-09) and is refused since 2026-09-10 (owner
-                // decision): the implied score silently dropped whatever a score names —
-                // lyrics and chord rows, tab, ensembles — and was a second spelling of "what
-                // to draw with no score" beside the file road's own fallback.
-                var scores = RenderSpecParser.FindAll(tree);
-                if (scores.Count != 1)
+                // A fence draws ONE picture: the book's DEFAULT score — the unnamed one, else
+                // the first (RenderSpecParser.Choose, the preview's own choice with nothing
+                // picked) — so an existing .lys pasted into a fence draws as it opens in the
+                // editor (owner decision 2026-10-09; from 2026-09-10 a fence had to hold exactly
+                // one score, and a book with `score tab { … }` beside its default was refused).
+                // NONE is still refused (owner decision 2026-09-10, and LYS6014 for a file since
+                // 2026-10-09): an implied score silently dropped whatever a score names —
+                // lyrics and chord rows, tab, ensembles.
+                if (RenderSpecParser.FindAll(tree).Count == 0)
                     return new SvgResponse
                     {
                         Svg = null,
-                        Error = scores.Count == 0
-                            ? "A fence draws one score; this one declares none. Write score { … } to say what to draw."
-                            : $"A fence draws one score; this one declares {scores.Count}. Keep one score {{ }}.",
+                        Error = "A fence draws a score; this one declares none. Write score { … } to say what to draw.",
                         Renders = renders, SelectedRender = drawn,
                     };
-                svg = LilySharp.Core.Svg.SvgGenerator.Generate(tree, options, null);
+                svg = LilySharp.Core.Svg.SvgGenerator.Generate(tree, options, @params.RenderName);
             }
             else
             {
