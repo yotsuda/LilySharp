@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 223 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **349** | |
+| `OWN` | 225 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **351** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -52,8 +52,8 @@
 - **:1328** whiteout −1) is not ported.
 - **:1450** NOT ported; this takes the note's own stem direction. No book and
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
-- **:363** Lily# has not ported; this arrow is its own device.
-- **:848** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
+- **:375** Lily# has not ported; this arrow is its own device.
+- **:860** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:301** ⚠️ subdivide_beams (:186-188) is not ported: it is gated on
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.MusicWalk.cs`
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（223 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（225 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **:90** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
@@ -316,9 +316,9 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:1444** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
-- **:184** LILYSHARP-OWN: LilyPond has no scoop or plop — no grob and no event spells either in
-- **:233** The bend amount label's ENGRAVING em. LILYSHARP-OWN, as
-- **:361** LILYSHARP-OWN: LilyPond's guitar bend is the BendSpanner (`\^`) — a line and curve to
+- **:196** LILYSHARP-OWN: LilyPond has no scoop or plop — no grob and no event spells either in
+- **:245** The bend amount label's ENGRAVING em. LILYSHARP-OWN, as
+- **:373** LILYSHARP-OWN: LilyPond's guitar bend is the BendSpanner (`\^`) — a line and curve to
 ### `LilySharp.Core/Rendering/SharedRenderer.Prefix.cs`
 - **:599** LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
 ### `LilySharp.Core/Rendering/SharedRenderer.Tab.cs`
@@ -332,7 +332,7 @@
 ### `LilySharp.Core/Rendering/TextFontPlan.cs`
 - **:379** LILYSHARP-OWN: LilyPond pairs no text face with its one music font.
 ### `LilySharp.Core/Rendering/TextRole.cs`
-- **:259** LILYSHARP-OWN: LilyPond pairs no text face with its one music font.
+- **:261** LILYSHARP-OWN: LilyPond pairs no text face with its one music font.
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
 - **:683** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Semantics/CapoAdvisor.cs`
@@ -419,8 +419,9 @@
 ### `LilySharp.Core/Svg/Layout/DotColumn.cs`
 - **:266** ⚠️ LILYSHARP-OWN: the dots' preferred DIRECTION is not read here. LilyPond's
 ### `LilySharp.Core/Svg/Layout/DynamicEngraver.cs`
-- **:122** ⚠️ LILYSHARP-OWN: a string the bundled face cannot spell (CJK — TextFontMetrics reports
-- **:470** ⚠️ LILYSHARP-OWN: the number is a support of THIS text alone, not ink of the staff's
+- **:123** ⚠️ LILYSHARP-OWN: a string the bundled face cannot spell (CJK — TextFontMetrics reports
+- **:474** ⚠️ LILYSHARP-OWN: the number is a support of THIS text alone, not ink of the staff's
+- **:996** the ink the side-position reads. LILYSHARP-OWN: LilyPond reads no SMuFL font and sets its
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
 - **:2758** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
 - **:2807** ⚠️ LILYSHARP-OWN, and LilyPond cannot be asked: MEASURED on 2.26.0, all three
@@ -485,8 +486,9 @@
 - **:3750** ⚠️ LILYSHARP-OWN, DECLARED: LilyPond's pure heights are BOXES — the begin-of-line
 - **:5125** LILYSHARP-OWN: the band is Lily#'s model of a line LilyPond walks as a loose line
 ### `LilySharp.Core/Svg/Layout/MusicFont.cs`
-- **:504** LILYSHARP-OWN: hand-tuned, and the only head width that is. ⚠️ NOT because LilyPond
-- **:517** LILYSHARP-OWN: the sM1 advance was never extracted either; 1.30 over the
+- **:262** drawn as, so no Emmentaler book moves. LILYSHARP-OWN.
+- **:513** LILYSHARP-OWN: hand-tuned, and the only head width that is. ⚠️ NOT because LilyPond
+- **:526** LILYSHARP-OWN: the sM1 advance was never extracted either; 1.30 over the
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:155** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **:181** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN

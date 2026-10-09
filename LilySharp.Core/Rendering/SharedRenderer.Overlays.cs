@@ -64,6 +64,18 @@ internal static partial class SharedRenderer
             // Free expressive text (@text) prints plain italic; dynamic levels keep LP's
             // bold-italic DynamicText face — from the one home the reservation reads.
             var style = LilySharp.Core.Svg.Layout.DynamicEngraver.LabelStyle(fonts, d.IsExpressiveText);
+            // A SMuFL score's level in the font's own dynamic glyphs, centred where the text
+            // would stand — the run the layout reserved (DynamicEngraver.SmuflGlyphRun).
+            if (!d.IsExpressiveText
+                && LilySharp.Core.Svg.Layout.DynamicEngraver.SmuflGlyphRun(fonts, text) is { } run)
+            {
+                double scale = os.Size(1.0, d.StaffIndex);
+                double left = d.X - run.Width * scale / 2;
+                using (gc.Source(d.SourcePosition))
+                    for (int i = 0; i < run.Glyphs.Length; i++)
+                        gc.DrawGlyph(run.Glyphs[i], left + run.Xs[i] * scale, y, run.FontSize * scale);
+                continue;
+            }
             using (gc.Source(d.SourcePosition))
                 gc.DrawText(text, d.X, y, size, LilySharp.Core.Svg.Layout.DynamicEngraver.LabelRole(d.IsExpressiveText),
                     style, TextAnchor.Middle, Color.Black);

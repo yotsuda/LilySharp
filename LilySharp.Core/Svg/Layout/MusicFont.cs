@@ -253,6 +253,15 @@ internal abstract class MusicFont
     /// font to pair with, so Emmentaler answers null.</remarks>
     public virtual string? ChordTextFace => null;
 
+    /// <summary>
+    /// Does a score in this font set a dynamic level's letters (p, m, f, r, s, z, n) in the
+    /// font's own dynamic glyphs (SMuFL <c>dynamic*</c>, U+E520–U+E526) rather than as text?
+    /// </summary>
+    /// <remarks>True for a SMuFL font (owner's decision 2026-10-09, Petaluma's handwritten f
+    /// and p). Emmentaler answers false: its dynamics stay the text they have always been
+    /// drawn as, so no Emmentaler book moves. LILYSHARP-OWN.</remarks>
+    internal virtual bool SetsDynamicsInItsOwnGlyphs => false;
+
     // ---- constants LilyPond wrote for Emmentaler's shapes (docs/smufl-design.md §3 #17) ----
 
     /// <summary>

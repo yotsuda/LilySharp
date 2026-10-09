@@ -254,14 +254,17 @@ public static class TextRoles
     /// title, subtitle, composer, poet (2026-10-09, owner: unless the score names their face,
     /// draw them in the music font's), and free text — <c>@text("…")</c> and the text
     /// spanners (2026-10-09, owner), the tempo and the navigation words — D.S., D.C., Fine,
-    /// To Coda (2026-10-09, owner). A face the score binds to the role, its group or its
+    /// To Coda (2026-10-09, owner), the dynamic words (cresc., dim.), the pedal words
+    /// (sost., una corda) and the instrument names (2026-10-09, owner). A face the score
+    /// binds to the role, its group or its
     /// generic family still wins (TextFontPlan.Resolve).
     /// LILYSHARP-OWN: LilyPond pairs no text face with its one music font.
     /// </summary>
     public static bool TakesMusicCompanionFace(TextRole role) =>
         role is TextRole.ChordName or TextRole.Mark
             or TextRole.Title or TextRole.Subtitle or TextRole.Composer or TextRole.Poet
-            or TextRole.Text or TextRole.Tempo or TextRole.Navigation;
+            or TextRole.Text or TextRole.Tempo or TextRole.Navigation
+            or TextRole.Dynamics or TextRole.Pedal or TextRole.Instrument;
 
     /// <summary>
     /// Is <paramref name="role"/> notation drawn as text — the clef's octave digit, a

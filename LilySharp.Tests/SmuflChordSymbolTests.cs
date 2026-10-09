@@ -21,6 +21,7 @@ using LilySharp.Core.Pdf;
 using LilySharp.Core.Rendering.Boxes;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Syntax;
 using Xunit;
@@ -124,6 +125,62 @@ public class SmuflChordSymbolTests
         Assert.False(InCompanion(NavSvg("fonts { music \"Petaluma\" tempo \"TeX Gyre Heros\" }"), "Allegro"));
         Assert.False(InCompanion(NavSvg("fonts { music \"Petaluma\" navigation \"TeX Gyre Heros\" }"), "Fine"));
         Assert.False(InCompanion(NavSvg(""), "Fine"));
+    }
+
+    /// <summary>So are the pedal words and the instrument name (owner, 2026-10-09).</summary>
+    [Fact]
+    public void APetalumaPedalWordAndInstrumentName_AreWrittenInPetalumaScript()
+    {
+        static string PedalSvg(string fonts) => LiveRender.SvgFromRenderSpec(fonts + "\n"
+            + "part m \"Violin\" { clef bass  pedal text  section A { m { c4@sostenuto d e f@!sostenuto | } } }\n"
+            + "form { A }\nscore { staff m }\n");
+        static bool InCompanion(string svg, string text) => System.Text.RegularExpressions.Regex.IsMatch(
+            svg, $"<text[^>]*font-family=\"Petaluma Script[^>]*>{System.Text.RegularExpressions.Regex.Escape(text)}</text>");
+        string petaluma = PedalSvg("fonts { music \"Petaluma\" }");
+        Assert.True(InCompanion(petaluma, "Sost. Ped."));
+        Assert.True(InCompanion(petaluma, "Violin"));
+        Assert.False(InCompanion(PedalSvg(""), "Violin"));
+    }
+
+    private static string DynamicsSvg(string fonts) => LiveRender.SvgFromRenderSpec(fonts + "\n"
+        + "part m { clef treble }\nsection A { m { c'2@mf d'2@sfz | } }\nform { A }\nscore { staff m }\n");
+
+    /// <summary>
+    /// A SMuFL score's dynamic levels are the music font's own dynamic glyphs (owner,
+    /// 2026-10-09: Petaluma's handwritten f and p) — m U+E521 and f U+E522 — not text; a face
+    /// the score names for <c>dynamics</c> keeps the text, and Emmentaler keeps the text it
+    /// always drew.
+    /// </summary>
+    [Theory]
+    [InlineData("Petaluma")]
+    [InlineData("Bravura")]
+    public void ASmuflScoresDynamics_AreTheFontsOwnGlyphs(string font)
+    {
+        string svg = DynamicsSvg($"fonts {{ music \"{font}\" }}");
+        Assert.Contains("></text>", svg, StringComparison.Ordinal);
+        Assert.Contains("></text>", svg, StringComparison.Ordinal);
+        Assert.DoesNotMatch("<text[^>]*>mf</text>", svg);
+    }
+
+    [Fact]
+    public void ANamedDynamicsFace_OrEmmentaler_KeepsTheText()
+    {
+        Assert.Matches("<text[^>]*>mf</text>", DynamicsSvg("fonts { music \"Petaluma\" dynamics \"TeX Gyre Heros\" }"));
+        Assert.Matches("<text[^>]*>mf</text>", DynamicsSvg(""));
+        Assert.DoesNotContain("></text>", DynamicsSvg(""), StringComparison.Ordinal);
+    }
+
+    /// <summary>The reservation is the drawn run: the half-width the side-position and the
+    /// hairpin bounds read is half the glyphs' summed advance.</summary>
+    [Fact]
+    public void ASmuflDynamicsReservation_IsItsGlyphRun()
+    {
+        var tree = SyntaxTree.Parse("fonts { music \"Petaluma\" }\n" + Book);
+        var fonts = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)).TextMetrics;
+        var run = Assert.IsType<DynamicEngraver.GlyphRun>(DynamicEngraver.SmuflGlyphRun(fonts, "sfz"));
+        Assert.Equal(run.Width / 2, DynamicEngraver.LabelHalfWidth(fonts, "sfz", expressive: false), 9);
+        Assert.Equal((run.Top, -run.Bottom), DynamicEngraver.InkOf(fonts, "sfz", expressive: false));
+        Assert.Null(DynamicEngraver.SmuflGlyphRun(fonts, "cresc."));
     }
 
     /// <summary>The rehearsal mark is set in the companion too — the serif box was the one

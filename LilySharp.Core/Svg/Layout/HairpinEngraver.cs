@@ -374,7 +374,7 @@ internal static class HairpinEngraver
             else if (dynamicAt.TryGetValue(
                          (hairpin.EndMeasureIndex, hairpin.EndItemIndex, hairpin.StaffIndex),
                          out var endDyn)
-                     && DynamicOutline.AdvanceWidth(endDyn.Text) is { } endW)
+                     && (endDyn.GlyphRunWidth ?? DynamicOutline.AdvanceWidth(endDyn.Text)) is { } endW)
             {
                 ownEndX = endDyn.X - endW / 2.0 - BoundPadding;
             }
@@ -406,7 +406,7 @@ internal static class HairpinEngraver
                 dynamicAt.TryGetValue(
                     (hairpin.StartMeasureIndex, hairpin.StartItemIndex, hairpin.StaffIndex),
                     out var startDyn)
-                && DynamicOutline.AdvanceWidth(startDyn.Text) is { } startW
+                && (startDyn.GlyphRunWidth ?? DynamicOutline.AdvanceWidth(startDyn.Text)) is { } startW
                 ? startDyn.X + startW / 2.0 + BoundPadding
                 : CalculateStartX(hairpin, measureLayouts);
 

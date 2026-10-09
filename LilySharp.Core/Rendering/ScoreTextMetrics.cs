@@ -145,6 +145,20 @@ public sealed class ScoreTextMetrics
     public FontStyle Style(TextRole role, FontStyle engravingDefault)
         => _plan.StyleOf(role, engravingDefault);
 
+    /// <summary>
+    /// Did the score name a face for <paramref name="role"/> — on the role, its group or the
+    /// generic family it follows? The music font's companion face, which the plan supplies
+    /// when nothing is named (<see cref="TextRoles.TakesMusicCompanionFace"/>), is not one.
+    /// </summary>
+    public bool NamesAFace(TextRole role)
+    {
+        var names = _plan.Resolve(role).Names;
+        if (names.IsDefaultOrEmpty)
+            return false;
+        return !(names.Length == 1 && TextRoles.TakesMusicCompanionFace(role)
+                 && TextFontMetrics.CompanionFaces.ContainsKey(names[0]));
+    }
+
     /// <summary>Advance width of <paramref name="text"/> in staff spaces.</summary>
     public double Advance(string text, double fontSize, TextRole role,
         FontStyle style = FontStyle.Regular)

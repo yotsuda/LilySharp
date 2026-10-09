@@ -238,6 +238,7 @@ internal sealed class MusicFontChain : MusicFont
     /// <inheritdoc/>
     /// <remarks>The first font's: the font the score wrote first is the one it reads as.</remarks>
     public override string? ChordTextFace => First.ChordTextFace;
+    internal override bool SetsDynamicsInItsOwnGlyphs => First.SetsDynamicsInItsOwnGlyphs;
 
     /// <inheritdoc/>
     public override double StemSidePaddingFraction(MusicGlyph glyph)

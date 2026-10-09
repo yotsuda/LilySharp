@@ -45,7 +45,8 @@ public readonly record struct DynamicLayout(
     bool IsAbove = false,   // Forced above the staff (from @f.up); default below.
     int StaffIndex = 0,     // Which staff this dynamic hangs under (per-staff stacking).
     bool IsExpressiveText = false, // @text("…"): plain italic, not a dynamic level.
-    bool OnMultiMeasureRest = false // @text on an R: MultiMeasureRestText (DynamicItem.OnMultiMeasureRest).
+    bool OnMultiMeasureRest = false, // @text on an R: MultiMeasureRestText (DynamicItem.OnMultiMeasureRest).
+    double? GlyphRunWidth = null // A SMuFL score's level in the font's own glyphs: its width (DynamicEngraver.SmuflGlyphRun).
 );
 
 /// <summary>
@@ -153,6 +154,8 @@ internal static class DynamicEngraver
             var (b, t) = Rendering.TextFontMetrics.Ink(text, em, face);
             return (t, -b);
         }
+        if (SmuflGlyphRun(fonts, text) is { } run)
+            return (run.Top, -run.Bottom);
         return GlyphMetrics.TryGetDynamicInk(text, out double bottom, out double top)
             ? (top, -bottom)
             : (FallbackAscent, FallbackDescent);
@@ -320,7 +323,8 @@ internal static class DynamicEngraver
                 dynamic.IsAbove,
                 dynamic.StaffIndex,
                 expressive,
-                dynamic.OnMultiMeasureRest
+                dynamic.OnMultiMeasureRest,
+                expressive ? null : SmuflGlyphRun(score.TextMetrics, labelText)?.Width
             ));
         }
 
@@ -684,6 +688,12 @@ internal static class DynamicEngraver
         Rendering.ScoreTextMetrics fonts,
         string? text, bool expressive, double xCentre, double yBaseline)
     {
+        if (!expressive && SmuflGlyphRun(fonts, text) is { } run)
+        {
+            double left = xCentre - run.Width / 2;
+            return (VerticalSkyline.FromBox(left, left + run.Width, yBaseline + run.Bottom, yBaseline + run.Top, VerticalDirection.Up),
+                    VerticalSkyline.FromBox(left, left + run.Width, yBaseline + run.Bottom, yBaseline + run.Top, VerticalDirection.Down));
+        }
         if (!expressive && text is { Length: > 0 }
             && DynamicOutline.AdvanceWidth(text) is { } w
             && DynamicOutline.Place(text, xCentre - w / 2.0, yBaseline) is { } outline)
@@ -957,9 +967,72 @@ internal static class DynamicEngraver
     internal static double LabelHalfWidth(
         Rendering.ScoreTextMetrics fonts, string text, bool expressive)
     {
+        if (!expressive && SmuflGlyphRun(fonts, text) is { } run)
+            return run.Width / 2.0;
         double w = fonts.Advance(text, LabelEm(fonts, expressive), LabelRole(expressive),
             LabelStyle(fonts, expressive));
         return w / 2.0;
+    }
+
+    /// <summary>
+    /// A dynamic level spelled in its music font's own dynamic glyphs: the glyphs, each one's
+    /// X from the run's left edge, the music font size they are drawn at, and the run's width
+    /// and ink about the baseline (staff spaces, up-positive).
+    /// </summary>
+    internal sealed record GlyphRun(string Glyphs, double[] Xs, double FontSize,
+        double Width, double Bottom, double Top);
+
+    /// <summary>
+    /// The level's glyph run when the score's music font sets dynamics in its own glyphs
+    /// (<see cref="MusicFont.SetsDynamicsInItsOwnGlyphs"/> — a SMuFL font), the score names no
+    /// face for <c>dynamics</c>, and every letter is one SMuFL has (p m f r s z n); else null and
+    /// the level is the text it always was.
+    /// </summary>
+    /// <remarks>
+    /// Owner's decision (2026-10-09): Petaluma's dynamics in Petaluma's own handwritten letters,
+    /// as a SMuFL engraver sets them. The glyphs stand on the baseline at the music font's size
+    /// (a <c>fonts { dynamics step … }</c> scales them), advance by their own advances, and the
+    /// layout reserves their DESIGN boxes — the width the hairpin bounds and the skylines read,
+    /// the ink the side-position reads. LILYSHARP-OWN: LilyPond reads no SMuFL font and sets its
+    /// DynamicText in Emmentaler's fetaText letters, which an Emmentaler score keeps.
+    /// </remarks>
+    internal static GlyphRun? SmuflGlyphRun(Rendering.ScoreTextMetrics fonts, string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return null;
+        var font = MusicFonts.Of(fonts.Plan);
+        if (!font.SetsDynamicsInItsOwnGlyphs || fonts.NamesAFace(Rendering.TextRole.Dynamics))
+            return null;
+        double step = fonts.StepOf(Rendering.TextRole.Dynamics, DynamicFontSize);
+        var design = font.SizedAt(step);
+        var glyphs = new char[text.Length];
+        var xs = new double[text.Length];
+        double x = 0, bottom = 0, top = 0;
+        for (int i = 0; i < text.Length; i++)
+        {
+            MusicGlyph? g = text[i] switch
+            {
+                'p' => MusicGlyph.DynamicPiano,
+                'm' => MusicGlyph.DynamicMezzo,
+                'f' => MusicGlyph.DynamicForte,
+                'r' => MusicGlyph.DynamicRinforzando,
+                's' => MusicGlyph.DynamicSforzando,
+                'z' => MusicGlyph.DynamicZ,
+                'n' => MusicGlyph.DynamicNiente,
+                _ => null,
+            };
+            if (g is not { } glyph || !font.Has(glyph))
+                return null;
+            var metrics = design.Metrics(glyph);
+            var box = metrics.DesignBox ?? default;
+            glyphs[i] = font.Codepoint(glyph);
+            xs[i] = x;
+            bottom = Math.Min(bottom, box.Bottom);
+            top = Math.Max(top, box.Top);
+            x += metrics.Advance ?? box.Right;
+        }
+        return new GlyphRun(new string(glyphs), xs,
+            Rendering.SharedRenderer.FontSize * EmmentalerDesignSize.Magstep(step), x, bottom, top);
     }
 
     // WidenToNeighbors is GONE (2026-07-29): it was Lily#'s own compensation for the
