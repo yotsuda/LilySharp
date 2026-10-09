@@ -22,19 +22,44 @@ namespace LilySharp.Core.Parser;
 internal sealed partial class Parser
 {
     /// <summary>
-    /// Parse section declaration: <c>section Name { ... }</c>.
+    /// Parse a top-level section declaration: <c>section Name ["label"] { ... }</c>. The label
+    /// is what every play of the section prints unless its form reference writes its own
+    /// (2026-10-09) — in a file grouped by part, <c>section A2 "A'" { }</c> beside the parts.
     /// </summary>
     private SectionDeclarationGreen ParseSectionDeclaration()
     {
         var keyword = Expect(SyntaxKind.SectionKeyword);
         var tilde = ReportDeclarationTilde();
         var name = ExpectPartName();
+        var label = Check(SyntaxKind.StringLiteral) ? Advance() : null;
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
         var items = ParseList(SyntaxKind.CloseBrace, ParseSectionItem);
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new SectionDeclarationGreen(keyword, tilde, name, openBrace, [.. items], closeBrace);
+        return new SectionDeclarationGreen(keyword, tilde, name, label, openBrace, [.. items], closeBrace);
+    }
+
+    /// <summary>
+    /// A label on a section inside a part or a track (<c>part p1 { section A2 "A'" { … } }</c>):
+    /// REPORTED (LYS0039) and kept for its width. Null when there is none.
+    /// </summary>
+    /// <remarks>
+    /// Every part plays the same section, so a label per part would be one property with as
+    /// many homes as parts — the reason the declaration's tilde went (LYS0033). The message
+    /// names the two places a label does belong.
+    /// </remarks>
+    private SyntaxToken? ReportSectionLabelInside(string where, SyntaxToken sectionName)
+    {
+        if (!Check(SyntaxKind.StringLiteral))
+            return null;
+        var span = new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length);
+        string label = Current.Text;
+        string name = sectionName.Text;
+        _diagnostics.Error(span, DiagnosticCodes.SectionLabelInsidePart,
+            $"A section inside {where} takes no label. Declare it once at the top level — "
+            + $"section {name} {label} {{ }} — or write it at the form reference: form {{ {name} {label} }}.");
+        return Advance();
     }
 
     /// <summary>
@@ -194,6 +219,7 @@ internal sealed partial class Parser
         var keyword = Expect(SyntaxKind.SectionKeyword);
         var tilde = ReportDeclarationTilde();
         var name = ExpectPartName();
+        var label = ReportSectionLabelInside("a lyrics track", name);
         var openBrace = Expect(SyntaxKind.OpenBrace);
         var measures = new List<GreenNode?>();
         while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
@@ -213,7 +239,7 @@ internal sealed partial class Parser
                 break; // no syllable/barline consumed → at the section's close
         }
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new SectionDeclarationGreen(keyword, tilde, name, openBrace, [.. measures], closeBrace);
+        return new SectionDeclarationGreen(keyword, tilde, name, label, openBrace, [.. measures], closeBrace);
     }
 
 
@@ -259,6 +285,7 @@ internal sealed partial class Parser
         var keyword = Expect(SyntaxKind.SectionKeyword);
         var tilde = ReportDeclarationTilde();
         var name = ExpectPartName();
+        var label = ReportSectionLabelInside("a chords track", name);
         var openBrace = Expect(SyntaxKind.OpenBrace);
         var items = new List<GreenNode?>();
         while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
@@ -267,7 +294,7 @@ internal sealed partial class Parser
             items.Add(item ?? SkipStrayChordToken());
         }
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new SectionDeclarationGreen(keyword, tilde, name, openBrace, [.. items], closeBrace);
+        return new SectionDeclarationGreen(keyword, tilde, name, label, openBrace, [.. items], closeBrace);
     }
 
     /// <summary>

@@ -628,6 +628,15 @@ public static class DiagnosticCodes
     /// one error is all a stale book gets.</summary>
     public const string ScoreNameQuoted = "LYS0038";
 
+    /// <summary>Parser error: a label on a section inside a part or a lyrics / chords track —
+    /// <c>part p1 { section A2 "A'" { … } }</c>. A section's label is declared once, on the
+    /// top-level section (<c>section A2 "A'" { }</c>, a body that may be empty), or written at
+    /// a form reference (<c>form { A2 "A'" }</c>): every part plays the same section, so a
+    /// label per part would be one property with as many homes as parts (the reason the
+    /// declaration's <c>~</c> went, <see cref="SectionDeclarationTilde"/>). The token is kept
+    /// for its width and means nothing (owner's decision 2026-10-09).</summary>
+    public const string SectionLabelInsidePart = "LYS0039";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>
@@ -711,6 +720,11 @@ public static class DiagnosticCodes
     /// the click track's notes and nothing said so (session 762). A book with no part named X
     /// keeps the tuning reading and never sees this.</remarks>
     public const string TabPartNameIsAlsoATuning = "LYS1044";
+
+    /// <summary>Warning: two top-level declarations of one section give it different labels
+    /// (<c>section A "Verse" { key g major }</c> and <c>section A "Chorus" { }</c>). The FIRST
+    /// one's label is the section's; the warning sits on the later one.</summary>
+    public const string SectionLabelConflict = "LYS1045";
 
     /// <summary>Syntax error: a phrase reference needs a <c>$</c> — write <c>$name</c>.</summary>
     public const string BareReferenceRequiresDollar = "LYS1012";

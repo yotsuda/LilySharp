@@ -133,6 +133,7 @@ internal sealed partial class Parser
         var keyword = Expect(SyntaxKind.SectionKeyword);
         var tilde = ReportDeclarationTilde();
         var name = ExpectPartName();
+        var label = ReportSectionLabelInside("a part", name);
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
         var items = RentSectionItems();
@@ -149,7 +150,7 @@ internal sealed partial class Parser
         var closeBrace = Expect(SyntaxKind.CloseBrace);
         // `[.. items]` COPIES, so the buffer is finished with here and not one line later.
         var section = new SectionDeclarationGreen(
-            keyword, tilde, name, openBrace, [.. items], closeBrace);
+            keyword, tilde, name, label, openBrace, [.. items], closeBrace);
         GiveSectionItems(items);
         return section;
     }

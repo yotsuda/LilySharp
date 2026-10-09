@@ -4654,11 +4654,14 @@ public sealed partial class MeasureCollector
             SetTopLevelRole(ending: false);
     }
 
-    /// <summary>No form: sections play in declaration order, each labelled with its own name
-    /// (a form is the only place a label can be hidden).</summary>
+    /// <summary>No form: sections play in declaration order, each labelled with the label its
+    /// top-level declaration gives it, else its own name (a form is the only place a label can
+    /// be hidden).</summary>
     private static string? LabelForDeclarationOrder(SectionDeclarationSyntax section)
         => Semantics.SectionLabelRule.LabelFor(
-            referenceIsSilent: false, displayLabel: null, sectionName: section.SectionName);
+            referenceIsSilent: false,
+            displayLabel: SyntaxFacts.DeclaredSectionLabel(section, section.SectionName),
+            sectionName: section.SectionName);
 
     /// <summary>
     /// The name of the <c>part</c> a node lives inside, or null if it is not inside

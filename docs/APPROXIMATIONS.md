@@ -253,7 +253,7 @@
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:748** ⚠️ LILYSHARP-OWN: carrying AbsoluteBaseOctave is correct by construction. A degree
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Form.cs`
-- **:1003** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:1004** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Marks.cs`
 - **:933** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Music.cs`
@@ -360,7 +360,7 @@
 - **:421** LILYSHARP-OWN (owner's decisions, 2026-10-02, HANDOFF §1.1 第737): a time, key
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **:3413** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:5841** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:5844** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Form.cs`
 - **:567** `time!` (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so
 - **:874** is not drawn unless written `key!` (MeasureBuilder.SectionHead, LILYSHARP-OWN). At a

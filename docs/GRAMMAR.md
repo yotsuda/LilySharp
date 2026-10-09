@@ -1152,7 +1152,20 @@ PhraseName     = PartName ;
 
 (* Musical sections bind music to each part by name. At least one is required. *)
 
-SectionDecl    = 'section' , PartName , '{' , { SectionItem } , '}' ;   (* the same name rule as a part *)
+SectionDecl    = 'section' , PartName , [ String ] , '{' , { SectionItem } , '}' ;   (* the same name rule as a part *)
+
+(* THE DECLARED LABEL (2026-10-09). The optional String is the text every play of the section
+   prints instead of its name — written ONCE, so several forms need not repeat 'A2 "A''"':
+     section A2 "A'" { }                    -- in a file grouped by part: the body may be empty
+     part p1 { section A2 { c d e r } }
+     part p2 { section A2 { e f g r } }
+     form { A2 }                            -- prints A'
+     form { A2 "A''" }                      -- the reference's own label wins: prints A''
+   Only a TOP-LEVEL section takes it. A section inside a part, a lyrics track or a chords track
+   is LYS0039 (every part plays the same section, so a label per part would be one property
+   with as many homes as parts). Two top-level declarations that give one section different
+   labels warn (LYS1045) and the first wins. A '~' on the reference still hides the label, and
+   an empty declared label ('section A ""') suppresses the mark like an empty reference label. *)
 
 (* A SECTION'S LABEL IS HIDDEN AT THE FORM REFERENCE, NOWHERE ELSE (2026-09-24). Every
    play of a section prints its rehearsal label unless that reference carries '~':

@@ -780,7 +780,7 @@ internal sealed class LyricsCollector
     /// its name and closing brace).</summary>
     private static IEnumerable<SyntaxNode> SectionLyricMeasures(SectionDeclarationSyntax section)
     {
-        // Slots: 0 keyword, 1 name, 2 '{', 3..n-2 items, n-1 '}'.
+        // Slots: 0 keyword, 1 '~', 2 name, 3 label, 4 '{', items, n-1 '}' — tokens skipped.
         for (int i = 3; i < section.SlotCount - 1; i++)
             if (section.GetChild(i) is SyntaxNode node and not SyntaxTokenNode)
                 yield return node;

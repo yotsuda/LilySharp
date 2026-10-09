@@ -1392,6 +1392,25 @@ string suppresses the mark (like `~Name`):
 form { Intro Main Main "Main (reprise)" Coda }
 ```
 
+A label that every play of a section prints — text with spaces or a `'`, say — is written
+once on the section's top-level declaration, so several forms need not repeat it. In a file
+grouped by part the declaration's body may be empty:
+
+```
+section A2 "A'" { }
+
+part p1 { section A2 { c d e r } }
+part p2 { section A2 { e f g r } }
+
+form { A2 }              // prints A'
+form other { A2 "A''" }  // the reference's own label wins: prints A''
+```
+
+Only a top-level section takes a label: one on a section inside a part, a lyrics track or a
+chords track is an error (**LYS0039**), because every part plays the same section. Two
+top-level declarations that label one section differently warn (**LYS1045**), and the first
+one wins.
+
 **Hiding a label.** A section prints its name as a rehearsal label, and a `~` on the
 form reference hides it for that play. A section that only carries STRUCTURE — one cut
 to hold a repeat edge, say — is referenced with the tilde:

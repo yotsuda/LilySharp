@@ -52,6 +52,20 @@ public sealed partial class SectionDeclarationSyntax : SyntaxNode
     /// Gets the section name as a string.
     /// </summary>
     public string SectionName => Name.Text;
+
+    /// <summary>The quoted label of <c>section A2 "A'" { … }</c> (slot 3), or null.</summary>
+    public SyntaxTokenNode? LabelToken => GetChild(3) as SyntaxTokenNode;
+
+    /// <summary>
+    /// The label this declaration gives its section, unquoted, or null — only a TOP-LEVEL
+    /// declaration's counts: one inside a part or a track is LYS0039 and means nothing.
+    /// What a play prints is <see cref="SyntaxFacts.DeclaredSectionLabel"/>'s answer, under
+    /// the reference's own label.
+    /// </summary>
+    public string? Label
+        => Parent is { Parent: null } && LabelToken is { Kind: SyntaxKind.StringLiteral } t
+            ? StringLiteral.Value(t.Text)
+            : null;
 }
 
 /// <summary>
@@ -184,8 +198,15 @@ public sealed partial class SectionReferenceSyntax : SyntaxNode
     /// <remarks>
     /// LILYPOND-REF: LilyPond's analog is a manual <c>\mark "text"</c> per
     /// occurrence — display labels are occurrence-level events there too.
+    /// <para>
+    /// With no label of its own, the reference takes the one its top-level declaration gives
+    /// (<c>section A2 "A'" { }</c>, 2026-10-09), so several forms need not repeat it. Only
+    /// this, the PLAIN reference's answer, reads the declaration: a <c>~</c> reference hides
+    /// the label anyway, and LYS0012 asks whether a label was WRITTEN on one.
+    /// </para>
     /// </remarks>
-    public string? DisplayLabel => SyntaxFacts.UnquotedLabel(this);
+    public string? DisplayLabel
+        => SyntaxFacts.UnquotedLabel(this) ?? SyntaxFacts.DeclaredSectionLabel(this, SectionName);
 
     /// <summary>
     /// Net octave shift from the trailing marks (<c>'</c> = +1, <c>,</c> = -1) — the same

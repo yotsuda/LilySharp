@@ -780,14 +780,21 @@ internal sealed class SectionDeclarationGreen : GreenSyntaxNode
     /// the stray token is kept here only so its width stays in the tree. The slot is always
     /// present so the name and the items keep fixed offsets.
     /// </param>
+    /// <param name="label">
+    /// The quoted label of <c>section A2 "A'" { … }</c>, or null — the text every play of the
+    /// section prints unless its form reference writes its own (2026-10-09). Only a top-level
+    /// section's label means anything; one inside a part or a track is LYS0039 and kept here
+    /// for its width. Always a slot, like the tilde.
+    /// </param>
     public SectionDeclarationGreen(
         SyntaxToken sectionKeyword,
         SyntaxToken? tilde,
         SyntaxToken name,
+        SyntaxToken? label,
         SyntaxToken openBrace,
         GreenNode?[] items,
         SyntaxToken closeBrace)
-        : base(SyntaxKind.SectionDeclaration, [sectionKeyword, tilde, name, openBrace, .. items, closeBrace])
+        : base(SyntaxKind.SectionDeclaration, [sectionKeyword, tilde, name, label, openBrace, .. items, closeBrace])
     {
     }
 }

@@ -133,12 +133,13 @@ public sealed partial class LilyPondExporter
             foreach (var entry in inOrder)
             {
                 // No form: sections play in declaration order and each is labelled with
-                // its own name (MeasureCollector's form-less arm sets SectionLabel =
-                // SectionName), with the same boundary key-restore a formed play gets.
+                // its declared label, else its own name (MeasureCollector.LabelForDeclarationOrder),
+                // with the same boundary key-restore a formed play gets.
                 var headerMusic = SectionHeaderMusic(entry.Section).ToList();
                 result.Add(new SectionPlayMarker(
                     Semantics.SectionLabelRule.LabelFor(referenceIsSilent: false,
-                        displayLabel: null, sectionName: entry.Section.SectionName),
+                        displayLabel: SyntaxFacts.DeclaredSectionLabel(entry.Section, entry.Section.SectionName),
+                        sectionName: entry.Section.SectionName),
                     headerMusic.Any(h => h is KeySignatureSyntax),
                     headerMusic.Any(h => h is TimeSignatureSyntax)));
                 result.AddRange(headerMusic);

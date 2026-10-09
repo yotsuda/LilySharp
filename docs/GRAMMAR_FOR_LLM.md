@@ -793,6 +793,10 @@ quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LY
   reference that should be silent (a section cut only to carry a repeat edge is usually
   referenced once). With no form, every section labels itself. An empty label `A ""` also
   suppresses, and a label written on a `~` play is LYS0012.
+- **A label every play prints is declared once, at the top level**: `section A2 "A'" { }`
+  (the body may be empty in a file grouped by part) makes every `form { A2 }` print A'; a
+  reference's own `A2 "A''"` still wins and `~A2` still hides it. ⚠️ **Never write the label
+  inside a part** — `part p1 { section A2 "A'" { … } }` is LYS0039.
 - **A SECTION reference takes the same marks**: `form { ~A ~B' }` opens B's play an
   octave up, `~B,` an octave down, `~B''` two. They belong to the PLAY, so one section can
   be quoted at two octaves (`~B ~B'`) while the declaration never moves, and the next

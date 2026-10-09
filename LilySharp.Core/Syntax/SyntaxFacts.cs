@@ -210,6 +210,29 @@ internal static class SyntaxFacts
     }
 
     /// <summary>
+    /// The label a section's TOP-LEVEL declaration gives it (<c>section A2 "A'" { }</c>), or
+    /// null — the first such declaration's, when several are written (LYS1045 names the
+    /// rest). <paramref name="anyNode"/> is any node of the tree, used to find its root.
+    /// </summary>
+    /// <remarks>
+    /// Declarations stand at the top level only (Parser.ParseTopLevelItem), so the root's
+    /// children are the whole search; a section inside a part has no label of its own
+    /// (LYS0039). Asked once per play, a walk of the top-level items — no cache to go stale
+    /// as the document is edited.
+    /// </remarks>
+    public static string? DeclaredSectionLabel(SyntaxNode anyNode, string sectionName)
+    {
+        SyntaxNode root = anyNode;
+        while (root.Parent != null)
+            root = root.Parent;
+        foreach (var child in root.ChildNodes())
+            if (child is SectionDeclarationSyntax s && s.Label is { } label
+                && string.Equals(s.SectionName, sectionName, StringComparison.Ordinal))
+                return label;
+        return null;
+    }
+
+    /// <summary>
     /// The occurrence label written on a form item — the quoted string, unquoted — or null.
     /// </summary>
     /// <remarks>
