@@ -864,28 +864,65 @@ public sealed partial class StaffRenderSyntax : SyntaxNode
 /// </remarks>
 internal static class StaffTargets
 {
-    internal readonly record struct Reading(SyntaxTokenNode? Clef, SyntaxTokenNode? Part, SyntaxTokenNode? MidiOnly);
+    /// <summary>The item's words: the <c>[clef] part [midiOnly]</c> reading, and around it the
+    /// label suppression (<c>~</c>), the display name (<c>"…"</c>) and the value tokens of the
+    /// <c>as</c> selectors (<c>lines N</c>, <c>removeEmpty V</c> — the TOKEN, read by
+    /// RenderSpecParser.SelectorsOf; null when not written or written with no value).</summary>
+    internal readonly record struct Reading(
+        SyntaxTokenNode? Clef, SyntaxTokenNode? Part, SyntaxTokenNode? MidiOnly,
+        SyntaxTokenNode? Tilde = null, SyntaxTokenNode? DisplayName = null,
+        SyntaxTokenNode? Lines = null, SyntaxTokenNode? RemoveEmpty = null);
 
+    /// <remarks>
+    /// ⚠️ ONE BOUNDARY, THE FIRST <c>as</c> (session 871): the words before it are the
+    /// targets and the label, the words after it the selectors. Until then RenderSpecParser,
+    /// PartReferenceFinder and the ossia reader each cut the <c>as</c> tail off a token list of
+    /// their own (CutStaffSelectors, at the first <c>as</c> FOLLOWED BY a selector word) while
+    /// this reading stopped at the first <c>as</c> — two boundaries for one item, which could
+    /// differ only on a part literally named <c>as</c> beside a selector.
+    /// </remarks>
     internal static Reading Of(SyntaxNode item)
     {
         var words = new List<SyntaxTokenNode>();
-        for (int i = 1; i < item.SlotCount; i++)
+        SyntaxTokenNode? tilde = null, display = null, lines = null, removeEmpty = null;
+        int i = 1;
+        for (; i < item.SlotCount; i++)
         {
             if (item.GetChild(i) is not SyntaxTokenNode t)
                 continue;
             if (string.Equals(t.Text, "as", StringComparison.Ordinal))
                 break;   // the selectors (`as lines 1 removeEmpty all`) follow
-            if (t.Kind is SyntaxKind.Tilde or SyntaxKind.StringLiteral or SyntaxKind.OpenBrace or SyntaxKind.CloseBrace)
-                continue;
-            words.Add(t);
+            if (t.Kind == SyntaxKind.Tilde)
+                tilde ??= t;
+            else if (t.Kind == SyntaxKind.StringLiteral)
+                display ??= t;
+            else if (t.Kind is not (SyntaxKind.OpenBrace or SyntaxKind.CloseBrace))
+                words.Add(t);
         }
+        // The selectors, any order, the last spelling of each winning; a selector word
+        // directly followed by the other one wrote no value.
+        static bool IsSelectorWord(SyntaxTokenNode t) => t.Text is "lines" or "removeEmpty";
+        for (i++; i < item.SlotCount; i++)
+        {
+            if (item.GetChild(i) is not SyntaxTokenNode t || !IsSelectorWord(t))
+                continue;
+            var value = i + 1 < item.SlotCount && item.GetChild(i + 1) is SyntaxTokenNode v && !IsSelectorWord(v)
+                ? v : null;
+            if (t.Text == "lines")
+                lines = value;
+            else
+                removeEmpty = value;
+            if (value != null)
+                i++;
+        }
+        var reading = new Reading(null, null, null, tilde, display, lines, removeEmpty);
         if (words.Count == 0)
-            return default;
+            return reading;
         if (words.Count == 1)
-            return new Reading(null, words[0], null);
+            return reading with { Part = words[0] };
         if (SyntaxFacts.IsClefKeyword(words[0].Kind) && !FirstIsADeclaredPart(item, words))
-            return new Reading(words[0], words[1], null);
-        return new Reading(null, words[0], words[1]);
+            return reading with { Clef = words[0], Part = words[1] };
+        return reading with { Part = words[0], MidiOnly = words[1] };
     }
 
     private static bool FirstIsADeclaredPart(SyntaxNode item, List<SyntaxTokenNode> words)

@@ -199,7 +199,7 @@ public class MagicConstantInventoryTests
         + @"Format\s*\(",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-    private sealed record Row(string File, int Line, string Literals, string Text,
+    private sealed record Row(string File, string Member, string Literals, string Text,
         string NearbyRef, string Decision);
 
     /// <summary>Renders the CSV, and returns the rows so the totals can be printed.</summary>
@@ -218,6 +218,8 @@ public class MagicConstantInventoryTests
                 + $"`git log --diff-filter=D -- LilySharp.Core/{rel}`.");
 
             var lines = File.ReadAllLines(path);
+            var members = SourceMemberLocator.Of(File.ReadAllText(path));
+            Assert.Equal(lines.Length, members.Length);
 
             // Where every reference in this file sits, so the file-level fallback below can be
             // decided once rather than re-scanned per line.
@@ -293,19 +295,18 @@ public class MagicConstantInventoryTests
                 if (NotAQuantity.IsMatch(line))
                     continue;
 
-                rows.Add(new Row(rel, i + 1,
+                rows.Add(new Row(rel, members[i],
                     string.Join(", ", literals.Select(m => m.Value)),
                     line.Trim(), nearbyRef, decision));
             }
         }
 
         var sb = new StringBuilder();
-        sb.Append(Csv("File", "Line", "Literals", "Text", "NearbyRef", "Decision"));
+        // MEMBER, NOT LINE (session 871, SourceMemberLocator): a line number moved with every
+        // edit above it, and the census went stale on edits that changed no constant.
+        sb.Append(Csv("File", "Member", "Literals", "Text", "NearbyRef", "Decision"));
         foreach (var r in rows)
-        {
-            sb.Append(Csv(r.File, r.Line.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                r.Literals, r.Text, r.NearbyRef, r.Decision));
-        }
+            sb.Append(Csv(r.File, r.Member, r.Literals, r.Text, r.NearbyRef, r.Decision));
         return (sb.ToString(), rows);
     }
 

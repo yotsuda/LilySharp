@@ -46,6 +46,38 @@ public sealed class StaffClefWordReadingTests
 
     private static RenderSpec Spec(string source) => RenderSpecParser.FindFirst(SyntaxTree.Parse(source))!;
 
+    /// <summary>The label and the <c>as</c> selectors come from the same reading as the part
+    /// (session 871: <c>StaffTargets</c> draws the one boundary at the first <c>as</c>; the
+    /// renderer and the reference finder kept token lists of their own until then).</summary>
+    [Theory]
+    [InlineData("staff ~bass click \"Bass\" as removeEmpty all lines 1", true, 1, true, true)]
+    [InlineData("staff bass as lines 2", false, 2, false, false)]
+    [InlineData("staff bass as removeEmpty true", false, 5, true, false)]
+    [InlineData("staff bass", false, 5, false, false)]
+    public void TheLabelAndTheSelectors_AreTheNodesReading(
+        string item, bool suppressed, int lines, bool removeEmpty, bool removeFirst)
+    {
+        var tree = SyntaxTree.Parse(Book(BassAndClick, BassAndClickCells, item));
+        var staff = Assert.IsType<SingleStaffSpec>(Assert.Single(RenderSpecParser.FindFirst(tree)!.Items)).Staff;
+
+        Assert.Equal("bass", staff.VoiceName);
+        Assert.Equal(suppressed, staff.NameSuppressed);
+        Assert.Equal(lines, staff.Lines);
+        Assert.Equal(removeEmpty, staff.RemoveEmpty);
+        Assert.Equal(removeFirst, staff.RemoveFirst);
+        var node = tree.GetRoot().DescendantNodes().OfType<StaffRenderSyntax>().Single();
+        Assert.Equal("bass", PartReferenceFinder.StaffPartToken(node)?.Text);
+    }
+
+    [Fact]
+    public void TheDisplayString_IsTheNodesReading()
+    {
+        var staff = Assert.IsType<SingleStaffSpec>(Assert.Single(
+            Spec(Book(BassAndClick, BassAndClickCells, "staff bass \"Low\" as lines 1")).Items)).Staff;
+        Assert.Equal("Low", staff.InstrumentName);
+        Assert.Equal(1, staff.Lines);
+    }
+
     [Fact]
     public void ADeclaredPartNamedForAClef_IsThePart_AndTheNextWordPlaysToMidiOnly()
     {

@@ -721,61 +721,24 @@ public static class RenderSpecParser
     internal readonly record struct StaffSelectors(int? Lines, bool RemoveEmpty, bool RemoveFirst);
 
     /// <summary>
-    /// Cuts the trailing <c>as …</c> selectors (<c>lines N</c>, <c>removeEmpty V</c>, any
-    /// order after one <c>as</c>) off a render item's target tokens and returns what they
-    /// said. ONE HOME for the cut: PartReferenceFinder and the LilyPond twin call this same
-    /// method so the part token stays the last remaining slot everywhere. Matched by TEXT —
-    /// <c>as</c> lexes as the Dutch A-flat pitch, the selector words as ordinary words — and
-    /// only an <c>as</c> FOLLOWED BY a selector word is the cut, so a part named <c>as</c>
-    /// is left alone. The <c>removeEmpty</c> value is read Ordinal: the parser refused any
+    /// What a staff or ossia item's <c>as …</c> selectors (<c>lines N</c>, <c>removeEmpty V</c>,
+    /// any order after one <c>as</c>) say — read from the node's one reading
+    /// (<see cref="StaffTargets"/>, which also answers the part, so the boundary between the
+    /// two is drawn once). The <c>removeEmpty</c> value is read Ordinal: the parser refused any
     /// other spelling (<c>TRUE</c> included) before this reader sees the book.
     /// </summary>
-    internal static StaffSelectors CutStaffSelectors(List<SyntaxTokenNode> toks)
-    {
-        static bool IsSelectorWord(SyntaxTokenNode t)
-            => string.Equals(t.Text, "lines", System.StringComparison.Ordinal)
-               || string.Equals(t.Text, "removeEmpty", System.StringComparison.Ordinal);
-        for (int i = 0; i + 1 < toks.Count; i++)
-        {
-            if (!string.Equals(toks[i].Text, "as", System.StringComparison.Ordinal)
-                || !IsSelectorWord(toks[i + 1]))
-                continue;
-            int? lines = null;
-            string? removeEmpty = null;
-            for (int j = i + 1; j < toks.Count; j++)
-            {
-                if (string.Equals(toks[j].Text, "lines", System.StringComparison.Ordinal))
-                {
-                    lines = j + 1 < toks.Count
-                        && int.TryParse(toks[j + 1].Text, out int n)
-                        && n >= StaffSpec.MinLines && n <= StaffSpec.MaxLines
-                        ? n : null;
-                    if (j + 1 < toks.Count && !IsSelectorWord(toks[j + 1])) j++;
-                }
-                else if (string.Equals(toks[j].Text, "removeEmpty", System.StringComparison.Ordinal))
-                {
-                    removeEmpty = j + 1 < toks.Count && !IsSelectorWord(toks[j + 1]) ? toks[j + 1].Text : null;
-                    if (removeEmpty != null) j++;
-                }
-            }
-            toks.RemoveRange(i, toks.Count - i);
-            return new StaffSelectors(lines,
-                RemoveEmpty: removeEmpty is "true" or "all",
-                RemoveFirst: removeEmpty is "all");
-        }
-        return default;
-    }
+    internal static StaffSelectors SelectorsOf(SyntaxNode item) => SelectorsOf(StaffTargets.Of(item));
 
-    /// <summary>The non-keyword, non-brace tokens of a render item, in order:
-    /// either [part] or [modifier, part] (modifier = clef or tuning).</summary>
-    private static List<SyntaxTokenNode> RenderTargetTokens(SyntaxNode node)
+    private static StaffSelectors SelectorsOf(StaffTargets.Reading reading)
     {
-        var toks = new List<SyntaxTokenNode>();
-        for (int i = 1; i < node.SlotCount; i++) // skip the leading keyword
-            if (node.GetChild(i) is SyntaxTokenNode t
-                && t.Kind is not (SyntaxKind.OpenBrace or SyntaxKind.CloseBrace))
-                toks.Add(t);
-        return toks;
+        int? lines = reading.Lines is { } l
+            && int.TryParse(l.Text, out int n)
+            && n >= StaffSpec.MinLines && n <= StaffSpec.MaxLines
+            ? n : null;
+        string? removeEmpty = reading.RemoveEmpty?.Text;
+        return new StaffSelectors(lines,
+            RemoveEmpty: removeEmpty is "true" or "all",
+            RemoveFirst: removeEmpty is "all");
     }
 
     /// <summary>One home for the staff-item token scan: the sings validator reads
@@ -802,24 +765,17 @@ public static class RenderSpecParser
     private static StaffSpec? ParseStaff(StaffRenderSyntax staff)
     {
         // [~][clef?] part ["display"] [with chords chordPart]; braces skipped.
-        var toks = RenderTargetTokens(staff);
-        // `as lines N removeEmpty V` — the staff-line count and hara-kiri are
-        // properties of THIS rendering (the part header carries neither); cut them
-        // before the display name scan below so `as` cannot be read as a bare
-        // display name.
-        var selectors = CutStaffSelectors(toks);
+        // The node's one reading (StaffTargets) of every word: `as lines N removeEmpty V` —
+        // the staff-line count and hara-kiri are properties of THIS rendering (the part
+        // header carries neither) — and the label.
+        var reading = StaffTargets.Of(staff);
+        var selectors = SelectorsOf(reading);
 
         // `staff ~flute` = no instrument-name label for this staff.
-        bool nameSuppressed = toks.RemoveAll(t => t.Kind == SyntaxKind.Tilde) > 0;
+        bool nameSuppressed = reading.Tilde != null;
 
         // `staff flute "津田さん"` = per-score display-name override.
-        string? nameOverride = null;
-        int si = toks.FindIndex(t => t.Kind == SyntaxKind.StringLiteral);
-        if (si >= 0)
-        {
-            nameOverride = StringLiteral.Value(toks[si].Text);
-            toks.RemoveAt(si);
-        }
+        string? nameOverride = reading.DisplayName is { } display ? StringLiteral.Value(display.Text) : null;
 
         // [clef?] part — the node's one reading (StaffTargets): a lone clef word is the part,
         // and a clef word that names a declared part is that part, the word after it a part
@@ -1171,14 +1127,10 @@ public static class RenderSpecParser
     /// </summary>
     private static OssiaStaffSpec? ParseOssia(OssiaRenderSyntax ossia)
     {
-        // ossia [clef] partName [as lines N …] — after the selector cut, the LAST
-        // token is always the part name; a clef word alone is a name. An ossia is
-        // hara-kiri on every system by construction (Staff.CreateOssia), so its
-        // `removeEmpty` selector, if written, changes nothing.
-        var toks = RenderTargetTokens(ossia);
-        int? ossiaLines = CutStaffSelectors(toks).Lines;
-        if (toks.Count == 0)
-            return null;
+        // ossia [clef] partName [as lines N …] — the node's one reading (StaffTargets); a
+        // clef word alone is a name. An ossia is hara-kiri on every system by construction
+        // (Staff.CreateOssia), so its `removeEmpty` selector, if written, changes nothing.
+        int? ossiaLines = SelectorsOf(ossia).Lines;
         if (ossia.PartToken is not { } nameToken)
             return null;
         string voiceName = nameToken.Text;

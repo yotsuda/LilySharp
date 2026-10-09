@@ -376,12 +376,12 @@ public static class PartReferenceFinder
     // ── reference-token selection (mirrors RenderSpecParser) ──
 
     /// <summary>
-    /// The part token in a <c>staff</c> render item: cut the trailing
-    /// <c>as lines N</c> selector, skip a leading <c>~</c> (label suppression)
-    /// and the per-score display string, then take the first token that is not a
-    /// clef keyword — unless that clef word is ALL that is left, in which case it
-    /// IS the part name. LILYPOND-REF is n/a — this mirrors
-    /// <see cref="Svg.Collector.RenderSpecParser.ParseStaffSpec"/>.
+    /// The part token in a <c>staff</c> render item — the NODE's reading
+    /// (<see cref="StaffRenderSyntax.PartToken"/>, <c>StaffTargets</c>): the <c>as</c>
+    /// selectors, the <c>~</c> and the display string are not words, and a clef word that is
+    /// ALL that is left IS the part name. RenderSpecParser reads the same answer. Since
+    /// session 871 this keeps no token list of its own (it cut the selectors and stripped
+    /// the label itself, a second boundary beside the node's).
     /// </summary>
     /// <remarks>
     /// ⚠️ THE TWO CUTS ARE THE MIRROR, AND BOTH WERE MISSING (2026-08-28). RenderSpecParser
@@ -405,18 +405,8 @@ public static class PartReferenceFinder
     /// the LilyPond twin (<c>LilyPondExporter.RenderPartName</c>) reads the staff's part
     /// here instead of taking the first identifier after the keyword for itself.
     /// </remarks>
-    internal static SyntaxTokenNode? StaffPartToken(StaffRenderSyntax staff)
-    {
-        var toks = TargetTokens(staff);
-        Svg.Collector.RenderSpecParser.CutStaffSelectors(toks);
-        toks.RemoveAll(t => t.Kind == SyntaxKind.Tilde);
-        int si = toks.FindIndex(t => t.Kind == SyntaxKind.StringLiteral);
-        if (si >= 0)
-            toks.RemoveAt(si);
-        if (toks.Count == 0)
-            return null;
-        return Referenceable(staff.PartToken);
-    }
+    internal static SyntaxTokenNode? StaffPartToken(StaffRenderSyntax staff) =>
+        Referenceable(staff.PartToken);
 
     /// <summary>
     /// The part token in a <c>tab</c> render item — the NODE's reading
@@ -472,18 +462,5 @@ public static class PartReferenceFinder
     /// </remarks>
     private static SyntaxTokenNode? Referenceable(SyntaxTokenNode? token)
         => token is { } t && t.Text.Length > 0 ? t : null;
-
-
-    /// <summary>The render item's tokens, skipping the leading keyword and braces
-    /// (RenderSpecParser.RenderTargetTokens).</summary>
-    private static List<SyntaxTokenNode> TargetTokens(SyntaxNode node)
-    {
-        var toks = new List<SyntaxTokenNode>();
-        for (int i = 1; i < node.SlotCount; i++)
-            if (node.GetChild(i) is SyntaxTokenNode t
-                && t.Kind is not (SyntaxKind.OpenBrace or SyntaxKind.CloseBrace))
-                toks.Add(t);
-        return toks;
-    }
 
 }

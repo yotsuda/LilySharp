@@ -164,7 +164,9 @@ public class ApproximationInventoryTests
             .Select(rel => rel.Replace('\\', '/'))
             .ToArray();
 
-    private sealed record Hit(string File, int Line, string Text);
+    /// <summary>One site: its file, the member it stands in (<see cref="SourceMemberLocator"/> —
+    /// NOT the line number, which every edit above it moved, session 871) and its text.</summary>
+    private sealed record Hit(string File, string Member, string Text);
 
     /// <summary>
     /// Scans the tree and renders the document. Returns the text and the per-category hits so
@@ -183,8 +185,9 @@ public class ApproximationInventoryTests
 
         foreach (var rel in files)
         {
-            var lines = File.ReadAllLines(
-                Path.Combine(root, rel.Replace('/', Path.DirectorySeparatorChar)));
+            var path = Path.Combine(root, rel.Replace('/', Path.DirectorySeparatorChar));
+            var lines = File.ReadAllLines(path);
+            string[]? members = null;   // parsed only for a file with a hit
             for (int i = 0; i < lines.Length; i++)
             {
                 if (!CommentPrefix.IsMatch(lines[i]))
@@ -197,7 +200,8 @@ public class ApproximationInventoryTests
                     // rather than let a later category claim it.
                     if (key == "OWN" && OwnMention.IsMatch(lines[i]))
                         break;
-                    hits[key].Add(new Hit(rel, i + 1, Clean(lines[i])));
+                    members ??= SourceMemberLocator.Of(File.ReadAllText(path));
+                    hits[key].Add(new Hit(rel, members[i], Clean(lines[i])));
                     if (!perFile.ContainsKey(rel))
                         firstSeen.Add(rel);
                     perFile[rel] = perFile.GetValueOrDefault(rel) + 1;
@@ -250,7 +254,7 @@ public class ApproximationInventoryTests
                     doc.Add($"### `{h.File}`");
                     current = h.File;
                 }
-                doc.Add($"- **:{h.Line}** {h.Text}");
+                doc.Add($"- **`{h.Member}`** {h.Text}");
             }
             doc.Add("");
         }
