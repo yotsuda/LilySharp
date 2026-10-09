@@ -412,6 +412,45 @@ internal static class ChordNameGlyphRun
         _ => MusicGlyph.AccidentalDoubleFlat,
     };
 
+    /// <summary>SMuFL's chord-symbol accidental for an alteration in half steps.</summary>
+    private static MusicGlyph CsymAccidental(int alteration) => alteration switch
+    {
+        >= 2 => MusicGlyph.CsymAccidentalDoubleSharp,
+        1 => MusicGlyph.CsymAccidentalSharp,
+        -1 => MusicGlyph.CsymAccidentalFlat,
+        _ => MusicGlyph.CsymAccidentalDoubleFlat,
+    };
+
+    /// <summary>
+    /// SMuFL's chord-symbol glyph for a quality character — the degree circle, the half-diminished
+    /// slash, the augmented plus and the major-seventh triangle — when the score's music font has
+    /// it; null otherwise (Emmentaler always), when the character is what it was.
+    /// </summary>
+    private static MusicGlyph? CsymOf(char c)
+    {
+        MusicGlyph? g = c switch
+        {
+            WhiteCircle => MusicGlyph.CsymDiminished,
+            'ø' => MusicGlyph.CsymHalfDiminished,
+            '+' => MusicGlyph.CsymAugmented,
+            TriangleCarrier => MusicGlyph.CsymMajorSeventh,
+            _ => null,
+        };
+        return g is { } glyph && MusicFont.Current.Has(glyph) ? glyph : null;
+    }
+
+    /// <summary>
+    /// The music font-size a chord-symbol glyph (<c>csym*</c>) is drawn at so that its em is the
+    /// TEXT's em at <paramref name="textFontSize"/> — SMuFL designs these glyphs to be set with the
+    /// letters, on their baseline (Bravura's flat stands 0 … 3.0 on a 4-space em, a capital's
+    /// height), not as reduced music glyphs. The page draws a glyph piece at
+    /// <see cref="AccidentalGlyphEm"/> of this.
+    /// </summary>
+    /// <remarks>LILYSHARP-OWN: LilyPond reads no SMuFL font and draws a chord symbol's flat as a
+    /// <c>\smaller</c> feta accidental, its triangle as a polygon and its circle as text.</remarks>
+    private static double CsymFontSize(double textFontSize)
+        => 6.0 * System.Math.Log2(EmAt(textFontSize) / Rendering.SharedRenderer.FontSize);
+
     /// <summary>The glyph's character and its page-space box for an alteration in half steps.</summary>
     private static (char Glyph, GlyphMetrics.BBox Box) GlyphFor(int alteration, double step)
     {
@@ -508,6 +547,23 @@ internal static class ChordNameGlyphRun
             x += advance;
         }
 
+        // One SMuFL chord-symbol glyph, at the em of the text it stands in and on that text's
+        // baseline, advancing by its own advance as a letter would (CsymFontSize).
+        void AddCsym(MusicGlyph g, bool up)
+        {
+            var font = MusicFont.Current;
+            double step = CsymFontSize(up ? superFontSize : fontSize);
+            var metrics = font.SizedAt(step).Metrics(g);
+            var box = metrics.DesignBox ?? default;
+            double advance = metrics.Advance ?? box.Right;
+            double raise = up ? superRaise : 0;
+            pieces.Add(new Piece(
+                Text: "", font.Codepoint(g), ChordPieceKind.Accidental,
+                X: x, Advance: advance, DrawX: x,
+                raise, box.Bottom + raise, box.Top + raise, step));
+            x += advance;
+        }
+
         for (int i = 0; i < text.Length;)
         {
             // An edge of a raised span cuts the run even when nothing else does.
@@ -515,6 +571,18 @@ internal static class ChordNameGlyphRun
             {
                 FlushText(i);
                 runStart = i;
+            }
+            // A quality the music font has SMuFL's own glyph for. The degree circle stands
+            // raised and small wherever it is written: LilyPond's is a text degree sign, whose
+            // ink sits high in the line; SMuFL's circle stands on the baseline, so it takes the
+            // superscript's place to read the same.
+            if (CsymOf(text[i]) is { } csym)
+            {
+                FlushText(i);
+                AddCsym(csym, Raised(i) || csym == MusicGlyph.CsymDiminished);
+                i++;
+                runStart = i;
+                continue;
             }
             if (text[i] == WhiteCircle)
             {
@@ -595,6 +663,15 @@ internal static class ChordNameGlyphRun
             var (length, alteration) = accidental.Value;
             FlushText(i);
             bool up = Raised(i);
+            if (MusicFont.Current.Has(CsymAccidental(alteration)))
+            {
+                // The font's chord-symbol accidental, set with the letters (CsymFontSize) —
+                // not the \smaller feta glyph LilyPond lifts by its Emmentaler constants.
+                AddCsym(CsymAccidental(alteration), up);
+                i += length;
+                runStart = i;
+                continue;
+            }
             // The accidental's own font-size: \smaller off whatever it stands in. A raised
             // one stands in the \super, so it reads that font-size — LilyPond's \super wraps
             // the whole markup, glyphs included — and its lift adds to the one the
@@ -639,7 +716,11 @@ internal static class ChordNameGlyphRun
         && bracketSuperFrom == Music.ChordSymbolText.NoSuperscript
         && text.IndexOf('♯') < 0 && text.IndexOf('♭') < 0
         && text.IndexOf(TriangleCarrier) < 0
-        && text.IndexOf(WhiteCircle) < 0;
+        && text.IndexOf(WhiteCircle) < 0
+        // A font with SMuFL's own glyph for them draws `ø` and `+` as glyphs (CsymOf); without
+        // one they are letters of the run, as before.
+        && (text.IndexOf('ø') < 0 || CsymOf('ø') is null)
+        && (text.IndexOf('+') < 0 || CsymOf('+') is null);
 
     /// <summary>
     /// A triangle piece's BASE, read back off its advance — the one place that inverts the

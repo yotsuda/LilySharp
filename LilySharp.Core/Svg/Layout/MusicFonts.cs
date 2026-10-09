@@ -76,6 +76,17 @@ public static class MusicFonts
     private static readonly ConcurrentDictionary<string, MusicFontChain> Chains = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
+    /// The text face a bundled music font sets chord symbols' letters in, by the music font's
+    /// name (<see cref="MusicFont.ChordTextFace"/>) — a face the bundle ships beside it
+    /// (<c>TextFontMetrics.CompanionFaces</c>).
+    /// </summary>
+    internal static readonly IReadOnlyDictionary<string, string> ChordTextFaces =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Petaluma"] = "Petaluma Script",
+        };
+
+    /// <summary>
     /// The font named <paramref name="name"/>, or null when none can be found —
     /// <paramref name="tried"/> then lists every place looked, for the diagnostic.
     /// </summary>

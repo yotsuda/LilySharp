@@ -477,7 +477,23 @@ public static class TextFontMetrics
     private static string? BundledPathForName(string name, FontStyle style)
         => TryBundledFamily(TextFace.Named(name, false, style), out bool sans)
             ? FontLocator.ResolveFile(FileName(sans, style))
-            : null;
+            : CompanionPath(name);
+
+    /// <summary>
+    /// The text faces shipped as a MUSIC font's companions — family name → its OTF and the
+    /// WOFF2 an SVG embeds. One regular file each, which answers for every style asked.
+    /// </summary>
+    /// <remarks>Petaluma Script is the handwritten face Petaluma's chord symbols are set in
+    /// (<c>MusicFont.ChordTextFace</c>); it comes from Petaluma's own repository under its OFL.</remarks>
+    internal static readonly IReadOnlyDictionary<string, (string File, string WebFile)> CompanionFaces =
+        new Dictionary<string, (string, string)>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Petaluma Script"] = ("PetalumaScript.otf", "PetalumaScript.woff2"),
+        };
+
+    /// <summary>The bundled file of a companion face (<see cref="CompanionFaces"/>), or null.</summary>
+    internal static string? CompanionPath(string name)
+        => CompanionFaces.TryGetValue(name, out var files) ? FontLocator.ResolveFile(files.File) : null;
 
     /// <summary>
     /// Does <paramref name="face"/> come out of the BUNDLE, and if so from which family's
@@ -527,7 +543,8 @@ public static class TextFontMetrics
     /// classification and the sort (HANDOFF §2F, 2026-08-19).
     /// </remarks>
     public static bool IsBundledFamilyName(string name)
-        => TryBundledFamily(TextFace.Named(name, false, FontStyle.Regular), out _);
+        => TryBundledFamily(TextFace.Named(name, false, FontStyle.Regular), out _)
+           || CompanionFaces.ContainsKey(name);
 
     /// <summary>
     /// The machine's face for <paramref name="name"/> at <paramref name="style"/>, or null

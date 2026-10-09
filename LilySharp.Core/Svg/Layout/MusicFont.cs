@@ -244,6 +244,15 @@ internal abstract class MusicFont
     /// <c>keyboardPedalPedNoDot</c>).</remarks>
     public virtual bool PedalPedCarriesItsPeriod => false;
 
+    /// <summary>
+    /// The text face a score in this font sets its chord symbols' letters in when the score
+    /// names none (<c>TextFontPlan.Resolve</c>), or null for the engraving's own (TeX Gyre Heros).
+    /// </summary>
+    /// <remarks>Petaluma is a handwritten jazz font whose chord symbols are written in its
+    /// companion Petaluma Script (<see cref="MusicFonts.ChordTextFaces"/>); LilyPond has no music
+    /// font to pair with, so Emmentaler answers null.</remarks>
+    public virtual string? ChordTextFace => null;
+
     // ---- constants LilyPond wrote for Emmentaler's shapes (docs/smufl-design.md §3 #17) ----
 
     /// <summary>
@@ -381,8 +390,9 @@ internal sealed class EmmentalerMusicFont : MusicFont
 
     /// <inheritdoc/>
     /// <remarks>Every <see cref="MusicGlyph"/> member is an Emmentaler glyph — the vocabulary was
-    /// cut from it (a test holds this).</remarks>
-    public override bool Has(MusicGlyph glyph) => true;
+    /// cut from it (a test holds this) — but SMuFL's own chord-symbol glyphs
+    /// (<see cref="MusicGlyphs.IsSmuflOnly"/>), which a reader asks for only where a font has them.</remarks>
+    public override bool Has(MusicGlyph glyph) => !MusicGlyphs.IsSmuflOnly(glyph);
 
     /// <inheritdoc/>
     public override char Codepoint(MusicGlyph glyph) => MusicGlyphs.Of(glyph).EmmentalerCode;
@@ -398,7 +408,8 @@ internal sealed class EmmentalerMusicFont : MusicFont
     {
         var map = new Dictionary<char, MusicGlyph>();
         foreach (var e in MusicGlyphs.Table)
-            map.TryAdd(e.EmmentalerCode, e.Glyph);
+            if (e.EmmentalerCode != '\0')
+                map.TryAdd(e.EmmentalerCode, e.Glyph);
         return map.ToFrozenDictionary();
     }
 

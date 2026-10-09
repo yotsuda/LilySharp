@@ -423,6 +423,12 @@ internal sealed class SvgDocumentContext : IDocumentContext
                                                .OrderBy(d => d))
                 AppendEmbeddedFontFace(faces, music.FaceFamily(design),
                     music.WebFaceFile(design), FormatOf(music.WebFaceFile(design)));
+            // …and the music font's companion text face its chord symbols are set in
+            // (Petaluma Script): unlike TeX Gyre it is on no viewer's machine.
+            if (Fonts.Resolve(TextRole.ChordName) is { IsBundled: false } chord)
+                foreach (var name in chord.Names)
+                    if (TextFontMetrics.CompanionFaces.TryGetValue(name, out var files))
+                        AppendEmbeddedFontFace(faces, name, files.WebFile, FormatOf(files.WebFile));
             if (faces.Length > 0)
                 return faces.ToString().TrimEnd();
         }

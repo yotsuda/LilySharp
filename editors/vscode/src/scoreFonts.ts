@@ -56,6 +56,9 @@ const MUSIC_FACES: ReadonlyArray<{ family: string; file: string; format: string 
     { family: 'Bravura', file: 'Bravura.woff2', format: 'woff2' },
     { family: 'Petaluma', file: 'Petaluma.woff2', format: 'woff2' },
     { family: 'Leland', file: 'Leland.otf', format: 'opentype' },
+    // Petaluma's companion TEXT face: a Petaluma score's chord symbols are set in it
+    // (MusicFont.ChordTextFace), and no viewer has it installed.
+    { family: 'Petaluma Script', file: 'PetalumaScript.woff2', format: 'woff2' },
 ];
 
 /** `@font-face` rules for the score's text faces and the bundled SMuFL music fonts, as

@@ -240,8 +240,12 @@ internal sealed class BoxesDrawingContext : IDrawingContext, IDisposable
         // The NAME is the glyph's, not the font's character: Emmentaler's constant for it, in
         // whatever font it is drawn — so a Bravura note head is a notehead too. A character the
         // vocabulary does not hold (a SMuFL brace) is named by its code point.
+        // A SMuFL-only glyph (a chord symbol's csym*) has no Emmentaler constant: its SMuFL name,
+        // capitalised like the constants ("CsymAccidentalFlat").
         string name = music.GlyphOf(glyph) is { } g
-            ? GlyphName(Core.Svg.MusicGlyphs.Of(g).EmmentalerCode)
+            ? Core.Svg.MusicGlyphs.IsSmuflOnly(g)
+                ? char.ToUpperInvariant(Core.Svg.MusicGlyphs.SmuflName(g)[0]) + Core.Svg.MusicGlyphs.SmuflName(g)[1..]
+                : GlyphName(Core.Svg.MusicGlyphs.Of(g).EmmentalerCode)
             : music is Core.Svg.Layout.EmmentalerMusicFont ? GlyphName(code) : $"U+{(int)code:X4}";
         string family = music.FaceFamily(face);
         Add(GlyphKind(name), ink.Left / Scale, ink.Top / Scale, ink.Right / Scale, ink.Bottom / Scale,
@@ -328,6 +332,7 @@ internal sealed class BoxesDrawingContext : IDrawingContext, IDisposable
         _ when name.StartsWith("Notehead", StringComparison.Ordinal) => "notehead",
         _ when name.StartsWith("Rest", StringComparison.Ordinal) => "rest",
         _ when name.StartsWith("Accidental", StringComparison.Ordinal) => "accidental",
+        _ when name.StartsWith("Csym", StringComparison.Ordinal) => "chordName",
         _ when name.StartsWith("Flag", StringComparison.Ordinal) => "flag",
         _ when name.Contains("Clef", StringComparison.Ordinal) => "clef",
         _ when name.StartsWith("Time", StringComparison.Ordinal) => "timeSignature",

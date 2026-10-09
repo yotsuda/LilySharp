@@ -92,6 +92,13 @@ internal sealed class MusicFontChain : MusicFont
         foreach (var e in MusicGlyphs.Table)
         {
             int owner = Array.FindIndex(_members, m => m.Has(e.Glyph));
+            if (owner < 0)
+            {
+                // A SMuFL-only glyph none of the fonts has (MusicGlyphs.IsSmuflOnly) — Emmentaler,
+                // the last, draws every other one.
+                _owner[(int) e.Glyph] = Absent;
+                continue;
+            }
             _owner[(int) e.Glyph] = (byte) owner;
             char code = owner == 0 ? _members[0].Codepoint(e.Glyph) : (char) (FallbackBase + (int) e.Glyph);
             _code[(int) e.Glyph] = code;
@@ -114,8 +121,12 @@ internal sealed class MusicFontChain : MusicFont
     public override string Name => First.Name;
 
     /// <inheritdoc/>
-    /// <remarks>Every glyph — Emmentaler, the last font, draws them all.</remarks>
-    public override bool Has(MusicGlyph glyph) => true;
+    /// <remarks>Every glyph — Emmentaler, the last font, draws them all — but a SMuFL-only one
+    /// none of the fonts has.</remarks>
+    public override bool Has(MusicGlyph glyph) => _owner[(int) glyph] != Absent;
+
+    // The owner a glyph no member has.
+    private const byte Absent = byte.MaxValue;
 
     /// <inheritdoc/>
     public override char Codepoint(MusicGlyph glyph) => _code[(int) glyph];
@@ -223,6 +234,10 @@ internal sealed class MusicFontChain : MusicFont
 
     /// <inheritdoc/>
     public override bool PedalPedCarriesItsPeriod => OwnerOf(MusicGlyph.KeyboardPedalPed).PedalPedCarriesItsPeriod;
+
+    /// <inheritdoc/>
+    /// <remarks>The first font's: the font the score wrote first is the one it reads as.</remarks>
+    public override string? ChordTextFace => First.ChordTextFace;
 
     /// <inheritdoc/>
     public override double StemSidePaddingFraction(MusicGlyph glyph)

@@ -69,6 +69,13 @@ is what `fonts { music "…" }` selects a score's music font from. The OFL
 permits bundling and embedding in documents and forbids selling the fonts by
 themselves, which Lily# does not do.
 
+Petaluma Script (`Fonts/PetalumaScript.otf`, `Fonts/PetalumaScript.woff2`) is
+Petaluma's companion text face from the same repository, the same copyright
+holder and the same licence — its `OFL.txt` and `FONTLOG.txt` are the files
+shipped as `Fonts/Petaluma-LICENSE.txt` and `Fonts/Petaluma-FONTLOG.txt`. A
+score in Petaluma draws its chord symbols' letters in it unless the score
+names a face for them; it is redistributed unmodified, under its reserved name.
+
 ## .NET libraries (bundled as DLLs)
 
 Present in the `lysc` archives, in the language server the VS Code extension

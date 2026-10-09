@@ -159,7 +159,12 @@ internal sealed class EmmentalerFontResolver : IFontResolver
                 if (faces.ContainsKey(name))
                     continue;   // first role bound to this name decides the stand-in
                 byte[]? bytes = null;
-                if (plan.Embed)
+                // A music font's companion face (Petaluma Script) is in the bundle under the
+                // OFL: its own program is always on the page, `embedded` or not — the bundled
+                // stand-in would be a face the layout never measured.
+                if (TextFontMetrics.CompanionPath(name) is { } companion)
+                    bytes = File.ReadAllBytes(companion);
+                else if (plan.Embed)
                 {
                     var cls = FontEmbedInfo.Classify(name);
                     if (cls is not (FontEmbedInfo.FontEmbedClass.Forbidden

@@ -91,6 +91,15 @@ public class MusicFontTests
         var font = EmmentalerMusicFont.Instance;
         foreach (var e in MusicGlyphs.Table)
         {
+            // SMuFL's own chord-symbol glyphs are the one family Emmentaler does not have: no feta
+            // name, no character, and the font says so (a reader asks Has before drawing one).
+            if (MusicGlyphs.IsSmuflOnly(e.Glyph))
+            {
+                Assert.StartsWith("Csym", e.Glyph.ToString(), StringComparison.Ordinal);
+                Assert.Equal("", e.FetaName);
+                Assert.False(font.Has(e.Glyph));
+                continue;
+            }
             Assert.True(font.Has(e.Glyph));
             Assert.Equal(e.EmmentalerCode, font.Codepoint(e.Glyph));
         }

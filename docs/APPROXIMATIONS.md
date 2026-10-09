@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 220 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **346** | |
+| `OWN` | 222 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **348** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -74,7 +74,7 @@
 ### `LilySharp.Core/Svg/Layout/ChordNameGlyphRun.cs`
 - **:66** ⚠️ WHAT IS NOT PORTED HERE, named so it is not mistaken for a defect in this file:
 - **:78** ⚠️ WHAT ELSE IS NOT PORTED, and it is ONE absence with one cause: LilyPond builds the
-- **:568** THAT SEPARATOR IS NOT PORTED, here or anywhere else in the symbol —
+- **:636** THAT SEPARATOR IS NOT PORTED, here or anywhere else in the symbol —
 ### `LilySharp.Core/Svg/Layout/DynamicAlignEngraver.cs`
 - **:49** ⚠️ NOT PORTED, DISCLOSED (no pair measures either) — both are LP behaviours this
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（220 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（222 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **:90** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
@@ -326,9 +326,11 @@
 - **:444** ⚠️ LILYSHARP-OWN on a FULL tab, and deliberately so (USER DECISION,
 - **:995** ⚠️ LILYSHARP-OWN, the other half: which x IS the centre when the digits do not
 ### `LilySharp.Core/Rendering/TextFontMetrics.cs`
-- **:543** LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
-- **:662** ⚠️ LILYSHARP-OWN: the glyphs a missing codepoint falls back to are drawn from a system
-- **:760** LILYSHARP-OWN: a face with no readable extents (none of the bundled ones), so
+- **:560** LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
+- **:679** ⚠️ LILYSHARP-OWN: the glyphs a missing codepoint falls back to are drawn from a system
+- **:777** LILYSHARP-OWN: a face with no readable extents (none of the bundled ones), so
+### `LilySharp.Core/Rendering/TextFontPlan.cs`
+- **:379** LILYSHARP-OWN: LilyPond pairs no text face with its one music font.
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
 - **:683** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Semantics/CapoAdvisor.cs`
@@ -408,6 +410,8 @@
 - **:227** ⚠️ LILYSHARP-OWN, all of it. LilyPond cannot spell the configuration: a
 - **:877** LILYSHARP-OWN: LilyPond does not shift a ChordName off its column at all — a
 - **:1031** ⚠️ LILYSHARP-OWN, THE DIAGRAM'S X: its box stands with its LEFT edge on the symbol's
+### `LilySharp.Core/Svg/Layout/ChordNameGlyphRun.cs`
+- **:449** LILYSHARP-OWN: LilyPond reads no SMuFL font and draws a chord symbol's flat as a
 ### `LilySharp.Core/Svg/Layout/CustomTextEngraver.cs`
 - **:118** LILYSHARP-OWN, two declared bridges inside that rule (HANDOFF 5.2):
 ### `LilySharp.Core/Svg/Layout/DotColumn.cs`
@@ -479,8 +483,8 @@
 - **:3750** ⚠️ LILYSHARP-OWN, DECLARED: LilyPond's pure heights are BOXES — the begin-of-line
 - **:5125** LILYSHARP-OWN: the band is Lily#'s model of a line LilyPond walks as a loose line
 ### `LilySharp.Core/Svg/Layout/MusicFont.cs`
-- **:493** LILYSHARP-OWN: hand-tuned, and the only head width that is. ⚠️ NOT because LilyPond
-- **:506** LILYSHARP-OWN: the sM1 advance was never extracted either; 1.30 over the
+- **:504** LILYSHARP-OWN: hand-tuned, and the only head width that is. ⚠️ NOT because LilyPond
+- **:517** LILYSHARP-OWN: the sM1 advance was never extracted either; 1.30 over the
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:155** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **:181** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN

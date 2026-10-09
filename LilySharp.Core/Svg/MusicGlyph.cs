@@ -100,6 +100,10 @@ internal enum MusicGlyph : ushort
 
     // ---- dynamics ----
     DynamicPiano, DynamicMezzo, DynamicForte, DynamicRinforzando, DynamicSforzando, DynamicZ, DynamicNiente,
+
+    // ---- chord symbols: SMuFL's own (csym*), which Emmentaler does not have ----
+    CsymAccidentalFlat, CsymAccidentalSharp, CsymAccidentalDoubleSharp, CsymAccidentalDoubleFlat,
+    CsymDiminished, CsymHalfDiminished, CsymAugmented, CsymMajorSeventh,
 }
 
 /// <summary>
@@ -318,7 +322,22 @@ internal static class MusicGlyphs
         new(MusicGlyph.DynamicSforzando, "dynamicSforzando", 0xE524, "s", EmmentalerGlyphs.DynamicSforzando),
         new(MusicGlyph.DynamicZ, "dynamicZ", 0xE525, "z", EmmentalerGlyphs.DynamicZ),
         new(MusicGlyph.DynamicNiente, "dynamicNiente", 0xE526, "n", 'n'),
+
+        // ---- chord symbols (SMuFL only — Emmentaler has none; no feta name, no character) ----
+        new(MusicGlyph.CsymAccidentalFlat, "csymAccidentalFlat", 0xED60, "", '\0'),
+        new(MusicGlyph.CsymAccidentalSharp, "csymAccidentalSharp", 0xED62, "", '\0'),
+        new(MusicGlyph.CsymAccidentalDoubleSharp, "csymAccidentalDoubleSharp", 0xED63, "", '\0'),
+        new(MusicGlyph.CsymAccidentalDoubleFlat, "csymAccidentalDoubleFlat", 0xED64, "", '\0'),
+        new(MusicGlyph.CsymDiminished, "csymDiminished", 0xE870, "", '\0'),
+        new(MusicGlyph.CsymHalfDiminished, "csymHalfDiminished", 0xE871, "", '\0'),
+        new(MusicGlyph.CsymAugmented, "csymAugmented", 0xE872, "", '\0'),
+        new(MusicGlyph.CsymMajorSeventh, "csymMajorSeventh", 0xE873, "", '\0'),
     ];
+
+    /// <summary>True for a glyph only a SMuFL font has — a chord-symbol glyph Emmentaler lacks
+    /// (<see cref="MusicGlyphEntry.EmmentalerCode"/> is <c>'\0'</c>). Ask
+    /// <c>MusicFont.Has</c> before drawing one: no font in a chain may have it.</summary>
+    public static bool IsSmuflOnly(MusicGlyph glyph) => ByGlyph[(int) glyph].EmmentalerCode == '\0';
 
     private static readonly MusicGlyphEntry[] ByGlyph = BuildByGlyph();
     private static readonly FrozenDictionary<string, MusicGlyph> BySmuflName =

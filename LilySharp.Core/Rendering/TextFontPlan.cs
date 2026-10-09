@@ -374,6 +374,12 @@ public sealed class TextFontPlan
         if (!TextRoles.IsNotation(role) &&
             _families.TryGetValue(family, out var fam) && !fam.IsDefaultOrEmpty)
             return new ResolvedFace(fam, family);
+        // A chord symbol the score named no face for is set in its music font's companion
+        // (Petaluma's chords in Petaluma Script) — never over a face or a family the score wrote.
+        // LILYSHARP-OWN: LilyPond pairs no text face with its one music font.
+        if (role == TextRole.ChordName && leaf?.Redirect is null && grp?.Redirect is null
+            && !Music.IsEmpty && LilySharp.Core.Svg.Layout.MusicFonts.Of(this).ChordTextFace is { } companion)
+            return new ResolvedFace([companion], family);
         return new ResolvedFace([], family);
     }
 
