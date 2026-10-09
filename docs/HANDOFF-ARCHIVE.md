@@ -129,6 +129,22 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第869セッションの経緯
+
+### 1.1 第869セッション（2026-10-09・YT-DELL2）
+
+新しい会話。`-Start p869`（HEAD `07a47b13b`）＝full **11498 / 0 / 2 / 11500**。§7 3.5 で第867 を ARCHIVE へ。
+- **④ 仕上げ＝4 書体で本を描いて見た**（samples 8・showcase 8・ベースタブ 1・試験譜 3＝Lab `p869/quad2/`・`probe/`・`tabc/`・並べる道具 `p869/look.ps1`）。**SMuFL が Emmentaler と違う約束で作る字が 5 族、崩れていた**（Emmentaler は毎回掃き 1199 枚・差 0）:
+  - **閉じた（`fe008a24e`）** ⑴ script は字の原点で置かれていた＝Emmentaler の script は原点が中央・SMuFL は左端＝fermata・accent・turn・bow が頭の右へ半幅。LP どおり箱の中心で揃える（`ArticulationEngraver.OriginFromCentre`・縦の probe・全休符・tab・間隔の箱にも）。⑵ `repeatOffset` を持つ字は設計の箱の幅＝歩幅（LILC の約束と同じ・トリルの線の隙間）。⑶ SMuFL のアルペジオの波は横に作られている＝`MusicFont.LiesDown`・`IDrawingContext.DrawGlyphTurned`（SVG／PDF／PNG／boxes の 6 実装）・`ArpeggioEngraver.WiggleBox`。
+  - **閉じた（`b2ebb6d99`）** ⑷ 指番号と通奏低音: LP の −5 は Emmentaler のテキスト用の切り方（高さ 2 ss）を縮める段＝SMuFL の数字は最初から約 1 ss なので二重に縮んで 0.58 ss。`MusicFont.TextCutStep`（SMuFL は 0＝LILYSHARP-OWN）。⑸ `FingeringEngraver` の 1 桁の memo がフォントを鍵にしていなかった（長命のプロセスで Emmentaler の後の Bravura に Emmentaler の字）。
+  - 網 `SmuflPlacementTests` 17・毒 5 本（修正ごとに戻すと、その網の SMuFL 行だけ赤）。metadata の箱は 3 書体とも輪郭と 0.05 ss 以内で一致（`p869/bbox-audit.py`）。直さない: Petaluma の拍子の数字の重なり・`p` の低さ＝字形の設計。
+  - ⚠️ 踏んだ罠: sln は `LilySharp.slnx`（`LilySharp.sln` を build して落ち、`--no-build` の full が**最後の毒入り dll** で走って 3 赤を出した＝CLAUDE-OPERATIONS §1 の「build の exit を読む」）／引用の名前は**同じ行**に無いと ratchet に数えられない。
+- **ユーザー「もう少し続けて」＝二巡目**（feature-tour・grammar-tour・試験譜 `misc`／`more`・LP 双子 `p869/probe/lp`）: ⑹ MMR の数字は基線で置かれていた＝SMuFL の `timeSig*` は中心基線で 1 ss 低く Petaluma で休符に重なる（`NumberBaselineAboveInk`）・⑺ `To ⊕` の ⊕ が原点中心の前提で右上へ（`ToCodaGlyphCentre`）＝`5125ebb4c`／⑻ `Ped..`＝SMuFL の `keyboardPedalPed` は点まで含む（`PedalPedCarriesItsPeriod`）＝`32b12029c`。毎回掃き 1199 枚・差 0・毒で網が赤。**LP のまま**: 幅広い装飾記号が短い音符で重なる＝LP も記号どうしの rod を持たない（双子で確認）。full **11524 / 0 / 2 / 11526**。
+- **三巡目＝§3 の代わりの経路の値付け**（Emmentaler に 1 つずつ当てて全 1199 枚を HEAD と比べた＝Lab `p869/price/`）: #1 LILC → 輪郭の箱は**段割れが 16 枚で変わり**・1180 枚が最大 3.13 ss 動く／#4 光学サイズ → 20 の拡縮は 72 枚・最大 0.14／#7 kern → 0 は 11 枚（1 冊で強弱の積み順が入れ替わり 1.02）／#3 加線の短縮 → なしは 112 枚・最大 0.32。表は smufl-design §6 ④。
+- **四巡目＝全コーパスの重なりの数え上げ**（4 書体 × 998 冊の boxes＝Lab `p869/coll/`）: ⑼ **Bravura／Leland の拍子も 1 ss 低かった**（目視で見落とし・`digitHalfHeight = 1.0` が Emmentaler の約束）→ `MeterRowCentre`（`83cf30688`）。装飾記号どうしの重なりは実コーパスで 3 件だけ。ユーザー「続けて」＝推奨どおり: ⒜ Petaluma の拍子の重なりは字形として残す・⒝ SMuFL の長い旗は下向きの符尾を旗と符頭の深さの差だけ伸ばす（`d397e6501`・LILYSHARP-OWN）。数え直しで Bravura の旗 × 符頭は Emmentaler 以下。full **11531 / 0 / 2 / 11533**。
+- **ユーザー「Petaluma のコード名は特徴的」→「記号も文字も合わせる」**: 和音記号の ♭♯△°ø+ を書体の `csym*` で（Emmentaler に無い初めての字＝`IsSmuflOnly`）・Petaluma の文字は同梱した Petaluma Script（`MusicFont.ChordTextFace`・`TextFontPlan.Resolve`・PDF／SVG／プレビュー）＝`8f72beb3b`・LILYSHARP-OWN。full **11537 / 0 / 2 / 11539**。ImageSharp の脆弱性 5 件（NU1902／NU1903・直るのは Split License の 4.1.2 だけ）は**配布しないことで解消**（ユーザー「ライセンスと機能的に問題がなければ」・`c1ba72ee9`）: Lily# は使っていない（PdfSharpCore の画像用の依存）＝`Directory.Build.props` で版の固定＋`ExcludeAssets="runtime"`＋5 件を id で抑制。どの出力にも DLL 無し・PDF 8 本バイト同一。
+- **`-End p869 -DiffBase 07a47b13b`（門は全部 OK）＝full **11515 / 0 / 2 / 11517**（+17）。Core '+' 213 行／LILYPOND-REF 1（define-grobs.scm の Script）／LILYSHARP-OWN 1（その後に足した `TextCutStep`）。未 push 53＋docs（push はユーザー）。
+
 ## 以下は第868セッションの経緯
 
 ### 1.1 第868セッション（2026-10-09・YT-DELL2）
