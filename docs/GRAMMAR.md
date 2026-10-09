@@ -398,7 +398,9 @@ Role           = 'title' | 'subtitle' | 'composer' | 'poet'
    A CHORD SYMBOL FOLLOWS THE MUSIC FONT (2026-10-09): its ♭ ♯ △ ° ø + are the font's
    chord-symbol glyphs (SMuFL `csym*`) where it has them, and under Petaluma its letters are
    the bundled Petaluma Script — unless `chord`, `chords` or the `sans` family names a face,
-   or an `as` redirect says which family to follow.
+   or an `as` redirect says which family to follow. The rehearsal marks and the header
+   (`title`, `subtitle`, `composer`, `poet`) follow it the same way: under Petaluma they are
+   Petaluma Script unless the role, its group (`marks`, `header`) or `serif` names a face.
 
    ⚠️ THE KEYWORD IS `fonts`, PLURAL, AND IT TAKES A BLOCK. The block is an alist of
    family -> face, which is what LilyPond calls `fonts` too

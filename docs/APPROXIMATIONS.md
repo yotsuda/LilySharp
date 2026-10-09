@@ -332,7 +332,7 @@
 ### `LilySharp.Core/Rendering/TextFontPlan.cs`
 - **:379** LILYSHARP-OWN: LilyPond pairs no text face with its one music font.
 ### `LilySharp.Core/Rendering/TextRole.cs`
-- **:254** LILYSHARP-OWN: LilyPond pairs no text face with its one music font.
+- **:257** LILYSHARP-OWN: LilyPond pairs no text face with its one music font.
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
 - **:683** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Semantics/CapoAdvisor.cs`

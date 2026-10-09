@@ -249,12 +249,16 @@ public static class TextRoles
     /// <summary>
     /// Is <paramref name="role"/> set in its music font's companion text face when the score
     /// names no face for it (Petaluma's in Petaluma Script — <c>MusicFont.ChordTextFace</c>)?
-    /// The chord symbols (2026-10-09, owner "記号も文字も合わせる") and the rehearsal marks
-    /// (2026-10-09, owner: the serif box beside a handwritten page "違和感ある").
+    /// The chord symbols (2026-10-09, owner "記号も文字も合わせる"), the rehearsal marks
+    /// (2026-10-09, owner: the serif box beside a handwritten page "違和感ある") and the header —
+    /// title, subtitle, composer, poet (2026-10-09, owner: unless the score names their face,
+    /// draw them in the music font's). A face the score binds to the role, its group or its
+    /// generic family still wins (TextFontPlan.Resolve).
     /// LILYSHARP-OWN: LilyPond pairs no text face with its one music font.
     /// </summary>
     public static bool TakesMusicCompanionFace(TextRole role) =>
-        role is TextRole.ChordName or TextRole.Mark;
+        role is TextRole.ChordName or TextRole.Mark
+            or TextRole.Title or TextRole.Subtitle or TextRole.Composer or TextRole.Poet;
 
     /// <summary>
     /// Is <paramref name="role"/> notation drawn as text — the clef's octave digit, a

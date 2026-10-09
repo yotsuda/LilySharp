@@ -74,6 +74,27 @@ public class SmuflChordSymbolTests
         Assert.All(companion, m => Assert.Equal("A", m.Groups[1].Value));
     }
 
+    /// <summary>The header is set in the companion too unless the score names its face — the
+    /// role, its group (<c>header</c>) or the generic family the role follows (owner,
+    /// 2026-10-09: "title/poet/composer … music font で描いて").</summary>
+    [Fact]
+    public void APetalumaHeader_IsWrittenInPetalumaScript_UnlessTheScoreNamesItsFace()
+    {
+        const string header = "title \"Tune\"\ncomposer \"Someone\"\npoet \"Words\"\nsubtitle \"Sub\"\n";
+        static string HeaderSvg(string fonts) => LiveRender.SvgFromRenderSpec(header + fonts + "\n" + Book);
+        static bool InCompanion(string svg, string text) => System.Text.RegularExpressions.Regex.IsMatch(
+            svg, $"<text[^>]*font-family=\"Petaluma Script[^>]*>{text}</text>");
+
+        string petaluma = HeaderSvg("fonts { music \"Petaluma\" }");
+        foreach (var text in new[] { "Tune", "Someone", "Words", "Sub" })
+            Assert.True(InCompanion(petaluma, text), text);
+
+        Assert.False(InCompanion(HeaderSvg("fonts { music \"Petaluma\" title \"TeX Gyre Heros\" }"), "Tune"));
+        Assert.False(InCompanion(HeaderSvg("fonts { music \"Petaluma\" header \"TeX Gyre Heros\" }"), "Someone"));
+        Assert.False(InCompanion(HeaderSvg("fonts { music \"Petaluma\" serif \"TeX Gyre Heros\" }"), "Words"));
+        Assert.False(InCompanion(HeaderSvg(""), "Tune"));
+    }
+
     /// <summary>The rehearsal mark is set in the companion too — the serif box was the one
     /// typeset letter left on a handwritten page (owner, 2026-10-09).</summary>
     [Fact]
