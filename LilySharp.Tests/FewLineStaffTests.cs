@@ -81,6 +81,22 @@ public sealed class FewLineStaffTests
         Assert.Equal(baselineOverTopLine, topLine - c.Box[3] + 0.047, 2);
     }
 
+    /// <summary>
+    /// ...and clears the rhythm SLASHES under it by their own glyph's height (±1.05), not a
+    /// round head's ±0.545: LilyPond 2.26.0 stands the row's baseline 1.610 over the line over
+    /// quarter slashes (Lab sessions/p871). SkylineBuilder.AddNoteBoxToSkylines seeded the round
+    /// head's box whatever the head style until session 871 (1.092).
+    /// </summary>
+    [Fact]
+    public void AChordsRow_ClearsTheSlashesUnderIt_AsLilyPondDoes()
+    {
+        var symbols = Symbols("time 4/4\npart comp { clef treble }\nsection A {\n  chords prog { C | F | }\n"
+            + "  comp { /4 4 4 4 | /4 4 4 4 | }\n}\nscore {\n  chords prog\n  staff comp as lines 1\n}\n");
+        double topLine = LineCentres(symbols)[0];
+        var c = symbols.First(s => s.Kind == "chordName" && s.Text == "C");
+        Assert.Equal(1.610, topLine - c.Box[3] + 0.047, 1);
+    }
+
     /// <remarks>
     /// The extents are about the staff's MIDDLE (staff position 0) in Lily#'s own line frame
     /// (EngravingDefaults.StaffLinePositions — two lines at ±2, four at −2…+4, LILYSHARP-OWN),

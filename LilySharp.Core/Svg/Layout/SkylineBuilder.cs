@@ -3451,9 +3451,14 @@ internal sealed class SkylineBuilder
         // here would be an invention that happens to land 0.001 away.
         // ...and OUT OF THE HEAD'S OWN FONT when it states one: a grace head is the
         // fourteen design's outline at magstep(−3), not the twenty's shrunk (GrobFontSize).
-        var headBox = size.Ink(headFont is { } hf
-            ? GlyphMetrics.GetNoteheadBBox(hf, noteValue)
-            : GlyphMetrics.GetNoteheadBBox(noteValue));
+        // ...and OF THE HEAD THE PAGE DRAWS (headStyle): a rhythm slash's box is ±1.05, not the
+        // round head's ±0.545. The style reached the stem's attachment below but not this box
+        // until session 871, and with the five-line band gone from a one-line staff's profile
+        // (MultiStaffLayouter.LineExtentOf) a chords row stood on the round head's 0.545 —
+        // LilyPond 2.26.0 clears the slash: baseline 1.61 over the line against Lily#'s 1.09
+        // (Lab sessions/p871, quarter slashes under chords).
+        var headBox = size.Ink(GlyphMetrics.GetNoteheadBBox(
+            headFont ?? GlyphMetrics.StaffHeadFont, headStyle, noteValue));
 
         // Notehead bounding box (head spans noteUp + the glyph's ink in the up frame).
         // ⚠️ X IS THE COLUMN, AND THE GLYPH STARTS THERE (2026-07-29): the renderer
