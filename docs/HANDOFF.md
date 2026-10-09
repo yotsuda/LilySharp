@@ -124,6 +124,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 新しい会話。`-Start p871`（HEAD `92f47a2f2`）＝full **11571 / 0 / 2 / 11573**。§7 3.5 で第869 を ARCHIVE へ。
 - **ユーザー決定＝score の名前は識別子 1 つ**（設計 `docs/anonymous-blocks-design.md` §7・`310f292bb`）: `score "tab"`／`score tab "both"` はやめた＝**LYS0038**（parser・直す語を名指す・回復で文字列を名前と読む・quick fix）。`main` は誰の名前でもない＝名前の無い score の選択子は空・選択欄のラベルは `(Default)`（`RenderSpecParser.UnnamedScoreLabel`）。**何も選ばない／古い選択は名前の無い score を描く**（`ChooseIndex`＝今までは最初の score）。名前の無い score が 2 つは LYS6001。
+- **OMR への引継ぎ** `..\LilySharp-Omr\docs\repro\lilysharp-handoff-2026-10-09.md`（未 commit・OMR 側が判断）: P6 SMuFL の使い方（`--set music=`・`boxes.json` の `musicFont`／`glyph` は書体共通／`codepoint` は書体の字／代替は `font`）と、**OMR が `form main`／`score main` を書く 6 行**（今の lysc では出力が `<名前>-main.png` になる＝試して確認）・site の文法（`8c5e7d643`・`e99d804a6`）。
 - ⚠️ 最初の説明で「文字列はファイル名を丸ごと決めるので本どうしで `both.svg` がぶつかる」とユーザーに言ったのは誤り＝実装は 2026-09-26 から `<入力>-<文字列>`（GRAMMAR・SYNTAX_REFERENCE の記述が古かった＝直した）。
 - 移行 `sessions/p871/migrate.ps1`（追跡下 224 冊・C#／文書 172・Lab `corpora/` 143 冊＝**未 commit・ユーザーが判断**）。出力名が変わったのは追跡下 204（名前なしへ 187）・Lab 27（ユーザーのベースタブでは `She Bangs` の `-tab-unfold`→`-unfold` だけ）。確かめ: 旧×新ソース 対 新×新ソース＝1199／差 0、旧×旧 対 旧×新（追跡下・名前を読み替え）＝687／差 0。
 - ⚠️ 踏んだ罠: 移行を `.cs` に当てたら ⑴ 補間 `"{{name}}"` を文字列と読んで `score name` にした（LpGeometryProbes ほか 5 本＝補間のまま外し直し）⑵ 地の文（`a score says "…"`）を「名前＋文字列」と読んで引用を消した（2 行＝戻した）⑶ 自分の LYS0038 の説明の `score "tab"` まで書き換えた。**文字列を書き換える移行は、削除行のうち引用の中身が名前でないものを全部目で見る**。
