@@ -30,7 +30,11 @@ namespace LilySharp.Tests;
 /// SMuFL locations. The fixture is the bundled Bravura under another name, "Testura", which no
 /// standard location holds.
 /// </summary>
-[Collection(nameof(MusicFontSearchPathTests))]   // the search list and the variable are process-wide
+// The search list and the variable are process-wide, and changing the list FORGETS every
+// resolved font (MusicFonts.ByName / Chains) — so this class runs alone, never beside a render.
+// MEASURED (session 871): beside it, SmuflChordSymbolTests.TheCompanionFace_TravelsWithThePage
+// failed once in a full run (its PDF lost "Petaluma Script") and passed on every rerun alone.
+[Collection(nameof(MusicFontSearchPathTests))]
 public sealed class MusicFontSearchPathTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "lilysharp-fontpath-" + Guid.NewGuid().ToString("N"));
@@ -85,3 +89,7 @@ public sealed class MusicFontSearchPathTests : IDisposable
         Assert.Contains(tried, t => t.StartsWith(_dir, StringComparison.OrdinalIgnoreCase));
     }
 }
+
+/// <summary>Runs <see cref="MusicFontSearchPathTests"/> with no other test in parallel.</summary>
+[CollectionDefinition(nameof(MusicFontSearchPathTests), DisableParallelization = true)]
+public sealed class MusicFontSearchPathCollection { }
