@@ -400,7 +400,7 @@ Role           = 'title' | 'subtitle' | 'composer' | 'poet'
    the bundled Petaluma Script — unless `chord`, `chords` or the `sans` family names a face,
    or an `as` redirect says which family to follow. The rehearsal marks and the header
    (`title`, `subtitle`, `composer`, `poet`) free text (`@text(...)`, the text spanners), the tempo and the navigation words
-   (D.S., D.C., Fine, To Coda), the dynamic and pedal words and the instrument names follow it the same way: under Petaluma they are
+   (D.S., D.C., Fine, To Coda), the dynamic and pedal words, the instrument names and the part-combine labels (a2, Solo) follow it the same way: under Petaluma they are
    Petaluma Script unless the role, its group (`marks`, `header`) or `serif` names a face.
    In any SMuFL font a dynamic LEVEL's letters (p m f r s z n) are the font's own dynamic
    glyphs (U+E520-U+E526), not text, unless `dynamics` names a face. Emmentaler keeps its text.

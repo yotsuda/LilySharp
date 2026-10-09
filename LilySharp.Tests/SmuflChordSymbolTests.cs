@@ -142,6 +142,20 @@ public class SmuflChordSymbolTests
         Assert.False(InCompanion(PedalSvg(""), "Violin"));
     }
 
+    /// <summary>So are a combined staff's a2 and Solo labels (owner, 2026-10-09: "続けて" after
+    /// the list of what was left).</summary>
+    [Fact]
+    public void APetalumaPartCombineLabel_IsWrittenInPetalumaScript()
+    {
+        static string CombinedSvg(string fonts) => LiveRender.SvgFromRenderSpec(fonts + "\n"
+            + "octave absolute\npart vone { clef treble }\npart vtwo { clef treble }\n"
+            + "section A {\n  vone { c''4 d'' e'' f'' | g''1 | }\n  vtwo { c''4 d'' e'' f'' | r1 | }\n}\n"
+            + "form { ~A }\nscore { combinedStaff { vone vtwo } }\n");
+        const string a2 = "<text[^>]*font-family=\"Petaluma Script[^>]*>a2</text>";
+        Assert.Matches(a2, CombinedSvg("fonts { music \"Petaluma\" }"));
+        Assert.DoesNotMatch(a2, CombinedSvg(""));
+    }
+
     private static string DynamicsSvg(string fonts) => LiveRender.SvgFromRenderSpec(fonts + "\n"
         + "part m { clef treble }\nsection A { m { c'2@mf d'2@sfz | } }\nform { A }\nscore { staff m }\n");
 
