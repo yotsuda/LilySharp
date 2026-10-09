@@ -1479,6 +1479,13 @@ public static class DiagnosticCodes
     /// rather than shipped, because an empty page looks like a layout failure.</summary>
     public const string EmptyScore = "LYS6002";
 
+    /// <summary>Render error: a book with music (a section) and no <c>score</c> block at all.
+    /// The score is the one place a book says what is engraved (owner's decision 2026-10-09):
+    /// until then such a book rendered its FIRST part alone and dropped the rest in silence.
+    /// The quick fix writes <c>Editing.ScoreSkeleton</c>'s score. A file without sections (a
+    /// library of phrases or part headers) is not reported.</summary>
+    public const string MissingScore = "LYS6014";
+
     /// <summary>Render error: a <c>condensedStaff { … }</c> names fewer than two parts.
     /// Condensing one part onto one staff is what <c>staff NAME</c> already is.</summary>
     /// <remarks>

@@ -312,5 +312,10 @@ public class DocExamplesParseTests
         // coverage the set does not have, against the very counting the remark above asks for.
         DiagnosticCodes.UndefinedVariable,
         DiagnosticCodes.UnknownFormReference,
+        // A section shown without the score that would engrave it (LYS6014, 2026-10-09) is an
+        // excerpt of the same kind: the example teaches the section, and a score line under every
+        // one would bury that. Counted when added: 12 blocks — GRAMMAR 2, SYNTAX_REFERENCE 9 and
+        // TUTORIAL 1, each one excerpt failing on this code alone.
+        DiagnosticCodes.MissingScore,
     };
 }

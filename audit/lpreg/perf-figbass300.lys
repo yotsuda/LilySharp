@@ -312,3 +312,5 @@ section A {
     c2@stemDown@figuredBass(5 3) c2@stemDown@figuredBass(6) |
   }
 }
+
+score { staff fig }

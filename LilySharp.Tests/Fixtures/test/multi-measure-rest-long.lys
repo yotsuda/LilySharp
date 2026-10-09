@@ -17,3 +17,5 @@ section Main {
     c'4 e g e |
   }
 }
+
+score { staff melody }

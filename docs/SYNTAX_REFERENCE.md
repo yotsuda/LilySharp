@@ -1480,6 +1480,10 @@ and the LilyPond twin writes `\jump`, whose MIDI does not follow it.
 
 ## Render Block
 
+A book that has music needs a score: one with sections and no `score` is an error
+(**LYS6014**), and the editor's quick fix adds one with a staff for every part. A file
+of phrases or part headers only, meant to be included, needs none.
+
 Controls output layout. Each `staff partName` names the part to draw (a bare
 name, no braces); the clef comes from the part declaration, not the render block.
 

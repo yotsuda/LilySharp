@@ -81,3 +81,5 @@ section Main {
     c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
   }
 }
+
+score { staff melody }

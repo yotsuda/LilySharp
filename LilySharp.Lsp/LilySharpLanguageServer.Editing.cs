@@ -356,6 +356,8 @@ public sealed partial class LilySharpLanguageServer
                     actions.Add(PadBarsAction(doc, uri, diagnostic, pads));
                 if (SplitSectionsAction(doc, uri, diagnostic) is { } split)
                     actions.Add(split);
+                if (MissingScoreAction(doc, uri, diagnostic) is { } score)
+                    actions.Add(score);
                 if (CaseSpellingAction(doc, uri, diagnostic) is { } spelling)
                     actions.Add(spelling);
                 if (diagnostic.Code == DiagnosticCodes.TodoMark && !todoOffered)
@@ -471,6 +473,38 @@ public sealed partial class LilySharpLanguageServer
                             },
                             NewText = newText,
                         },
+                    ],
+                },
+            },
+        };
+    }
+
+    /// <summary>
+    /// The quick fix for LYS6014, a book with music and no score: append
+    /// <see cref="LilySharp.Core.Editing.ScoreSkeleton"/>'s score — every chord track, a staff per
+    /// part in declaration order, every lyrics track — at the end of the file, in its line endings.
+    /// </summary>
+    private static CodeAction? MissingScoreAction(Document doc, Uri uri, CoreDiagnostic diagnostic)
+    {
+        if (diagnostic.Code != DiagnosticCodes.MissingScore)
+            return null;
+        string score = LilySharp.Core.Editing.ScoreSkeleton.For(doc.Tree.GetRoot());
+        string eol = doc.Text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+        string lead = doc.Text.Length == 0 || doc.Text.EndsWith('\n') ? eol : eol + eol;
+        var (line, character) = GetLineAndCharacter(doc.Text, doc.Text.Length);
+        var at = new Position { Line = line, Character = character };
+        return new CodeAction
+        {
+            Title = $"Add {score}",
+            Kind = CodeActionKind.QuickFix,
+            Diagnostics = [ConvertDiagnostic(diagnostic, doc.Text, uri)],
+            Edit = new WorkspaceEdit
+            {
+                Changes = new Dictionary<string, TextEdit[]>
+                {
+                    [uri.ToString()] =
+                    [
+                        new TextEdit { Range = new LspRange { Start = at, End = at }, NewText = lead + score + eol },
                     ],
                 },
             },

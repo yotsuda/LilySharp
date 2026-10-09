@@ -31,7 +31,7 @@ namespace LilySharp.Tests;
 /// </summary>
 public class MusicFontKeyTests
 {
-    private const string Book = "part m { clef treble }\nsection A { m { c'4 d'4 e'4 f'4 } }\n";
+    private const string Book = "part m { clef treble }\nsection A { m { c'4 d'4 e'4 f'4 } }\nscore { staff m }\n";
 
     private static (TextFontPlan Plan, Diagnostic[] Diagnostics) Read(string fontsBlock)
     {

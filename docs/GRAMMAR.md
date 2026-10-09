@@ -1500,7 +1500,10 @@ NavMark        = 'segno' | 'coda' | 'fine' | 'to' 'coda'
 ================================================================================
 
 (* A printable layout. 'score' is the keyword; the optional Identifier is the score's
-   name. Multiple 'score' blocks emit multiple files. MIDI has NO source block —
+   name. Multiple 'score' blocks emit multiple files. A book with music (a section) and no score is an error
+   (LYS6014, 2026-10-09): the score is the one place a book says what is engraved, and a
+   score-less book used to render its first part alone. The quick fix writes a staff per part.
+   A file of phrases or part headers only (a library) is not reported. MIDI has NO source block —
    it is a CLI output: `lysc midi song.lys song.mid`. *)
 
 ScoreDecl      = 'score' , [ Identifier ] , { ScoreOption } , '{' , { ScoreItem } , '}' ;

@@ -107,6 +107,7 @@ public static class SemanticValidation
         new SectionLabelConflictValidator(), // two top-level declarations giving one section two labels
         new StaffClefWordPartValidator(),   // staff/ossia X Y where X is a declared part and a clef word
         new EmptyScoreValidator(),          // a score block with no staff to engrave
+        new MissingScoreValidator(),        // a book with music and no score block at all
         new CondensedStaffValidator(),      // a condensedStaff with <2 parts, or a non-part member
         new CombinedStaffValidator(),       // a combinedStaff that does not name exactly two parts
         new DuplicateCellValidator(),       // a (section × part) cell filled twice
