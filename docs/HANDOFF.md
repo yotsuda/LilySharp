@@ -127,7 +127,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ 最初の説明で「文字列はファイル名を丸ごと決めるので本どうしで `both.svg` がぶつかる」とユーザーに言ったのは誤り＝実装は 2026-09-26 から `<入力>-<文字列>`（GRAMMAR・SYNTAX_REFERENCE の記述が古かった＝直した）。
 - 移行 `sessions/p871/migrate.ps1`（追跡下 224 冊・C#／文書 172・Lab `corpora/` 143 冊＝**未 commit・ユーザーが判断**）。出力名が変わったのは追跡下 204（名前なしへ 187）・Lab 27（ユーザーのベースタブでは `She Bangs` の `-tab-unfold`→`-unfold` だけ）。確かめ: 旧×新ソース 対 新×新ソース＝1199／差 0、旧×旧 対 旧×新（追跡下・名前を読み替え）＝687／差 0。
 - ⚠️ 踏んだ罠: 移行を `.cs` に当てたら ⑴ 補間 `"{{name}}"` を文字列と読んで `score name` にした（LpGeometryProbes ほか 5 本＝補間のまま外し直し）⑵ 地の文（`a score says "…"`）を「名前＋文字列」と読んで引用を消した（2 行＝戻した）⑶ 自分の LYS0038 の説明の `score "tab"` まで書き換えた。**文字列を書き換える移行は、削除行のうち引用の中身が名前でないものを全部目で見る**。
-- `-End p871 -DiffBase 92f47a2f2`（門は全部 OK）＝full **11580 / 0 / 2 / 11582**（+9＝ScorePickerTests の書き直しと quick fix の網）。Core '+' 197 行／REF 0／OWN 0（言語の文法＝LP に対応物が無い）。未 push 80＋docs（push はユーザー）。
+- **ユーザー指示＝section の別名を宣言に 1 回**（`6a82b8725`）: `section A2 "A'" { }`（トップレベル・中身は空でよい）を書くと、すべての `form { A2 }` が A' を刷る。参照の `A2 "A''"` が勝ち、`~A2` は隠す。part／lyrics／chords の中の section の別名は **LYS0039**、トップレベルで食い違う別名は **LYS1045**（最初が勝つ）。一つの家は `SectionReferenceSyntax.DisplayLabel`（参照の別名 ?? `SyntaxFacts.DeclaredSectionLabel`）＋form の無い宣言順。網 `SectionDeclaredLabelTests` 11（毒で 4 赤）・掃き 1199／差 0。
+- `-End p871 -DiffBase 92f47a2f2`（門は全部 OK）＝full **11591 / 0 / 2 / 11593**（+20＝ScorePickerTests の書き直し・quick fix・別名の網）。言語の文法＝LP に対応物が無い（REF／OWN 0）。一度だけ `SkylineMergeTests.AFirstMergeIntoASkyline…` が並列 full で赤（割当 17,632 B／閾値 15,000・単独 3 回緑）＝隣の網と同じ「3 回測って最小値」に（`0e8ebd909`）。未 push 83＋docs（push はユーザー）。
 
 ## 以下は第870セッションの経緯
 
