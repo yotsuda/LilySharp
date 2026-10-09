@@ -2316,6 +2316,26 @@ public class LilyPondExporterTests
         Assert.DoesNotMatch("(?m)^" + part + " = ", ly);
     }
 
+    /// <summary>The staff the twin writes is the page's: two and four lines are drawn on the
+    /// five-line frame (EngravingDefaults.StaffLinePositions), which `line-count` alone does not
+    /// say — LilyPond spreads N lines a space apart about the middle (session 871). One and
+    /// three lines are LilyPond's own positions and keep the count.</summary>
+    [Theory]
+    [InlineData(1, "\\override StaffSymbol.line-count = #1")]
+    [InlineData(2, "\\override StaffSymbol.line-positions = #'(-2 2)")]
+    [InlineData(3, "\\override StaffSymbol.line-count = #3")]
+    [InlineData(4, "\\override StaffSymbol.line-positions = #'(-2 0 2 4)")]
+    public void AStaffOfFewerLines_IsTheLinesThePageDraws(int lines, string expected)
+    {
+        var ly = Export($$"""
+            part m { clef percussion }
+            section S { m { c4 c c c | } }
+            form { S }
+            score { staff m as lines {{lines}} }
+            """);
+        Assert.Contains(expected, ly);
+    }
+
     [Fact]
     public void ADrumChord_KeepsItsMembers()
     {
