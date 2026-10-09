@@ -108,7 +108,7 @@ section Main {
 
 form { Main }           // the playing order
 
-score "out" {           // one or more render blocks
+score {               // one or more render blocks
   grandStaff { staff rightHand  staff leftHand }
 }</pre>
   <p>The declaration order above is the conventional one. Parts must be declared before the
@@ -517,7 +517,7 @@ part v1 { clef treble instrument "1st Violin" } // label only — no preset beha
   <code>piccolo</code>, a <code>transposition 8vb</code>) keep their notation under both, as
   a printed concert score keeps them. To print one score at concert pitch whichever way the
   file is written — the conductor's score — put the same words on that score:
-  <code>score "full" pitch concert { … }</code>.</p>
+  <code>score full pitch concert { … }</code>.</p>
   <p class="note">An explicit <code>transpose</code> is a different thing: it moves the
   written notes by hand. Its argument is a PITCH, not a number of steps — it renames
   <code>c</code> to that pitch and shifts every note by the same interval, so
@@ -822,8 +822,8 @@ form practice { Verse }        // a second form = a second output</pre>
   barline there — the route is read off the form alone. A landmark that falls inside a
   section is written by cutting the section there (<code>~</code> hides the label). They are
   landmarks, never note modifiers, so <code>c4@segno</code> is an error too.</p>
-  <p>The reserved form name <code>main</code> writes to the input file's name; any other
-  form name becomes the output file name unless a <code>"basename"</code> overrides it.</p>
+  <p>The unnamed <code>form { }</code> is the file's default; a score plays another with a
+  <code>form NAME</code> item.</p>
   <!--EXAMPLE:repeats-->
 </section>
 
@@ -832,7 +832,7 @@ form practice { Verse }        // a second form = a second output</pre>
   <h2>Scores</h2>
   <p>A <code>score</code> binds a form to a set of rows. <b>It is a vertical stack of
   bands</b>: what a row means comes from where it sits.</p>
-<pre>score "out" {
+<pre>score {
   chords prog                     // a chord row above ...
   staff melody "Melody"           // ... the staff it belongs to
   lyrics words                    // ... and that staff's verse below it
@@ -878,8 +878,8 @@ form practice { Verse }        // a second form = a second output</pre>
   moment is not applied and warns — write the same change in every part.</p>
   <p>Because these are score items, one source prints both the condensed score and the
   separate parts:</p>
-<pre>score "full"  { condensedStaff { fl1 fl2 } }
-score "parts" { staff fl1  staff fl2 }</pre>
+<pre>score full  { condensedStaff { fl1 fl2 } }
+score parts { staff fl1  staff fl2 }</pre>
 </section>
 
 <section id="tab">

@@ -78,7 +78,7 @@ public class SpannerCrossedSystemsTests
               lyrics w sings melody { {{sylls}} }
             }
             form { Main }
-            score "x" { staff melody  lyrics w }
+            score x { staff melody  lyrics w }
             """;
     }
 
@@ -98,7 +98,7 @@ public class SpannerCrossedSystemsTests
               low { {{low}} }
             }
             form { Main }
-            score "x" { staff top  staff low }
+            score x { staff top  staff low }
             """;
     }
 
@@ -111,7 +111,7 @@ public class SpannerCrossedSystemsTests
             part melody { clef treble }
             section Main { melody { {{music}} } }
             form { Main }
-            score "x" { staff melody }
+            score x { staff melody }
             """;
     }
 
@@ -129,7 +129,7 @@ public class SpannerCrossedSystemsTests
             section B { melody { {{ending}} } }
             section C { melody { {{c}} } }
             form { |: A [1. B] :| [2. C] }
-            score "x" { staff melody }
+            score x { staff melody }
             """;
     }
 

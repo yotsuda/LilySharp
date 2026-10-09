@@ -132,7 +132,7 @@ public class TablatureTests
 
             form { Main }
 
-            score "test" {
+            score test {
                 staff treble guitar
                 tab guitarguitar
             }
@@ -170,7 +170,7 @@ public class TablatureTests
 
             form { Main }
 
-            score "test" {
+            score test {
                 tab guitarmelody
             }
             """;
@@ -208,7 +208,7 @@ public class TablatureTests
 
             form { Main }
 
-            score "guitar-tab" {
+            score guitarTab {
               staff guitar
               tab guitarguitar
             }
@@ -217,7 +217,7 @@ public class TablatureTests
         var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
 
-        var renderSpec = RenderSpecParser.FindByName(tree, "guitar-tab");
+        var renderSpec = RenderSpecParser.FindByName(tree, "guitarTab");
         Assert.NotNull(renderSpec);
         Assert.Equal(2, renderSpec.Items.Length); // staff + tab
 

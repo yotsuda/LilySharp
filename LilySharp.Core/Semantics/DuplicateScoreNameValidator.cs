@@ -20,9 +20,9 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// Flags two <c>score</c> blocks that share the same name (the output basename),
-/// which would collide on disk and be indistinguishable in the preview's score
-/// picker. Two UNNAMED scores collide too — both would be the "(Default)" entry.
+/// Flags two <c>score</c> blocks that share the same name, which would collide on
+/// disk and be indistinguishable in the preview's score picker. Two UNNAMED scores
+/// collide too — both would be the "(Default)" entry.
 /// </summary>
 internal sealed class DuplicateScoreNameValidator : ISemanticValidator
 {
@@ -39,20 +39,15 @@ internal sealed class DuplicateScoreNameValidator : ISemanticValidator
             // preview's picker also read (RenderSpecParser.OutputNameOf). Two scores
             // sharing that key collide on disk — and, because the picker carries this
             // very word, the second one could not be selected in the preview either.
-            // ⚠️ Reading the RAW basename here was not the same test: "Take 1.0" and
-            // "Take 1.1" are different words but ONE output name (the rule drops what
-            // follows the last dot), so the collision went unreported (2026-09-06).
             string outputKey = Svg.Collector.RenderSpecParser.OutputNameOf(render);
 
             if (seen.Add(outputKey)) continue; // first time → fine
 
-            SyntaxTokenNode tok = render.Basename ?? render.ScoreName ?? render.RenderKeyword;
-            string label = outputKey.Length == 0
-                ? "the input-file output (the unnamed score, with no basename)"
-                : $"output name \"{outputKey}\"";
-            _diagnostics.Error(tok.Span,
-                DiagnosticCodes.DuplicateScoreName,
-                $"Duplicate {label}; give one score a distinct name or \"basename\".");
+            SyntaxTokenNode tok = render.ScoreName ?? render.QuotedName ?? render.RenderKeyword;
+            string message = outputKey.Length == 0
+                ? "A second unnamed score: the unnamed score is the file's default, so there is one — name this one ('score tab { … }')."
+                : $"Duplicate score name '{outputKey}'; give one score a distinct name.";
+            _diagnostics.Error(tok.Span, DiagnosticCodes.DuplicateScoreName, message);
         }
     }
 }

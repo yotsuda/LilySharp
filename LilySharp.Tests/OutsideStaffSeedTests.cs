@@ -61,7 +61,7 @@ public class OutsideStaffSeedTests
             "part m { clef treble }\n" +
             $"section S {{ m {{ {body} | }} }}\n" +
             "form { S }\n" +
-            "score \"o\" { staff m }\n");
+            "score o { staff m }\n");
         double y = double.MaxValue;
         foreach (var d in layout.DynamicLayouts.Where(d => !d.IsAbove))
             y = System.Math.Min(y, d.YUp);
@@ -83,7 +83,7 @@ public class OutsideStaffSeedTests
             $"section S {{ m {{ {StripMovers(body)} | }} "
                 + $"n {{ {lower} | }} }}\n" +
             "form { S }\n" +
-            "score \"o\" { grandStaff { staff m staff n } }\n");
+            "score o { grandStaff { staff m staff n } }\n");
         return layout.Systems[0].StaffSprings.Single().MinimumDistance;
     }
 
@@ -130,7 +130,7 @@ public class OutsideStaffSeedTests
             "part m { clef treble }\n" +
             $"section S {{ m {{ {body} | }} }}\n" +
             "form { S }\n" +
-            "score \"o\" { staff m }\n");
+            "score o { staff m }\n");
         return layout.FiguredBassLayouts.Select(f => f.YUp).Min();
     }
 
@@ -149,7 +149,7 @@ public class OutsideStaffSeedTests
             "part pb { clef bass }\n" +
             $"section S {{ pt {{ {upper} | }} pb {{ {lower} | }} }}\n" +
             "form { S }\n" +
-            "score \"o\" { staff pt staff pb }\n");
+            "score o { staff pt staff pb }\n");
         var staves = layout.Systems[0].StaffGroups.SelectMany(g => g.Staves).ToList();
         return layout.ChordNameLayouts.Select(c => c.YUp).Max() - staves[1].Y;
     }

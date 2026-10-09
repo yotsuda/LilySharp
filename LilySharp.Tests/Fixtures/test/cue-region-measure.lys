@@ -39,6 +39,6 @@ section Main {
 
 form { Main }
 
-score "cue-region-measure" {
+score {
   staff treble melody
 }

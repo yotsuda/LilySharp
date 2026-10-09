@@ -22,4 +22,4 @@ form {
   |: Verse [1. Chorus] :| [2. Intro]
 }
 
-score "grammar-test" { staff melody }
+score { staff melody }

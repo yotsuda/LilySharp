@@ -84,7 +84,7 @@ public class CueRegionTests
     [Fact]
     public void RegionCountsTowardsTheBar()
     {
-        var tree = SyntaxTree.Parse("time 4/4\npart m\nsection A { m { c'4 d' cue { e'4 f' } | } }\nform { A }\nscore \"x\" { staff m }");
+        var tree = SyntaxTree.Parse("time 4/4\npart m\nsection A { m { c'4 d' cue { e'4 f' } | } }\nform { A }\nscore x { staff m }");
         var diags = SemanticValidation.Run(tree);
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.PickupWithoutPartial);
     }
@@ -93,7 +93,7 @@ public class CueRegionTests
     // the same wherever it is played), which is not what this net is about.
     private static string Book(string phrases, string music) =>
         "octave absolute\ntime 4/4\npart m\n" + phrases + "\nsection A { m { " + music + " } }\nform { A }\n"
-        + "score \"x\" { staff m }";
+        + "score x { staff m }";
 
     private static List<NoteItem> BookNotes(string book)
     {
@@ -164,7 +164,7 @@ public class CueRegionTests
     /// <summary>A full document: the exporter walks parts and sections, not a bare block.</summary>
     private static string Doc(string music) =>
         "time 4/4\npart m\nsection A { m { " + music + " } }\nform { A }\n"
-        + "score \"x\" { staff m }";
+        + "score x { staff m }";
 
     [Fact]
     public void ExporterEmitsACueVoice()

@@ -18,7 +18,7 @@ section S {
   }
 }
 form { S }
-score "multivoice-voice2-tuplet" { staff mel }
+score { staff mel }
 
 // ---------------------------------------------------------------------------
 // ⚠️ THIS NOTE IS AT THE FILE END ON PURPOSE. A comment ABOVE the music shifts every

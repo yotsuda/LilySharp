@@ -352,7 +352,7 @@ internal static class TupletBracketEngraver
             // quarter has two different offsets; one whose end is a rest has that rest's
             // own ink edge (BoundEdgeOffset carries the citations).
             // A TAB staff's bounds are its own (user report 2026-09-29, bohemian-rhapsody.lys
-            // score "tab2" bar 25): a tab stem stands at the fret digit's CENTRE — a
+            // score tab2 bar 25): a tab stem stands at the fret digit's CENTRE — a
             // TabHeadCenterOffset right of the column, where a notation head's LEFT edge
             // stands — and points the way its STRING says (TabStaffGeometry.TabStemUp), not
             // the notated pitch. Read with the notation offsets, the hook stood 0.5–0.7 off
@@ -430,7 +430,7 @@ internal static class TupletBracketEngraver
             // where TabStaffGeometry says (2.25 below the bottom string for a down-stem
             // eighth), not where the notation frame CalculateSlope reads puts them, so the
             // bracket ran through the stems (user report 2026-09-29, bohemian-rhapsody.lys
-            // score "tab", bar 42). LilyPond's offset pass, over the tab columns' reach.
+            // score tab, bar 42). LilyPond's offset pass, over the tab columns' reach.
             // ⚠️ STAFF-RELATIVE, LIKE CalculateSlope: the geometry here stands at Y 0 (the
             // staff's top line) and the staff offset is added below with the notation
             // path's, not baked as the beam-attached number's branch bakes it — MEASURED on

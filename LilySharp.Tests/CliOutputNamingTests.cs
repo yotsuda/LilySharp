@@ -69,8 +69,8 @@ public class CliOutputNamingTests : IDisposable
 
     /// <summary>A book with three scores over one form — the shape 82 of the owner's bass
     /// books have: the main one, and two more with their own aliases.</summary>
-    private string Book(string scores = "score { staff m }\nscore \"both\" { staff m  tab m }\n"
-                                        + "score \"tab\" { tab m }\n")
+    private string Book(string scores = "score { staff m }\nscore both { staff m  tab m }\n"
+                                        + "score tab { tab m }\n")
     {
         string path = Path.Combine(_dir, "song.lys");
         File.WriteAllText(path, "part m { instrument bass }\nsection A { m { c4 d e f | } }\n"
@@ -128,7 +128,7 @@ public class CliOutputNamingTests : IDisposable
     {
         var r = Lysc("svg", "-n", Book("score { staff m }\nscore { tab m }\n"));
         Assert.NotEqual(0, r.Exit);
-        Assert.Contains("give each its own alias", r.Stderr);
+        Assert.Contains("give each its own name", r.Stderr);
         Assert.Empty(Written(_dir));
     }
 }

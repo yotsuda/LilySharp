@@ -19,4 +19,4 @@ section S {
   }
 }
 form { S }
-score "above-dynamics" { staff m }
+score { staff m }

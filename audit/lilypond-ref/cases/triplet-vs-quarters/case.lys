@@ -8,4 +8,4 @@ section Main {
   lh { bottom }
 }
 form { Main }
-score "x" { grandStaff { staff rh staff lh } }
+score x { grandStaff { staff rh staff lh } }

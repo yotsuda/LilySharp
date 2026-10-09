@@ -43,7 +43,7 @@ public class PartReferenceFinderTests
               lh { c2 g | }
             }
             form { A }
-            score "s" {
+            score s {
               grandStaff { staff rh  staff lh }
             }
             """);
@@ -60,7 +60,7 @@ public class PartReferenceFinderTests
         var src = """
             part lh { clef bass }
             section A { lh { c2 } }
-            score "s" { staff bass lh }
+            score s { staff bass lh }
             """;
         var root = Root(src);
 
@@ -97,7 +97,7 @@ public class PartReferenceFinderTests
         var src = """
             part bass { clef bass }
             section A { bass { c2 } }
-            score "s" { staff bass }
+            score s { staff bass }
             """;
         var root = Root(src);
 
@@ -119,7 +119,7 @@ public class PartReferenceFinderTests
         var src = """
             part bass { clef bass }
             section A { bass { c2 } }
-            score "s" { staff bass as lines 1 }
+            score s { staff bass as lines 1 }
             """;
         var root = Root(src);
 
@@ -135,7 +135,7 @@ public class PartReferenceFinderTests
             part m { clef treble }
             chords ch { C }
             section A { m { c4 } }
-            score "s" { staff m with chords ch }
+            score s { staff m with chords ch }
             """;
         var root = Root(src);
 
@@ -151,7 +151,7 @@ public class PartReferenceFinderTests
     {
         var root = Root("""
             section A { flute { c4 } }
-            score "s" { staff ~flute "Flöte" }
+            score s { staff ~flute "Flöte" }
             """);
 
         // section block + staff render — the `~` suppressor and the "Flöte"
@@ -171,14 +171,14 @@ public class PartReferenceFinderTests
               ossia_melody { r1 | }
             }
             form { A }
-            score "s" { staff melody  ossia ossia_melody }
+            score s { staff melody  ossia ossia_melody }
             """);
         Assert.Equal(2, PartReferenceFinder.Occurrences(ossia, "ossia_melody").Count);
 
         var tab = Root("""
             part bl { clef treble_8 }
             section A { bl { c4 } }
-            score "s" { tab bl }
+            score s { tab bl }
             """);
         Assert.Equal(3, PartReferenceFinder.Occurrences(tab, "bl").Count);
     }
@@ -196,7 +196,7 @@ public class PartReferenceFinderTests
         var src = """
             part m { clef treble }
             section A { m { c4 } }
-            score "s" { staff m  tab m as numbers }
+            score s { staff m  tab m as numbers }
             """;
         var root = Root(src);
 
@@ -220,7 +220,7 @@ public class PartReferenceFinderTests
             part m { clef treble }
             chords h { C }
             section A { m { c4 } }
-            score "s" { tab m as numbers with chords h as both }
+            score s { tab m as numbers with chords h as both }
             """;
         var root = Root(src);
 
@@ -237,7 +237,7 @@ public class PartReferenceFinderTests
         var src = """
             part gt { clef treble_8 }
             section A { gt { c4 } }
-            score "s" { tab bass gt as full }
+            score s { tab bass gt as full }
             """;
         var root = Root(src);
 
@@ -254,7 +254,7 @@ public class PartReferenceFinderTests
           lyrics words { la la | la la | }
         }
         form { Main }
-        score "x" { chords prog as roman  lyrics words }
+        score x { chords prog as roman  lyrics words }
         """;
 
     /// <summary>
@@ -295,7 +295,7 @@ public class PartReferenceFinderTests
               lyrics { la la la la | }
             }
             form { Main }
-            score "x" { staff m }
+            score x { staff m }
             """));
         Assert.Equal(new[] { SyntaxFacts.UnnamedChordsName }, rows.ChordTracks);
         Assert.Equal(new[] { SyntaxFacts.UnnamedLyricsName }, rows.LyricTracks);
@@ -331,7 +331,7 @@ public class PartReferenceFinderTests
             part fl1 { clef treble }
             part fl2 { clef treble }
             section A { fl1 { c4 } fl2 { e4 } }
-            score "s" { condensedStaff { fl1 fl2 }  combinedStaff { fl1 fl2 } }
+            score s { condensedStaff { fl1 fl2 }  combinedStaff { fl1 fl2 } }
             """);
 
         // header + section block + condensed member + combined member.
@@ -351,7 +351,7 @@ public class PartReferenceFinderTests
         var src = """
             part fl1 { clef treble }
             section A { fl1 { c4 } }
-            score "s" { condensedStaff { staff fl1 } }
+            score s { condensedStaff { staff fl1 } }
             """;
         var root = Root(src);
 
@@ -370,7 +370,7 @@ public class PartReferenceFinderTests
           lyrics words sings m { la la la la | }
         }
         form { Main }
-        score "x" {
+        score x {
           chords prog as roman
           staff ~m "Melody"
           lyrics words
@@ -424,7 +424,7 @@ public class PartReferenceFinderTests
             part m { clef treble }
             section Main { m { c4 } }
             form { Main }
-            score "x" { staff m  chords }
+            score x { staff m  chords }
             """)).References;
         var (token, isChord) = Assert.Single(refs);
         Assert.True(isChord);
@@ -434,7 +434,7 @@ public class PartReferenceFinderTests
     [Fact]
     public void CaretOnDeclarationResolvesToTheName()
     {
-        var src = "part rh { clef treble }\nsection A { rh { c4 } }\nscore \"s\" { staff rh }";
+        var src = "part rh { clef treble }\nsection A { rh { c4 } }\nscore s { staff rh }";
         var root = Root(src);
         int caret = src.IndexOf("rh") + 1; // inside `part rh`'s name
         var tok = PartReferenceFinder.PartNameTokenAt(root, caret);

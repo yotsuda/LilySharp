@@ -41,7 +41,7 @@ public class SectionReferenceFinderTests
               section B { g4 a b c | }
             }
             form { A B A }
-            score "s" { staff m }
+            score s { staff m }
             """);
 
         // decl + two plays of A in the structure (A B A).
@@ -59,7 +59,7 @@ public class SectionReferenceFinderTests
               section B { g4 a b c | }
             }
             form { A |: B :| [1. ~A] [2. B] }
-            score "s" { staff m }
+            score s { staff m }
             """);
 
         // A: decl + plain + volta-silent [1. ~A].
@@ -74,7 +74,7 @@ public class SectionReferenceFinderTests
         var src = """
             part m { section A { c4 } }
             form { A "A (reprise)" }
-            score "s" { staff m }
+            score s { staff m }
             """;
         var root = Root(src);
 
@@ -88,7 +88,7 @@ public class SectionReferenceFinderTests
     [Fact]
     public void CaretOnReferenceResolvesToTheName()
     {
-        var src = "part m { section Intro { c4 } }\nform { Intro }\nscore \"s\" { staff m }";
+        var src = "part m { section Intro { c4 } }\nform { Intro }\nscore s { staff m }";
         var root = Root(src);
         // Caret on the reference inside form { Intro }.
         int caret = src.LastIndexOf("Intro") + 2;

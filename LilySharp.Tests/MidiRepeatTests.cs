@@ -148,7 +148,7 @@ public sealed class MidiRepeatTests
             "section A { mel { pa } }\n" +
             "section B { mel { pb } }\n" +
             "form { A |: B | [1. B \"x\"] :| [2. B \"y\"] | A }\n" +
-            "score \"s\" { staff mel }\n";
+            "score s { staff mel }\n";
         Assert.Equal(new[] { 0, 1, 0, 2 }, Ordinals(src, 79)); // section B (g' = 79)
         Assert.Equal(new[] { 0, 1 }, Ordinals(src, 72));       // intro/outro A (c' = 72)
     }

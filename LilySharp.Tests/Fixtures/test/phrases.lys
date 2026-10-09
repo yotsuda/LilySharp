@@ -29,6 +29,6 @@ section Main {
 
 form { Main }
 
-score "phrases" {
+score {
   staff melody
 }

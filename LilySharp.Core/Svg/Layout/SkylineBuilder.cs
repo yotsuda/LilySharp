@@ -1441,7 +1441,7 @@ internal sealed class SkylineBuilder
                         // LILYPOND-REF: lily/flag.cc:183-196 internal_calc_y_offset (pure: the
                         //   stem's pure extent less half the blot); scm/define-grobs.scm Flag —
                         //   Y-extent from the stencil, the skyline from its outline.
-                        // MEASURED (2.26.0, Lab sessions/p856, Alone Again score "tab"): an up
+                        // MEASURED (2.26.0, Lab sessions/p856, Alone Again score tab): an up
                         //   eighth's flag at 4.525 over the tab's middle where its stem ends at
                         //   4.5, a down one's at -3.025 under a stem ending at -3.0.
                         if (pureBeams && GlyphMetrics.GetFlagBBox(noteValue, stemUp) is var pb && pb != default)

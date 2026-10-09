@@ -22,7 +22,7 @@ section Main {
 
 form { Main }
 
-score "tempo-grandstaff" {
+score {
   grandStaff {
     staff rightHand
     staff leftHand

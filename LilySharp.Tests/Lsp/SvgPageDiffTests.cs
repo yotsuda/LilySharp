@@ -194,7 +194,7 @@ public sealed class SvgPageDiffTests
     public void AnotherScoreOfTheDocument_NeverTakesTheVersionForItsOwn()
     {
         string src = SvgPageSetTests.MultiPageBook()
-            .Replace("score \"x\" { staff melody }", "score \"x\" { staff melody }\nscore \"y\" { staff melody }");
+            .Replace("score x { staff melody }", "score x { staff melody }\nscore y { staff melody }");
         var uri = new Uri("file:///pages.lys");
         var server = Opened(uri, src);
         var x = server.GetSvg(Ask(uri, null, renderName: "x")).Pages!;

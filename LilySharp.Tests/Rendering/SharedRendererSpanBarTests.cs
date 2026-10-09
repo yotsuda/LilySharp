@@ -59,7 +59,7 @@ public sealed class SharedRendererSpanBarTests
             section Main { melody { rh } bass { lh } }
             form { Main }
 
-            score "t" {
+            score t {
               {{keyword}} {
                 staff treble melody
                 staff bass bass
@@ -77,7 +77,7 @@ public sealed class SharedRendererSpanBarTests
             time 4/4
             section S { line { c'4 d e f | } }
             form { S }
-            score "s" { staff line }
+            score s { staff line }
             """);
 
         Assert.False(HasBarlineBridgingTheGap(single),

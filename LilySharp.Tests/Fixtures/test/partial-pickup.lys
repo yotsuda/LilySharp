@@ -13,4 +13,4 @@ section Main {
   }
 }
 form { Main }
-score "partial-pickup" { staff m }
+score { staff m }

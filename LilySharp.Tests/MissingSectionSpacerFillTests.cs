@@ -58,7 +58,7 @@ public class MissingSectionSpacerFillTests
           section B { c4 c c c | g2 g2 | }
         }
         form { A B A }
-        score "s" {
+        score s {
           staff melody
           staff bass
         }
@@ -114,7 +114,7 @@ public class MissingSectionSpacerFillTests
               section B { c4 c c c | g2 g2 | }
             }
             form { A B A }
-            score "s" {
+            score s {
               staff melody
               staff bass
             }
@@ -148,7 +148,7 @@ public class MissingSectionSpacerFillTests
               bass { c4 c c c | g2 g2 | }
             }
             form { A B A }
-            score "s" {
+            score s {
               staff melody
               staff bass
             }
@@ -179,7 +179,7 @@ public class MissingSectionSpacerFillTests
               section B { g2 g2 | }
             }
             form { A B A }
-            score "s" { staff melody staff bass }
+            score s { staff melody staff bass }
             """);
 
         var melody = VoiceOf(score, 0);
@@ -215,7 +215,7 @@ public class MissingSectionSpacerFillTests
               bass { g{{bar}} | }
             }
             form { A B C }
-            score "s" { staff melody staff bass }
+            score s { staff melody staff bass }
             """);
 
         var melody = VoiceOf(score, 0);
@@ -253,7 +253,7 @@ public class MissingSectionSpacerFillTests
             }
             section B { time 3/4  partial 4 }
             form { A B C }
-            score "s" { staff melody staff bass }
+            score s { staff melody staff bass }
             """);
 
         var melody = VoiceOf(score, 0);

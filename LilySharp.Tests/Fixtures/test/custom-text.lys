@@ -8,4 +8,4 @@ section B { melody { c4 b a g | c1 | } }
 
 form { A _"poco a poco dim." B }
 
-score "custom-text" { staff melody }
+score { staff melody }

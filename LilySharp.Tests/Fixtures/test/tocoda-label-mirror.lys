@@ -30,4 +30,4 @@ section C {
 // the same barline, the same picture.
 form { A B to coda segno C }
 
-score "tocoda-label-mirror" { staff m }
+score { staff m }

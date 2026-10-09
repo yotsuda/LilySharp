@@ -56,7 +56,7 @@ public class IncrementalFullAgreementTests
             part melody { clef treble }
             section Main { melody { c'4@finger(0) d' e' f' | } }
             form { Main }
-            score "x" { staff melody }
+            score x { staff melody }
             """;
         Assert.NotEqual(Keys(book)[0], Keys(book.Replace("@finger(0)", "@ffinger(0)"))[0]);
     }

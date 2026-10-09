@@ -22,7 +22,7 @@ section B {
 
 form { A B }
 
-score "pedal-under-next-system" {
+score {
   grandStaff {
     staff rh
     staff lh

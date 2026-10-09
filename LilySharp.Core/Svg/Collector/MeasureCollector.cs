@@ -44,7 +44,7 @@ public sealed partial class MeasureCollector
     private SyntaxNode? _root;
 
     /// <summary>
-    /// A per-score transpose (from <c>score "Bb" transpose d { ... }</c>) composed on
+    /// A per-score transpose (from <c>score Bb transpose d { ... }</c>) composed on
     /// top of each part's own transpose. Set by the render pipeline before collecting.
     /// </summary>
     public (int step, int alt, int oct)? ScoreTranspose { get; set; }

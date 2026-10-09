@@ -4681,8 +4681,8 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>
     /// At <c>score NAME |</c>, before the brace: the header's options
-    /// (ParseRenderDeclaration — a quoted output basename, <c>transpose PITCH</c>,
-    /// <c>pitch MODE</c>) and the body's braces. Until 2026-09-10 the caret there fell to the
+    /// (ParseRenderDeclaration — <c>transpose PITCH</c>, <c>pitch MODE</c>) and the body's
+    /// braces. Until 2026-09-10 the caret there fell to the
     /// top-level list.
     /// </summary>
     internal static CompletionList GetScoreHeaderCompletions() => new()
@@ -4700,16 +4700,6 @@ public sealed partial class LilySharpLanguageServer
                 SortText = "0",
                 Preselect = true,
                 Command = new Command { Title = "Suggest render item", CommandIdentifier = "editor.action.triggerSuggest" },
-            },
-            new CompletionItem
-            {
-                Label = "\"\"",
-                FilterText = "basename",
-                Kind = CompletionItemKind.Snippet,
-                InsertTextFormat = InsertTextFormat.Snippet,
-                InsertText = "\"$0\"",
-                Detail = "Output basename for this score's files (the extension is the CLI's)",
-                SortText = "1",
             },
             new CompletionItem
             {

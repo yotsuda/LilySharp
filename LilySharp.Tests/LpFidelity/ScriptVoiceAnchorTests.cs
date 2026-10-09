@@ -47,7 +47,7 @@ public class ScriptVoiceAnchorTests
         part m { clef treble }
         section S { m { voice { c''8 d'' e'' f'' g'' a'' b'' c''' } { g4 g2@staccato.down g4 } } }
         form { S }
-        score "o" { staff m }
+        score o { staff m }
         """;
 
     [Fact]
@@ -94,7 +94,7 @@ public class ScriptVoiceAnchorTests
             part m { clef treble }
             section S { m { voice { c''8 d''@staccato.down e'' f'' g'' a'' b'' c''' } { g4 g2 g4 } } }
             form { S }
-            score "o" { staff m }
+            score o { staff m }
             """);
 
         var dot = g.Glyphs.Single(x => x.Glyph == EmmentalerGlyphs.ArticStaccatoAbove);

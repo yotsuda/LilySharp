@@ -594,31 +594,37 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// Parse render declaration: render [name] "file.svg" { ... }
+    /// Parses a printable-score declaration: <c>score [Name] [options] { … }</c>.
     /// </summary>
-    // Parses a printable-score declaration: `score [ "basename" ] { layout }`.
-    // `score` is the keyword (the old `render score` form is gone). The optional
-    // string is the output BASENAME — its extension, if any, is ignored because
-    // the file format is a CLI choice; omitting it derives the name from the
-    // input file. Multiple `score` blocks (with distinct basenames) emit
-    // multiple files, e.g. a full score plus part extracts.
+    // The name is the score's own (`score another` writes <input>-another; the unnamed
+    // score writes <input>); the form it plays is a `form` item in its body (2026-10-09).
+    // Multiple `score` blocks emit multiple files, e.g. a full score plus part extracts.
     private RenderDeclarationGreen ParseRenderDeclaration()
     {
         var keyword = Expect(SyntaxKind.ScoreKeyword);
 
-        // `score [Name] ["basename"] [transpose <pitch>] { ... }`.
-        // A bare token is the score's OWN name (`score another` writes <input>-another);
-        // the form it plays is a `form` item in its body (2026-10-09). A quoted string
-        // is the output basename (quotes only needed for spaces).
         SyntaxToken? scoreName = Check(SyntaxKind.OpenBrace)
             || Check(SyntaxKind.TransposeKeyword)
             || Check(SyntaxKind.PitchKeyword)
             || Check(SyntaxKind.StringLiteral)
             ? null : Advance();
 
-        // Optional output basename (a quoted string). The extension, if written,
-        // is dropped downstream (the file format is a CLI choice).
-        SyntaxToken? filename = Check(SyntaxKind.StringLiteral) ? Advance() : null;
+        // A quoted name (`score "tab"`) is LYS0038. The token is kept, and its text reads as
+        // the name when no bare one was written (RenderDeclarationSyntax.ScoreNameText), so
+        // the error is the book's only complaint and the preview still picks the right score.
+        SyntaxToken? quotedName = null;
+        if (Check(SyntaxKind.StringLiteral))
+        {
+            int inkStart = _textPosition + Current.LeadingTriviaWidth;
+            quotedName = Advance();
+            string text = StringLiteral.Value(quotedName.Text);
+            _diagnostics.Error(new TextSpan(inkStart, quotedName.Text.Length),
+                DiagnosticCodes.ScoreNameQuoted,
+                scoreName != null
+                    ? $"A score has one name, a bare word: delete the quoted \"{text}\" — "
+                      + $"'score {scoreName.Text}' is the name."
+                    : $"A score's name is a bare word, not a string: write 'score {SyntaxFacts.ScoreNameFor(text)}'.");
+        }
 
         // Optional per-score options, in either order: `transpose <pitch>` (stored as a
         // transpose property, the shape the part header uses) and `pitch concert|written`
@@ -632,7 +638,7 @@ internal sealed partial class Parser
         var items = ParseList(SyntaxKind.CloseBrace, ParseRenderItem);
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new RenderDeclarationGreen(keyword, scoreName, filename, [.. options], openBrace, [.. items], closeBrace);
+        return new RenderDeclarationGreen(keyword, scoreName, quotedName, [.. options], openBrace, [.. items], closeBrace);
     }
 
 

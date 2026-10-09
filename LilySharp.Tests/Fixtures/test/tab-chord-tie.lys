@@ -9,7 +9,7 @@ section A {
   gt { <c' e' g'>2~ <c' e' g'>4 r4 }
 }
 form { A }
-score "tab-chord-tie" {
+score {
   staff gt
   tab gt as full
 }

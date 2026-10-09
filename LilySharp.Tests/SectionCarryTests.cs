@@ -479,14 +479,14 @@ public class SectionCarryTests
             form { C D }
             form other { D C }
             score { staff vn }
-            score other "rev" { form other staff vn }
+            score rev { form other staff vn }
             """;
         var slurs = Check(src).Where(d => d.Code == DiagnosticCodes.UnpairedSlur).ToList();
         Assert.Equal(2, slurs.Count);
         Assert.All(slurs, d => Assert.EndsWith("(in form 'other')", d.Message));
 
         // Only the first score's form: nothing.
-        Assert.DoesNotContain(Check(src.Replace("score other \"rev\" { form other staff vn }", "")),
+        Assert.DoesNotContain(Check(src.Replace("score rev { form other staff vn }", "")),
             d => d.Code == DiagnosticCodes.UnpairedSlur);
     }
 

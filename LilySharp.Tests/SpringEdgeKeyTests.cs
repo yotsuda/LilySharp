@@ -50,7 +50,7 @@ public class SpringEdgeKeyTests
         {{extra}}
         section Main { melody { mel } }
         form { Main }
-        score "x" { {{staff}} }
+        score x { {{staff}} }
         """;
 
     private const string Plain = "c4 d e f | g4 a b c | d4 e f g | a4 b c d |";

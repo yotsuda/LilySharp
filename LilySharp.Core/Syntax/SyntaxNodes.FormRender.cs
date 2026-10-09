@@ -656,7 +656,7 @@ public sealed partial class CustomTextSyntax : SyntaxNode
 }
 
 /// <summary>
-/// Represents a render declaration: render Name "file.svg" { ... }
+/// Represents a score declaration: <c>score [Name] [options] { … }</c>.
 /// </summary>
 public sealed partial class RenderDeclarationSyntax : SyntaxNode
 {
@@ -671,14 +671,23 @@ public sealed partial class RenderDeclarationSyntax : SyntaxNode
     /// <summary>
     /// The score's own name — the bare identifier right after <c>score</c>
     /// (<c>score another …</c> writes <c>&lt;input&gt;-another</c>), or null for the unnamed
-    /// score, which writes <c>&lt;input&gt;</c>. A quoted string is the basename. Until
-    /// 2026-10-09 this word named the FORM the score played; that is a <c>form</c> item now
-    /// (<see cref="FormItems"/>).
+    /// score, which writes <c>&lt;input&gt;</c>. Until 2026-10-09 this word named the FORM the
+    /// score played; that is a <c>form</c> item now (<see cref="FormItems"/>).
     /// </summary>
-    public SyntaxTokenNode? ScoreName => LeadingToken(basename: false);
+    public SyntaxTokenNode? ScoreName => LeadingToken(quoted: false);
 
-    /// <summary>The score's name text, or empty for the unnamed score.</summary>
-    public string ScoreNameText => ScoreName?.Text ?? "";
+    /// <summary>
+    /// The score's name text — what the output suffix, the preview's picker and
+    /// <c>--score</c> use — or empty for the unnamed score. A quoted name (LYS0038) reads as
+    /// the name when no bare one was written: the parser's recovery, so a stale book gets the
+    /// one error and still picks the score it meant.
+    /// </summary>
+    public string ScoreNameText => ScoreName?.Text
+        ?? (QuotedName is { } q ? StringLiteral.Value(q.Text) : "");
+
+    /// <summary>Whether this is the unnamed score — the file's default, written to
+    /// <c>&lt;input&gt;</c> and shown as <c>(Default)</c> in the preview's picker.</summary>
+    public bool IsUnnamed => ScoreNameText.Length == 0;
 
     /// <summary>The <c>form</c> items in this score's body — <c>form NAME</c> or
     /// <c>form { … }</c>; one is valid (the validator reports the rest).</summary>
@@ -722,18 +731,20 @@ public sealed partial class RenderDeclarationSyntax : SyntaxNode
     }
 
     /// <summary>
-    /// The optional output basename — the quoted string in the header
-    /// (`score Main "clean" …`), or null. Extension, if written, is dropped.
+    /// A name written as a quoted string (<c>score "tab"</c>) — the removed spelling the parser
+    /// reports as LYS0038 — or null. Kept so <see cref="ScoreNameText"/> can recover it.
     /// </summary>
-    public SyntaxTokenNode? Basename => LeadingToken(basename: true);
+    public SyntaxTokenNode? QuotedName => LeadingToken(quoted: true);
 
-    /// <summary>The basename text with surrounding quotes stripped, or null.</summary>
-    public string? BasenameText => Basename is { } b ? StringLiteral.Value(b.Text) : null;
+    /// <summary>The bare word <see cref="QuotedName"/> stands for — the one LYS0038 names and
+    /// its quick fix writes (<see cref="SyntaxFacts.ScoreNameFor"/>) — or null.</summary>
+    public string? QuotedNameAsBareWord
+        => QuotedName is { } q ? SyntaxFacts.ScoreNameFor(StringLiteral.Value(q.Text)) : null;
 
-    // Header tokens before the '{' are, in source order, an optional form-name
-    // (any bare token) and an optional basename (a string literal); the transpose
-    // is a property NODE, not a token, so it never matches here.
-    private SyntaxTokenNode? LeadingToken(bool basename)
+    // Header tokens before the '{' are, in source order, an optional name (any bare
+    // token) and an optional quoted name (a string literal); the transpose is a
+    // property NODE, not a token, so it never matches here.
+    private SyntaxTokenNode? LeadingToken(bool quoted)
     {
         for (int i = 1; i < SlotCount; i++)
         {
@@ -742,7 +753,7 @@ public sealed partial class RenderDeclarationSyntax : SyntaxNode
             if (t.Kind == SyntaxKind.OpenBrace)
                 break;
             bool isString = t.Kind == SyntaxKind.StringLiteral;
-            if (isString == basename)
+            if (isString == quoted)
                 return t;
         }
         return null;

@@ -397,7 +397,7 @@ public class SectionSplitterTests
             form { A C ~A' |: A :| }
             form short { A }
             score { staff fl staff ob }
-            score short "short" { form short staff fl }
+            score short { form short staff fl }
             """;
         var result = Split(src);
         Assert.True(result.NewText != null, result.Error);

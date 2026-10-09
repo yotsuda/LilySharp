@@ -88,7 +88,7 @@ public class EmptyScoreValidatorTests
     [Fact]
     public void EveryEmptyScoreIsReported()
         => Assert.Equal(2, Validate(
-            Preamble + "score {\n}\nscore other \"o\" { form other\n}\nform other { A }\n").Length);
+            Preamble + "score {\n}\nscore o { form other\n}\nform other { A }\n").Length);
 
     /// <summary>The staff names an undefined part: that is a DIFFERENT defect, already
     /// reported elsewhere. The score is not empty, so this validator stays quiet — it

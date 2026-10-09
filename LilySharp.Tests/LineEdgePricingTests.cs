@@ -49,7 +49,7 @@ public class LineEdgePricingTests
           m { c4 d e f | c4 d e f | time 2/4 c4 d | time 4/4 c4 d e f | c4 d e f | }
         }
         form { S }
-        score "x" { staff m }
+        score x { staff m }
         """;
 
     private static MultiStaffScore Collect(string src)
@@ -102,7 +102,7 @@ public class LineEdgePricingTests
           m { {{string.Concat(Enumerable.Repeat("c'8 d' e' f' g' a' b' c'' | ", 24))}} }
         }
         form { S }
-        score "x" { staff m }
+        score x { staff m }
         """;
 
     private static List<int> SystemBreaks(string src, LayoutOptions options)

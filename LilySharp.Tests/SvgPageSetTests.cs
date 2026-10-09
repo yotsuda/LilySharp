@@ -65,7 +65,7 @@ public sealed class SvgPageSetTests
         for (int i = 0; i < 6; i++)
             foreach (var bar in bars)
                 sb.Append(bar).Append('\n');
-        sb.Append("} }\nform { Main }\nscore \"x\" { staff melody }\n");
+        sb.Append("} }\nform { Main }\nscore x { staff melody }\n");
         return sb.ToString();
     }
 

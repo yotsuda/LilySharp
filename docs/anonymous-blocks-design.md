@@ -1,6 +1,6 @@
 # 名前の無いブロックとスコアの中の上書き — 設計
 
-**状態**: **方針はユーザー決定**（2026-10-09・第870）。**§0 1〜6 は実装済み**（第870: form と score は `d26115786`、chords・lyrics・part はその次の commit）。残りは §6 と、§3 の `staff bass` の読み（下）。
+**状態**: **方針はユーザー決定**（2026-10-09・第870）。**§0 1〜6 は実装済み**（第870: form と score は `d26115786`、chords・lyrics・part はその次の commit）。**§7（score の名前は識別子 1 つ）も実装済み**（第871）。残りは §6 と、§3 の `staff bass` の読み（下）。
 **根拠**: ユーザーとの会話（第870）。数は 2026-10-09 の作業ツリー（§4）。
 
 ---
@@ -65,8 +65,8 @@ score another {              // → song-another.svg
 
 ## 3. 名前の約束
 
-- **出力名**: 名前の無いスコアは `<入力名>`、`score NAME` は `<入力名>-NAME`。`"basename"` の文字列は
-  今どおりファイル名を丸ごと指定する（名前と両方書けば文字列が勝つ）。
+- **出力名**: 名前の無いスコアは `<入力名>`、`score NAME` は `<入力名>-NAME`。文字列の名前（`score "x"`）は
+  第871 でやめた（§7）。
   今 `"main"` を特別扱いしている所（`RenderSpecParser.cs:53`・`ScoreForms.cs:52`・
   `MeasureCollector.Definitions.cs:435`）は、「名前の無いもの」を特別扱いする形に置き換える。
 - **名前の無い同種のブロックが 2 つ**: エラー（`fonts` の 2 つ目の名前なしは今は警告＝合わせるかは実装時に決める）。
@@ -117,3 +117,31 @@ score another {              // → song-another.svg
   楽譜をファイルの一番外に書くのを禁じている今の方針（「a file declares parts, sections and scores」）を
   半分開けることになるので、別に判断する（ユーザー「あとで入れることもできる」）。
 - **スコアの中の `chords { }`・`lyrics { }`**（§0 4）。
+
+## 7. score の名前は識別子 1 つ（第871・ユーザー決定）
+
+**決定**（2026-10-09・第871）: `score name { }`（識別子）に一本化する。`score "name" { }` も `score name "alias" { }` もやめる。
+`main` は特別扱いしない。名前の無い score は VS Code のプレビューで **`(Default)`** と表示する。
+
+**理由**:
+- 他の宣言（part・section・form・chords・lyrics・fonts・paper・layout）はどれも名前を識別子で書く。
+- Lily# で `"…"` は紙に刷る文字（`staff flute "Piccolo"`・`title`）。score の名前は `--score` と選択欄の呼び名＝識別子の側。
+- 識別子は Unicode の文字を取るので `score イントロだけ` と書ける。
+- 文字列は名前と二重の役（出力の接尾辞・選択欄の表示）を持ち、名前の無い `score "both"` は内部で `main` と答えて、同じファイルの `score { }` と `--score main` で区別できなかった。
+  ⚠️ 第871 の最初の説明で「文字列はファイル名を丸ごと決めるので本どうしで `both.svg` がぶつかる」と書いたのは誤り。実装（`RenderSpec.ResolveOutputStem`）は 2026-09-26 から `<入力>-<文字列>` で、ぶつからない（GRAMMAR・SYNTAX_REFERENCE の「names the file outright」が古かった）。
+
+**形**:
+
+| | |
+|---|---|
+| 出力名 | 名前の無い score は `<入力>`、`score NAME` は `<入力>-NAME`（今までと同じ） |
+| 選択欄 | ラベルは名前、名前の無い score は `(Default)`（括弧は名前に使えないので取り違えない）。値は出力名（名前の無い score は空） |
+| 何も選んでいないとき | **名前の無い score**、無ければ最初の score（`RenderSpecParser.ChooseIndex`）。今までは最初の score だった＝名前の無い score を 2 つ目以降に書いた本は既定が出なかった |
+| `--score` | 名前で選ぶ。名前の無い score は `--score` を省くと書かれる（CLI は省けば全部書く） |
+| `score "tab"` | **LYS0038**（parser の error）。直す語を名指す（`write 'score tab'`・空白やハイフンは camelCase＝`SyntaxFacts.ScoreNameFor`）。回復として文字列の中身を名前と読む＝古い本は error 1 つで、プレビューは意図した score を出し続ける。quick fix あり |
+| `score tab "both"` | 同じく LYS0038（「名前は 1 つ。引用を消せ」）。名前は `tab` |
+| 名前の無い score が 2 つ | LYS6001（「既定は 1 つ。名前を付けよ」） |
+
+**移行**（Lab `sessions/p871/migrate.ps1`）: `score "S"` → `score S'`（S' は S が名前ならそのまま、でなければ camelCase）／`score N "S"` → `score S'`（S が名前でなければ `score N`）／`.lys` で S が本の名前と同じで名前の無い score がまだ無ければ `score`（`<stem>-<stem>.svg` という名前の付け方は、文字列がファイル名を丸ごと決めていた頃の名残）。追跡下 224 冊・Lab `corpora/` 143 冊・C#／文書 172 ファイル。出力名が変わったのは追跡下 204（うち名前なしへ 187）・Lab 27（ユーザーのベースタブ本では `She Bangs` の `-tab-unfold` → `-unfold` だけ）。
+
+**確かめたこと**: ⑴ 旧 lysc × 新ソース 対 新 lysc × 新ソース＝1199 枚・差 0（コードは描画を変えない）。⑵ 旧 lysc × 旧ソース 対 旧 lysc × 新ソース（追跡下・出力名は対応表で読み替え）＝687 枚・差 0（移行は意味を変えない）。どちらも data-pos は伏せた。

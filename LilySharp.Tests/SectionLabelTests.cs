@@ -42,7 +42,7 @@ public class SectionLabelTests
         section First { melody { pa } }
         section Second { melody { pa } }
         form { First Second First "First (reprise)" }
-        score "x" { staff melody }
+        score x { staff melody }
         """;
 
     [Fact]
@@ -73,7 +73,7 @@ public class SectionLabelTests
             phrase 動機 { c4 d e f | }
             section イントロ { メロディ { 動機 } }
             form { イントロ イントロ "イントロ(再現)" }
-            score "x" { staff メロディ }
+            score x { staff メロディ }
             """);
 
         Assert.Equal("イントロ", labels[0]);
@@ -90,7 +90,7 @@ public class SectionLabelTests
             section A { melody { c4 d e f | } }
             section B { melody { g4 a b c | } }
             form { A ~B }
-            score "x" { staff melody }
+            score x { staff melody }
             """);
 
         Assert.Equal(new string?[] { "A", null }, labels);
@@ -106,7 +106,7 @@ public class SectionLabelTests
             part melody
             section Zebra { melody { c4 d e f | } }
             section Alpha { melody { g4 a b c | } }
-            score "x" { staff melody }
+            score x { staff melody }
             """);
 
         Assert.Equal(new[] { "Zebra", "Alpha" }, labels);
@@ -120,7 +120,7 @@ public class SectionLabelTests
             phrase 動機 { c4 d e f | }
             section イントロ { メロディ { 動機 } }
             form { イントロ }
-            score "x" { staff メロディ }
+            score x { staff メロディ }
             """);
         Assert.Empty(tree.Diagnostics);
     }
@@ -148,7 +148,7 @@ public class SectionLabelTests
         Assert.Equal(1, SectionLabelMarkCount("""
             section Main { melody { c4 d e f | g1 } }
             form { Main }
-            score "x" { staff melody }
+            score x { staff melody }
             """));
     }
 
@@ -159,7 +159,7 @@ public class SectionLabelTests
         Assert.Equal(2, SectionLabelMarkCount("""
             section A { melody { c4 d e f | } }
             form { A A }
-            score "x" { staff melody }
+            score x { staff melody }
             """));
     }
 
@@ -170,7 +170,7 @@ public class SectionLabelTests
             section Intro { melody { c4 d e f | } }
             section Verse { melody { g4 f e d | } }
             form { Intro Verse }
-            score "x" { staff melody }
+            score x { staff melody }
             """));
     }
 
@@ -182,7 +182,7 @@ public class SectionLabelTests
         Assert.Equal(2, SectionLabelMarkCount("""
             section A { melody { c4 d e f | } }
             form { A A "A2" }
-            score "x" { staff melody }
+            score x { staff melody }
             """));
     }
 }

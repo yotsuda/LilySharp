@@ -38,7 +38,7 @@ lyrics words {
 
 form { Main }
 
-score "mid-bar-break" {
+score {
   chords prog
   staff melody
   lyrics words

@@ -39,7 +39,7 @@ public class LayoutGeometryRuleTests
             part melody { clef treble }
             section Main { melody { {{music}} } }
             form { Main }
-            score "x" { staff melody }
+            score x { staff melody }
             """;
         return new MeasureCollector().Collect(SyntaxTree.Parse(src), "melody");
     }
@@ -107,7 +107,7 @@ public class LayoutGeometryRuleTests
                 ossia_melody { c'4 e g e | }
             }
             form { Main }
-            score "x" {
+            score x {
                 staff melody
                 ossia ossia_melody
             }

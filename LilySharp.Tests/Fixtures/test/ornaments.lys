@@ -33,6 +33,6 @@ section Main {
 
 form { Main }
 
-score "ornaments" {
+score {
   staff melody
 }

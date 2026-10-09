@@ -39,6 +39,6 @@ section Main {
 
 form { Main }
 
-score "mmr-clef-change-bound" {
+score {
   staff melody
 }

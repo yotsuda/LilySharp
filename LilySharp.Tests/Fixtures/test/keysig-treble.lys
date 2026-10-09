@@ -42,6 +42,6 @@ section FMajor {
 
 form { DMajor GMajor FMajor }
 
-score "keysig-treble" {
+score {
   staff melody
 }

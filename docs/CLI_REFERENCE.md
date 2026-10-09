@@ -44,7 +44,7 @@ filenames containing spaces still work). The names are fixed as always (see
 
 ```
 score.lys                             # -> score.svg (beside it)
-suite.lys<TAB>out                     # -> out/suite.svg, out/suite-<alias>.svg
+suite.lys<TAB>out                     # -> out/suite.svg, out/suite-<name>.svg
 ```
 
 Measured speed-up, same machine, `svg -n`, outputs verified byte-identical to the
@@ -107,7 +107,7 @@ Notes:
 lysc svg [options] <input.lys>
 ```
 
-Writes every score: `score.svg` for the main one, `score-<alias>.svg` for each other
+Writes every score: `score.svg` for the unnamed one, `score-<name>.svg` for each other
 ([Output File Naming](#output-file-naming)).
 
 **Options:**
@@ -124,7 +124,7 @@ Writes every score: `score.svg` for the main one, `score-<alias>.svg` for each o
 
 **Examples:**
 ```bash
-lysc svg score.lys                    # Creates score.svg (+ score-<alias>.svg)
+lysc svg score.lys                    # Creates score.svg (+ score-<name>.svg)
 lysc svg -d out score.lys             # The same, into out/
 lysc svg --no-embed-font score.lys    # Without embedded font
 lysc svg --score tab score.lys        # Only score-tab.svg
@@ -147,7 +147,7 @@ lysc pdf [options] <input.lys>
 
 **Examples:**
 ```bash
-lysc pdf score.lys                    # Creates score.pdf (+ score-<alias>.pdf)
+lysc pdf score.lys                    # Creates score.pdf (+ score-<name>.pdf)
 lysc pdf -d out score.lys             # The same, into out/
 ```
 
@@ -254,7 +254,7 @@ lysc boxes [options] <input.lys>
 | `--set <KEY=VALUE>` | Override a `paper` or `layout` value for this run (repeatable; see [Paper and layout settings](#paper-and-layout-settings---set)) |
 | `-h, --help` | Show help |
 
-Writes `<input>.boxes.json` (and `<input>-<alias>.boxes.json` for each other score): every
+Writes `<input>.boxes.json` (and `<input>-<name>.boxes.json` for each other score): every
 symbol the SVG and the PNG draw, page by page, for an OMR reader's training truth — read
 from Lily# rather than guessed back out of the SVG. Same collection, layout and renderer as
 `svg` / `png`, and the same `--set`, so the boxes are those pictures' symbols.
@@ -312,12 +312,12 @@ lysc midi [options] <input.lys>
 | `-h, --help` | Show help |
 
 One file holds one form, so every score writes its form to a file of its own. Scores that
-share a form (`score`, `score "tab"`) write the same music under their own names.
+share a form (`score`, `score tab`) write the same music under their own names.
 A file with no `score` block writes its primary form and names the others in a warning.
 
 **Examples:**
 ```bash
-lysc midi score.lys                   # Creates score.mid (+ score-<alias>.mid)
+lysc midi score.lys                   # Creates score.mid (+ score-<name>.mid)
 lysc midi -d out score.lys            # The same, into out/
 lysc midi --score movement2 suite.lys # One named movement: suite-movement2.mid
 ```
@@ -341,7 +341,7 @@ The same one-file-one-form rule as `midi` above.
 
 **Examples:**
 ```bash
-lysc xml score.lys                    # Creates score.xml (+ score-<alias>.xml)
+lysc xml score.lys                    # Creates score.xml (+ score-<name>.xml)
 lysc xml -d out score.lys             # The same, into out/
 ```
 
@@ -374,7 +374,7 @@ when you measure a twin through `lilypond -dbackend=svg`, not when you print it.
 
 **Examples:**
 ```bash
-lysc ly score.lys                     # Creates score.ly (+ score-<alias>.ly)
+lysc ly score.lys                     # Creates score.ly (+ score-<name>.ly)
 lysc ly -d out score.lys              # The same, into out/
 lysc ly --pin-fonts score.lys         # A twin to measure through the svg backend
 ```
@@ -540,7 +540,7 @@ short final line) print on their own. Explicit `break`s are listed separately
 **Example:**
 ```bash
 lysc layout score.lys
-# score "demo"
+# score demo
 #   staves: treble, bass  |  time 4/4  |  10 systems, 40 bars
 #   pages: 2  |  systems per page: 6, 4
 #   system 1: bars 1-4     (4 bars)
@@ -559,13 +559,14 @@ unless `--score` picks one, and `-d <folder>` chooses where (default: the input'
 
 | The score in `song.lys` | Output (`svg`; the others the same with their extension) |
 |---|---|
-| `score { … }` — the main score | `song.svg` |
-| `score "tab" { … }` — the same form, another alias | `song-tab.svg` |
-| `score coda { … }` — another form | `song-coda.svg` |
+| `score { … }` — the unnamed score, the file's default | `song.svg` |
+| `score tab { … }` — a named score | `song-tab.svg` |
+| `score coda { form coda … }` — a named score playing another form | `song-coda.svg` |
 | no `score` block at all | `song.svg` |
 
-Two scores that would get one name (two unlabelled `score`) are refused rather than
-written over each other — give one an alias. `-o/--output`, an output argument and
+Two scores that would get one name (two unnamed `score`) are refused rather than
+written over each other — give one a name. `--score NAME` picks a named score; the unnamed one
+is written whenever `--score` is left out. `-o/--output`, an output argument and
 `--all` are gone: an old script using them is told what to write instead.
 
 ## Font Requirements

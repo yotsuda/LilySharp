@@ -32,23 +32,26 @@ namespace LilySharp.Tests.Lsp;
 /// <remarks>
 /// The picker's VALUE is a score's OUTPUT NAME and the renderer resolves that same word
 /// (<see cref="RenderSpecParser.MatchesName(string, string, string)"/>), so the list and
-/// the resolution have to come from one rule. They did not: the language server built the
-/// value from the RAW basename while the renderer dropped the extension, so a score named
-/// <c>"Take 1.0"</c> was offered under a word that matched nothing — and choosing it fell
-/// back to the FIRST score, silently. That is what "the preview will not switch scores;
-/// it stays on main" looks like from the outside (2026-09-06, owner report). No book in
-/// the corpus writes a dotted basename, which is why nothing had noticed.
+/// the resolution have to come from one rule. They did not once: the language server built
+/// the value one way and the renderer resolved another, so an entry could be offered under a
+/// word that matched nothing — and choosing it fell back to the FIRST score, silently
+/// (2026-09-06, owner report: "the preview will not switch scores").
 /// <para>
-/// Poisons: return the raw basename from <c>OutputNameOf</c> ⇒ the two picker tests go
-/// red; drop the <c>SelectedRender</c> echo ⇒ the stale-selection test goes red; compare
-/// raw basenames in <c>DuplicateScoreNameValidator</c> ⇒ the duplicate test goes red.
+/// Since 2026-10-09 a score has one name (docs/anonymous-blocks-design.md §7): the label is
+/// that name, or <c>(Default)</c> for the unnamed score, whose value is empty — and the empty
+/// value picks the unnamed score wherever the file declares it, not the first score.
+/// </para>
+/// <para>
+/// Poisons: make <c>ChooseIndex</c> fall back to the first score ⇒ the picker test and the
+/// stale-selection test go red; drop the <c>SelectedRender</c> echo ⇒ the stale-selection
+/// test goes red; label the unnamed score with its empty name ⇒ the picker test goes red.
 /// </para>
 /// </remarks>
 [Trait("Category", "Unit")]
 public sealed class ScorePickerTests
 {
-    /// <summary>Three scores that DRAW differently, one of them named with a dot in it —
-    /// the case the picker could offer but not select.</summary>
+    /// <summary>Three scores that DRAW differently, the unnamed one SECOND — the order in
+    /// which "the empty value is the first score" and "the empty value is the default" part.</summary>
     private const string ThreeScores = """
         octave absolute
         time 4/4
@@ -56,9 +59,9 @@ public sealed class ScorePickerTests
         part melody { section A { c'4 d' e' f' } }
         part bass { section A { c4 d e f } }
         form { A }
+        score take1 { staff bass }
         score { staff melody }
-        score "Take 1.0" { staff bass }
-        score "Take 2.0" { staff melody staff bass }
+        score take2 { staff melody staff bass }
         """;
 
     private static LilySharpLanguageServer Opened(Uri uri, string text)
@@ -88,17 +91,19 @@ public sealed class ScorePickerTests
 
         var first = server.GetSvg(Ask(uri, null));
         Assert.Null(first.Error);
+        // No selection draws the DEFAULT score, though it is declared second.
+        Assert.Equal("", first.SelectedRender);
         var entries = (first.Renders ?? Array.Empty<RenderInfo>()).Where(r => r.Type == "score").ToArray();
         Assert.Equal(3, entries.Length);
-        // The LABEL is the word the writer wrote; the VALUE is the output name.
-        Assert.Equal(new[] { "main", "Take 1.0", "Take 2.0" }, entries.Select(r => r.Name));
-        Assert.Equal(new[] { "", "Take 1", "Take 2" }, entries.Select(r => r.Filename));
+        // The LABEL is the score's name, (Default) for the unnamed one; the VALUE is the output name.
+        Assert.Equal(new[] { "take1", "(Default)", "take2" }, entries.Select(r => r.Name));
+        Assert.Equal(new[] { "take1", "", "take2" }, entries.Select(r => r.Filename));
 
         // Each entry draws a different picture, and the answer says which it drew.
         var drawn = new System.Collections.Generic.List<string>();
         foreach (var entry in entries)
         {
-            var response = server.GetSvg(Ask(uri, entry.Filename.Length == 0 ? null : entry.Filename));
+            var response = server.GetSvg(Ask(uri, entry.Filename));
             Assert.Null(response.Error);
             Assert.NotNull(response.Svg);
             Assert.Equal(entry.Filename, response.SelectedRender);
@@ -129,22 +134,24 @@ public sealed class ScorePickerTests
         for (int i = 0; i < specs.Count; i++)
         {
             Assert.Equal(specs[i].OutputFile, offered[i]);
-            // ...and asking for that value picks THAT score, not an earlier one.
+            // ...and asking for that value picks THAT score, not an earlier one — the empty
+            // value included, which is the unnamed score's (index 1).
             var (_, chosen) = RenderSpecParser.ScoreIndex(tree, offered[i]);
-            Assert.Equal(i, chosen);   // i == 0 is the empty value: the first score
+            Assert.Equal(i, chosen);
+            Assert.Same(specs[i], RenderSpecParser.Choose(specs, offered[i]));
         }
     }
 
     [Fact]
-    public void AStaleSelection_DrawsTheFirstScoreAndSaysSo()
+    public void AStaleSelection_DrawsTheDefaultScoreAndSaysSo()
     {
         // A selection left over from an edit that renamed the block: the renderer falls
-        // back to the first score by design, and the response names what it drew so the
+        // back to the default score by design, and the response names what it drew so the
         // picker can follow instead of claiming a score that is not the picture.
         var uri = new Uri("file:///stale.lys");
         var server = Opened(uri, ThreeScores);
 
-        var response = server.GetSvg(Ask(uri, "Take 9"));
+        var response = server.GetSvg(Ask(uri, "take9"));
 
         Assert.NotNull(response.Svg);
         Assert.Equal("", response.SelectedRender);
@@ -152,19 +159,65 @@ public sealed class ScorePickerTests
     }
 
     [Fact]
-    public void TwoBasenamesSharingAnOutputName_AreADuplicate()
+    public void AFileWithNoUnnamedScore_StartsOnItsFirst()
     {
-        // "Take 1.0" and "Take 1.1" are two words but one output name, so they collide
-        // on disk and in the picker — the check reads the same rule now, and sees it.
+        var tree = SyntaxTree.Parse("""
+            part melody { section A { c'4 d' e' f' } }
+            form { A }
+            score both { staff melody }
+            score tab { tab melody }
+            """);
+
+        var (scores, chosen) = RenderSpecParser.ScoreIndex(tree, null);
+
+        Assert.Equal(new[] { "both", "tab" }, scores.Select(s => s.Label));
+        Assert.Equal(0, chosen);
+    }
+
+    [Fact]
+    public void TwoUnnamedScores_AreADuplicate()
+    {
+        // Both would be the (Default) entry and both would write <input>.svg.
         var v = new DuplicateScoreNameValidator();
         v.Validate(SyntaxTree.Parse("""
             part melody { section A { c'4 d' e' f' } }
             form { A }
-            score "Take 1.0" { staff melody }
-            score "Take 1.1" { staff melody }
+            score { staff melody }
+            score { staff melody }
             """));
 
         var d = Assert.Single(v.Diagnostics);
         Assert.Equal(DiagnosticCodes.DuplicateScoreName, d.Code);
+    }
+
+    [Theory]
+    [InlineData("score \"tab\" { tab melody }", "write 'score tab'")]
+    [InlineData("score \"guitar-chart\" { tab melody }", "write 'score guitarChart'")]
+    [InlineData("score tab \"both\" { tab melody }", "delete the quoted \"both\"")]
+    public void AQuotedName_IsOneErrorThatNamesTheBareWord(string score, string fix)
+    {
+        var tree = SyntaxTree.Parse("part melody { section A { c'4 d' e' f' } }\nform { A }\n" + score + "\n");
+
+        var d = Assert.Single(tree.Diagnostics);
+        Assert.Equal(DiagnosticCodes.ScoreNameQuoted, d.Code);
+        Assert.Contains(fix, d.Message);
+    }
+
+    [Fact]
+    public void AQuotedName_StillPicksItsScore()
+    {
+        // The parser's recovery: the string's text reads as the name, so the preview keeps
+        // drawing the score the stale book meant while the error says how to write it.
+        var tree = SyntaxTree.Parse("""
+            part melody { section A { c'4 d' e' f' } }
+            form { A }
+            score { staff melody }
+            score "tab" { tab melody }
+            """);
+
+        var (scores, chosen) = RenderSpecParser.ScoreIndex(tree, "tab");
+
+        Assert.Equal(new[] { "(Default)", "tab" }, scores.Select(s => s.Label));
+        Assert.Equal(1, chosen);
     }
 }

@@ -34,6 +34,6 @@ section C {
 
 form { A B C }
 
-score "section-octave-reset" {
+score {
   staff melody
 }

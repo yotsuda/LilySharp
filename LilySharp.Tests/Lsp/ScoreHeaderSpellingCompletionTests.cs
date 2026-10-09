@@ -24,7 +24,7 @@ namespace LilySharp.Tests.Lsp;
 
 /// <summary>
 /// A score body is a render spec however long its header is —
-/// <c>score {</c>, <c>score "out" {</c>, and with either option written out:
+/// <c>score {</c>, <c>score out {</c>, and with either option written out:
 /// <c>score transpose d {</c>, <c>score pitch concert {</c> (GRAMMAR ScoreDecl:
 /// <c>'score' , Identifier , [ String ] , { ScoreOption } , '{'</c>).
 /// </summary>
@@ -67,10 +67,10 @@ public class ScoreHeaderSpellingCompletionTests
 
     [Theory]
     [InlineData("score {\n  ")]
-    [InlineData("score \"out\" {\n  ")]
+    [InlineData("score out {\n  ")]
     [InlineData("score transpose d {\n  ")]
     [InlineData("score pitch concert {\n  ")]
-    [InlineData("score \"out\" transpose d pitch concert {\n  ")]  // the longest header the grammar writes
+    [InlineData("score out transpose d pitch concert {\n  ")]  // the longest header the grammar writes
     public void EveryHeaderSpelling_OpensARenderSpec_NotMusic(string header)
     {
         string text = Parts + header;

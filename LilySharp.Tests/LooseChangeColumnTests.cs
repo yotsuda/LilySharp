@@ -58,7 +58,7 @@ public class LooseChangeColumnTests
             "  lh { fis,,8 cis, clef treble g8 fis, | }\n" +
             "}\n" +
             "form { S }\n" +
-            "score \"loose\" { grandStaff { staff rh staff lh } }\n");
+            "score loose { grandStaff { staff rh staff lh } }\n");
 
         var blacks = MusicGlyphs(svg, EmmentalerGlyphs.NoteheadBlack);
         Assert.Equal(5, blacks.Count);

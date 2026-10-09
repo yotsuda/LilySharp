@@ -106,7 +106,7 @@ public class SectionOrientedTests
         var source = """
             section A { guitar { c4 } }
             form { A }
-            score "output" {
+            score output {
                 staff guitar
             }
             """;
@@ -120,7 +120,7 @@ public class SectionOrientedTests
         var source = """
             section A { guitar { c4 d e f } }
             form { A }
-            score "guitar" {
+            score guitar {
                 staff guitar
                 tab guitar guitar
             }
@@ -148,7 +148,7 @@ public class SectionOrientedTests
         var source = """
             section A { guitar { c4 } }
             form { A }
-            score "song" {
+            score song {
                 guitar
             }
             """;
@@ -161,7 +161,7 @@ public class SectionOrientedTests
         var retired = SyntaxTree.Parse("""
             section A { guitar { c4 } }
             form { A }
-            score "song" {
+            score song {
                 guitar octave 1 instrument 25
             }
             """);
@@ -196,7 +196,7 @@ public class SectionOrientedTests
                 fine
             }
 
-            score "test" {
+            score test {
                 staff guitar
                 tab guitar guitar
                 staff bass bass

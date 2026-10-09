@@ -15,7 +15,7 @@ section Main {
 
 form { Main }
 
-score "voice-dynamics" {
+score {
   staff m
 }
 

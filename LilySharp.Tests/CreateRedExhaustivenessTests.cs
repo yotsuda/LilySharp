@@ -45,7 +45,7 @@ public class CreateRedExhaustivenessTests
             "part melody { clef treble }\n" +
             "section Main { melody { c4 d e f | } }\n" +
             "form { Main }\n" +
-            "score \"audio\" { melody }\n");
+            "score audio { melody }\n");
 
         var renders = tree.GetRoot().DescendantNodes<MidiPartRenderSyntax>().ToList();
         Assert.Single(renders);
@@ -89,8 +89,8 @@ public class CreateRedExhaustivenessTests
             "section Main { melody { c4 d( e) f ~ f | <c e g>2 g4 | tuplet 3/2 { a8 b c } grace { d16 } e4 | } " +
             "lyrics { la la la la | la la | } }\n" +
             "form { |: Main :| }\n" +
-            "score \"out\" { staff melody }\n" +
-            "score \"audio\" { melody instrument:1 }\n";
+            "score out { staff melody }\n" +
+            "score audio { melody instrument:1 }\n";
 
         var tree = SyntaxTree.Parse(source);
         foreach (var node in tree.GetRoot().DescendantNodes())

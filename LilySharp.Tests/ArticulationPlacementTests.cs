@@ -47,7 +47,7 @@ public class ArticulationPlacementTests
             "part m { clef treble }\n" +
             "section S { m { c'4@staccato.up d'4@staccato.down } }\n" +
             "form { S }\n" +
-            "score \"o\" { staff m }\n");
+            "score o { staff m }\n");
 
         var stac = score.Articulations
             .Where(a => a.Type == ArticulationType.Staccato)
@@ -72,7 +72,7 @@ public class ArticulationPlacementTests
                 "part m { clef treble }\n" +
                 $"section S {{ m {{ c'4{ann} }} }}\n" +
                 "form { S }\n" +
-                "score \"o\" { staff m }\n");
+                "score o { staff m }\n");
         }
 
         bool plain = Side("@staccato").Articulations.Single().IsAbove;

@@ -20,7 +20,7 @@ part bl {
 
 form { A }
 
-score "tab-percent-blank-bars" {
+score {
   staff bl
   tab bl as full
 }

@@ -120,7 +120,7 @@ internal static class LysWriter
         // position is the placement). No auto-attach; an unreferenced block would
         // be a LYS4006 error.
         var scoreLyricPart = doc.Parts.FirstOrDefault(HasLyrics);
-        sb.Append("score \"imported\" {\n");
+        sb.Append("score {\n");
         // Each part's groups, outer first — the source's part-groups, then its own split into
         // a grand staff. A run of parts sharing a group's key is that group's block.
         var open = new List<string>();

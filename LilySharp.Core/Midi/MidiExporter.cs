@@ -277,7 +277,7 @@ public sealed class MidiExporter
     /// <summary>The capo fret of the score being played (its layout's <c>chordDiagrams … capo N</c>,
     /// <see cref="_playedSpec"/>), 0 for none: a <c>chord(…)</c> item's strings sound that many
     /// semitones higher. Read once per export (<see cref="_capo"/>). Until 2026-09-29 it was the
-    /// FIRST score's, whichever score was played — <c>score "open" { … }</c> with no capo
+    /// FIRST score's, whichever score was played — <c>score open { … }</c> with no capo
     /// sounded the main score's capo (HANDOFF §1.0 ⒜, the capo's holes).</summary>
     private int Capo
     {
@@ -1211,7 +1211,7 @@ public sealed class MidiExporter
     /// rows (<see cref="RenderSpec.SoundingPartNames"/>) — or null for a file with no score.
     /// A part the score neither shows nor names is a sketch to it, exactly as a chord row it
     /// does not place is (<see cref="SoundingChordRows"/>): until 2026-09-29 the preview's Play
-    /// of <c>score "p2" { staff p2 }</c> sounded every part of the file, p1 included.
+    /// of <c>score p2 { staff p2 }</c> sounded every part of the file, p1 included.
     /// </summary>
     private static HashSet<string>? SoundingParts(RenderSpec? played)
         => played is { } spec

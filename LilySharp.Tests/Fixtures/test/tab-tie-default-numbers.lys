@@ -15,7 +15,7 @@ section A { bl { a,2 a,2~ | a,1 | } }
 
 form { A }
 
-score "tab-tie-default-numbers" {
+score {
   staff bl
   tab bl
 }

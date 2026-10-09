@@ -43,7 +43,7 @@ public sealed class GroupedByPartTests
           section Verse { g4 a b c | }
         }
         form { Intro Verse }
-        score "x" { tab bl }
+        score x { tab bl }
         """;
 
     private const string GroupedBySection = """
@@ -51,7 +51,7 @@ public sealed class GroupedByPartTests
         section Intro { bl { c4 d e f | } }
         section Verse { bl { g4 a b c | } }
         form { Intro Verse }
-        score "x" { tab bl }
+        score x { tab bl }
         """;
 
     [Fact]
@@ -83,7 +83,7 @@ public sealed class GroupedByPartTests
               section Intro { c4 d e f | }
               section Verse { g4 a b c | }
             }
-            score "x" { tab bl }
+            score x { tab bl }
             """);
         Assert.Equal(new[] { "Intro", "Verse" }, labels);
     }
@@ -95,7 +95,7 @@ public sealed class GroupedByPartTests
             part rh { clef treble  section A { c'4 d' e' f' | } }
             part lh { clef bass     section A { c4 g, c, g, | } }
             form { A }
-            score "x" { staff rh  staff lh }
+            score x { staff rh  staff lh }
             """);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
@@ -127,7 +127,7 @@ public sealed class GroupedByPartTests
             part rh { section A { c'4 } }
             part lh { section A { c4 } }
             form { A }
-            score "x" { staff rh  staff lh }
+            score x { staff rh  staff lh }
             """));
         Assert.Empty(v.Diagnostics);
     }

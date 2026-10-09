@@ -23,4 +23,4 @@ section Main {
   }
 }
 form { Main }
-score "lyric-break-pricing" { staff melody  lyrics words }
+score { staff melody  lyrics words }

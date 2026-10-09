@@ -36,7 +36,7 @@ public sealed class SharedRendererPngTests
             }
 
             form { Demo }
-            score "out" { staff line }
+            score out { staff line }
             """;
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
@@ -68,7 +68,7 @@ public sealed class SharedRendererPngTests
 
             form { Main }
 
-            score "ossia" {
+            score ossia {
                 staff melody
                 ossia ossia_melody
             }

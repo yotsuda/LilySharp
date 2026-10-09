@@ -18,7 +18,7 @@ section Main {
 
 form { Main }
 
-score "voice-grandstaff" {
+score {
   grandStaff {
     staff rh
     staff lh

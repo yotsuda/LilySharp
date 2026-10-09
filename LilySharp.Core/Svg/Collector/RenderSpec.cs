@@ -289,10 +289,8 @@ public sealed record RenderSpec(
 {
     /// <summary>
     /// The output file stem for this score, given the input file's stem: the
-    /// <c>main</c> score (empty OutputFile) uses the input stem as-is; every other
-    /// score appends its name — its form name, or an explicit basename — to the
-    /// input stem (<c>foo</c> + <c>score sub</c> → <c>foo-sub</c>; <c>foo</c> +
-    /// <c>score sub "custom"</c> → <c>foo-custom</c>).
+    /// unnamed score (empty OutputFile) uses the input stem as-is; every other score
+    /// appends its name to the input stem (<c>foo</c> + <c>score sub</c> → <c>foo-sub</c>).
     /// </summary>
     public string ResolveOutputStem(string inputStem) =>
         string.IsNullOrEmpty(OutputFile) ? inputStem : $"{inputStem}-{OutputFile}";
@@ -352,7 +350,7 @@ public sealed record RenderSpec(
     /// — the answer to "whose music does this score play". A part the score neither shows nor
     /// names is a sketch to it, as a chord row it does not place is (<c>MidiExporter</c> reads
     /// this; owner decision 2026-09-25 for the rows, extended to the parts 2026-09-29 when the
-    /// preview's Play of <c>score "p2" { staff p2 }</c> sounded p1 as well).
+    /// preview's Play of <c>score p2 { staff p2 }</c> sounded p1 as well).
     /// </summary>
     public ImmutableArray<string> SoundingPartNames
     {

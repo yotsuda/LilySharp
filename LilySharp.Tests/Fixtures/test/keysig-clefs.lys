@@ -28,7 +28,7 @@ section Main {
 
 form { Main }
 
-score "keysig-clefs" {
+score {
   grandStaff {
     staff treblePart
     staff bassPart

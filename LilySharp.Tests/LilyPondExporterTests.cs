@@ -1903,7 +1903,7 @@ public class LilyPondExporterTests
         part n { clef bass }
         section S { m { c'4 d e f | } n { c4 d e f | } }
         form { S }
-        score "t"{{scoreOpts}} { staff m staff n }
+        score t{{scoreOpts}} { staff m staff n }
         """;
 
     [Theory]

@@ -17,7 +17,7 @@ section Main {
 
 form { Main }
 
-score "voice-tuplet" {
+score {
   staff m
 }
 

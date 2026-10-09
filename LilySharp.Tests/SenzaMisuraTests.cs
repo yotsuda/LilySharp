@@ -64,7 +64,7 @@ public class SenzaMisuraTests
           }
         }
         form { Main }
-        score "senza-misura" { staff melody }
+        score senzaMisura { staff melody }
         """;
 
     [Fact]

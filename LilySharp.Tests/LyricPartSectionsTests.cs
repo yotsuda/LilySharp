@@ -36,7 +36,7 @@ public class LyricPartSectionsTests
         section A { melody { c4 c g' g | a a g2 | } lyrics w { Twin- kle twin- kle | lit- tle star | } }
         section B { melody { g'4 g f f | e e d2 | } lyrics w { how I won- der | what you are | } }
         form { A B }
-        score "s" { staff melody  lyrics w }
+        score s { staff melody  lyrics w }
         """;
 
     private const string GroupedByPart = """
@@ -51,7 +51,7 @@ public class LyricPartSectionsTests
           section B { how I won- der | what you are | }
         }
         form { A B }
-        score "s" { staff melody  lyrics w }
+        score s { staff melody  lyrics w }
         """;
 
     // Lyrics attach EXPLICITLY (`staff melody  lyrics w`); collect through the render

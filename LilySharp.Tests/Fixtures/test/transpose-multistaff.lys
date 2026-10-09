@@ -18,7 +18,7 @@ section Main {
 
 form { Main }
 
-score "transpose-multistaff" {
+score {
   grandStaff {
     staff upper
     staff lower

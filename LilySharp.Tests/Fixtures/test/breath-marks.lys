@@ -12,4 +12,4 @@ section Main {
   }
 }
 form { Main }
-score "breath-marks" { staff m }
+score { staff m }

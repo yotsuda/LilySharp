@@ -559,7 +559,7 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>
     /// True when the caret sits in a score HEADER — on a line that opens with <c>score</c>
     /// and a form name and has not reached its <c>{</c>: <c>score |</c>,
-    /// <c>score "out" |</c>, <c>score transpose d |</c>. Line-scoped, like the
+    /// <c>score out |</c>, <c>score transpose d |</c>. Line-scoped, like the
     /// override-value scan: a header is one line in every book in the tree.
     /// </summary>
     internal static bool IsScoreHeaderPosition(string text, int offset)
@@ -1211,7 +1211,7 @@ public sealed partial class LilySharpLanguageServer
         if (prevWord == "form" && IsInsideScoreBlock(scan.Stack) && !IsInsideStringLiteral(text, offset))
             return CompletionContext.AfterScoreForm;
 
-        // Inside score "name" { } / grandStaff { }: the body is a render spec.
+        // Inside score name { } / grandStaff { }: the body is a render spec.
         // After its reference keywords only the declared part names fit.
         if (IsInsideScoreBlock(scan.Stack))
         {
@@ -1511,7 +1511,7 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>
     /// True when <paramref name="offset"/> sits inside a <c>score … { }</c> body or
     /// one of the staff GROUPS nested in it. A score block usually carries a name
-    /// (<c>score "sheet" {</c> / <c>score practice {</c>) between the keyword
+    /// (<c>score sheet {</c> / <c>score practice {</c>) between the keyword
     /// and the brace, so the innermost-block scan must skip one quoted or bare
     /// name before reading the keyword.
     /// </summary>
@@ -1732,15 +1732,15 @@ public sealed partial class LilySharpLanguageServer
             or "lyrics" or "voice" or "tuplet" or "grace" or "acciaccatura"
             or "appoggiatura" or "repeat" or "ossia" or "tab")
             return false;
-        // Otherwise w1 was a bare name or a quoted basename (w1 == ""): walk back over the
-        // rest of the header looking for `score`.
+        // Otherwise w1 was a bare name or a quoted one (w1 == ""; LYS0038, which the parser
+        // still reads as the name): walk back over the rest of the header looking for `score`.
         //
         // ⚠️ THE BUDGET IS THE GRAMMAR'S, not a guess. ScoreDecl is
-        // `'score' , Identifier , [ String ] , { ScoreOption } , '{'` with
-        // `ScoreOption = 'transpose' PitchToken | 'pitch' PitchMode` — so the longest header
-        // is `score "out" transpose d pitch concert {`: SEVEN tokens, six of them
-        // behind the one already read. It walked back TWO until 2026-09-12, which covered
-        // `score {` and `score "out" {` and nothing else — so a score with ANY
+        // `'score' , [ Identifier ] , { ScoreOption } , '{'` with
+        // `ScoreOption = 'transpose' PitchToken | 'pitch' PitchMode`; with the recovered
+        // quoted name the longest header is `score out "out" transpose d pitch concert {`:
+        // SEVEN tokens, six of them behind the one already read. It walked back TWO until
+        // 2026-09-12, which covered `score {` and `score "out" {` and nothing else — so a score with ANY
         // option was not recognized as a score at all and its body fell through to the MUSIC
         // completions (measured: 98 items opening `c d e f g a b` at `score transpose d
         // { |`, where a score offers its 17 render items). The walk still stops dead at a

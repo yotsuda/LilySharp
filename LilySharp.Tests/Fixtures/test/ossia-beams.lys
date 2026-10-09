@@ -15,7 +15,7 @@ section Main {
 
 form { Main }
 
-score "ossia-beams" {
+score {
     staff melody
     ossia ossia_melody
 }

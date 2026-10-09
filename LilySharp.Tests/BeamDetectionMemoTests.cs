@@ -56,7 +56,7 @@ public class BeamDetectionMemoTests
           b8 a g f e d |
         } }
         form { Main }
-        score "x" { staff melody }
+        score x { staff melody }
         """;
 
     /// <summary>

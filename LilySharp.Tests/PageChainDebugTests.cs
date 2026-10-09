@@ -73,7 +73,7 @@ public class PageChainDebugTests
               lh { {{lh}} }
             }
             form { S }
-            score "chain" { staff rh staff lh }
+            score chain { staff rh staff lh }
             """;
     }
 

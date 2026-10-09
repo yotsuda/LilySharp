@@ -47,7 +47,7 @@ section Main {
 
 form { Main }
 
-score "instrument-names" {
+score {
   staff violin1
   staff violin2
   staff viola

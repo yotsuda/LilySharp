@@ -38,9 +38,9 @@ public class ChordDisplayModeTests
         section A { melody { e'4 e' f' g' | a' g' e' d' | } }
         chords harmony { C | Am | }
         form { A }
-        score "names" { chords harmony  staff melody }
-        score "roman" { chords harmony as roman  staff melody }
-        score "row"   { chords harmony as roman }
+        score names { chords harmony  staff melody }
+        score roman { chords harmony as roman  staff melody }
+        score row   { chords harmony as roman }
         """;
 
     private static ChordDisplayMode StaffMode(string score)
@@ -66,8 +66,8 @@ public class ChordDisplayModeTests
     public void Both_IsRejectedLikeAnyUnknownDisplay()
     {
         var tree = SyntaxTree.Parse(Doc.Replace(
-            "score \"row\"   { chords harmony as roman }",
-            "score \"row\"   { chords harmony as both }"));
+            "score row   { chords harmony as roman }",
+            "score row   { chords harmony as both }"));
         var d = LilySharp.Core.Semantics.SemanticValidation.Run(tree)
             .Single(x => x.Code == DiagnosticCodes.UnknownChordDisplayMode);
 
@@ -82,8 +82,8 @@ public class ChordDisplayModeTests
         // The pre-existing hole the retirement had to close first: ParseChordMode's `_`
         // arm meant any unrecognised word drew absolute names and reported nothing.
         var tree = SyntaxTree.Parse(Doc.Replace(
-            "score \"row\"   { chords harmony as roman }",
-            "score \"row\"   { chords harmony as romn }"));
+            "score row   { chords harmony as roman }",
+            "score row   { chords harmony as romn }"));
 
         Assert.Contains(LilySharp.Core.Semantics.SemanticValidation.Run(tree),
             x => x.Code == DiagnosticCodes.UnknownChordDisplayMode

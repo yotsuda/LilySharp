@@ -48,7 +48,7 @@ public class ContentKeyDirectFoldTests
           time 3/4 a,8@stemDown b, c d e f |
         } }
         form { Main }
-        score "x" { staff melody }
+        score x { staff melody }
         """;
 
     /// <summary>
@@ -140,7 +140,7 @@ public class ContentKeyDirectFoldTests
           c'8( d') e'-. f'-> <c' e' g'>2 |
         } }
         form { Main }
-        score "x" { staff melody }
+        score x { staff melody }
         """;
 
     /// <summary>

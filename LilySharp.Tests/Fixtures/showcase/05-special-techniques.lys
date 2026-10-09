@@ -42,6 +42,6 @@ section Main {
 
 form { Main }
 
-score "05-special-techniques" {
+score {
   staff melody
 }

@@ -66,16 +66,11 @@ public static class LayoutReport
         var score = SvgGenerator.CollectScore(tree, spec);
         var layout = new LayoutEngine(score.Paper).Layout(score);
 
-        // Reconstruct the header as written: `score [name] ["basename"]`. The
-        // basename is shown only when it differs from the name (i.e. it was given
-        // explicitly, not derived from the name); the unnamed score shows no name.
-        string formName = spec?.Name is { } n && n != Collector.RenderSpecParser.UnnamedScoreName ? n : "";
-        string basename = ScoreName(spec);
+        // Reconstruct the header as written: `score [name]`; the unnamed score shows no name.
+        string name = spec?.Name ?? "";
         sb.Append("score");
-        if (formName.Length > 0)
-            sb.Append(' ').Append(formName);
-        if (basename.Length > 0 && basename != formName)
-            sb.Append(" \"").Append(basename).Append('"');
+        if (name.Length > 0)
+            sb.Append(' ').Append(name);
         sb.AppendLine();
 
         var staves = score.EnumerateStaves()
@@ -267,13 +262,6 @@ public static class LayoutReport
                     changes.Add($"{ts.NewTime} (bar {i + 1})");
 
         return changes.Count == 0 ? initial : initial + " -> " + string.Join(" -> ", changes);
-    }
-
-    private static string ScoreName(RenderSpec? spec)
-    {
-        if (spec is null || string.IsNullOrEmpty(spec.OutputFile))
-            return "";
-        return Path.GetFileNameWithoutExtension(spec.OutputFile);
     }
 
     private static string StaffLabel(Staff staff)

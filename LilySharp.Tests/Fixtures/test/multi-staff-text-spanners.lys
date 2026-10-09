@@ -12,4 +12,4 @@ section S {
   low { c4@rit c4 c4 c4 | c4@!rit c4@accel c4 c4@!accel | }
 }
 form { S }
-score "multi-staff-text-spanners" { staff top staff low }
+score { staff top staff low }

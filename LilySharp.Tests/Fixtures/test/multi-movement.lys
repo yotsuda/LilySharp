@@ -5,9 +5,9 @@
 // form — so `form` is what separates the movements, not a variable per movement.
 //
 // ⚠️ This book is the tree's only one with more than one `form`, which is the
-// arrangement the form/score binding exists for: form names are unique and each
-// score names the form it renders, so a form other than `main` becomes the
-// output file name unless a "basename" overrides it (all three do here).
+// arrangement the form/score binding exists for: each score picks the form it
+// renders with a `form NAME` item, and its own name is the output suffix
+// (multi-movement-movement1.svg …).
 
 title "Sonatina in C"
 composer "Example"
@@ -42,7 +42,7 @@ form movement1 { ~Allegro }
 form movement2 { ~Andante }
 form movement3 { ~Rondo }
 
-score movement1 "movement1-allegro" {
+score movement1 {
   form movement1
   form movement1
   grandStaff {
@@ -51,7 +51,7 @@ score movement1 "movement1-allegro" {
   }
 }
 
-score movement2 "movement2-andante" {
+score movement2 {
   form movement2
   form movement2
   grandStaff {
@@ -60,7 +60,7 @@ score movement2 "movement2-andante" {
   }
 }
 
-score movement3 "movement3-rondo" {
+score movement3 {
   form movement3
   form movement3
   grandStaff {

@@ -69,7 +69,7 @@ public sealed class HeaderSubtitlePoetTests
     {
         var tree = SyntaxTree.Parse(Book + """
 
-            score "part" { subtitle "Part" poet "Other" staff m }
+            score part { subtitle "Part" poet "Other" staff m }
             """);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }

@@ -41,7 +41,7 @@ public class IncrementalParseTests
 
         form { Main }
 
-        score "x" { staff melody }
+        score x { staff melody }
         """;
 
     // ---------- helpers ----------

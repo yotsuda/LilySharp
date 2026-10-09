@@ -41,7 +41,7 @@ namespace LilySharp.Tests;
 /// The gaps, each a construct the grammar takes and the popup never named: <c>time none</c>,
 /// <c>tempo … shuffle</c>, <c>cue { }</c>, the navigation marks and <c>q</c> and a phrase
 /// reference in music, a section's <c>lyrics</c> / <c>chords</c> cells, the top-level
-/// <c>transpose</c> / <c>using</c> / <c>drummap</c>, a score header's basename /
+/// <c>transpose</c> / <c>using</c> / <c>drummap</c>, a score header's
 /// <c>transpose</c> / <c>pitch</c>, the clef before a <c>staff</c> part and the tuning before
 /// a <c>tab</c> part, a bare MIDI-only part, a lyrics body's <c>[N. …]</c>,
 /// <c>@feather(right|left)</c>, <c>@arpeggio(bracket)</c>, <c>@bend(N)</c>; and two
@@ -94,11 +94,11 @@ public class CompletionAuditTests
     // ================= contexts =================
 
     [Theory]
-    // The score header, before its brace — after the form name, a basename, an option's value.
+    // The score header, before its brace — after the score's name, an option's value.
     [InlineData("score ", "AfterScoreHeader")]
-    [InlineData("score \"out\" ", "AfterScoreHeader")]
+    [InlineData("score out ", "AfterScoreHeader")]
     [InlineData("score transpose d ", "AfterScoreHeader")]
-    [InlineData("score \"out\" pitch concert tr", "AfterScoreHeader")]
+    [InlineData("score out pitch concert tr", "AfterScoreHeader")]
     // `transpose |` takes a pitch everywhere the word is a directive.
     [InlineData("score transpose ", "AfterTransposePitch")]
     [InlineData("transpose ", "AfterTransposePitch")]
@@ -262,12 +262,11 @@ public class CompletionAuditTests
     // ================= the score =================
 
     [Fact]
-    public void ScoreHeader_OffersBasenameTransposeAndPitch_AndEachCompiles()
+    public void ScoreHeader_OffersTransposeAndPitch_AndEachCompiles()
     {
         var items = LilySharpLanguageServer.GetScoreHeaderCompletions().Items;
-        Assert.Equal(new[] { "{ }", "\"\"", "transpose", "pitch" }, items.Select(i => i.Label).ToArray());
-        AssertCompiles(Book(header: Resolved(items.Single(i => i.Label == "\"\""), "out")), "a score basename");
-        AssertCompiles(Book(header: Resolved(items.Single(i => i.Label == "transpose"), "d")), "a score's transpose");
+        Assert.Equal(new[] { "{ }", "transpose", "pitch" }, items.Select(i => i.Label).ToArray());
+       AssertCompiles(Book(header: Resolved(items.Single(i => i.Label == "transpose"), "d")), "a score's transpose");
         AssertCompiles(Book(header: Resolved(items.Single(i => i.Label == "pitch"), "concert")), "a score's pitch");
         // The braces item opens the body where the render items are offered.
         Assert.Equal("editor.action.triggerSuggest", items.Single(i => i.Label == "{ }").Command?.CommandIdentifier);

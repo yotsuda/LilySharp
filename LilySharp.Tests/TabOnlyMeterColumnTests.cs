@@ -68,7 +68,7 @@ public class TabOnlyMeterColumnTests
         part gt { instrument guitar }
         section Main { gt { c4 e g e | c4 e g e | time 2/4 c4 e | c4 e | } }
         form { ~Main }
-        score "x" { {{scoreBlock}} }
+        score x { {{scoreBlock}} }
         """;
 
     /// <summary>The same, with the change INSIDE bar 2 — the other pricing function.</summary>
@@ -78,7 +78,7 @@ public class TabOnlyMeterColumnTests
         part gt { instrument guitar }
         section Main { gt { c4 e g e | c4 e time 2/4 g4 e | c4 e | } }
         form { ~Main }
-        score "x" { {{scoreBlock}} }
+        score x { {{scoreBlock}} }
         """;
 
     // A List, not the ImmutableArray, so the column parameters (ItemColumn) take it
@@ -213,7 +213,7 @@ public class TabOnlyMeterColumnTests
             part gt { instrument guitar }
             section Main { gt { c4 e g e | c4 e g e | } }
             form { ~Main }
-            score "x" { tab gt as numbers }
+            score x { tab gt as numbers }
             """);
         Assert.Same(noChange, MeterStencil.Blank(noChange));
     }

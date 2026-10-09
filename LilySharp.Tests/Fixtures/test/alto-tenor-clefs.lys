@@ -11,7 +11,7 @@ section Main {
   ten { c4 d e f | g a bes c | }
 }
 form { Main }
-score "alto-tenor-clefs" { staff alt staff ten }
+score { staff alt staff ten }
 
 // ---------------------------------------------------------------------------
 // ⚠️ THIS NOTE IS AT THE FILE END ON PURPOSE. A comment ABOVE the music shifts every

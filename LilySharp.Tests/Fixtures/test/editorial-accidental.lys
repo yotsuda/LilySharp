@@ -21,6 +21,6 @@ section Main {
 
 form { Main }
 
-score "editorial-accidental" {
+score {
   staff melody
 }

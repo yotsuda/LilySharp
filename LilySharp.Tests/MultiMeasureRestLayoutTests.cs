@@ -59,7 +59,7 @@ public class MultiMeasureRestLayoutTests
             "part m { clef treble }\n" +
             "section S { m { c'1 | R1 | c'1 | } }\n" +
             "form { S }\n" +
-            "score \"o\" { staff m }\n");
+            "score o { staff m }\n");
         Assert.False(tree.HasErrors);
         var layout = new LayoutEngine().Layout(
             LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)));
@@ -93,7 +93,7 @@ public class MultiMeasureRestLayoutTests
             "part m { clef treble }\n" +
             $"section S {{ m {{ {measures} }} }}\n" +
             "form { ~S }\n" +
-            "score \"o\" { staff m }\n");
+            "score o { staff m }\n");
         Assert.False(tree.HasErrors);
         var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
         var layout = new LayoutEngine().Layout(score);
@@ -121,7 +121,7 @@ public class MultiMeasureRestLayoutTests
             "part m { clef treble }\n" +
             "section S { m { R1 | g'1 | } }\n" +
             "form { ~S }\n" +
-            "score \"o\" { staff m }\n");
+            "score o { staff m }\n");
         Assert.False(tree.HasErrors);
         var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
         var layout = new LayoutEngine().Layout(score);
@@ -286,7 +286,7 @@ public class MultiMeasureRestLayoutTests
         part melody
         section Main { melody { {{music}} } }
         form { Main }
-        score "x" { staff melody }
+        score x { staff melody }
         """;
 
     [Theory]
@@ -338,7 +338,7 @@ public class MultiMeasureRestLayoutTests
               lh { c2 c | R1*4 | c2 c | }
             }
             form { Main }
-            score "x" { staff melody staff lh }
+            score x { staff melody staff lh }
             """;
         var tree = SyntaxTree.Parse(src);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -478,7 +478,7 @@ public class MultiMeasureRestLayoutTests
               bot { c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | R1 | }
             }
             form { Main }
-            score "x" { staff top staff bot }
+            score x { staff top staff bot }
             """;
         var tree = SyntaxTree.Parse(src);
         var multi = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
@@ -536,7 +536,7 @@ public class MultiMeasureRestLayoutTests
               bot { c4 d e f | key d major c4 d e f | c4 d e f | clef treble c'4 d' e' f' | time 3/4 c'4 d' e' | }
             }
             form { ~Main }
-            score "x" { staff top staff bot }
+            score x { staff top staff bot }
             """;
         var tree = SyntaxTree.Parse(src);
         var multi = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);

@@ -17,4 +17,4 @@ section S {
   }
 }
 form { S }
-score "multivoice-beams" { staff mel }
+score { staff mel }

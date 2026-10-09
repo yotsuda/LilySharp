@@ -58,10 +58,10 @@ section Main {
 
 form { Main }
 
-score "cue-melody" {
+score cueMelody {
   staff treble melody
 }
 
-score "cue-chords" {
+score cueChords {
   staff treble harmony
 }

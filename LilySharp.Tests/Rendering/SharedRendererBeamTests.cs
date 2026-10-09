@@ -60,7 +60,7 @@ public sealed class SharedRendererBeamTests
             }
 
             form { Demo }
-            score "out" { staff line }
+            score out { staff line }
             """;
         var (score, layout) = BuildLayout(source);
 
@@ -92,7 +92,7 @@ public sealed class SharedRendererBeamTests
             }
 
             form { M }
-            score "grand" {
+            score grand {
                 staff top
                 staff bot
             }

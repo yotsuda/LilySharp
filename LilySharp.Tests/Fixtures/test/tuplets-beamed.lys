@@ -30,6 +30,6 @@ section Main {
 
 form { Main }
 
-score "tuplets-beamed" {
+score {
   staff melody
 }

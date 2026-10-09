@@ -60,7 +60,7 @@ public class KeySignatureChangeTests
             phrase mel { c'4 d' e' f' | g'4 a' key d major b' c'' | d''4 c'' b' a' | }
             section Main { melody { mel } }
             form { Main }
-            score "x" { staff melody }
+            score x { staff melody }
             """;
         var tree = SyntaxTree.Parse(source);
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
@@ -101,7 +101,7 @@ public class KeySignatureChangeTests
             phrase mel { c'4 d' e' f' | {{changes}} c'4 d' e' f' | }
             section Main { melody { mel } }
             form { Main }
-            score "x" { staff melody }
+            score x { staff melody }
             """;
         var tree = SyntaxTree.Parse(source);
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
@@ -139,7 +139,7 @@ public class KeySignatureChangeTests
                 part m
                 section A { m { f4 f f f | {{key}}{{pitch}}8 {{pitch}} {{pitch}}4 {{pitch}}2 | } }
                 form { ~A }
-                score "x" { staff m }
+                score x { staff m }
                 """;
             var tree = SyntaxTree.Parse(source);
             var multi = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
@@ -188,7 +188,7 @@ public class KeySignatureChangeTests
                   {{lower}}
                 }
                 form { ~Main }
-                score "x" { {{staves}} }
+                score x { {{staves}} }
                 """;
             var tree = SyntaxTree.Parse(source);
             var multi = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
@@ -232,7 +232,7 @@ part melody { clef treble }
 phrase m { c'4 d e f | key d major fis4 g a b | }
 section A { melody { m } }
 form { A }
-score ""test"" { staff melody }
+score test { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -264,7 +264,7 @@ part melody { clef treble }
 phrase m { c'4 d e f | key d major fis4 g a b | key bes major bes4 a g f | }
 section A { melody { m } }
 form { A }
-score ""test"" { staff melody }
+score test { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -311,7 +311,7 @@ part melody { clef treble }
 phrase m { c'4 d e f | key d major fis4 g a b | }
 section A { melody { m } }
 form { A }
-score ""test"" { staff melody }
+score test { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var options = new SvgRenderOptions { EmbedFont = false };
@@ -333,7 +333,7 @@ key d major
 phrase m { fis4 g a b | key f major c'4 bes a g | }
 section A { melody { m } }
 form { A }
-score ""test"" { staff melody }
+score test { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var options = new SvgRenderOptions { EmbedFont = false };
@@ -358,7 +358,7 @@ key d major
 phrase m { fis4 g a b | key c major c'4 d e f | }
 section A { melody { m } }
 form { A }
-score ""test"" { staff melody }
+score test { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -380,7 +380,7 @@ key d major
 phrase m { fis4 g a b | key g major c'4 d e fis | }
 section A { melody { m } }
 form { A }
-score ""test"" { staff melody }
+score test { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);

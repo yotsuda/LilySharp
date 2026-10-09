@@ -21,7 +21,7 @@ section Main {
 
 form { Main }
 
-score "tab-part-key" {
+score {
   staff pn
   tab gt
 }

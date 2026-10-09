@@ -77,7 +77,7 @@ public class MeasureContentKeySpanTests
               melody { {{music}} }
             }
             form { Main }
-            score "x" { staff melody }
+            score x { staff melody }
             """.Replace("\r\n", "\n");
     }
 

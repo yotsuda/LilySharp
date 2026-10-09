@@ -20,7 +20,7 @@ section Main {
 
 form { Main }
 
-score "voice-mixed" {
+score {
   staff m
 }
 

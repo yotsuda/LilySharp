@@ -58,7 +58,7 @@ public class PageLayouterSvgDemo
 
         form { Intro Dev Recap Intro Dev Recap }
 
-        score "demo" { staff melody }
+        score demo { staff melody }
         """;
 
     [Fact]

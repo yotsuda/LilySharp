@@ -20,4 +20,4 @@ section Main {
   }
 }
 form { Main }
-score "beamed-rest" { staff melody }
+score { staff melody }

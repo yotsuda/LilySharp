@@ -22,7 +22,7 @@ section Chorus {
 
 form { Chorus }
 
-score "sings-chorus-row" {
+score {
   staff sax
   lyrics ja
   lyrics en

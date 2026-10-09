@@ -30,7 +30,7 @@ section Main {
 
 form { Main }
 
-score "treble8" {
+score {
   staff gtr
   staff tnr
   staff t8

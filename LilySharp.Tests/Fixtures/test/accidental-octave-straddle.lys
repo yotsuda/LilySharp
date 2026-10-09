@@ -24,4 +24,4 @@ section Main {
   m { <eis eis' cis cis'>1 | }
 }
 form { Main }
-score "accidental-octave-straddle" { staff m }
+score { staff m }

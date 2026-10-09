@@ -1,6 +1,6 @@
 // A `chords NAME` row directly above a staff: the NAMED chord part's symbols
 // align above that staff - the same progression can also feed a lead-sheet row
-// (score "grid"), written once.
+// (score grid), written once.
 part melody { clef treble }
 
 section Main {
@@ -15,11 +15,11 @@ section Main {
 
 form { Main }
 
-score "chords-attached" {
+score {
   chords prog
   staff melody
 }
 
-score "chords-attached-grid" {
+score chordsAttachedGrid {
   chords prog
 }

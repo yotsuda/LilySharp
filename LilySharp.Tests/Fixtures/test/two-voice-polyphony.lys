@@ -11,7 +11,7 @@ section Main {
   }
 }
 form { Main }
-score "two-voice-polyphony" { staff m }
+score { staff m }
 
 // ---------------------------------------------------------------------------
 // ⚠️ THIS NOTE IS AT THE FILE END ON PURPOSE. A comment ABOVE the music shifts every

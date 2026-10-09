@@ -35,6 +35,6 @@ section Main {
 
 form { Main }
 
-score "grace-notes" {
+score {
   staff melody
 }

@@ -325,7 +325,7 @@ public class CollectEditResumeTests
     // padding of S reads a count of va's cell, text BELOW everything vb's walk reads.
     // va's bars are rests so an edit to them leaves every cumulative table count alone
     // (see SuffixSplice_DeclinesWhenAnotherPartsBarCountChanges' note).
-    private const string CanonBook = @"score ""canon"" { staff va staff vb }
+    private const string CanonBook = @"score canon { staff va staff vb }
 
 part vb {
   clef bass
@@ -384,7 +384,7 @@ form { S T }
     [Fact]
     public void PrefixResume_ALengthChangingEditInAGroupedByPartPart_KeepsThePrefix()
     {
-        const string oldText = @"score ""x"" { staff bl }
+        const string oldText = @"score x { staff bl }
 
 part bl {
   clef bass
@@ -408,7 +408,7 @@ form { A B }
     [Fact]
     public void PrefixResume_AFormLineBar_DoesNotReadPastTheMusicAbove()
     {
-        const string oldText = @"score ""x"" { staff bl }
+        const string oldText = @"score x { staff bl }
 
 part bl {
   clef bass
@@ -437,7 +437,7 @@ form { A |: B :| C }
     public void PrefixResume_AnEditThatMakesANewOriginal_DoesNotRestorePastIt()
     {
         const string oldText = @"octave absolute
-score ""x"" { staff bl }
+score x { staff bl }
 
 part bl {
   clef bass
@@ -482,12 +482,12 @@ form { A }
         // then the one that deletes the brace. A seeded System.Random is the same sequence on
         // every .NET, and the draw is the audit host's (Lab sessions/p593/cpuhost, `fuzz`).
         var path = Path.Combine(FindRepoRootForTests(), "LilySharp.Tests", "Fixtures", "test", "collision.lys");
-        // The draw was taken on the fixture as it read before 2026-10-09 (`form main`, `score main`):
+        // The draw was taken on the fixture as it read before 2026-10-09 (`form main`, `score main "collision"`):
         // the edits are drawn on that spelling and read back in today's, so the keystrokes stay
         // the audit's own.
         string text = File.ReadAllText(path)
-            .Replace("form { Main }", "form main { Main }").Replace("score \"collision\"", "score main \"collision\"");
-        static string Today(string s) => s.Replace("form main { Main }", "form { Main }").Replace("score main \"collision\"", "score \"collision\"");
+            .Replace("form { Main }", "form main { Main }").Replace("score {", "score main \"collision\" {");
+        static string Today(string s) => s.Replace("form main { Main }", "form { Main }").Replace("score main \"collision\" {", "score {");
         int h = 17;
         foreach (char ch in Path.GetFileName(path)) h = unchecked(h * 31 + ch);
         var rng = new Random(h ^ 1);
@@ -514,7 +514,7 @@ form { A }
     public void PrefixResume_AParallelSpanInThePrefix_IsReKeyedOntoTheNewTree()
     {
         const string oldText = @"octave absolute
-score ""x"" { staff bl }
+score x { staff bl }
 
 part bl {
   clef bass
@@ -543,7 +543,7 @@ form { A }
     [Fact]
     public void PrefixResume_AnEditThatSwallowsTheForm_DoesNotAdoptItsBars()
     {
-        const string oldText = @"score ""x"" { staff bl }
+        const string oldText = @"score x { staff bl }
 
 part bl {
   clef bass
@@ -602,7 +602,7 @@ form { A |: B :| C }
         const string oldText = @"part va { clef treble }
 part vb { clef bass }
 
-score ""canon"" { staff va staff vb }
+score canon { staff va staff vb }
 
 section S {
   va { r4 r r r | r4 r r r | r4 r r r | }
@@ -872,7 +872,7 @@ section S {
         var bars = string.Join(" |\n    ",
             Enumerable.Repeat("c'4 d'4 e'4 f'4", 60));
         var baseText = "octave absolute\npart m { clef treble }\nsection S {\n  m {\n    "
-            + bars + " |\n  }\n}\nform { S }\nscore \"rerecord-probe\" { staff m }\n";
+            + bars + " |\n  }\n}\nform { S }\nscore rerecordProbe { staff m }\n";
 
         var options = new SvgRenderOptions { EmbedFont = false };
         var compiler = new IncrementalCompiler(SyntaxTree.Parse(baseText), options);

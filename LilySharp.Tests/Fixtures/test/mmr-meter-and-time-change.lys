@@ -37,6 +37,6 @@ section Main {
 
 form { Main }
 
-score "mmr-meter-and-time-change" {
+score {
   staff melody
 }

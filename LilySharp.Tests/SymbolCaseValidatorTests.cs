@@ -34,7 +34,7 @@ public class SymbolCaseValidatorTests
     // Wrap a part header body in a minimal complete document. `vln` is a plain
     // identifier part name (p / pp / mf … are reserved dynamics, not names).
     private static string Doc(string header) =>
-        $"part vln {{ {header} }}\nsection A {{ vln {{ c4 d e f }} }}\nform {{ A }}\nscore \"s\" {{ staff vln }}";
+        $"part vln {{ {header} }}\nsection A {{ vln {{ c4 d e f }} }}\nform {{ A }}\nscore s {{ staff vln }}";
 
     private static bool HasSymbolError(string header) =>
         SemanticValidation.Run(SyntaxTree.Parse(Doc(header)))
@@ -205,7 +205,7 @@ public class SymbolCaseValidatorTests
     {
         var tree = SyntaxTree.Parse(
             "part vln { }\nsection A { vln { c4 d e f } }\nform { A }\n"
-            + "score \"s\" { staff vln \"Violin I\" as lines 1 }");
+            + "score s { staff vln \"Violin I\" as lines 1 }");
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
         var staff = RenderSpecParser.FindFirst(tree)!
             .Items.OfType<SingleStaffSpec>().Single().Staff;
@@ -214,7 +214,7 @@ public class SymbolCaseValidatorTests
 
         tree = SyntaxTree.Parse(
             "part vln { }\npart alt { }\nsection A { vln { c4 d e f } alt { e4 f g a } }\n"
-            + "form { A }\nscore \"s\" { ossia alt as lines 1\n  staff vln }");
+            + "form { A }\nscore s { ossia alt as lines 1\n  staff vln }");
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
         var ossia = RenderSpecParser.FindFirst(tree)!.Items.OfType<OssiaStaffSpec>().Single();
         Assert.Equal(1, ossia.Staff.Lines);
@@ -225,7 +225,7 @@ public class SymbolCaseValidatorTests
             + "section A { vln { c4 d e f } vla { e4 f g a } "
             + "lyrics w sings vln { la la la la | } }\n"
             + "form { A }\n"
-            + "score \"s\" { grandStaff { staff vln as lines 1  lyrics w  staff vla } }");
+            + "score s { grandStaff { staff vln as lines 1  lyrics w  staff vla } }");
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
         var grand = RenderSpecParser.FindFirst(tree)!
             .Items.OfType<GrandStaffRenderSpec>().Single();
@@ -241,7 +241,7 @@ public class SymbolCaseValidatorTests
 
     // The selector variants wrap the SCORE item instead of the part header.
     private static string SelectorDoc(string selector) =>
-        $"part vln {{ }}\nsection A {{ vln {{ c4 d e f }} }}\nform {{ A }}\nscore \"s\" {{ staff vln {selector} }}";
+        $"part vln {{ }}\nsection A {{ vln {{ c4 d e f }} }}\nform {{ A }}\nscore s {{ staff vln {selector} }}";
 
     private static bool HasLinesSelectorError(string selector) =>
         SyntaxTree.Parse(SelectorDoc(selector)).Diagnostics

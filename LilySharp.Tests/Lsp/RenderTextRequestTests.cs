@@ -110,7 +110,7 @@ public class RenderTextRequestTests
     [Fact]
     public void Fence_WithTwoScores_IsRefused()
     {
-        var text = TwoPartsNoScore + "\nscore tune { form tune staff melody }\nscore tune \"both\" { form tune staff melody staff bass }";
+        var text = TwoPartsNoScore + "\nscore tune { form tune staff melody }\nscore both { form tune staff melody staff bass }";
 
         var response = Server().RenderText(new RenderTextParams { Text = text, Interactive = false, Fence = true });
 

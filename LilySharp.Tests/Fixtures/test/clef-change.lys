@@ -25,6 +25,6 @@ section Main {
 
 form { Main }
 
-score "clef-change" {
+score {
   staff melody
 }

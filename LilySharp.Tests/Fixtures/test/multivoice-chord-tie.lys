@@ -14,4 +14,4 @@ section S {
   }
 }
 form { S }
-score "multivoice-chord-tie" { staff mel }
+score { staff mel }

@@ -22,7 +22,7 @@ section Main {
 
 form { Main }
 
-score "ossia-key" {
+score {
     staff melody
     ossia ossia_melody
 }

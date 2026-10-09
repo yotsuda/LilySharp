@@ -509,7 +509,7 @@ public class LineStartColumnTests
 
             form { ~Main }
 
-            score "M" {
+            score M {
               staff melody
             }
             """);

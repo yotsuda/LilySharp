@@ -49,7 +49,7 @@ public class ValueContextCompletionTests
     [InlineData("pitch wr", "AfterPitch")]
     [InlineData("part sax { pitch ", "AfterPitch")]
     [InlineData("score full pitch ", "AfterPitch")]
-    [InlineData("score full \"out\" transpose d pitch ", "AfterPitch")]
+    [InlineData("score out transpose d pitch ", "AfterPitch")]
     // …and NOT in a music body, where `pitch` is no directive; nor inside a string.
     [InlineData("section A { m { pitch ", "MusicBlock")]
     [InlineData("title \"perfect pitch ", "AfterTitleText")]
@@ -218,15 +218,15 @@ public class ValueContextCompletionTests
     }
 
     [Theory]
-    [InlineData("score \"s\" { ", "ScoreBlock")]
+    [InlineData("score s { ", "ScoreBlock")]
     [InlineData("score { ", "ScoreBlock")]
-    [InlineData("score \"s\" { staff ", "AfterStaffRef")]
+    [InlineData("score s { staff ", "AfterStaffRef")]
     // `tab` has its own list since 2026-09-10: the parts AND the tunings that may precede one.
-    [InlineData("score \"s\" { tab ", "AfterTabRef")]
+    [InlineData("score s { tab ", "AfterTabRef")]
     [InlineData("score { grandStaff { staff ", "AfterStaffRef")]
     [InlineData("score { grandStaff { staff m  lyrics ", "AfterLyricsRef")]
-    [InlineData("score \"s\" { chords ", "AfterChordsRef")]
-    [InlineData("score \"s\" { lyrics ", "AfterLyricsRef")]
+    [InlineData("score s { chords ", "AfterChordsRef")]
+    [InlineData("score s { lyrics ", "AfterLyricsRef")]
     public void InsideAScoreBlock_RenderSpecContexts(string text, string expected)
     {
         Assert.Equal(expected, ContextOf(text).ToString());

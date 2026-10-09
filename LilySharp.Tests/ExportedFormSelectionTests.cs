@@ -56,8 +56,8 @@ public class ExportedFormSelectionTests
         section Second { m { g2 g | g1 | } }
         form   { First }
         form encore { Second }
-        score "first" { staff m }
-        score encore "second" { form encore staff m }
+        score first { staff m }
+        score second { form encore staff m }
         """;
 
     private static FormDeclarationSyntax FormNamed(SyntaxTree tree, string name)
@@ -114,7 +114,7 @@ public class ExportedFormSelectionTests
 
     /// <summary>
     /// Two scores on ONE form — the tab corpus's shape, <c>score</c> beside
-    /// <c>score "tab"</c> — are told apart by their staves, and the twin engraves the
+    /// <c>score tab</c> — are told apart by their staves, and the twin engraves the
     /// score it is handed.
     /// </summary>
     /// <remarks>
@@ -131,7 +131,7 @@ public class ExportedFormSelectionTests
             section A { b { e,4 a, d g | } }
             form { A }
             score { staff b }
-            score "tab" { tab b }
+            score tab { tab b }
             """);
         var tab = Core.Svg.Collector.RenderSpecParser.FindDeclaredByName(tree, "tab")!.Value;
 

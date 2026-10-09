@@ -13,4 +13,4 @@ lyrics words sings melody { la la la | Twin- kle twin- kle | lit- tle star | }
 
 form { A }
 
-score "midmeter" { staff melody  lyrics words }
+score midmeter { staff melody  lyrics words }

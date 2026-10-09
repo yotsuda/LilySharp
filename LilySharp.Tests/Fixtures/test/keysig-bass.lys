@@ -32,6 +32,6 @@ section GMajor {
 
 form { FMajor GMajor }
 
-score "keysig-bass" {
+score {
   staff bassLine
 }

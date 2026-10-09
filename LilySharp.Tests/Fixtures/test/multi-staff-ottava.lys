@@ -16,4 +16,4 @@ section S {
   low { c,4@ottava(bassa) c,4 c,4 c,4 | c,4@!ottava c,4 c,4 c,4 | }
 }
 form { S }
-score "multi-staff-ottava" { staff top staff low }
+score { staff top staff low }

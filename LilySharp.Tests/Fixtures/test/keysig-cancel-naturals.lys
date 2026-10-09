@@ -13,7 +13,7 @@ part melody {
   section A { key a major a1 | key f major bes1 | }
 }
 form { A }
-score "score" {
+score score {
   staff melody
 }
 

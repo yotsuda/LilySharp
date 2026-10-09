@@ -17,6 +17,6 @@ part melody {
 
 form { Main }
 
-score "tie-seconds" {
+score {
   staff melody
 }

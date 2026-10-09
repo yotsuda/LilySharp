@@ -55,8 +55,7 @@ public static class SvgGenerator
 
     /// <summary>
     /// Generates the SVG of one given score (null = a file with no <c>score</c> block). A
-    /// name cannot always pick it: <c>score</c> and <c>score "tab"</c> share the
-    /// name <c>main</c>, so a caller walking every score hands over the spec itself.
+    /// caller walking every score hands over the spec itself rather than its name.
     /// </summary>
     public static string GenerateScore(SyntaxTree tree, RenderSpec? renderSpec, SvgRenderOptions? options = null)
     {
@@ -78,9 +77,9 @@ public static class SvgGenerator
     /// </summary>
     /// <param name="inputStem">
     /// The input file's stem (name without extension). When given, each score's
-    /// filename is resolved against it (<c>main</c> → the stem; <c>score sub</c> →
-    /// <c>stem-sub</c>; an explicit basename → verbatim). When null, the raw
-    /// OutputFile is returned (empty for <c>main</c>) — the caller derives the name.
+    /// filename is resolved against it (the unnamed score → the stem; <c>score sub</c> →
+    /// <c>stem-sub</c>). When null, the raw OutputFile is returned (empty for the unnamed
+    /// score) — the caller derives the name.
     /// </param>
     public static IReadOnlyList<(string Filename, string Svg)> GenerateAll(
         SyntaxTree tree, SvgRenderOptions? options = null, string? inputStem = null)

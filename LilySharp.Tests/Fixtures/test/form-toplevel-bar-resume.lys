@@ -37,4 +37,4 @@ section C {
 
 form { A || B || C |. }
 
-score "form-toplevel-bar-resume" { staff m }
+score { staff m }

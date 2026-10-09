@@ -457,7 +457,7 @@ score {{ chords prog  staff m }}
             "section Main {\n  hi { b4 b b b | }\n" +
             $"  lo {{ voice {{ {firstVoice} }} {{ b4 b b b }} | }}\n}}\n" +
             "form { Main }\n" +
-            "score \"o\" { staff hi  chords prog  staff lo }\n";
+            "score o { staff hi  chords prog  staff lo }\n";
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors,
             string.Join(", ", tree.Diagnostics.Select(d => d.Message)));

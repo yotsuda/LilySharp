@@ -17,6 +17,6 @@ section A {
 
 form { A }
 
-score "tempo-swing" {
+score {
   staff m
 }

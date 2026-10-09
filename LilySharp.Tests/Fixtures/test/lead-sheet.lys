@@ -10,4 +10,4 @@ section Main {
   lyrics words { Twin- kle lit- tle | star how I | won- der what | you~ | }
 }
 form { Main }
-score "lead-sheet" { chords prog lyrics words }
+score { chords prog lyrics words }

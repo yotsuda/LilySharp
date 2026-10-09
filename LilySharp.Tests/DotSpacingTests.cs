@@ -86,7 +86,7 @@ public class DotSpacingTests
               }
             }
             form { ~Main }
-            score "x" { staff ~up }
+            score x { staff ~up }
             """;
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(src);
         var multi = new LilySharp.Core.Svg.Collector.MeasureCollector()

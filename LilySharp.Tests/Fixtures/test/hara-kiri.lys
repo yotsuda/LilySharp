@@ -35,4 +35,4 @@ section Main {
 
 form { Main }
 
-score "x" { grandStaff { staff rh staff lh as removeEmpty all } }
+score x { grandStaff { staff rh staff lh as removeEmpty all } }

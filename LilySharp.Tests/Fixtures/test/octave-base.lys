@@ -19,6 +19,6 @@ section Main {
 
 form { Main }
 
-score "octave-base" {
+score {
   staff low
 }

@@ -54,11 +54,11 @@ score {
   staff bassline
 }
 
-score "both" {
+score both {
   staff bassline
   tab bassline
 }
 
-score "tab" {
+score tab {
   tab bassline
 }

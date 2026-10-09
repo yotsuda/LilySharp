@@ -161,7 +161,7 @@ section RepN    { rh { p_repeatN }    lh { p_bass1 } }
 // 9 の主張はこの 1 行にある：`|: … [1. …] :| [2. …]` と `:|*N`。
 form { A B C D |: ~RepBody [1. ~RepEnd1] :| [2. ~RepEnd2] |: ~RepN :|*2 }
 
-score "grammar-tour" {
+score {
   staff rh
   staff lh
 }

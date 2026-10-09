@@ -54,7 +54,7 @@ public class GraceInsideStaffSkylineTests
 
             form { ~A ~B }
 
-            score "{{name}}" {
+            score {{name}} {
               staff melody
             }
             """;

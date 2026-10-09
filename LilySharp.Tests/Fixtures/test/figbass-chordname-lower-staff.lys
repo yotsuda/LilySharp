@@ -16,7 +16,7 @@ section Main {
 
 form { Main }
 
-score "figbass-chordname-lower-staff" {
+score {
   staff top
   staff bot
 }

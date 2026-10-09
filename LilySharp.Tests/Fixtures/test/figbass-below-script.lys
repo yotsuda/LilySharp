@@ -12,4 +12,4 @@ section Main {
 
 form { Main }
 
-score "figbass-below-script" { staff bs }
+score { staff bs }

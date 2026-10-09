@@ -14,4 +14,4 @@ section Main {
 
 form { Main }
 
-score "text-annotation" { staff melody }
+score { staff melody }

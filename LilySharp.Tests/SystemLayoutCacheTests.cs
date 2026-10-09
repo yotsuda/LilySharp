@@ -177,7 +177,7 @@ public class SystemLayoutCacheTests
             part melody { clef treble }
             section Main { melody { c8[ d8] e8[ f8] g8[ a8] b8[ c'8] | c8[ d8] e8[ f8] g8[ a8] b8[ c'8] | } }
             form { Main }
-            score "x" { staff melody }
+            score x { staff melody }
             """;
         var score = new MeasureCollector().Collect(SyntaxTree.Parse(src), "melody");
         var engine = new LayoutEngine();
@@ -399,7 +399,7 @@ public class SystemLayoutCacheTests
           }
         }
         form { Main }
-        score "x" { staff melody }
+        score x { staff melody }
         """;
 
     /// <summary>
@@ -430,7 +430,7 @@ public class SystemLayoutCacheTests
               }
             }
             form { Main }
-            score "x" { staff melody }
+            score x { staff melody }
             """;
         var opt = new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false };
         var tree = SyntaxTree.Parse(src);

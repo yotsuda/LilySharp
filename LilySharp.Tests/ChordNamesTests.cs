@@ -227,7 +227,7 @@ public sealed class ChordNamesTests
         "key c major\npart m { clef treble }\n" +
         "section Main {\n  m {\n    time 4/4\n    c4 d e f | g a b c |\n  }\n" +
         "  chords prog {\n    C Am | F G7 |\n  }\n}\n" +
-        "form { Main }\nscore \"x\" { chords prog  staff m }\n";
+        "form { Main }\nscore x { chords prog  staff m }\n";
 
     [Fact]
     public void ChordNames_ParseWithoutErrors()
@@ -260,7 +260,7 @@ public sealed class ChordNamesTests
     {
         var src = "section Main {\n  m { time 4/4 c2 d2 | }\n" +
                   "  chords prog { Fmaj7/E Fmaj7/G | }\n}\n" +
-                  "form { Main }\nscore \"x\" { chords prog  staff m }\n";
+                  "form { Main }\nscore x { chords prog  staff m }\n";
         var tree = SyntaxTree.Parse(src);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
 
@@ -297,7 +297,7 @@ public sealed class ChordNamesTests
                   "section Main {\n  rh { a4 a a a | }\n  lh { a,,4 a,, a,, a,, | }\n" +
                   "  chords prog { F | }\n}\n" +
                   "form { Main }\n" +
-                  "score \"x\" { chords prog  grandStaff { staff rh staff lh } }\n";
+                  "score x { chords prog  grandStaff { staff rh staff lh } }\n";
         var tree = SyntaxTree.Parse(src);
         var spec = Core.Svg.Collector.RenderSpecParser.FindFirst(tree);
         var score = new MeasureCollector().CollectMultiStaff(tree, spec!);
@@ -315,7 +315,7 @@ public sealed class ChordNamesTests
         // block were silently dropped by stray-token recovery.
         var src = "section Main {\n  m { time 4/4 r1 | s1 | R1 | }\n" +
                   "  chords prog { r | . | R | }\n}\n" +
-                  "form { Main }\nscore \"x\" { chords prog  staff m }\n";
+                  "form { Main }\nscore x { chords prog  staff m }\n";
         var tree = SyntaxTree.Parse(src);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
         var score = CollectWithRow(tree);
@@ -332,7 +332,7 @@ public sealed class ChordNamesTests
         // spacer is a stray token whose report says so (ChordBlockStrayTokenTests).
         var src = "section Main {\n  m { time 4/4 r1 | s1 | }\n" +
                   "  chords prog { r | s | }\n}\n" +
-                  "form { Main }\nscore \"x\" { chords prog  staff m }\n";
+                  "form { Main }\nscore x { chords prog  staff m }\n";
         Assert.Contains(SyntaxTree.Parse(src).Diagnostics,
             d => d.Code == DiagnosticCodes.ChordBlockBadMember);
     }
@@ -388,7 +388,7 @@ public sealed class ChordNamesTests
     public void MultiTokenSymbol_IsCapturedWhole(string entry, string expected)
     {
         var src = "section Main {\n  m { time 4/4 c4 d e f | }\n  chords prog { " + entry + " }\n}\n" +
-                  "form { Main }\nscore \"x\" { chords prog  staff m }\n";
+                  "form { Main }\nscore x { chords prog  staff m }\n";
         var score = CollectWithRow(SyntaxTree.Parse(src));
         var chord = Assert.Single(score.ChordNames);
         Assert.Equal(expected, chord.ChordText);
@@ -401,7 +401,7 @@ public sealed class ChordNamesTests
         // and now resolves a Roman degree from its root, but carries no interval set
         // (unknown tones → no note expansion).
         var src = "section Main {\n  m { time 4/4 c4 d e f | }\n  chords prog { Cweird9 }\n}\n" +
-                  "form { Main }\nscore \"x\" { chords prog  staff m }\n";
+                  "form { Main }\nscore x { chords prog  staff m }\n";
         var score = CollectWithRow(SyntaxTree.Parse(src));
         var chord = Assert.Single(score.ChordNames);
         Assert.Equal("Cweird9", chord.ChordText);

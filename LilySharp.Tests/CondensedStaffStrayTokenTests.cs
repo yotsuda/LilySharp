@@ -46,7 +46,7 @@ public class CondensedStaffStrayTokenTests
         + "score {\n"
         + "  condensedStaff { staff fl1 staff fl2 }\n"
         + "}\n"
-        + "score \"another\" {\n"
+        + "score another {\n"
         + "  title \"別の楽譜\"\n"
         + "  staff fl1\n"
         + "}\n";

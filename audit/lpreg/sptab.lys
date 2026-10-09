@@ -9,6 +9,6 @@ section A {
   m { c4 d e f | g1 | }
 }
 form { A }
-score "Title 1" { staff m }
-score "Title 2" { tab m }
-score "Title 3" { staff m }
+score Title1 { staff m }
+score Title2 { tab m }
+score Title3 { staff m }

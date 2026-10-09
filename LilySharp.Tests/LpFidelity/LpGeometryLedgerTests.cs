@@ -206,7 +206,7 @@ public class LpGeometryLedgerTests
 
             form { ~Main }
 
-            score "anchor" {
+            score anchor {
               chords prog
               staff melody
             }
@@ -263,7 +263,7 @@ public class LpGeometryLedgerTests
 
             form { ~A }
 
-            score "runs" {
+            score runs {
               staff ~melody
               chords prog as names
               staff ~melody
@@ -344,7 +344,7 @@ public class LpGeometryLedgerTests
 
             form { ~Main }
 
-            score "DSK-anchor" {
+            score DSKAnchor {
               staff upper
             }
             """);

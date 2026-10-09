@@ -16,4 +16,4 @@ section Main {
 }
 
 form { Main }
-score "tempo-change" { staff melody }
+score { staff melody }

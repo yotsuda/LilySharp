@@ -15,6 +15,6 @@ section Main {
 
 form { Main }
 
-score "pedal-text" {
+score {
   staff lh
 }

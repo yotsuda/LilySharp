@@ -27,7 +27,7 @@ section Main {
 
 form { Main }
 
-score "timesig-grandstaff" {
+score {
   grandStaff {
     staff rh
     staff lh

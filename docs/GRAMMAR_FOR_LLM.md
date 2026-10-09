@@ -65,7 +65,7 @@ section Main {                  // a section binds music to each part by name
 
 form { Main }              // playback/print order of sections
 
-score "out" {                   // one or more render blocks
+score {                       // one or more render blocks; the unnamed one is the default
   grandStaff {
     staff rightHand             // 'staff NAME' — bare name, no braces
     staff leftHand
@@ -99,8 +99,8 @@ the same moment is not applied and warns (LYS4024) — write the same change in 
 | `choirStaff` | bracket | **not** drawn through | independent lines (voices) |
 
 ```
-score choral "satb" { choirStaff { staff sop  staff alt  staff ten  staff bas } }
-score winds  "winds" { staffGroup { staff flute  staff oboe  staff clarinet } }
+score satb { choirStaff { staff sop  staff alt  staff ten  staff bas } }
+score winds { staffGroup { staff flute  staff oboe  staff clarinet } }
 ```
 
 Each is the LilyPond context of the same name (`\new GrandStaff` / `\new StaffGroup` /
@@ -131,7 +131,7 @@ visibly separate.
 that part to MIDI only (played, never engraved — a click track, a cue part):
 
 ```
-score winds "winds" {
+score winds {
   staffGroup { staff flute  staff oboe }
   title "Woodwinds"    // this score only
   click                // played, never engraved
@@ -161,7 +161,7 @@ A minimal single-staff document:
 part melody { clef treble }
 section Main { melody { c4 d e f | g2 g | } }
 form { Main }
-score "out" { staff melody }
+score { staff melody }
 ```
 
 ⚠️ That document prints a boxed **"Main"** over its first bar: every section reference prints
@@ -667,7 +667,7 @@ section Loop {
   lyrics words { star | }
 }
 form { Main |: ~Loop :| }
-score "sheet" { chords prog lyrics words }     // chords + lyrics rows, no staff
+score sheet { chords prog lyrics words }     // chords + lyrics rows, no staff
 ```
 
 ## Structure: reuse and navigation
@@ -736,9 +736,10 @@ instead (`@fermata.up`), so `@notehead.x` does not work either.
 
 ## Multiple forms (excerpts)
 
-Declare several named forms and bind each `score` to one by name. The reserved
-form `main` writes to the input file's name; any other form name becomes the
-output file name (unless a `"basename"` overrides it).
+The unnamed `form { }` is the file's default; a score plays another with a `form NAME`
+item. A score's name is its own, a bare word (`score practice`, never `score "practice"`):
+the unnamed score writes to the input file's name and is `(Default)` in the preview,
+`score NAME` writes `<input>-NAME`.
 
 ```
 form { Intro Verse Outro }

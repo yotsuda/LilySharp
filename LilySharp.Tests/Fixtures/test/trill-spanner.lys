@@ -26,4 +26,4 @@ section C { melody { m3 } }
 
 form { A B C }
 
-score "trill-spanner" { staff melody }
+score { staff melody }

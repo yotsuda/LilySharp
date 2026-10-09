@@ -444,7 +444,7 @@ key g major
         // `Major` is a wrong-case (unknown) mode. It must give a clean "unknown mode"
         // error and be consumed — NOT leak into the music as a bare-reference error.
         var tree = SyntaxTree.Parse("key c Major\npart vln { clef treble }\n" +
-            "section A { vln { c4 d e f } }\nform { A }\nscore \"s\" { staff vln }");
+            "section A { vln { c4 d e f } }\nform { A }\nscore s { staff vln }");
         Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.UnknownSymbolCase);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.BareReferenceRequiresDollar);
     }
@@ -768,7 +768,7 @@ theme");
             "phrase bass { c2 c | }\n" +
             "section bass { bass { bass } }\n" +
             "form { bass }\n" +
-            "score \"out\" { staff bass }\n");
+            "score out { staff bass }\n");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
     }
 
@@ -1703,7 +1703,7 @@ form { Main }
         var tree = SyntaxTree.Parse(
             "part upper { clef treble }\npart lower { clef bass }\n" +
             "section Main { upper { c'1 } lower { c1 } }\nform { Main }\n" +
-            "score \"x\" { grandStaff { staff upper staff lower } }");
+            "score x { grandStaff { staff upper staff lower } }");
         Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.ClefNameAsStaff);
     }
 

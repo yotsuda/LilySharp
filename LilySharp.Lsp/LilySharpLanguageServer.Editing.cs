@@ -323,13 +323,17 @@ public sealed partial class LilySharpLanguageServer
 
         foreach (var diagnostic in doc.Tree.Diagnostics)
         {
-            if (diagnostic.Span.Start >= startOffset && diagnostic.Span.Start <= endOffset)
+            // By OVERLAP, like the semantic ones below: the caret sits inside the squiggle
+            // (on a letter of `score "tab"`'s name) more often than on its first character.
+            if (diagnostic.Span.Start <= endOffset && diagnostic.Span.End >= startOffset)
             {
                 // Generate quick fixes based on diagnostic
                 var fixes = GenerateQuickFixes(doc, diagnostic, uri);
                 actions.AddRange(fixes);
                 if (CaseSpellingAction(doc, uri, diagnostic) is { } spelling)
                     actions.Add(spelling);
+                if (ScoreNameQuotedAction(doc, uri, diagnostic) is { } bareName)
+                    actions.Add(bareName);
             }
         }
 
@@ -412,6 +416,63 @@ public sealed partial class LilySharpLanguageServer
                 Title = title,
                 CommandIdentifier = SplitSectionsCommand,
                 Arguments = [uri.ToString(), offer.Section],
+            },
+        };
+    }
+
+    /// <summary>
+    /// The quick fix for LYS0038, a score's name written as a quoted string: <c>score "tab"</c>
+    /// becomes <c>score tab</c> (the words joined camelCase when the text is not one name —
+    /// <see cref="RenderDeclarationSyntax.QuotedNameAsBareWord"/>, the word the error names), and the string beside
+    /// a bare name (<c>score tab "both"</c>) is deleted, the bare name being the score's.
+    /// </summary>
+    private static CodeAction? ScoreNameQuotedAction(Document doc, Uri uri, CoreDiagnostic diagnostic)
+    {
+        if (diagnostic.Code != DiagnosticCodes.ScoreNameQuoted)
+            return null;
+        var render = doc.Tree.GetRoot().ChildNodes().OfType<RenderDeclarationSyntax>()
+            .FirstOrDefault(r => r.QuotedName is { } q && q.Span.Start == diagnostic.Span.Start);
+        if (render?.QuotedName is not { } quoted)
+            return null;
+        int start = quoted.Span.Start, end = quoted.Span.End;
+        string newText, title;
+        if (render.ScoreName is { } bare)
+        {
+            start = bare.Span.End;   // with the space before the string
+            newText = "";
+            title = $"Delete the quoted name — the score is '{bare.Text}'";
+        }
+        else
+        {
+            newText = render.QuotedNameAsBareWord ?? "";
+            if (newText.Length == 0)
+                return null;
+            title = $"Write 'score {newText}'";
+        }
+        var (startLine, startChar) = GetLineAndCharacter(doc.Text, start);
+        var (endLine, endChar) = GetLineAndCharacter(doc.Text, end);
+        return new CodeAction
+        {
+            Title = title,
+            Kind = CodeActionKind.QuickFix,
+            Diagnostics = [ConvertDiagnostic(diagnostic, doc.Text, uri)],
+            Edit = new WorkspaceEdit
+            {
+                Changes = new Dictionary<string, TextEdit[]>
+                {
+                    [uri.ToString()] =
+                    [
+                        new TextEdit
+                        {
+                            Range = new LspRange
+                            {
+                                Start = new Position { Line = startLine, Character = startChar },
+                                End = new Position { Line = endLine, Character = endChar },
+                            },
+                            NewText = newText,
+                        },
+                    ],
+                },
             },
         };
     }

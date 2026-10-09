@@ -31,4 +31,4 @@ section E {
 
 form { segno A |: B [1. C ] :| [2. D ] to coda || E ds al coda coda A }
 
-score "tocoda-volta-clearance" { staff m }
+score { staff m }

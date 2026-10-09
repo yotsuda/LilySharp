@@ -41,7 +41,7 @@ public class RenderSpecTests
 
             form { Main }
 
-            score "test" {
+            score test {
               grandStaff {
                 staff treble melody
                 staff bass bass
@@ -55,8 +55,8 @@ public class RenderSpecTests
         var renderSpec = RenderSpecParser.FindFirst(tree);
 
         Assert.NotNull(renderSpec);
-        Assert.Equal("main", renderSpec.Name);       // Name = the form reference
-        Assert.Equal("test", renderSpec.OutputFile); // basename (extension dropped; CLI picks format)
+        Assert.Equal("test", renderSpec.Name);       // the score's own name
+        Assert.Equal("test", renderSpec.OutputFile); // the same word: the output suffix
         Assert.True(renderSpec.HasGrandStaff);
         Assert.Single(renderSpec.Items);
 
@@ -71,7 +71,7 @@ public class RenderSpecTests
         Assert.Equal("bass", lower.VoiceName);
     }
 
-    // A part score restates the header for itself: `score "vln" { title "Violin I" … }`.
+    // A part score restates the header for itself: `score vln { title "Violin I" … }`.
     // Written once and read by all three tests below, so they cannot drift apart on what
     // the file says versus what each score says.
     private const string PerScoreHeaderSource = """
@@ -86,12 +86,12 @@ public class RenderSpecTests
         }
         form { ~A }
         score { staff vln staff vla }
-        score "vln" {
+        score vln {
           title "Violin I"
           composer "Score Composer"
           staff vln
         }
-        score "vla" {
+        score vla {
           title "Viola"
           staff vla
         }
@@ -109,7 +109,7 @@ public class RenderSpecTests
     [Fact]
     public void ScoreWithoutItsOwnHeader_KeepsTheFileHeader()
     {
-        var score = CollectByName("main");
+        var score = CollectByName("");
         Assert.Equal("File Title", score.Title);
         Assert.Equal("File Composer", score.Composer);
     }
@@ -122,7 +122,7 @@ public class RenderSpecTests
         Assert.Equal("Score Composer", vln.Composer);
 
         // …and does not leak: the full score, collected from the same tree, is untouched.
-        var main = CollectByName("main");
+        var main = CollectByName("");
         Assert.Equal("File Title", main.Title);
         Assert.Equal("File Composer", main.Composer);
     }
@@ -130,7 +130,7 @@ public class RenderSpecTests
     [Fact]
     public void ScoreStatingOnlyOne_InheritsTheOtherFromTheFile()
     {
-        // `score "vla"` restates the title and says nothing about the composer.
+        // `score vla` restates the title and says nothing about the composer.
         var vla = CollectByName("vla");
         Assert.Equal("Viola", vla.Title);
         Assert.Equal("File Composer", vla.Composer);
@@ -224,13 +224,13 @@ public class RenderSpecTests
 
         var renderSpec = RenderSpecParser.FindFirst(tree);
         Assert.NotNull(renderSpec);
-        Assert.Equal("main", renderSpec.Name);
+        Assert.Equal("", renderSpec.Name);           // the unnamed score
         Assert.Equal("", renderSpec.OutputFile);
         Assert.Single(renderSpec.Items); // the staff still parses
     }
 
     [Fact]
-    public void ResolveOutputStem_MainIsStem_EveryOtherScoreAppendsItsName()
+    public void ResolveOutputStem_TheUnnamedIsTheStem_EveryOtherScoreAppendsItsName()
     {
         var tree = SyntaxTree.Parse("""
             part m { section A { c4 d e f | } }
@@ -238,13 +238,12 @@ public class RenderSpecTests
             form other { A A }
             score { staff m }
             score other { form other staff m }
-            score other "custom" { form other staff m }
+            score custom { form other staff m }
             """);
         var specs = RenderSpecParser.FindAll(tree);
 
-        // main → the input stem itself; every other score appends its name to the
-        // stem — its form name (song + `score other` → song-other) or an explicit
-        // basename (song + `score other "custom"` → song-custom).
+        // The unnamed score → the input stem itself; every other score appends its own
+        // name to the stem, whatever form it plays (song + `score custom` → song-custom).
         Assert.Equal("song", specs[0].ResolveOutputStem("song"));
         Assert.Equal("song-other", specs[1].ResolveOutputStem("song"));
         Assert.Equal("song-custom", specs[2].ResolveOutputStem("song"));
@@ -265,7 +264,7 @@ public class RenderSpecTests
 
             form { Main }
 
-            score "test" {
+            score test {
               staff treble guitar
             }
             """;
@@ -276,7 +275,7 @@ public class RenderSpecTests
         var renderSpec = RenderSpecParser.FindFirst(tree);
 
         Assert.NotNull(renderSpec);
-        Assert.Equal("main", renderSpec.Name);
+        Assert.Equal("test", renderSpec.Name);
         Assert.False(renderSpec.HasGrandStaff);
         Assert.Single(renderSpec.Items);
 
@@ -293,7 +292,7 @@ public class RenderSpecTests
         // (bass), while the quoted label overrides the displayed instrument name.
         var tree = SyntaxTree.Parse(
             "part vc { instrument cello \"Cello I\" }\n" +
-            "section A { vc { c4 d e f } }\nform { A }\nscore \"s\" { staff vc }");
+            "section A { vc { c4 d e f } }\nform { A }\nscore s { staff vc }");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
 
         var staff = (RenderSpecParser.FindFirst(tree)!.Items[0] as SingleStaffSpec)!.Staff;
@@ -320,7 +319,7 @@ public class RenderSpecTests
 
             form { Main }
 
-            score "test" {
+            score test {
               staff treble singer
               grandStaff {
                 staff treble melody
@@ -335,7 +334,7 @@ public class RenderSpecTests
         var renderSpec = RenderSpecParser.FindFirst(tree);
 
         Assert.NotNull(renderSpec);
-        Assert.Equal("main", renderSpec.Name);
+        Assert.Equal("test", renderSpec.Name);
         Assert.True(renderSpec.HasGrandStaff);
         Assert.True(renderSpec.IsMultiStaff);
         Assert.Equal(2, renderSpec.Items.Length);
@@ -368,7 +367,7 @@ public class RenderSpecTests
 
             form { Main }
 
-            score "test" {
+            score test {
               staff treble singer
               grandStaff {
                 staff treble rightHand
@@ -407,7 +406,7 @@ public class RenderSpecTests
 
             form { Main }
 
-            score "test" {
+            score test {
               grandStaff {
                 staff treble melody
                 staff bass bass
@@ -446,7 +445,7 @@ public class RenderSpecTests
 
             form { Main }
 
-            score "test" {
+            score test {
               grandStaff {
                 staff treble melody
                 staff bass bass

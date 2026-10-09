@@ -45,7 +45,7 @@ public class MultiPageRenderingTests
           c4 d e f | g2~ g2 |
         } }
         form { Main }
-        score "x" { staff melody }
+        score x { staff melody }
         """;
 
     private static string Render(LayoutOptions options, out ScoreLayout layout)

@@ -30,4 +30,4 @@ section S {
   }
 }
 form { S }
-score "slur-under-whole-notes" { grandStaff { staff rh staff lh } }
+score { grandStaff { staff rh staff lh } }

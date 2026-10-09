@@ -44,7 +44,7 @@ public class GoToDefinitionTests
         "  melody { intro }\n" +   // part block (defines melody's music) + phrase ref
         "}\n" +
         "form verse { Main }\n" +  // form declaration `verse` + section ref `Main`
-        "score \"out\" { form verse\n" + // the score's form item references `verse`
+        "score out { form verse\n" + // the score's form item references `verse`
         "  staff melody\n" +       // score references part `melody`
         "}\n";
 

@@ -36,6 +36,6 @@ section Main {
 
 form { Main }
 
-score "chords" {
+score {
   staff melody
 }

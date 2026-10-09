@@ -22,7 +22,7 @@ section Main {
 
 form { Main }
 
-score "voice2-slur-probe" {
+score voice2SlurProbe {
   staff m
 }
 

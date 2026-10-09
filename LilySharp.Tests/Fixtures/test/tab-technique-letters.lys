@@ -17,7 +17,7 @@ section S {
   }
 }
 form { ~S }
-score "tab-technique-letters" {
+score {
   staff gtr
   tab gtr
 }

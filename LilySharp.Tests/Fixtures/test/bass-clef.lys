@@ -20,6 +20,6 @@ section Main {
 
 form { Main }
 
-score "bass-clef" {
+score {
   staff bass_part
 }

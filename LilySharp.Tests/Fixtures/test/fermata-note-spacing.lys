@@ -15,6 +15,6 @@ section A { m { aes'8@fermata bes' ces'' des'' } }
 
 form { A }
 
-score "fermata-note-spacing" {
+score {
   staff m
 }

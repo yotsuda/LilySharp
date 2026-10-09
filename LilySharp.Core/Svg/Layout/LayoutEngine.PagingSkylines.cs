@@ -370,7 +370,7 @@ internal sealed partial class LayoutEngine
         //   group among the System's elements is not pure-relevant, and the
         //   VoltaBracketSpanner is one (PagingAugmentProgram.ExecuteForBreaker leaves its box
         //   out of the silhouette for the same reason).
-        // MEASURED (2.26.0, Lab sessions/p856, ABC score "tab"): the lines under the "1." and
+        // MEASURED (2.26.0, Lab sessions/p856, ABC score tab): the lines under the "1." and
         //   "2." brackets priced at the staff alone (rest up 0.050 / 2.275), where this scalar
         //   gave the breaker the bracket's 1.586 / 3.221.
         foreach (var v in ann.VoltaBrackets)

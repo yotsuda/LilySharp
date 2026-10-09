@@ -55,7 +55,7 @@ section End2 {
 
 form { |: Main [1. ~End1] :| [2. ~End2] }
 
-score "grandstaff-repeat" {
+score {
   grandStaff {
     staff rh
     staff lh

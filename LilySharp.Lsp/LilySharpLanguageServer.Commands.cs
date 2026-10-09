@@ -829,7 +829,7 @@ public sealed partial class LilySharpLanguageServer
                 Add(LilySharp.Core.Export.ScoreExport.Write(tree, format, Path.Combine(dir, stem + ext), null));
                 if (scores.Count > 1)
                     warnings.Add($"{stem}: a .vsqx holds one arrangement — wrote the first score, left out "
-                        + string.Join(", ", scores.Skip(1).Select(s => s.Spec.Name)));
+                        + string.Join(", ", scores.Skip(1).Select(s => RenderSpecParser.LabelOf(s.Spec.Name))));
             }
             else
             {
@@ -839,9 +839,9 @@ public sealed partial class LilySharpLanguageServer
                     var target = Path.Combine(dir, spec.ResolveOutputStem(stem) + ext);
                     if (outputs.Contains(target, StringComparer.OrdinalIgnoreCase))
                     {
-                        // Two scores on one form and no basename resolve to one file; the
-                        // second would silently replace the first's picture.
-                        warnings.Add($"{stem}: score '{spec.Name}' resolves to {Path.GetFileName(target)}, "
+                        // Two scores of one name (LYS6001) resolve to one file; the second
+                        // would silently replace the first's picture.
+                        warnings.Add($"{stem}: score '{RenderSpecParser.LabelOf(spec.Name)}' resolves to {Path.GetFileName(target)}, "
                             + "already written by an earlier score of this file — skipped");
                         continue;
                     }
@@ -889,7 +889,7 @@ public sealed partial class LilySharpLanguageServer
         try
         {
             // The score the preview DRAWS (the same choice the svg request makes), so its
-            // Play sounds that score's parts and form — `score "p2" { staff p2 }`
+            // Play sounds that score's parts and form — `score p2 { staff p2 }`
             // used to play p1 as well.
             var score = RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), @params.RenderName);
             var midi = new LilySharp.Core.Midi.MidiExporter { Form = score?.Form, Score = score }.Export(tree);
@@ -1385,21 +1385,18 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// Extract render definitions from the syntax tree.
-    /// </summary>
-    /// <summary>
-    /// The preview's score picker: one entry per <c>score</c> block (its LABEL — the
-    /// basename when given, else the form name — and the output name the client sends
-    /// back to select it), plus the output name <paramref name="renderName"/> actually
-    /// resolves to, so the response can say WHICH score was drawn.
+    /// The preview's score picker: one entry per <c>score</c> block (its LABEL — the score's
+    /// name, or <c>(Default)</c> for the unnamed one — and the output name the client sends
+    /// back to select it, empty for the unnamed one), plus the output name
+    /// <paramref name="renderName"/> actually resolves to, so the response can say WHICH
+    /// score was drawn.
     /// </summary>
     /// <remarks>
     /// ⚠️ The list and the resolution both come from
     /// <see cref="RenderSpecParser.ScoreIndex"/> — the renderer's own rule. This method
-    /// used to compute the value itself, from the RAW basename, while the renderer
-    /// resolved the extension-less form: a score named <c>"Take 1.0"</c> could then be
-    /// offered but never selected, and picking it silently drew the FIRST score
-    /// (2026-09-06, owner report — the preview looked stuck on the main score).
+    /// used to compute the value itself while the renderer resolved another: a score could
+    /// then be offered but never selected, and picking it silently drew the FIRST score
+    /// (2026-09-06, owner report — the preview looked stuck on the default score).
     /// </remarks>
     private static (RenderInfo[] Renders, string? Drawn) ExtractRenderInfo(
         SyntaxTree tree, string? renderName = null)

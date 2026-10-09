@@ -37,6 +37,6 @@ section Main {
 
 form { Main }
 
-score "multi-line-spanners" {
+score {
   staff melody
 }

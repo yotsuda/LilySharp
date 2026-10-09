@@ -15,4 +15,4 @@ section Main {
 }
 
 form { Main }
-score "transpose-down" { staff melody }
+score { staff melody }

@@ -18,7 +18,7 @@ section Main {
 
 form { Main }
 
-score "voice-dynamics-multistaff" {
+score {
   staff top
   staff bot
 }

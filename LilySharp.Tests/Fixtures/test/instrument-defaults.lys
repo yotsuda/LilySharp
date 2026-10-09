@@ -51,7 +51,7 @@ section Main {
 
 form { Main }
 
-score "instrument-defaults" {
+score {
   staff guitar
   staff tenorVoice
   grandStaff {

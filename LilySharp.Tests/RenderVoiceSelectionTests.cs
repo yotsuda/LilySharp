@@ -40,8 +40,8 @@ public class RenderVoiceSelectionTests
           harmony { pb }
         }
         form { Main }
-        score "first" { staff melody }
-        score "second" { staff harmony }
+        score first { staff melody }
+        score second { staff harmony }
         """;
 
     [Fact]

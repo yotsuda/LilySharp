@@ -23,4 +23,4 @@ section S {
   }
 }
 form { S }
-score "multivoice-crossing-collision" { staff mel }
+score { staff mel }

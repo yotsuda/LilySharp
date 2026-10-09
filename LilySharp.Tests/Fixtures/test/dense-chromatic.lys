@@ -12,4 +12,4 @@ section Main {
   }
 }
 form { Main }
-score "dense-chromatic" { staff m }
+score { staff m }

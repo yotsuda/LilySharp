@@ -18,5 +18,5 @@ section Main {
   }
 }
 form { Main }
-score "dot-force-down" { staff m }
+score dotForceDown { staff m }
 

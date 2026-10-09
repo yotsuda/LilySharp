@@ -13,4 +13,4 @@ section S {
   low { c2@dim c2 | c2@p c2 | }
 }
 form { S }
-score "multi-staff-hairpins" { staff top staff low }
+score { staff top staff low }

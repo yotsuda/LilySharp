@@ -14,7 +14,7 @@ section Main {
 
 form { Main }
 
-score "staff-group" {
+score {
   staffGroup {
     staff vln
     staff vla

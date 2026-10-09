@@ -275,7 +275,7 @@ public class MusicXmlRoundTripTests
 
             form { A }
 
-            score "lead-sheet" { staff melody  lyrics words }
+            score leadSheet { staff melody  lyrics words }
             """);
     }
 
@@ -767,7 +767,7 @@ public class MusicXmlRoundTripTests
         Assert.False(HasErrors(SyntaxTree.Parse(lys)), lys);
         var score = lys[lys.IndexOf("score", System.StringComparison.Ordinal)..]
             .Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).ToArray();
-        Assert.Equal(new[] { "score \"imported\" {", "grandStaff {", "staff right \"Right\"",
+        Assert.Equal(new[] { "score {", "grandStaff {", "staff right \"Right\"",
             "staff left \"Left\"", "}", "staff fl", "}" }, score);
     }
 
@@ -809,7 +809,7 @@ public class MusicXmlRoundTripTests
         Assert.False(HasErrors(SyntaxTree.Parse(lys)), lys);
         var score = lys[lys.IndexOf("score", System.StringComparison.Ordinal)..]
             .Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).ToArray();
-        Assert.Equal(new[] { "score \"imported\" {", "staffGroup {", "grandStaff {",
+        Assert.Equal(new[] { "score {", "staffGroup {", "grandStaff {",
             "staff pianoRH \"Piano\"", "staff pianoLH", "}", "staff violin \"Violin\"", "}",
             // "S" and "A" lex as a spacer and a note: those parts take their index names.
             "choirStaff {", "staff part3 \"S\"", "staff part4 \"A\"", "}", "staff fl", "}" }, score);
@@ -838,7 +838,7 @@ public class MusicXmlRoundTripTests
         var (lys, _) = new MusicXmlImporter().Import(xml.ToString());
         var score = lys[lys.IndexOf("score", System.StringComparison.Ordinal)..]
             .Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).ToArray();
-        Assert.Equal(new[] { "score \"imported\" {", "staffGroup {", "grandStaff {",
+        Assert.Equal(new[] { "score {", "staffGroup {", "grandStaff {",
             "staff right \"Right\"", "staff left \"Left\"", "}", "staff violin \"Violin\"", "}", "}" }, score);
     }
 

@@ -40,7 +40,7 @@ public class OverrideEditIncrementalTests
     {
         var bars = string.Join(" |\n    ", Enumerable.Repeat("c'4 d'4 e'4 f'4", 30));
         return overrideLine + "part m { clef treble }\nsection S {\n  m {\n    " + bars
-            + " |\n  }\n}\nform { S }\nscore \"ov\" { staff m }\n";
+            + " |\n  }\n}\nform { S }\nscore ov { staff m }\n";
     }
 
     [Fact]

@@ -78,7 +78,7 @@ public sealed class PreviewCollectSharingTests
         }
         form { A }
         score { staff melody staff bass }
-        score "Bass only" { staff bass }
+        score BassOnly { staff bass }
         """;
 
     private static LilySharpLanguageServer Opened(Uri uri, string text)
@@ -160,17 +160,17 @@ public sealed class PreviewCollectSharingTests
     [Fact]
     public void ThePanel_DoesNotBorrowANamedRendersCollect()
     {
-        // The validators are asked of the FIRST score. A session previewing "Bass only"
+        // The validators are asked of the FIRST score. A session previewing "BassOnly"
         // collected another score — its collect has no slur, no tie and no mark to warn
         // about — and must not be lent, or the panel would change its mind with the picker.
         var uri = new Uri("file:///named.lys");
         var server = Opened(uri, Book);
         var doc = server.DocumentAt(uri)!;
 
-        var bassOnly = server.GetSvg(Ask(uri, "Bass only"));
+        var bassOnly = server.GetSvg(Ask(uri, "BassOnly"));
         Assert.Null(bassOnly.Error);
-        Assert.Equal("Bass only", bassOnly.SelectedRender);
-        Assert.NotNull(server.SvgSlotFor(uri, "Bass only").Session);
+        Assert.Equal("BassOnly", bassOnly.SelectedRender);
+        Assert.NotNull(server.SvgSlotFor(uri, "BassOnly").Session);
 
         var diagnostics = server.DocumentDiagnostics(doc, CancellationToken.None, out bool lent);
         Assert.False(lent);

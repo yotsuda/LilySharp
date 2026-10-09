@@ -50,7 +50,7 @@ public class SpacingInvariantTests
         time 4/4
         section Main { melody { c2 d4 e | } }
         form { Main }
-        score "x" { staff melody }
+        score x { staff melody }
         """;
 
     /// <summary>
@@ -69,7 +69,7 @@ public class SpacingInvariantTests
           lower { c4 d e f | g2 e | }
         }
         form { Main }
-        score "x" { grandStaff { staff upper staff lower } }
+        score x { grandStaff { staff upper staff lower } }
         """;
 
     /// <summary>
@@ -139,7 +139,7 @@ public class SpacingInvariantTests
         section S2 { key ees major
           m { aes,4 bes, c des | aes,4 bes, c des | aes,4 bes, c des | aes,4 bes, c des | } }
         form { S1 S2 }
-        score "x" { staff m }
+        score x { staff m }
         """;
 
     /// <summary>The control: the SAME music and the SAME signature on system 2, declared up
@@ -153,7 +153,7 @@ public class SpacingInvariantTests
         section S2 {
           m { aes,4 bes, c des | aes,4 bes, c des | aes,4 bes, c des | aes,4 bes, c des | } }
         form { S1 S2 }
-        score "x" { staff m }
+        score x { staff m }
         """;
 
     /// <summary>
@@ -223,7 +223,7 @@ public class SpacingInvariantTests
               lower { d4 e fis g | a2 fis | }
             }
             form { Main }
-            score "x" { grandStaff { staff upper staff lower } }
+            score x { grandStaff { staff upper staff lower } }
             """);
 
         double clefWidth = SpacingRules.MaxClefWidth(score);
@@ -312,7 +312,7 @@ public class SpacingInvariantTests
             part melody
             section Main { melody { c'4 c'32 s32 d'32 s32 e'32 s32 f'32 s32 c'4 c'4 | } }
             form { Main }
-            score "x" { staff melody }
+            score x { staff melody }
             """);
         var spacing = SpacingOptions.Default.WithShortest(1.0);
         var columnSprings = new MeasureLayouter()
@@ -355,7 +355,7 @@ public class SpacingInvariantTests
             part melody
             section Main { melody { c'2 c'2 | grace { d'16 e' } f'4 g'2 r4 | } }
             form { Main }
-            score "x" { staff melody }
+            score x { staff melody }
             """);
         var next = score.StaffGroups[0].PrimaryStaff.PrimaryVoice.Measures[1];
         var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
@@ -389,7 +389,7 @@ public class SpacingInvariantTests
             part melody
             section Main { melody { c'4 d' clef bass e4 f4 | } }
             form { Main }
-            score "x" { staff melody }
+            score x { staff melody }
             """);
         var columnSprings = new MeasureLayouter()
             .CreateTimingSprings(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, SpacingOptions.Default.WithShortest(0.125), allMeasures);
@@ -425,7 +425,7 @@ public class SpacingInvariantTests
             part melody
             section Main { melody { {{bar}} | } }
             form { Main }
-            score "x" { staff melody }
+            score x { staff melody }
             """);
         Assert.False(primary.MarkColumnTimings.IsDefaultOrEmpty);
         var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
@@ -474,7 +474,7 @@ public class SpacingInvariantTests
                 part melody
                 section Main { melody { c'1 | {{runMeasure}} | c'1 | } }
                 form { Main }
-                score "x" { staff melody }
+                score x { staff melody }
                 """;
             var tree = SyntaxTree.Parse(src);
             var spec = RenderSpecParser.FindFirst(tree);
@@ -624,7 +624,7 @@ public class SpacingInvariantTests
             time 4/4
             section Main { melody { R1 | c4 d e f | } }
             form { Main }
-            score "x" { staff melody }
+            score x { staff melody }
             """;
         var (timings, allMeasures, primary, _) = Collect(src, measureIndex: 0);
         var springs = new MeasureLayouter().CreateTimingSprings(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, SpacingOptions.Default.WithShortest(0.125), allMeasures);
@@ -653,7 +653,7 @@ public class SpacingInvariantTests
               lh { c8 d e f g a b c | R1 | }
             }
             form { Main }
-            score "x" { staff rh staff lh }
+            score x { staff rh staff lh }
             """;
         var (timings0, all0, primary0, _) = Collect(src, measureIndex: 0);
         var (timings1, all1, primary1, _) = Collect(src, measureIndex: 1);
@@ -687,7 +687,7 @@ public class SpacingInvariantTests
               section A { a8 a a a a a a a | a8 a a a a a a a | }
             }
             form { A }
-            score "x" { tab melody }
+            score x { tab melody }
             """);
 
         var next = score.PrimaryContentStaff.PrimaryVoice.Measures[1];
@@ -753,7 +753,7 @@ public class SpacingInvariantTests
 
             form { ~A }
 
-            score "x" {
+            score x {
               staff melody
               lyrics w
             }
@@ -832,7 +832,7 @@ public class SpacingInvariantTests
             part m { clef treble }
             section A { m { c'1 | key d major grace { d'16 e' } f'4 g'2 r4 | } }
             form { A }
-            score "x" { staff m }
+            score x { staff m }
             """);
         double shortest = SpacingRules.CalculateCommonShortestDuration(score);
         var gate = SystemBreaker.ComputeMultiStaffSpringData(score, shortest);
@@ -854,7 +854,7 @@ public class SpacingInvariantTests
           section A { voice { g''2( g8) eis fis g } { e8 d e e e fis r4 }  { cis2. r4 } }
         }
         form { A }
-        score "x" { staff melody }
+        score x { staff melody }
         """;
 
     /// <summary>
@@ -951,7 +951,7 @@ public class SpacingInvariantTests
         time 4/4
         section Main { melody { c4 c g' g | key a major g'4 g f f | } }
         form { Main }
-        score "x" {{{StaffRows(staffCount)}}
+        score x {{{StaffRows(staffCount)}}
         """;
 
     /// <summary>
@@ -962,7 +962,7 @@ public class SpacingInvariantTests
         time 4/4
         section Main { melody { c4 c key a major g'4 g | } }
         form { Main }
-        score "x" {{{StaffRows(staffCount)}}
+        score x {{{StaffRows(staffCount)}}
         """;
 
     /// <summary>

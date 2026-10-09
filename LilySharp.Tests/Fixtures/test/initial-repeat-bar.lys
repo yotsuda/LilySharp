@@ -27,6 +27,6 @@ section C { tune { e'1 } }
 
 form { |: A :| B |: C :| }
 
-score "initial-repeat-bar" {
+score {
   staff tune
 }

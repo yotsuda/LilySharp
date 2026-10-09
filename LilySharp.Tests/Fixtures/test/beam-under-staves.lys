@@ -26,4 +26,4 @@ section S {
   lh { d,1 | }
 }
 form { S }
-score "beam-under-staves" { grandStaff { staff rh staff lh } }
+score { grandStaff { staff rh staff lh } }

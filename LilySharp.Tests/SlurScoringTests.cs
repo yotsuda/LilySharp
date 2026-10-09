@@ -183,7 +183,7 @@ public class SlurScoringTests
             "  }\n" +
             "}\n" +
             "form { S }\n" +
-            "score \"obs\" { staff mel }\n");
+            "score obs { staff mel }\n");
         double middle = MiddleLineY(svg);
         var c = BowCurve(svg);
 

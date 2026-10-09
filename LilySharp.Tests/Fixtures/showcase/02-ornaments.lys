@@ -45,6 +45,6 @@ section Main {
 
 form { Main }
 
-score "02-ornaments" {
+score {
   staff melody
 }

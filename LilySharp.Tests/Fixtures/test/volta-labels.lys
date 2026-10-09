@@ -16,7 +16,7 @@ section B { mel { pb } }
 
 form { A |: B | [1. B "first"] :| [2. B "second"] | A "A2" }
 
-score "volta-labels" {
+score {
   staff mel
 }
 

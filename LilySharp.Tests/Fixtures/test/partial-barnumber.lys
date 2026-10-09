@@ -15,4 +15,4 @@ section Main {
   }
 }
 form { Main }
-score "partial-barnumber" { staff m }
+score { staff m }

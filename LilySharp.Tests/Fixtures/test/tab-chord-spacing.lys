@@ -10,7 +10,7 @@ section A {
   gt { <c' e' g'>4 <c' e' g'> <c' e' g'> <c' e' g'> }
 }
 form { A }
-score "tab-chord-spacing" {
+score {
   staff gt
   tab gt
 }

@@ -95,7 +95,7 @@ public class CommonShortestDurationTests
             part melody
             section Main { melody { c8 d e f | R2*3 | } }
             form { Main }
-            score "x" { staff melody }
+            score x { staff melody }
             """;
         var tree = TestPaper.ParseAtIndentZero(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -120,7 +120,7 @@ public class CommonShortestDurationTests
             part melody
             section Main { melody { r1 | r1 | c16 d e f g a b c' c' b a g f e d c | r1 | } }
             form { Main }
-            score "x" { staff melody }
+            score x { staff melody }
             """;
         Assert.Equal(0.1875, ShortestOf(book), 4);
         Assert.Equal(0.0625, ShortestOf(book.Replace("r1", "R1")), 4);

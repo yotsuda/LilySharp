@@ -40,6 +40,6 @@ section Main {
 
 form { Main }
 
-score "01-expressions" {
+score {
   staff melody
 }

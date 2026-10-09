@@ -47,6 +47,6 @@ section Main {
 
 form { Main }
 
-score "notes" {
+score {
   staff melody
 }

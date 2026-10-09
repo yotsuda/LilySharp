@@ -26,6 +26,6 @@ section D {
 
 form { A B C D }
 
-score "tempo-beat-units" {
+score {
   staff m
 }

@@ -16,7 +16,7 @@ section Main {
 
 form { Main }
 
-score "choir-staff" {
+score {
   choirStaff {
     staff sop
     staff alt

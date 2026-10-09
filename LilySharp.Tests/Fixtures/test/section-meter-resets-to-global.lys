@@ -19,4 +19,4 @@ section B { g'4 f e d | c1 | }
 
 form { A B A "A2" }
 
-score "meter" { staff melody }
+score meter { staff melody }

@@ -17,6 +17,6 @@ part bl {
 
 form { A }
 
-score "tab-tempo-over-beam" {
+score {
   tab bl as full
 }

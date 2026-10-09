@@ -23,7 +23,7 @@ section Main {
 
 form { Main }
 
-score "ossia" {
+score {
     staff melody
     ossia ossia_melody
 }

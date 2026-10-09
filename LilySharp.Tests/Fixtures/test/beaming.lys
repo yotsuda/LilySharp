@@ -35,6 +35,6 @@ section Main {
 
 form { Main }
 
-score "beaming" {
+score {
   staff melody
 }

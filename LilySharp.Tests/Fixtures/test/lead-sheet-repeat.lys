@@ -14,4 +14,4 @@ section Loop {
   chords prog { F G7 | C | }
 }
 form { Main |: ~Loop :| }
-score "lead-sheet-repeat" { chords prog }
+score { chords prog }

@@ -36,7 +36,7 @@ public class ItemReuseTests
         part bl { clef bass tuning bass }
         section A { bl { c4 d e f | g4 a b c' | } }
         form { A }
-        score "x" { staff bl tab bl }
+        score x { staff bl tab bl }
         """;
 
     private static MultiStaffScore Collect(string src)

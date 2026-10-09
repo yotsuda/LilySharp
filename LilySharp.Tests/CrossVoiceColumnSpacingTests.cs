@@ -53,7 +53,7 @@ public class CrossVoiceColumnSpacingTests
           }
         }
         form { S }
-        score "beam-over-stem" { staff mel }
+        score beamOverStem { staff mel }
         """;
 
     /// <summary>Voice two's quarter starts where voice one's is a SKIP: the pair c'4 → c'4
@@ -206,7 +206,7 @@ public class CrossVoiceColumnSpacingTests
           melody { voice { e2 f | g2 a | } { d2 e | f2 g | } }
         }
         form { ~Main }
-        score "collision" { staff melody }
+        score collision { staff melody }
         """;
 
     /// <summary>Ledger book TSU's bar: whole-note seconds (`a1` under `b1`), stemless, so the
@@ -223,7 +223,7 @@ public class CrossVoiceColumnSpacingTests
           }
         }
         form { ~Main }
-        score "TSU" { staff melody }
+        score TSU { staff melody }
         """;
 
     /// <summary>

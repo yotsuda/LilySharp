@@ -16,4 +16,4 @@ lyrics words sings melody { | Twin- kle twin- kle | lit- tle star | How I won- d
 
 form { A }
 
-score "rest-lyrics" { staff melody  lyrics words }
+score restLyrics { staff melody  lyrics words }

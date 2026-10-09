@@ -952,7 +952,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 }
                 try {
                     // Name the score the preview is showing, so Play sounds ITS parts and
-                    // form: with `score "p2" { staff p2 }` picked, p1 stayed audible
+                    // form: with `score p2 { staff p2 }` picked, p1 stayed audible
                     // until the server was told which score (user report 2026-09-29).
                     const pb = await client.sendRequest<{ Notes?: { T: number, D: number, P: number, V: number }[], Error?: string }>(
                         'lilysharp/playback', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });
@@ -1174,8 +1174,8 @@ async function updatePreviewContent(
         }
         // What the picker must show is the score the server DREW, not the one this
         // request asked for: a selection the document no longer has (a block renamed or
-        // removed since it was picked) resolves to the first score, and a picker still
-        // naming the old one would make the preview look stuck on the main score with
+        // removed since it was picked) resolves to the default score, and a picker still
+        // naming the old one would make the preview look stuck on the default score with
         // nothing to say why. Older servers do not answer this; then the request stands.
         const drawnRender = response.SelectedRender ?? selectedRender ?? '';
         if (drawnRender !== (selectedRender ?? '')) {
@@ -1396,9 +1396,9 @@ async function exportPreview(
         return;
     }
 
-    // Default filename (matches `lysc svg`): the `main` score writes the
+    // Default filename (matches `lysc svg`): the unnamed score writes the
     // source file's basename; every other score appends its name to it —
-    // song.lys + `score sub` → song-sub, + `score sub "custom"` → song-custom.
+    // song.lys + `score sub` → song-sub.
     const docUri = vscode.Uri.parse(uri);
     // An unsaved (untitled:) score has no folder on disk, so its parent URI keeps
     // the untitled scheme and showSaveDialog cannot anchor to it — the simple file
@@ -2039,9 +2039,9 @@ interface SvgResponse {
     Renders: RenderInfo[] | null;
     // WHICH score was drawn (a RenderInfo.Filename). Normally the one asked for; when the
     // request named no score of this document — a selection left over from an edit that
-    // renamed or removed the block — the server draws the first one and says so here, and
+    // renamed or removed the block — the server draws the default one and says so here, and
     // the picker follows, so the mismatch is visible instead of a picture that looks stuck
-    // on the main score. Absent on servers older than 2026-09-06.
+    // on the default score. Absent on servers older than 2026-09-06.
     SelectedRender?: string | null;
     // True when the server's latest-wins machinery skipped this render because a
     // newer request for the same (document, render name) had already arrived —
@@ -3346,10 +3346,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
 
         function updateRenderSelect(renders, selectedRender) {
-            // One entry per score. Display the LABEL (the basename, or the form name
-            // such as main). The VALUE is the export basename / preview selector:
-            // empty for the main form with no basename, which exports to the source
-            // .lys filename.
+            // One entry per score. Display the LABEL (the score's name, or (Default) for the
+            // unnamed one). The VALUE is the output name / preview selector: empty for the
+            // unnamed score, which exports to the source .lys filename.
             renderSelect.innerHTML = '';
             const scoreRenders = (renders || []).filter(r => r.Type === 'score');
             scoreRenders.forEach(render => {

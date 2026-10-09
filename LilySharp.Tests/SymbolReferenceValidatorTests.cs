@@ -341,7 +341,7 @@ undefined2
           fl2 { e4 f g a | }
         }
         form { Main }
-        score "x" {
+        score x {
         """;
 
     [Theory]
@@ -404,7 +404,7 @@ undefined2
           lyrics words { la la | la la | }
         }
         form { Main }
-        score "x" {
+        score x {
         """;
 
     [Theory]
@@ -456,7 +456,7 @@ undefined2
               chords { c1 | }
             }
             form { Main }
-            score "x" { staff m  chords m }
+            score x { staff m  chords m }
             """).Where(d => d.Code == DiagnosticCodes.UndefinedPart).ToList();
         Assert.Single(undef);
         Assert.Contains("'m'", undef[0].Message);
@@ -484,7 +484,7 @@ undefined2
           lyrics words sings m { la la la la | }
         }
         form { Main }
-        score "x" {
+        score x {
         """;
 
     [Theory]

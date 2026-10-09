@@ -12,4 +12,4 @@ section S {
   lh { fis,,8 cis, clef treble g8 fis, | }
 }
 form { S }
-score "spacing-loose-polyphony" { grandStaff { staff rh staff lh } }
+score spacingLoosePolyphony { grandStaff { staff rh staff lh } }

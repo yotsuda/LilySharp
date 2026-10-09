@@ -13,4 +13,4 @@ section A {
   pno { c4 d@sustain e f@!sustain | }
 }
 form { A }
-score "pedal-below-lyrics" { staff voc  lyrics words  staff pno }
+score { staff voc  lyrics words  staff pno }

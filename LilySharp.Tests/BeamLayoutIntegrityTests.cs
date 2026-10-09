@@ -38,7 +38,7 @@ public class BeamLayoutIntegrityTests
         part melody { clef treble }
         section Main { melody { {{music}} } }
         form { Main }
-        score "x" { staff melody }
+        score x { staff melody }
         """;
 
     [Fact]

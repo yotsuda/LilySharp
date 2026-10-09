@@ -10,7 +10,7 @@ section Main {
 
 form { ~Main }
 
-score "DYPH" {
+score DYPH {
   staff ~ann
 }
 

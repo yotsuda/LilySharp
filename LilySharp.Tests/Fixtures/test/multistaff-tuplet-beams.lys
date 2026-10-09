@@ -16,4 +16,4 @@ section S {
   lh { c8 d e f g a b c' | }
 }
 form { S }
-score "multistaff-tuplet-beams" { grandStaff { staff rh staff lh } }
+score { grandStaff { staff rh staff lh } }

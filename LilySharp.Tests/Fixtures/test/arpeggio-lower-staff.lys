@@ -15,7 +15,7 @@ section Main {
 
 form { Main }
 
-score "arpeggio-lower-staff" {
+score {
   staff top
   staff bot
 }

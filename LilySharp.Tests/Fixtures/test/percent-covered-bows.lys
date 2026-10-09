@@ -8,7 +8,7 @@ part melody {
 
 form { A }
 
-score "percent-covered-bows" {
+score {
   staff melody
   tab melody as numbers
 }

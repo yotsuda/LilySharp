@@ -25,6 +25,6 @@ section Main {
 
 form { Main }
 
-score "lyrics" {
+score {
   staff melody  lyrics words
 }

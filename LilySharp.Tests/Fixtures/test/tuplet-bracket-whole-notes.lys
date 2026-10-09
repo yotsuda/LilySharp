@@ -38,4 +38,4 @@ section S {
   }
 }
 form { S }
-score "tuplet-bracket-whole-notes" { grandStaff { staff rh staff lh } }
+score { grandStaff { staff rh staff lh } }

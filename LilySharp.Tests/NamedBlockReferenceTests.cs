@@ -57,7 +57,7 @@ public class NamedBlockReferenceTests
     {
         var tree = SyntaxTree.Parse(source);
         var render = tree.GetRoot().DescendantNodes().OfType<RenderDeclarationSyntax>()
-            .First(r => RenderSpecParser.SelectorNameOf(r) == scoreName || scoreName == "");
+            .First(r => RenderSpecParser.SelectorNameOf(r) == scoreName);
         return SvgGenerator.CollectScore(tree, RenderSpecParser.Parse(render));
     }
 
@@ -82,7 +82,7 @@ public class NamedBlockReferenceTests
             + "score { paper wide  staff melody }\n"
             + "score parts { staff melody }\n";
 
-        var main = Collect(src, "main");
+        var main = Collect(src, "");
         Assert.Equal(142.26378, main.Paper.PageWidth); // 250 * 72.27 / 127, the defaults' rounding
         Assert.Equal(LayoutOptions.Default.MarginTop, main.Paper.MarginTop); // NOT the default block's 20
 
@@ -98,7 +98,7 @@ public class NamedBlockReferenceTests
             + Music
             + "score { paper wide { topMargin 12mm  systemSystemSpacing { padding 2 } }  staff melody }\n";
 
-        var p = Collect(src, "main").Paper;
+        var p = Collect(src, "").Paper;
         Assert.Equal(142.26378, p.PageWidth);                            // from the named block
         Assert.Equal(6.828661, p.MarginTop);                              // 12mm, from the override
         Assert.Equal(20, p.VerticalSpacing.SystemSystem.BasicDistance);   // named block's line survives
@@ -113,7 +113,7 @@ public class NamedBlockReferenceTests
             + Music
             + "score { fonts house { stanza \"Noto Serif CJK JP\" }  staff melody }\n";
 
-        var fonts = Collect(src, "main").Fonts;
+        var fonts = Collect(src, "").Fonts;
         var expected = new TextFontPlan.Builder()
             .Family(TextFontFamily.Serif, ["Georgia"])
             .Role(TextRole.Stanza, ["Noto Serif CJK JP"])
@@ -137,10 +137,10 @@ public class NamedBlockReferenceTests
             + Music
             + "score { fonts house { lyrics \"Verdana\" }  staff melody }\n";
 
-        var resolved = Collect(src, "main").Fonts.Resolve(TextRole.Stanza);
+        var resolved = Collect(src, "").Fonts.Resolve(TextRole.Stanza);
         Assert.Equal(["Charis SIL"], resolved.Names);
         // The control beside it: a role the house does NOT bind follows the group.
-        var syllable = Collect(src, "main").Fonts.Resolve(TextRole.LyricText);
+        var syllable = Collect(src, "").Fonts.Resolve(TextRole.LyricText);
         Assert.Equal(["Verdana"], syllable.Names);
     }
 
@@ -149,7 +149,7 @@ public class NamedBlockReferenceTests
     {
         string src = "fonts house { serif \"Georgia\"  sans \"Georgia\" }\n" + Music
             + "score { fonts house { embedded }  staff melody }\n";
-        Assert.True(Collect(src, "main").Fonts.Embed);
+        Assert.True(Collect(src, "").Fonts.Embed);
     }
 
     [Fact]
@@ -160,7 +160,7 @@ public class NamedBlockReferenceTests
         // Refused all the way through: the error names the missing declaration…
         Assert.Contains(Check(src), d => d.Code == DiagnosticCodes.UnknownPaperBlockName);
         // …and the score keeps the file default rather than half a guess.
-        Assert.Equal(100, Collect(src, "main").Paper.PageWidth);
+        Assert.Equal(100, Collect(src, "").Paper.PageWidth);
     }
 
     // ================================================================================
@@ -199,7 +199,7 @@ public class NamedBlockReferenceTests
             + "score { paper a  paper b  staff melody }\n";
         Assert.Contains(Check(src), d => d.Code == DiagnosticCodes.DuplicatePaperReference
                                       && d.Severity == DiagnosticSeverity.Warning);
-        Assert.Equal(90, Collect(src, "main").Paper.PageWidth);
+        Assert.Equal(90, Collect(src, "").Paper.PageWidth);
     }
 
     [Theory]
@@ -219,7 +219,7 @@ public class NamedBlockReferenceTests
         string src = "paper { paperWidth 100  paperHeight 150 }\nfonts { sans \"Arial\" }\n" + Music
             + "score { paper { paperWidth 90 }  fonts { serif \"Georgia\" }  staff melody }\n";
         Assert.Empty(Check(src).Where(d => d.Severity == DiagnosticSeverity.Error));
-        var score = Collect(src, "main");
+        var score = Collect(src, "");
         Assert.Equal(90, score.Paper.PageWidth);
         Assert.Equal(150, score.Paper.PageHeight);
         Assert.Contains("Georgia", score.Fonts.Resolve(TextRole.Title).Names);
@@ -231,7 +231,7 @@ public class NamedBlockReferenceTests
     public void ABareBlockInsideAScore_WithNoFileDefault_IsReadAlone()
     {
         string src = Music + "score { paper { paperWidth 100 }  staff melody }\n";
-        Assert.Equal(100, Collect(src, "main").Paper.PageWidth);
+        Assert.Equal(100, Collect(src, "").Paper.PageWidth);
     }
 
     // ================================================================================

@@ -35,7 +35,7 @@ section Main {
 
 form { Main }
 
-score "grandstaff-high-bass" {
+score {
   staff rh
   staff lh
 }

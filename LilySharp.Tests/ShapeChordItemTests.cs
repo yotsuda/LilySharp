@@ -535,10 +535,10 @@ public class ShapeChordItemTests
             section A { gt { chord(Eb x32010)1 | } }
             form { A }
             score { layout capo3  staff gt }
-            score "open" { layout open  staff gt }
+            score open { layout open  staff gt }
             """;
         string? hover = HoverAt(book, "chord(Eb x");
-        Assert.Contains("guitar, capo 3 (main): `x32010` — E♭3  G3  B♭3  E♭4  G4", hover);
+        Assert.Contains("guitar, capo 3 (Default): `x32010` — E♭3  G3  B♭3  E♭4  G4", hover);
         Assert.Contains("guitar, no capo (open): `x32010` — C3  E3  G3  C4  E4", hover);
         // One capo for every score: the line as it always was.
         string single = Book("instrument guitar", "chord(C x32010)1 |");
@@ -554,7 +554,7 @@ public class ShapeChordItemTests
     public void TheShapeCheck_ReadsEachScoresCapo(bool capoFirst)
     {
         string capo = "score { layout capo3  staff gt }";
-        string open = "score \"open\" { layout open  staff gt }";
+        string open = "score open { layout open  staff gt }";
         string book = $$"""
             layout capo3 { chordDiagrams guitar capo 3 }
             layout open { chordDiagrams guitar }

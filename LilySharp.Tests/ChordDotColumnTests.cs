@@ -112,7 +112,7 @@ public class ChordDotColumnTests
 
         form { ~Main }
 
-        score "{{name}}" {
+        score {{name}} {
           staff melody
         }
         """;

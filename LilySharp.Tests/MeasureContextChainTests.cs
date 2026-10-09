@@ -66,7 +66,7 @@ public class MeasureContextChainTests
         }
         section Main { melody { mel } }
         form { Main }
-        score "x" { staff melody }
+        score x { staff melody }
         """;
 
     [Fact]
@@ -115,7 +115,7 @@ public class MeasureContextChainTests
             phrase mel { c4 d e f | g4 a b c | d4 e f g | }
             section Main { melody { mel } }
             form { Main }
-            score "x" { staff melody }
+            score x { staff melody }
             """;
         var score = Collect(source);
         var chain = MeasureContextChain.Compute(score);
@@ -142,7 +142,7 @@ public class MeasureContextChainTests
             part melody
             section Main { melody { c4 d e f | clef bass g,4 a, b, c | } }
             form { Main }
-            score "x" { staff melody }
+            score x { staff melody }
             """;
         var score = Collect(source);
 

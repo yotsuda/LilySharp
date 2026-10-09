@@ -66,7 +66,7 @@ public class BeamDetectionInputMemoTests
           c8 d e f g a b c' |
         } }
         form { Main }
-        score "x" { staff melody }
+        score x { staff melody }
         """;
 
     /// <summary>One staff, two voices — the shape on which the annotation quantity (the
@@ -80,7 +80,7 @@ public class BeamDetectionInputMemoTests
           voice { c8 d e f g a b c' } voice { e,8 f, g, a, b, c d e }
         } }
         form { Main }
-        score "x" { staff melody }
+        score x { staff melody }
         """;
 
     /// <summary>

@@ -21,6 +21,6 @@ section Main {
 
 form { ~Main }
 
-score "VSSC" {
+score {
   staff melody
 }

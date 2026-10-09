@@ -133,7 +133,7 @@ key g major
 part melody { clef treble }       // declare each part; clef lives here
 section Main { melody { c4 d e | g2. | } }
 form { Main }                // print/playback order of sections
-score "out" { staff melody }      // one or more render blocks
+score { staff melody }          // one or more render blocks
 ```
 
 > Lily# is **not** LilyPond: `\relative`, `<< … \\ … >>`, `\new Staff`, `\version`
@@ -242,7 +242,7 @@ section Main {
     lyrics words { Twin- kle | lit- tle | star | }
 }
 form { Main }
-score "sheet" { chords prog lyrics words }
+score sheet { chords prog lyrics words }
 ```
 
 ### Repeats and Alternatives
@@ -289,7 +289,7 @@ phrase motif { c4 d e f }
 part melody { clef treble }
 section Main { melody { motif | g2 g | } }
 form { Main }
-score "out" { staff melody }
+score { staff melody }
 ```
 
 ### Staves and groups
@@ -304,7 +304,7 @@ from its order, not from a clause attached to it. Several staves can be brackete
 | `choirStaff` | bracket | **not** drawn through | independent lines (voices) |
 
 ```lilysharp
-score choral "satb" { choirStaff { staff sop  staff alt  staff ten  staff bas } }
+score satb { choirStaff { staff sop  staff alt  staff ten  staff bas } }
 ```
 
 Two more put several parts on ONE staff: `condensedStaff { fl1 fl2 }` gives each part its
@@ -328,7 +328,7 @@ part gt { clef treble_8 tuning guitar }
 section Main { gt { c4 e g e | } }
 form { Main }
 
-score "guitar" {
+score guitar {
   staff gt        // the notation
   tab gt          // the tablature under it
 }
@@ -386,7 +386,7 @@ lysc png samples/amazing-grace.lys      # -> amazing-grace.png
 lysc midi samples/canon-in-d.lys        # -> canon-in-d.mid
 lysc check samples/drunken-sailor.lys   # syntax check only, no output file
 
-lysc svg -d out score.lys              # every score, into out/ (score.svg, score-<alias>.svg)
+lysc svg -d out score.lys              # every score, into out/ (score.svg, score-<name>.svg)
 lysc --help                             # every command
 lysc svg --help                         # options for one command
 ```

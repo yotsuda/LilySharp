@@ -430,7 +430,7 @@ public class FiguredBassTests
             "part bs { clef treble }\n" +
             $"section Main {{\n  bs {{ voice {{ b4@figuredBass(6) b b b }} {{ {secondVoice} }} | }}\n}}\n" +
             "form { Main }\n" +
-            "score \"o\" { staff bs }\n";
+            "score o { staff bs }\n";
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors,
             string.Join(", ", tree.Diagnostics.Select(d => d.Message)));

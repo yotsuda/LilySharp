@@ -74,7 +74,7 @@ public class LooseLineExtentScopeTests
 
         form { ~Main }
 
-        score "loose-line-scope" {
+        score looseLineScope {
           staff ~up
           staff ~down
         }
@@ -128,7 +128,7 @@ public class LooseLineExtentScopeTests
             "  n { b4 b b b | b4 b b b | b4 b b b | b4 b b b | }\n" +
             "  lyrics w { la le li lo la le li lo la le li lo la le li lo }\n}\n" +
             "form { Main }\n" +
-            "score \"leading-row-closing\" { chords prog staff m staff n  lyrics w }\n";
+            "score leadingRowClosing { chords prog staff m staff n  lyrics w }\n";
     }
 
     // How far the chord row that OPENS SYSTEM 2 stands above the staff that closes its chain.

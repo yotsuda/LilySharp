@@ -46,6 +46,6 @@ score {
   lyrics words
 }
 
-score "grid" {
+score grid {
   chords prog
 }

@@ -29,7 +29,7 @@ lyrics verse {
 
 form { A C }
 
-score "chordrow-rit-second-system" {
+score {
   chords prog as names
   staff melody
   lyrics verse sings melody

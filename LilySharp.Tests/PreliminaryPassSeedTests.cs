@@ -89,7 +89,7 @@ public class PreliminaryPassSeedTests
             "part m { clef treble }\n" +
             $"section S {{ m {{ {body} | }} }}\n" +
             "form { S }\n" +
-            "score \"o\" { staff m }\n");
+            "score o { staff m }\n");
         Assert.Single(layout.Pages);
         Assert.Single(layout.AllSystems);
         double y = double.MaxValue;

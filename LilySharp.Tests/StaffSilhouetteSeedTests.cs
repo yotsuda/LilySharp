@@ -96,7 +96,7 @@ public class StaffSilhouetteSeedTests
               lh { {{lhFour}} {{lhFour}} {{lhFour}} {{lhFour}} {{lhFour}} {{lhFour}} {{lhFour}} {{lhFour}} }
             }
             form { ~S }
-            score "x" {
+            score x {
               grandStaff {
                 staff rh
                 staff lh
@@ -153,7 +153,7 @@ public class StaffSilhouetteSeedTests
               lh { {{lh}} }
             }
             form { ~S }
-            score "x" {
+            score x {
               grandStaff {
                 staff rh
                 staff lh
@@ -209,7 +209,7 @@ public class StaffSilhouetteSeedTests
               lh { {{lh}} {{lh}} }
             }
             form { ~S }
-            score "x" {
+            score x {
               grandStaff {
                 staff rh
                 staff lh
@@ -265,7 +265,7 @@ public class StaffSilhouetteSeedTests
               melody { {{music}} }
             }
             form { Main }
-            score "x" { staff melody }
+            score x { staff melody }
             """.Replace("\r\n", "\n");
     }
 

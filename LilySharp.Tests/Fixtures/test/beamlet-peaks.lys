@@ -16,4 +16,4 @@ section Main {
   }
 }
 form { Main }
-score "beamlet-peaks" { staff m }
+score { staff m }

@@ -8,4 +8,4 @@ section Main {
   lyrics words { Twin- kle twin- kle | lit- tle star | }
 }
 form { Main }
-score "lead-sheet-lyrics" { lyrics words }
+score { lyrics words }

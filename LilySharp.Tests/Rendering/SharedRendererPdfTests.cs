@@ -45,7 +45,7 @@ public sealed class SharedRendererPdfTests
 
             form { Main }
 
-            score "ossia" {
+            score ossia {
                 staff melody
                 ossia ossia_melody
             }
@@ -79,7 +79,7 @@ public sealed class SharedRendererPdfTests
 
             form { Demo }
 
-            score "out" { staff line }
+            score out { staff line }
             """;
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
@@ -232,7 +232,7 @@ public sealed class SharedRendererPdfTests
 
             form { Hello }
 
-            score "out" { staff tune }
+            score out { staff tune }
             """;
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));

@@ -6,4 +6,4 @@ section Groove {
   }
 }
 form { Groove }
-score "drums" { staff kit }
+score drums { staff kit }

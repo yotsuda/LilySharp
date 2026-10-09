@@ -1486,21 +1486,24 @@ NavMark        = 'segno' | 'coda' | 'fine' | 'to' 'coda'
 ## 7. Score (Output) Definition
 ================================================================================
 
-(* A printable layout. 'score' is the keyword; the optional string is the output
-   basename. Multiple 'score' blocks emit multiple files. MIDI has NO source block —
+(* A printable layout. 'score' is the keyword; the optional Identifier is the score's
+   name. Multiple 'score' blocks emit multiple files. MIDI has NO source block —
    it is a CLI output: `lysc midi song.lys song.mid`. *)
 
-ScoreDecl      = 'score' , [ Identifier ] , [ String ] , { ScoreOption } , '{' , { ScoreItem } , '}' ;
+ScoreDecl      = 'score' , [ Identifier ] , { ScoreOption } , '{' , { ScoreItem } , '}' ;
 ScoreOption    = 'transpose' , PitchToken       (* this score's transpose, composed on each part's own *)
                | 'pitch' , PitchMode ;          (* 'pitch concert': print THIS score at concert pitch —
                                                    every chromatically transposing part shown at what it
                                                    sounds, the conductor's score of a book written either
                                                    way (§2.3 PitchDecl). 'pitch written' is the default. *)
                  (* The Identifier is THE SCORE'S OWN NAME (2026-10-09; until then it named
-                    the form the score rendered). The unnamed score writes <input>.svg and
-                    answers to 'main' in --score and the preview's picker; 'score NAME'
-                    writes <input>-NAME.svg. The optional String is the output basename and
-                    wins over both. The form a score plays is its 'form' item (ScoreItem):
+                    the form the score rendered). The unnamed score is the file's default: it
+                    writes <input>.svg, the preview shows it first and lists it as '(Default)',
+                    and a second unnamed score is an error (LYS6001). 'score NAME' writes
+                    <input>-NAME.svg and answers to NAME in --score and the picker. The name is
+                    a bare word like every declaration's — a quoted one ('score "tab"') is an
+                    error (LYS0038) that names the word to write; a string in Lily# is text
+                    printed on the page. The form a score plays is its 'form' item (ScoreItem):
                     its own 'form { … }', or 'form NAME' for a named top-level form, else the
                     file's default form (§6). A named score that picks no form while a form
                     of its name exists is warned (LYS1018) — the name no longer picks it.
@@ -1764,18 +1767,18 @@ DisplayName    = String ;
 
 (* Examples:
 
-   score "full" {
+   score {                             // the file's default, written to <input>.svg
      grandStaff { staff rightHand  staff leftHand }
    }
 
-   score practice { staff melody }     // a second form, rendered to practice.svg
+   score practice { form practice  staff melody }   // <input>-practice.svg, its own form
 
-   score choral "satb" {               // a bracket, each staff keeping its own bar lines
+   score satb {                        // a bracket, each staff keeping its own bar lines
      choirStaff { staff sop  staff alt  staff ten  staff bas }
    }                                   // (not 'soprano': of the clef names, only
                                        //  treble/bass/alto/tenor may also name a part)
 
-   score winds "winds" {               // a bracket with bar lines drawn through
+   score winds {                       // a bracket with bar lines drawn through
      staffGroup { staff flute  staff oboe  staff clarinet }
      title "Woodwinds"                 // this score's own header
      click                             // played, never engraved
@@ -1803,7 +1806,7 @@ DisplayName    = String ;
      lyrics words { Twin- kle | lit- tle | star | }
    }
    form { Main }
-   score "sheet" { chords prog lyrics words }
+   score sheet { chords prog lyrics words }
 *)
 
 (* WRITING THE CHORDS AS DEGREES. An entry may be an absolute symbol (C, Am, G7, F#m,
@@ -1827,7 +1830,7 @@ DisplayName    = String ;
 (* SHOWING ONE TRACK TWO WAYS. A chord row takes 'as roman' (degrees for the key) or
    'as names' (the default). There is no third mode: to show BOTH, place the track twice —
 
-     score "sheet" { chords prog as roman  chords prog as names  lyrics words }
+     score sheet { chords prog as roman  chords prog as names  lyrics words }
 
    which is two rows, in the order written, each its own band. 'as both' — one symbol with
    the degree stacked above the name — was retired 2026-08-23. ⚠️ The two are not quite the
@@ -2543,8 +2546,8 @@ section SheetLoop {
 form  { Verse }
 form sheet { ~Sheet |: ~SheetLoop :| }
 
-score  "demo"  { staff melody  lyrics words }
-score sheet "sheet" { form sheet chords prog lyrics sheetWords }
+score       { staff melody  lyrics words }
+score sheet { form sheet chords prog lyrics sheetWords }
 ```
 
 MIDI export: `lysc midi demo.lys demo.mid` (no score block needed).

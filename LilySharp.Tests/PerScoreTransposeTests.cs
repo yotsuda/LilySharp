@@ -22,7 +22,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// Per-score transpose: `score "Bb" transpose d { ... }` renders a transposed copy
+/// Per-score transpose: `score Bb transpose d { ... }` renders a transposed copy
 /// of the piece, composing on top of any per-part transpose.
 /// </summary>
 [Trait("Category", "Unit")]
@@ -41,7 +41,7 @@ public sealed class PerScoreTransposeTests
     [Fact]
     public void Parses_ScoreTranspose_WithAndWithoutName()
     {
-        foreach (var head in new[] { "score transpose d {", "score \"Bb\" transpose d {" })
+        foreach (var head in new[] { "score transpose d {", "score Bb transpose d {" })
         {
             var tree = SyntaxTree.Parse(
                 "part vln { clef treble section A { c4 } }\nform { A }\n" + head + " staff vln }\n");
@@ -53,7 +53,7 @@ public sealed class PerScoreTransposeTests
     public void RenderSpec_CarriesScoreTranspose()
     {
         var tree = SyntaxTree.Parse(
-            "part vln { clef treble section A { c4 } }\nform { A }\nscore \"Bb\" transpose d { staff vln }\n");
+            "part vln { clef treble section A { c4 } }\nform { A }\nscore Bb transpose d { staff vln }\n");
         var spec = RenderSpecParser.FindFirst(tree)!;
         Assert.Equal((1, 0, 0), spec.ScoreTranspose); // d = diatonic step 1, no accidental, same octave
     }

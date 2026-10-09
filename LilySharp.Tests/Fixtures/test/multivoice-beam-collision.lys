@@ -21,4 +21,4 @@ section S {
   }
 }
 form { S }
-score "multivoice-beam-collision" { staff mel }
+score { staff mel }

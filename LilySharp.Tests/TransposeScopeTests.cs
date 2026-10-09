@@ -91,7 +91,7 @@ public sealed class TransposeScopeTests
 
     // A score that asks for nothing, sitting before one that asks for a transpose.
     private const string PlainThenTransposed =
-        Music + "\n\nscore \"plain\" { staff m }\nscore \"up\" transpose d { staff m }\n";
+        Music + "\n\nscore plain { staff m }\nscore up transpose d { staff m }\n";
 
     private static List<string> Pitches(string source)
     {

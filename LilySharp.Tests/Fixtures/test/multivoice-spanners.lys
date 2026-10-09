@@ -15,4 +15,4 @@ section S {
   }
 }
 form { S }
-score "multivoice-spanners" { staff mel }
+score { staff mel }

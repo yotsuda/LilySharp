@@ -33,6 +33,6 @@ section Main {
 
 form { Main }
 
-score "ledger-lines" {
+score {
   staff melody
 }

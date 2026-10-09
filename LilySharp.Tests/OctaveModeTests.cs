@@ -39,7 +39,7 @@ public class OctaveModeTests
 {prefix}part melody {{ clef treble }}
 section A {{ melody {{ {body} }} }}
 form {{ A }}
-score ""t"" {{ staff {{ melody }} }}
+score t {{ staff {{ melody }} }}
 ";
 
     [Fact]
@@ -81,7 +81,7 @@ part melody { clef treble }
 section A { melody { octave absolute  c' c'' | } }
 section B { melody { c' c'' | } }
 form { A B }
-score ""t"" { staff melody }
+score t { staff melody }
 ";
         var collector = new MeasureCollector();
         collector.Collect(SyntaxTree.Parse(src), "melody");
@@ -109,7 +109,7 @@ part melody {{ clef treble }}
 phrase theme {{ c4 d e f }}
 section A {{ melody {{ {reference} | }} }}
 form {{ A }}
-score ""t"" {{ staff melody }}
+score t {{ staff melody }}
 ";
 
     [Theory]

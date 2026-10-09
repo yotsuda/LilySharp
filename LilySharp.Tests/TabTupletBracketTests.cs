@@ -30,7 +30,7 @@ namespace LilySharp.Tests;
 /// (\tabFullNotation, Lab sessions/p690/probes): the bracket's X-positions start at the
 /// stem's edge, centre − 0.065, and print draws the hook shorten-pair × ss = 0.2 × 1.5
 /// further out. Lily# read the notation head's offsets there, so the hook stood 0.5–0.7 off
-/// the digit at either end (user report 2026-09-29, bohemian-rhapsody.lys score "tab2" bar 25).
+/// the digit at either end (user report 2026-09-29, bohemian-rhapsody.lys score tab2 bar 25).
 /// </summary>
 public class TabTupletBracketTests
 {
@@ -71,7 +71,7 @@ public class TabTupletBracketTests
     // Two eighths on the D string, stems DOWN, bracket below: LilyPond 2.26.0 stands the
     // bracket line 1.13 below the stem tips (padding 1.1 off the columns' reach); Lily# read
     // the tips in the notation frame and ran the line THROUGH the stems, 1.4 above their
-    // tips (user report 2026-09-29, bohemian-rhapsody.lys score "tab", bar 42).
+    // tips (user report 2026-09-29, bohemian-rhapsody.lys score tab, bar 42).
     private const string DString = """
         octave absolute
         part cb {

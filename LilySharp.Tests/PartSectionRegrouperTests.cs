@@ -37,7 +37,7 @@ public class PartSectionRegrouperTests
         section A { low { c4 d } high { e'4 f' } }
         section B { low { g,4 a, } high { b'4 c'' } }
         form { A B }
-        score "x" { staff low  staff high }
+        score x { staff low  staff high }
         """;
 
     /// <summary>
@@ -109,7 +109,7 @@ public class PartSectionRegrouperTests
         // Attributes and every other top-level item survive verbatim.
         Assert.Contains("clef bass", pm);
         Assert.Contains("form { A B }", pm);
-        Assert.Contains("score \"x\" { staff low  staff high }", pm);
+        Assert.Contains("score x { staff low  staff high }", pm);
         // The result is valid .lys.
         Assert.False(SyntaxTree.Parse(pm!).HasErrors);
     }
@@ -184,7 +184,7 @@ public class PartSectionRegrouperTests
             section A { melody { c4 c g' g | } chords harmony { C | F | } }
             section B { melody { g'4 g f f | } chords harmony { C | } }
             form { A B }
-            score "s" { chords harmony  staff melody }
+            score s { chords harmony  staff melody }
             """;
         Assert.False(PartSectionRegrouper.HasUntransposableSectionContent(sm));
 
@@ -213,7 +213,7 @@ public class PartSectionRegrouperTests
             section A { melody { c4 c g' g | } lyrics w { Twin- kle twin- kle | } }
             section B { melody { g'4 g f f | } lyrics w { how I won- der | } }
             form { A B }
-            score "s" { staff melody  lyrics w }
+            score s { staff melody  lyrics w }
             """;
         Assert.False(PartSectionRegrouper.HasUntransposableSectionContent(sm));
 

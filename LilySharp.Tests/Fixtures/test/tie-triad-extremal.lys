@@ -59,6 +59,6 @@ section Main {
 
 form { Main }
 
-score "tie-triad-extremal" {
+score {
   staff melody
 }

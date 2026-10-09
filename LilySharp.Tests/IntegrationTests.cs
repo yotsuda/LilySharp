@@ -58,7 +58,7 @@ form {
     A
 }
 
-score ""test"" {
+score test {
     staff treble melody
 }
 ";
@@ -93,7 +93,7 @@ form {
     A
 }
 
-score ""test"" {
+score test {
     staff treble melody
 }
 ";
@@ -140,7 +140,7 @@ section Main {
 
 form { Main }
 
-score ""test"" {
+score test {
   staff melody
 }
 ";
@@ -217,14 +217,14 @@ phrase lh1 { c2 e | g g, | }
 phrase rh2 { e'4 d' c' d' | e'1 | }
 phrase lh2 { c2 g, | c1 | }
 
-score ""mvt1"" {
+score mvt1 {
   grandStaff {
     staff treble rh1
     staff bass lh1
   }
 }
 
-score ""mvt2"" {
+score mvt2 {
   grandStaff {
     staff treble rh2
     staff bass lh2
@@ -258,14 +258,14 @@ phrase lh1 { c2 e | g g, | }
 phrase rh2 { e'4 d' c' d' | e'1 | }
 phrase lh2 { c2 g, | c1 | }
 
-score ""movement1"" {
+score movement1 {
   grandStaff {
     staff treble rh1
     staff bass lh1
   }
 }
 
-score ""movement2"" {
+score movement2 {
   grandStaff {
     staff treble rh2
     staff bass lh2
@@ -301,8 +301,8 @@ section Main {
   chords prog { a:m e | d:m | a:m | }
 }
 form { Main }
-score ""attached"" { chords prog  staff melody }
-score ""grid"" { chords prog }
+score attached { chords prog  staff melody }
+score grid { chords prog }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.True(tree.HasErrors);
@@ -340,9 +340,9 @@ score ""grid"" { chords prog }
 phrase rh { c'4 d' e' f' | }
 phrase lh { c2 e | }
 
-score ""first"" { staff treble rh }
-score ""second"" { staff treble lh }
-score ""third"" { staff treble rh }
+score first { staff treble rh }
+score second { staff treble lh }
+score third { staff treble rh }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
@@ -438,7 +438,7 @@ section Main {
     alt { e'4 f g a | b1 | }
 }
 form { Main }
-score ""ossia-test"" {
+score ossiaTest {
     staff melody
     ossia alt
 }";
@@ -471,7 +471,7 @@ section Main {
     bassAlt { c,4 d e f | g1 | }
 }
 form { Main }
-score ""ossia-clef"" {
+score ossiaClef {
     staff melody
     ossia bass bassAlt
 }";
@@ -496,7 +496,7 @@ section Main {
     alt { e'4 f g a | b1 | }
 }
 form { Main }
-score ""ossia-barline"" {
+score ossiaBarline {
     staff melody
     ossia alt
 }";

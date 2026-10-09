@@ -31,7 +31,7 @@ namespace LilySharp.Tests;
 /// sits on the third). Until 2026-09-29 the tab arm drew the bar's own rest under the
 /// multi-measure-rest symbol too, and the symbol stood half a space high — its middle and
 /// positions read in notation spaces on strings 1.5 apart — so the user saw "a whole rest
-/// and a half rest" in a 4/4 bar (bohemian-rhapsody.lys, score "tab", bars 8–12).
+/// and a half rest" in a 4/4 bar (bohemian-rhapsody.lys, score tab, bars 8–12).
 /// </summary>
 public class TabWholeBarRestTests
 {

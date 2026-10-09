@@ -87,7 +87,7 @@ public class BeamShiftRegionTests
 
             form { Intro }
 
-            score "PCV" { combinedStaff { vone vtwo } }
+            score PCV { combinedStaff { vone vtwo } }
             """);
 
         Assert.Equal(0, g.BeamGroupCount());

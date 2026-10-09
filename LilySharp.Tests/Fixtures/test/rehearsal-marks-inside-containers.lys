@@ -17,7 +17,7 @@ part melody {
 
 form { ~A |: ~Body [1. ~End1] :| [2. ~End2] }
 
-score "rehearsal-marks-inside-containers" {
+score {
   staff melody
   tab melody
 }

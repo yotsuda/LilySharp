@@ -618,6 +618,16 @@ public static class DiagnosticCodes
     /// ending drew a cascade of "Expected" errors that never named the separator.</summary>
     public const string VoltaPassesWithPoints = "LYS0037";
 
+    /// <summary>Parser error: a score's name written as a quoted string — <c>score "tab" { … }</c>.
+    /// A score's name is a bare word like every other declaration's (<c>score tab</c>, which
+    /// writes <c>&lt;input&gt;-tab</c> and is what the preview's picker and <c>--score</c> show);
+    /// a string in Lily# is text printed on the page. Until 2026-10-09 the string was a second
+    /// name beside the word (the output suffix and the picker's label), so <c>score "both"</c>
+    /// answered to the same selector as the unnamed score (owner's decision,
+    /// docs/anonymous-blocks-design.md §7). The parser reads the string's text as the name, so
+    /// one error is all a stale book gets.</summary>
+    public const string ScoreNameQuoted = "LYS0038";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>

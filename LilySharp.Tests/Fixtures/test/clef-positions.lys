@@ -21,7 +21,7 @@ section M {
 
 form { M }
 
-score "clef-positions" {
+score {
   staff sop
   staff alt
   staff ten

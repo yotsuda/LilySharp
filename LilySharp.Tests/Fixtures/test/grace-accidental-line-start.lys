@@ -15,6 +15,6 @@ section A {
 
 form { A }
 
-score "grace-accidental-line-start" {
+score {
   staff m
 }

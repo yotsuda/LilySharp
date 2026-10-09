@@ -10,4 +10,4 @@ section Main {
   m { c''8. d''16 e''16 f''8. g''8 a''16 b''16 c'''8 | }
 }
 form { Main }
-score "beamlets" { staff m }
+score { staff m }

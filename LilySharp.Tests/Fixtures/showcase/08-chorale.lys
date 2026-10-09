@@ -38,7 +38,7 @@ section Main {
 
 form { Main }
 
-score "chorale" {
+score chorale {
   grandStaff {
     staff upper  lyrics words
     staff lower

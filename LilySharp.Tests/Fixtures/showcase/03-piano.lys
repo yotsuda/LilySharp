@@ -50,7 +50,7 @@ section Main {
 
 form { Main }
 
-score "03-piano" {
+score {
   grandStaff {
     staff rightHand
     staff leftHand

@@ -1464,26 +1464,28 @@ and the LilyPond twin writes `\jump`, whose MIDI does not follow it.
 Controls output layout. Each `staff partName` names the part to draw (a bare
 name, no braces); the clef comes from the part declaration, not the render block.
 
-A score's name is optional. The unnamed `score { … }` writes to the input file's name
-(`song.lys` → `song.svg`); `score another { … }` writes `song-another.svg`; a quoted
-`"basename"` names the file outright:
+A score's name is optional. The unnamed `score { … }` is the file's default: it writes to
+the input file's name (`song.lys` → `song.svg`), and the preview shows it first, listed as
+**(Default)** in its score picker. `score another { … }` writes `song-another.svg` and is
+`another` in the picker and in `lysc --score`. A file has at most one unnamed score.
 
 ```
-score "out" {
+score {
   grandStaff {
     staff rightHand
     staff leftHand
   }
 }
-```
 
-A single-staff score names one staff directly:
-
-```
-score "out" {
-  staff melody
+score right {
+  staff rightHand
 }
 ```
+
+A score's name is a bare word, like a part's or a form's. `score "tab"` is an error
+(**LYS0038**) that names the word to write instead — a quoted string in Lily# is text
+printed on the page, and a name with spaces or hyphens is written in one word
+(`score guitarChart`).
 
 ### Staff groups — `grandStaff`, `staffGroup`, `choirStaff`
 
@@ -1497,11 +1499,11 @@ nothing else, and they differ only in what is drawn down the left edge:
 | `choirStaff` | bracket | **not** drawn through — each staff keeps its own | independent lines (voices) |
 
 ```
-score choral "satb" {
+score satb {
   choirStaff { staff sop  staff alt  staff ten  staff bas }
 }
 
-score winds "winds" {
+score winds {
   staffGroup { staff flute  staff oboe  staff clarinet }
 }
 ```
@@ -1525,7 +1527,7 @@ engraved, which is how a click track or a cue part rides along without appearing
 page.
 
 ```
-score winds "winds" {
+score winds {
   staffGroup { staff flute  staff oboe }
   title "Woodwinds"    // this score only
   click                // played, never engraved
@@ -2093,9 +2095,9 @@ section A {
 }
 form { A }
 score { chords prog  staff melody }                     // guitar diagrams: C F G, x3x546
-score "uke" { layout uke  chords prog  staff melody }   // ukulele diagrams: F G
-score "piano" { layout piano  chords prog  staff melody }  // none
-score "book" { layout book  chords prog  staff melody }    // every chord: C F G Am, x35343 x3x546
+score uke { layout uke  chords prog  staff melody }   // ukulele diagrams: F G
+score piano { layout piano  chords prog  staff melody }  // none
+score book { layout book  chords prog  staff melody }    // every chord: C F G Am, x35343 x3x546
 ```
 
 **Listed chords: a shape table.** Between "only what is written" and "everything", the layout

@@ -291,7 +291,7 @@ public class FontBlockCompletionTests
 
         form { A }
 
-        score "out" {
+        score out {
           title "A Title"
           chords prog
           staff m

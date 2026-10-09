@@ -27,86 +27,90 @@ namespace LilySharp.Core.Svg.Collector;
 public static class RenderSpecParser
 {
     /// <summary>
-    /// A score's OUTPUT NAME: the stem <c>svg --all</c> writes, the word <c>--score</c>
-    /// selects, and the value the preview's score picker carries. An explicit
-    /// <c>"basename"</c> wins (minus an extension, so <c>score "song.svg"</c> writes
-    /// song.svg); else the reserved form name <c>main</c> writes to the input .lys stem
-    /// (empty = "derive from the input file"), and any other form name becomes the name.
+    /// A score's OUTPUT NAME: the suffix its files take (<c>&lt;input&gt;-NAME</c>), the word
+    /// <c>--score</c> selects, and the value the preview's score picker carries — the score's
+    /// own name, or empty for the unnamed score, which writes to the input .lys stem.
     /// </summary>
     /// <remarks>
-    /// ⚠️ ONE HOME, and it has to be: the rule was written out three times — here, in the
+    /// ⚠️ ONE HOME, and it has to be: the rule was once written out three times — here, in the
     /// language server's picker (<c>ExtractRenderInfo</c>) and in
-    /// <c>DuplicateScoreNameValidator</c> — and the two copies kept the RAW basename while
-    /// this one drops the extension. A basename with a dot in it therefore made the picker
-    /// offer a word (<c>"Take 1.0"</c>) that <see cref="MatchesName(string, string, string)"/>
-    /// could not match (the spec's name being <c>Take 1</c>), so choosing that score
-    /// silently drew the FIRST one instead — the preview looked stuck on the main score —
-    /// and the duplicate check, comparing raw basenames, did not see that <c>"Take 1.0"</c>
-    /// and <c>"Take 1.1"</c> collide (2026-09-06, owner report).
+    /// <c>DuplicateScoreNameValidator</c> — and the copies drifted (2026-09-06, owner report:
+    /// a picker entry the renderer could not match, so choosing it drew the FIRST score).
+    /// Until 2026-10-09 a quoted string beside the name overrode it; a score has one name now
+    /// (LYS0038, docs/anonymous-blocks-design.md §7).
     /// </remarks>
-    public static string OutputNameOf(RenderDeclarationSyntax render)
-    {
-        string? basename = render.BasenameText;
-        if (!string.IsNullOrEmpty(basename))
-            return System.IO.Path.GetFileNameWithoutExtension(basename);
-        // The unnamed score writes to the input stem; a named one to <stem>-<name>.
-        return render.ScoreNameText;
-    }
+    public static string OutputNameOf(RenderDeclarationSyntax render) => render.ScoreNameText;
 
     /// <summary>
-    /// The name the unnamed score answers to in the picker and in <c>--score</c> — the word
-    /// that named the default form (and so the default score) until 2026-10-09.
+    /// What the preview's picker shows for the unnamed score. Parentheses cannot be part of a
+    /// name, so no named score can be mistaken for it. It is a LABEL only: the picker sends
+    /// back the empty output name, and a caller that names no score gets the unnamed one
+    /// (<see cref="Choose"/>).
     /// </summary>
-    public const string UnnamedScoreName = "main";
+    public const string UnnamedScoreLabel = "(Default)";
 
-    /// <summary>A score's selector name: its own name, or <see cref="UnnamedScoreName"/>.</summary>
-    public static string SelectorNameOf(RenderDeclarationSyntax render)
-        => render.ScoreName is { } n ? n.Text : UnnamedScoreName;
+    /// <summary>A score's selector name: its own name, or empty for the unnamed score.</summary>
+    public static string SelectorNameOf(RenderDeclarationSyntax render) => render.ScoreNameText;
+
+    /// <summary>A score's picker label: its name, or <see cref="UnnamedScoreLabel"/>.</summary>
+    public static string LabelOf(string scoreName)
+        => scoreName.Length > 0 ? scoreName : UnnamedScoreLabel;
 
     /// <summary>
     /// The score picker's list and its answer, from ONE walk of the render declarations
     /// and the SAME rule the renderer resolves with: every score's display label and
     /// output name in document order, plus the index <paramref name="renderName"/>
-    /// selects (<see cref="Choose"/>'s policy — a match, else the first score; −1 when
-    /// the file declares none).
+    /// selects (<see cref="Choose"/>'s policy — a match, else the unnamed score, else the
+    /// first; −1 when the file declares none).
     /// </summary>
     /// <remarks>
     /// The client shows the labels, sends back an output name, and the renderer resolves
     /// that name with <see cref="MatchesName(string, string, string)"/> — so the list and
     /// the resolution must come from one rule or a picker entry can name a score the
     /// renderer will not draw. Deliberately does NOT <see cref="Parse"/> the blocks: only
-    /// the form name and the basename decide either answer, and the preview asks this on
-    /// every keystroke.
+    /// the name decides either answer, and the preview asks this on every keystroke.
     /// </remarks>
     public static (System.Collections.Generic.List<(string Label, string OutputName)> Scores, int Chosen)
         ScoreIndex(SyntaxTree tree, string? renderName)
     {
         var scores = new System.Collections.Generic.List<(string Label, string OutputName)>();
-        var forms = new System.Collections.Generic.List<string>();
         // Render declarations only parse at the top level (Parser.ParseTopLevelItem's
         // ScoreKeyword arm), so the root's children are the whole search space.
         foreach (var node in tree.GetRoot().ChildNodes())
         {
             if (node is not RenderDeclarationSyntax render)
                 continue;
-            string selector = SelectorNameOf(render);
-            string? basename = render.BasenameText;
-            // The LABEL is what the writer wrote — the basename when given, else the score's
-            // name ("main" for the unnamed one).
-            scores.Add((!string.IsNullOrEmpty(basename) ? basename! : selector, OutputNameOf(render)));
-            // Parse's spec Name is the selector name; MatchesName reads it, so it is carried.
-            forms.Add(selector);
+            string name = SelectorNameOf(render);
+            scores.Add((LabelOf(name), OutputNameOf(render)));
         }
 
-        int chosen = scores.Count > 0 ? 0 : -1;
-        if (!string.IsNullOrEmpty(renderName))
-            for (int i = 0; i < scores.Count; i++)
-                if (MatchesName(forms[i], scores[i].OutputName, renderName!))
-                {
-                    chosen = i;
-                    break;
-                }
+        int chosen = ChooseIndex(scores.Count, i => scores[i].OutputName, renderName);
         return (scores, chosen);
+    }
+
+    /// <summary>
+    /// The selection policy, ONE HOME for <see cref="ScoreIndex"/>, <see cref="Choose"/> and
+    /// <see cref="ChooseDeclared"/>: the first score <paramref name="renderName"/> matches;
+    /// else — no name, or a stale one — the unnamed score; else the first. −1 for none.
+    /// </summary>
+    /// <remarks>
+    /// "Else the unnamed score" is what makes the empty name mean the default: the picker
+    /// sends <c>""</c> for <c>(Default)</c>, and a file may declare its unnamed score after a
+    /// named one (until 2026-10-09 the empty name took the FIRST score, so a book that wrote
+    /// <c>score tab</c> above <c>score</c> could not show its default).
+    /// </remarks>
+    private static int ChooseIndex(int count, Func<int, string> nameAt, string? renderName)
+    {
+        if (count == 0)
+            return -1;
+        if (!string.IsNullOrEmpty(renderName))
+            for (int i = 0; i < count; i++)
+                if (MatchesName(nameAt(i), nameAt(i), renderName!))
+                    return i;
+        for (int i = 0; i < count; i++)
+            if (nameAt(i).Length == 0)
+                return i;
+        return 0;
     }
 
     /// <summary>
@@ -121,13 +125,10 @@ public static class RenderSpecParser
         PaperDeclarationSyntax? paperRef = null;
         LayoutDeclarationSyntax? layoutRef = null;
 
-        // Header: `score [Name] ["basename"] [transpose …]`. The name is the score's own; the
-        // form it plays is a `form` item in its body (RenderDeclarationSyntax.PlayedForm).
-
-        // Output basename rule — ONE HOME (see OutputNameOf).
+        // Header: `score [Name] [transpose …]`. The name is the score's own; the form it
+        // plays is a `form` item in its body (RenderDeclarationSyntax.PlayedForm). It is
+        // also the output suffix and the `--score <name>` selector (OutputNameOf).
         string outputFile = OutputNameOf(render);
-
-        // Name doubles as the `--score <name>` selector (SelectorNameOf).
         var name = SelectorNameOf(render);
 
         // The parts this score ALSO puts on a notation staff — the tab default reads it.
@@ -597,13 +598,8 @@ public static class RenderSpecParser
     /// </summary>
     public static RenderSpec? Choose(IReadOnlyList<RenderSpec> specs, string? renderName)
     {
-        if (!string.IsNullOrEmpty(renderName))
-        {
-            foreach (var spec in specs)
-                if (MatchesName(spec, renderName!))
-                    return spec;
-        }
-        return specs.Count > 0 ? specs[0] : null;
+        int i = ChooseIndex(specs.Count, k => specs[k].Name, renderName);
+        return i >= 0 ? specs[i] : null;
     }
 
     /// <summary>
@@ -616,13 +612,8 @@ public static class RenderSpecParser
         SyntaxTree tree, string? renderName)
     {
         var scores = FindAllDeclared(tree);
-        if (!string.IsNullOrEmpty(renderName))
-        {
-            foreach (var score in scores)
-                if (MatchesName(score.Spec, renderName!))
-                    return score;
-        }
-        return scores.Count > 0 ? scores[0] : null;
+        int i = ChooseIndex(scores.Count, k => scores[k].Spec.Name, renderName);
+        return i >= 0 ? scores[i] : null;
     }
 
     /// <summary>

@@ -41,4 +41,4 @@ section Main {
 
 form { Main }
 
-score "tab-numbers-meter-change" { tab gt as numbers }
+score { tab gt as numbers }

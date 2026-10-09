@@ -36,7 +36,7 @@ section Main {
 
 form { Main }
 
-score "mmr-grandstaff-both-rest" {
+score mmrGrandstaffBothRest {
   staff melody
   staff lh
 }

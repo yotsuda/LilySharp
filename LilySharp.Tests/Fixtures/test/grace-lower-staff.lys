@@ -16,7 +16,7 @@ section Main {
 
 form { Main }
 
-score "grace-lower-staff" {
+score {
   staff top
   staff bot
 }

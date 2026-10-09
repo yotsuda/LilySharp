@@ -66,7 +66,7 @@ public class LineBreakGateTests
         phrase mel { {{phraseBody}} }
         section Main { melody { mel } }
         form { Main }
-        score "x" { staff melody }
+        score x { staff melody }
         """;
 
     [Fact]

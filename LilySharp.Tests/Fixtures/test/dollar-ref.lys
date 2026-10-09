@@ -27,6 +27,6 @@ section Second {
 // label so the printed rehearsal marks stay unique.
 form { First Second First "First (reprise)" }
 
-score "dollar-ref" {
+score {
   staff melody
 }

@@ -19,4 +19,4 @@ section S {
   }
 }
 form { S }
-score "multivoice-tuplet-beams" { staff mel }
+score { staff mel }

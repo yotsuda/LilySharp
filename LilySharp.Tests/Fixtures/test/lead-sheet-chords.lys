@@ -8,4 +8,4 @@ section Main {
   chords prog { C Am | F G7 | C | }
 }
 form { Main }
-score "lead-sheet-chords" { chords prog }
+score { chords prog }

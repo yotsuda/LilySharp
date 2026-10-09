@@ -93,8 +93,8 @@ static void ShowHelp()
         Usage: lysc <command> [options] <input>
                lysc [options]
 
-        Outputs are named for the input: song.lys writes song.svg for its main
-        score and song-<alias>.svg for each other one, every score unless --score
+        Outputs are named for the input: song.lys writes song.svg for its unnamed
+        score and song-<name>.svg for each other one, every score unless --score
         picks one. -d <folder> chooses where they go (default: the input's folder).
 
         Commands:
@@ -127,7 +127,7 @@ static void ShowHelp()
           --verbose, --debug  Print full stack traces on error
 
         Examples:
-          lysc svg score.lys                    # Output: score.svg (+ score-<alias>.svg)
+          lysc svg score.lys                    # Output: score.svg (+ score-<name>.svg)
           lysc svg -d out score.lys             # The same, into out/
           lysc pdf score.lys                    # Output: score.pdf
           lysc midi score.lys                   # Output: score.mid
@@ -146,7 +146,7 @@ static void ShowHelp()
 
           # books.txt
           score.lys                             # -> score.svg
-          suite.lys<TAB>out                     # -> out/suite.svg, out/suite-<alias>.svg
+          suite.lys<TAB>out                     # -> out/suite.svg, out/suite-<name>.svg
 
         A file that fails does not stop the rest — the run's exit code is non-zero if
         any file failed.
@@ -252,8 +252,8 @@ static void ShowSvgHelp()
 
         Usage: lysc svg [options] <input.lys>
 
-        Writes every score of the file: <input>.svg for the main score and
-        <input>-<alias>.svg for each other one (score "tab" -> song-tab.svg).
+        Writes every score of the file: <input>.svg for the unnamed score and
+        <input>-<name>.svg for each other one (score tab -> song-tab.svg).
 
         Options:
           -d, --out-dir <folder> Write into this folder (default: the input's folder)
@@ -348,8 +348,8 @@ static void ShowPdfHelp()
 
         Usage: lysc pdf [options] <input.lys>
 
-        Writes every score of the file: <input>.pdf for the main score and
-        <input>-<alias>.pdf for each other one.
+        Writes every score of the file: <input>.pdf for the unnamed score and
+        <input>-<name>.pdf for each other one.
 
         Options:
           -d, --out-dir <folder> Write into this folder (default: the input's folder)
@@ -396,7 +396,7 @@ static void ShowBoxesHelp()
 
         Usage: lysc boxes [options] <input.lys>
 
-        Writes <input>.boxes.json for the main score and <input>-<alias>.boxes.json for
+        Writes <input>.boxes.json for the unnamed score and <input>-<name>.boxes.json for
         each other one: per page, every symbol the SVG/PNG draws — its kind (notehead,
         stem, staffLine, tie, lyric, ...), its ink box in staff spaces (origin top-left,
         Y down), its source offset (data-pos) and staff — and each bar's printed number
@@ -452,8 +452,8 @@ static void ShowPngHelp()
 
         Usage: lysc png [options] <input.lys>
 
-        Writes every score of the file: <input>.png for the main score and
-        <input>-<alias>.png for each other one; a score of several pages writes
+        Writes every score of the file: <input>.png for the unnamed score and
+        <input>-<name>.png for each other one; a score of several pages writes
         NAME-page1.png, NAME-page2.png, …
 
         Options:
@@ -495,8 +495,8 @@ static void ShowMidiHelp()
 
         Usage: lysc midi [options] <input.lys>
 
-        Writes every score's form: <input>.mid for the main score and
-        <input>-<alias>.mid for each other one. A .mid holds ONE arrangement, so
+        Writes every score's form: <input>.mid for the unnamed score and
+        <input>-<name>.mid for each other one. A .mid holds ONE arrangement, so
         a file of several movements writes one file each — which is what
         LilyPond does too (two \score blocks with \midi { } write ts.mid and
         ts-1.mid).
@@ -568,8 +568,8 @@ static void ShowXmlHelp()
 
         Usage: lysc xml [options] <input.lys>
 
-        Writes every score's form: <input>.xml for the main score and
-        <input>-<alias>.xml for each other one. One document holds ONE
+        Writes every score's form: <input>.xml for the unnamed score and
+        <input>-<name>.xml for each other one. One document holds ONE
         arrangement, so a file of several movements writes one file each.
 
         Options:
@@ -611,7 +611,7 @@ static void ShowLyHelp()
 
         Usage: lysc ly [options] <input.lys>
 
-        Writes every score: <input>.ly for the main score and <input>-<alias>.ly
+        Writes every score: <input>.ly for the unnamed score and <input>-<name>.ly
         for each other one.
 
         Options:
@@ -1162,7 +1162,7 @@ static int Report(ExportResult result)
 // `--score` already means for svg/pdf/png — one word, one meaning. Two scores naming one
 // form therefore write the same music under two names, exactly as svg does.
 // The score's DECLARATION goes along too: its staves are not the form's (a book's
-// `score`, `score "both"` and `score "tab"` share one form), and the ly
+// `score`, `score both` and `score tab` share one form), and the ly
 // twin engraves them. midi and xml write the form's music and take no staves from it.
 static int RunFormOutput(
     string[] args, string verb, string defaultExt,
@@ -1202,7 +1202,7 @@ static void WarnFormsLeftOut(SyntaxTree tree)
 // ============ Where the outputs go ============
 //
 // ★ AN OUTPUT IS NAMED FOR ITS BOOK, NEVER BY THE CALLER (user decision 2026-09-26):
-// `<input stem>` for the main score and `<input stem>-<alias>` for every other one
+// `<input stem>` for the unnamed score and `<input stem>-<name>` for every other one
 // (RenderSpec.ResolveOutputStem), in the folder `-d/--out-dir` names — the input's own
 // folder when it names none. Every score is written unless `--score` picks one. A name typed
 // on the command line could say anything; this one always says which book and which score a
@@ -1211,7 +1211,7 @@ static void WarnFormsLeftOut(SyntaxTree tree)
 // write the rest at all.
 
 static string RemovedOutputMessage() =>
-    "output names are fixed — <input>.<ext> for the main score, <input>-<alias>.<ext> for "
+    "output names are fixed — <input>.<ext> for the unnamed score, <input>-<name>.<ext> for "
     + "each other — so -o/--output and the output argument are gone; choose the folder with -d <folder>";
 
 // The options every file-writing command shares. `-o` is still RECOGNISED, only to say why
@@ -1286,7 +1286,7 @@ static List<ScoreOutput>? ScoreOutputs(SyntaxTree tree, string input, string dir
     if (clash != null)
     {
         Console.Error.WriteLine($"Error: {clash.Count()} scores would all be written to {clash.Key} — "
-            + "give each its own alias (score \"tab\").");
+            + "give each its own name (score tab).");
         return null;
     }
     return outputs;

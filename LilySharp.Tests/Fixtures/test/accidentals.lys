@@ -37,6 +37,6 @@ section Main {
 
 form { Main }
 
-score "accidentals" {
+score {
   staff melody
 }

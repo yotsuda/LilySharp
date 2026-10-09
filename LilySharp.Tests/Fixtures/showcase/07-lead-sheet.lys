@@ -23,6 +23,6 @@ section A {
 
 form { A }
 
-score "lead-sheet" {
+score leadSheet {
   staff melody  lyrics words
 }

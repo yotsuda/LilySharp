@@ -116,7 +116,7 @@ section A {
     bassline { c4 d e f | }
 }
 form { A }
-score ""test"" {
+score test {
     staff bass bassline
 }
 ";
@@ -219,7 +219,7 @@ section A {
     cellopart { c4 d e f | }
 }
 form { A }
-score ""test"" {
+score test {
     staff bass cellopart
 }
 ";
@@ -328,7 +328,7 @@ section A {
     lead { c4 d e f | }
 }
 form { A }
-score ""test"" {
+score test {
     staff treble_8 lead
 }
 ";
@@ -348,7 +348,7 @@ section A {
     fl { c4 d e f | }
 }
 form { A }
-score ""test"" {
+score test {
     staff treble fl
 }
 ";
@@ -370,7 +370,7 @@ section A {
     high { c4 d e f | }
 }
 form { A }
-score ""test"" {
+score test {
     staff treble high
 }
 ";
@@ -393,7 +393,7 @@ section B {
     melody { c4 d e f | }
 }
 form { A B }
-score ""test"" {
+score test {
     staff treble melody
 }
 ";
@@ -421,7 +421,7 @@ section B {
     bassline { c4 d e f | }
 }
 form { A B }
-score ""test"" {
+score test {
     staff bass bassline
 }
 ";
@@ -471,7 +471,7 @@ section A {
     melody { c4 d e f | }
 }
 form { A }
-score ""test"" {
+score test {
     staff treble_8 melody
 }
 ";

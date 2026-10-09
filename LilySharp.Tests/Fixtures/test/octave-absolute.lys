@@ -20,6 +20,6 @@ section Main {
 
 form { Main }
 
-score "octave-absolute" {
+score {
   staff melody
 }

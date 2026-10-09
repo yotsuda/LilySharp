@@ -53,6 +53,6 @@ form {
   |: B [1. End1] :| [2. End2]
 }
 
-score "04-advanced" {
+score {
   staff melody
 }

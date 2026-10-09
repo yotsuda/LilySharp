@@ -389,7 +389,7 @@ public class EmptyBarSpacingTests
               chords prog { C | F | C | }
             }
             form { Main }
-            score "x" { chords prog staff melody }
+            score x { chords prog staff melody }
             """;
         var springs = ColumnSprings(named, 1, GlobalShortest);
         Assert.True(springs[0].IdealDistance > 0.0,

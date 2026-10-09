@@ -64,7 +64,7 @@ public class GraceSpacingTests
               up { c'4 c' c' c' | grace { d'16 } c'4 c' c' c' | }
             }
             form { ~Main }
-            score "x" { staff ~up }
+            score x { staff ~up }
             """;
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(src);
         var multi = new LilySharp.Core.Svg.Collector.MeasureCollector()
@@ -105,7 +105,7 @@ public class GraceSpacingTests
               up { c'1 | grace { d'16 } c'1 | }
             }
             form { ~Main }
-            score "x" { staff ~up }
+            score x { staff ~up }
             """;
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(src);
         var multi = new LilySharp.Core.Svg.Collector.MeasureCollector()
@@ -157,7 +157,7 @@ public class GraceSpacingTests
               up { {{bar}} | }
             }
             form { ~Main }
-            score "x" { staff ~up }
+            score x { staff ~up }
             """;
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(src);
         var multi = new LilySharp.Core.Svg.Collector.MeasureCollector()

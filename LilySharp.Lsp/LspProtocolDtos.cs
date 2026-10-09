@@ -228,7 +228,7 @@ public class ExportParams
     public string? RenderName { get; set; }
     /// <summary>Write EVERY score the file declares into <see cref="OutputDirectory"/>,
     /// named the way <c>lysc --all</c> names them (<c>RenderSpec.ResolveOutputStem</c>:
-    /// the <c>main</c> score takes the file's stem, every other appends its own name).</summary>
+    /// the unnamed score takes the file's stem, every other appends its own name).</summary>
     public bool All { get; set; }
     /// <summary>The folder every file goes to under <see cref="All"/>; created if
     /// missing.</summary>

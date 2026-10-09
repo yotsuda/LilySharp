@@ -49,7 +49,7 @@ public sealed class DuplicateScoreNameTests
     [Fact]
     public void ExplicitBasename_Wins()
     {
-        var tree = SyntaxTree.Parse(Head + "form { Main }\nscore \"clean\" { staff bl }\n");
+        var tree = SyntaxTree.Parse(Head + "form { Main }\nscore clean { staff bl }\n");
         var spec = RenderSpecParser.FindFirst(tree)!;
         Assert.Equal("clean", spec.OutputFile);
     }
@@ -70,7 +70,7 @@ public sealed class DuplicateScoreNameTests
         var v = new DuplicateScoreNameValidator();
         v.Validate(SyntaxTree.Parse(Head +
             "form { Main }\nform verse { Main }\n"
-            + "score { staff bl }\nscore verse { form verse tab bl }\nscore \"extra\" { staff bl }\n"));
+            + "score { staff bl }\nscore verse { form verse tab bl }\nscore extra { staff bl }\n"));
         Assert.Empty(v.Diagnostics);
     }
 }

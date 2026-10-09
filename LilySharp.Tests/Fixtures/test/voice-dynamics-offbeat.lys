@@ -21,7 +21,7 @@ section Main {
 
 form { Main }
 
-score "voice-dynamics-offbeat" {
+score {
   staff rh
 }
 

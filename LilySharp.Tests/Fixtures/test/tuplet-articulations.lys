@@ -17,6 +17,6 @@ section A {
 
 form { A }
 
-score "tuplet-articulations" {
+score {
   staff m
 }

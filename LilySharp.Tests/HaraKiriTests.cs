@@ -135,7 +135,7 @@ public class HaraKiriTests
             part lh { clef bass }
             section Main { rh { c4 d e f | } lh { r1 | } }
             form { Main }
-            score "x" { grandStaff { staff rh staff lh{{selector}} } }
+            score x { grandStaff { staff rh staff lh{{selector}} } }
             """;
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(src);
         var spec = Core.Svg.Collector.RenderSpecParser.FindFirst(tree);
@@ -389,7 +389,7 @@ public class HaraKiriTests
 
             form { ~Main }
 
-            score "HKJ" {
+            score HKJ {
               grandStaff {
                 staff rh{{(declareRemoveEmpty ? " as removeEmpty all" : "")}}
                 staff lh

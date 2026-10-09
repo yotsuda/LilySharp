@@ -20,7 +20,7 @@ section Chorale {
 
 form { Chorale }
 
-score "sings-per-row" {
+score {
   choirStaff {
     staff sop "Soprano"
     lyrics verse

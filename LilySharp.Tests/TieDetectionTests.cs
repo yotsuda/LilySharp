@@ -42,7 +42,7 @@ public class TieDetectionTests
             part melody { clef treble }
             section Main { melody { {{music}} } }
             form { Main }
-            score "x" { staff melody }
+            score x { staff melody }
             """;
         var score = new MeasureCollector().Collect(SyntaxTree.Parse(src), "melody");
         return new TieDetector().DetectTies(score);

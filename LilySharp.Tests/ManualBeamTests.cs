@@ -78,7 +78,7 @@ form {
     |: A | [1. A] :| [2. A]
 }
 
-score ""test"" {
+score test {
     staff treble melody
 }
 ";

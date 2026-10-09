@@ -56,7 +56,7 @@ public class BeamStemFrameTests
 
         form { ~Main }
 
-        score "x" { staff m }
+        score x { staff m }
         """;
 
     /// <summary>
@@ -76,7 +76,7 @@ public class BeamStemFrameTests
 
         form { ~Main }
 
-        score "x" { staff m }
+        score x { staff m }
         """;
 
     [Theory]

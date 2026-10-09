@@ -36,6 +36,6 @@ form {
   |: B [1. Ending1] :| [2. Ending2]
 }
 
-score "repeat-volta" {
+score {
   staff melody
 }

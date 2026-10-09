@@ -353,6 +353,45 @@ internal static class SyntaxFacts
     public static IReadOnlyList<string> NavigationMarkVocabulary { get; } =
         ["segno", "coda", "to coda", "fine", "dc", "ds", "dc al fine", "dc al coda", "ds al fine", "ds al coda"];
 
+    /// <summary>The name an UNNAMED <c>chords { … }</c> block answers to — the keyword itself,
+    /// which no writer can give a track (2026-10-09, docs/anonymous-blocks-design.md). A score's
+    /// bare <c>chords</c> row names it.</summary>
+    public const string UnnamedChordsName = "chords";
+
+    /// <summary>The name an UNNAMED <c>lyrics { … }</c> block answers to; see
+    /// <see cref="UnnamedChordsName"/>.</summary>
+    public const string UnnamedLyricsName = "lyrics";
+
+    /// <summary>The name an UNNAMED <c>part { … }</c> answers to — allowed only when it is the
+    /// file's one part; a score's bare <c>staff</c> / <c>tab</c> names it. See
+    /// <see cref="UnnamedChordsName"/>.</summary>
+    public const string UnnamedPartName = "part";
+
+    /// <summary>
+    /// The bare score name a quoted one stands for (LYS0038): <c>"tab"</c> → <c>tab</c>,
+    /// <c>"guitar-chart"</c> → <c>guitarChart</c> — the words joined camelCase, the way Lily#
+    /// names are written (<c>rightHand</c>). A name that would start with a digit gets
+    /// <c>score</c> in front (<c>"01-intro"</c> → <c>score01Intro</c>); empty text stays empty.
+    /// </summary>
+    public static string ScoreNameFor(string text)
+    {
+        var sb = new System.Text.StringBuilder(text.Length);
+        bool upperNext = false;
+        foreach (char c in text)
+        {
+            if (char.IsLetterOrDigit(c) || c == '_')
+            {
+                sb.Append(upperNext && sb.Length > 0 ? char.ToUpperInvariant(c) : c);
+                upperNext = false;
+            }
+            else
+                upperNext = true;
+        }
+        if (sb.Length > 0 && char.IsDigit(sb[0]))
+            sb.Insert(0, "score");
+        return sb.ToString();
+    }
+
     /// <summary>
     /// The keywords that open a render item in a <c>score { }</c> body (GRAMMAR.md:
     /// ScoreItem) — every branch of <c>ParseRenderItem</c> but the bare MIDI-only part name,
@@ -368,20 +407,6 @@ internal static class SyntaxFacts
     /// hand-written copy of the fifteen, the shape that had drifted for the clefs and the part
     /// properties.
     /// </remarks>
-    /// <summary>The name an UNNAMED <c>chords { … }</c> block answers to — the keyword itself,
-    /// which no writer can give a track (2026-10-09, docs/anonymous-blocks-design.md). A score's
-    /// bare <c>chords</c> row names it.</summary>
-    public const string UnnamedChordsName = "chords";
-
-    /// <summary>The name an UNNAMED <c>lyrics { … }</c> block answers to; see
-    /// <see cref="UnnamedChordsName"/>.</summary>
-    public const string UnnamedLyricsName = "lyrics";
-
-    /// <summary>The name an UNNAMED <c>part { … }</c> answers to — allowed only when it is the
-    /// file's one part; a score's bare <c>staff</c> / <c>tab</c> names it. See
-    /// <see cref="UnnamedChordsName"/>.</summary>
-    public const string UnnamedPartName = "part";
-
     public static IReadOnlyList<string> ScoreItemKeywordVocabulary { get; } =
     [
         "staff", "grandStaff", "staffGroup", "choirStaff", "condensedStaff", "combinedStaff",

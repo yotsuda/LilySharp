@@ -28,4 +28,4 @@ section B6 { rh { g'1 | } }
 
 form { segno ~B1 ~B2 to coda ~B3 ds al coda coda ~B4 ~B5 fine ~B6 dc al fine }
 
-score "navigation-marks" { staff rh }
+score { staff rh }

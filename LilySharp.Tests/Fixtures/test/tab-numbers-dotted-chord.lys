@@ -10,6 +10,6 @@ part melody {
 
 form { A }
 
-score "tab-numbers-dotted-chord" {
+score {
   tab melody as numbers
 }

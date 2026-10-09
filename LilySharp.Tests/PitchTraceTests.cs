@@ -183,8 +183,8 @@ public sealed class PitchTraceTests
 
         form { ~Main }
 
-        score "only-sopr"  { staff sopr }
-        score "only-basso" { staff basso }
+        score onlySopr  { staff sopr }
+        score onlyBasso { staff basso }
         """;
 
     // The same two parts, both drawn by ONE score. Whatever the fold reports for the

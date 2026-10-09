@@ -36,7 +36,7 @@ public class ChordPartSectionsTests
         section A { melody { c4 c g' g | a a g2 | } chords harmony { C | F | } }
         section B { melody { g'4 g f f | } chords harmony { C | } }
         form { A B }
-        score "s" { chords harmony  staff melody }
+        score s { chords harmony  staff melody }
         """;
 
     private const string GroupedByPart = """
@@ -51,7 +51,7 @@ public class ChordPartSectionsTests
           section B { C | }
         }
         form { A B }
-        score "s" { chords harmony  staff melody }
+        score s { chords harmony  staff melody }
         """;
 
     [Fact]

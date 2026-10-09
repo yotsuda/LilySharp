@@ -25,7 +25,7 @@ namespace LilySharp.Tests.Midi;
 /// <summary>
 /// A score's MIDI sounds the parts THAT score shows — the ones it engraves and its bare
 /// MIDI-only rows — the way a <c>chords</c> row it does not place is silent (owner decision
-/// 2026-09-25, extended 2026-09-29): with <c>score "p2" { staff p2 }</c> picked, the
+/// 2026-09-25, extended 2026-09-29): with <c>score p2 { staff p2 }</c> picked, the
 /// preview's Play sounded p1 as well (user report, <c>scratch/parts.lys</c>). A file with no
 /// <c>score</c> block sounds every part, as it always did, and the timeline of the played
 /// parts does not move: a section the picked parts sit out still takes its bars.
@@ -48,7 +48,7 @@ public class ScorePartsMidiTests
           staff p2
         }
 
-        score "p2" {
+        score p2 {
           staff p2
         }
         """;
@@ -80,7 +80,7 @@ public class ScorePartsMidiTests
     [Fact]
     public void TheScoreOfBothParts_SoundsBoth_AndTheOnePartScoreKeepsItsTiming()
     {
-        var both = Sounding(Export(TwoScores, "main"));
+        var both = Sounding(Export(TwoScores));
         Assert.Equal(12, both.Length);
         Assert.Equal(new[] { "p1", "p2" }, both.Select(n => n.Part).Distinct().OrderBy(p => p));
 
@@ -139,7 +139,7 @@ public class ScorePartsMidiTests
             section B { p2 { g'1 | } }
             form { A B }
             score { staff p1  staff p2 }
-            score "p2" { staff p2 }
+            score p2 { staff p2 }
             """, "p2");
         var notes = Sounding(midi);
         Assert.Single(notes);
@@ -157,9 +157,9 @@ public class ScorePartsMidiTests
             section B { p2 { g'1 | } }
             form { A B }
             score { staff p1 with lyrics words  staff p2 }
-            score "p2" { staff p2 }
+            score p2 { staff p2 }
             """;
-        Assert.Equal(4, Export(sung, "main").Tracks.Sum(t => t.Lyrics.Count));
+        Assert.Equal(4, Export(sung).Tracks.Sum(t => t.Lyrics.Count));
         Assert.Equal(0, Export(sung, "p2").Tracks.Sum(t => t.Lyrics.Count));
     }
 
@@ -176,10 +176,10 @@ public class ScorePartsMidiTests
             section A { gt { chord(C x32010)1 | } }
             form { A }
             score { layout capo3  staff gt }
-            score "open" { layout open  staff gt }
+            score open { layout open  staff gt }
             """;
         static int[] Pitches(MidiFile midi) => midi.Tracks.SelectMany(t => t.Notes).Select(n => n.Pitch).OrderBy(p => p).ToArray();
-        Assert.Equal(new[] { 51, 55, 58, 63, 67 }, Pitches(Export(book, "main")));   // E♭3 G3 B♭3 E♭4 G4
+        Assert.Equal(new[] { 51, 55, 58, 63, 67 }, Pitches(Export(book)));   // E♭3 G3 B♭3 E♭4 G4
         Assert.Equal(new[] { 48, 52, 55, 60, 64 }, Pitches(Export(book, "open")));   // C3 E3 G3 C4 E4
     }
 
@@ -197,7 +197,7 @@ public class ScorePartsMidiTests
             }
             form { A }
             score { chords harmony  staff p1  staff p2 }
-            score "p2" { chords harmony  staff p2 }
+            score p2 { chords harmony  staff p2 }
             """, "p2");
         Assert.Equal(new[] { "harmony (chords)", "p2" },
             Sounding(midi).Select(n => n.Part).Distinct().OrderBy(p => p));

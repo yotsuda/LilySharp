@@ -52,7 +52,7 @@ public class TieLedgerLineCenterTests
         part bassline
         section Main { bassline { clef bass {{Bar}} noBreak {{Bar}} noBreak {{Bar}} noBreak {{Bar}} } }
         form { Main }
-        score "x" { staff bassline }
+        score x { staff bassline }
         """;
 
     [Fact]

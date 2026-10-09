@@ -44,7 +44,7 @@ public class DrummapTests
         {{drummap}}
         section Groove { kit { hh8 hh hhc4 bd4 | } }
         form { Groove }
-        score "drums" { staff kit }
+        score drums { staff kit }
         """;
 
     /// <summary>The drum table a score's drummap produces, read the way the collector does.</summary>

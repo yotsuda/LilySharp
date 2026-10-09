@@ -89,7 +89,7 @@ form {
     public void ParseRenderDeclaration_Staff()
     {
         var source = @"
-score ""output"" {
+score output {
     staff guitar
 }";
         var tree = SyntaxTree.Parse(source);
@@ -100,7 +100,7 @@ score ""output"" {
     public void ParseRenderDeclaration_Tab()
     {
         var source = @"
-score ""guitar"" {
+score guitar {
     staff guitar
     tab guitar guitar
 }";
@@ -122,7 +122,7 @@ score ""guitar"" {
     public void ParseRenderDeclaration_Midi()
     {
         var source = @"
-score ""song"" {
+score song {
     guitar
     bass
 }";
@@ -130,7 +130,7 @@ score ""song"" {
         Assert.False(tree.HasErrors);
 
         Assert.True(SyntaxTree.Parse(@"
-score ""song"" {
+score song {
     guitar octave 1 instrument 25
 }").HasErrors);
     }
@@ -161,7 +161,7 @@ form {
     A
 }
 
-score ""test"" {
+score test {
     staff guitar
     staff bass bass
 }

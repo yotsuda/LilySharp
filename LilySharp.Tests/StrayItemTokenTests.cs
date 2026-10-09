@@ -52,7 +52,7 @@ public class StrayItemTokenTests
         "part melody\n"
         + "section A { melody { c4 d e f | } }\n"
         + "form { A }\n"
-        + "score \"p\" { staff melody }\n";
+        + "score p { staff melody }\n";
 
     private static string WithStray(string container, string token) => container switch
     {

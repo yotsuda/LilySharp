@@ -15,4 +15,4 @@ section Main {
 
 form { Main }
 
-score "scripts-stem-support" { staff m }
+score { staff m }

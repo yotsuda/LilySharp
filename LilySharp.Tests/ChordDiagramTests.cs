@@ -1682,7 +1682,7 @@ public class ChordDiagramTests
             octave absolute
             section A { chords prog { C | G7 . Am . | } lyrics words { la | la la | } }
             form { A }
-            score "sheet" { chords prog lyrics words }
+            score sheet { chords prog lyrics words }
             """;
         string xml = Xml(sheet);
         Assert.Contains("prog (chords)", xml);

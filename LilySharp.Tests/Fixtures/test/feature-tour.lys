@@ -156,7 +156,7 @@ section D {
 form { A B C D }
 
 // ---- 16. レンダリング (グランドスタッフ) ----------------------------------
-score "feature-tour" {
+score {
   staff melody
   staff lh
 }
