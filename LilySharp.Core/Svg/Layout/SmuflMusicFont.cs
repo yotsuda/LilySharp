@@ -396,6 +396,9 @@ internal sealed class SmuflMusicFont : MusicFont
     public override bool PedalPedCarriesItsPeriod => true;
 
     /// <inheritdoc/>
+    public override bool CarriesLedgerShorteningRange(MusicGlyph glyph) => false;
+
+    /// <inheritdoc/>
     internal override bool SetsDynamicsInItsOwnGlyphs => true;
 
     public override string? ChordTextFace

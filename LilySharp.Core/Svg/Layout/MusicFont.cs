@@ -245,6 +245,16 @@ internal abstract class MusicFont
     public virtual bool PedalPedCarriesItsPeriod => false;
 
     /// <summary>
+    /// Whether this font carries LilyPond's <c>ledger-shortening-range</c> for <paramref name="glyph"/>
+    /// (an accidental): the vertical span, about its note, over which it shortens the note's ledger
+    /// lines (<c>GlyphMetrics.AccidentalLedgerShorteningRange</c>).
+    /// </summary>
+    /// <remarks>The range is a Metafont extension of Emmentaler's (<c>accbot</c> / <c>acctop</c>,
+    /// docs/smufl-design.md §3 #3); SMuFL has no field for it, so a SMuFL font answers false and the
+    /// glyph's own box stands in.</remarks>
+    public virtual bool CarriesLedgerShorteningRange(MusicGlyph glyph) => true;
+
+    /// <summary>
     /// The text face a score in this font sets its chord symbols' letters in when the score
     /// names none (<c>TextFontPlan.Resolve</c>), or null for the engraving's own (TeX Gyre Heros).
     /// </summary>

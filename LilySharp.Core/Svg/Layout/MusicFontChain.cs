@@ -236,6 +236,9 @@ internal sealed class MusicFontChain : MusicFont
     public override bool PedalPedCarriesItsPeriod => OwnerOf(MusicGlyph.KeyboardPedalPed).PedalPedCarriesItsPeriod;
 
     /// <inheritdoc/>
+    public override bool CarriesLedgerShorteningRange(MusicGlyph glyph) => OwnerOf(glyph).CarriesLedgerShorteningRange(glyph);
+
+    /// <inheritdoc/>
     /// <remarks>The first font's: the font the score wrote first is the one it reads as.</remarks>
     public override string? ChordTextFace => First.ChordTextFace;
     internal override bool SetsDynamicsInItsOwnGlyphs => First.SetsDynamicsInItsOwnGlyphs;

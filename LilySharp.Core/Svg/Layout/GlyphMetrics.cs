@@ -634,6 +634,20 @@ internal static partial class GlyphMetrics
     public static (double Bottom, double Top) AccidentalLedgerShorteningRange(
         string? accidental, bool parenthesized)
     {
+        // A font with no such table (SMuFL, §3 #3): the accidental's own box is the span it
+        // reaches — LILYSHARP-OWN. Measured before (Lab sessions/p871/probe/ledger, 30 accidentals
+        // on ledgered notes, ledger left end against the accidental's ink right edge): with the
+        // feta ranges Bravura's ledgers ran 0.05 into 5 accidentals and Petaluma's into 11 —
+        // their sharps and naturals reach further up and down than the Metafont spans. A
+        // parenthesized one keeps at least the right parenthesis's span.
+        if (AccidentalGlyphOf(RestoreMainOf(accidental) ?? accidental) is { } glyph
+            && !MusicFont.Current.CarriesLedgerShorteningRange(glyph))
+        {
+            var box = GetAccidentalBBox(accidental);
+            return parenthesized
+                ? (Math.Min(-1.0, box.Bottom), Math.Max(1.0, box.Top))
+                : (box.Bottom, box.Top);
+        }
         if (parenthesized)
             return (-1.0, 1.0);
         return (RestoreMainOf(accidental) ?? accidental) switch
@@ -654,6 +668,21 @@ internal static partial class GlyphMetrics
             _ => (0.0, 0.0),
         };
     }
+
+    /// <summary>The glyph an accidental word is drawn with, or null for none.</summary>
+    private static MusicGlyph? AccidentalGlyphOf(string? accidental) => accidental switch
+    {
+        "sharp" => MusicGlyph.AccidentalSharp,
+        "flat" => MusicGlyph.AccidentalFlat,
+        "natural" => MusicGlyph.AccidentalNatural,
+        "doubleSharp" => MusicGlyph.AccidentalDoubleSharp,
+        "doubleFlat" => MusicGlyph.AccidentalDoubleFlat,
+        "quarterSharp" => MusicGlyph.AccidentalQuarterToneSharpStein,
+        "threeQuarterSharp" => MusicGlyph.AccidentalThreeQuarterTonesSharpStein,
+        "quarterFlat" => MusicGlyph.AccidentalQuarterToneFlatStein,
+        "threeQuarterFlat" => MusicGlyph.AccidentalThreeQuarterTonesFlatZimmermann,
+        _ => null,
+    };
 
     /// <summary>The same lookup asked of ONE font — see
     /// <see cref="GetNoteheadBBox(MusicFontDesign, int)"/>.</summary>

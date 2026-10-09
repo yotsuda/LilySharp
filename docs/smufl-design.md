@@ -67,7 +67,7 @@ score parts { fonts petaluma  staff melody }
 |---|---|---|---|---|---|
 | 1 | **LILC の箱**（LP が配置に使う設計の箱。輪郭の箱と 0.001〜0.448 ss 違う・ヘ音記号の下 0.448） | `GlyphMetricsGenerated.cs`・`GlyphMetrics.cs` | S~ | `glyphBBoxes`（＝輪郭の箱）とは**別欄**に LILC の箱 | `glyphBBoxes` |
 | 2 | **符尾の付け点**（上・下・頭の形ごと。下は上の鏡ではない＝s2triangle） | `GlyphMetrics.cs:939-1006` | S~ | `stemUpSE`／`stemDownNW` に入れ、デザインごとの値を保つ | metadata の anchor |
-| 3 | **ledger-shortening-range**（臨時記号ごとの加線の短縮） | `GlyphMetrics.cs:687-701`（mf から手写し） | E | 拡張欄 | `cutOut*` から導く（要設計）か短縮しない |
+| 3 | **ledger-shortening-range**（臨時記号ごとの加線の短縮） | `GlyphMetrics.AccidentalLedgerShorteningRange`（mf から手写し） | E | 拡張欄 | ✅ **字の箱の上下**（第871・`MusicFont.CarriesLedgerShorteningRange`＝SMuFL は false・LILYSHARP-OWN）。feta の範囲のままだと Bravura で 5・Petaluma で 11 の加線が臨時記号に 0.05 食い込んでいた（Lab `p871/probe/ledger`）＝4 書体とも 0 に・網 `SmuflPlacementTests.ALedgerLine…` |
 | 4 | **光学サイズ 8 本**（11〜26・比で最寄りを選び magstep で拡縮。全寸法・skyline・輪郭がデザインごと） | `EmmentalerDesignSize.cs`・`GrobFontSize.cs` | E | metadata を**デザインごとに 8 枚**＋選び方の表 | 1 枚を magstep で拡縮 |
 | 5 | **design_size**（LILY 表・11.22〜25.20） | 生成器 `EMP:495-505` | E | 拡張欄 | 不要 |
 | 6 | LILY 大域表（staff_space・linethickness・blot_diameter 等） | 生成器 | E | 拡張欄（今は staff_space と design_size だけ読む） | 不要 |
@@ -271,7 +271,7 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
      | #3 加線の短縮 → なし | 0 | 112 | 0.32 | <0.2: 103・<1: 9 |
 
      ⇒ 効きの大きいのは **#1**（LP の配置は設計の箱で組まれる＝輪郭で組むと段割れが変わる）。**#4 は小さい**（0.14 以下）。
-     #3 は SMuFL 書体にも今 Emmentaler の範囲（mf の accbot/acctop）を字の名前で当てている＝`cutOut*` から導くかは要設計のまま（Leland 等の字形で範囲が合うかは未確認）。
+     #3 は第871 で閉じた（§3 の表）＝SMuFL 書体は臨時記号の字の箱の上下を範囲にする。
    - ✅ **全コーパスの重なりの数え上げ（第869）**: 全 998 冊を 4 書体で `lysc boxes` に描き（Lab `p869/coll/boxes-all.ps1`）、グリフどうしのインクの箱が
      縦横とも 0.05 ss を超えて重なる組を種類の組ごとに数えた（`coll/count.ps1`・Emmentaler＝LP の配置が基準）。Emmentaler より増えた組:
      **拍子の数字どうし**（Petaluma で約 280）・**下向き 8 分の旗 × 符頭**（3 書体とも 8474 対 Emmentaler 2312）・装飾記号どうし（4 書体で計 3＝目視で心配したほど実コーパスでは起きない）。

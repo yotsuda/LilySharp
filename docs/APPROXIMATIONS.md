@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 225 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **351** | |
+| `OWN` | 226 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **352** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（225 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（226 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **:90** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
@@ -433,6 +433,7 @@
 - **:160** ⚠️ LILYSHARP-OWN (disclosed 2026-08-07, session 109 audit): Y at the
 ### `LilySharp.Core/Svg/Layout/GlyphMetrics.cs`
 - **:161** LILYSHARP-OWN: the gap Lily# leaves between a LYRIC syllable and its neighbour.
+- **:638** reaches — LILYSHARP-OWN. Measured before (Lab sessions/p871/probe/ledger, 30 accidentals
 ### `LilySharp.Core/Svg/Layout/HairpinEngraver.cs`
 - **:541** ⚠️ LILYSHARP-OWN, DECLARED: the voice a hairpin supports off. LilyPond's
 ### `LilySharp.Core/Svg/Layout/HeaderBand.cs`
@@ -486,9 +487,9 @@
 - **:3750** ⚠️ LILYSHARP-OWN, DECLARED: LilyPond's pure heights are BOXES — the begin-of-line
 - **:5125** LILYSHARP-OWN: the band is Lily#'s model of a line LilyPond walks as a loose line
 ### `LilySharp.Core/Svg/Layout/MusicFont.cs`
-- **:262** drawn as, so no Emmentaler book moves. LILYSHARP-OWN.
-- **:513** LILYSHARP-OWN: hand-tuned, and the only head width that is. ⚠️ NOT because LilyPond
-- **:526** LILYSHARP-OWN: the sM1 advance was never extracted either; 1.30 over the
+- **:272** drawn as, so no Emmentaler book moves. LILYSHARP-OWN.
+- **:523** LILYSHARP-OWN: hand-tuned, and the only head width that is. ⚠️ NOT because LilyPond
+- **:536** LILYSHARP-OWN: the sM1 advance was never extracted either; 1.30 over the
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:155** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **:181** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN

@@ -50,6 +50,40 @@ public class SmuflPlacementTests
 
     private static double CentreX(BoxSymbol s) => (s.Box[0] + s.Box[2]) / 2;
 
+    /// <summary>
+    /// A ledger line stops short of its note's accidental in every font. LilyPond shortens it
+    /// over the accidental's <c>ledger-shortening-range</c>, a Metafont extension of Emmentaler's
+    /// (docs/smufl-design.md §3 #3); a SMuFL font has none, so the glyph's own box is the span.
+    /// Measured before that (Lab sessions/p871/probe/ledger): with the feta spans, Bravura's
+    /// ledgers ran 0.05 into 5 of these accidentals and Petaluma's into 11.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Fonts))]
+    public void ALedgerLine_StopsShortOfItsAccidental_InEveryFont(string font)
+    {
+        var symbols = Symbols(font,
+            "cis'''4 des''' eis''' fes''' gis''' aes''' bis''' ces'''' | cisis''' deses''' eisis''' fisis''' cis'''' ees'''' r2 | "
+            + "cis4 des eis fes gis, aes, bis, ces | cisis deses eisis fisis cis, ees, r2 |");
+        var accidentals = symbols.Where(s => s.Kind == "accidental").ToList();
+        var ledgers = symbols.Where(s => s.Kind == "ledgerLine").ToList();
+        Assert.True(accidentals.Count >= 28, $"{font}: {accidentals.Count} accidentals");
+        int pairs = 0;
+        foreach (var a in accidentals)
+            foreach (var l in ledgers)
+            {
+                // A ledger that starts within 1.5 to the right of the accidental's ink and spans
+                // its height — the ledgers of its own note.
+                bool beside = l.Box[0] < a.Box[2] + 1.5 && l.Box[2] > a.Box[2]
+                    && l.Box[1] <= a.Box[3] && l.Box[3] >= a.Box[1];
+                if (!beside)
+                    continue;
+                pairs++;
+                Assert.True(l.Box[0] >= a.Box[2] - 0.01,
+                    $"{font}: a ledger at y {l.Box[1]:F3} starts {a.Box[2] - l.Box[0]:F3} inside an accidental");
+            }
+        Assert.True(pairs > 20, $"{font}: only {pairs} ledger/accidental pairs measured");
+    }
+
     [Theory]
     [MemberData(nameof(Fonts))]
     public void AScript_IsCentredOnItsHead_InEveryFont(string font)
