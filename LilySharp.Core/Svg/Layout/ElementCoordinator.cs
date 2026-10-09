@@ -2901,6 +2901,9 @@ internal sealed class ElementCoordinator
             EndColumn = endColumn,
             StartStemUp = startStemUp,
             EndStemUp = endStemUp,
+            // The staff the scorer reads its lines off; a tab keeps the default (its branch
+            // above places the bow itself).
+            StaffLines = staff is { IsTab: false } ? staff.Lines : EngravingDefaults.DefaultStaffLines,
         };
     }
 
@@ -3296,10 +3299,14 @@ internal sealed class ElementCoordinator
         return staffMiddleDown - staffPosition / 2.0 - upOffset;
     }
 
+    /// <summary>The head's box as the item DRAWS it — its own style's glyph, in the cue's font
+    /// for a cue. LilyPond's bound boxes are the head's stencil extent (tie-formatting-problem.cc:119,
+    /// slur-scoring.cc:576), and a black slash is 1.7152 wide where the plain head is 1.3042: until
+    /// 2026-10-10 this read the plain head for every style, so a slash tie left its head 0.41 early
+    /// and crossed into its own ink (Lab sessions/p872/probe/slashtie, st5).</summary>
     private static GlyphMetrics.BBox BowHeadBox(MusicItem item, int noteValue)
-        => BowFont(item) is { } cueFont
-            ? GlyphMetrics.GetNoteheadBBox(cueFont, noteValue)
-            : GlyphMetrics.GetNoteheadBBox(noteValue);
+        => GlyphMetrics.GetNoteheadBBox(BowFont(item) ?? GlyphMetrics.StaffHeadFont,
+            GlyphMetrics.HeadStyleOf(item), noteValue);
 
     /// <summary>
     /// The font a slur reads a note column's head-hung grobs from — its stem's attachment x

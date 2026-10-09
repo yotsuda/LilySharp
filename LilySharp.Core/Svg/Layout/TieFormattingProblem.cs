@@ -99,6 +99,23 @@ internal sealed class TieSpecification
     public int Position => Tie.StaffPosition;
 
     /// <summary>
+    /// The lines of the staff this tie is scored on — LilyPond's
+    /// <c>details_.staff_symbol_referencer_</c>, the one grob every line test and the staff span
+    /// read (<c>Staff_symbol_referencer::on_line</c>, <c>on_staff_line</c>, <c>staff_span</c>).
+    /// A column-less fixture and a TAB keep the five-line default: the tab branch is Lily#'s own
+    /// (see <see cref="Y"/>) and places its bow before the scorer reads a line.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ UNTIL 2026-10-10 THE FIVE LINES WERE HARD-CODED in the scorer — <c>|pos| ≤ 3</c> for
+    /// the widened staff span, <c>pos % 2 == 0</c> for a line, <c>|pos| ≤ 4</c> for a drawn one —
+    /// so a tie on a one-line staff was placed as if four more lines stood around it: `b4~ b4`
+    /// on `as lines 1` sat 0.26 above the line and 1.30 wide, where LilyPond (whose widened
+    /// span is empty there) sits at 0.75 and runs head centre to head centre, 2.60 wide; the
+    /// slash tie of site/sketch-in-c.lys the same (Lab sessions/p872/probe/slashtie).
+    /// </remarks>
+    public int StaffLines { get; init; } = EngravingDefaults.DefaultStaffLines;
+
+    /// <summary>
     /// A direction IMPOSED on this tie, or null — LilyPond's <c>has_manual_dir_</c>.
     /// </summary>
     /// <remarks>
@@ -343,7 +360,7 @@ internal sealed class TieFormattingProblem
             else if (specs[i].StartDots > 0)
             {
                 int pos = specs[i].Position;
-                _dotPositions.Add(pos % 2 == 0 ? pos + 1 : pos);
+                _dotPositions.Add(OnLine(i, pos) ? pos + 1 : pos);
             }
         }
     }
@@ -564,6 +581,45 @@ internal sealed class TieFormattingProblem
         => outline is { } o
             ? (dir > 0 ? o.HeadY.Up : o.HeadY.Down)
             : dir * double.NegativeInfinity;
+
+    /// <summary>
+    /// <c>Staff_symbol_referencer::on_line (details_.staff_symbol_referencer_, pos)</c> — a line
+    /// the specification's staff draws, or the ledger a head there would carry
+    /// (<c>allow_ledger</c> defaults to true).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/staff-symbol-referencer.cc:27-31 Staff_symbol_referencer::on_line;
+    /// <see cref="EngravingDefaults.OnLineOrLedger"/> is the walk.</remarks>
+    private bool OnLine(int specIdx, int pos)
+        => EngravingDefaults.OnLineOrLedger(pos, _specs[specIdx].StaffLines);
+
+    /// <summary>
+    /// <c>Staff_symbol_referencer::on_staff_line</c> — the drawn lines only (<c>allow_ledger</c>
+    /// false), which the tall-tie nudge alone asks (:553).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/staff-symbol-referencer.cc:33-38 Staff_symbol_referencer::on_staff_line.</remarks>
+    private bool OnStaffLine(int specIdx, int pos)
+        => EngravingDefaults.OnDrawnStaffLine(pos, _specs[specIdx].StaffLines);
+
+    /// <summary>
+    /// <c>Staff_symbol_referencer::staff_span</c>: the specification's staff's outer drawn lines,
+    /// as positions — <c>Staff_symbol::line_span</c>, which is (1, −1), the empty interval, for
+    /// no lines at all. Five lines give (−4, 4); one line (0, 0), which <c>widen (-1)</c> empties.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/staff-symbol-referencer.cc:180-187 staff_span;
+    /// lily/staff-symbol.cc:399-418 Staff_symbol::line_span.</remarks>
+    private (double Down, double Up) StaffSpan(int specIdx)
+    {
+        var lines = EngravingDefaults.StaffLinePositions(_specs[specIdx].StaffLines);
+        return lines.Length == 0 ? (1, -1) : (lines[0], lines[lines.Length - 1]);
+    }
+
+    /// <summary><c>staff_span.widen (-1); staff_span.contains (pos)</c> — the staff's inner
+    /// positions (:522-525, :777-784).</summary>
+    private bool WithinStaff(int specIdx, int pos)
+    {
+        var (down, up) = StaffSpan(specIdx);
+        return pos >= down + 1 && pos <= up - 1;
+    }
 
     /// <summary>
     /// Whether one bound's column has a head AT <paramref name="pos"/> — LilyPond's
@@ -947,9 +1003,11 @@ internal sealed class TieFormattingProblem
         //   column's TIED heads — so a middle tie of a chord never hugs.
         double leftHeadEdge = HeadExtentAt(_startOutlines[specIdx], dir);
         double rightHeadEdge = HeadExtentAt(_endOutlines[specIdx], dir);
+        // ⚠️ `!on_line (pos)` (:500-501), the staff's own lines and ledgers — not "pos is odd",
+        //   which is that answer on a five-line staff only.
         if (yTune
             && Math.Max(Math.Abs(leftHeadEdge - y), Math.Abs(rightHeadEdge - y)) < 0.25
-            && pos % 2 != 0)
+            && !OnLine(specIdx, pos))
         {
             deltaY = (leftHeadEdge - y) + dir * _details.OuterTieVerticalGap;
         }
@@ -964,15 +1022,15 @@ internal sealed class TieFormattingProblem
             // narrower here and so a little flatter than the branch it lands in expects.
             double height = BowHeight(GetAttachment(specIdx, y + deltaY));
 
-            // staff_span widened by -1: positions -3..3.
-            bool withinStaff = Math.Abs(pos) <= 3;
+            // staff_span widened by -1 (:522-525): positions -3..3 on five lines, NOTHING on one.
+            bool withinStaff = WithinStaff(specIdx, pos);
             bool nearHeads = ContainsPosition(_startOutlines[specIdx], pos)
                              || ContainsPosition(_endOutlines[specIdx], pos);
             if (nearHeads || withinStaff)
             {
                 if (height < _details.IntraSpaceThreshold * 0.5)
                 {
-                    if (pos % 2 == 0)
+                    if (OnLine(specIdx, pos))
                     {
                         // TipStaffLineClearance is stored in staff spaces
                         // (= LP's half-space value x 0.5 already).
@@ -994,7 +1052,7 @@ internal sealed class TieFormattingProblem
                     int roundPos = (int)Math.Floor(topPos + 0.5); // round_halfway_up
                     // Clearance compared in half-space units (LP raw value).
                     double clearanceHs = _details.CenterStaffLineClearance * 2;
-                    bool onRealStaffLine = EngravingDefaults.OnStaffLine(roundPos);
+                    bool onRealStaffLine = OnStaffLine(specIdx, roundPos);
                     if (Math.Abs(topPos - roundPos) < clearanceHs && onRealStaffLine)
                     {
                         double newY = (roundPos + clearanceHs * dir) * 0.5;
@@ -1269,9 +1327,11 @@ internal sealed class TieFormattingProblem
         // used to read the five-line OnStaffLine (|pos| <= 4), so the top of a low tie — a down
         // tie under the staff, the only ties this gate lets through outside it — never paid
         // for sitting on a ledger's position.
+        // :764-766 — on_line (ledgers too) and `staff_span[UP] * 0.5 > top_y`, the staff's own
+        // top line (2.0 on five lines, 0 on one).
         int roundTopPos = (int)Math.Round(topPos);
-        if (roundTopPos % 2 == 0
-            && topPos * 0.5 < 2.0)
+        if (OnLine(config.SpecIndex, roundTopPos)
+            && StaffSpan(config.SpecIndex).Up * 0.5 > topPos * 0.5)
         {
             double clearanceHs = _details.CenterStaffLineClearance * 2;
             demerits += _details.StaffLineCollisionPenalty
@@ -1287,10 +1347,10 @@ internal sealed class TieFormattingProblem
         // head on the stem. GenerateConfiguration was already spelling it the other way, one
         // ContainsPosition call away in the same file — the two spellings of one LilyPond line.
         int roundTipPos = (int)Math.Round(tipPos);
-        if (roundTipPos % 2 == 0
+        if (OnLine(config.SpecIndex, roundTipPos)
             && (ContainsPosition(_startOutlines[config.SpecIndex], roundTipPos)
                 || ContainsPosition(_endOutlines[config.SpecIndex], roundTipPos)
-                || Math.Abs(roundTipPos) <= 3))
+                || WithinStaff(config.SpecIndex, roundTipPos)))
         {
             double clearanceHs = _details.TipStaffLineClearance * 2;
             demerits += _details.StaffLineCollisionPenalty

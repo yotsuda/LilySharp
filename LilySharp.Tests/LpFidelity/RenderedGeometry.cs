@@ -295,7 +295,21 @@ internal sealed class RenderedGeometry
 
     private List<double> StaffLineYs(int page)
     {
-        var ys = _pages[page].Lines
+        var ys = StaffLineCandidateYs(page);
+        static bool Sibling(double a, double b)
+            => Math.Abs(Math.Abs(a - b) - 1.0) <= 1e-6 || Math.Abs(Math.Abs(a - b) - 1.5) <= 1e-6;
+        return ys
+            .Where((y, i) => (i > 0 && Sibling(ys[i - 1], y)) || (i + 1 < ys.Count && Sibling(y, ys[i + 1])))
+            .ToList();
+    }
+
+    /// <summary>
+    /// <see cref="StaffLineYs"/> before its sibling test — every full-width staff-thickness
+    /// rule, top down. A ONE-line staff has no sibling to show and is only read here
+    /// (<see cref="BowAttachmentAboveStaffLine"/>).
+    /// </summary>
+    private List<double> StaffLineCandidateYs(int page)
+        => _pages[page].Lines
             .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
                         && !l.IsDashed
                         && Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9)
@@ -306,12 +320,6 @@ internal sealed class RenderedGeometry
             .Select(g => g.Min(l => l.Y1))
             .OrderBy(y => y)
             .ToList();
-        static bool Sibling(double a, double b)
-            => Math.Abs(Math.Abs(a - b) - 1.0) <= 1e-6 || Math.Abs(Math.Abs(a - b) - 1.5) <= 1e-6;
-        return ys
-            .Where((y, i) => (i > 0 && Sibling(ys[i - 1], y)) || (i + 1 < ys.Count && Sibling(y, ys[i + 1])))
-            .ToList();
-    }
 
     public IReadOnlyList<double> StaffRefpoints(int page = 0)
     {
@@ -2749,6 +2757,31 @@ internal sealed class RenderedGeometry
         }
         // Device y is down; the staff refpoint is the middle line.
         return refs[0] - bows[index].P0.Y;
+    }
+
+    /// <summary>
+    /// How high bow <paramref name="index"/> attaches above the page's drawn staff line
+    /// <paramref name="line"/> (top down), in staff spaces — <see cref="BowAttachmentAboveStaffMiddle"/>
+    /// for a staff that is not five lines, which that reading refuses: a one-line staff has one
+    /// line to measure from, a four-line staff's middle (position 0) is its second from the bottom.
+    /// </summary>
+    public double BowAttachmentAboveStaffLine(int index, int line, int page = 0)
+    {
+        var ys = StaffLineCandidateYs(page);
+        if (line < 0 || line >= ys.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for staff line {line} but {ys.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        var bows = _pages[page].Beziers;
+        if (index < 0 || index >= bows.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for bow {index} but {bows.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        return ys[line] - bows[index].P0.Y;
     }
 
     public double BowSpan(int index, int page = 0)

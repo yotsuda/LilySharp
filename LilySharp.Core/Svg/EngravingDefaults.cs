@@ -159,6 +159,67 @@ internal static class EngravingDefaults
         return false;
     }
 
+    /// <summary>Whether a rounded staff position sits on a line a notation staff of
+    /// <paramref name="lineCount"/> lines draws OR on the ledger line a head there would carry —
+    /// <c>Staff_symbol::on_line</c> with <c>allow_ledger</c>, which is what
+    /// <c>Staff_symbol_referencer::on_line</c> asks (the tie scorer's line tests). On every
+    /// table in <see cref="StaffLinePositions"/> this is "the position is even", and the ledger
+    /// walk is kept rather than that reading: it is LilyPond's own rule, and the one that still
+    /// answers if a table ever holds an odd line.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/staff-symbol.cc:372-396 Staff_symbol::on_line — a staff line, else
+    ///   <c>ledger_positions (me, pos)</c> holds the position;
+    /// LILYPOND-REF: lily/staff-symbol.cc:122-319 Staff_symbol::ledger_positions, the default
+    ///   branch (no <c>ledger-positions</c>, <c>ledger-extra</c> 0): the staff line NEAREST the
+    ///   position (:163-179, a tie broken toward the middle), none when the head sits on it
+    ///   (:181-183), else every other position of the nearest line's parity between that line
+    ///   and the head (:289-306), minus the staff's own lines (:308-317).
+    /// </remarks>
+    public static bool OnLineOrLedger(int roundedPosition, int lineCount)
+    {
+        if (OnDrawnStaffLine(roundedPosition, lineCount))
+            return true;
+
+        // find the staff line nearest to note position (:163-179)
+        double nearestLine = 0;
+        double lineDist = double.PositiveInfinity;
+        foreach (double p in StaffLinePositions(lineCount))
+        {
+            double dist = System.Math.Abs(p - roundedPosition);
+            // prefer values nearer to the middle staff line
+            if ((p >= 0 && roundedPosition > 0 && p < roundedPosition)
+                || (p <= 0 && roundedPosition < 0 && p > roundedPosition))
+                dist = System.Math.BitDecrement(dist);   // std::nextafter (dist, 0)
+            if (dist < lineDist)
+            {
+                nearestLine = p;
+                lineDist = dist;
+            }
+        }
+
+        // nothing to do for notes on a staff line and normal ledger lines (:181-183)
+        if (lineDist == 0)
+            return false;
+
+        // ledger_fill: from the nearest staff line to the note head (:185-200; ledger-extra is
+        // 0, so extra_pos is the position itself)
+        double fillDown = System.Math.Min(nearestLine, roundedPosition);
+        double fillUp = System.Math.Max(nearestLine, roundedPosition);
+
+        // normal ledger lines (:289-306): bottom..top of the nearest line's parity
+        int bottom = (int)System.Math.Ceiling(fillDown);
+        int top = (int)System.Math.Floor(fillUp);
+        int nearest = (int)(nearestLine < 0 ? System.Math.Floor(nearestLine) : System.Math.Ceiling(nearestLine));
+        int oddStart = nearest & 1;
+        int numLedgers = (top - bottom + 2 - ((bottom & 1) != oddStart ? 1 : 0)) / 2;
+        int value = bottom + ((bottom & 1) != oddStart ? 1 : 0);
+        for (int i = 0; i < numLedgers; i++, value += 2)
+            // :308-317 drop the ledgers that fall on staff lines — a staff line answered above.
+            if (value == roundedPosition)
+                return true;
+        return false;
+    }
+
     /// <summary>Staff line thickness: 1.0 × line-thickness.</summary>
     /// <remarks>
     /// LILYPOND-REF: lily/staff-symbol.cc — StaffSymbol thickness default 1.0
