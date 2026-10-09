@@ -280,6 +280,10 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
      `digitHalfHeight = 1.0` として当てていた（§3 #14）。`MeterRowCentre`＝段の数字の箱の中心を上下各 2 間の中央へ（Emmentaler は箱なし＝1.0）。
      **残る判断 2 つ**: ⒜ Petaluma の数字は字そのものが 3.1〜3.9 ss＝中央に置いても上下が 1 ss 余り重なる（metadata は `timeSig3Numerator` 等を名乗るが OTF に字が無い）。
      ⒝ SMuFL の下向き 8 分の旗は 3.23〜3.28 ss と Emmentaler より長く、LP の符尾の長さのままだと短くなった符尾で旗の先が符頭に触れる・迫る（短い旗の代替は上向きにしか無い）。
+     → **ユーザー「続けて」＝推奨どおり**: ⒜ は字形の設計として残す。⒝ は ⑽（`d397e6501`・LILYSHARP-OWN）＝書体の `Engrave` が
+     `EngravingStyle.DownFlagStemExtension`（8 分・16 分の旗が符尾の先から上へ届く高さ＋黒符頭の中心から下端までの深さ、それぞれ Emmentaler との差）を立て、
+     `CalculateStemLength` が下向きの符尾にだけ足す（`StemDetails.DownFlagExtensions`・Emmentaler は空）＝LP の旗と符頭の余白を保つ。32 分以下は SMuFL では下へ伸びるので対象外。
+     数え直し（Bravura）: 旗 × 符頭の重なりは Emmentaler 以下に。超過は拍子の 2/8 の 7 件（Bravura の 8 が ±1.04＝字形）と単発 4 件だけ。網 `SmuflPlacementTests` 33。
 
 ## 7. 未決（ユーザー判断）→ 第862（2026-10-08）で決まった
 
