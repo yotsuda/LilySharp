@@ -60,13 +60,47 @@ public sealed class ChordAttachedSpacingTests
         var result = SpacingRules.ApplyChordRowSpacing(ScoreTextMetrics.Bundled, 
             Springs(3), TwoColumns, measureIndex: 0, chords, includeAttached: true);
 
-        // The interior spring between the symbol column and the bare note column
-        // is untouched — the symbol overhangs the note, keeping it evenly spaced.
-        Assert.Equal(0.5, result[1].MinDistance, precision: 6);
+        double w = ChordNameEngraver.SymbolInkWidth(ScoreTextMetrics.Bundled, "Cmaj7");
+
+        // The symbol overhangs the bare note: the spring to it is not pushed out to the
+        // symbol's width (the note keeps its place in the even spacing)...
+        Assert.True(result[1].MinDistance < w,
+            $"the note spring ({result[1].MinDistance:F2}) must not hold the whole symbol ({w:F2})");
+        // ...but the symbol still ends inside its bar: the rod to the bar edge spans the bare
+        // column and the two springs share it (the owner's decision of 2026-10-07).
+        Assert.Equal(w + 0.6, result[1].MinDistance + result[2].MinDistance, precision: 6);
+        Assert.Equal(result[1].MinDistance, result[2].MinDistance, precision: 6);
         // The bar's LEFT edge holds only extra-spacing-width's 0.5 — no part of the ink
         // lies left of the column — plus the rod's own padding 0.1
         // (lily/spacing-spanner.cc:315-316 set_column_rods).
         Assert.Equal(0.6, result[0].MinDistance, precision: 6);
+    }
+
+    /// <summary>
+    /// <c>Csus2 Csus4 | Cmaj7</c> over four quarters (scratch/PetalumaChord.lys, 2026-10-09):
+    /// the symbols stand on beats 1 and 3, so a bare column lies between them and another
+    /// between the second and the bar line. Both gaps priced nothing, and the engraver shoved
+    /// the second symbol off its note and over the bar line. Each is now a rod across the
+    /// bare column.
+    /// </summary>
+    [Fact]
+    public void AttachedChords_AcrossBareColumns_ClearEachOtherAndTheBarLine()
+    {
+        var fourQuarters = new List<Fraction>
+            { Fraction.Zero, new Fraction(1, 4), new Fraction(1, 2), new Fraction(3, 4) };
+        var chords = ImmutableArray.Create(
+            Attached("Csus2", Fraction.Zero),
+            Attached("Csus4", new Fraction(1, 2)));
+        double w2 = ChordNameEngraver.SymbolInkWidth(ScoreTextMetrics.Bundled, "Csus2");
+        double w4 = ChordNameEngraver.SymbolInkWidth(ScoreTextMetrics.Bundled, "Csus4");
+
+        var result = SpacingRules.ApplyChordRowSpacing(ScoreTextMetrics.Bundled,
+            Springs(5), fourQuarters, measureIndex: 0, chords, includeAttached: true);
+
+        // Beat 1 → beat 3: the first symbol, its 0.5, the second's 0.5 and one padding.
+        Assert.Equal(w2 + 1.1, result[1].MinDistance + result[2].MinDistance, precision: 6);
+        // Beat 3 → the bar line: the second symbol and its 0.5 and the padding.
+        Assert.Equal(w4 + 0.6, result[3].MinDistance + result[4].MinDistance, precision: 6);
     }
 
     /// <summary>

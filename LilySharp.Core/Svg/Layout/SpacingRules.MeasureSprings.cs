@@ -470,7 +470,29 @@ internal static partial class SpacingRules
             Widen(t + 1, Rod(RightReach(t) + LeftReach(t + 1)));
         }
         Widen(timings.Count, Rod(RightReach(timings.Count - 1)));
-        return result.ToImmutable();
+
+        // A symbol whose next symbol — or the bar edge — is past a bare column is rodded to it
+        // ACROSS that column: the gaps above skip a bare neighbour, so `Csus2 Csus4 | Cmaj7`
+        // over four quarters priced nothing between the first two names and nothing between
+        // the second and the bar line, and the engraver shoved the second name over the bar.
+        // LilyPond's set_column_rods also rods a column to every earlier one that still reaches
+        // it, not only its neighbour; the bar edge is the owner's decision above.
+        // LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods (the inner loop :265-294).
+        List<(int Left, int Right, double Distance)>? spans = null;
+        int previous = -1;
+        for (int t = 0; t <= timings.Count; t++)
+        {
+            bool edge = t == timings.Count;
+            if (!edge && width[t] <= 0)
+                continue;
+            if (previous >= 0 && t - previous > 1)
+                (spans ??= new()).Add((previous + 1, t + 1,
+                    Rod(RightReach(previous) + (edge ? 0 : LeftReach(t)))));
+            previous = t;
+        }
+        return spans is null
+            ? result.ToImmutable()
+            : SpringSolver.ApplyRods(result.ToImmutable(), spans);
     }
 
     /// <summary>
