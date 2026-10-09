@@ -95,6 +95,19 @@ public class SmuflChordSymbolTests
         Assert.False(InCompanion(HeaderSvg(""), "Tune"));
     }
 
+    /// <summary>So is free text — <c>@text("…")</c> — unless the score names its face (owner,
+    /// 2026-10-09).</summary>
+    [Fact]
+    public void APetalumaTextScript_IsWrittenInPetalumaScript_UnlessTheScoreNamesItsFace()
+    {
+        static string TextSvg(string fonts) => LiveRender.SvgFromRenderSpec(fonts + "\n"
+            + "part m { clef treble }\nsection A { m { c'2@text(\"here\") d'2 | } }\nform { A }\nscore { staff m }\n");
+        const string here = "<text[^>]*font-family=\"Petaluma Script[^>]*>here</text>";
+        Assert.Matches(here, TextSvg("fonts { music \"Petaluma\" }"));
+        Assert.DoesNotMatch(here, TextSvg("fonts { music \"Petaluma\" text \"TeX Gyre Heros\" }"));
+        Assert.DoesNotMatch(here, TextSvg(""));
+    }
+
     /// <summary>The rehearsal mark is set in the companion too — the serif box was the one
     /// typeset letter left on a handwritten page (owner, 2026-10-09).</summary>
     [Fact]
