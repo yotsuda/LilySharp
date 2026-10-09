@@ -775,6 +775,11 @@ Emmentaler and the render warns once per glyph. The first font's own line thickn
 nothing; whatever they say wins. `lysc svg --set music=Bravura` lays a name over the
 file's. The LilyPond twin stays in Emmentaler (LilyPond 2.26 reads no SMuFL font) and warns.
 
+A **chord symbol** follows the music font too: its ♭ ♯ △ ° ø + are the font's own
+chord-symbol glyphs where it has them, and under Petaluma its letters are set in Petaluma
+Script, the handwritten face bundled beside it — unless `chord` (or `chords`, or the `sans`
+family) names a face, or `chord as serif` / `as sans` says which family to follow.
+
 An entry is a **key followed by attributes**, in any order, and it ends where the next key
 begins — there is no separator. The attributes:
 

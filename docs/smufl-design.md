@@ -284,6 +284,15 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
      `EngravingStyle.DownFlagStemExtension`（8 分・16 分の旗が符尾の先から上へ届く高さ＋黒符頭の中心から下端までの深さ、それぞれ Emmentaler との差）を立て、
      `CalculateStemLength` が下向きの符尾にだけ足す（`StemDetails.DownFlagExtensions`・Emmentaler は空）＝LP の旗と符頭の余白を保つ。32 分以下は SMuFL では下へ伸びるので対象外。
      数え直し（Bravura）: 旗 × 符頭の重なりは Emmentaler 以下に。超過は拍子の 2/8 の 7 件（Bravura の 8 が ±1.04＝字形）と単発 4 件だけ。網 `SmuflPlacementTests` 33。
+   - ✅ **⑾ 和音記号を書体の流儀で**（`8f72beb3b`・ユーザー「Petaluma のコード名は特徴的」→「記号も文字も合わせる」・LILYSHARP-OWN）:
+     ⒜ `MusicGlyph` に SMuFL の和音記号用の字 8 つ（`csymAccidentalFlat/Sharp/DoubleSharp/DoubleFlat`・`csymDiminished`・`csymHalfDiminished`・
+     `csymAugmented`・`csymMajorSeventh`）＝**Emmentaler に無い初めての字**（`MusicGlyphs.IsSmuflOnly`・Emmentaler の `Has` は false・chain は「最後の
+     Emmentaler が全部描く」前提を外して不在と記す・boxes は SMuFL 名で kind `chordName`）。`ChordNameGlyphRun` は書体が持てば ♭♯△°ø+ をそれで描き、
+     大きさは**その段の文字の em**（`CsymFontSize`＝SMuFL は文字と並べる字として作る・Bravura の ♭ は em 4 で高さ 3.0＝大文字の高さ）、° は上付きの位置。
+     ⒝ **Petaluma Script を同梱**（steinbergmedia/petaluma・同じ OFL・OTF＋WOFF2）。`MusicFont.ChordTextFace`（Petaluma → Petaluma Script＝
+     `MusicFonts.ChordTextFaces`）を、和音記号に面も家族も書いていない譜で `TextFontPlan.Resolve` が渡す。計測と PNG は `TextFontMetrics.CompanionFaces`、
+     PDF は常に自分のプログラムを載せ、埋め込む SVG は WOFF2 を埋め込み、VS Code のプレビューは `scoreFonts.ts` が宣言。Bravura／Leland の文字は Heros のまま
+     （推奨のテキスト書体 Academico／Edwin は未同梱）。網 `SmuflChordSymbolTests` 6。
 
 ## 7. 未決（ユーザー判断）→ 第862（2026-10-08）で決まった
 

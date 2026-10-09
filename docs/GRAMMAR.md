@@ -395,6 +395,10 @@ Role           = 'title' | 'subtitle' | 'composer' | 'poet'
    LilyPond's own value. `lysc --set music=NAME` lays a name over the file's. The LilyPond twin cannot
    follow it (2.26 reads no SMuFL font) and says so. The text that is really notation —
    tab fret numbers, the `treble_8` digit, a compound meter's `+` — stays under `notation`.
+   A CHORD SYMBOL FOLLOWS THE MUSIC FONT (2026-10-09): its ♭ ♯ △ ° ø + are the font's
+   chord-symbol glyphs (SMuFL `csym*`) where it has them, and under Petaluma its letters are
+   the bundled Petaluma Script — unless `chord`, `chords` or the `sans` family names a face,
+   or an `as` redirect says which family to follow.
 
    ⚠️ THE KEYWORD IS `fonts`, PLURAL, AND IT TAKES A BLOCK. The block is an alist of
    family -> face, which is what LilyPond calls `fonts` too
