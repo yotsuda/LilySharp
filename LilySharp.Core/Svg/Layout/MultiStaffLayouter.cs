@@ -3989,7 +3989,7 @@ internal sealed class MultiStaffLayouter
                     // (AttachedChordLine) — and a band here would be the same room a second
                     // time, priced Lily#-shaped (the double-count HANDOFF names as 帯と walk).
                     // The band survives only where no pair walks the line: the system's top
-                    // staff, and a staff whose only symbols are note-attached @chord.
+                    // staff, and a staff whose @chord symbols may join a chord ROW above it.
                     // ★ ...AND UNLESS THE SYMBOLS HAVE GONE UP ONTO THE ROW ABOVE (owner,
                     // 2026-09-06). When every @chord of this staff prints on the chord row's line
                     // (ChordNameEngraver.StaffKeepsItsOwnChordLine), this band is room nothing
@@ -5127,8 +5127,9 @@ internal sealed class MultiStaffLayouter
     /// staff above then clears it by the staff pair's own padding, where LilyPond clears a
     /// ChordNames line by its <c>nonstaff-unrelatedstaff-spacing</c> (1.5 — MEASURED on
     /// test/figbass-chordname-lower-staff, 2.26.0: 1.511 from the upper staff's bottom line
-    /// to the raised 7, against this model's 1.0). Observed by that fixture's snapshot and by
-    /// nothing else; it goes when an <c>@chord</c> line joins the run.
+    /// to the raised 7, against this model's 1.0). Since 2026-10-09 an <c>@chord</c> line joins
+    /// the run too, so the band is left only to a top staff's line and to a staff under a chord
+    /// ROW (its symbols may join the row — <see cref="AttachedChordLineInRun"/>).
     /// ⚠️ UNTIL 2026-09-29 THE HEIGHT WAS A FLAT CAP (1.9 over a baseline taken at ink-bottom
     /// 0) on top of the highest note anywhere in the width: a raised 7 and a ♭ stood out of
     /// it, and a fingered chord row spaced off this band printed into them
@@ -5182,10 +5183,19 @@ internal sealed class MultiStaffLayouter
     /// <para>
     /// The two conditions, and why each:
     /// <list type="bullet">
-    /// <item>A CHORDS TRACK (<c>UseTiming</c>), not a note-attached <c>@chord</c>: only the
-    /// track is LilyPond's ChordNames context (a folded <c>chords … as names</c> row or
-    /// <c>staff … with chords</c>). An <c>@chord</c> annotation is Lily#'s own surface with
-    /// no LilyPond line to model, so a staff carrying only those keeps the band.</item>
+    /// <item>A CHORD LINE OF ITS OWN: a chords TRACK (<c>UseTiming</c> — a folded
+    /// <c>chords … as names</c> row or <c>staff … with chords</c>), or note-attached
+    /// <c>@chord</c> symbols with NO independent chord row above the staff. The twin writes
+    /// both as a <c>\new ChordNames</c> over the staff (LilyPondExporter's
+    /// <c>…InlineChords</c>), so to LilyPond both are one loose line. ⚠️ UNTIL 2026-10-09 THE
+    /// <c>@chord</c> LINE KEPT THE BAND, on the reading that it had "no LilyPond line to
+    /// model" — the twin had one all along, and the band's padding (1.0 against LilyPond's
+    /// <c>nonstaff-unrelatedstaff-spacing</c> 1.5 from the staff above, and the rest of the
+    /// pair's walk) put <c>test/figbass-chordname-lower-staff</c>'s lower staff 0.45 lower than
+    /// LilyPond's (6.02 against 5.57, session 681). With a ROW above, the <c>@chord</c>
+    /// symbols may join that row instead (owner's decision 2026-09-06,
+    /// <c>ChordNameEngraver.ChordLineOfSystem</c>) — a per-system answer the run's elements
+    /// cannot follow — so that configuration keeps the band and its merge.</item>
     /// <item>A SPACEABLE STAFF ABOVE IT in score order: with nothing above, the line leads
     /// the system and its spacing is the previous system's / the page top's business —
     /// that regime keeps the skyline-plus-padding placement
@@ -5201,14 +5211,21 @@ internal sealed class MultiStaffLayouter
     {
         if (score.ChordNames.IsDefaultOrEmpty)
             return false;
-        bool hostsTrack = false;
+        bool hostsTrack = false, hostsInline = false;
         foreach (var c in score.ChordNames)
-            if (!c.IsChordRow && c.UseTiming && c.StaffIndex == staffIndex)
+        {
+            if (c.IsChordRow || c.StaffIndex != staffIndex)
+                continue;
+            if (c.UseTiming)
             {
                 hostsTrack = true;
                 break;
             }
-        if (!hostsTrack)
+            // A numbers-only tab prints no @chord (the staff above names it), so it has no line.
+            if (!TabStaffStencils.BlanksNoteAttachedChord(score, c))
+                hostsInline = true;
+        }
+        if (!hostsTrack && !(hostsInline && ChordRowAbove(score, staffIndex) < 0))
             return false;
         foreach (var (_, staff, idx) in score.EnumerateStaves())
         {

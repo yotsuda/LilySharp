@@ -75,7 +75,7 @@
 "Svg/Layout/MultiStaffLayouter.cs","4340","0.0","? -Math.Max(0.0, qUp.Distance(insideDown) + OutsideStaffStacker.OutsideStaffPadding)","(file-level) LILYPOND-REF: lily/system.cc","Yellow"
 "Svg/Layout/MultiStaffLayouter.cs","4341","0.0",": Math.Max(0.0, qDown.Distance(insideUp) + OutsideStaffStacker.OutsideStaffPadding);","(file-level) LILYPOND-REF: lily/system.cc","Yellow"
 "Svg/Layout/MultiStaffLayouter.cs","4342","0.0","if (move != 0.0)","(file-level) LILYPOND-REF: lily/system.cc","Yellow"
-"Svg/Layout/MultiStaffLayouter.cs","5388","2.0","return closing is { } c ? c - ownHeight / 2.0 : null;","(file-level) LILYPOND-REF: lily/system.cc","Yellow"
+"Svg/Layout/MultiStaffLayouter.cs","5405","2.0","return closing is { } c ? c - ownHeight / 2.0 : null;","(file-level) LILYPOND-REF: lily/system.cc","Yellow"
 "Svg/Layout/PageBreaker.cs","183","1.0","public double InverseHooke { get; init; } = 1.0;","LILYPOND-REF: lily/include/constrained-breaking.hh:71 inverse_hooke_</remarks>","Green"
 "Svg/Layout/PageBreaker.cs","355","0.0","return Math.Max(0.0, SpringLength - refpointDist);","(file-level) LILYPOND-REF: lily/include/constrained-breaking.hh:35-43 Line_shape, whose two","Yellow"
 "Svg/Layout/PageBreaker.cs","433","0.0","return Math.Max(0.0, Math.Max(spec.Padding, spec.MinimumDistance - line.TopExtent));","LILYPOND-REF: lily/page-breaking.cc:1789-1790 min_whitespace_at_top_of_page — a","Green"

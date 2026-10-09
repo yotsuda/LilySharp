@@ -189,8 +189,8 @@
 - **:865** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
 - **:1142** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
-- **:2457** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
-- **:2479** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
+- **:2460** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
+- **:2482** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
 - **:793** THE CLEAR HAS NO OBSERVER HERE, and that was measured rather than assumed. Session 457's
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
@@ -203,7 +203,7 @@
 - **:152** is measured-exact there, and no ledger point prices replacing it.
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **:3961** staff down, and this reserves it on the hidden one. No book reaches that.
-- **:5434** company on a row whose symbols sit closer than its spec's 1.0. No point measures
+- **:5451** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:871** does not spell a per-type padding — no point observes a segno/coda over a
 - **:1071** X extent per mark -- and reproduce both pictures. No ledger point is

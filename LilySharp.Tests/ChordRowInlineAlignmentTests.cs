@@ -293,32 +293,31 @@ public class ChordRowInlineAlignmentTests
     }
 
     /// <summary>
-    /// The staff above a lower staff's own chord line (no row anywhere — the band arm every
-    /// two-staff book with a lower <c>@chord</c> takes) is spaced off the LINE'S OWN INK: the
-    /// distance is the line's top plus the staff pair's padding, and a high note in a bar with
-    /// no symbol over it does not lift the line's room.
+    /// The staff above a lower staff's own <c>@chord</c> line (no row anywhere) is spaced as
+    /// LilyPond spaces the <c>\new ChordNames</c> the twin writes for it: the line is an element
+    /// of the pair's run (<c>MultiStaffLayouter.AttachedChordLineInRun</c>), so the book stands
+    /// exactly where the same book with the symbol on a chords TRACK stands.
     /// </summary>
     /// <remarks>
-    /// ⚠️ THE SECOND TERM WAS FOUND BY MEASURING THE FIRST AGAINST LILYPOND (2026-09-29): with
-    /// the band counting the raised 7 at last, test/figbass-chordname-lower-staff's staves
-    /// moved 0.62 apart and landed 0.45 FURTHER from LilyPond than before — because the band
-    /// had also been reading the highest note anywhere in the width (an f3 stem in bar 1, 1.0
-    /// over the line's own bar) where the engraver reads each symbol's own window. Two errors
-    /// had been cancelling to 0.17. The two books here take them one at a time.
+    /// ⚠️ UNTIL 2026-10-09 THIS LINE WAS A BAND (the staff pair's padding over the line's
+    /// top), on the reading that an <c>@chord</c> had no LilyPond line to model — while the twin
+    /// wrote one all along. test/figbass-chordname-lower-staff measured the difference: the band
+    /// put its lower staff 6.02 below the upper one's bottom line, the run 5.52, LilyPond 5.57.
+    /// (The band itself had been taught on 2026-09-29 to read each symbol's own window, not the
+    /// highest note anywhere in the width — the second leg below keeps that.)
     /// </remarks>
     [Fact]
-    public void AStaffOverALowerStaffsOwnChordLine_ClearsExactlyThatLinesInk()
+    public void AStaffOverALowerStaffsOwnChordLine_IsSpacedAsTheTrackLineIs()
     {
-        static (double UpperY, double LowerY, ChordNameLayout? Chord, LilySharp.Core.Rendering.ScoreTextMetrics Fonts)
-            Lay(string lowerBars)
+        static (double UpperY, double LowerY, ChordNameLayout? Chord) Lay(string lowerBars, string chordsRow = "")
         {
             var tree = SyntaxTree.Parse(
                 "octave absolute\n"
               + "part up { clef treble }\n"
               + "part lo { clef treble }\n"
-              + $"section A {{ up {{ b'1 | b'1 | }} lo {{ {lowerBars} }} }}\n"
+              + $"section A {{ up {{ b'1 | b'1 | }} lo {{ {lowerBars} }} {chordsRow} }}\n"
               + "form { A }\n"
-              + "score { staff up  staff lo }\n");
+              + (chordsRow.Length > 0 ? "score { staff up  chords prog  staff lo }\n" : "score { staff up  staff lo }\n"));
             Assert.False(tree.HasErrors,
                 string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
             var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
@@ -326,28 +325,29 @@ public class ChordRowInlineAlignmentTests
             var staves = layout.Systems[0].StaffGroups.SelectMany(g => g.Staves).ToList();
             Assert.Equal(2, staves.Count);
             return (staves[0].Y, staves[1].Y,
-                    layout.ChordNameLayouts.IsDefaultOrEmpty ? null : layout.ChordNameLayouts.Single(),
-                    score.TextMetrics);
+                    layout.ChordNameLayouts.IsDefaultOrEmpty ? null : layout.ChordNameLayouts.Single());
         }
 
-        // ⑴ THE BAND BINDS: the symbol stands over a stemmed g'' (the line is high), the upper
-        // staff has nothing under its bottom line (b'1 sits on the middle line). The distance
-        // between the two top lines is the upper staff (4 ss) and its bottom line's half
-        // thickness, the staff pair's padding, and the line's top over the lower top line.
-        var bound = Lay("g''4 g'' g'' g''@chord(Cm7) | e'1 |");
-        Assert.NotNull(bound.Chord);
-        double lineTop = bound.Chord!.Value.YUp - bound.LowerY
-            + ChordNameEngraver.SymbolInk(bound.Fonts, bound.Chord.Value).Top;
-        double expected = 4.0 + EngravingDefaults.StaffLineThickness / 2.0
-            + StaffSpacingParameters.Default.DefaultStaffStaff.Padding + lineTop;
-        Assert.Equal(expected, bound.UpperY - bound.LowerY, precision: 6);
+        // ⑴ THE LINE BINDS: the symbol stands over a stemmed g'' (the line is high), the upper
+        // staff has nothing under its bottom line. The @chord book and the chords-track book
+        // are one LilyPond book, so they are one picture: staves and the symbol's baseline.
+        var inline = Lay("g''4 g'' g'' g''@chord(Cm7) | e'1 |");
+        var track = Lay("g''4 g'' g'' g'' | e'1 |", "chords prog { . . . Cm7 | . | }");
+        Assert.NotNull(inline.Chord);
+        Assert.NotNull(track.Chord);
+        Assert.Equal(track.UpperY - track.LowerY, inline.UpperY - inline.LowerY, precision: 6);
+        Assert.Equal(track.Chord!.Value.YUp - track.LowerY, inline.Chord!.Value.YUp - inline.LowerY, precision: 6);
 
-        // ⑵ THE BAND DOES NOT OVER-REACH: the symbol is over a bare bar, the high note is in the
-        // other bar. The line's room lies under the a''; the staves stand exactly where the
-        // same book with no symbol at all puts them.
+        // ⑵ THE SAME WHERE THE LINE'S INK IS NOT THE BINDING TERM: the symbol is over a bare bar,
+        // the high note in the other bar. ⚠️ The pair is then CLOSER than the same book with no
+        // symbol (9.595 against 10.095): with a loose line between them, LilyPond aligns the upper
+        // staff against the line and the line against the lower staff — never the two staves
+        // directly (lily/align-interface.cc get_minimum_translations over every line), so the
+        // a'' in a bar the line has no ink over is not measured against the upper staff. The
+        // track has always been spaced so; the @chord line now is too.
         var quiet = Lay("e'1@chord(Cm7) | a''1 |");
-        var control = Lay("e'1 | a''1 |");
+        var quietTrack = Lay("e'1 | a''1 |", "chords prog { Cm7 | . | }");
         Assert.NotNull(quiet.Chord);
-        Assert.Equal(control.UpperY - control.LowerY, quiet.UpperY - quiet.LowerY, precision: 6);
+        Assert.Equal(quietTrack.UpperY - quietTrack.LowerY, quiet.UpperY - quiet.LowerY, precision: 6);
     }
 }

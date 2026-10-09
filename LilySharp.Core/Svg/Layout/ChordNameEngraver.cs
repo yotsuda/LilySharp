@@ -153,8 +153,8 @@ internal static class ChordNameEngraver
     //
     // ⚠️ LILYSHARP-OWN. LilyPond cannot spell the configuration: a `ChordNames` context is its
     // only way to name chords, so its two kinds are two contexts and therefore always two
-    // lines. `@chord` is Lily#'s own surface (MultiStaffLayouter.AttachedChordLineInRun says
-    // the same of it), and this is what a book that uses both gets.
+    // lines (the twin writes an `@chord` as a ChordNames of its own), and this is what a book
+    // that uses both gets.
 
     /// <summary>
     /// The independent chord ROW standing above each staff, by global staff index (absent, or
@@ -226,8 +226,8 @@ internal static class ChordNameEngraver
     /// <para>
     /// ⚠️ LILYSHARP-OWN, all of it. LilyPond cannot spell the configuration: a
     /// <c>ChordNames</c> context is its only way to name chords, so its two kinds are two
-    /// contexts and therefore always two lines. <c>@chord</c> is Lily#'s own surface
-    /// (<c>MultiStaffLayouter.AttachedChordLineInRun</c> says the same of it).
+    /// contexts and therefore always two lines (the twin writes an <c>@chord</c> as a ChordNames
+    /// context of its own).
     /// </para>
     /// <para>
     /// ⚠️ "STAND ON" IS THE BOXES PLUS <see cref="SymbolGap"/>, not bare intersection — the
@@ -720,7 +720,7 @@ internal static class ChordNameEngraver
             // ChordNames line under a spaceable pair (see
             // MultiStaffLayouter.AttachedChordClosingStep for why the closing floor IS the
             // solved position). The floor arm remains the placement for every line no pair
-            // walks: the system's top staff, and @chord-only staves. A line with no skyline
+            // walks: the system's top staff, and a staff under a chord row. A line with no skyline
             // to read (none in the pass above) keeps the bare-staff answer.
             double? solvedAboveTop = attachedBaselineAboveTop?.Invoke(p.sysIdx, p.chord.StaffIndex);
             double floorAboveTop = lineFloor.TryGetValue((p.sysIdx, p.chord.StaffIndex), out var lineFloorAboveTop)

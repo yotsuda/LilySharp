@@ -1493,8 +1493,8 @@ internal sealed partial class LayoutEngine
 
         // An attached chord line that is a RUN ELEMENT is drawn at the run's own answer —
         // the walk's closing step over the pair that brackets it — instead of the
-        // 0.6+protrusion offset (which stays the placement for the top staff and for
-        // @chord-only staves). The walk is the SAME one that reserved the pair's room
+        // 0.6+protrusion offset (which stays the placement for the top staff and for a staff
+        // under a chord row, MultiStaffLayouter.AttachedChordLineInRun). The walk is the SAME one that reserved the pair's room
         // (MultiStaffLayouter.AttachedChordBaselineAboveTop), fed the same skylines
         // (ctx.StaffSkylines are the room's lists) and the same run parts.
         // Null in the preliminary pass, which runs before the per-staff skylines exist;
@@ -1505,7 +1505,7 @@ internal sealed partial class LayoutEngine
         if (ctx.MultiScore is { } multiScore
             && ctx.StaffSkylines is { } roomSkylines
             && staffByIndex != null
-            && !cn.IsDefaultOrEmpty && cn.Any(c => !c.IsChordRow && c.UseTiming))
+            && !cn.IsDefaultOrEmpty && cn.Any(c => !c.IsChordRow))
             attachedBaselineAboveTop = AttachedBaselineAboveTopSupplier(
                 ctx, multiScore, roomSkylines, staffByIndex, systems);
 
@@ -1789,7 +1789,7 @@ internal sealed partial class LayoutEngine
             attachedChordBelow = null;
         if (ctx.MultiScore is { } multiScore && staffByIndex != null
             && ctx.ChordNames is { IsDefaultOrEmpty: false } chordItems
-            && chordItems.Any(c => !c.IsChordRow && c.UseTiming))
+            && chordItems.Any(c => !c.IsChordRow))
         {
             var attCache =
                 new Dictionary<(int, int), (int, VerticalSkyline, VerticalSkyline)?>();
@@ -2398,8 +2398,11 @@ internal sealed partial class LayoutEngine
     private Func<int, MultiStaffLayouter.PairLooseLine?>? BuildAttachedChordLines(
         MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts)
     {
+        // Any attached symbol, track or note-bound @chord: which staves' lines are run elements
+        // is MultiStaffLayouter.AttachedChordLineInRun's answer, asked per staff below — this is
+        // only the bail-out for a score with none (the same one the two suppliers above take).
         if (score.ChordNames.IsDefaultOrEmpty
-            || !score.ChordNames.Any(c => !c.IsChordRow && c.UseTiming))
+            || !score.ChordNames.Any(c => !c.IsChordRow))
             return null;
         return AttachedChordLineSupplier(score, measureLayouts);
     }
