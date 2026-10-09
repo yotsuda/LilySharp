@@ -670,8 +670,12 @@ internal sealed class SkylineBuilder
         VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
         // NaN means the caller only wants the scalar extents (same contract as
-        // SeedSystemStaffSymbol); a text row prints no clef.
-        if (double.IsNaN(systemLeft) || staff.IsTextRow)
+        // SeedSystemStaffSymbol); a text row prints no clef — nor does a ONE-LINE staff
+        // (SpacingRules.EngravesClef, the rule the drawing reads), which seeded a phantom clef
+        // of its staff's type until session 871: a treble's ±3.8 on a rhythm staff that prints
+        // no clef at all.
+        if (double.IsNaN(systemLeft) || staff.IsTextRow
+            || (!staff.IsTab && !SpacingRules.EngravesClef(staff)))
             return;
 
         if (staff.IsTab)
@@ -725,6 +729,15 @@ internal sealed class SkylineBuilder
         // X that is off by a fraction costs a little page spacing and no position.
         double x = systemLeft + EngravingDefaults.ClefGlyphXOffset;
         double originUp = aboveMiddle + staffMiddleUp;
+        // A clef the font bakes no outline for (Emmentaler's percussion clef) seats its ink box,
+        // as the tab clef above does — the glyph's two bars fill it.
+        if (up is null || up.Length == 0 || down is null || down.Length == 0)
+        {
+            var ink = size.Ink(MusicFont.Current.FullSize.Outline(glyph));
+            upSkyline.MergeBox(x + ink.Left, x + ink.Right, originUp + ink.Bottom, originUp + ink.Top);
+            downSkyline.MergeBox(x + ink.Left, x + ink.Right, originUp + ink.Bottom, originUp + ink.Top);
+            return;
+        }
         // PERTURBATION (temporary, 2026-07-28): UP back to a box to name the owner of the
         // 0.890000 the hara-kiri snapshot moved by.
         upSkyline.Merge(PlaceGlyphOutlineCached(VerticalDirection.Up, up, size, x, originUp));

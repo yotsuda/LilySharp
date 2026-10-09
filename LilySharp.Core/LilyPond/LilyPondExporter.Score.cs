@@ -593,8 +593,25 @@ public sealed partial class LilyPondExporter
                 staffWith.Add(selectors.RemoveFirst ? "\\RemoveAllEmptyStaves" : "\\RemoveEmptyStaves");
             // LILYPOND-REF: scm/define-grobs.scm StaffSymbol — line-count, the property the
             // page's `as lines N` is (StaffSpec.Lines).
+            // ⚠️ AND line-positions WHERE THE PAGE'S LINES ARE NOT LILYPOND'S DEFAULT: Lily#
+            // draws two and four lines on the five-line frame (EngravingDefaults.StaffLinePositions,
+            // LILYSHARP-OWN: ±2, and −2…+4), where line-count alone spreads them one space apart
+            // about the middle — the twin drew a different staff until session 871. One and three
+            // lines are LilyPond's own positions, and keep the plain count.
+            // LILYPOND-REF: lily/staff-symbol.cc:108-119 Staff_symbol::calc_line_positions — without
+            // line-positions, line-count N puts the lines at N-1, N-3, …
             if (selectors is { } spec && spec.Lines != StaffSpec.MaxLines)
-                staffWith.Add("\\override StaffSymbol.line-count = #" + spec.Lines);
+            {
+                var drawn = Svg.EngravingDefaults.StaffLinePositions(spec.Lines);
+                bool lilyPondsOwn = true;
+                for (int i = 0; i < drawn.Length; i++)
+                    lilyPondsOwn &= drawn[i] == -(spec.Lines - 1) + 2 * i;
+                staffWith.Add(lilyPondsOwn
+                    ? "\\override StaffSymbol.line-count = #" + spec.Lines
+                    : "\\override StaffSymbol.line-positions = #'("
+                        + string.Join(" ", drawn.ToArray().Select(p => ((int)p).ToString(System.Globalization.CultureInfo.InvariantCulture)))
+                        + ")");
+            }
             // ...and a ONE-line staff prints no clef and no key signature, as the page draws it
             // (SharedRenderer: `as lines 1` is a rhythm staff, LilyPond's RhythmicStaff without
             // its pitch squash). The twin printed both until 2026-10-07, so LilyPond's system

@@ -695,11 +695,12 @@ internal sealed class EmmentalerMusicFont : MusicFont
         {
             MusicGlyph.GClef => ClefVerticalSkylineQuads("G"),
             MusicGlyph.FClef => ClefVerticalSkylineQuads("F"),
-            // The percussion clef has no baked outline of its own, so it answers the C clef's
-            // (§3 #17). Both are centred on the middle line and the C clef is the taller, so a
-            // seat over-reserves rather than under-reserves — a KNOWN approximation, and the one
-            // clef whose silhouette is not the font's own.
-            MusicGlyph.CClef or MusicGlyph.UnpitchedPercussionClef1 => ClefVerticalSkylineQuads("C"),
+            // ⚠️ The percussion clef has no baked outline of its own and answers NONE: its seat
+            // (SkylineBuilder.SeedClef) takes the glyph's ink box, two bars that fill it. It
+            // answered the C clef's until session 871, which stood a line-start rehearsal mark
+            // 1.41 higher over a percussion staff than over a treble one — LilyPond 2.26.0 puts
+            // it 0.85 over the top line over either (Lab sessions/p871).
+            MusicGlyph.CClef => ClefVerticalSkylineQuads("C"),
             MusicGlyph.WiggleTrill => TrillElementVerticalSkylineQuads(),
             MusicGlyph.KeyboardPedalPed or MusicGlyph.KeyboardPedalDot or MusicGlyph.KeyboardPedalUp
                 => PedalGlyphVerticalSkylineQuads(MusicGlyphs.Of(glyph).EmmentalerCode),

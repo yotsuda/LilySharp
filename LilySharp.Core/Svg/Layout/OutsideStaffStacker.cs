@@ -2020,13 +2020,18 @@ internal static class OutsideStaffStacker
         // LILYPOND-REF: lily/page-layout-problem.cc:1173-1177 Page_layout_problem::is_spaceable.
         if (!StaffAffinity.IsSpaceable(staff.StaffAffinity))
             return;
-        var (clefGlyph, anchorLine) = staff.Clef switch
-        {
-            ClefType.Bass => (MusicGlyph.FClef, 1.0),
-            ClefType.Alto => (MusicGlyph.CClef, 2.0),
-            ClefType.Tenor => (MusicGlyph.CClef, 1.0),
-            _ => (MusicGlyph.GClef, 3.0),
-        };
+        // ⚠️ THE CLEF THE PAGE DRAWS, from the one home the drawing reads (MusicGlyphs.Clef and
+        // SharedRenderer.ClefLineBelowTopLine). Until session 871 this kept a switch of its own
+        // that knew bass, alto and tenor and fell every other clef through to a TREBLE clef on
+        // the G line — so a percussion staff carried a phantom G clef's 1.8 over its top line,
+        // and its line-start section label stood 2.21 over the staff where LilyPond 2.26.0 puts
+        // it 0.85 over, as over a treble staff (Lab sessions/p871: the label sits further left
+        // over the narrower percussion clef, where the phantom's curl was). Bass_8 and the
+        // soprano / mezzo / baritone C clefs fell through the same way.
+        // ⚠️ A TAB keeps the treble it always had: its clef (clefs.tab) is drawn by the tab
+        // staff and is not this table's — a named divergence, no LilyPond pair read yet.
+        var clefGlyph = staff.Clef == ClefType.Tab ? MusicGlyph.GClef : MusicGlyphs.Clef(staff.Clef);
+        double anchorLine = staff.Clef == ClefType.Tab ? 3.0 : Rendering.SharedRenderer.ClefLineBelowTopLine(staff.Clef);
         var clefBox = MusicFont.Current.FullSize.Box(clefGlyph);
         double clefProtrusion = clefBox.Top - anchorLine;
         if (clefProtrusion <= 0)

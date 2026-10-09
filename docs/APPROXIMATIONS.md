@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 227 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **353** | |
+| `OWN` | 228 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **354** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（227 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（228 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **`LilyPondExporter.EmitChordList`** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
@@ -259,6 +259,8 @@
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Music.cs`
 - **`LilyPondExporter.EmitItem`** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision 2026-10-02). Any other
 - **`LilyPondExporter.EmitShapeChord`** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
+### `LilySharp.Core/LilyPond/LilyPondExporter.Score.cs`
+- **`LilyPondExporter.EmitStaff`** LILYSHARP-OWN: ±2, and −2…+4), where line-count alone spreads them one space apart
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Streams.cs`
 - **`LilyPondExporter.EmitLeadSheetTiming`** LILYSHARP-OWN: LilyPond has no lead sheet — a staff-less score prints no bar line,
 ### `LilySharp.Core/Midi/GeneralMidi.cs`

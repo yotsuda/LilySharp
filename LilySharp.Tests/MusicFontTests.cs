@@ -361,8 +361,9 @@ public class MusicFontTests
         // A sized design scales the hand rows as it scales the generated ones.
         var grace = font.SizedAt(-3);
         Assert.Equal(2.296 * grace.Magnification, grace.Box(MusicGlyph.NoteheadDoubleWhole).Width, 12);
-        // The percussion clef answers the C clef's outline.
-        Assert.Same(full.VerticalSkylineQuads(MusicGlyph.CClef).Up, full.VerticalSkylineQuads(MusicGlyph.UnpitchedPercussionClef1).Up);
+        // The percussion clef answers NO outline (session 871: it answered the C clef's, the
+        // taller); its seat takes the glyph's ink box (SkylineBuilder.SeedClef).
+        Assert.Null(full.VerticalSkylineQuads(MusicGlyph.UnpitchedPercussionClef1).Up);
         // §3 #17: the flat family's stem fattening and the chord name's kern and lift.
         Assert.Equal(0.375, font.StemSidePaddingFraction(MusicGlyph.AccidentalFlat));
         Assert.Equal(0.375, font.StemSidePaddingFraction(MusicGlyph.AccidentalDoubleFlat));
