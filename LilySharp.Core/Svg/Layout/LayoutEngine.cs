@@ -120,7 +120,7 @@ internal sealed partial class LayoutEngine
 
         // The faces this score reserves against — see the field's remark for why the
         // builder cannot be given them in the constructor.
-        _skylineBuilder = new SkylineBuilder(_options.StaffHeight, score.TextMetrics);
+        _skylineBuilder = new SkylineBuilder(_options.StaffHeight, score.TextMetrics, score);
         EdgeBeamSource = default;   // per layout, like the memo stores' pass counters
 
         // The book title as LilyPond pages it — a top-aligned column at the head of the

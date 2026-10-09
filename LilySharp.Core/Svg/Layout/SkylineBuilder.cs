@@ -46,10 +46,19 @@ internal sealed class SkylineBuilder
     // its glyph's box, its pure height, instead of its outline (MergeFlagInk).
     private bool _pureFlagBoxes;
 
-    public SkylineBuilder(double staffHeight, Rendering.ScoreTextMetrics? fonts = null)
+    /// <summary>
+    /// The score this builder serves, when the caller gave it — what the line-start meter seed
+    /// needs to find the system's shared time column (<see cref="SeedLineStartMeter"/>). Null
+    /// for a builder made without one (tests, geometry probes): that seed is then skipped.
+    /// </summary>
+    private readonly MultiStaffScore? _score;
+
+    public SkylineBuilder(double staffHeight, Rendering.ScoreTextMetrics? fonts = null,
+        MultiStaffScore? score = null)
     {
         _staffHeight = staffHeight;
         _fonts = fonts ?? Rendering.ScoreTextMetrics.Bundled;
+        _score = score;
     }
 
     /// <summary>
@@ -281,6 +290,7 @@ internal sealed class SkylineBuilder
                 _pureFlagBoxes = false;
             }
             SeedClef(staff, staffMiddleUp, systemLeft, size, upSkyline, downSkyline);
+            SeedLineStartMeter(staff, measureLayouts, staffMiddleUp, systemLeft, size, upSkyline, downSkyline);
         }
         // The same fork as BuildInsideStaffSkylines: a tab's stems and beams are seeded from
         // the tab's own geometry, so the page spaces against the beam the tab really draws.
@@ -529,6 +539,64 @@ internal sealed class SkylineBuilder
                 originX + size.Ink(GlyphMetrics.GetAccidentalSkylineBBox(kind)).Left,
                 glyphY, size, upSkyline, downSkyline);
         }
+    }
+
+    /// <summary>
+    /// Seeds the meter a system prints at its head on <paramref name="staff"/>, where the
+    /// renderer draws it (the shared time column, <c>SharedRenderer.SharedPrefixColumns</c>) —
+    /// see <see cref="SeedMeter"/> for when there is anything to seed.
+    /// </summary>
+    private void SeedLineStartMeter(
+        Staff staff, ImmutableArray<MeasureLayout> measureLayouts, double staffMiddleUp,
+        double systemLeft, StaffSize size, VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        if (_score is null || double.IsNaN(systemLeft) || measureLayouts.IsDefaultOrEmpty
+            || staff.IsTextRow || staff.IsOssia || staff.IsTab)
+            return;
+        bool isFirstSystem = measureLayouts[0].MeasureIndex == 0;
+        if (Rendering.SharedRenderer.LineStartMeter(staff, measureLayouts, isFirstSystem, _score) is not { } ts
+            || !MeterLeavesTheStaff(staff, ts))
+            return;
+        SeedMeter(staff, ts,
+            Rendering.SharedRenderer.LineStartMeterX(_score, measureLayouts, isFirstSystem, systemLeft),
+            staffMiddleUp, upSkyline, downSkyline);
+    }
+
+    /// <summary>Does the meter's ink stand out of a five-line staff's lines
+    /// (<c>SharedRenderer.MeterRows</c>)?</summary>
+    private static bool MeterLeavesTheStaff(Staff staff, TimeSignature ts)
+    {
+        if (staff.IsTab || staff.IsTextRow || staff.Lines != 5)
+            return false;
+        var rows = Rendering.SharedRenderer.MeterRows(ts);
+        double edge = 2.0 + EngravingDefaults.StaffLineThickness / 2.0;
+        return rows.InkTop > edge || rows.InkBottom < -edge;
+    }
+
+    /// <summary>
+    /// Seeds a meter's ink box into both skylines — ONLY where it stands out of the staff.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-935 skyline_spacing — a TimeSignature
+    /// carries no outside-staff-priority, so it is in the inside-staff skylines every mover
+    /// clears. Lily# seeded no meter at all until session 871: Emmentaler's numerals (and
+    /// Bravura's, Leland's) fill the staff exactly and stand inside its lines, so a seed there
+    /// changes no profile. Petaluma's are taller (<c>SharedRenderer.MeterRows</c>) and stand 1.1
+    /// over the top line, where a rehearsal mark at the line start was drawn on the numerator.
+    /// The gate keeps every within-staff meter out, which is what keeps this inert for the
+    /// faces whose digits fit. The box is the rows' ink over the meter's width
+    /// (<c>GlyphMetrics.GetTimeSigWidth</c>, the reservation's own).
+    /// </remarks>
+    private void SeedMeter(
+        Staff staff, TimeSignature ts, double x, double staffMiddleUp,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        if (staff.IsOssia || !MeterLeavesTheStaff(staff, ts))
+            return;
+        var rows = Rendering.SharedRenderer.MeterRows(ts);
+        double width = GlyphMetrics.GetTimeSigWidth(_fonts, ts.BeatsText ?? ts.Beats.ToString(), ts.BeatType.ToString());
+        upSkyline.MergeBox(x, x + width, staffMiddleUp + rows.InkBottom, staffMiddleUp + rows.InkTop);
+        downSkyline.MergeBox(x, x + width, staffMiddleUp + rows.InkBottom, staffMiddleUp + rows.InkTop);
     }
 
     private void SeedClef(
@@ -849,12 +917,16 @@ internal sealed class SkylineBuilder
                     // through the same SpacingRules/ChangeColumnItems homes, so the seeded
                     // ink stands where the glyphs print — seeded at the raw column x it sat
                     // a whole spring right of the sharps and the section label never met it.
-                    double seedX = item is KeySignatureChangeItem
+                    double seedX = item is KeySignatureChangeItem or TimeSignatureChangeItem
                         ? KeyChangeSeedX(_fonts, measure, itemIndex, measureLayout, itemX,
                             firstMeasureOfLine: measureLayouts[0].MeasureIndex)
                         : itemX;
                     if (double.IsNaN(seedX))
                         continue; // a change folded into the line-start prefix (not drawn here)
+                    // A meter change is drawn at the change column the key change's seed above
+                    // re-anchors to (the same SpacingRules/ChangeColumnItems homes).
+                    if (item is TimeSignatureChangeItem meterChange && !meterChange.NewTime.SenzaMisura)
+                        SeedMeter(staff, meterChange.NewTime, seedX, staffMiddleUp, upSkyline, downSkyline);
 
                     AddMusicItemToSkylines(item, seedX, staffMiddleUp, StaffSize.Of(staff),
                         upSkyline, downSkyline,
@@ -1660,6 +1732,8 @@ internal sealed class SkylineBuilder
         // inside-staff skylines carry every inside-staff grob, and a Clef is one, so it is
         // in the vertical skyline Align_interface walks exactly as a notehead is.
         SeedClef(staff, staffMiddleUp, systemLeft, size, upSkyline, downSkyline);
+        // ...and the meter beside it, where a face's digits stand out of the staff (SeedMeter).
+        SeedLineStartMeter(staff, measureLayouts, staffMiddleUp, systemLeft, size, upSkyline, downSkyline);
 
         AddStaffToSkylines(staff, measureLayouts, staffMiddleUp,
             upSkyline, downSkyline, beams, restShifts, graceSeeds);

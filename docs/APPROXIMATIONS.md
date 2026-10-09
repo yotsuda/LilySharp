@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 226 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **352** | |
+| `OWN` | 227 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **353** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（226 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（227 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **`LilyPondExporter.EmitChordList`** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
@@ -321,6 +321,7 @@
 - **`SharedRenderer.DrawGuitarBend`** LILYSHARP-OWN: LilyPond's guitar bend is the BendSpanner (`\^`) — a line and curve to
 ### `LilySharp.Core/Rendering/SharedRenderer.Prefix.cs`
 - **`SharedRenderer.DrawTimeSignature`** LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
+- **`SharedRenderer.MeterRows`** starts at the middle line and grows outward. LILYSHARP-OWN for that arm: LilyPond's rule
 ### `LilySharp.Core/Rendering/SharedRenderer.Tab.cs`
 - **`SharedRenderer.DrawTabMeasure`** LILYSHARP-OWN: LilyPond has no pitchless note — its slash is a style on
 - **`SharedRenderer.DrawTabMeasure`** ⚠️ LILYSHARP-OWN on a FULL tab, and deliberately so (USER DECISION,

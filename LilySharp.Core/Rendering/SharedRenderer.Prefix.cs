@@ -230,6 +230,76 @@ internal static partial class SharedRenderer
         return (key, ResolveClef(staff, probe));
     }
 
+    /// <summary>
+    /// The system's shared KEY and TIME columns: every staff's key signature starts at the
+    /// widest clef's right + the Clef→Key gap, and every staff's meter at the max of each staff's
+    /// own would-be meter X — what <c>DrawSystem</c> draws at, and what the skylines seed the
+    /// line-start meter at (<see cref="LineStartMeterX"/>). See DrawSystem's remark for why the
+    /// columns are shared.
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:141-142 Break_alignment_interface::calc_positioning_done
+    /// — each group's extent is the union across
+    /// staves, and the next column offsets from the union's RIGHT.
+    /// </summary>
+    internal static (double KeyX, double TimeX) SharedPrefixColumns(
+        MultiStaffScore score, SystemLayout system, double systemStartX)
+    {
+        double maxClefWidth = SpacingRules.MaxClefWidth(score);
+        double sharedKeyX;
+        double sharedTimeX;
+        double clefRightX = systemStartX + EngravingDefaults.ClefGlyphXOffset + maxClefWidth;
+        double clefToTime = clefRightX + BreakAlignSpacing.GetSpacing(
+            BreakAlignSymbol.Clef, BreakAlignSymbol.TimeSignature).Value;
+        sharedKeyX = clefRightX + BreakAlignSpacing.GetSpacing(
+            BreakAlignSymbol.Clef, BreakAlignSymbol.KeySignature).Value;
+        double keyToTime = BreakAlignSpacing.GetSpacing(
+            BreakAlignSymbol.KeySignature, BreakAlignSymbol.TimeSignature).Value;
+        sharedTimeX = clefToTime;
+        foreach (var (_, st, _) in score.EnumerateStaves())
+        {
+            // The SAME staff set the reservation's WidestActiveKeyInk walks — one
+            // predicate, so the column that is drawn and the column that is booked
+            // cannot be built from different staves (ledger
+            // line-start.time-to-first-note.tab-*).
+            if (!SpacingRules.ContributesToKeyColumnWidth(st))
+                continue;
+            var k = ResolveKeySignature(st, system, score);
+            if (GetSystemStartKeyChange(st, system) is { } kc)
+                k = kc.NewKey;
+            // "Keyed" is ink > 0 — the SAME predicate the reservation's key column
+            // uses (SolveColumns skips zero-width items), so a degenerate signature
+            // with glyphless Custom (e.g. `key custom` naming no pitches) neither
+            // draws nor spaces a key column on either side. The width is the ENGRAVED
+            // stencil's, so an ossia contributes its reduced-size signature — the same
+            // union LilyPond takes (break-alignment-interface.cc:141-142).
+            double keyInk = SpacingRules.EngravedKeyInkWidth(st, k);
+            double tx = keyInk > 0.0
+                ? sharedKeyX + keyInk + keyToTime
+                : clefToTime;
+            sharedTimeX = Math.Max(sharedTimeX, tx);
+        }
+        return (sharedKeyX, sharedTimeX);
+    }
+
+    /// <summary>
+    /// The meter a system opening at <paramref name="measures"/>' first measure prints at its
+    /// head on <paramref name="staff"/> — the score's opening meter on the first system, a meter
+    /// change opening the line on a later one, null for none or senza misura — as
+    /// <c>DrawSystem</c> chooses it, for the skyline seed (<c>SkylineBuilder.SeedLineStartMeter</c>),
+    /// which has the measures but no SystemLayout (the probe <see cref="LineStartKey"/> takes).
+    /// </summary>
+    internal static TimeSignature? LineStartMeter(
+        Staff staff, ImmutableArray<MeasureLayout> measures, bool isFirstSystem, MultiStaffScore score)
+    {
+        var ts = isFirstSystem
+            ? score.TimeSignature
+            : GetSystemStartTimeChange(staff, new SystemLayout(1, 0, 0, 0, measures))?.NewTime;
+        return ts is { SenzaMisura: false } ? ts : null;
+    }
+
+    /// <summary>The x the line-start meter is drawn at (<see cref="SharedPrefixColumns"/>).</summary>
+    internal static double LineStartMeterX(
+        MultiStaffScore score, ImmutableArray<MeasureLayout> measures, bool isFirstSystem, double systemStartX)
+        => SharedPrefixColumns(score, new SystemLayout(isFirstSystem ? 0 : 1, 0, 0, 0, measures), systemStartX).TimeX;
     private static KeySignatureChangeItem? GetSystemStartKeyChange(Staff staff, SystemLayout system)
     {
         if (system.SystemIndex == 0 || system.Measures.IsDefaultOrEmpty || system.Measures.Length == 0)
@@ -569,8 +639,12 @@ internal static partial class SharedRenderer
         // and carry no box here — so 1.0; a SMuFL timeSig* digit is centred on its baseline and
         // says so in its box. Until Lab sessions/p869 every font took the 1.0, which stood a SMuFL
         // signature a staff space low (its denominator under the staff).
-        double numCentre = MeterRowCentre(ts.BeatsText ?? ts.Beats.ToString());
-        double denCentre = MeterRowCentre(ts.BeatType.ToString());
+        // The rows' baselines about the middle line — MeterRows, the one home the skylines read
+        // too (SkylineBuilder.SeedMeter).
+        var rows = MeterRows(ts);
+        double middle = staffY - 2;
+        double numBaseline = middle + rows.NumBaseline;
+        double denBaseline = middle + rows.DenBaseline;
         // Additive meters print the numerator AS WRITTEN ("3+2" over 8), the
         // rows centered on each other. LILYPOND-REF: \compoundMeter numerator.
         // ⚠️ THE PEN READS THE RESERVATION'S OWN RUN. Until session 164 this loop stepped a
@@ -592,7 +666,7 @@ internal static partial class SharedRenderer
         {
             if (p.IsGlyph)
             {
-                gc.DrawGlyph(p.Ch, nx + p.X, staffY - 1 - numCentre, FontSize);
+                gc.DrawGlyph(p.Ch, nx + p.X, numBaseline, FontSize);
             }
             else
             {
@@ -604,7 +678,7 @@ internal static partial class SharedRenderer
                 // on the numerator row scales with the em (0.55 at the engraving's 2.4).
                 double plusEm = MeterGlyphRun.PlusEm(fonts);
                 gc.DrawText(p.Ch.ToString(), nx + p.X + p.Advance / 2,
-                    staffY - 1 - numCentre + 0.55 * plusEm / MeterGlyphRun.PlusEngravingEm,
+                    numBaseline + 0.55 * plusEm / MeterGlyphRun.PlusEngravingEm,
                     plusEm, TextRole.Meter, MeterGlyphRun.PlusStyle(fonts), TextAnchor.Middle, Color.Black);
             }
         }
@@ -612,14 +686,42 @@ internal static partial class SharedRenderer
         foreach (var p in denPieces)
         {
             if (p.IsGlyph)
-                gc.DrawGlyph(p.Ch, dnx + p.X, staffY - 3 - denCentre, FontSize);
+                gc.DrawGlyph(p.Ch, dnx + p.X, denBaseline, FontSize);
         }
     }
 
-    /// <summary>The vertical centre of a meter row's digits above their baseline: the union of
-    /// the drawn digits' boxes where the font gives them, Emmentaler's 2-space numeral's 1.0
-    /// otherwise (<see cref="DrawTimeSignature"/>).</summary>
-    private static double MeterRowCentre(string row)
+    /// <summary>
+    /// A meter's two rows about the staff's MIDDLE line (Y up): each row's baseline, and the
+    /// ink the pair spans — what <see cref="DrawTimeSignature"/> draws and what
+    /// <c>SkylineBuilder.SeedMeter</c> puts in the skylines, from this one home.
+    /// </summary>
+    /// <remarks>
+    /// Each row's centre stands a staff space from the middle line — LilyPond's 2-space slot
+    /// (the denominator translated -2 under the numerator, scm/time-signature-settings.scm
+    /// format-time-fraction) — unless its digits are TALLER than the slot: then the row's ink
+    /// starts at the middle line and grows outward. LILYSHARP-OWN for that arm: LilyPond's rule
+    /// is written for Emmentaler's 2-space numerals and has none for a taller face. Petaluma's
+    /// timeSig digits stand 3.1–3.9 spaces tall (±1.57 / ±1.96 about their baseline), so the
+    /// fixed ±1 overlapped the two rows by two staff spaces (owner report 2026-10-09); the rule
+    /// is MuseScore's for the same font (the numerator's bottom and the denominator's top on the
+    /// middle line). A row within the slot (Emmentaler, Leland) keeps the ±1 exactly; Bravura's
+    /// 4 is 2.004 tall, 0.002 out.
+    /// </remarks>
+    internal static (double NumBaseline, double DenBaseline, double InkBottom, double InkTop) MeterRows(
+        TimeSignature ts)
+    {
+        var (numCentre, numHalf) = MeterRowBox(ts.BeatsText ?? ts.Beats.ToString());
+        var (denCentre, denHalf) = MeterRowBox(ts.BeatType.ToString());
+        double numMid = Math.Max(1.0, numHalf);
+        double denMid = -Math.Max(1.0, denHalf);
+        return (numMid - numCentre, denMid - denCentre, denMid - denHalf, numMid + numHalf);
+    }
+
+    /// <summary>A meter row's digits: the vertical centre of their box above the baseline, and
+    /// half its height — the union of the drawn digits' boxes where the font gives them,
+    /// Emmentaler's 2-space numeral (centre 1.0, half 1.0) otherwise
+    /// (<see cref="DrawTimeSignature"/>).</summary>
+    private static (double Centre, double Half) MeterRowBox(string row)
     {
         double bottom = double.PositiveInfinity, top = double.NegativeInfinity;
         foreach (char ch in row)
@@ -629,7 +731,7 @@ internal static partial class SharedRenderer
                 bottom = Math.Min(bottom, box.Bottom);
                 top = Math.Max(top, box.Top);
             }
-        return bottom <= top ? (bottom + top) / 2 : 1.0;
+        return bottom <= top ? ((bottom + top) / 2, (top - bottom) / 2) : (1.0, 1.0);
     }
 
     // ---------- Key signature ----------

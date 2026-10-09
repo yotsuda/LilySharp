@@ -179,6 +179,44 @@ public class SmuflPlacementTests
                 $"{font}: the count clears the rest by {GapOverRest(font):F3}, Emmentaler's by {emmentaler:F3}");
     }
 
+    /// <summary>
+    /// A meter's two rows stand one over the other in every font (owner report 2026-10-09:
+    /// Petaluma's 3.1–3.9-space digits, placed at Emmentaler's ±1, overlapped by two staff
+    /// spaces), and the section label at the line start clears a numerator that stands out of
+    /// the staff (SharedRenderer.MeterRows / SkylineBuilder.SeedMeter) — at the line start and
+    /// at a change.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Fonts))]
+    public void TheMetersRows_StandOneOverTheOther_AndTheLabelClearsThem(string font)
+    {
+        var tree = SyntaxTree.Parse(
+            $"fonts {{ music \"{font}\" }}\ntime 3/4\n" +
+            "part m { clef treble }\n" +
+            "section A { m { c'4 d' e' | } }\nsection B { time 12/8  m { c'1. | } }\n" +
+            "score { staff m }\n");
+        var symbols = BoxesGenerator.GenerateDocument(tree, RenderSpecParser.FindFirst(tree))
+            .Pages.SelectMany(p => p.Symbols).ToList();
+        void OneOverTheOther(string num, string den, string label)
+        {
+            var n = Assert.Single(symbols, s => s.Glyph == num);
+            var d = symbols.Where(s => s.Glyph == den).OrderBy(s => Math.Abs(s.Box[0] - n.Box[0])).First();
+            // Box = [left, top, right, bottom], y down. Touching at the middle line is the rule.
+            Assert.True(n.Box[3] <= d.Box[1] + 0.01,
+                $"{font} {num}/{den}: the numerator reaches {n.Box[3] - d.Box[1]:F3} into the denominator");
+            // The label's FRAME (the rect around the letter) — it is what reaches over the meter.
+            var letter = Assert.Single(symbols, s => s.Text == label);
+            var mark = symbols.FirstOrDefault(s => s.Kind == "rect"
+                && s.Box[0] <= letter.Box[0] && s.Box[2] >= letter.Box[2]
+                && s.Box[1] <= letter.Box[1] && s.Box[3] >= letter.Box[3]) ?? letter;
+            if (mark.Box[2] > n.Box[0] && mark.Box[0] < n.Box[2])
+                Assert.True(mark.Box[3] <= n.Box[1] + 1e-6,
+                    $"{font}: label {label} reaches {mark.Box[3] - n.Box[1]:F3} into the numerator");
+        }
+        OneOverTheOther("TimeSig3", "TimeSig4", "A");
+        OneOverTheOther("TimeSig2", "TimeSig8", "B");
+    }
+
     [Theory]
     [MemberData(nameof(Fonts))]
     public void ToCoda_SetsTheSignBesideTheWord_CentredOnIt(string font)
@@ -224,6 +262,9 @@ public class SmuflPlacementTests
         // LilyPond's model is a 2-space digit on the baseline (Emmentaler's): numerator in the
         // upper two spaces, denominator in the lower. A SMuFL timeSig digit is centred on its
         // baseline, and placed by Emmentaler's 1.0 it stood a staff space low until p869.
+        // ⚠️ A ROW TALLER THAN ITS 2-SPACE HALF grows outward from the middle line instead
+        // (session 871, owner report): Petaluma's digits, centred at ±1 by this test's first
+        // version, overlapped by two staff spaces. Centre = max(1, half the row's height).
         var tree = SyntaxTree.Parse(
             $"fonts {{ music \"{font}\" }}\ntime 3/4\npart m {{ clef treble }}\n" +
             "section A { m { c'2. | } }\nform { A }\nscore { staff m }\n");
@@ -232,8 +273,10 @@ public class SmuflPlacementTests
         double top = symbols.Where(s => s.Kind == "staffLine").Min(s => s.Box[1]);
         var three = Assert.Single(symbols, s => s.Glyph == "TimeSig3");
         var four = Assert.Single(symbols, s => s.Glyph == "TimeSig4");
-        Assert.True(Math.Abs((three.Box[1] + three.Box[3]) / 2 - top - 1.0) < 0.1, $"{font}: the 3's centre {(three.Box[1] + three.Box[3]) / 2 - top:F3} below the top line");
-        Assert.True(Math.Abs((four.Box[1] + four.Box[3]) / 2 - top - 3.0) < 0.1, $"{font}: the 4's centre {(four.Box[1] + four.Box[3]) / 2 - top:F3} below the top line");
+        double threeCentre = 2.0 - Math.Max(1.0, (three.Box[3] - three.Box[1]) / 2);
+        double fourCentre = 2.0 + Math.Max(1.0, (four.Box[3] - four.Box[1]) / 2);
+        Assert.True(Math.Abs((three.Box[1] + three.Box[3]) / 2 - top - threeCentre) < 0.1, $"{font}: the 3's centre {(three.Box[1] + three.Box[3]) / 2 - top:F3} below the top line, not {threeCentre:F3}");
+        Assert.True(Math.Abs((four.Box[1] + four.Box[3]) / 2 - top - fourCentre) < 0.1, $"{font}: the 4's centre {(four.Box[1] + four.Box[3]) / 2 - top:F3} below the top line, not {fourCentre:F3}");
     }
 
     [Theory]
