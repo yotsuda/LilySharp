@@ -255,9 +255,7 @@ internal static partial class SharedRenderer
             var lastMl = system.Measures[^1];
             using (gc.Source(eolTimeChange.SourcePosition))
                 DrawTimeSignature(fonts, eolTimeChange.NewTime,
-                    lastMl.X + lastMl.Width + SpacingRules.BreakAlignGap(
-                        BreakAlignSymbol.StaffBar, BreakAlignSymbol.TimeSignature),
-                    meterStaffY, gc);
+                    LineEndMeterX(lastMl.X + lastMl.Width, columnX: null), meterStaffY, gc);
         }
 
         // LAST, so every digit above has booked its bite out of the line it sits on.

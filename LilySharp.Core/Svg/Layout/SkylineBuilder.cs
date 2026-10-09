@@ -291,6 +291,7 @@ internal sealed class SkylineBuilder
             }
             SeedClef(staff, staffMiddleUp, systemLeft, size, upSkyline, downSkyline);
             SeedLineStartMeter(staff, measureLayouts, staffMiddleUp, systemLeft, size, upSkyline, downSkyline);
+            SeedLineEndMeter(staff, measureLayouts, staffMiddleUp, systemLeft, upSkyline, downSkyline);
         }
         // The same fork as BuildInsideStaffSkylines: a tab's stems and beams are seeded from
         // the tab's own geometry, so the page spaces against the beam the tab really draws.
@@ -551,7 +552,7 @@ internal sealed class SkylineBuilder
         double systemLeft, StaffSize size, VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
         if (_score is null || double.IsNaN(systemLeft) || measureLayouts.IsDefaultOrEmpty
-            || staff.IsTextRow || staff.IsOssia || staff.IsTab)
+            || staff.IsTextRow || staff.IsOssia)
             return;
         bool isFirstSystem = measureLayouts[0].MeasureIndex == 0;
         if (Rendering.SharedRenderer.LineStartMeter(staff, measureLayouts, isFirstSystem, _score) is not { } ts
@@ -562,14 +563,38 @@ internal sealed class SkylineBuilder
             staffMiddleUp, upSkyline, downSkyline);
     }
 
-    /// <summary>Does the meter's ink stand out of a five-line staff's lines
-    /// (<c>SharedRenderer.MeterRows</c>)?</summary>
+    /// <summary>
+    /// Seeds the courtesy meter a system prints at its END on <paramref name="staff"/>, where the
+    /// renderer draws it (<c>SharedRenderer.LineEndMeter</c>, the drawing's own x).
+    /// </summary>
+    private void SeedLineEndMeter(
+        Staff staff, ImmutableArray<MeasureLayout> measureLayouts, double staffMiddleUp,
+        double systemLeft, VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        if (_score is null || double.IsNaN(systemLeft) || measureLayouts.IsDefaultOrEmpty
+            || staff.IsTextRow || staff.IsOssia)
+            return;
+        if (Rendering.SharedRenderer.LineEndMeter(_score, staff, measureLayouts) is { } m)
+            SeedMeter(staff, m.Meter, m.X, staffMiddleUp, upSkyline, downSkyline);
+    }
+
+    /// <summary>
+    /// Does <paramref name="staff"/> engrave a meter (<see cref="SpacingRules.ContributesToTimeColumnWidth"/>
+    /// — not a numbers-only tab, not a text row) whose ink (<c>SharedRenderer.MeterRows</c>,
+    /// about the staff's middle — a tab's is its vertical centre) stands out of the staff's
+    /// OWN outer lines? A five-line staff's are at ±2, a four-string bass tab's at ±2.25, a
+    /// one-line staff's at 0 — where even Emmentaler's 2-space numerals stand out by two.
+    /// </summary>
     private static bool MeterLeavesTheStaff(Staff staff, TimeSignature ts)
     {
-        if (staff.IsTab || staff.IsTextRow || staff.Lines != 5)
+        if (staff.IsOssia || !SpacingRules.ContributesToTimeColumnWidth(staff))
             return false;
+        double reach = 0;
+        foreach (double position in MultiStaffLayouter.LinePositionsOf(staff))
+            reach = Math.Max(reach, Math.Abs(position));
+        double edge = reach * 0.5 * MultiStaffLayouter.LineSpacingOf(staff)
+            + EngravingDefaults.StaffLineThickness / 2.0;
         var rows = Rendering.SharedRenderer.MeterRows(ts);
-        double edge = 2.0 + EngravingDefaults.StaffLineThickness / 2.0;
         return rows.InkTop > edge || rows.InkBottom < -edge;
     }
 
@@ -582,9 +607,11 @@ internal sealed class SkylineBuilder
     /// clears. Lily# seeded no meter at all until session 871: Emmentaler's numerals (and
     /// Bravura's, Leland's) fill the staff exactly and stand inside its lines, so a seed there
     /// changes no profile. Petaluma's are taller (<c>SharedRenderer.MeterRows</c>) and stand 1.1
-    /// over the top line, where a rehearsal mark at the line start was drawn on the numerator.
-    /// The gate keeps every within-staff meter out, which is what keeps this inert for the
-    /// faces whose digits fit. The box is the rows' ink over the meter's width
+    /// over the top line, where a rehearsal mark at the line start was drawn on the numerator;
+    /// and on a staff of fewer lines (a one-line rhythm staff) EVERY face's meter stands out.
+    /// The gate (<see cref="MeterLeavesTheStaff"/>, against the staff's own outer lines)
+    /// keeps every within-staff meter out, which is what keeps this inert where the digits fit.
+    /// Seeded at the line start, at a change, and at the line end's courtesy. The box is the rows' ink over the meter's width
     /// (<c>GlyphMetrics.GetTimeSigWidth</c>, the reservation's own).
     /// </remarks>
     private void SeedMeter(
@@ -1734,6 +1761,7 @@ internal sealed class SkylineBuilder
         SeedClef(staff, staffMiddleUp, systemLeft, size, upSkyline, downSkyline);
         // ...and the meter beside it, where a face's digits stand out of the staff (SeedMeter).
         SeedLineStartMeter(staff, measureLayouts, staffMiddleUp, systemLeft, size, upSkyline, downSkyline);
+        SeedLineEndMeter(staff, measureLayouts, staffMiddleUp, systemLeft, upSkyline, downSkyline);
 
         AddStaffToSkylines(staff, measureLayouts, staffMiddleUp,
             upSkyline, downSkyline, beams, restShifts, graceSeeds);

@@ -757,9 +757,7 @@ internal static partial class SharedRenderer
                         var lastMl = system.Measures[^1];
                         using (gc.Source(eolTimeChange.SourcePosition))
                             DrawTimeSignature(score.TextMetrics, eolTimeChange.NewTime,
-                                lastMl.X + lastMl.Width + SpacingRules.BreakAlignGap(
-                                    BreakAlignSymbol.StaffBar, BreakAlignSymbol.TimeSignature),
-                                meterY, gc);
+                                LineEndMeterX(lastMl.X + lastMl.Width, columnX: null), meterY, gc);
                     }
                 }
                 continue;
@@ -1048,8 +1046,7 @@ internal static partial class SharedRenderer
                                 // key's. LilyPond's two are 0.750000 and 1.150000, so one number
                                 // for both would be wrong on one side by construction. A staff
                                 // whose meter the primary staff does not share has no column.
-                                barlineRight + (eolColumns.TimeX ?? SpacingRules.BreakAlignGap(
-                                    BreakAlignSymbol.StaffBar, BreakAlignSymbol.TimeSignature)),
+                                LineEndMeterX(barlineRight, eolColumns.TimeX),
                                 localStaffY, sgc);
                 }
             }

@@ -296,6 +296,36 @@ internal static partial class SharedRenderer
         return ts is { SenzaMisura: false } ? ts : null;
     }
 
+    /// <summary>
+    /// The x an end-of-line courtesy meter is drawn at: off the final bar line's right edge,
+    /// in the line-end group's TIME column where the staff stands in that group
+    /// (<paramref name="columnX"/>, <c>LineEndCourtesyOf(…).TimeX</c>), else at the bar line's
+    /// own space-alist entry — a tab and a rows-only grid, which have no key in front of it.
+    /// One home for the drawing (notation, tab, row grid) and the skyline seed.
+    /// </summary>
+    internal static double LineEndMeterX(double barlineRight, double? columnX)
+        => barlineRight + (columnX ?? SpacingRules.BreakAlignGap(
+            BreakAlignSymbol.StaffBar, BreakAlignSymbol.TimeSignature));
+
+    /// <summary>
+    /// The courtesy meter a system ending at <paramref name="measures"/>' last measure prints
+    /// at its end on <paramref name="staff"/>, and where — null when the next line opens with
+    /// no meter change (<see cref="GetSystemEndTimeChange"/>) or a senza misura one. For the
+    /// skyline seed (<c>SkylineBuilder.SeedLineEndMeter</c>), which has no SystemLayout.
+    /// </summary>
+    internal static (TimeSignature Meter, double X)? LineEndMeter(
+        MultiStaffScore score, Staff staff, ImmutableArray<MeasureLayout> measures)
+    {
+        if (measures.IsDefaultOrEmpty)
+            return null;
+        var probe = new SystemLayout(1, 0, 0, 0, measures);
+        if (GetSystemEndTimeChange(staff, probe) is not { NewTime: { SenzaMisura: false } ts })
+            return null;
+        var last = measures[^1];
+        double? column = staff.IsTab || staff.IsTextRow ? null : LineEndCourtesyOf(score, probe).TimeX;
+        return (ts, LineEndMeterX(last.X + last.Width, column));
+    }
+
     /// <summary>The x the line-start meter is drawn at (<see cref="SharedPrefixColumns"/>).</summary>
     internal static double LineStartMeterX(
         MultiStaffScore score, ImmutableArray<MeasureLayout> measures, bool isFirstSystem, double systemStartX)
