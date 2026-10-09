@@ -278,25 +278,24 @@ public class ScoreRowFoldingTests
     }
 
     /// <summary>
-    /// The nameless <c>chords { }</c> block is LYS0032 (user decision,
-    /// 2026-08-19): its association was co-writing — stated nowhere, and
-    /// hard-coded to staff 0 the moment a section held two parts. The message
-    /// spells the replacement: name it, place it.
+    /// The unnamed <c>chords { }</c> block is the file's unnamed track (2026-10-09), and a
+    /// bare <c>chords</c> row places it — a row the score writes, never the co-writing
+    /// association LYS0032 refused until then (stated nowhere, hard-coded to staff 0).
     /// </summary>
     [Fact]
-    public void TheNamelessChordsBlock_ReportsItsNamedRowReplacement()
+    public void TheUnnamedChordsBlock_IsPlacedByABareRow()
     {
-        var tree = SyntaxTree.Parse("""
+        string source = """
             time 4/4
             section A {
               melody { c'4 d' e' f' | }
-              chords { c1 | }
+              chords { C | }
             }
             form { A }
-            score { staff melody }
-            """);
-        var d = Assert.Single(tree.Diagnostics, d => d.Code == "LYS0032");
-        Assert.Contains("needs a name", d.Message);
-        Assert.Contains("above the staff", d.Message);
+            score { chords  staff melody }
+            """;
+        Assert.Empty(SyntaxTree.Parse(source).Diagnostics);
+        var row = Assert.IsType<ChordRowSpec>(SpecOf(source).Items[0]);
+        Assert.Equal(SyntaxFacts.UnnamedChordsName, row.PartName);
     }
 }

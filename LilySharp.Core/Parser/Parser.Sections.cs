@@ -61,21 +61,8 @@ internal sealed partial class Parser
 
     private GreenNode? ParseSectionItem()
     {
-        // A lyrics track must be NAMED so a score can reference it (`staff X with lyrics
-        // NAME`), mirroring a `chords NAME` track. An UNNAMED inline `lyrics { … }` inside a
-        // section can never be referenced (and no longer auto-attaches), so it is an ordinary
-        // syntax error. Consume the block so the section's remaining items still parse cleanly,
-        // and report through the generic parser diagnostic (no dedicated code). A named
-        // `lyrics NAME { … }` falls through to the switch below and parses normally.
-        if (Check(SyntaxKind.LyricsKeyword) && Peek(1)?.Kind == SyntaxKind.OpenBrace)
-        {
-            var span = new TextSpan(_textPosition, Current.FullWidth);
-            _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
-                "an unnamed 'lyrics { ... }' block has no way to be attached; name it " +
-                "'lyrics NAME { ... }' and reference it with 'score { staff X with lyrics NAME }'.");
-            return ParseLyricsBlock();
-        }
-
+        // An unnamed `lyrics { … }` is the file's unnamed track (2026-10-09), placed by a
+        // score's bare `lyrics` row — the same block as at the top level.
         return Current.Kind switch
         {
             // A `using` includes a whole FILE, so only the file level can hold one. Reported
@@ -151,12 +138,14 @@ internal sealed partial class Parser
         // (SyntaxFacts.IsPartNameToken), and until 2026-09-26 `lyrics w sings bass { … }`
         // was a parse error ("Expected 'OpenBrace', found 'BassKeyword'") for a part the
         // grammar says may be called `bass` (found writing a hymn probe).
-        var name = IsPartNameToken(Current) ? Advance() : (SyntaxToken?)null;
+        // No name before `sings`: the unnamed track (SyntaxFacts.UnnamedLyricsName, 2026-10-09).
+        var name = IsPartNameToken(Current)
+            && !(Current.Text == "sings" && Peek(1)?.Kind != SyntaxKind.OpenBrace) ? Advance() : (SyntaxToken?)null;
         // Optional melody binding: `lyrics ja sings vocal { … }` — the track sings
         // the named part. Contextual like `q`: 'sings' stays an ordinary identifier
         // everywhere else, claimed only between a track name and its brace.
         SyntaxToken? singsKeyword = null, singsTarget = null;
-        if (name != null && Check(SyntaxKind.Identifier) && Current.Text == "sings")
+        if (Check(SyntaxKind.Identifier) && Current.Text == "sings" && Peek(1)?.Kind != SyntaxKind.OpenBrace)
         {
             singsKeyword = Advance();
             singsTarget = IsPartNameToken(Current) ? Advance() : null;
@@ -228,25 +217,16 @@ internal sealed partial class Parser
     }
 
 
-    // chords name { C | G7 C | } — a chord-symbol stream: an independent chord
+    // chords [name] { C | G7 C | } — a chord-symbol stream: an independent chord
     // part, placed in a score as a row (`chords name` — above the staff it stands
-    // directly over, or a lead-sheet row on its own). The NAMELESS form (the
-    // former `chordnames`, which auto-aligned above "the co-written part's staff")
-    // was removed before the first tag (LYS0032, user decision 2026-08-19): its
-    // association was co-writing, which no text states and which broke down the
-    // moment a section held two parts — the implementation hard-coded staff 0.
+    // directly over, or a lead-sheet row on its own). The UNNAMED block (2026-10-09) is
+    // the file's default track, placed by a bare `chords` row — still a row the score
+    // writes, never the removed `chordnames` auto-alignment above "the co-written part's
+    // staff" (LYS0032, 2026-08-19), whose association no text stated.
     private ChordPartBlockGreen ParseChordPartBlock()
     {
-        int kwInk = _textPosition + Current.LeadingTriviaWidth;
-        int kwLen = Current.Text.Length;
         var keyword = Expect(SyntaxKind.ChordsKeyword);
         var name = Check(SyntaxKind.Identifier) ? Advance() : (SyntaxToken?)null;
-        if (name == null)
-            _diagnostics.Error(new TextSpan(kwInk, kwLen),
-                DiagnosticCodes.NamelessChordsRemoved,
-                "a 'chords' block needs a name - write 'chords prog { ... }' here and "
-                + "place it in the score as its own item ('chords prog' above the staff "
-                + "it belongs to).");
         var openBrace = Expect(SyntaxKind.OpenBrace);
         var items = new List<GreenNode?>();
 

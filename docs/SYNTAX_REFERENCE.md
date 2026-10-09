@@ -1276,6 +1276,33 @@ part leftHand {
 }
 ```
 
+### One part, no names
+
+A piece with one part may leave the part, its chords and its lyrics unnamed — the score
+then names them with the bare keyword:
+
+```
+part {
+  clef treble
+  section A { c'4 d e f | g2 g | }
+}
+chords { section A { C | G } }
+lyrics { section A { Twin- kle twin- kle | lit- tle | } }
+
+form { A }
+
+score {
+  chords
+  staff
+  lyrics
+}
+```
+
+An unnamed `part` must be the file's only part, and an unnamed `lyrics` sings it unless it
+says `sings`. With no `part` at all, music written straight into a section is the one
+part's, and a bare `staff` renders it. A bare word right after `staff`, `tab`, `chords` or
+`lyrics` is always a name.
+
 ### Section with Parts
 
 ```

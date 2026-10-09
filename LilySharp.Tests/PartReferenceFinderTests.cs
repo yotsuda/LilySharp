@@ -281,13 +281,12 @@ public class PartReferenceFinderTests
     }
 
     /// <summary>
-    /// An UNNAMED <c>chords { … }</c> / <c>lyrics { … }</c> attaches to a co-written staff
-    /// rather than standing as a row, so it declares no name — and slot 1 of an unnamed
-    /// block is the opening BRACE, which a naive reading would have collected as a track
-    /// called "{".
+    /// An UNNAMED <c>chords { … }</c> / <c>lyrics { … }</c> is the file's unnamed track
+    /// (2026-10-09), declared by its keyword — never by slot 1, which is the opening BRACE
+    /// and which a naive reading would have collected as a track called "{".
     /// </summary>
     [Fact]
-    public void UnnamedChordOrLyricBlockDeclaresNoTrack()
+    public void UnnamedChordOrLyricBlockDeclaresTheUnnamedTrack()
     {
         var rows = PartReferenceFinder.Tracks(Root("""
             section Main {
@@ -298,8 +297,8 @@ public class PartReferenceFinderTests
             form { Main }
             score "x" { staff m }
             """));
-        Assert.Empty(rows.ChordTracks);
-        Assert.Empty(rows.LyricTracks);
+        Assert.Equal(new[] { SyntaxFacts.UnnamedChordsName }, rows.ChordTracks);
+        Assert.Equal(new[] { SyntaxFacts.UnnamedLyricsName }, rows.LyricTracks);
     }
 
     /// <summary>
@@ -414,20 +413,22 @@ public class PartReferenceFinderTests
     }
 
     /// <summary>
-    /// A <c>with</c> whose name is missing attaches nothing (RenderSpecParser needs the name
-    /// slot to exist), so it is not a reference — the zero-width token would only produce
-    /// "Undefined chords part: ''" under the parser's own "needs a name".
+    /// A bare <c>chords</c> row names the unnamed track (2026-10-09) by its keyword — the
+    /// one token whose text is the unnamed track's name — so the reference is checked like
+    /// any other, and never as a zero-width "Undefined chords part: ''".
     /// </summary>
     [Fact]
-    public void AttachmentWithNoNameIsNotAReference()
+    public void ABareChordsRow_ReferencesTheUnnamedTrackByItsKeyword()
     {
         var refs = PartReferenceFinder.Tracks(Root("""
             part m { clef treble }
             section Main { m { c4 } }
             form { Main }
-            score "x" { staff m with chords }
+            score "x" { staff m  chords }
             """)).References;
-        Assert.Empty(refs);
+        var (token, isChord) = Assert.Single(refs);
+        Assert.True(isChord);
+        Assert.Equal(SyntaxFacts.UnnamedChordsName, token.Text);
     }
 
     [Fact]

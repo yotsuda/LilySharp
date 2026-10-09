@@ -516,7 +516,7 @@ internal sealed class PartDeclarationGreen : GreenSyntaxNode
     // With body: part name { ... }
     public PartDeclarationGreen(
         SyntaxToken keyword,
-        SyntaxToken name,
+        SyntaxToken? name,
         SyntaxToken openBrace,
         GreenNode?[] properties,
         SyntaxToken closeBrace)
@@ -527,7 +527,7 @@ internal sealed class PartDeclarationGreen : GreenSyntaxNode
     // Without body: part name
     public PartDeclarationGreen(
         SyntaxToken keyword,
-        SyntaxToken name)
+        SyntaxToken? name)
         : base(SyntaxKind.PartDeclaration, [keyword, name])
     {
     }
@@ -535,7 +535,7 @@ internal sealed class PartDeclarationGreen : GreenSyntaxNode
     // With inline display name, no body: part name "display"
     public PartDeclarationGreen(
         SyntaxToken keyword,
-        SyntaxToken name,
+        SyntaxToken? name,
         SyntaxToken displayName)
         : base(SyntaxKind.PartDeclaration, [keyword, name, displayName])
     {
@@ -544,7 +544,7 @@ internal sealed class PartDeclarationGreen : GreenSyntaxNode
     // With inline display name and body: part name "display" { props }
     public PartDeclarationGreen(
         SyntaxToken keyword,
-        SyntaxToken name,
+        SyntaxToken? name,
         SyntaxToken displayName,
         SyntaxToken openBrace,
         GreenNode?[] properties,

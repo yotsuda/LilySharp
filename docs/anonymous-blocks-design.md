@@ -1,6 +1,6 @@
 # 名前の無いブロックとスコアの中の上書き — 設計
 
-**状態**: **方針はユーザー決定**（2026-10-09・第870）。**form・score・スコアの中の form／fonts／paper／layout は実装済み**（第870・§5 の ①〜⑤ のうち form と score の分）。**名前の無い chords・lyrics・part は未着手**（§5 ②の残り）。
+**状態**: **方針はユーザー決定**（2026-10-09・第870）。**§0 1〜6 は実装済み**（第870: form と score は `d26115786`、chords・lyrics・part はその次の commit）。残りは §6 と、§3 の `staff bass` の読み（下）。
 **根拠**: ユーザーとの会話（第870）。数は 2026-10-09 の作業ツリー（§4）。
 
 ---
@@ -73,8 +73,8 @@ score another {              // → song-another.svg
 - **スコアが form を選ばず、名前の無い form も無い**: 最初に宣言した form を鳴らす（`ScoreForms.Primary`）。form が 1 つも無ければ section を宣言順に鳴らす（今のまま）。
 - **名前の無い part**:
   - part が 2 つ以上あるファイルでは、どれかが名前なしならエラー。「最初の part にも名前を」と案内する。
-  - スコアの中の `staff`・`tab` を裸で書くと、名前の無い part を指す。`staff bass` は「名前の無い part を低音部記号で」と読む
-    （part が 1 つしかないので、今の「part 名か音部記号か」の先読みは要らない）。
+  - スコアの中の `staff`・`tab` を裸で書くと、名前の無い part を指す（内部名 `part`＝`SyntaxFacts.UnnamedPartName`。chords・lyrics も同じ形で `chords`・`lyrics`）。
+    ⚠️ **未実装**: `staff bass` は今も「bass という part」と読む（名前の無い part を低音部記号で、の読みは入れていない）。裸の `staff` の直後の単語は常に名前。
   - 歌詞の `sings` の既定も、その part。
   - section の中に直接音楽を書く形（`section A { c'4 d e f | }`）は、名前の無い part の音楽と読む。
   - part の宣言（`part { clef treble … }`）を書かずに、section の中の音楽だけでもよい。

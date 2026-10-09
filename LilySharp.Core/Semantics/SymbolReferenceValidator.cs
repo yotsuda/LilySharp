@@ -77,6 +77,8 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
                     + $"('{reference.Text} {{ … }}' in a section) or a header "
                     + $"('part {reference.Text} {{ … }}').");
 
+        ValidateUnnamedPart(root);
+
         // The score's TRACK references name their own tracks, not the staff parts above: a
         // `chords NAME` row — or a `staff X with chords NAME` attachment — is declared by a
         // named `chords NAME { … }` block, and the two lyric spellings by a named
@@ -97,6 +99,42 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
                 + $"('{keyword} {token.Text} {{ … }}').");
         }
     }
+
+    /// <summary>
+    /// The unnamed part (2026-10-09, docs/anonymous-blocks-design.md): <c>part { … }</c> is
+    /// allowed only as the file's ONE part, and a bare <c>staff</c> / <c>tab</c> renders it —
+    /// which a file whose parts are all named does not have. A file that declares no part at
+    /// all writes its music straight into its sections, and a bare staff renders that.
+    /// </summary>
+    private void ValidateUnnamedPart(SyntaxNode root)
+    {
+        foreach (var part in root.DescendantNodes<PartDeclarationSyntax>())
+            if (part.IsUnnamed && _definedParts.Count > 1)
+                _diagnostics.Error(part.Keyword.Span, DiagnosticCodes.UndefinedPart,
+                    "An unnamed 'part { … }' must be the file's only part. Name it "
+                    + "('part melody { … }') and render it with 'staff melody'.");
+
+        if (_definedParts.Count == 0 || _definedParts.Contains(SyntaxFacts.UnnamedPartName))
+            return;
+        string declared = string.Join(", ", _definedParts.OrderBy(n => n, StringComparer.Ordinal));
+        // The descendant index, not a whole-tree walk: this runs on every keystroke.
+        foreach (var node in root.DescendantNodesOfKinds(BareRenderKinds))
+        {
+            SyntaxTokenNode? keyword = node switch
+            {
+                StaffRenderSyntax staff when PartReferenceFinder.StaffPartToken(staff) == null => staff.StaffKeyword,
+                TabRenderSyntax tab when tab.SlotCount == 1 || tab.GetChild(1) is SyntaxTokenNode { Text: "as" }
+                    => (SyntaxTokenNode)tab.GetChild(0)!,
+                _ => null,
+            };
+            if (keyword != null)
+                _diagnostics.Error(keyword.Span, DiagnosticCodes.UndefinedPart,
+                    $"A bare '{keyword.Text}' renders the unnamed part, and this file names its parts "
+                    + $"({declared}): write '{keyword.Text} NAME'.");
+        }
+    }
+
+    private static readonly SyntaxKind[] BareRenderKinds = [SyntaxKind.StaffRender, SyntaxKind.TabRender];
 
     /// <summary>The kinds <see cref="CollectDefinitions"/> answers on: its own two cases
     /// plus the section and part predicates' lists.</summary>

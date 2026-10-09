@@ -800,7 +800,10 @@ internal sealed partial class Parser
         if (IsClefKeyword() && IsPartNameAhead())
             tokens.Add(Advance());
 
-        tokens.Add(ExpectPartName());
+        // A bare `staff` renders the file's unnamed part (SyntaxFacts.UnnamedPartName,
+        // 2026-10-09): no name to expect. ⚠️ So a bare word after it is always the part.
+        if (IsPartNameStart())
+            tokens.Add(Advance());
 
         // `staff flute "津田さん"` overrides the displayed instrument name. QUOTED ONLY
         // (2026-08-23, user-approved — GRAMMAR_AUDIT section 3.1): the bare form this
@@ -832,7 +835,10 @@ internal sealed partial class Parser
     private ChordRowRenderGreen ParseChordRowRender()
     {
         var tokens = new List<SyntaxToken> { Expect(SyntaxKind.ChordsKeyword) };
-        tokens.Add(ExpectPartName());
+        // A bare `chords` places the file's unnamed chord track (2026-10-09). ⚠️ So a bare
+        // word right after it is always the track's name, never a MIDI-only part.
+        if (IsPartNameStart() && !string.Equals(Current.Text, "as", System.StringComparison.Ordinal))
+            tokens.Add(Advance());
         ConsumeAsSelector(tokens);
         return new ChordRowRenderGreen([.. tokens]);
     }
@@ -933,7 +939,10 @@ internal sealed partial class Parser
     private LyricsRowRenderGreen ParseLyricsRowRender()
     {
         var tokens = new List<SyntaxToken> { Expect(SyntaxKind.LyricsKeyword) };
-        tokens.Add(ExpectPartName());
+        // A bare `lyrics` places the file's unnamed track (SyntaxFacts.UnnamedLyricsName,
+        // 2026-10-09). ⚠️ So a bare word right after it is always the track's name.
+        if (IsPartNameStart() && !(Check(SyntaxKind.Identifier) && Current.Text == "sings"))
+            tokens.Add(Advance());
         // Contextual like the definition's (Parser.Sections): 'sings' is claimed only
         // directly after a row's track name, and stays an ordinary identifier
         // everywhere else. Without this branch the word fell through to the score's
@@ -1187,7 +1196,9 @@ internal sealed partial class Parser
         if (IsPartNameStart() && IsPartNameAhead())
             tokens.Add(Advance());
 
-        tokens.Add(ExpectPartName());
+        // A bare `tab` renders the file's unnamed part (2026-10-09).
+        if (IsPartNameStart() && !string.Equals(Current.Text, "as", System.StringComparison.Ordinal))
+            tokens.Add(Advance());
         ConsumeAsSelector(tokens); // `... as numbers | full` (numbers-only tab)
         return new TabRenderGreen([.. tokens]);
     }

@@ -1066,8 +1066,14 @@ public sealed class PartDeclarationSyntax : SyntaxNode
 
     /// <summary>The <c>part</c> keyword token.</summary>
     public SyntaxTokenNode Keyword => (SyntaxTokenNode)GetChild(0)!;
-    /// <summary>The declared part name token.</summary>
-    public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(1)!;
+    /// <summary>The declared part name token — for the unnamed <c>part { … }</c>, the
+    /// <c>part</c> keyword itself, whose text is <see cref="SyntaxFacts.UnnamedPartName"/>
+    /// (2026-10-09). Every reader that keys a part by <c>Name.Text</c> reads the unnamed
+    /// part's name without a second spelling.</summary>
+    public SyntaxTokenNode Name => GetChild(1) as SyntaxTokenNode ?? Keyword;
+
+    /// <summary>True for the unnamed <c>part { … }</c>.</summary>
+    public bool IsUnnamed => GetChild(1) is null;
 
     /// <summary>The optional inline display-name token (<c>part melody "Violin I"</c>) —
     /// a string literal sitting right after the name, before any body brace. Null when

@@ -45,14 +45,16 @@ public sealed class LyricsBlockSyntax : SyntaxNode
     /// </summary>
     public SyntaxTokenNode? NameToken => HasName ? (SyntaxTokenNode)GetChild(1)! : null;
 
-    /// <summary>The voice name this lyrics block binds to, or null for the default
-    /// (first voice).</summary>
-    public string? VoiceName => NameToken?.Text;
+    /// <summary>The track name — <see cref="SyntaxFacts.UnnamedLyricsName"/> for an unnamed
+    /// block (2026-10-09), which a score places with a bare <c>lyrics</c> row and which
+    /// sings the unnamed part, or the file's only part, unless it says otherwise
+    /// (<see cref="Music.LyricBindings"/>).</summary>
+    public string? VoiceName => NameToken?.Text ?? SyntaxFacts.UnnamedLyricsName;
 
     /// <summary>The <c>sings</c> keyword token of a melody-bound track
     /// (<c>lyrics ja sings vocal { … }</c>), or null when the block writes none.</summary>
     public SyntaxTokenNode? SingsKeyword =>
-        HasName && GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } s
+        GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } s
             && s.Text == "sings" ? s : null;
 
     /// <summary>The token naming the part this track sings, or null when this block
@@ -151,8 +153,9 @@ public sealed class ChordPartBlockSyntax : SyntaxNode
     /// what the editor colours. <see cref="PartName"/> reads the same slot.</summary>
     public SyntaxTokenNode? NameToken => HasName ? (SyntaxTokenNode)GetChild(1)! : null;
 
-    /// <summary>The chord part name this block contributes to.</summary>
-    public string? PartName => NameToken?.Text;
+    /// <summary>The chord part name this block contributes to — <see cref="SyntaxFacts.UnnamedChordsName"/>
+    /// for an unnamed block.</summary>
+    public string? PartName => NameToken?.Text ?? SyntaxFacts.UnnamedChordsName;
 
     private int OpenBraceIndex => HasName ? 2 : 1;
 

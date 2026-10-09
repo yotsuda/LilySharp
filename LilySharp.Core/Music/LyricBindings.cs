@@ -114,9 +114,27 @@ public static class LyricBindings
     private static Dictionary<string, string> BuildMap(SyntaxNode root)
     {
         var map = new Dictionary<string, string>(StringComparer.Ordinal);
+        bool unnamedTrack = false;
         foreach (var node in root.DescendantNodes<LyricsBlockSyntax>())
+        {
+            if (node is LyricsBlockSyntax { NameToken: null })
+                unnamedTrack = true;
             if (DefinitionBindingOf(node) is ({ } name, { } target) && !map.ContainsKey(name))
                 map[name] = target;
+        }
+        // The UNNAMED track that states no `sings` (2026-10-09) sings the file's one part: the
+        // unnamed part, the only declared one, or — a file that declares none and writes its
+        // music straight into its sections — the unnamed part a bare `staff` renders. With
+        // several parts it stays unbound, like any track that names no melody.
+        if (unnamedTrack && !map.ContainsKey(SyntaxFacts.UnnamedLyricsName))
+        {
+            var parts = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var n in root.DescendantNodesOfKinds(Editing.PartReferenceFinder.DeclaringKinds))
+                if (Editing.PartReferenceFinder.DeclaredName(n) is { } declared)
+                    parts.Add(declared.Text);
+            if (parts.Count <= 1)
+                map[SyntaxFacts.UnnamedLyricsName] = parts.Count == 1 ? parts.First() : SyntaxFacts.UnnamedPartName;
+        }
         return map;
     }
 

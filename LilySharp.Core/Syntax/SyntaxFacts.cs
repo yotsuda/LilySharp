@@ -368,6 +368,20 @@ internal static class SyntaxFacts
     /// hand-written copy of the fifteen, the shape that had drifted for the clefs and the part
     /// properties.
     /// </remarks>
+    /// <summary>The name an UNNAMED <c>chords { … }</c> block answers to — the keyword itself,
+    /// which no writer can give a track (2026-10-09, docs/anonymous-blocks-design.md). A score's
+    /// bare <c>chords</c> row names it.</summary>
+    public const string UnnamedChordsName = "chords";
+
+    /// <summary>The name an UNNAMED <c>lyrics { … }</c> block answers to; see
+    /// <see cref="UnnamedChordsName"/>.</summary>
+    public const string UnnamedLyricsName = "lyrics";
+
+    /// <summary>The name an UNNAMED <c>part { … }</c> answers to — allowed only when it is the
+    /// file's one part; a score's bare <c>staff</c> / <c>tab</c> names it. See
+    /// <see cref="UnnamedChordsName"/>.</summary>
+    public const string UnnamedPartName = "part";
+
     public static IReadOnlyList<string> ScoreItemKeywordVocabulary { get; } =
     [
         "staff", "grandStaff", "staffGroup", "choirStaff", "condensedStaff", "combinedStaff",

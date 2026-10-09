@@ -962,7 +962,12 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
 (* Parts declare instruments/voices. Header attributes are written BARE — the same
    command form as the top-level commands (NO colon, NO '='). *)
 
-PartDecl       = 'part' , PartName , [ String ] , [ PartBody ] ;  (* String = display name *)
+PartDecl       = 'part' , [ PartName ] , [ String ] , [ PartBody ] ;  (* String = display name *)
+                 (* An UNNAMED 'part { … }' (2026-10-09) is allowed only as the file's ONE
+                    part (LYS1007 otherwise). A score's bare 'staff' / 'tab' renders it, a
+                    section's bare music is its music, and an unnamed lyrics track sings it.
+                    A file that declares no part at all writes its music straight into its
+                    sections, and a bare 'staff' renders that the same way. *)
 
 (* A PART NAME — and a section's — is ANY BARE WORD except the structural keywords
    (owner's decision 2026-10-03; until then an identifier and the four clef words
@@ -1231,7 +1236,11 @@ PartBlock      = PartName , MusicBlock ;
    part names its voices: there the likelier reading is a misspelled voice. A row without
    its own 'sings' cannot re-decide the association by position: after a staff
    it does not sing it simply stays an independent band. *)
-LyricsBlock    = 'lyrics' , Identifier , [ 'sings' , PartRef ] , '{' , { LyricMeasure | LyricVolta } , '}' ;
+LyricsBlock    = 'lyrics' , [ Identifier ] , [ 'sings' , PartRef ] , '{' , { LyricMeasure | LyricVolta } , '}' ;
+                 (* The UNNAMED track (2026-10-09) is placed by a score's bare 'lyrics' row.
+                    With no 'sings' it sings the file's one part - the unnamed part, the only
+                    declared one, or the music written straight into the sections; with
+                    several parts it is unbound, like any track that names no melody. *)
 LyricMeasure   = { LyricSyllable } , '|' ;
 LyricVolta     = '[' , [ '~' ] , Integer , { ( ',' | '-' ) , Integer } , '.' , { LyricMeasure } , ']' ;
                  (* A VERSE HEADER: the words for the Nth PLAY of the section — '[1. … ]
@@ -1256,7 +1265,8 @@ LyricSyllable  = LyricText , [ '-' ] | '--' | '-' | '~' | '_' ;
                     the slur's. '__' is the extender LINE and takes no note; '_' and a
                     detached '~' take one note each, holding the previous syllable. *)
 
-ChordsBlock    = 'chords' , Identifier , '{' , { ChordRowEntry | ChordExtend | Rest | Barline } , '}' ;
+ChordsBlock    = 'chords' , [ Identifier ] , '{' , { ChordRowEntry | ChordExtend | Rest | Barline } , '}' ;
+                 (* The UNNAMED track (2026-10-09) is placed by a score's bare 'chords' row. *)
 ChordRowEntry  = ( ChordEntry | RomanEntry ) , [ '(' , ShapeWords , ')' ] ;   (* '(' GLUED to the symbol *)
                  (* The chord diagram's shapes (owner's design 2026-09-28): F(133211),
                     F(133211 2010), F(guitar 133211 ukulele 2010), F/A(x03211). ShapeWords
@@ -1498,7 +1508,7 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                | 'choirStaff' , StaffGroupBody      (* a BRACKET, bar lines NOT drawn through *)
                | CondensedStaff                     (* several parts on ONE staff *)
                | CombinedStaff                      (* two parts on one staff, MERGED *)
-               | 'tab' , [ TuningName ] , PartRef , [ 'as' , TabStyle ]
+               | 'tab' , [ [ TuningName ] , PartRef ] , [ 'as' , TabStyle ]
                                                      (* tablature: tab partName, or
                                                         tab bass5 partName to override the
                                                         part header's own `tuning`.
@@ -1525,8 +1535,10 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         ⚠️ keep semicolons out of comments
                                                         inside this production — the doc
                                                         tests cut the block at the first *)
-               | 'chords' , PartRef                  (* independent chord ROW (lead sheet) *)
-               | 'lyrics' , PartRef , [ 'sings' , PartRef ]
+               | 'chords' , [ PartRef ] , [ 'as' , ( 'roman' | 'names' ) ]
+                                                     (* independent chord ROW (lead sheet) - bare,
+                                                        the unnamed chords track *)
+               | 'lyrics' , [ PartRef ] , [ 'sings' , PartRef ]
                                                      (* lyrics ROW. The optional 'sings' names
                                                         the melody THIS ROW sings - it overrides
                                                         the definition's default for this
@@ -1672,7 +1684,7 @@ CombinedStaff  = 'combinedStaff' , '{' , PartRef , PartRef , '}' ;
                       score full  { combinedStaff { fl1 fl2 } }
                       score parts { staff fl1  staff fl2 } *)
 
-StaffRender    = 'staff' , [ ClefName ] , PartRef , [ DisplayName ] ,
+StaffRender    = 'staff' , [ [ ClefName ] , PartRef ] , [ DisplayName ] ,
                  [ 'as' , StaffSelector , { StaffSelector } ] ;
 StaffSelector  = 'lines' , Integer
                | 'removeEmpty' , RemoveEmptyValue ;

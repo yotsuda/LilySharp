@@ -809,8 +809,14 @@ public sealed class ChordRowRenderSyntax : SyntaxNode
     /// <summary>The <c>chords</c> keyword token.</summary>
     public SyntaxTokenNode ChordsKeyword => (SyntaxTokenNode)GetChild(0)!;
 
-    /// <summary>The chord part name to place (e.g. <c>chords riff</c> → "riff").</summary>
-    public string PartName => ((SyntaxTokenNode)GetChild(1)!).Text;
+    /// <summary>The token naming the chord part to place, or null for a bare <c>chords</c> —
+    /// the file's unnamed chord track.</summary>
+    public SyntaxTokenNode? NameToken =>
+        GetChild(1) is SyntaxTokenNode t && !(t.Text == "as" && SlotCount > 2) ? t : null;
+
+    /// <summary>The chord part name to place (e.g. <c>chords riff</c> → "riff"; a bare
+    /// <c>chords</c> → <see cref="SyntaxFacts.UnnamedChordsName"/>).</summary>
+    public string PartName => NameToken?.Text ?? SyntaxFacts.UnnamedChordsName;
 
     /// <summary>The chord display selector after the name (<c>as roman|names</c> →
     /// "roman"), or null when absent.</summary>
@@ -819,8 +825,9 @@ public sealed class ChordRowRenderSyntax : SyntaxNode
     /// <summary>The token carrying the display selector, or null when the row writes none —
     /// what a diagnostic about the selector underlines (the WORD, not the whole row).</summary>
     public SyntaxTokenNode? DisplayModeToken =>
-        SlotCount > 3 && GetChild(2) is SyntaxTokenNode a && a.Text == "as"
-            && GetChild(3) is SyntaxTokenNode m
+        (NameToken != null ? 2 : 1) is int at && SlotCount > at + 1
+            && GetChild(at) is SyntaxTokenNode a && a.Text == "as"
+            && GetChild(at + 1) is SyntaxTokenNode m
             ? m
             : null;
 }
@@ -839,20 +846,29 @@ public sealed class LyricsRowRenderSyntax : SyntaxNode
     /// <summary>The <c>lyrics</c> keyword token.</summary>
     public SyntaxTokenNode LyricsKeyword => (SyntaxTokenNode)GetChild(0)!;
 
-    /// <summary>The lyrics part name to place (e.g. <c>lyrics verse</c> → "verse").</summary>
-    public string PartName => ((SyntaxTokenNode)GetChild(1)!).Text;
+    /// <summary>The token naming the track to place, or null for a bare <c>lyrics</c> — the
+    /// file's unnamed track.</summary>
+    public SyntaxTokenNode? NameToken =>
+        GetChild(1) is SyntaxTokenNode t && !(t.Kind == SyntaxKind.Identifier && t.Text == "sings" && SlotCount > 2)
+            ? t : null;
+
+    /// <summary>The lyrics part name to place (e.g. <c>lyrics verse</c> → "verse"; a bare
+    /// <c>lyrics</c> → <see cref="SyntaxFacts.UnnamedLyricsName"/>).</summary>
+    public string PartName => NameToken?.Text ?? SyntaxFacts.UnnamedLyricsName;
+
+    private int SingsIndex => NameToken != null ? 2 : 1;
 
     /// <summary>The <c>sings</c> keyword token of a binding-stating row
     /// (<c>lyrics verse sings melody</c>), or null when the row writes none.</summary>
     public SyntaxTokenNode? SingsKeyword =>
-        SlotCount > 2 && GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } s
+        SlotCount > SingsIndex && GetChild(SingsIndex) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } s
             && s.Text == "sings" ? s : null;
 
     /// <summary>The token naming the part this row says its track sings, or null when the
     /// row states no binding — what the editor colours.</summary>
     public SyntaxTokenNode? SingsTargetToken =>
-        SingsKeyword != null && SlotCount > 3
-            && GetChild(3) is SyntaxTokenNode { Kind: SyntaxKind.Identifier, Text.Length: > 0 } t2
+        SingsKeyword != null && SlotCount > SingsIndex + 1
+            && GetChild(SingsIndex + 1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier, Text.Length: > 0 } t2
             ? t2 : null;
 
     /// <summary>The part THIS ROW sings (<c>lyrics verse sings melody</c> →

@@ -26,7 +26,11 @@ internal sealed partial class Parser
     private PartDeclarationGreen ParsePartDeclaration()
     {
         var keyword = Expect(SyntaxKind.PartKeyword);
-        var name = ExpectPartName();   // names may be clef-name words (bass/treble/...)
+        // names may be clef-name words (bass/treble/...). `part { … }` / `part "Violin" { … }`
+        // is the file's unnamed part (SyntaxFacts.UnnamedPartName, 2026-10-09): the slot
+        // stays, empty, so every later slot keeps its index.
+        var name = Check(SyntaxKind.OpenBrace) || Check(SyntaxKind.StringLiteral)
+            ? null : ExpectPartName();
 
         // Optional inline display name: `part melody "Violin I"`. This is the label
         // printed for the part in every score that renders it (a score's

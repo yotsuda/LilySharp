@@ -209,8 +209,9 @@ public static class RenderSpecParser
                     break;
 
                 // `fonts NAME [{ … }]` / `paper NAME [{ … }]` / a bare `fonts { … }`: this
-                // score's reference to a named top-level block, or its override of the default. The LAST wins, like every repeated
-                // single-value setting (the validator names the earlier ones).
+                // score's reference to a named top-level block, or its override of the default.
+                // The LAST wins, like every repeated single-value setting (the validator names the
+                // earlier ones).
                 case FontDeclarationSyntax fonts:
                     fontsRef = fonts;
                     break;
@@ -796,7 +797,6 @@ public static class RenderSpecParser
         // before the display name scan below so `as` cannot be read as a bare
         // display name.
         var selectors = CutStaffSelectors(toks);
-        if (toks.Count == 0) return null;
 
         // `staff ~flute` = no instrument-name label for this staff.
         bool nameSuppressed = toks.RemoveAll(t => t.Kind == SyntaxKind.Tilde) > 0;
@@ -809,12 +809,12 @@ public static class RenderSpecParser
             nameOverride = StringLiteral.Value(toks[si].Text);
             toks.RemoveAt(si);
         }
-        if (toks.Count == 0) return null;
 
         // [clef?] part [bare display name] — the clef is a distinct keyword
         // kind, so the part is the first non-clef token; anything after it is
-        // an unquoted display name (`staff flute 津田さん`).
-        ClefType? explicitClef = toks[0].Kind switch
+        // an unquoted display name (`staff flute 津田さん`). No token at all is a bare
+        // `staff`: the file's unnamed part (SyntaxFacts.UnnamedPartName, 2026-10-09).
+        ClefType? explicitClef = toks.Count == 0 ? null : toks[0].Kind switch
         {
             SyntaxKind.TrebleKeyword => ClefType.Treble,
             SyntaxKind.BassKeyword => ClefType.Bass,
@@ -838,9 +838,7 @@ public static class RenderSpecParser
             explicitClef = null;
             partIdx = 0;
         }
-        if (partIdx >= toks.Count) return null;
-        var partToken = toks[partIdx];
-        string voiceName = partToken.Text;
+        string voiceName = partIdx < toks.Count ? toks[partIdx].Text : SyntaxFacts.UnnamedPartName;
         if (nameOverride == null && partIdx + 1 < toks.Count)
             nameOverride = toks[partIdx + 1].Text;
 
@@ -920,7 +918,10 @@ public static class RenderSpecParser
         // first is the part when the file declares a part by that name, else the tuning
         // (owner's decision 2026-10-03) — one answer for the page, the twin, the rename and
         // the validator.
-        if (tab.PartToken is not { } partToken) return null;
+        // A bare `tab` (only the keyword, perhaps an `as` selector) renders the file's unnamed
+        // part (SyntaxFacts.UnnamedPartName, 2026-10-09).
+        bool bare = tab.SlotCount == 1 || tab.GetChild(1) is SyntaxTokenNode { Text: "as" };
+        if (tab.PartToken is not { } partToken && !bare) return null;
 
         // Trailing `as numbers | full` — the tab STYLE selector (parallel to the
         // chord `as roman|names`). `numbers` = fret digits only.
@@ -932,8 +933,8 @@ public static class RenderSpecParser
             ? string.Equals(style.Text, "numbers", System.StringComparison.Ordinal)
             : null;
 
-        var tuningToken = tab.TuningToken;
-        string voiceName = partToken.Text;
+        var tuningToken = bare ? null : tab.TuningToken;
+        string voiceName = bare ? SyntaxFacts.UnnamedPartName : tab.PartToken!.Text;
 
         // Explicit tuning override → the part's `tuning` property → the tuning
         // implied by the part's `instrument` preset → else guitar.

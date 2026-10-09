@@ -300,7 +300,6 @@ undefined2
     // `voice` and `staff` are in SyntaxFacts.PartNameReservedVocabulary; `treble_8` and
     // `percussion`, which stood here until 2026-10-03, name a part now and report LYS1007.
     [InlineData("staff voice")]
-    [InlineData("staff staff")]
     [InlineData("ossia voice")]
     [InlineData("tab voice")]
     [InlineData("chords voice")]

@@ -202,11 +202,10 @@ public sealed partial class LilySharpLanguageServer
         {
             switch (node)
             {
-                case LyricsBlockSyntax block when block.VoiceName is { Length: > 0 }
-                    && block.GetChild(1) is SyntaxTokenNode dt:
+                case LyricsBlockSyntax { NameToken: { } dt }:
                     yield return dt;
                     break;
-                case LyricsRowRenderSyntax when node.GetChild(1) is SyntaxTokenNode rt && rt.Text.Length > 0:
+                case LyricsRowRenderSyntax { NameToken: { } rt }:
                     yield return rt;
                     break;
             }
@@ -221,11 +220,10 @@ public sealed partial class LilySharpLanguageServer
         {
             switch (node)
             {
-                case ChordPartBlockSyntax block when block.PartName is { Length: > 0 }
-                    && block.GetChild(1) is SyntaxTokenNode dt:
+                case ChordPartBlockSyntax { NameToken: { } dt }:
                     yield return dt;
                     break;
-                case ChordRowRenderSyntax when node.GetChild(1) is SyntaxTokenNode rt && rt.Text.Length > 0:
+                case ChordRowRenderSyntax { NameToken: { } rt }:
                     yield return rt;
                     break;
             }

@@ -216,7 +216,10 @@ public sealed class DiagnosticBag
 /// grammar no longer has either shape: the first ending closes a repeat's body (anything
 /// but <c>:|</c> after it is <see cref="ExpectedToken"/>), and a bare <c>2.</c> is a
 /// stray form item (<see cref="StrayItemToken"/>). Written by 0 of the 1,163 tracked and
-/// Lab-corpus books when they were retired.
+/// Lab-corpus books when they were retired. ·
+/// <c>LYS0032</c> NamelessChordsRemoved (2026-10-09, owner's decision, docs/anonymous-blocks-design.md):
+/// an unnamed <c>chords { … }</c> is the file's default track now, placed by a bare
+/// <c>chords</c> row — still a row the score writes, not the removed co-writing association.
 /// </para>
 /// <para>
 /// LYS8007 lived for one day. It refused the one-line <c>font "NAME"</c> and told the
@@ -574,44 +577,12 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string StrayItemToken = "LYS0030";
 
-    /// <summary>Syntax error: a nameless <c>chords { … }</c> block. Name the progression
-    /// and place it: <c>chords prog { … }</c> in the section, <c>chords prog</c> above the
-    /// staff in the score.</summary>
-    /// <remarks>
-    /// <para>
-    /// ⚠️ THIS CODE EARNS ITS PLACE IN THE PRESENT TENSE, not as a migration path. Two
-    /// reasons, either one sufficient. First, <c>chords</c> is a live keyword, so
-    /// <c>chords {</c> is a position the parser must answer for whatever the history —
-    /// unlike the retired <c>with</c>-clause error and LYS8007, which became unreachable
-    /// when their keywords stopped being keywords and were retired for it. Second, and the
-    /// reason that would hold even then: <c>voice { … }</c> legitimately takes no name, so
-    /// a writer who has never seen an older Lily# reaches for <c>chords { … }</c> by
-    /// analogy. It is a mistake the language invites, not a spelling it used to have.
-    /// </para>
-    /// <para>
-    /// The history, kept as history: the nameless form associated by CO-WRITING — "the part
-    /// in the same section" — which was written nowhere and stopped being well-defined the
-    /// moment a section held two parts (the implementation hard-coded staff 0). Removed
-    /// before the first tag, user decision, 2026-08-19.
-    /// </para>
-    /// <para>
-    /// ⚠️ The summary above was ONE sentence beginning "Removed before the first tag", and
-    /// that framing invited its own retirement: read against the never-released rule that
-    /// killed LYS0031 and LYS8007 on the same day, a code justified by a removal looks like
-    /// a code for nobody. Rewritten 2026-08-21. <see cref="RepeatedVoiceKeyword"/> is the
-    /// pattern to copy — it argues from what the spelling does today, not from what it used
-    /// to mean.
-    /// </para>
-    /// </remarks>
-    public const string NamelessChordsRemoved = "LYS0032";
-
     /// <summary>Syntax error: a <c>~</c> between <c>section</c> and the name
     /// (<c>section ~A { … }</c>). A section's rehearsal label is hidden at a form reference,
     /// <c>form { ~A }</c>; the declaration takes no tilde.</summary>
     /// <remarks>
     /// <para>
-    /// Earns its place in the present tense, the way <see cref="NamelessChordsRemoved"/>
-    /// does: <c>form { ~A }</c> is the analogy that makes <c>section ~A</c> look writable, so
+    /// Earns its place in the present tense: <c>form { ~A }</c> is the analogy that makes <c>section ~A</c> look writable, so
     /// a writer who never saw an older Lily# reaches for it — and without this the parser's
     /// answer is "expected a name, found '~'", which is true and says nothing about where the
     /// tilde goes. Reported and KEPT (like <see cref="StrayItemToken"/>): the name after it

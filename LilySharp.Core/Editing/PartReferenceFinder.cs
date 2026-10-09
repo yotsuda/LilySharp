@@ -289,10 +289,12 @@ public static class PartReferenceFinder
     /// <c>lyrics NAME { … }</c> block a lyric one; a nameless block (LYS0032, kept by
     /// recovery) declares nothing — its slot 1 is the opening BRACE, and a flat reading
     /// collects that as a track called "{".</summary>
+    /// <remarks>An UNNAMED <c>chords { … }</c> (2026-10-09) declares the track named by its
+    /// keyword — the token whose text is <see cref="SyntaxFacts.UnnamedChordsName"/>.</remarks>
     public static TrackName? DeclaredTrackName(SyntaxNode node) => node switch
     {
-        ChordPartBlockSyntax c when c.NameToken is { } t => new TrackName(t, true),
-        LyricsBlockSyntax l when l.NameToken is { } t => new TrackName(t, false),
+        ChordPartBlockSyntax c => new TrackName(c.NameToken ?? c.ChordsKeyword, true),
+        LyricsBlockSyntax l => new TrackName(l.NameToken ?? l.LyricsKeyword, false),
         _ => null,
     };
 
@@ -303,8 +305,14 @@ public static class PartReferenceFinder
     /// </summary>
     public static TrackName? ReferencedTrackName(SyntaxNode node) => node switch
     {
-        ChordRowRenderSyntax when RowTargetToken(node) is { } t => new TrackName(t, true),
-        LyricsRowRenderSyntax when RowTargetToken(node) is { } t => new TrackName(t, false),
+        // A bare `chords` row names the unnamed track by its keyword (UnnamedChordsName).
+        ChordRowRenderSyntax row => row.NameToken is { } n
+            ? Referenceable(n) is { } t ? new TrackName(t, true) : null
+            : new TrackName(row.ChordsKeyword, true),
+        // A bare `lyrics` row names the unnamed track by its keyword (UnnamedLyricsName).
+        LyricsRowRenderSyntax row => row.NameToken is { } n
+            ? Referenceable(n) is { } t ? new TrackName(t, false) : null
+            : new TrackName(row.LyricsKeyword, false),
         _ => null,
     };
 
