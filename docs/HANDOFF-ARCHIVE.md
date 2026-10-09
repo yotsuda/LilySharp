@@ -129,6 +129,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第868セッションの経緯
+
+### 1.1 第868セッション（2026-10-09・YT-DELL2）
+
+同じ会話。`-Start p868`（HEAD `17b9ae7d7`）＝full **11490 / 0 / 2 / 11492**。§7 3.5 で第866 を ARCHIVE へ。
+- **閉じた（`1517f4f0b`）4 分音の臨時記号の寸法**（第867 の目視で発見）: 生成器が 4 字の行を出していなかった＝`GetAccidentalBBox` が**空の箱**を返し、臨時記号の列が幅を取らず符頭（和音では隣の符頭）に重なって描かれていた・skyline は natural の借り物。**生成器を初めてこの機械で回した**（fontTools を scratchpad の venv に・PATH の `python` は LilyPond 同梱なので Python312 で venv＝手順は Lab notes/CLAUDE-OPERATIONS §3）: 未変更の入力で 3 本ともバイト同一を再現（skyline の生成物に手で直した doc 1 行＝`DesignMetrics`→`MusicFontDesign` を生成器へ戻した）→ `sharp.slashslash.stem`・`sharp.slashslash.stemstemstem`・`mirroredflat`・`mirroredflat.flat` を 8 設計ぶん（LILC の箱・輪郭・送り・横の skyline 対）。ledger の短縮は mf の accbot/acctop（mirroredflat は −0.8, 2）。**LP 2.26 で同じ譜を描いて並べた**（Lab `p868/qt/lp.png`）: 同じ字・和音の臨時記号の段違いも同じ。網 `QuarterToneAccidentalTests` 8・`EveryBakedSkylineAndKern` に 4 kind。⚠️ `LpReferenceCitationTests` の「範囲だけで名前なし」の ratchet（681）に 1 度当たった＝mf の範囲には `fet_beginchar` を書く（ドット区切りの glyph 名は名前に数えない）。掃き 1199 枚・差 0（4 分音の本はコーパスに無い）・full 11498 / 0 / 2 / 11500。
+- **`-End p868 -DiffBase 17b9ae7d7`（門は全部 OK）＝full **11498 / 0 / 2 / 11500**（+8）。HANDOFF 442,201 B（残り 7,799）・§1 現在便 8,952 字。Core '+' 2,841 行（うち生成物 2,815）／LILYPOND-REF 8（mf の 4 字・output-lib）／LILYSHARP-OWN 0。未 push 50（push はユーザー）。**次は ④ 仕上げ**（§1.0・smufl-design §6 ④）。
+
 ## 以下は第867セッションの経緯
 
 ### 1.1 第867セッション（2026-10-09・YT-DELL2）
