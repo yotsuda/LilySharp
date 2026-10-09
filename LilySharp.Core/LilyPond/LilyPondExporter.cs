@@ -956,6 +956,11 @@ public sealed partial class LilyPondExporter
         "tuplet", "turn", "tweak", "unaCorda", "upbow", "version",
         // the dynamics it writes by name
         "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "sf", "sfz", "fp", "rfz", "fz",
+        // note-mode words that are not pitches (IsPitchName has those): a rest and a spacer
+        // (RESTNAME), a chord repetition, a full-bar rest — a part named `r` made `r = …`, which
+        // LilyPond refused ("syntax error, unexpected RESTNAME", session 871).
+        // LILYPOND-REF: lily/lexer.ll:388-404 the RESTNAME, CHORD_REPETITION and MULTI_MEASURE_REST rules
+        "r", "s", "q", "R",
     ];
 
     private static string Escape(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");

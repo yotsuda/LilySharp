@@ -2295,6 +2295,13 @@ public class LilyPondExporterTests
     [InlineData("b", "bass", "c4 d e f", "bVarTwo")]               // a note name: NOTENAME_PITCH
     [InlineData("fis", "treble", "c'4 d' e' f'", "fisVarTwo")]
     [InlineData("as", "treble", "c'4 d' e' f'", "asVarTwo")]
+    // Note-mode words that are not pitches (session 871: a part named `r` made a twin LilyPond
+    // refused, "syntax error, unexpected RESTNAME"): a rest, a spacer, a chord repetition, a
+    // full-bar rest.
+    [InlineData("r", "treble", "c'4 d' e' f'", "rVarTwo")]
+    [InlineData("s", "treble", "c'4 d' e' f'", "sVarTwo")]
+    [InlineData("q", "treble", "c'4 d' e' f'", "qVarTwo")]
+    [InlineData("R", "treble", "c'4 d' e' f'", "RVarTwo")]
     public void APartNamedAfterALilyPondWord_GetsAnotherVariable(string part, string clef, string music, string variable)
     {
         var ly = Export($$"""
@@ -2305,7 +2312,8 @@ public class LilyPondExporterTests
             """);
         Assert.Contains(variable + " = ", ly);
         Assert.Contains("\\" + variable + " }", ly);
-        Assert.DoesNotContain(part + " = ", ly);
+        // At a line's start: `printInitialRepeatBar = ##t` holds "r = " too.
+        Assert.DoesNotMatch("(?m)^" + part + " = ", ly);
     }
 
     [Fact]
