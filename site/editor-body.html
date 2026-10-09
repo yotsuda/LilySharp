@@ -404,7 +404,7 @@ score { staff m }
   <h2>The <code>lysc</code> command line</h2>
   <p>The same compiler, for batch work and scripts:</p>
 <pre>lysc check song.lys         // errors and warnings, nothing written
-lysc svg song.lys           // song.svg, plus song-ALIAS.svg for each other score
+lysc svg song.lys           // song.svg, plus song-NAME.svg for each named score
 lysc pdf | png | midi | xml | ly | vsqx song.lys
 lysc import score.musicxml  // MusicXML to .lys
 lysc octave --absolute song.lys   // rewrite into absolute (or --relative) octaves

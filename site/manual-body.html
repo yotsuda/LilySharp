@@ -560,6 +560,16 @@ section Main { melody { motif g2 g | } }</pre>
   <p>A section prints a rehearsal label by default. <code>~</code> on a form reference hides
   it for that play (<code>form { ~Verse Chorus }</code>). The tilde belongs to the
   reference only — <code>section ~A { … }</code> is an error.</p>
+  <p>The label is the section's name unless a string says otherwise. Text with spaces or a
+  <code>'</code> is written once on the section's top-level declaration — in a file grouped by
+  part its body may be empty — and every play prints it; a form reference's own
+  <code>"Label"</code> still wins, and <code>~</code> still hides it:</p>
+<pre>section A2 "A'" { }
+part p1 { section A2 { c d e r } }
+part p2 { section A2 { e f g r } }
+form { A2 }                     // prints A'</pre>
+  <p>Only a top-level section takes a label: one inside a part or a lyrics / chords track is
+  an error, since every part plays the same section.</p>
   <p>A section may state its own <code>key</code>, <code>time</code>, <code>tempo</code> or
   <code>partial</code> at the top of its body; they apply to every part of that section, and
   key and meter revert at the next one (the tempo carries on). Those four are the whole list:
@@ -855,6 +865,12 @@ form practice { Verse }        // a second form = a second output</pre>
   <code>staff NAME</code> is always another score item — <code>staff flute click</code> is
   flute's staff plus the MIDI-only <code>click</code> part. Position never changes what a
   word means.</p>
+  <p>A score's name is optional and a bare word, like a part's. The unnamed
+  <code>score { … }</code> is the file's default: it writes <code>song.svg</code> and the
+  preview shows it first, listed as <b>(Default)</b>. <code>score parts { … }</code> writes
+  <code>song-parts.svg</code> and is <code>parts</code> in the preview and in
+  <code>lysc --score</code>. A quoted name (<code>score "parts"</code>) is an error that names
+  the word to write.</p>
 
   <h3>Grouping staves</h3>
   <table class="g">
