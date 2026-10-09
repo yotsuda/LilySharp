@@ -971,6 +971,30 @@ score {
   no <code>font</code> keyword and no one-line form. A named face is <b>measured</b> as well
   as drawn, so naming one that a machine lacks makes the page machine-dependent; a missing
   face warns rather than passing quietly.</p>
+
+  <h3>The music font</h3>
+  <p>The glyphs — noteheads, clefs, rests, accidentals, dynamics — come from the
+  <code>music</code> entry. Without one the page is drawn in Emmentaler, LilyPond's own
+  font. Bravura, Petaluma and Leland, three
+  <a href="https://w3c.github.io/smufl/latest/">SMuFL</a> fonts, ship with Lily#; any other
+  SMuFL font installed where the specification puts its metadata is found too.</p>
+<pre>fonts { music "Leland" }                  // the whole file in Leland
+
+fonts { music "Petaluma" "Bravura" }      // a fallback chain, glyph by glyph
+
+score sketch { fonts { music "Petaluma" }  staff melody }   // one score only</pre>
+  <p>The font is not only a different drawing: its own sizes and line thicknesses — staff
+  lines, stems, ledger lines, beams, bar lines — are used too, unless a <code>layout { }</code>
+  entry or <code>--set</code> says otherwise. Each glyph comes from the first named font that
+  has it; one that none has (Leland has no figured-bass digits, for one) is drawn in
+  Emmentaler and warns once. Dynamics are the font's own <i>p</i>, <i>f</i>,
+  <i>sfz</i>… glyphs. Chord symbols take the font's ♭ ♯ △ ° ø glyphs, and under Petaluma the
+  page's text — chord letters, titles, tempo, marks, instrument names, everything but the lyrics
+  — is set in Petaluma Script, the handwritten face shipped beside it, unless a
+  <code>fonts</code> key names a face for it. <code>music</code> takes quoted names only; a
+  glyph's size is its grob's (<code>layout { NoteHead.scale 1.2 }</code>). From the command
+  line, <code>lysc svg --set music=Leland song.lys</code> lays a font over the file's. The
+  LilyPond export stays in Emmentaler, since LilyPond reads no SMuFL font, and says so.</p>
 </section>
 
 <section id="layout">
