@@ -102,6 +102,33 @@ public class SlashNoteTests
         Assert.DoesNotContain("b'4", ly);
     }
 
+    /// <summary>
+    /// Every clef, not three: the page pins a slash at staff position 0 whatever the clef
+    /// (<see cref="SitsOnTheMiddleLine_WithASlashHead"/>), so the twin has to name the pitch
+    /// that sits there under each one — the page's own table. Until 2026-10-10 the twin
+    /// kept a copy naming bass, alto and tenor, and a percussion (or soprano, mezzo-soprano,
+    /// baritone, bass_8) staff's slashes went out as treble's b': six positions above a
+    /// percussion staff's line, with ledger lines (Lab sessions/p872/probe/slashdir).
+    /// Absolute mode wraps the twin in \fixed c', so the text is the written pitch itself.
+    /// LILYPOND-REF: scm/parser-clef.scm supported-clefs + c0-pitch-alist.
+    /// </summary>
+    [Theory]
+    [InlineData("treble", "b")]
+    [InlineData("bass", "d,")]
+    [InlineData("alto", "c")]
+    [InlineData("tenor", "a,")]
+    [InlineData("soprano", "g")]
+    [InlineData("mezzosoprano", "e")]
+    [InlineData("baritone", "f,")]
+    [InlineData("percussion", "c")]
+    [InlineData("bass_8", "d,")]
+    public void TheTwinsSlashSitsOnEveryClefsMiddleLine(string clef, string pitch)
+    {
+        string ly = new LilyPondExporter().Export(SyntaxTree.Parse(
+            $"octave absolute\npart m {{ clef {clef} }}\nsection A {{ m {{ /4 | }} }}\nform {{ A }}\nscore {{ staff m }}"));
+        Assert.Contains("\\improvisationOn " + pitch + "4", ly);
+    }
+
     [Fact]
     public void MusicXml_WritesAnUnpitchedSlashHead()
     {

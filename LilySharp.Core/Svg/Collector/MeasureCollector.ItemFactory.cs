@@ -1260,23 +1260,10 @@ public sealed partial class MeasureCollector
         // Display pitch = written pitch, transposed if the part has transpose:.
         var (dStep, dAlt, dOctave) = _octave.TransposePitch(step, accidentalOffset, actualOctave);
 
-        // Staff position 0 = middle line of the staff.
-        //   Treble: B4   Bass: D3   Alto: C4 (middle line)   Tenor: A3
-        // The C clefs differ — alto puts middle C on the middle line, tenor on
-        // the 4th line (so the middle line is A3, a third lower). Without their
-        // own cases both fell through to the treble default and rendered alike.
-        int basePosition = _meta.Clef switch
-        {
-            "treble" or "treble_8" or "treble^8" => dStep - GetPitchIndex('b') + (dOctave - 4) * 7,
-            "bass" or "bass_8" => dStep - GetPitchIndex('d') + (dOctave - 3) * 7,
-            "alto" or "percussion" => dStep - GetPitchIndex('c') + (dOctave - 4) * 7,
-            "tenor" => dStep - GetPitchIndex('a') + (dOctave - 3) * 7,
-            // C clefs on other lines: middle line = G4 (soprano), E4 (mezzo), F3 (baritone).
-            "soprano" => dStep - GetPitchIndex('g') + (dOctave - 4) * 7,
-            "mezzosoprano" => dStep - GetPitchIndex('e') + (dOctave - 4) * 7,
-            "baritone" => dStep - GetPitchIndex('f') + (dOctave - 3) * 7,
-            _ => dStep - GetPitchIndex('b') + (dOctave - 4) * 7
-        };
+        // Staff position 0 = middle line of the staff, and the pitch that sits there is the
+        // clef's — MiddleLinePitch, the one table (the twin's slash pitch reads the same one).
+        var (middleStep, middleOctave) = MiddleLinePitch(ParseClefType(_meta.Clef));
+        int basePosition = dStep - middleStep + (dOctave - middleOctave) * 7;
 
         // RelativeOctave keeps the ORIGINAL octave for the next note's chain.
         if (RecordsPitchTrace)
@@ -1318,6 +1305,31 @@ public sealed partial class MeasureCollector
         "bass_8" => ClefType.Bass8Below,
         "percussion" => ClefType.Percussion,
         _ => ClefType.Treble
+    };
+
+    /// <summary>The written pitch on the MIDDLE line (staff position 0) of a clef — step index
+    /// per <see cref="RelativeOctave.StepIndex"/>, octave in the c'=4 convention. ONE home: the
+    /// page resolves every pitch's staff position against it (ResolveAbsolutePitch) and the
+    /// twin spells a slash note as it (LilyPondExporter.EmitSlashNote). The exporter kept a
+    /// three-row copy of its own until 2026-10-10, and every clef the copy did not name fell
+    /// to treble's b' — a percussion staff's slashes stood six positions above its line in the
+    /// twin (Lab sessions/p872/probe/slashdir).</summary>
+    /// <remarks>LILYPOND-REF: scm/parser-clef.scm supported-clefs (the clef's line) and
+    /// c0-pitch-alist (middle C against the glyph): middleCClefPosition = line + c0, and the
+    /// pitch at position 0 is that many steps from c' the other way. Treble −6 → b', bass 6 →
+    /// d, alto and percussion 0 → c', tenor 2 → a, soprano −4 → g', mezzo-soprano −2 → e',
+    /// baritone 4 → f. The octave clefs keep their parent's: Lily#'s pitches are written, not
+    /// sounding, and the twin's \transpose moves a slash with the real pitches
+    /// (LilyPondExporter.Score.cs, the clef half of AppendTabTranspose).</remarks>
+    internal static (int Step, int Octave) MiddleLinePitch(ClefType clef) => clef switch
+    {
+        ClefType.Bass or ClefType.Bass8Below => (1, 3),    // d
+        ClefType.Alto or ClefType.Percussion => (0, 4),    // c'
+        ClefType.Tenor => (5, 3),                          // a
+        ClefType.Soprano => (4, 4),                        // g'
+        ClefType.MezzoSoprano => (2, 4),                   // e'
+        ClefType.Baritone => (3, 3),                       // f
+        _ => (6, 4),                                       // b' — treble, treble_8, treble^8
     };
 
     internal static BarlineType ParseBarlineType(string text) => text switch

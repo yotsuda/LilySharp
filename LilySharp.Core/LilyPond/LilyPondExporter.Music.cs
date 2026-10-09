@@ -993,16 +993,12 @@ public sealed partial class LilyPondExporter
     }
 
     /// <summary>The written pitch that sits on the MIDDLE staff line of a clef -
-    /// where Lily# draws every slash note. Step index per
-    /// <see cref="Semantics.RelativeOctave.StepIndex"/>, octave in the c'=4
-    /// convention.</summary>
-    private static (int Step, int Octave) MiddleLinePitch(ClefType clef) => clef switch
-    {
-        ClefType.Bass => (1, 3),   // d
-        ClefType.Alto => (0, 4),   // c'
-        ClefType.Tenor => (5, 3),  // a
-        _ => (6, 4),               // b' - treble, treble_8, and anything unmapped
-    };
+    /// where Lily# draws every slash note. The page's own table, so the twin's slash
+    /// cannot sit on a different line from the page's: until 2026-10-10 this was a
+    /// three-row copy of it, and every other clef fell to treble's b' — a percussion
+    /// staff's slashes stood six positions above its line, with ledger lines.</summary>
+    private static (int Step, int Octave) MiddleLinePitch(ClefType clef)
+        => Svg.Collector.MeasureCollector.MiddleLinePitch(clef);
 
     /// <summary>
     /// A slash note. LilyPond has no pitchless slash token, so the twin spells it
