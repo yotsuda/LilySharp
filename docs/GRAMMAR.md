@@ -399,7 +399,8 @@ Role           = 'title' | 'subtitle' | 'composer' | 'poet'
    chord-symbol glyphs (SMuFL `csym*`) where it has them, and under Petaluma its letters are
    the bundled Petaluma Script — unless `chord`, `chords` or the `sans` family names a face,
    or an `as` redirect says which family to follow. The rehearsal marks and the header
-   (`title`, `subtitle`, `composer`, `poet`) and free text (`@text(...)`, the text spanners) follow it the same way: under Petaluma they are
+   (`title`, `subtitle`, `composer`, `poet`) free text (`@text(...)`, the text spanners), the tempo and the navigation words
+   (D.S., D.C., Fine, To Coda) follow it the same way: under Petaluma they are
    Petaluma Script unless the role, its group (`marks`, `header`) or `serif` names a face.
 
    ⚠️ THE KEYWORD IS `fonts`, PLURAL, AND IT TAKES A BLOCK. The block is an alist of

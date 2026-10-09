@@ -108,6 +108,24 @@ public class SmuflChordSymbolTests
         Assert.DoesNotMatch(here, TextSvg(""));
     }
 
+    /// <summary>So are the tempo and the navigation words (owner, 2026-10-09: "テンポや D.S. も
+    /// フォントをそろえた方が良いよね"), unless the score names their face.</summary>
+    [Fact]
+    public void APetalumaTempoAndNavigation_AreWrittenInPetalumaScript_UnlessTheScoreNamesTheirFace()
+    {
+        static string NavSvg(string fonts) => LiveRender.SvgFromRenderSpec(fonts + "\n"
+            + "tempo \"Allegro\"\npart m { clef treble }\nsection A { m { c'1 | } }\nsection B { m { d'1 | } }\n"
+            + "form { segno A fine B ds al fine }\nscore { staff m }\n");
+        static bool InCompanion(string svg, string text) => System.Text.RegularExpressions.Regex.IsMatch(
+            svg, $"<text[^>]*font-family=\"Petaluma Script[^>]*>{text}</text>");
+        string petaluma = NavSvg("fonts { music \"Petaluma\" }");
+        Assert.True(InCompanion(petaluma, "Allegro"));
+        Assert.True(InCompanion(petaluma, "Fine"));
+        Assert.False(InCompanion(NavSvg("fonts { music \"Petaluma\" tempo \"TeX Gyre Heros\" }"), "Allegro"));
+        Assert.False(InCompanion(NavSvg("fonts { music \"Petaluma\" navigation \"TeX Gyre Heros\" }"), "Fine"));
+        Assert.False(InCompanion(NavSvg(""), "Fine"));
+    }
+
     /// <summary>The rehearsal mark is set in the companion too — the serif box was the one
     /// typeset letter left on a handwritten page (owner, 2026-10-09).</summary>
     [Fact]
