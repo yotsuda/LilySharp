@@ -84,6 +84,20 @@ public sealed partial class LilySharpLanguageServer
     internal static bool ParseFlatSpellingContracted(Newtonsoft.Json.Linq.JObject? settings) =>
         settings?["completion"]?["flatSpelling"]?.ToString() == "contracted";
 
+    /// <summary>
+    /// Applies <c>lilysharp.fontPaths</c> — <c>{ fonts: { paths: ["…", …] } }</c> in the pushed
+    /// settings — as the music fonts' extra search folders (<c>MusicFonts.SetSearchDirectories</c>);
+    /// settings without the key leave them as they are. The book names a font only; the folders
+    /// say where this machine keeps it (2026-10-09).
+    /// </summary>
+    internal static bool ApplyFontPaths(Newtonsoft.Json.Linq.JObject? settings)
+    {
+        if (settings?["fonts"]?["paths"] is not Newtonsoft.Json.Linq.JArray paths)
+            return false;
+        return LilySharp.Core.Svg.Layout.MusicFonts.SetSearchDirectories(
+            paths.Select(p => p.ToString()).Select(Environment.ExpandEnvironmentVariables));
+    }
+
     public LilySharpLanguageServer(Stream input, Stream output)
     {
         var handler = new HeaderDelimitedMessageHandler(output, input);
@@ -136,6 +150,7 @@ public sealed partial class LilySharpLanguageServer
         // STARTUP value; DidChangeConfiguration keeps it live afterwards.
         _flatSpellingContracted = ParseFlatSpellingContracted(
             @params.InitializationOptions as Newtonsoft.Json.Linq.JObject);
+        ApplyFontPaths(@params.InitializationOptions as Newtonsoft.Json.Linq.JObject);
 
         return new InitializeResult
         {
@@ -232,6 +247,11 @@ public sealed partial class LilySharpLanguageServer
     {
         _flatSpellingContracted = ParseFlatSpellingContracted(
             @params.Settings as Newtonsoft.Json.Linq.JObject);
+        // A music font found in a new folder changes every picture: the preview sessions keep
+        // their layouts, so they are dropped and the next render compiles afresh.
+        if (ApplyFontPaths(@params.Settings as Newtonsoft.Json.Linq.JObject))
+            lock (_svgSessionLock)
+                _svgSessions.Clear();
     }
 
     [JsonRpcMethod(Methods.ShutdownName)]

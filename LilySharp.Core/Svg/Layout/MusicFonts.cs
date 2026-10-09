@@ -29,6 +29,14 @@ namespace LilySharp.Core.Svg.Layout;
 /// The resolution order is "試して無ければ次" — no spelling rule guesses where a file is; every
 /// place looked is returned, so a failure can name them all. A font found once is kept.
 /// <para>
+/// ⑴ The bundle. ⑵ The user's own folders (2026-10-09): the editor's <c>lilysharp.fontPaths</c>
+/// (<see cref="SetSearchDirectories"/>) and the environment's <c>LILYSHARP_FONT_PATH</c> — a list in the
+/// platform's path separator (<c>;</c> on Windows, <c>:</c> elsewhere), the one spelling every OS reads.
+/// A score names its font only (owner's decision: a path in a book breaks when the book or the
+/// font moves); the MACHINE says where fonts are. ⑶ The SMuFL specification's locations. ⑷ The
+/// system font folders, for the font program.
+/// </para>
+/// <para>
 /// SMuFL 1.4, "Font metadata locations": Windows <c>%COMMONPROGRAMFILES%\SMuFL\Fonts\&lt;name&gt;\&lt;name&gt;.json</c>
 /// and per user <c>%LOCALAPPDATA%\SMuFL\Fonts\…</c>; macOS <c>/Library/Application Support/SMuFL/Fonts/…</c>
 /// and <c>~/Library/…</c>; Linux <c>$XDG_DATA_DIRS</c> and <c>$XDG_DATA_HOME</c> with
@@ -74,6 +82,37 @@ public static class MusicFonts
     }
 
     private static readonly ConcurrentDictionary<string, MusicFontChain> Chains = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The environment variable naming the user's extra font folders.</summary>
+    public const string FontPathVariable = "LILYSHARP_FONT_PATH";
+
+    private static volatile string[] _searchDirectories = [];
+
+    /// <summary>
+    /// The folders an editor names (VS Code's <c>lilysharp.fontPaths</c>), searched before
+    /// <see cref="FontPathVariable"/>'s. Replacing them forgets every name already resolved, so
+    /// the next layout looks again. True when the list changed.
+    /// </summary>
+    public static bool SetSearchDirectories(IEnumerable<string> directories)
+    {
+        string[] next = [.. directories.Where(d => !string.IsNullOrWhiteSpace(d)).Select(d => d.Trim())];
+        if (next.SequenceEqual(_searchDirectories, StringComparer.Ordinal))
+            return false;
+        _searchDirectories = next;
+        ByName.Clear();
+        Chains.Clear();
+        return true;
+    }
+
+    /// <summary>The user's font folders, in search order: the editor's, then the environment's.</summary>
+    internal static IEnumerable<string> UserFontDirectories()
+    {
+        foreach (var d in _searchDirectories)
+            yield return d;
+        if (Environment.GetEnvironmentVariable(FontPathVariable) is { Length: > 0 } list)
+            foreach (var d in list.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                yield return d;
+    }
 
     /// <summary>
     /// The text face a bundled music font sets chord symbols' letters in, by the music font's
@@ -152,7 +191,19 @@ public static class MusicFonts
                 if (string.Equals(Path.GetFileName(f), name + "_metadata.json", StringComparison.OrdinalIgnoreCase))
                     yield return f;
         }
-        // ⑵ The SMuFL specification's locations.
+        // ⑵ The user's folders: the font's files directly in one, or in a folder of its name
+        // (the SMuFL layout), the metadata matched without regard to case as in the bundle.
+        foreach (var dir in UserFontDirectories())
+        {
+            yield return Path.Combine(dir, name + "_metadata.json");
+            yield return Path.Combine(dir, name.ToLowerInvariant() + "_metadata.json");
+            yield return Path.Combine(dir, name + ".json");
+            var fontDir = Path.Combine(dir, name);
+            yield return Path.Combine(fontDir, name + ".json");
+            yield return Path.Combine(fontDir, name + "_metadata.json");
+            yield return Path.Combine(fontDir, name.ToLowerInvariant() + "_metadata.json");
+        }
+        // ⑶ The SMuFL specification's locations.
         foreach (var dir in SmuflFontDirectories())
         {
             var fontDir = Path.Combine(dir, name);
@@ -215,6 +266,7 @@ public static class MusicFonts
         var dirs = new List<string> { metadataDir };
         if (FontLocator.Find() is { } bundle)
             dirs.Add(bundle);
+        dirs.AddRange(UserFontDirectories());
         dirs.AddRange(SystemFontDirectories());
         foreach (var dir in dirs)
             foreach (var ext in new[] { ".otf", ".ttf" })

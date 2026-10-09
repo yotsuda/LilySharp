@@ -338,11 +338,7 @@ export function activate(context: vscode.ExtensionContext) {
         },
         outputChannelName: 'Lily# Language Server',
         // Applied when the server starts; change takes effect on reload.
-        initializationOptions: {
-            completion: {
-                flatSpelling: config.get<string>('completion.flatSpelling', 'full')
-            }
-        }
+        initializationOptions: serverSettings(config)
     };
 
     client = new LanguageClient(
@@ -415,17 +411,24 @@ export function activate(context: vscode.ExtensionContext) {
     // mirrors initializationOptions ({ completion: { flatSpelling } }).
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(e => {
-            if (!e.affectsConfiguration('lilysharp.completion.flatSpelling') || !client || !clientReady) {
+            const fonts = e.affectsConfiguration('lilysharp.fontPaths');
+            if ((!fonts && !e.affectsConfiguration('lilysharp.completion.flatSpelling')) || !client || !clientReady) {
                 return;
             }
-            const cfg = vscode.workspace.getConfiguration('lilysharp');
+            // The whole settings object every time: the server reads each key it finds.
             client.sendNotification('workspace/didChangeConfiguration', {
-                settings: {
-                    completion: {
-                        flatSpelling: cfg.get<string>('completion.flatSpelling', 'full')
-                    }
-                }
+                settings: serverSettings(vscode.workspace.getConfiguration('lilysharp'))
             });
+            // A music font found in a new folder changes the picture: draw the previews again.
+            if (fonts) {
+                previewPanels.forEach((panel, uri) => {
+                    void previewDocument(uri).then(doc => {
+                        if (doc) {
+                            updatePreviewContent(doc, panel, context);
+                        }
+                    });
+                });
+            }
         })
     );
 
@@ -4091,6 +4094,23 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
     </script>
 </body>
 </html>`;
+}
+
+/**
+ * The settings the language server reads, in the shape it reads them — sent as
+ * initializationOptions at start and as didChangeConfiguration afterwards:
+ * completion.flatSpelling, and fontPaths (the folders this machine keeps SMuFL music
+ * fonts in; a score names its font only).
+ */
+function serverSettings(config: vscode.WorkspaceConfiguration) {
+    return {
+        completion: {
+            flatSpelling: config.get<string>('completion.flatSpelling', 'full')
+        },
+        fonts: {
+            paths: config.get<string[]>('fontPaths', [])
+        }
+    };
 }
 
 export function deactivate(): Thenable<void> | undefined {

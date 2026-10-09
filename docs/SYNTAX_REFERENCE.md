@@ -764,8 +764,12 @@ fonts {
 ```
 
 Bundled: Emmentaler, Bravura, Petaluma, Leland (the last three are SMuFL fonts; the
-name is compared without regard to case). Another SMuFL font is found where the SMuFL
-specification says its metadata lives. `music` takes quoted names only — a glyph's size
+name is compared without regard to case). Another SMuFL font is found by its name — a score
+never names a file — in, in order: the folders of the VS Code setting `lilysharp.fontPaths`, the
+folders of the environment variable `LILYSHARP_FONT_PATH` (separated by `;` on Windows, `:`
+elsewhere; read by `lysc` too), where the SMuFL specification says its metadata lives, and
+the system font folders. In a folder the font's `<name>_metadata.json` and `.otf` stand
+directly or in a subfolder of its name. `music` takes quoted names only — a glyph's size
 is its grob's (`layout { NoteHead.scale 1.2 }`), so `step`, `size`, `as` and a style on it
 are errors. A name found nowhere **warns** (LYS8019, naming every place looked) and the
 next name, or Emmentaler, is used. Each glyph comes from the first named font that has

@@ -296,7 +296,7 @@ LP は太さを line-thickness の倍数で持ち、line-thickness は譜の大�
 
 ## 7. 未決（ユーザー判断）→ 第862（2026-10-08）で決まった
 
-- **A. パス指定**（`music "Petaluma" file "fonts/Petaluma.otf"`）: 推奨「出力の段で入れる」のまま（異論なし）。
+- **A. パス指定**（`music "Petaluma" file "fonts/Petaluma.otf"`）: 推奨「出力の段で入れる」のまま（異論なし）→ **第871 で方針を変えた（ユーザー決定）**: 本にパスを書くと本やフォントを動かしたとき・別の PC で壊れる＝**本は名前だけ、PC 側が探す場所を足す**。VS Code の設定 `lilysharp.fontPaths` と環境変数 `LILYSHARP_FONT_PATH`（OS の区切り文字）＝同梱の次・SMuFL の標準の場所の前に探す（`MusicFonts.UserFontDirectories`）。
 - **B. `engravingDefaults` を無視するスイッチ**: 推奨「作らない」のまま（LP の太さは `layout` に書けば足りる・異論なし）。
 - **C. 同梱**: **ユーザー決定「1＝同梱する。ライセンスに問題がないなら」**。3 書体とも SIL OFL 1.1（配布元の `OFL.txt`／`LICENSE.txt`・
   GitHub の spdx）＝改名しない限り同梱・埋め込みとも可。同梱した（§6 ②）。

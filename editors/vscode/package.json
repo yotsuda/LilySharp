@@ -227,6 +227,13 @@
           "default": "full",
           "description": "How flat pitches (E♭, A♭) are spelled in the autocomplete list. Both spellings always compile; this only changes which the completer suggests."
         },
+        "lilysharp.fontPaths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "scope": "machine-overridable",
+          "markdownDescription": "Folders to look for SMuFL music fonts in, before the standard SMuFL locations: a font's metadata (`<name>_metadata.json`) and program (`.otf`) directly in a folder or in a subfolder of its name. A score names its font only (`fonts { music \"MyFont\" }`); this says where this machine keeps it. The environment variable `LILYSHARP_FONT_PATH` is read too (by the command line as well)."
+        },
         "lilysharp.import.relativeOctave": {
           "type": "boolean",
           "default": false,
