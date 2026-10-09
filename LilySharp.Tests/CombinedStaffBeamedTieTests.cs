@@ -51,8 +51,8 @@ public sealed class CombinedStaffBeamedTieTests
               vone { a8[ a] a8[ a] | a8[ a] a8[ a] | }
               vtwo { f8[ f~] f8[ f] | f8[ f] f8[ f] | }
             }
-            form main { ~A }
-            score main { combinedStaff { vone vtwo } }
+            form { ~A }
+            score { combinedStaff { vone vtwo } }
             """);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));

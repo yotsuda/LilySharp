@@ -110,8 +110,8 @@ public class TempoValueTests
             body + "\n" +
             "part m { clef treble }\n" +
             "section A { m { c'4 d' e' f' | } }\n" +
-            "form main { A }\n" +
-            "score main \"s\" { staff m }\n";
+            "form { A }\n" +
+            "score \"s\" { staff m }\n";
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
         return SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));

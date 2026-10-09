@@ -20,5 +20,5 @@ section S {
     { a'1 | }
   }
 }
-form main { S }
-score main "multivoice-beam-collision" { staff mel }
+form { S }
+score "multivoice-beam-collision" { staff mel }

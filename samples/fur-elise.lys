@@ -60,9 +60,9 @@ section Main {
   }
 }
 
-form main { Main }
+form { Main }
 
-score main {
+score {
   grandStaff {
     staff rh
     staff lh

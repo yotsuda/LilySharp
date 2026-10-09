@@ -45,8 +45,8 @@ public sealed class BrokenTieLineStartTests
         part melody
         section A { melody { e,2 b,,2~ | break } }
         section B { melody { b,,2 e,2 | } }
-        form main { {{form}} }
-        score main { staff melody }
+        form { {{form}} }
+        score { staff melody }
         """;
 
     private static double ContinuationStartX(string form)
@@ -81,8 +81,8 @@ public sealed class BrokenTieLineStartTests
               tuning bass
               section A { c,2 r4 r8 g,,8~ | break g,, g,,4 g,,8 g,,4 r8 g,, | }
             }
-            form main { ~A }
-            score main { {{score}} }
+            form { ~A }
+            score { {{score}} }
             """);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var multi = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
@@ -109,8 +109,8 @@ public sealed class BrokenTieLineStartTests
               clef treble
               section A { c'4( d' e' f' | break g'4 a') b' c'' | }
             }
-            form main { ~A }
-            score main { staff m }
+            form { ~A }
+            score { staff m }
             """);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));

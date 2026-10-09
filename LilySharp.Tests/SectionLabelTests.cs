@@ -24,7 +24,7 @@ namespace LilySharp.Tests;
 
 /// <summary>
 /// Per-occurrence section display labels in structure
-/// (<c>form main { First Second First "First (reprise)" }</c>) and Unicode
+/// (<c>form { First Second First "First (reprise)" }</c>) and Unicode
 /// section/part/phrase identifiers.
 /// </summary>
 [Trait("Category", "Unit")]
@@ -41,8 +41,8 @@ public class SectionLabelTests
         phrase pa { c4 d e f | }
         section First { melody { pa } }
         section Second { melody { pa } }
-        form main { First Second First "First (reprise)" }
-        score main "x" { staff melody }
+        form { First Second First "First (reprise)" }
+        score "x" { staff melody }
         """;
 
     [Fact]
@@ -72,8 +72,8 @@ public class SectionLabelTests
             part メロディ
             phrase 動機 { c4 d e f | }
             section イントロ { メロディ { 動機 } }
-            form main { イントロ イントロ "イントロ(再現)" }
-            score main "x" { staff メロディ }
+            form { イントロ イントロ "イントロ(再現)" }
+            score "x" { staff メロディ }
             """);
 
         Assert.Equal("イントロ", labels[0]);
@@ -89,8 +89,8 @@ public class SectionLabelTests
             part melody
             section A { melody { c4 d e f | } }
             section B { melody { g4 a b c | } }
-            form main { A ~B }
-            score main "x" { staff melody }
+            form { A ~B }
+            score "x" { staff melody }
             """);
 
         Assert.Equal(new string?[] { "A", null }, labels);
@@ -99,14 +99,14 @@ public class SectionLabelTests
     [Fact]
     public void NoStructure_UsesSectionDeclarationOrder()
     {
-        // With no `form main { }`, sections play in the order they were declared
+        // With no `form { }`, sections play in the order they were declared
         // (source order). 'Zebra' is declared before 'Alpha', so an alphabetical
         // or hash-bucket order would fail this — only source order passes.
         var labels = SectionLabels("""
             part melody
             section Zebra { melody { c4 d e f | } }
             section Alpha { melody { g4 a b c | } }
-            score main "x" { staff melody }
+            score "x" { staff melody }
             """);
 
         Assert.Equal(new[] { "Zebra", "Alpha" }, labels);
@@ -119,8 +119,8 @@ public class SectionLabelTests
             part メロディ
             phrase 動機 { c4 d e f | }
             section イントロ { メロディ { 動機 } }
-            form main { イントロ }
-            score main "x" { staff メロディ }
+            form { イントロ }
+            score "x" { staff メロディ }
             """);
         Assert.Empty(tree.Diagnostics);
     }
@@ -147,19 +147,19 @@ public class SectionLabelTests
         // A deliberately named, referenced section shows its label even alone.
         Assert.Equal(1, SectionLabelMarkCount("""
             section Main { melody { c4 d e f | g1 } }
-            form main { Main }
-            score main "x" { staff melody }
+            form { Main }
+            score "x" { staff melody }
             """));
     }
 
     [Fact]
     public void OneSectionRepeated_EmitsBoxForEachPass()
     {
-        // `form main { A A }` shows a box at each pass, marking where the repeat lands.
+        // `form { A A }` shows a box at each pass, marking where the repeat lands.
         Assert.Equal(2, SectionLabelMarkCount("""
             section A { melody { c4 d e f | } }
-            form main { A A }
-            score main "x" { staff melody }
+            form { A A }
+            score "x" { staff melody }
             """));
     }
 
@@ -169,8 +169,8 @@ public class SectionLabelTests
         Assert.Equal(2, SectionLabelMarkCount("""
             section Intro { melody { c4 d e f | } }
             section Verse { melody { g4 f e d | } }
-            form main { Intro Verse }
-            score main "x" { staff melody }
+            form { Intro Verse }
+            score "x" { staff melody }
             """));
     }
 
@@ -181,8 +181,8 @@ public class SectionLabelTests
         // distinct labels, so the boxes stay (the user asked to tell them apart).
         Assert.Equal(2, SectionLabelMarkCount("""
             section A { melody { c4 d e f | } }
-            form main { A A "A2" }
-            score main "x" { staff melody }
+            form { A A "A2" }
+            score "x" { staff melody }
             """));
     }
 }

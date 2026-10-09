@@ -23,8 +23,8 @@ section Main {
   melody { clefChanges }
 }
 
-form main { Main }
+form { Main }
 
-score main "clef-change" {
+score "clef-change" {
   staff melody
 }

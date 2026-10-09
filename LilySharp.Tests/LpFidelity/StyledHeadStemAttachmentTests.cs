@@ -56,9 +56,9 @@ public class StyledHeadStemAttachmentTests
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main { staff v }
+        score { staff v }
         """;
 
     [Fact]

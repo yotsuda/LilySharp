@@ -35,8 +35,8 @@ section Main {
   melody { slurAcrossBreak tieAcrossBreak hairpinAcrossBreak }
 }
 
-form main { Main }
+form { Main }
 
-score main "multi-line-spanners" {
+score "multi-line-spanners" {
   staff melody
 }

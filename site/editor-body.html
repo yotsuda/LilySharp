@@ -292,7 +292,7 @@
     <tr><td>Transform Selection with AI… · Select AI Model…</td><td><a href="#ai">below</a></td></tr>
   </table>
   <!-- VIDEO editor-split-sections: a file grouped by part — vn1 has `section A` (2 bars) and
-       `section B` (2 bars), vn2 still writes all 4 bars in `section A`, form main { A }. Hover
+       `section B` (2 bars), vn2 still writes all 4 bars in `section A`, form { A }. Hover
        the LYS2007 warning on A, Ctrl+. → "Split section A in the other parts to match vn1…",
        read the confirmation, Apply: vn2 now has A and B, the form plays A B, and the warning
        is gone. ~20 s. See site/videos/SHOTLIST.md. -->
@@ -394,8 +394,8 @@
 <pre data-fragment>```lily#
 part m { clef treble }
 section A { m { c4 d e f | g1 | } }
-form main { ~A }
-score main { staff m }
+form { ~A }
+score { staff m }
 ```</pre>
 </section>
 

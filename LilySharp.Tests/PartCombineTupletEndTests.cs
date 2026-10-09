@@ -54,8 +54,8 @@ public class PartCombineTupletEndTests
           vone { {{PartOne}} }
           vtwo { {{PartTwo}} }
         }
-        form main { ~A }
-        score main { {{score}} }
+        form { ~A }
+        score { {{score}} }
         """ + "\n";
 
     /// <summary>

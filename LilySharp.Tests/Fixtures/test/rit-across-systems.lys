@@ -19,9 +19,9 @@ lyrics verse {
   }
 }
 
-form main { A B A "A2" }
+form { A B A "A2" }
 
-score main {
+score {
   staff melody
   chords prog as names
   tab melody

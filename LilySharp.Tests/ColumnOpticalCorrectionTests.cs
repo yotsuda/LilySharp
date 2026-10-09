@@ -58,8 +58,8 @@ public class ColumnOpticalCorrectionTests
               tuning bass
               section S { a,,4\4 a,,\4 a,,\4 a,,\4 | d4\3 a,,\4 a,,\4 a,,\4 | g,4\1 a,,\4 a,,\4 a,,\4 | a,,4\4 a,,\4 a,,\4 a,,\4 | }
             }
-            form main { S }
-            score main { staff bassline  tab bassline }
+            form { S }
+            score { staff bassline  tab bassline }
             """);
         var multi = SvgGenerator.CollectScore(tree, RenderSpecParser.FindAll(tree).First());
         var data = SystemBreaker.ComputeMultiStaffSpringData(
@@ -93,8 +93,8 @@ public class ColumnOpticalCorrectionTests
             section A { up { c4 c c c | break } lo { g,,4 g,, g,, g,, | break } }
             section B { up { c4 c c c | break } lo { e,4 g,, g,, g,, | break } }
             section C { up { c4 c c c | } lo { g,,4 g,, g,, g,, | } }
-            form main { A |: B :| |: C :| }
-            score main { staff up  staff lo }
+            form { A |: B :| |: C :| }
+            score { staff up  staff lo }
             """);
         // The upper staff's four c's, one row a system, in page order.
         var firsts = g.Noteheads

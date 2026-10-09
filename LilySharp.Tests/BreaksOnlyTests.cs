@@ -45,8 +45,8 @@ public class BreaksOnlyTests
             {{paper}}
             part m { }
             section A { m { {{music}} } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """;
     }
 

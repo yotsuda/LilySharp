@@ -54,11 +54,11 @@ section A {
     }
 }
 
-form main {
+form {
     A
 }
 
-score main ""test"" {
+score ""test"" {
     staff treble melody
 }
 ";
@@ -89,11 +89,11 @@ section A {
     }
 }
 
-form main {
+form {
     A
 }
 
-score main ""test"" {
+score ""test"" {
     staff treble melody
 }
 ";
@@ -138,9 +138,9 @@ section Main {
   melody { intro bridge finale }
 }
 
-form main { Main }
+form { Main }
 
-score main ""test"" {
+score ""test"" {
   staff melody
 }
 ";
@@ -217,14 +217,14 @@ phrase lh1 { c2 e | g g, | }
 phrase rh2 { e'4 d' c' d' | e'1 | }
 phrase lh2 { c2 g, | c1 | }
 
-score main ""mvt1"" {
+score ""mvt1"" {
   grandStaff {
     staff treble rh1
     staff bass lh1
   }
 }
 
-score main ""mvt2"" {
+score ""mvt2"" {
   grandStaff {
     staff treble rh2
     staff bass lh2
@@ -258,14 +258,14 @@ phrase lh1 { c2 e | g g, | }
 phrase rh2 { e'4 d' c' d' | e'1 | }
 phrase lh2 { c2 g, | c1 | }
 
-score main ""movement1"" {
+score ""movement1"" {
   grandStaff {
     staff treble rh1
     staff bass lh1
   }
 }
 
-score main ""movement2"" {
+score ""movement2"" {
   grandStaff {
     staff treble rh2
     staff bass lh2
@@ -300,9 +300,9 @@ section Main {
   melody { a4 b c' d' | e'2 e' | a1 | }
   chords prog { a:m e | d:m | a:m | }
 }
-form main { Main }
-score main ""attached"" { chords prog  staff melody }
-score main ""grid"" { chords prog }
+form { Main }
+score ""attached"" { chords prog  staff melody }
+score ""grid"" { chords prog }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.True(tree.HasErrors);
@@ -322,7 +322,7 @@ score main ""grid"" { chords prog }
     {
         // Hand-written rather than MusicSource.Wrap: the subject is a document with NO
         // score block, and the wrapper always emits one.
-        var source = "part melody\nsection A { melody { c4 d e f | g a b c' | } }\nform main { ~A }\n";
+        var source = "part melody\nsection A { melody { c4 d e f | g a b c' | } }\nform { ~A }\n";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
 
@@ -340,9 +340,9 @@ score main ""grid"" { chords prog }
 phrase rh { c'4 d' e' f' | }
 phrase lh { c2 e | }
 
-score main ""first"" { staff treble rh }
-score main ""second"" { staff treble lh }
-score main ""third"" { staff treble rh }
+score ""first"" { staff treble rh }
+score ""second"" { staff treble lh }
+score ""third"" { staff treble rh }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
@@ -437,8 +437,8 @@ section Main {
     melody { c'4 d e f | g1 | }
     alt { e'4 f g a | b1 | }
 }
-form main { Main }
-score main ""ossia-test"" {
+form { Main }
+score ""ossia-test"" {
     staff melody
     ossia alt
 }";
@@ -470,8 +470,8 @@ section Main {
     melody { c'4 d e f | g1 | }
     bassAlt { c,4 d e f | g1 | }
 }
-form main { Main }
-score main ""ossia-clef"" {
+form { Main }
+score ""ossia-clef"" {
     staff melody
     ossia bass bassAlt
 }";
@@ -495,8 +495,8 @@ section Main {
     melody { c'4 d e f | g1 | }
     alt { e'4 f g a | b1 | }
 }
-form main { Main }
-score main ""ossia-barline"" {
+form { Main }
+score ""ossia-barline"" {
     staff melody
     ossia alt
 }";

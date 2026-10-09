@@ -335,8 +335,8 @@ public class ChordNameTests
 part m {{ clef treble }}
 chords prog {{ C | D | }}
 section A {{ m {{ {body} }} }}
-form main {{ A }}
-score main {{ chords prog  staff m }}
+form {{ A }}
+score {{ chords prog  staff m }}
 ";
         var sTree = SyntaxTree.Parse(Doc("c'4 d' e' f' | g'4 a' b' c'' |"));
         var mTree = SyntaxTree.Parse(Doc("voice { c'4 d' e' f' | } { c4 d e f | }"));
@@ -456,8 +456,8 @@ score main {{ chords prog  staff m }}
             "chords prog { C | }\n" +
             "section Main {\n  hi { b4 b b b | }\n" +
             $"  lo {{ voice {{ {firstVoice} }} {{ b4 b b b }} | }}\n}}\n" +
-            "form main { Main }\n" +
-            "score main \"o\" { staff hi  chords prog  staff lo }\n";
+            "form { Main }\n" +
+            "score \"o\" { staff hi  chords prog  staff lo }\n";
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors,
             string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
@@ -548,7 +548,7 @@ score main {{ chords prog  staff m }}
         {
             var tree = SyntaxTree.Parse(
                 $"part melody {{ section A {{ c1\\3{(withChord ? "@chord(Cmaj7)" : "")} }} }}\n"
-                + "form main { A }\n"
+                + "form { A }\n"
                 + scoreBlock + "\n");
             Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
             var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
@@ -559,9 +559,9 @@ score main {{ chords prog  staff m }}
             return (layout.ChordNameLayouts.Count(c => c.ChordText == DrawnCmaj7), tabY);
         }
 
-        var numbers = Read("score main { staff melody  tab melody }");
-        var full = Read("score main { staff melody  tab melody as full }");
-        var noChord = Read("score main { staff melody  tab melody }", withChord: false);
+        var numbers = Read("score { staff melody  tab melody }");
+        var full = Read("score { staff melody  tab melody as full }");
+        var noChord = Read("score { staff melody  tab melody }", withChord: false);
 
         // The control first: a tab the writer asked to be COMPLETE carries its own markup,
         // so the name is over the staff AND over the tab. That is the premise the quantity
@@ -610,8 +610,8 @@ score main {{ chords prog  staff m }}
         var tree = SyntaxTree.Parse(
             "part melody { section A { c1\\3@chord(Cmaj7) } }\n"
             + "part back { section A { e1\\3@chord(Dm7) } }\n"
-            + "form main { A }\n"
-            + "score main { staff back  tab melody }\n");
+            + "form { A }\n"
+            + "score { staff back  tab melody }\n");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
         var layout = new LayoutEngine().Layout(score);

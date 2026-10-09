@@ -17,6 +17,6 @@ section Main {
   vtwo { R1 || R1 | }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { staff ~vone staff ~vtwo }
+score { staff ~vone staff ~vtwo }

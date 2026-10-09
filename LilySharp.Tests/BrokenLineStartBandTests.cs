@@ -44,8 +44,8 @@ public class BrokenLineStartBandTests
             {{lineTwoStart}} c c c | c1 | c1 | c1 |
           }
         }
-        form main { A }
-        score main { staff b  tab b }
+        form { A }
+        score { staff b  tab b }
         """;
 
     private static double[] SecondLineBars(string svg)

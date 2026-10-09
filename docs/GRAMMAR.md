@@ -516,7 +516,7 @@ Role           = 'title' | 'subtitle' | 'composer' | 'poet'
    by itself: a score references it as a ScoreItem, optionally overriding part of it —
 
      fonts house { serif "Georgia"  lyrics "Charis SIL" }
-     score main  { fonts house  staff melody }
+     score  { fonts house  staff melody }
      score parts { fonts house { lyrics "Noto Serif CJK JP" }  staff melody }
 
    The reference REPLACES the file default (resolved = built-in defaults + the named
@@ -590,7 +590,7 @@ SignedNumber   = [ '-' ] , ( Integer | Decimal ) ;
    block's, spelled out in the note at the end of 2.4:
 
      paper wide { paperWidth 250mm }
-     score main  { paper wide  staff melody }
+     score  { paper wide  staff melody }
      score parts { paper wide { topMargin 12mm }  staff melody }
 
    The vocabulary is LilyPond's \paper variables camelCased, and every
@@ -726,7 +726,7 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
    written at the end of the named block (the note at the end of 2.4):
 
      layout chart { markTempo beside  barNumbers every 4 }
-     score main  { layout chart  staff melody }
+     score  { layout chart  staff melody }
      score parts { layout chart { barNumbers lines }  staff melody }
 
    THE LINE AGAINST 'paper' (user decision 2026-09-11): a quantity with a UNIT — a
@@ -1108,7 +1108,7 @@ TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
    part melody { clef treble }        // bare attribute, no colon
    part bass   { clef bass  instrument "Cello" }
    part fill   { clef bass  pedal text }        // pedal style is the part's
-   // hara-kiri is the score's: score main { staff fill as removeEmpty all }
+   // hara-kiri is the score's: score { staff fill as removeEmpty all }
 *)
 
 ================================================================================
@@ -1146,7 +1146,7 @@ SectionDecl    = 'section' , PartName , '{' , { SectionItem } , '}' ;   (* the s
 
 (* A SECTION'S LABEL IS HIDDEN AT THE FORM REFERENCE, NOWHERE ELSE (2026-09-24). Every
    play of a section prints its rehearsal label unless that reference carries '~':
-     form main { A |: B [1. ~B1] :| [2. ~B2] C }   -- B1 and B2 play without a label
+     form { A |: B [1. ~B1] :| [2. ~B2] C }   -- B1 and B2 play without a label
    A declaration takes no tilde: 'section ~A { … }' is LYS0033 (an error that names the
    form spelling). The label is a property of the PLAY, so it is read off the form line
    alone - and in a file grouped by part, where every part declares its own 'section A', there
@@ -1322,8 +1322,8 @@ AssembledQuality = [ 'm' | 'min' | 'dim' | 'aug' ] , [ 'maj' ]
      melody { c4 d e f | g2 g | }
      lyrics words sings melody { Twin- kle twin- kle | lit- tle star | }
    }
-   form main { Verse }
-   score main { staff melody  lyrics words }
+   form { Verse }
+   score { staff melody  lyrics words }
 *)
 
 ### 5.1 Multi-voice (one staff)
@@ -1361,11 +1361,15 @@ VoicePart      = [ Identifier ] , MusicBlock ;
 (* ⚠️ The keyword is 'form'. It was 'structure' once, and this production still said so
    until 2026-08-16 — a production is not an Example, so DocExamplesParseTests never read
    it, and 'structure' now parses as an ordinary identifier (measured: "Undefined variable
-   or phrase: 'structure'"). The NAME is required; omitting it is LYS1016. The whole item
-   list below was measured the same day by putting each spelling in a form and running
-   `lysc check`. *)
+   or phrase: 'structure'"). The whole item list below was measured the same day by
+   putting each spelling in a form and running `lysc check`.
+   THE NAME IS OPTIONAL since 2026-10-09 (owner's decision, docs/anonymous-blocks-design.md):
+   the unnamed form is the file's DEFAULT — the one a score plays when it picks none — and
+   there is one (a second is LYS1016). A named form is played by a score that picks it with
+   'form NAME' (§7). With no unnamed form a score that picks none plays the first declared;
+   with no form at all the sections play in declaration order. *)
 
-StructureDecl  = 'form' , Identifier , '{' , { StructureItem } , '}' ;
+StructureDecl  = 'form' , [ Identifier ] , '{' , { StructureItem } , '}' ;
 
 StructureItem  = SectionRef                        (* Identifier , { OctaveMark } , [ String ]
                                                       — the string is this occurrence's
@@ -1403,8 +1407,8 @@ StructureRepeat = '|:' , { StructureItem } , ':|' , [ '*' , Integer ] ,
 
 (* A repeat volta ending inside a |: … :| repeat, naming one or more sections that play in
    order under ONE bracket:
-   form main { |: A [1. D] :| [2. O] }
-   form main { |: A [1. B C] :| [2. D] }       -- the first pass plays A B C, the second A D
+   form { |: A [1. D] :| [2. O] }
+   form { |: A [1. B C] :| [2. D] }       -- the first pass plays A B C, the second A D
    Each section is written exactly as in the form body: '~' hides that play's label, octave
    marks and a quoted label ride on it ([1. ~B C' "C2"]).
    RANGE, END SHAPE and LENGTH are three separate settings (2026-09-28):
@@ -1424,7 +1428,7 @@ StructureRepeat = '|:' , { StructureItem } , ':|' , [ '*' , Integer ] ,
      is no ']' to glue it to). A bad value, or another annotation on an ending, is warned
      (LYS1008) and ignored.
 
-   An ending that NO repeat opens — form main { A [1. B] } — is accepted and engraves as
+   An ending that NO repeat opens — form { A [1. B] } — is accepted and engraves as
    the plain reference B: no bracket, no number, played once. That is LilyPond's answer
    (measured, 2.26.0: an \alternative with no \repeat in front renders byte-identically to
    the bare music), and it is warned about (LYS6008) because the number prints nothing.
@@ -1441,8 +1445,8 @@ EndingSection  = [ '~' ] , Identifier , { OctaveMark } , [ String ] ;
 (* OCTAVE MARKS ON A SECTION REFERENCE (2026-08-31). A trailing ' or , moves the frame THAT
    PLAY of the section opens in, one octave per mark — the same spelling, and the same
    meaning, a phrase reference carries:
-     form main { Intro Main ~Main' Coda }        -- the reprise sounds an octave higher
-     form main { |: A [1. B' ] :| [2. C ] }      -- an ending takes them too
+     form { Intro Main ~Main' Coda }        -- the reprise sounds an octave higher
+     form { |: A [1. B' ] :| [2. C ] }      -- an ending takes them too
    The shift is the OCCURRENCE's: `~Main ~Main'` is one section played at two octaves, the
    declaration never moves, and the reference after it is back at the part's anchor. Both
    spellings take them (the tilde hides the label, not the music), and they mean the same
@@ -1456,12 +1460,12 @@ NavMark        = 'segno' | 'coda' | 'fine' | 'to' 'coda'
                | 'ds' [ 'al' ( 'fine' | 'coda' ) ] ;
 
 (* Section reuse and a custom label:
-   form main { Intro Verse Verse "Verse (reprise)" Coda } *)
+   form { Intro Verse Verse "Verse (reprise)" Coda } *)
 
 (* Navigation: signs (segno/coda) engrave at the START of the following section; text
    directives (fine, to coda, dc/ds, dc al fine, ds al coda) engrave at the END of the
    section just played:
-   form main { A segno  B to coda  C ds al coda  coda D } *)
+   form { A segno  B to coda  C ds al coda  coda D } *)
 
 ================================================================================
 ## 7. Score (Output) Definition
@@ -1471,18 +1475,21 @@ NavMark        = 'segno' | 'coda' | 'fine' | 'to' 'coda'
    basename. Multiple 'score' blocks emit multiple files. MIDI has NO source block —
    it is a CLI output: `lysc midi song.lys song.mid`. *)
 
-ScoreDecl      = 'score' , Identifier , [ String ] , { ScoreOption } , '{' , { ScoreItem } , '}' ;
+ScoreDecl      = 'score' , [ Identifier ] , [ String ] , { ScoreOption } , '{' , { ScoreItem } , '}' ;
 ScoreOption    = 'transpose' , PitchToken       (* this score's transpose, composed on each part's own *)
                | 'pitch' , PitchMode ;          (* 'pitch concert': print THIS score at concert pitch —
                                                    every chromatically transposing part shown at what it
                                                    sounds, the conductor's score of a book written either
                                                    way (§2.3 PitchDecl). 'pitch written' is the default. *)
-                 (* The Identifier NAMES THE FORM this score renders and is REQUIRED —
-                    'score "out" { … }' is refused with "A 'score' must name the form it
-                    renders". The optional String is the output basename.
-                    A score body holds ScoreItems and nothing else: a form is declared at
-                    the top level and referred to by that name, never written inside the
-                    braces. At least one ScoreItem is required — a score with an empty body
+                 (* The Identifier is THE SCORE'S OWN NAME (2026-10-09; until then it named
+                    the form the score rendered). The unnamed score writes <input>.svg and
+                    answers to 'main' in --score and the preview's picker; 'score NAME'
+                    writes <input>-NAME.svg. The optional String is the output basename and
+                    wins over both. The form a score plays is its 'form' item (ScoreItem):
+                    its own 'form { … }', or 'form NAME' for a named top-level form, else the
+                    file's default form (§6). A named score that picks no form while a form
+                    of its name exists is warned (LYS1018) — the name no longer picks it.
+                    At least one render item is required — a score with an empty body
                     engraves a page with no music, so it is an error (LYS6002). *)
 
 ScoreItem      = StaffRender                        (* staff partName — BARE, no braces *)
@@ -1532,11 +1539,22 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         even-spread lead-sheet row. *)
                | ( 'title' | 'subtitle' | 'composer' | 'poet' ) , String
                                                      (* THIS score's own header — see below *)
-               | 'fonts' , Identifier , [ FontBlock ] (* THIS score's faces: a reference to a
+               | 'form' , ( Identifier | '{' , { StructureItem } , '}' )
+                                                     (* THIS score's form: a named top-level
+                                                        form, or its own written in place
+                                                        (unnamed). One per score. 'form A'
+                                                        is a REFERENCE, never the section A -
+                                                        that is 'form { A }' *)
+               | 'fonts' , ( Identifier , [ FontBlock ] | FontBlock )
+                                                     (* THIS score's faces: a reference to a
                                                         named top-level block, the optional
-                                                        block overriding part of it *)
-               | 'paper' , Identifier , [ PaperBlock ] (* THIS score's page, same shape *)
-               | 'layout' , Identifier , [ LayoutBlock ] (* THIS score's display switches
+                                                        block overriding part of it - or a
+                                                        bare block, overriding the file's
+                                                        unnamed default *)
+               | 'paper' , ( Identifier , [ PaperBlock ] | PaperBlock )
+                                                     (* THIS score's page, same shape *)
+               | 'layout' , ( Identifier , [ LayoutBlock ] | LayoutBlock )
+                                                     (* THIS score's display switches
                                                         (§2.6), same shape: the reference
                                                         replaces the file's unnamed default
                                                         for this score alone *)
@@ -1697,7 +1715,7 @@ StaffSelector  = 'lines' , Integer
                     (SyntaxFacts.IsPartNameToken), so 'staff percussion' names a part
                     called percussion. The reading is RenderSpecParser.ParseStaff's and
                     ParseOssia's; until 2026-08-28 the REFERENCE scan disagreed with both
-                    and collected nothing, so 'score main { staff bass }' over a part named
+                    and collected nothing, so 'score { staff bass }' over a part named
                     'bassline' engraved a blank staff and 'lysc check' said "No errors
                     found". *)
 PartRef        = PartName ;
@@ -1724,12 +1742,12 @@ DisplayName    = String ;
    the click track silently stopped playing; a paragraph here taught word order as the
    workaround. Display names are quoted-only now, so position no longer matters.) *)
 
-(* A 'score' may carry its OWN 'form main { … }' to render a different arrangement
+(* A 'score' may carry its OWN 'form { … }' to render a different arrangement
    (e.g. a practice excerpt); it overrides the top-level structure for that score only. *)
 
 (* Examples:
 
-   score main "full" {
+   score "full" {
      grandStaff { staff rightHand  staff leftHand }
    }
 
@@ -1767,8 +1785,8 @@ DisplayName    = String ;
      chords prog  { C G7 | Am F | C | }
      lyrics words { Twin- kle | lit- tle | star | }
    }
-   form main { Main }
-   score main "sheet" { chords prog lyrics words }
+   form { Main }
+   score "sheet" { chords prog lyrics words }
 *)
 
 (* WRITING THE CHORDS AS DEGREES. An entry may be an absolute symbol (C, Am, G7, F#m,
@@ -1792,7 +1810,7 @@ DisplayName    = String ;
 (* SHOWING ONE TRACK TWO WAYS. A chord row takes 'as roman' (degrees for the key) or
    'as names' (the default). There is no third mode: to show BOTH, place the track twice —
 
-     score main "sheet" { chords prog as roman  chords prog as names  lyrics words }
+     score "sheet" { chords prog as roman  chords prog as names  lyrics words }
 
    which is two rows, in the order written, each its own band. 'as both' — one symbol with
    the degree stacked above the name — was retired 2026-08-23. ⚠️ The two are not quite the
@@ -2505,11 +2523,11 @@ section SheetLoop {
   lyrics sheetWords { lit- tle | star | }
 }
 
-form main  { Verse }
+form  { Verse }
 form sheet { ~Sheet |: ~SheetLoop :| }
 
-score main  "demo"  { staff melody  lyrics words }
-score sheet "sheet" { chords prog lyrics sheetWords }
+score  "demo"  { staff melody  lyrics words }
+score sheet "sheet" { form sheet chords prog lyrics sheetWords }
 ```
 
 MIDI export: `lysc midi demo.lys demo.mid` (no score block needed).
@@ -2530,7 +2548,7 @@ code's reason and the retired numbers.
 |--------------------|----------------------------------------------------------|
 | No section         | File must contain at least one `section` block           |
 | No score           | File must contain at least one `score` block             |
-| Unnamed form       | `form` written without a name (LYS1016) — `form main { … }` |
+| Unnamed form       | `form` written without a name (LYS1016) — `form { … }` |
 | Duplicate form     | Two `form`s share a name (LYS1017). SEVERAL forms are fine — one score each |
 | Inline music       | `{ }` music in a `form` (not allowed — section refs only) |
 | Undefined ref      | Section / phrase / part referenced but not defined       |

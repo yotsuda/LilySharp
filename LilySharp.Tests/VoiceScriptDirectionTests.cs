@@ -39,7 +39,7 @@ public class VoiceScriptDirectionTests
     private static bool[] SidesOf(string music, string clef = "treble")
     {
         string src = "octave absolute\npart m { clef " + clef + " }\nsection A { m { " + music
-            + " } }\nform main { ~A }\nscore main { staff m }\n";
+            + " } }\nform { ~A }\nscore { staff m }\n";
         var tree = SyntaxTree.Parse(src);
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
         return new LayoutEngine().Layout(score).ArticulationLayouts

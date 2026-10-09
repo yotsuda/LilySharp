@@ -48,8 +48,8 @@ public sealed class SectionResetTests
               section A { c1 | time 3/4 c4 d e | }
               section B { c4 d e f | }
             }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
 
         // A: [c1], [3/4 change + c d e]. B starts at measure index 2.
@@ -74,8 +74,8 @@ public sealed class SectionResetTests
               section A { time 3/4 c4 d e | time 4/4 c1 | }
               section B { c4 d e f | }
             }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
 
         // A: [3/4 change + c d e], [4/4 change + c1]. B starts at measure index 2.
@@ -94,8 +94,8 @@ public sealed class SectionResetTests
               section A { key g major c1 | }
               section B { c1 | }
             }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
 
         var bReset = measures[1].Items.OfType<KeySignatureChangeItem>().FirstOrDefault();
@@ -117,8 +117,8 @@ public sealed class SectionResetTests
               section A { key e minor e1 | }
               section B { g1 | }
             }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
 
         var bReset = Assert.Single(measures[1].Items.OfType<KeySignatureChangeItem>());
@@ -138,8 +138,8 @@ public sealed class SectionResetTests
               section A { clef treble c1 | }
               section B { c1 | }
             }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
 
         var bReset = measures[1].Items.OfType<ClefChangeItem>().FirstOrDefault();
@@ -160,8 +160,8 @@ public sealed class SectionResetTests
               section A { c1 | }
               section B { c1 | }
             }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
 
         Assert.DoesNotContain(measures[1].Items, i => i is TimeSignatureChangeItem);
@@ -185,8 +185,8 @@ public sealed class SectionResetTests
               section A { key g major time 6/8 d8 e f g a b | }
               section B { {{opening}} e4 f g a | }
             }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
 
         Assert.Single(measures[1].Items.OfType<TimeSignatureChangeItem>());
@@ -221,8 +221,8 @@ public sealed class SectionResetTests
             part m { clef treble }
             section A { m { c4 d e f | {{inA}} c2. | } }
             section B { {{headerB}} m { {{atB}} c2. | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
 
         var b = measures[^1];
@@ -242,8 +242,8 @@ public sealed class SectionResetTests
             part m { clef treble }
             section A { m { key e minor e1 | } }
             section B { m { {{atB}} g1 | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """;
         Assert.DoesNotContain(CollectParsed(Book("key e minor"))[1].Items, i => i is KeySignatureChangeItem);
         Assert.Single(CollectParsed(Book("key g major"))[1].Items.OfType<KeySignatureChangeItem>());
@@ -256,8 +256,8 @@ public sealed class SectionResetTests
             part m { clef bass }
             section A { m { clef treble c1 | } }
             section B { m { clef treble c1 | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.DoesNotContain(measures[1].Items, i => i is ClefChangeItem);
     }
@@ -272,8 +272,8 @@ public sealed class SectionResetTests
             part m { clef treble }
             section A { m { c4 d e f | {{inA}} c2. | } }
             section B { m { {{atB}} c2 | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.Single(measures[^1].Items.OfType<TimeSignatureChangeItem>());
     }
@@ -290,8 +290,8 @@ public sealed class SectionResetTests
         var measures = CollectParsed($$"""
             part m { clef treble }
             section A { m { {{music}} } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.DoesNotContain(measures[1].Items,
             i => i is TimeSignatureChangeItem or KeySignatureChangeItem or ClefChangeItem);
@@ -306,8 +306,8 @@ public sealed class SectionResetTests
         var measures = CollectParsed($$"""
             part m { clef treble }
             section A { m { {{music}} } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.Single(measures[1].Items, drawn.IsInstanceOfType);
     }
@@ -324,8 +324,8 @@ public sealed class SectionResetTests
             part m { clef treble }
             section A { m { c4 d e f | {{inA}} c2. | } }
             section B { {{headerB}} m { {{atB}} c2. | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.Single(measures[^1].Items, drawn.IsInstanceOfType);
     }
@@ -344,8 +344,8 @@ public sealed class SectionResetTests
             part m {
               {{sections}}
             }
-            form main { A{{(sections.Contains("section B") ? " B" : "")}} }
-            score main { staff m }
+            form { A{{(sections.Contains("section B") ? " B" : "")}} }
+            score { staff m }
             """);
 
         var kinds = measures[1].Items

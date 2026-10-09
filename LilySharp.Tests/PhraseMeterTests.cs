@@ -46,8 +46,8 @@ public class PhraseMeterTests
         section A { top { c'1 | } bot { c1 | } }
         section B { {{header}} {{b}} }
         section C { top { g'1 | } bot { c1 | } }
-        form main { A B C }
-        score main { staff top staff bot }
+        form { A B C }
+        score { staff top staff bot }
         """;
 
     private static bool IsBarCheck(Diagnostic d) => d.Code is DiagnosticCodes.MeasureIncomplete

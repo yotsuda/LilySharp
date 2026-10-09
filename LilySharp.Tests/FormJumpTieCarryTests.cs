@@ -76,8 +76,8 @@ public sealed class FormJumpTieCarryTests
           section A { c''1 | c1~ || }
           section B { c''1 | c1~ || }
         }
-        form main { I segno A fine B ds al fine }
-        score main { staff vn }
+        form { I segno A fine B ds al fine }
+        score { staff vn }
         """;
 
     [Fact]
@@ -120,8 +120,8 @@ public sealed class FormJumpTieCarryTests
               section A { e''1 | c1~ || }
               section B { c''1 | c1~ || }
             }
-            form main { I segno A fine B ds al fine }
-            score main { staff vn }
+            form { I segno A fine B ds al fine }
+            score { staff vn }
             """;
         Assert.Single(Check(src), d => d.Code == DiagnosticCodes.TieTargetMismatch);
         Assert.DoesNotContain(Notes(Collect(src)), n => n.HasRepeatTie || n.HasLaissezVibrer);
@@ -185,7 +185,7 @@ public sealed class FormJumpTieCarryTests
             section A { m { c4 d e f | g4 a | } }
             section B { m { b4 c' | d'4 e' f' g' | } }
             section C { m { c'4 d' | e'1 | } }
-            score main { staff m }
+            score { staff m }
             """;
         static string[] BarCodes(string book)
         {
@@ -193,8 +193,8 @@ public sealed class FormJumpTieCarryTests
             validator.Validate(SyntaxTree.Parse(book));
             return validator.Diagnostics.Where(d => d.Code is "LYS2001" or "LYS2006").Select(d => d.Code).OrderBy(c => c).ToArray();
         }
-        Assert.Empty(BarCodes(head + "form main { A to coda B dc al coda coda C }\n"));
+        Assert.Empty(BarCodes(head + "form { A to coda B dc al coda coda C }\n"));
         // The control: with no jump C follows B, and C's half bar is a short bar.
-        Assert.Equal(new[] { "LYS2006" }, BarCodes(head + "form main { A B C }\n"));
+        Assert.Equal(new[] { "LYS2006" }, BarCodes(head + "form { A B C }\n"));
     }
 }

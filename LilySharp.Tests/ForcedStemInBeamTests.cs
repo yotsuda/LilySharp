@@ -121,9 +121,9 @@ public class ForcedStemInBeamTests
               melody { d,4~ d,8.@{{annotation}} a,,16 d,8 d, b,,4 | }
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main { staff melody }
+            score { staff melody }
             """;
 
         var exporter = new LilyPondExporter();

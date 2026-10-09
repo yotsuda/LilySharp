@@ -43,8 +43,8 @@ public class MusicXmlMeterSpellingTests
             time 3+2/8
             part m { clef treble }
             section A { m { c'8 d' e' f' g' | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.Contains("<beats>3+2</beats>", measures[0]);
         Assert.Contains("<beat-type>8</beat-type>", measures[0]);
@@ -60,8 +60,8 @@ public class MusicXmlMeterSpellingTests
             time 4/4
             part m { clef treble }
             section A { m { c'4 d' e' f' | time none g'4 a' b' | time 4/4 c''1 | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.Equal(3, measures.Length);
         Assert.Contains("<senza-misura />", measures[1]);

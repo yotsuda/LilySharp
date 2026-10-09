@@ -43,6 +43,8 @@ form movement2 { ~Andante }
 form movement3 { ~Rondo }
 
 score movement1 "movement1-allegro" {
+  form movement1
+  form movement1
   grandStaff {
     staff rh
     staff lh
@@ -50,6 +52,8 @@ score movement1 "movement1-allegro" {
 }
 
 score movement2 "movement2-andante" {
+  form movement2
+  form movement2
   grandStaff {
     staff rh
     staff lh
@@ -57,6 +61,8 @@ score movement2 "movement2-andante" {
 }
 
 score movement3 "movement3-rondo" {
+  form movement3
+  form movement3
   grandStaff {
     staff rh
     staff lh

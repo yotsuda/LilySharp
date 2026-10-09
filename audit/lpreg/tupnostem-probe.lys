@@ -10,6 +10,6 @@ section Main {
   v { tuplet 3/2 { f8 g8 a8 } r4 r2 | }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { tab v as numbers }
+score { tab v as numbers }

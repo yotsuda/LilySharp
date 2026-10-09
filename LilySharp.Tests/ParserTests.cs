@@ -140,7 +140,7 @@ public class ParserTests
         // "with") and an English lyric syllable. Nothing fires.
         var src = "part m { section A { c1 } }\n"
             + "lyrics w sings m { section A { with | } }\n"
-            + "form f { A }\nscore f {\n  staff m with\n  lyrics w\n}";
+            + "form f { A }\nscore f { form f\n  staff m with\n  lyrics w\n}";
         var tree = SyntaxTree.Parse(src);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
     }
@@ -151,7 +151,7 @@ public class ParserTests
         // The named form is the supported spelling; it must not trip the missing-name
         // diagnostic.
         var src = "part m { section A { c1 } }\nlyrics verse { section A { la } }\n"
-            + "form f { A }\nscore f {\n  staff m  lyrics verse\n}";
+            + "form f { A }\nscore f { form f\n  staff m  lyrics verse\n}";
         var tree = SyntaxTree.Parse(src);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
     }
@@ -444,7 +444,7 @@ key g major
         // `Major` is a wrong-case (unknown) mode. It must give a clean "unknown mode"
         // error and be consumed — NOT leak into the music as a bare-reference error.
         var tree = SyntaxTree.Parse("key c Major\npart vln { clef treble }\n" +
-            "section A { vln { c4 d e f } }\nform main { A }\nscore \"s\" { staff vln }");
+            "section A { vln { c4 d e f } }\nform { A }\nscore \"s\" { staff vln }");
         Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.UnknownSymbolCase);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.BareReferenceRequiresDollar);
     }
@@ -522,7 +522,7 @@ key g major
             var tree = SyntaxTree.Parse(
                 "part bass { clef bass }\nsection A {\n  bass { c4 d e f | }\n  "
                 + head + " { " + words + " | }\n}\n"
-                + "form main { ~A }\nscore main { staff bass  lyrics w sings bass }\n");
+                + "form { ~A }\nscore { staff bass  lyrics w sings bass }\n");
             Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.UnexpectedCharacter);
             var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(
                 tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree));
@@ -534,7 +534,7 @@ key g major
     public void PunctuationOutsideALyricBody_IsStillFlagged()
     {
         // A score ROW `lyrics w sings m` has no body: a ';' after it is a stray again.
-        Assert.Contains(SyntaxTree.Parse("score main { staff m  lyrics w sings m ; staff n }").Diagnostics,
+        Assert.Contains(SyntaxTree.Parse("score { staff m  lyrics w sings m ; staff n }").Diagnostics,
             d => d.Code == DiagnosticCodes.UnexpectedCharacter);
         Assert.Contains(SyntaxTree.Parse("c4 ; d4").Diagnostics,
             d => d.Code == DiagnosticCodes.UnexpectedCharacter);
@@ -767,8 +767,8 @@ theme");
             "part bass { clef bass }\n" +
             "phrase bass { c2 c | }\n" +
             "section bass { bass { bass } }\n" +
-            "form main { bass }\n" +
-            "score main \"out\" { staff bass }\n");
+            "form { bass }\n" +
+            "score \"out\" { staff bass }\n");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
     }
 
@@ -814,7 +814,7 @@ theme");
         // must not throw downstream — int.Parse("") once took the whole diagnostics pass
         // down, emptying the Problems panel.
         var tree = SyntaxTree.Parse(
-            "section A { partial . }\npart melody { section A { c2 | a1 } }\nform main { A }\nscore main { staff melody }");
+            "section A { partial . }\npart melody { section A { c2 | a1 } }\nform { A }\nscore { staff melody }");
         Assert.Contains(tree.Diagnostics, d =>
             d.Code == DiagnosticCodes.ExpectedToken && d.Message.Contains("'partial' needs a duration"));
         // The full validator pass (what the LSP runs to fill the Problems panel) must not throw.
@@ -1398,7 +1398,7 @@ theme");
 section A {
     melody { c4 d e | }
 }
-form main {
+form {
     |: A :|
 }
 ";
@@ -1423,7 +1423,7 @@ form main {
         var source = @"
 section A { melody { c4 | } }
 section B { melody { d4 | } }
-form main {
+form {
     |: A [1-3. B] :|*4
 }
 ";
@@ -1438,7 +1438,7 @@ form main {
         var source = @"
 section A { melody { c4 | } }
 section B { melody { d4 | } }
-form main {
+form {
     |: A [1,3. B] :|*4
 }
 ";
@@ -1468,8 +1468,8 @@ form main {
                 time 4/4
                 part m { clef treble }
                 section A { m { c'4 d' e' f' | } }
-                form main { {{form}} }
-                score main { staff m }
+                form { {{form}} }
+                score { staff m }
                 """));
 
         Assert.Contains("\\repeat volta 4 {", Ly("|: A :|*4"));
@@ -1487,7 +1487,7 @@ section A {
         c4:8 d4:16 e4:32 |
     }
 }
-form main { A }
+form { A }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -1513,7 +1513,7 @@ section A {
         c4:64 d4:128 |
     }
 }
-form main { A }
+form { A }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -1534,7 +1534,7 @@ section A {
         <c e g>4:16 |
     }
 }
-form main { A }
+form { A }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -1553,7 +1553,7 @@ section Verse {
     melody { c4 d4 e4 f4 | g2 g2 | }
     lyrics w { き ら き ら | ひ か | }
 }
-form main { Verse }
+form { Verse }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -1568,7 +1568,7 @@ section Verse {
     melody { c4 d4 e4 f4 | g2 g2 | }
     lyrics w { twi- nkle twi- nkle | li- tle | }
 }
-form main { Verse }
+form { Verse }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -1582,7 +1582,7 @@ section Verse {
     melody { c4 d4 e4 f4 | g2 g2 | }
     lyrics w { Glo~ ~ ri- a | in ex- | }
 }
-form main { Verse }
+form { Verse }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -1597,7 +1597,7 @@ section Verse {
     lyrics w { き ら き ら | ひ か | }
     lyrics w2 { ま ば た き | し て | }
 }
-form main { Verse }
+form { Verse }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -1625,7 +1625,7 @@ phrase intro { c4 d e f | }
 section Main {
   melody { intro }
 }
-form main { Main }
+form { Main }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -1643,7 +1643,7 @@ phrase intro { c4 d e f | }
 section Main {
   melody { intro }
 }
-form main { Main }
+form { Main }
 ";
         var tree = SyntaxTree.Parse(source);
         var diags = tree.Diagnostics.Concat(SemanticValidation.Run(tree)).ToList();
@@ -1702,8 +1702,8 @@ form main { Main }
     {
         var tree = SyntaxTree.Parse(
             "part upper { clef treble }\npart lower { clef bass }\n" +
-            "section Main { upper { c'1 } lower { c1 } }\nform main { Main }\n" +
-            "score main \"x\" { grandStaff { staff upper staff lower } }");
+            "section Main { upper { c'1 } lower { c1 } }\nform { Main }\n" +
+            "score \"x\" { grandStaff { staff upper staff lower } }");
         Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.ClefNameAsStaff);
     }
 
@@ -1711,7 +1711,7 @@ form main { Main }
     public void ClefNameAsStaff_ClefDeclaration_DoesNotWarn()
     {
         // `clef treble` (with the clef keyword) is the real clef form — never flagged.
-        var tree = SyntaxTree.Parse("part p { clef treble }\nsection M { p { c1 } }\nform main { M }");
+        var tree = SyntaxTree.Parse("part p { clef treble }\nsection M { p { c1 } }\nform { M }");
         Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.ClefNameAsStaff);
     }
 

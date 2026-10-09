@@ -4,5 +4,5 @@ phrase top { g'4 a b c | }
 section Main {
   rh { top }
 }
-form main { Main }
-score main "x" { staff rh }
+form { Main }
+score "x" { staff rh }

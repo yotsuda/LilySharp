@@ -46,8 +46,8 @@ public sealed class HeaderSubtitlePoetTests
         poet "Pht"
         part m { clef treble }
         section A { m { c'4 d e f | } }
-        form main { ~A }
-        score main { staff m }
+        form { ~A }
+        score { staff m }
         """;
 
     private static string Svg(string source) =>
@@ -69,7 +69,7 @@ public sealed class HeaderSubtitlePoetTests
     {
         var tree = SyntaxTree.Parse(Book + """
 
-            score main "part" { subtitle "Part" poet "Other" staff m }
+            score "part" { subtitle "Part" poet "Other" staff m }
             """);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
@@ -180,8 +180,8 @@ public sealed class HeaderSubtitlePoetTests
     [Fact]
     public void AScoresOwnSubtitle_ReplacesTheFilesForThatScore()
     {
-        string svg = Svg(Book.Replace("score main { staff m }",
-            "score main { subtitle \"Own\" staff m }"));
+        string svg = Svg(Book.Replace("score { staff m }",
+            "score { subtitle \"Own\" staff m }"));
         Assert.Contains(">Own</text>", svg);
         Assert.DoesNotContain(">Sbt</text>", svg);
     }

@@ -73,12 +73,12 @@ public class RowsOnlySystemGapTests
           section B { [~1. eight nine | ten e- ]
             [~2. le- ven | twelve thir- ] }
         }
-        form main { A |: B :| A "A2" }
+        form { A |: B :| A "A2" }
         """;
 
     private static string Render(string scoreBody)
     {
-        var tree = SyntaxTree.Parse($"{Head}\nscore main {{\n{scoreBody}\n}}\n");
+        var tree = SyntaxTree.Parse($"{Head}\nscore {{\n{scoreBody}\n}}\n");
         Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
         return SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
     }
@@ -160,8 +160,8 @@ public class RowsOnlySystemGapTests
         var withLabel = Bands(Render("  chords prog as names\n  lyrics verse sings melody"));
         // The same book with the reprise silent, so no label stands above system 2.
         var tree = SyntaxTree.Parse(
-            Head.Replace("form main { A |: B :| A \"A2\" }", "form main { A |: B :| ~A }")
-            + "\nscore main {\n  chords prog as names\n  lyrics verse sings melody\n}\n");
+            Head.Replace("form { A |: B :| A \"A2\" }", "form { A |: B :| ~A }")
+            + "\nscore {\n  chords prog as names\n  lyrics verse sings melody\n}\n");
         Assert.False(tree.HasErrors);
         var without = Bands(SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false }));
 

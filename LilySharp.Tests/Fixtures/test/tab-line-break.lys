@@ -18,8 +18,8 @@ part melody {
   }
 }
 
-form main { A }
+form { A }
 
-score main {
+score {
   tab melody
 }

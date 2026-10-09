@@ -55,7 +55,7 @@ public sealed class FormMultiSectionEndingTests
 
         """;
 
-    private const string Tail = "\nscore main { staff m }\n";
+    private const string Tail = "\nscore { staff m }\n";
 
     private static SyntaxTree Parse(string form)
     {
@@ -71,7 +71,7 @@ public sealed class FormMultiSectionEndingTests
     [Fact]
     public void AnEndingHoldsItsSectionsInOrder_AndRoundTrips()
     {
-        var tree = Parse("form main { |: A [1. B ~C'] :| [2. D \"x\" E] }");
+        var tree = Parse("form { |: A [1. B ~C'] :| [2. D \"x\" E] }");
         var endings = tree.GetRoot().DescendantNodes().OfType<FormAlternativeSyntax>().ToList();
         Assert.Equal(2, endings.Count);
         Assert.Equal(new[] { SyntaxKind.SectionReference, SyntaxKind.SilentSectionReference },
@@ -82,7 +82,7 @@ public sealed class FormMultiSectionEndingTests
         var form = tree.GetRoot().DescendantNodes().OfType<FormDeclarationSyntax>().Single();
         Assert.Equal(new[] { "A", "B", "C", "D", "E" },
             LilySharp.Core.Editing.SectionReferenceFinder.AllSectionNameTokens(form).Select(t => t.Text));
-        Assert.Equal(Head + "form main { |: A [1. B ~C'] :| [2. D \"x\" E] }" + Tail,
+        Assert.Equal(Head + "form { |: A [1. B ~C'] :| [2. D \"x\" E] }" + Tail,
             tree.GetRoot().ToFullString());
     }
 
@@ -91,16 +91,16 @@ public sealed class FormMultiSectionEndingTests
     {
         // A |: B [1. C D] :| [2. E]  =  A B C D B E
         Assert.Equal(new[] { 72, 74, 76, 77, 74, 79 },
-            MidiPitches("form main { A |: B [1. C D] :| [2. E] }"));
+            MidiPitches("form { A |: B [1. C D] :| [2. E] }"));
         // The same with the second ending holding two.
         Assert.Equal(new[] { 74, 76, 74, 77, 79 },
-            MidiPitches("form main { |: B [1. C] :| [2. D E] }"));
+            MidiPitches("form { |: B [1. C] :| [2. D E] }"));
     }
 
     [Fact]
     public void OneBracketSpansEveryOneOfItsSections()
     {
-        var tree = Parse("form main { A |: B [1. C D] :| [2. E] }");
+        var tree = Parse("form { A |: B [1. C D] :| [2. E] }");
         var spec = RenderSpecParser.FindFirst(tree)!;
         var layout = new LayoutEngine().Layout(new MeasureCollector().CollectMultiStaff(tree, spec));
         var first = Assert.Single(layout.VoltaBracketLayouts, v => v.VoltaText == "1.");
@@ -112,7 +112,7 @@ public sealed class FormMultiSectionEndingTests
     [Fact]
     public void MusicXml_OneEndingFromTheFirstSectionToTheLast()
     {
-        var doc = new MusicXmlExporter().Export(Parse("form main { A |: B [1. C D] :| [2. E] }")).ToXml();
+        var doc = new MusicXmlExporter().Export(Parse("form { A |: B [1. C D] :| [2. E] }")).ToXml();
         var measures = doc.Descendants("measure").ToList();
         Assert.Equal(5, measures.Count);   // A B C D E
         List<(int Measure, string Type, string Number)> Endings() =>
@@ -131,7 +131,7 @@ public sealed class FormMultiSectionEndingTests
     [Fact]
     public void TheTwin_OneAlternativeHoldsBothSections()
     {
-        string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(Parse("form main { A |: B [1. C D] :| [2. E] }"));
+        string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(Parse("form { A |: B [1. C D] :| [2. E] }"));
         int alt = ly.IndexOf("\\alternative", System.StringComparison.Ordinal);
         Assert.True(alt > 0, ly);
         string tail = ly[alt..];
@@ -156,8 +156,8 @@ public sealed class FormMultiSectionEndingTests
               section D { e''2) f'' || }
               section E { g''1 | }
             }
-            form main { |: B [1. C D] :| [2. E] }
-            score main { staff vn }
+            form { |: B [1. C D] :| [2. E] }
+            score { staff vn }
             """;
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -177,8 +177,8 @@ public sealed class FormMultiSectionEndingTests
               section D { e''1 | }
               section E { g''1 | }
             }
-            form main { |: B [1. C D] :| [2. E] }
-            score main { staff vn }
+            form { |: B [1. C D] :| [2. E] }
+            score { staff vn }
             """;
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -195,7 +195,7 @@ public sealed class FormMultiSectionEndingTests
     [Fact]
     public void AnUnclosedFirstEnding_RunsToItsRepeatBar_AndHooks()
     {
-        var tree = Parse("form main { |: A [1. B C :| [2. D] }");
+        var tree = Parse("form { |: A [1. B C :| [2. D] }");
         var first = tree.GetRoot().DescendantNodes().OfType<FormAlternativeSyntax>().First();
         Assert.Equal(2, first.Sections.Count);
         Assert.True(first.EndsHooked);
@@ -206,9 +206,9 @@ public sealed class FormMultiSectionEndingTests
     /// ordinary "Expected" error, whatever follows it (it used to hold its first section and
     /// let the rest play after the repeat; retired 2026-09-28).</summary>
     [Theory]
-    [InlineData("form main { |: A [1. B] :| [2. C D E }", "}")]
-    [InlineData("form main { |: A [1. B] :| [2. C D |: E :| }", "|:")]
-    [InlineData("form main { A [1. B C break }", "break")]
+    [InlineData("form { |: A [1. B] :| [2. C D E }", "}")]
+    [InlineData("form { |: A [1. B] :| [2. C D |: E :| }", "|:")]
+    [InlineData("form { A [1. B C break }", "break")]
     public void AnUnclosedLastEnding_IsTheOrdinaryExpectedError(string form, string at)
     {
         string src = Head + form + Tail;
@@ -224,25 +224,25 @@ public sealed class FormMultiSectionEndingTests
     [Fact]
     public void ALoneEndingOfTwoSections_WarnsWithBothNames()
     {
-        var tree = SyntaxTree.Parse(Head + "form main { A [1. B C] }" + Tail);
+        var tree = SyntaxTree.Parse(Head + "form { A [1. B C] }" + Tail);
         var warning = Assert.Single(SemanticValidation.Run(tree),
             d => d.Code == DiagnosticCodes.VoltaEndingWithoutRepeat);
         Assert.Equal("No repeat opens this ending, so '1.' prints nothing and 'B C' is engraved as "
             + "ordinary section references. Open a repeat ('|: … [1. B C] :| …'), or remove the "
             + "brackets and write 'B C' on its own.", warning.Message);
-        Assert.Equal("[1. B C]", (Head + "form main { A [1. B C] }" + Tail).Substring(warning.Span.Start, warning.Span.Length));
-        Assert.Equal(new[] { 72, 74, 76 }, MidiPitches("form main { A [1. B C] }"));
+        Assert.Equal("[1. B C]", (Head + "form { A [1. B C] }" + Tail).Substring(warning.Span.Start, warning.Span.Length));
+        Assert.Equal(new[] { 72, 74, 76 }, MidiPitches("form { A [1. B C] }"));
     }
 
     // ---- a repeat run must name a section (LYS1041) --------------------------------------
 
     [Theory]
-    [InlineData("form main { |: [1. B] :| [2. C] }", "|:", true)]
-    [InlineData("form main { A |: :| [2. C] }", "|:", true)]
-    [InlineData("form main { A |: :| }", "|:", false)]
-    [InlineData("form main { A |: B :|: :| }", ":|:", false)]
-    [InlineData("form main { |: A :|: [1. B] :| [2. C] }", ":|:", true)]
-    [InlineData("form main { A |: break :| }", "|:", false)]
+    [InlineData("form { |: [1. B] :| [2. C] }", "|:", true)]
+    [InlineData("form { A |: :| [2. C] }", "|:", true)]
+    [InlineData("form { A |: :| }", "|:", false)]
+    [InlineData("form { A |: B :|: :| }", ":|:", false)]
+    [InlineData("form { |: A :|: [1. B] :| [2. C] }", ":|:", true)]
+    [InlineData("form { A |: break :| }", "|:", false)]
     public void ARepeatRunWithNoSection_IsAnError(string form, string underlined, bool withEnding)
     {
         string src = Head + form + Tail;
@@ -256,10 +256,10 @@ public sealed class FormMultiSectionEndingTests
     }
 
     [Theory]
-    [InlineData("form main { |: A :| }")]
-    [InlineData("form main { |: ~A [1. B] :| [2. C] }")]
-    [InlineData("form main { |: A :|: B :| }")]
-    [InlineData("form main { |: A [1. B C] :| [2. D] }")]
+    [InlineData("form { |: A :| }")]
+    [InlineData("form { |: ~A [1. B] :| [2. C] }")]
+    [InlineData("form { |: A :|: B :| }")]
+    [InlineData("form { |: A [1. B C] :| [2. D] }")]
     public void ARepeatRunThatNamesASection_IsNot(string form)
     {
         var tree = SyntaxTree.Parse(Head + form + Tail);

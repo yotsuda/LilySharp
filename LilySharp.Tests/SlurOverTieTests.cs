@@ -58,8 +58,8 @@ public class SlurOverTieTests
             <a d fis>1 |.
           }
         }
-        form main { ~Main }
-        score main { staff rh }
+        form { ~Main }
+        score { staff rh }
         """;
 
     private readonly record struct Bow(double X0, double Y0, double CX1, double CY1,

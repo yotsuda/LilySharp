@@ -58,11 +58,11 @@ public sealed class HalfTieEveryStaffTests
           section A { e1 | c1@laissezVibrer | e1~ || }
           section B { e1 | }
         }
-        form main { I |: A :| B }
+        form { I |: A :| B }
         """;
 
-    private const string TwoStaves = Parts + "\nscore main { staff up  staff lo }\n";
-    private const string GrandStaff = Parts + "\nscore main { grandStaff { staff up  staff lo } }\n";
+    private const string TwoStaves = Parts + "\nscore { staff up  staff lo }\n";
+    private const string GrandStaff = Parts + "\nscore { grandStaff { staff up  staff lo } }\n";
 
     // Voice 2 carries an l.v. and a repeat tie. The pitches are chosen so the PITCH rule would
     // give the opposite side to the voice rule: voice one's a (below the middle line) would curve
@@ -73,8 +73,8 @@ public sealed class HalfTieEveryStaffTests
         section A {
           up { voice { a2@laissezVibrer a2 } { e'2@laissezVibrer g'2@repeatTie } | c''1 | }
         }
-        form main { A }
-        score main { staff up }
+        form { A }
+        score { staff up }
         """;
 
     private static (MultiStaffScore Score, ScoreLayout Layout) Lay(string book)
@@ -117,8 +117,8 @@ public sealed class HalfTieEveryStaffTests
         section A {
           up { voice { a2@laissezVibrer@stemDown a2 } { e'2@laissezVibrer@stemUp g'2@repeatTie@stemUp } | c''1 | }
         }
-        form main { A }
-        score main { staff up }
+        form { A }
+        score { staff up }
         """;
 
     // A combined staff: the parts are apart (their rhythms differ), so part one is \voiceOne and
@@ -133,8 +133,8 @@ public sealed class HalfTieEveryStaffTests
           vone { a4 a4 a2@laissezVibrer | a1 | }
           vtwo { c''2@laissezVibrer c''2@repeatTie | c''1 | }
         }
-        form main { A }
-        score main { combinedStaff { vone vtwo } }
+        form { A }
+        score { combinedStaff { vone vtwo } }
         """;
 
     [Theory]
@@ -271,8 +271,8 @@ public sealed class HalfTieEveryStaffTests
             octave absolute
             part up { clef treble }
             section A { up { <c' e' g'>2@laissezVibrer <d'@repeatTie f'>2 | } }
-            form main { A }
-            score main { staff up }
+            form { A }
+            score { staff up }
             """));
         var notes = doc.Parts[0].Measures.SelectMany(m => m.Notes).Where(n => n.Step != null).ToList();
         Assert.Equal(5, notes.Count);

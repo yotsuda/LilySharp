@@ -33,7 +33,7 @@ namespace LilySharp.Tests;
 /// INCLUDED, while <c>lysc check</c> answered <c>No errors found.</c> for every one. A node's
 /// position is the running sum of the green widths before it, so those offsets were the ones
 /// the book has with the token DELETED — and the same slide reached other diagnostics:
-/// <c>form main { A section B }</c> reported its (correct) <c>Undefined section: 'B'</c> at
+/// <c>form { A section B }</c> reported its (correct) <c>Undefined section: 'B'</c> at
 /// column 15, on the dropped <c>section</c> keyword, with <c>B</c> standing at column 23.
 /// </para>
 /// <para>
@@ -51,14 +51,14 @@ public class StrayItemTokenTests
     private const string Control =
         "part melody\n"
         + "section A { melody { c4 d e f | } }\n"
-        + "form main { A }\n"
-        + "score main \"p\" { staff melody }\n";
+        + "form { A }\n"
+        + "score \"p\" { staff melody }\n";
 
     private static string WithStray(string container, string token) => container switch
     {
         "section" => Control.Replace("section A { melody", $"section A {{ {token} melody"),
         "music block" => Control.Replace("{ c4 d e f", $"{{ {token} c4 d e f"),
-        "form" => Control.Replace("form main { A", $"form main {{ {token} A"),
+        "form" => Control.Replace("form { A", $"form {{ {token} A"),
         "score" => Control.Replace("{ staff melody", $"{{ {token} staff melody"),
         "file" => $"{token} " + Control,
         _ => Control,
@@ -195,8 +195,8 @@ public class StrayItemTokenTests
         // A '|' between form items asks for nothing the page does not already do, so it is
         // kept as a bare token: it contributes width and NOTHING else. Made into a barline
         // NODE it asks for something the author did not write — measured 2026-08-16,
-        // `form main { A | B }` engraved three bars where `form main { A B }` engraves two.
-        string src = Control.Replace("form main { A }", "form main { | A }");
+        // `form { A | B }` engraved three bars where `form { A B }` engraves two.
+        string src = Control.Replace("form { A }", "form { | A }");
         var root = SyntaxTree.Parse(src).GetRoot();
 
         Assert.Equal(src, root.ToFullString());
@@ -214,7 +214,7 @@ public class StrayItemTokenTests
         // '||' names a glyph the reader expects to see, and now gets it: measured on a
         // real book (scratch/…/blogger.lys) the page gained exactly one element — a single
         // barline rect became a pair 0.49 apart — with the bar count and MIDI unchanged.
-        string src = Control.Replace("form main { A }", "form main { A || }");
+        string src = Control.Replace("form { A }", "form { A || }");
         var root = SyntaxTree.Parse(src).GetRoot();
 
         Assert.Equal(src, root.ToFullString());
@@ -271,7 +271,7 @@ public class StrayItemTokenTests
     {
         // ':|' and '|:' are claimed by earlier arms (2026-08-15); the catch-all must not
         // have taken them, or a one-sided repeat would stop being a repeat.
-        string src = Control.Replace("form main { A }", "form main { |: A :| }");
+        string src = Control.Replace("form { A }", "form { |: A :| }");
         var root = SyntaxTree.Parse(src).GetRoot();
 
         Assert.Equal(src, root.ToFullString());

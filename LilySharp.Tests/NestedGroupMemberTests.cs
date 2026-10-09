@@ -59,10 +59,10 @@ public class NestedGroupMemberTests
           cl { c'1 | }
           lyrics words sings fl1 { la la la la | }
         }
-        form main { ~A }
+        form { ~A }
         """;
 
-    private static string Book(string render) => Body + "\nscore main { " + render + " }\n";
+    private static string Book(string render) => Body + "\nscore { " + render + " }\n";
 
     private static SyntaxTree Parse(string render) => SyntaxTree.Parse(Book(render));
 

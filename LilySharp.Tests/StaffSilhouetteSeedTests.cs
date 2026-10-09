@@ -95,8 +95,8 @@ public class StaffSilhouetteSeedTests
               rh { {{four}} {{four}} {{four}} {{rhBar4}} break {{four}} {{four}} {{four}} <a' d'' fis''>1@pp | }
               lh { {{lhFour}} {{lhFour}} {{lhFour}} {{lhFour}} {{lhFour}} {{lhFour}} {{lhFour}} {{lhFour}} }
             }
-            form main { ~S }
-            score main "x" {
+            form { ~S }
+            score "x" {
               grandStaff {
                 staff rh
                 staff lh
@@ -152,8 +152,8 @@ public class StaffSilhouetteSeedTests
               rh { {{rh}} }
               lh { {{lh}} }
             }
-            form main { ~S }
-            score main "x" {
+            form { ~S }
+            score "x" {
               grandStaff {
                 staff rh
                 staff lh
@@ -208,8 +208,8 @@ public class StaffSilhouetteSeedTests
               rh { {{rhPlain}} break {{rhWedge}} }
               lh { {{lh}} {{lh}} }
             }
-            form main { ~S }
-            score main "x" {
+            form { ~S }
+            score "x" {
               grandStaff {
                 staff rh
                 staff lh
@@ -264,8 +264,8 @@ public class StaffSilhouetteSeedTests
             section Main {
               melody { {{music}} }
             }
-            form main { Main }
-            score main "x" { staff melody }
+            form { Main }
+            score "x" { staff melody }
             """.Replace("\r\n", "\n");
     }
 

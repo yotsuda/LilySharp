@@ -60,8 +60,8 @@ public class LineEdgeLyricReservationTests
           melody { {{Music}} }
           lyrics words sings melody { {{words}} }
         }
-        form main { Main }
-        score main { staff melody  lyrics words }
+        form { Main }
+        score { staff melody  lyrics words }
         """;
 
     private const string Unsung = $$"""
@@ -72,8 +72,8 @@ public class LineEdgeLyricReservationTests
         section Main {
           melody { {{Music}} }
         }
-        form main { Main }
-        score main { staff melody }
+        form { Main }
+        score { staff melody }
         """;
 
     private const string HyphenOnward = "Twin- kle twin- kle | lit- tle star bright- | ly shin- ing far | way |";

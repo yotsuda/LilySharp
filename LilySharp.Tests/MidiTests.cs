@@ -137,8 +137,8 @@ public class MidiTests
               section A { Lick }
               section B { key g major Lick }
             }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.Equal(new[] { 60, 62, 64, 60, /* G3 A3 B3 G3 */ 55, 57, 59, 55 }, pitches);
     }
@@ -162,8 +162,8 @@ public class MidiTests
               key g major
               melody { Lick }
             }
-            form main { A B }
-            score main { staff melody }
+            form { A B }
+            score { staff melody }
             """);
         Assert.Equal(new[] { 60, 62, 64, 60, /* G3 A3 B3 G3 */ 55, 57, 59, 55 }, pitches);
     }
@@ -183,8 +183,8 @@ public class MidiTests
             phrase Lick { c d e c }
             part melody { section A { Lick } }
             section A { key g major }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """);
         Assert.Equal(new[] { 55, 57, 59, 55 }, pitches);
     }
@@ -209,8 +209,8 @@ public class MidiTests
             phrase Lick { c d e c }
             part melody { section A { Lick } }
             section A { key g major  override NoteHead.color = red }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """);
         Assert.Equal(new[] { 55, 57, 59, 55 }, pitches);
     }
@@ -226,8 +226,8 @@ public class MidiTests
             tempo 100
             part melody { section A { c4 d e f } section B { g4 a g f } }
             section B { tempo 140 }
-            form main { A B }
-            score main { staff melody }
+            form { A B }
+            score { staff melody }
             """));
         var conductor = midi.Tracks[0];
         // 140 BPM = 428571 μs/beat, applied where section B begins (after A's 4/4 bar).
@@ -243,8 +243,8 @@ public class MidiTests
             time 4/4
             part melody { section A { c4 d e f } section B { g4 a g } }
             section B { time 3/4 }
-            form main { A B }
-            score main { staff melody }
+            form { A B }
+            score { staff melody }
             """));
         var conductor = midi.Tracks[0];
         Assert.Contains(conductor.TimeSignatures, ts => ts.Numerator == 3 && ts.Denominator == 4 && ts.Tick > 0);
@@ -265,8 +265,8 @@ public class MidiTests
             part m {
               section A { key g major Lick c }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.Equal(new[] { 55, 57, 59, 55, /* inline c = C4 */ 60 }, pitches);
     }
@@ -523,8 +523,8 @@ public class MidiTests
         string rhA = Bar("rh", marked == "rh" ? "@p" : ""), lhA = Bar("lh", marked == "lh" ? "@p" : "");
         string rhB = Bar("rh", ""), lhB = Bar("lh", "");
         var source = bySection
-            ? $"section A {{ rh {{ {rhA} }} lh {{ {lhA} }} }} section B {{ rh {{ {rhB} }} lh {{ {lhB} }} }} form main {{ A B }}"
-            : $"part rh {{ section A {{ {rhA} }} section B {{ {rhB} }} }} part lh {{ section A {{ {lhA} }} section B {{ {lhB} }} }} form main {{ A B }}";
+            ? $"section A {{ rh {{ {rhA} }} lh {{ {lhA} }} }} section B {{ rh {{ {rhB} }} lh {{ {lhB} }} }} form {{ A B }}"
+            : $"part rh {{ section A {{ {rhA} }} section B {{ {rhB} }} }} part lh {{ section A {{ {lhA} }} section B {{ {lhB} }} }} form {{ A B }}";
         var midi = new MidiExporter().Export(SyntaxTree.Parse(source));
 
         var markedNotes = midi.Tracks.Single(t => t.Name == marked).Notes;
@@ -542,7 +542,7 @@ public class MidiTests
     [Fact]
     public void AFromTheBeginningRepeat_ReopensEachPartAtItsOpeningVelocity()
     {
-        var source = "section A { rh { c'4 d'@p e' f' | } } section B { rh { c'4@f d' e' f' | } } form main { A B :| }";
+        var source = "section A { rh { c'4 d'@p e' f' | } } section B { rh { c'4@f d' e' f' | } } form { A B :| }";
         var midi = new MidiExporter().Export(SyntaxTree.Parse(source));
 
         var notes = midi.Tracks.Single(t => t.Name == "rh").Notes.OrderBy(n => n.StartTick).Select(n => n.Velocity).ToArray();
@@ -562,8 +562,8 @@ public class MidiTests
             part melody
             section A { melody { c'4@p d' e' f' | g'1 | } chords harmony { C . G7 . | Dm/F | } }
             section B { melody { c'4 d' e' f' | } chords harmony { C | } }
-            form main { A B }
-            score main { chords harmony  staff melody }";
+            form { A B }
+            score { chords harmony  staff melody }";
         var midi = new MidiExporter().Export(SyntaxTree.Parse(source));
 
         var row = midi.Tracks.Single(t => t.Name == "harmony (chords)").Notes;
@@ -655,8 +655,8 @@ public class MidiTests
         var source = @"
 part clar { clef treble transpose d }
 section Main { clar { c4 d e } }
-form main { Main }
-score main ""x"" { staff clar }";
+form { Main }
+score ""x"" { staff clar }";
         var tree = SyntaxTree.Parse(source);
         var midi = new MidiExporter().Export(tree);
         var notes = midi.Tracks[1].Notes;
@@ -674,8 +674,8 @@ score main ""x"" { staff clar }";
         var source = @"
 part lower { clef bass transpose c, }
 section Main { lower { c4 d e } }
-form main { Main }
-score main ""x"" { staff lower }";
+form { Main }
+score ""x"" { staff lower }";
         var tree = SyntaxTree.Parse(source);
         var midi = new MidiExporter().Export(tree);
         var notes = midi.Tracks[1].Notes;
@@ -696,8 +696,8 @@ tempo 120
 time 4/4
 part m { clef treble }
 section Main { m { c4 d e f | tempo 160 g a b c } }
-form main { Main }
-score main ""x"" { staff m }";
+form { Main }
+score ""x"" { staff m }";
         var tree = SyntaxTree.Parse(source);
         var midi = new MidiExporter().Export(tree);
         var tempos = midi.Tracks[0].TempoChanges; // conductor track

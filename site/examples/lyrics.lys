@@ -11,5 +11,5 @@ section A {
     ev- ery word a | song |
   }
 }
-form main { ~A }
-score main { staff melody  lyrics words }
+form { ~A }
+score { staff melody  lyrics words }

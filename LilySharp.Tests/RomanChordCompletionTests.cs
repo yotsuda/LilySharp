@@ -162,8 +162,8 @@ public class RomanChordCompletionTests
                 key {{key}}
                 part m { clef treble section A { c4 d e f | } }
                 chords prog { section A { {{label}} | } }
-                form main { A }
-                score main { staff m  chords prog }
+                form { A }
+                score { staff m  chords prog }
                 """;
             var tree = SyntaxTree.Parse(src);
             Assert.False(tree.HasErrors,
@@ -195,8 +195,8 @@ public class RomanChordCompletionTests
                 key {{key}}
                 part m { clef treble section A { c4 d e f | } }
                 chords prog { section A { {{entries}} } }
-                form main { A }
-                score main { staff m  chords prog }
+                form { A }
+                score { staff m  chords prog }
                 """);
             Assert.False(tree.HasErrors,
                 string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
@@ -243,8 +243,8 @@ public class RomanChordCompletionTests
             time 4/4
             key c major
             part m { clef treble section A { c4@chord(V7) d e f | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.Contains(LilySharp.Core.Semantics.SemanticValidation.Run(tree),
             d => d.Message.Contains("@chord(V7)"));

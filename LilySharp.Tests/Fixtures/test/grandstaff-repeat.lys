@@ -53,9 +53,9 @@ section End2 {
   lh { lhBass }
 }
 
-form main { |: Main [1. ~End1] :| [2. ~End2] }
+form { |: Main [1. ~End1] :| [2. ~End2] }
 
-score main "grandstaff-repeat" {
+score "grandstaff-repeat" {
   grandStaff {
     staff rh
     staff lh

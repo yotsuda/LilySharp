@@ -49,7 +49,7 @@ public class LayoutBlockTests
     private static readonly SvgRenderOptions Opt = new() { EmbedFont = false };
 
     private const string Body =
-        "part m { clef treble }\nsection A { m { c4 d e f | } }\nform main { A }\nscore main { staff m }\n";
+        "part m { clef treble }\nsection A { m { c4 d e f | } }\nform { A }\nscore { staff m }\n";
 
     private static LayoutPlan Read(string block, out LayoutPlanReader.Problem[] problems)
     {
@@ -320,12 +320,13 @@ public class LayoutBlockTests
     public void TheNameLayer_MirrorsThePaperOne()
     {
         static string Doc(string top, string item) =>
-            top + "part m { clef treble }\nsection A { m { c4 d e f | } }\nform main { A }\n"
-            + "score main { " + item + " staff m }\n";
+            top + "part m { clef treble }\nsection A { m { c4 d e f | } }\nform { A }\n"
+            + "score { " + item + " staff m }\n";
 
-        // An unnamed block inside a score: the reference form is what belongs there.
-        Assert.Contains(All(Doc("", "layout { markTempo beside }")),
-            d => d.Code == DiagnosticCodes.ScoreLayoutNeedsAName);
+        // A bare block inside a score overrides the file's default for that score (2026-10-09).
+        Assert.Empty(All(Doc("", "layout { markTempo beside }")));
+        var bare = SyntaxTree.Parse(Doc("layout { markTempo stacked }\n", "layout { markTempo beside }"));
+        Assert.True(SvgGenerator.CollectScore(bare, RenderSpecParser.FindFirst(bare)).MarksBeside);
         // A reference to nothing.
         Assert.Contains(All(Doc("", "layout chart")),
             d => d.Code == DiagnosticCodes.UnknownLayoutBlockName && d.Message.Contains("'chart'", StringComparison.Ordinal));
@@ -352,7 +353,7 @@ public class LayoutBlockTests
     private static string EightBars(string top) =>
         top + "part m { clef treble }\n"
         + "section A { m { c1 | c1 | break c1 | c1 | break c1 | c1 | break c1 | c1 | } }\n"
-        + "form main { A }\nscore main { staff m }\n";
+        + "form { A }\nscore { staff m }\n";
 
     private static ScoreLayout Lay(string source)
     {
@@ -411,7 +412,7 @@ public class LayoutBlockTests
     public void EveryN_SkipsTheBarsACompressedRestSwallows()
     {
         string book = "layout { barNumbers every 1 }\npart m { clef treble }\n"
-            + "section A { m { c1 | R1*2 | d1 | R*3 | e1 | } }\nform main { A }\nscore main { staff m }\n";
+            + "section A { m { c1 | R1*2 | d1 | R*3 | e1 | } }\nform { A }\nscore { staff m }\n";
         var layout = Lay(book);
         Assert.Equal(new[] { "1", "2", "4", "5", "8" }, layout.BarNumberLayouts.Select(b => b.Text));
         // …and the numbers that stand are each at their own column.
@@ -430,7 +431,7 @@ public class LayoutBlockTests
         // literal port prints the 0; suppressing it would be a Lily#-own rule.
         string book = "part m { clef treble }\n"
             + "section A { partial 4  m { c4 | c1 | c1 | c1 | } }\n"
-            + "form main { A }\nscore main { staff m }\n";
+            + "form { A }\nscore { staff m }\n";
         var layout = Lay("layout { barNumbers every 2 }\n" + book);
         var numbered = layout.BarNumberLayouts.Select(b => (b.MeasureIndex, b.Text)).ToArray();
         Assert.Equal(new[] { (0, "0"), (2, "2") }, numbered);
@@ -462,7 +463,7 @@ public class LayoutBlockTests
     private const string TwoSections =
         "part m { clef treble }\n"
         + "section A { m { c1 | } }\nsection B { m { c1 | } }\n"
-        + "form main { A B }\nscore main { staff m }\n";
+        + "form { A B }\nscore { staff m }\n";
 
     private static string MaskDataPos(string svg)
         => System.Text.RegularExpressions.Regex.Replace(svg, @"data-pos=""\d+""", "data-pos=\"\"");
@@ -598,7 +599,7 @@ public class LayoutBlockTests
     private const string Combined =
         "part one { clef treble }\npart two { clef treble }\n"
         + "section A { one { c'1 | d'1 | } two { c'1 | r1 | } }\n"
-        + "form main { A }\nscore main { combinedStaff { one two } }\n";
+        + "form { A }\nscore { combinedStaff { one two } }\n";
 
     private static string[] CombineWords(string top)
     {
@@ -654,7 +655,7 @@ public class LayoutBlockTests
         "time 4/4\npart m { clef treble }\n"
         + "section A { m { c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | }\n"
         + "  chords prog { Cdim | Caug | Cm7-5 | Cdim7 | Am7/C | } }\n"
-        + "form main { ~A }\nscore main { chords prog  staff m }\n";
+        + "form { ~A }\nscore { chords prog  staff m }\n";
 
     private static string[] ChordTexts(string top)
     {
@@ -846,8 +847,8 @@ public class LayoutBlockTests
         const string TwoRows =
             "time 4/4\nkey c major\npart m { clef treble }\n"
             + "section A { m { c4 d e f | } chords prog { Cdim | } }\n"
-            + "form main { ~A }\n"
-            + "score main { chords prog as roman  chords prog as names  staff m }\n";
+            + "form { ~A }\n"
+            + "score { chords prog as roman  chords prog as names  staff m }\n";
 
         static string[] Shown(string top)
         {
@@ -886,7 +887,7 @@ public class LayoutBlockTests
         const string Inline =
             "time 4/4\npart m { clef treble }\n"
             + "section A { m { c4@chord(Cdim) d e f | } chords prog { Cdim | } }\n"
-            + "form main { ~A }\nscore main { chords prog  staff m with chords prog }\n";
+            + "form { ~A }\nscore { chords prog  staff m with chords prog }\n";
 
         static string[] Texts(string source)
         {
@@ -990,7 +991,7 @@ public class LayoutBlockTests
         string book = "layout { chordQualities symbols  minorChords lower }\n"
             + "time 4/4\npart m { clef treble }\n"
             + "section A { m { c4 d e f | } chords prog { " + entry + " | } }\n"
-            + "form main { ~A }\nscore main { chords prog  staff m }\n";
+            + "form { ~A }\nscore { chords prog  staff m }\n";
         var tree = SyntaxTree.Parse(book);
         Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));

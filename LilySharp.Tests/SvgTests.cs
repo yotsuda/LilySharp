@@ -183,7 +183,7 @@ public class SvgTests
 section A {
     melody { c4 d4 e4 f4 | }
 }
-form main {
+form {
     |: A :|
 }
 ";

@@ -41,10 +41,10 @@
   <line x1="53.95" y1="10.93" x2="53.95" y2="14.28" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="56.89" y="10.28" font-size="4.00" data-pos="334"></text>
   <line x1="56.96" y1="10.43" x2="56.96" y2="13.78" stroke="#000000" stroke-width="0.130"/>
-  <rect x="29.08" y="10.28" width="0.60" height="4.00" data-pos="479"/>
-  <rect x="29.98" y="10.28" width="0.19" height="4.00" data-pos="479"/>
-  <circle cx="30.70" cy="11.78" r="0.23" data-pos="479"/>
-  <circle cx="30.70" cy="12.78" r="0.23" data-pos="479"/>
+  <rect x="29.08" y="10.28" width="0.60" height="4.00" data-pos="474"/>
+  <rect x="29.98" y="10.28" width="0.19" height="4.00" data-pos="474"/>
+  <circle cx="30.70" cy="11.78" r="0.23" data-pos="474"/>
+  <circle cx="30.70" cy="12.78" r="0.23" data-pos="474"/>
   <circle cx="45.24" cy="11.78" r="0.23" data-pos="369"/>
   <circle cx="45.24" cy="12.78" r="0.23" data-pos="369"/>
   <rect x="45.76" y="10.28" width="0.19" height="4.00" data-pos="369"/>
@@ -62,7 +62,7 @@
   <text x="36.03" y="17.78" font-size="2.47" text-anchor="middle" data-pos="450">up</text>
   <text x="39.42" y="17.78" font-size="2.47" text-anchor="middle" data-pos="453">up</text>
   <text x="42.81" y="17.78" font-size="2.47" text-anchor="middle" data-pos="456">up</text>
-  <text x="46.31" y="21.78" font-size="2.20" font-style="italic" text-anchor="end" data-pos="487">D.C.</text>
+  <text x="46.31" y="21.78" font-size="2.20" font-style="italic" text-anchor="end" data-pos="482">D.C.</text>
   <rect x="11.90" y="6.69" width="2.75" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="312"/>
   <text x="13.28" y="9.08" font-size="2.77" text-anchor="middle" data-pos="312">A</text>
   <rect x="28.39" y="6.73" width="2.48" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="343"/>

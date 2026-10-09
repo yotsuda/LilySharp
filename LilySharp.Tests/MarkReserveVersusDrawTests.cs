@@ -160,8 +160,8 @@ public class MarkReserveVersusDrawTests
     private const string PedalTextBook =
         "part pno { clef treble pedal text }\n" +
         "section A { pno { %BODY% } }\n" +
-        "form main { A }\n" +
-        "score main \"pedal\" { staff pno }\n";
+        "form { A }\n" +
+        "score \"pedal\" { staff pno }\n";
 
     /// <summary>
     /// The SUSTAIN pedal's word is drawn as music glyphs, not as text — the one place the
@@ -451,8 +451,8 @@ public class MarkReserveVersusDrawTests
         string book =
             "part rh { clef treble }\n" +
             "section A { rh { g4 a b c' | } }\n" +
-            "form main { A _\"poco a poco\" }\n" +
-            "score main \"textscript\" { staff rh }\n";
+            "form { A _\"poco a poco\" }\n" +
+            "score \"textscript\" { staff rh }\n";
         var (size, style) = DrawnTextAttributes(Svg(book), "poco a poco");
         Assert.Equal(EngravingDefaults.TextScriptFontSize, size, 2);
         Assert.Equal(FontStyle.Italic, style);

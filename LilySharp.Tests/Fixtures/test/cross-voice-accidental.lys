@@ -29,5 +29,5 @@ section S {
     { g'4 r | ges'4 r | ges'4 r | }
   }
 }
-form main { S }
-score main "cross-voice-accidental" { staff mel }
+form { S }
+score "cross-voice-accidental" { staff mel }

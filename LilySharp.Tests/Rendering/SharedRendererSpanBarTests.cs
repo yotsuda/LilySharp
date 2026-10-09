@@ -57,9 +57,9 @@ public sealed class SharedRendererSpanBarTests
             phrase lh { c4 e g c' | }
 
             section Main { melody { rh } bass { lh } }
-            form main { Main }
+            form { Main }
 
-            score main "t" {
+            score "t" {
               {{keyword}} {
                 staff treble melody
                 staff bass bass
@@ -76,8 +76,8 @@ public sealed class SharedRendererSpanBarTests
         var single = Render("""
             time 4/4
             section S { line { c'4 d e f | } }
-            form main { S }
-            score main "s" { staff line }
+            form { S }
+            score "s" { staff line }
             """);
 
         Assert.False(HasBarlineBridgingTheGap(single),

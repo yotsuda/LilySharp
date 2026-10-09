@@ -35,7 +35,7 @@ public class DuplicatePartPropertyValidatorTests
     private static IReadOnlyList<Diagnostic> Errors(string parts)
     {
         var source = $"octave absolute\n{parts}\nsection Main {{ m {{ c4 d4 e4 f4 | }} }}\n"
-                     + "form main { ~Main }\nscore main { staff m }\n";
+                     + "form { ~Main }\nscore { staff m }\n";
         var validator = new DuplicatePartPropertyValidator();
         validator.Validate(SyntaxTree.Parse(source));
         return validator.Diagnostics

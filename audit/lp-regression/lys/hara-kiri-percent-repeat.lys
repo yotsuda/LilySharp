@@ -27,6 +27,6 @@ section Main {
   rs { repeat percent 4 { b1 | } }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { staff ~n1 as removeEmpty true  staff ~n2 as removeEmpty true  tab tb  staff ~dr as removeEmpty true  staff ~rs as lines 1 removeEmpty true }
+score { staff ~n1 as removeEmpty true  staff ~n2 as removeEmpty true  tab tb  staff ~dr as removeEmpty true  staff ~rs as lines 1 removeEmpty true }

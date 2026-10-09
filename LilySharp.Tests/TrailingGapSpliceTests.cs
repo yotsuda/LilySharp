@@ -58,9 +58,9 @@ public sealed class TrailingGapSpliceTests
           section A { e1\3@chord(Dm7) }
         }
 
-        form main { A }
+        form { A }
 
-        score main {
+        score {
           staff back
           tab melody
         }
@@ -76,9 +76,9 @@ public sealed class TrailingGapSpliceTests
           }
         }
 
-        form main { ~Body }
+        form { ~Body }
 
-        score main {
+        score {
           staff bass
           tab bass
         }

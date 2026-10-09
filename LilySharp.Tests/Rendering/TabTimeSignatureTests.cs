@@ -83,8 +83,8 @@ public sealed class TabTimeSignatureTests
           instrument bass
           section A { {{music}} }
         }
-        form main { A }
-        score main { {{scoreBlock}} }
+        form { A }
+        score { {{scoreBlock}} }
         """;
 
     [Fact]

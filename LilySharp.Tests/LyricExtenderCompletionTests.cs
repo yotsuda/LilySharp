@@ -45,8 +45,8 @@ public class LyricExtenderCompletionTests
             section Main {
               v { g1( | c) | d | }
             }
-            form main { ~Main }
-            score main { staff ~v  lyrics w }
+            form { ~Main }
+            score { staff ~v  lyrics w }
             """);
 
         // Note columns: whole-note glyphs with data-pos, one per measure.
@@ -97,8 +97,8 @@ public class LyricExtenderCompletionTests
             section Main {
               v { c4 d e f~ | break f4 e d c | }
             }
-            form main { ~Main }
-            score main { staff ~v  lyrics w }
+            form { ~Main }
+            score { staff ~v  lyrics w }
             """);
 
         // Extender segments: thin (0.080 = the LyricExtender's 0.8 line-thicknesses; a flat

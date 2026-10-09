@@ -39,8 +39,8 @@ public class DynamicAlignTests
             "octave absolute\n" +
             "part m { clef treble }\n" +
             $"section S {{ m {{ {measures} }} }}\n" +
-            "form main { S }\n" +
-            "score main \"o\" { staff m }\n");
+            "form { S }\n" +
+            "score \"o\" { staff m }\n");
         Assert.False(tree.HasErrors,
             string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
         return new LayoutEngine().Layout(

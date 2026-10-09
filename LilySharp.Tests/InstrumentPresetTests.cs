@@ -48,7 +48,7 @@ public sealed class InstrumentPresetTests
         // `instrument bass` implies the 4-string bass tuning for a tab, no explicit
         // `tuning` needed.
         var tuning = TabTuningOf(
-            "part bl { instrument bass }\nsection A { bl { e,4 a, d g | } }\nform main { A }\nscore { tab bl }\n");
+            "part bl { instrument bass }\nsection A { bl { e,4 a, d g | } }\nform { A }\nscore { tab bl }\n");
         Assert.Equal(TuningType.Bass, tuning);
     }
 
@@ -63,7 +63,7 @@ public sealed class InstrumentPresetTests
         // Session 375: these five fell back to the guitar's six strings on a tab, although
         // the tuning table already held each of them.
         var tuning = TabTuningOf(
-            $"part str {{ instrument {instrument} }}\nsection A {{ str {{ g4 | }} }}\nform main {{ A }}\nscore {{ tab str }}\n");
+            $"part str {{ instrument {instrument} }}\nsection A {{ str {{ g4 | }} }}\nform {{ A }}\nscore {{ tab str }}\n");
         Assert.Equal(expected, tuning);
     }
 
@@ -82,7 +82,7 @@ public sealed class InstrumentPresetTests
     {
         // `tab guitar bl` pins guitar even though the instrument is a bass.
         var tuning = TabTuningOf(
-            "part bl { instrument bass }\nsection A { bl { e,4 | } }\nform main { A }\nscore { tab guitar bl }\n");
+            "part bl { instrument bass }\nsection A { bl { e,4 | } }\nform { A }\nscore { tab guitar bl }\n");
         Assert.Equal(TuningType.Guitar, tuning);
     }
 
@@ -90,7 +90,7 @@ public sealed class InstrumentPresetTests
     public void PartTuningProperty_OverridesInstrumentPreset()
     {
         var tuning = TabTuningOf(
-            "part bl { instrument bass tuning bass5 }\nsection A { bl { e,4 | } }\nform main { A }\nscore { tab bl }\n");
+            "part bl { instrument bass tuning bass5 }\nsection A { bl { e,4 | } }\nform { A }\nscore { tab bl }\n");
         Assert.Equal(TuningType.Bass5, tuning);
     }
 
@@ -99,7 +99,7 @@ public sealed class InstrumentPresetTests
     {
         // Unchanged baseline: a tab with no tuning hint is a guitar.
         var tuning = TabTuningOf(
-            "part gtr { }\nsection A { gtr { c4 | } }\nform main { A }\nscore { tab gtr }\n");
+            "part gtr { }\nsection A { gtr { c4 | } }\nform { A }\nscore { tab gtr }\n");
         Assert.Equal(TuningType.Guitar, tuning);
     }
 

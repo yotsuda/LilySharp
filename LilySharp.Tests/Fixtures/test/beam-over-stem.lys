@@ -22,5 +22,5 @@ section S {
     { s16 d''16 d'' d'' s2. | s16 d''4 s8. s2 | s1 | }
   }
 }
-form main { S }
-score main "beam-over-stem" { staff mel }
+form { S }
+score "beam-over-stem" { staff mel }

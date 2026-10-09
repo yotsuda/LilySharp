@@ -75,12 +75,12 @@ public class LyricsRowStaffSpringTests
           section A { Twin- kle twin- kle | lit- tle star | }
           section B { Up a- bove the | world so high | }
         }
-        form main { A B A }
+        form { A B A }
         """;
 
     private static string Render(string scoreBody)
     {
-        var tree = SyntaxTree.Parse($"{Head}\nscore main {{\n{scoreBody}\n}}\n");
+        var tree = SyntaxTree.Parse($"{Head}\nscore {{\n{scoreBody}\n}}\n");
         Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
         return SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
     }
@@ -230,8 +230,8 @@ public class LyricsRowStaffSpringTests
             .Select(v => $"lyrics v{v} {{ section A {{ Twin- kle twin- kle | lit- tle star | }} }}"));
         return "key c major\n"
             + "part melody { clef treble\n  section A { c4 c g' g | a a g2 | }\n}\n"
-            + blocks + "\nform main { A }\n"
-            + "score main {\n  staff melody\n" + tracks + "\n  staff melody\n}\n";
+            + blocks + "\nform { A }\n"
+            + "score {\n  staff melody\n" + tracks + "\n  staff melody\n}\n";
     }
 
     /// <summary>The syllable baselines standing between the system's two staves.</summary>

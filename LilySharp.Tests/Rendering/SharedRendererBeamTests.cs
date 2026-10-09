@@ -59,8 +59,8 @@ public sealed class SharedRendererBeamTests
                 line { | c'8[ d e f] g[ a b c''] | }
             }
 
-            form main { Demo }
-            score main "out" { staff line }
+            form { Demo }
+            score "out" { staff line }
             """;
         var (score, layout) = BuildLayout(source);
 
@@ -91,8 +91,8 @@ public sealed class SharedRendererBeamTests
                 bot { | <c e g>2 <d f a>2 | }
             }
 
-            form main { M }
-            score main "grand" {
+            form { M }
+            score "grand" {
                 staff top
                 staff bot
             }

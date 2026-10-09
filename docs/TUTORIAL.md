@@ -13,9 +13,9 @@ section A {
   melody { c4 c g' g | a a g2 | f4 f e e | d d c2 | }
 }
 
-form main { ~A }
+form { ~A }
 
-score main { staff melody }
+score { staff melody }
 ```
 
 A file declares its **parts**, puts their music in **sections**, says in which order the
@@ -52,9 +52,9 @@ section A {
   melody { c4 c g' g | a a g2 | f4 f e e | d d c2 | }
 }
 
-form main { ~A }
+form { ~A }
 
-score main { staff melody }
+score { staff melody }
 ```
 
 From here on, the examples show only the notes. They go inside a part's `{ … }`, where
@@ -120,14 +120,14 @@ section Main {
   leftHand  { c2 g | c g | }
 }
 
-score main {
+score {
   grandStaff {
     staff rightHand
     staff leftHand
   }
 }
 
-form main { Main }
+form { Main }
 ```
 
 ## One Section Name, One Span of Time
@@ -149,9 +149,9 @@ chords harmony {
   section B { F | G | }
 }
 
-form main { A B }
+form { A B }
 
-score main { chords harmony  staff melody }
+score { chords harmony  staff melody }
 ```
 
 The form plays `A` then `B`, and during `A` the melody's `c d e f | g` and the chords
@@ -166,9 +166,9 @@ chords harmony {
   section AChords { C | G | }   // ✗ a different name is a different time
 }
 
-form main { A AChords }
+form { A AChords }
 
-score main { chords harmony  staff melody }
+score { chords harmony  staff melody }
 ```
 
 This is valid, but `AChords` is a separate section that comes *after* `A`: two bars of
@@ -217,12 +217,12 @@ section Body {
 section First  { melody { d'2 d | } }   // First time
 section Second { melody { c'2 c | } }   // Second time
 
-form main { |: Body [1. ~First] :| [2. ~Second] }
+form { |: Body [1. ~First] :| [2. ~Second] }
 
-score main { staff melody }
+score { staff melody }
 ```
 
-A plain `form main { |: Body :| }` (no endings) just repeats its body. A third and later
+A plain `form { |: Body :| }` (no endings) just repeats its body. A third and later
 ending is written the same way: `:| [3. Third]`.
 
 ## Grace Notes
@@ -263,8 +263,8 @@ section Verse {
     to you |
   }
 }
-form main { Verse }
-score main { staff melody  lyrics words }
+form { Verse }
+score { staff melody  lyrics words }
 ```
 
 ## Output Formats

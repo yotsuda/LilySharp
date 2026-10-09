@@ -10,6 +10,6 @@ section A {
   vone { r2 tuplet 3/2 { g8[ g g] } tuplet 3/2 { g[ g g] } | g1 | }
 }
 
-form main { ~A }
+form { ~A }
 
-score main { staff vone }
+score { staff vone }

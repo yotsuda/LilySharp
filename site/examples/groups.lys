@@ -10,5 +10,5 @@ section A {
     voice { g'2 a'2 } { c'2 c'2 } |
   }
 }
-form main { ~A }
-score main { staff melody }
+form { ~A }
+score { staff melody }

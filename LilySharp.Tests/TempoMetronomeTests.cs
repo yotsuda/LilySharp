@@ -33,7 +33,7 @@ public class TempoMetronomeTests
     private static MusicMarkItem TempoMark(string tempoClause)
     {
         var src = $"part m {{ section A {{ c4 d {tempoClause} e f | }} }}\n"
-                + "form main { A }\nscore main { staff m }";
+                + "form { A }\nscore { staff m }";
         return new MeasureCollector().Collect(SyntaxTree.Parse(src), "m")
             .MusicMarks.First(mk => mk.Type == MusicMarkType.Tempo);
     }

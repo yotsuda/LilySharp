@@ -79,8 +79,8 @@ public class FontEmbedClassificationTests
         {{fontLine}}
         time 4/4
         part m { clef treble section A { c4 d e f | } }
-        form main { A }
-        score main { staff m }
+        form { A }
+        score { staff m }
         """;
 
     [Fact]

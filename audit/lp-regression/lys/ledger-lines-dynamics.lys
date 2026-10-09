@@ -9,6 +9,6 @@ section Main {
   v { f16@pp[ c d e] r2. | }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { staff ~v }
+score { staff ~v }

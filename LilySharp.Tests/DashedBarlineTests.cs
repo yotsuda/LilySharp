@@ -43,7 +43,7 @@ public sealed class DashedBarlineTests
 {
     private static string Book(string render, string part = "part m { clef treble }")
         => part + "\nsection A { m { c4 d e f ! g4 a b c' | } }\n"
-           + "form main { ~A }\nscore main { " + render + " }\n";
+           + "form { ~A }\nscore { " + render + " }\n";
 
     /// <summary>The page the score block asks for (a `tab m` is a tab staff), not
     /// LiveRender's plain staff.</summary>

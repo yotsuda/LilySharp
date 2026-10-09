@@ -55,10 +55,10 @@ public sealed class ScorePickerTests
         key c major
         part melody { section A { c'4 d' e' f' } }
         part bass { section A { c4 d e f } }
-        form main { A }
-        score main { staff melody }
-        score main "Take 1.0" { staff bass }
-        score main "Take 2.0" { staff melody staff bass }
+        form { A }
+        score { staff melody }
+        score "Take 1.0" { staff bass }
+        score "Take 2.0" { staff melody staff bass }
         """;
 
     private static LilySharpLanguageServer Opened(Uri uri, string text)
@@ -159,9 +159,9 @@ public sealed class ScorePickerTests
         var v = new DuplicateScoreNameValidator();
         v.Validate(SyntaxTree.Parse("""
             part melody { section A { c'4 d' e' f' } }
-            form main { A }
-            score main "Take 1.0" { staff melody }
-            score main "Take 1.1" { staff melody }
+            form { A }
+            score "Take 1.0" { staff melody }
+            score "Take 1.1" { staff melody }
             """));
 
         var d = Assert.Single(v.Diagnostics);

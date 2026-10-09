@@ -69,8 +69,8 @@ public class SectionBoundarySplitBarTests
             section A { m { c4 d e f | g4 a | } }
             section E1 { m { b4 c' | d'4 e' f' g' | } }
             section E2 { m { c'4 d' | e'1 | } }
-            form main { |: A [1. E1] :| [2. E2] }
-            score main { staff m }
+            form { |: A [1. E1] :| [2. E2] }
+            score { staff m }
             """;
         Assert.Empty(BarCodes(Diagnose(book)));
     }
@@ -85,8 +85,8 @@ public class SectionBoundarySplitBarTests
             section A { m { c4 d e f | g4 a | } }
             section E1 { m { b4 c' | d'4 e' f' g' | } }
             section E2 { m { c'4 d' e' | f'1 | } }
-            form main { |: A [1. E1] :| [2. E2] }
-            score main { staff m }
+            form { |: A [1. E1] :| [2. E2] }
+            score { staff m }
             """;
         var codes = BarCodes(Diagnose(book));
         Assert.Contains("LYS2001", codes);
@@ -111,8 +111,8 @@ public class SectionBoundarySplitBarTests
             time 4/4
             section Body_1 { partial 2 }
             part m { clef bass  section Body_1 { r8 }  section Intro { c8 r d | e4 f g a | } }
-            form main { ~Body_1 ~Intro }
-            score main { staff m }
+            form { ~Body_1 ~Intro }
+            score { staff m }
             """;
         Assert.Empty(BarCodes(Diagnose(book)));
     }
@@ -127,8 +127,8 @@ public class SectionBoundarySplitBarTests
             time 4/4
             section Body_1 { partial 2 }
             part m { clef bass  section Body_1 { r8 }  section Intro { c8 d | e4 f g a | } }
-            form main { ~Body_1 ~Intro }
-            score main { staff m }
+            form { ~Body_1 ~Intro }
+            score { staff m }
             """;
         var codes = BarCodes(Diagnose(book));
         Assert.Contains("LYS2001", codes);
@@ -142,11 +142,11 @@ public class SectionBoundarySplitBarTests
             section A { m { c4 d e f | g4 a | } }
             section B { m { b4 c' | d'1 | } }
             """;
-        Assert.Empty(BarCodes(Diagnose(Head + sections + "form main { A B }\nscore main { staff m }\n")));
+        Assert.Empty(BarCodes(Diagnose(Head + sections + "form { A B }\nscore { staff m }\n")));
 
         // Positive control: played on its own, B's first bar is a bare pickup and A's last
         // bar is short.
-        var alone = BarCodes(Diagnose(Head + sections + "form main { B A }\nscore main { staff m }\n"));
+        var alone = BarCodes(Diagnose(Head + sections + "form { B A }\nscore { staff m }\n"));
         Assert.Equal(new[] { "LYS2001", "LYS2006" }, alone);
     }
 
@@ -164,8 +164,8 @@ public class SectionBoundarySplitBarTests
               section E1 { b4 c' | d'4 e' f' g' | break }
               section E2 { c'4 d' | e'1 | }
             }
-            form main { |: A [1. ~E1] :| [2. ~E2] }
-            score main { staff m }
+            form { |: A [1. ~E1] :| [2. ~E2] }
+            score { staff m }
             """;
         Assert.Empty(BarCodes(Diagnose(book)));
     }
@@ -190,8 +190,8 @@ public class SectionBoundarySplitBarTests
               section E1 { b4 c' | d'4 e' f' g' | break }
               section E2 { c'4 d' | e'1 | }
             }
-            form main { |: A [1. ~E1] :| [2. ~E2] }
-            score main { staff m }
+            form { |: A [1. ~E1] :| [2. ~E2] }
+            score { staff m }
             """;
         var tree = SyntaxTree.Parse(book);
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
@@ -258,8 +258,8 @@ public class SectionBoundarySplitBarTests
         var split = Measures(head + """
             section A { m { c'1 | c'2 | } }
             section B { partial 2  m { d'2 | e'1 | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.True(split[2].IsPickup);
         Assert.True(split[2].ContinuesBar);
@@ -268,8 +268,8 @@ public class SectionBoundarySplitBarTests
         var afterFull = Measures(head + """
             section A { m { c'1 | c'1 | } }
             section B { partial 2  m { d'2 | e'1 | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.True(afterFull[2].IsPickup);
         Assert.False(afterFull[2].ContinuesBar);
@@ -280,8 +280,8 @@ public class SectionBoundarySplitBarTests
         var ownMeter = Measures(head + """
             section A { m { c'1 | time 2/4 g'2 | } }
             section B { partial 2  m { d'2 | e'1 | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.False(ownMeter[2].ContinuesBar);
         Assert.Equal(new[] { 1, 2, 3, 4 }, BarNumberEngraver.NumberMeasures(ownMeter, 0));
@@ -297,8 +297,8 @@ public class SectionBoundarySplitBarTests
               section A { c4 d e f | g4 a | }
               section B { b4 c' | d'1 | }
             }
-            form main { A ~B }
-            score main { staff m }
+            form { A ~B }
+            score { staff m }
             """;
         Assert.Empty(BarCodes(Diagnose(book)));
     }
@@ -312,8 +312,8 @@ public class SectionBoundarySplitBarTests
             part low { clef bass }
             section A { m { c4 d e f | g4 a | } }
             section B { m { b4 c' | d'1 | }  low { c4 d | e1 | } }
-            form main { A B }
-            score main { staff m staff low }
+            form { A B }
+            score { staff m staff low }
             """;
         var diags = Diagnose(book);
         Assert.Single(diags, d => d.Code == "LYS2006");

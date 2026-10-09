@@ -40,8 +40,8 @@ public class LilyPondExporterTests
           tuning bass
           section S { {{music}} }
         }
-        form main { ~S }
-        score main { {{render}} }
+        form { ~S }
+        score { {{render}} }
         """;
 
     /// <summary>
@@ -70,8 +70,8 @@ public class LilyPondExporterTests
           fl2 { e4 f g a | }
           fl3 { g4 a b c' | }
         }
-        form main { ~A }
-        """ + "\nscore main { " + render + " }\n";
+        form { ~A }
+        """ + "\nscore { " + render + " }\n";
 
     /// <summary>
     /// A top-level <c>combinedStaff</c> is LilyPond's <c>\partCombine</c> on ONE staff with the
@@ -115,8 +115,8 @@ public class LilyPondExporterTests
           fl1 { voice { r1 } { s2 s4 } { s4 } | }
           fl2 { r1 | }
         }
-        form main { ~A }
-        """ + "\nscore main { " + render + " }\n";
+        form { ~A }
+        """ + "\nscore { " + render + " }\n";
 
     /// <summary>
     /// In a part only a <c>combinedStaff</c> plays, a <c>voice { } { }</c> span is ONE Voice's
@@ -367,8 +367,8 @@ public class LilyPondExporterTests
         var ly = Export("""
             part low { instrument cello section S { c d e } }
             part high { clef bass section T { c d e } }
-            form main { ~S ~T }
-            score main { staff low staff high }
+            form { ~S ~T }
+            score { staff low staff high }
             """);
         Assert.Contains("low = \\relative c {", ly);
         Assert.Contains("high = \\relative c' {", ly);
@@ -385,8 +385,8 @@ public class LilyPondExporterTests
     {
         var ly = Export("""
             part v { clef bass octave 5 section S { c d e } }
-            form main { ~S }
-            score main { staff v }
+            form { ~S }
+            score { staff v }
             """);
         Assert.Contains("v = \\relative c'' {", ly);
     }
@@ -473,8 +473,8 @@ public class LilyPondExporterTests
         octave absolute
         part piano { clef bass {{pedalProperty}} }
         section S { piano { {{music}} } }
-        form main { ~S }
-        score main { staff piano }
+        form { ~S }
+        score { staff piano }
         """;
 
     /// <summary>
@@ -754,8 +754,8 @@ public class LilyPondExporterTests
     {
         var ly = Export("""
             part m { clef treble_8 section S { c d e } }
-            form main { ~S }
-            score main { staff m }
+            form { ~S }
+            score { staff m }
             """);
         Assert.Contains("\\clef \"treble_8\"", ly);
         Assert.DoesNotContain("\\clef treble_8", ly);
@@ -901,8 +901,8 @@ public class LilyPondExporterTests
             part melody {
               section A { voice { f'8 } { <bes' ges c>8 } }
             }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """);
         Assert.Contains("\\partial 8", ly);
         // Once — the header-only declaration must not ALSO stream it as loose music.
@@ -1053,8 +1053,8 @@ public class LilyPondExporterTests
         var named = Export("""
             part vln { instrument violin section S { c d e } }
             part vla { instrument viola  section S { c d e } }
-            form main { ~S }
-            score main { staff vln staff vla }
+            form { ~S }
+            score { staff vln staff vla }
             """);
         // ⚠️ LOWER CASE, because that is what the PAGE prints: a preset's DisplayName is the
         // preset's own spelling, and only the ensemble default (the capitalised part name)
@@ -1069,8 +1069,8 @@ public class LilyPondExporterTests
         // ⚠️ AND THE SUPPRESSION REACHES IT TOO, or `staff ~x` would be a twin-only label.
         var bare = Export("""
             part vln { section S { c d e } }
-            form main { ~S }
-            score main { staff ~vln }
+            form { ~S }
+            score { staff ~vln }
             """);
         Assert.DoesNotContain("instrumentName", bare);
         Assert.Contains("\\layout { indent = 15\\mm \\context { \\Score printInitialRepeatBar = ##t } }", bare);
@@ -1094,7 +1094,7 @@ public class LilyPondExporterTests
         // Session 375: `instrument violin` gives a tab the violin's four strings, and the twin
         // asks the same table the page frets against — so it names violin-tuning, not the
         // guitar's.
-        var ly = Export("part vln { instrument violin }\nsection A { vln { g4 d' a' e'' | } }\nform main { A }\nscore { tab vln }\n");
+        var ly = Export("part vln { instrument violin }\nsection A { vln { g4 d' a' e'' | } }\nform { A }\nscore { tab vln }\n");
         Assert.Contains("stringTunings = #violin-tuning", ly);
         Assert.DoesNotContain("guitar-tuning", ly);
     }
@@ -1180,8 +1180,8 @@ public class LilyPondExporterTests
         var ly = Export("""
             part bs { instrument bass section S { c d e } }
             part fl { instrument flute section T { c d e } }
-            form main { ~S ~T }
-            score main { staff bs staff fl }
+            form { ~S ~T }
+            score { staff bs staff fl }
             """);
         // bass = bass clef, octave 3; flute = treble clef, octave 5 (NOT the treble
         // default of 4 — the preset's own octave, which is why the bundle is read whole).
@@ -1202,8 +1202,8 @@ public class LilyPondExporterTests
     {
         var ly = Export("""
             part bs { instrument piano-left section S { c d e } }
-            form main { ~S }
-            score main { staff bs }
+            form { ~S }
+            score { staff bs }
             """);
         Assert.Contains("{ \\clef \"bass\" \\bs }", ly);
         Assert.Contains("bs = \\relative c {", ly);
@@ -1226,8 +1226,8 @@ public class LilyPondExporterTests
               instrument bass
               section S { c d e }
             }
-            form main { ~S }
-            score main { staff bs }
+            form { ~S }
+            score { staff bs }
             """);
         Assert.Contains("{ \\clef \"treble\" \\bs }", ly);
         Assert.Contains("bs = \\relative c {", ly);
@@ -1249,8 +1249,8 @@ public class LilyPondExporterTests
     {
         var ly = Export("""
             part gt { section S { c'4 d' e' f' } }
-            form main { ~S }
-            score main { staff gt  tab gt }
+            form { ~S }
+            score { staff gt  tab gt }
             """);
         Assert.Contains("stringTunings = #guitar-tuning", ly);
         Assert.DoesNotContain("bass-four-string-tuning", ly);
@@ -1273,8 +1273,8 @@ public class LilyPondExporterTests
             {{extra}}
               section S { c4 d e f }
             }
-            form main { ~S }
-            score main { staff gt  tab gt }
+            form { ~S }
+            score { staff gt  tab gt }
             """;
         Assert.DoesNotContain("\\transpose", Export(Source("")));
         Assert.Contains("\\transpose c c, ", Export(Source("  transposition 8vb")));
@@ -1309,8 +1309,8 @@ public class LilyPondExporterTests
             {{properties}}
               section S { c4 d e f }
             }
-            form main { ~S }
-            score main { staff pt  tab pt }
+            form { ~S }
+            score { staff pt  tab pt }
             """;
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
@@ -1379,8 +1379,8 @@ public class LilyPondExporterTests
             part gt {
               section S { <c e g>2 <a c g>2 | <c a f>2 <c e g>2 | }
             }
-            form main { ~S }
-            score main { staff gt }
+            form { ~S }
+            score { staff gt }
             """);
         Assert.Contains("<c e g>2 <a c g'>2", ly);   // g is BELOW a, so it stacks an octave up
         Assert.Contains("<c a' f>2 <c e g>2", ly);   // a and f both sit above the root c
@@ -1400,8 +1400,8 @@ public class LilyPondExporterTests
             part gt {
               section S { <a c g>4 a4 e4 f4 | }
             }
-            form main { ~S }
-            score main { staff gt }
+            form { ~S }
+            score { staff gt }
             """);
         Assert.Contains("<a c g'>4 a4 e4 f4", ly);
     }
@@ -1430,8 +1430,8 @@ public class LilyPondExporterTests
             part gt {
               section S { {{music}} | }
             }
-            form main { ~S }
-            score main { staff gt }
+            form { ~S }
+            score { staff gt }
             """);
         Assert.Contains(expected, ly);
     }
@@ -1467,8 +1467,8 @@ public class LilyPondExporterTests
             octave absolute
             part m { clef treble }
             section Main { m { c'8 d' e' f' } }
-            form main { Main }
-            score main { staff m }
+            form { Main }
+            score { staff m }
             """);
         Assert.Contains("c'8", ly);
         Assert.Contains("d'", ly);
@@ -1490,8 +1490,8 @@ public class LilyPondExporterTests
               up { c''4 d'' }
               down { c,4 d, }
             }
-            form main { Main }
-            score main { staff up
+            form { Main }
+            score { staff up
               staff down }
             """);
         int upVar = ly.IndexOf("up = ", System.StringComparison.Ordinal);
@@ -1514,8 +1514,8 @@ public class LilyPondExporterTests
             part m { clef treble }
             section B { m { g'4 } }
             section A { m { c'4 } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         int a = ly.IndexOf("c'4", System.StringComparison.Ordinal);
         int b = ly.IndexOf("g'4", System.StringComparison.Ordinal);
@@ -1540,8 +1540,8 @@ public class LilyPondExporterTests
         part m { clef treble }
         {{phrases}}
         section Main { m { {{body}} } }
-        form main { ~Main }
-        score main { staff m }
+        form { ~Main }
+        score { staff m }
         """;
 
     [Fact]
@@ -1640,8 +1640,8 @@ public class LilyPondExporterTests
         octave absolute
         part low { clef bass{{(partOctave is { } n ? $" octave {n}" : "")}} }
         section S { low { c4 d e f | } }
-        form main { ~S }
-        score main { staff low }
+        form { ~S }
+        score { staff low }
         """;
 
     /// <summary>The octave a twin's <c>\fixed</c> wrapper anchors on, read back out of the
@@ -1708,8 +1708,8 @@ public class LilyPondExporterTests
             octave absolute
             part low { clef bass octave 3 }
             section S { low { {{music}} } }
-            form main { ~S }
-            score main { staff low }
+            form { ~S }
+            score { staff low }
             """;
         string ly = Export(src);
 
@@ -1902,8 +1902,8 @@ public class LilyPondExporterTests
         part m { clef treble{{partM}} }
         part n { clef bass }
         section S { m { c'4 d e f | } n { c4 d e f | } }
-        form main { S }
-        score main "t"{{scoreOpts}} { staff m staff n }
+        form { S }
+        score "t"{{scoreOpts}} { staff m staff n }
         """;
 
     [Theory]
@@ -1995,8 +1995,8 @@ public class LilyPondExporterTests
         {{key}}
         part m { clef treble }
         section S { m { {{music}} } }
-        form main { S }
-        score main { staff m }
+        form { S }
+        score { staff m }
         """;
 
     [Fact]
@@ -2074,8 +2074,8 @@ public class LilyPondExporterTests
             key c major
             part m { clef treble }
             section S { m { <1 3 5>4 <1 3 5>'4 } }
-            form main { S }
-            score main { staff m }
+            form { S }
+            score { staff m }
             """);
         Assert.Contains("<c e g>4 <c' e' g'>4", ly);
     }
@@ -2093,8 +2093,8 @@ public class LilyPondExporterTests
             part m { clef treble }
             phrase P { c4 d }
             section S { m { P <1 3 5>4 } }
-            form main { S }
-            score main { staff m }
+            form { S }
+            score { staff m }
             """));
         Assert.Contains(exporter.Warnings, w => w.Contains("degree chord follows a phrase reference"));
 
@@ -2127,8 +2127,8 @@ public class LilyPondExporterTests
             time 6/8
             part m { clef treble }
             section S { m { c'4. d' | } }
-            form main { S }
-            score main { staff m }
+            form { S }
+            score { staff m }
             """;
         // The premise: Lily# reads the bare d' as a dotted quarter.
         var score = new MeasureCollector().Collect(SyntaxTree.Parse(src), "m");
@@ -2147,8 +2147,8 @@ public class LilyPondExporterTests
             time 4/4
             part m { clef treble }
             section S { m { c'8 d' e' f' | } }
-            form main { S }
-            score main { staff m }
+            form { S }
+            score { staff m }
             """);
         Assert.Contains("c'8 d' e' f' |", plain);
     }
@@ -2162,8 +2162,8 @@ public class LilyPondExporterTests
     private static string DrumScore(string music) => $$"""
         part kit { clef percussion }
         section S { kit { {{music}} } }
-        form main { S }
-        score main { staff kit }
+        form { S }
+        score { staff kit }
         """;
 
     /// <summary>
@@ -2178,8 +2178,8 @@ public class LilyPondExporterTests
             octave absolute
             part m { clef treble }
             section S { m { c''4@f.up d''@p.down e'' f''@mf | } }
-            form main { S }
-            score main { staff m }
+            form { S }
+            score { staff m }
             """);
         Assert.Contains("c''4^\\f d''_\\p e'' f''\\mf", ly);
     }
@@ -2197,8 +2197,8 @@ public class LilyPondExporterTests
             octave absolute
             part bass { clef bass tuning bass }
             section S { bass { e,,4 a,, d, g, | } }
-            form main { S }
-            score main { staff bass  tab bass as full }
+            form { S }
+            score { staff bass  tab bass as full }
             """);
         Assert.Contains("stringTunings = #bass-four-string-tuning", ly);
         Assert.Contains("\\bass }", ly);
@@ -2217,8 +2217,8 @@ public class LilyPondExporterTests
             octave absolute
             part m { clef treble }
             section S { chords ch { C | Am | } m { c'1 | time 7/8 a4 a a4. | } }
-            form main { S }
-            score main { chords ch  staff m }
+            form { S }
+            score { chords ch  staff m }
             """);
         Assert.Contains("a2..:m", ly);
         Assert.Contains("c1", ly);
@@ -2237,8 +2237,8 @@ public class LilyPondExporterTests
             octave absolute
             part gt { clef treble_8 }
             section S { gt { g4 d' g' b' | } }
-            form main { S }
-            score main { staff gt }
+            form { S }
+            score { staff gt }
             """);
         Assert.Contains("\\clef \"treble_8\" \\transpose c c, \\gt", ly);
     }
@@ -2272,8 +2272,8 @@ public class LilyPondExporterTests
             part kit { clef percussion }
             part m { clef treble }
             section S { kit { hh8 hh bd4 sn4 r | key bes major hh8 hh bd4 sn4 r | } m { c'4 d' e' f' | key bes major bes4 a g f | } }
-            form main { ~S }
-            score main { staff m  staff kit }
+            form { ~S }
+            score { staff m  staff kit }
             """);
         string kit = ly.Substring(ly.IndexOf("kit = \\drummode", System.StringComparison.Ordinal));
         kit = kit.Substring(0, kit.IndexOf("\n}", System.StringComparison.Ordinal));
@@ -2300,8 +2300,8 @@ public class LilyPondExporterTests
         var ly = Export($$"""
             part {{part}} { clef {{clef}} }
             section S { {{part}} { {{music}} | } }
-            form main { S }
-            score main { staff {{part}} }
+            form { S }
+            score { staff {{part}} }
             """);
         Assert.Contains(variable + " = ", ly);
         Assert.Contains("\\" + variable + " }", ly);
@@ -2373,8 +2373,8 @@ public class LilyPondExporterTests
         time 4/4
         part m { clef treble }
         {{sections}}
-        form main { {{form}} }
-        score main { staff m }
+        form { {{form}} }
+        score { staff m }
         """;
 
     /// <summary>A <c>break</c> written between sections reaches the twin.</summary>
@@ -2399,7 +2399,7 @@ public class LilyPondExporterTests
     /// </summary>
     /// <remarks>
     /// A repeat block is ONE child of the form, so a walk over direct children alone lost every
-    /// section inside it. <c>form main { A |: B :| A }</c> exported as <c>A A</c>: the twin was
+    /// section inside it. <c>form { A |: B :| A }</c> exported as <c>A A</c>: the twin was
     /// a third shorter and had no repeat at all.
     /// </remarks>
     [Fact]
@@ -2536,8 +2536,8 @@ public class LilyPondExporterTests
             part melody { clef treble }
             section A { c'4 d e f | }
             section B { g'4 f e d | }
-            form main { A B }
-            score main { staff melody }
+            form { A B }
+            score { staff melody }
             """);
 
         // Section A opens the wrapper's frame: `c'` is C5 and the line runs up to F5.
@@ -2557,8 +2557,8 @@ public class LilyPondExporterTests
             time 4/4
             part melody { clef treble }
             section A { c'4 d e f | g'4 f e d | }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """);
 
         Assert.Contains("c'4 d e f", ly);
@@ -2586,7 +2586,7 @@ public class LilyPondExporterTests
 
     /// <summary>A chords row over one staff — the corpus's lead-sheet shape.</summary>
     private static string ChordBook(string chords, string key = "key c major",
-        string form = "form main { A }", string moreSections = "",
+        string form = "form { A }", string moreSections = "",
         string render = "chords prog  staff m") => $$"""
         time 4/4
         {{key}}
@@ -2597,7 +2597,7 @@ public class LilyPondExporterTests
         }
         {{moreSections}}
         {{form}}
-        score main { {{render}} }
+        score { {{render}} }
         """;
 
     // A by-part chord track (`chords prog { section B { … } }`) registers its own inner
@@ -2615,8 +2615,8 @@ public class LilyPondExporterTests
             section A { m { c1 | } }
             section B { time 3/4 m { c2. | } }
             chords prog { section A { C | } section B { Dm | } }
-            form main { A B }
-            score main { chords prog  staff m }
+            form { A B }
+            score { chords prog  staff m }
             """);
         int chords = ly.IndexOf("progChords = \\chordmode {");
         Assert.True(chords >= 0, ly);
@@ -2638,8 +2638,8 @@ public class LilyPondExporterTests
             section A { m { c1 | } }
             section B { time 3/4 m { c2. | c2. | } }
             chords prog { section A { C | } section B { Dm | } }
-            form main { A B }
-            score main { chords prog  staff m }
+            form { A B }
+            score { chords prog  staff m }
             """);
         int chords = ly.IndexOf("progChords = \\chordmode {");
         Assert.True(chords >= 0, ly);
@@ -2663,8 +2663,8 @@ public class LilyPondExporterTests
             part m { clef treble }
             section A { tempo "Rubato" 4 = 80 m { c1 | } }
             section B { m { c1 | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.Contains("\\tempo \"Rubato\" 4 = 80", ly);
         Assert.DoesNotContain("\\tempo \"Moderato\" 4 = 100", ly);
@@ -2681,8 +2681,8 @@ public class LilyPondExporterTests
             part m { clef treble }
             section A { m { c1 | } }
             section B { tempo "Slower" 4 = 72 m { c1 | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.Contains("\\tempo \"Moderato\" 4 = 100", ly);
         Assert.Contains("\\tempo \"Slower\" 4 = 72", ly);
@@ -2735,7 +2735,7 @@ public class LilyPondExporterTests
     public void ChordRow_FollowsTheFormsRepeat_LikeTheMusic()
     {
         var (ly, _) = ExportWithWarnings(ChordBook("C | G |",
-            form: "form main { A |: ~B :| }",
+            form: "form { A |: ~B :| }",
             moreSections: "section B { m { c1 | } chords prog { Am | } }"));
         // One \repeat in the music, one in the chord track, and B's bar inside the latter.
         Assert.Equal(2, Occurrences(ly, "\\repeat volta 2 {"));
@@ -2763,8 +2763,8 @@ public class LilyPondExporterTests
               m { d'4 | g'2 b'8 g'8 | g'2 d'4 | }
               chords prog { | G | G | }
             }
-            form main { A }
-            score main { chords prog  staff m }
+            form { A }
+            score { chords prog  staff m }
             """);
         Assert.Contains("s4 |", ly);
         Assert.Contains("g1 |", ly);
@@ -2778,8 +2778,8 @@ public class LilyPondExporterTests
               m { d'4 | g'1 | }
               chords prog { D | G | }
             }
-            form main { A }
-            score main { chords prog  staff m }
+            form { A }
+            score { chords prog  staff m }
             """);
         Assert.Contains("d4 |", ly2);
         Assert.Contains("g1 |", ly2);
@@ -2808,8 +2808,8 @@ public class LilyPondExporterTests
         key c major
         part m { clef treble }
         section A { {{header}} m { {{music}} } }
-        form main { A }
-        score main { {{render}} }
+        form { A }
+        score { {{render}} }
         """;
 
     [Fact]
@@ -2872,8 +2872,8 @@ public class LilyPondExporterTests
           melody { {{melody}} }
           {{lyrics}}
         }
-        form main { A }
-        score main { {{render}} }
+        form { A }
+        score { {{render}} }
         """;
 
     [Fact]
@@ -2992,8 +2992,8 @@ public class LilyPondExporterTests
               melody { c'4 d' e' | f'2 g' | }
               lyrics words sings melody { a b c | d e | }
             }
-            form main { A }
-            score main { staff melody  lyrics words sings melody }
+            form { A }
+            score { staff melody  lyrics words sings melody }
             """);
         Assert.Contains("\\cadenzaOn", ly);
         Assert.Contains("  a4 b4 c4\n  d2 e2\n}", ly);
@@ -3024,8 +3024,8 @@ public class LilyPondExporterTests
             part melody { clef treble section A { c4 c g' g | a a g2 | } }
             chords prog { section A { C | G | } }
             lyrics verse { section A { one two | three four five six | } }
-            form main { A }
-            score main { chords prog  lyrics verse }
+            form { A }
+            score { chords prog  lyrics verse }
             """);
         Assert.Contains("verseLyricsOne = \\lyricmode {", ly);
         Assert.Contains("one2 two2 |", ly);
@@ -3048,8 +3048,8 @@ public class LilyPondExporterTests
               vocal { g8 g a4 a8 a a4 | g2 f | }
               lyrics en sings vocal { Sing it loud and clear now | ev- ery | }
             }
-            form main { Chorus }
-            score main { staff sax  lyrics en }
+            form { Chorus }
+            score { staff sax  lyrics en }
             """);
         Assert.Contains("enLyricsOne = \\lyricmode {", ly);
         Assert.Contains("Sing8 it8 loud4 and8 clear8 now4 |", ly);
@@ -3079,8 +3079,8 @@ public class LilyPondExporterTests
               sop { a'2 b' c'' | }
               lyrics v1 sings sop { Sing to the | }
             }
-            form main { A B }
-            score main { lyrics v1 }
+            form { A B }
+            score { lyrics v1 }
             """);
         // The pickup is a \time of its length, not a \partial (which trips LilyPond's
         // spacing in a staff-less score); the score's meter in its own spelling.
@@ -3107,8 +3107,8 @@ public class LilyPondExporterTests
               time 3/2
               chords prog { Am F | G C | }
             }
-            form main { A B }
-            score main { chords prog }
+            form { A B }
+            score { chords prog }
             """);
         Assert.Contains("leadSheetTiming = {\n  \\time 4/4 \\mark \\markup \\box \"A\" s1 |\n  s1 |\n  \\time 3/2 \\mark \\markup \\box \"B\" s1. |\n  s1. |\n}", ly);
         Assert.Contains("a2.:m f2.", ly);
@@ -3131,8 +3131,8 @@ public class LilyPondExporterTests
               tempo "Slower" 4 = 90
               chords prog { Am | F | }
             }
-            form main { A ~B }
-            score main { chords prog }
+            form { A ~B }
+            score { chords prog }
             """);
         Assert.Contains("leadSheetTiming = {\n  \\time 4/4 \\mark \\markup \\box \"A\" \\tempo 4 = 111 s1 |\n  s1 |\n  \\tempo \"Slower\" 4 = 90 s1 |\n  s1 |\n}", ly);
         // Under `sectionLabels none` the track writes no label, as the page draws none.
@@ -3141,8 +3141,8 @@ public class LilyPondExporterTests
             time 4/4
             key c major
             section A { chords prog { C | G | } }
-            form main { A }
-            score main { chords prog }
+            form { A }
+            score { chords prog }
             """);
         Assert.Contains("leadSheetTiming = {\n  \\time 4/4 s1 |\n  s1 |\n}", plain);
     }
@@ -3155,8 +3155,8 @@ public class LilyPondExporterTests
             key c major
             part melody { clef treble section A { c4 c g' g | a a g2 | } }
             chords prog { section A { C | G | } }
-            form main { A }
-            score main { RENDER }
+            form { A }
+            score { RENDER }
             """;
         var rows = Export(book.Replace("RENDER", "chords prog"));
         Assert.Contains("leadSheetTiming = {\n  \\time 4/4 \\mark \\markup \\box \"A\" s1 |\n  s1 |\n}", rows);
@@ -3180,8 +3180,8 @@ public class LilyPondExporterTests
             part m { clef treble }
             section A { m { c'1 | } }
             section B { m { d' e' f' g' | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.Contains("d'4 e' f' g'", ly);
         // The control: after a section that ends on a quarter nothing is forced.
@@ -3192,8 +3192,8 @@ public class LilyPondExporterTests
             part m { clef treble }
             section A { m { c'4 c' c' c' | } }
             section B { m { d' e' f' g' | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.Contains("d' e' f' g'", ly2);
         Assert.DoesNotContain("d'4 e'", ly2);

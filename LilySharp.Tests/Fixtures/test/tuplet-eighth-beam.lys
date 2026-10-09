@@ -6,5 +6,5 @@ title "eighth triplet beams as one"
 time 4/4
 key c major
 part m { section A { c8 c c c tuplet 3/4 { e8 e e } | } }
-form main { A }
-score main { staff m }
+form { A }
+score { staff m }

@@ -63,7 +63,7 @@ public sealed class TabScriptStemClearanceTests
     private const string Book =
         "time 4/4\nkey c major\n"
         + "part m { instrument bass section A { a4@fermata a4 a4 a4 | } }\n"
-        + "form main { A }\nscore main { staff m  tab m as full }";
+        + "form { A }\nscore { staff m  tab m as full }";
 
     private static RecordingDrawingContext RenderFirstPage(string source)
     {

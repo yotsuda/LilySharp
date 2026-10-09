@@ -62,8 +62,8 @@ public class LineLeadingSourcePositionTests
         + "    e1 | f1 |\n"
         + "  }\n"
         + "}\n"
-        + "form main { A }\n"
-        + "score main { staff m }\n";
+        + "form { A }\n"
+        + "score { staff m }\n";
 
     private static string Render(string source) =>
         SvgGenerator.Generate(SyntaxTree.Parse(source), new SvgRenderOptions { EmbedFont = false });
@@ -114,8 +114,8 @@ public class LineLeadingSourcePositionTests
             + "    c1 c1 |\n"
             + "  }\n"
             + "}\n"
-            + "form main { A }\n"
-            + "score main { staff m }\n";
+            + "form { A }\n"
+            + "score { staff m }\n";
 
         var tree = SyntaxTree.Parse(overfull);
         var validator = new LilySharp.Core.Semantics.MeasureValidator();

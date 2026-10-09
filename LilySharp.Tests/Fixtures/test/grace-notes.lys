@@ -33,8 +33,8 @@ section Main {
   melody { graceBasic acciaccaturaTest appoggiaturaTest graceChord }
 }
 
-form main { Main }
+form { Main }
 
-score main "grace-notes" {
+score "grace-notes" {
   staff melody
 }

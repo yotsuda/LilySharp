@@ -43,7 +43,7 @@ public class SectionMusicNeedsPartValidatorTests
         // is loose music that belongs to no part.
         => Assert.Equal(1, ErrCount(
             "part melody { section A { c4 d e f } }\nsection A { g4 a b c }\n"
-            + "form main { A }\nscore main { staff melody }"));
+            + "form { A }\nscore { staff melody }"));
 
     [Fact]
     public void SinglePartSectionMusic_Ok()
@@ -51,7 +51,7 @@ public class SectionMusicNeedsPartValidatorTests
         // Not by-part (the part has no inner section) → the loose music is that part's.
         => Assert.Equal(0, ErrCount(
             "part bl { clef bass }\nsection A { c4 d e f }\n"
-            + "form main { A }\nscore main { staff bl }"));
+            + "form { A }\nscore { staff bl }"));
 
     [Fact]
     public void DirectiveOnlyTopLevelSection_Ok()
@@ -59,16 +59,16 @@ public class SectionMusicNeedsPartValidatorTests
         // no music — allowed.
         => Assert.Equal(0, ErrCount(
             "section A { partial 4 }\npart melody { section A { g4 | c1 } }\n"
-            + "part bass { section A { g4 | c1 } }\nform main { A }\n"
-            + "score main { staff melody staff bass }"));
+            + "part bass { section A { g4 | c1 } }\nform { A }\n"
+            + "score { staff melody staff bass }"));
 
     [Fact]
     public void GroupedBySectionSection_Ok()
         // By-section: a top-level section legitimately holds the parts' cells.
         => Assert.Equal(0, ErrCount(
             "part melody { clef treble }\npart bass { clef bass }\n"
-            + "section A { melody { c4 d e f } bass { c2 g } }\nform main { A }\n"
-            + "score main { grandStaff { staff melody staff bass } }"));
+            + "section A { melody { c4 d e f } bass { c2 g } }\nform { A }\n"
+            + "score { grandStaff { staff melody staff bass } }"));
 
     [Fact]
     public void SinglePartLooseSectionMusic_Renders()
@@ -77,7 +77,7 @@ public class SectionMusicNeedsPartValidatorTests
         // mis-parsed) and render nothing. It must now reach the lone part's staff as notes.
         var tree = SyntaxTree.Parse(
             "part bl { clef bass }\nsection A { c4 d e f }\n"
-            + "form main { A }\nscore main { staff bl }");
+            + "form { A }\nscore { staff bl }");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
         var spec = RenderSpecParser.FindFirst(tree);
         Assert.NotNull(spec);

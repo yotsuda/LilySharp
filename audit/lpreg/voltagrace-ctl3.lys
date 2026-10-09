@@ -18,6 +18,6 @@ section Tail {
   }
 }
 
-form main { |: ~Main :| ~Tail }
+form { |: ~Main :| ~Tail }
 
-score main { staff ~v }
+score { staff ~v }

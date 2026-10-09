@@ -34,7 +34,7 @@ public class MusicXmlTrackLyricsTests
     private const string Music =
         "octave absolute\ntime 4/4\npart vo { clef treble }\npart gt { clef treble }\n"
         + "section A {\n vo { c'4 d' e' f' | g'2 a' | }\n gt { c1 | c1 | }\n}\n"
-        + "lyrics words sings vo { So if you lis- | ten now | }\nform main { A }\n";
+        + "lyrics words sings vo { So if you lis- | ten now | }\nform { A }\n";
 
     private static XDocument Export(string score)
     {
@@ -52,7 +52,7 @@ public class MusicXmlTrackLyricsTests
     [Fact]
     public void APlacedTrack_IsSungOnItsPartsNotes_AHyphenRunningOverTheBar()
     {
-        var doc = Export("score main { staff vo\n lyrics words\n staff gt }");
+        var doc = Export("score { staff vo\n lyrics words\n staff gt }");
         Assert.Equal(new[] { "So/single", "if/single", "you/single", "lis/begin", "ten/end", "now/single" },
             Lyrics(doc, 0));
         Assert.Empty(Lyrics(doc, 1));
@@ -62,5 +62,5 @@ public class MusicXmlTrackLyricsTests
     /// <summary>A track the score does not place is not on the page, and not in the file.</summary>
     [Fact]
     public void ATrackTheScoreDoesNotPlace_IsNotWritten()
-        => Assert.Empty(Export("score main { staff vo\n staff gt }").Descendants("lyric"));
+        => Assert.Empty(Export("score { staff vo\n staff gt }").Descendants("lyric"));
 }

@@ -183,9 +183,9 @@ public sealed class BreakerAlignmentFrameTests
               }
             }
 
-            form main { S }
+            form { S }
 
-            score main {
+            score {
               staff p
             }
             """;

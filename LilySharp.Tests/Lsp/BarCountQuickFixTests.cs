@@ -86,8 +86,8 @@ public class BarCountQuickFixTests
             part flute { section A { c1 | c1 | c1 | } }
             part oboe { section A { c1 | c1 | } }
             chords harmony { section A { C | F | } }
-            form main { A }
-            score main { chords harmony  staff flute  staff oboe }
+            form { A }
+            score { chords harmony  staff flute  staff oboe }
             """;
         var action = PadAction(text, text.IndexOf("section A") + "section ".Length + 1);
         Assert.NotNull(action);
@@ -112,8 +112,8 @@ public class BarCountQuickFixTests
         const string text = """
             part flute { section A { c1 | c1 | c1 | } }
             part oboe { section A { c1 | c1 | } }
-            form main { A }
-            score main { staff flute  staff oboe }
+            form { A }
+            score { staff flute  staff oboe }
             """;
         var core = SemanticValidation.Run(SyntaxTree.Parse(text))
             .Single(d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
@@ -139,8 +139,8 @@ public class BarCountQuickFixTests
               section A { Dm7 | G7 }
               section B { Cmaj7 | }
             }
-            form main { A | B | }
-            score main { chords prog  staff melody }
+            form { A | B | }
+            score { chords prog  staff melody }
             """;
         Assert.Equal(1, Lys2007Count(text));
         // Caret on the second letter of the name — inside the squiggle, not at its start.
@@ -165,8 +165,8 @@ public class BarCountQuickFixTests
             chords prog {
               section A { Dm7 | G7 | }
             }
-            form main { A | }
-            score main { chords prog  staff melody }
+            form { A | }
+            score { chords prog  staff melody }
             """;
         var action = PadAction(text, text.IndexOf("section A") + "section ".Length);
         Assert.NotNull(action);
@@ -186,8 +186,8 @@ public class BarCountQuickFixTests
             chords prog {
               section A { Dm7 | }
             }
-            form main { A | }
-            score main { chords prog  staff melody }
+            form { A | }
+            score { chords prog  staff melody }
             """;
         int anchor = text.LastIndexOf("section A") + "section ".Length;
         var action = PadAction(text, anchor);
@@ -207,8 +207,8 @@ public class BarCountQuickFixTests
               melody { g2 g | }
               chords prog { Dm7 | G7 | }
             }
-            form main { A | }
-            score main { chords prog  staff melody }
+            form { A | }
+            score { chords prog  staff melody }
             """;
         var action = PadAction(text, text.IndexOf("melody {") + 1);
         Assert.NotNull(action);
@@ -226,8 +226,8 @@ public class BarCountQuickFixTests
               melody { g2 g | g2 g | }
               chords prog { Dm7 }
             }
-            form main { A | }
-            score main { chords prog  staff melody }
+            form { A | }
+            score { chords prog  staff melody }
             """;
         var action = PadAction(text, text.IndexOf("chords prog") + "chords ".Length + 1);
         Assert.NotNull(action);
@@ -251,8 +251,8 @@ public class BarCountQuickFixTests
             lyrics words {
               section A { la la | }
             }
-            form main { A | }
-            score main { staff melody with lyrics words }
+            form { A | }
+            score { staff melody with lyrics words }
             """;
         Assert.Equal(1, Lys2007Count(text));
         var action = PadAction(text, text.LastIndexOf("section A") + "section ".Length);
@@ -274,8 +274,8 @@ public class BarCountQuickFixTests
               vocal { g2 g | g2 g | }
               lyrics words sings vocal { la la }
             }
-            form main { A | }
-            score main { lyrics words }
+            form { A | }
+            score { lyrics words }
             """;
         var action = PadAction(text, text.IndexOf("lyrics words") + "lyrics ".Length + 1);
         Assert.NotNull(action);
@@ -295,8 +295,8 @@ public class BarCountQuickFixTests
             chords prog {
               section A { Dm7 | G7 | }
             }
-            form main { A | }
-            score main { chords prog  staff melody }
+            form { A | }
+            score { chords prog  staff melody }
             """;
         Assert.Null(PadAction(text, text.IndexOf("section A") + "section ".Length));
     }

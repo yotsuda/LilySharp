@@ -16,6 +16,6 @@ section Main {
   bot { c,4 c,4 c,4 c,4 | }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { staff top staff bot }
+score { staff top staff bot }

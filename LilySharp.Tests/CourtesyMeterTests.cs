@@ -54,9 +54,9 @@ public sealed class CourtesyMeterTests
         section A { m { {{restA}} | } }
         section B { {{sectionBHeader}} m { d,2 e, | } }
 
-        form main { A break B }
+        form { A break B }
 
-        score main { staff m }
+        score { staff m }
         """;
 
     /// <summary>

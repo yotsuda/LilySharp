@@ -71,8 +71,8 @@ public sealed class SectionReferenceOctaveTests
           section B { {{bodyB}} }
           section C { e'4 d c b | }
         }
-        form main { {{form}} }
-        score main { staff m }
+        form { {{form}} }
+        score { staff m }
         """;
 
     /// <summary>Section B, written an octave up in the source instead of at the reference.
@@ -357,8 +357,8 @@ public sealed class SectionReferenceOctaveTests
               section B { P }
               section C { e'4 d c b | }
             }
-            form main { {{form}} }
-            score main { staff m }
+            form { {{form}} }
+            score { staff m }
             """;
 
         // Written out, and quoted: the same section, so the same pitches — with the mark and

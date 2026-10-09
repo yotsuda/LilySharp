@@ -37,7 +37,7 @@ public class RepeatAroundVoiceTests
     {
         var tree = SyntaxTree.Parse(
             $"octave absolute\ntime 4/4\npart m {{ clef treble }}\nsection A {{ m {{ {music} }} }}\n"
-            + "form main { ~A }\nscore main { staff m\n staff m }");
+            + "form { ~A }\nscore { staff m\n staff m }");
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var staff = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindAll(tree)[0])
             .StaffGroups.SelectMany(g => g.Staves).First();

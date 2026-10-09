@@ -21,8 +21,8 @@ section Main {
   melody { test }
 }
 
-form main { Main }
+form { Main }
 
-score main "cue-accidentals" {
+score "cue-accidentals" {
   staff treble melody
 }

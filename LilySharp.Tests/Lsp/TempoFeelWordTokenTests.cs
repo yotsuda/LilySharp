@@ -105,8 +105,8 @@ public class TempoFeelWordTokenTests
         // word is the writer's everywhere else, and here it names the part AND the section body.
         string book = "part swing { clef treble }" + Newline
                     + "section A { swing { c'1 } }" + Newline
-                    + "form main { A }" + Newline
-                    + "score main { staff swing }" + Newline;
+                    + "form { A }" + Newline
+                    + "score { staff swing }" + Newline;
         Assert.False(SyntaxTree.Parse(book).HasErrors);
         Assert.DoesNotContain("swing", KeywordSpans(book));
     }
@@ -142,6 +142,6 @@ public class TempoFeelWordTokenTests
         "part m { clef treble }" + Newline
         + directive + Newline
         + "section A { m { c'1 } }" + Newline
-        + "form main { A }" + Newline
-        + "score main { staff m }" + Newline;
+        + "form { A }" + Newline
+        + "score { staff m }" + Newline;
 }

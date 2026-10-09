@@ -41,7 +41,7 @@ public class PhrasingSlurTests
 {
     private static string Book(string music) =>
         "octave absolute part m { clef treble } section A { m { " + music
-        + " } } form main { A } score main { staff m }";
+        + " } } form { A } score { staff m }";
 
     private static Score Collect(string music)
     {
@@ -106,8 +106,8 @@ public class PhrasingSlurTests
     public void ACombinedStaff_KeepsEitherPartsPhrasingSlur(string one, string two)
     {
         string source = "octave absolute part fl1 { clef treble } part fl2 { clef treble } "
-            + "section A { fl1 { " + one + " | } fl2 { " + two + " | } } form main { A } "
-            + "score main { combinedStaff { fl1 fl2 } }";
+            + "section A { fl1 { " + one + " | } fl2 { " + two + " | } } form { A } "
+            + "score { combinedStaff { fl1 fl2 } }";
         int at = source.IndexOf("@phrasingSlur", StringComparison.Ordinal);
         string svg = SvgGenerator.Generate(SyntaxTree.Parse(source),
             new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
@@ -252,8 +252,8 @@ public class PhrasingSlurTests
         // first inner slur's crest — centre line on centre line, the two inks overlapping —
         // and 0.27 over it with them.
         string source = "octave absolute part gtr { instrument guitar } section A { gtr { "
-            + "e8@phrasingSlur g( c' g) e g c'( a)@!phrasingSlur | } } form main { A } "
-            + "score main { tab gtr }";
+            + "e8@phrasingSlur g( c' g) e g c'( a)@!phrasingSlur | } } form { A } "
+            + "score { tab gtr }";
         int phrasing = source.IndexOf("@phrasingSlur", StringComparison.Ordinal);
         int inner = source.IndexOf("(", source.IndexOf("g(", StringComparison.Ordinal), StringComparison.Ordinal);
         string svg = SvgGenerator.Generate(SyntaxTree.Parse(source),

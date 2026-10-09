@@ -53,16 +53,16 @@ public class SectionCodeLensTests
             part flute { section A { c1 | c1 | } section B { c1 | } }
             part oboe { section A { c1 | c1 | } section B { c1 | } }
             chords harmony { section A { C | F | } }
-            form main { A B A }
-            score main { chords harmony  staff flute  staff oboe }
+            form { A B A }
+            score { chords harmony  staff flute  staff oboe }
             """;
         var lenses = LensesOf(text);
         // One lens per section, over its first declaration — A is declared three times and B
         // twice, but the later declarations agree and say nothing.
         Assert.Equal(2, lenses.Length);
-        Assert.Equal("Section A · 2 bars · flute, oboe and chords 'harmony' · 2× in form main", lenses[0].Command!.Title);
+        Assert.Equal("Section A · 2 bars · flute, oboe and chords 'harmony' · 2× in the form", lenses[0].Command!.Title);
         Assert.Equal(0, lenses[0].Range.Start.Line);
-        Assert.Equal("Section B · 1 bar · flute and oboe · 1× in form main", lenses[1].Command!.Title);
+        Assert.Equal("Section B · 1 bar · flute and oboe · 1× in the form", lenses[1].Command!.Title);
     }
 
     [Fact]
@@ -73,8 +73,8 @@ public class SectionCodeLensTests
             part melody { section A { c'4 d | e2 f | g2 g | } }
             part bass { section A { c4 d | e2 f | g2 g | } }
             chords prog { section A { C4 D | E2 F | } }
-            form main { A }
-            score main { chords prog  staff melody  staff bass }
+            form { A }
+            score { chords prog  staff melody  staff bass }
             """;
         var lenses = LensesOf(text);
         Assert.Equal(2, lenses.Length);
@@ -101,8 +101,8 @@ public class SectionCodeLensTests
               X { | | | }
               chords prog { | | }
             }
-            form main { A A }
-            score main { staff melody }
+            form { A A }
+            score { staff melody }
             """;
         var lenses = LensesOf(text);
         Assert.Equal(2, lenses.Length);
@@ -120,8 +120,8 @@ public class SectionCodeLensTests
             part horn
             section A { flute { c1 | c1 | } oboe { c1 | c1 | } }
             section A { horn { c1 | } }
-            form main { A }
-            score main { staff flute  staff oboe  staff horn }
+            form { A }
+            score { staff flute  staff oboe  staff horn }
             """;
         var later = LensesOf(twice);
         Assert.Equal(2, later.Length);
@@ -140,8 +140,8 @@ public class SectionCodeLensTests
             part oboe { section A { c1 | c1 | } }
             part horn { section A { c1 | c1 | c1 | } }
             part viola { section A { c1 | c1 | } }
-            form main { A }
-            score main { staff flute  staff oboe  staff horn  staff viola }
+            form { A }
+            score { staff flute  staff oboe  staff horn  staff viola }
             """;
         var lenses = LensesOf(text);
         Assert.Equal(2, lenses.Length);
@@ -156,8 +156,8 @@ public class SectionCodeLensTests
         const string text = """
             part flute { section A { c1 | c1 | c1 | } }
             part oboe { section A { c1 | c1 | } }
-            form main { A }
-            score main { staff flute  staff oboe }
+            form { A }
+            score { staff flute  staff oboe }
             """;
         var lenses = LensesOf(text);
         Assert.Equal(2, lenses.Length);
@@ -167,8 +167,8 @@ public class SectionCodeLensTests
         const string swapped = """
             part oboe { section A { c1 | c1 | } }
             part flute { section A { c1 | c1 | c1 | } }
-            form main { A }
-            score main { staff flute  staff oboe }
+            form { A }
+            score { staff flute  staff oboe }
             """;
         Assert.Single(LensesOf(swapped));
     }
@@ -181,10 +181,10 @@ public class SectionCodeLensTests
             part horn { section S { c1 | } }
             part viola { section S { c1 | } }
             chords h { section S { C | } }
-            form main { S }
-            score main { chords h  staff oboe  staff horn  staff viola }
+            form { S }
+            score { chords h  staff oboe  staff horn  staff viola }
             """;
-        Assert.Equal("Section S · 1 bar · 3 parts, 1 chord row · 1× in form main", LensesOf(agreeing).First().Command!.Title);
+        Assert.Equal("Section S · 1 bar · 3 parts, 1 chord row · 1× in the form", LensesOf(agreeing).First().Command!.Title);
 
         const string mismatched = """
             part flute { section S { c1 | c1 | } }
@@ -192,10 +192,10 @@ public class SectionCodeLensTests
             part horn { section S { c1 | } }
             part viola { section S { c1 | } }
             chords h { section S { C | } }
-            form main { S }
-            score main { chords h  staff flute  staff oboe  staff horn  staff viola }
+            form { S }
+            score { chords h  staff flute  staff oboe  staff horn  staff viola }
             """;
-        Assert.Equal("Section S · ⚠ 2 bars in flute, 1 bar in the other 4 · 1× in form main",
+        Assert.Equal("Section S · ⚠ 2 bars in flute, 1 bar in the other 4 · 1× in the form",
             LensesOf(mismatched).First().Command!.Title);
     }
 
@@ -206,11 +206,11 @@ public class SectionCodeLensTests
             part flute { section A { c1 | c1 | c1 | } }
             part oboe { section A { c1 | c1 | } }
             part horn { section A { c1 | c1 | } }
-            form main { A }
-            score main { staff flute  staff oboe  staff horn }
+            form { A }
+            score { staff flute  staff oboe  staff horn }
             """;
         var title = LensesOf(text).First().Command!.Title;
-        Assert.Equal("Section A · ⚠ 3 bars in flute, 2 bars in oboe and horn · 1× in form main", title);
+        Assert.Equal("Section A · ⚠ 3 bars in flute, 2 bars in oboe and horn · 1× in the form", title);
     }
 
     [Fact]
@@ -218,8 +218,8 @@ public class SectionCodeLensTests
     {
         const string text = """
             part flute { section A { c1 | } section Unused { c1 | } }
-            form main { A }
-            score main { staff flute }
+            form { A }
+            score { staff flute }
             """;
         Assert.Contains(LensesOf(text), l => l.Command!.Title == "Section Unused · 1 bar · flute · in no form");
     }
@@ -231,8 +231,8 @@ public class SectionCodeLensTests
             part flute { section A { c1 | } }
             part oboe { section A { c1 | } }
             lyrics words sings flute { section A { la | } }
-            form main { A }
-            score main { staff flute  lyrics words  staff oboe }
+            form { A }
+            score { staff flute  lyrics words  staff oboe }
             """;
         var lens = LensesOf(text).First();
         Assert.Equal("lilysharp.showSectionLayers", lens.Command!.CommandIdentifier);
@@ -248,13 +248,13 @@ public class SectionCodeLensTests
             part flute
             part oboe
             section A { flute { c1 | c1 | } oboe { c1 | } lyrics w sings flute { la | lu | } }
-            form main { |: A :| }
-            score main { staff flute  staff oboe }
+            form { |: A :| }
+            score { staff flute  staff oboe }
             """;
         var a = Assert.Single(SectionOverview.Build(SyntaxTree.Parse(groupedBySection).GetRoot()));
         Assert.Equal(new[] { 2, 1, 2 }, a.Layers.Select(l => l.Bars).ToArray());
         Assert.True(a.IsInconsistent);
         Assert.Equal(2, a.Bars);
-        Assert.Equal(("main", 1), Assert.Single(a.FormReferences));   // `|: A :|` is written once
+        Assert.Equal(("", 1), Assert.Single(a.FormReferences));   // `|: A :|` is written once
     }
 }

@@ -33,7 +33,7 @@ public class BeamPairingValidatorTests
     private static IReadOnlyList<Diagnostic> Warnings(string music)
     {
         var source = $"octave absolute\ntime 4/4\npart m {{ clef treble }}\n"
-                     + $"section A {{ m {{ {music} }} }}\nform main {{ ~A }}\nscore main {{ staff m }}\n";
+                     + $"section A {{ m {{ {music} }} }}\nform {{ ~A }}\nscore {{ staff m }}\n";
         var validator = new BeamPairingValidator();
         validator.Validate(SyntaxTree.Parse(source));
         return validator.Diagnostics

@@ -12,6 +12,6 @@ section Main {
   v { c,1@ottava | c,1@ottava(bassa) | c,1@!ottava | }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { staff ~v }
+score { staff ~v }

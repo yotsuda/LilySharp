@@ -47,7 +47,7 @@ public class GraceExplicitSlurTests
 {
     private static string Book(string music)
         => "time 4/4\npart m { clef treble }\nsection A { m {\n" + music + "\n} }\n"
-           + "form main { ~A }\nscore main { staff m }\n";
+           + "form { ~A }\nscore { staff m }\n";
 
     /// <summary>The page with every source offset masked, so two books that write the same
     /// music at different lengths differ in nothing.</summary>
@@ -134,7 +134,7 @@ public class GraceExplicitSlurTests
         // Through the render block: LiveRender.Svg draws the part on a notation staff.
         static string TabPage(string music) => Regex.Replace(LiveRender.SvgFromRenderSpec(
             "octave absolute\ntime 4/4\npart bl { clef bass tuning bass }\nsection A { bl {\n" + music
-            + "\n} }\nform main { ~A }\nscore main { tab bl }\n"), "data-pos=\"\\d+\"", "data-pos=\"#\"");
+            + "\n} }\nform { ~A }\nscore { tab bl }\n"), "data-pos=\"\\d+\"", "data-pos=\"#\"");
         static int Bows(string page) => Regex.Matches(page, "<path d=\"M[^\"]* C ").Count;
         Assert.Equal(Bows(TabPage(control)) + 1, Bows(TabPage(written)));
     }

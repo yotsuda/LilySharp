@@ -52,7 +52,7 @@ public class TabSpacingWishTests
               tuning bass
               section S { {{Bar}} }
             }
-            form main { S }
+            form { S }
             {{score}}
             """);
         var multi = SvgGenerator.CollectScore(tree, RenderSpecParser.FindAll(tree).First());
@@ -64,7 +64,7 @@ public class TabSpacingWishTests
     [Fact]
     public void StaffAndNumbersTab_TakeTheMeanOfTheStaffWishAndAStemlessDigitWish()
     {
-        var ideals = Ideals("score main { staff bassline  tab bassline }");
+        var ideals = Ideals("score { staff bassline  tab bassline }");
         // s1 dotted 8th → 16th, s2/s3/s4 16ths, s5 8th → 8th (flagged: no correction on
         // either side, so it is the plain digit-for-notehead mean).
         Assert.Equal(4.4236, ideals[1], precision: 4);
@@ -88,7 +88,7 @@ public class TabSpacingWishTests
     [Fact]
     public void StaffAndNumbersTab_CloseTheBarOnTheMergedWish()
     {
-        var ideals = Ideals("score main { staff bassline  tab bassline }");
+        var ideals = Ideals("score { staff bassline  tab bassline }");
         Assert.Equal(4.9062, ideals[^1], precision: 4);
     }
 
@@ -111,8 +111,8 @@ public class TabSpacingWishTests
               tuning bass
               section S { e,,4 e,, a,, a,, | g, g, d, d, | }
             }
-            form main { S }
-            score main { tab bassline as numbers }
+            form { S }
+            score { tab bassline as numbers }
             """);
         var multi = SvgGenerator.CollectScore(tree, RenderSpecParser.FindAll(tree).First());
         var data = SystemBreaker.ComputeMultiStaffSpringData(
@@ -148,8 +148,8 @@ public class TabSpacingWishTests
               tuning bass
               section S { <e,,\4 c\3>4 e,,\4 e,,\4 e,,\4 | <c\2 g,\1>4 e,,\4 e,,\4 e,,\4 | }
             }
-            form main { S }
-            score main { {{staves}} }
+            form { S }
+            score { {{staves}} }
             """);
         var multi = SvgGenerator.CollectScore(tree, RenderSpecParser.FindAll(tree).First());
         var data = SystemBreaker.ComputeMultiStaffSpringData(
@@ -176,8 +176,8 @@ public class TabSpacingWishTests
               tuning bass
               section S { <e,, d,>4 <e,, d,> <e,, d,> <e,, d,> | e,,4 e,, e,, e,, | }
             }
-            form main { S }
-            score main { tab bassline as numbers }
+            form { S }
+            score { tab bassline as numbers }
             """);
         var multi = SvgGenerator.CollectScore(tree, RenderSpecParser.FindAll(tree).First());
         var data = SystemBreaker.ComputeMultiStaffSpringData(
@@ -189,7 +189,7 @@ public class TabSpacingWishTests
     [Fact]
     public void FullNotationTabAlone_ReadsTheDigitAndKeepsTheStemCorrection()
     {
-        var ideals = Ideals("score main { tab bassline }");
+        var ideals = Ideals("score { tab bassline }");
         Assert.Equal(4.4411, ideals[1], precision: 4);
         Assert.Equal(2.5392, ideals[2], precision: 4);
         Assert.Equal(2.0392, ideals[3], precision: 4);

@@ -40,8 +40,8 @@ public class TabWholeBarRestTests
           instrument bass
           section A { R1 | R1 | c'1 | r1 | r2 r2 | }
         }
-        form main { A }
-        score main { tab cb }
+        form { A }
+        score { tab cb }
         """;
 
     private const string Guitar = """
@@ -49,8 +49,8 @@ public class TabWholeBarRestTests
           instrument guitar
           section A { R1 | c'1 | r1 | }
         }
-        form main { A }
-        score main { tab gt }
+        form { A }
+        score { tab gt }
         """;
 
     private static string Render(string lys)

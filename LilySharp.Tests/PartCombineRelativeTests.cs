@@ -54,8 +54,8 @@ public class PartCombineRelativeTests
           vone { {{one}} }
           vtwo { {{two}} }
         }
-        form main { ~A }
-        score main { combinedStaff { vone vtwo } }
+        form { ~A }
+        score { combinedStaff { vone vtwo } }
         """ + "\n";
 
     private static string Svg(string source) => SvgGenerator.Generate(

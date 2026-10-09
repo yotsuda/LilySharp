@@ -39,6 +39,6 @@ section Main {
   }
 }
 
-form main { Main }
+form { Main }
 
-score main "tab-numbers-meter-change" { tab gt as numbers }
+score "tab-numbers-meter-change" { tab gt as numbers }

@@ -31,14 +31,14 @@ public class ChordDisplayCompletionTests
         => LilySharpLanguageServer.GetCompletionContext(text, text.Length);
 
     [Theory]
-    [InlineData("score main { staff melody with chords harmony ")]
-    [InlineData("score main { chords harmony ")]
+    [InlineData("score { staff melody with chords harmony ")]
+    [InlineData("score { chords harmony ")]
     public void AfterChordName_OffersTheAsSelector(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterChordAttachName, Ctx(text));
 
     [Theory]
-    [InlineData("score main { staff melody with chords harmony as ")]
-    [InlineData("score main { chords harmony as ")]
+    [InlineData("score { staff melody with chords harmony as ")]
+    [InlineData("score { chords harmony as ")]
     public void AfterAs_OffersTheModes(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterChordDisplayAs, Ctx(text));
 
@@ -47,7 +47,7 @@ public class ChordDisplayCompletionTests
     {
         // `with chords |` (before the name) keeps completing the chord-part names.
         Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterChordsRef,
-            Ctx("score main { staff melody with chords "));
+            Ctx("score { staff melody with chords "));
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public class ChordDisplayCompletionTests
         var expanded = System.Text.RegularExpressions.Regex
             .Replace(snippet, @"\$\{\d+:([^}]*)\}", "$1").Replace("$0", "");
         var book = "part melody { section A { c'4 d e f } }\n" + expanded
-                 + "\nform main { A }\nscore main { staff melody  chords prog }\n";
+                 + "\nform { A }\nscore { staff melody  chords prog }\n";
 
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(book);
         Assert.False(tree.HasErrors,
@@ -150,7 +150,7 @@ public class ChordDisplayCompletionTests
         // snippet's own output (`expanded.Replace("sings part", "sings melody")`) to get a
         // book that compiles — the repair WAS the defect the user reported, sitting in the
         // net that was supposed to catch it.
-        AssertCompiles(oneStaff, item, "score main { staff melody  lyrics verse }");
+        AssertCompiles(oneStaff, item, "score { staff melody  lyrics verse }");
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public class ChordDisplayCompletionTests
         // The name is stop 2 so stop 1 can be the slot that needs the popup.
         Assert.Contains("lyrics ${2:verse}", item.InsertText!);
         // The picked name is typed by the writer, so the compile check picks one for them.
-        AssertCompiles(twoStaves, item, "score main { staff melody  staff alto  lyrics verse }",
+        AssertCompiles(twoStaves, item, "score { staff melody  staff alto  lyrics verse }",
             pick: "melody");
     }
 
@@ -220,7 +220,7 @@ public class ChordDisplayCompletionTests
             .Replace(item.InsertText!, @"\$\{\d+:([^}]*)\}", "$1")
             .Replace("$0", "la");
         expanded = System.Text.RegularExpressions.Regex.Replace(expanded, @"\$\d+", pick);
-        var book = parts + expanded + "\nform main { A }\n" + score + "\n";
+        var book = parts + expanded + "\nform { A }\n" + score + "\n";
 
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(book);
         Assert.False(tree.HasErrors,
@@ -236,11 +236,11 @@ public class ChordDisplayCompletionTests
     // session 376 `condensedStaff { … }` / `combinedStaff { … }` — groups of all three types
     // at any depth (session 376), and `lyrics NAME` verse rows, nothing else — anything else
     // is LYS6011 "cannot contain".
-    [InlineData("score main { grandStaff { ")]
-    [InlineData("score main { staffGroup { ")]
-    [InlineData("score main { choirStaff { ")]
-    [InlineData("score main { staffGroup { grandStaff { ")]
-    [InlineData("score main { grandStaff { staffGroup { choirStaff { ")]
+    [InlineData("score { grandStaff { ")]
+    [InlineData("score { staffGroup { ")]
+    [InlineData("score { choirStaff { ")]
+    [InlineData("score { staffGroup { grandStaff { ")]
+    [InlineData("score { grandStaff { staffGroup { choirStaff { ")]
     public void InsideAStaffGroup_OffersStaffItemsGroupsAndLyricsRows(string text)
     {
         Assert.Equal(LilySharpLanguageServer.CompletionContext.StaffGroupBlock, Ctx(text));
@@ -256,15 +256,15 @@ public class ChordDisplayCompletionTests
     // is a parse error, so the parts are what belongs in the popup — their own context
     // since 2026-09-10, when the `staff` list grew the clef words a bare-name group
     // does not take.
-    [InlineData("score main { condensedStaff { ")]
-    [InlineData("score main { combinedStaff { ")]
+    [InlineData("score { condensedStaff { ")]
+    [InlineData("score { combinedStaff { ")]
     public void InsideABarePartNameGroup_OffersTheParts(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.BarePartNameList, Ctx(text));
 
     [Fact]
     public void AfterOssia_OffersTheParts()
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterStaffRef,
-            Ctx("score main { ossia "));
+            Ctx("score { ossia "));
 
     [Fact]
     public void ScoreBlockCompletions_StaffAndTab_RetriggerPartNameSuggestions()
@@ -301,7 +301,7 @@ public class ChordDisplayCompletionTests
             var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(
                 "part m { section A { c4 d e f } }\n"
                 + "chords h { section A { C | } }\n"
-                + $"form main {{ A }}\nscore main {{ staff m  chords h as {label} }}\n");
+                + $"form {{ A }}\nscore {{ staff m  chords h as {label} }}\n");
             Assert.DoesNotContain(LilySharp.Core.Semantics.SemanticValidation.Run(tree),
                 d => d.Code == LilySharp.Core.Syntax.DiagnosticCodes.UnknownChordDisplayMode);
         }

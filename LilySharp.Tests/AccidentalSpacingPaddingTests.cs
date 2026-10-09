@@ -47,8 +47,8 @@ public class AccidentalSpacingPaddingTests
             time 4/4
             part bassline { clef bass }
             section S { bassline { ges,8 ges,,16 ges,,16 r des,16 des, fis, f,8 c,( a,4\2) | } }
-            form main { S }
-            score main { staff bassline }
+            form { S }
+            score { staff bassline }
             """);
         var multi = SvgGenerator.CollectScore(tree, RenderSpecParser.FindAll(tree).First());
         var items = multi.PrimaryContentStaff.PrimaryVoice.Measures[0].Items;

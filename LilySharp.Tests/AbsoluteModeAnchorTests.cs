@@ -72,9 +72,9 @@ public sealed class AbsoluteModeAnchorTests
 
         section A { m { c4 c4 c4 c4 | } }
 
-        form main { A }
+        form { A }
 
-        score main { staff m }
+        score { staff m }
         """;
 
     /// <summary>The MIDI pitch a staff position stands for, given the clef's middle line.</summary>

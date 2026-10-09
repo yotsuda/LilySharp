@@ -41,7 +41,7 @@ public class TempoSourcePositionTests
 
     private static string Book(string header, string music = "c'4 d' e' f' |") =>
         header + "\npart m { clef treble }\nsection A { m { " + music + " } }\n"
-        + "form main { ~A }\nscore main { staff m }\n";
+        + "form { ~A }\nscore { staff m }\n";
 
     /// <summary>Every element that carries an address: its tag text, primary and aliases.</summary>
     private static List<(string Tag, int Pos, string Alt)> Addressed(string svg)

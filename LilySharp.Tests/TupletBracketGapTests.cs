@@ -52,8 +52,8 @@ public sealed class TupletBracketGapTests
             part m {
               section A { tuplet 3/2 { c'4 e' g' } r2 | }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """;
         var g = RenderedGeometry.Render(book);
         var strokes = g.Lines.Where(l => Math.Abs(l.StrokeWidth - 0.16) < 1e-9).ToList();

@@ -5,7 +5,7 @@ part melody {
   instrument bass
   section A { g'4@accent.down a4@accent d4@staccato.up g4 }
 }
-form main { A }
-score main {
+form { A }
+score {
   tab melody
 }

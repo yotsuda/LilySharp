@@ -418,7 +418,7 @@ public class ChordDiagramTests
 
     private static (LayoutPlan Plan, IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> Problems) Layout(string entries)
     {
-        var tree = SyntaxTree.Parse($"layout {{ {entries} }}\npart m {{ }}\nsection A {{ m {{ c'1 | }} }}\nform main {{ A }}\nscore main {{ staff m }}\n");
+        var tree = SyntaxTree.Parse($"layout {{ {entries} }}\npart m {{ }}\nsection A {{ m {{ c'1 | }} }}\nform {{ A }}\nscore {{ staff m }}\n");
         var problems = SemanticValidation.Run(tree).Where(d => d.Code.StartsWith("LYS", StringComparison.Ordinal)
             && (d.Code == DiagnosticCodes.LayoutEntryBadValue || d.Code == DiagnosticCodes.UnknownLayoutKey)).ToList();
         return (LayoutPlanReader.Resolve(tree.GetRoot(), TopLevelNodes.OfRoot<RenderDeclarationSyntax>(tree.GetRoot()).First()), problems);
@@ -481,8 +481,8 @@ public class ChordDiagramTests
           uk { {{music}} }
           chords prog { {{row}} }
         }
-        form main { A }
-        score main { {{score}} }
+        form { A }
+        score { {{score}} }
         """;
 
     /// <summary>C, F and G with their guitar shapes written.</summary>
@@ -583,8 +583,8 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A { gt { c'4@chord(Cm x-x-10-12-13-11) c'4@chord(8-10-10-8-8-8) c'4@diagram(x-15-13-12-13-x) c'4@diagram(x-x-10-12-13-11).down | } }
-            form main { A }
-            score main { staff gt }
+            form { A }
+            score { staff gt }
             """;
         var tree = SyntaxTree.Parse(book);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error);
@@ -616,8 +616,8 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A { gt { {{music}} } }
-            form main { A }
-            score main { staff gt }
+            form { A }
+            score { staff gt }
             """;
         Assert.Contains(fix, Assert.Single(SemanticValidation.Run(SyntaxTree.Parse(book)), d =>
             d.Code == DiagnosticCodes.ChordDiagramNotDrawn || d.Code == DiagnosticCodes.UnknownAnnotation).Message);
@@ -654,8 +654,8 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A { gt { c'4@chord(Cm7) c'4@chord(Cm7 x3x546) c'4@chord(x32010) c'4@diagram(xx0232) | } }
-            form main { A }
-            score main { staff gt }
+            form { A }
+            score { staff gt }
             """;
         // The name alone draws none; with no layout the written shapes draw on the guitar.
         foreach (string layout in new[] { Guitar, "" })
@@ -676,8 +676,8 @@ public class ChordDiagramTests
             octave absolute
             part uk { instrument ukulele }
             section A { uk { c'1@chord(C x32010 0003) | } }
-            form main { A }
-            score main { staff uk }
+            form { A }
+            score { staff uk }
             """;
         Assert.Equal("frame:0003", Assert.Single(Laid(With("")).ArticulationLayouts).Glyph);
         Assert.Equal("frame:x32010", Assert.Single(Laid(With(Guitar)).ArticulationLayouts).Glyph);
@@ -692,8 +692,8 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A { gt { <c' e' g'>1@chord | } }
-            form main { A }
-            score main { staff gt }
+            form { A }
+            score { staff gt }
             """;
         var lay = Laid(book);
         Assert.Empty(lay.ArticulationLayouts);
@@ -759,8 +759,8 @@ public class ChordDiagramTests
         section A { gt {
           chord(C x32013)2@chord e | chord(Am x02210)2@chord a | chord(G 320003)1@chord | chord(Cm xx-10-12-13-11)2@chord d2 |
         } }
-        form main { A }
-        score main { staff gt  tab gt }
+        form { A }
+        score { staff gt  tab gt }
         """;
 
     /// <summary>One treble staff (<c>octave absolute</c>) with <paramref name="music"/>.</summary>
@@ -768,8 +768,8 @@ public class ChordDiagramTests
         octave absolute
         part gt { clef treble }
         section A { gt { {{music}} } }
-        form main { A }
-        score main { staff gt }
+        form { A }
+        score { staff gt }
         """;
 
     /// <summary>
@@ -983,8 +983,8 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A { gt { {{music}} } }
-            form main { A }
-            score main { staff gt }
+            form { A }
+            score { staff gt }
             """;
         Assert.Contains("no tuning has strings for", Assert.Single(Warnings(Book("", "c'1@chord(C 7) |"))).Message);
         Assert.Contains("'mute' is neither", Assert.Single(Warnings(Book("", "c'1@chord(D mute 5) |"))).Message);
@@ -1046,8 +1046,8 @@ public class ChordDiagramTests
             octave absolute
             part {{part}}
             section A { gt { c'2@chord(Cm7) c'2@chord(C x32010 0003) | } }
-            form main { A }
-            score main { staff gt }
+            form { A }
+            score { staff gt }
             """;
         string ly = Twin(Book(Guitar));
         Assert.Contains("^\\markup \\fret-diagram-terse \"x;3;2;o;1;o;\"", ly);
@@ -1067,8 +1067,8 @@ public class ChordDiagramTests
             octave absolute
             part gt { {{part}} }
             section A { gt { c'1@chord({{chord}}) | } }
-            form main { A }
-            score main { staff gt }
+            form { A }
+            score { staff gt }
             """;
         foreach (string layout in new[] { Guitar, "" })
         {
@@ -1103,8 +1103,8 @@ public class ChordDiagramTests
               gt { c'1@chord(F) | }
               chords prog { F | }
             }
-            form main { A }
-            score main { chords prog  staff gt }
+            form { A }
+            score { chords prog  staff gt }
             """;
         var tree = SyntaxTree.Parse(book);
         Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
@@ -1137,8 +1137,8 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A { gt { {{music}} } }
-            form main { A }
-            score main { staff gt }
+            form { A }
+            score { staff gt }
             """;
         string ly = Twin(Book("c'2@chord(Cm x-15-13-12-13-x) c'2@diagram(x-x-10-12-13-11) |"));
         Assert.Contains("\\fret-diagram-terse \"x;15;13;12;13;x;\"", ly);
@@ -1191,7 +1191,7 @@ public class ChordDiagramTests
               gt { c'2@chord(C 0003) c'2@chord(Cm7 x3x546) | }
               chords prog { F(xx3211) | }
             }
-            form main { A }
+            form { A }
             score g { layout gtr  chords prog  staff gt }
             score u { layout uke  chords prog  staff gt }
             """;
@@ -1222,8 +1222,8 @@ public class ChordDiagramTests
               uk { c'1@chord(C) | }
               chords prog { G | }
             }
-            form main { A }
-            score main { chords prog  staff gt  staff uk }
+            form { A }
+            score { chords prog  staff gt  staff uk }
             """;
         Assert.Equal("Ctrl+Shift+↑ adds a chord diagram (guitar: 320003)", HoverAt(doc, "@chord(G)"));
         Assert.Equal("Ctrl+Shift+↑ adds a chord diagram (ukulele: 0003)", HoverAt(doc, "@chord(C)"));
@@ -1243,7 +1243,7 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A { gt { c'2@chord(Cm7 x35343) c'2@chord(Cm7 8xx546) | } }
-            form main { A }
+            form { A }
             score g { layout gtr  staff gt }
             """;
         var tree = SyntaxTree.Parse(doc);
@@ -1270,7 +1270,7 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A { gt { c'2@chord(Cm x-3-5-5-4-3) c'4@chord(Cm 8-x-x-8-8-11) c'4@chord(Cm x-x-10-12-13-11) | } }
-            form main { A }
+            form { A }
             score g { layout gtr  staff gt }
             """;
         Assert.Contains("guitar: `x35543` (written) — shape 1 of 29", HoverAt(doc, "@chord(Cm x-3"));
@@ -1286,8 +1286,8 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A { gt { c'1@chord(Cm7 x3x546) | } }
-            form main { A }
-            score main { staff gt }
+            form { A }
+            score { staff gt }
             """;
         Assert.Contains("`chordDiagrams none`", HoverAt(doc, "@chord(Cm7"));
     }
@@ -1346,7 +1346,7 @@ public class ChordDiagramTests
             layout every { chordDiagrams ukulele all }
             part m { }
             section A { m { c'1 | } }
-            form main { A }
+            form { A }
             score a { layout every  staff m }
             score b { layout every { chordDiagrams guitar }  staff m }
             """;
@@ -1387,8 +1387,8 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A { gt { c'4@chord(Cm7) c'4@chord(Cm7 x3x546) <c' e' g'>4@chord c'4@chord("N.C.") | } }
-            form main { A }
-            score main { staff gt }
+            form { A }
+            score { staff gt }
             """;
         // Cm7's default (predefined x35343), the written x3x546 winning, the bare chord's
         // derived C (x32010); quoted text names no chord.
@@ -1409,8 +1409,8 @@ public class ChordDiagramTests
               gt { c'2@chord(C13) c'2@chord(C13) | c'1 | c'1 | }
               chords prog { C13 | C13 | G |  }
             }
-            form main { A }
-            score main { chords prog  staff gt }
+            form { A }
+            score { chords prog  staff gt }
             """;
         var w = Warnings(Book(UkuleleAll));
         var only = Assert.Single(w);
@@ -1448,8 +1448,8 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A { gt { c'2@chord(Cm7) <c' e' g'>2@chord | } }
-            form main { A }
-            score main { staff gt }
+            form { A }
+            score { staff gt }
             """;
         string ly = Twin(Book(All));
         Assert.Contains("\\fret-diagram-terse \"x;3-(;5;3;4;3-);\"", ly);    // Cm7's default, its barre
@@ -1502,8 +1502,8 @@ public class ChordDiagramTests
               gt { c'1@chord(G) | }
               chords prog { G | }
             }
-            form main { A }
-            score main { chords prog  staff gt }
+            form { A }
+            score { chords prog  staff gt }
             """;
         string? atChord = HoverAt(doc, "@chord(G)");
         Assert.Contains("guitar: `320003` (default) — shape 1 of ", atChord);
@@ -1528,8 +1528,8 @@ public class ChordDiagramTests
         section A { gt {
           {{music}}
         } }
-        form main { A }
-        score main { staff gt }
+        form { A }
+        score { staff gt }
         """;
 
     /// <summary>Owner's decision 2026-09-28: a chord symbol belongs to the BEAT, not to a note —
@@ -1681,8 +1681,8 @@ public class ChordDiagramTests
         const string sheet = """
             octave absolute
             section A { chords prog { C | G7 . Am . | } lyrics words { la | la la | } }
-            form main { A }
-            score main "sheet" { chords prog lyrics words }
+            form { A }
+            score "sheet" { chords prog lyrics words }
             """;
         string xml = Xml(sheet);
         Assert.Contains("prog (chords)", xml);
@@ -1695,8 +1695,8 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble  section A { c'1 | c'1 | } }
             chords prog { section A { C | G7 . Am . | } }
-            form main { A }
-            score main { chords prog  staff gt }
+            form { A }
+            score { chords prog  staff gt }
             """;
         string xml2 = Xml(byPart);
         Assert.DoesNotContain("(chords)", xml2);
@@ -1726,7 +1726,7 @@ public class ChordDiagramTests
     /// <summary>Every LYS diagnostic of the standard one-section book with these layout entries.</summary>
     private static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> LayoutDiagnostics(string entries)
     {
-        var tree = SyntaxTree.Parse($"layout {{ {entries} }}\npart m {{ }}\nsection A {{ m {{ c'1 | }} }}\nform main {{ A }}\nscore main {{ staff m }}\n");
+        var tree = SyntaxTree.Parse($"layout {{ {entries} }}\npart m {{ }}\nsection A {{ m {{ c'1 | }} }}\nform {{ A }}\nscore {{ staff m }}\n");
         return [.. tree.Diagnostics.Concat(SemanticValidation.Run(tree)).Where(d => d.Code.StartsWith("LYS", StringComparison.Ordinal))];
     }
 
@@ -1836,8 +1836,8 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A { gt { c'4@chord(F) c'4@chord(G) <c' e' g'>4@chord c'4@chord(F 133211) | } }
-            form main { A }
-            score main { staff gt }
+            form { A }
+            score { staff gt }
             """;
         Assert.Equal(new[] { "frame:xx3211", "frame:x32010|032010", "frame:133211" },
             Laid(book).ArticulationLayouts.OrderBy(a => a.X).Select(a => a.Glyph));
@@ -1855,8 +1855,8 @@ public class ChordDiagramTests
             section A { gt { c'1 | c'1 | } }
             section B { gt { c'1 | c'1 | } }
             chords prog { section A { F | G | }  section B { F | G | } }
-            form main { A B }
-            score main { chords prog  staff gt }
+            form { A B }
+            score { chords prog  staff gt }
             """;
         Assert.Equal(new string?[] { "xx3211", null, "133211", "320003|210003" }, RowFrames(byPart));
         const string marks = layout + """
@@ -1864,8 +1864,8 @@ public class ChordDiagramTests
             part gt { clef treble }
             section A { gt { c'1@chord(F) | c'1@chord(G) | } }
             section B { gt { c'1@chord(F) | c'1@chord(G) | } }
-            form main { A B }
-            score main { staff gt }
+            form { A B }
+            score { staff gt }
             """;
         Assert.Equal(new[] { "frame:xx3211", "frame:133211", "frame:320003|210003" },
             Laid(marks).ArticulationLayouts.OrderBy(a => a.X).Select(a => a.Glyph));
@@ -1876,8 +1876,8 @@ public class ChordDiagramTests
             part gt { clef treble }
             section A { gt { c'1 | }  chords prog { F | } }
             section B { gt { c'1 | }  chords prog { F | } }
-            form main { A B }
-            score main { chords prog  staff gt }
+            form { A B }
+            score { chords prog  staff gt }
             """;
         Assert.Equal(new string?[] { null, "133211" }, RowFrames(flat));
     }
@@ -1908,8 +1908,8 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A { gt { c'2@chord(F) c'2@chord(G) | } }
-            form main { A }
-            score main { staff gt }
+            form { A }
+            score { staff gt }
             """;
         string twin = Twin(book);
         Assert.Contains("\\fret-diagram-terse \"x;x;3;2;1;1;\"", twin);
@@ -1930,8 +1930,8 @@ public class ChordDiagramTests
               gt { c'2@chord(F) c'2@chord(G) | }
               chords prog { C . F G | }
             }
-            form main { A }
-            score main { chords prog  staff gt }
+            form { A }
+            score { chords prog  staff gt }
             """;
         Assert.Contains("guitar: `xx3211` (layout)", HoverAt(doc, "@chord(F)"));
         Assert.Contains("adds a chord diagram (guitar: 320003)", HoverAt(doc, "@chord(G)"));
@@ -2028,8 +2028,8 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A { gt { c'2@chord(Eb) <c' e' g'>2@chord | } }
-            form main { A }
-            score main { staff gt }
+            form { A }
+            score { staff gt }
             """;
         Assert.Equal(new[] { "C", "A" }, Names(book));
         Assert.Equal("Capo 3", Collected(book).Instrument);
@@ -2042,7 +2042,7 @@ public class ChordDiagramTests
     public void UnderACapo_ABothNameRaisesBothQualities()
     {
         string book = "layout { chordDiagrams guitar capo 3  chordNames both }\n"
-            + "part m { clef treble }\nsection A { m { c4 d e f | } chords prog { Ebm7 | } }\nform main { A }\nscore main { chords prog  staff m }\n";
+            + "part m { clef treble }\nsection A { m { c4 d e f | } chords prog { Ebm7 | } }\nform { A }\nscore { chords prog  staff m }\n";
         var score = SvgGenerator.CollectScore(SyntaxTree.Parse(book), RenderSpecParser.FindFirst(SyntaxTree.Parse(book)));
         var item = Assert.Single(score.ChordNames);
         Assert.Equal("E♭m7 (Cm7)", item.ChordText);
@@ -2071,7 +2071,7 @@ public class ChordDiagramTests
         Assert.Equal("'320003' sounds B♭ D F with the capo on fret 3, which is Bb, not Eb (D F are not tones of Eb; "
                      + "it lacks G (the 3rd)) - write Bb(320003), or Eb(x32010) for Eb under the capo, or another shape.",
             Assert.Single(Mismatches(Song(Capo3, "Eb(320003) |", "c'1 |"))).Message);
-        Assert.Empty(Mismatches("layout { chordDiagrams guitar capo 3 { Eb x32010 } }\npart m { }\nsection A { m { c'1 | } }\nform main { A }\nscore main { staff m }\n"));
+        Assert.Empty(Mismatches("layout { chordDiagrams guitar capo 3 { Eb x32010 } }\npart m { }\nsection A { m { c'1 | } }\nform { A }\nscore { staff m }\n"));
         // A listed chord with no pressed shape on the tuning warns (C13 → A13 on the ukulele).
         Assert.Contains("C13 has no chord diagram on 'ukulele'",
             Assert.Single(Warnings(Song("layout { chordDiagrams ukulele capo 3 { C13 } }\n", "C13 |", "c'1 |"))).Message);
@@ -2115,8 +2115,8 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A { gt { c'1@chord(Eb) | } }
-            form main { A }
-            score main { staff gt }
+            form { A }
+            score { staff gt }
             """;
         var harmony = Regex.Match(Xml(book), "<harmony>.*?</harmony>", RegexOptions.Singleline).Value;
         Assert.Contains("<root-step>E</root-step>", harmony);
@@ -2139,8 +2139,8 @@ public class ChordDiagramTests
             part gt { clef treble }
             part bs { clef bass }
             section A { gt { c'1@chord(Eb) | } bs { c1 | } chords prog { Eb | } }
-            form main { A }
-            score main { chords prog  staff gt  staff bs }
+            form { A }
+            score { chords prog  staff gt  staff bs }
             """;
         var doc = new MusicXmlExporter().Export(SyntaxTree.Parse(Book(Capo3All)));
         var gt = doc.Parts.Single(p => p.Name == "gt");
@@ -2156,8 +2156,8 @@ public class ChordDiagramTests
         // The row's part on a lead sheet (no staff) carries frames too, so it carries the capo.
         var sheet = new MusicXmlExporter().Export(SyntaxTree.Parse(Capo3All + """
             section A { chords prog { Eb | Bb | } }
-            form main { A }
-            score main { chords prog }
+            form { A }
+            score { chords prog }
             """));
         Assert.Equal(3, sheet.Parts.Single().Measures[0].Attributes?.Capo);
         // No capo, no element — with or without frames.
@@ -2258,8 +2258,8 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A { gt { c'1@chord(Eb) | } }
-            form main { A }
-            score main { staff gt }
+            form { A }
+            score { staff gt }
             """;
         Assert.Contains("guitar: `x32010` (default) — shape 1 of ", HoverAt(doc, "@chord(Eb)"));
         string plain = Capo3 + doc[Capo3All.Length..];
@@ -2305,8 +2305,8 @@ public class ChordDiagramTests
               gt { c'2@chord(Dm7) <e' g' b'>2@chord | c'1 | }
               chords prog { C | G |  }
             }
-            form main { A }
-            score main { chords prog  staff gt }
+            form { A }
+            score { chords prog  staff gt }
             """;
         Assert.Equal(new[] { "C", "Dm7", "Em", "G" }, Listed(book).Select(e => e.Text));
         // Under `chordDiagrams none` the names alone; under a capo the pressed names and shapes.
@@ -2374,8 +2374,8 @@ public class ChordDiagramTests
             octave absolute
             part uk { instrument ukulele }
             section A { uk { c'2@chord(C 0003) c'2@chord(Cmaj9) | } }
-            form main { A }
-            score main { staff uk }
+            form { A }
+            score { staff uk }
             """;
         Assert.Contains("ukulele: `0003` (written) — shape 1 of 39", HoverAt(doc, "@chord(C 0003)"));
         Assert.Contains("adds a chord diagram (ukulele: 4203)", HoverAt(doc, "@chord(Cmaj9)"));
@@ -2413,12 +2413,12 @@ public class ChordDiagramTests
         {
             "layout { chordDiagrams guitar all }\noctave absolute\npart m { clef treble }\n"
             + "section A { m { c'1 | c'1 | c'1 | c'2 c'2 | } chords prog { C | G | F | C A(x57765) | } }\n"
-            + "form main { A }\nscore main { chords prog  staff m }\n",
+            + "form { A }\nscore { chords prog  staff m }\n",
             "layout { chordDiagrams guitar all }\n"
             + "section A { chords prog { C | G | F | C A(x57765) | C | G | F | C A(x57765) | C | G | F | C A(x57765) | C | G | F | C A(x57765) | } }\n"
-            + "form main { A }\nscore main { chords prog }\n",
+            + "form { A }\nscore { chords prog }\n",
             "layout { chordDiagrams guitar all }\noctave absolute\npart m { clef treble }\n"
-            + "section A { m { c'4 d' e' f'@chord(A x57765) | } }\nform main { A }\nscore main { staff m }\n",
+            + "section A { m { c'4 d' e' f'@chord(A x57765) | } }\nform { A }\nscore { staff m }\n",
         })
         {
             var tree = SyntaxTree.Parse(book);

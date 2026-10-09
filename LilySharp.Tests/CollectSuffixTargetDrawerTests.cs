@@ -38,7 +38,7 @@ public sealed class CollectSuffixTargetDrawerTests
         var sb = new StringBuilder("part bass { clef bass }\nsection A {\n");
         for (int bar = 0; bar < 24; bar++)
             sb.Append("  c4 d e f |\n");
-        sb.Append("}\nscore main { staff bass }\n");
+        sb.Append("}\nscore { staff bass }\n");
         string text = sb.ToString();
         var options = new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false };
         var compiler = new IncrementalCompiler(SyntaxTree.Parse(text), options);

@@ -38,16 +38,16 @@ public class EmptyBarExportTests
 {
     private const string OneStaff =
         "octave absolute\ntime 4/4\npart m {{ }}\nsection A {{ m {{ {0} }} }}\n"
-        + "form main {{ ~A }}\nscore main {{ staff m }}";
+        + "form {{ ~A }}\nscore {{ staff m }}";
 
     private const string ThreeFour =
         "octave absolute\ntime 3/4\npart m {{ }}\nsection A {{ m {{ {0} }} }}\n"
-        + "form main {{ ~A }}\nscore main {{ staff m }}";
+        + "form {{ ~A }}\nscore {{ staff m }}";
 
     private const string TwoStaves =
         "octave absolute\ntime 4/4\npart up {{ clef treble }}\npart dn {{ clef bass }}\n"
         + "section A {{ up {{ {0} }} dn {{ c1 | g1 | c1 }} }}\n"
-        + "form main {{ ~A }}\nscore main {{ staffGroup {{ staff up staff dn }} }}";
+        + "form {{ ~A }}\nscore {{ staffGroup {{ staff up staff dn }} }}";
 
     private static string Twin(string source) => new LilyPondExporter().Export(SyntaxTree.Parse(source));
 
@@ -107,7 +107,7 @@ public class EmptyBarExportTests
             "time 4/4\npart up { clef treble }\npart dn { clef bass }\n"
             + "phrase mel { c4 d e f | }\nphrase low { c2 d | e2 f | g2 a | b2 c | }\n"
             + "section A { up { mel mel } dn { low } }\nsection B { up { g4 a b c | } dn { g1 | } }\n"
-            + "form main { A B }\nscore main { staff up staff dn }";
+            + "form { A B }\nscore { staff up staff dn }";
         Assert.Equal(2, Spacers(Twin(source)));
     }
 
@@ -122,7 +122,7 @@ public class EmptyBarExportTests
     {
         string source =
             $"octave absolute\ntime 4/4\nphrase mel {{ {body} }}\npart m {{ }}\n"
-            + "section A { m { mel | e'1 | } }\nform main { ~A }\nscore main { staff m }";
+            + "section A { m { mel | e'1 | } }\nform { ~A }\nscore { staff m }";
         Assert.Equal(0, Spacers(Twin(source)));
     }
 
@@ -150,7 +150,7 @@ public class EmptyBarExportTests
             "octave absolute\ntime 4/4\npart m { }\n"
             + "section A { m { c'4 d' e' f' | } }\nsection B { m { g'1 | } }\n"
             + "section C { m { a'1 | } }\nsection D { m { b'1 | } }\n"
-            + $"form main {{ {form} }}\nscore main {{ staff m }}";
+            + $"form {{ {form} }}\nscore {{ staff m }}";
         string twin = Twin(source);
         Assert.DoesNotContain("s1", twin);
         Assert.Contains("\\repeat volta 2 {", twin);

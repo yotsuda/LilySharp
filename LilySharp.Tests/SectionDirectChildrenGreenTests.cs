@@ -51,7 +51,7 @@ public class SectionDirectChildrenGreenTests
         section Mixed { override Stem.thickness = 2  c4 d e f | }
         section Blocks { bass { c4 d | } chords { c1 } lyrics { la la } }
         section Empty { key c major }
-        score main { staff bass }
+        score { staff bass }
         """;
 
     [Fact]
@@ -128,7 +128,7 @@ public class SectionDirectChildrenGreenTests
         var sb = new System.Text.StringBuilder("part bass { clef bass }\nsection A {\n");
         for (int bar = 0; bar < 100; bar++)
             sb.Append("  c4 d e f |\n");
-        sb.Append("}\nscore main { staff bass }\n");
+        sb.Append("}\nscore { staff bass }\n");
         var tree = SyntaxTree.Parse(sb.ToString());
         var section = tree.GetRoot().DescendantNodes<SectionDeclarationSyntax>().Single();
         Assert.True(MeasureCollector.SectionHasInlineMusic(section));

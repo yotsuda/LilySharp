@@ -45,8 +45,8 @@ public sealed class SlurStemAttachAcrossVoicesTests
             part melody {
               section A { voice { g''2( g8) eis fis g } { e8 d e e e fis r4 } }
             }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));

@@ -17,9 +17,9 @@ section Chorus { key g major
   melody { g4 a b c | d2 d | }
 }
 
-form main {
+form {
   Intro
   |: Verse [1. Chorus] :| [2. Intro]
 }
 
-score main "grammar-test" { staff melody }
+score "grammar-test" { staff melody }

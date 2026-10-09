@@ -58,8 +58,8 @@ public sealed class SectionBoundaryMeterRevertTests
           section A { c'4 d e f | time 3/4 key g major g a b | }
           section B { c'4 d e f | }
         }
-        form main { ~A ~B }
-        score main { staff m }
+        form { ~A ~B }
+        score { staff m }
         """;
 
     private static SyntaxTree Tree() => SyntaxTree.Parse(Book);
@@ -132,8 +132,8 @@ public sealed class SectionBoundaryMeterRevertTests
               section A { c'4 d e f | time 2/2 g a b c' | }
               section B { c'4 d e f | }
             }
-            form main { ~A ~B }
-            score main { staff m }
+            form { ~A ~B }
+            score { staff m }
             """);
 
         var score = new LilySharp.Core.Svg.Collector.MeasureCollector().Collect(tree, "m");
@@ -172,8 +172,8 @@ public sealed class SectionBoundaryMeterRevertTests
               section P { r8 }
               section Q { c'8 d' e' | f'4 g' a' b' | }
             }
-            form main { ~P ~Q }
-            score main { staff m }
+            form { ~P ~Q }
+            score { staff m }
             """);
 
         var score = new LilySharp.Core.Svg.Collector.MeasureCollector().Collect(tree, "m");
@@ -197,8 +197,8 @@ public sealed class SectionBoundaryMeterRevertTests
             part m
             section A { m { c'4 d e f | } }
             section B { time 3/4 m { c'4 d e | } }
-            form main { ~A ~B }
-            score main { staff m }
+            form { ~A ~B }
+            score { staff m }
             """);
         var ly = new LilyPondExporter().Export(tree);
         Assert.Contains("\\time 3/4", ly);
@@ -230,16 +230,16 @@ public sealed class SectionBoundaryMeterRevertTests
               section A { c'4 d e f | key g major g a b c | }
               section B { c'4 d e f | }
             }
-            form main { ~A ~B }
-            score main { staff m }
+            form { ~A ~B }
+            score { staff m }
             """);
         var groupedBySection = Fifths("""
             time 4/4
             part m
             section A { m { c'4 d e f | key g major g a b c | } }
             section B { m { c'4 d e f | } }
-            form main { ~A ~B }
-            score main { staff m }
+            form { ~A ~B }
+            score { staff m }
             """);
 
         Assert.Equal(new[] { 0, 1, 0 }, groupedByPart);

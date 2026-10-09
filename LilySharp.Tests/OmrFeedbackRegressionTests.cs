@@ -52,8 +52,8 @@ public class OmrFeedbackRegressionTests
           rh { c''1 | c''1 | c''1 | c''1 | }
           lh { c1 | c1 | c1 | c1 | }
         }
-        form main { ~A }
-        score main {
+        form { ~A }
+        score {
           staff vo "Voice" as removeEmpty all
           {{(lyrics.Length > 0 ? "lyrics vowords" : "")}}
           grandStaff {
@@ -128,8 +128,8 @@ public class OmrFeedbackRegressionTests
                 time 12/8 voice { c''8 d''8 e''8 f''8 g''8 a''8 b''8 a''8 g''8 f''8 e''8 d''8 } { c'4. c'4. c'4. c'4. } |
               }
             }
-            form main { ~Piece }
-            score main { staff rh }
+            form { ~Piece }
+            score { staff rh }
             """);
 
         var staff = score.EnumerateStaves().Single().Staff;

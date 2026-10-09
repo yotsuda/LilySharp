@@ -9,8 +9,8 @@ section A {
   gt { c4 e g e | }
   bs { c4 e g e | }
 }
-form main { ~A }
-score main {
+form { ~A }
+score {
   staff gt  tab gt
   staff bs  tab bs
 }

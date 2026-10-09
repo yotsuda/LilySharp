@@ -29,5 +29,5 @@ section S {
     d,1 d,1 | f1( f1) |
   }
 }
-form main { S }
-score main "slur-under-whole-notes" { grandStaff { staff rh staff lh } }
+form { S }
+score "slur-under-whole-notes" { grandStaff { staff rh staff lh } }

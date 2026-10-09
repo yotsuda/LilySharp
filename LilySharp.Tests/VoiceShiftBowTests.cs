@@ -51,9 +51,9 @@ public sealed class VoiceShiftBowTests
               section A { e g b r }
             }
 
-            form main { A }
+            form { A }
 
-            score main {
+            score {
               condensedStaff {
                 melody
                 melody2

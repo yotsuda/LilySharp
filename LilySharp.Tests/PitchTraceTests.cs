@@ -55,9 +55,9 @@ public sealed class PitchTraceTests
           lh { c4 d e f | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main {
+        score {
           staff rh
           staff lh
         }
@@ -77,9 +77,9 @@ public sealed class PitchTraceTests
           rh { c'1 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main {
+        score {
           staff rh
           staff lh
         }
@@ -181,10 +181,10 @@ public sealed class PitchTraceTests
           basso { c4 d e f | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "only-sopr"  { staff sopr }
-        score main "only-basso" { staff basso }
+        score "only-sopr"  { staff sopr }
+        score "only-basso" { staff basso }
         """;
 
     // The same two parts, both drawn by ONE score. Whatever the fold reports for the
@@ -202,9 +202,9 @@ public sealed class PitchTraceTests
           basso { c4 d e f | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main {
+        score {
           staff sopr
           staff basso
         }
@@ -258,9 +258,9 @@ public sealed class PitchTraceTests
               gtr { c4 d e f | }
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main {
+            score {
               staff gtr
               tab gtr
             }
@@ -282,7 +282,7 @@ public sealed class PitchTraceTests
         (absolute ? "octave absolute\n" : "")
         + "time 4/4\npart m { clef treble }\n"
         + $"section A {{ m {{ {body} }} }}\n"
-        + "form main { A }\nscore main { staff m }";
+        + "form { A }\nscore { staff m }";
 
     /// <summary>The drawn staff positions of the first group in the book, and the pitches
     /// the trace reports for it — the page and the report, from one collect.</summary>

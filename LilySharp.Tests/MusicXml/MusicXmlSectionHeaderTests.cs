@@ -52,8 +52,8 @@ public class MusicXmlSectionHeaderTests
             octave absolute
             time 4/4
             section A { partial 8  melody { f'8 | g'4 a' b' c'' | } }
-            form main { ~A }
-            score main { staff melody }
+            form { ~A }
+            score { staff melody }
             """);
         // `~A`: the section's label, which the page draws and the file writes as a rehearsal
         // mark, is not what this compares — the inline spelling has no section to label.
@@ -76,8 +76,8 @@ public class MusicXmlSectionHeaderTests
             section A { partial 8 }
             part melody { section A { f'8 | g'4 a' b' c'' | } }
             part bass { clef bass  section A { d8 | g,4 a, b, c | } }
-            form main { A }
-            score main { staff melody  staff bass }
+            form { A }
+            score { staff melody  staff bass }
             """);
 
         Assert.Equal(new[] { "melody", "bass" }, doc.Parts.Select(p => p.Name));
@@ -105,8 +105,8 @@ public class MusicXmlSectionHeaderTests
             time 4/4
             section A { key d major  time 3/4 }
             part melody { section A { d'4 e' fis' | g'2. | } }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """);
 
         var first = doc.Parts.Single().Measures[0].ToXml().ToString();
@@ -127,8 +127,8 @@ public class MusicXmlSectionHeaderTests
             octave absolute
             section A { tempo 110 }
             part melody { section A { c'4 d' e' f' | }  section B { g'1 | } }
-            form main { B A }
-            score main { staff melody }
+            form { B A }
+            score { staff melody }
             """;
         var measures = Export(book).Parts.Single().Measures;
         Assert.Equal(2, measures.Count);
@@ -138,7 +138,7 @@ public class MusicXmlSectionHeaderTests
         Assert.DoesNotContain("<metronome>", measures[0].ToXml().ToString());
         Assert.Contains("<per-minute>110</per-minute>", measures[1].ToXml().ToString());
 
-        var opening = Export(book.Replace("form main { B A }", "form main { A B }")).Parts.Single().Measures;
+        var opening = Export(book.Replace("form { B A }", "form { A B }")).Parts.Single().Measures;
         Assert.Contains("<per-minute>110</per-minute>", opening[0].ToXml().ToString());
         Assert.DoesNotContain("<per-minute>120</per-minute>", opening[0].ToXml().ToString());
     }
@@ -151,8 +151,8 @@ public class MusicXmlSectionHeaderTests
     {
         var doc = Export("""
             part bassline { clef bass  section Body { } }
-            form main { Body }
-            score main { staff bassline }
+            form { Body }
+            score { staff bassline }
             """);
 
         var part = Assert.Single(doc.Parts);

@@ -48,7 +48,7 @@ public sealed class ClefModifierTests
 
     private static string Book(string clef)
         => "part m { clef " + clef + " }\nsection A { m { c4 d e f | } }\n"
-           + "form main { ~A }\nscore main { staff m }\n";
+           + "form { ~A }\nscore { staff m }\n";
 
     private static string Svg(string book)
         => SvgGenerator.Generate(TestPaper.ParseAtIndentZero(book), new SvgRenderOptions { EmbedFont = false });

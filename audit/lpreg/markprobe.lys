@@ -7,6 +7,6 @@ section Main {
   v { c1@mark("A") | c1 @mark("B") | }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { staff ~v }
+score { staff ~v }

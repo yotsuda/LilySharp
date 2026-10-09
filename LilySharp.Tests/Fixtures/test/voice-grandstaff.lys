@@ -16,9 +16,9 @@ section Main {
   lh { c4 d e f | g4 a g f | e4 d c2 | }
 }
 
-form main { Main }
+form { Main }
 
-score main "voice-grandstaff" {
+score "voice-grandstaff" {
   grandStaff {
     staff rh
     staff lh

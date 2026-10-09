@@ -54,8 +54,8 @@ public class DuplicateTrackSectionValidatorTests
               section B { up up up up | }
               section B { down down down down | }
             }
-            form main { A |: B :| }
-            score main { staff melody }
+            form { A |: B :| }
+            score { staff melody }
             """));
     }
 
@@ -67,8 +67,8 @@ public class DuplicateTrackSectionValidatorTests
               section A { la la la la | }
               section B { [1. up up up up |] [2. down down down down |] }
             }
-            form main { A |: B :| }
-            score main { staff melody }
+            form { A |: B :| }
+            score { staff melody }
             """));
     }
 
@@ -77,8 +77,8 @@ public class DuplicateTrackSectionValidatorTests
     {
         Assert.True(HasDuplicate(Parts + """
             chords harmony { section A { C | } section A { g1 | } }
-            form main { A }
-            score main { staff melody  chords harmony }
+            form { A }
+            score { staff melody  chords harmony }
             """));
     }
 
@@ -87,8 +87,8 @@ public class DuplicateTrackSectionValidatorTests
     {
         Assert.False(HasDuplicate(Parts + """
             lyrics { section A { la la la la | } section B { up up up up | } }
-            form main { A B }
-            score main { staff melody }
+            form { A B }
+            score { staff melody }
             """));
     }
 }

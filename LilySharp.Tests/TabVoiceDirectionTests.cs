@@ -62,8 +62,8 @@ public sealed class TabVoiceDirectionTests
                   { c4\5( d\5) e\4( f\4) | c8\5 d\5 e\5 f\5 c2\5~ | c1\5 | }
           }
         }
-        form main { A }
-        score main { tab gtr }
+        form { A }
+        score { tab gtr }
         """;
 
     private static (Staff Tab, TabStaffGeometry Geom) CollectTab()

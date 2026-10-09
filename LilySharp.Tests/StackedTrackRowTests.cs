@@ -59,12 +59,12 @@ public class StackedTrackRowTests
           section A { one two | three four | }
           section B { five six | }
         }
-        form main { A B }
+        form { A B }
         """;
 
     private static MultiStaffScore Collect(string scoreBody)
     {
-        var tree = SyntaxTree.Parse($"{Doc}\nscore main {{\n  staff m\n{scoreBody}\n}}\n");
+        var tree = SyntaxTree.Parse($"{Doc}\nscore {{\n  staff m\n{scoreBody}\n}}\n");
         Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
         var spec = RenderSpecParser.FindFirst(tree);
         Assert.NotNull(spec);

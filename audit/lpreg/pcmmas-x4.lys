@@ -12,6 +12,6 @@ section A {
   pb { c1 | c1 | c1 | }
 }
 
-form main { ~A }
+form { ~A }
 
-score main { staff pa staff pb }
+score { staff pa staff pb }

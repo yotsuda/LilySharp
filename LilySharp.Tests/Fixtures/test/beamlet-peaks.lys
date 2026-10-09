@@ -15,5 +15,5 @@ section Main {
     c'16[ e'16 g'8] a8[ c'16 e'16] r2 |
   }
 }
-form main { Main }
-score main "beamlet-peaks" { staff m }
+form { Main }
+score "beamlet-peaks" { staff m }

@@ -19,6 +19,6 @@ section Main {
   }
 }
 
-form main { ~Head |: ~Main :| }
+form { ~Head |: ~Main :| }
 
-score main { staff ~v }
+score { staff ~v }

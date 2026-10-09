@@ -185,9 +185,9 @@ part melody {
   section A { c'4 d e f | g2 g | }
 }
 
-form main { A }
+form { A }
 
-score main {
+score {
   staff melody
 }
 `;
@@ -952,7 +952,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 }
                 try {
                     // Name the score the preview is showing, so Play sounds ITS parts and
-                    // form: with `score main "p2" { staff p2 }` picked, p1 stayed audible
+                    // form: with `score "p2" { staff p2 }` picked, p1 stayed audible
                     // until the server was told which score (user report 2026-09-29).
                     const pb = await client.sendRequest<{ Notes?: { T: number, D: number, P: number, V: number }[], Error?: string }>(
                         'lilysharp/playback', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });

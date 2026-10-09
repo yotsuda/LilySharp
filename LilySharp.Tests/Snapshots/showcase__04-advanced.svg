@@ -155,27 +155,27 @@
   <text class="music" x="88.62" y="45.49" font-size="4.00" data-pos="889"></text>
   <line x1="89.86" y1="45.34" x2="89.86" y2="41.99" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="94.69" y="43.99" font-size="4.00" data-pos="893"></text>
-  <rect x="20.64" y="42.49" width="0.60" height="4.00" data-pos="1088"/>
-  <rect x="21.54" y="42.49" width="0.19" height="4.00" data-pos="1088"/>
-  <circle cx="22.26" cy="43.99" r="0.23" data-pos="1088"/>
-  <circle cx="22.26" cy="44.99" r="0.23" data-pos="1088"/>
+  <rect x="20.64" y="42.49" width="0.60" height="4.00" data-pos="1083"/>
+  <rect x="21.54" y="42.49" width="0.19" height="4.00" data-pos="1083"/>
+  <circle cx="22.26" cy="43.99" r="0.23" data-pos="1083"/>
+  <circle cx="22.26" cy="44.99" r="0.23" data-pos="1083"/>
   <rect x="38.26" y="42.49" width="0.19" height="4.00" data-pos="815"/>
   <rect x="49.06" y="42.49" width="0.19" height="4.00" data-pos="824"/>
   <rect x="64.95" y="42.49" width="0.19" height="4.00" data-pos="854"/>
-  <circle cx="74.97" cy="43.99" r="0.23" data-pos="1103"/>
-  <circle cx="74.97" cy="44.99" r="0.23" data-pos="1103"/>
-  <rect x="75.50" y="42.49" width="0.19" height="4.00" data-pos="1103"/>
-  <rect x="75.99" y="42.49" width="0.60" height="4.00" data-pos="1103"/>
+  <circle cx="74.97" cy="43.99" r="0.23" data-pos="1098"/>
+  <circle cx="74.97" cy="44.99" r="0.23" data-pos="1098"/>
+  <rect x="75.50" y="42.49" width="0.19" height="4.00" data-pos="1098"/>
+  <rect x="75.99" y="42.49" width="0.60" height="4.00" data-pos="1098"/>
   <rect x="92.44" y="42.49" width="0.19" height="4.00" data-pos="891"/>
   <rect x="102.24" y="42.49" width="0.19" height="4.00" data-pos="896"/>
-  <line x1="49.17" y1="39.36" x2="49.17" y2="41.44" stroke="#000000" stroke-width="0.160" data-pos="1093"/>
-  <line x1="49.17" y1="39.36" x2="75.58" y2="39.36" stroke="#000000" stroke-width="0.160" data-pos="1093"/>
-  <line x1="75.58" y1="39.36" x2="75.58" y2="41.44" stroke="#000000" stroke-width="0.160" data-pos="1093"/>
-  <text x="50.17" y="41.10" font-size="1.75" font-weight="bold" data-pos="1093">1.</text>
-  <line x1="76.51" y1="39.36" x2="76.51" y2="41.44" stroke="#000000" stroke-width="0.160" data-pos="1106"/>
-  <line x1="76.51" y1="39.36" x2="102.35" y2="39.36" stroke="#000000" stroke-width="0.160" data-pos="1106"/>
-  <line x1="102.35" y1="39.36" x2="102.35" y2="41.44" stroke="#000000" stroke-width="0.160" data-pos="1106"/>
-  <text x="77.51" y="41.10" font-size="1.75" font-weight="bold" data-pos="1106">2.</text>
+  <line x1="49.17" y1="39.36" x2="49.17" y2="41.44" stroke="#000000" stroke-width="0.160" data-pos="1088"/>
+  <line x1="49.17" y1="39.36" x2="75.58" y2="39.36" stroke="#000000" stroke-width="0.160" data-pos="1088"/>
+  <line x1="75.58" y1="39.36" x2="75.58" y2="41.44" stroke="#000000" stroke-width="0.160" data-pos="1088"/>
+  <text x="50.17" y="41.10" font-size="1.75" font-weight="bold" data-pos="1088">1.</text>
+  <line x1="76.51" y1="39.36" x2="76.51" y2="41.44" stroke="#000000" stroke-width="0.160" data-pos="1101"/>
+  <line x1="76.51" y1="39.36" x2="102.35" y2="39.36" stroke="#000000" stroke-width="0.160" data-pos="1101"/>
+  <line x1="102.35" y1="39.36" x2="102.35" y2="41.44" stroke="#000000" stroke-width="0.160" data-pos="1101"/>
+  <text x="77.51" y="41.10" font-size="1.75" font-weight="bold" data-pos="1101">2.</text>
   <text x="17.12" y="22.32" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="217">C</text>
   <text x="20.92" y="22.32" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="234">Dm</text>
   <text x="26.08" y="22.32" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="252">Em</text>

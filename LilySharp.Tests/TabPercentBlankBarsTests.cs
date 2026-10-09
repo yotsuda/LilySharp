@@ -47,8 +47,8 @@ public sealed class TabPercentBlankBarsTests
               tuning bass
               section A { {{sectionBody}} }
             }
-            form main { A }
-            score main { {{staffLine}} }
+            form { A }
+            score { {{staffLine}} }
             """);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var spec = RenderSpecParser.FindFirst(tree);

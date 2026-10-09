@@ -11,6 +11,6 @@ section Main {
   v { c''2 c | c c | }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { staff ~v  lyrics w }
+score { staff ~v  lyrics w }

@@ -20,6 +20,6 @@ section Main {
   two { g2 g2 | g2 g2 | g2 g2 | g2 g2 | }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { staff ~one  lyrics wa staff ~two  lyrics wb }
+score { staff ~one  lyrics wa staff ~two  lyrics wb }

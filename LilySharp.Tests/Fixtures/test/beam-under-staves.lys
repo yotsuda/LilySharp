@@ -25,5 +25,5 @@ section S {
   rh { voice { b1 } { g,8 g, g, g, g, g, g, g, } | }
   lh { d,1 | }
 }
-form main { S }
-score main "beam-under-staves" { grandStaff { staff rh staff lh } }
+form { S }
+score "beam-under-staves" { grandStaff { staff rh staff lh } }

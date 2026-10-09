@@ -1338,7 +1338,7 @@ internal static class MusicXmlReader
     /// to it and still a good part name.</summary>
     private static bool LexesAsOneName(string candidate)
         => !Syntax.SyntaxTree.Parse($"part {candidate} {{ }}\nsection A {{ {candidate} {{ c1 | }} }}\n"
-                + $"form main {{ ~A }}\nscore main {{ staff {candidate} }}\n")
+                + $"form {{ ~A }}\nscore {{ staff {candidate} }}\n")
             .Diagnostics.Any(d => d.Severity == Syntax.DiagnosticSeverity.Error);
 
     private static double ParseDouble(string? s)

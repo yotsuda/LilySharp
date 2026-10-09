@@ -507,9 +507,9 @@ public class LineStartColumnTests
               melody { {{music}} }
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "M" {
+            score "M" {
               staff melody
             }
             """);
@@ -776,7 +776,7 @@ public class LineStartColumnTests
             "pitch concert\npart sax { instrument alto-sax }\npart pno { clef treble }\n"
             + "section A { sax { c'4 d' e' f' | break c'4 d' e' f' | }"
             + " pno { f'4 d' e' f' | break fis'4 d' e' f' | } }\n"
-            + "form main { A }\nscore main { " + staves + " }\n";
+            + "form { A }\nscore { " + staves + " }\n";
 
         static double SecondLineFirstHeadX(string source)
         {

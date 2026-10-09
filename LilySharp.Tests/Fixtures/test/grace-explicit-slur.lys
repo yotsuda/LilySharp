@@ -15,5 +15,5 @@ part mel {
     c4 grace { g16( } a8) c4 d | c4 appoggiatura { g16 } a8 c4 d | c4 grace { f16( g16 } a8) c4 d |
   }
 }
-form main { A }
-score main { staff mel }
+form { A }
+score { staff mel }

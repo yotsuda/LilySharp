@@ -15,9 +15,9 @@ section Main {
   }
 }
 
-form main { Main }
+form { Main }
 
-score main "rows-song-sheet" {
+score "rows-song-sheet" {
   chords prog
   lyrics words
 }

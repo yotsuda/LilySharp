@@ -44,7 +44,7 @@ public class GreenTokenAccessorTests
           bass { es,4 as,, cis'8. d''16 | r4 s8 R1*2 | <c e g>4 q | e4\2 f\3 | g4@staccato.up a@rest b@accent.down | c4@arpeggio | }
         }
         section B { bass { d4 || e :| f |: g4 :|*3 | break a4 noBreak pageBreak b4 noPageBreak | } }
-        score main { staff bass }
+        score { staff bass }
         """;
 
     [Fact]

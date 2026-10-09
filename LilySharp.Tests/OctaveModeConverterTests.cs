@@ -37,7 +37,7 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class OctaveModeConverterTests
 {
-    private const string Score = "\nform main { A }\nscore main { staff m }\n";
+    private const string Score = "\nform { A }\nscore { staff m }\n";
 
     /// <summary>Converts, and asserts the result draws and plays every note as before.</summary>
     private static string Convert(string source, OctaveMode target)
@@ -105,13 +105,13 @@ public class OctaveModeConverterTests
     public void PhrasesAndSectionReferences_KeepTheirOwnMarks()
     {
         var src = "part m { }\nphrase P { g a b c }\nsection A {\n  m { P' e f | P, c2 | }\n}\n"
-            + "form main { A ~A' }\nscore main { staff m }\n";
+            + "form { A ~A' }\nscore { staff m }\n";
         var absolute = Convert(src, OctaveMode.Absolute);
         // A phrase body opens a fresh frame at C4, so its g is G3 — g, in absolute — wherever
         // it is played; the references keep their own marks, which mean the same in both.
         Assert.Contains("phrase P { g, a, b, c }", absolute);
         Assert.Contains("m { P' e f | P, c,2 | }", absolute);
-        Assert.Contains("form main { A ~A' }", absolute);
+        Assert.Contains("form { A ~A' }", absolute);
         Convert(absolute, OctaveMode.Relative);
     }
 

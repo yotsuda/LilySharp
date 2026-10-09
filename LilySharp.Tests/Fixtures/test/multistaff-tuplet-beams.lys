@@ -15,5 +15,5 @@ section S {
   rh { tuplet 3/2 { c''4 c'' c'' } c''2 | }
   lh { c8 d e f g a b c' | }
 }
-form main { S }
-score main "multistaff-tuplet-beams" { grandStaff { staff rh staff lh } }
+form { S }
+score "multistaff-tuplet-beams" { grandStaff { staff rh staff lh } }

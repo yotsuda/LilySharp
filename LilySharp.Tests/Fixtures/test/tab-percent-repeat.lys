@@ -19,8 +19,8 @@ part bl {
     repeat percent 3 { a,,4\4 r8 g,,16 a,,\4 c, c, a,,8\4 g,, a,,\4 | }
   }
 }
-form main { A }
-score main {
+form { A }
+score {
   staff bl
   tab bl
 }

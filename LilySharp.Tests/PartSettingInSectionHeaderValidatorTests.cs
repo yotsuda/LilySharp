@@ -54,7 +54,7 @@ public class PartSettingInSectionHeaderValidatorTests
             .ToList();
     }
 
-    private const string Score = "form main { ~A }\nscore main { staff m }\n";
+    private const string Score = "form { ~A }\nscore { staff m }\n";
 
     [Theory]
     // beside a part cell — the shape the decision names

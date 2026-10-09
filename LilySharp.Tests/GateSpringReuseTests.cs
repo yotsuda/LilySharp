@@ -47,8 +47,8 @@ public class GateSpringReuseTests
           upper { g'8 a' b' c'' d''4 e''8 fis'' | g''2 d''4. c''8 | b'1 | }
           lower { g,4 d g, d | c2 d | g,1 | }
         }
-        form main { Main }
-        score main "x" { staff upper staff lower }
+        form { Main }
+        score "x" { staff upper staff lower }
         """;
 
     private static (MultiStaffScore Score, double Shortest, MeasureSpringData[] Gate) Input()

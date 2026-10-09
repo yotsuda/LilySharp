@@ -38,8 +38,8 @@ public class SwingTempoTests
             body + "\n" +
             "part m { clef treble }\n" +
             "section A { m { c'4 d' e' f' | } }\n" +
-            "form main { A }\n" +
-            "score main \"s\" { staff m }\n";
+            "form { A }\n" +
+            "score \"s\" { staff m }\n";
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
         return SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
@@ -96,8 +96,8 @@ public class SwingTempoTests
     public void TheEquationWithNoCount_IsAMarkOfItsOwn(string header, string marking, string sections)
     {
         var src = header + "\npart m { clef treble }\n" + sections + "\n"
-            + "form main { " + (sections.Contains("section B") ? "A B" : "A") + " }\n"
-            + "score main \"s\" { staff m }\n";
+            + "form { " + (sections.Contains("section B") ? "A B" : "A") + " }\n"
+            + "score \"s\" { staff m }\n";
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
         var layout = new LayoutEngine().Layout(SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)));
@@ -138,8 +138,8 @@ public class SwingTempoTests
             "part swing { clef treble }\n" +
             "phrase shuffle { c'4 d' e' f' | }\n" +
             "section A { swing { shuffle } }\n" +
-            "form main { A }\n" +
-            "score main \"s\" { staff swing }\n");
+            "form { A }\n" +
+            "score \"s\" { staff swing }\n");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
     }
 }

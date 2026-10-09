@@ -74,8 +74,8 @@ public class MidBarBreakTests
               melody { {{melody}} }
             {{bassCell}}}
             {{rows ?? ""}}
-            form main { Main }
-            score main { staff melody{{bassStaff}}{{scoreExtra ?? ""}} }
+            form { Main }
+            score { staff melody{{bassStaff}}{{scoreExtra ?? ""}} }
             """;
     }
 
@@ -281,8 +281,8 @@ public class MidBarBreakTests
             part melody { clef treble }
             section A { melody { c'4 d break e f | g1 | } }
             section B { melody { a2 pageBreak b2 | c'1 | } }
-            form main { A A B }
-            score main { staff melody }
+            form { A A B }
+            score { staff melody }
             """;
         var measures = Melody(book).Measures;
         // A: head tail g1 | A: head tail g1 | B: head tail c'1

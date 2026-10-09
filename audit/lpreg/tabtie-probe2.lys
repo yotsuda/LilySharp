@@ -4,5 +4,5 @@ part m { clef treble_8 tuning guitar }
 section A {
   m { c'2 c'2@repeatTie | }
 }
-form main { A }
-score main { tab m as numbers }
+form { A }
+score { tab m as numbers }

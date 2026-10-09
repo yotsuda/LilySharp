@@ -24,6 +24,6 @@ section A {
   vtwo { c2 d | octave relative c2 d | }
 }
 
-form main { ~A }
+form { ~A }
 
-score main { combinedStaff { vone vtwo } }
+score { combinedStaff { vone vtwo } }

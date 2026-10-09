@@ -37,10 +37,10 @@ public class ChordDisplayModeTests
         part melody { clef treble }
         section A { melody { e'4 e' f' g' | a' g' e' d' | } }
         chords harmony { C | Am | }
-        form main { A }
-        score main "names" { chords harmony  staff melody }
-        score main "roman" { chords harmony as roman  staff melody }
-        score main "row"   { chords harmony as roman }
+        form { A }
+        score "names" { chords harmony  staff melody }
+        score "roman" { chords harmony as roman  staff melody }
+        score "row"   { chords harmony as roman }
         """;
 
     private static ChordDisplayMode StaffMode(string score)
@@ -66,8 +66,8 @@ public class ChordDisplayModeTests
     public void Both_IsRejectedLikeAnyUnknownDisplay()
     {
         var tree = SyntaxTree.Parse(Doc.Replace(
-            "score main \"row\"   { chords harmony as roman }",
-            "score main \"row\"   { chords harmony as both }"));
+            "score \"row\"   { chords harmony as roman }",
+            "score \"row\"   { chords harmony as both }"));
         var d = LilySharp.Core.Semantics.SemanticValidation.Run(tree)
             .Single(x => x.Code == DiagnosticCodes.UnknownChordDisplayMode);
 
@@ -82,8 +82,8 @@ public class ChordDisplayModeTests
         // The pre-existing hole the retirement had to close first: ParseChordMode's `_`
         // arm meant any unrecognised word drew absolute names and reported nothing.
         var tree = SyntaxTree.Parse(Doc.Replace(
-            "score main \"row\"   { chords harmony as roman }",
-            "score main \"row\"   { chords harmony as romn }"));
+            "score \"row\"   { chords harmony as roman }",
+            "score \"row\"   { chords harmony as romn }"));
 
         Assert.Contains(LilySharp.Core.Semantics.SemanticValidation.Run(tree),
             x => x.Code == DiagnosticCodes.UnknownChordDisplayMode
@@ -123,8 +123,8 @@ public class ChordDisplayModeTests
             part melody { clef treble }
             section A { melody { c'4@chord(Cmaj7) c' g' g' | } }
             chords harmony { Cmaj7 | }
-            form main { A }
-            score main { chords harmony as roman  staff melody }
+            form { A }
+            score { chords harmony as roman  staff melody }
             """);
         var score = new MeasureCollector()
             .Collect(tree, "melody", null, "harmony", ChordDisplayMode.Roman);
@@ -144,8 +144,8 @@ public class ChordDisplayModeTests
             part melody { clef treble }
             section A { melody { c'4 c' c' c' | key g major d' d' d' d' | } }
             chords harmony { C | G | }
-            form main { A }
-            score main { chords harmony as roman  staff melody }
+            form { A }
+            score { chords harmony as roman  staff melody }
             """);
         var score = new MeasureCollector()
             .Collect(tree, "melody", null, "harmony", ChordDisplayMode.Roman);

@@ -88,8 +88,8 @@ public class PreliminaryPassSeedTests
             $"time {time}\n" +
             "part m { clef treble }\n" +
             $"section S {{ m {{ {body} | }} }}\n" +
-            "form main { S }\n" +
-            "score main \"o\" { staff m }\n");
+            "form { S }\n" +
+            "score \"o\" { staff m }\n");
         Assert.Single(layout.Pages);
         Assert.Single(layout.AllSystems);
         double y = double.MaxValue;

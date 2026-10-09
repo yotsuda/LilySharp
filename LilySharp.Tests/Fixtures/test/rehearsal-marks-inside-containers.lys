@@ -15,9 +15,9 @@ part melody {
   section End2 { f'1@mark("D") }
 }
 
-form main { ~A |: ~Body [1. ~End1] :| [2. ~End2] }
+form { ~A |: ~Body [1. ~End1] :| [2. ~End2] }
 
-score main "rehearsal-marks-inside-containers" {
+score "rehearsal-marks-inside-containers" {
   staff melody
   tab melody
 }

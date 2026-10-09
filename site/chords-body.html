@@ -139,10 +139,10 @@ section A {
   melody { c'1@chord(C x32010) | }
   chords prog { F(guitar 133211 ukulele 2010) | }
 }
-form main { A }
-score main         { chords prog  staff melody }               // guitar: C and F
-score main "uke"   { layout uke    chords prog  staff melody } // ukulele: F only
-score main "piano" { layout piano  chords prog  staff melody } // no diagrams</pre>
+form { A }
+score         { chords prog  staff melody }               // guitar: C and F
+score "uke"   { layout uke    chords prog  staff melody } // ukulele: F only
+score "piano" { layout piano  chords prog  staff melody } // no diagrams</pre>
   <p>A shape the diagram's tuning cannot take (the guitar's six characters on a ukulele) is
   simply not used there.</p>
 

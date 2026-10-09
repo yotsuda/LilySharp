@@ -15,7 +15,7 @@ lysc svg samples/fur-elise.lys        # or: png / pdf / midi / xml
 | [`canon-in-d.lys`](canon-in-d.lys) | Pachelbel — Canon in D | A 4-bar `phrase` ground cycled 13 times under progressively livelier variations — eighths, sixteenths, solid chords — spilling onto a second page (automatic pagination). |
 | [`morning-light.lys`](morning-light.lys) | Original — Morning Light (the README's picture) | One source, four rows: chord symbols, a melody with its lyrics, and a bass part as notation AND as tablature. Written in relative octaves. |
 | [`nocturne.lys`](nocturne.lys) | Original — Nocturne in D | Grand staff with pickup, slurs over notes and chords, a triplet, a grace note, hairpins, pedal changes (a second `@sustain` while down), a ritardando. |
-| [`manual-beam-demo.lys`](manual-beam-demo.lys) | — (two bars) | Not a piece: manual beams `c8[ d e f g a]` against the automatic beaming of the bar below, and `form main { ~A }` to hide the section label. |
+| [`manual-beam-demo.lys`](manual-beam-demo.lys) | — (two bars) | Not a piece: manual beams `c8[ d e f g a]` against the automatic beaming of the bar below, and `form { ~A }` to hide the section label. |
 
 The traditional and classical pieces use `octave absolute` — every pitch is anchored to C4 (`c'` = C5,
 `c,` = C3, with `part { octave N }` re-anchoring a bass part), so a wrong octave

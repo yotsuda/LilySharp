@@ -51,7 +51,7 @@ public sealed class FormVoltaTests
     public void InlineVoltaForm_ParsesAndRenders()
     {
         // Repeat barline between the endings — the unified form.
-        Assert.True(MeasureCount("form main { |: A [1. D] :| [2. O] }") > 0);
+        Assert.True(MeasureCount("form { |: A [1. D] :| [2. O] }") > 0);
     }
 
     /// <summary>
@@ -64,7 +64,7 @@ public sealed class FormVoltaTests
     [Fact]
     public void AnEndingFollowedByAnotherEndingBeforeTheRepeatBar_IsAnOrdinarySyntaxError()
     {
-        var tree = SyntaxTree.Parse(Head + "form main { |: A [1. D] [2. O] :| }" + Tail);
+        var tree = SyntaxTree.Parse(Head + "form { |: A [1. D] [2. O] :| }" + Tail);
         var errors = tree.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
         var error = Assert.Single(errors);
         Assert.Equal(DiagnosticCodes.ExpectedToken, error.Code);
@@ -85,9 +85,9 @@ public sealed class FormVoltaTests
     /// <see cref="FormAlternativeSyntax"/> is built.
     /// </summary>
     [Theory]
-    [InlineData("form main { |: A [1. D] :| 2. O }", "2")]
-    [InlineData("form main { |: A :| 2. O }", "2")]
-    [InlineData("form main { |: A | 1. D :| 2. O }", "1")]
+    [InlineData("form { |: A [1. D] :| 2. O }", "2")]
+    [InlineData("form { |: A :| 2. O }", "2")]
+    [InlineData("form { |: A | 1. D :| 2. O }", "1")]
     public void ABareNumberedEnding_IsStrayFormItems(string form, string firstNumber)
     {
         var tree = SyntaxTree.Parse(Head + form + Tail);
@@ -107,7 +107,7 @@ public sealed class FormVoltaTests
     {
         // The closing ']' may be left off only where a ':|' follows at once (owner's design
         // 2026-09-28): the ':|' delimits the ending. The last ending writes `]` or `-]`.
-        Assert.True(MeasureCount("form main { |: A [1. D :| [2. O -] }") > 0);
+        Assert.True(MeasureCount("form { |: A [1. D :| [2. O -] }") > 0);
     }
 
     [Fact]
@@ -123,8 +123,8 @@ public sealed class FormVoltaTests
                 .Select(m => (m.StartBarline, m.EndBarline)).ToArray();
         }
 
-        var shorthand = Bars("form main { A |: D :|: O :| }");
-        var explicitTwoBlocks = Bars("form main { A |: D :| |: O :| }");
+        var shorthand = Bars("form { A |: D :|: O :| }");
+        var explicitTwoBlocks = Bars("form { A |: D :| |: O :| }");
         Assert.Equal(explicitTwoBlocks, shorthand);
 
         // And the shared boundary is a repeat-end meeting a repeat-start (which the
@@ -140,7 +140,7 @@ public sealed class FormVoltaTests
         // '~D' inside a repeat must render D's music with NO label — not drop the
         // measure. The top-level silent-reference case skips in-repeat nodes, so
         // without ProcessRepeatBlock handling it the whole measure vanished.
-        var tree = SyntaxTree.Parse(Head + "form main { A |: D :|: ~D :| }" + Tail);
+        var tree = SyntaxTree.Parse(Head + "form { A |: D :|: ~D :| }" + Tail);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
 
         var measures = new MeasureCollector().Collect(tree, "m").Voice.Measures.ToArray();
@@ -154,7 +154,7 @@ public sealed class FormVoltaTests
         // '~D "alt"' — a label parked but hidden by '~' (write now, reveal later by
         // dropping the '~'). Valid (not an error): warn, keep the text, render the
         // measure with NO label.
-        var tree = SyntaxTree.Parse(Head + "form main { A ~D \"alt\" }" + Tail);
+        var tree = SyntaxTree.Parse(Head + "form { A ~D \"alt\" }" + Tail);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
         Assert.True(WarnsHiddenLabel(tree));
 
@@ -172,7 +172,7 @@ public sealed class FormVoltaTests
     [Fact]
     public void SilentReference_NoLabel_DoesNotWarn()
     {
-        var tree = SyntaxTree.Parse(Head + "form main { A ~D }" + Tail);
+        var tree = SyntaxTree.Parse(Head + "form { A ~D }" + Tail);
         Assert.False(WarnsHiddenLabel(tree));
     }
 
@@ -193,7 +193,7 @@ public sealed class FormVoltaTests
     [Fact]
     public void VoltaSilentAlternative_WithLabel_WarnsAndPrintsNothing()
     {
-        var tree = SyntaxTree.Parse(Head + "form main { |: A [1. D] :| [2. ~O \"alt\"] }" + Tail);
+        var tree = SyntaxTree.Parse(Head + "form { |: A [1. D] :| [2. ~O \"alt\"] }" + Tail);
         Assert.True(WarnsHiddenLabel(tree));
 
         var measures = new MeasureCollector().Collect(tree, "m").Voice.Measures.ToArray();
@@ -208,7 +208,7 @@ public sealed class FormVoltaTests
         // VISIBLE labels, so hiding D collapsed the visible set to one distinct "A"
         // and wrongly wiped BOTH A boxes. A hand-hidden section signals the author
         // is curating marks — keep the survivors.
-        var tree = SyntaxTree.Parse(Head + "form main { A |: ~D :| A }" + Tail);
+        var tree = SyntaxTree.Parse(Head + "form { A |: ~D :| A }" + Tail);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
 
         var measures = new MeasureCollector().Collect(tree, "m").Voice.Measures;
@@ -225,7 +225,7 @@ public sealed class FormVoltaTests
         // Label visibility is the author's call: a section referenced by name shows
         // its box, even when it is the only one. (`~Body` is how you hide it.) The
         // engraver no longer auto-suppresses single/repeated section boxes.
-        var tree = SyntaxTree.Parse(Head + "form main { A }" + Tail);
+        var tree = SyntaxTree.Parse(Head + "form { A }" + Tail);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
 
         var measures = new MeasureCollector().Collect(tree, "m").Voice.Measures;
@@ -241,7 +241,7 @@ public sealed class FormVoltaTests
     {
         // 'A A' now shows both boxes (was suppressed as "redundant"): they mark
         // where the repeat lands, and hiding is opt-in via '~'.
-        var tree = SyntaxTree.Parse(Head + "form main { A A }" + Tail);
+        var tree = SyntaxTree.Parse(Head + "form { A A }" + Tail);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
 
         var measures = new MeasureCollector().Collect(tree, "m").Voice.Measures;
@@ -259,7 +259,7 @@ public sealed class FormVoltaTests
         // hook at the repeat (regression: it used to stay open — only the last
         // ending closed).
         var tree = SyntaxTree.Parse(
-            Head + "form main { |: A [1. D] :| [2. O] }\nscore { staff m  tab m }\n");
+            Head + "form { |: A [1. D] :| [2. O] }\nscore { staff m  tab m }\n");
         var spec = RenderSpecParser.FindFirst(tree)!;
         var layout = new LayoutEngine().Layout(new MeasureCollector().CollectMultiStaff(tree, spec));
 

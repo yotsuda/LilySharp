@@ -34,7 +34,7 @@ public sealed class NoBreakTests
     private static Measure[] Collect(string body)
     {
         string src = "time 4/4\nkey c major\npart m { section A { " + body + " } }\n"
-                   + "form main { A }\nscore main { staff m }";
+                   + "form { A }\nscore { staff m }";
         return new MeasureCollector().Collect(SyntaxTree.Parse(src), "m").Voice.Measures.ToArray();
     }
 

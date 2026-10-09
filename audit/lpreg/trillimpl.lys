@@ -5,5 +5,5 @@ part m { }
 section A {
   m { c'1@startTrillSpan | }
 }
-form main { A }
-score main { staff m }
+form { A }
+score { staff m }

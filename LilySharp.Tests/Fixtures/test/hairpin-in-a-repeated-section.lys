@@ -14,6 +14,6 @@ part m { clef treble }
 section A { m { c'2@cresc c'2 | c'2 c'2 | } }
 section B { m { d'2 d'2 | d'2 d'2 | } }
 
-form main { A B A "A2" }
+form { A B A "A2" }
 
-score main { staff m }
+score { staff m }

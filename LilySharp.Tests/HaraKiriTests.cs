@@ -134,8 +134,8 @@ public class HaraKiriTests
             part rh { clef treble }
             part lh { clef bass }
             section Main { rh { c4 d e f | } lh { r1 | } }
-            form main { Main }
-            score main "x" { grandStaff { staff rh staff lh{{selector}} } }
+            form { Main }
+            score "x" { grandStaff { staff rh staff lh{{selector}} } }
             """;
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(src);
         var spec = Core.Svg.Collector.RenderSpecParser.FindFirst(tree);
@@ -387,9 +387,9 @@ public class HaraKiriTests
               lh { {{lh}} }
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "HKJ" {
+            score "HKJ" {
               grandStaff {
                 staff rh{{(declareRemoveEmpty ? " as removeEmpty all" : "")}}
                 staff lh
@@ -550,7 +550,7 @@ public class HaraKiriTests
     /// <summary>A one-part book whose score item is <paramref name="staffItem"/>.</summary>
     private static string Book(string staffItem) =>
         "part m { }" + NL + "section A { m { c'1 } }" + NL
-        + "form main { A }" + NL + "score main { " + staffItem + " }" + NL;
+        + "form { A }" + NL + "score { " + staffItem + " }" + NL;
 
     private static string NL => Environment.NewLine;
 
@@ -600,7 +600,7 @@ public class HaraKiriTests
     public void EverySpellingTheLanguageMeans_Compiles(string staffItem)
     {
         string src = "part m { }" + NL + "part n { }" + NL + "section A { m { c'1 } n { c1 } }" + NL
-            + "form main { A }" + NL + "score main { staff n " + staffItem + " }" + NL;
+            + "form { A }" + NL + "score { staff n " + staffItem + " }" + NL;
         var tree = SyntaxTree.Parse(src);
         Assert.DoesNotContain(tree.Diagnostics.Concat(SemanticValidation.Run(tree)),
             d => d.Severity == DiagnosticSeverity.Error);
@@ -612,7 +612,7 @@ public class HaraKiriTests
     public void RemoveEmptyInAPartHeader_IsAnUnknownProperty()
     {
         var tree = SyntaxTree.Parse("part m { clef treble removeEmpty true }" + NL
-            + "section A { m { c'1 } }" + NL + "form main { A }" + NL + "score main { staff m }" + NL);
+            + "section A { m { c'1 } }" + NL + "form { A }" + NL + "score { staff m }" + NL);
         Assert.Contains(SemanticValidation.Run(tree),
             d => d.Code == DiagnosticCodes.UnknownSymbolCase && d.Message.Contains("Unknown part property 'removeEmpty'"));
         Assert.DoesNotContain("removeEmpty", SymbolCaseValidator.PropertyNameVocabulary);
@@ -638,8 +638,8 @@ public class HaraKiriTests
             + (verse ? "lyrics w sings voc { la la la la | } " : "")
             + "pno { c4 d e f | } }" + Environment.NewLine
             + "section B { voc { R1 | } pno { g4 a b c' | } }" + Environment.NewLine
-            + "form main { A break B }" + Environment.NewLine
-            + "score main { staff voc as removeEmpty true " + (verse ? " lyrics w " : "") + " staff pno }"
+            + "form { A break B }" + Environment.NewLine
+            + "score { staff voc as removeEmpty true " + (verse ? " lyrics w " : "") + " staff pno }"
             + Environment.NewLine;
 
         static (double Gap, int SyllablesPastSystem1) Measure(string src)

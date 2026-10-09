@@ -37,8 +37,8 @@ public class DoubleDynamicTests
         octave absolute
         part m { clef treble }
         section A { m { c'4@f@sfz d' e'@p@cresc f' | g'1@ff | } }
-        form main { A }
-        score main { staff m }
+        form { A }
+        score { staff m }
         """;
 
     [Fact]

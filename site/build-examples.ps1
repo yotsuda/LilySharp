@@ -22,8 +22,8 @@ octave absolute
 time 4/4
 part melody { clef treble }
 section A { melody { c4 c' c'' c, | e g e' g, | } }
-form main { ~A }
-score main { staff melody }
+form { ~A }
+score { staff melody }
 '@
 
 'durations' = @'
@@ -34,8 +34,8 @@ part melody { clef treble }
 section A {
   melody { c8 8 8 8 c4 4 | <c e g>4 q q' q | }
 }
-form main { ~A }
-score main { staff melody }
+form { ~A }
+score { staff melody }
 '@
 
 'events' = @'
@@ -51,8 +51,8 @@ section A {
     <c e g>4 <c 3 5>4 <1 3 5>2 | /4 4 8 8 4 |
   }
 }
-form main { ~A }
-score main { staff melody }
+form { ~A }
+score { staff melody }
 '@
 
 'arpeggio' = @'
@@ -65,8 +65,8 @@ part melody { clef treble }
 section A {
   melody { << c e g >>4 << c 3 5 >>4 << 8 5 3 1 >>2 | << c e g >>2 << c r e >>2 | }
 }
-form main { ~A }
-score main { staff melody }
+form { ~A }
+score { staff melody }
 '@
 
 'connectors' = @'
@@ -78,8 +78,8 @@ part melody { clef treble }
 section A {
   melody { c4~ c4 d4( e4) | <c e>4( <d f>4) c8[ d e f] | }
 }
-form main { ~A }
-score main { staff melody }
+form { ~A }
+score { staff melody }
 '@
 
 'tie-repeats' = @'
@@ -91,8 +91,8 @@ part vn {
   section A { c''1 | e1~ || }
   section B { e''1 | }
 }
-form main { I |: A [1. B] :| [2. B] }
-score main { staff vn }
+form { I |: A [1. B] :| [2. B] }
+score { staff vn }
 '@
 
 'annotations' = @'
@@ -108,8 +108,8 @@ section A {
     c'4@p@cresc b4 a4 g4@f | f4@f@decresc e4 d4 c4@p |
   }
 }
-form main { ~A }
-score main { staff melody }
+form { ~A }
+score { staff melody }
 '@
 
 'spanners' = @'
@@ -129,8 +129,8 @@ section A {
     c4@sustain e g e | c1@!sustain |
   }
 }
-form main { ~A }
-score main { grandStaff { staff rh  staff lh } }
+form { ~A }
+score { grandStaff { staff rh  staff lh } }
 '@
 
 'groups' = @'
@@ -146,8 +146,8 @@ section A {
     voice { g'2 a'2 } { c'2 c'2 } |
   }
 }
-form main { ~A }
-score main { staff melody }
+form { ~A }
+score { staff melody }
 '@
 
 'barlines' = @'
@@ -159,8 +159,8 @@ part melody { clef treble }
 section A {
   melody { c1 | | d1 || e1 ! f1 |. }
 }
-form main { ~A }
-score main { staff melody }
+form { ~A }
+score { staff melody }
 '@
 
 'repeats' = @'
@@ -173,8 +173,8 @@ part melody { clef treble }
 section Body   { melody { d'4 g' fis' | g'2. | } }
 section First  { melody { a'2. | } }
 section Second { melody { g'2.@fermata | } }
-form main { |: ~Body [1. ~First] :| [2. ~Second] }
-score main { staff melody }
+form { |: ~Body [1. ~First] :| [2. ~Second] }
+score { staff melody }
 '@
 
 'lyrics' = @'
@@ -191,8 +191,8 @@ section A {
     ev- ery word a | song |
   }
 }
-form main { ~A }
-score main { staff melody  lyrics words }
+form { ~A }
+score { staff melody  lyrics words }
 '@
 
 'sings' = @'
@@ -209,8 +209,8 @@ section A {
   alt { e4 e g f | e1 | }
   lyrics verse { Sing- ing a song | now | }
 }
-form main { ~A }
-score main {
+form { ~A }
+score {
   staff sop "Soprano"
   lyrics verse sings sop
   staff alt "Alto"
@@ -230,8 +230,8 @@ section A {
   gt { c4 e g e | }
   bs { c4 e g e | }
 }
-form main { ~A }
-score main {
+form { ~A }
+score {
   staff gt  tab gt
   staff bs  tab bs
 }
@@ -252,8 +252,8 @@ section A {
     g4 a b c' |
   }
 }
-form main { ~A }
-score main { staff melody }
+form { ~A }
+score { staff melody }
 '@
 
 # ---- chords.html: chords and chord diagrams, step by step
@@ -267,8 +267,8 @@ section A {
   melody { e'4 d c d | e e e2 | d4 d e d | c1@chord(C) | }
   chords prog { C | Am | Dm7 G7 | | }
 }
-form main { ~A }
-score main { chords prog  staff melody }
+form { ~A }
+score { chords prog  staff melody }
 '@
 
 'chord-shapes' = @'
@@ -282,8 +282,8 @@ section A {
   melody { e'2 c'2 | c'2 b2 | c''2 g'2 | }
   chords prog { C(x32010) Am(x02210) | F(133211) G7(320001) | Cm(8xx88-11) Cm(xx-10-12-13-11) | }
 }
-form main { ~A }
-score main { chords prog  staff melody }
+form { ~A }
+score { chords prog  staff melody }
 '@
 
 'chord-on-note' = @'
@@ -295,8 +295,8 @@ part melody { clef treble }
 section A {
   melody { e'1@chord(C x32010) | c'1@chord(Am7 x02010) | a'1@chord(x02210) | b'1@diagram(x24442) | }
 }
-form main { ~A }
-score main { staff melody }
+form { ~A }
+score { staff melody }
 '@
 
 'chord-notes' = @'
@@ -311,8 +311,8 @@ section A {
     chord(Am x02210)2@chord chord(F 133211)2@chord | r1@chord(G 320003) |
   }
 }
-form main { ~A }
-score main { staff gt  tab gt }
+form { ~A }
+score { staff gt  tab gt }
 '@
 
 'chord-all' = @'
@@ -327,8 +327,8 @@ section A {
   uke { g'4 e' c' e' | a'2 c'' | a'4 f' c' f' | g'1 | }
   chords prog { C | Am | F | G7(0212) | }
 }
-form main { ~A }
-score main { chords prog  staff uke }
+form { ~A }
+score { chords prog  staff uke }
 '@
 
 'chord-table' = @'
@@ -340,8 +340,8 @@ time 4/4
 part melody { clef treble }
 section Verse  { melody { e'2 c'2 | f'2 d'2 | }  chords prog { C | F G | } }
 section Chorus { melody { e'2 c'2 | f'2 d'2 | }  chords prog { C | F G | } }
-form main { ~Verse ~Chorus }
-score main { chords prog  staff melody }
+form { ~Verse ~Chorus }
+score { chords prog  staff melody }
 '@
 
 'chord-capo' = @'
@@ -358,8 +358,8 @@ section A {
   melody { g'2 ees'2 | aes'2 f'2 | bes'2 d'2 | ees'1 | }
   chords prog { Eb | Ab | Bb7 | Eb | }
 }
-form main { ~A }
-score main { chords prog  staff melody }
+form { ~A }
+score { chords prog  staff melody }
 '@
 
 'chord-list' = @'
@@ -374,8 +374,8 @@ section A {
   melody { e'2 c'2 | f'2 d'2 | g'2 b2 | c'1 | }
   chords prog { C | F(xx3211) | G | C | }
 }
-form main { ~A }
-score main { chords prog  staff melody }
+form { ~A }
+score { chords prog  staff melody }
 '@
 
 }

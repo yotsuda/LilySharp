@@ -1007,6 +1007,6 @@ section A {
 }
 
 // ~A hides the section label, so the engraved result is unchanged.
-form main { ~A }
+form { ~A }
 
-score main { staff melody }
+score { staff melody }

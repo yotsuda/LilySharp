@@ -43,8 +43,8 @@ public class ClefChangeTests
 part melody { clef treble }
 phrase m { c'4 d clef bass c,4 d | }
 section A { melody { m } }
-form main { A }
-score main ""test"" { staff melody }
+form { A }
+score ""test"" { staff melody }
 ";
         var tree = TestPaper.ParseAtIndentZero(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -84,8 +84,8 @@ score main ""test"" { staff melody }
 part melody { clef treble }
 phrase m { c'4 d clef treble_8 c4 d | }
 section A { melody { m } }
-form main { A }
-score main ""x"" { staff melody }
+form { A }
+score ""x"" { staff melody }
 ";
         var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors);
@@ -108,8 +108,8 @@ score main ""x"" { staff melody }
 part gtr { clef treble_8 }
 phrase m { c'4 d e f | }
 section A { gtr { m } }
-form main { A }
-score main ""x"" { staff gtr }
+form { A }
+score ""x"" { staff gtr }
 ";
         var tree = TestPaper.ParseAtIndentZero(source);
         var svg = SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
@@ -129,8 +129,8 @@ score main ""x"" { staff gtr }
 part melody { clef treble }
 phrase m { c'4 d clef treble_8 c4 d | }
 section A { melody { m } }
-form main { A }
-score main ""x"" { staff melody }
+form { A }
+score ""x"" { staff melody }
 ";
         var tree = TestPaper.ParseAtIndentZero(source);
         var svg = SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
@@ -155,8 +155,8 @@ score main ""x"" { staff melody }
 part melody { clef treble }
 phrase m { c'4 d e f | clef bass c,4 d e f | clef treble c'4 d e f | }
 section A { melody { m } }
-form main { A }
-score main ""test"" { staff melody }
+form { A }
+score ""test"" { staff melody }
 ";
         var tree = TestPaper.ParseAtIndentZero(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -209,7 +209,7 @@ score main ""test"" { staff melody }
         {
             var tree = TestPaper.ParseAtIndentZero(
                 "octave absolute\npart va { clef alto }\nsection A { va { " + music + " } }\n"
-                + "form main { A }\nscore main \"test\" { staff va }\n");
+                + "form { A }\nscore \"test\" { staff va }\n");
             var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
             var voice = score.StaffGroups[0].Staves[0].Voices[0];
             var found = new System.Collections.Generic.List<(int, ClefType)>();
@@ -238,8 +238,8 @@ score main ""test"" { staff melody }
 part melody { clef treble }
 phrase m { c'4 d e f | g4 a clef bass c,4 d | }
 section A { melody { m } }
-form main { A }
-score main ""test"" { staff melody }
+form { A }
+score ""test"" { staff melody }
 ";
         var tree = TestPaper.ParseAtIndentZero(source);
         var options = new SvgRenderOptions { EmbedFont = false };
@@ -264,8 +264,8 @@ score main ""test"" { staff melody }
 part melody { clef treble }
 phrase m { c'4 d e f | g4 a b c' | clef bass c,4 d e f | g4 a b c | break e4 f g a | b4 c d e | g4 a b c | e4 f g a | }
 section A { melody { m } }
-form main { A }
-score main ""test"" { staff melody }
+form { A }
+score ""test"" { staff melody }
 ";
         var tree = TestPaper.ParseAtIndentZero(source);
         var options = new SvgRenderOptions { EmbedFont = false };

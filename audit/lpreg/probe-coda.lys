@@ -12,6 +12,6 @@ section A2 {
 }
 
 // ~A hides the section label, so the engraved result is unchanged.
-form main { coda ~A1 coda ~A2 coda }
+form { coda ~A1 coda ~A2 coda }
 
-score main { staff melody }
+score { staff melody }

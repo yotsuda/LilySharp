@@ -136,13 +136,20 @@ public sealed partial class FormDeclarationSyntax : SyntaxNode
     /// <summary>The <c>form</c> keyword token.</summary>
     public SyntaxTokenNode FormKeyword => (SyntaxTokenNode)GetChild(0)!;
 
-    /// <summary>The form's name token (e.g. <c>Main</c>), or null when a malformed
-    /// declaration omitted it. Names are case-sensitive.</summary>
+    /// <summary>The form's name token (e.g. <c>practice</c>), or null for the unnamed form —
+    /// the file's default, or a score's own. Names are case-sensitive.</summary>
     public SyntaxTokenNode? Name =>
         GetChild(1) is SyntaxTokenNode { Kind: not SyntaxKind.OpenBrace } t ? t : null;
 
-    /// <summary>The form's name text, or empty when absent.</summary>
+    /// <summary>The form's name text, or empty when unnamed.</summary>
     public string NameText => Name?.Text ?? "";
+
+    /// <summary>True for a <c>form</c> item inside a score — its own form, or a reference.</summary>
+    public bool InScore => Parent is RenderDeclarationSyntax;
+
+    /// <summary>True for a score's <c>form Name</c>: a reference to a top-level form, with no
+    /// body of its own (the parser builds it without braces).</summary>
+    public bool IsReference => InScore && Name != null && GetChild(2) is null;
 
     /// <summary>
     /// The form body's own <c>{</c> … <c>}</c> span — what LYS6007 underlines, for the same
@@ -662,14 +669,57 @@ public sealed partial class RenderDeclarationSyntax : SyntaxNode
     public SyntaxTokenNode RenderKeyword => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>
-    /// The form this score renders — the bare-identifier reference right after
-    /// <c>score</c> (`score Main …`), or null when omitted (a validator error).
-    /// A quoted string is the basename, never the form name.
+    /// The score's own name — the bare identifier right after <c>score</c>
+    /// (<c>score another …</c> writes <c>&lt;input&gt;-another</c>), or null for the unnamed
+    /// score, which writes <c>&lt;input&gt;</c>. A quoted string is the basename. Until
+    /// 2026-10-09 this word named the FORM the score played; that is a <c>form</c> item now
+    /// (<see cref="FormItems"/>).
     /// </summary>
-    public SyntaxTokenNode? FormName => LeadingToken(basename: false);
+    public SyntaxTokenNode? ScoreName => LeadingToken(basename: false);
 
-    /// <summary>The form name text, or empty when absent.</summary>
-    public string FormNameText => FormName?.Text ?? "";
+    /// <summary>The score's name text, or empty for the unnamed score.</summary>
+    public string ScoreNameText => ScoreName?.Text ?? "";
+
+    /// <summary>The <c>form</c> items in this score's body — <c>form NAME</c> or
+    /// <c>form { … }</c>; one is valid (the validator reports the rest).</summary>
+    public IReadOnlyList<FormDeclarationSyntax> FormItems
+    {
+        get
+        {
+            var forms = new List<FormDeclarationSyntax>();
+            foreach (var child in ChildNodes())
+                if (child is FormDeclarationSyntax f)
+                    forms.Add(f);
+            return forms;
+        }
+    }
+
+    /// <summary>
+    /// The form this score plays: its own <c>form { … }</c>, else the top-level form its
+    /// <c>form NAME</c> names (null when that name is unknown — the validator says so), else
+    /// the file's default (<see cref="Semantics.ScoreForms.Primary"/>).
+    /// </summary>
+    public FormDeclarationSyntax? PlayedForm
+    {
+        get
+        {
+            SyntaxNode root = this;
+            while (root.Parent != null)
+                root = root.Parent;
+            var items = FormItems;
+            if (items.Count == 0)
+                return Semantics.ScoreForms.Primary(root);
+            var item = items[0];
+            if (!item.IsReference)
+                return item;
+            string name = item.NameText;
+            // Top-level only (Parser.ParseTopLevelItem), so the root's children are the search.
+            foreach (var child in root.ChildNodes())
+                if (child is FormDeclarationSyntax f && string.Equals(f.NameText, name, StringComparison.Ordinal))
+                    return f;
+            return null;
+        }
+    }
 
     /// <summary>
     /// The optional output basename — the quoted string in the header

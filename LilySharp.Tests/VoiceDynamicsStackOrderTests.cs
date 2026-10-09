@@ -39,8 +39,8 @@ public class VoiceDynamicsStackOrderTests
           top { c'4 d e f | voice { g'2@f a } { c2@p d }  | }
           bot { c'4 b a g | f2 e2 | }
         }
-        form main { Main }
-        score main { staff top  staff bot }
+        form { Main }
+        score { staff top  staff bot }
         """;
 
     [Fact]

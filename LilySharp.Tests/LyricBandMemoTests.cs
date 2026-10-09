@@ -43,8 +43,8 @@ public class LyricBandMemoTests
         section Main {
           v { c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | }
         }
-        form main { ~Main }
-        score main { staff ~v  lyrics w }
+        form { ~Main }
+        score { staff ~v  lyrics w }
         """;
 
     private static string Full(string text) =>

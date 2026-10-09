@@ -34,7 +34,7 @@ namespace LilySharp.Tests;
 public sealed class MarkNameWordTests
 {
     private static string Book(string mark) =>
-        "part m { section A { c4" + mark + " d e f | } }\nform main { A }\nscore main { staff m }\n";
+        "part m { section A { c4" + mark + " d e f | } }\nform { A }\nscore { staff m }\n";
 
     [Theory]
     [InlineData("mf")] [InlineData("p")] [InlineData("r")]

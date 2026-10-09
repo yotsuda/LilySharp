@@ -48,17 +48,17 @@ part bassline {
   }
 }
 
-form main { Intro A1 A2 B1 A3 A4 Interlude B2 Interlude2 Outro }
+form { Intro A1 A2 B1 A3 A4 Interlude B2 Interlude2 Outro }
 
-score main {
+score {
   staff bassline
 }
 
-score main "both" {
+score "both" {
   staff bassline
   tab bassline
 }
 
-score main "tab" {
+score "tab" {
   tab bassline
 }

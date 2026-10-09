@@ -21,7 +21,7 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// Flags a <c>score</c> block that holds no render item at all (<c>score main { }</c>).
+/// Flags a <c>score</c> block that holds no render item at all (<c>score { }</c>).
 /// It is not a harmless no-op: the engraver happily lays out a page with a title and
 /// no music, which reads as a layout failure rather than as a mistake in the source.
 /// </summary>
@@ -43,7 +43,7 @@ internal sealed class EmptyScoreValidator : ISemanticValidator
             if (spec is null || !spec.Items.IsEmpty)
                 continue;
 
-            string name = render.FormNameText;
+            string name = render.ScoreNameText;
             string which = name.Length == 0 ? "This score" : $"Score '{name}'";
             // Mark the EMPTY BODY, not the `score` keyword: the body is what has to
             // change, and a squiggle on the keyword reads as "this line is wrong"

@@ -28,6 +28,6 @@ section C {
 
 // The segno stands in the form, before C (a mark in music is LYS1034 since 2026-10-04):
 // the same barline, the same picture.
-form main { A B to coda segno C }
+form { A B to coda segno C }
 
-score main "tocoda-label-mirror" { staff m }
+score "tocoda-label-mirror" { staff m }

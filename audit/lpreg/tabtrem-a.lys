@@ -11,5 +11,5 @@ section A {
     repeat tremolo 4 { <c@stemUp d>16 } |
   }
 }
-form main { A }
-score main { staff m tab m as numbers }
+form { A }
+score { staff m tab m as numbers }

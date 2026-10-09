@@ -36,8 +36,8 @@ public class BoxesTests
         part m { clef treble
           section A { c'4( d'8 e'~ e' f') | g'4 a'16 b' c'' d'' e''4 | fis'2. | }
         }
-        form main { A }
-        score main { staff m }
+        form { A }
+        score { staff m }
         """;
 
     private static IReadOnlyList<BoxPage> Pages(string book, params string[] settings)
@@ -114,8 +114,8 @@ public class BoxesTests
             part up { clef treble }
             part down { clef bass }
             section A { up { c''4 d'' e'' f'' | } down { c4 d e f | } }
-            form main { A }
-            score main { staff up  staff down }
+            form { A }
+            score { staff up  staff down }
             """;
         var page = Pages(two)[0];
         Assert.Equal(4, page.Symbols.Count(s => s.Kind == "notehead" && s.Staff == 0));
@@ -136,8 +136,8 @@ public class BoxesTests
             part up { clef treble }
             part down { clef bass }
             section A { up { c''4@p@fermata d''@staccato tuplet 3/2 { e''8 f'' g'' } a''4 | } down { c4@f d@accent@finger(1) e f@mf | } }
-            form main { A }
-            score main { staff up  staff down }
+            form { A }
+            score { staff up  staff down }
             """;
         var page = Pages(two)[0];
         Assert.Equal([0, 1, 1], page.Symbols.Where(s => s.Kind == "dynamics").OrderBy(s => s.Pos).Select(s => s.Staff));
@@ -154,7 +154,7 @@ public class BoxesTests
     {
         string sixty = "octave absolute\npart m { clef treble\n  section A { "
             + string.Concat(Enumerable.Repeat("c'8 d' e' f' g'4 a' | ", 60))
-            + "}\n}\nform main { A }\nscore main { staff m }\n";
+            + "}\n}\nform { A }\nscore { staff m }\n";
         Assert.Single(Pages(sixty));
         Assert.Equal(4, Pages(sixty, "systemsPerPage=3").Count);
     }

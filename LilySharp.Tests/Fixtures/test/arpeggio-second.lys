@@ -19,8 +19,8 @@ section Main {
   melody { test }
 }
 
-form main { Main }
+form { Main }
 
-score main "arpeggio-second" {
+score "arpeggio-second" {
   staff treble melody
 }

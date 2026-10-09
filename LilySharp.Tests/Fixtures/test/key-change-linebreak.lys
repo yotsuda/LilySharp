@@ -53,8 +53,8 @@ section Main {
   }
 }
 
-form main { Main }
+form { Main }
 
-score main "key-change-linebreak" {
+score "key-change-linebreak" {
   staff melody
 }

@@ -99,8 +99,8 @@ public class FontAttributeTests
           melody { fine c'4 d e f | g4@mark("Q") a b c' | }
           lyrics words { la la la la | la la la la | }
         }
-        form main { |: A [1. B] :| [2. C] Z _"rit." }
-        score main { chords prog  staff melody  lyrics words }
+        form { |: A [1. B] :| [2. C] Z _"rit." }
+        score { chords prog  staff melody  lyrics words }
         """;
     // (The last section is Z, not D: a section outside the repeat is labelled with its
     // name in a boxed mark, and a "D" label would be read as the chord symbol's "D".
@@ -118,8 +118,8 @@ public class FontAttributeTests
           fl { c'4 d e f | g4 a b c' | }
           ob { c'4 d e f | e4 f g a | }
         }
-        form main { A }
-        score main { combinedStaff { fl ob } }
+        form { A }
+        score { combinedStaff { fl ob } }
         """;
 
     /// <summary>A guitar book for the notation-side labels the main book has no place for:
@@ -133,8 +133,8 @@ public class FontAttributeTests
         section S {
           gtr { c4@hammerOn e@bend(full) g@diagram(x57565) b'\2 | }
         }
-        form main { S }
-        score main { staff gtr  tab gtr }
+        form { S }
+        score { staff gtr  tab gtr }
         """;
 
     /// <summary>A book in a compound meter, for the one string a time signature draws as
@@ -144,8 +144,8 @@ public class FontAttributeTests
         section A {
           melody { c'8 d e f g | }
         }
-        form main { A }
-        score main { staff melody }
+        form { A }
+        score { staff melody }
         """;
 
     /// <summary>A third book for the stanza number: three verses, no volta — every stanza
@@ -158,8 +158,8 @@ public class FontAttributeTests
           lyrics words { lo lo lo lo | }
           lyrics words { lu lu lu lu | }
         }
-        form main { A }
-        score main { staff melody  lyrics words }
+        form { A }
+        score { staff melody  lyrics words }
         """;
 
     /// <summary>The page with its <c>data-pos</c> source offsets masked: a <c>fonts</c> line
@@ -551,8 +551,8 @@ public class FontAttributeTests
         }
         const string wideLyrics = """
             section A { melody { c'4 d e f | } lyrics words { supercalifragilistic la la la | } }
-            form main { A }
-            score main { staff melody  lyrics words }
+            form { A }
+            score { staff melody  lyrics words }
             """;
         double plain = LastBarLineX(Svg(wideLyrics));
         double big = LastBarLineX(Svg("fonts { lyrics step +6 }\n" + wideLyrics));
@@ -700,8 +700,8 @@ public class FontAttributeTests
     private const string Book0Body =
         "part m { clef treble }\n"
         + "section A { m { c4 d e f | } chords prog { Am7 | } }\n"
-        + "form main { ~A }\n"
-        + "score main { chords prog  staff m }\n";
+        + "form { ~A }\n"
+        + "score { chords prog  staff m }\n";
 
     /// <summary>…and the same book writing no fonts block at all — the control.</summary>
     private const string Book0 = "time 4/4\n" + Book0Body;

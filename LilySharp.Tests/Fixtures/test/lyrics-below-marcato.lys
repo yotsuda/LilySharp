@@ -10,5 +10,5 @@ part melody { clef treble
   section A { c4@marcato c g' g | a a g2 | }
 }
 lyrics words sings melody { section A { Twin- kle twin- kle | lit- tle star | } }
-form main { A }
-score main "lyrics-below-marcato" { staff melody  lyrics words }
+form { A }
+score "lyrics-below-marcato" { staff melody  lyrics words }

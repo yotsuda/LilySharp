@@ -57,8 +57,8 @@ public sealed class RowsOnlySectionTempoTests
           chords prog { Am | F | }
           lyrics words { eight nine ten e- le- ven | twelve thir- teen | }
         }
-        form main { ~A ~B }
-        score main { {{render}} }
+        form { ~A ~B }
+        score { {{render}} }
         """;
 
     /// <summary>The metronome equations drawn ("= N"), left to right.</summary>
@@ -112,8 +112,8 @@ public sealed class RowsOnlySectionTempoTests
     public void ASectionPlayedTwice_PrintsItsTempoAtEachPass_OnARowsOnlySheet()
     {
         // Every pass gets its mark, as every pass of the staff walk's ProcessSection does.
-        string book = Book("chords prog").Replace("form main { ~A ~B }", "form main { ~A ~B ~B }");
-        string staffBook = Book("chords prog  staff melody").Replace("form main { ~A ~B }", "form main { ~A ~B ~B }");
+        string book = Book("chords prog").Replace("form { ~A ~B }", "form { ~A ~B ~B }");
+        string staffBook = Book("chords prog  staff melody").Replace("form { ~A ~B }", "form { ~A ~B ~B }");
         Assert.Equal(
             Equations(RenderedGeometry.Render(staffBook)).Select(t => t.Text),
             Equations(RenderedGeometry.Render(book)).Select(t => t.Text));

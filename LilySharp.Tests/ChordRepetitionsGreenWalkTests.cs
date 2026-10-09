@@ -42,7 +42,7 @@ public class ChordRepetitionsGreenWalkTests
           other { q4 <d f a>8 q q' 8 | }
         }
         section B { bass { q4 <f a>4 q q, | } other { lick | } }
-        score main { staff bass staff other }
+        score { staff bass staff other }
         """;
 
     [Fact]

@@ -36,7 +36,7 @@ namespace LilySharp.Tests;
 public class ChordBlockStrayTokenTests
 {
     // Four lowercase roots, each one character plus its trailing space: the 8 characters
-    // that would vanish. The `score main "another"` after it is what made it visible.
+    // that would vanish. The `score "another"` after it is what made it visible.
     private const string Source =
         "octave absolute\n"
         + "part melody\n"
@@ -44,9 +44,9 @@ public class ChordBlockStrayTokenTests
         + "  melody { c'4 d' e' f' }\n"
         + "  chords prog { c | f | g | c }\n"
         + "}\n"
-        + "form main { ~A }\n"
-        + "score main { staff melody }\n"
-        + "score main \"another\" {\n"
+        + "form { ~A }\n"
+        + "score { staff melody }\n"
+        + "score \"another\" {\n"
         + "  title \"別の楽譜\"\n"
         + "  staff melody\n"
         + "}\n";

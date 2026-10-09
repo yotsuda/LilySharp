@@ -82,8 +82,8 @@ public class ChordRowInlineAlignmentTests
          + "part m { clef treble }\n"
          + (progression is null ? "" : $"chords prog {{ {progression} }}\n")
          + $"section A {{ m {{ c'1 | {bar2} | {bar3} | }} }}\n"
-         + "form main { A }\n"
-         + $"score main {{ {placement} }}\n";
+         + "form { A }\n"
+         + $"score {{ {placement} }}\n";
 
     [Fact]
     public void InlineChord_PrintsOnTheRowsLine()
@@ -257,8 +257,8 @@ public class ChordRowInlineAlignmentTests
           + "octave absolute\n"
           + "part m { clef treble }\n"
           + "section A { m { c'1@chord(Cm7) | c'1@chord(F) | } chords prog { Cm7 | F | } }\n"
-          + "form main { A }\n"
-          + "score main { chords prog  staff m }\n");
+          + "form { A }\n"
+          + "score { chords prog  staff m }\n");
         Assert.False(tree.HasErrors,
             string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
@@ -317,8 +317,8 @@ public class ChordRowInlineAlignmentTests
               + "part up { clef treble }\n"
               + "part lo { clef treble }\n"
               + $"section A {{ up {{ b'1 | b'1 | }} lo {{ {lowerBars} }} }}\n"
-              + "form main { A }\n"
-              + "score main { staff up  staff lo }\n");
+              + "form { A }\n"
+              + "score { staff up  staff lo }\n");
             Assert.False(tree.HasErrors,
                 string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
             var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));

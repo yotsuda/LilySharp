@@ -8,8 +8,8 @@ part melody {
   section A { <c e g>4. e4. | <c e g>4. <c e g>4. | }
 }
 
-form main { A }
+form { A }
 
-score main "tab-numbers-dotted-chord" {
+score "tab-numbers-dotted-chord" {
   tab melody as numbers
 }

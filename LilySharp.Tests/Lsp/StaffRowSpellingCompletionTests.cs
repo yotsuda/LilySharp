@@ -44,11 +44,11 @@ namespace LilySharp.Tests.Lsp;
 public class StaffRowSpellingCompletionTests
 {
     /// <summary>One part, named so that no clef or tuning word collides with it.</summary>
-    private const string OnePart = "part melody { section A { c'4 d' e' f' | } }\nform main { A }\n";
+    private const string OnePart = "part melody { section A { c'4 d' e' f' | } }\nform { A }\n";
 
     /// <summary>…and a book whose SECOND part is named after a clef (and a tuning) word.</summary>
     private const string PartNamedBass =
-        "part melody { section A { c'4 d' e' f' | } }\npart bass { section A { c4 d e f | } }\nform main { A }\n";
+        "part melody { section A { c'4 d' e' f' | } }\npart bass { section A { c4 d e f | } }\nform { A }\n";
 
     private static string[] LabelsAt(string doc, string row)
     {
@@ -73,9 +73,9 @@ public class StaffRowSpellingCompletionTests
     }
 
     [Theory]
-    [InlineData("score main { staff treble ▮ }")]
-    [InlineData("score main { ossia treble ▮ }")]
-    [InlineData("score main { grandStaff { staff treble ▮ } }")]
+    [InlineData("score { staff treble ▮ }")]
+    [InlineData("score { ossia treble ▮ }")]
+    [InlineData("score { grandStaff { staff treble ▮ } }")]
     public void AfterAClefThatNamesNoPart_OnlyThePartsAreOffered(string row)
     {
         // The clef has been written, so a part NAME is the only thing that can follow —
@@ -88,14 +88,14 @@ public class StaffRowSpellingCompletionTests
     {
         // `staff bass` in a book that declares `part bass` may already be complete, so both
         // readings are offered — the case the unconditional list was written for.
-        var labels = LabelsAt(PartNamedBass, "score main { staff bass ▮ }");
+        var labels = LabelsAt(PartNamedBass, "score { staff bass ▮ }");
         Assert.Equal(new[] { "melody", "bass", "as lines", "as removeEmpty" }, labels);
     }
 
     [Theory]
-    [InlineData("score main { staff treble melody ▮ }")]
-    [InlineData("score main { ossia treble melody ▮ }")]
-    [InlineData("score main { staff bass melody ▮ }")]   // clef word, other part name
+    [InlineData("score { staff treble melody ▮ }")]
+    [InlineData("score { ossia treble melody ▮ }")]
+    [InlineData("score { staff bass melody ▮ }")]   // clef word, other part name
     public void AfterAClefAndTheName_TheSelectorsAreOffered(string row)
     {
         var labels = LabelsAt(OnePart, row);
@@ -111,12 +111,12 @@ public class StaffRowSpellingCompletionTests
         // A group refuses the score-wide list (LYS6011), so the three-word row must land in
         // the GROUP's continuation set, not the score's.
         Assert.Equal(new[] { "as lines", "as removeEmpty", "staff", "condensedStaff", "combinedStaff", "grandStaff", "staffGroup", "choirStaff", "lyrics" },
-            LabelsAt(OnePart, "score main { grandStaff { staff treble melody ▮ } }"));
+            LabelsAt(OnePart, "score { grandStaff { staff treble melody ▮ } }"));
     }
 
     [Theory]
-    [InlineData("score main { staff melody ▮ }")]
-    [InlineData("score main { tab melody ▮ }")]
+    [InlineData("score { staff melody ▮ }")]
+    [InlineData("score { tab melody ▮ }")]
     public void TheTwoWordRowIsUnchanged(string row)
     {
         var labels = LabelsAt(OnePart, row);
@@ -129,11 +129,11 @@ public class StaffRowSpellingCompletionTests
         // The tab row's tuning is the clef's twin (`tab bass5 melody`), and its `as` was
         // offered after every tuning word for the same untested reason. One book, one part
         // named `bass`, both answers.
-        Assert.Equal(new[] { "melody" }, LabelsAt(OnePart, "score main { tab bass5 ▮ }"));
+        Assert.Equal(new[] { "melody" }, LabelsAt(OnePart, "score { tab bass5 ▮ }"));
         Assert.Equal(new[] { "melody", "bass", "as numbers", "as full" },
-            LabelsAt(PartNamedBass, "score main { tab bass ▮ }"));
+            LabelsAt(PartNamedBass, "score { tab bass ▮ }"));
 
-        var withName = LabelsAt(OnePart, "score main { tab bass5 melody ▮ }");
+        var withName = LabelsAt(OnePart, "score { tab bass5 melody ▮ }");
         Assert.Contains("as numbers", withName);
         Assert.Contains("as full", withName);
     }
@@ -141,9 +141,9 @@ public class StaffRowSpellingCompletionTests
     // ===== the `as` chain: `[ 'as' , StaffSelector , { StaffSelector } ]` =====
 
     [Theory]
-    [InlineData("score main { staff m as lines 1 ▮ }", "removeEmpty", "lines")]
-    [InlineData("score main { staff m as removeEmpty all ▮ }", "lines", "removeEmpty")]
-    [InlineData("score main { ossia m as lines 1 ▮ }", "removeEmpty", "lines")]
+    [InlineData("score { staff m as lines 1 ▮ }", "removeEmpty", "lines")]
+    [InlineData("score { staff m as removeEmpty all ▮ }", "lines", "removeEmpty")]
+    [InlineData("score { ossia m as lines 1 ▮ }", "removeEmpty", "lines")]
     public void AfterACompleteSelector_TheChainGoesOnWithTheOtherOne(
         string row, string expected, string written)
     {
@@ -162,7 +162,7 @@ public class StaffRowSpellingCompletionTests
     [Fact]
     public void WhenBothSelectorsAreWritten_OnlyTheContinuationsRemain()
     {
-        var labels = LabelsAt(OnePart, "score main { staff m as lines 1 removeEmpty all ▮ }");
+        var labels = LabelsAt(OnePart, "score { staff m as lines 1 removeEmpty all ▮ }");
         Assert.DoesNotContain("lines", labels);
         Assert.DoesNotContain("removeEmpty", labels);
         Assert.Contains("staff", labels);
@@ -171,12 +171,12 @@ public class StaffRowSpellingCompletionTests
     [Fact]
     public void TheChainInsideAGroup_KeepsTheGroupsNarrowContinuations()
         => Assert.Equal(new[] { "removeEmpty", "staff", "condensedStaff", "combinedStaff", "grandStaff", "staffGroup", "choirStaff", "lyrics" },
-            LabelsAt(OnePart, "score main { grandStaff { staff m as lines 1 ▮ } }"));
+            LabelsAt(OnePart, "score { grandStaff { staff m as lines 1 ▮ } }"));
 
     [Theory]
-    [InlineData("score main { staff m as ▮ }", "lines")]          // a selector MUST follow `as`
-    [InlineData("score main { staff m as lines ▮ }", "1")]        // the line count
-    [InlineData("score main { staff m as removeEmpty ▮ }", "true")]
+    [InlineData("score { staff m as ▮ }", "lines")]          // a selector MUST follow `as`
+    [InlineData("score { staff m as lines ▮ }", "1")]        // the line count
+    [InlineData("score { staff m as removeEmpty ▮ }", "true")]
     public void TheValueSlotsInsideTheClauseAreUnchanged(string row, string expected)
     {
         var labels = LabelsAt(OnePart, row);
@@ -188,7 +188,7 @@ public class StaffRowSpellingCompletionTests
     public void TheChainTheCompilerAccepts_IsWhatTheItemsSpell()
     {
         // The net under the two items above: the spelling they build parses and validates.
-        string book = OnePart + "score main { staff melody as lines 1 removeEmpty all }\n";
+        string book = OnePart + "score { staff melody as lines 1 removeEmpty all }\n";
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(book);
         Assert.False(tree.HasErrors,
             "the chained selectors do not parse: "
@@ -200,9 +200,9 @@ public class StaffRowSpellingCompletionTests
     // ===== the row's other optional clauses =====
 
     [Theory]
-    [InlineData("score main { staff ~m ▮ }")]                       // the label suppressor
-    [InlineData("score main { staff m \"Violin I\" ▮ }")]           // the display name
-    [InlineData("score main { staff ~treble m \"Violin I\" ▮ }")]   // all of them at once
+    [InlineData("score { staff ~m ▮ }")]                       // the label suppressor
+    [InlineData("score { staff m \"Violin I\" ▮ }")]           // the display name
+    [InlineData("score { staff ~treble m \"Violin I\" ▮ }")]   // all of them at once
     public void EveryOptionalClauseKeepsTheRowsSelectors(string row)
     {
         var labels = LabelsAt(OnePart, row);
@@ -211,13 +211,13 @@ public class StaffRowSpellingCompletionTests
     }
 
     [Theory]
-    [InlineData("score main { chords prog as roman ▮ }")]
-    [InlineData("score main { tab m as numbers ▮ }")]
+    [InlineData("score { chords prog as roman ▮ }")]
+    [InlineData("score { tab m as numbers ▮ }")]
     public void ARowWhoseSelectorDoesNotChain_EndsThere(string row)
     {
         // Control on the other rows: `ConsumeAsSelector` takes exactly ONE word, so there is
         // no chain to offer — the score's continuations are the whole answer.
-        string doc = "part m { section A { c'4 } }\nchords prog { section A { C } }\nform main { A }\n";
+        string doc = "part m { section A { c'4 } }\nchords prog { section A { C } }\nform { A }\n";
         var labels = LabelsAt(doc, row);
         Assert.Contains("staff", labels);
         Assert.DoesNotContain("numbers", labels);
@@ -231,7 +231,7 @@ public class StaffRowSpellingCompletionTests
         // The row reader has to END the staff row at a word the grammar cannot attach:
         // `staff m  n` is a staff row AND a MIDI-only part row, so the caret after `n` is
         // not inside the staff row and must not be offered its selectors.
-        var labels = LabelsAt(OnePart + "part n { section A { c4 } }\n", "score main { staff m  n ▮ }");
+        var labels = LabelsAt(OnePart + "part n { section A { c4 } }\n", "score { staff m  n ▮ }");
         Assert.DoesNotContain("as lines", labels);
         Assert.Contains("staff", labels);
     }
@@ -241,7 +241,7 @@ public class StaffRowSpellingCompletionTests
     {
         // Control: at `staff ▮` both the parts and the clefs that may precede one belong —
         // the row this whole test file is about starts here.
-        var labels = LabelsAt(OnePart, "score main { staff ▮ }");
+        var labels = LabelsAt(OnePart, "score { staff ▮ }");
         Assert.Contains("melody", labels);
         Assert.Contains("treble", labels);
         Assert.DoesNotContain("as lines", labels);

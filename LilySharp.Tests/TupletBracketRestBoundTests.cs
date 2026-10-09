@@ -58,8 +58,8 @@ public class TupletBracketRestBoundTests
           instrument bass
           section A { d,4\3 tuplet 3/4 { r16 c a,\2 } g,4\2 a,,4 | }
         }
-        form main { A }
-        score main { staff melody }
+        form { A }
+        score { staff melody }
         """;
 
     // THE CONTROL: the same tuplet with the rest replaced by a NOTE. Now the beam DOES reach
@@ -73,8 +73,8 @@ public class TupletBracketRestBoundTests
           instrument bass
           section A { d,4\3 tuplet 3/4 { e16 c a,\2 } g,4\2 a,,4 | }
         }
-        form main { A }
-        score main { staff melody }
+        form { A }
+        score { staff melody }
         """;
 
     /// <summary>
@@ -161,8 +161,8 @@ public class TupletBracketRestBoundTests
         part melody { instrument bass
           section A { c,16[ tuplet 3/4 { r16 c a,\2 ] } g,4\2 a,,4 r8. | }
         }
-        form main { A }
-        score main { staff melody }
+        form { A }
+        score { staff melody }
         """;
 
     // A GrandStaff whose UPPER tuplet is three unbeamed quarters while the LOWER staff of the
@@ -178,8 +178,8 @@ public class TupletBracketRestBoundTests
           rh { tuplet 3/2 { c''4 c'' c'' } c''2 | }
           lh { c8 d e f g a b c' | }
         }
-        form main { S }
-        score main { grandStaff { staff rh staff lh } }
+        form { S }
+        score { grandStaff { staff rh staff lh } }
         """;
 
     /// <summary>
@@ -196,8 +196,8 @@ public class TupletBracketRestBoundTests
     public void ABeamedTupletOnALowerStaff_DrawsItsNumberOnly(bool staffAbove)
     {
         string score = staffAbove
-            ? "score main { staff sop  grandStaff { staff rh  staff lh } }"
-            : "score main { grandStaff { staff rh  staff lh } }";
+            ? "score { staff sop  grandStaff { staff rh  staff lh } }"
+            : "score { grandStaff { staff rh  staff lh } }";
         var g = RenderedGeometry.Render($$"""
             octave absolute
             time 7/8
@@ -209,7 +209,7 @@ public class TupletBracketRestBoundTests
               rh { tuplet 3/2 { d''16 e'' f'' } g''8 a'' bes''4 c'''4 | }
               lh { bes,8 f, bes, c4 f4 | }
             }
-            form main { ~S }
+            form { ~S }
             {{score}}
             """);
         Assert.Contains(g.Texts, t => t.Text == "3");
@@ -282,8 +282,8 @@ public class TupletBracketRestBoundTests
         part melody {
           section A { tuplet 3/2 { r8[ c c] } c4 c4 r4 | }
         }
-        form main { A }
-        score main { staff melody }
+        form { A }
+        score { staff melody }
         """;
 
     /// <summary>

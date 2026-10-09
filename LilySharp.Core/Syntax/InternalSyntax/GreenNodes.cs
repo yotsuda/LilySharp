@@ -818,16 +818,17 @@ internal sealed class PartBlockGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// Structure declaration: structure { ... }
+/// Form declaration: <c>form [Name] { ... }</c> — and, inside a score, the score's own
+/// <c>form { ... }</c> or its reference <c>form Name</c> (no braces, so both are null).
 /// </summary>
 internal sealed class FormDeclarationGreen : GreenSyntaxNode
 {
     public FormDeclarationGreen(
         SyntaxToken formKeyword,
         SyntaxToken? name,
-        SyntaxToken openBrace,
+        SyntaxToken? openBrace,
         GreenNode?[] items,
-        SyntaxToken closeBrace)
+        SyntaxToken? closeBrace)
         : base(SyntaxKind.FormDeclaration,
             name != null
                 ? [formKeyword, name, openBrace, .. items, closeBrace]

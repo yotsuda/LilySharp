@@ -6,9 +6,9 @@ part melody {
   section A { repeat percent 2 { c1@p@accent( | c@f) | } }
 }
 
-form main { A }
+form { A }
 
-score main "percent-covered-bows" {
+score "percent-covered-bows" {
   staff melody
   tab melody as numbers
 }

@@ -89,37 +89,37 @@ public class CompletionAuditTests
     private static string Book(string top = "", string music = "c4 d e f |", string header = "",
         string items = "staff m", string sectionExtra = "")
         => $"{top}\npart m {{ clef treble }}\nsection A {{ {sectionExtra} m {{ {music} }} }}\n"
-         + $"form main {{ A }}\nscore main {header} {{ {items} }}\n";
+         + $"form {{ A }}\nscore {header} {{ {items} }}\n";
 
     // ================= contexts =================
 
     [Theory]
     // The score header, before its brace — after the form name, a basename, an option's value.
-    [InlineData("score main ", "AfterScoreHeader")]
-    [InlineData("score main \"out\" ", "AfterScoreHeader")]
-    [InlineData("score main transpose d ", "AfterScoreHeader")]
-    [InlineData("score main \"out\" pitch concert tr", "AfterScoreHeader")]
+    [InlineData("score ", "AfterScoreHeader")]
+    [InlineData("score \"out\" ", "AfterScoreHeader")]
+    [InlineData("score transpose d ", "AfterScoreHeader")]
+    [InlineData("score \"out\" pitch concert tr", "AfterScoreHeader")]
     // `transpose |` takes a pitch everywhere the word is a directive.
-    [InlineData("score main transpose ", "AfterTransposePitch")]
+    [InlineData("score transpose ", "AfterTransposePitch")]
     [InlineData("transpose ", "AfterTransposePitch")]
     [InlineData("part sax { transpose ", "AfterTransposePitch")]
     // `tab` — parts and tunings; after a tuning, the parts (and, the tuning word being a
     // legal part name, the style selector); after the part, the style selector.
-    [InlineData("score main { tab ", "AfterTabRef")]
-    [InlineData("score main { tab bass5 ", "AfterTabTuningRef")]
-    [InlineData("score main { tab bass ", "AfterTabTuningRef")]
-    [InlineData("score main { tab melody ", "AfterTabAttachName")]
-    [InlineData("score main { tab bass5 melody ", "AfterTabAttachName")]
-    [InlineData("score main { staff m  tab melody ", "AfterTabAttachName")]
+    [InlineData("score { tab ", "AfterTabRef")]
+    [InlineData("score { tab bass5 ", "AfterTabTuningRef")]
+    [InlineData("score { tab bass ", "AfterTabTuningRef")]
+    [InlineData("score { tab melody ", "AfterTabAttachName")]
+    [InlineData("score { tab bass5 melody ", "AfterTabAttachName")]
+    [InlineData("score { staff m  tab melody ", "AfterTabAttachName")]
     // `staff CLEF |` / `ossia CLEF |` — the part name comes next.
-    [InlineData("score main { staff bass ", "AfterStaffClefRef")]
-    [InlineData("score main { ossia treble ", "AfterStaffClefRef")]
-    [InlineData("score main { grandStaff { staff treble_8 ", "AfterStaffClefRef")]
+    [InlineData("score { staff bass ", "AfterStaffClefRef")]
+    [InlineData("score { ossia treble ", "AfterStaffClefRef")]
+    [InlineData("score { grandStaff { staff treble_8 ", "AfterStaffClefRef")]
     // …and a part NAME after `staff` keeps the selector list.
-    [InlineData("score main { staff melody ", "AfterStaffAttachName")]
+    [InlineData("score { staff melody ", "AfterStaffAttachName")]
     // The two bare-name groups.
-    [InlineData("score main { condensedStaff { ", "BarePartNameList")]
-    [InlineData("score main { combinedStaff { fl1 ", "BarePartNameList")]
+    [InlineData("score { condensedStaff { ", "BarePartNameList")]
+    [InlineData("score { combinedStaff { fl1 ", "BarePartNameList")]
     // Lyrics bodies, in every spelling: a by-section cell (named, bound, unnamed), a
     // by-part track's inner section, mid-verse.
     [InlineData("section A { lyrics w { ", "LyricsBody")]
@@ -130,7 +130,7 @@ public class CompletionAuditTests
     // The top-level track itself keeps its section-scaffold list, and a music body its own.
     [InlineData("lyrics w { ", "LyricsBlock")]
     [InlineData("section A { m { c4 d ", "MusicBlock")]
-    [InlineData("score main { ", "ScoreBlock")]
+    [InlineData("score { ", "ScoreBlock")]
     public void TheNewPositions_GetTheirOwnContext(string text, string expected)
         => Assert.Equal(expected, Ctx(text).ToString());
 
@@ -215,14 +215,14 @@ public class CompletionAuditTests
     [Fact]
     public void NavigationMarks_AreTheCompilersList_InTheFormPopupAlone()
     {
-        const string doc = "part m { section A { c4 d e f | } }\nform main { A }";
+        const string doc = "part m { section A { c4 d e f | } }\nform { A }";
         var form = LilySharpLanguageServer.GetFormCompletions(doc).Items.Select(i => i.Label).ToHashSet();
         var drums = LilySharpLanguageServer.GetDrumCompletions().Items.Select(i => i.Label).ToHashSet();
         foreach (string mark in LanguageVocabulary.NavigationMarks)
         {
             Assert.Contains(mark, form);
             Assert.DoesNotContain(mark, drums);
-            AssertCompiles(Book().Replace("form main { A }", $"form main {{ A {mark} A }}"), $"`{mark}` in a form");
+            AssertCompiles(Book().Replace("form { A }", $"form {{ A {mark} A }}"), $"`{mark}` in a form");
         }
         // The list is the ten the grammar spells (GRAMMAR NavMark) — guard the guard.
         Assert.Equal(10, LanguageVocabulary.NavigationMarks.Count);
@@ -253,8 +253,8 @@ public class CompletionAuditTests
               melody { c4 c g g | }
               bass { c2 g | }
             }
-            form main { A }
-            score main { staff melody  lyrics words  chords prog  staff bass }
+            form { A }
+            score { staff melody  lyrics words  chords prog  staff bass }
             """;
         AssertCompiles(book, "the section's lyrics and chords cells");
     }
@@ -346,7 +346,7 @@ public class CompletionAuditTests
             AssertCompiles(Book(sectionExtra: $"lyrics w sings m {{ {verse} }}", items: "staff m  lyrics w"),
                 $"`{item.Label}` in a by-section lyrics cell");
             AssertCompiles($"part m {{ section A {{ c4 d e f | }} }}\nlyrics w sings m {{ section A {{ {verse} }} }}\n"
-                           + "form main { A }\nscore main { staff m  lyrics w }", $"`{item.Label}` in a by-part track");
+                           + "form { A }\nscore { staff m  lyrics w }", $"`{item.Label}` in a by-part track");
         }
         // No pitch letters in a lyrics body.
         Assert.DoesNotContain(items, i => i.Label is "c" or "d");
@@ -503,7 +503,7 @@ public class CompletionAuditTests
             static bool NotABarLength(Diagnostic d)
                 => d.Code != DiagnosticCodes.MeasureOverflow && d.Code != DiagnosticCodes.MeasureIncomplete;
             var header = Errors($"part m {{ clef treble section A {{ c4 d e f | }} }}\nsection A {{ {line} }}\n"
-                                + "form main { A }\nscore main { staff m }").Where(NotABarLength).ToList();
+                                + "form { A }\nscore { staff m }").Where(NotABarLength).ToList();
             Assert.True(header.Count == 0, $"`{line}` in a by-part section header is refused: "
                 + string.Join(" | ", header.Select(d => $"{d.Code} {d.Message}")));
             var beside = Errors(Book(sectionExtra: line)).Where(NotABarLength).ToList();

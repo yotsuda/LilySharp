@@ -13,6 +13,6 @@ section A {
   vtwo { octave relative c'2 d | }
 }
 
-form main { ~A }
+form { ~A }
 
-score main { combinedStaff { vone vtwo } }
+score { combinedStaff { vone vtwo } }

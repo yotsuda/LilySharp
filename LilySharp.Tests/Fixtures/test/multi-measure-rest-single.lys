@@ -29,8 +29,8 @@ section Main {
   }
 }
 
-form main { Main }
+form { Main }
 
-score main "multi-measure-rest-single" {
+score "multi-measure-rest-single" {
   staff melody
 }

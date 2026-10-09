@@ -15,5 +15,5 @@ lyrics words sings melody {
     [2. How I won- der | what you are |]
   }
 }
-form main { A |: ~B :| A "A2" }
-score main { staff melody  lyrics words }
+form { A |: ~B :| A "A2" }
+score { staff melody  lyrics words }

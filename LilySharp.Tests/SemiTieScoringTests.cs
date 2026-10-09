@@ -41,8 +41,8 @@ public class SemiTieScoringTests
         time 4/4
         part melody { clef treble }
         section A { melody { {{music}} } }
-        form main { ~A }
-        score main { staff melody }
+        form { ~A }
+        score { staff melody }
         """;
 
     [Fact]

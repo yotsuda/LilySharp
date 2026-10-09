@@ -36,9 +36,9 @@ lyrics words {
   section Main { a b c d | e | f | g | }
 }
 
-form main { Main }
+form { Main }
 
-score main "mid-bar-break" {
+score "mid-bar-break" {
   chords prog
   staff melody
   lyrics words

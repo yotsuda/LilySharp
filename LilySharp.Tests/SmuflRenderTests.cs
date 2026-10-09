@@ -36,14 +36,14 @@ public class SmuflRenderTests
     private const string Book =
         "part m { clef treble }\n" +
         "section A { m { c'4 d'8 e'8 fis'2 | g'1 } }\n" +
-        "form main { A }\n" +
-        "score main { staff m }\n";
+        "form { A }\n" +
+        "score { staff m }\n";
 
     private const string GrandStaff =
         "part rh { clef treble }\npart lh { clef bass }\n" +
         "section A { rh { c''4 d'' e'' f'' } lh { c4 d e f } }\n" +
-        "form main { A }\n" +
-        "score main { grandStaff { staff rh staff lh } }\n";
+        "form { A }\n" +
+        "score { grandStaff { staff rh staff lh } }\n";
 
     private static string Svg(string source) => LiveRender.SvgFromRenderSpec(source);
 

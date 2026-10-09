@@ -22,5 +22,5 @@ section Main {
     pseudopseudohypo |
   }
 }
-form main { Main }
-score main "lyric-break-pricing" { staff melody  lyrics words }
+form { Main }
+score "lyric-break-pricing" { staff melody  lyrics words }

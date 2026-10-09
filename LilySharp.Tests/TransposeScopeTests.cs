@@ -50,7 +50,7 @@ public sealed class TransposeScopeTests
           m { c4 d e f | }
         }
 
-        form main { ~Main }
+        form { ~Main }
         """;
 
     // The same four notes, moved by the same interval, written three ways.
@@ -64,12 +64,12 @@ public sealed class TransposeScopeTests
           m { c4 d e f | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main { staff m }
+        score { staff m }
         """;
 
-    private const string OnTheScore = Music + "\n\nscore main transpose d { staff m }\n";
+    private const string OnTheScore = Music + "\n\nscore transpose d { staff m }\n";
 
     private const string OnTheFile =
         """
@@ -82,16 +82,16 @@ public sealed class TransposeScopeTests
           m { c4 d e f | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main { staff m }
+        score { staff m }
         """;
 
-    private const string Untransposed = Music + "\n\nscore main { staff m }\n";
+    private const string Untransposed = Music + "\n\nscore { staff m }\n";
 
     // A score that asks for nothing, sitting before one that asks for a transpose.
     private const string PlainThenTransposed =
-        Music + "\n\nscore main \"plain\" { staff m }\nscore main \"up\" transpose d { staff m }\n";
+        Music + "\n\nscore \"plain\" { staff m }\nscore \"up\" transpose d { staff m }\n";
 
     private static List<string> Pitches(string source)
     {

@@ -93,8 +93,8 @@ public class LyricsTrackBodyCompletionTests
               section A { Do re mi fa | }
               ▮
             }
-            form main { A B }
-            score main { staff melody  lyrics words }
+            form { A B }
+            score { staff melody  lyrics words }
             """);
         var labels = CompletionLabelsAt(text, offset);
 
@@ -114,8 +114,8 @@ public class LyricsTrackBodyCompletionTests
               section A { Do re mi fa | }
               section ▮
             }
-            form main { A B }
-            score main { staff melody  lyrics words }
+            form { A B }
+            score { staff melody  lyrics words }
             """);
         var labels = CompletionLabelsAt(text, offset);
 

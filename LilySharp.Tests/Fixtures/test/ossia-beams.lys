@@ -13,9 +13,9 @@ section Main {
     }
 }
 
-form main { Main }
+form { Main }
 
-score main "ossia-beams" {
+score "ossia-beams" {
     staff melody
     ossia ossia_melody
 }

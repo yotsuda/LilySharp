@@ -50,8 +50,8 @@ public class TieShortTieHeightTests
             e, b,, e, d,~ d, g,, gis,, a,,~ | a,, c, cis, d,~ d, a,, c, d, | e, b,, e, d,~ d, e, f, fis,~ | fis, b,, c, cis,~ cis, cis, d, dis, | break
           }
         }
-        form main { A }
-        score main { staff bassline }
+        form { A }
+        score { staff bassline }
         """;
 
     [Fact]

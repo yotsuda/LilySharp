@@ -94,8 +94,8 @@ public class CommonShortestDurationTests
             key c major
             part melody
             section Main { melody { c8 d e f | R2*3 | } }
-            form main { Main }
-            score main "x" { staff melody }
+            form { Main }
+            score "x" { staff melody }
             """;
         var tree = TestPaper.ParseAtIndentZero(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -119,8 +119,8 @@ public class CommonShortestDurationTests
         const string book = """
             part melody
             section Main { melody { r1 | r1 | c16 d e f g a b c' c' b a g f e d c | r1 | } }
-            form main { Main }
-            score main "x" { staff melody }
+            form { Main }
+            score "x" { staff melody }
             """;
         Assert.Equal(0.1875, ShortestOf(book), 4);
         Assert.Equal(0.0625, ShortestOf(book.Replace("r1", "R1")), 4);
@@ -155,8 +155,8 @@ public class CommonShortestDurationTests
             part melody { clef treble }
             section A { melody { c8 d e f g a b c' | R1*3 | } }
             lyrics verse { section A { one two three four five six seven eight | } }
-            form main { A }
-            score main {
+            form { A }
+            score {
               {{(row ? "lyrics verse sings melody" : "")}}
               staff melody
             }
@@ -180,8 +180,8 @@ public class CommonShortestDurationTests
             part melody { clef treble }
             section A { melody { c4 d e f | g a b c' | } }
             lyrics verse { section A { one two three four five six seven eight | one two three four five six seven eight | } }
-            form main { A }
-            score main {
+            form { A }
+            score {
               staff melody
               {{(row ? "lyrics verse" : "")}}
             }
@@ -233,8 +233,8 @@ public class CommonShortestDurationTests
               vocal { g8 g a4 a8 a a4 | g2 f | e4 f g2 | c1 | }
               lyrics en sings vocal { a b a b a b | a b | a b a | b | }
             }
-            form main { Chorus }
-            score main {
+            form { Chorus }
+            score {
               staff sax
               {{(row ? "lyrics en" : "")}}
             }
@@ -263,8 +263,8 @@ public class CommonShortestDurationTests
             part melody { clef treble }
             section A { melody { c4 d e f | } }
             chords prog { section A { C G C G C G C G | } }
-            form main { A }
-            score main {
+            form { A }
+            score {
               chords prog as names
               staff melody
             }

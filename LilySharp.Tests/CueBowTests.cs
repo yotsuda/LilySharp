@@ -43,8 +43,8 @@ public sealed class CueBowTests
             part m {
               section A { {{music}} }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));

@@ -2,7 +2,7 @@
 // prints one everywhere else — so ONE book has to show both halves, or the picture cannot
 // tell "the rule fired" from "the repeat was never collected".
 //
-// `form main { |: A :| B |: C :| }`:
+// `form { |: A :| B |: C :| }`:
 //   · the opening `|:` before A is at moment 0 and draws NOTHING — no thick bar, no dots,
 //     and no reserved width either (the grob is not created, so the spacing never sees it);
 //   · the `:|` closing A still draws, as does the `|:` opening C one bar later.
@@ -25,8 +25,8 @@ section A { tune { c'1 } }
 section B { tune { d'1 } }
 section C { tune { e'1 } }
 
-form main { |: A :| B |: C :| }
+form { |: A :| B |: C :| }
 
-score main "initial-repeat-bar" {
+score "initial-repeat-bar" {
   staff tune
 }

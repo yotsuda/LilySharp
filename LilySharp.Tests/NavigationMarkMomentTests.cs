@@ -54,7 +54,7 @@ public sealed class NavigationMarkMomentTests
 {
     private static string Book(string music)
         => "part m { clef treble }\nsection A { m {\n" + music + "\n} }\n"
-           + "form main { ~A }\nscore main { staff m }\n";
+           + "form { ~A }\nscore { staff m }\n";
 
     private static MusicMarkItem Mark(string music, MusicMarkType type)
     {

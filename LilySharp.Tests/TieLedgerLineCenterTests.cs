@@ -51,8 +51,8 @@ public class TieLedgerLineCenterTests
         key d major
         part bassline
         section Main { bassline { clef bass {{Bar}} noBreak {{Bar}} noBreak {{Bar}} noBreak {{Bar}} } }
-        form main { Main }
-        score main "x" { staff bassline }
+        form { Main }
+        score "x" { staff bassline }
         """;
 
     [Fact]

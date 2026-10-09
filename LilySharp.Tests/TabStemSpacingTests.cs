@@ -56,9 +56,9 @@ public sealed class TabStemSpacingTests
           gtr { MUSIC }
         }
 
-        form main { A }
+        form { A }
 
-        score main { tab gtr }
+        score { tab gtr }
         """;
 
     /// <summary>Bars 1-5 of the probe: one system, so every gap is its natural length.</summary>
@@ -119,9 +119,9 @@ public sealed class TabStemSpacingTests
             section B { gtr { e'4\1 e'\1 e'\1 e'\1 | break } }
             section C { gtr { c4\5 c\5 c\5 c\5 | } }
 
-            form main { A |: B :| |: C :| }
+            form { A |: B :| |: C :| }
 
-            score main { tab gtr }
+            score { tab gtr }
             """;
         var g = RenderedGeometry.Render(book);
         // Each system's four digits share one string, so one Y a system; systems in page order.
@@ -156,9 +156,9 @@ public sealed class TabStemSpacingTests
             section B { gtr { e'4\1 e'\1 e'\1 e'\1 | break } }
             section C { gtr { c4\5 c\5 c\5 c\5 | } }
 
-            form main { A |: B :| |: C :| }
+            form { A |: B :| |: C :| }
 
-            score main { tab gtr as numbers }
+            score { tab gtr as numbers }
             """;
         var g = RenderedGeometry.Render(book);
         var firsts = g.Texts.Where(t => t.Role == TextRole.TabFret)
@@ -193,8 +193,8 @@ public sealed class TabStemSpacingTests
               instrument bass
               section A { {{music}} }
             }
-            form main { A }
-            score main { tab cb }
+            form { A }
+            score { tab cb }
             """;
         var g = RenderedGeometry.Render(book);
         var xs = g.Texts.Where(t => t.Role == TextRole.TabFret).Select(t => t.X).OrderBy(x => x).ToArray();

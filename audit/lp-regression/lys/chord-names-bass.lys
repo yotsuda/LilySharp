@@ -22,6 +22,6 @@ section Main {
   }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { chords prog  staff v }
+score { chords prog  staff v }

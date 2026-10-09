@@ -54,8 +54,8 @@ public class SectionBoundaryFrameTests
         part m { clef {{clef}} }
         section A { m { c4 d e f | g2 g | } }
         section B { m { c4 d e f | } }
-        form main { A B }
-        score main { staff m }
+        form { A B }
+        score { staff m }
         """;
 
     [Theory]
@@ -78,8 +78,8 @@ public class SectionBoundaryFrameTests
         var notes = ExportNotes("""
             part m { clef treble }
             section A { m { c4 d e f | g2 g | c4 d e f | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.Equal(72, notes[6].Pitch);
     }
@@ -94,8 +94,8 @@ public class SectionBoundaryFrameTests
             part m { clef treble }
             section A { m { c2 d | } }
             section B { m { c d e f | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.Equal(6, notes.Count);
         int half = notes[0].DurationTicks;
@@ -109,8 +109,8 @@ public class SectionBoundaryFrameTests
         var notes = ExportNotes("""
             part m { clef treble }
             section A { m { c2 d | e f | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.Equal(4, notes.Count);
         Assert.All(notes, n => Assert.Equal(notes[0].DurationTicks, n.DurationTicks));

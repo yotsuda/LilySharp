@@ -87,8 +87,8 @@ public class LooseBlockCropTests
         + "part m { clef treble }\n"
         + $"section A {{ m {{ {pitches} | }} }}\n"
         + "lyrics v { section A { Twin- kle twin- kle | } }\n"
-        + "form main { ~A }\n"
-        + $"score main \"{name}\" {{\n  staff m\n  lyrics v sings m\n}}\n";
+        + "form { ~A }\n"
+        + $"score \"{name}\" {{\n  staff m\n  lyrics v sings m\n}}\n";
 
     /// <summary>
     /// How far the deepest syllable's BASELINE stands above the page foot, in page Y-up.
@@ -173,8 +173,8 @@ public class LooseBlockCropTests
             "key c major\n"
             + "part m { clef treble }\n"
             + $"section A {{\n  m {{ {music}}}\n{sung}}}\n"
-            + "form main { ~A }\n"
-            + "score main \"CRPC\" {\n  staff m  lyrics words\n}\n");
+            + "form { ~A }\n"
+            + "score \"CRPC\" {\n  staff m  lyrics words\n}\n");
 
         var systems = layout.AllSystems;
         Assert.True(systems.Length >= 2,

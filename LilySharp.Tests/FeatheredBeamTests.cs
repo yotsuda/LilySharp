@@ -270,7 +270,7 @@ public class FeatheredBeamTests
     private const string Book =
         "octave absolute\npart m { clef treble\n"
         + "  section A { MUSIC | c'4 d' e' f' | }\n}\n"
-        + "form main { A }\nscore main { staff m }\n";
+        + "form { A }\nscore { staff m }\n";
 
     private const string UpStemMusic = "c'16ANNOTATION d' e' f'";
 

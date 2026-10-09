@@ -28,7 +28,7 @@ namespace LilySharp.Core.Svg.Collector;
 /// <c>form</c> lays it out — so a <c>|:</c> written in a section's music may be closed by a
 /// <c>:|</c> the FORM writes, and vice versa. The two spellings sit in different layers of
 /// the syntax tree and are only siblings after score expansion. Books in the wild are
-/// written exactly that way: <c>form main { Intro |: A1 … :| … }</c> where section A1's own
+/// written exactly that way: <c>form { Intro |: A1 … :| … }</c> where section A1's own
 /// music also opens with <c>|:</c>.
 /// <para>
 /// The collector has already done that expansion: <c>ProcessRepeatBlock</c> emits a form

@@ -273,7 +273,7 @@ $template = @'
     <div class="paper"><img src="air-in-d.svg" alt="Two-voice dance with first and second endings"></div>
     <p class="note"><b>A repeat changes the playing order, so it is written where the order
     is.</b> The music itself holds no repeat barline —
-    <code>form main { |: ~Body [1. ~First] :| [2. ~Second] }</code> is what draws the repeat
+    <code>form { |: ~Body [1. ~First] :| [2. ~Second] }</code> is what draws the repeat
     dots and the numbered brackets. A <code>:|</code> written among the notes is refused
     outright. <b>Two voices, one staff:</b> <code>voice { … } { … }</code> opens the span
     once and each further brace is another voice — the stems sort themselves up and down.</p>
@@ -444,9 +444,9 @@ section Verse {
   chords prog { Am | }
 }
 
-form main { |: Verse :| }  // the repeat lives here
+form { |: Verse :| }  // the repeat lives here
 
-score main {
+score {
   chords prog              // a row above ...
   staff  gt                // ... the staff it belongs to
   tab    gt                // and its tablature

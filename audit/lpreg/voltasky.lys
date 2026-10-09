@@ -27,9 +27,9 @@ section A1 { v { r2 a'''4 r4 | } }
 section A2 { v { r2 a'''4 r4 | } }
 section A3 { v { r2 a'''4 r4 | } }
 
-form main {
+form {
   |: ~Body1 [1. ~D1] :| [2. ~D2] :| [3. ~D3]
   |: ~Body2 [1. ~A1] :| [2. ~A2] :| [3. ~A3]
 }
 
-score main { staff ~v }
+score { staff ~v }

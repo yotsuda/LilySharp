@@ -57,8 +57,8 @@ public class LooseChangeColumnTests
             "  rh { tuplet 3/2 { g4 a2 } | }\n" +
             "  lh { fis,,8 cis, clef treble g8 fis, | }\n" +
             "}\n" +
-            "form main { S }\n" +
-            "score main \"loose\" { grandStaff { staff rh staff lh } }\n");
+            "form { S }\n" +
+            "score \"loose\" { grandStaff { staff rh staff lh } }\n");
 
         var blacks = MusicGlyphs(svg, EmmentalerGlyphs.NoteheadBlack);
         Assert.Equal(5, blacks.Count);

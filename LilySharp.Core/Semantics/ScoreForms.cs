@@ -21,8 +21,8 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// Which <c>form</c> an output renders when nothing says otherwise: the one named
-/// <c>main</c>, else the first declared.
+/// Which <c>form</c> an output renders when nothing says otherwise: the unnamed one, else
+/// the first declared.
 /// </summary>
 /// <remarks>
 /// ⚠️ ONE HOME, because three exporters had written the same two lines and one of them had
@@ -43,12 +43,12 @@ public static class ScoreForms
     public static IReadOnlyList<FormDeclarationSyntax> All(SyntaxNode root)
         => TopLevelNodes.OfRoot<FormDeclarationSyntax>(root).ToList();
 
-    /// <summary>The form an output renders by default — <c>main</c>, else the first
-    /// declared, else null when the file declares none (the sections then play in
-    /// declaration order).</summary>
+    /// <summary>The form an output renders by default — the unnamed <c>form { … }</c>, else
+    /// the first declared, else null when the file declares none (the sections then play in
+    /// declaration order). Until 2026-10-09 the default was the one named <c>main</c>.</summary>
     public static FormDeclarationSyntax? Primary(SyntaxNode root)
     {
         var forms = All(root);
-        return forms.FirstOrDefault(f => f.NameText == "main") ?? forms.FirstOrDefault();
+        return forms.FirstOrDefault(f => f.NameText.Length == 0) ?? forms.FirstOrDefault();
     }
 }

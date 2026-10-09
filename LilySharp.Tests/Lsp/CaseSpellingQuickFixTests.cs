@@ -78,8 +78,8 @@ public class CaseSpellingQuickFixTests
     private static string Book(string music, string layout = "") => $$"""
         {{layout}}part gt { clef treble }
         section A { gt { {{music}} } chords prog { C(X32010) | } }
-        form main { A }
-        score main { chords prog  staff gt }
+        form { A }
+        score { chords prog  staff gt }
         """;
 
     [Theory]

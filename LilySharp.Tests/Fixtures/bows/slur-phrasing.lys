@@ -3,5 +3,5 @@ time 4/4
 part m {
   section A { c'4@phrasingSlur d'( e') f' | g'( a') b' c''@!phrasingSlur | e4@phrasingSlur f( g a) | b( c' d') e'@!phrasingSlur | }
 }
-form main { A }
-score main { staff m }
+form { A }
+score { staff m }

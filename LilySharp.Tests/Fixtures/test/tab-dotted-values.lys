@@ -5,8 +5,8 @@ part gtr { instrument guitar }
 section A {
   gtr { e4. f8 g4. a8 | <c e g>2. <d f a>4 | }
 }
-form main { A }
-score main {
+form { A }
+score {
   staff gtr
   tab gtr as full
 }

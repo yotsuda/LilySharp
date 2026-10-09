@@ -72,8 +72,8 @@ public class PageChainDebugTests
               rh { {{rh}} }
               lh { {{lh}} }
             }
-            form main { S }
-            score main "chain" { staff rh staff lh }
+            form { S }
+            score "chain" { staff rh staff lh }
             """;
     }
 

@@ -168,7 +168,7 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
         }
 
         // Both spellings of a form's section reference — `A` and the label-hiding `~A` —
-        // live in SectionSymbols, for the reason its remark gives: `form main { ~Nope }`
+        // live in SectionSymbols, for the reason its remark gives: `form { ~Nope }`
         // passed `lysc check` clean until the silent one was added HERE, and the next
         // spelling should have one place to be added rather than two.
         //

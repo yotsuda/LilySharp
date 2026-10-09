@@ -71,8 +71,8 @@ public class SectionHeaderDirectiveTests
             {{(headerFirst ? header : body)}}
             {{(headerFirst ? body : header)}}
             section Q { melody { c'8 d' e' | f'4 g' a' b' | } }
-            form main { ~P ~Q }
-            score main { staff melody }
+            form { ~P ~Q }
+            score { staff melody }
             """);
         Assert.Equal(2, score.Voice.Measures.Length);
         var pickup = score.Voice.Measures[0];
@@ -88,8 +88,8 @@ public class SectionHeaderDirectiveTests
         var score = Collect("""
             time 4/4
             section A { time 3/4  melody { c4 d e | } }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """);
         OpensIn(score, 3, 4);
     }
@@ -105,9 +105,9 @@ public class SectionHeaderDirectiveTests
     /// per timestep.
     /// </remarks>
     [Theory]
-    [InlineData("time 4/4", "form main { A }", 4, 4)]
-    [InlineData("time 4/4", "form main { |: A :| }", 4, 4)]
-    [InlineData("time 3/4", "form main { |: A :| }", 3, 4)]
+    [InlineData("time 4/4", "form { A }", 4, 4)]
+    [InlineData("time 4/4", "form { |: A :| }", 4, 4)]
+    [InlineData("time 3/4", "form { |: A :| }", 3, 4)]
     public void TheOpeningSectionsHeaderTime_IsTheOpeningSignature_NotAChange(
         string headerTime, string form, int beats, int beatType)
     {
@@ -115,7 +115,7 @@ public class SectionHeaderDirectiveTests
         var score = Collect($$"""
             section A { {{headerTime}}  melody { {{body}} } }
             {{form}}
-            score main { staff melody }
+            score { staff melody }
             """);
         OpensIn(score, beats, beatType);
         Assert.DoesNotContain(score.Voice.Measures.SelectMany(m => m.Items), i => i is TimeSignatureChangeItem);
@@ -129,8 +129,8 @@ public class SectionHeaderDirectiveTests
             tempo 100
             section A { melody { c4 d e f | } }
             section B { tempo 140  melody { g4 a b c' | } }
-            form main { A B }
-            score main { staff melody }
+            form { A B }
+            score { staff melody }
             """);
         Assert.Contains(score.MusicMarks, m => m.Type == MusicMarkType.Tempo && m.Text == "140");
     }
@@ -147,8 +147,8 @@ public class SectionHeaderDirectiveTests
             part lh { clef bass  section A { c4 e g e } section B { c4 g, c g, } }
             section A { }
             section B { tempo 140 }
-            form main { A B }
-            score main { staff rh  staff lh }
+            form { A B }
+            score { staff rh  staff lh }
             """);
         var renderSpec = RenderSpecParser.FindFirst(tree)!;
         var score = new MeasureCollector().CollectMultiStaff(tree, renderSpec);
@@ -164,8 +164,8 @@ public class SectionHeaderDirectiveTests
             tempo 100
             section A { tempo 140  melody { c4 d e f | } }
             section B { melody { g4 a b c' | } }
-            form main { A B }
-            score main { staff melody }
+            form { A B }
+            score { staff melody }
             """);
         Assert.Equal(140, score.Tempo);
         // It replaced the opening mark — no second Tempo mark stacked on top of it.
@@ -179,8 +179,8 @@ public class SectionHeaderDirectiveTests
             time 4/4
             part melody { section A { c4 d e | } }
             section A { time 3/4 }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """);
         OpensIn(score, 3, 4);
     }
@@ -192,8 +192,8 @@ public class SectionHeaderDirectiveTests
             tempo 100
             part melody { section A { c4 d e f | } section B { g4 a b c' | } }
             section B { tempo 140 }
-            form main { A B }
-            score main { staff melody }
+            form { A B }
+            score { staff melody }
             """);
         Assert.Contains(score.MusicMarks, m => m.Type == MusicMarkType.Tempo && m.Text == "140");
     }
@@ -206,8 +206,8 @@ public class SectionHeaderDirectiveTests
         var score = Collect("""
             time 4/4
             section A { partial 4  melody { g4 | c' d' e' f' | } }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """);
         Assert.Equal(Fraction.Quarter, score.Voice.Measures[0].TotalDuration);
         Assert.Equal(new Fraction(4, 4), score.Voice.Measures[1].TotalDuration);
@@ -220,8 +220,8 @@ public class SectionHeaderDirectiveTests
             time 4/4
             part melody { section A { g4 | c' d' e' f' | } }
             section A { partial 4 }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """);
         Assert.Equal(Fraction.Quarter, score.Voice.Measures[0].TotalDuration);
     }
@@ -248,8 +248,8 @@ public class SectionHeaderDirectiveTests
             part lh { clef bass }
             {{sectionA}}
             section B { rh { c'1 | }  lh { c1 | } }
-            form main { ~A ~B }
-            score main { grandStaff { staff rh  staff lh } }
+            form { ~A ~B }
+            score { grandStaff { staff rh  staff lh } }
             """);
         var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
 
@@ -271,8 +271,8 @@ public class SectionHeaderDirectiveTests
             time 4/4
             section A { time 3/4  melody { c4 d e | } }
             section B { melody { c4 d e f | } }
-            form main { A B }
-            score main { staff melody }
+            form { A B }
+            score { staff melody }
             """);
         OpensIn(score, 3, 4);               // A's meter opens the piece
         Assert.True(HasMeter(score, 4, 4)); // B reverted

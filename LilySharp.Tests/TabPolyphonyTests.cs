@@ -42,7 +42,7 @@ public class TabPolyphonyTests
             "octave absolute\n\npart gt { clef treble_8 tuning guitar }\n\n"
             + "section Main {\n  gt {\n    c'1 |\n"
             + "    voice { c'4 d' e' f' } { g,1 } |\n    c'1 |\n  }\n}\n\n"
-            + "form main { ~Main }\n\nscore main { staff gt tab gt as numbers }\n");
+            + "form { ~Main }\n\nscore { staff gt tab gt as numbers }\n");
 
         var digits = System.Text.RegularExpressions.Regex.Matches(svg,
                 "<text x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" font-size=\"[\\d.]+\"(?: font-weight=\"bold\")? text-anchor=\"middle\"[^>]*>(\\d+)</text>")

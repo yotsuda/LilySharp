@@ -19,5 +19,5 @@ section Main {
     a'8[ r8 a'8 ] |
   }
 }
-form main { Main }
-score main "beamed-rest" { staff melody }
+form { Main }
+score "beamed-rest" { staff melody }

@@ -40,8 +40,8 @@ public class PedalMixedChangeTests
         time 3/4
         part lh { clef bass pedal {{style}} }
         section S { lh { c4@sustain e g | c4@sustain e g | c4@sustain e g | c2.@!sustain | } }
-        form main { ~S }
-        score main { staff lh }
+        form { ~S }
+        score { staff lh }
         """;
 
     private static int PedWords(string style)

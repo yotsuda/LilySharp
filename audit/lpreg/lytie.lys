@@ -4,6 +4,6 @@ time 4/4
 
 lyrics w { section Main { wa~o~a | } }
 
-form main { ~Main }
+form { ~Main }
 
-score main { lyrics w }
+score { lyrics w }

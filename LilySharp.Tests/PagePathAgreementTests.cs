@@ -95,9 +95,9 @@ public class PagePathAgreementTests
           section B { g''4 g'' f'' f'' | e'' e'' d''2 | break }
         }
 
-        form main { {{string.Join(" ", Enumerable.Range(0, systems).Select(i => i % 2 == 0 ? "A" : "B"))}} }
+        form { {{string.Join(" ", Enumerable.Range(0, systems).Select(i => i % 2 == 0 ? "A" : "B"))}} }
 
-        score main {
+        score {
         {{string.Join("\n", Enumerable.Repeat("  staff melody", staffCount))}}
         }
         """;

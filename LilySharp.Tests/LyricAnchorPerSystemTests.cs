@@ -68,8 +68,8 @@ public class LyricAnchorPerSystemTests
           section A { Twin- kle twin- kle | lit- tle star | }
           section B { Twin- kle twin- kle | lit- tle star | }
         }
-        form main { A B }
-        score main {
+        form { A B }
+        score {
           chords prog as names
           staff melody
           lyrics verse sings melody

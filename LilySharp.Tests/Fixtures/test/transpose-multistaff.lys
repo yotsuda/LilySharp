@@ -16,9 +16,9 @@ section Main {
   lower { c4 d e f | g2 e | }
 }
 
-form main { Main }
+form { Main }
 
-score main "transpose-multistaff" {
+score "transpose-multistaff" {
   grandStaff {
     staff upper
     staff lower

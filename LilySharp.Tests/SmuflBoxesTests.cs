@@ -33,8 +33,8 @@ public class SmuflBoxesTests
     private const string Book =
         "part m { clef bass }\n" +
         "section A { m { c4@figuredBass(6) d4 e2 } }\n" +
-        "form main { A }\n" +
-        "score main { staff m }\n";
+        "form { A }\n" +
+        "score { staff m }\n";
 
     private static BoxDocument Boxes(string fonts)
     {

@@ -8,5 +8,5 @@ section A {
   melody { e'2 c'2 | c'2 b2 | c''2 g'2 | }
   chords prog { C(x32010) Am(x02210) | F(133211) G7(320001) | Cm(8xx88-11) Cm(xx-10-12-13-11) | }
 }
-form main { ~A }
-score main { chords prog  staff melody }
+form { ~A }
+score { chords prog  staff melody }

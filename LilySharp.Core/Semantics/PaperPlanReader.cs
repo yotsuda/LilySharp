@@ -296,16 +296,31 @@ internal static class PaperPlanReader
     internal static LayoutOptions ReadReference(SyntaxNode root, PaperDeclarationSyntax reference,
         LayoutOptions fallback, LayoutOptions? @base = null)
     {
-        if (!TryResolve(root, reference, out var declaration, out _))
+        // A score's bare `paper { … }` (2026-10-09): the file's unnamed default with the
+        // score's entries laid over it, read as one merged block like a named reference is.
+        bool bare = reference.NameToken == null && reference.IsBlock;
+        var declaration = bare
+            ? FileDefault(root)
+            : TryResolve(root, reference, out var named, out _) ? named : null;
+        if (declaration == null && !bare)
             return fallback;
         var discard = new List<Problem>();
         // The staff space either block writes (the override's first) goes under both.
-        double? staffSpace = (reference.IsBlock ? StaffSpaceOf(reference) : null) ?? StaffSpaceOf(declaration!);
-        var options = ReadEntriesInto(OnStaffSpace(@base ?? LayoutOptions.Default, staffSpace), declaration!, discard);
+        double? staffSpace = (reference.IsBlock ? StaffSpaceOf(reference) : null)
+            ?? (declaration != null ? StaffSpaceOf(declaration) : null);
+        var options = OnStaffSpace(@base ?? LayoutOptions.Default, staffSpace);
+        if (declaration != null)
+            options = ReadEntriesInto(options, declaration, discard);
         if (reference.IsBlock)
             options = ReadEntriesInto(options, reference, discard);
         return options;
     }
+
+    /// <summary>The file's unnamed top-level paper block (the last, as a repeated global
+    /// setting reads), or null.</summary>
+    internal static PaperDeclarationSyntax? FileDefault(SyntaxNode root) =>
+        TopLevelNodes.OfRoot<PaperDeclarationSyntax>(root)
+            .LastOrDefault(p => p.NameToken == null && p.IsBlock);
 
     /// <summary>Overlays one block's entries onto <paramref name="options"/> — the loop
     /// <see cref="Read(PaperDeclarationSyntax, LayoutOptions, out IReadOnlyList{Problem})"/> and

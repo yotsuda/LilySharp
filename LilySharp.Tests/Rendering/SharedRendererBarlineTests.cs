@@ -41,8 +41,8 @@ public sealed class SharedRendererBarlineTests
                 line { {{body}} }
             }
 
-            form main { Demo }
-            score main "out" { staff line }
+            form { Demo }
+            score "out" { staff line }
             """;
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
@@ -100,8 +100,8 @@ public sealed class SharedRendererBarlineTests
     [InlineData("""
         time 4/4
         part m { clef treble section A { c4 d e f | } section B { g4 a b c' | } }
-        form main { A |: B :| }
-        score main { staff m }
+        form { A |: B :| }
+        score { staff m }
         """, 5)]
     // A staffless lyrics row with TWO verses: the band is taller than a staff, which is the
     // only shape that can tell "centred" apart from "1.5 below the top".
@@ -112,8 +112,8 @@ public sealed class SharedRendererBarlineTests
           section A { one two three four | }
           section B { [~1. five six sev- en |] [~2. eight nine ten e- le- ven |] }
         }
-        form main { A |: B :| }
-        score main { lyrics v }
+        form { A |: B :| }
+        score { lyrics v }
         """, 0)]
     // …and the span between them is the SEARCH's answer for that band: five lines put a dot
     // in each space beside the middle line, a band with no lines at all takes LilyPond's

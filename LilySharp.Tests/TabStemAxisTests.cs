@@ -81,8 +81,8 @@ public class TabStemAxisTests
         time 4/4
         part m { clef treble_8 tuning guitar }
         section A { m { {{music}} } }
-        form main { A }
-        score main { tab m }
+        form { A }
+        score { tab m }
         """;
 
     [Fact]

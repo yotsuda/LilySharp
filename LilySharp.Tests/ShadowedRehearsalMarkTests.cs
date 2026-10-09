@@ -49,8 +49,8 @@ public sealed class ShadowedRehearsalMarkTests
         "part m { clef treble }\n"
         + "section Solo { m { c'1@mark(\"Solo\") | d'1 | } }\n"
         + "section B { m { e'1@mark(\"B\") | f'1 | } }\n"
-        + "form main { Solo ~B }\n"
-        + "score main { staff m }\n";
+        + "form { Solo ~B }\n"
+        + "score { staff m }\n";
 
     private static System.Collections.Immutable.ImmutableArray<MusicMarkItem> AllMarks(string source)
     {
@@ -108,7 +108,7 @@ public sealed class ShadowedRehearsalMarkTests
     [Fact]
     public void ASilentReference_KeepsTheMark_AndNothingIsReported()
     {
-        string book = Book.Replace("form main { Solo ~B }", "form main { ~Solo ~B }");
+        string book = Book.Replace("form { Solo ~B }", "form { ~Solo ~B }");
         var first = Assert.Single(AllMarks(book).Where(m => m.MeasureIndex == 0));
         Assert.Equal(MusicMarkType.Rehearsal, first.Type);
         Assert.Empty(Shadowed(book));
@@ -119,7 +119,7 @@ public sealed class ShadowedRehearsalMarkTests
     [Fact]
     public void ARepeatedSection_ReportsTheWrittenMarkOnce()
     {
-        string book = Book.Replace("form main { Solo ~B }", "form main { Solo Solo ~B }");
+        string book = Book.Replace("form { Solo ~B }", "form { Solo Solo ~B }");
         Assert.Single(Shadowed(book));
         Assert.Empty(AllMarks(book).Where(m => m.Type == MusicMarkType.Rehearsal && m.Text == "Solo"));
     }

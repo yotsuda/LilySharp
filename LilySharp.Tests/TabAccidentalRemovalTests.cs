@@ -65,9 +65,9 @@ public class TabAccidentalRemovalTests
           pn { c4 d e f | g2 e }
         }
 
-        form main { Main }
+        form { Main }
 
-        score main { staff pn  tab gt }
+        score { staff pn  tab gt }
         """;
 
     private static MultiStaffScore Collect()

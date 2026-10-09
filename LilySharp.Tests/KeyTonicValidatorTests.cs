@@ -33,8 +33,8 @@ public class KeyTonicValidatorTests
         key {{key}}
         part v { clef treble }
         section S { v { c4 d e f | } }
-        form main { ~S }
-        score main { staff v }
+        form { ~S }
+        score { staff v }
         """;
 
     private static Diagnostic[] Check(string key) =>
@@ -128,16 +128,16 @@ public class KeyTonicValidatorTests
         time 4/4
         part v { clef treble key ef major }
         section S { v { c4 d e f | } }
-        form main { ~S }
-        score main { staff v }
+        form { ~S }
+        score { staff v }
         """)]
     [InlineData("""
         octave absolute
         time 4/4
         part v { clef treble }
         section S { v { c4 d key ef major e f | } }
-        form main { ~S }
-        score main { staff v }
+        form { ~S }
+        score { staff v }
         """)]
     public void ATonicIsCheckedWhereverAKeyCanBeWritten(string book) =>
         Assert.Contains(

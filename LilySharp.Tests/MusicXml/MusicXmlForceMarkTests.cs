@@ -33,8 +33,8 @@ public class MusicXmlForceMarkTests
         string source = $$"""
             part m { clef treble }
             section A { m { {{music}} } }
-            form main { ~A }
-            score main { staff m }
+            form { ~A }
+            score { staff m }
             """;
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));

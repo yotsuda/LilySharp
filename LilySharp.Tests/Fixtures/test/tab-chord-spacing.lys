@@ -9,8 +9,8 @@ part gt { clef treble_8 tuning guitar }
 section A {
   gt { <c' e' g'>4 <c' e' g'> <c' e' g'> <c' e' g'> }
 }
-form main { A }
-score main "tab-chord-spacing" {
+form { A }
+score "tab-chord-spacing" {
   staff gt
   tab gt
 }

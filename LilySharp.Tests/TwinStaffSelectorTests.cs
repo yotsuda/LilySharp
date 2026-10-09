@@ -32,8 +32,8 @@ public class TwinStaffSelectorTests
         part rh { clef treble }
         part lh { clef bass }
         section A { rh { c'1 | } lh { r1 | } }
-        form main { A }
-        score main { {{scoreBody}} }
+        form { A }
+        score { {{scoreBody}} }
         """));
 
     [Theory]

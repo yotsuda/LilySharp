@@ -20,9 +20,9 @@ section Chorus {
   }
 }
 
-form main { Chorus }
+form { Chorus }
 
-score main "sings-chorus-row" {
+score "sings-chorus-row" {
   staff sax
   lyrics ja
   lyrics en

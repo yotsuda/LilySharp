@@ -53,15 +53,15 @@ public class TransposedMidiPitchTests
             octave absolute
             part m { clef treble transpose g }
             section A { m { f'4 | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         var control = FirstNote("""
             octave absolute
             part m { clef treble }
             section A { m { c''4 | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
 
         Assert.Equal(control.Midi, transposed.Midi);

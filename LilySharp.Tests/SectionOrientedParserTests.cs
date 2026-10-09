@@ -60,7 +60,7 @@ section A {
     public void ParseStructureDeclaration_Simple()
     {
         var source = @"
-form main {
+form {
     Intro
     A
     B
@@ -73,7 +73,7 @@ form main {
     public void ParseStructureDeclaration_WithNavigation()
     {
         var source = @"
-form main {
+form {
     Intro
     segno
     A
@@ -89,7 +89,7 @@ form main {
     public void ParseRenderDeclaration_Staff()
     {
         var source = @"
-score main ""output"" {
+score ""output"" {
     staff guitar
 }";
         var tree = SyntaxTree.Parse(source);
@@ -100,7 +100,7 @@ score main ""output"" {
     public void ParseRenderDeclaration_Tab()
     {
         var source = @"
-score main ""guitar"" {
+score ""guitar"" {
     staff guitar
     tab guitar guitar
 }";
@@ -122,7 +122,7 @@ score main ""guitar"" {
     public void ParseRenderDeclaration_Midi()
     {
         var source = @"
-score main ""song"" {
+score ""song"" {
     guitar
     bass
 }";
@@ -130,7 +130,7 @@ score main ""song"" {
         Assert.False(tree.HasErrors);
 
         Assert.True(SyntaxTree.Parse(@"
-score main ""song"" {
+score ""song"" {
     guitar octave 1 instrument 25
 }").HasErrors);
     }
@@ -156,12 +156,12 @@ section A {
     bass { e,4 b, e, b, }
 }
 
-form main {
+form {
     Intro
     A
 }
 
-score main ""test"" {
+score ""test"" {
     staff guitar
     staff bass bass
 }
@@ -174,7 +174,7 @@ score main ""test"" {
     public void ParseStructureDeclaration_VoltaBracket_Simple()
     {
         var source = @"
-form main {
+form {
     |: Verse [1. Bridge] :| [2. Chorus]
 }";
         var tree = SyntaxTree.Parse(source);
@@ -185,7 +185,7 @@ form main {
     public void ParseStructureDeclaration_VoltaBracket_SilentSection()
     {
         var source = @"
-form main {
+form {
     |: Verse [1. Bridge] :| [2. ~Verse]
 }";
         var tree = SyntaxTree.Parse(source);
@@ -207,7 +207,7 @@ form main {
     public void ParseStructureDeclaration_VoltaBracket_RangeWithSilent()
     {
         var source = @"
-form main {
+form {
     |: Verse [1-2. Bridge] :| [3. ~Coda] x3
 }";
         var tree = SyntaxTree.Parse(source);
@@ -219,7 +219,7 @@ form main {
     {
         // Navigation marks are BARE (a standalone landmark, not a note modifier).
         var source = @"
-form main {
+form {
     Intro
     segno
     Verse
@@ -236,7 +236,7 @@ form main {
     public void ParseStructureDeclaration_NavigationMark_WithAt_IsRejected()
     {
         // '@' modifies a note; a navigation mark with '@' (@segno) is a syntax error.
-        var source = "form main { Intro @segno Verse @fine }";
+        var source = "form { Intro @segno Verse @fine }";
         var tree = SyntaxTree.Parse(source);
         var errors = tree.Diagnostics
             .Where(d => d.Code == LilySharp.Core.Syntax.DiagnosticCodes.NavigationMarkIsBare)
@@ -251,7 +251,7 @@ form main {
     public void ParseStructureDeclaration_NavigationMark_CompoundBare()
     {
         var source = @"
-form main {
+form {
     Intro
     ds al fine
 }";
@@ -266,7 +266,7 @@ form main {
     public void ParseStructureDeclaration_CustomText_Simple()
     {
         var source = @"
-form main {
+form {
     Intro
     _""molto rit.""
     Verse
@@ -286,7 +286,7 @@ form main {
     public void ParseStructureDeclaration_CustomText_WithSpecialChars()
     {
         var source = @"
-form main {
+form {
     Intro
     _""cresc. poco a poco""
 }";

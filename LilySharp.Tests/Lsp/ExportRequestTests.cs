@@ -54,10 +54,10 @@ public sealed class ExportRequestTests : IDisposable
         part melody { clef treble }
         phrase mel { c4 d e f | g4 a b c | }
         section Main { melody { mel } }
-        form main { Main }
+        form { Main }
         form sub { Main Main }
-        score main { staff melody }
-        score sub { staff melody }
+        score { staff melody }
+        score sub { form sub staff melody }
         """;
 
     // Parts, a section and a form, but no `score` block — the renderer's default
@@ -67,7 +67,7 @@ public sealed class ExportRequestTests : IDisposable
         key c major
         part melody { clef treble }
         section Main { melody { c4 d e f | g1 | } }
-        form main { Main }
+        form { Main }
         """;
 
     private string Book(string name, string text)

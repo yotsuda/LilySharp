@@ -15,9 +15,9 @@ section Main {
   }
 }
 
-form main { Main }
+form { Main }
 
-score main "perf-v2bow1k" {
+score "perf-v2bow1k" {
   staff m
 }
 

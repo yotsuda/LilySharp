@@ -35,7 +35,7 @@ namespace LilySharp.Core.Editing;
 /// <para>
 /// ⚠️ A form has TWO spellings of a reference — <c>A</c> and <c>~A</c>, the latter hiding
 /// the printed rehearsal label — and that is exactly the pair that has drifted before:
-/// <c>form main { ~Nope }</c> passed <c>lysc check</c> clean until the silent spelling was
+/// <c>form { ~Nope }</c> passed <c>lysc check</c> clean until the silent spelling was
 /// added to the validator. Both live in <see cref="ReferencedName"/> so the next reader
 /// finds one place to add a third.
 /// </para>

@@ -40,7 +40,7 @@ namespace LilySharp.Tests;
 /// </para>
 /// <para>
 /// ⚠️ IT WAS INVERTED INSIDE A REPEAT, AND ONLY THERE (user report,
-/// scratch/ベースタブLy/repeat-disappear.lys, 2026-08-25): <c>form main { A |: [1. ~B :| }</c>
+/// scratch/ベースタブLy/repeat-disappear.lys, 2026-08-25): <c>form { A |: [1. ~B :| }</c>
 /// printed B's label and drew no ending at all. <c>MeasureCollector.Form.cs</c>'s in-repeat
 /// arm wrote the label unconditionally and gated the BRACKET on <c>IsSilent</c> — both
 /// halves the wrong way round — while the three other page readers
@@ -69,7 +69,7 @@ public class FormVoltaSilentLabelTests
         """;
 
     private static string Source(string form) =>
-        $"{Head}\n\nform main {{ {form} }}\n\nscore main {{\n  staff melody\n}}\n";
+        $"{Head}\n\nform {{ {form} }}\n\nscore {{\n  staff melody\n}}\n";
 
     private static string Svg(string form)
     {

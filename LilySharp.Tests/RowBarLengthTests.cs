@@ -63,8 +63,8 @@ public class RowBarLengthTests
           m { d'4 | g'2 b'8 g'8 | g'2 d'4 | }
           chords prog { | G | G | }
         }
-        form main { A }
-        score main { chords prog  staff m }
+        form { A }
+        score { chords prog  staff m }
         """;
 
     [Fact]
@@ -85,8 +85,8 @@ public class RowBarLengthTests
             part m { clef treble }
             section A { m { c'1 | } chords prog { C | } }
             section B { time 3/4  m { d'2. | } chords prog { D | } }
-            form main { A B }
-            score main { chords prog  staff m }
+            form { A B }
+            score { chords prog  staff m }
             """);
         Assert.Equal(new Fraction(1, 1), BarLength(score, "prog", 0));
         Assert.Equal(new Fraction(3, 4), BarLength(score, "prog", 1));
@@ -104,8 +104,8 @@ public class RowBarLengthTests
               m { c'4 | d'4 e' f' g' | }
               lyrics words { one | two three four five | }
             }
-            form main { A }
-            score main { staff m  lyrics words }
+            form { A }
+            score { staff m  lyrics words }
             """);
         Assert.Equal(new Fraction(1, 4), BarLength(score, "words", 0));
         Assert.Equal(new Fraction(1, 1), BarLength(score, "words", 1));

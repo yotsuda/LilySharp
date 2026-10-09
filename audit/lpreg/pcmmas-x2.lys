@@ -11,6 +11,6 @@ section A {
   sa2 { R1*2 | }
 }
 
-form main { ~A }
+form { ~A }
 
-score main { combinedStaff { sa1 sa2 } }
+score { combinedStaff { sa1 sa2 } }

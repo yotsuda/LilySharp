@@ -54,10 +54,10 @@ public class ExportedFormSelectionTests
         part m { clef treble }
         section First  { m { c4 c c c | } }
         section Second { m { g2 g | g1 | } }
-        form main   { First }
+        form   { First }
         form encore { Second }
-        score main "first" { staff m }
-        score encore "second" { staff m }
+        score "first" { staff m }
+        score encore "second" { form encore staff m }
         """;
 
     private static FormDeclarationSyntax FormNamed(SyntaxTree tree, string name)
@@ -113,8 +113,8 @@ public class ExportedFormSelectionTests
     }
 
     /// <summary>
-    /// Two scores on ONE form — the tab corpus's shape, <c>score main</c> beside
-    /// <c>score main "tab"</c> — are told apart by their staves, and the twin engraves the
+    /// Two scores on ONE form — the tab corpus's shape, <c>score</c> beside
+    /// <c>score "tab"</c> — are told apart by their staves, and the twin engraves the
     /// score it is handed.
     /// </summary>
     /// <remarks>
@@ -129,9 +129,9 @@ public class ExportedFormSelectionTests
         var tree = SyntaxTree.Parse("""
             part b { clef bass tuning bass }
             section A { b { e,4 a, d g | } }
-            form main { A }
-            score main { staff b }
-            score main "tab" { tab b }
+            form { A }
+            score { staff b }
+            score "tab" { tab b }
             """);
         var tab = Core.Svg.Collector.RenderSpecParser.FindDeclaredByName(tree, "tab")!.Value;
 
@@ -172,7 +172,7 @@ public class ExportedFormSelectionTests
             part m { clef treble }
             section Only { m { e4 | } }
             form finale { Only }
-            score finale { staff m }
+            score finale { form finale staff m }
             """);
 
         Assert.Equal("finale", ScoreForms.Primary(tree.GetRoot())!.NameText);

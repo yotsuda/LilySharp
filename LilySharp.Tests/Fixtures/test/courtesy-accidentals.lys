@@ -40,8 +40,8 @@ section Main {
   melody { noAutoCourtesy explicitCourtesy noCourtesy noAutoFlatCourtesy }
 }
 
-form main { Main }
+form { Main }
 
-score main "courtesy-accidentals" {
+score "courtesy-accidentals" {
   staff melody
 }

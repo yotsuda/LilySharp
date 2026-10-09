@@ -12,5 +12,5 @@ lyrics words sings melody {
   section A { la la la la | }
   section B { up up up up | }
 }
-form main { A |: B :| dc A "A2" }
-score main { staff melody  lyrics words }
+form { A |: B :| dc A "A2" }
+score { staff melody  lyrics words }

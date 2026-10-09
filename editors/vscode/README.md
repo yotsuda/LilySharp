@@ -163,8 +163,8 @@ phrase theme { c4 d e f | g2 g | }
 
 part melody { clef treble }
 section Main { melody { theme } }
-form main { Main }
-score main { staff melody }
+form { Main }
+score { staff melody }
 ```
 
 ## Troubleshooting

@@ -74,13 +74,13 @@ public class SectionPlaysNothingValidatorTests
     [Theory]
     // the shape the decision names: A is declared, but only as a header
     [InlineData("time 4/4\npart m { clef treble\n  section B { f'4 f f f | }\n}\n"
-        + "section A { key g major }\nform main { ~A ~B }\nscore main { staff m }\n")]
+        + "section A { key g major }\nform { ~A ~B }\nscore { staff m }\n")]
     // the label-printing spelling of the same reference
     [InlineData("time 4/4\npart m { clef treble\n  section B { f'4 f f f | }\n}\n"
-        + "section A { key g major }\nform main { A B }\nscore main { staff m }\n")]
+        + "section A { key g major }\nform { A B }\nscore { staff m }\n")]
     // a header carrying the other three directives is the same mistake
     [InlineData("time 4/4\npart m { clef treble\n  section B { f'4 f f f | }\n}\n"
-        + "section A { tempo 120 }\nform main { ~A ~B }\nscore main { staff m }\n")]
+        + "section A { tempo 120 }\nform { ~A ~B }\nscore { staff m }\n")]
     public void AFormPlayingAHeaderOnlyName_IsRefused(string book)
         => Assert.Single(Reports(book));
 
@@ -89,26 +89,26 @@ public class SectionPlaysNothingValidatorTests
     // GRAMMAR.md's own reference example writes the header AFTER the part, so both orders
     // are pinned: the rule must not care which side of the part the header is written on.
     [InlineData("time 4/4\npart m { clef treble\n  section A { f'4 f f f | }\n}\n"
-        + "section A { key g major }\nform main { ~A }\nscore main { staff m }\n")]
+        + "section A { key g major }\nform { ~A }\nscore { staff m }\n")]
     [InlineData("time 4/4\nsection A { key g major }\n"
         + "part m { clef treble\n  section A { f'4 f f f | }\n}\n"
-        + "form main { ~A }\nscore main { staff m }\n")]
+        + "form { ~A }\nscore { staff m }\n")]
     // by-section: the cell is the music, and it is a sibling of the header
     [InlineData("time 4/4\npart m { clef treble }\nsection A { m { f'4 f f f | } }\n"
-        + "section A { key g major }\nform main { ~A }\nscore main { staff m }\n")]
+        + "section A { key g major }\nform { ~A }\nscore { staff m }\n")]
     // ⚠️ THE ROW THE PREDICATE IS SHAPED BY: A's music belongs to a part this score does not
     // draw. Correct - m is spacer-filled across A - and "does THIS part declare it" refuses it.
     [InlineData("time 4/4\npart m  { clef treble  section B { f'4 f f f | } }\n"
         + "part fl { clef treble  section A { g'4 g g g | } section B { g'4 g g g | } }\n"
-        + "form main { ~A ~B }\nscore main { staff m }\n")]
+        + "form { ~A ~B }\nscore { staff m }\n")]
     // an EMPTY section is not a header - there is no directive to be only - so it is left
     // alone: this rule raises an error, and silence on a shape nobody listed is the safe way
     // to be wrong.
     [InlineData("time 4/4\npart m { clef treble\n  section B { f'4 f f f | }\n}\n"
-        + "section A { }\nform main { ~A ~B }\nscore main { staff m }\n")]
+        + "section A { }\nform { ~A ~B }\nscore { staff m }\n")]
     // the single-part shorthand: bare music in a top-level section IS music
     [InlineData("time 4/4\npart m { clef treble }\nsection A { f'4 f f f | }\n"
-        + "form main { ~A }\nscore main { staff m }\n")]
+        + "form { ~A }\nscore { staff m }\n")]
     public void ANameSomePartGivesMusic_IsLeftAlone(string book)
         => Assert.Empty(Reports(book));
 
@@ -119,7 +119,7 @@ public class SectionPlaysNothingValidatorTests
         // `section Z` anywhere is undefined, and saying "it is also declared only as a
         // header" about a name that is not declared at all would be false as well as noisy.
         const string book = "time 4/4\npart m { clef treble\n  section B { f'4 f f f | }\n}\n"
-            + "form main { ~Z ~B }\nscore main { staff m }\n";
+            + "form { ~Z ~B }\nscore { staff m }\n";
         Assert.Single(Undefined(book));
         Assert.Empty(Reports(book));
     }
@@ -130,7 +130,7 @@ public class SectionPlaysNothingValidatorTests
         // Reported per PLAY, like LYS1005: the author fixes it where it is written, and a
         // name played twice is written wrong twice.
         const string book = "time 4/4\npart m { clef treble\n  section B { f'4 f f f | }\n}\n"
-            + "section A { key g major }\nform main { ~A ~B ~A }\nscore main { staff m }\n";
+            + "section A { key g major }\nform { ~A ~B ~A }\nscore { staff m }\n";
         Assert.Equal(2, Reports(book).Count);
     }
 }

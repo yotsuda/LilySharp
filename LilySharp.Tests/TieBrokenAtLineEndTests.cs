@@ -53,8 +53,8 @@ public class TieBrokenAtLineEndTests
             aes,,4 r2. |
           }
         }
-        form main { Tacet }
-        score main { staff bassline }
+        form { Tacet }
+        score { staff bassline }
         """;
 
     [Fact]
@@ -92,8 +92,8 @@ public class TieBrokenAtLineEndTests
                 cis,8 cis cis, cis cis, gis,, b,, cis,~ | break cis, cis cis, cis cis, e,4 dis,8 |
               }
             }
-            form main { A }
-            score main { staff bassline }
+            form { A }
+            score { staff bassline }
             """);
 
         Assert.Equal(0.8544, g.BowControlLift(0), 3);

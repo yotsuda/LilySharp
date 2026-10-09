@@ -54,7 +54,7 @@ public class RehearsalMarkEngravedValidatorTests
     /// <summary>One part, one staff, the mark written in the given music.</summary>
     private static string OneStaff(string music)
         => "part m { clef treble }\nsection A { m {\n" + music + "\n} }\n"
-           + "form main { ~A }\nscore main { staff m }\n";
+           + "form { ~A }\nscore { staff m }\n";
 
     /// <summary>
     /// Every place a mark can be written and IS engraved: plainly, and inside each of the
@@ -84,7 +84,7 @@ public class RehearsalMarkEngravedValidatorTests
             "part m { clef treble }\n"
             + "section A { m { c'1@mark(\"P\") | d'1 } }\n"
             + "section B { m { e'1@mark(\"Q\") | f'1 } }\n"
-            + "form main { ~A }\nscore main { staff m }\n"));
+            + "form { ~A }\nscore { staff m }\n"));
         Assert.Contains("not printed by this score", warning.Message);
     }
 
@@ -94,7 +94,7 @@ public class RehearsalMarkEngravedValidatorTests
         => Assert.Single(Warnings(
             "part m { clef treble }\npart other { clef treble }\n"
             + "section A { m { c'1@mark(\"P\") | d'1 } other { e'1@mark(\"Q\") | f'1 } }\n"
-            + "form main { ~A }\nscore main { staff m }\n"));
+            + "form { ~A }\nscore { staff m }\n"));
 
     /// <summary>
     /// ⚠️ A mark on a GRACE note is PRINTED, and this test used to assert the opposite.
@@ -134,7 +134,7 @@ public class RehearsalMarkEngravedValidatorTests
             "part m { clef treble }\n"
             + "section A { m { c'1 | d'1 } }\n"
             + "section B { m { e'1@mark(\"Q\") | f'1 } }\n"
-            + "form main { ~A }\nscore main { staff m }\n";
+            + "form { ~A }\nscore { staff m }\n";
 
         var warning = Assert.Single(Warnings(source));
         Assert.Equal(source.IndexOf("@mark(\"Q\")", System.StringComparison.Ordinal),

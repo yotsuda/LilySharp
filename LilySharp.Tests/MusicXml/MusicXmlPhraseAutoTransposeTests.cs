@@ -49,8 +49,8 @@ public sealed class MusicXmlPhraseAutoTransposeTests
             phrase Lick { c d e c }
             section A { m { Lick } }
             section B { m { key g major Lick } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.Equal(new[]
         {
@@ -67,8 +67,8 @@ public sealed class MusicXmlPhraseAutoTransposeTests
             key c major
             phrase Lick { c d e c }
             section A { m { Lick } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.Equal(new[] { ("C", 4), ("D", 4), ("E", 4), ("C", 4) }, pitches);
     }
@@ -84,8 +84,8 @@ public sealed class MusicXmlPhraseAutoTransposeTests
         key c major
         phrase Lick { c d e c }
         section A { m { {{reference}} } }
-        form main { A }
-        score main { staff m }
+        form { A }
+        score { staff m }
         """;
 
     [Theory]

@@ -31,8 +31,8 @@ section Main {
   }
 }
 
-form main { Main }
+form { Main }
 
-score main "mmr-key-change-bound" {
+score "mmr-key-change-bound" {
   staff melody
 }

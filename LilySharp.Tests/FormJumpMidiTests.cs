@@ -48,7 +48,7 @@ public sealed class FormJumpMidiTests
 
     private const string Tail = "\nscore { staff m }\n";
 
-    private static SyntaxTree Parse(string form) => SyntaxTree.Parse(Head + "form main { " + form + " }" + Tail);
+    private static SyntaxTree Parse(string form) => SyntaxTree.Parse(Head + "form { " + form + " }" + Tail);
 
     private static int[] Pitches(string form)
         => new MidiExporter().Export(Parse(form)).Tracks[1].Notes.OrderBy(n => n.StartTick).Select(n => n.Pitch).ToArray();
@@ -113,7 +113,7 @@ public sealed class FormJumpMidiTests
     public void ADalSegno_RestoresTheStateThePieceHadAtTheSegno()
     {
         var source = "section A { m { c4@f c c c | } } section B { m { d4 d d d | } } section C { m { e4@p e e e | } }"
-            + " form main { A segno B fine C ds al fine }";
+            + " form { A segno B fine C ds al fine }";
         var notes = new MidiExporter().Export(SyntaxTree.Parse(source)).Tracks[1].Notes.OrderBy(n => n.StartTick).ToList();
         Assert.Equal(16, notes.Count);
         // A f, B f (the lane carries), C p, B again at f — the segno's state, not C's.
@@ -126,7 +126,7 @@ public sealed class FormJumpMidiTests
     {
         var source = "part m { clef treble } part n { clef bass }"
             + " section A { m { c4 c c c | } n { c4 c c c | } } section B { m { d4 d d d | } n { d4 d d d | } }"
-            + " form main { A fine B dc al fine } score { staff m staff n }";
+            + " form { A fine B dc al fine } score { staff m staff n }";
         var midi = new MidiExporter().Export(SyntaxTree.Parse(source));
         foreach (var part in new[] { "m", "n" })
             Assert.Equal(12, midi.Tracks.Single(t => t.Name == part).Notes.Count);

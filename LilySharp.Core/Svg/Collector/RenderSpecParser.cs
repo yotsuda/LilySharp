@@ -29,7 +29,7 @@ public static class RenderSpecParser
     /// <summary>
     /// A score's OUTPUT NAME: the stem <c>svg --all</c> writes, the word <c>--score</c>
     /// selects, and the value the preview's score picker carries. An explicit
-    /// <c>"basename"</c> wins (minus an extension, so <c>score main "song.svg"</c> writes
+    /// <c>"basename"</c> wins (minus an extension, so <c>score "song.svg"</c> writes
     /// song.svg); else the reserved form name <c>main</c> writes to the input .lys stem
     /// (empty = "derive from the input file"), and any other form name becomes the name.
     /// </summary>
@@ -49,9 +49,19 @@ public static class RenderSpecParser
         string? basename = render.BasenameText;
         if (!string.IsNullOrEmpty(basename))
             return System.IO.Path.GetFileNameWithoutExtension(basename);
-        string formName = render.FormNameText;
-        return formName == "main" ? "" : formName;
+        // The unnamed score writes to the input stem; a named one to <stem>-<name>.
+        return render.ScoreNameText;
     }
+
+    /// <summary>
+    /// The name the unnamed score answers to in the picker and in <c>--score</c> — the word
+    /// that named the default form (and so the default score) until 2026-10-09.
+    /// </summary>
+    public const string UnnamedScoreName = "main";
+
+    /// <summary>A score's selector name: its own name, or <see cref="UnnamedScoreName"/>.</summary>
+    public static string SelectorNameOf(RenderDeclarationSyntax render)
+        => render.ScoreName is { } n ? n.Text : UnnamedScoreName;
 
     /// <summary>
     /// The score picker's list and its answer, from ONE walk of the render declarations
@@ -79,13 +89,13 @@ public static class RenderSpecParser
         {
             if (node is not RenderDeclarationSyntax render)
                 continue;
-            string formName = render.FormNameText;
+            string selector = SelectorNameOf(render);
             string? basename = render.BasenameText;
-            // The LABEL is what the writer wrote — the basename when given, else the form
-            // name — so two scores on one form still read apart ("main" and "both").
-            scores.Add((!string.IsNullOrEmpty(basename) ? basename! : formName, OutputNameOf(render)));
-            // Parse's spec Name is the form name; MatchesName reads it, so it is carried.
-            forms.Add(string.IsNullOrEmpty(formName) ? "score" : formName);
+            // The LABEL is what the writer wrote — the basename when given, else the score's
+            // name ("main" for the unnamed one).
+            scores.Add((!string.IsNullOrEmpty(basename) ? basename! : selector, OutputNameOf(render)));
+            // Parse's spec Name is the selector name; MatchesName reads it, so it is carried.
+            forms.Add(selector);
         }
 
         int chosen = scores.Count > 0 ? 0 : -1;
@@ -111,16 +121,14 @@ public static class RenderSpecParser
         PaperDeclarationSyntax? paperRef = null;
         LayoutDeclarationSyntax? layoutRef = null;
 
-        // Header: `score <FormName> ["basename"] [transpose …]`. The form name says
-        // WHICH form to render; the basename names the OUTPUT file.
-        string formName = render.FormNameText;
+        // Header: `score [Name] ["basename"] [transpose …]`. The name is the score's own; the
+        // form it plays is a `form` item in its body (RenderDeclarationSyntax.PlayedForm).
 
         // Output basename rule — ONE HOME (see OutputNameOf).
         string outputFile = OutputNameOf(render);
 
-        // Name doubles as the `--score <name>` selector — the form name, or "score"
-        // when the header is malformed (no form name).
-        var name = string.IsNullOrEmpty(formName) ? "score" : formName;
+        // Name doubles as the `--score <name>` selector (SelectorNameOf).
+        var name = SelectorNameOf(render);
 
         // The parts this score ALSO puts on a notation staff — the tab default reads it.
         // ⚠️ IT IS BUILT BEFORE THE LOOP ON PURPOSE: the rule is about the SCORE, and a
@@ -200,8 +208,8 @@ public static class RenderSpecParser
                     headerOverrides.Add(meta);
                     break;
 
-                // `fonts NAME [{ … }]` / `paper NAME [{ … }]`: this score's reference
-                // to a named top-level block. The LAST wins, like every repeated
+                // `fonts NAME [{ … }]` / `paper NAME [{ … }]` / a bare `fonts { … }`: this
+                // score's reference to a named top-level block, or its override of the default. The LAST wins, like every repeated
                 // single-value setting (the validator names the earlier ones).
                 case FontDeclarationSyntax fonts:
                     fontsRef = fonts;
@@ -240,9 +248,8 @@ public static class RenderSpecParser
             ? LilySharp.Core.Semantics.PartTranspose.ReadProperty(t)
             : null;
 
-        // Bind the score to its form by name (case-sensitive). Null when the name
-        // is missing or unresolved — the validator reports it; the score renders nothing.
-        var form = ResolveForm(render, formName);
+        // The form this score plays — its own, the one it names, else the file's default.
+        var form = render.PlayedForm;
 
         return new RenderSpec(name, outputFile, [.. items], scoreTranspose, form,
             [.. headerOverrides], fontsRef, paperRef,
@@ -416,25 +423,6 @@ public static class RenderSpecParser
                     : staff.VerseVoices).Add((track, sings)),
             }
             : staff with { WithLyrics = verses };
-    }
-
-    /// <summary>
-    /// Resolves a score's <c>form &lt;Name&gt;</c> reference to the matching top-level
-    /// form declaration (case-sensitive). Null when the name is empty or unknown.
-    /// </summary>
-    private static FormDeclarationSyntax? ResolveForm(RenderDeclarationSyntax render, string formName)
-    {
-        if (string.IsNullOrEmpty(formName))
-            return null;
-        SyntaxNode root = render;
-        while (root.Parent != null)
-            root = root.Parent;
-        // Form declarations are top-level only (Parser.ParseTopLevelItem), so the
-        // root's direct children are the whole search space — a descendant walk
-        // here re-enumerated every music body per lookup (see SyntaxNode.ChildNodes).
-        return root.ChildNodes()
-            .OfType<FormDeclarationSyntax>()
-            .FirstOrDefault(f => string.Equals(f.NameText, formName, System.StringComparison.Ordinal));
     }
 
     /// <summary>

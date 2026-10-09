@@ -32,14 +32,14 @@ public class FormCompletionTests
           section Intro { c4 d e f | }
           section Verse { g4 a b c | }
         }
-        form main { Intro segno Verse to coda }
-        score main { staff m }
+        form { Intro segno Verse to coda }
+        score { staff m }
         """;
 
     [Fact]
     public void InsideFormBlock_IsDetected()
     {
-        int offset = Doc.IndexOf("Intro segno") + "Intro ".Length; // inside form main { }
+        int offset = Doc.IndexOf("Intro segno") + "Intro ".Length; // inside form { }
         Assert.Equal(LilySharpLanguageServer.CompletionContext.FormBlock,
             LilySharpLanguageServer.GetCompletionContext(Doc, offset));
     }
@@ -121,8 +121,8 @@ public class FormCompletionTests
                   section Intro { c4 d e f | }
                   section Verse { g4 a b c | }
                 }
-                form main { {{body}} }
-                score main { staff m }
+                form { {{body}} }
+                score { staff m }
                 """);
             Assert.False(tree.HasErrors,
                 $"'{item.Label}' → {insert} does not parse in a form: "
@@ -172,9 +172,9 @@ public class FormCompletionTests
     }
 
     [Theory]
-    [InlineData("form main { Intro ")]
-    [InlineData("form main {\n  Intro\n  ")]
-    [InlineData("form main {\n  |: Intro [1. Verse ] :| ")]
+    [InlineData("form { Intro ")]
+    [InlineData("form {\n  Intro\n  ")]
+    [InlineData("form {\n  |: Intro [1. Verse ] :| ")]
     public void InAFormBody_TheRepeatBarIsOffered(string tail)
     {
         string doc = "part m {\n  section Intro { c4 d e f | }\n  section Verse { g4 a b c | }\n}\n" + tail;
@@ -191,7 +191,7 @@ public class FormCompletionTests
         // `|` typed, caret after it: accepting `|:` must give `|:`, not `||:`. `|` is no
         // word character, so the editor's own replace range is empty; the item carries the
         // range over the typed `|` itself.
-        string doc = "part m {\n  section Intro { c4 d e f | }\n}\nform main { Intro |";
+        string doc = "part m {\n  section Intro { c4 d e f | }\n}\nform { Intro |";
         var item = CompletionAt(doc, doc.Length).Single(i => i.Label == "|:");
         Assert.NotNull(item.TextEdit);
         Assert.Equal("|:", item.TextEdit!.NewText);

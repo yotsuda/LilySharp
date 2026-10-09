@@ -10,6 +10,6 @@ section Main {
   v { tuplet 3/2 { a8@accent.up r8 a8@accent.up } | }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { staff ~v }
+score { staff ~v }

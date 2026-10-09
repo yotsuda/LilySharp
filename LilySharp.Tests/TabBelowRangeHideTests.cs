@@ -34,7 +34,7 @@ public sealed class TabBelowRangeHideTests
     {
         var tree = SyntaxTree.Parse(
             "time 4/4\nkey c major\npart m { instrument bass section A { " + body + " } }\n"
-            + "form main { A }\nscore main { staff m  tab m }");
+            + "form { A }\nscore { staff m  tab m }");
         var spec = RenderSpecParser.FindAll(tree).First(s => s.HasTab);
         return new MeasureCollector().CollectMultiStaff(tree, spec);
     }
@@ -65,7 +65,7 @@ public sealed class TabBelowRangeHideTests
         {
             var svg = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(
                 "octave absolute\ntime 4/4\npart gt { clef treble_8  tuning guitar }\n"
-                + $"section A {{ gt {{ {body} }} }}\nform main {{ A }}\nscore main {{ tab gt }}"));
+                + $"section A {{ gt {{ {body} }} }}\nform {{ A }}\nscore {{ tab gt }}"));
             return (System.Text.RegularExpressions.Regex.Matches(svg, "<line\\b").Count,
                 System.Text.RegularExpressions.Regex.Matches(svg, "<text\\b").Count);
         }
@@ -85,7 +85,7 @@ public sealed class TabBelowRangeHideTests
     {
         var svg = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(
             "octave absolute\ntime 4/4\npart gt { clef treble_8  tuning guitar }\n"
-            + "section A { gt { /4 4 4 4 | } }\nform main { A }\nscore main { tab gt }"));
+            + "section A { gt { /4 4 4 4 | } }\nform { A }\nscore { tab gt }"));
         static double Attr(System.Text.RegularExpressions.Match m, string name) => double.Parse(
             System.Text.RegularExpressions.Regex.Match(m.Value, name + "=\"([^\"]+)\"").Groups[1].Value,
             System.Globalization.CultureInfo.InvariantCulture);

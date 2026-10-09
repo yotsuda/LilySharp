@@ -47,7 +47,7 @@ internal sealed class CondensedStaffChangeValidator : ISharedCollectValidator
     public void ValidateWith(SyntaxTree tree, System.Lazy<MeasureCollector?> sharedCollect)
     {
         // The fault lives on a condensed staff, which is an item of a SCORE — and the
-        // owner's book keeps its condensed score third (`score main "tab2"`), so the first
+        // owner's book keeps its condensed score third (`score "tab2"`), so the first
         // score's collect (the shared one) sees none of it. Every score that condenses is
         // collected; the first one through the shared collect, as the other validators read it.
         var seen = new HashSet<(int, bool)>();

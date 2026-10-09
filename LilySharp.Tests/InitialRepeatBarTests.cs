@@ -98,8 +98,8 @@ public sealed class InitialRepeatBarTests
             section A { m { c'1 } }
             section B { m { d'1 } }
             section C { m { e'1 } }
-            form main { |: A :| B |: C :| }
-            score main { staff m }
+            form { |: A :| B |: C :| }
+            score { staff m }
             """));
     }
 
@@ -110,8 +110,8 @@ public sealed class InitialRepeatBarTests
         AssertKeptAtTheStartAndLater(Collect("""
             time 4/4
             part m { clef treble section A { |: c'1 :| d'1 |: e'1 :| } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """));
     }
 
@@ -126,8 +126,8 @@ public sealed class InitialRepeatBarTests
             section A { rh { c'1 } lh { c1 } }
             section B { rh { d'1 } lh { d1 } }
             section C { rh { e'1 } lh { e1 } }
-            form main { |: A :| B |: C :| }
-            score main { grandStaff { staff rh  staff lh } }
+            form { |: A :| B |: C :| }
+            score { grandStaff { staff rh  staff lh } }
             """));
     }
 
@@ -142,8 +142,8 @@ public sealed class InitialRepeatBarTests
             section A { m { c'1 } }
             section B { m { d'1 } }
             section C { m { e'1 } }
-            form main { |: A :| B |: C :| }
-            score main { chords prog  staff m }
+            form { |: A :| B |: C :| }
+            score { chords prog  staff m }
             """));
     }
 
@@ -158,8 +158,8 @@ public sealed class InitialRepeatBarTests
             section A { m { c'1 } }
             section B { m { d'1 } }
             section C { m { e'1 } }
-            form main { |: A :| B |: C :| }
-            score main { staff m  lyrics words }
+            form { |: A :| B |: C :| }
+            score { staff m  lyrics words }
             """));
     }
 
@@ -173,8 +173,8 @@ public sealed class InitialRepeatBarTests
         AssertKeptAtTheStartAndLater(Collect("""
             time 4/4
             chords prog { section A { C } section B { G } section C { A } }
-            form main { |: A :| B |: C :| }
-            score main { chords prog }
+            form { |: A :| B |: C :| }
+            score { chords prog }
             """));
     }
 
@@ -188,8 +188,8 @@ public sealed class InitialRepeatBarTests
         var score = Collect("""
             time 4/4
             part m { clef treble section A { c'1 |: d'1 :| } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         var measures = score.StaffGroups.SelectMany(g => g.Staves)
             .SelectMany(s => s.Voices).First().Measures;
@@ -210,8 +210,8 @@ public sealed class InitialRepeatBarTests
             time 4/4
             part m { clef treble }
             section A { m { c'1 } }
-            form main { |: A :| }
-            score main { staff m }
+            form { |: A :| }
+            score { staff m }
             """));
         Assert.Contains("printInitialRepeatBar = ##t", Regex.Replace(ly, @"\s+", " "));
     }

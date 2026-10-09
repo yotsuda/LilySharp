@@ -35,7 +35,7 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class DoubleAngleArpeggioTests
 {
-    private const string Tail = "\nform main { A }\nscore main { staff m }";
+    private const string Tail = "\nform { A }\nscore { staff m }";
 
     private static int[] Pitches(string src) =>
         new MidiExporter().Export(SyntaxTree.Parse(src)).Tracks[1].Notes.Select(n => n.Pitch).ToArray();

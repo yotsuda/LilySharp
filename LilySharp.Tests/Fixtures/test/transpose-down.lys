@@ -14,5 +14,5 @@ section Main {
   melody { g'4 a b c | d2 g | }
 }
 
-form main { Main }
-score main "transpose-down" { staff melody }
+form { Main }
+score "transpose-down" { staff melody }

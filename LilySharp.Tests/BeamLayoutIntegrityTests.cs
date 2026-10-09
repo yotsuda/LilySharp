@@ -37,8 +37,8 @@ public class BeamLayoutIntegrityTests
         key c major
         part melody { clef treble }
         section Main { melody { {{music}} } }
-        form main { Main }
-        score main "x" { staff melody }
+        form { Main }
+        score "x" { staff melody }
         """;
 
     [Fact]

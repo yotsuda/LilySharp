@@ -58,8 +58,8 @@ public class RestArticulationTests
         var tree = SyntaxTree.Parse("""
             time 4/4
             part m { clef treble section A { c2 r2 coda | d1 | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.Empty(tree.Diagnostics);
         var score = new MeasureCollector().Collect(tree, "m");

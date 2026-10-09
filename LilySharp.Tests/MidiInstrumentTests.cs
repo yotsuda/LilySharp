@@ -42,7 +42,7 @@ public class MidiInstrumentTests
 {
     private static string Book(string parts, string sectionBody, string staves) =>
         "title \"t\"\ntime 4/4\noctave absolute\n" + parts
-        + "\nsection A {\n" + sectionBody + "\n}\nform main { A }\nscore main \"x\" { " + staves + " }\n";
+        + "\nsection A {\n" + sectionBody + "\n}\nform { A }\nscore \"x\" { " + staves + " }\n";
 
     private static SyntaxTree Parse(string source)
     {

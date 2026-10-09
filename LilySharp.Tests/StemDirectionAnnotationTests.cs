@@ -40,8 +40,8 @@ public class StemDirectionAnnotationTests
         var src =
             "part m { clef treble }\n" +
             $"section S {{ m {{ {body} }} }}\n" +
-            "form main { S }\n" +
-            "score main \"o\" { staff m }\n";
+            "form { S }\n" +
+            "score \"o\" { staff m }\n";
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors,
             string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
@@ -93,8 +93,8 @@ public class StemDirectionAnnotationTests
         var src =
             "part m { clef treble }\n" +
             $"section S {{ m {{ {body} }} }}\n" +
-            "form main { S }\n" +
-            "score main \"o\" { staff m }\n";
+            "form { S }\n" +
+            "score \"o\" { staff m }\n";
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors,
             string.Join(", ", tree.Diagnostics.Select(d => d.Message)));

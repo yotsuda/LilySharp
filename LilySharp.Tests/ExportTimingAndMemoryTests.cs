@@ -37,7 +37,7 @@ public class ExportTimingAndMemoryTests
 {
     private static SyntaxTree Book(string body, string header = "octave absolute")
         => SyntaxTree.Parse(header + "\npart m { clef treble }\nsection A { m { " + body + " } }\n"
-            + "form main { A }\nscore main { staff m }\n");
+            + "form { A }\nscore { staff m }\n");
 
     private static MidiNote[] Notes(SyntaxTree tree)
         => new MidiExporter().Export(tree).Tracks.SelectMany(t => t.Notes).OrderBy(n => n.StartTick).ToArray();
@@ -84,8 +84,8 @@ public class ExportTimingAndMemoryTests
               up { g'1 | }
               lo { g1 | }
             }
-            form main { A B }
-            score main { staff up  staff lo }
+            form { A B }
+            score { staff up  staff lo }
             """);
         var notes = Notes(tree);
         var lo = notes.Where(n => n.Part == "lo").ToArray();
@@ -108,8 +108,8 @@ public class ExportTimingAndMemoryTests
               m { c'4 d' e' f' | r4 g'4~ g'4 a'4 | }
               lyrics { la la la la | mor -- ning }
             }
-            form main { A }
-            score main { staff m  lyrics }
+            form { A }
+            score { staff m  lyrics }
             """));
         var lyrics = midi.Tracks.SelectMany(t => t.Lyrics).OrderBy(l => l.Tick).ToList();
         Assert.Equal(new[] { 0, 480, 960, 1440, 2400, 3360 }, lyrics.Select(l => l.Tick).ToArray());
@@ -158,8 +158,8 @@ public class ExportTimingAndMemoryTests
             phrase G { d' e' }
             part m { clef treble }
             section A { m { c'8 G f' g' | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """));
         // Absolute mode inlines the body, so the whole bar is one line: the body's first
         // note carries the crotchet, the rest inherit (probe phrase-value: base wrote

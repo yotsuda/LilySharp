@@ -48,8 +48,8 @@ public class RepeatTremoloChordRepTests
             repeat tremolo 4 { c16 q16 } |
           }
         }
-        form main { ~Main }
-        score main { staff ~v }
+        form { ~Main }
+        score { staff ~v }
         """;
 
     [Fact]

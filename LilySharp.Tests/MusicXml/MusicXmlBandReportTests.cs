@@ -43,7 +43,7 @@ public class MusicXmlBandReportTests
         + "part vo { clef treble }\npart ba { clef bass }\npart kit { clef percussion }\n"
         + "section A {\n vo { b'1 | } ba { e,1 | } kit { bd4 sn bd sn | }\n}\n"
         + "section B {\n vo { a'1 | } ba { d,1 | } kit { bd4 sn bd sn | }\n}\n"
-        + "form main { A B }\nscore main { staff vo\n staff ba\n staff kit }";
+        + "form { A B }\nscore { staff vo\n staff ba\n staff kit }";
 
     private static XElement Part(XDocument doc, int index) => doc.Descendants("part").ElementAt(index);
 
@@ -135,8 +135,8 @@ public class MusicXmlBandReportTests
             part rh { clef treble }
             part lh { clef bass }
             section A { rh { c''2( d'') | e''1 | } lh { c2( g,) | c1 | } }
-            form main { ~A }
-            score main { grandStaff { staff rh "Piano"  staff lh } }
+            form { ~A }
+            score { grandStaff { staff rh "Piano"  staff lh } }
             """);
         var part = Assert.Single(doc.Descendants("part"));
         Assert.Equal("Piano", doc.Descendants("part-name").Single().Value);
@@ -169,8 +169,8 @@ public class MusicXmlBandReportTests
             part rh { clef treble }
             part lh { clef bass }
             section A { rh { c''4@cresc@ottava d'' e'' f''@f@!ottava | } lh { c4@cresc@ottava d e f@f@!ottava | } }
-            form main { ~A }
-            score main { grandStaff { staff rh "Piano"  staff lh } }
+            form { ~A }
+            score { grandStaff { staff rh "Piano"  staff lh } }
             """);
         var part = Assert.Single(doc.Descendants("part"));
         string Numbered(string name) => string.Join(" ", part.Descendants(name)
@@ -191,8 +191,8 @@ public class MusicXmlBandReportTests
             part rh { clef treble }
             part lh { clef bass }
             section A { rh { c''1 | } lh { c1 | } }
-            form main { ~A }
-            score main { grandStaff { staff rh "Right"  staff lh "Left" } }
+            form { ~A }
+            score { grandStaff { staff rh "Right"  staff lh "Left" } }
             """);
         var list = doc.Descendants("part-list").Single().Elements()
             .Select(e => e.Name == "part-group"

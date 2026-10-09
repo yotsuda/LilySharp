@@ -35,7 +35,7 @@ public class InstrumentTranspositionMidiTests
     {
         var tree = SyntaxTree.Parse(
             "time 4/4\nkey c major\n" + body
-            + "\nform main { A }\nscore main { staff x }");
+            + "\nform { A }\nscore { staff x }");
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
         var midi = new MidiExporter().Export(tree);
         return midi.Tracks[1].Notes[0].Pitch;
@@ -87,7 +87,7 @@ public class InstrumentTranspositionMidiTests
         var tree = SyntaxTree.Parse(
             "time 4/4\nkey c major\n"
             + $"part x {{ instrument {preset} section A {{ c'1 | }} }}"
-            + "\nform main { A }\nscore main { staff x }");
+            + "\nform { A }\nscore { staff x }");
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
         var midi = new MidiExporter().Export(tree);
         Assert.Equal(expectedTimbre, midi.Tracks[1].Notes[0].Timbre);

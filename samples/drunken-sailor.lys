@@ -27,13 +27,13 @@ section Verse {
   }
 }
 
-form main { Verse }
+form { Verse }
 
-score main {
+score {
   chords prog
   lyrics words
 }
 
-score main "lyrics" {
+score "lyrics" {
   lyrics words
 }

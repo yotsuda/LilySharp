@@ -38,7 +38,7 @@ public class MusicXmlTabTests
     {
         var tree = SyntaxTree.Parse(
             "octave absolute\ntime 4/4\npart gt { clef treble_8  tuning guitar }\n"
-            + $"section A {{ gt {{ {music} }} }}\nform main {{ A }}\nscore main {{ {score} }}");
+            + $"section A {{ gt {{ {music} }} }}\nform {{ A }}\nscore {{ {score} }}");
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         return new MusicXmlExporter().Export(tree).ToXml();
     }
@@ -139,7 +139,7 @@ public class MusicXmlTabTests
         static IEnumerable<string> Lys5002(string music)
             => SemanticValidation.Run(SyntaxTree.Parse(
                     "octave absolute\ntime 4/4\npart gt { clef treble_8  tuning guitar }\n"
-                    + $"section A {{ gt {{ {music} }} }}\nform main {{ A }}\nscore main {{ staff gt\n tab gt }}"))
+                    + $"section A {{ gt {{ {music} }} }}\nform {{ A }}\nscore {{ staff gt\n tab gt }}"))
                 .Where(d => d.Code == "LYS5002").Select(d => d.Message);
         Assert.Empty(Lys5002("/4 4 8 8 4 |"));
         Assert.Single(Lys5002("/4 4 4 c,,4 |"));

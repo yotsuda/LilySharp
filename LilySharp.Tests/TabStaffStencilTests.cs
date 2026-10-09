@@ -99,12 +99,12 @@ public sealed class TabStaffStencilTests
         + "  clef treble\n"
         + "  section A { c4@rit c@!rit g'@f a@text(\"dolce\") | b4@cresc c'' d'' e''@f | }\n"
         + "}\n"
-        + "form main { A }\n";
+        + "form { A }\n";
 
-    private const string Both = Music + "score main { staff m  tab m as numbers }";
+    private const string Both = Music + "score { staff m  tab m as numbers }";
 
     /// <summary>The same music with NO tab — the control every count below is read against.</summary>
-    private const string StaffOnly = Music + "score main { staff m }";
+    private const string StaffOnly = Music + "score { staff m }";
 
     private static (MultiStaffScore Score, ScoreLayout Layout) LayoutOf(string source)
     {
@@ -202,10 +202,10 @@ public sealed class TabStaffStencilTests
     {
         const string bare =
             "part m {\n  clef treble\n  section A { c4 c g' a | }\n}\n"
-            + "form main { A }\nscore main { staff m  tab m as numbers }";
+            + "form { A }\nscore { staff m  tab m as numbers }";
         const string spanned =
             "part m {\n  clef treble\n  section A { c4@rit c@!rit g' a | }\n}\n"
-            + "form main { A }\nscore main { staff m  tab m as numbers }";
+            + "form { A }\nscore { staff m  tab m as numbers }";
 
         // The gap between the notation staff's bottom line and the tab's top line — the
         // band a tab's own rit. would reserve ABOVE itself.
@@ -299,16 +299,16 @@ public sealed class TabStaffStencilTests
     public void AnOrdinaryScriptIsBlankedOnANumbersOnlyTabAndKeptOnAFullOne()
     {
         const string music =
-            "part m {\n  clef treble\n  section A { g'4@accent a b c'' | }\n}\nform main { A }\n";
+            "part m {\n  clef treble\n  section A { g'4@accent a b c'' | }\n}\nform { A }\n";
 
         // A FULL tab carries its own markup: nothing else is carrying it for the reader.
-        int full = RenderFirstPage(music + "score main { staff m  tab m as full }")
+        int full = RenderFirstPage(music + "score { staff m  tab m as full }")
             .Glyphs.Count(g => g.Glyph == EmmentalerGlyphs.ArticAccentAbove);
         Assert.Equal(2, full);
 
         // A NUMBERS-ONLY tab does not — the staff above is carrying it. Reader report,
         // 2026-08-30: "an @accent is showing on an `as numbers` tab; it should not".
-        int numbers = RenderFirstPage(music + "score main { staff m  tab m as numbers }")
+        int numbers = RenderFirstPage(music + "score { staff m  tab m as numbers }")
             .Glyphs.Count(g => g.Glyph == EmmentalerGlyphs.ArticAccentAbove);
         Assert.Equal(1, numbers);
     }
@@ -330,7 +330,7 @@ public sealed class TabStaffStencilTests
         const string book =
             "octave absolute\npart m { clef treble }\n"
             + "section A { m { c4@tap e@hammerOn g@pullOff b@pluck(p) | } }\n"
-            + "form main { ~A }\nscore main { staff m  tab m as numbers }";
+            + "form { ~A }\nscore { staff m  tab m as numbers }";
 
         var page = RenderFirstPage(book);
         foreach (string letter in new[] { "T", "H", "P", "p" })
@@ -361,18 +361,18 @@ public sealed class TabStaffStencilTests
     {
         const string music =
             "part m {\n  clef treble\n  section A { c4@f c g'@text(\"dolce\") a | }\n}\n"
-            + "form main { A }\n";
+            + "form { A }\n";
 
         // Explicitly full, and standing alone — where `tab m` alone would ALSO be full by
         // default (RenderSpecParser.StaffRenderedParts), stated so the default cannot
         // silently retire the test.
-        var alone = RenderFirstPage(music + "score main { tab m as full }");
+        var alone = RenderFirstPage(music + "score { tab m as full }");
         Assert.Contains(alone.Texts, t => t.Text == "dolce");
         Assert.Contains(alone.Texts, t => t.Text == "f");
 
         // NEGATIVE CONTROL — the same music on a numbers-only tab loses both, so this test
         // is measuring the STYLE and not merely "a tab draws text".
-        var numbers = RenderFirstPage(music + "score main { staff m  tab m as numbers }");
+        var numbers = RenderFirstPage(music + "score { staff m  tab m as numbers }");
         Assert.Single(numbers.Texts.Where(t => t.Text == "dolce"));
         Assert.Single(numbers.Texts.Where(t => t.Text == "f"));
     }
@@ -398,8 +398,8 @@ public sealed class TabStaffStencilTests
         const string book =
             "part m {\n  clef treble\n  section A { c4 d e f | g a b2 | }\n}\n"
             + "chords prog { section A { Dmaj7 | Em7 } }\n"
-            + "form main { A }\n"
-            + "score main { staff m  chords prog as names  tab m as full }";
+            + "form { A }\n"
+            + "score { staff m  chords prog as names  tab m as full }";
 
         var (score, _) = LayoutOf(book);
         var page = RenderFirstPage(book);

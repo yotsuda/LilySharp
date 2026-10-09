@@ -54,8 +54,8 @@ public sealed class ChordNameStaffPaddingTests
         section Main {
           m { time 4/4 {{melody}} }
         }
-        form main { Main }
-        score main { staff m }
+        form { Main }
+        score { staff m }
         """);
 
     private const string BareLine = "c4@chord(C) d e@chord(Am) f | c@chord(F) d e@chord(G7) f |";

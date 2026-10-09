@@ -31,7 +31,7 @@ public sealed class DuplicateScoreNameTests
     [Fact]
     public void MainForm_WritesToInputStem()
     {
-        var tree = SyntaxTree.Parse(Head + "form main { Main }\nscore main { staff bl }\n");
+        var tree = SyntaxTree.Parse(Head + "form { Main }\nscore { staff bl }\n");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
         var spec = RenderSpecParser.FindFirst(tree)!;
         Assert.Equal("", spec.OutputFile);   // `main` → derive the name from the input file
@@ -40,7 +40,7 @@ public sealed class DuplicateScoreNameTests
     [Fact]
     public void NonMainForm_NamesTheOutputFile()
     {
-        var tree = SyntaxTree.Parse(Head + "form verse { Main }\nscore verse { staff bl }\n");
+        var tree = SyntaxTree.Parse(Head + "form verse { Main }\nscore verse { form verse staff bl }\n");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
         var spec = RenderSpecParser.FindFirst(tree)!;
         Assert.Equal("verse", spec.OutputFile);   // any non-`main` form name becomes the file name
@@ -49,7 +49,7 @@ public sealed class DuplicateScoreNameTests
     [Fact]
     public void ExplicitBasename_Wins()
     {
-        var tree = SyntaxTree.Parse(Head + "form main { Main }\nscore main \"clean\" { staff bl }\n");
+        var tree = SyntaxTree.Parse(Head + "form { Main }\nscore \"clean\" { staff bl }\n");
         var spec = RenderSpecParser.FindFirst(tree)!;
         Assert.Equal("clean", spec.OutputFile);
     }
@@ -59,7 +59,7 @@ public sealed class DuplicateScoreNameTests
     {
         // Two `main` scores with no basename both write the input stem — a collision.
         var v = new DuplicateScoreNameValidator();
-        v.Validate(SyntaxTree.Parse(Head + "form main { Main }\nscore main { staff bl }\nscore main { tab bl }\n"));
+        v.Validate(SyntaxTree.Parse(Head + "form { Main }\nscore { staff bl }\nscore { tab bl }\n"));
         var d = Assert.Single(v.Diagnostics);
         Assert.Equal(DiagnosticCodes.DuplicateScoreName, d.Code);
     }
@@ -69,8 +69,8 @@ public sealed class DuplicateScoreNameTests
     {
         var v = new DuplicateScoreNameValidator();
         v.Validate(SyntaxTree.Parse(Head +
-            "form main { Main }\nform verse { Main }\n"
-            + "score main { staff bl }\nscore verse { tab bl }\nscore main \"extra\" { staff bl }\n"));
+            "form { Main }\nform verse { Main }\n"
+            + "score { staff bl }\nscore verse { form verse tab bl }\nscore \"extra\" { staff bl }\n"));
         Assert.Empty(v.Diagnostics);
     }
 }

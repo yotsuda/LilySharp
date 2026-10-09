@@ -46,8 +46,8 @@ public class GraceNoteMidiTests
             octave absolute
             part m { clef treble }
             section A { m { grace { <c' e'>16 } d'4 | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         // Before the fix the grace chord was dropped whole (OfType<NoteSyntax>),
         // leaving only the main d'. Now both chord members sound as grace notes.
@@ -69,15 +69,15 @@ public class GraceNoteMidiTests
             octave absolute
             part m { clef treble }
             section A { m { grace { c'{{dur}} } d'4 | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """).OrderBy(n => n.StartTick).First().DurationTicks;
         int NoteDur(string dur) => ExportNotes($$"""
             octave absolute
             part m { clef treble }
             section A { m { c'{{dur}} } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """).First().DurationTicks;
 
         // Each grace item's sounding time is 9/40 of its written value (checked
@@ -105,8 +105,8 @@ public class GraceNoteMidiTests
             octave absolute
             part m { clef treble }
             section A { m { grace { d'16 e' } f'4 | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """).OrderBy(n => n.StartTick).ToList();
         Assert.Equal(3, notes.Count);
         Assert.Equal(notes[0].DurationTicks, notes[1].DurationTicks); // e' == d' (both 16th → same 9/40 length)
@@ -119,15 +119,15 @@ public class GraceNoteMidiTests
             octave absolute
             part m { clef treble }
             section A { m { grace { c'16 } d'4 | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """).OrderBy(n => n.StartTick).ToList();
         int quarter = ExportNotes("""
             octave absolute
             part m { clef treble }
             section A { m { d'4 } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """).First().DurationTicks;
 
         Assert.Equal(2, notes.Count);
@@ -148,8 +148,8 @@ public class GraceNoteMidiTests
         int DAfter(string body) => ExportNotes($$"""
             part m { clef treble }
             section A { m { {{body}} } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """).OrderByDescending(n => n.StartTick).First().Pitch; // the trailing d
 
         // `grace { g'16 }` and a plain `g'16` before the d reference the same pitch,
@@ -160,7 +160,7 @@ public class GraceNoteMidiTests
     private static string PhraseBook(string phrases, string music)
         => "octave absolute\npart m { clef treble }\n" + phrases
            + "\nsection A { m {\n" + music + "\n} }\n"
-           + "form main { A }\nscore main { staff m }\n";
+           + "form { A }\nscore { staff m }\n";
 
     /// <summary>Every sounded event as (start, length, pitch), in time order — the whole
     /// performance, so a phrase that sounds at the wrong moment or the wrong length fails
@@ -268,7 +268,7 @@ public class GraceNoteMidiTests
             => ExportNotes(
                 "part m { clef treble }\n" + phrases
                 + "\nsection A { m {\n" + music + "\n} }\n"
-                + "form main { A }\nscore main { staff m }\n")
+                + "form { A }\nscore { staff m }\n")
                 .OrderBy(n => n.StartTick).Skip(1).Take(2).Select(n => n.Pitch).ToArray();
 
         const string G = "phrase G { d16 e }";
@@ -301,7 +301,7 @@ public class GraceNoteMidiTests
             => ExportNotes(
                 "part m { clef treble }\n" + phrases
                 + "\nsection A { m {\n" + music + "\n} }\n"
-                + "form main { A }\nscore main { staff m }\n")
+                + "form { A }\nscore { staff m }\n")
                 .OrderBy(n => n.StartTick).ElementAt(index).Pitch;
 
         const string G = "phrase G { d16 d' }";
@@ -373,8 +373,8 @@ public class GraceNoteMidiTests
             part m { clef treble }
             phrase Lick { c'16 d' e' }
             section A { m { key g major %BODY% c'1 | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """;
         Assert.Equal(
             Last(Modulating.Replace("%BODY% ", "")),
@@ -395,8 +395,8 @@ public class GraceNoteMidiTests
             part m { clef treble }
             phrase G { d'16 e' }
             section A { m { grace { %REF% } c'1 | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """;
         Assert.Equal(Last(Marked.Replace("%REF%", "G")), Last(Marked.Replace("%REF%", "G'")));
         // …and the mark DID raise the phrase itself.

@@ -39,7 +39,7 @@ public sealed class MidMeasureRepeatFlowValidationTests
     private static IReadOnlyList<Diagnostic> Diagnose(string music)
     {
         var tree = SyntaxTree.Parse(
-            $"part mel {{\n  section A {{ {music} }}\n}}\nform main {{ A }}\nscore main {{ staff mel }}\n");
+            $"part mel {{\n  section A {{ {music} }}\n}}\nform {{ A }}\nscore {{ staff mel }}\n");
         var validator = new MeasureValidator();
         validator.Validate(tree);
         return validator.Diagnostics;
@@ -118,7 +118,7 @@ public sealed class MidMeasureRepeatFlowValidationTests
               rh { c4 c c c | repeat percent 2 { d8 d d d d d d d } }
               lh { c1 | c1 | c1 | }
             }
-            form main { Main }
+            form { Main }
             """);
         var validator = new MeasureValidator();
         validator.Validate(tree);

@@ -56,12 +56,12 @@ public class BareSectionPartTests
             .Tracks.SelectMany(t => t.Notes).Select(n => n.Pitch).ToArray();
 
     // Bare: the notes sit directly in the section. Blocked: the same notes inside `bl { }`.
-    private static string Bare(string header, string score = "score main { staff bl }") => $$"""
+    private static string Bare(string header, string score = "score { staff bl }") => $$"""
         time 4/4
         part bl { {{header}} }
         section A { c'4 d e f | }
         section B { g'4 f e d | }
-        form main { A B }
+        form { A B }
         {{score}}
         """;
 
@@ -70,8 +70,8 @@ public class BareSectionPartTests
         part bl { {{header}} }
         section A { bl { c'4 d e f | } }
         section B { bl { g'4 f e d | } }
-        form main { A B }
-        score main { staff bl }
+        form { A B }
+        score { staff bl }
         """;
 
     /// <summary>The part's own <c>octave</c> sets the octave a bare letter anchors to (its clef does not).</summary>
@@ -124,7 +124,7 @@ public class BareSectionPartTests
             time 4/4
             part bl { clef bass }
             section A { c'4 d e f | }
-            form main { A }
+            form { A }
             """;
 
         Assert.Equal(72, Play(lys)[0]);    // the default anchor, not the bass clef's
@@ -142,8 +142,8 @@ public class BareSectionPartTests
             part bl { clef bass }
             part tr { clef treble }
             section A { c'4 d e f | }
-            form main { A }
-            score main { staff bl  staff tr }
+            form { A }
+            score { staff bl  staff tr }
             """;
 
         Assert.Equal(72, Play(lys)[0]);    // neither part's register: the default one
@@ -156,7 +156,7 @@ public class BareSectionPartTests
     [Fact]
     public void OnePartOnTwoStavesIsStillOnePart()
     {
-        int[] played = Play(Bare("clef bass octave 3 tuning bass", "score main { staff bl  tab bl }"));
+        int[] played = Play(Bare("clef bass octave 3 tuning bass", "score { staff bl  tab bl }"));
 
         Assert.Equal(48, played[0]);
     }

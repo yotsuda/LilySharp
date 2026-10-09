@@ -59,12 +59,12 @@
   <rect x="63.39" y="19.17" width="0.19" height="4.00" data-pos="1445"/>
   <rect x="71.54" y="19.17" width="0.19" height="4.00" data-pos="1473"/>
   <rect x="79.69" y="19.17" width="0.19" height="4.00" data-pos="1501"/>
-  <text class="music" x="8.84" y="15.41" font-size="4.00" data-pos="1520"></text>
-  <text x="39.37" y="15.60" font-size="2.20" font-style="italic" data-pos="1534">To</text>
-  <text class="music" x="43.22" y="14.82" font-size="4.00" data-pos="1534"></text>
-  <text x="50.36" y="26.67" font-size="2.20" font-style="italic" text-anchor="end" data-pos="1546">D.S. al Coda</text>
-  <text class="music" x="50.45" y="16.32" font-size="4.00" data-pos="1557"></text>
-  <text x="71.64" y="16.67" font-size="2.20" font-style="italic" text-anchor="end" data-pos="1570">Fine</text>
-  <text x="79.79" y="26.67" font-size="2.20" font-style="italic" text-anchor="end" data-pos="1579">D.C. al Fine</text>
+  <text class="music" x="8.84" y="15.41" font-size="4.00" data-pos="1515"></text>
+  <text x="39.37" y="15.60" font-size="2.20" font-style="italic" data-pos="1529">To</text>
+  <text class="music" x="43.22" y="14.82" font-size="4.00" data-pos="1529"></text>
+  <text x="50.36" y="26.67" font-size="2.20" font-style="italic" text-anchor="end" data-pos="1541">D.S. al Coda</text>
+  <text class="music" x="50.45" y="16.32" font-size="4.00" data-pos="1552"></text>
+  <text x="71.64" y="16.67" font-size="2.20" font-style="italic" text-anchor="end" data-pos="1565">Fine</text>
+  <text x="79.79" y="26.67" font-size="2.20" font-style="italic" text-anchor="end" data-pos="1574">D.C. al Fine</text>
   </g>
 </svg>

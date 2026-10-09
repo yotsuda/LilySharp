@@ -35,8 +35,8 @@ public class OneLineStaffPrefixTests
         part melody {
           section A { r1 | r2 r4 r8 r16 r32 r64 r | }
         }
-        form main { A }
-        score main {
+        form { A }
+        score {
           staff melody as lines 1
         }
         """;

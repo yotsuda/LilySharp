@@ -47,8 +47,8 @@ public sealed class CueBeamSpacingTests
             part m {
               section A { {{music}} }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
@@ -97,8 +97,8 @@ public sealed class CueBeamSpacingTests
             part m {
               section A { cue { g8 a b c' d' e' f' g' } | }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
         var layout = new LayoutEngine(score.Paper).Layout(score);

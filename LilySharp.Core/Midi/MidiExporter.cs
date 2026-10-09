@@ -277,7 +277,7 @@ public sealed class MidiExporter
     /// <summary>The capo fret of the score being played (its layout's <c>chordDiagrams … capo N</c>,
     /// <see cref="_playedSpec"/>), 0 for none: a <c>chord(…)</c> item's strings sound that many
     /// semitones higher. Read once per export (<see cref="_capo"/>). Until 2026-09-29 it was the
-    /// FIRST score's, whichever score was played — <c>score main "open" { … }</c> with no capo
+    /// FIRST score's, whichever score was played — <c>score "open" { … }</c> with no capo
     /// sounded the main score's capo (HANDOFF §1.0 ⒜, the capo's holes).</summary>
     private int Capo
     {
@@ -382,7 +382,7 @@ public sealed class MidiExporter
     /// <remarks>
     /// ⚠️ WHY THE SCORE IS THE ONE WHO KNOWS. <c>section A { c4 … }</c> written outside any
     /// part block is music no block claims, and the only statement in the file that says
-    /// whose it is is <c>score main { staff bl }</c>. The page has always read it that way
+    /// whose it is is <c>score { staff bl }</c>. The page has always read it that way
     /// (RenderSpecParser → GetPartDefaults); this export did not read <c>score</c> at all,
     /// so a bare section got no part header, no anchor, no sounding shift and no
     /// section-boundary reset. MEASURED 2026-08-17 on
@@ -1211,7 +1211,7 @@ public sealed class MidiExporter
     /// rows (<see cref="RenderSpec.SoundingPartNames"/>) — or null for a file with no score.
     /// A part the score neither shows nor names is a sketch to it, exactly as a chord row it
     /// does not place is (<see cref="SoundingChordRows"/>): until 2026-09-29 the preview's Play
-    /// of <c>score main "p2" { staff p2 }</c> sounded every part of the file, p1 included.
+    /// of <c>score "p2" { staff p2 }</c> sounded every part of the file, p1 included.
     /// </summary>
     private static HashSet<string>? SoundingParts(RenderSpec? played)
         => played is { } spec
@@ -1336,7 +1336,7 @@ public sealed class MidiExporter
     /// ⚠️ A '~' REFERENCE HIDES A LABEL, NOT THE MUSIC. <c>~Name</c> is the same section
     /// reference with its rehearsal label suppressed (Parser.Form.cs ParseSilentSectionReference),
     /// so it has to play. Matching only <see cref="SectionReferenceSyntax"/> here silenced
-    /// the whole section: <c>form main { ~Main }</c> engraved correctly and exported ZERO
+    /// the whole section: <c>form { ~Main }</c> engraved correctly and exported ZERO
     /// notes, while the same book with the '~' dropped exported eight.
     /// The engraver has already been bitten by this once, in its repeat-block walk
     /// (MeasureCollector.Form.cs, "without this the section's measures were dropped entirely,
@@ -1437,7 +1437,7 @@ public sealed class MidiExporter
             case FormWalk.Repeat r:
                 PlayRepeatBlock(r, track, conductorTrack);
                 break;
-            // A volta ending no repeat block opened — `form main { A [1. B] }`. There is
+            // A volta ending no repeat block opened — `form { A [1. B] }`. There is
             // nothing for it to be an alternative TO, so it sounds as its plain section,
             // once.
             // LILYPOND-REF: lily/alternative-sequence-iterator.cc:83-84 — Alternative_sequence_iterator::analyze defaults repeat-count to 1

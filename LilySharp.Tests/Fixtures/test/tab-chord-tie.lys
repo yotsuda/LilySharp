@@ -8,8 +8,8 @@ part gt { clef treble_8 tuning guitar }
 section A {
   gt { <c' e' g'>2~ <c' e' g'>4 r4 }
 }
-form main { A }
-score main "tab-chord-tie" {
+form { A }
+score "tab-chord-tie" {
   staff gt
   tab gt as full
 }

@@ -34,7 +34,7 @@ namespace LilySharp.Tests;
 /// (lily/axis-group-interface.cc:914-935).
 /// Until 2026-09-28 they were in no vertical skyline (SkylineBuilder.AddSemiTiesToSkylines):
 /// the second ending's label B was drawn on the automatic repeat tie of
-/// <c>form main { I |: A [1. B] :| [2. B] }</c> (SYNTAX_REFERENCE "Across a section
+/// <c>form { I |: A [1. B] :| [2. B] }</c> (SYNTAX_REFERENCE "Across a section
 /// boundary"), and a label at a section opened by a user-written <c>@repeatTie</c> the same.
 /// </summary>
 [Trait("Category", "Unit")]
@@ -47,8 +47,8 @@ public sealed class SemiTieSkylineTests
           section A { c''1 | e1~ || }
           section B { e''1 | }
         }
-        form main { I |: A [1. B] :| [2. B] }
-        score main { staff vn }
+        form { I |: A [1. B] :| [2. B] }
+        score { staff vn }
         """;
 
     // A user-written @repeatTie on the first note of a labelled section.
@@ -58,8 +58,8 @@ public sealed class SemiTieSkylineTests
           section A { c''1 | d''1 || }
           section B { d''1@repeatTie | e''1 | }
         }
-        form main { A B }
-        score main { staff vn }
+        form { A B }
+        score { staff vn }
         """;
 
     // The tie carried back to the |: — the repeat tie lands on the body's first note.
@@ -70,8 +70,8 @@ public sealed class SemiTieSkylineTests
           section A { e''1 | c''1 | e''1~ || }
           section B { e''1 | }
         }
-        form main { I |: A :| B }
-        score main { staff vn }
+        form { I |: A :| B }
+        score { staff vn }
         """;
 
     public static TheoryData<string, string> Books => new()

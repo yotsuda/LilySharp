@@ -32,17 +32,17 @@ public class TabDisplayCompletionTests
         => LilySharpLanguageServer.GetCompletionContext(text, text.Length);
 
     [Theory]
-    [InlineData("score main { tab melody as ")]
-    [InlineData("score main { tab bass5 melody as ")]    // an explicit tuning precedes the part (`drop-d` stood here — a spelling no tuning has)
-    [InlineData("score main { tab melody as nu")]        // partial word keeps the list
-    [InlineData("score main { staff melody  tab bass as ")] // a staff item ahead of the tab
+    [InlineData("score { tab melody as ")]
+    [InlineData("score { tab bass5 melody as ")]    // an explicit tuning precedes the part (`drop-d` stood here — a spelling no tuning has)
+    [InlineData("score { tab melody as nu")]        // partial word keeps the list
+    [InlineData("score { staff melody  tab bass as ")] // a staff item ahead of the tab
     public void AfterTabAs_OffersTheTabStyles(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterTabDisplayAs, Ctx(text));
 
     [Theory]
-    [InlineData("score main { tab melody with chords harmony as ")] // chord attach on a tab
-    [InlineData("score main { chords harmony as ")]
-    [InlineData("score main { staff melody with chords harmony as ")]
+    [InlineData("score { tab melody with chords harmony as ")] // chord attach on a tab
+    [InlineData("score { chords harmony as ")]
+    [InlineData("score { staff melody with chords harmony as ")]
     public void AfterChordsAs_StillOffersChordModes_EvenOnATabLine(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterChordDisplayAs, Ctx(text));
 

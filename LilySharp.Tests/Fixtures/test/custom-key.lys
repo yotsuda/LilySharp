@@ -23,8 +23,8 @@ section Main {
   melody { p1 }
 }
 
-form main { Main }
+form { Main }
 
-score main "custom-key" {
+score "custom-key" {
   staff melody
 }

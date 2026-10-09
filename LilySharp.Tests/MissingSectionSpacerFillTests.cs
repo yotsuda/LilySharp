@@ -57,8 +57,8 @@ public class MissingSectionSpacerFillTests
           section A { c2 g, | }
           section B { c4 c c c | g2 g2 | }
         }
-        form main { A B A }
-        score main "s" {
+        form { A B A }
+        score "s" {
           staff melody
           staff bass
         }
@@ -113,8 +113,8 @@ public class MissingSectionSpacerFillTests
               section A { c2 g, | }
               section B { c4 c c c | g2 g2 | }
             }
-            form main { A B A }
-            score main "s" {
+            form { A B A }
+            score "s" {
               staff melody
               staff bass
             }
@@ -147,8 +147,8 @@ public class MissingSectionSpacerFillTests
             section B {
               bass { c4 c c c | g2 g2 | }
             }
-            form main { A B A }
-            score main "s" {
+            form { A B A }
+            score "s" {
               staff melody
               staff bass
             }
@@ -178,8 +178,8 @@ public class MissingSectionSpacerFillTests
               section A { c2 g, | }
               section B { g2 g2 | }
             }
-            form main { A B A }
-            score main "s" { staff melody staff bass }
+            form { A B A }
+            score "s" { staff melody staff bass }
             """);
 
         var melody = VoiceOf(score, 0);
@@ -214,8 +214,8 @@ public class MissingSectionSpacerFillTests
               melody { c'{{bar}} | }
               bass { g{{bar}} | }
             }
-            form main { A B C }
-            score main "s" { staff melody staff bass }
+            form { A B C }
+            score "s" { staff melody staff bass }
             """);
 
         var melody = VoiceOf(score, 0);
@@ -252,8 +252,8 @@ public class MissingSectionSpacerFillTests
               section C { c1 | }
             }
             section B { time 3/4  partial 4 }
-            form main { A B C }
-            score main "s" { staff melody staff bass }
+            form { A B C }
+            score "s" { staff melody staff bass }
             """);
 
         var melody = VoiceOf(score, 0);

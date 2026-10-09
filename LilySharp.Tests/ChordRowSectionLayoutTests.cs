@@ -54,8 +54,8 @@ public class ChordRowSectionLayoutTests
         => Assert.Equal(2, MeasureCount("""
             time 4/4
             chords prog { section A { C } section B { G } }
-            form main { A B }
-            score main { chords prog }
+            form { A B }
+            score { chords prog }
             """));
 
     [Fact]
@@ -63,8 +63,8 @@ public class ChordRowSectionLayoutTests
         => Assert.Equal(4, MeasureCount("""
             time 4/4
             chords prog { section A { C | F } section B { G | C } }
-            form main { A B }
-            score main { chords prog }
+            form { A B }
+            score { chords prog }
             """));
 
     [Fact]
@@ -72,8 +72,8 @@ public class ChordRowSectionLayoutTests
         => Assert.Equal(new[] { 0, 2 }, SectionLabelMeasures("""
             time 4/4
             chords prog { section A { C | F } section B { G | C } }
-            form main { A B }
-            score main { chords prog }
+            form { A B }
+            score { chords prog }
             """));
 
     [Fact]
@@ -87,14 +87,14 @@ public class ChordRowSectionLayoutTests
         Assert.Equal(3, MeasureCount("""
             time 4/4
             chords prog { | C | F | }
-            form main { }
-            score main { chords prog }
+            form { }
+            score { chords prog }
             """));
         Assert.Equal(2, MeasureCount("""
             time 4/4
             chords prog { C | F | }
-            form main { }
-            score main { chords prog }
+            form { }
+            score { chords prog }
             """));
     }
 
@@ -105,7 +105,7 @@ public class ChordRowSectionLayoutTests
         => Assert.Equal(4, MeasureCount("""
             time 4/4
             chords prog { | | C | F | }
-            form main { }
-            score main { chords prog }
+            form { }
+            score { chords prog }
             """));
 }

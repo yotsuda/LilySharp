@@ -13,6 +13,6 @@ section Main {
   m { c'4@snapPizz }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { staff m }
+score { staff m }

@@ -3,7 +3,7 @@ time 4/4
 part m {
   section A { c4 cue { e4( f) } g4 | cue { e2~ e2 } | c4( d) cue { a4( g) } | cue { c'8( d' e' f') } g2 | }
 }
-form main { A }
-score main {
+form { A }
+score {
   staff m
 }

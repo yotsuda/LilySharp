@@ -19,6 +19,6 @@ section Main {
   lo { <a b>4 }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { staff up staff lo }
+score { staff up staff lo }

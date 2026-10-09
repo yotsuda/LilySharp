@@ -207,7 +207,7 @@ public class CollectEditResumeTests
         for (int i = 0; i < 120; i++)
             lines.Append("    c'4 e'4 g'4 b'4 |\n");
         var baseText = "octave absolute\n\npart melody {\n  section A {\n" + lines
-            + "  }\n}\n\nform main { A }\n\nscore main {\n  staff melody\n}\n";
+            + "  }\n}\n\nform { A }\n\nscore {\n  staff melody\n}\n";
         int idx = baseText.IndexOf("\n    c'4", baseText.Length / 2, StringComparison.Ordinal) + 5;
         var edited = baseText.Remove(idx, 1).Insert(idx, "d");
 
@@ -325,7 +325,7 @@ public class CollectEditResumeTests
     // padding of S reads a count of va's cell, text BELOW everything vb's walk reads.
     // va's bars are rests so an edit to them leaves every cumulative table count alone
     // (see SuffixSplice_DeclinesWhenAnotherPartsBarCountChanges' note).
-    private const string CanonBook = @"score main ""canon"" { staff va staff vb }
+    private const string CanonBook = @"score ""canon"" { staff va staff vb }
 
 part vb {
   clef bass
@@ -337,7 +337,7 @@ part va {
   section S { r4 r r r | r4 r r r | }
   section T { r4 r r r | r4 r r r | }
 }
-form main { S T }
+form { S T }
 ";
 
     /// <summary>
@@ -384,14 +384,14 @@ form main { S T }
     [Fact]
     public void PrefixResume_ALengthChangingEditInAGroupedByPartPart_KeepsThePrefix()
     {
-        const string oldText = @"score main ""x"" { staff bl }
+        const string oldText = @"score ""x"" { staff bl }
 
 part bl {
   clef bass
   section A { c4 d e f | g4 a b c | }
   section B { c4 d e f | g4 a b c | }
 }
-form main { A B }
+form { A B }
 ";
         var newText = oldText.Replace("section B { c4 d e f | g4 a b c | }", "section B { c4 d e f | g8 g a4 b c | }");
         Assert.NotEqual(oldText, newText);
@@ -408,7 +408,7 @@ form main { A B }
     [Fact]
     public void PrefixResume_AFormLineBar_DoesNotReadPastTheMusicAbove()
     {
-        const string oldText = @"score main ""x"" { staff bl }
+        const string oldText = @"score ""x"" { staff bl }
 
 part bl {
   clef bass
@@ -416,7 +416,7 @@ part bl {
   section B { g4 a b c | }
   section C { e4 f g a | a4 g f e | }
 }
-form main { A |: B :| C }
+form { A |: B :| C }
 ";
         var newText = oldText.Replace("a4 g f e", "b4 g f e");
         Assert.Equal(oldText.Length, newText.Length);
@@ -437,13 +437,13 @@ form main { A |: B :| C }
     public void PrefixResume_AnEditThatMakesANewOriginal_DoesNotRestorePastIt()
     {
         const string oldText = @"octave absolute
-score main ""x"" { staff bl }
+score ""x"" { staff bl }
 
 part bl {
   clef bass
   section A { c4 d e f | g4 a b c | d4 e f g | a4 b c d | }
 }
-form main { A }
+form { A }
 ";
         var newText = oldText.Replace("| a4 b c d |", "| 4 b c d |");
         Assert.NotEqual(oldText, newText);
@@ -482,7 +482,12 @@ form main { A }
         // then the one that deletes the brace. A seeded System.Random is the same sequence on
         // every .NET, and the draw is the audit host's (Lab sessions/p593/cpuhost, `fuzz`).
         var path = Path.Combine(FindRepoRootForTests(), "LilySharp.Tests", "Fixtures", "test", "collision.lys");
-        string text = File.ReadAllText(path);
+        // The draw was taken on the fixture as it read before 2026-10-09 (`form main`, `score main`):
+        // the edits are drawn on that spelling and read back in today's, so the keystrokes stay
+        // the audit's own.
+        string text = File.ReadAllText(path)
+            .Replace("form { Main }", "form main { Main }").Replace("score \"collision\"", "score main \"collision\"");
+        static string Today(string s) => s.Replace("form main { Main }", "form { Main }").Replace("score main \"collision\"", "score \"collision\"");
         int h = 17;
         foreach (char ch in Path.GetFileName(path)) h = unchecked(h * 31 + ch);
         var rng = new Random(h ^ 1);
@@ -491,7 +496,7 @@ form main { A }
         {
             int at = rng.Next(text.Length / 4, text.Length);
             text = rng.Next(2) == 0 ? text.Remove(at, 1) : text.Insert(at, text[at].ToString());
-            texts.Add(text);
+            texts.Add(Today(text));
         }
         Assert.Contains("section Main {", texts[4]);
         Assert.DoesNotContain("section Main {", texts[5]);
@@ -509,13 +514,13 @@ form main { A }
     public void PrefixResume_AParallelSpanInThePrefix_IsReKeyedOntoTheNewTree()
     {
         const string oldText = @"octave absolute
-score main ""x"" { staff bl }
+score ""x"" { staff bl }
 
 part bl {
   clef bass
   section A { voice { e2 f | g2 a | } { 2 e | f2 g | } c4 d e f | g4 a b c | }
 }
-form main { A }
+form { A }
 ";
         var newText = oldText.Replace("g4 a b c", "g4 a b d");
         Assert.Equal(oldText.Length, newText.Length);
@@ -538,7 +543,7 @@ form main { A }
     [Fact]
     public void PrefixResume_AnEditThatSwallowsTheForm_DoesNotAdoptItsBars()
     {
-        const string oldText = @"score main ""x"" { staff bl }
+        const string oldText = @"score ""x"" { staff bl }
 
 part bl {
   clef bass
@@ -546,9 +551,9 @@ part bl {
   section B { g4 a b c | }
   section C { e4 f g a | a4 g f e | }
 }
-form main { A |: B :| C }
+form { A |: B :| C }
 ";
-        int brace = oldText.LastIndexOf("}", oldText.IndexOf("form main", StringComparison.Ordinal), StringComparison.Ordinal);
+        int brace = oldText.LastIndexOf("}", oldText.IndexOf("form {", StringComparison.Ordinal), StringComparison.Ordinal);
         Assert.True(brace > 0);
         var newText = oldText.Remove(brace, 1).Insert(brace, " ");
         var recorder = CollectWalkProbe.Recorder();
@@ -597,7 +602,7 @@ form main { A |: B :| C }
         const string oldText = @"part va { clef treble }
 part vb { clef bass }
 
-score main ""canon"" { staff va staff vb }
+score ""canon"" { staff va staff vb }
 
 section S {
   va { r4 r r r | r4 r r r | r4 r r r | }
@@ -650,8 +655,8 @@ section S {
               section A { c'4 c' c' c' | key g major d'4 d' d' d' | e'4 e' e' e' | f'4 f' f' f' | g'4 g' g' g' | a'4 a' a' a' | }
             }
             chords prog { section A { I | I | I | I | I | I | } }
-            form main { A }
-            score main { staff m  chords prog }
+            form { A }
+            score { staff m  chords prog }
             """;
         // Late edit: a same-length pitch swap in the LAST bar, so checkpoints
         // past the bar-1 modulation qualify as prefix targets.
@@ -713,8 +718,8 @@ section S {
               section A { c'4 c' c' c' | key g major d'4 d' d' d' | e'4 e' e' e' | key c major f'4 f' f' f' | g'4 g' g' g' | a'4 a' a' a' | }
             }
             chords prog { section A { I | I | I | I | I | I | } }
-            form main { A }
-            score main { staff m  chords prog }
+            form { A }
+            score { staff m  chords prog }
             """;
         // Same-length swap: only the first modulation's letter changes.
         int idx = oldText.IndexOf("key g major", StringComparison.Ordinal);
@@ -867,7 +872,7 @@ section S {
         var bars = string.Join(" |\n    ",
             Enumerable.Repeat("c'4 d'4 e'4 f'4", 60));
         var baseText = "octave absolute\npart m { clef treble }\nsection S {\n  m {\n    "
-            + bars + " |\n  }\n}\nform main { S }\nscore main \"rerecord-probe\" { staff m }\n";
+            + bars + " |\n  }\n}\nform { S }\nscore \"rerecord-probe\" { staff m }\n";
 
         var options = new SvgRenderOptions { EmbedFont = false };
         var compiler = new IncrementalCompiler(SyntaxTree.Parse(baseText), options);
@@ -955,11 +960,11 @@ section S {
             "chord-repetition" =>
                 "octave absolute\npart m { clef treble }\nsection S { m { <c' e' g'>4 q q q | "
                 + Bars("q4 q q q", 30) + " | e'4 f' g' a' } }\n"
-                + "form main { S }\nscore main { staff m }\n",
+                + "form { S }\nscore { staff m }\n",
             "bare-duration" =>
                 "octave absolute\npart m { clef treble }\nsection S { m { c'4 4 4 4 | "
                 + Bars("d'4 4 4 4", 30) + " | e'4 f' g' a' } }\n"
-                + "form main { S }\nscore main { staff m }\n",
+                + "form { S }\nscore { staff m }\n",
             // The block sits AFTER a plain section: post-block checkpoints fold the
             // form line's repeat-token positions (burned into the synthesized
             // barlines' data-pos) into MaxSourceRead, so with the form at the file's
@@ -971,7 +976,7 @@ section S {
                 + "section A { m { " + Bars("c'4 d' e' f'", 16) + " } }\n"
                 + "section B { m { " + Bars("g'4 a' b' c''", 16) + " } }\n"
                 + "section C { m { " + Bars("e'4 d' c' d'", 16) + " } }\n"
-                + "form main { A |: B :| C }\nscore main { staff m }\n",
+                + "form { A |: B :| C }\nscore { staff m }\n",
         };
 
         var options = new SvgRenderOptions { EmbedFont = false };
@@ -1004,7 +1009,7 @@ section S {
         string source =
             "octave absolute\npart m { clef treble }\nsection S { m { <c' e' g'>4 q q q | "
             + Bars("d'4 e' f' g'", 24) + " | e'4 f' q q | " + Bars("a'4 b' c'' d''", 8) + " } }\n"
-            + "form main { S }\nscore main { staff m }\n";
+            + "form { S }\nscore { staff m }\n";
 
         var options = new SvgRenderOptions { EmbedFont = false };
         var compiler = new IncrementalCompiler(SyntaxTree.Parse(source), options);
@@ -1037,7 +1042,7 @@ section S {
     {
         string source = "time 4/4\nkey c major\npart m { clef treble }\n"
             + "section S { m { " + Bars("c4 d e f", 40) + " } }\n"
-            + "form main { S }\nscore main { staff m }\n";
+            + "form { S }\nscore { staff m }\n";
         var options = new SvgRenderOptions { EmbedFont = false };
         var compiler = new IncrementalCompiler(SyntaxTree.Parse(source), options);
         compiler.Render();
@@ -1075,8 +1080,8 @@ section S {
             lyrics verse {
               section A { hey | | | | hey | |  }
             }
-            form main { A | B |  }
-            score main {
+            form { A | B |  }
+            score {
               chords prog
               staff melody
               lyrics verse sings melody
@@ -1137,8 +1142,8 @@ section S {
               sop { c'1 }
               alt { c'1 }
             }
-            form main { M }
-            score main { staff sop  staff alt }
+            form { M }
+            score { staff sop  staff alt }
             """;
         AssertKeystrokeMatchesFull(source, "c'1 }", "c'1 c'1 }");
     }
@@ -1161,8 +1166,8 @@ section S {
             section Main {
               melody { intro theme finale }
             }
-            form main { Main }
-            score main { staff melody }
+            form { Main }
+            score { staff melody }
             """;
         AssertKeystrokeMatchesFull(source, "{ intro", "{ | intro");
         AssertKeystrokeMatchesFull(source, "{ intro", "{ c'4 intro");
@@ -1189,8 +1194,8 @@ section S {
               section A { Dmaj7 | Em7 | Gmaj7 | A7 }
               section B { Gm7 F#maj7 | }
             }
-            form main { A B A B }
-            score main { chords prog  staff melody  staff bass }
+            form { A B A B }
+            score { chords prog  staff melody  staff bass }
             """;
         AssertKeystrokeMatchesFull(source, "Dmaj7 | Em7", "Dmaj7 | | Em7");
         AssertKeystrokeMatchesFull(source, "{ Dmaj7", "{ | Dmaj7");
@@ -1211,8 +1216,8 @@ section S {
               partial 2
               m { a'8 a' a' a' | }
             }
-            form main { ~Main }
-            score main { staff m }
+            form { ~Main }
+            score { staff m }
             """;
         AssertKeystrokeMatchesFull(source, "a' | }\n}", "a' | }\n | }");
         AssertKeystrokeMatchesFull(source, "a' | }\n}", "a' | }\n c'4 }");
@@ -1229,8 +1234,8 @@ section S {
         }
         section A { key g major }
         section B { key d major }
-        form main { A B A B }
-        score main { staff melody }
+        form { A B A B }
+        score { staff melody }
         """;
 
     // Two parts whose A cells share a name; the bass cell carries a key of its own.
@@ -1246,8 +1251,8 @@ section S {
           section A { key g major c4 d e f | g1 | }
           section B { e4 d c d | e1 | }
         }
-        form main { A B A B }
-        score main { staff melody  staff bass }
+        form { A B A B }
+        score { staff melody  staff bass }
         """;
 
     /// <summary>THE SECOND-SOURCE HOLE (session 794, the §1.0 ⑺ item): the prologue's key /
@@ -1326,8 +1331,8 @@ section S {
             section B {
               m { e'4 e' e' e' | e'4 e' e' e' | e'4 e' e' e' | }
             }
-            form main { B A }
-            score main { staff m }
+            form { B A }
+            score { staff m }
             """;
         AssertKeystrokeMatchesFull(source, find, replacement);
     }
@@ -1343,7 +1348,7 @@ section S {
         + "part melody { section S { " + Bars("c'4 d' e' f'", 24) + " } }\n"
         + "part alto { section S { " + Bars("e'4 f' g' a'", 24) + " } }\n"
         + "part band { section S { |: " + Bars("g'4 a' b' c''", 24) + " :| } }\n"
-        + "form main { S }\nscore main { staff melody  staff alto }\n";
+        + "form { S }\nscore { staff melody  staff alto }\n";
 
     /// <summary>Finding 3-5 liveness: the omitted-structure harvest used to run a
     /// COMPLETE fresh collect of the undrawn part on every keystroke, outside the
@@ -1408,7 +1413,7 @@ section S {
             + "part alto { section S { " + Bars("e'4 f' g' a'", 24) + " } }\n"
             + "part band1 { section S { |: " + Bars("g'4 a' b' c''", 24) + " :| } }\n"
             + "part band2 { section S { |: " + Bars("d'4 e' f' g'", 24) + " :| } }\n"
-            + "form main { S }\nscore main { staff melody  staff alto }\n";
+            + "form { S }\nscore { staff melody  staff alto }\n";
         var options = new SvgRenderOptions { EmbedFont = false };
         var compiler = new IncrementalCompiler(SyntaxTree.Parse(source), options);
         compiler.Render();
@@ -1437,7 +1442,7 @@ section S {
             + "part melody { section A { " + Bars("c'4 d' e' f'", 24) + " } }\n"
             + "part back { section A { " + Bars("e'4 f' g' a'", 24) + " } }\n"
             + "lyrics ly sings melody { section A { " + Bars("la le li lo", 24) + " } }\n"
-            + "form main { A }\nscore main { staff back  lyrics ly }\n";
+            + "form { A }\nscore { staff back  lyrics ly }\n";
         var options = new SvgRenderOptions { EmbedFont = false };
         var compiler = new IncrementalCompiler(SyntaxTree.Parse(source), options);
         compiler.Render();
@@ -1469,7 +1474,7 @@ section S {
             "octave absolute\npart m { clef treble }\nsection S { m { "
             + Bars("c'4 d' e' f'", 10) + " | <c' e' g'>4 f' g' a' | "
             + Bars("d'4 e' f' g'", 18) + " | q4 q q q | " + Bars("a'4 b' c'' d''", 8) + " } }\n"
-            + "form main { S }\nscore main { staff m }\n";
+            + "form { S }\nscore { staff m }\n";
 
         var options = new SvgRenderOptions { EmbedFont = false };
         var compiler = new IncrementalCompiler(SyntaxTree.Parse(source), options);
@@ -1548,8 +1553,8 @@ part n { clef bass }
 section A { m { c4 d e f | g4 a b c' | d'4 e' f' g' | }  n { c4 d e f | g4 a b c' | d'4 e' f' g' | } }
 section B { m { e4 f g a | b4 c' d' e' | }  n { e4 f g a | b4 c' d' e' | } }
 section C { m { c'4 b a g | }  n { c'4 b a g | } }
-form main { A ~B ~C }
-score main { staff m staff n }
+form { A ~B ~C }
+score { staff m staff n }
 ";
         int at = oldText.IndexOf("f' g' |", StringComparison.Ordinal);
         Assert.True(at > 0);
@@ -1575,8 +1580,8 @@ score main { staff m staff n }
 time 4/4
 part m { clef treble }
 section A { m { c1 | |: d1 :| e1 | } }
-form main { A }
-score main { staff m }
+form { A }
+score { staff m }
 ";
         int at = oldText.IndexOf("d1", StringComparison.Ordinal);
         Assert.True(at > 0);
@@ -1602,8 +1607,8 @@ score main { staff m }
         const string oldText = @"octave absolute
 part m { clef treble }
 section A { m { time 4/4 c4 time none d4 e4 | f4 g4 | a4 b4 | time 4/4 c'1 | } }
-form main { A }
-score main { staff m }
+form { A }
+score { staff m }
 ";
         int at = oldText.IndexOf("c4 time none", StringComparison.Ordinal);
         Assert.True(at > 0);
@@ -1635,7 +1640,7 @@ score main { staff m }
             + "octave absolute\ntime 4/4\nkey c major\npart m { clef treble }\n"
             + "section A { m { cis4 d e f | " + Bars("g4 a b d'", 5) + " | c4 d e f | "
             + Bars("g4 a b d'", 3) + " | } }\n"
-            + "form main { A }\nscore main { staff m }\n";
+            + "form { A }\nscore { staff m }\n";
         // Edit bar 5 (the last `g4 a b d'` before `c4 d e f`): a → f.
         int at = oldText.IndexOf("g4 a b d' | c4", StringComparison.Ordinal);
         Assert.True(at > 0);
@@ -1665,7 +1670,7 @@ score main { staff m }
         // 15-book splice floor never noticed. Trivia is not structure.
         string oldText = "octave absolute\ntime 4/4\npart m { clef treble }\n"
             + "section A { m { " + Bars("g4 a b d'", 8) + " | } }\n"
-            + "form main { A }\nscore main { staff m }\n";
+            + "form { A }\nscore { staff m }\n";
         int at = oldText.IndexOf("g4 a b d'", oldText.Length / 2, StringComparison.Ordinal);
         Assert.True(at > 0);
         var newText = oldText.Remove(at + 3, 1).Insert(at + 3, "f");
@@ -1688,7 +1693,7 @@ score main { staff m }
         // consumed the same way.
         string oldText = "octave absolute\ntime 4/4\npart m { clef treble }\n"
             + "section A { m { " + Bars("g4 fis a b", 8) + " | } }\n"
-            + "form main { A }\nscore main { staff m }\n";
+            + "form { A }\nscore { staff m }\n";
         int at = oldText.IndexOf("fis", oldText.Length / 2, StringComparison.Ordinal);
         Assert.True(at > 0);
         var newText = oldText.Remove(at, 1).Insert(at, "g");

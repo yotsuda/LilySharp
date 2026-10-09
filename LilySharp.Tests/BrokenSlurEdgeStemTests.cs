@@ -45,8 +45,8 @@ public sealed class BrokenSlurEdgeStemTests
             part m {
               section A { c2( e | break g2 c'') | }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
@@ -82,8 +82,8 @@ public sealed class BrokenSlurEdgeStemTests
             part m {
               section A { c2 e( | break c''2) r2 | }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));

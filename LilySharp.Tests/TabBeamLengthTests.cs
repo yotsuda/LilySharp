@@ -58,8 +58,8 @@ public sealed class TabBeamLengthTests
             e,,8\4 fis,,\4 a,,\3 b,,\3 e,,8\4 fis,,\4 a,,\3 b,,\3 |
           }
         }
-        form main { A }
-        score main { tab bl as full }
+        form { A }
+        score { tab bl as full }
         """;
 
     /// <summary>Every beam's bar and outer edge at both ends (Y-up about the tab's middle).</summary>

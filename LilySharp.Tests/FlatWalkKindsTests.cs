@@ -79,8 +79,8 @@ public sealed class FlatWalkKindsTests
         section B {
           melody { c'4 d' e' f' | }
         }
-        form main { A B }
-        score main { staff melody with lyrics w  staff bass }
+        form { A B }
+        score { staff melody with lyrics w  staff bass }
         """;
 
     /// <summary>The nodes <see cref="SectionBarCounts.SemanticVoices"/> is offered: the

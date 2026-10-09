@@ -45,8 +45,8 @@ section Main {
   melody { wholeAndHalf quarters eighths sixteenths dotted rests mixed }
 }
 
-form main { Main }
+form { Main }
 
-score main "notes" {
+score "notes" {
   staff melody
 }

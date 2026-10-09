@@ -35,8 +35,8 @@ public class LyricPartSectionsTests
         part melody { clef treble }
         section A { melody { c4 c g' g | a a g2 | } lyrics w { Twin- kle twin- kle | lit- tle star | } }
         section B { melody { g'4 g f f | e e d2 | } lyrics w { how I won- der | what you are | } }
-        form main { A B }
-        score main "s" { staff melody  lyrics w }
+        form { A B }
+        score "s" { staff melody  lyrics w }
         """;
 
     private const string GroupedByPart = """
@@ -50,8 +50,8 @@ public class LyricPartSectionsTests
           section A { Twin- kle twin- kle | lit- tle star | }
           section B { how I won- der | what you are | }
         }
-        form main { A B }
-        score main "s" { staff melody  lyrics w }
+        form { A B }
+        score "s" { staff melody  lyrics w }
         """;
 
     // Lyrics attach EXPLICITLY (`staff melody  lyrics w`); collect through the render
@@ -88,7 +88,7 @@ public class LyricPartSectionsTests
     [Fact]
     public void LyricTrack_RepeatsUnderAReprise()
     {
-        // form main { A B A "A2" }: A's verse must reappear at the A2 reprise.
+        // form { A B A "A2" }: A's verse must reappear at the A2 reprise.
         var tree = SyntaxTree.Parse("""
             time 4/4
             key c major
@@ -97,8 +97,8 @@ public class LyricPartSectionsTests
               section B { f'4 f' e' e' | }
             }
             lyrics w { section A { Twin- kle | star | } section B { how | } }
-            form main { A B A "A2" }
-            score main { staff melody }
+            form { A B A "A2" }
+            score { staff melody }
             """);
         var score = new MeasureCollector().Collect(tree, "melody", attachedLyricParts: new[] { "w" });
         var byMeasure = score.Lyrics
@@ -126,8 +126,8 @@ public class LyricPartSectionsTests
               section A { Do re mi fa | }
               section B { sol la ti do | }
             }
-            form main { A B }
-            score main { staff melody  lyrics words }
+            form { A B }
+            score { staff melody  lyrics words }
             """);
         var spec = RenderSpecParser.FindFirst(tree);
         Assert.NotNull(spec);
@@ -160,8 +160,8 @@ public class LyricPartSectionsTests
                 [2. How I won- der | what you are |]
               }
             }
-            form main { A |: ~B :| A "A2" }
-            score main { staff melody }
+            form { A |: ~B :| A "A2" }
+            score { staff melody }
             """);
         var score = new MeasureCollector().Collect(tree, "melody", attachedLyricParts: new[] { "w" });
         var byMeasure = score.Lyrics
@@ -192,8 +192,8 @@ public class LyricPartSectionsTests
               section A { la la la la | }
               section B { [1. up up up up |] [2. down down down down |] }
             }
-            form main { A |: B :| }
-            score main { staff melody }
+            form { A |: B :| }
+            score { staff melody }
             """);
         var score = new MeasureCollector().Collect(tree, "melody", attachedLyricParts: new[] { "w" });
         var atB = score.Lyrics.Where(l => l.MeasureIndex == 1).ToList(); // A=bar0, B=bar1
@@ -210,8 +210,8 @@ public class LyricPartSectionsTests
             key c major
             part melody { clef treble section A { c'4 d' e' f' | } }
             lyrics w { section A { [1,3. one two three four |] [2. aa bb cc dd |] } }
-            form main { A "1" A "2" A "3" }
-            score main { staff melody }
+            form { A "1" A "2" A "3" }
+            score { staff melody }
             """);
         var score = new MeasureCollector().Collect(tree, "melody", attachedLyricParts: new[] { "w" }); // occurrences at bars 0,1,2
         Assert.Contains(score.Lyrics, l => l.Text == "one" && l.MeasureIndex == 0);
@@ -232,8 +232,8 @@ public class LyricPartSectionsTests
             key c major
             part melody { clef treble section A { c'4 d' e' f' | } }
             lyrics w { section A { [3,1. one two three four |] } }
-            form main { A "1" A "2" }
-            score main { staff melody }
+            form { A "1" A "2" }
+            score { staff melody }
             """);
         var score = new MeasureCollector().Collect(tree, "melody", attachedLyricParts: new[] { "w" }); // occurrences at bars 0,1
         Assert.Contains(score.Lyrics, l => l.Text == "one" && l.MeasureIndex == 0);
@@ -254,8 +254,8 @@ public class LyricPartSectionsTests
               section A { la la la la | }
               section B { [1. up up up up |] [~2. down down down down |] }
             }
-            form main { A |: B :| }
-            score main { staff melody }
+            form { A |: B :| }
+            score { staff melody }
             """);
         var score = new MeasureCollector().Collect(tree, "melody", attachedLyricParts: new[] { "w" });
         Assert.NotEmpty(score.Lyrics.Where(l => l.Text == "down"));
@@ -276,8 +276,8 @@ public class LyricPartSectionsTests
               section B { g'4 f' e' d' | }
             }
             lyrics w { section A { Do re mi fa | } }
-            form main { A |: ~B :| A "A2" }
-            score main { staff melody }
+            form { A |: ~B :| A "A2" }
+            score { staff melody }
             """);
         var score = new MeasureCollector().Collect(tree, "melody", attachedLyricParts: new[] { "w" });
         var atReprise = score.Lyrics.Where(l => l.MeasureIndex == 2).Select(l => l.Text).ToList();
@@ -303,8 +303,8 @@ public class LyricPartSectionsTests
               section A { Do re mi fa | }
               section B { sol la ti do | }
             }
-            form main { A B A "A2" }
-            score main { staff melody  lyrics words }
+            form { A B A "A2" }
+            score { staff melody  lyrics words }
             """);
         // A=bar0, B=bar1, A2=bar2.
         Assert.Contains(score.Lyrics, l => l.IsLyricsRow && l.Text == "Do" && l.MeasureIndex == 0);
@@ -328,8 +328,8 @@ public class LyricPartSectionsTests
               section A { la la la la | }
               section B { [1. up up up up |] [~2. down down down down |] }
             }
-            form main { A |: B :| }
-            score main { staff melody  lyrics words }
+            form { A |: B :| }
+            score { staff melody  lyrics words }
             """);
         var atB = score.Lyrics.Where(l => l.IsLyricsRow && l.MeasureIndex == 1).ToList();
         Assert.Contains(atB, l => l.Text == "up" && l.VerseNumber == 1);
@@ -348,8 +348,8 @@ public class LyricPartSectionsTests
             key c major
             part melody { clef treble section A { c'4 d' e' f' | } }
             lyrics words { section A { [1. one one one one |] [2. two two two two |] } }
-            form main { A "1" A "2" }
-            score main { staff melody  lyrics words }
+            form { A "1" A "2" }
+            score { staff melody  lyrics words }
             """);
         var rows = score.Lyrics.Where(l => l.IsLyricsRow).ToList();
         Assert.Contains(rows, l => l.Text == "one" && l.MeasureIndex == 0);

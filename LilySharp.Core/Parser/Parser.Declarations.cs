@@ -214,7 +214,7 @@ internal sealed partial class Parser
     /// offset after the token slides. Measured: four books differing from a control only by
     /// an inserted <c>"oops"</c> rendered SVGs byte-identical to it, <c>data-pos</c>
     /// included, while <c>lysc check</c> said <c>No errors found.</c> — and on
-    /// <c>form main { A section B }</c> the resulting <c>Undefined section: 'B'</c> pointed
+    /// <c>form { A section B }</c> the resulting <c>Undefined section: 'B'</c> pointed
     /// at column 15, the dropped <c>section</c> keyword, with <c>B</c> at column 23.
     /// Same shape and same fix as <see cref="SkipStrayChordToken"/>,
     /// <see cref="ReportUnclaimedDot"/> and <see cref="ReportStrayStringNumber"/>;
@@ -467,7 +467,7 @@ internal sealed partial class Parser
     /// </para>
     /// <para>
     /// ⚠️ The shape errors that are POSITIONAL are anchored after the keyword, not on
-    /// it: <c>score main {{ fonts }}</c> reports on the token where the name belongs,
+    /// it: <c>score {{ fonts }}</c> reports on the token where the name belongs,
     /// the same convention as <c>staff</c> missing its part — a word with a real branch
     /// that lacks its arguments is not a stray item (DocKeywordListTests reads exactly
     /// this distinction).
@@ -487,15 +487,7 @@ internal sealed partial class Parser
 
         if (Check(SyntaxKind.OpenBrace))
         {
-            if (inScore && name == null)
-            {
-                // The block still parses so its tokens keep their spans; it binds
-                // nothing (a refused directive is refused all the way through).
-                var braceSpan = new TextSpan(_textPosition + Current.LeadingTriviaWidth, 1);
-                _diagnostics.Error(braceSpan, DiagnosticCodes.ScoreFontsNeedsAName,
-                    "A score's fonts item references a named top-level block: fonts NAME, "
-                    + "or fonts NAME { role \"FACE\" } to override part of it here.");
-            }
+            // A score's bare block overrides the file's unnamed default (2026-10-09).
             return ParseFontBlock(keyword, name);
         }
 
@@ -525,8 +517,8 @@ internal sealed partial class Parser
             Math.Max(1, Current.Text.Length));
         if (inScore)
             _diagnostics.Error(span, DiagnosticCodes.ScoreFontsNeedsAName,
-                "A score's fonts item references a named top-level block: fonts NAME, "
-                + "or fonts NAME { role \"FACE\" } to override part of it here.");
+                "A score's fonts item takes a block or a name: fonts { role \"FACE\" } over the file's default, "
+                + "fonts NAME for a named top-level block, or fonts NAME { … } to override part of it here.");
         else
             _diagnostics.Error(span, DiagnosticCodes.FontsNeedsABlock,
                 face is { Length: > 0 }
@@ -628,13 +620,7 @@ internal sealed partial class Parser
 
         if (Check(SyntaxKind.OpenBrace))
         {
-            if (inScore && name == null)
-            {
-                var braceSpan = new TextSpan(_textPosition + Current.LeadingTriviaWidth, 1);
-                _diagnostics.Error(braceSpan, DiagnosticCodes.ScorePaperNeedsAName,
-                    "A score's paper item references a named top-level block: paper NAME, "
-                    + "or paper NAME { topMargin 12mm } to override part of it here.");
-            }
+            // A score's bare block overrides the file's unnamed default (2026-10-09).
             return ParsePaperBlock(keyword, name);
         }
 
@@ -659,8 +645,8 @@ internal sealed partial class Parser
             Math.Max(1, Current.Text.Length));
         if (inScore)
             _diagnostics.Error(span, DiagnosticCodes.ScorePaperNeedsAName,
-                "A score's paper item references a named top-level block: paper NAME, "
-                + "or paper NAME { topMargin 12mm } to override part of it here.");
+                "A score's paper item takes a block or a name: paper { topMargin 12mm } over the file's default, "
+                + "paper NAME for a named top-level block, or paper NAME { … } to override part of it here.");
         else
             _diagnostics.Error(span, DiagnosticCodes.PaperNeedsABlock,
                 "'paper' sets the page's dimensions, so it takes a block: "
@@ -768,13 +754,7 @@ internal sealed partial class Parser
 
         if (Check(SyntaxKind.OpenBrace))
         {
-            if (inScore && name == null)
-            {
-                var braceSpan = new TextSpan(_textPosition + Current.LeadingTriviaWidth, 1);
-                _diagnostics.Error(braceSpan, DiagnosticCodes.ScoreLayoutNeedsAName,
-                    "A score's layout item references a named top-level block: layout NAME, "
-                    + "or layout NAME { markTempo beside } to override part of it here.");
-            }
+            // A score's bare block overrides the file's unnamed default (2026-10-09).
             return ParseLayoutBlock(keyword, name);
         }
 
@@ -799,8 +779,8 @@ internal sealed partial class Parser
             Math.Max(1, Current.Text.Length));
         if (inScore)
             _diagnostics.Error(span, DiagnosticCodes.ScoreLayoutNeedsAName,
-                "A score's layout item references a named top-level block: layout NAME, "
-                + "or layout NAME { markTempo beside } to override part of it here.");
+                "A score's layout item takes a block or a name: layout { markTempo beside } over the file's default, "
+                + "layout NAME for a named top-level block, or layout NAME { … } to override part of it here.");
         else
             _diagnostics.Error(span, DiagnosticCodes.LayoutNeedsABlock,
                 "'layout' sets the score's display switches, so it takes a block: "

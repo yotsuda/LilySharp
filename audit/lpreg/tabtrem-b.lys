@@ -10,5 +10,5 @@ section A {
     repeat tremolo 4 { <c d>16 } |
   }
 }
-form main { A }
-score main { tab m }
+form { A }
+score { tab m }

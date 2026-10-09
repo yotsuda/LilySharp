@@ -81,8 +81,8 @@ public class PaperOverridesTests
             octave absolute
             part m { }
             section A { m { c'4 d' e' f' | g'1 | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """;
         var tree = SyntaxTree.Parse(book);
         var settings = PaperOverrides.Parse(["spacingIncrement=2.4", "raggedRight=false"], out _);
@@ -144,8 +144,8 @@ public class PaperOverridesTests
             paper { shortestDurationSpace 3  systemsPerPage 4  measuresPerSystem 2  staffSpace 1.5mm  leftMargin 30mm }
             part m { }
             section A { m { c'1 | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """;
         var tree = SyntaxTree.Parse(book);
         var paper = tree.GetRoot().DescendantNodes<PaperDeclarationSyntax>().First();
@@ -175,8 +175,8 @@ public class PaperOverridesTests
             paper small { staffSpace 1.4mm  systemsPerPage 6 }
             part m { }
             section A { m { c'1 | } }
-            form main { A }
-            score main { paper small { staffSpace 1.6mm }  staff m }
+            form { A }
+            score { paper small { staffSpace 1.6mm }  staff m }
             """);
         var p = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)).Paper;
         Assert.Equal(1.6, p.StaffSpaceMm);
@@ -202,8 +202,8 @@ public class PaperOverridesTests
             part m { clef treble
               section A { c'4 d'8 e' f'2 | g'16 a' b' c'' d''4 e''2 | s1 | c'1 | }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         string svg = SvgGenerator.Generate(tree, new SvgRenderOptions
         {
@@ -222,7 +222,7 @@ public class PaperOverridesTests
     private static readonly string SixtyBars =
         "octave absolute\npart m { clef treble\n  section A { "
         + string.Concat(Enumerable.Repeat("c'8 d' e' f' g'4 a' | ", 60))
-        + "}\n}\nform main { A }\nscore main { staff m }\n";
+        + "}\n}\nform { A }\nscore { staff m }\n";
 
     /// <summary>The systems on each page, and what the layout said.</summary>
     private static (int[] PerPage, List<string> Warnings) Paged(params string[] settings)
@@ -283,7 +283,7 @@ public class PaperOverridesTests
     {
         string dense = "octave absolute\npart m { clef treble\n  section A { "
             + string.Concat(Enumerable.Repeat("cis''16 d'' ees'' fis'' g'' aes'' b'' c''' d'''4 bes'' | ", 16))
-            + "}\n}\nform main { A }\nscore main { staff m }\n";
+            + "}\n}\nform { A }\nscore { staff m }\n";
         var warnings = new List<string>();
         SvgGenerator.Generate(SyntaxTree.Parse(dense), new SvgRenderOptions
         {
@@ -346,8 +346,8 @@ public class PaperOverridesTests
     private const string OneBar = """
         part m { }
         section A { m { c'1 | } }
-        form main { A }
-        score main { staff m }
+        form { A }
+        score { staff m }
         """;
 
     /// <summary>
@@ -398,7 +398,7 @@ public class PaperOverridesTests
     {
         string forty = "octave absolute\npart m { clef treble\n  section A { "
             + string.Concat(Enumerable.Repeat("c'8 d' e' f' g'4 a' | ", 40))
-            + "}\n}\nform main { A }\nscore main { staff m }\n";
+            + "}\n}\nform { A }\nscore { staff m }\n";
         double mm = points / 4.0 * 25.4 / 72.27;
         string svg = SvgGenerator.Generate(SyntaxTree.Parse(forty), new SvgRenderOptions
         {

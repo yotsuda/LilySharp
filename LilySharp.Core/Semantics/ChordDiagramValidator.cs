@@ -250,7 +250,7 @@ public static class ChordDiagramScores
     /// differ: each score sounds the item under its own capo (2026-09-30).</summary>
     public static IReadOnlyList<(int Capo, IReadOnlyList<string> Scores)> CaposOfNode(SyntaxNode node)
         => [.. RenderingScores(node).GroupBy(s => s.Capo)
-            .Select(g => (g.Key, (IReadOnlyList<string>)[.. g.Select(s => s.Node?.BasenameText ?? s.Node?.FormNameText ?? "")]))];
+            .Select(g => (g.Key, (IReadOnlyList<string>)[.. g.Select(s => s.Node?.BasenameText ?? (s.Node is { } d ? Svg.Collector.RenderSpecParser.SelectorNameOf(d) : ""))]))];
 
     private static List<Score> RenderingScores(SyntaxNode node)
     {

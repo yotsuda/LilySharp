@@ -49,8 +49,8 @@ Start clips 1–5 from this file:
 ```
 part m { clef treble }
 section A { m { c4 cis4. d8 e4 | c4 d4 e4 f4 | c4 e g <c e g>4 | g2 g | } }
-form main { ~A }
-score main { staff m }
+form { ~A }
+score { staff m }
 ```
 
 ### 1. `editor-octave-mark` — an octave mark lands after the pitch
@@ -93,8 +93,8 @@ section A {
   melody { c4 d e f | g1 | }
   bass { c1 | }
 }
-form main { A }
-score main { staff melody  staff bass }
+form { A }
+score { staff melody  staff bass }
 ```
 1. Hover the squiggle on `bass` — *Section 'A' is not the same length everywhere it is written:
    2 bar(s) in part 'melody'; 1 bar(s) in part 'bass'…*
@@ -115,8 +115,8 @@ part vn2 {
   clef treble
   section A { e'4 f g a | b1 | c4 d e f | g1 | }
 }
-form main { A }
-score main { staff vn1  staff vn2 }
+form { A }
+score { staff vn1  staff vn2 }
 ```
 1. Hover the warning on `A` (*4 bar(s) in part 'vn2'; 2 bar(s) in part 'vn1'*).
 2. `Ctrl+.` → *Split section A in the other parts to match vn1 (…)…*.
@@ -128,8 +128,8 @@ score main { staff vn1  staff vn2 }
 ```
 part m { clef treble }
 section A { m { c'1@chord(Cm7) | f1@chord(F7) | } }
-form main { ~A }
-score main { staff m }
+form { ~A }
+score { staff m }
 ```
 1. Caret inside `Cm7`. `Ctrl+Shift+Up`: `@chord(Cm7 x35343)` — the diagram appears, the chord
    sounds; the status bar says `Cm7: shape 1 of …`.
@@ -142,8 +142,8 @@ Needs a signed-in GitHub Copilot (or another model provider) in VS Code.
 ```
 part m { clef treble }
 section A { m { e'4 d c d | e e e2 | d4 d e d | c1 | } }
-form main { ~A }
-score main { staff m }
+form { ~A }
+score { staff m }
 ```
 1. Select bars 1–2. `Ctrl+I`, type *add a harmony line a third below*, Enter.
 2. Wait for the engraved candidate beside the original; toggle After/Before once.

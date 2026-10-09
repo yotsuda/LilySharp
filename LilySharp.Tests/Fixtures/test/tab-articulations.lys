@@ -10,8 +10,8 @@ part m {
   section A { a4@accent a@staccato a@fermata a@tenuto | }
 }
 
-form main { A }
+form { A }
 
-score main {
+score {
   tab m
 }

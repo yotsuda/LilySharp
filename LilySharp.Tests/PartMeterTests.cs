@@ -47,8 +47,8 @@ public class PartMeterTests
         section A { top { c'1 | } bot { c1 | } }
         section B { bot { time 3/4 g2. | a2. | } }
         section C { top { e'1 | } bot { c1 | } }
-        form main { A B C }
-        score main { staff top staff bot }
+        form { A B C }
+        score { staff top staff bot }
         """;
 
     // top writes B without restating bot's 3/4.
@@ -60,8 +60,8 @@ public class PartMeterTests
         section A { top { c'1 | } bot { c1 | } }
         section B { top { e'2. | f'2. | } bot { time 3/4 g2. | a2. | } }
         section C { top { g'1 | } bot { c1 | } }
-        form main { A B C }
-        score main { staff top staff bot }
+        form { A B C }
+        score { staff top staff bot }
         """;
 
     // top writes one bar of B, bot two: top's padding bar is a 3/4 bar.
@@ -73,8 +73,8 @@ public class PartMeterTests
         section A { top { c'1 | } bot { c1 | } }
         section B { top { e'2. | } bot { time 3/4 g2. | a2. | } }
         section C { top { g'1 | } bot { c1 | } }
-        form main { A B C }
-        score main { staff top staff bot }
+        form { A B C }
+        score { staff top staff bot }
         """;
 
     private static IReadOnlyList<Measure> Staff(string source, int staff)
@@ -144,8 +144,8 @@ public class PartMeterTests
             part top { clef treble }
             part bot { clef bass }
             section A { top { time 2/4 c'2 | } bot { time 3/4 c2. | } }
-            form main { A }
-            score main { staff top staff bot }
+            form { A }
+            score { staff top staff bot }
             """);
         var d = Assert.Single(diags, x => x.Code == DiagnosticCodes.ConflictingTimeSignatures);
         Assert.Contains("'time 3/4' is not the meter of bar 1 of section 'A'", d.Message);
@@ -158,8 +158,8 @@ public class PartMeterTests
             part top { clef treble }
             part bot { clef bass }
             section A { top { c'1 | time 3/4 c'2. | } bot { c1 | time 3/4 c2. | } }
-            form main { A }
-            score main { staff top staff bot }
+            form { A }
+            score { staff top staff bot }
             """).GetRoot();
         Assert.True(SectionMeterPlan.Build(root).IsEmpty);
         Assert.False(SectionMeterPlan.Build(SyntaxTree.Parse(Silent).GetRoot()).IsEmpty);
@@ -183,8 +183,8 @@ public class PartMeterTests
         section A { top { c'1 | } bot { c1 | } }
         section B { {{b}} }
         section C { top { g'1 | } bot { c1 | } }
-        form main { A B C }
-        score main { staff top staff bot }
+        form { A B C }
+        score { staff top staff bot }
         """;
 
     // ---------------------------------------------------------------- the exporters
@@ -212,8 +212,8 @@ public class PartMeterTests
             section A { bot { c1 | } }
             section B { bot { time 3/4 g2. | a2. | } }
             section C { bot { c1 | } }
-            form main { A B C }
-            score main { chords prog staff bot }
+            form { A B C }
+            score { chords prog staff bot }
             """));
         var chords = twin[twin.IndexOf("\\chordmode", System.StringComparison.Ordinal)..];
         chords = chords[..chords.IndexOf('}')];

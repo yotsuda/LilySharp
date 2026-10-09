@@ -43,16 +43,16 @@ public class TabFretFaceTests
     private const string Guitar = """
         part gt { instrument guitar }
         section A { gt { chord(Em 022000)2 chord(C x32010)2 | } }
-        form main { ~A }
-        score main { staff gt  tab gt }
+        form { ~A }
+        score { staff gt  tab gt }
         """;
 
     private const string Bass = """
         octave absolute
         part bs { clef bass tuning bass }
         section A { bs { e,,4\4 a,,\3 d,\2 g,\1 | } }
-        form main { ~A }
-        score main { tab bs }
+        form { ~A }
+        score { tab bs }
         """;
 
     private static string Svg(string source)
@@ -110,8 +110,8 @@ public class TabFretFaceTests
             octave absolute
             part gt { instrument guitar }
             section A { gt { e''4\1 b''4\1 e'''2\1 | } }
-            form main { ~A }
-            score main { tab gt }
+            form { ~A }
+            score { tab gt }
             """);
         double em = TabConstants.ReducedFretEm;
         double one = LilySharp.Core.Rendering.TextFontMetrics.Advance("1", em, sans: false,

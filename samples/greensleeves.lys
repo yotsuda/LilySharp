@@ -63,14 +63,14 @@ section Chorus {
   }
 }
 
-form main { Verse Chorus }
+form { Verse Chorus }
 
-score main {
+score {
   chords prog
   staff melody
   lyrics words
 }
 
-score main "grid" {
+score "grid" {
   chords prog
 }

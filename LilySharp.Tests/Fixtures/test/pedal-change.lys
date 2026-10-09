@@ -13,8 +13,8 @@ section Main {
   rh { c'1@sustain | d'1@!sustain@sustain | e'1@!sustain | }
 }
 
-form main { Main }
+form { Main }
 
-score main "pedal-change" {
+score "pedal-change" {
   staff rh
 }

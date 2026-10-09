@@ -12,9 +12,9 @@ part m {
   section A { <a c g>8 a a@fermata a e f g a | }
 }
 
-form main { A }
+form { A }
 
-score main {
+score {
   staff m
   tab m as full
 }

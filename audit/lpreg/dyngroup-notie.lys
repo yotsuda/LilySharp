@@ -2,6 +2,6 @@ octave absolute
 time 12/4
 part m { clef treble }
 section S { m { e,1 @cresc e,1 e,1@f | } }
-form main { S }
-score main "o" { staff m }
+form { S }
+score "o" { staff m }
 

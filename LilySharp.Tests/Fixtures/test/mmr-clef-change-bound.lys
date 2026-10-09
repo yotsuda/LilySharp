@@ -37,8 +37,8 @@ section Main {
   }
 }
 
-form main { Main }
+form { Main }
 
-score main "mmr-clef-change-bound" {
+score "mmr-clef-change-bound" {
   staff melody
 }

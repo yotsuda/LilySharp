@@ -23,9 +23,9 @@ chords prog {
   }
 }
 
-form main { Intro }
+form { Intro }
 
-score main {
+score {
   chords prog as roman
   combinedStaff {
     bassline

@@ -34,9 +34,9 @@ part bassline {
   }
 }
 
-form main { ~Body }
+form { ~Body }
 
-score main {
+score {
   staff bassline
   tab bassline
 }

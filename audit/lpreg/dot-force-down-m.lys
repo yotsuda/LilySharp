@@ -17,6 +17,6 @@ section Main {
     { b4. b8 }
   }
 }
-form main { Main }
-score main "dot-force-down" { staff m }
+form { Main }
+score "dot-force-down" { staff m }
 

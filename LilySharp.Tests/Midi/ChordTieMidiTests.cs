@@ -56,8 +56,8 @@ public class ChordTieMidiTests
             time 4/4
             part v { }
             section Main { v { {{body}} } }
-            form main { ~Main }
-            score main { staff ~v }
+            form { ~Main }
+            score { staff ~v }
             """);
         return new MidiExporter().Export(tree).Tracks.SelectMany(t => t.Notes).ToList();
     }
@@ -158,8 +158,8 @@ public class ChordTieMidiTests
         var tree = SyntaxTree.Parse("""
             part kit { clef percussion }
             section A { kit { bd4~ bd4 | } }
-            form main { A }
-            score main { staff kit }
+            form { A }
+            score { staff kit }
             """);
         var notes = new MidiExporter().Export(tree).Tracks.SelectMany(t => t.Notes).ToList();
 

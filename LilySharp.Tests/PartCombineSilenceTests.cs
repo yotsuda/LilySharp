@@ -53,8 +53,8 @@ public class PartCombineSilenceTests
           vone { {{partOne}} }
           vtwo { {{partTwo}} }
         }
-        form main { ~A }
-        score main { combinedStaff { vone vtwo } }
+        form { ~A }
+        score { combinedStaff { vone vtwo } }
         """ + "\n";
 
     private static string Svg(string source) => SvgGenerator.Generate(
@@ -231,8 +231,8 @@ public class PartCombineSilenceTests
               vone { r4 r2 r8 r8 | r1 | }
               vtwo { r8 r8 r2 r4 | r1 | }
             }
-            form main { ~A }
-            score main { condensedStaff { vone vtwo } }
+            form { ~A }
+            score { condensedStaff { vone vtwo } }
             """ + "\n");
 
         var columns = Columns(svg);

@@ -74,7 +74,7 @@ public class SectionOrientedTests
     {
         var source = """
             section A { guitar { c4 } }
-            form main {
+            form {
                 A
             }
             """;
@@ -88,7 +88,7 @@ public class SectionOrientedTests
         var source = """
             section A { guitar { c4 } }
             section B { guitar { d4 } }
-            form main {
+            form {
                 A
                 segno
                 B
@@ -105,8 +105,8 @@ public class SectionOrientedTests
     {
         var source = """
             section A { guitar { c4 } }
-            form main { A }
-            score main "output" {
+            form { A }
+            score "output" {
                 staff guitar
             }
             """;
@@ -119,8 +119,8 @@ public class SectionOrientedTests
     {
         var source = """
             section A { guitar { c4 d e f } }
-            form main { A }
-            score main "guitar" {
+            form { A }
+            score "guitar" {
                 staff guitar
                 tab guitar guitar
             }
@@ -147,8 +147,8 @@ public class SectionOrientedTests
     {
         var source = """
             section A { guitar { c4 } }
-            form main { A }
-            score main "song" {
+            form { A }
+            score "song" {
                 guitar
             }
             """;
@@ -160,8 +160,8 @@ public class SectionOrientedTests
         // on the UNCHANGED text (measured — it went green against the wrong input once).
         var retired = SyntaxTree.Parse("""
             section A { guitar { c4 } }
-            form main { A }
-            score main "song" {
+            form { A }
+            score "song" {
                 guitar octave 1 instrument 25
             }
             """);
@@ -190,13 +190,13 @@ public class SectionOrientedTests
                 bass { g,4 d, g, d, }
             }
 
-            form main {
+            form {
                 Intro
                 A
                 fine
             }
 
-            score main "test" {
+            score "test" {
                 staff guitar
                 tab guitar guitar
                 staff bass bass

@@ -55,8 +55,8 @@ public class BeamDetectionMemoTests
           time 3/4 a8 b c d e f |
           b8 a g f e d |
         } }
-        form main { Main }
-        score main "x" { staff melody }
+        form { Main }
+        score "x" { staff melody }
         """;
 
     /// <summary>

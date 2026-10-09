@@ -43,8 +43,8 @@ public class LilyPondExporterNoteheadTests
             octave absolute
             part m { clef treble }
             section A { m { {{note}} r2. | } }
-            form main { ~A }
-            score main { staff m }
+            form { ~A }
+            score { staff m }
             """);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var exporter = new LilyPondExporter();

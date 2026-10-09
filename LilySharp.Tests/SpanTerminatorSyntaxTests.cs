@@ -34,7 +34,7 @@ public class SpanTerminatorSyntaxTests
     /// attached to a note inside a scored part.</summary>
     private static string Source(string music)
         => $"octave absolute part m {{ clef treble }} "
-           + $"section A {{ m {{ {music} }} }} form main {{ A }} score main {{ staff m }}";
+           + $"section A {{ m {{ {music} }} }} form {{ A }} score {{ staff m }}";
 
     private static SyntaxTree Parsed(string music) => SyntaxTree.Parse(Source(music));
 

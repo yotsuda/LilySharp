@@ -46,8 +46,8 @@ public sealed class ChordHeadSlurTests
             <c e( g>4 <d f) a> <c( e g>4 <d f a)> |
           }
         }
-        form main { A }
-        score main { staff m }
+        form { A }
+        score { staff m }
         """;
 
     private static Score Collect(string source)

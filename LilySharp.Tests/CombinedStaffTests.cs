@@ -59,8 +59,8 @@ public class CombinedStaffTests
           fl1 { c4 d e f | g2 g | R1 | c4 e g e | }
           fl2 { c4 d e f | R1 | g,2 g, | g,4 g, g, g, | }
         }
-        form main { ~A }
-        """ + "\nscore main { " + render + " }\n";
+        form { ~A }
+        """ + "\nscore { " + render + " }\n";
 
     private static string Svg(string source) => SvgGenerator.Generate(
         TestPaper.ParseAtIndentZero(source),
@@ -214,8 +214,8 @@ public class CombinedStaffTests
               fl2 { c4 d e f | }
               fl3 { c4 d e f | }
             }
-            form main { ~A }
-            score main { combinedStaff { fl1 fl2 fl3 } }
+            form { ~A }
+            score { combinedStaff { fl1 fl2 fl3 } }
             """ + "\n";
 
         var d = Diagnose(source);
@@ -267,8 +267,8 @@ public class CombinedStaffTests
               pa { e'4@f g' a'2@accent | g'1@fermata | }
               pb { c'4@f e' f'2@staccato | e'1@fermata | }
             }
-            form main { ~A }
-            score main { combinedStaff { pa pb } }
+            form { ~A }
+            score { combinedStaff { pa pb } }
             """);
         var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
 
@@ -284,7 +284,7 @@ public class CombinedStaffTests
     /// other: the change is a zero-length directive, not a third head in the column.
     /// </summary>
     /// <remarks>
-    /// Lab corpora partial.lys (user report, 2026-09-26): `form main { A A }` with A ending
+    /// Lab corpora partial.lys (user report, 2026-09-26): `form { A A }` with A ending
     /// in 2/4, so the second A's pickup bar opens on the section reset's 4/4 change. Its
     /// unison c'' was drawn as two heads side by side, where bar 1's shared one — and where
     /// LilyPond 2.26.0 shares both.
@@ -300,8 +300,8 @@ public class CombinedStaffTests
               melody { c'4 d | e2 f | time 2/4 g2 }
               x { c4 f | g2 a | time 2/4 b2 | }
             }
-            form main { A A }
-            score main { condensedStaff { x melody } }
+            form { A A }
+            score { condensedStaff { x melody } }
             """);
         var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
         var voices = score.StaffGroups[0].Staves[0].Voices;
@@ -316,7 +316,7 @@ public class CombinedStaffTests
     /// <summary>The multi-measure-rest runs of a combined staff, as the engraver groups them.</summary>
     private static ImmutableArray<MmrRun> CombinedRuns(string parts, string render)
     {
-        var tree = TestPaper.ParseAtIndentZero(Defaults + parts + "\nform main { ~A }\nscore main { " + render + " }\n");
+        var tree = TestPaper.ParseAtIndentZero(Defaults + parts + "\nform { ~A }\nscore { " + render + " }\n");
         var spec = RenderSpecParser.FindFirst(tree);
         return MultiMeasureRestEngraver.FindRuns(new MeasureCollector().CollectMultiStaff(tree, spec!));
     }

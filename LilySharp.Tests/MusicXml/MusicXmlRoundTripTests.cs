@@ -91,7 +91,7 @@ public class MusicXmlRoundTripTests
         string header, string writtenPitch, int? clefOctaveChange, int? octaveChange)
     {
         string source = $"part m {{ {header} }}\nsection A {{ m {{ c4 d e f | }} }}\n"
-                        + "form main { A }\nscore main { staff m }";
+                        + "form { A }\nscore { staff m }";
 
         static (string Pitch, int? Clef, int? Transpose) Attributes(string lys)
         {
@@ -189,8 +189,8 @@ public class MusicXmlRoundTripTests
         const string lys = """
             part perc { clef percussion }
             section A { perc { bd4 sn4 bd4 sn4 | } }
-            form main { A }
-            score main { staff perc as lines 1 }
+            form { A }
+            score { staff perc as lines 1 }
             """;
         var doc = XDocument.Parse(new MusicXmlExporter().Export(SyntaxTree.Parse(lys)).ToXml().ToString());
 
@@ -273,9 +273,9 @@ public class MusicXmlRoundTripTests
               lyrics words sings melody { Mu- sic fills the | air to- night so | ev- 'ry- one will | sing a- long | }
             }
 
-            form main { A }
+            form { A }
 
-            score main "lead-sheet" { staff melody  lyrics words }
+            score "lead-sheet" { staff melody  lyrics words }
             """);
     }
 
@@ -294,8 +294,8 @@ public class MusicXmlRoundTripTests
               melody { e'4@chord(C) e' f' g' | }
               lyrics words sings melody { Mu- sic fills the | }
             }
-            form main { A }
-            score main { staff melody  lyrics words }
+            form { A }
+            score { staff melody  lyrics words }
             """)).ToXml();
 
         var firstNote = xml.Descendants("note").First();
@@ -316,8 +316,8 @@ public class MusicXmlRoundTripTests
             section A {
               bass { c4@figuredBass(6) d4@figuredBass(6 4) e4@figuredBass(7 s) f4@figuredBass(_) | }
             }
-            form main { A }
-            score main { staff bass }
+            form { A }
+            score { staff bass }
             """);
         Assert.False(HasErrors(tree), "the fixture itself must parse clean");
 
@@ -533,8 +533,8 @@ public class MusicXmlRoundTripTests
             key c major
             part melody { clef treble }
             section A { melody { c'4 d' e' f' | g'4 a' b' c'' | } }
-            form main { |: A :| }
-            score main { staff melody }
+            form { |: A :| }
+            score { staff melody }
             """);
     }
 
@@ -704,8 +704,8 @@ public class MusicXmlRoundTripTests
               rh { c''4@quindicesima d'' e'' f''@!ottava@p | g''1 | g''1 | }
               lh { c4@f@ottava(bassa) d e f@!ottava | g,1@sustain | c1@!sustain | }
             }
-            form main { ~A }
-            score main { grandStaff { staff rh "Piano"  staff lh } }
+            form { ~A }
+            score { grandStaff { staff rh "Piano"  staff lh } }
             """);
         var xml = new MusicXmlExporter().Export(original).ToXml().ToString();
         var (lys, _) = new MusicXmlImporter().Import(xml);
@@ -730,8 +730,8 @@ public class MusicXmlRoundTripTests
             part lh { clef bass }
             part fl { clef treble }
             section A { rh { c''1 | } lh { c1 | } fl { g''1 | } }
-            form main { ~A }
-            score main { grandStaff { staff rh "Piano"  staff lh }  staff fl }
+            form { ~A }
+            score { grandStaff { staff rh "Piano"  staff lh }  staff fl }
             """);
         var xml = new MusicXmlExporter().Export(original).ToXml();
         Assert.Equal(new[] { "Piano:-", "fl:no" }, xml.Descendants("part-name")
@@ -758,16 +758,16 @@ public class MusicXmlRoundTripTests
             part lh { clef bass }
             part fl { clef treble }
             section A { rh { c''1 | } lh { c1 | } fl { g''1 | } }
-            form main { ~A }
-            score main { grandStaff { staff rh "Right"  staff lh "Left" }  staff fl }
+            form { ~A }
+            score { grandStaff { staff rh "Right"  staff lh "Left" }  staff fl }
             """);
         var xml = new MusicXmlExporter().Export(original).ToXml().ToString();
         Assert.Contains("<group-symbol>brace</group-symbol>", xml);
         var (lys, _) = new MusicXmlImporter().Import(xml);
         Assert.False(HasErrors(SyntaxTree.Parse(lys)), lys);
-        var score = lys[lys.IndexOf("score main", System.StringComparison.Ordinal)..]
+        var score = lys[lys.IndexOf("score", System.StringComparison.Ordinal)..]
             .Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).ToArray();
-        Assert.Equal(new[] { "score main \"imported\" {", "grandStaff {", "staff right \"Right\"",
+        Assert.Equal(new[] { "score \"imported\" {", "grandStaff {", "staff right \"Right\"",
             "staff left \"Left\"", "}", "staff fl", "}" }, score);
     }
 
@@ -791,8 +791,8 @@ public class MusicXmlRoundTripTests
             part alt { clef treble }
             part fl { clef treble }
             section A { rh { c''1 | } lh { c1 | } vn { g'1 | } sop { e''1 | } alt { c''1 | } fl { g''1 | } }
-            form main { ~A }
-            score main {
+            form { ~A }
+            score {
               staffGroup { grandStaff { staff rh "Piano"  staff lh }  staff vn "Violin" }
               choirStaff { staff sop "S"  staff alt "A" }
               staff fl
@@ -807,9 +807,9 @@ public class MusicXmlRoundTripTests
 
         var (lys, _) = new MusicXmlImporter().Import(xml.ToString());
         Assert.False(HasErrors(SyntaxTree.Parse(lys)), lys);
-        var score = lys[lys.IndexOf("score main", System.StringComparison.Ordinal)..]
+        var score = lys[lys.IndexOf("score", System.StringComparison.Ordinal)..]
             .Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).ToArray();
-        Assert.Equal(new[] { "score main \"imported\" {", "staffGroup {", "grandStaff {",
+        Assert.Equal(new[] { "score \"imported\" {", "staffGroup {", "grandStaff {",
             "staff pianoRH \"Piano\"", "staff pianoLH", "}", "staff violin \"Violin\"", "}",
             // "S" and "A" lex as a spacer and a note: those parts take their index names.
             "choirStaff {", "staff part3 \"S\"", "staff part4 \"A\"", "}", "staff fl", "}" }, score);
@@ -827,8 +827,8 @@ public class MusicXmlRoundTripTests
             part lh { clef bass }
             part vn { clef treble }
             section A { rh { c''1 | } lh { c1 | } vn { g'1 | } }
-            form main { ~A }
-            score main { staffGroup { grandStaff { staff rh "Right"  staff lh "Left" }  staff vn "Violin" } }
+            form { ~A }
+            score { staffGroup { grandStaff { staff rh "Right"  staff lh "Left" }  staff vn "Violin" } }
             """);
         var xml = new MusicXmlExporter().Export(original).ToXml();
         var list = xml.Descendants("part-list").Single().Elements().Select(e => e.Name == "part-group"
@@ -836,9 +836,9 @@ public class MusicXmlRoundTripTests
             : e.Element("part-name")!.Value);
         Assert.Equal(new[] { "start1:bracket", "start2:brace", "Right", "Left", "stop2:", "Violin", "stop1:" }, list);
         var (lys, _) = new MusicXmlImporter().Import(xml.ToString());
-        var score = lys[lys.IndexOf("score main", System.StringComparison.Ordinal)..]
+        var score = lys[lys.IndexOf("score", System.StringComparison.Ordinal)..]
             .Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).ToArray();
-        Assert.Equal(new[] { "score main \"imported\" {", "staffGroup {", "grandStaff {",
+        Assert.Equal(new[] { "score \"imported\" {", "staffGroup {", "grandStaff {",
             "staff right \"Right\"", "staff left \"Left\"", "}", "staff violin \"Violin\"", "}", "}" }, score);
     }
 
@@ -853,8 +853,8 @@ public class MusicXmlRoundTripTests
             part rh { clef treble }
             part lh { clef bass }
             section A { rh { c''1 | c''1 | } lh { c1 | clef treble c''1 | } }
-            form main { ~A }
-            score main { grandStaff { staff rh "Right"  staff lh "Left" } }
+            form { ~A }
+            score { grandStaff { staff rh "Right"  staff lh "Left" } }
             """);
         var xml = new MusicXmlExporter().Export(original).ToXml().ToString();
         var (lys, _) = new MusicXmlImporter().Import(xml);
@@ -938,8 +938,8 @@ public class MusicXmlRoundTripTests
             octave absolute
             part melody { clef treble }
             section A { melody { c'4 d'@cresc e' f'@f | c'1@p | } }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """;
         var xml = new MusicXmlExporter().Export(SyntaxTree.Parse(lys)).ToXml().ToString();
         var (imported, _) = new MusicXmlImporter().Import(xml);
@@ -1134,7 +1134,7 @@ public class MusicXmlRoundTripTests
     // NOTE: structure-level repeats (|: A :|) replay sections in the collector but
     // the exporter unrolls them to repeat BARLINES (section emitted once), so a
     // round-trip through XML can't match on replay count until the importer factors
-    // repeats back into form main { } (Phase 3). Deliberately not covered here yet.
+    // repeats back into form { } (Phase 3). Deliberately not covered here yet.
 
     // ---- harness ----------------------------------------------------------
 
@@ -1251,7 +1251,7 @@ public class MusicXmlRoundTripTests
     {
         const string music = "c'4 grace { d''16( } e''4) acciaccatura { f''8( } g''4) grace { a''16 b''16( } c'''4) |";
         string source = "octave absolute\ntime 4/4\npart m { clef treble }\n"
-                        + $"section S {{ m {{ {music} }} }}\nform main {{ ~S }}\nscore main {{ staff m }}\n";
+                        + $"section S {{ m {{ {music} }} }}\nform {{ ~S }}\nscore {{ staff m }}\n";
         string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().ToString();
         var (lys, report) = new MusicXmlImporter().Import(xml);
         Assert.Contains(music, lys);
@@ -1277,7 +1277,7 @@ public class MusicXmlRoundTripTests
         // members stack above its bare-letter anchor, and the next note reads from the anchor).
         const string music = "c'4 grace { a''16 <b'' d'''>16( } c'''4) acciaccatura { <e' g'>8 } f'4 d'4 | c'''4 <e' g'>4 f'4 d'4 |";
         string source = "octave absolute\ntime 4/4\npart m { clef treble }\n"
-                        + $"section S {{ m {{ {music} }} }}\nform main {{ ~S }}\nscore main {{ staff m }}\n";
+                        + $"section S {{ m {{ {music} }} }}\nform {{ ~S }}\nscore {{ staff m }}\n";
         string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().ToString();
         var (lys, report) = new MusicXmlImporter().Import(xml, relativeOctave: relative);
         Assert.Empty(report.Warnings);
@@ -1307,7 +1307,7 @@ public class MusicXmlRoundTripTests
     public void MidPieceChanges_RoundTrip(string music)
     {
         string source = "octave absolute\ntime 4/4\nkey c major\ntempo 100\npart m { clef treble }\n"
-                        + $"section S {{ m {{ {music} }} }}\nform main {{ ~S }}\nscore main {{ staff m }}\n";
+                        + $"section S {{ m {{ {music} }} }}\nform {{ ~S }}\nscore {{ staff m }}\n";
         var sourceTree = SyntaxTree.Parse(source);
         string xml = new MusicXmlExporter().Export(sourceTree).ToXml().ToString();
         var (lys, _) = new MusicXmlImporter().Import(xml);
@@ -1331,7 +1331,7 @@ public class MusicXmlRoundTripTests
     public void RepeatPassEndingOnAFullBar_ClosesIt(string music, string expected)
     {
         string source = $"octave absolute\ntime 3/4\npart m {{ clef treble }}\n"
-                        + $"section A {{ m {{ {music} }} }}\nform main {{ ~A }}\nscore main {{ staff m }}\n";
+                        + $"section A {{ m {{ {music} }} }}\nform {{ ~A }}\nscore {{ staff m }}\n";
         string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().ToString();
         var (lys, _) = new MusicXmlImporter().Import(xml);
         Assert.Contains(expected, OneLine(lys));
@@ -1362,7 +1362,7 @@ public class MusicXmlRoundTripTests
     {
         // `~A`: no section label, which would come back as the first note's @mark.
         string source = $"octave absolute\n{time}\npart m {{ clef treble }}\n"
-                        + $"section A {{ m {{ {music} }} }}\nform main {{ ~A }}\nscore main {{ staff m }}\n";
+                        + $"section A {{ m {{ {music} }} }}\nform {{ ~A }}\nscore {{ staff m }}\n";
         string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().ToString();
         var (lys, _) = new MusicXmlImporter().Import(xml);
         Assert.Contains(expected, OneLine(lys));
@@ -1378,7 +1378,7 @@ public class MusicXmlRoundTripTests
     {
         const string music = "c'4@mark(\"Q\") d'4 e'4@text(\"dolce\").up f'4 | R@text(\"tacet\") | c'4@unaCorda d'4 e'4@treCorde f'4 |";
         string source = "octave absolute\ntime 4/4\npart m { clef treble }\n"
-                        + $"section S {{ m {{ {music} }} }}\nform main {{ ~S }}\nscore main {{ staff m }}\n";
+                        + $"section S {{ m {{ {music} }} }}\nform {{ ~S }}\nscore {{ staff m }}\n";
         string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().ToString();
         var (lys, _) = new MusicXmlImporter().Import(xml);
         Assert.Contains(music, lys);

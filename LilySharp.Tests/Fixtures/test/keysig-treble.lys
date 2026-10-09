@@ -40,8 +40,8 @@ section FMajor {
   melody { fMajor }
 }
 
-form main { DMajor GMajor FMajor }
+form { DMajor GMajor FMajor }
 
-score main "keysig-treble" {
+score "keysig-treble" {
   staff melody
 }

@@ -40,8 +40,8 @@ public sealed class CollectSectionOverrideResumeTests
         section B {
           melody { c4 d e f | c4 d e f | }
         }
-        form main { A B }
-        score main { staff melody }
+        form { A B }
+        score { staff melody }
         """;
 
     [Fact]

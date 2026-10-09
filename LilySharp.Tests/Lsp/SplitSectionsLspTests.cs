@@ -64,8 +64,8 @@ public class SplitSectionsLspTests
         part vn2 {
           section A { d'1 | e1 | }
         }
-        form main { A }
-        score main { staff vn1 staff vn2 }
+        form { A }
+        score { staff vn1 staff vn2 }
         """;
 
     [Fact]
@@ -86,7 +86,7 @@ public class SplitSectionsLspTests
         Assert.True(response.Success, response.Error);
         Assert.StartsWith("Follow vn1: A 1 + B 1 bars.\nSplit A in vn2 after bar 1 → A, B.", response.Plan);
         Assert.Contains("section A { d'1 | }", response.NewText);
-        Assert.Contains("form main { A B }", response.NewText);
+        Assert.Contains("form { A B }", response.NewText);
     }
 
     [Fact]
@@ -108,8 +108,8 @@ public class SplitSectionsLspTests
             part hn {
               section A { c'1 | d1 | e1 | }
             }
-            form main { A }
-            score main { staff fl staff ob staff cl staff hn }
+            form { A }
+            score { staff fl staff ob staff cl staff hn }
             """;
         var server = Open(text);
         var response = server.SplitSections(new SplitSectionsParams { TextDocument = new TextDocumentIdentifier { Uri = Uri } });
@@ -141,8 +141,8 @@ public class SplitSectionsLspTests
             part vn2 {
               section A { d'2 d4 d8[ d8 | d8] d8 d4 d2 | }
             }
-            form main { A }
-            score main { staff vn1 staff vn2 }
+            form { A }
+            score { staff vn1 staff vn2 }
             """;
         // A manual beam across the cut is refused (a tie there is now carried, and kept).
         var server = Open(text);

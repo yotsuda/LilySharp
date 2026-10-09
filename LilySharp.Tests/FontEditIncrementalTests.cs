@@ -56,8 +56,8 @@ public class FontEditIncrementalTests
         section Main {
           v { c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | }
         }
-        form main { ~Main }
-        score main { staff ~v  lyrics w }
+        form { ~Main }
+        score { staff ~v  lyrics w }
         """;
 
     /// <remarks>

@@ -43,8 +43,8 @@ public class LedgerLineRodTests
         part m { clef treble
           section A { c'8 d' e' f' g' a' b' c'' | d''8 c'' b' a' g' f' e' d' | c'8 d' e' f' g'32 a' b' c'' d''8 e'' f'' | e''8 d'' c'' b' a' g' f' e' | }
         }
-        form main { A }
-        score main { staff m }
+        form { A }
+        score { staff m }
         """;
 
     private static string Svg(string source) =>

@@ -35,6 +35,6 @@ section C {
   m { e4 d c d | e1 | }
 }
 
-form main { A || B || C |. }
+form { A || B || C |. }
 
-score main "form-toplevel-bar-resume" { staff m }
+score "form-toplevel-bar-resume" { staff m }

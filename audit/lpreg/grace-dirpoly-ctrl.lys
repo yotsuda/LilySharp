@@ -9,6 +9,6 @@ section Main {
   v { c''4 grace { d''8 } c''4 }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { staff v }
+score { staff v }

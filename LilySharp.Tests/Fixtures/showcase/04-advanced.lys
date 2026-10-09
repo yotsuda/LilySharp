@@ -48,11 +48,11 @@ section End2 {
   melody { ending2 }
 }
 
-form main {
+form {
   A
   |: B [1. End1] :| [2. End2]
 }
 
-score main "04-advanced" {
+score "04-advanced" {
   staff melody
 }

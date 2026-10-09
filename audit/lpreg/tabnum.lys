@@ -11,5 +11,5 @@ section A {
     <e dis'\4>4\5 |
   }
 }
-form main { A }
-score main { staff m tab m as numbers }
+form { A }
+score { staff m tab m as numbers }

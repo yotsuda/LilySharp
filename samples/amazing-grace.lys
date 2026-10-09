@@ -38,14 +38,14 @@ section Verse {
   }
 }
 
-form main { Verse }
+form { Verse }
 
-score main {
+score {
   chords prog
   staff melody
   lyrics words
 }
 
-score main "grid" {
+score "grid" {
   chords prog
 }

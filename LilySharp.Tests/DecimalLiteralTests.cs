@@ -219,7 +219,7 @@ public class DecimalLiteralTests
     [Fact]
     public void AFractionalPartPropertyIsAReal()
     {
-        var tree = SyntaxTree.Parse("part perc { octave 0.5 }\nscore main { staff perc }");
+        var tree = SyntaxTree.Parse("part perc { octave 0.5 }\nscore { staff perc }");
         var prop = tree.GetRoot().ChildNodes()
             .OfType<PartDeclarationSyntax>()
             .SelectMany(p => p.Properties)

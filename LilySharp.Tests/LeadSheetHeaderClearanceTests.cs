@@ -68,8 +68,8 @@ public class LeadSheetHeaderClearanceTests
         lyrics verse {
           section A { la la la la | la la la | }
         }
-        form main { A }
-        score main {
+        form { A }
+        score {
           chords prog as names
           lyrics verse sings melody
           staff melody
@@ -85,8 +85,8 @@ public class LeadSheetHeaderClearanceTests
           clef treble
           section A { c4 c g' g | a a g2 }
         }
-        form main { A }
-        score main {
+        form { A }
+        score {
           staff melody
         }
         """;
@@ -289,8 +289,8 @@ public class LeadSheetHeaderClearanceTests
         chords prog {
           section A { {{chord}} | {{chord}} }
         }
-        form main { A }
-        score main {
+        form { A }
+        score {
           chords prog as names
           staff melody
         }

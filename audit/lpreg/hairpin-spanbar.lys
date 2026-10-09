@@ -14,6 +14,6 @@ section Main {
   bot { a4 a a a | s1 | a4 a a a | }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { grandStaff { staff top staff bot as removeEmpty true } }
+score { grandStaff { staff top staff bot as removeEmpty true } }

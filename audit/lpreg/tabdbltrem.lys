@@ -7,5 +7,5 @@ part m { clef treble_8 tuning guitar }
 section A {
   m { a2:32 | }
 }
-form main { A }
-score main { tab m }
+form { A }
+score { tab m }

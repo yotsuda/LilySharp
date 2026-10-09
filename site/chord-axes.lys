@@ -14,9 +14,9 @@ section A {
   chords byRoman { Imaj7 | IIm7 | V7 | Imaj7 | }
 }
 
-form main { ~A }
+form { ~A }
 
-score main {
+score {
   chords byName             // written as names, printed as names
   chords byName as roman    // the SAME row, printed as degrees
   chords byRoman            // written as degrees, printed as names

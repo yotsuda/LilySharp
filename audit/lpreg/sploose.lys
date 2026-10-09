@@ -11,5 +11,5 @@ section S {
   rh { tuplet 3/2 { g4 a2 } | }
   lh { fis,,8 cis, clef treble g8 fis, | }
 }
-form main { S }
-score main "spacing-loose-polyphony" { grandStaff { staff rh staff lh } }
+form { S }
+score "spacing-loose-polyphony" { grandStaff { staff rh staff lh } }

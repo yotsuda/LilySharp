@@ -37,8 +37,8 @@ section Main {
   melody { test }
 }
 
-form main { Main }
+form { Main }
 
-score main "cue-region-measure" {
+score "cue-region-measure" {
   staff treble melody
 }

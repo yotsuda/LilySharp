@@ -59,22 +59,22 @@ public class RepeatStructureScopeValidatorTests
     [Theory]
     // inside a phrase
     [InlineData("part m { clef treble }\nphrase T { |: c'4 d e f | }\n"
-        + "section A { m { T } }\nform main { ~A }\nscore main { staff m }\n", 1)]
+        + "section A { m { T } }\nform { ~A }\nscore { staff m }\n", 1)]
     // inside a by-part section
     [InlineData("part m { clef treble\n  section A { |: c'4 d e f | :| }\n}\n"
-        + "form main { ~A }\nscore main { staff m }\n", 2)]
+        + "form { ~A }\nscore { staff m }\n", 2)]
     // inside a by-section part block
     [InlineData("part m { clef treble }\nsection A { m { |: c'4 d e f | :| } }\n"
-        + "form main { ~A }\nscore main { staff m }\n", 2)]
+        + "form { ~A }\nscore { staff m }\n", 2)]
     // inside a `chords` row — a repeat is a repeat wherever it is written
     [InlineData("time 4/4\nsection A { chords p { C Am |: F G7 | C :| } }\n"
-        + "form main { ~A }\nscore main { chords p }\n", 2)]
+        + "form { ~A }\nscore { chords p }\n", 2)]
     // an inline volta ending, and the back-to-back divider
     [InlineData("part m { clef treble }\n"
         + "section A { m { |: c'4 d e f | [1. g2 g | ] :| [2. a2 a | ] } }\n"
-        + "form main { ~A }\nscore main { staff m }\n", 4)]
+        + "form { ~A }\nscore { staff m }\n", 4)]
     [InlineData("part m { clef treble }\nsection A { m { |: c'4 d e f | :|: g4 a b c' | :| } }\n"
-        + "form main { ~A }\nscore main { staff m }\n", 3)]
+        + "form { ~A }\nscore { staff m }\n", 3)]
     public void RepeatStructureInMusic_IsRefused(string book, int expected)
         => Assert.Equal(expected, Reports(book).Count);
 
@@ -84,27 +84,27 @@ public class RepeatStructureScopeValidatorTests
     // the legal spelling: repeat and both endings in the form
     [InlineData("part m { clef treble }\nsection A { m { c'4 d e f | } }\n"
         + "section B { m { g2 g | } }\nsection C { m { a2 a | } }\n"
-        + "form main { |: A [1. ~B] :| [2. ~C] }\nscore main { staff m }\n")]
+        + "form { |: A [1. ~B] :| [2. ~C] }\nscore { staff m }\n")]
     // a `:|` and a `:|:` standing loose in a form body DO make BarlineSyntax nodes — these
     // are the rows that fail if the ancestor test is dropped.
     [InlineData("part m { clef treble }\nsection A { m { c'4 d e f | } }\n"
-        + "section B { m { g2 g | } }\nform main { A :| B :|: A }\nscore main { staff m }\n")]
+        + "section B { m { g2 g | } }\nform { A :| B :|: A }\nscore { staff m }\n")]
     // the repeats that stay in music: they abbreviate notes, they do not reorder them
     [InlineData("part m { clef treble }\n"
         + "section A { m { repeat unfold 2 { c'4 d e f | } repeat percent 2 { g4 g g g | } } }\n"
-        + "form main { ~A }\nscore main { staff m }\n")]
+        + "form { ~A }\nscore { staff m }\n")]
     // a LYRIC verse header is the words for the Nth pass, not an ending
     [InlineData("octave absolute\ntime 4/4\nkey c major\n"
         + "part m { clef treble\n  section A { c'4 d' e' d' | }\n}\n"
         + "lyrics w sings m {\n  section A {\n    [1. Twin- kle twin- kle | ]\n"
         + "    [2. How I won- der | ]\n  }\n}\n"
-        + "form main { ~A }\nscore main { staff m  lyrics w }\n")]
+        + "form { ~A }\nscore { staff m  lyrics w }\n")]
     // a lyric row's barline is a raw token inside LyricMeasureGreen, never a BarlineSyntax —
     // so this rule cannot see it, and a lyric row plays nothing whose order could change.
     [InlineData("octave absolute\ntime 4/4\nkey c major\n"
         + "part m { clef treble\n  section A { c'4 d' e' d' | c'4 e' g'2 | }\n}\n"
         + "lyrics w sings m { section A { Twin- kle twin- kle |: lit- tle star | } }\n"
-        + "form main { ~A }\nscore main { staff m  lyrics w }\n")]
+        + "form { ~A }\nscore { staff m  lyrics w }\n")]
     public void SpellingsThatAreNotAMusicRepeat_AreLeftAlone(string book)
         => Assert.Empty(Reports(book));
 
@@ -128,7 +128,7 @@ public class RepeatStructureScopeValidatorTests
             + "section E1 { v { d'1 | } }\n"
             + "section E2 { v { e'1 | } }\n"
             + "section E3 { v { f'1 | } }\n"
-            + "form main { " + formBody + " }\nscore main { staff ~v }\n";
+            + "form { " + formBody + " }\nscore { staff ~v }\n";
         var pitches = new MidiExporter().Export(SyntaxTree.Parse(book))
             .Tracks.SelectMany(t => t.Notes).Select(n => n.Pitch).ToArray();
         Assert.Equal(expectedPitches, pitches);

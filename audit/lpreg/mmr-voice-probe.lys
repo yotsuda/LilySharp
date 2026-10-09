@@ -18,6 +18,6 @@ section A {
   }
 }
 
-form main { ~A }
+form { ~A }
 
-score main { staff vone }
+score { staff vone }

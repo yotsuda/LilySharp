@@ -60,8 +60,8 @@ public class KeyOutputsTests
         key {{key}}
         part v { clef treble }
         section S { v { c4 d e f | } }
-        form main { ~S }
-        score main { staff v }
+        form { ~S }
+        score { staff v }
         """;
 
     /// <summary>

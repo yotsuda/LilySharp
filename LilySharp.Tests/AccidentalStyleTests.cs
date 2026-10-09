@@ -57,7 +57,7 @@ public class AccidentalStyleTests
         + "octave absolute\ntime 4/4\nkey c major\n"
         + "part m { clef treble }\n"
         + "section A { m { " + music + " } }\n"
-        + "form main { A }\nscore main { staff m }\n";
+        + "form { A }\nscore { staff m }\n";
 
     /// <summary>Every NOTE of the book, in order, as (accidental glyph, parenthesised) —
     /// rests are not notes and are not counted.</summary>

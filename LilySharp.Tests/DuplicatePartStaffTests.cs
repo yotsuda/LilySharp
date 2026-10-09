@@ -60,8 +60,8 @@ public class DuplicatePartStaffTests
     private static string Source(string parts, params string[] staves) =>
         string.Concat(parts.Split(' ').Distinct()
             .Select(p => $"part {p} {{\n{Music}}}\n\n"))
-        + "form main { A |: B :| A }\n\n"
-        + "score main {\n"
+        + "form { A |: B :| A }\n\n"
+        + "score {\n"
         + string.Concat(staves.Select(s => $"  staff {s}\n"))
         + "}\n";
 

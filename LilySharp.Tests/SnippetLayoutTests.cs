@@ -40,8 +40,8 @@ public sealed class SnippetLayoutTests
         key c major
         part melody { clef treble }
         section Main { melody { c4 d e f | g1 | } }
-        form main { Main }
-        score main { staff melody }
+        form { Main }
+        score { staff melody }
         """;
 
     private const string TwoSections = """
@@ -51,14 +51,14 @@ public sealed class SnippetLayoutTests
           section A { c'4 d' e' f' | g'4 a' b' c'' | }
           section B { c'4 d' e' f' | g'1 | }
         }
-        form main { A {{JOIN}} B }
-        score main { staff m }
+        form { A {{JOIN}} B }
+        score { staff m }
         """;
 
     private static string LongScore(int bars) =>
         "time 4/4\nkey c major\npart m { clef treble\n  section A { "
         + string.Concat(Enumerable.Repeat("c'4 d' e' f' | ", bars))
-        + "} }\nform main { A }\nscore main { staff m }";
+        + "} }\nform { A }\nscore { staff m }";
 
     private static (MultiStaffScore Score, ScoreLayout Layout) LayoutOf(string source, LayoutOptions paperBase)
     {
@@ -104,8 +104,8 @@ public sealed class SnippetLayoutTests
             octave absolute
             part bl { instrument bass }
             section A { bl { c4 d e f | break {{change}} g4 a | } }
-            form main { A }
-            score main { staff bl  tab bl }
+            form { A }
+            score { staff bl  tab bl }
             """), new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
 
         // The first system's staff and string lines: the nine highest horizontal lines

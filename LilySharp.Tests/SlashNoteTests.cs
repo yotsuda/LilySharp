@@ -69,12 +69,12 @@ public class SlashNoteTests
     public void IsSilentInMidi_ButOccupiesItsTime()
     {
         var tree = SyntaxTree.Parse("octave absolute\ntime 4/4\npart v { }\n"
-            + "section Main { v { /4 /4 c'2 | } }\nform main { Main }\nscore main { staff v }");
+            + "section Main { v { /4 /4 c'2 | } }\nform { Main }\nscore { staff v }");
         var notes = new MidiExporter().Export(tree).Tracks.SelectMany(t => t.Notes).ToList();
         var note = Assert.Single(notes);
         // The two silent quarters pushed the c' to beat 3.
         var control = SyntaxTree.Parse("octave absolute\ntime 4/4\npart v { }\n"
-            + "section Main { v { r4 r4 c'2 | } }\nform main { Main }\nscore main { staff v }");
+            + "section Main { v { r4 r4 c'2 | } }\nform { Main }\nscore { staff v }");
         var controlNote = Assert.Single(
             new MidiExporter().Export(control).Tracks.SelectMany(t => t.Notes));
         Assert.Equal(controlNote.StartTick, note.StartTick);
@@ -84,7 +84,7 @@ public class SlashNoteTests
     public void TheTwinSpellsItAsImprovisation_OnTheClefsMiddleLine()
     {
         string ly = new LilyPondExporter().Export(SyntaxTree.Parse(
-            "part m\nsection A { m { /4 4 c'4 d | } }\nform main { A }\nscore main { staff m }"));
+            "part m\nsection A { m { /4 4 c'4 d | } }\nform { A }\nscore { staff m }"));
         // Treble middle line is b' (relative from c': one mark up), the run
         // closes before the first pitched note, and the bare duration rides
         // inside the run.
@@ -96,7 +96,7 @@ public class SlashNoteTests
     public void TheTwinFollowsTheClef_ForTheMiddlePitch()
     {
         string ly = new LilyPondExporter().Export(SyntaxTree.Parse(
-            "part m { clef bass }\nsection A { m { /4 4 | } }\nform main { A }\nscore main { staff m }"));
+            "part m { clef bass }\nsection A { m { /4 4 | } }\nform { A }\nscore { staff m }"));
         // Bass middle line is d (octave 3) — never treble's b'.
         Assert.Contains("\\improvisationOn d", ly);
         Assert.DoesNotContain("b'4", ly);
@@ -106,7 +106,7 @@ public class SlashNoteTests
     public void MusicXml_WritesAnUnpitchedSlashHead()
     {
         string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(
-            "part m\nsection A { m { /4 | } }\nform main { A }\nscore main { staff m }")).ToXml().ToString();
+            "part m\nsection A { m { /4 | } }\nform { A }\nscore { staff m }")).ToXml().ToString();
         Assert.Contains("<unpitched>", xml);
         Assert.Contains("slash", xml);
     }

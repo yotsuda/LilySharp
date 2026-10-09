@@ -23,8 +23,8 @@ section Main {
   }
 }
 
-form main { Main }
+form { Main }
 
-score main "lyrics" {
+score "lyrics" {
   staff melody  lyrics words
 }

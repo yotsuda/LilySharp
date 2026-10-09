@@ -35,21 +35,21 @@ public class StaffLinesCompletionTests
         => LilySharpLanguageServer.GetCompletionContext(text, text.Length);
 
     [Theory]
-    [InlineData("score main { staff melody ")]
-    [InlineData("score main { ossia melody ")]
+    [InlineData("score { staff melody ")]
+    [InlineData("score { ossia melody ")]
     public void AfterStaffName_OffersTheLinesSelector(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterStaffAttachName, Ctx(text));
 
     [Theory]
-    [InlineData("score main { staff melody as ")]
-    [InlineData("score main { ossia melody as ")]
+    [InlineData("score { staff melody as ")]
+    [InlineData("score { ossia melody as ")]
     public void AfterAs_OffersLines(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterStaffLinesAs, Ctx(text));
 
     [Fact]
     public void AfterAsLines_EnumeratesTheCounts()
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterStaffLinesValue,
-            Ctx("score main { staff melody as lines "));
+            Ctx("score { staff melody as lines "));
 
     [Fact]
     public void StaffAttachCompletions_ContainTheSelectorAndContinuations()
@@ -82,7 +82,7 @@ public class StaffLinesCompletionTests
     public void InsideAGroup_AfterStaffName_OffersTheSelectorAndGroupItems()
     {
         Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterGroupStaffAttachName,
-            Ctx("score main { grandStaff { staff melody "));
+            Ctx("score { grandStaff { staff melody "));
 
         var labels = LilySharpLanguageServer.GetGroupStaffAttachNameCompletions().Items
             .Select(i => i.Label).ToArray();
@@ -95,7 +95,7 @@ public class StaffLinesCompletionTests
     [Fact]
     public void InsideAGroup_AfterAs_StillReachesTheLinesSelector()
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterStaffLinesAs,
-            Ctx("score main { grandStaff { staff melody as "));
+            Ctx("score { grandStaff { staff melody as "));
 
     [Fact]
     public void PartHeaderCompletions_NoLongerOfferLines()
@@ -105,23 +105,23 @@ public class StaffLinesCompletionTests
     // ----- `as removeEmpty V` — hara-kiri joined the selectors 2026-09-08 (user decision) -----
 
     [Theory]
-    [InlineData("score main { staff melody as removeEmpty ")]
-    [InlineData("score main { staff melody as removeEmpty a")]
-    [InlineData("score main { staff melody as lines 1 removeEmpty ")]   // chained after one `as`
-    [InlineData("score main { grandStaff { staff melody as removeEmpty ")]
+    [InlineData("score { staff melody as removeEmpty ")]
+    [InlineData("score { staff melody as removeEmpty a")]
+    [InlineData("score { staff melody as lines 1 removeEmpty ")]   // chained after one `as`
+    [InlineData("score { grandStaff { staff melody as removeEmpty ")]
     public void AfterAsRemoveEmpty_OffersItsValues(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterRemoveEmpty, Ctx(text));
 
     [Fact]
     public void AfterAsRemoveEmptyAllLines_StillEnumeratesTheCounts()
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterStaffLinesValue,
-            Ctx("score main { staff melody as removeEmpty all lines "));
+            Ctx("score { staff melody as removeEmpty all lines "));
 
     [Fact]
     public void ARemoveEmptyNoAsGoverns_IsNotAValueSlot()
         // A part that happens to be named removeEmpty, placed as a MIDI-only item.
         => Assert.NotEqual(LilySharpLanguageServer.CompletionContext.AfterRemoveEmpty,
-            Ctx("score main { staff melody removeEmpty "));
+            Ctx("score { staff melody removeEmpty "));
 
     [Fact]
     public void TheSelectorLists_OfferRemoveEmptyBesideLines()
@@ -142,7 +142,7 @@ public class StaffLinesCompletionTests
             .Where(v =>
             {
                 var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(
-                    "part m { }\nsection A { m { c'1 } }\nform main { A }\nscore main { staff m as removeEmpty " + v + " }\n");
+                    "part m { }\nsection A { m { c'1 } }\nform { A }\nscore { staff m as removeEmpty " + v + " }\n");
                 return tree.Diagnostics.Concat(SemanticValidation.Run(tree))
                     .Any(d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error);
             })

@@ -45,12 +45,12 @@ public class CompletionVocabularyTests
     /// `vln` is a plain identifier — single letters are pitch names, not part names.</summary>
     private static string PartHeaderDoc(string header) =>
         $"part vln {{ {header} }}\nsection A {{ vln {{ c4 d e f }} }}\n"
-        + "form main { A }\nscore main { staff vln }";
+        + "form { A }\nscore { staff vln }";
 
     /// <summary>The same, with <paramref name="directive"/> inside the MUSIC instead.</summary>
     private static string MusicDoc(string directive) =>
         $"part vln {{ clef treble }}\nsection A {{ vln {{ {directive} c4 d e f }} }}\n"
-        + "form main { A }\nscore main { staff vln }";
+        + "form { A }\nscore { staff vln }";
 
     /// <summary>Errors from BOTH passes: a bad clef in music is a PARSE error, a bad clef in a
     /// header is a SEMANTIC one, and a check that looked at only one would be blind to half of
@@ -245,7 +245,7 @@ public class CompletionVocabularyTests
         {
             Assert.Empty(Errors($"layout {{ markTempo {word} }}\n{PartHeaderDoc("clef treble")}"));
             Assert.Empty(Errors($"layout house {{ markTempo {word} }}\n" + PartHeaderDoc("clef treble")
-                .Replace("score main { staff vln }", "score main { layout house  staff vln }")));
+                .Replace("score { staff vln }", "score { layout house  staff vln }")));
         }
     }
 
@@ -291,7 +291,7 @@ public class CompletionVocabularyTests
             string resolved = System.Text.RegularExpressions.Regex.Replace(item.InsertText!, @"\$\{\d+:([^}]*)\}", "$1")
                 .Replace("$0", b);
             string doc = $"part vln {{ clef treble }}\nsection A {{ vln {{ repeat {resolved} {tail} }} }}\n"
-                + "form main { A }\nscore main { staff vln }";
+                + "form { A }\nscore { staff vln }";
             var errors = Errors(doc);
             if (errors.Count > 0)
                 rejected.Add($"{item.Label}: {errors[0].Message}");

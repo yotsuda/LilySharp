@@ -253,7 +253,7 @@ static void ShowSvgHelp()
         Usage: lysc svg [options] <input.lys>
 
         Writes every score of the file: <input>.svg for the main score and
-        <input>-<alias>.svg for each other one (score main "tab" -> song-tab.svg).
+        <input>-<alias>.svg for each other one (score "tab" -> song-tab.svg).
 
         Options:
           -d, --out-dir <folder> Write into this folder (default: the input's folder)
@@ -1162,7 +1162,7 @@ static int Report(ExportResult result)
 // `--score` already means for svg/pdf/png — one word, one meaning. Two scores naming one
 // form therefore write the same music under two names, exactly as svg does.
 // The score's DECLARATION goes along too: its staves are not the form's (a book's
-// `score main`, `score main "both"` and `score main "tab"` share one form), and the ly
+// `score`, `score "both"` and `score "tab"` share one form), and the ly
 // twin engraves them. midi and xml write the form's music and take no staves from it.
 static int RunFormOutput(
     string[] args, string verb, string defaultExt,
@@ -1191,10 +1191,11 @@ static void WarnFormsLeftOut(SyntaxTree tree)
     var forms = LilySharp.Core.Semantics.ScoreForms.All(tree.GetRoot());
     if (forms.Count <= 1) return;
     var chosen = LilySharp.Core.Semantics.ScoreForms.Primary(tree.GetRoot());
-    var left = forms.Where(f => !ReferenceEquals(f, chosen)).Select(f => f.NameText).ToList();
+    static string Label(LilySharp.Core.Syntax.FormDeclarationSyntax? f) => f is { NameText.Length: > 0 } ? $"'{f.NameText}'" : "the unnamed form";
+    var left = forms.Where(f => !ReferenceEquals(f, chosen)).Select(Label).ToList();
     if (left.Count == 0) return;
     Console.WriteLine($"  warning: this file declares {forms.Count} forms and no score — "
-        + $"wrote '{chosen?.NameText}', left out {string.Join(", ", left)} "
+        + $"wrote {Label(chosen)}, left out {string.Join(", ", left)} "
         + "(declare a score for each to write them all)");
 }
 
@@ -1206,7 +1207,7 @@ static void WarnFormsLeftOut(SyntaxTree tree)
 // folder when it names none. Every score is written unless `--score` picks one. A name typed
 // on the command line could say anything; this one always says which book and which score a
 // file came from. And the old default wrote the FIRST score only: 92 of the owner's 332 bass
-// books declare two to four (`score main`, `"both"`, `"tab"`), and `pdf`/`png` had no way to
+// books declare two to four (`score`, `"both"`, `"tab"`), and `pdf`/`png` had no way to
 // write the rest at all.
 
 static string RemovedOutputMessage() =>
@@ -1285,7 +1286,7 @@ static List<ScoreOutput>? ScoreOutputs(SyntaxTree tree, string input, string dir
     if (clash != null)
     {
         Console.Error.WriteLine($"Error: {clash.Count()} scores would all be written to {clash.Key} — "
-            + "give each its own alias (score main \"tab\").");
+            + "give each its own alias (score \"tab\").");
         return null;
     }
     return outputs;

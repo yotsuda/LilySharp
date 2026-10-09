@@ -69,10 +69,10 @@ public sealed class ScoreExportTests : IDisposable
         part bass { clef bass }
         phrase mel { c4 d e f | g4 a b c | }
         section Main { melody { mel } bass { c,4 e g c | f,4 a c f | } }
-        form main { Main }
+        form { Main }
         form sub { Main Main }
-        score main { staff melody staff bass }
-        score sub { staff melody }
+        score { staff melody staff bass }
+        score sub { form sub staff melody }
         """;
 
     private static readonly string Muxer = Path.Combine(
@@ -158,7 +158,7 @@ public sealed class ScoreExportTests : IDisposable
             key c major
             part melody { clef treble }
             section Main { melody { c4 d e f | g1 | } }
-            form main { Main }
+            form { Main }
             """);
         string path = Path.Combine(_dir, "plain" + ScoreExport.Extensions[format]);
 
@@ -180,7 +180,7 @@ public sealed class ScoreExportTests : IDisposable
     [Fact]
     public void AnUnknownFormat_IsRefused()
     {
-        var tree = SyntaxTree.Parse("part m { clef treble } section A { m { c4 } } form main { A }");
+        var tree = SyntaxTree.Parse("part m { clef treble } section A { m { c4 } } form { A }");
         Assert.Throws<ArgumentException>(() => ScoreExport.Write(tree, "docx", Path.Combine(_dir, "x.docx"), null));
     }
 }

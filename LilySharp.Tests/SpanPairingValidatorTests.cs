@@ -43,7 +43,7 @@ public class SpanPairingValidatorTests
     private static IReadOnlyList<Diagnostic> Reports(string music)
     {
         var source = $"octave absolute part m {{ clef treble }} "
-                     + $"section A {{ m {{ {music} }} }} form main {{ A }} score main {{ staff m }}";
+                     + $"section A {{ m {{ {music} }} }} form {{ A }} score {{ staff m }}";
         var validator = new SpanPairingValidator();
         validator.Validate(SyntaxTree.Parse(source));
         return validator.Diagnostics
@@ -120,7 +120,7 @@ public class SpanPairingValidatorTests
     {
         const string music = "c'4 c' c'@rit c' |";
         var source = $"octave absolute part m {{ clef treble }} "
-                     + $"section A {{ m {{ {music} }} }} form main {{ A }} score main {{ staff m }}";
+                     + $"section A {{ m {{ {music} }} }} form {{ A }} score {{ staff m }}";
         var warning = Assert.Single(Reports(music));
         Assert.Equal(source.IndexOf("@rit", StringComparison.Ordinal), warning.Span.Start);
     }
@@ -136,7 +136,7 @@ public class SpanPairingValidatorTests
         var source = "octave absolute part m { clef treble } "
                      + "section A { m { c'4@rit c' c' c' | } } "
                      + "section B { m { d'4 d' d' d' | } } "
-                     + "form main { A B A } score main { staff m }";
+                     + "form { A B A } score { staff m }";
         var validator = new SpanPairingValidator();
         validator.Validate(SyntaxTree.Parse(source));
 

@@ -53,8 +53,8 @@ public sealed class BarlineColumnRodTests
 
           }
         }
-        form main { A }
-        score main { staff m }
+        form { A }
+        score { staff m }
         """;
 
     private static MultiStaffScore ScoreOf(string bar)

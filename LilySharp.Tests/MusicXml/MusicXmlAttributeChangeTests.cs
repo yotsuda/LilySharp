@@ -77,8 +77,8 @@ public class MusicXmlAttributeChangeTests
           m { Lick } }
         section C { key f major
           m { Lick } }
-        form main { A B C }
-        score main { staff m }
+        form { A B C }
+        score { staff m }
         """;
 
     [Fact]
@@ -110,15 +110,15 @@ public class MusicXmlAttributeChangeTests
             phrase Lick { c d e c }
             section A { key g major
               m { Lick } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """;
         string inside = """
             key c major
             phrase Lick { c d e c }
             section A { m { key g major Lick } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """;
         Assert.Equal(KeyChanges(Export(inside)), KeyChanges(Export(outside)));
         Assert.Equal(Pitches(Export(inside)), Pitches(Export(outside)));
@@ -136,8 +136,8 @@ public class MusicXmlAttributeChangeTests
             section A { m { c4 d e f | } }
             section B { key g major
               m { c4 d e f | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.Equal(new[] { (1, "0"), (2, "1") }, KeyChanges(doc));
     }
@@ -152,8 +152,8 @@ public class MusicXmlAttributeChangeTests
             part m { clef treble }
             section A { m { time 3/4 c'4 d' e' | time 4/4 f'4 e' d' c' | } }
             section B { m { g'4 f' e' d' | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.Equal(new[] { (1, "3"), (2, "4") }, TimeChanges(doc));
         // And the bar that says 3/4 holds three quarters — the pair that makes the
@@ -172,8 +172,8 @@ public class MusicXmlAttributeChangeTests
             time 3/4
             part m { clef treble }
             section A { m { c'4 d' e' | f'4 g' a' | b'4 c'' d'' | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.Equal(new[] { (1, "2") }, KeyChanges(doc));
         Assert.Equal(new[] { (1, "3") }, TimeChanges(doc));

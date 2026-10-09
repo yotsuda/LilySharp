@@ -47,7 +47,7 @@ public sealed class SystemCountLineMemoTests
         sb.Append("title \"Line memo\"\ntime 4/4\npart m { clef treble section A {\n");
         for (int i = 0; i < 120; i++)
             sb.Append(i == 14 ? bar14 : "c4 d e f | ");
-        sb.Append("\n} }\nform main { A }\nscore main { staff m }\n");
+        sb.Append("\n} }\nform { A }\nscore { staff m }\n");
         return sb.ToString();
     }
 

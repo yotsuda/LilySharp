@@ -76,9 +76,9 @@ public sealed class PreviewCollectSharingTests
           melody { c'4@mark("B") d' e' f' | }
           bass { c4 d e f | }
         }
-        form main { A }
-        score main { staff melody staff bass }
-        score main "Bass only" { staff bass }
+        form { A }
+        score { staff melody staff bass }
+        score "Bass only" { staff bass }
         """;
 
     private static LilySharpLanguageServer Opened(Uri uri, string text)

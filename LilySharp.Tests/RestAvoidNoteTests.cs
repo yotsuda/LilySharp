@@ -56,8 +56,8 @@ public class RestAvoidNoteTests
                 { r2 g | }
               }
             }
-            form main { ~Main }
-            score main { staff ~v }
+            form { ~Main }
+            score { staff ~v }
             """);
 
         // The staff middle line: the 3rd of the five full-width staff lines.
@@ -138,8 +138,8 @@ public class RestAvoidNoteTests
                 { r2 g | }
               }
             }
-            form main { ~Main }
-            score main { staff ~v }
+            form { ~Main }
+            score { staff ~v }
             """);
 
         var lineYs = Regex.Matches(svg,

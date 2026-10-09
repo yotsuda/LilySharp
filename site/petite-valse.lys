@@ -28,9 +28,9 @@ section B {
        e,4@sustain <gis b d>' <gis b d> | <a, e a c e,>2.@arpeggio@!sustain | }
 }
 
-form main { A B }
+form { A B }
 
-score main {
+score {
   grandStaff {        // brace on the left, barlines drawn through
     staff rh
     staff lh

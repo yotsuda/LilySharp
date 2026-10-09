@@ -49,7 +49,7 @@ public class MultiStaffKeySignatureTests
         var sharps = OpeningSharpsPerStaff(
             "part melody { section A { key c major c1 } } " +
             "part melody2 { section A { key a major c1 } } " +
-            "form main { A } score main { staff melody staff melody2 }");
+            "form { A } score { staff melody staff melody2 }");
         // Staff 1 opens in C major (0 sharps), staff 2 in A major (3) — no leak.
         Assert.Equal(new[] { 0, 3 }, sharps);
     }
@@ -63,7 +63,7 @@ public class MultiStaffKeySignatureTests
             "key d major " +
             "part melody { section A { c1 } } " +
             "part melody2 { section A { key a major c1 } } " +
-            "form main { A } score main { staff melody staff melody2 }");
+            "form { A } score { staff melody staff melody2 }");
         Assert.Equal(new[] { 2, 3 }, sharps);
     }
 
@@ -77,7 +77,7 @@ public class MultiStaffKeySignatureTests
             "key c major " +
             "part melody { key bes major section A { c1 } } " +
             "part melody2 { section A { e1 } } " +
-            "form main { A } score main { staff melody staff melody2 }");
+            "form { A } score { staff melody staff melody2 }");
         Assert.Equal(new[] { -2, 0 }, sharps);
     }
 
@@ -88,7 +88,7 @@ public class MultiStaffKeySignatureTests
         var sharps = OpeningSharpsPerStaff(
             "part melody { key bes major section A { c1 } } " +
             "part melody2 { key d major section A { e1 } } " +
-            "form main { A } score main { staff melody staff melody2 }");
+            "form { A } score { staff melody staff melody2 }");
         Assert.Equal(new[] { -2, 2 }, sharps);
     }
 }

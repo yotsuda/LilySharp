@@ -32,6 +32,6 @@ section A {
   }
 }
 
-form main { ~A }
+form { ~A }
 
-score main { staff ~v }
+score { staff ~v }

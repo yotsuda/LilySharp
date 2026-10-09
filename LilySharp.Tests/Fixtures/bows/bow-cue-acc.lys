@@ -12,7 +12,7 @@ part m {
     cue { f'1( | gis'1) } |
   }
 }
-form main { A }
-score main {
+form { A }
+score {
   staff m
 }

@@ -49,8 +49,8 @@ public class CollectDefinitionsFoldTests
             transpose d
             pitch concert
             part sax { instrument alto-sax  section A { c4 d e f | } }
-            form main { A }
-            score main { staff sax }
+            form { A }
+            score { staff sax }
             """, out var root);
         var (transpose, concert) = c.FileDefaultsForTest;
         Assert.Equal(PartTranspose.ReadScoreDefault(root), transpose);
@@ -66,8 +66,8 @@ public class CollectDefinitionsFoldTests
         // and passes them over, as the whole-tree readers do.
         var c = Collect("""
             part sax { instrument alto-sax  pitch concert  section A { c4 d e f | } }
-            form main { A }
-            score main transpose d { staff sax }
+            form { A }
+            score transpose d { staff sax }
             """, out var root);
         var (transpose, concert) = c.FileDefaultsForTest;
         Assert.Null(transpose);

@@ -65,8 +65,8 @@ public class PostEventOrderTests
     private static string Ink(string svg) => Regex.Replace(svg, " data-pos=\"\\d+\"", "");
 
     private static string Book(string music) =>
-        $"part bass\nsection A {{ bass {{ {music} }} }}\nform main {{ ~A }}\n"
-        + "score main { staff bass }\n";
+        $"part bass\nsection A {{ bass {{ {music} }} }}\nform {{ ~A }}\n"
+        + "score { staff bass }\n";
 
     private static string Page(string music) => Ink(LilySharp.Core.Svg.SvgGenerator.Generate(
         SyntaxTree.Parse(Book(music)),

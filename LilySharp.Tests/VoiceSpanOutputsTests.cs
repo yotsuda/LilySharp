@@ -74,8 +74,8 @@ public class VoiceSpanOutputsTests
     private const string Book = """
         part melody
         section Main { melody { c'1 | voice { g'2 a' | } { b,2 c, | } d1 | } }
-        form main { Main }
-        score main { staff melody }
+        form { Main }
+        score { staff melody }
         """;
 
     /// <summary>The control: the same six LETTERS with no span at all. ⚠️ NOT the same six
@@ -86,8 +86,8 @@ public class VoiceSpanOutputsTests
     private const string Sequential = """
         part melody
         section Main { melody { c'1 | g'2 a' | b,2 c, | d1 | } }
-        form main { Main }
-        score main { staff melody }
+        form { Main }
+        score { staff melody }
         """;
 
     /// <summary>C5 G5 A6 B3 C3 D5 — measured from the page, and from LilyPond through the
@@ -158,16 +158,16 @@ public class VoiceSpanOutputsTests
     private const string ValueBook = """
         part melody
         section Main { melody { c'2 d'8 e' f' g' | voice { a'2 b' | } { c'' d'' e'' f'' g''4 a'' | } g'' a'' b'' c''' d''' e''' f''' g''' | } }
-        form main { Main }
-        score main { staff melody }
+        form { Main }
+        score { staff melody }
         """;
 
     /// <summary>The same piece with every value written out — the differential's other side.</summary>
     private const string ValueBookExplicit = """
         part melody
         section Main { melody { c'2 d'8 e' f' g' | voice { a'2 b' | } { c''8 d'' e'' f'' g''4 a'' | } g''8 a'' b'' c''' d''' e''' f''' g''' | } }
-        form main { Main }
-        score main { staff melody }
+        form { Main }
+        score { staff melody }
         """;
 
     [Fact]

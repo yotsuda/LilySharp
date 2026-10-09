@@ -40,8 +40,8 @@ public class FormNavigationTests
               section C { e4 f g a | }
               section D { c'4 b a g | }
             }
-            form main { {{structure}} }
-            score main "x" { staff m }
+            form { {{structure}} }
+            score "x" { staff m }
             """;
         var score = new MeasureCollector().Collect(SyntaxTree.Parse(source));
         return score.MusicMarks.Select(m => m.Type).ToArray();
@@ -57,8 +57,8 @@ public class FormNavigationTests
               section C { e4 f g a | }
               section D { c'4 b a g | }
             }
-            form main { {{structure}} }
-            score main "x" { staff m }
+            form { {{structure}} }
+            score "x" { staff m }
             """;
         return new MeasureCollector().Collect(SyntaxTree.Parse(source)).MusicMarks.ToArray();
     }
@@ -78,10 +78,10 @@ public class FormNavigationTests
     [InlineData("part rh { clef treble }\npart lh { clef bass }\n"
         + "section A { rh { c'4 d' e' f' | } lh { c4 d e f | } }\n"
         + "section B { rh { g'4 a' b' c'' | } lh { g4 a b c' | } }\n"
-        + "form main { A fine B dc al fine _\"rit.\" }\nscore main { staff rh staff lh }\n")]
+        + "form { A fine B dc al fine _\"rit.\" }\nscore { staff rh staff lh }\n")]
     [InlineData("part rh { clef treble }\n"
         + "section A { rh { c'4 d' e' f' | } }\nsection B { rh { g'4 a' b' c'' | } }\n"
-        + "form main { A fine B dc al fine _\"rit.\" }\nscore main { staff rh }\n")]
+        + "form { A fine B dc al fine _\"rit.\" }\nscore { staff rh }\n")]
     public void AFormsMarksAndTexts_AreCollectedOncePerScore_HoweverManyParts(string source)
     {
         var tree = SyntaxTree.Parse(source);
@@ -221,8 +221,8 @@ public class FormNavigationTests
               lyrics words sings melody { la | }
               bass { d,1 | }
             }
-            form main { segno A ds al coda coda B }
-            score main { {{staves}} }
+            form { segno A ds al coda coda B }
+            score { {{staves}} }
             """;
         string svg = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(source),
             new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
@@ -270,9 +270,9 @@ public class FormNavigationTests
           section E { c1 | c1 }
         }
 
-        form main { A coda |: E :| }
+        form { A coda |: E :| }
 
-        score main { staff melody }
+        score { staff melody }
         """;
 
     private static (double CodaX, double LabelX, double BarX, double StaffTop) LineStartGeometry()

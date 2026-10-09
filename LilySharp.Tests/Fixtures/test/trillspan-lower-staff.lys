@@ -14,9 +14,9 @@ section Main {
   bot { c4@startTrillSpan d e f@stopTrillSpan | g1 | }
 }
 
-form main { Main }
+form { Main }
 
-score main "trillspan-lower-staff" {
+score "trillspan-lower-staff" {
   staff top
   staff bot
 }

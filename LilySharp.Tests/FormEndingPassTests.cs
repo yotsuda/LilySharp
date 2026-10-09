@@ -48,8 +48,8 @@ public sealed class FormEndingPassTests
           section C { e''1 | }
           section D { a'1 | }
         }
-        form main { {{form}} }
-        score main { staff m }
+        form { {{form}} }
+        score { staff m }
         """;
 
     private static List<MidiNote> MidiNotes(string src) =>
@@ -192,8 +192,8 @@ public sealed class FormEndingPassTests
               section C { c''1 | c1~ || }
               section D { c''1 | }
             }
-            form main { |: A [1,3. B] :| [2. C] D }
-            score main { staff vn }
+            form { |: A [1,3. B] :| [2. C] D }
+            score { staff vn }
             """;
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
@@ -270,8 +270,8 @@ public sealed class FormEndingPassTests
     public void ASplitBarIsJudgedByTheNeighboursThePassesGive()
     {
         Assert.Equal(new[] { "LYS2001", "LYS2006" },
-            BarCodes(Head + "form main { |: A [1,3. E1] :| [2. E2] D }\nscore main { staff m }\n"));
-        Assert.Empty(BarCodes(Head + "form main { |: A [1. E1] :| [2. E2] D }\nscore main { staff m }\n"));
+            BarCodes(Head + "form { |: A [1,3. E1] :| [2. E2] D }\nscore { staff m }\n"));
+        Assert.Empty(BarCodes(Head + "form { |: A [1. E1] :| [2. E2] D }\nscore { staff m }\n"));
     }
 
     // ---- the twin ---------------------------------------------------------------------------
@@ -324,7 +324,7 @@ public sealed class FormEndingPassTests
     /// "Expected" errors an ending, and the pass reader then threw on the empty number the
     /// recovery left, so <c>lysc check</c> printed "The input string '' was not in a correct
     /// format." and no diagnostic at all (the owner wrote
-    /// <c>form main { A |: [1.3. B] :| [2.4. C] :| }</c>).
+    /// <c>form { A |: [1.3. B] :| [2.4. C] :| }</c>).
     /// </summary>
     [Theory]
     [InlineData("|: A [1.3. B] :| [2.4. C]", 2)]
@@ -345,8 +345,8 @@ public sealed class FormEndingPassTests
         const string src = """
             octave absolute
             part m { section A { c'1 |: d'1 [1.3. e'1] :| [2. f'1] } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """;
         var tree = SyntaxTree.Parse(src);
         var parse = Assert.Single(tree.Diagnostics);

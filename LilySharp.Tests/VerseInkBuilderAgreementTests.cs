@@ -178,8 +178,8 @@ section Main {
   melody { c'4 d e f | g a b c'' | }
   lyrics melody { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
 }
-form main { Main }
-score main ""x"" { staff melody  lyrics melody }
+form { Main }
+score ""x"" { staff melody  lyrics melody }
 ");
     }
 
@@ -190,8 +190,8 @@ score main ""x"" { staff melody  lyrics melody }
             "part melody { section A { c4 d e f } }\n" +
             "part back { section A { e4 f g a } }\n" +
             "lyrics ly sings melody { section A { la le li lo } }\n" +
-            "form main { A }\n" +
-            "score main {\n  staff melody  lyrics ly\n  staff back\n}\n");
+            "form { A }\n" +
+            "score {\n  staff melody  lyrics ly\n  staff back\n}\n");
     }
 
     [Fact]
@@ -205,8 +205,8 @@ section Main {
   melody { c'4 d e f | g a b c'' | c''4 b a g | f e d c' | c'4 d e f | g a b c'' | c''4 b a g | f e d c' | c'4 d e f | g a b c'' | c''4 b a g | f e d c' | }
   lyrics melody { Aa bb cc dd | ee ff gg hh | ii jj kk ll | mm nn oo pp | qq rr ss tt | uu vv ww xx | yy zz ab cd | ef gh ij kl | mn op qr st | uv wx yz za | zb zc zd ze | zf zg zh zi | }
 }
-form main { Main }
-score main ""x"" { staff melody  lyrics melody }
+form { Main }
+score ""x"" { staff melody  lyrics melody }
 ");
     }
 
@@ -217,8 +217,8 @@ score main ""x"" { staff melody  lyrics melody }
             "part melody { section A { c4 d e f } }\n" +
             "part back { section A { e4 f g a } }\n" +
             "lyrics ly sings melody { section A { la le li lo la le li lo } }\n" +
-            "form main { A A }\n" +
-            "score main {\n  staff melody\n  staff back\n  lyrics ly\n}\n");
+            "form { A A }\n" +
+            "score {\n  staff melody\n  staff back\n  lyrics ly\n}\n");
 
         var rowStaves = score.Lyrics
             .Where(l => l.IsLyricsRow).Select(l => l.StaffIndex).Distinct().ToList();

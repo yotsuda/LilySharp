@@ -267,9 +267,9 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.BarePartNameList => GetDeclaredNameCompletions(doc.Text, "part", "Part"),
             // `score NAME |`: the header options and the body's braces.
             CompletionContext.AfterScoreHeader => GetScoreHeaderCompletions(),
-            // `score |`: the forms this document declares — the one thing that fits.
-            CompletionContext.AfterScoreKeyword =>
-                GetDeclaredNameCompletions(doc.Text, "form", "Form this score renders"),
+            // `form |` in a score: the forms this document declares — the one thing that fits.
+            CompletionContext.AfterScoreForm =>
+                GetDeclaredNameCompletions(doc.Text, "form", "Form this score plays"),
             // `transpose |`: a pitch is typed; nothing to list.
             CompletionContext.AfterTransposePitch => GetTransposePitchCompletions(),
             // A lyrics body: the verse headers.

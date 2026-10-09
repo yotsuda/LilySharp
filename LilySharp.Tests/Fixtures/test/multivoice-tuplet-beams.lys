@@ -18,5 +18,5 @@ section S {
     { e'8 f' g' a' b' a' g' f' | }
   }
 }
-form main { S }
-score main "multivoice-tuplet-beams" { staff mel }
+form { S }
+score "multivoice-tuplet-beams" { staff mel }

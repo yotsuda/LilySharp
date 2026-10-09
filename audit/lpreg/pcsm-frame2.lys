@@ -14,6 +14,6 @@ section A {
   vtwo { r1@text("r").down | voice { s4 s2 s4 } { R1 } | }
 }
 
-form main { ~A }
+form { ~A }
 
-score main { combinedStaff { vone vtwo } }
+score { combinedStaff { vone vtwo } }

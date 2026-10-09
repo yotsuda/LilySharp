@@ -9,5 +9,5 @@ section A {
     chord(Am x02210)2@chord chord(F 133211)2@chord | r1@chord(G 320003) |
   }
 }
-form main { ~A }
-score main { staff gt  tab gt }
+form { ~A }
+score { staff gt  tab gt }

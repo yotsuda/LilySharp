@@ -10,5 +10,5 @@ section A {
     <c e g>4 <c 3 5>4 <1 3 5>2 | /4 4 8 8 4 |
   }
 }
-form main { ~A }
-score main { staff melody }
+form { ~A }
+score { staff melody }

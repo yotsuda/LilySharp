@@ -1,1 +1,1 @@
-part melody { key bes major section A { c d e f | g a b c } } form main { A } score main { staff melody }
+part melody { key bes major section A { c d e f | g a b c } } form { A } score { staff melody }

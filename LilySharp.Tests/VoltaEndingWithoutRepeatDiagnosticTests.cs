@@ -54,12 +54,12 @@ public sealed class VoltaEndingWithoutRepeatDiagnosticTests
     /// exactly once — including the one in a form that DOES have a repeat block, which the
     /// weaker "this form has no repeat" rule would have missed.</summary>
     [Theory]
-    [InlineData("form main { [1. A] }")]
-    [InlineData("form main { A [1. B] }")]
-    [InlineData("form main { |: A :| B [1. B] }")]     // has a repeat block, ending still loose
-    [InlineData("form main { A :|: B :| A [1. B] }")]  // the divider run ended at A; this one is loose
-    [InlineData("form main { [1. ~A] }")]
-    [InlineData("form main { [1-3. A] }")]
+    [InlineData("form { [1. A] }")]
+    [InlineData("form { A [1. B] }")]
+    [InlineData("form { |: A :| B [1. B] }")]     // has a repeat block, ending still loose
+    [InlineData("form { A :|: B :| A [1. B] }")]  // the divider run ended at A; this one is loose
+    [InlineData("form { [1. ~A] }")]
+    [InlineData("form { [1-3. A] }")]
     public void ARepeatlessEnding_Warns(string form)
     {
         var d = Assert.Single(Warnings(form));
@@ -71,11 +71,11 @@ public sealed class VoltaEndingWithoutRepeatDiagnosticTests
     /// <c>:|:</c> opens, which <c>FormWalk.GroupDividerRepeats</c> reads as a block's (until
     /// 2026-09-29, 第663 ⒁, they were accused while every reader played them).</summary>
     [Theory]
-    [InlineData("form main { |: A [1. A] :| [2. B] }")]
-    [InlineData("form main { |: A [1. A] :| }")]
-    [InlineData("form main { A B }")]
-    [InlineData("form main { A :|: B [1. A] :| [2. B] }")]
-    [InlineData("form main { A :|: B :| [1. A] }")]
+    [InlineData("form { |: A [1. A] :| [2. B] }")]
+    [InlineData("form { |: A [1. A] :| }")]
+    [InlineData("form { A B }")]
+    [InlineData("form { A :|: B [1. A] :| [2. B] }")]
+    [InlineData("form { A :|: B :| [1. A] }")]
     public void ALegitimateArrangement_IsSilent(string form) => Assert.Empty(Warnings(form));
 
     /// <summary>
@@ -85,7 +85,7 @@ public sealed class VoltaEndingWithoutRepeatDiagnosticTests
     /// </summary>
     [Fact]
     public void TheSilentControlReallyContainsEndings()
-        => Assert.Equal(2, Parse("form main { |: A [1. A] :| [2. B] }").GetRoot()
+        => Assert.Equal(2, Parse("form { |: A [1. A] :| [2. B] }").GetRoot()
             .DescendantNodes().OfType<FormAlternativeSyntax>().Count());
 
     /// <summary>
@@ -96,10 +96,10 @@ public sealed class VoltaEndingWithoutRepeatDiagnosticTests
     /// and the collector ever answer differently, this is where it shows (HANDOFF §5.2.1②).
     /// </summary>
     [Theory]
-    [InlineData("form main { |: A [1. A] :| [2. B] [3. B] }")]
+    [InlineData("form { |: A [1. A] :| [2. B] [3. B] }")]
     // …and the same partition over a run a form-level `:|:` opens: its endings are
     // bracketed (ProcessForm's ending arm, 2026-09-29), the one after the plain A is loose.
-    [InlineData("form main { A :|: B [1. A] :| [2. B] A [3. B] }")]
+    [InlineData("form { A :|: B [1. A] :| [2. B] A [3. B] }")]
     public void TheWarnedEndingsAreExactlyTheOnesTheEngraverDoesNotBracket(string form)
     {
         var tree = Parse(form);
@@ -125,7 +125,7 @@ public sealed class VoltaEndingWithoutRepeatDiagnosticTests
     /// each other (the rule LYS6002 and LYS6007 already follow).</summary>
     [Fact]
     public void EveryLooseEndingIsReported()
-        => Assert.Equal(2, Warnings("form main { [1. A] [2. B] }").Length);
+        => Assert.Equal(2, Warnings("form { [1. A] [2. B] }").Length);
 
     /// <summary>
     /// The squiggle sits on the ending itself — the thing to delete or to open a repeat in
@@ -139,9 +139,9 @@ public sealed class VoltaEndingWithoutRepeatDiagnosticTests
     /// the ink end from the last child token instead (FormDeclarationValidator.InkSpan).
     /// </remarks>
     [Theory]
-    [InlineData("form main { A [1. B] }", "[1. B]")]
-    [InlineData("form main { A [1. B -] }", "[1. B -]")]  // an open end — ends on its ']'
-    [InlineData("form main { A [1. B]@voltaBracket(1) }", "[1. B]@voltaBracket(1)")]
+    [InlineData("form { A [1. B] }", "[1. B]")]
+    [InlineData("form { A [1. B -] }", "[1. B -]")]  // an open end — ends on its ']'
+    [InlineData("form { A [1. B]@voltaBracket(1) }", "[1. B]@voltaBracket(1)")]
     public void TheWarningMarksExactlyTheEndingAsWritten(string form, string ink)
     {
         var d = Assert.Single(Warnings(form));
@@ -162,7 +162,7 @@ public sealed class VoltaEndingWithoutRepeatDiagnosticTests
     [Fact]
     public void TheMessageNamesTheNumberTheSectionAndBothWaysOut()
     {
-        var d = Assert.Single(Warnings("form main { A [1. B] }"));
+        var d = Assert.Single(Warnings("form { A [1. B] }"));
         Assert.Contains("'1.' prints nothing", d.Message);
         Assert.Contains("'B' is engraved as an ordinary section reference", d.Message);
         Assert.Contains("|: … [1. B] :|", d.Message);   // open a repeat
@@ -175,9 +175,9 @@ public sealed class VoltaEndingWithoutRepeatDiagnosticTests
     /// is excluded by name rather than by being overlooked.
     /// </summary>
     [Theory]
-    [InlineData("form main { A [1. B] }")]
-    [InlineData("form main { A [1-3. B] }")]
-    [InlineData("form main { A [1,3. B] }")]
+    [InlineData("form { A [1. B] }")]
+    [InlineData("form { A [1-3. B] }")]
+    [InlineData("form { A [1,3. B] }")]
     public void EveryQuotedSpellingIsOneTheAuthorWrote(string form)
     {
         string src = Head + form + Tail;
@@ -197,7 +197,7 @@ public sealed class VoltaEndingWithoutRepeatDiagnosticTests
     [Fact]
     public void ARangedEndingReportsItsWrittenNumber()
         => Assert.Contains("'1-3.' prints nothing",
-            Assert.Single(Warnings("form main { [1-3. A] }")).Message);
+            Assert.Single(Warnings("form { [1-3. A] }")).Message);
 
     /// <summary>
     /// LYS6007 and LYS6008 answer different questions and must not double up: a form holding
@@ -205,6 +205,6 @@ public sealed class VoltaEndingWithoutRepeatDiagnosticTests
     /// </summary>
     [Fact]
     public void ALooseEndingIsNotAlsoCalledAnEmptyForm()
-        => Assert.DoesNotContain(SemanticValidation.Run(Parse("form main { [1. A] }")),
+        => Assert.DoesNotContain(SemanticValidation.Run(Parse("form { [1. A] }")),
             d => d.Code == DiagnosticCodes.EmptyForm);
 }

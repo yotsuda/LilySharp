@@ -83,8 +83,8 @@ public class ForeignTupletBracketTests
           rh { c16 d16. e32 f16 g16 r2 r8 r16 | }
           lh { c,16 d,16 tuplet 3/2 { e,16 f,16 g,16 } r2. | }
         }
-        form main { Main }
-        score main "x" { grandStaff { staff rh staff lh } }
+        form { Main }
+        score "x" { grandStaff { staff rh staff lh } }
         """;
 
     /// <summary>
@@ -167,8 +167,8 @@ public class ForeignTupletBracketTests
             section Main { melody {
               c16 tuplet 3/2 { d16. e32 f16 } g16 |
             } }
-            form main { Main }
-            score main "x" { staff melody }
+            form { Main }
+            score "x" { staff melody }
             """);
         var (staff, staffIndex) = score.PrimaryContentStaffWithIndex();
         Assert.False(score.TupletBrackets.IsDefaultOrEmpty, "the book carries no bracket — vacuous");

@@ -52,8 +52,8 @@ public class MidiPitchRangeTests
             time 4/4
             part v { }
             section Main { v { {{body}} } }
-            form main { ~Main }
-            score main { staff ~v }
+            form { ~Main }
+            score { staff ~v }
             """);
         var exporter = new MidiExporter();
         var file = exporter.Export(tree);

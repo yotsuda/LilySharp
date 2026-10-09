@@ -35,8 +35,8 @@ public class ItemReuseTests
         octave absolute
         part bl { clef bass tuning bass }
         section A { bl { c4 d e f | g4 a b c' | } }
-        form main { A }
-        score main "x" { staff bl tab bl }
+        form { A }
+        score "x" { staff bl tab bl }
         """;
 
     private static MultiStaffScore Collect(string src)

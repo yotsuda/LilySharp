@@ -21,9 +21,9 @@ section A { m { g'4 g f f | } }
 
 lyrics v { section A { Twin- kle twin- kle | } }
 
-form main { A }
+form { A }
 
-score main {
+score {
   tab m
   lyrics v sings m
 }

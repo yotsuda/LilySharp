@@ -38,7 +38,7 @@ public class PartialPickupValidationTests
         return v.Diagnostics;
     }
 
-    private const string Tail = "\nform main { A }\nscore main { staff melody }";
+    private const string Tail = "\nform { A }\nscore { staff melody }";
 
     [Fact]
     public void StandaloneSectionHeaderPartial_AppliesToGroupedByPartMusic_NoWarning()
@@ -93,7 +93,7 @@ public class PartialPickupValidationTests
         // B's short first bar is B's own affair (a bare-pickup nudge at most), never a
         // mismatch against A's pickup.
         var d = Diags("section A { partial 2 }\npart melody { section A { c2 | a1 | } section B { c4 d e | f1 | } }"
-                      + "\nform main { A B }\nscore main { staff melody }");
+                      + "\nform { A B }\nscore { staff melody }");
         Assert.DoesNotContain(d, x => x.Message.Contains("declared partial"));
     }
 

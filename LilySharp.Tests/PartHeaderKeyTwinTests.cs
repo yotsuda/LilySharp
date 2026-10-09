@@ -50,8 +50,8 @@ public sealed class PartHeaderKeyTwinTests
           section B { key d major g4 a b c | }
           section C { c4 d e f | }
         }
-        form main { A B C }
-        score main { staff m  staff n }
+        form { A B C }
+        score { staff m  staff n }
         """;
 
     private static string Twin() => new LilyPondExporter().Export(SyntaxTree.Parse(Book));

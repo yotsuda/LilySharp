@@ -55,7 +55,7 @@ public static class SvgGenerator
 
     /// <summary>
     /// Generates the SVG of one given score (null = a file with no <c>score</c> block). A
-    /// name cannot always pick it: <c>score main</c> and <c>score main "tab"</c> share the
+    /// name cannot always pick it: <c>score</c> and <c>score "tab"</c> share the
     /// name <c>main</c>, so a caller walking every score hands over the spec itself.
     /// </summary>
     public static string GenerateScore(SyntaxTree tree, RenderSpec? renderSpec, SvgRenderOptions? options = null)
@@ -232,7 +232,7 @@ public static class SvgGenerator
         var pedalStyle = renderSpec is { Items.Length: 1 }
             && renderSpec.Items[0] is SingleStaffSpec pss ? pss.Staff.PedalStyle : PedalStyle.Bracket;
         // BOTH returns go through MeterStencil.Blank, and the wrap path is not a formality:
-        // `score main { tab m as numbers }` is a ONE-staff score, so it comes out here rather
+        // `score { tab m as numbers }` is a ONE-staff score, so it comes out here rather
         // than through CollectMultiStaff — and it is the very shape the blanking is for.
         return WithShadowedMarksRecorded(collector, Collector.MeterStencil.Blank(
             MultiStaffScore.FromScore(score, instrumentName, staffLines, pedalStyle)));

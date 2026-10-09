@@ -38,36 +38,36 @@ public class ScoreSettingInPartHeaderValidatorTests
     [Fact]
     public void PartHeaderTempo_Errors()
         => Assert.Equal(1, ErrCount(
-            "part melody { tempo 120  clef treble  section A { c1 } }\nform main { A }\nscore main { staff melody }"));
+            "part melody { tempo 120  clef treble  section A { c1 } }\nform { A }\nscore { staff melody }"));
 
     [Fact]
     public void PartHeaderTime_Errors()
         => Assert.Equal(1, ErrCount(
-            "part melody { time 3/4  clef treble  section A { c2. } }\nform main { A }\nscore main { staff melody }"));
+            "part melody { time 3/4  clef treble  section A { c2. } }\nform { A }\nscore { staff melody }"));
 
     [Fact]
     public void BothInOnePartHeader_ErrorEach()
         => Assert.Equal(2, ErrCount(
-            "part melody { tempo 120  time 3/4  section A { c2. } }\nform main { A }\nscore main { staff melody }"));
+            "part melody { tempo 120  time 3/4  section A { c2. } }\nform { A }\nscore { staff melody }"));
 
     [Fact]
     public void GlobalTempoAndTime_Ok()
         => Assert.Equal(0, ErrCount(
-            "time 4/4\ntempo 100\npart melody { clef treble  section A { c1 } }\nform main { A }\nscore main { staff melody }"));
+            "time 4/4\ntempo 100\npart melody { clef treble  section A { c1 } }\nform { A }\nscore { staff melody }"));
 
     [Fact]
     public void SectionHeaderTempo_Ok()
         // A tempo change stated in a top-level section header applies to every part — allowed.
         => Assert.Equal(0, ErrCount(
             "tempo 100\npart melody { section A { c1 } section B { d1 } }\nsection B { tempo 132 }\n"
-            + "form main { A B }\nscore main { staff melody }"));
+            + "form { A B }\nscore { staff melody }"));
 
     [Fact]
     public void MidMusicTempoInPartSection_Ok()
         // A tempo written INSIDE the music (a part's inner section) is a mid-piece change, not a
         // header attribute — not flagged.
         => Assert.Equal(0, ErrCount(
-            "tempo 100\npart melody { section A { c2 tempo 132 c2 } }\nform main { A }\nscore main { staff melody }"));
+            "tempo 100\npart melody { section A { c2 tempo 132 c2 } }\nform { A }\nscore { staff melody }"));
 
     [Fact]
     public void PartPropertyCompletion_DoesNotOfferTempoOrTime()

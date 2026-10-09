@@ -61,8 +61,8 @@ public class BarlineToColumnMinimumTests
                 {{opening}} c' c' c' |
               }
             }
-            form main { A }
-            score main {
+            form { A }
+            score {
               staff m
             }
             """;
@@ -106,8 +106,8 @@ public class BarlineToColumnMinimumTests
                 {{bar2}} |
               }
             }
-            form main { A }
-            score main {
+            form { A }
+            score {
               staff m
             }
             """;

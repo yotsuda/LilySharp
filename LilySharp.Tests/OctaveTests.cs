@@ -115,8 +115,8 @@ part bassline { clef bass }
 section A {
     bassline { c4 d e f | }
 }
-form main { A }
-score main ""test"" {
+form { A }
+score ""test"" {
     staff bass bassline
 }
 ";
@@ -130,15 +130,15 @@ score main ""test"" {
     // only: the note keeps its pitch (C4 sits on the first ledger line above a bass staff)
     // and the twin writes \clef without moving its \relative anchor.
     [Theory]
-    [InlineData("score main { staff bass melody }")]
-    [InlineData("score main { staff treble other  staff bass melody }")]
+    [InlineData("score { staff bass melody }")]
+    [InlineData("score { staff treble other  staff bass melody }")]
     // A grand staff's member (RenderSpec.WrittenClefOf walks into the group). Session 470's
     // poison skipping that walk was green over the suite and the corpus, which wrote no
     // clef on a member; this row is its observer (session 485).
-    [InlineData("score main { grandStaff { staff treble other  staff bass melody } }")]
+    [InlineData("score { grandStaff { staff treble other  staff bass melody } }")]
     public void AClefWrittenOnTheStaffItem_IsTheStaffsClef_AndMovesNoPitch(string score)
     {
-        var source = "section A {\n  melody { c1 }\n  other { c1 }\n}\nform main { A }\n" + score + "\n";
+        var source = "section A {\n  melody { c1 }\n  other { c1 }\n}\nform { A }\n" + score + "\n";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
 
@@ -158,13 +158,13 @@ score main ""test"" {
     // (Lab sessions/p648 clef). A part's own clef still wins. The twin writes it too: it never
     // read the top-level word, so seven audit books with `clef bass` had a treble twin.
     [Theory]
-    [InlineData("score main { staff melody }")]
-    [InlineData("score main { staff other  staff melody }")]
-    [InlineData("score main { grandStaff { staff other  staff melody } }")]
+    [InlineData("score { staff melody }")]
+    [InlineData("score { staff other  staff melody }")]
+    [InlineData("score { grandStaff { staff other  staff melody } }")]
     public void ATopLevelClef_IsTheClefOfAPartThatNamesNone(string score)
     {
         var source = "clef bass\npart melody\npart other\npart own { clef treble }\n"
-                     + "section A {\n  melody { c1 }\n  other { c1 }\n  own { c1 }\n}\nform main { A }\n"
+                     + "section A {\n  melody { c1 }\n  other { c1 }\n  own { c1 }\n}\nform { A }\n"
                      + score + "\n";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -185,8 +185,8 @@ score main ""test"" {
     public void APartsOwnClef_WinsOverTheTopLevelOne()
     {
         var source = "clef bass\npart melody\npart own { clef treble }\n"
-                     + "section A {\n  melody { c1 }\n  own { c1 }\n}\nform main { A }\n"
-                     + "score main { staff melody  staff own }\n";
+                     + "section A {\n  melody { c1 }\n  own { c1 }\n}\nform { A }\n"
+                     + "score { staff melody  staff own }\n";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
 
@@ -218,8 +218,8 @@ part cellopart { instrument cello }
 section A {
     cellopart { c4 d e f | }
 }
-form main { A }
-score main ""test"" {
+form { A }
+score ""test"" {
     staff bass cellopart
 }
 ";
@@ -327,8 +327,8 @@ part lead { instrument guitar }
 section A {
     lead { c4 d e f | }
 }
-form main { A }
-score main ""test"" {
+form { A }
+score ""test"" {
     staff treble_8 lead
 }
 ";
@@ -347,8 +347,8 @@ part fl { instrument flute }
 section A {
     fl { c4 d e f | }
 }
-form main { A }
-score main ""test"" {
+form { A }
+score ""test"" {
     staff treble fl
 }
 ";
@@ -369,8 +369,8 @@ part high { instrument violin, octave 5 }
 section A {
     high { c4 d e f | }
 }
-form main { A }
-score main ""test"" {
+form { A }
+score ""test"" {
     staff treble high
 }
 ";
@@ -392,8 +392,8 @@ section A {
 section B {
     melody { c4 d e f | }
 }
-form main { A B }
-score main ""test"" {
+form { A B }
+score ""test"" {
     staff treble melody
 }
 ";
@@ -420,8 +420,8 @@ section A {
 section B {
     bassline { c4 d e f | }
 }
-form main { A B }
-score main ""test"" {
+form { A B }
+score ""test"" {
     staff bass bassline
 }
 ";
@@ -470,8 +470,8 @@ part melody { clef treble_8 }
 section A {
     melody { c4 d e f | }
 }
-form main { A }
-score main ""test"" {
+form { A }
+score ""test"" {
     staff treble_8 melody
 }
 ";

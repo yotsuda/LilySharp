@@ -41,8 +41,8 @@ public class MidiExportShapeTests
         var notes = ExportNotes("""
             part kit { clef percussion }
             section A { kit { bd4 bd sn bd | } }
-            form main { A }
-            score main { staff kit }
+            form { A }
+            score { staff kit }
             """);
         Assert.Equal(4, notes.Count);
         Assert.All(notes, n => Assert.Equal(9, n.Channel));
@@ -68,8 +68,8 @@ public class MidiExportShapeTests
             part melody { clef treble section A { c'4 d' e' f' | } }
             part bass { clef bass section A { c4 d e f | } }
             chords harmony { section A { C | } }
-            form main { A }
-            score main { staff melody with chords harmony
+            form { A }
+            score { staff melody with chords harmony
             staff bass }
             """);
 
@@ -90,8 +90,8 @@ public class MidiExportShapeTests
             octave absolute
             part m { clef treble }
             section A { m { cih'4 c' deh' d' | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.Equal(4, notes.Count);
         Assert.Equal(new[] { 1, 0, -1, 0 }, notes.Select(n => n.QuarterBend));
@@ -105,8 +105,8 @@ public class MidiExportShapeTests
         var notes = ExportNotes("""
             part kit { clef percussion }
             section A { kit { <bd hh>4 r r r | } }
-            form main { A }
-            score main { staff kit }
+            form { A }
+            score { staff kit }
             """);
         Assert.Equal(2, notes.Count);
         Assert.All(notes, n => Assert.Equal(9, n.Channel));
@@ -125,8 +125,8 @@ public class MidiExportShapeTests
         part m { clef treble }
         phrase Lick { c4 d e f }
         section A { m { {{reference}} | } }
-        form main { A }
-        score main { staff m }
+        form { A }
+        score { staff m }
         """;
 
     [Theory]

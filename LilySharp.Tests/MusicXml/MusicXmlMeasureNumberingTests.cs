@@ -43,8 +43,8 @@ public class MusicXmlMeasureNumberingTests
             time 4/4
             part m
             section A { m { voice { c'2 d' | e'2 f' | } { e'2 f' | g'2 a' | }  g'1 | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.Equal(new[] { 1, 2, 3 }, numbers);
     }
@@ -68,8 +68,8 @@ public class MusicXmlMeasureNumberingTests
             part m { clef treble }
             section A { m { c'1 | c'2 | } }
             section B { m { d'2 | e'1 | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.Equal(new[] { (1, false), (2, false), (2, true), (3, false) }, m);
     }
@@ -86,8 +86,8 @@ public class MusicXmlMeasureNumberingTests
             part m { clef treble }
             section A { m { c'1 | c'2 | } }
             section B { m { d'4 | e'1 | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.Equal(new[] { (1, false), (2, false), (3, false), (4, false) }, m);
     }
@@ -107,8 +107,8 @@ public class MusicXmlMeasureNumberingTests
             part m { clef treble }
             section A { m { c'1 | c'2 | } }
             section B { partial 2  m { d'2 | e'1 | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.Equal(new[] { (1, false), (2, false), (2, true), (3, false) }, m);
     }
@@ -125,8 +125,8 @@ public class MusicXmlMeasureNumberingTests
             part m { clef treble }
             section A { m { c'1 | c'1 | } }
             section B { partial 2  m { d'2 | e'1 | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.Equal(new[] { (1, false), (2, false), (3, true), (4, false) }, m);
     }
@@ -143,8 +143,8 @@ public class MusicXmlMeasureNumberingTests
             part m { clef treble }
             section A { m { c'1 | time 2/4 g'2 | } }
             section B { partial 2  m { d'2 | e'1 | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.Equal(new[] { (1, false), (2, false), (3, true), (4, false) }, m);
     }
@@ -163,8 +163,8 @@ public class MusicXmlMeasureNumberingTests
             section A { m { c'1 | c'2 | } }
             section B { m { d'2 | e'1 | } }
             section C { m { f'2 | g'1 | } }
-            form main { |: A [1. B] :| [2. C] }
-            score main { staff m }
+            form { |: A [1. B] :| [2. C] }
+            score { staff m }
             """);
         Assert.Equal(new[] { (1, false), (2, false), (2, true), (3, false), (4, false), (5, false) }, m);
     }
@@ -179,8 +179,8 @@ public class MusicXmlMeasureNumberingTests
             time 4/4
             part m
             section A { m { voice { c'2 d' } { e'2 f' } | g'1 | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.Equal(new[] { 1, 2 }, numbers);
     }

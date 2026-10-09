@@ -15,8 +15,8 @@ section A {
   }
 }
 
-form main { A }
+form { A }
 
-score main "tuplet-articulations" {
+score "tuplet-articulations" {
   staff m
 }

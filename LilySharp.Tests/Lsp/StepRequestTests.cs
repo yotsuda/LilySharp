@@ -39,8 +39,8 @@ public class StepRequestTests
         octave absolute
         part gt { clef treble }
         section A { gt { {{music}} } }
-        form main { A }
-        score main { staff gt }
+        form { A }
+        score { staff gt }
         """;
 
     private static string Plain(string music) => MusicSource.Wrap(music, "octave absolute");
@@ -225,8 +225,8 @@ public class StepRequestTests
             octave absolute
             part uk { instrument ukulele }
             section A { uk { {{music}} } }
-            form main { A }
-            score main { staff uk }
+            form { A }
+            score { staff uk }
             """;
         Assert.Equal(Uke("c'1@chord(C 0003)"), Up("c'1@chord(C‸)", Uke));
         Assert.Equal(Uke("c'1@chord(C x32010)"), Down("c'1@chord(C x32010 0003‸)", Uke));
@@ -314,8 +314,8 @@ public class StepRequestTests
           gt { c'1 | c'1 | }
           chords prog { {{row}} }
         }
-        form main { A }
-        score main { chords prog  staff gt }
+        form { A }
+        score { chords prog  staff gt }
         """;
 
     [Fact]
@@ -351,7 +351,7 @@ public class StepRequestTests
               gt { c'1 | }
               chords prog { {{row}} }
             }
-            form main { A }
+            form { A }
             score u { layout uke  chords prog  staff gt }
             score g { chords prog  staff gt }
             """;

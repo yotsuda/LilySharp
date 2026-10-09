@@ -19,9 +19,9 @@ section Main {
   rh { voice { c''8 d'' e'' f'' g'' a'' b'' c''' | } { c2 e2@f@staccato | } }
 }
 
-form main { Main }
+form { Main }
 
-score main "voice-dynamics-offbeat" {
+score "voice-dynamics-offbeat" {
   staff rh
 }
 

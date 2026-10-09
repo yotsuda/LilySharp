@@ -17,8 +17,8 @@ phrase fa {
 }
 
 section Main { melody { fa } }
-form main { Main }
-score main "fingering-articulation" {
+form { Main }
+score "fingering-articulation" {
   staff melody
 }
 

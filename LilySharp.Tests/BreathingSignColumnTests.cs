@@ -44,8 +44,8 @@ public class BreathingSignColumnTests
             c'4@breath dis'4 e'4@breath ges'4 |
           }
         }
-        form main { A }
-        score main { staff m }
+        form { A }
+        score { staff m }
         """;
 
     // LilyPond 2.26.0: N = a note head's left, B = a sign's ink left.

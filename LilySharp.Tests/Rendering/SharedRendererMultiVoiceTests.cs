@@ -45,8 +45,8 @@ public sealed class SharedRendererMultiVoiceTests
 
             section S { line { voice { c''4 c'' c'' c'' } { e4 e e e } } }
 
-            form main { S }
-            score main "o" { staff line }
+            form { S }
+            score "o" { staff line }
             """);
 
         // Sanity: the staff really has two voices.
@@ -80,8 +80,8 @@ public sealed class SharedRendererMultiVoiceTests
 
             section S { line { voice { d'4 d'4 d'4 d'4 } { c'4 c'4 c'4 c'4 } } }
 
-            form main { S }
-            score main "o" { staff line }
+            form { S }
+            score "o" { staff line }
             """);
 
         bool anyOffset = false;
@@ -115,8 +115,8 @@ public sealed class SharedRendererMultiVoiceTests
               rh { voice { dis''1 } { <a'' b''>1 } | }
               lh { b,16 fis a fis b,16 fis a fis b,16 fis a fis b,16 fis a fis | }
             }
-            form main { S }
-            score main { grandStaff { staff rh  staff lh } }
+            form { S }
+            score { grandStaff { staff rh  staff lh } }
             """);
 
         // Positive control: the right hand really does collide and shift.

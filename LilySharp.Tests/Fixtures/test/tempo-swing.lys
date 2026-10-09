@@ -15,8 +15,8 @@ section A {
       g''8 a, a@fermata a d e f g | }
 }
 
-form main { A }
+form { A }
 
-score main "tempo-swing" {
+score "tempo-swing" {
   staff m
 }

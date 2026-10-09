@@ -56,9 +56,9 @@ public class BreakerPureHeightTests
           }
         }
 
-        form main { S }
+        form { S }
 
-        score main {
+        score {
           staff p
         }
         """;
@@ -138,9 +138,9 @@ public class BreakerPureHeightTests
               section S { a,,8 r8 r4 r2 | a,,8 r8 r4 r2 | }
             }
 
-            form main { S }
+            form { S }
 
-            score main {
+            score {
               tab p
             }
             """);
@@ -176,9 +176,9 @@ public class BreakerPureHeightTests
               section F { e,1 | e,1 | }
             }
 
-            form main { |: A [1. E] :| [2. F] }
+            form { |: A [1. E] :| [2. F] }
 
-            score main {
+            score {
               staff p
             }
             """, 2);
@@ -223,9 +223,9 @@ public class BreakerPureHeightTests
               }
             }
 
-            form main { S }
+            form { S }
 
-            score main {
+            score {
               staff p
             }
             """;
@@ -271,9 +271,9 @@ public class BreakerPureHeightTests
               }
             }
 
-            form main { S }
+            form { S }
 
-            score main {
+            score {
               tab p
             }
             """);

@@ -26,9 +26,9 @@ section Main {
   bassPart { bassPhrase }
 }
 
-form main { Main }
+form { Main }
 
-score main "keysig-clefs" {
+score "keysig-clefs" {
   grandStaff {
     staff treblePart
     staff bassPart

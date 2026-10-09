@@ -204,9 +204,9 @@ public class LpGeometryLedgerTests
               chords prog { C Am | F G7 | C | }
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "anchor" {
+            score "anchor" {
               chords prog
               staff melody
             }
@@ -261,9 +261,9 @@ public class LpGeometryLedgerTests
               chords prog { Em7 | A7 }
             }
 
-            form main { ~A }
+            form { ~A }
 
-            score main "runs" {
+            score "runs" {
               staff ~melody
               chords prog as names
               staff ~melody
@@ -342,9 +342,9 @@ public class LpGeometryLedgerTests
               upper { a,1@staccato.down@f | }
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "DSK-anchor" {
+            score "DSK-anchor" {
               staff upper
             }
             """);

@@ -39,8 +39,8 @@ public class TablatureTests
     private static string TabDoc(string tuning, string music) =>
         "part melody\n"
         + "section A { melody { " + music + " } }\n"
-        + "form main { ~A }\n"
-        + "score main { tab " + (tuning.Length > 0 ? tuning + " " : "") + "melody }\n";
+        + "form { ~A }\n"
+        + "score { tab " + (tuning.Length > 0 ? tuning + " " : "") + "melody }\n";
 
     [Fact]
     public void ParseTabStaff_NoTuning()
@@ -130,9 +130,9 @@ public class TablatureTests
                 }
             }
 
-            form main { Main }
+            form { Main }
 
-            score main "test" {
+            score "test" {
                 staff treble guitar
                 tab guitarguitar
             }
@@ -168,9 +168,9 @@ public class TablatureTests
                 }
             }
 
-            form main { Main }
+            form { Main }
 
-            score main "test" {
+            score "test" {
                 tab guitarmelody
             }
             """;
@@ -206,9 +206,9 @@ public class TablatureTests
               }
             }
 
-            form main { Main }
+            form { Main }
 
-            score main "guitar-tab" {
+            score "guitar-tab" {
               staff guitar
               tab guitarguitar
             }

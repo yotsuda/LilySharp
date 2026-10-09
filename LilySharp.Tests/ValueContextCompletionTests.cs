@@ -23,7 +23,7 @@ namespace LilySharp.Tests;
 
 /// <summary>
 /// Value positions after tempo / time / partial / title, and the render-spec
-/// positions inside score main { }, offer only what fits there — not the keyword list.
+/// positions inside score { }, offer only what fits there — not the keyword list.
 /// </summary>
 [Trait("Category", "Unit")]
 public class ValueContextCompletionTests
@@ -218,15 +218,15 @@ public class ValueContextCompletionTests
     }
 
     [Theory]
-    [InlineData("score main \"s\" { ", "ScoreBlock")]
-    [InlineData("score main { ", "ScoreBlock")]
-    [InlineData("score main \"s\" { staff ", "AfterStaffRef")]
+    [InlineData("score \"s\" { ", "ScoreBlock")]
+    [InlineData("score { ", "ScoreBlock")]
+    [InlineData("score \"s\" { staff ", "AfterStaffRef")]
     // `tab` has its own list since 2026-09-10: the parts AND the tunings that may precede one.
-    [InlineData("score main \"s\" { tab ", "AfterTabRef")]
-    [InlineData("score main { grandStaff { staff ", "AfterStaffRef")]
-    [InlineData("score main { grandStaff { staff m  lyrics ", "AfterLyricsRef")]
-    [InlineData("score main \"s\" { chords ", "AfterChordsRef")]
-    [InlineData("score main \"s\" { lyrics ", "AfterLyricsRef")]
+    [InlineData("score \"s\" { tab ", "AfterTabRef")]
+    [InlineData("score { grandStaff { staff ", "AfterStaffRef")]
+    [InlineData("score { grandStaff { staff m  lyrics ", "AfterLyricsRef")]
+    [InlineData("score \"s\" { chords ", "AfterChordsRef")]
+    [InlineData("score \"s\" { lyrics ", "AfterLyricsRef")]
     public void InsideAScoreBlock_RenderSpecContexts(string text, string expected)
     {
         Assert.Equal(expected, ContextOf(text).ToString());
@@ -443,13 +443,13 @@ public class ValueContextCompletionTests
     [Theory]
     [InlineData("layout ", "AfterLayoutKeyword")]
     [InlineData("tempo 120\nlayout ", "AfterLayoutKeyword")]
-    [InlineData("score main { layout ", "AfterLayoutBlockRef")]
-    [InlineData("score main { staff m  layout ch", "AfterLayoutBlockRef")]
+    [InlineData("score { layout ", "AfterLayoutBlockRef")]
+    [InlineData("score { staff m  layout ch", "AfterLayoutBlockRef")]
     [InlineData("layout {", "LayoutBlock")]
     [InlineData("layout { ", "LayoutBlock")]
     [InlineData("layout { markTempo beside\n  ", "LayoutBlock")]
     [InlineData("layout chart { ", "LayoutBlock")]
-    [InlineData("score main { layout chart { ", "LayoutBlock")]
+    [InlineData("score { layout chart { ", "LayoutBlock")]
     [InlineData("layout { markTempo ", "AfterLayoutMarks")]
     [InlineData("layout { markTempo be", "AfterLayoutMarks")]
     [InlineData("layout { barNumbers ", "AfterLayoutBarNumbers")]
@@ -467,7 +467,7 @@ public class ValueContextCompletionTests
     [InlineData("section A { m { marks ")]
     [InlineData("title \"rehearsal marks ")]
     [InlineData("marks ")]
-    [InlineData("score main { marks ")]
+    [InlineData("score { marks ")]
     public void MarksArrangements_AreNotOfferedOutsideTheLayoutBlock(string text)
         => Assert.NotEqual(LilySharpLanguageServer.CompletionContext.AfterLayoutMarks, ContextOf(text));
 
@@ -528,7 +528,7 @@ public class ValueContextCompletionTests
         foreach (string n in labels)
         {
             string doc = $"part gtr {{ clef treble_8 tuning guitar7 }}\nsection A {{ gtr {{ c4\\{n} d e f | }} }}\n"
-                + "form main { A }\nscore main { tab gtr }";
+                + "form { A }\nscore { tab gtr }";
             var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(doc);
             var errors = tree.Diagnostics.Concat(LilySharp.Core.Semantics.SemanticValidation.Run(tree))
                 .Where(d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error)

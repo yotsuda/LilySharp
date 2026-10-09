@@ -1004,5 +1004,5 @@ section Main {
     <b c'>4 <b c'> <b c'> <b c'> |
   }
 }
-form main { ~Main }
-score main { staff ~v }
+form { ~Main }
+score { staff ~v }

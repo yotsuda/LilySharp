@@ -40,8 +40,8 @@ public class TabGraceFretScaleTests
             grace { e8 } c4 d e f |
           }
         }
-        form main { A }
-        score main { tab m as numbers }
+        form { A }
+        score { tab m as numbers }
         """;
 
     [Fact]

@@ -46,8 +46,8 @@ public class LaissezVibrerChordTests
                 <d@laissezVibrer.up g@laissezVibrer.down>1 |
               }
             }
-            form main { ~Main }
-            score main { staff ~v }
+            form { ~Main }
+            score { staff ~v }
             """);
 
         // Tie curves: "M sx,sy C c1x,c1y ..." — curvature sign from c1y vs sy.

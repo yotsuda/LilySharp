@@ -19,8 +19,8 @@ section Main {
   melody { ficta }
 }
 
-form main { Main }
+form { Main }
 
-score main "editorial-accidental" {
+score "editorial-accidental" {
   staff melody
 }

@@ -552,7 +552,7 @@ public static class DiagnosticCodes
     /// is the running sum of the green widths before it, so a dropped token slides
     /// <c>data-pos</c>, the LSP's jump targets, <c>check --pitches</c>' line numbers and the
     /// editor's write-back. It also corrupts OTHER diagnostics: measured on
-    /// <c>form main { A section B }</c>, the (correct) <c>Undefined section: 'B'</c> was
+    /// <c>form { A section B }</c>, the (correct) <c>Undefined section: 'B'</c> was
     /// reported at column 15 — on the dropped <c>section</c> keyword — where <c>B</c> stands
     /// at column 23.
     /// </para>
@@ -676,11 +676,15 @@ public static class DiagnosticCodes
     /// <summary>Semantic error: a rehearsal mark label was not quoted
     /// (<c>@mark(A)</c> instead of <c>@mark("A")</c>).</summary>
     public const string MarkLabelNotQuoted = "LYS1009";
-    /// <summary>Semantic error: a <c>form</c> was declared without a name.</summary>
+    /// <summary>Semantic error: a second unnamed <c>form</c> — the unnamed one is the file's
+    /// default, so there is one (2026-10-09; until then every form had to be named).</summary>
     public const string UnnamedForm = "LYS1016";
     /// <summary>Semantic error: two forms share the same name.</summary>
     public const string DuplicateFormName = "LYS1017";
-    /// <summary>Semantic error: a <c>score</c> references a form that is missing or undeclared.</summary>
+    /// <summary>Semantic error: a score's <c>form NAME</c> names no top-level form, a score
+    /// writes more than one <c>form</c>, or writes <c>form NAME { … }</c> (a score's own form
+    /// is unnamed). Warning: a named score that picks no form while a form of its name exists —
+    /// the name no longer picks it (2026-10-09).</summary>
     public const string UnknownFormReference = "LYS1018";
     // LYS1010 (VoltaRepeatBarlinePlacement) and LYS1011 (VoltaBracketRequired) are
     // RETIRED — see the class remarks' retired-numbers list.
@@ -949,7 +953,7 @@ public static class DiagnosticCodes
     /// the play engraves nothing.</summary>
     /// <remarks>
     /// <para>
-    /// LYS1005's sibling, and the gap between them is the whole point. <c>form main { ~Z }</c>
+    /// LYS1005's sibling, and the gap between them is the whole point. <c>form { ~Z }</c>
     /// with no <c>section Z</c> anywhere is already LYS1005 <c>Undefined section</c>; this is
     /// the case where the name IS declared — <c>section A { key g major }</c> — but every
     /// declaration of it is a bare header (<see cref="Editing.SectionSymbols.IsBareHeader"/>).
@@ -1521,7 +1525,7 @@ public static class DiagnosticCodes
     /// engrave zero bytes, 15 of them caught here</b> (an empty body; a body holding only
     /// barlines <c>| || |. ! :|</c>, only navigation marks <c>segno fine coda dc ds</c>, only
     /// <c>break</c>/<c>noBreak</c>, only <c>@mark("X")</c>, or only <c>_"text"</c>).
-    /// <b>The sixteenth shape — <c>form main { [1. A] }</c>, a volta ending that no repeat
+    /// <b>The sixteenth shape — <c>form { [1. A] }</c>, a volta ending that no repeat
     /// opens — is no longer one of them.</b> It NAMES a section, so this check was right to
     /// stay quiet; what was wrong was the ENGRAVER dropping it, and that half is now fixed
     /// (the ending engraves as its plain section, so the body is no longer zero bytes).
@@ -1543,7 +1547,7 @@ public static class DiagnosticCodes
     public const string EmptyForm = "LYS6007";
 
     /// <summary>Render WARNING: a volta ending that no repeat block opened —
-    /// <c>form main { A [1. B] }</c>. It engraves as its plain section, so the number the
+    /// <c>form { A [1. B] }</c>. It engraves as its plain section, so the number the
     /// author wrote prints nothing at all.</summary>
     /// <remarks>
     /// <para>

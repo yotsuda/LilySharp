@@ -31,7 +31,7 @@ namespace LilySharp.Tests;
 public class SmuflEngravingTests
 {
     private const string Book =
-        "part m { clef treble }\nsection A { m { c'8 d' e' f' g'2 } }\nform main { A }\nscore main { staff m }\n";
+        "part m { clef treble }\nsection A { m { c'8 d' e' f' g'2 } }\nform { A }\nscore { staff m }\n";
 
     private const double Eps = 1e-9;
 

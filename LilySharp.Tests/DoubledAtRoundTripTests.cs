@@ -34,8 +34,8 @@ public class DoubledAtRoundTripTests
         "octave absolute\n"
         + "part melody { clef treble }\n"
         + "section A { melody { c'4@@staccato d' e' f' | g'1 | } }\n"
-        + "form main { A |: A :| }\n"
-        + "score main { staff melody }\n";
+        + "form { A |: A :| }\n"
+        + "score { staff melody }\n";
 
     [Fact]
     public void ADoubledAt_RoundTripsExactly()

@@ -55,8 +55,8 @@ public class StaffBowItemsSharingTests
             key c major
             part melody { clef treble }
             section Main { melody { {{body}} } }
-            form main { Main }
-            score main "x" { staff melody }
+            form { Main }
+            score "x" { staff melody }
             """;
         return new MeasureCollector().Collect(SyntaxTree.Parse(src), part);
     }

@@ -52,8 +52,8 @@ public class LyricPlainVerseShadowedValidatorTests
         // "zz zz zz zz" line can never render.
         Assert.True(PlainShadowed(Melody + """
             lyrics w sings melody { section A { [1. one two three four |] [2. aa bb cc dd |] zz zz zz zz | } }
-            form main { A A }
-            score main { staff melody  lyrics w }
+            form { A A }
+            score { staff melody  lyrics w }
             """));
     }
 
@@ -64,8 +64,8 @@ public class LyricPlainVerseShadowedValidatorTests
         // occurrence falls back to the plain line — it is used, not shadowed.
         Assert.False(PlainShadowed(Melody + """
             lyrics w sings melody { section A { [1. one two three four |] [2. aa bb cc dd |] zz zz zz zz | } }
-            form main { A A A }
-            score main { staff melody  lyrics w }
+            form { A A A }
+            score { staff melody  lyrics w }
             """));
     }
 
@@ -75,8 +75,8 @@ public class LyricPlainVerseShadowedValidatorTests
         // No brackets at all: the plain line repeats under every occurrence as before.
         Assert.False(PlainShadowed(Melody + """
             lyrics w sings melody { section A { do re mi fa | } }
-            form main { A A }
-            score main { staff melody  lyrics w }
+            form { A A }
+            score { staff melody  lyrics w }
             """));
     }
 
@@ -102,8 +102,8 @@ public class LyricPlainVerseShadowedValidatorTests
         // melody's would be.
         Assert.True(PlainShadowed(TwoParts + """
             lyrics w sings harmony { section A { [1. one two three four |] [2. aa bb cc dd |] zz zz zz zz | } }
-            form main { A A }
-            score main { staff melody  staff harmony  lyrics w }
+            form { A A }
+            score { staff melody  staff harmony  lyrics w }
             """));
     }
 
@@ -115,16 +115,16 @@ public class LyricPlainVerseShadowedValidatorTests
         // no lyrics at all — the diagnostic follows the lent collect.
         var shadowed = SyntaxTree.Parse(Melody + """
             lyrics w sings melody { section A { [1. one two three four |] [2. aa bb cc dd |] zz zz zz zz | } }
-            form main { A A }
-            score main { staff melody  lyrics w }
+            form { A A }
+            score { staff melody  lyrics w }
             """);
         var lent = SemanticValidation.TryCollect(shadowed);
         Assert.NotNull(lent);
         Assert.NotEmpty(lent!.LyricShadowedPlainWarnings);
 
         var wordless = SyntaxTree.Parse(Melody + """
-            form main { A A }
-            score main { staff melody }
+            form { A A }
+            score { staff melody }
             """);
         var validator = new LyricPlainVerseShadowedValidator();
         validator.ValidateWith(wordless, new System.Lazy<LilySharp.Core.Svg.Collector.MeasureCollector?>(() => lent));

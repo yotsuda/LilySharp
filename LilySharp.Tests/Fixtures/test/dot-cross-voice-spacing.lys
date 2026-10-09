@@ -18,8 +18,8 @@ part melody {
   section A { voice { g''2( g8) eis fis g } { e8 d e e e fis r4 }  { cis2. r4 } }
 }
 
-form main { A }
+form { A }
 
-score main {
+score {
   staff melody
 }

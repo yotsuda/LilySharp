@@ -52,8 +52,8 @@ public class NestedPhraseTests
             phrase y { c d e f }
             phrase x { y }
             part m { section A { x } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """;
         Assert.Equal(4, CollectedNoteCount(src));
     }
@@ -67,8 +67,8 @@ public class NestedPhraseTests
             phrase inner { c d e f }
             phrase outer { inner inner }
             part m { section A { outer } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """;
         Assert.Equal(8, CollectedNoteCount(src));
         Assert.Equal(8, MidiNoteCount(src));
@@ -76,7 +76,7 @@ public class NestedPhraseTests
 
     private static System.Collections.Generic.IReadOnlyList<Diagnostic> Cycle(string decls)
     {
-        var src = $"{decls}\npart m {{ section A {{ x }} }} form main {{ A }} score main {{ staff m }}";
+        var src = $"{decls}\npart m {{ section A {{ x }} }} form {{ A }} score {{ staff m }}";
         return SemanticValidation.Run(SyntaxTree.Parse(src));
     }
 
@@ -102,7 +102,7 @@ public class NestedPhraseTests
     public void ReferenceCycle_IsDetectedEvenWhenNoFormUsesIt()
     {
         // Form-independent, like the other declaration-graph checks.
-        var src = "phrase x { y } phrase y { x } form main { }";
+        var src = "phrase x { y } phrase y { x } form { }";
         var cycles = SemanticValidation.Run(SyntaxTree.Parse(src))
             .Where(d => d.Code == DiagnosticCodes.PhraseReferenceCycle).ToList();
         Assert.Single(cycles);
@@ -117,8 +117,8 @@ public class NestedPhraseTests
             phrase x { c4 y }
             phrase y { d4 x }
             part m { section A { x } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """;
         var tree = SyntaxTree.Parse(src);
         var ex1 = Record.Exception(() => new MeasureCollector().Collect(tree, "m"));

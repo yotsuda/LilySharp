@@ -27,9 +27,9 @@ lyrics verse {
   section C { Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }
 }
 
-form main { A C }
+form { A C }
 
-score main "chordrow-rit-second-system" {
+score "chordrow-rit-second-system" {
   chords prog as names
   staff melody
   lyrics verse sings melody

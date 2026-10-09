@@ -75,9 +75,9 @@ public sealed class TabSlurDirectionTests
           bl { g,4\2( c\1 c\1 g,\2) | d,4\3( a,,\4 a,,\4 d,\3) | }
         }
 
-        form main { A }
+        form { A }
 
-        score main { tab bl as numbers }
+        score { tab bl as numbers }
         """;
 
     [Fact]

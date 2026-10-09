@@ -33,7 +33,7 @@ public sealed class TabRangeValidatorTests
     {
         var v = new TabRangeValidator();
         v.Validate(SyntaxTree.Parse(
-            "part bl { clef bass octave 3 tuning bass }\nsection A { bl { " + body + " } }\nform main { A }\nscore { tab bl }\n"));
+            "part bl { clef bass octave 3 tuning bass }\nsection A { bl { " + body + " } }\nform { A }\nscore { tab bl }\n"));
         return v.Diagnostics;
     }
 
@@ -58,7 +58,7 @@ public sealed class TabRangeValidatorTests
         // The check only applies to tab renders; a staff score never warns.
         var v = new TabRangeValidator();
         v.Validate(SyntaxTree.Parse(
-            "part bl { clef bass }\nsection A { bl { a,,4 r2. | } }\nform main { A }\nscore { staff bl }\n"));
+            "part bl { clef bass }\nsection A { bl { a,,4 r2. | } }\nform { A }\nscore { staff bl }\n"));
         Assert.Empty(v.Diagnostics);
     }
 
@@ -67,7 +67,7 @@ public sealed class TabRangeValidatorTests
         var v = new TabRangeValidator();
         v.Validate(SyntaxTree.Parse(
             "octave absolute part gtr { instrument guitar }\nsection A { gtr { " + body
-            + " } }\nform main { A }\nscore { tab gtr }\n"));
+            + " } }\nform { A }\nscore { tab gtr }\n"));
         return v.Diagnostics.Where(x => x.Code == DiagnosticCodes.TabStringUnplayable).ToList();
     }
 

@@ -312,7 +312,7 @@ lysc midi [options] <input.lys>
 | `-h, --help` | Show help |
 
 One file holds one form, so every score writes its form to a file of its own. Scores that
-share a form (`score main`, `score main "tab"`) write the same music under their own names.
+share a form (`score`, `score "tab"`) write the same music under their own names.
 A file with no `score` block writes its primary form and names the others in a warning.
 
 **Examples:**
@@ -540,7 +540,7 @@ short final line) print on their own. Explicit `break`s are listed separately
 **Example:**
 ```bash
 lysc layout score.lys
-# score main "demo"
+# score "demo"
 #   staves: treble, bass  |  time 4/4  |  10 systems, 40 bars
 #   pages: 2  |  systems per page: 6, 4
 #   system 1: bars 1-4     (4 bars)
@@ -559,12 +559,12 @@ unless `--score` picks one, and `-d <folder>` chooses where (default: the input'
 
 | The score in `song.lys` | Output (`svg`; the others the same with their extension) |
 |---|---|
-| `score main { … }` — the main score | `song.svg` |
-| `score main "tab" { … }` — the same form, another alias | `song-tab.svg` |
+| `score { … }` — the main score | `song.svg` |
+| `score "tab" { … }` — the same form, another alias | `song-tab.svg` |
 | `score coda { … }` — another form | `song-coda.svg` |
 | no `score` block at all | `song.svg` |
 
-Two scores that would get one name (two unlabelled `score main`) are refused rather than
+Two scores that would get one name (two unlabelled `score`) are refused rather than
 written over each other — give one an alias. `-o/--output`, an output argument and
 `--all` are gone: an old script using them is told what to write instead.
 

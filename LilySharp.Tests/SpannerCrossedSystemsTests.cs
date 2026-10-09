@@ -77,8 +77,8 @@ public class SpannerCrossedSystemsTests
               melody { {{music}} }
               lyrics w sings melody { {{sylls}} }
             }
-            form main { Main }
-            score main "x" { staff melody  lyrics w }
+            form { Main }
+            score "x" { staff melody  lyrics w }
             """;
     }
 
@@ -97,8 +97,8 @@ public class SpannerCrossedSystemsTests
               top { {{top}} }
               low { {{low}} }
             }
-            form main { Main }
-            score main "x" { staff top  staff low }
+            form { Main }
+            score "x" { staff top  staff low }
             """;
     }
 
@@ -110,8 +110,8 @@ public class SpannerCrossedSystemsTests
             time 4/4
             part melody { clef treble }
             section Main { melody { {{music}} } }
-            form main { Main }
-            score main "x" { staff melody }
+            form { Main }
+            score "x" { staff melody }
             """;
     }
 
@@ -128,8 +128,8 @@ public class SpannerCrossedSystemsTests
             section A { melody { {{a}} } }
             section B { melody { {{ending}} } }
             section C { melody { {{c}} } }
-            form main { |: A [1. B] :| [2. C] }
-            score main "x" { staff melody }
+            form { |: A [1. B] :| [2. C] }
+            score "x" { staff melody }
             """;
     }
 

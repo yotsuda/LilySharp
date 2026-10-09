@@ -67,7 +67,7 @@ public class BarCheckDebugTests
 section A {
     melody { c4 d4 e4 f4 | }
 }
-form main { |: A :| }
+form { |: A :| }
 ";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();

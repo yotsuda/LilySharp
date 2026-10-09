@@ -42,8 +42,8 @@ public class AnnotationValuesTests
           clef bass
           section S { {{music}} }
         }
-        form main { ~S }
-        score main { staff bassline }
+        form { ~S }
+        score { staff bassline }
         """));
 
     [Theory]
@@ -257,8 +257,8 @@ public class AnnotationValuesTests
         new LilySharp.Core.MusicXml.MusicXmlExporter()
             .Export(SyntaxTree.Parse($$"""
             part gtr { clef treble section S { {{music}} } }
-            form main { ~S }
-            score main { staff gtr }
+            form { ~S }
+            score { staff gtr }
             """)).ToXml().ToString();
 
     /// <summary>

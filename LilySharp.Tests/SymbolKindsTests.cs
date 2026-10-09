@@ -52,8 +52,8 @@ public sealed class SymbolKindsTests
         section B { melody { e4 f g a | } low { c4 d e f | } }
         chords prog { section A { | G | } section B { | C | } }
         lyrics verse sings melody { section A { la la la la | } section B { la la la la | } }
-        form main { A ~B }
-        score main {
+        form { A ~B }
+        score {
           staff melody
           low
           ossia melody
@@ -126,7 +126,7 @@ public sealed class SymbolKindsTests
         // file's line-ending style cannot decide whether the poison lands.
         var poisoned = System.Text.RegularExpressions.Regex.Replace(
             EverySpelling
-                .Replace("form main { A ~B }", "form main { A ~Nope }")
+                .Replace("form { A ~B }", "form { A ~Nope }")
                 .Replace("combinedStaff { melody low }", "combinedStaff { melody lo }")
                 .Replace("melody { riff }", "melody { rif }"),
             @"lyrics verse(\s*\})", "lyrics vers$1");

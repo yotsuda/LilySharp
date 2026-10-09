@@ -24,8 +24,8 @@ namespace LilySharp.Tests.Lsp;
 
 /// <summary>
 /// A score body is a render spec however long its header is —
-/// <c>score main {</c>, <c>score main "out" {</c>, and with either option written out:
-/// <c>score main transpose d {</c>, <c>score main pitch concert {</c> (GRAMMAR ScoreDecl:
+/// <c>score {</c>, <c>score "out" {</c>, and with either option written out:
+/// <c>score transpose d {</c>, <c>score pitch concert {</c> (GRAMMAR ScoreDecl:
 /// <c>'score' , Identifier , [ String ] , { ScoreOption } , '{'</c>).
 /// </summary>
 /// <remarks>
@@ -43,7 +43,7 @@ public class ScoreHeaderSpellingCompletionTests
     private const string Parts = """
         part melody { section A { c'4 d' e' f' | } }
         part bass { section A { c4 d e f | } }
-        form main { A }
+        form { A }
 
         """;
 
@@ -66,11 +66,11 @@ public class ScoreHeaderSpellingCompletionTests
     }
 
     [Theory]
-    [InlineData("score main {\n  ")]
-    [InlineData("score main \"out\" {\n  ")]
-    [InlineData("score main transpose d {\n  ")]
-    [InlineData("score main pitch concert {\n  ")]
-    [InlineData("score main \"out\" transpose d pitch concert {\n  ")]  // the longest header the grammar writes
+    [InlineData("score {\n  ")]
+    [InlineData("score \"out\" {\n  ")]
+    [InlineData("score transpose d {\n  ")]
+    [InlineData("score pitch concert {\n  ")]
+    [InlineData("score \"out\" transpose d pitch concert {\n  ")]  // the longest header the grammar writes
     public void EveryHeaderSpelling_OpensARenderSpec_NotMusic(string header)
     {
         string text = Parts + header;
@@ -86,8 +86,8 @@ public class ScoreHeaderSpellingCompletionTests
     }
 
     [Theory]
-    [InlineData("score main { grandStaff {\n    ")]
-    [InlineData("score main transpose d { grandStaff {\n    ")]
+    [InlineData("score { grandStaff {\n    ")]
+    [InlineData("score transpose d { grandStaff {\n    ")]
     public void AGroupUnderAnyHeader_KeepsItsOwnNarrowList(string header)
     {
         // A group's body is narrower than the score's (a chords row in here is LYS6011),
@@ -108,7 +108,7 @@ public class ScoreHeaderSpellingCompletionTests
         // The walk is bounded by the grammar's longest header AND stops at the first token
         // that cannot be part of one, so a brace opened by something else stays music even
         // with a `score` written earlier in the document.
-        string text = Parts + "score main { staff melody }\n" + opener;
+        string text = Parts + "score { staff melody }\n" + opener;
         Assert.Equal(LilySharpLanguageServer.CompletionContext.MusicBlock,
             LilySharpLanguageServer.GetCompletionContext(text, text.Length));
         Assert.Contains("c", CompletionLabelsAt(text, text.Length));

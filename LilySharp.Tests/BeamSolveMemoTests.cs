@@ -153,8 +153,8 @@ public class BeamSolveMemoTests
             section Main { melody {
               c'8 d' e' f' g' a' b' c'' | c''8 b' a' g' f' e' d' c' |
             } }
-            form main { Main }
-            score main "x" { staff melody }
+            form { Main }
+            score "x" { staff melody }
             """;
         long before = BeamScoringProblem.t_solvedHits;
         var compiler = new IncrementalCompiler(SyntaxTree.Parse(book),

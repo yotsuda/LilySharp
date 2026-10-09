@@ -95,9 +95,9 @@ public sealed class VoiceSpanTupletBarTests
           }
         }
 
-        form main { ~Piece }
+        form { ~Piece }
 
-        score main {
+        score {
           staff p1 "Staff"
         }
         """;
@@ -108,8 +108,8 @@ public sealed class VoiceSpanTupletBarTests
         key c major
         part lh { clef treble }
         section Main { lh { {{music}} } }
-        form main { Main }
-        score main { staff lh }
+        form { Main }
+        score { staff lh }
         """;
 
     private static MultiStaffScore Collect(string source)

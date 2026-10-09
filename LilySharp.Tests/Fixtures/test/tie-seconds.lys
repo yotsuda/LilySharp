@@ -15,8 +15,8 @@ part melody {
   section Main { <c d>2 ~ <c d>2 | <d e>2 ~ <d e>2 | }
 }
 
-form main { Main }
+form { Main }
 
-score main "tie-seconds" {
+score "tie-seconds" {
   staff melody
 }

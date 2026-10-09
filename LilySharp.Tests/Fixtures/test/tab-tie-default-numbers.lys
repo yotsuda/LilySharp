@@ -13,9 +13,9 @@ part bl { clef bass tuning bass }
 
 section A { bl { a,2 a,2~ | a,1 | } }
 
-form main { A }
+form { A }
 
-score main "tab-tie-default-numbers" {
+score "tab-tie-default-numbers" {
   staff bl
   tab bl
 }

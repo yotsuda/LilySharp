@@ -241,8 +241,8 @@ public class SystemStartDelimiterTests
                 LilySharp.Core.Syntax.SyntaxTree.Parse(
                     "part rh { clef treble }\npart lh { clef bass }\n"
                     + "section A { rh { c4 d e f | } lh { c4 d e f | } }\n"
-                    + "form main { A }\n"
-                    + $"score main {{ {keyword} {{ staff rh  staff lh }} }}"),
+                    + "form { A }\n"
+                    + $"score {{ {keyword} {{ staff rh  staff lh }} }}"),
                 new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
 
         string brace = Render("grandStaff");

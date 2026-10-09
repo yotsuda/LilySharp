@@ -31,8 +31,8 @@ section Main {
   melody { trills mordentPrall turns tremoloTest }
 }
 
-form main { Main }
+form { Main }
 
-score main "ornaments" {
+score "ornaments" {
   staff melody
 }

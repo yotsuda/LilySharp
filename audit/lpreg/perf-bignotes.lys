@@ -504,6 +504,6 @@ section Main {
     c4 d e f |
   }
 }
-form main { ~Main }
-score main { staff v }
+form { ~Main }
+score { staff v }
 

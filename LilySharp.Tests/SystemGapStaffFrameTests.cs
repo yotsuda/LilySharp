@@ -73,13 +73,13 @@ public class SystemGapStaffFrameTests
           section A { c4 c g' g | a a g2 | f4 f e e | d d c2 | break}
           section B { g'4 g f f | e e d2 | break}
         }
-        form main { A B A B }
+        form { A B A B }
         """;
 
     private static string Render(int staffCount)
     {
         var staves = string.Join("\n", Enumerable.Repeat("  staff melody", staffCount));
-        var tree = SyntaxTree.Parse($"{Head}\nscore main {{\n{staves}\n}}\n");
+        var tree = SyntaxTree.Parse($"{Head}\nscore {{\n{staves}\n}}\n");
         Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
         return SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
     }

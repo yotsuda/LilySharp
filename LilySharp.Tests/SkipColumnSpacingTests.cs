@@ -48,8 +48,8 @@ public class SkipColumnSpacingTests
             c4 d e f | c4 s2. | c4 d e f | c8 s8 c8 s8 c4 s4 | c4 d e f |
           }
         }
-        form main { A }
-        score main { staff bassline }
+        form { A }
+        score { staff bassline }
         """;
 
     /// <summary>scratch/p333/ps/ps2.lys — one voice sustains through the other's skip.</summary>
@@ -63,8 +63,8 @@ public class SkipColumnSpacingTests
             { s4 s s s | s4 e4 s2 | s4 s s s | }
           }
         }
-        form main { A }
-        score main { staff bassline }
+        form { A }
+        score { staff bassline }
         """;
 
     /// <summary>scratch/p333/ps/ps3.lys — the bar opens with a skip.</summary>
@@ -77,8 +77,8 @@ public class SkipColumnSpacingTests
             c4 d e f | s4 c4 d e | c4 d e f | s2 c4 d | c4 d e f |
           }
         }
-        form main { A }
-        score main { staff bassline }
+        form { A }
+        score { staff bassline }
         """;
 
     /// <summary>scratch/p388/fm/end.lys — the other voice's skip starts with the bar and ENDS
@@ -90,8 +90,8 @@ public class SkipColumnSpacingTests
         section A {
           m { r1 | voice { r1 } { s2 } | voice { r1 } { s4 } | r1 | }
         }
-        form main { ~A }
-        score main { staff m }
+        form { ~A }
+        score { staff m }
         """;
 
     /// <summary>A combined part's <c>&lt;&lt; r1 s2 s4 &gt;&gt;</c> — bar 5 of LilyPond's
@@ -105,8 +105,8 @@ public class SkipColumnSpacingTests
           vone { r1 | voice { r1 } { s2 } { s4 } | r1 | }
           vtwo { r1 | voice { s4 } { s2 } { r1 } | r1 | }
         }
-        form main { ~A }
-        score main { combinedStaff { vone vtwo } }
+        form { ~A }
+        score { combinedStaff { vone vtwo } }
         """;
 
     /// <summary>Lab sessions/p801/probe/q5-cadenza-wholes.lys — lone notes in the bars of a
@@ -119,8 +119,8 @@ public class SkipColumnSpacingTests
         section A { melody { c'4 d e f | } }
         section B { time none  melody { c1 | d1 | e4 f | } }
         section C { melody { c1 | d1 | c4 d e f | } }
-        form main { A B C }
-        score main { staff melody }
+        form { A B C }
+        score { staff melody }
         """;
 
     /// <summary>The same book with section B in 2/4: the meter change into section C is an

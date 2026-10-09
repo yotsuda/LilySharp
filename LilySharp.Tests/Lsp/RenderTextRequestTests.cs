@@ -34,8 +34,8 @@ public class RenderTextRequestTests
         key c major
         part melody { clef treble }
         section Main { melody { c4 d e f | g1 | } }
-        form main { Main }
-        score main { staff melody }
+        form { Main }
+        score { staff melody }
         """;
 
     [Fact]
@@ -99,7 +99,7 @@ public class RenderTextRequestTests
     public void Fence_WithOneScore_DrawsIt_WhateverTheFormCount()
     {
         // Two forms are no longer a question the fence has to answer: the score names its form.
-        var text = TwoPartsNoScore + "\nform other { Main Main }\nscore tune { staff melody staff bass }";
+        var text = TwoPartsNoScore + "\nform other { Main Main }\nscore tune { form tune staff melody staff bass }";
 
         var response = Server().RenderText(new RenderTextParams { Text = text, Interactive = false, Fence = true });
 
@@ -110,7 +110,7 @@ public class RenderTextRequestTests
     [Fact]
     public void Fence_WithTwoScores_IsRefused()
     {
-        var text = TwoPartsNoScore + "\nscore tune { staff melody }\nscore tune \"both\" { staff melody staff bass }";
+        var text = TwoPartsNoScore + "\nscore tune { form tune staff melody }\nscore tune \"both\" { form tune staff melody staff bass }";
 
         var response = Server().RenderText(new RenderTextParams { Text = text, Interactive = false, Fence = true });
 
@@ -121,7 +121,7 @@ public class RenderTextRequestTests
     [Fact]
     public void Fence_WithOneScore_DrawsIt_AsASnippet()
     {
-        var text = TwoPartsNoScore + "\nscore tune { staff bass }";
+        var text = TwoPartsNoScore + "\nscore tune { form tune staff bass }";
 
         var fence = Server().RenderText(new RenderTextParams { Text = text, Interactive = false, Fence = true });
         var plain = Server().RenderText(new RenderTextParams { Text = text, Interactive = false });

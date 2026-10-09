@@ -22,5 +22,5 @@ section S {
     { a'4 a' a' a' | }
   }
 }
-form main { S }
-score main "multivoice-crossing-collision" { staff mel }
+form { S }
+score "multivoice-crossing-collision" { staff mel }

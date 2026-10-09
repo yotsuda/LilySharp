@@ -42,8 +42,8 @@ public class GraceStaffOffsetTests
               up { c''4 c'' c'' c'' | c''1 | break c,4 c, c, c, | c,1 | }
               low { c4 c c c | grace { d16 e } c4 c c c | c4 c c c | grace { d16 e } c4 c c c | }
             }
-            form main { ~Main }
-            score main "x" { staff ~up  staff ~low }
+            form { ~Main }
+            score "x" { staff ~up  staff ~low }
             """;
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(src);
         var multi = new LilySharp.Core.Svg.Collector.MeasureCollector()

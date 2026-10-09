@@ -63,8 +63,8 @@ public class TabTechniqueLetterTests
         "octave absolute\ntime 4/4\n"
         + "part mel { clef treble }\n"
         + "section Main { mel { " + note + mark + " r4 r r | } }\n"
-        + "form main { ~Main }\n"
-        + "score main { staff mel }\n";
+        + "form { ~Main }\n"
+        + "score { staff mel }\n";
 
     /// <summary>The black notehead's centre Y in the drawn (Y-down) frame.</summary>
     private static double NoteheadY(string svg)

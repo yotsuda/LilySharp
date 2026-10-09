@@ -45,7 +45,7 @@ public class EmptyPlaceholderBreakTests
         // A leading placeholder is an explicit `| |` pair (a single leading `|`
         // just anchors the section start and holds no measure).
         var measures = PrimaryMeasures(
-            "part m { section A { break | | c4 c g' g | a a g2 } } form main { A } score main { staff m }");
+            "part m { section A { break | | c4 c g' g | a a g2 } } form { A } score { staff m }");
         Assert.True(measures[0].IsEmptyPlaceholder);
         Assert.True(measures[0].HasBreakAfter);   // the break lands on the placeholder
         Assert.False(measures[1].HasBreakAfter);  // NOT deferred onto the content bar
@@ -55,7 +55,7 @@ public class EmptyPlaceholderBreakTests
     public void NoBreakBeforeLeadingPlaceholder_ForbidsBreakAfterThePlaceholder()
     {
         var measures = PrimaryMeasures(
-            "part m { section A { noBreak | | c4 c g' g | a a g2 } } form main { A } score main { staff m }");
+            "part m { section A { noBreak | | c4 c g' g | a a g2 } } form { A } score { staff m }");
         Assert.True(measures[0].IsEmptyPlaceholder);
         Assert.Equal(BreakPermission.Forbid, measures[0].LineBreakPermission);
         Assert.Equal(BreakPermission.Allow, measures[1].LineBreakPermission);
@@ -75,8 +75,8 @@ public class EmptyPlaceholderBreakTests
               melody {| | | |}
               melody2 { c1 | c1 | c1 | }
             }
-            form main { B }
-            score main { staff melody  staff melody2 }
+            form { B }
+            score { staff melody  staff melody2 }
             """), new SvgRenderOptions { EmbedFont = false });
         Assert.False(string.IsNullOrWhiteSpace(svg));
         Assert.Contains("<svg", svg);

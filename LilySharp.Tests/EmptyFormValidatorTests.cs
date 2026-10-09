@@ -50,10 +50,9 @@ public class EmptyFormValidatorTests
     [InlineData("_\"a title\"")]
     public void AFormThatNamesNoSection_IsAnError(string body)
     {
-        var d = Assert.Single(Validate(Preamble + "form main { " + body + " }\n"));
+        var d = Assert.Single(Validate(Preamble + "form { " + body + " }\n"));
         Assert.Equal(DiagnosticSeverity.Error, d.Severity);
-        Assert.Contains("main", d.Message);
-        Assert.Contains("names no section", d.Message);
+       Assert.Contains("names no section", d.Message);
     }
 
     /// <summary>
@@ -68,7 +67,7 @@ public class EmptyFormValidatorTests
     [InlineData("|: A :|")]                // inside a repeat block
     [InlineData("|: [1. A] :| [2. B]")]    // ONLY inside volta alternatives
     public void AFormThatNamesASection_IsClean(string body)
-        => Assert.Empty(Validate(Preamble + "form main { " + body + " }\n"));
+        => Assert.Empty(Validate(Preamble + "form { " + body + " }\n"));
 
     /// <summary>
     /// The claim behind the diagnostic, asserted directly rather than quoted: the empty form
@@ -79,8 +78,8 @@ public class EmptyFormValidatorTests
     [Fact]
     public void TheEmptyFormEngravesNothingAndTheControlEngravesSomething()
     {
-        string empty = SvgGenerator.Generate(SyntaxTree.Parse(Preamble + "form main { }\n"));
-        string control = SvgGenerator.Generate(SyntaxTree.Parse(Preamble + "form main { A }\n"));
+        string empty = SvgGenerator.Generate(SyntaxTree.Parse(Preamble + "form { }\n"));
+        string control = SvgGenerator.Generate(SyntaxTree.Parse(Preamble + "form { A }\n"));
 
         Assert.Equal("", empty);          // zero bytes — not a blank page, no page
         Assert.NotEqual("", control);
@@ -94,7 +93,7 @@ public class EmptyFormValidatorTests
     [Fact]
     public void TheErrorMarksTheFormsOwnBraces()
     {
-        const string src = "part m { clef treble }\nsection A { m { c4 } }\nform main {\n}\n";
+        const string src = "part m { clef treble }\nsection A { m { c4 } }\nform {\n}\n";
         var d = Assert.Single(Validate(src));
         Assert.Equal(src.LastIndexOf('{'), d.Span.Start);
         Assert.Equal(src.LastIndexOf('}') + 1, d.Span.End);
@@ -104,7 +103,7 @@ public class EmptyFormValidatorTests
     /// file with two of them does not hide one behind the other.</summary>
     [Fact]
     public void EveryEmptyFormIsReported()
-        => Assert.Equal(2, Validate(Preamble + "form main { }\nform other { }\n").Length);
+        => Assert.Equal(2, Validate(Preamble + "form { }\nform other { }\n").Length);
 
     /// <summary>
     /// ⚠️ This was the KNOWN edge of this check: of the 46 form-body shapes enumerated from
@@ -123,7 +122,7 @@ public class EmptyFormValidatorTests
     /// </remarks>
     [Fact]
     public void AVoltaEndingNoRepeatOpens_NamesASection_SoThisCheckStaysQuiet()
-        => Assert.Empty(Validate(Preamble + "form main { [1. A] }\n"));
+        => Assert.Empty(Validate(Preamble + "form { [1. A] }\n"));
 
     /// <summary>
     /// A form that names a section which does not exist is a DIFFERENT defect — LYS1005 says
@@ -132,18 +131,17 @@ public class EmptyFormValidatorTests
     /// </summary>
     [Fact]
     public void AFormNamingAnUndefinedSection_IsNotCalledEmpty()
-        => Assert.Empty(Validate(Preamble + "form main { Nope }\n"));
+        => Assert.Empty(Validate(Preamble + "form { Nope }\n"));
 
     /// <summary>
-    /// An UNNAMED form is reported as unnamed (LYS1016) and nothing else. Naming it is the
-    /// first repair, and the empty-form message would have to say "Form ''", which names
-    /// nothing the author can look for.
+    /// The unnamed form is the file's default since 2026-10-09, so an empty one is reported as
+    /// empty like any other.
     /// </summary>
     [Fact]
-    public void AnUnnamedEmptyForm_IsReportedOnlyAsUnnamed()
+    public void AnUnnamedEmptyForm_IsReportedAsEmpty()
     {
         var all = SemanticValidation.Run(SyntaxTree.Parse(Preamble + "form { }\n")).ToArray();
-        Assert.Contains(all, d => d.Code == DiagnosticCodes.UnnamedForm);
-        Assert.DoesNotContain(all, d => d.Code == DiagnosticCodes.EmptyForm);
+        Assert.DoesNotContain(all, d => d.Code == DiagnosticCodes.UnnamedForm);
+        Assert.Contains(all, d => d.Code == DiagnosticCodes.EmptyForm);
     }
 }

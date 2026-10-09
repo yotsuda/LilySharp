@@ -153,10 +153,10 @@ section D {
   lh     { bassLine bassLine bassLine bassLine }
 }
 
-form main { A B C D }
+form { A B C D }
 
 // ---- 16. レンダリング (グランドスタッフ) ----------------------------------
-score main "feature-tour" {
+score "feature-tour" {
   staff melody
   staff lh
 }

@@ -52,8 +52,8 @@ public class RepeatTieChordTests
                 <d g>@repeatTie |
               }
             }
-            form main { ~Main }
-            score main { staff ~v }
+            form { ~Main }
+            score { staff ~v }
             """);
 
         // Tie curves: "M sx,sy C c1x,c1y ..." — curvature sign from c1y vs sy.

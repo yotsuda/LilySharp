@@ -45,7 +45,7 @@ namespace LilySharp.Tests;
 public class EmptyMeasureValidatorTests
 {
     private static int PlaceholderCount(string music)
-        => PlaceholderCountIn($"part m {{ section A {{ {music} }} }} form main {{ A }} score main {{ staff m }}");
+        => PlaceholderCountIn($"part m {{ section A {{ {music} }} }} form {{ A }} score {{ staff m }}");
 
     // ⚠️ THIS COUNTED WARNINGS UNTIL 2026-08-28, when the owner asked for `| |` to stop
     // being diagnosed at all (the engine fills the bar itself — see the section at the
@@ -127,7 +127,7 @@ public class EmptyMeasureValidatorTests
         // The phrase's trailing `|` and that separator must NOT read as a `| |` empty
         // pair — a reference is ONE item, its boundary re-arms like a section start.
         var src = "phrase x { c d e f | } part melody { section A { x | x } } "
-                + "form main { A } score main { staff melody }";
+                + "form { A } score { staff melody }";
         Assert.Equal(0, PlaceholderCountIn(src));
     }
 
@@ -137,7 +137,7 @@ public class EmptyMeasureValidatorTests
         // `x | | x` — an EXPLICIT `| |` pair after the phrase is still an empty bar
         // (the boundary re-arm absorbs ONE barline, not a written pair).
         var src = "phrase x { c d e f | } part melody { section A { x | | x } } "
-                + "form main { A } score main { staff melody }";
+                + "form { A } score { staff melody }";
         Assert.Equal(1, PlaceholderCountIn(src));
     }
 
@@ -146,7 +146,7 @@ public class EmptyMeasureValidatorTests
     {
         // A `| |` pair WITHIN the phrase body is a real empty measure and still warns.
         var src = "phrase x { c d e f | | g a b c' } part melody { section A { x } } "
-                + "form main { A } score main { staff melody }";
+                + "form { A } score { staff melody }";
         Assert.Equal(1, PlaceholderCountIn(src));
     }
 
@@ -157,7 +157,7 @@ public class EmptyMeasureValidatorTests
         // section opened, then two of music. The trailing `|` still closes nothing — it
         // confirms the auto-fill — which is what keeps the 497 tracked books that end a
         // block `… c1 |` at their written length.
-        var src = "part m { section A { | c1 | c1 | } } form main { A } score main { staff m }";
+        var src = "part m { section A { | c1 | c1 | } } form { A } score { staff m }";
         var score = new LilySharp.Core.Svg.Collector.MeasureCollector()
             .Collect(SyntaxTree.Parse(src), "m");
         Assert.Equal(3, score.Voice.Measures.Length);
@@ -171,7 +171,7 @@ public class EmptyMeasureValidatorTests
         // The render agrees with the validator: `phrase x { c d e f | }` used as
         // `x | x` is two content bars, with no empty placeholder between them.
         var src = "phrase x { c d e f | } part melody { section A { x | x } } "
-                + "form main { A } score main { staff melody }";
+                + "form { A } score { staff melody }";
         var score = new LilySharp.Core.Svg.Collector.MeasureCollector()
             .Collect(SyntaxTree.Parse(src), "melody");
         Assert.Equal(2, score.Voice.Measures.Length);
@@ -190,7 +190,7 @@ public class EmptyMeasureValidatorTests
         // directive must differ from the default to leave an item to assert on.
         var src = "phrase x { | c d e f | c' b a g | } "
                 + "part melody2 { section A { clef bass x | x | x | } } "
-                + "form main { A } score main { staff melody2 }";
+                + "form { A } score { staff melody2 }";
         var score = new LilySharp.Core.Svg.Collector.MeasureCollector()
             .Collect(SyntaxTree.Parse(src), "melody2");
 
@@ -212,7 +212,7 @@ public class EmptyMeasureValidatorTests
         // phrase would silently lose a bar). Each of the three `~x` brings one.
         var src = "phrase x { | c d e f | c' b a g | } "
                 + "part melody2 { section A { clef treble x | x | x | } } "
-                + "form main { A } score main { staff melody2 }";
+                + "form { A } score { staff melody2 }";
         Assert.Equal(3, PlaceholderCountIn(src));
     }
 
@@ -235,34 +235,34 @@ public class EmptyMeasureValidatorTests
         Diagnose(source).Any(d => d.Code == DiagnosticCodes.ScoreHasNoMusic);
 
     [Theory]
-    [InlineData("part m { section A { } } form main { A } score main { staff m }")]
-    [InlineData("part m { section A { clef bass } } form main { A } score main { staff m }")]
-    [InlineData("part m { } section A { m { } } form main { A } score main { staff m }")]
+    [InlineData("part m { section A { } } form { A } score { staff m }")]
+    [InlineData("part m { section A { clef bass } } form { A } score { staff m }")]
+    [InlineData("part m { } section A { m { } } form { A } score { staff m }")]
     public void AScoreWithNoBarsAtAll_IsReported(string source) => Assert.True(WarnsBlank(source));
 
     // …and the other direction, which is the one that keeps the check honest. ⚠️ THE
     // SECOND CASE IS THE POINT OF THE WHOLE SESSION: one written `|` IS a bar now, so a
     // section spelled `{ | }` is a real empty measure and the page is not blank.
     [Theory]
-    [InlineData("part m { section A { c1 } } form main { A } score main { staff m }")]
-    [InlineData("part m { section A { | } } form main { A } score main { staff m }")]
-    [InlineData("chords p { C | F | } form main { } score main { chords p }")]
+    [InlineData("part m { section A { c1 } } form { A } score { staff m }")]
+    [InlineData("part m { section A { | } } form { A } score { staff m }")]
+    [InlineData("chords p { C | F | } form { } score { chords p }")]
     // ⚠️ A LYRICS-ONLY SCORE IS A REAL PAGE — the measure grid draws on the top text row.
     // Its bars parse as LyricMeasure holding barline TOKENS, invisible to the music walk
     // that counts Barline NODES, so the first cut of this check warned on both of the
     // tree's lyrics-only books (test/lead-sheet-lyrics, audit/lpreg/lytie). The sweep over
     // 899 books is what caught it; these two lines are what keep it caught.
     [InlineData("time 4/4 section M { lyrics w { Twin- kle | lit- tle | } } "
-              + "form main { M } score main { lyrics w }")]
+              + "form { M } score { lyrics w }")]
     [InlineData("time 4/4 lyrics w { section M { wa~o~a | } } "
-              + "form main { ~M } score main { lyrics w }")]
+              + "form { ~M } score { lyrics w }")]
     public void AScoreWithAnyBar_IsNotReported(string source) => Assert.False(WarnsBlank(source));
 
     [Fact]
     public void AFragmentWithNoScoreBlock_IsNotReported() =>
         // No `score` means no claim about a page — a parser fixture or an include is not
         // asking to print anything, so there is nothing to warn about.
-        Assert.False(WarnsBlank("part m { section A { } } form main { A }"));
+        Assert.False(WarnsBlank("part m { section A { } } form { A }"));
 
     // ===================== `| |` IS A FULL BAR OF SILENCE =====================
     //
@@ -282,7 +282,7 @@ public class EmptyMeasureValidatorTests
 
     private const string OneStaff =
         "octave absolute\ntime 4/4\npart m {{ }}\nsection A {{ m {{ {0} }} }}\n"
-        + "form main {{ ~A }}\nscore main {{ staff m }}";
+        + "form {{ ~A }}\nscore {{ staff m }}";
 
     [Theory]
     [InlineData("| | c'4 c' g' g' | a' a' g'2")]
@@ -319,7 +319,7 @@ public class EmptyMeasureValidatorTests
         // force, so in 3/4 it is worth a dotted half and the pair is written that way.
         const string ThreeFour =
             "octave absolute\ntime 3/4\npart m {{ }}\nsection A {{ m {{ {0} }} }}\n"
-            + "form main {{ ~A }}\nscore main {{ staff m }}";
+            + "form {{ ~A }}\nscore {{ staff m }}";
         Assert.Equal(
             Notes(string.Format(ThreeFour, "c'2. | s2. | e'2.")),
             Notes(string.Format(ThreeFour, "c'2. | | e'2.")));
@@ -357,7 +357,7 @@ public class EmptyMeasureValidatorTests
         // (MeasureCollector.Form.cs); the exporter reads the same header.
         const string Header =
             "octave absolute\ntime 4/4\npart m {{ }}\nsection A {{ partial 4  m {{ {0} }} }}\n"
-            + "form main {{ ~A }}\nscore main {{ staff m }}";
+            + "form {{ ~A }}\nscore {{ staff m }}";
         Assert.Equal(
             Notes(string.Format(Header, "s4 | c'4 c' g' g' | a'1")),
             Notes(string.Format(Header, "| c'4 c' g' g' | a'1")));
@@ -373,7 +373,7 @@ public class EmptyMeasureValidatorTests
         const string TwoStaves =
             "octave absolute\ntime 4/4\npart up {{ clef treble }}\npart dn {{ clef bass }}\n"
             + "section A {{ up {{ {0} }} dn {{ c1 | g1 | c1 }} }}\n"
-            + "form main {{ ~A }}\nscore main {{ staffGroup {{ staff up staff dn }} }}";
+            + "form {{ ~A }}\nscore {{ staffGroup {{ staff up staff dn }} }}";
         Assert.Equal(
             Notes(string.Format(TwoStaves, "c'1 | s1 | e'1")),
             Notes(string.Format(TwoStaves, "c'1 | | e'1")));
@@ -440,7 +440,7 @@ public class EmptyMeasureValidatorTests
         // empty measure is not the one that gets played twice.
         var src = "octave absolute time 4/4 part m { } "
                 + "section A { m { c'1 | |: c'4 d e f :| } } "
-                + "form main { ~A } score main { staff m }";
+                + "form { ~A } score { staff m }";
         var score = new LilySharp.Core.Svg.Collector.MeasureCollector()
             .Collect(SyntaxTree.Parse(src), "m");
         Assert.Equal(3, score.Voice.Measures.Length);
@@ -458,7 +458,7 @@ public class EmptyMeasureValidatorTests
         // gap (rather than a bar of rests) still can. What changes is that the bar now
         // MEASURES like the bar it stands for.
         var src = "octave absolute\ntime 4/4\npart m { }\nsection A { m { c'1 | | e'1 } }\n"
-                + "form main { ~A }\nscore main { staff m }";
+                + "form { ~A }\nscore { staff m }";
         var score = new LilySharp.Core.Svg.Collector.MeasureCollector()
             .Collect(SyntaxTree.Parse(src), "m");
         Assert.Equal(3, score.Voice.Measures.Length);

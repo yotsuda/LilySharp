@@ -61,8 +61,8 @@ public class SectionHeaderRegistryValidatorTests
             section A { {{first}} }
             section A { {{second}} }
             part melody { section A { c4 | c d e f | } }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """);
         var short1 = d.Where(x => x.Code == DiagnosticCodes.MeasureIncomplete
                                   && x.Message.Contains("less than the declared partial 1/2"));
@@ -83,8 +83,8 @@ public class SectionHeaderRegistryValidatorTests
             section A { {{first}} }
             section A { {{second}} }
             part melody { section A { c4 d e | c d e | } }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """);
         var over = d.Where(x => x.Code == DiagnosticCodes.MeasureOverflow
                                 && x.Message.Contains("exceeds time signature 2/4"));
@@ -111,8 +111,8 @@ public class SectionHeaderRegistryValidatorTests
             {{top}}
             {{m}}
             part n { section A { c4 d e | } section B { c4 d e f | } }
-            form main { A B }
-            score main { staff m staff n }
+            form { A B }
+            score { staff m staff n }
             """);
         var over = d.Where(x => x.Code == DiagnosticCodes.MeasureOverflow
                                 && x.Message.Contains("exceeds time signature 3/4"));

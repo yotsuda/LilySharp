@@ -68,8 +68,8 @@ public class TrackNeedsSectionsValidatorTests
     {
         Assert.True(LyricsFlagged(GroupedByPartParts + """
             lyrics words { Do re mi fa | sol la ti do | }
-            form main { A B }
-            score main { staff melody  lyrics words }
+            form { A B }
+            score { staff melody  lyrics words }
             """));
     }
 
@@ -78,8 +78,8 @@ public class TrackNeedsSectionsValidatorTests
     {
         Assert.False(LyricsFlagged(GroupedByPartParts + """
             lyrics words { section A { Do re mi fa | } section B { sol la ti do | } }
-            form main { A B }
-            score main { staff melody  lyrics words }
+            form { A B }
+            score { staff melody  lyrics words }
             """));
     }
 
@@ -93,8 +93,8 @@ public class TrackNeedsSectionsValidatorTests
             key c major
             part melody { clef treble }
             section A { melody { c'4 d' e' f' | } lyrics { Do re mi fa | } }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """));
     }
 
@@ -113,8 +113,8 @@ public class TrackNeedsSectionsValidatorTests
         // The reported shape, reduced.
         Assert.True(ChordsFlagged(GroupedByPartParts + """
             chords prog { Dmaj7 | Em7 | Gmaj7 | A7 }
-            form main { A B }
-            score main { staff melody  chords prog }
+            form { A B }
+            score { staff melody  chords prog }
             """));
     }
 
@@ -123,8 +123,8 @@ public class TrackNeedsSectionsValidatorTests
     {
         Assert.False(ChordsFlagged(GroupedByPartParts + """
             chords prog { section A { Dmaj7 | Em7 | } section B { Gmaj7 | A7 | } }
-            form main { A B }
-            score main { staff melody  chords prog }
+            form { A B }
+            score { staff melody  chords prog }
             """));
     }
 
@@ -136,8 +136,8 @@ public class TrackNeedsSectionsValidatorTests
         // exempts it.
         Assert.False(ChordsFlagged(GroupedByPartParts + """
             section A { chords prog { Dmaj7 | Em7 | } }
-            form main { A B }
-            score main { staff melody  chords prog }
+            form { A B }
+            score { staff melody  chords prog }
             """));
     }
 
@@ -152,8 +152,8 @@ public class TrackNeedsSectionsValidatorTests
     {
         var d = Run(GroupedByPartParts + """
             chords prog { Dmaj7 | Em7 | Gmaj7 | A7 }
-            form main { A B }
-            score main { staff melody  chords prog }
+            form { A B }
+            score { staff melody  chords prog }
             """).Single(x => x.Code == DiagnosticCodes.ChordTrackNeedsSections);
 
         Assert.Contains("chords prog { section A { … } }", d.Message);
@@ -170,8 +170,8 @@ public class TrackNeedsSectionsValidatorTests
     {
         var tree = SyntaxTree.Parse(GroupedByPartParts + """
             chords prog { Dmaj7 | Em7 | Gmaj7 | A7 }
-            form main { A B }
-            score main { staff melody  chords prog }
+            form { A B }
+            score { staff melody  chords prog }
             """);
 
         Assert.Contains(SemanticValidation.Run(tree),
@@ -187,8 +187,8 @@ public class TrackNeedsSectionsValidatorTests
         var diags = Run(GroupedByPartParts + """
             lyrics words { Do re mi fa | sol la ti do | }
             chords prog { Dmaj7 | Em7 | Gmaj7 | A7 }
-            form main { A B }
-            score main { staff melody  lyrics words  chords prog }
+            form { A B }
+            score { staff melody  lyrics words  chords prog }
             """);
 
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.LyricTrackNeedsSections);

@@ -153,8 +153,8 @@ public class ChordShapeCheckTests
             octave absolute
             part gt { clef treble }
             section A { gt { c'1 | } chords prog { D#m | } }
-            form main { A }
-            score main { chords prog  staff gt }
+            form { A }
+            score { chords prog  staff gt }
             """;
         string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(book));
         var fallback = ChordShapes.Default(TuningType.Guitar, Parse("D#m"))!;
@@ -220,8 +220,8 @@ public class ChordShapeCheckTests
         octave absolute
         part gt { clef treble }
         section A { gt { {{music}} } }
-        form main { A }
-        score main { staff gt }
+        form { A }
+        score { staff gt }
         """;
 
     private static string Single(string book) => Assert.Single(Mismatches(book)).Message;
@@ -334,8 +334,8 @@ public class ChordShapeCheckTests
           uk { c'1 | c'1 | }
           chords prog { {{row}} }
         }
-        form main { A }
-        score main { {{score}} }
+        form { A }
+        score { {{score}} }
         """;
 
     /// <summary>A row entry is checked the same, the fix in the row's form, at the shape word.</summary>
@@ -366,8 +366,8 @@ public class ChordShapeCheckTests
             octave absolute
             part {{part}}
             section A { pt { c'1@chord(C 0000) | } }
-            form main { A }
-            score main { staff pt }
+            form { A }
+            score { staff pt }
             """;
         Assert.Contains("which is C6, not C", Single(Uke("pt { instrument ukulele }")));
         Assert.DoesNotContain(SyntaxTree.Parse(Uke("pt { clef treble }")).Diagnostics,
@@ -378,7 +378,7 @@ public class ChordShapeCheckTests
             octave absolute
             part gt { clef treble }
             section A { gt { c'1@chord(C x02210) | } }
-            form main { A }
+            form { A }
             score a { staff gt }
             score b { staff gt }
             """;

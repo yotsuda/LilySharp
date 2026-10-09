@@ -159,7 +159,7 @@ public class RehearsalMarkTests
     {
         var tree = SyntaxTree.Parse(
             "part melody\nsection A { melody { c4" + annotation + " d4 e4 f4 | } }\n"
-            + "form main { ~A }\nscore main { staff melody }\n");
+            + "form { ~A }\nscore { staff melody }\n");
         Assert.Contains(expected, new LilyPondExporter().Export(tree));
     }
 
@@ -441,8 +441,8 @@ public class RehearsalMarkTests
               clef bass
               section A { c4@mark("A") d e f |: g1 | [1. a1@mark("B") ] :| [2. b1 ] }
             }
-            form main { ~A }
-            score main {
+            form { ~A }
+            score {
               staff melody
               tab melody
             }

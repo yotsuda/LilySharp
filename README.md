@@ -49,9 +49,9 @@ section Verse {
   }
 }
 
-form main { ~Verse }
+form { ~Verse }
 
-score main {
+score {
   chords harmony
   staff melody
   lyrics words
@@ -132,8 +132,8 @@ key g major
 
 part melody { clef treble }       // declare each part; clef lives here
 section Main { melody { c4 d e | g2. | } }
-form main { Main }                // print/playback order of sections
-score main "out" { staff melody }      // one or more render blocks
+form { Main }                // print/playback order of sections
+score "out" { staff melody }      // one or more render blocks
 ```
 
 > Lily# is **not** LilyPond: `\relative`, `<< … \\ … >>`, `\new Staff`, `\version`
@@ -222,8 +222,8 @@ section Main {
     melody { c4 d e f | g2 g | }
     lyrics words sings melody { Hap- py birth- day | to you | }
 }
-form main { Main }
-score main { staff melody  lyrics words }   // the row below the staff is its verse
+form { Main }
+score { staff melody  lyrics words }   // the row below the staff is its verse
 ```
 
 ### Lead sheets (chords and/or lyrics, no staff)
@@ -241,8 +241,8 @@ section Main {
     chords prog  { C G7 | Am F | C | }
     lyrics words { Twin- kle | lit- tle | star | }
 }
-form main { Main }
-score main "sheet" { chords prog lyrics words }
+form { Main }
+score "sheet" { chords prog lyrics words }
 ```
 
 ### Repeats and Alternatives
@@ -260,12 +260,12 @@ section Body   { melody { c4 d e f | } }
 section First  { melody { g2 g | } }        // first time
 section Second { melody { a2 a | } }        // second time
 
-form main { |: Body [1. ~First] :| [2. ~Second] }
+form { |: Body [1. ~First] :| [2. ~Second] }
 
-score main { staff melody }
+score { staff melody }
 ```
 
-A plain `form main { |: Body :| }` (no endings) just repeats its body, and a third or
+A plain `form { |: Body :| }` (no endings) just repeats its body, and a third or
 later ending is written the same way: `:| [3. Third]`. A repeat bar, a volta ending or a
 navigation mark (`segno`, `coda`, `fine`, `to coda`, `dc`, `ds`) written in the music is
 refused with `LYS1034`; the marks go between the section names of the form too.
@@ -288,8 +288,8 @@ phrase motif { c4 d e f }
 
 part melody { clef treble }
 section Main { melody { motif | g2 g | } }
-form main { Main }
-score main "out" { staff melody }
+form { Main }
+score "out" { staff melody }
 ```
 
 ### Staves and groups
@@ -326,9 +326,9 @@ on its own:
 part gt { clef treble_8 tuning guitar }
 
 section Main { gt { c4 e g e | } }
-form main { Main }
+form { Main }
 
-score main "guitar" {
+score "guitar" {
   staff gt        // the notation
   tab gt          // the tablature under it
 }

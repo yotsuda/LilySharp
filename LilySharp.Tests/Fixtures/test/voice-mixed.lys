@@ -18,9 +18,9 @@ section Main {
   }
 }
 
-form main { Main }
+form { Main }
 
-score main "voice-mixed" {
+score "voice-mixed" {
   staff m
 }
 

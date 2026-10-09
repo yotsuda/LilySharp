@@ -43,8 +43,8 @@ public class GoToDefinitionTests
         "section Main {\n" +       // section declaration — the `Main` definition
         "  melody { intro }\n" +   // part block (defines melody's music) + phrase ref
         "}\n" +
-        "form main { Main }\n" +   // form declaration `main` + section ref `Main`
-        "score main \"out\" {\n" + // score references form `main`
+        "form verse { Main }\n" +  // form declaration `verse` + section ref `Main`
+        "score \"out\" { form verse\n" + // the score's form item references `verse`
         "  staff melody\n" +       // score references part `melody`
         "}\n";
 
@@ -90,9 +90,9 @@ public class GoToDefinitionTests
     [Fact]
     public void FormNameInScore_JumpsToFormDeclaration()
     {
-        int declName = Source.IndexOf("main");                 // form main
-        int reference = Source.IndexOf("main", declName + 1);  // score main
-        AssertJumps(Source, reference, declName, "main".Length);
+        int declName = Source.IndexOf("verse");                // form verse
+        int reference = Source.IndexOf("verse", declName + 1); // score { form verse
+        AssertJumps(Source, reference, declName, "verse".Length);
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public class GoToDefinitionTests
     public void SectionNameInForm_JumpsToSectionDeclaration()
     {
         int declName = Source.IndexOf("Main");                 // section Main
-        int reference = Source.IndexOf("Main", declName + 1);  // form main { Main }
+        int reference = Source.IndexOf("Main", declName + 1);  // form { Main }
         AssertJumps(Source, reference, declName, "Main".Length);
     }
 
@@ -134,8 +134,8 @@ public class GoToDefinitionTests
         "part melody { section A { c4 d e f } }\n" +
         "lyrics verse { section A { la la la la } }\n" +   // lyrics block `verse`
         "chords harmony { section A { c1 } }\n" +          // chord part `harmony`
-        "form main { A }\n" +
-        "score main {\n" +
+        "form { A }\n" +
+        "score {\n" +
         "  staff melody  lyrics verse\n" +             // attaches lyrics `verse`
         "  chords harmony\n" +                             // chord row -> `harmony`
         "}\n";

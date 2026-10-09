@@ -179,7 +179,7 @@ public class DocKeywordListTests
             .OrderBy(w => w, StringComparer.Ordinal)
             .ToArray();
 
-    private const string ScorePrefix = "score main { ";
+    private const string ScorePrefix = "score { ";
 
     /// <summary>
     /// Does a score body refuse this word — is there an error ON THE WORD ITSELF?
@@ -189,7 +189,7 @@ public class DocKeywordListTests
     /// <c>using</c> has a branch in <c>ParseRenderItem</c> whose whole purpose is to REFUSE it
     /// (LYS0029, "a 'using' cannot go inside a score"), so a stray-code test called it
     /// accepted. Anchoring on the span separates the two: a word that reached a real branch
-    /// and merely lacks its ARGUMENTS reports on what is missing — <c>score main { staff }</c>
+    /// and merely lacks its ARGUMENTS reports on what is missing — <c>score { staff }</c>
     /// lands on the '}' — while a refused word is reported where it stands.
     /// </remarks>
     private static bool IsStrayInsideAScore(string word)
@@ -315,8 +315,8 @@ public class DocKeywordListTests
         // names has nothing to engrave — the item is real, and the production has to say so.
         Assert.False(
             SyntaxTree.Parse(
-                "part m { clef treble }\nsection A { m { c4 } }\nform main { A }\n"
-                + "score main { staff m\n  m }").HasErrors,
+                "part m { clef treble }\nsection A { m { c4 } }\nform { A }\n"
+                + "score { staff m\n  m }").HasErrors,
             "a bare part name beside a staff is a score item and must parse");
 
         // ⚠️ A bare `Contains("PartRef")` passes on the tab/ossia/chords alternatives, which
@@ -440,7 +440,7 @@ public class DocKeywordListTests
 
         static string Doc(string name, string header) =>
             $"part {name} {{ {header} }}\nsection A {{ {name} {{ c4 d e f }} }}\n"
-            + $"form main {{ A }}\nscore main {{ staff {name} }}";
+            + $"form {{ A }}\nscore {{ staff {name} }}";
 
         // The control: the very same document with a digit instead of the hyphen compiles,
         // so a red below is about the hyphen and not about the document (RULES §5.4).

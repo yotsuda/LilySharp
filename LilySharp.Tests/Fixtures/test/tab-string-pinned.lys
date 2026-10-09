@@ -29,8 +29,8 @@ section A {
     a,,8\4 a,,\4 a,,\4 a,,\4 c\1 c\1 c\1 c\1 |
   }
 }
-form main { A }
-score main {
+form { A }
+score {
   staff bl
   tab bl as full
 }

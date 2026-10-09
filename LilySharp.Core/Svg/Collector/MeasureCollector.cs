@@ -1098,7 +1098,7 @@ public sealed partial class MeasureCollector
 
         // Score-level structure from the parts this score OMITS (|: :|, navigation
         // marks, inline voltas) — the SAME harvest CollectMultiStaff runs, on the same
-        // resume channel. The single-staff road never called it, so `score main
+        // resume channel. The single-staff road never called it, so `score
         // { staff sax }` dropped the band's repeats that the multi-staff spelling of
         // the same book drew (measured 2026-08-27: with/without the omitted part's
         // |: :| the single-staff page was byte-identical). Placed BEFORE the
@@ -3912,7 +3912,7 @@ public sealed partial class MeasureCollector
                 // so it read as invocation 0 of the target section, and its single
                 // node was compared against the target's address, which names an
                 // unrelated node in an unrelated section: a deterministic
-                // `address drifted` abort on `form main { A B || C }`.
+                // `address drifted` abort on `form { A B || C }`.
                 // ⚠️ MEASURED SCOPE (2026-08-22): the abort is reachable from the
                 // Δ=0 substrate net only. Sweeping every pitch keystroke of both
                 // books through CollectResumePlanner, the cross-edit planner never
@@ -4376,7 +4376,7 @@ public sealed partial class MeasureCollector
                         builder.BeginAlternatives();
                     break;
 
-                // A volta ending that NO repeat block opened — `form main { A [1. B] }`.
+                // A volta ending that NO repeat block opened — `form { A [1. B] }`.
                 // It is its sections and nothing more: there is no repeat for the ending to
                 // be an ending OF, so no bracket and no number are engraved. Its sections are
                 // ordinary reference nodes, played by the two reference arms (the plain one

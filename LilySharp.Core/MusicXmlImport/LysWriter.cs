@@ -120,7 +120,7 @@ internal static class LysWriter
         // position is the placement). No auto-attach; an unreferenced block would
         // be a LYS4006 error.
         var scoreLyricPart = doc.Parts.FirstOrDefault(HasLyrics);
-        sb.Append("score main \"imported\" {\n");
+        sb.Append("score \"imported\" {\n");
         // Each part's groups, outer first — the source's part-groups, then its own split into
         // a grand staff. A run of parts sharing a group's key is that group's block.
         var open = new List<string>();
@@ -199,7 +199,7 @@ internal static class LysWriter
     // ---- sections ---------------------------------------------------------
 
     // Every section the layout cut, each part's music for its measures, then the form that
-    // plays them. A flat piece is one section A played once (`form main { ~A }`) — reached only
+    // plays them. A flat piece is one section A played once (`form { ~A }`) — reached only
     // when the piece has NO repeat barline at all: a repeat is cut into sections and spelled in
     // the form (LYS1034, TryFactorPlainRepeats). With endings, the repeat + volta brackets live
     // in the form (Body played twice, End1 the first time, End2 the second).
@@ -226,9 +226,9 @@ internal static class LysWriter
         // `~`: the sections are the importer's, not the source's — their labels are not
         // printed (see HiddenLabel).
         if (layout.Segments.Count == 1)
-            sb.Append("form main { ").Append(layout.Structure).Append(" }\n\n");
+            sb.Append("form { ").Append(layout.Structure).Append(" }\n\n");
         else
-            sb.Append("form main {\n  ").Append(layout.Structure).Append("\n}\n\n");
+            sb.Append("form {\n  ").Append(layout.Structure).Append("\n}\n\n");
     }
 
     /// <summary>A stretch of measures [Start, End) written as one section.</summary>

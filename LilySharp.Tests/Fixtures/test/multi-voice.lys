@@ -21,8 +21,8 @@ section Main {
   melody { twoVoices threeVoices }
 }
 
-form main { Main }
+form { Main }
 
-score main "multi-voice" {
+score "multi-voice" {
   staff melody
 }

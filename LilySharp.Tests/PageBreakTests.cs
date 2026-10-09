@@ -46,7 +46,7 @@ public sealed class PageBreakTests
     private static Measure[] Collect(string body)
     {
         string src = "time 4/4\nkey c major\npart m { section A { " + body + " } }\n"
-                   + "form main { A }\nscore main { staff m }";
+                   + "form { A }\nscore { staff m }";
         return new MeasureCollector().Collect(SyntaxTree.Parse(src), "m").Voice.Measures.ToArray();
     }
 
@@ -96,8 +96,8 @@ public sealed class PageBreakTests
               section B { g'4 a' b' c'' | }
               section C { c'4 d' e' f' | }
             }
-            form main { A pageBreak B noPageBreak C }
-            score main { staff m }
+            form { A pageBreak B noPageBreak C }
+            score { staff m }
             """;
         var m = new MeasureCollector().Collect(SyntaxTree.Parse(source), "m").Voice.Measures;
         Assert.Equal(3, m.Length);
@@ -123,8 +123,8 @@ public sealed class PageBreakTests
           section A { c'4 d' e' f' | g'4 a' b' c'' | }
           section B { c''4 b' a' g' | f'4 e' d' c' | }
         }
-        form main { A {{JOIN}} B }
-        score main { staff m }
+        form { A {{JOIN}} B }
+        score { staff m }
         """;
 
     /// <summary>
@@ -167,8 +167,8 @@ public sealed class PageBreakTests
             time 4/4
             part bass { clef bass section S { {{bars}} } }
             lyrics verse { section S { {{skips}} la la la la | la la la la | } }
-            form main { S }
-            score main {
+            form { S }
+            score {
               staff bass
               lyrics verse sings bass
             }
@@ -205,8 +205,8 @@ public sealed class PageBreakTests
             time 4/4
             part up { clef treble section S { {{up}} } }
             part lo { clef bass section S { {{lo}} } }
-            form main { S }
-            score main {
+            form { S }
+            score {
               staff up
               staff lo
             }
@@ -235,8 +235,8 @@ public sealed class PageBreakTests
             part m { clef treble
               section A { c'4 d' e' f' | pageBreak g'4 a' b' c'' | noPageBreak c''4 b' a' g' | }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """));
         Assert.Contains("\\pageBreak", ly);
         Assert.Contains("\\noPageBreak", ly);
@@ -249,7 +249,7 @@ public sealed class PageBreakTests
         Assert.Contains("pageBreak", music);
         Assert.Contains("noPageBreak", music);
 
-        const string doc = "part m { section A { c4 d e f | } }\nform main { A }";
+        const string doc = "part m { section A { c4 d e f | } }\nform { A }";
         var form = LilySharpLanguageServer.GetFormCompletions(doc).Items.Select(i => i.Label).ToList();
         Assert.Contains("pageBreak", form);
         Assert.Contains("noPageBreak", form);
@@ -258,7 +258,7 @@ public sealed class PageBreakTests
     [Fact]
     public void TheLilyPondSpelling_IsPointedAtTheLilySharpOne()
     {
-        var tree = SyntaxTree.Parse("part m { section A { c4 d e f | \\pageBreak g4 a b c | } }\nform main { A }\nscore main { staff m }");
+        var tree = SyntaxTree.Parse("part m { section A { c4 d e f | \\pageBreak g4 a b c | } }\nform { A }\nscore { staff m }");
         // The general "no leading backslash" hint, naming the bare word — the same hint
         // `\tempo` gets, because the spelling IS LilyPond's minus the backslash.
         Assert.Contains(tree.Diagnostics, d => d.Message.Contains("write 'pageBreak"));

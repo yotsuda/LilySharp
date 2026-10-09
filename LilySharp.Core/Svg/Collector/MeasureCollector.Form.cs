@@ -1726,7 +1726,7 @@ public sealed partial class MeasureCollector
     /// Before that net existed this walk skipped <c>|: … :|</c> blocks whole (every arm
     /// was gated on <c>!IsInsideRepeatBlock</c> and no arm handled the block itself) and
     /// collapsed a section's second occurrence onto its first (a <c>ContainsKey</c> guard
-    /// that also REWOUND the cursor). So a staffless <c>form main { A B A }</c> engraved
+    /// that also REWOUND the cursor). So a staffless <c>form { A B A }</c> engraved
     /// 6 bars instead of 10 with the reprise's syllables landing on top of the first A's,
     /// which is what the "lyrics overlap" report was.
     /// </para>
@@ -1946,7 +1946,7 @@ public sealed partial class MeasureCollector
                     case FormAlternativeSyntax alt when !IsInsideRepeatBlock(alt) && (dividerOpen || dividerClosed):
                         dividerEnding = (alt, cur);
                         break;
-                    // A volta ending that NO repeat block opened — `form main { A [1. B] }` —
+                    // A volta ending that NO repeat block opened — `form { A [1. B] }` —
                     // plays exactly once and engraves no bracket (see ProcessForm for the
                     // LilyPond reference that settles the play count). Its sections are
                     // ordinary reference nodes, advanced by the reference arms as this walk

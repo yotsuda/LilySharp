@@ -1812,7 +1812,7 @@ internal static class MusicMarkEngraver
 
         // Collect a rehearsal-box mark for every measure that carries a section
         // label. Label VISIBILITY is the author's call, not the engraver's: a
-        // section shows its name by being referenced by name (`form main { Body }`)
+        // section shows its name by being referenced by name (`form { Body }`)
         // and hides it with the silent reference (`~Body`). So every non-null
         // SectionLabel engraves — no auto-suppression of "single distinct section"
         // or "repeated section" boxes. That heuristic fought the author's explicit

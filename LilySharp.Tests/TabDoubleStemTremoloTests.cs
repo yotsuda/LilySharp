@@ -38,8 +38,8 @@ public class TabDoubleStemTremoloTests
         section A {
           m { a2:32 | }
         }
-        form main { A }
-        score main { tab m }
+        form { A }
+        score { tab m }
         """;
 
     /// <remarks>

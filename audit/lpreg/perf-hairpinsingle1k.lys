@@ -344,6 +344,6 @@ section Main {
   }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { staff top }
+score { staff top }

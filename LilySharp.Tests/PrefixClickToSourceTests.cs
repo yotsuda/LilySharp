@@ -73,8 +73,8 @@ public class PrefixClickToSourceTests
         + "  clef treble\n"
         + "  section A { c'4 c' g' g' | break a' a' g'2 | break f'4 f' e' e' }\n"
         + "}\n"
-        + "form main { A }\n"
-        + "score main { staff melody }\n";
+        + "form { A }\n"
+        + "score { staff melody }\n";
 
     [Fact]
     public void EverySystemsKeySignature_PointsAtTheKeyDeclaration()
@@ -104,8 +104,8 @@ public class PrefixClickToSourceTests
             + "  clef treble\n"
             + "  section A { c'4 c' g' g' | break key f major clef bass a4 a g2 | break f4 f e e }\n"
             + "}\n"
-            + "form main { A }\n"
-            + "score main { staff melody }\n";
+            + "form { A }\n"
+            + "score { staff melody }\n";
         var svg = Render(src);
 
         // System 1 shows the declarations; systems 2 and 3 show the change.
@@ -129,8 +129,8 @@ public class PrefixClickToSourceTests
             + "  clef treble\n"
             + "  section A { c'4 c' g' g' | break a' a' g'2 }\n"
             + "}\n"
-            + "form main { A }\n"
-            + "score main { staff melody }\n";
+            + "form { A }\n"
+            + "score { staff melody }\n";
         var svg = Render(src);
         Assert.Equal(0, TaggedInside(svg, src, "key c major"));
         Assert.Equal(2, TaggedInside(svg, src, "clef treble"));

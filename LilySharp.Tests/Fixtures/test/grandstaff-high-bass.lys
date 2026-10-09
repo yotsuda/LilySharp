@@ -33,9 +33,9 @@ section Main {
   lh { c4 d e f | <c'' e'' g''>1 | }
 }
 
-form main { Main }
+form { Main }
 
-score main "grandstaff-high-bass" {
+score "grandstaff-high-bass" {
   staff rh
   staff lh
 }

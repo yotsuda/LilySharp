@@ -11,8 +11,8 @@ section A {
   alt { e4 e g f | e1 | }
   lyrics verse { Sing- ing a song | now | }
 }
-form main { ~A }
-score main {
+form { ~A }
+score {
   staff sop "Soprano"
   lyrics verse sings sop
   staff alt "Alto"

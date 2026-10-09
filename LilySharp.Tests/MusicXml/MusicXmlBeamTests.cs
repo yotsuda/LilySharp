@@ -35,7 +35,7 @@ public class MusicXmlBeamTests
     private static XDocument Export(string time, string music)
     {
         var tree = SyntaxTree.Parse(
-            $"octave absolute\ntime {time}\npart m {{ clef treble }}\nsection A {{ m {{ {music} }} }}\nform main {{ A }}\nscore main {{ staff m }}");
+            $"octave absolute\ntime {time}\npart m {{ clef treble }}\nsection A {{ m {{ {music} }} }}\nform {{ A }}\nscore {{ staff m }}");
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         return new MusicXmlExporter().Export(tree).ToXml();
     }

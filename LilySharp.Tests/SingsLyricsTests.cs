@@ -41,8 +41,8 @@ public class SingsLyricsTests
           vocal { g8 g a4 a8 a a4 | g2 f | }
           lyrics ja sings vocal { Sing it loud and clear now | ev- ery | }
         }
-        form main { Chorus }
-        score main { staff sax lyrics ja }
+        form { Chorus }
+        score { staff sax lyrics ja }
         """;
 
     private static IReadOnlyList<Diagnostic> Validate(string src)
@@ -95,15 +95,15 @@ public class SingsLyricsTests
         // back to.)
         Assert.Contains(Validate("""
             section A { m { c4 d | } v { e4 f | } lyrics w sings v { la la | } }
-            form main { A }
-            score main { grandStaff { staff m  lyrics w  staff v } }
+            form { A }
+            score { grandStaff { staff m  lyrics w  staff v } }
             """), d => d.Code == DiagnosticCodes.GroupRowNotBoundToStaffAbove);
 
         // sings target that names nothing.
         Assert.Contains(Validate("""
             section A { m { c4 d | } lyrics w sings ghost { la la | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """), d => d.Code == DiagnosticCodes.SingsTargetUnknown);
 
         // Two blocks of one track naming different targets.
@@ -111,8 +111,8 @@ public class SingsLyricsTests
             section A { m { c4 d | } v { e4 f | }
               lyrics w sings m { la la | }
               lyrics w sings v { lo lo | } }
-            form main { A }
-            score main { staff m  lyrics w }
+            form { A }
+            score { staff m  lyrics w }
             """), d => d.Code == DiagnosticCodes.SingsConflict);
     }
 
@@ -124,28 +124,28 @@ public class SingsLyricsTests
             // sings + attach to the singing staff.
             """
             section A { m { c4 d | } lyrics w sings m { la la | } }
-            form main { A }
-            score main { staff m  lyrics w }
+            form { A }
+            score { staff m  lyrics w }
             """,
             // sings + the bound ROW (the melody is not engraved).
             PartSheet,
             // The voice rule IS a binding: lyrics named after a voice.
             """
             section A { m { voice sop { c'4 d' | } { e4 f | } } lyrics sop { la la | } }
-            form main { A }
-            score main { staff m  lyrics sop }
+            form { A }
+            score { staff m  lyrics sop }
             """,
             // A track named after the part itself.
             """
             section A { m { c4 d | } lyrics m { la la | } }
-            form main { A }
-            score main { staff m  lyrics m }
+            form { A }
+            score { staff m  lyrics m }
             """,
             // An unbound row stays the even-spread lead sheet.
             """
             section A { chords prog { C | } lyrics words { la la | } }
-            form main { A }
-            score main { chords prog lyrics words }
+            form { A }
+            score { chords prog lyrics words }
             """,
         ];
         foreach (var src in clean)
@@ -163,8 +163,8 @@ public class SingsLyricsTests
               lyrics w sings m { la la | }
               lyrics w { lo lo | }
               lyrics w sings m { le le | } }
-            form main { A }
-            score main { staff m  lyrics w }
+            form { A }
+            score { staff m  lyrics w }
             """;
         Assert.DoesNotContain(Validate(src), d => d.Code == DiagnosticCodes.SingsConflict);
     }
@@ -179,8 +179,8 @@ public class SingsLyricsTests
           lyrics {{track}} { Low part deep | }
           lyrics free { la la | }
         }
-        form main { A }
-        score main { {{scoreItems}} }
+        form { A }
+        score { {{scoreItems}} }
         """;
 
     [Fact]
@@ -237,8 +237,8 @@ public class SingsLyricsTests
           n { c1 | }
           {{lyricsHeader}} { Low part deep | }
         }
-        form main { A }
-        score main { {{scoreItems}} }
+        form { A }
+        score { {{scoreItems}} }
         """;
 
     private static readonly Fraction[] AltOnsets = [new(0, 1), new(1, 2), new(3, 4)];
@@ -325,8 +325,8 @@ public class SingsLyricsTests
               vocal { g8 g a4 a8 a a4 | g2 f | }
               lyrics ja { Sing it loud and clear now | ev- ery | }
             }
-            form main { Chorus }
-            score main { staff sax  lyrics ja sings vocal }
+            form { Chorus }
+            score { staff sax  lyrics ja sings vocal }
             """);
         Assert.DoesNotContain(SemanticValidation.Run(tree), d => d.Severity == DiagnosticSeverity.Error);
 
@@ -346,8 +346,8 @@ public class SingsLyricsTests
         // Unknown target on the row → LYS7004, same as the definition's.
         Assert.Contains(Validate("""
             section A { m { c4 d | } lyrics w { la la | } }
-            form main { A }
-            score main { staff m  lyrics w sings ghost }
+            form { A }
+            score { staff m  lyrics w sings ghost }
             """), d => d.Code == DiagnosticCodes.SingsTargetUnknown);
 
         // A row naming a DIFFERENT target than the definition is NOT a conflict
@@ -355,8 +355,8 @@ public class SingsLyricsTests
         // melody. Until then this spelling was LYS7005 — "a track sings ONE part".
         Assert.DoesNotContain(Validate("""
             section A { m { c4 d | } v { e4 f | } lyrics w sings m { la la | } }
-            form main { A }
-            score main { staff m  lyrics w sings v }
+            form { A }
+            score { staff m  lyrics w sings v }
             """), d => d.Code == DiagnosticCodes.SingsConflict);
 
         // Two DEFINITION blocks naming different targets still conflict: the
@@ -365,15 +365,15 @@ public class SingsLyricsTests
             section A { m { c4 d | } v { e4 f | }
               lyrics w sings m { la la | }
               lyrics w sings v { lo lo | } }
-            form main { A }
-            score main { staff m  lyrics w }
+            form { A }
+            score { staff m  lyrics w }
             """), d => d.Code == DiagnosticCodes.SingsConflict);
 
         // A row repeating the definition's target identically is silent.
         Assert.DoesNotContain(Validate("""
             section A { m { c4 d | } lyrics w sings m { la la | } }
-            form main { A }
-            score main { staff m  lyrics w sings m }
+            form { A }
+            score { staff m  lyrics w sings m }
             """), d => d.Code is DiagnosticCodes.SingsConflict
                              or DiagnosticCodes.SingsTargetUnknown);
     }
@@ -394,8 +394,8 @@ public class SingsLyricsTests
               vocal { g8 g a4 a8 a a4 | g2 f | }
               lyrics ja sings sax { Sing it loud and clear now | ev- ery | }
             }
-            form main { Chorus }
-            score main { staff sax  lyrics ja sings vocal }
+            form { Chorus }
+            score { staff sax  lyrics ja sings vocal }
             """);
         Assert.DoesNotContain(SemanticValidation.Run(tree), d => d.Severity == DiagnosticSeverity.Error);
 
@@ -419,8 +419,8 @@ public class SingsLyricsTests
               vocal { g8 g a4 a8 a a4 | g2 f | }
               lyrics ja sings sax { Sing it loud and clear now | ev- ery | }
             }
-            form main { Chorus }
-            score main { staff sax  lyrics ja }
+            form { Chorus }
+            score { staff sax  lyrics ja }
             """);
         var foldedSpec = RenderSpecParser.FindFirst(folded);
         Assert.Equal(1, foldedSpec!.Items.Length);
@@ -438,8 +438,8 @@ public class SingsLyricsTests
           bas { g,4 g, c g, | g,8 g, c4 g, d | }
           lyrics verse sings sop { Freu- de, schö- ner | Göt- ter- fun- ken, | }
         }
-        form main { Chorale }
-        score main {
+        form { Chorale }
+        score {
           choirStaff {
             staff sop
             lyrics verse
@@ -506,8 +506,8 @@ public class SingsLyricsTests
               m { c4 d e f | }
               lyrics w sings m { la la la la | }
             }
-            form main { A }
-            score main { staff m  lyrics w }
+            form { A }
+            score { staff m  lyrics w }
             """;
         var pm = PartSectionRegrouper.Convert(groupedBySection);
         Assert.NotNull(pm);

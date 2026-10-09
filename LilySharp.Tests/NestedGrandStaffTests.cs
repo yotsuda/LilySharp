@@ -58,10 +58,10 @@ public class NestedGrandStaffTests
           vc { c1 | c1 | }
           lyrics words sings pl { la la | }
         }
-        form main { ~A }
+        form { ~A }
         """;
 
-    private static string Book(string render) => Body + "\nscore main { " + render + " }\n";
+    private static string Book(string render) => Body + "\nscore { " + render + " }\n";
 
     private const string InBracket = "staffGroup { staff vln  grandStaff { staff pr  staff pl }  staff vc }";
     private const string InChoir = "choirStaff { staff vln  grandStaff { staff pr  staff pl }  staff vc }";

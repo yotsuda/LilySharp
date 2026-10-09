@@ -28,9 +28,9 @@ section Chorus {
   chords prog { F7 | Bb7 | F7 | F7 | Bb7 | Bb7 | F7 | F7 | C7 | Bb7 | F7 | C7 | }
 }
 
-form main { Chorus }
+form { Chorus }
 
-score main {
+score {
   chords prog            // symbols across the top
   staff head             // the written melody
   staff comp as lines 1  // one-line slash staff

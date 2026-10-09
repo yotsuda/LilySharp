@@ -13,8 +13,8 @@ section A {
   m { acciaccatura { cis'8 } <e' ges' bes'>4 r2. }
 }
 
-form main { A }
+form { A }
 
-score main "grace-accidental-line-start" {
+score "grace-accidental-line-start" {
   staff m
 }

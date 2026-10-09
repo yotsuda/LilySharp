@@ -50,8 +50,8 @@ public class BeamedPureStemSpacingTests
             "  m { gis'8@stemUp a,@stemUp bes'@stemUp a,@stemUp" +
             " bes'@stemUp a,@stemUp bes'@stemUp a,@stemUp | }\n" +
             "}\n" +
-            "form main { A }\n" +
-            "score main { staff m }\n");
+            "form { A }\n" +
+            "score { staff m }\n");
 
         var heads = MusicGlyphs(svg, EmmentalerGlyphs.NoteheadBlack);
         Assert.Equal(8, heads.Count);

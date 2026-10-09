@@ -46,8 +46,8 @@ public class ChordNameSpacingTests
             key c major
             part m { clef treble section A { a4 a g2 | } }
             chords h { section A { F G Dm Em | } }
-            form main { A }
-            score main { chords h  staff m }
+            form { A }
+            score { chords h  staff m }
             """);
 
         var xs = layout.ChordNameLayouts.Select(c => c.X).OrderBy(x => x).ToList();
@@ -72,8 +72,8 @@ public class ChordNameSpacingTests
             key c major
             part m { clef treble section A { a4 a g2 | c'4 c c c | } }
             chords h { section A { F G Dm Em | F G C D | } }
-            form main { A }
-            score main { chords h  staff m }
+            form { A }
+            score { chords h  staff m }
             """);
 
         var m0 = layout.ChordNameLayouts.Where(c => c.MeasureIndex == 0).Select(c => c.X).OrderBy(x => x).ToList();

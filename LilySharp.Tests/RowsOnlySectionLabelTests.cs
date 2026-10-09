@@ -67,9 +67,9 @@ public class RowsOnlySectionLabelTests
           section B { one two three four | five six sev- en | }
         }
 
-        form main { A B }
+        form { A B }
 
-        score main {{{(withChords ? "\n          chords harm as names" : "")}}
+        score {{{(withChords ? "\n          chords harm as names" : "")}}
           lyrics verse sings melody
         }
         """;
@@ -100,7 +100,7 @@ public class RowsOnlySectionLabelTests
     public void SectionLabel_OnAStafflessChordSheet_LeavesTheSymbolsWhereTheyStand()
     {
         var shown = RenderedGeometry.Render(RowsOnly(withChords: true));
-        var hidden = RenderedGeometry.Render(RowsOnly(withChords: true).Replace("form main { A B }", "form main { ~A ~B }"));
+        var hidden = RenderedGeometry.Render(RowsOnly(withChords: true).Replace("form { A B }", "form { ~A ~B }"));
         Assert.Empty(hidden.MusicMarkLabels);
         Assert.Equal(hidden.ChordSymbols.Select(c => (c.Text, System.Math.Round(c.X, 6))).ToList(),
                      shown.ChordSymbols.Select(c => (c.Text, System.Math.Round(c.X, 6))).ToList());
@@ -139,9 +139,9 @@ public class RowsOnlySectionLabelTests
               section B { C | G | }
             }
 
-            form main { A B }
+            form { A B }
 
-            score main {
+            score {
               chords harm
               staff melody
             }
@@ -163,8 +163,8 @@ public class RowsOnlySectionLabelTests
         tempo 117
         time 4/4
         chords prog { section Intro { C | G | Am | F | } }
-        form main { {{form}} }
-        score main { chords prog }
+        form { {{form}} }
+        score { chords prog }
         """ + "\n";
 
     private static (MultiStaffScore Score, ScoreLayout Layout) Lay(string source)

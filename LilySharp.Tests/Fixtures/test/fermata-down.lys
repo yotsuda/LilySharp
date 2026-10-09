@@ -10,8 +10,8 @@ part m {
   section A { g'8@accent a,@flageolet a@fermata.down a@portato d e f g }
 }
 
-form main { A }
+form { A }
 
-score main {
+score {
   staff m
 }

@@ -27,9 +27,9 @@ section Chorale {
       Wir be- tre- ten | feu- er- trun- ken, | Himm- li- sche, dein | Hei- lig- tum! | }
 }
 
-form main { Chorale }
+form { Chorale }
 
-score main {
+score {
   choirStaff {
     staff sop "Soprano"
     lyrics verse sings sop

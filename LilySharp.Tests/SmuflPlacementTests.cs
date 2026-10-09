@@ -42,8 +42,8 @@ public class SmuflPlacementTests
             $"fonts {{ music \"{font}\" }}\n" +
             "part m { clef treble }\n" +
             $"section A {{ m {{ {music} }} }}\n" +
-            "form main { A }\n" +
-            "score main { staff m }\n");
+            "form { A }\n" +
+            "score { staff m }\n");
         return BoxesGenerator.GenerateDocument(tree, RenderSpecParser.FindFirst(tree))
             .Pages.SelectMany(p => p.Symbols).ToList();
     }
@@ -153,8 +153,8 @@ public class SmuflPlacementTests
             $"fonts {{ music \"{font}\" }}\n" +
             "part m { clef treble }\n" +
             "section A { m { c'1 | } }\nsection B { m { d'1 | } }\n" +
-            "form main { segno A to coda B ds al coda coda B }\n" +
-            "score main { staff m }\n");
+            "form { segno A to coda B ds al coda coda B }\n" +
+            "score { staff m }\n");
         var symbols = BoxesGenerator.GenerateDocument(tree, RenderSpecParser.FindFirst(tree))
             .Pages.SelectMany(p => p.Symbols).ToList();
         var word = Assert.Single(symbols, s => s.Text == "To");
@@ -176,8 +176,8 @@ public class SmuflPlacementTests
             $"fonts {{ music \"{font}\" }}\n" +
             "part m { clef treble pedal text }\n" +
             "section A { m { c'4@sustain d' e' f'@!sustain | } }\n" +
-            "form main { A }\n" +
-            "score main { staff m }\n");
+            "form { A }\n" +
+            "score { staff m }\n");
         var pedal = BoxesGenerator.GenerateDocument(tree, RenderSpecParser.FindFirst(tree))
             .Pages.SelectMany(p => p.Symbols).Where(s => s.Kind == "pedal").ToList();
         Assert.Equal(glyphs, pedal.Count);
@@ -192,7 +192,7 @@ public class SmuflPlacementTests
         // baseline, and placed by Emmentaler's 1.0 it stood a staff space low until p869.
         var tree = SyntaxTree.Parse(
             $"fonts {{ music \"{font}\" }}\ntime 3/4\npart m {{ clef treble }}\n" +
-            "section A { m { c'2. | } }\nform main { A }\nscore main { staff m }\n");
+            "section A { m { c'2. | } }\nform { A }\nscore { staff m }\n");
         var symbols = BoxesGenerator.GenerateDocument(tree, RenderSpecParser.FindFirst(tree))
             .Pages.SelectMany(p => p.Symbols).ToList();
         double top = symbols.Where(s => s.Kind == "staffLine").Min(s => s.Box[1]);

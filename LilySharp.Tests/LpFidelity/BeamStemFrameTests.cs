@@ -54,9 +54,9 @@ public class BeamStemFrameTests
 
         section Main { m { g8 g g g g g g g | } }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "x" { staff m }
+        score "x" { staff m }
         """;
 
     /// <summary>
@@ -74,9 +74,9 @@ public class BeamStemFrameTests
 
         section Main { m { grace { d'16 e' } f'4 g'2 r4 | } }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "x" { staff m }
+        score "x" { staff m }
         """;
 
     [Theory]
@@ -138,9 +138,9 @@ public class BeamStemFrameTests
           section A { voice { ges' f8. ges16 } { aes' bes4 } }
         }
 
-        form main { ~A }
+        form { ~A }
 
-        score main { staff melody }
+        score { staff melody }
         """;
 
     private const string LoneBeamSrc = """
@@ -150,9 +150,9 @@ public class BeamStemFrameTests
           section A { voice { ges' f8. ges16 } { aes' r } }
         }
 
-        form main { ~A }
+        form { ~A }
 
-        score main { staff melody }
+        score { staff melody }
         """;
 
     /// <summary>

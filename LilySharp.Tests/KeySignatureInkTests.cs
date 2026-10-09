@@ -48,8 +48,8 @@ public sealed class KeySignatureInkTests
             key {{key}}
             part m { clef treble }
             section A { m { c''1 | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """), new SvgRenderOptions { EmbedFont = false });
         var glyphs = Regex.Matches(svg, "<text class=\"music\" x=\"([-\\d.]+)\" y=\"[-\\d.]+\"[^>]*>(.)</text>")
             .Select(m => (Glyph: m.Groups[2].Value[0], X: double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture)))

@@ -13,13 +13,13 @@ section Main {
   chords prog { C G7 | Am | C | F | }
 }
 
-form main { Main }
+form { Main }
 
-score main "chords-attached" {
+score "chords-attached" {
   chords prog
   staff melody
 }
 
-score main "chords-attached-grid" {
+score "chords-attached-grid" {
   chords prog
 }

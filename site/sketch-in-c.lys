@@ -19,9 +19,9 @@ section Chorus {
      | | | | | | }  // one kick, on the "and" of 4
 }
 
-form main { ~Chorus }
+form { ~Chorus }
 
-score main {
+score {
   chords prog                     // symbols across the top
   staff comp "Rhythm" as lines 1  // one-line slash staff under them
 }

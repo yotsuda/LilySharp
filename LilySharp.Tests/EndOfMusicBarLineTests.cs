@@ -45,8 +45,8 @@ public class EndOfMusicBarLineTests
             octave absolute
             part m
             section A { {{header}} m { {{music}} } }
-            form main { ~A }
-            score main { staff m }
+            form { ~A }
+            score { staff m }
             """);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
@@ -93,8 +93,8 @@ public class EndOfMusicBarLineTests
             section A { m { c'1 | c'2 } }
             section B { m { c'2 } }
             section C { m { {{second}} } }
-            form main { |: A [1. B] :| [2. C] }
-            score main { staff m }
+            form { |: A [1. B] :| [2. C] }
+            score { staff m }
             """);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));

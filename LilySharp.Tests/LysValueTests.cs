@@ -100,7 +100,7 @@ public class LysValueTests
         // A hyphenated bare value is word+minus+word in the green tree. Reading only
         // the FIRST token answered "piano" while the live reader answered "piano-left"
         // — the same node with two values (docs/VALUE_SITE_AUDIT.md §7 ①).
-        var tree = SyntaxTree.Parse("part gtr { instrument piano-left }\nscore main { staff gtr }");
+        var tree = SyntaxTree.Parse("part gtr { instrument piano-left }\nscore { staff gtr }");
         Assert.Empty(tree.Diagnostics);
         var prop = PartProperty(tree, "instrument");
 
@@ -111,7 +111,7 @@ public class LysValueTests
     [Fact]
     public void ANumericPartPropertyIsReadAsANumberNotReparsedFromText()
     {
-        var tree = SyntaxTree.Parse("part perc { octave 3 }\nscore main { staff perc }");
+        var tree = SyntaxTree.Parse("part perc { octave 3 }\nscore { staff perc }");
         Assert.Empty(tree.Diagnostics);
         var prop = PartProperty(tree, "octave");
 

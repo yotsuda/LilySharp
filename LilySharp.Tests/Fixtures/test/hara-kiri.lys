@@ -33,6 +33,6 @@ section Main {
   }
 }
 
-form main { Main }
+form { Main }
 
-score main "x" { grandStaff { staff rh staff lh as removeEmpty all } }
+score "x" { grandStaff { staff rh staff lh as removeEmpty all } }

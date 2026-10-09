@@ -83,8 +83,8 @@ public class TabChordTieTests
         time 4/4
         part m { {{part}} }
         section A { m { {{music}} } }
-        form main { A }
-        score main { tab m }
+        form { A }
+        score { tab m }
         """;
 
     private static string Guitar(string music) =>

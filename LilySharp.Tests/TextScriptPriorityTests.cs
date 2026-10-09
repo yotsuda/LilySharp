@@ -46,7 +46,7 @@ public class TextScriptPriorityTests
     private static double Y(string music, string text)
     {
         string book = "octave absolute\npart m { clef treble }\n"
-                      + $"section A {{ m {{ {music} }} }}\nform main {{ ~A }}\nscore main {{ staff m }}\n";
+                      + $"section A {{ m {{ {music} }} }}\nform {{ ~A }}\nscore {{ staff m }}\n";
         string svg = SvgGenerator.Generate(SyntaxTree.Parse(book), Opt);
         var m = Regex.Match(svg, $"<text x=\"[\\d.]+\" y=\"([\\d.]+)\"[^>]*>{Regex.Escape(text)}</text>");
         Assert.True(m.Success, $"no <text> '{text}' in the page");

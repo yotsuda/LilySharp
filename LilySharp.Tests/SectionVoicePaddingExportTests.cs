@@ -45,8 +45,8 @@ public class SectionVoicePaddingExportTests
           section A { Dm7 | G7 }
           section B { Cmaj7 | }
         }
-        form main { A | B | }
-        score main { chords prog  staff melody }
+        form { A | B | }
+        score { chords prog  staff melody }
         """;
 
     // scratch/p363/pm-two-parts.lys: bass makes A two bars, melody writes one.
@@ -59,8 +59,8 @@ public class SectionVoicePaddingExportTests
           section A { c2 e | g2 g | }
           section B { c2 c | }
         }
-        form main { A | B | }
-        score main { staff melody  staff bass }
+        form { A | B | }
+        score { staff melody  staff bass }
         """;
 
     private static string Twin(string source) => new LilyPondExporter().Export(SyntaxTree.Parse(source));
@@ -99,8 +99,8 @@ public class SectionVoicePaddingExportTests
             }
             section D { melody { c1 | } chords prog { C | F | G | } }
             section E { c1 | c1 | }
-            form main { A B C D E }
-            score main { chords prog  staff melody  staff bass  lyrics words sings melody }
+            form { A B C D E }
+            score { chords prog  staff melody  staff bass  lyrics words sings melody }
             """).GetRoot();
         var semantic = SectionBarCounts.BuildSemanticIndex(root).Canonical;
         var syntactic = SectionBarCounts.CanonicalByNameSyntactic(root);
@@ -180,8 +180,8 @@ public class SectionVoicePaddingExportTests
             phrase two { c1 | c1 | }
             part upper { section Rest { R1*4 | } section Unf { repeat unfold 2 { c1 | c1 | } } section Phr { two two } }
             part lower { section Rest { c1 | c1 | c1 | c1 | } section Unf { c1 | c1 | c1 | c1 | } section Phr { c1 | c1 | c1 | c1 | } }
-            form main { Rest Unf Phr }
-            score main { staff upper  staff lower }
+            form { Rest Unf Phr }
+            score { staff upper  staff lower }
             """;
         // (`section R` does not parse: R is the multi-measure rest.)
         var root = SyntaxTree.Parse(text).GetRoot();
@@ -285,11 +285,11 @@ public class SectionVoicePaddingExportTests
     [InlineData("v { repeat percent 2 { g2 ~ g } | }", 1)]
     public void SyntacticCount_NeverExceedsThePage_OnRepeatShapes(string block, int expected)
     {
-        var root = SyntaxTree.Parse($"time 4/4 part v {{ }} section Main {{ {block} }} form main {{ Main }} score main {{ staff v }}").GetRoot();
+        var root = SyntaxTree.Parse($"time 4/4 part v {{ }} section Main {{ {block} }} form {{ Main }} score {{ staff v }}").GetRoot();
         Assert.Equal(expected, SectionBarCounts.CanonicalByNameSyntactic(root)["Main"]);
         // …and so the page draws exactly its own bars, padded by nothing.
         var score = new MeasureCollector().Collect(SyntaxTree.Parse(
-            $"time 4/4 part v {{ }} section Main {{ {block} }} form main {{ Main }} score main {{ staff v }}"), "v");
+            $"time 4/4 part v {{ }} section Main {{ {block} }} form {{ Main }} score {{ staff v }}"), "v");
         Assert.True(score.Voice.Measures.Length >= expected, $"page {score.Voice.Measures.Length} < count {expected}");
     }
 
@@ -319,8 +319,8 @@ public class SectionVoicePaddingExportTests
         var ly = Twin("""
             part melody { section A { g2 g } }
             part bass { section A { c2 e | g2 g | } }
-            form main { A | }
-            score main { staff melody  staff bass }
+            form { A | }
+            score { staff melody  staff bass }
             """);
         Assert.Matches(@"g2 g \|\s*s1 \|", ly);
     }
@@ -331,8 +331,8 @@ public class SectionVoicePaddingExportTests
         var ly = Twin("""
             part melody { section A { g2 g | g2 g | g2 g | } section B { c1 | } }
             chords prog { section A { Dm7 | } section B { Cmaj7 | } }
-            form main { A | B | }
-            score main { chords prog  staff melody }
+            form { A | B | }
+            score { chords prog  staff melody }
             """);
         // Two silent chord bars after Dm7, so Cmaj7 stands over B's bar.
         Assert.Matches(@"d1:m7 \|\s*s1 \|\s*s1 \|\s*c1:maj7", ly);
@@ -355,8 +355,8 @@ public class SectionVoicePaddingExportTests
           section A { C | G | }
           section C { G | }
         }
-        form main { A B C }
-        score main { chords prog  staff melody  staff bass }
+        form { A B C }
+        score { chords prog  staff melody  staff bass }
         """;
 
     /// <summary>Poisons (RULES §5.4): return from AppendSection on the missing name, as it did,
@@ -386,8 +386,8 @@ public class SectionVoicePaddingExportTests
             section A { melody { g'2 g' | } bass { c2 e | } chords prog { C | } }
             section B { time 3/4  partial 4  melody { c''4 | d''2. | } }
             section C { melody { e''2 e'' | } bass { g2 g | } chords prog { G | } }
-            form main { A B C }
-            score main { chords prog  staff melody  staff bass }
+            form { A B C }
+            score { chords prog  staff melody  staff bass }
             """);
         Assert.Matches(@"c2 e \|\s*\\mark \\markup \\box ""B"" \\time 3/4 \\partial 4 s4 \|\s*s2\. \|\s*\\time 4/4 \\mark \\markup \\box ""C"" g2 g \|", ly);
         Assert.Matches(@"c1 \|\s*s4 \|\s*s2\. \|\s*g1 \|", ly);
@@ -414,8 +414,8 @@ public class SectionVoicePaddingExportTests
             part melody
             part X
             section A { partial 2  melody { c'4 d' | e'2 f' | g'2 g' | }  X { | | | } }
-            form main { A A }
-            score main { staff melody }
+            form { A A }
+            score { staff melody }
             """);
         Assert.Equal(new[] { 0, 1, 2, 4, 6, 8, 10, 11, 12, 14, 16, 18 }, notes.Select(n => n.Tick).ToArray());
     }
@@ -512,8 +512,8 @@ public class SectionVoicePaddingExportTests
             section A { melody { c'1 | } chords prog { C | } }
             section B { chords prog { F | G | } }
             section C { melody { e'1 | } chords prog { C | } }
-            form main { A B C }
-            score main { chords prog  staff melody }
+            form { A B C }
+            score { chords prog  staff melody }
             """);
         var melody = doc.Parts.Single(p => p.Name == "melody");
         Assert.Equal(4, melody.Measures.Count);
@@ -536,8 +536,8 @@ public class SectionVoicePaddingExportTests
             section A { melody { g'2 g' | } bass { c2 e | } chords prog { C | } }
             section B { time 3/4  partial 4  melody { c''4 | d''2. | } }
             section C { melody { e''2 e'' | } bass { g2 g | } chords prog { G | } }
-            form main { A B C }
-            score main { chords prog  staff melody  staff bass }
+            form { A B C }
+            score { chords prog  staff melody  staff bass }
             """);
         var bass = doc.Parts.Single(p => p.Name == "bass");
         Assert.Equal(4, bass.Measures.Count);
@@ -570,8 +570,8 @@ public class SectionVoicePaddingExportTests
             section A { melody { g'2 g' | } bass { c2 e | } chords prog { C | } }
             section B { time 3/4  partial 4  melody { c''4 | d''2. | } bass { c4 | d2. | } }
             section C { melody { e''2 e'' | } bass { g2 g | } chords prog { G | } }
-            form main { A B C }
-            score main { chords prog  staff melody  staff bass }
+            form { A B C }
+            score { chords prog  staff melody  staff bass }
             """);
         foreach (var part in doc.Parts.Where(p => p.Name is "melody" or "bass"))
         {

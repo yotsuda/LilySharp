@@ -35,7 +35,7 @@ public sealed class ChordDegreeTests
     private static ChordItem FirstChord(string body, string key = "c major")
     {
         var src = $"time 4/4\nkey {key}\npart m {{ clef treble\n  section A {{ {body} }} }}\n"
-                + "form main { A }\nscore main { staff m }";
+                + "form { A }\nscore { staff m }";
         return new MeasureCollector().Collect(SyntaxTree.Parse(src), "m").Voice.Measures
             .SelectMany(m => m.Items).OfType<ChordItem>().First();
     }

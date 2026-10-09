@@ -79,8 +79,8 @@
   <p>The smallest complete document is four lines:</p>
 <pre>part melody { clef treble }
 section Main { melody { c4 d e f | g2 g | } }
-form main { Main }
-score main { staff melody }</pre>
+form { Main }
+score { staff melody }</pre>
   <p>Everything else is optional, and top-level settings come first:</p>
 <pre>// comments are // to end of line, or /* … */
 title    "Song"
@@ -106,9 +106,9 @@ section Main {
   leftHand  { c2 c | g2 g | }
 }
 
-form main { Main }           // the playing order
+form { Main }           // the playing order
 
-score main "out" {           // one or more render blocks
+score "out" {           // one or more render blocks
   grandStaff { staff rightHand  staff leftHand }
 }</pre>
   <p>The declaration order above is the conventional one. Parts must be declared before the
@@ -291,15 +291,15 @@ c4@phrasingSlur d( e) f g@!phrasingSlur   // a phrasing slur over a whole phrase
   <h3>Across a section boundary</h3>
   <p>A slur, a phrasing slur, a tie or a hairpin still open when a section ends is carried
   into the section the form plays <b>next</b>, and must end there. The carry follows the
-  form, play by play — <code>form main { C D C E }</code> carries C's slur into D the first
+  form, play by play — <code>form { C D C E }</code> carries C's slur into D the first
   time and into E the second — so it is checked per form, per part and per play:</p>
 <pre>part vc {
   section C { g4 a b c( || }
   section D { d4) e f g~ || }
   section E { g'1 | }   // the frame resets at E: g' is the tied G
 }
-form main { C D E }
-score main { staff vc }</pre>
+form { C D E }
+score { staff vc }</pre>
   <p>A span that breaks the rule draws nothing (a hairpin is cut at its own section's end)
   and is reported as <b>LYS4023</b>: carried in and not ended in that next section, a
   <code>)</code> at a section's start with nothing carried in, or carried into a section the
@@ -517,7 +517,7 @@ part v1 { clef treble instrument "1st Violin" } // label only — no preset beha
   <code>piccolo</code>, a <code>transposition 8vb</code>) keep their notation under both, as
   a printed concert score keeps them. To print one score at concert pitch whichever way the
   file is written — the conductor's score — put the same words on that score:
-  <code>score main "full" pitch concert { … }</code>.</p>
+  <code>score "full" pitch concert { … }</code>.</p>
   <p class="note">An explicit <code>transpose</code> is a different thing: it moves the
   written notes by hand. Its argument is a PITCH, not a number of steps — it renames
   <code>c</code> to that pitch and shifts every note by the same interval, so
@@ -558,7 +558,7 @@ section Main { melody { motif g2 g | } }</pre>
   lyrics words sings melody { A- | las my love you do | }
 }</pre>
   <p>A section prints a rehearsal label by default. <code>~</code> on a form reference hides
-  it for that play (<code>form main { ~Verse Chorus }</code>). The tilde belongs to the
+  it for that play (<code>form { ~Verse Chorus }</code>). The tilde belongs to the
   reference only — <code>section ~A { … }</code> is an error.</p>
   <p>A section may state its own <code>key</code>, <code>time</code>, <code>tempo</code> or
   <code>partial</code> at the top of its body; they apply to every part of that section, and
@@ -585,8 +585,8 @@ section Main { melody { motif g2 g | } }</pre>
 <pre>part melody { section A { c4 c g' g | } }
 part bass   { section A { c2 e | } }
 section A { key g major }       // applies to every part playing A
-form main { A }
-score main { staff melody  staff bass }</pre>
+form { A }
+score { staff melody  staff bass }</pre>
   <p>In that grouping a chord row or a lyrics track names its sections inside it
   (<code>chords prog { section A { C | } }</code>). The editor's <i>Regroup</i> command
   rewrites a file from one grouping to the other, and <i>Split Sections to Match a Part</i>
@@ -602,16 +602,16 @@ score main { staff melody  staff bass }</pre>
   <b>score row</b>, or both — the same one property, written wherever it reads best.</p>
 <pre>// on the definition
 lyrics words sings melody { Hap- py birth- day | to you | }
-score main { staff melody  lyrics words }
+score { staff melody  lyrics words }
 
 // or on the score row, leaving the definition bare
 lyrics words { Hap- py birth- day | to you | }
-score main { staff melody  lyrics words sings melody }</pre>
+score { staff melody  lyrics words sings melody }</pre>
   <p><b>Spelling it on the row is what lets ONE track serve several staves.</b> Place the
   same <code>lyrics</code> row under each staff and bind it there — the words are written
   once and appear under every voice that sings them, which is what a homophonic chorale
   wants:</p>
-<pre>score main {
+<pre>score {
   staff sop "Soprano"
   lyrics verse sings sop
   staff alt "Alto"
@@ -645,8 +645,8 @@ section B {
     [2. down down down down |]
   }
 }
-form main { |: B :| }
-score main { staff melody  lyrics words }</pre>
+form { |: B :| }
+score { staff melody  lyrics words }</pre>
   <p>Barlines follow the same rule as music: every written <code>|</code> closes one bar,
   the one that <i>opens</i> the run included. That leading <code>|</code> is how a verse
   skips the rest bar its melody opens with.</p>
@@ -779,9 +779,9 @@ score main { staff melody  lyrics words }</pre>
   <h2>Forms — the playing order</h2>
   <p>A <code>form</code> lists sections in the order they are played and printed. This is
   where repeats live, because a repeat is a change to the order.</p>
-<pre>form main { Intro Main Main "Main (reprise)" Coda }
-form main { |: Body [1. ~First] :| [2. ~Second] }
-form main { |: A :|*3 }
+<pre>form { Intro Main Main "Main (reprise)" Coda }
+form { |: Body [1. ~First] :| [2. ~Second] }
+form { |: A :|*3 }
 form practice { Verse }        // a second form = a second output</pre>
   <table class="g">
     <tr><th>Written</th><th>Means</th></tr>
@@ -810,7 +810,7 @@ form practice { Verse }        // a second form = a second output</pre>
   section; text directives (<code>fine</code>, <code>to coda</code>, <code>dc</code>,
   <code>ds</code>, and <code>dc al fine</code>, <code>ds al coda</code>) engrave at the end
   of the section just played.</p>
-<pre>form main { A segno  B to coda  C ds al coda  coda D }   // the MIDI plays A B C B D</pre>
+<pre>form { A segno  B to coda  C ds al coda  coda D }   // the MIDI plays A B C B D</pre>
   <p>The MIDI follows the jump texts as a player reads them: <code>dc</code> goes back to
   the beginning and <code>ds</code> to after the last <code>segno</code>; <code>al fine</code>
   ends the piece at the first <code>fine</code> of the replay, <code>al coda</code> goes on
@@ -832,7 +832,7 @@ form practice { Verse }        // a second form = a second output</pre>
   <h2>Scores</h2>
   <p>A <code>score</code> binds a form to a set of rows. <b>It is a vertical stack of
   bands</b>: what a row means comes from where it sits.</p>
-<pre>score main "out" {
+<pre>score "out" {
   chords prog                     // a chord row above ...
   staff melody "Melody"           // ... the staff it belongs to
   lyrics words                    // ... and that staff's verse below it
@@ -878,8 +878,8 @@ form practice { Verse }        // a second form = a second output</pre>
   moment is not applied and warns — write the same change in every part.</p>
   <p>Because these are score items, one source prints both the condensed score and the
   separate parts:</p>
-<pre>score main "full"  { condensedStaff { fl1 fl2 } }
-score main "parts" { staff fl1  staff fl2 }</pre>
+<pre>score "full"  { condensedStaff { fl1 fl2 } }
+score "parts" { staff fl1  staff fl2 }</pre>
 </section>
 
 <section id="tab">
@@ -888,7 +888,7 @@ score main "parts" { staff fl1  staff fl2 }</pre>
   <p>Give a part a <code>tuning</code> and render it with <code>tab</code>:</p>
 <pre>part gt { clef treble_8 tuning guitar }
 
-score main {
+score {
   staff gt        // the notation
   tab gt          // the tablature under it
 }</pre>
@@ -975,7 +975,7 @@ score main {
   voltaBracket all         // the default: an ending's bracket covers all of it
 }
 layout chart { markTempo beside  barNumbers every 4  chordQualities words }
-score main  { staff melody }                 // the file's default
+score  { staff melody }                 // the file's default
 score parts { layout chart  staff melody }   // this score's own</pre>
   <table class="g">
     <tr><th>Key</th><th>Values</th><th>Chooses</th></tr>
@@ -1085,7 +1085,7 @@ ppp pp p mp mf ff fff</pre>
     <tr><td><code>\new Staff</code>, <code>\new Voice</code></td><td><code>part</code> declarations and <code>score</code> rows</td></tr>
     <tr><td><code>&lt;&lt; … \\ … &gt;&gt;</code></td><td><code>voice { … } { … }</code></td></tr>
     <tr><td><code>&lt;&lt; … &gt;&gt;</code> (parallel)</td><td>in Lily# this spelling is a written-out arpeggio</td></tr>
-    <tr><td><code>\repeat volta 2 { … }</code></td><td><code>form main { |: A :| }</code></td></tr>
+    <tr><td><code>\repeat volta 2 { … }</code></td><td><code>form { |: A :| }</code></td></tr>
     <tr><td><code>\alternative</code></td><td><code>[1. B] :| [2. C]</code> in the form</td></tr>
     <tr><td><code>c4\staccato</code>, <code>c4-.</code></td><td><code>c4@staccato</code></td></tr>
     <tr><td><code>c:maj7</code>, <code>fis:m7.5-</code></td><td><code>Cmaj7</code>, <code>F#m7-5</code> — the printed symbol, with <code>+</code>/<code>-</code> for an altered tension</td></tr>

@@ -43,8 +43,8 @@ section Main {
   melody { graceLeadingRest graceInnerRest graceDottedRest }
 }
 
-form main { Main }
+form { Main }
 
-score main "grace-rest" {
+score "grace-rest" {
   staff melody
 }

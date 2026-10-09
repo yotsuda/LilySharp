@@ -57,8 +57,8 @@ public sealed class SystemCountPageScoreTests
 
           }
         }
-        form main { Body }
-        score main { staff bl }
+        form { Body }
+        score { staff bl }
         """;
 
     private const string FourBusyBars =
@@ -191,8 +191,8 @@ public sealed class SystemCountPageScoreTests
             gis,4. dis,8 gis, gis, r dis, | gis,2 gis,8 gis, r cis, | fis,2 fis,8 fis, r cis, | fis,,4 r8 fis,, eis,,4 eis, |
           }
         }
-        form main { Intro A }
-        score main { staff bl }
+        form { Intro A }
+        score { staff bl }
         """;
 
     /// <summary>

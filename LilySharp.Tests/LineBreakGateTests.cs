@@ -65,8 +65,8 @@ public class LineBreakGateTests
         part melody { clef treble }
         phrase mel { {{phraseBody}} }
         section Main { melody { mel } }
-        form main { Main }
-        score main "x" { staff melody }
+        form { Main }
+        score "x" { staff melody }
         """;
 
     [Fact]

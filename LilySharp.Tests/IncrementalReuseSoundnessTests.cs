@@ -70,8 +70,8 @@ public class IncrementalReuseSoundnessTests
         part melody { clef treble }
         phrase mel { c4 d e f | g4 a b c | d4 e f g | a4 b c d | }
         section Main { melody { mel } }
-        form main { Main }
-        score main "x" { staff melody }
+        form { Main }
+        score "x" { staff melody }
         """;
 
     private const string Header = """
@@ -83,8 +83,8 @@ public class IncrementalReuseSoundnessTests
         part melody { clef treble }
         phrase mel { c8 d e f g a b c | g4 a b c | }
         section Main { melody { mel } }
-        form main { Main }
-        score main "x" { staff melody }
+        form { Main }
+        score "x" { staff melody }
         """;
 
     private const string Lyrics = """
@@ -95,8 +95,8 @@ public class IncrementalReuseSoundnessTests
           melody { c4 d e f | g4 a b c | }
           lyrics { Twin- kle lit- tle | star how I you | }
         }
-        form main { Main }
-        score main "x" { staff melody }
+        form { Main }
+        score "x" { staff melody }
         """;
 
     private const string GrandStaff = """
@@ -105,8 +105,8 @@ public class IncrementalReuseSoundnessTests
         part rh "Violin" { clef treble }
         part lh "Cello" { clef bass }
         section Main { rh { c4 d e f | g4 a b c | } lh { c4 d e f | g4 a b c | } }
-        form main { Main }
-        score main "x" { grandStaff { staff rh staff lh } }
+        form { Main }
+        score "x" { grandStaff { staff rh staff lh } }
         """;
 
     // ---------------------------------------------------------------------
@@ -124,8 +124,8 @@ public class IncrementalReuseSoundnessTests
         section Main {
           melody { voice { c'2 d | e2 f | } { a2 g | b2 a | } }
         }
-        form main { Main }
-        score main "x" { staff melody }
+        form { Main }
+        score "x" { staff melody }
         """;
 
     [Fact]
@@ -252,8 +252,8 @@ public class IncrementalReuseSoundnessTests
         part melody
         phrase mel { voice { c'2 d | e2 f | } { a2 g | b2 a | } }
         section Main { melody { mel } }
-        form main { Main }
-        score main "x" { staff melody }
+        form { Main }
+        score "x" { staff melody }
         """;
 
     [Fact]
@@ -300,8 +300,8 @@ public class IncrementalReuseSoundnessTests
         part melody
         phrase mel { override Stem.length = 10 c4 d e f | revert Stem.length g4 a b c | }
         section Main { melody { mel } }
-        form main { Main }
-        score main "x" { staff melody }
+        form { Main }
+        score "x" { staff melody }
         """;
 
     [Fact]
@@ -393,8 +393,8 @@ public class IncrementalReuseSoundnessTests
           c4 d e f | g4 a b c | d4 e f g | a4 b c d |
         }
         section Main { melody { mel } }
-        form main { Main }
-        score main "x" { staff melody }
+        form { Main }
+        score "x" { staff melody }
         """;
 
     // Offset of the first character of bar `bar` inside the phrase body.

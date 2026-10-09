@@ -3,7 +3,7 @@ time 4/4
 part m {
   section A { c''4@ottava~ c'' d''~ d''@!ottava | e''4~ e'' f''2 | a''4@ottava( b'' c'''~ c'''@!ottava) | }
 }
-form main { A }
-score main {
+form { A }
+score {
   staff m
 }

@@ -10,5 +10,5 @@ section A {
     s2 b |
   }
 }
-form main { A }
-score main { tab m as numbers }
+form { A }
+score { tab m as numbers }

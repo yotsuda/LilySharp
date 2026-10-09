@@ -56,12 +56,12 @@ section Main {
   harmony { cueChords }
 }
 
-form main { Main }
+form { Main }
 
-score main "cue-melody" {
+score "cue-melody" {
   staff treble melody
 }
 
-score main "cue-chords" {
+score "cue-chords" {
   staff treble harmony
 }

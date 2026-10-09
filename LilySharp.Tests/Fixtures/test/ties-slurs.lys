@@ -40,8 +40,8 @@ section Main {
   melody { ties slurs tieDirection }
 }
 
-form main { Main }
+form { Main }
 
-score main "ties-slurs" {
+score "ties-slurs" {
   staff melody
 }

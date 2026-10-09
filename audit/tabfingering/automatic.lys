@@ -61,17 +61,17 @@ part bassline {
   }
 }
 
-form main { Intro A1 |: A2 B C1 C2 [1. ~Intro2_1] :| [2. ~Intro2_2] C3 C4 C5 C6 }
+form { Intro A1 |: A2 B C1 C2 [1. ~Intro2_1] :| [2. ~Intro2_2] C3 C4 C5 C6 }
 
-score main {
+score {
   staff bassline
 }
 
-score main "both" {
+score "both" {
   staff bassline
   tab bassline
 }
 
-score main "tab" {
+score "tab" {
   tab bassline
 }

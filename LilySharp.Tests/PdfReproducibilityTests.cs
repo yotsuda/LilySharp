@@ -40,8 +40,8 @@ public class PdfReproducibilityTests
         key g major
         part m { clef treble }
         section A { m { g'4@mf a' b' c'' | d''2.@text("dolce") r4 | } }
-        form main { A }
-        score main { staff m }
+        form { A }
+        score { staff m }
         """;
 
     private static byte[] Pdf() => PdfGenerator.Generate(SyntaxTree.Parse(Book));

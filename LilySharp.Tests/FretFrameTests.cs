@@ -40,8 +40,8 @@ public class FretFrameTests
         octave absolute
         part gt { clef treble }
         section A { gt { <g,@diagram(320003) d g>2 <g' d'' g''@diagram(320003)>2 | e2 c2@diagram(x32010).down | } }
-        form main { A }
-        score main { staff gt }
+        form { A }
+        score { staff gt }
         """;
 
     /// <summary>
@@ -104,8 +104,8 @@ public class FretFrameTests
         octave absolute
         part gt { clef treble }
         section A { gt { <g@diagram(320003) b d'>4 <d'@diagram(xx0232) fis' a'>4 <c'@diagram(x32010) e' g'>4 <a@diagram(x02220) cis' e'>4 | } }
-        form main { A }
-        score main { staff gt }
+        form { A }
+        score { staff gt }
         """;
 
     private static readonly ScoreTextMetrics Fonts = ScoreTextMetrics.Bundled;
@@ -218,8 +218,8 @@ public class FretFrameTests
             octave absolute
             part gt { clef treble }
             section A { gt { c'2@diagram(x-15-13-12-13-x) c'2@diagram(x-x-10-12-13-11) | } }
-            form main { A }
-            score main { staff gt }
+            form { A }
+            score { staff gt }
             """;
         var f = Frames(high);
         Assert.Equal(new[] { "frame:xfdcdx", "frame:xxacdb" }, f.Select(a => a.Glyph));

@@ -36,8 +36,8 @@ public class UnrenderedPartStructureMarkTests
         part piano { clef treble  section Main { segno c4 d e f | g a b c } }
         chords prog { section Main { C | G } }
         lyrics words { section Main { Twin- kle lit- tle | star how I } }
-        form main { Main }
-        score main { chords prog  lyrics words }
+        form { Main }
+        score { chords prog  lyrics words }
         """;
 
     private static MultiStaffScore Collect(string src)
@@ -75,8 +75,8 @@ public class UnrenderedPartStructureMarkTests
     public void RenderingThePartItself_StillHasExactlyOneSegno()
     {
         // When the carrying part IS drawn the harvest must not double it (the dedup guard).
-        var src = Source.Replace("score main { chords prog  lyrics words }",
-            "score main { chords prog  staff piano }");
+        var src = Source.Replace("score { chords prog  lyrics words }",
+            "score { chords prog  staff piano }");
         Assert.Equal(1, Collect(src).MusicMarks.Count(m => m.Type == MusicMarkType.Segno));
     }
 
@@ -104,8 +104,8 @@ public class UnrenderedPartStructureMarkTests
             time 4/4
             part piano { clef treble  section A { |: c4 d e f | g a b c :| } section B { c1 | g1 } }
             chords prog { section A { C | G } section B { C | G } }
-            form main { B A }
-            score main { chords prog }
+            form { B A }
+            score { chords prog }
             """;
         var measures = Collect(src).StaffGroups
             .SelectMany(g => g.Staves).SelectMany(s => s.Voices).First().Measures;
@@ -131,8 +131,8 @@ public class UnrenderedPartStructureMarkTests
             chords prog { section Main { C | G } }
             lyrics words { section Main { Twin- kle lit- tle | star how I } }
             section Main { piano { segno c4 d e f | g a b c } }
-            form main { Main }
-            score main { chords prog  lyrics words }
+            form { Main }
+            score { chords prog  lyrics words }
             """;
         Assert.Equal(1, Collect(src).MusicMarks.Count(m => m.Type == MusicMarkType.Segno));
     }
@@ -146,8 +146,8 @@ public class UnrenderedPartStructureMarkTests
             chords prog { section A { C | G } section B { C | G } }
             section A { piano { |: c4 d e f | g a b c :| } }
             section B { piano { c1 | g1 } }
-            form main { B A }
-            score main { chords prog }
+            form { B A }
+            score { chords prog }
             """;
         var measures = Collect(src).StaffGroups
             .SelectMany(g => g.Staves).SelectMany(s => s.Voices).First().Measures;
@@ -165,16 +165,16 @@ public class UnrenderedPartStructureMarkTests
             time 4/4
             part piano { clef treble  section A { |: segno c4 d e f | g a b c :| } }
             chords prog { section A { C | G } }
-            form main { A }
-            score main { chords prog }
+            form { A }
+            score { chords prog }
             """;
         var groupedBySection = """
             time 4/4
             part piano { clef treble }
             chords prog { section A { C | G } }
             section A { piano { |: segno c4 d e f | g a b c :| } }
-            form main { A }
-            score main { chords prog }
+            form { A }
+            score { chords prog }
             """;
         var pm = Collect(groupedByPart);
         var sm = Collect(groupedBySection);
@@ -195,8 +195,8 @@ public class UnrenderedPartStructureMarkTests
             part piano { clef treble }
             chords prog { section A { C | G | A } }
             section A { piano { |: c4 d e f | [1. g2 g | ] :| [2. a2 a | ] } }
-            form main { A }
-            score main { chords prog }
+            form { A }
+            score { chords prog }
             """;
         var voltas = Collect(src).VoltaBrackets;
         Assert.Contains(voltas, v => v.VoltaText.Contains('1'));
@@ -219,8 +219,8 @@ public class UnrenderedPartStructureMarkTests
             chords prog { section Z { C } section A { C | G } }
             section Z { piano { c1 } }
             section A { piano { hook } }
-            form main { Z A }
-            score main { chords prog }
+            form { Z A }
+            score { chords prog }
             """;
         var measures = Collect(src).StaffGroups
             .SelectMany(g => g.Staves).SelectMany(s => s.Voices).First().Measures;
@@ -239,8 +239,8 @@ public class UnrenderedPartStructureMarkTests
             phrase hook { core }
             part piano { clef treble  section Z { c1 } section A { hook } }
             chords prog { section Z { C } section A { C | G } }
-            form main { Z A }
-            score main { chords prog }
+            form { Z A }
+            score { chords prog }
             """;
         var measures = Collect(src).StaffGroups
             .SelectMany(g => g.Staves).SelectMany(s => s.Voices).First().Measures;
@@ -256,8 +256,8 @@ public class UnrenderedPartStructureMarkTests
             phrase hook { segno g8 g a4 a8 a a4 | g2 f }
             part piano { clef treble  section A { hook } }
             chords prog { section A { C | G } }
-            form main { A }
-            score main { chords prog }
+            form { A }
+            score { chords prog }
             """;
         Assert.Equal(1, Collect(src).MusicMarks.Count(m => m.Type == MusicMarkType.Segno));
     }
@@ -272,8 +272,8 @@ public class UnrenderedPartStructureMarkTests
             phrase hook { g8 g a4 a8 a a4 | g2 f }
             part piano { clef treble  section A { hook } }
             chords prog { section A { C | G } }
-            form main { A }
-            score main { chords prog }
+            form { A }
+            score { chords prog }
             """;
         var score = Collect(src);
         Assert.DoesNotContain(score.MusicMarks, m => m.Type == MusicMarkType.Segno);
@@ -282,7 +282,7 @@ public class UnrenderedPartStructureMarkTests
             m => m.StartBarline == BarlineType.RepeatStart || m.EndBarline == BarlineType.RepeatEnd);
     }
 
-    // ── The SINGLE-staff road (`score main { staff sax }` — one plain staff goes through
+    // ── The SINGLE-staff road (`score { staff sax }` — one plain staff goes through
     // the SvgGenerator wrap, not CollectMultiStaff). That road never called the harvest at
     // all, in EITHER spelling: extracting one part from a band book dropped every repeat and
     // navigation mark the other parts wrote (2026-08-27, measured: the extracted page was
@@ -297,8 +297,8 @@ public class UnrenderedPartStructureMarkTests
             part piano { clef treble  section Z { c1 } section A { |: c4 d e f | g a b c :| } }
             section Z { sax { c1 } }
             section A { sax { c4 d e f | g4 f e d | } }
-            form main { Z A }
-            score main { staff sax }
+            form { Z A }
+            score { staff sax }
             """;
         var measures = CollectViaRenderPath(src).StaffGroups
             .SelectMany(g => g.Staves).SelectMany(s => s.Voices).First().Measures;
@@ -321,8 +321,8 @@ public class UnrenderedPartStructureMarkTests
               sax { c4 d e f | g4 f e d | }
               piano { |: c4 d e f | g a b c :| }
             }
-            form main { Z A }
-            score main { staff sax }
+            form { Z A }
+            score { staff sax }
             """;
         var measures = CollectViaRenderPath(src).StaffGroups
             .SelectMany(g => g.Staves).SelectMany(s => s.Voices).First().Measures;
@@ -338,8 +338,8 @@ public class UnrenderedPartStructureMarkTests
             part sax { }
             part piano { clef treble  section A { segno c4 d e f | g a b c } }
             section A { sax { c4 d e f | g4 f e d | } }
-            form main { A }
-            score main { staff sax }
+            form { A }
+            score { staff sax }
             """;
         Assert.Equal(1, CollectViaRenderPath(src).MusicMarks.Count(m => m.Type == MusicMarkType.Segno));
     }
@@ -355,8 +355,8 @@ public class UnrenderedPartStructureMarkTests
             part piano { clef treble  section Z { c1 } section A { |: c4 d e f | g a b c :| } }
             section Z { sax { voice { c1 } { c,1 } } }
             section A { sax { voice { c4 d e f | g4 f e d | } { c,4 d e f | g,4 f e d | } } }
-            form main { Z A }
-            score main { staff sax }
+            form { Z A }
+            score { staff sax }
             """;
         var measures = CollectViaRenderPath(src).StaffGroups
             .SelectMany(g => g.Staves).SelectMany(s => s.Voices).First().Measures;
@@ -373,8 +373,8 @@ public class UnrenderedPartStructureMarkTests
             time 4/4
             part piano { clef treble  section A { |: c4 d e f | [1. g2 g | ] :| [2. a2 a | ] } }
             chords prog { section A { C | G | A } }
-            form main { A }
-            score main { chords prog }
+            form { A }
+            score { chords prog }
             """;
         var voltas = Collect(src).VoltaBrackets;
         Assert.Contains(voltas, v => v.VoltaText.Contains('1'));

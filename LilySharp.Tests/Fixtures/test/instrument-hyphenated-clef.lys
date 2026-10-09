@@ -5,5 +5,5 @@ part m { instrument piano-left }
 section A {
   m { c,4 d e f }
 }
-form main { A }
-score main { staff m }
+form { A }
+score { staff m }

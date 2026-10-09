@@ -30,7 +30,7 @@ namespace LilySharp.Tests;
 /// </summary>
 /// <remarks>
 /// ⚠️ Until 2026-08-23 they were ordinary snippets: accepting one dropped a complete second
-/// piece — its own <c>title</c>, <c>tempo</c>, <c>form main</c>, <c>score main</c> — at the
+/// piece — its own <c>title</c>, <c>tempo</c>, <c>form main</c>, <c>score</c> — at the
 /// caret of whatever the writer already had. Nothing was red. Every net in this suite reads
 /// the completion LIST (is the label offered? is it offered in the right context?) and none
 /// read what accepting one DOES to the document, so the only observer was the writer's eye.
@@ -143,7 +143,7 @@ public class ScoreTemplateCompletionTests
         // The text travels in the argument: the server is its one home, so a new template
         // needs no change in the extension.
         var template = Assert.IsType<string>(args[1]);
-        Assert.Contains("score main", template);
+        Assert.Contains("score", template);
 
         // The last four are the range the no-op edit rewrote. The editor subtracts it before
         // asking whether there is anything to lose — a fresh file where `temp` was typed to

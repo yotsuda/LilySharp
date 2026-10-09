@@ -50,8 +50,8 @@ public class MusicXmlChordTieTests
             time 4/4
             part v { }
             section Main { v { {{body}} } }
-            form main { ~Main }
-            score main { staff ~v }
+            form { ~Main }
+            score { staff ~v }
             """);
         return new MusicXmlExporter().Export(tree).ToXml()
             .Descendants("note").Where(n => n.Element("rest") == null).ToList();

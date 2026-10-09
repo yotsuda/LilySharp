@@ -105,8 +105,8 @@ public class BreakKeywordTests
               section B { g'4 a' b' c'' | }
               section C { c'4 d' e' f' | }
             }
-            form main { A B break C }
-            score main { staff m }
+            form { A B break C }
+            score { staff m }
             """;
         var score = new MeasureCollector().Collect(SyntaxTree.Parse(source), "m");
         Assert.Equal(3, score.Voice.Measures.Length);
@@ -124,8 +124,8 @@ public class BreakKeywordTests
               section A { c'4 d' e' f' | }
               section B { g'4 a' b' c'' | }
             }
-            form main { A noBreak B }
-            score main { staff m }
+            form { A noBreak B }
+            score { staff m }
             """;
         var score = new MeasureCollector().Collect(SyntaxTree.Parse(source), "m");
         Assert.Equal(LilySharp.Core.Svg.Layout.BreakPermission.Forbid,

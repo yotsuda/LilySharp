@@ -62,7 +62,7 @@ public sealed partial class LilyPondExporter
             if (spec != null)
                 // ⚠️ THE PER-SCORE REFERENCES ARE SET HERE, the way the render pipeline sets
                 // them (SvgGenerator.CollectFor). Until 2026-09-11 this collect was a bare
-                // `new MeasureCollector()`, so `score main { fonts house }` was invisible to
+                // `new MeasureCollector()`, so `score { fonts house }` was invisible to
                 // the twin and it wrote the FILE's plan — the page and its twin read two
                 // different plans, which is the one thing PageModel exists to prevent. Found
                 // while wiring `layout NAME`; measured at the same time: no tracked book

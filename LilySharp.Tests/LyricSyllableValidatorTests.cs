@@ -41,7 +41,7 @@ public class LyricSyllableValidatorTests
     // overflow this validator reads back.
     private static string Scored(string music, string lyrics) =>
         $"time 4/4\nsection S {{\n  m {{ {music} }}\n  lyrics w sings m {{ {lyrics} }}\n}}\n"
-        + "form main { S }\nscore main { staff m  lyrics w }\n";
+        + "form { S }\nscore { staff m  lyrics w }\n";
 
     private static Diagnostic? Overflow(IReadOnlyList<Diagnostic> diags) =>
         diags.FirstOrDefault(d => d.Code == DiagnosticCodes.LyricSyllableOverflow);
@@ -65,8 +65,8 @@ public class LyricSyllableValidatorTests
         // The section's lyrics are walked once per play; the overflow is one mistake, and the
         // run of all validators (what the CLI and the editor report) says it once.
         var source = Scored("c4 d e f", "one two three four five")
-            .Replace("form main { S }", "form main { S S }");
-        Assert.Contains("form main { S S }", source);
+            .Replace("form { S }", "form { S S }");
+        Assert.Contains("form { S S }", source);
         Assert.Single(SemanticValidation.Run(SyntaxTree.Parse(source)),
             d => d.Code == DiagnosticCodes.LyricSyllableOverflow);
     }

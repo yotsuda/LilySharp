@@ -32,7 +32,7 @@ namespace LilySharp.Core.Semantics;
 /// <see cref="SlurPairingValidator"/> gives: the page draws by the same rule.
 /// </para>
 /// <para>
-/// ⚠️ PER FORM, because a section's neighbours are the form's: <c>form main { C D }</c> carries
+/// ⚠️ PER FORM, because a section's neighbours are the form's: <c>form { C D }</c> carries
 /// C's closing slur into D, and <c>form other { D C }</c> leaves it with nothing after it. The
 /// shared collect is the FIRST score's; every other score is collected too when it plays a
 /// different form, or engraves a part no collect of that form has covered yet (owner's
@@ -114,9 +114,9 @@ internal sealed class SectionCarryValidator : ISharedCollectValidator
         }
     }
 
-    /// <summary>"form 'main'", or the order the sections are declared in when no form is.</summary>
+    /// <summary>"form 'practice'", "the form" for the unnamed one, or the order the sections are declared in when no form is.</summary>
     private static string FormLabel(FormDeclarationSyntax? form)
-        => form is { NameText: { Length: > 0 } name } ? "form '" + name + "'" : "the order the sections are declared in";
+        => form is null ? "the order the sections are declared in" : form.NameText is { Length: > 0 } name ? "form '" + name + "'" : "the form";
 
     /// <summary>The words for one fault. ASCII punctuation only: these strings reach
     /// legacy-codepage consoles via the CLI.</summary>

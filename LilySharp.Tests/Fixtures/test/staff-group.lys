@@ -12,9 +12,9 @@ section Main {
   vla { f4 g a g | f1 | }
 }
 
-form main { Main }
+form { Main }
 
-score main "staff-group" {
+score "staff-group" {
   staffGroup {
     staff vln
     staff vla

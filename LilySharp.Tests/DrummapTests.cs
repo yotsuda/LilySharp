@@ -43,8 +43,8 @@ public class DrummapTests
         part kit { clef percussion }
         {{drummap}}
         section Groove { kit { hh8 hh hhc4 bd4 | } }
-        form main { Groove }
-        score main "drums" { staff kit }
+        form { Groove }
+        score "drums" { staff kit }
         """;
 
     /// <summary>The drum table a score's drummap produces, read the way the collector does.</summary>

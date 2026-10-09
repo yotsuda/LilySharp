@@ -88,7 +88,7 @@ public readonly struct PassSet : IEquatable<PassSet>
 /// <remarks>
 /// Until 2026-09-29 (HANDOFF §1.1 第663 ⑾) only the music stream's MIDI read the numbers. The
 /// form's three readers each spelled the run for themselves, and all three played the i-th
-/// WRITTEN ending on pass i and counted the ENDINGS: <c>form main { |: A [1-2. B] :| [3. C] }</c>
+/// WRITTEN ending on pass i and counted the ENDINGS: <c>form { |: A [1-2. B] :| [3. C] }</c>
 /// sounded A B A C — and carried a tie, and exempted a split bar, along that order — while the
 /// same music written inline sounded A B A B A C. Measured on that book and on
 /// <c>[1,3. B] :| [2. C]</c> (A B A C A B against A B A C); <c>FormEndingPassTests</c>.

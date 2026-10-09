@@ -10,9 +10,9 @@ part m {
   section A { a4@accent a@flageolet a@fermata a@portato | }
 }
 
-form main { A }
+form { A }
 
-score main {
+score {
   staff m
   tab m as full
 }

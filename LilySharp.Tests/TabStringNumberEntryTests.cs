@@ -43,8 +43,8 @@ public class TabStringNumberEntryTests
             <e\5 dis'\4>4 <e dis'>4\5\4 <e dis'\4>4\5 r4 |
           }
         }
-        form main { A }
-        score main { tab m as numbers }
+        form { A }
+        score { tab m as numbers }
         """;
 
     [Fact]
@@ -107,8 +107,8 @@ public class TabStringNumberEntryTests
               instrument bass
               section A { {{music}} }
             }
-            form main { A }
-            score main { tab melody }
+            form { A }
+            score { tab melody }
             """);
 
         var digits = new List<(double X, double Y, string Text)>();
@@ -146,8 +146,8 @@ public class TabStringNumberEntryTests
               instrument bass
               section A { \2 c8 c c c }
             }
-            form main { A }
-            score main { tab melody }
+            form { A }
+            score { tab melody }
             """);
 
         var error = Assert.Single(tree.Diagnostics,

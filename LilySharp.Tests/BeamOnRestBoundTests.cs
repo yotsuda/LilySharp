@@ -52,15 +52,15 @@ public class BeamOnRestBoundTests
     private const string OpensOnRest = """
         octave absolute
         part m { section A { r8[ c' c' c'] | } }
-        form main { A }
-        score main { staff m }
+        form { A }
+        score { staff m }
         """;
 
     private const string ClosesOnRest = """
         octave absolute
         part m { section A { c'8[ c' c' r8] | } }
-        form main { A }
-        score main { staff m }
+        form { A }
+        score { staff m }
         """;
 
     // THE CONTROL: the same four columns with a note in the rest's place. Its beam must NOT
@@ -69,8 +69,8 @@ public class BeamOnRestBoundTests
     private const string NoRest = """
         octave absolute
         part m { section A { c'8[ c' c' c'] | } }
-        form main { A }
-        score main { staff m }
+        form { A }
+        score { staff m }
         """;
 
     /// <summary>The bracket is accepted: no diagnostic, and the group is the writer's.</summary>

@@ -12,8 +12,8 @@ section A {
   m { g'4 acciaccatura { cis'8 } <e' ges' bes'>4 r2 }
 }
 
-form main { A }
+form { A }
 
-score main "grace-chord-accidental" {
+score "grace-chord-accidental" {
   staff m
 }

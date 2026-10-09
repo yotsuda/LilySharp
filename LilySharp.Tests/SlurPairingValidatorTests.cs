@@ -31,7 +31,7 @@ public class SlurPairingValidatorTests
 {
     private static IReadOnlyList<Diagnostic> Warnings(string music)
     {
-        var source = $"part m {{ section A {{ {music} }} }} form main {{ A }} score main {{ staff m }}";
+        var source = $"part m {{ section A {{ {music} }} }} form {{ A }} score {{ staff m }}";
         var validator = new SlurPairingValidator();
         validator.Validate(SyntaxTree.Parse(source));
         return validator.Diagnostics
@@ -71,7 +71,7 @@ public class SlurPairingValidatorTests
     public void ARestIsASlurBoundForTheWarningAsForThePage(string music, int drawn)
     {
         var tree = SyntaxTree.Parse(
-            $"part m {{ section A {{ {music} }} }} form main {{ A }} score main {{ staff m }}");
+            $"part m {{ section A {{ {music} }} }} form {{ A }} score {{ staff m }}");
         var score = new LilySharp.Core.Svg.Collector.MeasureCollector().Collect(tree, "m");
         var slurs = new LilySharp.Core.Svg.Collector.SlurDetector().DetectSlurs(score);
         Assert.Equal(drawn, slurs.Count(s => !s.IsPhrasing));
@@ -89,7 +89,7 @@ public class SlurPairingValidatorTests
         // A rest carries no cue flag; read as "outside every cue" it would make one cue
         // region two and report a crossing that is not there.
         Assert.Empty(SemanticValidation.Run(SyntaxTree.Parse(
-                "part m { section A { c'4 cue { e4( r4 g4) } r4 | } } form main { A } score main { staff m }"))
+                "part m { section A { c'4 cue { e4( r4 g4) } r4 | } } form { A } score { staff m }"))
             .Where(d => d.Code == DiagnosticCodes.SpanCrossesCueBoundary));
 
     [Theory]
@@ -137,6 +137,6 @@ public class SlurPairingValidatorTests
         // diagnostics both surface it.
         Assert.Contains(
             SemanticValidation.Run(SyntaxTree.Parse(
-                "part m { section A { c4( d e f } } form main { A } score main { staff m }")),
+                "part m { section A { c4( d e f } } form { A } score { staff m }")),
             d => d.Code == DiagnosticCodes.UnpairedSlur);
 }

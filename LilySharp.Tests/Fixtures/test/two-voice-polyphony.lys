@@ -10,8 +10,8 @@ section Main {
     voice { g'2 a | b4 c b a | } { c4 d e f | g2 g | } 
   }
 }
-form main { Main }
-score main "two-voice-polyphony" { staff m }
+form { Main }
+score "two-voice-polyphony" { staff m }
 
 // ---------------------------------------------------------------------------
 // ⚠️ THIS NOTE IS AT THE FILE END ON PURPOSE. A comment ABOVE the music shifts every

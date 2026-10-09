@@ -10,6 +10,6 @@ section Main {
   bs { a2@figuredBass(5 3)@staccatissimo.down g2@figuredBass(6) | c1@figuredBass(7) | }
 }
 
-form main { Main }
+form { Main }
 
-score main "figbass-below-script" { staff bs }
+score "figbass-below-script" { staff bs }

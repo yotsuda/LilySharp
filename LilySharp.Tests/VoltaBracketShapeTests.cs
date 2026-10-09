@@ -54,7 +54,7 @@ public sealed class VoltaBracketShapeTests
         """;
 
     private static string Source(string form, string layout = "")
-        => Head + layout + (layout.Length > 0 ? "\n" : "") + form + "\nscore main { staff m }\n";
+        => Head + layout + (layout.Length > 0 ? "\n" : "") + form + "\nscore { staff m }\n";
 
     private static SyntaxTree Parse(string form, string layout = "")
     {
@@ -76,7 +76,7 @@ public sealed class VoltaBracketShapeTests
     [Fact]
     public void TheEndShapes_AndTheOverride_RoundTrip()
     {
-        const string form = "form main { |: A [1. B C]@voltaBracket(3) :| [2. D E -]@voltaBracket(line) }";
+        const string form = "form { |: A [1. B C]@voltaBracket(3) :| [2. D E -]@voltaBracket(line) }";
         var tree = Parse(form);
         Assert.Equal(Source(form), tree.GetRoot().ToFullString());
         var endings = tree.GetRoot().DescendantNodes().OfType<FormAlternativeSyntax>().ToList();
@@ -93,8 +93,8 @@ public sealed class VoltaBracketShapeTests
     /// cannot hold a '-' and a '-' never lexes into a number — so <c>E-]</c> is the section E
     /// and an open end, and a range ending's own '-' (<c>[1-2.</c>) is unaffected.</summary>
     [Theory]
-    [InlineData("form main { |: A [1. B] :| [2-3. C E-] }", 2)]
-    [InlineData("form main { |: A [1. B] :| [2. C -] }", 1)]
+    [InlineData("form { |: A [1. B] :| [2-3. C E-] }", 2)]
+    [InlineData("form { |: A [1. B] :| [2. C -] }", 1)]
     public void MinusBracket_IsAnOpenEnd(string form, int sections)
     {
         var last = Parse(form).GetRoot().DescendantNodes().OfType<FormAlternativeSyntax>().Last();
@@ -105,7 +105,7 @@ public sealed class VoltaBracketShapeTests
     [Fact]
     public void AMinusApartFromItsBracket_IsTheOrdinaryExpectedError()
     {
-        var tree = SyntaxTree.Parse(Source("form main { |: A [1. B] :| [2. C - ] }"));
+        var tree = SyntaxTree.Parse(Source("form { |: A [1. B] :| [2. C - ] }"));
         var error = Assert.Single(tree.Diagnostics, d => d.Code == DiagnosticCodes.ExpectedToken);
         Assert.Equal("Expected 'CloseBracket', found 'Minus'", error.Message);
     }
@@ -113,9 +113,9 @@ public sealed class VoltaBracketShapeTests
     // ---- end shape on the page -----------------------------------------------------------
 
     [Theory]
-    [InlineData("form main { |: A [1. B] :| [2. C] }", true)]
-    [InlineData("form main { |: A [1. B] :| [2. C -] }", false)]
-    [InlineData("form main { |: A [1. B -] :| [2. C] }", true)]   // the 2. is asked; still hooked
+    [InlineData("form { |: A [1. B] :| [2. C] }", true)]
+    [InlineData("form { |: A [1. B] :| [2. C -] }", false)]
+    [InlineData("form { |: A [1. B -] :| [2. C] }", true)]   // the 2. is asked; still hooked
     public void TheLastEndingsHook_FollowsItsBracket(string form, bool hook)
     {
         var second = Assert.Single(Brackets(form), v => v.VoltaText == "2.");
@@ -125,10 +125,10 @@ public sealed class VoltaBracketShapeTests
     [Fact]
     public void AnOpenFirstEnding_IsStraightBeforeItsRepeatBar()
     {
-        var first = Assert.Single(Brackets("form main { |: A [1. B -] :| [2. C] }"), v => v.VoltaText == "1.");
+        var first = Assert.Single(Brackets("form { |: A [1. B -] :| [2. C] }"), v => v.VoltaText == "1.");
         Assert.False(first.IsClosed);
         // …and the ending its ':|' closes hooks, like `]`.
-        var closedByBar = Assert.Single(Brackets("form main { |: A [1. B :| [2. C] }"), v => v.VoltaText == "1.");
+        var closedByBar = Assert.Single(Brackets("form { |: A [1. B :| [2. C] }"), v => v.VoltaText == "1.");
         Assert.True(closedByBar.IsClosed);
     }
 
@@ -146,7 +146,7 @@ public sealed class VoltaBracketShapeTests
     [InlineData("layout { voltaBracket all }", "@voltaBracket(1)", 1, 1, false)]
     public void NBars_CoverTheEndingsFirstNBars(string layout, string annotation, int start, int end, bool hook)
     {
-        string form = $"form main {{ |: A [1. B C]{annotation} :| [2. D] }}";
+        string form = $"form {{ |: A [1. B C]{annotation} :| [2. D] }}";
         var first = Assert.Single(Brackets(form, layout), v => v.VoltaText == "1.");
         Assert.Equal((start, end, hook), (first.StartMeasureIndex, first.EndMeasureIndex, first.IsClosed));
     }
@@ -155,7 +155,7 @@ public sealed class VoltaBracketShapeTests
     public void Line_DrawsOnlyTheFirstSystemsPiece_Straight()
     {
         // [2. F] covers bars 3..6 with a system break after bar 4.
-        const string form = "form main { |: A [1. B] :| [2. F] }";
+        const string form = "form { |: A [1. B] :| [2. F] }";
         var all = Brackets(form).Where(v => v.StartMeasureIndex >= 3).ToList();
         Assert.Equal(new[] { (3, 4, false), (5, 6, true) },
             all.Select(v => (v.StartMeasureIndex, v.EndMeasureIndex, v.IsClosed)));
@@ -164,7 +164,7 @@ public sealed class VoltaBracketShapeTests
         Assert.Equal(new[] { (3, 4, false) }, line.Select(v => (v.StartMeasureIndex, v.EndMeasureIndex, v.IsClosed)));
 
         // The ending's own `@voltaBracket(all)` beats the layout's `line`.
-        var over = Brackets("form main { |: A [1. B] :| [2. F]@voltaBracket(all) }", "layout { voltaBracket line }")
+        var over = Brackets("form { |: A [1. B] :| [2. F]@voltaBracket(all) }", "layout { voltaBracket line }")
             .Where(v => v.StartMeasureIndex >= 3).ToList();
         Assert.Equal(2, over.Count);
     }
@@ -172,10 +172,10 @@ public sealed class VoltaBracketShapeTests
     [Fact]
     public void Line_OnAnEndingThatFitsItsSystem_KeepsItsEndShape()
     {
-        var hooked = Assert.Single(Brackets("form main { |: A [1. B] :| [2. C] }", "layout { voltaBracket line }"),
+        var hooked = Assert.Single(Brackets("form { |: A [1. B] :| [2. C] }", "layout { voltaBracket line }"),
             v => v.VoltaText == "2.");
         Assert.True(hooked.IsClosed);
-        var open = Assert.Single(Brackets("form main { |: A [1. B] :| [2. C -] }", "layout { voltaBracket line }"),
+        var open = Assert.Single(Brackets("form { |: A [1. B] :| [2. C -] }", "layout { voltaBracket line }"),
             v => v.VoltaText == "2.");
         Assert.False(open.IsClosed);
     }
@@ -184,7 +184,7 @@ public sealed class VoltaBracketShapeTests
     public void NBars_AcrossASystemBreak_ContinueOnTheNextSystem()
     {
         // [2. F] = bars 3..6, break after 4: three bars are two pieces, cut, so straight.
-        var pieces = Brackets("form main { |: A [1. B] :| [2. F]@voltaBracket(3) }")
+        var pieces = Brackets("form { |: A [1. B] :| [2. F]@voltaBracket(3) }")
             .Where(v => v.StartMeasureIndex >= 3).ToList();
         Assert.Equal(new[] { (3, 4, false), (5, 5, false) },
             pieces.Select(v => (v.StartMeasureIndex, v.EndMeasureIndex, v.IsClosed)));
@@ -207,8 +207,8 @@ public sealed class VoltaBracketShapeTests
             section A { bass { c'1 | c'1 | } }
             section E1 { bass { {{ending}} | } }
             section E2 { bass { e'1 | } }
-            form main { |: A [1. ~E1] :| [2. ~E2] }
-            score main { staff bass }
+            form { |: A [1. ~E1] :| [2. ~E2] }
+            score { staff bass }
             """;
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -266,8 +266,8 @@ public sealed class VoltaBracketShapeTests
             section A { bass { {{a}} } }
             section E1 { bass { {{e1}} } }
             section E2 { bass { {{e2}} } }
-            form main { |: A [1. ~E1] :| [2. ~E2]{{tail}} }
-            score main { staff bass }
+            form { |: A [1. ~E1] :| [2. ~E2]{{tail}} }
+            score { staff bass }
             """;
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -305,8 +305,8 @@ public sealed class VoltaBracketShapeTests
             section E2 { m { d2 | d1 | break } }
             section E3 { m { e2 | e1 | break } }
             section E4 { m { f2 | f1 | break } }
-            form main { |: A [1. ~E1] :| [2. ~E2] :| [3. ~E3] :| [4. ~E4] }
-            score main {
+            form { |: A [1. ~E1] :| [2. ~E2] :| [3. ~E3] :| [4. ~E4] }
+            score {
               {{items}}
             }
             """;
@@ -331,7 +331,7 @@ public sealed class VoltaBracketShapeTests
     [Fact]
     public void ACutBracket_KeepsItsEndingsPlace()
     {
-        var tree = Parse("form main { |: A [1. B C]@voltaBracket(1) :| [2. D] }");
+        var tree = Parse("form { |: A [1. B C]@voltaBracket(1) :| [2. D] }");
         var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
         var first = Assert.Single(score.VoltaBrackets, v => v.VoltaText == "1.");
         Assert.Equal((1, 1, 4), (first.StartMeasureIndex, first.EndMeasureIndex, first.EndingLastMeasureIndex));
@@ -348,7 +348,7 @@ public sealed class VoltaBracketShapeTests
     [InlineData("layout { VoltaBracket 2 }", "'VoltaBracket' is not a layout key. Keys are case-sensitive: write 'voltaBracket'.")]
     public void ABadLayoutValue_IsTheOrdinaryLayoutError(string layout, string message)
     {
-        var tree = SyntaxTree.Parse(Source("form main { |: A [1. B] :| [2. C] }", layout));
+        var tree = SyntaxTree.Parse(Source("form { |: A [1. B] :| [2. C] }", layout));
         var d = Assert.Single(SemanticValidation.Run(tree), x => x.Code is DiagnosticCodes.LayoutEntryBadValue
             or DiagnosticCodes.UnknownLayoutKey);
         Assert.Equal(message, d.Message);
@@ -363,13 +363,13 @@ public sealed class VoltaBracketShapeTests
     [InlineData("[2. C]@accent", "Unknown annotation '@accent' on an ending - it is ignored. An ending takes '@voltaBracket(…)': [1. B C]@voltaBracket(2).")]
     public void ABadEndingAnnotation_IsTheOrdinaryAnnotationWarning(string ending, string message)
     {
-        var tree = SyntaxTree.Parse(Source($"form main {{ |: A [1. B] :| {ending} }}"));
+        var tree = SyntaxTree.Parse(Source($"form {{ |: A [1. B] :| {ending} }}"));
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
         var d = Assert.Single(SemanticValidation.Run(tree), x => x.Code == DiagnosticCodes.UnknownAnnotation);
         Assert.Equal(message, d.Message);
         Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
         // …and the bracket keeps the layout's length (C = bars 3..4) and its hook.
-        var second = Brackets($"form main {{ |: A [1. B] :| {ending} }}").Single(v => v.VoltaText == "2.");
+        var second = Brackets($"form {{ |: A [1. B] :| {ending} }}").Single(v => v.VoltaText == "2.");
         Assert.Equal((3, 4, true), (second.StartMeasureIndex, second.EndMeasureIndex, second.IsClosed));
     }
 
@@ -377,7 +377,7 @@ public sealed class VoltaBracketShapeTests
     public void VoltaBracketOnANote_IsIgnoredWithWhereItBelongs()
     {
         var tree = SyntaxTree.Parse(Head.Replace("c'1 |", "c'1@voltaBracket(2) |")
-            + "form main { |: A [1. B] :| [2. C] }\nscore main { staff m }\n");
+            + "form { |: A [1. B] :| [2. C] }\nscore { staff m }\n");
         var d = Assert.Single(SemanticValidation.Run(tree), x => x.Code == DiagnosticCodes.UnknownAnnotation);
         Assert.Equal("'@voltaBracket(2)' is ignored: '@voltaBracket' belongs on a form ending, glued to its ']' "
             + "- [1. B C]@voltaBracket(line).", d.Message);
@@ -397,9 +397,9 @@ public sealed class VoltaBracketShapeTests
     {
         // A=0, B=1..2, C=3..4
         Assert.Equal(new[] { (1, "start", "1"), (2, "stop", "1"), (3, "start", "2"), (4, "stop", "2") },
-            XmlEndings("form main { |: A [1. B] :| [2. C] }"));
+            XmlEndings("form { |: A [1. B] :| [2. C] }"));
         Assert.Equal(new[] { (1, "start", "1"), (2, "discontinue", "1"), (3, "start", "2"), (4, "discontinue", "2") },
-            XmlEndings("form main { |: A [1. B -] :| [2. C -] }"));
+            XmlEndings("form { |: A [1. B -] :| [2. C -] }"));
     }
 
     [Fact]
@@ -407,9 +407,9 @@ public sealed class VoltaBracketShapeTests
     {
         // [1. B C] = 1..4 cut to 2 bars; [2. D] = 5..6 not cut by 5.
         Assert.Equal(new[] { (1, "start", "1"), (2, "discontinue", "1"), (5, "start", "2"), (6, "stop", "2") },
-            XmlEndings("form main { |: A [1. B C] :| [2. D]@voltaBracket(5) }", "layout { voltaBracket 2 }"));
+            XmlEndings("form { |: A [1. B C] :| [2. D]@voltaBracket(5) }", "layout { voltaBracket 2 }"));
         // The repeat bar stays where the ending ends.
-        var doc = new MusicXmlExporter().Export(Parse("form main { |: A [1. B C]@voltaBracket(1) :| [2. D] }")).ToXml();
+        var doc = new MusicXmlExporter().Export(Parse("form { |: A [1. B C]@voltaBracket(1) :| [2. D] }")).ToXml();
         var measures = doc.Descendants("measure").ToList();
         Assert.Contains(measures[4].Descendants("repeat"), r => r.Attribute("direction")?.Value == "backward");
     }
@@ -418,10 +418,10 @@ public sealed class VoltaBracketShapeTests
 
     [Theory]
     [InlineData("layout { voltaBracket ", "AfterLayoutVoltaBracket")]
-    [InlineData("form main { |: A [1. B]@", "AfterEndingAt")]
-    [InlineData("form main { |: A [1. B]@vol", "AfterEndingAt")]
-    [InlineData("form main { |: A [1. B]@voltaBracket(", "InVoltaBracketAnnotation")]
-    [InlineData("form main { |: A [1. B -]@voltaBracket(li", "InVoltaBracketAnnotation")]
+    [InlineData("form { |: A [1. B]@", "AfterEndingAt")]
+    [InlineData("form { |: A [1. B]@vol", "AfterEndingAt")]
+    [InlineData("form { |: A [1. B]@voltaBracket(", "InVoltaBracketAnnotation")]
+    [InlineData("form { |: A [1. B -]@voltaBracket(li", "InVoltaBracketAnnotation")]
     public void Completion_KnowsTheKeyAndTheAnnotation(string text, string context)
     {
         Assert.Equal(context, LilySharp.Lsp.LilySharpLanguageServer.GetCompletionContext(text, text.Length).ToString());
@@ -443,7 +443,7 @@ public sealed class VoltaBracketShapeTests
     [InlineData("", "[2. C ", "**Ending end** `-]`")]
     public void Hover_ExplainsTheKeyTheAnnotationAndTheEnd(string layout, string before, string head)
     {
-        string src = Source("form main { |: A [1. B]@voltaBracket(2) :| [2. C -] }", layout);
+        string src = Source("form { |: A [1. B]@voltaBracket(2) :| [2. C -] }", layout);
         var node = SyntaxTree.Parse(src).FindNode(src.IndexOf(before, System.StringComparison.Ordinal) + before.Length)!;
         var hover = LilySharp.Lsp.LanguageReference.Hover(node);
         Assert.NotNull(hover);
@@ -473,7 +473,7 @@ public sealed class VoltaBracketShapeTests
     [Fact]
     public void Twin_AHookedFirstEnding_IsLilyPondsDefault_AHookedLastOneIsForced()
     {
-        string ly = Twin("form main { |: A [1. B] :| [2. C] }");
+        string ly = Twin("form { |: A [1. B] :| [2. C] }");
         Assert.DoesNotContain("VoltaBracket", AlternativeBranch(ly, 0));
         Assert.Contains(ForceHook, AlternativeBranch(ly, 1));
         Assert.DoesNotContain(OpenEnd, ly);
@@ -482,7 +482,7 @@ public sealed class VoltaBracketShapeTests
     [Fact]
     public void Twin_AnOpenEnd_ZeroesTheRightEdge()
     {
-        string ly = Twin("form main { |: A [1. B -] :| [2. C -] }");
+        string ly = Twin("form { |: A [1. B -] :| [2. C -] }");
         Assert.Contains(OpenEnd, AlternativeBranch(ly, 0));
         Assert.Contains(OpenEnd, AlternativeBranch(ly, 1));
         Assert.DoesNotContain(ForceHook, ly);
@@ -491,7 +491,7 @@ public sealed class VoltaBracketShapeTests
     [Fact]
     public void Twin_NBars_SetMusicalLength_AndOpenTheEnd()
     {
-        string ly = Twin("form main { |: A [1. B C]@voltaBracket(3) :| [2. D]@voltaBracket(5) }");
+        string ly = Twin("form { |: A [1. B C]@voltaBracket(3) :| [2. D]@voltaBracket(5) }");
         string first = AlternativeBranch(ly, 0);
         Assert.Contains("\\once \\override Score.VoltaBracket.musical-length = #(ly:make-moment 3/1)", first);
         Assert.Contains(OpenEnd, first);
@@ -507,9 +507,9 @@ public sealed class VoltaBracketShapeTests
     /// Until 2026-09-29 (第663 ⒀) the twin wrote 2 × 4/4 and ran a quarter into bar 3. An
     /// ending of two sections sums across them (A's whole note, then G's first two bars).</summary>
     [Theory]
-    [InlineData("form main { |: A [1. B] :| [2. G]@voltaBracket(2) }", "7/4")]
-    [InlineData("form main { |: A [1. B] :| [2. A G]@voltaBracket(3) }", "11/4")]
-    [InlineData("form main { |: A [1. B] :| [2. G]@voltaBracket(1) }", "1/1")]
+    [InlineData("form { |: A [1. B] :| [2. G]@voltaBracket(2) }", "7/4")]
+    [InlineData("form { |: A [1. B] :| [2. A G]@voltaBracket(3) }", "11/4")]
+    [InlineData("form { |: A [1. B] :| [2. G]@voltaBracket(1) }", "1/1")]
     public void Twin_NBars_AreTheBarsOwnLengths(string form, string moment)
     {
         string branch = AlternativeBranch(Twin(form), 1);
@@ -527,7 +527,7 @@ public sealed class VoltaBracketShapeTests
     [Fact]
     public void Twin_Line_KillsEveryPieceButTheFirst()
     {
-        string ly = Twin("form main { |: A [1. B] :| [2. F -] }", "layout { voltaBracket line }");
+        string ly = Twin("form { |: A [1. B] :| [2. F -] }", "layout { voltaBracket line }");
         string second = AlternativeBranch(ly, 1);
         Assert.Contains("(ly:grob-suicide! grob)", second);
         Assert.Contains(OpenEnd, second);

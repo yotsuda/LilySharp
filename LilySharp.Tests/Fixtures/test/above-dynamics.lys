@@ -18,5 +18,5 @@ section S {
     voice { e'4@f.up f' g' a' } { b4@p.up c' d' e' } |
   }
 }
-form main { S }
-score main "above-dynamics" { staff m }
+form { S }
+score "above-dynamics" { staff m }

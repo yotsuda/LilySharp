@@ -15,9 +15,9 @@ section Main {
   bass { c8 8 8 8 8 8 8 8 | f8 8 8 8 g8 8 8 8 | c8 8 8 8 g,8 8 8 8 | c1 | }
 }
 
-form main { Main }
+form { Main }
 
-score main "rhythm-slashes" {
+score "rhythm-slashes" {
   staff comp as lines 1
   staff gtr
   staff bass

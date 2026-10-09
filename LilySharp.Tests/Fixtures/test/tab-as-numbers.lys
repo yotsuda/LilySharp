@@ -8,8 +8,8 @@
 time 4/4
 key c major
 part m { instrument bass section A { c8 e g8. e16 g4 r4 | tuplet 3/2 { c8 e g } e4 c2 | } }
-form main { A }
-score main {
+form { A }
+score {
   staff m
   tab m as numbers
 }

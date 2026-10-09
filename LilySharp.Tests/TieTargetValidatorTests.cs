@@ -32,7 +32,7 @@ public class TieTargetValidatorTests
 {
     private static int WarningCount(string music)
     {
-        var source = $"part m {{ section A {{ {music} }} }} form main {{ A }} score main {{ staff m }}";
+        var source = $"part m {{ section A {{ {music} }} }} form {{ A }} score {{ staff m }}";
         var validator = new TieTargetValidator();
         validator.Validate(SyntaxTree.Parse(source));
         return validator.Diagnostics.Count(d => d.Code == DiagnosticCodes.TieTargetMismatch
@@ -82,7 +82,7 @@ public class TieTargetValidatorTests
     public void ADanglingTieIsPointedAtTheHangingTieSpelling()
     {
         // The complaint can name what was probably meant, because Lily# already spells it.
-        var source = "part m { section A { c2.~ } } form main { A } score main { staff m }";
+        var source = "part m { section A { c2.~ } } form { A } score { staff m }";
         var validator = new TieTargetValidator();
         validator.Validate(SyntaxTree.Parse(source));
         var d = Assert.Single(validator.Diagnostics.Where(x => x.Message.Contains("nothing after it")));
@@ -130,7 +130,7 @@ public class TieTargetValidatorTests
         static int Count(string body, string staves, string code) =>
             SemanticValidation.Run(SyntaxTree.Parse(
                 $"octave absolute time 4/4 part m {{ tuning bass section A {{ {body} }} }} "
-                + $"form main {{ ~A }} score main {{ {staves} }}"))
+                + $"form {{ ~A }} score {{ {staves} }}"))
                 .Count(d => d.Code == code);
 
         // The control: one staff, one complaint. Then the same music on two staves —
@@ -145,6 +145,6 @@ public class TieTargetValidatorTests
         // LSP's live diagnostics both surface it.
         Assert.Contains(
             SemanticValidation.Run(SyntaxTree.Parse(
-                "part m { section A { c4~ d4 c2 } } form main { A } score main { staff m }")),
+                "part m { section A { c4~ d4 c2 } } form { A } score { staff m }")),
             d => d.Code == DiagnosticCodes.TieTargetMismatch);
 }

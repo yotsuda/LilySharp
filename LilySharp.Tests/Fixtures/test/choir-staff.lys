@@ -14,9 +14,9 @@ section Main {
   alt { g4 a g f | g1 | }
 }
 
-form main { Main }
+form { Main }
 
-score main "choir-staff" {
+score "choir-staff" {
   choirStaff {
     staff sop
     staff alt

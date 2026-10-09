@@ -46,8 +46,8 @@ section Main {
   melody { c'4 d e f | g a b c'' | }
   chords riff { C | G7 C | }
 }
-form main { Main }
-score main ""x"" { chords riff  staff melody }
+form { Main }
+score ""x"" { chords riff  staff melody }
 ";
         var svg = Render(source);
         _output.WriteLine(svg);
@@ -73,8 +73,8 @@ time 4/4
 section Main {
   chords riff { C | Am | F | G7 | }
 }
-form main { Main }
-score main ""x"" { chords riff }
+form { Main }
+score ""x"" { chords riff }
 ";
         var svg = Render(source);
         _output.WriteLine(svg);
@@ -106,8 +106,8 @@ score main ""x"" { chords riff }
         var source = @"
 time 4/4
 section Main { chords riff { C | | F | G7 | } }
-form main { Main }
-score main ""x"" { chords riff }
+form { Main }
+score ""x"" { chords riff }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -129,8 +129,8 @@ section Main {
   melody { c'4 d e f | }
   chords riff { Gm7 C Am Dm | }
 }
-form main { Main }
-score main ""x"" { chords riff  staff melody }
+form { Main }
+score ""x"" { chords riff  staff melody }
 ";
         var svg = Render(source);
         _output.WriteLine(svg);

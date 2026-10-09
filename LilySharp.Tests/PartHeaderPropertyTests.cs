@@ -87,7 +87,7 @@ public sealed class PartHeaderPropertyTests
     [Fact]
     public void TopLevel_TransposeBare_Parses()
     {
-        var tree = SyntaxTree.Parse("transpose d part melody { clef treble } section Main { melody { c4 } } form main { Main }");
+        var tree = SyntaxTree.Parse("transpose d part melody { clef treble } section Main { melody { c4 } } form { Main }");
         Assert.False(tree.HasErrors);
     }
 }

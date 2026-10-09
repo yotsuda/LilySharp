@@ -39,9 +39,9 @@ public class RenderSpecTests
               bass { lh }
             }
 
-            form main { Main }
+            form { Main }
 
-            score main "test" {
+            score "test" {
               grandStaff {
                 staff treble melody
                 staff bass bass
@@ -71,7 +71,7 @@ public class RenderSpecTests
         Assert.Equal("bass", lower.VoiceName);
     }
 
-    // A part score restates the header for itself: `score main "vln" { title "Violin I" … }`.
+    // A part score restates the header for itself: `score "vln" { title "Violin I" … }`.
     // Written once and read by all three tests below, so they cannot drift apart on what
     // the file says versus what each score says.
     private const string PerScoreHeaderSource = """
@@ -84,14 +84,14 @@ public class RenderSpecTests
           vln { c''1 }
           vla { c'1 }
         }
-        form main { ~A }
-        score main { staff vln staff vla }
-        score main "vln" {
+        form { ~A }
+        score { staff vln staff vla }
+        score "vln" {
           title "Violin I"
           composer "Score Composer"
           staff vln
         }
-        score main "vla" {
+        score "vla" {
           title "Viola"
           staff vla
         }
@@ -130,7 +130,7 @@ public class RenderSpecTests
     [Fact]
     public void ScoreStatingOnlyOne_InheritsTheOtherFromTheFile()
     {
-        // `score main "vla"` restates the title and says nothing about the composer.
+        // `score "vla"` restates the title and says nothing about the composer.
         var vla = CollectByName("vla");
         Assert.Equal("Viola", vla.Title);
         Assert.Equal("File Composer", vla.Composer);
@@ -162,8 +162,8 @@ public class RenderSpecTests
             octave absolute
             part bass { clef bass }
             section A { bass { c1 } }
-            form main { A }
-            score main { staff bass }
+            form { A }
+            score { staff bass }
             """);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
 
@@ -186,8 +186,8 @@ public class RenderSpecTests
             part foo { clef treble }
             part voice { clef treble }
             section A { foo { c'1 } voice { c'1 } }
-            form main { A }
-            score main { staff foo staff voice }
+            form { A }
+            score { staff foo staff voice }
             """);
         Assert.True(tree.HasErrors);
 
@@ -199,7 +199,7 @@ public class RenderSpecTests
     [Fact]
     public void OmittedFilename_ParsesWithEmptyOutputFile()
     {
-        // The output filename is optional: `score main { … }` is valid and
+        // The output filename is optional: `score { … }` is valid and
         // yields an empty OutputFile, signalling the consumer to derive the name
         // from the input file (<input>.<ext>).
         var source = """
@@ -212,9 +212,9 @@ public class RenderSpecTests
               melody { melody }
             }
 
-            form main { Main }
+            form { Main }
 
-            score main {
+            score {
               staff treble melody
             }
             """;
@@ -234,11 +234,11 @@ public class RenderSpecTests
     {
         var tree = SyntaxTree.Parse("""
             part m { section A { c4 d e f | } }
-            form main { A }
+            form { A }
             form other { A A }
-            score main { staff m }
-            score other { staff m }
-            score other "custom" { staff m }
+            score { staff m }
+            score other { form other staff m }
+            score other "custom" { form other staff m }
             """);
         var specs = RenderSpecParser.FindAll(tree);
 
@@ -263,9 +263,9 @@ public class RenderSpecTests
               guitar { melody }
             }
 
-            form main { Main }
+            form { Main }
 
-            score main "test" {
+            score "test" {
               staff treble guitar
             }
             """;
@@ -293,7 +293,7 @@ public class RenderSpecTests
         // (bass), while the quoted label overrides the displayed instrument name.
         var tree = SyntaxTree.Parse(
             "part vc { instrument cello \"Cello I\" }\n" +
-            "section A { vc { c4 d e f } }\nform main { A }\nscore \"s\" { staff vc }");
+            "section A { vc { c4 d e f } }\nform { A }\nscore \"s\" { staff vc }");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
 
         var staff = (RenderSpecParser.FindFirst(tree)!.Items[0] as SingleStaffSpec)!.Staff;
@@ -318,9 +318,9 @@ public class RenderSpecTests
               bass { lh }
             }
 
-            form main { Main }
+            form { Main }
 
-            score main "test" {
+            score "test" {
               staff treble singer
               grandStaff {
                 staff treble melody
@@ -366,9 +366,9 @@ public class RenderSpecTests
               leftHand { dummy }
             }
 
-            form main { Main }
+            form { Main }
 
-            score main "test" {
+            score "test" {
               staff treble singer
               grandStaff {
                 staff treble rightHand
@@ -405,9 +405,9 @@ public class RenderSpecTests
               bass { lh }
             }
 
-            form main { Main }
+            form { Main }
 
-            score main "test" {
+            score "test" {
               grandStaff {
                 staff treble melody
                 staff bass bass
@@ -444,9 +444,9 @@ public class RenderSpecTests
               bass { lh }
             }
 
-            form main { Main }
+            form { Main }
 
-            score main "test" {
+            score "test" {
               grandStaff {
                 staff treble melody
                 staff bass bass

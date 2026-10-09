@@ -82,8 +82,8 @@ public class RestPitchedBeamTests
             section Main {
               v { a4@rest a8[ a8@rest b8] r4 r8 | }
             }
-            form main { ~Main }
-            score main { staff ~v }
+            form { ~Main }
+            score { staff ~v }
             """));
 
         // LilyPond: staff-position −1 for both pitched rests (Xrel 8.585 and 14.4392),
@@ -126,8 +126,8 @@ public class RestPitchedBeamTests
                 d8[ r8 d8] r8 d8[ a8@rest d8] r8 |
               }
             }
-            form main { ~Main }
-            score main { staff ~v }
+            form { ~Main }
+            score { staff ~v }
             """));
 
         var positions = rests.Select(r => r.Position).ToArray();

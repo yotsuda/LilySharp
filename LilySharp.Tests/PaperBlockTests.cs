@@ -125,7 +125,7 @@ public class PaperBlockTests
     public void RaggedBottom_KeepsTheFirstPageOfATwoPageBookAtNaturalSpacing()
     {
         const string book = "title \"T\"\npart melody { section A { g2 g | pageBreak } "
-            + "section B { c2 c | } }\nform main { A B }\nscore main { staff melody }\n";
+            + "section B { c2 c | } }\nform { A B }\nscore { staff melody }\n";
         static string Svg(string src)
         {
             var tree = SyntaxTree.Parse(src);
@@ -319,8 +319,8 @@ public class PaperBlockTests
         // one-word page, and a score's override block can restate the size.
         var tree = SyntaxTree.Parse(
             "paper concert { size b4 }\n"
-            + "section Main { melody { c'4 d e f | } }\nform main { Main }\n"
-            + "score main { paper concert { size jisb5 }  staff melody }\n");
+            + "section Main { melody { c'4 d e f | } }\nform { Main }\n"
+            + "score { paper concert { size jisb5 }  staff melody }\n");
         var render = tree.GetRoot().DescendantNodes()
             .OfType<RenderDeclarationSyntax>().First();
         var score = SvgGenerator.CollectScore(tree,
@@ -448,7 +448,7 @@ public class PaperBlockTests
         // Same claim as the refused fonts one-liner: a dropped token slides every later
         // data-pos and diagnostic column (RULES §5.1). Both halves — total width, and
         // each node's own span.
-        const string src = "paper 210\nform main { A }\n";
+        const string src = "paper 210\nform { A }\n";
         var root = SyntaxTree.Parse(src).GetRoot();
 
         Assert.Equal(src, root.ToFullString());
@@ -537,7 +537,7 @@ public class PaperBlockTests
         section Main {
           melody { c'4 d e f | g a b c' | }
         }
-        form main { Main }
-        score main { staff melody }
+        form { Main }
+        score { staff melody }
         """;
 }

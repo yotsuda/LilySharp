@@ -52,8 +52,8 @@ public class StaffSpacingWishTests
             section A { bass { aes,1 | aes,1 | } }
             section E1 { bass { time 2/4 des4 ees | break time 4/4 aes,1 | aes,1 | } }
             section E2 { bass { time 4/4 ees1 | } }
-            form main { |: A [1. ~E1] :| [2. ~E2] }
-            score main {
+            form { |: A [1. ~E1] :| [2. ~E2] }
+            score {
               {{items}}
             }
             """;

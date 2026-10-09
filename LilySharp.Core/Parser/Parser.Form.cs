@@ -22,24 +22,22 @@ namespace LilySharp.Core.Parser;
 internal sealed partial class Parser
 {
     /// <summary>
-    /// Parse form declaration: form Name { ... }
+    /// Parse form declaration: <c>form [Name] { ... }</c>; in a score also the reference
+    /// <c>form Name</c>.
     /// </summary>
-    private FormDeclarationGreen ParseFormDeclaration()
+    private FormDeclarationGreen ParseFormDeclaration(bool inScore = false)
     {
         var keyword = Expect(SyntaxKind.FormKeyword);   // the `form` keyword
 
-        // A form is always named: `form Main { … }`. A score binds to it by that
-        // name (`score Main { … }`); the reserved name `main` writes to the input
-        // .lys stem. Names are case-sensitive (like every Lily# symbol).
-        SyntaxToken name;
-        if (!Check(SyntaxKind.OpenBrace))
-            name = Advance();
-        else
-        {
-            var span = new TextSpan(_textPosition, Current.FullWidth);
-            _diagnostics.Error(span, DiagnosticCodes.ExpectedToken, "Expected a form name after 'form'");
-            name = new SyntaxToken(SyntaxKind.Identifier, "", null, null);
-        }
+        // `form { … }` is the file's default form — the one a score plays when it picks
+        // none; `form Name { … }` is a named one a score picks with `form Name`
+        // (docs/anonymous-blocks-design.md, owner's decision 2026-10-09). Names are
+        // case-sensitive (like every Lily# symbol).
+        SyntaxToken? name = Check(SyntaxKind.OpenBrace) ? null : Advance();
+
+        // In a score, a bare `form Name` is a reference: no braces.
+        if (inScore && name != null && !Check(SyntaxKind.OpenBrace))
+            return new FormDeclarationGreen(keyword, name, null, [], null);
 
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
@@ -62,7 +60,7 @@ internal sealed partial class Parser
             // itself, and it needs a node before anything can give it meaning: without this
             // arm ParseFormItem returned null and ParseList's shared `else Advance()` — the
             // same guard whose part-header twin was LYS0025 — dropped it. Measured
-            // 2026-08-15 on `form main { … Solo :| }`: the MIDI hash, the SVG hash, the
+            // 2026-08-15 on `form { … Solo :| }`: the MIDI hash, the SVG hash, the
             // MusicXML repeat count and the LilyPond twin were all byte-identical to not
             // writing it, with no diagnostic. It is the same BarlineSyntax the music stream
             // uses, so ':|*N' comes along for free.
@@ -85,7 +83,7 @@ internal sealed partial class Parser
             // Same guard as the ':|' arm above, for `using` (LYS0029).
             SyntaxKind.UsingKeyword => ParseMisplacedUsing("a form"),
             // Section reference with optional per-occurrence display label:
-            //   form main { First Second First "First (reprise)" }
+            //   form { First Second First "First (reprise)" }
             // Any word a section may be NAMED (SyntaxFacts.IsPartNameToken — the rule a
             // declaration uses, so a declared name is always referenceable): an identifier,
             // a clef word, a dynamic, `q` … The form's own words (navigation marks, breaks)
@@ -93,7 +91,7 @@ internal sealed partial class Parser
             _ when IsPartNameStart() => ParseSectionReference(),
             // Anything else: reported and KEPT (LYS0030) — the general case of the two
             // arms above, which were added one silent spelling at a time. Measured
-            // 2026-08-16 on `form main { A section B }`: the `section` keyword was dropped
+            // 2026-08-16 on `form { A section B }`: the `section` keyword was dropped
             // in silence, and the (correct) `Undefined section: 'B'` was then reported at
             // column 15, ON that keyword, with `B` standing at column 23.
             _ => ReportStrayItem("a form",
@@ -115,7 +113,7 @@ internal sealed partial class Parser
     /// <see cref="ReportStrayItem"/> keeps. Sections already abut, so a <c>|</c> between
     /// form items asks for nothing the page does not already do — and made into a barline
     /// NODE it asks for something the author did not write. Measured 2026-08-16:
-    /// <c>form main { A | B }</c> engraved THREE bars where <c>form main { A B }</c>
+    /// <c>form { A | B }</c> engraved THREE bars where <c>form { A B }</c>
     /// engraves two, because section A's music already closes with <c>|</c> and the
     /// language's own rule is that "an empty measure is always an explicit <c>| |</c> pair"
     /// (MeasureCollector.Form ProcessSectionPrologue). Both books in the tree that write
@@ -204,7 +202,7 @@ internal sealed partial class Parser
             // consumed, so _textPosition/Current now point one token past it).
             var span = new TextSpan(nameStart, Math.Max(1, name.FullWidth));
             _diagnostics.Error(span, DiagnosticCodes.NavigationMarkIsBare,
-                $"A navigation mark is bare, not '@', and it is written in the form, between the section names (e.g. 'form main {{ A segno B ds al coda }}') — '@' modifies a note.");
+                $"A navigation mark is bare, not '@', and it is written in the form, between the section names (e.g. 'form {{ A segno B ds al coda }}') — '@' modifies a note.");
         }
 
         // Handle compound marks like @ds.al.fine
@@ -435,7 +433,7 @@ internal sealed partial class Parser
 
         // Parse items until :| — or until the first ending, which is the last thing before it.
         // ⚠️ AND STOP AT THE FORM'S OWN `}`. Without that stop an unclosed `|:` ate the rest
-        // of the FILE looking for a `:|` that was never coming: `form main { ~Body |: A }`
+        // of the FILE looking for a `:|` that was never coming: `form { ~Body |: A }`
         // reported `}`, `score`, `{`, `staff`, `}` as five things "a form cannot hold" and
         // only then said "Expected RepeatEndBar, found EndOfFile" — five wrong errors before
         // the true one, and the score block declared garbage. Reported 2026-08-31 on
@@ -608,12 +606,11 @@ internal sealed partial class Parser
     {
         var keyword = Expect(SyntaxKind.ScoreKeyword);
 
-        // `score <FormName> ["basename"] [transpose <pitch>] { ... }`.
-        // A bare token is the FORM reference (which form this score renders); a
-        // quoted string is the output basename (quotes only needed for spaces).
-        // The form name is REQUIRED at the semantic layer; a missing one is caught
-        // by the validator, not here, so recovery stays local.
-        SyntaxToken? formName = Check(SyntaxKind.OpenBrace)
+        // `score [Name] ["basename"] [transpose <pitch>] { ... }`.
+        // A bare token is the score's OWN name (`score another` writes <input>-another);
+        // the form it plays is a `form` item in its body (2026-10-09). A quoted string
+        // is the output basename (quotes only needed for spaces).
+        SyntaxToken? scoreName = Check(SyntaxKind.OpenBrace)
             || Check(SyntaxKind.TransposeKeyword)
             || Check(SyntaxKind.PitchKeyword)
             || Check(SyntaxKind.StringLiteral)
@@ -635,8 +632,7 @@ internal sealed partial class Parser
         var items = ParseList(SyntaxKind.CloseBrace, ParseRenderItem);
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        // The `name` slot now carries the form reference; `filename` the basename.
-        return new RenderDeclarationGreen(keyword, formName, filename, [.. options], openBrace, [.. items], closeBrace);
+        return new RenderDeclarationGreen(keyword, scoreName, filename, [.. options], openBrace, [.. items], closeBrace);
     }
 
 
@@ -749,7 +745,7 @@ internal sealed partial class Parser
             SyntaxKind.CombinedStaffKeyword => ParseCombinedStaffRender(),
             SyntaxKind.TabKeyword => ParseTabRender(),
             SyntaxKind.OssiaKeyword => ParseOssiaRender(),
-            // A per-score header: `score main { title "…" composer "…" staff … }`
+            // A per-score header: `score { title "…" composer "…" staff … }`
             // restates the file's title/subtitle/composer/poet for THIS score only. Parsed as
             // the ordinary metadata node so it round-trips and keeps its source spans —
             // an unrecognised token here falls to ParseList's Advance(), which drops
@@ -765,6 +761,9 @@ internal sealed partial class Parser
             // `layout NAME` — the third reference of that shape: THIS score's display
             // switches (Semantics.LayoutPlanReader), replacing the file's unnamed default.
             SyntaxKind.LayoutKeyword => ParseLayoutDeclaration(inScore: true),
+            // `form Name` / `form { … }` — which form THIS score plays: a reference to a
+            // named top-level form, or its own written in place.
+            SyntaxKind.FormKeyword => ParseFormDeclaration(inScore: true),
             // The same drop this comment names, for the one keyword that reads most like it
             // belongs here: `using` includes a FILE, not a staff (LYS0029).
             SyntaxKind.UsingKeyword => ParseMisplacedUsing("a score"),
@@ -779,9 +778,9 @@ internal sealed partial class Parser
                     "A score body holds render items — 'staff NAME', 'tab NAME', "
                     + "'grandStaff { … }', 'staffGroup { … }', 'choirStaff { … }', "
                     + "'condensedStaff { … }', 'combinedStaff { … }', 'ossia NAME', "
-                    + "'chords NAME', 'lyrics NAME' — its own 'title'/'subtitle'/'composer'/'poet', a "
-                    + "'fonts NAME' / 'paper NAME' / 'layout NAME' reference, and a "
-                    + "bare part name to render that part to MIDI only.")
+                    + "'chords NAME', 'lyrics NAME' — its own 'title'/'subtitle'/'composer'/'poet', "
+                    + "'form NAME' or 'form { … }', a 'fonts' / 'paper' / 'layout' reference or "
+                    + "block, and a bare part name to render that part to MIDI only.")
         };
     }
 

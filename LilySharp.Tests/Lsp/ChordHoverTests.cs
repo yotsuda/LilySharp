@@ -33,7 +33,7 @@ public class ChordHoverTests
     private const string Doc =
         "part melody {\n" +
         "  section A { <d f a>4 <f d a>4 << c e g >>4 q4 | <c des d>4 <d f a>4 q4 << g' e c >>4 | c4 d e f | }\n" +
-        "}\n\nform main { A }\n\nscore main {\n  staff melody\n}\n";
+        "}\n\nform { A }\n\nscore {\n  staff melody\n}\n";
 
     private static string? HoverAt(string needle, int skip = 0, int occurrence = 0, string doc = Doc)
     {
@@ -71,8 +71,8 @@ public class ChordHoverTests
         "part melody { clef treble }\n" +
         "section A { melody { e'4 e' f' g' | a' g' e' d' | c'1 | } }\n" +
         "chords harmony { Dm | G7/B C/E | Cx | }\n" +
-        "form main { A }\n" +
-        "score main { chords harmony  staff melody }\n";
+        "form { A }\n" +
+        "score { chords harmony  staff melody }\n";
 
     /// <summary>The chord line of a row entry's hover \u2014 the paragraph before the chord-diagram
     /// line an entry with no shape adds (<c>Ctrl+Shift+\u2191 adds a chord diagram (guitar: \u2026)</c>,
@@ -102,7 +102,7 @@ public class ChordHoverTests
     [Fact]
     public void TheDegree_ReadsTheKeyInForce() =>
         Assert.Equal("`D (V)` \u00A0D4 \u00A0F♯4 \u00A0A4", HoverAt("<d fis a>", doc:
-            "key g major\n\npart melody {\n  section A { <d fis a>4 r2. | }\n}\n\nform main { A }\n\nscore main {\n  staff melody\n}\n"));
+            "key g major\n\npart melody {\n  section A { <d fis a>4 r2. | }\n}\n\nform { A }\n\nscore {\n  staff melody\n}\n"));
 
     [Fact]
     public void AnInversion_ShowsTheWrittenBassAsTheSlash_AndListsLowestFirst() =>

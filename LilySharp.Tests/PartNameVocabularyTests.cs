@@ -53,8 +53,8 @@ public class PartNameVocabularyTests
     private static string Book(string partName) =>
         $"part {partName} {{ clef treble }}\n"
         + $"section A {{ {partName} {{ c4 d e f | }} }}\n"
-        + "form main { A }\n"
-        + $"score main {{ staff {partName} }}";
+        + "form { A }\n"
+        + $"score {{ staff {partName} }}";
 
     // ── part and section names ──
 
@@ -123,8 +123,8 @@ public class PartNameVocabularyTests
         string src = $"part m {{ clef treble }}\n"
             + $"section {name} {{ m {{ c4 d e f | }} }}\n"
             + $"section B {{ m {{ g4 a b c' | }} }}\n"
-            + $"form main {{ {name} |: B [1. {name}] :| [2. ~{name}] {name}' }}\n"
-            + "score main { staff m }";
+            + $"form {{ {name} |: B [1. {name}] :| [2. ~{name}] {name}' }}\n"
+            + "score { staff m }";
         var errors = Errors(src).ToList();
         Assert.True(errors.Count == 0, string.Join(" | ", errors.Select(e => $"{e.Code} {e.Message}")));
     }
@@ -147,8 +147,8 @@ public class PartNameVocabularyTests
     {
         // The kept body `{ staff c }` holds a pitch letter, which is a legal part name now;
         // it must not come back as a member and be reported undefined on top of LYS6004.
-        string src = "section A { m { c4 } }\nform main { A }\n"
-            + "score main { condensedStaff { m grandStaff { staff c } } }";
+        string src = "section A { m { c4 } }\nform { A }\n"
+            + "score { condensedStaff { m grandStaff { staff c } } }";
         var render = SyntaxTree.Parse(src).GetRoot().DescendantNodes<CondensedStaffRenderSyntax>().Single();
         Assert.Equal(["m"], render.PartNames);
         Assert.DoesNotContain(AllDiagnostics(src), d => d.Code == DiagnosticCodes.UndefinedPart);
@@ -166,7 +166,7 @@ public class PartNameVocabularyTests
         string src = $"phrase {name} {{ c4 d e f | }}\n"
             + "part m { clef treble }\n"
             + $"section A {{ m {{ {name} {name}' | }} }}\n"
-            + "form main { A }\nscore main { staff m }";
+            + "form { A }\nscore { staff m }";
         var errors = Errors(src).ToList();
         Assert.True(errors.Count == 0, string.Join(" | ", errors.Select(e => $"{e.Code} {e.Message}")));
         var refs = SyntaxTree.Parse(src).GetRoot().DescendantNodes<VariableReferenceSyntax>().ToList();
@@ -205,8 +205,8 @@ public class PartNameVocabularyTests
         + "part click { instrument \"Click\" }\npart melody { clef treble }\n"
         + "section A { " + (declareBass ? "bass { c4 d e f | } " : "")
         + "click { c4 c c c | } melody { c'4 d' e' f' | } }\n"
-        + "form main { A }\n"
-        + $"score main {{ staff melody  {tabItem} }}";
+        + "form { A }\n"
+        + $"score {{ staff melody  {tabItem} }}";
 
     private static RenderSpec Spec(string src) =>
         RenderSpecParser.Parse(SyntaxTree.Parse(src).GetRoot().DescendantNodes<RenderDeclarationSyntax>().Single())!;

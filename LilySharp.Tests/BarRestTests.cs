@@ -42,8 +42,8 @@ public class BarRestTests
         time {{time}}
         part m { clef treble }
         section A { {{header}} m { {{music}} } }
-        form main { ~A }
-        score main { staff m }
+        form { ~A }
+        score { staff m }
         """;
 
     private static SyntaxTree Parse(string lys)
@@ -134,8 +134,8 @@ public class BarRestTests
               up { R | R*2 | c'4 d' e' f' g' | }
               low { c4 d e f g | c4 d e f g | c4 d e f g | c4 d e f g | }
             }
-            form main { ~A }
-            score main { staff up  staff low }
+            form { ~A }
+            score { staff up  staff low }
             """;
         Assert.Empty(Codes(book));
     }

@@ -111,7 +111,7 @@ public class VocabularyPerturbationTests
 
     private const string Plain =
         "octave absolute\npart m { clef treble\n  section A { c'4 d' e' f' | c'4 d' e' f' | }\n}\n"
-        + "form main { A }\nscore main { staff m }\n";
+        + "form { A }\nscore { staff m }\n";
 
     // ===================== the `@` vocabulary =====================
 
@@ -274,7 +274,7 @@ public class VocabularyPerturbationTests
     private static string TabBendBook(string amount) =>
         "octave absolute\npart m { clef treble_8 tuning guitar\n"
         + $"  section A {{ e,4@bend({amount}) a, d g | }}\n}}\n"
-        + "form main { A }\nscore main { tab m }\n";
+        + "form { A }\nscore { tab m }\n";
 
     // ===================== the layout switches =====================
 
@@ -288,7 +288,7 @@ public class VocabularyPerturbationTests
     private const string ManySystems =
         "octave absolute\npart m { clef treble\n"
         + "  section A { c'4 d' e' f' | break g'4 a' b' c'' | break d''4 e'' f'' g'' | }\n}\n"
-        + "form main { A }\nscore main { staff m }\n";
+        + "form { A }\nscore { staff m }\n";
 
     /// <summary>
     /// The three situations the styles actually differ about, in one book — read from
@@ -312,19 +312,19 @@ public class VocabularyPerturbationTests
     private const string WithAccidentals =
         "octave absolute\npart m { clef treble\n"
         + "  section A { cisis'4 cis' c'' d' | c'4 d' e' f' | }\n}\n"
-        + "form main { A }\nscore main { staff m }\n";
+        + "form { A }\nscore { staff m }\n";
 
     private const string TwoLabelledSections =
         "octave absolute\npart m { clef treble\n"
         + "  section A { c'4 d' e' f' | }\n  section B { g'4 a' b' c'' | }\n}\n"
-        + "form main { A B }\nscore main { staff m }\n";
+        + "form { A B }\nscore { staff m }\n";
 
     /// <summary>Two parts on ONE staff, the second silent in the second bar — which is what
     /// makes the combiner print its texts at all.</summary>
     private const string CombinedParts =
         "octave absolute\npart one { clef treble }\npart two { clef treble }\n"
         + "section A { one { c'1 | d'1 | } two { c'1 | r1 | } }\n"
-        + "form main { A }\nscore main { combinedStaff { one two } }\n";
+        + "form { A }\nscore { combinedStaff { one two } }\n";
 
     /// <summary>A chord row of the qualities LilyPond names with a symbol, plus a minor
     /// seventh over a slash bass — so both chord keys have something to spell.</summary>
@@ -332,7 +332,7 @@ public class VocabularyPerturbationTests
         "time 4/4\noctave absolute\npart m { clef treble }\n"
         + "section A { m { c'4 d' e' f' | c'4 d' e' f' | c'4 d' e' f' | }\n"
         + "  chords prog { Cdim | Cm7-5 | Am7/C | } }\n"
-        + "form main { ~A }\nscore main { chords prog  staff m }\n";
+        + "form { ~A }\nscore { chords prog  staff m }\n";
 
     private static string BookFor(string key) => key switch
     {
@@ -431,7 +431,7 @@ public class VocabularyPerturbationTests
     /// had one reads inert for the obvious wrong reason (this file's first lesson).</summary>
     private const string NoClef =
         "octave absolute\npart m {\n  section A { c'4 d' e' f' | }\n}\n"
-        + "form main { A }\nscore main { staff m }\n";
+        + "form { A }\nscore { staff m }\n";
 
     [Theory]
     [InlineData("alto")]
@@ -472,8 +472,8 @@ public class VocabularyPerturbationTests
         }
         lyrics w sings m { section A { la la la la | la la la la | la la la la | } }
         lyrics v sings n { section A { do do do do | do do do do | do do do do | } }
-        form main { A }
-        score main { staffGroup { staff m  staff n }  lyrics w  lyrics v  staff o }
+        form { A }
+        score { staffGroup { staff m  staff n }  lyrics w  lyrics v  staff o }
 
         """;
 
@@ -503,7 +503,7 @@ public class VocabularyPerturbationTests
         return "paper { " + entry + " }\n"
             + "octave absolute\ntitle \"T\"\npart m { clef treble\n"
             + "  section A { " + music + "}\n}\n"
-            + "form main { A }\nscore main { staff m }\n";
+            + "form { A }\nscore { staff m }\n";
     }
 
     /// <summary>
@@ -558,8 +558,8 @@ public class VocabularyPerturbationTests
     /// </remarks>
     private static string UngroupedPaperBookWith(string entry) =>
         PaperBookWith(entry).Replace(
-            "score main { staffGroup { staff m  staff n }  lyrics w  lyrics v  staff o }",
-            "score main { staff m  staff n  staff o }");
+            "score { staffGroup { staff m  staff n }  lyrics w  lyrics v  staff o }",
+            "score { staff m  staff n  staff o }");
 
     /// <summary>
     /// The keys that want a page which must SPREAD — measured against a two-page book, where
@@ -757,7 +757,7 @@ public class VocabularyPerturbationTests
           section A { c4 d e f | c4 d e f | }
           section B { R1 | R1 | }
         }
-        form main { A B }
+        form { A B }
 
         """;
 
@@ -765,8 +765,8 @@ public class VocabularyPerturbationTests
     [InlineData("true")]
     [InlineData("all")]
     public void HaraKiriHidesAStaffThatHasNothingToSay(string value)
-        => AssertMoves(HaraKiriBook + "score main { staff m  staff n }\n",
-            HaraKiriBook + $"score main {{ staff m  staff n as removeEmpty {value} }}\n",
+        => AssertMoves(HaraKiriBook + "score { staff m  staff n }\n",
+            HaraKiriBook + $"score {{ staff m  staff n as removeEmpty {value} }}\n",
             "as removeEmpty " + value);
 
     [Fact]
@@ -777,15 +777,15 @@ public class VocabularyPerturbationTests
         // default ever changes, this test says so instead of the sweep reading it as a dead
         // word.
         Assert.Equal(
-            Signature(HaraKiriBook + "score main { staff m  staff n }\n"),
-            Signature(HaraKiriBook + "score main { staff m  staff n as removeEmpty false }\n"));
+            Signature(HaraKiriBook + "score { staff m  staff n }\n"),
+            Signature(HaraKiriBook + "score { staff m  staff n as removeEmpty false }\n"));
     }
 
     [Theory]
     [InlineData("1")]
     [InlineData("3")]
     public void EveryStaffLineCountMovesThePage(string lines)
-        => AssertMoves(Plain, Plain.Replace("score main { staff m }", $"score main {{ staff m as lines {lines} }}"),
+        => AssertMoves(Plain, Plain.Replace("score { staff m }", $"score {{ staff m as lines {lines} }}"),
             "as lines " + lines);
 
     // ===================== the drum table =====================
@@ -793,7 +793,7 @@ public class VocabularyPerturbationTests
     private static string DrumBook(string drum) =>
         "octave absolute\npart m { clef percussion\n"
         + $"  section A {{ {drum}4 {drum}4 {drum}4 {drum}4 | }}\n}}\n"
-        + "form main { A }\nscore main { staff m }\n";
+        + "form { A }\nscore { staff m }\n";
 
     /// <remarks>
     /// ⚠️ THE DRUM HAS TO BE ONE THE FIELD CAN CHANGE. <c>mark accent</c> was measured
@@ -967,7 +967,7 @@ public class VocabularyPerturbationTests
         style
         + "time 4/4\noctave absolute\npart m { clef treble }\n"
         + $"section A {{ m {{ c'4 d' e' f' | }}\n  chords prog {{ {symbol} | }} }}\n"
-        + "form main { ~A }\nscore main { chords prog  staff m }\n";
+        + "form { ~A }\nscore { chords prog  staff m }\n";
 
     /// <summary>
     /// The two chord vocabularies, as the books that select them. BOTH have to be swept.
@@ -1105,7 +1105,7 @@ public class VocabularyPerturbationTests
     private static string TabBook(string tuning) =>
         "octave absolute\npart m { clef treble_8 tuning " + tuning + "\n"
         + "  section A { e,4 a, d g | c' e' g' c'' | }\n}\n"
-        + "form main { A }\nscore main { tab m }\n";
+        + "form { A }\nscore { tab m }\n";
 
     public static TheoryData<string> TuningWords()
     {

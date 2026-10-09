@@ -46,8 +46,8 @@ public class TupletBracketFollowsBeamTests
         part melody {
           section A { c8[ tuplet 3/2 { e8 d c } a,8] c4 r4 | }
         }
-        form main { A }
-        score main { staff melody }
+        form { A }
+        score { staff melody }
         """;
 
     // The same arm with the tuplet's FIRST column a REST the beam runs over.
@@ -56,8 +56,8 @@ public class TupletBracketFollowsBeamTests
         part melody {
           section A { e8[ tuplet 3/2 { r8 d c ] } c8 c4 r4 | }
         }
-        form main { A }
-        score main { staff melody }
+        form { A }
+        score { staff melody }
         """;
 
     /// <summary>

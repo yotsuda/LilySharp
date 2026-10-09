@@ -46,7 +46,7 @@ public sealed class InlineVoltaMeasureValidationTests
     private static IReadOnlyList<Diagnostic> Diagnose(string music)
     {
         var tree = SyntaxTree.Parse(
-            $"part mel {{\n  section A {{ {music} }}\n}}\nform main {{ A }}\nscore main {{ staff mel }}\n");
+            $"part mel {{\n  section A {{ {music} }}\n}}\nform {{ A }}\nscore {{ staff mel }}\n");
         var validator = new MeasureValidator();
         validator.Validate(tree);
         return validator.Diagnostics;

@@ -11,9 +11,9 @@ part m {
   section A { e,8 f g@fermata a@flageolet e f g a | }
 }
 
-form main { A }
+form { A }
 
-score main {
+score {
   staff m
   tab m as full
 }

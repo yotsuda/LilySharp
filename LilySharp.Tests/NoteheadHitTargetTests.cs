@@ -33,8 +33,8 @@ public class NoteheadHitTargetTests
 {
     private const string Doc = """
         part m { clef treble section A { c'4 d' } }
-        form main { A }
-        score main "s" { staff m }
+        form { A }
+        score "s" { staff m }
         """;
 
     private static string Render(SvgRenderOptions options)
@@ -81,8 +81,8 @@ public class NoteheadHitTargetTests
         // ~0.2 ss — too thin to click) carrying a source offset.
         var svg = SvgGenerator.Generate(SyntaxTree.Parse("""
             part m { clef treble section A { c'1 | d'1 } }
-            form main { A }
-            score main "s" { staff m }
+            form { A }
+            score "s" { staff m }
             """), SvgRenderOptions.Preview());
         Assert.NotEmpty(ClickTargets(svg));
     }
@@ -93,7 +93,7 @@ public class NoteheadHitTargetTests
         // A click jumps the editor to the hit rect's data-pos; it must be the '|'
         // character's offset, not the whitespace in front of it.
         const string src = "part m { clef treble section A { c'1 | d'1 } }\n"
-                         + "form main { A }\nscore main \"s\" { staff m }";
+                         + "form { A }\nscore \"s\" { staff m }";
         int barPos = src.IndexOf('|', src.IndexOf("c'1")); // the mid-measure '|'
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());
         Assert.Contains(barPos, ClickTargets(svg));
@@ -107,7 +107,7 @@ public class NoteheadHitTargetTests
         // a caret on EITHER the section `|` OR the phrase `|` highlights it.
         const string src = "phrase x { c1 | }\n"
                          + "part m { clef treble section A { x | x } }\n"
-                         + "form main { A }\nscore main \"s\" { staff m }";
+                         + "form { A }\nscore \"s\" { staff m }";
         int sectionBar = src.IndexOf('|', src.IndexOf("{ x")); // between the two x
         int phraseBar = src.IndexOf('|');                       // the phrase's own |
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());
@@ -126,7 +126,7 @@ public class NoteheadHitTargetTests
         // the section bar there.
         const string src = "phrase x { |: c1 | d1 :| }\n"
                          + "part m { clef treble section A { x | x :|: x } }\n"
-                         + "form main { A }\nscore main \"s\" { staff m }";
+                         + "form { A }\nscore \"s\" { staff m }";
         int repeatStart = src.IndexOf("|:");
         int repeatEnd = src.IndexOf(":|");
         int sectionPlain = src.IndexOf('|', src.IndexOf("{ x")); // the `|` between x1 and x2
@@ -152,7 +152,7 @@ public class NoteheadHitTargetTests
         // offset (it is a highlight alias on the merged bars, the click target on the last).
         const string src = "phrase x { |: c1 | c1 :| }\n"
                          + "part m { clef treble section A { x | x | x } }\n"
-                         + "form main { A }\nscore main \"s\" { staff m }";
+                         + "form { A }\nscore \"s\" { staff m }";
         int repeatEnd = src.IndexOf(":|");
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());
         Assert.Equal(3, HighlightTargets(svg, repeatEnd));
@@ -169,7 +169,7 @@ public class NoteheadHitTargetTests
         // book would have no drawn start barline for the assertion to be about.
         const string src = "phrase x { |: c1 :| }\n"
                          + "part m { clef treble section A { d1 x } }\n"
-                         + "form main { A }\nscore main \"s\" { staff m }";
+                         + "form { A }\nscore \"s\" { staff m }";
         int repeatStart = src.IndexOf("|:");
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());
         Assert.True(HighlightTargets(svg, repeatStart) >= 1);
@@ -191,7 +191,7 @@ public class NoteheadHitTargetTests
         // onto the loose accidental glyph box. It is emitted pointer-events="none"
         // (keeps data-pos), so only the notehead's nh-hit rect owns the click.
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(
-            "part m { clef treble section A { cis'4 } }\nform main { A }\nscore \"s\" { staff m }"),
+            "part m { clef treble section A { cis'4 } }\nform { A }\nscore \"s\" { staff m }"),
             SvgRenderOptions.Preview());
 
         // The accidental is a non-clickable music glyph that still carries data-pos.

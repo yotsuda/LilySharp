@@ -86,8 +86,8 @@ public class LyricRowUnderMultipleStavesTests
         "    [~2. Like a dia- mond | in the sky |]\n" +
         "  }\n" +
         "}\n" +
-        "form main { A |: B :| A \"A2\" }\n" +
-        "score main {\n  staff melody\n  staff lower\n  lyrics verse\n}\n";
+        "form { A |: B :| A \"A2\" }\n" +
+        "score {\n  staff melody\n  staff lower\n  lyrics verse\n}\n";
 
     [Fact]
     public void RowBelowTwoStaves_ClearsTheLowerStaffsNotes_OnEverySystem()

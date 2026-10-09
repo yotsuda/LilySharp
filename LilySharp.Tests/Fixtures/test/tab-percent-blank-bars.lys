@@ -18,9 +18,9 @@ part bl {
   }
 }
 
-form main { A }
+form { A }
 
-score main "tab-percent-blank-bars" {
+score "tab-percent-blank-bars" {
   staff bl
   tab bl as full
 }

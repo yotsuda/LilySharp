@@ -45,8 +45,8 @@ public class MusicXmlPickupNumberingTests
             part m
             section P { partial 2  m { r8 c'8 d' e' } }
             section Q { m { f'4 g' a' b' | c''1 | } }
-            form main { P Q }
-            score main { staff m }
+            form { P Q }
+            score { staff m }
             """);
         Assert.Equal(new[] { 0, 1, 2 }, numbers);
     }
@@ -62,8 +62,8 @@ public class MusicXmlPickupNumberingTests
             part m
             section A { partial 4  m { c'4 | d'1 | e'1 | } }
             section B { m { f'1 | g'1 | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.Equal(new[] { 0, 1, 2, 3, 4 }, numbers);
     }
@@ -78,8 +78,8 @@ public class MusicXmlPickupNumberingTests
             part m
             section A { m { d'1 | e'1 | } }
             section B { m { f'1 | g'1 | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.Equal(new[] { 1, 2, 3, 4 }, numbers);
     }

@@ -18,8 +18,8 @@ section Main {
   }
 }
 
-form main { Main }
+form { Main }
 
-score main "octave-absolute" {
+score "octave-absolute" {
   staff melody
 }

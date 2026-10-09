@@ -46,13 +46,13 @@ internal sealed class DuplicateScoreNameValidator : ISemanticValidator
 
             if (seen.Add(outputKey)) continue; // first time → fine
 
-            SyntaxTokenNode tok = render.Basename ?? render.FormName ?? render.RenderKeyword;
+            SyntaxTokenNode tok = render.Basename ?? render.ScoreName ?? render.RenderKeyword;
             string label = outputKey.Length == 0
-                ? "the input-file output (form 'main' with no basename)"
+                ? "the input-file output (the unnamed score, with no basename)"
                 : $"output name \"{outputKey}\"";
             _diagnostics.Error(tok.Span,
                 DiagnosticCodes.DuplicateScoreName,
-                $"Duplicate {label}; give one score a distinct \"basename\".");
+                $"Duplicate {label}; give one score a distinct name or \"basename\".");
         }
     }
 }

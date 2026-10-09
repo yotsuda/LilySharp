@@ -25,8 +25,8 @@ section Second {
 
 // Reuse sections — the second occurrence of First gets its own display
 // label so the printed rehearsal marks stay unique.
-form main { First Second First "First (reprise)" }
+form { First Second First "First (reprise)" }
 
-score main "dollar-ref" {
+score "dollar-ref" {
   staff melody
 }

@@ -90,7 +90,7 @@ public class CompletionContextCommentStringTests
     [Fact]
     public void ScoreBlock_NotFooledByBraceInString()
     {
-        var doc = "title \"score main { x\"\n";
+        var doc = "title \"score { x\"\n";
         Assert.False(LilySharpLanguageServer.IsInsideScoreBlock(doc, doc.Length));
     }
 

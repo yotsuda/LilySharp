@@ -36,7 +36,7 @@ public class MusicXmlPercentRepeatTests
     private static XDocument Export(string sections, string form)
     {
         var tree = SyntaxTree.Parse(
-            $"octave absolute\ntime 4/4\npart m {{ clef treble }}\n{sections}\nform main {{ {form} }}\nscore main {{ staff m }}");
+            $"octave absolute\ntime 4/4\npart m {{ clef treble }}\n{sections}\nform {{ {form} }}\nscore {{ staff m }}");
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         return new MusicXmlExporter().Export(tree).ToXml();
     }

@@ -19,5 +19,5 @@ section Main {
     up up up up |
   }
 }
-form main { Main }
-score main "lyrics-skyline" { staff melody  lyrics words }
+form { Main }
+score "lyrics-skyline" { staff melody  lyrics words }

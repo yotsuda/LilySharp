@@ -3,5 +3,5 @@ time 4/4
 part m {
   section A { c'4@staccato( d'@accent e'@tenuto f'@fermata) | g@finger(1)( a@finger(2) b@finger(3) c'@finger(4)) | c'4@p( d' e' f'@f) | d''4@staccato( e''@accent f'' g''@marcato) | e4@staccato( f@staccato g@staccato a@staccato) | }
 }
-form main { A }
-score main { staff m }
+form { A }
+score { staff m }

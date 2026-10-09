@@ -50,8 +50,8 @@ public sealed class BrokenSlurStaffSpacingTests
               up { g1 | g1 | g1 | g1 | break g1 | g1 | g1 | g1 | }
               lo { c''1 | c''1 | c''1 | c''2 c''4( a'' | break c''' d''' e''' f''' | c''1) | c''1 | c''1 | }
             }
-            form main { A }
-            score main {
+            form { A }
+            score {
               grandStaff {
                 staff up
                 staff lo
@@ -85,8 +85,8 @@ public sealed class BrokenSlurStaffSpacingTests
               up { g1 | g1 | g1 | g1 | break g1 | g1 | g1 | g1 | }
               lo { c''1 | c''1 | c''1 | f'''1~ | break f'''1 | c''1 | c''1 | c''1 | }
             }
-            form main { A }
-            score main {
+            form { A }
+            score {
               grandStaff {
                 staff up
                 staff lo

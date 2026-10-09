@@ -31,7 +31,7 @@ public class PartHeaderParseTests
 {
     private static string Source(string parts) =>
         $"octave absolute\n{parts}\nsection Main {{ m {{ c4 d4 e4 f4 | }} }}\n"
-        + "form main { ~Main }\nscore main { staff m }\n";
+        + "form { ~Main }\nscore { staff m }\n";
 
     private static IReadOnlyList<Diagnostic> ParseErrors(string parts, string code) =>
         SyntaxTree.Parse(Source(parts)).Diagnostics

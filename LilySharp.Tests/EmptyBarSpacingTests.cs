@@ -49,8 +49,8 @@ public class EmptyBarSpacingTests
             c4 d e f | s1 | s1 | s1 | d4 e f g |
           }
         }
-        form main { A }
-        score main { staff bassline }
+        form { A }
+        score { staff bassline }
         """;
 
     /// <summary>scratch/p332/t7/pc6r.lys — the eighths book whose common shortest is 1/8.</summary>
@@ -63,8 +63,8 @@ public class EmptyBarSpacingTests
             c8 d e f g a b c' | s1 | s1 | s1 | d4 e f g |
           }
         }
-        form main { A }
-        score main { staff bassline }
+        form { A }
+        score { staff bassline }
         """;
 
     private static (System.Collections.Generic.List<Fraction> Timings,
@@ -211,8 +211,8 @@ public class EmptyBarSpacingTests
               clef bass
               section A { c4 d e f | repeat percent 2 { g,4 a, b, c } | d4 e f g | }
             }
-            form main { A }
-            score main { staff bassline }
+            form { A }
+            score { staff bassline }
             """;
         var coveredSprings = ColumnSprings(covered, 2, GlobalShortest);
         double bw = SpacingRules.GetBarlineWidth(BarlineType.Single);
@@ -229,8 +229,8 @@ public class EmptyBarSpacingTests
               clef bass
               section A { repeat percent 8 { c8 d } | d4 e f g | }
             }
-            form main { A }
-            score main { staff bassline }
+            form { A }
+            score { staff bassline }
             """;
         var (_, _, _, slashScore) = Collect(slashes, 1);
         Assert.True(slashScore.PercentRepeats.Any(p => p.IsBeatSlash && p.MeasureIndex == 1),
@@ -251,8 +251,8 @@ public class EmptyBarSpacingTests
             r1 |
           }
         }
-        form main { A }
-        score main { staff bl }
+        form { A }
+        score { staff bl }
         """;
 
     [Fact]
@@ -326,8 +326,8 @@ public class EmptyBarSpacingTests
                 c4 d e f | repeat percent 3 { g,4 a, b, c | d4 e f g | } a4 b c d |
               }
             }
-            form main { A }
-            score main { staff bassline }
+            form { A }
+            score { staff bassline }
             """;
         var tree = SyntaxTree.Parse(pair);
         var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
@@ -388,8 +388,8 @@ public class EmptyBarSpacingTests
               melody { c4 d e f | s1 | c4 d e f | }
               chords prog { C | F | C | }
             }
-            form main { Main }
-            score main "x" { chords prog staff melody }
+            form { Main }
+            score "x" { chords prog staff melody }
             """;
         var springs = ColumnSprings(named, 1, GlobalShortest);
         Assert.True(springs[0].IdealDistance > 0.0,

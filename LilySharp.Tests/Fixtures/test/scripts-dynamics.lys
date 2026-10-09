@@ -14,6 +14,6 @@ section Main {
   }
 }
 
-form main { Main }
+form { Main }
 
-score main "scripts-dynamics" { staff melody }
+score "scripts-dynamics" { staff melody }

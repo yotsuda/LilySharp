@@ -40,8 +40,8 @@ public sealed class CollectSectionHeadResumeTests
         section B { melody { key ees major c4 d e f | c4 d e f | } }
         section C { melody { key ees major c4 d e f | } }
         section D { melody { time 3/4 c4 d e | c4 d e | } }
-        form main { A B C D }
-        score main { staff melody }
+        form { A B C D }
+        score { staff melody }
         """;
 
     [Fact]

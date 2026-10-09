@@ -70,8 +70,8 @@ public class SharedStaffVoiceSlotTests
           rh { voice { c''2 r4 g''8 a''8 | } voice { e'2 r2 | } }
           lh { voice { c'4@f e' g' a' | } voice { g2 tuplet 3/2 { c'8 d' e' } r4 | } }
         }
-        form main { Main }
-        score main "x" { condensedStaff { rh lh } }
+        form { Main }
+        score "x" { condensedStaff { rh lh } }
         """;
 
     /// <summary>
@@ -138,8 +138,8 @@ public class SharedStaffVoiceSlotTests
               rh { {{upper}} }
               lh { c'16 d' tuplet 3/2 { e' f' g' } r2. | }
             }
-            form main { Main }
-            score main "x" { condensedStaff { rh lh } }
+            form { Main }
+            score "x" { condensedStaff { rh lh } }
             """);
         var staff = shared.EnumerateStaves().Single().Staff;
         var bracket = Assert.Single(shared.TupletBrackets);
@@ -165,8 +165,8 @@ public class SharedStaffVoiceSlotTests
             key c major
             part rh { clef treble }
             section Main { rh { {{upper}} } }
-            form main { Main }
-            score main "x" { staff rh }
+            form { Main }
+            score "x" { staff rh }
             """);
         var aloneStaff = alone.EnumerateStaves().Single().Staff;
         Assert.Empty(alone.TupletBrackets);
@@ -201,8 +201,8 @@ public class SharedStaffVoiceSlotTests
             part rh { clef treble }
             part lh { clef treble }
             section Main { rh { c''1 | } lh { c'1 | } }
-            form main { Main }
-            score main "x" { {{kind}} { rh lh } }
+            form { Main }
+            score "x" { {{kind}} { rh lh } }
             """);
         var slots = RenderSpecParser.FindFirst(tree).GetVoiceBindings()
             .Select(b => (b.VoiceName, b.Slotting)).ToArray();
@@ -228,8 +228,8 @@ public class SharedStaffVoiceSlotTests
               rh { voice { tuplet 3/2 { c''8 d'' e'' } r2. | } voice { e'1 | } }
               lh { voice { tuplet 3/2 { c8 d e } r2. | } voice { e,1 | } }
             }
-            form main { Main }
-            score main "x" { grandStaff { staff rh staff lh } }
+            form { Main }
+            score "x" { grandStaff { staff rh staff lh } }
             """);
         Assert.Equal(
             new[] { (0, 0), (1, 0) },
@@ -255,8 +255,8 @@ public class SharedStaffVoiceSlotTests
           rh { c''8 d'' e'' f'' g'' a'' b'' c''' | }
           lh { c'4 e'4@f g'4@staccato tuplet 3/2 { c'8 d' e' } | }
         }
-        form main { Main }
-        score main "x" { %%KIND%% { rh lh } }
+        form { Main }
+        score "x" { %%KIND%% { rh lh } }
         """;
 
     /// <summary>
@@ -376,8 +376,8 @@ public class SharedStaffVoiceSlotTests
               rh { c''8 d'' e'' f'' g'' a'' b'' c''' | }
               lh { r4 r4 c'4@f e'4 | }
             }
-            form main { Main }
-            score main "x" { combinedStaff { rh lh } }
+            form { Main }
+            score "x" { combinedStaff { rh lh } }
             """);
         var staff = score.EnumerateStaves().Single().Staff;
         var dynamic = Assert.Single(score.Dynamics);
@@ -420,8 +420,8 @@ public class SharedStaffVoiceSlotTests
               vone { R1@text("R") | }
               vtwo { r1@text("r") | }
             }
-            form main { A }
-            score main "x" { combinedStaff { vone vtwo } }
+            form { A }
+            score "x" { combinedStaff { vone vtwo } }
             """);
         var text = Assert.Single(score.Dynamics);
         Assert.Equal("r", text.Text);
@@ -452,8 +452,8 @@ public class SharedStaffVoiceSlotTests
               rh { c''8 d'' e'' f'' g'' a'' b'' c''' | }
               lh { voice { c'4 e' g' b' | } voice { c2@f e2 | } }
             }
-            form main { Main }
-            score main "x" { combinedStaff { rh lh } }
+            form { Main }
+            score "x" { combinedStaff { rh lh } }
             """);
         var staff = score.EnumerateStaves().Single().Staff;
         var dynamic = Assert.Single(score.Dynamics);
@@ -495,8 +495,8 @@ public class SharedStaffVoiceSlotTests
               rh { c''8 d'' e'' f'' g'' a'' b'' c''' | }
               lh { c'4 e'4@f g'4@staccato tuplet 3/2 { c''8 d'' e'' } | }
             }
-            form main { Main }
-            score main "x" { combinedStaff { rh lh } }
+            form { Main }
+            score "x" { combinedStaff { rh lh } }
             """);
         var staff = score.EnumerateStaves().Single().Staff;
 
@@ -550,8 +550,8 @@ public class SharedStaffVoiceSlotTests
               fl1 { c''4 grace { d''16 } e''4 f''2 | }
               fl2 { e'4 grace { f'16 } g'4 a'2 | }
             }
-            form main { A }
-            score main "x" { condensedStaff { fl1 fl2 } }
+            form { A }
+            score "x" { condensedStaff { fl1 fl2 } }
             """);
         var staff = score.EnumerateStaves().Single().Staff;
 
@@ -586,8 +586,8 @@ public class SharedStaffVoiceSlotTests
         key c major
         part lh { clef treble }
         section Main { lh { {{music}} } }
-        form main { Main }
-        score main "x" { staff lh }
+        form { Main }
+        score "x" { staff lh }
         """).EnumerateStaves().Single().Staff;
 
     private static int? StaffPositionOf(MusicItem? item)

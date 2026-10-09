@@ -8,8 +8,8 @@ part m { clef treble_8 tuning guitar }
 section A {
   m { c'1 | }
 }
-form main { A }
-score main {
+form { A }
+score {
 //  staffGroup {
   staff m
   tab m as numbers

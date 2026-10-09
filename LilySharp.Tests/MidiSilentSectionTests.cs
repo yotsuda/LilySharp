@@ -28,7 +28,7 @@ namespace LilySharp.Tests;
 /// <remarks>
 /// The MIDI exporter used to match only <c>SectionReferenceSyntax</c> when walking a form,
 /// so a silent reference fell through the switch and the section never played:
-/// <c>form main { ~Main }</c> engraved correctly and exported ZERO notes. The engraver had
+/// <c>form { ~Main }</c> engraved correctly and exported ZERO notes. The engraver had
 /// already been bitten by the same omission in its repeat-block walk, and says so in
 /// MeasureCollector.Form.cs — "without this the section's measures were dropped entirely,
 /// not just its label". The invariant these tests hold is the strong one: dropping the '~'
@@ -40,7 +40,7 @@ public sealed class MidiSilentSectionTests
         new MidiExporter().Export(SyntaxTree.Parse(source))
             .Tracks[1].Notes.OrderBy(n => n.StartTick).Select(n => n.Pitch).ToArray();
 
-    private const string Book = "part m { section A { c4 d4 } }\nform main { ";
+    private const string Book = "part m { section A { c4 d4 } }\nform { ";
 
     [Fact]
     public void SilentSectionReference_Plays()
@@ -69,7 +69,7 @@ public sealed class MidiSilentSectionTests
     {
         // Two sections, one hidden, so a fix that played the silent one in the wrong
         // place (or twice) would not pass by accident.
-        const string two = "part m { section A { c4 } section B { e4 } }\nform main { ";
+        const string two = "part m { section A { c4 } section B { e4 } }\nform { ";
         Assert.Equal(new[] { 60, 64, 60 }, Pitches(two + "~A B A }"));
     }
 }

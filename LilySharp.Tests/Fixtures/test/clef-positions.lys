@@ -19,9 +19,9 @@ section M {
   bas { c'1 }
 }
 
-form main { M }
+form { M }
 
-score main "clef-positions" {
+score "clef-positions" {
   staff sop
   staff alt
   staff ten

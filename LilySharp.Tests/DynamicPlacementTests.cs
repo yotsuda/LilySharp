@@ -40,8 +40,8 @@ public class DynamicPlacementTests
         var src =
             "part m { clef treble }\n" +
             $"section S {{ m {{ {body} }} }}\n" +
-            "form main { S }\n" +
-            "score main \"o\" { staff m }\n";
+            "form { S }\n" +
+            "score \"o\" { staff m }\n";
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors,
             string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
@@ -66,14 +66,14 @@ public class DynamicPlacementTests
         // there and must be flagged, not silently swallowed.
         var tree = SyntaxTree.Parse(
             "part m { clef treble } section S { m { c''4@p@cresc.up d e f@f } }\n" +
-            "form main { S } score main \"o\" { staff m }\n");
+            "form { S } score \"o\" { staff m }\n");
         Assert.True(tree.HasErrors);
         Assert.Contains(tree.Diagnostics, d => d.Message.Contains("cresc"));
 
         // A dynamic LEVEL placement is fine.
         Assert.False(SyntaxTree.Parse(
             "part m { clef treble } section S { m { c''4@f.up } }\n" +
-            "form main { S } score main \"o\" { staff m }\n").HasErrors);
+            "form { S } score \"o\" { staff m }\n").HasErrors);
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public class DynamicPlacementTests
         var src =
             "part top { clef treble }\npart bot { clef bass }\n" +
             $"section S {{ top {{ c'1 }} bot {{ <c' e' g'>1{dynamic} }} }}\n" +
-            "form main { S }\nscore \"o\" { staff top staff bot }\n";
+            "form { S }\nscore \"o\" { staff top staff bot }\n";
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors,
             string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
@@ -220,8 +220,8 @@ public class DynamicPlacementTests
             "octave absolute\n" +
             "part m { clef treble }\n" +
             $"section S {{ m {{ voice {{ b4@f b b b }} {{ {secondVoice} }} | }} }}\n" +
-            "form main { S }\n" +
-            "score main \"o\" { staff m }\n";
+            "form { S }\n" +
+            "score \"o\" { staff m }\n";
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors,
             string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
@@ -306,9 +306,9 @@ public class DynamicPlacementTests
           section B { c1 | c1 }
         }
 
-        form main { A B }
+        form { A B }
 
-        score main { staff melody }
+        score { staff melody }
         """;
 
     /// <summary>

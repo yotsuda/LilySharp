@@ -47,7 +47,7 @@ internal sealed partial class Parser
                 _diagnostics.Error(voltaSpan, DiagnosticCodes.LilyPondRepeatVolta,
                     "'repeat volta' is LilyPond's spelling. In Lily# a repeat is written in "
                     + "the form: cut the repeated bars into a section and write "
-                    + "'form main { |: A :| }' (explicit count ':|*N', volta endings "
+                    + "'form { |: A :| }' (explicit count ':|*N', volta endings "
                     + "'|: A [1. B] :| [2. C]').");
             }
         }

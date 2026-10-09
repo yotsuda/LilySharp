@@ -50,7 +50,7 @@ public class SingsCompletionTests
 
     [Theory]
     [InlineData("lyrics verse { ")]                                  // the body, not the header
-    [InlineData("score main { staff m  lyrics w ")]                  // a score ROW, not a definition
+    [InlineData("score { staff m  lyrics w ")]                  // a score ROW, not a definition
     public void NeitherTheBodyNorAScoreRow_OffersTheKeyword(string text)
         => Assert.NotEqual(LilySharpLanguageServer.CompletionContext.AfterLyricsTrackName, Ctx(text));
 
@@ -82,20 +82,20 @@ public class SingsCompletionTests
     // ── the ROW spelling: `score { … lyrics w sings m }` ──
 
     [Theory]
-    [InlineData("score main { staff m  lyrics w ")]                  // after the row's name
-    [InlineData("score main { staff m  lyrics w si")]                // typing the keyword
+    [InlineData("score { staff m  lyrics w ")]                  // after the row's name
+    [InlineData("score { staff m  lyrics w si")]                // typing the keyword
     public void AScoreRowAfterItsName_OffersTheBindingKeyword(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterLyricsRowAttachName, Ctx(text));
 
     [Fact]
     public void AGroupRowAfterItsName_OffersTheBindingKeyword()
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterGroupLyricsRowAttachName,
-            Ctx("score main { grandStaff { staff m  lyrics w "));
+            Ctx("score { grandStaff { staff m  lyrics w "));
 
     [Theory]
-    [InlineData("score main { staff m  lyrics w sings ")]
-    [InlineData("score main { staff m  lyrics w sings vo")]          // typing the target
-    [InlineData("score main { grandStaff { staff m  lyrics w sings ")]
+    [InlineData("score { staff m  lyrics w sings ")]
+    [InlineData("score { staff m  lyrics w sings vo")]          // typing the target
+    [InlineData("score { grandStaff { staff m  lyrics w sings ")]
     public void AScoreRowsSings_OffersTheBindingTargets(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterSingsTarget, Ctx(text));
 
@@ -112,7 +112,7 @@ public class SingsCompletionTests
             lyrics words sings melody { section A { la la | } }
             lyrics verse2 { section A { lo lo | } }
             section A { melody { c4 d | } bass { c2 | } lyrics cell sings bass { do | } }
-            score main { staff melody  lyrics
+            score { staff melody  lyrics
             """ + " ";
         string text = head + " }";
         Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterLyricsRef,

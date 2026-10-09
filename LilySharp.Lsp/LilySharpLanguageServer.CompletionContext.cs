@@ -558,8 +558,8 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>
     /// True when the caret sits in a score HEADER — on a line that opens with <c>score</c>
-    /// and a form name and has not reached its <c>{</c>: <c>score main |</c>,
-    /// <c>score main "out" |</c>, <c>score main transpose d |</c>. Line-scoped, like the
+    /// and a form name and has not reached its <c>{</c>: <c>score |</c>,
+    /// <c>score "out" |</c>, <c>score transpose d |</c>. Line-scoped, like the
     /// override-value scan: a header is one line in every book in the tree.
     /// </summary>
     internal static bool IsScoreHeaderPosition(string text, int offset)
@@ -593,7 +593,8 @@ public sealed partial class LilySharpLanguageServer
         }
         // An option's own value slot (`pitch |`, `transpose |`) is answered by that option's
         // context, not by the header list.
-        return tokens.Count >= 2 && tokens[0] == "score" && tokens[^1] is not ("pitch" or "transpose");
+        // `score |` is a header position too: the name is optional (the unnamed score).
+        return tokens.Count >= 1 && tokens[0] == "score" && tokens[^1] is not ("pitch" or "transpose");
     }
 
     private static bool IsInsideTopLevelSectionBody(List<OpenBlock> stack)
@@ -729,9 +730,9 @@ public sealed partial class LilySharpLanguageServer
         /// <summary><c>score NAME |</c> — before the brace: the header's options (a quoted
         /// basename, <c>transpose</c>, <c>pitch</c>) and the body's braces.</summary>
         AfterScoreHeader,
-        /// <summary><c>score |</c> — the form this score renders, which must already be
-        /// declared (LYS1018 otherwise).</summary>
-        AfterScoreKeyword,
+        /// <summary><c>form |</c> in a score — the top-level form it plays, which must already
+        /// be declared (LYS1018 otherwise).</summary>
+        AfterScoreForm,
         /// <summary><c>transpose |</c> — a pitch is typed there, which no list serves.</summary>
         AfterTransposePitch,
         /// <summary><c>tab |</c> in a score: the declared parts, and the tunings that may
@@ -882,7 +883,7 @@ public sealed partial class LilySharpLanguageServer
             while (atSign >= 0 && char.IsLetter(text[atSign]))
                 atSign--;
             if (atSign > 0 && text[atSign] == '@' && text[atSign - 1] == ']'
-                && scan.Stack.Count > 0 && scan.Stack[^1].Frame.Prefix == "form")
+                && scan.Stack.Count > 0 && (scan.Stack[^1].Frame.Prefix == "form" || scan.Stack[^1].Frame.Name == "form"))
                 return CompletionContext.AfterEndingAt;
         }
 
@@ -1129,12 +1130,6 @@ public sealed partial class LilySharpLanguageServer
         if (IsPitchName(prevWord) && SecondWordBeforeCursor(text, offset) == "key")
             return CompletionContext.AfterKeyTonic;
 
-        // `score |` — the FORM this score renders. ScoreDecl's Identifier "NAMES THE FORM
-        // this score renders and is REQUIRED" (GRAMMAR §7), so the declared form names are
-        // what belongs; the caret got the top-level KEYWORD list until 2026-09-12, which is
-        // also why the item that writes this name could not hand the choice to a popup.
-        if (prevWord == "score" && scan.Stack.Count == 0 && !IsInsideStringLiteral(text, offset))
-            return CompletionContext.AfterScoreKeyword;
 
         // `score NAME |` — the header, before its brace: the caret is at the top level
         // (the block stack is empty) on a line that opens with `score` and has not yet
@@ -1204,11 +1199,17 @@ public sealed partial class LilySharpLanguageServer
         if (IsInsidePartBlock(scan.Stack) && !IsInsideStringLiteral(text, offset))
             return CompletionContext.PartBlock;
 
-        // Inside form <name> { … } the body is a playback order (section names and
+        // Inside form [name] { … } the body is a playback order (section names and
         // navigation marks), not music — so it gets its own completions, never note
-        // names. A form is always named, so the `form` keyword is the frame Prefix.
-        if (scan.Stack.Count > 0 && scan.Stack[^1].Frame.Prefix == "form")
+        // names. The `form` keyword is the frame's Prefix when the form is named and its
+        // Name when it is not (the file's default form, or a score's own `form { … }`).
+        if (scan.Stack.Count > 0
+            && (scan.Stack[^1].Frame.Prefix == "form" || scan.Stack[^1].Frame.Name == "form"))
             return CompletionContext.FormBlock;
+
+        // `form |` in a score — the top-level forms it may pick (LYS1018 otherwise).
+        if (prevWord == "form" && IsInsideScoreBlock(scan.Stack) && !IsInsideStringLiteral(text, offset))
+            return CompletionContext.AfterScoreForm;
 
         // Inside score "name" { } / grandStaff { }: the body is a render spec.
         // After its reference keywords only the declared part names fit.
@@ -1737,11 +1738,11 @@ public sealed partial class LilySharpLanguageServer
         // ⚠️ THE BUDGET IS THE GRAMMAR'S, not a guess. ScoreDecl is
         // `'score' , Identifier , [ String ] , { ScoreOption } , '{'` with
         // `ScoreOption = 'transpose' PitchToken | 'pitch' PitchMode` — so the longest header
-        // is `score main "out" transpose d pitch concert {`: SEVEN tokens, six of them
+        // is `score "out" transpose d pitch concert {`: SEVEN tokens, six of them
         // behind the one already read. It walked back TWO until 2026-09-12, which covered
-        // `score main {` and `score main "out" {` and nothing else — so a score with ANY
+        // `score {` and `score "out" {` and nothing else — so a score with ANY
         // option was not recognized as a score at all and its body fell through to the MUSIC
-        // completions (measured: 98 items opening `c d e f g a b` at `score main transpose d
+        // completions (measured: 98 items opening `c d e f g a b` at `score transpose d
         // { |`, where a score offers its 17 render items). The walk still stops dead at a
         // token that is not part of a header — punctuation, a brace, or a block keyword —
         // so a longer budget cannot reach past the construct it is reading.

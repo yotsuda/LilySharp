@@ -305,9 +305,9 @@ public class SkylineStaffSpacingTests
                    c''4 d'' e'' f'' | }
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "TWO" {
+            score "TWO" {
               grandStaff {
                 staff rh
                 staff lh
@@ -367,9 +367,9 @@ public class SkylineStaffSpacingTests
               chords prog { C | C | }
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "ROW" {
+            score "ROW" {
               chords prog
               staff melody
             }

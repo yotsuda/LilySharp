@@ -146,7 +146,7 @@ public sealed partial class LilySharpLanguageServer
         parts.Add(section.FormReferences.Count == 0
             ? "in no form"
             : string.Join(", ", section.FormReferences.Select(f =>
-                $"{f.Count}× in form {(f.Form.Length == 0 ? "(unnamed)" : f.Form)}")));
+                (f.Form.Length == 0 ? $"{f.Count}× in the form" : $"{f.Count}× in form {f.Form}"))));
         return string.Join(" · ", parts);
     }
 

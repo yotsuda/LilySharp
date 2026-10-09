@@ -13,8 +13,8 @@ section Main {
   lh { c4 d e@sustain f | g4 a b@!sustain c | }
 }
 
-form main { Main }
+form { Main }
 
-score main "pedal-mixed" {
+score "pedal-mixed" {
   staff lh
 }

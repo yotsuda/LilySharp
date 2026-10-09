@@ -54,8 +54,8 @@ public class PitchedRestOutputsTests
         time 4/4
         part v { clef treble }
         section S { v { a'4@rest c'4 r4 g'4@rest | } }
-        form main { ~S }
-        score main { staff v }
+        form { ~S }
+        score { staff v }
         """;
 
     /// <summary>The control: the same book with the two pitched rests written plainly.</summary>
@@ -64,8 +64,8 @@ public class PitchedRestOutputsTests
         time 4/4
         part v { clef treble }
         section S { v { r4 c'4 r4 r4 | } }
-        form main { ~S }
-        score main { staff v }
+        form { ~S }
+        score { staff v }
         """;
 
     [Fact]
@@ -132,8 +132,8 @@ public class PitchedRestOutputsTests
             time 4/4
             part v { clef treble }
             section S { v { tuplet 3/2 { c'4 c4@rest c'4 } c'2 | } }
-            form main { ~S }
-            score main { staff v }
+            form { ~S }
+            score { staff v }
             """;
         var tree = SyntaxTree.Parse(book);
 
@@ -167,8 +167,8 @@ public class PitchedRestOutputsTests
             time 4/4
             part v { clef treble transpose d }
             section S { v { a'4@rest r2. | } }
-            form main { ~S }
-            score main { staff v }
+            form { ~S }
+            score { staff v }
             """)).Parts[0].Measures[0].Notes;
 
         Assert.True(xml[0].IsRest && xml[0].RestHasDisplayPitch);

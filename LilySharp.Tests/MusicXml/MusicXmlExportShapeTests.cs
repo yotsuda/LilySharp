@@ -48,8 +48,8 @@ public class MusicXmlExportShapeTests
                 { c4 c c c | c1 | }
               }
             }
-            form main { A }
-            score main { staff pno }
+            form { A }
+            score { staff pno }
             """);
         var measures = doc.Descendants("measure").ToList();
         Assert.Equal(2, measures.Count);               // NOT 4 (serialized voices)
@@ -76,8 +76,8 @@ public class MusicXmlExportShapeTests
                 { e4 f g a | }
               }
             }
-            form main { A }
-            score main { staff pno }
+            form { A }
+            score { staff pno }
             """);
         var backups = doc.Descendants("backup").ToList();
         Assert.Equal(2, backups.Count);
@@ -94,8 +94,8 @@ public class MusicXmlExportShapeTests
             part m { clef bass
               section A { c d e f | }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.Equal(4, doc.Descendants("note").Count());
         Assert.Equal("m", doc.Descendants("part-name").Single().Value);
@@ -114,8 +114,8 @@ public class MusicXmlExportShapeTests
               section A { c d e f | }
               section B { g a b c' | }
             }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.Equal(8, doc.Descendants("note").Count());
         Assert.Single(doc.Descendants("score-part"));
@@ -130,8 +130,8 @@ public class MusicXmlExportShapeTests
             time 4/4
             part m { clef treble }
             section A { m { <c' e' g'>2~ <c' e' g'>2 | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         var ties = doc.Descendants("tie").ToList();
         Assert.Equal(3, ties.Count(t => t.Attribute("type")!.Value == "start"));
@@ -158,8 +158,8 @@ public class MusicXmlExportShapeTests
             time 4/4
             part m { clef treble }
             section A { m { /4 /4 /8~ /8 /4 | /2 /2~ | 4 /2 | /4 /4 /4 /8~ | /8 /2. | c'2~ /2 | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         var notes = doc.Descendants("note").ToList();
         Assert.Equal(17, notes.Count);
@@ -187,8 +187,8 @@ public class MusicXmlExportShapeTests
             part m { clef treble }
             section A { m { c'4 d' e' f' | } }
             section B { m { g'4 a' b' c'' | } }
-            form main { A B A }
-            score main { staff m }
+            form { A B A }
+            score { staff m }
             """);
         var measures = doc.Descendants("measure").ToList();
         Assert.Equal(3, measures.Count);   // A, B, A — not 2
@@ -205,8 +205,8 @@ public class MusicXmlExportShapeTests
             part m { clef treble }
             section A { m { c'4 d' e' f' | } }
             section B { m { g'4 a' b' c'' | d''4 c'' b' a' | } }
-            form main { A |: B :| }
-            score main { staff m }
+            form { A |: B :| }
+            score { staff m }
             """);
         var measures = doc.Descendants("measure").ToList();
         Assert.Equal(3, measures.Count);   // A(1) + B(2)
@@ -225,8 +225,8 @@ public class MusicXmlExportShapeTests
             octave absolute
             part m { clef treble }
             section A { m { c'4@figuredBass(#6) d' e' f' | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         var figs = doc.Descendants("figured-bass").ToList();
         Assert.Single(figs);
@@ -243,8 +243,8 @@ public class MusicXmlExportShapeTests
             time 4/4
             part m { clef treble }
             section A { m { tuplet 3/2 { c'8 d' e' } r4 c'2 | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         var tuplets = doc.Descendants("tuplet").ToList();
         Assert.Equal(2, tuplets.Count);
@@ -263,8 +263,8 @@ public class MusicXmlExportShapeTests
             time 4/4
             part m { clef treble }
             section A { m { |: c'4 d' e' f' | g' a' b' c'' :| } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         var measures = doc.Descendants("measure").ToList();
         Assert.Equal(2, measures.Count);   // NOT 3 — no spurious empty leading measure
@@ -283,8 +283,8 @@ public class MusicXmlExportShapeTests
             section A { m { c'4 d' e' f' | } }
             section D { m { g'4 a' b' c'' | } }
             section O { m { e'4 f' g' a' | } }
-            form main { |: A [1. D] :| [2. O] }
-            score main { staff m }
+            form { |: A [1. D] :| [2. O] }
+            score { staff m }
             """);
         var measures = doc.Descendants("measure").ToList();
         Assert.Equal(3, measures.Count);   // A, 1st ending D, 2nd ending O
@@ -315,8 +315,8 @@ public class MusicXmlExportShapeTests
             section A { m { c'4 d' e' f' | } }
             section B { m { g'4 a' b' c'' | } }
             section C { m { e'4 f' g' a' | } }
-            form main { A segno B ds al fine C fine }
-            score main { staff m }
+            form { A segno B ds al fine C fine }
+            score { staff m }
             """);
         var measures = doc.Descendants("measure").ToList();
         Assert.Equal(3, measures.Count);
@@ -361,8 +361,8 @@ public class MusicXmlExportShapeTests
             part m { clef treble }
             section A { m { c'4 d' e' f' | } }
             section B { m { g'4 a' b' c'' | } }
-            form main { A _"rit." B fine }
-            score main { staff m }
+            form { A _"rit." B fine }
+            score { staff m }
             """);
         var measures = doc.Descendants("measure").ToList();
         Assert.Equal(2, measures.Count);
@@ -410,8 +410,8 @@ public class MusicXmlExportShapeTests
             octave absolute
             part m { clef treble }
             section A { m { c'1 | R1*3@p@fermata | s2 d'2 | r1 | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         var measures = doc.Descendants("measure").ToList();
         Assert.Equal(6, measures.Count);
@@ -451,8 +451,8 @@ public class MusicXmlExportShapeTests
         var doc = Export("""
             part m { clef treble }
             section A { m { repeat percent 2 { c'4 d' e' f' | } } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.Equal(2, doc.Descendants("measure").Count());
         Assert.Equal(8, doc.Descendants("note").Count());
@@ -466,8 +466,8 @@ public class MusicXmlExportShapeTests
         var doc = Export("""
             part kit { clef percussion }
             section A { kit { bd4 sn hh hh | } }
-            form main { A }
-            score main { staff kit }
+            form { A }
+            score { staff kit }
             """);
         Assert.Equal(4, doc.Descendants("unpitched").Count());
         Assert.Equal("percussion", doc.Descendants("clef").First().Element("sign")!.Value);
@@ -485,8 +485,8 @@ public class MusicXmlExportShapeTests
               |: c'4@sustain@chord(Dm7) d'@cresc e' f'@!sustain | g'1@f :|
               a'4@ottava b' a'@!ottava g' | c'1@chord(G7/B) |
             } }
-            form main { A }
-            score main { staff pno }
+            form { A }
+            score { staff pno }
             """);
         Assert.Single(doc.Descendants("repeat").Where(r => (string?)r.Attribute("direction") == "forward"));
         Assert.Single(doc.Descendants("repeat").Where(r => (string?)r.Attribute("direction") == "backward"));
@@ -517,8 +517,8 @@ public class MusicXmlExportShapeTests
             section A { pno {
               c'4 d'@cresc e' f'@f | c'4@unaCorda d' e' f'@treCorde | c'4@quindicesima d' e' f'@!ottava | c'1@p |
             } }
-            form main { A }
-            score main { staff pno }
+            form { A }
+            score { staff pno }
             """);
         int OffsetOf(XElement directionType)
             => (int?)directionType.Parent!.Element("offset") ?? 0;
@@ -560,8 +560,8 @@ public class MusicXmlExportShapeTests
             section A { pno {
               c'4@text("dolce") d' e'@text("sub.").up f' | R1*2@text("tacet") | g'1@mark("C") |
             } }
-            form main { A }
-            score main { staff pno }
+            form { A }
+            score { staff pno }
             """);
         int OffsetOf(XElement directionType)
             => (int?)directionType.Parent!.Element("offset") ?? 0;
@@ -595,8 +595,8 @@ public class MusicXmlExportShapeTests
               v { c'4 d' | }
               lyrics { glo ri~a | }
             }
-            form main { A }
-            score main { staff v }
+            form { A }
+            score { staff v }
             """);
         var lyric = doc.Descendants("lyric")
             .First(l => l.Elements("elision").Any());
@@ -606,7 +606,7 @@ public class MusicXmlExportShapeTests
     private static string PhraseBook(string phrases, string music)
         => "octave absolute\npart m { clef treble }\n" + phrases
            + "\nsection A { m {\n" + music + "\n} }\n"
-           + "form main { A }\nscore main { staff m }\n";
+           + "form { A }\nscore { staff m }\n";
 
     private static string[] GraceNotes(string book)
         => Export(book).Descendants("note")
@@ -690,7 +690,7 @@ public class MusicXmlExportShapeTests
     private static string[] RelativePitches(string phrases, string music)
         => Export("part m { clef treble }\n" + phrases
                   + "\nsection A { m {\n" + music + "\n} }\n"
-                  + "form main { A }\nscore main { staff m }\n")
+                  + "form { A }\nscore { staff m }\n")
             .Descendants("pitch")
             .Select(p => p.Element("step")!.Value + p.Element("octave")!.Value)
             .ToArray();
@@ -773,7 +773,7 @@ public class MusicXmlExportShapeTests
     {
         var doc = Export("octave absolute\npart m { clef treble }\n"
                          + "section A { m {\ngrace { tuplet 3/2 { d'16 e' f' } } c'4 c'2. |\n} }\n"
-                         + "form main { A }\nscore main { staff m }\n");
+                         + "form { A }\nscore { staff m }\n");
 
         var graces = doc.Descendants("note").Where(n => n.Element("grace") != null).ToArray();
         Assert.Equal(3, graces.Length);
@@ -808,7 +808,7 @@ public class MusicXmlExportShapeTests
     {
         var doc = Export("octave absolute\npart m { clef treble }\n"
                          + "section A { m {\ngrace { tuplet 3/2 { d'16 e' f' } } c'4 c'2. |\n} }\n"
-                         + "form main { A }\nscore main { staff m }\n");
+                         + "form { A }\nscore { staff m }\n");
 
         var plain = doc.Descendants("note").Where(n => n.Element("grace") == null).ToArray();
         Assert.Equal(2, plain.Length);
@@ -834,7 +834,7 @@ public class MusicXmlExportShapeTests
     {
         var doc = Export("octave absolute\npart m { clef treble }\n"
                          + "section A { m {\ngrace { tuplet 3/2 { d'16 e' f' } } c'4 c'2. |\n} }\n"
-                         + "form main { A }\nscore main { staff m }\n");
+                         + "form { A }\nscore { staff m }\n");
 
         var graces = doc.Descendants("note").Where(n => n.Element("grace") != null).ToArray();
         Assert.Equal(3, graces.Length);
@@ -849,7 +849,7 @@ public class MusicXmlExportShapeTests
     {
         var doc = Export("octave absolute\npart m { clef treble }\n"
                          + "section A { m {\ngrace { d'16 e' f' } c'4 c'2. |\n} }\n"
-                         + "form main { A }\nscore main { staff m }\n");
+                         + "form { A }\nscore { staff m }\n");
 
         var graces = doc.Descendants("note").Where(n => n.Element("grace") != null).ToArray();
         Assert.Equal(3, graces.Length);

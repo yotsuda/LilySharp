@@ -46,7 +46,7 @@ public class ExpansionBudgetTests
         for (int k = 2; k <= depth; k++)
             src.AppendLine($"phrase p{k} {{ p{k - 1} p{k - 1} }}");
         src.AppendLine($"part m {{ }}\nsection A {{ m {{ p{depth} }} }}\n"
-            + "form main { ~A }\nscore main { staff m }");
+            + "form { ~A }\nscore { staff m }");
         return src.ToString();
     }
 
@@ -91,7 +91,7 @@ public class ExpansionBudgetTests
         var collector = new MeasureCollector { ExpansionBudgetCap = 30 };
         var score = collector.Collect(
             SyntaxTree.Parse("part m { }\nsection A { m { repeat unfold 1000 { c4 d e f } } }\n"
-                + "form main { ~A }\nscore main { staff m }"), "m");
+                + "form { ~A }\nscore { staff m }"), "m");
 
         Assert.NotNull(collector.ExpansionBudgetExceededAt);
         Assert.Equal(32, score.Voice.Measures.Sum(mm => mm.Items.Length));
@@ -104,7 +104,7 @@ public class ExpansionBudgetTests
         var collector = new MeasureCollector { ExpansionBudgetCap = 10 };
         var score = collector.Collect(
             SyntaxTree.Parse("part m { }\nsection A { m { R1*1000 } }\n"
-                + "form main { ~A }\nscore main { staff m }"), "m");
+                + "form { ~A }\nscore { staff m }"), "m");
 
         Assert.NotNull(collector.ExpansionBudgetExceededAt);
         Assert.Equal(11, score.Voice.Measures.Sum(mm => mm.Items.Length));
@@ -116,7 +116,7 @@ public class ExpansionBudgetTests
         var collector = new MeasureCollector();
         collector.Collect(SyntaxTree.Parse(
             "part m { }\nsection A { m { repeat unfold 4 { c4 d e f } | R1*3 } }\n"
-            + "form main { ~A }\nscore main { staff m }"), "m");
+            + "form { ~A }\nscore { staff m }"), "m");
         Assert.Null(collector.ExpansionBudgetExceededAt);
     }
 
@@ -132,7 +132,7 @@ public class ExpansionBudgetTests
         for (int k = 2; k <= 12; k++)
             src.AppendLine($"phrase p{k} {{ p{k - 1} p{k - 1} }}");
         src.AppendLine("part m { }\nsection A { m { p12 g4 a b } }\n"
-            + "form main { ~A }\nscore main { staff m }");
+            + "form { ~A }\nscore { staff m }");
         var score = collector.Collect(SyntaxTree.Parse(src.ToString()), "m");
 
         Assert.NotNull(collector.ExpansionBudgetExceededAt);
@@ -146,7 +146,7 @@ public class ExpansionBudgetTests
     {
         var collector = new MeasureCollector { ExpansionBudgetCap = 30 };
         var tree = SyntaxTree.Parse("part m { }\nsection A { m { repeat unfold 1000 { c4 d e f } } }\n"
-            + "form main { ~A }\nscore main { staff m }");
+            + "form { ~A }\nscore { staff m }");
         collector.Collect(tree, "m");
 
         var validator = new ExpansionBudgetValidator();
@@ -165,7 +165,7 @@ public class ExpansionBudgetTests
     {
         var diags = SemanticValidation.Run(SyntaxTree.Parse(
             "part m { }\nsection A { m { repeat unfold 4 { c4 d e f } } }\n"
-            + "form main { ~A }\nscore main { staff m }"));
+            + "form { ~A }\nscore { staff m }"));
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.ExpansionBudgetExceeded);
     }
 }

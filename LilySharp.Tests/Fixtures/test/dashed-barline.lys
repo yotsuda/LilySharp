@@ -33,8 +33,8 @@ section Main {
   melody { dashedBetweenMeasures dashedThenOrdinary }
 }
 
-form main { Main }
+form { Main }
 
-score main "dashed-barline" {
+score "dashed-barline" {
   staff melody
 }

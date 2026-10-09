@@ -48,8 +48,8 @@ public class LilyPondExporterSectionPlayTests
           section A { c4 c g' g | a a g2 | }
           section B { key a major g'4 g f f | e e d2 | }
         }
-        form main { {{form}} }
-        score main { staff melody }
+        form { {{form}} }
+        score { staff melody }
         """;
 
     [Fact]
@@ -114,8 +114,8 @@ public class LilyPondExporterSectionPlayTests
           section B { key a major g'4 g f f | }
           section C { e4 e d d | }
         }
-        form main { |: A [1. B] :| [2. C] }
-        score main { staff melody }
+        form { |: A [1. B] :| [2. C] }
+        score { staff melody }
         """;
 
     [Fact]
@@ -173,8 +173,8 @@ public class LilyPondExporterSectionPlayTests
             section A { m { c4 d e f | time 3/4 key ees major c2. | } }
             section B { m { time 3/4 key ees major c2. | } }
             section C { m { time 2/4 c2 | } }
-            form main { A B C }
-            score main { staff m }
+            form { A B C }
+            score { staff m }
             """;
         Assert.False(SyntaxTree.Parse(book).HasErrors);
         var ly = Export(book);
@@ -206,8 +206,8 @@ public class LilyPondExporterSectionPlayTests
         string Book(string bang) => $$"""
             part m { clef treble }
             section A { m { key g major time 3/4 clef bass c2. | key{{bang}} g major time{{bang}} 3/4 clef{{bang}} bass c2. | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """;
         Assert.False(SyntaxTree.Parse(Book("!")).HasErrors);
         static int Count(string s, string what) => (s.Length - s.Replace(what, "").Length) / what.Length;
@@ -231,8 +231,8 @@ public class LilyPondExporterSectionPlayTests
             part m { clef treble }
             section A { m { c4 d e f | time 3/4 key ees major c2. | } }
             section B { m { time! 3/4 key! ees major c2. | } }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """;
         Assert.False(SyntaxTree.Parse(book).HasErrors);
         var ly = Export(book);

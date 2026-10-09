@@ -19,8 +19,8 @@ section Main {
   }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main "VSSC" {
+score "VSSC" {
   staff melody
 }

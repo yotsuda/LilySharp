@@ -88,7 +88,7 @@ public sealed class StringLiteralTests
 
     private static SyntaxTree Book(string title, string music)
         => SyntaxTree.Parse($"octave absolute\ntitle {title}\ntime 4/4\npart m {{ clef treble }}\n"
-            + $"section S {{ m {{ {music} }} }}\nform main {{ ~S }}\nscore main {{ staff m }}\n");
+            + $"section S {{ m {{ {music} }} }}\nform {{ ~S }}\nscore {{ staff m }}\n");
 
     [Fact]
     public void TheParsedFile_ReadsTheDecodedValue_AndReportsABadEscape()

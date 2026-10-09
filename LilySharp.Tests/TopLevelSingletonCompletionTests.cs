@@ -84,7 +84,7 @@ public class TopLevelSingletonCompletionTests
     [Fact]
     public void GroupedByPartNoGlobalSection_OffersKnownSectionNamesAtTopLevel()
     {
-        var text = "part melody { section A { c } section B { d } }\nform main { A B }\n";
+        var text = "part melody { section A { c } section B { d } }\nform { A B }\n";
         var items = LilySharpLanguageServer.GetTopLevelCompletions(text, text.Length).Items;
         var labels = items.Select(i => i.Label!).ToArray();
         Assert.Contains("section A", labels);
@@ -99,7 +99,7 @@ public class TopLevelSingletonCompletionTests
         // A top-level `section A` exists, but the form also names B (not yet at the top level).
         // Only the ALREADY-declared top-level section (A) is dropped; B stays on offer so it can
         // be pulled up too. The bare `section` keyword also stays.
-        var text = "section A { melody { c } }\nform main { A B }\n";
+        var text = "section A { melody { c } }\nform { A B }\n";
         var labels = LilySharpLanguageServer.GetTopLevelCompletions(text, text.Length)
             .Items.Select(i => i.Label!).ToArray();
         Assert.DoesNotContain("section A", labels);
@@ -114,7 +114,7 @@ public class TopLevelSingletonCompletionTests
         // and named by the form. Completing at the top level offers `section B` (missing there)
         // but not `section A` (already present) — a nested part cell for B does not suppress it.
         var text = "section A {\n\t\n}\n\npart melody {\n  section A { c d e f }\n  section B {\n\t\n  }\n}\n"
-                 + "form main { A B }\n";
+                 + "form { A B }\n";
         int caret = text.IndexOf("\n\npart", System.StringComparison.Ordinal); // blank line after section A
         var labels = LilySharpLanguageServer.GetTopLevelCompletions(text, caret)
             .Items.Select(i => i.Label!).ToArray();

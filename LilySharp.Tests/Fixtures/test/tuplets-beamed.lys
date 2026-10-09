@@ -28,8 +28,8 @@ section Main {
   melody { beamedTuplets }
 }
 
-form main { Main }
+form { Main }
 
-score main "tuplets-beamed" {
+score "tuplets-beamed" {
   staff melody
 }

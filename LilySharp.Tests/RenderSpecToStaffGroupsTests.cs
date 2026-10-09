@@ -37,8 +37,8 @@ public class RenderSpecToStaffGroupsTests
         var tree = SyntaxTree.Parse("""
             part m { clef treble }
             section A { m { c'4 d' e' f' | } }
-            form main { A }
-            score main { tab m }
+            form { A }
+            score { tab m }
             """);
         var spec = RenderSpecParser.FindFirst(tree);
         Assert.NotNull(spec);

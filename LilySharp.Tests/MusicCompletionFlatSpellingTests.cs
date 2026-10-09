@@ -160,8 +160,8 @@ public class MusicCompletionFlatSpellingTests
                 time 4/4
                 part m { clef treble }
                 section A { m { c4 d e f | {{bar}} } }
-                form main { A }
-                score main { staff m }
+                form { A }
+                score { staff m }
                 """);
             Assert.False(tree.HasErrors,
                 $"'{item.Label}' → {bar} does not parse in music: "

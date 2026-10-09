@@ -6,5 +6,5 @@ part vn {
   section A { c''1 | e1~ || }
   section B { e''1 | }
 }
-form main { I |: A [1. B] :| [2. B] }
-score main { staff vn }
+form { I |: A [1. B] :| [2. B] }
+score { staff vn }

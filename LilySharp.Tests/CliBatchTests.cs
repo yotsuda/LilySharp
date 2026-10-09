@@ -86,7 +86,7 @@ public class CliBatchTests : IDisposable
         string path = Path.Combine(_dir, name + ".lys");
         File.WriteAllText(path,
             $"title \"{name}\"\n{extra}part m {{ clef treble }}\n"
-            + "section A { m { c'4 d' e' f' | } }\nform main { A }\nscore main { staff m }\n");
+            + "section A { m { c'4 d' e' f' | } }\nform { A }\nscore { staff m }\n");
         return path;
     }
 

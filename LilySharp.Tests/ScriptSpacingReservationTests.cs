@@ -36,7 +36,7 @@ public class ScriptSpacingReservationTests
     private static string[] NoteXs(string music)
     {
         string src = "octave absolute\npart m { clef treble }\nsection A { m { " + music
-            + " } }\nform main { ~A }\nscore main { staff m }\n";
+            + " } }\nform { ~A }\nscore { staff m }\n";
         string svg = SvgGenerator.Generate(SyntaxTree.Parse(src),
             new SvgRenderOptions { EmbedFont = false });
         // Every music glyph but the fermata: heads, the accidental, the rest.
@@ -68,7 +68,7 @@ public class ScriptSpacingReservationTests
     private static string GraceX(string music)
     {
         string src = "octave absolute\npart m { clef treble }\nsection A { m { " + music
-            + " } }\nform main { ~A }\nscore main { staff m }\n";
+            + " } }\nform { ~A }\nscore { staff m }\n";
         string svg = SvgGenerator.Generate(SyntaxTree.Parse(src),
             new SvgRenderOptions { EmbedFont = false });
         // The grace head: the one music glyph at the grace size.

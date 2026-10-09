@@ -85,9 +85,9 @@ public class TieOutlineBoxTests
           melody { {{music}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;

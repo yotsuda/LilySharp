@@ -48,13 +48,13 @@ public class ScoreRowFoldingTests
           lyrics ja sings vocal { la la la la | ho ho | }
           lyrics en sings vocal { na na na na | go go | }
         }
-        form main { A }
+        form { A }
         """;
 
     [Fact]
     public void BoundRowAfterItsStaff_FoldsIntoAnAttachedVerse()
     {
-        var spec = SpecOf(BoundBody + "score main { staff vocal  lyrics ja }");
+        var spec = SpecOf(BoundBody + "score { staff vocal  lyrics ja }");
 
         var staff = Assert.IsType<SingleStaffSpec>(Assert.Single(spec.Items)).Staff;
         Assert.Equal(new[] { "ja" }, staff.WithLyrics);
@@ -63,7 +63,7 @@ public class ScoreRowFoldingTests
     [Fact]
     public void ARunOfBoundRows_StacksAsVersesInWrittenOrder()
     {
-        var spec = SpecOf(BoundBody + "score main { staff vocal  lyrics ja  lyrics en }");
+        var spec = SpecOf(BoundBody + "score { staff vocal  lyrics ja  lyrics en }");
 
         var staff = Assert.IsType<SingleStaffSpec>(Assert.Single(spec.Items)).Staff;
         Assert.Equal(new[] { "ja", "en" }, staff.WithLyrics);
@@ -84,8 +84,8 @@ public class ScoreRowFoldingTests
               vocal { g8 g a4 a8 a a4 | }
               lyrics ja sings vocal { la la la la la la | }
             }
-            form main { A }
-            score main { staff sax  lyrics ja }
+            form { A }
+            score { staff sax  lyrics ja }
             """);
 
         Assert.Equal(2, spec.Items.Length);
@@ -102,8 +102,8 @@ public class ScoreRowFoldingTests
               melody { c'4 d' e' f' | }
               lyrics words { la la | }
             }
-            form main { A }
-            score main { staff melody  lyrics words }
+            form { A }
+            score { staff melody  lyrics words }
             """);
 
         Assert.Equal(2, spec.Items.Length);
@@ -122,8 +122,8 @@ public class ScoreRowFoldingTests
               m { voice sop { c'4 d' e' f' | } alt { e4 f g a | } }
               lyrics sop { la la la la | }
             }
-            form main { A }
-            score main { staff m  lyrics sop }
+            form { A }
+            score { staff m  lyrics sop }
             """);
 
         var staff = Assert.IsType<SingleStaffSpec>(Assert.Single(spec.Items)).Staff;
@@ -148,8 +148,8 @@ public class ScoreRowFoldingTests
               melody { c'4 d' e' f' | }
               chords prog { C | }
             }
-            form main { A }
-            score main { chords prog  staff melody }
+            form { A }
+            score { chords prog  staff melody }
             """);
 
         Assert.Equal(2, spec.Items.Length);
@@ -174,8 +174,8 @@ public class ScoreRowFoldingTests
               lo { c4 d e f | }
               chords prog { C | }
             }
-            form main { A }
-            score main { staff hi  chords prog  staff lo }
+            form { A }
+            score { staff hi  chords prog  staff lo }
             """);
 
         Assert.Equal(2, spec.Items.Length);
@@ -193,8 +193,8 @@ public class ScoreRowFoldingTests
               lh { c4 d e f | }
               lyrics words sings lh { la la la la | }
             }
-            form main { A }
-            score main { grandStaff { staff rh  staff lh }  lyrics words }
+            form { A }
+            score { grandStaff { staff rh  staff lh }  lyrics words }
             """);
 
         var group = Assert.IsType<GrandStaffRenderSpec>(Assert.Single(spec.Items)).GrandStaff;
@@ -211,7 +211,7 @@ public class ScoreRowFoldingTests
           alt { e4 f g a | }
           lyrics words sings sop { la la la la | }
         }
-        form main { A }
+        form { A }
         """;
 
     /// <summary>Score = a vertical stack of bands INSIDE a group too: the chorale
@@ -221,7 +221,7 @@ public class ScoreRowFoldingTests
     public void BoundRowInsideAGroup_FoldsIntoTheStaffAbove()
     {
         var spec = SpecOf(ChoraleBody
-            + "score main { choirStaff { staff sop  lyrics words  staff alt } }");
+            + "score { choirStaff { staff sop  lyrics words  staff alt } }");
 
         var group = Assert.IsType<GrandStaffRenderSpec>(Assert.Single(spec.Items)).GrandStaff;
         Assert.Equal(2, group.StaffCount);
@@ -233,7 +233,7 @@ public class ScoreRowFoldingTests
     public void RowInAGroupSingingNoAdjacentStaff_IsRefused()
     {
         var src = ChoraleBody.Replace("sings sop", "sings alt")
-            + "score main { choirStaff { staff sop  lyrics words  staff alt } }";
+            + "score { choirStaff { staff sop  lyrics words  staff alt } }";
         var diags = LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(src));
 
         var d = Assert.Single(diags, d => d.Code == "LYS6012");
@@ -244,7 +244,7 @@ public class ScoreRowFoldingTests
     public void NonStaffNonRowMemberInAGroup_IsReportedAtTheMember()
     {
         var tree = SyntaxTree.Parse(ChoraleBody
-            + "score main { grandStaff { staff sop  tab alt } }");
+            + "score { grandStaff { staff sop  tab alt } }");
 
         var d = Assert.Single(tree.Diagnostics, d => d.Code == "LYS6011");
         Assert.Contains("cannot contain 'tab'", d.Message);
@@ -264,7 +264,7 @@ public class ScoreRowFoldingTests
     [Fact]
     public void TheRetiredWithSpelling_ReadsAsAPartRefAndARow()
     {
-        var source = BoundBody + "score main { staff vocal with lyrics ja }";
+        var source = BoundBody + "score { staff vocal with lyrics ja }";
         var spec = SpecOf(source);
         var staff = Assert.IsType<SingleStaffSpec>(Assert.Single(spec.Items)).Staff;
         Assert.Null(staff.InstrumentName);
@@ -292,8 +292,8 @@ public class ScoreRowFoldingTests
               melody { c'4 d' e' f' | }
               chords { c1 | }
             }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """);
         var d = Assert.Single(tree.Diagnostics, d => d.Code == "LYS0032");
         Assert.Contains("needs a name", d.Message);

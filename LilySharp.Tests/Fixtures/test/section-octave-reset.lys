@@ -32,8 +32,8 @@ section C {
   melody { highPhrase lowPhrase }
 }
 
-form main { A B C }
+form { A B C }
 
-score main "section-octave-reset" {
+score "section-octave-reset" {
   staff melody
 }

@@ -38,8 +38,8 @@ public class OctaveModeTests
     private static string Wrap(string body, string prefix = "") => $@"
 {prefix}part melody {{ clef treble }}
 section A {{ melody {{ {body} }} }}
-form main {{ A }}
-score main ""t"" {{ staff {{ melody }} }}
+form {{ A }}
+score ""t"" {{ staff {{ melody }} }}
 ";
 
     [Fact]
@@ -80,8 +80,8 @@ score main ""t"" {{ staff {{ melody }} }}
 part melody { clef treble }
 section A { melody { octave absolute  c' c'' | } }
 section B { melody { c' c'' | } }
-form main { A B }
-score main ""t"" { staff melody }
+form { A B }
+score ""t"" { staff melody }
 ";
         var collector = new MeasureCollector();
         collector.Collect(SyntaxTree.Parse(src), "melody");
@@ -108,8 +108,8 @@ score main ""t"" { staff melody }
 part melody {{ clef treble }}
 phrase theme {{ c4 d e f }}
 section A {{ melody {{ {reference} | }} }}
-form main {{ A }}
-score main ""t"" {{ staff melody }}
+form {{ A }}
+score ""t"" {{ staff melody }}
 ";
 
     [Theory]

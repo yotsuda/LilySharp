@@ -14,7 +14,7 @@ section A {
     acciaccatura { e8 } c4 d e f |
   }
 }
-form main { A }
+form { A }
 // 原書の TabStaff は \tabFullNotation 無し=数字のみ既定(LP)。Lily# は full 既定
 // なので as numbers で枠を揃える。
-score main { staff m tab m as numbers }
+score { staff m tab m as numbers }

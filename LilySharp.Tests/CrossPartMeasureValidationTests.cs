@@ -49,7 +49,7 @@ public class CrossPartMeasureValidationTests
               rh { c4 d e f g | c4 d e f g | c4 d e f g | }
               lh { c2 g2 c4 | c2 g2 c4 | c2 g2 c4 | }
             }
-            form main { Main }
+            form { Main }
             """);
         Assert.Empty(diags);
     }
@@ -71,7 +71,7 @@ public class CrossPartMeasureValidationTests
               rh { {{rh}} c'1 | }
               lh { c1 | c1 | }
             }
-            form main { Main }
+            form { Main }
             """);
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.MeasureDurationMismatch);
     }
@@ -103,7 +103,7 @@ public class CrossPartMeasureValidationTests
         """)]
     public void ASectionHeaderTime_IsThatSectionsMeterOnly(string body)
     {
-        var diags = Validate("time 4/4\n" + body + "\nform main { A B }\n");
+        var diags = Validate("time 4/4\n" + body + "\nform { A B }\n");
         Assert.Empty(diags);
     }
 
@@ -113,7 +113,7 @@ public class CrossPartMeasureValidationTests
     [InlineData("section A { time 3/4  rh { c'2. | } }\nsection B { rh { c'1 | c'2. | } }", "less than")]
     public void ASectionHeaderTime_StillFlagsABarThatMissesItsOwnSectionsMeter(string sections, string words)
     {
-        var diags = Validate("time 4/4\npart rh { clef treble }\n" + sections + "\nform main { A B }\n");
+        var diags = Validate("time 4/4\npart rh { clef treble }\n" + sections + "\nform { A B }\n");
         Assert.Contains(diags, d => d.Message.Contains(words));
     }
 
@@ -129,7 +129,7 @@ public class CrossPartMeasureValidationTests
               rh { c4 d e f g | c4 d e f g | c4 d e f g | }
               lh { c2 g2 c4 | c2 g2 | c2 g2 c4 | }
             }
-            form main { Main }
+            form { Main }
             """);
         var incomplete = diags.Where(d => d.Code == DiagnosticCodes.MeasureIncomplete).ToList();
         var mismatch = diags.Where(d => d.Code == DiagnosticCodes.MeasureDurationMismatch).ToList();
@@ -149,7 +149,7 @@ public class CrossPartMeasureValidationTests
               rh { c4 | c4 d e f | }
               lh { c2 | c4 d e f | }
             }
-            form main { Main }
+            form { Main }
             """);
         var mismatch = diags.Where(d => d.Code == DiagnosticCodes.MeasureDurationMismatch).ToList();
         Assert.Single(mismatch);
@@ -167,7 +167,7 @@ public class CrossPartMeasureValidationTests
               rh { c4 | c4 d e f | }
               lh { e4 | c4 d e f | }
             }
-            form main { Main }
+            form { Main }
             """);
         Assert.All(diags, d => Assert.Equal(DiagnosticCodes.PickupWithoutPartial, d.Code));
     }
@@ -185,7 +185,7 @@ public class CrossPartMeasureValidationTests
               rh { pa }
               lh { pb }
             }
-            form main { Main }
+            form { Main }
             """);
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.MeasureDurationMismatch);
     }
@@ -202,7 +202,7 @@ public class CrossPartMeasureValidationTests
               time 3/4
               lh { c4 d e | }
             }
-            form main { Main }
+            form { Main }
             """);
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.ConflictingTimeSignatures);
     }
@@ -218,7 +218,7 @@ public class CrossPartMeasureValidationTests
             time 4/4
             part melody { section A { c4 d e f | g4 a b c' | } }
             part bass { section A { c2 e2 | } }
-            form main { A }
+            form { A }
             """);
         var m = diags.Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
         Assert.Single(m);
@@ -234,7 +234,7 @@ public class CrossPartMeasureValidationTests
             time 4/4
             part melody { section A { c4 d e f | g4 a b c' | } }
             part bass { section A { c2 e2 | c2 e2 | } }
-            form main { A }
+            form { A }
             """);
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
     }
@@ -256,8 +256,8 @@ public class CrossPartMeasureValidationTests
               section A { Dm7 | G7 }
               section B { Cmaj7 | }
             }
-            form main { A | B | }
-            score main { chords prog  staff melody }
+            form { A | B | }
+            score { chords prog  staff melody }
             """;
         var diags = Validate(source);
         var m = diags.Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
@@ -283,8 +283,8 @@ public class CrossPartMeasureValidationTests
             part oboe { section A { c1 | c1 | } }
             part horn { section A { c1 | c1 | } }
             chords harmony { section A { C | F | } }
-            form main { A }
-            score main { chords harmony  staff flute  staff oboe  staff horn }
+            form { A }
+            score { chords harmony  staff flute  staff oboe  staff horn }
             """;
         var m = Validate(source).Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
         var w = Assert.Single(m);
@@ -312,8 +312,8 @@ public class CrossPartMeasureValidationTests
               section A { Dm7 | G7 | }
               section B { Cmaj7 | }
             }
-            form main { A | B | }
-            score main { chords prog  staff melody }
+            form { A | B | }
+            score { chords prog  staff melody }
             """);
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
     }
@@ -331,8 +331,8 @@ public class CrossPartMeasureValidationTests
             chords prog {
               section A { Dm7 | }
             }
-            form main { A | }
-            score main { chords prog  staff melody }
+            form { A | }
+            score { chords prog  staff melody }
             """);
         var m = diags.Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
         Assert.Single(m);
@@ -348,8 +348,8 @@ public class CrossPartMeasureValidationTests
         var diags = Validate("""
             section A { melody { g2 g | } chords prog { Dm7 | G7 } }
             section B { melody { c2 c | } chords prog { Cmaj7 | } }
-            form main { A | B | }
-            score main { chords prog  staff melody }
+            form { A | B | }
+            score { chords prog  staff melody }
             """);
         var m = diags.Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
         Assert.Single(m);
@@ -369,8 +369,8 @@ public class CrossPartMeasureValidationTests
             lyrics words {
               section A { la la | }
             }
-            form main { A | }
-            score main { staff melody with lyrics words }
+            form { A | }
+            score { staff melody with lyrics words }
             """;
         var diags = Validate(source);
         var m = diags.Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
@@ -393,8 +393,8 @@ public class CrossPartMeasureValidationTests
             lyrics words {
               section A { la la | la la | li li | li li | }
             }
-            form main { A | }
-            score main { staff melody with lyrics words }
+            form { A | }
+            score { staff melody with lyrics words }
             """);
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
     }
@@ -407,8 +407,8 @@ public class CrossPartMeasureValidationTests
         var diags = Validate("""
             lyrics ja { section A { la | } }
             lyrics en { section A { la | la | } }
-            form main { A | }
-            score main { lyrics ja  lyrics en }
+            form { A | }
+            score { lyrics ja  lyrics en }
             """);
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
     }
@@ -424,8 +424,8 @@ public class CrossPartMeasureValidationTests
               vocal { g2 g | g2 g | }
               lyrics words sings vocal { la la | }
             }
-            form main { A | }
-            score main { lyrics words }
+            form { A | }
+            score { lyrics words }
             """;
         var diags = Validate(source);
         var m = diags.Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
@@ -446,8 +446,8 @@ public class CrossPartMeasureValidationTests
               lyrics ja sings vocal { la la | la la | }
               lyrics en sings vocal { sing it | loud | }
             }
-            form main { A | }
-            score main { lyrics ja  lyrics en }
+            form { A | }
+            score { lyrics ja  lyrics en }
             """);
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
     }
@@ -461,7 +461,7 @@ public class CrossPartMeasureValidationTests
         var diags = Validate("""
             time 4/4
             section Main { rh { c4 d e f | g4 a b c' | } lh { c4 d e f | } }
-            form main { Main }
+            form { Main }
             """);
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
     }
@@ -476,7 +476,7 @@ public class CrossPartMeasureValidationTests
             section Main {
               melody { c4 | c4 d e f | g2 a4 | c1 | }
             }
-            form main { Main }
+            form { Main }
             """);
         Assert.Single(diags.Where(d => d.Code == DiagnosticCodes.MeasureIncomplete));
         // The bare quarter-note pickup additionally gets the declare-it nudge.
@@ -496,7 +496,7 @@ public class CrossPartMeasureValidationTests
               melody {| | |}
               melody2 { c1 | c1 | c1 | }
             }
-            form main { B }
+            form { B }
             """);
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.MeasureDurationMismatch);
@@ -513,7 +513,7 @@ public class CrossPartMeasureValidationTests
               melody {| |}
               melody2 { c1 | c1 | c1 | }
             }
-            form main { B }
+            form { B }
             """);
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
     }
@@ -533,7 +533,7 @@ public class CrossPartMeasureValidationTests
               melody { R1*2 | c1 | }
               melody2 { c1 | c1 | c1 | }
             }
-            form main { B }
+            form { B }
             """);
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.MeasureDurationMismatch);
@@ -550,7 +550,7 @@ public class CrossPartMeasureValidationTests
               melody { R1*2 | c1 | }
               melody2 { c1 | c1 | c1 | c1 | }
             }
-            form main { B }
+            form { B }
             """);
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
     }

@@ -35,7 +35,7 @@ public class ChordSlotGridTests
 {
     private static string Sheet(string row, string time = "4/4") =>
         $"time {time}\nsection Main {{\n  chords prog {{ {row} }}\n}}\n" +
-        "form main { Main }\nscore main { chords prog }\n";
+        "form { Main }\nscore { chords prog }\n";
 
     private static (string Text, double Timing)[] Chords(string src)
     {
@@ -121,7 +121,7 @@ public class ChordSlotGridTests
         // The structure replays the section's bars per occurrence; one written
         // fault is one diagnostic, not one per occurrence.
         var src = "time 4/4\nsection A {\n  chords prog { C F G | }\n}\n" +
-                  "form main { A A \"A2\" }\nscore main { chords prog }\n";
+                  "form { A A \"A2\" }\nscore { chords prog }\n";
         Assert.Single(SemanticValidation.Run(SyntaxTree.Parse(src)),
             x => x.Code == DiagnosticCodes.ChordSlotMismatch);
     }

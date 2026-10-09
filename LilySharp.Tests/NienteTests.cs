@@ -48,8 +48,8 @@ public class NienteTests
         "octave absolute\n" +
         "part m { clef treble }\n" +
         $"section S {{ m {{ {measures} }} }}\n" +
-        "form main { S }\n" +
-        "score main { staff m }\n";
+        "form { S }\n" +
+        "score { staff m }\n";
 
     private const string AlNiente = "c'4@mf@decresc d' e' f' | g'2 a'2@niente |";
     private const string DalNiente = "c'4@niente@cresc d' e' f' | g'1@f |";

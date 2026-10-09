@@ -45,9 +45,9 @@ public sealed class UsingDiagnosticsTests
 
         time 4/4
 
-        form main { ~A }
+        form { ~A }
 
-        score main { staff melody }
+        score { staff melody }
         """;
 
     private const string Parts =
@@ -127,7 +127,7 @@ public sealed class UsingDiagnosticsTests
     {
         // The overwhelmingly common path must be untouched: same diagnostics as running
         // the validators directly, in the same order.
-        const string plain = "time 4/4\n\nscore main { staff nope }\n";
+        const string plain = "time 4/4\n\nscore { staff nope }\n";
         var direct = SemanticValidation.Run(SyntaxTree.Parse(plain)).Select(d => d.Code);
         var panel = Panel(plain, new()).Select(d => d.Code);
 

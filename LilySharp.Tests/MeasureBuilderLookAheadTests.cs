@@ -52,7 +52,7 @@ public sealed class MeasureBuilderLookAheadTests
     }
 
     private static string Book(string music)
-        => "part m { clef treble section A { " + music + " } }\nform main { A }\nscore main { staff m }";
+        => "part m { clef treble section A { " + music + " } }\nform { A }\nscore { staff m }";
 
     [Fact]
     public void ABarAfterANote_IsTheMeasuresEndFromTheEmit_AndNothingIsRewritten()
@@ -104,7 +104,7 @@ public sealed class MeasureBuilderLookAheadTests
         // the suffix splice at a boundary the look-ahead no longer rewrites.
         var options = new SvgRenderOptions { EmbedFont = false };
         string src = "part m { clef treble section A { c4 d e f | break g a b c | d e f g | a b c d | e f g a | } }\n"
-            + "form main { A }\nscore main { staff m }";
+            + "form { A }\nscore { staff m }";
         var session = new IncrementalCompiler(SyntaxTree.Parse(src), options);
         session.RenderIncrementalPages(SyntaxTree.Parse(src), default);
         string edited = src.Replace("| break g", "| g");

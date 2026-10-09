@@ -39,8 +39,8 @@ public sealed class IncompleteInputTests
     [Theory]
     [InlineData("key")]                                                   // a file's first word
     [InlineData("part m { clef bass }\nsection S { m { c1 | } }\nsection F {\n  key ")]
-    [InlineData("part m { clef bass }\nsection S { m { c1 | } }\nsection F { key \n m { c1 | } }\nform main { S F }\nscore main { staff m }")]
-    [InlineData("part m { clef bass\n key }\nsection S { m { c1 | } }\nform main { S }\nscore main { staff m }")]
+    [InlineData("part m { clef bass }\nsection S { m { c1 | } }\nsection F { key \n m { c1 | } }\nform { S F }\nscore { staff m }")]
+    [InlineData("part m { clef bass\n key }\nsection S { m { c1 | } }\nform { S }\nscore { staff m }")]
     public void AKeyWithNothingAfterIt_IsTheParsersErrorAlone(string src)
     {
         var tree = SyntaxTree.Parse(src);
@@ -62,7 +62,7 @@ public sealed class IncompleteInputTests
     public void ACustomKey_IsNamedInTheOutlineAndTheHover()
     {
         const string doc = "octave absolute\ntime 4/4\nkey custom fis cis\npart melody\n"
-            + "section Main { melody { d4 e fis g | } }\nform main { Main }\nscore main { staff melody }\n";
+            + "section Main { melody { d4 e fis g | } }\nform { Main }\nscore { staff melody }\n";
         var server = new LilySharp.Lsp.LilySharpLanguageServer(System.IO.Stream.Null, System.IO.Stream.Null);
         var uri = new System.Uri("file:///custom-key.lys");
         server.DidOpen(new LilySharp.Lsp.Protocol.DidOpenTextDocumentParams
@@ -86,7 +86,7 @@ public sealed class IncompleteInputTests
     }
 
     private static string Book(string music) =>
-        "part m { clef treble }\nsection S { m { " + music + " } }\nform main { S }\nscore main { staff m }\n";
+        "part m { clef treble }\nsection S { m { " + music + " } }\nform { S }\nscore { staff m }\n";
 
     private static void EveryReader(SyntaxTree tree)
     {

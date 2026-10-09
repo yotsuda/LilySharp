@@ -10,6 +10,6 @@ section Main {
   n2 { c1 | c | r1 | r1 | }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { staff ~n1 as removeEmpty true  staff ~n2 as removeEmpty true }
+score { staff ~n1 as removeEmpty true  staff ~n2 as removeEmpty true }

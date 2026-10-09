@@ -49,7 +49,7 @@ public class PaperEditIncrementalTests
     {
         var bars = string.Join(" |\n    ", Enumerable.Repeat("c'4 d'4 e'4 f'4", 30));
         return paper + "part m { clef treble }\nsection S {\n  m {\n    " + bars
-            + " |\n  }\n}\nform main { S }\nscore main \"pp\" { staff m }\n";
+            + " |\n  }\n}\nform { S }\nscore \"pp\" { staff m }\n";
     }
 
     [Fact]

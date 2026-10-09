@@ -9,6 +9,6 @@ section Main {
   chords prog { Fmaj7/E Fmaj7/F Fmaj7/G . | }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { chords prog  staff v }
+score { chords prog  staff v }

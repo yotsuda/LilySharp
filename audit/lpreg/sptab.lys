@@ -8,7 +8,7 @@ part m { }
 section A {
   m { c4 d e f | g1 | }
 }
-form main { A }
-score main "Title 1" { staff m }
-score main "Title 2" { tab m }
-score main "Title 3" { staff m }
+form { A }
+score "Title 1" { staff m }
+score "Title 2" { tab m }
+score "Title 3" { staff m }

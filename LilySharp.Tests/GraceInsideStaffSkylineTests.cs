@@ -52,9 +52,9 @@ public class GraceInsideStaffSkylineTests
               section B { {{grace}}a'4@mark("B") b' a' g' | f'4 e' d' c' | }
             }
 
-            form main { ~A ~B }
+            form { ~A ~B }
 
-            score main "{{name}}" {
+            score "{{name}}" {
               staff melody
             }
             """;

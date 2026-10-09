@@ -48,8 +48,8 @@ public class MusicXmlSectionCutTests
             g'1@mark("C") | a'1 | b'1 | c''1 | d''1 | e''1 |
           }
         }
-        form main { ~S }
-        score main { staff m }
+        form { ~S }
+        score { staff m }
         """;
 
     private static string Import(string lys)
@@ -68,7 +68,7 @@ public class MusicXmlSectionCutTests
         string lys = Import(Source);
         foreach (var name in new[] { "A", "B", "C" })
             Assert.Contains("section " + name + " {", lys);
-        Assert.Matches(@"form main \{\s*~A ~B ~C\s*\}", lys);
+        Assert.Matches(@"form \{\s*~A ~B ~C\s*\}", lys);
         // The mark itself stays on its note: the section labels are hidden.
         Assert.Contains("@mark(\"B\")", SectionBody(lys, "B"));
         Assert.DoesNotContain(SyntaxTree.Parse(lys).Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
@@ -116,8 +116,8 @@ public class MusicXmlSectionCutTests
             octave absolute
             part m { clef treble }
             section S { m { c'1 | d'1 || e'1 | f'1 | g'1 | a'1 | b'1 |. } }
-            form main { ~S }
-            score main { staff m }
+            form { ~S }
+            score { staff m }
             """);
         var lines = SectionBody(lys, "A").Split('\n').Where(l => l.Contains('|')).ToArray();
         Assert.EndsWith("||", lines[0].TrimEnd());
@@ -146,12 +146,12 @@ public class MusicXmlSectionCutTests
                 c'2.@mark("C") | d'2.@mark("D") | e'2. |
               }
             }
-            form main { ~S }
-            score main { staff m }
+            form { ~S }
+            score { staff m }
             """)).ToXml().ToString();
         var (lys, report) = new MusicXmlImporter().Import(xml);
         Assert.Matches(@"(?m)^time 3/4$", lys);
-        Assert.Matches(@"form main \{\s*~A ~B ~C ~D\s*\}", lys);
+        Assert.Matches(@"form \{\s*~A ~B ~C ~D\s*\}", lys);
         Assert.Contains("time 4/4", SectionBody(lys, "B"));
         Assert.DoesNotContain(report.Warnings, w => w.Contains("does not start a section"));
         // The page draws the source's two meter changes and no third: B's 4/4 is no change.
@@ -181,12 +181,12 @@ public class MusicXmlSectionCutTests
                 time 3/4 c'2. | c'2.@mark("D") | c'2. |
               }
             }
-            form main { ~S }
-            score main { staff m }
+            form { ~S }
+            score { staff m }
             """)).ToXml().ToString();
         var (lys, report) = new MusicXmlImporter().Import(xml);
         Assert.Matches(@"(?m)^time 3/4$", lys);
-        Assert.Matches(@"form main \{\s*~A ~B ~C ~D\s*\}", lys);
+        Assert.Matches(@"form \{\s*~A ~B ~C ~D\s*\}", lys);
         Assert.Empty(report.Warnings);
     }
 
@@ -205,11 +205,11 @@ public class MusicXmlSectionCutTests
             section S {
               m { c'2@mark("A")@cresc c'2 | c'2 c'2 | d'2@mark("B") d'2 | d'2 d'2 | c'2@mark("C")@p c'2 | c'2 c'2 | }
             }
-            form main { ~S }
-            score main { staff m }
+            form { ~S }
+            score { staff m }
             """)).ToXml().ToString();
         var (lys, report) = new MusicXmlImporter().Import(xml);
-        Assert.Matches(@"form main \{\s*~A ~C\s*\}", lys);
+        Assert.Matches(@"form \{\s*~A ~C\s*\}", lys);
         Assert.Contains(report.Warnings, w => w.Contains("'B' does not start a section"));
         Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(lys)),
             d => d.Code == DiagnosticCodes.SpanAcrossSectionBoundary);
@@ -224,10 +224,10 @@ public class MusicXmlSectionCutTests
             octave absolute
             part m { clef treble }
             section S { m { c'1 | d'1@mark("12") | e'1@mark("verse") | f'1 | } }
-            form main { ~S }
-            score main { staff m }
+            form { ~S }
+            score { staff m }
             """);
-        Assert.Matches(@"form main \{\s*~Intro ~M12 ~\w+\s*\}", lys);
+        Assert.Matches(@"form \{\s*~Intro ~M12 ~\w+\s*\}", lys);
         Assert.DoesNotContain(SyntaxTree.Parse(lys).Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
     }
 
@@ -262,11 +262,11 @@ public class MusicXmlSectionCutTests
             key g major
             part m { clef treble }
             section S { m { g'1 | a'1 | key! g major b'1 | c''1 | time! 4/4 d''1 | clef! treble e''1 | } }
-            form main { ~S }
-            score main { staff m }
+            form { ~S }
+            score { staff m }
             """;
         string lys = Import(source);
-        Assert.Matches(@"form main \{\s*~A ~A2 ~A3 ~A4\s*\}", lys);
+        Assert.Matches(@"form \{\s*~A ~A2 ~A3 ~A4\s*\}", lys);
         Assert.StartsWith("key! g major b'1", SectionBody(lys, "A2").Trim().Split('\n')[1].Trim());
         Assert.Contains("time! 4/4 d''1", SectionBody(lys, "A3"));
         Assert.Contains("clef! treble e''1", SectionBody(lys, "A4"));
@@ -284,11 +284,11 @@ public class MusicXmlSectionCutTests
             key d major
             part m { clef treble }
             section S { m { d'1@mark("A") | e'1 | fis'1@mark("B") | key! d major g'1 | a'1 | } }
-            form main { ~S }
-            score main { staff m }
+            form { ~S }
+            score { staff m }
             """;
         string lys = Import(source);
-        Assert.Matches(@"form main \{\s*~A ~B ~B2\s*\}", lys);
+        Assert.Matches(@"form \{\s*~A ~B ~B2\s*\}", lys);
         Assert.Contains("key! d major g'1", SectionBody(lys, "B2"));
         Assert.Equal(Drawn(source), Drawn(lys));
     }
@@ -307,14 +307,14 @@ public class MusicXmlSectionCutTests
             key g major
             part m { clef treble }
             section S { m { g'1 | a'1 | key! g major clef! treble b'1 | c''1 | } }
-            form main { ~S }
-            score main { staff m }
+            form { ~S }
+            score { staff m }
             """)).ToXml();
         var third = doc.Descendants().Where(e => e.Name.LocalName == "measure").ElementAt(2);
         third.AddFirst(new System.Xml.Linq.XElement(third.Name.Namespace + "print",
             new System.Xml.Linq.XAttribute("new-system", "yes")));
         var (lys, _) = new MusicXmlImporter().Import(doc.ToString());
-        Assert.Matches(@"form main \{\s*~A\s*\}", lys);
+        Assert.Matches(@"form \{\s*~A\s*\}", lys);
         Assert.DoesNotContain("!", SectionBody(lys, "A"));
         Assert.Empty(Drawn(lys));
     }
@@ -332,9 +332,9 @@ public class MusicXmlSectionCutTests
     public void AChange_OpensASectionOnlyWhereNoMarkDoes(string music, string form)
     {
         string source = "octave absolute\ntime 4/4\nkey c major\npart m { clef treble }\n"
-                        + $"section S {{ m {{ {music} }} }}\nform main {{ ~S }}\nscore main {{ staff m }}\n";
+                        + $"section S {{ m {{ {music} }} }}\nform {{ ~S }}\nscore {{ staff m }}\n";
         string lys = Import(source);
-        Assert.Matches(@"form main \{\s*" + form + @"\s*\}", lys);
+        Assert.Matches(@"form \{\s*" + form + @"\s*\}", lys);
         Assert.DoesNotContain("!", lys.Replace("@mark", ""));
         Assert.Equal(Drawn(source), Drawn(lys));
     }

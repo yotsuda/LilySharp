@@ -22,5 +22,5 @@ chords prog {
   section E1 { Am | | }
   section E2 { | Dm G | C | }
 }
-form main { |: A [1. E1 ] :| [2. E2 ] |. }
-score main { chords prog staff mel }
+form { |: A [1. E1 ] :| [2. E2 ] |. }
+score { chords prog staff mel }

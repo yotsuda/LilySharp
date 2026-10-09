@@ -65,8 +65,8 @@ public class BeamDetectionInputMemoTests
           c16 tuplet 3/2 { d16. e32 f16 } g16 |
           c8 d e f g a b c' |
         } }
-        form main { Main }
-        score main "x" { staff melody }
+        form { Main }
+        score "x" { staff melody }
         """;
 
     /// <summary>One staff, two voices — the shape on which the annotation quantity (the
@@ -79,8 +79,8 @@ public class BeamDetectionInputMemoTests
         section Main { melody {
           voice { c8 d e f g a b c' } voice { e,8 f, g, a, b, c d e }
         } }
-        form main { Main }
-        score main "x" { staff melody }
+        form { Main }
+        score "x" { staff melody }
         """;
 
     /// <summary>

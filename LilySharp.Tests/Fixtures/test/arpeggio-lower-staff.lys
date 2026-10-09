@@ -13,9 +13,9 @@ section Main {
   bot { c4 d e f | <c e g>1@arpeggio | }
 }
 
-form main { Main }
+form { Main }
 
-score main "arpeggio-lower-staff" {
+score "arpeggio-lower-staff" {
   staff top
   staff bot
 }

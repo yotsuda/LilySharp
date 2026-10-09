@@ -44,8 +44,8 @@ public class TabSplitTieParenTests
             c'2~ c'2 |
           }
         }
-        form main { A }
-        score main { tab m as numbers }
+        form { A }
+        score { tab m as numbers }
         """;
 
     private const string RepeatTieTwin = """
@@ -54,8 +54,8 @@ public class TabSplitTieParenTests
         section A {
           m { c'2 c'2@repeatTie | }
         }
-        form main { A }
-        score main { tab m as numbers }
+        form { A }
+        score { tab m as numbers }
         """;
 
     private static List<(double X, double Y, string Text)> FretDigits(string svg)

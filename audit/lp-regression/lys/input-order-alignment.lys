@@ -20,6 +20,6 @@ section Main {
   two { <c' b>2 s2 | <c' b>2@f s2 | <c' b>2@text("Text").up s2 | <c' b>2@staccatissimo s2 | }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { staff ~one  lyrics wa staff ~two  lyrics wb }
+score { staff ~one  lyrics wa staff ~two  lyrics wb }

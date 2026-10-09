@@ -69,8 +69,8 @@ public class MeasureContentKeyTests
           a4 b c d |
         }
         section Main { melody { mel } }
-        form main { Main }
-        score main "x" { staff melody }
+        form { Main }
+        score "x" { staff melody }
         """;
 
     [Fact]
@@ -104,8 +104,8 @@ public class MeasureContentKeyTests
               r1 |
             }
             section Main { melody { mel } }
-            form main { Main }
-            score main "x" { staff melody }
+            form { Main }
+            score "x" { staff melody }
             """;
         var keys = Keys(source);
         Assert.Equal(4, keys.Length);
@@ -125,8 +125,8 @@ public class MeasureContentKeyTests
           r1 |
         }
         section Main { melody { mel } }
-        form main { Main }
-        score main "x" { staff melody }
+        form { Main }
+        score "x" { staff melody }
         """;
 
     /// <summary>
@@ -155,7 +155,7 @@ public class MeasureContentKeyTests
     private static string BeamedBars(params string[] bars) =>
         "octave absolute\ntime 4/4\nkey c major\npart melody { clef treble }\n"
         + "section Main { melody {\n" + string.Join("\n", bars) + "\n} }\n"
-        + "form main { Main }\nscore main \"x\" { staff melody }\n";
+        + "form { Main }\nscore \"x\" { staff melody }\n";
 
     /// <summary>
     /// A beamed bar deleted (or added) EARLIER leaves a beamed measure's key alone. BeamId

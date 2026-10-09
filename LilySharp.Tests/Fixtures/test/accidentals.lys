@@ -35,8 +35,8 @@ section Main {
   melody { sharps flats consecutive chordAccidentals }
 }
 
-form main { Main }
+form { Main }
 
-score main "accidentals" {
+score "accidentals" {
   staff melody
 }

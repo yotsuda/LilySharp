@@ -55,8 +55,8 @@ public sealed class SectionDeclarationTildeTests
         part m
         section {{declaration}} { m { c'4 c c c | } }
         section B { m { d'4 d d d | } }
-        form main { {{form}} }
-        score main { staff m }
+        form { {{form}} }
+        score { staff m }
         """;
 
     /// <summary>The same book written by-part — the regrouper turns these two into
@@ -67,8 +67,8 @@ public sealed class SectionDeclarationTildeTests
           section {{declaration}} { c'4 c c c | }
           section B { d'4 d d d | }
         }
-        form main { {{form}} }
-        score main { staff m }
+        form { {{form}} }
+        score { staff m }
         """;
 
     // ===== the two readers =====
@@ -97,10 +97,10 @@ public sealed class SectionDeclarationTildeTests
     /// spells the source byte for byte.
     /// </summary>
     [Theory]
-    [InlineData("time 4/4\npart m\nsection ~A { m { c'4 c c c | } }\nform main { A }\nscore main { staff m }\n")]
-    [InlineData("time 4/4\npart m {\n  section ~A { c'4 c c c | }\n}\nform main { A }\nscore main { staff m }\n")]
-    [InlineData("time 4/4\npart m {\n  section A { c'4 c c c | }\n}\nlyrics verse {\n  section ~A { la la la la | }\n}\nform main { A }\nscore main {\n  staff m\n  lyrics verse sings m\n}\n")]
-    [InlineData("time 4/4\npart m {\n  section A { c'4 c c c | }\n}\nchords prog {\n  section ~A { Dm7 | }\n}\nform main { A }\nscore main {\n  chords prog\n  staff m\n}\n")]
+    [InlineData("time 4/4\npart m\nsection ~A { m { c'4 c c c | } }\nform { A }\nscore { staff m }\n")]
+    [InlineData("time 4/4\npart m {\n  section ~A { c'4 c c c | }\n}\nform { A }\nscore { staff m }\n")]
+    [InlineData("time 4/4\npart m {\n  section A { c'4 c c c | }\n}\nlyrics verse {\n  section ~A { la la la la | }\n}\nform { A }\nscore {\n  staff m\n  lyrics verse sings m\n}\n")]
+    [InlineData("time 4/4\npart m {\n  section A { c'4 c c c | }\n}\nchords prog {\n  section ~A { Dm7 | }\n}\nform { A }\nscore {\n  chords prog\n  staff m\n}\n")]
     public void ADeclarationTildeIsReportedOnceAndKept(string source)
     {
         var tree = SyntaxTree.Parse(source);
@@ -165,7 +165,7 @@ public sealed class SectionDeclarationTildeTests
             part m
             section A { m { c'4 c c c | } }
             section B { m { d'4 d d d | } }
-            score main { staff m }
+            score { staff m }
             """;
         Assert.Equal(new[] { "A", "B" }, PageLabels(book));
         Assert.Equal(new[] { "A", "B" }, TwinLabels(book));

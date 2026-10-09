@@ -39,9 +39,9 @@ public class IncrementalParseTests
 
         section Main { melody { intro theme } }
 
-        form main { Main }
+        form { Main }
 
-        score main "x" { staff melody }
+        score "x" { staff melody }
         """;
 
     // ---------- helpers ----------

@@ -88,7 +88,7 @@ internal sealed class RepeatStructureScopeValidator : ISemanticValidator
                         + "the music: a repeat changes the ORDER the music plays in, and a "
                         + "form is where a book's order is written. Cut the repeated bars "
                         + "into a section of their own and repeat the SECTION - "
-                        + "'section A { … }' with 'form main { |: A :| }'.");
+                        + "'section A { … }' with 'form { |: A :| }'.");
                     break;
 
                 case InlineVoltaSyntax volta when !volta.IsInside<FormDeclarationSyntax>():
@@ -101,7 +101,7 @@ internal sealed class RepeatStructureScopeValidator : ISemanticValidator
                         + "in the music: an ending changes the ORDER the music plays in, and a "
                         + "form is where a book's order is written. Cut each ending into a "
                         + "section of its own and name it in the form - "
-                        + "'form main { |: A [1. B] :| [2. C] }'. (A LYRIC verse keeps this "
+                        + "'form { |: A [1. B] :| [2. C] }'. (A LYRIC verse keeps this "
                         + "spelling: '[1. … ]' in a 'lyrics' row is the words for the first "
                         + "pass, and stays where it is.)");
                     break;
@@ -119,7 +119,7 @@ internal sealed class RepeatStructureScopeValidator : ISemanticValidator
                         + "in the music: the route a jump takes is read off the form alone, and a "
                         + "mark here would be drawn and never followed (a 'segno' here is no "
                         + "target for the form's 'ds'). Write it between the section names - "
-                        + $"'form main {{ A {Written(nav)} B }}' - cutting the section where the "
+                        + $"'form {{ A {Written(nav)} B }}' - cutting the section where the "
                         + "mark falls inside it.");
                     break;
             }

@@ -69,8 +69,8 @@ public class MarkArrangementTests
         time 4/4
         part bl { clef bass }
         section Intro { bl { r1 | r1 | } }
-        form main { Intro }
-        score main {
+        form { Intro }
+        score {
         """ + scoreItems + " staff bl }\n";
 
     private static (MultiStaffScore Score, ScoreLayout Layout) Lay(string source)
@@ -245,8 +245,8 @@ public class MarkArrangementTests
         time 4/4
         part bl { clef bass }
         section Intro { bl { d4 tempo 90 e f g | a1 | } }
-        form main { Intro }
-        score main { staff bl }
+        form { Intro }
+        score { staff bl }
         """;
         var (_, layout) = Lay(book);
         var label = Assert.Single(layout.MusicMarkLayouts, m => m.MarkType == MusicMarkType.SectionLabel);

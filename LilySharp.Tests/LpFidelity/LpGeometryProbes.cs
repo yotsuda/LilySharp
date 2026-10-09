@@ -82,9 +82,9 @@ internal static class LpGeometryProbes
           melody { {{music}} }
         }
 
-        form main { Main }
+        form { Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -95,9 +95,9 @@ internal static class LpGeometryProbes
           melody { {{music}} }
         }
 
-        form main { Main }
+        form { Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -144,9 +144,9 @@ internal static class LpGeometryProbes
           bl { repeat percent 2 { c,16 d, e, f, } repeat percent 2 { g,8. c,16 } | c,1 | }
         }
 
-        form main { Main }
+        form { Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           {{staves}}
         }
         """;
@@ -341,7 +341,7 @@ internal static class LpGeometryProbes
     // 24 measures land on 3 systems on both sides, which is what makes the gap measurable
     // at all (two gaps, and StaffGap insists they agree).
     //
-    // NOTE THE `~`. Every other probe goes through Score(), whose `form main { Main }` prints
+    // NOTE THE `~`. Every other probe goes through Score(), whose `form { Main }` prints
     // the section's rehearsal MARK above the first system. That mark is ~3.86 ss of ink, it
     // lands exactly where this measurement looks, and Lily# seats the first system by
     // skyline — so the first draft of this probe read 14.350551 against LilyPond's 11.690551
@@ -365,9 +365,9 @@ internal static class LpGeometryProbes
           melody { {{string.Concat(Enumerable.Repeat("c4 d e f | ", 24)).Trim()}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "V" {
+        score "V" {
           staff melody
         }
         """;
@@ -397,9 +397,9 @@ internal static class LpGeometryProbes
           melody { {{string.Concat(Enumerable.Repeat("c4 d e f | ", 150)).Trim()}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "W" {
+        score "W" {
           staff melody
         }
         """;
@@ -437,9 +437,9 @@ internal static class LpGeometryProbes
           melody { {{string.Concat(Enumerable.Repeat("a4 a a a | ", 150)).Trim()}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "S" {
+        score "S" {
           staff melody
         }
         """;
@@ -506,9 +506,9 @@ internal static class LpGeometryProbes
           melody { {{string.Concat(Enumerable.Repeat("a4 a a a | ", 24)).Trim()}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -615,9 +615,9 @@ internal static class LpGeometryProbes
           section A { gyp jog pyx pug }
         }
 
-        form main { ~A break ~B }
+        form { ~A break ~B }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
           lyrics w
         }
@@ -659,9 +659,9 @@ internal static class LpGeometryProbes
           section B { Aa bb cc dd | ee ff gg }
         }
 
-        form main { ~A break ~B }
+        form { ~A break ~B }
 
-        score main "LBS" {
+        score "LBS" {
           staff melody
           lyrics w
         }
@@ -713,9 +713,9 @@ internal static class LpGeometryProbes
           section B { g4 g f f | e e d2 | break }
         }
 
-        form main { A B A B }
+        form { A B A B }
 
-        score main "{{tag}}" {
+        score "{{tag}}" {
         {{string.Join("\n", Enumerable.Repeat("  staff melody", staffCount))}}
         }
         """;
@@ -770,9 +770,9 @@ internal static class LpGeometryProbes
           section A { {{words}} }
         }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
           lyrics w
         }
@@ -815,9 +815,9 @@ internal static class LpGeometryProbes
           section A { a2 a | a2 a | }
         }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "LCC" {
+        score "LCC" {
           staff melody
         }
         """;
@@ -863,9 +863,9 @@ internal static class LpGeometryProbes
           lyrics {{lyricVoice}} { {{words}} }
         }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff m
           lyrics {{lyricVoice}}
         }
@@ -913,9 +913,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff m
         }
         """;
@@ -948,9 +948,9 @@ internal static class LpGeometryProbes
           m { {{bar}} | }
         }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff m
         }
         """;
@@ -990,9 +990,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff m
         }
         """;
@@ -1042,9 +1042,9 @@ internal static class LpGeometryProbes
           melody { {{bars}} }
         }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -1111,9 +1111,9 @@ internal static class LpGeometryProbes
           melody { {{bar}} }
         }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -1155,9 +1155,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "LVA" { staff ~v }
+        score "LVA" { staff ~v }
         """;
 
     /// <summary>
@@ -1181,9 +1181,9 @@ internal static class LpGeometryProbes
           m { <b' c'' d'' e''>4.@stemDown <f' g' a' b'>4.@stemDown | }
         }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "DCW" {
+        score "DCW" {
           staff m
         }
         """;
@@ -1224,9 +1224,9 @@ internal static class LpGeometryProbes
           section A { {{words}} }
         }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
           lyrics w
         }
@@ -1288,9 +1288,9 @@ internal static class LpGeometryProbes
           lh { {{string.Concat(Enumerable.Repeat("c,4 d, e, f, | ", 120)).Trim()}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           grandStaff {
             staff rh{{(declareRemoveEmpty ? " as removeEmpty all" : "")}}
             staff lh
@@ -1409,9 +1409,9 @@ internal static class LpGeometryProbes
           lyrics words{{(bound ? " sings melody" : "")}} { {{string.Concat(Enumerable.Repeat("no no no no | ", 120)).Trim()}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
         {{scoreBody}}
         }
         """;
@@ -1472,9 +1472,9 @@ internal static class LpGeometryProbes
           lyrics two sings melody { {{string.Concat(Enumerable.Repeat("no no no no | ", 120)).Trim()}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody  lyrics one  lyrics two
         }
         """;
@@ -1515,9 +1515,9 @@ internal static class LpGeometryProbes
           lyrics words { {{string.Concat(Enumerable.Repeat("no no no no | ", 240)).Trim()}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
           lyrics words
         }
@@ -1573,9 +1573,9 @@ internal static class LpGeometryProbes
           lyrics words sings melody { la la la la | ho ho | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody  lyrics words
         }
         """;
@@ -1625,9 +1625,9 @@ internal static class LpGeometryProbes
           melody { c,1@sustain@sostenuto@unaCorda | c,1 | c,1@!sustain@!sostenuto@treCorde | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "PT3" {
+        score "PT3" {
           staff melody
         }
         """;
@@ -1659,9 +1659,9 @@ internal static class LpGeometryProbes
           lower { {{string.Concat(Enumerable.Repeat("g,4 a, g, a, | ", 8)).Trim()}} }
         }
 
-        form main { A }
+        form { A }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff upper
           {{render}} lower
         }
@@ -1713,9 +1713,9 @@ internal static class LpGeometryProbes
           upper  { {{string.Concat(Enumerable.Repeat("g4 a g a | ", bars)).Trim()}} }
         }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           {{render}} upper
           staff melody
         }
@@ -1790,9 +1790,9 @@ internal static class LpGeometryProbes
           gtr { {{string.Concat(Enumerable.Repeat("g,4 a, g, a, | ", 24)).Trim()}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           {{render}} gtr
         }
         """;
@@ -1820,9 +1820,9 @@ internal static class LpGeometryProbes
           gtr { e'8\1 r8 r2. }
         }
 
-        form main { Main }
+        form { Main }
 
-        score main "TABSTEM" {
+        score "TABSTEM" {
           tab gtr as full
         }
         """;
@@ -1859,9 +1859,9 @@ internal static class LpGeometryProbes
           melody { {{string.Concat(Enumerable.Repeat("c4 d e f | ", 8)).Trim()}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -1909,9 +1909,9 @@ internal static class LpGeometryProbes
           melody { {{string.Concat(Enumerable.Repeat(string.Concat(Enumerable.Repeat("c4 d e f | ", 8)) + "break ", 16)).Trim()}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -1972,9 +1972,9 @@ internal static class LpGeometryProbes
           bassline { {{StaffTabPageBody(lines, marked)}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
         {{(bracketed ? "  staffGroup {\n    staff bassline\n    tab bassline\n  }" : "  staff bassline\n  tab bassline")}}
         }
         """;
@@ -2062,9 +2062,9 @@ internal static class LpGeometryProbes
           lower { {{string.Concat(Enumerable.Repeat(string.Concat(Enumerable.Repeat("g,,4 a,, b,, a,, | ", 8)) + "break ", lines)).Trim()}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
         {{(bracketed ? "  staffGroup {\n    staff upper\n    staff lower\n  }" : "  staff upper\n  staff lower")}}
         }
         """;
@@ -2088,9 +2088,9 @@ internal static class LpGeometryProbes
           lyrics two{{(secondBound ? " sings melody" : "")}} { {{string.Concat(Enumerable.Repeat("no no no no | ", 40)).Trim()}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
         {{scoreBlock}}
         }
         """;
@@ -2185,9 +2185,9 @@ internal static class LpGeometryProbes
               lyrics one sings melody { {{syllables}} }{{(secondVerse ? $"\n  lyrics two sings melody {{ {syllables} }}" : "")}}
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "{{name}}" {
+            score "{{name}}" {
               staff upper
               staff melody  lyrics one{{(secondVerse ? "  lyrics two" : "")}}
             }
@@ -2259,9 +2259,9 @@ internal static class LpGeometryProbes
               chords prog { {{string.Concat(Enumerable.Repeat("C | ", 120)).Trim()}} }
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "{{name}}" {
+            score "{{name}}" {
               chords prog
               staff upper
               staff melody  lyrics one
@@ -2341,9 +2341,9 @@ internal static class LpGeometryProbes
           lyrics one sings melody { no no no no | no no no no | }
         }
 
-        form main { ~A break ~B }
+        form { ~A break ~B }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           chords prog
           staff melody  lyrics one
         }
@@ -2412,9 +2412,9 @@ internal static class LpGeometryProbes
           lyrics one sings melody { no no no no | no no no no | }
         }
 
-        form main { ~A break ~B }
+        form { ~A break ~B }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           chords prog
           staff melody  lyrics one
         }
@@ -2504,9 +2504,9 @@ internal static class LpGeometryProbes
         lyrics one sings melody { section A { gyp gyp | gyp gyp } }
         lyrics two sings melody { section A { pug pug | pug pug } }
 
-        form main { ~A break ~A break ~A }
+        form { ~A break ~A break ~A }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
           staff lower
           lyrics one
@@ -2565,9 +2565,9 @@ internal static class LpGeometryProbes
               lyrics one sings melody { {{syllables}} }{{(secondVerse ? $"\n  lyrics two sings melody {{ {syllables} }}" : "")}}
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "{{name}}" {
+            score "{{name}}" {
               staff melody  lyrics one{{(secondVerse ? "  lyrics two" : "")}}
               staff lower
             }
@@ -2645,9 +2645,9 @@ internal static class LpGeometryProbes
               lyrics one { {{row}} }{{(secondVerse ? $"\n  lyrics two {{ {row} }}" : "")}}
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "{{name}}" {
+            score "{{name}}" {
               staff melody
               lyrics one{{(secondVerse ? "\n  lyrics two" : "")}}
               staff lower{{(haraKiri ? " as removeEmpty all" : "")}}
@@ -2762,9 +2762,9 @@ internal static class LpGeometryProbes
               lyrics {{verse2name}} { no no no no | no no no no | | no no no no | }
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "{{name}}" {
+            score "{{name}}" {
               staff melody
               lyrics one{{(oneTrack ? "" : "\n  lyrics two")}}
               staff lower
@@ -2829,9 +2829,9 @@ internal static class LpGeometryProbes
               section B { {{verseB}} }
             }
 
-            form main { ~A ~B }
+            form { ~A ~B }
 
-            score main "{{name}}" {
+            score "{{name}}" {
               staff melody
               chords prog as names
               lyrics verse sings melody
@@ -2885,7 +2885,7 @@ internal static class LpGeometryProbes
     /// The user read a delivered picture and said the gap between systems 2 and 3 looked
     /// longer than the one between 1 and 2. It is: Lily# reads 12.000000 and 16.970000
     /// between refpoints. Their book spells <c>chords prog as names / staff melody / lyrics
-    /// verse sings melody / staff melody</c> with <c>form main { A |: B :| A "A2" }</c> and a
+    /// verse sings melody / staff melody</c> with <c>form { A |: B :| A "A2" }</c> and a
     /// <c>chords prog</c> that has ONLY section A — so the row is on systems 1 and 3 and
     /// absent from system 2.
     /// <para>
@@ -3015,9 +3015,9 @@ internal static class LpGeometryProbes
               lyrics one sings melody { {{syllables}} }{{last}}
             }
 
-            form main { {{(marks ? "A B C" : "~A ~B ~C")}} }
+            form { {{(marks ? "A B C" : "~A ~B ~C")}} }
 
-            score main "{{name}}" {
+            score "{{name}}" {
             {{(rows == Rows.None ? "" : "  chords prog\n")}}  staff melody
               lyrics one
               staff lower
@@ -3093,7 +3093,7 @@ internal static class LpGeometryProbes
     /// <remarks>
     /// <para>
     /// ⚠️⚠️ ★★★ READ THIS FIRST: THE PAIR IS MISMATCHED IN THE GROB (2026-08-25). These twins
-    /// write their A/B/C as <c>form main { A B C }</c>, which Lily# engraves as a SECTION
+    /// write their A/B/C as <c>form { A B C }</c>, which Lily# engraves as a SECTION
     /// LABEL and means as one (<see cref="MusicMarkEngraver"/> gives it outside-staff-priority
     /// 1450 and cites SectionLabel's grob definition). The probe writes them as
     /// <c>\mark \markup \box</c>, which is a REHEARSAL MARK. LilyPond gives the two DIFFERENT
@@ -3295,9 +3295,9 @@ internal static class LpGeometryProbes
               chords prog { {{chords}} }
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "{{name}}" {
+            score "{{name}}" {
               chords prog
               staff melody  lyrics one
               staff lower
@@ -3351,9 +3351,9 @@ internal static class LpGeometryProbes
               chords prog { {{chords}} }
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "{{name}}" {
+            score "{{name}}" {
               chords prog
               staff melody
             }
@@ -3406,9 +3406,9 @@ internal static class LpGeometryProbes
           lyrics verse { Twin- kle twin- kle | lit- tle star | }
         }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "CHL1" {
+        score "CHL1" {
           staff ~melody
           chords prog as names
           lyrics verse sings melody
@@ -3440,9 +3440,9 @@ internal static class LpGeometryProbes
           chords prog { Dmaj7 | Em7 }
         }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "CHL2" {
+        score "CHL2" {
           staff ~melody
           chords prog as names
           staff ~melody
@@ -3480,9 +3480,9 @@ internal static class LpGeometryProbes
           lyrics verse { Twin- kle twin- kle | lit- tle star | }
         }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "CHL4" {
+        score "CHL4" {
           staff ~melody
           lyrics verse sings melody
           chords prog as names
@@ -3506,9 +3506,9 @@ internal static class LpGeometryProbes
           lyrics v1 { Twin- kle twin- kle | lit- tle star | }
         }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "VRS1" {
+        score "VRS1" {
           staff ~melody
           lyrics v1 sings melody
           staff ~melody
@@ -3549,9 +3549,9 @@ internal static class LpGeometryProbes
           lyrics v2 { How I won- der | what you are | }
         }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "VRS2" {
+        score "VRS2" {
           staff ~melody
           lyrics v1 sings melody
           lyrics v2 sings melody
@@ -3594,9 +3594,9 @@ internal static class LpGeometryProbes
           lyrics v2 { How I won- der | what you are | }
         }
 
-        form main { ~A break ~B }
+        form { ~A break ~B }
 
-        score main "VRC1" {
+        score "VRC1" {
           staff ~melody
           lyrics v1 sings melody
           lyrics v2 sings melody
@@ -3634,9 +3634,9 @@ internal static class LpGeometryProbes
           two { <c' b>2 s2 | <c' b>2@f s2 | <c' b>2@text("Text").up s2 | <c' b>2@staccatissimo s2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "IOA" { staff ~one  lyrics wa staff ~two  lyrics wb }
+        score "IOA" { staff ~one  lyrics wa staff ~two  lyrics wb }
         """;
 
     /// <summary>
@@ -3683,9 +3683,9 @@ internal static class LpGeometryProbes
           lyrics words sings upper { Praise God from whom | all bless- ings | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "GSL" { grandStaff { staff ~upper
+        score "GSL" { grandStaff { staff ~upper
                                         lyrics words sings upper
                                         staff ~lower } }
         """;
@@ -3712,9 +3712,9 @@ internal static class LpGeometryProbes
           lyrics words sings upper { Praise God from whom | all bless- ings | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "GSN" { grandStaff { staff ~upper
+        score "GSN" { grandStaff { staff ~upper
                                         staff ~lower } }
         """;
 
@@ -3766,9 +3766,9 @@ internal static class LpGeometryProbes
           chords prog { {{(sharp ? "F#" : "F")}} | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" { chords prog  grandStaff { staff rh staff lh } }
+        score "{{name}}" { chords prog  grandStaff { staff rh staff lh } }
         """;
 
     /// <inheritdoc cref="GrandChordsScore"/>
@@ -3837,9 +3837,9 @@ internal static class LpGeometryProbes
           melody { <c e g>1{{(chords ? "@chord" : "")}} | <f a c'>1{{(chords ? "@chord" : "")}} | }
         }
 
-        form main { ~A ~B }
+        form { ~A ~B }
 
-        score main "{{name}}" { staff melody }
+        score "{{name}}" { staff melody }
         """;
 
     /// <inheritdoc cref="InlineChordGapScore"/>
@@ -3905,9 +3905,9 @@ internal static class LpGeometryProbes
         section B { mel { e'1 | g'2 a'4 bes'4{{(chord ? "@chord(Fm)" : "")}} } }
         section C { mel { g'1 | a'1 } }
 
-        form main { |: ~A [1. ~B] :| [2. ~C -] }
+        form { |: ~A [1. ~B] :| [2. ~C -] }
 
-        score main "{{name}}" { staff mel }
+        score "{{name}}" { staff mel }
         """;
 
     /// <inheritdoc cref="VoltaOverChordScore"/>
@@ -3942,9 +3942,9 @@ internal static class LpGeometryProbes
         section B { mel { e1 | g1 } }
         section C { mel { g1 | a1 } }
 
-        form main { |: ~A [1. ~B] :| [2. ~C -] }
+        form { |: ~A [1. ~B] :| [2. ~C -] }
 
-        score main "VOCF" { staff mel }
+        score "VOCF" { staff mel }
         """;
 
     /// <summary>
@@ -3973,8 +3973,8 @@ internal static class LpGeometryProbes
           section E1 { Am | | }
           section E2 { | Dm G | C | }
         }
-        form main { |: A [1. E1 ] :| [2. E2 ] |. }
-        score main "{{name}}" { {{(row ? "chords prog " : "")}}staff mel }
+        form { |: A [1. E1 ] :| [2. E2 ] |. }
+        score "{{name}}" { {{(row ? "chords prog " : "")}}staff mel }
         """;
 
     /// <inheritdoc cref="VoltaChordRowScore"/>
@@ -4026,9 +4026,9 @@ internal static class LpGeometryProbes
           melody { a''4 a'' a'' a'' | }
         }
 
-        form main { ~A _"{{text}}" }
+        form { ~A _"{{text}}" }
 
-        score main "{{name}}" { staff melody }
+        score "{{name}}" { staff melody }
         """;
 
     /// <inheritdoc cref="CustomTextPageScore"/>
@@ -4064,9 +4064,9 @@ internal static class LpGeometryProbes
           melody { a''4 a'' a'' a'' | a''4 a'' a'' a'' | }
         }
 
-        form main { ~A ~B{{(text.Length > 0 ? $" _\"{text}\"" : "")}} }
+        form { ~A ~B{{(text.Length > 0 ? $" _\"{text}\"" : "")}} }
 
-        score main "{{name}}" { staff melody }
+        score "{{name}}" { staff melody }
         """;
 
     /// <inheritdoc cref="CustomTextGapScore"/>
@@ -4125,9 +4125,9 @@ internal static class LpGeometryProbes
               melody { g4 a g a | g4 a g a | }{{chords}}
             }
 
-            form main { ~A ~B{{ct}} }
+            form { ~A ~B{{ct}} }
 
-            score main "{{name}}" { {{scoreRow}}staff melody }
+            score "{{name}}" { {{scoreRow}}staff melody }
             """;
     }
 
@@ -4180,9 +4180,9 @@ internal static class LpGeometryProbes
               melody { a''4 a'' a'' a'' | a''4 a'' a'' a'' | }
             }
 
-            form main { ~A ~B }
+            form { ~A ~B }
 
-            score main "{{name}}" { {{scoreRow}}staff melody }
+            score "{{name}}" { {{scoreRow}}staff melody }
             """;
     }
 
@@ -4233,9 +4233,9 @@ internal static class LpGeometryProbes
             section B { melody { g4 a g a | g4 a g a | } }
             section C { melody { g4 a g a | g4 a g a | } }
 
-            form main { ~A ~B{{ct}} ~C }
+            form { ~A ~B{{ct}} ~C }
 
-            score main "{{name}}" { staff melody }
+            score "{{name}}" { staff melody }
             """;
     }
 
@@ -4295,9 +4295,9 @@ internal static class LpGeometryProbes
               melody { a''4 a'' a'' a'' | a''4 a'' a'' a'' | }
             }
 
-            form main { ~A ~B }
+            form { ~A ~B }
 
-            score main "{{name}}" { staff melody }
+            score "{{name}}" { staff melody }
             """;
     }
 
@@ -4345,9 +4345,9 @@ internal static class LpGeometryProbes
               lyrics one sings melody { {{syllables}} }
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "{{name}}" {
+            score "{{name}}" {
               staff melody  lyrics one
               ossia ossia_mel
               staff lower
@@ -4492,9 +4492,9 @@ internal static class LpGeometryProbes
               lyrics two sings melody { {{syllables.Trim()}} }
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "LYRHKG" {
+            score "LYRHKG" {
               grandStaff { staff top staff inner as removeEmpty all }
               staff melody  lyrics one  lyrics two
             }
@@ -4521,9 +4521,9 @@ internal static class LpGeometryProbes
               lyrics two sings melody { {{syllables.Trim()}} }
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "{{(declareRemoveEmpty ? "LYRHKD" : "LYRHKN")}}" {
+            score "{{(declareRemoveEmpty ? "LYRHKD" : "LYRHKN")}}" {
               staff upper{{(declareRemoveEmpty ? " as removeEmpty all" : "")}}
               staff melody  lyrics one  lyrics two
             }
@@ -4644,9 +4644,9 @@ internal static class LpGeometryProbes
               lh { {{string.Concat(Enumerable.Repeat("d,1 | ", barsPerSystem * systems)).Trim()}} }
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "{{(declareRemoveEmpty ? "HKW" : "HKWN")}}" {
+            score "{{(declareRemoveEmpty ? "HKW" : "HKWN")}}" {
               grandStaff {
                 staff rh{{(declareRemoveEmpty ? " as removeEmpty all" : "")}}
                 staff lh
@@ -4683,9 +4683,9 @@ internal static class LpGeometryProbes
               lyrics two sings melody { {{syllables.Trim()}} }
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "LYRHK" {
+            score "LYRHK" {
               staff upper as removeEmpty all
               staff melody  lyrics one  lyrics two
             }
@@ -4731,9 +4731,9 @@ internal static class LpGeometryProbes
           melody { {{string.Concat(Enumerable.Repeat($"a{octave}4 b{octave} a{octave} b{octave} | ", 48)).Trim()}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -4781,9 +4781,9 @@ internal static class LpGeometryProbes
           chords harm { {{string.Concat(Enumerable.Repeat("C | G | Am | F | ", 3)).Trim()}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BNC" {
+        score "BNC" {
           chords harm
           staff melody
         }
@@ -4816,9 +4816,9 @@ internal static class LpGeometryProbes
           chords harm { {{chords}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           chords harm
           staff melody
         }
@@ -4852,9 +4852,9 @@ internal static class LpGeometryProbes
           chords harm { C | | | | F | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BRX" {
+        score "BRX" {
           chords harm
           staff melody
         }
@@ -4876,9 +4876,9 @@ internal static class LpGeometryProbes
           chords harm { Am | F | }
         }
 
-        form main { ~A |: ~B :| }
+        form { ~A |: ~B :| }
 
-        score main "BRR" {
+        score "BRR" {
           chords harm
           staff melody
         }
@@ -4902,9 +4902,9 @@ internal static class LpGeometryProbes
           chords harm { F | C | }
         }
 
-        form main { ~A ~B }
+        form { ~A ~B }
 
-        score main "BRK" {
+        score "BRK" {
           chords harm
           staff melody
         }
@@ -4984,9 +4984,9 @@ internal static class LpGeometryProbes
               bot { {{g1}}g4 a b c' | {{g2}}f'2 g'2 | }
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "{{name}}" {
+            score "{{name}}" {
               staff top
               staff bot
             }
@@ -5006,9 +5006,9 @@ internal static class LpGeometryProbes
               section B { {{grace}}a'4@mark("B") b' a' g' | f'4 e' d' c' | }
             }
 
-            form main { ~A ~B }
+            form { ~A ~B }
 
-            score main "{{name}}" {
+            score "{{name}}" {
               staff melody
             }
             """;
@@ -5037,9 +5037,9 @@ internal static class LpGeometryProbes
         section A { melody { c4@mark("A") d e f | g a b c' | c'4 b a g | f e d c | break } }
         section B { melody { c4@mark("B") d e f | g a b c' | c'4 b a g | f e d c | } }
 
-        form main { ~A ~B }
+        form { ~A ~B }
 
-        score main "RXQ" { staff melody }
+        score "RXQ" { staff melody }
         """;
 
     /// <summary>
@@ -5060,9 +5060,9 @@ internal static class LpGeometryProbes
 
         section A { melody { c'4@mark("A") d' e' f' | g' a' b' c'' | c''4 b' a' g' | f' e' d' c' | } }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "RXK" { staff melody }
+        score "RXK" { staff melody }
         """;
 
     /// <summary>
@@ -5083,9 +5083,9 @@ internal static class LpGeometryProbes
         section A { melody { c4 d e f | g a b c' | c'4 b a g | f e d c | break } }
         section B { melody { c4 d e f | g a b c' | c'4 b a g | f e d c | } }
 
-        form main { A B }
+        form { A B }
 
-        score main "RXB" { staff melody }
+        score "RXB" { staff melody }
         """;
 
     /// <summary>
@@ -5110,9 +5110,9 @@ internal static class LpGeometryProbes
 
         section A { melody { c'4 d' e' f' | g' a' b' c'' | c''4@mark("B") b' a' g' | f' e' d' c' | } }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "MMB" { staff melody }
+        score "MMB" { staff melody }
         """;
 
     /// <summary>MMS — a repeat OPENS at the mark (<c>|:</c>, LilyPond's <c>.|:</c>).</summary>
@@ -5126,9 +5126,9 @@ internal static class LpGeometryProbes
         section A { melody { c'4 d' e' f' | g' a' b' c'' | } }
         section B { melody { c''4@mark("B") b' a' g' | f' e' d' c' | } }
 
-        form main { ~A |: ~B :| }
+        form { ~A |: ~B :| }
 
-        score main "MMS" { staff melody }
+        score "MMS" { staff melody }
         """;
 
     /// <summary>MMR — a repeat CLOSES at the mark (<c>:|</c>, LilyPond's <c>:|.</c>).</summary>
@@ -5142,9 +5142,9 @@ internal static class LpGeometryProbes
         section A { melody { c'4 d' e' f' | g' a' b' c'' | } }
         section B { melody { c''4@mark("B") b' a' g' | f' e' d' c' | } }
 
-        form main { |: ~A :| ~B }
+        form { |: ~A :| ~B }
 
-        score main "MMR" { staff melody }
+        score "MMR" { staff melody }
         """;
 
     /// <summary>MMD — one repeat closes and another opens at the mark (<c>:|.|:</c>).</summary>
@@ -5158,9 +5158,9 @@ internal static class LpGeometryProbes
         section A { melody { c'4 d' e' f' | g' a' b' c'' | } }
         section B { melody { c''4@mark("B") b' a' g' | f' e' d' c' | } }
 
-        form main { |: ~A :| |: ~B :| }
+        form { |: ~A :| |: ~B :| }
 
-        score main "MMD" { staff melody }
+        score "MMD" { staff melody }
         """;
 
     /// <summary>
@@ -5182,9 +5182,9 @@ internal static class LpGeometryProbes
         section E1 { melody { c''4 b' a' g' | } }
         section E2 { melody { f'4 e' d' c' | } }
 
-        form main { |: ~A [1. E1 ] :| [2. E2 ] }
+        form { |: ~A [1. E1 ] :| [2. E2 ] }
 
-        score main "MMV" { staff melody }
+        score "MMV" { staff melody }
         """;
 
     /// <summary>
@@ -5310,9 +5310,9 @@ internal static class LpGeometryProbes
               chords harm { {{chords2}} }
             {{lyricsB}}}
 
-            form main { ~A ~B }
+            form { ~A ~B }
 
-            score main "{{name}}" {
+            score "{{name}}" {
               chords harm
             {{lyricsRow}}}
             """;
@@ -5336,9 +5336,9 @@ internal static class LpGeometryProbes
               lyrics words { eight nine ten e- le- ven | twelve thir- teen | }
             }
 
-            form main { ~A Chorus }
+            form { ~A Chorus }
 
-            score main "{{name}}" {
+            score "{{name}}" {
               chords harm
               lyrics words
             }
@@ -5376,9 +5376,9 @@ internal static class LpGeometryProbes
               chords harm { {{chords2}} }
             }
 
-            form main { ~A B }
+            form { ~A B }
 
-            score main "{{name}}" {
+            score "{{name}}" {
               chords harm
               staff melody
             }
@@ -5409,9 +5409,9 @@ internal static class LpGeometryProbes
 
             part melody { section A { {{bars}} } section B { {{bars}} } }{{chordPart}}
 
-            form main { A B }
+            form { A B }
 
-            score main "{{name}}" {{{chordRow}}
+            score "{{name}}" {{{chordRow}}
               staff melody
             }
             """;
@@ -5452,9 +5452,9 @@ internal static class LpGeometryProbes
           section Main { {{string.Concat(Enumerable.Repeat("one two three four | five six sev- en | eight nine ten e- | le- ven twelve thir- | ", 3)).Trim()}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BNS" {
+        score "BNS" {
           chords harm as names
           lyrics verse sings melody
         }
@@ -5514,9 +5514,9 @@ internal static class LpGeometryProbes
           melody { c'4 c' c' c' | c'1 | }
         }
 
-        form main { ~A {{texts}} ~B }
+        form { ~A {{texts}} ~B }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -5687,9 +5687,9 @@ internal static class LpGeometryProbes
           melody { c'4 c' c' c' | {{marks}} c'1 | }
         }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -5720,9 +5720,9 @@ internal static class LpGeometryProbes
           melody { c'4 c' c' c' | c'4 c' c' c' {{mark}} | c'4 c' c' c' | c'1 | }
         }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -5788,9 +5788,9 @@ internal static class LpGeometryProbes
           lower { d,1 | d,1 | d,1 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff upper
           staff lower
         }
@@ -5827,9 +5827,9 @@ internal static class LpGeometryProbes
           mel { {{bars}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff mel
         }
         """;
@@ -5864,9 +5864,9 @@ internal static class LpGeometryProbes
           lower { c'''4@ottava c''' c''' c''' | c''4@!ottava c'' c'' c'' | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "OTL" {
+        score "OTL" {
           staff upper
           staff lower
         }
@@ -5914,9 +5914,9 @@ internal static class LpGeometryProbes
           mel { {{bars}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff mel
         }
         """;
@@ -6029,9 +6029,9 @@ internal static class LpGeometryProbes
 
         chords prog { section Main { D | E } }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" { chords prog as names
+        score "{{name}}" { chords prog as names
                                 staff ~melody }
         """;
 
@@ -6059,9 +6059,9 @@ internal static class LpGeometryProbes
           lyrics words sings upper { Twin- kle twin- kle | lit- tle star | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" { staff ~upper
+        score "{{name}}" { staff ~upper
                                 lyrics words sings upper
                                 staff ~lower }
         """;
@@ -6127,9 +6127,9 @@ internal static class LpGeometryProbes
           mel { voice { {{voiceOne}} } { {{voiceTwo}} } }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff mel
         }
         """;
@@ -6201,9 +6201,9 @@ internal static class LpGeometryProbes
           lower { voice { c4@startTrillSpan c c c@stopTrillSpan | } { c''4 c'' c'' c'' | } }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "TVL" {
+        score "TVL" {
           staff upper
           staff lower
         }
@@ -6230,9 +6230,9 @@ internal static class LpGeometryProbes
           mel { c'4@fermata@startTrillSpan c' c' c'@stopTrillSpan | c4 c c c | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "TSP" {
+        score "TSP" {
           staff mel
         }
         """;
@@ -6278,9 +6278,9 @@ internal static class LpGeometryProbes
           mel { {{(voiceTwo.Length == 0 ? bars : $"voice {{ {bars} }} {{ {voiceTwo} }}")}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff mel
         }
         """;
@@ -6323,9 +6323,9 @@ internal static class LpGeometryProbes
           lower { d,4@fermata d, d, d, | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "SPL" {
+        score "SPL" {
           staff upper
           staff lower
         }
@@ -6385,9 +6385,9 @@ internal static class LpGeometryProbes
           mel { c'1@decresc{{first}} | c'1{{second}} | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff mel
         }
         """;
@@ -6466,9 +6466,9 @@ internal static class LpGeometryProbes
           fig { c,,2@stemDown@figuredBass(5 3) c,,@stemDown@figuredBass(6) | c,,2@stemDown@figuredBass(7) c,,@stemDown@figuredBass(6 4) | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "FBA" {
+        score "FBA" {
           staff ~fig
         }
         """;
@@ -6497,9 +6497,9 @@ internal static class LpGeometryProbes
           fig { d,2@stemUp@figuredBass(5 3) d,@stemUp@figuredBass(6) | d,2@stemUp@figuredBass(7) d,@stemUp@figuredBass(6 4) | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "FBQ" {
+        score "FBQ" {
           staff ~fig
         }
         """;
@@ -6519,9 +6519,9 @@ internal static class LpGeometryProbes
           comp { c,,2@stemDown c,,@stemDown | c,,2@stemDown c,,@stemDown | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "FBB" {
+        score "FBB" {
           staff ~fig
           staff ~comp
         }
@@ -6543,9 +6543,9 @@ internal static class LpGeometryProbes
           fig { c,,2@stemDown@figuredBass(5 3) c,,@stemDown@figuredBass(6) | c,,2@stemDown@figuredBass(7) c,,@stemDown@figuredBass(6 4) | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "FBC" {
+        score "FBC" {
           staff ~comp
           staff ~fig
         }
@@ -6596,9 +6596,9 @@ internal static class LpGeometryProbes
               fig { {{string.Concat(Enumerable.Repeat(bar, 100)).Trim()}} }
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "{{tag}}" {
+            score "{{tag}}" {
               staff ~fig
             }
             """;
@@ -6651,9 +6651,9 @@ internal static class LpGeometryProbes
               ann { {{string.Concat(Enumerable.Repeat(bar, 100)).Trim()}} }
             }
 
-            form main { ~Main }
+            form { ~Main }
 
-            score main "{{tag}}" {
+            score "{{tag}}" {
               staff ~ann
             }
             """;
@@ -6722,9 +6722,9 @@ internal static class LpGeometryProbes
           mel { {{bars}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff mel
         }
         """;
@@ -6763,9 +6763,9 @@ internal static class LpGeometryProbes
           mel { {{bars}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff mel
         }
         """;
@@ -6880,9 +6880,9 @@ internal static class LpGeometryProbes
           lower { {{lowerBars}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff upper
           staff lower
         }
@@ -7027,9 +7027,9 @@ internal static class LpGeometryProbes
           lower { {{lowerBars}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff upper
           staff lower
         }
@@ -7103,9 +7103,9 @@ internal static class LpGeometryProbes
           lower { d,1 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff upper
           staff lower
         }
@@ -7190,9 +7190,9 @@ internal static class LpGeometryProbes
           melody { {{music}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -7251,9 +7251,9 @@ internal static class LpGeometryProbes
           melody { {{chord}}1 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -7302,9 +7302,9 @@ internal static class LpGeometryProbes
           melody { <c@finger(1) e@finger(3) g@finger(5)>8 {{tail}} r4 r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -7343,9 +7343,9 @@ internal static class LpGeometryProbes
           melody { {{music}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -7404,9 +7404,9 @@ internal static class LpGeometryProbes
           melody { g'4@finger({{digit}}) r4 r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -7466,9 +7466,9 @@ internal static class LpGeometryProbes
           melody { {{chord}}4@p r4 r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -7515,9 +7515,9 @@ internal static class LpGeometryProbes
           melody { <c e g>4( <c e g>{{second}}) r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -7600,9 +7600,9 @@ internal static class LpGeometryProbes
 
         lyrics verse { section A { Twin- kle twin- kle | } }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           {{(tab ? "tab melody" : "staff melody")}}
           lyrics verse sings melody
         }
@@ -7637,9 +7637,9 @@ internal static class LpGeometryProbes
           melody { {{string.Concat(Enumerable.Repeat("c4 d e f | ", 40)).Trim()}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "TP" {
+        score "TP" {
           staff melody
         }
         """;
@@ -7752,9 +7752,9 @@ internal static class LpGeometryProbes
           melody { g4 g g g g g g g | }
         }
 
-        form main { Main }
+        form { Main }
 
-        score main "CN" { staff melody }
+        score "CN" { staff melody }
         """;
 
     /// <summary>
@@ -7814,9 +7814,9 @@ internal static class LpGeometryProbes
           lh { d,1 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "P" {
+        score "P" {
           grandStaff {
             staff rh
             staff lh
@@ -7862,9 +7862,9 @@ internal static class LpGeometryProbes
           lh { d,1 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "DY" {
+        score "DY" {
           grandStaff {
             staff rh
             staff lh
@@ -7897,9 +7897,9 @@ internal static class LpGeometryProbes
           lh { b1 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "Q" {
+        score "Q" {
           grandStaff {
             staff rh
             staff lh
@@ -7950,9 +7950,9 @@ internal static class LpGeometryProbes
           lh { b4 b b b | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "RSTD" {
+        score "RSTD" {
           grandStaff {
             staff rh
             staff lh
@@ -7985,9 +7985,9 @@ internal static class LpGeometryProbes
           lh { b4 b b b | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "RSTC" {
+        score "RSTC" {
           grandStaff {
             staff rh
             staff lh
@@ -8049,9 +8049,9 @@ internal static class LpGeometryProbes
           lh { b4@stemUp r4 r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           grandStaff {
             staff rh
             staff lh
@@ -8081,9 +8081,9 @@ internal static class LpGeometryProbes
           lh { c4@stemUp r4 r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           grandStaff {
             staff rh
             staff lh
@@ -8119,9 +8119,9 @@ internal static class LpGeometryProbes
           lh { voice { r4 r r r } { d,4 d, d, d, } | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "RSTU" {
+        score "RSTU" {
           grandStaff {
             staff rh
             staff lh
@@ -8144,9 +8144,9 @@ internal static class LpGeometryProbes
           lh { voice { s4 s s s } { d,4 d, d, d, } | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "RSTUC" {
+        score "RSTUC" {
           grandStaff {
             staff rh
             staff lh
@@ -8211,9 +8211,9 @@ internal static class LpGeometryProbes
           lh { voice { tuplet 3/2 { a1 a1 a1 } } { d,1 d,1 } | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "TU" {
+        score "TU" {
           grandStaff {
             staff rh
             staff lh
@@ -8249,9 +8249,9 @@ internal static class LpGeometryProbes
           lh { d,1 d,1 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "TD" {
+        score "TD" {
           grandStaff {
             staff rh
             staff lh
@@ -8296,9 +8296,9 @@ internal static class LpGeometryProbes
           lh { d,1 d,1 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "SD" {
+        score "SD" {
           grandStaff {
             staff rh
             staff lh
@@ -8335,9 +8335,9 @@ internal static class LpGeometryProbes
           lh { f1( f1) | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "SU" {
+        score "SU" {
           grandStaff {
             staff rh
             staff lh
@@ -8380,9 +8380,9 @@ internal static class LpGeometryProbes
           melody { {{music}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -8548,9 +8548,9 @@ internal static class LpGeometryProbes
           melody { {{music}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -8610,9 +8610,9 @@ internal static class LpGeometryProbes
           melody { {{music}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff melody
         }
         """;
@@ -8883,9 +8883,9 @@ internal static class LpGeometryProbes
           bassline { {{music}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff bassline
         }
         """;
@@ -8968,9 +8968,9 @@ internal static class LpGeometryProbes
           lh { d,1 d,1 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "TID" {
+        score "TID" {
           grandStaff {
             staff rh
             staff lh
@@ -9001,9 +9001,9 @@ internal static class LpGeometryProbes
           lh { a1~ a1 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "TIU" {
+        score "TIU" {
           grandStaff {
             staff rh
             staff lh
@@ -9061,9 +9061,9 @@ internal static class LpGeometryProbes
           lh { d,1 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BMD" {
+        score "BMD" {
           grandStaff {
             staff rh
             staff lh
@@ -9107,9 +9107,9 @@ internal static class LpGeometryProbes
 
         section Main { m { {{music}} r4 r2 | } }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" { staff m }
+        score "{{name}}" { staff m }
         """;
 
     private static readonly string TRB0 = BeamedTremoloScore("TRB0", "a8:32[ a8:32]");
@@ -9135,9 +9135,9 @@ internal static class LpGeometryProbes
 
         section Main { m { {{music.Replace("@S", script)}} } }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" { staff m }
+        score "{{name}}" { staff m }
         """;
 
     private const string ScriptRun =
@@ -9165,9 +9165,9 @@ internal static class LpGeometryProbes
 
         section Main { m { e'4 grace { r16 f'16 } g'4 e4 grace { r16 f16 } g4 | c4 grace { r8 } c4 e'4 r16 f'8. | } }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "GRC" { staff m }
+        score "GRC" { staff m }
         """;
 
     /// <summary>
@@ -9184,9 +9184,9 @@ internal static class LpGeometryProbes
 
         section Main { m { e'4( grace { r16 f'16 } g'4) e'4( grace { r8 } g'4) | } }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "GRS" { staff m }
+        score "GRS" { staff m }
         """;
 
     /// <summary>
@@ -9203,9 +9203,9 @@ internal static class LpGeometryProbes
 
         section Main { m { a4( grace { b16 } c'4) c4( grace { a,16 } b,4) | } }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "GFS" { staff m }
+        score "GFS" { staff m }
         """;
 
     /// <summary>
@@ -9223,9 +9223,9 @@ internal static class LpGeometryProbes
 
         section Main { m { {{music}} } }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{tag}}" { staff m }
+        score "{{tag}}" { staff m }
         """;
 
     private static readonly string GSA = GraceSlurBook("GSA", "treble", "c'4 acciaccatura { e'8 } d'4 e'4 f'4 |");
@@ -9280,9 +9280,9 @@ internal static class LpGeometryProbes
 
         section Main { m { c'4 grace { d'16 e'16 } c'4 grace { f'8 } e'4 f'4 | break R1 | } }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main { staff m }
+        score { staff m }
         """;
 
     /// <summary>The 100mm line of <see cref="GST"/>: LilyPond's line-width, widened by the two margins.</summary>
@@ -9320,9 +9320,9 @@ internal static class LpGeometryProbes
 
         section Main { m { {{music}} } }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main { staff m }
+        score { staff m }
         """;
 
     private static readonly string SRR = SlurRodBook(
@@ -9341,9 +9341,9 @@ internal static class LpGeometryProbes
 
         section Main { m { r2 r4 gis,,16 dis,8 fis,16 | } }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BQA" { staff m }
+        score "BQA" { staff m }
         """;
 
     /// <summary>
@@ -9378,9 +9378,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BQV" { staff m }
+        score "BQV" { staff m }
         """;
 
     /// <summary>
@@ -9419,9 +9419,9 @@ internal static class LpGeometryProbes
         section A { m { g'8 a' b' c'' d'' e'' fis'' g'' | } }
         section B { m { voice { b2 a } { d2 e } } }
 
-        form main { ~A ~B }
+        form { ~A ~B }
 
-        score main "BVS" { staff m }
+        score "BVS" { staff m }
         """;
 
     /// <summary>The control for <see cref="BVS"/>: the same beamed measure, no span.</summary>
@@ -9434,9 +9434,9 @@ internal static class LpGeometryProbes
 
         section A { m { g'8 a' b' c'' d'' e'' fis'' g'' | } }
 
-        form main { ~A }
+        form { ~A }
 
-        score main "BVSC" { staff m }
+        score "BVSC" { staff m }
         """;
 
     // --- the one regime where the quanter's stems do NOT all point the same way
@@ -9477,9 +9477,9 @@ internal static class LpGeometryProbes
           m { c8 c'' c c'' r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BQK" { staff m }
+        score "BQK" { staff m }
         """;
 
     /// <summary>
@@ -9502,9 +9502,9 @@ internal static class LpGeometryProbes
           m { c8 c'' c r4 r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BQK3" { staff m }
+        score "BQK3" { staff m }
         """;
 
     /// <summary>
@@ -9526,9 +9526,9 @@ internal static class LpGeometryProbes
           m { c8 e c e r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BQKC" { staff m }
+        score "BQKC" { staff m }
         """;
 
     // --- the other regime every beam point above is blind to: a group whose members do NOT
@@ -9574,9 +9574,9 @@ internal static class LpGeometryProbes
           m { c8 d16 e f8 g16 a g8 f16 e d4 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BMC" { staff m }
+        score "BMC" { staff m }
         """;
 
     /// <summary>
@@ -9601,9 +9601,9 @@ internal static class LpGeometryProbes
           m { a'8[ a'32] r16. r4 r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BMCX" { staff m }
+        score "BMCX" { staff m }
         """;
 
     /// <summary>
@@ -9632,9 +9632,9 @@ internal static class LpGeometryProbes
           m { a'8[ a'8] r4 r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BMCC" { staff m }
+        score "BMCC" { staff m }
         """;
 
     /// <summary>
@@ -9662,9 +9662,9 @@ internal static class LpGeometryProbes
           m { c'8[ e'32 g'8] r8 r16. r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BMCU" { staff m }
+        score "BMCU" { staff m }
         """;
 
     /// <summary>
@@ -9697,9 +9697,9 @@ internal static class LpGeometryProbes
           m { a8[ c'32 e'8] r8 r16. r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BMCF" { staff m }
+        score "BMCF" { staff m }
         """;
 
     /// <summary>
@@ -9730,9 +9730,9 @@ internal static class LpGeometryProbes
           m { grace { d16 e } f4 g2 r4 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BGR" { staff m }
+        score "BGR" { staff m }
         """;
 
     /// <summary>
@@ -9758,9 +9758,9 @@ internal static class LpGeometryProbes
           m { d16 e r8 g2 r4 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BGRC" { staff m }
+        score "BGRC" { staff m }
         """;
 
     /// <summary>
@@ -9786,9 +9786,9 @@ internal static class LpGeometryProbes
           m { grace { f16 g } a4 g2 r4 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BGRT" { staff m }
+        score "BGRT" { staff m }
         """;
 
     /// <summary>
@@ -9827,9 +9827,9 @@ internal static class LpGeometryProbes
           m { grace { c'16 d' } e'4 g2 r4 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BGRJ" { staff m }
+        score "BGRJ" { staff m }
         """;
 
     /// <summary>
@@ -9862,9 +9862,9 @@ internal static class LpGeometryProbes
           m { grace { a16 b } c'4 g2 r4 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BGRK" { staff m }
+        score "BGRK" { staff m }
         """;
 
     // ---- the X FRAME the grace beam is quanted in: how wide is a grace COLUMN? ------------
@@ -9938,9 +9938,9 @@ internal static class LpGeometryProbes
           m { grace { d16 e f } g4 g2 r4 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "GCW3" { staff m }
+        score "GCW3" { staff m }
         """;
 
     /// <summary>…and FOUR, whose last gap is the one that reaches the main note.</summary>
@@ -9961,9 +9961,9 @@ internal static class LpGeometryProbes
           m { grace { d16 e f g } a4 g2 r4 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "GCW4" { staff m }
+        score "GCW4" { staff m }
         """;
 
     /// <summary>Two EIGHTH graces — the same gap, because the run normalises by its own min.</summary>
@@ -9984,9 +9984,9 @@ internal static class LpGeometryProbes
           m { grace { d8 e } f4 g2 r4 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "GCW2E" { staff m }
+        score "GCW2E" { staff m }
         """;
 
     /// <summary>…and two THIRTY-SECOND graces, the same claim from the other side.</summary>
@@ -10006,9 +10006,9 @@ internal static class LpGeometryProbes
           m { grace { d32 e } f4 g2 r4 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "GCW2T" { staff m }
+        score "GCW2T" { staff m }
         """;
 
     /// <summary>
@@ -10035,9 +10035,9 @@ internal static class LpGeometryProbes
           m { grace { d16 } f4 g2 r4 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "GCW1" { staff m }
+        score "GCW1" { staff m }
         """;
 
     /// <summary>
@@ -10061,9 +10061,9 @@ internal static class LpGeometryProbes
           m { fis4@editorial bes@editorial c@editorial c | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "EDA" { staff m }
+        score "EDA" { staff m }
         """;
 
     /// <summary>A sixteenth then an EIGHTH grace: the run splits, by log2 of the ratio.</summary>
@@ -10085,9 +10085,9 @@ internal static class LpGeometryProbes
           m { grace { d16 e8 } f4 g2 r4 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "GCWM" { staff m }
+        score "GCWM" { staff m }
         """;
 
     /// <summary>…and the same two durations the other way round.</summary>
@@ -10108,9 +10108,9 @@ internal static class LpGeometryProbes
           m { grace { d8 e16 } f4 g2 r4 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "GCWN" { staff m }
+        score "GCWN" { staff m }
         """;
 
     /// <summary>An ACCIDENTAL on the second grace — the floor's other half.</summary>
@@ -10137,9 +10137,9 @@ internal static class LpGeometryProbes
           m { grace { d16 eis } f4 g2 r4 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "GCWA" { staff m }
+        score "GCWA" { staff m }
         """;
 
     /// <summary>
@@ -10194,9 +10194,9 @@ internal static class LpGeometryProbes
           m { c'8 dis4 r4 r8 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "FSF8" { staff m }
+        score "FSF8" { staff m }
         """;
 
     /// <summary>
@@ -10223,9 +10223,9 @@ internal static class LpGeometryProbes
           m { b8 r8 r4 r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "FLXD" { staff m }
+        score "FLXD" { staff m }
         """;
 
     /// <summary>The same reading with an UP stem, where the stem stands at the head's RIGHT
@@ -10245,9 +10245,9 @@ internal static class LpGeometryProbes
           m { d8 r8 r4 r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "FLXU" { staff m }
+        score "FLXU" { staff m }
         """;
 
     /// <summary>The same book with the accidental an octave UP, where it faces the notehead
@@ -10263,9 +10263,9 @@ internal static class LpGeometryProbes
           m { c'8 dis'4 r4 r8 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "FSFH8" { staff m }
+        score "FSFH8" { staff m }
         """;
 
     /// <summary>
@@ -10302,9 +10302,9 @@ internal static class LpGeometryProbes
           m { <c' e'>8 dis4 r4 r8 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "FSCF8" { staff m }
+        score "FSCF8" { staff m }
         """;
 
     /// <summary>The chord pair's control — the accidental an octave UP, facing the head band
@@ -10320,9 +10320,9 @@ internal static class LpGeometryProbes
           m { <c' e'>8 dis'4 r4 r8 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "FSCFH8" { staff m }
+        score "FSCFH8" { staff m }
         """;
 
     /// <summary>An UP stem's flag, which stands beside the head and sets the column's reach on
@@ -10339,9 +10339,9 @@ internal static class LpGeometryProbes
           m { d8 fis'4 r4 r8 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "FSFU8" { staff m }
+        score "FSFU8" { staff m }
         """;
 
     /// <summary>
@@ -10380,9 +10380,9 @@ internal static class LpGeometryProbes
           m { c'4 dis'4 r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "XQS" { staff m }
+        score "XQS" { staff m }
         """;
 
     /// <summary>The same book with the accidental taken away, which makes it SPRING-bound —
@@ -10400,9 +10400,9 @@ internal static class LpGeometryProbes
           m { c'4 d'4 r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "XQN" { staff m }
+        score "XQN" { staff m }
         """;
 
     /// <summary>The same floor with a WIDER accidental: the residual under the defect was the
@@ -10420,9 +10420,9 @@ internal static class LpGeometryProbes
           m { c'4 deses'4 r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "XQD" { staff m }
+        score "XQD" { staff m }
         """;
 
     /// <summary>…and the same wide accidental with the left column FLAGGED at an eighth. It
@@ -10440,9 +10440,9 @@ internal static class LpGeometryProbes
           m { c'8 deses'4 r4 r8 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "XFD" { staff m }
+        score "XFD" { staff m }
         """;
 
     /// <summary>
@@ -10487,9 +10487,9 @@ internal static class LpGeometryProbes
           m { g4 ceses'4 r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "SRA" { staff m }
+        score "SRA" { staff m }
         """;
 
     /// <summary>
@@ -10512,9 +10512,9 @@ internal static class LpGeometryProbes
           m { g4 aeses4 r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "SRH" { staff m }
+        score "SRH" { staff m }
         """;
 
     /// <summary>
@@ -10545,9 +10545,9 @@ internal static class LpGeometryProbes
         section A { m { r2 | } }
         section B { time 4/4 m { d,2 e, | } }
 
-        form main { A break B }
+        form { A break B }
 
-        score main "CMT" { staff m }
+        score "CMT" { staff m }
         """;
 
     /// <summary>
@@ -10573,9 +10573,9 @@ internal static class LpGeometryProbes
         section A { m { r2 | } }
         section B { time 4/4 key a major m { d,2 e, | } }
 
-        form main { A break B }
+        form { A break B }
 
-        score main "CMK" { staff m }
+        score "CMK" { staff m }
         """;
 
     /// <summary>
@@ -10606,9 +10606,9 @@ internal static class LpGeometryProbes
         section A { m { c'1 | } }
         section B { key a major m { c'1 | } }
 
-        form main { A B }
+        form { A B }
 
-        score main "KCGS" {
+        score "KCGS" {
           grandStaff {
             staff m
             staff m
@@ -10650,9 +10650,9 @@ internal static class LpGeometryProbes
         section A { m { c1 | } }
         section B { key a major m { c1 | } }
 
-        form main { A break B }
+        form { A break B }
 
-        score main "CMKO" { staff m }
+        score "CMKO" { staff m }
         """;
 
     /// <summary>
@@ -10677,9 +10677,9 @@ internal static class LpGeometryProbes
         section A { m { c1 | } }
         section B { key c major m { c1 | } }
 
-        form main { A break B }
+        form { A break B }
 
-        score main "CANCONLY" { staff m }
+        score "CANCONLY" { staff m }
         """;
 
     /// <summary>
@@ -10703,9 +10703,9 @@ internal static class LpGeometryProbes
         section A { m { c1 | } }
         section B { time 3/4 key c major m { c2. | } }
 
-        form main { A break B }
+        form { A break B }
 
-        score main "CANCMETER" { staff m }
+        score "CANCMETER" { staff m }
         """;
 
     /// <summary>
@@ -10728,9 +10728,9 @@ internal static class LpGeometryProbes
         section A { m { c1 | } }
         section B { time 3/4 key a minor m { c2. | } }
 
-        form main { A break B }
+        form { A break B }
 
-        score main "NOKEYMETER" { staff m }
+        score "NOKEYMETER" { staff m }
         """;
 
     /// <summary>
@@ -10765,9 +10765,9 @@ internal static class LpGeometryProbes
         section A { m { r2 || } }
         section B { time 3/4 m { d,2. | } }
 
-        form main { A break B }
+        form { A break B }
 
-        score main "CMT3" { staff m }
+        score "CMT3" { staff m }
         """;
 
     /// <summary>
@@ -10793,9 +10793,9 @@ internal static class LpGeometryProbes
           m { g'4 g' cue { g'4 g' } | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "CUE1" { staff m }
+        score "CUE1" { staff m }
         """;
 
     /// <summary>The same four quarters with no cue anywhere — the one-variable control, and
@@ -10811,9 +10811,9 @@ internal static class LpGeometryProbes
           m { g'4 g' g'4 g' | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "CUEC" { staff m }
+        score "CUEC" { staff m }
         """;
 
     /// <summary>
@@ -10852,9 +10852,9 @@ internal static class LpGeometryProbes
           m { g'4 cue { g'4 g' } cue { g' } | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "CUE2" { staff m }
+        score "CUE2" { staff m }
         """;
 
     /// <summary>The same four quarters with the last three in ONE cue region — the control for
@@ -10870,9 +10870,9 @@ internal static class LpGeometryProbes
           m { g'4 cue { g'4 g' g' } | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "CUE2ONE" { staff m }
+        score "CUE2ONE" { staff m }
         """;
 
     /// <summary>
@@ -10906,9 +10906,9 @@ internal static class LpGeometryProbes
           m { c'4 cue { fis'4 } r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "CUEA" { staff m }
+        score "CUEA" { staff m }
         """;
 
     /// <summary>
@@ -10938,9 +10938,9 @@ internal static class LpGeometryProbes
           m { c'2 cue { grace { d'16 } e'2 } | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "CUEG" { staff m }
+        score "CUEG" { staff m }
         """;
 
     /// <summary>
@@ -11000,9 +11000,9 @@ internal static class LpGeometryProbes
           m { g'4 g' cue { g'4 g' } | g'1 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "CUEBAR" { staff m }
+        score "CUEBAR" { staff m }
         """;
 
     /// <summary>
@@ -11028,9 +11028,9 @@ internal static class LpGeometryProbes
           m { g'4 g' g'4 g' | g'1 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "CUEB" { staff m }
+        score "CUEB" { staff m }
         """;
 
     /// <summary>
@@ -11064,9 +11064,9 @@ internal static class LpGeometryProbes
           m { c4 grace { d16 e } f4 g2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "GCWP" { staff m }
+        score "GCWP" { staff m }
         """;
 
     /// <summary>
@@ -11102,9 +11102,9 @@ internal static class LpGeometryProbes
           m { <cis' e' gis'>8 <d' f' aes'> <ees' ges' bes'> <e' g' b'> r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BQC" { staff m }
+        score "BQC" { staff m }
         """;
 
     /// <summary>
@@ -11130,9 +11130,9 @@ internal static class LpGeometryProbes
           m { cis'8 d' ees' e' r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BQCC" { staff m }
+        score "BQCC" { staff m }
         """;
 
     /// <summary>
@@ -11172,9 +11172,9 @@ internal static class LpGeometryProbes
           m { <a,, c, g,>8 a,, a,, a,, e,, f,, g,, a,, | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BQCD" { staff m }
+        score "BQCD" { staff m }
         """;
 
     /// <summary>
@@ -11199,9 +11199,9 @@ internal static class LpGeometryProbes
           m { g,8 a,, a,, a,, e,, f,, g,, a,, | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BQCDC" { staff m }
+        score "BQCDC" { staff m }
         """;
 
     /// <summary>
@@ -11245,9 +11245,9 @@ internal static class LpGeometryProbes
           bl { a,,8\4 d,\3 g,\2 c\1 c\1 g,\2 d,\3 a,,\4 | a,,8\4 a,,\4 a,,\4 a,,\4 c\1 c\1 c\1 c\1 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BQT" { tab bl }
+        score "BQT" { tab bl }
         """;
 
     /// <summary>
@@ -11308,9 +11308,9 @@ internal static class LpGeometryProbes
           bl { {{music}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{tag}}" { tab bl as numbers }
+        score "{{tag}}" { tab bl as numbers }
         """;
 
     private static readonly string TGH = TabGraceSlurBook("TGH", "c,4\\3 r g,,\\4 r | c,\\3 r grace { d,16\\3( } e,4\\3) g,,\\4 |");
@@ -11330,9 +11330,9 @@ internal static class LpGeometryProbes
           bl { g,4\2( c\1 c\1 g,\2) | d,4\3( a,,\4 a,,\4 d,\3) | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "TSL" { tab bl as numbers }
+        score "TSL" { tab bl as numbers }
         """;
 
     /// <summary>
@@ -11376,9 +11376,9 @@ internal static class LpGeometryProbes
           gtr { c'16\2@phrasingSlur.down d'\2 e'\1 f'\1 g'\1 a'\1 g'\1 f'\1@!phrasingSlur | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "TSS" { tab gtr }
+        score "TSS" { tab gtr }
         """;
 
     /// <summary>
@@ -11402,9 +11402,9 @@ internal static class LpGeometryProbes
           gtr { e'16\1@phrasingSlur.down f'\1 g'\1 f'\1 g\3 a\3 b\3 a\3 e'\1 f'\1 g'\1 e'\1@!phrasingSlur | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "TSS2" { tab gtr }
+        score "TSS2" { tab gtr }
         """;
 
     /// <summary>
@@ -11427,9 +11427,9 @@ internal static class LpGeometryProbes
           gtr { e'8\1@phrasingSlur.down f'4\1 g'8\1@!phrasingSlur | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "TSS3" { tab gtr }
+        score "TSS3" { tab gtr }
         """;
 
     /// <summary>
@@ -11453,9 +11453,9 @@ internal static class LpGeometryProbes
           melody { r4 e8( g <>)@text("sul D").up c8 c c c | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "SBR" { staff melody }
+        score "SBR" { staff melody }
         """;
 
     /// <summary>
@@ -11501,9 +11501,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BQM" { staff m }
+        score "BQM" { staff m }
         """;
 
     /// <summary>
@@ -11539,9 +11539,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BQU" { staff m }
+        score "BQU" { staff m }
         """;
 
     /// <summary>
@@ -11570,9 +11570,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BQF" { staff m }
+        score "BQF" { staff m }
         """;
 
     // ---------------------------------------------------------------------------------
@@ -11615,9 +11615,9 @@ internal static class LpGeometryProbes
           m { c8[ c16 c8] r8. r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BLA" { staff m }
+        score "BLA" { staff m }
         """;
 
     /// <summary>
@@ -11642,9 +11642,9 @@ internal static class LpGeometryProbes
           m { c16[ c8 c16] r4 r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BLB" { staff m }
+        score "BLB" { staff m }
         """;
 
     /// <summary>
@@ -11669,9 +11669,9 @@ internal static class LpGeometryProbes
           m { c16[ c16 c8] r4 r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BLC" { staff m }
+        score "BLC" { staff m }
         """;
 
     /// <summary>
@@ -11694,9 +11694,9 @@ internal static class LpGeometryProbes
           m { c8[ c16 c16] r4 r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BLD" { staff m }
+        score "BLD" { staff m }
         """;
 
     /// <summary>
@@ -11722,9 +11722,9 @@ internal static class LpGeometryProbes
           m { c16[ c8 c8 c16] r8 r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BLE" { staff m }
+        score "BLE" { staff m }
         """;
 
     /// <summary>
@@ -11748,9 +11748,9 @@ internal static class LpGeometryProbes
           m { c8[ c32 c8] r8 r16. r2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BLF" { staff m }
+        score "BLF" { staff m }
         """;
 
     // ---------------------------------------------------------------------------------
@@ -11787,9 +11787,9 @@ internal static class LpGeometryProbes
           m { {{string.Join(" ", Enumerable.Repeat("c8", count))}} | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" { staff m }
+        score "{{name}}" { staff m }
         """;
 
     /// <summary>4/8 — beatStructure (2 2). LilyPond twin: score M48, two beams of two.</summary>
@@ -11854,9 +11854,9 @@ internal static class LpGeometryProbes
           m { c16 c c c c c c c c c c c c c c c | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BG44S" { staff m }
+        score "BG44S" { staff m }
         """;
 
     /// <summary>
@@ -11885,9 +11885,9 @@ internal static class LpGeometryProbes
           m { c8 c r8 c c c | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BG34R" { staff m }
+        score "BG34R" { staff m }
         """;
 
     /// <summary>
@@ -11916,9 +11916,9 @@ internal static class LpGeometryProbes
           m { c2 c8 c c r8 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BG44B" { staff m }
+        score "BG44B" { staff m }
         """;
 
     // --- the beamExceptions that are NOT keyed on an eighth. 3/4 and 4/4 each carry a second
@@ -11945,9 +11945,9 @@ internal static class LpGeometryProbes
           m { tuplet 3/2 { c8 c c } tuplet 3/2 { c8 c c } tuplet 3/2 { c8 c c } | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BGT34" { staff m }
+        score "BGT34" { staff m }
         """;
 
     /// <summary>4/4 filled with eighth triplets. LilyPond twin: score T44, four beams of three.</summary>
@@ -11962,9 +11962,9 @@ internal static class LpGeometryProbes
           m { tuplet 3/2 { c8 c c } tuplet 3/2 { c8 c c } tuplet 3/2 { c8 c c } tuplet 3/2 { c8 c c } | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BGT44" { staff m }
+        score "BGT44" { staff m }
         """;
 
     /// <summary>
@@ -11988,9 +11988,9 @@ internal static class LpGeometryProbes
           m { tuplet 3/2 { c8 c c } c8 c c c | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BGT34M" { staff m }
+        score "BGT34M" { staff m }
         """;
 
     /// <summary>The same mixture in 4/4. LilyPond twin: score T44M, beams of 3, 3 and 4.</summary>
@@ -12005,9 +12005,9 @@ internal static class LpGeometryProbes
           m { tuplet 3/2 { c8 c c } tuplet 3/2 { c8 c c } c8 c c c | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BGT44M" { staff m }
+        score "BGT44M" { staff m }
         """;
 
     /// <summary>
@@ -12046,9 +12046,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BGT44S" { staff m }
+        score "BGT44S" { staff m }
         """;
 
     // --- the beamExceptions keyed on 1/16 and 1/32, which no book above reaches.
@@ -12075,9 +12075,9 @@ internal static class LpGeometryProbes
           m { c{{noteValue}} {{string.Join(" ", Enumerable.Repeat("c", count - 1))}} | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" { staff m }
+        score "{{name}}" { staff m }
         """;
 
     /// <summary>
@@ -12182,9 +12182,9 @@ internal static class LpGeometryProbes
           m { c8 tuplet 3/2 { c8 c c } c8 c2 | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BGTOFF" { staff m }
+        score "BGTOFF" { staff m }
         """;
 
     /// <summary>
@@ -12212,9 +12212,9 @@ internal static class LpGeometryProbes
           m { c4. c8 c c | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BGH34" { staff m }
+        score "BGH34" { staff m }
         """;
 
     /// <summary>
@@ -12248,9 +12248,9 @@ internal static class LpGeometryProbes
           lh { voice { f8 f f f f f f f } { d,1 } | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BMU" {
+        score "BMU" {
           grandStaff {
             staff rh
             staff lh
@@ -12305,9 +12305,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "TSU" {
+        score "TSU" {
           staff melody
         }
         """;
@@ -12334,9 +12334,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "TSD" {
+        score "TSD" {
           staff melody
         }
         """;
@@ -12394,9 +12394,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "SSD" {
+        score "SSD" {
           staff melody
         }
         """;
@@ -12430,9 +12430,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "SSU" {
+        score "SSU" {
           staff melody
         }
         """;
@@ -12482,9 +12482,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "TSID" {
+        score "TSID" {
           staff melody
         }
         """;
@@ -12519,9 +12519,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "TSIU" {
+        score "TSIU" {
           staff melody
         }
         """;
@@ -12583,9 +12583,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "VSSD" {
+        score "VSSD" {
           staff melody
         }
         """;
@@ -12618,9 +12618,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "VSSC" {
+        score "VSSC" {
           staff melody
         }
         """;
@@ -12665,9 +12665,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "VTSID" {
+        score "VTSID" {
           staff melody
         }
         """;
@@ -12699,9 +12699,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "VTSIC" {
+        score "VTSIC" {
           staff melody
         }
         """;
@@ -12762,9 +12762,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BSD" {
+        score "BSD" {
           staff melody
         }
         """;
@@ -12802,9 +12802,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "BSU" {
+        score "BSU" {
           staff melody
         }
         """;
@@ -12845,9 +12845,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "LSCT" {
+        score "LSCT" {
           staff melody
         }
         """;
@@ -12876,9 +12876,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "LSCB" {
+        score "LSCB" {
           staff melody
         }
         """;
@@ -12911,9 +12911,9 @@ internal static class LpGeometryProbes
           melody { c,1 | c,1 | }
         }
 
-        form main { Main }
+        form { Main }
 
-        score main "DCB" {
+        score "DCB" {
           staff melody
         }
         """;
@@ -12940,9 +12940,9 @@ internal static class LpGeometryProbes
           melody { c1 | c1 | }
         }
 
-        form main { Main }
+        form { Main }
 
-        score main "DCP" {
+        score "DCP" {
           staff melody
         }
         """;
@@ -12986,9 +12986,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "KNE" {
+        score "KNE" {
           staff melody
         }
         """;
@@ -13017,9 +13017,9 @@ internal static class LpGeometryProbes
           lower { c,1 | c,1 | }
         }
 
-        form main { Main }
+        form { Main }
 
-        score main "TSA" {
+        score "TSA" {
           grandStaff {
             staff upper
             staff lower
@@ -13046,9 +13046,9 @@ internal static class LpGeometryProbes
           melody { d1 | d1 | }
         }
 
-        form main { Main }
+        form { Main }
 
-        score main "DCTK" {
+        score "DCTK" {
           staff melody
         }
         """;
@@ -13116,8 +13116,8 @@ internal static class LpGeometryProbes
         key c major
         part melody { clef bass }
         section Main { melody { c1 | repeat percent 30 { r1 } } }
-        form main { Main }
-        score main "ESB" { staff melody }
+        form { Main }
+        score "ESB" { staff melody }
         """;
 
     /// <summary>
@@ -13139,8 +13139,8 @@ internal static class LpGeometryProbes
         section A {
           m { e'4@chord(C x32010) d' e' f' | }
         }
-        form main { A }
-        score main "LSD" { staff m }
+        form { A }
+        score "LSD" { staff m }
         """;
 
     /// <summary>
@@ -13161,8 +13161,8 @@ internal static class LpGeometryProbes
         section A {
           b { r1 | break <e gis>4. <e a>8~ <e a>2 | }
         }
-        form main { A }
-        score main "LST" { staff b
+        form { A }
+        score "LST" { staff b
           tab b }
         """;
 
@@ -13186,8 +13186,8 @@ internal static class LpGeometryProbes
         section A {
           m { repeat percent 8 { r1 | r1 } break c,1 | }
         }
-        form main { A }
-        score main "DPK" { staff m  tab m }
+        form { A }
+        score "DPK" { staff m  tab m }
         """;
 
     /// <summary>
@@ -13208,8 +13208,8 @@ internal static class LpGeometryProbes
         section A {
           p { c'1 | r2. a4@mark("Tacet") | c'1 | c'4 d'4@mark("X") e'4 f'4 | break c'1 | }
         }
-        form main { A }
-        score main "MKC" { staff p }
+        form { A }
+        score "MKC" { staff p }
         """;
 
     /// <summary>
@@ -13228,8 +13228,8 @@ internal static class LpGeometryProbes
         section A {
           p { r1 | r1 | break c'16 d' e' f' g' a' b' c'' c'' b' a' g' f' e' d' c' | c'8 d' e' f' g' a' b' c'' | break r1 | }
         }
-        form main { A }
-        score main "RBV" { staff p }
+        form { A }
+        score "RBV" { staff p }
         """;
 
     /// <summary>
@@ -13247,8 +13247,8 @@ internal static class LpGeometryProbes
         key c major
         part m { clef treble }
         section A { m { c'1 | key d major grace { d'16 e' } f'4 g'2 r4 | } }
-        form main { A }
-        score main "KG1" { staff m }
+        form { A }
+        score "KG1" { staff m }
         """;
 
     /// <summary>
@@ -13264,8 +13264,8 @@ internal static class LpGeometryProbes
         key c major
         part m { clef treble }
         section A { m { c'1 | key d major grace { dis'16 e' } f'4 g'2 r4 | } }
-        form main { A }
-        score main "KG10" { staff m }
+        form { A }
+        score "KG10" { staff m }
         """;
 
     /// <summary>
@@ -13282,8 +13282,8 @@ internal static class LpGeometryProbes
         key c major
         part m { clef treble }
         section A { m { c'1 | break grace { d'16 e' } f'4 g'2 r4 | } }
-        form main { A }
-        score main "LEG1" { staff m }
+        form { A }
+        score "LEG1" { staff m }
         """;
 
     /// <summary>
@@ -13300,8 +13300,8 @@ internal static class LpGeometryProbes
         key c major
         part m { clef treble }
         section A { m { c'1 | break key d major grace { d'16 e' } f'4 g'2 r4 | } }
-        form main { A }
-        score main "LEG2" { staff m }
+        form { A }
+        score "LEG2" { staff m }
         """;
 
     /// <summary>
@@ -13317,8 +13317,8 @@ internal static class LpGeometryProbes
         key c major
         part m { clef treble }
         section A { m { c'1 | break time 3/4 grace { d'16 e' } f'4 g'2 | } }
-        form main { A }
-        score main "LEG3" { staff m }
+        form { A }
+        score "LEG3" { staff m }
         """;
 
     /// <summary>
@@ -13337,8 +13337,8 @@ internal static class LpGeometryProbes
         time 4/4
         part m { clef treble }
         section A { m { e'1 | c'4@diagram(x02010) c' c' c' | } }
-        form main { A }
-        score main "DN1" { staff m }
+        form { A }
+        score "DN1" { staff m }
         """;
 
     /// <summary>
@@ -13353,8 +13353,8 @@ internal static class LpGeometryProbes
         time 4/4
         part m { clef treble }
         section A { m { c'4 c' c' c'@diagram(x02010) | e'1 | } }
-        form main { A }
-        score main "DN2" { staff m }
+        form { A }
+        score "DN2" { staff m }
         """;
 
     /// <summary>
@@ -13370,8 +13370,8 @@ internal static class LpGeometryProbes
         time 4/4
         part m { clef treble }
         section A { m { c'4 c' c' c'@diagram(133211) | e'1 | } }
-        form main { A }
-        score main "DN3" { staff m }
+        form { A }
+        score "DN3" { staff m }
         """;
 
     /// <summary>
@@ -13482,9 +13482,9 @@ internal static class LpGeometryProbes
           melody { c1 | c1 | }
         }
 
-        form main { |: Main :| }
+        form { |: Main :| }
 
-        score main "IRB" {
+        score "IRB" {
           staff melody
         }
         """;
@@ -13518,9 +13518,9 @@ internal static class LpGeometryProbes
           melody { a'4 b' c'' d'' | a'4 b' c'' d'' | }
         }
 
-        form main { |: Main :| }
+        form { |: Main :| }
 
-        score main "IRD" {
+        score "IRD" {
           staff melody
         }
         """;
@@ -13605,9 +13605,9 @@ internal static class LpGeometryProbes
           ossia_melody { d'4 e' fis' g' | r1 | }
         }
 
-        form main { Main }
+        form { Main }
 
-        score main "OKN" {
+        score "OKN" {
           staff melody
           ossia ossia_melody
         }
@@ -13626,9 +13626,9 @@ internal static class LpGeometryProbes
           ossia_melody { d'4 ees' f' g' | r1 | }
         }
 
-        form main { Main }
+        form { Main }
 
-        score main "OKNF" {
+        score "OKNF" {
           staff melody
           ossia ossia_melody
         }
@@ -13685,9 +13685,9 @@ internal static class LpGeometryProbes
           melody { c4 c8 c c4 c8 c | c4 c8 c c4 c8 c | }
         }
 
-        form main { Main }
+        form { Main }
 
-        score main "NN" { staff melody }
+        score "NN" { staff melody }
         """;
 
     /// <summary>
@@ -13729,9 +13729,9 @@ internal static class LpGeometryProbes
           melody { c2 c2 | c4 c4 r2 | c4 c4 c4 c4 | }
         }
 
-        form main { Main }
+        form { Main }
 
-        score main "HR" { staff melody }
+        score "HR" { staff melody }
         """;
 
     /// <summary>
@@ -13783,9 +13783,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { Main }
+        form { Main }
 
-        score main "JN" { staff melody }
+        score "JN" { staff melody }
         """;
 
     /// <summary>
@@ -13816,9 +13816,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { Main }
+        form { Main }
 
-        score main "LR" { staff melody }
+        score "LR" { staff melody }
         """;
 
     /// <summary>
@@ -13844,9 +13844,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { Main }
+        form { Main }
 
-        score main "LN" { staff melody }
+        score "LN" { staff melody }
         """;
 
     /// <summary>
@@ -13876,9 +13876,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { S }
+        form { S }
 
-        score main "CVR" { staff mel }
+        score "CVR" { staff mel }
         """;
 
     /// <summary>
@@ -13955,9 +13955,9 @@ internal static class LpGeometryProbes
           melody { ties slurs tieDirection }
         }
 
-        form main { Main }
+        form { Main }
 
-        score main "TSJ" { staff melody }
+        score "TSJ" { staff melody }
         """;
 
     /// <summary>
@@ -13971,8 +13971,8 @@ internal static class LpGeometryProbes
     /// span widened by half a line thickness at each edge.</remarks>
     private static readonly string TAB6 = """
         part gtr { instrument guitar section A { c4 d e f | } }
-        form main { A }
-        score main "TAB6" { tab gtr }
+        form { A }
+        score "TAB6" { tab gtr }
         """;
 
     /// <summary>
@@ -13988,8 +13988,8 @@ internal static class LpGeometryProbes
     /// 4.5 span).</remarks>
     private static readonly string TAB4 = """
         part bs { instrument bass section A { c4 d e f | } }
-        form main { A }
-        score main "TAB4" { tab bs }
+        form { A }
+        score "TAB4" { tab bs }
         """;
 
     /// <summary>
@@ -14049,9 +14049,9 @@ internal static class LpGeometryProbes
           pn { c4 d e f | g2 e }
         }
 
-        form main { Main }
+        form { Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           staff pn
           tab gt{{(tabNumbersOnly ? " as numbers" : "")}}
         }
@@ -14136,9 +14136,9 @@ internal static class LpGeometryProbes
           gt { c4 e g e | c4 e g e | {{change}}c4 e | c4 e | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" { tab gt as numbers }
+        score "{{name}}" { tab gt as numbers }
         """;
 
     /// <summary>
@@ -14154,9 +14154,9 @@ internal static class LpGeometryProbes
           gt { c4 e g e | c4 e {{change}}g4 e | c4 e | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" { tab gt as numbers }
+        score "{{name}}" { tab gt as numbers }
         """;
 
     // --- a system with NO STAFF: chords only (probes/staffless-system.ly) ---
@@ -14167,7 +14167,7 @@ internal static class LpGeometryProbes
     // LilyPond's ChordName reference point is its ink LEFT, so a RAW anchor could not be
     // compared at all — only a difference of two anchors read the same way on each side.
     //
-    // ⚠️ Each uses `form main { ~Main }`, the SILENT section reference. A plain `{ Main }`
+    // ⚠️ Each uses `form { ~Main }`, the SILENT section reference. A plain `{ Main }`
     // engraves a rehearsal mark, and on a staff-less system that box is the only other ink
     // on the row.
 
@@ -14223,9 +14223,9 @@ internal static class LpGeometryProbes
           chords prog { C Am | F G7 | C | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "SCS" {
+        score "SCS" {
           chords prog
           staff melody
         }
@@ -14271,9 +14271,9 @@ internal static class LpGeometryProbes
           lyrics words { {{firstSyllable}} no | oh no | yes | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           chords prog
           lyrics words
         }
@@ -14308,9 +14308,9 @@ internal static class LpGeometryProbes
           lyrics words sings melody { I no | oh no | yes | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "SLSH" {
+        score "SLSH" {
           staff melody  lyrics words
         }
         """;
@@ -14325,9 +14325,9 @@ internal static class LpGeometryProbes
           chords prog { C Am | F G7 | C | }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           chords prog
         }
         """;
@@ -14349,9 +14349,9 @@ internal static class LpGeometryProbes
           chords prog { {{music}} }
         }
 
-        form main { ~Main }
+        form { ~Main }
 
-        score main "{{name}}" {
+        score "{{name}}" {
           chords prog
         }
         """;
@@ -14412,9 +14412,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { Intro }
+        form { Intro }
 
-        score main "PCF" { combinedStaff { bass bass } }
+        score "PCF" { combinedStaff { bass bass } }
         """;
 
     /// <summary>
@@ -14434,9 +14434,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { Intro }
+        form { Intro }
 
-        score main "PCH" { combinedStaff { bass bass } }
+        score "PCH" { combinedStaff { bass bass } }
         """;
 
     /// <summary>
@@ -14458,9 +14458,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { Intro }
+        form { Intro }
 
-        score main "PCS" { combinedStaff { bass bass } }
+        score "PCS" { combinedStaff { bass bass } }
         """;
 
     /// <summary>
@@ -14481,9 +14481,9 @@ internal static class LpGeometryProbes
           }
         }
 
-        form main { Intro }
+        form { Intro }
 
-        score main "PCB" { combinedStaff { bass bass } }
+        score "PCB" { combinedStaff { bass bass } }
         """;
 
     /// <summary>
@@ -14509,9 +14509,9 @@ internal static class LpGeometryProbes
           vtwo { r8 g'8 r4 r2 | }
         }
 
-        form main { Intro }
+        form { Intro }
 
-        score main "PCV" { combinedStaff { vone vtwo } }
+        score "PCV" { combinedStaff { vone vtwo } }
         """;
 
     public static IReadOnlyList<LpProbe> All { get; } = new List<LpProbe>

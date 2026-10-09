@@ -138,7 +138,7 @@ public class NameCaseSensitivityTests
     private static string Book(string music) =>
         "octave absolute\npart m { clef treble }\n"
         + $"section A {{ m {{ {music} }} }}\n"
-        + "form main { A }\nscore main { staff m }\n";
+        + "form { A }\nscore { staff m }\n";
 
     private static string Svg(string music) => Regex.Replace(
         SvgGenerator.Generate(SyntaxTree.Parse(Book(music)), new SvgRenderOptions { EmbedFont = false }),

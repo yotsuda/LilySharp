@@ -60,11 +60,11 @@ public class VoltaBracketSkylineTests
             "section A1 { v { r2 a'''4 r4 | } }\n" +
             "section A2 { v { r2 a'''4 r4 | } }\n" +
             "section A3 { v { r2 a'''4 r4 | } }\n" +
-            "form main {\n" +
+            "form {\n" +
             "  |: ~Body1 [1. ~D1] :| [2. ~D2] :| [3. ~D3]\n" +
             "  |: ~Body2 [1. ~A1] :| [2. ~A2] :| [3. ~A3]\n" +
             "}\n" +
-            "score main { staff ~v }\n";
+            "score { staff ~v }\n";
         var tree = SyntaxTree.Parse(source);
         var score = new MeasureCollector().Collect(tree);
         var layout = new LayoutEngine(new LayoutOptions()).Layout(score);

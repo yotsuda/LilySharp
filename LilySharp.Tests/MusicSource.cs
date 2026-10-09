@@ -29,7 +29,7 @@ namespace LilySharp.Tests;
 /// barline rect), the only diff being <c>data-pos</c>, which is a source offset and moves
 /// because the source text did. Two things earn that:
 /// <list type="bullet">
-/// <item><c>form main { ~A }</c> — the <c>~</c> suppresses the section label, whose box
+/// <item><c>form { ~A }</c> — the <c>~</c> suppresses the section label, whose box
 /// otherwise sits above the staff and pushes everything down 2.66.</item>
 /// <item>No display name and no <c>instrument</c>, so no staff name and no indent: X is
 /// untouched.</item>
@@ -56,8 +56,8 @@ internal static class MusicSource
             + "section A { melody {\n"
             + music + "\n"
             + "} }\n"
-            + "form main { ~A }\n"
-            + "score main { staff melody }\n";
+            + "form { ~A }\n"
+            + "score { staff melody }\n";
 
     /// <summary>Parses a music fragment in the minimal document. Use
     /// <c>tree.GetNodes&lt;T&gt;()</c> to reach the music — it is no longer at a root slot.</summary>

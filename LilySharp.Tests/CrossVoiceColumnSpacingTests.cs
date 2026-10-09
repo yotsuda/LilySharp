@@ -52,8 +52,8 @@ public class CrossVoiceColumnSpacingTests
             { s16 d''16 d'' d'' s2. | s16 d''4 s8. s2 | s1 | }
           }
         }
-        form main { S }
-        score main "beam-over-stem" { staff mel }
+        form { S }
+        score "beam-over-stem" { staff mel }
         """;
 
     /// <summary>Voice two's quarter starts where voice one's is a SKIP: the pair c'4 → c'4
@@ -67,8 +67,8 @@ public class CrossVoiceColumnSpacingTests
             { s4 c'4 s2 | }
           }
         }
-        form main { S }
-        score main { staff mel }
+        form { S }
+        score { staff mel }
         """;
 
     private static (System.Collections.Generic.List<Fraction> Timings,
@@ -205,8 +205,8 @@ public class CrossVoiceColumnSpacingTests
         section Main {
           melody { voice { e2 f | g2 a | } { d2 e | f2 g | } }
         }
-        form main { ~Main }
-        score main "collision" { staff melody }
+        form { ~Main }
+        score "collision" { staff melody }
         """;
 
     /// <summary>Ledger book TSU's bar: whole-note seconds (`a1` under `b1`), stemless, so the
@@ -222,8 +222,8 @@ public class CrossVoiceColumnSpacingTests
             { b1 b1 b1 | b1 b1 b1 | }
           }
         }
-        form main { ~Main }
-        score main "TSU" { staff melody }
+        form { ~Main }
+        score "TSU" { staff melody }
         """;
 
     /// <summary>

@@ -41,7 +41,7 @@ public class GrobOverrideTests
         var score = CollectMulti(
             "part rh { clef treble }\npart lh { clef bass }\n" +
             "section A { rh { override NoteHead.color = red c4 d e f | } lh { c2 g | } }\n" +
-            "form main { A }\nscore main { staff rh  staff lh }");
+            "form { A }\nscore { staff rh  staff lh }");
         Assert.Single(score.GrobOverrides);
         Assert.Equal("NoteHead", score.GrobOverrides[0].GrobType);
     }
@@ -53,7 +53,7 @@ public class GrobOverrideTests
         var score = CollectMulti(
             "override NoteHead.color = red\npart rh { clef treble }\npart lh { clef bass }\n" +
             "section A { rh { c4 d e f | } lh { c2 g | } }\n" +
-            "form main { A }\nscore main { staff rh  staff lh }");
+            "form { A }\nscore { staff rh  staff lh }");
         Assert.Single(score.GrobOverrides);
         Assert.Equal(0, score.GrobOverrides[0].MeasureIndex);
     }
@@ -66,13 +66,13 @@ public class GrobOverrideTests
         var scoped = CollectMulti(
             "part rh { clef treble }\npart lh { clef bass }\n" +
             "section A { rh { override NoteHead.color = red c4 d e f | } lh { c2 g | } }\n" +
-            "form main { A }\nscore main { staff rh  staff lh }");
+            "form { A }\nscore { staff rh  staff lh }");
         Assert.Equal(0, Assert.Single(scoped.GrobOverrides).StaffIndex);
 
         var global = CollectMulti(
             "override NoteHead.color = red\npart rh { clef treble }\npart lh { clef bass }\n" +
             "section A { rh { c4 d e f | } lh { c2 g | } }\n" +
-            "form main { A }\nscore main { staff rh  staff lh }");
+            "form { A }\nscore { staff rh  staff lh }");
         Assert.Null(Assert.Single(global.GrobOverrides).StaffIndex);
     }
 
@@ -84,7 +84,7 @@ public class GrobOverrideTests
         var score = CollectMulti(
             "part melody { clef bass  override NoteHead.color = red\n" +
             "  section A { clef treble c4 d e f | } section B { g4 a b c' | } }\n" +
-            "form main { A B }\nscore main { staff melody }");
+            "form { A B }\nscore { staff melody }");
         var ov = Assert.Single(score.GrobOverrides);
         Assert.Equal(new LysValue.Symbol("red"), ov.Value);
         Assert.Equal(0, ov.StaffIndex);    // melody's staff
@@ -101,7 +101,7 @@ public class GrobOverrideTests
             "part melody { clef treble }\npart bass { clef bass }\n" +
             "section A { override NoteHead.color = red  melody { c4 d e f | } bass { c2 g | } }\n" +
             "section B { melody { g4 a b c' | } bass { e2 c | } }\n" +
-            "form main { A B }\nscore main { staff melody  staff bass }");
+            "form { A B }\nscore { staff melody  staff bass }");
         var reds = score.GrobOverrides.Where(o => o.Value.AsText == "red").ToList();
         Assert.Equal(2, reds.Count);
         Assert.Contains(reds, o => o.StaffIndex == 0);   // melody
@@ -117,7 +117,7 @@ public class GrobOverrideTests
         var score = CollectMulti(
             "part m { clef treble }\n" +
             "section A { m { voice { override NoteHead.color = red c4 d e f | } { override NoteHead.color = blue c2 g | } } }\n" +
-            "form main { A }\nscore main { staff m }");
+            "form { A }\nscore { staff m }");
         Assert.Equal(1, Assert.Single(score.GrobOverrides.Where(o => o.Value.AsText == "red")).VoiceIndex);
         Assert.Equal(2, Assert.Single(score.GrobOverrides.Where(o => o.Value.AsText == "blue")).VoiceIndex);
     }
@@ -127,7 +127,7 @@ public class GrobOverrideTests
     {
         Assert.True(HasRevertContextError(
             "part melody { clef treble }\nsection A { revert NoteHead.color  melody { c4 d e f | } }\n" +
-            "form main { A }\nscore main { staff melody }"));
+            "form { A }\nscore { staff melody }"));
     }
 
     private static bool HasRevertContextError(string src)
@@ -140,11 +140,11 @@ public class GrobOverrideTests
         // A part header holds no note stream, so revert/once there is meaningless.
         Assert.True(HasRevertContextError(
             "part m { override NoteHead.color = red  revert NoteHead.color  section A { c4 d e f | } }\n" +
-            "form main { A }\nscore main { staff m }"));
+            "form { A }\nscore { staff m }"));
         // The top level of a STRUCTURED file (has a part/section/form) is structural too.
         Assert.True(HasRevertContextError(
             "override NoteHead.color = red\nrevert NoteHead.color\npart m { section A { c4 d e f | } }\n" +
-            "form main { A }\nscore main { staff m }"));
+            "form { A }\nscore { staff m }"));
     }
 
     [Fact]
@@ -153,13 +153,13 @@ public class GrobOverrideTests
         // A part-body override (a valid default) is not flagged.
         Assert.False(HasRevertContextError(
             "part m { override NoteHead.color = red  section A { c4 d e f | } }\n" +
-            "form main { A }\nscore main { staff m }"));
+            "form { A }\nscore { staff m }"));
         // Bare music: the top level IS a note stream, so a revert there is fine.
         Assert.False(HasRevertContextError("override NoteHead.color = red c4 d revert NoteHead.color e f"));
         // A revert inside a section's music is fine.
         Assert.False(HasRevertContextError(
             "part m { section A { override NoteHead.color = red c4 d revert NoteHead.color e f | } }\n" +
-            "form main { A }\nscore main { staff m }"));
+            "form { A }\nscore { staff m }"));
     }
 
     [Fact]
@@ -169,7 +169,7 @@ public class GrobOverrideTests
         // default (none here, so NoteHead.color is unset in B).
         var score = CollectMulti(
             "part m { section A { override NoteHead.color = red c4 d e f | } section B { g4 a b c' | } }\n" +
-            "form main { A B }\nscore main { staff m }");
+            "form { A B }\nscore { staff m }");
         var r = GrobPropertyResolver.ForStaffVoice(score.GrobOverrides, score.GrobReverts, 0, 1);
         r.AdvanceTo(0, 0);                                       // section A (measure 0)
         Assert.Equal("red", r.GetString("NoteHead", "color"));
@@ -184,7 +184,7 @@ public class GrobOverrideTests
         // nothing — the boundary reverts to the PART DEFAULT, not a bare revert.
         var score = CollectMulti(
             "part m { override NoteHead.color = red  section A { override NoteHead.color = blue c4 d e f | } section B { g4 a b c' | } }\n" +
-            "form main { A B }\nscore main { staff m }");
+            "form { A B }\nscore { staff m }");
         var r = GrobPropertyResolver.ForStaffVoice(score.GrobOverrides, score.GrobReverts, 0, 1);
         r.AdvanceTo(0, 0);
         Assert.Equal("blue", r.GetString("NoteHead", "color")); // A: section-internal

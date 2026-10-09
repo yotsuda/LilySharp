@@ -47,8 +47,8 @@ public sealed class TiedAccidentalTests
         time 4/4
         part melody
         section A { melody { {{body}} } }
-        form main { ~A }
-        score main { staff melody }
+        form { ~A }
+        score { staff melody }
         """;
 
     private static MultiStaffScore Collect(string body)

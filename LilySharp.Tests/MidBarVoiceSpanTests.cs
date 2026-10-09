@@ -45,8 +45,8 @@ public sealed class MidBarVoiceSpanTests
             part melody {
               section A { c8( d) e4~ e8 voice { f8 g4 } { a,8 b,4 } }
             }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
@@ -72,8 +72,8 @@ public sealed class MidBarVoiceSpanTests
             part melody {
               section A { voice { c8( d) e4 f2 } { s8 a,8 b,4 a,2 } }
             }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));

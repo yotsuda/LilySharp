@@ -112,8 +112,8 @@ public class EngravingStyleTests
         part m { clef treble
           section A { c'8 d' e' f' g'4 a'' | b16 c' d' e' f'8 g' a'2 | c'''4 b'' a'' g'' | e2 c''2 | }
         }
-        form main { A }
-        score main { staff m }
+        form { A }
+        score { staff m }
         """;
 
     private static string Svg(string book, params string[] settings) =>
@@ -200,8 +200,8 @@ public class EngravingStyleTests
         part m { clef treble
           section A { c'8 d' e' f' g' a' b' c'' | b16 c' d' e' f' g' a' b' e''8 d'' c'' b' | a'8 g' f' e' d''16 e'' f'' g'' a''8 g'' | }
         }
-        form main { A }
-        score main { staff m }
+        form { A }
+        score { staff m }
         """;
 
     private static double[] StemLengths(string svg, string width) =>
@@ -287,8 +287,8 @@ public class EngravingStyleTests
         part m { clef treble
           section A { c'4. d'8 e'4.. f'16 | r4. g'8 <c' e' g'>4. r8 | fis'4 bes' <cis'' e'' gis''>2 | aes'2. b'4 | }
         }
-        form main { A }
-        score main { staff m }
+        form { A }
+        score { staff m }
         """;
 
     private static double[] GlyphXs(string svg, params char[] glyphs) =>
@@ -338,8 +338,8 @@ public class EngravingStyleTests
         part m { clef treble
           section A { c'1 | d'2. g''4 | <c' d' f'>4 <f'' g''>8 a'' e'4. f'8 | b4~ b8 c''( d'' e'') a4 | }
         }
-        form main { A }
-        score main { staff m }
+        form { A }
+        score { staff m }
         """;
 
     // Every music glyph, whatever face and size it is drawn at: (char, x, font-size, face or "").
@@ -409,8 +409,8 @@ public class EngravingStyleTests
             part m { clef treble
               section A { <e' g'>4~ <e' g'>8 a'8@staccato b'4@accent c''8( b' | a'4)@p g'4@f tuplet 3/2 { f'8 e' d' } c'4@fermata | voice { e'4 f' g' a' } { e'4 e' g'8 f' e'4 } | <f' g'>2.. r8 | }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """;
         var line = Regex.Match(Svg(book, "NoteHead.scale=" + scale),
             "<line x1=\"([-\\d.]+)\" y1=\"[-\\d.]+\" x2=\"([-\\d.]+)\"[^>]*stroke-width=\"0.100\"");
@@ -433,8 +433,8 @@ public class EngravingStyleTests
             part m { clef treble
               section A { grace { d''16 } c''4 fis'8. g'16 cue { a'4 } r4 | }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """;
         var plain = Glyphs(Svg(book));
         var set = Glyphs(Svg(book, "NoteHead.scale=1.148698"));
@@ -470,8 +470,8 @@ public class EngravingStyleTests
             part m { clef treble
               section A { << { aes'2 bes'2 } \\ { ges'2 ees'2 } >> | }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """;
         double[] Gaps(string svg)
         {
@@ -499,14 +499,14 @@ public class EngravingStyleTests
             part m { clef treble
               section A { c'8 d' e' f' g'4 a'' | b16 c' d' e' f'8 g' a'2 | }
             }
-            form main { A }
+            form { A }
             """;
-        string file = "layout { lineThickness 0.15  Stem.thickness 2 }\n" + music + "score main { staff m }\n";
+        string file = "layout { lineThickness 0.15  Stem.thickness 2 }\n" + music + "score { staff m }\n";
         Assert.Equal(["0.150", "0.250", "0.300"], StrokeWidths(Svg(file)));                // ledger 0.15 + 0.1
         Assert.Equal(["0.150", "0.250", "0.450"], StrokeWidths(Svg(file, "Stem.thickness=3")));
 
         string scored = "layout thin { lineThickness 0.08 }\n" + music
-            + "score main { layout thin { Stem.thickness 1.0 }  staff m }\n";
+            + "score { layout thin { Stem.thickness 1.0 }  staff m }\n";
         Assert.Equal(["0.080", "0.180"], StrokeWidths(Svg(scored)));                        // stem 1.0 × 0.08 joins the staff
 
         var tree = SyntaxTree.Parse(file);
@@ -521,7 +521,7 @@ public class EngravingStyleTests
     public void TheTwin_SpellsTheStyleInLilyPond()
     {
         string Twin(string layout) => new Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(
-            layout + "part m { }\nsection A { m { c'1 | } }\nform main { A }\nscore main { staff m }\n"));
+            layout + "part m { }\nsection A { m { c'1 | } }\nform { A }\nscore { staff m }\n"));
         string styled = Twin("layout { lineThickness 0.15  StaffLine.thickness 1.2  LedgerLine.thickness 2 0.1  "
             + "LedgerLine.lengthFraction 0.4  Stem.thickness 2 Stem.lengthFraction 1.2  Beam.thickness 0.6  Beam.damping 3  Dots.padding 0.7  Accidental.rightPadding 0.4  NoteHead.scale 1.1  BarLine.thinThickness 3  BarLine.thickThickness 7 }\n");
         foreach (string line in new[]

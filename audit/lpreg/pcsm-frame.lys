@@ -13,6 +13,6 @@ section A {
   vtwo { r1@text("r") | R1 | }
 }
 
-form main { ~A }
+form { ~A }
 
-score main { combinedStaff { vone vtwo } }
+score { combinedStaff { vone vtwo } }

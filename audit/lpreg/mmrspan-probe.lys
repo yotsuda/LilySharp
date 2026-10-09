@@ -10,6 +10,6 @@ section Main {
   v { f1( | R1@fermata | e'1) | }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { staff ~v }
+score { staff ~v }

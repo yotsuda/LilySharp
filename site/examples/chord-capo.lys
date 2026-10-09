@@ -11,5 +11,5 @@ section A {
   melody { g'2 ees'2 | aes'2 f'2 | bes'2 d'2 | ees'1 | }
   chords prog { Eb | Ab | Bb7 | Eb | }
 }
-form main { ~A }
-score main { chords prog  staff melody }
+form { ~A }
+score { chords prog  staff melody }

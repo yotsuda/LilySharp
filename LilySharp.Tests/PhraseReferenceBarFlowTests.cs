@@ -32,7 +32,7 @@ namespace LilySharp.Tests;
 public sealed class PhraseReferenceBarFlowTests
 {
     private static string Book(string phrase, string music) =>
-        phrase + "\npart m { section A { " + music + " } }\nform main { A }\nscore main { staff m }\n";
+        phrase + "\npart m { section A { " + music + " } }\nform { A }\nscore { staff m }\n";
 
     // Diagnostics that stand in the SECTION (the phrase's own block is validated where it is
     // declared, and says what it says there either way).

@@ -51,9 +51,9 @@ public class BeamShiftRegionTests
               }
             }
 
-            form main { ~A }
+            form { ~A }
 
-            score main { staff melody }
+            score { staff melody }
             """);
 
         Assert.Equal(-3.5, g.BeamPositionAboveStaffMiddle(0, rightEnd: false), 6);
@@ -85,9 +85,9 @@ public class BeamShiftRegionTests
               vtwo { r8 g'8 r4 r2 | }
             }
 
-            form main { Intro }
+            form { Intro }
 
-            score main "PCV" { combinedStaff { vone vtwo } }
+            score "PCV" { combinedStaff { vone vtwo } }
             """);
 
         Assert.Equal(0, g.BeamGroupCount());

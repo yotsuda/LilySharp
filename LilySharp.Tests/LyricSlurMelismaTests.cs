@@ -45,8 +45,8 @@ public sealed class LyricSlurMelismaTests
             time 4/4
             part m { section A { {{music}} } }
             lyrics w sings m { section A { {{words}} } }
-            form main { A }
-            score main { staff m  lyrics w }
+            form { A }
+            score { staff m  lyrics w }
             """;
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));

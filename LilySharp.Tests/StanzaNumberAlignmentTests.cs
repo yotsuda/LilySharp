@@ -53,8 +53,8 @@ public sealed class StanzaNumberAlignmentTests
           lyrics words sings melody { A- ma- zing grace | how~ sweet | }
           lyrics words sings melody { Twas grace that taught | my~ heart | }
         }
-        form main { Main }
-        score main { staff melody  lyrics words }
+        form { Main }
+        score { staff melody  lyrics words }
         """);
 
     /// <summary>Each stanza number's right edge: its start plus its advance.</summary>

@@ -57,8 +57,8 @@ public class PhraseAnchorOutputsTests
         part lh { clef bass octave 3 }
         phrase lhA { <c e>2 <c g> | }
         section Main { lh { lhA } }
-        form main { Main }
-        score main { staff lh }
+        form { Main }
+        score { staff lh }
         """;
 
     /// <summary>The control: the same notes written inline in the part. This path already
@@ -68,8 +68,8 @@ public class PhraseAnchorOutputsTests
         time 4/4
         part lh { clef bass octave 3 }
         section Main { lh { <c e>2 <c g> | } }
-        form main { Main }
-        score main { staff lh }
+        form { Main }
+        score { staff lh }
         """;
 
     [Theory]

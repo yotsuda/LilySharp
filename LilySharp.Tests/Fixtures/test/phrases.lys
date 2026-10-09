@@ -27,8 +27,8 @@ section Main {
   melody { intro verse chorus }
 }
 
-form main { Main }
+form { Main }
 
-score main "phrases" {
+score "phrases" {
   staff melody
 }

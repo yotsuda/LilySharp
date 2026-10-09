@@ -51,8 +51,8 @@ namespace LilySharp.Tests;
 public class SemiTieSourcePositionTests
 {
     private static string Book(string music) =>
-        $"part bass\nsection A {{ bass {{ {music} }} }}\nform main {{ ~A }}\n"
-        + "score main { staff bass }\n";
+        $"part bass\nsection A {{ bass {{ {music} }} }}\nform {{ ~A }}\n"
+        + "score { staff bass }\n";
 
     private static string Render(string book) => LilySharp.Core.Svg.SvgGenerator.Generate(
         SyntaxTree.Parse(book),

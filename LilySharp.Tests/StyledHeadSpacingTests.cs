@@ -41,8 +41,8 @@ public class StyledHeadSpacingTests
           g { /4 4 4 4 | /2 2 | /4. 8 /2 | /8 8 8 8 /2 | /1 | }
           b { c4 d e f | g2 a | c4. d8 e2 | c8 d e f g2 | c1 | }
         }
-        form main { A }
-        score main { staff g  staff b }
+        form { A }
+        score { staff g  staff b }
         """;
 
     private static readonly double[] LilyPond = [12.02, 13.91, 17.42, 9.38];

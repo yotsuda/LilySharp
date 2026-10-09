@@ -97,6 +97,6 @@ section Tail {
 //    and 56 notes; the MusicXML GAINS its `<ending>` markers (the inline spelling never
 //    wrote them) and the MIDI LOSES one bar of silence — the ghost empty measure the old
 //    `… | |: …` opened between the two repeats, which is the defect this move retires.
-form main { ~A |: ~Rep [1. ~RepEnd1] :| [2. ~RepEnd2] |: ~RepN :|*3 ~Tail }
+form { ~A |: ~Rep [1. ~RepEnd1] :| [2. ~RepEnd2] |: ~RepN :|*3 ~Tail }
 
-score main { staff melody }
+score { staff melody }

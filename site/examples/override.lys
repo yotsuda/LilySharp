@@ -12,5 +12,5 @@ section A {
     g4 a b c' |
   }
 }
-form main { ~A }
-score main { staff melody }
+form { ~A }
+score { staff melody }

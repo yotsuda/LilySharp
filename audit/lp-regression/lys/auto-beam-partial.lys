@@ -11,6 +11,6 @@ section Main {
   m { a8 a a a | }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { staff m }
+score { staff m }

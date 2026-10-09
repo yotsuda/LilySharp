@@ -226,7 +226,7 @@ public class DurationAdjacencyTests
         // erroneous chord keeps its real notes and the following music survives.
         var src = "part m { clef treble }\n"
                 + "section A { m { <c e g2>2 d 4 e2 } }\n"
-                + "form main { A }\nscore main { staff m }";
+                + "form { A }\nscore { staff m }";
         var tree = SyntaxTree.Parse(src);
         Assert.True(tree.HasErrors); // LYS0015 + LYS0016 are both in there
         var svg = LilySharp.Core.Svg.SvgGenerator.Generate(tree);

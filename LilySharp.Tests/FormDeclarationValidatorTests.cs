@@ -42,31 +42,61 @@ section B {{ melody {{ g'4 a b c | }} }}
 
     [Fact]
     public void NamedFormWithMatchingScore_NoError()
-        => Assert.Empty(Validate("form main { A B }\nscore main { staff { melody } }"));
+        => Assert.Empty(Validate("form { A B }\nscore { staff { melody } }"));
 
     [Fact]
     public void MultipleNamedForms_NoError()
         => Assert.Empty(Validate(
-            "form main { A B }\nform excerpt { B }\n"
-            + "score main { staff { melody } }\nscore excerpt { staff { melody } }"));
+            "form { A B }\nform excerpt { B }\n"
+            + "score { staff { melody } }\nscore excerpt { form excerpt staff { melody } }"));
 
     [Fact]
-    public void UnnamedForm_IsFlagged()
-        => Assert.Contains(Validate("form { A B }\nscore main { staff { melody } }"),
+    public void ASecondUnnamedForm_IsFlagged()
+        => Assert.Contains(Validate("form { A B }\nform { B }\nscore { staff { melody } }"),
             d => d.Code == DiagnosticCodes.UnnamedForm);
 
     [Fact]
     public void DuplicateFormName_IsFlagged()
-        => Assert.Contains(Validate("form main { A }\nform main { B }\nscore main { staff { melody } }"),
+        => Assert.Contains(Validate("form x { A }\nform x { B }\nscore { staff { melody } }"),
             d => d.Code == DiagnosticCodes.DuplicateFormName);
 
     [Fact]
-    public void UnknownFormReference_IsFlagged()
-        => Assert.Contains(Validate("form main { A B }\nscore verse { staff { melody } }"),
+    public void AScoresFormNamingNoForm_IsFlagged()
+        => Assert.Contains(Validate("form { A B }\nscore { form verse staff { melody } }"),
+            d => d.Code == DiagnosticCodes.UnknownFormReference && d.Message.Contains("Unknown form 'verse'"));
+
+    /// <summary>`form A` with A a section is the likeliest slip: the message writes the fix.</summary>
+    [Fact]
+    public void AScoresFormNamingASection_SaysToWriteItsOwnForm()
+        => Assert.Contains(Validate("form { A B }\nscore { form A staff { melody } }"),
+            d => d.Code == DiagnosticCodes.UnknownFormReference && d.Message.Contains("'form { A }'"));
+
+    [Fact]
+    public void AScoresOwnForm_IsClean()
+        => Assert.Empty(Validate("form { A B }\nscore { form { B A } staff { melody } }"));
+
+    [Fact]
+    public void AScoresOwnForm_IsUnnamed()
+        => Assert.Contains(Validate("score { form x { A } staff { melody } }"),
             d => d.Code == DiagnosticCodes.UnknownFormReference);
 
     [Fact]
-    public void ScoreWithoutFormName_IsFlagged()
-        => Assert.Contains(Validate("form main { A B }\nscore { staff { melody } }"),
-            d => d.Code == DiagnosticCodes.UnknownFormReference);
+    public void AScorePlaysOneForm()
+        => Assert.Contains(Validate("form x { A }\nscore { form x form { B } staff { melody } }"),
+            d => d.Code == DiagnosticCodes.UnknownFormReference && d.Message.Contains("one form"));
+
+    /// <summary>The spelling before 2026-10-09: the score's name picked the form. It is the
+    /// score's own name now — said, not played in silence.</summary>
+    [Fact]
+    public void AScoreNamedLikeAForm_IsWarnedThatTheNameDoesNotPickIt()
+    {
+        var d = Assert.Single(Validate("form { A }\nform verse { B }\nscore verse { staff { melody } }"));
+        Assert.Equal(DiagnosticCodes.UnknownFormReference, d.Code);
+        Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
+        Assert.Contains("write 'form verse'", d.Message);
+    }
+
+    [Fact]
+    public void AnUnnamedScoreWithNoForm_PlaysTheDefault_AndIsClean()
+        => Assert.Empty(Validate("form { A B }\nscore { staff { melody } }"));
 }

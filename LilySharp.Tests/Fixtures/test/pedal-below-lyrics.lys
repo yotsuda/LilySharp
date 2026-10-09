@@ -12,5 +12,5 @@ section A {
   lyrics words sings voc { la la la la | }
   pno { c4 d@sustain e f@!sustain | }
 }
-form main { A }
-score main "pedal-below-lyrics" { staff voc  lyrics words  staff pno }
+form { A }
+score "pedal-below-lyrics" { staff voc  lyrics words  staff pno }

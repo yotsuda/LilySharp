@@ -289,7 +289,7 @@ public static partial class ChordHarmonizer
     // A structure that names one section, parsed standalone; its reference resolves
     // against the main tree's section definitions when passed to Collect.
     private static FormDeclarationSyntax? SectionForm(string sectionName)
-        => SyntaxTree.Parse("form main { " + sectionName + " }").GetRoot()
+        => SyntaxTree.Parse("form { " + sectionName + " }").GetRoot()
             .DescendantNodes<FormDeclarationSyntax>().FirstOrDefault();
 
     // Common chords first when the pitch score ties (I / IV / V over iii / vii°).

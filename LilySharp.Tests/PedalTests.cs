@@ -423,9 +423,9 @@ public class PedalTests
           section A { c1@sustain@sostenuto@unaCorda | c1@!sustain@!sostenuto@treCorde }
         }
 
-        form main { A }
+        form { A }
 
-        score main { staff pf }
+        score { staff pf }
         """;
 
     /// <summary>
@@ -480,7 +480,7 @@ public class PedalTests
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(
             "octave absolute\npart lh { clef bass }\n"
             + "section A { lh { " + music + " } }\n"
-            + "form main { ~A }\nscore main { staff lh }\n");
+            + "form { ~A }\nscore { staff lh }\n");
         var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(
             tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree));
         return new LayoutEngine().Layout(score).PedalBracketLayouts;
@@ -540,7 +540,7 @@ public class PedalTests
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(
             "octave absolute\ntime 12/8\npart lh { clef bass }\n"
             + "section A { lh { " + bar + " f,,1.@!sustain | } }\n"
-            + "form main { ~A }\nscore main { staff lh }\n");
+            + "form { ~A }\nscore { staff lh }\n");
         var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(
             tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree));
         var onsets = score.MusicMarks

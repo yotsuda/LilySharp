@@ -45,8 +45,8 @@ public sealed class PolyphonyBowDirectionTests
                 voice { b'2( a') | } { d'2( e') | }
               }
             }
-            form main { ~A }
-            score main { staff melody }
+            form { ~A }
+            score { staff melody }
             """);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));

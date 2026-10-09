@@ -61,7 +61,7 @@ public class DocumentSymbolRobustnessTests
     [Theory]
     [InlineData("")]                                        // empty
     [InlineData("part m { section A { c'4 ")]               // unterminated braces at EOF
-    [InlineData("form main { ")]                            // unterminated form
+    [InlineData("form { ")]                            // unterminated form
     [InlineData(">> <> {} \\ @ |")]                         // stray operator tokens, no music
     [InlineData("\r")]                                      // lone classic-Mac CR
     [InlineData("part\npart\npart")]                        // keywords with no bodies
@@ -81,8 +81,8 @@ public class DocumentSymbolRobustnessTests
         var symbols = Symbols("""
             title "T"
             part melody { section A { c'4 d' e' } }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """);
         Assert.NotNull(symbols);
         AssertNonNegative(symbols);

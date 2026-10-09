@@ -111,9 +111,9 @@ public sealed class TempoLineEndBreakTests
           }
         }
 
-        form main { ~Intro |: Theme Middle [1. Ending1] :| [2. Ending2] }
+        form { ~Intro |: Theme Middle [1. Ending1] :| [2. Ending2] }
 
-        score main {
+        score {
           grandStaff {
             staff rh "Piano"
             staff lh

@@ -47,8 +47,8 @@ public sealed class TabTempoOverBeamTests
           tuning bass
           section A { fis,,8\4 cis,\3 e,\3 fis,\3 e,\3 cis,\3 b,,\4 cis,\3 | fis,,8\4 cis,\3 e,\3 fis,\3 e,\3 cis,\3 b,,\4 cis,\3 | }
         }
-        form main { A }
-        score main { STAVES }
+        form { A }
+        score { STAVES }
         """;
 
     private static (MultiStaffScore Score, ScoreLayout Layout) Lay(string staves)

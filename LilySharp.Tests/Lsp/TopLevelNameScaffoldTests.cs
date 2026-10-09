@@ -25,19 +25,18 @@ using Xunit;
 namespace LilySharp.Tests.Lsp;
 
 /// <summary>
-/// The two top-level scaffolds that write a FORM NAME, and the opposite questions they
-/// answer: <c>form</c> CREATES one (it must be free — LYS1017 "Duplicate form name") and
-/// <c>score</c> REFERS to one (it must exist — LYS1018 "Unknown form"). Both read the
-/// document now; both wrote the literal <c>main</c> before 2026-09-12.
+/// The two top-level scaffolds that write a form or a score: both write the UNNAMED block
+/// first — the file's default form, the score that writes the input's own name — and a name
+/// only beside it, a free one for <c>form</c> (LYS1017 "Duplicate form name" otherwise)
+/// (docs/anonymous-blocks-design.md, 2026-10-09). A score's <c>form |</c> lists the forms
+/// it may pick.
 /// </summary>
 /// <remarks>
 /// ⚠️ Found by auditing every completion item that writes a NAME — the generalization of
 /// the owner's <c>sings part</c> report. The test of a placeholder is not how it looks but
 /// WHETHER THE THING IT NAMES HAS TO EXIST ALREADY: <c>chords ${1:prog}</c> is a name being
-/// created and stays free text, while these two are a reference and a declaration of the
-/// same name, and each was wrong in its own direction. Measured: in a book whose form is
-/// <c>verse</c>, accepting <c>score</c> typed "Unknown form 'main'"; in a book that already
-/// has <c>main</c>, accepting <c>form</c> typed a duplicate.
+/// created and stays free text. Until 2026-10-09 a score's header named a form, which had
+/// to exist; the score's name is its own now, and the reference is its <c>form</c> item.
 /// </remarks>
 [Trait("Category", "Unit")]
 public class TopLevelNameScaffoldTests
@@ -67,67 +66,50 @@ public class TopLevelNameScaffoldTests
     }
 
     [Fact]
-    public void TheScoreScaffold_NamesTheFormThisBookDeclares()
+    public void WithNothingYet_BothScaffoldsWriteTheUnnamedBlock()
     {
-        string doc = Piece + "form verse { A }\n";
+        var form = Item("", "form");
+        var score = Item("", "score");
+        Assert.StartsWith("form {", form.InsertText!);
+        Assert.StartsWith("score {", score.InsertText!);
+        Assert.Null(score.Command);
+
+        AssertCompiles(Piece + Accept(form, "A") + "\n" + Accept(score, "staff m"));
+    }
+
+    [Fact]
+    public void BesideTheUnnamedScore_TheScoreScaffoldWritesAName()
+    {
+        string doc = Piece + "form { A }\nscore { staff m }\n";
         var item = Item(doc, "score");
 
-        Assert.Contains("score verse", item.InsertText!);
-        Assert.Null(item.Command);                      // nothing to choose between
+        Assert.Contains("score ${1:another}", item.InsertText!);
         AssertCompiles(doc + Accept(item, "staff m"));
     }
 
     [Fact]
-    public void WithSeveralForms_TheScoreScaffoldLeavesTheNameToThePicker()
+    public void AScoresFormItem_ListsThisBooksForms()
     {
-        string doc = Piece + "form verse { A }\nform chorus { A }\n";
-        var item = Item(doc, "score");
-
-        Assert.Contains("score $1", item.InsertText!);
-        Assert.Equal("editor.action.triggerSuggest", item.Command?.CommandIdentifier);
-        AssertCompiles(doc + Accept(item, "staff m", pick: "chorus"));
-    }
-
-    [Fact]
-    public void ThePickerThatOpens_ListsThisBooksForms()
-    {
-        // The other end of the retrigger: the caret it leaves is a position that answers
-        // with the forms — it answered with the top-level KEYWORD list until 2026-09-12,
-        // which is why the item could not hand the choice over.
-        string doc = Piece + "form verse { A }\nform chorus { A }\nscore ";
-        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterScoreKeyword,
+        string doc = Piece + "form verse { A }\nform chorus { A }\nscore {\n  form ";
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterScoreForm,
             LilySharpLanguageServer.GetCompletionContext(doc, doc.Length));
         Assert.Equal(new[] { "verse", "chorus" },
             LilySharpLanguageServer.GetDeclaredNameCompletions(doc, "form", "Form")
                 .Items.Select(i => i.Label).ToArray());
     }
 
-    [Fact]
-    public void WithNoFormYet_TheTwoScaffoldsAgreeOnTheName()
-    {
-        // An empty book has nothing to name, so `score` keeps `main` as a placeholder — and
-        // it is the same name the `form` item writes beside it, so accepting BOTH compiles.
-        var form = Item("", "form");
-        var score = Item("", "score");
-        Assert.Contains("form main", form.InsertText!);
-        Assert.Contains("${1:main}", score.InsertText!);
-
-        AssertCompiles(Piece + Accept(form, "A") + "\n" + Accept(score, "staff m"));
-    }
-
     [Theory]
-    [InlineData("", "form main")]                                    // free
-    [InlineData("form main { A }\n", "form main2")]                  // taken
-    [InlineData("form main { A }\nform main2 { A }\n", "form main3")] // and the next
+    [InlineData("", "form {")]                                             // the default is free
+    [InlineData("form { A }\n", "form excerpt {")]                         // taken: a name
+    [InlineData("form { A }\nform excerpt { A }\n", "form excerpt2 {")]    // and the next
     public void TheFormScaffold_NeverWritesANameThatIsTaken(string declared, string expected)
     {
         var item = Item(Piece + declared, "form");
         Assert.Contains(expected, Accept(item, "A"));
 
         // …and the book it leaves behind compiles — a derived name is only useful if it is
-        // legal (LYS1017 is what a taken one produces).
-        string book = Piece + declared + Accept(item, "A") + "\n"
-                    + "score " + (declared.Length == 0 ? "main" : "main") + " { staff m }\n";
+        // legal (LYS1016 / LYS1017 is what a taken one produces).
+        string book = Piece + declared + Accept(item, "A") + "\n" + "score { staff m }\n";
         AssertCompiles(book);
     }
 

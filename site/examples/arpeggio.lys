@@ -7,5 +7,5 @@ part melody { clef treble }
 section A {
   melody { << c e g >>4 << c 3 5 >>4 << 8 5 3 1 >>2 | << c e g >>2 << c r e >>2 | }
 }
-form main { ~A }
-score main { staff melody }
+form { ~A }
+score { staff melody }

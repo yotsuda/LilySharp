@@ -14,6 +14,6 @@ section A {
   vtwo { c4( d~ d f) | }
 }
 
-form main { ~A }
+form { ~A }
 
-score main { combinedStaff { vone vtwo } }
+score { combinedStaff { vone vtwo } }

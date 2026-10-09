@@ -51,8 +51,8 @@ namespace LilySharp.Tests;
 public class BowSourcePositionTests
 {
     private static string Book(string music) =>
-        $"part bass\nsection A {{ bass {{ {music} }} }}\nform main {{ ~A }}\n"
-        + "score main { staff bass }\n";
+        $"part bass\nsection A {{ bass {{ {music} }} }}\nform {{ ~A }}\n"
+        + "score { staff bass }\n";
 
     /// <summary>⚠️ INTERACTIVE, because the alias half of the claim only exists there:
     /// <c>SvgDrawingContext.Source(int, aliases)</c> keeps <c>data-alt</c> for the preview
@@ -141,8 +141,8 @@ public class BowSourcePositionTests
     public void OneSlurOnTwoStaves_IsTwoBowsWithOneAddress()
     {
         const string music = "c4( d4 e4) f4 |";
-        string book = $"part bass\nsection A {{ bass {{ {music} }} }}\nform main {{ ~A }}\n"
-            + "score main { staff bass tab bass }\n";
+        string book = $"part bass\nsection A {{ bass {{ {music} }} }}\nform {{ ~A }}\n"
+            + "score { staff bass tab bass }\n";
         int open = book.IndexOf(music, System.StringComparison.Ordinal) + music.IndexOf('(');
 
         var bows = BowAddresses(Render(book));

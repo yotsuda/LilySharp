@@ -176,10 +176,16 @@ internal static class LayoutPlanReader
     internal static LayoutPlan ReadReference(SyntaxNode root, LayoutDeclarationSyntax reference,
         LayoutPlan fallback)
     {
-        if (!TryResolve(root, reference, out var declaration, out _))
+        // A score's bare `layout { … }` (2026-10-09): the file's unnamed default with the
+        // score's entries laid over it, read as one merged block like a named reference is.
+        bool bare = reference.NameToken == null && reference.IsBlock;
+        var declaration = bare
+            ? FileDefault(root)
+            : TryResolve(root, reference, out var named, out _) ? named : null;
+        if (declaration == null && !bare)
             return fallback;
         var discard = new List<Problem>();
-        var plan = ReadEntriesInto(LayoutPlan.Default, declaration!, discard);
+        var plan = declaration != null ? ReadEntriesInto(LayoutPlan.Default, declaration, discard) : LayoutPlan.Default;
         if (reference.IsBlock)
             plan = ReadEntriesInto(plan, reference, discard);
         return plan;

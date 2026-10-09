@@ -69,8 +69,8 @@ public class IncrementalLyricLinePassTests
           section A { one two three four | five six sev- en | }
           section B { eight nine ten e- | lev- en twelve x | }
         }
-        form main { A B }
-        score main {
+        form { A B }
+        score {
           staff melody
           lyrics verse sings melody
           staff melody
@@ -90,8 +90,8 @@ public class IncrementalLyricLinePassTests
           section A { one two three four | five six sev- en | }
           section B { eight nine ten e- | lev- en twelve x | }
         }
-        form main { A B }
-        score main {
+        form { A B }
+        score {
           staff melody
           lyrics verse sings melody
         }

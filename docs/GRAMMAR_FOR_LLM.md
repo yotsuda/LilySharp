@@ -63,9 +63,9 @@ section Main {                  // a section binds music to each part by name
   leftHand  { c2 c | g2 g | }
 }
 
-form main { Main }              // playback/print order of sections
+form { Main }              // playback/print order of sections
 
-score main "out" {                   // one or more render blocks
+score "out" {                   // one or more render blocks
   grandStaff {
     staff rightHand             // 'staff NAME' — bare name, no braces
     staff leftHand
@@ -146,7 +146,7 @@ restates part of it:
 ```
 layout { markTempo beside }                              // the file default: chart layout
 layout lp { markTempo stacked  barNumbers every 4 }      // a named block
-score main  { staff melody }                         // chart layout
+score  { staff melody }                         // chart layout
 score parts { layout lp  staff melody }              // this score keeps LilyPond's stacking
 score study { layout lp { barNumbers none }  staff melody }
 ```
@@ -160,13 +160,13 @@ A minimal single-staff document:
 ```
 part melody { clef treble }
 section Main { melody { c4 d e f | g2 g | } }
-form main { Main }
-score main "out" { staff melody }
+form { Main }
+score "out" { staff melody }
 ```
 
 ⚠️ That document prints a boxed **"Main"** over its first bar: every section reference prints
 its name as a section label by default. A piece with one section rarely wants that — write
-`form main { ~Main }` (the `~` hides the label; see "Rules and gotchas"). A `@mark("A")` on a
+`form { ~Main }` (the `~` hides the label; see "Rules and gotchas"). A `@mark("A")` on a
 note in that first bar is NOT printed while the label is (one mark a bar; LYS4021 says so) —
 put the rehearsal letter on a later bar, or hide the label.
 
@@ -491,7 +491,7 @@ below the staff — the parser rejects it). Placement applies only to dynamic le
   on an empty span DECORATE the bar behind them; and a `|` landing where the
   meter just auto-filled a bar merely confirms it — which is why a trailing `c1 |` is one
   bar, not two.
-- Volta repeats are symbolic and live in the form: `form main { |: A [1. B] :| [2. C] }`.
+- Volta repeats are symbolic and live in the form: `form { |: A [1. B] :| [2. C] }`.
   An ending NAMES one or more sections, played in order under one bracket:
   `|: A [1. B C] :| [2. D]` plays A B C, then A D. The body before the first ending must
   name a section (`|: [1. B] :| [2. C]` and `|: :|` are errors, LYS1041).
@@ -508,17 +508,17 @@ below the staff — the parser rejects it). Placement applies only to dynamic le
   bar of the ending, `line` up to the end of the system it starts in, `N` its first N bars.
   One ending overrides it after its `]`: `[1. B C]@voltaBracket(2)`. A bracket cut short
   always ends straight, whatever `]` / `-]` says.
-- An ending needs a repeat to be an ending OF. Write `form main { [1. A] }` and no bracket
+- An ending needs a repeat to be an ending OF. Write `form { [1. A] }` and no bracket
   is drawn: it engraves as the plain reference `A`, and LYS6008 warns that the `1.` prints
-  nothing. Put the ending inside the repeat — `form main { |: A [1. B] :| [2. C] }`.
+  nothing. Put the ending inside the repeat — `form { |: A [1. B] :| [2. C] }`.
 
 ```
 part melody { clef treble }
 section A { melody { c4 d e f | } }
 section B { melody { g2 g | } }
 section C { melody { a2 a | } }
-form main { |: A [1. ~B] :| [2. ~C] }
-score main { staff melody }
+form { |: A [1. ~B] :| [2. ~C] }
+score { staff melody }
 ```
 
 - A bar may be split by a SECTION boundary: end one section on a short bar and open the
@@ -616,8 +616,8 @@ section Main {
   melody { c4 d e f | g2 g | }
   lyrics words sings melody { Hap- py birth- day | to you | }
 }
-form main { Main }
-score main { staff melody  lyrics words }
+form { Main }
+score { staff melody  lyrics words }
 ```
 
 **Verses** (different words per pass of a section) are verse headers inside the lyrics
@@ -633,8 +633,8 @@ section B {
   melody { g4 a b c | }
   lyrics words sings melody { [1. up up up up |] [2. down down down down |] }
 }
-form main { A |: B :| }
-score main { staff melody  lyrics words }
+form { A |: B :| }
+score { staff melody  lyrics words }
 ```
 
 ## Lead sheet (chords and/or lyrics, no staff)
@@ -666,20 +666,20 @@ section Loop {
   chords prog  { C | }
   lyrics words { star | }
 }
-form main { Main |: ~Loop :| }
-score main "sheet" { chords prog lyrics words }     // chords + lyrics rows, no staff
+form { Main |: ~Loop :| }
+score "sheet" { chords prog lyrics words }     // chords + lyrics rows, no staff
 ```
 
 ## Structure: reuse and navigation
 
 ```
-form main { Intro Main Main "Main (reprise)" Coda }   // string = custom section label
+form { Intro Main Main "Main (reprise)" Coda }   // string = custom section label
 ```
 
 A trailing `'` / `,` on a reference shifts THAT play's octave (one per mark):
 
 ```
-form main { Intro Main ~Main' Coda }
+form { Intro Main ~Main' Coda }
 ```
 
 Navigation marks sit between section names. Signs `segno` / `coda` engrave at the start
@@ -687,7 +687,7 @@ of the following section; text directives `fine`, `to coda`, `dc`/`ds` (and `dc 
 `ds al coda`) engrave at the end of the section just played.
 
 ```
-form main { A segno  B to coda  C ds al coda  coda D }   // the MIDI plays A B C B D
+form { A segno  B to coda  C ds al coda  coda D }   // the MIDI plays A B C B D
 ```
 
 The MIDI follows a FORM's jump texts as a player reads them (`dc` to the beginning, `ds` to
@@ -741,10 +741,10 @@ form `main` writes to the input file's name; any other form name becomes the
 output file name (unless a `"basename"` overrides it).
 
 ```
-form main { Intro Verse Outro }
+form { Intro Verse Outro }
 form practice { Verse }
-score main { staff melody }
-score practice { staff melody }
+score { staff melody }
+score practice { form practice staff melody }
 ```
 
 ## Override / revert (engraving properties)
@@ -786,13 +786,13 @@ quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LY
   or E♭ instrument you normally write NO `transpose` at all: name the `instrument` and
   either write what the player reads (the default) or write what sounds under a top-level
   `pitch concert` — the part is transposed for you (see Pitches).
-- **A section's label is hidden at the FORM reference only**: `form main { A |: B [1. ~B1]
+- **A section's label is hidden at the FORM reference only**: `form { A |: B [1. ~B1]
   :| [2. ~B2] }` plays B1 and B2 without a rehearsal letter. ⚠️ **Never write
   `section ~A { … }`** — a declaration takes no tilde (LYS0033). Write the `~` on every
   reference that should be silent (a section cut only to carry a repeat edge is usually
   referenced once). With no form, every section labels itself. An empty label `A ""` also
   suppresses, and a label written on a `~` play is LYS0012.
-- **A SECTION reference takes the same marks**: `form main { ~A ~B' }` opens B's play an
+- **A SECTION reference takes the same marks**: `form { ~A ~B' }` opens B's play an
   octave up, `~B,` an octave down, `~B''` two. They belong to the PLAY, so one section can
   be quoted at two octaves (`~B ~B'`) while the declaration never moves, and the next
   reference is back at the part's anchor. Both spellings take them (`B'` and `~B'` — the
@@ -926,7 +926,7 @@ Rules worth knowing before emitting one:
   pass). There is no staff-size key and no algorithm switch.
 - Unknown keys are an error; a key set twice is a warning (last wins).
 - **Named blocks, per score** — same shape as fonts: `paper wide { paperWidth 250mm }`
-  at the top level, then `score main { paper wide staff melody }`, or
+  at the top level, then `score { paper wide staff melody }`, or
   `paper wide { topMargin 12mm }` inside the score to override part of it. The
   reference replaces the file's unnamed default; a spacing block's unwritten lines
   keep the named block's values.

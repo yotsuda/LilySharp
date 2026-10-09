@@ -45,8 +45,8 @@ public sealed class OttavaBoundaryTieTests
             part m {
               section A { c''4@ottava~ c'' d''~ d''@!ottava | }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
@@ -76,8 +76,8 @@ public sealed class OttavaBoundaryTieTests
             part m {
               section A { c''4@ottava~ c'' d''~ d''@!ottava | }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var diags = LilySharp.Core.Semantics.SemanticValidation.Run(tree);

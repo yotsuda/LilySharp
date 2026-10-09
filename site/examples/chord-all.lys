@@ -9,5 +9,5 @@ section A {
   uke { g'4 e' c' e' | a'2 c'' | a'4 f' c' f' | g'1 | }
   chords prog { C | Am | F | G7(0212) | }
 }
-form main { ~A }
-score main { chords prog  staff uke }
+form { ~A }
+score { chords prog  staff uke }

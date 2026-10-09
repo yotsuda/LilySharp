@@ -50,8 +50,8 @@ public class TodoIndexTests
           lh { r4 | c1 | d1 | e1@todo(l3) | }
           x { c'4@todo | c'1 | c'1 | c'1 | }
         }
-        form main { A }
-        score main { staff rh staff lh }
+        form { A }
+        score { staff rh staff lh }
         """;
 
     [Fact]
@@ -100,7 +100,7 @@ public class TodoIndexTests
     [InlineData("lh { r4 | c1 |^ d1", 1, "lh")]          // after the c's bar line: still the c
     [InlineData("^  lh { r4", 0, "lh")]                  // the head of the line: its first item
     [InlineData("d''1 | e''1 | }^", 3, "rh")]            // the end of the line: its last item
-    [InlineData("form ^main", null, null)]
+    [InlineData("form ^{", null, null)]
     public void TheCaretsPlace_IsReadOnItsLine(string caretAt, int? measure, string? part)
     {
         // '^' is the caret.

@@ -42,8 +42,8 @@ public sealed class TabNumbersDottedChordTests
               instrument guitar
               section A { <c e g>4. e4. }
             }
-            form main { A }
-            score main { tab melody as {{style}} }
+            form { A }
+            score { tab melody as {{style}} }
             """);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var spec = RenderSpecParser.FindFirst(tree);

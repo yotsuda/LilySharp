@@ -25,7 +25,7 @@ import {
     SEL_CLOSE, SEL_OPEN, isUnchanged, marksContext, octaveOutliers, pitchToMidi, toCandidateEdit,
 } from '../src/aiTransformCore';
 
-const FILE = 'part m { clef treble }\npart h { clef treble }\n\nsection A {\n  m { c4 d e f | }\n}\n\nscore main {\n  staff m\n}\n';
+const FILE = 'part m { clef treble }\npart h { clef treble }\n\nsection A {\n  m { c4 d e f | }\n}\n\nscore {\n  staff m\n}\n';
 const SEL = 'c4 d e f |';
 
 function snapshotOf(text: string, selected: string) {

@@ -206,8 +206,8 @@ public class PercentRepeatTests
             octave absolute
             part mel { }
             section A { mel { repeat percent 2 { c4 c c c | } } }
-            form main { ~A }
-            score main { staff mel tab mel }
+            form { ~A }
+            score { staff mel tab mel }
             """);
 
         // Horizontal staff lines: 5 notation lines (1.0 apart) above 6 tab
@@ -329,8 +329,8 @@ public class PercentRepeatTests
             part melody {
               section A { repeat percent 8 { R1 } }
             }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """);
         var spec = RenderSpecParser.FindFirst(tree);
         Assert.NotNull(spec);
@@ -429,8 +429,8 @@ public class PercentRepeatTests
         var svg = TestPaper.SvgFromRenderSpec("""
             part mel { }
             section A { mel { repeat percent 2 { c1 | d1 } } }
-            form main { ~A }
-            score main { staff mel }
+            form { ~A }
+            score { staff mel }
             """);
 
         // ONE sign, drawn as two slashes — not two signs and not one.
@@ -491,8 +491,8 @@ public class PercentRepeatTests
         var control = TestPaper.SvgFromRenderSpec("""
             part mel { }
             section A { mel { c1 | d1 } }
-            form main { ~A }
-            score main { staff mel }
+            form { ~A }
+            score { staff mel }
             """);
         Assert.Equal(
             System.Text.RegularExpressions.Regex.Matches(control, "<text class=\"music\"").Count,
@@ -512,14 +512,14 @@ public class PercentRepeatTests
         var svg = TestPaper.SvgFromRenderSpec("""
             part mel { }
             section A { mel { repeat percent 2 { c8 d e f g a b c' | d'8 c' b a g f e d | } } }
-            form main { ~A }
-            score main { staff mel }
+            form { ~A }
+            score { staff mel }
             """);
         var control = TestPaper.SvgFromRenderSpec("""
             part mel { }
             section A { mel { c8 d e f g a b c' | d'8 c' b a g f e d | } }
-            form main { ~A }
-            score main { staff mel }
+            form { ~A }
+            score { staff mel }
             """);
 
         // The repeated pair adds the sign — two slashes and two dots — and NOTHING else:
@@ -632,8 +632,8 @@ public class PercentRepeatTests
                 repeat percent 2 { c16 d e f } repeat percent 2 { g8. c16 } | c1 |
               }
             }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """;
         var tree = TestPaper.ParseAtIndentZero(src);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -700,8 +700,8 @@ public class PercentRepeatTests
                 repeat percent 2 { c,16 d, e, f, } repeat percent 2 { g,8. c,16 } | c,1 |
               }
             }
-            form main { A }
-            score main { {{staves}} }
+            form { A }
+            score { {{staves}} }
             """;
         var tree = TestPaper.ParseAtIndentZero(src);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -796,8 +796,8 @@ public class PercentRepeatTests
         var svg = TestPaper.SvgFromRenderSpec("""
             part mel { }
             section A { mel { repeat percent 2 { c16 d e f } g2 } }
-            form main { ~A }
-            score main { staff mel }
+            form { ~A }
+            score { staff mel }
             """);
 
         var slashes = Slashes(svg);
@@ -839,8 +839,8 @@ public class PercentRepeatTests
         var svg = TestPaper.SvgFromRenderSpec("""
             part mel { }
             section A { mel { repeat percent 2 { g8. c16 } g2 } }
-            form main { ~A }
-            score main { staff mel }
+            form { ~A }
+            score { staff mel }
             """);
 
         var slashes = Slashes(svg);
@@ -868,8 +868,8 @@ public class PercentRepeatTests
         var svg = TestPaper.SvgFromRenderSpec("""
             part mel { }
             section A { mel { repeat percent 2 { c16 d e f } g2 } }
-            form main { ~A }
-            score main { staff mel }
+            form { ~A }
+            score { staff mel }
             """);
 
         // The sixteenths are beamed (two beam levels) and stemmed, exactly as when written
@@ -877,8 +877,8 @@ public class PercentRepeatTests
         var control = TestPaper.SvgFromRenderSpec("""
             part mel { }
             section A { mel { c16 d e f g2. } }
-            form main { ~A }
-            score main { staff mel }
+            form { ~A }
+            score { staff mel }
             """);
         Assert.Equal(Beams(control).Count, Beams(svg).Count);
         Assert.Equal(Stems(control).Count, Stems(svg).Count);
@@ -910,8 +910,8 @@ public class PercentRepeatTests
             part melody {
               section A { repeat percent 4 { c4@p@accent( d) e~ e@f | } }
             }
-            form main { A }
-            score main { {{staffSpec}} }
+            form { A }
+            score { {{staffSpec}} }
             """);
 
         Assert.Equal(3, layout.PercentRepeatLayouts.Length);
@@ -946,8 +946,8 @@ public class PercentRepeatTests
             part melody {
               section A { repeat unfold 4 { c4@p@accent( d) e~ e@f | } }
             }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """);
 
         Assert.Empty(layout.PercentRepeatLayouts);
@@ -967,8 +967,8 @@ public class PercentRepeatTests
             part melody {
               section A { repeat percent 3 { c1( | d1) | } }
             }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """);
 
         Assert.Equal(2, layout.PercentRepeatLayouts.Length);

@@ -55,7 +55,7 @@ public class GraceBodyValidatorTests
 
     private static string Book(string music)
         => "part m { clef treble }\nsection A { m {\n" + music + "\n} }\n"
-           + "form main { ~A }\nscore main { staff m }\n";
+           + "form { ~A }\nscore { staff m }\n";
 
     /// <summary>The page with every source offset masked: two books that write the same
     /// music at different lengths differ in <c>data-pos</c> and in nothing else.</summary>
@@ -190,7 +190,7 @@ public class GraceBodyValidatorTests
         string source =
             "part m { clef treble }\n"
             + "section A { m { grace { d'8@mark(\"P\") } c'1 | e'1 | } }\n"
-            + "form main { ~A }\nscore main { staff m tab m }\n";
+            + "form { ~A }\nscore { staff m tab m }\n";
         string svg = Regex.Replace(
             LiveRender.SvgFromRenderSpec(source), "data-pos=\"\\d+\"", "data-pos=\"#\"");
         Assert.Equal(1, Regex.Matches(svg, ">P</text>").Count);
@@ -212,7 +212,7 @@ public class GraceBodyValidatorTests
                 "octave absolute\nkey a major\ntime 3/4\n"
                 + "part bs { clef bass tuning bass }\n"
                 + "section S { bs { " + grace + " b,8\\2 a,\\2 d, | } }\n"
-                + "form main { ~S }\nscore main { tab bs }\n"),
+                + "form { ~S }\nscore { tab bs }\n"),
             "data-pos=\"\\d+\"", "data-pos=\"#\"");
 
         string auto = Tab("grace { a,16 }");
@@ -221,7 +221,7 @@ public class GraceBodyValidatorTests
 
         Assert.Empty(Warnings("octave absolute\npart bs { clef bass tuning bass }\n"
             + "section S { bs { grace { a,16\\2 } b,8 | } }\n"
-            + "form main { ~S }\nscore main { tab bs }\n"));
+            + "form { ~S }\nscore { tab bs }\n"));
         Assert.NotEqual(auto, s2);
         Assert.NotEqual(auto, s3);
         Assert.NotEqual(s2, s3);
@@ -359,7 +359,7 @@ public class GraceBodyValidatorTests
     {
         string page = Regex.Replace(
             LiveRender.Svg("octave absolute\npart m { clef treble }\nsection A { m {\n"
-                           + music + "\n} }\nform main { ~A }\nscore main { staff m }\n"),
+                           + music + "\n} }\nform { ~A }\nscore { staff m }\n"),
             "data-pos=\"\\d+\"", "data-pos=\"#\"");
         double[] heads = GraceHeadXs(page).Select(ParseX).ToArray();
         double[] dots = GraceGlyphXs(
@@ -644,7 +644,7 @@ public class GraceBodyValidatorTests
     private static string PhraseBook(string phrases, string music)
         => "octave absolute\npart m { clef treble }\n" + phrases
            + "\nsection A { m {\n" + music + "\n} }\n"
-           + "form main { ~A }\nscore main { staff m }\n";
+           + "form { ~A }\nscore { staff m }\n";
 
     private static string PhrasePage(string phrases, string music)
         => Regex.Replace(
@@ -697,7 +697,7 @@ public class GraceBodyValidatorTests
                 .Collect(SyntaxTree.Parse(
                     "part m { clef treble }\n" + phrases
                     + "\nsection A { m {\n" + music + "\n} }\n"
-                    + "form main { ~A }\nscore main { staff m }\n"))
+                    + "form { ~A }\nscore { staff m }\n"))
                 .GraceNotes.Single().Columns.Select(n => n.Lowest.StaffPosition).ToArray();
 
         const string G = "phrase G { d16 e }";
@@ -731,7 +731,7 @@ public class GraceBodyValidatorTests
                 .Collect(SyntaxTree.Parse(
                     "part m { clef treble }\n" + phrases
                     + "\nsection A { m {\n" + music + "\n} }\n"
-                    + "form main { ~A }\nscore main { staff m }\n"));
+                    + "form { ~A }\nscore { staff m }\n"));
             // ⚠️ THE MAIN STREAM'S notes, not the grace's. Since session 310 a grace body is
             // walked by the ordinary walker, so its columns ARE measure items and they stand
             // BEFORE the note they lead: this index used to reach the first `c2`, and without

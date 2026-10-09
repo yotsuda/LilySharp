@@ -10,6 +10,6 @@ section A {
   fl2 { e4 f g a | b2 b | }
 }
 
-form main { ~A }
+form { ~A }
 
-score main { condensedStaff { fl1 fl2 } }
+score { condensedStaff { fl1 fl2 } }

@@ -66,7 +66,7 @@ public class LyricsVoiceBindingCompletionTests
     {
         // `staff melody  lyrics ▮` references a declared lyrics track, so it keeps
         // the AfterLyricsRef context — not the voice-binding one.
-        var text = "score main { staff melody  lyrics ";
+        var text = "score { staff melody  lyrics ";
         Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterLyricsRef, Ctx(text));
     }
 }

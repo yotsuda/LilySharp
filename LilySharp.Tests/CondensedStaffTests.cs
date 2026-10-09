@@ -42,8 +42,8 @@ public class CondensedStaffTests
           fl1 { c'4 d' e' f' | g'2 g' | }
           fl2 { e4 f g a | b2 b | }
         }
-        form main { ~A }
-        """ + "\nscore main { " + render + " }\n";
+        form { ~A }
+        """ + "\nscore { " + render + " }\n";
 
     /// <summary>The SAME music written the way it can be written today: one part whose
     /// section holds a two-voice span. This is what a condensed staff must engrave as.</summary>
@@ -52,8 +52,8 @@ public class CondensedStaffTests
         section A {
           fl { voice { c'4 d' e' f' | g'2 g' | } { e4 f g a | b2 b | } }
         }
-        form main { ~A }
-        score main { staff fl }
+        form { ~A }
+        score { staff fl }
         """ + "\n";
 
     private static string Svg(string source) => SvgGenerator.Generate(
@@ -109,12 +109,12 @@ public class CondensedStaffTests
           a { {{firstPartKey}} time 12/8 ees'4. g'4 aes'8 bes'4 c''8 d'' ees''4 | }
           b { {{secondPartKey}} time 12/8 g4. g4 g8 g4 g8 g g4 | }
         }
-        form main { ~A ~B }
+        form { ~A ~B }
         """ + "\n";
 
     private static LilySharp.Core.Svg.Model.Staff CondensedStaffOf(string source)
     {
-        var tree = TestPaper.ParseAtIndentZero(source + "score main { condensedStaff { a b } }\n");
+        var tree = TestPaper.ParseAtIndentZero(source + "score { condensedStaff { a b } }\n");
         var spec = LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree)!;
         return new LilySharp.Core.Svg.Collector.MeasureCollector().CollectMultiStaff(tree, spec).StaffGroups[0].Staves[0];
     }
@@ -130,7 +130,7 @@ public class CondensedStaffTests
         Assert.Equal((12, 8), (meter.NewTime.Beats, meter.NewTime.BeatType));
         // …on the FIRST part's voice; and nothing is said, since nothing of value was lost.
         Assert.Contains(meter, staff.Voices[0].Measures[1].Items);
-        Assert.DoesNotContain(Diagnose(ChangesInBothParts("") + "score main { condensedStaff { a b } }\n"),
+        Assert.DoesNotContain(Diagnose(ChangesInBothParts("") + "score { condensedStaff { a b } }\n"),
             d => d.Code == DiagnosticCodes.CondensedStaffChangeConflict);
     }
 
@@ -146,14 +146,14 @@ public class CondensedStaffTests
         var change = Assert.Single(staff.Voices.SelectMany(v => v.Measures[1].Items.OfType<LilySharp.Core.Svg.Model.KeySignatureChangeItem>()));
         Assert.Equal(-3, change.NewKey.Sharps);
         Assert.Contains(change, staff.Voices[0].Measures[1].Items);
-        var warning = Assert.Single(Diagnose(source + "score main { condensedStaff { a b } }\n"),
+        var warning = Assert.Single(Diagnose(source + "score { condensedStaff { a b } }\n"),
             d => d.Code == DiagnosticCodes.CondensedStaffChangeConflict);
         Assert.Equal(DiagnosticSeverity.Warning, warning.Severity);
         Assert.Contains("different keys ('a': 2 flats, 'b': 3 flats)", warning.Message);
         int keyAt = source.IndexOf("key ees major", System.StringComparison.Ordinal);
         Assert.InRange(warning.Span.Start, keyAt, keyAt + "key ees major".Length);
         // Two separate staves apply both, and nothing warns.
-        Assert.DoesNotContain(Diagnose(source + "score main { staff a staff b }\n"),
+        Assert.DoesNotContain(Diagnose(source + "score { staff a staff b }\n"),
             d => d.Code == DiagnosticCodes.CondensedStaffChangeConflict);
     }
 
@@ -166,7 +166,7 @@ public class CondensedStaffTests
         var staff = CondensedStaffOf(source);
         var change = Assert.Single(staff.Voices.SelectMany(v => v.Measures[1].Items.OfType<LilySharp.Core.Svg.Model.KeySignatureChangeItem>()));
         Assert.Equal(-3, change.NewKey.Sharps);
-        var warnings = Diagnose(source + "score main { condensedStaff { a b } }\n")
+        var warnings = Diagnose(source + "score { condensedStaff { a b } }\n")
             .Where(d => d.Code == DiagnosticCodes.CondensedStaffChangeConflict).ToList();
         int keyAt = source.IndexOf("key f major", System.StringComparison.Ordinal);
         Assert.Contains(warnings, w => w.Message.Contains("'key' of part 'b' is not applied")
@@ -174,7 +174,7 @@ public class CondensedStaffTests
         // …and the same keys in both parts: one change, nothing said.
         var agreed = ChangesInBothParts("key ees major", firstPartKey: "key ees major");
         Assert.Single(CondensedStaffOf(agreed).Voices.SelectMany(v => v.Measures[1].Items.OfType<LilySharp.Core.Svg.Model.KeySignatureChangeItem>()));
-        Assert.DoesNotContain(Diagnose(agreed + "score main { condensedStaff { a b } }\n"),
+        Assert.DoesNotContain(Diagnose(agreed + "score { condensedStaff { a b } }\n"),
             d => d.Code == DiagnosticCodes.CondensedStaffChangeConflict);
     }
 
@@ -237,8 +237,8 @@ public class CondensedStaffTests
               hn2 { e4 f g a | }
               hn3 { c4 c c c | }
             }
-            form main { ~A }
-            score main { condensedStaff { hn1 hn2 hn3 } }
+            form { ~A }
+            score { condensedStaff { hn1 hn2 hn3 } }
             """ + "\n";
 
         Assert.Empty(Diagnose(src).Where(d => d.Severity == DiagnosticSeverity.Error));
@@ -260,8 +260,8 @@ public class CondensedStaffTests
               fl2 { e4 f g a | }
               bass { c2 g | }
             }
-            form main { ~A }
-            score main { condensedStaff { fl1 fl2 }  staff bass }
+            form { ~A }
+            score { condensedStaff { fl1 fl2 }  staff bass }
             """ + "\n";
 
         Assert.Empty(Diagnose(src).Where(d => d.Severity == DiagnosticSeverity.Error));
@@ -339,8 +339,8 @@ public class CondensedStaffTests
           fl1 { r4 r2 r8 r8 | r1 | }
           fl2 { r8 r8 r2 r4 | r1 | }
         }
-        form main { ~A }
-        """ + "\nscore main { " + render + " }\n";
+        form { ~A }
+        """ + "\nscore { " + render + " }\n";
 
     /// <summary>The same rests as one part holding a two-voice span.</summary>
     private static readonly string RestTwoVoiceControl = Defaults + """
@@ -348,8 +348,8 @@ public class CondensedStaffTests
         section A {
           fl { voice { r4 r2 r8 r8 | r1 | } { r8 r8 r2 r4 | r1 | } }
         }
-        form main { ~A }
-        score main { staff fl }
+        form { ~A }
+        score { staff fl }
         """ + "\n";
 
     [Fact]

@@ -37,7 +37,7 @@ public sealed class FormJumpTargetValidatorTests
         "section B { m { d4 d d d | } }\n" +
         "section C { m { e4 e e e | } }\n";
 
-    private static string Source(string form) => Head + "form main { " + form + " }\nscore { staff m }\n";
+    private static string Source(string form) => Head + "form { " + form + " }\nscore { staff m }\n";
 
     private static IReadOnlyList<Diagnostic> Faults(string form)
     {

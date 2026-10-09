@@ -191,8 +191,8 @@ public class MusicChordCompletionTests
                 key {{key}}
                 part m { clef treble }
                 section A { m { {{item.InsertText}}4 {{item.InsertText}}2. | } }
-                form main { A }
-                score main { staff m }
+                form { A }
+                score { staff m }
                 """;
             var tree = SyntaxTree.Parse(src);
             Assert.False(tree.HasErrors,

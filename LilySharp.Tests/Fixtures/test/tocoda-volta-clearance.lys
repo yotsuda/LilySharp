@@ -29,6 +29,6 @@ section E {
   m { e1 | }
 }
 
-form main { segno A |: B [1. C ] :| [2. D ] to coda || E ds al coda coda A }
+form { segno A |: B [1. C ] :| [2. D ] to coda || E ds al coda coda A }
 
-score main "tocoda-volta-clearance" { staff m }
+score "tocoda-volta-clearance" { staff m }

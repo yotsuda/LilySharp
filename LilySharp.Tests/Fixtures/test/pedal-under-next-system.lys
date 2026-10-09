@@ -20,9 +20,9 @@ section B {
        a,4@sustain <c e a> <c e a> | <a, e a c' e'>2.@!sustain | }
 }
 
-form main { A B }
+form { A B }
 
-score main "pedal-under-next-system" {
+score "pedal-under-next-system" {
   grandStaff {
     staff rh
     staff lh

@@ -35,8 +35,8 @@ public class ChordPartSectionsTests
         part melody { clef treble }
         section A { melody { c4 c g' g | a a g2 | } chords harmony { C | F | } }
         section B { melody { g'4 g f f | } chords harmony { C | } }
-        form main { A B }
-        score main "s" { chords harmony  staff melody }
+        form { A B }
+        score "s" { chords harmony  staff melody }
         """;
 
     private const string GroupedByPart = """
@@ -50,8 +50,8 @@ public class ChordPartSectionsTests
           section A { C | F | }
           section B { C | }
         }
-        form main { A B }
-        score main "s" { chords harmony  staff melody }
+        form { A B }
+        score "s" { chords harmony  staff melody }
         """;
 
     [Fact]
@@ -80,7 +80,7 @@ public class ChordPartSectionsTests
     [Fact]
     public void ChordTrack_RepeatsUnderAReprise()
     {
-        // form main { A B A "A2" }: A's chords must appear again at the A2 reprise,
+        // form { A B A "A2" }: A's chords must appear again at the A2 reprise,
         // not only at A's first occurrence.
         var tree = SyntaxTree.Parse("""
             time 4/4
@@ -90,8 +90,8 @@ public class ChordPartSectionsTests
               section B { g'4 g f f | }
             }
             chords harmony { section A { C | F | } section B { G7 | } }
-            form main { A B A "A2" }
-            score main { chords harmony  staff melody }
+            form { A B A "A2" }
+            score { chords harmony  staff melody }
             """);
         var score = new MeasureCollector().Collect(tree, "melody", null, "harmony");
         var byMeasure = score.ChordNames
@@ -118,8 +118,8 @@ public class ChordPartSectionsTests
               section A { Dm7 | G7 }
               section B { Cmaj7 | }
             }
-            form main { A | B | }
-            score main { chords prog  staff melody }
+            form { A | B | }
+            score { chords prog  staff melody }
             """);
         var score = new MeasureCollector().Collect(tree, "melody", null, "prog");
         var byMeasure = score.ChordNames
@@ -139,8 +139,8 @@ public class ChordPartSectionsTests
         var tree = SyntaxTree.Parse("""
             section A { melody { g2 g | } chords prog { Dm7 | G7 } }
             section B { melody { c2 c | } chords prog { Cmaj7 | } }
-            form main { A | B | }
-            score main { chords prog  staff melody }
+            form { A | B | }
+            score { chords prog  staff melody }
             """);
         var score = new MeasureCollector().Collect(tree, "melody", null, "prog");
         var byMeasure = score.ChordNames

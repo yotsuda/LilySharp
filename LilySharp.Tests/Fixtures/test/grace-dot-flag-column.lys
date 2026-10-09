@@ -47,6 +47,6 @@ section B {
   }
 }
 
-form main { ~A ~B }
+form { ~A ~B }
 
-score main { staff ~v }
+score { staff ~v }

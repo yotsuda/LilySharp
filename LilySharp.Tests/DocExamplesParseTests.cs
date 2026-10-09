@@ -194,8 +194,8 @@ public class DocExamplesParseTests
             ? (defaults.Length > 0 ? defaults + "\n" : "")
                 + "part melody\n"
                 + "section A { melody " + music + " }\n"
-                + "form main { ~A }\n"
-                + "score main { staff melody }\n"
+                + "form { ~A }\n"
+                + "score { staff melody }\n"
             : MusicSource.Wrap(music, defaults);
     }
 

@@ -134,16 +134,28 @@ internal static class FontPlanReader
     internal static TextFontPlan ReadReference(SyntaxNode root, FontDeclarationSyntax reference,
         TextFontPlan fallback)
     {
-        if (!TryResolve(root, reference, out var declaration, out _))
+        // A score's bare `fonts { … }` (2026-10-09): the file's unnamed default with the
+        // score's entries laid over it, read as one merged block like a named reference is.
+        var declaration = reference.NameToken == null && reference.IsBlock
+            ? FileDefault(root)
+            : TryResolve(root, reference, out var named, out _) ? named : null;
+        if (declaration == null && !(reference.NameToken == null && reference.IsBlock))
             return fallback;
         var builder = new TextFontPlan.Builder();
-        builder.Embed(declaration!.Embedded || reference.Embedded);
+        builder.Embed((declaration?.Embedded ?? false) || reference.Embedded);
         var discard = new List<Problem>();
-        ReadEntriesInto(builder, declaration, discard);
+        if (declaration != null)
+            ReadEntriesInto(builder, declaration, discard);
         if (reference.IsBlock)
             ReadEntriesInto(builder, reference, discard);
         return builder.Build();
     }
+
+    /// <summary>The file's unnamed top-level fonts block (the last, as a repeated global
+    /// setting reads), or null.</summary>
+    internal static FontDeclarationSyntax? FileDefault(SyntaxNode root) =>
+        TopLevelNodes.OfRoot<FontDeclarationSyntax>(root)
+            .LastOrDefault(f => f.NameToken == null && f.IsBlock);
 
     /// <summary>Reads one block's entries into <paramref name="builder"/> — the loop
     /// <see cref="Read"/> and <see cref="ReadReference"/> share, so a directive and a

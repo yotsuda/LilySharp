@@ -39,7 +39,7 @@ public class OttavaMidBarTests
     private static string Svg(string music)
         => SvgGenerator.Generate(SyntaxTree.Parse(
                 "octave absolute\npart m { clef bass octave 3 }\nsection A { m { " + music
-                + " } }\nform main { ~A }\nscore main { staff m }\n"),
+                + " } }\nform { ~A }\nscore { staff m }\n"),
             new SvgRenderOptions { EmbedFont = false });
 
     private static (double X, double Y)[] Heads(string svg)
@@ -64,7 +64,7 @@ public class OttavaMidBarTests
         var tree = SyntaxTree.Parse(
             "octave absolute\nkey e major\npart m { clef treble }\npart l { clef bass }\n"
             + "section A {\n  m { e''8@ottava( dis'' cis'' b' a' gis' fis' e'@!ottava) | }\n"
-            + "  l { e,1 | }\n}\nform main { A }\nscore main { " + staves + " }\n");
+            + "  l { e,1 | }\n}\nform { A }\nscore { " + staves + " }\n");
         Assert.False(tree.HasErrors);
         var score = SvgGenerator.CollectScore(tree,
             LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree).First());

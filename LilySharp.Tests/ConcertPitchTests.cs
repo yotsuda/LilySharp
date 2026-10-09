@@ -51,8 +51,8 @@ public sealed class ConcertPitchTests
         part x { {{header}} }
         part ctl
         section A { x { c'1 | } ctl { c'1 | } }
-        form main { A }
-        score main{{scoreOpts}} { staff x staff ctl }
+        form { A }
+        score{{scoreOpts}} { staff x staff ctl }
         """;
 
     private static SyntaxTree Parse(string source)
@@ -165,7 +165,7 @@ public sealed class ConcertPitchTests
         var tree = Parse(
             $"time 4/4\nkey c major\noctave absolute\n{top}\n"
             + $"part x {{ {header} section A {{ c'1 | }} }}\n"
-            + $"form main {{ A }}\nscore main{scoreOpts} {{ staff x }}");
+            + $"form {{ A }}\nscore{scoreOpts} {{ staff x }}");
         var midi = new MidiExporter().Export(tree);
         return midi.Tracks[1].Notes[0].Pitch;
     }
@@ -346,8 +346,8 @@ public sealed class ConcertPitchTests
             part sax { instrument alto-sax pitch written }
             part cl { instrument clarinet }
             section A { sax { c'1 | } cl { c'1 | } }
-            form main { A }
-            score main { staff sax staff cl }
+            form { A }
+            score { staff sax staff cl }
             """);
 
         var (sax, saxSharps, cl, clSharps) = Page(tree.Text);
@@ -449,7 +449,7 @@ public sealed class ConcertPitchTests
         var session = new IncrementalCompiler(tree, Opt);
         session.Render();
 
-        int at = tree.Text.IndexOf("score main", System.StringComparison.Ordinal) + "score main".Length;
+        int at = tree.Text.IndexOf("score", System.StringComparison.Ordinal) + "score".Length;
         tree = tree.WithChange(new TextChange(new TextSpan(at, 0), " pitch concert"));
 
         Assert.Equal(Full(tree.Text), session.RenderIncremental(tree).Replace("\r\n", "\n"));

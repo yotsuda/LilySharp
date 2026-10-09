@@ -14,8 +14,8 @@ section Main {
     g8 a b c d e fis g a b |
   }
 }
-form main { Main }
-score main "mixed-meters" { staff m }
+form { Main }
+score "mixed-meters" { staff m }
 
 // ---------------------------------------------------------------------------
 // ⚠️ THIS NOTE IS AT THE FILE END ON PURPOSE. A comment ABOVE the music shifts every

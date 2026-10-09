@@ -215,8 +215,8 @@ section Main {
     { r2 g | }
   }
 }
-form main { ~Main }
-score main { staff ~v }
+form { ~Main }
+score { staff ~v }
 ```
 
 The pitch is only a height: it never sounds, never prints an accidental, and never
@@ -529,12 +529,12 @@ part vc {
   section D { d4) e f g~ || }
   section E { g'1 | }   // the frame reset at E: g' is the tied G
 }
-form main { C D E }
-score main { staff vc }
+form { C D E }
+score { staff vc }
 ```
 
 The carry follows the form, play by play and part by part, so the same section can be followed
-by different sections in different places (`form main { C D C E }` carries C's slur into D the
+by different sections in different places (`form { C D C E }` carries C's slur into D the
 first time and into E the second). Every form a score plays is checked. A span that breaks the
 rule is not drawn (a hairpin is cut at the end of its own section) and is reported (**LYS4023**):
 
@@ -558,8 +558,8 @@ part vn {
   section A { c''1 | e1~ || }
   section B { e''1 | }
 }
-form main { I |: A [1. B] :| [2. B] }
-score main { staff vn }
+form { I |: A [1. B] :| [2. B] }
+score { staff vn }
 ```
 
 Where the section played next is also the one printed next, the tie is an ordinary arc (I into
@@ -600,8 +600,8 @@ part m { clef treble }
 section A { m { c4 d e f | time 3/4 key ees major c2. | key ees major c2. | } }  // 2nd key: nothing
 section B { m { time 3/4 key ees major c2. | } }   // nothing drawn at B
 section C { m { key! ees major c2. | } }           // E♭ major drawn again, and 4/4 (the reset)
-form main { A B C }
-score main { staff m }
+form { A B C }
+score { staff m }
 ```
 
 The key compares its tonic too: `key g major` after `key e minor` is drawn. The LilyPond twin
@@ -875,7 +875,7 @@ part of it with `fonts NAME { lyrics "…" }`:
 ```
 fonts house { serif "Georgia"  lyrics "Charis SIL" }
 
-score main  { fonts house  staff melody }
+score  { fonts house  staff melody }
 score parts { fonts house { lyrics "Noto Serif CJK JP" }  staff melody }
 ```
 
@@ -1100,8 +1100,8 @@ part m { clef treble }
 section A { m { c4 d e f | } }
 section B { m { g2 g | } }
 section C { m { a2 a | } }
-form main { |: A [1. ~B] :| [2. ~C] }
-score main { staff m }
+form { |: A [1. ~B] :| [2. ~C] }
+score { staff m }
 ```
 
 An ending NAMES a section — the music lives in the section, and the bracket goes round
@@ -1148,7 +1148,7 @@ ending), `|: :|` and an empty run after a `:|:` are errors (**LYS1041**). Withou
 default, or `|: A :|*N` times).
 
 An ending needs a repeat to be an ending *of*. An ending that no repeat opens —
-`form main { A [1. B] }` — draws no bracket and no number: it engraves as the plain
+`form { A [1. B] }` — draws no bracket and no number: it engraves as the plain
 reference `B`, played once, and **LYS6008** warns that the `1.` prints nothing.
 This is LilyPond's behaviour for the same shape. Note that it is the *tree* that
 decides, not the reading order: in `|: A [1. D] :| [2. O]` the ending written after the
@@ -1354,7 +1354,7 @@ both correct. Only a section holding *cells* has nowhere to put a loose one.
 ### Structure (Playback Order)
 
 ```
-form main { Intro Main Main Coda }
+form { Intro Main Main Coda }
 ```
 
 A reused section prints the same section mark each time. Give an
@@ -1362,7 +1362,7 @@ occurrence its own display label with a string after the name; an empty
 string suppresses the mark (like `~Name`):
 
 ```
-form main { Intro Main Main "Main (reprise)" Coda }
+form { Intro Main Main "Main (reprise)" Coda }
 ```
 
 **Hiding a label.** A section prints its name as a rehearsal label, and a `~` on the
@@ -1370,7 +1370,7 @@ form reference hides it for that play. A section that only carries STRUCTURE —
 to hold a repeat edge, say — is referenced with the tilde:
 
 ```
-form main { A |: B [1. ~B1] :| [2. ~B2] C }
+form { A |: B [1. ~B1] :| [2. ~B2] C }
 ```
 
 The tilde belongs to the reference, never to the declaration: `section ~B1 { … }` is an
@@ -1383,13 +1383,13 @@ frame that play opens in — one octave per mark, the same spelling a phrase ref
 carries:
 
 ```
-form main { Intro Main ~Main' Coda }        // the reprise sounds an octave higher
+form { Intro Main ~Main' Coda }        // the reprise sounds an octave higher
 ```
 
 An ending takes them too:
 
 ```
-form main { |: A [1. B' ] :| [2. C ] }
+form { |: A [1. B' ] :| [2. C ] }
 ```
 
 The shift belongs to the occurrence, never to the declaration: `~Main ~Main'` is one
@@ -1402,7 +1402,7 @@ Identifiers (sections, parts, phrases) may use any Unicode letters:
 
 ```
 section イントロ { メロディ { 動機 } }
-form main { イントロ イントロ "イントロ(再現)" }
+form { イントロ イントロ "イントロ(再現)" }
 ```
 
 ### Navigation marks
@@ -1413,7 +1413,7 @@ target); the *text* directives `fine`, `to coda`, `dc`/`ds` (optionally
 `dc al fine`, `ds al coda`, …) engrave at the end of the section just played:
 
 ```
-form main {
+form {
   A segno
   B  to coda
   C  ds al coda
@@ -1435,10 +1435,14 @@ and the LilyPond twin writes `\jump`, whose MIDI does not follow it.
 ## Render Block
 
 Controls output layout. Each `staff partName` names the part to draw (a bare
-name, no braces); the clef comes from the part declaration, not the render block:
+name, no braces); the clef comes from the part declaration, not the render block.
+
+A score's name is optional. The unnamed `score { … }` writes to the input file's name
+(`song.lys` → `song.svg`); `score another { … }` writes `song-another.svg`; a quoted
+`"basename"` names the file outright:
 
 ```
-score main "out" {
+score "out" {
   grandStaff {
     staff rightHand
     staff leftHand
@@ -1449,7 +1453,7 @@ score main "out" {
 A single-staff score names one staff directly:
 
 ```
-score main "out" {
+score "out" {
   staff melody
 }
 ```
@@ -1508,40 +1512,46 @@ nothing but bare names has nothing to engrave, which is the empty-body error.
 
 ### This score's own page and faces
 
-A score may also reference a **named** `fonts` / `paper` block (declared at the top
-level — see those sections) and override part of it in place:
+A score may write its own `fonts` / `paper` / `layout` block, which overrides the file's
+unnamed default for that score alone — or reference a **named** block (declared at the
+top level — see those sections) and override part of it in place:
 
 ```
+fonts { music "Bravura" }                           // the file's default
 paper wide  { paperWidth 250mm }
 fonts house { serif "Georgia"  lyrics "Charis SIL" }
 
-score main  { paper wide  fonts house  staff melody }        // the conductor page
-score parts { paper wide { topMargin 12mm }  staff melody }  // same paper, wider top
+score       { paper wide  fonts house  staff melody }       // the conductor page
+score parts { paper wide { topMargin 12mm }  staff melody } // same paper, wider top
+score sketch { fonts { music "Petaluma" }  staff melody }   // the default, in Petaluma
 ```
 
-The reference replaces the file's unnamed default for that score alone; the override
-block reads as if its entries were written at the end of the named block.
+A bare block reads as if its entries were written at the end of the file's unnamed
+default. A reference replaces the default for that score alone; its override block reads
+as if its entries were written at the end of the named block.
 
-A score references its own display switches the same way — `layout chart` names a
-top-level `layout chart { markTempo beside  barNumbers every 4 }` block (see *Display
-switches* under Music Marks), replacing the file's unnamed `layout { }` default for that
-score alone.
+The display switches work the same way — `layout { barNumbers every 4 }` in a score, or
+`layout chart` naming a top-level `layout chart { markTempo beside  barNumbers every 4 }`
+block (see *Display switches* under Music Marks).
 
-### Multiple forms (excerpts)
+### Which form a score plays (excerpts)
 
-Declare several named forms and bind each `score` to one by name — for example a
-full arrangement plus a practice excerpt that plays only the intro. The reserved
-form `main` writes to the input file's name; any other form name becomes the
-output file name (unless a `"basename"` overrides it). MIDI plays the `main` form
-(or the first declared).
+The unnamed `form { … }` is the file's default: every score that picks no form plays
+it (and with no form at all the sections play in the order they are declared). A score
+picks another with a `form` item — a named top-level form, or its own written in place:
 
 ```
-form main     { Intro Verse Outro }
+form          { Intro Verse Outro }   // the default
 form practice { Intro }
 
-score main     "full" { staff melody }  // → full.svg
-score practice        { staff melody }  // → practice.svg
+score              { staff melody }   // → song.svg, plays the default
+score practice     { form practice  staff melody }        // → song-practice.svg
+score reprise      { form { Verse Verse Outro }  staff melody }  // its own form
 ```
+
+`form A` is always a **reference** to a form named `A` — to play the section `A` alone,
+write `form { A }`. MIDI plays the form of the score it is made from: the preview plays
+the score it shows, and `lysc midi` writes one file per score (`--score NAME` picks one).
 
 ## Override/Revert
 
@@ -1585,8 +1595,8 @@ section Main {
     to you |
   }
 }
-form main { Main }
-score main { staff melody  lyrics words }
+form { Main }
+score { staff melody  lyrics words }
 ```
 
 Barlines in a lyrics block follow the music rule: every written `|` closes one
@@ -1609,8 +1619,8 @@ section Main {
     la _ lu li |     // la on c, d held, lu on e, li on f
   }
 }
-form main { Main }
-score main { staff melody  lyrics words }
+form { Main }
+score { staff melody  lyrics words }
 ```
 
 **Verses** — different words for each pass of a section — are written as a verse header,
@@ -1631,8 +1641,8 @@ section B {
     [2. down down down down |]
   }
 }
-form main { A |: B :| }
-score main { staff melody  lyrics words }
+form { A |: B :| }
+score { staff melody  lyrics words }
 ```
 
 ## Music Marks
@@ -1662,10 +1672,10 @@ stands at the section boundary it is written at — a text (`fine`, `dc`, `ds`, 
 `SegnoMark`/`CodaMark`. A text after the last section is drawn at the final bar.
 
 ```
-form main { segno A B to coda C ds al coda coda D fine }
+form { segno A B to coda C ds al coda coda D fine }
 ```
 
-The words are how a `form` names the route: `form main { A segno B to coda C ds al
+The words are how a `form` names the route: `form { A segno B to coda C ds al
 coda coda D }`. A jump text in a form whose landmark is missing warns (LYS4025) and says what
 the MIDI does instead: a `ds` with no `segno` before it is not followed, an `al fine` with no
 `fine` on the replayed stretch replays to the jump and ends there, an `al coda` with no
@@ -1698,7 +1708,7 @@ layout chart {
   minorChords lower        // a, a7 — a lowercase root, no m
   chordDiagrams none       // no chord diagrams at all, even for written shapes
 }
-score main  { staff melody }                 // the file's default
+score  { staff melody }                 // the file's default
 score parts { layout chart  staff melody }   // this score's own
 ```
 
@@ -2054,11 +2064,11 @@ section A {
   melody { c'2@chord(Cm7) c'2@chord(Cm7 x3x546) | c'1 | }
   chords prog { C(x32010) F(133211 2010) | G(guitar 320003 ukulele 0232) Am | }
 }
-form main { A }
-score main { chords prog  staff melody }                     // guitar diagrams: C F G, x3x546
-score main "uke" { layout uke  chords prog  staff melody }   // ukulele diagrams: F G
-score main "piano" { layout piano  chords prog  staff melody }  // none
-score main "book" { layout book  chords prog  staff melody }    // every chord: C F G Am, x35343 x3x546
+form { A }
+score { chords prog  staff melody }                     // guitar diagrams: C F G, x3x546
+score "uke" { layout uke  chords prog  staff melody }   // ukulele diagrams: F G
+score "piano" { layout piano  chords prog  staff melody }  // none
+score "book" { layout book  chords prog  staff melody }    // every chord: C F G Am, x35343 x3x546
 ```
 
 **Listed chords: a shape table.** Between "only what is written" and "everything", the layout

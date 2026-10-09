@@ -14,5 +14,5 @@ section A {
     c4@sustain e g e | c1@!sustain |
   }
 }
-form main { ~A }
-score main { grandStaff { staff rh  staff lh } }
+form { ~A }
+score { grandStaff { staff rh  staff lh } }

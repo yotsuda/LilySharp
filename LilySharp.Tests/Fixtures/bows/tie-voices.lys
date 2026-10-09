@@ -3,5 +3,5 @@ time 4/4
 part m {
   section A { voice { e'4~ e' c'~ c' } { c4~ c a,~ a, } | voice { g'2~ g' } { e2~ e } | voice { b2~ b } { g2~ g } | voice { <e' g'>2~ <e' g'> } { <c e>2~ <c e> } | }
 }
-form main { A }
-score main { staff m }
+form { A }
+score { staff m }

@@ -55,8 +55,8 @@ public sealed class RowsOnlyMeterChangeTests
           melody { e'1. | f'1. | }
           chords prog { Am F | G C | }
         }
-        form main { {{form}} }
-        score main { {{render}} }
+        form { {{form}} }
+        score { {{render}} }
         """;
 
     private static bool IsMeterGlyph(char g) =>
@@ -184,8 +184,8 @@ public sealed class RowsOnlyMeterChangeTests
               melody { g'1 | c'1 | }
               chords prog { G | C | }
             }
-            form main { A Free B }
-            score main { {{render}} }
+            form { A Free B }
+            score { {{render}} }
             """;
         var staffless = RenderedGeometry.Render(Book3("chords prog"));
         var staffful = RenderedGeometry.Render(Book3("chords prog staff melody"));
@@ -226,8 +226,8 @@ public sealed class RowsOnlyMeterChangeTests
                   melody { c'1 | d'1 | }
                   chords prog { C | G | }
                 }
-                form main { Intro A }
-                score main { {{render}} }
+                form { Intro A }
+                score { {{render}} }
                 """;
             var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(source);
             var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));

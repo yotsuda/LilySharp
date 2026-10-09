@@ -3,5 +3,5 @@ time 4/4
 part m {
   section A { c'2.~ c'4 | c'8~ c'8 d'4~ d'8 e'8~ e'8 r8 | e4.~ e8 f8[ g~] g[ a] | c'1~ | c'1 | d'16~ d'16 r8 e'4.~ e'8 f'4 | a2.~ a4 | g8~ g~ g4~ g2 | }
 }
-form main { A }
-score main { staff m }
+form { A }
+score { staff m }

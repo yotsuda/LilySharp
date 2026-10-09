@@ -139,7 +139,7 @@ internal static class FormWalk
     /// <see cref="RepeatEnd"/>; that is LYS4017's case and the page decides it.
     /// </summary>
     /// <remarks>
-    /// MEASURED 2026-09-10 (scratch/ベースタブLy/pageBreak.lys, <c>form main { A :|: B :| }</c>):
+    /// MEASURED 2026-09-10 (scratch/ベースタブLy/pageBreak.lys, <c>form { A :|: B :| }</c>):
     /// the token fell into <see cref="Other"/>, so MIDI ignored it and rewound at the closing
     /// <c>:|</c> (A B A B), MusicXML wrote one backward repeat on the last bar (the same
     /// reading), while the page drew <c>:|</c> after A, <c>|:</c> before B and <c>:|</c> after

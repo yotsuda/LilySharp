@@ -131,7 +131,7 @@ public class SectionNameCompletionTests
         // offers B — the section the piece expects but that has not been declared.
         var text =
             "section A { melody { c d } }\n" +
-            "form main { A B A }\n" +
+            "form { A B A }\n" +
             "section ";
         Assert.Equal(new[] { "B" }, Missing(text));
     }
@@ -153,7 +153,7 @@ public class SectionNameCompletionTests
         var text =
             "section A { melody { c d } }\n" +
             "section B { melody { e f } }\n" +
-            "form main { A B }\n" +
+            "form { A B }\n" +
             "section ";
         Assert.Empty(Missing(text));
     }
@@ -375,8 +375,8 @@ public class SectionNameCompletionTests
                   melody { {{body}} }
                   bass { {{body}} }
                 }
-                form main { A }
-                score main { staff melody  staff bass }
+                form { A }
+                score { staff melody  staff bass }
                 """);
             Assert.False(tree.HasErrors,
                 $"'{item.Label}' → {head} does not parse: " + string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));

@@ -289,9 +289,9 @@ public class FontBlockCompletionTests
           chords prog { C | G | }
         }
 
-        form main { A }
+        form { A }
 
-        score main "out" {
+        score "out" {
           title "A Title"
           chords prog
           staff m

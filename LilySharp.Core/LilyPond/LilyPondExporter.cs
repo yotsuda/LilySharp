@@ -493,8 +493,8 @@ public sealed partial class LilyPondExporter
     /// form. Null for the default: the file's first <c>score</c>.
     /// </summary>
     /// <remarks>
-    /// ⚠️ <see cref="Form"/> alone cannot say which score: a book of <c>score main</c>,
-    /// <c>score main "both" { staff … tab … }</c> and <c>score main "tab" { tab … }</c>
+    /// ⚠️ <see cref="Form"/> alone cannot say which score: a book of <c>score</c>,
+    /// <c>score "both" { staff … tab … }</c> and <c>score "tab" { tab … }</c>
     /// names ONE form three times. Until 2026-09-25 the twin read the file's first
     /// <c>score</c> whatever it was asked for, so <c>lysc ly --all</c> wrote that book's
     /// staff-only score three times over — the tab score's twin had no TabStaff (found

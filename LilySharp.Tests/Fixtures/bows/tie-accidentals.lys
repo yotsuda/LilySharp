@@ -3,5 +3,5 @@ time 4/4
 part m {
   section A { fis2~ fis | bes~ bes | cis'4~ cis' dis'~ dis' | fis1~ | fis1 | <cis e>2~ <cis e> | <f aes c'>2~ <f aes c'> | }
 }
-form main { A }
-score main { staff m }
+form { A }
+score { staff m }

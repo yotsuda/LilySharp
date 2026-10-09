@@ -89,7 +89,7 @@ public class FontDirectiveTests
         // LSP's jump targets and the columns of the diagnostics after it (RULES §5.1 —
         // "report" and "keep" are different repairs, and the reported one is the one left
         // unchecked). Both halves: the total width, and each node's own span.
-        const string src = "fonts \"meiryo\" embedded\nform main { A }\n";
+        const string src = "fonts \"meiryo\" embedded\nform { A }\n";
         var root = SyntaxTree.Parse(src).GetRoot();
 
         Assert.Equal(src, root.ToFullString());
@@ -143,8 +143,8 @@ public class FontDirectiveTests
           melody { c'4 d e f | }
           lyrics words { la la la la | }
         }
-        form main { Main }
-        score main { chords prog  staff melody  lyrics words }
+        form { Main }
+        score { chords prog  staff melody  lyrics words }
         """;
 
     // ---- the resolution rule ------------------------------------------------------
@@ -268,8 +268,8 @@ public class FontDirectiveTests
         title "T"
         part g { clef treble_8 tuning guitar }
         section A { c'4\6 d e f | }
-        score main { staff g  tab g }
-        form main { A }
+        score { staff g  tab g }
+        form { A }
         """;
 
     [Fact]
@@ -435,8 +435,8 @@ public class FontDirectiveTests
             part header { clef bass }
             phrase chordName { c'4 d e f | }
             section A { serif { chordName } header { c1 | } }
-            score main { staff serif  staff header }
-            form main { A }
+            score { staff serif  staff header }
+            form { A }
             """);
         Assert.Empty(d.Where(x => x.Severity == DiagnosticSeverity.Error));
     }

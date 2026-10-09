@@ -50,14 +50,14 @@ public class NamedBlockReferenceTests
         section Main {
           melody { c'4 d e f | g a b c' | }
         }
-        form main { Main }
+        form { Main }
         """;
 
     private static MultiStaffScore Collect(string source, string scoreName)
     {
         var tree = SyntaxTree.Parse(source);
         var render = tree.GetRoot().DescendantNodes().OfType<RenderDeclarationSyntax>()
-            .First(r => r.FormNameText == scoreName || scoreName == "");
+            .First(r => RenderSpecParser.SelectorNameOf(r) == scoreName || scoreName == "");
         return SvgGenerator.CollectScore(tree, RenderSpecParser.Parse(render));
     }
 
@@ -79,7 +79,7 @@ public class NamedBlockReferenceTests
         // this test pins is REPLACE (resolved = defaults + named block + override).
         string src = "paper { paperWidth 100  topMargin 20 }\n"
             + "paper wide { paperWidth 250mm }\n" + Music
-            + "score main { paper wide  staff melody }\n"
+            + "score { paper wide  staff melody }\n"
             + "score parts { staff melody }\n";
 
         var main = Collect(src, "main");
@@ -96,7 +96,7 @@ public class NamedBlockReferenceTests
     {
         string src = "paper wide { paperWidth 250mm  systemSystemSpacing { basicDistance 20 } }\n"
             + Music
-            + "score main { paper wide { topMargin 12mm  systemSystemSpacing { padding 2 } }  staff melody }\n";
+            + "score { paper wide { topMargin 12mm  systemSystemSpacing { padding 2 } }  staff melody }\n";
 
         var p = Collect(src, "main").Paper;
         Assert.Equal(142.26378, p.PageWidth);                            // from the named block
@@ -111,7 +111,7 @@ public class NamedBlockReferenceTests
     {
         string src = "fonts house { serif \"Georgia\"  stanza \"Charis SIL\" }\n"
             + Music
-            + "score main { fonts house { stanza \"Noto Serif CJK JP\" }  staff melody }\n";
+            + "score { fonts house { stanza \"Noto Serif CJK JP\" }  staff melody }\n";
 
         var fonts = Collect(src, "main").Fonts;
         var expected = new TextFontPlan.Builder()
@@ -135,7 +135,7 @@ public class NamedBlockReferenceTests
         // override a role, write the same or a narrower key.
         string src = "fonts house { stanza \"Charis SIL\" }\n"
             + Music
-            + "score main { fonts house { lyrics \"Verdana\" }  staff melody }\n";
+            + "score { fonts house { lyrics \"Verdana\" }  staff melody }\n";
 
         var resolved = Collect(src, "main").Fonts.Resolve(TextRole.Stanza);
         Assert.Equal(["Charis SIL"], resolved.Names);
@@ -148,7 +148,7 @@ public class NamedBlockReferenceTests
     public void EmbeddedOnEitherSide_Embeds()
     {
         string src = "fonts house { serif \"Georgia\"  sans \"Georgia\" }\n" + Music
-            + "score main { fonts house { embedded }  staff melody }\n";
+            + "score { fonts house { embedded }  staff melody }\n";
         Assert.True(Collect(src, "main").Fonts.Embed);
     }
 
@@ -156,7 +156,7 @@ public class NamedBlockReferenceTests
     public void AnUnknownName_BindsNothing_AndKeepsTheDefault()
     {
         string src = "paper { paperWidth 100 }\n" + Music
-            + "score main { paper wide  staff melody }\n";
+            + "score { paper wide  staff melody }\n";
         // Refused all the way through: the error names the missing declaration…
         Assert.Contains(Check(src), d => d.Code == DiagnosticCodes.UnknownPaperBlockName);
         // …and the score keeps the file default rather than half a guess.
@@ -173,7 +173,7 @@ public class NamedBlockReferenceTests
         // A duplicate declaration name is an error; an unreferenced declaration warns.
         string src = "fonts a { serif \"Georgia\" }\nfonts a { serif \"Verdana\" }\n"
             + "paper b { paperWidth 100 }\n" + Music
-            + "score main { fonts a  staff melody }\n";
+            + "score { fonts a  staff melody }\n";
         var d = Check(src);
         Assert.Contains(d, x => x.Code == DiagnosticCodes.DuplicateFontsBlockName);
         Assert.Contains(d, x => x.Code == DiagnosticCodes.UnreferencedNamedPaper
@@ -187,7 +187,7 @@ public class NamedBlockReferenceTests
     {
         // Named declarations coexist; the singleton rule is the UNNAMED default's.
         string src = "fonts a { serif \"Georgia\" }\nfonts b { serif \"Verdana\" }\n" + Music
-            + "score main { fonts a  staff melody }\nscore parts { fonts b  staff melody }\n";
+            + "score { fonts a  staff melody }\nscore parts { fonts b  staff melody }\n";
         Assert.DoesNotContain(Check(src),
             d => d.Code == DiagnosticCodes.DuplicateGlobalSetting);
     }
@@ -196,7 +196,7 @@ public class NamedBlockReferenceTests
     public void TwoReferencesInOneScore_WarnAndTheLastWins()
     {
         string src = "paper a { paperWidth 100 }\npaper b { paperWidth 90 }\n" + Music
-            + "score main { paper a  paper b  staff melody }\n";
+            + "score { paper a  paper b  staff melody }\n";
         Assert.Contains(Check(src), d => d.Code == DiagnosticCodes.DuplicatePaperReference
                                       && d.Severity == DiagnosticSeverity.Warning);
         Assert.Equal(90, Collect(src, "main").Paper.PageWidth);
@@ -207,20 +207,31 @@ public class NamedBlockReferenceTests
     [InlineData("paper wide\n", "LYS9010")]
     public void ANamedDeclarationWithoutABlock_IsRefused(string decl, string code)
     {
-        Assert.Contains(SyntaxTree.Parse(decl + Music + "score main { staff melody }\n").Diagnostics,
+        Assert.Contains(SyntaxTree.Parse(decl + Music + "score { staff melody }\n").Diagnostics,
             d => d.Code == code);
     }
 
-    [Theory]
-    [InlineData("fonts { serif \"Georgia\" }", "LYS8013")]  // a score's item is a reference
-    [InlineData("paper { paperWidth 100 }", "LYS9011")]
-    public void AnUnnamedBlockInsideAScore_IsRefused_AndBindsNothing(string item, string code)
+    /// <summary>A score's bare block (2026-10-09): the file's unnamed default with the score's
+    /// entries over it — the default's other keys survive, the written one wins.</summary>
+    [Fact]
+    public void ABareBlockInsideAScore_OverridesTheFileDefault()
     {
-        string src = Music + "score main { " + item + "  staff melody }\n";
-        Assert.Contains(SyntaxTree.Parse(src).Diagnostics, d => d.Code == code);
-        // Refused all the way through: the score keeps the built-in defaults.
-        Assert.Equal(LayoutOptions.Default, Collect(src, "main").Paper);
-        Assert.True(Collect(src, "main").Fonts.IsDefault);
+        string src = "paper { paperWidth 100  paperHeight 150 }\nfonts { sans \"Arial\" }\n" + Music
+            + "score { paper { paperWidth 90 }  fonts { serif \"Georgia\" }  staff melody }\n";
+        Assert.Empty(Check(src).Where(d => d.Severity == DiagnosticSeverity.Error));
+        var score = Collect(src, "main");
+        Assert.Equal(90, score.Paper.PageWidth);
+        Assert.Equal(150, score.Paper.PageHeight);
+        Assert.Contains("Georgia", score.Fonts.Resolve(TextRole.Title).Names);
+        Assert.Contains("Arial", score.Fonts.Resolve(TextRole.ChordName).Names);
+    }
+
+    /// <summary>With no file default, the bare block is read over the built-in defaults.</summary>
+    [Fact]
+    public void ABareBlockInsideAScore_WithNoFileDefault_IsReadAlone()
+    {
+        string src = Music + "score { paper { paperWidth 100 }  staff melody }\n";
+        Assert.Equal(100, Collect(src, "main").Paper.PageWidth);
     }
 
     // ================================================================================
@@ -233,7 +244,7 @@ public class NamedBlockReferenceTests
         string src = "fonts house { serif \"Georgia\" }\n"
             + "paper wide { paperWidth 250mm  systemSystemSpacing { basicDistance 20 } }\n"
             + Music
-            + "score main { paper wide { topMargin 12mm }  fonts house  staff melody }\n";
+            + "score { paper wide { topMargin 12mm }  fonts house  staff melody }\n";
         var root = SyntaxTree.Parse(src).GetRoot();
         Assert.Equal(src, root.ToFullString());
         foreach (var n in root.DescendantNodes())
@@ -247,7 +258,7 @@ public class NamedBlockReferenceTests
         // The whole point of naming: one file, a wide conductor page and a default
         // part page. The claim is made on the rendered widths.
         string src = "paper wide { paperWidth 250mm }\n" + Music
-            + "score main { paper wide  staff melody }\n"
+            + "score { paper wide  staff melody }\n"
             + "score parts { staff melody }\n";
         var tree = SyntaxTree.Parse(src);
         var all = SvgGenerator.GenerateAll(tree, new SvgRenderOptions { EmbedFont = false });
@@ -283,7 +294,7 @@ public class NamedBlockReferenceTests
     {
         string src = "fonts { mark step -2 }\n"
             + "fonts house { mark step +3 }\n" + Music
-            + "score main { fonts house  staff melody }\n";
+            + "score { fonts house  staff melody }\n";
         var ly = new LilySharp.Core.LilyPond.LilyPondExporter();
         string text = ly.Export(SyntaxTree.Parse(src));
 
@@ -293,7 +304,7 @@ public class NamedBlockReferenceTests
         // The control: with no reference the file's own default is what the twin writes.
         var bare = new LilySharp.Core.LilyPond.LilyPondExporter();
         string plain = bare.Export(SyntaxTree.Parse(
-            "fonts { mark step -2 }\n" + Music + "score main { staff melody }\n"));
+            "fonts { mark step -2 }\n" + Music + "score { staff melody }\n"));
         Assert.Contains("\\override RehearsalMark.font-size = #-2", plain, StringComparison.Ordinal);
     }
 
@@ -304,7 +315,7 @@ public class NamedBlockReferenceTests
     {
         string src = "layout { barNumbers none }\n"
             + "layout chart { barNumbers every 3 }\n" + Music
-            + "score main { layout chart  staff melody }\n";
+            + "score { layout chart  staff melody }\n";
         string text = new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(src));
         Assert.Contains("every-nth-bar-number-visible 3", text, StringComparison.Ordinal);
         Assert.DoesNotContain("\\remove Bar_number_engraver", text, StringComparison.Ordinal);

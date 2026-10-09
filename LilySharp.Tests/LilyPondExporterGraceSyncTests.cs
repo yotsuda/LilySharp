@@ -49,7 +49,7 @@ public class LilyPondExporterGraceSyncTests
 
         """;
 
-    private const string TwoStaves = "score main { staff top staff bot }\n";
+    private const string TwoStaves = "score { staff top staff bot }\n";
 
     [Fact]
     public void AGraceOnOneStaff_GivesTheOtherStaffASkipOfItsLength()
@@ -59,7 +59,7 @@ public class LilyPondExporterGraceSyncTests
               top { c'4 d' e' f' | g'1 | }
               bot { grace { e16 f } g4 a b c' | grace { d'16 e' } f'2 g'2 | }
             }
-            form main { A }
+            form { A }
 
             """ + TwoStaves);
         string top = Body(ly, "top");
@@ -78,7 +78,7 @@ public class LilyPondExporterGraceSyncTests
               top { grace { d'16 } c'1 | }
               bot { grace { e16 f g } g1 | }
             }
-            form main { A }
+            form { A }
 
             """ + TwoStaves);
         // 3/16 below, 1/16 above: the upper run is preceded by the difference.
@@ -94,7 +94,7 @@ public class LilyPondExporterGraceSyncTests
               top { c'2 d'2 | }
               bot { grace { e16 } g1 | }
             }
-            form main { A A }
+            form { A A }
 
             """ + TwoStaves);
         Assert.Equal(2, Regex.Matches(Body(ly, "top"), @"\\grace \{ s16 \} c'2").Count);
@@ -112,7 +112,7 @@ public class LilyPondExporterGraceSyncTests
               top { riff riff }
               bot { c1 | grace { e16 } g1 | }
             }
-            form main { A }
+            form { A }
 
             """ + TwoStaves);
         var plays = Regex.Matches(Body(ly, "top"), @"(\\grace \{ s16 \} )?c'2");
@@ -129,7 +129,7 @@ public class LilyPondExporterGraceSyncTests
               top { voice { grace { a'16 } g'2 e'2 } { c'1 } | }
               bot { c1 | }
             }
-            form main { A }
+            form { A }
 
             """ + TwoStaves);
         Assert.Contains(@"\\ { \grace { s16 } c'1 }", Body(ly, "top"));
@@ -154,7 +154,7 @@ public class LilyPondExporterGraceSyncTests
               {{header}}
               bot { grace { e16 f } g{{body}} | grace { e16 } g{{body}} | }
             }
-            form main { A B }
+            form { A B }
 
             """ + TwoStaves);
         string top = Body(ly, "top");
@@ -172,7 +172,7 @@ public class LilyPondExporterGraceSyncTests
             section B {
               bot { g1 | grace { e16 } g1 | }
             }
-            form main { B B }
+            form { B B }
 
             """ + TwoStaves);
         Assert.Equal(2, Regex.Matches(Body(ly, "top"), @"\bs1 \|\s*\\grace \{ s16 \} s1 \|").Count);
@@ -191,7 +191,7 @@ public class LilyPondExporterGraceSyncTests
               {{top}}
               {{bot}}
             }
-            form main { A }
+            form { A }
 
             """ + TwoStaves);
         Assert.Contains(@"\grace { s16 } s1 |", Body(ly, "top"));
@@ -205,7 +205,7 @@ public class LilyPondExporterGraceSyncTests
               top { c'1 | }
               bot { c1 | }
             }
-            form main { A }
+            form { A }
 
             """ + TwoStaves);
         Assert.DoesNotContain(@"\grace", ly);

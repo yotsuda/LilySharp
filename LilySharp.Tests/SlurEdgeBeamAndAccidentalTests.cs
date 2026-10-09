@@ -47,8 +47,8 @@ public sealed class SlurEdgeBeamAndAccidentalTests
           clef bass
           section A { b,,4 b,,8 b,,( dis,) dis, dis, dis, | }
         }
-        form main { ~A }
-        score main { staff bassline }
+        form { ~A }
+        score { staff bassline }
         """;
 
     private static RecordingDrawingContext Render()
@@ -93,8 +93,8 @@ public sealed class SlurEdgeBeamAndAccidentalTests
               clef bass
               section A { b,,4 r8 b,,8 b,,2( | break e,4) r8 e, e,4 r8 e, | }
             }
-            form main { ~A }
-            score main { staff bassline }
+            form { ~A }
+            score { staff bassline }
             """);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
@@ -118,8 +118,8 @@ public sealed class SlurEdgeBeamAndAccidentalTests
             part m {
               section A { voice { c''8( b' a' g' f'4 e') } { e8( f g a b4 c') } }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));

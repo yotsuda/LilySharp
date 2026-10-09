@@ -307,7 +307,7 @@ public sealed record RenderSpec(
     /// registers a piece of unattributed music could be read in.
     /// <para>
     /// ⚠️ DISTINCT, and that is the point of the property rather than an optimisation:
-    /// <c>score main { staff bl  tab bl }</c> shows ONE part on two staves, and a caller
+    /// <c>score { staff bl  tab bl }</c> shows ONE part on two staves, and a caller
     /// asking "does this score name a single part" has to get yes. The first caller is
     /// <c>MidiExporter</c>, which uses it to attribute a bare <c>section</c> — music no
     /// <c>part { }</c> block claims — to the part the score gives it to.
@@ -352,7 +352,7 @@ public sealed record RenderSpec(
     /// — the answer to "whose music does this score play". A part the score neither shows nor
     /// names is a sketch to it, as a chord row it does not place is (<c>MidiExporter</c> reads
     /// this; owner decision 2026-09-25 for the rows, extended to the parts 2026-09-29 when the
-    /// preview's Play of <c>score main "p2" { staff p2 }</c> sounded p1 as well).
+    /// preview's Play of <c>score "p2" { staff p2 }</c> sounded p1 as well).
     /// </summary>
     public ImmutableArray<string> SoundingPartNames
     {

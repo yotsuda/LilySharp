@@ -45,7 +45,7 @@ public sealed class LedgerAccidentalShorteningTests
 {
     private static string Book(string music)
         => "part m { clef treble }\nsection A { m { " + music + " } }\n"
-           + "form main { ~A }\nscore main { staff m }\n";
+           + "form { ~A }\nscore { staff m }\n";
 
     private static string Svg(string music)
         => SvgGenerator.Generate(SyntaxTree.Parse(Book(music)), new SvgRenderOptions { EmbedFont = false });

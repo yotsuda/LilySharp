@@ -67,8 +67,8 @@ public sealed class TabScriptAlignedSideTests
               instrument bass
               section A { {{note}} r4 r2 | }
             }
-            form main { A }
-            score main { tab cb }
+            form { A }
+            score { tab cb }
             """;
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));

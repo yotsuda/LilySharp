@@ -428,11 +428,14 @@ public sealed partial class MeasureCollector
                     break;
 
                 case FormDeclarationSyntax form:
-                    // A score binds its form by name (from the RenderSpec). When a
-                    // path doesn't specify one (single-staff Collect, exporters),
-                    // fall back to the PRIMARY form: `main` if present, else the
-                    // first declared. (`main` is matched case-sensitively.)
-                    if (form.NameText == "main" || _form == null)
+                    // A score's form comes from its RenderSpec (RenderDeclarationSyntax.PlayedForm).
+                    // When a path doesn't specify one (single-staff Collect, exporters), fall
+                    // back to the PRIMARY form — the same rule as Semantics.ScoreForms.Primary:
+                    // the unnamed one, else the first declared. A score's own `form` item is
+                    // never the default.
+                    if (form.InScore)
+                        break;
+                    if (_form == null || (form.NameText.Length == 0 && _form.NameText.Length != 0))
                         _form = form;
                     break;
 

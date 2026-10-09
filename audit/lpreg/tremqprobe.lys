@@ -7,6 +7,6 @@ section Main {
   v { <c e g>1 | repeat tremolo 4 { q16 } repeat tremolo 4 { q16 } repeat tremolo 4 { c16 q16 } | }
 }
 
-form main { ~Main }
+form { ~Main }
 
-score main { staff ~v }
+score { staff ~v }

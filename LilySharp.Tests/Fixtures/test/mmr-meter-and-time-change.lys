@@ -35,8 +35,8 @@ section Main {
   }
 }
 
-form main { Main }
+form { Main }
 
-score main "mmr-meter-and-time-change" {
+score "mmr-meter-and-time-change" {
   staff melody
 }

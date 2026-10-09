@@ -47,8 +47,8 @@ public class ContentKeyDirectFoldTests
           c8[ d e f] clef bass g,4 :|
           time 3/4 a,8@stemDown b, c d e f |
         } }
-        form main { Main }
-        score main "x" { staff melody }
+        form { Main }
+        score "x" { staff melody }
         """;
 
     /// <summary>
@@ -139,8 +139,8 @@ public class ContentKeyDirectFoldTests
           grace { d'16 } c'4 grace { e'16 f'16 } <c' e' g'>4 grace { <d' f'>8 } e'4 f'4 |
           c'8( d') e'-. f'-> <c' e' g'>2 |
         } }
-        form main { Main }
-        score main "x" { staff melody }
+        form { Main }
+        score "x" { staff melody }
         """;
 
     /// <summary>

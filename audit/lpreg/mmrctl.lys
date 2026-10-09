@@ -34,9 +34,9 @@ section Main {
   }
 }
 
-form main { Main }
+form { Main }
 
-score main "mmr-grandstaff-both-rest" {
+score "mmr-grandstaff-both-rest" {
   staff melody
   staff lh
 }

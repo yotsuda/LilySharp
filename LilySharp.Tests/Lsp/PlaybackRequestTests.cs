@@ -26,7 +26,7 @@ namespace LilySharp.Tests.Lsp;
 /// <summary>
 /// The <c>lilysharp/playback</c> request plays the score the preview is SHOWING: the
 /// request names the picker's score and the notes are that score's parts (user report
-/// 2026-09-29: with <c>score main "p2" { staff p2 }</c> picked, Play sounded p1 too). No
+/// 2026-09-29: with <c>score "p2" { staff p2 }</c> picked, Play sounded p1 too). No
 /// name, or a name no score has, is the first score — the same fallback the drawing uses.
 /// </summary>
 public class PlaybackRequestTests
@@ -36,9 +36,9 @@ public class PlaybackRequestTests
         "section A {\n" +
         "  p1 { c'4 d e f | g2 g | }\n" +
         "  p2 { e f g a | b2 b }\n" +
-        "}\n\nform main { A }\n\n" +
-        "score main {\n  staff p1\n  staff p2\n}\n\n" +
-        "score main \"p2\" {\n  staff p2\n}\n";
+        "}\n\nform { A }\n\n" +
+        "score {\n  staff p1\n  staff p2\n}\n\n" +
+        "score \"p2\" {\n  staff p2\n}\n";
 
     private static PlaybackResponse Playback(string? renderName)
     {

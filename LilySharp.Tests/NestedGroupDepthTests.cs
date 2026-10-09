@@ -55,10 +55,10 @@ public class NestedGroupDepthTests
           pd { c1 | c1 | }
           pe { c''1 | c''1 | }
         }
-        form main { ~A }
+        form { ~A }
         """;
 
-    private static string Book(string render) => Body + "\nscore main { " + render + " }\n";
+    private static string Book(string render) => Body + "\nscore { " + render + " }\n";
 
     private static string Svg(string render) => SvgGenerator.Generate(
         TestPaper.ParseAtIndentZero(Book(render)),

@@ -299,7 +299,7 @@ internal static class Outputs
 
                 // ⚠️ A BARE SECTION IS ATTRIBUTED BY THE SCORE, not by the music. Music
                 // written in `section A { c4 … }` with no `partName { }` block around it is
-                // claimed by nothing except `score main { staff bl }` — which is how the
+                // claimed by nothing except `score { staff bl }` — which is how the
                 // page reads it, and (since 2026-08-17) the MIDI too. Without this the
                 // instrument compared the page's C3 against a MIDI that correctly sounds C2
                 // for a bass, and reported the fix as a difference.

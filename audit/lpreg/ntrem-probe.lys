@@ -5,5 +5,5 @@ part m { }
 section A {
   m { a,4:32 e'8:32 | }
 }
-form main { A }
-score main { staff m }
+form { A }
+score { staff m }

@@ -48,8 +48,8 @@ public class SectionMarkOverKeyChangeTests
               section A { c4 c g' g | a a g2 | f4 f e e | d d c2 | }
               section B { key a major g'4 g f f | e e d2 | }
             }
-            form main { {{form}} }
-            score main { staff melody }
+            form { {{form}} }
+            score { staff melody }
             """),
         new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
 

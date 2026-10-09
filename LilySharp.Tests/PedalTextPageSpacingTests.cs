@@ -48,8 +48,8 @@ public sealed class PedalTextPageSpacingTests
           rh { {{rh}} }
           lh { {{lh}} }
         }
-        form main { ~A }
-        score main { grandStaff { staff rh  staff lh } }
+        form { ~A }
+        score { grandStaff { staff rh  staff lh } }
         """;
 
     private const string TempoRh = "c'1 | break tempo \"Agitato\" 4 = 112 c'1 |";

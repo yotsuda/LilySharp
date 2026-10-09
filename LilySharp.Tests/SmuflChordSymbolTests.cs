@@ -38,8 +38,8 @@ public class SmuflChordSymbolTests
     private const string Book =
         "part m { clef treble }\n" +
         "section A { m { c'2@chord(Bb) d'2@chord(Ebmaj7) | e'2@chord(C#dim) f'2@chord(Caug) | } }\n" +
-        "form main { A }\n" +
-        "score main { staff m }\n";
+        "form { A }\n" +
+        "score { staff m }\n";
 
     private static string Svg(string fonts) => LiveRender.SvgFromRenderSpec(fonts + "\n" + Book);
 

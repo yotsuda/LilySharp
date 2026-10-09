@@ -43,17 +43,17 @@ public class PartialScopeValidatorTests
     [Fact]
     public void GroupedBySectionHeaderPartial_Ok()
         => Assert.Equal(0, ErrCount(
-            "time 4/4\nsection A { partial 4  melody { g4 | c' d' e' f' | } }\nform main { A }\nscore main { staff melody }"));
+            "time 4/4\nsection A { partial 4  melody { g4 | c' d' e' f' | } }\nform { A }\nscore { staff melody }"));
 
     [Fact]
     public void StandaloneGroupedByPartHeaderPartial_Ok()
         => Assert.Equal(0, ErrCount(
-            "part melody { section A { g4 | c' d' e' f' | } }\nsection A { partial 4 }\nform main { A }\nscore main { staff melody }"));
+            "part melody { section A { g4 | c' d' e' f' | } }\nsection A { partial 4 }\nform { A }\nscore { staff melody }"));
 
     [Fact]
     public void SingleVoiceSectionBodyPartial_Ok()
         => Assert.Equal(0, ErrCount(
-            "time 4/4\nsection A { partial 4  g4 | c' d' e' f' | }\nform main { A }\nscore main { staff melody }"));
+            "time 4/4\nsection A { partial 4  g4 | c' d' e' f' | }\nform { A }\nscore { staff melody }"));
 
     // --- Refused since 2026-09-15: a section's opening pickup is its header's ---
 
@@ -62,25 +62,25 @@ public class PartialScopeValidatorTests
         // The opening bar is the section's: `section A { partial 4 }` beside the cell says it once
         // for every part.
         => Assert.Equal(1, ErrCount(
-            "part melody { section A { partial 4  g4 | c' d' e' f' | } }\nform main { A }\nscore main { staff melody }"));
+            "part melody { section A { partial 4  g4 | c' d' e' f' | } }\nform { A }\nscore { staff melody }"));
 
     [Fact]
     public void PartialAtTheHeadOfAPartBlock_Errors()
         => Assert.Equal(1, ErrCount(
-            "section A { melody { partial 4  g4 | c' d' e' f' | } }\nform main { A }\nscore main { staff melody }"));
+            "section A { melody { partial 4  g4 | c' d' e' f' | } }\nform { A }\nscore { staff melody }"));
 
     [Fact]
     public void PartialLaterInAPartBlocksFirstBar_Errors()
         // Still the opening bar — no bar line comes before it.
         => Assert.Equal(1, ErrCount(
-            "section A { melody { g4 partial 4 | c' d' e' f' | } }\nform main { A }\nscore main { staff melody }"));
+            "section A { melody { g4 partial 4 | c' d' e' f' | } }\nform { A }\nscore { staff melody }"));
 
     // --- Allowed since 2026-09-08: in a part's music after the first bar, per part ---
 
     [Fact]
     public void MidSectionPartialInAGroupedByPartCell_Ok()
         => Assert.Equal(0, ErrCount(
-            "part melody { section A { c'4 d' e' f' | partial 4  g4 | c' d' e' f' | } }\nform main { A }\nscore main { staff melody }"));
+            "part melody { section A { c'4 d' e' f' | partial 4  g4 | c' d' e' f' | } }\nform { A }\nscore { staff melody }"));
 
     [Fact]
     public void MidPiecePartial_ShortensTheBarItStandsIn_OnThePage()
@@ -88,7 +88,7 @@ public class PartialScopeValidatorTests
         // The census shape of the tab corpus: `| partial 2. r2. |` closes a three-beat bar
         // mid-piece, and the meter resumes after it. No diagnostic, and the page has the bar.
         const string src = "time 4/4\nsection A { melody { c'4 d' e' f' | partial 2. r2. | g'4 a' b' c'' | } }\n"
-            + "form main { A }\nscore main { staff melody }";
+            + "form { A }\nscore { staff melody }";
         Assert.Empty(SemanticValidation.Run(SyntaxTree.Parse(src)).Where(d => d.Severity == DiagnosticSeverity.Error));
         Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(src)),
             d => d.Code == DiagnosticCodes.MeasureIncomplete);
@@ -105,7 +105,7 @@ public class PartialScopeValidatorTests
         // bars disagree — which the cross-part check reports rather than the scope check.
         => Assert.Contains(SemanticValidation.Run(SyntaxTree.Parse(
                 "time 4/4\nsection A { melody { c'4 d' e' f' | partial 4 g'4 | c'4 d' e' f' | }\n"
-                + "  bass { c4 d e f | c4 d e f | c4 d e f | } }\nform main { A }\nscore main { staff melody staff bass }")),
+                + "  bass { c4 d e f | c4 d e f | c4 d e f | } }\nform { A }\nscore { staff melody staff bass }")),
             d => d.Code == DiagnosticCodes.MeasureDurationMismatch);
 
     // --- Rejected: no bar there ---
@@ -113,7 +113,7 @@ public class PartialScopeValidatorTests
     [Fact]
     public void TopLevelPartial_InStructuredFile_Errors()
         => Assert.Equal(1, ErrCount(
-            "partial 4\nsection A { melody { c4 d e f | } }\nform main { A }\nscore main { staff melody }"));
+            "partial 4\nsection A { melody { c4 d e f | } }\nform { A }\nscore { staff melody }"));
 
     // --- Exempt: bare music has no sections ---
 

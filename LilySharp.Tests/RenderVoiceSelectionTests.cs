@@ -39,9 +39,9 @@ public class RenderVoiceSelectionTests
           melody { pa }
           harmony { pb }
         }
-        form main { Main }
-        score main "first" { staff melody }
-        score main "second" { staff harmony }
+        form { Main }
+        score "first" { staff melody }
+        score "second" { staff harmony }
         """;
 
     [Fact]

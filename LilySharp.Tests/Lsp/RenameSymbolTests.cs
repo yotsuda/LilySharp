@@ -45,7 +45,7 @@ public class RenameSymbolTests
         "lyrics singwords { section Verse { la la la la } }\n" +  // lyrics decl; section decl (2/4)
         "chords harm { section Verse { c1 } }\n" +               // chords decl; section decl (3/4)
         "form whole { Verse }\n" +                    // form decl; section ref (4/4)
-        "score whole {\n" +                           // form ref
+        "score whole { form whole\n" +                           // form ref
         "  staff tune  lyrics singwords\n" +      // part ref + lyrics ref
         "  chords harm\n" +                           // chords row ref
         "}\n";

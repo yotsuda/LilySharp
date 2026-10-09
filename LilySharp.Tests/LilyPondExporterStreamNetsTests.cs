@@ -52,8 +52,8 @@ public class LilyPondExporterStreamNetsTests
             time 4/4
             part melody { clef treble }
             section A { melody { tuplet 3/2 { g'8 a b } tuplet 3/2 { c d e } d2 | } }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """);
         Assert.Contains("\\tuplet 3/2 { g'8 a b } \\tuplet 3/2 { c d e } d2 |", ly);
     }
@@ -68,8 +68,8 @@ public class LilyPondExporterStreamNetsTests
             time 4/4
             part melody { clef treble }
             section A { melody { c'4 r d' e' | r2 f' | } lyrics words sings melody { a b c | d | } }
-            form main { A }
-            score main { staff melody lyrics words }
+            form { A }
+            score { staff melody lyrics words }
             """);
         Assert.Contains("a2 b4 c4 |", ly);
         Assert.Contains("\\skip 2 d2 |", ly);
@@ -87,8 +87,8 @@ public class LilyPondExporterStreamNetsTests
             part melody { clef treble }
             section Main { melody { c'4 d break e f | g1 | } }
             lyrics words { section Main { a b c d | e | } }
-            form main { Main }
-            score main { staff melody  lyrics words }
+            form { Main }
+            score { staff melody  lyrics words }
             """);
         Assert.Contains("a4 b4\n  c4 d4 |", ly);
     }

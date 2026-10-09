@@ -2,5 +2,5 @@ key d major
 part melody {
   section A { key a major a'1 }
 }
-form main { A }
-score main { staff melody }
+form { A }
+score { staff melody }

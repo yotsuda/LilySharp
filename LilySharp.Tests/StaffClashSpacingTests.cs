@@ -56,8 +56,8 @@ public class StaffClashSpacingTests
             "  }\n" +
             "  lo { <a b>4 }\n" +
             "}\n\n" +
-            "form main { ~Main }\n\n" +
-            "score main { staff up staff lo }\n");
+            "form { ~Main }\n\n" +
+            "score { staff up staff lo }\n");
 
         var middles = StaffMiddleLines(svg);
         Assert.Equal(2, middles.Count);

@@ -40,9 +40,9 @@ public class ShapeChordIncrementalTests
           section A { chord(C x35550)1@chord() | c'1 }
         }
 
-        form main { A |: A  [1. ~A ~A ] :| ~A A }
+        form { A |: A  [1. ~A ~A ] :| ~A A }
 
-        score main {
+        score {
           staff melody
         }
         """;

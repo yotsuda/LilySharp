@@ -40,8 +40,8 @@ public class TabTupletBracketTests
           instrument bass
           section A { tuplet 3/2 { ees8@f ees4 } ees4 r8 bes'\2 bes bes | }
         }
-        form main { A }
-        score main { tab cb }
+        form { A }
+        score { tab cb }
         """;
 
     // … and on the bottom string (stems up, bracket above): the same x rule on either side.
@@ -51,8 +51,8 @@ public class TabTupletBracketTests
           instrument bass
           section A { tuplet 3/2 { bes,,8@f bes,,4 } bes,,4 r8 bes\2 bes bes | }
         }
-        form main { A }
-        score main { tab cb }
+        form { A }
+        score { tab cb }
         """;
 
     // … and where the string and the notated pitch disagree: E2 on the A string (fret 7)
@@ -64,8 +64,8 @@ public class TabTupletBracketTests
           instrument bass
           section A { tuplet 3/2 { e,8\3@f e,4\3 } e,4\3 r8 bes\2 bes bes | }
         }
-        form main { A }
-        score main { tab cb }
+        form { A }
+        score { tab cb }
         """;
 
     // Two eighths on the D string, stems DOWN, bracket below: LilyPond 2.26.0 stands the
@@ -78,8 +78,8 @@ public class TabTupletBracketTests
           instrument bass
           section A { bes,4@mf tuplet 3/2 { g,8\2 g,4\2~ } g,4\2 f,4 | }
         }
-        form main { A }
-        score main { tab cb }
+        form { A }
+        score { tab cb }
         """;
 
     /// <summary>Every tab stem (0.130 wide vertical line) as (x, top y, bottom y).</summary>
@@ -126,8 +126,8 @@ public class TabTupletBracketTests
               instrument bass
               section A { tuplet 3/2 { tuplet 3/2 { bes,,8 bes,, bes,, } bes,,4 bes,, } r2 | }
             }
-            form main { A }
-            score main { tab cb }
+            form { A }
+            score { tab cb }
             """;
         string svg = Render(book);
         int outer = book.IndexOf("tuplet 3/2", System.StringComparison.Ordinal);
@@ -155,8 +155,8 @@ public class TabTupletBracketTests
               instrument bass
               section A { tuplet 3/2 { bes,,4@turn bes,,8@turn } r4 r2 | }
             }
-            form main { A }
-            score main { tab cb }
+            form { A }
+            score { tab cb }
             """;
         string svg = Render(book);
         var hooks = Hooks(svg, book.IndexOf("tuplet 3/2", System.StringComparison.Ordinal));
@@ -179,8 +179,8 @@ public class TabTupletBracketTests
               instrument bass
               section A { tuplet 3/2 { f,4 bes,,8[ } bes,,8 bes,,] r4 r4 | }
             }
-            form main { A }
-            score main { tab cb }
+            form { A }
+            score { tab cb }
             """;
         string svg = Render(book);
         var hooks = Hooks(svg, book.IndexOf("tuplet 3/2", System.StringComparison.Ordinal));
@@ -202,8 +202,8 @@ public class TabTupletBracketTests
               instrument bass
               section A { tuplet 3/2 { a,,8 d,8 g,8[ } g,8] r4 r2 | }
             }
-            form main { A }
-            score main { tab cb }
+            form { A }
+            score { tab cb }
             """;
         string svg = Render(book);
         var hooks = Hooks(svg, book.IndexOf("tuplet 3/2", System.StringComparison.Ordinal));

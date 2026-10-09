@@ -53,8 +53,8 @@ public class PhraseExtractorTests
             part melody { clef treble
               section A { c'4 d e f | g a b c' | }
             }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """;
         int caret = src.IndexOf("d e f");
         var newText = ExtractOk(src, caret, caret, "theme");
@@ -74,7 +74,7 @@ public class PhraseExtractorTests
         // not the inline chunk's last note, so measure 3's d needs its own marks
         // to stay put.
         var src = "part m { section A { c'4 d e f | g a b c' | d4 e f g } }\n"
-                + "form main { A }\nscore main { staff m }";
+                + "form { A }\nscore { staff m }";
         int selStart = src.IndexOf("g a b");
         var newText = ExtractOk(src, selStart, selStart + 1, "climb");
         Assert.Contains("phrase climb { g''4 a b c' |}", newText);
@@ -89,7 +89,7 @@ public class PhraseExtractorTests
         // Measure 2's `e f` inherit the half from `c2`; the phrase's default is
         // a quarter, so the extractor stamps the running duration explicitly.
         var src = "part m { section A { c2 d | e f | g1 } }\n"
-                + "form main { A }\nscore main { staff m }";
+                + "form { A }\nscore { staff m }";
         int selStart = src.IndexOf("e f");
         var newText = ExtractOk(src, selStart, selStart + 1, "mid");
         Assert.Contains("e2 f", newText);
@@ -102,8 +102,8 @@ public class PhraseExtractorTests
             section A {
               melody { c4 d e f | g2 g }
             }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """;
         int caret = src.IndexOf("d e f");
         var newText = ExtractOk(src, caret, caret, "line");
@@ -118,12 +118,12 @@ public class PhraseExtractorTests
         // the same music — here an octave up. (It used to say "a third up", written
         // the glued-interval spelling; it was removed 2026-08-28, and the octave
         // marks are what a second part reaches for now.)
-        var src = "part m { section A { c'4 d e f } }\nform main { A }\nscore main { staff m }";
+        var src = "part m { section A { c'4 d e f } }\nform { A }\nscore { staff m }";
         int caret = src.IndexOf("d e");
         var newText = PhraseExtractor.Extract(src, caret, caret, "theme").NewText!;
         var harmonized = newText.Replace(
-            "score main { staff m }",
-            "part h { clef treble section A { theme' } }\nscore main { staff m staff h }");
+            "score { staff m }",
+            "part h { clef treble section A { theme' } }\nscore { staff m staff h }");
         Assert.False(SyntaxTree.Parse(harmonized).HasErrors);
     }
 
@@ -133,7 +133,7 @@ public class PhraseExtractorTests
     [InlineData("bd")]     // drum vocabulary
     public void UnusableName_IsRefused(string name)
     {
-        var src = "part m { section A { c4 d } }\nform main { A }\nscore main { staff m }";
+        var src = "part m { section A { c4 d } }\nform { A }\nscore { staff m }";
         var result = PhraseExtractor.Extract(src, src.IndexOf("c4"), src.IndexOf("c4"), name);
         Assert.Null(result.NewText);
     }
@@ -141,7 +141,7 @@ public class PhraseExtractorTests
     [Fact]
     public void TakenName_IsRefused()
     {
-        var src = "part m { section A { c4 d } }\nform main { A }\nscore main { staff m }";
+        var src = "part m { section A { c4 d } }\nform { A }\nscore { staff m }";
         var result = PhraseExtractor.Extract(src, src.IndexOf("c4"), src.IndexOf("c4"), "m");
         Assert.Null(result.NewText);
         Assert.Contains("already declared", result.Error);
@@ -150,7 +150,7 @@ public class PhraseExtractorTests
     [Fact]
     public void CaretOutsideMusic_IsRefused()
     {
-        var src = "part m { section A { c4 d } }\nform main { A }\nscore main { staff m }";
+        var src = "part m { section A { c4 d } }\nform { A }\nscore { staff m }";
         var result = PhraseExtractor.Extract(src, src.IndexOf("form"), src.IndexOf("form"), "x");
         Assert.Null(result.NewText);
     }
@@ -160,7 +160,7 @@ public class PhraseExtractorTests
     {
         // `d 4` stopped being a syntax error on 2026-08-19 (bare-duration repeat);
         // an unclaimed dot (LYS0023) is still one.
-        var src = "part m { section A { c4 d . } }\nform main { A }\nscore main { staff m }";
+        var src = "part m { section A { c4 d . } }\nform { A }\nscore { staff m }";
         var result = PhraseExtractor.Extract(src, src.IndexOf("c4"), src.IndexOf("c4"), "x");
         Assert.Null(result.NewText);
         Assert.Contains("syntax errors", result.Error);

@@ -17,5 +17,5 @@ section Main {
   }
 }
 
-form main { Main }
-score main "transpose" { staff melody }
+form { Main }
+score "transpose" { staff melody }

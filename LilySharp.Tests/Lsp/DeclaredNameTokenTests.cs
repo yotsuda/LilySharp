@@ -41,7 +41,7 @@ namespace LilySharp.Tests.Lsp;
 /// </para>
 /// <para>
 /// ★ The section names inside a <c>form { }</c> are the reason this belongs to the semantic
-/// tokens rather than the grammar. A regex sees that <c>form main { A }</c> writes an A; it
+/// tokens rather than the grammar. A regex sees that <c>form { A }</c> writes an A; it
 /// cannot see whether a <c>section A { … }</c> exists to give it meaning. The user's call
 /// (2026-08-23) was that an unresolvable name gets NO colour — so the editor never asserts a
 /// name means something at the same moment LYS1005 squiggles it as undefined.
@@ -81,9 +81,9 @@ public class DeclaredNameTokenTests
 
         phrase turn { c'8 d c b }
 
-        form main { A B }
+        form { A B }
 
-        score main { staff melody }
+        score { staff melody }
         """;
 
     [Fact]
@@ -107,19 +107,19 @@ public class DeclaredNameTokenTests
     // refused — "one part on one staff is what 'staff melody' already does". A fixture
     // written from the node's doc comment would have pinned the wrong language, which is
     // RULES §5.0's "measure the premise before you write it down".
-    [InlineData("score main { staff melody }")]
-    [InlineData("score main { staff melody \"Flute\" }")]
-    [InlineData("score main { ossia melody }")]
-    [InlineData("score main { tab melody }")]
-    [InlineData("score main { grandStaff { staff melody staff other } }")]
-    [InlineData("score main { condensedStaff { melody other } }")]
-    [InlineData("score main { combinedStaff { melody other } }")]
+    [InlineData("score { staff melody }")]
+    [InlineData("score { staff melody \"Flute\" }")]
+    [InlineData("score { ossia melody }")]
+    [InlineData("score { tab melody }")]
+    [InlineData("score { grandStaff { staff melody staff other } }")]
+    [InlineData("score { condensedStaff { melody other } }")]
+    [InlineData("score { combinedStaff { melody other } }")]
     // A bare part name renders that part to MIDI only — MidiPartRenderSyntax.
-    [InlineData("score main { staff other  melody }")]
+    [InlineData("score { staff other  melody }")]
     public void EverySpellingOfAScoresPartReference_IsColoured(string render)
     {
         var source = $"part melody {{ section A {{ c'4 }} }}\n"
-                   + $"part other {{ section A {{ e'4 }} }}\nform main {{ A }}\n{render}\n";
+                   + $"part other {{ section A {{ e'4 }} }}\nform {{ A }}\n{render}\n";
 
         Assert.Contains("melody", Coloured(source, Part));
         Assert.Equal(2, Coloured(source, Part).Count(n => n == "melody"));
@@ -132,8 +132,8 @@ public class DeclaredNameTokenTests
         part melody { section A { c'4 d e f } }
         lyrics verse sings melody { section A { la la la la } }
         chords prog { section A { C | } }
-        form main { A }
-        score main {
+        form { A }
+        score {
           staff melody
           lyrics verse
           chords prog
@@ -178,7 +178,7 @@ public class DeclaredNameTokenTests
     public void ASingsTarget_IsColouredExactlyWhenItResolves(string part, string target, bool coloured)
     {
         var book = $"{part}\nlyrics v sings {target} {{ section A {{ la la la la }} }}\n"
-                 + "form main { A }\nscore main { staff melody  lyrics v }\n";
+                 + "form { A }\nscore { staff melody  lyrics v }\n";
 
         Assert.Equal(coloured, Coloured(book, Part).Contains(target));
     }
@@ -190,8 +190,8 @@ public class DeclaredNameTokenTests
         // underline it.
         const string source = """
             part melody { section A { c'4 } }
-            form main { A }
-            score main { staff melody  staff nope }
+            form { A }
+            score { staff melody  staff nope }
             """;
 
         Assert.Equal(["melody", "melody"], Coloured(source, Part));
@@ -205,8 +205,8 @@ public class DeclaredNameTokenTests
         // declaration, so it resolves the score's reference — and is coloured itself.
         const string source = """
             section A { melody { c'4 } }
-            form main { A }
-            score main { staff melody }
+            form { A }
+            score { staff melody }
             """;
 
         Assert.Equal(["melody", "melody"], Coloured(source, Part));
@@ -235,8 +235,8 @@ public class DeclaredNameTokenTests
         // about to underline it.
         const string source = """
             part melody { section A { c'4 } }
-            form main { A Nope }
-            score main { staff melody }
+            form { A Nope }
+            score { staff melody }
             """;
 
         Assert.Equal(["A", "A"], Coloured(source, Section));
@@ -246,18 +246,18 @@ public class DeclaredNameTokenTests
     public void TheSilentSpelling_AnswersTheSameWayAsThePlainOne()
     {
         // `~A` is the same reference with its rehearsal label hidden. It is the spelling that
-        // has drifted before — `form main { ~Nope }` passed `lysc check` clean until the
+        // has drifted before — `form { ~Nope }` passed `lysc check` clean until the
         // validator learned it — so both halves are pinned here, and both go through the one
         // predicate in SectionSymbols.
         const string resolves = """
             part melody { section A { c'4 } }
-            form main { ~A }
-            score main { staff melody }
+            form { ~A }
+            score { staff melody }
             """;
         const string doesNot = """
             part melody { section A { c'4 } }
-            form main { ~Nope }
-            score main { staff melody }
+            form { ~Nope }
+            score { staff melody }
             """;
 
         Assert.Equal(["A", "A"], Coloured(resolves, Section));
@@ -274,8 +274,8 @@ public class DeclaredNameTokenTests
         const string source = """
             part melody { section A { c'4 } }
             section B { melody { c'4 } }
-            form main { A B ~A Nope ~AlsoNope }
-            score main { staff melody  staff noSuchPart }
+            form { A B ~A Nope ~AlsoNope }
+            score { staff melody  staff noSuchPart }
             """;
 
         var tree = SyntaxTree.Parse(source);

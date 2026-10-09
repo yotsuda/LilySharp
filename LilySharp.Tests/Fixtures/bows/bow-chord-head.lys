@@ -10,7 +10,7 @@ part m {
     <c' e'>2) <e' g'( c''>4 <d' f' b'>) |
   }
 }
-form main { A }
-score main {
+form { A }
+score {
   staff m
 }

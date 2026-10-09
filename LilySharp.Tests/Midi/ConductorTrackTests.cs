@@ -62,8 +62,8 @@ public class ConductorTrackTests
           d { c1 | c1 | }
           e { c,1 | r1 | }
         }
-        form main { A B }
-        score main { staff a staff b staff c staff d staff e }
+        form { A B }
+        score { staff a staff b staff c staff d staff e }
         """;
 
     private static MidiFile Export(string source) => new MidiExporter().Export(SyntaxTree.Parse(source));
@@ -96,8 +96,8 @@ public class ConductorTrackTests
             time 4/4
             part m { clef treble }
             section A { m { c'4 d' e' f' | tempo 4 = 100 g'1 | tempo 4 = 120 c'1 | } }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """).Tracks[0];
 
         Assert.Equal([(0, 600000), (3840, 500000)],

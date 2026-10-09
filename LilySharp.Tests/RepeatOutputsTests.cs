@@ -63,16 +63,16 @@ public class RepeatOutputsTests
         time 4/4
         part melody
         section A { melody { repeat tremolo 32 { g''64 a } } }
-        form main { ~A }
-        score main { staff melody }
+        form { ~A }
+        score { staff melody }
         """;
 
     private const string Percent = """
         time 4/4
         part melody
         section A { melody { repeat percent 3 { g''8 a b c d e f g | } } }
-        form main { ~A }
-        score main { staff melody }
+        form { ~A }
+        score { staff melody }
         """;
 
     [Theory]
@@ -120,8 +120,8 @@ public class RepeatOutputsTests
             time 4/4
             part melody
             section A { melody { repeat percent 3 { g'8 a' b' c'' d'' e'' f'' g'' | } } }
-            form main { ~A }
-            score main { staff melody }
+            form { ~A }
+            score { staff melody }
             """);
         var midi = new MidiExporter().Export(tree).Tracks
             .SelectMany(t => t.Notes).Select(n => n.Pitch).Distinct().OrderBy(k => k).ToArray();

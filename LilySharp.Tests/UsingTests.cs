@@ -90,8 +90,8 @@ public sealed class UsingTests
     public static TheoryData<string> MisplacedUsings() => new()
     {
         "time 4/4\n\npart m { clef treble }\n\nsection A {\n  using \"n.lys\"\n  m { c4 d e f | }\n}\n",
-        "time 4/4\n\npart m { clef treble }\n\nsection A { m { c4 d e f | } }\n\nform main { ~A }\n\nscore main { using \"n.lys\" staff m }\n",
-        "form main { using \"n.lys\" ~A }\n",
+        "time 4/4\n\npart m { clef treble }\n\nsection A { m { c4 d e f | } }\n\nform { ~A }\n\nscore { using \"n.lys\" staff m }\n",
+        "form { using \"n.lys\" ~A }\n",
         "part m { clef treble using \"n.lys\" }\n",
         "section A {\n  m { c4 using \"n.lys\" d e f | }\n}\n",
     };
@@ -306,7 +306,7 @@ public sealed class UsingTests
     public void CrossFile_DuplicateCell_IsError()
     {
         // Two files both supply (section A x part p) — a duplicated cell across files.
-        var expanded = Expand("using \"a.lys\"\nusing \"b.lys\"\nform main { A }\n", new()
+        var expanded = Expand("using \"a.lys\"\nusing \"b.lys\"\nform { A }\n", new()
         {
             ["a.lys"] = "part vln { clef treble section A { c4 d e f | } }",
             ["b.lys"] = "part vln { clef treble section A { g4 a b c | } }",
@@ -320,7 +320,7 @@ public sealed class UsingTests
     [Fact]
     public void CrossFile_DistinctParts_AreClean()
     {
-        var expanded = Expand("using \"rh.lys\"\nusing \"lh.lys\"\nform main { A }\n", new()
+        var expanded = Expand("using \"rh.lys\"\nusing \"lh.lys\"\nform { A }\n", new()
         {
             ["rh.lys"] = "part rh { clef treble section A { c'4 d' e' f' | } }",
             ["lh.lys"] = "part lh { clef bass    section A { c4 g, c, g, | } }",

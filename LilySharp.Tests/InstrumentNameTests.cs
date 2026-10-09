@@ -38,8 +38,8 @@ public class InstrumentNameTests
 part violin ""Violin""
 phrase m { c4 d e f }
 section A { violin { m } }
-form main { A }
-score main ""test"" { staff violin }
+form { A }
+score ""test"" { staff violin }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -55,8 +55,8 @@ score main ""test"" { staff violin }
 part vln1 ""Violin I""
 phrase m { c4 d e f }
 section A { vln1 { m } }
-form main { A }
-score main ""test"" { staff vln1 }
+form { A }
+score ""test"" { staff vln1 }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -72,8 +72,8 @@ score main ""test"" { staff vln1 }
 part melody { clef treble }
 phrase m { c4 d e f }
 section A { melody { m } }
-form main { A }
-score main ""test"" { staff melody }
+form { A }
+score ""test"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -91,8 +91,8 @@ part lh { clef bass }
 phrase rhM { c4 d e f }
 phrase lhM { c,4 d e f }
 section A { rh { rhM } lh { lhM } }
-form main { A }
-score main ""test"" { grandStaff { staff rh staff lh } }
+form { A }
+score ""test"" { grandStaff { staff rh staff lh } }
 ";
         var tree = SyntaxTree.Parse(source);
         var options = new SvgRenderOptions { EmbedFont = false };
@@ -114,8 +114,8 @@ part vln ""Violin"" { clef treble }
 part vla ""Viola"" { clef alto }
 phrase m { c4 d e f }
 section A { vln { m } vla { m } }
-form main { A }
-score main ""test"" { staff vln staff vla }
+form { A }
+score ""test"" { staff vln staff vla }
 ";
         var tree = SyntaxTree.Parse(source);
         var options = new SvgRenderOptions { EmbedFont = false };
@@ -134,8 +134,8 @@ part vln ""Violin I"" { clef treble }
 part vla ""Viola"" { clef alto }
 phrase m { c4 d e f }
 section A { vln { m } vla { m } }
-form main { A }
-score main ""test"" { staff vln staff vla }
+form { A }
+score ""test"" { staff vln staff vla }
 ";
         var tree = SyntaxTree.Parse(source);
         var options = new SvgRenderOptions { EmbedFont = false };

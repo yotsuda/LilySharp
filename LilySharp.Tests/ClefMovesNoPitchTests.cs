@@ -79,8 +79,8 @@ public class ClefMovesNoPitchTests
     private static string Book(string header, string music, string score = "staff m") => $$"""
         part m { {{header}} }
         section A { m { {{music}} } }
-        form main { ~A }
-        score main { {{score}} }
+        form { ~A }
+        score { {{score}} }
         """;
 
     [Fact]
@@ -120,15 +120,15 @@ public class ClefMovesNoPitchTests
             part m { }
             section A { m { e4 f g a | clef bass b c d e | } }
             section B { m { c4 d e f | } }
-            form main { ~A ~B }
-            score main { staff m }
+            form { ~A ~B }
+            score { staff m }
             """;
         const string noClef = """
             part m { }
             section A { m { e4 f g a | b c d e | } }
             section B { m { c4 d e f | } }
-            form main { ~A ~B }
-            score main { staff m }
+            form { ~A ~B }
+            score { staff m }
             """;
         AllOutputsAre(PagePitches(noClef), withClef);
     }

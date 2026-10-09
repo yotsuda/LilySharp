@@ -42,8 +42,8 @@ public class TodoAnnotationTests
         octave absolute
         part m { }
         section A { m { {{music}} } }
-        form main { A }
-        score main { staff m }
+        form { A }
+        score { staff m }
         """;
 
     private static Diagnostic[] Diagnostics(string source)

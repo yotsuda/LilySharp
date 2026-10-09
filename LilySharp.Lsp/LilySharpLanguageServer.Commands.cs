@@ -889,7 +889,7 @@ public sealed partial class LilySharpLanguageServer
         try
         {
             // The score the preview DRAWS (the same choice the svg request makes), so its
-            // Play sounds that score's parts and form — `score main "p2" { staff p2 }`
+            // Play sounds that score's parts and form — `score "p2" { staff p2 }`
             // used to play p1 as well.
             var score = RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), @params.RenderName);
             var midi = new LilySharp.Core.Midi.MidiExporter { Form = score?.Form, Score = score }.Export(tree);

@@ -60,7 +60,7 @@ public class LilyPondStandaloneSectionHeaderTests
     private static string Export(string source)
         => new LilyPondExporter().Export(SyntaxTree.Parse(source));
 
-    private const string Tail = "form main { ~A }\nscore main { staff m }\n";
+    private const string Tail = "form { ~A }\nscore { staff m }\n";
 
     // The minimal pair: the SAME book with the header moved across the part.
     private const string HeaderBefore =
@@ -135,7 +135,7 @@ public class LilyPondStandaloneSectionHeaderTests
         const string book =
             "time 4/4\npart m { clef treble\n  section B { f'4 f f f | }\n}\n"
             + "section A { key g major }\n"
-            + "form main { ~A ~B }\nscore main { staff m }\n";
+            + "form { ~A ~B }\nscore { staff m }\n";
 
         var validator = new SymbolReferenceValidator();
         validator.Validate(SyntaxTree.Parse(book));

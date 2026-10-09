@@ -33,8 +33,8 @@ public class TabRenderVocabularyTests
         time 4/4
         part m { instrument bass }
         section A { m { c8 e g8. e16 g4 r4 | } }
-        form main { A }
-        score main {
+        form { A }
+        score {
           staff m
           {{tabItem}}
         }
@@ -125,8 +125,8 @@ public class TabRenderVocabularyTests
             time 4/4
             part m { instrument bass }
             section A { m { c8 e g8. e16 g4~ g4 | } }
-            form main { A }
-            score main {
+            form { A }
+            score {
               {{items}}
             }
             """;

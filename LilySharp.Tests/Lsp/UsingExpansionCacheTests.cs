@@ -43,9 +43,9 @@ public sealed class UsingExpansionCacheTests
 
         time 4/4
 
-        form main { ~A }
+        form { ~A }
 
-        score main { staff melody }
+        score { staff melody }
         """;
 
     private const string Parts =
@@ -172,7 +172,7 @@ public sealed class UsingExpansionCacheTests
     public void WithNoIncludes_TheIdentityPathStaysUncached()
     {
         // No usings: the tree handed in comes straight back (no snapshot machinery).
-        const string plain = "time 4/4\n\nscore main { staff nope }\n";
+        const string plain = "time 4/4\n\nscore { staff nope }\n";
         var tree = SyntaxTree.Parse(plain);
         var (expanded, diagnostics) = LilySharpLanguageServer.ExpandUsings(
             plain, tree, "C:/proj/main.lys", _ => null);

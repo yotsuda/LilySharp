@@ -66,7 +66,7 @@ public sealed partial class LilySharpLanguageServer
     /// midi part) or a section-body part block → the <c>part</c> definition;</item>
     /// <item>a form/structure section reference (<c>form m { Main }</c>, <c>~Main</c>,
     /// <c>[1. Main]</c>) → the <c>section Main { … }</c> declaration;</item>
-    /// <item>a score's form name (<c>score main …</c>) → the <c>form main { … }</c>
+    /// <item>a score's form name (<c>score …</c>) → the <c>form { … }</c>
     /// declaration;</item>
     /// <item>a bare music-block reference (<c>intro</c>) → the <c>phrase</c> (or the
     /// legacy <c>name = …</c> variable) declaration.</item>
@@ -86,7 +86,7 @@ public sealed partial class LilySharpLanguageServer
         if (SectionReferenceFinder.SectionNameTokenAt(root, offset) is { } sectionTok)
             return FindSectionDefinition(root, sectionTok.Text);
 
-        // A score's form name: `score main …` → `form main { … }`.
+        // A score's form name: `score …` → `form { … }`.
         if (TokenAt(FormNameTokens(root), offset) is { } formTok)
             return FindFormDefinition(root, formTok.Text);
 
@@ -162,7 +162,7 @@ public sealed partial class LilySharpLanguageServer
     private static SyntaxTokenNode? FindFormDefinition(SyntaxNode root, string name)
     {
         foreach (var form in root.DescendantNodes<FormDeclarationSyntax>())
-            if (form.Name is { } n && form.NameText == name) return n;
+            if (!form.IsReference && form.Name is { } n && form.NameText == name) return n;
         return null;
     }
 
@@ -189,7 +189,7 @@ public sealed partial class LilySharpLanguageServer
     private static bool IsDeclarationToken(SyntaxNode token) => token.Parent is
         PartDeclarationSyntax or PartBlockSyntax
         or SectionDeclarationSyntax
-        or FormDeclarationSyntax
+        or FormDeclarationSyntax { IsReference: false }
         or LyricsBlockSyntax or ChordPartBlockSyntax
         or PhraseDeclarationSyntax or VariableDeclarationSyntax;
 
@@ -233,7 +233,7 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>Every <c>form NAME</c> name token — the <c>form NAME { … }</c>
-    /// declaration plus each <c>score NAME …</c> reference.</summary>
+    /// declaration plus each score's <c>form NAME</c> reference.</summary>
     private static IEnumerable<SyntaxTokenNode> FormNameTokens(SyntaxNode root)
     {
         foreach (var node in root.DescendantNodes())
@@ -242,9 +242,6 @@ public sealed partial class LilySharpLanguageServer
             {
                 case FormDeclarationSyntax form when form.Name is { } n && n.Text.Length > 0:
                     yield return n;
-                    break;
-                case RenderDeclarationSyntax render when render.FormName is { } fn && fn.Text.Length > 0:
-                    yield return fn;
                     break;
             }
         }

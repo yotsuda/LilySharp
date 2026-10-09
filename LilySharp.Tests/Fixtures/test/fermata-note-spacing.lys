@@ -13,8 +13,8 @@ part m { clef treble }
 
 section A { m { aes'8@fermata bes' ces'' des'' } }
 
-form main { A }
+form { A }
 
-score main "fermata-note-spacing" {
+score "fermata-note-spacing" {
   staff m
 }

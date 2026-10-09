@@ -40,7 +40,7 @@ namespace LilySharp.Tests;
 /// Before this net existed the rows-only walk skipped <c>|: … :|</c> blocks whole (every arm
 /// was gated on <c>!IsInsideRepeatBlock</c> and no arm handled the block) and collapsed a
 /// section's second occurrence onto its first, with a cursor assignment that REWOUND the
-/// grid. A staffless <c>form main { A B A }</c> engraved 6 bars instead of 10, and the
+/// grid. A staffless <c>form { A B A }</c> engraved 6 bars instead of 10, and the
 /// reprise's syllables were laid on top of the first pass's — the "lyrics overlap" report.
 /// The suite was fully green throughout: 5874 tests, 222 snapshots and 572 tracked books all
 /// agreed, because every tracked staffless book names each of its sections exactly once.
@@ -65,8 +65,8 @@ public class RowsOnlyFormOrderTests
 
     private static string Book(string form, bool withStaff) => $$"""
         {{Head}}
-        form main { {{form}} }
-        score main {
+        form { {{form}} }
+        score {
         {{(withStaff ? "  staff melody" : "")}}
           lyrics verse
         }
@@ -170,10 +170,10 @@ public class RowsOnlyFormOrderTests
               section D { eight nine ten e- le- ven | }
               section O { twelve thir- teen | }
             }
-            form main { {{form}} }
+            form { {{form}} }
             """;
-        var staffless = Collect($"{head}\nscore main {{\n  lyrics verse\n}}");
-        var staffful = Collect($"{head}\nscore main {{\n  staff melody\n  lyrics verse\n}}");
+        var staffless = Collect($"{head}\nscore {{\n  lyrics verse\n}}");
+        var staffful = Collect($"{head}\nscore {{\n  staff melody\n  lyrics verse\n}}");
 
         Assert.Equal(RowSyllables(staffful), RowSyllables(staffless));
         Assert.Equal(RowBarlines(staffful, "verse"), RowBarlines(staffless, "verse"));
@@ -206,10 +206,10 @@ public class RowsOnlyFormOrderTests
               section D { eight nine ten e- le- ven | }
               section O { twelve thir- teen | }
             }
-            form main { {{form}} }
+            form { {{form}} }
             """;
-        var staffless = Collect($"{head}\nscore main {{\n  lyrics verse\n}}");
-        var staffful = Collect($"{head}\nscore main {{\n  staff melody\n  lyrics verse\n}}");
+        var staffless = Collect($"{head}\nscore {{\n  lyrics verse\n}}");
+        var staffful = Collect($"{head}\nscore {{\n  staff melody\n  lyrics verse\n}}");
 
         Assert.Equal(RowBarlines(staffful, "verse"), RowBarlines(staffless, "verse"));
         Assert.Equal(LilySharp.Core.Svg.Model.BarlineType.RepeatEnd, RowBarlines(staffless, "verse")[3].End);
@@ -232,10 +232,10 @@ public class RowsOnlyFormOrderTests
               melody { {{firstBar}} | g2 b8 g8 | b2 a4 | }
               chords prog { | G | G | }
             }
-            form main { Verse }
+            form { Verse }
             """;
-        var staffless = Collect($"{head}\nscore main {{\n  chords prog\n}}");
-        var staffful = Collect($"{head}\nscore main {{\n  staff melody\n  chords prog\n}}");
+        var staffless = Collect($"{head}\nscore {{\n  chords prog\n}}");
+        var staffful = Collect($"{head}\nscore {{\n  staff melody\n  chords prog\n}}");
 
         static List<LilySharp.Core.Semantics.Fraction> BarLengths(LilySharp.Core.Svg.Model.MultiStaffScore score, string row)
             => score.StaffGroups.SelectMany(g => g.Staves).SelectMany(s => s.Voices)
@@ -275,10 +275,10 @@ public class RowsOnlyFormOrderTests
               melody { {{bar}} | {{bar}} | }
               chords prog { Am F | G C | }
             }
-            form main { A B }
+            form { A B }
             """;
-        var staffless = Collect($"{head}\nscore main {{\n  chords prog\n}}");
-        var staffful = Collect($"{head}\nscore main {{\n  staff melody\n  chords prog\n}}");
+        var staffless = Collect($"{head}\nscore {{\n  chords prog\n}}");
+        var staffful = Collect($"{head}\nscore {{\n  staff melody\n  chords prog\n}}");
 
         static List<LilySharp.Core.Semantics.Fraction> BarLengths(LilySharp.Core.Svg.Model.MultiStaffScore score, string row)
             => score.StaffGroups.SelectMany(g => g.Staves).SelectMany(s => s.Voices)
@@ -322,8 +322,8 @@ public class RowsOnlyFormOrderTests
           section A { C | F | G | C | }
           section B { Am | G | }
         }
-        form main { A B A }
-        score main { chords prog }
+        form { A B A }
+        score { chords prog }
         """;
 
     [Fact]
@@ -357,8 +357,8 @@ public class RowsOnlyFormOrderTests
               }
             }
             chords prog { section A { C | F | } section B { G | C | } }
-            form main { A B }
-            score main { chords prog  lyrics verse }
+            form { A B }
+            score { chords prog  lyrics verse }
             """;
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors);

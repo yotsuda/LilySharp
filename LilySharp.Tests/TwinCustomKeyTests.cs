@@ -36,8 +36,8 @@ public class TwinCustomKeyTests
         {{key}}
         part melody
         section Main { melody { d'4 e' fis' g' | } }
-        form main { Main }
-        score main { staff melody }
+        form { Main }
+        score { staff melody }
         """));
 
     [Fact]

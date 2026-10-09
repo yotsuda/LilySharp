@@ -12,7 +12,7 @@ part m {
     cue { b4( g'4 d'2) } |
   }
 }
-form main { A }
-score main {
+form { A }
+score {
   staff m
 }

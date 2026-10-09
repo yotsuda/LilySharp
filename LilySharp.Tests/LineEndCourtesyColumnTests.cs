@@ -42,8 +42,8 @@ public sealed class LineEndCourtesyColumnTests
         part lower { clef bass }
         section A { upper { c''4 d'' e'' f'' | g''1 | } lower { c4 d e f | g1 | } }
         section B { upper { key {{toKey}} time 3/4 g''4 a'' b'' | c'''2. | } lower { key {{toKey}} time 3/4 g4 a b | c'2. | } }
-        form main { A break B }
-        score main { staff upper  staff lower }
+        form { A break B }
+        score { staff upper  staff lower }
         """;
 
     private static (char Glyph, double X, double Y)[] Glyphs(string svg) =>

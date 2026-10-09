@@ -94,8 +94,8 @@ public class TrailingLyricsRowBandTests
               section A { one two three four | five six seven | eight nine ten | e- le- ven | }
               section B { {{b}} }
             }
-            form main { A B A }
-            score main {
+            form { A B A }
+            score {
             {{rows}}
             }
             """;

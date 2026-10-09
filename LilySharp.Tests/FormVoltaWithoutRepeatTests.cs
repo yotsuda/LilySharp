@@ -27,7 +27,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// A volta ending that NO repeat block opened — <c>form main { A [1. B] }</c> — is its
+/// A volta ending that NO repeat block opened — <c>form { A [1. B] }</c> — is its
 /// plain section and nothing else: no bracket, no number, played once.
 /// </summary>
 /// <remarks>
@@ -87,9 +87,9 @@ public sealed class FormVoltaWithoutRepeatTests
     /// break it, and none of them has to be enumerated here.
     /// </summary>
     [Theory]
-    [InlineData("form main { A [1. B] }", "form main { A B }")]
-    [InlineData("form main { [1. A] }", "form main { A }")]
-    [InlineData("form main { |: A :| B [1. B] }", "form main { |: A :| B B }")]
+    [InlineData("form { A [1. B] }", "form { A B }")]
+    [InlineData("form { [1. A] }", "form { A }")]
+    [InlineData("form { |: A :| B [1. B] }", "form { |: A :| B B }")]
     public void ARepeatlessEnding_IsItsPlainReference_InAllFourOutputs(string written, string plain)
     {
         Assert.Equal(Page(plain), Page(written));
@@ -101,14 +101,14 @@ public sealed class FormVoltaWithoutRepeatTests
     /// <summary>
     /// The premise of the test above, asserted so it cannot pass by being vacuous: the
     /// controls really are three DIFFERENT pieces, and none of them is the empty page that
-    /// <c>form main { [1. A] }</c> used to produce (§5.4's empty-set trap — a comparison
+    /// <c>form { [1. A] }</c> used to produce (§5.4's empty-set trap — a comparison
     /// between two zero-byte strings would satisfy every Equal above).
     /// </summary>
     [Fact]
     public void TheControlsAreThreeDifferentNonEmptyPieces()
     {
-        var pages = new[] { Page("form main { A B }"), Page("form main { A }"),
-                            Page("form main { |: A :| B B }") };
+        var pages = new[] { Page("form { A B }"), Page("form { A }"),
+                            Page("form { |: A :| B B }") };
         Assert.All(pages, p => Assert.NotEqual("", p));
         Assert.Equal(3, pages.Distinct().Count());
     }
@@ -122,7 +122,7 @@ public sealed class FormVoltaWithoutRepeatTests
     [Fact]
     public void ARepeatlessEnding_EngravesNoVoltaBracket()
     {
-        var tree = Parse("form main { A [1. B] }");
+        var tree = Parse("form { A [1. B] }");
         var layout = new LayoutEngine().Layout(
             new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!));
         Assert.Empty(layout.VoltaBracketLayouts);
@@ -136,7 +136,7 @@ public sealed class FormVoltaWithoutRepeatTests
     [Fact]
     public void ARealPairOfEndings_StillDrawsBothBrackets()
     {
-        var tree = Parse("form main { |: A [1. A] :| [2. B] }");
+        var tree = Parse("form { |: A [1. A] :| [2. B] }");
         var layout = new LayoutEngine().Layout(
             new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!));
         Assert.Equal(new[] { "1.", "2." },
@@ -160,7 +160,7 @@ public sealed class FormVoltaWithoutRepeatTests
     public void AnEndingInsideARepeatBlock_IsEngravedByTheBlockAndNotAlsoByThisArm()
     {
         var labels = new MeasureCollector()
-            .Collect(Parse("form main { |: A [1. A] :| [2. B] }"), "m")
+            .Collect(Parse("form { |: A [1. A] :| [2. B] }"), "m")
             .Voice.Measures.Select(m => m.SectionLabel).ToArray();
         Assert.Equal(new[] { "A", "A", "B" }, labels);   // not A A A B B
     }
@@ -171,7 +171,7 @@ public sealed class FormVoltaWithoutRepeatTests
     /// </summary>
     [Fact]
     public void ARepeatlessEnding_PlaysItsSectionExactlyOnce()
-        => Assert.Equal(8, MidiPitches("form main { A [1. B] }").Length);
+        => Assert.Equal(8, MidiPitches("form { A [1. B] }").Length);
 
     /// <summary>
     /// The label follows the plain reference's rule, which is the one LilyPondExporter
@@ -185,7 +185,7 @@ public sealed class FormVoltaWithoutRepeatTests
     public void TheLabelIsThePlainReferences(string ending, string? expected)
     {
         var measures = new MeasureCollector()
-            .Collect(Parse("form main { A " + ending + " }"), "m").Voice.Measures.ToArray();
+            .Collect(Parse("form { A " + ending + " }"), "m").Voice.Measures.ToArray();
         Assert.Equal(2, measures.Length);              // A, then the ending's section
         Assert.Equal(expected, measures[1].SectionLabel);
     }
@@ -199,8 +199,8 @@ public sealed class FormVoltaWithoutRepeatTests
     [Fact]
     public void TheRepeatlessEndingSoundsOnBothPassesOfAOneSidedRepeat()
     {
-        var once = MidiPitches("form main { A [1. B] }");
-        var twice = MidiPitches("form main { A [1. B] :| }");
+        var once = MidiPitches("form { A [1. B] }");
+        var twice = MidiPitches("form { A [1. B] :| }");
         Assert.Equal(once.Concat(once).ToArray(), twice);
     }
 }

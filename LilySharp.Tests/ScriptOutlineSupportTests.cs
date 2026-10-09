@@ -54,8 +54,8 @@ public sealed class ScriptOutlineSupportTests
             part m {
               section A { {{note}} r4 r2 | }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """;
         var g = RenderedGeometry.Render(src);
         double middle = g.StaffRefpoints()[0];
@@ -81,8 +81,8 @@ public sealed class ScriptOutlineSupportTests
             part m {
               section A { voice { {{note}} r4 r2 } { c'1 } | }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """;
         var g = RenderedGeometry.Render(src);
         double middle = g.StaffRefpoints()[0];

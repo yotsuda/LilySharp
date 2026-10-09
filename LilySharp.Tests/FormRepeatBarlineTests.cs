@@ -33,7 +33,7 @@ namespace LilySharp.Tests;
 /// ⚠️ Until 2026-08-15 this token did not exist. <c>ParseFormItem</c> had no arm for
 /// <c>RepeatEndBar</c>, so it returned null and <c>ParseList</c>'s shared
 /// <c>else Advance()</c> — the same infinite-loop guard whose part-header twin was
-/// LYS0025 — dropped it. Measured on <c>form main { … Solo :| }</c>: the MIDI hash, the
+/// LYS0025 — dropped it. Measured on <c>form { … Solo :| }</c>: the MIDI hash, the
 /// SVG hash, the MusicXML repeat count and the LilyPond twin were ALL byte-identical to
 /// not writing it, and `check` reported nothing. A book in the author's own library
 /// (Addicted To Love.lys) ends exactly that way.
@@ -58,7 +58,7 @@ public sealed class FormRepeatBarlineTests
     [Fact]
     public void AFormLevelRepeatEnd_IsEngraved()
     {
-        var m = Measures(TwoSections + "form main { A B :| }\nscore main { staff m }");
+        var m = Measures(TwoSections + "form { A B :| }\nscore { staff m }");
         Assert.Equal(2, m.Length);
         Assert.Equal(BarlineType.RepeatEnd, m[^1].EndBarline);
     }
@@ -76,12 +76,12 @@ public sealed class FormRepeatBarlineTests
     [Fact]
     public void WithoutIt_TheSameScoreEndsInAPlainBar()
     {
-        var m = Measures(TwoSections + "form main { A B }\nscore main { staff m }");
+        var m = Measures(TwoSections + "form { A B }\nscore { staff m }");
         Assert.Equal(2, m.Length);
         Assert.Equal(BarlineType.Single, m[^1].EndBarline);
     }
 
-    private static string Src(string form) => TwoSections + form + "\nscore main { staff m }";
+    private static string Src(string form) => TwoSections + form + "\nscore { staff m }";
 
     /// <summary>The twin plays it: the stretch before the bar becomes a <c>\repeat volta</c>
     /// body, and the score's initial-repeat-bar setting goes off, since no <c>|:</c> was
@@ -97,7 +97,7 @@ public sealed class FormRepeatBarlineTests
     public void AFormLevelRepeatEnd_ReachesTheTwin_AsARepeatFromTheBeginning()
     {
         var exporter = new LilyPondExporter();
-        var with = exporter.Export(SyntaxTree.Parse(Src("form main { A B :| }")));
+        var with = exporter.Export(SyntaxTree.Parse(Src("form { A B :| }")));
         Assert.Equal(1, Occurrences(with, "\\repeat volta 2 {"));
         // Both sections are INSIDE the body, in order.
         int open = with.IndexOf("\\repeat volta 2 {", System.StringComparison.Ordinal);
@@ -110,7 +110,7 @@ public sealed class FormRepeatBarlineTests
         Assert.DoesNotContain(exporter.Warnings, w => w.Contains("one-sided ':|'"));
 
         var plain = new LilyPondExporter();
-        var without = plain.Export(SyntaxTree.Parse(Src("form main { A B }")));
+        var without = plain.Export(SyntaxTree.Parse(Src("form { A B }")));
         Assert.DoesNotContain("\\repeat volta", without);
         Assert.DoesNotContain("\\bar \":|.\"", without);
         Assert.Contains("printInitialRepeatBar = ##t", without);
@@ -121,7 +121,7 @@ public sealed class FormRepeatBarlineTests
     [Fact]
     public void AFormLevelRepeatEnd_CarriesItsPlayCountIntoTheTwin()
     {
-        var ly = new LilyPondExporter().Export(SyntaxTree.Parse(Src("form main { A B :|*3 }")));
+        var ly = new LilyPondExporter().Export(SyntaxTree.Parse(Src("form { A B :|*3 }")));
         Assert.Equal(1, Occurrences(ly, "\\repeat volta 3 {"));
     }
 
@@ -140,7 +140,7 @@ public sealed class FormRepeatBarlineTests
     public void ABackToBackDivider_AtFormLevel_IsTwoRepeatsInTheTwin()
     {
         var exporter = new LilyPondExporter();
-        var ly = exporter.Export(SyntaxTree.Parse(Src("form main { A :|: B :| }")));
+        var ly = exporter.Export(SyntaxTree.Parse(Src("form { A :|: B :| }")));
         Assert.Equal(2, Occurrences(ly, "\\repeat volta 2 {"));
         int first = ly.IndexOf("\\repeat volta 2 {", System.StringComparison.Ordinal);
         int second = ly.IndexOf("\\repeat volta 2 {", first + 1, System.StringComparison.Ordinal);
@@ -159,7 +159,7 @@ public sealed class FormRepeatBarlineTests
     [Fact]
     public void ARewindOverAWrittenRepeat_NestsIt_AndKeepsTheWrittenOpener()
     {
-        var ly = new LilyPondExporter().Export(SyntaxTree.Parse(Src("form main { |: A :| B :| }")));
+        var ly = new LilyPondExporter().Export(SyntaxTree.Parse(Src("form { |: A :| B :| }")));
         Assert.Equal(2, Occurrences(ly, "\\repeat volta 2 {"));
         Assert.Contains("printInitialRepeatBar = ##t", ly);
     }
@@ -173,7 +173,7 @@ public sealed class FormRepeatBarlineTests
     public void TwoRewinds_NestInTheTwin_AndSaySoInTheWarning()
     {
         var exporter = new LilyPondExporter();
-        var ly = exporter.Export(SyntaxTree.Parse(Src("form main { A :| B :| }")));
+        var ly = exporter.Export(SyntaxTree.Parse(Src("form { A :| B :| }")));
         Assert.Equal(2, Occurrences(ly, "\\repeat volta 2 {"));
         Assert.Contains(exporter.Warnings, w => w.Contains("nest"));
     }
@@ -194,7 +194,7 @@ public sealed class FormRepeatBarlineTests
     {
         const string src =
             "part m { clef treble section A { c1 } section B { d1 } section C { e1 } section D { f1 } }\n"
-            + "form main { |: A [1. B] :| [2. C] :| [3. D] }\nscore main { staff m }";
+            + "form { |: A [1. B] :| [2. C] :| [3. D] }\nscore { staff m }";
         var exporter = new LilyPondExporter();
         var ly = exporter.Export(SyntaxTree.Parse(src));
         Assert.Equal(1, Occurrences(ly, "\\repeat volta 3 {"));
@@ -218,7 +218,7 @@ public sealed class FormRepeatBarlineTests
         const string src =
             "part m { clef treble section A { c1 } section B { d1 } }\n"
             + "chords h { section A { C } section B { G } }\n"
-            + "form main { A :|: B :| }\nscore main { staff m chords h }";
+            + "form { A :|: B :| }\nscore { staff m chords h }";
         var ly = new LilyPondExporter().Export(SyntaxTree.Parse(src));
         int chordmode = ly.IndexOf("\\chordmode {", System.StringComparison.Ordinal);
         Assert.True(chordmode >= 0, ly);
@@ -239,8 +239,8 @@ public sealed class FormRepeatBarlineTests
         // ⚠️ Export returns the DOCUMENT MODEL, not serialized XML — the first draft of this
         // test matched on `.ToString()` and was reading a type name, so it counted 0 for
         // both sides (RULES §5.4: a checker has to be shown failing on a known input).
-        var with = new MusicXmlExporter().Export(SyntaxTree.Parse(Src("form main { A B :| }")));
-        var without = new MusicXmlExporter().Export(SyntaxTree.Parse(Src("form main { A B }")));
+        var with = new MusicXmlExporter().Export(SyntaxTree.Parse(Src("form { A B :| }")));
+        var without = new MusicXmlExporter().Export(SyntaxTree.Parse(Src("form { A B }")));
         Assert.True(with.Parts[0].Measures[^1].RepeatBackward);
         Assert.False(without.Parts[0].Measures[^1].RepeatBackward);
         // No forward repeat anywhere: backward-without-forward is the MusicXML spelling.
@@ -259,8 +259,8 @@ public sealed class FormRepeatBarlineTests
     [Fact]
     public void AFormLevelRepeatEnd_PlaysThePieceFromTheBeginning()
     {
-        Assert.Equal(new[] { 60, 62 }, Pitches(Src("form main { A B }")));
-        Assert.Equal(new[] { 60, 62, 60, 62 }, Pitches(Src("form main { A B :| }")));
+        Assert.Equal(new[] { 60, 62 }, Pitches(Src("form { A B }")));
+        Assert.Equal(new[] { 60, 62, 60, 62 }, Pitches(Src("form { A B :| }")));
     }
 
     /// <summary>
@@ -279,9 +279,9 @@ public sealed class FormRepeatBarlineTests
         const string three =
             "part m { clef treble section A { c1 } section B { d1 } section C { e1 } }\n";
         Assert.Equal(new[] { 60, 62, 64 },
-            Pitches(three + "form main { A B C }\nscore main { staff m }"));
+            Pitches(three + "form { A B C }\nscore { staff m }"));
         Assert.Equal(new[] { 60, 62, 64, 60, 62, 64 },
-            Pitches(three + "form main { A B C :| }\nscore main { staff m }"));
+            Pitches(three + "form { A B C :| }\nscore { staff m }"));
     }
 
     /// <summary>
@@ -294,7 +294,7 @@ public sealed class FormRepeatBarlineTests
         Assert.Equal(new[] { 60, 62, 60, 62, 64 },
             Pitches(
                 "part m { clef treble section A { c1 } section B { d1 } section C { e1 } }\n"
-                + "form main { A B :| C }\nscore main { staff m }"));
+                + "form { A B :| C }\nscore { staff m }"));
     }
 
     /// <summary>
@@ -312,19 +312,19 @@ public sealed class FormRepeatBarlineTests
     [Fact]
     public void ABackToBackDivider_AtFormLevel_RewindsThenRepeats_InMidi()
     {
-        Assert.Equal(new[] { 60, 60, 62, 62 }, Pitches(Src("form main { A :|: B :| }")));
+        Assert.Equal(new[] { 60, 60, 62, 62 }, Pitches(Src("form { A :|: B :| }")));
         // A second divider closes the block and opens the next — it rewinds nothing.
         Assert.Equal(new[] { 60, 60, 62, 62, 64, 64 }, Pitches(
             "part m { clef treble section A { c1 } section B { d1 } section C { e1 } }\n"
-            + "form main { A :|: B :|: C :| }\nscore main { staff m }"));
+            + "form { A :|: B :|: C :| }\nscore { staff m }"));
         // The closing bar's count is the block's.
-        Assert.Equal(new[] { 60, 60, 62, 62, 62 }, Pitches(Src("form main { A :|: B :|*3 }")));
+        Assert.Equal(new[] { 60, 60, 62, 62, 62 }, Pitches(Src("form { A :|: B :|*3 }")));
     }
 
     [Fact]
     public void ABackToBackDivider_AtFormLevel_IsThreeRepeatBarsInMusicXml()
     {
-        var doc = new MusicXmlExporter().Export(SyntaxTree.Parse(Src("form main { A :|: B :| }")));
+        var doc = new MusicXmlExporter().Export(SyntaxTree.Parse(Src("form { A :|: B :| }")));
         var m = doc.Parts[0].Measures;
         Assert.Equal(2, m.Count);
         Assert.False(m[0].RepeatForward);
@@ -345,11 +345,11 @@ public sealed class FormRepeatBarlineTests
         const string three =
             "part m { clef treble section A { c1 } section B { d1 } section C { e1 } section D { f1 } }\n";
         Assert.Equal(new[] { 60, 60, 62, 62 },
-            Pitches(three + "form main { |: A :|: B :| }\nscore main { staff m }"));
+            Pitches(three + "form { |: A :|: B :| }\nscore { staff m }"));
         Assert.Equal(new[] { 60, 60, 60, 62, 62, 62 },
-            Pitches(three + "form main { |: A :|: B :|*3 }\nscore main { staff m }"));
+            Pitches(three + "form { |: A :|: B :|*3 }\nscore { staff m }"));
         Assert.Equal(new[] { 60, 60, 62, 64, 62, 65 },
-            Pitches(three + "form main { |: A :|: B [1. C] :| [2. D] }\nscore main { staff m }"));
+            Pitches(three + "form { |: A :|: B [1. C] :| [2. D] }\nscore { staff m }"));
     }
 
     /// <summary>The reader's own shape: rewind, then a block with the divider's token as its
@@ -360,7 +360,7 @@ public sealed class FormRepeatBarlineTests
     {
         var form = SyntaxTree.Parse(
                 "part m { clef treble section A { c1 } section B { d1 } section C { e1 } section D { f1 } }\n"
-                + "form main { A :|: B [1. C] :| [2. D] }\nscore main { staff m }")
+                + "form { A :|: B [1. C] :| [2. D] }\nscore { staff m }")
             .GetRoot().DescendantNodes().OfType<FormDeclarationSyntax>().Single();
         var items = FormWalk.Read(form);
         Assert.Collection(items,
@@ -388,7 +388,7 @@ public sealed class FormRepeatBarlineTests
     {
         const string src =
             "part m { clef treble section A { c1 } section B { d1 } section C { e1 } section D { f1 } }\n"
-            + "form main { A :|: B [1. C] :| [2. D] }\nscore main { staff m }";
+            + "form { A :|: B [1. C] :| [2. D] }\nscore { staff m }";
         Assert.Equal(new[] { 60, 60, 62, 64, 62, 65 }, Pitches(src));
         var tree = SyntaxTree.Parse(src);
         Assert.DoesNotContain(SemanticValidation.Run(tree), d => d.Code == DiagnosticCodes.VoltaEndingWithoutRepeat);
@@ -410,8 +410,8 @@ public sealed class FormRepeatBarlineTests
         // `last: true` at every divider-run ending and the divider spelling's D fills the bar.
         const string half =
             "part m { clef treble section A { c1 } section B { d1 } section C { e2 } section D { f2 } }\n";
-        var block = Measures(half + "form main { A |: B [1. C] :| [2. D] }\nscore main { staff m }");
-        var divider = Measures(half + "form main { A :|: B [1. C] :| [2. D] }\nscore main { staff m }");
+        var block = Measures(half + "form { A |: B [1. C] :| [2. D] }\nscore { staff m }");
+        var divider = Measures(half + "form { A :|: B [1. C] :| [2. D] }\nscore { staff m }");
         Assert.Equal(block.Length, divider.Length);
         Assert.Equal(block[^1].EndBarline, divider[^1].EndBarline);
         Assert.Equal(block.Select(m => m.EndBarline == BarlineType.None).ToArray(),
@@ -430,7 +430,7 @@ public sealed class FormRepeatBarlineTests
         // second time. Written-order is the reading that terminates.
         var pitches = Pitches(
             "part m { clef treble section A { c1 } section B { d1 } section C { e1 } }\n"
-            + "form main { A B :| C :| }\nscore main { staff m }");
+            + "form { A B :| C :| }\nscore { staff m }");
         Assert.Equal(new[] { 60, 62, /*rewind*/ 60, 62, /**/ 64, /*rewind*/ 60, 62, 64 }, pitches);
     }
 

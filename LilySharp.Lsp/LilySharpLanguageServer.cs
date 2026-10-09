@@ -202,7 +202,7 @@ public sealed partial class LilySharpLanguageServer
                             //
                             // ⚠️ A name is also not something the TextMate grammar could
                             // resolve. It reads a line at a time, so it can see that
-                            // `form main { A }` writes an A and cannot see whether a
+                            // `form { A }` writes an A and cannot see whether a
                             // `section A { … }` exists to give it meaning. The tree can, and
                             // that is why the form's names are coloured from here.
                             "part",            // Custom: the name in `part NAME { … }`

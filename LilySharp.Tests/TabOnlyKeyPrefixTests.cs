@@ -58,8 +58,8 @@ public class TabOnlyKeyPrefixTests
         time {{meter}}
         part bl { clef bass  tuning bass }
         section Main { bl { e,4 e, e, | e,4 e, e, } }
-        form main { Main }
-        score main { {{scoreBlock}} }
+        form { Main }
+        score { {{scoreBlock}} }
         """;
 
     [Fact]

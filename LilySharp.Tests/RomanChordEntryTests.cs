@@ -50,8 +50,8 @@ public class RomanChordEntryTests
               section A { c4 d e f | g a b c' | c'4 b a g | f e d c | }
             }
             chords prog { section A { {{entries}} } }
-            form main { A }
-            score main { staff m  chords prog{{display}} }
+            form { A }
+            score { staff m  chords prog{{display}} }
             """;
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
@@ -142,8 +142,8 @@ public class RomanChordEntryTests
               section A { c'4 c' c' c' | key g major d' d' d' d' | }
             }
             chords prog { section A { I | I | } }
-            form main { A }
-            score main { staff m  chords prog }
+            form { A }
+            score { staff m  chords prog }
             """;
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
@@ -198,8 +198,8 @@ public class RomanChordEntryTests
             key c major
             part m { clef treble section A { c4 d e f | } }
             chords prog { section A { ♭VII | } }
-            form main { A }
-            score main { staff m  chords prog }
+            form { A }
+            score { staff m  chords prog }
             """);
         Assert.True(tree.HasErrors);
     }

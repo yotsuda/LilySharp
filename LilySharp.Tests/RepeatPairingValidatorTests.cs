@@ -50,7 +50,7 @@ public sealed class RepeatPairingValidatorTests
     {
         Assert.Equal(1, Count(
             "part m { clef treble section A { |: c1 } }\n"
-            + "form main { A }\nscore main { staff m }"));
+            + "form { A }\nscore { staff m }"));
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public sealed class RepeatPairingValidatorTests
     {
         Assert.Equal(0, Count(
             "part m { clef treble section A { |: c1 :| } }\n"
-            + "form main { A }\nscore main { staff m }"));
+            + "form { A }\nscore { staff m }"));
     }
 
     // --- the half that has a MEANING, not a defect --------------------------------
@@ -79,15 +79,15 @@ public sealed class RepeatPairingValidatorTests
     {
         Assert.Equal(0, Count(
             "part m { clef treble section A { c1 :| } }\n"
-            + "form main { A }\nscore main { staff m }"));
+            + "form { A }\nscore { staff m }"));
         Assert.Equal(0, Count(
             "part m { clef treble section A { c1 } section B { d1 } }\n"
-            + "form main { A B :| }\nscore main { staff m }"));
+            + "form { A B :| }\nscore { staff m }"));
         // A lone ':|' first, then a '|:' that nothing closes: the lone ':|' must neither
         // report nor be spent closing the later '|:'.
         Assert.Equal(1, Count(
             "part m { clef treble section A { c1 :| d1 |: e1 } }\n"
-            + "form main { A }\nscore main { staff m }"));
+            + "form { A }\nscore { staff m }"));
     }
 
     // --- the reason it cannot be decided on the text ------------------------------
@@ -101,7 +101,7 @@ public sealed class RepeatPairingValidatorTests
     {
         Assert.Equal(0, Count(
             "part m { clef treble section A { |: c1 } section B { d1 } }\n"
-            + "form main { A B :| }\nscore main { staff m }"));
+            + "form { A B :| }\nscore { staff m }"));
     }
 
     /// <summary>
@@ -109,7 +109,7 @@ public sealed class RepeatPairingValidatorTests
     /// validator's to report. A form-level <c>|:</c> opens a <c>FormRepeatBlock</c>, and the
     /// parser requires that block to close at form level — so "opened by the form, closed
     /// inside a section" cannot be written at all. MEASURED 2026-08-15:
-    /// <c>form main { |: A B }</c> with section B ending <c>:|</c> is rejected by the parser
+    /// <c>form { |: A B }</c> with section B ending <c>:|</c> is rejected by the parser
     /// before any of this runs.
     /// <para>
     /// The first draft of this file asserted that spelling was ACCEPTED, and the source it
@@ -129,7 +129,7 @@ public sealed class RepeatPairingValidatorTests
     {
         var diagnostics = SyntaxTree.Parse(
             "part m { clef treble section A { c1 } section B { d1 :| } }\n"
-            + "form main { |: A B }\nscore main { staff m }").Diagnostics;
+            + "form { |: A B }\nscore { staff m }").Diagnostics;
         Assert.Contains(diagnostics, d => d.Code == DiagnosticCodes.UnpairedRepeat
             && d.Message.Contains("never closed"));
     }
@@ -147,7 +147,7 @@ public sealed class RepeatPairingValidatorTests
         Assert.Equal(1, Count(
             "part m { clef treble section A { |: c1 } }\n"
             + "part b { clef bass section A { |: c1 } }\n"
-            + "form main { A }\nscore main { staff m staff b }"));
+            + "form { A }\nscore { staff m staff b }"));
     }
 
     /// <summary>
@@ -160,7 +160,7 @@ public sealed class RepeatPairingValidatorTests
         Assert.Equal(1, Count(
             "part m { clef treble section A { |: c1 } }\n"
             + "part b { clef bass section A { c1 } }\n"
-            + "form main { A }\nscore main { staff m staff b }"));
+            + "form { A }\nscore { staff m staff b }"));
     }
 
     // --- nesting -------------------------------------------------------------------
@@ -170,7 +170,7 @@ public sealed class RepeatPairingValidatorTests
     {
         Assert.Equal(0, Count(
             "part m { clef treble section A { |: c1 |: d1 :| e1 :| } }\n"
-            + "form main { A }\nscore main { staff m }"));
+            + "form { A }\nscore { staff m }"));
     }
 
     [Fact]
@@ -178,7 +178,7 @@ public sealed class RepeatPairingValidatorTests
     {
         Assert.Equal(2, Count(
             "part m { clef treble section A { |: c1 |: d1 } }\n"
-            + "form main { A }\nscore main { staff m }"));
+            + "form { A }\nscore { staff m }"));
     }
 
     /// <summary>
@@ -191,9 +191,9 @@ public sealed class RepeatPairingValidatorTests
     {
         Assert.Equal(0, Count(
             "part m { clef treble section A { |: c1 :| |: d1 :| } }\n"
-            + "form main { A }\nscore main { staff m }"));
+            + "form { A }\nscore { staff m }"));
         Assert.Equal(0, Count(
             "part m { clef treble section A { |: c1 :|: d1 :| } }\n"
-            + "form main { A }\nscore main { staff m }"));
+            + "form { A }\nscore { staff m }"));
     }
 }

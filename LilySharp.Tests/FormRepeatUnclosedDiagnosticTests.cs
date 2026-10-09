@@ -26,7 +26,7 @@ namespace LilySharp.Tests;
 /// </summary>
 /// <remarks>
 /// The item loop ran to END OF FILE looking for a <c>:|</c> that was never coming, so
-/// <c>form main { ~Body |: A }</c> reported the form's own <c>}</c>, then <c>score</c>,
+/// <c>form { ~Body |: A }</c> reported the form's own <c>}</c>, then <c>score</c>,
 /// <c>{</c>, <c>staff</c> and <c>}</c> as five things "a form cannot hold", and only then
 /// said "Expected RepeatEndBar, found EndOfFile" — five wrong errors before the true one,
 /// with the score block declared garbage. Reported 2026-08-31 on
@@ -49,8 +49,8 @@ public sealed class FormRepeatUnclosedDiagnosticTests
           section B { c'4 c c c | }
           section A { d'4 d d d | [1. e'4 e e e | ] :| [2. f'4 f f f | ] }
         }
-        form main { ~B |: A }
-        score main { staff m }
+        form { ~B |: A }
+        score { staff m }
         """;
 
     private static Diagnostic[] Errors(string src) => SyntaxTree.Parse(src).Diagnostics
@@ -68,7 +68,7 @@ public sealed class FormRepeatUnclosedDiagnosticTests
     public void ItPointsAtTheOpeningBarlineAndNotAtTheEndOfTheFile()
     {
         var errors = Errors(Book);
-        // The `|:` of `form main { ~B |: A }` — not the `}` five tokens later, and not EOF.
+        // The `|:` of `form { ~B |: A }` — not the `}` five tokens later, and not EOF.
         Assert.Equal(Book.IndexOf("|: A"), errors[0].Span.Start);
     }
 
@@ -96,7 +96,7 @@ public sealed class FormRepeatUnclosedDiagnosticTests
               section B { c'4 c c c | }
               section A { |: d'4 d d d | }
             }
-            form main { ~B A :| }
-            score main { staff m }
+            form { ~B A :| }
+            score { staff m }
             """));
 }

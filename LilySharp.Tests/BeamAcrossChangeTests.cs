@@ -41,7 +41,7 @@ public class BeamAcrossChangeTests
     private static (int Beams, double CentreBelowMiddle) Beam(string key, string music)
     {
         string src = "octave absolute\nkey " + key + "\npart m { clef treble }\nsection A { m { "
-            + music + " } }\nform main { ~A }\nscore main { staff m }\n";
+            + music + " } }\nform { ~A }\nscore { staff m }\n";
         string svg = SvgGenerator.Generate(SyntaxTree.Parse(src), new SvgRenderOptions { EmbedFont = false });
         double middle = Regex.Matches(svg,
                 "<line x1=\"[\\d.]+\" y1=\"([\\d.]+)\" x2=\"[\\d.]+\" y2=\"\\1\" stroke=\"#000000\" stroke-width=\"0.100\"")

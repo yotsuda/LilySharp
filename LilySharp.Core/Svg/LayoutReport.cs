@@ -66,10 +66,10 @@ public static class LayoutReport
         var score = SvgGenerator.CollectScore(tree, spec);
         var layout = new LayoutEngine(score.Paper).Layout(score);
 
-        // Reconstruct the header as written: `score <form> ["basename"]`. The
-        // basename is shown only when it differs from the form name (i.e. it was
-        // given explicitly, not derived from the form).
-        string formName = spec?.Name ?? "";
+        // Reconstruct the header as written: `score [name] ["basename"]`. The
+        // basename is shown only when it differs from the name (i.e. it was given
+        // explicitly, not derived from the name); the unnamed score shows no name.
+        string formName = spec?.Name is { } n && n != Collector.RenderSpecParser.UnnamedScoreName ? n : "";
         string basename = ScoreName(spec);
         sb.Append("score");
         if (formName.Length > 0)

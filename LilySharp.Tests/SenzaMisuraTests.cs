@@ -63,8 +63,8 @@ public class SenzaMisuraTests
             d1 |
           }
         }
-        form main { Main }
-        score main "senza-misura" { staff melody }
+        form { Main }
+        score "senza-misura" { staff melody }
         """;
 
     [Fact]
@@ -137,8 +137,8 @@ public class SenzaMisuraTests
             time 4/4
             part melody { clef treble }
             section Main { melody { c'4 d e f | g8 a b c d c b a | g4 f e2 | } }
-            form main { Main }
-            score main { staff melody }
+            form { Main }
+            score { staff melody }
             """;
         var control = new BeamDetector().DetectBeamGroups(Collect(metered));
         Assert.Equal(2, control.Count(g => g.MeasureIndex == 1));
@@ -148,8 +148,8 @@ public class SenzaMisuraTests
             time none
             part melody { clef treble }
             section Main { melody { g'8[ a' b' c''] d''4 e''8 f'' | } }
-            form main { Main }
-            score main { staff melody }
+            form { Main }
+            score { staff melody }
             """;
         var written = new BeamDetector().DetectBeamGroups(Collect(manual));
         var one = Assert.Single(written);
@@ -163,8 +163,8 @@ public class SenzaMisuraTests
             time none
             part melody { clef treble }
             section Main { melody { c'4 d e f g a b c' | d'1 e' f' | } }
-            form main { Main }
-            score main { staff melody }
+            form { Main }
+            score { staff melody }
             """;
         var score = Collect(source);
         Assert.True(score.TimeSignature.SenzaMisura);
@@ -183,8 +183,8 @@ public class SenzaMisuraTests
             part melody { clef treble }
             section A { time none  melody { c'4 d e f g | a b c' | } }
             section B { melody { c'4 d e f | g a b c' | } }
-            form main { A B }
-            score main { staff melody }
+            form { A B }
+            score { staff melody }
             """;
         var score = Collect(source);
         var measures = score.Voice.Measures;
@@ -289,8 +289,8 @@ public class SenzaMisuraTests
             time 4/4
             part strict { clef treble }
             section Strict { strict { c'4 d e f | c'4 d e | } }
-            form main { Free Strict }
-            score main { staff free  staff strict }
+            form { Free Strict }
+            score { staff free  staff strict }
             """;
         var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors);
@@ -318,8 +318,8 @@ public class SenzaMisuraTests
             part melody { clef treble }
             section A { melody { c'4 d e | time none f8 g a b c' d' e' f' g'4 | time 3/4 a2. | } }
             section B { time none  melody { c'4 d e f g | } }
-            form main { A B }
-            score main { staff melody }
+            form { A B }
+            score { staff melody }
             """;
         var midi = new LilySharp.Core.Midi.MidiExporter().Export(TestPaper.ParseAtIndentZero(source));
         var meters = midi.Tracks[0].TimeSignatures;
@@ -334,8 +334,8 @@ public class SenzaMisuraTests
             time none
             part melody { clef treble }
             section Main { melody { c'4 d | | e'4 f' | } }
-            form main { Main }
-            score main { staff melody }
+            form { Main }
+            score { staff melody }
             """;
         var measures = Collect(source).Voice.Measures;
         Assert.Equal(3, measures.Length);
@@ -353,16 +353,16 @@ public class SenzaMisuraTests
         time 4/4
         part melody { clef treble }
         section Main { melody { c'8 d time none e8 f g a b c d e f4 g | time 4/4 c1 | } }
-        form main { Main }
-        score main { staff melody }
+        form { Main }
+        score { staff melody }
         """;
 
     private const string MidBarQuarters = """
         time 4/4
         part melody { clef treble }
         section Main { melody { c'4 d time none e8 f g a b c d e f4 g | time 4/4 c1 | } }
-        form main { Main }
-        score main { staff melody }
+        form { Main }
+        score { staff melody }
         """;
 
     /// <summary>
@@ -395,8 +395,8 @@ public class SenzaMisuraTests
             time 4/4
             part melody { clef treble }
             section Main { melody { c'8 d time none e8 f g4 | a8 b c d e4 | time 4/4 c1 | } }
-            form main { Main }
-            score main { staff melody }
+            form { Main }
+            score { staff melody }
             """;
         var score = Collect(source);
         Assert.Equal(new Fraction(1, 4), score.Voice.Measures[0].UnmeteredPosition);
@@ -414,8 +414,8 @@ public class SenzaMisuraTests
             time 4/4
             part melody { clef treble }
             section Main { melody { c'4 d time none e8 f g4 | a8 b c d e4 | time 4/4 c1 | } }
-            form main { Main }
-            score main { staff melody }
+            form { Main }
+            score { staff melody }
             """;
         Assert.Empty(new BeamDetector().DetectBeamGroups(Collect(control)));
     }
@@ -438,8 +438,8 @@ public class SenzaMisuraTests
             time 4/4
             part melody { clef treble }
             section Main { melody { c'8 d time none e8 f g a b c d e f4 g | time 3/4 c2. | d2. | } }
-            form main { Main }
-            score main { staff melody }
+            form { Main }
+            score { staff melody }
             """;
         Assert.Contains("\\cadenzaOff \\time 3/4 \\partial 2. c2. |",
             new LilyPondExporter().Export(TestPaper.ParseAtIndentZero(threeFour)));
@@ -462,8 +462,8 @@ public class SenzaMisuraTests
             time 4/4
             part melody { clef treble }
             section Main { melody { c'4 d e f | time none g8 a b partial 4 c'4 | d'4 e' f' g' | time 4/4 a'1 | } }
-            form main { Main }
-            score main { staff melody }
+            form { Main }
+            score { staff melody }
             """;
         var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors);
@@ -484,8 +484,8 @@ public class SenzaMisuraTests
             time 4/4
             part melody { clef treble }
             section Main { melody { c'4 d e f | partial 4 c'4 | d'4 e' f' g' | } }
-            form main { Main }
-            score main { staff melody }
+            form { Main }
+            score { staff melody }
             """;
         var v2 = new MeasureValidator();
         v2.Validate(TestPaper.ParseAtIndentZero(metered));

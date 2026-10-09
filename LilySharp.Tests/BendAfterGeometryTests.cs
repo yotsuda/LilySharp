@@ -56,8 +56,8 @@ public sealed class BendAfterGeometryTests
     private static string Render(string sectionA) => LiveRender.SvgFromRenderSpec($$"""
         part v { octave 5 }
         section A { {{sectionA}} }
-        form main { A }
-        score main { staff v }
+        form { A }
+        score { staff v }
         """);
 
     private readonly record struct Bend(int Pos, double X0, double Y0, double X1, double Y1, double Width);

@@ -12,9 +12,9 @@ part m {
   section A { e,8 f g a e f g a | c,8 d, e, f, c, d, e, f, | }
 }
 
-form main { A }
+form { A }
 
-score main {
+score {
   staff m
   tab m
 }

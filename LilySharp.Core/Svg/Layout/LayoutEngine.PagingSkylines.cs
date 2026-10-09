@@ -1195,7 +1195,7 @@ internal sealed partial class LayoutEngine
                 //   * a segno/coda glyph got a hand-written 1.0 half-width beside the 1.2
                 //     the same glyph is given everywhere else.
                 // FOUND by porting the plain-text em: eighteen books moved and thirteen of
-                // them carry no plain-text mark at all — they carry `form main { Intro A1
+                // them carry no plain-text mark at all — they carry `form { Intro A1
                 // … }`, i.e. section labels, riding a constant that has nothing to do with
                 // them. HANDOFF §7.6: a comment claiming N spellings were unified does not
                 // make the site exhaustive; count the arms.

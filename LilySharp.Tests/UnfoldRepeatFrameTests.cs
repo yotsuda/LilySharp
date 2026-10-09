@@ -58,8 +58,8 @@ public class UnfoldRepeatFrameTests
         {{directives}}
         part m { clef treble }
         section A { m { {{body}} } }
-        form main { A }
-        score main { staff m }
+        form { A }
+        score { staff m }
         """;
 
     private static int[] MidiPitches(string lys)

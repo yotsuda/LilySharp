@@ -69,8 +69,8 @@ public class GridRowMeterCentringTests
             }
             chords prog { section A { C | G | } }
             lyrics verse { section A { {{b}} } }
-            form main { A }
-            score main {
+            form { A }
+            score {
               chords prog as names
               lyrics verse sings melody
             }
@@ -134,7 +134,7 @@ public class GridRowMeterCentringTests
     [Fact]
     public void TheRepeatDotsAndTheMeterShareOneCentre()
     {
-        string src = Book(2).Replace("form main { A }", "form main { |: A :| }");
+        string src = Book(2).Replace("form { A }", "form { |: A :| }");
         string svg = Render(src);
         var (top, bottom) = Band(svg);
         double centre = (top + bottom) / 2;

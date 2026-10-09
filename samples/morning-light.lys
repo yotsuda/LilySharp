@@ -27,9 +27,9 @@ section Verse {
   }
 }
 
-form main { ~Verse }
+form { ~Verse }
 
-score main {
+score {
   chords harmony
   staff melody
   lyrics words

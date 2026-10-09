@@ -254,9 +254,9 @@ public sealed partial class LilyPondExporter
     /// those drops were structural, and both produced a twin that COMPILES AND IS A DIFFERENT
     /// PIECE, which no warning and no snapshot can catch — only reading the .ly:
     /// <list type="bullet">
-    /// <item><c>form main { A break B }</c> — the <c>\break</c> never reached the twin, so
+    /// <item><c>form { A break B }</c> — the <c>\break</c> never reached the twin, so
     /// LilyPond broke the line wherever its own spacing put it while Lily# broke it at B.</item>
-    /// <item><c>form main { A |: B :| dc A "A2" }</c> — a <c>|:</c> block is ONE child, so B
+    /// <item><c>form { A |: B :| dc A "A2" }</c> — a <c>|:</c> block is ONE child, so B
     /// (and every other section inside the repeat), the repeat bar lines and the D.C. all
     /// vanished. The twin was <c>A A</c>.</item>
     /// </list>
@@ -412,7 +412,7 @@ public sealed partial class LilyPondExporter
     /// pads the staff with (MeasureCollector's section padding) and the MIDI walk and the
     /// MusicXML export count (SectionVoicePaddingExportTests). ⚠️ Until 2026-09-29 (HANDOFF
     /// §1.1 第662 ⑺) the play was skipped whole: `part bass { section A { … } section C { … } }`
-    /// under `form main { A B C }` wrote bass's C straight after its A, under the other
+    /// under `form { A B C }` wrote bass's C straight after its A, under the other
     /// parts' B — a different piece from the page, silently (Lab sessions/p674/probes/emptysec).
     /// </summary>
     /// <remarks>

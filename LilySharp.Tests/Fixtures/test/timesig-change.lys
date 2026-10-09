@@ -26,8 +26,8 @@ section Main {
   melody { meterChanges }
 }
 
-form main { Main }
+form { Main }
 
-score main "timesig-change" {
+score "timesig-change" {
   staff melody
 }

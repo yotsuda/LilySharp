@@ -20,9 +20,9 @@ section Main {
     }
 }
 
-form main { Main }
+form { Main }
 
-score main "ossia-key" {
+score "ossia-key" {
     staff melody
     ossia ossia_melody
 }

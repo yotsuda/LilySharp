@@ -19,8 +19,8 @@ part melody {
   section A { voice { f'8 } { <bes' ges c>8 } }
 }
 
-form main { A }
+form { A }
 
-score main {
+score {
   staff melody
 }

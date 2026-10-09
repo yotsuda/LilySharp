@@ -9,6 +9,6 @@ section A {
   pa { c4 d e f | R1*2 | c1 | }
 }
 
-form main { ~A }
+form { ~A }
 
-score main { staff pa }
+score { staff pa }

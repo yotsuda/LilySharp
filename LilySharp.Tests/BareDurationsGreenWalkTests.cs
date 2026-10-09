@@ -53,7 +53,7 @@ public class BareDurationsGreenWalkTests
         }
         section B { bass { f'4 4 | 8 | } other { g'4 4 | } }
         section C { bass { 4 g'4 | } other { <a c'>4 q 4 | } }
-        score main { staff bass staff other }
+        score { staff bass staff other }
         """;
 
     [Fact]

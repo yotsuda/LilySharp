@@ -35,8 +35,8 @@ public sealed class SharedRendererPngTests
                 line { | c'4 d e f | g2 e | c1 | }
             }
 
-            form main { Demo }
-            score main "out" { staff line }
+            form { Demo }
+            score "out" { staff line }
             """;
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
@@ -66,9 +66,9 @@ public sealed class SharedRendererPngTests
                 ossia_melody { | c'4 e g e | a2 f | e1 | }
             }
 
-            form main { Main }
+            form { Main }
 
-            score main "ossia" {
+            score "ossia" {
                 staff melody
                 ossia ossia_melody
             }

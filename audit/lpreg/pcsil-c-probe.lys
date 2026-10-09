@@ -17,6 +17,6 @@ section A {
   vtwo { R1 | r4 d2. | }
 }
 
-form main { ~A }
+form { ~A }
 
-score main { combinedStaff { vone vtwo } }
+score { combinedStaff { vone vtwo } }

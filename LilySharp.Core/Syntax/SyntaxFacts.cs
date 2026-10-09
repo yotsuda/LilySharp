@@ -372,7 +372,7 @@ internal static class SyntaxFacts
     [
         "staff", "grandStaff", "staffGroup", "choirStaff", "condensedStaff", "combinedStaff",
         "tab", "ossia", "chords", "lyrics",
-        "title", "subtitle", "composer", "poet", "fonts", "paper", "layout",
+        "title", "subtitle", "composer", "poet", "form", "fonts", "paper", "layout",
     ];
 
     /// <summary>

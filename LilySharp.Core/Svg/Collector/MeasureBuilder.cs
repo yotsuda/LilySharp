@@ -523,7 +523,7 @@ internal sealed class MeasureBuilder
     /// (<c>MeasureCollector.Form.cs</c> ProcessRepeatBlockCore), so by the time they reach
     /// <see cref="HandleBarline"/> they are indistinguishable from ones the author typed —
     /// and the section before them has usually closed its last bar with a written <c>|</c>,
-    /// which leaves the boundary consumed. Without this, <c>form main { A |: D :| }</c> read
+    /// which leaves the boundary consumed. Without this, <c>form { A |: D :| }</c> read
     /// as a written <c>| |:</c> PAIR and opened an empty bar between every section and every
     /// form-level repeat sign (measured: 3 bars became 5). The pair rule is about two
     /// barlines written NEXT TO EACH OTHER in one music stream; a structural barline is not

@@ -36,7 +36,7 @@ public class MusicXmlTechnicalTests
 {
     private static XDocument Export(string music)
     {
-        var tree = SyntaxTree.Parse($"section A {{ m {{ {music} }} }}\nform main {{ A }}\nscore main {{ staff m }}");
+        var tree = SyntaxTree.Parse($"section A {{ m {{ {music} }} }}\nform {{ A }}\nscore {{ staff m }}");
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         return new MusicXmlExporter().Export(tree).ToXml();
     }

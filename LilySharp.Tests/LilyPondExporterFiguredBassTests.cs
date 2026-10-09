@@ -44,8 +44,8 @@ public class LilyPondExporterFiguredBassTests
         time 4/4
         part bass { clef bass }
         section A { bass { {{music}} } }
-        form main { ~A }
-        score main { staff bass }
+        form { ~A }
+        score { staff bass }
         """;
 
     [Fact]
@@ -87,8 +87,8 @@ public class LilyPondExporterFiguredBassTests
             part bass { clef bass }
             phrase cadence { c4@chord(C)@figuredBass(5 3) g,@chord(G7)@figuredBass(7) c2@chord(C) | }
             section A { bass { cadence } }
-            form main { ~A }
-            score main { staff bass }
+            form { ~A }
+            score { staff bass }
             """);
         Assert.Empty(warnings);
         Assert.Contains("<5 3>4 <7>2. |", ly);

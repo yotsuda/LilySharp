@@ -53,8 +53,8 @@ public class ShapeChordItemTests
 
         part gt { {{header}} }
         section A { gt { {{music}} } }
-        form main { A }
-        score main { {{score}} }
+        form { A }
+        score { {{score}} }
         """;
 
     private static ChordSyntax Item(string book)
@@ -195,8 +195,8 @@ public class ShapeChordItemTests
         Assert.DoesNotContain(Diagnostics("""
             part chord { instrument guitar }
             section A { chord { c1 | } }
-            form main { A }
-            score main { staff chord }
+            form { A }
+            score { staff chord }
             """), d => d.Severity == DiagnosticSeverity.Error);
     }
 
@@ -533,9 +533,9 @@ public class ShapeChordItemTests
             layout open { chordDiagrams guitar }
             part gt { instrument guitar }
             section A { gt { chord(Eb x32010)1 | } }
-            form main { A }
-            score main { layout capo3  staff gt }
-            score main "open" { layout open  staff gt }
+            form { A }
+            score { layout capo3  staff gt }
+            score "open" { layout open  staff gt }
             """;
         string? hover = HoverAt(book, "chord(Eb x");
         Assert.Contains("guitar, capo 3 (main): `x32010` — E♭3  G3  B♭3  E♭4  G4", hover);
@@ -553,14 +553,14 @@ public class ShapeChordItemTests
     [InlineData(false)]
     public void TheShapeCheck_ReadsEachScoresCapo(bool capoFirst)
     {
-        string capo = "score main { layout capo3  staff gt }";
-        string open = "score main \"open\" { layout open  staff gt }";
+        string capo = "score { layout capo3  staff gt }";
+        string open = "score \"open\" { layout open  staff gt }";
         string book = $$"""
             layout capo3 { chordDiagrams guitar capo 3 }
             layout open { chordDiagrams guitar }
             part gt { instrument guitar }
             section A { gt { chord(Eb x32010)1 | } }
-            form main { A }
+            form { A }
             {{(capoFirst ? capo : open)}}
             {{(capoFirst ? open : capo)}}
             """;

@@ -85,8 +85,8 @@ public class SectionSplitterTests
           section A { la la la la | la la la la la | la la la la la la la la | la | }
         }
 
-        form main { |: A :| }
-        score main { chords prog staff vn1 staff vn2 lyrics words staff va staff vc }
+        form { |: A :| }
+        score { chords prog staff vn1 staff vn2 lyrics words staff va staff vc }
 
         """;
 
@@ -143,8 +143,8 @@ public class SectionSplitterTests
           section B { la la la la la la la la | la | }
         }
 
-        form main { |: A B :| }
-        score main { chords prog staff vn1 staff vn2 lyrics words staff va staff vc }
+        form { |: A B :| }
+        score { chords prog staff vn1 staff vn2 lyrics words staff va staff vc }
 
         """;
 
@@ -197,7 +197,7 @@ public class SectionSplitterTests
             Follow vn1: A 2 + B 2 bars.
             Split A in vn2, va and vc after bar 2 → A, B.
             Also split chords prog and lyrics words.
-            Form main: A → A B.
+            The form: A → A B.
             At the cuts: octave marks on 3 note(s); a written duration on 1 note(s); restated time 2/2 (vn2 B), key d major (vn2 B), time 2/2 (va B), time 2/2 (vc B).
             Checked: vn2, va, vc, chords prog and lyrics words sound and count exactly as before, no error is new, and the length warning on A is gone.
             Heard at other times now that the sections are no longer padded to the longest part (their notes are not changed): vn1.
@@ -227,13 +227,13 @@ public class SectionSplitterTests
             part ob {
               section A { e4 f g a | time 3/4 b2 b4 | c2. | d2. | }
             }
-            form main { A }
-            score main { staff fl staff ob }
+            form { A }
+            score { staff fl staff ob }
             """;
         var result = Split(src);
         Assert.True(result.NewText != null, result.Error);
         Assert.Contains("section A { e4 f g a | time 3/4 b2 b4 | }\n  section B { time 3/4 c'2. | d2. | }", result.NewText);
-        Assert.Contains("form main { A B }", result.NewText);
+        Assert.Contains("form { A B }", result.NewText);
         AssertSoundsTheSame(src, result.NewText!, "ob");
     }
 
@@ -251,8 +251,8 @@ public class SectionSplitterTests
               clef treble
               section A { c'1 | clef bass octave absolute c1 | d1 | e1 | }
             }
-            form main { A }
-            score main { staff fl staff vc }
+            form { A }
+            score { staff fl staff vc }
             """;
         var result = Split(src);
         Assert.True(result.NewText != null, result.Error);
@@ -280,8 +280,8 @@ public class SectionSplitterTests
               chords prog { G | D | Em | C | }
               lyrics words sings ob { la la la la | la | la | la | }
             }
-            form main { A }
-            score main { chords prog staff fl staff ob lyrics words }
+            form { A }
+            score { chords prog staff fl staff ob lyrics words }
             """;
         var result = Split(src);
         Assert.True(result.NewText != null, result.Error);
@@ -296,7 +296,7 @@ public class SectionSplitterTests
               chords prog { Em | C | }
               lyrics words sings ob { la | la | }
             }
-            form main { A B }
+            form { A B }
             """.ReplaceLineEndings("\n"), result.NewText);
         AssertSoundsTheSame(src, result.NewText!, "ob", "prog (chords)");
         Assert.Equal(Lyrics(src), Lyrics(result.NewText!));
@@ -316,8 +316,8 @@ public class SectionSplitterTests
         part cl {
           section A { c'1 | d1 | e1 | f1 | }
         }
-        form main { A }
-        score main { staff fl staff ob staff cl }
+        form { A }
+        score { staff fl staff ob staff cl }
         """;
 
     [Fact]
@@ -333,7 +333,7 @@ public class SectionSplitterTests
         var followA = Split(TwoWays, "A", "fl");
         Assert.True(followA.NewText != null, followA.Error);
         Assert.Contains("section A { c'1 | d1 | }\n  section B { e1 | f1 | }", followA.NewText);
-        Assert.Contains("form main { A B }", followA.NewText);
+        Assert.Contains("form { A B }", followA.NewText);
         AssertSoundsTheSame(TwoWays, followA.NewText!, "cl");
         // ob's A stays one bar (it subdivides A its own way): said, not left to be found.
         Assert.Contains("Still not the same length: Section 'A' is not the same length everywhere it is written: "
@@ -346,7 +346,7 @@ public class SectionSplitterTests
         var followB = Split(TwoWays, "A", "ob");
         Assert.True(followB.NewText != null, followB.Error);
         Assert.Contains("section A { c'1 | }\n  section X { d1 | }\n  section B { e1 | f1 | }", followB.NewText);
-        Assert.Contains("form main { A X B }", followB.NewText);
+        Assert.Contains("form { A X B }", followB.NewText);
         Assert.Empty(LengthWarnings(followB.NewText!));
         AssertSoundsTheSame(TwoWays, followB.NewText!, "cl");
     }
@@ -366,16 +366,16 @@ public class SectionSplitterTests
             part cl {
               section A { g'1 | a1 | }
             }
-            form main { A B }
-            score main { staff fl staff ob staff cl }
+            form { A B }
+            score { staff fl staff ob staff cl }
             """;
         var result = Split(src);
         Assert.True(result.NewText != null, result.Error);
         Assert.StartsWith("Follow fl: A 1 + B 1 bars.", result.Plan);
         Assert.Contains("section A { g'1 | }\n  section B { a'1 | }", result.NewText);
         // The form already plays B after A: left as it is.
-        Assert.Contains("form main { A B }", result.NewText);
-        Assert.Contains("Form main already plays A B.", result.Plan);
+        Assert.Contains("form { A B }", result.NewText);
+        Assert.Contains("The form already plays A B.", result.Plan);
         AssertSoundsTheSame(src, result.NewText!, "cl");
     }
 
@@ -394,16 +394,16 @@ public class SectionSplitterTests
               section A { g'1 | a1 | }
               section C { b1 | }
             }
-            form main { A C ~A' |: A :| }
+            form { A C ~A' |: A :| }
             form short { A }
-            score main { staff fl staff ob }
-            score short "short" { staff fl }
+            score { staff fl staff ob }
+            score short "short" { form short staff fl }
             """;
         var result = Split(src);
         Assert.True(result.NewText != null, result.Error);
-        Assert.Contains("form main { A B C ~A' ~B' |: A B :| }", result.NewText);
+        Assert.Contains("form { A B C ~A' ~B' |: A B :| }", result.NewText);
         Assert.Contains("form short { A B }", result.NewText);
-        Assert.Contains("Form main: A → A B (3 places).", result.Plan);
+        Assert.Contains("The form: A → A B (3 places).", result.Plan);
         AssertSoundsTheSame(src, result.NewText!, "ob");
     }
 
@@ -426,7 +426,7 @@ public class SectionSplitterTests
           section A { MUSIC }
         }
         form FORM
-        score main { staff fl staff ob }
+        score { staff fl staff ob }
         """;
 
     private static string With(string music, string form = "main { A }")
@@ -519,7 +519,7 @@ public class SectionSplitterTests
           section C { c'1 | }
         }
         form FORM
-        score main { staff fl staff ob }
+        score { staff fl staff ob }
         """;
 
     /// <summary>A section played as a repeat ending splits like any other play: the ending
@@ -551,7 +551,7 @@ public class SectionSplitterTests
               fl { c'1 | }
               ob { g'1 | a1 | }
             }
-            form main { A }
+            form { A }
             """;
         Assert.Contains("not supported yet for a file grouped by section", Refusal(src));
     }
@@ -586,8 +586,8 @@ public class SectionSplitterTests
           octave 3
           section A { c'1 | d1( | e1) | }
         }
-        form main { A B C }
-        score main { staff fl staff ob staff db }
+        form { A B C }
+        score { staff fl staff ob staff db }
         """;
 
     [Fact]
@@ -643,11 +643,11 @@ public class SectionSplitterTests
         Assert.Equal("""
             Follow fl: B 1 + C 1 bars.
             Split B in ob after bar 1 → B, C.
-            Form main already plays B C.
+            The form already plays B C.
             At the cuts: octave marks on 1 note(s).
             Follow fl: A 1 + B 1 + C 1 bars.
             Split A in db after bars 1, 2 → A, B, C.
-            Form main already plays A B C.
+            The form already plays A B C.
             At the cuts: octave marks on 2 note(s).
             Checked: db sounds and counts exactly as before, ob keeps every note it played, no error is new, and the length warnings on B and A are gone.
             Heard at other times now that the sections are no longer padded to the longest part (their notes are not changed): fl and ob.
@@ -716,8 +716,8 @@ public class SectionSplitterTests
               clef treble
               section A { c'8 d' e' f' g' a' b' c'' | R | d' e' f' g' a' b' c'' d'' | }
             }
-            form main { A B }
-            score main { staff vn1 staff vn2 }
+            form { A B }
+            score { staff vn1 staff vn2 }
 
             """;
         var result = Split(source);

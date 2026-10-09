@@ -55,8 +55,8 @@ public sealed class LyricSingsWalkTests
         lyrics verse sings melody { section A { la la la la | } }
         lyrics inner sings hi { section A { ka ka ka ka | } }
         lyrics plain { section A { na na na na | } }
-        form main { A }
-        score main {
+        form { A }
+        score {
           staff melody
           lyrics verse
           lyrics plain

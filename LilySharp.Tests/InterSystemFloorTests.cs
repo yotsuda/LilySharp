@@ -74,8 +74,8 @@ public class InterSystemFloorTests
           section A { one two three four | five six sev- en | }
           section B { eight nine ten e- | le- ven twelve | }
         }
-        form main { A B }
-        score main {
+        form { A B }
+        score {
         {{rows}}
         }
         """;

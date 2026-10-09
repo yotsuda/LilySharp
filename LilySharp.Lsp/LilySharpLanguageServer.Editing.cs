@@ -704,13 +704,13 @@ public sealed partial class LilySharpLanguageServer
             if (firstRender != null)
             {
                 offset = firstRender.Position;
-                newText = $"form main {{ {names} }}\n\n";
+                newText = $"form {{ {names} }}\n\n";
             }
             else
             {
                 var last = sections[^1];
                 offset = last.Position + last.FullWidth;
-                newText = $"\nform main {{ {names} }}\n";
+                newText = $"\nform {{ {names} }}\n";
             }
             var (insLine, insChar) = GetLineAndCharacter(doc.Text, offset);
             actions.Add(new CodeAction

@@ -11,6 +11,6 @@ section A {
   vone { R1 | g1 | }
 }
 
-form main { ~A }
+form { ~A }
 
-score main { staff vone }
+score { staff vone }

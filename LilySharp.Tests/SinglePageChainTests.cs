@@ -61,7 +61,7 @@ public sealed class SinglePageChainTests
     public void ASnippet_IsOnePage_UnderASystemsPerPageCap()
     {
         var tree = SyntaxTree.Parse("paper { systemsPerPage 1 }\ntime 4/4\npart m { clef treble\n  section A { "
-            + string.Concat(Enumerable.Repeat("c'4 d' e' f' | ", 40)) + "} }\nform main { A }\nscore main { staff m }");
+            + string.Concat(Enumerable.Repeat("c'4 d' e' f' | ", 40)) + "} }\nform { A }\nscore { staff m }");
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree), LayoutOptions.Snippet);
         var layout = new LayoutEngine(score.Paper).Layout(score);
         Assert.True(layout.AllSystems.Length >= 2);

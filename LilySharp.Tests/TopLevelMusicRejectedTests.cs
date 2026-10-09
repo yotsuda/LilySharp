@@ -99,7 +99,7 @@ public class TopLevelMusicRejectedTests
         // lines that make it a file.
         Assert.Contains("part melody", message);
         Assert.Contains("section A", message);
-        Assert.Contains("score main", message);
+        Assert.Contains("score", message);
     }
 
     [Fact]

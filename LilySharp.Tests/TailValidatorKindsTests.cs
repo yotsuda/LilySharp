@@ -77,8 +77,8 @@ public sealed class TailValidatorKindsTests
             c'4 q 4 r8 d'8 <e' g'>4 | c'4 d' e' f' :| [1. g'1 ]
           }
         }
-        form main { A }
-        score main { staff melody }
+        form { A }
+        score { staff melody }
         """;
 
     private static readonly (string Validator, SyntaxKind[] Kinds, Func<SyntaxNode, bool> Answers)[]

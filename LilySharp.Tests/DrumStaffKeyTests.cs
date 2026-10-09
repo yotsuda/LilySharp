@@ -39,8 +39,8 @@ public class DrumStaffKeyTests
         part kit { clef percussion }
         part m { clef treble }
         section A { kit { {{drums}} } m { {{melody}} } }
-        form main { ~A }
-        score main { {{score}} }
+        form { ~A }
+        score { {{score}} }
         """;
 
     private static int Flats(string src)

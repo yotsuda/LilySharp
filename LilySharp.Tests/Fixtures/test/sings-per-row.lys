@@ -18,9 +18,9 @@ section Chorale {
   lyrics verse sings sop { Freu- de, schö- ner | Göt- ter- fun- ken, | }
 }
 
-form main { Chorale }
+form { Chorale }
 
-score main "sings-per-row" {
+score "sings-per-row" {
   choirStaff {
     staff sop "Soprano"
     lyrics verse

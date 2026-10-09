@@ -43,8 +43,8 @@ public class InstrumentNameSizeTests
             part cl { clef treble }
             part hn { clef treble }
             section S { cl { c'1 | } hn { c'1 | } }
-            form main { ~S }
-            score main { staffGroup { staff cl "Clarinet in B♭"  staff hn "Horn" } }
+            form { ~S }
+            score { staffGroup { staff cl "Clarinet in B♭"  staff hn "Horn" } }
             """), new SvgRenderOptions { EmbedFont = false });
 
         var name = Regex.Match(svg,

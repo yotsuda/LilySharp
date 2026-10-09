@@ -79,7 +79,7 @@ public class CliBestEffortOutputTests : IDisposable
 
     private static string Source(string parts) =>
         "octave absolute\n" + parts + "\n"
-        + "section Main { m { c4 d4 e4 f4 | } }\nform main { ~Main }\nscore main { staff m }\n";
+        + "section Main { m { c4 d4 e4 f4 | } }\nform { ~Main }\nscore { staff m }\n";
 
     /// <summary>
     /// The muxer running THIS test, derived from the runtime that loaded it so that it cannot
@@ -177,8 +177,8 @@ public class CliBestEffortOutputTests : IDisposable
         string output = Path.Combine(_dir, "warn.svg");
         File.WriteAllText(input,
             "octave absolute\ntime 4/4\npart m { clef treble }\n"
-            + "section Main { m { c8[ d8 e8 f8 g8 a8 b8 c8 | } }\nform main { ~Main }\n"
-            + "score main { staff m }\n");
+            + "section Main { m { c8[ d8 e8 f8 g8 a8 b8 c8 | } }\nform { ~Main }\n"
+            + "score { staff m }\n");
 
         var (exit, stderr) = RunLysc(input);
 

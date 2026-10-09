@@ -67,7 +67,7 @@ public class ScoreRowSpellingMatrixTests
         }
         chords prog { section A { C | } }
         lyrics w { section A { Do re mi fa | } }
-        form main { A }
+        form { A }
 
         """;
 
@@ -111,7 +111,7 @@ public class ScoreRowSpellingMatrixTests
 
     private static string[] LabelsAfter(string row)
     {
-        string text = Book + "score main { staff melody  " + row + " ";
+        string text = Book + "score { staff melody  " + row + " ";
         var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
         var uri = new System.Uri("file:///score.lys");
         server.DidOpen(new DidOpenTextDocumentParams
@@ -140,7 +140,7 @@ public class ScoreRowSpellingMatrixTests
     [MemberData(nameof(Spellings))]
     public void EverySpellingCompiles(string row, string[] _)
     {
-        string book = Book + "score main { staff melody  " + row + " }\n";
+        string book = Book + "score { staff melody  " + row + " }\n";
         Assert.Empty(Errors(book));
     }
 
@@ -181,7 +181,7 @@ public class ScoreRowSpellingMatrixTests
     [InlineData("bass instrument piano", "Undefined part: 'instrument'")]
     public void TheMidiRowsRetiredOptions_AreRefused(string row, string report)
     {
-        var errors = Errors(Book + "score main { staff melody  " + row + " }\n");
+        var errors = Errors(Book + "score { staff melody  " + row + " }\n");
         Assert.NotEmpty(errors);
         Assert.Contains(errors, e => e.Contains(report));
     }
@@ -193,7 +193,7 @@ public class ScoreRowSpellingMatrixTests
         // `relative`) because the rule that offers those asked only "not in a part header".
         // The word is a stray item here now, so the score's own list is the answer — and the
         // mode words are not in it.
-        string text = Book + "score main { staff melody  bass octave ";
+        string text = Book + "score { staff melody  bass octave ";
         var labels = LabelsAfter("bass octave");
         Assert.DoesNotContain("absolute", labels);
         Assert.DoesNotContain("relative", labels);
@@ -213,7 +213,7 @@ public class ScoreRowSpellingMatrixTests
         // bare MIDI-only row is what LYS1007 reports. If a row's parser learns a new
         // optional clause that could swallow this word, the error stops coming and this test
         // names the row.
-        string book = Book + "score main { staff melody  " + row + " label }\n";
+        string book = Book + "score { staff melody  " + row + " label }\n";
         Assert.Contains(Errors(book),
             e => e.StartsWith("LYS1007", System.StringComparison.Ordinal) && e.Contains("'label'"));
     }

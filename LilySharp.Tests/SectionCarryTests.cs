@@ -70,8 +70,8 @@ public class SectionCarryTests
           section D { c'''4) d@cresc e f@phrasingSlur || }
           section E { g4@f a b c@!phrasingSlur | }
         }
-        form main { C D E }
-        score main { staff vn }
+        form { C D E }
+        score { staff vn }
         """;
 
     [Fact]
@@ -104,18 +104,18 @@ public class SectionCarryTests
               section D { g4) a b c || }
               section E { c4 d e f || }
             }
-            form main { C D C E D }
-            score main { staff vn }
+            form { C D C E D }
+            score { staff vn }
             """;
         var carry = Carry(src);
         Assert.Equal(2, carry.Count);
         Assert.Equal(DiagnosticSeverity.Warning, carry[0].Severity);
         Assert.Equal(2, LineOf(src, carry[0]));
-        Assert.StartsWith("a slur '(' is carried from section C into section E, which follows it in form 'main', "
+        Assert.StartsWith("a slur '(' is carried from section C into section E, which follows it in the form, "
             + "and is not closed there, so no slur is drawn", carry[0].Message);
         Assert.Equal(3, LineOf(src, carry[1]));
         Assert.StartsWith("this ')' closes nothing: no slur is open, and section E, played before section D in "
-            + "form 'main', carries none into it", carry[1].Message);
+            + "the form, carries none into it", carry[1].Message);
 
         // The page draws the one slur the rule allows: C (play 1) into D (play 2).
         var slur = Assert.Single(new SlurDetector().DetectSlurs(Collect(src)));
@@ -147,12 +147,12 @@ public class SectionCarryTests
               section D { g4 a b c || }
               section E { g4 a b c | }
             }
-            form main { C D E }
-            score main { staff vn staff vc }
+            form { C D E }
+            score { staff vn staff vc }
             """;
         var carry = Carry(src);
         Assert.Contains(carry, d => d.Message.StartsWith(
-            "a slur '(' is carried from section C into section D, where this part plays nothing in form 'main'"));
+            "a slur '(' is carried from section C into section D, where this part plays nothing in the form"));
         Assert.Contains(carry, d => d.Message.StartsWith("this ')' closes nothing"));
     }
 
@@ -178,8 +178,8 @@ public class SectionCarryTests
               section I { c''1~ || }
               section A { c''1 | d1 || }
             }
-            form main { I |: A :| }
-            score main { staff vn }
+            form { I |: A :| }
+            score { staff vn }
             """;
         Assert.DoesNotContain(Check(src), d => d.Code is DiagnosticCodes.SpanAcrossSectionBoundary
             or DiagnosticCodes.TieTargetMismatch);
@@ -204,8 +204,8 @@ public class SectionCarryTests
             part vn {
               section A { c''1 | c1~ || }
             }
-            form main { |: A :| }
-            score main { staff vn }
+            form { |: A :| }
+            score { staff vn }
             """;
         Assert.DoesNotContain(Check(src), d => d.Code is DiagnosticCodes.SpanAcrossSectionBoundary
             or DiagnosticCodes.TieTargetMismatch);
@@ -234,8 +234,8 @@ public class SectionCarryTests
             part vn {
               section A { c''1 | e1~ || }
             }
-            form main { |: A :| }
-            score main { staff vn }
+            form { |: A :| }
+            score { staff vn }
             """;
         var diagnostics = Check(src);
         Assert.Single(diagnostics, d => d.Code == DiagnosticCodes.TieTargetMismatch);
@@ -256,8 +256,8 @@ public class SectionCarryTests
               section C { c''1 | c1~ || }
               section D { c''1 | }
             }
-            form main { |: A [1. B] :| [2. C] D }
-            score main { staff vn }
+            form { |: A [1. B] :| [2. C] D }
+            score { staff vn }
             """;
         Assert.DoesNotContain(Check(src), d => d.Code is DiagnosticCodes.SpanAcrossSectionBoundary
             or DiagnosticCodes.TieTargetMismatch);
@@ -290,8 +290,8 @@ public class SectionCarryTests
               section I { c''1( || }
               section A { d''1) | }
             }
-            form main { I |: A :| }
-            score main { staff vn }
+            form { I |: A :| }
+            score { staff vn }
             """;
         Assert.Contains(Carry(src), d => d.Severity == DiagnosticSeverity.Error
             && d.Message.StartsWith("a slur '(' would be carried from section I into section A over a repeat sign"));
@@ -309,8 +309,8 @@ public class SectionCarryTests
               section B { g4) a b c || }
               section C { c4 d e f | }
             }
-            form main { |: A [1. B :| [2. C] }
-            score main { staff vn }
+            form { |: A [1. B :| [2. C] }
+            score { staff vn }
             """;
         var carry = Carry(src);
         Assert.Contains(carry, d => d.Severity == DiagnosticSeverity.Error
@@ -329,11 +329,11 @@ public class SectionCarryTests
               section D { g4 a b c || }
               section E { c4@f d e f | }
             }
-            form main { C D E }
-            score main { staff vn }
+            form { C D E }
+            score { staff vn }
             """;
         var carry = Assert.Single(Carry(src));
-        Assert.StartsWith("a hairpin is carried from section C into section D, which follows it in form 'main', "
+        Assert.StartsWith("a hairpin is carried from section C into section D, which follows it in the form, "
             + "and nothing ends it there, so it is cut at the end of section C", carry.Message);
         var score = Collect(src);
         var hairpin = Assert.Single(HairpinEngraver.DetectHairpins(score.MusicMarks, score.Dynamics, SectionPlays.For(score)));
@@ -361,8 +361,8 @@ public class SectionCarryTests
               section C { c''4@rit d e f@ottava | g4@sustain a b@startTrillSpan c || }
               section D { c''4@!rit d@!ottava e@!sustain f@stopTrillSpan | }
             }
-            form main { C D }
-            score main { staff vn }
+            form { C D }
+            score { staff vn }
             """;
         Assert.DoesNotContain(Check(src), d => d.Code is DiagnosticCodes.SpanAcrossSectionBoundary
             or DiagnosticCodes.UnpairedSpan);
@@ -390,14 +390,14 @@ public class SectionCarryTests
               section D { g4@sustain a b c@startTrillSpan || }
               section E { c4@!rit d@!ottava e@!sustain f@stopTrillSpan | }
             }
-            form main { C D E }
-            score main { staff vn }
+            form { C D E }
+            score { staff vn }
             """;
         var carry = Carry(src);
         Assert.Equal(2, carry.Count);
         Assert.All(carry, d => Assert.Equal(DiagnosticSeverity.Warning, d.Severity));
         Assert.Contains(carry, d => d.Message.StartsWith("a text spanner (@rit / @accel / @textSpan) is carried from section C "
-            + "into section D, which follows it in form 'main', and is not closed there, so it is cut at the end of section C; "
+            + "into section D, which follows it in the form, and is not closed there, so it is cut at the end of section C; "
             + "close it with '@!rit' (or '@!textSpan') in section D"));
         Assert.Contains(carry, d => d.Message.StartsWith("an ottava (@ottava / @quindicesima) is carried from section C into section D"));
         var score = Collect(src);
@@ -423,8 +423,8 @@ public class SectionCarryTests
               section I { c''4@rit d e f@sustain || }
               section A { g4@!rit a b c@!sustain | }
             }
-            form main { I |: A :| }
-            score main { staff vn }
+            form { I |: A :| }
+            score { staff vn }
             """;
         var carry = Carry(src);
         Assert.Equal(2, carry.Count);
@@ -450,18 +450,18 @@ public class SectionCarryTests
               section C { c''4 d e f || }
               section D { g4@!rit a b c@!ottava | }
             }
-            form main { C D }
-            score main { staff vn }
+            form { C D }
+            score { staff vn }
             """;
         var diagnostics = Check(src);
         var carry = diagnostics.Where(d => d.Code == DiagnosticCodes.SpanAcrossSectionBoundary).ToList();
         Assert.Equal(2, carry.Count);
         Assert.Contains(carry, d => d.Message.StartsWith("this '@!rit' (or '@!textSpan') closes nothing: no text spanner is open, "
-            + "and section C, played before section D in form 'main', carries none into it, so nothing is drawn for it"));
+            + "and section C, played before section D in the form, carries none into it, so nothing is drawn for it"));
         Assert.Contains(carry, d => d.Message.StartsWith("this '@!ottava' closes nothing: no ottava is open"));
         Assert.DoesNotContain(diagnostics, d => d.Code == DiagnosticCodes.UnpairedSpan);
         // Played first, the same stops are the families' own unpaired stops.
-        var first = Check(src.Replace("form main { C D }", "form main { D C }"));
+        var first = Check(src.Replace("form { C D }", "form { D C }"));
         Assert.Equal(2, first.Count(d => d.Code == DiagnosticCodes.UnpairedSpan));
         Assert.DoesNotContain(first, d => d.Code == DiagnosticCodes.SpanAcrossSectionBoundary);
     }
@@ -476,17 +476,17 @@ public class SectionCarryTests
               section C { c''4 d e f( || }
               section D { g4) a b c | }
             }
-            form main { C D }
+            form { C D }
             form other { D C }
-            score main { staff vn }
-            score other "rev" { staff vn }
+            score { staff vn }
+            score other "rev" { form other staff vn }
             """;
         var slurs = Check(src).Where(d => d.Code == DiagnosticCodes.UnpairedSlur).ToList();
         Assert.Equal(2, slurs.Count);
         Assert.All(slurs, d => Assert.EndsWith("(in form 'other')", d.Message));
 
         // Only the first score's form: nothing.
-        Assert.DoesNotContain(Check(src.Replace("score other \"rev\" { staff vn }", "")),
+        Assert.DoesNotContain(Check(src.Replace("score other \"rev\" { form other staff vn }", "")),
             d => d.Code == DiagnosticCodes.UnpairedSlur);
     }
 
@@ -506,8 +506,8 @@ public class SectionCarryTests
               section C { c4 d e f || }
               section D { g4 a b c | }
             }
-            form main { C D }
-            score main { staff vn staff vc }
+            form { C D }
+            score { staff vn staff vc }
             """;
         Assert.Empty(Carry(src));
         var vn = new MidiExporter().Export(SyntaxTree.Parse(src)).Tracks.First(t => t.Notes.Count > 0).Notes;
@@ -538,8 +538,8 @@ public class SectionCarryTests
               section C { c''4 d e f || }
               section D { g4( a b c | }
             }
-            form main { C D }
-            score main { staff vn }
+            form { C D }
+            score { staff vn }
             """;
         Assert.Empty(Carry(src));
         Assert.Single(Check(src), d => d.Code == DiagnosticCodes.UnpairedSlur);

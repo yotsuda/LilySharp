@@ -16,8 +16,8 @@ section S {
     e4@pluck(p) a@pluck(i) b@pluck(m) e'@pluck(a) |
   }
 }
-form main { ~S }
-score main "tab-technique-letters" {
+form { ~S }
+score "tab-technique-letters" {
   staff gtr
   tab gtr
 }

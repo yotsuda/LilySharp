@@ -113,8 +113,8 @@ public class ChordsTrackBodyCompletionTests
               section A { C | }
               ▮
             }
-            form main { A B }
-            score main { staff melody  chords prog }
+            form { A B }
+            score { staff melody  chords prog }
             """);
         var labels = CompletionLabelsAt(text, offset);
 
@@ -131,8 +131,8 @@ public class ChordsTrackBodyCompletionTests
         var (text, offset) = At("""
             part melody { section A { c'4 d' e' f' | } section B { g'4 a' b' c'' | } }
             chords prog { ▮ }
-            form main { A B }
-            score main { staff melody  chords prog }
+            form { A B }
+            score { staff melody  chords prog }
             """);
         var labels = CompletionLabelsAt(text, offset);
 
@@ -153,8 +153,8 @@ public class ChordsTrackBodyCompletionTests
               section A { C | }
               section ▮
             }
-            form main { A B }
-            score main { staff melody  chords prog }
+            form { A B }
+            score { staff melody  chords prog }
             """);
         var labels = CompletionLabelsAt(text, offset);
 

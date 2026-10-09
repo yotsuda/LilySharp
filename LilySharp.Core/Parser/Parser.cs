@@ -536,8 +536,8 @@ internal sealed partial class Parser
             + "and the notes live inside a part. Wrap this music:\n"
             + "  part melody\n"
             + "  section A { melody { … } }\n"
-            + "  form main { ~A }\n"
-            + "  score main { staff melody }\n"
+            + "  form { ~A }\n"
+            + "  score { staff melody }\n"
             + "Leading 'clef' / 'key' / 'time' / 'tempo' stay at the top level — they are "
             + "the file's defaults.");
     }

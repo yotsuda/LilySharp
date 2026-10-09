@@ -11,6 +11,6 @@ section A {
   pb { f8[ f~] f8[ f] | }
 }
 
-form main { ~A }
+form { ~A }
 
-score main { staff pa  staff pb }
+score { staff pa  staff pb }

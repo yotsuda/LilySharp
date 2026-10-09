@@ -15,8 +15,8 @@ part bl {
   section A { fis,,8\4 cis,\3 e,\3 fis,\3 e,\3 cis,\3 b,,\4 cis,\3 | fis,,8\4 cis,\3 e,\3 fis,\3 e,\3 cis,\3 b,,\4 cis,\3 | }
 }
 
-form main { A }
+form { A }
 
-score main "tab-tempo-over-beam" {
+score "tab-tempo-over-beam" {
   tab bl as full
 }

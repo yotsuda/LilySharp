@@ -153,8 +153,8 @@ public class BraceLadderTests
             "part alt { section A { e4 f g a } }\n" +
             "part ten { section A { g4 a b c } }\n" +
             "part bas { clef bass section A { c4 d e f } }\n" +
-            "form main { A }\n" +
-            "score main {\n  grandStaff {\n    staff sop\n    staff alt\n" +
+            "form { A }\n" +
+            "score {\n  grandStaff {\n    staff sop\n    staff alt\n" +
             "    staff ten\n    staff bas\n  }\n}\n");
 
         // ⚠️ THE COORDINATES CAN BE NEGATIVE — a score with no instrument names indents by

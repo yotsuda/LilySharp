@@ -45,9 +45,9 @@ section Main {
   cello { vcLine }
 }
 
-form main { Main }
+form { Main }
 
-score main "instrument-names" {
+score "instrument-names" {
   staff violin1
   staff violin2
   staff viola

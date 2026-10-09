@@ -49,8 +49,8 @@ public class SpringEdgeKeyTests
         phrase mel { {{music}} }
         {{extra}}
         section Main { melody { mel } }
-        form main { Main }
-        score main "x" { {{staff}} }
+        form { Main }
+        score "x" { {{staff}} }
         """;
 
     private const string Plain = "c4 d e f | g4 a b c | d4 e f g | a4 b c d |";

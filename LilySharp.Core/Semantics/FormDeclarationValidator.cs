@@ -20,14 +20,12 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// Validates the <c>form</c> / <c>score</c> binding: every <c>form</c> is named
-/// (<c>form Main { ... }</c>), form names are unique (case-sensitive), every <c>form</c>
-/// names at least one section (LYS6007), and every
-/// <c>score</c> references an existing form by name (<c>score Main { ... }</c>).
-/// A form is the piece's arrangement — the order sections play in, with repeats
-/// and navigation. The reserved form name <c>main</c> writes to the input file's
-/// stem; any other name becomes the output file name unless a <c>"basename"</c>
-/// overrides it.
+/// Validates the <c>form</c> / <c>score</c> binding: at most one unnamed top-level
+/// <c>form</c> (the file's default), form names unique (case-sensitive), every <c>form</c>
+/// names at least one section (LYS6007), and a score's <c>form NAME</c> names a top-level
+/// form. A form is the piece's arrangement — the order sections play in, with repeats and
+/// navigation. A score plays its own <c>form { … }</c>, else the form it names with
+/// <c>form NAME</c>, else the file's default (docs/anonymous-blocks-design.md).
 /// </summary>
 internal sealed class FormDeclarationValidator : ISemanticValidator
 {
@@ -39,18 +37,31 @@ internal sealed class FormDeclarationValidator : ISemanticValidator
     {
         var forms = tree.GetNodes<FormDeclarationSyntax>().ToList();
 
-        // Every form must be named; names are unique and case-sensitive.
+        // One unnamed top-level form (the file's default); names unique and case-sensitive.
         var declared = new HashSet<string>(StringComparer.Ordinal);
+        bool sawUnnamed = false;
         foreach (var form in forms)
         {
+            if (form.IsReference)
+                continue;   // a score's `form NAME` — checked with its score below
             string name = form.NameText;
-            if (string.IsNullOrEmpty(name))
+            if (form.InScore)
             {
-                _diagnostics.Error(form.FormKeyword.Span, DiagnosticCodes.UnnamedForm,
-                    "A 'form' must be named, e.g. 'form main { ... }'.");
-                continue;
+                if (form.Name is { } scoreFormName)
+                    _diagnostics.Error(scoreFormName.Span, DiagnosticCodes.UnknownFormReference,
+                        $"A score's own form is unnamed: write 'form {{ … }}' here, or declare "
+                        + $"'form {name} {{ … }}' at the top level and pick it with 'form {name}'.");
             }
-            if (!declared.Add(name))
+            else if (name.Length == 0)
+            {
+                if (sawUnnamed)
+                    _diagnostics.Error(form.FormKeyword.Span, DiagnosticCodes.UnnamedForm,
+                        "The file already has an unnamed form — the one a score plays when it picks "
+                        + "none. Name this one ('form practice { … }') and pick it in a score with "
+                        + "'form practice'.");
+                sawUnnamed = true;
+            }
+            else if (!declared.Add(name))
                 _diagnostics.Error(form.Name!.Span, DiagnosticCodes.DuplicateFormName,
                     $"Duplicate form name '{name}'. Each form name must be unique.");
 
@@ -60,11 +71,14 @@ internal sealed class FormDeclarationValidator : ISemanticValidator
             // here: it already knows all three spellings, and this validator would be the
             // fourth place to keep in step.
             if (SectionReferenceFinder.AllSectionNameTokens(form).Count == 0)
+            {
+                string named = name.Length > 0 && !form.InScore ? " " + name : "";
                 _diagnostics.Error(form.BodySpan ?? form.FormKeyword.Span,
                     DiagnosticCodes.EmptyForm,
-                    $"Form '{name}' has nothing to arrange — it names no section. "
-                    + "Add a section reference, e.g. 'form " + name + " { A }' "
+                    $"This form has nothing to arrange — it names no section. "
+                    + "Add a section reference, e.g. 'form" + named + " { A }' "
                     + "('~A' plays it without printing a rehearsal label).");
+            }
 
             ReportEndingsNoRepeatOpens(form);
             ReportEndingPasses(FormWalk.Read(form));
@@ -269,15 +283,34 @@ internal sealed class FormDeclarationValidator : ISemanticValidator
 
     private void ValidateScoreBindings(SyntaxTree tree, HashSet<string> declared)
     {
+        HashSet<string>? sections = null;
         foreach (var score in tree.GetNodes<RenderDeclarationSyntax>())
         {
-            string reference = score.FormNameText;
-            if (string.IsNullOrEmpty(reference))
-                _diagnostics.Error(score.RenderKeyword.Span, DiagnosticCodes.UnknownFormReference,
-                    "A 'score' must name the form it renders, e.g. 'score main { ... }'.");
-            else if (!declared.Contains(reference))
-                _diagnostics.Error(score.FormName!.Span, DiagnosticCodes.UnknownFormReference,
-                    $"Unknown form '{reference}'. Declare it with 'form {reference} {{ ... }}'.");
+            var items = score.FormItems;
+            for (int i = 1; i < items.Count; i++)
+                _diagnostics.Error(items[i].FormKeyword.Span, DiagnosticCodes.UnknownFormReference,
+                    "A score plays one form: keep one 'form' item.");
+
+            if (items.Count > 0 && items[0] is { IsReference: true, Name: { } reference }
+                && !declared.Contains(reference.Text))
+            {
+                sections ??= new HashSet<string>(
+                    tree.GetNodes<SectionDeclarationSyntax>().Select(s => s.SectionName), StringComparer.Ordinal);
+                _diagnostics.Error(reference.Span, DiagnosticCodes.UnknownFormReference,
+                    sections.Contains(reference.Text)
+                        ? $"'{reference.Text}' is a section, not a form. To play it here, write "
+                          + $"'form {{ {reference.Text} }}'."
+                        : $"Unknown form '{reference.Text}'. Declare it with "
+                          + $"'form {reference.Text} {{ … }}' at the top level.");
+            }
+
+            // The old spelling: `score practice { … }` beside `form practice { … }` picked that
+            // form until 2026-10-09. The name is the score's own now, so say so rather than
+            // play the default form in silence.
+            if (items.Count == 0 && score.ScoreName is { } scoreName && declared.Contains(scoreName.Text))
+                _diagnostics.Warning(scoreName.Span, DiagnosticCodes.UnknownFormReference,
+                    $"A score's name does not pick its form: this score plays the file's default "
+                    + $"form. To play form '{scoreName.Text}', write 'form {scoreName.Text}' in its body.");
         }
     }
 }

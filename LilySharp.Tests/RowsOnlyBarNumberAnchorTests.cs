@@ -76,12 +76,12 @@ public class RowsOnlyBarNumberAnchorTests
           section B { [~1. eight nine | ten e- ]
             [~2. le- ven | twelve thir- ] }
         }
-        form main { A |: B :| A "A2" }
+        form { A |: B :| A "A2" }
         """;
 
     private static string Render(string scoreBody)
     {
-        var tree = SyntaxTree.Parse($"{Head}\nscore main {{\n{scoreBody}\n}}\n");
+        var tree = SyntaxTree.Parse($"{Head}\nscore {{\n{scoreBody}\n}}\n");
         Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
         return SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
     }

@@ -232,7 +232,7 @@ public sealed class MusicXmlExporter
     /// </summary>
     /// <remarks>
     /// The same reading the MIDI takes, and for the same reason — a bare section is music no
-    /// block claims, and <c>score main { staff bl }</c> is the only statement of whose it is.
+    /// block claims, and <c>score { staff bl }</c> is the only statement of whose it is.
     /// ⚠️ Only when the score names exactly ONE part: two parts means the page draws the same
     /// music in two registers and a single stream cannot be both.
     /// </remarks>

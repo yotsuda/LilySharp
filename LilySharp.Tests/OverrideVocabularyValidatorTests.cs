@@ -33,7 +33,7 @@ public class OverrideVocabularyValidatorTests
 {
     private static IReadOnlyList<Diagnostic> Errors(string music)
     {
-        var source = $"part m {{ section A {{ {music} }} }} form main {{ A }} score main {{ staff m }}";
+        var source = $"part m {{ section A {{ {music} }} }} form {{ A }} score {{ staff m }}";
         var validator = new OverrideVocabularyValidator();
         validator.Validate(SyntaxTree.Parse(source));
         return validator.Diagnostics

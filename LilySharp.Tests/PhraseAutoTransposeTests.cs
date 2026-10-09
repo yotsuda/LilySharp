@@ -51,8 +51,8 @@ public sealed class PhraseAutoTransposeTests
             part m {
               section A { Lick }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.Equal(Home, pos);
     }
@@ -71,8 +71,8 @@ public sealed class PhraseAutoTransposeTests
               section A { Lick }
               section B { key g major Lick }
             }
-            form main { A B }
-            score main { staff m }
+            form { A B }
+            score { staff m }
             """);
         Assert.Equal(new[] { -6, -5, -4, -6, /* G3 A3 B3 G3 */ -9, -8, -7, -9 }, pos);
     }
@@ -88,8 +88,8 @@ public sealed class PhraseAutoTransposeTests
             part m {
               section A { key bes major Lick }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.Equal(new[] { -7, -6, -5, -7 }, pos);
     }
@@ -107,8 +107,8 @@ public sealed class PhraseAutoTransposeTests
             part m {
               section A { key g major Lick c }
             }
-            form main { A }
-            score main { staff m }
+            form { A }
+            score { staff m }
             """);
         Assert.Equal(new[] { -9, -8, -7, -9, /* inline c = C4, not transposed */ -6 }, pos);
     }

@@ -133,8 +133,8 @@ public class MultiVoiceRenderingTests
             key c major
             part m { clef treble }
             section S { m { {{music}} } }
-            form main { S }
-            score main { staff m }
+            form { S }
+            score { staff m }
             """);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));

@@ -47,8 +47,8 @@ public class AccidentalReachRodTests
             time 4/4
             part bassline { clef bass }
             section S { bassline { f,16 ges,, a,16 c,16 r4 r2 | } }
-            form main { S }
-            score main { staff bassline }
+            form { S }
+            score { staff bassline }
             """);
         var multi = SvgGenerator.CollectScore(tree, RenderSpecParser.FindAll(tree).First());
         var measures = MultiStaffLayouter.CollectAllMeasuresAtIndex(multi, 0);
@@ -89,8 +89,8 @@ public class AccidentalReachRodTests
               rh { voice { gis''4. fis''8 e''4 dis'' } { <b' e''>2 <ais' d''>2 } | }
               lh { {{(leftHand ? "e,16 b, e b e,16 b, e b e,16 b, e b e,16 b, e b" : "e,1")}} | }
             }
-            form main { S }
-            score main { grandStaff { staff rh  staff lh } }
+            form { S }
+            score { grandStaff { staff rh  staff lh } }
             """);
         Assert.False(tree.HasErrors);
         var multi = SvgGenerator.CollectScore(tree, RenderSpecParser.FindAll(tree).First());
@@ -140,8 +140,8 @@ public class AccidentalReachRodTests
               rh { tuplet 3/2 { e'8 f' g' } c'4~ c'2 | }
               lh { {{(leftHand ? "c8 g e g c g e g" : "c1")}} | }
             }
-            form main { S }
-            score main { grandStaff { staff rh  staff lh } }
+            form { S }
+            score { grandStaff { staff rh  staff lh } }
             """);
         Assert.False(tree.HasErrors);
         var multi = SvgGenerator.CollectScore(tree, RenderSpecParser.FindAll(tree).First());
