@@ -1707,6 +1707,15 @@ CombinedStaff  = 'combinedStaff' , '{' , PartRef , PartRef , '}' ;
 
 StaffRender    = 'staff' , [ [ ClefName ] , PartRef ] , [ DisplayName ] ,
                  [ 'as' , StaffSelector , { StaffSelector } ] ;
+                 (* ⚠️ A CLEF WORD IS ALSO A PART NAME, so two words read by what the file
+                    declares (2026-10-09, the tab item's rule since 2026-10-03): 'staff bass
+                    melody' is the bass clef over part melody — unless the file declares a part
+                    named 'bass', when it is part bass's staff and 'melody' after it a part played
+                    to MIDI only (LYS1046 says so, and how to write either meaning plainly). The
+                    same word twice ('staff bass bass') is the clef over that part. A lone word
+                    is always the part. 'ossia' reads the same way. Until then the clef always
+                    won, and 'staff bass click' beside 'part bass' drew click on a bass clef and
+                    dropped part bass, in silence. *)
 StaffSelector  = 'lines' , Integer
                | 'removeEmpty' , RemoveEmptyValue ;
                  (* ONE 'as', then any of the selectors in any order:

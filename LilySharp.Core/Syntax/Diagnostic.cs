@@ -726,6 +726,16 @@ public static class DiagnosticCodes
     /// one's label is the section's; the warning sits on the later one.</summary>
     public const string SectionLabelConflict = "LYS1045";
 
+    /// <summary>Warning: a <c>staff X Y</c> / <c>ossia X Y</c> item whose first word names a PART
+    /// of this file and is also a clef word — <c>staff bass click</c> beside <c>part bass</c>.
+    /// The part wins (<c>StaffTargets</c>, the reading <see cref="TabPartNameIsAlsoATuning"/>
+    /// gave the tab item): the item is part X's staff, and Y a part played to MIDI only.
+    /// Reported at X, saying how to write either meaning plainly.</summary>
+    /// <remarks>2026-10-09: until then the clef reading won in silence — part X was not drawn,
+    /// part Y was drawn on X's clef, and Y stopped being MIDI-only. A book with no part named X
+    /// keeps the clef reading and never sees this.</remarks>
+    public const string StaffPartNameIsAlsoAClef = "LYS1046";
+
     /// <summary>Syntax error: a phrase reference needs a <c>$</c> — write <c>$name</c>.</summary>
     public const string BareReferenceRequiresDollar = "LYS1012";
 

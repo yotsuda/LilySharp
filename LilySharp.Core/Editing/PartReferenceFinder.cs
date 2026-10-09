@@ -62,10 +62,14 @@ public static class PartReferenceFinder
                 case StaffRenderSyntax staff:
                     if (StaffPartToken(staff) is { } st)
                         tokens.Add(st);
+                    if (Referenceable(staff.MidiOnlyPartToken) is { } sm)
+                        tokens.Add(sm);
                     break;
                 case OssiaRenderSyntax ossia:
-                    if (LastTargetToken(ossia) is { } ot)
+                    if (Referenceable(ossia.PartToken) is { } ot)
                         tokens.Add(ot);
+                    if (Referenceable(ossia.MidiOnlyPartToken) is { } om)
+                        tokens.Add(om);
                     break;
                 case TabRenderSyntax tab:
                     if (TabPartToken(tab) is { } tt)
@@ -183,10 +187,16 @@ public static class PartReferenceFinder
             case StaffRenderSyntax staff:
                 if (StaffPartToken(staff) is { } st)
                     into.Add(st);
+                // `staff bass click` with a part named bass: the trailing word is the MIDI-only
+                // part (StaffTargets), a reference like the tab's.
+                if (Referenceable(staff.MidiOnlyPartToken) is { } sm)
+                    into.Add(sm);
                 break;
             case OssiaRenderSyntax ossia:
-                if (LastTargetToken(ossia) is { } ot)
+                if (Referenceable(ossia.PartToken) is { } ot)
                     into.Add(ot);
+                if (Referenceable(ossia.MidiOnlyPartToken) is { } om)
+                    into.Add(om);
                 break;
             case TabRenderSyntax tab:
                 if (TabPartToken(tab) is { } tt)
@@ -405,19 +415,7 @@ public static class PartReferenceFinder
             toks.RemoveAt(si);
         if (toks.Count == 0)
             return null;
-        int partIdx = toks.Count > 1 && IsClefKeyword(toks[0].Kind) ? 1 : 0;
-        return Referenceable(toks[partIdx]);
-    }
-
-    /// <summary>The part token for <c>ossia</c>: cut the trailing <c>as lines N</c>
-    /// selector (the SAME cut RenderSpecParser.ParseOssia makes — one home,
-    /// <see cref="Svg.Collector.RenderSpecParser.CutStaffSelectors"/>), then the
-    /// last target token (<c>ossia [clef] part</c> takes the last slot).</summary>
-    private static SyntaxTokenNode? LastTargetToken(SyntaxNode node)
-    {
-        var toks = TargetTokens(node);
-        Svg.Collector.RenderSpecParser.CutStaffSelectors(toks);
-        return toks.Count > 0 ? Referenceable(toks[^1]) : null;
+        return Referenceable(staff.PartToken);
     }
 
     /// <summary>
@@ -488,9 +486,4 @@ public static class PartReferenceFinder
         return toks;
     }
 
-    private static bool IsClefKeyword(SyntaxKind kind) => kind is
-        SyntaxKind.TrebleKeyword or SyntaxKind.BassKeyword or SyntaxKind.AltoKeyword
-        or SyntaxKind.TenorKeyword or SyntaxKind.Treble8Keyword or SyntaxKind.Treble8UpKeyword
-        or SyntaxKind.SopranoKeyword or SyntaxKind.MezzoSopranoKeyword
-        or SyntaxKind.BaritoneKeyword or SyntaxKind.Bass8Keyword or SyntaxKind.PercussionKeyword;
 }

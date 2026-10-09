@@ -825,6 +825,78 @@ public sealed partial class StaffRenderSyntax : SyntaxNode
 
     /// <summary>The <c>staff</c> keyword token.</summary>
     public SyntaxTokenNode StaffKeyword => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>The clef word of <c>staff [clef] part</c> (<c>staff bass melody</c>), or null —
+    /// <see cref="StaffTargets"/>'s reading.</summary>
+    public SyntaxTokenNode? ClefToken => StaffTargets.Of(this).Clef;
+
+    /// <summary>The token naming the part this staff engraves, or null for a bare
+    /// <c>staff</c> (the file's unnamed part) — <see cref="StaffTargets"/>'s reading.</summary>
+    public SyntaxTokenNode? PartToken => StaffTargets.Of(this).Part;
+
+    /// <summary>The part played to MIDI only that follows a part which is also a clef word —
+    /// <c>staff bass click</c> beside <c>part bass</c> — or null (<see cref="StaffTargets"/>).</summary>
+    public SyntaxTokenNode? MidiOnlyPartToken => StaffTargets.Of(this).MidiOnly;
+}
+
+/// <summary>
+/// ONE reading of the words a <c>staff</c> or <c>ossia</c> item names before its display name
+/// and <c>as</c> selectors: <c>[clef] part</c>, or — when the first word is a part this file
+/// declares — <c>part midiOnlyPart</c>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// A clef word (<c>treble bass alto tenor treble_8 …</c>, <see cref="SyntaxFacts.IsClefKeyword"/>)
+/// is a legal part name, and the parser keeps a clef word followed by another word as two
+/// words of the item. Until 2026-10-09 the first was always the clef: <c>staff bass click</c>
+/// beside <c>part bass</c> drew part <c>click</c> on a bass clef, part <c>bass</c> was not drawn,
+/// and <c>click</c> stopped being the MIDI-only part it was written as — with no diagnostic.
+/// The TAB item had the same hole and was closed the same way on 2026-10-03
+/// (<see cref="TabRenderSyntax.PartToken"/>): a DECLARED part wins, and the word after it is a
+/// part played to MIDI only. A book with no part of that name reads as before, and so does the
+/// same word twice (<c>staff bass bass</c>: the bass clef on part bass, either way).
+/// </para>
+/// <para>
+/// The declared names are the ROOT's, so the reading does not depend on where the
+/// declarations stand. RenderSpecParser, PartReferenceFinder, the LilyPond twin and the
+/// validator (LYS1046) all read this one answer.
+/// </para>
+/// </remarks>
+internal static class StaffTargets
+{
+    internal readonly record struct Reading(SyntaxTokenNode? Clef, SyntaxTokenNode? Part, SyntaxTokenNode? MidiOnly);
+
+    internal static Reading Of(SyntaxNode item)
+    {
+        var words = new List<SyntaxTokenNode>();
+        for (int i = 1; i < item.SlotCount; i++)
+        {
+            if (item.GetChild(i) is not SyntaxTokenNode t)
+                continue;
+            if (string.Equals(t.Text, "as", StringComparison.Ordinal))
+                break;   // the selectors (`as lines 1 removeEmpty all`) follow
+            if (t.Kind is SyntaxKind.Tilde or SyntaxKind.StringLiteral or SyntaxKind.OpenBrace or SyntaxKind.CloseBrace)
+                continue;
+            words.Add(t);
+        }
+        if (words.Count == 0)
+            return default;
+        if (words.Count == 1)
+            return new Reading(null, words[0], null);
+        if (SyntaxFacts.IsClefKeyword(words[0].Kind) && !FirstIsADeclaredPart(item, words))
+            return new Reading(words[0], words[1], null);
+        return new Reading(null, words[0], words[1]);
+    }
+
+    private static bool FirstIsADeclaredPart(SyntaxNode item, List<SyntaxTokenNode> words)
+    {
+        if (string.Equals(words[0].Text, words[1].Text, StringComparison.Ordinal))
+            return false;
+        SyntaxNode root = item;
+        while (root.Parent is { } parent)
+            root = parent;
+        return root is CompilationUnitSyntax unit && unit.DeclaredPartNames.Contains(words[0].Text);
+    }
 }
 
 /// <summary>
@@ -1076,6 +1148,16 @@ public sealed partial class OssiaRenderSyntax : SyntaxNode
 
     /// <summary>The <c>ossia</c> keyword token.</summary>
     public SyntaxTokenNode OssiaKeyword => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>The clef word of <c>ossia [clef] part</c>, or null (<see cref="StaffTargets"/>).</summary>
+    public SyntaxTokenNode? ClefToken => StaffTargets.Of(this).Clef;
+
+    /// <summary>The token naming the ossia's part, or null (<see cref="StaffTargets"/>).</summary>
+    public SyntaxTokenNode? PartToken => StaffTargets.Of(this).Part;
+
+    /// <summary>A part played to MIDI only after a part that is also a clef word, or null
+    /// (<see cref="StaffTargets"/>).</summary>
+    public SyntaxTokenNode? MidiOnlyPartToken => StaffTargets.Of(this).MidiOnly;
 }
 
 /// <summary>

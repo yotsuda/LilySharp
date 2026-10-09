@@ -242,6 +242,14 @@ public static class RenderSpecParser
         // LILYPOND-REF: ly/engraver-init.ly:648-658 Lyrics nonstaff-relatedstaff-spacing,
         // staff-affinity UP — a LilyPond score is exactly this vertical list, and
         // the gluing is the affinity, not a clause.
+        // `staff bass click` / `ossia bass click` beside a part named bass: the word after the
+        // part is a MIDI-only part (StaffTargets), exactly as the bare item and the tab's — read
+        // here for every such item, a group's members included.
+        foreach (var node in render.DescendantNodes())
+            if (((node as StaffRenderSyntax)?.MidiOnlyPartToken ?? (node as OssiaRenderSyntax)?.MidiOnlyPartToken)
+                is { } staffMidiOnly)
+                midiOnlyParts.Add(staffMidiOnly.Text);
+
         FoldAdjacentRows(render, items);
 
         ApplyEnsembleDefault(items);
@@ -777,6 +785,23 @@ public static class RenderSpecParser
 
     /// <summary>One home for the staff-item token scan: the sings validator reads
     /// the same (part, with-lyrics) answer the renderer does, never a re-spelling.</summary>
+    /// <summary>The clef a <c>staff</c> / <c>ossia</c> item's clef word writes, or null for none.</summary>
+    private static ClefType? ClefOfKeyword(SyntaxTokenNode? clef) => clef?.Kind switch
+    {
+        SyntaxKind.TrebleKeyword => ClefType.Treble,
+        SyntaxKind.BassKeyword => ClefType.Bass,
+        SyntaxKind.AltoKeyword => ClefType.Alto,
+        SyntaxKind.TenorKeyword => ClefType.Tenor,
+        SyntaxKind.Treble8Keyword => ClefType.Treble8Below,
+        SyntaxKind.Treble8UpKeyword => ClefType.Treble8Above,
+        SyntaxKind.SopranoKeyword => ClefType.Soprano,
+        SyntaxKind.MezzoSopranoKeyword => ClefType.MezzoSoprano,
+        SyntaxKind.BaritoneKeyword => ClefType.Baritone,
+        SyntaxKind.Bass8Keyword => ClefType.Bass8Below,
+        SyntaxKind.PercussionKeyword => ClefType.Percussion,
+        _ => null,
+    };
+
     internal static StaffSpec? ParseStaffSpec(StaffRenderSyntax staff) => ParseStaff(staff);
 
     private static StaffSpec? ParseStaff(StaffRenderSyntax staff)
@@ -801,37 +826,12 @@ public static class RenderSpecParser
             toks.RemoveAt(si);
         }
 
-        // [clef?] part [bare display name] — the clef is a distinct keyword
-        // kind, so the part is the first non-clef token; anything after it is
-        // an unquoted display name (`staff flute 津田さん`). No token at all is a bare
-        // `staff`: the file's unnamed part (SyntaxFacts.UnnamedPartName, 2026-10-09).
-        ClefType? explicitClef = toks.Count == 0 ? null : toks[0].Kind switch
-        {
-            SyntaxKind.TrebleKeyword => ClefType.Treble,
-            SyntaxKind.BassKeyword => ClefType.Bass,
-            SyntaxKind.AltoKeyword => ClefType.Alto,
-            SyntaxKind.TenorKeyword => ClefType.Tenor,
-            SyntaxKind.Treble8Keyword => ClefType.Treble8Below,
-            SyntaxKind.Treble8UpKeyword => ClefType.Treble8Above,
-            SyntaxKind.SopranoKeyword => ClefType.Soprano,
-            SyntaxKind.MezzoSopranoKeyword => ClefType.MezzoSoprano,
-            SyntaxKind.BaritoneKeyword => ClefType.Baritone,
-            SyntaxKind.Bass8Keyword => ClefType.Bass8Below,
-            SyntaxKind.PercussionKeyword => ClefType.Percussion,
-            _ => null,
-        };
-        int partIdx = explicitClef != null ? 1 : 0;
-        if (explicitClef != null && partIdx >= toks.Count)
-        {
-            // The only token is a clef-name word, so it IS the part name, not a clef
-            // modifier — `staff bass` references a part literally named "bass" (its clef
-            // then comes from the part definition), not a bass-clef staff with no part.
-            explicitClef = null;
-            partIdx = 0;
-        }
-        string voiceName = partIdx < toks.Count ? toks[partIdx].Text : SyntaxFacts.UnnamedPartName;
-        if (nameOverride == null && partIdx + 1 < toks.Count)
-            nameOverride = toks[partIdx + 1].Text;
+        // [clef?] part — the node's one reading (StaffTargets): a lone clef word is the part,
+        // and a clef word that names a declared part is that part, the word after it a part
+        // played to MIDI only (collected in Parse). No word at all is a bare `staff`: the
+        // file's unnamed part (SyntaxFacts.UnnamedPartName, 2026-10-09).
+        ClefType? explicitClef = ClefOfKeyword(staff.ClefToken);
+        string voiceName = staff.PartToken?.Text ?? SyntaxFacts.UnnamedPartName;
 
         // No explicit clef in the render block → take it from the part definition.
         ClefType clef = explicitClef ?? GetPartClef(staff, voiceName) ?? ClefType.Treble;
@@ -1184,29 +1184,10 @@ public static class RenderSpecParser
         int? ossiaLines = CutStaffSelectors(toks).Lines;
         if (toks.Count == 0)
             return null;
-        var nameToken = toks[^1];
+        if (ossia.PartToken is not { } nameToken)
+            return null;
         string voiceName = nameToken.Text;
-
-        ClefType? explicitClef = null;
-        if (toks.Count >= 2)
-        {
-            var clefToken = toks[0];
-            explicitClef = clefToken.Kind switch
-            {
-                SyntaxKind.TrebleKeyword => ClefType.Treble,
-                SyntaxKind.BassKeyword => ClefType.Bass,
-                SyntaxKind.AltoKeyword => ClefType.Alto,
-                SyntaxKind.TenorKeyword => ClefType.Tenor,
-                SyntaxKind.Treble8Keyword => ClefType.Treble8Below,
-                SyntaxKind.Treble8UpKeyword => ClefType.Treble8Above,
-                SyntaxKind.SopranoKeyword => ClefType.Soprano,
-                SyntaxKind.MezzoSopranoKeyword => ClefType.MezzoSoprano,
-                SyntaxKind.BaritoneKeyword => ClefType.Baritone,
-                SyntaxKind.Bass8Keyword => ClefType.Bass8Below,
-                SyntaxKind.PercussionKeyword => ClefType.Percussion,
-                _ => null,
-            };
-        }
+        ClefType? explicitClef = ClefOfKeyword(ossia.ClefToken);
 
         ClefType clef = explicitClef ?? GetPartClef(ossia, voiceName) ?? ClefType.Treble;
         return new OssiaStaffSpec(new StaffSpec(clef, voiceName,

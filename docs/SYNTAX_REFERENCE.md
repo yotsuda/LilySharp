@@ -1558,6 +1558,12 @@ A staff's display name is a quoted string (`staff flute "Piccolo"`) — a bare w
 `click` MIDI-only part), so position never changes what a word means. And a score of
 nothing but bare names has nothing to engrave, which is the empty-body error.
 
+A clef word before the part puts that clef on this staff only (`staff bass melody`). Since a
+clef word may also be a part's name, a file that declares a part named `bass` reads
+`staff bass click` as **part bass's staff plus `click` played to MIDI only**, and warns
+(**LYS1046**) with both plain spellings: `click staff bass`, or `clef bass` in part click.
+`ossia` reads the same way, and `tab` does with its tuning words (LYS1044).
+
 ### This score's own page and faces
 
 A score may write its own `fonts` / `paper` / `layout` block, which overrides the file's

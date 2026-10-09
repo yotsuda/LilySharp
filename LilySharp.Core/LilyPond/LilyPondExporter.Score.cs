@@ -324,15 +324,9 @@ public sealed partial class LilyPondExporter
         return sb.ToString();
     }
 
-    /// <summary>The part an ossia row names — the LAST token after the
-    /// <c>as lines N</c> cut, the same read as
-    /// <see cref="Svg.Collector.RenderSpecParser"/>'s ParseOssia (one home for
-    /// the cut; the twin does not carry a line count, so only the slots move).</summary>
-    private static string? OssiaPartName(OssiaRenderSyntax ossia)
-    {
-        var toks = OssiaTargetTokens(ossia);
-        return toks.Count > 0 ? toks[^1].Text : null;
-    }
+    /// <summary>The part an ossia row names — the node's reading (<c>StaffTargets</c>), the
+    /// same the page's ParseOssia takes.</summary>
+    private static string? OssiaPartName(OssiaRenderSyntax ossia) => ossia.PartToken?.Text;
 
     /// <summary>The clef word of <c>staff [clef] part</c>, or null when the row names only the
     /// part. Read through the renderer's own scan (RenderSpecParser.ParseStaffSpec), so the twin
@@ -340,26 +334,9 @@ public sealed partial class LilyPondExporter
     private static string? StaffClefWord(StaffRenderSyntax staff) =>
         RenderSpecParser.ParseStaffSpec(staff)?.WrittenClef is { } c ? InstrumentDefaults.ClefWord(c) : null;
 
-    /// <summary>The clef word of <c>ossia [clef] part</c>, or null when the row is just
-    /// <c>ossia part</c> (a lone word is the PART, never a clef).</summary>
-    private static string? OssiaClef(OssiaRenderSyntax ossia)
-    {
-        var toks = OssiaTargetTokens(ossia);
-        return toks.Count >= 2 ? toks[0].Text : null;
-    }
-
-    /// <summary>The ossia row's tokens after the keyword with the trailing
-    /// <c>as lines N</c> selector cut off — the shared cut, so the part stays
-    /// the last slot here exactly as it does for the renderer.</summary>
-    private static List<SyntaxTokenNode> OssiaTargetTokens(OssiaRenderSyntax ossia)
-    {
-        var toks = new List<SyntaxTokenNode>();
-        for (int i = 1; i < ossia.SlotCount; i++)
-            if (ossia.GetChild(i) is SyntaxTokenNode t)
-                toks.Add(t);
-        Svg.Collector.RenderSpecParser.CutStaffSelectors(toks);
-        return toks;
-    }
+    /// <summary>The clef word of <c>ossia [clef] part</c>, or null when the row names only the
+    /// part — the node's reading (<c>StaffTargets</c>).</summary>
+    private static string? OssiaClef(OssiaRenderSyntax ossia) => ossia.ClefToken?.Text;
 
     /// <summary>
     /// Gives an already-emitted <c>\new Staff</c> row the context id an ossia aligns above.
