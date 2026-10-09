@@ -451,32 +451,7 @@ public sealed partial class LilySharpLanguageServer
                 return null;
             title = $"Write 'score {newText}'";
         }
-        var (startLine, startChar) = GetLineAndCharacter(doc.Text, start);
-        var (endLine, endChar) = GetLineAndCharacter(doc.Text, end);
-        return new CodeAction
-        {
-            Title = title,
-            Kind = CodeActionKind.QuickFix,
-            Diagnostics = [ConvertDiagnostic(diagnostic, doc.Text, uri)],
-            Edit = new WorkspaceEdit
-            {
-                Changes = new Dictionary<string, TextEdit[]>
-                {
-                    [uri.ToString()] =
-                    [
-                        new TextEdit
-                        {
-                            Range = new LspRange
-                            {
-                                Start = new Position { Line = startLine, Character = startChar },
-                                End = new Position { Line = endLine, Character = endChar },
-                            },
-                            NewText = newText,
-                        },
-                    ],
-                },
-            },
-        };
+        return QuickFix(title, doc, uri, diagnostic, EditOf(doc.Text, start, end, newText));
     }
 
     /// <summary>
@@ -491,24 +466,8 @@ public sealed partial class LilySharpLanguageServer
         string score = LilySharp.Core.Editing.ScoreSkeleton.For(doc.Tree.GetRoot());
         string eol = doc.Text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
         string lead = doc.Text.Length == 0 || doc.Text.EndsWith('\n') ? eol : eol + eol;
-        var (line, character) = GetLineAndCharacter(doc.Text, doc.Text.Length);
-        var at = new Position { Line = line, Character = character };
-        return new CodeAction
-        {
-            Title = $"Add {score}",
-            Kind = CodeActionKind.QuickFix,
-            Diagnostics = [ConvertDiagnostic(diagnostic, doc.Text, uri)],
-            Edit = new WorkspaceEdit
-            {
-                Changes = new Dictionary<string, TextEdit[]>
-                {
-                    [uri.ToString()] =
-                    [
-                        new TextEdit { Range = new LspRange { Start = at, End = at }, NewText = lead + score + eol },
-                    ],
-                },
-            },
-        };
+        return QuickFix($"Add {score}", doc, uri, diagnostic,
+            EditOf(doc.Text, doc.Text.Length, doc.Text.Length, lead + score + eol));
     }
 
     private static readonly System.Text.RegularExpressions.Regex SectionOfWarning =
@@ -536,33 +495,7 @@ public sealed partial class LilySharpLanguageServer
         string written = doc.Text[start..end];
         if (written == wanted || !string.Equals(written, wanted, StringComparison.OrdinalIgnoreCase))
             return null;
-        var (startLine, startChar) = GetLineAndCharacter(doc.Text, start);
-        var (endLine, endChar) = GetLineAndCharacter(doc.Text, end);
-        string title = $"Write '{wanted}'";
-        return new CodeAction
-        {
-            Title = title,
-            Kind = CodeActionKind.QuickFix,
-            Diagnostics = [ConvertDiagnostic(diagnostic, doc.Text, uri)],
-            Edit = new WorkspaceEdit
-            {
-                Changes = new Dictionary<string, TextEdit[]>
-                {
-                    [uri.ToString()] =
-                    [
-                        new TextEdit
-                        {
-                            Range = new LspRange
-                            {
-                                Start = new Position { Line = startLine, Character = startChar },
-                                End = new Position { Line = endLine, Character = endChar },
-                            },
-                            NewText = wanted,
-                        },
-                    ],
-                },
-            },
-        };
+        return QuickFix($"Write '{wanted}'", doc, uri, diagnostic, EditOf(doc.Text, start, end, wanted));
     }
 
     /// <summary>
@@ -573,46 +506,21 @@ public sealed partial class LilySharpLanguageServer
     private static IEnumerable<CodeAction> ResolveTodoActions(
         Document doc, Uri uri, CoreDiagnostic diagnostic, IReadOnlyList<CoreDiagnostic> all)
     {
-        TextEdit Delete(CoreDiagnostic d)
-        {
-            var (sl, sc) = GetLineAndCharacter(doc.Text, d.Span.Start);
-            var (el, ec) = GetLineAndCharacter(doc.Text, d.Span.End);
-            return new TextEdit
-            {
-                Range = new LspRange
-                {
-                    Start = new Position { Line = sl, Character = sc },
-                    End = new Position { Line = el, Character = ec },
-                },
-                NewText = "",
-            };
-        }
+        TextEdit Delete(CoreDiagnostic d) => EditOf(doc.Text, d.Span.Start, d.Span.End, "");
         bool IsMark(CoreDiagnostic d) => d.Code == DiagnosticCodes.TodoMark
             && d.Span.Start >= 0 && d.Span.End <= doc.Text.Length
             && doc.Text.AsSpan(d.Span.Start).StartsWith("@todo", StringComparison.Ordinal);
 
         if (!IsMark(diagnostic))
             yield break;
-        yield return new CodeAction
-        {
-            Title = "Resolve this TODO (remove @todo)",
-            Kind = CodeActionKind.QuickFix,
-            Diagnostics = [ConvertDiagnostic(diagnostic, doc.Text, uri)],
-            Edit = new WorkspaceEdit
-            {
-                Changes = new Dictionary<string, TextEdit[]> { [uri.ToString()] = [Delete(diagnostic)] },
-            },
-        };
+        yield return QuickFix("Resolve this TODO (remove @todo)", doc, uri, diagnostic, Delete(diagnostic));
         var marks = all.Where(IsMark).DistinctBy(d => d.Span.Start).ToList();
         if (marks.Count > 1)
             yield return new CodeAction
             {
                 Title = $"Resolve all {marks.Count} TODOs in this file",
                 Kind = CodeActionKind.QuickFix,
-                Edit = new WorkspaceEdit
-                {
-                    Changes = new Dictionary<string, TextEdit[]> { [uri.ToString()] = marks.Select(Delete).ToArray() },
-                },
+                Edit = WorkspaceEditOf(uri, [.. marks.Select(Delete)]),
             };
     }
 
@@ -635,28 +543,11 @@ public sealed partial class LilySharpLanguageServer
         var candidates = OmrSideFile.Candidates(System.IO.Path.ChangeExtension(uri.LocalPath, ".omr.json"), key);
         if (candidates.Count == 0)
             return [];
-        var (sl, sc) = GetLineAndCharacter(doc.Text, host.Span.Start);
-        var (el, ec) = GetLineAndCharacter(doc.Text, host.Span.End);
-        var range = new LspRange
-        {
-            Start = new Position { Line = sl, Character = sc },
-            End = new Position { Line = el, Character = ec },
-        };
-        return candidates.Select(c => new CodeAction
-        {
-            Title = c.Label is { Length: > 0 } label && label != c.Text
+        return candidates.Select(c => QuickFix(
+            c.Label is { Length: > 0 } label && label != c.Text
                 ? $"Write {label}: {c.Text} (resolves the TODO)"
                 : $"Write {c.Text} (resolves the TODO)",
-            Kind = CodeActionKind.QuickFix,
-            Diagnostics = [ConvertDiagnostic(diagnostic, doc.Text, uri)],
-            Edit = new WorkspaceEdit
-            {
-                Changes = new Dictionary<string, TextEdit[]>
-                {
-                    [uri.ToString()] = [new TextEdit { Range = range, NewText = c.Text }],
-                },
-            },
-        }).ToList();
+            doc, uri, diagnostic, EditOf(doc.Text, host.Span.Start, host.Span.End, c.Text))).ToList();
     }
 
     /// <summary>The spelling a case hint names: "Names / Values / Keys are case-sensitive: write 'X'."</summary>
@@ -669,13 +560,6 @@ public sealed partial class LilySharpLanguageServer
     private static CodeAction PadBarsAction(
         Document doc, Uri uri, CoreDiagnostic diagnostic, IReadOnlyList<BarPad> pads)
     {
-        TextEdit EditOf(BarPad pad)
-        {
-            var (line, character) = GetLineAndCharacter(doc.Text, pad.Offset);
-            var at = new Position { Line = line, Character = character };
-            return new TextEdit { Range = new LspRange { Start = at, End = at }, NewText = pad.Text };
-        }
-
         // Counted in BAR LINES, not bars: over an open last bar the first `|` only closes it,
         // and the title must say what the edit writes. One short part or track keeps the old
         // title; several are named while they are few, and counted when they are many (the
@@ -689,19 +573,8 @@ public sealed partial class LilySharpLanguageServer
             : one.Bars == 1
                 ? $"Add 1 bar line to {one.Voice} (|)"
                 : $"Add {one.Bars} bar lines to {one.Voice} ({string.Join(" ", Enumerable.Repeat("|", one.Bars))})";
-        return new CodeAction
-        {
-            Title = title,
-            Kind = CodeActionKind.QuickFix,
-            Diagnostics = [ConvertDiagnostic(diagnostic, doc.Text, uri)],
-            Edit = new WorkspaceEdit
-            {
-                Changes = new Dictionary<string, TextEdit[]>
-                {
-                    [uri.ToString()] = pads.Select(EditOf).ToArray(),
-                },
-            },
-        };
+        return QuickFix(title, doc, uri, diagnostic,
+            [.. pads.Select(p => EditOf(doc.Text, p.Offset, p.Offset, p.Text))]);
     }
 
     private IEnumerable<CodeAction> GenerateQuickFixes(Document doc, CoreDiagnostic diagnostic, Uri uri)
@@ -716,62 +589,24 @@ public sealed partial class LilySharpLanguageServer
             // Compute the end from the span's END offset (not start-char + length):
             // a diagnostic span may cross a line, and assuming one line puts the end
             // past the line, yielding a malformed edit.
-            var (startLine, startChar) = GetLineAndCharacter(doc.Text, diagnostic.Span.Start);
-            var (endLine, endChar) = GetLineAndCharacter(doc.Text, diagnostic.Span.End);
             actions.Add(new CodeAction
             {
                 Title = "Insert rest (r4)",
                 Kind = CodeActionKind.QuickFix,
-                Edit = new WorkspaceEdit
-                {
-                    Changes = new Dictionary<string, TextEdit[]>
-                    {
-                        [uri.ToString()] = new[]
-                        {
-                            new TextEdit
-                            {
-                                Range = new LspRange
-                                {
-                                    Start = new Position { Line = startLine, Character = startChar },
-                                    End = new Position { Line = endLine, Character = endChar }
-                                },
-                                NewText = "r4"
-                            }
-                        }
-                    }
-                }
+                Edit = WorkspaceEditOf(uri, EditOf(doc.Text, diagnostic.Span.Start, diagnostic.Span.End, "r4")),
             });
         }
 
         // Fix: Unclosed brace
         if (message.Contains("Expected '}'") || message.Contains("unclosed"))
         {
-            var lines = doc.Text.Split('\n');
-            var lastLine = lines.Length - 1;
-            var lastChar = lines[lastLine].TrimEnd('\r').Length;
-
+            // At the end of the text, before a trailing CR.
+            int end = doc.Text.TrimEnd('\r').Length;
             actions.Add(new CodeAction
             {
                 Title = "Add closing brace",
                 Kind = CodeActionKind.QuickFix,
-                Edit = new WorkspaceEdit
-                {
-                    Changes = new Dictionary<string, TextEdit[]>
-                    {
-                        [uri.ToString()] = new[]
-                        {
-                            new TextEdit
-                            {
-                                Range = new LspRange
-                                {
-                                    Start = new Position { Line = lastLine, Character = lastChar },
-                                    End = new Position { Line = lastLine, Character = lastChar }
-                                },
-                                NewText = "\n}"
-                            }
-                        }
-                    }
-                }
+                Edit = WorkspaceEditOf(uri, EditOf(doc.Text, end, end, "\n}")),
             });
         }
 
@@ -807,29 +642,11 @@ public sealed partial class LilySharpLanguageServer
                 offset = last.Position + last.FullWidth;
                 newText = $"\nform {{ {names} }}\n";
             }
-            var (insLine, insChar) = GetLineAndCharacter(doc.Text, offset);
             actions.Add(new CodeAction
             {
                 Title = "Insert structure declaration",
                 Kind = CodeActionKind.Refactor,
-                Edit = new WorkspaceEdit
-                {
-                    Changes = new Dictionary<string, TextEdit[]>
-                    {
-                        [uri.ToString()] = new[]
-                        {
-                            new TextEdit
-                            {
-                                Range = new LspRange
-                                {
-                                    Start = new Position { Line = insLine, Character = insChar },
-                                    End = new Position { Line = insLine, Character = insChar }
-                                },
-                                NewText = newText
-                            }
-                        }
-                    }
-                }
+                Edit = WorkspaceEditOf(uri, EditOf(doc.Text, offset, offset, newText)),
             });
         }
 
@@ -837,49 +654,54 @@ public sealed partial class LilySharpLanguageServer
         if (node is MusicBlockSyntax block && block.Items.Any())
         {
             var blockText = block.ToFullString().Trim();
-            var (line, character) = GetLineAndCharacter(doc.Text, block.Position);
-            var (endLine, endChar) = GetLineAndCharacter(doc.Text, block.Position + block.FullWidth);
-
             actions.Add(new CodeAction
             {
                 Title = "Extract to phrase",
                 Kind = CodeActionKind.Refactor,
-                Edit = new WorkspaceEdit
-                {
-                    Changes = new Dictionary<string, TextEdit[]>
-                    {
-                        [uri.ToString()] = new[]
-                        {
-                            // Insert a phrase declaration at the top. blockText already
-                            // includes the braces, so `phrase melody { … }` is well-formed.
-                            // (`let name = …` was removed from the grammar.)
-                            new TextEdit
-                            {
-                                Range = new LspRange
-                                {
-                                    Start = new Position { Line = 0, Character = 0 },
-                                    End = new Position { Line = 0, Character = 0 }
-                                },
-                                NewText = $"phrase melody {blockText}\n\n"
-                            },
-                            // Replace block with a phrase reference
-                            new TextEdit
-                            {
-                                Range = new LspRange
-                                {
-                                    Start = new Position { Line = line, Character = character },
-                                    End = new Position { Line = endLine, Character = endChar }
-                                },
-                                NewText = "melody"
-                            }
-                        }
-                    }
-                }
+                Edit = WorkspaceEditOf(uri,
+                    // Insert a phrase declaration at the top. blockText already
+                    // includes the braces, so `phrase melody { … }` is well-formed.
+                    // (`let name = …` was removed from the grammar.)
+                    EditOf(doc.Text, 0, 0, $"phrase melody {blockText}\n\n"),
+                    // Replace block with a phrase reference
+                    EditOf(doc.Text, block.Position, block.Position + block.FullWidth, "melody")),
             });
         }
 
 
         return actions;
     }
+
+    /// <summary>The edit that writes <paramref name="newText"/> over the text offsets
+    /// [<paramref name="start"/>, <paramref name="end"/>) — an insertion when they are equal.</summary>
+    private static TextEdit EditOf(string text, int start, int end, string newText)
+    {
+        var (startLine, startChar) = GetLineAndCharacter(text, start);
+        var (endLine, endChar) = GetLineAndCharacter(text, end);
+        return new TextEdit
+        {
+            Range = new LspRange
+            {
+                Start = new Position { Line = startLine, Character = startChar },
+                End = new Position { Line = endLine, Character = endChar },
+            },
+            NewText = newText,
+        };
+    }
+
+    /// <summary>The workspace edit that applies <paramref name="edits"/> to the one document.</summary>
+    private static WorkspaceEdit WorkspaceEditOf(Uri uri, params TextEdit[] edits)
+        => new() { Changes = new Dictionary<string, TextEdit[]> { [uri.ToString()] = edits } };
+
+    /// <summary>A quick fix for <paramref name="diagnostic"/>: the action every diagnostic-bound
+    /// fix here builds, titled, tied to its diagnostic, and applying <paramref name="edits"/>.</summary>
+    private static CodeAction QuickFix(
+        string title, Document doc, Uri uri, CoreDiagnostic diagnostic, params TextEdit[] edits) => new()
+    {
+        Title = title,
+        Kind = CodeActionKind.QuickFix,
+        Diagnostics = [ConvertDiagnostic(diagnostic, doc.Text, uri)],
+        Edit = WorkspaceEditOf(uri, edits),
+    };
 
 }

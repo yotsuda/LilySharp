@@ -1505,7 +1505,7 @@ internal sealed partial class LayoutEngine
         if (ctx.MultiScore is { } multiScore
             && ctx.StaffSkylines is { } roomSkylines
             && staffByIndex != null
-            && !cn.IsDefaultOrEmpty && cn.Any(c => !c.IsChordRow))
+            && ChordNameEngraver.AnyAttached(cn))
             attachedBaselineAboveTop = AttachedBaselineAboveTopSupplier(
                 ctx, multiScore, roomSkylines, staffByIndex, systems);
 
@@ -1788,8 +1788,7 @@ internal sealed partial class LayoutEngine
         Func<int, int, (int StaffIndex, VerticalSkyline Up, VerticalSkyline Down)?>?
             attachedChordBelow = null;
         if (ctx.MultiScore is { } multiScore && staffByIndex != null
-            && ctx.ChordNames is { IsDefaultOrEmpty: false } chordItems
-            && chordItems.Any(c => !c.IsChordRow))
+            && ctx.ChordNames is { } chordItems && ChordNameEngraver.AnyAttached(chordItems))
         {
             var attCache =
                 new Dictionary<(int, int), (int, VerticalSkyline, VerticalSkyline)?>();
@@ -2401,8 +2400,7 @@ internal sealed partial class LayoutEngine
         // Any attached symbol, track or note-bound @chord: which staves' lines are run elements
         // is MultiStaffLayouter.AttachedChordLineInRun's answer, asked per staff below — this is
         // only the bail-out for a score with none (the same one the two suppliers above take).
-        if (score.ChordNames.IsDefaultOrEmpty
-            || !score.ChordNames.Any(c => !c.IsChordRow))
+        if (!ChordNameEngraver.AnyAttached(score.ChordNames))
             return null;
         return AttachedChordLineSupplier(score, measureLayouts);
     }

@@ -101,7 +101,7 @@
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **:3269** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
 - **:3321** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
-- **:4514** same approximation the scripts' own remark records for the movers; the books that
+- **:4512** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1230** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
 - **:2378** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
@@ -189,8 +189,8 @@
 - **:865** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
 - **:1142** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
-- **:2460** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
-- **:2482** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
+- **:2458** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
+- **:2480** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
 - **:793** THE CLEAR HAS NO OBSERVER HERE, and that was measured rather than assumed. Session 457's
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
@@ -203,7 +203,7 @@
 - **:152** is measured-exact there, and no ledger point prices replacing it.
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **:3961** staff down, and this reserves it on the hidden one. No book reaches that.
-- **:5451** company on a row whose symbols sit closer than its spec's 1.0. No point measures
+- **:5437** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:871** does not spell a per-type padding — no point observes a segno/coda over a
 - **:1071** X extent per mark -- and reproduce both pictures. No ledger point is
@@ -410,8 +410,8 @@
 - **:125** LILYSHARP-OWN, and ONE HOME for it: the rule decides which baseline the symbols are
 - **:154** ⚠️ LILYSHARP-OWN. LilyPond cannot spell the configuration: a `ChordNames` context is its
 - **:227** ⚠️ LILYSHARP-OWN, all of it. LilyPond cannot spell the configuration: a
-- **:877** LILYSHARP-OWN: LilyPond does not shift a ChordName off its column at all — a
-- **:1031** ⚠️ LILYSHARP-OWN, THE DIAGRAM'S X: its box stands with its LEFT edge on the symbol's
+- **:922** LILYSHARP-OWN: LilyPond does not shift a ChordName off its column at all — a
+- **:1076** ⚠️ LILYSHARP-OWN, THE DIAGRAM'S X: its box stands with its LEFT edge on the symbol's
 ### `LilySharp.Core/Svg/Layout/ChordNameGlyphRun.cs`
 - **:449** LILYSHARP-OWN: LilyPond reads no SMuFL font and draws a chord symbol's flat as a
 ### `LilySharp.Core/Svg/Layout/CustomTextEngraver.cs`
@@ -443,8 +443,8 @@
 - **:456** ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's mark aligns to the BreakAlignGroup,
 - **:487** LILYSHARP-OWN (2026-09-28): see for
 - **:1082** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
-- **:1870** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
-- **:2165** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
+- **:1869** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
+- **:2164** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
 - **:856** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
@@ -485,7 +485,7 @@
 - **:2352** wide as its 3/4 bars for one beat). LILYSHARP-OWN like the floor itself: LilyPond has
 - **:2588** timing-placed chord symbol and a beat slash do. LILYSHARP-OWN: the filler-slot keep.
 - **:3750** ⚠️ LILYSHARP-OWN, DECLARED: LilyPond's pure heights are BOXES — the begin-of-line
-- **:5125** LILYSHARP-OWN: the band is Lily#'s model of a line LilyPond walks as a loose line
+- **:5123** LILYSHARP-OWN: the band is Lily#'s model of a line LilyPond walks as a loose line
 ### `LilySharp.Core/Svg/Layout/MusicFont.cs`
 - **:272** drawn as, so no Emmentaler book moves. LILYSHARP-OWN.
 - **:523** LILYSHARP-OWN: hand-tuned, and the only head width that is. ⚠️ NOT because LilyPond

@@ -57,7 +57,7 @@ public class NamedBlockReferenceTests
     {
         var tree = SyntaxTree.Parse(source);
         var render = tree.GetRoot().DescendantNodes().OfType<RenderDeclarationSyntax>()
-            .First(r => RenderSpecParser.SelectorNameOf(r) == scoreName);
+            .First(r => RenderSpecParser.NameOf(r) == scoreName);
         return SvgGenerator.CollectScore(tree, RenderSpecParser.Parse(render));
     }
 

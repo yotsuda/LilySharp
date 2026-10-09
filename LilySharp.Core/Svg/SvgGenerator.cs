@@ -78,7 +78,7 @@ public static class SvgGenerator
     /// <param name="inputStem">
     /// The input file's stem (name without extension). When given, each score's
     /// filename is resolved against it (the unnamed score → the stem; <c>score sub</c> →
-    /// <c>stem-sub</c>). When null, the raw OutputFile is returned (empty for the unnamed
+    /// <c>stem-sub</c>). When null, the raw Name is returned (empty for the unnamed
     /// score) — the caller derives the name.
     /// </param>
     public static IReadOnlyList<(string Filename, string Svg)> GenerateAll(
@@ -100,7 +100,7 @@ public static class SvgGenerator
             var (multiScore, layout) = BuildLayout(tree, spec, settings: options.PaperOverrides);
             LayoutWarnings.Report(layout, multiScore.Paper, options.LayoutWarning);
             var svg = RenderToSvg(multiScore, layout, options);
-            var filename = inputStem != null ? spec.ResolveOutputStem(inputStem) : spec.OutputFile;
+            var filename = inputStem != null ? spec.ResolveOutputStem(inputStem) : spec.Name;
             results.Add((filename, svg));
         }
 
@@ -140,7 +140,7 @@ public static class SvgGenerator
             // `lysc svg --combined` wrote nothing for a book the plain command recovers.
             if (svg.Length == 0)
                 continue;
-            var title = System.IO.Path.GetFileNameWithoutExtension(spec.OutputFile);
+            var title = System.IO.Path.GetFileNameWithoutExtension(spec.Name);
             movements.Add((title, svg, layout.Width, layout.Height));
         }
 

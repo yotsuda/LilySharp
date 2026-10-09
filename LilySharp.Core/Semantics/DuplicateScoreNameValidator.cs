@@ -36,10 +36,10 @@ internal sealed class DuplicateScoreNameValidator : ISemanticValidator
         foreach (var render in TopLevelNodes.OfRoot<RenderDeclarationSyntax>(tree.GetRoot()))
         {
             // The on-disk output name, from the ONE home that the renderer and the
-            // preview's picker also read (RenderSpecParser.OutputNameOf). Two scores
+            // preview's picker also read (RenderSpecParser.NameOf). Two scores
             // sharing that key collide on disk — and, because the picker carries this
             // very word, the second one could not be selected in the preview either.
-            string outputKey = Svg.Collector.RenderSpecParser.OutputNameOf(render);
+            string outputKey = Svg.Collector.RenderSpecParser.NameOf(render);
 
             if (seen.Add(outputKey)) continue; // first time → fine
 

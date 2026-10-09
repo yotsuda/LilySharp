@@ -29,35 +29,29 @@ public sealed class DuplicateScoreNameTests
         "part bl { clef bass tuning bass }\nsection Main { bl { a4 b c d | } }\n";
 
     [Fact]
-    public void MainForm_WritesToInputStem()
+    public void TheUnnamedScore_HasAnEmptyName_AndWritesToTheInputStem()
     {
         var tree = SyntaxTree.Parse(Head + "form { Main }\nscore { staff bl }\n");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
         var spec = RenderSpecParser.FindFirst(tree)!;
-        Assert.Equal("", spec.OutputFile);   // `main` → derive the name from the input file
+        Assert.Equal("", spec.Name);
+        Assert.Equal("song", spec.ResolveOutputStem("song"));
     }
 
     [Fact]
-    public void NonMainForm_NamesTheOutputFile()
+    public void ANamedScore_IsItsOwnOutputSuffix_WhateverFormItPlays()
     {
-        var tree = SyntaxTree.Parse(Head + "form verse { Main }\nscore verse { form verse staff bl }\n");
+        var tree = SyntaxTree.Parse(Head + "form verse { Main }\nscore clean { form verse staff bl }\n");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
         var spec = RenderSpecParser.FindFirst(tree)!;
-        Assert.Equal("verse", spec.OutputFile);   // any non-`main` form name becomes the file name
-    }
-
-    [Fact]
-    public void ExplicitBasename_Wins()
-    {
-        var tree = SyntaxTree.Parse(Head + "form { Main }\nscore clean { staff bl }\n");
-        var spec = RenderSpecParser.FindFirst(tree)!;
-        Assert.Equal("clean", spec.OutputFile);
+        Assert.Equal("clean", spec.Name);
+        Assert.Equal("song-clean", spec.ResolveOutputStem("song"));
     }
 
     [Fact]
     public void DuplicateOutput_IsAnError()
     {
-        // Two `main` scores with no basename both write the input stem — a collision.
+        // Two unnamed scores both write the input stem and are both (Default) — a collision.
         var v = new DuplicateScoreNameValidator();
         v.Validate(SyntaxTree.Parse(Head + "form { Main }\nscore { staff bl }\nscore { tab bl }\n"));
         var d = Assert.Single(v.Diagnostics);

@@ -350,9 +350,9 @@ score third { staff treble rh }
         var specs = LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree);
 
         Assert.Equal(3, specs.Count);
-        Assert.Equal("first", specs[0].OutputFile);
-        Assert.Equal("second", specs[1].OutputFile);
-        Assert.Equal("third", specs[2].OutputFile);
+        Assert.Equal("first", specs[0].Name);
+        Assert.Equal("second", specs[1].Name);
+        Assert.Equal("third", specs[2].Name);
     }
 
     [Fact]

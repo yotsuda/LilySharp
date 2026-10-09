@@ -36,7 +36,7 @@ public class RenderSpecBindsVoiceTests
     public void EveryItemKind_AnswersAsTheBindingsDo()
     {
         static StaffSpec S(string name) => new(ClefType.Treble, name);
-        var spec = new RenderSpec("s", "o", ImmutableArray.Create<RenderItemSpec>(
+        var spec = new RenderSpec("s", ImmutableArray.Create<RenderItemSpec>(
             new SingleStaffSpec(S("single")),
             new GrandStaffRenderSpec(new GrandStaffSpec(ImmutableArray.Create<RenderItemSpec>(
                 new SingleStaffSpec(S("upper")),

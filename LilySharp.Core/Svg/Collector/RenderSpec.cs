@@ -250,8 +250,10 @@ public sealed record LyricsRowSpec(string PartName, string? Sings = null) : Rend
 /// Complete render specification parsed from a render block.
 /// </summary>
 public sealed record RenderSpec(
+    // The score's one name (RenderSpecParser.NameOf): the output suffix, the --score word, the
+    // picker's value. Empty for the unnamed score. (OutputFile, the same word under a second
+    // name since 2026-10-09, went with it.)
     string Name,
-    string OutputFile,
     ImmutableArray<RenderItemSpec> Items,
     // A per-score `transpose <pitch>` (e.g. a Bb part-score): the c->target diatonic
     // interval, composed on top of each part's own transpose. Null = concert pitch.
@@ -289,11 +291,11 @@ public sealed record RenderSpec(
 {
     /// <summary>
     /// The output file stem for this score, given the input file's stem: the
-    /// unnamed score (empty OutputFile) uses the input stem as-is; every other score
-    /// appends its name to the input stem (<c>foo</c> + <c>score sub</c> → <c>foo-sub</c>).
+    /// unnamed score (empty Name) uses the input stem as-is; every other score appends its
+    /// name to the input stem (<c>foo</c> + <c>score sub</c> → <c>foo-sub</c>).
     /// </summary>
     public string ResolveOutputStem(string inputStem) =>
-        string.IsNullOrEmpty(OutputFile) ? inputStem : $"{inputStem}-{OutputFile}";
+        string.IsNullOrEmpty(Name) ? inputStem : $"{inputStem}-{Name}";
 
     /// <summary>
     /// The parts this score ENGRAVES, in score order, without repeats — the answer to

@@ -158,7 +158,7 @@ public sealed class BreakerAlignmentFrameTests
         var path = System.IO.Path.Combine(CollectResumeTests.FindRepoRoot(), "audit", "tabfingering", "amanda.lys");
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(System.IO.File.ReadAllText(path));
         var spec = System.Linq.Enumerable.First(LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree),
-            s => s.OutputFile.Contains("both"));
+            s => s.Name.Contains("both"));
         var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, spec);
         var layout = new LayoutEngine(score.Paper).Layout(score);
         Assert.Equal(new[] { 7, 8, 3 }, System.Linq.Enumerable.ToArray(

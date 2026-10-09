@@ -341,6 +341,52 @@ internal static class ChordNameEngraver
         return (line, true);
     }
 
+    // ── THE ATTACHED-CHORD PREDICATES (one home, session 871) ──────────────────────────────
+    // An ATTACHED chord is any symbol that is not an independent row's (!IsChordRow): a chords
+    // TRACK placed on a staff (UseTiming — `staff X with chords P`, a folded row) or a note's
+    // @chord. The band gate, the run-element test (MultiStaffLayouter.AttachedChordLineInRun)
+    // and the annotation pass's bail-outs all ask these; ⚠️ a gate that spelled one of them on
+    // its own once kept the band for an @chord line the run had taken, and the chord collided
+    // with the staff above.
+
+    /// <summary>Does the score carry any attached chord symbol (track or <c>@chord</c>)? The
+    /// score-wide early exit of every attached-chord pass.</summary>
+    internal static bool AnyAttached(ImmutableArray<ChordNameItem> chordNames)
+    {
+        if (chordNames.IsDefaultOrEmpty)
+            return false;
+        foreach (var c in chordNames)
+            if (!c.IsChordRow)
+                return true;
+        return false;
+    }
+
+    /// <summary>Does <paramref name="staffIndex"/> host a chords TRACK — a line the writer
+    /// placed, which is never moved onto a row?</summary>
+    internal static bool HostsChordTrack(ImmutableArray<ChordNameItem> chordNames, int staffIndex)
+    {
+        if (chordNames.IsDefaultOrEmpty)
+            return false;
+        foreach (var c in chordNames)
+            if (!c.IsChordRow && c.UseTiming && c.StaffIndex == staffIndex)
+                return true;
+        return false;
+    }
+
+    /// <summary>Does <paramref name="staffIndex"/> PRINT an attached chord symbol — a track,
+    /// or an <c>@chord</c> a numbers-only tab does not blank
+    /// (<see cref="TabStaffStencils.BlanksNoteAttachedChord"/>)?</summary>
+    internal static bool StaffPrintsAttachedChords(MultiStaffScore score, int staffIndex)
+    {
+        if (score.ChordNames.IsDefaultOrEmpty)
+            return false;
+        foreach (var c in score.ChordNames)
+            if (!c.IsChordRow && c.StaffIndex == staffIndex
+                && !TabStaffStencils.BlanksNoteAttachedChord(score, c))
+                return true;
+        return false;
+    }
+
     /// <summary>
     /// Does this staff still need a chord line of ITS OWN — i.e. is there a symbol on it that
     /// the row above does not take?
@@ -371,9 +417,8 @@ internal static class ChordNameEngraver
     {
         if (rowStaff < 0 || chordNames.IsDefaultOrEmpty || systemMeasureLayouts.IsDefaultOrEmpty)
             return true;
-        foreach (var c in chordNames)
-            if (!c.IsChordRow && c.UseTiming && c.StaffIndex == staffIndex)
-                return true;
+        if (HostsChordTrack(chordNames, staffIndex))
+            return true;
 
         // ⚠️ THE SAME ANSWER THE PLACEMENT USES, from the same function: the merge can decline
         // (ChordLineOfSystem's `Merged`), and a staff whose symbols were NOT taken still needs

@@ -1408,10 +1408,10 @@ public sealed partial class LilySharpLanguageServer
             {
                 Name = scores[i].Label,
                 Type = "score",
-                Filename = scores[i].OutputName,
+                Filename = scores[i].Name,
             };
         }
-        return (renders, chosen >= 0 ? scores[chosen].OutputName : null);
+        return (renders, chosen >= 0 ? scores[chosen].Name : null);
     }
 
 }

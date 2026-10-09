@@ -56,7 +56,7 @@ public class RenderSpecTests
 
         Assert.NotNull(renderSpec);
         Assert.Equal("test", renderSpec.Name);       // the score's own name
-        Assert.Equal("test", renderSpec.OutputFile); // the same word: the output suffix
+        Assert.Equal("test", renderSpec.Name); // the same word: the output suffix
         Assert.True(renderSpec.HasGrandStaff);
         Assert.Single(renderSpec.Items);
 
@@ -197,10 +197,10 @@ public class RenderSpecTests
     }
 
     [Fact]
-    public void OmittedFilename_ParsesWithEmptyOutputFile()
+    public void TheUnnamedScore_ParsesWithAnEmptyName()
     {
-        // The output filename is optional: `score { … }` is valid and
-        // yields an empty OutputFile, signalling the consumer to derive the name
+        // The name is optional: `score { … }` is valid and yields an empty Name,
+        // signalling the consumer to derive the output name
         // from the input file (<input>.<ext>).
         var source = """
             title "Test"
@@ -225,7 +225,7 @@ public class RenderSpecTests
         var renderSpec = RenderSpecParser.FindFirst(tree);
         Assert.NotNull(renderSpec);
         Assert.Equal("", renderSpec.Name);           // the unnamed score
-        Assert.Equal("", renderSpec.OutputFile);
+        Assert.Equal("", renderSpec.Name);
         Assert.Single(renderSpec.Items); // the staff still parses
     }
 

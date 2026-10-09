@@ -48,7 +48,7 @@ public sealed class TitleCompressedPagingTests
     {
         var path = Path.Combine(CollectResumeTests.FindRepoRoot(), "audit", "tabfingering", book);
         var tree = SyntaxTree.Parse(File.ReadAllText(path));
-        var spec = RenderSpecParser.FindAll(tree).First(s => string.IsNullOrEmpty(s.OutputFile));
+        var spec = RenderSpecParser.FindAll(tree).First(s => string.IsNullOrEmpty(s.Name));
         var score = SvgGenerator.CollectScore(tree, spec);
         var layout = new LayoutEngine(score.Paper).Layout(score);
         Assert.Equal(lilyPond, layout.Pages.Select(p => p.Systems.Length).ToArray());

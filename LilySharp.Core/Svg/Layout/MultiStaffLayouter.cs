@@ -4015,9 +4015,7 @@ internal sealed class MultiStaffLayouter
                     // took them (the score-wide `Any` in front keeps its early exit).
                     // ⚠️ THIS STAFF'S OWN HEIGHT for the frame (StaffHeightOf — a tab is 7.5 tall),
                     // the same question the engraver's reflection asks (LowerStaffUpSkylineSupplier).
-                    if (!score.ChordNames.IsDefaultOrEmpty
-                        && score.ChordNames.Any(c => c.StaffIndex == thisStaff && !c.IsChordRow
-                            && !TabStaffStencils.BlanksNoteAttachedChord(score, c))
+                    if (ChordNameEngraver.StaffPrintsAttachedChords(score, thisStaff)
                         && !AttachedChordLineInRun(score, thisStaff)
                         && ChordNameEngraver.StaffKeepsItsOwnChordLine(
                             score.TextMetrics, score.ChordNames, measureLayouts, thisStaff,
@@ -5209,23 +5207,11 @@ internal sealed class MultiStaffLayouter
     /// </remarks>
     internal static bool AttachedChordLineInRun(MultiStaffScore score, int staffIndex)
     {
-        if (score.ChordNames.IsDefaultOrEmpty)
-            return false;
-        bool hostsTrack = false, hostsInline = false;
-        foreach (var c in score.ChordNames)
-        {
-            if (c.IsChordRow || c.StaffIndex != staffIndex)
-                continue;
-            if (c.UseTiming)
-            {
-                hostsTrack = true;
-                break;
-            }
-            // A numbers-only tab prints no @chord (the staff above names it), so it has no line.
-            if (!TabStaffStencils.BlanksNoteAttachedChord(score, c))
-                hostsInline = true;
-        }
-        if (!hostsTrack && !(hostsInline && ChordRowAbove(score, staffIndex) < 0))
+        // A track is its own line; an @chord is one only with no row above to join, and only
+        // where it prints (a numbers-only tab prints none — the staff above names it).
+        if (!ChordNameEngraver.HostsChordTrack(score.ChordNames, staffIndex)
+            && !(ChordNameEngraver.StaffPrintsAttachedChords(score, staffIndex)
+                && ChordRowAbove(score, staffIndex) < 0))
             return false;
         foreach (var (_, staff, idx) in score.EnumerateStaves())
         {

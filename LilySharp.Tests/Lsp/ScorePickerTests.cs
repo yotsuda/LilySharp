@@ -31,7 +31,7 @@ namespace LilySharp.Tests.Lsp;
 /// </summary>
 /// <remarks>
 /// The picker's VALUE is a score's OUTPUT NAME and the renderer resolves that same word
-/// (<see cref="RenderSpecParser.MatchesName(string, string, string)"/>), so the list and
+/// (<see cref="RenderSpecParser.MatchesName(string, string)"/>), so the list and
 /// the resolution have to come from one rule. They did not once: the language server built
 /// the value one way and the renderer resolved another, so an entry could be offered under a
 /// word that matched nothing — and choosing it fell back to the FIRST score, silently
@@ -133,7 +133,7 @@ public sealed class ScorePickerTests
         Assert.Equal(specs.Count, offered.Length);
         for (int i = 0; i < specs.Count; i++)
         {
-            Assert.Equal(specs[i].OutputFile, offered[i]);
+            Assert.Equal(specs[i].Name, offered[i]);
             // ...and asking for that value picks THAT score, not an earlier one — the empty
             // value included, which is the unnamed score's (index 1).
             var (_, chosen) = RenderSpecParser.ScoreIndex(tree, offered[i]);

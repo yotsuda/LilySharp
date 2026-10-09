@@ -27,9 +27,9 @@ namespace LilySharp.Core.Svg.Collector;
 public static class RenderSpecParser
 {
     /// <summary>
-    /// A score's OUTPUT NAME: the suffix its files take (<c>&lt;input&gt;-NAME</c>), the word
-    /// <c>--score</c> selects, and the value the preview's score picker carries — the score's
-    /// own name, or empty for the unnamed score, which writes to the input .lys stem.
+    /// A score's NAME — the one word that is the suffix its files take (<c>&lt;input&gt;-NAME</c>),
+    /// what <c>--score</c> selects and the value the preview's score picker carries — or empty for
+    /// the unnamed score, which writes to the input .lys stem.
     /// </summary>
     /// <remarks>
     /// ⚠️ ONE HOME, and it has to be: the rule was once written out three times — here, in the
@@ -37,9 +37,10 @@ public static class RenderSpecParser
     /// <c>DuplicateScoreNameValidator</c> — and the copies drifted (2026-09-06, owner report:
     /// a picker entry the renderer could not match, so choosing it drew the FIRST score).
     /// Until 2026-10-09 a quoted string beside the name overrode it; a score has one name now
-    /// (LYS0038, docs/anonymous-blocks-design.md §7).
+    /// (LYS0038, docs/anonymous-blocks-design.md §7), so the output name and the selector — two
+    /// functions and two <c>RenderSpec</c> fields until then — are this one word.
     /// </remarks>
-    public static string OutputNameOf(RenderDeclarationSyntax render) => render.ScoreNameText;
+    public static string NameOf(RenderDeclarationSyntax render) => render.ScoreNameText;
 
     /// <summary>
     /// What the preview's picker shows for the unnamed score. Parentheses cannot be part of a
@@ -49,9 +50,6 @@ public static class RenderSpecParser
     /// </summary>
     public const string UnnamedScoreLabel = "(Default)";
 
-    /// <summary>A score's selector name: its own name, or empty for the unnamed score.</summary>
-    public static string SelectorNameOf(RenderDeclarationSyntax render) => render.ScoreNameText;
-
     /// <summary>A score's picker label: its name, or <see cref="UnnamedScoreLabel"/>.</summary>
     public static string LabelOf(string scoreName)
         => scoreName.Length > 0 ? scoreName : UnnamedScoreLabel;
@@ -59,32 +57,32 @@ public static class RenderSpecParser
     /// <summary>
     /// The score picker's list and its answer, from ONE walk of the render declarations
     /// and the SAME rule the renderer resolves with: every score's display label and
-    /// output name in document order, plus the index <paramref name="renderName"/>
+    /// name in document order, plus the index <paramref name="renderName"/>
     /// selects (<see cref="Choose"/>'s policy — a match, else the unnamed score, else the
     /// first; −1 when the file declares none).
     /// </summary>
     /// <remarks>
-    /// The client shows the labels, sends back an output name, and the renderer resolves
-    /// that name with <see cref="MatchesName(string, string, string)"/> — so the list and
+    /// The client shows the labels, sends back a name, and the renderer resolves
+    /// that name with <see cref="MatchesName(string, string)"/> — so the list and
     /// the resolution must come from one rule or a picker entry can name a score the
     /// renderer will not draw. Deliberately does NOT <see cref="Parse"/> the blocks: only
     /// the name decides either answer, and the preview asks this on every keystroke.
     /// </remarks>
-    public static (System.Collections.Generic.List<(string Label, string OutputName)> Scores, int Chosen)
+    public static (System.Collections.Generic.List<(string Label, string Name)> Scores, int Chosen)
         ScoreIndex(SyntaxTree tree, string? renderName)
     {
-        var scores = new System.Collections.Generic.List<(string Label, string OutputName)>();
+        var scores = new System.Collections.Generic.List<(string Label, string Name)>();
         // Render declarations only parse at the top level (Parser.ParseTopLevelItem's
         // ScoreKeyword arm), so the root's children are the whole search space.
         foreach (var node in tree.GetRoot().ChildNodes())
         {
             if (node is not RenderDeclarationSyntax render)
                 continue;
-            string name = SelectorNameOf(render);
-            scores.Add((LabelOf(name), OutputNameOf(render)));
+            string name = NameOf(render);
+            scores.Add((LabelOf(name), name));
         }
 
-        int chosen = ChooseIndex(scores.Count, i => scores[i].OutputName, renderName);
+        int chosen = ChooseIndex(scores.Count, i => scores[i].Name, renderName);
         return (scores, chosen);
     }
 
@@ -105,7 +103,7 @@ public static class RenderSpecParser
             return -1;
         if (!string.IsNullOrEmpty(renderName))
             for (int i = 0; i < count; i++)
-                if (MatchesName(nameAt(i), nameAt(i), renderName!))
+                if (MatchesName(nameAt(i), renderName!))
                     return i;
         for (int i = 0; i < count; i++)
             if (nameAt(i).Length == 0)
@@ -125,11 +123,10 @@ public static class RenderSpecParser
         PaperDeclarationSyntax? paperRef = null;
         LayoutDeclarationSyntax? layoutRef = null;
 
-        // Header: `score [Name] [transpose …]`. The name is the score's own; the form it
-        // plays is a `form` item in its body (RenderDeclarationSyntax.PlayedForm). It is
-        // also the output suffix and the `--score <name>` selector (OutputNameOf).
-        string outputFile = OutputNameOf(render);
-        var name = SelectorNameOf(render);
+        // Header: `score [Name] [transpose …]`. The name is the score's own — also the output
+        // suffix and the `--score <name>` selector (NameOf); the form it plays is a `form` item
+        // in its body (RenderDeclarationSyntax.PlayedForm).
+        var name = NameOf(render);
 
         // The parts this score ALSO puts on a notation staff — the tab default reads it.
         // ⚠️ IT IS BUILT BEFORE THE LOOP ON PURPOSE: the rule is about the SCORE, and a
@@ -261,7 +258,7 @@ public static class RenderSpecParser
         // The form this score plays — its own, the one it names, else the file's default.
         var form = render.PlayedForm;
 
-        return new RenderSpec(name, outputFile, [.. items], scoreTranspose, form,
+        return new RenderSpec(name, [.. items], scoreTranspose, form,
             [.. headerOverrides], fontsRef, paperRef,
             ScoreConcert: LilySharp.Core.Semantics.ConcertPitch.ScoreIsConcert(render),
             LayoutRef: layoutRef,
@@ -578,28 +575,26 @@ public static class RenderSpecParser
         return null;
     }
 
-    /// <summary>Whether <paramref name="name"/> selects <paramref name="spec"/> — by its
-    /// Name (e.g. "sub"), its full output filename (e.g. "fur-elise.svg"), or that
-    /// filename without its extension. The name-match policy has ONE home:
-    /// <see cref="FindByName"/>, <see cref="Choose"/> and <see cref="ScoreIndex"/> read it,
-    /// so the CLI's <c>--score</c>, the preview's picker and its render session cannot
-    /// drift apart.</summary>
+    /// <summary>Whether <paramref name="name"/> selects <paramref name="spec"/>. The name-match
+    /// policy has ONE home: <see cref="FindByName"/>, <see cref="Choose"/> and
+    /// <see cref="ScoreIndex"/> read it, so the CLI's <c>--score</c>, the preview's picker and
+    /// its render session cannot drift apart.</summary>
     private static bool MatchesName(RenderSpec spec, string name)
-        => MatchesName(spec.Name, spec.OutputFile, name);
+        => MatchesName(spec.Name, name);
 
-    /// <summary>The same policy over a score's two names alone — for
-    /// <see cref="ScoreIndex"/>, which answers the picker without parsing the blocks.</summary>
-    public static bool MatchesName(string specName, string outputFile, string name)
-        => specName == name
-            || outputFile == name
-            || System.IO.Path.GetFileNameWithoutExtension(outputFile) == name;
+    /// <summary>The same policy over a score's name alone — for <see cref="ScoreIndex"/>, which
+    /// answers the picker without parsing the blocks. ⚠️ The name IS the output name now (one name
+    /// since 2026-10-09), so the old arms that matched a separate output file, with or without
+    /// its extension, are gone with the second name.</summary>
+    public static bool MatchesName(string scoreName, string name)
+        => string.Equals(scoreName, name, StringComparison.Ordinal);
 
     /// <summary>
     /// The render-selection policy of <see cref="SvgGenerator.Generate(SyntaxTree, Renderer.SvgRenderOptions, string)"/>,
-    /// over an already-parsed spec list: no name (null/empty) takes the first spec;
-    /// a name takes the first spec it matches (<see cref="MatchesName(RenderSpec, string)"/>), falling
-    /// back to the first spec when nothing matches — a stale preview selection still
-    /// shows the default score rather than nothing. Shared by that full path and by
+    /// over an already-parsed spec list (<see cref="ChooseIndex"/>): a name takes the first spec
+    /// it matches; no name, or one nothing matches, takes the unnamed score, else the first — a
+    /// stale preview selection still shows the default score rather than nothing. Shared by that
+    /// full path and by
     /// <see cref="IncrementalCompiler"/> so a named session resolves the SAME spec
     /// the full compile it must byte-match would — and by the language server's playback
     /// and export, so what the preview PLAYS is the score it DRAWS.

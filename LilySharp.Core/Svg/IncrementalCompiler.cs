@@ -71,11 +71,11 @@ public sealed class IncrementalCompiler
     private readonly string? _renderName;
     private SyntaxTree _tree;
 
-    // The (Name, OutputFile) sequence of the tree's parseable render blocks at the
+    // The Name sequence of the tree's parseable render blocks at the
     // last compile — the complete input of WHICH block Choose resolves, for a fixed
     // _renderName. While it is unchanged, resolution picks the same ordinal block,
     // and every cache below is keyed on that block's collected score. When it moves
-    // (a render block inserted, deleted, renamed, its output file changed), the
+    // (a render block inserted, deleted or renamed), the
     // resolved block may be a DIFFERENT one whose score could even collect to the
     // same content keys (identical music in another part — the keys are blind to
     // source offsets by design, so fragment data-pos would replay the other part's
@@ -980,7 +980,7 @@ public sealed class IncrementalCompiler
     }
 
     /// <summary>The tree's render-block sequence folded to what <see cref="RenderSpecParser.Choose"/>
-    /// resolves from: each parseable block's Name and OutputFile, in document order
+    /// resolves from: each parseable block's Name, in document order
     /// (a parse-failed block is invisible to Choose and to this fold alike). Each
     /// field is length-prefixed, so the fold is injective - no field content can
     /// make two different sequences fold equal.</summary>
@@ -989,8 +989,7 @@ public sealed class IncrementalCompiler
     {
         var sb = new System.Text.StringBuilder();
         foreach (var s in specs)
-            sb.Append(s.Name.Length).Append(':').Append(s.Name)
-              .Append(s.OutputFile.Length).Append(':').Append(s.OutputFile);
+            sb.Append(s.Name.Length).Append(':').Append(s.Name);
         return sb.ToString();
     }
 
