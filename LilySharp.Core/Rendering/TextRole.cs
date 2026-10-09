@@ -247,6 +247,16 @@ public static class TextRoles
         role is TextRole.ChordName or TextRole.FretFrame ? TextFontFamily.Sans : TextFontFamily.Serif;
 
     /// <summary>
+    /// Is <paramref name="role"/> set in its music font's companion text face when the score
+    /// names no face for it (Petaluma's in Petaluma Script — <c>MusicFont.ChordTextFace</c>)?
+    /// The chord symbols (2026-10-09, owner "記号も文字も合わせる") and the rehearsal marks
+    /// (2026-10-09, owner: the serif box beside a handwritten page "違和感ある").
+    /// LILYSHARP-OWN: LilyPond pairs no text face with its one music font.
+    /// </summary>
+    public static bool TakesMusicCompanionFace(TextRole role) =>
+        role is TextRole.ChordName or TextRole.Mark;
+
+    /// <summary>
     /// Is <paramref name="role"/> notation drawn as text — the clef's octave digit, a
     /// compound meter's «+», a tab fret number?
     /// </summary>

@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 222 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **348** | |
+| `OWN` | 223 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **349** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（222 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（223 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **:90** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
@@ -331,6 +331,8 @@
 - **:777** LILYSHARP-OWN: a face with no readable extents (none of the bundled ones), so
 ### `LilySharp.Core/Rendering/TextFontPlan.cs`
 - **:379** LILYSHARP-OWN: LilyPond pairs no text face with its one music font.
+### `LilySharp.Core/Rendering/TextRole.cs`
+- **:254** LILYSHARP-OWN: LilyPond pairs no text face with its one music font.
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
 - **:683** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Semantics/CapoAdvisor.cs`

@@ -66,8 +66,22 @@ public class SmuflChordSymbolTests
     public void AFaceTheScoreNames_WinsOverTheCompanion()
     {
         string svg = Svg("fonts { music \"Petaluma\" chord \"TeX Gyre Schola\" }");
-        Assert.DoesNotContain("Petaluma Script", svg, StringComparison.Ordinal);
         Assert.Contains("font-family=\"TeX Gyre Schola", svg, StringComparison.Ordinal);
+        // The binding is the chord symbols' alone: the rehearsal mark keeps the companion
+        // (2026-10-09), and nothing else is set in it.
+        var companion = System.Text.RegularExpressions.Regex.Matches(svg,
+            "<text[^>]*font-family=\"Petaluma Script[^>]*>([^<]*)</text>");
+        Assert.All(companion, m => Assert.Equal("A", m.Groups[1].Value));
+    }
+
+    /// <summary>The rehearsal mark is set in the companion too — the serif box was the one
+    /// typeset letter left on a handwritten page (owner, 2026-10-09).</summary>
+    [Fact]
+    public void APetalumaRehearsalMark_IsWrittenInPetalumaScript()
+    {
+        string svg = Svg("fonts { music \"Petaluma\" }");
+        Assert.Matches("<text[^>]*font-family=\"Petaluma Script[^>]*>A</text>", svg);
+        Assert.DoesNotMatch("<text[^>]*font-family=\"Petaluma Script[^>]*>A</text>", Svg(""));
     }
 
     [Fact]
