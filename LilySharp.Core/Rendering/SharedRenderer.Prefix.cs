@@ -247,10 +247,24 @@ internal static partial class SharedRenderer
         double sharedKeyX;
         double sharedTimeX;
         double clefRightX = systemStartX + EngravingDefaults.ClefGlyphXOffset + maxClefWidth;
-        double clefToTime = clefRightX + BreakAlignSpacing.GetSpacing(
-            BreakAlignSymbol.Clef, BreakAlignSymbol.TimeSignature).Value;
-        sharedKeyX = clefRightX + BreakAlignSpacing.GetSpacing(
-            BreakAlignSymbol.Clef, BreakAlignSymbol.KeySignature).Value;
+        // ⚠️ WITH NO CLEF IN THE SYSTEM (a one-line rhythm staff alone — SpacingRules.EngravesClef)
+        // the clef group is EMPTY and LilyPond skips it: the key and the meter are spaced in from
+        // the LEFT EDGE by its own entries (key 0.8, meter 1.0), as the reservation already reads
+        // them (BreakAlignSpacing.SolvePrefixColumns). This drew the meter off a clef column that
+        // has no clef until session 871: 2.27 in where LilyPond's is 1.0, so the meter stood 1.3
+        // too close to the first note and a chord row over it rose on its ink (Lab sessions/p871,
+        // a one-line staff under `chords`: the row 1.553 over the line, LilyPond's 1.0).
+        // LILYPOND-REF: scm/define-grobs.scm:2080-2104 LeftEdge, break-align-symbol left-edge —
+        //   (key-signature . (extra-space . 0.8)), (time-signature . (extra-space . 1.0)).
+        bool noClef = maxClefWidth <= 0.0;
+        double clefToTime = noClef
+            ? systemStartX + BreakAlignSpacing.LeftEdgeToTimeSignature
+            : clefRightX + BreakAlignSpacing.GetSpacing(
+                BreakAlignSymbol.Clef, BreakAlignSymbol.TimeSignature).Value;
+        sharedKeyX = noClef
+            ? systemStartX + EngravingDefaults.ClefGlyphXOffset
+            : clefRightX + BreakAlignSpacing.GetSpacing(
+                BreakAlignSymbol.Clef, BreakAlignSymbol.KeySignature).Value;
         double keyToTime = BreakAlignSpacing.GetSpacing(
             BreakAlignSymbol.KeySignature, BreakAlignSymbol.TimeSignature).Value;
         sharedTimeX = clefToTime;
@@ -644,14 +658,9 @@ internal static partial class SharedRenderer
         // glyph (LILC) path for exactly these two fractions and the numbered markup
         // path for everything else.
         // LILYPOND-REF: scm/time-signature-settings.scm:954-964,981-982.
-        if (ts.Beats == 4 && ts.BeatType == 4)
+        if (MeterSymbol(ts) is { } symbol)
         {
-            gc.DrawGlyph(Music(MusicGlyph.TimeSigCommon), x, staffY - StaffMiddleLineDrop, FontSize);
-            return;
-        }
-        if (ts.Beats == 2 && ts.BeatType == 2)
-        {
-            gc.DrawGlyph(Music(MusicGlyph.TimeSigCutCommon), x, staffY - StaffMiddleLineDrop, FontSize);
+            gc.DrawGlyph(Music(symbol), x, staffY - StaffMiddleLineDrop, FontSize);
             return;
         }
         // Stack numerator over denominator, each centered on the staff like
@@ -737,6 +746,31 @@ internal static partial class SharedRenderer
     /// middle line). A row within the slot (Emmentaler, Leland) keeps the ±1 exactly; Bravura's
     /// 4 is 2.004 tall, 0.002 out.
     /// </remarks>
+    /// <summary>The C / cut-C glyph a meter prints instead of digits — 4/4 and 2/2, LilyPond's
+    /// default style (scm/time-signature-settings.scm:954-964,981-982) — or null.</summary>
+    internal static MusicGlyph? MeterSymbol(TimeSignature ts)
+        => ts.Beats == 4 && ts.BeatType == 4 ? MusicGlyph.TimeSigCommon
+            : ts.Beats == 2 && ts.BeatType == 2 ? MusicGlyph.TimeSigCutCommon
+            : null;
+
+    /// <summary>
+    /// The ink a meter stands in about the staff's MIDDLE line (Y up): the C / cut-C glyph's box
+    /// (centred on its origin, drawn on the middle line) or the digit rows'
+    /// (<see cref="MeterRows"/>) — what <c>SkylineBuilder.SeedMeter</c> seeds. ⚠️ The glyph arm
+    /// is session 871's: the seed read the DIGITS' rows for a 4/4 drawn as a C, ±2 against the
+    /// glyph's ±1.05, and on a one-line staff the chord row above stood on ink nothing drew.
+    /// </summary>
+    internal static (double Bottom, double Top) MeterInk(TimeSignature ts)
+    {
+        if (MeterSymbol(ts) is { } symbol)
+        {
+            var box = LilySharp.Core.Svg.Layout.MusicFont.Current.FullSize.Box(symbol);
+            return (box.Bottom, box.Top);
+        }
+        var rows = MeterRows(ts);
+        return (rows.InkBottom, rows.InkTop);
+    }
+
     internal static (double NumBaseline, double DenBaseline, double InkBottom, double InkTop) MeterRows(
         TimeSignature ts)
     {

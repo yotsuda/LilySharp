@@ -61,6 +61,26 @@ public sealed class FewLineStaffTests
         Assert.Equal(lilyPond, lowerMiddle - upperMiddle, 3);
     }
 
+    /// <summary>
+    /// A chords row over a one-line staff stands at its spec's ideal, its baseline 1.0 over the
+    /// line — LilyPond 2.26.0's (Lab sessions/p871) — where the staves' BANDS used to floor the
+    /// gap at 0 (MultiStaffLayouter.CalculateStaffGapWithSkylines) and the meter was drawn off an
+    /// absent clef's column (SharedRenderer.SharedPrefixColumns): 1.6 over. Over five lines the
+    /// row is unmoved (0.9, LilyPond's too).
+    /// </summary>
+    [Theory]
+    [InlineData(1, 1.0)]
+    [InlineData(5, 0.9)]
+    public void AChordsRow_StandsOverAFewLineStaff_AsLilyPondStandsIt(int lines, double baselineOverTopLine)
+    {
+        var symbols = Symbols("time 4/4\npart comp { clef treble }\nsection A {\n  chords prog { C | Bb7 | Em7 | G | }\n"
+            + $"  comp {{ r1 | r1 | r1 | r1 | }}\n}}\nscore {{\n  chords prog\n  staff comp as lines {lines}\n}}\n");
+        double topLine = LineCentres(symbols)[0];
+        var c = symbols.First(s => s.Kind == "chordName" && s.Text == "C");
+        // The C's ink stands 0.047 under its baseline (the serif's own descent).
+        Assert.Equal(baselineOverTopLine, topLine - c.Box[3] + 0.047, 2);
+    }
+
     /// <remarks>
     /// The extents are about the staff's MIDDLE (staff position 0) in Lily#'s own line frame
     /// (EngravingDefaults.StaffLinePositions — two lines at ±2, four at −2…+4, LILYSHARP-OWN),

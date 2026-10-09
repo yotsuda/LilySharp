@@ -323,7 +323,7 @@
 - **`SharedRenderer.DrawGuitarBend`** LILYSHARP-OWN: LilyPond's guitar bend is the BendSpanner (`\^`) — a line and curve to
 ### `LilySharp.Core/Rendering/SharedRenderer.Prefix.cs`
 - **`SharedRenderer.DrawTimeSignature`** LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
-- **`SharedRenderer.MeterRows`** starts at the middle line and grows outward. LILYSHARP-OWN for that arm: LilyPond's rule
+- **`SharedRenderer.MeterSymbol`** starts at the middle line and grows outward. LILYSHARP-OWN for that arm: LilyPond's rule
 ### `LilySharp.Core/Rendering/SharedRenderer.Tab.cs`
 - **`SharedRenderer.DrawTabMeasure`** LILYSHARP-OWN: LilyPond has no pitchless note — its slash is a style on
 - **`SharedRenderer.DrawTabMeasure`** ⚠️ LILYSHARP-OWN on a FULL tab, and deliberately so (USER DECISION,

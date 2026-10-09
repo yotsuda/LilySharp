@@ -5504,7 +5504,14 @@ internal sealed class MultiStaffLayouter
             AlignmentMinimumWithSkylines(
                 spec, staffSkylines, upperStaffIndex, lowerStaffIndex, looseLines, out _));
 
-        return Math.Max(0, centerToCenter - refpointSpan);
+        // ⚠️ NOT FLOORED AT 0: a negative gap is two BANDS overlapping, and the bands are
+        // Lily#'s frame, not ink — LilyPond aligns refpoints and asks only the skylines. A
+        // one-line staff's band is the five-line one (StaffHeightOf) while its ink is its line
+        // (LineExtentOf), so a chords row over it wants its baseline 1.0 over the line (the
+        // spec's ideal) where the band floor stood it 1.6 over (Lab sessions/p871: LilyPond
+        // 1.000, Lily# 1.553 at the symbol's ink). Wherever the ink clears the bands — every
+        // five-line pair — the difference is already ≥ 0 and nothing moves.
+        return centerToCenter - refpointSpan;
     }
 
     /// <summary>

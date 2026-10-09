@@ -588,7 +588,7 @@ internal sealed class SkylineBuilder
 
     /// <summary>
     /// Does <paramref name="staff"/> engrave a meter (<see cref="SpacingRules.ContributesToTimeColumnWidth"/>
-    /// — not a numbers-only tab, not a text row) whose ink (<c>SharedRenderer.MeterRows</c>,
+    /// — not a numbers-only tab, not a text row) whose ink (<c>SharedRenderer.MeterInk</c> — the C glyph's or the digit rows',
     /// about the staff's middle — a tab's is its vertical centre) stands out of the staff's
     /// OWN outer lines? A five-line staff's are at ±2, a four-string bass tab's at ±2.25, a
     /// one-line staff's at 0 — where even Emmentaler's 2-space numerals stand out by two.
@@ -599,8 +599,8 @@ internal sealed class SkylineBuilder
             return false;
         var (low, high) = MultiStaffLayouter.LineExtentOf(staff, _staffHeight);
         double halfLine = EngravingDefaults.StaffLineThickness / 2.0;
-        var rows = Rendering.SharedRenderer.MeterRows(ts);
-        return rows.InkTop > high + halfLine || rows.InkBottom < low - halfLine;
+        var (inkBottom, inkTop) = Rendering.SharedRenderer.MeterInk(ts);
+        return inkTop > high + halfLine || inkBottom < low - halfLine;
     }
 
     /// <summary>
@@ -625,10 +625,10 @@ internal sealed class SkylineBuilder
     {
         if (staff.IsOssia || !MeterLeavesTheStaff(staff, ts))
             return;
-        var rows = Rendering.SharedRenderer.MeterRows(ts);
+        var (inkBottom, inkTop) = Rendering.SharedRenderer.MeterInk(ts);
         double width = GlyphMetrics.GetTimeSigWidth(_fonts, ts.BeatsText ?? ts.Beats.ToString(), ts.BeatType.ToString());
-        upSkyline.MergeBox(x, x + width, staffMiddleUp + rows.InkBottom, staffMiddleUp + rows.InkTop);
-        downSkyline.MergeBox(x, x + width, staffMiddleUp + rows.InkBottom, staffMiddleUp + rows.InkTop);
+        upSkyline.MergeBox(x, x + width, staffMiddleUp + inkBottom, staffMiddleUp + inkTop);
+        downSkyline.MergeBox(x, x + width, staffMiddleUp + inkBottom, staffMiddleUp + inkTop);
     }
 
     /// <summary>
