@@ -104,7 +104,7 @@
 - **:4514** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1230** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
-- **:2372** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
+- **:2378** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:180** non-default merge-differently-* switches. dot_wipe_head is NOT ported (no channel).
 - **:571** ⚠️ NOT PORTED — dot_wipe_head: LilyPond also kills the down head's DOT on
@@ -496,14 +496,14 @@
 - **:1746** The air between the "To" advance and the coda sign's ink. LILYSHARP-OWN with the
 - **:1763** shares the rehearsal line with. LILYSHARP-OWN with the arrangement itself
 - **:2177** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-11, session 368): a Lily# `form'
-- **:2278** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26: "Bridge"'s B stood too high — above
-- **:2303** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26): with equal margins round the ink, a
-- **:2322** LILYSHARP-OWN with LabelBoxBottomMargin.
-- **:2330** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26: "the margins inside the frame should be
-- **:2574** ⚠️ Until session 735 such a mark took the musical-column arm — a LILYSHARP-OWN limit
-- **:2702** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
-- **:2713** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
-- **:2762** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
+- **:2284** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26: "Bridge"'s B stood too high — above
+- **:2309** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26): with equal margins round the ink, a
+- **:2328** LILYSHARP-OWN with LabelBoxBottomMargin.
+- **:2336** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26: "the margins inside the frame should be
+- **:2580** ⚠️ Until session 735 such a mark took the musical-column arm — a LILYSHARP-OWN limit
+- **:2708** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
+- **:2719** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
+- **:2768** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:296** too (LILYSHARP-OWN, the remark at the meshing branch). Kept as LilyPond's number.
 - **:499** LILYSHARP-OWN (user decision 2026-09-26): ONE meshing shift, dotted or not.

@@ -395,6 +395,24 @@ public class MarkReserveVersusDrawTests
         Assert.Equal(0.0, shift - advance / 2 + (left + right) / 2, 6);
     }
 
+    /// <summary>
+    /// A label the label face cannot spell ("ほえほえ" — kana, drawn from a system fallback face)
+    /// reserves the ideographic em box for its glyphs, as the header band does. Until
+    /// 2026-10-09 its measured ink was NOTHING and the frame shut to a 0.70-tall sliver
+    /// through the drawn text (owner report, a Petaluma score — the serif face did the same).
+    /// </summary>
+    [Fact]
+    public void ALabelOfFallbackGlyphs_IsFramedAroundTheIdeographicEmBox()
+    {
+        var type = MusicMarkType.SectionLabel;
+        double em = MusicMarkEngraver.LabelEm(Fonts, type);
+        var (bottom, top) = MusicMarkEngraver.LabelInk(Fonts, type, "ほえほえ");
+        Assert.Equal(TextFontMetrics.IdeographicEmBoxTop * em, top, 6);
+        Assert.Equal(TextFontMetrics.IdeographicEmBoxBottom * em, bottom, 6);
+        Assert.True(MusicMarkEngraver.LabelBoxHalfHeight(Fonts, type, "ほえほえ", true)
+            > MusicMarkEngraver.LabelBoxHalfHeight(Fonts, type, "A", true));
+    }
+
     // ---- dynamics and text scripts: the same claim, their own homes ----
 
     [Theory]

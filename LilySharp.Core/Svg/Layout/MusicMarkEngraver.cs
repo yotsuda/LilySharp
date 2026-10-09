@@ -2251,9 +2251,15 @@ internal static class MusicMarkEngraver
            * Magstep(LabelFontSizeStep(type) + fonts.StepOf(TextRole.Mark, LabelEngravingEm(type)));
 
     /// <summary>The string's ink about its baseline, at the label's own em.</summary>
+    /// <remarks>
+    /// A glyph the label face cannot spell — "ほえほえ" in TeX Gyre or Petaluma Script — is drawn
+    /// from a fallback face the layout never measures, so its ink is nothing here and the frame
+    /// shut to a sliver (0.70 tall, 2026-10-09). It reserves the box every other text role
+    /// does for it: the ideographic em box for CJK (<see cref="TextFontMetrics.InkOrFallbackBox"/>).
+    /// </remarks>
     internal static (double Bottom, double Top) LabelInk(
         ScoreTextMetrics fonts, MusicMarkType type, string text)
-        => fonts.Ink(text, LabelEm(fonts, type), TextRole.Mark, LabelStyle(fonts));
+        => fonts.InkOrFallbackBox(text, LabelEm(fonts, type), TextRole.Mark, LabelStyle(fonts));
 
     /// <summary>
     /// Half the drawn frame's height — the string's ink plus the frame, about the box centre
