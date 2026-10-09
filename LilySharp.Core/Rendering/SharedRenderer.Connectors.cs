@@ -207,6 +207,39 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/span-bar-engraver.cc — the spanned segment redraws
     ///   the bar glyph without the dots.
     /// </remarks>
+    /// <summary>
+    /// Where a placed staff's bar lines end, Y-up in the system frame: its band's top and bottom
+    /// on a five-line staff, a tab or a text row; LilyPond's bar extent about the middle on a
+    /// notation staff of other lines (<see cref="MultiStaffLayouter.BarExtentOf"/>, in the
+    /// placed band's own scale) joined with the lines' own ink — a three-line staff's lines
+    /// (±1.05) reach past its bar (±1.0). A span bar between two staves runs from one to the
+    /// other.
+    /// LILYPOND-REF: scm/bar-line.scm:1045-1080 ly:span-bar::print, bar-line::bar-y-extent — each
+    /// staff's extent is the union of its bar line's and its StaffSymbol's, and the span
+    /// bar reaches from the lower end of the upper one to the upper end of the lower.
+    /// </summary>
+    private static (double Top, double Bottom) BarEdgesOf(MultiStaffScore score, StaffLayout placed)
+    {
+        double middle = placed.Y - placed.Height / 2.0;
+        double top = placed.Height / 2.0, bottom = -placed.Height / 2.0;
+        foreach (var (_, st, idx) in score.EnumerateStaves())
+        {
+            if (idx != placed.StaffIndex)
+                continue;
+            if (!st.IsTab && !st.IsTextRow && st.Lines != 5)
+            {
+                double scale = placed.Height / MultiStaffLayouter.StaffHeightOf(st, StaffHeight);
+                double halfLine = EngravingDefaults.StaffLineThickness / 2.0;
+                var (barLow, barHigh) = MultiStaffLayouter.BarExtentOf(st, StaffHeight);
+                var (lineLow, lineHigh) = MultiStaffLayouter.LineExtentOf(st, StaffHeight);
+                top = Math.Max(barHigh, lineHigh + halfLine) * scale;
+                bottom = Math.Min(barLow, lineLow - halfLine) * scale;
+            }
+            break;
+        }
+        return (middle + top, middle + bottom);
+    }
+
     private static void DrawStaffConnectors(
         MultiStaffScore score, ScoreLayout layout, SystemLayout system,
         double systemStartX, IDrawingContext gc)
@@ -262,8 +295,10 @@ internal static partial class SharedRenderer
 
                 foreach (var (upper, lower) in gaps)
                 {
-                    double gapTop = systemYUp + upper.Y - upper.Height;
-                    double gapBottom = systemYUp + lower.Y;
+                    // From bar line to bar line (BarEdgesOf): a staff of fewer lines than five
+                    // stops its bar short of its band, and the span bar reaches down to it.
+                    double gapTop = systemYUp + BarEdgesOf(score, upper).Bottom;
+                    double gapBottom = systemYUp + BarEdgesOf(score, lower).Top;
                     double gapHeight = gapTop - gapBottom;
                     if (gapHeight <= 0)
                         continue;

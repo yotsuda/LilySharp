@@ -180,13 +180,13 @@ internal sealed class SkylineBuilder
         // (a six-string tab staff spans 7.500000, not 4.000000) and the middle is the middle
         // of that span, which is what makes a tab staff's own line the extreme of its
         // silhouette (audit/lp-geometry page.tab-only.first-staff-refpoint).
-        var firstSpan = StaffSpan(firstLayout, firstStaffMiddleUp);
+        var firstSpan = StaffSpan(firstStaff, firstLayout, firstStaffMiddleUp);
         SeedSystemStaffSymbol(measureLayouts, systemLeft,
             seed: firstStaff is not null,
             firstSpan.TopLineY, firstSpan.BottomLineY, upSkyline, downSkyline);
         if (twoEnds)
         {
-            var lastSpan = StaffSpan(lastLayout, lastStaffMiddleUp);
+            var lastSpan = StaffSpan(lastStaff, lastLayout, lastStaffMiddleUp);
             SeedSystemStaffSymbol(measureLayouts, systemLeft,
                 seed: true, lastSpan.TopLineY, lastSpan.BottomLineY, upSkyline, downSkyline);
         }
@@ -292,6 +292,7 @@ internal sealed class SkylineBuilder
             SeedClef(staff, staffMiddleUp, systemLeft, size, upSkyline, downSkyline);
             SeedLineStartMeter(staff, measureLayouts, staffMiddleUp, systemLeft, size, upSkyline, downSkyline);
             SeedLineEndMeter(staff, measureLayouts, staffMiddleUp, systemLeft, upSkyline, downSkyline);
+            SeedBarlines(staff, measureLayouts, staffMiddleUp, upSkyline, downSkyline);
         }
         // The same fork as BuildInsideStaffSkylines: a tab's stems and beams are seeded from
         // the tab's own geometry, so the page spaces against the beam the tab really draws.
@@ -427,10 +428,17 @@ internal sealed class SkylineBuilder
 
     /// <summary>
     /// A placed staff's TOP and BOTTOM line, device-DOWN from the system origin — its middle
-    /// widened by half its own span, so the two travel together.
+    /// widened by half its own span, so the two travel together. ⚠️ The LINES' extent, not the
+    /// band's, on a notation staff of other than five lines (MultiStaffLayouter.LineExtentOf —
+    /// a one-line staff's band is the five-line one, its line is one).
     /// </summary>
-    private (double TopLineY, double BottomLineY) StaffSpan(StaffLayout? layout, double middleUp)
+    private (double TopLineY, double BottomLineY) StaffSpan(Staff? staff, StaffLayout? layout, double middleUp)
     {
+        if (staff is { IsTab: false, IsTextRow: false } && staff.Lines != 5)
+        {
+            var (low, high) = MultiStaffLayouter.LineExtentOf(staff, _staffHeight);
+            return (-middleUp - high, -middleUp - low);
+        }
         double half = (layout is { } lay && lay.Height > 0 ? lay.Height : _staffHeight) / 2.0;
         return (-middleUp - half, -middleUp + half);
     }
@@ -585,17 +593,14 @@ internal sealed class SkylineBuilder
     /// OWN outer lines? A five-line staff's are at ±2, a four-string bass tab's at ±2.25, a
     /// one-line staff's at 0 — where even Emmentaler's 2-space numerals stand out by two.
     /// </summary>
-    private static bool MeterLeavesTheStaff(Staff staff, TimeSignature ts)
+    private bool MeterLeavesTheStaff(Staff staff, TimeSignature ts)
     {
         if (staff.IsOssia || !SpacingRules.ContributesToTimeColumnWidth(staff))
             return false;
-        double reach = 0;
-        foreach (double position in MultiStaffLayouter.LinePositionsOf(staff))
-            reach = Math.Max(reach, Math.Abs(position));
-        double edge = reach * 0.5 * MultiStaffLayouter.LineSpacingOf(staff)
-            + EngravingDefaults.StaffLineThickness / 2.0;
+        var (low, high) = MultiStaffLayouter.LineExtentOf(staff, _staffHeight);
+        double halfLine = EngravingDefaults.StaffLineThickness / 2.0;
         var rows = Rendering.SharedRenderer.MeterRows(ts);
-        return rows.InkTop > edge || rows.InkBottom < -edge;
+        return rows.InkTop > high + halfLine || rows.InkBottom < low - halfLine;
     }
 
     /// <summary>
@@ -624,6 +629,39 @@ internal sealed class SkylineBuilder
         double width = GlyphMetrics.GetTimeSigWidth(_fonts, ts.BeatsText ?? ts.Beats.ToString(), ts.BeatType.ToString());
         upSkyline.MergeBox(x, x + width, staffMiddleUp + rows.InkBottom, staffMiddleUp + rows.InkTop);
         downSkyline.MergeBox(x, x + width, staffMiddleUp + rows.InkBottom, staffMiddleUp + rows.InkTop);
+    }
+
+    /// <summary>
+    /// Seeds the bar lines of a notation staff of other than five lines into both skylines,
+    /// where the renderer draws them (<c>SharedRenderer.StaffBars</c>, the drawing's own walk)
+    /// at LilyPond's bar extent (<see cref="MultiStaffLayouter.BarExtentOf"/>).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-935 skyline_spacing — a BarLine has no
+    /// outside-staff-priority, so it is inside-staff ink like the StaffSymbol. On five lines
+    /// the bar stands inside the lines' ink (±2.0 against ±2.05) and changes no profile, so
+    /// only the other staves are walked. ⚠️ Until session 871 a one-line staff's profile was
+    /// the five-line band (±2.05), which hid its bars; with the band gone
+    /// (MultiStaffLayouter.LineExtentOf) the bars are what stands ±1.0 at each bar line, as in
+    /// LilyPond. ⚠️ The multi-measure-rest runs are not known here, so the plain bars inside
+    /// one (which the page does not draw) are seeded too — a one-line staff's run reserves
+    /// ±1.0 at bar lines it does not print.
+    /// </remarks>
+    private void SeedBarlines(
+        Staff staff, ImmutableArray<MeasureLayout> measureLayouts, double staffMiddleUp,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        if (_score is null || measureLayouts.IsDefaultOrEmpty
+            || staff.IsTab || staff.IsTextRow || staff.Lines == 5)
+            return;
+        var (low, high) = MultiStaffLayouter.BarExtentOf(staff, _staffHeight);
+        var probe = new SystemLayout(measureLayouts[0].MeasureIndex == 0 ? 0 : 1, 0, 0, 0, measureLayouts);
+        foreach (var bar in Rendering.SharedRenderer.StaffBars(_score, probe, staff, isMmrInner: null))
+        {
+            double right = bar.X + Rendering.SharedRenderer.GetVisualBarlineWidth(bar.Type);
+            upSkyline.MergeBox(bar.X, right, staffMiddleUp + low, staffMiddleUp + high);
+            downSkyline.MergeBox(bar.X, right, staffMiddleUp + low, staffMiddleUp + high);
+        }
     }
 
     private void SeedClef(
@@ -1749,8 +1787,12 @@ internal sealed class SkylineBuilder
         // the reason a text row's skyline looked populated while the row's OWN ink was in no
         // skyline at all (MultiStaffLayouter.BuildAllStaffSkylines seeds that).
         if (!staff.IsTextRow)
-            SeedStaffSymbol(measureLayouts, staffMiddleUp, size, staffHeight,
+            SeedStaffSymbol(measureLayouts, staffMiddleUp, size,
+                MultiStaffLayouter.LineExtentOf(staff, _staffHeight),
                 upSkyline, downSkyline);
+        // ...and its bar lines, which on a staff of fewer lines reach past them (SeedBarlines).
+        if (!staff.IsTextRow)
+            SeedBarlines(staff, measureLayouts, staffMiddleUp, upSkyline, downSkyline);
 
         // ...and the clef, which on a plain staff is the extreme ink in BOTH directions —
         // further out than any note that stays inside the staff. The same seed the system
@@ -2568,8 +2610,9 @@ internal sealed class SkylineBuilder
     }
 
     /// <summary>
-    /// Seeds both skylines with the staff symbol's own vertical extent (its lines span
-    /// ±<paramref name="staffHeight"/>/2 about the middle). LilyPond's per-staff spacing
+    /// Seeds both skylines with the staff symbol's own vertical extent (its outer lines'
+    /// centres at <paramref name="lines"/> about the middle — MultiStaffLayouter.LineExtentOf,
+    /// the band's ±half on five lines). LilyPond's per-staff spacing
     /// skyline includes the StaffSymbol, so a neighbour's high/low notes must
     /// clear these lines, not merely the notes at the same X.
     /// </summary>
@@ -2587,7 +2630,7 @@ internal sealed class SkylineBuilder
     /// </remarks>
     private void SeedStaffSymbol(
         ImmutableArray<MeasureLayout> measureLayouts, double staffMiddleUp, StaffSize size,
-        double staffHeight, VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+        (double Bottom, double Top) lines, VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
         if (measureLayouts.IsDefaultOrEmpty)
             return;
@@ -2611,13 +2654,11 @@ internal sealed class SkylineBuilder
         // line's own weight still has to be scaled, exactly as magnifyStaff makes it (it sets
         // staff-space and fontSize together). Written as one Span over both, an ossia's
         // magnification landed on its height twice.
-        double half = staffHeight / 2.0
-            + size.Span(EngravingDefaults.StaffLineThickness / 2.0);
+        double halfLine = size.Span(EngravingDefaults.StaffLineThickness / 2.0);
 
-        // Translate the device-frame staff lines to this skyline's Y-up frame (negate):
-        // the top line sits above the origin, the bottom line below.
-        double staffTop = half + staffMiddleUp;      // Y-up of the top line's ink
-        double staffBottom = -half + staffMiddleUp;  // Y-up of the bottom line's ink
+        // The top line sits above the origin, the bottom line below.
+        double staffTop = lines.Top + halfLine + staffMiddleUp;         // Y-up of the top line's ink
+        double staffBottom = lines.Bottom - halfLine + staffMiddleUp;   // Y-up of the bottom line's ink
 
         // UP skyline takes the top line; DOWN skyline takes the bottom line.
         upSkyline.MergeBox(xLeft, xRight, staffBottom, staffTop);

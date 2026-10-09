@@ -38,10 +38,10 @@
   <text class="music" x="76.04" y="19.08" font-size="4.00" data-pos="448"></text>
   <line x1="76.10" y1="20.07" x2="76.10" y2="22.41" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="83.37" y="19.08" font-size="4.00" data-pos="453"></text>
-  <rect x="37.85" y="17.08" width="0.19" height="4.00" data-pos="420"/>
-  <rect x="59.72" y="17.08" width="0.19" height="4.00" data-pos="434"/>
-  <rect x="81.28" y="17.08" width="0.19" height="4.00" data-pos="451"/>
-  <rect x="90.84" y="17.08" width="0.19" height="4.00" data-pos="456"/>
+  <rect x="37.85" y="18.08" width="0.19" height="2.00" data-pos="420"/>
+  <rect x="59.72" y="18.08" width="0.19" height="2.00" data-pos="434"/>
+  <rect x="81.28" y="18.08" width="0.19" height="2.00" data-pos="451"/>
+  <rect x="90.84" y="18.08" width="0.19" height="2.00" data-pos="456"/>
   <line x1="8.59" y1="26.08" x2="90.98" y2="26.08" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="27.08" x2="90.98" y2="27.08" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="28.08" x2="90.98" y2="28.08" stroke="#000000" stroke-width="0.100"/>

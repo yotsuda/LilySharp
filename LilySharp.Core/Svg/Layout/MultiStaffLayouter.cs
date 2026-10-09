@@ -371,6 +371,69 @@ internal sealed class MultiStaffLayouter
             ? EngravingDefaults.TabLinePositions(Tunings.GetStringCount(staff.Tuning.Value))
             : EngravingDefaults.StaffLinePositions(staff.Lines);
 
+    /// <summary>
+    /// Where the outer LINES <paramref name="staff"/> draws stand about its middle (Y up, line
+    /// CENTRES, at the staff's own scale) — what its StaffSymbol's ink covers once half a line
+    /// is added, and so what its skylines carry (SkylineBuilder's staff-symbol seeds). The band
+    /// (<see cref="StaffHeightOf"/>, ±half) everywhere but a notation staff of other than five
+    /// lines, whose band stays the five-line one while its lines span less: one line (0, 0),
+    /// two (−1, +1), three (−1, +1), four (−1, +2) — the five-line frame those staves are drawn
+    /// in (EngravingDefaults.StaffLinePositions).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/staff-symbol.cc:348-352 Staff_symbol::height — the extent is
+    /// Staff_symbol::line_span (the outer line positions) widened by half a line; a one-line
+    /// staff's is (-0.05 . 0.05). ⚠️ UNTIL SESSION 871 THE SKYLINES TOOK THE BAND: MEASURED
+    /// (LilyPond 2.26.0, a one-line staff of whole notes over a staff whose note stands at
+    /// c'''), the staves stand 9.590 apart in LilyPond and stood 11.095 in Lily# — the band's
+    /// 2.05 against the head's own reach under the line.
+    /// </remarks>
+    internal static (double Bottom, double Top) LineExtentOf(Staff staff, double nominalStaffHeight)
+    {
+        double band = StaffHeightOf(staff, nominalStaffHeight);
+        if (staff.IsTab || staff.IsTextRow || staff.Lines == 5)
+            return (-band / 2.0, band / 2.0);
+        double space = band / 4.0;   // the staff's own space: 1, or an ossia's magnified one
+        double low = double.PositiveInfinity, high = double.NegativeInfinity;
+        foreach (double position in LinePositionsOf(staff))
+        {
+            low = Math.Min(low, position);
+            high = Math.Max(high, position);
+        }
+        return low <= high ? (low * 0.5 * space, high * 0.5 * space) : (0.0, 0.0);
+    }
+
+    /// <summary>
+    /// Where a bar line on <paramref name="staff"/> ends below and above its middle (Y up): the
+    /// band's edges on a five-line staff, a tab or a text row (what the bar has always been
+    /// drawn to), and on a notation staff of other lines LilyPond's: the outer lines' ink,
+    /// widened by a staff space each way while it is under two spaces long, less half a line —
+    /// one line ±1.0, two and three ±1.0, four (−1.0, +2.0).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/output-lib.scm:561-575 staff-symbol::calc-widened-extent — "Avoid bar
+    /// lines shorter than two staff spaces … extending the bar line by one staff space in each
+    /// direction"; scm/bar-line.scm:641-662 ly:bar-line::calc-bar-extent — the widened extent
+    /// less half the staff line's thickness. ⚠️ UNTIL SESSION 871 every staff's bar was the
+    /// five-line band's 4.0, so a one-line rhythm staff's bars stood twice LilyPond's height.
+    /// </remarks>
+    internal static (double Bottom, double Top) BarExtentOf(Staff staff, double nominalStaffHeight)
+    {
+        var (low, high) = LineExtentOf(staff, nominalStaffHeight);
+        if (staff.IsTab || staff.IsTextRow || staff.Lines == 5)
+            return (low, high);
+        double halfLine = EngravingDefaults.StaffLineThickness / 2.0;
+        double space = StaffHeightOf(staff, nominalStaffHeight) / 4.0;
+        low -= halfLine;
+        high += halfLine;
+        if (high - low < 2.0 * space)
+        {
+            low -= space;
+            high += space;
+        }
+        return (low + halfLine, high - halfLine);
+    }
+
     internal static double StaffHeightOf(Staff staff, double nominalStaffHeight)
     {
         if (staff.IsTab && staff.Tuning.HasValue)

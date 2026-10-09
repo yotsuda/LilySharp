@@ -33,13 +33,64 @@ internal static partial class SharedRenderer
         int fromMeasure = int.MinValue, int toMeasure = int.MaxValue)
     {
         // A lead-sheet text row has no staff, so its barlines are short ticks the
-        // chord/lyric row hangs on; a real staff uses its full height.
+        // chord/lyric row hangs on; a real staff uses its full height — LilyPond's bar
+        // extent, which is the band on five lines and not on fewer (BarExtentOf, about the
+        // staff's middle, StaffHeight / 2 under the band's top).
         double height = barHeight ?? StaffHeight;
+        if (barHeight is null && !staff.IsTextRow && !staff.IsTab && staff.Lines != 5)
+        {
+            // In this drawing's own frame — the band's: an ossia is drawn unscaled inside its
+            // scaled group, so its magnification divides back out.
+            double scale = StaffHeight / MultiStaffLayouter.StaffHeightOf(staff, StaffHeight);
+            var (low, high) = MultiStaffLayouter.BarExtentOf(staff, StaffHeight);
+            staffY -= StaffHeight / 2.0 - high * scale;
+            height = (high - low) * scale;
+        }
         // …and it has no staff LINES either, which is what LilyPond's repeat-dot search
         // reads. Zero selects its no-staff-symbol default; a real staff hands over its own
         // count, so a one-line rhythm staff gets the search's answer rather than a five-line
         // staff's (EngravingDefaults.RepeatDotHalfSpan).
         int staffLines = staff.IsTextRow ? 0 : staff.Lines;
+        foreach (var bar in StaffBars(score, system, staff,
+                     m => IsMmrInnerEndBarline(layout, m), fromMeasure, toMeasure))
+        {
+            // The barline is clickable/highlightable in the preview: a start bar carries the
+            // measure boundary's source position (the written `|:` token's spot); an end bar
+            // SourceEnd, the written `|` token's position (or, for an auto-filled close, the
+            // point just after the bar's last note — still the boundary). data-pos = SourceEnd
+            // (the click target: the outermost/section bar), data-alt = the phrase bars that
+            // also collapse here — so a click jumps to the section bar while a caret on any
+            // contributing bar highlights the whole glyph. The transparent hit rect widens the
+            // thin ink to a comfortable click target.
+            var measure = bar.Measure;
+            using (bar.IsStart ? gc.Source(measure.SourceStart)
+                : measure.EndHighlightAliases.IsDefaultOrEmpty
+                    ? gc.Source(measure.SourceEnd)
+                    : gc.Source(measure.SourceEnd, measure.EndHighlightAliases))
+            {
+                DrawBarline(bar.Type, bar.X, staffY, height, gc, staffLines: staffLines);
+                gc.DrawHitRect(bar.X - BarlineHitPad, staffY,
+                    GetVisualBarlineWidth(bar.Type) + 2 * BarlineHitPad, height);
+            }
+        }
+    }
+
+    /// <summary>One bar line a staff draws: its type, its left edge, the measure it belongs
+    /// to and whether it is that measure's START bar (a repeat-start) or its end bar.</summary>
+    internal readonly record struct StaffBar(BarlineType Type, double X, Measure Measure, bool IsStart);
+
+    /// <summary>
+    /// The bar lines <paramref name="staff"/> draws in <paramref name="system"/>, left to
+    /// right — the ONE walk <see cref="DrawBarlines"/> draws and the skyline seed
+    /// (<c>SkylineBuilder.SeedBarlines</c>) reads.
+    /// </summary>
+    /// <param name="isMmrInner">Whether a measure's plain end bar sits inside a multi-measure
+    /// rest run (and so is not drawn); null when the runs are not known yet (the skyline pass
+    /// runs before them, and then seeds those bars too).</param>
+    internal static List<StaffBar> StaffBars(MultiStaffScore score, SystemLayout system, Staff staff,
+        Func<int, bool>? isMmrInner, int fromMeasure = int.MinValue, int toMeasure = int.MaxValue)
+    {
+        var bars = new List<StaffBar>();
         var voice = staff.PrimaryVoice;
         // Where the bar line a system OPENS with stands, past the measure's X: the
         // staff-bar column of the line-start break-align group, which at a line start
@@ -63,19 +114,7 @@ internal static partial class SharedRenderer
             // start, past the redrawn clef/key/time prefix by the column gap above.
             var startType = StartBarWithBreakPieces(measure, voice, ml.MeasureIndex, atLineStart);
             if (startType != BarlineType.None)
-            {
-                double sx = atLineStart ? ml.X + lineStartBarGap : ml.X;
-                // The barline is clickable/highlightable in the preview: it carries
-                // the measure boundary's source position (the written `|:` token's
-                // spot). The transparent hit rect widens the thin ink to a
-                // comfortable click target.
-                using (gc.Source(measure.SourceStart))
-                {
-                    DrawBarline(startType, sx, staffY, height, gc, staffLines: staffLines);
-                    gc.DrawHitRect(sx - BarlineHitPad, staffY,
-                        GetVisualBarlineWidth(startType) + 2 * BarlineHitPad, height);
-                }
-            }
+                bars.Add(new StaffBar(startType, atLineStart ? ml.X + lineStartBarGap : ml.X, measure, IsStart: true));
 
             // End barline drawn so its right edge sits on the column boundary
             // (endX - visualWidth). Normal measures carry
@@ -86,7 +125,7 @@ internal static partial class SharedRenderer
             // (LILYPOND-REF: lily/multi-measure-rest.cc). Non-Single barlines
             // (double / final / repeat) keep their meaning and stay visible.
             if (measure.EndBarline == BarlineType.Single
-                && IsMmrInnerEndBarline(layout, ml.MeasureIndex))
+                && isMmrInner?.Invoke(ml.MeasureIndex) == true)
                 continue;
 
             // A plain Single immediately before a repeat-start in the SAME system
@@ -100,23 +139,9 @@ internal static partial class SharedRenderer
                 continue;
 
             var endType = EndBarWithBreakPieces(measure, system, ml.MeasureIndex);
-            double endX = ml.X + ml.Width;
-            double width = GetVisualBarlineWidth(endType);
-            // Clickable/highlightable like the start barline: SourceEnd is the
-            // written `|` token's position (or, for an auto-filled close, the
-            // point just after the bar's last note — still the boundary).
-            // data-pos = SourceEnd (the click target: the outermost/section bar), data-alt
-            // = the phrase bars that also collapse here — so a click jumps to the section
-            // bar while a caret on any contributing bar highlights the whole glyph.
-            using (measure.EndHighlightAliases.IsDefaultOrEmpty
-                ? gc.Source(measure.SourceEnd)
-                : gc.Source(measure.SourceEnd, measure.EndHighlightAliases))
-            {
-                DrawBarline(endType, endX - width, staffY, height, gc, staffLines: staffLines);
-                gc.DrawHitRect(endX - width - BarlineHitPad, staffY,
-                    width + 2 * BarlineHitPad, height);
-            }
+            bars.Add(new StaffBar(endType, ml.X + ml.Width - GetVisualBarlineWidth(endType), measure, IsStart: false));
         }
+        return bars;
     }
 
     /// <summary>
