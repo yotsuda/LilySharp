@@ -109,7 +109,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **⒞ ユーザー決定が先・触らない**
 
-- ★★ **候補（第681・設計・ユーザー判断）: `@chord` だけの line も run の要素にする**（今は帯 ＋ staff-staff padding 1.0・LP は ChordNames を loose line として x ごとに歩きばねで配る）。値付け: `test/figbass-chordname-lower-staff` で LP 5.57 対 Lily# 6.02（+0.45・snapshot は第681 が GO で再ベース）。`AttachedChordLineInRun` の「`@chord` は LP の line を持たない」（2026-08-26）を覆す話なので提案だけ
 - ★★ **⒴⁗ 天井 2.03%**＝安くすると `アゲハ蝶.lys` 1 冊が 24→26 系になる＝perf ではなく*忠実度の判断*
   （実装は Lab `sessions/p423/zz423-deferred-prelim.diff.txt`）・**先に LP 双子**
 - ⚠️ **`RestCollisionsOf`／`RestDotOffsetsOf` は「今はやらない。着手はずっと後だ」**（第407 ⑺⑴）＝**提案しない**
@@ -124,12 +123,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 新しい会話。`-Start p871`（HEAD `92f47a2f2`）＝full **11571 / 0 / 2 / 11573**。§7 3.5 で第869 を ARCHIVE へ。
 - **ユーザー決定＝score の名前は識別子 1 つ**（設計 `docs/anonymous-blocks-design.md` §7・`310f292bb`）: `score "tab"`／`score tab "both"` はやめた＝**LYS0038**（parser・直す語を名指す・回復で文字列を名前と読む・quick fix）。`main` は誰の名前でもない＝名前の無い score の選択子は空・選択欄のラベルは `(Default)`（`RenderSpecParser.UnnamedScoreLabel`）。**何も選ばない／古い選択は名前の無い score を描く**（`ChooseIndex`＝今までは最初の score）。名前の無い score が 2 つは LYS6001。
+- **ユーザー質問「bass は特別扱い？」から欠陥**（`0f955ad82`）: 音部記号の語は part 名にもなる＝`staff bass click` が part bass の横で「click を低音部記号で・bass は描かない・click は MIDI 専用でなくなる」と黙って読まれていた（tab は 10-03 に直した型）。`StaffTargets`＝宣言された part が勝つ・LYS1046。掃き 1199／差 0。
+- **ユーザー指示「@chord もやる」**（`e56eba2d4`）: 譜表の `@chord` の段を pair の run の要素に（双子は `\new ChordNames` で書いていた）＝figbass-chordname-lower-staff 6.02→5.52（LP 5.57）。上に和音の行がある譜表と数字だけの tab は帯のまま。掃きで 3 枚（その fixture と tab-chord.lys）。
+- **ユーザー指示「SMuFL はやり切れるところまで」**: §3 #3 加線の短縮を字の箱で（`0368443b0`・Bravura 5／Petaluma 11 の食い込みが 0）。⚠️ **残りの A（`music "名前" file "パス"`）は判断待ち**＝`fonts` の項目は属性語が閉じた語彙（`file` を足すと項目の区切りの規則が変わる）・相対パスには元ファイルの場所を CLI／LSP／プレビューから木へ通す配管が要る。案は `file` 属性か、パスを名前に書く（`music "fonts/X.otf"`）か。
+- ⚠️ **score の無い .lys**（ユーザー「受け入れない方が良い」）: 今は part が 2 つあっても**最初の part だけ黙って描く**（Lab 41・追跡 4 冊ほど）。Markdown の fence は既に score 必須。推奨＝エラー＋quick fix で `score { staff a  staff b }` を足す＝ユーザーの GO 待ち。
 - **OMR への引継ぎ** `..\LilySharp-Omr\docs\repro\lilysharp-handoff-2026-10-09.md`（未 commit・OMR 側が判断）: P6 SMuFL の使い方（`--set music=`・`boxes.json` の `musicFont`／`glyph` は書体共通／`codepoint` は書体の字／代替は `font`）と、**OMR が `form main`／`score main` を書く 6 行**（今の lysc では出力が `<名前>-main.png` になる＝試して確認）・site の文法（`8c5e7d643`・`e99d804a6`）。
 - ⚠️ 最初の説明で「文字列はファイル名を丸ごと決めるので本どうしで `both.svg` がぶつかる」とユーザーに言ったのは誤り＝実装は 2026-09-26 から `<入力>-<文字列>`（GRAMMAR・SYNTAX_REFERENCE の記述が古かった＝直した）。
 - 移行 `sessions/p871/migrate.ps1`（追跡下 224 冊・C#／文書 172・Lab `corpora/` 143 冊＝**未 commit・ユーザーが判断**）。出力名が変わったのは追跡下 204（名前なしへ 187）・Lab 27（ユーザーのベースタブでは `She Bangs` の `-tab-unfold`→`-unfold` だけ）。確かめ: 旧×新ソース 対 新×新ソース＝1199／差 0、旧×旧 対 旧×新（追跡下・名前を読み替え）＝687／差 0。
 - ⚠️ 踏んだ罠: 移行を `.cs` に当てたら ⑴ 補間 `"{{name}}"` を文字列と読んで `score name` にした（LpGeometryProbes ほか 5 本＝補間のまま外し直し）⑵ 地の文（`a score says "…"`）を「名前＋文字列」と読んで引用を消した（2 行＝戻した）⑶ 自分の LYS0038 の説明の `score "tab"` まで書き換えた。**文字列を書き換える移行は、削除行のうち引用の中身が名前でないものを全部目で見る**。
 - **ユーザー指示＝section の別名を宣言に 1 回**（`6a82b8725`）: `section A2 "A'" { }`（トップレベル・中身は空でよい）を書くと、すべての `form { A2 }` が A' を刷る。参照の `A2 "A''"` が勝ち、`~A2` は隠す。part／lyrics／chords の中の section の別名は **LYS0039**、トップレベルで食い違う別名は **LYS1045**（最初が勝つ）。一つの家は `SectionReferenceSyntax.DisplayLabel`（参照の別名 ?? `SyntaxFacts.DeclaredSectionLabel`）＋form の無い宣言順。網 `SectionDeclaredLabelTests` 11（毒で 4 赤）・掃き 1199／差 0。
-- `-End p871 -DiffBase 92f47a2f2`（門は全部 OK）＝full **11591 / 0 / 2 / 11593**（+20＝ScorePickerTests の書き直し・quick fix・別名の網）。言語の文法＝LP に対応物が無い（REF／OWN 0）。一度だけ `SkylineMergeTests.AFirstMergeIntoASkyline…` が並列 full で赤（割当 17,632 B／閾値 15,000・単独 3 回緑）＝隣の網と同じ「3 回測って最小値」に（`0e8ebd909`）。未 push 83＋docs（push はユーザー）。
+- `-End p871 -DiffBase 92f47a2f2`（門は全部 OK・最後は `0368443b0` で）＝full **11602 / 0 / 2 / 11604**。途中でユーザーが `87e5bba30` まで push。言語の文法＝LP に対応物が無い（REF／OWN 0）。一度だけ `SkylineMergeTests.AFirstMergeIntoASkyline…` が並列 full で赤（割当 17,632 B／閾値 15,000・単独 3 回緑）＝隣の網と同じ「3 回測って最小値」に（`0e8ebd909`）。未 push 3＋docs（push はユーザー）。
 
 ## 以下は第870セッションの経緯
 
