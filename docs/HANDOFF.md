@@ -78,7 +78,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。→ **第751（2026-10-02・ユーザー決定）「LP 忠実にこだわるより音楽的な妥当性を重視。LP から引き継ぐのはレンダリングとレイアウトの美しさだけ。ユーザーがまだ少ないので過去のしがらみに縛られない」＝意味論（拍子・弱起・反復・強弱・検査・出力の意味）の裁定者は音楽的妥当性、LP は描画と配置の裁定者（RULES §5.2 に規則として置いた）。
 
-**★★★★ 第857（2026-10-08）ユーザー決定＝総点検は区切った・SMuFL に着手**: 文法は `fonts { music "…" }` で承認・**Emmentaler は SMuFL の形に包み、SMuFL に無い Emmentaler のパラメータは失わない**。設計と棚卸しは **`docs/smufl-design.md`**（§3 の 17 行＝失わないもの・§6 の段取り）。**§6 ①（土台）は第857〜第861 で閉じた**（✅ の行と SHA は smufl-design §6 ①・門は毎回「全 svg の掃きで動いた svg 0 ＋ full 緑」＝Lab `p8NN/sweep/`・base は HEAD の bin を `exe-base` へ写す）。**§7 C はユーザー決定「同梱」（第862）・A／B は推奨どおり。②の第 1 歩（同梱・`SmuflMusicFont`・`MusicFonts.Find`＝`f9eccda23`）・⒜（文法・診断・`--set music=`＝`b2f9352f8`）・⒞⒝⒢（cache の鍵・`MusicFont.Use`・brace＝`c658f03a4`）・⒟（グリフ単位の fallback＝`MusicFontChain`・`70abd02a4`）・⒠（GPOS の kern＝`1a91b264e`）・⒡（engravingDefaults＝`d5d10a2a4`）は閉じた＝**② は閉じた: `fonts { music "Bravura" }` の譜は Bravura の字・寸法・線の太さで描かれ、無い字は次の名前か Emmentaler で描かれる**。③ 出力も第867 で閉じた（`boxes.json`・プレビューの font・§4 の 24 行＝`1c5d9b887`／`1f5b91119`）。④ の目視は第869 で済み、SMuFL が Emmentaler と違う約束で作る字を 8 か所直した（script の横位置・波の歩幅・アルペジオの向き・指番号と通奏低音の大きさ・数字の memo・MMR の数字・`To ⊕`・`Ped.`＝`fe008a24e`／`b2ebb6d99`／`5125ebb4c`／`32b12029c`）。残りは **§3 の代わりの経路を数で値付け**（LP 双子との差・smufl-design §6 ④ 末尾）＝**続けるか SMuFL を区切るかはユーザー判断**。⚠️ VS Code のプレビューは拡張を作り直して `server/Fonts` に SMuFL が入ってから実機で見る（ユーザー）**。
+**★★★★ 第857（2026-10-08）ユーザー決定＝総点検は区切った・SMuFL に着手**: 文法は `fonts { music "…" }` で承認・**Emmentaler は SMuFL の形に包み、SMuFL に無い Emmentaler のパラメータは失わない**。設計と棚卸しは **`docs/smufl-design.md`**（§3 の 17 行＝失わないもの・§6 の段取り）。**§6 ①〜④ は第857〜第869 で閉じた**（SHA と経緯は smufl-design §6 と ARCHIVE「§1.0 から移した閉じた段落」第872・門は毎回「全 svg の掃きで動いた svg 0 ＋ full 緑」＝base は HEAD の bin を `exe-base` へ写す・§7 C はユーザー決定「同梱」）。残りは **§3 の代わりの経路を数で値付け**（LP 双子との差・smufl-design §6 ④ 末尾）＝**続けるか SMuFL を区切るかはユーザー判断**。⚠️ VS Code のプレビューは拡張を作り直して `server/Fonts` に SMuFL が入ってから実機で見る（ユーザー）**。
 - **第870〜871（2026-10-09）ユーザー決定**: 名前の無い form／score／part／chords／lyrics とスコアの中の上書き・**score の名前は識別子 1 つ（`score "x"` は LYS0038・名前の無い score はプレビューで `(Default)`）**＝実装済み（`docs/anonymous-blocks-design.md` §7・残りは `staff bass` の読みと §6 の既定のスコア＝後で）。⚠️ プレビューの `(Default)` は拡張を作り直してからユーザーが見る。Petaluma の文字は歌詞以外すべて Petaluma Script・SMuFL の強弱記号は字形。⚠️ Lab `corpora/` の書き換え 470 冊は未 commit（ユーザー）。
 - ⚠️ **Lab の作業ツリーに*この会話より前からの*未 commit の変更が 138 ファイル（`corpora/` のユーザーの本・`sessions/p739/twin` ほか）＋未追跡多数**＝Claude は `sessions/pNNN` と notes だけを path 指定で commit している。中身はユーザーが判断
 
@@ -88,7 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - **v0.11.0 は出した（第854・`docs/RELEASING.md` §8）**。残り: Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
-- **T7 の残り（双子と段割れが違う 22 score＝双子の既定の数字と比べる限り残る差）**: ⒜ staff＋tab で Lily# が段を増やす族（Amanda・Butterfly ほか）＝**第583 が F9 の帰結と確定**（Lily# の数字の rod は LP の font-size 2〜3 の間＝§1.1 第583）／⒣ ~~カムフラージュ 1 段目 LP 6,7・Lily# 7,6~~＝**第833 で LP の 6,7 に**（行頭の空の小節＝`641bcc171`）／⒡ **小節の合計が合わない score（Disco Inferno ほか＝22 の外）は計器**（LP の小節番号の数え方）／⒞ tab だけの Lily# が段を増やす 5／⒟ ~~Le Freak は A1 の僅差が逆に倒れた~~＝**第833 で LP の 4+12 に**（同じ修正）。閉じた分（merge・Universe・奏・rod・小節線のばね・first_head）は第576〜第661 の §1.1（ARCHIVE）
+- **T7 の残り（双子と段割れが違う 22 score＝双子の既定の数字と比べる限り残る差）**: ⒜ staff＋tab で Lily# が段を増やす族（Amanda・Butterfly ほか）＝**第583 が F9 の帰結と確定**（Lily# の数字の rod は LP の font-size 2〜3 の間＝§1.1 第583）／⒡ **小節の合計が合わない score（Disco Inferno ほか＝22 の外）は計器**（LP の小節番号の数え方）／⒞ tab だけの Lily# が段を増やす 5。閉じた分（merge・Universe・奏・rod・小節線のばね・first_head・⒣⒟）は第576〜第661 の §1.1 と「§1.0 から移した閉じた段落」第872（ARCHIVE）
 - ⚠️ **双子の計器の残り**: 小節数の違う 14 score は計器（LP の小節番号の数え方＝途中の弱起・反復）／署名なし 21 は 1 段だけの試験ファイル（段中の番号が無い）／LP 失敗 2（Mandy・You're the One That I Want (-1)）＝本の側（第737 で読んだ: 4 弦 bass の最低弦より下の音＝Lily# は 1 音ずつ「tab から省いた・1 オクターブ低いのでは」と警告・LP は弦の無い TabNoteHead で自分の Guile が落ちる＝LP の不具合。Mandy は 13/16 の小節も本の側＝LYS2001）。**比較の基準は双子の既定の数字**（`TabNoteHead.font-size` 2・3 を足すと一致が 413 → 409 → 394 に減る）
 - **U9 ユーザー報告 `space.lys` の小節頭の余白＝保留（ユーザー判断「一旦この件は忘れて」・第477）**。4 通りすべてで再現せず LP とも同比率（Lab `sessions/p477/`）。⚠️ **毒は今後も同じフォルダで回してよい**（ユーザー決定）＝毒の最中のビルドはユーザー側で避ける
 - ⏸ **perf の島（⒭⁸・⒮*・⒩⁴・⒨・⒯ …）は第615 で区切り＝一時停止（ユーザー判断・忠実度が先）**。本文と掃き終わった島（第434〜第456）の教訓は `HANDOFF-ARCHIVE.md`「§1.0 から移した perf の島」（第660）・閉じた島の一覧は第654 が畳んだ（各便の §1＝ARCHIVE・RULES §5.4 末尾）
@@ -118,6 +118,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第872セッション（2026-10-10・YT-DELL2）
+
+新しい会話。`-Start p872`（HEAD `a9cf63720`）＝full **11653 / 0 / 2 / 11655**（148 秒で完走）。§7 3.5 で第870 を ARCHIVE へ。HANDOFF は 445,487 B＝残り 4,513 B・Fold は畳む物 0 ⇒ §1.0 の閉じた文（SMuFL §6 ①〜④ の SHA・T7 の ⒣⒟）を ARCHIVE「§1.0 から移した閉じた段落（第872）」へ逐語で移した。
+- **第871 の「打楽器記号の 1 線譜の slash は双子が符尾上」は双子の欠陥だった**（`2bf93e3b9`）: 対の本（treble／percussion × `as lines 1` × `/4` × 歌詞＝Lab `sessions/p872/probe/slashdir`）を Lily# と LP 2.26.0 で描いたら、双子は `\clef "percussion"` の下に `b'` を書いていた＝頭が線の 6 段上（加線つき）・符尾は LP の既定どおり下（`calc_default_direction`・+6 の頭）。`LilyPondExporter.MiddleLinePitch` は bass／alto／tenor の 3 行の写しで、percussion・soprano・mezzosoprano・baritone・bass_8 は treble の b' に落ちていた。**一つの家＝`MeasureCollector.MiddleLinePitch`**（ページの `ResolveAbsolutePitch` が clef の語で切っていた 7 行と同じ表・REF scm/parser-clef.scm supported-clefs ＋ c0-pitch-alist）を双子も読む。確かめ: percussion の双子の LP svg が treble の双子とバイト同一・ページ 1199／差 0（構成）・双子 1199／差 0（結果＝その clef で slash を書く本が 1 冊も無い・`sessions/p872/ly-sweep.ps1`）・`SlashNoteTests` +9。
+- ⚠️ **残る問い（ユーザー判断・提案ではない）**: `as lines 1` を LP の RhythmicStaff と呼んでいる（`SharedRenderer.cs:863`・双子は `\new Staff` ＋ `line-count = 1`）が、RhythmicStaff は `Stem.neutral-direction = #UP`／`Beam.neutral-direction = #UP`（engraver-init.ly:325-326）＝線上の slash の符尾は上。Lily# と双子（Staff）は下。どちらの context かは描画の決定＝変えていない。
+- **第871 の「sketch-in-c の chords 行 Lily# 1.60・LP 1.672＝slash のタイ」は slash ではなく *1 線譜* だった**（`a55d75854`）: 対 4 冊（5 線／1 線 × 丸頭／slash のタイ＝Lab `sessions/p872/probe/slashtie`・双子は `-dbackend=svg`）で、5 線は丸頭も slash も LP と一致（0.26 上・1.30 幅）、1 線は丸頭でも LP が 0.75 上・2.60 幅（頭の中心から中心）なのに Lily# は 0.26・1.30＝`TieFormattingProblem` が LP の `staff_symbol_referencer_` を定数で持っていた（`|pos|<=3`・`pos%2`・5 線の `OnStaffLine`・`2.0`）。1 線譜では `staff_span` を −1 に広げると空＝pos 0 は「譜の中」でなく、探索が pos 1 に落ち、head-edge hug で 0.75、その高さの outline は頭の中心（recession box）。直し: `TieSpecification.StaffLines`（tab は 5 のまま＝自前の枝）・`EngravingDefaults.OnLineOrLedger`＝`Staff_symbol::on_line` の既定の ledger walk の字面移植（Lily# の表では全部「pos が偶数」だが規則で持つ）・`StaffSpan`／`WithinStaff`。**もう 1 つ**: `BowHeadBox` が符頭の形を見ていなかった＝slash（1.7152）を丸頭（1.3042）の箱で読み、slash のタイが頭の中へ 0.41 食い込んでいた（5 線でも・slur も同じ箱）。網 `TieFewLineStaffTests` 16（LP の 4 点＋ledger walk 12・1 線譜の読みは `RenderedGeometry.BowAttachmentAboveStaffLine`）。掃き 1199／差 1＝sketch-in-c だけ（chords 行 1.60→1.70・LP 1.672）。full 11678 / 0 / 2 / 11680。
+- `-End p872 -DiffBase a9cf63720`（門は全部 OK）＝full **11678 / 0 / 2 / 11680**。Core '+' 176 行／REF 6／OWN 0（tab の 5 線既定は `TieSpecification.StaffLines` の註＝tab の枝は元から OWN）。HANDOFF 447,948 B（残り 2,052＝次便の `-Start` が第871 のブロックを ARCHIVE へ出せば空く）。未 push 32＋docs（push はユーザー）。
+
+## 以下は第871セッションの経緯
+
 ### 1.1 第871セッション（2026-10-09・YT-DELL2）
 
 新しい会話。`-Start p871`（HEAD `92f47a2f2`）＝full **11571 / 0 / 2 / 11573**。§7 3.5 で第869 を ARCHIVE へ。
@@ -135,17 +145,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ 踏んだ罠: 移行を `.cs` に当てたら ⑴ 補間 `"{{name}}"` を文字列と読んで `score name` にした（LpGeometryProbes ほか 5 本＝補間のまま外し直し）⑵ 地の文（`a score says "…"`）を「名前＋文字列」と読んで引用を消した（2 行＝戻した）⑶ 自分の LYS0038 の説明の `score "tab"` まで書き換えた。**文字列を書き換える移行は、削除行のうち引用の中身が名前でないものを全部目で見る**。
 - **ユーザー指示＝section の別名を宣言に 1 回**（`6a82b8725`）: `section A2 "A'" { }`（トップレベル・中身は空でよい）を書くと、すべての `form { A2 }` が A' を刷る。参照の `A2 "A''"` が勝ち、`~A2` は隠す。part／lyrics／chords の中の section の別名は **LYS0039**、トップレベルで食い違う別名は **LYS1045**（最初が勝つ）。一つの家は `SectionReferenceSyntax.DisplayLabel`（参照の別名 ?? `SyntaxFacts.DeclaredSectionLabel`）＋form の無い宣言順。網 `SectionDeclaredLabelTests` 11（毒で 4 赤）・掃き 1199／差 0。
 - `-End p871 -DiffBase 92f47a2f2`（門は全部 OK・最後は `0368443b0` で）＝full **11602 / 0 / 2 / 11604**。途中でユーザーが `87e5bba30` まで push。言語の文法＝LP に対応物が無い（REF／OWN 0）。一度だけ `SkylineMergeTests.AFirstMergeIntoASkyline…` が並列 full で赤（割当 17,632 B／閾値 15,000・単独 3 回緑）＝隣の網と同じ「3 回測って最小値」に（`0e8ebd909`）。未 push 3＋docs（push はユーザー）。
-
-## 以下は第870セッションの経緯
-
-### 1.1 第870セッション（2026-10-09・YT-DELL2）
-
-同じ会話（第869 の続き）。`-Start p870` は末に回した（HEAD `d661e4874`）＝full **11571 / 0 / 2 / 11573**。§7 3.5 で第868 を ARCHIVE へ。
-- **和音記号の rod**（`4def31845`）: 付いた記号は裸の列をまたいで次の記号と小節の端に rod（`SpringSolver.ApplyRods`）＝`Csus2 Csus4 |` の Isus4 が小節線を越えていた。
-- **ユーザー決定＝名前の無いブロック**（設計 `docs/anonymous-blocks-design.md`・後方互換は取らない）: `d26115786`＝`form { }` が既定・`score` の名前はスコア自身（名前無しは `<入力>`／`--score main`）・スコアの中の `form NAME`／`form { }`／`fonts { }`／`paper { }`／`layout { }`。`e58d0271d`＝名前の無い part／chords／lyrics（内部名はキーワード＝`SyntaxFacts.Unnamed*Name`）と裸の `staff`／`tab`／`chords`／`lyrics`・LYS0032 退役。追跡下 1,236 ファイルと Lab `corpora/` 470 冊を `sessions/p870/migrate.ps1` で書き換え（**corpora は未 commit＝ユーザーが判断**）。前後の掃き（旧版×旧ソース対 新版×新ソース）で動いたのはスコアの中に form を書いた 3 枚だけ。⚠️ 未実装: `staff bass` を「名前の無い part を低音部記号で」と読むこと（設計 §3）。
-- **Petaluma の文字**（ユーザー指示の積み重ね）: `TextRoles.TakesMusicCompanionFace` に和音記号・リハーサルマーク・題名 4 種・`@text`／text spanner・テンポ・D.S. 類・強弱の言葉・ペダル・楽器名・a2／Solo（歌詞は残す）。**SMuFL の強弱記号はフォント自身の dynamic 字形**（ユーザー選択・`DynamicEngraver.SmuflGlyphRun` が寸法・skyline・松葉・描画の一つの家・Emmentaler は文字のまま）。
-- **woff2 の欠陥**（`8d178fc6e`）: 同梱の `PetalumaScript.woff2` は GPOS／GSUB／kern の無い TrueType 変換＝プレビューは字詰めなしで描き「Introduction」が箱を 1.2 越えた。otf を fontTools でそのまま包み直し（`Petaluma.woff2` も）・網 `BundledWebFontTests`。⚠️ プレビューは拡張を作り直してからユーザーが確かめる。
-- **かなのセクションラベル**（`1252b7c7d`）: 書体に無い字の高さが 0＝箱が 0.70 の帯に。`LabelInk` を `InkOrFallbackBox` に（Emmentaler でも同じ欠陥だった）。
 
 ## 2. 開いている作業
 

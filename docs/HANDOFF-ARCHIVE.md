@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第870セッションの経緯
+
+### 1.1 第870セッション（2026-10-09・YT-DELL2）
+
+同じ会話（第869 の続き）。`-Start p870` は末に回した（HEAD `d661e4874`）＝full **11571 / 0 / 2 / 11573**。§7 3.5 で第868 を ARCHIVE へ。
+- **和音記号の rod**（`4def31845`）: 付いた記号は裸の列をまたいで次の記号と小節の端に rod（`SpringSolver.ApplyRods`）＝`Csus2 Csus4 |` の Isus4 が小節線を越えていた。
+- **ユーザー決定＝名前の無いブロック**（設計 `docs/anonymous-blocks-design.md`・後方互換は取らない）: `d26115786`＝`form { }` が既定・`score` の名前はスコア自身（名前無しは `<入力>`／`--score main`）・スコアの中の `form NAME`／`form { }`／`fonts { }`／`paper { }`／`layout { }`。`e58d0271d`＝名前の無い part／chords／lyrics（内部名はキーワード＝`SyntaxFacts.Unnamed*Name`）と裸の `staff`／`tab`／`chords`／`lyrics`・LYS0032 退役。追跡下 1,236 ファイルと Lab `corpora/` 470 冊を `sessions/p870/migrate.ps1` で書き換え（**corpora は未 commit＝ユーザーが判断**）。前後の掃き（旧版×旧ソース対 新版×新ソース）で動いたのはスコアの中に form を書いた 3 枚だけ。⚠️ 未実装: `staff bass` を「名前の無い part を低音部記号で」と読むこと（設計 §3）。
+- **Petaluma の文字**（ユーザー指示の積み重ね）: `TextRoles.TakesMusicCompanionFace` に和音記号・リハーサルマーク・題名 4 種・`@text`／text spanner・テンポ・D.S. 類・強弱の言葉・ペダル・楽器名・a2／Solo（歌詞は残す）。**SMuFL の強弱記号はフォント自身の dynamic 字形**（ユーザー選択・`DynamicEngraver.SmuflGlyphRun` が寸法・skyline・松葉・描画の一つの家・Emmentaler は文字のまま）。
+- **woff2 の欠陥**（`8d178fc6e`）: 同梱の `PetalumaScript.woff2` は GPOS／GSUB／kern の無い TrueType 変換＝プレビューは字詰めなしで描き「Introduction」が箱を 1.2 越えた。otf を fontTools でそのまま包み直し（`Petaluma.woff2` も）・網 `BundledWebFontTests`。⚠️ プレビューは拡張を作り直してからユーザーが確かめる。
+- **かなのセクションラベル**（`1252b7c7d`）: 書体に無い字の高さが 0＝箱が 0.70 の帯に。`LabelInk` を `InkOrFallbackBox` に（Emmentaler でも同じ欠陥だった）。
+
 ## 以下は第869セッションの経緯
 
 ### 1.1 第869セッション（2026-10-09・YT-DELL2）
@@ -46094,3 +46105,11 @@ HANDOFF §1.0 で閉じた・後の決定に上書きされた段落を逐語で
 - ✅ 4 分音の臨時記号の寸法（第867 発見）は第868 で閉じた（`1517f4f0b`）。
 
 **★★★★ 第815〜816（2026-10-05）ユーザー指示「OMR の提案を優先度順に着手」＝次の会話はここから**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`。OMR は別プログラム・Lily# は子プロセスで呼びファイルを読むだけ＝コードを混ぜない）: 0・A1・B1〜B6・C1〜C3 は**閉じた**（第815〜818・経緯は ARCHIVE）。配布の取り決め `..\LilySharp-Omr\docs\repro\lilysharp-omr-distribution-2026-10-05.md`（同梱しない・L1〜L11）。⚠️ **B1〜B6 は VS Code で未確認**（OMR の `omr read` は第 1 歩が動く＝`OmrProto.exe` を `LILYSHARP_OMR_PATH` で指せば試せる）。残り: ⑥ 10-02 提案（学習データ）: **P1〜P5 は閉じた（第818〜828・全部 `paper { }`／`layout { }` の言語のキー・`--set` は上書き）・残りは作らないと決めた（第828）**。次は P6（SMuFL＝大・別に判断）。**B5 は OMR の `omr verify`（第818 が提案）が出るまで動かない**。OMR 側へのお願い（`breaksOnly` を書く・`part voice` をやめる・TIFF 用の PNG・`omr verify`・記号単位の `confidence`/`candidates`）は OMR の提案書に書いた。配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後。第814 末の決定（下）はこの後。
+
+## §1.0 から移した閉じた段落（2026-10-10・第872 に移した）
+
+HANDOFF §1.0 の SMuFL の段落（第857）から、閉じた ①〜④ の SHA と経緯を逐語で。§1.0 には「§6 ①〜④ は第857〜第869 で閉じた」だけを残した。
+
+**§6 ①（土台）は第857〜第861 で閉じた**（✅ の行と SHA は smufl-design §6 ①・門は毎回「全 svg の掃きで動いた svg 0 ＋ full 緑」＝Lab `p8NN/sweep/`・base は HEAD の bin を `exe-base` へ写す）。**§7 C はユーザー決定「同梱」（第862）・A／B は推奨どおり。②の第 1 歩（同梱・`SmuflMusicFont`・`MusicFonts.Find`＝`f9eccda23`）・⒜（文法・診断・`--set music=`＝`b2f9352f8`）・⒞⒝⒢（cache の鍵・`MusicFont.Use`・brace＝`c658f03a4`）・⒟（グリフ単位の fallback＝`MusicFontChain`・`70abd02a4`）・⒠（GPOS の kern＝`1a91b264e`）・⒡（engravingDefaults＝`d5d10a2a4`）は閉じた＝**② は閉じた: `fonts { music "Bravura" }` の譜は Bravura の字・寸法・線の太さで描かれ、無い字は次の名前か Emmentaler で描かれる**。③ 出力も第867 で閉じた（`boxes.json`・プレビューの font・§4 の 24 行＝`1c5d9b887`／`1f5b91119`）。④ の目視は第869 で済み、SMuFL が Emmentaler と違う約束で作る字を 8 か所直した（script の横位置・波の歩幅・アルペジオの向き・指番号と通奏低音の大きさ・数字の memo・MMR の数字・`To ⊕`・`Ped.`＝`fe008a24e`／`b2ebb6d99`／`5125ebb4c`／`32b12029c`）。
+
+T7 の残り（§1.0 ⒜）から、第833 で閉じた 2 つを逐語で: ⒣ ~~カムフラージュ 1 段目 LP 6,7・Lily# 7,6~~＝**第833 で LP の 6,7 に**（行頭の空の小節＝`641bcc171`）／⒟ ~~Le Freak は A1 の僅差が逆に倒れた~~＝**第833 で LP の 4+12 に**（同じ修正）。
