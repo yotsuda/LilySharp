@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第872セッションの経緯
+
+### 1.1 第872セッション（2026-10-10・YT-DELL2）
+
+新しい会話。`-Start p872`（HEAD `a9cf63720`）＝full **11653 / 0 / 2 / 11655**（148 秒で完走）。§7 3.5 で第870 を ARCHIVE へ。HANDOFF は 445,487 B＝残り 4,513 B・Fold は畳む物 0 ⇒ §1.0 の閉じた文（SMuFL §6 ①〜④ の SHA・T7 の ⒣⒟）を ARCHIVE「§1.0 から移した閉じた段落（第872）」へ逐語で移した。
+- **第871 の「打楽器記号の 1 線譜の slash は双子が符尾上」は双子の欠陥だった**（`2bf93e3b9`）: 対の本（treble／percussion × `as lines 1` × `/4` × 歌詞＝Lab `sessions/p872/probe/slashdir`）を Lily# と LP 2.26.0 で描いたら、双子は `\clef "percussion"` の下に `b'` を書いていた＝頭が線の 6 段上（加線つき）・符尾は LP の既定どおり下（`calc_default_direction`・+6 の頭）。`LilyPondExporter.MiddleLinePitch` は bass／alto／tenor の 3 行の写しで、percussion・soprano・mezzosoprano・baritone・bass_8 は treble の b' に落ちていた。**一つの家＝`MeasureCollector.MiddleLinePitch`**（ページの `ResolveAbsolutePitch` が clef の語で切っていた 7 行と同じ表・REF scm/parser-clef.scm supported-clefs ＋ c0-pitch-alist）を双子も読む。確かめ: percussion の双子の LP svg が treble の双子とバイト同一・ページ 1199／差 0（構成）・双子 1199／差 0（結果＝その clef で slash を書く本が 1 冊も無い・`sessions/p872/ly-sweep.ps1`）・`SlashNoteTests` +9。
+- ⚠️ **残る問い（ユーザー判断・提案ではない）**: `as lines 1` を LP の RhythmicStaff と呼んでいる（`SharedRenderer.cs:863`・双子は `\new Staff` ＋ `line-count = 1`）が、RhythmicStaff は `Stem.neutral-direction = #UP`／`Beam.neutral-direction = #UP`（engraver-init.ly:325-326）＝線上の slash の符尾は上。Lily# と双子（Staff）は下。どちらの context かは描画の決定＝変えていない。
+- **第871 の「sketch-in-c の chords 行 Lily# 1.60・LP 1.672＝slash のタイ」は slash ではなく *1 線譜* だった**（`a55d75854`）: 対 4 冊（5 線／1 線 × 丸頭／slash のタイ＝Lab `sessions/p872/probe/slashtie`・双子は `-dbackend=svg`）で、5 線は丸頭も slash も LP と一致（0.26 上・1.30 幅）、1 線は丸頭でも LP が 0.75 上・2.60 幅（頭の中心から中心）なのに Lily# は 0.26・1.30＝`TieFormattingProblem` が LP の `staff_symbol_referencer_` を定数で持っていた（`|pos|<=3`・`pos%2`・5 線の `OnStaffLine`・`2.0`）。1 線譜では `staff_span` を −1 に広げると空＝pos 0 は「譜の中」でなく、探索が pos 1 に落ち、head-edge hug で 0.75、その高さの outline は頭の中心（recession box）。直し: `TieSpecification.StaffLines`（tab は 5 のまま＝自前の枝）・`EngravingDefaults.OnLineOrLedger`＝`Staff_symbol::on_line` の既定の ledger walk の字面移植（Lily# の表では全部「pos が偶数」だが規則で持つ）・`StaffSpan`／`WithinStaff`。**もう 1 つ**: `BowHeadBox` が符頭の形を見ていなかった＝slash（1.7152）を丸頭（1.3042）の箱で読み、slash のタイが頭の中へ 0.41 食い込んでいた（5 線でも・slur も同じ箱）。網 `TieFewLineStaffTests` 16（LP の 4 点＋ledger walk 12・1 線譜の読みは `RenderedGeometry.BowAttachmentAboveStaffLine`）。掃き 1199／差 1＝sketch-in-c だけ（chords 行 1.60→1.70・LP 1.672）。full 11678 / 0 / 2 / 11680。
+- `-End p872 -DiffBase a9cf63720`（門は全部 OK）＝full **11678 / 0 / 2 / 11680**。Core '+' 176 行／REF 6／OWN 0（tab の 5 線既定は `TieSpecification.StaffLines` の註＝tab の枝は元から OWN）。HANDOFF 447,948 B（残り 2,052＝次便の `-Start` が第871 のブロックを ARCHIVE へ出せば空く）。未 push 32＋docs（push はユーザー）。
+
 ## 以下は第871セッションの経緯
 
 ### 1.1 第871セッション（2026-10-09・YT-DELL2）
