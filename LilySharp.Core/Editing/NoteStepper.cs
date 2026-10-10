@@ -236,9 +236,19 @@ public static class NoteStepper
         if (target.Kind == TargetKind.Voicing
             && SoundedShape(target.Node, includeStretch) is null)
             return null;
+        // A member of `<…>` sounds its whole chord (owner's decision 2026-10-10), and the
+        // audition's KEY is the chord's, so the caret crossing the members strikes it once.
+        if (ChordOfMember(target) is { } chord)
+            target = new Target(TargetKind.Chord, chord);
         var (pitches, timbre) = Sound(target, sounding ?? tree, includeStretch);
         return pitches.IsEmpty ? null : new Audition(target, pitches, timbre);
     }
+
+    /// <summary>The <c>&lt;…&gt;</c> a member target belongs to — what it SOUNDS as (owner's
+    /// decision 2026-10-10: the chord is one sound; a member of an arpeggio keeps its own
+    /// position, as it plays). Null for every other target.</summary>
+    private static ChordSyntax? ChordOfMember(Target target)
+        => target.Kind == TargetKind.Member && target.Node.Parent is ChordSyntax chord ? chord : null;
 
     // ------------------------------------------------------------------ what the caret is on
 
@@ -902,24 +912,15 @@ public static class NoteStepper
             }
             case TargetKind.Member:
             {
+                // A member of `<…>` sounds the whole chord it was stepped inside — the one
+                // sound the player hears (owner's decision 2026-10-10; until then the moved
+                // member alone). An arpeggio's members play at their own positions.
+                if (ChordOfMember(target) is { } chord)
+                    return Sound(new Target(TargetKind.Chord, chord), sounding, includeStretch);
                 int at = target.Key;
-                // An arpeggio's members play at their own positions.
                 if (index.Midi.TryGetValue(at, out var played))
                     return ([played[0]], index.Timbre[at]);
-                if (!index.Trace.TryGetValue(at, out int written))
-                    return ([], 0);
-                // A chord's are filed under the chord: the member's resolved pitch, moved
-                // by what the export moved the chord by.
-                if (target.Node.Parent is ChordSyntax chord
-                    && index.Midi.TryGetValue(chord.SourceStart, out var chordPlayed))
-                {
-                    var members = MembersOf(chord)
-                        .Select(m => index.Trace.TryGetValue(m.SourceStart, out int p) ? p : int.MaxValue)
-                        .Where(p => p != int.MaxValue).ToList();
-                    int shift = members.Count > 0 ? chordPlayed.Min() - members.Min() : 0;
-                    return ([written + shift], index.Timbre[chord.SourceStart]);
-                }
-                return ([written], 0);
+                return index.Trace.TryGetValue(at, out int written) ? ([written], 0) : ([], 0);
             }
             case TargetKind.Chord:
             {

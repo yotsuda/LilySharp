@@ -169,6 +169,16 @@ workflow attaches that section to the GitHub Release verbatim.
   the bundled font names. The grammar colours `music` as a fonts key.
 - **A changed `lilysharp.fontPaths` redraws the open previews** — a music font found in a new
   folder changes the picture.
+- **A member of `<…>` sounds its whole chord.** Stepping a member with Ctrl+Shift+↑/↓, or
+  landing the caret on one, now sounds the chord with that member moved — one sound, as the
+  player hears it — where it struck the member alone; arrowing across the members strikes it
+  once. A member of a `<< … >>` keeps sounding at its own position.
+- **The preview says when its sound is blocked.** The preview's synth may not run until the
+  preview itself has been clicked or typed in once (the browser's autoplay rule; the editor's
+  keys do not count). The audition now keeps one synth for the preview's life, resumes it from
+  the first click or key there, and when a step or an audition is struck while it is still
+  blocked the status bar says *click the preview once to enable its sound*; it used to stay
+  silent with no word.
 
 ## 0.11.0
 

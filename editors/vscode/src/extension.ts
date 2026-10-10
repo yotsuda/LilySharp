@@ -942,6 +942,15 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     `WEBVIEW ERROR: ${message.message} (line ${message.line})`);
                 return;
             }
+            if (message.type === 'audioBlocked') {
+                // The webview's synth is not allowed to run until the user has clicked or
+                // typed in the preview (the browser's autoplay policy; the editor's keys
+                // do not count). Said once per blocked spell — the webview resets the flag
+                // when sound gets through.
+                outputChannel.appendLine(`Audio blocked in the preview (AudioContext ${message.state}): click the preview once`);
+                vscode.window.setStatusBarMessage('Lily#: click the preview once to enable its sound', 8000);
+                return;
+            }
             if (message.type === 'webviewPerf') {
                 // The preview's own account of one update — what it swapped and
                 // how long the swap took in the page's thread — beside the
@@ -3632,7 +3641,40 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // The caret's note rings while the key is held. VS Code has no key-up event,
         // so a held key arrives as an OS key-repeat of the play command; each fire
         // re-arms a watchdog, and the note stops once the repeats cease.
-        let heldCtx = null;
+        // ONE AudioContext for the audition, for the life of this document, never closed.
+        // The browser's autoplay policy lets a context run only once the user has
+        // interacted with THIS document (a click or a key in the preview — the editor's
+        // keys do not count): a context made before that stays 'suspended', and resume()
+        // from a message handler is no gesture. Until 2026-10-10 every strike made a new
+        // context and closed it 400 ms later, so a strike before the first click was
+        // silent and nothing said why (owner's report). Now the one context is resumed
+        // from the first pointer / key gesture here and asked to resume at every strike;
+        // if it is still not running shortly after, the host is told once (audioBlocked)
+        // and the status bar says to click the preview. The Play button has its own
+        // context (startPlayback) — a click, so always allowed.
+        let synthCtx = null;
+        let audioBlockedTold = false;
+        function synth() {
+            if (!synthCtx || synthCtx.state === 'closed') { synthCtx = new AudioContext(); }
+            if (synthCtx.state !== 'running') {
+                synthCtx.resume().catch(() => { /* reported below */ });
+                setTimeout(() => {
+                    if (synthCtx && synthCtx.state !== 'running' && !audioBlockedTold) {
+                        audioBlockedTold = true;
+                        vscode.postMessage({ type: 'audioBlocked', state: synthCtx.state });
+                    }
+                }, 300);
+            }
+            return synthCtx;
+        }
+        function resumeSynthOnGesture() {
+            if (synthCtx && synthCtx.state === 'suspended') {
+                synthCtx.resume().then(() => { audioBlockedTold = false; }).catch(() => { /* noop */ });
+            }
+        }
+        window.addEventListener('pointerdown', resumeSynthOnGesture, true);
+        window.addEventListener('keydown', resumeSynthOnGesture, true);
+
         let heldOscs = [];
         let heldPitchKey = '';     // pitches currently ringing, so a repeat sustains
         let heldWatchdog = null;
@@ -3641,8 +3683,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
 
         function stopHeldNote() {
             if (heldWatchdog) { clearTimeout(heldWatchdog); heldWatchdog = null; }
-            if (!heldCtx) return;
-            const t = heldCtx.currentTime;
+            if (heldOscs.length === 0 || !synthCtx) return;
+            const t = synthCtx.currentTime;
             for (const o of heldOscs) {
                 try {
                     o.g.gain.cancelScheduledValues(t);
@@ -3650,29 +3692,26 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     o.osc.stop(t + 0.3);
                 } catch (e) { /* already ended */ }
             }
-            const ctx = heldCtx;
-            heldCtx = null; heldOscs = []; heldPitchKey = '';
-            setTimeout(() => { try { ctx.close(); } catch (e) { /* noop */ } }, 400);
+            heldOscs = []; heldPitchKey = '';
         }
 
         function holdNotes(pitches, timbre, gapMs) {
             const key = pitches.slice().sort((a, b) => a - b).join(',');
             // Fresh press (or a different note) re-attacks; a fast repeat of the SAME
             // note leaves the tone ringing and only re-arms the watchdog.
-            const fresh = !heldCtx || key !== heldPitchKey || gapMs > 700;
+            const fresh = heldOscs.length === 0 || key !== heldPitchKey || gapMs > 700;
             if (fresh) {
                 stopHeldNote();
-                heldCtx = new AudioContext();
-                if (heldCtx.state === 'suspended') { heldCtx.resume(); }
-                const master = heldCtx.createGain();
+                const ctx = synth();
+                const master = ctx.createGain();
                 master.gain.value = 0.22;
-                master.connect(heldCtx.destination);
-                const t0 = heldCtx.currentTime;
+                master.connect(ctx.destination);
+                const t0 = ctx.currentTime;
                 for (const p of pitches) {
-                    const osc = heldCtx.createOscillator();
+                    const osc = ctx.createOscillator();
                     osc.type = AUD_WAVE[timbre] || 'triangle';
                     osc.frequency.value = 440 * Math.pow(2, (p - 69) / 12);
-                    const g = heldCtx.createGain();
+                    const g = ctx.createGain();
                     g.gain.setValueAtTime(0, t0);
                     g.gain.linearRampToValueAtTime(0.9, t0 + 0.02);
                     osc.connect(g); g.connect(master);

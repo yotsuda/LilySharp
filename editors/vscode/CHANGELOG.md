@@ -49,6 +49,13 @@ All notable changes to the Lily# VS Code extension are documented here.
   box and every chord symbol was a little wide.
 - **SixLabors.ImageSharp is not in the VSIX any more** — a PdfSharpCore dependency Lily# never
   used, carrying five advisories.
+- **A member of `<…>` sounds its whole chord** when stepped (Ctrl+Shift+↑/↓) or landed on — one
+  sound, with the member moved — where it struck the member alone; arrowing across the members
+  strikes it once.
+- **The preview says when its sound is blocked.** A step or an audition struck before the
+  preview has been clicked or typed in once (the browser's autoplay rule) now puts *click the
+  preview once to enable its sound* in the status bar, and the preview keeps one synth for its
+  life and resumes it from that first click; it used to stay silent with no word.
 
 ## 0.11.0
 

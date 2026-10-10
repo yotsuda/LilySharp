@@ -494,7 +494,9 @@ public class StepRequestTests
     public void ASteppedNote_SoundsItsNewPitch()
     {
         Assert.Equal([84], Step(Plain("c'‸4 d'4"), +1).Response.Pitches);          // c'' = C6 (Lily#'s absolute c is C4)
-        Assert.Equal([88], Step(Plain("<c' e'‸ g'>4"), +1).Response.Pitches);      // e'' = E6
+        // A stepped member sounds its WHOLE chord with the member moved (owner's decision
+        // 2026-10-10: `<…>` is one sound; it used to strike the moved member alone).
+        Assert.Equal([72, 79, 88], Step(Plain("<c' e'‸ g'>4"), +1).Response.Pitches); // c' g' e'' = C5 G5 E6
         Assert.Equal([48], Step(Plain("c‸4 d'4"), -1).Response.Pitches);           // c = C4, c, = C3
     }
 
@@ -519,13 +521,17 @@ public class StepRequestTests
         Assert.Equal("note", note.Kind);
         Assert.Equal([74], note.Pitches);
 
+        // The caret on a MEMBER of `<…>` sounds the whole chord, under the chord's own key —
+        // so arrowing across the members strikes it once (owner's decision 2026-10-10; it
+        // used to sound the member alone, as "member").
         var member = AuditionAt(Plain("<c' ‸e' g'>4"));
-        Assert.Equal("member", member.Kind);
-        Assert.Equal([76], member.Pitches);
+        Assert.Equal("chord", member.Kind);
+        Assert.Equal([72, 76, 79], member.Pitches);
 
         var chord = AuditionAt(Plain("<c' e' g'>‸4"));
         Assert.Equal("chord", chord.Kind);
         Assert.Equal([72, 76, 79], chord.Pitches);
+        Assert.Equal(chord.Key, member.Key);
 
         Assert.Equal(-1, AuditionAt(Plain("c'4 r‸4")).Key);
         // A name with no shape written sounds the shape drawn for it (K3: every step sounds).
