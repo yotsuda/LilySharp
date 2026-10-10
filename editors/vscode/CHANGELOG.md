@@ -2,6 +2,54 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
+## Unreleased
+
+### Breaking changes
+
+- **A block's name is optional, and a score has one name, a bare word.** `form { … }` is the
+  file's default form, `score { … }` its default score (the picker shows it as `(Default)` and
+  draws it first), `part { … }` its one part, `chords { … }` and `lyrics { … }` its unnamed
+  tracks, named bare in a score (`staff`, `tab`, `chords`, `lyrics`). `score "tab"` and
+  `score tab "both"` are LYS0038, with a quick fix that writes the word; `score tab` exports to
+  `<file>-tab`, the unnamed score to `<file>`. A score picks its form inside (`form NAME` or
+  `form { … }`); `score main` and `form main` are plain names no more. The `form` and `score`
+  snippets write the unnamed block first, and `form |` inside a score lists the file's forms.
+- **A book with sections and no `score` block is an error** (LYS6014), with a quick fix that
+  appends the score — every chord track as a row, a staff per part, every lyrics track. It used
+  to draw the first part alone.
+- **`staff bass click` beside a part named `bass` is that part's staff, with `click` played to
+  MIDI only**, as `tab bass click` reads; LYS1046 names the spellings when a word is both a part
+  and a clef.
+
+### Music fonts (SMuFL)
+
+- **`fonts { music "…" }` names the music font** — Bravura, Petaluma and Leland are bundled
+  beside Emmentaler, and several names are a per-glyph fallback chain. The key completes with
+  its quotes and the bundled names, the grammar colours it, and the preview draws the named
+  font (it declares Bravura, Petaluma, Leland and Petaluma Script beside the text faces).
+- **`lilysharp.fontPaths`** (machine-overridable) lists the folders this machine keeps SMuFL
+  fonts in — a font's metadata and program directly in a folder or in a subfolder of its name
+  — searched before the standard SMuFL locations; `LILYSHARP_FONT_PATH` is read too. A score
+  names its font only, never a path. Changing the folders redraws the open previews.
+- **Under Petaluma the text is Petaluma Script**: the header, chord symbols, rehearsal marks and
+  section labels, tempo and navigation words, `@text`, dynamic and pedal words and instrument
+  names, unless the score names their face; the lyrics keep the engraving face.
+
+### Editor
+
+- **A `lily#` fence may hold a whole book**: the preview draws the book's default score instead
+  of refusing a fence with more than one score. A fence with no score is still refused.
+- **A section's label is declared once** — `section A2 "A'" { }` at the top level — and the
+  forms stop repeating it (LYS1045 when two declarations disagree, LYS0039 inside a part).
+
+### Fixes
+
+- **Petaluma Script is kerned in the preview.** The bundled WOFF2s are now the OTFs wrapped
+  unchanged; the old conversion carried no GPOS or kern table, so a section label overran its
+  box and every chord symbol was a little wide.
+- **SixLabors.ImageSharp is not in the VSIX any more** — a PdfSharpCore dependency Lily# never
+  used, carrying five advisories.
+
 ## 0.11.0
 
 ### Breaking changes

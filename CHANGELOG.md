@@ -4,6 +4,172 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
+## Unreleased
+
+### Breaking changes
+
+- **A block's name is optional, and the unnamed block is the file's default.** `form { … }` is
+  the file's default form (a second unnamed one is LYS1016), `score { … }` its default score,
+  `part { … }` its one part (only in a file with no other part, LYS1007), `chords { … }` and
+  `lyrics { … }` its unnamed chord and lyrics tracks — a `lyrics` block may stand inside a
+  section again, and one with no `sings` sings the file's one part. A score names them bare:
+  `staff`, `tab`, `chords`, `lyrics`. `form main { … }` and `score main { … }` read as two names
+  that were one (the score's word named the form); `main` is no one's name now, and the
+  nameless-chords error LYS0032 retires. Every tracked book was rewritten; a file on the old
+  spelling changes `form main {` to `form {` and `score main` to `score`.
+- **A score has one name, a bare word, and picks its form inside.** `score tab { … }` is the
+  score named `tab`, written to `<input>-tab.svg`; the unnamed score writes `<input>.svg`.
+  `score "tab"` and `score tab "both"` are LYS0038, with the word to write (the editor's quick
+  fix writes it). Inside a score, `form NAME` plays a top-level form and `form { … }` its own;
+  an unknown form, a section written where a form belongs, a second form item and a named form
+  inside the score are LYS1018, and a named score that picks nothing while a form of its name
+  exists is warned — that was the old spelling. A bare `fonts { … }`, `paper { … }` or
+  `layout { … }` inside a score lays its entries over the file's defaults. With nothing picked
+  (`lysc` without `--score`, the preview's first picture) the unnamed score is drawn, else the
+  first; the picker shows the unnamed one as `(Default)`. Two unnamed scores are LYS6001.
+- **A book with sections and no `score` block is an error** (LYS6014). It used to draw its first
+  part alone and drop the rest in silence. The message names a score to write — every chord
+  track as a row, a staff per part in declaration order, every lyrics track — and the editor's
+  quick fix appends it. A file with no sections (a library of phrases included with `using`)
+  is not reported.
+- **`staff bass click` beside a part named `bass` is that part's staff, with `click` played to
+  MIDI only** — as `tab bass click` has read since 0.11.0. It used to draw part `click` on a
+  bass clef and not draw part `bass` at all, with no diagnostic. LYS1046 (a warning) names the
+  plain spellings when the word is both a part and a clef: `click staff bass`, or `clef bass`
+  in part click's header. A file with no part of that name reads as before.
+- **A section's label is declared once, at the top level.** `section A2 "A'" { }` says the text
+  every form reference prints (`form { A2 }` prints A'), so several forms no longer repeat it;
+  a reference's own label still wins and a `~` reference still hides it. Two top-level
+  declarations labelling one section differently are LYS1045 (the first wins). Inside a part,
+  a lyrics track or a chords track the label is LYS0039 — every part plays the same section.
+
+### Music fonts (SMuFL)
+
+- **`fonts { music "…" }` names the music font.** Bravura, Petaluma and Leland (all SIL OFL) are
+  bundled beside Emmentaler, LilyPond's own and still the default. Several names are a
+  per-glyph fallback chain (`music "Petaluma" "Bravura"`): a glyph the first font lacks is drawn
+  from the next, else from Emmentaler, and the fallback is said once per glyph. A name found
+  nowhere warns (LYS8019) with every place looked and stays in the chain. `lysc … --set
+  music=NAME` lays one name over the file's. A font that is not bundled is found in the
+  machine's own folders — the editor's `lilysharp.fontPaths` setting and the
+  `LILYSHARP_FONT_PATH` environment variable, which `lysc` reads too — and in the standard
+  SMuFL locations; a score names its font only, never a path, so a book moves between machines.
+  The LilyPond twin warns that LilyPond reads no SMuFL font; its page is unchanged.
+- **A SMuFL font is engraved out of its own metadata**: glyph boxes, advances and stem anchors;
+  its `engravingDefaults` for the line thicknesses the score did not write (a written
+  `lineThickness` still wins); its own GPOS kerning for dynamic letters and time-signature
+  digits; its one brace scaled to the span; its quarter-tone accidentals; its chord-symbol
+  glyphs (♭ ♯ ° ø + △ in the font's own hand). Where a SMuFL font's conventions differ from
+  Emmentaler's the page follows the font: scripts centred by their boxes, wiggles repeated by
+  their `repeatOffset`, the arpeggio stood up, fingering and figured-bass digits at their
+  reading size, a numbered meter's rows centred by the digits' own boxes — and stacked outward
+  from the middle line when the digits are taller than two staff spaces, as Petaluma's are —
+  the multi-measure rest's count placed by its ink, "To ⊕" centred by the sign's box, "Ped."
+  with one period, a ledger line stopping short of the accidental's own box, a down flag's stem
+  lengthened so the longer SMuFL flag keeps LilyPond's clearance from the head, and the
+  dynamics (`p m f r s z n`) as the font's own glyphs. An Emmentaler page is byte-identical
+  before and after all of this (every svg of the 998-book corpus).
+- **Under Petaluma, the text is Petaluma Script.** Petaluma is a handwritten jazz font, and its
+  companion face (bundled, OFL) now sets the title, subtitle, composer and poet, chord symbols,
+  rehearsal marks and section labels, tempo and navigation words, `@text` and the text
+  spanners, dynamic and pedal words, instrument names and part-combine labels — unless the
+  score names their face. The lyrics keep the engraving face. The PDF embeds it, an embedding
+  SVG carries its WOFF2, the preview declares it.
+- **`boxes.json` names a glyph alike in every music font** — its SMuFL name, with the code point
+  drawn, the music font at the top, and the font a fallback glyph came from. The installed-font
+  warning (LYS8003) and the PDF's embedding do not see the `music` entry: it names no text face.
+
+### Engraving
+
+- **A staff of fewer than five lines (`as lines N`) is engraved on its own lines.** The
+  five-line staff had been written into nearly every reader: the ledger lines (a one-line
+  staff's d' carried one ledger where LilyPond draws three), the bar lines (twice LilyPond's
+  height on one line), the vertical spacing (the five-line band stood in for the staff's ink,
+  so a one-line staff stood 11.1 under a treble staff where LilyPond puts it 9.6), ties, slurs,
+  tuplet brackets, beam quanting, dynamics, trills, ottava brackets, a fermata or a text on a
+  multi-measure rest, figured bass, part-combine labels, rehearsal and metronome marks, and
+  the outside-staff stacking. Each now reads the lines its staff draws, measured against
+  LilyPond 2.26.0 on one-, two- and three-line staves; a five-line staff, a tab and a text row
+  are unchanged. A one-line staff seeds no clef (it prints none), a system of such staves
+  spaces its meter from the left edge, and a boxed label at a clefless line start is centred on
+  the staff's edge, as LilyPond's fallback to the invisible staff bar puts it. The twin writes
+  `line-positions` for a two- or four-line staff so LilyPond draws the lines where Lily# does.
+- **Two staves' bands may overlap where their ink does not.** The gap between two elements was
+  floored at zero between their frames — on a reduced staff the five-line band — where LilyPond
+  aligns on skylines alone. A chords row over a one-line staff now stands where LilyPond's does,
+  and a note head is seeded into the skylines as the glyph the page draws (a rhythm slash
+  reaches ±1.05, not a round head's ±0.545; a chords row over slashes stood half a space low).
+- **A staff's own `@chord` symbols are a line of the staff pair's run, as the twin's
+  `ChordNames` is.** The page kept a band of its own shape for them: a lower staff under a
+  figured-bass staff with attached chords stood 6.02 below the upper (LilyPond 5.57, now 5.52).
+  A book with the symbols on a chords track and the same book with them attached are one
+  picture now.
+- **A staff-attached chord symbol is rodded across bare columns to the next symbol and to the
+  bar edge.** `Csus2 Csus4 | Cmaj7` over four quarters had its second symbol shoved off its note
+  and over the bar line; the springs between share the room and the notes stay evenly spaced.
+- **The page breaker prices a line as LilyPond's does**: a staff pair's floor without its ties
+  and tuplet brackets (a low tie between two staves made the line taller to the breaker than to
+  LilyPond; two corpus books now split as their twins do), a flag by its glyph's box, a volta
+  bracket not at all. A lyrics or chord-name row empty on a system is removed from it, as
+  LilyPond's `remove-empty` does, so the line is priced as its staves alone — a tab with a
+  lyrics row whose words start on line 11 went from 5/5/10/10/10 systems a page to 10/10/10/10.
+- **`time 4/4 break` breaks at the bar line.** A `break` written after the signature a bar opens
+  with was read as mid-bar and deferred to the end of that bar, so the page broke a bar late.
+- **A condensed staff packs its parts' accidentals into one column**, as a staff of two voices
+  does; the pinned part's flat was drawn inside the other part's note head.
+- **A section label the face cannot spell is framed around the ideographic em box.**
+  `form { Introduction "ほえほえ" }` drew its box as a sliver through the kana, which come from
+  a fallback face the layout never measured.
+
+### Diagnostics
+
+- **A tie on the last note of a `repeat percent` body warns** (LYS4007): the repetition is the
+  sign alone, so the tie reaches no note. LilyPond says "unterminated tie"; Lily# said nothing.
+  The message names `@laissezVibrer` for a note meant to ring.
+
+### MIDI, MusicXML and the LilyPond twin
+
+- **The twin compresses `R1*N` as the page does.** It never wrote `\compressMMRests`, so
+  LilyPond expanded every multi-measure rest into N bars of whole rests with no count. Each `R`
+  now carries `\once \set Score.skipBars = ##t`, the very mapping `\compressMMRests` makes —
+  on the rest itself, because the Score-wide property also swallowed the bar lines inside a
+  percent repeat's repetitions. Over the user's corpus the twin's and the page's system
+  signatures went from 429 to 463 of 491 scores matching.
+- **A part named `r`, `s`, `q` or `R` gets another variable name in the twin** — they are
+  note-mode words, and LilyPond refused the file ("unexpected RESTNAME").
+- **A slash note's middle-line pitch follows every clef in the twin.** A percussion, soprano,
+  mezzo-soprano, baritone or `bass_8` staff's slashes went out as treble's b', six positions
+  above the line with ledgers.
+
+### Fixes
+
+- **PDF: two documents with different `fonts { }` for one face no longer share the first one's
+  answer.** PdfSharpCore caches what a family name resolved to for the life of the process, so
+  in a host that renders book after book (the language server, `lysc pdf --batch`)
+  `title "Georgia" embedded` followed by `title "Georgia"` embedded Georgia on the second page
+  too, and `title "Verdana"` followed by `title "Verdana" embedded` lost the embedding. A page
+  now asks the resolver for the answer it wants, not the name. Every PDF of the corpus
+  (1387) is byte-identical to before.
+- **The bundled Petaluma WOFF2s are the OTFs wrapped unchanged.** The preview and an embedding
+  SVG drew Petaluma Script unkerned — the WOFF2 was a TrueType conversion carrying no GPOS,
+  GSUB or kern table — so a section label overran its box while Lily#'s own PNG and PDF, drawn
+  from the OTF, were right.
+- **SixLabors.ImageSharp is in no output any more.** It is PdfSharpCore's dependency for raster
+  images, which Lily#'s PDFs never draw (vectors and embedded fonts only), and it carried five
+  advisories fixable only in a version whose licence a GPL binary cannot take; it is excluded
+  from every bin, publish, archive and VSIX, and the PDFs are byte-identical.
+
+### Editor
+
+- **A `lily#` fence in Markdown may hold a whole book.** It draws the book's default score
+  instead of refusing a fence with more than one score; a fence with no score is still refused
+  (LYS6014).
+- **The `form` and `score` snippets write the unnamed block first**, `form |` inside a score
+  lists the file's forms, and the `fonts` block's completion offers `music` with its quotes and
+  the bundled font names. The grammar colours `music` as a fonts key.
+- **A changed `lilysharp.fontPaths` redraws the open previews** — a music font found in a new
+  folder changes the picture.
+
 ## 0.11.0
 
 ### Breaking changes

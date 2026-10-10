@@ -90,6 +90,11 @@ The product CHANGELOG's topmost section is served verbatim as the GitHub Release
 so it is read by people who did not follow the work. Lead with breaking changes and name
 the diagnostic that catches each one, so a reader on the previous version can tell
 whether their files still compile.
+When an `## Unreleased` section already stands at the top — the work between releases is
+written there as it lands — retitle it to the version (the release workflow takes the topmost
+section whatever its heading says) and read it once more against `git log <previous tag>..HEAD`
+for what landed after it was last written.
+
 
 ### 4. Verify locally
 
