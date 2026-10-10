@@ -85,7 +85,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後（`lilysharp-omr-distribution-2026-10-05.md`）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- **`@todo` の memo の置き場＝第899 で「帯（段組みが memo の行を取る）＋並びの探索」まで閉じた**（規則は `docs/todo-memo-design.md`・残りは同 §4＝順番の探索・長い memo の切り詰め・`lysc png --todo`）。**ユーザーの実機確認待ち**（Reload Window 後・`Untitled-2.lys` と `sessions/p896/probe/one.lys`）
+- **`@todo` の memo の置き場＝第899〜900 で「段組みが memo の置き場を予約（必要なときだけ段が下がる）＋並びの探索」まで閉じた**（規則は `docs/todo-memo-design.md`・残りは同 §4＝順番の探索・長い memo の切り詰め・`lysc png --todo`）。**ユーザーの実機確認待ち**（Reload Window 後・`Untitled-2.lys`＝余白が増えない・`sessions/p896/probe/one.lys`＝段が下がって 6 本が収まる）
 - ⚠️ **VS Code の手動確認が未**＝**手順と期待は `editors/vscode/MANUAL-CHECKS.md`（第888 起票・§1〜§5 の 60 項目＝ステップ・入力補助・Split Sections・SHOTLIST の 9 本・0.11.0 と Unreleased の拡張側・R13 ⒝・OMR B1〜B6）**。⚠️ 「Ctrl+Alt+↑↓」は Lily# の割り当てではない（Ctrl+Shift+↑↓ の 1 組だけ＝起票が古かった）。⚠️ ユーザーの拡張のフォルダ名は yotsuda.lilysharp-0.7.0 のままだが、**中身（`server`＋`out\extension.js`）は 2026-10-10 17:42 に組み直されて入っている**（第884 が時刻で確認・18:05 の `89168e9c1` だけ未収録）＝SMuFL と `(Default)` は今の拡張で見られる
 - **v0.11.0 は出した（第854・`docs/RELEASING.md` §8）**。残り: Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663・**Honesty L13 `bes, aes, | fis, f, |` の 2 小節＝音価 `2` が落ちている・LYS2001＝第881**）／**push はユーザー**／**CHANGELOG の 0.11.0 以降は両 changelog の `## Unreleased` に書いた（第887）**＝release 時に見出しを版番号へ替え、その後の commit を足す（`RELEASING.md` §3 に書いた）
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
@@ -119,6 +119,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第900セッション（2026-10-11・YT-DELL2）
+
+同じ会話（第899 の続き）。`-Start p900`（HEAD `b1b9752bf`）＝full **11782 / 0 / 2 / 11784**。着手＝**ユーザー報告 14 件目**「五線と五線の間の y の余白が無駄に広くなった。`Untitled-2.lys` は y の余白をいっさい増やさずに todo を表示できる」。
+- 原因＝第899 の帯は**段ごとに全幅・全行ぶん**（`Gap＋行数×(箱＋air)`）を段の up extent の*上*に積んでいた＝memo が実際には段の端の高さ（印や歌詞の隙間・左の余白）に収まる本でも、段がまるごと下がった。
+- 直し＝`TodoMemoBand.Estimate`（帯）→ **`TodoMemoBand.Boxes`（memo ごとの箱）**: 段の paging silhouette（印・コードネーム・強弱・歌詞が入った後の `AugmentSkylinesForPaging` の結果）の**その x 範囲の高さ**（`MaxHeightInRange`）＋gap を箱の底にし、両側のうち低い側（同点は余白の広い側）、先に見積もった箱と重なれば上へ積む。箱は `AugmentSkylinesForPaging` の末尾で **X-aware の `AddMarkBox`** として silhouette に合流（`todoBoxesOf` の lambda＝Prelim が箱を受け取って scalar の up/down extent と breaker の annotation extent を `max` で上げる）。⇒ 段間は**上の段がその x で本当に届くときだけ**、頁の先頭は**memo が段自身の最上のインクより高いときだけ**広がる。
+- 結果（preview の viewBox 高さ・p898＝予約なし／p899＝帯／p900）: **twinkle 53.58／66.68／53.58**（ユーザーの言うとおり 0 増）・busy 28.35／35.41／34.36・piano 29.98／37.03／32.51・one 20.92／36.31／27.40・one-title 26.59／42.44／33.52。絵 `sessions/p900/probe/*-preview.png`。
+- 網 `TheLayoutReservesTheMemosRows_InThePreviewOnly` に**「収まる memo は何も動かさない」**（title＋section mark の本で g'4 の memo＝preview 頁 == export 頁）を足した。毒 A／B／C（`todoBoxes` を切る）／D＝それぞれ赤 1（`sessions/p900/poisons.ps1`）。
+- docs＝`docs/todo-memo-design.md` §1・SYNTAX_REFERENCE・CHANGELOG×2・MANUAL-CHECKS §2.1（「帯のぶん下がる」→「収まらないときだけ下がる」）。
+- commit `e6681acf5`（`todo:`）。拡張は `tools\Deploy-Lsp.ps1` で入れ直し済み（**Reload Window が要る**）。
+- `-End p900 -DiffBase b1b9752bf`（門は全部 OK）＝full **11782 / 0 / 2 / 11784**（±0＝既存の網に 1 主張）。Core '+' 137 行／REF 0／OWN 2＝7.6 ⒞（`TodoMemoBand.Boxes` と Prelim の箱＝エディターの印の置き場・LP に対応物なし）。7.7: 該当なし。HANDOFF 376,864 B（残り 73,136）・§1 現在便 9,601 字。未 push 89＋docs（push はユーザー）。Lab `sessions/p900/`（probe の絵・poisons・log・Zz の写し）。
+判定: **ユーザーの実機確認待ち**（Reload Window 後に `Untitled-2.lys`＝余白が元どおり・`one.lys`＝段が必要なぶんだけ下がる）。(a) 次の一手は memo の文脈の上に立つ／(b) **3 便＝重くなってきた**（圧縮は未だ）／(c) 既定は続ける ⇒ **次の報告が memo の島ならこの会話で `-Start p901`、別の島なら新しい会話**。
+
+## 以下は第899セッションの経緯
+
 ### 1.1 第899セッション（2026-10-11・YT-DELL2）
 
 同じ会話（第898 の続き）。`-Start p899`（HEAD `4ce7d20ac`）＝full **11781 / 0 / 2 / 11783**。着手＝**ユーザー決定（第899 冒頭の問い「設計変更に進む」）**: 第896 で保留した「段組みが memo の行を取る」。設計は **`docs/todo-memo-design.md`**（置き場の規則を 1 か所に）。
@@ -131,19 +145,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - commit `8a2e2cdb0`（`todo:`）。拡張は `tools\Deploy-Lsp.ps1` で入れ直し済み（**Reload Window が要る**）。
 - `-End p899 -DiffBase 4ce7d20ac`（門は全部 OK）＝full **11782 / 0 / 2 / 11784**（＋1＝`TheLayoutReservesTheMemosRows_InThePreviewOnly`）。Core '+' 468 行／REF 0／OWN 4＝7.6 ⒞（`TodoMemoStyle`・`TodoMemoBand`・`LayoutOptions.TodoBands`・Prelim の帯＝全部エディターの印の置き場・LP に対応物なし）。7.7: 9 本以上の memo は探索せず greedy（`combos = 0` の腕・註に明記）・sentinel なし。HANDOFF 376,812 B（残り 73,188）・§1 現在便 10,337 字。未 push 87＋docs（push はユーザー）。Lab `sessions/p899/`。
 判定: **ユーザーの実機確認とフィードバック待ち**（Reload Window 後に `Untitled-2.lys`＝第 2 段が memo の帯ぶん下がる・`sessions/p896/probe/one.lys`＝6 本が重ならない・書き出しは動かない）。(a) 次の一手は memo の文脈の上に立つ／(b) **2 便＝まだ軽い**（圧縮は未だ）／(c) 既定は続ける ⇒ **フィードバックが来たらこの会話で `-Start p900`**。残りの候補は `docs/todo-memo-design.md` §4。
-
-## 以下は第898セッションの経緯
-
-### 1.1 第898セッション（2026-10-11・YT-DELL2）
-
-新しい会話。`-Start p898`（HEAD `8cf430655`）＝full **11780 / 0 / 2 / 11782**。着手＝第897 の残り「`one`（1 段に memo 5 本）は引き出し線が別の memo の文字を横切る」のうち、**他の要素を動かさずに閉じられる分**（新方針＝段組みが memo の行を取る＝はユーザーのフィードバック待ちのまま）。
-- 原因＝`Settle` は memo の*箱*がインクを避けることしか見ていない。引き出し線は recorder に記録しない（長い斜めの箱が余白を塞ぐ・第896）ので、**後の memo の線が先の memo の文字を通り、先の線の上に後の箱が乗る**。⚠️ `one` そのもの（title 無し）の横切りは**頁の天井**＝プレビューの頁は段の高さの帯で、両側とも登り切って天井に止まるから横切る＝設計の限界のまま（新方針の材料）。title を付けて頭上に余白を作ると直しが見える（`sessions/p898/probe/one-title.lys`）。
-- 直し＝置いた memo の箱と線を `placedMemos`／`placedLeaders` に貯め、`Settle` は登りながら **2 つの場所**を取る: インクが空く最初の場所（`InkClear`）と、自分の線が先の memo の文字を通らず・先の線が自分の箱を通らない最初の場所（`LeadersClear`）。**横切りは登り 4 空間ぶんの値段（`TodoLeaderCrossing`）**＝近ければ登って（または反対側へ回って）避け、遠ければ横切ったまま（先の memo の文字が音符の真上＝どこから引いても通る形がある）。線分と箱の交差は Liang–Barsky（`SegmentMeetsBox`）。側の選択は climb → cost に（2 空間の crossOver の規則はそのまま）。
-- 計器 Lab `sessions/p898/ZzP898CandidateTests.cs.txt`＝候補 9 冊を real／poison で描き比べ: **変わるのは c6（隣り合う 2 音の memo＝2 つ目が左へ渡る）と c9（4 連続＝3 つ目が 1 段余分に登る・線が先の箱の角をかすめていた）だけ**。絵 `probe/*-preview.png`（one・one-title・busy・piano・twinkle・c6・c9＝`ZzP898ProbeTests.cs.txt`・PNG は `PngDocumentOptions.EditorMarks`）。**twinkle（Untitled-2）・busy・piano は不変**。
-- 網 `ALeader_RunsThroughNoOtherMemo`（one-title の 6 本＋c6 の 2 本＝どの線も他の memo の箱を通らない）。毒（`LeadersClear` を常に true）＝c6 で赤 1。docs＝SYNTAX_REFERENCE・CHANGELOG×2・MANUAL-CHECKS §2.1。
-- commit `ecd971c6f`（`todo:`）。拡張は `tools\Deploy-Lsp.ps1` で入れ直し済み（**Reload Window が要る**）。
-- `-End p898 -DiffBase 8cf430655`（門は全部 OK）＝full **11781 / 0 / 2 / 11783**（＋1＝`ALeader_RunsThroughNoOtherMemo`）。Core '+' 99 行／REF 0／OWN 0＝7.6 ⒞（`DrawTodoMarks` の既存の OWN の項の中・新しい項なし）。7.7: 該当なし。HANDOFF 375,411 B（残り 74,589）。未 push 85＋docs（push はユーザー）。Lab `sessions/p898/`（probe の絵・cand-real／cand-poison・Zz 2 本の写し・log）。
-判定: **ユーザーの実機確認とフィードバック待ち**（Reload Window 後に `Untitled-2.lys` と隣り合う 2 音の memo を見てもらう／新方針＝段組みが memo の行を取る＝に進むかの判断）。(a) 次の一手は memo の文脈の上に立つ／(b) **1 便＝軽い**／(c) 既定は続ける ⇒ **フィードバックが来たらこの会話で `-Start p899`**。
 
 ## 2. 開いている作業
 

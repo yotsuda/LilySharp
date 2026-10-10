@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第898セッションの経緯
+
+### 1.1 第898セッション（2026-10-11・YT-DELL2）
+
+新しい会話。`-Start p898`（HEAD `8cf430655`）＝full **11780 / 0 / 2 / 11782**。着手＝第897 の残り「`one`（1 段に memo 5 本）は引き出し線が別の memo の文字を横切る」のうち、**他の要素を動かさずに閉じられる分**（新方針＝段組みが memo の行を取る＝はユーザーのフィードバック待ちのまま）。
+- 原因＝`Settle` は memo の*箱*がインクを避けることしか見ていない。引き出し線は recorder に記録しない（長い斜めの箱が余白を塞ぐ・第896）ので、**後の memo の線が先の memo の文字を通り、先の線の上に後の箱が乗る**。⚠️ `one` そのもの（title 無し）の横切りは**頁の天井**＝プレビューの頁は段の高さの帯で、両側とも登り切って天井に止まるから横切る＝設計の限界のまま（新方針の材料）。title を付けて頭上に余白を作ると直しが見える（`sessions/p898/probe/one-title.lys`）。
+- 直し＝置いた memo の箱と線を `placedMemos`／`placedLeaders` に貯め、`Settle` は登りながら **2 つの場所**を取る: インクが空く最初の場所（`InkClear`）と、自分の線が先の memo の文字を通らず・先の線が自分の箱を通らない最初の場所（`LeadersClear`）。**横切りは登り 4 空間ぶんの値段（`TodoLeaderCrossing`）**＝近ければ登って（または反対側へ回って）避け、遠ければ横切ったまま（先の memo の文字が音符の真上＝どこから引いても通る形がある）。線分と箱の交差は Liang–Barsky（`SegmentMeetsBox`）。側の選択は climb → cost に（2 空間の crossOver の規則はそのまま）。
+- 計器 Lab `sessions/p898/ZzP898CandidateTests.cs.txt`＝候補 9 冊を real／poison で描き比べ: **変わるのは c6（隣り合う 2 音の memo＝2 つ目が左へ渡る）と c9（4 連続＝3 つ目が 1 段余分に登る・線が先の箱の角をかすめていた）だけ**。絵 `probe/*-preview.png`（one・one-title・busy・piano・twinkle・c6・c9＝`ZzP898ProbeTests.cs.txt`・PNG は `PngDocumentOptions.EditorMarks`）。**twinkle（Untitled-2）・busy・piano は不変**。
+- 網 `ALeader_RunsThroughNoOtherMemo`（one-title の 6 本＋c6 の 2 本＝どの線も他の memo の箱を通らない）。毒（`LeadersClear` を常に true）＝c6 で赤 1。docs＝SYNTAX_REFERENCE・CHANGELOG×2・MANUAL-CHECKS §2.1。
+- commit `ecd971c6f`（`todo:`）。拡張は `tools\Deploy-Lsp.ps1` で入れ直し済み（**Reload Window が要る**）。
+- `-End p898 -DiffBase 8cf430655`（門は全部 OK）＝full **11781 / 0 / 2 / 11783**（＋1＝`ALeader_RunsThroughNoOtherMemo`）。Core '+' 99 行／REF 0／OWN 0＝7.6 ⒞（`DrawTodoMarks` の既存の OWN の項の中・新しい項なし）。7.7: 該当なし。HANDOFF 375,411 B（残り 74,589）。未 push 85＋docs（push はユーザー）。Lab `sessions/p898/`（probe の絵・cand-real／cand-poison・Zz 2 本の写し・log）。
+判定: **ユーザーの実機確認とフィードバック待ち**（Reload Window 後に `Untitled-2.lys` と隣り合う 2 音の memo を見てもらう／新方針＝段組みが memo の行を取る＝に進むかの判断）。(a) 次の一手は memo の文脈の上に立つ／(b) **1 便＝軽い**／(c) 既定は続ける ⇒ **フィードバックが来たらこの会話で `-Start p899`**。
+
 ## 以下は第897セッションの経緯
 
 ### 1.1 第897セッション（2026-10-11・YT-DELL2）
