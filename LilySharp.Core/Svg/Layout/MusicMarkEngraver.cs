@@ -2753,6 +2753,31 @@ internal static class MusicMarkEngraver
                 else if (!marksBeside && prefixMarkAnchorX?.Invoke(lineStartSystem) is { } prefX
                          && !double.IsNaN(prefX))
                     anchor = prefX;
+                else if (!marksBeside && AnchorIsASpaceableStaff(systems[lineStartSystem]))
+                {
+                    // NO CLEF AND NO KEY AT THE LINE START — an `as lines 1` rhythm staff
+                    // prints neither (SpacingRules.EngravesClef) — so none of the list's
+                    // visible grobs exists, and find_parent falls back to the first match it
+                    // kept: the line-start STAFF BAR, invisible and empty. Its anchor is the
+                    // line-start column, its anchor alignment a BarLine's CENTER, and
+                    // self-alignment-opposite-of-anchor therefore CENTRES the box on the
+                    // column — the staff's own left edge — exactly as a mid-line mark is
+                    // centred on its bar's anchor. Until 2026-10-10 the box's LEFT edge stood
+                    // on the edge's 0.3 instead. MEASURED (LilyPond 2.26.0, Lab
+                    // sessions/p879/probe, `as lines 1`): the "A" box 7.18..9.90 about the
+                    // staff's 8.5358, the box centre on the column to two digits.
+                    // LILYPOND-REF: lily/break-alignment-interface.cc:309-334 find_parent —
+                    //   break_aligned_grob, the first symbol's item kept when none is
+                    //   break-visible with an extent; :337-353 self_align_callback — the
+                    //   parent's break-align-anchor (0 for an empty bar).
+                    // LILYPOND-REF: scm/output-lib.scm:484-488 self-alignment-opposite-of-anchor;
+                    //   scm/define-grobs.scm:2881 RehearsalMark break-align-symbols.
+                    // ⚠️ A STAFF's line start only: a rows-only sheet (chords, lyrics) has no
+                    //   Bar_engraver and so no staff bar to fall back to, and its label keeps
+                    //   the line-start edge it has (RowsOnlySectionLabelTests, the owner's
+                    //   staffless convention, measured at 0.300 in mark-chord-row.ly MKT).
+                    return systems[lineStartSystem].Indent;
+                }
             }
             else if (!measures.IsDefaultOrEmpty
                      && MidLineBarAnchorX(measureLayout, measures) is { } barAnchor)
@@ -2801,6 +2826,21 @@ internal static class MusicMarkEngraver
         }
 
         return anchor + 0.5;
+    }
+
+    /// <summary>Whether the system's top score-grob staff — the one a Score-level mark anchors
+    /// on — is a real (spaceable) staff rather than a chords or lyrics row: a staff has a
+    /// Bar_engraver and so a line-start staff bar to break-align on; a row has none.</summary>
+    private static bool AnchorIsASpaceableStaff(SystemLayout system)
+    {
+        int anchor = LayoutUtilities.TopScoreGrobStaff(system);
+        if (system.StaffGroups.IsDefaultOrEmpty)
+            return false;
+        foreach (var g in system.StaffGroups)
+            foreach (var st in g.Staves)
+                if (st.StaffIndex == anchor)
+                    return StaffAffinity.IsSpaceable(st.StaffAffinity);
+        return false;
     }
 
     /// <summary>

@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
+using System.Linq;
 using LilySharp.Core.Rendering;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Layout;
@@ -42,9 +44,10 @@ namespace LilySharp.Tests;
 /// Before 2026-10-10 the one-line tempo stood 4.26 over its line: the pass seeded a treble
 /// clef the staff never prints (1.8 over the frame's top), and the tempo's own 2.883 base was
 /// the five-line one; and a one-line mark under the frame's 2.0 was left out of the pass.
-/// The "A" over the tempo is NOT pinned: LilyPond's box starts left of the staff's edge
-/// (its break alignment on a clefless line) and clears only the tempo's note head, where Lily#'s
-/// box stands over the tempo's stem and clears its whole height — an X question, open.
+/// The "A" over the tempo rides its X: the box is centred on the staff's left edge on a
+/// clefless line (<see cref="ABoxedLabel_OnAClefLessLineStart_IsCentredOnTheStaffsLeftEdge"/>)
+/// and so clears only the tempo's note head — its frame bottom 3.44 over the line against
+/// LilyPond's 3.52 read off the page, not pinned to the hundredth.
 /// LILYPOND-REF: scm/define-grobs.scm:2889-2896 RehearsalMark side-position-interface::y-aligned-side,
 ///   padding 0.8; :2337-2360 MetronomeMark self-alignment-interface::self-aligned-on-breakable;
 ///   lily/side-position-interface.cc:433-453 Side_position_interface::aligned_side, the
@@ -86,6 +89,32 @@ public class MarkFewLineStaffTests
         // The second label, "B" — the first stands over the tempo mark (see the remarks).
         Assert.InRange(g.TextBaselineAboveStaffLine(TextRole.Mark, 1, 0) + TopAboveMiddle(lines),
             baselineAboveMiddle - 0.05, baselineAboveMiddle + 0.05);
+    }
+
+    /// <summary>
+    /// At the line start a boxed label break-aligns on the first of (staff-bar key-signature
+    /// clef) that is visible; a one-line staff prints no clef and no key, so LilyPond falls back
+    /// to the invisible staff bar and CENTRES the box on its column — the staff's own left edge —
+    /// where a five-line staff's box keeps its left edge on the clef's right.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p879/probe, the grob dump's X against the staff's
+    /// 8.5358): the one-line "A" box 7.18..9.90, centre 8.54; the five-line box 11.90..14.62.
+    /// Until 2026-10-10 the one-line box's LEFT edge stood on the edge's 0.3.
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:309-334 Break_alignable_interface::find_parent
+    ///   (the invisible staff bar kept as the fallback); scm/output-lib.scm:484-488
+    ///   self-alignment-opposite-of-anchor.
+    /// </remarks>
+    [Fact]
+    public void ABoxedLabel_OnAClefLessLineStart_IsCentredOnTheStaffsLeftEdge()
+    {
+        var g = Render(1);
+        double staffLeft = g.Lines
+            .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9 && Math.Abs(l.StrokeWidth - EngravingDefaults.StaffLineThickness) < 1e-9
+                        && l.X2 - l.X1 > 20)
+            .Min(l => l.X1) - EngravingDefaults.StaffLineThickness / 2.0;
+        var a = g.Texts.First(t => t.Role == TextRole.Mark);
+        Assert.InRange(a.X, staffLeft - 0.02, staffLeft + 0.02);
     }
 
     [Theory]
