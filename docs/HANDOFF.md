@@ -118,6 +118,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第877セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第876 の続き・ユーザー「続けて」）。`-Start p877`（HEAD `12a060082`）＝full **11732 / 0 / 2 / 11734**。§7 3.5 で第875 を ARCHIVE へ。
+- **`StaffExtent`（5 線の 2.05）の残りの読み手を全部、譜自身の線へ**（`272295529`）。先に値付け（Lab `sessions/p877/probe/ext`＝`as lines 1/5` × trill spanner・ottava・text spanner・`R*2@text`・`R@fermata`、LP の grob dump＝`dump.ily`）。1 線での LP: trill の線 2.949（符尾下の c' d' e' f'＝波の下の頭で決まる・5 線は床 2.05＋1.0＋0.5＝3.55）／4.0（符尾上・両譜同じ）、OttavaBracket の原点 2.595（5 線 4.05）、MMR の fermata 0.526（5 線 2.526）、`tacet` 2.943（5 線 4.943・数字の上）。TextSpanner（rit.）は **1 線でも 5 線でも同じ 3.055／3.51**＝譜の extent に依らない（支えの読みは未解明・床は出番なし）＝触らず。
+- 直したもの: ⑴ `TrillSpannerEngraver`・`OttavaBracketEngraver` に `staffLinesOf`（床と支えの最小値を `StaffExtentToward`）、⑵ `MultiMeasureRestLayout.StaffLines`（`staffByIndex` から）を `ArticulationEngraver.PlaceOnMultiMeasureRests`／`DynamicEngraver.PlaceOnMultiMeasureRests`（数字の箱・床）が読む、⑶ `FiguredBassEngraver.AlignedSideFloorBelowStaff(lines)`・`PartCombineAnalyzer.AlignedSideBaselineUp(…, lines)` も同じ配管、⑷ **`OutsideStaffStacker` の上側 tracker の土台**＝`FlatBase(枠の上線)` だったのを**描く外側の線**へ（`staffLinesOf`）。直す前の 1 線は trill 3.46（＝2.0＋0.46＋reach 1.0・床ではなく stacker の土台が効いていた）・fermata 2.07・8va 3.29。直した後: trill 2.94／4.0・fermata 0.52・8va の baseline 1.83（LP 2.595−0.76）・tacet 2.94＝一致（`OutsideStaffFewLineStaffTests` 10・計器 `RenderedGeometry.TextBaselineAboveStaffLine`／`GlyphAboveStaffLine`）。5 線は不変。`TextSpannerEngraver.InkAboveStaff` だけは `StaffExtent`（5 線）のまま＝置く側 `PlaceTextSpanners` が枠の上線で床を取るので綴りを揃えた（`StaffExtent` の remark に書いた）。
+- ⚠️ **見つけた・未着手**: ⒜ **双子は `\compressMMRests` を書かない**＝LP は `R1*2` を 2 小節に展開して数字を描かず、Lily# は常に圧縮して数字を描く（`MultiMeasureRestEngraver` :612-617 の規則は LP の `\compressMMRests` 時の規則そのもの）→ MMR の値付けは双子に `\compressMMRests` を足してから（今回は `ex1c.ly` を手で）。exporter に 1 行足せば直るが 998 冊の双子が動く＝ユーザー判断。⒝ **1 線譜の rehearsal mark `A` が 4.61**（5 線は中線から 3.2・LP の 1 線は線のすぐ上）＝`MusicMarkEngraver.LabelFrameBottomAboveStaffMiddle` の `2.0＋0.05＋0.8` が 5 線定数＋α（4.61 の出所は未読）。⒞ 1 線の trill の 0.009（2.94 vs 2.949）は波の輪郭の点ごとの差。
+- 掃き 1199／差 0（base は p876 の exe-head）・full **11738 / 4 / 2**＝HANDOFF の門 3（語り未）＋magic census（再生成して同梱）。
+- `-End p877 -DiffBase 12a060082`（門は全部 OK）＝full **11742 / 0 / 2 / 11744**。Core '+' 130 行／REF 1／OWN 0。HANDOFF 441,514 B（残り 8,486＝次便の `-Start` が第876 を畳めば戻る）。未 push 42＋docs（push はユーザー）。
+
+## 以下は第876セッションの経緯
+
 ### 1.1 第876セッション（2026-10-10・YT-DELL2）
 
 同じ会話（第875 の続き・ユーザー「続けて」）。`-Start p876`（HEAD `00433c6a6`）＝full **11713 / 0 / 2 / 11715**。§7 3.5 で第874 を ARCHIVE へ。
@@ -126,16 +137,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 確かめ: 1 線で f −3.509／−2.676／−2.546／−4.019・p −5.056／−4.223、5 線は不変（f −4.546・p −5.056／−4.223）＝LP の dump と一致（`DynamicFewLineStaffTests` 12＋`StaffExtentToward` 7）。計器 `RenderedGeometry.DynamicBaselineAboveStaffLine`。掃き 1199／差 0（結果・base は p875 の exe-head）・full **11728 / 4 / 2**＝4 は HANDOFF の門 3（語り未）＋magic census（HairpinEngraver の呼び出し行の文が変わった＝再生成して commit に同梱）。
 - ⚠️ **残り＝1 線譜の trill／ottava／text spanner／figured bass／MMR の text は 5 線の extent のまま**（`StaffExtent` の読み手・値付け前）。`as lines 1` の文脈（RhythmicStaff＝符尾上）・collector の死んだ `needsLedgerLines`・SMuFL §3・`staff bass` の読みはユーザー判断（第872〜875 のまま）。
 - `-End p876 -DiffBase 00433c6a6`（門は全部 OK）＝full **11732 / 0 / 2 / 11734**。Core '+' 113 行／REF 1／OWN 0。HANDOFF 440,534 B（残り 9,466＝次便の `-Start` が第875 を畳めば戻る）。未 push 40＋docs（push はユーザー）。
-
-## 以下は第875セッションの経緯
-
-### 1.1 第875セッション（2026-10-10・YT-DELL2）
-
-同じ会話（第874 の続き・ユーザー「続けて」）。`-Start p875`（HEAD `9d6bc4cc9`）＝full **11711 / 0 / 2 / 11713**（full が 2 分 23 秒＝testhost の CPU は増え続けていた・止まってはいない）。§7 3.5 で第873 を ARCHIVE へ。
-- **5 線未満の譜の slur と tuplet bracket も 5 線前提だった**（`32458d075`）: 対 3 冊（`as lines 1/2/5` × articulation・slur・強弱・tuplet＝Lab `sessions/p875/probe/marks`）。**staccato／accent の高さは全部の譜で一致**（済み）。slur: `SlurScoringProblem` の線数は tab しか渡しておらず、1 線譜で `move_away_from_staffline`（slur-scoring.cc:639-658）が無い「±2 の線」から 0.15 逃げていた（`b8( d' f' a')` 1.19 vs LP 1.045）＝notation の呼び手が譜の線数を渡し、線上判定は notation なら描く表（`OnDrawnStaffLine`）・tab は LP の N 線位置（`tabStrings`）。tuplet: notation の枝に 5 線の譜の縁 2.3（2.05＋staff-padding）・量子化の範囲 ±5・線上判定が直書き（`TupletBracketEngraver` :1347・:1511）＝譜の外側の線＋線の半厚＋padding（tuplet-bracket.cc:463-477）・線の span を 1 スペース広げた範囲（:731-735・LP の単位混在のまま）・`OnLineOrLedger`（:741）。確かめ: 1 線で slur 1.045／−2.045・`tuplet 3/2 { g4 e c }` の bracket 3.246／1.443 が LP と一致（`SlurTupletFewLineStaffTests` 2）・5 線は不変。掃き 1199／差 0（結果）・full 11710 / 0 / 2。
-- ⚠️ **未着手＝1 線譜の強弱記号 `f`**: LP は stem の先の 0.18 下に置く（b の下 −3.51・d' の下 −2.68・f' の下 −2.55・g（符尾上）の下 −4.02）のに Lily# は 5 線と同じ −4.55。`p` は一致（−4.22／−5.06）。LP の f の字形の箱（dynamics.f の ascent）と stem の横の重なりの読みが要る＝値付け前。Lily# の強弱は Emmentaler では文字（TeX Gyre bold italic・`dominant-baseline=central`）で描くので、箱の出所も違う。
-- 閉じていると確かめた: tuplet の数字の高さ（5 線で LP の baseline＋字の半分＝Lily# の central）・1 線譜の stem と beam（第874）。
-- `-End p875 -DiffBase 9d6bc4cc9`（門は全部 OK）＝full **11713 / 0 / 2 / 11715**。Core '+' 53 行／REF 2／OWN 0。HANDOFF 439,392 B（残り 10,608）。未 push 38＋docs（push はユーザー）。
 
 ## 2. 開いている作業
 
