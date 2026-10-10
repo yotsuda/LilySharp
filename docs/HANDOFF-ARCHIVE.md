@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第885セッションの経緯
+
+### 1.1 第885セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第884 の続き・ユーザー「続けて」）。`-Start p885`（HEAD `196441b4f`）＝full **11762 / 0 / 2 / 11764**。§7 3.5 で第883 を ARCHIVE へ。着手＝第884 の判定どおり **§2 G-pdf**。
+- **起票より広かった（実測が先）**: 使い捨て `ZzP885ProbeTests.cs.txt`（Lab `sessions/p885/`）で 1 プロセスに文書を*逐次*に作った＝PdfSharpCore の `FontFactory` が `ResolveTypeface(family, style)` の答えを `tk:<family>/…` でプロセス全体に cache する（reflection で `GetFontCachesState` を刷った・`probe2.log`）。`title "Georgia" embedded` の後の `title "Georgia"`（embedded なし）は **Georgia を埋め込む**（Gray の face を頼まれずに）／`title "Verdana"` の後の `title "Verdana" embedded` は **Schola**（埋め込みが消える）。起票の「同時に作ると」は半分で、LSP が本を順に PDF にするだけで出る。face が無い名前（stand-in）は `ScoreTextMetrics.Face` が bundled に落とすので名前では頼まない＝無事。
+- **直し＝答えを*要求する family 名*に織り込む**（第317 の起票が書いた「face 名そのものに文書を混ぜる」の、cache の鍵が*要求*だと分かった上での形）: `EmmentalerFontResolver` から文書ごとの `_textFaces`／`SetTextFonts`／`EmbedsOwnProgram` を消し、`LoadTextFonts(plan)` が **`DocumentTextFaces`**（名前 → 自前の program か・stand-in は sans か）を*返す*＋ bytes を `_embeddedPrograms`（add-only・同じ名前は同じ file）に登録。`PdfDocumentContext.TextFaces` が各頁へ渡し、`PdfDrawingContext.DrawText` が `LysEmbed:<name>`（自前の program）／`serif`・`sans-serif`（stand-in）／素の名前（directive が名指していない brace 等）を頼む。resolver は `LysEmbed:` 要求を bytes の有無で答え、未登録は throw（fallback にしない）。
+- 網: **`PdfFontIsolationTests`**（同じ名前・反対の答えの 2 文書を 1 プロセスで＝Petaluma Script＝同梱 companion で決定的・反対の答えは `TextFaces` の内部 setter で手渡し・順序に依らない 3 冊）＋ `EmmentalerFontResolverTests` を新 API に書き直し（stress net は「resolver に答えが無い」の 1 本に）。毒 2 種（embed 枝が `serif` を頼む／stand-in 枝が素の名前を頼み resolver が名前で決める）＝どちらも isolation の 1 本だけ赤（`poison-*.log`）。
+- **出力同一の証明＝PDF の全数掃き**（Lab `sessions/p885/sweep-pdf.ps1`・1177 冊 → 1387 pdf・`SOURCE_DATE_EPOCH=0`・source dir ごとに `lysc pdf --batch` 1 プロセス＝LSP と同じ「1 プロセスで多数の文書」の形・1 側 4〜6 分）: **1 回目は 46 冊が動いた＝全部 grand staff**（`Emmentaler-Brace` の font が消えていた）。原因＝`LoadTextFonts` が `TextRoles.All` を歩くと `SystemBrace` が `Resolve` で常に「`Emmentaler-Brace` という名前の face」になり、serif の stand-in として表に載る→頁が `serif` を頼む。旧 resolver は名前の判定を `_textFaces` より先にしていたので隠れていた。`SystemBrace` を表から外して（網 `AFaceTheDirectiveNeverNamed_HasNoAnswer` が pin）2 回目 **1387 / 1387 同一**。
+- `-End p885 -DiffBase 196441b4f`（門は全部 OK）＝full **11765 / 0 / 2 / 11767**（網 +3）。Core '+' 190 行／REF 0／OWN 1（`ConfiguredTextFace` の「最初の role の stand-in」の札を `DocumentTextFaces` へ移しただけ＝棚卸しは 1 行の住所替え）。7.6: ⒞＝PdfSharpCore の cache の都合で LP に対応物なし（REF 0 はそのため）。7.7: 未登録の `LysEmbed:` 要求は throw（fallback にしない）・sentinel なし。HANDOFF 442,955 B（残り 7,045）。未 push 57＋docs（push はユーザー）。
+判定: §2 G-pdf は閉じた（commit `pdf:`＝`01946a709`）。製品の仕事が残る起票で次に着手できるのは小さいものだけ＝§2 R13 ⒞（死んだ `DEBOUNCE_DELAY_DEFAULT`）・G-condensed の未測 3 点・R12 ⒠。大きい島はユーザーが選ぶ（§1.0 ⒜ の残りはユーザー側・CHANGELOG の 0.11.0 以降もまとめて書く日が要る）。(a) 今便の文脈は使わない／(b) この会話は 2 便＋画像 6 枚＋長い log＝重くなり始めた／(c) 別の島 ⇒ **小さい島ならこの会話で `-Start p886`、ユーザーが大きい島を選ぶなら新しい会話**。
+
 ## 以下は第884セッションの経緯
 
 ### 1.1 第884セッション（2026-10-10・YT-DELL2）
@@ -46268,3 +46280,430 @@ HANDOFF §1.0 の SMuFL の段落（第857）から、閉じた ①〜④ の SH
 **§6 ①（土台）は第857〜第861 で閉じた**（✅ の行と SHA は smufl-design §6 ①・門は毎回「全 svg の掃きで動いた svg 0 ＋ full 緑」＝Lab `p8NN/sweep/`・base は HEAD の bin を `exe-base` へ写す）。**§7 C はユーザー決定「同梱」（第862）・A／B は推奨どおり。②の第 1 歩（同梱・`SmuflMusicFont`・`MusicFonts.Find`＝`f9eccda23`）・⒜（文法・診断・`--set music=`＝`b2f9352f8`）・⒞⒝⒢（cache の鍵・`MusicFont.Use`・brace＝`c658f03a4`）・⒟（グリフ単位の fallback＝`MusicFontChain`・`70abd02a4`）・⒠（GPOS の kern＝`1a91b264e`）・⒡（engravingDefaults＝`d5d10a2a4`）は閉じた＝**② は閉じた: `fonts { music "Bravura" }` の譜は Bravura の字・寸法・線の太さで描かれ、無い字は次の名前か Emmentaler で描かれる**。③ 出力も第867 で閉じた（`boxes.json`・プレビューの font・§4 の 24 行＝`1c5d9b887`／`1f5b91119`）。④ の目視は第869 で済み、SMuFL が Emmentaler と違う約束で作る字を 8 か所直した（script の横位置・波の歩幅・アルペジオの向き・指番号と通奏低音の大きさ・数字の memo・MMR の数字・`To ⊕`・`Ped.`＝`fe008a24e`／`b2ebb6d99`／`5125ebb4c`／`32b12029c`）。
 
 T7 の残り（§1.0 ⒜）から、第833 で閉じた 2 つを逐語で: ⒣ ~~カムフラージュ 1 段目 LP 6,7・Lily# 7,6~~＝**第833 で LP の 6,7 に**（行頭の空の小節＝`641bcc171`）／⒟ ~~Le Freak は A1 の僅差が逆に倒れた~~＝**第833 で LP の 4+12 に**（同じ修正）。
+#### [F] ✅ ⒳ `repeat percent` の覆われた周に残るもの＝第884 が閉じた（2026-09-02・第320 ⑽ 起票）: 起票の 4 つ（figured bass・chord name・cross-staff・…
+
+
+> ## ✅ **⒫ `|:` `:|` `[N. …]` は form 限定になった＝第305 で入った**（起票第303・決定第304・実装 2026-08-31・第305）
+> **入ったもの＝診断 1 本**（`LYS1034` / `RepeatStructureScopeValidator`）: **`BarlineSyntax` の token が repeat 種、または `InlineVoltaSyntax`。それが `IsInside<FormDeclarationSyntax>()` でなければエラー。**
+> **パーサの腕は 1 つも触っていない**——**その綴りは今も*読める*ので、診断がその場所を名指せる**（禁じたのは token ではなく*場所*）。
+> ★ **1 つの述語で 4 つの形をまとめて取った**（phrase の中・`chords` 行・by-part の section・by-section の part ブロック）——**起票が名指した設計そのまま**。
+> ⚠️ **数は第304 の 3 度目の数え直しと*ぴったり一致した***（**追跡 11 / ユーザー 115**）——**別の計器**（テキスト走査 対 パーサのノード型）**で同じ数**。
+> ⚠️ **掃きは 1946 冊・両側 Release・4 出力**: **`check` が動いたのは 253 冊で、*増えた行は全部 LYS1034*・減った行は「No errors found.」**（例外 5 冊は全部こちらが意図したもの＝言い換えた診断文 3 本と、3 つ目の括弧が通って消えた LYS6008 2 本）。**SVG/MIDI/XML が動いたのは 3 つ目の括弧を使う 2 冊と `:|*N` の probe だけ。**
+> ★ **賛成に回った決め手は「同じ構文に家が 2 つある」ことが生む*片方向性*だった**（§1 ⑻ 実測）:
+> **music の `|:` は form の `:|` で閉じられる**が、**form の `|:` は music の `:|` では閉じられない**。
+> **構造を form へ移す人は、移すのが `|:` のほうなので、必ず通らない側に先に当たる。**
+> ★ **線は「演奏順序を変えるか」で引く**——**form へ**: `|:` `:|` `[N. …]` `repeat volta`／
+> **music に残す**: `repeat percent`（ユーザーの **113 冊**）・`repeat unfold`・`tremolo`（＝音符の省略記法で、順序を変えない）。
+> ✅ **前提条件 ⑴ ＝ 引き継ぎの記法**（下の ⒬）は **2026-08-31・第304 で入った**（`~B'` / `~B,` / `[1. B']`）。
+> ✅ **前提条件 ⑵ も第304 で入った**: **宣言側に `section ~A { … }` と書くと、その section のラベル既定がひっくり返る**（§3）。**純粋な追加**であることは実測済み——**`section ~A` を書いている本はディスク 1925 冊中 0 冊で、直前まで硬いエラー**（`Expected a name, found 'Tilde'`）。★ **前提条件は 2 つとも済んだ**——**決定という意味では ⒫ の着手を止めるものは無い**（移行も ⒜ 即エラー）。
+> ★ **第304 は着手前の数を 3 度間違えてから収束させた**（20 → 14 → 12 → 11。`//` コメント／1 行 form の regex／lyrics の `[1. …]`）。**第305 がコンパイラで数え直して 11 と 115 が再現した**——**計器が別**（テキスト走査 対 パーサのノード型）**なので、これは 2 つ目の観測**。
+> ⚠️ **禁止の射程**: **lyrics の `[N. …]`（歌詞の番＝`LyricVoltaSyntax`）と `repeat percent` / `repeat unfold` / `tremolo` は残る**——**除外リストではなく*ノード型が別*だから**。`chords` 行の `|:` は繰り返しなので対象。**lyrics 行の `|:` は `BarlineSyntax` にならない**（`LyricMeasureGreen` の生トークン）**のでこの規則からは見えない**——**書けてしまうが、歌詞の行は何も演奏しないので順序も変えない**（実測して記録・`scratch/p305/b4_lyric_row_repeat_bar.lys`）。
+> ★ **切り直した 11 冊の結果**（`scratch/p305/cmp.ps1` が base の掃きハッシュと突き合わせる）:
+> | 本 | ページ | 音 | MusicXML |
+> |---|---|---|---|
+> | `test/lead-sheet-repeat`（snapshot） | **インク同一**（`data-pos` のみ） | 同一 | 同一 |
+> | `test/rehearsal-marks-inside-containers`（snapshot） | **インク同一**（`data-pos` のみ） | 同一 | **`<ending>` が増える**（インライン綴りは 1 度も書いていなかった） |
+> | `test/grandstaff-repeat`（snapshot） | **+8 要素・削除 0**＝**volta 括弧 2 本と "1." "2."**（旧綴りはこの本でどこにも描いていなかった） | **18 → 20 音**（第304 の予測どおり） | 変わる |
+> | `showcase/grammar-2026-06-09` | 幽霊空小節 1 つぶん縮む | 同左 | `<ending>` が増える |
+> | `showcase/grammar-tour` | 組み直し（snapshot 無し） | 同左 | — |
+> | `audit/lpreg/voltasky` | **主張の量は不動**（鎖 1 が y=8.79・鎖 2 が y=6.79＝2.0 差・括弧 6 本）。X が組み直り、**最後の括弧に右キャップが出るようになった** | — | — |
+> | `audit/lpreg/voltagrace{,-ctl3,-ctl4}` ＋ `audit/lp-regression/lys/repeat-volta-initial-grace` | **幽霊空小節が消える**（MusicXML の小節が 2 → 1） | 同左 | 同左 |
+> | `audit/lpreg/voltagrace-ctl` | **インク同一**（`data-pos` のみ） | 同一 | 同一 |
+> ⇒ ⚠️⚠️ **snapshot 3 枚は再ベースした**（**ユーザー承認を取ってから**・§5.1）。**`data-pos` は本文を書き換えれば必ず動く**ので、第304 の「インクが同一に切り直せれば再ベースは 0 件」は原理的に成り立たなかった——**保てるのはインクのほうで、2 枚は保てた**。★ **numstat がその区別を言う**: 9/9・46/46（出入り同数＝`data-pos` だけ）対 56/48（**+8 要素・削除 0**）。
+> ⚠️⚠️⚠️ ★★★★ **⒫ は「構文の移動」ではない＝`|:` は書いた場所で意味が違う**（第304 実測）:
+> | 書き方 | 上パート | 下パート |
+> |---|---|---|
+> | `up { \|: c'4 c c c \| :\| }`（music） | **8 音**（2 回） | **4 音**（1 回） |
+> | `form main { \|: Main :\| }`（form） | 8 音 | **8 音**（2 回） |
+> ⇒ **music の `|:` は*それを書いたパートだけ*を展開し、form の繰り返しは*スコア全体*を展開する。** **`grandstaff-repeat.lys` を切り直すと MIDI が 18 → 20 音。**
+> ⚠️ **ページは前から score 級**（その fixture のコメント自身が「rh にだけ書いた繰り返しも両方の五線に出る」と書く）＝**ページと MIDI は前から食い違っていた。**
+> ⚠️⚠️ ★★★ **これは決めることではなく*決定の帰結*。** **第304 はここで「意図か欠陥か」を訊きかけ、蒸し返しだと指摘されて取り下げた**（RULES §5.1 に汎化）。
+> ⇒ ★★ **網は張り直した**（黙って別のテストに替えていない・§5.4）: **`grandstaff-repeat` と `grammar-tour` の「1 パートだけの繰り返し」という主張は*書けない*ので、両方のヘッダに「この本が言えなくなったこと」を名指して残した。** **`rehearsal-marks-inside-containers` も同じ**（インライン volta という容れ物が消え、生き残った容れ物は tuplet だけ）。**`VoltaBracketSkylineTests` は inline 綴りの 1 行を form 綴りに書き直した**（量は不動）。
+> ★ **ユーザーのコーパスには当たらない**——**`|:` を music に書く 115 冊は全部 1 パート**。
+>
+> ### ⚠️⚠️⚠️ ★★★★ **⒫ が*道連れにした*3 つ**（どれも起票には無い。禁止が「唯一の家」を作った瞬間に load-bearing になったもの）
+> **⑴ form は 3 つ目の括弧を言えなかった。** **music は `|: X | [1. A] :| [2. B] :| [3. C]` と書けたが、form は `:|` のあとの括弧を 1 つしか取らず、3 本目は LYS6008 で落ちて素の参照になっていた**（実測）。⇒ **これは「決定の帰結」ではなく*決定の前提の反証***（「form の中だけで書けるようにする」は form が同じことを言えることを前提にしている）。**着手前に数えた＝ユーザーの 326 冊のうち 13 冊・追跡 1 冊（`voltasky`）が 3 つ目以降を使う。** ⇒ **`ParseFormRepeatBlock` に「`:| [N. …]` をもう一度」の腕を足した**（`FormRepeatBlockGreen` は平らな子リストなので `FormWalk` は slot を歩くだけで読める＝**下流は 1 行も変えていない**）。**検算は恒等の対**: **ページはマスク後バイト同一・MIDI は 6 音で音列一致**。⚠️ **そのとき*旧綴りのほうが壊れていた*のが分かった**——**music 綴りの 3 パス目は本体を飛ばして括弧だけ鳴らしていた**（X E1 X E2 **E3**）。
+> **⑵ form の `:|*N` は MIDI に届いていなかった。** **`MidiExporter.PlayRepeatBlock` は `Math.Max(2, alternatives.Count)` で、`FormWalk` が持っている play count を読んでいなかった**——**`form { |: ~X :|*3 }` は 2 回、同じ音楽を music に書くと 3 回**（実測 16 音 対 24 音）。**base でも同じなので第305 が作った欠陥ではない**が、**⒫ が「唯一の綴り」にした瞬間、これが*その量の唯一の挙動*になる**。⇒ **music 側と同じ 3 段の規則に直した**（明示 `*N` ＞ 括弧の数 ＞ 2）。**ページと `.ly` 双子は前から正しかった**＝**4 読み手のうち MIDI だけがずれていた。** ★ **射程はディスク 19 冊（ユーザー 8 冊）。**
+> **⑶ MusicXML importer が*禁止した綴りを書いていた*。** **`LysWriter` は ending 付きだけを「名前つき section ＋ form」に分解し、単純な繰り返しは `BarlineBetween` が music に `|:` を書いていた**＝**import した本がコンパイルできない**。⇒ **`TryFactorPlainRepeats` を足した**（repeat 小節線ごとに section を切り、form が順序を言う。`:|:` も一方通行の `:|` も取る。閉じられていない `|:` は曲末で閉じて `report.Warn`）。**`BarlineBetween` の repeat 3 腕は到達不能になったので、消さずに理由を書いた。**
+> ⇒ ★★★ **判定法として RULES §5.1 に汎化した 3 本**: **⒜ 「X を場所 Y だけに移す」決定は、*Y が X を綴れるか*を綴りごとに数えてから着手する**／**⒝ 綴りを 1 つ禁じたら、*残る綴り*の読み手を全部並べて同じ答えを出すか 1 つずつ測る**／**⒞ 禁じた綴りを*書く側*（importer・formatter・診断メッセージ）を grep する。**
+> ⚠️ **嘘になった計器を 3 本直した**: `RepeatVoltaRemoved` の案内文（`[1. …] [2. …]` を宣伝していた）・`RepeatPairingValidator` の LYS4017（「この section か form のどちらでもよい」）・`ParseFormRepeatBlock` の LYS4017（「逆向きは効く」）。
+
+> ## ✅ **⒬ section 参照の octave marks＝第304 で入った**（起票第303・実装 2026-08-31・第304）
+> **入ったもの**: **`~B'` / `B,` / `[1. B']` が、その*play* の枠を 1 マーク＝1 オクターブ動かす**（phrase 参照の印と同じ綴り・同じ意味）。
+> **shift は occurrence のもの**——`~B ~B'` は 1 つの section を 2 つのオクターブで鳴らし、**宣言は動かず、次の参照は part の anchor に戻る**。
+> **両綴りが取り**（`~` はラベルだけを隠す）、**volta ending も取り**、**`octave absolute` でも効く**。
+> ⚠️⚠️ ★★★ **起票が測っていなかった数が 1 つあり、それが設計を変えた＝*ユーザーの本の 87% が `octave absolute`***（283/326。
+> **section を 2 つ以上持つ 75 冊でも 52 冊が absolute**）。**relative だけ実装していたら、この記法が存在する理由の大半の本で黙って落ちていた。**
+> ★ **「新しい概念はゼロ」は正しかった**（phrase 参照は既に両モードを持っていた＝relative は `EnterDefaultFrame`、absolute は `OctaveBase +=` と twin の `\fixed`）
+> **が、「最小の追加」は*読み手ごとに腕が 2 本*という意味だった。**
+> ⚠️⚠️ ★★★ **そしてその「腕 2 本」が、入れた*あとに* 2 つ目の穴を出した＝`section B { P }` を `~B'` で鳴らすと absolute だけが動いた**
+> （**実測: absolute G4 → G5 ／ relative は G3 のまま**）。**phrase の本体は「毎回同じ音」のために*新しい枠*を開く**（`OctaveContext.ResetToInitial`）が、
+> **その枠の anchor は *section* のものでなければならない**——さもないと `~B'` は「1 オクターブ上。ただし section が参照で書かれていなければ」という意味になる。
+> ⇒ **`OctaveContext.SectionOctaveOffset` を 1 本置いて `ResetToInitial` が読む**（ly と xml の phrase 腕にも同じ 1 語。midi は `_partOctaveAnchor` が既に shift 済みで最初から正しかった）。
+> ★★ **判定法として残す**: **モードごとに腕を 2 本書いたら、*その量を読み直す他の場所*を数える**——**穴は「片方のモードだけが既に正しい」という顔で出る。**
+> ★ **音価は新しい記法が要らない**（section の最初の音符に数字を 1 つ書けば済む——LilyPond の綴りでもある）ので、**この項では入れていない。**
+> ⚠️ **まだ開いている半分＝「前の section から*引き継ぐ*」**（`~B~` のような印）。**入れるなら参照側の opt-in にすること。宣言側に置いてはいけない**——
+> section の音が呼び出し元で変わる。**それはこのリセットが直した当のバグ**（`ProcessSectionPrologue` のコメントが実例を残している:
+> 「the reprise `A` after `~B` (`g'1`) inherited B's whole-note and rendered its quarter-note melody as whole notes」）。
+> ★ **番人は `SectionReferenceOctaveTests`**（**1 ファイル・読み手ごとに 1 メソッド・全ケース両モード**）。**毒は `scratch/p304/poison.py` の 17 本。**
+
+> ## ✅ **⒯ 独立ヘッダは*どこに書いても*ヘッダ＝第306 で入った**（起票第305・実装 2026-08-31・第306・`427d3a38`）
+> **`part` の*後ろ*に置いた `section A { key g major }` が part の本物の宣言を上書きし、双子が `\key g \major \key g \major` と*ヘッダを鳴らして*音符を落としていた**（前に置けば健全＝**違いは行の順だけ**）。
+> ★ **原因は述語の食い違い 1 か所**: **`LilyPondExporter.OrderedMusic` の「単一 part の略記」の腕が `LooseSectionMusic(s).Any()` を訊いていた**——**その一覧は指示を音楽に数える**ので、ヘッダが「鳴る宣言」として*後勝ち*で登録された。**コレクタの同じ腕が訊いている `SectionHasInlineMusic`（THE one spelling）に揃えた＝直したのは 1 行。**
+> ★ **form 無しの腕も一緒に閉じた**（ヘッダが `inOrder` の 2 つ目として「空の 2 度目の A」を鳴らしていた）。
+> ★ **射程は実測ゼロ**: **1966 冊で SVG / MIDI / XML / `check` は 1 冊も動かず、双子が動いた 7 冊は全部 scratch のプローブ**。⚠️ **起票の proxy が名指したユーザー本 `(They Long To Be) Close To You.lys` は白**（独立ヘッダを 1 つも持っていない。**「双子 75 対ページ 83」は `\repeat percent 4` と末尾の `s1` でちょうど説明が付く**）。
+> ★ **番人は `LilyPondStandaloneSectionHeaderTests`**（**対そのものを恒等式として主張する 2 行**＋内容 8 行＋**狭めた腕の陽性対照 1 本**＋**穴のピン 1 本**）。**残った穴は下の ⒰。**
+>
+> ## ✅ **⒰ ヘッダだけの宣言を form が鳴らすのは誤り＝第306 で拒否になった**（起票第306・ユーザー決定 2026-08-31・実装同便・`LYS1036` `20c75cb4`）
+> **`section A { key g major }` だけが A の宣言で、どの part も A に音楽を与えないとき、ページはその調を arm して次の section の小節に効かせ、双子は調を 1 つも書かなかった。**⇒ ★★ **どちらの沈黙が正しいかを選ばず、綴りを拒否した**（§3 の 1 行）。
+> ★ **`LYS1005` の兄弟で、その差が規則そのもの**: **`form main { ~Z }` で `section Z` がどこにも無い本は*既に*エラー**（実測）。**これは宣言は在って全部ヘッダの場合**なので、**同じ検証器・同じ walk の 1 つ先の腕**に置き、**未宣言の側は先に return する**（宣言されていない名前に「ヘッダだけ」と言うのは嘘でもある）。
+> ⚠️⚠️ ★★★ **判定は「名前が」であって「この part が」ではない**——**`part fl { section A { … } }` の隣で score が `part m` だけを描く本は*正しい*（m は A の間スペーサで埋まる）**ので、「この part が宣言しているか」で訊くと誤爆する。**規則を書く前に測って**（`scratch/p306/u3`・2 小節・clean）**番人の*黙る行*として留めた**。
+> ★ **述語は 1 軒に寄せた**: **`IsBareHeader` を `SectionSymbols` へ移し**（そこは既に「何が section 名を宣言するか」の家）、**`PartSectionRegrouper` の写しは委譲**。⚠️ **これは ⒯ が数時間前に逆向きで要求した修理と同じ**——**エクスポータが共有の問いではなく自前の問いを訊いていたことが、ヘッダに part の音楽を食わせた。**
+> ★ **射程は実測ゼロ**（1970 冊で `check` が動いたのは本日書いた 3 冊のプローブだけ・出力は 4 つとも不動）。**番人は `SectionPlaysNothingValidatorTests`**（**黙る行 6 本**——そこがこの規則の壊れどころ）。
+>
+> ## ✅ **⒭ 閉じた＝ヘッダ位置は第305・cell の option 位置は第306**（起票第303・第305 が測り直して 3 つに分け・`LYS1035` の 2 つの位置 `14b45d4f` と `20c75cb4`）
+> ✅ **ヘッダ位置**（第305）: **section の「ヘッダ位置」に書いた `clef` / `octave` はエラー**（`instrument` / `transpose` は元からエラーで、直したのは LYS0030 の文面だけ）。
+> ✅ **part ブロックの option 位置**（第306・`section A { m clef bass { … } }`）: **4 つとも拒否**。
+> ⚠️⚠️ ★★★ **後半は「決めることが 2 つ」と書かれていたが、*どちらも新しい決定ではなかった***——**§3 に「`transpose` / `octave` を section スコープの機能として足さない」が既に在り、その理由（*参照側*の印であって宣言側ではない）が cell にもそのまま届く**。⇒ ★★ **⑵ が No なら ⑴ も決まる。起票が「決めること」と呼んだものが、読み直すと「既に決まっていること」だった。**
+> ★ **実測（第305）が 4 つを 3 対 1 に割っていたのが要点**: **`clef` / `octave` / `instrument` は黙って無視され、`transpose` だけが読まれてスコープを間違える**（cell に書いて part 全体が動く）。**番人はその非対称を保つため 4 行に分けてある。**
+> ★ **書き手も見た**（第305 の規則）: **`PartSectionRegrouper` は cell を `BetweenBraces` で写すのでoption を*黙って落としていた***——**源で拒否したことでその経路も消えた**（逆向きは第305 の `Convert_NeverProducesABookTheCompilerRefuses` が押さえている）。
+> ★ **射程は実測ゼロ**（scratch のプローブ 3 冊のみ）。**`GRAMMAR.md` に位置と「なぜ scope せず拒否したか」を書いた。**
+>
+> ### 以下は第303 起票の経緯（同じ棚にもう一度触るときのために残す）
+> ⚠️ **この項は最初「音部記号とテンポだけが引き継ぐ理由が書かれていない」として起票したが、前提が誤っていた**（第303 §1 ⑸ の訂正）。**section 境界の現状はユーザーの判断とちょうど一致している**——**調はリセット／音部記号もリセット／テンポはリセットしない**（§3）。**ここは閉じている。**
+>
+> ### ⑴ 起票の主張は再現する（第305 実測・`scratch/p305/r1_section_header_clef.lys`）
+> **`section A { clef bass  m { c'4 c c c | } }` の `clef bass` は 4 読み手すべてで落ちる**: ページはクレフ字母を 1 つしか描かず（`data-pos` は part ヘッダの `treble`）、**`.ly` 双子は `\clef "treble"` しか書かず**、`--pitches` も treble の anchor（C5）。**`lysc check` は「No errors found.」**
+> ⇒ **傍証も現存**: **section ヘッダのレジストリは key / time / tempo / partial の 4 本だけ**（`MeasureCollector.Definitions.cs:317-324` が `_sectionHeaderKeys` / `Times` / `Tempos` / `Partials` を埋める）——**`clef` の腕は無い**。**`_sectionResetClef` は `MeasureCollector.Form.cs:355-359` の*part 既定へ戻す*係**で、ヘッダの clef を*適用する*係ではない。
+>
+> ### ⑵ ★★★ 起票が「確かめていない」と書いた問いには、いま答えが在る＝**言語は約束していない**
+> **`GRAMMAR.md` の `SectionSetting = KeyDecl | TempoDecl | TimeDecl | PartialDecl ;`**——**clef は section setting ではない。** ⇒ **修理は実装ではなく*診断*。** ⚠️ **ただし ⑷ を読んでから決めること**（診断の対象が clef 1 つでは済まない）。
+>
+> ### ⑶ ★★★ 機構は起票の診断より 1 段下にある＝**ヘッダ設定にならず「孤児の音楽」になる**
+> **`ParseSectionItem` に `ClefKeyword` の腕は無い**が、**`IsMusicItemStart()` が `ClefKeyword` を受ける**ので、`_ when IsMusicItemStart() => ParseMusicItem()` に落ちる。⇒ **section ヘッダの `clef` は*どの part にも属さない裸の音楽*としてツリーに入る。** **`SectionMusicNeedsPartValidator` はそれを by-part でしか報告しない**ので、**by-section では誰も何も言わない**。⇒ **「レジストリに腕が無い」ではなく「そもそもヘッダ設定として読まれていない」が根。**
+>
+> ### ⑷ ⚠️⚠️ ★★★ 穴は起票より広い＝**part ブロックの option という第 2 の綴りが在り、そちらは 4 つとも壊れている**
+> **パーサは part ブロックに option 専用の腕を持っている**（`Parser.Sections.cs` の `IsPartOption` ＝ **transpose / octave / instrument / clef**）ので **`section A { m clef bass { … } }` も無警告で通る**。⚠️ **`GRAMMAR.md` の `PartBlock = Identifier , MusicBlock ;` には option がそもそも書かれていない。** **4 つ測った**（`scratch/p305/r4_partblock_options.lys`・4 section の同じ音楽）:
+> | 綴り | 結果 |
+> |---|---|
+> | `m clef bass { … }` | **黙って無視** |
+> | `m octave absolute { … }` | **黙って無視** |
+> | `m instrument "Tuba" { … }` | **黙って無視** |
+> | `m transpose d { … }` | ⚠️⚠️ **読まれるが*スコープが違う*——section A に書いたのに 4 section 全部が D5 になった**（双子は `m = \transpose c d \relative c'` を **part 全体**に掛ける） |
+> ⇒ ★★★ **「1 つが何もしない」ではなく「3 つが何もせず 1 つが黙ってやりすぎる」。** **`transpose` の漏れは*出力が変わる*欠陥**なので、性質が他の 3 つと違う——**別項に切るべきかもしれない。**
+>
+> ### ⑸ 対照は健全（＝壊れているのは「ヘッダ位置」だけ）
+> **音楽の中の `clef` は効く**: `m { clef bass c'4 c c c | }` は双子が `\clef "bass"` を書き、音高は C4、**次の section は treble に正しく戻る**（`_sectionResetClef` が仕事をしている）。`scratch/p305/r3_clef_in_music.lys`。
+>
+> ⇒ ⚠️⚠️ ★★★ **着手前にユーザー決定が要る＝綴りごとに「診断して拒否する」か「実装する」か。** **⒫ を 2 便止めていたのと同じ形の問い**で、しかも **`transpose` の側は出力が動く**。★ **測定は済んでいるので、次便は数え直す必要が無い**（probe は `scratch/p305/r1`〜`r4`。⚠️ `scratch/` は git 管理外）。
+
+> ## ✅ **⒮ は ⒫ が閉じた＝「双子が music の inline volta を書き出さない」は*問いごと消えた***（第303 起票・第304 が測り直し・**2026-08-31・第305 で ⒫ が入って閉じた**）
+> ⚠️ **直したのではない。その綴りが書けなくなった**——`[1. … ] :| [2. … ]` は music に無いので、双子が変換しそこねる対象が存在しない。**§2 F ⒫ の「同じ 1 つの決定の裏表」がそのとおりだったということ**（⒫ を入れたら ⒮ の仕事は 0 行になった）。
+> ⚠️ **77 冊という射程も消えた**（その 77 冊は今 LYS1034 で止まり、切り直すと form 側の `\repeat volta` / `\alternative` を通る＝**双子が正しくなる経路に載る**）。★ **実測でも見えた**——`rehearsal-marks-inside-containers` を切り直したら **MusicXML が `<ending>` を*得た***。
+> ★ **以下は当時の実測。同じ棚にもう一度触るときのために残す。**
+> ⚠️⚠️ ★★★ **起票は「`form { ~B |: A :| }` と music の volta を*混ぜた*から余分な `\bar` が出る」と書いていたが、実測すると*混ぜていない本でも出る*。**
+> **対照**（`scratch/p304/s1_both.lys` ／ `s2_noformrepeat.lys` ／ `s3_formrepeat_only.lys`・両方とも `lysc check` 無警告）:
+> | 本 | `.ly` | `lysc ly` の警告 |
+> |---|---|---|
+> | `form main { ~B \|: A :\| }` ＋ music volta | `\repeat volta 2 { … } \alternative { … }` ＋ **余分な `\bar ":\|."`** | 片側 `:\|` の 1 本 |
+> | **`form main { ~B A }`** ＋ music volta | **`\repeat volta` も `\alternative` も出ない** ＋ **`\bar ":\|."`** | **`InlineVolta not exported` ×2** ＋ 片側 `:\|` |
+> | `form main { ~B \|: A :\| }`・music volta 無し | `\repeat volta 2 { … }` のみ・**余分な `\bar` 無し** | 無し |
+> ⇒ ★★★ **本当の項は「余分な `\bar` を 1 本落とす」ではなく「双子が inline volta を持たない」**——**`\repeat volta` / `\alternative` を作っているのは*form の repeat ブロック*のほうで、music の `[1. … ] :\| [2. … ]` は 1 度も変換されない。**
+> ★ **ページ側は起票時「未確認」だったので測った**: **3 冊とも `lysc layout` の小節数はページと一致**（混合 4 小節・form repeat のみ 2 小節）**＝ページは正しく、食い違っているのは `.ly` だけ。**
+> ★★ **そして黙ってはいない**——**`InlineVolta not exported` と「片側 `:\|` は LilyPond では*描くだけ*」の 2 本が、双子が違う曲になることを*その語で*言っている**（§5.2.1 の「嘘を立てたまま残さない」は満たしている）。
+> ⚠️⚠️ **射程はこれで大きく変わる**: **ユーザーの 326 冊のうち `[N. …]` を music にインラインで書く本が 77 冊**（第304 実測）——**双子に inline volta を教えるのは、その 77 冊の `.ly` が動く変更で、掃きと読み合わせを 1 便まるごと要る。**
+> ⇒ ✅ **第305 で ⒫ が入り、そのとおりになった**（上の見出し）。**残っている本物の穴は 1 つだけ**——**「片側 `:|` は LilyPond では*描くだけ*で、繰り返しは鳴らない」**（`lysc ly` が警告する）。**これは form 側の綴りなので生きている。**
+
+> ## ▶ **⒩ 展開の予算はページだけのもので、`midi`・`xml`・`ly` は読まない＝1 冊の本に「どれだけ音楽が在るか」で 4 つの出力が食い違う**（第301 起票・**実測**・✅ **【ユーザー決定 2026-09-08: ⒜ 予算は絵だけのもの】LYS1033 の文面は第352 第 4 便で入れた＝閉じた**）
+> **`MeasureCollector` は展開に site 予算を持ち**（`DefaultExpansionBudgetCap = 50_000`）、
+> **超えたら絵を打ち切って `LYS1033` で*そう言う***（「this score expands past the collector's
+> site budget, so the picture is TRUNCATED from here on」）。**その文は*絵*についてしか言っていない**——
+> **`MidiExporter` と `MusicXmlExporter` の主旋律の walk は予算を 1 度も引かない。**
+> **実測 2026-08-30**（`scratch/p301/budget`・倍々の phrase DAG `P(n) = P(n-1) P(n-1)`・**原文 26 行**）:
+> **`svg` は 131,072 音の本でも 1,048,576 音の本でも `data-pos` 21,350／21,349 で*平ら*（2.0→2.4 秒）**、
+> **`midi` は 131,072／1,048,576 をそのまま鳴らし（0.88→1.9 秒・1.2 MB→9.4 MB）**、
+> **`xml` は同じだけ書き出す（1.2→4.2 秒・24 MB→**`192 MB`**）。**
+> ⇒ ★★★ **読み手は「絵は打ち切った」という警告を読んだあと、打ち切られていない 100 万音を再生し、
+> 192 MB を書き出す。** ⇒ **これは第301 が `grace { }` の本体で直した族の*1 段外側*で、
+> 病名も同じ「1 つの量を N 人が別々に答える」。**
+> ⚠️ **重さは低い**——**実コーパス（ディスク 1754 冊）に倍々 DAG は 1 冊も無く、
+> 本便の掃きでもこの差は 1 冊も出ていない。** **これは「今日の欠陥」ではなく「今日の食い違い」。**
+> ⚠️⚠️ ★★★ **着手する便はまず*どちらが正しいか*を決めること。3 通り在る**:
+> **⒜ 予算は絵だけのもので、export は書かれたものを全部出すのが正しい**（**なら `LYS1033` の文面が
+> 「絵は」と言っているのは正しく、足りないのは*他の出力にはこの打ち切りが無い*と読み手に言うこと**）／
+> **⒝ 予算は本のもので、4 つの出力が同じところで打ち切るべき**（**なら `ChargeExpansion` は
+> collector の外へ出る**）／**⒞ 予算そのものが LSP の打鍵経路のためのもので、CLI の一発 export では
+> 外すべき**（**なら `svg` の側が場合分けを持つ**）。
+> ⚠️ **`lysc ly` の双子は数えていない**——**着手する便が 4 つ目として測ること。**
+> ⇒ ✅ **ユーザー決定 2026-09-08＝⒜**。根拠: 50,000 は実コーパス最大の本（8,000 音）より上で、かつ行折り DP が確保に失敗する大きさ＝**ページの描画能力の限界であって音楽の性質ではない**。100 万音の MIDI は正しい出力で、切る理由がページの都合しか無い。**残る仕事＝LYS1033 の文面に「MIDI・MusicXML・ly はこの打ち切りを持たない」を足す**（`ExpansionBudgetValidator`）。⒝⒞ は採らない。
+> ★ **計器はディスクに在る**: `scratch/p301/budget/`（`gen.py` が本を作り、`run.sh` が時間と大きさ、
+> `count.sh` が出力ごとの音符数を出す。**`scratch/` は git 管理外なので、無ければ 3 本とも 20 行以下**）。
+
+> ## ✅ **⒧ 3 小節以上の整数小節 `repeat percent` の `%`＝【ユーザー決定 2026-08-29: 診断を出す】**（第282 起票・同便で実装・`85406c45`・LYS2014）
+> **`%` は「直前の 1 小節を繰り返す」記号**なので、`repeat percent 2 { A | B | C | D | }` の 4 つの `%` は**読み手に D D D D を指示する**（作者の意図は A B C D）。**音は正しく、紙だけがずれている。**
+> **⒤ 今のまま／⒥ 診断／⒦ 別の記譜 の 3 択を出し、ユーザーが ⒥ を選んだ。****⒦ を採らなかったので出力は 1 バイトも動いていない**（全数掃き 899 冊 SAME 899 / MOVED 0）。
+> ⚠️ **警告が安全な条件は「コレクタが小節ごとに署名するのと*ちょうど同じ*場所で鳴る」こと**——規則は `PercentRepeatShape` の一軒、**長さの測り方は 2 つのまま**で、**掃きが突き合わせる**（30 冊 94 site・census と 1 冊も違わない）。**この不変条件を壊す変更は、掃きで数を取り直すこと。**
+> ★ **残っているのは ⒦ だけ**（`repeat unfold` 相当に書き下す等）。**今日それを求めている本は 1 冊も無い**ので、**起票し直す前に、まず求める本が現れたかを数えること。**
+
+
+> ## ✅ **⒤ `time none`（senza misura）は描画側で効いていない＝半実装**（第280 起票・**実測**・✅ **【ユーザー決定 2026-09-08: 彫る】・第353 で実装＝§1 第353 ⑵・番人 `SenzaMisuraTests`・fixture `test/senza-misura`・LP 対 `scratch/p354/lp`**）
+> **パーサも検証器も知っている**——`TimeSignatureSyntax.IsSenzaMisura` が `time none` を読み、
+> `MeasureModel.Split` と `MeasureValidator` は小節長の検査を止める。**描画側がしているのは
+> 拍子記号を消すことだけ**（`SharedRenderer.Prefix.DrawTimeSignature` の 1 行 `if (ts.SenzaMisura) return x;`）
+> ——**`MeasureBuilder` に senza の腕が無い**ので、**自動補完は 4/4 のまま走り、小節線が引かれる**。
+> ★ **実測**（`scratch/p280/senza-long.lys`・`senza-sec.lys`）: `time none` を**上位に書いても
+> section の設定に書いても**、`lysc layout` は **`time 4/4 | 2 systems, 9 bars`** と答え、
+> 絵には**小節線が 8 本引かれる**（拍子記号だけが消える）。
+> ⇒ **無拍子の音楽は今日そもそも彫れない。**
+> ⚠️ **観測者ゼロ**——**`time none` を書いた本は追跡 573 冊にも作者の 326 冊にも 0 冊**
+> （だから誰も踏んでいない。**踏まれていないだけで、規則としては嘘をついている**）。
+> ⇒ **着手はユーザー決定から**: 「無拍子を彫る」を決めるなら **`MeasureBuilder` に
+> 「境界を作らない」腕**が要る（auto-fill を止める・小節線を引かない・小節番号をどう数えるか）。
+> ★ **そして下の ⒥ より先**——**⒥ の必要は ⒤ が閉じて初めて*実在*する**。
+> ⇒ ✅ **ユーザー決定 2026-09-08＝彫る**（「LP が `time none` を彫るなら Lily# も」）。**LP は `\cadenzaOn`**（NR「Unmetered music」: 区間は小節長に数えない・自動小節線／自動連桁／自動改行が止まる・`\cadenzaOff` で戻る）。**双子は既に `time none` を `\cadenzaOn` で書いている**（`LilyPondExporter.cs:2586`）ので、今日は 4 読み手のうちページだけが嘘。**移植点 4 つ**: ⑴ `MeasureBuilder` の境界を作らない腕（auto-fill 停止・小節線を引かない）／⑵ 自動連桁停止（`BeamingPattern.cs:185` は senza を既に見る＝確認）／⑶ 改行は次の `time N/M` まで無し（⒥「小節線でだけ折る」と整合）／⑷ 小節番号を進めない。**観測者 0（追跡 597・ユーザー 324 とも `time none` 0 冊）なので fixture＋LP 双子の対を先に建てる**（LP 側の計器は `scratch/p280/lp/` の型）。⚠️ 双子の `\cadenzaOff` を書いているかは着手時に確認（`TimeText` は `\cadenzaOn` しか書かない）。
+
+> ## ✅ **⒥ 小節の途中での改行＝【ユーザー指示 2026-09-09「安全に実装できるなら実装して」・第356 で実装＝§3 先頭行・§1 第356】**（旧決定 2026-08-29「サポートしない」は ⒤ が閉じた時点で再検討条件が成立していた。**下は第280 の経緯**）
+> ★ **第356 の形**: 音楽の両側を持つ小節途中の `break`（`pageBreak` も）は、その小節を**head（終止線なし・改行 Force・`Measure.BreaksMidBar`）と tail（開始線なし・小節番号なし・`Measure.ContinuesBar`）の 2 measure**に割る。割る場所は score 全体で 1 つの表 `MidBarBreakTable`（bar 単位の鍵＝`MeasureBuilder.LogicalMeasureIndex`）が決め、**collector は 2 回走る**（1 回目が要求を集め、2 回目が全 voice・行・`| |`・omitted-part harvest を同じ拍で切る）。**割れない小節は割らず、break は次の小節線に落ち、LYS1037 が理由を名指す**（他 part の音符が跨ぐ＝LILYSHARP-OWN・梁・tuplet・percent・`time none`・同じ小節の 2 本目）。読み手 4 人のうち動くのはページだけ（MIDI/XML は構文・双子は `\break` をそのまま書く）。掃き 922 冊 **MOVED 1＝ユーザーの `Disco Inferno.lys`（機能そのもの＝section 末の半小節 `break`・§1 ⑷）**・番人 `MidBarBreakTests` 17 本・fixture `test/mid-bar-break`・LP 対は `scratch/p357/lp/pair357.ps1`。⚠️ **T7 の「Lily# は行 DP の最適を段数にし LP は頁の得点で選び直す」とは独立**（forced break の話）。
+> **⒜ LP は対応している**（2.27.3 実測・`scratch/p280/lp/`）: `\break` を小節の途中に書くと
+> **その位置で折り、折れ目に小節線を描かない**（1 小節が 2 段にまたがる。`\bar ""` は不要だった）。
+> **⒝ Lily# は黙って次の小節線へ送る**——**絵は「小節線に break を書いた本」と `data-pos` を除いて
+> バイト同一**、診断ゼロ。
+> **⒞ しかし求めている本が無い**。**毒**（`SetBreak` の else 腕で「小節が満杯か」を印字）**で 899 冊を掃いた**:
+> **真に小節の途中に立つ `break` は追跡 573 冊で 0 件**、作者の 326 冊で 198 件・8 冊。
+> ★ **その 198 件を 1 か所ずつ住所つきで読んだら全部が「短い小節の中に置かれた break」**
+> （`e2 break` で `dur=1/2 meter=1` 等）で、**その短さは既に `Measure duration … is less than …`
+> として診断済み**。**「満杯の小節の真ん中で折りたい」という要求は 899 冊に 1 件も無い。**
+> ⚠️ **文字列の走査は嘘をつく**——`|` の無い自動補完境界を「途中」と数えて **270 件**と出た
+> （真値 198）。**この種の問いは engine に訊くこと。**
+> **⒟ 費用は「1 機能」ではなく前提の破壊**: 今日のエンジンは**小節をレイアウトの原子**として扱う
+> （line breaker は小節を歩き・`lysc layout` は小節で報告し・パート間整列は小節で合わせ・
+> 小節番号は小節を数える）。途中で折れると **1 小節が 2 段にまたがる**ので、間隔・小節番号・
+> パート間整列・skyline がまとめて動く。**観測者 0 に対しては高すぎる。**
+> ⇒ **Lily# の規則は「小節線は、行が折れてよい場所」**——**LP の `|` は表明で Lily# の `|` は境界**
+> という既存の意図的乖離（`MeasureBuilder.HandleBarline` の remark）の、素直な延長。
+> ★ **再検討の条件は 1 つだけ＝上の ⒤ が閉じたとき**。**無拍子の音楽には折る場所が存在しない**ので、
+> **そのときはじめて「小節線でだけ折る」規則が*実際に*行き詰まる**。
+
+> ## ✅ **⒦ `break` に小節線の機能を持たせる案＝【ユーザー決定 2026-08-29: 採らない】**（第280・**毒で実測**）
+> 案は「`break` も小節を閉じる／ただし `| break` は小節線 1 本と読む」。**実装して 899 冊を掃いた。**
+> **⒜ 版面の指示が音楽を変える**——`d'' e'' break f'' g''` を描かせると **4 小節が 5 小節になり、
+> 2 段目の小節番号が 3 でなく 4 になり、折れ目に小節線が描かれる**。**LP は同じ入力で 4 小節・
+> 番号 3・小節線なし**（上の ⒥ ⒜）。⇒ **「行をここで終える」と言っただけで曲の小節数が変わる**のは
+> `|` が音楽の宣言・`break` が版面の指示という層の分離を壊す。
+> **⒝ そして ⒤ と直接衝突する**（★ **ユーザーの指摘**）——**`time none` には小節線が 1 本も無い**ので、
+> **`break` が小節線を引くなら、無拍子で折る唯一の方法が「引きたくない小節線を引くこと」**になる。
+> **⒤ を将来サポートするなら、`break` は小節線であってはならない。**
+> **⒞ 影響**: **追跡 573 冊は 0 冊**（毒だけが動かした本）、**作者の 326 冊は 7 冊**
+> （`Real Gone`／`You Make Me Feel Brand New`／`銀河鉄道999`／`Can't Fight This Feeling`／
+> `Disco Inferno`／`I Love You`／`クリスマスソング`）——**全部が「既に過少小節の警告が出ている箇所」**。
+> ⇒ **得るものが無く、失うものがある。**
+> ★ **「`| break` は小節線 1 本」という守りたい性質は、案を採らなければ今日すでに成立している**
+> （`break` は小節線ではないので `| break` は `|` 1 本きり）。**案はその性質を危うくする側だった。**
+
+> ## ✅ **⒱ 途中の `partial`＝【ユーザー決定 2026-09-08: 許す。パートごとに書く（`time` と同じ規則）】**（決定便で起票・**第352 第 4 便で実装＝`PartialScopeValidator` の緩和＋番人 9 本＋GRAMMAR・§1 第352 ⑵⒜**）
+> **LP**: `\partial` は `Timing` context に送られる music（`ly/music-functions-init.ly:1697-1705` `context-spec-music … 'Timing`）で、途中では「現在の小節を dur 後に終える。新しい番号付き小節は作らない」（NR「Upbeats」）。**Timing は Score の別名なので時計は全譜で 1 つ＝1 パートに書けば全パートが動く**（両方に書いても同じ値を 2 度置くだけ）。
+> **Lily#**: walker には途中の `partial` を読む腕が既に在り（`MeasureCollector.MusicWalk.cs:1702` → `builder.SetPartial`・`MeasureBuilder.SetPartial` は「現在の小節をその長さで閉じ、次から元の拍子」）、充足検査も小節内の `partial` を読む（`MeasureValidator.cs:343`）。**止めているのは `PartialScopeValidator` だけ**（section 直下以外を LYS error）。**共有の Timing は無く、途中の `time` はパートごとに書き直す規則**（`MeasureValidator.cs:281-286` が明記）＝**途中の `partial` も同じ規則で、書かないパートは `CrossPartMeasureValidator` の不一致になる**。
+> **決定**: ⒜ 許す・パートごとに書く（validator の緩和＋番人＋GRAMMAR §8.1 の `MidMusicCommand` に規則を書く）。⒝ score 級 Timing（小節番号で束ねた timeline を全 voice の builder に配り `time` も書き一度に）は「900 冊が `time` の書き直しで困っていない」ので需要が出てから。⚠️ **T6 の census には使わない**（理由は §2 T6 の同項）。⚠️ **`PartialScopeValidator` の doc（「section にしか属さない」の理屈）と `MeasureValidator.cs:684` の案内文（「section directive として書け」）は同時に書き換える**——嘘の案内を残さない（§5.2.1）。
+
+> ## ✅ **⒣ `removeEmpty`・`pedal` も「版面ものが part ヘッダに居る」同族＝別便で検討**（第217 起票・**ユーザー指示「別便で検討して」**・✅ **【ユーザー決定 2026-09-08: ⒝ removeEmpty だけ score 側へ・pedal は part のまま】・第352 第 5 便で実装＝`staff m as lines 1 removeEmpty all`（§1 第352 ⑵⒠）**）
+> `lines` を score 側 `as lines N` へ移した決定（§3 第217）の同族が 2 つ残る: **removeEmpty**
+> （LP では RemoveEmptyStaves＝context mod）と **pedal**（描画スタイル＝presentation）。
+> どちらも part 持ちだと「総譜では隠す・パート譜では隠さない」等の score ごとの使い分けが綴れない。
+> 移すなら **`as` 修飾の複数連結**（`staff m as lines 1 as removeEmpty …` か 1 つの `as` に列挙か）の
+> 設計から——**判断だけで閉じる型ではなく設計資産が要る**（第215 骨 1 の区別）。着手はユーザー決定から。
+> ⇒ ✅ **ユーザー決定 2026-09-08＝⒝ `removeEmpty` は score 項目へ・`pedal` は part のまま。綴りは `as` 1 つに列挙＝`staff m as lines 1 removeEmpty all`**（`as` の反復ではない・ossia にも許す＝`lines` と同じ・2 つの綴りは持たない RULES §5.2.1⑤）。**根拠**: LP の `\RemoveEmptyStaves` は `\with { \override VerticalAxisGroup.remove-empty = ##t }` の context mod（`ly/context-mods-init.ly:52-64`・`RemoveAllEmptyStaves` は `remove-first` を足す）で、**書ける場所は score の `\layout { \context { \Staff … } }` か譜の `\with` だけ＝音楽の属性ではない**。動作は段ごとの hara-kiri（`keepAliveInterfaces` の grob＝符頭・タブ数字・歌詞・和音名・強弱・数字付き低音・フレット図・percent・stanza が 1 つも無い段で譜が消える・休符／clef／key だけでは生きない・`remove-first` 偽なら最初の段は全譜）。典型は総譜で休む楽器を落とし、パート譜では落とさない＝`lines` を移した論法がそのまま当たる。**`pedal` は `pedalSustainStyle` という context property で `\set` により音楽にも書ける**＝家風で score ごとに変える需要が無い。**Lily# 側**: `HaraKiri.cs` が同じ規則を移植済み（値は `Staff.RemoveEmpty`）なので動くのは綴りと配線だけ（`RenderSpecParser`・`StaffRender`・LSP 補完・TextMate・GRAMMAR §3／§7・`DocKeywordListTests`）。**射程**: 追跡 `test/hara-kiri.lys`・`audit/lpreg/harakiri-percent{,-ctrl}.lys`・`audit/lp-regression/lys/hara-kiri-percent-repeat.lys`・`hairpin-spanbar.lys`／ユーザー実コーパス 0 冊。part ヘッダの `removeEmpty` は既存の unknown-property 網が拒む（`lines` と同じ・新 code 0 の見込み）。
+
+> ## ✅ **⒨ `lysc svg --combined` は構文エラーを持つ本で例外を投げて出力を作らない＝第799 で閉じた**（第298 起票・**掃きの副産物**）。正体は「頁 0 の score を含む複数 score の本」（`SvgGenerator.ExtractSvgContent` の `IndexOf(-1)`）＝§1.1 第799。下段の双子の 5 冊は別の島で開いたまま。起票時の本文:
+> **`Index was out of range. Must be non-negative and less than or equal to the size of the
+> collection. (Parameter 'startIndex')`**——**エラー行を全部出したあと、既定モードなら
+> 「written anyway, from the part of the file that parsed」で出す版面を、`--combined` は出さない。**
+> ★ **この repo は recover を設計として持っている**（§5・第173第8便で `lysc` は best-effort に
+> なった）ので、**`--combined` だけが例外で落ちるのは、そのモードが recover を通っていないということ。**
+> ★ **射程（第298 実測・ディスク 1713 冊）**: **2 冊**——`scratch\p216\pins\chords-attach.lys`・
+> `scratch\p216\pins\chords-row.lys`（**どちらも退役した `a:m` 記法を残した古いプローブ**）。
+> ⚠️ **base と head で同じ**＝第298 の欠陥ではない。**掃きの `no-output 2` の正体はこれ。**
+> ⚠️ **急ぐ理由は無い**（当たるのは壊れた本だけ）。**だが `--combined` を掃きに使うなら、
+> 「no-output は本が壊れている印」だと知っていないと、レンダー失敗を数え違える**（RULES §5.0）。
+
+> ## ✅ **⒢ ペダル・強弱 vs 歌詞の優先順位スタック＝⒜⒝ とも第220 で閉じた**（起票第215・再測第216。`abdeab0f`→`344a3a5e`→`85bbff88` の 3 commit）
+> **台帳に 4 点起票してから移植した**（audit/lp-geometry `lyrics.{pedal-bracket,pedal-text,dynamic}.staff-to-lyric`＋対照。
+> LP は **2.26.0 のローカル実機**で取り直し済み＝第216 の宿題どおり。probe は `probes/pedal-lyric-stack.ly`）:
+> **⒝ `@f`**＝`-1` family（最下譜・単譜の歌詞塊）が**システムシルエット**を読んでいて、per-staff Down に
+> 既在だった dynamics が見えなかった → **anchor 譜自身の Down を読む形に**（`LyricEngraver.LastSpaceableStaffOf`
+> ＝系ごと・hara-kiri 対応。譜なしシートはシルエットに fallback）。−1.668349 → **+0.024651**。
+> **⒜ 括弧**＝`PedalEngraver` が score 全体で 1 本の Y（systems[0] の底）を使い、どのスカイラインにも
+> ペダル ink が無かった → **族ごと・系ごとに 1 本**（LP の SustainPedalLineSpanner＝padding 1.2、pointwise、
+> フックは全高・線中央は半線幅）を **skyline 構築時に解いて seed**（`SolveAndSeed`）、解は
+> `StaffSkylineSet.PedalLines` で draw に渡る（1 計算 2 読者）。PLB −1.800155 → **−0.000155**（対照と同値の書体スライバ）。
+> LP 実測 5.295 ＝ 支え 3.045 + 1.2 + フック 1.05 と桁一致。snapshot 4 枚だけ動き再承認（pedal-below-lyrics は
+> 「別譜のペダルは落ちない」を保ったまま自譜に寄った）。射程: sweep 569 冊中、⒝ で 2 冊（歌詞床が締まる向き）＋⒜ で snapshot 4 冊のみ。
+> **残債（この島の続き）**: ⑴ ✅ **PLT＝text スタイルは同便の続きで閉じた**（`82c72f64`・語ごと 1 スパナ・
+> `LyricClearance` の pedal 免除は**残す**＝LP も「ペダルは譜側・歌詞が下がる」）／
+> ⑵ ✅ **dynamic の +0.024651 は同便の続きで閉じた**（音節プロファイル＝字ごと実輪郭＋LyricText 自前の
+> skyline-horizontal-padding 0.1。箱 +0.0247／素輪郭 −0.0313／pad 輪郭 **−0.0003** の三角測量が機構の証明。
+> 11 snapshot 再承認・射程 20 冊＝全て歌詞持ち）。⚠️ **代わりに 2 つ開いた**: ⓐ LYRBV の内側 gap が
+> +0.0018→**−0.0066**（台帳 OPEN・どの項かは dynamic 点と同じ pointwise dump で切る）／
+> ⓑ **打鍵 alloc**: perf-lyrplain1k 71.7→**367.9 MB**（素の輪郭化は 1235——バッチ化 508・resolved 直 merge 46/pass・
+> colinear 連結 368 まで返済、連結は sweep 0/569 で無損失を機械確認。バッチ化だけなら旧箱より速い 55.2）。
+> **残り 5 倍は ▶ perf 島の債**: walk 99 MB/pass・build 46×2・残 ~130 未帰属。梃子候補=行 profile の
+> per-system memo／ShiftedRaised 1-alloc 化。ユーザー実本規模（〜50 音節）では +2〜3 MB/打鍵。／
+> ⑶ ✅ **系をまたぐ括弧 × 増分は同便で毒→修理**（`b1607c1c` 後続 commit）: 毒は実在した——Off を消す編集で
+> On 側 system の cache が死んだ括弧の ink を保持（増分ページ高 793.7 vs full 782.8）。修理は Volta と同形＝
+> **検出済みスパンを両 overload の鍵に BucketSpan**（印の純関数なので再導出）。毒はテストとして常設
+> （`DeletingAPedalRelease_RedrawsTheSystemsTheBracketSpanned`）・full render は 0/569 不動。
+
+> ## ✅ **`with lyrics`/`with chords` の除去＝「score は帯の縦列」は第216 で完成した**（`b30d9bce`→`0baf2dcc` の 4 commit。**起票・決定は第215**）
+> **残る作業 4 つを全部閉じた**: ⑴ bound 行は譜の直後で fold（byte 恒等を機械証明してから構文を除去）
+> ⑵ グループ本体が `lyrics` 行を取る（LYS6011/6012）⑶ ハラキリはピンで固定（fold の帰結として既に正しい）
+> ⑷ 無名 `chords {}` は LYS0032（ユーザー決定＝畳む）。**除去は LYS0031**・LYS6009/6010 退役。
+> **chords 行は regime で家が割れる**（先頭行＝loose-chain 移植のまま／譜間＝attached engraver へ fold）
+> ——理由と実測は §1 第216 の骨 2。⚠️ **第260 で「譜間」側の*置き方*は帯から run の要素に変わった**（fold そのものは不変・`AttachedChordLineInRun`）。**snapshot は chords 3 枚のみ・lyrics 全数不変・台帳不動。**
+
+> ## ✅ **「同名のシステムフォントが同梱フェイスを隠す」は第214 で閉じた**（`05f59d45`。**起票は第213**）
+> **`BuildFontNameCompletions` が同梱同名のインストール行を畳む**——問い口は
+> **`TextFontMetrics.IsBundledFamilyName`＝`TryBundledFamily` の公開ドア**（「is this face
+> available?」の 4 人目の読み手も同じ家を読む）。**網は合成リスト**
+> （`FontNameCompletionTests.BuildHelper_ExcludesInstalledFamiliesTheBundleShadows`）**なので
+> TeX Gyre の無い機械でも赤が見える**。**この機械の WSL は 5593/2 → 5596/0＝完全緑。**
+> ⚠️ **「システム側を別の段に見せる」案は採らなかった**（第214 の自律判断・§1 ⑵）——
+> **エンジンは同名を常に同梱で解決する（`BundledPathForName` が先）ので、システム行は
+> *選べても使われない***。**ユーザーが自分の TeX Gyre を指したくなったら、それは同梱解決
+> そのものの仕様変更であって、補完の段の話ではない。**
+
+> ## ✅ **CI の ubuntu 脚は第213 で閉じた**（`7e00f580`。**起票は第212**）
+> **ubuntu Release は `5531 / 53` → `5593 / 2`**（**残る 2 件は上の ▶＝この機械固有**）。
+> **Windows は `5595 / 0`。総数はどちらも 5599。** **0.3.0 の門はもう赤で止めない。**
+> ⚠️ **CI 自身が緑を出すのは push のあと**——**`gh run list` を読むのは §1 ⑸ ⒥ のあと。**
+>
+> ### 原因（**測定。推測ではない**）
+> **`SKPaint.GetTextPath` が 2 つの機械で同じ関数ではない。** TextSize 1000・upem 1000 の
+> 同梱 bold serif で、**Windows は設計自身の整数**（`"3"` → top `-708`・bottom `14`）、
+> **Linux（SkiaSharp の FreeType 経路）は同じ輪郭を 1/512 の格子へ**
+> （`-708.0078125` / `13.916015625`）。**Emmentaler も同じ**（`U+E0A4` の top が
+> `-782` 対 `-781.982421875`）。
+> ⚠️ **hinting のノブは無関係**——`NoHinting`／`IsLinearText`／`SubpixelText` の 4 組合せを
+> 両 OS で測って、**Linux はどれでも Linux の数**。
+> ⇒ **1 グリフ 1e-5 em。font-size を掛けて縦に積むと 1e-4 staff space** になり、
+> **丸めの境界に載った台帳点と snapshot だけが赤くなる**（**53 件のうち 51 件がこれ**）。
+> ★★★ **算術は `barnumber.*.staff-to-baseline` で閉じてある**: overshoot が
+> **Windows `0.024445976200310277`**（台帳の記録 `0.024446` そのもの）／
+> **Linux `0.024299327626563994`**、`3.05 + overshoot` が **3.074445976 ／ 3.074299328**
+> ——**後者は Linux の suite が刷った値と桁まで一致。差 0.000146648 ＝ 観測された drift。**
+> ⚠️ **HarfBuzz は白だった**（第212 が並べた 2 つの容疑者のうち片方）:
+> **`Advance` は両 OS でビット一致**、**`hb_font_get_glyph_extents` は同一の整数**を返し、
+> **その整数は Windows の Skia の値そのもの。**
+>
+> ### 閉じ方（**ユーザー決定＝⒝ 両 OS で合わせる**）
+> **輪郭の生産者を 2 つとも `hb_font_draw_glyph` に替えた**（`HarfBuzzOutline.cs`）
+> ——**テキストの `OutlinePath` と音楽の `MusicGlyphPath`。**
+> **命令列は両 OS で SHA-256 一致**で、**その値は Windows が既に返していた数**
+> ＝**Linux を Windows に合わせたのであって、両方を第三の数へ動かしていない**
+> （**台帳 529 点・snapshot 218 枚とも不動**がその観測）。
+> ⚠️ **新規パッケージは 0**。**`HarfBuzzSharp` 8.3.1 に draw の API は無い**が、
+> **同梱の native lib が `hb_draw_*` を全部 export している**ので生 P/Invoke で届く。
+> ⚠️ **`⒜ Windows 限定` と `⒞ 許容差を上げる` は採らなかった**——**⒜ は Linux で彫版の
+> 幾何を誰も見なくなる／⒞ は原因が測れた時点で「何 ulp までを同値とみなすか」を
+> 書く必要が消えた**（**動かすべきは許容差ではなく生産者だった**）。
+>
+> ### ★★ 道連れで消えたもの（**探していない**）
+> **`GetTextPath` は GPOS 抜きの素の advance でグリフを並べていた**のに、
+> **`Advance` は 2026-08-02 から kerning を数えている**——
+> **予約*幅*と予約*輪郭*が「2 文字目がどこから始まるか」で食い違っていた**
+> （§7.7 の「同じ量の 2 つ目の綴り」）。**pen は shaper のものになった。**
+>
+> ### ★★★ 網（**214 便のあいだ無かった観測点**）
+> **`TextFontMetricsTests` に 11 本**——**「同梱フェイスの ink は*整数の font unit*」**。
+> **数ではなく*整数性*を主張する**のは、**それが両 OS の一致そのもの**だから
+> （**どのフェイスかは別の問いなので、ピン留めは 1 対だけ**）。
+> ⚠️ **11 本とも「旧 Core ＋ Linux」で赤になることを確かめてある**（WSL で実際に戻して実行）。
+> ⚠️ **Windows では旧 Core でも緑**——**これは*Linux の*観測者**で、
+> **§0 の Windows だけでは永遠に沈黙する。** **だから §0 に Linux の行が要る。**
+>
+> ### perf（§7.9）
+> **計算は変えたので測った**（`alloc`・3 回・最小採用）:
+> **`perf-fingstack1k` 2440.4 → 2412.1 MB（全体）・165.0 → 161.9（1 打鍵）＝改善**、
+> **`perf-plain1k` は 694.0 / 45.2 で厳密に不動＝真の対照**（fingering が無くテキスト輪郭が建たない）。
+> ## ✅ **部品ヘッダの値検証は第210 で閉じた**（`b6482657` ＋ `2b66808b`。**ユーザー決定＝5 つとも error**）
+> **起票（第209）は「2 つの値が検証されていない」だったが、着手時に switch を数えたら 5 つだった**
+> （`removeEmpty`・`lines`・`octave`・`transpose`・`transposition`。**枝が在るのは
+> `clef`/`tuning`/`pedal`/`instrument` の 4 つだけ**）。**2 つだけ塞ぐと報告は移動する。**
+> ⇒ **汎化して §5 へ**: **「報告された欠陥の数は、その族の大きさではない。族は*検査する側*を数えて出す。」**
+> ⇒ **残った網は `EveryPartProperty_RefusesAValueItCannotRead`**——**公開語彙の上に書いてあるので、
+> 検査の無い property を後から足すと赤で着く。**
+> ⚠️ **「大小文字を無視するのは `removeEmpty` ただ 1 つ」の項も同時に閉じた**（同じ根＝誰も検査していない）。
+> **`transposition 8VB` が拒まれる理由がレクサーだった件は、レクサーを大小無視にして*検証側*へ移した**
+> ——**受理する集合は 1 語も変わらず、診断が 3 行から 1 行になった。**
+
+> ## ✅ **LSP の値補完の綴りは第211 で閉じた**（`792c5f57` ＋ `89f69a4c`。**起票は第210・⑵ も同じ便で閉じた**）
+> ★★★ **起票は 2 件だったが、族は 3 件だった**——**着手前に「Core の語彙を自前で綴っている補完」を
+> *数え直した*ら、⑶ `GetPartPropertyCompletions` が出た**（第210 は値の補完だけ数えて
+> **名前の補完を数えていなかった**）。**そしてその 3 件目だけが*今まさに壊れていた***:
+> **9 property のうち 6 つしか出さず**（`transposition`・`lines`・`pedal` が欠落＝**エディタが
+> 言語の property 3 つの存在を否定していた**）、**`octave` の Detail が `absolute | relative` と
+> 書いていた**——**第210 が部品ヘッダで*エラーにした*ちょうどその 2 語**（実測: `octave relative` は error）。
+> ⇒ ★★★ **第209→第210→第211 で「色づけ／検証／補完」と 3 便続けて同じ族の別の顔が出た。**
+> **§5.0 罠22 の「族は*検査する側*を数えて出す」を、今回は*提案する側*を数えて適用した。**
+> ⚠️ **起票の「閉じ方は 1 つ」は実行できなかった**——**`LilySharp.Lsp` は別アセンブリで
+> `RemoveEmptyValueVocabulary` は `internal`**（`InternalsVisibleTo` は Tests/Benchmarks/Probe のみ）。
+> **起票は読みだけで書かれていたのでそこが見えていなかった。**
+> ⇒ **`LanguageVocabulary`（public）を Core に置いて全部そこから作らせた。**
+> **`SyntaxFacts.ClefNameVocabulary` は 11 語を `IsClefKeyword` で*濾して* 5 語を出す**ので、
+> **音楽側は「パーサが拒む語」を名乗れない**。**パーサのエラー文言と `GRAMMAR.md` の
+> `ClefName` もそこを読む＝5 語の綴りが 4 つから 1 つに。**
+> ⚠️ **`tuning`/`pedal` の値補完文脈は足していない**（起票の指示どおり混ぜていない）。
+
+
+> ## ★★ **計器が在る（2026-08-17・第195）＝`audit/LilySharp.Probe -- pitches`。この節の項は、まずこれに訊く**
+> ```
+> dotnet run --project audit/LilySharp.Probe -c Release -- pitches [listfile] [only]
+> ```
+> **1 冊を複数の出力に訊いて食い違いを印字する**——**ページ（collector の item）と MIDI を
+> *ソース位置で*突き合わせ**（`MidiNote.SourcePos` と `MusicItem.SourcePosition`）、
+> **MusicXML と MIDI を*鍵の多重集合*で**（XML にソース位置は無いので、
+> **MIDI が「文書が書いていないコピー」を鳴らさない本＝566 中 532 冊**に限る）。
+> ⚠️⚠️ ★★★ **ページ側に `check --pitches` を使わないこと**——**音高付き休符は音符と同じ家で
+> 解決されるので trace には音符として並び**、**報告で作った計器は第194 の ⑶ を「MATCH」と言う。**
+> ⚠️⚠️ ★★★ **射程の述語は第196 で直した。それ以前の CSV の `xmlComparable` は信用しない**
+> ——**旧述語は `SourceOrdinal == 0` が全部**で、**その量は「鳴った回数」ではなく
+> 「*印刷された*コピーの番号」**なので**両方向に外れていた**（`a2da9275`）:
+> **phrase を 2 回鳴らす本 12 冊を理由なく除外し、`|: :|` と percent/tremolo の 22 冊を
+> 比較して 2 周目まるごとを差として報告していた。**
+> **今の述語は「ページが N 個の頭を彫った位置で MIDI が N 回より多く鳴っていないか」。**
+> ⚠️ **見えない所は数えて印字してある**（黙って落とさない）: **grace はページ側にソース位置が無い**
+> （566 冊で 1,459 位置・31 冊）／**タイの 2 つ目は XML に書かれ MIDI では併合**／
+> **part-combine のユニゾンは 1 つしか彫られない**（`midiOnly` 9 冊はこれ）。
+> ⚠️ **CSV は初弾も持つ**（`pitchSample` / `xmlSample`）——**報告は見出しごとに 25 行しか刷らない**ので、
+> **26 位以下の族を読むには CSV のほうを見る**（第196 はこれが無くて小 listfile を何度も回した）。
+> ⚠️⚠️ ★★★ **比べているのは*鳴る*音高で、書かれた音高ではない**（第197 で直した・`ddf75df7`）。
+> **移調 part は「印刷する音高」と「鳴る音高」が違うためにある**ので、
+> **ページから C4・MIDI から 48 を読んで差と数えていた計器は、46 冊のうち 21 冊を
+> *欠陥でないもの*で埋めていた**（`test/treble8` は 24 位置ぜんぶ）。**今は両側を sounding に揃える**——
+> **⒜ MusicXML 側は文書自身の `<transpose>`**（規約の式。**`<clef-octave-change>` は足さない＝記譜だから**）／
+> **⒝ ページ側は part ヘッダ**（**その要素が無いので**）**をソース span で帰属**
+> （part block・part 宣言・**それと phrase 本体**——**phrase はどの part の外にも書かれる**）。
+> ⚠️⚠️ ★★★ **⒝ は*循環*で、注記にそう書いてある**——**MIDI と同じ読みなので、
+> その読みが壊れたら両側が一緒に動いて緑になる。**残るのは他の全部（綴り・開いたオクターブ・落とした音）。
+> ⚠️ **`Staff.Transposition` から読んではいけない**——**TAB 譜しか埋めない**
+> （`CreateTab` は取り `Create` は取らない）。**通常譜は 0 を返し、`staff m` と `tab m` を
+> 両方持つ本は最後に歩いた譜で答えが変わる**（第197 が 30 分そこで外した）。
+> ⚠️ **双子（LP）はまだこの計器に入っていない**——**1 冊ずつなら
+> `scratch\p195\Compare-Pitches.ps1`**（`lysc ly` → LP → NoteHead dump → ページと多重集合で比較）。
+> **全数に広げるなら LP を 566 回まわす便が要る。**
+> ★ **現状**（第197 終了時）:
+> **soundingRests 0 冊・midiOnly 9 冊・silentHeads 35 冊・pitchDiffers 5 冊・xmlDiffers 3 冊
+> ＝合併 5 冊**（**第197 の頭は 46 冊**）。
+> ⚠️ **この数は引継ぎに書いてあるだけ**——`audit/probe-out/` も `scratch/` も**git 管理外**なので、
+> **CSV へのパスを根拠として引かないこと**（第196 は 1 度そう書いて、翌行で古くなった）。
+> **取り直しは 8 秒**: `dotnet run --project audit/LilySharp.Probe -c Release -- pitches audit\probe-out\all566.txt`
+> （**listfile は `git ls-files "*.lys"` で作り直す**）。
+> ⇒ ★★★ **残る 5 冊の行き先**（**移調 clef の島は ⒜ で閉じた**）:
+> **⒡ の 2 冊**（`section-meter-resets-to-global`・`fermata-b-obs-probe`＝**意図しない上昇＋MIDI の天井**）／
+> **⒢ の 2 冊**（`bend`・`dead-note`＝**素の section と part の register・要決定**）／
+> **`tab-below-range` 1 冊**（**MIDI の*床*。天井と同じ外部制約**）。
+> ⇒ ★★★ **§2F に「決定済み・未実装」の項は 1 つも残っていない。**
+> ⚠️ **第198 が足した ⒣ は第202 が閉じた**（`36c2e6f2`。**先に LP を測って台帳点を作る**を
+> そのとおりの順で踏んだ——**測ったら起票の 2 regime のうち片方は*届かない*と分かり、
+> 移植の形も「幅 0」から「欄ごと無い」へ変わった**）。**射程 0 冊は変わらない。**
+> **この計器（pitches）はそもそも拍子を見ない**ので、
+> **⒣ も、第198 が直したタブの拍子も、この 5 冊の数には 1 度も現れていない。**
+
