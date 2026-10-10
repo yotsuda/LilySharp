@@ -1433,9 +1433,32 @@ internal sealed class MeasureBuilder
     /// closes into — unless music follows it in the same bar, in which case the score splits
     /// the bar there on its second collect (<see cref="MidBarBreaks"/>; the request is made
     /// by <see cref="RequestPendingMidBar"/>, the cut by <see cref="TrySplitAtMidBar"/>).</summary>
+    /// <summary>
+    /// True while a break directive stands AT THE BAR LINE: a measure is closed and the bar
+    /// under construction holds no time yet — nothing, or only the prelude a bar opens with
+    /// (its time or key signature, a clef, a mark). The clock has not moved, so the directive
+    /// is the bar-line break the writer meant, whichever side of the signature it was written
+    /// on; only music before it makes it a mid-bar one. (Right after a split bar's head is
+    /// emitted — <see cref="EmitSplitHead"/>, the bar's clock still running — the bar holds
+    /// no item either: the directive met there is the one the head already carries, and the
+    /// bar-line arm's rewrite finds it in place.)
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/paper-column-engraver.cc:68-112 Paper_column_engraver::handle_manual_breaks
+    ///   — a break event sets the permission on the COMMAND COLUMN of the moment it is heard
+    ///   at; a `\time` or `\key` in the same moment does not move that moment, so
+    ///   `\time 4/4 \break` and `\break \time 4/4` are the same column's permission.
+    /// ⚠️ UNTIL 2026-10-10 THIS READ `_currentItems.Count == 0`, so the signature item already
+    /// in the bar made `time 4/4 break` a mid-bar break, deferred onto the END of the bar the
+    /// signature opened (If You Leave Me Now: the page broke after bar 13, LilyPond after 12).
+    /// </remarks>
+    private bool DirectiveStandsAtTheBarLine
+        => _measures.Count > 0
+           && (_currentItems.Count == 0 || (!_hasMeasureContent && _currentDuration == Fraction.Zero));
+
     public void SetBreak(int sourcePosition = -1)
     {
-        if (_currentItems.Count == 0 && _measures.Count > 0)
+        if (DirectiveStandsAtTheBarLine)
         {
             // At measure boundary - apply break to previous measure. `with`
             // preserves break penalty and page/turn permissions; the old
@@ -1461,7 +1484,7 @@ internal sealed class MeasureBuilder
     /// <c>\noBreak</c>) — the mirror of <see cref="SetBreak"/>.</summary>
     public void SetNoBreak()
     {
-        if (_currentItems.Count == 0 && _measures.Count > 0)
+        if (DirectiveStandsAtTheBarLine)
         {
             if (_measures[^1].LineBreakPermission != Layout.BreakPermission.Forbid)
             {
@@ -1481,7 +1504,7 @@ internal sealed class MeasureBuilder
     /// </remarks>
     public void SetPageBreak(int sourcePosition = -1)
     {
-        if (_currentItems.Count == 0 && _measures.Count > 0)
+        if (DirectiveStandsAtTheBarLine)
         {
             var last = _measures[^1];
             if (last.LineBreakPermission != Layout.BreakPermission.Force
@@ -1510,7 +1533,7 @@ internal sealed class MeasureBuilder
     /// </remarks>
     public void SetNoPageBreak()
     {
-        if (_currentItems.Count == 0 && _measures.Count > 0)
+        if (DirectiveStandsAtTheBarLine)
         {
             if (_measures[^1].PageBreakPermission != Layout.BreakPermission.Forbid)
             {

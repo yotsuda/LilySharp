@@ -14,8 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Linq;
 using Xunit;
 using Xunit.Abstractions;
+using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Svg.Collector;
 
@@ -69,6 +72,45 @@ public class BreakKeywordTests
         Assert.Equal(3, score.Voice.Measures.Length);
         Assert.False(score.Voice.Measures[0].HasBreakAfter);
         Assert.True(score.Voice.Measures[1].HasBreakAfter, "Second measure should have HasBreakAfter=true");
+    }
+
+    /// <summary>
+    /// A <c>break</c> written after the prelude a bar opens with — its time signature, key or
+    /// clef — stands at the bar line, exactly as one written before it: the clock has not
+    /// moved, so it is the bar-line break and not a mid-bar one. Until 2026-10-10 the
+    /// signature item already in the bar made <c>time 4/4 break</c> read as mid-bar, and the
+    /// break was deferred onto the END of the bar it opened (If You Leave Me Now, bar 12:
+    /// the page broke after bar 13 where LilyPond breaks after 12).
+    /// </summary>
+    [Theory]
+    [InlineData("c4 d e f | time 2/4 g a | time 4/4 break b c' d' e' | f' g' a' b' |")]
+    [InlineData("c4 d e f | g a b c' | key g major break b c' d' e' | f' g' a' b' |")]
+    [InlineData("c4 d e f | g a b c' | clef bass break b c' d' e' | f' g' a' b' |")]
+    [InlineData("c4 d e f | g a b c' | time 3/4 key g major break b c' d' | f' g' a' |")]
+    public void MeasureCollector_BreakAfterABarsOpeningSignature_StandsAtTheBarLine(string music)
+    {
+        var measures = BookMeasures(music);
+        Assert.Equal(4, measures.Count);
+        Assert.False(measures[0].HasBreakAfter);
+        Assert.True(measures[1].HasBreakAfter, "the break stands at the bar line the signature opens");
+        Assert.False(measures[2].HasBreakAfter, "…and is not deferred onto the end of that bar");
+    }
+
+    [Fact]
+    public void MeasureCollector_NoBreakAfterABarsOpeningSignature_StandsAtTheBarLine()
+    {
+        var measures = BookMeasures("c4 d e f | g a b c' | time 2/4 noBreak b c' | f' g' |");
+        Assert.Equal(4, measures.Count);
+        Assert.Equal(LilySharp.Core.Svg.Layout.BreakPermission.Forbid, measures[1].LineBreakPermission);
+        Assert.Equal(LilySharp.Core.Svg.Layout.BreakPermission.Allow, measures[2].LineBreakPermission);
+    }
+
+    /// <summary>The primary voice's measures of a one-part book in 4/4 playing <paramref name="music"/>.</summary>
+    private static IReadOnlyList<LilySharp.Core.Svg.Model.Measure> BookMeasures(string music)
+    {
+        var tree = SyntaxTree.Parse("time 4/4 part m { section A { " + music + " } } form { A } score { staff m }");
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        return score.EnumerateStaves().First().Staff.PrimaryVoice.Measures;
     }
 
     [Fact]
