@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第884セッションの経緯
+
+### 1.1 第884セッション（2026-10-10・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで着手して」・島の指定なし）。`-Start p884`（HEAD `eb2b62f5f`）＝full **11759 / 0 / 2 / 11761**。§7 3.5 で第882 を ARCHIVE へ。§1.0 ⒜ はユーザー側の項目だけ（VS Code の拡張は 17:42 に組み直し済みと時刻で確認＝§1.0 の行）なので、§2 で製品の仕事が残る起票を実コードで裏取りして選んだ＝**F ⒳（`repeat percent` の覆われた周）**。
+- **起票は半分 stale**: 「collector の門 `_percentCoveredDepth` が通していない 4 つ」は第332 以降*到達不能*（反復は spacer で書き、本文を再 walk しない＝`MeasureCollector.cs` の註「NOTHING RAISES THIS DEPTH ANY MORE」）。probe（Lab `sessions/p884/px/px3.lys`＝和音記号・通奏低音・glissando・`@cross` を 1 小節の本文に）＝全部 1 回だけ・印の下は無し。網 `PercentRepeatTests.PercentCoveredMeasures_CarryNoChordNameFiguredBassGlissandoOrCrossStaff`（不在を pin）。隣の網の註「RE-WALKS the body」も stale＝直した（RULES §5.0「起票の値段はその時の木の値段」の再演）。
+- **残る半分＝本文末尾の `~`／`(`**（LP 双子 `px1`／`px2`・2.26.0・`lysc ly` → cairo png）: `(` は LP も Lily# も印をまたいで次の音まで 1 本のスラー＝一致。`~` は両者とも描かないが **LP は「unterminated tie」を警告し、Lily# は黙っていた**（`TieTargetScanner` が spacer を一律 padding と読む）。⇒ **直した（`check:` の commit）**: `RestItem.IsRepetitionSpacer`（`WriteRepetitionAsSpacers` が立てる・読み手は scanner 1 軒＝描画は触らない）＋ `TieTargetProblem.IntoRepetition`＝LYS4007 の 4 つ目の文面（位置は結んだ音・`@laissezVibrer` を名指す）。網 `TieTargetValidatorTests` +2（対照＝同じ本文の `repeat unfold` は 0）・毒（枝を `false &&` で殺す）＝その 2 本だけ赤。**射程＝`lysc check --batch` 1177 冊（追跡 666＋Lab corpora 511）で新しい警告 0 冊**。棚卸し 2 枚＝差分 0。
+- `-End p884 -DiffBase eb2b62f5f`（門は全部 OK）＝full **11762 / 0 / 2 / 11764**（網 +3）。Core '+' 37 行／REF 3（percent-repeat-iterator `next_element`・tie-engraver `start_translation_timestep`／`report_unterminated_tie`）／OWN 0。7.6: ⒝＝「反復は印 1 つで音が無い」「次の timestep に頭が無い tie は unterminated」は LP の事実、*flag を item に持たせる*のは Lily# の器の都合（`OpensWrittenRun` と同じ形）。7.7: 該当なし（flag の読み手 1 軒・fallback 無し）。HANDOFF 441,429 B（残り 8,571）。未 push 55＋docs（push はユーザー）。
+判定: §2 F ⒳ は閉じた。次に製品の仕事が残る起票で着手できるもの＝**§2 G-pdf**（PDF の font resolver がプロセスに 1 つ＝LSP が 2 冊を同時に PDF にした日に出る・閉じ方は起票に書いてある）か、ユーザーが島を選ぶ（§1.0 ⒜ の残りはユーザー側）。(a) 今便の文脈は使わない／(b) 会話は軽い（1 便・画像 6 枚）／(c) 別の島 ⇒ **既定どおりこの会話で `-Start p885` を回して続けてよい**。
+
 ## 以下は第883セッションの経緯
 
 ### 1.1 第883セッション（2026-10-10・YT-DELL2）
