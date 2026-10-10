@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第879セッションの経緯
+
+### 1.1 第879セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第878 の続き・ユーザー「続けて」）。`-Start p879`（HEAD `ac82f737b`）＝full **11752 / 0 / 2 / 11754**。§7 3.5 で第877 を ARCHIVE へ。
+- **clef の無い段の行頭の boxed label の X**（`4e4e07bd6`）: RehearsalMark は `(staff-bar key-signature clef)` の*見える*最初の grob に break-align する（break-alignment-interface.cc:309-334 `find_parent`）が、`as lines 1` は clef も key も描かないので**見えない行頭の staff bar が fallback**＝anchor はその column（段の左端）・anchor alignment は BarLine の CENTER・`self-alignment-opposite-of-anchor`（output-lib.scm:484-488）で**箱の中心が段の左端に乗る**（mid-line の bar anchor と同じ形）。Lily# は `prefixMarkAnchorX` が NaN のとき「縁＋0.3 に箱の左端」だった。LP（p878 の dump の X）: 1 線の `A` 箱 7.18..9.90（中心 8.54＝段の 8.5358）・5 線 11.90..14.62（clef の右・不変）。直した後: 箱 7.16..9.91・`A` の枠底 3.44（LP の紙で 3.52）＝tempo の音符の頭だけを避ける形が再現。⚠️ **rows-only（chords／lyrics だけ）の sheet は除外**＝Bar_engraver が無く staff bar も無い→従来の「縁＋0.3」（`RowsOnlySectionLabelTests`・ユーザーの慣例）のまま＝`AnchorIsASpaceableStaff`。最初の build は除外前で掃き 12 冊（lead-sheet 族）が動いたので作り直した。
+- 掃き 1199／差 1（oneline-rest＝1 線譜の行頭 label）・full **11750 / 3 / 2**＝HANDOFF の門 3 だけ。`MarkFewLineStaffTests` ＋1（箱の中心＝段の左端）。
+- 1 線譜の島で残っているもの: `TextSpannerEngraver.InkAboveStaff` の 5 線 `StaffExtent`（置く側と綴りを揃えた・LP は線数に依らない＝第877）、PagingSkylines の tempo の見積り（5 線のまま・過大予約のみ）。**この島はこれで一巡**＝次はユーザー判断（SMuFL §3・`as lines 1` の文脈・collector の `needsLedgerLines`・`staff bass`）。
+- `-End p879 -DiffBase ac82f737b`（門は全部 OK）＝full **11753 / 0 / 2 / 11755**。Core '+' 40 行／REF 2／OWN 0。HANDOFF 440,227 B（残り 9,773）。未 push 46＋docs（push はユーザー）。
+
 ## 以下は第878セッションの経緯
 
 ### 1.1 第878セッション（2026-10-10・YT-DELL2）
