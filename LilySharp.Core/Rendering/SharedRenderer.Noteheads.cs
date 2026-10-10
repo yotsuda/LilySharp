@@ -66,7 +66,7 @@ internal static partial class SharedRenderer
             // Percent-covered measures draw no notes — and no ledgers either.
             if (percentCovered != null && percentCovered.Contains(ledgerMl.MeasureIndex))
                 continue;
-            CollectItemLedgers(item, itemX, ledgerVoiceX, staffMiddleY, ledgerColumn++, ledgerPlan);
+            CollectItemLedgers(item, itemX, ledgerVoiceX, staffMiddleY, ledgerColumn++, ledgerPlan, staffLines);
         }
         DrawPlannedLedgers(ledgerPlan, gc);
 
@@ -473,14 +473,17 @@ internal static partial class SharedRenderer
     /// nominal AccidentalNoteGap) rather than read from where the accidental was drawn, and
     /// its shortening range was a flat ±3 positions for every glyph.
     /// </remarks>
+    /// <param name="staffLines">The staff's drawn line count: the ledgers a head carries are
+    /// THIS staff's (EngravingDefaults.LedgerPositions) — on one line they start at ±2.</param>
     private static void CollectItemLedgers(MusicItem item, double x, double voiceX,
-        double staffMiddleY, int column, List<LedgerRequest> ledgerPlan)
+        double staffMiddleY, int column, List<LedgerRequest> ledgerPlan, int staffLines)
     {
         switch (item)
         {
             case NoteItem note:
             {
-                if (Math.Abs(note.StaffPosition) < 5)
+                // A head with ledgers, or outside the staff without any (ledger-line-spanner.cc:223-226).
+                if (!EngravingDefaults.LedgerRequested(note.StaffPosition, staffLines))
                     break;
                 int noteValue = GlyphMetrics.NoteValueOf(note.BaseDuration);
                 // The head's INK width, not its advance: LilyPond's ledger takes the head's
@@ -509,7 +512,7 @@ internal static partial class SharedRenderer
                             accFont ?? MusicFont.Current.DesignAt(0));
                 }
                 CollectLedgerRequest(ledgerPlan, column, note.StaffPosition, x, headWidth,
-                    staffMiddleY, accRight, note.Accidental, note.IsCourtesy);
+                    staffMiddleY, accRight, note.Accidental, note.IsCourtesy, staffLines);
                 break;
             }
             case ChordItem chord when chord.Notes.Length > 0:
@@ -524,7 +527,7 @@ internal static partial class SharedRenderer
                     chord.Notes, chord.StemUp, noteValue, chordHeadFont);
                 bool anyOutside = false;
                 foreach (var n in chord.Notes)
-                    if (Math.Abs(n.StaffPosition) >= 5) { anyOutside = true; break; }
+                    if (EngravingDefaults.LedgerRequested(n.StaffPosition, staffLines)) { anyOutside = true; break; }
                 if (!anyOutside)
                     break;
                 // The chord's accidentals, placed as DrawChord places them (a packed column's
@@ -544,7 +547,7 @@ internal static partial class SharedRenderer
                 for (int i = 0; i < chord.Notes.Length; i++)
                 {
                     var n = chord.Notes[i];
-                    if (Math.Abs(n.StaffPosition) < 5)
+                    if (!EngravingDefaults.LedgerRequested(n.StaffPosition, staffLines))
                         continue;
                     double? accRight = null;
                     if (n.Accidental != null)
@@ -556,7 +559,7 @@ internal static partial class SharedRenderer
                                 break;
                             }
                     CollectLedgerRequest(ledgerPlan, column, n.StaffPosition, x + offsets[i],
-                        headWidth, staffMiddleY, accRight, n.Accidental, n.IsCourtesy);
+                        headWidth, staffMiddleY, accRight, n.Accidental, n.IsCourtesy, staffLines);
                 }
                 break;
             }
@@ -1358,16 +1361,23 @@ internal static partial class SharedRenderer
         public double HeadLeft, HeadRight;
         public double LedgerLeft, LedgerRight; // the head's own extent, clamped by the column's
         public int Position;                   // this head's signed staff position
+        public int StaffLines;                 // the staff's drawn lines: whose ledgers these are
         public double StaffMiddleY;
         public double? AccidentalRight;        // the drawn accidental's ink right, page X
         public double ShortenBottom, ShortenTop; // the accidental's range, in positions about the head
     }
+
+    /// <summary>The side a head's ledgers are reasoned on — <c>sign (pos != 0 ? pos : 1)</c>: a
+    /// head ON the middle (the timbales pair's gap, which carries a ledger) counts as UP.</summary>
+    /// <remarks>LILYPOND-REF: lily/ledger-line-spanner.cc:232 Ledger_line_spanner::print, <c>Direction vdir</c>.</remarks>
+    private static int LedgerDirection(int position) => Math.Sign(position != 0 ? position : 1);
 
     /// <summary>The per-column bounds the neighbour pass reasons with: the union of the
     /// column's heads and their ledgers, and the position furthest from the staff.</summary>
     private sealed class LedgerColumn
     {
         public int Column;
+        public int StaffLines;
         public double HeadLeft = double.MaxValue, HeadRight = double.MinValue;
         public double LedgerLeft = double.MaxValue, LedgerRight = double.MinValue;
         public int MaxPosition;
@@ -1387,9 +1397,9 @@ internal static partial class SharedRenderer
     /// </remarks>
     private static void CollectLedgerRequest(List<LedgerRequest> plan, int column, int position,
         double x, double headWidth, double staffMiddleY, double? accidentalRight,
-        string? accidental, bool isCourtesy)
+        string? accidental, bool isCourtesy, int staffLines)
     {
-        if (Math.Abs(position) < 5)
+        if (!EngravingDefaults.LedgerRequested(position, staffLines))
             return;
 
         double ext = EngravingDefaults.LedgerLengthFraction * headWidth;
@@ -1404,6 +1414,7 @@ internal static partial class SharedRenderer
             LedgerLeft = x - ext,
             LedgerRight = x + headWidth + ext,
             Position = position,
+            StaffLines = staffLines,
             StaffMiddleY = staffMiddleY,
             AccidentalRight = accidentalRight,
             ShortenBottom = bottom * 2 - 1e-3,
@@ -1452,14 +1463,14 @@ internal static partial class SharedRenderer
             columns.Clear();
             foreach (var r in plan)
             {
-                if (Math.Sign(r.Position) != direction)
+                if (LedgerDirection(r.Position) != direction)
                     continue;
                 LedgerColumn? col = null;
                 foreach (var c in columns)
                     if (c.Column == r.Column) { col = c; break; }
                 if (col == null)
                 {
-                    col = new LedgerColumn { Column = r.Column, MaxPosition = r.Position };
+                    col = new LedgerColumn { Column = r.Column, MaxPosition = r.Position, StaffLines = r.StaffLines };
                     int at = columns.Count;
                     while (at > 0 && columns[at - 1].HeadLeft.CompareTo(r.HeadLeft) > 0)
                         at--;
@@ -1478,7 +1489,10 @@ internal static partial class SharedRenderer
                 var prev = columns[i - 1];
                 var cur = columns[i];
                 double center = (prev.HeadRight + cur.HeadLeft) / 2.0;
-                bool both = Math.Abs(prev.MaxPosition) >= 6 && Math.Abs(cur.MaxPosition) >= 6;
+                // Both columns' furthest heads beyond the first space outside the staff — the
+                // position one step toward the staff is outside it too (:302-311); ±6 on five lines.
+                bool both = !EngravingDefaults.StaffLinesSpan(prev.MaxPosition - Math.Sign(prev.MaxPosition), prev.StaffLines)
+                         && !EngravingDefaults.StaffLinesSpan(cur.MaxPosition - Math.Sign(cur.MaxPosition), cur.StaffLines);
                 double half = both ? gap / 2.0 : 0.0;
                 prev.LedgerRight = Math.Min(prev.LedgerRight, center - half);
                 cur.LedgerLeft = Math.Max(cur.LedgerLeft, center + half);
@@ -1487,7 +1501,7 @@ internal static partial class SharedRenderer
             // Each head's extent intersected with its column's clamped maximum.
             foreach (var r in plan)
             {
-                if (Math.Sign(r.Position) != direction)
+                if (LedgerDirection(r.Position) != direction)
                     continue;
                 foreach (var c in columns)
                     if (c.Column == r.Column)
@@ -1501,14 +1515,24 @@ internal static partial class SharedRenderer
 
         // Per (column, position): the union of what its heads ask for.
         var lines = new Dictionary<(int Column, int Pos), (double Left, double Right, double Y)>();
+        // One buffer for the furthest head's ledgers, lent to every request below.
+        int furthest = 0;
+        foreach (var req in plan)
+            furthest = Math.Max(furthest, Math.Abs(req.Position));
+        Span<int> ledgers = stackalloc int[EngravingDefaults.LedgerCapacity(furthest)];
         foreach (var req in plan)
         {
             int extreme = req.Position;
-            int step = extreme > 0 ? 2 : -2;
-            for (int pos = extreme > 0 ? 6 : -6;
-                 extreme > 0 ? pos <= extreme : pos >= extreme;
-                 pos += step)
+            // The ledgers THIS staff gives the head (Staff_symbol::ledger_positions): ±6 and
+            // beyond on five lines, ±2 and beyond on one.
+            // LILYPOND-REF: lily/ledger-line-spanner.cc:220-221, :354-356 Ledger_line_spanner::print.
+            int ledgerCount = EngravingDefaults.LedgerPositions(extreme, req.StaffLines, ledgers);
+            // From the staff outward, as the lines were always emitted (the walk lists them
+            // ascending): a page's element order is not a layout rule, and keeping it keeps
+            // every below-staff snapshot byte-stable.
+            for (int li = 0; li < ledgerCount; li++)
             {
+                int pos = ledgers[extreme < 0 ? ledgerCount - 1 - li : li];
                 double left = req.LedgerLeft;
                 double rel = pos - extreme;
                 if (req.AccidentalRight is { } accRight

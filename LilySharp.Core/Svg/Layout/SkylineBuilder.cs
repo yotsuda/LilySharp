@@ -2899,7 +2899,7 @@ internal sealed class SkylineBuilder
                 break;
             case NoteItem note:
                 AddNoteToSkylines(note, x, staffMiddleUp, size,
-                    upSkyline, downSkyline, forcedStemUp, reserveStem);
+                    upSkyline, downSkyline, forcedStemUp, reserveStem, staffLines);
                 // The augmentation dots the renderer draws, as their EXTENT boxes: a Dots
                 // grob declares no vertical-skylines, so it enters LilyPond's inside-staff
                 // profile through the default — a box from its extents — and the
@@ -2991,7 +2991,7 @@ internal sealed class SkylineBuilder
                     AddNoteBoxToSkylines(chordNote.StaffPosition, x, staffMiddleUp, size,
                         chordStemUp, chordNoteValue,
                         upSkyline, downSkyline, reserveStem, chord.Notehead,
-                        graceItem: chord.GraceTime ? chord : null);
+                        graceItem: chord.GraceTime ? chord : null, staffLines: staffLines);
                 }
                 // Chord accidentals go through the REAL placement machinery
                 // (stagger columns, reversed-head offsets) so the skyline
@@ -3312,7 +3312,8 @@ internal sealed class SkylineBuilder
         VerticalSkyline upSkyline,
         VerticalSkyline downSkyline,
         bool? forcedStemUp = null,
-        bool reserveStem = true)
+        bool reserveStem = true,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
     {
         int noteValue = LayoutUtilities.GetNoteValueFromFraction(note.BaseDuration);
         // Writer's @stemUp/@stemDown outranks the voice default, as the
@@ -3323,7 +3324,7 @@ internal sealed class SkylineBuilder
         // note's keep the staff's own.
         AddNoteBoxToSkylines(note.StaffPosition, x, staffMiddleUp, size,
             stemUp, noteValue, upSkyline, downSkyline, reserveStem, note.Notehead,
-            graceItem: note.GraceTime ? note : null);
+            graceItem: note.GraceTime ? note : null, staffLines: staffLines);
     }
 
     /// <summary>
@@ -3407,7 +3408,10 @@ internal sealed class SkylineBuilder
         // GRACE TIME: the item itself, so the head's font, the stem's length rule and the
         // flag's outline are each asked of the grob (GraceFontsOf / GrobFontSize). Null keeps
         // every full-size seed byte for byte.
-        MusicItem? graceItem = null)
+        MusicItem? graceItem = null,
+        // The staff's drawn line count: the ledgers the head carries are THIS staff's
+        // (EngravingDefaults.LedgerPositions) — on one line they start at ±2, not ±6.
+        int staffLines = EngravingDefaults.DefaultStaffLines)
     {
         var (headFont, stemDetails, flagFont) = graceItem is { } sizedItem
             ? GraceFontsOf(sizedItem)
@@ -3494,31 +3498,27 @@ internal sealed class SkylineBuilder
         double ledgerLeft = noteLeft - ledgerExtension;
         double ledgerRight = noteRight + ledgerExtension;
 
-        // Ledger lines above staff (staffPosition >= 6). Each ledger sits at the
-        // staff position it serves: its Y-up coordinate is pos/2.
-        if (staffPosition >= 6)
+        // The ledger lines THIS staff gives the head — Staff_symbol::ledger_positions, ±6 and
+        // beyond on five lines, ±2 and beyond on one (the five-line ±6 was written in here
+        // until 2026-10-10). Each sits at the staff position it serves: its Y-up coordinate is
+        // pos/2; one above the middle goes to the up skyline, one below to the down, and the
+        // timbales pair's ledger ON the middle to both.
+        // LILYPOND-REF: lily/ledger-line-spanner.cc:220-221, :354-356, :400-403 Ledger_line_spanner::print.
+        System.Span<int> ledgers = stackalloc int[EngravingDefaults.LedgerCapacity(staffPosition)];
+        int ledgerCount = EngravingDefaults.LedgerPositions(staffPosition, staffLines, ledgers);
+        // From the staff outward, the order the boxes were always merged in.
+        for (int li = 0; li < ledgerCount; li++)
         {
-            for (int pos = 6; pos <= staffPosition; pos += 2)
-            {
-                double ledgerUp = size.Span(pos * 0.5);
-                double ledgerTopUp = ledgerUp + ledgerThickness / 2;
-                double ledgerBottomUp = ledgerUp - ledgerThickness / 2;
+            int pos = ledgers[staffPosition < 0 ? ledgerCount - 1 - li : li];
+            double ledgerUp = size.Span(pos * 0.5);
+            double ledgerTopUp = ledgerUp + ledgerThickness / 2;
+            double ledgerBottomUp = ledgerUp - ledgerThickness / 2;
+            if (pos >= 0)
                 upSkyline.MergeBox(ledgerLeft, ledgerRight,
                     ToSystemUp(ledgerBottomUp), ToSystemUp(ledgerTopUp));
-            }
-        }
-
-        // Ledger lines below staff (staffPosition <= -6)
-        if (staffPosition <= -6)
-        {
-            for (int pos = -6; pos >= staffPosition; pos -= 2)
-            {
-                double ledgerUp = size.Span(pos * 0.5);
-                double ledgerTopUp = ledgerUp + ledgerThickness / 2;
-                double ledgerBottomUp = ledgerUp - ledgerThickness / 2;
+            if (pos <= 0)
                 downSkyline.MergeBox(ledgerLeft, ledgerRight,
                     ToSystemUp(ledgerBottomUp), ToSystemUp(ledgerTopUp));
-            }
         }
 
         // Stem bounding box. A whole note or a breve has NO stem, so it must not reserve

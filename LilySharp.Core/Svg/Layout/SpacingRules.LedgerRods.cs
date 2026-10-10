@@ -63,10 +63,10 @@ internal static partial class SpacingRules
     /// (<see cref="ChordHeadPositioning.CalculateOffsets"/>) and a colliding voice at its shift
     /// (<see cref="VoiceCollisionShiftsOf(Model.Staff)"/>).
     /// <para>
-    /// A head carries ledger lines at |staff position| &gt;= 6 — the renderer's own test
-    /// (SharedRenderer.Noteheads, DrawPlannedLedgers), so the rod answers for exactly the ledgers
-    /// that are drawn. ⚠️ Like the renderer it assumes the five-line staff; LilyPond's
-    /// <c>ledger_positions</c> follows a staff's own line positions.
+    /// A head carries ledger lines where <see cref="EngravingDefaults.LedgerPositions"/> says its
+    /// staff gives it some — the renderer's own test (SharedRenderer.Noteheads, DrawPlannedLedgers),
+    /// so the rod answers for exactly the ledgers that are drawn: |position| &gt;= 6 on five
+    /// lines, ±2 and beyond on one (the five-line ±6 was written in here until 2026-10-10).
     /// </para>
     /// <para>
     /// ⚠️ Grace heads take no part: LilyPond's grace columns are paper columns of their own and
@@ -142,7 +142,13 @@ internal static partial class SpacingRules
 
                         void AddLedgeredHead(int col, int position, double x)
                         {
-                            if (Math.Abs(position) < 6)
+                            // A head whose ledger_positions are empty takes no part (:101-103),
+                            // nor one on the middle (sign 0, :126-128) — the timbales pair's gap
+                            // carries a ledger but no rod. ±6 on five lines; ±2 on one.
+                            // LILYPOND-REF: lily/ledger-line-spanner.cc:101-103, :126-128 Ledger_line_spanner::set_spacing_rods.
+                            Span<int> ledgers = stackalloc int[EngravingDefaults.LedgerCapacity(position)];
+                            if (position == 0
+                                || EngravingDefaults.LedgerPositions(position, staff.Lines, ledgers) == 0)
                                 return;
                             EnsureExtents();
                             if (position > 0)

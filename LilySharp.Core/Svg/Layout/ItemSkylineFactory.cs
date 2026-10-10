@@ -185,17 +185,25 @@ internal static class ItemSkylineFactory
     /// (flag-low-norod.ly) moved nothing, so the rod is not what holds them apart. Beamed
     /// eighths on ledger lines (ledger-beamed.ly, 21.303 / 21.56 / 20.891) are priced by the
     /// duration space either way and do not move.
-    /// The frame here is the device's (y down): the staff's outer lines are <c>staffY ± 2</c>
-    /// and the first ledger lines <c>staffY ± 3</c>.
+    /// The frame here is the device's (y down): on five lines the staff's outer lines are
+    /// <c>staffY ± 2</c> and the first ledger lines <c>staffY ± 3</c>; on THIS staff's lines
+    /// generally, one staff space beyond its outer drawn line each way (<c>line_span</c> — a
+    /// one-line staff's first ledgers are <c>staffY ± 1</c>). The five-line ±3 was written in
+    /// until 2026-10-10.
     /// </remarks>
-    private static (double YBottom, double YTop) WithLedgerReach(double yBottom, double yTop, double staffY)
+    private static (double YBottom, double YTop) WithLedgerReach(double yBottom, double yTop, double staffY,
+        int staffLines)
     {
+        var lines = EngravingDefaults.StaffLinePositions(staffLines);
+        // lines[DOWN] − 1 and lines[UP] + 1, in the device's y-down frame.
+        double firstLedgerBelow = staffY - lines[0] / 2.0 + 1.0;
+        double firstLedgerAbove = staffY - lines[lines.Length - 1] / 2.0 - 1.0;
         // Below the staff (larger y): the box climbs to the first ledger line below.
-        if (yBottom > staffY + 3.0)
-            yBottom = staffY + 3.0;
+        if (yBottom > firstLedgerBelow)
+            yBottom = firstLedgerBelow;
         // Above the staff (smaller y): the box drops to the first ledger line above.
-        if (yTop < staffY - 3.0)
-            yTop = staffY - 3.0;
+        if (yTop < firstLedgerAbove)
+            yTop = firstLedgerAbove;
         return (yBottom, yTop);
     }
 
@@ -499,7 +507,7 @@ internal static class ItemSkylineFactory
         int staffLines = EngravingDefaults.DefaultStaffLines)
     {
         var parts = ColumnParts(item, referenceX, staffY, staffLines);
-        var boxes = BoxesOf(parts, staffY, which);
+        var boxes = BoxesOf(parts, staffY, which, staffLines);
         GiveParts(parts);
         return boxes;
     }
@@ -644,8 +652,11 @@ internal static class ItemSkylineFactory
                 }
             }
         }
+        // A grace column's frame is its own (middle line at 0) and its ledger reach the
+        // five-line staff's — a grace on a reduced staff is not priced here.
         var boxes = BoxesOf(parts, 0.0,
-            direction == HorizontalDirection.Left ? ColumnElements.WishLeft : ColumnElements.NoteColumn);
+            direction == HorizontalDirection.Left ? ColumnElements.WishLeft : ColumnElements.NoteColumn,
+            EngravingDefaults.DefaultStaffLines);
         var skyline = HorizontalSkyline.FromBoxesPadded(
             boxes, direction, SpacingRules.NoteColumnSkylineVerticalPadding);
         HorizontalSkyline.GiveBoxList(boxes);
@@ -657,7 +668,7 @@ internal static class ItemSkylineFactory
     private static HorizontalSkyline GraceSkyline(
         List<ColumnPart> parts, ColumnElements which, HorizontalDirection direction)
     {
-        var boxes = BoxesOf(parts, 0.0, which);
+        var boxes = BoxesOf(parts, 0.0, which, EngravingDefaults.DefaultStaffLines);
         var skyline = HorizontalSkyline.FromBoxesPadded(
             boxes, direction, SpacingRules.MusicalColumnSkylineVerticalPadding);
         HorizontalSkyline.GiveBoxList(boxes);
@@ -667,8 +678,10 @@ internal static class ItemSkylineFactory
     /// <summary>The parts' boxes, in a list lent by
     /// <see cref="HorizontalSkyline.RentBoxList"/> — every caller hands it to
     /// <see cref="HorizontalSkyline.FromBoxes"/>, which copies it, and gives it back.</summary>
+    /// <param name="staffLines">The staff's drawn line count — the head's ledger reach
+    /// (<see cref="WithLedgerReach"/>) stops at ITS first ledger line.</param>
     private static List<(double YBottom, double YTop, double XLeft, double XRight)> BoxesOf(
-        List<ColumnPart> parts, double staffY, ColumnElements which)
+        List<ColumnPart> parts, double staffY, ColumnElements which, int staffLines)
     {
         // At most one box per part — and all three callers hold the very list ColumnParts
         // built — so the lent list is made to hold that many before the walk, and the walk
@@ -687,7 +700,7 @@ internal static class ItemSkylineFactory
             // (HorizontalSkyline.BoxBuilding), so the box GROWS outward from both.
             // LILYPOND-REF: lily/separation-item.cc:168-183 Separation_item::boxes.
             var (yBottom, yTop) = p.LedgerReach
-                ? WithLedgerReach(p.YBottom, p.YTop, staffY)
+                ? WithLedgerReach(p.YBottom, p.YTop, staffY, staffLines)
                 : (p.YBottom, p.YTop);
             if (p.ExtraHeight != 0.0)
             {

@@ -179,16 +179,79 @@ internal static class EngravingDefaults
     {
         if (OnDrawnStaffLine(roundedPosition, lineCount))
             return true;
+        System.Span<int> ledgers = stackalloc int[LedgerCapacity(roundedPosition)];
+        int n = LedgerPositions(roundedPosition, lineCount, ledgers);
+        for (int i = 0; i < n; i++)
+            if (ledgers[i] == roundedPosition)
+                return true;
+        return false;
+    }
 
+    /// <summary>Room for every ledger line <see cref="LedgerPositions"/> can write for a head at
+    /// <paramref name="position"/>: at most one per two positions between the staff and the
+    /// head, and the staff's nearest line is never more than two positions past the middle.
+    /// LILYSHARP-OWN: a buffer size, not a quantity — LilyPond's vector grows as it fills.</summary>
+    public static int LedgerCapacity(int position) => System.Math.Abs(position) / 2 + 2;
+
+    /// <summary>
+    /// Whether a staff of <paramref name="lineCount"/> lines spans a position: its outer drawn
+    /// lines enclose it. LilyPond asks the StaffSymbol's Y extent in half spaces, which is the
+    /// line span widened by half a line's thickness — the same answer for a whole position.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/ledger-line-spanner.cc:202-203 <c>staff_extent</c> (the
+    /// staff's extent over the half space), :226 and :294-311 <c>staff_extent.contains (pos)</c>.</remarks>
+    public static bool StaffLinesSpan(int position, int lineCount)
+    {
+        var lines = StaffLinePositions(lineCount);
+        return lines.Length > 0 && position >= lines[0] && position <= lines[lines.Length - 1];
+    }
+
+    /// <summary>
+    /// Whether a head at a position asks the ledger-line spanner for anything: it carries
+    /// ledger lines, or it stands outside the staff's lines without any (the first space
+    /// beyond the staff) — the heads <c>Ledger_line_spanner::print</c> works with, whose
+    /// extents shorten a neighbour's ledgers even when they draw none of their own.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/ledger-line-spanner.cc:223-226 — <c>ledger_positions.size ()
+    /// != 0 || !staff_extent.contains (pos)</c>.</remarks>
+    public static bool LedgerRequested(int position, int lineCount)
+    {
+        if (!StaffLinesSpan(position, lineCount))
+            return true;
+        System.Span<int> ledgers = stackalloc int[LedgerCapacity(position)];
+        return LedgerPositions(position, lineCount, ledgers) > 0;
+    }
+
+    /// <summary>
+    /// The staff positions of the ledger lines a head at <paramref name="position"/> carries on a
+    /// notation staff of <paramref name="lineCount"/> lines — written into <paramref name="into"/>
+    /// in ascending order, and counted. None for a head on a line or in the first space beyond
+    /// the staff; on five lines the first is ±6, on one line ±2, and the timbales pair's gap
+    /// (position 0 between ±2) carries one, as LilyPond draws it (MEASURED, 2.26.0: Lab
+    /// sessions/p873/probe/ledger, the `as lines 1..5` twins — the pair's b on the middle
+    /// carries a ledger, a one-line staff's d' one at +2, its a, four at −2 … −8).
+    /// Until 2026-10-10 every reader here — the drawn ledgers, their skyline boxes, the
+    /// spacing rods, the column box's ledger reach — had the five-line ±6 written in.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/staff-symbol.cc:122-319 Staff_symbol::ledger_positions, the default
+    ///   branch (no <c>ledger-positions</c> property, <c>ledger-extra</c> 0): the staff line
+    ///   NEAREST the position (:163-179, a tie broken toward the middle), none when the head
+    ///   sits on it (:181-183), the fill from that line to the head (:185-200), every other
+    ///   position of the nearest line's parity across it (:289-306), minus the staff's own
+    ///   lines (:308-317).
+    /// </remarks>
+    public static int LedgerPositions(int position, int lineCount, System.Span<int> into)
+    {
         // find the staff line nearest to note position (:163-179)
         double nearestLine = 0;
         double lineDist = double.PositiveInfinity;
         foreach (double p in StaffLinePositions(lineCount))
         {
-            double dist = System.Math.Abs(p - roundedPosition);
+            double dist = System.Math.Abs(p - position);
             // prefer values nearer to the middle staff line
-            if ((p >= 0 && roundedPosition > 0 && p < roundedPosition)
-                || (p <= 0 && roundedPosition < 0 && p > roundedPosition))
+            if ((p >= 0 && position > 0 && p < position)
+                || (p <= 0 && position < 0 && p > position))
                 dist = System.Math.BitDecrement(dist);   // std::nextafter (dist, 0)
             if (dist < lineDist)
             {
@@ -198,13 +261,13 @@ internal static class EngravingDefaults
         }
 
         // nothing to do for notes on a staff line and normal ledger lines (:181-183)
-        if (lineDist == 0)
-            return false;
+        if (lineDist == 0 || double.IsPositiveInfinity(lineDist))
+            return 0;
 
         // ledger_fill: from the nearest staff line to the note head (:185-200; ledger-extra is
         // 0, so extra_pos is the position itself)
-        double fillDown = System.Math.Min(nearestLine, roundedPosition);
-        double fillUp = System.Math.Max(nearestLine, roundedPosition);
+        double fillDown = System.Math.Min(nearestLine, position);
+        double fillUp = System.Math.Max(nearestLine, position);
 
         // normal ledger lines (:289-306): bottom..top of the nearest line's parity
         int bottom = (int)System.Math.Ceiling(fillDown);
@@ -213,11 +276,15 @@ internal static class EngravingDefaults
         int oddStart = nearest & 1;
         int numLedgers = (top - bottom + 2 - ((bottom & 1) != oddStart ? 1 : 0)) / 2;
         int value = bottom + ((bottom & 1) != oddStart ? 1 : 0);
-        for (int i = 0; i < numLedgers; i++, value += 2)
-            // :308-317 drop the ledgers that fall on staff lines — a staff line answered above.
-            if (value == roundedPosition)
-                return true;
-        return false;
+        int n = 0;
+        for (int i = 0; i < numLedgers && n < into.Length; i++, value += 2)
+        {
+            // remove all ledger lines that would fall on staff lines (:308-317)
+            if (OnDrawnStaffLine(value, lineCount))
+                continue;
+            into[n++] = value;
+        }
+        return n;
     }
 
     /// <summary>Staff line thickness: 1.0 × line-thickness.</summary>

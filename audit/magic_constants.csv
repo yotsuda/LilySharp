@@ -151,7 +151,6 @@
 "Svg/Layout/SkylineBuilder.cs","SkylineBuilder.AddMusicItemToSkylines","0.5","(restDotRel ?? ElementCoordinator.RestDotDefaultOffset(restValue)) * 0.5);","(file-level) LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline()","Yellow"
 "Svg/Layout/SkylineBuilder.cs","SkylineBuilder.AddNoteBoxToSkylines","0.5","double noteUp = size.Span(staffPosition * 0.5);   // staff-spaces above middle, up+","(file-level) LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline()","Yellow"
 "Svg/Layout/SkylineBuilder.cs","SkylineBuilder.AddNoteBoxToSkylines","0.5","double ledgerUp = size.Span(pos * 0.5);","(file-level) LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline()","Yellow"
-"Svg/Layout/SkylineBuilder.cs","SkylineBuilder.AddNoteBoxToSkylines","0.5","double ledgerUp = size.Span(pos * 0.5);","(file-level) LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline()","Yellow"
 "Svg/Layout/MusicFont.cs","EmmentalerMusicFont.Kern","0.0","return 0.0;","","Yellow"
 "Svg/Layout/MusicFont.cs","EmmentalerMusicFont.Brace","0.0","return new((char) (BraceGlyphStart + rung), BraceLadder.Widths[rung], Rendering.SharedRenderer.FontSize, 0.0);","","Red"
 "Svg/Layout/MusicFont.cs","EmmentalerMusicFont.StemSidePaddingFraction","0.0",": 0.0;","LILYPOND-REF: scm/chord-name.scm — short-glyph?, whose whole body is `(&lt; alteration 0)'","Green"
