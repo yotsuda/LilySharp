@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第896セッションの経緯
+
+### 1.1 第896セッション（2026-10-10〜11・YT-DELL2）
+
+同じ会話（第895 の続き）。`-Start p896`（HEAD `008970df8`）＝full **11779 / 0 / 2 / 11781**。着手＝**ユーザー報告 12 件目**: 「コメントがほかの要素に重なると赤字でも読めない。重ならないように動かして。斜めの線と x のずらしはこのまま」。作業中に追加の方針＝**「ほかのページ上の要素を動かしても良い。どうせ動かすなら最終的にきれいに整った形が良い。いったん今の実装を見てからフィードバックする」** ⇒ この便は**他の要素を動かさず memo だけ逃がす版**を仕上げて見せる。段組みに memo の場所を取る版（他の要素が動く）は**ユーザーのフィードバック待ち・次便以降**。
+- 作り＝**`InkRecorder`**（新・`IDrawingContext` の decorator・`LilySharp.Core/Rendering/InkRecorder.cs`）。device context を包み、描いた primitive の箱（glyph は design box × size、text は `ScoreTextMetrics` の advance／ink、曲線は制御点の hull、線は端点＋pen）を頁の Y-up frame（margin group の X・頁の底からの Y）で記録、`BeginGroup` の translate／scale を stack で追う。`RenderTo` は **memo のある score で backend が editor marks を描くとき**（interactive SVG・`EditorMarks` の PNG）だけ包み、その頁は fragment memo を使わず全段を生で描く（replay は text を書くだけで primitive を通らない）。書き出しは包まない＝snapshot 不動。
+- `DrawTodoMarks` pass 2＝memo の箱（文字＋下線・空気は横 0.4／縦 0.5）が `ink.IsClear` になるまで 0.5 ずつ上（`.down` は下）へ登る。先に置いた memo と輪も記録されるので memo どうしも避ける（第893 の level 積みと `NoteReach` は撤去）。引き出し線は `ink.Suspend()` で記録しない（長い斜めの箱が余白を塞ぐ）。**頁の端で止まる**（プレビューの頁は段の高さの帯＝端を越えると切れる）＝空きが無いときだけ重なる。
+- 網 `TodoCalloutTests.AMemo_StandsClearOfTheInkAroundIt`＝同じ memo を加線の高音（`c'''4 d'''4 e'''4`）の隣に置くと引き出し線の縦の長さが 1.5 以上伸びる。⚠️ 最初の 2 つの形は**毒が緑**＝コードネーム行は `staffEdges` に入って端そのものが動く／`@text` は memo と段のあいだに空きがあって登らない（どちらも recorder 無しで通る）。毒 A（`SvgDrawingContext.DrawsEditorMarks => false`）3 本赤・毒 B（`RenderTo` の包みを `&& false`）1 本赤。絵 `sessions/p896/probe`（`one`・`piano`・`busy`＝コードネーム・強弱・歌詞つき）。
+- ⚠️ `one` の probe（1 段に memo 5 本）は頁の上端で memo が重なる＝この設計の限界。ユーザーの新方針（他の要素を動かして良い）の材料＝次は**段組みが memo の行を取る**形（第891 の DynamicItem 経路は第893 で撤去済み・同じ轍を踏まず、overlay の置き場を layout の余白として予約する形が筋）。
+- ⚠️ pwsh MCP の console に `Add-Type -Path LilySharp.Core.dll` を読ませてしまい（build 出力を lock する）console を閉じて立て直した。**console に product の DLL を読ませない**＝`Zz*` probe で書き出す。
+- 棚卸し＝OWN 231→232（`InkRecorder` の 1 件・APPROXIMATIONS.md 再生成）。docs＝SYNTAX_REFERENCE `@todo`・CHANGELOG×2（本体側は `todo` 補完の bullet の中に輪の bullet が割り込んでいたのを直した）・MANUAL-CHECKS §2.1。commit `059ac77eb`（`todo:`）。拡張は `tools\Deploy-Lsp.ps1` で入れ直し済み（**Reload Window が要る**）。
+- `-End p896 -DiffBase 008970df8`（門は全部 OK）＝full **11780 / 0 / 2 / 11782**（＋1＝`AMemo_StandsClearOfTheInkAroundIt`）。Core '+' 346 行／REF 0／OWN 2＝7.6 ⒞（recorder も置き場も Lily# 自身の設計・LP に対応物なし）。7.7: 該当なし。HANDOFF 375,076 B（残り 74,924）。未 push 81＋docs（push はユーザー）。Lab `sessions/p896/`（probe の絵・poison／build／test の log・commit-msg）。
+判定: **ユーザーの実機確認とフィードバック待ち**（新方針＝他の要素を動かして良い・整った形が良い）。(a) 文脈を使う／(b) **10 便＝重い**／(c) 次は設計変更（段組みが memo の行を取る）⇒ **フィードバックを受けたら新しい会話で `-Start p897`**。
+
 ## 以下は第895セッションの経緯
 
 ### 1.1 第895セッション（2026-10-10・YT-DELL2）
