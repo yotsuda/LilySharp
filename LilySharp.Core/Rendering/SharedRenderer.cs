@@ -85,6 +85,12 @@ internal static partial class SharedRenderer
     /// a draw site hands <see cref="IDrawingContext.DrawGlyph"/> (docs/smufl-design.md §6 ①).</summary>
     private static char Music(MusicGlyph glyph) => MusicFont.Current.Codepoint(glyph);
 
+    /// <summary>The ink recorder of the last page rendered with one on this thread — for a
+    /// probe or a test that asks what stood in a memo's way. Null until a page with memos
+    /// is drawn for a backend that shows the editor's marks.</summary>
+    [ThreadStatic]
+    internal static InkRecorder? LastInkRecorder;
+
     public static void RenderTo(
         MultiStaffScore score, ScoreLayout layout, IDocumentContext doc,
         bool resolveDataPos = false, SvgSystemFragmentCache? fragments = null)
@@ -155,8 +161,9 @@ internal static partial class SharedRenderer
             InkRecorder? ink = null;
             if (device.DrawsEditorMarks && recordInk)
             {
-                ink = new InkRecorder(device, score.TextMetrics, page.Height, options.MarginLeft);
+                ink = new InkRecorder(device, score.TextMetrics, page.Width, page.Height, options.MarginLeft);
                 device = ink;
+                LastInkRecorder = ink;
             }
             var pageFragHost = ink == null ? fragHost : null;
             IDrawingContext gc = new YFlipDrawingContext(device, page.Height);

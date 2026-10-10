@@ -48,14 +48,17 @@ internal sealed class InkRecorder : IDrawingContext
     private readonly Stack<(double Tx, double Ty, double Sx, double Sy)> _transforms = new();
     private int _suspended;
 
-    public InkRecorder(IDrawingContext inner, ScoreTextMetrics fonts, double pageHeight, double marginLeft)
+    public InkRecorder(IDrawingContext inner, ScoreTextMetrics fonts, double pageWidth, double pageHeight, double marginLeft)
     {
         _inner = inner;
         _fonts = fonts;
+        _pageWidth = pageWidth;
         _pageHeight = pageHeight;
         _marginLeft = marginLeft;
         _transforms.Push((0, 0, 1, 1));
     }
+
+    private readonly double _pageWidth;
 
     /// <summary>How many boxes have been put down so far.</summary>
     public int Count => _boxes.Count;
@@ -63,6 +66,14 @@ internal sealed class InkRecorder : IDrawingContext
     /// <summary>The page's height in staff spaces — the top of the page frame's Y-up range,
     /// past which a memo would be cut off.</summary>
     public double PageHeight => _pageHeight;
+
+    /// <summary>The page's left edge in the page frame (whose X is right of the left margin):
+    /// <c>−marginLeft</c>. The margin is paper a memo may stand on.</summary>
+    public double PageLeft => -_marginLeft;
+
+    /// <summary>The page's right edge in the page frame: the page's width less the left
+    /// margin.</summary>
+    public double PageRight => _pageWidth - _marginLeft;
 
     /// <summary>Stops recording until the token is disposed — for the memos' own leaders,
     /// whose long slanted boxes would fence off the margin they cross.</summary>
@@ -85,6 +96,17 @@ internal sealed class InkRecorder : IDrawingContext
             if (b.Left < right && left < b.Right && b.Bottom < top && bottom < b.Top)
                 return false;
         return true;
+    }
+
+    /// <summary>The boxes put down so far that meet the page-frame box <c>[left, right] ×
+    /// [bottom, top]</c> (Y-up) — what a probe or a test asks when a memo was set where it
+    /// was not expected.</summary>
+    internal IEnumerable<(double Left, double Right, double Bottom, double Top)> Blocking(
+        double left, double right, double bottom, double top)
+    {
+        foreach (var b in _boxes)
+            if (b.Left < right && left < b.Right && b.Bottom < top && bottom < b.Top)
+                yield return b;
     }
 
     // ---- recording ----
@@ -175,15 +197,63 @@ internal sealed class InkRecorder : IDrawingContext
         (double X, double Y) p1, (double X, double Y) c2Back, (double X, double Y) c1Back,
         Color? fill = null, double strokeWidth = 0)
     {
-        PutPoints(strokeWidth, p0, c1, c2, p1, c2Back, c1Back);
+        PutCubic(strokeWidth, p0, c1, c2, p1);
+        PutCubic(strokeWidth, p1, c2Back, c1Back, p0);
         _inner.DrawClosedBezier(p0, c1, c2, p1, c2Back, c1Back, fill, strokeWidth);
     }
 
     public void DrawBezier((double X, double Y) p0, (double X, double Y) c1, (double X, double Y) c2,
         (double X, double Y) p1, Color? stroke = null, double strokeWidth = 0.1)
     {
-        PutPoints(strokeWidth, p0, c1, c2, p1);
+        PutCubic(strokeWidth, p0, c1, c2, p1);
         _inner.DrawBezier(p0, c1, c2, p1, stroke, strokeWidth);
+    }
+
+    /// <summary>A cubic's own extent — not its control points' hull, which runs past the
+    /// curve and fenced off the margin next to a todo ring by a third of a space.</summary>
+    private void PutCubic(double pen, (double X, double Y) p0, (double X, double Y) c1,
+        (double X, double Y) c2, (double X, double Y) p1)
+    {
+        var (x0, x1) = CubicExtent(p0.X, c1.X, c2.X, p1.X);
+        var (y0, y1) = CubicExtent(p0.Y, c1.Y, c2.Y, p1.Y);
+        Put(x0 - pen / 2, y0 - pen / 2, x1 + pen / 2, y1 + pen / 2);
+    }
+
+    /// <summary>The least and greatest value a cubic Bézier's coordinate takes over
+    /// t ∈ [0, 1]: its ends and the roots of its derivative.</summary>
+    private static (double Min, double Max) CubicExtent(double a, double b, double c, double d)
+    {
+        double min = Math.Min(a, d), max = Math.Max(a, d);
+        // B'(t) = 3[(−a + 3b − 3c + d)t² + 2(a − 2b + c)t + (−a + b)]
+        double qa = -a + 3 * b - 3 * c + d, qb = 2 * (a - 2 * b + c), qc = -a + b;
+        Span<double> roots = stackalloc double[2];
+        int n = 0;
+        if (Math.Abs(qa) < 1e-12)
+        {
+            if (Math.Abs(qb) > 1e-12)
+                roots[n++] = -qc / qb;
+        }
+        else
+        {
+            double disc = qb * qb - 4 * qa * qc;
+            if (disc >= 0)
+            {
+                double s = Math.Sqrt(disc);
+                roots[n++] = (-qb + s) / (2 * qa);
+                roots[n++] = (-qb - s) / (2 * qa);
+            }
+        }
+        for (int i = 0; i < n; i++)
+        {
+            double t = roots[i];
+            if (t <= 0 || t >= 1)
+                continue;
+            double u = 1 - t;
+            double v = u * u * u * a + 3 * u * u * t * b + 3 * u * t * t * c + t * t * t * d;
+            min = Math.Min(min, v);
+            max = Math.Max(max, v);
+        }
+        return (min, max);
     }
 
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
@@ -228,7 +298,11 @@ internal sealed class InkRecorder : IDrawingContext
             var (bottom, top) = _fonts.Ink(text, fontSize, role, style);
             // The frame is Y down: ink above the baseline is a smaller Y. A text anchored
             // other than at its baseline is read as if it were — a rough box is all the
-            // memos need.
+            // memos need. The box is never shallower than a face's usual ascent and
+            // descent: a text the metrics cannot measure (a script the face lacks, read
+            // through a fallback) came back with no height, and a memo was set through it.
+            top = Math.Max(top, 0.72 * fontSize);
+            bottom = Math.Min(bottom, -0.22 * fontSize);
             Put(left, y - top, left + advance, y - bottom);
         }
         _inner.DrawText(text, x, y, fontSize, role, style, anchor, fill, verticalAnchor);

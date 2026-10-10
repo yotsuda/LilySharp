@@ -230,20 +230,44 @@ internal static partial class SharedRenderer
                 descent *= scale * TodoMemoScale;
                 double offset = TodoMemoOffset * scale, gap = TodoMemoGap * scale, air = TodoMemoAir * scale;
                 double drop = TodoUnderlineDrop * scale;
-                // The side with more room between the ring and the system's edge.
-                bool toRight = sysRight - c.RingX >= c.RingX - sysLeft;
-                double left = toRight ? c.RingX + offset : c.RingX - offset - width;
-                left = Math.Max(sysLeft, Math.Min(left, sysRight - width));
-                double right = left + width;
                 double ringEdge = below ? c.RingY - c.RingRy : c.RingY + c.RingRy;
                 // The text's box, underline included, from the baseline: [baseline − descent −
                 // drop − pen, baseline + ascent].
                 double boxDown = descent + drop + TodoPen * scale, boxUp = ascent;
-                double baseline = below
+                double start = below
                     ? Math.Min(edge, ringEdge) - gap - boxUp
                     : Math.Max(edge, ringEdge) + gap + boxDown;
-                if (ink != null)
+                // The side with more room between the ring and the system's edge is the one
+                // the memo would take; but a memo climbs from the staff's edge until it is
+                // clear, and where that side is walled — a fermata and a rehearsal mark over
+                // the note, the lyrics of the system above right over them — the climb runs
+                // past the system's own margin and sets the memo beside another system
+                // (owner's report 2026-10-11, `Untitled-2.lys`: a memo on bar 6's d2 stood
+                // over bar 1). So both sides are tried, and the memo takes the other side
+                // when that saves it two spaces of climbing or more — the roomier side stays
+                // the rule, so memos still line up, and only a walled one crosses over.
+                bool roomierRight = sysRight - c.RingX >= c.RingX - sysLeft;
+                var (leftR, baseR, climbR) = Settle(true);
+                var (leftL, baseL, climbL) = Settle(false);
+                double crossOver = 2.0 * scale;
+                bool toRight = roomierRight ? climbR <= climbL + crossOver : climbR + crossOver < climbL;
+                double left = toRight ? leftR : leftL;
+                double right = left + width;
+                double baseline = toRight ? baseR : baseL;
+
+                (double Left, double Baseline, double Climb) Settle(bool onRight)
                 {
+                    double l = onRight ? c.RingX + offset : c.RingX - offset - width;
+                    // Kept on the paper: the page's margins are room too — a memo on a note
+                    // near the system's left end would be pushed right over the note itself
+                    // if it had to stay within the system's width (the `Untitled-2.lys`
+                    // memo, 13 spaces wide, on bar 6's first notes).
+                    double paperLeft = ink?.PageLeft + air ?? sysLeft;
+                    double paperRight = ink?.PageRight - air ?? sysRight;
+                    l = Math.Max(paperLeft, Math.Min(l, paperRight - width));
+                    double b = start;
+                    if (ink == null)
+                        return (l, b, 0);
                     // The climb ends at the page's edge: a memo that finds no clear place
                     // before it stays at the edge, over whatever is there, rather than be cut
                     // off (the preview's page is a strip no taller than its systems).
@@ -253,11 +277,12 @@ internal static partial class SharedRenderer
                     // offset from the ring's centre, and a full space of air there would
                     // meet the ring's own box and lift every memo a step.
                     for (int tries = 0; tries < 400
-                        && (below ? baseline - boxDown - climb * scale > pageBottom : baseline + boxUp + climb * scale < pageTop)
-                        && !ink.IsClear(left - air * 0.4, right + air * 0.4, baseline - boxDown - air / 2, baseline + boxUp + air / 2);
+                        && (below ? b - boxDown - climb * scale > pageBottom : b + boxUp + climb * scale < pageTop)
+                        && !ink.IsClear(l - air * 0.4, l + width + air * 0.4, b - boxDown - air / 2, b + boxUp + air / 2);
                         tries++)
-                        baseline += below ? -climb * scale : climb * scale;
-                    baseline = below ? Math.Max(baseline, pageBottom + boxDown) : Math.Min(baseline, pageTop - boxUp);
+                        b += below ? -climb * scale : climb * scale;
+                    b = below ? Math.Max(b, pageBottom + boxDown) : Math.Min(b, pageTop - boxUp);
+                    return (l, b, Math.Abs(b - start));
                 }
                 // The memo is UNDERLINED, and the leader joins the underline's centre to the
                 // ring — the point of the ring that faces it — with the one pen (owner's

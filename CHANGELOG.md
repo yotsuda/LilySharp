@@ -184,8 +184,9 @@ workflow attaches that section to the GitHub Release verbatim.
   it red, and a memo stands as a line of small red text, underlined, in the margin above the
   system — `.down` below — set off to the side with more room, with a leader from the ring
   to the underline, all in one pen. Nothing on the page moves for a mark; the memo itself is
-  set where nothing else is drawn, climbing past a chord symbol, a dynamic, a ledgered note or
-  an earlier memo until it stands clear. `lilysharp.preview.highlightTodos` off hides them,
+  set where nothing else is drawn, crossing to the note's other side where that is clear and
+  climbing past a chord symbol, a dynamic, a ledgered note or an earlier memo otherwise.
+  `lilysharp.preview.highlightTodos` off hides them,
   and no export draws them.
 - **`todo` completes into its quotes.** Picking `todo` from the `@` completion writes
   `todo("")` with the caret between the quotes, as `text`, `mark` and `textSpan` do; it used to

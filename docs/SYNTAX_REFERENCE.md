@@ -398,8 +398,9 @@ stands as a line of small red text, underlined, in the margin above the system, 
 the side with more room, with a leader from the ring to the underline — one pen for all three
 — and `.down` puts it below. Nothing on the page
 moves for a mark, as nothing moves for a pencilled note; the memo itself is set where nothing
-else is drawn — it climbs past a chord symbol, a dynamic, a ledgered note or an earlier memo
-until it stands clear, and only at the page's edge may it lie over something. The
+else is drawn — it crosses to the note's other side where that side is clear, climbs past a
+chord symbol, a dynamic, a ledgered note or an earlier memo otherwise, may stand on the page's
+margin, and only at the page's edge may it lie over something. The
 `lilysharp.preview.highlightTodos` setting hides the marks. No export draws them.
 
 ```
