@@ -714,11 +714,23 @@ public sealed record RenderSpec(
                 // LILYPOND-REF: scm/music-functions.scm:666-674 make-voice-props-set — the
                 // direction the voice number sets goes to every direction-polyphonic grob,
                 // and Rest is one of them, which is why the rests and not the stems broke.
+                // ⚠️ …and the SECOND step the staff owns: the accidental column. A column two
+                // voices stand on has ONE AccidentalPlacement in LilyPond, packed against
+                // EVERY voice's heads (StaffAccidentalColumns, CrossVoiceAccidentalColumnTests),
+                // and MeasureCollector.ResolveStaffColumns runs that per PART too — so a
+                // condensed staff's parts were each packed alone, and the pinned part's flat
+                // was placed against its OWN head, inside the displaced part's notehead.
+                // MEASURED 2026-10-10 (Lab sessions/p886/cs, the XVB shape across two parts):
+                // the lower part's flat at x 34.58 with the upper head at 34.42; the same music
+                // as a voice { } { } span puts it at 33.27, left of the whole column, where
+                // LilyPond puts it. The scopes this packing reads (engraving style, music font)
+                // are opened by the caller, MeasureCollector's phase 3.
                 case CondensedStaffSpec condensed:
-                    var condensedVoices = MeasureCollector.ResolveVoiceStemDirections(
-                        condensed.PartNames
-                            .SelectMany(name => (IEnumerable<Voice>)getVoices(name))
-                            .ToImmutableArray());
+                    var condensedVoices = StaffAccidentalColumns.Resolve(
+                        MeasureCollector.ResolveVoiceStemDirections(
+                            condensed.PartNames
+                                .SelectMany(name => (IEnumerable<Voice>)getVoices(name))
+                                .ToImmutableArray()));
                     return Staff.Create(condensed.Clef, condensedVoices, condensed.InstrumentName);
 
                 // TWO parts -> ONE staff, MERGED. Unlike the condensed staff above, the

@@ -2054,11 +2054,20 @@ public sealed partial class MeasureCollector
         // A condensed staff's parts each walked their own key / time / clef: one staff
         // takes one of each at a moment (the first part's), the rest are junked here.
         JunkCondensedStaffDuplicateChanges(renderSpec, staffVoices, voiceKeyDict);
-        var staffGroups = renderSpec.ToStaffGroups(name =>
-            staffVoices.TryGetValue(name, out var v) ? v
-                : ImmutableArray.Create(new Voice(name, ImmutableArray<Measure>.Empty)),
-            combinedAddressings)
-            .ToImmutableArray();
+        ImmutableArray<StaffGroup> staffGroups;
+        // A condensed staff packs its parts' accidentals into one column as it is built
+        // (RenderSpec.ToStaffGroups), under the same two scopes ResolveStaffColumns opens for
+        // a part's own voices: the packing reads the engraving style and the music font's
+        // head boxes. ToStaffGroups is lazy, so the scopes must outlive the ToImmutableArray.
+        using (EngravingStyle.Use(_meta.Paper.Style))
+        using (Layout.MusicFont.Use(Layout.MusicFonts.Of(_meta.Fonts)))
+        {
+            staffGroups = renderSpec.ToStaffGroups(name =>
+                staffVoices.TryGetValue(name, out var v) ? v
+                    : ImmutableArray.Create(new Voice(name, ImmutableArray<Measure>.Empty)),
+                combinedAddressings)
+                .ToImmutableArray();
+        }
 
         // Per-staff facts only the collector knows, stamped onto the staves the render
         // spec just built (a staff is keyed by its primary voice's name):

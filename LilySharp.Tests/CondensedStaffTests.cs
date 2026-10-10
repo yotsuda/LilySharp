@@ -94,6 +94,47 @@ public class CondensedStaffTests
         Assert.Equal(1, StaffCount(Svg(TwoParts("condensedStaff { fl1 fl2 }"))));
     }
 
+    /// <summary>
+    /// A column two PARTS stand on has one accidental column, as a column two voices of one
+    /// part stand on does (<see cref="CrossVoiceAccidentalColumnTests"/>, LilyPond's XVA / XVB /
+    /// XVC shapes). The packing is the staff's, and a condensed staff only becomes a staff
+    /// when its parts are put together — so it has to run there, after the voices are joined,
+    /// not per part (HANDOFF §2 G-condensed, point 1; Lab sessions/p886/cs).
+    /// </summary>
+    /// <remarks>
+    /// MEASURED before the packing moved: bar 2 (the lower part pinned and carrying the flat)
+    /// drew the flat at x 34.58 — INSIDE the upper part's head at 34.42 — where the same music
+    /// as a two-voice span draws it at 33.27, left of the whole column. A differential net:
+    /// the control is the path the LilyPond-measured tests pin, and the two pages must agree
+    /// glyph for glyph.
+    /// </remarks>
+    [Fact]
+    public void TwoPartsAccidentals_ArePackedIntoOneColumn_AsTwoVoicesAre()
+    {
+        const string upper = "aes4 aes aes aes | a4 a a a | aes4 aes aes aes |";
+        const string lower = "g4 g g g | ges4 ges ges ges | ges4 ges ges ges |";
+        var condensed = Svg(Defaults + $$"""
+            part up { clef treble }
+            part lo { clef treble }
+            section A {
+              up { {{upper}} }
+              lo { {{lower}} }
+            }
+            form { ~A }
+            score { condensedStaff { up lo } }
+            """ + "\n");
+        var control = Svg(Defaults + $$"""
+            part p { clef treble }
+            section A {
+              p { voice { {{upper}} } { {{lower}} } }
+            }
+            form { ~A }
+            score { staff p }
+            """ + "\n");
+
+        Assert.Equal(GlyphXs(control), GlyphXs(condensed));
+    }
+
     /// <summary>Two parts, both opening section B with the header's <c>time 12/8</c>; the
     /// second also with a <c>key</c> the first does not write. One staff takes one meter
     /// and one key at a moment (session 779).</summary>

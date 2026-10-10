@@ -228,7 +228,11 @@ function cancelSvgRequest(uri: string) {
 }
 
 // Constants
-const DEBOUNCE_DELAY_DEFAULT = 60;
+// The preview's refresh debounce when the configuration has no value for it. package.json
+// declares `lilysharp.preview.refreshDelay` with default 100 and minimum 100, and VS Code
+// always answers from that schema, so this is reached by nothing in practice; it says the
+// same number so that the one reader (HANDOFF §2 R13 ⒞) cannot find two defaults. It was 60.
+const DEBOUNCE_DELAY_DEFAULT = 100;
 const HIGHLIGHT_DISTANCE_THRESHOLD = 50;
 
 export function activate(context: vscode.ExtensionContext) {
