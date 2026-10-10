@@ -118,6 +118,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第891セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第890 の続き）。`-Start p891`（HEAD `ecd9bc230`）＝full **11775 / 0 / 2 / 11777**。§7 3.5 で第889 を ARCHIVE へ。着手＝**ユーザー報告 4 件目**「todo を付けた音符がプレビューで赤くつぶれる・memo が出ない」→ 設計を相談して**ユーザー決定（2026-10-10）**: 符頭は**輪**（塗らない）・memo は**吹き出し**（譜の上が既定・`.down` で下・引き出し線で輪へ）・**プレビューだけ**（書き出しのスイッチは作らない＝要るときは CLI のフラグ＋明示のコマンドで後から）。
+- **配管**: `SvgRenderOptions.TodoCallouts`（`Preview()` だけ true）→ `SvgGenerator.CollectScore(todoCallouts)` と `IncrementalCompiler` の 2 collector → `MeasureCollector.TodoCallouts`（sub-collector 3 か所に継承）。collector の注釈の腕に `todo` を足し、memo のあるものを `DynamicItem { IsTodoCallout, TodoKey }`（expressive text の経路＝置き場所・積み・staff ごとの配送をそのまま使う・**上が既定**＝`@text` は下）に。`DynamicLayout` に `IsTodoCallout / TodoKey / TodoLeaderYUp`（host の外側の符頭の輪のすぐ先）。`SharedRenderer.DrawTodoCallout`＝箱（ink＋0.25）・引き出し線（箱が輪より近ければ省く）・memo を `Todo` scope の中で描く（全部 `data-todo`）。**輪**＝`IDrawingContext.TodoRing`（既定 no-op・YFlip／UnscaledX が転送・`SvgDrawingContext` が interactive のときだけ `<ellipse class="todo-ring">`）を `TodoScope` の 4 か所（音符・和音の member ごと・休符・MMR の棒）で。parser は `@todo(…).up/.down` を `@text`／`@diagram` と同じ条件で受ける（`ForcedAbove`）。webview の CSS: 赤塗りを消し、輪の色・`highlightTodos` 切で輪と箱と線を隠す（memo は黒で残る）。定数 3 つ（`TodoRingPadding` 0.35・`TodoCalloutPadding` 0.25・`TodoLineThickness` 0.1）＝LILYSHARP-OWN。
+- **予約は memo の ink だけ**（箱の padding 0.25 は予約に入れていない＝隣と 0.25 まで触りうる・プレビューの印なので受け入れた・`DrawTodoCallout` の註）。
+- 網 **`TodoCalloutTests`** 4 本（preview の collect だけ callout／`.down` と key／preview SVG に輪が glyph ごと・箱・memo、export には無し／**export は memo を同じ長さの空 memo に替えた本と byte 同一**）。毒 3 種（輪を描かない・全 collect で callout・`.down` 拒否）＝**1・3・1 本赤**（Lab `sessions/p891/poison-*.log`）。
+- 出力同一: **svg の掃き 998 冊 1201 svg（export）＝差 0**（HEAD の worktree の lysc 対 `exe-head`・`sessions/p891/sweep.log`）。絵: `sessions/p891/probe/todo-preview.png`（callout を PNG で描いた＝輪は SVG だけ）と `todo-preview.svg`。棚卸し 2 枚再生成（OWN +5）。拡張 check-types・compile・test 211 / 211。
+- docs: `SYNTAX_REFERENCE` の `@todo`・CHANGELOG 両方・`MANUAL-CHECKS.md` §2.1・`TodoAnnotation` の註。拡張は `tools\Deploy-Lsp.ps1` で入れ直し（Reload Window）。
+- `-End p891 -DiffBase ecd9bc230`（門は全部 OK）＝full **11779 / 0 / 2 / 11781**（網 +4）。Core '+' 244 行／REF 0／OWN 5＝7.6 ⒞（エディターの印＝LP に対応物なし・定数 3 つと札 2 つ）。7.7: 引き出し線は「箱が輪より近ければ描かない」の 1 分岐（註に明記）・sentinel なし・fallback なし。棚卸し 2 枚＝差分なし。HANDOFF 374,412 B（残り 75,588）・§1 現在便 10,024 字。commit `4a175bab8`。未 push 72＋docs（push はユーザー）。Lab `sessions/p891/`＝log・毒・sweep・probe（png／svg）。
+判定: ユーザーが実機で見る番（輪・吹き出し・`.down`・`highlightTodos`・書き出しに出ないこと＝MANUAL-CHECKS §2.1 の 2 行）。残りの候補＝箱の padding を予約に入れる（隣と触るのを見てから）・吹き出しの文字の切り詰め（長い memo をどうするかは未決・今は全文）。(a) 文脈を使う／(b) 5 便＝文脈の圧縮は起きていないがそろそろ重い／(c) 同じ島 ⇒ **次の報告が来たらこの会話で `-Start p892`、別の島なら新しい会話**。
+
+## 以下は第890セッションの経緯
+
 ### 1.1 第890セッション（2026-10-10・YT-DELL2）
 
 同じ会話（第889 の続き）。`-Start p890`（HEAD `1b3aca8ab`）＝full **11771 / 0 / 2 / 11773**。§7 3.5 で第888 を ARCHIVE へ。着手＝**ユーザー報告 3 件目**（手動確認の続き）: `@todo` の補完が使いにくい＝リストから選んだら `todo("")` を書いて `""` の間にカレットを置いてほしい。
@@ -125,17 +138,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - docs: CHANGELOG（両方）・`MANUAL-CHECKS.md` §2.1。拡張は `tools\Deploy-Lsp.ps1` で入れ直し（サーバー側の変更＝Reload Window が要る）。
 - `-End p890 -DiffBase 1b3aca8ab`（門は全部 OK）＝full **11775 / 0 / 2 / 11777**（網 +4＝Theory の 4 行）。Core '+' 0 行（Lsp と Tests だけ）／REF 0／OWN 0＝7.6・7.7 該当なし。棚卸し 2 枚＝差分なし。HANDOFF 374,475 B（残り 75,525）。commit `8cb27af34`。未 push 69＋docs（push はユーザー）。Lab `sessions/p890/`。
 判定: 手動確認の報告が続いている＝**次の報告が来たらこの会話で `-Start p891`**（(a) 拡張と LSP の文脈を使う／(b) 4 便でもまだ軽い＝読み直しは起きていない／(c) 同じ島）。
-
-## 以下は第889セッションの経緯
-
-### 1.1 第889セッション（2026-10-10・YT-DELL2）
-
-同じ会話（第888 の続き）。`-Start p889`（HEAD `78a630122`）＝full **11771 / 0 / 2 / 11773**。§7 3.5 で第887 を ARCHIVE へ。着手＝**ユーザー報告 2 件**（VS Code の手動確認 `MANUAL-CHECKS.md` §1.1 を始めてすぐ）: ⑴ Ctrl+Shift+↑↓ は動くが音が鳴らない → プレビューをクリックすると鳴る → **何かの拍子にまた鳴らなくなる**／⑵ `<c e g>` の中の音をステップしたとき、**和音全体が鳴るべき**（単音しか鳴らない）。
-- **⑴ の正体＝webview の autoplay 規則**: 合成器は `holdNotes` が打鍵ごとに `new AudioContext()` を作り 400 ms 後に閉じていた。ブラウザーは**その document を利用者が操作する（クリック・キー）まで** context を suspended に留め、message handler からの `resume()` は gesture ではない＝最初のクリックの前は全部無音で、しかも何も言わない。「また鳴らなくなる」は webview が作り直されたとき（別の列へ動かす・reload）で activation が消える形。サーバー側は白＝使い捨ての試験で SHOTLIST の本に `pitches=[72]` を返した（第888 末・消した）。**直し**: context を webview の寿命で 1 つ持ち（閉じない）、最初の `pointerdown`／`keydown` で `resume()`、打鍵ごとにも `resume()` を頼み、300 ms 後にまだ running でなければ host へ `audioBlocked` を 1 度だけ送る → host は出力チャネルに書き、ステータスバーに *Lily#: click the preview once to enable its sound*。Play ボタンは自分の context のまま（クリック＝常に許可）。⚠️ **実機で再現はできていない**（Claude は VS Code を動かせない）＝ユーザーが MANUAL-CHECKS §1.1 の 2 行で確かめる。
-- **⑵ ユーザー決定 2026-10-10: `<…>` は 1 つの音**＝member をステップしても caret が乗っても和音全体（member は動いた後の音）を鳴らす。`NoteStepper.ChordOfMember`＝`Sound` の Member 腕は Chord 腕へ委ね、`AuditionAt` は target を和音に差し替える（**key も和音の**＝member を矢印で渡っても 1 回しか鳴らない）。`<< >>` の member はこれまでどおり自分の位置で鳴る。網 `StepRequestTests` 2 本を決定に合わせて書き換え（`ASteppedNote_SoundsItsNewPitch`＝`[72, 79, 88]`・`TheCaret_SoundsWhatItIsOn`＝member は "chord"・和音の key）、毒（`ChordOfMember` が null）＝**その 2 本だけ赤**。filtered 27 / 27。拡張 check-types・compile・test 211 / 211。
-- docs: CHANGELOG（両方・Unreleased の Editor／Fixes）・`MANUAL-CHECKS.md` §1.1（和音の期待と status bar の案内）。commit `5c64c828c`。拡張は `tools\Deploy-Lsp.ps1` で入れ直した（ユーザーは Reload Window）。
-- `-End p889 -DiffBase 78a630122`（門は全部 OK）＝full **11771 / 0 / 2 / 11773**（網 ±0＝2 本を書き換え）。Core '+' 16 行／REF 0／OWN 0＝7.6 ⒞（試聴は Lily# 独自の機能・LP に対応物なし・既存の札のまま）。7.7: sentinel なし・fallback なし（和音でない member は従来の 1 音・`audioBlocked` は 1 度だけの通知で挙動を変えない）。棚卸し 2 枚＝差分なし。HANDOFF 376,545 B（残り 73,455）。未 push 67＋docs（push はユーザー）。Lab `sessions/p889/`＝start/end・毒・npm・deploy の log。
-判定: ユーザーの手動確認が進行中＝**次の報告が来たらこの会話で `-Start p890`**（(a) 文脈は拡張の合成器と NoteStepper の読み＝使う／(b) 3 便でまだ軽い／(c) 同じ島）。⚠️ ⑴ の直しは実機で未確認＝ユーザーの「鳴る／案内が出る」の報告が門。
 
 ## 2. 開いている作業
 

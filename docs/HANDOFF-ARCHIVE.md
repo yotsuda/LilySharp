@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第889セッションの経緯
+
+### 1.1 第889セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第888 の続き）。`-Start p889`（HEAD `78a630122`）＝full **11771 / 0 / 2 / 11773**。§7 3.5 で第887 を ARCHIVE へ。着手＝**ユーザー報告 2 件**（VS Code の手動確認 `MANUAL-CHECKS.md` §1.1 を始めてすぐ）: ⑴ Ctrl+Shift+↑↓ は動くが音が鳴らない → プレビューをクリックすると鳴る → **何かの拍子にまた鳴らなくなる**／⑵ `<c e g>` の中の音をステップしたとき、**和音全体が鳴るべき**（単音しか鳴らない）。
+- **⑴ の正体＝webview の autoplay 規則**: 合成器は `holdNotes` が打鍵ごとに `new AudioContext()` を作り 400 ms 後に閉じていた。ブラウザーは**その document を利用者が操作する（クリック・キー）まで** context を suspended に留め、message handler からの `resume()` は gesture ではない＝最初のクリックの前は全部無音で、しかも何も言わない。「また鳴らなくなる」は webview が作り直されたとき（別の列へ動かす・reload）で activation が消える形。サーバー側は白＝使い捨ての試験で SHOTLIST の本に `pitches=[72]` を返した（第888 末・消した）。**直し**: context を webview の寿命で 1 つ持ち（閉じない）、最初の `pointerdown`／`keydown` で `resume()`、打鍵ごとにも `resume()` を頼み、300 ms 後にまだ running でなければ host へ `audioBlocked` を 1 度だけ送る → host は出力チャネルに書き、ステータスバーに *Lily#: click the preview once to enable its sound*。Play ボタンは自分の context のまま（クリック＝常に許可）。⚠️ **実機で再現はできていない**（Claude は VS Code を動かせない）＝ユーザーが MANUAL-CHECKS §1.1 の 2 行で確かめる。
+- **⑵ ユーザー決定 2026-10-10: `<…>` は 1 つの音**＝member をステップしても caret が乗っても和音全体（member は動いた後の音）を鳴らす。`NoteStepper.ChordOfMember`＝`Sound` の Member 腕は Chord 腕へ委ね、`AuditionAt` は target を和音に差し替える（**key も和音の**＝member を矢印で渡っても 1 回しか鳴らない）。`<< >>` の member はこれまでどおり自分の位置で鳴る。網 `StepRequestTests` 2 本を決定に合わせて書き換え（`ASteppedNote_SoundsItsNewPitch`＝`[72, 79, 88]`・`TheCaret_SoundsWhatItIsOn`＝member は "chord"・和音の key）、毒（`ChordOfMember` が null）＝**その 2 本だけ赤**。filtered 27 / 27。拡張 check-types・compile・test 211 / 211。
+- docs: CHANGELOG（両方・Unreleased の Editor／Fixes）・`MANUAL-CHECKS.md` §1.1（和音の期待と status bar の案内）。commit `5c64c828c`。拡張は `tools\Deploy-Lsp.ps1` で入れ直した（ユーザーは Reload Window）。
+- `-End p889 -DiffBase 78a630122`（門は全部 OK）＝full **11771 / 0 / 2 / 11773**（網 ±0＝2 本を書き換え）。Core '+' 16 行／REF 0／OWN 0＝7.6 ⒞（試聴は Lily# 独自の機能・LP に対応物なし・既存の札のまま）。7.7: sentinel なし・fallback なし（和音でない member は従来の 1 音・`audioBlocked` は 1 度だけの通知で挙動を変えない）。棚卸し 2 枚＝差分なし。HANDOFF 376,545 B（残り 73,455）。未 push 67＋docs（push はユーザー）。Lab `sessions/p889/`＝start/end・毒・npm・deploy の log。
+判定: ユーザーの手動確認が進行中＝**次の報告が来たらこの会話で `-Start p890`**（(a) 文脈は拡張の合成器と NoteStepper の読み＝使う／(b) 3 便でまだ軽い／(c) 同じ島）。⚠️ ⑴ の直しは実機で未確認＝ユーザーの「鳴る／案内が出る」の報告が門。
+
 ## 以下は第888セッションの経緯
 
 ### 1.1 第888セッション（2026-10-10・YT-DELL2）
