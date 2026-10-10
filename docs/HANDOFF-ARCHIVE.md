@@ -129,6 +129,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第873セッションの経緯
+
+### 1.1 第873セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第872 の続き・ユーザー「続けて」）。`-Start p873`（HEAD `dffb16afb`）＝full **11678 / 0 / 2 / 11680**。§7 3.5 で第871 を ARCHIVE へ。
+- **5 線未満の譜の加線は LP の `Staff_symbol::ledger_positions`**（`32ff3fcf2`）: rhythm-slashes の双子を LP と並べて発見＝1 線譜の `c'8 d'` に Lily# は加線 1 本（|pos|≥6 の 5 線前提）、LP は 3 本。LP は**譜の一番近い線から音符まで、その線と同じ偶奇の位置に埋めて譜の線を除く**＝1 線譜は ±2 から・4 線（−2…4）は下 −4／上 6 から・timbales の ±2 は中線上の音に 1 本（実測 Lab `sessions/p873/probe/ledger`＝`as lines 1..5` × `b4 d' f' a' | g e c a,`・LP は 1 線 16 本・2 線 10・5 線 4）。`EngravingDefaults.LedgerPositions`（walk の字面移植・`OnLineOrLedger` もこれを読む）・`LedgerRequested`（ledger-line-spanner.cc:223-226）・`StaffLinesSpan`。読み手 4 か所＝描画（`SharedRenderer.Noteheads`・中線上の頭は UP :232・「両方が譜の外の最初の間より遠い」の gap も譜で :302-311）・skyline（`SkylineBuilder.AddNoteBoxToSkylines`）・spacing rod（`LedgerRods`・中線は rod 無し :126-128）・列の箱の加線までの reach（`ItemSkylineFactory.WithLedgerReach`＝外側の線の 1 スペース外）。grace 列と tab は 5 線のまま（grace は自分の枠・tab は自前の枝）。⚠️ 踏んだ罠: 緩衝を 24 本で切ったら tab-below-range の 25 本目（譜に一番近い −6）が落ちた＝`LedgerCapacity` で頭ごとに取る／並びは譜から外へ（LP の昇順にすると下側の snapshot が全部動く＝描く順は配置の規則ではない）。掃き 1199／差 1＝rhythm-slashes だけ（snapshot は双子と見比べて承認）・5 線は構成で不変。網 `LedgerPositionsTests` 24。残り: collector の `needsLedgerLines`（|pos|≥6 の印）は読み手の無い旗＝触っていない。
+- `-End p873 -DiffBase dffb16afb`（門は全部 OK）＝full **11702 / 0 / 2 / 11704**。Core '+' 181 行／REF 7／OWN 1（`LedgerCapacity`＝緩衝の大きさで量ではない）。HANDOFF 440,809 B（残り 9,191）。未 push 34＋docs（push はユーザー）。
+
 ## 以下は第872セッションの経緯
 
 ### 1.1 第872セッション（2026-10-10・YT-DELL2）

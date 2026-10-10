@@ -118,20 +118,22 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第875セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第874 の続き・ユーザー「続けて」）。`-Start p875`（HEAD `9d6bc4cc9`）＝full **11711 / 0 / 2 / 11713**（full が 2 分 23 秒＝testhost の CPU は増え続けていた・止まってはいない）。§7 3.5 で第873 を ARCHIVE へ。
+- **5 線未満の譜の slur と tuplet bracket も 5 線前提だった**（`32458d075`）: 対 3 冊（`as lines 1/2/5` × articulation・slur・強弱・tuplet＝Lab `sessions/p875/probe/marks`）。**staccato／accent の高さは全部の譜で一致**（済み）。slur: `SlurScoringProblem` の線数は tab しか渡しておらず、1 線譜で `move_away_from_staffline`（slur-scoring.cc:639-658）が無い「±2 の線」から 0.15 逃げていた（`b8( d' f' a')` 1.19 vs LP 1.045）＝notation の呼び手が譜の線数を渡し、線上判定は notation なら描く表（`OnDrawnStaffLine`）・tab は LP の N 線位置（`tabStrings`）。tuplet: notation の枝に 5 線の譜の縁 2.3（2.05＋staff-padding）・量子化の範囲 ±5・線上判定が直書き（`TupletBracketEngraver` :1347・:1511）＝譜の外側の線＋線の半厚＋padding（tuplet-bracket.cc:463-477）・線の span を 1 スペース広げた範囲（:731-735・LP の単位混在のまま）・`OnLineOrLedger`（:741）。確かめ: 1 線で slur 1.045／−2.045・`tuplet 3/2 { g4 e c }` の bracket 3.246／1.443 が LP と一致（`SlurTupletFewLineStaffTests` 2）・5 線は不変。掃き 1199／差 0（結果）・full 11710 / 0 / 2。
+- ⚠️ **未着手＝1 線譜の強弱記号 `f`**: LP は stem の先の 0.18 下に置く（b の下 −3.51・d' の下 −2.68・f' の下 −2.55・g（符尾上）の下 −4.02）のに Lily# は 5 線と同じ −4.55。`p` は一致（−4.22／−5.06）。LP の f の字形の箱（dynamics.f の ascent）と stem の横の重なりの読みが要る＝値付け前。Lily# の強弱は Emmentaler では文字（TeX Gyre bold italic・`dominant-baseline=central`）で描くので、箱の出所も違う。
+- 閉じていると確かめた: tuplet の数字の高さ（5 線で LP の baseline＋字の半分＝Lily# の central）・1 線譜の stem と beam（第874）。
+- `-End p875 -DiffBase 9d6bc4cc9`（門は全部 OK）＝full **11713 / 0 / 2 / 11715**。Core '+' 53 行／REF 2／OWN 0。HANDOFF 439,392 B（残り 10,608）。未 push 38＋docs（push はユーザー）。
+
+## 以下は第874セッションの経緯
+
 ### 1.1 第874セッション（2026-10-10・YT-DELL2）
 
 同じ会話（第873 の続き・ユーザー「続けて」）。`-Start p874`（HEAD `3bad50832`）＝full **11702 / 0 / 2 / 11704**。§7 3.5 で第872 を ARCHIVE へ。
 - **5 線未満の譜の beam は LP の `staff_radius_` を譜から受け取っていなかった**（`9208ee842`）: 1 線譜の stem・beam を rhythm-slashes で LP と並べたら一致（stem の付け根 0.99・長さ 3.33・beam 3.0 と傾き）だが、線から離れた音の beam（対 3 冊＝`as lines 1..3` × `b8 b d' d' | f'8 f' a' a' | g8 g e e | c8 c a, a,`・Lab `sessions/p874/probe/beam`）は 1 線で LP −3.19→−2.50／+2.19→+1.50 に対し Lily# −2.81→−2.19／+1.81→+1.19。`BeamScoringProblem` の `staffLineCount` は tab しか渡しておらず、notation の beam は全部 5 線の半径 2.0 で quant（score_forbidden_quants の線の walk :1300・譜の中の判定 :1248/:1338/:1352）。さらに `(N−1)/2` は LP の既定の N 線位置の半径で、Lily# の ±2 の pair は 1.0（0.5 ではない）。直し: 引数を半径そのものに（`EngravingDefaults.StaffRadius`＝外側の線の span/4・REF staff-symbol-referencer.cc:189-196・`NotationStaffRadius`）・`LayoutBeams`／`CalculateBeamLayout`／cross-measure の枝／`LayoutEngine.Prelim` に線数を通す（`MultiStaffLayouter.BeamStaffLinesOf`＝tab の notation 影は 5・tab 自身の beam は弦の span＝従来どおり）・grace の beam は既定のまま。確かめ: 1 線・pair の 4 小節が LP と 0.01 で一致（`BeamFewLineStaffTests` 9・1 線譜の読みは `RenderedGeometry.BeamPositionAboveStaffLine`）。掃き 1199／差 0（結果＝線から離れた音を beam で結ぶ 5 線未満の本が無い）・full 11708 / 0 / 2。stem の `staffRadius`（`CalculateStemLength`・既定 2.0）は r≤2 で式に効かない（`min(1, 7−2r−2)` が 1 のまま）＝触っていない。
 - 閉じていると確かめた: 休符の加線 glyph（`MusicGlyph.IsLedgered`＝`on_staff_line`・rest.cc:170-185）は譜の線表を読んでいた。
 - `-End p874 -DiffBase 3bad50832`（門は全部 OK）＝full **11711 / 0 / 2 / 11713**。Core '+' 70 行／REF 2／OWN 0。HANDOFF 439,241 B（残り 10,759）。未 push 36＋docs（push はユーザー）。
-
-## 以下は第873セッションの経緯
-
-### 1.1 第873セッション（2026-10-10・YT-DELL2）
-
-同じ会話（第872 の続き・ユーザー「続けて」）。`-Start p873`（HEAD `dffb16afb`）＝full **11678 / 0 / 2 / 11680**。§7 3.5 で第871 を ARCHIVE へ。
-- **5 線未満の譜の加線は LP の `Staff_symbol::ledger_positions`**（`32ff3fcf2`）: rhythm-slashes の双子を LP と並べて発見＝1 線譜の `c'8 d'` に Lily# は加線 1 本（|pos|≥6 の 5 線前提）、LP は 3 本。LP は**譜の一番近い線から音符まで、その線と同じ偶奇の位置に埋めて譜の線を除く**＝1 線譜は ±2 から・4 線（−2…4）は下 −4／上 6 から・timbales の ±2 は中線上の音に 1 本（実測 Lab `sessions/p873/probe/ledger`＝`as lines 1..5` × `b4 d' f' a' | g e c a,`・LP は 1 線 16 本・2 線 10・5 線 4）。`EngravingDefaults.LedgerPositions`（walk の字面移植・`OnLineOrLedger` もこれを読む）・`LedgerRequested`（ledger-line-spanner.cc:223-226）・`StaffLinesSpan`。読み手 4 か所＝描画（`SharedRenderer.Noteheads`・中線上の頭は UP :232・「両方が譜の外の最初の間より遠い」の gap も譜で :302-311）・skyline（`SkylineBuilder.AddNoteBoxToSkylines`）・spacing rod（`LedgerRods`・中線は rod 無し :126-128）・列の箱の加線までの reach（`ItemSkylineFactory.WithLedgerReach`＝外側の線の 1 スペース外）。grace 列と tab は 5 線のまま（grace は自分の枠・tab は自前の枝）。⚠️ 踏んだ罠: 緩衝を 24 本で切ったら tab-below-range の 25 本目（譜に一番近い −6）が落ちた＝`LedgerCapacity` で頭ごとに取る／並びは譜から外へ（LP の昇順にすると下側の snapshot が全部動く＝描く順は配置の規則ではない）。掃き 1199／差 1＝rhythm-slashes だけ（snapshot は双子と見比べて承認）・5 線は構成で不変。網 `LedgerPositionsTests` 24。残り: collector の `needsLedgerLines`（|pos|≥6 の印）は読み手の無い旗＝触っていない。
-- `-End p873 -DiffBase dffb16afb`（門は全部 OK）＝full **11702 / 0 / 2 / 11704**。Core '+' 181 行／REF 7／OWN 1（`LedgerCapacity`＝緩衝の大きさで量ではない）。HANDOFF 440,809 B（残り 9,191）。未 push 34＋docs（push はユーザー）。
 
 ## 2. 開いている作業
 
