@@ -1160,6 +1160,16 @@ public sealed record RestItem : MusicItem
     /// </summary>
     public bool IsSpanLead { get; init; }
 
+    /// <summary>
+    /// A spacer the collector wrote for an iteration a <c>repeat percent</c> sign stands for
+    /// (<c>MeasureCollector.MusicWalk</c>, <c>WriteRepetitionAsSpacers</c>) — the one event
+    /// LilyPond's iterator hands the context in place of the body's music. Nothing a reader
+    /// wrote stands here: a tie reaching it reaches no note (<c>TieTargetScanner</c>,
+    /// LYS4007), where a spacer the writer put down (<c>s4</c>) is padding and stays quiet.
+    /// LILYPOND-REF: lily/percent-repeat-iterator.cc:75-111 Percent_repeat_iterator::next_element
+    /// </summary>
+    public bool IsRepetitionSpacer { get; init; }
+
     /// <summary>Whether this rest opens a manual beam group.</summary>
     /// <remarks>
     /// ⚠️ A REST IS A LEGAL BEAM BOUND, the same way it is a legal slur bound

@@ -117,8 +117,8 @@ public record TieTargetWarning(
 );
 
 /// <summary>
-/// Why a tie could not bind. Three states, not two booleans: a bool pair would have a
-/// fourth combination that cannot happen.
+/// Why a tie could not bind. Four states, not booleans: a bool triple would have
+/// combinations that cannot happen.
 /// </summary>
 public enum TieTargetProblem
 {
@@ -126,6 +126,19 @@ public enum TieTargetProblem
     PitchMismatch,
     /// <summary>The following timed item is an audible rest.</summary>
     IntoRest,
+    /// <summary>The following timed item is the spacer a <c>repeat percent</c> iteration is
+    /// written as (<see cref="Svg.Model.RestItem.IsRepetitionSpacer"/>): the tie sits on the
+    /// body's last note and the sign that follows holds no note to reach. MEASURED, LilyPond
+    /// 2.26.0 (Lab sessions/p884/px/px1): "warning: unterminated tie", no tie drawn; Lily#
+    /// drew none either and said nothing. <see cref="TieTargetWarning.SourcePosition"/> points
+    /// at the tied note, as <see cref="NoTarget"/> does — the spacer's own position is the
+    /// <c>repeat</c> keyword.
+    /// LILYPOND-REF: lily/tie-engraver.cc:228-242 start_translation_timestep — a head still
+    ///   waiting for its tie once now_mom passes its end_moment_ is reported, and the sign's
+    ///   timestep brings no head;
+    /// LILYPOND-REF: lily/tie-engraver.cc:104-114 report_unterminated_tie — the warning, and
+    ///   the tie's suicide.</summary>
+    IntoRepetition,
     /// <summary>Nothing follows at all — the tie is the last thing in its voice, so the
     /// renderer draws nothing. MEASURED: `c4 d4 e4 f4~ |` engraves byte-for-byte as the
     /// same bar without the tie, while `f4@laissezVibrer` draws the hanging tie the

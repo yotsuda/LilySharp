@@ -5516,6 +5516,7 @@ public sealed partial class MeasureCollector
                         new RestItem(piece, 0, repeat.SourceStart)
                         {
                             IsSpacer = true,
+                            IsRepetitionSpacer = true,
                             RepeatSlashCount = repeatSlashCount,
                         });
                     repeatSlashCount = null;

@@ -102,6 +102,34 @@ public class TieTargetValidatorTests
         // but this is a layout idiom, not a pitch slip.
         Assert.Equal(0, WarningCount("c4~ s4 c2"));
 
+    /// <summary>
+    /// The spacer standing for a <c>repeat percent</c> iteration is not padding: a tie on the
+    /// body's last note reaches no note there, since a repetition is the sign alone.
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p884/px/px1): "warning: unterminated tie" and
+    /// no tie; Lily# drew none and, until session 884, said nothing. The control is the same
+    /// body under <c>repeat unfold</c>, which IS played again, so the tie binds to its own
+    /// first note.
+    /// </summary>
+    [Fact]
+    public void TieIntoPercentRepetition_Warns()
+    {
+        Assert.Equal(1, WarningCount("repeat percent 2 { f4 d e f~ | } f4 g a b |"));
+        Assert.Equal(0, WarningCount("repeat unfold 2 { f4 d e f~ | } f4 g a b |"));
+    }
+
+    [Fact]
+    public void ATieIntoAPercentRepetitionNamesTheRepeat()
+    {
+        var source = "part m { section A { repeat percent 2 { f4 d e f~ | } f4 g a b | } } form { A } score { staff m }";
+        var validator = new TieTargetValidator();
+        validator.Validate(SyntaxTree.Parse(source));
+        var d = Assert.Single(validator.Diagnostics);
+        Assert.Contains("'repeat percent'", d.Message);
+        Assert.Contains("@laissezVibrer", d.Message);
+        // Pointed at the tied note, not at the `repeat` keyword the spacer carries.
+        Assert.Equal(source.IndexOf("f~"), d.Span.Start);
+    }
+
     [Fact]
     public void EachMismatchWarnsOnce() =>
         Assert.Equal(2, WarningCount("c4~ d4 e4~ f4"));

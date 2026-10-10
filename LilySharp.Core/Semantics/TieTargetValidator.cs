@@ -56,6 +56,12 @@ internal sealed class TieTargetValidator : ISharedCollectValidator
                 {
                     Svg.Collector.TieTargetProblem.IntoRest =>
                         "a tie '~' runs into a rest, so nothing is tied; remove the tie or fill the gap",
+                    // The body's last note tied into the % sign: the repetition is the sign
+                    // alone, so there is no note for the tie to reach (LilyPond: unterminated tie).
+                    Svg.Collector.TieTargetProblem.IntoRepetition =>
+                        "a tie '~' on the last note of a 'repeat percent' body reaches no note: a "
+                        + "repetition is the sign alone, so no tie is drawn; remove it, or write "
+                        + "'@laissezVibrer' for a tie that hangs into silence",
                     // Nothing follows at all. The score does not gain a hanging tie, it loses
                     // the mark outright — and Lily# already spells the hanging tie, so the
                     // complaint can name what was probably meant instead of only refusing.

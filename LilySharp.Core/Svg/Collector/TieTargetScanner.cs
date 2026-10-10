@@ -115,6 +115,11 @@ internal static class TieTargetScanner
                 {
                     if (!rest.IsSpacer)
                         sink.Add(new TieTargetWarning(rest.SourcePosition, TieTargetProblem.IntoRest));
+                    // A writer's spacer (`s4`) is padding and stays quiet; the spacer standing
+                    // for a `repeat percent` iteration is the sign, and a tie on the body's
+                    // last note reaches no note there (LilyPond: "unterminated tie").
+                    else if (rest.IsRepetitionSpacer)
+                        sink.Add(new TieTargetWarning(item.SourcePosition, TieTargetProblem.IntoRepetition));
                 }
                 else if (!AnyPitchMatches(item, n.Item))
                 {

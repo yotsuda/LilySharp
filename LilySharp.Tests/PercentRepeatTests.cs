@@ -903,9 +903,11 @@ public class PercentRepeatTests
     [InlineData("tab melody as numbers")]
     public void PercentCoveredMeasures_CarryNoSlurTieScriptOrDynamic(string staffSpec)
     {
-        // A ONE-bar body, so every repetition is a single sign that RE-WALKS the body
-        // (a body of three or more bars is a slash whose repetitions are spacers and
-        // never reach the walk at all). Bar 0 is written; bars 1-3 are the signs.
+        // A ONE-bar body, so every repetition is a single sign. Since session 332 EVERY
+        // repetition is written as spacers (MeasureCollector.MusicWalk,
+        // WriteRepetitionAsSpacers) and the body is never re-walked, so the gate this
+        // pins is honoured by absence — nothing is collected under a sign at all.
+        // Bar 0 is written; bars 1-3 are the signs.
         var layout = LayoutOf($$"""
             part melody {
               section A { repeat percent 4 { c4@p@accent( d) e~ e@f | } }
@@ -955,6 +957,45 @@ public class PercentRepeatTests
         Assert.Equal(4, layout.TieLayouts.Length);
         Assert.Equal(8, layout.DynamicLayouts.Length);
         Assert.Equal(4, layout.ArticulationLayouts.Length);
+    }
+
+    /// <summary>
+    /// The rest of what a body writes prints once too: a chord name, a figured bass, a
+    /// glissando and a cross-staff mark. HANDOFF §2 F ⒳ (session 320) listed these four as
+    /// what the body's re-walk still carried under the sign, unmeasured; the re-walk itself
+    /// went in session 332 (a repetition is spacers), so nothing written can reach a covered
+    /// bar. MEASURED (Lab sessions/p884/px/px3): one C, one 6, one glissando, two signs.
+    /// This pins the absence, with <see cref="UnfoldRepeat_StillCarriesEverySlurTieScriptAndDynamic"/>
+    /// as the shape of the control.
+    /// </summary>
+    [Fact]
+    public void PercentCoveredMeasures_CarryNoChordNameFiguredBassGlissandoOrCrossStaff()
+    {
+        var tree = TestPaper.ParseAtIndentZero("""
+            part rh { clef treble }
+            part lh { clef bass }
+            section A {
+              rh { repeat percent 3 { c4@chord(C)@figuredBass(6) d@glissando e f@cross | } g1 | }
+              lh { c2 g | c2 g | c2 g | c1 | }
+            }
+            form { ~A }
+            score { grandStaff { staff rh staff lh } }
+            """);
+        var spec = RenderSpecParser.FindFirst(tree);
+        Assert.NotNull(spec);
+        var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, spec);
+
+        Assert.Equal(2, score.PercentRepeats.Length);
+        Assert.All(score.PercentRepeats, pr => Assert.InRange(pr.MeasureIndex, 1, 2));
+        Assert.Equal(0, Assert.Single(score.ChordNames).MeasureIndex);
+        Assert.Equal(0, Assert.Single(score.FiguredBasses).MeasureIndex);
+        Assert.Equal(0, Assert.Single(score.CrossStaffItems).MeasureIndex);
+        var glissandi = score.StaffGroups
+            .SelectMany(g => g.Staves).SelectMany(s => s.Voices)
+            .SelectMany(v => v.Measures.Select((m, i) => (Measure: m, Index: i)))
+            .SelectMany(mi => mi.Measure.Items.OfType<NoteItem>().Where(n => n.HasGlissando).Select(_ => mi.Index))
+            .ToList();
+        Assert.Equal(new[] { 0 }, glissandi);
     }
 
     /// <summary>
