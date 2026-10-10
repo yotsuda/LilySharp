@@ -118,6 +118,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第897セッション（2026-10-11・YT-DELL2）
+
+同じ会話（第896 の続き）。第896 の -End のあとにユーザー報告 13 件目が来たので、作業ツリーを stash して `-Start p897`（HEAD `c3086449c`）＝full **11780 / 0 / 2 / 11782**、pop して続けた。報告＝**`corpora\ベースタブLy\Untitled-2.lys`**（保存してもらった・最初は未保存の Untitled でディスクに無かった）: L17 `d2@todo("これは良いかな。")@fermata` の memo が L16 の `ほえほえ` と重なり、d2 から離れすぎている。「音符の近くの余白に配置して」。
+- 原因 3 つ（probe `sessions/p897/probe/twinkle-blocking.txt`＝`InkRecorder.Blocking` で memo の行く手の箱を吐かせた）: ⑴ 右側だけ試していた＝d2 の右上は fermata と `A2` の箱、その上は前の段の歌詞「Twin-kle」で壁、登り切って第 1 段の上（`ほえほえ` の隣）に出た。⑵ memo の x を段の幅に clamp していた＝幅 13 の memo が段の左端の音符では右へ押されて音符の真上に乗る。⑶ 日本語の文字の箱の高さが 0（Petaluma Script に無い字の ink metrics が空）＝memo どうしが重なった。おまけ⑷ 輪の箱が Bézier の制御点の hull で 1/3 空間ふくらみ、右側の memo が毎回 1 段余分に登っていた。
+- 直し＝`Settle(onRight)` で**両側を試し、余白側を既定にしつつ、反対側が 2 空間以上登りを節約するならそちら**（整列は保ちつつ壁のある memo だけ渡る）。x の bound は**ページの端**（`InkRecorder.PageLeft/PageRight`＝余白も紙）。text の箱は **0.72 em 上／0.22 em 下を床**に。曲線は `CubicExtent`（微分の根）で真の範囲。`SharedRenderer.LastInkRecorder`（ThreadStatic・internal）と `InkRecorder.Blocking` は probe／網の窓として残した。
+- 網 `AMemo_StandsClearOfTheInkAroundIt` を 3 本立てに: 素（右）／右が壁（左へ渡り、高さは素以下）／両側壁（1.5 以上登る）。毒 B（包みを `&& false`）＝「右が壁」で赤 1。絵 `sessions/p897/probe/twinkle-preview.png`＝memo は d2 の左上・段のすぐ上。`one`・`busy`・`piano` も退行なし。棚卸し差分なし。commit `af56da8d2`。拡張 deploy 済み（**Reload Window**）。
+- ⚠️ `one`（1 段に memo 5 本）はまだ密＝引き出し線が別の memo の文字を横切る。これはユーザーの新方針（段組みが memo の行を取る）の材料のまま。
+- `-End p897 -DiffBase c3086449c`（門は全部 OK）＝full **11780 / 0 / 2 / 11782**。Core '+' 122 行／REF 0／OWN 0＝7.6 ⒞（第896 の `InkRecorder`／`DrawTodoMarks` の手直し・新しい OWN の項は無く既存の 2 項の中）。7.7: 該当なし。HANDOFF 376,685 B（残り 73,315）。未 push 83＋docs（push はユーザー）。Lab `sessions/p897/`。
+判定: **ユーザーの実機確認待ち**（`Untitled-2.lys` を Reload Window 後に見てもらう）。(a) 文脈を使う／(b) **11 便＝重い**／(c) 新方針（他の要素を動かす）は設計変更 ⇒ **次は新しい会話で `-Start p898`**。小さな置き場の直しがもう 1 つ来るならこの会話でも可。
+
+## 以下は第896セッションの経緯
+
 ### 1.1 第896セッション（2026-10-10〜11・YT-DELL2）
 
 同じ会話（第895 の続き）。`-Start p896`（HEAD `008970df8`）＝full **11779 / 0 / 2 / 11781**。着手＝**ユーザー報告 12 件目**: 「コメントがほかの要素に重なると赤字でも読めない。重ならないように動かして。斜めの線と x のずらしはこのまま」。作業中に追加の方針＝**「ほかのページ上の要素を動かしても良い。どうせ動かすなら最終的にきれいに整った形が良い。いったん今の実装を見てからフィードバックする」** ⇒ この便は**他の要素を動かさず memo だけ逃がす版**を仕上げて見せる。段組みに memo の場所を取る版（他の要素が動く）は**ユーザーのフィードバック待ち・次便以降**。
@@ -129,17 +141,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 棚卸し＝OWN 231→232（`InkRecorder` の 1 件・APPROXIMATIONS.md 再生成）。docs＝SYNTAX_REFERENCE `@todo`・CHANGELOG×2（本体側は `todo` 補完の bullet の中に輪の bullet が割り込んでいたのを直した）・MANUAL-CHECKS §2.1。commit `059ac77eb`（`todo:`）。拡張は `tools\Deploy-Lsp.ps1` で入れ直し済み（**Reload Window が要る**）。
 - `-End p896 -DiffBase 008970df8`（門は全部 OK）＝full **11780 / 0 / 2 / 11782**（＋1＝`AMemo_StandsClearOfTheInkAroundIt`）。Core '+' 346 行／REF 0／OWN 2＝7.6 ⒞（recorder も置き場も Lily# 自身の設計・LP に対応物なし）。7.7: 該当なし。HANDOFF 375,076 B（残り 74,924）。未 push 81＋docs（push はユーザー）。Lab `sessions/p896/`（probe の絵・poison／build／test の log・commit-msg）。
 判定: **ユーザーの実機確認とフィードバック待ち**（新方針＝他の要素を動かして良い・整った形が良い）。(a) 文脈を使う／(b) **10 便＝重い**／(c) 次は設計変更（段組みが memo の行を取る）⇒ **フィードバックを受けたら新しい会話で `-Start p897`**。
-
-## 以下は第895セッションの経緯
-
-### 1.1 第895セッション（2026-10-10・YT-DELL2）
-
-同じ会話（第894 の続き）。`-Start p895`（HEAD `a93e063e`）＝full **11779 / 0 / 2 / 11781**。§7 3.5 で第893 を ARCHIVE へ。着手＝**ユーザー報告 11 件目（3 点）**: 引き出し線を太く＝輪・文字・線は同じ太さ／線は memo の x の中央へ／memo に下線を引き、下線と輪を線でつなぐ。
-- 直し＝`TodoPen` 0.2 の 1 本（輪の path・下線・引き出し線）。下線は memo の descent の 0.15 下、引き出し線は下線の中央と「それに向く輪の点」（楕円上の角度）を結ぶ。`.down` の memo は文字の上の中央につなぐ（線が文字を横切らないため）。積みの段差に下線のぶんを足した。
-- 網 `TodoCalloutTests`＝memo ごとに赤い線 2 本（水平の下線と引き出し線・引き出し線の終点は下線の中央）・0.200 の stroke が 28（path 24＋下線 2＋線 2）。毒＝2 本赤。snapshot 不動。拡張 211 / 211。絵 `sessions/p895/probe`。棚卸し差分なし。commit `todo:`。拡張は `tools\Deploy-Lsp.ps1` で入れ直し（Reload Window）。
-- ⚠️ 長い memo の下線の中央は輪から遠くなる＝引き出し線が長く斜めになり、密な所では線どうしが交差する（`one` の probe）。仕様どおり。
-- `-End p895 -DiffBase a93e063e5`（門は全部 OK）＝full **11779 / 0 / 2 / 11781**。Core '+' 19 行／REF 0／OWN 0＝7.6 ⒞。7.7: 該当なし。棚卸し差分なし。HANDOFF 373,776 B（残り 76,224）。commit `5e173724a`。未 push 80＋docs（push はユーザー）。Lab `sessions/p895/`。
-判定: ユーザーの実機確認。(a) 文脈を使う／(b) **9 便＝重い**／(c) 同じ島 ⇒ **次が todo の島なら `-Start p896` をこの会話で、それ以外は新しい会話**。
 
 ## 2. 開いている作業
 
