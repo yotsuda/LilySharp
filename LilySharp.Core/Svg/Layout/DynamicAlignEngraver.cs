@@ -103,7 +103,8 @@ internal static class DynamicAlignEngraver
             ImmutableArray<Voice> voices,
             Dictionary<int, ImmutableArray<Voice>>? voicesByStaff,
             Dictionary<int, ImmutableArray<Measure>>? measuresByStaff,
-            ImmutableArray<BeamLayout> beamLayouts)
+            ImmutableArray<BeamLayout> beamLayouts,
+            Func<int, int>? staffLinesOf = null)
     {
         if (hairpinItems.IsDefaultOrEmpty || hairpinLayouts.IsDefaultOrEmpty)
             return (dynamicLayouts, hairpinLayouts, ImmutableArray<AlignedLineGroup>.Empty);
@@ -215,12 +216,17 @@ internal static class DynamicAlignEngraver
                 if (myDim is not { } my)
                     continue;
 
+                // The line's staff's own extent floors the supports (an `as lines N` staff's
+                // drawn lines), as each member's own placement read it.
+                int staffLines = staffLinesOf?.Invoke(line.StaffIndex)
+                    ?? EngravingDefaults.DefaultStaffLines;
                 var support = DynamicEngraver.SpanSupportSkylines(
                     lineVoices, voiceIndex,
                     SpanColumns(line, sysIdx, lineMeasures, measureLayouts, measureToSystem),
                     (vi, mi, ii) => beamMembers.TryGetValue((line.StaffIndex, vi, mi, ii), out var b)
-                        ? b : null);
-                double spannerY = DynamicEngraver.SpannerOffsetY(dir: -1.0, support, my);
+                        ? b : null,
+                    staffLines);
+                double spannerY = DynamicEngraver.SpannerOffsetY(dir: -1.0, support, my, staffLines);
 
                 foreach (int di in sysTexts)
                     dynBuilder![di] = dynBuilder[di] with

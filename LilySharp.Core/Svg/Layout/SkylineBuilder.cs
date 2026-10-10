@@ -2733,7 +2733,8 @@ internal sealed class SkylineBuilder
             int dynStaff = dyn.StaffIndex;
             double baselineUp = DynamicEngraver.PointwiseBaselineY(_fonts, dyn.IsAbove, voices,
                 dyn.VoiceIndex, mi, ii, xColumn, xLabel, dyn.Text, dyn.IsExpressiveText,
-                vi => beamMembers.TryGetValue((dynStaff, vi, mi, ii), out var b) ? b : null);
+                vi => beamMembers.TryGetValue((dynStaff, vi, mi, ii), out var b) ? b : null,
+                MultiStaffLayouter.NotationStaffLinesOf(staff));
 
             // This label's own ink, from the font. LilyPond's DynamicText extent IS the
             // drawn glyph's ink, so it differs per dynamic — see DynamicEngraver.InkOf.

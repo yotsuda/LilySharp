@@ -174,6 +174,8 @@ internal static class DynamicEngraver
     /// Dynamics are placed below the staff, avoiding collision with notes
     /// that extend below the staff (low notes, stems down).
     /// </remarks>
+    /// <param name="staffLinesOf">The lines a staff (by index) draws, for the staff extent the
+    /// side position floors on; absent, every staff stands on five.</param>
     public static ImmutableArray<DynamicLayout> Calculate(
         Score score,
         ImmutableArray<DynamicItem> dynamics,
@@ -182,7 +184,8 @@ internal static class DynamicEngraver
         Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
         ImmutableArray<BeamLayout> beamLayouts = default,
-        HashSet<(int Staff, int Measure, int Item, int Source)>? circled = null)
+        HashSet<(int Staff, int Measure, int Item, int Source)>? circled = null,
+        Func<int, int>? staffLinesOf = null)
     {
         if (dynamics.IsDefaultOrEmpty)
             return ImmutableArray<DynamicLayout>.Empty;
@@ -291,9 +294,14 @@ internal static class DynamicEngraver
             //   side-position-interface.cc:353-358 pointwise Skyline::distance to my_dim.
             int staffIdx = dynamic.StaffIndex;
             int mi = dynamic.MeasureIndex, ii = dynamic.ItemIndex;
+            // The staff floor and the staff-padding floor are the dynamic's OWN staff's extent
+            // (:323-330, :433-453 read the StaffSymbol grob), so an `as lines N` staff sides
+            // off the lines it draws; a caller without staves stands on five.
+            int staffLines = staffLinesOf?.Invoke(staffIdx) ?? EngravingDefaults.DefaultStaffLines;
             double y = PointwiseBaselineY(score.TextMetrics, dynamic.IsAbove, dynVoices, dynamic.VoiceIndex,
                 mi, ii, xColumn, x, dynamic.Text, expressive,
-                vi => beamMembers.TryGetValue((staffIdx, vi, mi, ii), out var b) ? b : null);
+                vi => beamMembers.TryGetValue((staffIdx, vi, mi, ii), out var b) ? b : null,
+                staffLines);
 
             // Stack each successive same-column dynamic ABOVE the staff away from it (+ in
             // the native Y-up frame). BELOW, no step: each stays at its own side-position and
@@ -347,8 +355,34 @@ internal static class DynamicEngraver
     /// <remarks>Exposed for <see cref="TrillSpannerEngraver"/>, the other aligned_side
     /// consumer that declares staff-padding — one home for the staff symbol's own extent
     /// rather than a second spelling of the derivation.</remarks>
+    /// <remarks>⚠️ THE FIVE-LINE STAFF'S. The dynamics' own path (<see cref="Calculate"/>,
+    /// <see cref="HairpinEngraver"/>, <see cref="DynamicAlignEngraver"/>) reads
+    /// <see cref="StaffExtentToward"/> for the staff's OWN lines since 2026-10-10; the other
+    /// readers (scripts, figured bass, trills, ottava, text spanners, the multi-measure rest's
+    /// text) still take this, so on an <c>as lines N</c> staff they side off a five-line
+    /// extent.</remarks>
     internal static double StaffExtent
-        => StaffMiddle + EngravingDefaults.StaffLineThickness / 2;
+        => StaffExtentToward(1.0, EngravingDefaults.DefaultStaffLines);
+
+    /// <summary>
+    /// <c>staff_extents[dir]</c> of a notation staff drawing <paramref name="staffLines"/>
+    /// lines, as the positive reach past the staff middle on the <paramref name="dir"/> side:
+    /// its outermost line THERE, half a line thickness past its centre. A one-line staff
+    /// reaches 0.05 either way, a four-line one 2.05 up and 1.05 down.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/side-position-interface.cc:318-331 Side_position_interface::aligned_side
+    ///   — <c>staff_extents = staff_symbol->extent (common, Y_AXIS)</c>, the StaffSymbol
+    ///   grob's own Y extent (lily/staff-symbol.cc:346-369 Staff_symbol::height: the line
+    ///   positions' span widened by half the line thickness), read per side as
+    ///   <c>staff_extents[dir]</c> at :329 and :450.
+    /// </remarks>
+    internal static double StaffExtentToward(double dir, int staffLines)
+    {
+        var lines = EngravingDefaults.StaffLinePositions(staffLines);
+        double outer = dir > 0 ? lines[lines.Length - 1] : lines[0];
+        return dir * outer / 2 + EngravingDefaults.StaffLineThickness / 2;
+    }
 
     /// <summary>
     /// The DynamicLineSpanner's OWN offset that <c>side-position-interface</c> produces
@@ -390,9 +424,12 @@ internal static class DynamicEngraver
     ///   a nominal 0.64 descent reach the same total as 2.05 + 0.6 and the `f` glyph's
     ///   own 0.692002.
     /// </remarks>
+    /// <param name="staffLines">The lines the spanner's staff draws — the :433-453 floor is
+    /// that staff's own extent on the <paramref name="dir"/> side.</param>
     internal static double SpannerOffsetY(double dir,
         (VerticalSkyline Up, VerticalSkyline Down) support,
-        (VerticalSkyline Up, VerticalSkyline Down) spannerDim)
+        (VerticalSkyline Up, VerticalSkyline Down) spannerDim,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
     {
         // :354-358 — dir * the POINTWISE distance of my facing profile (skyp[-dir],
         // the spanner's own outline about its origin) to the supports' skyline.
@@ -405,9 +442,9 @@ internal static class DynamicEngraver
         // :384-385
         if (totalOff * dir < MinimumSpace)
             totalOff = MinimumSpace * dir;
-        // :433-453 — dir * staff_extent[dir] is StaffExtent on either side, and
+        // :433-453 — dir * staff_extent[dir] is the staff's own reach on this side, and
         // (staff_position - parent_position) drops out: both refpoints are this staff.
-        double diff = StaffExtent + StaffPadding - dir * totalOff;
+        double diff = StaffExtentToward(dir, staffLines) + StaffPadding - dir * totalOff;
         totalOff += dir * Math.Max(diff, 0.0);
 
         return totalOff;
@@ -424,10 +461,13 @@ internal static class DynamicEngraver
     /// </summary>
     /// <param name="xColumn">The note column's X (the drawn head starts here).</param>
     /// <param name="xLabel">The label's centre (column + the anchor's half advance).</param>
+    /// <param name="staffLines">The lines the dynamic's staff draws: the staff floor under the
+    /// supports and the staff-padding floor are that staff's own extent.</param>
     internal static double PointwiseBaselineY(Rendering.ScoreTextMetrics fonts, bool above,
         ImmutableArray<Voice> voices, int voiceIndex, int measureIndex, int itemIndex,
         double xColumn, double xLabel, string? text, bool expressive,
-        Func<int, (BeamLayout Beam, double StemX, bool StemUp)?>? beamOf)
+        Func<int, (BeamLayout Beam, double StemX, bool StemUp)?>? beamOf,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
     {
         if (expressive)
         {
@@ -437,21 +477,22 @@ internal static class DynamicEngraver
             // LILYPOND-REF: lily/side-position-interface.cc:323-330 set_minimum_height (the staff
             //   floor); :354-370 total_off (distance + padding); :433-453 staff_padding.
             double dir = above ? 1.0 : -1.0;
-            var floor = StaffFloorSupport();
+            var floor = StaffFloorSupport(staffLines);
             var mine = LabelSkylines(fonts, text, true, xLabel, 0.0);
             double off = dir * (dir > 0 ? mine.Down.Distance(floor.Up) : mine.Up.Distance(floor.Down));
             off += dir * TextScriptPadding;
-            double floorDiff = StaffExtent + EngravingDefaults.TextScriptStaffPadding - dir * off;
+            double floorDiff = StaffExtentToward(dir, staffLines)
+                + EngravingDefaults.TextScriptStaffPadding - dir * off;
             off += dir * Math.Max(floorDiff, 0.0);
             return off;
         }
         var support = ColumnSupportSkylines(
-            voices, voiceIndex, measureIndex, itemIndex, xColumn, beamOf);
+            voices, voiceIndex, measureIndex, itemIndex, xColumn, beamOf, staffLines);
         double textOffset = TextOffsetInSpanner(fonts);
         var my = LabelSkylines(fonts, text, expressive, xLabel, -textOffset);
         // total_off positions the SPANNER; the text's baseline sits TextOffsetInSpanner
         // below it (define-grobs.scm:1450 DynamicText Y-offset, "center on an 'm'").
-        return SpannerOffsetY(above ? 1.0 : -1.0, support, my) - textOffset;
+        return SpannerOffsetY(above ? 1.0 : -1.0, support, my, staffLines) - textOffset;
     }
 
     /// <summary>
@@ -548,9 +589,10 @@ internal static class DynamicEngraver
     internal static (VerticalSkyline Up, VerticalSkyline Down) ColumnSupportSkylines(
         ImmutableArray<Voice> voices, int voiceIndex, int measureIndex, int itemIndex,
         double xColumn,
-        Func<int, (BeamLayout Beam, double StemX, bool StemUp)?>? beamOf)
+        Func<int, (BeamLayout Beam, double StemX, bool StemUp)?>? beamOf,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
     {
-        var (up, down) = StaffFloorSupport();
+        var (up, down) = StaffFloorSupport(staffLines);
         MergeColumnSupport(up, down, voices, voiceIndex, measureIndex, itemIndex, xColumn, beamOf);
         return (up, down);
     }
@@ -573,9 +615,10 @@ internal static class DynamicEngraver
     internal static (VerticalSkyline Up, VerticalSkyline Down) SpanSupportSkylines(
         ImmutableArray<Voice> voices, int voiceIndex,
         IEnumerable<(int Measure, int Item, double X)> columns,
-        Func<int, int, int, (BeamLayout Beam, double StemX, bool StemUp)?>? beamOf)
+        Func<int, int, int, (BeamLayout Beam, double StemX, bool StemUp)?>? beamOf,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
     {
-        var (up, down) = StaffFloorSupport();
+        var (up, down) = StaffFloorSupport(staffLines);
         // A span is many boxes into one skyline, which is the shape Merge's batch mode
         // exists for: append now, resolve once, O(K log K) instead of O(K²). Byte-identical
         // — the resolve keeps the highest at each point, and max is commutative.
@@ -602,13 +645,21 @@ internal static class DynamicEngraver
     /// <c>empty_skyline</c> / <c>single_skyline</c> (skyline.cc:259-282) — so this is back to
     /// what <c>set_minimum_height</c> says: no horizon at all, the whole dim is raised.
     /// </remarks>
-    internal static (VerticalSkyline Up, VerticalSkyline Down) StaffFloorSupport()
-        => (VerticalSkyline.FromBox(
+    /// <param name="staffLines">The lines the staff draws: each side's floor is ITS outermost
+    /// line's ink (<see cref="StaffExtentToward"/>) — 0.05 either way on a one-line staff,
+    /// where a dynamic under a stem-down note then sides off the stem alone.</param>
+    internal static (VerticalSkyline Up, VerticalSkyline Down) StaffFloorSupport(
+        int staffLines = EngravingDefaults.DefaultStaffLines)
+    {
+        double extentUp = StaffExtentToward(1.0, staffLines);
+        double extentDown = StaffExtentToward(-1.0, staffLines);
+        return (VerticalSkyline.FromBox(
                 double.NegativeInfinity, double.PositiveInfinity,
-                StaffExtent, StaffExtent, VerticalDirection.Up),
+                extentUp, extentUp, VerticalDirection.Up),
             VerticalSkyline.FromBox(
                 double.NegativeInfinity, double.PositiveInfinity,
-                -StaffExtent, -StaffExtent, VerticalDirection.Down));
+                -extentDown, -extentDown, VerticalDirection.Down));
+    }
 
     /// <summary>Merges ONE note column's head and direction-matching real stem into an
     /// accumulating support pair. See <see cref="ColumnSupportSkylines"/> for the refs.</summary>

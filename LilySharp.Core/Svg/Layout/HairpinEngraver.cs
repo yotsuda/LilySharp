@@ -151,7 +151,8 @@ internal static class HairpinEngraver
         Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
         ImmutableArray<BeamLayout> beamLayouts = default,
-        ImmutableArray<DynamicLayout> dynamicLayouts = default)
+        ImmutableArray<DynamicLayout> dynamicLayouts = default,
+        Func<int, int>? staffLinesOf = null)
     {
         if (hairpins.IsDefaultOrEmpty)
             return ImmutableArray<HairpinLayout>.Empty;
@@ -228,10 +229,14 @@ internal static class HairpinEngraver
             // (break-substitution.cc:67-153 substitute_grob / do_break_substitution
             // rewrites the support list per piece), so the level is resolved here and not
             // once for the whole span.
+            // The staff floor under the supports is this staff's own extent (an `as lines N`
+            // staff's drawn lines); a caller without staves stands on five.
+            int staffLines = staffLinesOf?.Invoke(hairpin.StaffIndex)
+                ?? EngravingDefaults.DefaultStaffLines;
             foreach (var (segment, system) in SpannerBreakSubstitution.BrokenPieces(
                 hairpin.StartMeasureIndex, endMeasureIdx, systems, measureToSystemIdx))
                 layouts.Add(LayoutPiece(hairpin, segment, system, endMeasureIdx, measureLayouts,
-                    staffOffset, hpVoices, hpMeasures, beamMembers, dynamicAt));
+                    staffOffset, hpVoices, hpMeasures, beamMembers, dynamicAt, staffLines));
         }
 
         return layouts.ToImmutable();
@@ -269,7 +274,8 @@ internal static class HairpinEngraver
         ImmutableArray<Voice> staffVoices,
         ImmutableArray<Measure> staffMeasures,
         ImmutableArray<BeamLayout> beamLayouts,
-        ImmutableArray<DynamicLayout> dynamicLayouts)
+        ImmutableArray<DynamicLayout> dynamicLayouts,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
     {
         if (hairpins.IsDefaultOrEmpty || system.Measures.IsDefaultOrEmpty)
             return ImmutableArray<HairpinLayout>.Empty;
@@ -306,7 +312,7 @@ internal static class HairpinEngraver
                 EndMeasureIndex: Math.Min(endMeasureIdx, last),
                 IsFirst: isFirst, IsLast: isLast, IsMiddle: !isFirst && !isLast);
             layouts.Add(LayoutPiece(hairpin, segment, system, endMeasureIdx, byMeasureIndex,
-                staffOffset: 0.0, staffVoices, staffMeasures, beamMembers, dynamicAt));
+                staffOffset: 0.0, staffVoices, staffMeasures, beamMembers, dynamicAt, staffLines));
         }
 
         return layouts.ToImmutable();
@@ -326,7 +332,8 @@ internal static class HairpinEngraver
         ImmutableArray<Voice> hpVoices, ImmutableArray<Measure> hpMeasures,
         Dictionary<(int Staff, int Voice, int Measure, int Item),
             (BeamLayout Beam, double StemX, bool StemUp)> beamMembers,
-        Dictionary<(int Measure, int Item, int Staff), DynamicLayout> dynamicAt)
+        Dictionary<(int Measure, int Item, int Staff), DynamicLayout> dynamicAt,
+        int staffLines)
     {
         int staffIdx = hairpin.StaffIndex;
 
@@ -522,9 +529,11 @@ internal static class HairpinEngraver
                     hpVoices, VoiceIndex,
                     SpanColumns(hairpin, segment, hpMeasures, measureLayouts),
                     (vi, mi, ii) => beamMembers.TryGetValue((staffIdx, vi, mi, ii), out var b)
-                        ? b : null);
+                        ? b : null,
+                    staffLines);
                 double spannerY = DynamicEngraver.SpannerOffsetY(dir: -1.0, support,
-                    WedgeSkylines(segStartX, segEndX, startOpening, endOpening, 0.0, circleX));
+                    WedgeSkylines(segStartX, segEndX, startOpening, endOpening, 0.0, circleX),
+                    staffLines);
                 // spannerY is Y-up about the staff middle; the layout frame is Y-up from
                 // the SYSTEM top, and staffOffset is a within-system downward offset.
                 double hairpinYUp = spannerY - StaffMiddleBelowSystemTop - staffOffset;

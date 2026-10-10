@@ -4467,11 +4467,13 @@ internal sealed class MultiStaffLayouter
             ? ImmutableArray<DynamicLayout>.Empty
             : DynamicEngraver.Calculate(
                 StaffSpannerItemsOf(score, staff).LocalScore, systemDynamics.ToImmutable(),
-                keyed, staff.Voices, voicesByStaff, measuresByStaff, staffBeams);
+                keyed, staff.Voices, voicesByStaff, measuresByStaff, staffBeams,
+                staffLinesOf: _ => NotationStaffLinesOf(staff));
 
         return HairpinEngraver.CalculateOnSystem(
             staffHairpins, system, staff.PrimaryVoice.Measures.Length, keyed,
-            staff.Voices, staff.PrimaryVoice.Measures, staffBeams, dynamicLayouts);
+            staff.Voices, staff.PrimaryVoice.Measures, staffBeams, dynamicLayouts,
+            NotationStaffLinesOf(staff));
     }
 
     /// <summary>
@@ -4979,7 +4981,12 @@ internal sealed class MultiStaffLayouter
     /// <summary>The line count a staff's NOTATION beams are quanted on: its own drawn lines; a
     /// tab's notation shadow keeps the five-line default (its drawn beams are
     /// <see cref="TabStaffGeometry"/>'s, quanted on the strings).</summary>
-    internal static int BeamStaffLinesOf(Staff staff)
+    internal static int BeamStaffLinesOf(Staff staff) => NotationStaffLinesOf(staff);
+
+    /// <summary>The lines a staff's NOTATION reading draws — <c>as lines N</c> — which the side
+    /// positions (dynamics, hairpins) floor on; a tab stands on five (its dynamics are blanked,
+    /// and its strings are not staff lines).</summary>
+    internal static int NotationStaffLinesOf(Staff staff)
         => staff.IsTab ? EngravingDefaults.DefaultStaffLines : staff.Lines;
 
     internal static Score StaffBeamScoreOf(MultiStaffScore score, Staff staff, int staffIndex)

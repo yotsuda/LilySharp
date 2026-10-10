@@ -2809,6 +2809,31 @@ internal sealed class RenderedGeometry
         return ys[line] - bows[index].P0.Y;
     }
 
+    /// <summary>
+    /// How far the baseline of the page's dynamic text <paramref name="index"/> (left to
+    /// right) stands above the page's drawn staff line <paramref name="line"/> (top down), in
+    /// staff spaces — negative below it. Measured from a drawn LINE rather than the five-line
+    /// middle, so a one-line staff reads too (<see cref="BowAttachmentAboveStaffLine"/>).
+    /// </summary>
+    public double DynamicBaselineAboveStaffLine(int index, int line, int page = 0)
+    {
+        var ys = StaffLineCandidateYs(page);
+        if (line < 0 || line >= ys.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for staff line {line} but {ys.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        var texts = _pages[page].Texts.Where(t => t.Role == TextRole.Dynamics).OrderBy(t => t.X).ToList();
+        if (index < 0 || index >= texts.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for dynamic {index} but {texts.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        return ys[line] - texts[index].Y;
+    }
+
     public double BowSpan(int index, int page = 0)
     {
         var bows = _pages[page].Beziers;

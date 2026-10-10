@@ -729,7 +729,10 @@ internal sealed partial class LayoutEngine
         // The niente words a circled hairpin tip stands for, paired as the hairpins below are.
         var circledNientes = HairpinEngraver.HasNiente(dynamics)
             ? HairpinEngraver.CircledNientes(musicMarks, dynamics, sectionPlays) : null;
-        var dynamicLayouts = score != null ? DynamicEngraver.Calculate(score, dynamics, ml, staffVoices, voicesByStaff, measuresByStaff, beamLayouts ?? default, circledNientes) : ImmutableArray<DynamicLayout>.Empty;
+        // The lines each staff draws, which the DynamicLineSpanner family floors on.
+        Func<int, int> staffLinesOf = si => staffByIndex != null && staffByIndex.TryGetValue(si, out var st)
+            ? MultiStaffLayouter.NotationStaffLinesOf(st) : EngravingDefaults.DefaultStaffLines;
+        var dynamicLayouts = score != null ? DynamicEngraver.Calculate(score, dynamics, ml, staffVoices, voicesByStaff, measuresByStaff, beamLayouts ?? default, circledNientes, staffLinesOf) : ImmutableArray<DynamicLayout>.Empty;
         // …minus the ones a tab staff blanks. LILYPOND-REF:
         // ly/engraver-init.ly:1280-1285 Tab_staff_symbol_engraver — that context's
         // \override DynamicText.stencil = ##f / \override TextScript.stencil = ##f — one
@@ -767,7 +770,7 @@ internal sealed partial class LayoutEngine
         var hairpinLayouts = HairpinEngraver.Calculate(hairpinItems, systems, ml, staffYAt,
             score != null && staffVoices.IsDefaultOrEmpty
                 ? ImmutableArray.Create(score.Voice) : staffVoices,
-            voicesByStaff, measuresByStaff, beamLayouts ?? default, dynamicLayouts);
+            voicesByStaff, measuresByStaff, beamLayouts ?? default, dynamicLayouts, staffLinesOf);
 
         // Texts and wedges linked by RUNNING hairpins ride one DynamicLineSpanner: the
         // group is side-positioned once and every member re-seats on the shared line
@@ -780,7 +783,7 @@ internal sealed partial class LayoutEngine
             ctx.Fonts, hairpinItems, dynamics, dynamicLayouts, hairpinLayouts, systems, ml, staffYAt,
             score != null && staffVoices.IsDefaultOrEmpty
                 ? ImmutableArray.Create(score.Voice) : staffVoices,
-            voicesByStaff, measuresByStaff, beamLayouts ?? default);
+            voicesByStaff, measuresByStaff, beamLayouts ?? default, staffLinesOf);
 
         // Detect and layout text spanners from rit/accel marks (outside-staff-priority: 350)
         // Pass dynamic layouts so text spanners can stack below them
