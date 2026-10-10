@@ -62,7 +62,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   system — `.down` below — set off to the side with more room, with a leader from the ring
   to the underline, all in one pen. Nothing on the page moves for a mark; the memo itself is
   set where nothing else is drawn, crossing to the note's other side where that is clear and
-  climbing past a chord symbol, a dynamic, a ledgered note or an earlier memo otherwise.
+  climbing past a chord symbol, a dynamic, a ledgered note or an earlier memo otherwise, and
+  its leader keeps out of the other memos' words where a clear place is near.
   `lilysharp.preview.highlightTodos` off hides them,
   and no export draws them.
 - **`todo` completes into its quotes**: `todo("")` with the caret between the quotes, like

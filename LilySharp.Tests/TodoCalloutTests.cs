@@ -166,6 +166,62 @@ public class TodoCalloutTests
     }
 
     [Fact]
+    public void ALeader_RunsThroughNoOtherMemo()
+    {
+        // Six memos on one short system (the p896 probe `one`, with a title so the page has
+        // room over the staff — the preview's page is a strip, and a memo that reaches its
+        // top stays there over whatever is in the way): set left to right, each where the
+        // ink is clear, the later ones climb over the earlier — and a later memo's leader
+        // ran down through an earlier memo's words. A memo's words are the box over its
+        // underline, a line of its font's height; no leader passes through another memo's
+        // box, and no memo's box has a leader through it.
+        // And the plain case: memos on two notes side by side, the first's words running
+        // over the second note — the second memo, set where the ink is clear just over the
+        // first's words, had its leader run down through them; it takes the other side.
+        CheckLeaders("c'4@todo(\"F# or F natural? the sharp is faint\") d'4 e'4@todo f'4 | r2@todo(\"bar 12 is only 7/8\").down <e' g' b'>4@todo(\"both\") g'4@todo(\"a second memo, right beside\") | R1@todo(\"tacet?\") | c''1@todo(\"high note\") |", 6);
+        CheckLeaders("c''4@todo(\"first memo here\") d''4@todo(\"second memo here\") e''4 f''4 |", 2);
+    }
+
+    private static void CheckLeaders(string music, int memos)
+    {
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse("title \"Room above\"\n" + Book(music)), SvgRenderOptions.Preview());
+        var leaders = Leaders(svg);
+        var underlines = Underlines(svg);
+        Assert.Equal(memos, leaders.Count);
+        Assert.Equal(memos, underlines.Count);
+        double em = double.Parse(Regex.Match(svg, "<text [^>]*font-size=\"([0-9.]+)\"[^>]*fill=\"#E53935\"[^>]*data-todo=").Groups[1].Value);
+        // A memo's box: its underline's span, and the line of text over it (SVG's Y grows
+        // downward, so the words lie at smaller Y than the underline — for the .down memo
+        // too, whose leader ends at the top of its words instead of at its underline).
+        var boxes = underlines.Select(u => (Left: u.X1, Right: u.X2, Top: u.Y1 - 0.9 * em, Bottom: u.Y1)).ToList();
+        int crossings = 0;
+        foreach (var l in leaders)
+            foreach (var b in boxes)
+            {
+                // The leader's own memo is the one whose centre it ends under or over.
+                if (Math.Abs(l.X2 - (b.Left + b.Right) / 2) < 0.01)
+                    continue;
+                if (SegmentMeetsBox(l.X1, l.Y1, l.X2, l.Y2, b.Left, b.Right, b.Top, b.Bottom))
+                    crossings++;
+            }
+        Assert.True(crossings == 0, $"{crossings} leader(s) through another memo: {string.Join(" ", leaders)} / {string.Join(" ", boxes)}");
+
+        static bool SegmentMeetsBox(double x1, double y1, double x2, double y2, double left, double right, double top, double bottom)
+        {
+            double t0 = 0, t1 = 1, dx = x2 - x1, dy = y2 - y1;
+            return Clip(-dx, x1 - left) && Clip(dx, right - x1) && Clip(-dy, y1 - top) && Clip(dy, bottom - y1);
+            bool Clip(double p, double q)
+            {
+                if (p == 0) return q >= 0;
+                double t = q / p;
+                if (p < 0) { if (t > t1) return false; if (t > t0) t0 = t; }
+                else { if (t < t0) return false; if (t < t1) t1 = t; }
+                return true;
+            }
+        }
+    }
+
+    [Fact]
     public void AMark_MovesNothingOnThePage()
     {
         // The same book with the memo and with an empty one (the mark stays, so the export's

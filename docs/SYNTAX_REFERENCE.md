@@ -400,7 +400,9 @@ the side with more room, with a leader from the ring to the underline — one pe
 moves for a mark, as nothing moves for a pencilled note; the memo itself is set where nothing
 else is drawn — it crosses to the note's other side where that side is clear, climbs past a
 chord symbol, a dynamic, a ledgered note or an earlier memo otherwise, may stand on the page's
-margin, and only at the page's edge may it lie over something. The
+margin, and only at the page's edge may it lie over something; its leader keeps out of the
+other memos' words where a clear place is near, and runs through them only where every place
+would. The
 `lilysharp.preview.highlightTodos` setting hides the marks. No export draws them.
 
 ```

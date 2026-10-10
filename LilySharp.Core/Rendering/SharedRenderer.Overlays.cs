@@ -99,6 +99,7 @@ internal static partial class SharedRenderer
     private const double TodoMemoGap = 0.6;        // between the memo's ink and what it stands over
     private const double TodoMemoAir = 1.0;        // between two memos side by side on one level
     private const double TodoMemoScale = 0.75;     // the memo's em over @text's
+    private const double TodoLeaderCrossing = 4.0; // a leader through another memo's words costs this much climbing
 
     /// <summary>
     /// The preview's <c>@todo</c> marks, drawn OVER the page after every overlay — the ring
@@ -197,6 +198,15 @@ internal static partial class SharedRenderer
         // 2026-10-10: a memo over another mark cannot be read; the p893 spelling only
         // stacked the memos among themselves and let them lie over a dynamic or a chord
         // symbol). Without a recorder the edge itself is taken.
+        // The memos set so far on the page, and their leaders. A memo's leader is not
+        // recorded — its long slanted box would fence off the margin — but a later memo's
+        // leader must not run through an earlier memo's words, and a later memo must not be
+        // set across an earlier leader (the p896 probe `one`: five memos on one system, two
+        // leaders through other memos' text). So the leaders are kept as the segments they
+        // are, and a candidate place is clear only when its box meets no leader and its own
+        // leader meets no memo.
+        var placedMemos = new List<(double Left, double Right, double Bottom, double Top)>();
+        var placedLeaders = new List<(double X1, double Y1, double X2, double Y2)>();
         var systemEdge = new Dictionary<(int System, bool Below), double>();
         foreach (var group in callouts.GroupBy(c => (c.System.SystemIndex, c.Below)))
         {
@@ -247,15 +257,23 @@ internal static partial class SharedRenderer
                 // when that saves it two spaces of climbing or more — the roomier side stays
                 // the rule, so memos still line up, and only a walled one crosses over.
                 bool roomierRight = sysRight - c.RingX >= c.RingX - sysLeft;
-                var (leftR, baseR, climbR) = Settle(true);
-                var (leftL, baseL, climbL) = Settle(false);
+                var (leftR, baseR, costR) = Settle(true);
+                var (leftL, baseL, costL) = Settle(false);
                 double crossOver = 2.0 * scale;
-                bool toRight = roomierRight ? climbR <= climbL + crossOver : climbR + crossOver < climbL;
+                bool toRight = roomierRight ? costR <= costL + crossOver : costR + crossOver < costL;
                 double left = toRight ? leftR : leftL;
                 double right = left + width;
                 double baseline = toRight ? baseR : baseL;
 
-                (double Left, double Baseline, double Climb) Settle(bool onRight)
+                // A side's place and its cost: the climb, plus TodoLeaderCrossing spaces where
+                // the memo's leader runs through another memo's words or its box lies across
+                // another's leader. Two places are found up the climb — the first clear of the
+                // page's ink, and the first clear of the other memos' leaders and words too —
+                // and the cheaper is taken: a memo climbs over a crossing where the clear
+                // place is near, and keeps the crossing where it is far or there is none
+                // (an earlier memo's words right over the note, which every leader from
+                // above must pass).
+                (double Left, double Baseline, double Cost) Settle(bool onRight)
                 {
                     double l = onRight ? c.RingX + offset : c.RingX - offset - width;
                     // Kept on the paper: the page's margins are room too — a memo on a note
@@ -276,24 +294,65 @@ internal static partial class SharedRenderer
                     // Less air sideways than up and down: the memo's near end stands one
                     // offset from the ring's centre, and a full space of air there would
                     // meet the ring's own box and lift every memo a step.
-                    for (int tries = 0; tries < 400
-                        && (below ? b - boxDown - climb * scale > pageBottom : b + boxUp + climb * scale < pageTop)
-                        && !ink.IsClear(l - air * 0.4, l + width + air * 0.4, b - boxDown - air / 2, b + boxUp + air / 2);
-                        tries++)
+                    double? inkClear = null, allClear = null;
+                    for (int tries = 0; tries < 400; tries++)
+                    {
+                        if (InkClear(l, b))
+                        {
+                            inkClear ??= b;
+                            if (LeadersClear(l, b))
+                            {
+                                allClear = b;
+                                break;
+                            }
+                        }
+                        if (!(below ? b - boxDown - climb * scale > pageBottom : b + boxUp + climb * scale < pageTop))
+                            break;
                         b += below ? -climb * scale : climb * scale;
+                    }
                     b = below ? Math.Max(b, pageBottom + boxDown) : Math.Min(b, pageTop - boxUp);
-                    return (l, b, Math.Abs(b - start));
+                    double crossing = TodoLeaderCrossing * scale;
+                    double bCrossed = inkClear ?? b;
+                    double costCrossed = Math.Abs(bCrossed - start) + crossing;
+                    if (allClear is { } bClear && Math.Abs(bClear - start) <= costCrossed)
+                        return (l, bClear, Math.Abs(bClear - start));
+                    return (l, bCrossed, costCrossed);
+                }
+                // Whether a memo set with its left end at l and its baseline at b stands clear
+                // of the page's ink: its box, with its air, meets no box the recorder holds.
+                bool InkClear(double l, double b)
+                    => ink!.IsClear(l - air * 0.4, l + width + air * 0.4, b - boxDown - air / 2, b + boxUp + air / 2);
+                // Whether a memo set there is clear of the other memos' leaders and words: no
+                // leader set before runs through its box, and its own leader runs through no
+                // memo set before.
+                bool LeadersClear(double l, double b)
+                {
+                    double bl = l - air * 0.4, br = l + width + air * 0.4;
+                    double bb = b - boxDown - air / 2, bt = b + boxUp + air / 2;
+                    foreach (var s in placedLeaders)
+                        if (SegmentMeetsBox(s.X1, s.Y1, s.X2, s.Y2, bl, br, bb, bt))
+                            return false;
+                    var (x1, y1, x2, y2) = LeaderOf(l, b);
+                    foreach (var m in placedMemos)
+                        if (SegmentMeetsBox(x1, y1, x2, y2, m.Left, m.Right, m.Bottom, m.Top))
+                            return false;
+                    return true;
                 }
                 // The memo is UNDERLINED, and the leader joins the underline's centre to the
                 // ring — the point of the ring that faces it — with the one pen (owner's
                 // requests 2026-10-10). A memo below the staff is joined at the centre of its
                 // top instead, so the leader does not run through the words.
+                (double OnRingX, double OnRingY, double CentreX, double AttachY) LeaderOf(double l, double b)
+                {
+                    double centre = l + width / 2;
+                    double attach = below ? b + ascent + drop : b - descent - drop;
+                    double angle = Math.Atan2((attach - c.RingY) / c.RingRy, (centre - c.RingX) / c.RingRx);
+                    return (c.RingX + c.RingRx * Math.Cos(angle), c.RingY + c.RingRy * Math.Sin(angle), centre, attach);
+                }
                 double underlineY = baseline - descent - drop;
-                double centreX = (left + right) / 2;
-                double attachY = below ? baseline + ascent + drop : underlineY;
-                double angle = Math.Atan2((attachY - c.RingY) / c.RingRy, (centreX - c.RingX) / c.RingRx);
-                double onRingX = c.RingX + c.RingRx * Math.Cos(angle);
-                double onRingY = c.RingY + c.RingRy * Math.Sin(angle);
+                var (onRingX, onRingY, centreX, attachY) = LeaderOf(left, baseline);
+                placedMemos.Add((left, right, baseline - boxDown, baseline + boxUp));
+                placedLeaders.Add((onRingX, onRingY, centreX, attachY));
                 double pen = TodoPen * scale;
                 using (gc.Staff(c.StaffIndex))
                 using (gc.Source(c.SourcePosition))
@@ -308,6 +367,33 @@ internal static partial class SharedRenderer
                         DynamicEngraver.LabelStyle(fonts, true), TextAnchor.Start, TodoInk);
                 }
             }
+        }
+    }
+
+    /// <summary>Whether the segment from (x1, y1) to (x2, y2) passes through the box
+    /// <c>[left, right] × [bottom, top]</c> — Liang–Barsky's clip, kept for the yes or no.</summary>
+    private static bool SegmentMeetsBox(double x1, double y1, double x2, double y2,
+        double left, double right, double bottom, double top)
+    {
+        double t0 = 0, t1 = 1, dx = x2 - x1, dy = y2 - y1;
+        return Clip(-dx, x1 - left) && Clip(dx, right - x1) && Clip(-dy, y1 - bottom) && Clip(dy, top - y1);
+
+        bool Clip(double p, double q)
+        {
+            if (p == 0)
+                return q >= 0; // parallel to this edge: inside it, or not at all
+            double t = q / p;
+            if (p < 0)
+            {
+                if (t > t1) return false;
+                if (t > t0) t0 = t;
+            }
+            else
+            {
+                if (t < t0) return false;
+                if (t < t1) t1 = t;
+            }
+            return true;
         }
     }
 
