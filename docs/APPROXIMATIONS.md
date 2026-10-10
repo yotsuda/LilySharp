@@ -463,7 +463,7 @@
 - **`LayoutEngine.EnrichExtentsWithAnnotationProtrusions`** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
 - **`LayoutEngine.AugmentSkylinesForPaging`** LILYSHARP-OWN: the SILHOUETTE margin, not ink. It widens a mark's box before the
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Prelim.cs`
-- **`LayoutEngine.RunPreliminaryAnnotationPass`** find a clear place near their notes. LILYSHARP-OWN: an editor's aid.
+- **`LayoutEngine.RunPreliminaryAnnotationPass`** LILYSHARP-OWN: an editor's aid.
 - **`LayoutEngine.BowShiftsOf`** LILYSHARP-OWN: the shift itself. LilyPond has no counterpart, because it has no second
 ### `LilySharp.Core/Svg/Layout/LayoutOptions.cs`
 - **`LayoutOptions.SystemSpacing`** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
@@ -574,7 +574,7 @@
 - **`TieFormattingProblem.EdgeYUp`** ⚠️ LILYSHARP-OWN, AND ONLY ON A TAB. LilyPond has one staff_symbol_referencer_
 ### `LilySharp.Core/Svg/Layout/TodoMemoBand.cs`
 - **`TodoMemoStyle`** LILYSHARP-OWN, every one: an editor's mark, with no LilyPond counterpart. Owner's
-- **`TodoMemoBand`** LILYSHARP-OWN: an editor's aid with no LilyPond counterpart. The estimate is the memos'
+- **`TodoMemoBand`** LILYSHARP-OWN: an editor's aid with no LilyPond counterpart. The reservation is each
 ### `LilySharp.Core/Svg/Layout/TrillSpannerEngraver.cs`
 - **`TrillSpannerEngraver.BoundPadding`** LILYSHARP-OWN: an X-axis bound gap. LilyPond's (padding . 0.5)
 - **`TrillSpannerEngraver.GetEndX`** BoundPadding short of the measure's end — a device, kept (LILYSHARP-OWN,

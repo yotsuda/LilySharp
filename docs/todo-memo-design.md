@@ -10,15 +10,22 @@ page records the placing, which sessions 896–899 built up and session 899 sett
 
 - **An export moves nothing and draws nothing.** PDF, PNG and SVG are the page the book would
   have without its memos (`TodoCalloutTests.AMark_MovesNothingOnThePage`).
-- **The preview's layout keeps a band for the memos** (`LayoutOptions.TodoBands`, set by the
+- **The preview's layout reserves each memo's place** (`LayoutOptions.TodoBands`, set by the
   interactive render options — `SvgGenerator.PaperBaseOf`, and the same base in
-  `IncrementalCompiler` so the session's picture is the full render's). `TodoMemoBand.Estimate`
-  packs each system's memos into rows on their roomier sides and prices the rows; the band
-  joins the system's up extent (down, for `.down`) in the preliminary annotation pass
-  (`LayoutEngine.Prelim.cs`) and the X-aware paging silhouette as a full-width mark box, so
-  the page's top spring, the inter-system floor and the page breaker all read it. The owner's
-  decision of 2026-10-10 allowed the page's other elements to move for a memo "so long as
-  the result is tidy"; this is the one way they move.
+  `IncrementalCompiler` so the session's picture is the full render's). `TodoMemoBand.Boxes`
+  puts each memo's box where the drawer would set it — off its note, on the side whose ink
+  under the box is lower, on the system's paging silhouette at that X, stacked over the memos
+  estimated before it — and the boxes join that silhouette as X-aware mark boxes
+  (`AugmentSkylinesForPaging`, after the marks, chord names, dynamics and lyrics are in it)
+  and the system's scalar extents (`LayoutEngine.Prelim.cs`), which the page's top spring and
+  the breaker read. So a memo that fits in the room the page has anyway — between the
+  lyrics of the system above and a bar with nothing over it, in the margin — moves nothing;
+  the inter-system floor grows only where the system above really reaches the box, and a
+  page's first system moves only where a memo stands higher than its own topmost ink. (A
+  full-width band over every marked system, session 899's first spelling, widened
+  `Untitled-2.lys`'s systems for nothing — owner's report 2026-10-11.) The owner's decision
+  of 2026-10-10 allowed the page's other elements to move for a memo "so long as the result
+  is tidy"; this is the one way they move.
 - **The memos are set at render time**, where the page's ink is clear
   (`SharedRenderer.DrawTodoMarks`, pass 2). The page's device context is wrapped in an
   `InkRecorder` while it is drawn, so every glyph, text, line and curve is a box the memos can

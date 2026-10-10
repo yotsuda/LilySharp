@@ -25,7 +25,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// <summary>
 /// The look of the preview's <c>@todo</c> marks — the ring, the memo's text and its leader —
 /// in staff spaces, shared by the drawer (<c>SharedRenderer.DrawTodoMarks</c>) and the
-/// layout's reservation of the memos' rows (<see cref="TodoMemoBand"/>), so the two price
+/// layout's reservation of the memos' room (<see cref="TodoMemoBand"/>), so the two price
 /// the same memo alike.
 /// </summary>
 /// <remarks>
@@ -63,112 +63,116 @@ internal static class TodoMemoStyle
 }
 
 /// <summary>
-/// The rows the preview's memos need above a system (below, for <c>.down</c>), reserved by
-/// the layout as a BAND over the system's own ink when <see cref="LayoutOptions.TodoBands"/>
-/// is on — the interactive preview's layout, never an export's. The memos themselves are
-/// still set at render time, where the page's ink is clear (<c>SharedRenderer.DrawTodoMarks</c>);
-/// the band is what makes sure such a place exists near the note instead of beside another
-/// system or past the page's top (owner's decision 2026-10-10: the page's other elements may
-/// move for a memo, so long as the result is tidy; the p896 probe `one`, five memos on one
-/// system, had two of them over each other at the page's edge).
+/// The room the preview's memos need over a system (under it, for <c>.down</c>), reserved by
+/// the layout when <see cref="LayoutOptions.TodoBands"/> is on — the interactive preview's
+/// layout, never an export's. The memos themselves are still set at render time, where the
+/// page's ink is clear (<c>SharedRenderer.DrawTodoMarks</c>); this is what makes sure such a
+/// place exists near the note instead of beside another system or past the page's top
+/// (owner's decision 2026-10-10: the page's other elements may move for a memo, so long as
+/// the result is tidy; the p896 probe `one`, six memos on one system, had two of them over
+/// each other at the page's edge).
 /// </summary>
 /// <remarks>
-/// LILYSHARP-OWN: an editor's aid with no LilyPond counterpart. The estimate is the memos'
-/// own boxes packed into rows, left to right, each on the side of its note with more room —
-/// the drawer's first choice; a memo the drawer then crosses to the other side or lifts over
-/// a mark needs no more rows than this, only other ones. The band is a full-width box: a
-/// memo may stand anywhere along its line, the page's margin included.
+/// LILYSHARP-OWN: an editor's aid with no LilyPond counterpart. The reservation is each
+/// memo's own box where the drawer would set it — off its note to the side whose ink under
+/// the box is lower (the roomier side among equals), on the system's paging silhouette at
+/// that X, stacked over the memos estimated before it where they overlap — joined to the
+/// silhouette as X-aware boxes. So a memo that fits in the room the page has anyway
+/// (between the lyrics of the system above and a bar with nothing over it, in the margin)
+/// moves nothing: the inter-system floor grows only where the system above really reaches
+/// down to the box, and the page's top only where the box stands higher than the system's
+/// own topmost ink (owner's report 2026-10-11: a full-width band over every system with a
+/// memo widened the systems' spacing for nothing — `Untitled-2.lys` can show its memos
+/// without a space of new room).
 /// </remarks>
 internal static class TodoMemoBand
 {
-    /// <summary>Per system, the band's height above and below the system's ink (0 where
-    /// the system has no memo on that side).</summary>
-    public readonly record struct Bands(double Up, double Down);
+    /// <summary>A memo's box in the system's origin frame (X as the measures', Y up).</summary>
+    public readonly record struct Box(double X0, double X1, double Bottom, double Top);
 
     /// <summary>
-    /// The bands of every system of one placement: how much higher the memos above lift
-    /// the system's up extent, and how much deeper the memos below push its down extent.
-    /// Reads the live score's items and the systems' measure layouts, exactly as the
-    /// drawer does.
+    /// The boxes the memos of <paramref name="system"/> would take, over its paging
+    /// silhouette <paramref name="up"/> (under <paramref name="down"/> for <c>.down</c>) —
+    /// null where the system has no memo. Reads the live score's items and the system's
+    /// measure layouts, as the drawer does.
     /// </summary>
-    public static ImmutableArray<Bands> Estimate(MultiStaffScore score, ImmutableArray<SystemLayout> systems)
+    public static List<Box>? Boxes(MultiStaffScore score, SystemLayout system,
+        VerticalSkyline up, VerticalSkyline down)
     {
+        if (system.Measures.IsDefaultOrEmpty)
+            return null;
         var fonts = score.TextMetrics;
-        var above = new List<(double Left, double Right)>[systems.Length];
-        var below = new List<(double Left, double Right)>[systems.Length];
-        var rowUp = new double[systems.Length];
-        var rowDown = new double[systems.Length];
-        var measureToSystem = new Dictionary<int, int>();
-        for (int s = 0; s < systems.Length; s++)
-            foreach (var ml in systems[s].Measures)
-                measureToSystem[ml.MeasureIndex] = s;
+        double sysLeft = system.Measures[0].X;
+        double sysRight = system.Measures[^1].X + system.Measures[^1].Width;
+        var measureToLayout = new Dictionary<int, MeasureLayout>();
+        foreach (var ml in system.Measures)
+            measureToLayout[ml.MeasureIndex] = ml;
 
+        // The memos, each with its note's column and its text's box; the short first, as the
+        // drawer sets them.
+        var memos = new List<(double X, bool Below, double Width, double Height)>();
         foreach (var (_, staff, _) in score.EnumerateStaves())
-        {
             foreach (var voice in staff.Voices)
             {
                 var measures = voice.Measures;
                 for (int mi = 0; mi < measures.Length; mi++)
                 {
+                    if (!measureToLayout.TryGetValue(mi, out var measureLayout))
+                        continue;
                     var items = measures[mi].Items;
                     for (int ii = 0; ii < items.Length; ii++)
                     {
                         var item = items[ii];
                         if (item.TodoMemo is not { Length: > 0 } memo)
                             continue;
-                        if (!measureToSystem.TryGetValue(mi, out int s))
-                            continue;
-                        var system = systems[s];
-                        MeasureLayout? measureLayout = null;
-                        foreach (var ml in system.Measures)
-                            if (ml.MeasureIndex == mi) { measureLayout = ml; break; }
-                        if (measureLayout == null)
-                            continue;
                         // The note's column, about where its ring's centre stands.
                         double x = measureLayout.X + LayoutUtilities.GetItemXOffset(measures, mi, ii, measureLayout) + 0.6;
-                        double sysLeft = system.Measures[0].X;
-                        double sysRight = system.Measures[^1].X + system.Measures[^1].Width;
                         var (_, width, boxUp, boxDown) = TodoMemoStyle.MetricsOf(fonts, memo, 1.0);
-                        bool toRight = sysRight - x >= x - sysLeft;
-                        double left = toRight ? x + TodoMemoStyle.Offset : x - TodoMemoStyle.Offset - width;
-                        var side = item.TodoBelow ? (below[s] ??= new()) : (above[s] ??= new());
-                        side.Add((left, left + width));
-                        // One row's pitch: the box, and the air the drawer keeps about it.
-                        double pitch = boxUp + boxDown + TodoMemoStyle.Air;
-                        if (item.TodoBelow)
-                            rowDown[s] = Math.Max(rowDown[s], pitch);
-                        else
-                            rowUp[s] = Math.Max(rowUp[s], pitch);
+                        memos.Add((x, item.TodoBelow, width, boxUp + boxDown));
                     }
                 }
             }
-        }
+        if (memos.Count == 0)
+            return null;
+        memos.Sort((a, b) => a.Width != b.Width ? a.Width.CompareTo(b.Width) : a.X.CompareTo(b.X));
 
-        var bands = ImmutableArray.CreateBuilder<Bands>(systems.Length);
-        for (int s = 0; s < systems.Length; s++)
-            bands.Add(new Bands(BandOf(above[s], rowUp[s]), BandOf(below[s], rowDown[s])));
-        return bands.MoveToImmutable();
-    }
-
-    /// <summary>The band one side's memos need: the gap the first row keeps from the ink
-    /// under it, then as many rows as the memos' boxes take packed left to right.</summary>
-    private static double BandOf(List<(double Left, double Right)>? memos, double pitch)
-    {
-        if (memos is null || memos.Count == 0)
-            return 0;
-        memos.Sort((a, b) => a.Left.CompareTo(b.Left));
-        // Greedy rows: each memo joins the first row whose last memo it clears by the air.
-        var rowRights = new List<double>();
-        foreach (var (left, right) in memos)
+        var boxes = new List<Box>(memos.Count);
+        foreach (var (x, below, width, height) in memos)
         {
-            int row = -1;
-            for (int r = 0; r < rowRights.Count; r++)
-                if (rowRights[r] + TodoMemoStyle.Air <= left) { row = r; break; }
-            if (row < 0)
-                rowRights.Add(right);
-            else
-                rowRights[row] = right;
+            bool roomierRight = sysRight - x >= x - sysLeft;
+            var right = Settle(x + TodoMemoStyle.Offset);
+            var left = Settle(x - TodoMemoStyle.Offset - width);
+            // The side whose box stands nearer the system (ties to the roomier side).
+            bool toRight = below
+                ? (roomierRight ? right.Top >= left.Top : right.Top > left.Top)
+                : (roomierRight ? right.Bottom <= left.Bottom : right.Bottom < left.Bottom);
+            boxes.Add(toRight ? right : left);
+
+            // The box with its left end at l: on the silhouette's ink under it plus the gap,
+            // or over the boxes already estimated that it overlaps, whichever is further out.
+            Box Settle(double l)
+            {
+                double x0 = l - TodoMemoStyle.Air * 0.4, x1 = l + width + TodoMemoStyle.Air * 0.4;
+                if (!below)
+                {
+                    double ink = up.IsEmpty ? 0 : up.MaxHeightInRange(x0, x1);
+                    double bottom = (double.IsInfinity(ink) ? 0 : Math.Max(ink, 0)) + TodoMemoStyle.Gap;
+                    foreach (var b in boxes)
+                        if (b.X0 < x1 && x0 < b.X1 && b.Top > 0)
+                            bottom = Math.Max(bottom, b.Top + TodoMemoStyle.Air);
+                    return new Box(l, l + width, bottom, bottom + height);
+                }
+                else
+                {
+                    double ink = down.IsEmpty ? 0 : down.MaxHeightInRange(x0, x1);
+                    double top = (double.IsInfinity(ink) ? 0 : Math.Min(ink, 0)) - TodoMemoStyle.Gap;
+                    foreach (var b in boxes)
+                        if (b.X0 < x1 && x0 < b.X1 && b.Bottom < 0)
+                            top = Math.Min(top, b.Bottom - TodoMemoStyle.Air);
+                    return new Box(l, l + width, top - height, top);
+                }
+            }
         }
-        return TodoMemoStyle.Gap + rowRights.Count * pitch;
+        return boxes;
     }
 }

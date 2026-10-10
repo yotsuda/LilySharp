@@ -60,9 +60,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   chord with a ring drawn as a hand draws one (one ring round a whole chord) instead of filling
   it red, and a memo stands as a line of small red text, underlined, in the margin above the
   system — `.down` below — set off to the side with more room, with a leader from the ring
-  to the underline, all in one pen. The preview's layout keeps the rows the memos need as a
-  band over the system (under it for `.down`), so the system below moves down that much and
-  the page grows; within that room the memo is set where nothing else is drawn, crossing to
+  to the underline, all in one pen. The preview's layout reserves each memo's place on the
+  system's silhouette, so a system moves down only where a memo needs more room than the
+  page has there (a memo that fits between the systems or in the margin moves nothing);
+  within that room the memo is set where nothing else is drawn, crossing to
   the note's other side where that is clear and climbing past a chord symbol, a dynamic, a
   ledgered note or an earlier memo otherwise, and a system's memos are arranged together so
   that no leader runs through another memo's words where any arrangement avoids it.

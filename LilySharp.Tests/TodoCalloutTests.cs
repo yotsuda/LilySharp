@@ -217,6 +217,15 @@ public class TodoCalloutTests
                 Assert.True(apart, $"memos {i} and {j} overlap: {a} / {b}");
             }
         Assert.Equal(preview, new IncrementalCompiler(tree, SvgRenderOptions.Preview()).Render());
+
+        // And a memo that fits in the room the page has anyway moves nothing (owner's report
+        // 2026-10-11: a band over every marked system widened the spacing for nothing): a
+        // memo on a note inside the staff, under a system whose section mark stands higher
+        // than the memo's box, leaves the preview page as tall as the export's.
+        var fits = SyntaxTree.Parse("title \"Room above\"\noctave absolute\npart m { clef treble }\nsection A { m { c'4 d'4 e'4 f'4 | g'4@todo(\"memo\") a'4 b'4 c''4 | } }\nform { A }\nscore { staff m }\n");
+        string fitsPreview = SvgGenerator.Generate(fits, SvgRenderOptions.Preview());
+        Assert.Single(Leaders(fitsPreview));
+        Assert.Equal(PageHeight(SvgGenerator.Generate(fits, SvgRenderOptions.Default)), PageHeight(fitsPreview));
     }
 
     /// <summary>Each memo's box in the SVG's frame (Y down): its underline's span, and the

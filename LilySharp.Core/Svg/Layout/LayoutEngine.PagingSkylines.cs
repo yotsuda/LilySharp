@@ -910,7 +910,7 @@ internal sealed partial class LayoutEngine
         List<VerticalSkyline?>? breakerDowns = null,
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? breakerBases = null,
         List<BreakerSplit?>? breakerSplits = null,
-        IReadOnlyList<(int System, double X0, double X1, double Bottom, double Top)>? todoBandBoxes = null)
+        Func<int, (VerticalSkyline up, VerticalSkyline down), List<TodoMemoBand.Box>?>? todoBoxesOf = null)
     {
         if (skylines == null)
             return null;
@@ -1517,16 +1517,6 @@ internal sealed partial class LayoutEngine
             }
         }
 
-        // The preview's memo rows (LayoutOptions.TodoBands): a full-width box over the
-        // system's ink, above or below, where its memos will be set — the band the layout
-        // reserves for the editor's red ink (RunPreliminaryAnnotationPass, TodoMemoBand).
-        if (todoBandBoxes is not null)
-        {
-            foreach (var (s, x0, x1, bottom, top) in todoBandBoxes)
-                if (s < systemCount)
-                    BuilderAt(s).AddMarkBox(x0, x1, bottom, top);
-        }
-
         // The lyric block at its ALIGNMENT MINIMUM — the last family, appended after every
         // other step so the existing families keep their association (the program remark's
         // ULP discipline). This is what makes the inter-system floor read the band WITH X:
@@ -1555,6 +1545,23 @@ internal sealed partial class LayoutEngine
             result.Add(systemCache is null
                 ? builder.Build().Execute(skylines[s])
                 : systemCache.GetOrComputePagingAugment(s, skylines[s], builder));
+        }
+        // The preview's memos (LayoutOptions.TodoBands): each memo's box where it would be set
+        // on the silhouette just built — the marks, chord names, dynamics and lyrics in it —
+        // merged as one more mark box, after the memo and outside it (a memo's room is the
+        // editor's, and a marked system is a few a score). RunPreliminaryAnnotationPass reads
+        // the boxes back for the scalar extents.
+        if (todoBoxesOf is not null)
+        {
+            for (int s = 0; s < systemCount; s++)
+            {
+                if (todoBoxesOf(s, result[s]) is not { Count: > 0 } boxes)
+                    continue;
+                var memoBuilder = new PagingAugmentProgram.Builder();
+                foreach (var b in boxes)
+                    memoBuilder.AddMarkBox(b.X0, b.X1, b.Bottom, b.Top);
+                result[s] = memoBuilder.Build().Execute(result[s]);
+            }
         }
         // The page breaker's up silhouettes, where they differ (a mark above the staff); not
         // memoized — a marked system is a few a score.

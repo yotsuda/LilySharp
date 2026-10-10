@@ -396,10 +396,11 @@ The preview shows the marks as red ink over the finished page: the marked head, 
 chord wears a ring drawn as a hand draws one (one ring round a whole chord), and a memo
 stands as a line of small red text, underlined, in the margin above the system, set off to
 the side with more room, with a leader from the ring to the underline — one pen for all three
-— and `.down` puts it below. The preview's layout keeps the rows the memos need as a band
-over a system that has one (under it, for `.down`), so the system below moves down that much
-and the page grows — the one way a mark moves anything, and only in the preview: an export
-lays out as if no memo were written, and draws none. Within that room the memo itself is set
+— and `.down` puts it below. The preview's layout reserves each memo's place on the system's
+silhouette, so a system moves down only where a memo needs more room than the page has
+there — a memo that fits between the systems or in the margin moves nothing; this is the one
+way a mark moves anything, and only in the preview: an export lays out as if no memo were
+written, and draws none. Within that room the memo itself is set
 where nothing else is drawn — it crosses to the note's other side where that side is clear,
 climbs past a chord symbol, a dynamic, a ledgered note or an earlier memo otherwise, may stand
 on the page's margin, and only at the page's edge may it lie over something; the memos of a
