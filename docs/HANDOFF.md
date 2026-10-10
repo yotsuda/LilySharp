@@ -118,6 +118,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第885セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第884 の続き・ユーザー「続けて」）。`-Start p885`（HEAD `196441b4f`）＝full **11762 / 0 / 2 / 11764**。§7 3.5 で第883 を ARCHIVE へ。着手＝第884 の判定どおり **§2 G-pdf**。
+- **起票より広かった（実測が先）**: 使い捨て `ZzP885ProbeTests.cs.txt`（Lab `sessions/p885/`）で 1 プロセスに文書を*逐次*に作った＝PdfSharpCore の `FontFactory` が `ResolveTypeface(family, style)` の答えを `tk:<family>/…` でプロセス全体に cache する（reflection で `GetFontCachesState` を刷った・`probe2.log`）。`title "Georgia" embedded` の後の `title "Georgia"`（embedded なし）は **Georgia を埋め込む**（Gray の face を頼まれずに）／`title "Verdana"` の後の `title "Verdana" embedded` は **Schola**（埋め込みが消える）。起票の「同時に作ると」は半分で、LSP が本を順に PDF にするだけで出る。face が無い名前（stand-in）は `ScoreTextMetrics.Face` が bundled に落とすので名前では頼まない＝無事。
+- **直し＝答えを*要求する family 名*に織り込む**（第317 の起票が書いた「face 名そのものに文書を混ぜる」の、cache の鍵が*要求*だと分かった上での形）: `EmmentalerFontResolver` から文書ごとの `_textFaces`／`SetTextFonts`／`EmbedsOwnProgram` を消し、`LoadTextFonts(plan)` が **`DocumentTextFaces`**（名前 → 自前の program か・stand-in は sans か）を*返す*＋ bytes を `_embeddedPrograms`（add-only・同じ名前は同じ file）に登録。`PdfDocumentContext.TextFaces` が各頁へ渡し、`PdfDrawingContext.DrawText` が `LysEmbed:<name>`（自前の program）／`serif`・`sans-serif`（stand-in）／素の名前（directive が名指していない brace 等）を頼む。resolver は `LysEmbed:` 要求を bytes の有無で答え、未登録は throw（fallback にしない）。
+- 網: **`PdfFontIsolationTests`**（同じ名前・反対の答えの 2 文書を 1 プロセスで＝Petaluma Script＝同梱 companion で決定的・反対の答えは `TextFaces` の内部 setter で手渡し・順序に依らない 3 冊）＋ `EmmentalerFontResolverTests` を新 API に書き直し（stress net は「resolver に答えが無い」の 1 本に）。毒 2 種（embed 枝が `serif` を頼む／stand-in 枝が素の名前を頼み resolver が名前で決める）＝どちらも isolation の 1 本だけ赤（`poison-*.log`）。
+- **出力同一の証明＝PDF の全数掃き**（Lab `sessions/p885/sweep-pdf.ps1`・1177 冊 → 1387 pdf・`SOURCE_DATE_EPOCH=0`・source dir ごとに `lysc pdf --batch` 1 プロセス＝LSP と同じ「1 プロセスで多数の文書」の形・1 側 4〜6 分）: **1 回目は 46 冊が動いた＝全部 grand staff**（`Emmentaler-Brace` の font が消えていた）。原因＝`LoadTextFonts` が `TextRoles.All` を歩くと `SystemBrace` が `Resolve` で常に「`Emmentaler-Brace` という名前の face」になり、serif の stand-in として表に載る→頁が `serif` を頼む。旧 resolver は名前の判定を `_textFaces` より先にしていたので隠れていた。`SystemBrace` を表から外して（網 `AFaceTheDirectiveNeverNamed_HasNoAnswer` が pin）2 回目 **1387 / 1387 同一**。
+- `-End p885 -DiffBase 196441b4f`（門は全部 OK）＝full **11765 / 0 / 2 / 11767**（網 +3）。Core '+' 190 行／REF 0／OWN 1（`ConfiguredTextFace` の「最初の role の stand-in」の札を `DocumentTextFaces` へ移しただけ＝棚卸しは 1 行の住所替え）。7.6: ⒞＝PdfSharpCore の cache の都合で LP に対応物なし（REF 0 はそのため）。7.7: 未登録の `LysEmbed:` 要求は throw（fallback にしない）・sentinel なし。HANDOFF 442,955 B（残り 7,045）。未 push 57＋docs（push はユーザー）。
+判定: §2 G-pdf は閉じた（commit `pdf:`＝`01946a709`）。製品の仕事が残る起票で次に着手できるのは小さいものだけ＝§2 R13 ⒞（死んだ `DEBOUNCE_DELAY_DEFAULT`）・G-condensed の未測 3 点・R12 ⒠。大きい島はユーザーが選ぶ（§1.0 ⒜ の残りはユーザー側・CHANGELOG の 0.11.0 以降もまとめて書く日が要る）。(a) 今便の文脈は使わない／(b) この会話は 2 便＋画像 6 枚＋長い log＝重くなり始めた／(c) 別の島 ⇒ **小さい島ならこの会話で `-Start p886`、ユーザーが大きい島を選ぶなら新しい会話**。
+
+## 以下は第884セッションの経緯
+
 ### 1.1 第884セッション（2026-10-10・YT-DELL2）
 
 新しい会話（ユーザー「HANDOFF を読んで着手して」・島の指定なし）。`-Start p884`（HEAD `eb2b62f5f`）＝full **11759 / 0 / 2 / 11761**。§7 3.5 で第882 を ARCHIVE へ。§1.0 ⒜ はユーザー側の項目だけ（VS Code の拡張は 17:42 に組み直し済みと時刻で確認＝§1.0 の行）なので、§2 で製品の仕事が残る起票を実コードで裏取りして選んだ＝**F ⒳（`repeat percent` の覆われた周）**。
@@ -125,17 +137,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **残る半分＝本文末尾の `~`／`(`**（LP 双子 `px1`／`px2`・2.26.0・`lysc ly` → cairo png）: `(` は LP も Lily# も印をまたいで次の音まで 1 本のスラー＝一致。`~` は両者とも描かないが **LP は「unterminated tie」を警告し、Lily# は黙っていた**（`TieTargetScanner` が spacer を一律 padding と読む）。⇒ **直した（`check:` の commit）**: `RestItem.IsRepetitionSpacer`（`WriteRepetitionAsSpacers` が立てる・読み手は scanner 1 軒＝描画は触らない）＋ `TieTargetProblem.IntoRepetition`＝LYS4007 の 4 つ目の文面（位置は結んだ音・`@laissezVibrer` を名指す）。網 `TieTargetValidatorTests` +2（対照＝同じ本文の `repeat unfold` は 0）・毒（枝を `false &&` で殺す）＝その 2 本だけ赤。**射程＝`lysc check --batch` 1177 冊（追跡 666＋Lab corpora 511）で新しい警告 0 冊**。棚卸し 2 枚＝差分 0。
 - `-End p884 -DiffBase eb2b62f5f`（門は全部 OK）＝full **11762 / 0 / 2 / 11764**（網 +3）。Core '+' 37 行／REF 3（percent-repeat-iterator `next_element`・tie-engraver `start_translation_timestep`／`report_unterminated_tie`）／OWN 0。7.6: ⒝＝「反復は印 1 つで音が無い」「次の timestep に頭が無い tie は unterminated」は LP の事実、*flag を item に持たせる*のは Lily# の器の都合（`OpensWrittenRun` と同じ形）。7.7: 該当なし（flag の読み手 1 軒・fallback 無し）。HANDOFF 441,429 B（残り 8,571）。未 push 55＋docs（push はユーザー）。
 判定: §2 F ⒳ は閉じた。次に製品の仕事が残る起票で着手できるもの＝**§2 G-pdf**（PDF の font resolver がプロセスに 1 つ＝LSP が 2 冊を同時に PDF にした日に出る・閉じ方は起票に書いてある）か、ユーザーが島を選ぶ（§1.0 ⒜ の残りはユーザー側）。(a) 今便の文脈は使わない／(b) 会話は軽い（1 便・画像 6 枚）／(c) 別の島 ⇒ **既定どおりこの会話で `-Start p885` を回して続けてよい**。
-
-## 以下は第883セッションの経緯
-
-### 1.1 第883セッション（2026-10-10・YT-DELL2）
-
-同じ会話（第882 の続き・ユーザー「続けて」）。`-Start p883`（HEAD `17f015b52`）＝full **11759 / 0 / 2 / 11761**。§7 3.5 で第881 を ARCHIVE へ。着手＝アゲハ蝶 section H の最小幅。
-- probe（Lab `sessions/p883/ag/ag1.lys`＝本の形・`ag2.lys`＝4 小節を noBreak で接着）で再現: both だけ 3+1。接着すると Lily# も LP とほぼ同じ位置（小節線 29.0／54.4／78.1／102.3 対 LP 28.9／54.1／78.0／102.4）で 1 段に収まる＝最小幅の超過は 1 ss 弱（DP は全 k を不能として greedy に落ち、layout は rod を僅かに破って置く）。
-- **DP の中身を刷った**（使い捨て `ZzP883ProbeTests.cs.txt`＝`ComputeMultiStaffSpringData` ＋ `KnuthPlassBreaker.Solve` の `For(k)`）: both は k=3 が不能（4 小節の min 25.16／25.16／23.55／23.98 ＋ 行頭が段幅 98.83 を超える）・staff／tab 単独なら k=3 が解ける。対ごとの最小: `cis,16~ cis,8`（タイの行き先）が **tab 1.87（半幅 0.785×2＋rod 0.3）・staff 1.60**＝both では tab が勝つ。LP の圧縮行（`-dinclude-settings` の PROBECOL dump）は同じ対が 1.70（staff が勝つ）、tab 単独を line-width 95mm まで絞ると tab の数字の対は 1.2〜1.3 まで縮む＝**LP の tab の数字の最小は Lily# より約 0.6 小さい＝F9（§3 既決・第369 ユーザー決定「数字の大きさは Lily# のまま・rod は LP の 0.3」）**。描かないタイの行き先も描く数字と同じ幅を予約するが、LP でも隠れた TabNoteHead の対は縮まない（1.29 対 1.20）＝そこは差の源ではない。
-- ⇒ **T7 の段割れ違い 16 は全部分類が付いた**（F9 13・計器 3・製品 1＝第882 で閉じた）。製品の変更 0。
-- `-End p883 -DiffBase 17f015b52`（門は全部 OK）＝full **11759 / 0 / 2 / 11761**。Core '+' 0 行（計器と所見だけ）。7.6／7.7: 該当なし。HANDOFF 441,781 B（残り 8,219）。未 push 53＋docs（push はユーザー）。
-判定: T7 の双子基準の島は分類が尽きた（残りは §3 既決の F9 と計器）。次は §1.0 ⒜ の他＝VS Code の実機確認（ユーザー）か、ユーザー判断待ちの項目（OMR の L2〜L11・B5 の `omr verify`）＝**着手できる製品の仕事はこの島には無い**。(a) 今便の文脈は使わない／(b) この会話は 3 便ぶん＋画像多数＝重い／(c) 別の島 ⇒ **次は新しい会話**（ユーザーが次の島を選んでから）。
 
 ## 2. 開いている作業
 
@@ -2047,14 +2048,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 ### G. 保守性の負債・未 commit のプローブ
 
 - **G-condensed. ⚠️ `condensedStaff`／`combinedStaff` は snapshot にも audit にも 1 本も無い**（第127・128）。回帰網は単体テスト（`CondensedStaffTests`・`CombinedStaffTests` ほか）だけ。未測は 3 点: condensed 枝の `StaffAccidentalColumns` が譜単位かどうか・隣接 cue 領域 2 つが 1 文脈のまま（`VoiceContext` を stamp せず `IsCue` から導出）・`Materialise` の overlap（釘 `ASoloThatStartsInsideTheOtherPartsRestIsStillPlacedLate`）。
-- **G-pdf. ⚠️⚠️ 起票（2026-09-01・第317）＝PDF の font resolver はプロセスに 1 つしかなく、2 文書が互いの face を上書きする**
-
-  ★★★ **第317 が*競合*のほうは閉じた**（`0e45222f`＝`EmmentalerFontResolver._textFaces` は不変スナップショットを丸ごと差し替える。**素の `Dictionary` を `Clear()` して詰め直していたので、2 文書同時で `Operations that change non-concurrent collections must have exclusive access` が出ていた**）。**残るのは*設計*のほう**:
-  **`PdfDocumentContext.EnsureFontResolver` はプロセスに 1 つだけ resolver を据える**（**PdfSharpCore の `GlobalFontSettings.FontResolver` は 1 回しか設定できない**）が、
-  **`SetTextFonts` はその 1 つを*文書ごとに*書き換える**。⇒ **違う `fonts { }` を持つ 2 文書を同時に作ると、後から書いたほうの face で両方が埋め込まれうる。**
-  ⚠️ **これは第317 が作った穴ではない**——**`EnsureFontResolver` の remark が前から「一 shot の CLI では無害・long-lived host（LSP など）では latent」と書いている**。**第317 はその文の*半分*（地図の破壊）だけを閉じ、もう半分（どの文書の地図か）は開けたまま残した。**
-  ★ **閉じ方は「face を文書ごとに鍵付ける」**——`ResolveTypeface` が呼ばれた文脈から文書を引けないので、**face 名そのものに文書を混ぜる**のが素直（`LysEmbed:…#` が既に名前に情報を載せている形）。
-  ⚠️ **観測者はまだ居ない**: **CLI は 1 プロセス 1 文書**で、**suite は同時に PDF を作るが `fonts { }` は同じ**。**LSP / プレビューが 2 つの本を同時に PDF にした日に出る。**
+- ✅ **G-pdf. PDF の font resolver がプロセスに 1 つ＝第885 が閉じた**（2026-09-01・第317 起票・競合のほうは第317 `0e45222f`）。**起票より広かった**: PdfSharpCore は `ResolveTypeface(family, style)` の答えを*プロセス全体で* cache する（`FontFactory.FontResolverInfosByName`・`tk:<family>/…`）ので、同じ名前を `embedded` あり／なしで使う 2 文書は*逐次でも*最初の答えを使い回す（実測 Lab `sessions/p885/probe2.log`: `title "Georgia" embedded` → `title "Georgia"` で 2 冊目も Georgia を埋め込む＝Gray の face を頼まれずに埋め込む／`Verdana` → `Verdana embedded` で 2 冊目が Schola＝埋め込みが消える）。直し＝**答えを*要求する family 名*に織り込む**（`PdfDrawingContext.DrawText` が自分の文書の `DocumentTextFaces` を読んで `LysEmbed:<name>`／`serif`／`sans-serif` を頼む・resolver は `LysEmbed:` の bytes の登録簿だけ＝文書ごとの状態なし・`SetTextFonts` → 値を返す `LoadTextFonts`）。網 `PdfFontIsolationTests`（同じ名前に反対の答えを持つ 2 文書を 1 プロセスで・Petaluma Script＝同梱で決定的・毒 2 種で 1 本赤）＋ `EmmentalerFontResolverTests` 書き直し。残る limitation＝`FontDirectory` は最初の文書のもの（`EnsureFontResolver` の remark のまま・観測者なし）。
 
 - ✅✅ ★★★★ **【閉じた・2026-09-01・第313】この hang は*起動のしかた*で、回避策は 1 行。正典 2.26.0 は 15 秒で完走する。** → **本文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の同じ見出し**（第351 が落とした）
 
