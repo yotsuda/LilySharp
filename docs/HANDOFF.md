@@ -118,6 +118,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第892セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第891 の続き）。`-Start p892`（HEAD `c1aa2cab`）＝full **11779 / 0 / 2 / 11781**。§7 3.5 で第890 を ARCHIVE へ。着手＝**ユーザー報告 5 件目**「TODO の赤枠が中を塗りつぶしている・赤丸で中を透過に」。
+- **正体＝webview のカレットのハイライト**（`highlightPositions`）: 要素の属性で「線か塗りか」を決め、`fill="none"` でも **`stroke` 属性が無ければ塗りの図形として fill にハイライト色を入れる**。輪は SVG に `fill="none"` だけ持ち、stroke は CSS で与えていた＝カレットが乗ると赤い円盤になった（カレットが無ければ輪だった）。
+- 直し＝`SvgDrawingContext.TodoRing` が stroke（`SharedRenderer.TodoInk`・`TodoLineThickness`）を要素に書く（箱と線は最初からそう）。CSS は色を与えず、`highlightTodos` 切の非表示だけ。網 `ThePreviewDrawsTheRingAndTheCallout…` に「輪は fill none ＋ stroke」を足し、stroke を外す毒＝その 1 本だけ赤。拡張 check-types・compile・test 211 / 211。`MANUAL-CHECKS.md` §2.1 に「カレットで輪は線の色が変わるだけ」。commit `todo:`。拡張は `tools\Deploy-Lsp.ps1` で入れ直し（Reload Window）。
+- `-End p892 -DiffBase c1aa2cabf`（門は全部 OK）＝full **11779 / 0 / 2 / 11781**（網 ±0）。Core '+' 9 行／REF 0／OWN 0＝7.6・7.7 該当なし。棚卸し 2 枚＝差分なし。HANDOFF 375,171 B（残り 74,829）。commit `870d96670`。未 push 74＋docs（push はユーザー）。Lab `sessions/p892/`。
+判定: ユーザーの実機確認が続く。(a) 文脈を使う／(b) 6 便＝重くなってきた（圧縮は未だ）／(c) 同じ島 ⇒ **次の報告が todo の島ならこの会話で `-Start p893`、別の島なら新しい会話**。
+
+## 以下は第891セッションの経緯
+
 ### 1.1 第891セッション（2026-10-10・YT-DELL2）
 
 同じ会話（第890 の続き）。`-Start p891`（HEAD `ecd9bc230`）＝full **11775 / 0 / 2 / 11777**。§7 3.5 で第889 を ARCHIVE へ。着手＝**ユーザー報告 4 件目**「todo を付けた音符がプレビューで赤くつぶれる・memo が出ない」→ 設計を相談して**ユーザー決定（2026-10-10）**: 符頭は**輪**（塗らない）・memo は**吹き出し**（譜の上が既定・`.down` で下・引き出し線で輪へ）・**プレビューだけ**（書き出しのスイッチは作らない＝要るときは CLI のフラグ＋明示のコマンドで後から）。
@@ -128,16 +138,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - docs: `SYNTAX_REFERENCE` の `@todo`・CHANGELOG 両方・`MANUAL-CHECKS.md` §2.1・`TodoAnnotation` の註。拡張は `tools\Deploy-Lsp.ps1` で入れ直し（Reload Window）。
 - `-End p891 -DiffBase ecd9bc230`（門は全部 OK）＝full **11779 / 0 / 2 / 11781**（網 +4）。Core '+' 244 行／REF 0／OWN 5＝7.6 ⒞（エディターの印＝LP に対応物なし・定数 3 つと札 2 つ）。7.7: 引き出し線は「箱が輪より近ければ描かない」の 1 分岐（註に明記）・sentinel なし・fallback なし。棚卸し 2 枚＝差分なし。HANDOFF 374,412 B（残り 75,588）・§1 現在便 10,024 字。commit `4a175bab8`。未 push 72＋docs（push はユーザー）。Lab `sessions/p891/`＝log・毒・sweep・probe（png／svg）。
 判定: ユーザーが実機で見る番（輪・吹き出し・`.down`・`highlightTodos`・書き出しに出ないこと＝MANUAL-CHECKS §2.1 の 2 行）。残りの候補＝箱の padding を予約に入れる（隣と触るのを見てから）・吹き出しの文字の切り詰め（長い memo をどうするかは未決・今は全文）。(a) 文脈を使う／(b) 5 便＝文脈の圧縮は起きていないがそろそろ重い／(c) 同じ島 ⇒ **次の報告が来たらこの会話で `-Start p892`、別の島なら新しい会話**。
-
-## 以下は第890セッションの経緯
-
-### 1.1 第890セッション（2026-10-10・YT-DELL2）
-
-同じ会話（第889 の続き）。`-Start p890`（HEAD `1b3aca8ab`）＝full **11771 / 0 / 2 / 11773**。§7 3.5 で第888 を ARCHIVE へ。着手＝**ユーザー報告 3 件目**（手動確認の続き）: `@todo` の補完が使いにくい＝リストから選んだら `todo("")` を書いて `""` の間にカレットを置いてほしい。
-- 直し＝`GetArticulationCompletions` の `todo` を `text`／`mark`／`textSpan` と同じ形（`InsertText = "todo(\"$0\")"`・Snippet）に。空の memo `@todo("")` は compile する（`EveryAtCompletionItem_ParsesAndIsRecognized` が `$0` を剥がして `c4@todo("")` を parse する＝緑）。網 `AtCompletionParsesTests.AQuotedTextAnnotation_CompletesIntoItsQuotes`（text・mark・textSpan・todo の 4 行＝引用符に入る 4 つを 1 表で pin）。毒（素の `todo` に戻す）＝その todo の行だけ赤。filtered 155 / 155。
-- docs: CHANGELOG（両方）・`MANUAL-CHECKS.md` §2.1。拡張は `tools\Deploy-Lsp.ps1` で入れ直し（サーバー側の変更＝Reload Window が要る）。
-- `-End p890 -DiffBase 1b3aca8ab`（門は全部 OK）＝full **11775 / 0 / 2 / 11777**（網 +4＝Theory の 4 行）。Core '+' 0 行（Lsp と Tests だけ）／REF 0／OWN 0＝7.6・7.7 該当なし。棚卸し 2 枚＝差分なし。HANDOFF 374,475 B（残り 75,525）。commit `8cb27af34`。未 push 69＋docs（push はユーザー）。Lab `sessions/p890/`。
-判定: 手動確認の報告が続いている＝**次の報告が来たらこの会話で `-Start p891`**（(a) 拡張と LSP の文脈を使う／(b) 4 便でもまだ軽い＝読み直しは起きていない／(c) 同じ島）。
 
 ## 2. 開いている作業
 

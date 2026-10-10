@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第890セッションの経緯
+
+### 1.1 第890セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第889 の続き）。`-Start p890`（HEAD `1b3aca8ab`）＝full **11771 / 0 / 2 / 11773**。§7 3.5 で第888 を ARCHIVE へ。着手＝**ユーザー報告 3 件目**（手動確認の続き）: `@todo` の補完が使いにくい＝リストから選んだら `todo("")` を書いて `""` の間にカレットを置いてほしい。
+- 直し＝`GetArticulationCompletions` の `todo` を `text`／`mark`／`textSpan` と同じ形（`InsertText = "todo(\"$0\")"`・Snippet）に。空の memo `@todo("")` は compile する（`EveryAtCompletionItem_ParsesAndIsRecognized` が `$0` を剥がして `c4@todo("")` を parse する＝緑）。網 `AtCompletionParsesTests.AQuotedTextAnnotation_CompletesIntoItsQuotes`（text・mark・textSpan・todo の 4 行＝引用符に入る 4 つを 1 表で pin）。毒（素の `todo` に戻す）＝その todo の行だけ赤。filtered 155 / 155。
+- docs: CHANGELOG（両方）・`MANUAL-CHECKS.md` §2.1。拡張は `tools\Deploy-Lsp.ps1` で入れ直し（サーバー側の変更＝Reload Window が要る）。
+- `-End p890 -DiffBase 1b3aca8ab`（門は全部 OK）＝full **11775 / 0 / 2 / 11777**（網 +4＝Theory の 4 行）。Core '+' 0 行（Lsp と Tests だけ）／REF 0／OWN 0＝7.6・7.7 該当なし。棚卸し 2 枚＝差分なし。HANDOFF 374,475 B（残り 75,525）。commit `8cb27af34`。未 push 69＋docs（push はユーザー）。Lab `sessions/p890/`。
+判定: 手動確認の報告が続いている＝**次の報告が来たらこの会話で `-Start p891`**（(a) 拡張と LSP の文脈を使う／(b) 4 便でもまだ軽い＝読み直しは起きていない／(c) 同じ島）。
+
 ## 以下は第889セッションの経緯
 
 ### 1.1 第889セッション（2026-10-10・YT-DELL2）
