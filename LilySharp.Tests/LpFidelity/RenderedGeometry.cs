@@ -2671,6 +2671,31 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// How high beam <paramref name="beamIndex"/>'s end stands above the page's drawn staff line
+    /// <paramref name="line"/> (top down), in staff spaces — <see cref="BeamPositionAboveStaffMiddle"/>
+    /// for a staff that is not five lines (a one-line staff has one line to measure from).
+    /// </summary>
+    public double BeamPositionAboveStaffLine(int beamIndex, bool rightEnd, int line, int page = 0)
+    {
+        var ys = StaffLineCandidateYs(page);
+        if (line < 0 || line >= ys.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for staff line {line} but {ys.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        var primaries = PrimaryBeamLines(page);
+        if (primaries.Count <= beamIndex)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for beam {beamIndex} but only {primaries.Count} beam "
+                + "group(s) were drawn.\nDrawn geometry:\n" + Describe());
+        }
+        var beam = primaries[beamIndex];
+        return ys[line] - (rightEnd ? beam.RightY : beam.LeftY);
+    }
+
+    /// <summary>
     /// Which way the page's ONE bow curves: +1 up, −1 down — LilyPond's <c>Tie.direction</c>.
     /// </summary>
     /// <remarks>

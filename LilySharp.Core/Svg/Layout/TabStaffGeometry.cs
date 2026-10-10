@@ -487,7 +487,8 @@ internal static class TabBeamQuant
             stemPositions: stemPos,
             beamThickness: EngravingDefaults.BeamThickness / space,
             lineThickness: EngravingDefaults.StaffLineThickness / space,
-            staffLineCount: geom.StringCount,
+            // The strings' span over four — (N − 1)/2 for LilyPond's own N-line positions.
+            staffRadius: EngravingDefaults.StaffRadius(EngravingDefaults.TabLinePositions(geom.StringCount)),
             beamLengthFraction: TabConstants.BeamLengthFraction,
             // LILYSHARP-OWN (owner's decision 2026-09-24): an eighth pair takes a sixteenth
             // group's stem length, so the two line up over one string (see the parameter).

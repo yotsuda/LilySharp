@@ -4957,7 +4957,8 @@ internal sealed class MultiStaffLayouter
         var staffScore = StaffBeamScoreOf(score, staff, staffIndex);
         return _elementCoordinator.LayoutBeams(
             staffScore, ImmutableArray.Create(system), staffIndex: 0,
-            StaffBeamGroupsOf(score, staff, staffIndex));
+            StaffBeamGroupsOf(score, staff, staffIndex),
+            staffLines: BeamStaffLinesOf(staff));
     }
 
     /// <summary>
@@ -4975,6 +4976,12 @@ internal sealed class MultiStaffLayouter
     /// (<see cref="BeamDetector"/> is stateless and its Score entry touches only those), so
     /// the clef/tempo/header fields here serve the LAYOUT call, not the detection.
     /// </remarks>
+    /// <summary>The line count a staff's NOTATION beams are quanted on: its own drawn lines; a
+    /// tab's notation shadow keeps the five-line default (its drawn beams are
+    /// <see cref="TabStaffGeometry"/>'s, quanted on the strings).</summary>
+    internal static int BeamStaffLinesOf(Staff staff)
+        => staff.IsTab ? EngravingDefaults.DefaultStaffLines : staff.Lines;
+
     internal static Score StaffBeamScoreOf(MultiStaffScore score, Staff staff, int staffIndex)
     {
         var staffTuplets = score.TupletBrackets.IsDefaultOrEmpty

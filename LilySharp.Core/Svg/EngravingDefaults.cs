@@ -187,6 +187,22 @@ internal static class EngravingDefaults
         return false;
     }
 
+    /// <summary>
+    /// Half a staff's line span in staff spaces — <c>Staff_symbol_referencer::staff_radius</c>,
+    /// the outer lines' distance in positions over four: 2.0 for five lines, 0 for one, and
+    /// 1.0 for the timbales pair (±2) as for three lines (−2 … 2) — NOT (N − 1)/2, which is
+    /// the radius of LilyPond's own N-line default and gives the pair 0.5.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/staff-symbol-referencer.cc:189-196 staff_radius —
+    /// <c>staff_span (me).length () / 4.0</c>, "line_span is measured in pitch steps, not in
+    /// staff spaces"; lily/staff-symbol.cc:399-418 Staff_symbol::line_span.</remarks>
+    public static double StaffRadius(System.ReadOnlySpan<double> linePositions)
+        => linePositions.Length == 0 ? -0.5 : (linePositions[linePositions.Length - 1] - linePositions[0]) / 4.0;
+
+    /// <summary><see cref="StaffRadius"/> of the notation staff of <paramref name="lineCount"/>
+    /// lines, as it is drawn (<see cref="StaffLinePositions"/>).</summary>
+    public static double NotationStaffRadius(int lineCount) => StaffRadius(StaffLinePositions(lineCount));
+
     /// <summary>Room for every ledger line <see cref="LedgerPositions"/> can write for a head at
     /// <paramref name="position"/>: at most one per two positions between the staff and the
     /// head, and the staff's nearest line is never more than two positions past the middle.

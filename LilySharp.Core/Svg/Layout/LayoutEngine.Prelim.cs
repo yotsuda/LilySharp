@@ -214,7 +214,8 @@ internal sealed partial class LayoutEngine
             var staffBows = layouter.StaffBowItemsOf(score, staff);
             var staffPrelimBeams = LayoutPreliminaryStaffBeams(
                 staffBeamScore, layouter.StaffBeamGroupsOf(score, staff, staffIndex),
-                prelimSystems, staffIndex, systemCache, commonShortestDuration);
+                prelimSystems, staffIndex, systemCache, commonShortestDuration,
+                MultiStaffLayouter.BeamStaffLinesOf(staff));
             prelimBeamsByStaff[staffIndex] = staffPrelimBeams;
             prelimBeams.AddRange(staffPrelimBeams);
             var staffPrelimTies = LayoutPreliminaryStaffTies(
@@ -505,10 +506,10 @@ internal sealed partial class LayoutEngine
     private ImmutableArray<BeamLayout> LayoutPreliminaryStaffBeams(
         Score staffBeamScore, ImmutableArray<BeamGroup> groups,
         ImmutableArray<SystemLayout> prelimSystems, int staffIndex,
-        SystemLayoutCache? systemCache, double commonShortestDuration)
+        SystemLayoutCache? systemCache, double commonShortestDuration, int staffLines)
     {
         if (systemCache is null || groups.IsEmpty || prelimSystems.Length == 0)
-            return _elementCoordinator.LayoutBeams(staffBeamScore, prelimSystems, staffIndex, groups);
+            return _elementCoordinator.LayoutBeams(staffBeamScore, prelimSystems, staffIndex, groups, staffLines);
 
         // ⚠️ THE SHARED TABLE, NOT A HAND COPY. This walk was
         // SpannerBreakSubstitution.BuildMeasureToSystemMap's (:88-92) line for line, and it
@@ -539,7 +540,7 @@ internal sealed partial class LayoutEngine
             groupSystem[i] = home == -2 ? -1 : home;
             if (groupSystem[i] < 0)
                 return _elementCoordinator.LayoutBeams(
-                    staffBeamScore, prelimSystems, staffIndex, groups);
+                    staffBeamScore, prelimSystems, staffIndex, groups, staffLines);
         }
 
         // Lent, and given back after the memo loop below — its last reader (see RentGroupsBySystem).
@@ -568,10 +569,10 @@ internal sealed partial class LayoutEngine
                 isFirstSystem: k == 0, isLastSystem: k == prelimSystems.Length - 1,
                 sys.Indent, commonShortestDuration,
                 (Coordinator: _elementCoordinator, Score: staffBeamScore, Sys: sys,
-                    StaffIndex: staffIndex, Groups: sysGroups),
+                    StaffIndex: staffIndex, Groups: sysGroups, StaffLines: staffLines),
                 static s => s.Coordinator.LayoutBeams(
                     s.Score, ImmutableArray.Create(s.Sys), s.StaffIndex,
-                    s.Groups.ToImmutableArray()));
+                    s.Groups.ToImmutableArray(), s.StaffLines));
         }
         GiveGroupsBySystem(groupsBySystem);
 

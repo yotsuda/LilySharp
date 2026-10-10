@@ -295,9 +295,12 @@ internal sealed class ElementCoordinator
     /// every layout call, and the per-system beam memo partitions it by system and hands each
     /// partition back through here, so detection and layout cannot diverge. Null detects
     /// internally, exactly as before (no production caller passes null any more).</param>
+    /// <param name="staffLines">The staff's drawn line count — the quanter's
+    /// <c>staff_radius_</c> (BeamEngraver.CalculateBeamLayout).</param>
     public ImmutableArray<BeamLayout> LayoutBeams(
         Score score, ImmutableArray<SystemLayout> systems, int staffIndex,
-        ImmutableArray<BeamGroup>? precomputedGroups = null)
+        ImmutableArray<BeamGroup>? precomputedGroups = null,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
     {
         var beamGroups = precomputedGroups ?? _beamDetector.DetectBeamGroups(score);
 
@@ -314,7 +317,7 @@ internal sealed class ElementCoordinator
             // LILYPOND-REF: lily/beam.cc — multi-measure beams get a dedicated path.
             if (IsCrossMeasureGroup(group))
             {
-                foreach (var crossLayout in LayoutCrossMeasureBeamPieces(score, group, measureMap, staffIndex))
+                foreach (var crossLayout in LayoutCrossMeasureBeamPieces(score, group, measureMap, staffIndex, staffLines))
                     beamLayouts.Add(crossLayout);
                 continue;
             }
@@ -384,7 +387,8 @@ internal sealed class ElementCoordinator
                 itemXPositions,
                 staffIndex,
                 system.SystemIndex,
-                collisions);
+                collisions,
+                staffLines);
 
             beamLayouts.Add(beamLayout);
         }
@@ -424,7 +428,7 @@ internal sealed class ElementCoordinator
     private IEnumerable<BeamLayout> LayoutCrossMeasureBeamPieces(
         Score score, BeamGroup group,
         IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)> measureMap,
-        int staffIndex)
+        int staffIndex, int staffLines)
     {
         // Group members by their system index. Members of the same system stay
         // on the same beam piece; the break happens between systems.
@@ -467,7 +471,7 @@ internal sealed class ElementCoordinator
                 group.VoiceIndex);
 
             var pieceLayout = LayoutSingleSystemBeamPiece(
-                score, subGroup, measureMap, staffIndex, sysIdx);
+                score, subGroup, measureMap, staffIndex, sysIdx, staffLines);
             if (pieceLayout != null)
                 yield return pieceLayout;
         }
@@ -483,7 +487,7 @@ internal sealed class ElementCoordinator
     private BeamLayout? LayoutSingleSystemBeamPiece(
         Score score, BeamGroup group,
         IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)> measureMap,
-        int staffIndex, int systemIndex)
+        int staffIndex, int systemIndex, int staffLines)
     {
         // The same collision shifts the single-measure path adds to its table — see
         // ApplyVoiceCollisionShifts. A beam that crosses a bar line has members in two
@@ -563,7 +567,8 @@ internal sealed class ElementCoordinator
             memberXs.Concat(restXs).ToList(),
             staffIndex: staffIndex,
             systemIndex: systemIndex,
-            collisions: null);
+            collisions: null,
+            staffLines: staffLines);
 
         // The dense renumbering above exists ONLY so the scorer can index
         // memberXs by member.ItemIndex. Everything downstream keys on the REAL

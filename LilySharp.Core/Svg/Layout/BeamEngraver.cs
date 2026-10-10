@@ -54,12 +54,16 @@ internal sealed class BeamEngraver
     /// Calculates the layout for a beam group.
     /// X positions are in staff spaces, Y positions are in staff positions.
     /// </summary>
+    /// <param name="staffLines">The staff's drawn line count: the quanter's
+    /// <c>staff_radius_</c> is this staff's (EngravingDefaults.NotationStaffRadius), the
+    /// line walk and the inside-the-staff tests reading it.</param>
     public BeamLayout CalculateBeamLayout(
         BeamGroup group,
         IReadOnlyList<double> itemXPositions,
         int staffIndex,
         int systemIndex,
-        IReadOnlyList<BeamCollision>? collisions = null)
+        IReadOnlyList<BeamCollision>? collisions = null,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
     {
         if (group.Members.Length < 2)
             throw new ArgumentException("Beam group must have at least 2 members");
@@ -118,6 +122,7 @@ internal sealed class BeamEngraver
             group, itemXPositions, Parameters, collisions,
             lengthFraction: group.LengthFraction, beamThickness: group.Thickness,
             headFont: group.HeadFont,
+            staffRadius: EngravingDefaults.NotationStaffRadius(staffLines),
             restXPositions: restXPositions);
         return new BeamLayout(
             group, leftY, rightY, leftX, rightX, leftStemX, rightStemX,

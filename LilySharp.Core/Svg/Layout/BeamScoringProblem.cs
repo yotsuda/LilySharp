@@ -272,7 +272,7 @@ internal sealed class BeamScoringProblem
         double? beamThickness = null,
         MusicFontDesign? headFont = null,
         double? lineThickness = null,
-        int staffLineCount = 5,
+        double staffRadius = 2.0,
         double? beamLengthFraction = null,
         IReadOnlyList<double>? restXPositions = null,
         bool noStemExtend = false,
@@ -282,7 +282,7 @@ internal sealed class BeamScoringProblem
         // The defaults are the running style's (EngravingStyle — lysc --set Beam.beamThickness=…).
         Bind(group, itemXPositions, parameters, collisions, stemPositions, lengthFraction,
             beamThickness ?? EngravingDefaults.BeamThickness, headFont,
-            lineThickness ?? EngravingDefaults.StaffLineThickness, staffLineCount, beamLengthFraction,
+            lineThickness ?? EngravingDefaults.StaffLineThickness, staffRadius, beamLengthFraction,
             restXPositions, noStemExtend, uniformBeamedLength);
     }
 
@@ -349,7 +349,10 @@ internal sealed class BeamScoringProblem
         double? beamThickness = null,
         MusicFontDesign? headFont = null,
         double? lineThickness = null,
-        int staffLineCount = 5,
+        // Staff_symbol_referencer::staff_radius of the beam's staff (EngravingDefaults.StaffRadius):
+        // 2.0 for five lines, 0 for one. Until 2026-10-10 the notation callers never passed it
+        // and the quanter walked a one-line staff's beam as if five lines stood around it.
+        double staffRadius = 2.0,
         double? beamLengthFraction = null,
         IReadOnlyList<double>? restXPositions = null,
         bool noStemExtend = false,
@@ -366,7 +369,7 @@ internal sealed class BeamScoringProblem
             foreach (var entry in solved)
             {
                 if (entry.Matches(group, itemXPositions, parameters, collisions, stemPositions,
-                        lengthFraction, beamThick, headFont, lineThick, staffLineCount,
+                        lengthFraction, beamThick, headFont, lineThick, staffRadius,
                         beamLengthFraction, restXPositions, noStemExtend, uniformBeamedLength))
                 {
                     t_solvedHits++;
@@ -378,7 +381,7 @@ internal sealed class BeamScoringProblem
         var problem = t_problem ?? new BeamScoringProblem();
         t_problem = null;
         problem.Bind(group, itemXPositions, parameters, collisions, stemPositions, lengthFraction,
-            beamThick, headFont, lineThick, staffLineCount, beamLengthFraction,
+            beamThick, headFont, lineThick, staffRadius, beamLengthFraction,
             restXPositions, noStemExtend, uniformBeamedLength);
         var (leftY, rightY) = problem.Solve();
         var outer = problem.OuterMemberStemXs;
@@ -387,7 +390,7 @@ internal sealed class BeamScoringProblem
 
         var answer = (leftY, rightY, outer);
         var solvedEntry = new SolvedBeam(group, itemXPositions, parameters, collisions, stemPositions,
-            lengthFraction, beamThick, headFont, lineThick, staffLineCount,
+            lengthFraction, beamThick, headFont, lineThick, staffRadius,
             beamLengthFraction, restXPositions, noStemExtend, uniformBeamedLength, answer);
         // The newest two inputs of this group: the prelim pass and the staff skylines ask
         // the same one, and a third input evicts the oldest. A new array each time, so a
@@ -451,7 +454,7 @@ internal sealed class BeamScoringProblem
         private readonly double _lengthFraction;
         private readonly double _beamThickness;
         private readonly double _lineThickness;
-        private readonly int _staffLineCount;
+        private readonly double _staffRadius;
         private readonly double? _beamLengthFraction;
         private readonly bool _noStemExtend;
         private readonly bool _uniformBeamedLength;
@@ -462,7 +465,7 @@ internal sealed class BeamScoringProblem
             BeamGroup group, IReadOnlyList<double> itemXPositions, BeamQuantParameters? parameters,
             IReadOnlyList<BeamCollision>? collisions, IReadOnlyList<int>? stemPositions,
             double lengthFraction, double beamThickness, MusicFontDesign? headFont,
-            double lineThickness, int staffLineCount, double? beamLengthFraction,
+            double lineThickness, double staffRadius, double? beamLengthFraction,
             IReadOnlyList<double>? restXPositions, bool noStemExtend, bool uniformBeamedLength,
             (double, double, (double, double)) answer)
         {
@@ -477,7 +480,7 @@ internal sealed class BeamScoringProblem
             _lengthFraction = lengthFraction;
             _beamThickness = beamThickness;
             _lineThickness = lineThickness;
-            _staffLineCount = staffLineCount;
+            _staffRadius = staffRadius;
             _beamLengthFraction = beamLengthFraction;
             _noStemExtend = noStemExtend;
             _uniformBeamedLength = uniformBeamedLength;
@@ -488,12 +491,12 @@ internal sealed class BeamScoringProblem
             BeamGroup group, IReadOnlyList<double> itemXPositions, BeamQuantParameters? parameters,
             IReadOnlyList<BeamCollision>? collisions, IReadOnlyList<int>? stemPositions,
             double lengthFraction, double beamThickness, MusicFontDesign? headFont,
-            double lineThickness, int staffLineCount, double? beamLengthFraction,
+            double lineThickness, double staffRadius, double? beamLengthFraction,
             IReadOnlyList<double>? restXPositions, bool noStemExtend, bool uniformBeamedLength)
         {
             if (!ReferenceEquals(parameters, _parameters) || !ReferenceEquals(headFont, _headFont)
                 || !Same(lengthFraction, _lengthFraction) || !Same(beamThickness, _beamThickness)
-                || !Same(lineThickness, _lineThickness) || staffLineCount != _staffLineCount
+                || !Same(lineThickness, _lineThickness) || !Same(staffRadius, _staffRadius)
                 || beamLengthFraction.HasValue != _beamLengthFraction.HasValue
                 || (beamLengthFraction.HasValue && !Same(beamLengthFraction.Value, _beamLengthFraction!.Value))
                 || noStemExtend != _noStemExtend || uniformBeamedLength != _uniformBeamedLength)
@@ -565,7 +568,7 @@ internal sealed class BeamScoringProblem
         double beamThickness,
         MusicFontDesign? headFont,
         double lineThickness,
-        int staffLineCount,
+        double staffRadius,
         double? beamLengthFraction,
         IReadOnlyList<double>? restXPositions,
         bool noStemExtend,
@@ -762,7 +765,10 @@ internal sealed class BeamScoringProblem
         // Calculations are in staff-space units
         _beamThickness = beamThickness;                         // 0.48 staff spaces full size
         _lineThickness = lineThickness;                         // 0.1 staff spaces full size
-        _staffRadius = (staffLineCount - 1) / 2.0;              // 2.0 for five lines
+        // The staff's own (EngravingDefaults.StaffRadius: the outer lines' span over four):
+        // 2.0 for five lines, 1.0 for the timbales pair, 0 for one line.
+        // LILYPOND-REF: lily/beam-quanting.cc:335 staff_radius_ = Staff_symbol_referencer::staff_radius.
+        _staffRadius = staffRadius;
         // Derived from THIS beam's thickness, fraction and count, not the full-size constant:
         // lily/beam.cc:130-145 Beam::get_beam_translation reads all three off the grob.
         // ⚠️ TWO length-fractions, because LilyPond reads two grobs. The BEAM's is read by
