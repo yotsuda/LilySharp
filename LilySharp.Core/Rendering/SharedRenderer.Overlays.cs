@@ -93,8 +93,8 @@ internal static partial class SharedRenderer
     // towards the side with more room, with no box round it, and NOTHING ON THE PAGE MOVES
     // for a mark: it is red ink over the finished page, not an engraved grob.
     private const double TodoRingPadding = 0.35;   // the ring stands this far outside the glyphs' box
-    private const double TodoRingThickness = 0.2;  // the ring's pen
-    private const double TodoLineThickness = 0.1;  // the leader's pen
+    private const double TodoPen = 0.2;            // ONE pen for the ring, the memo's underline and the leader (owner: unequal pens look wrong)
+    private const double TodoUnderlineDrop = 0.15; // the underline this far under the memo's descent
     private const double TodoMemoOffset = 1.5;     // from the ring's centre X to the memo's near end
     private const double TodoMemoGap = 0.6;        // between the memo's ink and what it stands over
     private const double TodoMemoAir = 1.0;        // between two memos side by side on one level
@@ -179,7 +179,7 @@ internal static partial class SharedRenderer
                         using (gc.Staff(staffIndex))
                         using (gc.Source(item.SourcePosition))
                         using (gc.Todo(key))
-                            DrawHandRing(gc, cx, ringMid, rx, ry, TodoRingThickness * scale, item.SourcePosition);
+                            DrawHandRing(gc, cx, ringMid, rx, ry, TodoPen * scale, item.SourcePosition);
                         if (item.TodoMemo is { Length: > 0 } memo)
                             callouts.Add(new TodoCallout(system, staffIndex, mi, item.SourcePosition, key, memo,
                                 item.TodoBelow, cx, ringMid, rx, ry, scale));
@@ -248,22 +248,29 @@ internal static partial class SharedRenderer
                 while (placed.Any(p => p.Level == level && p.Left < right + TodoMemoAir * scale && left - TodoMemoAir * scale < p.Right))
                     level++;
                 placed.Add((left, right, level));
-                double step = level * (ascent + descent + gap / 2);
+                double step = level * (ascent + descent + TodoUnderlineDrop * scale + gap / 2);
                 double ringEdge = below ? c.RingY - c.RingRy : c.RingY + c.RingRy;
+                double drop = TodoUnderlineDrop * scale;
                 double baseline = below
                     ? Math.Min(edge, ringEdge) - gap - ascent - step
-                    : Math.Max(edge, ringEdge) + gap + descent + step;
-                // The leader: from the ring's shoulder on the text's side to a little short of
-                // the text's near end, at the text's mid-height.
-                double shoulderX = c.RingX + (toRight ? 1 : -1) * c.RingRx * 0.7;
-                double shoulderY = c.RingY + (below ? -1 : 1) * c.RingRy * 0.7;
-                double nearX = toRight ? left - 0.3 * scale : right + 0.3 * scale;
+                    : Math.Max(edge, ringEdge) + gap + descent + drop + step;
+                // The memo is UNDERLINED, and the leader joins the underline's centre to the
+                // ring — the point of the ring that faces it — with the one pen (owner's
+                // requests 2026-10-10). A memo below the staff is joined at the centre of its
+                // top instead, so the leader does not run through the words.
+                double underlineY = baseline - descent - drop;
+                double centreX = (left + right) / 2;
+                double attachY = below ? baseline + ascent + drop : underlineY;
+                double angle = Math.Atan2((attachY - c.RingY) / c.RingRy, (centreX - c.RingX) / c.RingRx);
+                double onRingX = c.RingX + c.RingRx * Math.Cos(angle);
+                double onRingY = c.RingY + c.RingRy * Math.Sin(angle);
+                double pen = TodoPen * scale;
                 using (gc.Staff(c.StaffIndex))
                 using (gc.Source(c.SourcePosition))
                 using (gc.Todo(c.Key))
                 {
-                    gc.DrawLine(shoulderX, shoulderY, nearX, baseline + (ascent - descent) / 2,
-                        stroke: TodoInk, strokeWidth: TodoLineThickness * scale, cap: LineCap.Round);
+                    gc.DrawLine(left, underlineY, right, underlineY, stroke: TodoInk, strokeWidth: pen, cap: LineCap.Round);
+                    gc.DrawLine(onRingX, onRingY, centreX, attachY, stroke: TodoInk, strokeWidth: pen, cap: LineCap.Round);
                     gc.DrawText(c.Memo, left, baseline, em, DynamicEngraver.LabelRole(true),
                         DynamicEngraver.LabelStyle(fonts, true), TextAnchor.Start, TodoInk);
                 }

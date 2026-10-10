@@ -394,8 +394,9 @@ a tool (an OMR reader) links its own data to.
 
 The preview shows the marks as red ink over the finished page: the marked head, rest or
 chord wears a ring drawn as a hand draws one (one ring round a whole chord), and a memo
-stands as a line of small red text in the margin above the system, set off to the side with
-more room, with a short leader from the ring — `.down` puts it below. Nothing on the page
+stands as a line of small red text, underlined, in the margin above the system, set off to
+the side with more room, with a leader from the ring to the underline — one pen for all three
+— and `.down` puts it below. Nothing on the page
 moves for a mark, as nothing moves for a pencilled note; a memo may stand over whatever is
 there. The `lilysharp.preview.highlightTodos` setting hides the marks. No export draws them.
 
