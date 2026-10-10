@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第893セッションの経緯
+
+### 1.1 第893セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第892 の続き）。`-Start p893`（HEAD `506f3ef4`）＝full **11779 / 0 / 2 / 11781**。§7 3.5 で第891 を ARCHIVE へ。着手＝**ユーザー報告 6〜9 件目（この便の途中で 4 つ）**: 輪の線を太く／和音は 1 つの輪／memo の文字を小さく／**「TODO で他の要素が動くのは不自然・紙に赤字を入れるように上書きで描く」**／**「なるべく余白に書く」**。
+- **設計を変えた**: 第891 の経路（preview だけの collector オプション → `DynamicItem` → expressive text の積み）は**他の要素を動かす**ので全部外した（`SvgRenderOptions.TodoCallouts`・collector の option と腕・`DynamicItem.IsTodoCallout`・`DynamicLayout` の 3 欄・`DynamicEngraver` の中央寄せと `TodoLeaderYUp`・`SkylineBuilder`・glyph 4 か所の輪・`IDrawingContext.TodoRing`＝`git checkout ecd9bc230 -- …` で戻してから書き直し）。代わりに **item が `TodoMemo`／`TodoBelow` を `TodoKey` の隣に持ち**（`ItemFactory`・mark の `ForcedAbove`）、**`SharedRenderer.DrawTodoMarks` が page の overlay の最後に、live の score と layout の列から描く**。描くのは `IDrawingContext.DrawsEditorMarks` が true の backend だけ（interactive SVG・PNG は `PngDocumentOptions.EditorMarks` で頼んだときだけ＝probe と将来の `lysc png --todo` の扉）。輪＝item の ink（音符の頭・和音は変位した頭の幅ごと全部・休符の glyph・`R1*N` の棒）＋0.35、線 0.2。吹き出し＝**段の最上の線の上の余白**（`.down` は最下の線の下）、輪がそれより外ならその先、段幅の内側に収め、同じ段・同じ側で横に重なるものは左から外側へ積む、引き出し線は箱から輪へ（端で押し込まれたら斜め）。箱と線 0.1・memo は `@text` の em の 0.75。**layout の記録は無い**＝cache の data-pos も古くならない・export には何も出ない。
+- 網 `TodoCalloutTests` 4 本（item の memo と側／preview に item ごと 1 つの輪（和音の輪は頭より高い）・箱・memo、export には無し／`.down` は箱が輪の下／**memo を書いても layout の段は同じ・export は同じ長さの空 memo の本と byte 同一**）。毒（SVG が editor marks を描かない）＝2 本赤。export の svg 掃き 998 冊 1201 枚＝差 0。絵 `sessions/p893/probe/{one,piano}-preview.png`（PNG に `EditorMarks` で描いた）。棚卸し再生成。拡張 211 / 211。commit `todo:`。拡張は `tools\Deploy-Lsp.ps1` で入れ直し（Reload Window）。
+- docs: `SYNTAX_REFERENCE`・CHANGELOG 両方・`MANUAL-CHECKS.md` §2.1（和音 1 輪・余白・動かない）・`TodoAnnotation` の註。
+- `-End p893 -DiffBase 506f3ef4a`（門は全部 OK）＝full **11779 / 0 / 2 / 11781**（網 ±0＝4 本を書き換え）。Core '+' 328 行／REF 0／OWN 2（`DrawTodoMarks` の定数と `MusicItem.TodoMemo`＝エディターの印・LP に対応物なし）＝7.6 ⒞。7.7: `DrawsEditorMarks` が false なら何も描かない（export の既定）・sentinel なし・fallback なし。棚卸し 2 枚＝差分なし。HANDOFF 374,238 B（残り 75,762）。commit `fcbe55867`。未 push 76＋docs（push はユーザー）。Lab `sessions/p893/`＝log・毒・sweep・probe。
+判定: ユーザーの実機確認（輪の太さ・和音 1 輪・余白の吹き出し・文字の大きさ・何も動かないこと）。残りの候補＝吹き出しが段の上の余白で**他の段の記号**（前の段の歌詞など）に重なるときの逃げ（今は重ねる＝赤字の約束どおり）・長い memo の切り詰め（未決）・`lysc png --todo`（扉は `PngDocumentOptions.EditorMarks` に用意済み・CLI には出していない）。(a) 文脈を使う／(b) **7 便＝重い**（圧縮は未だ）／(c) 同じ島 ⇒ **次の報告が todo の島ならこの会話で `-Start p894`、それ以外は新しい会話**。
+
 ## 以下は第892セッションの経緯
 
 ### 1.1 第892セッション（2026-10-10・YT-DELL2）
