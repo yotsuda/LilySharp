@@ -78,8 +78,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。→ **第751（2026-10-02・ユーザー決定）「LP 忠実にこだわるより音楽的な妥当性を重視。LP から引き継ぐのはレンダリングとレイアウトの美しさだけ。ユーザーがまだ少ないので過去のしがらみに縛られない」＝意味論（拍子・弱起・反復・強弱・検査・出力の意味）の裁定者は音楽的妥当性、LP は描画と配置の裁定者（RULES §5.2 に規則として置いた）。
 
-**★★★★ 第857（2026-10-08）ユーザー決定＝総点検は区切った・SMuFL に着手**: 文法は `fonts { music "…" }` で承認・**Emmentaler は SMuFL の形に包み、SMuFL に無い Emmentaler のパラメータは失わない**。設計と棚卸しは **`docs/smufl-design.md`**（§3 の 17 行＝失わないもの・§6 の段取り）。**§6 ①〜④ は第857〜第869 で閉じた**（SHA と経緯は smufl-design §6 と ARCHIVE「§1.0 から移した閉じた段落」第872・門は毎回「全 svg の掃きで動いた svg 0 ＋ full 緑」＝base は HEAD の bin を `exe-base` へ写す・§7 C はユーザー決定「同梱」）。残りは **§3 の代わりの経路を数で値付け**（LP 双子との差・smufl-design §6 ④ 末尾）＝**続けるか SMuFL を区切るかはユーザー判断**。⚠️ VS Code のプレビューは拡張を作り直して `server/Fonts` に SMuFL が入ってから実機で見る（ユーザー）**。
-- **第870〜871（2026-10-09）ユーザー決定**: 名前の無い form／score／part／chords／lyrics とスコアの中の上書き・**score の名前は識別子 1 つ（`score "x"` は LYS0038・名前の無い score はプレビューで `(Default)`）**＝実装済み（`docs/anonymous-blocks-design.md` §7・残りは `staff bass` の読みと §6 の既定のスコア＝後で）。⚠️ プレビューの `(Default)` は拡張を作り直してからユーザーが見る。Petaluma の文字は歌詞以外すべて Petaluma Script・SMuFL の強弱記号は字形。⚠️ Lab `corpora/` の書き換え 470 冊は未 commit（ユーザー）。
+**★★★★ 第857（2026-10-08）ユーザー決定＝総点検は区切った・SMuFL に着手**: 文法は `fonts { music "…" }` で承認・**Emmentaler は SMuFL の形に包み、SMuFL に無い Emmentaler のパラメータは失わない**。設計と棚卸しは **`docs/smufl-design.md`**（§3 の 17 行＝失わないもの・§6 の段取り）。**§6 ①〜④ は第857〜第869 で閉じた**（SHA と経緯は smufl-design §6 と ARCHIVE「§1.0 から移した閉じた段落」第872・門は毎回「全 svg の掃きで動いた svg 0 ＋ full 緑」＝base は HEAD の bin を `exe-base` へ写す・§7 C はユーザー決定「同梱」）。**第880（2026-10-10）ユーザー決定: SMuFL はここで区切る**（§3 の代わりの経路の値付けは第869 の表で済み・残りは目で見る仕上げ）。⚠️ VS Code のプレビューは拡張を作り直して `server/Fonts` に SMuFL が入ってから実機で見る（ユーザー）**。
+- **第870〜871（2026-10-09）ユーザー決定**: 名前の無い form／score／part／chords／lyrics とスコアの中の上書き・**score の名前は識別子 1 つ（`score "x"` は LYS0038・名前の無い score はプレビューで `(Default)`）**＝実装済み（`docs/anonymous-blocks-design.md` §7・**`staff bass` は「bass という part」のまま＝第880 ユーザー決定**・残りは §6 の既定のスコア＝後で）。**第880 ユーザー決定: `as lines 1` は今のまま**（音高どおりに頭を置く 1 本線の譜・RhythmicStaff の潰しはしない・双子は Clef／Key engraver を外すだけ）。⚠️ プレビューの `(Default)` は拡張を作り直してからユーザーが見る。Petaluma の文字は歌詞以外すべて Petaluma Script・SMuFL の強弱記号は字形。⚠️ Lab `corpora/` の書き換え 470 冊は未 commit（ユーザー）。
 - ⚠️ **Lab の作業ツリーに*この会話より前からの*未 commit の変更が 138 ファイル（`corpora/` のユーザーの本・`sessions/p739/twin` ほか）＋未追跡多数**＝Claude は `sessions/pNNN` と notes だけを path 指定で commit している。中身はユーザーが判断
 
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後（`lilysharp-omr-distribution-2026-10-05.md`）。
@@ -118,6 +118,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第880セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第879 の続き）。ユーザーに「何を判断すればよいか」と問われ 4 点を出し、**「推奨どおりで進めて」＝決定**: ⑴ `as lines 1` は今のまま（A）、⑵ `staff bass` は「bass という part」のまま（A）、⑶ SMuFL はここで区切る、⑷ 掃除 2 つを消す。`-Start p880`（HEAD `081ef9f78`）＝full **11753 / 0 / 2 / 11755**。§7 3.5 で第878 を ARCHIVE へ。
+- **掃除**（`2759574d0`・56 ファイル・+265 −317）: ⒜ `NoteItem.NeedsLedgerLines`／`ChordNoteInfo.NeedsLedgerLines`／`GraceHeadInfo.NeedsLedger`＝`position <= −6 || >= 6` の 5 線定数で計算して全 ctor・複製に運び、読み手ゼロ（加線は `LedgerPositions` が譜の線から出す）→ モデル・collector・builder・テスト 50 ファイルから消した（テスト側は正規表現で一括・`new(...)` の target-typed と複数行の `GraceColumnInfo` はコンパイラの行番号で追い撃ち）。⒝ `LayoutEngine.PagingSkylines.EstimateAboveStaffExtents` の boxed mark 3.0／label 3.5／segno・coda 2.5／volta 2.0＝第273 が「4 つとも 0 にして 572 冊 0・rerender 0/81」と実測した二重の見積り→消した（tempo の腕＝実測の床から出す見積りは残す・`voltaBrackets` 引数も消えた）。
+- 決定の記録: `docs/anonymous-blocks-design.md`（§0 の状態・§3 `staff bass`）、`docs/smufl-design.md`（状態）、§1.0 の第857／第870 の段落。
+- 掃き 1199／差 0・full **11750 / 3 / 2**＝HANDOFF の門 3 だけ（census は動かず）。
+- **次（ユーザー判断は尽きた）**: §1.0 ⒜ の残り＝VS Code の実機確認（ユーザー）／T7 の段割れの族／双子の計器。LP 忠実度の島で未値付けのものは `TextSpannerEngraver.InkAboveStaff` の 5 線 `StaffExtent`（LP は線数に依らない）と PagingSkylines の tempo 見積り（過大予約のみ）だけ。
+- `-End p880 -DiffBase 081ef9f78`（門は全部 OK）＝full **11753 / 0 / 2 / 11755**。Core '+' 25 行／REF 0／OWN 0（掃除＝消しただけ）。HANDOFF 439,412 B（残り 10,588）。未 push 48＋docs（push はユーザー）。
+
+## 以下は第879セッションの経緯
+
 ### 1.1 第879セッション（2026-10-10・YT-DELL2）
 
 同じ会話（第878 の続き・ユーザー「続けて」）。`-Start p879`（HEAD `ac82f737b`）＝full **11752 / 0 / 2 / 11754**。§7 3.5 で第877 を ARCHIVE へ。
@@ -125,17 +136,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 掃き 1199／差 1（oneline-rest＝1 線譜の行頭 label）・full **11750 / 3 / 2**＝HANDOFF の門 3 だけ。`MarkFewLineStaffTests` ＋1（箱の中心＝段の左端）。
 - 1 線譜の島で残っているもの: `TextSpannerEngraver.InkAboveStaff` の 5 線 `StaffExtent`（置く側と綴りを揃えた・LP は線数に依らない＝第877）、PagingSkylines の tempo の見積り（5 線のまま・過大予約のみ）。**この島はこれで一巡**＝次はユーザー判断（SMuFL §3・`as lines 1` の文脈・collector の `needsLedgerLines`・`staff bass`）。
 - `-End p879 -DiffBase ac82f737b`（門は全部 OK）＝full **11753 / 0 / 2 / 11755**。Core '+' 40 行／REF 2／OWN 0。HANDOFF 440,227 B（残り 9,773）。未 push 46＋docs（push はユーザー）。
-
-## 以下は第878セッションの経緯
-
-### 1.1 第878セッション（2026-10-10・YT-DELL2）
-
-同じ会話（第877 の続き・ユーザー「続けて。双子に書く方が技術的に妥当なら書くようにして」）。`-Start p878`（HEAD `eb6e902aa`）＝full **11742 / 0 / 2 / 11744**。§7 3.5 で第876 を ARCHIVE へ。
-- **双子に `skipBars = ##t`**（`6d7ca77f6`）: Lily# は書いた `R*N` を全段が休む run で常に圧縮して数字を描く＝LP の `\compressMMRests`（＝`\once \set Score.skipBars = ##t`・ly/music-functions-init.ly:452-460）下の規則そのもの。LP の既定は N 小節に展開して数字なし。`\layout` の `\Score` に `skipBars = ##t` を常に書く（`printInitialRepeatBar` の隣・両方の腕）。双子の掃き（`sessions/p872/ly-sweep.ps1`・base p877／head p878）**1199／1199 が動いた＝全部その 1 行だけ**（1 行を除いて比べ直すと 0）。exporter のテスト 4 本の期待文字列を更新。
-- **1 線譜の rehearsal mark／tempo**（同 commit）。値付け（Lab `sessions/p878/probe/mark`＝`tempo 4 = 120` ＋ section A／B・`as lines 1/5`）: ⚠️ **after-line-breaking の dump は outside-staff pass の前の値**（第876〜877 の強弱・trill は動かなかったので一致していた）、**LP の svg の `<text>` の translate は信用できない**（箱の rect と 3.0 ずれる）→ **300 dpi の png を System.Drawing で行走査して読んだ**（`lpng300-*.png`・線 267 px・1 ss＝20.75 px）。LP 1 線: `= 120` の baseline 2.05（d'' の頭 1.5＋0.46＋0.033）・`B` の枠の底 1.5（小節線の ±1.0＋0.46）・5 線は 2.883／枠底 0.85＝従来どおり。Lily# は tempo 4.26・B 3.2 だった。原因 3 つ: ⑴ `MusicMarkEngraver.LabelFrameBottomAboveStaffMiddle`／`MetronomeMarkGeometry.QuietBaselineAboveMiddle` が `2.0＋0.05＋0.8` の定数→線数（`Calculate` に `staffLinesOf`・anchor 段＝`TopScoreGrobStaff`）、⑵ `OutsideStaffStacker.SeedClefInk` が 1 線譜（clef を描かない＝`SpacingRules.EngravesClef`）にも段の clef を植えていた（treble の 1.8＝線の 3.8 上・tempo 4.26 の正体）、⑶ `PlaceMusicMarks` の `m.YUp < 2.0 → 上の pass に入れない` が 5 線定数＝1 線の tempo（0.883）が pass を素通りして C の上に乗った→描く上線で判定。直した後: tempo 2.04・B 1.86（枠底 1.5）＝一致、5 線不変（`MarkFewLineStaffTests` 8）。
-- ⚠️ **残り＝`A`（tempo と同じ小節）の高さ**: LP は箱の底 3.52（tempo の音符の頭だけを避ける）・Lily# は 5.66（tempo の符尾まで避ける）。原因は **X**: LP の箱は段の左端より 1.36 左から始まる（clef の無い段の break-align）のに Lily# は段の左端の 0.25 右から＝箱が tempo の符尾の上に来る。値付け済み・未着手。
-- 掃き 1199／差 3＝1 線譜の本だけ（rhythm-slashes・oneline-rest ×2＝mark が下がりページが縮む・snapshot 承認）・full **11747 / 5 / 2**＝HANDOFF の門 3＋census（再生成）＋snapshot。
-- `-End p878 -DiffBase eb6e902aa`（門は全部 OK）＝full **11752 / 0 / 2 / 11754**。Core '+' 71 行／REF 2／OWN 0。HANDOFF 441,391 B（残り 8,609）。未 push 44＋docs（push はユーザー）。
 
 ## 2. 開いている作業
 

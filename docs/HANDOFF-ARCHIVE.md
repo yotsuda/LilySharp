@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第878セッションの経緯
+
+### 1.1 第878セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第877 の続き・ユーザー「続けて。双子に書く方が技術的に妥当なら書くようにして」）。`-Start p878`（HEAD `eb6e902aa`）＝full **11742 / 0 / 2 / 11744**。§7 3.5 で第876 を ARCHIVE へ。
+- **双子に `skipBars = ##t`**（`6d7ca77f6`）: Lily# は書いた `R*N` を全段が休む run で常に圧縮して数字を描く＝LP の `\compressMMRests`（＝`\once \set Score.skipBars = ##t`・ly/music-functions-init.ly:452-460）下の規則そのもの。LP の既定は N 小節に展開して数字なし。`\layout` の `\Score` に `skipBars = ##t` を常に書く（`printInitialRepeatBar` の隣・両方の腕）。双子の掃き（`sessions/p872/ly-sweep.ps1`・base p877／head p878）**1199／1199 が動いた＝全部その 1 行だけ**（1 行を除いて比べ直すと 0）。exporter のテスト 4 本の期待文字列を更新。
+- **1 線譜の rehearsal mark／tempo**（同 commit）。値付け（Lab `sessions/p878/probe/mark`＝`tempo 4 = 120` ＋ section A／B・`as lines 1/5`）: ⚠️ **after-line-breaking の dump は outside-staff pass の前の値**（第876〜877 の強弱・trill は動かなかったので一致していた）、**LP の svg の `<text>` の translate は信用できない**（箱の rect と 3.0 ずれる）→ **300 dpi の png を System.Drawing で行走査して読んだ**（`lpng300-*.png`・線 267 px・1 ss＝20.75 px）。LP 1 線: `= 120` の baseline 2.05（d'' の頭 1.5＋0.46＋0.033）・`B` の枠の底 1.5（小節線の ±1.0＋0.46）・5 線は 2.883／枠底 0.85＝従来どおり。Lily# は tempo 4.26・B 3.2 だった。原因 3 つ: ⑴ `MusicMarkEngraver.LabelFrameBottomAboveStaffMiddle`／`MetronomeMarkGeometry.QuietBaselineAboveMiddle` が `2.0＋0.05＋0.8` の定数→線数（`Calculate` に `staffLinesOf`・anchor 段＝`TopScoreGrobStaff`）、⑵ `OutsideStaffStacker.SeedClefInk` が 1 線譜（clef を描かない＝`SpacingRules.EngravesClef`）にも段の clef を植えていた（treble の 1.8＝線の 3.8 上・tempo 4.26 の正体）、⑶ `PlaceMusicMarks` の `m.YUp < 2.0 → 上の pass に入れない` が 5 線定数＝1 線の tempo（0.883）が pass を素通りして C の上に乗った→描く上線で判定。直した後: tempo 2.04・B 1.86（枠底 1.5）＝一致、5 線不変（`MarkFewLineStaffTests` 8）。
+- ⚠️ **残り＝`A`（tempo と同じ小節）の高さ**: LP は箱の底 3.52（tempo の音符の頭だけを避ける）・Lily# は 5.66（tempo の符尾まで避ける）。原因は **X**: LP の箱は段の左端より 1.36 左から始まる（clef の無い段の break-align）のに Lily# は段の左端の 0.25 右から＝箱が tempo の符尾の上に来る。値付け済み・未着手。
+- 掃き 1199／差 3＝1 線譜の本だけ（rhythm-slashes・oneline-rest ×2＝mark が下がりページが縮む・snapshot 承認）・full **11747 / 5 / 2**＝HANDOFF の門 3＋census（再生成）＋snapshot。
+- `-End p878 -DiffBase eb6e902aa`（門は全部 OK）＝full **11752 / 0 / 2 / 11754**。Core '+' 71 行／REF 2／OWN 0。HANDOFF 441,391 B（残り 8,609）。未 push 44＋docs（push はユーザー）。
+
 ## 以下は第877セッションの経緯
 
 ### 1.1 第877セッション（2026-10-10・YT-DELL2）
