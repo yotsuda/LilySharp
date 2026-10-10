@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第886セッションの経緯
+
+### 1.1 第886セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第885 の続き・ユーザー「続けて」）。`-Start p886`（HEAD `8a924644b`）＝full **11765 / 0 / 2 / 11767**。§7 3.5 で第884 を ARCHIVE へ。着手＝第885 の判定どおり小さい島 2 つ。
+- **R13 ⒞ 閉じた**: `extension.ts` の `DEBOUNCE_DELAY_DEFAULT` を 60 → 100（`package.json` の既定＝最小と同じ数・VS Code は schema から答えるので到達しない定数＝2 つ目の既定を無くしただけ）。`npm run check-types`／`compile` 緑。
+- **G-condensed の 1 点目＝測って、欠陥で、直した**: `condensedStaff` の譜は `RenderSpec.ToStaffGroups` が part ごとの声部を連結して組むが、`StaffAccidentalColumns`（1 列に 1 つの臨時記号の列＝LP の AccidentalPlacement）は `ResolveStaffColumns` が *part ごと*にしか走らない。probe（Lab `sessions/p886/cs/cs1.lys`＝XVA／XVB／XVC の形を 2 part で・`cs1-voice.lys`＝同じ音楽を 1 part の `voice { } { }` で）: **bar 2（pinned の下声部に ♭）で condensed は ♭ を x 34.58＝上声部の符頭 34.42 の内側に描き、voice 版は 33.27＝列全体の左**（LP は voice 版の側＝`CrossVoiceAccidentalColumnTests` の XVB）。直し＝condensed 枝で `ResolveVoiceStemDirections` の後に `StaffAccidentalColumns.Resolve` を通し、`CollectMultiStaff` の phase 3 が `ToStaffGroups` を engraving style と music font の scope で包む（`ResolveStaffColumns` と同じ 2 つ）。網 `CondensedStaffTests.TwoPartsAccidentals_ArePackedIntoOneColumn_AsTwoVoicesAre`（差分の網＝voice 版と glyph の x が全部一致）・毒（packing を恒等に）＝その 1 本だけ赤。残る 2 点: cue 隣接 2 領域が 1 文脈（`VoiceContextId.Cue` の註で名指し済みの逸脱・LP 双子で測るには cue の間隔の計器が要る）・`Materialise` の overlap（釘のまま＝設計級）。
+- 掃き（p723 `sweep-all.ps1`・998 冊 1201 svg・data-pos 伏せ）＝**差 0**（そこにある condensed 本 9 冊は 2 part の臨時記号が衝突した列に乗る形を持たない）。Lab dogfood の 2 冊は別に比べた: `choir-chorale` 4 枚同一・`quartet-collide` の condensed score は glyph 1 つ（bar 4 下段の ♯）が 1.11 左＝列の縁へ（意図した向き・`sessions/p886/dog/`）。commit `0ab6e3a2f`。
+- `-End p886 -DiffBase 8a924644b`（門は全部 OK）＝full **11766 / 0 / 2 / 11768**（網 +1）。Core '+' 30 行／REF 0／OWN 0＝7.6 ⒟（既存の家 `StaffAccidentalColumns` を condensed の枝から指し直しただけ・REF はその家のもの）。7.7: 該当なし。棚卸し 2 枚＝差分 0。**HANDOFF 443,525 B（残り 6,475）＝次便は `-Start` の後、語りを書く前に `tools\Fold-ClosedHandoffItems.ps1` で §2 の ✅ を落とす**。未 push 59＋docs（push はユーザー）。
+判定: 小さい島は尽きた（R13 ⒞・G-condensed 1 点目）。残りは設計級か LP 双子の計器が要るもの（G-condensed の cue 隣接・`Materialise` overlap・R12 ⒠）か、ユーザーが選ぶ島（§1.0 ⒜・CHANGELOG の 0.11.0 以降）。(a) 文脈は使わない／(b) **この会話は 3 便ぶん＝重い**／(c) 別の島 ⇒ **次は新しい会話**（ユーザーが島を選んでから）。
+
 ## 以下は第885セッションの経緯
 
 ### 1.1 第885セッション（2026-10-10・YT-DELL2）

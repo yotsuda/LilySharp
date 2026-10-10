@@ -118,6 +118,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第888セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第887 の続き・ユーザー「続けて」・島の指定なし）。`-Start p888`（HEAD `dec39d572`）＝full **11766 / 0 / 2 / 11768**。§7 3.5 で第886 を ARCHIVE へ。着手＝第887 が読んで残した **§2 R12 ⒠**（残りの島で唯一、コードが読めていて 1 便で閉じる形）。
+- **単位違いの正体**: `MeasureModel.Flatten` は平たくした item の総数（書かれた音符・小節線・marker も）で 50,000 に切り、collector の `ChargeExpansion` は展開だけ（phrase の入口 1・展開した body の site 1 つずつ・percent/unfold の 2 周目以降を body の大きさ `passCost` で・`R1*N` の内側の写し 1 つずつ）を数える。しかも model は `Split` の scope ごと、collector は collect ごと。⇒ 書かれた item が 50,000 を超える scope は model だけが切れて cross-part の小節数が狂い、LYS1033 は出ない（collector は書かれた音楽に課金しない）。
+- **直し＝model の予算を collector と同じ単位に**（`ExpansionBudget`・`Flatten(…, budget, inPhrase)`）: phrase の入口で 1（尽きていれば marker ごと何も出さない＝collector と同じ「省略で釣り合う」）、phrase body の中では site ごとに 1（`Emit`）、repeat は phrase 内なら wrapper 1 ＋ 1 周目無料・2 周目以降は 1 周目が出した数、`R*N` は Split 側で写しごとに 1。書かれた音楽は無料。scope ごとの予算は collect ごとの予算より厳しくないので、score が弾く scope では「model が切れた ⇒ collector も切れた ⇒ LYS1033」が成り立つ（`ExpansionCap` の註に書いた）。`Split` に `expansionBudget` 引数（既定 `ExpansionCap`・網用）。
+- 網 **`MeasureModelBudgetTests`** 5 本＝書かれた 12 小節は予算 3 でも 12／DagBook(6) を cap 40 で collector の音符数と model の四分音符数が**一致**（差分の網＝63 入口＋32 音符を同じ順に歩く）／unfold 1000 を cap 30 で 32 音＝8 小節／`R1*1000` を cap 10 で 11 小節／DagBook(20) が既定予算で止まる。毒 4 種（site 課金なし・`R*N` 無料・2 周目以降無料・入口無料）＝**それぞれ網 1 本だけ赤**（Lab `sessions/p888/poison-*.log`）。
+- 出力同一: `lysc check --batch` 1177 冊（追跡 666＋Lab corpora 511）を HEAD の exe（worktree で build）と作業ツリーの exe で＝**診断 2425 行が同一**（違うのは Batch の所要時間の行だけ・`sessions/p888/check-*.txt`・`-j 0` は進捗番号の順が変わるので剥がして比べる）。棚卸し 2 枚＝差分なし。描画は触っていない（validator の模型だけ）＝svg の掃きは要らない。commit `validators:`。
+- `-End p888 -DiffBase dec39d572`（門は全部 OK）＝full **11771 / 0 / 2 / 11773**（網 +5）。Core '+' 82 行／REF 0／OWN 0＝7.6 ⒞（予算は liveness の守りで LP に対応物なし＝札は collector の `DefaultExpansionBudgetCap` に在り、model はそれを「one home」で指す・新しい札は無し）。7.7: sentinel なし・fallback なし（尽きた予算は歩きを止めるだけ＝註に明記）。棚卸し 2 枚＝差分なし。HANDOFF 375,548 B（残り 74,452）・§1 現在便 9,507 字。commit `f966b0c72`。未 push 63＋docs（push はユーザー）。Lab `sessions/p888/`＝start/end の log・毒 4 本の log・check の掃き 2 側・books.txt。
+判定: §2 R12 は全項閉じた。Claude 側だけで着手できる島は尽きた＝残りはユーザー側（VS Code の手動確認・Lab の本の修正・push）か、ユーザー判断が要るもの（G-condensed の cue 隣接＝LP 双子の cue 間隔の計器から／`Materialise` overlap＝設計級／R15 ⒠ の 2 綴り＝要承認／perf の島＝第615 で一時停止）。(a) 今便の文脈は要らない／(b) この会話は 2 便＝まだ軽い／(c) 別の島 ⇒ **ユーザーが島を選べばこの会話のまま `-Start p889`**。
+
+## 以下は第887セッションの経緯
+
 ### 1.1 第887セッション（2026-10-10・YT-DELL2）
 
 新しい会話（ユーザー「次を読んで作業に着手して」・島の指定なし）。`-Start p887`（HEAD `2860aabfe`）＝full **11766 / 0 / 2 / 11768**。§7 3.5 で第885 を ARCHIVE へ。**§1.0 の指示どおり語りの前に `tools\Fold-ClosedHandoffItems.ps1 -Session 887`**＝閉じた §2 の項目 1 件・424 行を ARCHIVE へ（HANDOFF 439,765 → 372,631 B＝天井まで約 77 KB 空いた）。
@@ -125,17 +137,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 触っていない: **R12 ⒠**（読んだ限り単位違いは実在＝`MeasureModel.Flatten` は `output.Count`（書かれた item も数える）で切り、collector は展開 site だけを `ChargeExpansion` で数える。切れるのは 50,000 を超える本だけ・優先度低のまま）／G-condensed の残り 2 点／`Materialise` overlap。
 - `-End p887 -DiffBase 2860aabfe`（門は全部 OK）＝full **11766 / 0 / 2 / 11768**（docs のみ・網 ±0）。Core '+' 0 行／REF 0／OWN 0＝7.5・7.6・7.7 とも該当なし（コードに触っていない）。棚卸し 2 枚＝差分なし。HANDOFF 375,035 B（残り 74,965）・§1 現在便 9,372 字。commit `5560ce5cb`（changelog ×2 ＋ RELEASING）。未 push 61＋docs（push はユーザー）。Lab `sessions/p887/`＝start.log・end.log・commits の本文・changelog の下書き。
 判定: §1.0 ⒜ で Claude 側に残っていた最後の項目（CHANGELOG）を閉じた。残りは全部ユーザー側か設計級（VS Code の手動確認・Lab の本の修正・push／G-condensed の cue 隣接・`Materialise` overlap・R12 ⒠）。(a) 今便の文脈は要らない／(b) この会話は 1 便＝軽い／(c) 別の島 ⇒ **ユーザーが島を選べばこの会話のまま `-Start p888`**（既定は続ける・CLAUDE-OPERATIONS §2 ⑵(c)）。
-
-## 以下は第886セッションの経緯
-
-### 1.1 第886セッション（2026-10-10・YT-DELL2）
-
-同じ会話（第885 の続き・ユーザー「続けて」）。`-Start p886`（HEAD `8a924644b`）＝full **11765 / 0 / 2 / 11767**。§7 3.5 で第884 を ARCHIVE へ。着手＝第885 の判定どおり小さい島 2 つ。
-- **R13 ⒞ 閉じた**: `extension.ts` の `DEBOUNCE_DELAY_DEFAULT` を 60 → 100（`package.json` の既定＝最小と同じ数・VS Code は schema から答えるので到達しない定数＝2 つ目の既定を無くしただけ）。`npm run check-types`／`compile` 緑。
-- **G-condensed の 1 点目＝測って、欠陥で、直した**: `condensedStaff` の譜は `RenderSpec.ToStaffGroups` が part ごとの声部を連結して組むが、`StaffAccidentalColumns`（1 列に 1 つの臨時記号の列＝LP の AccidentalPlacement）は `ResolveStaffColumns` が *part ごと*にしか走らない。probe（Lab `sessions/p886/cs/cs1.lys`＝XVA／XVB／XVC の形を 2 part で・`cs1-voice.lys`＝同じ音楽を 1 part の `voice { } { }` で）: **bar 2（pinned の下声部に ♭）で condensed は ♭ を x 34.58＝上声部の符頭 34.42 の内側に描き、voice 版は 33.27＝列全体の左**（LP は voice 版の側＝`CrossVoiceAccidentalColumnTests` の XVB）。直し＝condensed 枝で `ResolveVoiceStemDirections` の後に `StaffAccidentalColumns.Resolve` を通し、`CollectMultiStaff` の phase 3 が `ToStaffGroups` を engraving style と music font の scope で包む（`ResolveStaffColumns` と同じ 2 つ）。網 `CondensedStaffTests.TwoPartsAccidentals_ArePackedIntoOneColumn_AsTwoVoicesAre`（差分の網＝voice 版と glyph の x が全部一致）・毒（packing を恒等に）＝その 1 本だけ赤。残る 2 点: cue 隣接 2 領域が 1 文脈（`VoiceContextId.Cue` の註で名指し済みの逸脱・LP 双子で測るには cue の間隔の計器が要る）・`Materialise` の overlap（釘のまま＝設計級）。
-- 掃き（p723 `sweep-all.ps1`・998 冊 1201 svg・data-pos 伏せ）＝**差 0**（そこにある condensed 本 9 冊は 2 part の臨時記号が衝突した列に乗る形を持たない）。Lab dogfood の 2 冊は別に比べた: `choir-chorale` 4 枚同一・`quartet-collide` の condensed score は glyph 1 つ（bar 4 下段の ♯）が 1.11 左＝列の縁へ（意図した向き・`sessions/p886/dog/`）。commit `0ab6e3a2f`。
-- `-End p886 -DiffBase 8a924644b`（門は全部 OK）＝full **11766 / 0 / 2 / 11768**（網 +1）。Core '+' 30 行／REF 0／OWN 0＝7.6 ⒟（既存の家 `StaffAccidentalColumns` を condensed の枝から指し直しただけ・REF はその家のもの）。7.7: 該当なし。棚卸し 2 枚＝差分 0。**HANDOFF 443,525 B（残り 6,475）＝次便は `-Start` の後、語りを書く前に `tools\Fold-ClosedHandoffItems.ps1` で §2 の ✅ を落とす**。未 push 59＋docs（push はユーザー）。
-判定: 小さい島は尽きた（R13 ⒞・G-condensed 1 点目）。残りは設計級か LP 双子の計器が要るもの（G-condensed の cue 隣接・`Materialise` overlap・R12 ⒠）か、ユーザーが選ぶ島（§1.0 ⒜・CHANGELOG の 0.11.0 以降）。(a) 文脈は使わない／(b) **この会話は 3 便ぶん＝重い**／(c) 別の島 ⇒ **次は新しい会話**（ユーザーが島を選んでから）。
 
 ## 2. 開いている作業
 
@@ -1854,7 +1855,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 - **R9 梁・弓の残り**＝**全項 ✅**（⒢ は第574＝台帳 `beam.tremolo.*` 17 点 exact）／⒜⒝⒞⒟⒠⒡ ✅（第570・第572・第573。⒟ は起票が古かった＝slur 対 slur の項は第470/481 が「LP に無い」と撤去済み・phrasing slur の中の slur は `AddEnclosedSlurPoints` が LP の 3 点で既に積む） → **閉じた項の本文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の「R7〜R12 の行（第573 が落とした）」**
 - **R10 記号・歌詞の残り**＝⒜ `ArticulationEngraver` の aligned_side が 3 綴り（note 支持は箱の算術、chain/tie/slur は pointwise、`DynamicEngraver.SpannerOffsetY`）＋`on_line` の ledger parity＝**第574 が LP 双子で測った＝忠実度の欠陥は無い**（`probes/script-positions.ly` の 77 個が全部 exact・台帳 `script.staccato.*`／`script.tenuto.*` 8 点で regime ごとに固定）＝残るのは*保守性*（1 綴りに畳むこと）だけ・畳むときはこの 8 点が網／⒝〜⒣ ✅（第565〜第570） → **閉じた項の本文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の「R7〜R12 の行（第573 が落とした）」**
 - **R11 renderer の残り**＝**全項 ✅**（⒜〜⒢・第561〜第566） → **閉じた項の本文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の「R7〜R12 の行（第573 が落とした）」**
-- **R12 言語層の残り**＝⒠ `MeasureModel` と collector の予算の単位違い（予算 50,000 を超えた本だけ・LYS1033 が既に「頁は切り詰め」と言う＝優先度は低い）／⒜⒝⒞⒟⒡ ✅（第570・第571） → **閉じた項の本文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の「R7〜R12 の行（第573 が落とした）」**
+- **R12 言語層の残り**＝**全項 ✅**（⒠ は第888＝`MeasureModel` の予算を collector と同じ単位に＝書かれた音楽は無料・展開だけ課金・網 `MeasureModelBudgetTests` 5 本・`lysc check` 1177 冊の診断同一／⒜⒝⒞⒟⒡ 第570・第571） → **閉じた項の本文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の「R7〜R12 の行（第573 が落とした）」**
 - **R13 プレビュー遅延の構造**（第395 起票）＝**⒜⒟⒥⒦⒤⒧⒨⒨′⒨″⒩⒪⒫⒬⒬′ は第399〜第410 で閉じた** → **経緯の全文は `HANDOFF-ARCHIVE.md`「閉じた §2 の本文」の同じ見出し**（2026-09-21・第449 に落とした。**25,495 B の 1 行**で、機械の fold が読めない形だった）。⚠️ **コードが名指す letter の主題だけ残す**（`R13⒜` 3 本・`R13⒩` 4 本・`R13⒫` 1 本＝**宛先が消えると §2 でも「letter を指す参照が宙に浮く」が起きる**）: **⒜**＝preview の collect を最後の compile の collector と共有（第399・`8a3b7f68`）／**⒩**＝`AnnotationNameValidator` の 3 つ（全木 walk・`MarkName` の組み立て・`Arguments` の建て直し）を畳んだ（第408・18.82 MB → 6.92 MB／6.81 → 3.13 ms）／**⒫**＝`MeasureValidator` の刈る再帰を index の 4 kind ＋ *祖先への*刈り込みに置き換えた（第408 第 3 便・`c168b220`・walk 2.12 → 1.06 ms）。
   ⚠️ **開いているのはこれだけ**: **⒝ 実機未確認**（第404・`2f6bba07`＝差分頁 `SvgPageSet`。残り＝frame（頁の高さ）が動く本は `requestFull` で全頁）／~~⒞~~（第886: `DEBOUNCE_DELAY_DEFAULT` を 100 に揃えた）／**⒠** overlay drawer 28 本が page ごとに全配列を走る（fingering だけ bucket 済み）／**⒣** `IncrementalCompiler` の cancel が 3 点だけ（layout 全体が atomic）／**⒤′** `UsingExpander.FindUsings` が main text を再 parse。
   ⚠️ **戻らない島**: **⒦** の線分割 DP 5.3 ms＝**⒤ が census で「やらない」と決めた**（ink が動かない打鍵では layout ごと飛ばされている＝**memo が当たり得る打鍵はそもそも layout ごと飛ばされている**・賞金は打鍵の 0.3% 未満で鍵は DP の表まるごと）／**⒡⒢** は第403 実測で小さい（`LayoutStaffGroups` 200 system で 0.6 ms・count 変更打鍵の 2 回目は 0 回）／**⒨″** の「同じ量が N 綴り」＝畳める余地は 1 冊 2 本で配管のほうが大きい（**`PagingSkylines` の 3 箇所は*境界が違う別の量*＝字面で畳まない**）／**⒧** の同じ顔 `RestCollisionsOf`／`RestDotOffsetsOf` は §1.0 ⒞ の「触らない」。
