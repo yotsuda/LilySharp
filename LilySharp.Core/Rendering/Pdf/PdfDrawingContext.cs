@@ -43,6 +43,11 @@ internal sealed class PdfDrawingContext : IDrawingContext
     /// directive, resolved. The document hands its own down at <c>BeginPage</c>.</summary>
     private readonly TextFontPlan _plan;
 
+    /// <summary>The document's answer per named face — own program, or which stand-in —
+    /// spelled into the family name <see cref="DrawText"/> asks for. See
+    /// <see cref="DocumentTextFaces"/>.</summary>
+    private readonly DocumentTextFaces _faces;
+
     /// <summary>
     /// The SAME resolution the layout reserved through — role and style in, the font PROGRAM
     /// out. See the note on <c>PngDrawingContext</c>'s copy for why it is built here rather
@@ -51,13 +56,15 @@ internal sealed class PdfDrawingContext : IDrawingContext
     private readonly ScoreTextMetrics _metrics;
 
     public PdfDrawingContext(XGraphics gfx, double pointsPerSpace, double originPt = 0,
-        EmmentalerFontResolver? fontResolver = null, TextFontPlan? plan = null)
+        EmmentalerFontResolver? fontResolver = null, TextFontPlan? plan = null,
+        DocumentTextFaces? faces = null)
     {
         _gfx = gfx;
         _scale = pointsPerSpace;
         _originPt = originPt;
         _fontResolver = fontResolver;
         _plan = plan ?? TextFontPlan.Default;
+        _faces = faces ?? DocumentTextFaces.None;
         _metrics = new ScoreTextMetrics(_plan);
     }
 
@@ -276,11 +283,24 @@ internal sealed class PdfDrawingContext : IDrawingContext
         bool bundledSans = false;
         bool bundled = role != TextRole.SystemBrace
             && TextFontMetrics.TryBundledFamily(face, out bundledSans);
-        bool drawsMeasuredProgram = bundled
-            || (!face.IsBundled && _fontResolver?.EmbedsOwnProgram(face.Name!) == true);
+        // THE ANSWER IS IN THE REQUEST. PdfSharpCore remembers what the resolver answered for
+        // a family name for the whole process (FontFactory's cache), so a page must not ask
+        // for "Georgia" and leave it to a shared resolver to say whether that means Georgia's
+        // own program or a stand-in — the first document to ask would decide for every later
+        // one (EmmentalerFontResolver's _embeddedPrograms remark has the measurement). This
+        // page asks for `LysEmbed:Georgia` when its document embeds the program, and for the
+        // generic family of the stand-in when it does not, so equal requests are equal
+        // answers. A face the directive never named (the brace) goes out under its own name.
+        var named = face.IsBundled ? null : _faces.Of(face.Name!);
+        bool drawsMeasuredProgram = bundled || named is { Embedded: true };
         string fontFamily = bundled
             ? (bundledSans ? "sans-serif" : "serif")
-            : face.Name!;
+            : named switch
+            {
+                { Embedded: true } => EmmentalerFontResolver.EmbeddedFamilyRequest(face.Name!),
+                { Sans: var sans } => sans ? "sans-serif" : "serif",
+                null => face.Name!,
+            };
         var pdfStyle = ((style & FontStyle.Bold) != 0, (style & FontStyle.Italic) != 0) switch
         {
             (true, true) => XFontStyle.BoldItalic,

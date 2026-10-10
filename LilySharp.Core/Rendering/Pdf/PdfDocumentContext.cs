@@ -74,7 +74,6 @@ internal sealed class PdfDocumentContext : IDocumentContext
     {
         _options = options ?? new PdfDocumentOptions();
         _resolver = EnsureFontResolver(_options.FontDirectory);
-        _resolver.SetTextFonts(TextFontPlan.Default);
         _document = new PdfDocument();
     }
 
@@ -82,11 +81,11 @@ internal sealed class PdfDocumentContext : IDocumentContext
 
     /// <inheritdoc/>
     /// <remarks>
-    /// Setting this ALSO configures the font resolver, which is a process global that
-    /// this document re-points at its own faces. That coupling is why the plan is a
-    /// property with a body rather than an auto-property: a caller that set the plan and
-    /// then drew would otherwise get pages laid out for its faces and embedded with the
-    /// previous document's.
+    /// Setting this ALSO resolves the plan's named faces into <see cref="TextFaces"/> — the
+    /// programs to embed are loaded (and registered with the process-wide resolver) here,
+    /// once, rather than at every page. That coupling is why the plan is a property with a
+    /// body rather than an auto-property: a caller that set the plan and then drew would
+    /// otherwise get pages laid out for its faces and drawn with the previous plan's answers.
     /// </remarks>
     public TextFontPlan Fonts
     {
@@ -94,9 +93,18 @@ internal sealed class PdfDocumentContext : IDocumentContext
         set
         {
             _fonts = value;
-            _resolver.SetTextFonts(value);
+            TextFaces = _resolver.LoadTextFonts(value);
         }
     }
+
+    /// <summary>
+    /// THIS DOCUMENT'S answer for each named face — own program or bundled stand-in — handed
+    /// to every page it begins. Set by <see cref="Fonts"/>; settable on its own so a test can
+    /// hand a page the opposite answer for a face and show that the answer, not the name,
+    /// is what reaches PdfSharpCore (the resolver's <c>_embeddedPrograms</c> remark says why
+    /// that matters).
+    /// </summary>
+    internal DocumentTextFaces TextFaces { get; set; } = DocumentTextFaces.None;
 
     public IDrawingContext BeginPage(double widthSpaces, double heightSpaces)
     {
@@ -122,7 +130,7 @@ internal sealed class PdfDocumentContext : IDocumentContext
 
         _currentGfx = XGraphics.FromPdfPage(page);
         _currentPage = new PdfDrawingContext(_currentGfx, _options.PointsPerSpace, originPt,
-            _resolver, _fonts);
+            _resolver, _fonts, TextFaces);
         return _currentPage;
     }
 

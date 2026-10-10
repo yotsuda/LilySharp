@@ -52,24 +52,32 @@ public class EmmentalerFontResolverTests
     public void Emmentaler_ResolvesToMusicFace()
         => Assert.Equal("Emmentaler#", new EmmentalerFontResolver().ResolveTypeface("Emmentaler", false, false)?.FaceName);
 
+    // The document-side answers (DocumentTextFaces.Face): a stand-in of the serif family,
+    // of the sans family, and a face that carries its own program.
+    private static readonly DocumentTextFaces.Face SerifStandIn = new(Embedded: false, Sans: false);
+    private static readonly DocumentTextFaces.Face SansStandIn = new(Embedded: false, Sans: true);
+
     [Fact]
-    public void ConfiguredFont_NotEmbedded_ResolvesToBundledSerif()
+    public void ConfiguredFont_NotEmbedded_StandsInAsTheBundledSerif()
     {
-        // font "X" (no `embedded`) must NOT embed a system font — it maps to the
-        // bundled serif so nothing proprietary is embedded without asking.
+        // font "X" (no `embedded`) must NOT embed a system font — the document's answer
+        // is the bundled serif, so nothing proprietary is embedded without asking.
         var r = new EmmentalerFontResolver();
-        r.SetTextFonts(new TextFontPlan.Builder().Everything([BogusFont]).Build());
-        Assert.Equal("Schola#", r.ResolveTypeface(BogusFont, false, false)?.FaceName);
+        var faces = r.LoadTextFonts(new TextFontPlan.Builder().Everything([BogusFont]).Build());
+        Assert.Equal(SerifStandIn, faces.Of(BogusFont));
+        Assert.False(faces.EmbedsOwnProgram(BogusFont));
     }
 
     [Fact]
-    public void ConfiguredFont_EmbedButNotInstalled_FallsBackToSerif()
+    public void ConfiguredFont_EmbedButNotInstalled_StandsInAsTheBundledSerif()
     {
-        // `embedded` on a font this machine doesn't have: nothing to embed, so it
-        // still resolves to the bundled serif (never a LysEmbed face).
+        // `embedded` on a font this machine doesn't have: nothing to embed, so the answer
+        // is still the bundled serif (never a LysEmbed face).
         var r = new EmmentalerFontResolver();
-        r.SetTextFonts(new TextFontPlan.Builder().Everything([BogusFont]).Embed().Build());
-        Assert.Equal("Schola#", r.ResolveTypeface(BogusFont, false, false)?.FaceName);
+        var faces = r.LoadTextFonts(new TextFontPlan.Builder().Everything([BogusFont]).Embed().Build());
+        Assert.Equal(SerifStandIn, faces.Of(BogusFont));
+        Assert.Throws<InvalidOperationException>(
+            () => r.ResolveTypeface(EmmentalerFontResolver.EmbeddedFamilyRequest(BogusFont), false, false));
     }
 
     [Fact]
@@ -81,16 +89,16 @@ public class EmmentalerFontResolverTests
         // configured face and it always stood in as serif, which was right only because
         // `font "X"` bound every role at once.
         var r = new EmmentalerFontResolver();
-        r.SetTextFonts(new TextFontPlan.Builder()
+        var faces = r.LoadTextFonts(new TextFontPlan.Builder()
             .Role(TextRole.ChordName, [BogusFont])
             .Build());
-        Assert.Equal("Heros#", r.ResolveTypeface(BogusFont, false, false)?.FaceName);
+        Assert.Equal(SansStandIn, faces.Of(BogusFont));
     }
 
     [Fact]
     public void OneNameBoundToBothFamilies_KeepsTheFirstRolesStandIn()
     {
-        // A deliberate fold, and this is its only observer: the resolver holds ONE
+        // A deliberate fold, and this is its only observer: a document holds ONE
         // stand-in per face NAME, so a name bound to both a serif and a sans role keeps
         // whichever role was declared first (the roles are walked in TextRole order, so
         // LyricText precedes ChordName). Keying faces on (name, family) instead would
@@ -98,11 +106,11 @@ public class EmmentalerFontResolverTests
         // difference that only shows when the face is ABSENT. Change the fold and this
         // case says so out loud.
         var r = new EmmentalerFontResolver();
-        r.SetTextFonts(new TextFontPlan.Builder()
+        var faces = r.LoadTextFonts(new TextFontPlan.Builder()
             .Role(TextRole.LyricText, [BogusFont])
             .Role(TextRole.ChordName, [BogusFont])
             .Build());
-        Assert.Equal("Schola#", r.ResolveTypeface(BogusFont, false, false)?.FaceName);
+        Assert.Equal(SerifStandIn, faces.Of(BogusFont));
     }
 
     [Fact]
@@ -112,91 +120,79 @@ public class EmmentalerFontResolverTests
         // A single-face resolver answered the FIRST name for every one of them.
         const string Other = "NoSuchFontFace-Second";
         var r = new EmmentalerFontResolver();
-        r.SetTextFonts(new TextFontPlan.Builder()
+        var faces = r.LoadTextFonts(new TextFontPlan.Builder()
             .Role(TextRole.LyricText, [BogusFont])
             .Role(TextRole.ChordName, [Other])
             .Build());
-        Assert.Equal("Schola#", r.ResolveTypeface(BogusFont, false, false)?.FaceName);
-        Assert.Equal("Heros#", r.ResolveTypeface(Other, false, false)?.FaceName);
+        Assert.Equal(SerifStandIn, faces.Of(BogusFont));
+        Assert.Equal(SansStandIn, faces.Of(Other));
+    }
+
+    [Fact]
+    public void AFaceTheDirectiveNeverNamed_HasNoAnswer()
+    {
+        // The brace and the music faces are asked for under their own names; a document
+        // says nothing about them, and the page must be able to tell that apart from a
+        // stand-in. ⚠️ THE BRACE IS THE ONE THAT BITES: TextFontPlan.Resolve names
+        // "Emmentaler-Brace" for TextRole.SystemBrace on EVERY plan, so a loader that walks
+        // the roles without skipping it records the brace as a serif stand-in — and the page
+        // then asks for "serif" and draws no brace at all. The p885 sweep caught exactly
+        // that (46 grand-staff PDFs without their Emmentaler-Brace font) before this line did.
+        var r = new EmmentalerFontResolver();
+        Assert.Null(r.LoadTextFonts(TextFontPlan.Default).Of(BogusFont));
+        Assert.Null(r.LoadTextFonts(TextFontPlan.Default).Of(TextFontPlan.BraceFaceName));
+        Assert.Null(r.LoadTextFonts(new TextFontPlan.Builder().Everything([BogusFont]).Embed().Build())
+            .Of(TextFontPlan.BraceFaceName));
     }
 
     /// <summary>
-    /// Two documents configuring this resolver at once must not corrupt its face map.
+    /// A music font's companion face (Petaluma Script) is in the bundle under the OFL, so
+    /// its own program is on the page whether or not <c>embedded</c> was written — the one
+    /// deterministic embedded face, because it needs nothing installed.
+    /// </summary>
+    [Fact]
+    public void ACompanionFace_CarriesItsOwnProgram_UnderTheEmbedRequest()
+    {
+        const string Companion = "Petaluma Script";
+        var r = new EmmentalerFontResolver();
+        var faces = r.LoadTextFonts(new TextFontPlan.Builder().Role(TextRole.ChordName, [Companion]).Build());
+        Assert.True(faces.EmbedsOwnProgram(Companion));
+        Assert.Equal(new DocumentTextFaces.Face(Embedded: true, Sans: true), faces.Of(Companion));
+
+        // The request the page makes, and the program behind the face it is answered with.
+        string request = EmmentalerFontResolver.EmbeddedFamilyRequest(Companion);
+        Assert.Equal("LysEmbed:Petaluma Script", request);
+        string faceName = Assert.IsType<string>(r.ResolveTypeface(request, false, false)?.FaceName);
+        Assert.Equal("LysEmbed:Petaluma Script#", faceName);
+        Assert.NotEmpty(r.GetFont(faceName));
+        // Every weight and slant is the one face; PdfSharpCore synthesises emphasis.
+        Assert.Equal(faceName, r.ResolveTypeface(request, true, true)?.FaceName);
+    }
+
+    /// <summary>
+    /// Two documents loaded from the ONE process-wide resolver keep their own answers: the
+    /// answer is in the object each document holds, not in the resolver, so loading the
+    /// second cannot change the first.
     /// </summary>
     /// <remarks>
-    /// ⚠️ THE RESOLVER IS A PROCESS GLOBAL — PdfSharpCore's
-    /// <c>GlobalFontSettings.FontResolver</c>, installed once by
-    /// <c>PdfDocumentContext.EnsureFontResolver</c> — and EVERY <c>PdfDocumentContext</c>
-    /// constructor calls <see cref="EmmentalerFontResolver.SetTextFonts"/> on it. So this is
-    /// not a hypothetical: it is what two threads rendering PDFs do.
-    /// <para>
-    /// FOUND 2026-09-01 (session 317) as an intermittent red in
-    /// <c>BackendKerningTests.PdfPlacesTextWhereTheLayoutReservedItForANamedFace</c>:
-    /// <c>System.InvalidOperationException : Operations that change non-concurrent
-    /// collections must have exclusive access</c>, thrown from <c>Dictionary.TryInsert</c>
-    /// under <c>SetTextFonts</c>, which used to <c>Clear()</c> and refill a plain
-    /// <c>Dictionary</c> in place. Green on the next run — a DIFFERENT intermittent from the
-    /// HarfBuzz shaping crash closed in the same session, and both were read as one flake of
-    /// session 315's parallelisation.
-    /// </para>
-    /// <para>
-    /// ⚠️ A STRESS NET, NOT A PROOF: it cannot show the absence of a race, only catch a
-    /// mutable map back in that field, which it does essentially always — the poison
-    /// (restoring the in-place Clear-and-refill) throws within the first few iterations.
-    /// What it does prove for the repair is the reachable half: no reader ever sees a
-    /// half-built map, because the map a reader can reach is never written to.
-    /// </para>
+    /// This is what replaced the map the resolver used to keep per document. The old field
+    /// had two failure modes: concurrently, a torn map (session 317: <c>Operations that
+    /// change non-concurrent collections must have exclusive access</c>, out of
+    /// <c>Dictionary.TryInsert</c> under <c>SetTextFonts</c>); and sequentially, the LAST
+    /// document's answer standing for every face name while PdfSharpCore's cache froze the
+    /// FIRST document's — measured in session 885 (the resolver's field remark). With no
+    /// shared answer there is nothing to tear and nothing to freeze; the page-level half is
+    /// <c>PdfFontIsolationTests</c>.
     /// </remarks>
     [Fact]
-    public async Task ConfiguringFromTwoDocumentsAtOnce_NeitherCorruptsNorTearsTheFaceMap()
+    public void TwoDocumentsLoadedFromOneResolver_KeepTheirOwnAnswers()
     {
-        const string Other = "NoSuchFontFace-Second";
         var r = new EmmentalerFontResolver();
-
-        // Neither plan asks to embed, so no plan touches the machine's fonts: the case is
-        // about the map, and stays the same on every platform.
-        var plans = new[]
-        {
-            new TextFontPlan.Builder().Role(TextRole.LyricText, [BogusFont]).Build(),
-            new TextFontPlan.Builder().Role(TextRole.LyricText, [Other]).Build(),
-            new TextFontPlan.Builder()
-                .Role(TextRole.LyricText, [BogusFont]).Role(TextRole.ChordName, [Other]).Build(),
-        };
-
-        var failures = new System.Collections.Concurrent.ConcurrentBag<Exception>();
-        var workers = new List<Task>();
-        for (int t = 0; t < 8; t++)
-        {
-            int seed = t;
-            workers.Add(Task.Run(() =>
-            {
-                try
-                {
-                    for (int i = 0; i < 500; i++)
-                    {
-                        if ((seed + i) % 2 == 0)
-                            r.SetTextFonts(plans[(seed + i) % plans.Length]);
-                        else
-                        {
-                            // A reader must always get one of the bundled stand-ins or the
-                            // generic answer — never a torn read, and never an exception.
-                            var name = r.ResolveTypeface(BogusFont, false, false)?.FaceName;
-                            Assert.True(name is null or "Schola#" or "Heros#",
-                                $"torn read: {name}");
-                            r.EmbedsOwnProgram(Other);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    failures.Add(ex);
-                }
-            }));
-        }
-        await Task.WhenAll(workers);
-
-        Assert.True(failures.IsEmpty,
-            "SetTextFonts must publish a finished map rather than mutate the shared one: "
-            + string.Join("\n", failures.Select(e => e.ToString())));
+        var first = r.LoadTextFonts(new TextFontPlan.Builder().Role(TextRole.LyricText, [BogusFont]).Build());
+        var second = r.LoadTextFonts(new TextFontPlan.Builder().Role(TextRole.ChordName, [BogusFont]).Build());
+        Assert.Equal(SerifStandIn, first.Of(BogusFont));
+        Assert.Equal(SansStandIn, second.Of(BogusFont));
+        // The resolver itself no longer has an opinion about the name.
+        Assert.Null(r.ResolveTypeface(BogusFont, false, false));
     }
 }
