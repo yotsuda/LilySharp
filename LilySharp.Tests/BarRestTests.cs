@@ -187,6 +187,11 @@ public class BarRestTests
         string ly = new LilyPondExporter().Export(Parse(Book("5/4", "c'8 d' e' f' g' a' b' c'' d'' e'' | R*2 | c' d' e' f' g' a' b' c'' d'' e'' |")));
         Assert.Contains("R4*5*2", ly);
         Assert.Matches(@"R4\*5\*2\s*\|\s*c[',]*8", ly);
+        // …compressed as the page compresses it, in \compressMMRests' own words ON THE REST
+        // — not as a Score-wide \layout property, which would also swallow the bar lines
+        // inside a percent repeat (LilyPondExporterTests.RepeatPercent_CarriesNoSkipBars…).
+        Assert.Contains("\\once \\set Score.skipBars = ##t R4*5*2", ly);
+        Assert.DoesNotContain("skipBars = ##t }", ly);
     }
 
     [Fact]

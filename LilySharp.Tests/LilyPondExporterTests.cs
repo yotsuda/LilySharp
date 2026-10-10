@@ -971,6 +971,22 @@ public class LilyPondExporterTests
     }
 
     /// <summary>
+    /// A percent repeat's twin carries no <c>skipBars</c>: under that Score property LilyPond's
+    /// timing translator schedules no bar line inside a repetition that is one long event (the
+    /// double percent, the whole-body slash), and LilyPond then drew each repetition of an
+    /// eight-bar body as ONE narrow measure where the page draws the slash and its seven empty
+    /// bars (Stand By Me, 2026-10-10: LilyPond 3 systems to the page's 7). The compression a
+    /// bar rest wants is written on the rest itself (<see cref="BarRestTests"/>).
+    /// </summary>
+    [Fact]
+    public void RepeatPercent_CarriesNoSkipBars_SoLilyPondDrawsTheEmptyBars()
+    {
+        var ly = Export(Score("repeat percent 3 { c,4 d,4 e,4 f,4 | c,1 | d,1 | }"));
+        Assert.Contains("\\repeat percent 3 {", ly);
+        Assert.DoesNotContain("skipBars", ly);
+    }
+
+    /// <summary>
     /// The label is QUOTED, because <c>\box</c> takes one markup: an unquoted two-word
     /// label boxes only its first word, which is not what Lily# draws. The one-word case
     /// pinned here renders identically either way on 2.26.0; the rule and the measurement
@@ -1064,7 +1080,7 @@ public class LilyPondExporterTests
         Assert.Contains("instrumentName = \"viola\"", named);
         // The indent shares its \layout with the opening-repeat switch every twin carries
         // (InitialRepeatBarTests.TheTwin_TellsLilyPondToPrintItsOwn).
-        Assert.Contains("\\layout { indent = 15\\mm \\context { \\Score printInitialRepeatBar = ##t skipBars = ##t } }", named);
+        Assert.Contains("\\layout { indent = 15\\mm \\context { \\Score printInitialRepeatBar = ##t } }", named);
 
         // ⚠️ AND THE SUPPRESSION REACHES IT TOO, or `staff ~x` would be a twin-only label.
         var bare = Export("""
@@ -1073,7 +1089,7 @@ public class LilyPondExporterTests
             score { staff ~vln }
             """);
         Assert.DoesNotContain("instrumentName", bare);
-        Assert.Contains("\\layout { indent = 15\\mm \\context { \\Score printInitialRepeatBar = ##t skipBars = ##t } }", bare);
+        Assert.Contains("\\layout { indent = 15\\mm \\context { \\Score printInitialRepeatBar = ##t } }", bare);
     }
 
     [Fact]

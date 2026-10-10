@@ -1107,16 +1107,38 @@ public sealed partial class LilyPondExporter
     {
         var (prefix, suffix) = SplitAttachments(r.Articulations);
         string mmr = r.IsMultiMeasure ? "*" + r.MeasureCount : "";
+        // A whole-bar rest `R` is LilyPond's MultiMeasureRestMusic, and the page draws it as
+        // \compressMMRests does — ONE symbol with its count whenever every staff rests the run
+        // (MultiMeasureRestEngraver.FindRuns) — where LilyPond's default expands `R1*N` into N
+        // bars of whole rests and no count. The twin says so in LilyPond's own words: the very
+        // `\once \set` that function maps every multi-measure rest to. MEASURED (Lab
+        // sessions/p877/probe/ext): without it a `tacet` over an `R1*2` stood 2.943 under the
+        // page's 4.943 on five lines, the count's whole height.
+        // ⚠️ PER REST, NOT A \layout-WIDE `skipBars = ##t` (session 878's spelling, one day):
+        // the property is read by the TIMING translator, which under it stops scheduling the
+        // next bar line's moment, so a `\repeat percent` whose repetition is one long event —
+        // the two-measure double percent, the whole-body slash — lost every bar line inside it
+        // and LilyPond drew each repetition as ONE narrow measure where the page draws the
+        // slash and its empty bars (Stand By Me: LilyPond 3 systems to the page's 7, Lab
+        // sessions/p881/outp881). Confined to the rests, the twin is byte-identical to the
+        // \layout form on an `R1*2` and to LilyPond's default on the percent (sessions/p881/mmr).
+        // LILYPOND-REF: ly/music-functions-init.ly:452-460 compressMMRests — a define-music-function
+        //   that music-maps MultiMeasureRestMusic to `\once \set Score.skipBars = ##t`.
+        // LILYPOND-REF: lily/timing-translator.cc:308-328 Timing_translator::stop_translation_timestep
+        //   — the next bar's moment is added to the global context only while skipBars is false.
+        //   lily/multi-measure-rest-engraver.cc:203-217 number_threshold_ — the count's text and
+        //   its threshold.
+        string compress = r.RestText == "R" ? "\\once \\set Score.skipBars = ##t " : "";
         if (Music.BarRest.IsBare(r))
         {
             // A bare `R` lasts its bar (Music.BarRest): LilyPond's `R1`, `R2.`, `R4*5` — and,
             // as it leaves Lily#'s running duration alone while LilyPond's moves to the value
             // written here, the next event states its own.
             _forceNextDuration = true;
-            return prefix + "R" + Music.BarRest.LilyPondDuration(_bars.BarLength)
+            return compress + prefix + "R" + Music.BarRest.LilyPondDuration(_bars.BarLength)
                 + mmr + suffix;
         }
-        return prefix + r.RestToken.Text + EmitEventDuration(r.Duration) + mmr + suffix;
+        return compress + prefix + r.RestToken.Text + EmitEventDuration(r.Duration) + mmr + suffix;
     }
 
     /// <summary>
