@@ -195,6 +195,10 @@ workflow attaches that section to the GitHub Release verbatim.
 - **`todo` completes into its quotes.** Picking `todo` from the `@` completion writes
   `todo("")` with the caret between the quotes, as `text`, `mark` and `textSpan` do; it used to
   write the bare word and leave the parens and quotes to type. An empty memo compiles.
+- **`.down` completes after a memo.** After `@todo("…")`, `@text("…")` or `@diagram(…)`, typing
+  `.` (or asking for completion right after the `)`) offers `.up` and `.down`, the side that
+  moves the mark first — `.down` for a memo or a diagram, `.up` for text — as `@fermata.`
+  already did. The `.` opens the list only there; after a dotted note it stays quiet.
 
 ## 0.11.0
 

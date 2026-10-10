@@ -243,4 +243,18 @@ public static class LanguageVocabulary
     /// from the wider one and can never name a word the parser would reject.
     /// </remarks>
     public static IReadOnlyCollection<string> ClefNames => SyntaxFacts.ClefNameVocabulary;
+
+    // ===== ANNOTATIONS =====
+
+    /// <summary>Whether <c>@name(…)</c> takes <c>.up</c> / <c>.down</c> after its argument
+    /// (<c>@todo("memo").down</c>) — <see cref="SyntaxFacts.AnnotationTakesPlacementAfterArgument"/>,
+    /// the test the parser makes. Published 2026-10-11 for the editor's placement completion.</summary>
+    public static bool AnnotationTakesPlacementAfterArgument(string name)
+        => SyntaxFacts.AnnotationTakesPlacementAfterArgument(name);
+
+    /// <summary>Whether <c>@name</c> is complete without an argument and also takes one, so a
+    /// glued <c>(</c> followed by a space opens a slur rather than the argument —
+    /// <see cref="SyntaxFacts.AnnotationArgumentIsOptional"/>.</summary>
+    public static bool AnnotationArgumentIsOptional(string name)
+        => SyntaxFacts.AnnotationArgumentIsOptional(name);
 }

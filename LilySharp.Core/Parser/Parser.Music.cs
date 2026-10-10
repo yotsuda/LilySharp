@@ -1356,9 +1356,8 @@ internal sealed partial class Parser
                         // take it: the other value annotations have fixed sides, and
                         // consuming a '.' here would corrupt their dotted MarkName
                         // forms (all three read their argument, never the name).
-                        if ((name.Text.Equals("text", StringComparison.Ordinal)
-                             || name.Text.Equals("diagram", StringComparison.Ordinal)
-                             || name.Text.Equals("todo", StringComparison.Ordinal))
+                        // The list is SyntaxFacts' so the editor offers what this takes.
+                        if (SyntaxFacts.AnnotationTakesPlacementAfterArgument(name.Text)
                             && Current.Kind == SyntaxKind.Dot
                             && IsPlacementWord(Peek(1))
                             && Peek(2)?.Kind != SyntaxKind.Dot)

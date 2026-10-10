@@ -3988,8 +3988,12 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
+    /// <param name="valueAnnotation">The value annotation the placement follows
+    /// (<c>todo</c> in <c>@todo("memo").down</c>), or null for an articulation. It decides
+    /// the words in the Detail and which side comes first: the one that moves the mark
+    /// off its default side.</param>
     internal static CompletionList GetArticulationPlacementCompletions(
-        string text, int offset, Position? position = null)
+        string text, int offset, Position? position = null, string? valueAnnotation = null)
     {
         int j = offset - 1;
         while (j >= 0 && char.IsLetter(text[j])) j--;
@@ -4007,13 +4011,21 @@ public sealed partial class LilySharpLanguageServer
             End = position,
         };
 
+        // The value annotations' own sides (Parser.Music: @text below by default, @diagram
+        // and @todo above): the qualifier that moves the mark is listed first.
+        (string Up, string Down, bool DownFirst) words = valueAnnotation switch
+        {
+            "todo" => ("The memo above the system (the default)", "Put the memo BELOW the system", true),
+            "text" => ("Put the text ABOVE the note", "The text below the note (the default)", false),
+            "diagram" => ("The fret diagram above the staff (the default)", "Put the fret diagram BELOW the staff", true),
+            _ => ("Force this articulation ABOVE the note", "Force this articulation BELOW the note", false),
+        };
+
         CompletionItem Item(string word, string sort) => new()
         {
             Label = p + word,
             Kind = CompletionItemKind.EnumMember,
-            Detail = word == "up"
-                ? "Force this articulation ABOVE the note"
-                : "Force this articulation BELOW the note",
+            Detail = word == "up" ? words.Up : words.Down,
             SortText = sort,
             FilterText = p + word,
             TextEdit = range == null ? null : new TextEdit { Range = range, NewText = p + word },
@@ -4025,7 +4037,9 @@ public sealed partial class LilySharpLanguageServer
             // '!' sorts before every digit, so when these are merged with the
             // annotation names (groups "0".."8") the placement stays on top —
             // it is the more specific continuation of what was just typed.
-            Items = new[] { Item("up", "!0up"), Item("down", "!1down") },
+            Items = words.DownFirst
+                ? new[] { Item("down", "!0down"), Item("up", "!1up") }
+                : new[] { Item("up", "!0up"), Item("down", "!1down") },
         };
     }
 

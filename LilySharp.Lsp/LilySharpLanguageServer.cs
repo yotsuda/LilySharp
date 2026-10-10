@@ -164,7 +164,9 @@ public sealed partial class LilySharpLanguageServer
                 },
                 CompletionProvider = new CompletionOptions
                 {
-                    TriggerCharacters = ["\\", "@", " "],
+                    // '.' only for the placement qualifier (`@todo("memo").` → up/down);
+                    // Completion answers nothing else a '.' triggers.
+                    TriggerCharacters = ["\\", "@", " ", "."],
                     ResolveProvider = false
                 },
                 HoverProvider = true,

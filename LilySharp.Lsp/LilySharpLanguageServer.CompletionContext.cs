@@ -727,6 +727,10 @@ public sealed partial class LilySharpLanguageServer
         AfterAt,
         AfterBackslash,
         AfterArticulationPlacement,
+        /// <summary><c>@todo("…")|</c>, <c>@todo("…").|</c>, <c>@todo("…").d|</c> — the
+        /// placement after a value annotation's argument (<c>@text</c>, <c>@diagram</c>,
+        /// <c>@todo</c>: <see cref="LanguageVocabulary.AnnotationTakesPlacementAfterArgument"/>).</summary>
+        AfterValueAnnotationPlacement,
         /// <summary><c>score NAME |</c> — before the brace: the header's options (a quoted
         /// basename, <c>transpose</c>, <c>pitch</c>) and the body's braces.</summary>
         AfterScoreHeader,
@@ -866,6 +870,10 @@ public sealed partial class LilySharpLanguageServer
         // trailing space means the user has moved on to the next note.
         if (IsArticulationPlacementContext(text, offset))
             return CompletionContext.AfterArticulationPlacement;
+        // The same qualifier after a value annotation's closing paren — `@todo("memo")|`,
+        // `@todo("memo").d|` (owner's request 2026-10-11: `.down` had to be typed by hand).
+        if (ValueAnnotationBeforePlacement(text, offset) is not null)
+            return CompletionContext.AfterValueAnnotationPlacement;
 
         // Look back for context clues
         int i = offset - 1;
@@ -1980,10 +1988,69 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// The '.up' / '.down' placement qualifier for an articulation. When the '.' is
-    /// already typed ('@fermata.'), the bare words are offered; otherwise they carry
-    /// the leading dot so '@fermata' → '@fermata.up'.
+    /// The value annotation whose argument the caret sits right after, when that
+    /// annotation takes the '.up' / '.down' placement there
+    /// (<see cref="LanguageVocabulary.AnnotationTakesPlacementAfterArgument"/>):
+    /// <c>@todo("memo")|</c>, <c>@todo("memo").|</c>, <c>@todo("memo").do|</c> give
+    /// <c>todo</c>. Otherwise null — also for a trailing space (the user moved on), a
+    /// word glued to the ')' without a dot, and an argument the parser would not read
+    /// as one (a '(' after a space is a slur).
     /// </summary>
+    /// <remarks>
+    /// The argument is a memo, so it may hold ')' and '@' of its own
+    /// (<c>@todo("see @text(x) in bar 3")</c>): the '@' is found by reading each
+    /// candidate's argument FORWARD, past quoted strings, and taking the one whose list
+    /// closes at this ')'. Only the caret's line is read — an argument never spans lines.
+    /// </remarks>
+    internal static string? ValueAnnotationBeforePlacement(string text, int offset)
+    {
+        int last = Math.Min(offset, text.Length) - 1;
+        int j = last;
+        while (j >= 0 && char.IsLetter(text[j])) j--;
+        int close;
+        if (j >= 0 && text[j] == '.') close = j - 1;   // '…).' or '…).do'
+        else if (j == last) close = last;               // '…)' with nothing after it
+        else return null;                               // '…)do' — not a placement
+        if (close < 0 || text[close] != ')') return null;
+
+        int lineStart = close;
+        while (lineStart > 0 && text[lineStart - 1] is not ('\n' or '\r')) lineStart--;
+        for (int at = close - 1; at >= lineStart; at--)
+        {
+            if (text[at] != '@') continue;
+            int open = at + 1;
+            while (open < close && char.IsLetter(text[open])) open++;
+            if (open == at + 1 || text[open] != '(' || ArgumentListEnd(text, open, close) != close)
+                continue;
+            string name = text[(at + 1)..open];
+            // `@todo( d e)` is the slur that starts on the note, not an argument (the
+            // parser's rule for a name whose argument is optional).
+            if (LanguageVocabulary.AnnotationArgumentIsOptional(name) && char.IsWhiteSpace(text[open + 1]))
+                return null;
+            return LanguageVocabulary.AnnotationTakesPlacementAfterArgument(name) ? name : null;
+        }
+        return null;
+    }
+
+    /// <summary>The ')' that closes the argument list opened at <paramref name="open"/>,
+    /// read no further than <paramref name="limit"/>, skipping quoted strings (with their
+    /// <c>\"</c> escapes); -1 when it does not close by then.</summary>
+    private static int ArgumentListEnd(string text, int open, int limit)
+    {
+        for (int k = open + 1; k <= limit; k++)
+        {
+            if (text[k] == '"')
+            {
+                for (k++; k <= limit && text[k] != '"'; k++)
+                    if (text[k] == '\\') k++;
+                if (k > limit) return -1;
+            }
+            else if (text[k] == ')')
+                return k;
+        }
+        return -1;
+    }
+
     /// <summary>
     /// True when the caret has already passed a placement dot — <c>@trill.</c>,
     /// <c>@trill.d</c>. There the annotation name is settled and only up/down can

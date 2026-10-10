@@ -70,6 +70,7 @@
 - [ ] クイックフィックス *Resolve this TODO* / *Resolve all N TODOs* で `@todo` が消える（メモごと）。
 - [ ] `Lily#: Show Original Scan` は `x.omr.json` の無い本では出ない（コマンドパレットの when）。
 - [ ] 音符の後ろで `@` → 補完から `todo` を選ぶ → `@todo("")` が入り、カレットが `""` の間に来る（`text`・`mark` と同じ・2026-10-10 のユーザー要望）。そのまま Tab／Esc で抜けても `@todo("")` は警告 LYS4026 を出し、エラーにはならない。
+- [ ] `c4@todo("comment")` の `)` の後ろで `.` を打つ → 補完に `down`（先頭）と `up` が出て、選ぶと `@todo("comment").down` になる。`)` の直後で Ctrl+Space でも `.down`／`.up` が出る。`@text("dolce").` は `up` が先頭、`@fermata.` も `.` で開く。**付点の `c4.` では何も開かない**（`.` は配置のときだけ答える・2026-10-11 のユーザー要望）。⚠️ Reload Window が要る（トリガー文字はサーバの起動時に決まる）。
 
 ### 2.2 コード図まわり
 

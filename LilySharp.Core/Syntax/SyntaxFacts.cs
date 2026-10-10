@@ -711,4 +711,15 @@ internal static class SyntaxFacts
 
     /// <summary>The argument-taking names above, for <c>AnnotationNames</c>.</summary>
     public static IReadOnlyCollection<string> ArgumentTakingAnnotationNames => ArgumentTakingAnnotations;
+
+    /// <summary>
+    /// Whether <c>@name(…)</c> may be followed by the <c>.up</c> / <c>.down</c> placement:
+    /// <c>@text("…").up</c>, <c>@diagram(…).down</c> (the diagram stands above by default,
+    /// owner's decision, session 646) and <c>@todo("…").down</c> (the memo stands above by
+    /// default, owner's decision 2026-10-10). The other value annotations have fixed sides,
+    /// and a '.' after them would corrupt their dotted MarkName forms. One list for the
+    /// parser, which takes the placement, and the editor, which offers it.
+    /// </summary>
+    public static bool AnnotationTakesPlacementAfterArgument(string name)
+        => name is "text" or "diagram" or "todo";
 }

@@ -71,6 +71,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   an export is the page the book would have without its memos.
 - **`todo` completes into its quotes**: `todo("")` with the caret between the quotes, like
   `text` and `mark`; it used to write the bare word.
+- **`.down` completes after a memo**: after `@todo("…")`, `@text("…")` or `@diagram(…)`, a `.`
+  (or completion right after the `)`) offers `.up` and `.down`, the side that moves the mark
+  first; the `.` opens a list nowhere else.
 
 ## 0.11.0
 

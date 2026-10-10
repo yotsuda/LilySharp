@@ -81,6 +81,9 @@ public sealed partial class LilySharpLanguageServer
 
     // ========== Completion ==========
 
+    /// <summary>LSP <c>CompletionTriggerKind.TriggerCharacter</c>.</summary>
+    private const int CompletionTriggerKindTriggerCharacter = 2;
+
     [JsonRpcMethod(Methods.TextDocumentCompletionName, UseSingleObjectParameterDeserialization = true)]
     public Task<CompletionList?> CompletionAsync(CompletionParams @params, CancellationToken token)
         => OffDispatch(() => Completion(@params), token);
@@ -96,6 +99,15 @@ public sealed partial class LilySharpLanguageServer
 
         // Determine context
         var context = GetCompletionContext(doc.Text, offset);
+
+        // '.' is a trigger for ONE thing: the placement after `@fermata.` / `@todo("memo").`
+        // (owner's request 2026-10-11). Everywhere else a '.' is a dotted note value, a
+        // grob key's dot or a sentence's full stop, and a list popping up there would be
+        // noise — so a '.'-triggered request answers nothing outside the placement.
+        if (@params.Context is { TriggerKind: CompletionTriggerKindTriggerCharacter, TriggerCharacter: "." }
+            && context is not (CompletionContext.AfterArticulationPlacement
+                               or CompletionContext.AfterValueAnnotationPlacement))
+            return null;
 
         // The word being typed at the cursor (chord letters/digits, e.g. "cmaj7"
         // or, after a ':', the quality being completed).
@@ -310,6 +322,10 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterArticulationPlacement => PlacementAndStillMatchingNames(
                 doc.Text, offset, position,
                 AtFollowsChord(doc.Text, offset) && GroupBeforeAtAutoNames(doc.Text, offset)),
+            // `@todo("memo")|` / `@todo("memo").|` — the argument is settled, so only the
+            // placement can follow (no names to keep matching, unlike `@trill|`).
+            CompletionContext.AfterValueAnnotationPlacement => GetArticulationPlacementCompletions(
+                doc.Text, offset, position, ValueAnnotationBeforePlacement(doc.Text, offset)),
             // Only a tab string number follows a backslash (the dynamic names this
             // offered until 2026-09-03 were all refused by the parser).
             CompletionContext.AfterBackslash => GetStringNumberCompletions(),
