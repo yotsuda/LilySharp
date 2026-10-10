@@ -1349,13 +1349,16 @@ internal sealed partial class Parser
                             parts.Add(Advance()); // argument token (or a ',' separator)
                         parts.Add(Expect(SyntaxKind.CloseParen));
                         // @text("…").up / .down — placement on the free-text
-                        // annotation — and @diagram(…).down, the fret diagram being
-                        // above by default (owner's decision, session 646). Only these
-                        // two take it: the other value annotations have fixed sides,
-                        // and consuming a '.' here would corrupt their dotted MarkName
-                        // forms (both of these read their argument, never the name).
+                        // annotation — @diagram(…).down, the fret diagram being
+                        // above by default (owner's decision, session 646), and
+                        // @todo("…").down, the memo's callout standing above the staff
+                        // by default (owner's decision 2026-10-10). Only these three
+                        // take it: the other value annotations have fixed sides, and
+                        // consuming a '.' here would corrupt their dotted MarkName
+                        // forms (all three read their argument, never the name).
                         if ((name.Text.Equals("text", StringComparison.Ordinal)
-                             || name.Text.Equals("diagram", StringComparison.Ordinal))
+                             || name.Text.Equals("diagram", StringComparison.Ordinal)
+                             || name.Text.Equals("todo", StringComparison.Ordinal))
                             && Current.Kind == SyntaxKind.Dot
                             && IsPlacementWord(Peek(1))
                             && Peek(2)?.Kind != SyntaxKind.Dot)

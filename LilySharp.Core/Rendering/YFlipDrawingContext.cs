@@ -137,6 +137,10 @@ internal sealed class YFlipDrawingContext : IDrawingContext
     // Forwarded, NOT left to the interface default (a no-op), or no data-todo is written.
     public IDisposable Todo(string key) => _inner.Todo(key);
 
+    // Forwarded like Todo (the default draws nothing); only the centre Y flips.
+    public void TodoRing(double cx, double cy, double rx, double ry)
+        => _inner.TodoRing(cx, F(cy), rx, ry);
+
     // Forwarded like Todo: the interface default is a no-op, so a decorated backend would
     // otherwise never hear what a primitive is or which staff it is on (lysc boxes).
     public IDisposable Kind(string kind) => _inner.Kind(kind);

@@ -208,6 +208,23 @@ internal sealed class SvgDrawingContext : IDrawingContext
         _sb.Append("/>").AppendLine();
     }
 
+    /// <summary>Interactive preview only (the ring is a mark of the editor, not of the page):
+    /// an ellipse of class <c>todo-ring</c>, coloured by the preview's stylesheet, carrying the
+    /// <c>data-todo</c> of its scope.</summary>
+    public void TodoRing(double cx, double cy, double rx, double ry)
+    {
+        if (!_interactive)
+            return;
+        _sb.Append("  <ellipse class=\"todo-ring\"");
+        Attr("cx", cx);
+        Attr("cy", cy);
+        Attr("rx", rx);
+        Attr("ry", ry);
+        _sb.Append(" fill=\"none\"");
+        AppendSource();
+        _sb.Append("/>").AppendLine();
+    }
+
     public void DrawCircle(double cx, double cy, double r, Color? fill = null)
     {
         _sb.Append("  <circle");

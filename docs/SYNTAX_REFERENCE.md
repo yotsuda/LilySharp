@@ -387,15 +387,19 @@ d4@accent.down     // accent forced below
 ### Left to check (`@todo`)
 
 `@todo` marks a note, rest or chord to come back to — a reading you are unsure of, a bar to
-review. It draws nothing and plays nothing: the compiler reports each one as a warning
-(LYS4026, `TODO: memo`), the preview draws the marked head red (the
-`lilysharp.preview.highlightTodos` setting turns that off), and the quick fix *Resolve this
-TODO* deletes it. A quoted argument is a memo; a bare one is a key — a letter, then letters,
-digits, `_` and `-` — which a tool (an OMR reader) links its own data to.
+review. It draws nothing on the page and plays nothing: the compiler reports each one as a
+warning (LYS4026, `TODO: memo`), and the quick fix *Resolve this TODO* deletes it. A quoted
+argument is a memo; a bare one is a key — a letter, then letters, digits, `_` and `-` — which
+a tool (an OMR reader) links its own data to.
+
+The preview shows the marks: the marked head or rest wears a red ring, and a memo stands in
+a callout above the staff with a leader to the ring — `.down` puts it below. The
+`lilysharp.preview.highlightTodos` setting hides the ring and the callout. No export draws
+them: a PDF, PNG, SVG or LilyPond file is laid out as if the memo were not written.
 
 ```
 c'4 fis'8@todo("F# or F natural? the sharp is faint") e'8 g'2 |
-r2@todo("bar 12 is only 7/8") d'2 |
+r2@todo("bar 12 is only 7/8").down d'2 |
 c'4@todo(o1203 "smudged") e'4@todo g'2 |
 ```
 

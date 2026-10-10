@@ -769,6 +769,10 @@ internal static partial class SharedRenderer
                 gc.DrawNotehead(head, x, noteY, noteFontSize, noteheadColor,
                     GlyphMetrics.GetNoteheadBBox(headFont, noteValue).Width,
                     GlyphMetrics.GetNoteheadBBox(headFont, noteValue).Height);
+                // The preview's ring around a @todo head (IDrawingContext.TodoRing: the
+                // interactive SVG alone draws it).
+                if (note.TodoKey != null)
+                    TodoRingAround(gc, GlyphMetrics.GetNoteheadBBox(headFont, noteValue), x, noteY);
             }
 
         // Ledger lines are drawn by the staff-measure ledger pre-pass, BEFORE
@@ -1130,9 +1134,14 @@ internal static partial class SharedRenderer
                 using (GrobFontSize.IsReduced(chord)
                        ? gc.MusicFace(GrobFontSize.DesignOf(chord, SizedGrob.NoteHead))
                        : NullScope.Instance)
+                {
                     gc.DrawNotehead(memberHead, x + headOffsets[i], y, noteFontSize, noteheadColor,
                         GlyphMetrics.GetNoteheadAdvance(chordHeadFont, noteValue),
                         GlyphMetrics.GetNoteheadBBox(chordHeadFont, noteValue).Height);
+                    // One ring per member: the chord is the marked item (MusicItem.TodoKey).
+                    if (chord.TodoKey != null)
+                        TodoRingAround(gc, GlyphMetrics.GetNoteheadBBox(chordHeadFont, noteValue), x + headOffsets[i], y);
+                }
             if (y > topY) topY = y;
             if (y < bottomY) bottomY = y;
             if (n.StaffPosition > maxPos) maxPos = n.StaffPosition;
@@ -1601,7 +1610,11 @@ internal static partial class SharedRenderer
         char glyph = Music(MusicGlyphs.Rest(noteValue, staffPosition, staffLines));
         using (gc.Source(rest.SourcePosition))
         using (TodoScope(gc, rest))
+        {
             gc.DrawGlyph(glyph, x, y, FontSize);
+            if (rest.TodoKey != null)
+                TodoRingAround(gc, GlyphMetrics.GetRestBBox(noteValue), x, y);
+        }
 
         // Augmentation dots: one dot-width right of the rest's ink, at the position the
         // dot COLUMN solved RELATIVE to the rest's origin (the dot's Y-parent is the
@@ -1628,4 +1641,13 @@ internal static partial class SharedRenderer
     /// glyph carries it), or nothing.</summary>
     private static IDisposable TodoScope(IDrawingContext gc, MusicItem item)
         => item.TodoKey is { } key ? gc.Todo(key) : NullScope.Instance;
+
+    /// <summary>The preview's ring around a marked glyph: the glyph's box (Y-up, about the
+    /// origin the glyph is drawn at) widened by <see cref="DynamicEngraver.TodoRingPadding"/>
+    /// each way. Called inside the glyph's <see cref="TodoScope"/>, so it carries the mark's
+    /// <c>data-todo</c>; drawn by the interactive SVG alone (owner's decision 2026-10-10:
+    /// a ring, not a red head). LILYSHARP-OWN.</summary>
+    private static void TodoRingAround(IDrawingContext gc, GlyphMetrics.BBox box, double x, double y)
+        => gc.TodoRing(x + box.CenterX, y + box.CenterY,
+            box.Width / 2 + DynamicEngraver.TodoRingPadding, box.Height / 2 + DynamicEngraver.TodoRingPadding);
 }

@@ -90,6 +90,20 @@ public sealed record DynamicItem
     /// </summary>
     public bool OnMultiMeasureRest { get; init; }
 
+    /// <summary>
+    /// True for a <c>@todo("memo")</c> callout (<see cref="IsExpressiveText"/> is set with it):
+    /// the memo rides the expressive-text pipeline for its place beside the staff (UP by
+    /// default, <c>.down</c> below) and the preview draws it in a box with a leader to the
+    /// ringed head. Made only when the collector's <c>TodoCallouts</c> is on — the preview's
+    /// setting; an export has none. <see cref="TodoKey"/> is the mark's key (<c>""</c> for
+    /// none), stamped <c>data-todo</c> on what is drawn. Owner's decisions 2026-10-10.
+    /// LILYSHARP-OWN: a working mark of the editor, no LilyPond counterpart.
+    /// </summary>
+    public bool IsTodoCallout { get; init; }
+
+    /// <inheritdoc cref="IsTodoCallout"/>
+    public string? TodoKey { get; init; }
+
     /// <summary>Creates a dynamic marking of the given level.</summary>
     public DynamicItem(DynamicLevel level, int measureIndex, int itemIndex,
         int sourcePosition, int staffIndex = 0)

@@ -30,8 +30,10 @@ namespace LilySharp.Core.Semantics;
 /// The owner's decision of 2026-10-05 (LilySharp-Omr proposal A1): a general "check this
 /// later" mark, which an OMR reader writes on the symbols it is unsure of and a writer on
 /// anything. It changes neither the page nor the playback; the compiler reports each one
-/// (<see cref="DiagnosticCodes.TodoMark"/>), the preview draws the marked head red
-/// (<c>data-todo</c> on its glyph), and resolving it is deleting it.
+/// (<see cref="DiagnosticCodes.TodoMark"/>), the preview rings the marked head (<c>data-todo</c>
+/// on its glyph, <c>IDrawingContext.TodoRing</c>) and stands the memo in a callout beside the
+/// staff (<c>Svg.Model.DynamicItem.IsTodoCallout</c>, the preview's collect only; <c>.down</c>
+/// puts it below — owner's decisions 2026-10-10), and resolving it is deleting it.
 /// </para>
 /// <para>
 /// The two arguments are told apart by their QUOTES alone: a string is the memo, a bare word

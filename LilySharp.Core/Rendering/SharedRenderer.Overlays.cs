@@ -64,6 +64,11 @@ internal static partial class SharedRenderer
             // Free expressive text (@text) prints plain italic; dynamic levels keep LP's
             // bold-italic DynamicText face — from the one home the reservation reads.
             var style = LilySharp.Core.Svg.Layout.DynamicEngraver.LabelStyle(fonts, d.IsExpressiveText);
+            if (d.IsTodoCallout)
+            {
+                DrawTodoCallout(fonts, d, text, y, size, style, midYup, os, gc);
+                continue;
+            }
             // A SMuFL score's level in the font's own dynamic glyphs, centred where the text
             // would stand — the run the layout reserved (DynamicEngraver.SmuflGlyphRun).
             if (!d.IsExpressiveText
@@ -79,6 +84,42 @@ internal static partial class SharedRenderer
             using (gc.Source(d.SourcePosition))
                 gc.DrawText(text, d.X, y, size, LilySharp.Core.Svg.Layout.DynamicEngraver.LabelRole(d.IsExpressiveText),
                     style, TextAnchor.Middle, Color.Black);
+        }
+    }
+
+    // The @todo marks' ink and paper (the preview's; owner's decision 2026-10-10 — the same red
+    // as the scan view's boxes, a pale ground so the memo reads over the music).
+    private static readonly Color TodoInk = new(0xE5, 0x39, 0x35);
+    private static readonly Color TodoPaper = new(0xFF, 0xF3, 0xF2);
+
+    /// <summary>
+    /// A <c>@todo("memo")</c> callout: the memo in a box beside the staff, a leader from the
+    /// box to the ring around the marked head (<see cref="DynamicLayout.TodoLeaderYUp"/>),
+    /// everything stamped <c>data-todo</c>. The box is the memo's ink plus
+    /// <see cref="DynamicEngraver.TodoCalloutPadding"/>; the layout reserved the ink alone, so
+    /// the box may touch a neighbour by that padding — a preview mark, not a page. The leader
+    /// is left out when the box already stands closer than the ring (a chord's low head under a
+    /// callout below it, say). LILYSHARP-OWN.
+    /// </summary>
+    private static void DrawTodoCallout(ScoreTextMetrics fonts, DynamicLayout d, string text,
+        double y, double size, FontStyle style, double midYup, in OssiaShrink os, IDrawingContext gc)
+    {
+        double scale = os.Size(1.0, d.StaffIndex);
+        double half = DynamicEngraver.LabelHalfWidth(fonts, text, expressive: true) * scale;
+        var (ascent, descent) = DynamicEngraver.InkOf(fonts, text, true);
+        double pad = DynamicEngraver.TodoCalloutPadding * scale;
+        double top = y + ascent * scale + pad, bottom = y - descent * scale - pad;
+        double leaderEnd = os.YUp(midYup + d.TodoLeaderYUp, d.StaffIndex, d.MeasureIndex);
+        using (gc.Source(d.SourcePosition))
+        using (gc.Todo(d.TodoKey ?? ""))
+        {
+            gc.DrawRectangle(d.X - half - pad, top, 2 * (half + pad), top - bottom,
+                fill: TodoPaper, stroke: TodoInk, strokeWidth: DynamicEngraver.TodoLineThickness);
+            if (d.IsAbove ? leaderEnd < bottom : leaderEnd > top)
+                gc.DrawLine(d.X, d.IsAbove ? bottom : top, d.X, leaderEnd,
+                    stroke: TodoInk, strokeWidth: DynamicEngraver.TodoLineThickness);
+            gc.DrawText(text, d.X, y, size, DynamicEngraver.LabelRole(true),
+                style, TextAnchor.Middle, TodoInk);
         }
     }
 

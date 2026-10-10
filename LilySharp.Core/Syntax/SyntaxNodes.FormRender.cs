@@ -630,8 +630,9 @@ public sealed partial class MusicMarkSyntax : SyntaxNode
 
     /// <summary>
     /// The side forced by a trailing '.up' / '.down' qualifier, or null when none was
-    /// written. Only <c>@text(…)</c> takes one; the parser refuses it elsewhere so the
-    /// other families' dotted names cannot be corrupted by it.
+    /// written. Only <c>@text(…)</c>, <c>@diagram(…)</c> and <c>@todo(…)</c> take one; the
+    /// parser refuses it elsewhere so the other families' dotted names cannot be corrupted
+    /// by it.
     /// </summary>
     public bool? ForcedAbove
     {

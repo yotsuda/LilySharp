@@ -56,6 +56,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   preview has been clicked or typed in once (the browser's autoplay rule) now puts *click the
   preview once to enable its sound* in the status bar, and the preview keeps one synth for its
   life and resumes it from that first click; it used to stay silent with no word.
+- **A `@todo` is shown as a ring and a callout.** The preview rings the marked head or rest
+  in red instead of filling it, and a memo stands in a callout above the staff — `.down`
+  below — with a leader down to the ring; `lilysharp.preview.highlightTodos` off hides them.
+  No export draws them.
 - **`todo` completes into its quotes**: `todo("")` with the caret between the quotes, like
   `text` and `mark`; it used to write the bare word.
 

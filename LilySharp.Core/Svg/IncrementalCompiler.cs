@@ -994,7 +994,7 @@ public sealed class IncrementalCompiler
     }
 
     /// <summary>
-    /// Collects <paramref name="tree"/> the way <see cref="SvgGenerator.CollectScore(SyntaxTree, RenderSpec?, Layout.LayoutOptions?, Semantics.PaperOverrides?)"/>
+    /// Collects <paramref name="tree"/> the way <see cref="SvgGenerator.CollectScore(SyntaxTree, RenderSpec?, Layout.LayoutOptions?, Semantics.PaperOverrides?, bool)"/>
     /// does, resuming the collect walks from the recorded baseline when the edit
     /// window allows it (see <see cref="CollectResumePlanner"/>). Any resume path —
     /// planned or bailed — produces a score identical to a full collect of
@@ -1021,6 +1021,7 @@ public sealed class IncrementalCompiler
                         BeamMemo = _beamMemo,
                         NestedResume = _nestedResume,
                         RecordsPitchTrace = false, // no reader (MeasureCollector.RecordsPitchTrace)
+                        TodoCallouts = _options.TodoCallouts,
                     };
                     var resumed = SvgGenerator.CollectScore(resumedCollector, tree, spec);
                     int walks = 0, adopted = 0, splicedWalks = 0, spliced = 0;
@@ -1088,6 +1089,7 @@ public sealed class IncrementalCompiler
             BeamMemo = _beamMemo,
             NestedResume = _nestedResume,
             RecordsPitchTrace = false, // no reader (MeasureCollector.RecordsPitchTrace)
+            TodoCallouts = _options.TodoCallouts,
         };
         var score = SvgGenerator.CollectScore(source, tree, spec);
         _collectSource = source;

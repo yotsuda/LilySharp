@@ -257,6 +257,15 @@ public interface IDrawingContext
     IDisposable Todo(string key) => NullScope.Instance;
 
     /// <summary>
+    /// The ring around a head or rest marked <c>@todo</c>: an ellipse of the given centre and
+    /// radii, drawn by the INTERACTIVE SVG only (the preview's mark; owner's decision
+    /// 2026-10-10) and stamped <c>data-todo</c> by the enclosing <see cref="Todo"/> scope. It
+    /// takes no space and no export draws it, so the default ignores it; a decorating
+    /// backend forwards it like <see cref="Todo"/>.
+    /// </summary>
+    void TodoRing(double cx, double cy, double rx, double ry) { }
+
+    /// <summary>
     /// Names WHAT subsequent draw operations (until <see cref="IDisposable.Dispose"/>) are — a
     /// stem, a staff line, a tie — where the primitive cannot say it (a line is a line). Read
     /// by <c>lysc boxes</c> (BoxesDrawingContext: one box per symbol, by kind, for an OMR

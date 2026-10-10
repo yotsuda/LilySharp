@@ -45,6 +45,16 @@ public sealed class SvgRenderOptions
     public bool Interactive { get; init; }
 
     /// <summary>
+    /// If true, a <c>@todo("memo")</c> is laid out as a CALLOUT — the memo in a box beside
+    /// the staff with a leader to the ringed head (<c>MeasureCollector.TodoCallouts</c>). Set
+    /// for the VS Code preview; off for every export, whose page is laid out as if the memo
+    /// were not there (owner's decision 2026-10-10: the marks are the preview's, the exports
+    /// are the finished page). The RING itself is a drawing-time mark of the interactive SVG
+    /// (<c>IDrawingContext.TodoRing</c>) and takes no space.
+    /// </summary>
+    public bool TodoCallouts { get; init; }
+
+    /// <summary>
     /// Lay the music out as a SNIPPET — a picture in a document rather than a page
     /// (<see cref="Layout.LayoutOptions.Snippet"/>: one page as tall as the music, no
     /// automatic page breaks, cropped to the widest system). Set by the Markdown lys
@@ -85,6 +95,7 @@ public sealed class SvgRenderOptions
     public static SvgRenderOptions Preview() => new()
     {
         OmitFontFace = true,
-        Interactive = true
+        Interactive = true,
+        TodoCallouts = true,
     };
 }

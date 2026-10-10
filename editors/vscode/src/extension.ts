@@ -2304,11 +2304,25 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .highlight {
             filter: drop-shadow(0 0 4px #ff6600);
         }
-        /* A head or rest marked @todo (data-todo) is red unless the
-           lilysharp.preview.highlightTodos setting is off. The dark scheme's
-           invert + hue-rotate(180deg) brings the red back to red. */
-        :root:not(.todo-plain) #svgContainer [data-todo] {
-            fill: #e53935;
+        /* A head or rest marked @todo wears a ring (the SVG's ellipse.todo-ring, drawn by
+           the interactive SVG alone), and a memo stands in a callout box with a leader to
+           the ring — both stamped data-todo, both coloured by the SVG itself. The
+           lilysharp.preview.highlightTodos setting off (todo-plain) hides the ring, the
+           box and the leader; the memo keeps its place (the layout reserved it) and goes
+           plain. Until 2026-10-10 the head itself was filled red (owner: "赤くつぶれる").
+           The dark scheme's invert + hue-rotate(180deg) brings the red back to red. */
+        #svgContainer ellipse.todo-ring {
+            fill: none;
+            stroke: #e53935;
+            stroke-width: 1.2;
+        }
+        :root.todo-plain #svgContainer ellipse.todo-ring,
+        :root.todo-plain #svgContainer rect[data-todo],
+        :root.todo-plain #svgContainer line[data-todo] {
+            display: none;
+        }
+        :root.todo-plain #svgContainer text[data-todo] {
+            fill: currentColor;
         }
         /* A bar an OMR reader flagged (the scan view's B4), framed as on the scan. */
         #svgContainer rect.bar-box.flagged {
