@@ -141,6 +141,27 @@ public class TodoCalloutTests
     }
 
     [Fact]
+    public void AMemo_StandsClearOfTheInkAroundIt()
+    {
+        // The same marked note, followed by notes within the staff and by notes high on
+        // ledger lines (whose heads and stems stand where the memo would go, right of the
+        // ring, just over the staff; the staff's edge is the same in both): the memo is set
+        // where nothing else is drawn, so beside the high notes it stands farther from the
+        // ring (owner's request 2026-10-10: a memo over another mark cannot be read).
+        // Distances are leader lengths in Y — ring (y1) to underline (y2) — both page
+        // overlays, so one frame; the notes themselves are drawn in the system's own frame
+        // and are not compared.
+        string bare = Book("c''4@todo(\"memo\") d''4 e''4 f''4 |");
+        string busy = Book("c''4@todo(\"memo\") c'''4 d'''4 e'''4 |");
+        string bareSvg = SvgGenerator.Generate(SyntaxTree.Parse(bare), SvgRenderOptions.Preview());
+        string busySvg = SvgGenerator.Generate(SyntaxTree.Parse(busy), SvgRenderOptions.Preview());
+        var bareLeader = Assert.Single(Leaders(bareSvg));
+        var busyLeader = Assert.Single(Leaders(busySvg));
+        double bareRise = bareLeader.Y1 - bareLeader.Y2, busyRise = busyLeader.Y1 - busyLeader.Y2;
+        Assert.True(busyRise > bareRise + 1.5, $"bare rise {bareRise}, beside ledgered notes {busyRise}");
+    }
+
+    [Fact]
     public void AMark_MovesNothingOnThePage()
     {
         // The same book with the memo and with an empty one (the mark stays, so the export's

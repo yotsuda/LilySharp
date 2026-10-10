@@ -60,9 +60,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   chord with a ring drawn as a hand draws one (one ring round a whole chord) instead of filling
   it red, and a memo stands as a line of small red text, underlined, in the margin above the
   system — `.down` below — set off to the side with more room, with a leader from the ring
-  to the underline, all in one pen;
-  nothing on the page moves for a mark. `lilysharp.preview.highlightTodos` off hides them, and
-  no export draws them.
+  to the underline, all in one pen. Nothing on the page moves for a mark; the memo itself is
+  set where nothing else is drawn, climbing past a chord symbol, a dynamic, a ledgered note or
+  an earlier memo until it stands clear. `lilysharp.preview.highlightTodos` off hides them,
+  and no export draws them.
 - **`todo` completes into its quotes**: `todo("")` with the caret between the quotes, like
   `text` and `mark`; it used to write the bare word.
 

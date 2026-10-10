@@ -108,12 +108,17 @@ internal static partial class SharedRenderer
     /// off the LIVE score and the layout's columns, so no layout record exists for them and
     /// no cached layout can hold a stale data-pos; drawn by a backend that
     /// <see cref="IDrawingContext.DrawsEditorMarks"/> (the interactive SVG), so no export has
-    /// them and nothing is reserved for them: other marks may stand under the ink, as under a
-    /// reviewer's pencil. Everything is stamped <c>data-todo</c> and the item's <c>data-pos</c>.
-    /// A multi-measure rest's ring spans its measure, a staff space each way. LILYSHARP-OWN.
+    /// them and nothing is reserved for them. A memo is set where nothing else is: the page's
+    /// ink was recorded as it was drawn (<paramref name="ink"/>, an <see cref="InkRecorder"/>
+    /// round the device), and the memo climbs from the staff's edge until its own box clears
+    /// every box there — notes, marks, lyrics, the rings, the memos placed before it (owner's
+    /// request 2026-10-10: a memo over another mark cannot be read). Everything is stamped
+    /// <c>data-todo</c> and the item's <c>data-pos</c>. A multi-measure rest's ring spans
+    /// its measure, a staff space each way.
+    /// LILYSHARP-OWN: an editor's mark, with no LilyPond counterpart.
     /// </summary>
     private static void DrawTodoMarks(MultiStaffScore score, Dictionary<int, SystemLayout> measureToSystem,
-        Dictionary<int, double> sysTopYUp, in OssiaShrink os, IDrawingContext gc)
+        InkRecorder? ink, in OssiaShrink os, IDrawingContext gc)
     {
         if (!gc.DrawsEditorMarks)
             return;
@@ -133,11 +138,8 @@ internal static partial class SharedRenderer
             staffEdges[staffIndex] = (top, bottom, MultiStaffLayouter.NotationStaffLinesOf(staff), spacing);
         }
 
-        // Pass 1: the rings, the memos to place, and how far each system's NOTES reach above
-        // and below its staves (heads and stems — the memos stand clear of them).
+        // Pass 1: the rings, and the memos to place.
         var callouts = new List<TodoCallout>();
-        var inkTop = new Dictionary<int, double>();
-        var inkBottom = new Dictionary<int, double>();
         foreach (var (_, staff, staffIndex) in score.EnumerateStaves())
         {
             var (_, _, staffLines, spacing) = staffEdges[staffIndex];
@@ -160,13 +162,6 @@ internal static partial class SharedRenderer
                     for (int ii = 0; ii < items.Length; ii++)
                     {
                         var item = items[ii];
-                        if (NoteReach(item) is var (reachBottom, reachTop))
-                        {
-                            double t = os.YUp(midYup + reachTop, staffIndex, mi);
-                            double b = os.YUp(midYup + reachBottom, staffIndex, mi);
-                            inkTop[system.SystemIndex] = Math.Max(inkTop.GetValueOrDefault(system.SystemIndex, double.MinValue), t);
-                            inkBottom[system.SystemIndex] = Math.Min(inkBottom.GetValueOrDefault(system.SystemIndex, double.MaxValue), b);
-                        }
                         if (item.TodoKey is not { } key)
                             continue;
                         if (TodoInkBox(item, measureLayout, measures, mi, ii, staffLines, spacing) is not var (left, right, bottom, top))
@@ -195,8 +190,13 @@ internal static partial class SharedRenderer
         // line of red text with no box, set OFF the note's column by one fixed distance towards
         // the side with more room (owner's requests 2026-10-10: a memo on the note's own x
         // looks wrong, and a shift that differs from memo to memo looks untidy), kept inside the
-        // system's width; two that would overlap at one level stack outward, left to right. A
-        // short leader runs from the ring's shoulder to the text's near end.
+        // system's width. From that edge the memo climbs (sinks, for .down) by small steps
+        // until the box of its text and underline, with a space of air round it, clears every
+        // box the page's ink recorder holds — the notes and their stems, the marks and
+        // lyrics, the rings, and the memos already placed, left to right (owner's request
+        // 2026-10-10: a memo over another mark cannot be read; the p893 spelling only
+        // stacked the memos among themselves and let them lie over a dynamic or a chord
+        // symbol). Without a recorder the edge itself is taken.
         var systemEdge = new Dictionary<(int System, bool Below), double>();
         foreach (var group in callouts.GroupBy(c => (c.System.SystemIndex, c.Below)))
         {
@@ -205,16 +205,8 @@ internal static partial class SharedRenderer
             bool below = first.Below;
             if (!systemEdge.TryGetValue(group.Key, out double edge))
             {
-                // The margin's edge: the system's outermost drawn line, or its farthest note
-                // (head and stem) where the notes reach past the lines — so the memos stand
-                // in the gap between systems and not through a run of ledgered notes (the
-                // owner's "余白": the first spelling stood them a gap over the top LINE). Other
-                // marks there — a dynamic, a chord symbol, a lyric row — may lie under the ink.
+                // The system's outermost drawn line, over every staff standing on it.
                 edge = below ? double.MaxValue : double.MinValue;
-                if (!below && inkTop.TryGetValue(first.System.SystemIndex, out double top))
-                    edge = top;
-                if (below && inkBottom.TryGetValue(first.System.SystemIndex, out double bottomInk))
-                    edge = bottomInk;
                 foreach (var (si, (staffTop, staffBottom, _, _)) in staffEdges)
                 {
                     double mid = os.StaffMiddleYUp(si, first.MeasureIndex, StaffHeight);
@@ -228,7 +220,6 @@ internal static partial class SharedRenderer
             var system = first.System;
             double sysLeft = system.Measures[0].X;
             double sysRight = system.Measures[^1].X + system.Measures[^1].Width;
-            var placed = new List<(double Left, double Right, int Level)>();
             foreach (var c in ordered)
             {
                 double scale = c.Scale;
@@ -237,23 +228,37 @@ internal static partial class SharedRenderer
                 var (ascent, descent) = DynamicEngraver.InkOf(fonts, c.Memo, true);
                 ascent *= scale * TodoMemoScale;
                 descent *= scale * TodoMemoScale;
-                double offset = TodoMemoOffset * scale, gap = TodoMemoGap * scale;
+                double offset = TodoMemoOffset * scale, gap = TodoMemoGap * scale, air = TodoMemoAir * scale;
+                double drop = TodoUnderlineDrop * scale;
                 // The side with more room between the ring and the system's edge.
                 bool toRight = sysRight - c.RingX >= c.RingX - sysLeft;
                 double left = toRight ? c.RingX + offset : c.RingX - offset - width;
                 left = Math.Max(sysLeft, Math.Min(left, sysRight - width));
                 double right = left + width;
-                // A level is free when the text clears every neighbour on it by a space of air.
-                int level = 0;
-                while (placed.Any(p => p.Level == level && p.Left < right + TodoMemoAir * scale && left - TodoMemoAir * scale < p.Right))
-                    level++;
-                placed.Add((left, right, level));
-                double step = level * (ascent + descent + TodoUnderlineDrop * scale + gap / 2);
                 double ringEdge = below ? c.RingY - c.RingRy : c.RingY + c.RingRy;
-                double drop = TodoUnderlineDrop * scale;
+                // The text's box, underline included, from the baseline: [baseline − descent −
+                // drop − pen, baseline + ascent].
+                double boxDown = descent + drop + TodoPen * scale, boxUp = ascent;
                 double baseline = below
-                    ? Math.Min(edge, ringEdge) - gap - ascent - step
-                    : Math.Max(edge, ringEdge) + gap + descent + drop + step;
+                    ? Math.Min(edge, ringEdge) - gap - boxUp
+                    : Math.Max(edge, ringEdge) + gap + boxDown;
+                if (ink != null)
+                {
+                    // The climb ends at the page's edge: a memo that finds no clear place
+                    // before it stays at the edge, over whatever is there, rather than be cut
+                    // off (the preview's page is a strip no taller than its systems).
+                    const double climb = 0.5;
+                    double pageTop = ink.PageHeight - air, pageBottom = air;
+                    // Less air sideways than up and down: the memo's near end stands one
+                    // offset from the ring's centre, and a full space of air there would
+                    // meet the ring's own box and lift every memo a step.
+                    for (int tries = 0; tries < 400
+                        && (below ? baseline - boxDown - climb * scale > pageBottom : baseline + boxUp + climb * scale < pageTop)
+                        && !ink.IsClear(left - air * 0.4, right + air * 0.4, baseline - boxDown - air / 2, baseline + boxUp + air / 2);
+                        tries++)
+                        baseline += below ? -climb * scale : climb * scale;
+                    baseline = below ? Math.Max(baseline, pageBottom + boxDown) : Math.Min(baseline, pageTop - boxUp);
+                }
                 // The memo is UNDERLINED, and the leader joins the underline's centre to the
                 // ring — the point of the ring that faces it — with the one pen (owner's
                 // requests 2026-10-10). A memo below the staff is joined at the centre of its
@@ -270,7 +275,10 @@ internal static partial class SharedRenderer
                 using (gc.Todo(c.Key))
                 {
                     gc.DrawLine(left, underlineY, right, underlineY, stroke: TodoInk, strokeWidth: pen, cap: LineCap.Round);
-                    gc.DrawLine(onRingX, onRingY, centreX, attachY, stroke: TodoInk, strokeWidth: pen, cap: LineCap.Round);
+                    // The leader is not recorded: its long slanted box would fence off the
+                    // margin it crosses for the memos after it.
+                    using (ink?.Suspend())
+                        gc.DrawLine(onRingX, onRingY, centreX, attachY, stroke: TodoInk, strokeWidth: pen, cap: LineCap.Round);
                     gc.DrawText(c.Memo, left, baseline, em, DynamicEngraver.LabelRole(true),
                         DynamicEngraver.LabelStyle(fonts, true), TextAnchor.Start, TodoInk);
                 }
@@ -278,36 +286,17 @@ internal static partial class SharedRenderer
         }
     }
 
-    /// <summary>How far an item's notes reach over the staff middle (Y-up, staff spaces), head
-    /// and stem: a stem is read at LilyPond's plain length of 3.5 on the stem's side and a
-    /// head's half height on the other; a rest its own position a space each way; null for
-    /// an item that draws nothing of the kind. A rough bound for the margin — beams and flags
-    /// are not read — which is all the memos need.</summary>
-    private static (double Bottom, double Top)? NoteReach(MusicItem item)
+    /// <summary>Whether any item of the score carries a memo — what decides that a page's ink
+    /// is recorded for the memos' placing (<see cref="InkRecorder"/>).</summary>
+    internal static bool HasTodoMemos(MultiStaffScore score)
     {
-        const double stem = 3.5, head = 0.5;
-        switch (item)
-        {
-            case NoteItem note:
-            {
-                double y = note.StaffPosition / 2.0;
-                bool up = note.ForcedStemUp ?? note.StemUp;
-                return (y - (up ? head : stem), y + (up ? stem : head));
-            }
-            case ChordItem { Notes.Length: > 0 } chord:
-            {
-                double lo = chord.Notes.Min(n => n.StaffPosition) / 2.0, hi = chord.Notes.Max(n => n.StaffPosition) / 2.0;
-                bool up = chord.ForcedStemUp ?? chord.StemUp;
-                return (lo - (up ? head : stem), hi + (up ? stem : head));
-            }
-            case RestItem { IsMultiMeasure: false } rest:
-            {
-                double y = (rest.StaffPosition ?? 0) / 2.0;
-                return (y - 1.0, y + 1.0);
-            }
-            default:
-                return null;
-        }
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+            foreach (var voice in staff.Voices)
+                foreach (var measure in voice.Measures)
+                    foreach (var item in measure.Items)
+                        if (item.TodoMemo is { Length: > 0 })
+                            return true;
+        return false;
     }
 
     /// <summary>A memo awaiting its place in the margin (<see cref="DrawTodoMarks"/>): its

@@ -137,6 +137,7 @@ internal static partial class SharedRenderer
         // drawer's dominant term (session 160).
         var fingeringsByPage = GroupFingeringsByPage(layout);
         var barNumbers = PrintedBarNumbers(score);
+        bool recordInk = HasTodoMemos(score);
         bool firstPage = true;
         int pageIndex = -1;
         foreach (var page in layout.Pages)
@@ -147,6 +148,17 @@ internal static partial class SharedRenderer
             // context. Every primitive Y handed to `gc` below is page Y-up
             // (page-bottom origin) and the decorator maps it to device.
             var device = doc.BeginPage(page.Width, page.Height);
+            // The editor's memos are set where nothing else is drawn, so a page that has one
+            // records its ink as it goes (InkRecorder round the device) and draws every
+            // system live — a replayed fragment writes text, not primitives. Only where the
+            // backend shows the editor's marks: an export records nothing.
+            InkRecorder? ink = null;
+            if (device.DrawsEditorMarks && recordInk)
+            {
+                ink = new InkRecorder(device, score.TextMetrics, page.Height, options.MarginLeft);
+                device = ink;
+            }
+            var pageFragHost = ink == null ? fragHost : null;
             IDrawingContext gc = new YFlipDrawingContext(device, page.Height);
             // LILYPOND-REF: lily/page-layout-problem.cc:434 — header at MarginTop;
             // SystemLayout.Y already includes MarginTop, so apply MarginLeft only.
@@ -208,9 +220,9 @@ internal static partial class SharedRenderer
                     }
                     try
                     {
-                        if (fragHost == null || !fragments!.TryReplay(score, drawn, fragHost, flipBase))
-                            using (fragHost != null
-                                ? fragments!.BeginCapture(score, drawn, fragHost, flipBase)
+                        if (pageFragHost == null || !fragments!.TryReplay(score, drawn, pageFragHost, flipBase))
+                            using (pageFragHost != null
+                                ? fragments!.BeginCapture(score, drawn, pageFragHost, flipBase)
                                 : null)
                                 DrawSystem(score, layout, drawn, resolver, beamedItems, systemGc, flipBase);
                         // OUTSIDE the capture: a replayed system stands at other bar numbers
@@ -262,7 +274,7 @@ internal static partial class SharedRenderer
                 DrawLyricHyphens(layout, measureToSystemTopYUp, gc);
                 DrawPartCombine(score.TextMetrics, layout, measureToSystemTopYUp, gc);
                 // LAST, over everything: the editor's red ink (the interactive SVG alone draws it).
-                DrawTodoMarks(score, measureToSystem, measureToSystemTopYUp, os, gc);
+                DrawTodoMarks(score, measureToSystem, ink, os, gc);
             }
             finally
             {

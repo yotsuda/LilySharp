@@ -397,8 +397,10 @@ chord wears a ring drawn as a hand draws one (one ring round a whole chord), and
 stands as a line of small red text, underlined, in the margin above the system, set off to
 the side with more room, with a leader from the ring to the underline — one pen for all three
 — and `.down` puts it below. Nothing on the page
-moves for a mark, as nothing moves for a pencilled note; a memo may stand over whatever is
-there. The `lilysharp.preview.highlightTodos` setting hides the marks. No export draws them.
+moves for a mark, as nothing moves for a pencilled note; the memo itself is set where nothing
+else is drawn — it climbs past a chord symbol, a dynamic, a ledgered note or an earlier memo
+until it stands clear, and only at the page's edge may it lie over something. The
+`lilysharp.preview.highlightTodos` setting hides the marks. No export draws them.
 
 ```
 c'4 fis'8@todo("F# or F natural? the sharp is faint") e'8 g'2 |

@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 231 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **357** | |
+| `OWN` | 232 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **358** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（231 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（232 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **`LilyPondExporter.EmitChordList`** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
@@ -303,6 +303,8 @@
 - **`Parser.ParseShapeChord`** LILYSHARP-OWN: LilyPond writes such a chord out note by note.
 ### `LilySharp.Core/Rendering/HarfBuzzOutline.cs`
 - **`HarfBuzzOutline`** LILYSHARP-OWN: LilyPond reads its text ink through FreeType as well (Pango over the
+### `LilySharp.Core/Rendering/InkRecorder.cs`
+- **`InkRecorder`** LILYSHARP-OWN: an editor's aid with no LilyPond counterpart — LilyPond has no marks to place.
 ### `LilySharp.Core/Rendering/Pdf/EmmentalerFontResolver.cs`
 - **`DocumentTextFaces`** ⚠️ LILYSHARP-OWN: ONE NAME BOUND TO BOTH FAMILIES keeps the FIRST role's answer.
 ### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
@@ -319,7 +321,7 @@
 - **`SharedRenderer.DrawStemlessTremolo`** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
 - **`SharedRenderer.TodoRingPadding`** LILYSHARP-OWN, every one: an editor's mark, with no LilyPond counterpart. Owner's
-- **`SharedRenderer.DrawTodoMarks`** A multi-measure rest's ring spans its measure, a staff space each way. LILYSHARP-OWN.
+- **`SharedRenderer.DrawTodoMarks`** LILYSHARP-OWN: an editor's mark, with no LilyPond counterpart.
 - **`SharedRenderer.DrawBendBefore`** LILYSHARP-OWN: LilyPond has no scoop or plop — no grob and no event spells either in
 - **`SharedRenderer.BendLabelEm`** The bend amount label's ENGRAVING em. LILYSHARP-OWN, as
 - **`SharedRenderer.DrawGuitarBend`** LILYSHARP-OWN: LilyPond's guitar bend is the BendSpanner (`\^`) — a line and curve to
