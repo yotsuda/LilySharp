@@ -129,6 +129,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第874セッションの経緯
+
+### 1.1 第874セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第873 の続き・ユーザー「続けて」）。`-Start p874`（HEAD `3bad50832`）＝full **11702 / 0 / 2 / 11704**。§7 3.5 で第872 を ARCHIVE へ。
+- **5 線未満の譜の beam は LP の `staff_radius_` を譜から受け取っていなかった**（`9208ee842`）: 1 線譜の stem・beam を rhythm-slashes で LP と並べたら一致（stem の付け根 0.99・長さ 3.33・beam 3.0 と傾き）だが、線から離れた音の beam（対 3 冊＝`as lines 1..3` × `b8 b d' d' | f'8 f' a' a' | g8 g e e | c8 c a, a,`・Lab `sessions/p874/probe/beam`）は 1 線で LP −3.19→−2.50／+2.19→+1.50 に対し Lily# −2.81→−2.19／+1.81→+1.19。`BeamScoringProblem` の `staffLineCount` は tab しか渡しておらず、notation の beam は全部 5 線の半径 2.0 で quant（score_forbidden_quants の線の walk :1300・譜の中の判定 :1248/:1338/:1352）。さらに `(N−1)/2` は LP の既定の N 線位置の半径で、Lily# の ±2 の pair は 1.0（0.5 ではない）。直し: 引数を半径そのものに（`EngravingDefaults.StaffRadius`＝外側の線の span/4・REF staff-symbol-referencer.cc:189-196・`NotationStaffRadius`）・`LayoutBeams`／`CalculateBeamLayout`／cross-measure の枝／`LayoutEngine.Prelim` に線数を通す（`MultiStaffLayouter.BeamStaffLinesOf`＝tab の notation 影は 5・tab 自身の beam は弦の span＝従来どおり）・grace の beam は既定のまま。確かめ: 1 線・pair の 4 小節が LP と 0.01 で一致（`BeamFewLineStaffTests` 9・1 線譜の読みは `RenderedGeometry.BeamPositionAboveStaffLine`）。掃き 1199／差 0（結果＝線から離れた音を beam で結ぶ 5 線未満の本が無い）・full 11708 / 0 / 2。stem の `staffRadius`（`CalculateStemLength`・既定 2.0）は r≤2 で式に効かない（`min(1, 7−2r−2)` が 1 のまま）＝触っていない。
+- 閉じていると確かめた: 休符の加線 glyph（`MusicGlyph.IsLedgered`＝`on_staff_line`・rest.cc:170-185）は譜の線表を読んでいた。
+- `-End p874 -DiffBase 3bad50832`（門は全部 OK）＝full **11711 / 0 / 2 / 11713**。Core '+' 70 行／REF 2／OWN 0。HANDOFF 439,241 B（残り 10,759）。未 push 36＋docs（push はユーザー）。
+
 ## 以下は第873セッションの経緯
 
 ### 1.1 第873セッション（2026-10-10・YT-DELL2）

@@ -118,6 +118,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第876セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第875 の続き・ユーザー「続けて」）。`-Start p876`（HEAD `00433c6a6`）＝full **11713 / 0 / 2 / 11715**。§7 3.5 で第874 を ARCHIVE へ。
+- **1 線譜の強弱記号＝強弱の「譜の extent」が 5 線の定数だった**（`435e98309`）。第875 の「LP は stem の先の 0.18 下に置く」は読み違い。LP の grob dump（Lab `sessions/p876/probe/dyn/dump.ily`＝DynamicText・DynamicLineSpanner・Stem の extent と系座標）で読んだ正体: `aligned_side` は支え（頭と符尾）の skyline の下に **StaffSymbol の Y extent を最小値として敷く**（side-position-interface.cc:323-330 `set_minimum_height (staff_extents[dir])`）＋ staff-padding の床も同じ extent（:433-453）。5 線では ±2.05 が勝つので f は譜の 0.6 下（−4.546）・1 線では ±0.05 しか無く **符尾と頭だけが支え**: b（符尾下・先 −3.333）の下の f は、細い符尾の x に f の字形の*左下の curl*（原点から −0.42）しか無いので原点 −3.509＝「符尾の先の下」に見えた。`p` は左の縦画が全高なので符尾の先の 0.6 下（−5.056）・f'（符尾の先 −1.5）の下は 0.05 の床が勝つ（1.296＋0.05＋0.6＝−2.546）・g（符尾上）の下は頭（−4.019）。**Lily# の `DynamicOutline` の f の profile も curl だけで符尾に会う**＝箱の出所の違い（Emmentaler では TeX Gyre の文字）は効かなかった。
+- 直し: `DynamicEngraver.StaffExtentToward(dir, staffLines)`（その側の外側の線／2＋線の半厚＝staff-symbol.cc:346-369 `Staff_symbol::height`・4 線は上 2.05／下 1.05）を `StaffFloorSupport`・`ColumnSupportSkylines`・`SpanSupportSkylines`・`SpannerOffsetY`・`PointwiseBaselineY` に通し、`Calculate` は `staffLinesOf`（譜番号→線数・`MultiStaffLayouter.NotationStaffLinesOf`＝tab は 5）。**同じ DynamicLineSpanner に乗る hairpin（`HairpinEngraver.Calculate/CalculateOnSystem/LayoutPiece`）と `DynamicAlignEngraver.AlignLines`、`SkylineBuilder` の段間の種も同じ線数**。`StaffExtent`（5 線）は残した＝読み手は scripts（MMR の床）・figured bass・trill・ottava・text spanner・part-combine・MMR の text。
+- 確かめ: 1 線で f −3.509／−2.676／−2.546／−4.019・p −5.056／−4.223、5 線は不変（f −4.546・p −5.056／−4.223）＝LP の dump と一致（`DynamicFewLineStaffTests` 12＋`StaffExtentToward` 7）。計器 `RenderedGeometry.DynamicBaselineAboveStaffLine`。掃き 1199／差 0（結果・base は p875 の exe-head）・full **11728 / 4 / 2**＝4 は HANDOFF の門 3（語り未）＋magic census（HairpinEngraver の呼び出し行の文が変わった＝再生成して commit に同梱）。
+- ⚠️ **残り＝1 線譜の trill／ottava／text spanner／figured bass／MMR の text は 5 線の extent のまま**（`StaffExtent` の読み手・値付け前）。`as lines 1` の文脈（RhythmicStaff＝符尾上）・collector の死んだ `needsLedgerLines`・SMuFL §3・`staff bass` の読みはユーザー判断（第872〜875 のまま）。
+- `-End p876 -DiffBase 00433c6a6`（門は全部 OK）＝full **11732 / 0 / 2 / 11734**。Core '+' 113 行／REF 1／OWN 0。HANDOFF 440,534 B（残り 9,466＝次便の `-Start` が第875 を畳めば戻る）。未 push 40＋docs（push はユーザー）。
+
+## 以下は第875セッションの経緯
+
 ### 1.1 第875セッション（2026-10-10・YT-DELL2）
 
 同じ会話（第874 の続き・ユーザー「続けて」）。`-Start p875`（HEAD `9d6bc4cc9`）＝full **11711 / 0 / 2 / 11713**（full が 2 分 23 秒＝testhost の CPU は増え続けていた・止まってはいない）。§7 3.5 で第873 を ARCHIVE へ。
@@ -125,15 +136,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **未着手＝1 線譜の強弱記号 `f`**: LP は stem の先の 0.18 下に置く（b の下 −3.51・d' の下 −2.68・f' の下 −2.55・g（符尾上）の下 −4.02）のに Lily# は 5 線と同じ −4.55。`p` は一致（−4.22／−5.06）。LP の f の字形の箱（dynamics.f の ascent）と stem の横の重なりの読みが要る＝値付け前。Lily# の強弱は Emmentaler では文字（TeX Gyre bold italic・`dominant-baseline=central`）で描くので、箱の出所も違う。
 - 閉じていると確かめた: tuplet の数字の高さ（5 線で LP の baseline＋字の半分＝Lily# の central）・1 線譜の stem と beam（第874）。
 - `-End p875 -DiffBase 9d6bc4cc9`（門は全部 OK）＝full **11713 / 0 / 2 / 11715**。Core '+' 53 行／REF 2／OWN 0。HANDOFF 439,392 B（残り 10,608）。未 push 38＋docs（push はユーザー）。
-
-## 以下は第874セッションの経緯
-
-### 1.1 第874セッション（2026-10-10・YT-DELL2）
-
-同じ会話（第873 の続き・ユーザー「続けて」）。`-Start p874`（HEAD `3bad50832`）＝full **11702 / 0 / 2 / 11704**。§7 3.5 で第872 を ARCHIVE へ。
-- **5 線未満の譜の beam は LP の `staff_radius_` を譜から受け取っていなかった**（`9208ee842`）: 1 線譜の stem・beam を rhythm-slashes で LP と並べたら一致（stem の付け根 0.99・長さ 3.33・beam 3.0 と傾き）だが、線から離れた音の beam（対 3 冊＝`as lines 1..3` × `b8 b d' d' | f'8 f' a' a' | g8 g e e | c8 c a, a,`・Lab `sessions/p874/probe/beam`）は 1 線で LP −3.19→−2.50／+2.19→+1.50 に対し Lily# −2.81→−2.19／+1.81→+1.19。`BeamScoringProblem` の `staffLineCount` は tab しか渡しておらず、notation の beam は全部 5 線の半径 2.0 で quant（score_forbidden_quants の線の walk :1300・譜の中の判定 :1248/:1338/:1352）。さらに `(N−1)/2` は LP の既定の N 線位置の半径で、Lily# の ±2 の pair は 1.0（0.5 ではない）。直し: 引数を半径そのものに（`EngravingDefaults.StaffRadius`＝外側の線の span/4・REF staff-symbol-referencer.cc:189-196・`NotationStaffRadius`）・`LayoutBeams`／`CalculateBeamLayout`／cross-measure の枝／`LayoutEngine.Prelim` に線数を通す（`MultiStaffLayouter.BeamStaffLinesOf`＝tab の notation 影は 5・tab 自身の beam は弦の span＝従来どおり）・grace の beam は既定のまま。確かめ: 1 線・pair の 4 小節が LP と 0.01 で一致（`BeamFewLineStaffTests` 9・1 線譜の読みは `RenderedGeometry.BeamPositionAboveStaffLine`）。掃き 1199／差 0（結果＝線から離れた音を beam で結ぶ 5 線未満の本が無い）・full 11708 / 0 / 2。stem の `staffRadius`（`CalculateStemLength`・既定 2.0）は r≤2 で式に効かない（`min(1, 7−2r−2)` が 1 のまま）＝触っていない。
-- 閉じていると確かめた: 休符の加線 glyph（`MusicGlyph.IsLedgered`＝`on_staff_line`・rest.cc:170-185）は譜の線表を読んでいた。
-- `-End p874 -DiffBase 3bad50832`（門は全部 OK）＝full **11711 / 0 / 2 / 11713**。Core '+' 70 行／REF 2／OWN 0。HANDOFF 439,241 B（残り 10,759）。未 push 36＋docs（push はユーザー）。
 
 ## 2. 開いている作業
 
