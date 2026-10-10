@@ -393,11 +393,11 @@ argument is a memo; a bare one is a key — a letter, then letters, digits, `_` 
 a tool (an OMR reader) links its own data to.
 
 The preview shows the marks as red ink over the finished page: the marked head, rest or
-chord wears a red ring (one ring round a whole chord), and a memo stands in a small callout
-in the margin above the system with a leader to the ring — `.down` puts it below. Nothing on
-the page moves for a mark, as nothing moves for a pencilled note; a callout may stand over
-whatever is there. The `lilysharp.preview.highlightTodos` setting hides the marks. No export
-draws them.
+chord wears a ring drawn as a hand draws one (one ring round a whole chord), and a memo
+stands as a line of small red text in the margin above the system, set off to the side with
+more room, with a short leader from the ring — `.down` puts it below. Nothing on the page
+moves for a mark, as nothing moves for a pencilled note; a memo may stand over whatever is
+there. The `lilysharp.preview.highlightTodos` setting hides the marks. No export draws them.
 
 ```
 c'4 fis'8@todo("F# or F natural? the sharp is faint") e'8 g'2 |

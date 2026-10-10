@@ -181,8 +181,9 @@ workflow attaches that section to the GitHub Release verbatim.
   silent with no word.
 - **`todo` completes into its quotes.** Picking `todo` from the `@` completion writes
 - **A `@todo` is shown as red ink over the page.** The preview rings the marked head, rest or
-  chord (one ring round a whole chord) instead of filling it red, and a memo stands in a small
-  callout in the margin above the system — `.down` below — with a leader down to the ring;
+  chord with a ring drawn as a hand draws one (one ring round a whole chord) instead of filling
+  it red, and a memo stands as a line of small red text in the margin above the system —
+  `.down` below — set off to the side with more room, with a short leader from the ring;
   nothing on the page moves for a mark. `lilysharp.preview.highlightTodos` off hides them, and
   no export draws them.
   `todo("")` with the caret between the quotes, as `text`, `mark` and `textSpan` do; it used to

@@ -38,10 +38,28 @@ public class TodoCalloutTests
     private static string Book(string music)
         => $"octave absolute\npart m {{ clef treble }}\nsection A {{ m {{ {music} }} }}\nform {{ ~A }}\nscore {{ staff m }}\n";
 
-    private static readonly Regex Ring = new("<ellipse [^>]*data-todo=\"[^\"]*\"[^>]*/>", RegexOptions.Compiled);
-    // The callout's box: the one rect painted on the preview's paper (a head's click
-    // target is a rect carrying data-todo too).
-    private static readonly Regex CalloutBox = new("<rect [^>]*fill=\"#FFF3F2\"[^>]*data-todo=\"([^\"]*)\"[^>]*/>", RegexOptions.Compiled);
+    // A ring is eight round-capped cubic paths (a hand's loop); they share the mark's data-pos.
+    private static readonly Regex RingPath = new("<path d=\"([^\"]*)\"[^>]*fill=\"none\"[^>]*stroke=\"#E53935\"[^>]*data-todo=\"[^\"]*\" data-pos=\"(\\d+)\"", RegexOptions.Compiled);
+    // The memo's leader: the one line painted red that carries the mark.
+    private static readonly Regex Leader = new("<line x1=\"(-?[0-9.]+)\" y1=\"(-?[0-9.]+)\" x2=\"(-?[0-9.]+)\" y2=\"(-?[0-9.]+)\"[^>]*stroke=\"#E53935\"[^>]*data-todo=", RegexOptions.Compiled);
+
+    /// <summary>Each ring's height on the page, by the mark's data-pos: the span of the Y's
+    /// its paths visit.</summary>
+    private static Dictionary<int, double> RingHeights(string svg)
+    {
+        var ys = new Dictionary<int, (double Min, double Max)>();
+        foreach (Match m in RingPath.Matches(svg))
+        {
+            int pos = int.Parse(m.Groups[2].Value);
+            var numbers = Regex.Matches(m.Groups[1].Value, "-?[0-9.]+").Select(n => double.Parse(n.Value)).ToList();
+            for (int i = 1; i < numbers.Count; i += 2)
+            {
+                var (min, max) = ys.TryGetValue(pos, out var r) ? r : (double.MaxValue, double.MinValue);
+                ys[pos] = (Math.Min(min, numbers[i]), Math.Max(max, numbers[i]));
+            }
+        }
+        return ys.ToDictionary(kv => kv.Key, kv => kv.Value.Max - kv.Value.Min);
+    }
 
     [Fact]
     public void TheItem_CarriesTheMemoAndTheSide()
@@ -60,39 +78,52 @@ public class TodoCalloutTests
         var tree = SyntaxTree.Parse(Book("c'4@todo(\"why\") d'4 r4@todo <e' g' b'>4@todo(\"both\") |"));
 
         string preview = SvgGenerator.Generate(tree, SvgRenderOptions.Preview());
-        // One ring per marked ITEM — the note, the rest, and the chord as a whole — with its
-        // paint on the element (fill none and a stroke: the caret highlight fills a shape
-        // that carries no stroke attribute, owner's report 2026-10-10).
-        var rings = Ring.Matches(preview).Select(m => m.Value).ToList();
+        // One ring per marked ITEM — the note, the rest, and the chord as a whole — drawn as
+        // a hand's loop (eight paths, fill none and a stroke: the caret highlight fills a
+        // shape that carries no stroke attribute, owner's report 2026-10-10).
+        var rings = RingHeights(preview);
         Assert.Equal(3, rings.Count);
-        Assert.All(rings, r => Assert.True(r.Contains("fill=\"none\"") && r.Contains("stroke=\"#E53935\""), r));
+        Assert.Equal(24, RingPath.Matches(preview).Count);
         // The chord's one ring is taller than a head's: three heads a third apart.
-        double ChordRy(string r) => double.Parse(Regex.Match(r, "ry=\"([0-9.]+)\"").Groups[1].Value);
-        Assert.True(rings.Max(ChordRy) > 2 * rings.Min(ChordRy));
-        // A memo's callout: its box, its text; the bare mark has none.
-        Assert.Equal(2, CalloutBox.Matches(preview).Count);
+        Assert.True(rings.Values.Max() > 2 * rings.Values.Min(), string.Join(" ", rings.Values));
+        // A memo is a line of text with a leader and NO box (owner's request 2026-10-10); the
+        // bare mark has neither.
+        Assert.Equal(2, Leader.Matches(preview).Count);
+        Assert.DoesNotContain("fill=\"#FFF3F2\"", preview); // p893's paper box is gone
         Assert.Contains(">why<", preview);
         Assert.Contains(">both<", preview);
 
         string export = SvgGenerator.Generate(tree, SvgRenderOptions.Default);
-        Assert.Empty(Ring.Matches(export));
-        Assert.Empty(CalloutBox.Matches(export));
+        Assert.Empty(RingPath.Matches(export));
+        Assert.Empty(Leader.Matches(export));
         Assert.DoesNotContain(">why<", export);
     }
 
     [Fact]
-    public void Down_PutsTheCalloutBelowTheStaff()
+    public void Down_PutsTheMemoBelow_AndTheMemoStandsOffToTheRoomierSide()
     {
-        // The same memo above and below: the box stands over the ring in the one picture and
-        // under it in the other. Both are page overlays, so their Y's share a frame (the
-        // SVG's Y grows downward; a head's own hit rect is in its system's frame instead).
+        // The same memo above and below: the leader runs from the ring (x1, y1) to the text's
+        // near end (x2, y2) — up in the one picture, down in the other (the SVG's Y grows
+        // downward; both are page overlays, so their Y's share a frame). And the text is set
+        // OFF the note's column: a first-bar note has more room to its right, so the leader
+        // runs to the right (owner's requests 2026-10-10).
         string above = SvgGenerator.Generate(SyntaxTree.Parse(Book("c'4@todo(\"memo\") d'4 e'4 f'4 |")), SvgRenderOptions.Preview());
         string below = SvgGenerator.Generate(SyntaxTree.Parse(Book("c'4@todo(\"memo\").down d'4 e'4 f'4 |")), SvgRenderOptions.Preview());
-        double BoxY(string svg) => double.Parse(Regex.Match(CalloutBox.Match(svg).Value, "y=\"(-?[0-9.]+)\"").Groups[1].Value);
-        double BoxBottom(string svg) => BoxY(svg) + double.Parse(Regex.Match(CalloutBox.Match(svg).Value, "height=\"(-?[0-9.]+)\"").Groups[1].Value);
-        double RingY(string svg) => double.Parse(Regex.Match(Ring.Match(svg).Value, "cy=\"(-?[0-9.]+)\"").Groups[1].Value);
-        Assert.True(BoxBottom(above) < RingY(above), $"above: box bottom {BoxBottom(above)} ring {RingY(above)}");
-        Assert.True(BoxY(below) > RingY(below), $"below: box top {BoxY(below)} ring {RingY(below)}");
+        (double X1, double Y1, double X2, double Y2) LeaderOf(string svg)
+        {
+            var m = Leader.Match(svg);
+            Assert.True(m.Success, "no leader");
+            return (double.Parse(m.Groups[1].Value), double.Parse(m.Groups[2].Value),
+                double.Parse(m.Groups[3].Value), double.Parse(m.Groups[4].Value));
+        }
+        var up = LeaderOf(above);
+        var down = LeaderOf(below);
+        Assert.True(up.Y2 < up.Y1, $"above: text end {up.Y2} ring {up.Y1}");
+        Assert.True(down.Y2 > down.Y1, $"below: text end {down.Y2} ring {down.Y1}");
+        // The text starts right of the ring's shoulder, by the one offset every memo gets.
+        double TextX(string svg) => double.Parse(Regex.Match(svg, "<text [^>]*x=\"(-?[0-9.]+)\"[^>]*data-todo=\"\"[^>]*>memo<").Groups[1].Value);
+        Assert.True(TextX(above) > up.X1 + 0.5, $"the memo stands off to the right: shoulder {up.X1}, text {TextX(above)}");
+        Assert.True(TextX(below) > down.X1 + 0.5, $"the memo stands off to the right: shoulder {down.X1}, text {TextX(below)}");
     }
 
     [Fact]

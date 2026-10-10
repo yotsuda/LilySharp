@@ -84,20 +84,21 @@ internal static partial class SharedRenderer
 
     // ---------- @todo marks: the editor's red ink over the page ----------
 
-    // The preview's ink and paper (owner's decision 2026-10-10 — the same red as the scan
-    // view's boxes, a pale ground so the memo reads over the music).
+    // The preview's ink (owner's decision 2026-10-10 — the same red as the scan view's boxes).
     internal static readonly Color TodoInk = new(0xE5, 0x39, 0x35);
-    internal static readonly Color TodoPaper = new(0xFF, 0xF3, 0xF2);
     // LILYSHARP-OWN, every one: an editor's mark, with no LilyPond counterpart. Owner's
-    // decisions 2026-10-10 — a ring (not a red head), one ring round a whole chord, the ring's
-    // pen thicker than the box's, the memo smaller than @text (memos run long), and NOTHING
-    // ON THE PAGE MOVES for a mark: it is red ink over the finished page, not an engraved grob.
-    private const double TodoRingPadding = 0.35;    // the ring stands this far outside the glyphs' box
-    private const double TodoRingThickness = 0.2;   // the ring's pen
-    private const double TodoLineThickness = 0.1;   // the box's and the leader's pen
-    private const double TodoCalloutPadding = 0.25; // the box around the memo's ink
-    private const double TodoCalloutGap = 0.6;      // between the box and what it stands over
-    private const double TodoMemoScale = 0.75;      // the memo's em over @text's
+    // decisions 2026-10-10 — a ring as a hand draws one (not a red head, not a compass
+    // ellipse), one ring round a whole chord, the ring's pen thicker than the leader's, the
+    // memo smaller than @text (memos run long) and set off the note's column by ONE distance
+    // towards the side with more room, with no box round it, and NOTHING ON THE PAGE MOVES
+    // for a mark: it is red ink over the finished page, not an engraved grob.
+    private const double TodoRingPadding = 0.35;   // the ring stands this far outside the glyphs' box
+    private const double TodoRingThickness = 0.2;  // the ring's pen
+    private const double TodoLineThickness = 0.1;  // the leader's pen
+    private const double TodoMemoOffset = 1.5;     // from the ring's centre X to the memo's near end
+    private const double TodoMemoGap = 0.6;        // between the memo's ink and what it stands over
+    private const double TodoMemoAir = 1.0;        // between two memos side by side on one level
+    private const double TodoMemoScale = 0.75;     // the memo's em over @text's
 
     /// <summary>
     /// The preview's <c>@todo</c> marks, drawn OVER the page after every overlay — the ring
@@ -112,7 +113,7 @@ internal static partial class SharedRenderer
     /// A multi-measure rest's ring spans its measure, a staff space each way. LILYSHARP-OWN.
     /// </summary>
     private static void DrawTodoMarks(MultiStaffScore score, Dictionary<int, SystemLayout> measureToSystem,
-        in OssiaShrink os, IDrawingContext gc)
+        Dictionary<int, double> sysTopYUp, in OssiaShrink os, IDrawingContext gc)
     {
         if (!gc.DrawsEditorMarks)
             return;
@@ -132,8 +133,11 @@ internal static partial class SharedRenderer
             staffEdges[staffIndex] = (top, bottom, MultiStaffLayouter.NotationStaffLinesOf(staff), spacing);
         }
 
-        // Pass 1: the rings, and the memos to place.
+        // Pass 1: the rings, the memos to place, and how far each system's NOTES reach above
+        // and below its staves (heads and stems — the memos stand clear of them).
         var callouts = new List<TodoCallout>();
+        var inkTop = new Dictionary<int, double>();
+        var inkBottom = new Dictionary<int, double>();
         foreach (var (_, staff, staffIndex) in score.EnumerateStaves())
         {
             var (_, _, staffLines, spacing) = staffEdges[staffIndex];
@@ -149,16 +153,23 @@ internal static partial class SharedRenderer
                         if (ml.MeasureIndex == mi) { measureLayout = ml; break; }
                     if (measureLayout == null)
                         continue;
+                    double midYup = os.StaffMiddleYUp(staffIndex, mi, StaffHeight);
+                    if (double.IsNaN(midYup))
+                        continue;
                     var items = measures[mi].Items;
                     for (int ii = 0; ii < items.Length; ii++)
                     {
                         var item = items[ii];
+                        if (NoteReach(item) is var (reachBottom, reachTop))
+                        {
+                            double t = os.YUp(midYup + reachTop, staffIndex, mi);
+                            double b = os.YUp(midYup + reachBottom, staffIndex, mi);
+                            inkTop[system.SystemIndex] = Math.Max(inkTop.GetValueOrDefault(system.SystemIndex, double.MinValue), t);
+                            inkBottom[system.SystemIndex] = Math.Min(inkBottom.GetValueOrDefault(system.SystemIndex, double.MaxValue), b);
+                        }
                         if (item.TodoKey is not { } key)
                             continue;
                         if (TodoInkBox(item, measureLayout, measures, mi, ii, staffLines, spacing) is not var (left, right, bottom, top))
-                            continue;
-                        double midYup = os.StaffMiddleYUp(staffIndex, mi, StaffHeight);
-                        if (double.IsNaN(midYup))
                             continue;
                         double scale = os.Size(1.0, staffIndex);
                         double cx = (left + right) / 2, cy = (top + bottom) / 2;
@@ -168,11 +179,10 @@ internal static partial class SharedRenderer
                         using (gc.Staff(staffIndex))
                         using (gc.Source(item.SourcePosition))
                         using (gc.Todo(key))
-                            gc.DrawEllipse(cx, ringMid, rx, ry, fill: null, stroke: TodoInk,
-                                strokeWidth: TodoRingThickness * scale);
+                            DrawHandRing(gc, cx, ringMid, rx, ry, TodoRingThickness * scale, item.SourcePosition);
                         if (item.TodoMemo is { Length: > 0 } memo)
                             callouts.Add(new TodoCallout(system, staffIndex, mi, item.SourcePosition, key, memo,
-                                item.TodoBelow, cx, item.TodoBelow ? ringMid - ry : ringMid + ry, scale));
+                                item.TodoBelow, cx, ringMid, rx, ry, scale));
                     }
                 }
             }
@@ -180,11 +190,13 @@ internal static partial class SharedRenderer
         if (callouts.Count == 0)
             return;
 
-        // Pass 2: the callouts go in the MARGIN — over the system's topmost drawn line (under
-        // its bottommost for .down), further out where the ring itself stands beyond it — and
-        // kept inside the system's width; two that would overlap at one level stack outward,
-        // left to right (owner's request 2026-10-10: "なるべく余白に書く"). The leader runs
-        // from the box to the ring, slanting when the box was pushed in from an edge.
+        // Pass 2: the memos go in the MARGIN — over the system's topmost drawn line (under its
+        // bottommost for .down), further out where the ring itself stands beyond it — as a
+        // line of red text with no box, set OFF the note's column by one fixed distance towards
+        // the side with more room (owner's requests 2026-10-10: a memo on the note's own x
+        // looks wrong, and a shift that differs from memo to memo looks untidy), kept inside the
+        // system's width; two that would overlap at one level stack outward, left to right. A
+        // short leader runs from the ring's shoulder to the text's near end.
         var systemEdge = new Dictionary<(int System, bool Below), double>();
         foreach (var group in callouts.GroupBy(c => (c.System.SystemIndex, c.Below)))
         {
@@ -193,15 +205,23 @@ internal static partial class SharedRenderer
             bool below = first.Below;
             if (!systemEdge.TryGetValue(group.Key, out double edge))
             {
-                // The system's outermost drawn line, over every staff standing on it.
+                // The margin's edge: the system's outermost drawn line, or its farthest note
+                // (head and stem) where the notes reach past the lines — so the memos stand
+                // in the gap between systems and not through a run of ledgered notes (the
+                // owner's "余白": the first spelling stood them a gap over the top LINE). Other
+                // marks there — a dynamic, a chord symbol, a lyric row — may lie under the ink.
                 edge = below ? double.MaxValue : double.MinValue;
-                foreach (var (si, (top, bottom, _, _)) in staffEdges)
+                if (!below && inkTop.TryGetValue(first.System.SystemIndex, out double top))
+                    edge = top;
+                if (below && inkBottom.TryGetValue(first.System.SystemIndex, out double bottomInk))
+                    edge = bottomInk;
+                foreach (var (si, (staffTop, staffBottom, _, _)) in staffEdges)
                 {
                     double mid = os.StaffMiddleYUp(si, first.MeasureIndex, StaffHeight);
                     if (double.IsNaN(mid))
                         continue;
-                    edge = below ? Math.Min(edge, os.YUp(mid + bottom, si, first.MeasureIndex))
-                                 : Math.Max(edge, os.YUp(mid + top, si, first.MeasureIndex));
+                    edge = below ? Math.Min(edge, os.YUp(mid + staffBottom, si, first.MeasureIndex))
+                                 : Math.Max(edge, os.YUp(mid + staffTop, si, first.MeasureIndex));
                 }
                 systemEdge[group.Key] = edge;
             }
@@ -213,52 +233,125 @@ internal static partial class SharedRenderer
             {
                 double scale = c.Scale;
                 double em = os.Size(DynamicEngraver.LabelEm(fonts, true), c.StaffIndex) * TodoMemoScale;
-                double half = DynamicEngraver.LabelHalfWidth(fonts, c.Memo, expressive: true) * scale * TodoMemoScale;
+                double width = 2 * DynamicEngraver.LabelHalfWidth(fonts, c.Memo, expressive: true) * scale * TodoMemoScale;
                 var (ascent, descent) = DynamicEngraver.InkOf(fonts, c.Memo, true);
                 ascent *= scale * TodoMemoScale;
                 descent *= scale * TodoMemoScale;
-                double pad = TodoCalloutPadding * scale, gap = TodoCalloutGap * scale;
-                double width = 2 * (half + pad), height = ascent + descent + 2 * pad;
-                double left = Math.Max(sysLeft, Math.Min(c.RingX - width / 2, sysRight - width));
+                double offset = TodoMemoOffset * scale, gap = TodoMemoGap * scale;
+                // The side with more room between the ring and the system's edge.
+                bool toRight = sysRight - c.RingX >= c.RingX - sysLeft;
+                double left = toRight ? c.RingX + offset : c.RingX - offset - width;
+                left = Math.Max(sysLeft, Math.Min(left, sysRight - width));
                 double right = left + width;
+                // A level is free when the text clears every neighbour on it by a space of air.
                 int level = 0;
-                while (placed.Any(p => p.Level == level && p.Left < right && left < p.Right))
+                while (placed.Any(p => p.Level == level && p.Left < right + TodoMemoAir * scale && left - TodoMemoAir * scale < p.Right))
                     level++;
                 placed.Add((left, right, level));
-                double step = level * (height + gap / 2);
-                double boxTop, boxBottom, baseline;
-                if (!below)
-                {
-                    boxBottom = Math.Max(edge, c.RingEdge) + gap + step;
-                    baseline = boxBottom + pad + descent;
-                    boxTop = boxBottom + height;
-                }
-                else
-                {
-                    boxTop = Math.Min(edge, c.RingEdge) - gap - step;
-                    baseline = boxTop - pad - ascent;
-                    boxBottom = boxTop - height;
-                }
-                double leaderX = Math.Clamp(c.RingX, left + pad, right - pad);
+                double step = level * (ascent + descent + gap / 2);
+                double ringEdge = below ? c.RingY - c.RingRy : c.RingY + c.RingRy;
+                double baseline = below
+                    ? Math.Min(edge, ringEdge) - gap - ascent - step
+                    : Math.Max(edge, ringEdge) + gap + descent + step;
+                // The leader: from the ring's shoulder on the text's side to a little short of
+                // the text's near end, at the text's mid-height.
+                double shoulderX = c.RingX + (toRight ? 1 : -1) * c.RingRx * 0.7;
+                double shoulderY = c.RingY + (below ? -1 : 1) * c.RingRy * 0.7;
+                double nearX = toRight ? left - 0.3 * scale : right + 0.3 * scale;
                 using (gc.Staff(c.StaffIndex))
                 using (gc.Source(c.SourcePosition))
                 using (gc.Todo(c.Key))
                 {
-                    gc.DrawRectangle(left, boxTop, width, height,
-                        fill: TodoPaper, stroke: TodoInk, strokeWidth: TodoLineThickness * scale);
-                    gc.DrawLine(leaderX, below ? boxTop : boxBottom, c.RingX, c.RingEdge,
-                        stroke: TodoInk, strokeWidth: TodoLineThickness * scale);
-                    gc.DrawText(c.Memo, (left + right) / 2, baseline, em, DynamicEngraver.LabelRole(true),
-                        DynamicEngraver.LabelStyle(fonts, true), TextAnchor.Middle, TodoInk);
+                    gc.DrawLine(shoulderX, shoulderY, nearX, baseline + (ascent - descent) / 2,
+                        stroke: TodoInk, strokeWidth: TodoLineThickness * scale, cap: LineCap.Round);
+                    gc.DrawText(c.Memo, left, baseline, em, DynamicEngraver.LabelRole(true),
+                        DynamicEngraver.LabelStyle(fonts, true), TextAnchor.Start, TodoInk);
                 }
             }
         }
     }
 
-    /// <summary>A memo awaiting its place in the margin (<see cref="DrawTodoMarks"/>): the
-    /// ring's centre X and the ring's edge on the callout's side, page Y-up.</summary>
+    /// <summary>How far an item's notes reach over the staff middle (Y-up, staff spaces), head
+    /// and stem: a stem is read at LilyPond's plain length of 3.5 on the stem's side and a
+    /// head's half height on the other; a rest its own position a space each way; null for
+    /// an item that draws nothing of the kind. A rough bound for the margin — beams and flags
+    /// are not read — which is all the memos need.</summary>
+    private static (double Bottom, double Top)? NoteReach(MusicItem item)
+    {
+        const double stem = 3.5, head = 0.5;
+        switch (item)
+        {
+            case NoteItem note:
+            {
+                double y = note.StaffPosition / 2.0;
+                bool up = note.ForcedStemUp ?? note.StemUp;
+                return (y - (up ? head : stem), y + (up ? stem : head));
+            }
+            case ChordItem { Notes.Length: > 0 } chord:
+            {
+                double lo = chord.Notes.Min(n => n.StaffPosition) / 2.0, hi = chord.Notes.Max(n => n.StaffPosition) / 2.0;
+                bool up = chord.ForcedStemUp ?? chord.StemUp;
+                return (lo - (up ? head : stem), hi + (up ? stem : head));
+            }
+            case RestItem { IsMultiMeasure: false } rest:
+            {
+                double y = (rest.StaffPosition ?? 0) / 2.0;
+                return (y - 1.0, y + 1.0);
+            }
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>A memo awaiting its place in the margin (<see cref="DrawTodoMarks"/>): its
+    /// ring's centre and radii on the page (Y-up).</summary>
     private readonly record struct TodoCallout(SystemLayout System, int StaffIndex, int MeasureIndex,
-        int SourcePosition, string Key, string Memo, bool Below, double RingX, double RingEdge, double Scale);
+        int SourcePosition, string Key, string Memo, bool Below, double RingX, double RingY,
+        double RingRx, double RingRy, double Scale);
+
+    /// <summary>
+    /// A ring as a hand draws one round something on a page: a wobbly loop that starts at the
+    /// upper left, runs round, and overshoots its start a little on the outside — not a
+    /// compass ellipse (owner's request 2026-10-10: "人が〇をつけたような形"). The wobble is a
+    /// sum of low harmonics whose phases, and a slight lean, come from the mark's source
+    /// position, so a ring is the same picture at every render and no two rings are quite
+    /// alike. Eight round-capped cubic segments, tangent-matched.
+    /// </summary>
+    private static void DrawHandRing(IDrawingContext gc, double cx, double cy, double rx, double ry,
+        double pen, int seed)
+    {
+        const int Segments = 8;
+        const double Overlap = 0.55;        // the pen runs this far past its start (radians)
+        const double Start = Math.PI * 0.62; // upper left (the frame is Y-up)
+        const double Sweep = 2 * Math.PI + Overlap;
+        uint h = (uint)seed * 2654435761u ^ 0x9E3779B9u;
+        double p1 = (h & 0xFF) / 255.0 * 2 * Math.PI;
+        double p2 = ((h >> 8) & 0xFF) / 255.0 * 2 * Math.PI;
+        double p3 = ((h >> 16) & 0xFF) / 255.0 * 2 * Math.PI;
+        double lean = (((h >> 24) & 0xFF) / 255.0 - 0.5) * 0.25; // ±7° either way
+        double cosLean = Math.Cos(lean), sinLean = Math.Sin(lean);
+        (double X, double Y) At(double t)
+        {
+            double a = Start + t;
+            double rho = 1 + 0.05 * Math.Sin(2 * a + p1) + 0.035 * Math.Sin(3 * a + p2) + 0.02 * Math.Sin(5 * a + p3)
+                         + 0.06 * t / Sweep; // a slow spiral outward: the overshoot lies outside the start
+            double x = rx * rho * Math.Cos(a), y = ry * rho * Math.Sin(a);
+            return (cx + x * cosLean - y * sinLean, cy + x * sinLean + y * cosLean);
+        }
+        const double step = Sweep / Segments, eps = 1e-3;
+        for (int i = 0; i < Segments; i++)
+        {
+            double t0 = i * step, t1 = t0 + step;
+            var a0 = At(t0);
+            var a1 = At(t1);
+            var d0 = At(t0 + eps);
+            var d1 = At(t1 - eps);
+            // The tangents, by one-sided differences, each a third of the segment long.
+            var c1 = (a0.X + (d0.X - a0.X) / eps * step / 3, a0.Y + (d0.Y - a0.Y) / eps * step / 3);
+            var c2 = (a1.X + (d1.X - a1.X) / eps * step / 3, a1.Y + (d1.Y - a1.Y) / eps * step / 3);
+            gc.DrawBezier(a0, c1, c2, a1, TodoInk, pen);
+        }
+    }
 
     /// <summary>
     /// The box the ring goes round, in staff spaces — X on the page, Y over the staff middle
