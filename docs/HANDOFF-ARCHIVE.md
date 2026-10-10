@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第891セッションの経緯
+
+### 1.1 第891セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第890 の続き）。`-Start p891`（HEAD `ecd9bc230`）＝full **11775 / 0 / 2 / 11777**。§7 3.5 で第889 を ARCHIVE へ。着手＝**ユーザー報告 4 件目**「todo を付けた音符がプレビューで赤くつぶれる・memo が出ない」→ 設計を相談して**ユーザー決定（2026-10-10）**: 符頭は**輪**（塗らない）・memo は**吹き出し**（譜の上が既定・`.down` で下・引き出し線で輪へ）・**プレビューだけ**（書き出しのスイッチは作らない＝要るときは CLI のフラグ＋明示のコマンドで後から）。
+- **配管**: `SvgRenderOptions.TodoCallouts`（`Preview()` だけ true）→ `SvgGenerator.CollectScore(todoCallouts)` と `IncrementalCompiler` の 2 collector → `MeasureCollector.TodoCallouts`（sub-collector 3 か所に継承）。collector の注釈の腕に `todo` を足し、memo のあるものを `DynamicItem { IsTodoCallout, TodoKey }`（expressive text の経路＝置き場所・積み・staff ごとの配送をそのまま使う・**上が既定**＝`@text` は下）に。`DynamicLayout` に `IsTodoCallout / TodoKey / TodoLeaderYUp`（host の外側の符頭の輪のすぐ先）。`SharedRenderer.DrawTodoCallout`＝箱（ink＋0.25）・引き出し線（箱が輪より近ければ省く）・memo を `Todo` scope の中で描く（全部 `data-todo`）。**輪**＝`IDrawingContext.TodoRing`（既定 no-op・YFlip／UnscaledX が転送・`SvgDrawingContext` が interactive のときだけ `<ellipse class="todo-ring">`）を `TodoScope` の 4 か所（音符・和音の member ごと・休符・MMR の棒）で。parser は `@todo(…).up/.down` を `@text`／`@diagram` と同じ条件で受ける（`ForcedAbove`）。webview の CSS: 赤塗りを消し、輪の色・`highlightTodos` 切で輪と箱と線を隠す（memo は黒で残る）。定数 3 つ（`TodoRingPadding` 0.35・`TodoCalloutPadding` 0.25・`TodoLineThickness` 0.1）＝LILYSHARP-OWN。
+- **予約は memo の ink だけ**（箱の padding 0.25 は予約に入れていない＝隣と 0.25 まで触りうる・プレビューの印なので受け入れた・`DrawTodoCallout` の註）。
+- 網 **`TodoCalloutTests`** 4 本（preview の collect だけ callout／`.down` と key／preview SVG に輪が glyph ごと・箱・memo、export には無し／**export は memo を同じ長さの空 memo に替えた本と byte 同一**）。毒 3 種（輪を描かない・全 collect で callout・`.down` 拒否）＝**1・3・1 本赤**（Lab `sessions/p891/poison-*.log`）。
+- 出力同一: **svg の掃き 998 冊 1201 svg（export）＝差 0**（HEAD の worktree の lysc 対 `exe-head`・`sessions/p891/sweep.log`）。絵: `sessions/p891/probe/todo-preview.png`（callout を PNG で描いた＝輪は SVG だけ）と `todo-preview.svg`。棚卸し 2 枚再生成（OWN +5）。拡張 check-types・compile・test 211 / 211。
+- docs: `SYNTAX_REFERENCE` の `@todo`・CHANGELOG 両方・`MANUAL-CHECKS.md` §2.1・`TodoAnnotation` の註。拡張は `tools\Deploy-Lsp.ps1` で入れ直し（Reload Window）。
+- `-End p891 -DiffBase ecd9bc230`（門は全部 OK）＝full **11779 / 0 / 2 / 11781**（網 +4）。Core '+' 244 行／REF 0／OWN 5＝7.6 ⒞（エディターの印＝LP に対応物なし・定数 3 つと札 2 つ）。7.7: 引き出し線は「箱が輪より近ければ描かない」の 1 分岐（註に明記）・sentinel なし・fallback なし。棚卸し 2 枚＝差分なし。HANDOFF 374,412 B（残り 75,588）・§1 現在便 10,024 字。commit `4a175bab8`。未 push 72＋docs（push はユーザー）。Lab `sessions/p891/`＝log・毒・sweep・probe（png／svg）。
+判定: ユーザーが実機で見る番（輪・吹き出し・`.down`・`highlightTodos`・書き出しに出ないこと＝MANUAL-CHECKS §2.1 の 2 行）。残りの候補＝箱の padding を予約に入れる（隣と触るのを見てから）・吹き出しの文字の切り詰め（長い memo をどうするかは未決・今は全文）。(a) 文脈を使う／(b) 5 便＝文脈の圧縮は起きていないがそろそろ重い／(c) 同じ島 ⇒ **次の報告が来たらこの会話で `-Start p892`、別の島なら新しい会話**。
+
 ## 以下は第890セッションの経緯
 
 ### 1.1 第890セッション（2026-10-10・YT-DELL2）
