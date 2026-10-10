@@ -68,6 +68,7 @@
 - [ ] `c4@todo` / `c4@todo("F♯ or F♮?")` が Problems に LYS4026 で出て、プレビューの符頭が赤い。`lilysharp.preview.highlightTodos` を切ると赤が消える。
 - [ ] クイックフィックス *Resolve this TODO* / *Resolve all N TODOs* で `@todo` が消える（メモごと）。
 - [ ] `Lily#: Show Original Scan` は `x.omr.json` の無い本では出ない（コマンドパレットの when）。
+- [ ] 音符の後ろで `@` → 補完から `todo` を選ぶ → `@todo("")` が入り、カレットが `""` の間に来る（`text`・`mark` と同じ・2026-10-10 のユーザー要望）。そのまま Tab／Esc で抜けても `@todo("")` は警告 LYS4026 を出し、エラーにはならない。
 
 ### 2.2 コード図まわり
 

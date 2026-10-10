@@ -4205,11 +4205,16 @@ public sealed partial class LilySharpLanguageServer
                 },
 
                 // A mark left to check: no ink, no sound, a warning and a red head in the preview.
+                // Completes into its quotes like @text — the memo is what one writes next
+                // (owner's request 2026-10-10: the bare `todo` left the caret after the word, and
+                // the memo's parens and quotes had to be typed by hand). An empty memo compiles
+                // (`@todo("")` is a mark with nothing to say), so a Tab straight out is harmless.
                 new CompletionItem
                 {
                     Label = "todo", Kind = CompletionItemKind.Value,
-                    Detail = "Left to check — a warning and a red head in the preview; @todo(\"memo\") says why",
-                    InsertText = "todo", SortText = "0todo",
+                    Detail = "Left to check — a warning and a red head in the preview; the memo in the quotes says why",
+                    InsertText = "todo(\"$0\")", InsertTextFormat = InsertTextFormat.Snippet,
+                    SortText = "0todo",
                 },
 
                 // Ornaments

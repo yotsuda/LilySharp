@@ -142,6 +142,24 @@ public class AtCompletionParsesTests
             $"The '@' completion offers nothing for the '{labelPrefix}…' family.");
     }
 
+    /// <summary>
+    /// The annotations whose argument is a quoted text one types next complete INTO their
+    /// quotes, so the caret lands where the text goes: <c>@text("…")</c>, <c>@mark("…")</c>,
+    /// <c>@textSpan("…")</c> and, since 2026-10-10 (owner's request — the bare word left the
+    /// parens and quotes to be typed by hand), <c>@todo("…")</c>.
+    /// </summary>
+    [Theory]
+    [InlineData("text")]
+    [InlineData("mark")]
+    [InlineData("textSpan")]
+    [InlineData("todo")]
+    public void AQuotedTextAnnotation_CompletesIntoItsQuotes(string name)
+    {
+        var item = LilySharpLanguageServer.GetArticulationCompletions().Items.Single(i => i.Label == name);
+        Assert.Equal($"{name}(\"$0\")", item.InsertText);
+        Assert.Equal(LspInsertTextFormat.Snippet, item.InsertTextFormat);
+    }
+
     /// <summary>The annotations whose argument is picked from a second list.</summary>
     public static TheoryData<string> ArgumentStubNames() =>
         new() { "notehead", "finger", "pluck", "bend", "feather", "figuredBass" };

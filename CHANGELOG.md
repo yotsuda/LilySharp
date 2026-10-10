@@ -179,6 +179,9 @@ workflow attaches that section to the GitHub Release verbatim.
   the first click or key there, and when a step or an audition is struck while it is still
   blocked the status bar says *click the preview once to enable its sound*; it used to stay
   silent with no word.
+- **`todo` completes into its quotes.** Picking `todo` from the `@` completion writes
+  `todo("")` with the caret between the quotes, as `text`, `mark` and `textSpan` do; it used to
+  write the bare word and leave the parens and quotes to type. An empty memo compiles.
 
 ## 0.11.0
 

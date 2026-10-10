@@ -56,6 +56,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   preview has been clicked or typed in once (the browser's autoplay rule) now puts *click the
   preview once to enable its sound* in the status bar, and the preview keeps one synth for its
   life and resumes it from that first click; it used to stay silent with no word.
+- **`todo` completes into its quotes**: `todo("")` with the caret between the quotes, like
+  `text` and `mark`; it used to write the bare word.
 
 ## 0.11.0
 
