@@ -257,13 +257,13 @@ public interface IDrawingContext
     IDisposable Todo(string key) => NullScope.Instance;
 
     /// <summary>
-    /// The ring around a head or rest marked <c>@todo</c>: an ellipse of the given centre and
-    /// radii, drawn by the INTERACTIVE SVG only (the preview's mark; owner's decision
-    /// 2026-10-10) and stamped <c>data-todo</c> by the enclosing <see cref="Todo"/> scope. It
-    /// takes no space and no export draws it, so the default ignores it; a decorating
-    /// backend forwards it like <see cref="Todo"/>.
+    /// Whether this backend shows the EDITOR'S marks — the preview's red ink over the page
+    /// (the ring around a <c>@todo</c> head, the memo's callout; <c>SharedRenderer.DrawTodoMarks</c>).
+    /// True for the interactive SVG alone; every export answers false, so nothing of them
+    /// reaches a page. The default answers false; a decorating backend forwards it like
+    /// <see cref="Todo"/>.
     /// </summary>
-    void TodoRing(double cx, double cy, double rx, double ry) { }
+    bool DrawsEditorMarks => false;
 
     /// <summary>
     /// Names WHAT subsequent draw operations (until <see cref="IDisposable.Dispose"/>) are — a

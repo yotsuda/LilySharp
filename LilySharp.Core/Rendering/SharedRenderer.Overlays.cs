@@ -64,11 +64,6 @@ internal static partial class SharedRenderer
             // Free expressive text (@text) prints plain italic; dynamic levels keep LP's
             // bold-italic DynamicText face — from the one home the reservation reads.
             var style = LilySharp.Core.Svg.Layout.DynamicEngraver.LabelStyle(fonts, d.IsExpressiveText);
-            if (d.IsTodoCallout)
-            {
-                DrawTodoCallout(fonts, d, text, y, size, style, midYup, os, gc);
-                continue;
-            }
             // A SMuFL score's level in the font's own dynamic glyphs, centred where the text
             // would stand — the run the layout reserved (DynamicEngraver.SmuflGlyphRun).
             if (!d.IsExpressiveText
@@ -87,39 +82,241 @@ internal static partial class SharedRenderer
         }
     }
 
-    // The @todo marks' ink and paper (the preview's; owner's decision 2026-10-10 — the same red
-    // as the scan view's boxes, a pale ground so the memo reads over the music).
+    // ---------- @todo marks: the editor's red ink over the page ----------
+
+    // The preview's ink and paper (owner's decision 2026-10-10 — the same red as the scan
+    // view's boxes, a pale ground so the memo reads over the music).
     internal static readonly Color TodoInk = new(0xE5, 0x39, 0x35);
     internal static readonly Color TodoPaper = new(0xFF, 0xF3, 0xF2);
+    // LILYSHARP-OWN, every one: an editor's mark, with no LilyPond counterpart. Owner's
+    // decisions 2026-10-10 — a ring (not a red head), one ring round a whole chord, the ring's
+    // pen thicker than the box's, the memo smaller than @text (memos run long), and NOTHING
+    // ON THE PAGE MOVES for a mark: it is red ink over the finished page, not an engraved grob.
+    private const double TodoRingPadding = 0.35;    // the ring stands this far outside the glyphs' box
+    private const double TodoRingThickness = 0.2;   // the ring's pen
+    private const double TodoLineThickness = 0.1;   // the box's and the leader's pen
+    private const double TodoCalloutPadding = 0.25; // the box around the memo's ink
+    private const double TodoCalloutGap = 0.6;      // between the box and what it stands over
+    private const double TodoMemoScale = 0.75;      // the memo's em over @text's
 
     /// <summary>
-    /// A <c>@todo("memo")</c> callout: the memo in a box beside the staff, a leader from the
-    /// box to the ring around the marked head (<see cref="DynamicLayout.TodoLeaderYUp"/>),
-    /// everything stamped <c>data-todo</c>. The box is the memo's ink plus
-    /// <see cref="DynamicEngraver.TodoCalloutPadding"/>; the layout reserved the ink alone, so
-    /// the box may touch a neighbour by that padding — a preview mark, not a page. The leader
-    /// is left out when the box already stands closer than the ring (a chord's low head under a
-    /// callout below it, say). LILYSHARP-OWN.
+    /// The preview's <c>@todo</c> marks, drawn OVER the page after every overlay — the ring
+    /// around a marked head, rest or chord (one ring about every head of a chord) and, for a
+    /// memo, a callout box with a leader down to the ring: above the staff, or above the ring
+    /// where the note stands higher; below both for <see cref="MusicItem.TodoBelow"/>. Read
+    /// off the LIVE score and the layout's columns, so no layout record exists for them and
+    /// no cached layout can hold a stale data-pos; drawn by a backend that
+    /// <see cref="IDrawingContext.DrawsEditorMarks"/> (the interactive SVG), so no export has
+    /// them and nothing is reserved for them: other marks may stand under the ink, as under a
+    /// reviewer's pencil. Everything is stamped <c>data-todo</c> and the item's <c>data-pos</c>.
+    /// A multi-measure rest's ring spans its measure, a staff space each way. LILYSHARP-OWN.
     /// </summary>
-    private static void DrawTodoCallout(ScoreTextMetrics fonts, DynamicLayout d, string text,
-        double y, double size, FontStyle style, double midYup, in OssiaShrink os, IDrawingContext gc)
+    private static void DrawTodoMarks(MultiStaffScore score, Dictionary<int, SystemLayout> measureToSystem,
+        in OssiaShrink os, IDrawingContext gc)
     {
-        double scale = os.Size(1.0, d.StaffIndex);
-        double half = DynamicEngraver.LabelHalfWidth(fonts, text, expressive: true) * scale;
-        var (ascent, descent) = DynamicEngraver.InkOf(fonts, text, true);
-        double pad = DynamicEngraver.TodoCalloutPadding * scale;
-        double top = y + ascent * scale + pad, bottom = y - descent * scale - pad;
-        double leaderEnd = os.YUp(midYup + d.TodoLeaderYUp, d.StaffIndex, d.MeasureIndex);
-        using (gc.Source(d.SourcePosition))
-        using (gc.Todo(d.TodoKey ?? ""))
+        if (!gc.DrawsEditorMarks)
+            return;
+        var fonts = score.TextMetrics;
+        // Every staff's outer drawn lines over its middle (half-positions × spacing), and the
+        // count DrawRest places a rest by.
+        var staffEdges = new Dictionary<int, (double Top, double Bottom, int Lines, double Spacing)>();
+        foreach (var (_, staff, staffIndex) in score.EnumerateStaves())
         {
-            gc.DrawRectangle(d.X - half - pad, top, 2 * (half + pad), top - bottom,
-                fill: TodoPaper, stroke: TodoInk, strokeWidth: DynamicEngraver.TodoLineThickness);
-            if (d.IsAbove ? leaderEnd < bottom : leaderEnd > top)
-                gc.DrawLine(d.X, d.IsAbove ? bottom : top, d.X, leaderEnd,
-                    stroke: TodoInk, strokeWidth: DynamicEngraver.TodoLineThickness);
-            gc.DrawText(text, d.X, y, size, DynamicEngraver.LabelRole(true),
-                style, TextAnchor.Middle, TodoInk);
+            double spacing = MultiStaffLayouter.LineSpacingOf(staff);
+            double top = double.MinValue, bottom = double.MaxValue;
+            foreach (double line in MultiStaffLayouter.LinePositionsOf(staff))
+            {
+                top = Math.Max(top, line / 2.0 * spacing);
+                bottom = Math.Min(bottom, line / 2.0 * spacing);
+            }
+            staffEdges[staffIndex] = (top, bottom, MultiStaffLayouter.NotationStaffLinesOf(staff), spacing);
+        }
+
+        // Pass 1: the rings, and the memos to place.
+        var callouts = new List<TodoCallout>();
+        foreach (var (_, staff, staffIndex) in score.EnumerateStaves())
+        {
+            var (_, _, staffLines, spacing) = staffEdges[staffIndex];
+            for (int v = 0; v < staff.Voices.Length; v++)
+            {
+                var measures = staff.Voices[v].Measures;
+                for (int mi = 0; mi < measures.Length; mi++)
+                {
+                    if (!measureToSystem.TryGetValue(mi, out var system))
+                        continue; // other page
+                    MeasureLayout? measureLayout = null;
+                    foreach (var ml in system.Measures)
+                        if (ml.MeasureIndex == mi) { measureLayout = ml; break; }
+                    if (measureLayout == null)
+                        continue;
+                    var items = measures[mi].Items;
+                    for (int ii = 0; ii < items.Length; ii++)
+                    {
+                        var item = items[ii];
+                        if (item.TodoKey is not { } key)
+                            continue;
+                        if (TodoInkBox(item, measureLayout, measures, mi, ii, staffLines, spacing) is not var (left, right, bottom, top))
+                            continue;
+                        double midYup = os.StaffMiddleYUp(staffIndex, mi, StaffHeight);
+                        if (double.IsNaN(midYup))
+                            continue;
+                        double scale = os.Size(1.0, staffIndex);
+                        double cx = (left + right) / 2, cy = (top + bottom) / 2;
+                        double rx = ((right - left) / 2 + TodoRingPadding) * scale;
+                        double ry = ((top - bottom) / 2 + TodoRingPadding) * scale;
+                        double ringMid = os.YUp(midYup + cy, staffIndex, mi);
+                        using (gc.Staff(staffIndex))
+                        using (gc.Source(item.SourcePosition))
+                        using (gc.Todo(key))
+                            gc.DrawEllipse(cx, ringMid, rx, ry, fill: null, stroke: TodoInk,
+                                strokeWidth: TodoRingThickness * scale);
+                        if (item.TodoMemo is { Length: > 0 } memo)
+                            callouts.Add(new TodoCallout(system, staffIndex, mi, item.SourcePosition, key, memo,
+                                item.TodoBelow, cx, item.TodoBelow ? ringMid - ry : ringMid + ry, scale));
+                    }
+                }
+            }
+        }
+        if (callouts.Count == 0)
+            return;
+
+        // Pass 2: the callouts go in the MARGIN — over the system's topmost drawn line (under
+        // its bottommost for .down), further out where the ring itself stands beyond it — and
+        // kept inside the system's width; two that would overlap at one level stack outward,
+        // left to right (owner's request 2026-10-10: "なるべく余白に書く"). The leader runs
+        // from the box to the ring, slanting when the box was pushed in from an edge.
+        var systemEdge = new Dictionary<(int System, bool Below), double>();
+        foreach (var group in callouts.GroupBy(c => (c.System.SystemIndex, c.Below)))
+        {
+            var ordered = group.OrderBy(c => c.RingX).ToList();
+            var first = ordered[0];
+            bool below = first.Below;
+            if (!systemEdge.TryGetValue(group.Key, out double edge))
+            {
+                // The system's outermost drawn line, over every staff standing on it.
+                edge = below ? double.MaxValue : double.MinValue;
+                foreach (var (si, (top, bottom, _, _)) in staffEdges)
+                {
+                    double mid = os.StaffMiddleYUp(si, first.MeasureIndex, StaffHeight);
+                    if (double.IsNaN(mid))
+                        continue;
+                    edge = below ? Math.Min(edge, os.YUp(mid + bottom, si, first.MeasureIndex))
+                                 : Math.Max(edge, os.YUp(mid + top, si, first.MeasureIndex));
+                }
+                systemEdge[group.Key] = edge;
+            }
+            var system = first.System;
+            double sysLeft = system.Measures[0].X;
+            double sysRight = system.Measures[^1].X + system.Measures[^1].Width;
+            var placed = new List<(double Left, double Right, int Level)>();
+            foreach (var c in ordered)
+            {
+                double scale = c.Scale;
+                double em = os.Size(DynamicEngraver.LabelEm(fonts, true), c.StaffIndex) * TodoMemoScale;
+                double half = DynamicEngraver.LabelHalfWidth(fonts, c.Memo, expressive: true) * scale * TodoMemoScale;
+                var (ascent, descent) = DynamicEngraver.InkOf(fonts, c.Memo, true);
+                ascent *= scale * TodoMemoScale;
+                descent *= scale * TodoMemoScale;
+                double pad = TodoCalloutPadding * scale, gap = TodoCalloutGap * scale;
+                double width = 2 * (half + pad), height = ascent + descent + 2 * pad;
+                double left = Math.Max(sysLeft, Math.Min(c.RingX - width / 2, sysRight - width));
+                double right = left + width;
+                int level = 0;
+                while (placed.Any(p => p.Level == level && p.Left < right && left < p.Right))
+                    level++;
+                placed.Add((left, right, level));
+                double step = level * (height + gap / 2);
+                double boxTop, boxBottom, baseline;
+                if (!below)
+                {
+                    boxBottom = Math.Max(edge, c.RingEdge) + gap + step;
+                    baseline = boxBottom + pad + descent;
+                    boxTop = boxBottom + height;
+                }
+                else
+                {
+                    boxTop = Math.Min(edge, c.RingEdge) - gap - step;
+                    baseline = boxTop - pad - ascent;
+                    boxBottom = boxTop - height;
+                }
+                double leaderX = Math.Clamp(c.RingX, left + pad, right - pad);
+                using (gc.Staff(c.StaffIndex))
+                using (gc.Source(c.SourcePosition))
+                using (gc.Todo(c.Key))
+                {
+                    gc.DrawRectangle(left, boxTop, width, height,
+                        fill: TodoPaper, stroke: TodoInk, strokeWidth: TodoLineThickness * scale);
+                    gc.DrawLine(leaderX, below ? boxTop : boxBottom, c.RingX, c.RingEdge,
+                        stroke: TodoInk, strokeWidth: TodoLineThickness * scale);
+                    gc.DrawText(c.Memo, (left + right) / 2, baseline, em, DynamicEngraver.LabelRole(true),
+                        DynamicEngraver.LabelStyle(fonts, true), TextAnchor.Middle, TodoInk);
+                }
+            }
+        }
+    }
+
+    /// <summary>A memo awaiting its place in the margin (<see cref="DrawTodoMarks"/>): the
+    /// ring's centre X and the ring's edge on the callout's side, page Y-up.</summary>
+    private readonly record struct TodoCallout(SystemLayout System, int StaffIndex, int MeasureIndex,
+        int SourcePosition, string Key, string Memo, bool Below, double RingX, double RingEdge, double Scale);
+
+    /// <summary>
+    /// The box the ring goes round, in staff spaces — X on the page, Y over the staff middle
+    /// (Y-up): a note's head, a chord's heads together (the displaced heads' full width, the
+    /// lowest head's bottom to the highest head's top), a rest's glyph at its drawn position,
+    /// a multi-measure rest's bar over its measure; null for an item that draws no such thing.
+    /// </summary>
+    private static (double Left, double Right, double Bottom, double Top)? TodoInkBox(
+        MusicItem item, MeasureLayout measureLayout, ImmutableArray<Measure> measures,
+        int measureIndex, int itemIndex, int staffLines, double lineSpacing)
+    {
+        double xColumn = measureLayout.X + LayoutUtilities.GetItemXOffset(measures, measureIndex, itemIndex, measureLayout);
+        switch (item)
+        {
+            case NoteItem note:
+            {
+                var box = GlyphMetrics.GetNoteheadBBox(HeadFontOf(note), GlyphMetrics.NoteValueOf(note.BaseDuration));
+                double y = note.StaffPosition / 2.0;
+                return (xColumn + box.Left, xColumn + box.Right, y - box.Height / 2, y + box.Height / 2);
+            }
+            case ChordItem { Notes.Length: > 0 } chord:
+            {
+                int noteValue = GlyphMetrics.NoteValueOf(chord.BaseDuration);
+                var font = HeadFontOf(chord);
+                var box = GlyphMetrics.GetNoteheadBBox(font, noteValue);
+                // The displaced heads of a second, as DrawChord places them (a voice's forced
+                // direction is not known here; the chord's own answer stands in).
+                double[] offsets = ChordHeadPositioning.CalculateOffsets(
+                    chord.Notes, chord.ForcedStemUp ?? chord.StemUp, noteValue, font);
+                double left = double.PositiveInfinity, right = double.NegativeInfinity;
+                double bottom = double.PositiveInfinity, top = double.NegativeInfinity;
+                for (int i = 0; i < chord.Notes.Length; i++)
+                {
+                    double dx = i < offsets.Length ? offsets[i] : 0;
+                    left = Math.Min(left, xColumn + dx + box.Left);
+                    right = Math.Max(right, xColumn + dx + box.Right);
+                    double y = chord.Notes[i].StaffPosition / 2.0;
+                    bottom = Math.Min(bottom, y - box.Height / 2);
+                    top = Math.Max(top, y + box.Height / 2);
+                }
+                return (left, right, bottom, top);
+            }
+            case RestItem { IsMultiMeasure: true }:
+                // The H-bar's span (DrawBigRest: a space in from each bar line), a staff space
+                // each way about the middle.
+                return measureLayout.Width > 2.0
+                    ? (measureLayout.X + 1.0, measureLayout.X + measureLayout.Width - 1.0, -lineSpacing, lineSpacing)
+                    : null;
+            case RestItem rest:
+            {
+                int noteValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
+                var box = GlyphMetrics.GetRestBBox(noteValue);
+                // The glyph's origin: the rest's own position, else the neutral one DrawRest draws at.
+                double y = (rest.StaffPosition ?? ElementCoordinator.NeutralRestPosition(staffLines, noteValue)) / 2.0;
+                return (xColumn + box.Left, xColumn + box.Right, y + box.Bottom, y + box.Top);
+            }
+            default:
+                return null;
         }
     }
 

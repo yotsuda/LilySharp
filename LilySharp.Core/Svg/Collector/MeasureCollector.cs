@@ -293,15 +293,6 @@ public sealed partial class MeasureCollector
     /// as they inherit <see cref="RecordsPitchTrace"/>.
     /// </remarks>
     internal Func<int, int, int>? OctaveOverride { get; init; }
-    /// <summary>
-    /// Whether a <c>@todo("memo")</c> becomes a CALLOUT (<see cref="DynamicItem.IsTodoCallout"/>):
-    /// the memo laid out as expressive text beside the staff, which the preview draws in a box
-    /// with a leader to the ringed head. Set from <see cref="Renderer.SvgRenderOptions.TodoCallouts"/>
-    /// — the preview only; every export collects without it, so its page is laid out as if the
-    /// memo were not written (owner's decision 2026-10-10). Nested collects inherit it, as they
-    /// inherit <see cref="RecordsPitchTrace"/>.
-    /// </summary>
-    internal bool TodoCallouts { get; init; }
     /// <summary>Lyric lines whose syllable count overflowed their bound notes
     /// (extra syllables dropped). Populated as a side effect of Collect.</summary>
     public IReadOnlyList<LyricSyllableWarning> LyricWarnings => _lyricsCollector.Warnings;
@@ -2310,14 +2301,14 @@ public sealed partial class MeasureCollector
         var seeded = MidBarBreaks ?? MidBarBreakTable.Empty;
 
         if (NestedResume?.Begin(channelKey) is not { } begun)
-            return Finish(new MeasureCollector { BeamMemo = BeamMemo, SeededMidBarBreaks = seeded, RecordsPitchTrace = RecordsPitchTrace, OctaveOverride = OctaveOverride, TodoCallouts = TodoCallouts }
+            return Finish(new MeasureCollector { BeamMemo = BeamMemo, SeededMidBarBreaks = seeded, RecordsPitchTrace = RecordsPitchTrace, OctaveOverride = OctaveOverride }
                 .CollectMultiStaff(tree, spec, harvestStructureMarks));
 
         if (begun.IsResume)
         {
             try
             {
-                return Finish(new MeasureCollector { WalkProbe = begun.Probe, BeamMemo = BeamMemo, SeededMidBarBreaks = seeded, RecordsPitchTrace = RecordsPitchTrace, OctaveOverride = OctaveOverride, TodoCallouts = TodoCallouts }
+                return Finish(new MeasureCollector { WalkProbe = begun.Probe, BeamMemo = BeamMemo, SeededMidBarBreaks = seeded, RecordsPitchTrace = RecordsPitchTrace, OctaveOverride = OctaveOverride }
                     .CollectMultiStaff(tree, spec, harvestStructureMarks));
             }
             catch (CollectResumeAbortException)
@@ -2328,7 +2319,7 @@ public sealed partial class MeasureCollector
             begun = (CollectWalkProbe.Recorder(), false);
         }
 
-        var sub = new MeasureCollector { WalkProbe = begun.Probe, BeamMemo = BeamMemo, SeededMidBarBreaks = seeded, RecordsPitchTrace = RecordsPitchTrace, OctaveOverride = OctaveOverride, TodoCallouts = TodoCallouts };
+        var sub = new MeasureCollector { WalkProbe = begun.Probe, BeamMemo = BeamMemo, SeededMidBarBreaks = seeded, RecordsPitchTrace = RecordsPitchTrace, OctaveOverride = OctaveOverride };
         var result = sub.CollectMultiStaff(tree, spec, harvestStructureMarks);
         // A nested collect cut under a settled table must not be resumed under a later one.
         if (!seeded.IsEmpty)

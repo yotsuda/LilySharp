@@ -52,14 +52,20 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
     private readonly ScoreTextMetrics _metrics;
 
     public PngDrawingContext(SKCanvas canvas, double pixelsPerSpace, string? fontDirectory,
-        TextFontPlan? plan = null)
+        TextFontPlan? plan = null, bool editorMarks = false)
     {
         _canvas = canvas;
         _scale = pixelsPerSpace;
         _fonts = new FontCache(fontDirectory);
         _plan = plan ?? TextFontPlan.Default;
         _metrics = new ScoreTextMetrics(_plan);
+        DrawsEditorMarks = editorMarks;
     }
+
+    /// <summary>The preview's @todo marks (<see cref="IDrawingContext.DrawsEditorMarks"/>):
+    /// off for every PNG a user asks for; on only where a caller asks for the preview's
+    /// picture as pixels (<see cref="PngDocumentOptions.EditorMarks"/>).</summary>
+    public bool DrawsEditorMarks { get; }
 
     private float X(double s) => (float)(s * _scale);
     private float T(double s) => (float)(s * _scale);

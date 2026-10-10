@@ -2315,7 +2315,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
            box and the leader; the memo keeps its place (the layout reserved it) and goes
            plain. Until 2026-10-10 the head itself was filled red (owner: "赤くつぶれる").
            The dark scheme's invert + hue-rotate(180deg) brings the red back to red. */
-        :root.todo-plain #svgContainer ellipse.todo-ring,
+        :root.todo-plain #svgContainer ellipse[data-todo],
         :root.todo-plain #svgContainer rect[data-todo],
         :root.todo-plain #svgContainer line[data-todo] {
             display: none;

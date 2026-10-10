@@ -1056,13 +1056,6 @@ internal static partial class SharedRenderer
                     DrawChurchRest(mmr, cy, lines, gc);
                 else
                     DrawBigRest(mmr, cy, lines, gc);
-                // The preview's ring around a marked rest: the symbol's span, a staff
-                // space tall each way, widened by the ring's padding (the interactive SVG
-                // alone draws it — IDrawingContext.TodoRing).
-                if (mmr.TodoKey != null && mmr.EndX > mmr.StartX)
-                    gc.TodoRing((mmr.StartX + mmr.EndX) / 2, cy,
-                        (mmr.EndX - mmr.StartX) / 2 - 1.0 + DynamicEngraver.TodoRingPadding,
-                        mmr.LineSpacing + DynamicEngraver.TodoRingPadding);
             }
         }
     }

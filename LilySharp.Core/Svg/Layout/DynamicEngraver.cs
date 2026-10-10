@@ -46,11 +46,7 @@ public readonly record struct DynamicLayout(
     int StaffIndex = 0,     // Which staff this dynamic hangs under (per-staff stacking).
     bool IsExpressiveText = false, // @text("…"): plain italic, not a dynamic level.
     bool OnMultiMeasureRest = false, // @text on an R: MultiMeasureRestText (DynamicItem.OnMultiMeasureRest).
-    double? GlyphRunWidth = null, // A SMuFL score's level in the font's own glyphs: its width (DynamicEngraver.SmuflGlyphRun).
-    bool IsTodoCallout = false,   // @todo("memo") in the preview: a box with a leader (DynamicItem.IsTodoCallout).
-    string? TodoKey = null,       // Its mark's key, stamped data-todo on the box, the leader and the memo.
-    double TodoLeaderYUp = 0      // Where the leader ends (Y-up over the staff middle): just past the ring
-                                  // around the host's outermost head on the callout's side (DynamicEngraver.TodoLeaderYUp).
+    double? GlyphRunWidth = null // A SMuFL score's level in the font's own glyphs: its width (DynamicEngraver.SmuflGlyphRun).
 );
 
 /// <summary>
@@ -283,11 +279,7 @@ internal static class DynamicEngraver
             // \italic) — it has no dynamic letters. It still ends a hairpin and sets the MIDI
             // level, which is what keeps it a DynamicItem.
             bool expressive = dynamic.IsExpressiveText || dynamic.Level == DynamicLevel.Niente;
-            // A todo callout is expressive text for its face and its ink, but it is CENTRED on
-            // the head it points at, as a dynamic is — its leader is a vertical line to the
-            // ringed head (owner's decision 2026-10-10). SkylineBuilder seeds the same X.
-            bool callout = dynamic.IsTodoCallout;
-            double x = xColumn + (expressive && !callout
+            double x = xColumn + (expressive
                 ? LabelHalfWidth(score.TextMetrics, labelText, expressive: true)
                 : DynamicAnchorCentreOffset(
                     dynVoices, dynamic.VoiceIndex, dynamic.MeasureIndex, dynamic.ItemIndex));
@@ -340,46 +332,11 @@ internal static class DynamicEngraver
                 dynamic.StaffIndex,
                 expressive,
                 dynamic.OnMultiMeasureRest,
-                expressive ? null : SmuflGlyphRun(score.TextMetrics, labelText)?.Width,
-                callout,
-                callout ? dynamic.TodoKey ?? "" : null,
-                callout ? TodoLeaderYUp(dynVoices, dynamic.VoiceIndex, mi, ii, dynamic.IsAbove) : 0
+                expressive ? null : SmuflGlyphRun(score.TextMetrics, labelText)?.Width
             ));
         }
 
         return layouts.ToImmutable();
-    }
-
-    // ---- the @todo marks of the preview (owner's decisions 2026-10-10) ----
-    // LILYSHARP-OWN, all three: a working mark of the editor, with no LilyPond counterpart.
-    // The ring around a marked head or rest stands this far outside the glyph's box.
-    internal const double TodoRingPadding = 0.35;
-    // The callout's box stands this far outside the memo's ink.
-    internal const double TodoCalloutPadding = 0.25;
-    // The ring's, the box's and the leader's line thickness.
-    internal const double TodoLineThickness = 0.1;
-
-    /// <summary>
-    /// Where a todo callout's leader ends, in staff spaces over the staff middle (Y-up): a
-    /// tenth past the ring around the host's outermost head on the callout's side — the
-    /// highest head of a chord under a callout above it, the lowest under one below; a
-    /// rest's own position; the middle line for anything else (a multi-measure rest's bar).
-    /// </summary>
-    internal static double TodoLeaderYUp(ImmutableArray<Voice> voices, int voiceIndex,
-        int measureIndex, int itemIndex, bool isAbove)
-    {
-        double position = AnchorItem(voices, voiceIndex, measureIndex, itemIndex) switch
-        {
-            NoteItem note => note.StaffPosition,
-            ChordItem { Notes.Length: > 0 } chord => isAbove
-                ? chord.Notes.Max(n => n.StaffPosition)
-                : chord.Notes.Min(n => n.StaffPosition),
-            RestItem rest => rest.StaffPosition ?? 0,
-            _ => 0,
-        };
-        // Half a head's height, the ring's padding, and a tenth of clear space.
-        double clearance = 0.5 + TodoRingPadding + 0.1;
-        return position / 2.0 + (isAbove ? clearance : -clearance);
     }
 
     /// <summary>

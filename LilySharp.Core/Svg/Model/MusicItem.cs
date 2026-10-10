@@ -159,6 +159,8 @@ internal sealed record MusicItemRare
     public int LaissezVibrerSourcePosition { get; init; } = MusicItem.NoSourcePosition;
     public int RepeatTieSourcePosition { get; init; } = MusicItem.NoSourcePosition;
     public string? TodoKey { get; init; }
+    public string? TodoMemo { get; init; }
+    public bool TodoBelow { get; init; }
 }
 
 /// <summary>
@@ -224,6 +226,26 @@ public abstract record MusicItem
     {
         get => _rareBase?.TodoKey;
         init { if (value != TodoKey) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { TodoKey = value }; }
+    }
+
+    /// <summary>
+    /// The mark's memo (<c>@todo("memo")</c>), or null without one. Like <see cref="TodoKey"/>
+    /// it engraves nothing and takes no space: the preview draws it as red ink OVER the page —
+    /// a callout beside the staff with a leader to the ringed head (<c>SharedRenderer.DrawTodoMarks</c>),
+    /// above by default, below for <see cref="TodoBelow"/> (<c>.down</c>). Owner's decisions
+    /// 2026-10-10: nothing on the page moves for a mark, as nothing moves for a pencilled note.
+    /// </summary>
+    public string? TodoMemo
+    {
+        get => _rareBase?.TodoMemo;
+        init { if (value != TodoMemo) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { TodoMemo = value }; }
+    }
+
+    /// <inheritdoc cref="TodoMemo"/>
+    public bool TodoBelow
+    {
+        get => _rareBase?.TodoBelow ?? false;
+        init { if (value != TodoBelow) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { TodoBelow = value }; }
     }
 
     /// <summary>

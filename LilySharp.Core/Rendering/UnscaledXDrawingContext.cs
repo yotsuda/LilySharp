@@ -130,10 +130,9 @@ internal sealed class UnscaledXDrawingContext : IDrawingContext
     // Forwarded, NOT left to the interface default (a no-op), or no data-todo is written.
     public IDisposable Todo(string key) => _inner.Todo(key);
 
-    // Forwarded like Todo (the default draws nothing); the X and the X radius are
-    // position-compensated as DrawEllipse's are.
-    public void TodoRing(double cx, double cy, double rx, double ry)
-        => _inner.TodoRing(X(cx), cy, rx * _invScaleX, ry);
+    // Forwarded like Todo: the default answers false, and a decorated backend would
+    // otherwise never draw the preview's @todo marks.
+    public bool DrawsEditorMarks => _inner.DrawsEditorMarks;
 
     // Forwarded like Todo: the interface default is a no-op, so a decorated backend would
     // otherwise never hear what a primitive is or which staff it is on (lysc boxes).

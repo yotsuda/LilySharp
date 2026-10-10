@@ -392,10 +392,12 @@ warning (LYS4026, `TODO: memo`), and the quick fix *Resolve this TODO* deletes i
 argument is a memo; a bare one is a key — a letter, then letters, digits, `_` and `-` — which
 a tool (an OMR reader) links its own data to.
 
-The preview shows the marks: the marked head or rest wears a red ring, and a memo stands in
-a callout above the staff with a leader to the ring — `.down` puts it below. The
-`lilysharp.preview.highlightTodos` setting hides the ring and the callout. No export draws
-them: a PDF, PNG, SVG or LilyPond file is laid out as if the memo were not written.
+The preview shows the marks as red ink over the finished page: the marked head, rest or
+chord wears a red ring (one ring round a whole chord), and a memo stands in a small callout
+in the margin above the system with a leader to the ring — `.down` puts it below. Nothing on
+the page moves for a mark, as nothing moves for a pencilled note; a callout may stand over
+whatever is there. The `lilysharp.preview.highlightTodos` setting hides the marks. No export
+draws them.
 
 ```
 c'4 fis'8@todo("F# or F natural? the sharp is faint") e'8 g'2 |

@@ -999,32 +999,6 @@ public sealed partial class MeasureCollector
                             anchorTiming: anchorTiming.Denominator != 0 && anchorTiming > Fraction.Zero
                                 ? anchorTiming : default));
                 }
-                else if (markSyntax.Name.Equals(Semantics.TodoAnnotation.Name, StringComparison.Ordinal))
-                {
-                    // @todo("memo")[.up/.down] — the memo as a CALLOUT beside the staff, in the
-                    // PREVIEW only: TodoCallouts is set by the preview's render options and by
-                    // nothing else, so an export is laid out as if the memo were not written
-                    // (owner's decision 2026-10-10). It rides the expressive-text pipeline above
-                    // (placement, stacking, per-staff routing, the MultiMeasureRestText seat on an
-                    // R), UP by default where @text is DOWN — a reviewer's note stands over the
-                    // music; the renderer draws the box and the leader to the ringed head
-                    // (SharedRenderer.DrawDynamics). A todo with no memo, or a key alone, is the
-                    // ring alone (MusicItem.TodoKey, stamped at item creation). LILYSHARP-OWN.
-                    if (TodoCallouts
-                        && Semantics.TodoAnnotation.Of(markSyntax) is { Memo: { Length: > 0 } memo } todo)
-                    {
-                        bool onMmr = node is RestSyntax { RestText: "R" };
-                        _dynamics.Add(new DynamicItem(
-                            memo, measureIndex, itemIndex, markSyntax.SourceStart, _cursor.StaffIndex)
-                        {
-                            IsAbove = markSyntax.ForcedAbove != false,
-                            VoiceIndex = _cursor.VoiceIndex,
-                            OnMultiMeasureRest = onMmr,
-                            IsTodoCallout = true,
-                            TodoKey = todo.Key ?? "",
-                        });
-                    }
-                }
                 else
                 {
                     // Everything still here is BUILT by the statement-level handler. That

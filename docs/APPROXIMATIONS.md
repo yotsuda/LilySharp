@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 234 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **360** | |
+| `OWN` | 231 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **357** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -27,11 +27,11 @@
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 10 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 8 |
+| `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 7 |
-| `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 6 |
 
 ## APPROX — LP に対応物はあるが、形が違うと自認しているもの（63 件）
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（234 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（231 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **`LilyPondExporter.EmitChordList`** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
@@ -317,10 +317,9 @@
 - **`SharedRenderer.DrawTabGraceNotes`** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **`SharedRenderer.DrawStemlessTremolo`** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
-### `LilySharp.Core/Rendering/SharedRenderer.Noteheads.cs`
-- **`SharedRenderer.TodoRingAround`** a ring, not a red head). LILYSHARP-OWN.
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
-- **`SharedRenderer.DrawTodoCallout`** callout below it, say). LILYSHARP-OWN.
+- **`SharedRenderer.TodoRingPadding`** LILYSHARP-OWN, every one: an editor's mark, with no LilyPond counterpart. Owner's
+- **`SharedRenderer.DrawTodoMarks`** A multi-measure rest's ring spans its measure, a staff space each way. LILYSHARP-OWN.
 - **`SharedRenderer.DrawBendBefore`** LILYSHARP-OWN: LilyPond has no scoop or plop — no grob and no event spells either in
 - **`SharedRenderer.BendLabelEm`** The bend amount label's ENGRAVING em. LILYSHARP-OWN, as
 - **`SharedRenderer.DrawGuitarBend`** LILYSHARP-OWN: LilyPond's guitar bend is the BendSpanner (`\^`) — a line and curve to
@@ -364,8 +363,6 @@
 - **`BeamingPattern.Options.For`** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureBuilder.cs`
 - **`MeasureBuilder.SectionHead`** LILYSHARP-OWN (owner's decisions, 2026-10-02, HANDOFF §1.1 第737): a time, key
-### `LilySharp.Core/Svg/Collector/MeasureCollector.Annotations.cs`
-- **`MeasureCollector.CollectArticulations`** ring alone (MusicItem.TodoKey, stamped at item creation). LILYSHARP-OWN.
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **`MeasureCollector.DefaultExpansionBudgetCap`** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
 - **`MeasureCollector.ProcessGraceRegion`** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
@@ -429,7 +426,6 @@
 - **`DotColumn.Reserved`** ⚠️ LILYSHARP-OWN: the dots' preferred DIRECTION is not read here. LilyPond's
 ### `LilySharp.Core/Svg/Layout/DynamicEngraver.cs`
 - **`DynamicEngraver.HasMissingGlyph`** ⚠️ LILYSHARP-OWN: a string the bundled face cannot spell (CJK — TextFontMetrics reports
-- **`DynamicEngraver.TodoRingPadding`** LILYSHARP-OWN, all three: a working mark of the editor, with no LilyPond counterpart.
 - **`DynamicEngraver.PlaceOnMultiMeasureRests`** ⚠️ LILYSHARP-OWN: the number is a support of THIS text alone, not ink of the staff's
 - **`DynamicEngraver.SmuflGlyphRun`** the ink the side-position reads. LILYSHARP-OWN: LilyPond reads no SMuFL font and sets its
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
@@ -584,8 +580,6 @@
 ### `LilySharp.Core/Svg/Layout/VoltaBracketEngraver.cs`
 - **`VoltaBracketEngraver.Bounds`** ⚠️ LILYSHARP-OWN: that column's X extent is taken as EMPTY, where
 - **`VoltaBracketEngraver.BarWalk`** ⚠️ LILYSHARP-OWN: the plain bar lines inside a compressed multi-measure rest, which the
-### `LilySharp.Core/Svg/Model/DynamicItem.cs`
-- **`DynamicItem.IsTodoCallout`** LILYSHARP-OWN: a working mark of the editor, no LilyPond counterpart.
 ### `LilySharp.Core/Svg/Model/FiguredBassItem.cs`
 - **`FiguredBassItem.ParseFigures`** LILYSHARP-OWN: the @figuredBass(…) SPELLING is Lily#'s, not a port — LilyPond writes
 ### `LilySharp.Core/Svg/Model/InstrumentDefaults.cs`

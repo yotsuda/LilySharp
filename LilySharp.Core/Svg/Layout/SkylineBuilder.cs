@@ -2724,8 +2724,7 @@ internal sealed class SkylineBuilder
             // computes (DynamicEngraver.Calculate), so seed and draw agree.
             double xColumn = measureLayout.X + LayoutUtilities.GetItemXOffset(
                 primaryMeasures, dyn.MeasureIndex, dyn.ItemIndex, measureLayout);
-            // (A todo callout is expressive text centred like a dynamic — DynamicEngraver.Calculate.)
-            double xLabel = xColumn + (dyn.IsExpressiveText && !dyn.IsTodoCallout
+            double xLabel = xColumn + (dyn.IsExpressiveText
                 ? DynamicEngraver.LabelHalfWidth(_fonts, dyn.Text ?? string.Empty, expressive: true)
                 : DynamicEngraver.DynamicAnchorCentreOffset(
                     voices, dyn.VoiceIndex, dyn.MeasureIndex, dyn.ItemIndex));

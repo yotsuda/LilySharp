@@ -34,6 +34,12 @@ internal sealed class PngDocumentOptions
     /// <summary>PNG encoder quality (0-100). 100 = lossless.</summary>
     public int Quality { get; init; } = 100;
 
+    /// <summary>Draw the preview's @todo marks — the rings and the memo callouts, the editor's
+    /// red ink (<see cref="IDrawingContext.DrawsEditorMarks"/>). Off by default and for every
+    /// PNG the CLI writes; a caller that wants the preview's picture as pixels (a probe, a
+    /// future `lysc png --todo`) sets it.</summary>
+    public bool EditorMarks { get; init; }
+
     /// <summary>Background color. Defaults to white.</summary>
     public Color Background { get; init; } = Color.White;
 
@@ -87,7 +93,7 @@ internal sealed class PngDocumentContext : IDocumentContext
         var bg = _options.Background;
         _pageCanvas.Clear(new SKColor(bg.R, bg.G, bg.B, bg.A));
         _currentPage = new PngDrawingContext(_pageCanvas, _options.PixelsPerSpace,
-            _options.FontDirectory, Fonts);
+            _options.FontDirectory, Fonts, _options.EditorMarks);
         return _currentPage;
     }
 

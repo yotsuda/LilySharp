@@ -60,8 +60,7 @@ public static class SvgGenerator
     public static string GenerateScore(SyntaxTree tree, RenderSpec? renderSpec, SvgRenderOptions? options = null)
     {
         options ??= SvgRenderOptions.Default;
-        var (multiScore, layout) = BuildLayout(tree, renderSpec, PaperBaseOf(options), options.PaperOverrides,
-            options.TodoCallouts);
+        var (multiScore, layout) = BuildLayout(tree, renderSpec, PaperBaseOf(options), options.PaperOverrides);
         LayoutWarnings.Report(layout, multiScore.Paper, options.LayoutWarning);
         return RenderToSvg(multiScore, layout, options);
     }
@@ -150,9 +149,9 @@ public static class SvgGenerator
 
     private static (MultiStaffScore Score, ScoreLayout Layout) BuildLayout(
         SyntaxTree tree, RenderSpec? renderSpec, LayoutOptions? paperBase = null,
-        Semantics.PaperOverrides? settings = null, bool todoCallouts = false)
+        Semantics.PaperOverrides? settings = null)
     {
-        var multiScore = CollectScore(tree, renderSpec, paperBase, settings, todoCallouts);
+        var multiScore = CollectScore(tree, renderSpec, paperBase, settings);
         // score.Paper is the base (LayoutOptions.Default, or the snippet layout) unless
         // the book wrote `paper { … }`, so a book without one lays out exactly as before.
         return (multiScore, new LayoutEngine(multiScore.Paper).Layout(multiScore));
@@ -168,10 +167,8 @@ public static class SvgGenerator
     /// </summary>
     /// <paramref name="settings"/> are the caller's paper values (<c>lysc … --set</c>), laid
     /// over the paper the file says (<see cref="Semantics.PaperOverrides"/>).
-    /// <paramref name="todoCallouts"/> is the preview's (<see cref="SvgRenderOptions.TodoCallouts"/>).
     internal static MultiStaffScore CollectScore(SyntaxTree tree, RenderSpec? renderSpec,
-        LayoutOptions? paperBase = null, Semantics.PaperOverrides? settings = null,
-        bool todoCallouts = false)
+        LayoutOptions? paperBase = null, Semantics.PaperOverrides? settings = null)
         => CollectScore(new MeasureCollector
             {
                 ScoreTranspose = renderSpec?.ScoreTranspose,
@@ -179,7 +176,6 @@ public static class SvgGenerator
                 // `--set staffSpace=…` goes under the file's paper, which is read through it.
                 PaperBase = settings?.OnBase(paperBase ?? LayoutOptions.Default) ?? paperBase ?? LayoutOptions.Default,
                 PaperOverrides = settings,
-                TodoCallouts = todoCallouts,
             },
             tree, renderSpec);
 
