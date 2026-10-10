@@ -51,10 +51,10 @@ public class AccidentalOctaveAlignmentTests
         // is measuring nothing.
         var notes = new[]
         {
-            new ChordNoteInfo(-4, "sharp", true),
-            new ChordNoteInfo(3, "sharp", true),
-            new ChordNoteInfo(-6, "sharp", true),
-            new ChordNoteInfo(1, "sharp", true),
+            new ChordNoteInfo(-4, "sharp"),
+            new ChordNoteInfo(3, "sharp"),
+            new ChordNoteInfo(-6, "sharp"),
+            new ChordNoteInfo(1, "sharp"),
         };
         var ls = new AccidentalPlacement().CalculatePositions(notes);
 

@@ -754,7 +754,6 @@ public sealed partial class MeasureCollector
             GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
         if (pitch.QuarterOffset != 0)
             accidental = QuarterToneAccidental(pitch, accidental);
-        bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
         int midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
         int? fingering = ExtractFingering(pitch);
         bool hasLv = HasLaissezVibrerAnnotation(pitch);
@@ -769,7 +768,7 @@ public sealed partial class MeasureCollector
             bool tieStart = !last || marks.TieAfter;
             items.Add(new NoteItem(staffPosition, Fraction.FromNoteValue(parts[k].Value), parts[k].Dots,
                 // A tied continuation does not print its accidental again.
-                first ? accidental : null, needsLedger, pitch.SourceStart, 0,
+                first ? accidental : null, pitch.SourceStart, 0,
                 hasTieStart: tieStart,
                 hasSlurStart: first && marks.SlurStart,
                 hasSlurEnd: last && marks.SlurEnd,
@@ -808,14 +807,13 @@ public sealed partial class MeasureCollector
         var rp = ResolveAbsolutePitch(step, alteration, octave, degree.SourceStart);
         var (accidental, styleCourtesy) =
             GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
-        bool needsLedger = rp.StaffPosition is <= -6 or >= 6;
         int midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
         for (int k = 0; k < parts.Count; k++)
         {
             bool first = k == 0, last = k == parts.Count - 1;
             bool tieStart = !last || marks.TieAfter;
             var noteItem = new NoteItem(rp.StaffPosition, Fraction.FromNoteValue(parts[k].Value), parts[k].Dots,
-                first ? accidental : null, needsLedger, degree.SourceStart, 0,
+                first ? accidental : null, degree.SourceStart, 0,
                 hasTieStart: tieStart,
                 hasSlurStart: first && marks.SlurStart,
                 hasSlurEnd: last && marks.SlurEnd,

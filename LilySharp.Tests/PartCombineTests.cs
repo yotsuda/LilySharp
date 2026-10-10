@@ -47,7 +47,7 @@ public class PartCombineTests
 {
     private static NoteItem Note(int staffPosition, Fraction duration, string? accidental = null,
         bool slurStart = false, bool slurEnd = false, bool tieStart = false) =>
-        new(staffPosition, duration, 0, accidental, false, 0,
+        new(staffPosition, duration, 0, accidental, 0,
             hasTieStart: tieStart, hasSlurStart: slurStart, hasSlurEnd: slurEnd);
 
     private static RestItem Rest(Fraction duration) => new(duration, 0, 0);

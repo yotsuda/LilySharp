@@ -44,7 +44,6 @@ public enum GraceNoteType
 public readonly record struct GraceHeadInfo(
     int StaffPosition,      // Staff position (-6 = middle C in treble clef)
     string? Accidental,     // "sharp", "flat", "natural", "doubleSharp", "doubleFlat", or null
-    bool NeedsLedger,       // Whether ledger lines are needed
     int Midi = 0,           // Absolute MIDI pitch (for tab fret resolution)
     // The '\N' written on this grace note, or null for automatic string selection.
     // ⚠️ THIS IS NOT A GROB, which is why a grace note can carry it while it carries no
@@ -167,11 +166,11 @@ public readonly record struct GraceColumnInfo(
     /// out at each of those call sites would say nothing extra.
     /// </summary>
     public GraceColumnInfo(
-        int staffPosition, string? accidental, bool needsLedger, Fraction baseDuration,
+        int staffPosition, string? accidental, Fraction baseDuration,
         int midi = 0, int? stringNumber = null, int dots = 0)
         : this(
             ImmutableArray.Create(
-                new GraceHeadInfo(staffPosition, accidental, needsLedger, midi, stringNumber)),
+                new GraceHeadInfo(staffPosition, accidental, midi, stringNumber)),
             baseDuration, dots)
     {
     }

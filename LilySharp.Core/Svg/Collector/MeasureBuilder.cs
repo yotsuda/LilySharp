@@ -722,7 +722,7 @@ internal sealed class MeasureBuilder
             // note, paired by the ordinary SlurDetector and laid out at the grace's own X and
             // font (ElementCoordinator.LayoutSlurs) — `grace { d'16( e') }`, `grace { g16( } a8)`.
             NoteItem n => new NoteItem(
-                n.StaffPosition, n.BaseDuration, n.Dots, n.Accidental, n.NeedsLedgerLines,
+                n.StaffPosition, n.BaseDuration, n.Dots, n.Accidental,
                 n.SourcePosition, hasSlurStart: n.HasSlurStart, hasSlurEnd: n.HasSlurEnd, isCue: n.IsCue)
             {
                 GraceTime = true,
@@ -738,7 +738,7 @@ internal sealed class MeasureBuilder
                 // The members keep the same seven answers and nothing else — a member can carry
                 // its own fingering and its own notehead style, and both are drops here too.
                 c.Notes.Select(static m => new ChordNoteInfo(
-                    m.StaffPosition, m.Accidental, m.NeedsLedgerLines,
+                    m.StaffPosition, m.Accidental,
                     StringNumber: m.StringNumber, Midi: m.Midi,
                     SourcePosition: m.SourcePosition)).ToImmutableArray(),
                 c.BaseDuration, c.Dots, c.SourcePosition, isCue: c.IsCue,

@@ -33,7 +33,6 @@ public class VoiceCollectorTests
             baseDuration: Fraction.Quarter,
             dots: 0,
             accidental: null,
-            needsLedgerLines: false,
             sourcePosition: 0);
 
         var measure = new Measure(
@@ -81,8 +80,8 @@ public class VoiceCollectorTests
     [Fact]
     public void SingleVoice_MultipleMeasures_TracksIndices()
     {
-        var note1 = new NoteItem(4, Fraction.Quarter, 0, null, false, 0);
-        var note2 = new NoteItem(5, Fraction.Quarter, 0, null, false, 10);
+        var note1 = new NoteItem(4, Fraction.Quarter, 0, null, 0);
+        var note2 = new NoteItem(5, Fraction.Quarter, 0, null, 10);
 
         var measure1 = new Measure(
             ImmutableArray.Create<MusicItem>(note1),
@@ -107,9 +106,9 @@ public class VoiceCollectorTests
     {
         var chord = new ChordItem(
             ImmutableArray.Create(
-                new ChordNoteInfo(0, null, false),
-                new ChordNoteInfo(4, null, false),
-                new ChordNoteInfo(7, null, false)),
+                new ChordNoteInfo(0, null),
+                new ChordNoteInfo(4, null),
+                new ChordNoteInfo(7, null)),
             Fraction.Quarter,
             dots: 0,
             sourcePosition: 0);
@@ -131,8 +130,8 @@ public class VoiceCollectorTests
     [Fact]
     public void MultipleVoices_SameTimePosition_GroupedInColumn()
     {
-        var note1 = new NoteItem(8, Fraction.Quarter, 0, null, false, 0);  // High note
-        var note2 = new NoteItem(0, Fraction.Quarter, 0, null, false, 10); // Low note
+        var note1 = new NoteItem(8, Fraction.Quarter, 0, null, 0);  // High note
+        var note2 = new NoteItem(0, Fraction.Quarter, 0, null, 10); // Low note
 
         var measure1 = new Measure(
             ImmutableArray.Create<MusicItem>(note1),
@@ -163,9 +162,9 @@ public class VoiceCollectorTests
     {
         // Voice 1: quarter note at beat 1
         // Voice 2: two eighth notes at beats 1 and 2
-        var quarterNote = new NoteItem(8, Fraction.Quarter, 0, null, false, 0);
-        var eighthNote1 = new NoteItem(0, Fraction.Eighth, 0, null, false, 10);
-        var eighthNote2 = new NoteItem(2, Fraction.Eighth, 0, null, false, 20);
+        var quarterNote = new NoteItem(8, Fraction.Quarter, 0, null, 0);
+        var eighthNote1 = new NoteItem(0, Fraction.Eighth, 0, null, 10);
+        var eighthNote2 = new NoteItem(2, Fraction.Eighth, 0, null, 20);
 
         var measure1 = new Measure(
             ImmutableArray.Create<MusicItem>(quarterNote),

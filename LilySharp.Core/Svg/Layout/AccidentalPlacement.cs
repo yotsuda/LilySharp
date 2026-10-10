@@ -292,7 +292,7 @@ internal sealed class AccidentalPlacement
         if (string.IsNullOrEmpty(accidental))
             return null;
         var note = new ChordNoteInfo(
-            staffPosition, accidental, NeedsLedgerLines: false, IsCourtesy: isCourtesy);
+            staffPosition, accidental, IsCourtesy: isCourtesy);
         var layouts = CalculatePositions(
             new[] { note }, headOffsets: null, accidentalFont, headFont, stem);
         return layouts.Length > 0 ? layouts[0] : (AccidentalLayout?)null;

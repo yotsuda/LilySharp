@@ -322,7 +322,7 @@ score { staff m }
         var systems = ImmutableArray.Create(new SystemLayout(0, 10.0, 100.0, 5.0, measures));
 
         // Create a beam group that covers the entire tuplet range
-        var dummyNote = new NoteItem(0, Fraction.Eighth, 0, null, false, 0);
+        var dummyNote = new NoteItem(0, Fraction.Eighth, 0, null, 0);
         var members = ImmutableArray.Create(
             new BeamMember(dummyNote, 1, 1, 1, 0, 0),
             new BeamMember(dummyNote, 1, 1, 1, 0, 1),
@@ -346,7 +346,7 @@ score { staff m }
         var systems = ImmutableArray.Create(new SystemLayout(0, 10.0, 100.0, 5.0, measures));
 
         // Beam covers only first 2 of 3 notes
-        var dummyNote = new NoteItem(0, Fraction.Eighth, 0, null, false, 0);
+        var dummyNote = new NoteItem(0, Fraction.Eighth, 0, null, 0);
         var members = ImmutableArray.Create(
             new BeamMember(dummyNote, 1, 1, 1, 0, 0),
             new BeamMember(dummyNote, 1, 1, 1, 0, 1));
@@ -370,9 +370,9 @@ score { staff m }
 
         // Create notes with ascending pitch (different staff positions)
         var noteItems = ImmutableArray.Create<MusicItem>(
-            new NoteItem(-2, Fraction.Eighth, 0, null, false, 0),  // low
-            new NoteItem(0, Fraction.Eighth, 0, null, false, 0),   // middle
-            new NoteItem(2, Fraction.Eighth, 0, null, false, 0));  // high
+            new NoteItem(-2, Fraction.Eighth, 0, null, 0),  // low
+            new NoteItem(0, Fraction.Eighth, 0, null, 0),   // middle
+            new NoteItem(2, Fraction.Eighth, 0, null, 0));  // high
         var musicMeasures = ImmutableArray.Create(new Measure(noteItems, BarlineType.None, BarlineType.Single, null, 0, 0));
 
         var result = TupletBracketEngraver.Calculate(

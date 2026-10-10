@@ -35,7 +35,6 @@ public class BeamMemberMeasureIndexTests
             baseDuration: new Fraction(1, 8),
             dots: 0,
             accidental: null,
-            needsLedgerLines: false,
             sourcePosition: 0);
 
     [Fact]

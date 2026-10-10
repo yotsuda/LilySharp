@@ -34,7 +34,7 @@ namespace LilySharp.Tests;
 public class TieFormattingProblemTests
 {
     private static NoteItem CreateNote(int staffPosition) =>
-        new(staffPosition, Fraction.Quarter, 0, null, false, 0);
+        new(staffPosition, Fraction.Quarter, 0, null, 0);
 
     /// <summary>
     /// A tie with its direction IMPOSED, which is what these fixtures need: they assert the
@@ -77,7 +77,7 @@ public class TieFormattingProblemTests
     {
         // A head on the middle line with a SYNTHETIC dot row 0 — a row the head's parity rule
         // (+1) does not name, and the row a bow read outside its span would report — at X [1.5, 1.7].
-        var note = new NoteItem(0, Fraction.Quarter, 1, null, false, 0);
+        var note = new NoteItem(0, Fraction.Quarter, 1, null, 0);
         var column = new TieColumnParts
         {
             TiedHeads = [new TieOutlineHead(0, 0.0, 1.3)],
@@ -254,7 +254,7 @@ public class TieFormattingProblemTests
         // Note on a staff line (position 0) with 1 dot.
         // Dot shifts up by 1 half-space → dotPosition=1.
         // CurveUp tie should be penalized if it curves toward the dot.
-        var startNote = new NoteItem(0, Fraction.Quarter, dots: 1, null, false, 0, hasTieStart: true);
+        var startNote = new NoteItem(0, Fraction.Quarter, dots: 1, null, 0, hasTieStart: true);
         var endNote = CreateNote(0);
         var tieUp = new TieItem(startNote, endNote, 0, forcedCurveUp: true, 0, 0, 0, 1);
         var tieDown = new TieItem(startNote, endNote, 0, forcedCurveUp: false, 0, 0, 0, 1);
@@ -294,7 +294,7 @@ public class TieFormattingProblemTests
     {
         // Note in a space (odd position=1), dot stays at position 1.
         // CurveUp should be affected if tie attachment is near position 1.
-        var startNote = new NoteItem(1, Fraction.Quarter, dots: 1, null, false, 0, hasTieStart: true);
+        var startNote = new NoteItem(1, Fraction.Quarter, dots: 1, null, 0, hasTieStart: true);
         var endNote = CreateNote(1);
         var tie = new TieItem(startNote, endNote, 1, forcedCurveUp: true, 0, 0, 0, 1);
 

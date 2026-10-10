@@ -27,7 +27,7 @@ public class GraceSpacingTests
 {
     // Helper to create grace note info with duration
     private static GraceColumnInfo MakeGrace(Fraction duration, int staffPos = 0) =>
-        new(staffPos, null, false, duration);
+        new(staffPos, null, duration);
 
     [Fact]
     public void GraceSpacingParameters_Default_MatchesLilyPond()

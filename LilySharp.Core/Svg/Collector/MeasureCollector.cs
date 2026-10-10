@@ -6047,7 +6047,7 @@ public sealed partial class MeasureCollector
                 // (GrobFontSize's remarks name that gap), so a rest column stays at 0.
                 case NoteItem note:
                     columns.Add(new GraceColumnInfo(
-                        note.StaffPosition, note.Accidental, note.NeedsLedgerLines,
+                        note.StaffPosition, note.Accidental,
                         note.BaseDuration, note.Midi, note.StringNumber, note.Dots)
                     { ContextFontSizeStep = note.IsCue ? EngravingDefaults.CueFontSizeStep : 0, StemDown = stemDown });
                     break;
@@ -6061,7 +6061,7 @@ public sealed partial class MeasureCollector
                         var heads = ImmutableArray.CreateBuilder<GraceHeadInfo>(chord.Notes.Length);
                         foreach (var member in chord.Notes)
                             heads.Add(new GraceHeadInfo(
-                                member.StaffPosition, member.Accidental, member.NeedsLedgerLines,
+                                member.StaffPosition, member.Accidental,
                                 member.Midi, member.StringNumber));
                         heads.Sort(static (a, b) => a.StaffPosition.CompareTo(b.StaffPosition));
                         columns.Add(new GraceColumnInfo(

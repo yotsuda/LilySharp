@@ -34,11 +34,11 @@ namespace LilySharp.Tests;
 public class NoteColumnLayoutTests
 {
     private static NoteItem Note(int staffPosition, Fraction duration)
-        => new(staffPosition, duration, 0, null, false, 0);
+        => new(staffPosition, duration, 0, null, 0);
 
     private static ChordItem Chord(Fraction duration, params int[] staffPositions)
         => new(
-            staffPositions.Select(p => new ChordNoteInfo(p, null, false)).ToImmutableArray(),
+            staffPositions.Select(p => new ChordNoteInfo(p, null)).ToImmutableArray(),
             duration, 0, 0);
 
     /// <summary>A flat one-beam layout whose quanted centre sits at 3.0 ss above the middle

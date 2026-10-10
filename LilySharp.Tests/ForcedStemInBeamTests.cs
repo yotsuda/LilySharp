@@ -58,11 +58,11 @@ public class ForcedStemInBeamTests
     /// </summary>
     private static (bool GroupUp, bool[] StemsUp) BeamOf(bool? forcedOnFirst)
     {
-        var first = new NoteItem(0, Fraction.Eighth, 1, null, false, 0, hasBeamStart: true)
+        var first = new NoteItem(0, Fraction.Eighth, 1, null, 0, hasBeamStart: true)
         {
             ForcedStemUp = forcedOnFirst,
         };
-        var second = new NoteItem(-3, Fraction.Sixteenth, 0, null, false, 1, hasBeamEnd: true);
+        var second = new NoteItem(-3, Fraction.Sixteenth, 0, null, 1, hasBeamEnd: true);
         var measure = new Measure(
             ImmutableArray.Create<MusicItem>(first, second),
             BarlineType.None, BarlineType.None, null, 0, 0);

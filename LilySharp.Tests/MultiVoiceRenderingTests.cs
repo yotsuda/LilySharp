@@ -34,7 +34,7 @@ public class MultiVoiceRenderingTests
     [Fact]
     public void Score_SingleVoice_BackwardCompatible()
     {
-        var note = new NoteItem(4, Fraction.Quarter, 0, null, false, 0);
+        var note = new NoteItem(4, Fraction.Quarter, 0, null, 0);
         var measure = new Measure(
             ImmutableArray.Create<MusicItem>(note),
             BarlineType.None, BarlineType.Single, null, 0, 10);
@@ -51,8 +51,8 @@ public class MultiVoiceRenderingTests
     [Fact]
     public void Score_MultipleVoices_Supported()
     {
-        var note1 = new NoteItem(8, Fraction.Quarter, 0, null, false, 0);  // High note
-        var note2 = new NoteItem(0, Fraction.Quarter, 0, null, false, 10); // Low note
+        var note1 = new NoteItem(8, Fraction.Quarter, 0, null, 0);  // High note
+        var note2 = new NoteItem(0, Fraction.Quarter, 0, null, 10); // Low note
 
         var measure1 = new Measure(
             ImmutableArray.Create<MusicItem>(note1),
@@ -78,8 +78,8 @@ public class MultiVoiceRenderingTests
     [Fact]
     public void VoiceCollector_MultiVoice_AppliesStemDirections()
     {
-        var note1 = new NoteItem(8, Fraction.Quarter, 0, null, false, 0);
-        var note2 = new NoteItem(0, Fraction.Quarter, 0, null, false, 10);
+        var note1 = new NoteItem(8, Fraction.Quarter, 0, null, 0);
+        var note2 = new NoteItem(0, Fraction.Quarter, 0, null, 10);
 
         var measure1 = new Measure(
             ImmutableArray.Create<MusicItem>(note1),

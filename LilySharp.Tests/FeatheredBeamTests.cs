@@ -39,31 +39,31 @@ public class FeatheredBeamTests
     [Fact]
     public void NoteItem_FeatherDirection_DefaultZero()
     {
-        var note = new NoteItem(0, Fraction.Sixteenth, 0, null, false, 0);
+        var note = new NoteItem(0, Fraction.Sixteenth, 0, null, 0);
         Assert.Equal(0, note.FeatherDirection);
     }
 
     [Fact]
     public void NoteItem_FeatherDirection_Right()
     {
-        var note = new NoteItem(0, Fraction.Sixteenth, 0, null, false, 0, featherDirection: 1);
+        var note = new NoteItem(0, Fraction.Sixteenth, 0, null, 0, featherDirection: 1);
         Assert.Equal(1, note.FeatherDirection);
     }
 
     [Fact]
     public void NoteItem_FeatherDirection_Left()
     {
-        var note = new NoteItem(0, Fraction.Sixteenth, 0, null, false, 0, featherDirection: -1);
+        var note = new NoteItem(0, Fraction.Sixteenth, 0, null, 0, featherDirection: -1);
         Assert.Equal(-1, note.FeatherDirection);
     }
 
     [Fact]
     public void NoteItem_FeatherDirection_ClampedToRange()
     {
-        var noteHigh = new NoteItem(0, Fraction.Sixteenth, 0, null, false, 0, featherDirection: 5);
+        var noteHigh = new NoteItem(0, Fraction.Sixteenth, 0, null, 0, featherDirection: 5);
         Assert.Equal(1, noteHigh.FeatherDirection);
 
-        var noteLow = new NoteItem(0, Fraction.Sixteenth, 0, null, false, 0, featherDirection: -5);
+        var noteLow = new NoteItem(0, Fraction.Sixteenth, 0, null, 0, featherDirection: -5);
         Assert.Equal(-1, noteLow.FeatherDirection);
     }
 
@@ -73,8 +73,8 @@ public class FeatheredBeamTests
     public void BeamGroup_GrowDirection_DefaultZero()
     {
         var members = ImmutableArray.Create(
-            new BeamMember(new NoteItem(0, Fraction.Sixteenth, 0, null, false, 0), 2, 0, 2, 0, 0),
-            new BeamMember(new NoteItem(2, Fraction.Sixteenth, 0, null, false, 1), 2, 2, 0, 2, 1));
+            new BeamMember(new NoteItem(0, Fraction.Sixteenth, 0, null, 0), 2, 0, 2, 0, 0),
+            new BeamMember(new NoteItem(2, Fraction.Sixteenth, 0, null, 1), 2, 2, 0, 2, 1));
         var group = new BeamGroup(members, 0, 0, true);
         Assert.Equal(0, group.GrowDirection);
     }
@@ -83,8 +83,8 @@ public class FeatheredBeamTests
     public void BeamGroup_GrowDirection_Right()
     {
         var members = ImmutableArray.Create(
-            new BeamMember(new NoteItem(0, Fraction.Sixteenth, 0, null, false, 0), 2, 0, 2, 0, 0),
-            new BeamMember(new NoteItem(2, Fraction.Sixteenth, 0, null, false, 1), 2, 2, 0, 2, 1));
+            new BeamMember(new NoteItem(0, Fraction.Sixteenth, 0, null, 0), 2, 0, 2, 0, 0),
+            new BeamMember(new NoteItem(2, Fraction.Sixteenth, 0, null, 1), 2, 2, 0, 2, 1));
         var group = new BeamGroup(members, 0, 0, true, growDirection: 1);
         Assert.Equal(1, group.GrowDirection);
     }
@@ -93,8 +93,8 @@ public class FeatheredBeamTests
     public void BeamGroup_GrowDirection_Left()
     {
         var members = ImmutableArray.Create(
-            new BeamMember(new NoteItem(0, Fraction.Sixteenth, 0, null, false, 0), 2, 0, 2, 0, 0),
-            new BeamMember(new NoteItem(2, Fraction.Sixteenth, 0, null, false, 1), 2, 2, 0, 2, 1));
+            new BeamMember(new NoteItem(0, Fraction.Sixteenth, 0, null, 0), 2, 0, 2, 0, 0),
+            new BeamMember(new NoteItem(2, Fraction.Sixteenth, 0, null, 1), 2, 2, 0, 2, 1));
         var group = new BeamGroup(members, 0, 0, true, growDirection: -1);
         Assert.Equal(-1, group.GrowDirection);
     }
@@ -110,10 +110,10 @@ public class FeatheredBeamTests
         // Create 4 sixteenth notes, first with feather=1
         var notes = new MusicItem[]
         {
-            new NoteItem(0, Fraction.Sixteenth, 0, null, false, 0, hasBeamStart: true, featherDirection: 1),
-            new NoteItem(2, Fraction.Sixteenth, 0, null, false, 1),
-            new NoteItem(4, Fraction.Sixteenth, 0, null, false, 2),
-            new NoteItem(6, Fraction.Sixteenth, 0, null, false, 3, hasBeamEnd: true),
+            new NoteItem(0, Fraction.Sixteenth, 0, null, 0, hasBeamStart: true, featherDirection: 1),
+            new NoteItem(2, Fraction.Sixteenth, 0, null, 1),
+            new NoteItem(4, Fraction.Sixteenth, 0, null, 2),
+            new NoteItem(6, Fraction.Sixteenth, 0, null, 3, hasBeamEnd: true),
         };
         var measure = MakeMeasure(notes);
         var voice = new Voice("default", ImmutableArray.Create(measure));
@@ -130,10 +130,10 @@ public class FeatheredBeamTests
     {
         var notes = new MusicItem[]
         {
-            new NoteItem(0, Fraction.Sixteenth, 0, null, false, 0, hasBeamStart: true),
-            new NoteItem(2, Fraction.Sixteenth, 0, null, false, 1),
-            new NoteItem(4, Fraction.Sixteenth, 0, null, false, 2),
-            new NoteItem(6, Fraction.Sixteenth, 0, null, false, 3, hasBeamEnd: true),
+            new NoteItem(0, Fraction.Sixteenth, 0, null, 0, hasBeamStart: true),
+            new NoteItem(2, Fraction.Sixteenth, 0, null, 1),
+            new NoteItem(4, Fraction.Sixteenth, 0, null, 2),
+            new NoteItem(6, Fraction.Sixteenth, 0, null, 3, hasBeamEnd: true),
         };
         var measure = MakeMeasure(notes);
         var voice = new Voice("default", ImmutableArray.Create(measure));

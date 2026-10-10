@@ -27,7 +27,7 @@ namespace LilySharp.Tests;
 public class OttavaTransposerTests
 {
     private static NoteItem Note(int staffPos, int midi = 60) =>
-        new NoteItem(staffPos, Fraction.Quarter, 0, null, false, 0) { Midi = midi };
+        new NoteItem(staffPos, Fraction.Quarter, 0, null, 0) { Midi = midi };
 
     private static Measure Meas(params MusicItem[] items) =>
         new Measure(ImmutableArray.Create(items), BarlineType.None, BarlineType.None, null, 0, 0);
@@ -93,8 +93,8 @@ public class OttavaTransposerTests
     public void Transpose_Chord_ShiftsEveryNote()
     {
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(0, null, false),
-            new ChordNoteInfo(4, null, false));
+            new ChordNoteInfo(0, null),
+            new ChordNoteInfo(4, null));
         var chord = new ChordItem(notes, Fraction.Quarter, 0, 0);
         var voice = new Voice("v", ImmutableArray.Create(Meas(chord)));
 

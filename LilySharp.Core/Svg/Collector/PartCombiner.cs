@@ -1686,7 +1686,7 @@ internal static class PartCombiner
 
     private static ImmutableArray<ChordNoteInfo> ChordNotesOf(MusicItem item) => item switch
     {
-        NoteItem n => [new ChordNoteInfo(n.StaffPosition, n.Accidental, n.NeedsLedgerLines, n.IsCourtesy)],
+        NoteItem n => [new ChordNoteInfo(n.StaffPosition, n.Accidental, n.IsCourtesy)],
         ChordItem c => c.Notes,
         _ => [],
     };

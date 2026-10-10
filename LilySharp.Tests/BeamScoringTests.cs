@@ -27,7 +27,7 @@ namespace LilySharp.Tests;
 public class BeamScoringTests
 {
     private static NoteItem CreateNote(int staffPosition)
-        => new(staffPosition, Fraction.Eighth, 0, null, false, 0);
+        => new(staffPosition, Fraction.Eighth, 0, null, 0);
 
     [Fact]
     public void BeamScoringProblem_SolvesForTwoNotes()

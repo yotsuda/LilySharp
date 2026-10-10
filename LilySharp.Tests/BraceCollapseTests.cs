@@ -37,7 +37,7 @@ namespace LilySharp.Tests;
 public class BraceCollapseTests
 {
     private static NoteItem MakeNote(int staffPosition = 0) =>
-        new(staffPosition, Fraction.Quarter, 0, null, false, 0);
+        new(staffPosition, Fraction.Quarter, 0, null, 0);
 
     private static RestItem MakeRest() =>
         new(Fraction.Quarter, 0, 0);

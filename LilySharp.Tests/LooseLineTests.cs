@@ -39,15 +39,15 @@ public class LooseLineTests
     {
         // Create 2 measures of simple quarter notes (enough to potentially span multiple systems)
         var items1 = ImmutableArray.Create<MusicItem>(
-            new NoteItem(0, Fraction.Quarter, 0, null, false, 0),
-            new NoteItem(2, Fraction.Quarter, 0, null, false, 0),
-            new NoteItem(4, Fraction.Quarter, 0, null, false, 0),
-            new NoteItem(0, Fraction.Quarter, 0, null, false, 0));
+            new NoteItem(0, Fraction.Quarter, 0, null, 0),
+            new NoteItem(2, Fraction.Quarter, 0, null, 0),
+            new NoteItem(4, Fraction.Quarter, 0, null, 0),
+            new NoteItem(0, Fraction.Quarter, 0, null, 0));
         var items2 = ImmutableArray.Create<MusicItem>(
-            new NoteItem(0, Fraction.Quarter, 0, null, false, 0),
-            new NoteItem(-2, Fraction.Quarter, 0, null, false, 0),
-            new NoteItem(2, Fraction.Quarter, 0, null, false, 0),
-            new NoteItem(0, Fraction.Quarter, 0, null, false, 0));
+            new NoteItem(0, Fraction.Quarter, 0, null, 0),
+            new NoteItem(-2, Fraction.Quarter, 0, null, 0),
+            new NoteItem(2, Fraction.Quarter, 0, null, 0),
+            new NoteItem(0, Fraction.Quarter, 0, null, 0));
 
         var measure1 = new Measure(items1, BarlineType.None, BarlineType.Single, null, 0, 0);
         var measure2 = new Measure(items2, BarlineType.None, BarlineType.Single, null, 0, 0);

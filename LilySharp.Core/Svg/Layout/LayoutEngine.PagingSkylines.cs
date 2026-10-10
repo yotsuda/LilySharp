@@ -107,7 +107,6 @@ internal sealed partial class LayoutEngine
     private static (double upExtent, double bandUp) EstimateAboveStaffExtents(
         ScoreTextMetrics fonts,
         ImmutableArray<MusicMarkItem> musicMarks,
-        ImmutableArray<VoltaBracketItem> voltaBrackets,
         int startMeasure, int endMeasure)
     {
         double upExtent = 0;
@@ -155,34 +154,14 @@ internal sealed partial class LayoutEngine
                         - EngravingDefaults.StaffMiddle + tInk.Top);
                 }
 
-                // LILYPOND-REF: scm/define-grobs.scm RehearsalMark.outside-staff-priority = 1500
-                if (mark.Type == MusicMarkType.Rehearsal)
-                    upExtent = Math.Max(upExtent, 3.0); // boxed rehearsal mark
-
-                // LILYPOND-REF: scm/define-grobs.scm SectionLabel
-                if (mark.Type == MusicMarkType.SectionLabel)
-                    upExtent = Math.Max(upExtent, 3.5); // boxed section label
-
-                // LILYPOND-REF: scm/define-grobs.scm SegnoMark/CodaMark
-                if (mark.Type == MusicMarkType.Segno || mark.Type == MusicMarkType.Coda)
-                    upExtent = Math.Max(upExtent, 2.5); // glyph above staff
             }
         }
 
-        // LILYPOND-REF: scm/define-grobs.scm VoltaBracketSpanner.outside-staff-priority = 600
-        if (!voltaBrackets.IsDefaultOrEmpty)
-        {
-            foreach (var vb in voltaBrackets)
-            {
-                if (vb.StartMeasureIndex < endMeasure && vb.EndMeasureIndex >= startMeasure
-                    // `voltaBracket line` draws nothing on the systems after its first.
-                    && !(vb.FirstSystemOnly && vb.StartMeasureIndex < startMeasure))
-                {
-                    upExtent = Math.Max(upExtent, 2.0); // volta bracket height
-                    break;
-                }
-            }
-        }
+        // The boxed marks' 3.0 / 3.5, the segno and coda's 2.5 and the volta bracket's 2.0 —
+        // the "four" the remarks above name — went on 2026-10-10 (owner's approval, session
+        // 880): each was a second model of ink EnrichExtentsWithAnnotationProtrusions already
+        // prices from the placed grobs, and session 273 had measured all four at 0.0 moving
+        // 0 of 572 books, rerender 0/81, every ledger point unmoved.
 
         return (upExtent, bandUp);
     }
@@ -1661,7 +1640,7 @@ internal sealed partial class LayoutEngine
         {
             var (start, count) = systemMeasureRanges[i];
             var (looseUp, bandUp) = EstimateAboveStaffExtents(
-                fonts, musicMarks, voltaBrackets, start, start + count);
+                fonts, musicMarks, start, start + count);
             perSystemBandUps?.Add(bandUp);
 
             // ⚠️ TWO FRAMES MET IN THIS Math.Max UNTIL 2026-08-25. Every constant

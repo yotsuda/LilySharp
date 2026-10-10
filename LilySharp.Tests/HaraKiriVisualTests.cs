@@ -42,7 +42,7 @@ namespace LilySharp.Tests;
 [Trait("Category", "Visual")]
 public class HaraKiriVisualTests
 {
-    private static NoteItem Note(int pos) => new(pos, Fraction.Quarter, 0, null, false, 0);
+    private static NoteItem Note(int pos) => new(pos, Fraction.Quarter, 0, null, 0);
 
     private static Measure Notes(bool breakAfter = false, int basePos = 0) =>
         new(ImmutableArray.Create<MusicItem>(

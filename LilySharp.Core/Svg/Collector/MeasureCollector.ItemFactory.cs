@@ -68,8 +68,6 @@ public sealed partial class MeasureCollector
             _defaultDots = dots;
         }
 
-        bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
-
         // Parse tremolo suffix (:8 = 1 beam, :16 = 2 beams, :32 = 3 beams)
         int tremoloBeams = ParseTremoloBeams(note.Tremolo);
 
@@ -156,7 +154,6 @@ public sealed partial class MeasureCollector
             Fraction.FromNoteValue(noteValue),
             dots,
             accidental,
-            needsLedger,
             note.SourceStart,
             tremoloBeams,
             hasTieStart: hasTieAfter,
@@ -225,14 +222,12 @@ public sealed partial class MeasureCollector
             _defaultDots = dots;
         }
         int tremoloBeams = ParseTremoloBeams(drum.Tremolo);
-        bool needsLedger = info.StaffPosition <= -6 || info.StaffPosition >= 6;
 
         return new NoteItem(
             info.StaffPosition,
             Fraction.FromNoteValue(noteValue),
             dots,
             accidental: null,
-            needsLedger,
             drum.SourceStart,
             tremoloBeams)
         {
@@ -565,8 +560,6 @@ public sealed partial class MeasureCollector
                 accidental = null;
             }
 
-            bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
-
             // LILYPOND-REF: lily/fingering-engraver.cc — per-pitch finger via <c@finger.N>.
             int? pitchFingering = ExtractPitchFingering(pitch);
 
@@ -590,7 +583,7 @@ public sealed partial class MeasureCollector
                 }
 
             notes.Add(new ChordNoteInfo(
-                staffPosition, accidental, needsLedger,
+                staffPosition, accidental,
                 IsCourtesy: memberCourtesy || styleCourtesy,
                 Fingering: pitchFingering,
                 StringNumber: pitch.Articulations.OfType<StringNumberAnnotationSyntax>().FirstOrDefault()?.StringNumber,
@@ -635,7 +628,7 @@ public sealed partial class MeasureCollector
                     accidental = null;
                 }
                 notes.Add(new ChordNoteInfo(
-                    rp.StaffPosition, accidental, rp.StaffPosition is <= -6 or >= 6,
+                    rp.StaffPosition, accidental,
                     IsCourtesy: styleCourtesy,
                     StringNumber: sn.StringNumber,
                     Midi: midi,
@@ -712,7 +705,6 @@ public sealed partial class MeasureCollector
                 GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
             notes.Add(new ChordNoteInfo(
                 rp.StaffPosition, accidental,
-                rp.StaffPosition is <= -6 or >= 6,
                 IsCourtesy: styleCourtesy,
                 Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
                 SourcePosition: degree.SourceStart,
@@ -926,7 +918,6 @@ public sealed partial class MeasureCollector
             }
             notes.Add(new ChordNoteInfo(
                 m.StaffPosition, accidental,
-                m.StaffPosition is <= -6 or >= 6,
                 IsCourtesy: styleCourtesy,
                 Notehead: m.Notehead,
                 Midi: m.Midi,
@@ -980,7 +971,6 @@ public sealed partial class MeasureCollector
             Fraction.FromNoteValue(noteValue),
             dots,
             accidental: null,
-            needsLedgerLines: false,
             slash.SourceStart,
             tremoloBeams,
             hasTieStart: hasTieAfter,
@@ -1063,7 +1053,6 @@ public sealed partial class MeasureCollector
                         : (null, false);
                     notes.Add(new ChordNoteInfo(
                         m.StaffPosition, accidental,
-                        m.StaffPosition is <= -6 or >= 6,
                         IsCourtesy: styleCourtesy,
                         Notehead: m.Notehead,
                         Midi: m.Midi,
@@ -1087,7 +1076,6 @@ public sealed partial class MeasureCollector
                     Fraction.FromNoteValue(noteValue),
                     dots,
                     bareAccidental,
-                    needsLedgerLines: m.StaffPosition is <= -6 or >= 6,
                     bare.SourceStart,
                     tremoloBeams,
                     hasTieStart: hasTieAfter,
@@ -1114,7 +1102,6 @@ public sealed partial class MeasureCollector
                     Fraction.FromNoteValue(noteValue),
                     dots,
                     accidental: null,
-                    needsLedgerLines: info.StaffPosition is <= -6 or >= 6,
                     bare.SourceStart,
                     tremoloBeams,
                     hasTieStart: hasTieAfter,
@@ -1136,7 +1123,6 @@ public sealed partial class MeasureCollector
                     Fraction.FromNoteValue(noteValue),
                     dots,
                     accidental: null,
-                    needsLedgerLines: false,
                     bare.SourceStart,
                     tremoloBeams,
                     hasTieStart: hasTieAfter,

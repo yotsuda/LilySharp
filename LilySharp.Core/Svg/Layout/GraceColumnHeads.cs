@@ -187,7 +187,7 @@ internal static class GraceColumnHeads
         {
             var notes = ImmutableArray.CreateBuilder<ChordNoteInfo>(column.Heads.Length);
             foreach (var h in column.Heads)
-                notes.Add(new ChordNoteInfo(h.StaffPosition, h.Accidental, h.NeedsLedger));
+                notes.Add(new ChordNoteInfo(h.StaffPosition, h.Accidental));
             return new ChordItem(notes.MoveToImmutable(), column.BaseDuration, dots,
                                  sourcePosition)
             {
@@ -196,7 +196,7 @@ internal static class GraceColumnHeads
         }
         var head = column.Lowest;
         return new NoteItem(head.StaffPosition, column.BaseDuration, dots,
-                            head.Accidental, head.NeedsLedger, sourcePosition)
+                            head.Accidental, sourcePosition)
         {
             StemUpOverride = stemUpOverride,
         };
@@ -216,7 +216,7 @@ internal static class GraceColumnHeads
         {
             var h = column.Heads[i];
             notes[i] = new ChordNoteInfo(
-                h.StaffPosition, h.Accidental, h.NeedsLedger, IsCourtesy: false);
+                h.StaffPosition, h.Accidental, IsCourtesy: false);
         }
         return notes;
     }

@@ -34,7 +34,7 @@ namespace LilySharp.Tests;
 public class BeamSolveMemoTests
 {
     private static NoteItem Note(int staffPosition) =>
-        new(staffPosition, Fraction.Eighth, 0, null, false, 0);
+        new(staffPosition, Fraction.Eighth, 0, null, 0);
 
     /// <summary>A new group each call: the memo is keyed on the group's identity, so no
     /// other test's answers can reach these.</summary>

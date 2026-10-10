@@ -228,8 +228,8 @@ score { staff melody }
         // AccidentalPlacement should preserve IsCourtesy from ChordNoteInfo
         var notes = new[]
         {
-            new ChordNoteInfo(0, "sharp", false, true),    // courtesy sharp
-            new ChordNoteInfo(2, "natural", false, false),  // normal natural
+            new ChordNoteInfo(0, "sharp", IsCourtesy: true),    // courtesy sharp
+            new ChordNoteInfo(2, "natural"),                     // normal natural
         };
 
         var placement = new AccidentalPlacement();
@@ -248,8 +248,8 @@ score { staff melody }
     public void AccidentalPlacement_CourtesyWider()
     {
         // Courtesy accidental should have wider spacing (includes paren width)
-        var notesCourtesy = new[] { new ChordNoteInfo(0, "sharp", false, true) };
-        var notesNormal = new[] { new ChordNoteInfo(0, "sharp", false, false) };
+        var notesCourtesy = new[] { new ChordNoteInfo(0, "sharp", IsCourtesy: true) };
+        var notesNormal = new[] { new ChordNoteInfo(0, "sharp") };
 
         var placement = new AccidentalPlacement();
         var courtesyLayout = placement.CalculatePositions(notesCourtesy);

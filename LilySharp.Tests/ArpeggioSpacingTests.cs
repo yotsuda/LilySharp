@@ -45,9 +45,9 @@ public class ArpeggioSpacingTests
     // head below the middle line, so the stem points up and its ink stays on the right.
     private static ChordItem Triad(bool arpeggio, string? lowestAccidental = null)
         => new(ImmutableArray.Create(
-                new ChordNoteInfo(-6, lowestAccidental, false),
-                new ChordNoteInfo(-4, null, false),
-                new ChordNoteInfo(-2, null, false)),
+                new ChordNoteInfo(-6, lowestAccidental),
+                new ChordNoteInfo(-4, null),
+                new ChordNoteInfo(-2, null)),
             Fraction.Quarter, 0, 0, hasArpeggio: arpeggio);
 
     [Fact]

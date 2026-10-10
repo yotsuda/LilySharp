@@ -97,7 +97,7 @@ public class SystemLayoutCacheTests
     /// this test is about; the geometry is arbitrary.</summary>
     private static BeamLayout BeamAt(int measureIndex)
     {
-        var note = new NoteItem(0, Fraction.Eighth, 0, null, false, 0);
+        var note = new NoteItem(0, Fraction.Eighth, 0, null, 0);
         var members = ImmutableArray.Create(
             new BeamMember(note, 1, 0, 1, 0, 0, memberStemUp: true),
             new BeamMember(note, 1, 1, 0, 0, 1, memberStemUp: true));

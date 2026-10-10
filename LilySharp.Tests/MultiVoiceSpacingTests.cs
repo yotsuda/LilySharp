@@ -43,7 +43,6 @@ public class MultiVoiceSpacingTests
                 baseDuration: d,
                 dots: 0,
                 accidental: null,
-                needsLedgerLines: false,
                 sourcePosition: 0));
         }
         return new Measure(
@@ -83,7 +82,7 @@ public class MultiVoiceSpacingTests
         var restThenQuarter = new MusicItem[]
         {
             new RestItem(new Fraction(1, 4), 0, 0),
-            new NoteItem(0, new Fraction(1, 4), 0, null, false, 0),
+            new NoteItem(0, new Fraction(1, 4), 0, null, 0),
         };
         var v2 = new Measure(
             restThenQuarter.ToImmutableArray(),

@@ -678,8 +678,6 @@ public sealed record NoteItem : MusicItem
     /// and the accidental is decided once per PART, before the score binds that part to a
     /// staff.</remarks>
     public string? Accidental { get; init; }
-    /// <summary>Whether the note needs ledger lines because it sits outside the staff.</summary>
-    public bool NeedsLedgerLines { get; }
     /// <summary>Number of tremolo beams (0 = no tremolo, 1-3 = tremolo).</summary>
     public int TremoloBeams => _rare?.TremoloBeams ?? 0;
     /// <summary>Two-note (chord) tremolo: the BETWEEN-stems beam count. The
@@ -1092,13 +1090,12 @@ public sealed record NoteItem : MusicItem
     public bool HasTremolo => TremoloBeams > 0;
 
     /// <summary>Initializes a new <see cref="NoteItem"/>.</summary>
-    public NoteItem(int staffPosition, Fraction baseDuration, int dots, string? accidental, bool needsLedgerLines, int sourcePosition, int tremoloBeams = 0, bool hasTieStart = false, bool hasSlurStart = false, bool hasSlurEnd = false, bool hasBeamStart = false, bool hasBeamEnd = false, bool hasGlissando = false, int featherDirection = 0, bool isCourtesy = false, bool isCue = false, string? editorialAccidental = null, int? fingering = null, bool hasLaissezVibrer = false, bool hasRepeatTie = false)
+    public NoteItem(int staffPosition, Fraction baseDuration, int dots, string? accidental, int sourcePosition, int tremoloBeams = 0, bool hasTieStart = false, bool hasSlurStart = false, bool hasSlurEnd = false, bool hasBeamStart = false, bool hasBeamEnd = false, bool hasGlissando = false, int featherDirection = 0, bool isCourtesy = false, bool isCue = false, string? editorialAccidental = null, int? fingering = null, bool hasLaissezVibrer = false, bool hasRepeatTie = false)
     {
         StaffPosition = staffPosition;
         BaseDuration = baseDuration;
         Dots = dots;
         Accidental = accidental;
-        NeedsLedgerLines = needsLedgerLines;
         HasTieStart = hasTieStart;
         HasSlurStart = hasSlurStart;
         HasSlurEnd = hasSlurEnd;
@@ -1344,7 +1341,6 @@ public sealed record RestItem : MusicItem
 public readonly record struct ChordNoteInfo(
     int StaffPosition,
     string? Accidental,
-    bool NeedsLedgerLines,
     // Whether this accidental is a courtesy (cautionary) accidental shown in parentheses.
     bool IsCourtesy = false,
     // Optional per-pitch finger number attached via @finger.N inside a chord.

@@ -134,8 +134,7 @@ internal static class StaffAccidentalColumns
                 {
                     case NoteItem note:
                         notes.Add(new ChordNoteInfo(
-                            note.StaffPosition, note.Accidental,
-                            note.NeedsLedgerLines, note.IsCourtesy));
+                            note.StaffPosition, note.Accidental, note.IsCourtesy));
                         headOffsets.Add(voiceX);
                         slots.Add((entry.VoiceId, entry.ItemIndex, 0));
                         stems.Add(AccidentalStem.Of(entry.ForcedStemUp ?? note.StemUp,

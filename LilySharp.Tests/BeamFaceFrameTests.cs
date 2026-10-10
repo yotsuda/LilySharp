@@ -50,7 +50,7 @@ namespace LilySharp.Tests;
 public class BeamFaceFrameTests
 {
     private static NoteItem Note(int staffPosition, Fraction duration)
-        => new(staffPosition, duration, 0, null, false, 0);
+        => new(staffPosition, duration, 0, null, 0);
 
     /// <summary>Two beamed eighths, up stems, the line RISING one staff space per staff
     /// space of x (positions 4 → 12 over a 4-ss run between the stems). Anchors at 0 and

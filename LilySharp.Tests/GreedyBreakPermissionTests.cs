@@ -92,10 +92,10 @@ public class GreedyBreakPermissionTests
     private static Measure M(BreakPermission perm = BreakPermission.Allow, bool breakAfter = false)
     {
         var items = ImmutableArray.Create<MusicItem>(
-            new NoteItem(0, Fraction.Quarter, 0, null, false, 0),
-            new NoteItem(2, Fraction.Quarter, 0, null, false, 0),
-            new NoteItem(4, Fraction.Quarter, 0, null, false, 0),
-            new NoteItem(0, Fraction.Quarter, 0, null, false, 0));
+            new NoteItem(0, Fraction.Quarter, 0, null, 0),
+            new NoteItem(2, Fraction.Quarter, 0, null, 0),
+            new NoteItem(4, Fraction.Quarter, 0, null, 0),
+            new NoteItem(0, Fraction.Quarter, 0, null, 0));
         return new Measure(items, BarlineType.None, BarlineType.Single, null, 0, 0,
             hasBreakAfter: breakAfter, lineBreakPermission: perm);
     }

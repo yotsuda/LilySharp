@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -32,7 +32,7 @@ public class KneedBeamTests
     public void BeamMember_MemberStemUp_DefaultTrue()
     {
         var member = new BeamMember(
-            new NoteItem(0, Fraction.Eighth, 0, null, false, 0), 1, 0, 1, 0, 0);
+            new NoteItem(0, Fraction.Eighth, 0, null, 0), 1, 0, 1, 0, 0);
         Assert.True(member.MemberStemUp);
     }
 
@@ -40,7 +40,7 @@ public class KneedBeamTests
     public void BeamMember_MemberStemUp_SetFalse()
     {
         var member = new BeamMember(
-            new NoteItem(0, Fraction.Eighth, 0, null, false, 0), 1, 0, 1, 0, 0, memberStemUp: false);
+            new NoteItem(0, Fraction.Eighth, 0, null, 0), 1, 0, 1, 0, 0, memberStemUp: false);
         Assert.False(member.MemberStemUp);
     }
 
@@ -50,8 +50,8 @@ public class KneedBeamTests
     public void BeamGroup_IsKnee_UniformDirection_False()
     {
         var members = ImmutableArray.Create(
-            new BeamMember(new NoteItem(-2, Fraction.Eighth, 0, null, false, 0), 1, 0, 1, -2, 0, true),
-            new BeamMember(new NoteItem(-4, Fraction.Eighth, 0, null, false, 1), 1, 1, 0, -4, 1, true));
+            new BeamMember(new NoteItem(-2, Fraction.Eighth, 0, null, 0), 1, 0, 1, -2, 0, true),
+            new BeamMember(new NoteItem(-4, Fraction.Eighth, 0, null, 1), 1, 1, 0, -4, 1, true));
         var group = new BeamGroup(members, 0, 0, true);
         Assert.False(group.IsKnee);
     }
@@ -60,8 +60,8 @@ public class KneedBeamTests
     public void BeamGroup_IsKnee_MixedDirections_True()
     {
         var members = ImmutableArray.Create(
-            new BeamMember(new NoteItem(-6, Fraction.Eighth, 0, null, false, 0), 1, 0, 1, -6, 0, true),
-            new BeamMember(new NoteItem(6, Fraction.Eighth, 0, null, false, 1), 1, 1, 0, 6, 1, false));
+            new BeamMember(new NoteItem(-6, Fraction.Eighth, 0, null, 0), 1, 0, 1, -6, 0, true),
+            new BeamMember(new NoteItem(6, Fraction.Eighth, 0, null, 1), 1, 1, 0, 6, 1, false));
         var group = new BeamGroup(members, 0, 0, true);
         Assert.True(group.IsKnee);
     }
@@ -70,7 +70,7 @@ public class KneedBeamTests
     public void BeamGroup_IsKnee_SingleMember_False()
     {
         var members = ImmutableArray.Create(
-            new BeamMember(new NoteItem(0, Fraction.Eighth, 0, null, false, 0), 1, 0, 0, 0, 0, true));
+            new BeamMember(new NoteItem(0, Fraction.Eighth, 0, null, 0), 1, 0, 0, 0, 0, true));
         var group = new BeamGroup(members, 0, 0, true);
         Assert.False(group.IsKnee);
     }
@@ -86,9 +86,9 @@ public class KneedBeamTests
         // Notes close together: staff positions 0, 2, 4 (gap = 2, below threshold 5.5)
         var notes = new MusicItem[]
         {
-            new NoteItem(0, Fraction.Eighth, 0, null, false, 0, hasBeamStart: true),
-            new NoteItem(2, Fraction.Eighth, 0, null, false, 1),
-            new NoteItem(4, Fraction.Eighth, 0, null, false, 2, hasBeamEnd: true),
+            new NoteItem(0, Fraction.Eighth, 0, null, 0, hasBeamStart: true),
+            new NoteItem(2, Fraction.Eighth, 0, null, 1),
+            new NoteItem(4, Fraction.Eighth, 0, null, 2, hasBeamEnd: true),
         };
         var measure = MakeMeasure(notes);
         var voice = new Voice("default", ImmutableArray.Create(measure));
@@ -108,8 +108,8 @@ public class KneedBeamTests
         // LILYPOND-REF: beam.cc:968-1056 consider_auto_knees
         var notes = new MusicItem[]
         {
-            new NoteItem(-8, Fraction.Eighth, 0, null, false, 0, hasBeamStart: true),
-            new NoteItem(8, Fraction.Eighth, 0, null, false, 1, hasBeamEnd: true),
+            new NoteItem(-8, Fraction.Eighth, 0, null, 0, hasBeamStart: true),
+            new NoteItem(8, Fraction.Eighth, 0, null, 1, hasBeamEnd: true),
         };
         var measure = MakeMeasure(notes);
         var voice = new Voice("default", ImmutableArray.Create(measure));
@@ -129,8 +129,8 @@ public class KneedBeamTests
         // heads above stem down.
         var notes = new MusicItem[]
         {
-            new NoteItem(-8, Fraction.Eighth, 0, null, false, 0, hasBeamStart: true),
-            new NoteItem(8, Fraction.Eighth, 0, null, false, 1, hasBeamEnd: true),
+            new NoteItem(-8, Fraction.Eighth, 0, null, 0, hasBeamStart: true),
+            new NoteItem(8, Fraction.Eighth, 0, null, 1, hasBeamEnd: true),
         };
         var measure = MakeMeasure(notes);
         var voice = new Voice("default", ImmutableArray.Create(measure));
@@ -152,9 +152,9 @@ public class KneedBeamTests
         // All notes below middle line → all stem up
         var notes = new MusicItem[]
         {
-            new NoteItem(-2, Fraction.Eighth, 0, null, false, 0, hasBeamStart: true),
-            new NoteItem(-4, Fraction.Eighth, 0, null, false, 1),
-            new NoteItem(-3, Fraction.Eighth, 0, null, false, 2, hasBeamEnd: true),
+            new NoteItem(-2, Fraction.Eighth, 0, null, 0, hasBeamStart: true),
+            new NoteItem(-4, Fraction.Eighth, 0, null, 1),
+            new NoteItem(-3, Fraction.Eighth, 0, null, 2, hasBeamEnd: true),
         };
         var measure = MakeMeasure(notes);
         var voice = new Voice("default", ImmutableArray.Create(measure));
@@ -179,9 +179,9 @@ public class KneedBeamTests
         // LILYPOND-REF: beam.cc:968-1056 consider_auto_knees
         var notes = new MusicItem[]
         {
-            new NoteItem(-8, Fraction.Eighth, 0, null, false, 0, hasBeamStart: true),
-            new NoteItem(8, Fraction.Eighth, 0, null, false, 1),
-            new NoteItem(-8, Fraction.Eighth, 0, null, false, 2, hasBeamEnd: true),
+            new NoteItem(-8, Fraction.Eighth, 0, null, 0, hasBeamStart: true),
+            new NoteItem(8, Fraction.Eighth, 0, null, 1),
+            new NoteItem(-8, Fraction.Eighth, 0, null, 2, hasBeamEnd: true),
         };
         var measure = MakeMeasure(notes);
         var voice = new Voice("default", ImmutableArray.Create(measure));
@@ -203,8 +203,8 @@ public class KneedBeamTests
         // Gap of 5 staff positions = 2.5 staff spaces (below 5.5 staff spaces threshold)
         var notes = new MusicItem[]
         {
-            new NoteItem(0, Fraction.Eighth, 0, null, false, 0, hasBeamStart: true),
-            new NoteItem(5, Fraction.Eighth, 0, null, false, 1, hasBeamEnd: true),
+            new NoteItem(0, Fraction.Eighth, 0, null, 0, hasBeamStart: true),
+            new NoteItem(5, Fraction.Eighth, 0, null, 1, hasBeamEnd: true),
         };
         var measure = MakeMeasure(notes);
         var voice = new Voice("default", ImmutableArray.Create(measure));
@@ -223,8 +223,8 @@ public class KneedBeamTests
         // LILYPOND-REF: define-grobs.scm:437 auto-knee-gap = 5.5 (staff spaces)
         var notes = new MusicItem[]
         {
-            new NoteItem(-1, Fraction.Eighth, 0, null, false, 0, hasBeamStart: true),
-            new NoteItem(6, Fraction.Eighth, 0, null, false, 1, hasBeamEnd: true),
+            new NoteItem(-1, Fraction.Eighth, 0, null, 0, hasBeamStart: true),
+            new NoteItem(6, Fraction.Eighth, 0, null, 1, hasBeamEnd: true),
         };
         var measure = MakeMeasure(notes);
         var voice = new Voice("default", ImmutableArray.Create(measure));
@@ -246,8 +246,8 @@ public class KneedBeamTests
         var atKneeGap = new MusicItem[]
         {
             // positions -6 / 7: widened extents [-7,-5] / [6,8] → gap 11 = 5.5 SS
-            new NoteItem(-6, Fraction.Eighth, 0, null, false, 0, hasBeamStart: true),
-            new NoteItem(7, Fraction.Eighth, 0, null, false, 1, hasBeamEnd: true),
+            new NoteItem(-6, Fraction.Eighth, 0, null, 0, hasBeamStart: true),
+            new NoteItem(7, Fraction.Eighth, 0, null, 1, hasBeamEnd: true),
         };
         var detector = new BeamDetector();
         var groups = detector.DetectBeamGroups(
@@ -259,8 +259,8 @@ public class KneedBeamTests
         var overThreshold = new MusicItem[]
         {
             // positions -6 / 8: gap 12 positions = 6 SS > 5.74 SS
-            new NoteItem(-6, Fraction.Eighth, 0, null, false, 0, hasBeamStart: true),
-            new NoteItem(8, Fraction.Eighth, 0, null, false, 1, hasBeamEnd: true),
+            new NoteItem(-6, Fraction.Eighth, 0, null, 0, hasBeamStart: true),
+            new NoteItem(8, Fraction.Eighth, 0, null, 1, hasBeamEnd: true),
         };
         groups = detector.DetectBeamGroups(
             new Voice("default", ImmutableArray.Create(MakeMeasure(overThreshold))),

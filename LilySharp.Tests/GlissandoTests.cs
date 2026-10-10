@@ -51,14 +51,14 @@ public class GlissandoTests
     [Fact]
     public void NoteItem_HasGlissando_DefaultFalse()
     {
-        var note = new NoteItem(0, Fraction.Quarter, 0, null, false, 0);
+        var note = new NoteItem(0, Fraction.Quarter, 0, null, 0);
         Assert.False(note.HasGlissando);
     }
 
     [Fact]
     public void NoteItem_HasGlissando_True()
     {
-        var note = new NoteItem(0, Fraction.Quarter, 0, null, false, 0, hasGlissando: true);
+        var note = new NoteItem(0, Fraction.Quarter, 0, null, 0, hasGlissando: true);
         Assert.True(note.HasGlissando);
     }
 
@@ -98,8 +98,8 @@ public class GlissandoTests
     public void DetectGlissandos_NoGlissando_ReturnsEmpty()
     {
         var score = MakeScore(MakeMeasure(
-            new NoteItem(0, Fraction.Quarter, 0, null, false, 0),
-            new NoteItem(2, Fraction.Quarter, 0, null, false, 10)));
+            new NoteItem(0, Fraction.Quarter, 0, null, 0),
+            new NoteItem(2, Fraction.Quarter, 0, null, 10)));
 
         var detector = new GlissandoDetector();
         var result = detector.DetectGlissandos(score);
@@ -111,8 +111,8 @@ public class GlissandoTests
     public void DetectGlissandos_SingleGlissando_DetectsCorrectly()
     {
         var score = MakeScore(MakeMeasure(
-            new NoteItem(0, Fraction.Quarter, 0, null, false, 42, hasGlissando: true),
-            new NoteItem(4, Fraction.Quarter, 0, null, false, 50)));
+            new NoteItem(0, Fraction.Quarter, 0, null, 42, hasGlissando: true),
+            new NoteItem(4, Fraction.Quarter, 0, null, 50)));
 
         var detector = new GlissandoDetector();
         var result = detector.DetectGlissandos(score);
@@ -133,9 +133,9 @@ public class GlissandoTests
     {
         var score = MakeScore(
             MakeMeasure(
-                new NoteItem(-2, Fraction.Quarter, 0, null, false, 10, hasGlissando: true)),
+                new NoteItem(-2, Fraction.Quarter, 0, null, 10, hasGlissando: true)),
             MakeMeasure(
-                new NoteItem(6, Fraction.Quarter, 0, null, false, 20)));
+                new NoteItem(6, Fraction.Quarter, 0, null, 20)));
 
         var detector = new GlissandoDetector();
         var result = detector.DetectGlissandos(score);
@@ -151,7 +151,7 @@ public class GlissandoTests
     public void DetectGlissandos_NoNextNote_ReturnsEmpty()
     {
         var score = MakeScore(MakeMeasure(
-            new NoteItem(0, Fraction.Quarter, 0, null, false, 0, hasGlissando: true)));
+            new NoteItem(0, Fraction.Quarter, 0, null, 0, hasGlissando: true)));
 
         var detector = new GlissandoDetector();
         var result = detector.DetectGlissandos(score);
@@ -164,9 +164,9 @@ public class GlissandoTests
     public void DetectGlissandos_SkipsRests_FindsNextNote()
     {
         var score = MakeScore(MakeMeasure(
-            new NoteItem(0, Fraction.Quarter, 0, null, false, 0, hasGlissando: true),
+            new NoteItem(0, Fraction.Quarter, 0, null, 0, hasGlissando: true),
             new RestItem(Fraction.Quarter, 0, 5),
-            new NoteItem(4, Fraction.Quarter, 0, null, false, 10)));
+            new NoteItem(4, Fraction.Quarter, 0, null, 10)));
 
         var detector = new GlissandoDetector();
         var result = detector.DetectGlissandos(score);
@@ -180,9 +180,9 @@ public class GlissandoTests
     public void DetectGlissandos_TwoConsecutive_TwoGlissandos()
     {
         var score = MakeScore(MakeMeasure(
-            new NoteItem(0, Fraction.Quarter, 0, null, false, 0, hasGlissando: true),
-            new NoteItem(4, Fraction.Quarter, 0, null, false, 10, hasGlissando: true),
-            new NoteItem(8, Fraction.Quarter, 0, null, false, 20)));
+            new NoteItem(0, Fraction.Quarter, 0, null, 0, hasGlissando: true),
+            new NoteItem(4, Fraction.Quarter, 0, null, 10, hasGlissando: true),
+            new NoteItem(8, Fraction.Quarter, 0, null, 20)));
 
         var detector = new GlissandoDetector();
         var result = detector.DetectGlissandos(score);

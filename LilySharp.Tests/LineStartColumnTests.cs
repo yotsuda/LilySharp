@@ -125,8 +125,7 @@ public class LineStartColumnTests
             // (it is absent from the column's 'elements, paper-column-engraver.cc:259);
             // geometrically that is the same union, so it is a box here.
             var accBox = GlyphMetrics.GetAccidentalBBox(accidental);
-            var note = new NoteItem(staffPosition, new Fraction(1, 4), 0, accidental,
-                needsLedgerLines: false, sourcePosition: 0);
+            var note = new NoteItem(staffPosition, new Fraction(1, 4), 0, accidental, sourcePosition: 0);
             var layout = new AccidentalPlacement().CalculateSinglePosition(note);
             Assert.NotNull(layout);
             // XOffset is relative to the notehead's LEFT edge, which IS the column origin.

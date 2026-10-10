@@ -307,7 +307,6 @@ internal sealed class TieDetector
             baseDuration: chord.BaseDuration,
             dots: chord.Dots,
             accidental: info.Accidental,
-            needsLedgerLines: info.NeedsLedgerLines,
             sourcePosition: chord.SourcePosition);
     }
 

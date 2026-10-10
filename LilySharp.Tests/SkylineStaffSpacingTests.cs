@@ -74,8 +74,8 @@ public class SkylineStaffSpacingTests
     private static BeamLayout MakeBeamLayout(
         int targetStaffIndex0, int targetStaffIndex1, bool knee)
     {
-        var n0 = new NoteItem(-9, Fraction.Eighth, 0, null, false, 0);
-        var n1 = new NoteItem(knee ? 9 : -9, Fraction.Eighth, 0, null, false, 1);
+        var n0 = new NoteItem(-9, Fraction.Eighth, 0, null, 0);
+        var n1 = new NoteItem(knee ? 9 : -9, Fraction.Eighth, 0, null, 1);
         var members = ImmutableArray.Create(
             new BeamMember(n0, 1, 1, 1, staffPosition: -9, itemIndex: 0,
                 memberStemUp: false, targetStaffIndex: targetStaffIndex0),
@@ -148,12 +148,12 @@ public class SkylineStaffSpacingTests
     {
         // Notes in the middle of the staff → no collision, should use basic-distance
         var trebleItems = ImmutableArray.Create<MusicItem>(
-            new NoteItem(0, Fraction.Quarter, 0, null, false, 0),
-            new NoteItem(2, Fraction.Quarter, 0, null, false, 0));
+            new NoteItem(0, Fraction.Quarter, 0, null, 0),
+            new NoteItem(2, Fraction.Quarter, 0, null, 0));
 
         var bassItems = ImmutableArray.Create<MusicItem>(
-            new NoteItem(0, Fraction.Quarter, 0, null, false, 0),
-            new NoteItem(-2, Fraction.Quarter, 0, null, false, 0));
+            new NoteItem(0, Fraction.Quarter, 0, null, 0),
+            new NoteItem(-2, Fraction.Quarter, 0, null, 0));
 
         var score = CreateGrandStaffScore(trebleItems, bassItems);
         var skylineBuilder = new SkylineBuilder(StaffHeight);
@@ -178,11 +178,11 @@ public class SkylineStaffSpacingTests
         // Notes with extreme ledger lines (below treble, above bass) should force larger gap
         // Treble: very low note (staff position -8 → 4 ledger lines below staff)
         var trebleItems = ImmutableArray.Create<MusicItem>(
-            new NoteItem(-8, Fraction.Quarter, 0, null, false, 0));
+            new NoteItem(-8, Fraction.Quarter, 0, null, 0));
 
         // Bass: very high note (staff position 10 → 3 ledger lines above staff)
         var bassItems = ImmutableArray.Create<MusicItem>(
-            new NoteItem(10, Fraction.Quarter, 0, null, false, 0));
+            new NoteItem(10, Fraction.Quarter, 0, null, 0));
 
         var score = CreateGrandStaffScore(trebleItems, bassItems);
         var skylineBuilder = new SkylineBuilder(StaffHeight);
@@ -206,9 +206,9 @@ public class SkylineStaffSpacingTests
     public void SkylineSpacing_LayoutStaffGroups_ProducesValidLayout()
     {
         var trebleItems = ImmutableArray.Create<MusicItem>(
-            new NoteItem(0, Fraction.Quarter, 0, null, false, 0));
+            new NoteItem(0, Fraction.Quarter, 0, null, 0));
         var bassItems = ImmutableArray.Create<MusicItem>(
-            new NoteItem(0, Fraction.Quarter, 0, null, false, 0));
+            new NoteItem(0, Fraction.Quarter, 0, null, 0));
 
         var score = CreateGrandStaffScore(trebleItems, bassItems);
         var skylineBuilder = new SkylineBuilder(StaffHeight);
@@ -432,7 +432,7 @@ public class SkylineStaffSpacingTests
     {
         // A5 (staff position 6, ON the first ledger line): the dot resolves into the
         // space above (position 7), centre Y-up 3.5 — past the head top and the ledger.
-        NoteItem Note(int dots) => new(6, Fraction.Quarter, dots, null, true, 0);
+        NoteItem Note(int dots) => new(6, Fraction.Quarter, dots, null, 0);
 
         // The renderer's dot column: head ink right + one dot width from the item's
         // column (5.0 in CreateSimpleMeasureLayouts); probe the dot box's centre.
@@ -454,7 +454,7 @@ public class SkylineStaffSpacingTests
         // resolves into the space at -5, centre Y-up -2.5, whose box bottom -2.725
         // reaches past the staff's own -2.05).
         var lowDotted = BuildOneItemStaffSkylines(
-            new NoteItem(-6, Fraction.Quarter, 1, null, true, 0));
+            new NoteItem(-6, Fraction.Quarter, 1, null, 0));
         Assert.Equal(-2.5 + GlyphMetrics.AugmentationDot.Bottom,
             lowDotted.Down.Height(probeX), 9);
     }

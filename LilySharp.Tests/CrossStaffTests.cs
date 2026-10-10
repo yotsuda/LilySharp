@@ -243,5 +243,5 @@ public class CrossStaffTests
     // --- Helper ---
 
     private static NoteItem CreateNote(int staffPos)
-        => new(staffPos, new LilySharp.Core.Semantics.Fraction(1, 8), 0, null, false, 0);
+        => new(staffPos, new LilySharp.Core.Semantics.Fraction(1, 8), 0, null, 0);
 }

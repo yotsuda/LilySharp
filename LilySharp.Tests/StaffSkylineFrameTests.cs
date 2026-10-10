@@ -113,7 +113,7 @@ public class StaffSkylineFrameTests
     {
         // A note that stays well inside the staff, so the clef is the only thing that can
         // reach past the staff lines.
-        var staff = OneStaff(new NoteItem(0, Fraction.Whole, 0, null, false, 0));
+        var staff = OneStaff(new NoteItem(0, Fraction.Whole, 0, null, 0));
 
         var withClef = new SkylineBuilder(StaffHeight).BuildStaffSkylines(
             staff, Layouts(), default, default, default, default, default, default,
@@ -173,7 +173,7 @@ public class StaffSkylineFrameTests
     [Fact]
     public void AnOssiaStaffReservesItsOwnSize_NotAFullStaffs()
     {
-        var note = new NoteItem(0, Fraction.Whole, 0, null, false, 0);
+        var note = new NoteItem(0, Fraction.Whole, 0, null, 0);
         var full = OneStaff(note);
         var ossia = Staff.CreateOssia(
             ClefType.Treble, new Voice("v", full.PrimaryVoice.Measures));
@@ -233,7 +233,7 @@ public class StaffSkylineFrameTests
     [Fact]
     public void AnOssiaStaffReservesItsOwnSize_InXAsWellAsY()
     {
-        var note = new NoteItem(0, Fraction.Whole, 0, null, false, 0);
+        var note = new NoteItem(0, Fraction.Whole, 0, null, 0);
         var full = OneStaff(note);
         var ossia = Staff.CreateOssia(
             ClefType.Treble, new Voice("v", full.PrimaryVoice.Measures));
@@ -295,7 +295,7 @@ public class StaffSkylineFrameTests
     [Fact]
     public void StaffSymbol_IsSeededAboutTheStaffReferencePoint()
     {
-        var (up, down) = Build(OneStaff(new NoteItem(0, Fraction.Whole, 0, null, false, 0)));
+        var (up, down) = Build(OneStaff(new NoteItem(0, Fraction.Whole, 0, null, 0)));
 
         // SYMMETRIC, which is the whole assertion: the outer lines stand the same distance
         // either side of the origin exactly when the origin is the MIDDLE line. Before the
@@ -327,7 +327,7 @@ public class StaffSkylineFrameTests
     public void TextRow_SeedsNeitherStaffSymbolNorItsUndrawnNotes()
     {
         var measure = new Measure(
-            ImmutableArray.Create<MusicItem>(new NoteItem(0, Fraction.Whole, 0, null, false, 0)),
+            ImmutableArray.Create<MusicItem>(new NoteItem(0, Fraction.Whole, 0, null, 0)),
             BarlineType.None, BarlineType.Single, null, 0, 0);
         var row = Staff.CreateTextRow(new Voice("row", ImmutableArray.Create(measure)));
 
@@ -398,7 +398,7 @@ public class StaffSkylineFrameTests
         const double y = 6.25;
         double half = EngravingDefaults.TupletBracketThickness / 2.0;
         var (up, _) = Build(
-            OneStaff(new NoteItem(0, Fraction.Whole, 0, null, false, 0)),
+            OneStaff(new NoteItem(0, Fraction.Whole, 0, null, 0)),
             tuplets: ImmutableArray.Create(Bracket(y, stemUp: true, number: "")));
 
         Assert.Equal(y + half + HalfStaff, up.MaxHeight(), 9);
@@ -421,7 +421,7 @@ public class StaffSkylineFrameTests
     public void TupletNumber_RidesTheSameFrameAsItsBracketLine()
     {
         const double y = 6.25, step = 3.0;
-        var staff = OneStaff(new NoteItem(0, Fraction.Whole, 0, null, false, 0));
+        var staff = OneStaff(new NoteItem(0, Fraction.Whole, 0, null, 0));
 
         double lineOnly = Build(staff,
             tuplets: ImmutableArray.Create(Bracket(y, stemUp: true, number: ""))).Up.MaxHeight();
@@ -449,7 +449,7 @@ public class StaffSkylineFrameTests
         const double y = -9.5;
         double half = EngravingDefaults.TupletBracketThickness / 2.0;
         var (_, down) = Build(
-            OneStaff(new NoteItem(0, Fraction.Whole, 0, null, false, 0)),
+            OneStaff(new NoteItem(0, Fraction.Whole, 0, null, 0)),
             tuplets: ImmutableArray.Create(Bracket(y, stemUp: false, number: "")));
 
         Assert.Equal(y - half + HalfStaff, down.MaxHeight(), 9);
@@ -473,7 +473,7 @@ public class StaffSkylineFrameTests
         const double y = 7.0;
         var slur = new SlurItem(0, 0, true, 0, 0, 0, 0, 0);
         var (up, _) = Build(
-            OneStaff(new NoteItem(0, Fraction.Whole, 0, null, false, 0)),
+            OneStaff(new NoteItem(0, Fraction.Whole, 0, null, 0)),
             slurs: ImmutableArray.Create(new SlurLayout(
                 slur, startX: 5.0, startY: y, endX: 30.0, endY: y,
                 control1: (12.0, y), control2: (23.0, y))));
@@ -496,7 +496,7 @@ public class StaffSkylineFrameTests
         // written flat would be seeded into the other skyline and measure nothing. Found by
         // writing it flat first; the assertion then read the staff's own bottom line.
         const double y = -8.0, dip = 1.0;
-        var note = new NoteItem(0, Fraction.Whole, 0, null, false, 0);
+        var note = new NoteItem(0, Fraction.Whole, 0, null, 0);
         var tie = new TieItem(note, note, 0, false, 0, 0, 0, 0, 0);
         var (_, down) = Build(
             OneStaff(note),
@@ -526,7 +526,7 @@ public class StaffSkylineFrameTests
     [Fact]
     public void TheTwoStaffLocalFrames_DifferByExactlyAHalfStaff()
     {
-        var staff = OneStaff(new NoteItem(0, Fraction.Whole, 0, null, false, 0));
+        var staff = OneStaff(new NoteItem(0, Fraction.Whole, 0, null, 0));
         double half = EngravingDefaults.TupletBracketThickness / 2.0;
 
         // Path A, the staff-MIDDLE group: the staff symbol is placed about the middle line,

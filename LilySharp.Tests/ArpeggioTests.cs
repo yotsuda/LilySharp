@@ -31,8 +31,8 @@ public class ArpeggioTests
     public void ChordItem_HasArpeggio_DefaultFalse()
     {
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(0, null, false),
-            new ChordNoteInfo(4, null, false));
+            new ChordNoteInfo(0, null),
+            new ChordNoteInfo(4, null));
         var chord = new ChordItem(notes, Fraction.Quarter, 0, 0);
         Assert.False(chord.HasArpeggio);
     }
@@ -41,8 +41,8 @@ public class ArpeggioTests
     public void ChordItem_HasArpeggio_True()
     {
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(0, null, false),
-            new ChordNoteInfo(4, null, false));
+            new ChordNoteInfo(0, null),
+            new ChordNoteInfo(4, null));
         var chord = new ChordItem(notes, Fraction.Quarter, 0, 0, hasArpeggio: true);
         Assert.True(chord.HasArpeggio);
     }

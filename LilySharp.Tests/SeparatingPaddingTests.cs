@@ -46,7 +46,6 @@ public class SeparatingPaddingTests
             baseDuration: new Fraction(1, 4),
             dots: 0,
             accidental: null,
-            needsLedgerLines: false,
             sourcePosition: 0);
 
     /// <summary>

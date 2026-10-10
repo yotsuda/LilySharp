@@ -51,7 +51,6 @@ public class SlashNoteTests
         Assert.Equal(0, slash.StaffPosition);
         Assert.Equal(NoteheadStyle.Slash, slash.Notehead);
         Assert.Null(slash.Accidental);
-        Assert.False(slash.NeedsLedgerLines);
     }
 
     [Fact]

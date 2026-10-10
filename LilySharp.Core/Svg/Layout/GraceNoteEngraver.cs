@@ -688,7 +688,7 @@ internal static class GraceNoteEngraver
         if (noteCount <= 0) return 0;
         var uniform = ImmutableArray.CreateBuilder<GraceColumnInfo>(noteCount);
         for (int i = 0; i < noteCount; i++)
-            uniform.Add(new GraceColumnInfo(0, null, false, Fraction.Eighth));
+            uniform.Add(new GraceColumnInfo(0, null, Fraction.Eighth));
         return SpacingRules.CalculateGraceGroupSpringWidth(uniform.ToImmutable());
     }
 

@@ -552,7 +552,7 @@ internal static class TieVariantEngraver
         foreach (var tie in ties)
         {
             var head = item as NoteItem
-                       ?? new NoteItem(tie.StaffPosition, baseDuration, dots, null, false, tie.SourcePosition);
+                       ?? new NoteItem(tie.StaffPosition, baseDuration, dots, null, tie.SourcePosition);
             specs.Add(new TieSpecification
             {
                 Tie = new TieItem(head, head, tie.StaffPosition, tie.Forced,

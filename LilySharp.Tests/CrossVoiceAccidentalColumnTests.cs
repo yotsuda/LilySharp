@@ -52,8 +52,7 @@ public class CrossVoiceAccidentalColumnTests
     private const double LoneFlatInkLeft = -1.27;
 
     private static NoteItem Note(int staffPosition, string? accidental) =>
-        new(staffPosition, new Fraction(1, 4), 0, accidental,
-            needsLedgerLines: false, sourcePosition: 0);
+        new(staffPosition, new Fraction(1, 4), 0, accidental, sourcePosition: 0);
 
     /// <summary>Two voices, one quarter each, on one column of one measure.</summary>
     private static ImmutableArray<Voice> TwoVoices(MusicItem upper, MusicItem lower)

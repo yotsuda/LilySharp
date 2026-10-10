@@ -38,13 +38,13 @@ namespace LilySharp.Tests;
 public class HaraKiriTests
 {
     private static NoteItem MakeNote(int staffPosition = 0) =>
-        new(staffPosition, Fraction.Quarter, 0, null, false, 0);
+        new(staffPosition, Fraction.Quarter, 0, null, 0);
 
     private static RestItem MakeRest() =>
         new(Fraction.Quarter, 0, 0);
 
     private static ChordItem MakeChord() =>
-        new(ImmutableArray.Create(new ChordNoteInfo(0, null, false)),
+        new(ImmutableArray.Create(new ChordNoteInfo(0, null)),
             Fraction.Quarter, 0, 0);
 
     private static Measure MakeNoteMeasure() =>

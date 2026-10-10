@@ -29,7 +29,7 @@ public class AccidentalPlacementTests
     {
         var placement = new AccidentalPlacement();
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(0, "sharp", false)
+            new ChordNoteInfo(0, "sharp")
         );
 
         var layouts = placement.CalculatePositions(notes);
@@ -45,8 +45,8 @@ public class AccidentalPlacementTests
         // Staff positions 0 and 8 are far apart (4 staff spaces)
         // Glyph Y-extents don't overlap → placed at same X distance
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(0, "sharp", false),
-            new ChordNoteInfo(8, "flat", false)
+            new ChordNoteInfo(0, "sharp"),
+            new ChordNoteInfo(8, "flat")
         );
 
         var layouts = placement.CalculatePositions(notes);
@@ -64,8 +64,8 @@ public class AccidentalPlacementTests
         // Staff positions 0 and 2 are close (1 staff space apart)
         // Glyph Y-extents overlap → second must shift left
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(0, "sharp", false),
-            new ChordNoteInfo(2, "flat", false)
+            new ChordNoteInfo(0, "sharp"),
+            new ChordNoteInfo(2, "flat")
         );
 
         var layouts = placement.CalculatePositions(notes);
@@ -80,8 +80,8 @@ public class AccidentalPlacementTests
     {
         var placement = new AccidentalPlacement();
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(0, null, false),
-            new ChordNoteInfo(4, null, false)
+            new ChordNoteInfo(0, null),
+            new ChordNoteInfo(4, null)
         );
 
         var layouts = placement.CalculatePositions(notes);
@@ -93,7 +93,7 @@ public class AccidentalPlacementTests
     public void CalculateSinglePosition_ForNote()
     {
         var placement = new AccidentalPlacement();
-        var note = new NoteItem(0, Core.Semantics.Fraction.Quarter, 0, "flat", false, 0);
+        var note = new NoteItem(0, Core.Semantics.Fraction.Quarter, 0, "flat", 0);
 
         var layout = placement.CalculateSinglePosition(note);
 
@@ -107,7 +107,7 @@ public class AccidentalPlacementTests
     public void CalculateSinglePosition_NoAccidental_ReturnsNull()
     {
         var placement = new AccidentalPlacement();
-        var note = new NoteItem(0, Core.Semantics.Fraction.Quarter, 0, null, false, 0);
+        var note = new NoteItem(0, Core.Semantics.Fraction.Quarter, 0, null, 0);
 
         var layout = placement.CalculateSinglePosition(note);
 
@@ -184,10 +184,10 @@ public class AccidentalPlacementTests
     {
         var placement = new AccidentalPlacement();
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(0, "sharp", false),
-            new ChordNoteInfo(2, "flat", true),
-            new ChordNoteInfo(4, "sharp", false),
-            new ChordNoteInfo(5, "natural", false));
+            new ChordNoteInfo(0, "sharp"),
+            new ChordNoteInfo(2, "flat"),
+            new ChordNoteInfo(4, "sharp"),
+            new ChordNoteInfo(5, "natural"));
 
         var first = placement.CalculatePositions(notes);
         var second = placement.CalculatePositions(notes);
@@ -233,8 +233,8 @@ public class AccidentalPlacementTests
     {
         var placement = new AccidentalPlacement();
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(0, "natural", false),
-            new ChordNoteInfo(2, "sharp", false)
+            new ChordNoteInfo(0, "natural"),
+            new ChordNoteInfo(2, "sharp")
         );
 
         var layouts = placement.CalculatePositions(notes);
@@ -264,8 +264,8 @@ public class AccidentalPlacementTests
         int marginalPos = (int)Math.Ceiling(2 * (sharp.Top + horizonPadding - dsharp.Bottom)) + 1;
 
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(0, "sharp", false),
-            new ChordNoteInfo(marginalPos, "doubleSharp", false)
+            new ChordNoteInfo(0, "sharp"),
+            new ChordNoteInfo(marginalPos, "doubleSharp")
         );
 
         var layouts = placement.CalculatePositions(notes);
@@ -285,9 +285,9 @@ public class AccidentalPlacementTests
         var placement = new AccidentalPlacement();
         // Three accidentals very close together: all overlap in Y → stacked in 3 columns
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(-2, "sharp", false),
-            new ChordNoteInfo(0, "flat", false),
-            new ChordNoteInfo(2, "natural", false)
+            new ChordNoteInfo(-2, "sharp"),
+            new ChordNoteInfo(0, "flat"),
+            new ChordNoteInfo(2, "natural")
         );
 
         var layouts = placement.CalculatePositions(notes);
@@ -304,7 +304,7 @@ public class AccidentalPlacementTests
     {
         var placement = new AccidentalPlacement();
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(0, "sharp", false)
+            new ChordNoteInfo(0, "sharp")
         );
 
         var layouts = placement.CalculatePositions(notes);
@@ -315,7 +315,7 @@ public class AccidentalPlacementTests
     public void SinglePosition_XOffset_MatchesExpectedValue()
     {
         var placement = new AccidentalPlacement();
-        var note = new NoteItem(0, Core.Semantics.Fraction.Quarter, 0, "sharp", false, 0);
+        var note = new NoteItem(0, Core.Semantics.Fraction.Quarter, 0, "sharp", 0);
 
         var layout = placement.CalculateSinglePosition(note);
 
@@ -341,8 +341,8 @@ public class AccidentalPlacementTests
         // Two accidentals in same octave (positions 0, 2) with different types
         // should be placed according to alteration priority within that octave
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(0, "flat", false),      // octave 0, priority 3
-            new ChordNoteInfo(2, "natural", false)     // octave 0, priority 0
+            new ChordNoteInfo(0, "flat"),      // octave 0, priority 3
+            new ChordNoteInfo(2, "natural")     // octave 0, priority 0
         );
 
         var layouts = placement.CalculatePositions(notes);
@@ -361,9 +361,9 @@ public class AccidentalPlacementTests
         var placement = new AccidentalPlacement();
         // Accidentals in different octaves: lower octave placed first (rightmost)
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(-7, "sharp", false),    // octave -1
-            new ChordNoteInfo(0, "sharp", false),      // octave 0
-            new ChordNoteInfo(7, "sharp", false)       // octave 1
+            new ChordNoteInfo(-7, "sharp"),    // octave -1
+            new ChordNoteInfo(0, "sharp"),      // octave 0
+            new ChordNoteInfo(7, "sharp")       // octave 1
         );
 
         var layouts = placement.CalculatePositions(notes);
@@ -384,8 +384,8 @@ public class AccidentalPlacementTests
         // Two flats in different octaves at close Y positions
         // Use positions in different octaves to avoid same-octave overstrike
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(6, "flat", false),    // octave 0 (6/7=0)
-            new ChordNoteInfo(9, "flat", false)     // octave 1 (9/7=1)
+            new ChordNoteInfo(6, "flat"),    // octave 0 (6/7=0)
+            new ChordNoteInfo(9, "flat")     // octave 1 (9/7=1)
         );
 
         var layouts = placement.CalculatePositions(notes);
@@ -394,8 +394,8 @@ public class AccidentalPlacementTests
         // With flat merge, the offset difference should be less than
         // what it would be for two sharps at the same positions
         var sharpNotes = ImmutableArray.Create(
-            new ChordNoteInfo(6, "sharp", false),
-            new ChordNoteInfo(9, "sharp", false)
+            new ChordNoteInfo(6, "sharp"),
+            new ChordNoteInfo(9, "sharp")
         );
         var sharpLayouts = placement.CalculatePositions(sharpNotes);
 
@@ -415,8 +415,8 @@ public class AccidentalPlacementTests
         var placement = new AccidentalPlacement();
         // Flat + sharp should NOT get the flat merge overlap
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(0, "flat", false),
-            new ChordNoteInfo(2, "sharp", false)
+            new ChordNoteInfo(0, "flat"),
+            new ChordNoteInfo(2, "sharp")
         );
 
         var layouts = placement.CalculatePositions(notes);
@@ -433,11 +433,11 @@ public class AccidentalPlacementTests
     {
         var placement = new AccidentalPlacement();
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(-4, a1, false),
-            new ChordNoteInfo(-2, a2, false),
-            new ChordNoteInfo(0, a3, false),
-            new ChordNoteInfo(2, a4, false),
-            new ChordNoteInfo(4, a5, false)
+            new ChordNoteInfo(-4, a1),
+            new ChordNoteInfo(-2, a2),
+            new ChordNoteInfo(0, a3),
+            new ChordNoteInfo(2, a4),
+            new ChordNoteInfo(4, a5)
         );
 
         var layouts = placement.CalculatePositions(notes);
@@ -459,10 +459,10 @@ public class AccidentalPlacementTests
         // Stagger should produce valid non-overlapping layout
         var placement = new AccidentalPlacement();
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(-7, "sharp", false),   // octave -1
-            new ChordNoteInfo(0, "flat", false),       // octave 0
-            new ChordNoteInfo(7, "natural", false),    // octave 1
-            new ChordNoteInfo(14, "sharp", false)      // octave 2
+            new ChordNoteInfo(-7, "sharp"),   // octave -1
+            new ChordNoteInfo(0, "flat"),       // octave 0
+            new ChordNoteInfo(7, "natural"),    // octave 1
+            new ChordNoteInfo(14, "sharp")      // octave 2
         );
 
         var layouts = placement.CalculatePositions(notes);
@@ -480,10 +480,10 @@ public class AccidentalPlacementTests
         // The cluster (3 accidentals) should be closer to noteheads than the isolated one
         var placement = new AccidentalPlacement();
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(0, "sharp", false),
-            new ChordNoteInfo(1, "sharp", false),
-            new ChordNoteInfo(2, "sharp", false),
-            new ChordNoteInfo(14, "sharp", false)  // far away, isolated
+            new ChordNoteInfo(0, "sharp"),
+            new ChordNoteInfo(1, "sharp"),
+            new ChordNoteInfo(2, "sharp"),
+            new ChordNoteInfo(14, "sharp")  // far away, isolated
         );
 
         var layouts = placement.CalculatePositions(notes);
@@ -504,8 +504,8 @@ public class AccidentalPlacementTests
         // Only 2 entries: stagger is not applied (threshold is >2)
         var placement = new AccidentalPlacement();
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(0, "sharp", false),
-            new ChordNoteInfo(2, "flat", false)
+            new ChordNoteInfo(0, "sharp"),
+            new ChordNoteInfo(2, "flat")
         );
 
         var layouts = placement.CalculatePositions(notes);
@@ -527,8 +527,8 @@ public class AccidentalPlacementTests
         // → same note name + same octave + same alteration → overstrike
         var placement = new AccidentalPlacement();
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(-5, "sharp", false),
-            new ChordNoteInfo(2, "sharp", false)
+            new ChordNoteInfo(-5, "sharp"),
+            new ChordNoteInfo(2, "sharp")
         );
 
         var layouts = placement.CalculatePositions(notes);
@@ -549,8 +549,8 @@ public class AccidentalPlacementTests
         // LILYPOND-REF: In LilyPond, these would be in separate APEs
         var placement = new AccidentalPlacement();
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(0, "sharp", false),
-            new ChordNoteInfo(2, "sharp", false)
+            new ChordNoteInfo(0, "sharp"),
+            new ChordNoteInfo(2, "sharp")
         );
 
         var layouts = placement.CalculatePositions(notes);
@@ -570,9 +570,9 @@ public class AccidentalPlacementTests
         // LILYPOND-REF: Each would be in a separate APE → positioned by skyline collision
         var placement = new AccidentalPlacement();
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(-5, "natural", false),  // D4
-            new ChordNoteInfo(-3, "natural", false),  // F4
-            new ChordNoteInfo(-1, "natural", false)   // A4
+            new ChordNoteInfo(-5, "natural"),  // D4
+            new ChordNoteInfo(-3, "natural"),  // F4
+            new ChordNoteInfo(-1, "natural")   // A4
         );
 
         var layouts = placement.CalculatePositions(notes);
@@ -591,8 +591,8 @@ public class AccidentalPlacementTests
         // Sharp and flat in same octave → different alteration → separate positions
         var placement = new AccidentalPlacement();
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(0, "sharp", false),
-            new ChordNoteInfo(2, "flat", false)
+            new ChordNoteInfo(0, "sharp"),
+            new ChordNoteInfo(2, "flat")
         );
 
         var layouts = placement.CalculatePositions(notes);
@@ -610,8 +610,8 @@ public class AccidentalPlacementTests
         // Two sharps in different octaves → no overstrike
         var placement = new AccidentalPlacement();
         var notes = ImmutableArray.Create(
-            new ChordNoteInfo(0, "sharp", false),   // octave 0
-            new ChordNoteInfo(7, "sharp", false)     // octave 1
+            new ChordNoteInfo(0, "sharp"),   // octave 0
+            new ChordNoteInfo(7, "sharp")     // octave 1
         );
 
         var layouts = placement.CalculatePositions(notes);

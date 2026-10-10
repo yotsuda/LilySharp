@@ -629,7 +629,7 @@ public class NoteCollisionTests
     }
 
     private static ChordItem MakeChord(Fraction baseDuration, params int[] staffPositions) =>
-        new(staffPositions.Select(p => new ChordNoteInfo(p, null, false)).ToImmutableArray(),
+        new(staffPositions.Select(p => new ChordNoteInfo(p, null)).ToImmutableArray(),
             baseDuration, 0, 0);
 
     // --- LILYPOND-REF dot direction / dot side-support tests (I-4) ---
@@ -740,7 +740,7 @@ public class NoteCollisionTests
         // against LilyPond: dots land 4.49/4.50 right of the down chord's head.
         var headBox = GlyphMetrics.GetNoteheadBBox(4);
         var upNotes = new[] { -3, -2 }
-            .Select(p => new ChordNoteInfo(p, null, false)).ToImmutableArray();
+            .Select(p => new ChordNoteInfo(p, null)).ToImmutableArray();
         double flip = ChordHeadPositioning.CalculateOffsets(upNotes, true, 4).Max();
         double expected = up.XOffset + flip + headBox.Right + GlyphMetrics.AugmentationDot.Width;
         Assert.Equal(expected, down.Dot.ColumnMinX!.Value, 6);
@@ -783,7 +783,7 @@ public class NoteCollisionTests
         // head ink right + one dot width) — for BOTH voices' dots.
         var headBox = GlyphMetrics.GetNoteheadBBox(4);
         double flip = ChordHeadPositioning.CalculateOffsets(
-            new[] { 0, 1 }.Select(p => new ChordNoteInfo(p, null, false)).ToImmutableArray(),
+            new[] { 0, 1 }.Select(p => new ChordNoteInfo(p, null)).ToImmutableArray(),
             true, 4).Max();
         double expected = flip + headBox.Right + GlyphMetrics.AugmentationDot.Width;
         Assert.Equal(expected, up.Dot.ColumnMinX!.Value, 6);
@@ -791,13 +791,13 @@ public class NoteCollisionTests
     }
 
     private static ChordItem MakeDottedChord(Fraction baseDuration, int dots, params int[] staffPositions) =>
-        new(staffPositions.Select(p => new ChordNoteInfo(p, null, false)).ToImmutableArray(),
+        new(staffPositions.Select(p => new ChordNoteInfo(p, null)).ToImmutableArray(),
             baseDuration, dots, 0);
 
     // --- LILYPOND-REF multi-voice cascading tests (I-5) ---
 
     private static NoteItem MakeNote(int staffPosition) =>
-        new(staffPosition, Fraction.Quarter, 0, null, false, 0);
+        new(staffPosition, Fraction.Quarter, 0, null, 0);
 
     [Fact]
     public void ThreeVoices_CascadingOffsets()
@@ -891,7 +891,7 @@ public class NoteCollisionTests
     }
 
     private static NoteItem MakeNoteWithDuration(int staffPosition, Fraction duration) =>
-        new(staffPosition, duration, 0, null, false, 0);
+        new(staffPosition, duration, 0, null, 0);
 
     // --- LILYPOND-REF branch ORDER of check_meshing_chords, measured end to end ---
     // audit/lp-geometry/probes/cross-voice-accidental.ly, books XVE..XVH. Each number is
@@ -901,7 +901,7 @@ public class NoteCollisionTests
     // DOWN-stem group is the one that moves right.
 
     private static NoteItem Dotted(int staffPosition, Fraction baseDuration, int dots) =>
-        new(staffPosition, baseDuration, dots, null, false, 0);
+        new(staffPosition, baseDuration, dots, null, 0);
 
     private static (double Up, double Down) Displace(MusicItem up, MusicItem down)
     {
@@ -962,7 +962,7 @@ public class NoteCollisionTests
         // group's LOWEST head is a third below the down head, so the extremes do NOT touch
         // and :207-210 reaches stem_to_stem: 2 × 0.65 × 1.3774 = 1.790620.
         var chord = new ChordItem(
-            ImmutableArray.Create(new ChordNoteInfo(-5, null, false), new ChordNoteInfo(-2, null, false)),
+            ImmutableArray.Create(new ChordNoteInfo(-5, null), new ChordNoteInfo(-2, null)),
             Fraction.Half, 0, 0);
 
         var (up, down) = Displace(chord, Dotted(-2, Fraction.Quarter, 1));
@@ -1132,7 +1132,7 @@ public class NoteCollisionTests
     // LILYPOND-REF: lily/stem.cc:606-760 calc_positioning_done
 
     private static ChordNoteInfo[] Infos(params int[] positions)
-        => positions.Select(p => new ChordNoteInfo(p, null, false)).ToArray();
+        => positions.Select(p => new ChordNoteInfo(p, null)).ToArray();
 
     [Fact]
     public void ChordHeadPositioning_Second_StemUp_ShiftsUpperHeadRight()

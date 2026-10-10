@@ -51,7 +51,7 @@ public class SpringRodModelTests
     // knee-spacing-correction to 0 / 0.5 / 2 and move the term in proportion, both signs.
 
     private static NoteItem BeamedEighth(int staffPosition, bool stemUp, int? beamId) =>
-        new NoteItem(staffPosition, Fraction.Eighth, 0, null, false, 0)
+        new NoteItem(staffPosition, Fraction.Eighth, 0, null, 0)
         { StemUpOverride = stemUp, BeamId = beamId };
 
     [Theory]
@@ -76,7 +76,7 @@ public class SpringRodModelTests
     }
 
     private static NoteItem UnbeamedQuarter(int staffPosition, bool stemUp) =>
-        new NoteItem(staffPosition, Fraction.Quarter, 0, null, false, 0)
+        new NoteItem(staffPosition, Fraction.Quarter, 0, null, 0)
         { StemUpOverride = stemUp };
 
     [Fact]
@@ -359,14 +359,14 @@ public class SpringRodModelTests
     public void StemCorrection_OppositeDirections_IncreasesSpace()
     {
         // Stem up followed by stem down → need more space
-        var noteUp = new NoteItem(-2, Fraction.Quarter, 0, null, false, 0);
-        var noteDown = new NoteItem(2, Fraction.Quarter, 0, null, false, 0);
+        var noteUp = new NoteItem(-2, Fraction.Quarter, 0, null, 0);
+        var noteDown = new NoteItem(2, Fraction.Quarter, 0, null, 0);
 
         var springOpposite = SpacingRules.CreateSpring(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, noteUp, noteDown, Fraction.Quarter);
 
         // Same direction → less space
-        var noteUp2 = new NoteItem(-2, Fraction.Quarter, 0, null, false, 0);
-        var noteUp3 = new NoteItem(-4, Fraction.Quarter, 0, null, false, 0);
+        var noteUp2 = new NoteItem(-2, Fraction.Quarter, 0, null, 0);
+        var noteUp3 = new NoteItem(-4, Fraction.Quarter, 0, null, 0);
 
         var springSame = SpacingRules.CreateSpring(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, noteUp2, noteUp3, Fraction.Quarter);
 
@@ -377,7 +377,7 @@ public class SpringRodModelTests
     [Fact]
     public void StemCorrection_RestDoesNotAffect()
     {
-        var note = new NoteItem(0, Fraction.Quarter, 0, null, false, 0);
+        var note = new NoteItem(0, Fraction.Quarter, 0, null, 0);
         var rest = new RestItem(Fraction.Quarter, 0, 0);
 
         var springNoParams = SpacingRules.CreateSpring(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, note, rest, Fraction.Quarter,

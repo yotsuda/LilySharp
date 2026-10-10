@@ -338,8 +338,7 @@ public class GraceBodyValidatorTests
         for (int i = 0; i < books.Length; i++)
         {
             var column = new LilySharp.Core.Svg.Model.GraceColumnInfo(
-                books[i].Position, accidental: null, needsLedger: false,
-                Fraction.FromNoteValue(books[i].Value), dots: 1);
+                books[i].Position, accidental: null, Fraction.FromNoteValue(books[i].Value), dots: 1);
             AssertOffset(
                 LilySharp.Core.Svg.Layout.DotColumn.ReservedForGrace(column, beamed: false).OffsetX,
                 drawn[i]);
@@ -417,9 +416,9 @@ public class GraceBodyValidatorTests
             => LilySharp.Core.Svg.Layout.SpacingRules.GraceColumns(
                 System.Collections.Immutable.ImmutableArray.Create(
                     new LilySharp.Core.Svg.Model.GraceColumnInfo(
-                        2, null, false, Fraction.Eighth, dots: dots),
+                        2, null, Fraction.Eighth, dots: dots),
                     new LilySharp.Core.Svg.Model.GraceColumnInfo(
-                        3, null, false, Fraction.Sixteenth)),
+                        3, null, Fraction.Sixteenth)),
                 mainItem: null).Offsets[1];
 
         Assert.Equal(0.46797, SecondColumn(1) - SecondColumn(0), 5);

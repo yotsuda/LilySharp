@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -33,7 +33,7 @@ public class ItemSkylineRenderMemoTests
     // A dotted note: its paper column (the rod's view) holds the dot, its note column (the
     // wish's view) does not, so the two right-side views differ.
     private static NoteItem DottedQuarter(int staffPosition)
-        => new(staffPosition, Fraction.Quarter, 1, null, false, 0);
+        => new(staffPosition, Fraction.Quarter, 1, null, 0);
 
     [Fact]
     public void InsideAScope_EachViewIsTheFreshBuildOfItsOwnArguments()
