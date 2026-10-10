@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第881セッションの経緯
+
+### 1.1 第881セッション（2026-10-10・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで作業に着手して」）。`-Start p881`（HEAD `b086a4d51`）＝full **11753 / 0 / 2 / 11755**。§7 3.5 で第879 を ARCHIVE へ。着手＝§1.0 ⒜「T7 の段割れの族／双子の計器」。
+- **第838 の未調査 2 冊**（`twinsys.ps1` の写し `sessions/p881/twinsys.ps1`＝本の path で動く）: The Hustle は **0.02**＝閉じている（第838〜839 の列の修正で消えた）／Honesty の 20 は**本の側**＝L13 `bes, aes, | fis, f, |` の音価 `2` 落ち（Lily# は LYS2001 ×2・LP は bar check 失敗で以後の小節線がずれる）。
+- **双子の段署名の掃き直し**（`twin881.ps1`＝p575 の写し・`--all` を外した／`parse-lib.ps1` の `score` 行の正規表現を名前なしに対応）: 最初の数は一致 429／段割れ違い 31／小節数違い 29。**原因 2 つ**: ⒜ 計器＝LP は `R1*N` や percent の反復の内側に BarNumber を作らない→ `reparse881.ps1` が段の小節数を次の段の先頭番号との差で数える／⒝ **製品（twin）＝第878 の `\layout` 全体の `skipBars = ##t`**。LP の Timing_translator は skipBars の下で次の小節線の moment を予約しない（timing-translator.cc:308-328）ので、`\repeat percent` の反復（1 つの長い event＝2 小節の `%%` と 3 小節以上のスラッシュ）の内側の小節線が消え、LP は反復 1 回を 1 小節幅で描いた（Stand By Me `repeat percent 11 { 8 小節 }`: LP 3 段・頁 7 段）。頁はスラッシュ＋空小節（第286 U1）。
+- ★ `41987096c`: skipBars を `\compressMMRests` と同じく**各 `R` の前の `\once \set Score.skipBars = ##t`** に移し、`\layout` から外した。LP で検証: `R1*2` の probe（p877 ex1）は `\layout` 形と byte 同一・Stand By Me は既定（skipBars なし）と byte 同一（Lab `sessions/p881/mmr`・`outp881/Stand By Me`）。双子の掃き（`ly-sweep.ps1`・1199 冊）: 1199 が動き、`\layout` 行 1199 本の削除＋`\once \set` 1048 本の追加を除くと **差 0**。網 +1（`RepeatPercent_CarriesNoSkipBars…`）・`BarRestTests` に per-rest の assert。**掃き直し: 一致 463／段割れ違い 16／小節数違い 11**（§1.0）。
+- ABC の both だけ小節が 6 多いのは LP の癖（§1.0 の双子の計器の行・最小再現 `abcmin`）＝製品 0。
+- `-End p881 -DiffBase b086a4d51`（門は全部 OK）＝full **11754 / 0 / 2 / 11756**（網 +1）。Core '+' 29 行／REF 2（`compressMMRests`・timing-translator.cc の `stop_translation_timestep`）／OWN 0。7.6: ⒜＝LP 自身の `\compressMMRests` の綴り。7.7: 匂いなし（skipBars の家は `EmitRest` 1 軒・`\layout` はもう言わない）。HANDOFF 440,589 B（残り 9,411）。未 push 50＋docs（push はユーザー）。
+判定: 次は §1.0 の段割れ違い 16 の分類（both だけの 9 冊・tab だけの 4 冊＝今便の `twin881`／`reparse881`／`twinsys` の上に立つ）。(a) 今便の計器と所見の上に立つ＝続ける側／(b) 会話は 1 便ぶん・圧縮なし／(c) 同じ島 ⇒ **この会話で続けてよい**（`-Start p882` から）。
+
 ## 以下は第880セッションの経緯
 
 ### 1.1 第880セッション（2026-10-10・YT-DELL2）

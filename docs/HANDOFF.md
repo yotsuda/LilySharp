@@ -88,7 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - **v0.11.0 は出した（第854・`docs/RELEASING.md` §8）**。残り: Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663・**Honesty L13 `bes, aes, | fis, f, |` の 2 小節＝音価 `2` が落ちている・LYS2001＝第881**）／**push はユーザー**
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
-- **T7 の残り＝双子と段割れが違う score（第882 が分類・Lab `sessions/p881/twin881.ps1` → `reparse881.ps1`・比較可能 491＝一致 463→464）**: **F9 の族 11（§3 既決＝Lily# の tab の数字は LP より大きい）**＝LP の `TabNoteHead.font-size` を 2 にすると一致する 6（Beat It・Smooth Operator ×2・longtab・ジングルベル (UiPath)・異邦人）＋段数が fs0 と fs2〜3 の間に落ちる 4（Universe both 34<39<50・心にしまいましょう 19<20<22・奏（かなで） 28<29<31・A Thousand Miles tab 21<25=25）／**計器 3**＝Disco Inferno ×3（途中の弱起の番号）／**製品 1＝閉じた**（If You Leave Me Now＝`time 4/4 break`・`89168e9c1`）／**未解明 2＝アゲハ蝶 both・tab**（section H の `ais,,8. cis,16~ cis,8 eis,` の形・noBreak 2 本の 4 小節を Lily# は 1 段に押し込めず 70・74・75 が 1 小節の段になる。LP は fs3 でも 4 小節入る＝数字の大きさではなく最小幅の差＝次の計器仕事。絵は Lab `sessions/p882/pic`・`sessions/p881/outp881b/アゲハ蝶/hiboth-page3.png`）。閉じた分（merge・rod・小節線のばね・first_head・⒣⒟）は第576〜第661 の §1.1 と「§1.0 から移した閉じた段落」第872（ARCHIVE）。⚠️ **計器の罠 2 つ（第881 が直した）**: ⒜ LP は長い 1 event（`R1*N`・percent の反復）の内側に BarNumber を作らない＝段の小節数は「次の段の先頭番号 − この段の先頭番号」で数える／⒝ 旧 `parse-lib` は名前の無い score の `layout` 行（`score` だけ）を読めず 180 score しか比べていなかった
+- **T7 の残り＝双子と段割れが違う score（第882 が分類・Lab `sessions/p881/twin881.ps1` → `reparse881.ps1`・比較可能 491＝一致 463→464）**: **F9 の族 13（§3 既決＝Lily# の tab の数字は LP より大きい）**＝LP の `TabNoteHead.font-size` を 2 にすると一致する 6（Beat It・Smooth Operator ×2・longtab・ジングルベル (UiPath)・異邦人）＋段数が fs0 と fs2〜3 の間に落ちる 4（Universe both 34<39<50・心にしまいましょう 19<20<22・奏（かなで） 28<29<31・A Thousand Miles tab 21<25=25）／**計器 3**＝Disco Inferno ×3（途中の弱起の番号）／**製品 1＝閉じた**（If You Leave Me Now＝`time 4/4 break`・`89168e9c1`）／**アゲハ蝶 both・tab 2 も F9 の際どい形（第883）**: section H の 4 小節（noBreak 2 本）の最小幅が段幅を 1 ss 弱超え、DP は k=3 を不能として 3+1 にする。超過分は tab の数字の rod＝`cis,16~ cis,8`（タイの行き先）の対の最小が tab で 1.87（半幅 0.785×2＋rod 0.3・描かない行き先も同じ幅）、譜では 1.60、LP は 1.70（LP の tab の数字の対は 95mm まで絞ると 1.2〜1.3）＝数字の大きさの帰結（計器 Lab `sessions/p883/ag`・`ZzP883ProbeTests.cs.txt`＝DP の候補行の force と fits を刷る）。**⇒ 段割れ違い 16 は全部分類が付いた。**閉じた分（merge・rod・小節線のばね・first_head・⒣⒟）は第576〜第661 の §1.1 と「§1.0 から移した閉じた段落」第872（ARCHIVE）。⚠️ **計器の罠 2 つ（第881 が直した）**: ⒜ LP は長い 1 event（`R1*N`・percent の反復）の内側に BarNumber を作らない＝段の小節数は「次の段の先頭番号 − この段の先頭番号」で数える／⒝ 旧 `parse-lib` は名前の無い score の `layout` 行（`score` だけ）を読めず 180 score しか比べていなかった
 - ⚠️ **双子の計器の残り（第881）**: 小節数の違う 11 score＝**本の側 8**（LYS2001／2002 の短い・長い小節＝LP は bar check で割れて以後の小節線がずれる: Honesty・I'm In The Mood For Dancing・Livin' It Up・More Than A Woman ×3・世界に一つだけの花・瞳をとじて）／**ABC の both は LP 側の癖**（`\alternative` の 1 番の中の `\time` ＋ 2 譜で小節が増える・最小再現 Lab `sessions/p881/abcmin` one.ly 11 小節／two.ly 16 小節＝1 譜は正しい）／repeat（試験ファイル）／Last Christmas（LP 落ち）。署名なし 21 は 1 段だけの試験ファイル。**LP 失敗 3（Mandy・You're the One That I Want (-1)・Last Christmas）＝本の側**（4 弦 bass の最低弦より下の音＝LP は `negative fret` の警告の後に自分の Guile が落ちる・第737）。**比較の基準は双子の既定の数字**（`TabNoteHead.font-size` 2・3 を足すと一致が減る＝第586）
 - **U9 ユーザー報告 `space.lys` の小節頭の余白＝保留（ユーザー判断「一旦この件は忘れて」・第477）**。4 通りすべてで再現せず LP とも同比率（Lab `sessions/p477/`）。⚠️ **毒は今後も同じフォルダで回してよい**（ユーザー決定）＝毒の最中のビルドはユーザー側で避ける
 - ⏸ **perf の島（⒭⁸・⒮*・⒩⁴・⒨・⒯ …）は第615 で区切り＝一時停止（ユーザー判断・忠実度が先）**。本文と掃き終わった島（第434〜第456）の教訓は `HANDOFF-ARCHIVE.md`「§1.0 から移した perf の島」（第660）・閉じた島の一覧は第654 が畳んだ（各便の §1＝ARCHIVE・RULES §5.4 末尾）
@@ -118,6 +118,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第883セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第882 の続き・ユーザー「続けて」）。`-Start p883`（HEAD `17f015b52`）＝full **11759 / 0 / 2 / 11761**。§7 3.5 で第881 を ARCHIVE へ。着手＝アゲハ蝶 section H の最小幅。
+- probe（Lab `sessions/p883/ag/ag1.lys`＝本の形・`ag2.lys`＝4 小節を noBreak で接着）で再現: both だけ 3+1。接着すると Lily# も LP とほぼ同じ位置（小節線 29.0／54.4／78.1／102.3 対 LP 28.9／54.1／78.0／102.4）で 1 段に収まる＝最小幅の超過は 1 ss 弱（DP は全 k を不能として greedy に落ち、layout は rod を僅かに破って置く）。
+- **DP の中身を刷った**（使い捨て `ZzP883ProbeTests.cs.txt`＝`ComputeMultiStaffSpringData` ＋ `KnuthPlassBreaker.Solve` の `For(k)`）: both は k=3 が不能（4 小節の min 25.16／25.16／23.55／23.98 ＋ 行頭が段幅 98.83 を超える）・staff／tab 単独なら k=3 が解ける。対ごとの最小: `cis,16~ cis,8`（タイの行き先）が **tab 1.87（半幅 0.785×2＋rod 0.3）・staff 1.60**＝both では tab が勝つ。LP の圧縮行（`-dinclude-settings` の PROBECOL dump）は同じ対が 1.70（staff が勝つ）、tab 単独を line-width 95mm まで絞ると tab の数字の対は 1.2〜1.3 まで縮む＝**LP の tab の数字の最小は Lily# より約 0.6 小さい＝F9（§3 既決・第369 ユーザー決定「数字の大きさは Lily# のまま・rod は LP の 0.3」）**。描かないタイの行き先も描く数字と同じ幅を予約するが、LP でも隠れた TabNoteHead の対は縮まない（1.29 対 1.20）＝そこは差の源ではない。
+- ⇒ **T7 の段割れ違い 16 は全部分類が付いた**（F9 13・計器 3・製品 1＝第882 で閉じた）。製品の変更 0。
+- `-End p883 -DiffBase 17f015b52`（門は全部 OK）＝full **11759 / 0 / 2 / 11761**。Core '+' 0 行（計器と所見だけ）。7.6／7.7: 該当なし。HANDOFF 441,781 B（残り 8,219）。未 push 53＋docs（push はユーザー）。
+判定: T7 の双子基準の島は分類が尽きた（残りは §3 既決の F9 と計器）。次は §1.0 ⒜ の他＝VS Code の実機確認（ユーザー）か、ユーザー判断待ちの項目（OMR の L2〜L11・B5 の `omr verify`）＝**着手できる製品の仕事はこの島には無い**。(a) 今便の文脈は使わない／(b) この会話は 3 便ぶん＋画像多数＝重い／(c) 別の島 ⇒ **次は新しい会話**（ユーザーが次の島を選んでから）。
+
+## 以下は第882セッションの経緯
+
 ### 1.1 第882セッション（2026-10-10・YT-DELL2）
 
 同じ会話（第881 の続き・ユーザー「続けて」）。`-Start p882`（HEAD `418659caa`）＝full **11754 / 0 / 2 / 11756**。§7 3.5 で第880 を ARCHIVE へ。着手＝段割れ違い 16 の分類。
@@ -126,18 +137,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **アゲハ蝶（both・tab）は未解明**（§1.0 の行）: section H の 4 小節を Lily# は 1 段に押し込めない。LP は fs3 でも入る＝最小幅の差＝次便の計器仕事（p839 `vk/probe.ps1` の列の dump の型）。
 - `-End p882 -DiffBase 418659caa`（門は全部 OK）＝full **11759 / 0 / 2 / 11761**（網 +5）。Core '+' 27 行／REF 1（paper-column-engraver.cc `handle_manual_breaks`）／OWN 0。7.6: ⒝＝LP は event の moment の column に permission を置く・Lily# は小節頭の判定を「時間を取る item が無い」で言い直した（字面にするには moment ごとの column の模型が要る＝§2 の paper column の話）。7.7: `_currentItems.Count == 0` の旧の腕を残した（split bar の頭の直後の no-op）＝同じ問いの 2 綴りではなく 1 つの述語の 2 項。HANDOFF 441,745 B（残り 8,255）。未 push 52＋docs（push はユーザー）。
 判定: 次は **アゲハ蝶 section H の最小幅**（LP の列の dump `p839/vk/probe.ps1` の型で `ais,,8. cis,16~ cis,8 eis,` の 4 小節を列ごとに比べる）か、§1.0 ⒜ の他の島。(a) 今便の双子と絵の上に立つ＝続ける側／(b) **この会話は 2 便ぶんで長く、画像を何枚も読んだ**＝圧縮は未だだが重い／(c) 同じ島 ⇒ **この会話で `-Start p883` から続けてよいが、重さを感じたら新しい会話**。
-
-## 以下は第881セッションの経緯
-
-### 1.1 第881セッション（2026-10-10・YT-DELL2）
-
-新しい会話（ユーザー「HANDOFF を読んで作業に着手して」）。`-Start p881`（HEAD `b086a4d51`）＝full **11753 / 0 / 2 / 11755**。§7 3.5 で第879 を ARCHIVE へ。着手＝§1.0 ⒜「T7 の段割れの族／双子の計器」。
-- **第838 の未調査 2 冊**（`twinsys.ps1` の写し `sessions/p881/twinsys.ps1`＝本の path で動く）: The Hustle は **0.02**＝閉じている（第838〜839 の列の修正で消えた）／Honesty の 20 は**本の側**＝L13 `bes, aes, | fis, f, |` の音価 `2` 落ち（Lily# は LYS2001 ×2・LP は bar check 失敗で以後の小節線がずれる）。
-- **双子の段署名の掃き直し**（`twin881.ps1`＝p575 の写し・`--all` を外した／`parse-lib.ps1` の `score` 行の正規表現を名前なしに対応）: 最初の数は一致 429／段割れ違い 31／小節数違い 29。**原因 2 つ**: ⒜ 計器＝LP は `R1*N` や percent の反復の内側に BarNumber を作らない→ `reparse881.ps1` が段の小節数を次の段の先頭番号との差で数える／⒝ **製品（twin）＝第878 の `\layout` 全体の `skipBars = ##t`**。LP の Timing_translator は skipBars の下で次の小節線の moment を予約しない（timing-translator.cc:308-328）ので、`\repeat percent` の反復（1 つの長い event＝2 小節の `%%` と 3 小節以上のスラッシュ）の内側の小節線が消え、LP は反復 1 回を 1 小節幅で描いた（Stand By Me `repeat percent 11 { 8 小節 }`: LP 3 段・頁 7 段）。頁はスラッシュ＋空小節（第286 U1）。
-- ★ `41987096c`: skipBars を `\compressMMRests` と同じく**各 `R` の前の `\once \set Score.skipBars = ##t`** に移し、`\layout` から外した。LP で検証: `R1*2` の probe（p877 ex1）は `\layout` 形と byte 同一・Stand By Me は既定（skipBars なし）と byte 同一（Lab `sessions/p881/mmr`・`outp881/Stand By Me`）。双子の掃き（`ly-sweep.ps1`・1199 冊）: 1199 が動き、`\layout` 行 1199 本の削除＋`\once \set` 1048 本の追加を除くと **差 0**。網 +1（`RepeatPercent_CarriesNoSkipBars…`）・`BarRestTests` に per-rest の assert。**掃き直し: 一致 463／段割れ違い 16／小節数違い 11**（§1.0）。
-- ABC の both だけ小節が 6 多いのは LP の癖（§1.0 の双子の計器の行・最小再現 `abcmin`）＝製品 0。
-- `-End p881 -DiffBase b086a4d51`（門は全部 OK）＝full **11754 / 0 / 2 / 11756**（網 +1）。Core '+' 29 行／REF 2（`compressMMRests`・timing-translator.cc の `stop_translation_timestep`）／OWN 0。7.6: ⒜＝LP 自身の `\compressMMRests` の綴り。7.7: 匂いなし（skipBars の家は `EmitRest` 1 軒・`\layout` はもう言わない）。HANDOFF 440,589 B（残り 9,411）。未 push 50＋docs（push はユーザー）。
-判定: 次は §1.0 の段割れ違い 16 の分類（both だけの 9 冊・tab だけの 4 冊＝今便の `twin881`／`reparse881`／`twinsys` の上に立つ）。(a) 今便の計器と所見の上に立つ＝続ける側／(b) 会話は 1 便ぶん・圧縮なし／(c) 同じ島 ⇒ **この会話で続けてよい**（`-Start p882` から）。
 
 ## 2. 開いている作業
 
