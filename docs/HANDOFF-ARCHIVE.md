@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第887セッションの経緯
+
+### 1.1 第887セッション（2026-10-10・YT-DELL2）
+
+新しい会話（ユーザー「次を読んで作業に着手して」・島の指定なし）。`-Start p887`（HEAD `2860aabfe`）＝full **11766 / 0 / 2 / 11768**。§7 3.5 で第885 を ARCHIVE へ。**§1.0 の指示どおり語りの前に `tools\Fold-ClosedHandoffItems.ps1 -Session 887`**＝閉じた §2 の項目 1 件・424 行を ARCHIVE へ（HANDOFF 439,765 → 372,631 B＝天井まで約 77 KB 空いた）。
+- 着手＝§1.0 ⒜ の **CHANGELOG の 0.11.0 以降**（第886 の判定「小さい島は尽きた・残りはユーザーが選ぶ島」のうち、docs だけで閉じて可逆なもの）。`v0.11.0..HEAD` の製品 commit 90 本の本文を全部読み（Lab `sessions/p887/commits-since-0.11.0.txt`）、`CHANGELOG.md` と `editors/vscode/CHANGELOG.md` の先頭に **`## Unreleased`** を立てた（本体 166 行・拡張 48 行・下書きは Lab `sessions/p887/changelog-*.md`・CRLF 保持・`ChangelogMentionTests` 緑）。節＝Breaking changes（名前の無いブロック・score の 1 語の名前と `form` の選択・LYS6014・LYS1046・section のラベル宣言）／Music fonts (SMuFL)（`fonts { music }`・metadata からの engrave と SMuFL の作法の差・Petaluma Script・`boxes.json`）／Engraving（`as lines N` の族・band の重なり・`@chord` の run・和音記号の rod・page breaker の pure 高さと hara-kiri の行・`time 4/4 break`・condensed の臨時記号・かなのラベル枠）／Diagnostics（LYS4007 の percent）／MIDI, MusicXML and the LilyPond twin（skipBars・`r`/`s`/`q`/`R`・slash の音高）／Fixes（PDF の font の答え・Petaluma WOFF2・ImageSharp）／Editor（fence・snippet・`fontPaths` の再描画）。**書いていないもの**＝SMuFL foundation の内部段階・refactor・cleanup・試験だけの commit（利用者に見えない）。release 時は見出しを版番号に替えるだけ＝`RELEASING.md` §3 に 1 段落足した。
+- 触っていない: **R12 ⒠**（読んだ限り単位違いは実在＝`MeasureModel.Flatten` は `output.Count`（書かれた item も数える）で切り、collector は展開 site だけを `ChargeExpansion` で数える。切れるのは 50,000 を超える本だけ・優先度低のまま）／G-condensed の残り 2 点／`Materialise` overlap。
+- `-End p887 -DiffBase 2860aabfe`（門は全部 OK）＝full **11766 / 0 / 2 / 11768**（docs のみ・網 ±0）。Core '+' 0 行／REF 0／OWN 0＝7.5・7.6・7.7 とも該当なし（コードに触っていない）。棚卸し 2 枚＝差分なし。HANDOFF 375,035 B（残り 74,965）・§1 現在便 9,372 字。commit `5560ce5cb`（changelog ×2 ＋ RELEASING）。未 push 61＋docs（push はユーザー）。Lab `sessions/p887/`＝start.log・end.log・commits の本文・changelog の下書き。
+判定: §1.0 ⒜ で Claude 側に残っていた最後の項目（CHANGELOG）を閉じた。残りは全部ユーザー側か設計級（VS Code の手動確認・Lab の本の修正・push／G-condensed の cue 隣接・`Materialise` overlap・R12 ⒠）。(a) 今便の文脈は要らない／(b) この会話は 1 便＝軽い／(c) 別の島 ⇒ **ユーザーが島を選べばこの会話のまま `-Start p888`**（既定は続ける・CLAUDE-OPERATIONS §2 ⑵(c)）。
+
 ## 以下は第886セッションの経緯
 
 ### 1.1 第886セッション（2026-10-10・YT-DELL2）

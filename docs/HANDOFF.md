@@ -118,6 +118,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第889セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第888 の続き）。`-Start p889`（HEAD `78a630122`）＝full **11771 / 0 / 2 / 11773**。§7 3.5 で第887 を ARCHIVE へ。着手＝**ユーザー報告 2 件**（VS Code の手動確認 `MANUAL-CHECKS.md` §1.1 を始めてすぐ）: ⑴ Ctrl+Shift+↑↓ は動くが音が鳴らない → プレビューをクリックすると鳴る → **何かの拍子にまた鳴らなくなる**／⑵ `<c e g>` の中の音をステップしたとき、**和音全体が鳴るべき**（単音しか鳴らない）。
+- **⑴ の正体＝webview の autoplay 規則**: 合成器は `holdNotes` が打鍵ごとに `new AudioContext()` を作り 400 ms 後に閉じていた。ブラウザーは**その document を利用者が操作する（クリック・キー）まで** context を suspended に留め、message handler からの `resume()` は gesture ではない＝最初のクリックの前は全部無音で、しかも何も言わない。「また鳴らなくなる」は webview が作り直されたとき（別の列へ動かす・reload）で activation が消える形。サーバー側は白＝使い捨ての試験で SHOTLIST の本に `pitches=[72]` を返した（第888 末・消した）。**直し**: context を webview の寿命で 1 つ持ち（閉じない）、最初の `pointerdown`／`keydown` で `resume()`、打鍵ごとにも `resume()` を頼み、300 ms 後にまだ running でなければ host へ `audioBlocked` を 1 度だけ送る → host は出力チャネルに書き、ステータスバーに *Lily#: click the preview once to enable its sound*。Play ボタンは自分の context のまま（クリック＝常に許可）。⚠️ **実機で再現はできていない**（Claude は VS Code を動かせない）＝ユーザーが MANUAL-CHECKS §1.1 の 2 行で確かめる。
+- **⑵ ユーザー決定 2026-10-10: `<…>` は 1 つの音**＝member をステップしても caret が乗っても和音全体（member は動いた後の音）を鳴らす。`NoteStepper.ChordOfMember`＝`Sound` の Member 腕は Chord 腕へ委ね、`AuditionAt` は target を和音に差し替える（**key も和音の**＝member を矢印で渡っても 1 回しか鳴らない）。`<< >>` の member はこれまでどおり自分の位置で鳴る。網 `StepRequestTests` 2 本を決定に合わせて書き換え（`ASteppedNote_SoundsItsNewPitch`＝`[72, 79, 88]`・`TheCaret_SoundsWhatItIsOn`＝member は "chord"・和音の key）、毒（`ChordOfMember` が null）＝**その 2 本だけ赤**。filtered 27 / 27。拡張 check-types・compile・test 211 / 211。
+- docs: CHANGELOG（両方・Unreleased の Editor／Fixes）・`MANUAL-CHECKS.md` §1.1（和音の期待と status bar の案内）。commit `5c64c828c`。拡張は `tools\Deploy-Lsp.ps1` で入れ直した（ユーザーは Reload Window）。
+- `-End p889 -DiffBase 78a630122`（門は全部 OK）＝full **11771 / 0 / 2 / 11773**（網 ±0＝2 本を書き換え）。Core '+' 16 行／REF 0／OWN 0＝7.6 ⒞（試聴は Lily# 独自の機能・LP に対応物なし・既存の札のまま）。7.7: sentinel なし・fallback なし（和音でない member は従来の 1 音・`audioBlocked` は 1 度だけの通知で挙動を変えない）。棚卸し 2 枚＝差分なし。HANDOFF 376,545 B（残り 73,455）。未 push 67＋docs（push はユーザー）。Lab `sessions/p889/`＝start/end・毒・npm・deploy の log。
+判定: ユーザーの手動確認が進行中＝**次の報告が来たらこの会話で `-Start p890`**（(a) 文脈は拡張の合成器と NoteStepper の読み＝使う／(b) 3 便でまだ軽い／(c) 同じ島）。⚠️ ⑴ の直しは実機で未確認＝ユーザーの「鳴る／案内が出る」の報告が門。
+
+## 以下は第888セッションの経緯
+
 ### 1.1 第888セッション（2026-10-10・YT-DELL2）
 
 同じ会話（第887 の続き・ユーザー「続けて」・島の指定なし）。`-Start p888`（HEAD `dec39d572`）＝full **11766 / 0 / 2 / 11768**。§7 3.5 で第886 を ARCHIVE へ。着手＝第887 が読んで残した **§2 R12 ⒠**（残りの島で唯一、コードが読めていて 1 便で閉じる形）。
@@ -127,16 +138,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 出力同一: `lysc check --batch` 1177 冊（追跡 666＋Lab corpora 511）を HEAD の exe（worktree で build）と作業ツリーの exe で＝**診断 2425 行が同一**（違うのは Batch の所要時間の行だけ・`sessions/p888/check-*.txt`・`-j 0` は進捗番号の順が変わるので剥がして比べる）。棚卸し 2 枚＝差分なし。描画は触っていない（validator の模型だけ）＝svg の掃きは要らない。commit `validators:`。
 - `-End p888 -DiffBase dec39d572`（門は全部 OK）＝full **11771 / 0 / 2 / 11773**（網 +5）。Core '+' 82 行／REF 0／OWN 0＝7.6 ⒞（予算は liveness の守りで LP に対応物なし＝札は collector の `DefaultExpansionBudgetCap` に在り、model はそれを「one home」で指す・新しい札は無し）。7.7: sentinel なし・fallback なし（尽きた予算は歩きを止めるだけ＝註に明記）。棚卸し 2 枚＝差分なし。HANDOFF 375,548 B（残り 74,452）・§1 現在便 9,507 字。commit `f966b0c72`。未 push 63＋docs（push はユーザー）。Lab `sessions/p888/`＝start/end の log・毒 4 本の log・check の掃き 2 側・books.txt。
 判定: §2 R12 は全項閉じた。Claude 側だけで着手できる島は尽きた＝残りはユーザー側（VS Code の手動確認・Lab の本の修正・push）か、ユーザー判断が要るもの（G-condensed の cue 隣接＝LP 双子の cue 間隔の計器から／`Materialise` overlap＝設計級／R15 ⒠ の 2 綴り＝要承認／perf の島＝第615 で一時停止）。(a) 今便の文脈は要らない／(b) この会話は 2 便＝まだ軽い／(c) 別の島 ⇒ **ユーザーが島を選べばこの会話のまま `-Start p889`**。
-
-## 以下は第887セッションの経緯
-
-### 1.1 第887セッション（2026-10-10・YT-DELL2）
-
-新しい会話（ユーザー「次を読んで作業に着手して」・島の指定なし）。`-Start p887`（HEAD `2860aabfe`）＝full **11766 / 0 / 2 / 11768**。§7 3.5 で第885 を ARCHIVE へ。**§1.0 の指示どおり語りの前に `tools\Fold-ClosedHandoffItems.ps1 -Session 887`**＝閉じた §2 の項目 1 件・424 行を ARCHIVE へ（HANDOFF 439,765 → 372,631 B＝天井まで約 77 KB 空いた）。
-- 着手＝§1.0 ⒜ の **CHANGELOG の 0.11.0 以降**（第886 の判定「小さい島は尽きた・残りはユーザーが選ぶ島」のうち、docs だけで閉じて可逆なもの）。`v0.11.0..HEAD` の製品 commit 90 本の本文を全部読み（Lab `sessions/p887/commits-since-0.11.0.txt`）、`CHANGELOG.md` と `editors/vscode/CHANGELOG.md` の先頭に **`## Unreleased`** を立てた（本体 166 行・拡張 48 行・下書きは Lab `sessions/p887/changelog-*.md`・CRLF 保持・`ChangelogMentionTests` 緑）。節＝Breaking changes（名前の無いブロック・score の 1 語の名前と `form` の選択・LYS6014・LYS1046・section のラベル宣言）／Music fonts (SMuFL)（`fonts { music }`・metadata からの engrave と SMuFL の作法の差・Petaluma Script・`boxes.json`）／Engraving（`as lines N` の族・band の重なり・`@chord` の run・和音記号の rod・page breaker の pure 高さと hara-kiri の行・`time 4/4 break`・condensed の臨時記号・かなのラベル枠）／Diagnostics（LYS4007 の percent）／MIDI, MusicXML and the LilyPond twin（skipBars・`r`/`s`/`q`/`R`・slash の音高）／Fixes（PDF の font の答え・Petaluma WOFF2・ImageSharp）／Editor（fence・snippet・`fontPaths` の再描画）。**書いていないもの**＝SMuFL foundation の内部段階・refactor・cleanup・試験だけの commit（利用者に見えない）。release 時は見出しを版番号に替えるだけ＝`RELEASING.md` §3 に 1 段落足した。
-- 触っていない: **R12 ⒠**（読んだ限り単位違いは実在＝`MeasureModel.Flatten` は `output.Count`（書かれた item も数える）で切り、collector は展開 site だけを `ChargeExpansion` で数える。切れるのは 50,000 を超える本だけ・優先度低のまま）／G-condensed の残り 2 点／`Materialise` overlap。
-- `-End p887 -DiffBase 2860aabfe`（門は全部 OK）＝full **11766 / 0 / 2 / 11768**（docs のみ・網 ±0）。Core '+' 0 行／REF 0／OWN 0＝7.5・7.6・7.7 とも該当なし（コードに触っていない）。棚卸し 2 枚＝差分なし。HANDOFF 375,035 B（残り 74,965）・§1 現在便 9,372 字。commit `5560ce5cb`（changelog ×2 ＋ RELEASING）。未 push 61＋docs（push はユーザー）。Lab `sessions/p887/`＝start.log・end.log・commits の本文・changelog の下書き。
-判定: §1.0 ⒜ で Claude 側に残っていた最後の項目（CHANGELOG）を閉じた。残りは全部ユーザー側か設計級（VS Code の手動確認・Lab の本の修正・push／G-condensed の cue 隣接・`Materialise` overlap・R12 ⒠）。(a) 今便の文脈は要らない／(b) この会話は 1 便＝軽い／(c) 別の島 ⇒ **ユーザーが島を選べばこの会話のまま `-Start p888`**（既定は続ける・CLAUDE-OPERATIONS §2 ⑵(c)）。
 
 ## 2. 開いている作業
 
