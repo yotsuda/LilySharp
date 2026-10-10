@@ -69,12 +69,16 @@ internal static class MeasureModel
     /// start of a bar this scope does not write one for (<see cref="Svg.Collector.SectionMeterPlan.ForeignChangeAt"/>),
     /// by bar index — adopted as the bar opens, so a bare <c>R</c> or an empty <c>| |</c>
     /// there is a bar of that meter, as the collector draws it.</param>
+    /// <param name="expansionBudget">The walk's expansion budget in the collector's own
+    /// unit (<see cref="ExpansionCap"/> by default; tests pass a small one to pin the
+    /// truncation arms, as ExpansionBudgetTests do for the collector).</param>
     public static List<Bar> Split(SyntaxNode scope, IReadOnlyDictionary<string, SyntaxNode> phraseBodies,
         Fraction? initialMeter = null, List<(int Bar, TimeSignatureSyntax Time, bool MidBar)>? meterChanges = null,
-        Func<int, TimeSignatureSyntax?>? plannedMeterAt = null)
+        Func<int, TimeSignatureSyntax?>? plannedMeterAt = null, int expansionBudget = ExpansionCap)
     {
         var stream = new List<object>();
-        Flatten(scope, stream, new HashSet<string>(), phraseBodies);
+        var budget = new ExpansionBudget(expansionBudget);
+        Flatten(scope, stream, new HashSet<string>(), phraseBodies, budget, inPhrase: false);
 
         var bars = new List<Bar>();
         var current = new List<SyntaxNode>();
@@ -235,9 +239,10 @@ internal static class MeasureModel
             // re-parsed on every added bar. This walk is on the diagnostics path, which the
             // editor runs on every keystroke.
             if (node is RestSyntax rest && rest.MeasureCount is var written && written > 1)
-                // Same cut-off as Flatten's: `R1*2000000000` parses, and this loop
-                // would faithfully model that many bars on the diagnostics path.
-                for (int extra = 1; extra < written && bars.Count < ExpansionCap; extra++)
+                // Each interior copy is a site of the expansion budget, as the collector
+                // charges it: `R1*2000000000` parses, and this loop would faithfully model
+                // that many bars on the diagnostics path.
+                for (int extra = 1; extra < written && budget.Charge(1); extra++)
                     bars.Add(new Bar(itemDuration, node.Span));
         }
         FlushMusic(); // a trailing partial bar (music after the last barline) counts
@@ -283,16 +288,52 @@ internal static class MeasureModel
     /// truncates at its budget doubles HERE too (a sibling reference re-flattens
     /// after <c>activeRefs.Remove</c>), and this walk runs on the diagnostics
     /// path per keystroke — it OOM'd on the 2^29 book before this cap did. One
-    /// number, one home (<see cref="Svg.Collector.MeasureCollector.DefaultExpansionBudgetCap"/>);
-    /// a truncated model can misreport cross-part bar counts for the pathological
-    /// book, which already carries LYS1033 naming the real problem.</summary>
+    /// number, one home (<see cref="Svg.Collector.MeasureCollector.DefaultExpansionBudgetCap"/>),
+    /// and ONE UNIT: the budget is charged for what the collector's
+    /// <c>ChargeExpansion</c> charges — a phrase entry, each site inside an expanded
+    /// phrase body, each extra pass of a percent/unfold repeat by its body's size, each
+    /// interior copy of <c>R1*N</c> — and never for the written music of the scope. Until
+    /// 2026-10-10 the cap was on the flattened item count, written music included, so a
+    /// scope of more than 50,000 written items was truncated here while the collector,
+    /// which charges nothing for written music, drew it whole and no LYS1033 said so
+    /// (HANDOFF §2 R12 ⒠). The budget is per <see cref="Split"/> scope where the
+    /// collector's is per collect, so over a scope the score plays the collector has
+    /// charged at least as much as this walk: a truncated model stands beside LYS1033.</summary>
     private const int ExpansionCap = Svg.Collector.MeasureCollector.DefaultExpansionBudgetCap;
 
-    private static void Flatten(SyntaxNode scope, List<object> output, HashSet<string> activeRefs,
-        IReadOnlyDictionary<string, SyntaxNode> phraseBodies)
+    /// <summary>The walk's share of the budget, spent as <c>MeasureCollector.ChargeExpansion</c>
+    /// spends it: a charge the remainder cannot cover empties it and answers false.</summary>
+    private sealed class ExpansionBudget(int sites)
     {
-        if (output.Count >= ExpansionCap)
-            return; // truncated — see ExpansionCap's remarks
+        private int _left = sites;
+
+        public bool Charge(int sites)
+        {
+            if (_left < sites)
+            {
+                _left = 0;
+                return false;
+            }
+            _left -= sites;
+            return true;
+        }
+    }
+
+    /// <param name="inPhrase">True inside an expanded phrase body, where every site is
+    /// charged (the collector's <c>ExpandVariable</c> charges each node it emits); the
+    /// written music of the scope itself, and a repeat body's first pass, are free.</param>
+    private static void Flatten(SyntaxNode scope, List<object> output, HashSet<string> activeRefs,
+        IReadOnlyDictionary<string, SyntaxNode> phraseBodies, ExpansionBudget budget, bool inPhrase)
+    {
+        // A site of the expansion: charged inside a phrase body, free elsewhere. False
+        // once the budget is spent — the caller stops, as the collector's walk does.
+        bool Emit(SyntaxNode n)
+        {
+            if (inPhrase && !budget.Charge(1))
+                return false;
+            output.Add(n);
+            return true;
+        }
 
         // A variable bound to a single music node has no relevant DESCENDANTS —
         // the node itself is the content.
@@ -300,7 +341,7 @@ internal static class MeasureModel
             or ChordRepetitionSyntax or SlashNoteSyntax or BareDurationSyntax or BarlineSyntax
             or TupletExpressionSyntax or GraceExpressionSyntax or ArpeggioSyntax)
         {
-            output.Add(scope);
+            Emit(scope);
             return;
         }
 
@@ -335,7 +376,8 @@ internal static class MeasureModel
                 case BarlineSyntax:
                 case TupletExpressionSyntax:
                 case GraceExpressionSyntax:
-                    output.Add(n);
+                    if (!Emit(n))
+                        return;
                     break;
 
                 // `<< … >>` is ONE item whose length is the group's total
@@ -344,13 +386,15 @@ internal static class MeasureModel
                 // f'2` read as a 3/4 bar and a grand staff drew LYS2004 against the full
                 // bar beside it (2026-09-26).
                 case ArpeggioSyntax:
-                    output.Add(n);
+                    if (!Emit(n))
+                        return;
                     break;
 
                 // A meter change steers the repeat-flow auto-complete in Split (it is a
                 // directive there, never content — `| time |` stays an empty pair).
                 case TimeSignatureSyntax:
-                    output.Add(n);
+                    if (!Emit(n))
+                        return;
                     break;
 
                 // Cross-part alignment and bar counting must see repeats at their
@@ -362,19 +406,29 @@ internal static class MeasureModel
                 case RepeatExpressionSyntax rep:
                     if (rep.RepeatType.Text == "tremolo")
                     {
-                        output.Add(rep);
+                        if (!Emit(rep))
+                            return;
                     }
                     else if (int.TryParse(rep.Count.Text, out int repCount))
                     {
+                        // Inside a phrase body the repeat is ONE site of the body (the
+                        // collector's ExpandVariable emits the wrapper as one node); its
+                        // interior is the repeat's own walk, whose first pass is free and
+                        // whose extra passes are charged by the body's size, as
+                        // ProcessRepeatExpression's passCost charges them.
+                        if (inPhrase && !budget.Charge(1))
+                            return;
                         // No DurationResetMarker here: the collector walks each turn with
                         // the RUNNING default note value (see the marker's remarks). The
                         // flow markers bracket ALL turns: the seam between turns is inside
                         // the flow, so a body that is no whole number of bars auto-completes
                         // across it exactly where the rendered barline falls.
                         output.Add(RepeatFlowMarker.Enter);
-                        for (int r = 0; r < Math.Max(1, repCount)
-                            && output.Count < ExpansionCap; r++)
-                            Flatten(rep.Body, output, activeRefs, phraseBodies);
+                        int before = output.Count;
+                        Flatten(rep.Body, output, activeRefs, phraseBodies, budget, inPhrase: false);
+                        int passCost = Math.Max(1, output.Count - before);
+                        for (int r = 1; r < repCount && budget.Charge(passCost); r++)
+                            Flatten(rep.Body, output, activeRefs, phraseBodies, budget, inPhrase: false);
                         output.Add(RepeatFlowMarker.Exit);
                     }
                     break;
@@ -383,9 +437,17 @@ internal static class MeasureModel
                     var name = varRef.Name.Text;
                     if (phraseBodies.TryGetValue(name, out var body) && activeRefs.Add(name))
                     {
+                        // A phrase ENTRY is a site (a DAG of empty phrases is sites all the
+                        // same); on a spent budget the reference emits nothing, markers
+                        // included — balanced by omission, as the collector leaves it.
+                        if (!budget.Charge(1))
+                        {
+                            activeRefs.Remove(name);
+                            return;
+                        }
                         output.Add(DurationResetMarker.Instance);
                         output.Add(BoundaryMarker.Enter);
-                        Flatten(body, output, activeRefs, phraseBodies);
+                        Flatten(body, output, activeRefs, phraseBodies, budget, inPhrase: true);
                         output.Add(BoundaryMarker.Exit);
                         activeRefs.Remove(name);
                     }
