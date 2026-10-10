@@ -4831,7 +4831,9 @@ internal sealed class ElementCoordinator
                     leftEdge: leftEdgeInfo,
                     rightEdge: rightEdgeInfo,
                     extraObjects: extraObjects,
-                    tieEnds: tieEnds);
+                    tieEnds: tieEnds,
+                    // The staff's drawn lines, which the two line avoidances step off.
+                    staffLineCount: staff is { IsTab: false } ? staff.Lines : EngravingDefaults.DefaultStaffLines);
                 slurLayouts.Add(solved with { StaffIndex = staffIndex, RenderMeasureIndex = segment.StartMeasureIndex });
             }
         }
@@ -5285,6 +5287,7 @@ internal sealed class ElementCoordinator
             rightEdge: rightEdge,
             staffSpace: space,
             staffLineCount: geom.StringCount,
+            tabStrings: true,
             // LILYPOND-REF: lily/slur-scoring.cc:334-341 musical_dy_ — the two edge HEADS'
             //   reference coordinates, which on a tab are their STRING lines (Y-up = −device).
             musicalDy: startDigitY - endDigitY);

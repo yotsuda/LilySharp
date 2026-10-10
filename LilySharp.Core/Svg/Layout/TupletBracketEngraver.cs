@@ -1344,7 +1344,15 @@ internal static class TupletBracketEngraver
             // rises (+0.561446) while the heads descend, so `sign(graphicalDy) != musDown'
             // zeroed the dy and the bracket came out flat at -3.730 against LilyPond's
             // sloped positions=(-4.315073 . -3.271576).
-            double staffEdge = 2.3 * dir;
+            // The staff's extent on the bracket's side — its outer DRAWN line, half a line
+            // thick, widened by staff-padding: 2.3 on five lines, 0.3 on one. The five-line
+            // 2.3 was written in until 2026-10-10.
+            // LILYPOND-REF: lily/tuplet-bracket.cc:463-477 calc_position_and_height —
+            //   staff = st->extent (commony, Y_AXIS) widened by staff-padding.
+            var staffLinePositions = EngravingDefaults.StaffLinePositions(staffLines);
+            double staffEdge = dir > 0
+                ? staffLinePositions[^1] / 2.0 + EngravingDefaults.StaffLineThickness / 2 + StaffPaddingLP
+                : staffLinePositions[0] / 2.0 - EngravingDefaults.StaffLineThickness / 2 - StaffPaddingLP;
             var followPoints = new List<(double X, double YUp)>();
             double dy;
             if (followBeam)
@@ -1505,13 +1513,17 @@ internal static class TupletBracketEngraver
 
             // A flat bracket quantizes onto a line/space and steps OFF a line
             // when it lands inside the widened staff (:726-746).
+            // The widened staff is THIS staff's line span (positions) widened by one staff
+            // space — LilyPond's unit mix, kept: ±5 on five lines, ±1 on one — and the line
+            // test is on_line WITH ledgers (:741). Five lines were written in until 2026-10-10.
+            // LILYPOND-REF: lily/tuplet-bracket.cc:726-746 calc_position_and_height.
             if (Math.Abs(dy) < 0.01)
             {
                 double posQ = offsetUp / 0.5;
-                if (posQ >= -5.0 && posQ <= 5.0)
+                if (posQ >= staffLinePositions[0] - 1.0 && posQ <= staffLinePositions[^1] + 1.0)
                 {
                     posQ = Math.Round(posQ, MidpointRounding.ToEven);
-                    if ((int)posQ % 2 == 0 && Math.Abs((int)posQ) <= 4)
+                    if (EngravingDefaults.OnLineOrLedger((int)posQ, staffLines))
                         posQ += dir;
                     offsetUp = posQ * 0.5;
                 }

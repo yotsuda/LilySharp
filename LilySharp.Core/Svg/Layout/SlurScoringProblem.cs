@@ -271,10 +271,27 @@ internal sealed class SlurScoringProblem
     /// </remarks>
     private double _staffSpace;
 
-    /// <summary>How many lines the staff has — 5 for notation, the string count for a tab.
-    /// Only the two staff-line avoidances read it, and they must: a four-line tab's lines
-    /// are at ODD positions (3, 1, −1, −3).</summary>
+    /// <summary>How many lines the staff has — its drawn count for notation (the one
+    /// <c>as lines N</c> draws: 5 by default, 1 for a rhythm staff), the string count for a
+    /// tab. Only the two staff-line avoidances read it, and they must: a four-line tab's
+    /// lines are at ODD positions (3, 1, −1, −3), and a one-line staff has none at ±2.
+    /// Until 2026-10-10 the notation callers never passed it, so a one-line staff's slur
+    /// stepped off a "line" at ±2 that was not there (Lab sessions/p875/probe/marks: the
+    /// `b8( d' f' a')` slur on `as lines 1` left at 1.19 where LilyPond's leaves at 1.045).</summary>
     private int _staffLineCount;
+
+    /// <summary>Whether <see cref="_staffLineCount"/> counts a TAB's strings — LilyPond's own
+    /// N-line positions (N−1, N−3, …) — rather than a notation staff's drawn lines
+    /// (<see cref="EngravingDefaults.StaffLinePositions"/>, whose two- and four-line rows are
+    /// not LilyPond's).</summary>
+    private bool _tabStrings;
+
+    /// <summary><c>Staff_symbol_referencer::on_staff_line</c> for this slur's staff — the
+    /// drawn lines only, as both avoidances ask (slur-scoring.cc:653, :757).</summary>
+    private static bool OnStaffLine(int pos, int staffLineCount, bool tabStrings)
+        => tabStrings
+            ? EngravingDefaults.OnStaffLine(pos, staffLineCount)
+            : EngravingDefaults.OnDrawnStaffLine(pos, staffLineCount);
 
     /// <summary>
     /// The thread's one problem, taken out of this drawer while <see cref="SolveLent"/> runs
@@ -317,13 +334,14 @@ internal sealed class SlurScoringProblem
         double staffSpace = 1.0,
         int staffLineCount = 5,
         double? musicalDy = null,
-        IReadOnlyList<(double X, double Y)>? tieEnds = null)
+        IReadOnlyList<(double X, double Y)>? tieEnds = null,
+        bool tabStrings = false)
     {
         var problem = t_problem ?? new SlurScoringProblem();
         t_problem = null;
         problem.Bind(slur, startX, startY, endX, endY, staffMiddleDown, parameters, obstacles,
             enclosedSlurs, isBrokenLeft, isBrokenRight, leftEdge, rightEdge, extraObjects,
-            staffSpace, staffLineCount, musicalDy, tieEnds);
+            staffSpace, staffLineCount, musicalDy, tieEnds, tabStrings);
         var layout = problem.Solve();
         problem.Release();
         t_problem = problem;
@@ -354,12 +372,13 @@ internal sealed class SlurScoringProblem
         double staffSpace = 1.0,
         int staffLineCount = 5,
         double? musicalDy = null,
-        IReadOnlyList<(double X, double Y)>? tieEnds = null)
+        IReadOnlyList<(double X, double Y)>? tieEnds = null,
+        bool tabStrings = false)
         : this()
     {
         Bind(slur, startX, startY, endX, endY, staffMiddleDown, parameters, obstacles,
             enclosedSlurs, isBrokenLeft, isBrokenRight, leftEdge, rightEdge, extraObjects,
-            staffSpace, staffLineCount, musicalDy, tieEnds);
+            staffSpace, staffLineCount, musicalDy, tieEnds, tabStrings);
     }
 
     /// <summary>Forgets the slur: the lists emptied (their capacity kept), the candidate pool
@@ -411,10 +430,12 @@ internal sealed class SlurScoringProblem
         double staffSpace,
         int staffLineCount,
         double? musicalDy,
-        IReadOnlyList<(double X, double Y)>? tieEnds)
+        IReadOnlyList<(double X, double Y)>? tieEnds,
+        bool tabStrings)
     {
         _staffSpace = staffSpace;
         _staffLineCount = staffLineCount;
+        _tabStrings = tabStrings;
         // Internal vertical frame: LilyPond's native Y-up. We obtain it from
         // the device frame (Y-down) by exact negation (yUp = -yDevice), so the
         // scorers below read sign-for-sign against lily/slur-configuration.cc
@@ -437,10 +458,10 @@ internal sealed class SlurScoringProblem
         //     sessions/p691 poison P6 is green by construction). Ported as LilyPond writes it.
         _startX = startX;
         _startY = leftEdge.OnHead && !isBrokenLeft ? -startY
-            : MoveAwayFromStaffline(-startY, staffMiddleDown, slurDir, staffSpace, staffLineCount);
+            : MoveAwayFromStaffline(-startY, staffMiddleDown, slurDir, staffSpace, staffLineCount, tabStrings);
         _endX = endX;
         _endY = rightEdge.OnHead && !isBrokenRight ? -endY
-            : MoveAwayFromStaffline(-endY, staffMiddleDown, slurDir, staffSpace, staffLineCount);
+            : MoveAwayFromStaffline(-endY, staffMiddleDown, slurDir, staffSpace, staffLineCount, tabStrings);
         _parameters = parameters
             ?? (slur.IsPhrasing ? SlurScoreParameters.PhrasingDefault : SlurScoreParameters.Default);
         _isBrokenLeft = isBrokenLeft;
@@ -540,12 +561,12 @@ internal sealed class SlurScoringProblem
     /// hold.
     /// </remarks>
     private static double MoveAwayFromStaffline(
-        double yUp, double staffMiddleDown, int dir, double staffSpace, int staffLineCount)
+        double yUp, double staffMiddleDown, int dir, double staffSpace, int staffLineCount, bool tabStrings)
     {
         double pos = (yUp + staffMiddleDown) * 2.0 / staffSpace;
         double roundedUp = Math.Floor(pos + 0.5);
         int rint = (int)Math.Round(pos, MidpointRounding.ToEven);
-        bool onLine = EngravingDefaults.OnStaffLine(rint, staffLineCount);
+        bool onLine = OnStaffLine(rint, staffLineCount, tabStrings);
         if (Math.Abs(pos - roundedUp) < 0.2 && onLine)
             yUp += 1.5 * staffSpace * dir / 10.0;
         return yUp;
@@ -762,7 +783,7 @@ internal sealed class SlurScoringProblem
         // Y-up frame: the staff middle line sits at -staffMiddleDown.
         double p = 2 * (y + _staffMiddleDown) / _staffSpace;
         int roundP = (int)Math.Floor(p + 0.5);
-        bool OnLine(int pos) => EngravingDefaults.OnStaffLine(pos, _staffLineCount);
+        bool OnLine(int pos) => OnStaffLine(pos, _staffLineCount, _tabStrings);
         if (!OnLine(roundP))
             roundP += (p > roundP) ? 1 : -1;
         if (!OnLine(roundP))
