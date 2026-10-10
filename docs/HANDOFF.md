@@ -118,6 +118,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第879セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第878 の続き・ユーザー「続けて」）。`-Start p879`（HEAD `ac82f737b`）＝full **11752 / 0 / 2 / 11754**。§7 3.5 で第877 を ARCHIVE へ。
+- **clef の無い段の行頭の boxed label の X**（`4e4e07bd6`）: RehearsalMark は `(staff-bar key-signature clef)` の*見える*最初の grob に break-align する（break-alignment-interface.cc:309-334 `find_parent`）が、`as lines 1` は clef も key も描かないので**見えない行頭の staff bar が fallback**＝anchor はその column（段の左端）・anchor alignment は BarLine の CENTER・`self-alignment-opposite-of-anchor`（output-lib.scm:484-488）で**箱の中心が段の左端に乗る**（mid-line の bar anchor と同じ形）。Lily# は `prefixMarkAnchorX` が NaN のとき「縁＋0.3 に箱の左端」だった。LP（p878 の dump の X）: 1 線の `A` 箱 7.18..9.90（中心 8.54＝段の 8.5358）・5 線 11.90..14.62（clef の右・不変）。直した後: 箱 7.16..9.91・`A` の枠底 3.44（LP の紙で 3.52）＝tempo の音符の頭だけを避ける形が再現。⚠️ **rows-only（chords／lyrics だけ）の sheet は除外**＝Bar_engraver が無く staff bar も無い→従来の「縁＋0.3」（`RowsOnlySectionLabelTests`・ユーザーの慣例）のまま＝`AnchorIsASpaceableStaff`。最初の build は除外前で掃き 12 冊（lead-sheet 族）が動いたので作り直した。
+- 掃き 1199／差 1（oneline-rest＝1 線譜の行頭 label）・full **11750 / 3 / 2**＝HANDOFF の門 3 だけ。`MarkFewLineStaffTests` ＋1（箱の中心＝段の左端）。
+- 1 線譜の島で残っているもの: `TextSpannerEngraver.InkAboveStaff` の 5 線 `StaffExtent`（置く側と綴りを揃えた・LP は線数に依らない＝第877）、PagingSkylines の tempo の見積り（5 線のまま・過大予約のみ）。**この島はこれで一巡**＝次はユーザー判断（SMuFL §3・`as lines 1` の文脈・collector の `needsLedgerLines`・`staff bass`）。
+- `-End p879 -DiffBase ac82f737b`（門は全部 OK）＝full **11753 / 0 / 2 / 11755**。Core '+' 40 行／REF 2／OWN 0。HANDOFF 440,227 B（残り 9,773）。未 push 46＋docs（push はユーザー）。
+
+## 以下は第878セッションの経緯
+
 ### 1.1 第878セッション（2026-10-10・YT-DELL2）
 
 同じ会話（第877 の続き・ユーザー「続けて。双子に書く方が技術的に妥当なら書くようにして」）。`-Start p878`（HEAD `eb6e902aa`）＝full **11742 / 0 / 2 / 11744**。§7 3.5 で第876 を ARCHIVE へ。
@@ -126,17 +136,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **残り＝`A`（tempo と同じ小節）の高さ**: LP は箱の底 3.52（tempo の音符の頭だけを避ける）・Lily# は 5.66（tempo の符尾まで避ける）。原因は **X**: LP の箱は段の左端より 1.36 左から始まる（clef の無い段の break-align）のに Lily# は段の左端の 0.25 右から＝箱が tempo の符尾の上に来る。値付け済み・未着手。
 - 掃き 1199／差 3＝1 線譜の本だけ（rhythm-slashes・oneline-rest ×2＝mark が下がりページが縮む・snapshot 承認）・full **11747 / 5 / 2**＝HANDOFF の門 3＋census（再生成）＋snapshot。
 - `-End p878 -DiffBase eb6e902aa`（門は全部 OK）＝full **11752 / 0 / 2 / 11754**。Core '+' 71 行／REF 2／OWN 0。HANDOFF 441,391 B（残り 8,609）。未 push 44＋docs（push はユーザー）。
-
-## 以下は第877セッションの経緯
-
-### 1.1 第877セッション（2026-10-10・YT-DELL2）
-
-同じ会話（第876 の続き・ユーザー「続けて」）。`-Start p877`（HEAD `12a060082`）＝full **11732 / 0 / 2 / 11734**。§7 3.5 で第875 を ARCHIVE へ。
-- **`StaffExtent`（5 線の 2.05）の残りの読み手を全部、譜自身の線へ**（`272295529`）。先に値付け（Lab `sessions/p877/probe/ext`＝`as lines 1/5` × trill spanner・ottava・text spanner・`R*2@text`・`R@fermata`、LP の grob dump＝`dump.ily`）。1 線での LP: trill の線 2.949（符尾下の c' d' e' f'＝波の下の頭で決まる・5 線は床 2.05＋1.0＋0.5＝3.55）／4.0（符尾上・両譜同じ）、OttavaBracket の原点 2.595（5 線 4.05）、MMR の fermata 0.526（5 線 2.526）、`tacet` 2.943（5 線 4.943・数字の上）。TextSpanner（rit.）は **1 線でも 5 線でも同じ 3.055／3.51**＝譜の extent に依らない（支えの読みは未解明・床は出番なし）＝触らず。
-- 直したもの: ⑴ `TrillSpannerEngraver`・`OttavaBracketEngraver` に `staffLinesOf`（床と支えの最小値を `StaffExtentToward`）、⑵ `MultiMeasureRestLayout.StaffLines`（`staffByIndex` から）を `ArticulationEngraver.PlaceOnMultiMeasureRests`／`DynamicEngraver.PlaceOnMultiMeasureRests`（数字の箱・床）が読む、⑶ `FiguredBassEngraver.AlignedSideFloorBelowStaff(lines)`・`PartCombineAnalyzer.AlignedSideBaselineUp(…, lines)` も同じ配管、⑷ **`OutsideStaffStacker` の上側 tracker の土台**＝`FlatBase(枠の上線)` だったのを**描く外側の線**へ（`staffLinesOf`）。直す前の 1 線は trill 3.46（＝2.0＋0.46＋reach 1.0・床ではなく stacker の土台が効いていた）・fermata 2.07・8va 3.29。直した後: trill 2.94／4.0・fermata 0.52・8va の baseline 1.83（LP 2.595−0.76）・tacet 2.94＝一致（`OutsideStaffFewLineStaffTests` 10・計器 `RenderedGeometry.TextBaselineAboveStaffLine`／`GlyphAboveStaffLine`）。5 線は不変。`TextSpannerEngraver.InkAboveStaff` だけは `StaffExtent`（5 線）のまま＝置く側 `PlaceTextSpanners` が枠の上線で床を取るので綴りを揃えた（`StaffExtent` の remark に書いた）。
-- ⚠️ **見つけた・未着手**: ⒜ **双子は `\compressMMRests` を書かない**＝LP は `R1*2` を 2 小節に展開して数字を描かず、Lily# は常に圧縮して数字を描く（`MultiMeasureRestEngraver` :612-617 の規則は LP の `\compressMMRests` 時の規則そのもの）→ MMR の値付けは双子に `\compressMMRests` を足してから（今回は `ex1c.ly` を手で）。exporter に 1 行足せば直るが 998 冊の双子が動く＝ユーザー判断。⒝ **1 線譜の rehearsal mark `A` が 4.61**（5 線は中線から 3.2・LP の 1 線は線のすぐ上）＝`MusicMarkEngraver.LabelFrameBottomAboveStaffMiddle` の `2.0＋0.05＋0.8` が 5 線定数＋α（4.61 の出所は未読）。⒞ 1 線の trill の 0.009（2.94 vs 2.949）は波の輪郭の点ごとの差。
-- 掃き 1199／差 0（base は p876 の exe-head）・full **11738 / 4 / 2**＝HANDOFF の門 3（語り未）＋magic census（再生成して同梱）。
-- `-End p877 -DiffBase 12a060082`（門は全部 OK）＝full **11742 / 0 / 2 / 11744**。Core '+' 130 行／REF 1／OWN 0。HANDOFF 441,514 B（残り 8,486＝次便の `-Start` が第876 を畳めば戻る）。未 push 42＋docs（push はユーザー）。
 
 ## 2. 開いている作業
 
