@@ -85,6 +85,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後（`lilysharp-omr-distribution-2026-10-05.md`）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
+- **`@todo` の memo の置き場＝第899 で「帯（段組みが memo の行を取る）＋並びの探索」まで閉じた**（規則は `docs/todo-memo-design.md`・残りは同 §4＝順番の探索・長い memo の切り詰め・`lysc png --todo`）。**ユーザーの実機確認待ち**（Reload Window 後・`Untitled-2.lys` と `sessions/p896/probe/one.lys`）
 - ⚠️ **VS Code の手動確認が未**＝**手順と期待は `editors/vscode/MANUAL-CHECKS.md`（第888 起票・§1〜§5 の 60 項目＝ステップ・入力補助・Split Sections・SHOTLIST の 9 本・0.11.0 と Unreleased の拡張側・R13 ⒝・OMR B1〜B6）**。⚠️ 「Ctrl+Alt+↑↓」は Lily# の割り当てではない（Ctrl+Shift+↑↓ の 1 組だけ＝起票が古かった）。⚠️ ユーザーの拡張のフォルダ名は yotsuda.lilysharp-0.7.0 のままだが、**中身（`server`＋`out\extension.js`）は 2026-10-10 17:42 に組み直されて入っている**（第884 が時刻で確認・18:05 の `89168e9c1` だけ未収録）＝SMuFL と `(Default)` は今の拡張で見られる
 - **v0.11.0 は出した（第854・`docs/RELEASING.md` §8）**。残り: Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663・**Honesty L13 `bes, aes, | fis, f, |` の 2 小節＝音価 `2` が落ちている・LYS2001＝第881**）／**push はユーザー**／**CHANGELOG の 0.11.0 以降は両 changelog の `## Unreleased` に書いた（第887）**＝release 時に見出しを版番号へ替え、その後の commit を足す（`RELEASING.md` §3 に書いた）
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
@@ -118,6 +119,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第899セッション（2026-10-11・YT-DELL2）
+
+同じ会話（第898 の続き）。`-Start p899`（HEAD `4ce7d20ac`）＝full **11781 / 0 / 2 / 11783**。着手＝**ユーザー決定（第899 冒頭の問い「設計変更に進む」）**: 第896 で保留した「段組みが memo の行を取る」。設計は **`docs/todo-memo-design.md`**（置き場の規則を 1 か所に）。
+- **帯**＝`LayoutOptions.TodoBands`（LILYSHARP-OWN・paper の鍵ではなく render options が立てる: `SvgGenerator.PaperBaseOf(snippet, interactive)`・**`IncrementalCompiler` の 2 つの collector にも同じ `PaperBase`**＝無いと session の絵が full と違う）。`TodoMemoBand.Estimate`（新・`Svg/Layout/TodoMemoBand.cs`・定数は `TodoMemoStyle` へ移して renderer と共有）が段ごとに memo の箱を余白の広い側へ greedy に行へ詰めて帯の高さ（gap＋行数×(箱＋air)）を出し、**Prelim の `EnrichExtentsWithAnnotationProtrusions` の直後**で up/down extent（と breaker の annotation extent）に足し、`AugmentSkylinesForPaging` に全幅の `AddMarkBox` として渡す（lyric band の手前）。頁の top spring・段間の floor・page breaker が全部読む。書き出しは `Default` のまま＝`AMark_MovesNothingOnThePage` 不変。
+- **並び**＝`DrawTodoMarks` pass 2 を書き直し: 同じ段・同じ側の memo を**幅の短い順**に、**左右の全組み合わせ（n ≤ 8＝2^n）を試して総コスト最小の並び**を描く（コスト＝登り＋横切り 4（線が他の文字を通る／箱が他の線に乗る）＋狭い側 2）。第898 の greedy＋「覆い（covering）」の発想は捨てた（c10＝one-title で覆いの連鎖が横切りを 2 本に増やした・Lab `probe/one-title-poisonA.png` との比較）。`MemoFit` record struct に memo の寸法を持つ。
+- 計器 Lab `sessions/p899/`: `cand.ps1`（候補 16 冊を real／poison で描き比べ）・`crossings.ps1`（線が他の memo の箱を通る数）・`poisons.ps1`（A 探索を切る／B LeadersClear 常に true／C 帯を切る／D IncrementalCompiler の PaperBase を外す）・`ZzP898{Probe,Candidate}Tests.cs.txt`・`ZzP899TimingTests.cs.txt`。**候補 16 冊すべて横切り 0**（`cand-search/`）。絵 `probe/*-preview.png`（one・one-title・busy・piano・twinkle・c6・c9＝全部帯で段が下がり、横切り 0）。
+- 網 `TodoCalloutTests`: `ALeader_RunsThroughNoOtherMemo`（4 冊＝5 本・隣 2 音・4 連続・1 音おき）／新 `TheLayoutReservesTheMemosRows_InThePreviewOnly`（`one` の preview 頁が export 頁より 4 以上高い・memo 6 本の箱が互いに離れ・線の横切り 0・**`IncrementalCompiler(…, Preview()).Render()` が `SvgGenerator.Generate` と byte 同一**）。毒 A／B／C／D＝それぞれ赤 1（`poison{A..D}.log`）。
+- 時間（`probe/timing.txt`・mean of 20・preview）: one 4.03 ms（memo を空にすると 3.37）・busy 20.8／15.1・twinkle 44／75（ばらつき）＝探索は 1 ms 未満。
+- docs＝`docs/todo-memo-design.md`（新）・SYNTAX_REFERENCE・CHANGELOG×2・MANUAL-CHECKS §2.1（「他の要素は動かない」→「プレビューの段は帯のぶん下がる・書き出しは同じ」）。棚卸し 2 枚再生成（OWN＝定数の移設と帯）。
+- commit `8a2e2cdb0`（`todo:`）。拡張は `tools\Deploy-Lsp.ps1` で入れ直し済み（**Reload Window が要る**）。
+- `-End p899 -DiffBase 4ce7d20ac`（門は全部 OK）＝full **11782 / 0 / 2 / 11784**（＋1＝`TheLayoutReservesTheMemosRows_InThePreviewOnly`）。Core '+' 468 行／REF 0／OWN 4＝7.6 ⒞（`TodoMemoStyle`・`TodoMemoBand`・`LayoutOptions.TodoBands`・Prelim の帯＝全部エディターの印の置き場・LP に対応物なし）。7.7: 9 本以上の memo は探索せず greedy（`combos = 0` の腕・註に明記）・sentinel なし。HANDOFF 376,812 B（残り 73,188）・§1 現在便 10,337 字。未 push 87＋docs（push はユーザー）。Lab `sessions/p899/`。
+判定: **ユーザーの実機確認とフィードバック待ち**（Reload Window 後に `Untitled-2.lys`＝第 2 段が memo の帯ぶん下がる・`sessions/p896/probe/one.lys`＝6 本が重ならない・書き出しは動かない）。(a) 次の一手は memo の文脈の上に立つ／(b) **2 便＝まだ軽い**（圧縮は未だ）／(c) 既定は続ける ⇒ **フィードバックが来たらこの会話で `-Start p900`**。残りの候補は `docs/todo-memo-design.md` §4。
+
+## 以下は第898セッションの経緯
+
 ### 1.1 第898セッション（2026-10-11・YT-DELL2）
 
 新しい会話。`-Start p898`（HEAD `8cf430655`）＝full **11780 / 0 / 2 / 11782**。着手＝第897 の残り「`one`（1 段に memo 5 本）は引き出し線が別の memo の文字を横切る」のうち、**他の要素を動かさずに閉じられる分**（新方針＝段組みが memo の行を取る＝はユーザーのフィードバック待ちのまま）。
@@ -128,18 +144,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - commit `ecd971c6f`（`todo:`）。拡張は `tools\Deploy-Lsp.ps1` で入れ直し済み（**Reload Window が要る**）。
 - `-End p898 -DiffBase 8cf430655`（門は全部 OK）＝full **11781 / 0 / 2 / 11783**（＋1＝`ALeader_RunsThroughNoOtherMemo`）。Core '+' 99 行／REF 0／OWN 0＝7.6 ⒞（`DrawTodoMarks` の既存の OWN の項の中・新しい項なし）。7.7: 該当なし。HANDOFF 375,411 B（残り 74,589）。未 push 85＋docs（push はユーザー）。Lab `sessions/p898/`（probe の絵・cand-real／cand-poison・Zz 2 本の写し・log）。
 判定: **ユーザーの実機確認とフィードバック待ち**（Reload Window 後に `Untitled-2.lys` と隣り合う 2 音の memo を見てもらう／新方針＝段組みが memo の行を取る＝に進むかの判断）。(a) 次の一手は memo の文脈の上に立つ／(b) **1 便＝軽い**／(c) 既定は続ける ⇒ **フィードバックが来たらこの会話で `-Start p899`**。
-
-## 以下は第897セッションの経緯
-
-### 1.1 第897セッション（2026-10-11・YT-DELL2）
-
-同じ会話（第896 の続き）。第896 の -End のあとにユーザー報告 13 件目が来たので、作業ツリーを stash して `-Start p897`（HEAD `c3086449c`）＝full **11780 / 0 / 2 / 11782**、pop して続けた。報告＝**`corpora\ベースタブLy\Untitled-2.lys`**（保存してもらった・最初は未保存の Untitled でディスクに無かった）: L17 `d2@todo("これは良いかな。")@fermata` の memo が L16 の `ほえほえ` と重なり、d2 から離れすぎている。「音符の近くの余白に配置して」。
-- 原因 3 つ（probe `sessions/p897/probe/twinkle-blocking.txt`＝`InkRecorder.Blocking` で memo の行く手の箱を吐かせた）: ⑴ 右側だけ試していた＝d2 の右上は fermata と `A2` の箱、その上は前の段の歌詞「Twin-kle」で壁、登り切って第 1 段の上（`ほえほえ` の隣）に出た。⑵ memo の x を段の幅に clamp していた＝幅 13 の memo が段の左端の音符では右へ押されて音符の真上に乗る。⑶ 日本語の文字の箱の高さが 0（Petaluma Script に無い字の ink metrics が空）＝memo どうしが重なった。おまけ⑷ 輪の箱が Bézier の制御点の hull で 1/3 空間ふくらみ、右側の memo が毎回 1 段余分に登っていた。
-- 直し＝`Settle(onRight)` で**両側を試し、余白側を既定にしつつ、反対側が 2 空間以上登りを節約するならそちら**（整列は保ちつつ壁のある memo だけ渡る）。x の bound は**ページの端**（`InkRecorder.PageLeft/PageRight`＝余白も紙）。text の箱は **0.72 em 上／0.22 em 下を床**に。曲線は `CubicExtent`（微分の根）で真の範囲。`SharedRenderer.LastInkRecorder`（ThreadStatic・internal）と `InkRecorder.Blocking` は probe／網の窓として残した。
-- 網 `AMemo_StandsClearOfTheInkAroundIt` を 3 本立てに: 素（右）／右が壁（左へ渡り、高さは素以下）／両側壁（1.5 以上登る）。毒 B（包みを `&& false`）＝「右が壁」で赤 1。絵 `sessions/p897/probe/twinkle-preview.png`＝memo は d2 の左上・段のすぐ上。`one`・`busy`・`piano` も退行なし。棚卸し差分なし。commit `af56da8d2`。拡張 deploy 済み（**Reload Window**）。
-- ⚠️ `one`（1 段に memo 5 本）はまだ密＝引き出し線が別の memo の文字を横切る。これはユーザーの新方針（段組みが memo の行を取る）の材料のまま。
-- `-End p897 -DiffBase c3086449c`（門は全部 OK）＝full **11780 / 0 / 2 / 11782**。Core '+' 122 行／REF 0／OWN 0＝7.6 ⒞（第896 の `InkRecorder`／`DrawTodoMarks` の手直し・新しい OWN の項は無く既存の 2 項の中）。7.7: 該当なし。HANDOFF 376,685 B（残り 73,315）。未 push 83＋docs（push はユーザー）。Lab `sessions/p897/`。
-判定: **ユーザーの実機確認待ち**（`Untitled-2.lys` を Reload Window 後に見てもらう）。(a) 文脈を使う／(b) **11 便＝重い**／(c) 新方針（他の要素を動かす）は設計変更 ⇒ **次は新しい会話で `-Start p898`**。小さな置き場の直しがもう 1 つ来るならこの会話でも可。
 
 ## 2. 開いている作業
 

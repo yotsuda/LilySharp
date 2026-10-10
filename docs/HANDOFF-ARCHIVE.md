@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第897セッションの経緯
+
+### 1.1 第897セッション（2026-10-11・YT-DELL2）
+
+同じ会話（第896 の続き）。第896 の -End のあとにユーザー報告 13 件目が来たので、作業ツリーを stash して `-Start p897`（HEAD `c3086449c`）＝full **11780 / 0 / 2 / 11782**、pop して続けた。報告＝**`corpora\ベースタブLy\Untitled-2.lys`**（保存してもらった・最初は未保存の Untitled でディスクに無かった）: L17 `d2@todo("これは良いかな。")@fermata` の memo が L16 の `ほえほえ` と重なり、d2 から離れすぎている。「音符の近くの余白に配置して」。
+- 原因 3 つ（probe `sessions/p897/probe/twinkle-blocking.txt`＝`InkRecorder.Blocking` で memo の行く手の箱を吐かせた）: ⑴ 右側だけ試していた＝d2 の右上は fermata と `A2` の箱、その上は前の段の歌詞「Twin-kle」で壁、登り切って第 1 段の上（`ほえほえ` の隣）に出た。⑵ memo の x を段の幅に clamp していた＝幅 13 の memo が段の左端の音符では右へ押されて音符の真上に乗る。⑶ 日本語の文字の箱の高さが 0（Petaluma Script に無い字の ink metrics が空）＝memo どうしが重なった。おまけ⑷ 輪の箱が Bézier の制御点の hull で 1/3 空間ふくらみ、右側の memo が毎回 1 段余分に登っていた。
+- 直し＝`Settle(onRight)` で**両側を試し、余白側を既定にしつつ、反対側が 2 空間以上登りを節約するならそちら**（整列は保ちつつ壁のある memo だけ渡る）。x の bound は**ページの端**（`InkRecorder.PageLeft/PageRight`＝余白も紙）。text の箱は **0.72 em 上／0.22 em 下を床**に。曲線は `CubicExtent`（微分の根）で真の範囲。`SharedRenderer.LastInkRecorder`（ThreadStatic・internal）と `InkRecorder.Blocking` は probe／網の窓として残した。
+- 網 `AMemo_StandsClearOfTheInkAroundIt` を 3 本立てに: 素（右）／右が壁（左へ渡り、高さは素以下）／両側壁（1.5 以上登る）。毒 B（包みを `&& false`）＝「右が壁」で赤 1。絵 `sessions/p897/probe/twinkle-preview.png`＝memo は d2 の左上・段のすぐ上。`one`・`busy`・`piano` も退行なし。棚卸し差分なし。commit `af56da8d2`。拡張 deploy 済み（**Reload Window**）。
+- ⚠️ `one`（1 段に memo 5 本）はまだ密＝引き出し線が別の memo の文字を横切る。これはユーザーの新方針（段組みが memo の行を取る）の材料のまま。
+- `-End p897 -DiffBase c3086449c`（門は全部 OK）＝full **11780 / 0 / 2 / 11782**。Core '+' 122 行／REF 0／OWN 0＝7.6 ⒞（第896 の `InkRecorder`／`DrawTodoMarks` の手直し・新しい OWN の項は無く既存の 2 項の中）。7.7: 該当なし。HANDOFF 376,685 B（残り 73,315）。未 push 83＋docs（push はユーザー）。Lab `sessions/p897/`。
+判定: **ユーザーの実機確認待ち**（`Untitled-2.lys` を Reload Window 後に見てもらう）。(a) 文脈を使う／(b) **11 便＝重い**／(c) 新方針（他の要素を動かす）は設計変更 ⇒ **次は新しい会話で `-Start p898`**。小さな置き場の直しがもう 1 つ来るならこの会話でも可。
+
 ## 以下は第896セッションの経緯
 
 ### 1.1 第896セッション（2026-10-10〜11・YT-DELL2）
