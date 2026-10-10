@@ -85,8 +85,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後（`lilysharp-omr-distribution-2026-10-05.md`）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
-- **v0.11.0 は出した（第854・`docs/RELEASING.md` §8）**。残り: Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663・**Honesty L13 `bes, aes, | fis, f, |` の 2 小節＝音価 `2` が落ちている・LYS2001＝第881**）／**push はユーザー**
+- ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張のフォルダ名は yotsuda.lilysharp-0.7.0 のままだが、**中身（`server`＋`out\extension.js`）は 2026-10-10 17:42 に組み直されて入っている**（第884 が時刻で確認・18:05 の `89168e9c1` だけ未収録）＝SMuFL と `(Default)` は今の拡張で見られる
+- **v0.11.0 は出した（第854・`docs/RELEASING.md` §8）**。残り: Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663・**Honesty L13 `bes, aes, | fis, f, |` の 2 小節＝音価 `2` が落ちている・LYS2001＝第881**）／**push はユーザー**／⚠️ **CHANGELOG は 0.11.0 以降の commit が未記載**（SMuFL・名前の無いブロック・`fontPaths`・`time 4/4 break`・LYS4007 の percent＝第884 確認）＝次の release で `RELEASING.md` §3 のとおりまとめて書く
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
 - **T7 の残り＝双子と段割れが違う score（第882 が分類・Lab `sessions/p881/twin881.ps1` → `reparse881.ps1`・比較可能 491＝一致 463→464）**: **F9 の族 13（§3 既決＝Lily# の tab の数字は LP より大きい）**＝LP の `TabNoteHead.font-size` を 2 にすると一致する 6（Beat It・Smooth Operator ×2・longtab・ジングルベル (UiPath)・異邦人）＋段数が fs0 と fs2〜3 の間に落ちる 4（Universe both 34<39<50・心にしまいましょう 19<20<22・奏（かなで） 28<29<31・A Thousand Miles tab 21<25=25）／**計器 3**＝Disco Inferno ×3（途中の弱起の番号）／**製品 1＝閉じた**（If You Leave Me Now＝`time 4/4 break`・`89168e9c1`）／**アゲハ蝶 both・tab 2 も F9 の際どい形（第883）**: section H の 4 小節（noBreak 2 本）の最小幅が段幅を 1 ss 弱超え、DP は k=3 を不能として 3+1 にする。超過分は tab の数字の rod＝`cis,16~ cis,8`（タイの行き先）の対の最小が tab で 1.87（半幅 0.785×2＋rod 0.3・描かない行き先も同じ幅）、譜では 1.60、LP は 1.70（LP の tab の数字の対は 95mm まで絞ると 1.2〜1.3）＝数字の大きさの帰結（計器 Lab `sessions/p883/ag`・`ZzP883ProbeTests.cs.txt`＝DP の候補行の force と fits を刷る）。**⇒ 段割れ違い 16 は全部分類が付いた。**閉じた分（merge・rod・小節線のばね・first_head・⒣⒟）は第576〜第661 の §1.1 と「§1.0 から移した閉じた段落」第872（ARCHIVE）。⚠️ **計器の罠 2 つ（第881 が直した）**: ⒜ LP は長い 1 event（`R1*N`・percent の反復）の内側に BarNumber を作らない＝段の小節数は「次の段の先頭番号 − この段の先頭番号」で数える／⒝ 旧 `parse-lib` は名前の無い score の `layout` 行（`score` だけ）を読めず 180 score しか比べていなかった
 - ⚠️ **双子の計器の残り（第881）**: 小節数の違う 11 score＝**本の側 8**（LYS2001／2002 の短い・長い小節＝LP は bar check で割れて以後の小節線がずれる: Honesty・I'm In The Mood For Dancing・Livin' It Up・More Than A Woman ×3・世界に一つだけの花・瞳をとじて）／**ABC の both は LP 側の癖**（`\alternative` の 1 番の中の `\time` ＋ 2 譜で小節が増える・最小再現 Lab `sessions/p881/abcmin` one.ly 11 小節／two.ly 16 小節＝1 譜は正しい）／repeat（試験ファイル）／Last Christmas（LP 落ち）。署名なし 21 は 1 段だけの試験ファイル。**LP 失敗 3（Mandy・You're the One That I Want (-1)・Last Christmas）＝本の側**（4 弦 bass の最低弦より下の音＝LP は `negative fret` の警告の後に自分の Guile が落ちる・第737）。**比較の基準は双子の既定の数字**（`TabNoteHead.font-size` 2・3 を足すと一致が減る＝第586）
@@ -118,6 +118,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第884セッション（2026-10-10・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで着手して」・島の指定なし）。`-Start p884`（HEAD `eb2b62f5f`）＝full **11759 / 0 / 2 / 11761**。§7 3.5 で第882 を ARCHIVE へ。§1.0 ⒜ はユーザー側の項目だけ（VS Code の拡張は 17:42 に組み直し済みと時刻で確認＝§1.0 の行）なので、§2 で製品の仕事が残る起票を実コードで裏取りして選んだ＝**F ⒳（`repeat percent` の覆われた周）**。
+- **起票は半分 stale**: 「collector の門 `_percentCoveredDepth` が通していない 4 つ」は第332 以降*到達不能*（反復は spacer で書き、本文を再 walk しない＝`MeasureCollector.cs` の註「NOTHING RAISES THIS DEPTH ANY MORE」）。probe（Lab `sessions/p884/px/px3.lys`＝和音記号・通奏低音・glissando・`@cross` を 1 小節の本文に）＝全部 1 回だけ・印の下は無し。網 `PercentRepeatTests.PercentCoveredMeasures_CarryNoChordNameFiguredBassGlissandoOrCrossStaff`（不在を pin）。隣の網の註「RE-WALKS the body」も stale＝直した（RULES §5.0「起票の値段はその時の木の値段」の再演）。
+- **残る半分＝本文末尾の `~`／`(`**（LP 双子 `px1`／`px2`・2.26.0・`lysc ly` → cairo png）: `(` は LP も Lily# も印をまたいで次の音まで 1 本のスラー＝一致。`~` は両者とも描かないが **LP は「unterminated tie」を警告し、Lily# は黙っていた**（`TieTargetScanner` が spacer を一律 padding と読む）。⇒ **直した（`check:` の commit）**: `RestItem.IsRepetitionSpacer`（`WriteRepetitionAsSpacers` が立てる・読み手は scanner 1 軒＝描画は触らない）＋ `TieTargetProblem.IntoRepetition`＝LYS4007 の 4 つ目の文面（位置は結んだ音・`@laissezVibrer` を名指す）。網 `TieTargetValidatorTests` +2（対照＝同じ本文の `repeat unfold` は 0）・毒（枝を `false &&` で殺す）＝その 2 本だけ赤。**射程＝`lysc check --batch` 1177 冊（追跡 666＋Lab corpora 511）で新しい警告 0 冊**。棚卸し 2 枚＝差分 0。
+- `-End p884 -DiffBase eb2b62f5f`（門は全部 OK）＝full **11762 / 0 / 2 / 11764**（網 +3）。Core '+' 37 行／REF 3（percent-repeat-iterator `next_element`・tie-engraver `start_translation_timestep`／`report_unterminated_tie`）／OWN 0。7.6: ⒝＝「反復は印 1 つで音が無い」「次の timestep に頭が無い tie は unterminated」は LP の事実、*flag を item に持たせる*のは Lily# の器の都合（`OpensWrittenRun` と同じ形）。7.7: 該当なし（flag の読み手 1 軒・fallback 無し）。HANDOFF 441,429 B（残り 8,571）。未 push 55＋docs（push はユーザー）。
+判定: §2 F ⒳ は閉じた。次に製品の仕事が残る起票で着手できるもの＝**§2 G-pdf**（PDF の font resolver がプロセスに 1 つ＝LSP が 2 冊を同時に PDF にした日に出る・閉じ方は起票に書いてある）か、ユーザーが島を選ぶ（§1.0 ⒜ の残りはユーザー側）。(a) 今便の文脈は使わない／(b) 会話は軽い（1 便・画像 6 枚）／(c) 別の島 ⇒ **既定どおりこの会話で `-Start p885` を回して続けてよい**。
+
+## 以下は第883セッションの経緯
+
 ### 1.1 第883セッション（2026-10-10・YT-DELL2）
 
 同じ会話（第882 の続き・ユーザー「続けて」）。`-Start p883`（HEAD `17f015b52`）＝full **11759 / 0 / 2 / 11761**。§7 3.5 で第881 を ARCHIVE へ。着手＝アゲハ蝶 section H の最小幅。
@@ -126,17 +136,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⇒ **T7 の段割れ違い 16 は全部分類が付いた**（F9 13・計器 3・製品 1＝第882 で閉じた）。製品の変更 0。
 - `-End p883 -DiffBase 17f015b52`（門は全部 OK）＝full **11759 / 0 / 2 / 11761**。Core '+' 0 行（計器と所見だけ）。7.6／7.7: 該当なし。HANDOFF 441,781 B（残り 8,219）。未 push 53＋docs（push はユーザー）。
 判定: T7 の双子基準の島は分類が尽きた（残りは §3 既決の F9 と計器）。次は §1.0 ⒜ の他＝VS Code の実機確認（ユーザー）か、ユーザー判断待ちの項目（OMR の L2〜L11・B5 の `omr verify`）＝**着手できる製品の仕事はこの島には無い**。(a) 今便の文脈は使わない／(b) この会話は 3 便ぶん＋画像多数＝重い／(c) 別の島 ⇒ **次は新しい会話**（ユーザーが次の島を選んでから）。
-
-## 以下は第882セッションの経緯
-
-### 1.1 第882セッション（2026-10-10・YT-DELL2）
-
-同じ会話（第881 の続き・ユーザー「続けて」）。`-Start p882`（HEAD `418659caa`）＝full **11754 / 0 / 2 / 11756**。§7 3.5 で第880 を ARCHIVE へ。着手＝段割れ違い 16 の分類。
-- **LP の tab の数字を大きくした双子で分類**（`twin881.ps1 -Settings probe-dir-fs2.ly／fs3.ly -Only …`・Lab `sessions/p881/outp882fs2`・`outp882fs3`）: fs2 で 6 score が一致、4 score は段数が fs0 と fs2〜3 の間＝F9 の族 11／Disco Inferno ×3 は計器／残り 3 を絵で読んだ（§1.0 の行）。
-- ★ **製品の欠陥 1 つ＝`time 4/4 break`**（`89168e9c1`）: `MeasureBuilder` の 4 つの break setter は「小節頭か」を `_currentItems.Count == 0` で決めていたので、小節頭の拍子記号の後ろに書いた `break` は「小節の途中」＝その小節の*終わり*へ送られていた（If You Leave Me Now bar 12: Lily# は 13 の後で折り、LP は 12 の後）。LP の Paper_column_engraver は break event を聞いた moment の command column に permission を置く（paper-column-engraver.cc:68-112）＝`\time` は moment を動かさない。直し＝「閉じた小節があり、作りかけの小節に時間を取る item が無い（`!_hasMeasureContent && _currentDuration == 0`）」も小節頭。split bar の頭を出した直後（item 0）は旧の腕のまま no-op（最初の版は `!_continuesBar` を足して pending に落とし、`MidBarBreakTests` が 2 本赤になって気づいた）。網 `BreakKeywordTests` +5（time の 2 形は直す前に赤・key／clef の形は元から通る）。掃き 998 冊・1201 svg: **差 1＝その本だけ**（census: `time … break` を書く本はコーパス 1 冊・repo 0）。
-- **アゲハ蝶（both・tab）は未解明**（§1.0 の行）: section H の 4 小節を Lily# は 1 段に押し込めない。LP は fs3 でも入る＝最小幅の差＝次便の計器仕事（p839 `vk/probe.ps1` の列の dump の型）。
-- `-End p882 -DiffBase 418659caa`（門は全部 OK）＝full **11759 / 0 / 2 / 11761**（網 +5）。Core '+' 27 行／REF 1（paper-column-engraver.cc `handle_manual_breaks`）／OWN 0。7.6: ⒝＝LP は event の moment の column に permission を置く・Lily# は小節頭の判定を「時間を取る item が無い」で言い直した（字面にするには moment ごとの column の模型が要る＝§2 の paper column の話）。7.7: `_currentItems.Count == 0` の旧の腕を残した（split bar の頭の直後の no-op）＝同じ問いの 2 綴りではなく 1 つの述語の 2 項。HANDOFF 441,745 B（残り 8,255）。未 push 52＋docs（push はユーザー）。
-判定: 次は **アゲハ蝶 section H の最小幅**（LP の列の dump `p839/vk/probe.ps1` の型で `ais,,8. cis,16~ cis,8 eis,` の 4 小節を列ごとに比べる）か、§1.0 ⒜ の他の島。(a) 今便の双子と絵の上に立つ＝続ける側／(b) **この会話は 2 便ぶんで長く、画像を何枚も読んだ**＝圧縮は未だだが重い／(c) 同じ島 ⇒ **この会話で `-Start p883` から続けてよいが、重さを感じたら新しい会話**。
 
 ## 2. 開いている作業
 
@@ -1433,7 +1432,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   ★ **決めることが 2 つ**: **⑴ 切り替えの綴りと家**（score 級か・`transpose` の score 既定と同じ棚か＝`PartTranspose.ReadScoreDefault`。**そこは第182 `077e5c98` で「1 つの構文が 3 つの答えを返す」を閉じた場所なので、4 つ目の読者を足す形になる**）／**⑵ 既定はどちらか**（実音入力を既定にすると、**今ディスクに在る本の意味が変わる**＝**着手前に corpus に訊くこと**）。
   ★ **MusicXML は (A) の時点で正しい**（2026-09-03 実測）: `<transpose>` に **alto-sax は diatonic −5 / chromatic −9**、**tenor-sax は −1 / −2 ＋ `<octave-change>` −1**。**(B) は書記側を動かすので、この要素の意味（＝「刷られている音高から実音への距離」）が変わらないことを測り直すこと。**
   ★ **落ちたら直す文書**（**(A) のときに 1 つ stale を踏んだ**＝マニュアルの `instrument` 節が「半音移調は組み込みではない」と書いたまま残っていた）: `README.md`・`docs/GRAMMAR_FOR_LLM.md`・**`scratch/site-showcase/manual-body.html` の `instrument` 節と §11 の属性表**（**git 管理外**）。
-- ★ **⒳ `repeat percent` の覆われた周に、collector の門（`_percentCoveredDepth`）がまだ通していないもの**（2026-09-02・第320 ⑽ 起票・**未実装・実需 0 冊**）。**第320 ⑽ は tie/slur の marker と script/dynamic を落とした**が、同じ再 walk が今も運ぶものが 4 つ: **figured bass・chord name・cross-staff（`CollectFiguredBass`／`CollectChordNames`／`CollectCrossStaff`）と glissando（`CreateNoteItem` の `hasGliss`）**——どれも % の下に 2 度目を刷る*はず*だが**測っていない**（測ってから同じ門に加えること＝早期 return 1 行ずつ）。**もう 1 つは本文の*末尾*の `~`／`(`**: 書かれた周の最後の音に付いた `~` は覆われた周の先頭音と対を成して tie を描く（LP は 2 周目に音が無いので "unterminated tie" 警告で描かない）。こちらは門の位置が違う（marker は書かれた周に在る）ので、直すなら detector 側で「相手が覆われた小節なら結ばない」＝`PercentRepeatItem.FirstCoveredMeasure` の 5 つ目の読者になる。⚠️ chord name は LP でも ChordNames 文脈に percent engraver が無い＝2 周目は*何も*刷らない（iterator が本文を流さないのは文脈に依らない）ので、「% の上にコード名を繰り返す」が欲しければそれは Lily# 固有の決定になる。
+- ✅ **⒳ `repeat percent` の覆われた周に残るもの＝第884 が閉じた**（2026-09-02・第320 ⑽ 起票）: 起票の 4 つ（figured bass・chord name・cross-staff・glissando）は**第332 で反復が spacer になって以来*到達不能***（本文は再 walk されない・probe Lab `sessions/p884/px/px3`・網 `PercentRepeatTests.PercentCoveredMeasures_CarryNoChordNameFiguredBassGlissandoOrCrossStaff`）。本文末尾の `(` は LP と同じ（印をまたいで次の音まで 1 本のスラー）。本文末尾の `~` は描かないのが LP と同じで、**警告だけ無かった＝LYS4007 `IntoRepetition`**（`RestItem.IsRepetitionSpacer`・射程 1177 冊で 0）。⚠️ chord name を % の上に繰り返すかは Lily# 固有の決定＝提案しない（LP も 2 周目は何も刷らない）。
 
 > ## ✅ **⒫ `|:` `:|` `[N. …]` は form 限定になった＝第305 で入った**（起票第303・決定第304・実装 2026-08-31・第305）
 > **入ったもの＝診断 1 本**（`LYS1034` / `RepeatStructureScopeValidator`）: **`BarlineSyntax` の token が repeat 種、または `InlineVoltaSyntax`。それが `IsInside<FormDeclarationSyntax>()` でなければエラー。**

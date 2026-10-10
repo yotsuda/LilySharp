@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第882セッションの経緯
+
+### 1.1 第882セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第881 の続き・ユーザー「続けて」）。`-Start p882`（HEAD `418659caa`）＝full **11754 / 0 / 2 / 11756**。§7 3.5 で第880 を ARCHIVE へ。着手＝段割れ違い 16 の分類。
+- **LP の tab の数字を大きくした双子で分類**（`twin881.ps1 -Settings probe-dir-fs2.ly／fs3.ly -Only …`・Lab `sessions/p881/outp882fs2`・`outp882fs3`）: fs2 で 6 score が一致、4 score は段数が fs0 と fs2〜3 の間＝F9 の族 11／Disco Inferno ×3 は計器／残り 3 を絵で読んだ（§1.0 の行）。
+- ★ **製品の欠陥 1 つ＝`time 4/4 break`**（`89168e9c1`）: `MeasureBuilder` の 4 つの break setter は「小節頭か」を `_currentItems.Count == 0` で決めていたので、小節頭の拍子記号の後ろに書いた `break` は「小節の途中」＝その小節の*終わり*へ送られていた（If You Leave Me Now bar 12: Lily# は 13 の後で折り、LP は 12 の後）。LP の Paper_column_engraver は break event を聞いた moment の command column に permission を置く（paper-column-engraver.cc:68-112）＝`\time` は moment を動かさない。直し＝「閉じた小節があり、作りかけの小節に時間を取る item が無い（`!_hasMeasureContent && _currentDuration == 0`）」も小節頭。split bar の頭を出した直後（item 0）は旧の腕のまま no-op（最初の版は `!_continuesBar` を足して pending に落とし、`MidBarBreakTests` が 2 本赤になって気づいた）。網 `BreakKeywordTests` +5（time の 2 形は直す前に赤・key／clef の形は元から通る）。掃き 998 冊・1201 svg: **差 1＝その本だけ**（census: `time … break` を書く本はコーパス 1 冊・repo 0）。
+- **アゲハ蝶（both・tab）は未解明**（§1.0 の行）: section H の 4 小節を Lily# は 1 段に押し込めない。LP は fs3 でも入る＝最小幅の差＝次便の計器仕事（p839 `vk/probe.ps1` の列の dump の型）。
+- `-End p882 -DiffBase 418659caa`（門は全部 OK）＝full **11759 / 0 / 2 / 11761**（網 +5）。Core '+' 27 行／REF 1（paper-column-engraver.cc `handle_manual_breaks`）／OWN 0。7.6: ⒝＝LP は event の moment の column に permission を置く・Lily# は小節頭の判定を「時間を取る item が無い」で言い直した（字面にするには moment ごとの column の模型が要る＝§2 の paper column の話）。7.7: `_currentItems.Count == 0` の旧の腕を残した（split bar の頭の直後の no-op）＝同じ問いの 2 綴りではなく 1 つの述語の 2 項。HANDOFF 441,745 B（残り 8,255）。未 push 52＋docs（push はユーザー）。
+判定: 次は **アゲハ蝶 section H の最小幅**（LP の列の dump `p839/vk/probe.ps1` の型で `ais,,8. cis,16~ cis,8 eis,` の 4 小節を列ごとに比べる）か、§1.0 ⒜ の他の島。(a) 今便の双子と絵の上に立つ＝続ける側／(b) **この会話は 2 便ぶんで長く、画像を何枚も読んだ**＝圧縮は未だだが重い／(c) 同じ島 ⇒ **この会話で `-Start p883` から続けてよいが、重さを感じたら新しい会話**。
+
 ## 以下は第881セッションの経緯
 
 ### 1.1 第881セッション（2026-10-10・YT-DELL2）
