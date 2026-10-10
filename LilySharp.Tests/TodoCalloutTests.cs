@@ -73,6 +73,12 @@ public class TodoCalloutTests
         string preview = SvgGenerator.Generate(tree, SvgRenderOptions.Preview());
         // One ring per marked glyph: the note, the rest, and each head of the chord.
         Assert.Equal(4, preview.Split("class=\"todo-ring\"").Length - 1);
+        // The ring's paint is on the element — fill none AND a stroke — because the
+        // preview's caret highlight fills a shape that carries no stroke attribute
+        // (the ring came up as a red disc under the caret, owner's report 2026-10-10).
+        Assert.Equal(4, preview.Split("class=\"todo-ring\"").Skip(1)
+            .Count(after => after[..after.IndexOf("/>")] is var ring
+                && ring.Contains("fill=\"none\"") && ring.Contains("stroke=\"#E53935\"")));
         Assert.Contains(">why<", preview);
         Assert.Contains(">both<", preview);
         // The box, the leader and the memo carry the mark (data-todo), as the ring does.

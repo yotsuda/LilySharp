@@ -2306,16 +2306,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         /* A head or rest marked @todo wears a ring (the SVG's ellipse.todo-ring, drawn by
            the interactive SVG alone), and a memo stands in a callout box with a leader to
-           the ring — both stamped data-todo, both coloured by the SVG itself. The
+           the ring — both stamped data-todo, both painted BY THE SVG ITSELF (fill="none"
+           and a stroke on the element): the caret highlight (highlightPositions) reads a
+           shape's attributes to decide whether to recolour its fill or its stroke, and a
+           ring styled only from here had no stroke attribute, so the highlight filled it
+           into a disc (owner's report 2026-10-10). No paint here, then. The
            lilysharp.preview.highlightTodos setting off (todo-plain) hides the ring, the
            box and the leader; the memo keeps its place (the layout reserved it) and goes
            plain. Until 2026-10-10 the head itself was filled red (owner: "赤くつぶれる").
            The dark scheme's invert + hue-rotate(180deg) brings the red back to red. */
-        #svgContainer ellipse.todo-ring {
-            fill: none;
-            stroke: #e53935;
-            stroke-width: 1.2;
-        }
         :root.todo-plain #svgContainer ellipse.todo-ring,
         :root.todo-plain #svgContainer rect[data-todo],
         :root.todo-plain #svgContainer line[data-todo] {

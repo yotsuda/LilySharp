@@ -65,7 +65,7 @@
 
 ### 2.1 `@todo` と元の画像（OMR の本が無くても見られる分）
 
-- [ ] `c4@todo` / `c4@todo("F♯ or F♮?")` が Problems に LYS4026 で出る。プレビューでは**符頭が赤い輪で囲まれ**（塗りではない・2026-10-10 のユーザー決定）、memo のあるものは**譜の上の吹き出し**に memo が出て、細い引き出し線が輪まで下りる。`.down` で吹き出しが譜の下。和音は member ごとに輪、休符も輪。`lilysharp.preview.highlightTodos` を切ると輪・吹き出しの箱・線が消える（memo の文字は黒で残る）。
+- [ ] `c4@todo` / `c4@todo("F♯ or F♮?")` が Problems に LYS4026 で出る。プレビューでは**符頭が赤い輪で囲まれ**（塗りではない・2026-10-10 のユーザー決定）、memo のあるものは**譜の上の吹き出し**に memo が出て、細い引き出し線が輪まで下りる。`.down` で吹き出しが譜の下。和音は member ごとに輪、休符も輪。**カレットをその音符に置くと輪はハイライト色の線になり、中は透過のまま**（塗られたら第892 の再発）。`lilysharp.preview.highlightTodos` を切ると輪・吹き出しの箱・線が消える（memo の文字は黒で残る）。
 - [ ] 同じ本を PDF / PNG / SVG に書き出すと、輪も吹き出しも無く、memo のぶんの余白も無い（書き出しは memo が無いときと同じ段組み）。
 - [ ] クイックフィックス *Resolve this TODO* / *Resolve all N TODOs* で `@todo` が消える（メモごと）。
 - [ ] `Lily#: Show Original Scan` は `x.omr.json` の無い本では出ない（コマンドパレットの when）。

@@ -209,8 +209,12 @@ internal sealed class SvgDrawingContext : IDrawingContext
     }
 
     /// <summary>Interactive preview only (the ring is a mark of the editor, not of the page):
-    /// an ellipse of class <c>todo-ring</c>, coloured by the preview's stylesheet, carrying the
-    /// <c>data-todo</c> of its scope.</summary>
+    /// an ellipse of class <c>todo-ring</c> carrying the <c>data-todo</c> of its scope. Its
+    /// paint is ON THE ELEMENT — <c>fill="none"</c> and the stroke — not in the preview's
+    /// stylesheet: the preview's caret highlight recolours a shape by its attributes, and
+    /// takes one with no <c>stroke</c> attribute for a filled shape and fills it (owner's
+    /// report 2026-10-10: the ring came up as a red disc under the caret). With the stroke
+    /// here it recolours the stroke, as it does a chord diagram's open-string ring.</summary>
     public void TodoRing(double cx, double cy, double rx, double ry)
     {
         if (!_interactive)
@@ -221,6 +225,7 @@ internal sealed class SvgDrawingContext : IDrawingContext
         Attr("rx", rx);
         Attr("ry", ry);
         _sb.Append(" fill=\"none\"");
+        AppendStroke(SharedRenderer.TodoInk, LilySharp.Core.Svg.Layout.DynamicEngraver.TodoLineThickness);
         AppendSource();
         _sb.Append("/>").AppendLine();
     }

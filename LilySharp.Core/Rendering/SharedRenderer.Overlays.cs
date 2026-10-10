@@ -89,8 +89,8 @@ internal static partial class SharedRenderer
 
     // The @todo marks' ink and paper (the preview's; owner's decision 2026-10-10 — the same red
     // as the scan view's boxes, a pale ground so the memo reads over the music).
-    private static readonly Color TodoInk = new(0xE5, 0x39, 0x35);
-    private static readonly Color TodoPaper = new(0xFF, 0xF3, 0xF2);
+    internal static readonly Color TodoInk = new(0xE5, 0x39, 0x35);
+    internal static readonly Color TodoPaper = new(0xFF, 0xF3, 0xF2);
 
     /// <summary>
     /// A <c>@todo("memo")</c> callout: the memo in a box beside the staff, a leader from the
