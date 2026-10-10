@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第880セッションの経緯
+
+### 1.1 第880セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第879 の続き）。ユーザーに「何を判断すればよいか」と問われ 4 点を出し、**「推奨どおりで進めて」＝決定**: ⑴ `as lines 1` は今のまま（A）、⑵ `staff bass` は「bass という part」のまま（A）、⑶ SMuFL はここで区切る、⑷ 掃除 2 つを消す。`-Start p880`（HEAD `081ef9f78`）＝full **11753 / 0 / 2 / 11755**。§7 3.5 で第878 を ARCHIVE へ。
+- **掃除**（`2759574d0`・56 ファイル・+265 −317）: ⒜ `NoteItem.NeedsLedgerLines`／`ChordNoteInfo.NeedsLedgerLines`／`GraceHeadInfo.NeedsLedger`＝`position <= −6 || >= 6` の 5 線定数で計算して全 ctor・複製に運び、読み手ゼロ（加線は `LedgerPositions` が譜の線から出す）→ モデル・collector・builder・テスト 50 ファイルから消した（テスト側は正規表現で一括・`new(...)` の target-typed と複数行の `GraceColumnInfo` はコンパイラの行番号で追い撃ち）。⒝ `LayoutEngine.PagingSkylines.EstimateAboveStaffExtents` の boxed mark 3.0／label 3.5／segno・coda 2.5／volta 2.0＝第273 が「4 つとも 0 にして 572 冊 0・rerender 0/81」と実測した二重の見積り→消した（tempo の腕＝実測の床から出す見積りは残す・`voltaBrackets` 引数も消えた）。
+- 決定の記録: `docs/anonymous-blocks-design.md`（§0 の状態・§3 `staff bass`）、`docs/smufl-design.md`（状態）、§1.0 の第857／第870 の段落。
+- 掃き 1199／差 0・full **11750 / 3 / 2**＝HANDOFF の門 3 だけ（census は動かず）。
+- **次（ユーザー判断は尽きた）**: §1.0 ⒜ の残り＝VS Code の実機確認（ユーザー）／T7 の段割れの族／双子の計器。LP 忠実度の島で未値付けのものは `TextSpannerEngraver.InkAboveStaff` の 5 線 `StaffExtent`（LP は線数に依らない）と PagingSkylines の tempo 見積り（過大予約のみ）だけ。
+- `-End p880 -DiffBase 081ef9f78`（門は全部 OK）＝full **11753 / 0 / 2 / 11755**。Core '+' 25 行／REF 0／OWN 0（掃除＝消しただけ）。HANDOFF 439,412 B（残り 10,588）。未 push 48＋docs（push はユーザー）。
+
 ## 以下は第879セッションの経緯
 
 ### 1.1 第879セッション（2026-10-10・YT-DELL2）
