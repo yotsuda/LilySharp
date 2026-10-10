@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第888セッションの経緯
+
+### 1.1 第888セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第887 の続き・ユーザー「続けて」・島の指定なし）。`-Start p888`（HEAD `dec39d572`）＝full **11766 / 0 / 2 / 11768**。§7 3.5 で第886 を ARCHIVE へ。着手＝第887 が読んで残した **§2 R12 ⒠**（残りの島で唯一、コードが読めていて 1 便で閉じる形）。
+- **単位違いの正体**: `MeasureModel.Flatten` は平たくした item の総数（書かれた音符・小節線・marker も）で 50,000 に切り、collector の `ChargeExpansion` は展開だけ（phrase の入口 1・展開した body の site 1 つずつ・percent/unfold の 2 周目以降を body の大きさ `passCost` で・`R1*N` の内側の写し 1 つずつ）を数える。しかも model は `Split` の scope ごと、collector は collect ごと。⇒ 書かれた item が 50,000 を超える scope は model だけが切れて cross-part の小節数が狂い、LYS1033 は出ない（collector は書かれた音楽に課金しない）。
+- **直し＝model の予算を collector と同じ単位に**（`ExpansionBudget`・`Flatten(…, budget, inPhrase)`）: phrase の入口で 1（尽きていれば marker ごと何も出さない＝collector と同じ「省略で釣り合う」）、phrase body の中では site ごとに 1（`Emit`）、repeat は phrase 内なら wrapper 1 ＋ 1 周目無料・2 周目以降は 1 周目が出した数、`R*N` は Split 側で写しごとに 1。書かれた音楽は無料。scope ごとの予算は collect ごとの予算より厳しくないので、score が弾く scope では「model が切れた ⇒ collector も切れた ⇒ LYS1033」が成り立つ（`ExpansionCap` の註に書いた）。`Split` に `expansionBudget` 引数（既定 `ExpansionCap`・網用）。
+- 網 **`MeasureModelBudgetTests`** 5 本＝書かれた 12 小節は予算 3 でも 12／DagBook(6) を cap 40 で collector の音符数と model の四分音符数が**一致**（差分の網＝63 入口＋32 音符を同じ順に歩く）／unfold 1000 を cap 30 で 32 音＝8 小節／`R1*1000` を cap 10 で 11 小節／DagBook(20) が既定予算で止まる。毒 4 種（site 課金なし・`R*N` 無料・2 周目以降無料・入口無料）＝**それぞれ網 1 本だけ赤**（Lab `sessions/p888/poison-*.log`）。
+- 出力同一: `lysc check --batch` 1177 冊（追跡 666＋Lab corpora 511）を HEAD の exe（worktree で build）と作業ツリーの exe で＝**診断 2425 行が同一**（違うのは Batch の所要時間の行だけ・`sessions/p888/check-*.txt`・`-j 0` は進捗番号の順が変わるので剥がして比べる）。棚卸し 2 枚＝差分なし。描画は触っていない（validator の模型だけ）＝svg の掃きは要らない。commit `validators:`。
+- `-End p888 -DiffBase dec39d572`（門は全部 OK）＝full **11771 / 0 / 2 / 11773**（網 +5）。Core '+' 82 行／REF 0／OWN 0＝7.6 ⒞（予算は liveness の守りで LP に対応物なし＝札は collector の `DefaultExpansionBudgetCap` に在り、model はそれを「one home」で指す・新しい札は無し）。7.7: sentinel なし・fallback なし（尽きた予算は歩きを止めるだけ＝註に明記）。棚卸し 2 枚＝差分なし。HANDOFF 375,548 B（残り 74,452）・§1 現在便 9,507 字。commit `f966b0c72`。未 push 63＋docs（push はユーザー）。Lab `sessions/p888/`＝start/end の log・毒 4 本の log・check の掃き 2 側・books.txt。
+判定: §2 R12 は全項閉じた。Claude 側だけで着手できる島は尽きた＝残りはユーザー側（VS Code の手動確認・Lab の本の修正・push）か、ユーザー判断が要るもの（G-condensed の cue 隣接＝LP 双子の cue 間隔の計器から／`Materialise` overlap＝設計級／R15 ⒠ の 2 綴り＝要承認／perf の島＝第615 で一時停止）。(a) 今便の文脈は要らない／(b) この会話は 2 便＝まだ軽い／(c) 別の島 ⇒ **ユーザーが島を選べばこの会話のまま `-Start p889`**。
+
 ## 以下は第887セッションの経緯
 
 ### 1.1 第887セッション（2026-10-10・YT-DELL2）
