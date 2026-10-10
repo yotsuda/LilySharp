@@ -185,15 +185,28 @@ public sealed partial class LilyPondExporter
         // …and the layout's engraving style (`Stem.thickness 1.5`, …) as the same \Score's
         // overrides, `lineThickness` as the \layout variable it is in LilyPond
         // (EngravingStyleContextLines / LineThicknessVariable) — nothing at the defaults.
+        // ⚠️ skipBars IS WRITTEN, ALWAYS. A written `R*N` is ONE multi-measure rest on the page —
+        // compressed into one symbol with its count whenever every staff rests the run
+        // (MultiMeasureRestEngraver.FindRuns) — which is what LilyPond draws for `R1*N` only
+        // under `\compressMMRests`; its default expands the rest into N bars of whole rests
+        // and no count. The twin says so in LilyPond's own words, as the Score property the
+        // function sets (`\once \set Score.skipBars = ##t` before each such rest). MEASURED
+        // (Lab sessions/p877/probe/ext): without it a `tacet` over an `R1*2` stood 2.943
+        // under the page's 4.943 on five lines, the count's whole height.
+        // LILYPOND-REF: ly/music-functions-init.ly:452-460 compressMMRests, a define-music-function
+        //   that music-maps MultiMeasureRestMusic to `\once \set Score.skipBars = ##t`;
+        //   lily/multi-measure-rest-engraver.cc:203-217 number_threshold_ — the count's text
+        //   and its threshold.
         string overrides = BarNumberContextLines() + FontOverrideLines() + EngravingStyleContextLines();
         string initialRepeatBar = _rewindOpensThePiece ? "##f" : "##t";
         _sb.Append("  \\layout { indent = 15\\mm").Append(LineThicknessVariable());
         if (overrides.Length == 0)
             _sb.Append(" \\context { \\Score printInitialRepeatBar = ").Append(initialRepeatBar)
-               .Append(" } }\n}\n");
+               .Append(" skipBars = ##t } }\n}\n");
         else
             _sb.Append("\n    \\context {\n      \\Score\n      printInitialRepeatBar = ")
                .Append(initialRepeatBar).Append('\n')
+               .Append("      skipBars = ##t\n")
                .Append(overrides)
                .Append("    }\n  }\n}\n");
     }

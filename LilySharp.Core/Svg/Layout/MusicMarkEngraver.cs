@@ -560,7 +560,11 @@ internal static class MusicMarkEngraver
         // The lead sheet's GRID row (MultiStaffScore.GridBarlineRowIndex, handed down as the
         // bar-number pass takes it): the one text row whose band carries ink for a boxed
         // label to clear (see AnchorRowCarriesTheGrid). −1 on every other score.
-        int gridBarlineRowIndex = -1)
+        int gridBarlineRowIndex = -1,
+        // The lines a staff (by index) draws: a boxed label's and a tempo's quiet base pad
+        // 0.8 from the anchor staff's OWN outer line's ink (an `as lines N` staff's), not a
+        // five-line frame's. Null keeps five.
+        Func<int, int>? staffLinesOf = null)
     {
         // Does THIS mark carry a frame? Only a SECTION label loses one, and only under
         // `plain`: a `@mark` rehearsal box is a different spelling with its own meaning,
@@ -700,6 +704,18 @@ internal static class MusicMarkEngraver
                         return st.StaffAffinity is not null ? st : null;
             return null;
         }
+
+        // The lines the mark's anchor staff draws — the same staff AnchorRowLayout resolves
+        // (the system's top score-grob staff) — for the staff-symbol edge a quiet base pads
+        // from. MEASURED (LilyPond 2.26.0, Lab sessions/p878/probe/mark, `as lines 1`): a
+        // boxed label's frame bottom and a tempo's ink bottom both 0.85 over the ONE line
+        // (0.05 + 0.8), where the five-line 2.85 stood them two spaces high.
+        int AnchorStaffLines(int measureIndex)
+            => staffLinesOf != null
+               && measureToSystemIdx.TryGetValue(measureIndex, out int sysIdx)
+               && sysIdx >= 0 && sysIdx < systems.Length
+                ? staffLinesOf(LayoutUtilities.TopScoreGrobStaff(systems[sysIdx]))
+                : EngravingDefaults.DefaultStaffLines;
 
         // ⚠️ A STAFFLESS SHEET'S LABEL KEEPS ITS BAND ABOVE THE ROW, as LilyPond's does
         // (probes/mark-chord-row.ly books MKT/MKS/MKV: the row's ink top +
@@ -1076,7 +1092,7 @@ internal static class MusicMarkEngraver
                             row.StaffIndex == gridBarlineRowIndex
                                 ? TextRowLabelFrameBottomAboveBandMiddle - tInk.Bottom
                                 : double.NegativeInfinity)
-                        : MetronomeMarkGeometry.QuietBaselineAboveMiddle(tInk.Bottom);
+                        : MetronomeMarkGeometry.QuietBaselineAboveMiddle(tInk.Bottom, AnchorStaffLines(mark.MeasureIndex));
                     if (!double.IsNegativeInfinity(markCeilingUp))
                         yUp = Math.Max(yUp, markCeilingUp - tInk.Bottom);
                 }
@@ -1109,7 +1125,7 @@ internal static class MusicMarkEngraver
                     // symbols — the ceiling alone is the port.
                     bool? gridRow = IsBoxedLabel(mark.Type) ? AnchorRowCarriesTheGrid(mark.MeasureIndex) : null;
                     yUp = !IsBoxedLabel(mark.Type) ? baseAboveYUp + Padding
-                        : gridRow is null ? LabelFrameBottomAboveStaffMiddle + halfExtent
+                        : gridRow is null ? LabelFrameBottomAboveStaffMiddle(AnchorStaffLines(mark.MeasureIndex)) + halfExtent
                         : gridRow == true || double.IsNegativeInfinity(markCeilingUp)
                             ? TextRowLabelFrameBottomAboveBandMiddle + halfExtent
                             : double.NegativeInfinity;
@@ -2378,8 +2394,11 @@ internal static class MusicMarkEngraver
     /// ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
     /// the stacker adds when something is actually under the label.
     /// </remarks>
-    internal static double LabelFrameBottomAboveStaffMiddle
-        => 2.0 + EngravingDefaults.StaffLineThickness / 2 + LabelSidePositionPadding;
+    /// <param name="staffLines">The lines the anchor staff draws: the frame stands 0.8 over
+    /// ITS outer line's ink (<see cref="DynamicEngraver.StaffExtentToward"/>) — 0.85 over the
+    /// one line of an <c>as lines 1</c> staff, 2.85 over five.</param>
+    internal static double LabelFrameBottomAboveStaffMiddle(int staffLines = EngravingDefaults.DefaultStaffLines)
+        => DynamicEngraver.StaffExtentToward(1.0, staffLines) + LabelSidePositionPadding;
 
     /// <summary>
     /// How far above a chords / lyrics ROW's band middle a boxed label's frame bottom stands

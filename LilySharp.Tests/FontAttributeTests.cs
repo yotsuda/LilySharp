@@ -590,7 +590,7 @@ public class FontAttributeTests
     {
         string ly = new LilyPondExporter().Export(SyntaxTree.Parse(Book));
         // (15\mm: the book names its part, so the first system is indented.)
-        Assert.Contains("\\layout { indent = 15\\mm \\context { \\Score printInitialRepeatBar = ##t } }", ly, StringComparison.Ordinal);
+        Assert.Contains("\\layout { indent = 15\\mm \\context { \\Score printInitialRepeatBar = ##t skipBars = ##t } }", ly, StringComparison.Ordinal);
         Assert.DoesNotContain("font-size", ly, StringComparison.Ordinal);
         Assert.Contains("title = \"Ttl\"", ly, StringComparison.Ordinal);
     }

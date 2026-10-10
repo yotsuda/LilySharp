@@ -387,8 +387,10 @@ internal static class MetronomeMarkGeometry
     // clamp (a positive ext[DOWN] cannot arise here anyway: the DOWN-aligned note
     // pins the ink bottom at ≤ 0);
     // lily/metronome-engraver.cc:136-139 stop_translation_timestep — side-support-elements = stavesFound.
-    public static double QuietBaselineAboveMiddle(double inkBottom)
-        => 2.0 + EngravingDefaults.StaffLineThickness / 2.0
+    // The staff ink is the anchor staff's OWN outer line (DynamicEngraver.StaffExtentToward):
+    // 0.05 over the one line of an `as lines 1` staff, 2.05 over five.
+    public static double QuietBaselineAboveMiddle(double inkBottom, int staffLines = EngravingDefaults.DefaultStaffLines)
+        => DynamicEngraver.StaffExtentToward(1.0, staffLines)
            + EngravingDefaults.MetronomeMarkPadding - inkBottom;
 
     /// <summary>

@@ -1783,7 +1783,7 @@ internal static class OutsideStaffStacker
         // The Score-level movers' extra support: a chord ROW's symbols (ChordRowSupport).
         var rowSupport = ChordRowSupport(fonts, systems, chordNames, chordItems, measureToSystem);
         var adjVoltas = PlaceVoltas(fonts, voltas, trackers, measureToSystem, topStaff, rowSupport);
-        var adjMarks = PlaceMusicMarks(fonts, musicMarks, trackers, measureToSystem, systems, rowSupport);
+        var adjMarks = PlaceMusicMarks(fonts, musicMarks, trackers, measureToSystem, systems, rowSupport, staffLinesOf);
 
         return (adjTrills, adjBarNumbers, adjOttavas, adjCustomTexts, adjVoltas, adjMarks,
             adjDynamics, adjTextSpanners, adjArticulations, adjPartCombine);
@@ -1919,7 +1919,7 @@ internal static class OutsideStaffStacker
                 // FiguredBass do not. Each wants a point of its own.
                 supportUp.Merge(systemSkylines[sys].up);
             }
-            SeedClefInk(systems, sys, staff, t);
+            SeedClefInk(systems, sys, staff, t, staffLines);
             trackers[(sys, staff)] = t;
             return t;
         };
@@ -2001,9 +2001,19 @@ internal static class OutsideStaffStacker
     /// </para>
     /// </remarks>
     private static void SeedClefInk(
-        ImmutableArray<SystemLayout> systems, int sys, int staffIndex, OutsideStaffSkylines t)
+        ImmutableArray<SystemLayout> systems, int sys, int staffIndex, OutsideStaffSkylines t,
+        int staffLines)
     {
         if (sys < 0 || sys >= systems.Length || systems[sys].StaffGroups.IsDefaultOrEmpty)
+            return;
+        // ⚠️ A ONE-LINE STAFF PRINTS NO CLEF (SpacingRules.EngravesClef — `as lines 1` is
+        // LilyPond's RhythmicStaff, which removes the Clef_engraver), and this seeded its
+        // staff type's clef anyway: a treble's 1.8 over the frame's top, 3.8 over the one line,
+        // so a line-start tempo mark cleared a clef nobody drew. MEASURED (Lab
+        // sessions/p878/probe/mark): the tempo's baseline 4.26 over the line where LilyPond
+        // 2.26.0 puts it 0.883 (its own padding 0.8 over the line's ink).
+        // LILYPOND-REF: ly/engraver-init.ly \context RhythmicStaff — \remove "Clef_engraver".
+        if (staffLines <= 1)
             return;
         // A loop, not SelectMany + FirstOrDefault: the predicate captured staffIndex, a delegate
         // and an environment per seeded tracker (session 535).
@@ -2926,7 +2936,8 @@ internal static class OutsideStaffStacker
         ScoreTextMetrics fonts,
         ImmutableArray<MusicMarkLayout> musicMarks, Func<int, int, OutsideStaffSkylines> trackers,
         IReadOnlyDictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems,
-        Dictionary<int, (VerticalSkyline Up, VerticalSkyline Down)>? rowSupport = null)
+        Dictionary<int, (VerticalSkyline Up, VerticalSkyline Down)>? rowSupport = null,
+        Func<int, int>? staffLinesOf = null)
     {
         if (musicMarks.IsDefaultOrEmpty)
             return musicMarks;
@@ -2984,18 +2995,23 @@ internal static class OutsideStaffStacker
             // drawn by DrawMusicMarks — registering them would reserve
             // PHANTOM space and push real marks above thin air. Marks
             // placed below the staff don't belong to the above pass.
-            // m.YUp is Y-up; a mark below the staff-top line (m.YUp < 2.0, the top line
-            // sits 2 above the middle) is not part of this above pass. The stacker frame
-            // is system-relative Y-up, so shift against the WITHIN-SYSTEM staff middle.
+            // m.YUp is Y-up; a mark below the staff's TOP DRAWN LINE (2 above the middle on
+            // five lines, the one line itself on an `as lines 1` staff) is not part of this
+            // above pass. The stacker frame is system-relative Y-up, so shift against the
+            // WITHIN-SYSTEM staff middle.
             // ⚠️ THE SENTINEL IS RESOLVED, and it was not until session 243: passing the
             // raw -1 to StaffOffsetInSystemUp falls through its `staffIndex >= 0` guard and
             // returns 0 — the SYSTEM TOP — so the mark was priced against the staff the
             // tracker resolved and shifted against a different line. The draw resolves it
             // the same way (SharedRenderer.DrawMusicMarks); both go through this one home.
-            double midUp = LayoutUtilities.StaffMiddleUpInSystem(
-                systems[sysIdx],
-                LayoutUtilities.ResolveScoreGrobStaff(systems[sysIdx], m.StaffIndex));
-            if (MusicMarkItem.IsSpannerHandled(m.MarkType) || m.YUp < 2.0)
+            // ⚠️ THE LINE WAS THE FIVE-LINE 2.0 UNTIL 2026-10-10, so a one-line staff's tempo
+            // mark, resting 0.883 over its line, was never in the pass and stood on the meter's
+            // C (MEASURED, Lab sessions/p878/probe/mark: LilyPond 2.26.0 lifts it clear).
+            int anchorStaff = LayoutUtilities.ResolveScoreGrobStaff(systems[sysIdx], m.StaffIndex);
+            double midUp = LayoutUtilities.StaffMiddleUpInSystem(systems[sysIdx], anchorStaff);
+            double topLineUp = EngravingDefaults.StaffLinePositions(
+                staffLinesOf?.Invoke(anchorStaff) ?? EngravingDefaults.DefaultStaffLines)[^1] / 2.0;
+            if (MusicMarkItem.IsSpannerHandled(m.MarkType) || m.YUp < topLineUp)
                 continue;
             // The metronome mark's pair is its STENCIL's, piecewise like the draw:
             // outline profiles under the text runs (so a flat-footed digit sits ON the
