@@ -109,7 +109,8 @@ internal static class TrillSpannerEngraver
         ImmutableArray<MeasureLayout> measureLayouts,
         Func<int, int, double>? staffYAt = null,
         Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
-        ImmutableArray<BeamLayout> beamLayouts = default)
+        ImmutableArray<BeamLayout> beamLayouts = default,
+        Func<int, int>? staffLinesOf = null)
     {
         if (trillSpanners.IsDefaultOrEmpty)
             return ImmutableArray<TrillSpannerLayout>.Empty;
@@ -134,6 +135,11 @@ internal static class TrillSpannerEngraver
             var trillVoices = voicesByStaff != null
                 && voicesByStaff.TryGetValue(spanner.StaffIndex, out var vv)
                 ? vv : ImmutableArray<Voice>.Empty;
+            // The staff floor under the supports and the staff-padding floor are this staff's
+            // own extent (an `as lines N` staff's drawn lines); a caller without staves stands
+            // on five.
+            int staffLines = staffLinesOf?.Invoke(spanner.StaffIndex)
+                ?? EngravingDefaults.DefaultStaffLines;
 
             var startMeasure = measureLayouts[spanner.StartMeasureIndex];
             // Existence is the VOICE's — a later voice's item indices do not exist in
@@ -269,7 +275,7 @@ internal static class TrillSpannerEngraver
             {
                 double lineUp = AlignedSideLineY(
                     spanner, piece.Segment, piece.GlyphX, piece.LineStartX, piece.EndX,
-                    trillVoices, measureLayouts, beamMembers, dir);
+                    trillVoices, measureLayouts, beamMembers, dir, staffLines);
                 // AlignedSideLineY answers in the staff-MIDDLE frame (the frame the ledger's
                 // staff-to-line entries read); this record's frame has its origin on the
                 // staff TOP line, 2 above it, and carries the staff's own offset within the
@@ -339,7 +345,7 @@ internal static class TrillSpannerEngraver
         ImmutableArray<Voice> voices, ImmutableArray<MeasureLayout> measureLayouts,
         Dictionary<(int Staff, int Voice, int Measure, int Item),
             (BeamLayout Beam, double StemX, bool StemUp)> beamMembers,
-        int dir)
+        int dir, int staffLines)
     {
         // The DOWN arm (dir = −1) is the same aligned_side with every side flipped: my_dim
         // becomes the grob's UP profile (skyp[-dir]), the supports contribute their DOWN
@@ -377,10 +383,12 @@ internal static class TrillSpannerEngraver
 
         // :323-330 — the staff symbol's extent is the minimum under whatever the columns
         // contribute (include_staff, which declaring staff-padding turns on) — the
-        // dir-side extent: +2 for an UP spanner, −2 for a DOWN one.
+        // dir-side extent of THIS staff's drawn lines: +2.05 for an UP spanner over five,
+        // −2.05 for a DOWN one, ±0.05 on a one-line staff.
+        double staffExtent = DynamicEngraver.StaffExtentToward(dir, staffLines);
         var support = VerticalSkyline.FromBox(
             double.NegativeInfinity, double.PositiveInfinity,
-            dir * DynamicEngraver.StaffExtent, dir * DynamicEngraver.StaffExtent,
+            dir * staffExtent, dir * staffExtent,
             dir > 0 ? VerticalDirection.Up : VerticalDirection.Down);
         // ⚠️ NOT LITERAL, and named rather than fixed: LilyPond's support here is each
         // NoteColumn's whole skyline, so every element of the column is in it — dots,
@@ -418,7 +426,8 @@ internal static class TrillSpannerEngraver
                 var (up, down) = DynamicEngraver.ColumnSupportSkylines(voices, voiceIndex, mi, ii,
                     xColumn,
                     v => beamMembers.TryGetValue((spanner.StaffIndex, v, cmi, cii),
-                        out var b) ? b : null);
+                        out var b) ? b : null,
+                    staffLines);
                 support.Merge(dir > 0 ? up : down);
             }
         }
@@ -437,7 +446,7 @@ internal static class TrillSpannerEngraver
         // subsumes it whenever reach > staff-padding - padding, which 1.0 always
         // satisfies; it is written because LilyPond computes it (HANDOFF §5.2: do not
         // fold a term to its value).
-        double diff = DynamicEngraver.StaffExtent
+        double diff = staffExtent
             + EngravingDefaults.TrillSpannerStaffPadding - totalOff;
         return dir * (totalOff + Math.Max(diff, 0.0));
     }

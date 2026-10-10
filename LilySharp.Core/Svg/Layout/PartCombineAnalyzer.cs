@@ -89,7 +89,8 @@ internal static class PartCombineAnalyzer
         ImmutableArray<Voice> voices,
         IReadOnlyDictionary<(int Staff, int Voice, int Measure, int Item),
             (BeamLayout Beam, double StemX, bool StemUp)>? beamMembers,
-        int staffIndex = 0)
+        int staffIndex = 0,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
     {
         var measures = voices.IsDefaultOrEmpty ? default : voices[0].Measures;
         if (marks.IsDefaultOrEmpty)
@@ -113,7 +114,7 @@ internal static class PartCombineAnalyzer
             }
 
             layouts.Add(new PartCombineLayout(mark.Text, x, 0, mark.MeasureIndex, staffIndex,
-                AlignedSideBaselineUp(fonts, voices, mark, x, beamMembers, staffIndex)));
+                AlignedSideBaselineUp(fonts, voices, mark, x, beamMembers, staffIndex, staffLines)));
         }
 
         return layouts.ToImmutable();
@@ -155,7 +156,8 @@ internal static class PartCombineAnalyzer
     internal static double AlignedSideBaselineUp(Rendering.ScoreTextMetrics fonts,
         ImmutableArray<Voice> voices, Collector.PartCombineMark mark, double x,
         IReadOnlyDictionary<(int Staff, int Voice, int Measure, int Item),
-            (BeamLayout Beam, double StemX, bool StemUp)>? beamMembers, int staffIndex)
+            (BeamLayout Beam, double StemX, bool StemUp)>? beamMembers, int staffIndex,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
     {
         double em = LabelEm(fonts);
         var style = LabelStyle(fonts);
@@ -165,12 +167,14 @@ internal static class PartCombineAnalyzer
             voices, 0, mark.MeasureIndex, mark.ItemIndex, x,
             beamMembers is null ? null
                 : vi => beamMembers.TryGetValue((staffIndex, vi, mark.MeasureIndex, mark.ItemIndex),
-                    out var b) ? b : null);
+                    out var b) ? b : null,
+            staffLines);
         // :354-358 + :370 — the box bottom (baseline + bottom) stands padding over the supports.
         double totalOff = support.Up.MaxProtrusionInRange(x, x + advance) - bottom
             + CombineTextPadding;
-        // :433-453 — the refpoint floor.
-        return Math.Max(totalOff, DynamicEngraver.StaffExtent + CombineTextStaffPadding);
+        // :433-453 — the refpoint floor, over this staff's own extent.
+        return Math.Max(totalOff,
+            DynamicEngraver.StaffExtentToward(1.0, staffLines) + CombineTextStaffPadding);
     }
 
     /// <summary>
@@ -217,7 +221,8 @@ internal static class PartCombineAnalyzer
         ImmutableArray<Voice> voices,
         ImmutableArray<BeamLayout> beams,
         ImmutableArray<MeasureLayout> systemMeasureLayouts,
-        VerticalSkyline accumulatedUp)
+        VerticalSkyline accumulatedUp,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
     {
         var ink = new VerticalSkyline(VerticalDirection.Up);
         if (marks.IsDefaultOrEmpty || systemMeasureLayouts.IsDefaultOrEmpty || voices.IsDefaultOrEmpty)
@@ -240,7 +245,7 @@ internal static class PartCombineAnalyzer
             double x1 = x0 + fonts.Advance(mark.Text, em, Rendering.TextRole.PartCombine, style);
             var (bottom, top) = fonts.Ink(mark.Text, em, Rendering.TextRole.PartCombine, style);
             double baseline = Math.Max(
-                AlignedSideBaselineUp(fonts, voices, mark, x0, beamMembers, staffIndex: 0),
+                AlignedSideBaselineUp(fonts, voices, mark, x0, beamMembers, staffIndex: 0, staffLines),
                 accumulatedUp.MaxProtrusionInRange(x0, x1)
                     + OutsideStaffStacker.OutsideStaffPadding - bottom);
             ink.MergeBox(x0, x1, baseline + bottom, baseline + top);

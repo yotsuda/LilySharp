@@ -64,7 +64,11 @@ public readonly record struct MultiMeasureRestLayout(
     double LineSpacing = 1.0,
     // The @todo key of the rest that opens the run (MusicItem.TodoKey): the symbol carries
     // data-todo as a single rest's glyph does.
-    string? TodoKey = null);
+    string? TodoKey = null,
+    // The lines the staff draws (MultiStaffLayouter.NotationStaffLinesOf): the staff extent
+    // the count number, a text and a script on the rest side off is the outer line's ink —
+    // 0.05 over the middle on a one-line staff, not five lines' 2.05.
+    int StaffLines = EngravingDefaults.DefaultStaffLines);
 
 /// <summary>
 /// A run of consecutive measures that EVERY staff rests with an explicit
@@ -265,6 +269,11 @@ internal static class MultiMeasureRestEngraver
             return (LayoutUtilities.StaffOffsetInSystemDown(system, si) + height / 2.0, spacing);
         }
 
+        // The lines the staff draws, for the staff extent its number, texts and scripts side off.
+        int StaffLinesOf(int si)
+            => si >= 0 && staffByIndex != null && staffByIndex.TryGetValue(si, out var s)
+                ? MultiStaffLayouter.NotationStaffLinesOf(s) : EngravingDefaults.DefaultStaffLines;
+
         var measureMap = prebuiltMeasureMap ?? LayoutUtilities.BuildMeasureMap(systems);
         var voice = score.Voice;
         // ⚠️ IT WAITS FOR ITS FIRST ELEMENT. `ImmutableArray.CreateBuilder<T>()` lays out its
@@ -393,7 +402,8 @@ internal static class MultiMeasureRestEngraver
                             StaffIndex: si,
                             VoiceIndex: vi,
                             LineSpacing: spacing,
-                            TodoKey: bar.Items[ri].TodoKey));
+                            TodoKey: bar.Items[ri].TodoKey,
+                            StaffLines: StaffLinesOf(si)));
                     }
                 }
             }
@@ -448,7 +458,8 @@ internal static class MultiMeasureRestEngraver
                         StaffIndex: si,
                         VoiceIndex: vi,
                         LineSpacing: spacing,
-                        TodoKey: bar.Items[ri].TodoKey));
+                        TodoKey: bar.Items[ri].TodoKey,
+                        StaffLines: StaffLinesOf(si)));
                 }
             }
         }

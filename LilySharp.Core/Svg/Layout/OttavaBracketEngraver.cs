@@ -269,7 +269,8 @@ internal static class OttavaBracketEngraver
         ImmutableArray<MeasureLayout> measureLayouts,
         Func<int, int, double>? staffYAt = null,
         Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
-        ImmutableArray<BeamLayout> beamLayouts = default)
+        ImmutableArray<BeamLayout> beamLayouts = default,
+        Func<int, int>? staffLinesOf = null)
     {
         if (ottavaBrackets.IsDefaultOrEmpty)
             return ImmutableArray<OttavaBracketLayout>.Empty;
@@ -299,6 +300,11 @@ internal static class OttavaBracketEngraver
             var ottavaVoices = voicesByStaff != null
                 && voicesByStaff.TryGetValue(bracket.StaffIndex, out var vv)
                 ? vv : ImmutableArray<Voice>.Empty;
+            // The staff floor under the supports and the staff-padding floor are this staff's
+            // own extent (an `as lines N` staff's drawn lines); a caller without staves stands
+            // on five.
+            int staffLines = staffLinesOf?.Invoke(bracket.StaffIndex)
+                ?? EngravingDefaults.DefaultStaffLines;
 
             string text = bracket.Type switch
             {
@@ -367,7 +373,8 @@ internal static class OttavaBracketEngraver
                 // LILYPOND-REF: lily/spanner.cc:36-144 Spanner::do_break_processing.
                 double lineMiddleFrame = AlignedSideLineY(
                     fonts, segText, startX, endX, segEdgeHeight, isAbove,
-                    segment, ottavaVoices, measureLayouts, beamMembers, bracket.StaffIndex);
+                    segment, ottavaVoices, measureLayouts, beamMembers, bracket.StaffIndex,
+                    staffLines);
                 // aligned_side answers in the staff-MIDDLE frame (the frame the ledger's
                 // staff-to-line entries read); this record's frame has its origin on the
                 // staff TOP line, 2 above it, and carries the staff's own within-system
@@ -466,7 +473,7 @@ internal static class OttavaBracketEngraver
         ImmutableArray<MeasureLayout> measureLayouts,
         Dictionary<(int Staff, int Voice, int Measure, int Item),
             (BeamLayout Beam, double StemX, bool StemUp)> beamMembers,
-        int staffIndex)
+        int staffIndex, int staffLines)
     {
         double dir = isAbove ? 1.0 : -1.0;
         // :225-259 — my_dim, the grob's own profile about its line (Y = 0 here).
@@ -480,7 +487,7 @@ internal static class OttavaBracketEngraver
         // by the staff symbol's own extent (include_staff, which declaring staff-padding
         // turns on).
         var support = DynamicEngraver.SpanSupportSkylines(
-            voices, 0, Array.Empty<(int, int, double)>(), null);
+            voices, 0, Array.Empty<(int, int, double)>(), null, staffLines);
         for (int vi = 0; vi < voices.Length; vi++)
         {
             var columns = new List<(int Measure, int Item, double X)>();
@@ -499,7 +506,8 @@ internal static class OttavaBracketEngraver
             var (vUp, vDown) = DynamicEngraver.SpanSupportSkylines(
                 voices, voiceIndex, columns,
                 (v, m, i) => beamMembers.TryGetValue((staffIndex, v, m, i), out var b)
-                    ? b : null);
+                    ? b : null,
+                staffLines);
             support.Up.Merge(vUp);
             support.Down.Merge(vDown);
         }
@@ -512,7 +520,7 @@ internal static class OttavaBracketEngraver
         // :433-453 — the refpoint floor. Unlike the trill's, this one really binds over a
         // quiet staff: the label's downward reach (about 0.79) is well under
         // staff-padding − padding = 1.5 (ledger ottava.floor.staff-to-line = 2.05 + 2.0).
-        double diff = DynamicEngraver.StaffExtent
+        double diff = DynamicEngraver.StaffExtentToward(dir, staffLines)
             + EngravingDefaults.OttavaBracketStaffPadding - dir * totalOff;
         totalOff += dir * Math.Max(diff, 0.0);
         return totalOff;

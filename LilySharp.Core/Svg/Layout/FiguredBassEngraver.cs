@@ -72,7 +72,8 @@ internal static class FiguredBassEngraver
     /// <c>diff = dir * staff_extent[dir] + staff_padding - dir * total_off;
     /// total_off += dir * max (diff, 0.0)</c>, the same block
     /// <c>DynamicEngraver.SpannerOffsetY</c> transcribes; the staff extent comes from
-    /// <see cref="DynamicEngraver.StaffExtent"/>, the one home for it.
+    /// <see cref="DynamicEngraver.StaffExtentToward"/>, the one home for it — the staff's OWN
+    /// drawn lines' reach below its middle.
     /// LILYPOND-REF: scm/define-grobs.scm:395 staff-padding 1.0 of BassFigureAlignmentPositioning (side-position-interface at :407).
     /// <para>
     /// ⚠️ MEASURED INERT, and computed anyway because LilyPond computes it (HANDOFF §5.2):
@@ -91,8 +92,8 @@ internal static class FiguredBassEngraver
     /// texture away from being load-bearing.
     /// </para>
     /// </remarks>
-    private static double AlignedSideFloorBelowStaff
-        => DynamicEngraver.StaffExtent + EngravingDefaults.BassFigureStaffPadding;
+    private static double AlignedSideFloorBelowStaff(int staffLines)
+        => DynamicEngraver.StaffExtentToward(-1.0, staffLines) + EngravingDefaults.BassFigureStaffPadding;
 
     /// <summary>
     /// The figure's own ink above its baseline — <c>BassFigure</c>'s Y-extent.
@@ -231,13 +232,14 @@ internal static class FiguredBassEngraver
         ImmutableArray<MeasureLayout> measureLayouts,
         int staffIndex,
         ImmutableArray<Measure> staffMeasures,
-        VerticalSkyline downSoFar)
+        VerticalSkyline downSoFar,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
     {
         var ink = new VerticalSkyline(VerticalDirection.Down);
         if (figuredBasses.IsDefaultOrEmpty) return ink;
 
         // The row's own basic position, in this staff's frame: Y-up above the middle line.
-        double baselineYUp = -AlignedSideFloorBelowStaff;
+        double baselineYUp = -AlignedSideFloorBelowStaff(staffLines);
 
         var columns = new List<BassFigureAlignment.Column>();
         var rowUp = new VerticalSkyline(VerticalDirection.Up);
@@ -299,7 +301,8 @@ internal static class FiguredBassEngraver
         ImmutableArray<Measure> measures = default,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
-        Func<int, int, VerticalSkyline?>? staffDownSkyline = null)
+        Func<int, int, VerticalSkyline?>? staffDownSkyline = null,
+        Func<int, int>? staffLinesOf = null)
     {
         if (figuredBasses.IsDefaultOrEmpty)
             return ImmutableArray<FiguredBassLayout>.Empty;
@@ -327,8 +330,10 @@ internal static class FiguredBassEngraver
                 fbMeasures, fb.MeasureIndex, fb.ItemIndex, measureLayout);
             // Y-up (frame B): the topmost figure starts on aligned_side's floor below the
             // staff middle, and ApplySkylineDrop then lowers it until it clears its own
-            // staff's ink (the support half of the same aligned_side).
-            double yUp = -AlignedSideFloorBelowStaff;
+            // staff's ink (the support half of the same aligned_side). The floor is the
+            // figure's own staff's extent (an `as lines N` staff's drawn lines).
+            double yUp = -AlignedSideFloorBelowStaff(
+                staffLinesOf?.Invoke(fb.StaffIndex) ?? EngravingDefaults.DefaultStaffLines);
 
             var figureTexts = fb.Figures
                 .Select(f => f.DisplayText)

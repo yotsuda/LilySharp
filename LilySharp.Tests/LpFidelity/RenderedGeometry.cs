@@ -2834,6 +2834,57 @@ internal sealed class RenderedGeometry
         return ys[line] - texts[index].Y;
     }
 
+    /// <summary>
+    /// How far the baseline of the page's text <paramref name="index"/> of <paramref name="role"/>
+    /// (left to right) stands above the page's drawn staff line <paramref name="line"/> (top
+    /// down), in staff spaces — a drawn LINE rather than the five-line middle, so a one-line
+    /// staff reads too (<see cref="DynamicBaselineAboveStaffLine"/> for the dynamics).
+    /// </summary>
+    public double TextBaselineAboveStaffLine(TextRole role, int index, int line, int page = 0)
+    {
+        var ys = StaffLineCandidateYs(page);
+        if (line < 0 || line >= ys.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for staff line {line} but {ys.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        var texts = _pages[page].Texts.Where(t => t.Role == role).OrderBy(t => t.X).ToList();
+        if (index < 0 || index >= texts.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for {role} text {index} but {texts.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        return ys[line] - texts[index].Y;
+    }
+
+    /// <summary>
+    /// How far the origin of the page's music glyph <paramref name="glyph"/> number
+    /// <paramref name="index"/> (left to right) stands above the page's drawn staff line
+    /// <paramref name="line"/> (top down), in staff spaces — the fermata on a rest, the "tr"
+    /// of a trill spanner (whose LINE is <see cref="EngravingDefaults.TrillSpannerTextOffsetDown"/>
+    /// above the glyph, as <see cref="TrillLineAboveStaff"/> reads it on five lines).
+    /// </summary>
+    public double GlyphAboveStaffLine(char glyph, int index, int line, int page = 0)
+    {
+        var ys = StaffLineCandidateYs(page);
+        if (line < 0 || line >= ys.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for staff line {line} but {ys.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        var glyphs = _pages[page].Glyphs.Where(g => g.Glyph == glyph).OrderBy(g => g.X).ToList();
+        if (index < 0 || index >= glyphs.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for glyph {index} of U+{(int)glyph:X4} but {glyphs.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        return ys[line] - glyphs[index].Y;
+    }
+
     public double BowSpan(int index, int page = 0)
     {
         var bows = _pages[page].Beziers;

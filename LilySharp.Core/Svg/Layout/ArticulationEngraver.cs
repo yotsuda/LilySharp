@@ -2366,19 +2366,22 @@ internal static class ArticulationEngraver
             var centred = a with { X = cx + OriginFromCentre(a.Glyph) };
             // The side facing the supports: the script's outline placed with its origin at 0.
             var mine = ScriptSkyline(centred, 0.0, a.IsAbove ? VerticalDirection.Down : VerticalDirection.Up);
-            var (floorUp, floorDown) = DynamicEngraver.StaffFloorSupport();
+            // The staff floor and the staff-padding floor are the rest's own staff's extent.
+            var (floorUp, floorDown) = DynamicEngraver.StaffFloorSupport(rest.StaffLines);
             // The count number is the first UP grob of the stack, so an UP script's support.
             VerticalSkyline? numberSky = null;
             if (rest.MeasureCount > 1 && rest.DrawsCount && dir > 0)
             {
-                var nb = MultiMeasureRestEngraver.NumberInkBox(rest.MeasureCount, cx, DynamicEngraver.StaffExtent);
+                var nb = MultiMeasureRestEngraver.NumberInkBox(rest.MeasureCount, cx,
+                    DynamicEngraver.StaffExtentToward(1.0, rest.StaffLines));
                 numberSky = VerticalSkyline.FromBox(nb.Left, nb.Right, nb.Bottom, nb.Top, VerticalDirection.Up);
                 floorUp.Merge(numberSky);
             }
             // aligned_side: the supports' distance, the padding, then the staff-padding floor.
             double off = dir * (dir > 0 ? mine.Distance(floorUp) : mine.Distance(floorDown));
             off += dir * ArticulationSpacing.VerticalPadding(type);
-            off += dir * Math.Max(DynamicEngraver.StaffExtent + ArticulationSpacing.StaffPadding(type) - dir * off, 0.0);
+            off += dir * Math.Max(DynamicEngraver.StaffExtentToward(dir, rest.StaffLines)
+                + ArticulationSpacing.StaffPadding(type) - dir * off, 0.0);
             // The outside-staff pass: clear the number's INK by the grob's own padding (0).
             if (numberSky != null)
                 off = Math.Max(off, mine.Distance(numberSky, OutsideStaffStacker.OutsideStaffHorizontalPadding)

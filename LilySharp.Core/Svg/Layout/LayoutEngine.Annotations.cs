@@ -804,7 +804,7 @@ internal sealed partial class LayoutEngine
         // stem ends at the quanted beam face — the same ingredients the trill reads.
         var ottavaLayouts = OttavaBracketEngraver.Calculate(
             ctx.Fonts, ottavaItems, systems, ml, staffYAt,
-            voicesByStaff, beamLayouts ?? ImmutableArray<BeamLayout>.Empty);
+            voicesByStaff, beamLayouts ?? ImmutableArray<BeamLayout>.Empty, staffLinesOf);
 
         // Layout arpeggio markings
         var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, measures, measuresByStaff);
@@ -983,7 +983,7 @@ internal sealed partial class LayoutEngine
 
         var figuredBassLayouts = FiguredBassEngraver.Calculate(
             ctx.Fonts, fbItems, systems, ml, measures,
-            measuresByStaff, scriptedSkylines, figuredBassStaffDown);
+            measuresByStaff, scriptedSkylines, figuredBassStaffDown, staffLinesOf);
 
         var chordNameLayouts = LayoutChordNames(
             ctx, ml, scriptedSkylines, staffYAt, minStaffYAt);
@@ -1002,7 +1002,7 @@ internal sealed partial class LayoutEngine
         // LILYPOND-REF: scm/scheme-engravers.scm — trill spanner positioning
         var trillSpannerLayouts = TrillSpannerEngraver.Calculate(
             trillSpanners ?? ImmutableArray<TrillSpannerItem>.Empty, systems, ml, staffYAt,
-            voicesByStaff, beamLayouts ?? ImmutableArray<BeamLayout>.Empty);
+            voicesByStaff, beamLayouts ?? ImmutableArray<BeamLayout>.Empty, staffLinesOf);
 
         // Calculate volta brackets first — needed by MusicMarkEngraver for collision avoidance
         // LILYPOND-REF: axis-group-interface.cc — elements sorted by outside-staff-priority
@@ -1278,7 +1278,8 @@ internal sealed partial class LayoutEngine
             // The combined staff's a2 / Solo labels (priority 475) — in BOTH passes, so the
             // preliminary extents reserve what the final pass draws.
             partCombineTexts: PartCombineLayoutsOf(ctx.MultiScore, ml, beamLayouts ?? default),
-            prebuiltMeasureToSystem: measureToSystem);
+            prebuiltMeasureToSystem: measureToSystem,
+            staffLinesOf: staffLinesOf);
         stackedDynamics = stackedDynamicsAbove;
         stackedArticulations = stackedArticulationsAbove;
         // (No To-Coda/label co-placement here any more: the pass above owns it. A

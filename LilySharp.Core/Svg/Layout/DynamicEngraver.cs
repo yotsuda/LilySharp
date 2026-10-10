@@ -355,12 +355,15 @@ internal static class DynamicEngraver
     /// <remarks>Exposed for <see cref="TrillSpannerEngraver"/>, the other aligned_side
     /// consumer that declares staff-padding — one home for the staff symbol's own extent
     /// rather than a second spelling of the derivation.</remarks>
-    /// <remarks>⚠️ THE FIVE-LINE STAFF'S. The dynamics' own path (<see cref="Calculate"/>,
-    /// <see cref="HairpinEngraver"/>, <see cref="DynamicAlignEngraver"/>) reads
-    /// <see cref="StaffExtentToward"/> for the staff's OWN lines since 2026-10-10; the other
-    /// readers (scripts, figured bass, trills, ottava, text spanners, the multi-measure rest's
-    /// text) still take this, so on an <c>as lines N</c> staff they side off a five-line
-    /// extent.</remarks>
+    /// <remarks>⚠️ THE FIVE-LINE STAFF'S. Every aligned_side reader takes
+    /// <see cref="StaffExtentToward"/> for the staff's OWN lines since 2026-10-10 — the
+    /// dynamics, hairpins and aligned lines, the trill and ottava spanners, the multi-measure
+    /// rest's number, text and script, figured bass, the part-combine label — except the text
+    /// spanner's reservation (<c>TextSpannerEngraver.InkAboveStaff</c>), which keeps this
+    /// because the stacker that places the spanner (<c>OutsideStaffStacker.PlaceTextSpanners</c>)
+    /// floors on the staff FRAME's top line and the two must stay one spelling; MEASURED
+    /// (Lab sessions/p877/probe/ext) LilyPond's TextSpanner stands at the same height on a
+    /// one-line and a five-line staff, so nothing is lost there yet.</remarks>
     internal static double StaffExtent
         => StaffExtentToward(1.0, EngravingDefaults.DefaultStaffLines);
 
@@ -540,10 +543,13 @@ internal static class DynamicEngraver
 
             double cx = (rest.StartX + rest.EndX) / 2.0;
             double dir = d.IsAbove ? 1.0 : -1.0;
+            // The number, the staff floor and the staff-padding floor stand on the rest's own
+            // staff's extent (an `as lines N` staff's drawn lines).
             var number = rest.MeasureCount > 1 && rest.DrawsCount && dir > 0
-                ? MultiMeasureRestEngraver.NumberInkBox(rest.MeasureCount, cx, StaffExtent)
+                ? MultiMeasureRestEngraver.NumberInkBox(rest.MeasureCount, cx,
+                    StaffExtentToward(1.0, rest.StaffLines))
                 : ((double Left, double Right, double Bottom, double Top)?)null;
-            var (floorUp, floorDown) = StaffFloorSupport();
+            var (floorUp, floorDown) = StaffFloorSupport(rest.StaffLines);
             VerticalSkyline? numberSky = null;
             if (number is { } nb)
             {
@@ -554,7 +560,7 @@ internal static class DynamicEngraver
             // aligned_side: the supports' distance, the padding, then the staff-padding floor.
             double off = dir * (dir > 0 ? mine.Down.Distance(floorUp) : mine.Up.Distance(floorDown));
             off += dir * MmrTextPadding;
-            off += dir * Math.Max(StaffExtent + MmrTextStaffPadding - dir * off, 0.0);
+            off += dir * Math.Max(StaffExtentToward(dir, rest.StaffLines) + MmrTextStaffPadding - dir * off, 0.0);
             // The outside-staff pass: clear the number's INK by the outside-staff padding.
             if (numberSky != null)
                 off = Math.Max(off, mine.Down.Distance(numberSky, SkylineHorizontalPadding)

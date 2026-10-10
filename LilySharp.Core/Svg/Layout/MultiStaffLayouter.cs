@@ -4036,7 +4036,7 @@ internal sealed class MultiStaffLayouter
                     {
                         var labelInk = PartCombineAnalyzer.InkAboveStaff(
                             score.TextMetrics, staff.PartCombineMarks, staff.Voices, beams,
-                            measureLayouts, sky.Up);
+                            measureLayouts, sky.Up, NotationStaffLinesOf(staff));
                         if (!labelInk.IsEmpty)
                             sky.Up.Merge(labelInk);
                     }
@@ -4145,7 +4145,7 @@ internal sealed class MultiStaffLayouter
                     {
                         var fbInk = FiguredBassEngraver.RowInkBelowStaff(
                             score.TextMetrics, score.FiguredBasses, measureLayouts, thisStaff,
-                            staff.PrimaryVoice.Measures, sky.Down);
+                            staff.PrimaryVoice.Measures, sky.Down, NotationStaffLinesOf(staff));
                         if (!fbInk.IsEmpty)
                             sky.Down.Merge(fbInk);
                     }
@@ -4383,7 +4383,8 @@ internal sealed class MultiStaffLayouter
             onThisSystem.ToImmutable(), ImmutableArray.Create(system), keyed,
             staffYAt: null,
             voicesByStaff: new Dictionary<int, ImmutableArray<Voice>> { [staffIndex] = staff.Voices },
-            beamLayouts: RestampedToStaff(beamLayouts, staffIndex));
+            beamLayouts: RestampedToStaff(beamLayouts, staffIndex),
+            staffLinesOf: _ => NotationStaffLinesOf(staff));
         if (layouts.IsDefaultOrEmpty)
             return null;
 

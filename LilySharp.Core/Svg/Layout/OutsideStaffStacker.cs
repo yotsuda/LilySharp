@@ -1195,6 +1195,9 @@ internal static class OutsideStaffStacker
     /// builds no staff has.</param>
     /// <param name="partCombineTexts">A combined staff's "a2" / "Solo" / "Solo II" labels,
     /// placed at their own priority 475 (<see cref="PlacePartCombineTexts"/>).</param>
+    /// <param name="staffLinesOf">The lines a staff (by index) draws, for the flat edge each
+    /// tracker's support starts from — the staff's outermost DRAWN line, which on an
+    /// <c>as lines N</c> staff stands below the frame's top; absent, five lines.</param>
     public static (ImmutableArray<TrillSpannerLayout> Trills,
                    ImmutableArray<BarNumberLayout> BarNumbers,
                    ImmutableArray<OttavaBracketLayout> Ottavas,
@@ -1225,7 +1228,8 @@ internal static class OutsideStaffStacker
             AboveStackMemo? memo = null,
             Func<int, int, (object Up, object Down)?>? profileIdentity = null,
             ImmutableArray<PartCombineLayout> partCombineTexts = default,
-            IReadOnlyDictionary<int, int>? prebuiltMeasureToSystem = null)
+            IReadOnlyDictionary<int, int>? prebuiltMeasureToSystem = null,
+            Func<int, int>? staffLinesOf = null)
     {
         // ⚠️ A BOOK WITH PART-COMBINE LABELS STACKS LIVE: the memo's program does not carry
         // them (AboveStackMemo.SystemEntry has no field for the family), and a replayed
@@ -1236,11 +1240,11 @@ internal static class OutsideStaffStacker
             return StackAboveStaffCore(fonts, systems, systemSkylines, tupletBrackets, trills,
                 barNumbers, ottavas, customTexts, voltas, musicMarks, articulations,
                 aboveDynamics, textSpanners, chordNames, chordItems, staffProfile,
-                partCombineTexts, prebuiltMeasureToSystem);
+                partCombineTexts, prebuiltMeasureToSystem, staffLinesOf);
         var m = StackAboveStaffMemoized(fonts, systems, systemSkylines, tupletBrackets, trills,
             barNumbers, ottavas, customTexts, voltas, musicMarks, articulations,
             aboveDynamics, textSpanners, chordNames, chordItems, staffProfile, memo,
-            profileIdentity, prebuiltMeasureToSystem);
+            profileIdentity, prebuiltMeasureToSystem, staffLinesOf);
         return (m.Trills, m.BarNumbers, m.Ottavas, m.CustomTexts, m.Voltas, m.MusicMarks,
             m.Dynamics, m.TextSpanners, m.Articulations, partCombineTexts);
     }
@@ -1299,7 +1303,8 @@ internal static class OutsideStaffStacker
             Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile,
             AboveStackMemo memo,
             Func<int, int, (object Up, object Down)?> profileIdentity,
-            IReadOnlyDictionary<int, int>? prebuiltMeasureToSystem = null)
+            IReadOnlyDictionary<int, int>? prebuiltMeasureToSystem = null,
+            Func<int, int>? staffLinesOf = null)
     {
         // The same measure→system map the core needs — so it is built ONCE and handed on
         // (this remark used to say "the same map the core builds (cheap)", which is how one
@@ -1439,7 +1444,7 @@ internal static class OutsideStaffStacker
         var core = StackAboveStaffCore(fonts, systems, systemSkylines, liveTuplets, liveTrills,
             liveBarNumbers, liveOttavas, liveCustomTexts, liveVoltas, liveMarks, liveArtics,
             liveDynamics, liveTextSpanners, liveChordNames, chordItems, staffProfile,
-            prebuiltMeasureToSystem: measureToSystem);
+            prebuiltMeasureToSystem: measureToSystem, staffLinesOf: staffLinesOf);
 
         // 5. Reassemble: live results scatter back by index; hit systems replay their
         // stored outputs, positionally parallel to the (equal) stored inputs.
@@ -1741,7 +1746,8 @@ internal static class OutsideStaffStacker
             ImmutableArray<ChordNameItem> chordItems,
             Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile,
             ImmutableArray<PartCombineLayout> partCombineTexts = default,
-            IReadOnlyDictionary<int, int>? prebuiltMeasureToSystem = null)
+            IReadOnlyDictionary<int, int>? prebuiltMeasureToSystem = null,
+            Func<int, int>? staffLinesOf = null)
     {
         if (systems.IsDefaultOrEmpty)
             return (trills, barNumbers, ottavas, customTexts, voltas, musicMarks,
@@ -1751,7 +1757,7 @@ internal static class OutsideStaffStacker
             ?? SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
 
         var topStaff = TopStaffBySystem(systems);
-        var trackers = AboveTrackers(systems, systemSkylines, staffProfile, topStaff);
+        var trackers = AboveTrackers(systems, systemSkylines, staffProfile, topStaff, staffLinesOf);
         SeedAboveTrackers(fonts, systems, trackers, articulations, tupletBrackets,
             chordNames, chordItems, measureToSystem);
 
@@ -1820,7 +1826,8 @@ internal static class OutsideStaffStacker
         ImmutableArray<SystemLayout> systems,
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
         Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile,
-        int[] topStaff)
+        int[] topStaff,
+        Func<int, int>? staffLinesOf = null)
     {
         var trackers = new Dictionary<(int Sys, int Staff), OutsideStaffSkylines>();
         return (sys, rawStaff) =>
@@ -1849,9 +1856,22 @@ internal static class OutsideStaffStacker
             double topUp = sys >= 0 && sys < systems.Length
                 ? LayoutUtilities.StaffOffsetInSystemUp(systems[sys], staff)
                 : 0;
-            var supportUp = FlatBase(topUp, VerticalDirection.Up);
+            // ⚠️ THE EDGE IS THE OUTERMOST DRAWN LINE, not the frame's top: an `as lines N`
+            // staff keeps the five-line frame and draws fewer lines inside it, and LilyPond's
+            // support is the staff symbol's own ink (its inside-staff skylines), so on a
+            // one-line staff a trill, a fermata on a rest or a mark stands off the one line,
+            // two spaces below the frame's top. MEASURED (Lab sessions/p877/probe/ext): a
+            // quiet one-line staff's `tr` line at 2.949 over the line where this edge put
+            // it at 3.46 = frame top 2.0 + 0.46 + the glyph's 1.0 reach.
+            // LILYPOND-REF: lily/axis-group-interface.cc:937-950 skyline_spacing —
+            //   all_v_skylines starts from the inside-staff skylines, the StaffSymbol's own
+            //   extent among them (lily/staff-symbol.cc:346-369 Staff_symbol::height).
+            int staffLines = staffLinesOf?.Invoke(staff) ?? EngravingDefaults.DefaultStaffLines;
+            double edgeUp = topUp - (EngravingDefaults.StaffMiddle
+                - EngravingDefaults.StaffLinePositions(staffLines)[^1] / 2.0);
+            var supportUp = FlatBase(edgeUp, VerticalDirection.Up);
             var t = new OutsideStaffSkylines(dir: +1,
-                supportUp, FlatBase(topUp, VerticalDirection.Down));
+                supportUp, FlatBase(edgeUp, VerticalDirection.Down));
             if (staffProfile?.Invoke(sys, staff) is { } p)
             {
                 // The profile is about the element's own REFERENCE POINT; the tracker frame
