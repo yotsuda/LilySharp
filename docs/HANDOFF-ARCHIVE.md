@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第892セッションの経緯
+
+### 1.1 第892セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第891 の続き）。`-Start p892`（HEAD `c1aa2cab`）＝full **11779 / 0 / 2 / 11781**。§7 3.5 で第890 を ARCHIVE へ。着手＝**ユーザー報告 5 件目**「TODO の赤枠が中を塗りつぶしている・赤丸で中を透過に」。
+- **正体＝webview のカレットのハイライト**（`highlightPositions`）: 要素の属性で「線か塗りか」を決め、`fill="none"` でも **`stroke` 属性が無ければ塗りの図形として fill にハイライト色を入れる**。輪は SVG に `fill="none"` だけ持ち、stroke は CSS で与えていた＝カレットが乗ると赤い円盤になった（カレットが無ければ輪だった）。
+- 直し＝`SvgDrawingContext.TodoRing` が stroke（`SharedRenderer.TodoInk`・`TodoLineThickness`）を要素に書く（箱と線は最初からそう）。CSS は色を与えず、`highlightTodos` 切の非表示だけ。網 `ThePreviewDrawsTheRingAndTheCallout…` に「輪は fill none ＋ stroke」を足し、stroke を外す毒＝その 1 本だけ赤。拡張 check-types・compile・test 211 / 211。`MANUAL-CHECKS.md` §2.1 に「カレットで輪は線の色が変わるだけ」。commit `todo:`。拡張は `tools\Deploy-Lsp.ps1` で入れ直し（Reload Window）。
+- `-End p892 -DiffBase c1aa2cabf`（門は全部 OK）＝full **11779 / 0 / 2 / 11781**（網 ±0）。Core '+' 9 行／REF 0／OWN 0＝7.6・7.7 該当なし。棚卸し 2 枚＝差分なし。HANDOFF 375,171 B（残り 74,829）。commit `870d96670`。未 push 74＋docs（push はユーザー）。Lab `sessions/p892/`。
+判定: ユーザーの実機確認が続く。(a) 文脈を使う／(b) 6 便＝重くなってきた（圧縮は未だ）／(c) 同じ島 ⇒ **次の報告が todo の島ならこの会話で `-Start p893`、別の島なら新しい会話**。
+
 ## 以下は第891セッションの経緯
 
 ### 1.1 第891セッション（2026-10-10・YT-DELL2）

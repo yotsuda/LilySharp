@@ -118,6 +118,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第894セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第893 の続き）。`-Start p894`（HEAD `f8a978d7`）＝full **11779 / 0 / 2 / 11781**。§7 3.5 で第892 を ARCHIVE へ。着手＝**ユーザー報告 10 件目（3 点）**: memo の箱は要らない／memo を音符と同じ x に書くとかっこ悪い＝余白の広い側へ、**ずらす量は memo ごとに変えない**／輪は人が○を付けたような形に。
+- **輪＝`DrawHandRing`**: 左上から始めて一周し、始点を少し越えて外側で終わるループ。半径を低い倍音 3 つで揺らし、数度傾ける。位相と傾きは mark の source position から＝毎回同じ絵・どの輪も少しずつ違う。接線を合わせた 8 本の cubic（`DrawBezier`＝`<path fill="none" stroke>`・丸キャップ・caret のハイライトは stroke を塗り替える）。
+- **memo＝箱なしの赤い文字**（`@text` の em の 0.75）。近い端を輪の中心から `TodoMemoOffset` 1.5 だけ、輪と段の端との間が広い側へ。段幅の内側に収め、輪の肩（その側）から文字の手前まで短い引き出し線（文字の中段の高さ）。**余白の縁は譜線ではなく段の音符の到達**（pass 1 で全 item の頭と符尾 3.5・休符 ±1 を読む＝`NoteReach`）＝加線の音の列を突き抜けない。同じ水準で横に 1.0 の空気を空けて重なるものは外側へ積む。
+- 網 `TodoCalloutTests` を path と引き出し線の形に書き直し（item ごと 8 本の path・和音の輪は頭より高い／memo ごと引き出し線 1 本・紙の箱なし／`.down` は線が下へ／文字は輪の肩より右）。毒（SVG が editor marks を描かない）＝2 本赤。snapshot 不動。拡張 211 / 211。絵 `sessions/p894/probe/{one,piano,right}-preview.png`。棚卸し差分なし。commit `todo:`。拡張は `tools\Deploy-Lsp.ps1` で入れ直し（Reload Window）。
+- ⚠️ **多段の系で下の段の memo も既定は系の上の余白**（`piano` の `lh`＝上の段を横切る長い引き出し線）。`.down` で下の余白。段ごとに近い余白を自動で選ぶかはユーザー判断。
+- `-End p894 -DiffBase f8a978d7e`（門は全部 OK）＝full **11779 / 0 / 2 / 11781**（網 ±0＝書き換え）。Core '+' 152 行／REF 0／OWN 0（第893 の札の下に増えた分）＝7.6 ⒞。7.7: `DrawsEditorMarks` が false なら何も描かない・sentinel なし。棚卸し差分なし。HANDOFF 375,809 B（残り 74,191）。commit `ed08d14d0`。未 push 78＋docs（push はユーザー）。Lab `sessions/p894/`。
+判定: ユーザーの実機確認（手描きの輪・箱なし・ずらし・余白）。(a) 文脈を使う／(b) **8 便＝重い**／(c) 同じ島 ⇒ **次の報告が todo の島なら `-Start p895` をこの会話で、それ以外は新しい会話**。
+
+## 以下は第893セッションの経緯
+
 ### 1.1 第893セッション（2026-10-10・YT-DELL2）
 
 同じ会話（第892 の続き）。`-Start p893`（HEAD `506f3ef4`）＝full **11779 / 0 / 2 / 11781**。§7 3.5 で第891 を ARCHIVE へ。着手＝**ユーザー報告 6〜9 件目（この便の途中で 4 つ）**: 輪の線を太く／和音は 1 つの輪／memo の文字を小さく／**「TODO で他の要素が動くのは不自然・紙に赤字を入れるように上書きで描く」**／**「なるべく余白に書く」**。
@@ -126,16 +138,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - docs: `SYNTAX_REFERENCE`・CHANGELOG 両方・`MANUAL-CHECKS.md` §2.1（和音 1 輪・余白・動かない）・`TodoAnnotation` の註。
 - `-End p893 -DiffBase 506f3ef4a`（門は全部 OK）＝full **11779 / 0 / 2 / 11781**（網 ±0＝4 本を書き換え）。Core '+' 328 行／REF 0／OWN 2（`DrawTodoMarks` の定数と `MusicItem.TodoMemo`＝エディターの印・LP に対応物なし）＝7.6 ⒞。7.7: `DrawsEditorMarks` が false なら何も描かない（export の既定）・sentinel なし・fallback なし。棚卸し 2 枚＝差分なし。HANDOFF 374,238 B（残り 75,762）。commit `fcbe55867`。未 push 76＋docs（push はユーザー）。Lab `sessions/p893/`＝log・毒・sweep・probe。
 判定: ユーザーの実機確認（輪の太さ・和音 1 輪・余白の吹き出し・文字の大きさ・何も動かないこと）。残りの候補＝吹き出しが段の上の余白で**他の段の記号**（前の段の歌詞など）に重なるときの逃げ（今は重ねる＝赤字の約束どおり）・長い memo の切り詰め（未決）・`lysc png --todo`（扉は `PngDocumentOptions.EditorMarks` に用意済み・CLI には出していない）。(a) 文脈を使う／(b) **7 便＝重い**（圧縮は未だ）／(c) 同じ島 ⇒ **次の報告が todo の島ならこの会話で `-Start p894`、それ以外は新しい会話**。
-
-## 以下は第892セッションの経緯
-
-### 1.1 第892セッション（2026-10-10・YT-DELL2）
-
-同じ会話（第891 の続き）。`-Start p892`（HEAD `c1aa2cab`）＝full **11779 / 0 / 2 / 11781**。§7 3.5 で第890 を ARCHIVE へ。着手＝**ユーザー報告 5 件目**「TODO の赤枠が中を塗りつぶしている・赤丸で中を透過に」。
-- **正体＝webview のカレットのハイライト**（`highlightPositions`）: 要素の属性で「線か塗りか」を決め、`fill="none"` でも **`stroke` 属性が無ければ塗りの図形として fill にハイライト色を入れる**。輪は SVG に `fill="none"` だけ持ち、stroke は CSS で与えていた＝カレットが乗ると赤い円盤になった（カレットが無ければ輪だった）。
-- 直し＝`SvgDrawingContext.TodoRing` が stroke（`SharedRenderer.TodoInk`・`TodoLineThickness`）を要素に書く（箱と線は最初からそう）。CSS は色を与えず、`highlightTodos` 切の非表示だけ。網 `ThePreviewDrawsTheRingAndTheCallout…` に「輪は fill none ＋ stroke」を足し、stroke を外す毒＝その 1 本だけ赤。拡張 check-types・compile・test 211 / 211。`MANUAL-CHECKS.md` §2.1 に「カレットで輪は線の色が変わるだけ」。commit `todo:`。拡張は `tools\Deploy-Lsp.ps1` で入れ直し（Reload Window）。
-- `-End p892 -DiffBase c1aa2cabf`（門は全部 OK）＝full **11779 / 0 / 2 / 11781**（網 ±0）。Core '+' 9 行／REF 0／OWN 0＝7.6・7.7 該当なし。棚卸し 2 枚＝差分なし。HANDOFF 375,171 B（残り 74,829）。commit `870d96670`。未 push 74＋docs（push はユーザー）。Lab `sessions/p892/`。
-判定: ユーザーの実機確認が続く。(a) 文脈を使う／(b) 6 便＝重くなってきた（圧縮は未だ）／(c) 同じ島 ⇒ **次の報告が todo の島ならこの会話で `-Start p893`、別の島なら新しい会話**。
 
 ## 2. 開いている作業
 
