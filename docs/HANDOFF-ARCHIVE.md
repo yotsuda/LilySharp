@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第876セッションの経緯
+
+### 1.1 第876セッション（2026-10-10・YT-DELL2）
+
+同じ会話（第875 の続き・ユーザー「続けて」）。`-Start p876`（HEAD `00433c6a6`）＝full **11713 / 0 / 2 / 11715**。§7 3.5 で第874 を ARCHIVE へ。
+- **1 線譜の強弱記号＝強弱の「譜の extent」が 5 線の定数だった**（`435e98309`）。第875 の「LP は stem の先の 0.18 下に置く」は読み違い。LP の grob dump（Lab `sessions/p876/probe/dyn/dump.ily`＝DynamicText・DynamicLineSpanner・Stem の extent と系座標）で読んだ正体: `aligned_side` は支え（頭と符尾）の skyline の下に **StaffSymbol の Y extent を最小値として敷く**（side-position-interface.cc:323-330 `set_minimum_height (staff_extents[dir])`）＋ staff-padding の床も同じ extent（:433-453）。5 線では ±2.05 が勝つので f は譜の 0.6 下（−4.546）・1 線では ±0.05 しか無く **符尾と頭だけが支え**: b（符尾下・先 −3.333）の下の f は、細い符尾の x に f の字形の*左下の curl*（原点から −0.42）しか無いので原点 −3.509＝「符尾の先の下」に見えた。`p` は左の縦画が全高なので符尾の先の 0.6 下（−5.056）・f'（符尾の先 −1.5）の下は 0.05 の床が勝つ（1.296＋0.05＋0.6＝−2.546）・g（符尾上）の下は頭（−4.019）。**Lily# の `DynamicOutline` の f の profile も curl だけで符尾に会う**＝箱の出所の違い（Emmentaler では TeX Gyre の文字）は効かなかった。
+- 直し: `DynamicEngraver.StaffExtentToward(dir, staffLines)`（その側の外側の線／2＋線の半厚＝staff-symbol.cc:346-369 `Staff_symbol::height`・4 線は上 2.05／下 1.05）を `StaffFloorSupport`・`ColumnSupportSkylines`・`SpanSupportSkylines`・`SpannerOffsetY`・`PointwiseBaselineY` に通し、`Calculate` は `staffLinesOf`（譜番号→線数・`MultiStaffLayouter.NotationStaffLinesOf`＝tab は 5）。**同じ DynamicLineSpanner に乗る hairpin（`HairpinEngraver.Calculate/CalculateOnSystem/LayoutPiece`）と `DynamicAlignEngraver.AlignLines`、`SkylineBuilder` の段間の種も同じ線数**。`StaffExtent`（5 線）は残した＝読み手は scripts（MMR の床）・figured bass・trill・ottava・text spanner・part-combine・MMR の text。
+- 確かめ: 1 線で f −3.509／−2.676／−2.546／−4.019・p −5.056／−4.223、5 線は不変（f −4.546・p −5.056／−4.223）＝LP の dump と一致（`DynamicFewLineStaffTests` 12＋`StaffExtentToward` 7）。計器 `RenderedGeometry.DynamicBaselineAboveStaffLine`。掃き 1199／差 0（結果・base は p875 の exe-head）・full **11728 / 4 / 2**＝4 は HANDOFF の門 3（語り未）＋magic census（HairpinEngraver の呼び出し行の文が変わった＝再生成して commit に同梱）。
+- ⚠️ **残り＝1 線譜の trill／ottava／text spanner／figured bass／MMR の text は 5 線の extent のまま**（`StaffExtent` の読み手・値付け前）。`as lines 1` の文脈（RhythmicStaff＝符尾上）・collector の死んだ `needsLedgerLines`・SMuFL §3・`staff bass` の読みはユーザー判断（第872〜875 のまま）。
+- `-End p876 -DiffBase 00433c6a6`（門は全部 OK）＝full **11732 / 0 / 2 / 11734**。Core '+' 113 行／REF 1／OWN 0。HANDOFF 440,534 B（残り 9,466＝次便の `-Start` が第875 を畳めば戻る）。未 push 40＋docs（push はユーザー）。
+
 ## 以下は第875セッションの経緯
 
 ### 1.1 第875セッション（2026-10-10・YT-DELL2）
