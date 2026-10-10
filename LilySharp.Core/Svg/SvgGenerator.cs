@@ -68,7 +68,17 @@ public static class SvgGenerator
     /// <summary>The paper a book without a <c>paper { }</c> lays out on, from the
     /// caller's options: the snippet layout for a Markdown fence, else the defaults.</summary>
     private static LayoutOptions PaperBaseOf(SvgRenderOptions options)
-        => options.Snippet ? LayoutOptions.Snippet : LayoutOptions.Default;
+        => PaperBaseOf(options.Snippet, options.Interactive);
+
+    /// <summary>The paper a book without a <c>paper { }</c> lays out on: the snippet layout
+    /// for a Markdown fence, else the defaults — and, for the interactive preview, with the
+    /// memos' rows reserved (<see cref="LayoutOptions.TodoBands"/>). Shared with
+    /// <see cref="IncrementalCompiler"/>, whose collects must start from the same paper.</summary>
+    internal static LayoutOptions PaperBaseOf(bool snippet, bool interactive)
+    {
+        var paper = snippet ? LayoutOptions.Snippet : LayoutOptions.Default;
+        return interactive ? paper with { TodoBands = true } : paper;
+    }
 
     /// <summary>
     /// Generates all render blocks as separate SVG files.

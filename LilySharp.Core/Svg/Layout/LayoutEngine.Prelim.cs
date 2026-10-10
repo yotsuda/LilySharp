@@ -369,6 +369,47 @@ internal sealed partial class LayoutEngine
         var (annotationUps, annotationDowns) = EnrichExtentsWithAnnotationProtrusions(score.TextMetrics,
             perSystemExtents, prelimSystems, prelimAnn, allPrelimTies, allPrelimSlurs,
             rowsAboveFirstStaff, pedalLines);
+        // The editor's memos' rows (LayoutOptions.TodoBands — the interactive preview's
+        // layout only): a band over each system's ink, above for the memos over it and below
+        // for the `.down` ones, sized by TodoMemoBand from the live items. It joins the
+        // scalar extents (the page's top spring and the breaker read those) and the X-aware
+        // silhouette (the inter-system distance reads that) as a full-width box standing on
+        // the extent the real ink just raised, so the memos drawn over the finished page
+        // find a clear place near their notes. LILYSHARP-OWN: an editor's aid.
+        List<(int System, double X0, double X1, double Bottom, double Top)>? todoBandBoxes = null;
+        if (_options.TodoBands)
+        {
+            var bands = TodoMemoBand.Estimate(score, prelimSystems);
+            for (int i = 0; i < bands.Length && i < perSystemExtents.Count; i++)
+            {
+                var (up, down) = bands[i];
+                var sys = prelimSystems[i];
+                if ((up <= 0 && down <= 0) || sys.Measures.IsDefaultOrEmpty)
+                    continue;
+                var ext = perSystemExtents[i];
+                double x0 = sys.Measures[0].X, x1 = sys.Measures[^1].X + sys.Measures[^1].Width;
+                double body = MultiStaffLayouter.SystemHeightOf(sys.StaffGroups);
+                if (body <= 0)
+                    body = _options.StaffHeight;
+                todoBandBoxes ??= new();
+                if (up > 0)
+                {
+                    todoBandBoxes.Add((i, x0, x1, ext.upExtent, ext.upExtent + up));
+                    if (annotationUps is { } au && i < au.Length)
+                        au[i] = Math.Max(au[i], ext.upExtent + up);
+                }
+                if (down > 0)
+                {
+                    // The down extent is measured below the body; the silhouette's frame is
+                    // the system's origin, Y-up.
+                    double inkBottom = -(body + ext.downExtent);
+                    todoBandBoxes.Add((i, x0, x1, inkBottom - down, inkBottom));
+                    if (annotationDowns is { } ad && i < ad.Length)
+                        ad[i] = Math.Max(ad[i], ext.downExtent + down);
+                }
+                perSystemExtents[i] = (ext.upExtent + up, ext.downExtent + down);
+            }
+        }
         // The page breaker's view — LilyPond's pure heights (PreliminaryPass.BreakerUp): the
         // staves without their drawn beams, every beam's stems at their pure (unbeamed) reach,
         // the music marks above a staff resting on it instead of stacked, and no tuplets or
@@ -386,7 +427,7 @@ internal sealed partial class LayoutEngine
             prelimAnn.BarNumbers, prelimAnn.TupletBrackets, allPrelimSlurs,
             allPrelimTies, prelimAnn.TextSpanners,
             systemCache, lyricBands, pedalLines, breakerUps, breakerDowns, breakerBases,
-            breakerSplits);
+            breakerSplits, todoBandBoxes);
         return new PreliminaryPass(
             pagingSkylines,
             prelimBeamsByStaff,

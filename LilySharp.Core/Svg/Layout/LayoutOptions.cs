@@ -361,6 +361,23 @@ internal sealed record LayoutOptions
     /// </remarks>
     public static LayoutOptions Snippet { get; } = new() { PageHeight = 0, CropWidth = true };
 
+    // === The editor's picture ===
+
+    /// <summary>
+    /// Reserve the rows the preview's <c>@todo</c> memos need as a band above each system
+    /// that has one (below, for <c>.down</c>), so the memos drawn over the finished page find
+    /// a clear place near their notes instead of beside another system or past the page's
+    /// top (<see cref="TodoMemoBand"/>). On for the interactive preview's layout only — set
+    /// by the render options, not by a <c>paper { }</c>; an export lays out as if no memo
+    /// were written, and draws none.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: an editor's aid with no LilyPond counterpart (owner's decision
+    /// 2026-10-10: the page's other elements may move for a memo in the preview, so long as
+    /// the result is tidy).
+    /// </remarks>
+    public bool TodoBands { get; init; } = false;
+
     /// <summary>Default options for standard layout.</summary>
     public static LayoutOptions Default { get; } = new();
 }

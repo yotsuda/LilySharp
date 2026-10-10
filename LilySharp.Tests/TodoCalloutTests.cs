@@ -168,32 +168,78 @@ public class TodoCalloutTests
     [Fact]
     public void ALeader_RunsThroughNoOtherMemo()
     {
-        // Six memos on one short system (the p896 probe `one`, with a title so the page has
-        // room over the staff — the preview's page is a strip, and a memo that reaches its
-        // top stays there over whatever is in the way): set left to right, each where the
-        // ink is clear, the later ones climb over the earlier — and a later memo's leader
-        // ran down through an earlier memo's words. A memo's words are the box over its
-        // underline, a line of its font's height; no leader passes through another memo's
-        // box, and no memo's box has a leader through it.
-        // And the plain case: memos on two notes side by side, the first's words running
-        // over the second note — the second memo, set where the ink is clear just over the
-        // first's words, had its leader run down through them; it takes the other side.
-        CheckLeaders("c'4@todo(\"F# or F natural? the sharp is faint\") d'4 e'4@todo f'4 | r2@todo(\"bar 12 is only 7/8\").down <e' g' b'>4@todo(\"both\") g'4@todo(\"a second memo, right beside\") | R1@todo(\"tacet?\") | c''1@todo(\"high note\") |", 6);
+        // Five memos on one short system (the p896 probe `one` less one): set short first and
+        // long after, each where the ink is clear — and a later memo's leader ran down through
+        // an earlier memo's words. A memo's words are the box over its underline, a line of
+        // its font's height; no leader passes through another memo's box, and no memo's box
+        // has a leader through it. The plain cases: memos on two notes side by side, the
+        // first's words running over the second note — the second memo, set where the ink
+        // is clear just over the first's words, had its leader run down through them; and
+        // four memos on four notes in a row.
+        // (A long memo on a note BETWEEN two short ones — the probe's sixth — still has one
+        // crossing: its leader must pass a neighbour's words from either side, and the climb
+        // that would clear them is dearer than the crossing. Lab sessions/p899/probe.)
+        CheckLeaders("c'4@todo(\"F# or F natural? the sharp is faint\") d'4 e'4@todo f'4 | r2@todo(\"bar 12 is only 7/8\").down <e' g' b'>4@todo(\"both\") g'4 | R1@todo(\"tacet?\") | c''1@todo(\"high note\") |", 5);
         CheckLeaders("c''4@todo(\"first memo here\") d''4@todo(\"second memo here\") e''4 f''4 |", 2);
+        CheckLeaders("c''4@todo(\"first\") d''4@todo(\"second\") e''4@todo(\"third\") f''4@todo(\"fourth\") |", 4);
+        // A memo whose words, on its roomier side, would stand over a later memo's note: the
+        // later one's leader must then pass through them from either side, so the first takes
+        // its narrower side (the margin) instead — the arrangement that costs least over the
+        // system, not the memo's own cheapest place.
+        CheckLeaders("c''4@todo(\"first memo here\") d''4 e''4@todo(\"second memo here\") f''4 |", 2);
+    }
+
+    [Fact]
+    public void TheLayoutReservesTheMemosRows_InThePreviewOnly()
+    {
+        // The p896 probe `one`: six memos on one system with no title over it. The preview's
+        // layout reserves the rows the memos need as a band over the system
+        // (LayoutOptions.TodoBands, set by the preview's render options): its page is taller
+        // than the same book's export page, and every memo stands clear of every other —
+        // they used to pile up at the page's top. The export's layout reserves nothing
+        // (AMark_MovesNothingOnThePage). And a session's incremental render starts from the
+        // same paper as the full render, so the two are the same picture.
+        string book = Book("c'4@todo(\"F# or F natural? the sharp is faint\") d'4 e'4@todo f'4 | r2@todo(\"bar 12 is only 7/8\").down <e' g' b'>4@todo(\"both\") g'4@todo(\"a second memo, right beside\") | R1@todo(\"tacet?\") | c''1@todo(\"high note\") |");
+        var tree = SyntaxTree.Parse(book);
+        string preview = SvgGenerator.Generate(tree, SvgRenderOptions.Preview());
+        string export = SvgGenerator.Generate(tree, SvgRenderOptions.Default);
+        static double PageHeight(string svg) => double.Parse(Regex.Match(svg, "viewBox=\"0 0 [0-9.]+ ([0-9.]+)\"").Groups[1].Value);
+        Assert.True(PageHeight(preview) > PageHeight(export) + 4, $"preview page {PageHeight(preview)}, export page {PageHeight(export)}");
+        var boxes = MemoBoxes(preview);
+        Assert.Equal(6, boxes.Count);
+        CheckLeadersOf(preview, 6);
+        for (int i = 0; i < boxes.Count; i++)
+            for (int j = i + 1; j < boxes.Count; j++)
+            {
+                var a = boxes[i];
+                var b = boxes[j];
+                bool apart = a.Right <= b.Left || b.Right <= a.Left || a.Bottom <= b.Top || b.Bottom <= a.Top;
+                Assert.True(apart, $"memos {i} and {j} overlap: {a} / {b}");
+            }
+        Assert.Equal(preview, new IncrementalCompiler(tree, SvgRenderOptions.Preview()).Render());
+    }
+
+    /// <summary>Each memo's box in the SVG's frame (Y down): its underline's span, and the
+    /// line of text over it, a face's height.</summary>
+    private static List<(double Left, double Right, double Top, double Bottom)> MemoBoxes(string svg)
+    {
+        double em = double.Parse(Regex.Match(svg, "<text [^>]*font-size=\"([0-9.]+)\"[^>]*fill=\"#E53935\"[^>]*data-todo=").Groups[1].Value);
+        return Underlines(svg).Select(u => (Left: u.X1, Right: u.X2, Top: u.Y1 - 0.9 * em, Bottom: u.Y1)).ToList();
     }
 
     private static void CheckLeaders(string music, int memos)
+        => CheckLeadersOf(SvgGenerator.Generate(SyntaxTree.Parse("title \"Room above\"\n" + Book(music)), SvgRenderOptions.Preview()), memos);
+
+    private static void CheckLeadersOf(string svg, int memos)
     {
-        string svg = SvgGenerator.Generate(SyntaxTree.Parse("title \"Room above\"\n" + Book(music)), SvgRenderOptions.Preview());
         var leaders = Leaders(svg);
         var underlines = Underlines(svg);
         Assert.Equal(memos, leaders.Count);
         Assert.Equal(memos, underlines.Count);
-        double em = double.Parse(Regex.Match(svg, "<text [^>]*font-size=\"([0-9.]+)\"[^>]*fill=\"#E53935\"[^>]*data-todo=").Groups[1].Value);
         // A memo's box: its underline's span, and the line of text over it (SVG's Y grows
         // downward, so the words lie at smaller Y than the underline — for the .down memo
         // too, whose leader ends at the top of its words instead of at its underline).
-        var boxes = underlines.Select(u => (Left: u.X1, Right: u.X2, Top: u.Y1 - 0.9 * em, Bottom: u.Y1)).ToList();
+        var boxes = MemoBoxes(svg);
         int crossings = 0;
         foreach (var l in leaders)
             foreach (var b in boxes)

@@ -909,7 +909,8 @@ internal sealed partial class LayoutEngine
         List<VerticalSkyline?>? breakerUps = null,
         List<VerticalSkyline?>? breakerDowns = null,
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? breakerBases = null,
-        List<BreakerSplit?>? breakerSplits = null)
+        List<BreakerSplit?>? breakerSplits = null,
+        IReadOnlyList<(int System, double X0, double X1, double Bottom, double Top)>? todoBandBoxes = null)
     {
         if (skylines == null)
             return null;
@@ -1514,6 +1515,16 @@ internal sealed partial class LayoutEngine
                     }
                 }
             }
+        }
+
+        // The preview's memo rows (LayoutOptions.TodoBands): a full-width box over the
+        // system's ink, above or below, where its memos will be set — the band the layout
+        // reserves for the editor's red ink (RunPreliminaryAnnotationPass, TodoMemoBand).
+        if (todoBandBoxes is not null)
+        {
+            foreach (var (s, x0, x1, bottom, top) in todoBandBoxes)
+                if (s < systemCount)
+                    BuilderAt(s).AddMarkBox(x0, x1, bottom, top);
         }
 
         // The lyric block at its ALIGNMENT MINIMUM — the last family, appended after every

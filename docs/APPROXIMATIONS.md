@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 232 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **358** | |
+| `OWN` | 235 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **361** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -27,11 +27,11 @@
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 10 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 8 |
-| `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 7 |
+| `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 6 |
 
 ## APPROX — LP に対応物はあるが、形が違うと自認しているもの（63 件）
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（232 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（235 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
 - **`LilyPondExporter.EmitChordList`** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
@@ -320,7 +320,6 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **`SharedRenderer.DrawStemlessTremolo`** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
-- **`SharedRenderer.TodoRingPadding`** LILYSHARP-OWN, every one: an editor's mark, with no LilyPond counterpart. Owner's
 - **`SharedRenderer.DrawTodoMarks`** LILYSHARP-OWN: an editor's mark, with no LilyPond counterpart.
 - **`SharedRenderer.DrawBendBefore`** LILYSHARP-OWN: LilyPond has no scoop or plop — no grob and no event spells either in
 - **`SharedRenderer.BendLabelEm`** The bend amount label's ENGRAVING em. LILYSHARP-OWN, as
@@ -464,10 +463,12 @@
 - **`LayoutEngine.EnrichExtentsWithAnnotationProtrusions`** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
 - **`LayoutEngine.AugmentSkylinesForPaging`** LILYSHARP-OWN: the SILHOUETTE margin, not ink. It widens a mark's box before the
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Prelim.cs`
+- **`LayoutEngine.RunPreliminaryAnnotationPass`** find a clear place near their notes. LILYSHARP-OWN: an editor's aid.
 - **`LayoutEngine.BowShiftsOf`** LILYSHARP-OWN: the shift itself. LilyPond has no counterpart, because it has no second
 ### `LilySharp.Core/Svg/Layout/LayoutOptions.cs`
 - **`LayoutOptions.SystemSpacing`** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
 - **`LayoutOptions.MeasuresPerSystem`** LILYSHARP-OWN: LilyPond has no such variable (its spelling is a \break every N bars beside the ##f permissions); 0 leaves the breaks to the breaker.
+- **`LayoutOptions.TodoBands`** LILYSHARP-OWN: an editor's aid with no LilyPond counterpart (owner's decision
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
 - **`LineStartColumn.LineStartSpring`** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
 - **`LineStartColumn.LineStartSpring`** LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
@@ -571,6 +572,9 @@
 ### `LilySharp.Core/Svg/Layout/TieFormattingProblem.cs`
 - **`TieFormattingProblem.BowHeight`** LILYSHARP-OWN "observed by nothing". The bow twin sweep (HANDOFF §2 S0) observed it:
 - **`TieFormattingProblem.EdgeYUp`** ⚠️ LILYSHARP-OWN, AND ONLY ON A TAB. LilyPond has one staff_symbol_referencer_
+### `LilySharp.Core/Svg/Layout/TodoMemoBand.cs`
+- **`TodoMemoStyle`** LILYSHARP-OWN, every one: an editor's mark, with no LilyPond counterpart. Owner's
+- **`TodoMemoBand`** LILYSHARP-OWN: an editor's aid with no LilyPond counterpart. The estimate is the memos'
 ### `LilySharp.Core/Svg/Layout/TrillSpannerEngraver.cs`
 - **`TrillSpannerEngraver.BoundPadding`** LILYSHARP-OWN: an X-axis bound gap. LilyPond's (padding . 0.5)
 - **`TrillSpannerEngraver.GetEndX`** BoundPadding short of the measure's end — a device, kept (LILYSHARP-OWN,
