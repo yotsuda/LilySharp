@@ -850,6 +850,10 @@ quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LY
   too (`\RemoveAllEmptyStaves`); any playing voice keeps the staff visible. It chains with
   the line count after one `as` (`staff m as lines 1 removeEmpty all`) and is NOT a part
   property: the full score hides the empty systems, the part sheet of the same part never does.
+- `staff NAME as pitch written|concert` prints THAT staff's transposing part for its player or
+  as it sounds, over the score's `pitch` (see Pitches): `score { staff tp as pitch written
+  staff bs }` under a top-level `pitch concert` is a sounding score with the trumpet in its
+  player's key. Not on an `ossia` (it prints as its staff).
 - Identifiers (parts, phrases, sections) may use any Unicode letters: `phrase 動機 { ... }`.
 - Everything is **case-sensitive**: keywords, identifiers, and vocabulary values (clef /
   instrument-preset / tuning names, key modes) are written in their canonical (lowercase)

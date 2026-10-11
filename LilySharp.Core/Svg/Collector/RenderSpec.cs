@@ -292,7 +292,10 @@ public sealed record RenderSpec(
     LayoutDeclarationSyntax? LayoutRef = null,
     // The bare part names of the score body (GRAMMAR §7 `PartRef`): parts PLAYED and never
     // engraved — a click track, a cue part. Default (unset) reads as none.
-    ImmutableArray<string> MidiOnlyParts = default
+    ImmutableArray<string> MidiOnlyParts = default,
+    // `staff tp as pitch written|concert`: the parts whose staves print by their own `pitch`,
+    // over ScoreConcert (Semantics.ConcertPitch.StaffModes); null when no staff writes one.
+    ImmutableDictionary<string, bool>? StaffPitch = null
 )
 {
     /// <summary>

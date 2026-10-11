@@ -234,6 +234,7 @@ public static class SemanticValidation
             {
                 ScoreTranspose = renderSpec?.ScoreTranspose,
                 ScoreConcert = renderSpec?.ScoreConcert,
+                StaffPitch = renderSpec?.StaffPitch,
             };
             Svg.SvgGenerator.CollectScore(collector, tree, renderSpec);
             return collector;

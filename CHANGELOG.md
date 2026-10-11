@@ -17,6 +17,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Language
 
+- **One staff can print in its player's key.** `staff tp as pitch written` prints that staff's
+  transposing part for its player (`as pitch concert`: as it sounds), over the score's own
+  `pitch` — a sounding full score with the trumpet in its key. It chains with `lines` and
+  `removeEmpty` after the one `as`; an `ossia` refuses it, since it prints as its staff.
+
 - **A chord symbol takes `@todo`.** In a `chords` row the mark is glued after the symbol (and
   after its shape group): `Am7@todo("Am7 or C?")`, `F(133211)@todo(o12 "barre?")`, and `r@todo`
   on a no-chord slot. A chord chart has no notes, so a doubt about a chord had nowhere to go.

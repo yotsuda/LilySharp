@@ -55,7 +55,7 @@ public sealed partial class LilyPondExporter
         // concert-pitch SCORE's shift back to sounding pitch composes on top, as the
         // collector's GetPartDefaults composes it (Semantics.ConcertPitch).
         var scoreConcert = Semantics.ConcertPitch.OutputShift(
-            Semantics.ConcertPitch.ScoreMode(render),
+            Semantics.ConcertPitch.PageMode(render, partName),
             Semantics.ConcertPitch.FileIsConcert(root),
             Semantics.ConcertPitch.FindPart(root, partName));
         return Semantics.PitchTransposer.Compose(

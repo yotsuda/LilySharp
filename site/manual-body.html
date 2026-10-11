@@ -533,8 +533,10 @@ part v1 { clef treble instrument "1st Violin" } // label only — no preset beha
   saxophone the way its player reads it, pitches and key signature together — an
   <code>alto-sax</code> part of a piece in C major prints its <code>c'</code> as
   <code>a'</code>, in A major, and still plays C — and <code>score full pitch concert { … }</code>
-  prints a file written the first way at concert pitch, the conductor's score. A score that
-  says neither prints each part as its letters are written. The default,
+  prints a file written the first way at concert pitch, the conductor's score. One staff can
+  say it for itself — <code>score { staff sx as pitch written  staff pno }</code> is a
+  sounding score with the saxophone in its player's key. A score that says neither prints
+  each part as its letters are written. The default,
   <code>pitch written</code>, is the first convention above. Octave-only instruments
   (<code>bass</code>, <code>piccolo</code>, a <code>transposition 8vb</code>) keep their
   notation under both, as a printed concert score keeps them.</p>
@@ -908,6 +910,7 @@ form practice { Verse }        // a second form = a second output</pre>
     <tr><td><code>staff NAME "Label"</code></td><td>…with a printed name</td></tr>
     <tr><td><code>staff NAME as lines N</code></td><td>…with N staff lines (1–5). <code>as lines 1</code> is a rhythm staff</td></tr>
     <tr><td><code>staff NAME as removeEmpty true</code></td><td>…hidden in systems where it only rests (<code>all</code>: in the first system too)</td></tr>
+    <tr><td><code>staff NAME as pitch written</code></td><td>…a transposing part in its player's key (<code>concert</code>: as it sounds), whatever the score's <code>pitch</code> — see <a href="#transposing">Transposing instruments</a></td></tr>
     <tr><td><code>tab NAME</code></td><td>tablature — see below</td></tr>
     <tr><td><code>chords NAME</code></td><td>a chord row</td></tr>
     <tr><td><code>lyrics NAME</code></td><td>a lyric row</td></tr>

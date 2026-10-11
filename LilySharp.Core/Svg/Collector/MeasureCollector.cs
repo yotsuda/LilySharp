@@ -58,6 +58,17 @@ public sealed partial class MeasureCollector
     public bool? ScoreConcert { get; set; }
 
     /// <summary>
+    /// <c>staff tp as pitch written|concert</c>: the parts whose staves in this score print by
+    /// their own <c>pitch</c>, over <see cref="ScoreConcert"/> (RenderSpec.StaffPitch).
+    /// </summary>
+    public System.Collections.Immutable.ImmutableDictionary<string, bool>? StaffPitch { get; set; }
+
+    /// <summary>How this score prints <paramref name="partName"/>: its staff's own
+    /// <c>pitch</c>, else the score's — Semantics.ConcertPitch.PageMode's rule on the spec.</summary>
+    private bool? PagePitchOf(string partName)
+        => StaffPitch?.TryGetValue(partName, out bool own) == true ? own : ScoreConcert;
+
+    /// <summary>
     /// The <c>title</c> / <c>composer</c> the score being collected states for itself
     /// (<c>score sub { title "Violin I" … }</c>). Set by the render pipeline before
     /// collecting, and applied by <see cref="CollectDefinitions"/> after the file-level
@@ -1042,7 +1053,7 @@ public sealed partial class MeasureCollector
             // Part-body grob defaults (`part <voice> { override … }`) — staff 0 here.
             CollectPartBodyOverrides(tree.GetRoot(), voiceName, _cursor.StaffIndex);
             var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(
-                tree.GetRoot(), voiceName, ScoreConcert, _fileTransposeDefault, _fileIsConcert);
+                tree.GetRoot(), voiceName, PagePitchOf(voiceName), _fileTransposeDefault, _fileIsConcert);
             SetPartTuning(tree.GetRoot(), voiceName);
             // The POSITION follows the clef it describes. A part without its own
             // `clef` keeps the top-level one, so overwriting the offset regardless
@@ -1759,7 +1770,7 @@ public sealed partial class MeasureCollector
 
             // Set clef and octave for this voice from part definition
             var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(
-                tree.GetRoot(), voiceName, ScoreConcert, _fileTransposeDefault, _fileIsConcert);
+                tree.GetRoot(), voiceName, PagePitchOf(voiceName), _fileTransposeDefault, _fileIsConcert);
             SetPartTuning(tree.GetRoot(), voiceName);
             // A clef the staff item wrote (`staff bass melody`) wins over the part's: it is
             // this rendering's clef, the one the page draws (pitches do not depend on it).
@@ -2804,7 +2815,7 @@ public sealed partial class MeasureCollector
     private ImmutableArray<Measure> CollectMelodyFor(SyntaxTree tree, RenderSpec renderSpec, string partName)
     {
         var (partClef, _, _, _, _, _) = GetPartDefaults(
-            tree.GetRoot(), partName, ScoreConcert, _fileTransposeDefault, _fileIsConcert);
+            tree.GetRoot(), partName, PagePitchOf(partName), _fileTransposeDefault, _fileIsConcert);
         var spec = renderSpec with
         {
             Items = ImmutableArray.Create<RenderItemSpec>(

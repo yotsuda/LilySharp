@@ -1017,6 +1017,7 @@ public sealed class IncrementalCompiler
                     {
                         ScoreTranspose = spec?.ScoreTranspose,
                         ScoreConcert = spec?.ScoreConcert,
+                        StaffPitch = spec?.StaffPitch,
                         PaperBase = SvgGenerator.PaperBaseOf(_options.Snippet, _options.Interactive),
                         WalkProbe = resumer,
                         BeamMemo = _beamMemo,
@@ -1085,6 +1086,7 @@ public sealed class IncrementalCompiler
         {
             ScoreTranspose = spec?.ScoreTranspose,
             ScoreConcert = spec?.ScoreConcert,
+            StaffPitch = spec?.StaffPitch,
             // The same paper SvgGenerator starts a book from with these options (the
             // preview's memo rows, LayoutOptions.TodoBands), so the session's picture is
             // the full render's.

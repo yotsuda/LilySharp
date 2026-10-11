@@ -330,6 +330,7 @@ public static class OctaveModeConverter
                 {
                     ScoreTranspose = spec?.ScoreTranspose,
                     ScoreConcert = spec?.ScoreConcert,
+                    StaffPitch = spec?.StaffPitch,
                     RecordsPitchTrace = false,
                     OctaveOverride = hook,
                 };

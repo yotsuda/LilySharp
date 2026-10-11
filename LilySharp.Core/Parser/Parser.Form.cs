@@ -882,7 +882,7 @@ internal sealed partial class Parser
     /// read from its one home (<see cref="Semantics.SymbolCaseValidator.RemoveEmptyValueVocabulary"/>),
     /// Ordinal like every other symbol.
     /// </summary>
-    private void ConsumeStaffSelectors(List<SyntaxToken> tokens)
+    private void ConsumeStaffSelectors(List<SyntaxToken> tokens, bool ossia = false)
     {
         if (!string.Equals(Current.Text, "as", System.StringComparison.Ordinal)
             || Peek(1) is null)
@@ -926,6 +926,32 @@ internal sealed partial class Parser
                 any = true;
                 continue;
             }
+            // `pitch written|concert`: how THIS staff prints its part — for the player or as
+            // it sounds — over the score's own `pitch` (owner's decision 2026-10-11:
+            // Semantics.ConcertPitch.PageMode).
+            if (string.Equals(Current.Text, Semantics.ConcertPitch.Property, System.StringComparison.Ordinal))
+            {
+                var pitchSpan = new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length);
+                tokens.Add(Advance()); // pitch
+                // An ossia prints its part as the part's staff does: a second answer here
+                // would be one the page cannot draw beside the first.
+                if (ossia)
+                    _diagnostics.Error(
+                        pitchSpan,
+                        DiagnosticCodes.UnknownSymbolCase,
+                        "An ossia prints its part the way the part's staff does - write 'as pitch …' on that staff.");
+                var modes = Semantics.ConcertPitch.Modes;
+                if (!modes.Contains(Current.Text, System.StringComparer.Ordinal))
+                    _diagnostics.Error(
+                        new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length),
+                        DiagnosticCodes.UnknownSymbolCase,
+                        $"'{Current.Text}' is not a pitch mode. A staff's 'pitch' takes " +
+                        $"{string.Join(" or ", modes)}.");
+                if (Check(SyntaxKind.Identifier))
+                    tokens.Add(Advance()); // written | concert
+                any = true;
+                continue;
+            }
             break;
         }
         if (!any)
@@ -933,8 +959,8 @@ internal sealed partial class Parser
                 new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length),
                 DiagnosticCodes.UnknownSymbolCase,
                 $"'{Current.Text}' is not a staff selector. 'as' takes 'lines N' " +
-                $"({Semantics.LanguageVocabulary.MinStaffLines}..{Semantics.LanguageVocabulary.MaxStaffLines}) " +
-                "and/or 'removeEmpty true|all|false'.");
+                $"({Semantics.LanguageVocabulary.MinStaffLines}..{Semantics.LanguageVocabulary.MaxStaffLines}), " +
+                "'removeEmpty true|all|false' and/or 'pitch written|concert'.");
     }
 
     /// <summary>
@@ -1174,7 +1200,7 @@ internal sealed partial class Parser
             tokens.Add(Advance());
 
         tokens.Add(ExpectPartName());
-        ConsumeStaffSelectors(tokens);
+        ConsumeStaffSelectors(tokens, ossia: true);
         return new OssiaRenderGreen([.. tokens]);
     }
 

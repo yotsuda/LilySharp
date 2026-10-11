@@ -2058,7 +2058,34 @@ public sealed partial class LilySharpLanguageServer
                 CommandIdentifier = "editor.action.triggerSuggest",
             },
         },
+        // How THIS staff prints its part (2026-10-11): `written` in its player's key, `concert`
+        // as it sounds — over the score's own `pitch` (Semantics.ConcertPitch.PageMode).
+        new CompletionItem
+        {
+            Label = prefix + "pitch",
+            Kind = CompletionItemKind.Keyword,
+            InsertTextFormat = InsertTextFormat.Snippet,
+            InsertText = prefix + "pitch $0",
+            Detail = "How this staff prints a transposing part: written (the player's key) | concert (as it sounds)",
+            SortText = "2",
+            Command = new Command
+            {
+                Title = "Suggest value",
+                CommandIdentifier = "editor.action.triggerSuggest",
+            },
+        },
     ];
+
+    /// <summary>A selector list without <c>pitch</c> when the caret is in an <c>ossia</c>
+    /// row, which does not take it (an ossia prints as its part's staff does).</summary>
+    internal static CompletionList WithoutOssiaPitch(CompletionList list, string text, int offset)
+        => InAnOssiaRow(text, offset)
+            ? new CompletionList
+            {
+                IsIncomplete = list.IsIncomplete,
+                Items = list.Items.Where(i => i.Label is not ("pitch" or "as pitch")).ToArray(),
+            }
+            : list;
 
     /// <summary>After <c>staff NAME</c> / <c>ossia NAME</c>: the <c>as lines N</c> /
     /// <c>as removeEmpty V</c> selectors, then the ordinary render-item continuations so a

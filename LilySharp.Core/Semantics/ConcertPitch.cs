@@ -142,6 +142,49 @@ public static class ConcertPitch
         return false;
     }
 
+    /// <summary>
+    /// How a <c>staff</c> item prints its part — <c>staff tp as pitch written</c> (false),
+    /// <c>as pitch concert</c> (true) — or null when it writes no <c>pitch</c> and the score's
+    /// own answers (<see cref="ScoreMode"/>).
+    /// </summary>
+    public static bool? StaffMode(StaffRenderSyntax staff) => StaffTargets.Of(staff).Pitch?.Text switch
+    {
+        Concert => true,
+        Written => false,
+        _ => null,
+    };
+
+    /// <summary>
+    /// How <paramref name="render"/> prints the part <paramref name="partName"/>: the first of
+    /// its <c>staff</c> items for that part that writes a <c>pitch</c> (a group's members
+    /// included), else the score's own (<see cref="ScoreMode"/>) — null when neither says,
+    /// and the part prints in its letters' convention (<see cref="OutputShift"/>).
+    /// </summary>
+    /// <remarks>
+    /// Owner's decision 2026-10-11: how a page reads belongs to the score — the whole score
+    /// (<c>score full pitch concert</c>) or one of its staves (a sounding full score with the
+    /// trumpet in its player's key: <c>staff tp as pitch written</c>).
+    /// </remarks>
+    public static bool? PageMode(RenderDeclarationSyntax? render, string partName)
+        => StaffModes(render)?.TryGetValue(partName, out bool own) == true ? own : ScoreMode(render);
+
+    /// <summary>The parts whose <c>staff</c> items in <paramref name="render"/> write a
+    /// <c>pitch</c>, each with the first one's mode; null when none does.</summary>
+    public static System.Collections.Immutable.ImmutableDictionary<string, bool>? StaffModes(RenderDeclarationSyntax? render)
+    {
+        if (render == null)
+            return null;
+        System.Collections.Immutable.ImmutableDictionary<string, bool>.Builder? modes = null;
+        foreach (var staff in render.DescendantNodes().OfType<StaffRenderSyntax>())
+        {
+            if (StaffMode(staff) is not { } own)
+                continue;
+            modes ??= System.Collections.Immutable.ImmutableDictionary.CreateBuilder<string, bool>(StringComparer.Ordinal);
+            modes.TryAdd(staff.PartToken?.Text ?? SyntaxFacts.UnnamedPartName, own);
+        }
+        return modes?.ToImmutable();
+    }
+
     /// <summary>Whether <paramref name="render"/> asks to be printed at concert pitch (true),
     /// for the players (false), or writes no <c>pitch</c> and prints each part in the
     /// convention its letters are written in (null).</summary>

@@ -262,7 +262,8 @@ public static class RenderSpecParser
             [.. headerOverrides], fontsRef, paperRef,
             ScoreConcert: LilySharp.Core.Semantics.ConcertPitch.ScoreMode(render),
             LayoutRef: layoutRef,
-            MidiOnlyParts: [.. midiOnlyParts]);
+            MidiOnlyParts: [.. midiOnlyParts],
+            StaffPitch: LilySharp.Core.Semantics.ConcertPitch.StaffModes(render));
     }
 
     /// <summary>

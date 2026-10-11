@@ -1748,7 +1748,14 @@ StaffRender    = 'staff' , [ [ ClefName ] , PartRef ] , [ DisplayName ] ,
                     won, and 'staff bass click' beside 'part bass' drew click on a bass clef and
                     dropped part bass, in silence. *)
 StaffSelector  = 'lines' , Integer
-               | 'removeEmpty' , RemoveEmptyValue ;
+               | 'removeEmpty' , RemoveEmptyValue
+               | 'pitch' , PitchMode ;
+                 (* 'pitch' (2026-10-11, owner's decision): how THIS staff prints its part,
+                    over the score's own 'pitch' (§2.3) — a sounding full score with one
+                    transposing staff in its player's key: 'staff tp as pitch written'. The
+                    first staff of a part that writes one decides for that part in that score
+                    (Semantics.ConcertPitch.PageMode). An 'ossia' refuses it: it prints its
+                    part as the part's staff does. *)
                  (* ONE 'as', then any of the selectors in any order:
                     'staff melody as lines 1 removeEmpty all'. Both are properties
                     of THIS rendering, not of the part. 'lines N' (1..5) is the

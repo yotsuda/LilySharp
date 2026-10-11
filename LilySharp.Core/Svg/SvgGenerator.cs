@@ -183,6 +183,7 @@ public static class SvgGenerator
             {
                 ScoreTranspose = renderSpec?.ScoreTranspose,
                 ScoreConcert = renderSpec?.ScoreConcert,
+                StaffPitch = renderSpec?.StaffPitch,
                 // `--set staffSpace=…` goes under the file's paper, which is read through it.
                 PaperBase = settings?.OnBase(paperBase ?? LayoutOptions.Default) ?? paperBase ?? LayoutOptions.Default,
                 PaperOverrides = settings,

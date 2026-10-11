@@ -89,7 +89,7 @@ public class StaffRowSpellingCompletionTests
         // `staff bass` in a book that declares `part bass` may already be complete, so both
         // readings are offered — the case the unconditional list was written for.
         var labels = LabelsAt(PartNamedBass, "score { staff bass ▮ }");
-        Assert.Equal(new[] { "melody", "bass", "as lines", "as removeEmpty" }, labels);
+        Assert.Equal(new[] { "melody", "bass", "as lines", "as removeEmpty", "as pitch" }, labels);
     }
 
     [Theory]
@@ -110,7 +110,7 @@ public class StaffRowSpellingCompletionTests
     {
         // A group refuses the score-wide list (LYS6011), so the three-word row must land in
         // the GROUP's continuation set, not the score's.
-        Assert.Equal(new[] { "as lines", "as removeEmpty", "staff", "condensedStaff", "combinedStaff", "grandStaff", "staffGroup", "choirStaff", "lyrics" },
+        Assert.Equal(new[] { "as lines", "as removeEmpty", "as pitch", "staff", "condensedStaff", "combinedStaff", "grandStaff", "staffGroup", "choirStaff", "lyrics" },
             LabelsAt(OnePart, "score { grandStaff { staff treble melody ▮ } }"));
     }
 
@@ -159,6 +159,20 @@ public class StaffRowSpellingCompletionTests
         Assert.Contains("staff", labels);
     }
 
+    /// <summary>A staff's own <c>pitch</c> (2026-10-11): offered beside the other selectors,
+    /// its two values after it — and never on an ossia, which prints as its part's staff
+    /// does (the parser refuses it there).</summary>
+    [Fact]
+    public void AStaffOffersPitch_ItsTwoValuesFollow_AndAnOssiaGetsNone()
+    {
+        Assert.Contains("pitch", LabelsAt(OnePart, "score { staff m as ▮ }"));
+        Assert.Equal(new[] { "written", "concert" }, LabelsAt(OnePart, "score { staff m as pitch ▮ }"));
+        Assert.Contains("pitch", LabelsAt(OnePart, "score { staff m as lines 1 ▮ }"));
+        Assert.DoesNotContain("as pitch", LabelsAt(OnePart, "score { ossia m ▮ }"));
+        Assert.DoesNotContain("pitch", LabelsAt(OnePart, "score { ossia m as ▮ }"));
+        Assert.DoesNotContain("pitch", LabelsAt(OnePart, "score { ossia m as lines 1 ▮ }"));
+    }
+
     [Fact]
     public void WhenBothSelectorsAreWritten_OnlyTheContinuationsRemain()
     {
@@ -170,7 +184,7 @@ public class StaffRowSpellingCompletionTests
 
     [Fact]
     public void TheChainInsideAGroup_KeepsTheGroupsNarrowContinuations()
-        => Assert.Equal(new[] { "removeEmpty", "staff", "condensedStaff", "combinedStaff", "grandStaff", "staffGroup", "choirStaff", "lyrics" },
+        => Assert.Equal(new[] { "removeEmpty", "pitch", "staff", "condensedStaff", "combinedStaff", "grandStaff", "staffGroup", "choirStaff", "lyrics" },
             LabelsAt(OnePart, "score { grandStaff { staff m as lines 1 ▮ } }"));
 
     [Theory]

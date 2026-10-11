@@ -1262,6 +1262,8 @@ public sealed partial class LilySharpLanguageServer
                         return CompletionContext.AfterStaffLinesValue;
                     if (row.OpenSelector == "removeEmpty")
                         return CompletionContext.AfterRemoveEmpty;
+                    if (row.OpenSelector == "pitch")
+                        return CompletionContext.AfterPitch;
                     // Inside the `as` clause: the FIRST selector must follow the `as` (the
                     // row cannot end there — ConsumeStaffSelectors reports a bare `as`),
                     // while after a complete one the chain may continue OR the row may end.
@@ -1627,11 +1629,14 @@ public sealed partial class LilySharpLanguageServer
         /// <c>removeEmpty</c>), else null.</summary>
         string? OpenSelector,
         /// <summary>The selectors already complete in this row's chain.</summary>
-        List<string> Selectors);
+        List<string> Selectors,
+        /// <summary>The row is an <c>ossia</c>, which takes no <c>pitch</c>: it prints as its
+        /// part's staff does (ConsumeStaffSelectors refuses it).</summary>
+        bool IsOssia = false);
 
     /// <summary>The selector keywords of a staff row (<c>as lines 1 removeEmpty all</c> —
     /// one <c>as</c>, then any of these in any order, ConsumeStaffSelectors).</summary>
-    private static bool IsStaffSelectorWord(string w) => w is "lines" or "removeEmpty";
+    private static bool IsStaffSelectorWord(string w) => w is "lines" or "removeEmpty" or "pitch";
 
     /// <summary>
     /// Replays the score body from its <c>{</c> to the caret and reports the state of the
@@ -1709,7 +1714,7 @@ public sealed partial class LilySharpLanguageServer
             // other word is some other row (a keyword's, or a bare MIDI-only part name) and
             // the caret is not in a staff row until the next keyword.
             row = w is "staff" or "ossia"
-                ? new StaffRow(true, false, false, false, null, [])
+                ? new StaffRow(true, false, false, false, null, [], IsOssia: w == "ossia")
                 : new StaffRow(false, false, false, false, null, []);
         }
         return row;
@@ -1723,7 +1728,18 @@ public sealed partial class LilySharpLanguageServer
         if (scan.Stack.Count == 0)
             return [];
         var row = ScanStaffRow(text, scan.Stack[^1].OpenIndex + 1, offset);
-        return row.IsRow ? row.Selectors : [];
+        if (!row.IsRow)
+            return [];
+        // An ossia takes no `pitch`: offering it would propose an error.
+        return row.IsOssia && !row.Selectors.Contains("pitch") ? [.. row.Selectors, "pitch"] : row.Selectors;
+    }
+
+    /// <summary>Whether the caret is in an <c>ossia</c> row — whose selector lists leave out
+    /// <c>pitch</c> (it prints as its part's staff does).</summary>
+    internal static bool InAnOssiaRow(string text, int offset)
+    {
+        var scan = new BlockContextScan(text, offset);
+        return scan.Stack.Count > 0 && ScanStaffRow(text, scan.Stack[^1].OpenIndex + 1, offset) is { IsRow: true, IsOssia: true };
     }
 
     private static bool IsScoreBlockOpener(string text, int braceIndex)

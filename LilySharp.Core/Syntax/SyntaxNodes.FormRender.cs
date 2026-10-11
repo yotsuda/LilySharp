@@ -867,12 +867,14 @@ internal static class StaffTargets
 {
     /// <summary>The item's words: the <c>[clef] part [midiOnly]</c> reading, and around it the
     /// label suppression (<c>~</c>), the display name (<c>"…"</c>) and the value tokens of the
-    /// <c>as</c> selectors (<c>lines N</c>, <c>removeEmpty V</c> — the TOKEN, read by
-    /// RenderSpecParser.SelectorsOf; null when not written or written with no value).</summary>
+    /// <c>as</c> selectors (<c>lines N</c>, <c>removeEmpty V</c>, <c>pitch M</c> — the TOKEN,
+    /// read by RenderSpecParser.SelectorsOf and Semantics.ConcertPitch.StaffMode; null when not
+    /// written or written with no value).</summary>
     internal readonly record struct Reading(
         SyntaxTokenNode? Clef, SyntaxTokenNode? Part, SyntaxTokenNode? MidiOnly,
         SyntaxTokenNode? Tilde = null, SyntaxTokenNode? DisplayName = null,
-        SyntaxTokenNode? Lines = null, SyntaxTokenNode? RemoveEmpty = null);
+        SyntaxTokenNode? Lines = null, SyntaxTokenNode? RemoveEmpty = null,
+        SyntaxTokenNode? Pitch = null);
 
     /// <remarks>
     /// ⚠️ ONE BOUNDARY, THE FIRST <c>as</c> (session 871): the words before it are the
@@ -885,7 +887,7 @@ internal static class StaffTargets
     internal static Reading Of(SyntaxNode item)
     {
         var words = new List<SyntaxTokenNode>();
-        SyntaxTokenNode? tilde = null, display = null, lines = null, removeEmpty = null;
+        SyntaxTokenNode? tilde = null, display = null, lines = null, removeEmpty = null, pitch = null;
         int i = 1;
         for (; i < item.SlotCount; i++)
         {
@@ -902,7 +904,7 @@ internal static class StaffTargets
         }
         // The selectors, any order, the last spelling of each winning; a selector word
         // directly followed by the other one wrote no value.
-        static bool IsSelectorWord(SyntaxTokenNode t) => t.Text is "lines" or "removeEmpty";
+        static bool IsSelectorWord(SyntaxTokenNode t) => t.Text is "lines" or "removeEmpty" or "pitch";
         for (i++; i < item.SlotCount; i++)
         {
             if (item.GetChild(i) is not SyntaxTokenNode t || !IsSelectorWord(t))
@@ -911,12 +913,14 @@ internal static class StaffTargets
                 ? v : null;
             if (t.Text == "lines")
                 lines = value;
+            else if (t.Text == "pitch")
+                pitch = value;
             else
                 removeEmpty = value;
             if (value != null)
                 i++;
         }
-        var reading = new Reading(null, null, null, tilde, display, lines, removeEmpty);
+        var reading = new Reading(null, null, null, tilde, display, lines, removeEmpty, pitch);
         if (words.Count == 0)
             return reading;
         if (words.Count == 1)

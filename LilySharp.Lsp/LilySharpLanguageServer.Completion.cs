@@ -306,12 +306,12 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterSingsTarget => GetVoiceBindingNameCompletions(doc.Text,
                 "The part - or named voice - this lyrics track sings"),
             CompletionContext.AfterChordAttachName => GetChordAttachNameCompletions(),
-            CompletionContext.AfterStaffAttachName => GetStaffAttachNameCompletions(),
+            CompletionContext.AfterStaffAttachName => WithoutOssiaPitch(GetStaffAttachNameCompletions(), doc.Text, offset),
             CompletionContext.AfterTabAttachName => GetTabAttachNameCompletions(),
-            CompletionContext.AfterGroupStaffAttachName => GetGroupStaffAttachNameCompletions(),
+            CompletionContext.AfterGroupStaffAttachName => WithoutOssiaPitch(GetGroupStaffAttachNameCompletions(), doc.Text, offset),
             CompletionContext.AfterLyricsRowAttachName => GetLyricsRowAttachNameCompletions(),
             CompletionContext.AfterGroupLyricsRowAttachName => GetGroupLyricsRowAttachNameCompletions(),
-            CompletionContext.AfterStaffLinesAs => GetStaffLinesSelectorCompletions(),
+            CompletionContext.AfterStaffLinesAs => WithoutOssiaPitch(GetStaffLinesSelectorCompletions(), doc.Text, offset),
             // `as lines 1 |` — the chain may go on (bare, sharing the one `as`) or the row
             // may end; the selectors already written are dropped.
             CompletionContext.AfterStaffSelectorChain =>

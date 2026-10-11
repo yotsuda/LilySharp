@@ -306,6 +306,41 @@ public sealed class ConcertPitchTests
         Assert.Contains(tree.Diagnostics, d => d.Message.Contains("Expected pitch mode"));
     }
 
+    // ───────────────────────────── one staff of a score ─────────────────────────────
+
+    /// <summary>A score's own staves (owner's decision 2026-10-11): <c>staff x as pitch …</c>
+    /// prints that staff's part by its own word, over the score's — a sounding full score with
+    /// the saxophone in its player's key — and only that staff's part moves.</summary>
+    [Theory]
+    [InlineData("pitch concert", "", " as pitch written", "A5", 3)]                 // sounding score, one staff for its player
+    [InlineData("pitch concert", " pitch written", " as pitch concert", "C5", 0)]   // players' score, one staff as it sounds
+    [InlineData("", "", " as pitch concert", "Eb4", -3)]                           // a written book's staff at concert pitch
+    [InlineData("pitch concert", "", " as lines 1 pitch written", "A5", 3)]        // beside another selector
+    public void AStaffsOwnPitch_WinsOverTheScores(
+        string top, string scoreOpts, string staffOpts, string expectedPitch, int expectedSharps)
+    {
+        string book = Book(top, "instrument alto-sax", scoreOpts).Replace("{ staff x staff ctl }", $"{{ staff x{staffOpts} staff ctl }}");
+        var (x, xSharps, ctl, ctlSharps) = Page(book);
+
+        Assert.Equal(expectedPitch, x);
+        Assert.Equal(expectedSharps, xSharps);
+        Assert.Equal(("C5", 0), (ctl, ctlSharps));
+        // The LilyPond twin reads the same answer (ConcertPitch.PageMode).
+        bool moved = expectedPitch != "C5";
+        Assert.Equal(moved, !new LilyPondExporter().Export(SyntaxTree.Parse(book)).Contains("x = \\fixed c'"));
+    }
+
+    [Fact]
+    public void AStaffsPitch_IsWrittenOrConcert_AndAnOssiaTakesNone()
+    {
+        var bad = SyntaxTree.Parse(Book("pitch concert", "instrument alto-sax").Replace("staff x staff ctl", "staff x as pitch sounding staff ctl"));
+        Assert.Contains(bad.Diagnostics, d => d.Message.Contains("'sounding' is not a pitch mode"));
+        // An ossia prints as its part's staff does: a second answer is refused at the word.
+        string ossia = Book("pitch concert", "instrument alto-sax").Replace("staff x staff ctl", "staff x ossia x as pitch written staff ctl");
+        var refused = Assert.Single(SyntaxTree.Parse(ossia).Diagnostics, d => d.Message.Contains("An ossia prints its part"));
+        Assert.Equal("pitch", ossia.Substring(refused.Span.Start, refused.Span.Length));
+    }
+
     // ───────────────────────────── the part header ─────────────────────────────
 
     /// <summary>
