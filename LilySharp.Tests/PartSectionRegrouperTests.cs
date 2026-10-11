@@ -455,4 +455,75 @@ public class PartSectionRegrouperTests
             Assert.True(converted.EndsWith(closing, System.StringComparison.Ordinal), lesson.Label);
         }
     }
+    private static int CountComments(string text) =>
+        System.Text.RegularExpressions.Regex.Matches(text, "//[^\n]*").Count;
+
+    /// <summary>
+    /// Every comment inside the regrouped region survives, both ways (owner's request
+    /// 2026-10-11): one around a cell travels inside it, one on a part or a section stands
+    /// above it, and a line comment after a setting no longer swallows the next one.
+    /// </summary>
+    [Theory]
+    [InlineData("""
+        part kit {                      // a player
+          clef percussion
+          section A {                   // the music
+            sn4 sn sn sn |
+          }
+          // the bridge
+          section B { bd1 | }           // loud
+        }
+        form { ~A ~B }
+        score { staff kit }
+        """)]
+    [InlineData("""
+        // the band
+        part low { clef bass // low
+          instrument cello }
+        part high { clef treble }
+
+        // verse
+        section A {
+          // the cello leads
+          low { c4 d e f | }   // softly
+          high { e'1 | }
+        }
+        section B { /* tutti */ low { g,1 | } high { b'1 | } }
+        form { A B }
+        score { staff low  staff high }
+        """)]
+    public void EveryComment_SurvivesRegroup_BothWays(string book)
+    {
+        int before = CountComments(book.Replace("/* tutti */", "// tutti"));
+        string there = Assert.IsType<string>(PartSectionRegrouper.Convert(book));
+        _output.WriteLine(there);
+        Assert.Equal(before, CountComments(there.Replace("/* tutti */", "// tutti")));
+        string back = Assert.IsType<string>(PartSectionRegrouper.Convert(there));
+        _output.WriteLine(back);
+        Assert.Equal(before, CountComments(back.Replace("/* tutti */", "// tutti")));
+        // ⚠️ AND THE MUSIC: a first attempt kept every comment and emptied two cells.
+        foreach (var music in new[] { "sn4 sn sn sn |", "bd1 |", "c4 d e f |", "e'1 |", "g,1 |", "b'1 |" })
+            if (book.Contains(music))
+            {
+                Assert.Contains(music, there);
+                Assert.Contains(music, back);
+            }
+        // Nothing lost to a swallowing comment: the cello is still a cello.
+        if (book.Contains("instrument cello"))
+            Assert.Contains("instrument cello", back.Split('\n').First(l => l.Contains("instrument cello")).Split("//")[0]);
+        Assert.Empty(LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(back))
+            .Where(d => d.Severity == DiagnosticSeverity.Error));
+    }
+
+    [Fact]
+    public void ACommentsComment_StaysWithItsCellsMusic()
+    {
+        // `// the music` was written inside part kit's section A: it comes out inside the
+        // kit cell of section A, and back inside part kit's section A.
+        string book = "part kit { clef percussion\n  section A { // the music\n    sn1 |\n  }\n}\nform { ~A }\nscore { staff kit }";
+        string there = PartSectionRegrouper.Convert(book)!;
+        Assert.Matches(@"kit \{ // the music\s+sn1", there);
+        string back = PartSectionRegrouper.Convert(there)!;
+        Assert.Matches(@"section A \{ // the music\s+sn1", back);
+    }
 }

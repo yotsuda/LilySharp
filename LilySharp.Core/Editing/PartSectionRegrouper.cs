@@ -178,18 +178,59 @@ public static class PartSectionRegrouper
             if (!lyricTracks.Contains(track)) lyricTracks.Add(track);
         }
 
+        // THE COMMENTS (owner's report 2026-10-11: Regroup lost them). Every comment the
+        // copied pieces below do not carry — a cell's and an attribute's text are taken
+        // verbatim, so the comments INSIDE them travel already — is given to the nearest
+        // thing that survives the regroup: a comment around a CELL goes inside it, at its top,
+        // so it moves with its music; one on a part or a section stands above that block in
+        // the output; anything left leads the regenerated region. The first structural
+        // member's leading trivia is Reassemble's and is not counted twice.
+        var comments = CommentSpans(root);
+        var firstLead = FirstStructuralLead(root);
+        var partNotes = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        var sectionNotes = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        var looseNotes = new List<string>();
+        // The comments inside [start, end) that none of `carried` holds.
+        List<string> CommentsOutside(int start, int end, IEnumerable<(int Start, int End)> carried)
+        {
+            var found = new List<string>();
+            foreach (var (s, e) in comments)
+                if (s >= start && e <= end && !(s >= firstLead.Start && e <= firstLead.End)
+                    && !carried.Any(c => s >= c.Start && e <= c.End))
+                    found.Add(source[s..e].TrimEnd());
+            return found;
+        }
+        void Note(Dictionary<string, List<string>> map, string key, List<string> notes)
+        {
+            if (notes.Count == 0) return;
+            if (!map.TryGetValue(key, out var list)) map[key] = list = new();
+            list.AddRange(notes);
+        }
+        // A cell's music with the comments written around it (outside its braces) on top.
+        string Cell(SyntaxNode node)
+        {
+            var (open, close) = Interior(source, node, comments);
+            string music = source[open..close].Trim();
+            var notes = CommentsOutside(node.Position, node.Position + node.FullWidth, [(open, close)]);
+            // Indented as a cell's lines are (both emitters write a cell two spaces in).
+            return notes.Count == 0 ? music : string.Join("\n    ", notes) + "\n    " + music;
+        }
+        (int Start, int End) Whole(SyntaxNode n) => (n.Position, n.Position + n.FullWidth);
+
         foreach (var member in TopLevel(root))
         {
             switch (member)
             {
                 case PartDeclarationSyntax part:
                     var attrs = new List<string>();
+                    var carried = new List<(int, int)>();
                     foreach (var child in DirectChildren(part))
                     {
+                        carried.Add(Whole(child));
                         if (child is SectionDeclarationSyntax inner) // by-part cell
                         {
                             AddSection(inner.SectionName);
-                            Put(cells, (part.Name.Text, inner.SectionName), BetweenBraces(Verbatim(source, inner)),
+                            Put(cells, (part.Name.Text, inner.SectionName), Cell(inner),
                                 $"part '{part.Name.Text}' in section {inner.SectionName}");
                         }
                         else
@@ -197,7 +238,8 @@ public static class PartSectionRegrouper
                             attrs.Add(Verbatim(source, child).Trim());
                         }
                     }
-                    parts.Add((part.Name.Text, string.Join(" ", attrs.Where(a => a.Length > 0))));
+                    Note(partNotes, part.Name.Text, CommentsOutside(member.Position, member.Position + member.FullWidth, carried));
+                    parts.Add((part.Name.Text, JoinPieces(attrs)));
                     break;
 
                 // By-part chord track: chords name { section A { c1 } section B { c1 } }.
@@ -206,9 +248,11 @@ public static class PartSectionRegrouper
                     foreach (var cs in topChords.Sections)
                     {
                         AddSection(cs.SectionName);
-                        Put(chordCells, (topChords.PartName, cs.SectionName), BetweenBraces(Verbatim(source, cs)),
+                        Put(chordCells, (topChords.PartName, cs.SectionName), Cell(cs),
                             $"{ChordsLabel(topChords.PartName)} in section {cs.SectionName}");
                     }
+                    looseNotes.AddRange(CommentsOutside(member.Position, member.Position + member.FullWidth,
+                        topChords.Sections.Select(c => Whole(c))));
                     break;
 
                 // By-part lyric track: lyrics [name] { section A { .. } section B { .. } }.
@@ -222,9 +266,11 @@ public static class PartSectionRegrouper
                     foreach (var ls in topLyrics.Sections)
                     {
                         AddSection(ls.SectionName);
-                        Put(lyricCells, (topLyrics.VoiceName, ord, ls.SectionName), BetweenBraces(Verbatim(source, ls)),
+                        Put(lyricCells, (topLyrics.VoiceName, ord, ls.SectionName), Cell(ls),
                             $"{LyricsLabel(topLyrics.VoiceName)} in section {ls.SectionName}");
                     }
+                    looseNotes.AddRange(CommentsOutside(member.Position, member.Position + member.FullWidth,
+                        topLyrics.Sections.Select(l => Whole(l))));
                     break;
                 }
 
@@ -233,6 +279,8 @@ public static class PartSectionRegrouper
                 case SectionDeclarationSyntax header when IsSectionHeader(header):
                     AddSection(header.SectionName);
                     PutHeader(header.SectionName, SectionDirectiveText(source, header));
+                    Note(sectionNotes, header.SectionName, CommentsOutside(member.Position, member.Position + member.FullWidth,
+                        DirectChildren(header).Where(IsSectionDirective).Select(Whole)));
                     break;
 
                 case SectionDeclarationSyntax section
@@ -241,14 +289,19 @@ public static class PartSectionRegrouper
                     // Section-level directives (`key g major`) fold out to a standalone
                     // header in by-part.
                     PutHeader(section.SectionName, SectionDirectiveText(source, section));
+                    // Comments on the section itself (above it, after its `{`, between its
+                    // blocks) — the cells and directives carry their own.
+                    Note(sectionNotes, section.SectionName, CommentsOutside(member.Position, member.Position + member.FullWidth,
+                        DirectChildren(section).Where(c => c is PartBlockSyntax or ChordPartBlockSyntax or LyricsBlockSyntax
+                            || IsSectionDirective(c)).Select(Whole)));
                     foreach (var pb in DirectChildrenOfType<PartBlockSyntax>(section))
-                        Put(cells, (pb.Name, section.SectionName), BetweenBraces(Verbatim(source, pb)),
+                        Put(cells, (pb.Name, section.SectionName), Cell(pb),
                             $"part '{pb.Name}' in section {section.SectionName}");
                     // In-section chord tracks become by-part chord tracks and back.
                     foreach (var cb in DirectChildrenOfType<ChordPartBlockSyntax>(section))
                     {
                         AddChordPart(cb.PartName);
-                        Put(chordCells, (cb.PartName, section.SectionName), BetweenBraces(Verbatim(source, cb)),
+                        Put(chordCells, (cb.PartName, section.SectionName), Cell(cb),
                             $"{ChordsLabel(cb.PartName)} in section {section.SectionName}");
                     }
                     // In-section lyric verses: the Nth same-named block per section is
@@ -265,7 +318,7 @@ public static class PartSectionRegrouper
                         if (lb is { VoiceName: { } ln, SingsTarget: { } lt }
                             && !lyricSings.ContainsKey(ln))
                             lyricSings[ln] = lt;
-                        Put(lyricCells, (lb.VoiceName, ord, section.SectionName), BetweenBraces(Verbatim(source, lb)),
+                        Put(lyricCells, (lb.VoiceName, ord, section.SectionName), Cell(lb),
                             $"{LyricsLabel(lb.VoiceName)} in section {section.SectionName}");
                     }
                     break;
@@ -282,9 +335,10 @@ public static class PartSectionRegrouper
                 parts.Add((p, ""));
 
         var tracks = new TrackData(chordParts, chordCells, lyricTracks, lyricCells, lyricSings);
+        var notes = new Notes(partNotes, sectionNotes, looseNotes);
         var body = target == Grouping.ByPart
-            ? EmitGroupedByPart(parts, sectionOrder, cells, tracks, sectionHeaders)
-            : EmitGroupedBySection(parts, sectionOrder, cells, tracks, sectionHeaders);
+            ? EmitGroupedByPart(parts, sectionOrder, cells, tracks, sectionHeaders, notes)
+            : EmitGroupedBySection(parts, sectionOrder, cells, tracks, sectionHeaders, notes);
 
         return Reassemble(source, root, body);
     }
@@ -326,20 +380,42 @@ public static class PartSectionRegrouper
         }
     }
 
+    /// <summary>The comments a regroup moves rather than copies (Emit's remark): those on a
+    /// part, those on a section, and the rest.</summary>
+    private sealed record Notes(
+        Dictionary<string, List<string>> Parts,
+        Dictionary<string, List<string>> Sections,
+        List<string> Loose);
+
+    /// <summary>Writes each comment on a line of its own.</summary>
+    private static void AppendNotes(StringBuilder sb, IEnumerable<string>? notes)
+    {
+        if (notes == null) return;
+        foreach (var n in notes)
+            sb.Append(n).Append('\n');
+    }
+
     private static string EmitGroupedByPart(
         List<(string Name, string Attrs)> parts, List<string> sectionOrder,
         Dictionary<(string, string), string> cells, TrackData tracks,
-        Dictionary<string, string> sectionHeaders)
+        Dictionary<string, string> sectionHeaders, Notes notes)
     {
         var sb = new StringBuilder();
+        AppendNotes(sb, notes.Loose);
         // A section's own directives (`key g major`) stand parallel to the parts as a
         // standalone header, stated once for every part playing the section. They lead
         // the layout — a section's meter/key/tempo reads best BEFORE the parts that use it.
+        // A comment on a section has no section block of its own here: it stands where the
+        // section's header does (or would).
         foreach (var section in sectionOrder)
+        {
+            AppendNotes(sb, notes.Sections.GetValueOrDefault(section));
             if (sectionHeaders.TryGetValue(section, out var dir) && dir.Length > 0)
-                sb.Append("section ").Append(section).Append(" { ").Append(dir).Append(" }\n");
+                sb.Append("section ").Append(section).Append(' ').Append(Braced(dir).Replace("\n  }", "\n}")).Append('\n');
+        }
         foreach (var (name, attrs) in parts)
         {
+            AppendNotes(sb, notes.Parts.GetValueOrDefault(name));
             sb.Append("part ").Append(name).Append(" {\n");
             if (attrs.Length > 0)
                 sb.Append("  ").Append(attrs).Append('\n');
@@ -374,17 +450,24 @@ public static class PartSectionRegrouper
     private static string EmitGroupedBySection(
         List<(string Name, string Attrs)> parts, List<string> sectionOrder,
         Dictionary<(string, string), string> cells, TrackData tracks,
-        Dictionary<string, string> sectionHeaders)
+        Dictionary<string, string> sectionHeaders, Notes notes)
     {
         var sb = new StringBuilder();
+        AppendNotes(sb, notes.Loose);
         foreach (var (name, attrs) in parts)
         {
+            AppendNotes(sb, notes.Parts.GetValueOrDefault(name));
             sb.Append("part ").Append(name);
-            sb.Append(attrs.Length > 0 ? " { " + attrs + " }\n" : " { }\n");
+            // Settings that hold a line comment take lines of their own, or the comment
+            // would swallow the brace.
+            sb.Append(attrs.Length == 0 ? " { }\n"
+                : attrs.Contains('\n') || attrs.Contains("//") ? " {\n  " + attrs + "\n}\n"
+                : " { " + attrs + " }\n");
         }
         sb.Append('\n');
         foreach (var section in sectionOrder)
         {
+            AppendNotes(sb, notes.Sections.GetValueOrDefault(section));
             sb.Append("section ").Append(section).Append(" {\n");
             // A standalone header's directives fold back in at the section's top.
             if (sectionHeaders.TryGetValue(section, out var dir) && dir.Length > 0)
@@ -425,13 +508,7 @@ public static class PartSectionRegrouper
         bool emitted = false;
         foreach (var member in TopLevel(root))
         {
-            bool structural = member is PartDeclarationSyntax
-                || (member is ChordPartBlockSyntax cb && cb.HasSections)   // by-part chord track
-                || (member is LyricsBlockSyntax lb && lb.HasSections)      // by-part lyric track
-                || (member is SectionDeclarationSyntax s
-                        && (DirectChildrenOfType<PartBlockSyntax>(s).Any()  // by-section
-                            || IsSectionHeader(s)));                        // standalone header
-            if (structural)
+            if (IsStructural(member))
             {
                 if (!emitted)
                 {
@@ -489,8 +566,83 @@ public static class PartSectionRegrouper
     /// <summary>The section's directive children joined verbatim (the header text folded
     /// into / split out of a section), empty when it carries none.</summary>
     private static string SectionDirectiveText(string source, SectionDeclarationSyntax s)
-        => string.Join(" ", DirectChildren(s).Where(IsSectionDirective)
-            .Select(d => Verbatim(source, d).Trim()).Where(t => t.Length > 0));
+        => JoinPieces(DirectChildren(s).Where(IsSectionDirective).Select(d => Verbatim(source, d).Trim()));
+
+    /// <summary>
+    /// Settings joined on one line — or, when one holds a comment, a line each: a line comment
+    /// joined to the setting after it would swallow it (<c>clef treble // high</c> +
+    /// <c>instrument flute</c> on one line drops the instrument, and still parses).
+    /// </summary>
+    private static string JoinPieces(IEnumerable<string> pieces)
+    {
+        var kept = pieces.Where(t => t.Length > 0).ToList();
+        return kept.Any(t => t.Contains("//") || t.Contains('\n'))
+            ? string.Join("\n  ", kept.Select(t => t.Replace("\n", "\n  ")))
+            : string.Join(" ", kept);
+    }
+
+    /// <summary>Every comment in the tree, as source spans (line comments without their line
+    /// break, block comments whole).</summary>
+    private static List<(int Start, int End)> CommentSpans(CompilationUnitSyntax root)
+    {
+        var found = new List<(int, int)>();
+        Walk(root.Green, 0);
+        return found;
+
+        void Walk(Syntax.InternalSyntax.GreenNode g, int pos)
+        {
+            if (g.Kind is SyntaxKind.LineCommentTrivia or SyntaxKind.BlockCommentTrivia)
+            {
+                found.Add((pos, pos + g.FullWidth));
+                return;
+            }
+            if (g.IsTrivia && g.SlotCount == 0)
+                return;
+            if (g.IsToken)
+            {
+                if (g.LeadingTrivia is { } lead) Walk(lead, pos);
+                if (g.TrailingTrivia is { } trail) Walk(trail, pos + g.FullWidth - trail.FullWidth);
+                return;
+            }
+            for (int i = 0; i < g.SlotCount; i++)
+                if (g.GetSlot(i) is { } child)
+                {
+                    Walk(child, pos);
+                    pos += child.FullWidth;
+                }
+        }
+    }
+
+    /// <summary>The leading trivia of the first structural member's keyword — what
+    /// Reassemble keeps above the regenerated region (empty when there is none).</summary>
+    private static (int Start, int End) FirstStructuralLead(CompilationUnitSyntax root)
+        => TopLevel(root).FirstOrDefault(IsStructural)?.GetChild(0) is SyntaxTokenNode kw
+            ? (kw.FullSpan.Start, kw.Span.Start)
+            : (0, 0);
+
+    /// <summary>A top-level member the regroup rewrites (parts and part-bearing sections,
+    /// by-part tracks, standalone section headers).</summary>
+    private static bool IsStructural(SyntaxNode member)
+        => member is PartDeclarationSyntax
+            || (member is ChordPartBlockSyntax cb && cb.HasSections)   // by-part chord track
+            || (member is LyricsBlockSyntax lb && lb.HasSections)      // by-part lyric track
+            || (member is SectionDeclarationSyntax s
+                    && (DirectChildrenOfType<PartBlockSyntax>(s).Any()  // by-section
+                        || IsSectionHeader(s)));                        // standalone header
+
+    /// <summary>The source range between a node's own <c>{</c> and its last <c>}</c>, neither
+    /// taken from inside a comment — a brace in a comment above or after the block is not its own.</summary>
+    private static (int Open, int Close) Interior(string source, SyntaxNode node, List<(int Start, int End)> comments)
+    {
+        int start = node.Position, end = node.Position + node.FullWidth;
+        bool InComment(int i) => comments.Any(c => i >= c.Start && i < c.End);
+        int open = -1, close = -1;
+        for (int i = start; i < end && open < 0; i++)
+            if (source[i] == '{' && !InComment(i)) open = i;
+        for (int i = end - 1; i > open && close < 0; i--)
+            if (source[i] == '}' && !InComment(i)) close = i;
+        return open < 0 || close <= open ? (start, end) : (open + 1, close);
+    }
 
     /// <summary>
     /// A node's own characters, taken from the SOURCE rather than re-spelled out of
@@ -514,17 +666,6 @@ public static class PartSectionRegrouper
     /// </remarks>
     private static string Verbatim(string source, SyntaxNode node)
         => source.Substring(node.Position, node.FullWidth);
-
-    /// <summary>The inner content between a node's first <c>{</c> and last <c>}</c>,
-    /// trimmed — preserves the music verbatim (including any inner comments).</summary>
-    private static string BetweenBraces(string text)
-    {
-        int open = text.IndexOf('{');
-        int close = text.LastIndexOf('}');
-        if (open < 0 || close < 0 || close <= open)
-            return text.Trim();
-        return text.Substring(open + 1, close - open - 1).Trim();
-    }
 
     /// <summary>Wraps a music cell in braces. A cell that spans lines or ends in a
     /// <c>//</c> line comment puts the closing brace on its OWN line, so the comment

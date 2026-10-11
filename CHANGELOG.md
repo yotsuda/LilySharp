@@ -218,6 +218,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **Regroup keeps the comments.** Converting between by-part and by-section dropped every comment
+  after the last block (a lesson's TRY and NEXT lines), every comment on a part or between the
+  blocks, and those around a part's music in a section. They survive now: one around a cell moves
+  inside it with its music, one on a part or a section stands above that block. A line comment
+  after a part's setting no longer swallows the next setting when they are joined.
+
 - **A drum chord draws once.** `<bd hh>4` drew the chord and then each of its drums again as a
   note of its own, so the bar overflowed into the next. It is one chord now.
 
