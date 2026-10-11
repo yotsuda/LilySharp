@@ -257,7 +257,7 @@ public class LessonTests
     [Fact]
     public void Lesson1_Step3_AnAtAfterTheFirstNote_ListsDynamicsArticulationsAndFermata()
     {
-        int at = Lesson1.IndexOf("e4 d c d", System.StringComparison.Ordinal) + "e4".Length;
+        int at = Lesson1.IndexOf("e4@todo(\"STEP 3\")", System.StringComparison.Ordinal) + "e4".Length;
         var labels = Labels(CompletionAt(Lesson1.Insert(at, "@"), at + 1));
         Assert.Contains("mf", labels);
         Assert.Contains("p", labels);
@@ -267,16 +267,19 @@ public class LessonTests
     }
 
     [Fact]
-    public void Lesson1_Step4_TheEmptyBarOffersCmaj7_InCMajorAndAfterStep1sGMajor()
+    public void Lesson1_Step4_WhereTheRingedRestWas_Cmaj7IsOffered_InCMajorAndAfterStep1sGMajor()
     {
         // Cmaj7, not C: a label nobody can take for the note c. It is the key's IV7 in
-        // G major too, so step 1 having changed the key does not take it away.
-        int at = EmptyLineAfter(Lesson1, "STEP 4");
-        Assert.Equal("<c e g b>", CompletionAt(Lesson1, at).Single(i => i.Label == "Cmaj7").InsertText);
+        // G major too, so step 1 having changed the key does not take it away. The writer
+        // deletes `r1@todo("STEP 4")` and asks there.
+        const string rest = "r1@todo(\"STEP 4\")";
+        Assert.Contains(rest, Lesson1);
+        string emptied = Lesson1.Replace(rest, "");
+        int at = Lesson1.IndexOf(rest, System.StringComparison.Ordinal);
+        Assert.Equal("<c e g b>", CompletionAt(emptied, at).Single(i => i.Label == "Cmaj7").InsertText);
 
-        int keyAt = EmptyLineAfter(Lesson1, "STEP 1");
-        string inG = Lesson1.Insert(keyAt, "key g major");
-        int inGAt = EmptyLineAfter(inG, "STEP 4");
+        string inG = emptied.Insert(EmptyLineAfter(emptied, "STEP 1"), "key g major");
+        int inGAt = at + "key g major".Length;
         Assert.Equal("<c e g b>", CompletionAt(inG, inGAt).Single(i => i.Label == "Cmaj7").InsertText);
     }
 
@@ -298,14 +301,15 @@ public class LessonTests
         string text = Lesson1;
         text = text.Insert(EmptyLineAfter(text, "STEP 1"), "key g major");
         text = text.Insert(EmptyLineAfter(text, "STEP 2"), "instrument cello");
-        int first = text.IndexOf("e4 d c d", System.StringComparison.Ordinal) + "e4".Length;
+        int first = text.IndexOf("e4@todo(\"STEP 3\")", System.StringComparison.Ordinal) + "e4".Length;
         text = text.Insert(first, "@mf");
-        text = text.Insert(EmptyLineAfter(text, "STEP 4"), "<c e g b>");
+        text = text.Replace("r1@todo(\"STEP 4\")", "<c e g b>");
         Assert.Contains("form { |: ~A :| }", Lesson1);   // the sample step 5 shows
         text = text.Replace("form { ~A }", "form { |: ~A :| }");
 
         var tree = SyntaxTree.Parse(text);
-        var diagnostics = tree.Diagnostics.Concat(SemanticValidation.Run(tree)).ToList();
+        var diagnostics = tree.Diagnostics.Concat(SemanticValidation.Run(tree))
+            .Where(d => d.Code != DiagnosticCodes.TodoMark).ToList();   // the rings may stay
         Assert.True(diagnostics.Count == 0, string.Join("\n", diagnostics.Select(d => $"{d.Code}: {d.Message}")));
     }
 
@@ -313,9 +317,9 @@ public class LessonTests
     public void Lesson1_TheMessageExercise_DoesRaiseAMessage()
     {
         // "delete one `e` from `e e e2`: a squiggle appears".
-        Assert.Contains("e e e2", Lesson1);
-        var tree = SyntaxTree.Parse(Lesson1.Replace("e e e2", "e e2"));
-        Assert.NotEmpty(tree.Diagnostics.Concat(SemanticValidation.Run(tree)));
+        Assert.Contains("e@todo(\"MESSAGES\") e e2", Lesson1);
+        var tree = SyntaxTree.Parse(Lesson1.Replace("e@todo(\"MESSAGES\") e e2", "e e2"));
+        Assert.NotEmpty(tree.Diagnostics.Concat(SemanticValidation.Run(tree)).Where(d => d.Code != DiagnosticCodes.TodoMark));
     }
 
     private static Position PositionAtEnd(string text)

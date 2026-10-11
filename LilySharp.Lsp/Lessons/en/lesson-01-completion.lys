@@ -6,6 +6,7 @@
 // Click the score, then ▶ to hear it.
 //
 // Then: Ctrl+Space anywhere lists what you can write there.
+// Red circles in the score show where a step happens.
 
 title "Mary Had a Little Lamb"
 composer "Traditional"
@@ -20,13 +21,12 @@ part melody {
 }
 
 section A {
-  // STEP 3 — Type `@` right after the first `e4` below. Pick `mf`.
+  // STEP 3 — Type `@` right after the ringed `e4`. Pick `mf`.
   melody {
-    e4 d c d | e e e2 | d4 d d2 | e4 g g2 |
+    e4@todo("STEP 3") d c d | e@todo("MESSAGES") e e2 | d4 d d2 | e4 g g2 |
     e4 d c d | e e e e | d d e d | c1 |
-    // STEP 4 — Ctrl+Space on the empty line below. Pick `Cmaj7`: a chord, one more bar.
-
-    |.
+    // STEP 4 — Delete `r1@todo("STEP 4")`, press Ctrl+Space there, pick `Cmaj7`.
+    r1@todo("STEP 4") |.
   }
 }
 
@@ -37,7 +37,7 @@ score {
   staff melody
 }
 
-// MESSAGES — delete one `e` from `e e e2`: a squiggle appears under the bar.
+// MESSAGES — delete the ringed note in bar 2: a squiggle appears under the bar.
 // Rest the mouse on it to read what is wrong. Ctrl+Z puts it back.
 //
 // NEXT — type `lesson` on a new line and pick `lesson-02-notes`.
