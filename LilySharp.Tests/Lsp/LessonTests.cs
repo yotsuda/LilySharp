@@ -303,7 +303,7 @@ public class LessonTests
     [Fact]
     public void Lesson1_Step4_AnAtAfterTheRingedE_ListsDynamicsArticulationsAndFermata()
     {
-        int at = Lesson1.IndexOf("e@todo(\"STEP 4\")", System.StringComparison.Ordinal) + "e".Length;
+        int at = Lesson1.LastIndexOf("e@todo(\"STEP 4\")", System.StringComparison.Ordinal) + "e".Length;   // the comment quotes it first
         Assert.True(at > Lesson1.IndexOf(Step3Mark, System.StringComparison.Ordinal), "the rings run in step order");
         var labels = Labels(CompletionAt(Lesson1.Insert(at, "@"), at + 1));
         Assert.Contains("mf", labels);
@@ -321,8 +321,8 @@ public class LessonTests
         // deletes `r1@todo("STEP 5")` and asks there.
         const string rest = "r1@todo(\"STEP 5\")";
         Assert.Contains(rest, Lesson1);
-        string emptied = Lesson1.Replace(rest, "");
-        int at = Lesson1.IndexOf(rest, System.StringComparison.Ordinal);
+        int at = Lesson1.LastIndexOf(rest, System.StringComparison.Ordinal);   // the comment quotes it first
+        string emptied = Lesson1.Remove(at, rest.Length);
         Assert.Equal("<c e g b>", CompletionAt(emptied, at).Single(i => i.Label == "Cmaj7").InsertText);
 
         string inG = emptied.Insert(EmptyLineAfter(emptied, "STEP 1"), "key g major");
@@ -349,8 +349,9 @@ public class LessonTests
         text = text.Insert(EmptyLineAfter(text, "STEP 1"), "key g major");
         text = text.Insert(EmptyLineAfter(text, "STEP 2"), "instrument cello");
         text = text.Replace(Step3Mark, "");
-        text = text.Replace("e@todo(\"STEP 4\")", "e@mf@todo(\"STEP 4\")");
-        text = text.Replace("r1@todo(\"STEP 5\")", "<c e g b>");
+        text = text.Insert(text.LastIndexOf("e@todo(\"STEP 4\")", System.StringComparison.Ordinal) + 1, "@mf");
+        int rest = text.LastIndexOf("r1@todo(\"STEP 5\")", System.StringComparison.Ordinal);
+        text = text.Remove(rest, "r1@todo(\"STEP 5\")".Length).Insert(rest, "<c e g b>");
         Assert.Contains("form { |: ~A :| }", Lesson1);   // the sample step 6 shows
         text = text.Replace("form { ~A }", "form { |: ~A :| }");
 
