@@ -336,17 +336,6 @@ public class LessonTests
         Assert.Empty(doneTree.Diagnostics.Concat(SemanticValidation.Run(doneTree)));
     }
 
-    [Fact]
-    public void Lesson1_TheMessageExercise_DoesRaiseAMessage()
-    {
-        // "delete the ringed note in bar 3: a squiggle appears". The rings themselves are
-        // not the message.
-        const string ringed = "d@todo(\"MESSAGES\") ";
-        Assert.Contains("d4 " + ringed + "d2", Lesson1);
-        var tree = SyntaxTree.Parse(Lesson1.Replace(ringed, ""));
-        Assert.NotEmpty(tree.Diagnostics.Concat(SemanticValidation.Run(tree)).Where(d => d.Code != DiagnosticCodes.TodoMark));
-    }
-
     private static Position PositionAtEnd(string text)
     {
         var (line, character) = LilySharpLanguageServer.GetLineAndCharacter(text, text.Length);

@@ -6,7 +6,8 @@
 // Click the score, then ▶ to hear it.
 //
 // Then: Ctrl+Space anywhere lists what you can write there.
-// Red circles in the score show where a step happens.
+// Red circles in the score show where a step happens. Step done? Delete its
+// `@todo(…)` (or Ctrl+. on it).
 
 title "Mary Had a Little Lamb"
 composer "Traditional"
@@ -25,7 +26,7 @@ section A {
   // STEP 4 — Type `@` right after the ringed `e` in bar 2. Pick `mf`.
   melody {
     e4@todo("STEP 3: delete this @todo") d c d | e@todo("STEP 4") e e2 |
-    d4 d@todo("MESSAGES") d2 | e4 g g2 |
+    d4 d d2 | e4 g g2 |
     e4 d c d | e e e e | d d e d | c1 |
     // STEP 5 — Delete `r1@todo("STEP 5")`, press Ctrl+Space there, pick `Cmaj7`.
     r1@todo("STEP 5") |.
@@ -39,9 +40,4 @@ score {
   staff melody
 }
 
-// MESSAGES — delete the ringed note in bar 3: a squiggle appears under the bar.
-// Rest the mouse on it to read what is wrong. Ctrl+Z puts it back.
-//
-// DONE — remove the `@todo(…)` marks: Ctrl+. on one, then "Resolve all TODOs".
-//
 // NEXT — type `lesson` on a new line and pick `lesson-02-notes`.
