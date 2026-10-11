@@ -355,6 +355,7 @@ internal sealed class ChordDiagramValidator : ISemanticValidator
 
         var fileScores = ChordDiagramScores.Of(root);
         CheckShapesAgainstSymbols(root, entries, fileScores);
+        CheckShapesSomeScoreDraws(root, entries, fileScores);
 
         // ⑵ In a `chordDiagrams … all` score: the chords with no shape on its tuning — and in a
         // score whose layout table LISTS a chord by name alone, that chord (2026-09-29): both
@@ -462,6 +463,62 @@ internal sealed class ChordDiagramValidator : ISemanticValidator
                 continue;
             Check(symbol, structure, annotation.Shapes, words, inRow: false,
                 ChordDiagramScores.TuningsOfMarkIn(mark, fileScores));
+        }
+    }
+
+    /// <summary>
+    /// ⑷ LYS1038: a written shape that no score drawing its chord can use — an unnamed shape
+    /// whose length is none of those scores' tunings (<c>G(xx543)</c>, five strings, in a file
+    /// whose scores draw the guitar's six), or a shape named for a tuning none of them draws.
+    /// </summary>
+    /// <remarks>
+    /// Owner's report 2026-10-11 (lesson 8, <c>G(xx543)</c>): a length the tuning vocabulary has
+    /// (4–7) passes <see cref="ChordShapes.ParseWords"/>, because a file may carry shapes for
+    /// several instruments and each score takes its own (<see cref="ChordShapes.WrittenFor"/>) —
+    /// so a shape for an instrument no score here draws drew nothing and said nothing. It is
+    /// warned only where some score does draw this chord's diagram: under <c>chordDiagrams
+    /// none</c>, or for a row no score places, no shape is used and none is a slip.
+    /// </remarks>
+    private void CheckShapesSomeScoreDraws(SyntaxNode root, IReadOnlyList<ChordEntrySyntax> entries,
+        IReadOnlyList<ChordDiagramScores.Score> fileScores)
+    {
+        void Check(IReadOnlyList<WrittenShape> shapes, IReadOnlyList<(string Text, TextSpan Span)> words,
+            IReadOnlyList<(ChordDiagramScores.Score Score, string? Word)> scores)
+        {
+            var drawn = scores.Where(s => s.Word != null).Select(s => s.Word!).Distinct(StringComparer.Ordinal)
+                .Select(w => (Tuning: w, Strings: Tablature.Tunings.GetStringCount(Tablature.Tunings.Parse(w))))
+                .ToList();
+            if (drawn.Count == 0)
+                return;
+            foreach (var shape in shapes)
+            {
+                if (drawn.Any(d => ChordShapes.WrittenFor(Tablature.Tunings.Parse(d.Tuning), [shape]) == shape.Shape))
+                    continue;
+                var at = words.FirstOrDefault(w => w.Text == shape.Shape);
+                if (at.Text != null)
+                    _diagnostics.Warning(at.Span, DiagnosticCodes.ChordDiagramNotDrawn,
+                        ChordShapes.UsedByNoScore(shape.Shape, shape.TuningName, drawn));
+            }
+        }
+
+        foreach (var entry in entries)
+        {
+            if (entry.ShapeWords.Count == 0 || ChordDiagramScores.BlockOf(entry)?.PartName is not { } rowName)
+                continue;
+            Check(ChordDiagramScores.ShapesOf(entry).Shapes,
+                [.. entry.ShapeWords.Select(w => (w.Text, w.Span))],
+                ChordDiagramScores.TuningsOfRowIn(root, rowName, fileScores));
+        }
+        foreach (var mark in root.KindSites(SyntaxKind.MusicMark).OfType<MusicMarkSyntax>())
+        {
+            if (ChordAnnotation.Of(mark) is not { } annotation || annotation.Shapes.IsEmpty)
+                continue;
+            var spans = ChordAnnotation.WordSpans(mark);
+            var args = mark.Arguments.Select(a => a.Text).ToList();
+            var words = new List<(string Text, TextSpan Span)>();
+            for (int i = 0; i < args.Count && i < spans.Count; i++)
+                words.Add((args[i], new TextSpan(spans[i].Start, spans[i].End - spans[i].Start)));
+            Check(annotation.Shapes, words, ChordDiagramScores.TuningsOfMarkIn(mark, fileScores));
         }
     }
 }

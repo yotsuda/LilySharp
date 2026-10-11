@@ -151,6 +151,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Diagnostics
 
+- **A chord shape no score can draw warns** (LYS1038). `G(xx543)` is a five-string shape; in a
+  file whose scores draw guitar diagrams it drew nothing and said nothing, because a file may
+  carry shapes for several instruments and each score takes its own. It now says which strings
+  the scores draw ("a 5-string shape, but the scores here draw this chord's diagram on guitar
+  (6 strings)"), in a row and in an `@chord`, and the same for a shape named for a tuning no
+  score draws. A file with a score for each instrument, or one under
+  `chordDiagrams none`, says nothing.
+
 - **A tie on the last note of a `repeat percent` body warns** (LYS4007): the repetition is the
   sign alone, so the tie reaches no note. LilyPond says "unterminated tie"; Lily# said nothing.
   The message names `@laissezVibrer` for a note meant to ring.

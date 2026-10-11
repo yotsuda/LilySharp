@@ -2373,8 +2373,9 @@ than Lily#'s order, below, so every shape of that order passes):
 The bass is not checked: an inversion (`@chord(C 032010)`, LilyPond's own C7 `032310`) is an
 ordinary shape. One warning per shape lists every problem. A shape is checked on the tuning it is routed to
 in each score that draws it (layout, else the part's instrument, else the guitar); a shape
-no score uses (a four-string shape in a guitar-only score) and a shape under
-`chordDiagrams none` are not. A symbol-less `@chord(x32010)` (its name comes from the shape),
+no score uses (a four-string shape in a guitar-only score) is not — it is warned as unused
+(LYS1038: *'0232' is a 4-string shape, but the scores here draw this chord's diagram on
+ guitar (6 strings)*) — and a shape under `chordDiagrams none` is neither. A symbol-less `@chord(x32010)` (its name comes from the shape),
 `@diagram` and a Roman degree in a row (its chord is the key's at its bar) are not checked.
 The notes are named as the chord spells them; any other in the key its root suggests.
 Nine of LilyPond's predefined shapes would warn and are left out of Lily#'s tables — seven

@@ -560,7 +560,9 @@ public class ChordDiagramTests
         const string row = "Cm(8-10-10-8-8-8) | F(1-3-3-2-1-1 2-0-1-0) | Cm7-5(x-3-4-3-4-x) | Cm(x-x-10-12-13-11) |";
         var tree = SyntaxTree.Parse(Song(Guitar, row));
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error);
-        Assert.Empty(Warnings(Song(Guitar, row)));
+        // The 4-string shape is the ukulele's, and this book's one score draws the guitar: it is
+        // used nowhere, and said (2026-10-11) — the only warning.
+        Assert.Equal(new[] { "2-0-1-0" }, Warnings(Song(Guitar, row)).Select(d => d.Message.Split('\'')[1]));
         var entries = tree.GetRoot().DescendantNodes().OfType<ChordEntrySyntax>().ToList();
         Assert.Equal("Cm7-5", entries[2].SymbolText);
         Assert.Equal(new[] { "1-3-3-2-1-1", "2-0-1-0" }, entries[1].ShapeWords.Select(w => w.Text));
@@ -569,7 +571,7 @@ public class ChordDiagramTests
         Assert.Equal(new string?[] { null, "2010", null, null }, RowFrames(Song(Ukulele, row)));
         // The compact form (owner's decision 2026-09-28) reads the same in a row.
         const string compact = "Cm(8-10-10-888) | Cm(8xx88-11 0-3-3-3) | Cm(xx-10-12-13-11) |";
-        Assert.Empty(Warnings(Song(Guitar, compact)));
+        Assert.Equal(new[] { "0-3-3-3" }, Warnings(Song(Guitar, compact)).Select(d => d.Message.Split('\'')[1]));
         Assert.Equal(new string?[] { "8aa888", "8xx88b", "xxacdb" }, RowFrames(Song(Guitar, compact)));
         Assert.Equal(new string?[] { null, "0333", null }, RowFrames(Song(Ukulele, compact)));
     }
@@ -956,13 +958,44 @@ public class ChordDiagramTests
     {
         string book = Song(Guitar, "C(x3201) | F(133211 xx3211) | G(guitr 320003) |");
         var w = Warnings(book);
-        Assert.Equal(2, w.Count);
+        Assert.Equal(3, w.Count);
         Assert.Contains(w, d => d.Message.Contains("two shapes of 6 strings"));
         Assert.Contains(w, d => d.Message.Contains("'guitr' is neither"));
-        // x3201 is five strings: a bass5 or a banjo's, not this score's — silently unused.
-        Assert.DoesNotContain(w, d => d.Message.Contains("'x3201'"));
+        // x3201 is five strings: a bass5 or a banjo's, and no score here draws one — unused, and
+        // said (owner's report 2026-10-11, lesson 8's G(xx543); it used to pass in silence).
+        var five = Assert.Single(w, d => d.Message.Contains("'x3201' is a 5-string shape"));
+        Assert.Equal("x3201", book.Substring(five.Span.Start, five.Span.Length));
         var two = w.First(d => d.Message.Contains("two shapes"));
         Assert.Equal("xx3211", book.Substring(two.Span.Start, two.Span.Length));
+    }
+
+    /// <summary>A shape no score drawing its chord can use is warned — and only then: a file
+    /// for two instruments carries each one's shapes, and under <c>chordDiagrams none</c> no
+    /// shape is used at all, so none is a slip.</summary>
+    [Fact]
+    public void AShapeNoScoreDraws_IsWarned_AndOnlyThen()
+    {
+        // A tuning-named shape for a tuning no score draws, and an @chord's.
+        Assert.Contains(Warnings(Song(Guitar, "G(320003 ukulele 0232) | C | F |")),
+            d => d.Message.StartsWith("'0232' is written for ukulele"));
+        Assert.Contains(Warnings(OnAStaff("g'1@chord(G xx543) |")), d => d.Message.StartsWith("'xx543' is a 5-string shape"));
+        // Two scores, a guitar's and a ukulele's: each shape is some score's.
+        Assert.Empty(Warnings("""
+            part m { clef treble section A { g'1 | } }
+            part u { instrument ukulele section A { g'1 | } }
+            chords prog { section A { G(320003 0232) | } }
+            form { ~A }
+            score { chords prog staff m }
+            score uke { chords prog staff u }
+            """));
+        // No diagram drawn anywhere: nothing to say.
+        Assert.Empty(Warnings("""
+            layout { chordDiagrams none }
+            part m { clef treble section A { g'1 | } }
+            chords prog { section A { G(xx543) | } }
+            form { ~A }
+            score { chords prog staff m }
+            """));
     }
 
     /// <summary>A name with no shape written draws no diagram by design (owner's decision

@@ -755,6 +755,22 @@ public static class ChordShapes
            + "string, low string first (x32010 on a guitar, 0003 on a ukulele), a two-digit fret "
            + "with a '-' on each side (xx-10-12-13-11). It is not used.";
 
+    /// <param name="tuningName">The tuning the shape names (<c>banjo xx543</c>), or null for an
+    /// unnamed one, which is routed by its length.</param>
+    /// <param name="drawn">The tunings the scores here draw this chord's diagram on, each with
+    /// its string count.</param>
+    internal static string UsedByNoScore(string shape, string? tuningName,
+        IReadOnlyList<(string Tuning, int Strings)> drawn)
+    {
+        string where = string.Join(" and ", drawn.Select(d => $"{d.Tuning} ({d.Strings} strings)"));
+        return tuningName != null
+            ? $"'{shape}' is written for {tuningName}, but the scores here draw this chord's diagram "
+              + $"on {where} - no score draws it. It is not used."
+            : $"'{shape}' is a {StringCount(shape)}-string shape, but the scores here draw this "
+              + $"chord's diagram on {where} - write one character per string, low string first "
+              + $"(x32010 on a guitar). It is not used.";
+    }
+
     internal static string WrongLengthNamed(string shape, string tuning, int strings)
         => $"'{shape}' has {Counted(shape)} but '{tuning}' has {strings} strings - "
            + "a shape is one character (or one '-'-separated two-digit fret) per string, low "
