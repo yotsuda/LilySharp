@@ -305,8 +305,15 @@ internal sealed class InkRecorder : IDrawingContext
             // memos need. The box is never shallower than a face's usual ascent and
             // descent: a text the metrics cannot measure (a script the face lacks, read
             // through a fallback) came back with no height, and a memo was set through it.
-            top = Math.Max(top, 0.72 * fontSize);
-            bottom = Math.Min(bottom, -0.22 * fontSize);
+            // ⚠️ ONLY such a text: a measured one keeps its own ink. Floored always, a title
+            // without descenders ("Chord doubts") reached 0.22 em under its baseline, a
+            // memo the layout had made room for under it met that empty band, and climbed
+            // OVER the title (2026-10-11, Lab sessions/p902/probe `chordtodo`).
+            if (top - bottom < 0.1 * fontSize)
+            {
+                top = Math.Max(top, 0.72 * fontSize);
+                bottom = Math.Min(bottom, -0.22 * fontSize);
+            }
             Put(left, y - top, left + advance, y - bottom);
         }
         _inner.DrawText(text, x, y, fontSize, role, style, anchor, fill, verticalAnchor);

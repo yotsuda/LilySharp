@@ -580,7 +580,7 @@ internal static partial class SharedRenderer
     /// lowest head's bottom to the highest head's top), a rest's glyph at its drawn position,
     /// a multi-measure rest's bar over its measure; null for an item that draws no such thing.
     /// </summary>
-    private static (double Left, double Right, double Bottom, double Top)? TodoInkBox(
+    internal static (double Left, double Right, double Bottom, double Top)? TodoInkBox(
         MusicItem item, MeasureLayout measureLayout, ImmutableArray<Measure> measures,
         int measureIndex, int itemIndex, int staffLines, double lineSpacing)
     {

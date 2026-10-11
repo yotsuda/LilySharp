@@ -54,10 +54,17 @@ internal static class TodoMemoStyle
         double em = DynamicEngraver.LabelEm(fonts, true) * Scale * scale;
         double width = 2 * DynamicEngraver.LabelHalfWidth(fonts, memo, expressive: true) * Scale * scale;
         var (ascent, descent) = DynamicEngraver.InkOf(fonts, memo, true);
-        // Never shallower than a face's usual ascent and descent: a text the metrics cannot
-        // measure came back with no height (InkRecorder's floor, the same numbers).
-        ascent = Math.Max(ascent * Scale * scale, 0.72 * em);
-        descent = Math.Max(descent * Scale * scale, 0.22 * em);
+        // The text's own ink, as the drawer measures it — floored at a face's usual ascent and
+        // descent only where the metrics cannot measure it and it came back with no height
+        // (InkRecorder's floor, the same numbers and the same test). Floored always, the
+        // reservation stood a third of a space over the drawn memo.
+        ascent *= Scale * scale;
+        descent *= Scale * scale;
+        if (ascent + descent < 0.1 * em)
+        {
+            ascent = Math.Max(ascent, 0.72 * em);
+            descent = Math.Max(descent, 0.22 * em);
+        }
         return (em, width, ascent, descent + (UnderlineDrop + Pen) * scale);
     }
 }
@@ -108,10 +115,15 @@ internal static class TodoMemoBand
         foreach (var ml in system.Measures)
             measureToLayout[ml.MeasureIndex] = ml;
 
-        // The memos, each with its note's column and its text's box; the short first, as the
-        // drawer sets them.
-        var memos = new List<(double X, bool Below, double Width, double Height)>();
-        foreach (var (_, staff, _) in score.EnumerateStaves())
+        // The memos, each with its note's column, its text's box and its ring's outer edges
+        // (the drawer starts a memo at the ring's edge plus Gap — the marked item's ink +
+        // RingPadding); the short first, as the drawer sets them.
+        var memos = new List<(double X, bool Below, double Width, double Height, double RingTop, double RingBottom)>();
+        foreach (var (_, staff, staffIndex) in score.EnumerateStaves())
+        {
+            int staffLines = MultiStaffLayouter.NotationStaffLinesOf(staff);
+            double spacing = MultiStaffLayouter.LineSpacingOf(staff);
+            double middle = LayoutUtilities.StaffMiddleUpInSystem(system, staffIndex);
             foreach (var voice in staff.Voices)
             {
                 var measures = voice.Measures;
@@ -125,13 +137,22 @@ internal static class TodoMemoBand
                         var item = items[ii];
                         if (item.TodoMemo is not { Length: > 0 } memo)
                             continue;
-                        // The note's column, about where its ring's centre stands.
-                        double x = measureLayout.X + LayoutUtilities.GetItemXOffset(measures, mi, ii, measureLayout) + 0.6;
                         var (_, width, boxUp, boxDown) = TodoMemoStyle.MetricsOf(fonts, memo, 1.0);
-                        memos.Add((x, item.TodoBelow, width, boxUp + boxDown));
+                        // The ring's box as the drawer rings it (the head, the chord's heads, the
+                        // rest — never the stem: a stem-up note's ring stands far under its stem's
+                        // top, and a floor read off the silhouette over the column reserved a memo
+                        // over a note inside the staff a stem too high).
+                        if (SharedRenderer.TodoInkBox(item, measureLayout, measures, mi, ii, staffLines, spacing)
+                            is var (left, right, bottom, top))
+                            memos.Add(((left + right) / 2, item.TodoBelow, width, boxUp + boxDown,
+                                middle + top + TodoMemoStyle.RingPadding, middle + bottom - TodoMemoStyle.RingPadding));
+                        else
+                            memos.Add((measureLayout.X + LayoutUtilities.GetItemXOffset(measures, mi, ii, measureLayout) + 0.6,
+                                item.TodoBelow, width, boxUp + boxDown, double.NegativeInfinity, double.PositiveInfinity));
                     }
                 }
             }
+        }
         // …and the chords rows' memos (ChordNameItem.TodoMemo, docs/todo-memo-design.md §5): a
         // row's symbol stands on its timing column (ChordNameEngraver.SymbolX), its ring's centre
         // half its ink to the right. Without these a row's memo had no room reserved and climbed
@@ -141,17 +162,21 @@ internal static class TodoMemoBand
             if (chord.TodoMemo is not { Length: > 0 } memo || !chord.UseTiming
                 || !measureToLayout.TryGetValue(chord.MeasureIndex, out var measureLayout))
                 continue;
-            double x = measureLayout.X + measureLayout.GetXForTiming(chord.Timing)
-                       + ChordNameEngraver.SymbolInkWidth(fonts, chord) / 2;
+            double inkWidth = ChordNameEngraver.SymbolInkWidth(fonts, chord);
+            double x0 = measureLayout.X + measureLayout.GetXForTiming(chord.Timing);
             var (_, width, boxUp, boxDown) = TodoMemoStyle.MetricsOf(fonts, memo, 1.0);
-            memos.Add((x, chord.TodoBelow, width, boxUp + boxDown));
+            double ringTop = up.IsEmpty ? 0 : up.MaxHeightInRange(x0, x0 + inkWidth);
+            double ringBottom = down.IsEmpty ? 0 : down.MaxHeightInRange(x0, x0 + inkWidth);
+            memos.Add((x0 + inkWidth / 2, chord.TodoBelow, width, boxUp + boxDown,
+                (double.IsInfinity(ringTop) ? 0 : ringTop) + TodoMemoStyle.RingPadding,
+                (double.IsInfinity(ringBottom) ? 0 : ringBottom) - TodoMemoStyle.RingPadding));
         }
         if (memos.Count == 0)
             return null;
         memos.Sort((a, b) => a.Width != b.Width ? a.Width.CompareTo(b.Width) : a.X.CompareTo(b.X));
 
         var boxes = new List<Box>(memos.Count);
-        foreach (var (x, below, width, height) in memos)
+        foreach (var (x, below, width, height, ringTop, ringBottom) in memos)
         {
             bool roomierRight = sysRight - x >= x - sysLeft;
             var right = Settle(x + TodoMemoStyle.Offset);
@@ -162,28 +187,41 @@ internal static class TodoMemoBand
                 : (roomierRight ? right.Bottom <= left.Bottom : right.Bottom < left.Bottom);
             boxes.Add(toRight ? right : left);
 
-            // The box with its left end at l: on the silhouette's ink under it plus the gap,
-            // or over the boxes already estimated that it overlaps, whichever is further out.
+            // The box with its left end at l: on the ink under it plus the gap — never nearer
+            // than the ring's edge plus the gap, where the drawer starts it — or over the boxes
+            // already estimated that it overlaps, whichever is further out. (The box set off to
+            // the side stands over lower ink than the marked item itself: without the ring's
+            // floor a high note's memo was reserved a ring's height too low, and the drawer
+            // climbed past the reservation.)
+            // Its OUTER edge carries the half Air the drawer keeps round a memo
+            // (SharedRenderer.DrawTodoMarks: a place is clear when the box grown by Air/2 above
+            // and below meets no ink). Without it the reservation ended at the memo's own top,
+            // the title on the first page came down to the markup padding over it — 0.5, the
+            // drawer's air exactly — and the drawer, finding its first place blocked by a hair,
+            // climbed a step and then OVER the title with its leader across the letters
+            // (2026-10-11, Lab sessions/p902/probe `chordtodo`; TodoCalloutTests
+            // AMemo_UnderTheTitle_StaysUnderIt). The
+            // near edge already has it: Gap (0.6) under the box exceeds Air/2.
             Box Settle(double l)
             {
                 double x0 = l - TodoMemoStyle.Air * 0.4, x1 = l + width + TodoMemoStyle.Air * 0.4;
                 if (!below)
                 {
                     double ink = up.IsEmpty ? 0 : up.MaxHeightInRange(x0, x1);
-                    double bottom = (double.IsInfinity(ink) ? 0 : Math.Max(ink, 0)) + TodoMemoStyle.Gap;
+                    double bottom = Math.Max(double.IsInfinity(ink) ? 0 : Math.Max(ink, 0), ringTop) + TodoMemoStyle.Gap;
                     foreach (var b in boxes)
                         if (b.X0 < x1 && x0 < b.X1 && b.Top > 0)
-                            bottom = Math.Max(bottom, b.Top + TodoMemoStyle.Air);
-                    return new Box(l, l + width, bottom, bottom + height);
+                            bottom = Math.Max(bottom, b.Top + TodoMemoStyle.Air / 2);   // b.Top holds the other half
+                    return new Box(l, l + width, bottom, bottom + height + TodoMemoStyle.Air / 2);
                 }
                 else
                 {
                     double ink = down.IsEmpty ? 0 : down.MaxHeightInRange(x0, x1);
-                    double top = (double.IsInfinity(ink) ? 0 : Math.Min(ink, 0)) - TodoMemoStyle.Gap;
+                    double top = Math.Min(double.IsInfinity(ink) ? 0 : Math.Min(ink, 0), ringBottom) - TodoMemoStyle.Gap;
                     foreach (var b in boxes)
                         if (b.X0 < x1 && x0 < b.X1 && b.Bottom < 0)
-                            top = Math.Min(top, b.Bottom - TodoMemoStyle.Air);
-                    return new Box(l, l + width, top - height, top);
+                            top = Math.Min(top, b.Bottom - TodoMemoStyle.Air / 2);   // b.Bottom holds the other half
+                    return new Box(l, l + width, top - height - TodoMemoStyle.Air / 2, top);
                 }
             }
         }

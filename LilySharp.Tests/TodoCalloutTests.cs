@@ -237,11 +237,34 @@ public class TodoCalloutTests
         // And a memo that fits in the room the page has anyway moves nothing (owner's report
         // 2026-10-11: a band over every marked system widened the spacing for nothing): a
         // memo on a note inside the staff, under a system whose section mark stands higher
-        // than the memo's box, leaves the preview page as tall as the export's.
-        var fits = SyntaxTree.Parse("title \"Room above\"\noctave absolute\npart m { clef treble }\nsection A { m { c'4 d'4 e'4 f'4 | g'4@todo(\"memo\") a'4 b'4 c''4 | } }\nform { A }\nscore { staff m }\n");
+        // than the memo's box, leaves the preview page as tall as the export's. (The note is
+        // e', not the g' it was: since the reservation carries the air the drawer keeps round
+        // a memo and starts at the ring's top, a g' memo's box stands 0.05 over the mark.)
+        var fits = SyntaxTree.Parse("title \"Room above\"\noctave absolute\npart m { clef treble }\nsection A { m { c'4 d'4 e'4 f'4 | e'4@todo(\"memo\") a'4 b'4 c''4 | } }\nform { A }\nscore { staff m }\n");
         string fitsPreview = SvgGenerator.Generate(fits, SvgRenderOptions.Preview());
         Assert.Single(Leaders(fitsPreview));
         Assert.Equal(PageHeight(SvgGenerator.Generate(fits, SvgRenderOptions.Default)), PageHeight(fitsPreview));
+    }
+
+    [Theory]
+    [InlineData("m { e'4 g c g | a2 e | f4 a c@todo(\"or G?\") a | g2. r4 | }", "score { staff m }")]
+    [InlineData("m { e'4 g c g | a2 e | f4 a c a | g2. r4 | }\n  chords prog { C | Am7@todo(\"Am7 or C?\") | F . G7@todo(\"or G?\") . | G | }", "score { chords prog  staff m }")]
+    public void AMemo_UnderTheTitle_StaysUnderIt(string music, string score)
+    {
+        // A first system's memo, on a high note or on a chords row's symbol, climbed OVER the
+        // title with its leader across the letters (2026-10-11, Lab sessions/p902/probe
+        // `notetodo`, `chordtodo`): the page's ink recorder floored every text's box at 0.22 em
+        // under its baseline, so a title without descenders fenced off the room under it that
+        // the layout had reserved — and the reservation itself stopped at the memo's top,
+        // without the air the drawer keeps round it, and under the ring's top. Every memo
+        // stands under the title's baseline (the title has no descenders).
+        var tree = SyntaxTree.Parse($"title \"Chord doubts\"\npart m {{ clef treble }}\nsection A {{\n  {music}\n}}\nform {{ ~A }}\n{score}\n");
+        string preview = SvgGenerator.Generate(tree, SvgRenderOptions.Preview());
+        double titleBaseline = double.Parse(Regex.Match(preview, "<text [^>]*y=\"(-?[0-9.]+)\"[^>]*>Chord doubts<").Groups[1].Value);
+        var boxes = MemoBoxes(preview);
+        Assert.NotEmpty(boxes);
+        foreach (var b in boxes)
+            Assert.True(b.Top > titleBaseline, $"a memo over the title: memo top {b.Top}, title baseline {titleBaseline}");
     }
 
     /// <summary>Each memo's box in the SVG's frame (Y down): its underline's span, and the

@@ -70,11 +70,17 @@ one system costs under a millisecond of the preview's render.
 - A long memo on a note *between* two short ones, where the first row is taken on both
   sides, is placed by cost like any other; the probes in Lab `sessions/p899/probe` show no
   crossing left in the cases tried, but the search varies the sides only, not the order.
-- **Under the title** a memo on the first system can still climb OVER the title, its leader
-  across the letters (Lab `sessions/p902/probe/notetodo.png`, a note's memo; the same for a
-  chord's): the band reserves the memo's box on the system's silhouette, but the title is not
-  part of it, and the gap the header keeps above the box is narrower than the air the drawer
-  wants round a memo, so the drawer climbs past the title. Measured 2026-10-11; not yet fixed.
+- ~~**Under the title**~~ FIXED 2026-10-11 (p902). A memo on the first system climbed OVER
+  the title, its leader across the letters (Lab `sessions/p902/probe` `notetodo`, a note's
+  memo; `chordtodo`, a chords row's). Three mismatches between the band and the drawer, all
+  needed (each one's fix alone left a probe failing): the page's ink recorder floored every
+  text's box at 0.22 em under its baseline, so a title without descenders fenced off the room
+  under it (now only a text the metrics cannot measure is floored); the band's box stopped at
+  the memo's own top, without the Air/2 the drawer keeps round it (the header's padding, 0.5,
+  left the drawer's first place blocked by a hair, and its next step was over the title); and
+  the band started the box on the ink beside the note, not at the ring's top where the drawer
+  starts it (now read off the ring's own box, `SharedRenderer.TodoInkBox`, never the stem).
+  Guard: `TodoCalloutTests.AMemo_UnderTheTitle_StaysUnderIt`.
 - A memo is never shortened; a very long memo spans the margin (undecided since session 891).
 - `lysc png --todo` would draw the preview's picture as pixels; `PngDocumentOptions.EditorMarks`
   is the door, not yet opened in the CLI.
