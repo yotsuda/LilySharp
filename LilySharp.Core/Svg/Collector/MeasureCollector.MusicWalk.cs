@@ -933,6 +933,8 @@ public sealed partial class MeasureCollector
     private static bool CanStandInGraceTime(SyntaxNode node) => node switch
     {
         NoteSyntax => true,
+        // A drum note — a flam's grace (GraceBodySupport.CarriedDrum, since 2026-10-11).
+        DrumNoteSyntax => true,
         ChordSyntax chord => !chord.IsEmpty,
         RestSyntax rest => rest.RestText != "R",
         TupletExpressionSyntax => true,
@@ -1157,7 +1159,12 @@ public sealed partial class MeasureCollector
                     int drumMeasureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                     int drumItemIndex = builder.CurrentItemCount;
                     Fraction drumAnchorTiming = builder.CurrentDuration;
-                    var drumItem = CreateDrumNoteItem(drumNote);
+                    // Opened like every sounding item — above all for the grace waiting for
+                    // it: a flam (`acciaccatura { sn16 } sn4`) drew no grace until 2026-10-11,
+                    // because this arm never walked it (and LYS4020 called the body empty).
+                    (drumItemIndex, bool drumCue, _) =
+                        OpenSoundingItem(drumNote, builder, drumMeasureIndex, drumItemIndex, ref hasSlurEndAfter);
+                    var drumItem = DecorateSoundingItem(CreateDrumNoteItem(drumNote), drumNote, drumCue);
                     builder.AddItem(drumItem);
                     CollectDrumNoteMarks(drumNote, drumItem, drumMeasureIndex, drumItemIndex, drumAnchorTiming);
                 }
@@ -2375,9 +2382,12 @@ public sealed partial class MeasureCollector
                 // this arm did not exist and the switch fell through: `tuplet 3/2 { sn8 sn sn }`
                 // drew nothing, played nothing and took no time, with no diagnostic (the
                 // owner's report on drum fills, a triplet fill being the common one).
+                (annItemIndex, bool isCue, _) =
+                    OpenSoundingItem(drumNote, builder, annMeasureIndex, annItemIndex, ref hasSlurEndAfter);
                 var drumItem = CreateDrumNoteItem(drumNote);
                 Fraction written = drumItem.Duration;
-                builder.AddItemWithoutDuration(WithBowSources(drumItem with { TimeScale = scale }, m));
+                drumItem = DecorateSoundingItem(drumItem with { TimeScale = scale }, drumNote, isCue);
+                builder.AddItemWithoutDuration(WithBowSources(drumItem, m));
                 CollectDrumNoteMarks(drumNote, drumItem, annMeasureIndex, annItemIndex, annAnchor);
                 return written;
             }

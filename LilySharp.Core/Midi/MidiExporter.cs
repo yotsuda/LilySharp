@@ -2974,6 +2974,21 @@ public sealed class MidiExporter
                     _pendingGraceSteal += g;
                     break;
                 }
+                // A flam's grace (`acciaccatura { sn16 } sn4`): the drum's key on the drum
+                // channel, as ProcessDrumNote plays it. Until 2026-10-11 it fell through and
+                // the flam played as a single stroke.
+                case DrumNoteSyntax drum:
+                {
+                    if (drum.Duration != null) written = drum.Duration.ToFraction();
+                    int g = GraceTicks(written);
+                    var info = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
+                    track.Notes.Add(new MidiNote(9, info.GmKey, _velocity, _currentTick, g,
+                        drum.SourceStart, SourceOrdinal: NextOrdinal(drum.SourceStart),
+                        Timbre: 9, Part: _currentPart, IsGrace: true));
+                    _currentTick += g;
+                    _pendingGraceSteal += g;
+                    break;
+                }
                 case ChordSyntax chord:
                 {
                     if (chord.Duration != null) written = chord.Duration.ToFraction();

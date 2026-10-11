@@ -3923,7 +3923,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var names = tree.GetRoot().ChildNodes().OfType<LilySharp.Core.Syntax.PhraseDeclarationSyntax>()
             .Select(p => p.Name.Text).Distinct(System.StringComparer.Ordinal).ToList();
-        if (names.Count == 0)
+        if (names.Count == 0 && !drums)
             return list;
         var items = list.Items.ToList();
         foreach (var name in names)
@@ -3949,8 +3949,68 @@ public sealed partial class LilySharpLanguageServer
             item.Detail = summary.Tag;
             item.Documentation = new MarkupContent { Kind = MarkupKind.Markdown, Value = summary.ToMarkdown() };
         }
+        if (drums)
+            items.AddRange(StockDrumPatternItems(tree, names));
         return new CompletionList { IsIncomplete = list.IsIncomplete, Items = items.ToArray() };
     }
+
+    /// <summary>
+    /// The stock drum patterns (<see cref="LilySharp.Core.Music.DrumPatterns"/>, owner's
+    /// request 2026-10-11) the document does not declare yet, after its own phrases and in the
+    /// same kit-piece order. Accepting one writes its name here and its <c>phrase NAME { … }</c>
+    /// declaration above the file's first part (or section), so the pattern is the writer's to
+    /// read and change from then on — a library that hid its notes would be one more thing to learn.
+    /// </summary>
+    private static IEnumerable<CompletionItem> StockDrumPatternItems(
+        LilySharp.Core.Syntax.SyntaxTree tree, IReadOnlyCollection<string> declared)
+    {
+        string text = tree.Text;
+        string nl = text.Contains("\r\n", System.StringComparison.Ordinal) ? "\r\n" : "\n";
+        var root = tree.GetRoot();
+        var anchor = root.ChildNodes().FirstOrDefault(n => n is LilySharp.Core.Syntax.PartDeclarationSyntax)
+                     ?? root.ChildNodes().FirstOrDefault(n => n is LilySharp.Core.Syntax.SectionDeclarationSyntax);
+        int at = anchor?.SourceStart ?? text.Length;
+        at = anchor != null ? text.LastIndexOf('\n', System.Math.Max(0, at - 1)) + 1 : at;
+        var (line, character) = GetLineAndCharacter(text, at);
+        string prefix = anchor == null && text.Length > 0 && !text.EndsWith('\n') ? nl : "";
+        foreach (var pattern in LilySharp.Core.Music.DrumPatterns.All)
+        {
+            if (declared.Contains(pattern.Name))
+                continue;
+            int rank = System.Array.IndexOf(LilySharp.Core.Music.PhraseSummary.FamilyOrder, pattern.Family);
+            var summary = StockSummary(pattern);
+            yield return new CompletionItem
+            {
+                Label = pattern.Name,
+                Kind = CompletionItemKind.Snippet,
+                Detail = pattern.Description,
+                SortText = "01" + rank + pattern.Name,
+                Documentation = new MarkupContent
+                {
+                    Kind = MarkupKind.Markdown,
+                    Value = "Stock pattern — accepting it adds `" + pattern.Declaration + "` to the file.\n\n"
+                            + (summary?.ToMarkdown() ?? ""),
+                },
+                InsertText = pattern.Name,
+                AdditionalTextEdits =
+                [
+                    new TextEdit
+                    {
+                        Range = new LspRange { Start = new Position(line, character), End = new Position(line, character) },
+                        NewText = prefix + pattern.Declaration + nl,
+                    },
+                ],
+            };
+        }
+    }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, LilySharp.Core.Music.PhraseSummary?> s_stockSummaries = new();
+
+    /// <summary>What a stock pattern holds, measured once — the same account a declared
+    /// phrase's item carries.</summary>
+    private static LilySharp.Core.Music.PhraseSummary? StockSummary(LilySharp.Core.Music.DrumPattern pattern)
+        => s_stockSummaries.GetOrAdd(pattern.Name, _ =>
+            LilySharp.Core.Music.PhraseSummary.Of(LilySharp.Core.Syntax.SyntaxTree.Parse(pattern.Declaration), pattern.Name));
 
     internal static CompletionList GetDrumCompletions(bool insideVoice = false)
     {

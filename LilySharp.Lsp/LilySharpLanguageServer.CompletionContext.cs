@@ -1962,13 +1962,25 @@ public sealed partial class LilySharpLanguageServer
                 continue; // ascend to the enclosing part block
             }
 
+            // A drum chart is drum music wherever it stands — in a part or in a phrase — and
+            // takes neither another chart nor a voice span inside it (Parser.Drums).
+            if (name == "drums")
+            {
+                insideVoice = true;
+                return true;
+            }
+
             // Structural keywords: this is not a part-music block.
             if (name is "section" or "score" or "form" or "part" or "phrase"
                 or "grandstaff" or "lyrics" or "chords" or "repeat" or "tuplet"
                 or "grace" or "acciaccatura" or "appoggiatura")
                 return false;
 
-            return PartIsPercussion(text, name);
+            if (PartIsPercussion(text, name))
+                return true;
+            // Not a percussion part's name: the word before a chart line's `{` (the line
+            // before it, `drums { hats { …`, or its `up`/`down`) or a named voice — ascend.
+            continue;
         }
         return false;
     }

@@ -773,6 +773,13 @@ in a line are an error (LYS0040). A line holding something a drum part does not 
 note, a nested tuplet) leaves the chart drawn a voice a line. MIDI plays every line; the
 LilyPond and MusicXML exports write each line as a voice.
 
+In a drum part (and inside a chart) the completion list offers the file's own phrases first,
+then a set of **stock patterns**, each one bar of 4/4: `hats8` `hats16` `hats4` `hatsOpen`
+`shuffle` (ride), `back` `halfTime` `flam` (snare), `fourFloor` `kick8` `kickSync` (bass drum),
+`fillToms` `fillTriplet`. Accepting one writes its name and adds its `phrase NAME { … }` above
+the file's first part, so its notes are yours to read and change. A flam is written
+`acciaccatura { sn16 } sn4`.
+
 ## Time Signature
 
 ```

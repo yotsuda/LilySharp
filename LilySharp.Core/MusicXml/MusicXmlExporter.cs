@@ -4818,6 +4818,33 @@ public sealed class MusicXmlExporter
                     break;
                 }
 
+                // A flam's grace: an unpitched grace note, placed and headed as ProcessDrumNote
+                // places a drum (since 2026-10-11; it was dropped, as on the page and in MIDI).
+                case DrumNoteSyntax drum:
+                {
+                    var info = DrumOverrides.Resolve(DrumOverridesMap, drum.DrumName);
+                    int idx = 6 + info.StaffPosition;
+                    if (drum.Duration != null)
+                        graceDuration = drum.Duration.ToFraction();
+                    var (type, _) = GetNoteType(graceDuration);
+                    var (tupletActual, tupletNormal) = CurrentTupletRatio();
+                    var xmlNote = new MusicXmlNote
+                    {
+                        IsGrace = true,
+                        IsSlash = isAcciaccatura,
+                        IsUnpitched = true,
+                        Step = "CDEFGAB"[((idx % 7) + 7) % 7].ToString(),
+                        Octave = 4 + (int)Math.Floor(idx / 7.0),
+                        Type = type,
+                        ActualNotes = tupletActual,
+                        NormalNotes = tupletNormal,
+                        Notehead = NoteheadName(info.Notehead),
+                    };
+                    _currentMeasure.Notes.Add(xmlNote);
+                    (lastGrace, graceSlurOn) = (xmlNote, null);
+                    break;
+                }
+
                 case SlurSyntax { IsOpen: true }:
                     graceSlurOn = lastGrace;
                     break;

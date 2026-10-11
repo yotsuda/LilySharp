@@ -31,7 +31,8 @@ public sealed partial class MeasureCollector
 {
     /// <summary>One hit of a chart line: when it sounds (from the chart's start), how long its
     /// line held it, the tuplet run it was written in (-1: none), and which voice it joins.</summary>
-    private readonly record struct DrumHit(Fraction Onset, Fraction Length, int Run, string Drum, SyntaxNode Node, bool Down);
+    private readonly record struct DrumHit(Fraction Onset, Fraction Length, int Run, string Drum, SyntaxNode Node, bool Down,
+        GraceExpressionSyntax? Grace = null);
 
     /// <summary>A <c>tuplet</c> written in a chart line: the time it covers and its ratio.</summary>
     private sealed record DrumTupletRun(Fraction Start, Fraction End, Fraction Scale, int Ratio, int Base, int SourceStart);
@@ -140,8 +141,13 @@ public sealed partial class MeasureCollector
             }
             runOf[r] = same;
         }
+        // A hit from another line may fall inside a run only on the run's own grid — a
+        // backbeat's quarter on a shuffle's beat joins it; an eighth between two triplet notes
+        // cannot be written in that tuplet, and the chart is drawn as written instead.
         foreach (var h in hits)
-            if (RunAt(runs, h.Onset) is { } inside && (h.Run < 0 || runOf[h.Run] != inside))
+            if (RunAt(runs, h.Onset) is { } inside
+                && (h.Run < 0 || runOf[h.Run] != inside)
+                && !OnRunGrid(inside, h.Onset, hits.Where(o => o.Run >= 0 && runOf[o.Run] == inside)))
                 return null;
 
         var cuts = new SortedSet<Fraction> { Fraction.Zero, length };
@@ -185,6 +191,15 @@ public sealed partial class MeasureCollector
         return pieces;
     }
 
+    /// <summary>True when <paramref name="onset"/>, read in the run's written time, is no
+    /// finer than the run's own hits are — a step its notes already take.</summary>
+    private static bool OnRunGrid(DrumTupletRun run, Fraction onset, IEnumerable<DrumHit> own)
+    {
+        int finest = own.Select(o => ((o.Onset - run.Start) / run.Scale).Denominator)
+            .Append(((run.End - run.Start) / run.Scale).Denominator).Max();
+        return finest % ((onset - run.Start) / run.Scale).Denominator == 0;
+    }
+
     private static DrumTupletRun? RunAt(List<DrumTupletRun> runs, Fraction t)
         => runs.FirstOrDefault(r => r.Start <= t && t < r.End);
 
@@ -223,6 +238,7 @@ public sealed partial class MeasureCollector
         public Fraction Time = Fraction.Zero;
         public Fraction Value;
         public int Dots;
+        private GraceExpressionSyntax? _grace;
 
         public bool Read(List<GreenSite> sites, Fraction scale, int run)
         {
@@ -276,6 +292,11 @@ public sealed partial class MeasureCollector
                                 return false;
                         break;
                     }
+                    // A flam's grace waits for the hit after it, and is walked in front of the
+                    // item that hit joins (EmitDrumPiece).
+                    case GraceExpressionSyntax grace:
+                        _grace = grace;
+                        break;
                     // A mark the flattened walk lists after its own note (IsAttachedMark):
                     // it rides the hit, which collects it.
                     case MusicMarkSyntax when IsAttachedMark(site):
@@ -303,7 +324,10 @@ public sealed partial class MeasureCollector
         {
             var sound = written * scale;
             foreach (var (drum, node) in members)
-                hits.Add(new DrumHit(Time, sound, run, drum, node, down ?? DrumNameRegistry.IsFootDrum(drum)));
+            {
+                hits.Add(new DrumHit(Time, sound, run, drum, node, down ?? DrumNameRegistry.IsFootDrum(drum), _grace));
+                _grace = null;
+            }
             Time += sound;
         }
     }
@@ -378,6 +402,14 @@ public sealed partial class MeasureCollector
         int itemIndex = builder.CurrentItemCount;
         Fraction anchor = builder.CurrentDuration;
         var value = Fraction.FromNoteValue(piece.Value);
+        // A flam: its grace is walked now, in front of the item its hit joined.
+        if (piece.Hits?.FirstOrDefault(h => h.Grace != null) is { Grace: { } grace } graced)
+        {
+            _pendingGrace = grace;
+            _pendingGraceAt = (builder.CurrentMeasureIndex, builder.CurrentItemCount, _meta.Clef);
+            bool noSlur = false;
+            (itemIndex, _, _) = OpenSoundingItem(graced.Node, builder, measureIndex, itemIndex, ref noSlur);
+        }
         MusicItem item;
         if (piece.Hits is not { } hits)
             item = new RestItem(value, piece.Dots, piece.SourceStart);
@@ -401,6 +433,13 @@ public sealed partial class MeasureCollector
             item = new ChordItem(notes, value, piece.Dots, piece.SourceStart);
         }
 
+        if (piece.Hits is { Count: > 0 } sounding)
+            item = item switch
+            {
+                NoteItem n => DecorateSoundingItem(n, sounding[0].Node, false),
+                ChordItem c => DecorateSoundingItem(c, sounding[0].Node, false),
+                _ => item,
+            };
         if (scaled is { } scale)
             builder.AddItemWithoutDuration(item switch
             {

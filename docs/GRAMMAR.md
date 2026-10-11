@@ -1422,6 +1422,7 @@ DrumLine       = [ 'up' | 'down' ] , ( PhraseRef | MusicBlock ) ;
    side. A line holds drum notes, drum chords, bare durations, rests, bar lines, 'tuplet'
    and 'repeat unfold/percent'; a chart whose lines hold anything else (a pitched note, a
    nested tuplet, two tuplets crossing in one voice) is drawn as written, a voice a line.
+   A flam's grace (acciaccatura { sn16 } sn4) is drawn before the item its hit joins.
    Music written straight into the chart, not in a line, is LYS0040. Hits no drummer can
    play at once — three for the hands, three for the feet, the closed and the open hi-hat
    together — warn (LYS4030). MIDI plays every line; the LilyPond and MusicXML exports

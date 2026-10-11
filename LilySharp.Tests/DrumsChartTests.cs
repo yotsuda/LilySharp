@@ -138,6 +138,36 @@ public class DrumsChartTests
     }
 
     [Fact]
+    public void AFlam_DrawsItsGraceNote()
+    {
+        // Until 2026-10-11 a grace before a drum note was never walked: the drum arm did not
+        // open its item, and LYS4020 called the body empty.
+        var score = Collect(Book("r2. acciaccatura { sn16 } sn4 |"));
+        var grace = Assert.Single(score.GraceNotes);
+        Assert.Single(grace.Columns);
+    }
+
+    [Fact]
+    public void AFlamInAChartLine_DrawsItsGrace_InFrontOfTheChordItJoined()
+    {
+        var score = Collect(Book("drums { hats  { r2. acciaccatura { sn16 } sn4 | }  kick }"));
+        var grace = Assert.Single(score.GraceNotes);
+        Assert.Single(grace.Columns);
+        var hands = score.EnumerateStaves().Single().Staff.Voices[0].Measures[0].Items;
+        Assert.IsType<ChordItem>(hands[grace.MainNoteItemIndex]);   // the sn with its hi-hat
+    }
+
+    [Fact]
+    public void AFlam_PlaysItsGrace()
+    {
+        var notes = new MidiExporter().Export(SyntaxTree.Parse(Book("r2. acciaccatura { sn16 } sn4 |")))
+            .Tracks.SelectMany(t => t.Notes).ToList();
+        Assert.Equal(2, notes.Count);
+        Assert.True(notes[0].StartTick < notes[1].StartTick);
+        Assert.All(notes, n => Assert.Equal((9, 38), (n.Channel, n.Pitch)));
+    }
+
+    [Fact]
     public void ALineThatIsNotDrums_DrawsTheChartAsWritten()
     {
         // A pitched note is no kit piece: no merge, a voice a line, as `voice { } { }` draws.

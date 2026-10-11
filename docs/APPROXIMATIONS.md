@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 239 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **365** | |
+| `OWN` | 240 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **366** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（239 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（240 件）
 
 ### `LilySharp.Core/Editing/NoteStepper.cs`
 - **`NoteStepper.NoProgram`** LILYSHARP-OWN: the editor's audition has no LilyPond counterpart (the performer
@@ -287,6 +287,8 @@
 - **`ChordVoicing`** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): the WINDOW voicing. Every
 ### `LilySharp.Core/Music/ChordVoicings.cs`
 - **`ChordVoicings`** LILYSHARP-OWN, all of it: LilyPond has no voicing catalogue. Its predefined fret diagrams
+### `LilySharp.Core/Music/DrumPatterns.cs`
+- **`DrumPatterns`** LILYSHARP-OWN (owner's request 2026-10-11): LilyPond ships no pattern library. Every body
 ### `LilySharp.Core/Music/PhraseAnchor.cs`
 - **`PhraseAnchor.Shape`** LILYSHARP-OWN: LilyPond has neither the item nor a phrase anchor — the twin's
 ### `LilySharp.Core/Music/PhraseSummary.cs`

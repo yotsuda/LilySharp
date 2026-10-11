@@ -608,7 +608,10 @@ drummap { hh: position 6 notehead x }  // TOP LEVEL, optional: re-table a drum
   voices: hands merged on stems up, feet (`bd bda hhp`) stems down. Lines hold drum notes,
   drum chords, rests, `tuplet`, `repeat unfold/percent`. Notes straight in the chart =
   LYS0040; three hands / three feet / hh with hho at once = warning LYS4030. Prefer it to
-  `voice { } { }` for a kit: write each pattern once as a one-bar phrase.
+  `voice { } { }` for a kit: write each pattern once as a one-bar phrase. Flam:
+  `acciaccatura { sn16 } sn4`. The editor offers stock one-bar patterns (`hats8 hats16 hats4
+  hatsOpen shuffle back halfTime flam fourFloor kick8 kickSync fillToms fillTriplet`) and
+  writes their `phrase` declarations into the file; outside the editor, declare them yourself.
 - `drummap { NAME: position N notehead W midi K mark M … }`: position −9…9 (0 = middle
   line), notehead `x cross diamond triangle slash xcircle default`, midi 0…127, mark `open
   stopped staccato tenuto`. It only changes existing drums; a bad entry warns LYS0024. The

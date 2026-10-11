@@ -188,12 +188,17 @@ internal static class GraceBodySupport
     internal static RestSyntax? CarriedRest(SyntaxNode item)
         => item is RestSyntax rest && rest.RestToken.Text != "R" ? rest : null;
 
+    /// <summary>A grace column built from ONE drum — a flam's <c>acciaccatura { sn16 } sn4</c>
+    /// (a column like a note's, its head from the drum table; carried since 2026-10-11).</summary>
+    internal static DrumNoteSyntax? CarriedDrum(SyntaxNode item) => item as DrumNoteSyntax;
+
     /// <summary>
     /// True for a body element that becomes a grace COLUMN. THE question the collector, the
     /// validator and the "engraves nothing" test all ask, so the three cannot drift apart.
     /// </summary>
     internal static bool IsCarried(SyntaxNode item)
-        => CarriedNote(item) != null || CarriedChord(item) != null || CarriedRest(item) != null;
+        => CarriedNote(item) != null || CarriedChord(item) != null || CarriedRest(item) != null
+            || CarriedDrum(item) != null;
 
     /// <summary>
     /// The kinds a grace body engraves, worded as <see cref="GraceBodyValidator"/> says them
@@ -207,7 +212,7 @@ internal static class GraceBodySupport
     /// grows, because a message is not an assertion. Keeping the two lines adjacent does not
     /// make it impossible — it makes it visible to whoever adds the next kind.
     /// </remarks>
-    internal const string CarriedKinds = "notes, chords and rests";
+    internal const string CarriedKinds = "notes, drum notes, chords and rests";
 
     /// <summary>
     /// The annotations written on a carried element: a note's own, and for a chord both the
@@ -238,6 +243,12 @@ internal static class GraceBodySupport
         if (CarriedRest(item) is { } rest)
         {
             foreach (var a in rest.Articulations)
+                yield return a;
+            yield break;
+        }
+        if (CarriedDrum(item) is { } drum)
+        {
+            foreach (var a in drum.Articulations)
                 yield return a;
         }
     }

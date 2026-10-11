@@ -26,6 +26,12 @@ workflow attaches that section to the GitHub Release verbatim.
   (LYS4030); notes written straight into the chart are an error (LYS0040). The editor offers
   `drums` in a drum part and colors its words. MIDI plays every line; the LilyPond and
   MusicXML exports write a voice a line.
+
+- **Stock drum patterns in the completion list.** In a drum part, after the file's own phrases,
+  the list offers thirteen one-bar patterns — hi-hats in eighths, sixteenths and quarters, open
+  off-beats, a ride shuffle, backbeat, half time, a flam, four on the floor, two kicks and two
+  fills — each showing its drum grid. Accepting one writes its name and adds its `phrase`
+  declaration above the first part, so the notes stay in the file to be changed.
 - **One staff can print in its player's key.** `staff tp as pitch transposed` prints that staff's
   transposing part for its player (`as pitch concert`: as it sounds), over the score's own
   `pitch` — a sounding full score with the trumpet in its key. It chains with `lines` and
@@ -205,6 +211,10 @@ workflow attaches that section to the GitHub Release verbatim.
   above the line with ledgers.
 
 ### Fixes
+
+- **A flam is drawn and played.** `acciaccatura { sn16 } sn4` drew no grace note (LYS4020 called
+  the body empty), played a single stroke and wrote no grace to MusicXML: a grace body did not
+  take drum notes. It now does, in a plain drum line and in a `drums { }` chart alike.
 
 - **A drum note's own script is drawn.** `sn4@accent` in a drum part drew no accent (nor any
   other script written on the drum note): only the automatic `+`/`○` of `hhc`/`hho` came
