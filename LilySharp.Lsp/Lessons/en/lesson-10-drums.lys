@@ -20,10 +20,9 @@ phrase back   { r4 sn r sn | }
 phrase kick   { bd4 r8 bd bd4 r | }
 phrase groove { drums { hats back kick } }
 
-part kit { clef percussion }
-
-section A {
-  kit {
+part kit {                      // a player
+  clef percussion
+  section A {                   // the music
     groove groove groove
     drums { kick }              // STEP 1: a fill goes here, beside the kick
   }
