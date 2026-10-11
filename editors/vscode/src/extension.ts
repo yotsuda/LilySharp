@@ -3595,10 +3595,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // the extension gave this page (the head script); no bundle or no processor URL
         // means no synth, and the page plays its oscillator patches.
         let sfSynth = null;
+        let noSynthTold = false;
         function soundFontSynth() {
             if (sfSynth) { return sfSynth; }
             const cfg = window.lysSynthConfig;
-            if (!window.LysSynth || !cfg || !cfg.processor) { return null; }
+            if (!window.LysSynth || !cfg || !cfg.processor) {
+                if (!noSynthTold) {
+                    noSynthTold = true;
+                    vscode.postMessage({ type: 'synthStatus', state: 'failed', detail: !window.LysSynth
+                        ? 'the synth bundle did not load (window.LysSynth is undefined)' : 'no processor URL' });
+                }
+                return null;
+            }
             sfSynth = window.LysSynth.create(audioContext(), cfg.processor, cfg.soundFont || '', (status) => {
                 vscode.postMessage({ type: 'synthStatus', state: status.state, detail: status.detail || '' });
                 if (status.state === 'failed') {
@@ -3633,6 +3641,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
 
         function stopPlayback() {
+            playGeneration++;   // a Play waiting for the sound font is off
             clearTimeout(playEndTimer);
             playEndTimer = null;
             clearInterval(playheadTimer);
@@ -3656,7 +3665,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             setPlayUi(false);
         }
 
-        function startPlayback(notes, offset) {
+        // A Play struck while the sound font is still loading waits for it a few
+        // seconds — the click just resumed the context, so the worklet's processor and
+        // the bank's parsing, which wait for the audio thread, are now under way — and
+        // plays the oscillator patches only if it does not come. The generation makes a
+        // Stop or another Play in the meantime cancel the wait.
+        let playGeneration = 0;
+        function startPlayback(notes, offset, plainTones) {
             offset = offset || 0;
             stopPlayback();
             if (!notes || notes.length === 0) { return; }
@@ -3666,15 +3681,25 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             notes = notes.filter(n => n.T >= offset - 0.001);
             if (notes.length === 0) { return; }
             const ctx = audio();
+            const sf = soundFontSynth();
+            if (sf && sf.state === 'loading' && !plainTones) {
+                const gen = ++playGeneration;
+                setPlayUi(true);
+                flashInfo('Loading the sound font…', 6000);
+                sf.whenReady(8000).then(ok => {
+                    if (gen !== playGeneration) { return; }
+                    if (!ok) { flashInfo('The sound font is not ready: plain tones this time'); }
+                    startPlayback(notes, offset, !ok);
+                });
+                return;
+            }
             let t0 = ctx.currentTime + 0.15;
             let end;
-            const sf = soundFontSynth();
-            if (sf && sf.ready) {
+            if (sf && sf.ready && !plainTones) {
                 sfPlayer = sf.play(notes, offset, t0);
                 t0 = sfPlayer.t0;
                 end = sfPlayer.end;
             } else {
-                if (sf && sf.state === 'loading') { flashInfo('The sound font is still loading: plain tones this time'); }
                 end = startOscillators(ctx, notes, offset, t0);
             }
             setPlayUi(true);

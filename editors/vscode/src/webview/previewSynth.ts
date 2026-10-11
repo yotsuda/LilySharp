@@ -154,23 +154,50 @@ export class PreviewSynth {
 
     get ready(): boolean { return this.state === 'ready' && this.synth !== null; }
 
+    private readonly waiters: ((ready: boolean) => void)[] = [];
+
+    /** Resolves true once the synth can play, false when it fails, is unloaded or
+     *  `timeoutMs` passes first. The caller resumes the context (a gesture) before
+     *  waiting: the worklet's processor is built, and the bank parsed, only once the
+     *  audio thread runs — a page's context is suspended until its first click. */
+    whenReady(timeoutMs: number): Promise<boolean> {
+        if (this.ready) { return Promise.resolve(true); }
+        if (this.state !== 'loading') { return Promise.resolve(false); }
+        return new Promise<boolean>(resolve => {
+            let done = false;
+            const settle = (ok: boolean) => { if (!done) { done = true; resolve(ok); } };
+            this.waiters.push(settle);
+            setTimeout(() => settle(false), timeoutMs);
+        });
+    }
+
+    private settle(state: SynthState, detail: string): void {
+        this.state = state;
+        this.onStatus({ state, detail });
+        if (state !== 'loading') {
+            const waiting = this.waiters.splice(0);
+            for (const w of waiting) { w(state === 'ready'); }
+        }
+    }
+
+    // Every stage is reported, because the stages that need the audio thread —
+    // the processor's construction (isReady) and the bank's parsing (addSoundBank) —
+    // do not complete while the context is suspended, and a log that stops at a stage
+    // says which one is waiting (owner's report 2026-10-11: no synth line at all).
     private async start(processorUrl: string, soundFontUrl: string): Promise<void> {
         try {
+            this.settle('loading', 'adding the worklet processor (context ' + this.ctx.state + ')');
             await addProcessor(this.ctx, processorUrl);
             const synth = new WorkletSynthesizer(this.ctx);
             synth.connect(this.master);
-            await synth.isReady;
             this.synth = synth;
+            this.settle('loading', 'synth created; its processor starts with the audio thread (context ' + this.ctx.state + ')');
+            void synth.isReady.then(() => this.onStatus({ state: this.state, detail: 'the worklet answered' }));
         } catch (e) {
-            this.fail('the synth did not start: ' + String(e));
+            this.settle('failed', 'the synth did not start: ' + String(e));
             return;
         }
         await this.setSoundFont(soundFontUrl);
-    }
-
-    private fail(detail: string): void {
-        this.state = 'failed';
-        this.onStatus({ state: 'failed', detail });
     }
 
     /** Loads (or replaces) the sound font; an empty URL unloads it, and the page falls
@@ -179,12 +206,10 @@ export class PreviewSynth {
         await this.init.catch(() => { /* reported by start */ });
         if (!this.synth) { return; }
         if (!url) {
-            this.state = 'none';
-            this.onStatus({ state: 'none', detail: 'no sound font' });
+            this.settle('none', 'no sound font');
             return;
         }
-        this.state = 'loading';
-        this.onStatus({ state: 'loading', detail: url });
+        this.settle('loading', 'fetching ' + url);
         const serial = ++this.bankSerial;
         try {
             const started = Date.now();
@@ -192,19 +217,18 @@ export class PreviewSynth {
             if (!response.ok) { throw new Error('HTTP ' + response.status); }
             const buffer = await response.arrayBuffer();
             if (serial !== this.bankSerial) { return; }   // another font was asked for meanwhile
+            const mb = (buffer.byteLength / 1048576).toFixed(1);
+            this.settle('loading', 'fetched ' + mb + ' MB in ' + (Date.now() - started)
+                + ' ms; the synth parses it once the audio thread runs (context ' + this.ctx.state + ')');
             const id = 'lys-' + serial;
             await this.synth.soundBankManager.addSoundBank(buffer, id);
             if (this.bankId) { await this.synth.soundBankManager.deleteSoundBank(this.bankId); }
             this.bankId = id;
             if (serial !== this.bankSerial) { return; }
-            this.state = 'ready';
-            this.onStatus({
-                state: 'ready',
-                detail: (buffer.byteLength / 1048576).toFixed(1) + ' MB in ' + (Date.now() - started) + ' ms: ' + url,
-            });
+            this.settle('ready', mb + ' MB in ' + (Date.now() - started) + ' ms: ' + url);
         } catch (e) {
             if (serial !== this.bankSerial) { return; }
-            this.fail('the sound font did not load (' + String(e) + '): ' + url);
+            this.settle('failed', 'the sound font did not load (' + String(e) + '): ' + url);
         }
     }
 
