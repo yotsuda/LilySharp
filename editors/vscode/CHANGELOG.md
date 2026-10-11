@@ -77,6 +77,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Fixes
 
+- **The preview checks the source offsets of a page it updated in place.** After reusing the
+  unchanged systems of a changed page, it reads every offset back against the page it was
+  sent; a page that disagrees is replaced whole, and the output channel says
+  `STALE OFFSETS on page N`. A stale offset made the caret or a selection light the wrong
+  note until the preview was reopened.
 - **A `@todo` memo in a score with a numeric meter (3/4, 6/8, …) no longer stops the
   preview.** Placing the memo measured every glyph on the page by its design box, which the
   time-signature digits do not have; the picture failed to render at all (4/4, drawn as the

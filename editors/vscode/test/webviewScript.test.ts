@@ -49,3 +49,45 @@ describe('the preview page script', () => {
         }
     });
 });
+
+// The page's offsets read back after a group reconcile (offsetsDisagree): the guard that
+// replaces a page whose reused groups kept a stale data-pos (owner report 2026-10-11 —
+// selecting a note lit another one until the preview was reopened). The DOM is not
+// available here, so the function is taken out of the evaluated page script and handed
+// pages made of plain objects: what it reads is each element's attributes, in order.
+describe('the preview reads its offsets back after a reconcile', () => {
+    const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const start = source.indexOf('return `<!DOCTYPE html>') + 'return '.length;
+    const end = source.indexOf('</html>`;', start) + '</html>`'.length;
+    const html = new vm.Script(source.slice(start, end).replace(/\$\{[^}]*\}/g, 'X')).runInNewContext({}) as string;
+    const head = 'function offsetsDisagree(';
+    const at = html.indexOf(head);
+    let depth = 0, close = -1;
+    for (let i = html.indexOf('{', at); i < html.length; i++) {
+        if (html[i] === '{') depth++;
+        else if (html[i] === '}' && --depth === 0) { close = i + 1; break; }
+    }
+    const offsetsDisagree = new vm.Script('(' + html.slice(at, close) + ')').runInNewContext({}) as
+        (page: unknown, markup: string) => string | null;
+
+    type Attr = { name: string; value: string };
+    const page = (...els: Attr[][]) => ({ querySelectorAll: () => els.map(attributes => ({ attributes })) });
+    const pos = (v: string): Attr => ({ name: 'data-pos', value: v });
+    const alt = (v: string): Attr => ({ name: 'data-alt', value: v });
+    const markup = '<g><path d="M0" data-pos="12"/><rect data-pos="30" data-alt="31 40"/><text class="x">a</text></g>';
+
+    it('finds the function in the page script', () => {
+        assert.ok(at >= 0 && close > at, 'offsetsDisagree is not in the page script');
+    });
+    it('says nothing when every offset agrees, data-alt included, in attribute order', () => {
+        assert.equal(offsetsDisagree(page([pos('12')], [pos('30'), alt('31 40')]), markup), null);
+    });
+    it('names the first offset a reused group kept stale', () => {
+        const why = offsetsDisagree(page([pos('12')], [pos('38'), alt('31 40')]), markup);
+        assert.match(why ?? '', /#1 drawn data-pos=38, markup data-pos=30/);
+    });
+    it('notices an element too many or too few', () => {
+        assert.notEqual(offsetsDisagree(page([pos('12')]), markup), null);
+        assert.notEqual(offsetsDisagree(page([pos('12')], [pos('30'), alt('31 40')], [pos('99')]), markup), null);
+    });
+});

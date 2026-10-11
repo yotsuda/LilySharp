@@ -2874,6 +2874,48 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             return attrs.exec(markup) === null;
         }
 
+        // A page's source offsets as drawn, in document order, against the markup the page
+        // was just brought up to — what the group reconcile promises (a kept or carried group
+        // re-stamped, a parsed one fresh). Reading them back costs one pass over the page's
+        // offset-carrying elements, far less than the parse the reconcile saves, and it is
+        // the one place a reconcile that left an offset stale can be seen: the caret and the
+        // selection light whatever note carries the offset, so a stale one lights the wrong
+        // note (owner report 2026-10-11: selecting a d lit the e three notes on, until the
+        // preview was reopened — the server's pages were right, measured edit by edit).
+        // null when they agree, else what differed first, for the output channel.
+        function offsetsDisagree(page, markup) {
+            const drawn = [];
+            for (const el of page.querySelectorAll('[data-pos], [data-alt]')) {
+                for (const a of el.attributes) {
+                    if (a.name === 'data-pos' || a.name === 'data-alt') drawn.push(a.name + '=' + a.value);
+                }
+            }
+            const attrs = /\\sdata-(pos|alt)="([^"]*)"/g;
+            let k = 0;
+            for (let m; (m = attrs.exec(markup)); k++) {
+                const want = 'data-' + m[1] + '=' + m[2];
+                if (drawn[k] !== want) return 'offset #' + k + ' drawn ' + (drawn[k] || 'none') + ', markup ' + want;
+            }
+            return k === drawn.length ? null : drawn.length + ' offsets drawn, ' + k + ' in the markup';
+        }
+
+        // After a reconcile: every changed page's offsets read back against its markup, and
+        // a page that disagrees replaced from its markup — said loudly in the account, so the
+        // reconcile's slip is found from the output channel the next time it happens.
+        function recheckOffsets(live, livePages, markups, changed) {
+            let note = '';
+            for (const i of changed) {
+                const why = offsetsDisagree(livePages[i], markups[i]);
+                if (!why) continue;
+                const fresh = parseOne(markups[i]);
+                if (!fresh) return note + '; STALE OFFSETS on page ' + i + ' (' + why + '), and it did not parse alone';
+                live.replaceChild(fresh, livePages[i]);
+                shownPages[i] = { markup: markups[i], blank: markups[i].replace(SOURCE_ATTRS, ' $1') };
+                note += '; STALE OFFSETS on page ' + i + ' after the reconcile (' + why + ') - page replaced';
+            }
+            return note;
+        }
+
         // Inside a page the renderer puts each SYSTEM, and then the page's overlays
         // (slurs, lyrics, dynamics, marks — drawn after every system), in a labeled
         // group of its own (SharedRenderer, BeginLabeledGroup — interactive SVG
@@ -3135,7 +3177,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     account = ', replaced ' + pagesReplaced + ' (reconcile gave up: ' + r.fail + ')';
                 } else {
                     account = ', reconciled ' + changed.length + ' (groups kept ' + r.kept + ', moved ' + r.moved
-                        + ', carried ' + r.carried + ', parsed ' + r.parsed + (r.why ? '; ' + r.why : '') + ')';
+                        + ', carried ' + r.carried + ', parsed ' + r.parsed + (r.why ? '; ' + r.why : '') + ')'
+                        + recheckOffsets(live, livePages, split.pages, changed);
                 }
             }
             return 'pages kept ' + pagesKept + ', re-stamped ' + pagesRestamped + account;
@@ -3245,7 +3288,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     account = ', replaced ' + pagesReplaced + ' (reconcile gave up: ' + r.fail + ')';
                 } else {
                     account = ', reconciled ' + changed.length + ' (groups kept ' + r.kept + ', moved ' + r.moved
-                        + ', carried ' + r.carried + ', parsed ' + r.parsed + (r.why ? '; ' + r.why : '') + ')';
+                        + ', carried ' + r.carried + ', parsed ' + r.parsed + (r.why ? '; ' + r.why : '') + ')'
+                        + recheckOffsets(live, livePages, markups, changed);
                 }
             }
             return 'pages kept ' + pagesKept + ', shifted ' + pagesShifted + account;
