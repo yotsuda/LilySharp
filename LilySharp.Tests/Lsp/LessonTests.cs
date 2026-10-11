@@ -50,10 +50,10 @@ public class LessonTests
         LilySharpLanguageServer.LessonsByLanguage[language].Single(l => l.Label == label);
 
     [Fact]
-    public void TheEnglishSet_IsTenLessons_NumberedInOrder()
+    public void TheEnglishSet_IsElevenLessons_NumberedInOrder()
     {
         var lessons = LilySharpLanguageServer.Lessons;
-        Assert.Equal(10, lessons.Count);
+        Assert.Equal(11, lessons.Count);
         for (int i = 0; i < lessons.Count; i++)
         {
             Assert.StartsWith($"lesson-{i + 1:D2}-", lessons[i].Label);
@@ -179,7 +179,7 @@ public class LessonTests
     }
 
     [Fact]
-    public void Lesson10_TheTrumpetsPartReadsItsKey_AndTheBandSoundsInC()
+    public void Lesson11_TheTrumpetsPartReadsItsKey_AndTheBandSoundsInC()
     {
         // Owner's decisions 2026-10-11: under the file's `pitch concert` the letters are what
         // sounds, and a score inherits that — the full score prints the trumpet as it sounds
@@ -187,7 +187,7 @@ public class LessonTests
         // every score sounds the letters (a band in C; `pitch written` for the file made the
         // trumpet sound in B♭ against it): the same keys as the same letters on an instrument
         // that does not transpose.
-        string text = LilySharpLanguageServer.Lessons[9].Text;
+        string text = LilySharpLanguageServer.Lessons[10].Text;
         Assert.Contains("pick `trumpet`", text);
         string untransposed = text.Replace("part lead { instrument trumpet }", "part lead { clef treble }");
         Assert.NotEqual(text, untransposed);
@@ -203,11 +203,11 @@ public class LessonTests
     }
 
     [Fact]
-    public void Lesson10_TheKitIsADrumChart_DrawnInTwoVoices()
+    public void Lesson11_TheKitIsADrumChart_DrawnInTwoVoices()
     {
         // Owner's request 2026-10-11: the band's drums are written as patterns in drums { }
         // and read as a drummer reads them — hats and snare as chords on top, the kick below.
-        string text = LilySharpLanguageServer.Lessons[9].Text;
+        string text = LilySharpLanguageServer.Lessons[10].Text;
         Assert.Contains("drums {", text);
         var tree = SyntaxTree.Parse(text);
         var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(tree,
@@ -356,6 +356,55 @@ public class LessonTests
             TextDocument = new TextDocumentIdentifier { Uri = uri },
             Position = new Position(line, character),
         })?.Items ?? [];
+    }
+
+    // ── lesson 10 (drums): its two Ctrl+Space steps, through the real completion path ──
+
+    /// <summary>Accepts <paramref name="item"/> at <paramref name="offset"/> the way the editor
+    /// does: its name there, and its additional edit (a stock pattern's declaration) where it says.</summary>
+    private static string Accept(string text, int offset, CompletionItem item)
+    {
+        var edit = Assert.Single(item.AdditionalTextEdits!);
+        var lines = text.Split('\n');
+        int at = lines.Take(edit.Range.Start.Line).Sum(l => l.Length + 1) + edit.Range.Start.Character;
+        string name = item.InsertText ?? item.Label!;
+        // The later edit first, so the earlier one's offset still holds.
+        return at <= offset
+            ? text.Insert(offset, name).Insert(at, edit.NewText)
+            : text.Insert(at, edit.NewText).Insert(offset, name);
+    }
+
+    [Fact]
+    public void Lesson10_ItsStepsPickAFillAndAGhostFromTheList_AndTheResultIsAClean4BarGroove()
+    {
+        string text = LilySharpLanguageServer.Lessons[9].Text;
+        Assert.StartsWith("// Lesson 10 of 11 — Drums", text);
+
+        // STEP 1: in bar 4, after `kick` and a space, the patterns lead the list.
+        int step1 = text.IndexOf("drums { kick }", System.StringComparison.Ordinal) + "drums { kick ".Length;
+        text = text.Insert(step1, " ");
+        step1++;
+        var fill = CompletionAt(text, step1).Single(i => i.Label == "fillTriplet");
+        text = Accept(text, step1, fill);
+        Assert.Contains("phrase fillTriplet {", text);
+
+        // STEP 2: in `groove`, `back` becomes the stock `ghost`.
+        text = text.Replace("drums { hats back kick }", "drums { hats  kick }");
+        int step2 = text.IndexOf("drums { hats  kick }", System.StringComparison.Ordinal) + "drums { hats ".Length;
+        var ghost = CompletionAt(text, step2).Single(i => i.Label == "ghost");
+        text = Accept(text, step2, ghost);
+
+        var tree = SyntaxTree.Parse(text);
+        Assert.Empty(LilySharp.Core.Semantics.SemanticValidation.Run(tree)
+            .Where(d => d.Severity is LilySharp.Core.Syntax.DiagnosticSeverity.Error or LilySharp.Core.Syntax.DiagnosticSeverity.Warning));
+        var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(tree,
+            LilySharp.Core.Svg.Collector.RenderSpecParser.Choose(LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree), null));
+        var kit = score.EnumerateStaves().Single().Staff;
+        Assert.Equal(2, kit.Voices.Length);                  // hands and feet
+        Assert.Equal(4, kit.Voices[0].Measures.Length);
+        Assert.Equal(4, score.TupletBrackets.Length);        // the fill, a bracket a beat
+        Assert.Equal(3, kit.Voices[0].Measures.SelectMany(m => m.Items).OfType<LilySharp.Core.Svg.Model.NoteItem>()
+            .Count(n => n.Parenthesized));                   // a ghost in each groove bar
     }
 
     private static string Lesson1 => LilySharpLanguageServer.Lessons[0].Text;

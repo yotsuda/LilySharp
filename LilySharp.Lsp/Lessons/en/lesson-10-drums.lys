@@ -1,0 +1,40 @@
+// Lesson 10 of 11 — Drums
+// Preview: Ctrl+K V
+//
+// A drum part is written as patterns. `drums { }` plays its lines together —
+// each a `phrase` or `{ … }` — and draws them as drummers read: hands on top,
+// feet below. Hover a pattern's name to see its beat.
+//
+// STEP 1 — in bar 4, after `kick`: a space, then Ctrl+Space. The patterns come
+// first. Pick `fillTriplet` — its `phrase` appears above.
+// STEP 2 — in `groove`, replace `back` with `ghost` (Ctrl+Space shows it):
+// a soft extra snare, drawn in parentheses.
+
+title "Back Beat"
+composer "Lily# lessons"
+
+tempo 96
+
+phrase hats   { hh8 8 8 8 8 8 8 8 | }
+phrase back   { r4 sn r sn | }
+phrase kick   { bd4 r8 bd bd4 r | }
+phrase groove { drums { hats back kick } }
+
+part kit { clef percussion }
+
+section A {
+  kit {
+    groove groove groove
+    drums { kick }              // STEP 1: a fill goes here, beside the kick
+  }
+}
+
+form { ~A }
+
+score { staff kit }
+
+// TRY: change `hh8 8 8 8 8 8 8 8` to `hh8 8 8 8 8 8 hho hh` — every bar that
+// plays `hats` changes. `sn16@parenthesize` is a ghost note,
+// `acciaccatura { sn16 } sn4` a flam.
+//
+// NEXT — type `lesson` on a new line and pick `lesson-11-band`.

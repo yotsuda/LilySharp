@@ -1,9 +1,9 @@
-// Lesson 10 of 10 — A band
+// Lesson 11 of 11 — A band
 // Preview: Ctrl+K V
 //
 // More parts, same section. `tab` prints a part as tablature, `clef percussion`
 // makes a drum part, and each `score` is one printout of the same music.
-// `drums { }` plays drum patterns together: hands on top, feet below.
+// The drums are lesson 10's patterns.
 // `pitch concert`: write what sounds. `pitch transposed` on a score prints it for the player.
 
 title "Saturday"

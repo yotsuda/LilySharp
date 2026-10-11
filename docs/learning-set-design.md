@@ -14,9 +14,9 @@
   拡張側の変更は要らない（本文は引数で渡る）。
 - **出し方**（`LessonItems`）: 打ちかけの語が**空なら lesson-01 だけ**（一覧はもう長い・入口は 1 本でよい）、
   `lesson`／`learn` に向かう語なら**全部**、それ以外の語なら出さない。client は語の 1 文字目で 1 回だけ訊き、
-  その後は手元で絞るので、`l` で 10 本が来て `ly`（lyrics）・`la`（layout）で自然に消える。
+  その後は手元で絞るので、`l` で 11 本が来て `ly`（lyrics）・`la`（layout）で自然に消える。
 - **本文はファイル**: `LilySharp.Lsp/Lessons/<言語>/lesson-NN-slug.lys` を EmbeddedResource（csproj の
-  `Lessons\**\*.lys`）。順序はファイル名。1 行目 `// Lesson N of 10 — Title` が item の detail になる。
+  `Lessons\**\*.lys`）。順序はファイル名。1 行目 `// Lesson N of 11 — Title` が item の detail になる。
 - **言語**: LSP `initialize` の `locale`（VS Code は表示言語を送る）→ `LessonsFor(locale)`＝英語の全セットを土台に、
   `pt-br` → `pt` の順で訳を探し、**訳の無いレッスンは英語のまま出す**（欠けて見えない）。
   **ラベル（slug）は全言語で同じ英語**＝レッスンの身元で、本文の「NEXT: `lesson-02-notes`」もこれで引く。
@@ -37,7 +37,8 @@
 | 7 | `lesson-07-lyrics` | `lyrics … sings`・ハイフン・`\|`・2 言語の 2 行 | Frère Jacques（英・仏） |
 | 8 | `lesson-08-chords` | `chords` 行・リードシート・（TRY で Ctrl+Shift+↑ のダイアグラム・`chordDiagrams all`） | Evening Walk（オリジナル） |
 | 9 | `lesson-09-piano` | 大譜表・`octave 3`・`phrase`・（TRY で和音・3 連符・2 声） | Minuet in G（両手・左手は簡略） |
-| 10 | `lesson-10-band` | **移調楽器**（`pitch concert`＋`instrument trumpet`＝書く文字は実音・全体の楽譜は実音、`score trumpet pitch transposed` が奏者の調＝ニ長調。鳴る音はハ長調のまま。2026-10-11 ユーザー決定＝score は `pitch` を受け継ぐ）・`tab`/`tuning bass`・`clef percussion` とドラム・score を 3 つ（`midiInstrument` は TRY の補完だけ） | Saturday（オリジナル） |
+| 10 | `lesson-10-drums` | **ドラム**（2026-10-11 ユーザー決定「作って。前に入れて」）: `drums { }` の行＝phrase・手は上／足は下・ホバーでビートの格子・**STEP 1 = bar 4 の `kick` の後で Ctrl+Space → 定番パターン `fillTriplet`**（宣言が上に自動で入る）・**STEP 2 = `groove` の `back` を `ghost` に**（括弧付きのゴーストノート）・TRY で `hho`・フラム | Back Beat（オリジナル） |
+| 11 | `lesson-11-band` | **移調楽器**（`pitch concert`＋`instrument trumpet`＝書く文字は実音・全体の楽譜は実音、`score trumpet pitch transposed` が奏者の調＝ニ長調。鳴る音はハ長調のまま。2026-10-11 ユーザー決定＝score は `pitch` を受け継ぐ）・`tab`/`tuning bass`・`clef percussion` とドラム・score を 3 つ（`midiInstrument` は TRY の補完だけ） | Saturday（オリジナル） |
 
 曲は**音を確実に書けるもの**に絞った（初案の Oh! Susanna・Scarborough Fair・Brahms・Clementine・Saints は、
 旋律や歌詞の割り付けを確かめられないので差し替えた）。Lesson 4 と 9 は同じ曲＝「4 で書いた曲に 9 で左手を足す」。
@@ -137,11 +138,12 @@ index の「03 Speed」は見出しだけ。
    Lineage／Licence／Speed／Architecture は About へ。Grammar 節は抜粋＋Learn への導線に縮める。
 2. `start.html` Get started（約 0.4）: インストール（index と `editor#install` を統合）・プレビュー（Ctrl+K V）・最初の 1 曲・
    「`lesson` と打って Ctrl+Space」。
-3. `learn-01.html`〜`learn-10.html`（各 0.5〜0.8・前後リンク）＝**拡張のレッスンと 1 対 1**。移す元: 01←`editor#language`
+3. `learn-01.html`〜`learn-11.html`（各 0.5〜0.8・前後リンク）＝**拡張のレッスンと 1 対 1**。移す元: 01←`editor#language`
    `#typing`（要約）`#step` `#audition`・`grammar#chordrows` の補完 h3／02←`#pitch` `#duration` `#glance`（簡約）／03←
    `#duration` `#events` の休符 `#connect` のタイ `#sections` の partial `#bars`／04←調と臨時記号（新規）・`#transposing` の score の `transpose`／05←`#anno` を
    割る `#connect`／06←`#sections` `#forms`＋P4／07←`#lyrics`／08←`#chordrows` の前半・slash notes・chords.html への入口／
-   09←`#scores` の grouping・`#groups` `#phrases`／10←`#tab` `#parts`（instrument・midiInstrument）・`#transposing`（移調楽器と `pitch concert`）・ドラム（新規・P5）・複数 score。
+   09←`#scores` の grouping・`#groups` `#phrases`／10←`grammar#drums`（`drums { }`・定番パターン・`@parenthesize`・フラム）＋補完の定番パターン（新規）／
+   11←`#tab` `#parts`（instrument・midiInstrument）・`#transposing`（移調楽器と `pitch concert`）・複数 score。
 4. Reference（`grammar.html` を割る。URL は入口として残すか転送）: `ref-music.html`（約 1.5）・`ref-structure.html`（約 1.5）・
    `ref-output.html`（約 1.2）・`ref-lookup.html`（約 0.8＝予約語・診断・LilyPond から・Rough edges）。
 5. `chords.html` はそのまま（`#check` を末尾へ）。`editor.html`（約 1.2・Ctrl+Space を正面に）。`ai.html`（約 0.5）。

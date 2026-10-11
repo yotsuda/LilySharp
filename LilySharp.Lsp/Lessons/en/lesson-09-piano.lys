@@ -1,4 +1,4 @@
-// Lesson 9 of 10 — Piano
+// Lesson 9 of 11 — Piano
 // Preview: Ctrl+K V
 //
 // Two parts on a grand staff. A `phrase` is music with a name, played
@@ -41,4 +41,4 @@ score {
 // TRY: do what the red circle says (a chord) · `tuplet 3/2 { g8 a b }` is a
 // triplet · `voice { b2 c4 } { g2 a4 }` puts two voices on one staff.
 //
-// NEXT — type `lesson` on a new line and pick `lesson-10-band`.
+// NEXT — type `lesson` on a new line and pick `lesson-10-drums`.
