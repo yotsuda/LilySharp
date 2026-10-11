@@ -526,16 +526,18 @@ part v1 { clef treble instrument "1st Violin" } // label only — no preset beha
   voice-range words are already the choral presets. Guitar and vocal tenor carry their
   octave on the <code>treble_8</code> clef instead of here, which is why their parts print
   the little 8 under the clef and this table does not list them.</p>
-  <p><b>Or write what sounds, and let the part be transposed for you.</b> A top-level
-  <code>pitch concert</code> says the letters are concert pitch: every chromatically
-  transposing part is then printed the way its player reads it, pitches and key signature
-  together — an <code>alto-sax</code> part of a piece in C major prints its <code>c'</code>
-  as <code>a'</code>, in A major, and still plays C. The default, <code>pitch written</code>,
-  is the first convention above. Octave-only instruments (<code>bass</code>,
-  <code>piccolo</code>, a <code>transposition 8vb</code>) keep their notation under both, as
-  a printed concert score keeps them. To print one score at concert pitch whichever way the
-  file is written — the conductor's score — put the same words on that score:
-  <code>score full pitch concert { … }</code>.</p>
+  <p><b>Or write what sounds, and print the players' parts transposed.</b> A top-level
+  <code>pitch concert</code> says the letters are concert pitch: they play as written, and
+  the file's scores print them so — a sounding score. On a score the same words say how
+  <i>that page</i> reads: <code>score sax pitch written { staff sx }</code> prints the
+  saxophone the way its player reads it, pitches and key signature together — an
+  <code>alto-sax</code> part of a piece in C major prints its <code>c'</code> as
+  <code>a'</code>, in A major, and still plays C — and <code>score full pitch concert { … }</code>
+  prints a file written the first way at concert pitch, the conductor's score. A score that
+  says neither prints each part as its letters are written. The default,
+  <code>pitch written</code>, is the first convention above. Octave-only instruments
+  (<code>bass</code>, <code>piccolo</code>, a <code>transposition 8vb</code>) keep their
+  notation under both, as a printed concert score keeps them.</p>
   <p class="note">An explicit <code>transpose</code> is a different thing: it moves the
   written notes by hand. Its argument is a PITCH, not a number of steps — it renames
   <code>c</code> to that pitch and shifts every note by the same interval, so

@@ -179,22 +179,22 @@ public class LessonTests
     }
 
     [Fact]
-    public void Lesson10_TheTrumpetReadsItsKey_AndTheBandSoundsInC()
+    public void Lesson10_TheTrumpetsPartReadsItsKey_AndTheBandSoundsInC()
     {
-        // Owner's report 2026-10-11: the full score printed the trumpet in C (`score pitch
-        // concert`, the conductor's sounding score), which a trumpeter cannot play from; under
-        // `pitch written` it sounded in B♭ against a band in C. Under the file's `pitch concert`
-        // the letters are what sounds: the trumpet's staff prints a step up (D major) in the
-        // full score and in its own printout, and sounds the letters — the same keys as the same
-        // letters on an instrument that does not transpose.
+        // Owner's decisions 2026-10-11: under the file's `pitch concert` the letters are what
+        // sounds, and a score inherits that — the full score prints the trumpet as it sounds
+        // (C), and the trumpeter's printout, `score trumpet pitch written`, a step up (D) — while
+        // every score sounds the letters (a band in C; `pitch written` for the file made the
+        // trumpet sound in B♭ against it): the same keys as the same letters on an instrument
+        // that does not transpose.
         string text = LilySharpLanguageServer.Lessons[9].Text;
         Assert.Contains("pick `trumpet`", text);
         string untransposed = text.Replace("part lead { instrument trumpet }", "part lead { clef treble }");
         Assert.NotEqual(text, untransposed);
         var asWritten = FirstStaffOf(untransposed, null);
         Assert.NotEmpty(asWritten);
-        foreach (var score in new[] { null, "trumpet" })
-            Assert.Equal(asWritten.Select(n => n.Position + 1), FirstStaffOf(text, score).Select(n => n.Position));
+        Assert.Equal(asWritten.Select(n => n.Position), FirstStaffOf(text, null).Select(n => n.Position));
+        Assert.Equal(asWritten.Select(n => n.Position + 1), FirstStaffOf(text, "trumpet").Select(n => n.Position));
         // What it SOUNDS is the .mid's (NoteItem.Midi is the printed head's): the lead is the
         // first part, so the first track with notes.
         static int[] Sounding(string book) => [.. new LilySharp.Core.Midi.MidiExporter().Export(SyntaxTree.Parse(book))

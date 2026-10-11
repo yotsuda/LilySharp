@@ -69,8 +69,9 @@ public sealed partial class MeasureCollector
     /// (PartHeaderDefaults.SoundingShiftSemitones); only the ANCHOR is per-mode, which is what
     /// the two modes are for. See AbsoluteModeAnchorTests.
     /// </remarks>
-    /// <param name="scoreConcert">Whether the score being collected prints at concert pitch
-    /// (<see cref="ScoreConcert"/>): its shift is composed onto the part's transpose here,
+    /// <param name="scoreConcert">How the score being collected prints: at concert pitch, for
+    /// the players, or (null) in the part's own convention (<see cref="ScoreConcert"/>): its
+    /// shift is composed onto the part's transpose here,
     /// beside the part's own, so ApplyTranspose sees one interval.</param>
     /// <param name="fileTranspose">The file's top-level <c>transpose</c> default, read once per
     /// collect by <see cref="CollectDefinitions"/> (<see cref="PartTranspose.ReadScoreDefault"/>'s answer).</param>
@@ -83,7 +84,7 @@ public sealed partial class MeasureCollector
     // non-section direct children must be content- and position-stable across the
     // edit), NOT folded into MaxSourceRead. See ProcessSection's matching note.
     private static (string? clef, int? octave, int? explicitOctave, (int step, int alt, int oct)? transpose, int clefPos, KeySignatureSyntax? key) GetPartDefaults(
-        SyntaxNode root, string partName, bool scoreConcert,
+        SyntaxNode root, string partName, bool? scoreConcert,
         (int step, int alt, int oct)? fileTranspose, bool fileIsConcert)
     {
         foreach (var partDecl in root.ChildNodesOfKind<PartDeclarationSyntax>())
@@ -149,7 +150,7 @@ public sealed partial class MeasureCollector
             // PartTranspose.Read(root, partName) here walked the whole tree twice per part.
             transpose = PitchTransposer.NullIfIdentity(PitchTransposer.Compose(
                 PartTranspose.Read(partDecl, fileTranspose, fileIsConcert),
-                ConcertPitch.OutputShift(scoreConcert, partDecl)));
+                ConcertPitch.OutputShift(scoreConcert, fileIsConcert, partDecl)));
 
             // Resolve clef: explicit > instrument > null
             string? resolvedClef = clef;

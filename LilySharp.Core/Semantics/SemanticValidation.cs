@@ -233,7 +233,7 @@ public static class SemanticValidation
             var collector = new MeasureCollector
             {
                 ScoreTranspose = renderSpec?.ScoreTranspose,
-                ScoreConcert = renderSpec?.ScoreConcert ?? false,
+                ScoreConcert = renderSpec?.ScoreConcert,
             };
             Svg.SvgGenerator.CollectScore(collector, tree, renderSpec);
             return collector;

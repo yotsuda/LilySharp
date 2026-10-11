@@ -211,16 +211,17 @@ verbatim `@"C:\music"` / `@"say ""hi"""` (backslash as written, `""` = one quote
   `c,` = C3), independent per note - octave mistakes never cascade. RECOMMENDED
   when generating scores. `part X { octave 2 }` re-anchors the base (bass parts).
   Sections restore the file-level mode.
-- `pitch concert` (top level) says the letters are what SOUNDS: a part whose `instrument`
-  transposes (clarinet, trumpet, horn, alto-sax, tenor-sax, …) is then PRINTED the way its
-  player reads it, pitches and key signature together — an alto-sax `c'` prints as `a'` in
-  A major when the piece is in C, and still plays C. The default, `pitch written`, prints
-  the letters as they are and only playback moves. Octave-only instruments (bass, piccolo)
-  keep their notation either way. A part header takes the same words for that part alone
-  (`part sax { instrument alto-sax pitch written }` beside a top-level `pitch concert`: own
-  wins, as with `transpose`), and without a transposing `instrument` the word changes
-  nothing. `score full pitch concert { … }` prints THAT score at concert pitch (the
-  conductor's score) whichever way the file is written.
+- `pitch concert` / `pitch written` say which pitch the notes are in — what SOUNDS, or what
+  the player of a transposing `instrument` (clarinet, trumpet, horn, alto-sax, …) READS —
+  and mean that at every level: the top level for the file's letters (default `written`:
+  playback moves, a B♭ trumpet's `c` sounds B♭), a part header for that part's letters
+  (own wins, as with `transpose`), a score for its PAGE. ⚠️ A score that writes none
+  INHERITS: each part prints in its letters' convention, so nothing moves. Under a
+  top-level `pitch concert` the plain `score { … }` is the sounding (conductor's) score,
+  and a player's part is `score trumpet pitch written { staff tp }` — an alto-sax `c'`
+  prints there as `a'` in A major when the piece is in C, and still plays C. Octave-only
+  instruments (bass, piccolo) keep their notation either way; without a transposing
+  `instrument` the word changes nothing.
 
 ```
 c d e f g a b c    // C4 D4 E4 F4 G4 A4 B4 C5
@@ -820,7 +821,7 @@ quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LY
   takes an octave marker (`8va` / `8vb` / `15ma` / `15mb`) and nothing else. For a B♭
   or E♭ instrument you normally write NO `transpose` at all: name the `instrument` and
   either write what the player reads (the default) or write what sounds under a top-level
-  `pitch concert` — the part is transposed for you (see Pitches).
+  `pitch concert` and print the player's part with `score NAME pitch written` (see Pitches).
 - **A section's label is hidden at the FORM reference only**: `form { A |: B [1. ~B1]
   :| [2. ~B2] }` plays B1 and B2 without a rehearsal letter. ⚠️ **Never write
   `section ~A { … }`** — a declaration takes no tilde (LYS0033). Write the `~` on every

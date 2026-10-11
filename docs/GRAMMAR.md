@@ -239,16 +239,22 @@ OctaveDecl     = 'octave' , ( 'absolute' | 'relative' ) ;
 PitchDecl      = 'pitch' , PitchMode ;
 PitchMode      = 'written' | 'concert' ;
                  (* Which convention the note letters follow for a TRANSPOSING instrument.
-                    'written' (the default): the letters are what the player reads; the part
-                    prints exactly that and only playback moves (InstrumentDefaults'
-                    sounding shift — a B♭ clarinet's c sounds b♭). 'concert': the letters
-                    are what SOUNDS, and every chromatically transposing part is printed
-                    the way its player reads it, pitches AND key signature together — an
-                    E♭ alto saxophone's c' prints as a', in A major when the piece is in C.
-                    Octave-only transposers (bass, piccolo, a 'transposition 8vb') keep
-                    their notation under both, as a concert score keeps them. A third word
-                    is refused at the word. Semantics.ConcertPitch holds the rule; the
-                    per-score 'pitch' option (ScoreDecl, §7) says how a SCORE prints. *)
+                    'written' (the default): the letters are what the player reads, and
+                    playback moves (InstrumentDefaults' sounding shift — a B♭ clarinet's c
+                    sounds b♭). 'concert': the letters are what SOUNDS, and play as written.
+                    The same word at every level means the same thing (owner's decision
+                    2026-10-11): on a part header, that part's letters; on a score
+                    (ScoreDecl, §7), that score's PAGE — 'pitch written' prints every
+                    chromatically transposing part the way its player reads it, pitches AND
+                    key signature together (a concert-pitch book's E♭ alto saxophone c'
+                    prints as a', in A major when the piece is in C), 'pitch concert' prints
+                    it as it sounds. A score that writes none INHERITS: each part prints in
+                    its letters' own convention and nothing moves — so a concert-pitch book's
+                    own score is a sounding score, and the players' parts say 'pitch
+                    written'. (Until 2026-10-11 a score that wrote none printed for the
+                    players.) Octave-only transposers (bass, piccolo, a 'transposition 8vb')
+                    keep their notation under both, as a concert score keeps them. A third
+                    word is refused at the word. Semantics.ConcertPitch holds the rule. *)
 TransposeDecl  = 'transpose' , PitchToken ;
                  (* the file default: every part that sets no 'transpose' of its own *)
 
@@ -1117,8 +1123,8 @@ TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
 (* transposition: the part's written->sounding shift, BEYOND the octave the part's bare
    letters start from ('octave N' / the preset — never the clef, above). 'transpose' moves the written pitches; 'transposition' states
    that the written pitches sound elsewhere. A chromatic transposer's shift comes from
-   its 'instrument' preset (clarinet −2, alto-sax −9, …); under the file-level
-   'pitch concert' (§2.3) that same shift, negated, is what the part is PRINTED by. *)
+   its 'instrument' preset (clarinet −2, alto-sax −9, …); a concert-pitch part on a
+   page for its player ('score … pitch written', §2.3) is PRINTED by that same shift, negated. *)
 
 (* pedal: how a sustain span is drawn - the 'Ped.' text, a bracket, or 'mixed'
    (text at the start, bracket for the hold). *)
@@ -1529,10 +1535,11 @@ NavMark        = 'segno' | 'coda' | 'fine' | 'to' 'coda'
 
 ScoreDecl      = 'score' , [ Identifier ] , { ScoreOption } , '{' , { ScoreItem } , '}' ;
 ScoreOption    = 'transpose' , PitchToken       (* this score's transpose, composed on each part's own *)
-               | 'pitch' , PitchMode ;          (* 'pitch concert': print THIS score at concert pitch —
-                                                   every chromatically transposing part shown at what it
-                                                   sounds, the conductor's score of a book written either
-                                                   way (§2.3 PitchDecl). 'pitch written' is the default. *)
+               | 'pitch' , PitchMode ;          (* how THIS score's page reads: 'concert' shows every
+                                                   chromatically transposing part at what it sounds (the
+                                                   conductor's score), 'written' as its player reads it
+                                                   (a part sheet). None written: each part in its
+                                                   letters' own convention — nothing moves (§2.3). *)
                  (* The Identifier is THE SCORE'S OWN NAME (2026-10-09; until then it named
                     the form the score rendered). The unnamed score is the file's default: it
                     writes <input>.svg, the preview shows it first and lists it as '(Default)',

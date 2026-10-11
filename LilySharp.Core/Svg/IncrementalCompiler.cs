@@ -1016,7 +1016,7 @@ public sealed class IncrementalCompiler
                     var resumedCollector = new MeasureCollector
                     {
                         ScoreTranspose = spec?.ScoreTranspose,
-                        ScoreConcert = spec?.ScoreConcert ?? false,
+                        ScoreConcert = spec?.ScoreConcert,
                         PaperBase = SvgGenerator.PaperBaseOf(_options.Snippet, _options.Interactive),
                         WalkProbe = resumer,
                         BeamMemo = _beamMemo,
@@ -1084,7 +1084,7 @@ public sealed class IncrementalCompiler
         var source = new MeasureCollector
         {
             ScoreTranspose = spec?.ScoreTranspose,
-            ScoreConcert = spec?.ScoreConcert ?? false,
+            ScoreConcert = spec?.ScoreConcert,
             // The same paper SvgGenerator starts a book from with these options (the
             // preview's memo rows, LayoutOptions.TodoBands), so the session's picture is
             // the full render's.

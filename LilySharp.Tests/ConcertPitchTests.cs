@@ -88,15 +88,18 @@ public sealed class ConcertPitchTests
     /// <summary>
     /// The four cells of ConcertPitch's table, on an E♭ alto saxophone (T = −9): the two
     /// spellings compose to one page shift, and the two that cancel print what the letters
-    /// say. The control part never moves.
+    /// say. A score that writes no <c>pitch</c> inherits the letters' convention, so nothing
+    /// moves (owner's decision 2026-10-11 — it used to print for the players). The control
+    /// part never moves.
     /// </summary>
     [Theory]
-    [InlineData("", "", "C5", 0)]                                  // written file, written score: the default
+    [InlineData("", "", "C5", 0)]                                  // written file, its own score: the default
     [InlineData("pitch written", "", "C5", 0)]                     // …spelled out
+    [InlineData("", " pitch written", "C5", 0)]                    // …and on the score
     [InlineData("", " pitch concert", "Eb4", -3)]                  // a written part shown at what it sounds
-    [InlineData("pitch concert", "", "A5", 3)]                     // a concert-pitch file printed for the player
-    [InlineData("pitch concert", " pitch written", "A5", 3)]       // …spelled out
-    [InlineData("pitch concert", " pitch concert", "C5", 0)]       // both: nothing moves
+    [InlineData("pitch concert", "", "C5", 0)]                     // a concert-pitch file's own score: as it sounds
+    [InlineData("pitch concert", " pitch written", "A5", 3)]       // a concert-pitch file printed for the player
+    [InlineData("pitch concert", " pitch concert", "C5", 0)]       // …and spelled out: nothing moves
     public void TheTwoSpellingsComposeToOnePageShift(
         string top, string scoreOpts, string expectedPitch, int expectedSharps)
     {
@@ -132,7 +135,7 @@ public sealed class ConcertPitchTests
     public void AConcertPitchFile_PrintsEachInstrumentInItsWrittenKey(
         string header, string expectedPitch, int expectedSharps)
     {
-        var (x, xSharps, ctl, ctlSharps) = Page(Book("pitch concert", header));
+        var (x, xSharps, ctl, ctlSharps) = Page(Book("pitch concert", header, " pitch written"));
 
         Assert.Equal(expectedPitch, x);
         Assert.Equal(expectedSharps, xSharps);
@@ -146,9 +149,9 @@ public sealed class ConcertPitchTests
     /// alto saxophone part of a piece printed a step up is a major 6th plus a major 2nd.
     /// </summary>
     [Theory]
-    [InlineData("pitch concert", "instrument alto-sax transpose d", "", "B5", 5)]   // on the part
-    [InlineData("pitch concert\ntranspose d", "instrument alto-sax", "", "B5", 5)]  // the file default
-    [InlineData("pitch concert", "instrument alto-sax", " transpose d", "B5", 5)]   // on the score
+    [InlineData("pitch concert", "instrument alto-sax transpose d", " pitch written", "B5", 5)]   // on the part
+    [InlineData("pitch concert\ntranspose d", "instrument alto-sax", " pitch written", "B5", 5)]  // the file default
+    [InlineData("pitch concert", "instrument alto-sax", " pitch written transpose d", "B5", 5)]   // on the score
     public void TheInstrumentShiftComposesWithAWrittenTranspose(
         string top, string header, string scoreOpts, string expectedPitch, int expectedSharps)
     {
@@ -254,7 +257,8 @@ public sealed class ConcertPitchTests
     /// spellings cancel. The control part's variable never takes a wrapper.
     /// </summary>
     [Theory]
-    [InlineData("pitch concert", "", "x = \\transpose c a \\fixed c'")]
+    [InlineData("pitch concert", " pitch written", "x = \\transpose c a \\fixed c'")]
+    [InlineData("pitch concert", "", "x = \\fixed c'")]       // its own score inherits: as it sounds
     [InlineData("", " pitch concert", "x = \\transpose c ees, \\fixed c'")]
     [InlineData("pitch concert", " pitch concert", "x = \\fixed c'")]
     [InlineData("", "", "x = \\fixed c'")]
@@ -322,7 +326,9 @@ public sealed class ConcertPitchTests
         string top, string header, string expectedPitch, int expectedSharps,
         string? overridePitch = null, int? overrideSharps = null)
     {
-        var (x, xSharps, ctl, ctlSharps) = Page(Book(top, header));
+        // On a page for the players (`pitch written` on the score): a score that writes none
+        // prints each part in its letters' own convention, so nothing would move there.
+        var (x, xSharps, ctl, ctlSharps) = Page(Book(top, header, " pitch written"));
 
         Assert.Equal(overridePitch ?? expectedPitch, x);
         Assert.Equal(overrideSharps ?? expectedSharps, xSharps);
@@ -347,12 +353,16 @@ public sealed class ConcertPitchTests
             part cl { instrument clarinet }
             section A { sax { c'1 | } cl { c'1 | } }
             form { A }
-            score { staff sax staff cl }
+            score pitch written { staff sax staff cl }
             """);
 
         var (sax, saxSharps, cl, clSharps) = Page(tree.Text);
         Assert.Equal(("C5", 0), (sax, saxSharps));   // printed as copied
         Assert.Equal(("D5", 2), (cl, clSharps));     // printed for the player
+        // A score that writes no `pitch` prints each part in its own convention: the
+        // saxophone as copied, the clarinet as it sounds — nothing moves.
+        var (sax2, _, cl2, _) = Page(tree.Text.Replace("score pitch written {", "score {"));
+        Assert.Equal(("C5", "C5"), (sax2, cl2));
 
         var midi = new MidiExporter().Export(tree);
         var played = midi.Tracks.SelectMany(t => t.Notes).Select(n => n.Pitch).OrderBy(p => p).ToList();
@@ -390,8 +400,8 @@ public sealed class ConcertPitchTests
         var render = tree.GetRoot().DescendantNodes().OfType<RenderDeclarationSyntax>().Single();
 
         Assert.Equal((1, 0, 0), PartTranspose.ReadProperty(render.Transpose!));
-        Assert.True(ConcertPitch.ScoreIsConcert(render));
-        Assert.True(RenderSpecParser.FindFirst(tree)!.ScoreConcert);
+        Assert.True(ConcertPitch.ScoreMode(render));
+        Assert.True(RenderSpecParser.FindFirst(tree)!.ScoreConcert == true);
         Assert.False(ConcertPitch.FileIsConcert(tree.GetRoot()), "a score's option is not the file's");
     }
 

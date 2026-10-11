@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -182,7 +182,7 @@ public static class SvgGenerator
         => CollectScore(new MeasureCollector
             {
                 ScoreTranspose = renderSpec?.ScoreTranspose,
-                ScoreConcert = renderSpec?.ScoreConcert ?? false,
+                ScoreConcert = renderSpec?.ScoreConcert,
                 // `--set staffSpace=…` goes under the file's paper, which is read through it.
                 PaperBase = settings?.OnBase(paperBase ?? LayoutOptions.Default) ?? paperBase ?? LayoutOptions.Default,
                 PaperOverrides = settings,

@@ -260,7 +260,7 @@ public static class RenderSpecParser
 
         return new RenderSpec(name, [.. items], scoreTranspose, form,
             [.. headerOverrides], fontsRef, paperRef,
-            ScoreConcert: LilySharp.Core.Semantics.ConcertPitch.ScoreIsConcert(render),
+            ScoreConcert: LilySharp.Core.Semantics.ConcertPitch.ScoreMode(render),
             LayoutRef: layoutRef,
             MidiOnlyParts: [.. midiOnlyParts]);
     }

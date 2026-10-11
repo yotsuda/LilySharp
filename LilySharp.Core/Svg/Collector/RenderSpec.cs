@@ -281,11 +281,11 @@ public sealed record RenderSpec(
     FontDeclarationSyntax? FontsRef = null,
     // `paper NAME [{ … }]`, same contract as FontsRef.
     PaperDeclarationSyntax? PaperRef = null,
-    // `score <Form> pitch concert { … }`: print this score at CONCERT pitch — every
-    // chromatically transposing part shown at what it sounds, the conductor's score
-    // (Semantics.ConcertPitch). False = written pitch, the default and what every score
-    // printed before the option existed.
-    bool ScoreConcert = false,
+    // `score NAME pitch concert { … }`: print this score at CONCERT pitch — every
+    // chromatically transposing part shown at what it sounds, the conductor's score;
+    // `pitch written`: as each player reads it; null (none written): each part in the
+    // convention its letters are written in, so nothing moves (Semantics.ConcertPitch).
+    bool? ScoreConcert = null,
     // `layout NAME [{ … }]`, same contract as PaperRef: this score's display switches
     // (Semantics.LayoutPlanReader), null when the score references none and the file's
     // unnamed default applies.

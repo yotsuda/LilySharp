@@ -26,6 +26,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Breaking changes
 
+- **A score without `pitch` prints the parts as they are written.** `pitch` now means the same
+  thing at every level — which pitch the notes are in, what sounds (`concert`) or what a
+  transposing instrument's player reads (`written`) — and a score that writes none inherits it.
+  Under a top-level `pitch concert` the plain `score { … }` used to print each transposing part
+  for its player; it is now a sounding score, and a player's part says so:
+  `score trumpet pitch written { staff tp }`. A file without `pitch` prints as before, and
+  playback does not change. On a score, `pitch written` now means something: the players' key.
+
 - **A block's name is optional, and the unnamed block is the file's default.** `form { … }` is
   the file's default form (a second unnamed one is LYS1016), `score { … }` its default score,
   `part { … }` its one part (only in a file with no other part, LYS1007), `chords { … }` and

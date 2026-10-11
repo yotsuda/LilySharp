@@ -50,11 +50,12 @@ public sealed partial class MeasureCollector
     public (int step, int alt, int oct)? ScoreTranspose { get; set; }
 
     /// <summary>
-    /// <c>score … pitch concert { … }</c>: this score prints every chromatically transposing
-    /// part at what it sounds (RenderSpec.ScoreConcert). Composed onto each part's transpose
-    /// in GetPartDefaults, beside the part's own — Semantics.ConcertPitch.OutputShift.
+    /// <c>score … pitch concert { … }</c> (true) / <c>pitch written</c> (false): how this score
+    /// prints every chromatically transposing part; null, each part in its letters' own
+    /// convention (RenderSpec.ScoreConcert). Composed onto each part's transpose in
+    /// GetPartDefaults, beside the part's own — Semantics.ConcertPitch.OutputShift.
     /// </summary>
-    public bool ScoreConcert { get; set; }
+    public bool? ScoreConcert { get; set; }
 
     /// <summary>
     /// The <c>title</c> / <c>composer</c> the score being collected states for itself

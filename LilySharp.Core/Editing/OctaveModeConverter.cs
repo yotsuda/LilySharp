@@ -329,7 +329,7 @@ public static class OctaveModeConverter
                 var collector = new MeasureCollector
                 {
                     ScoreTranspose = spec?.ScoreTranspose,
-                    ScoreConcert = spec?.ScoreConcert ?? false,
+                    ScoreConcert = spec?.ScoreConcert,
                     RecordsPitchTrace = false,
                     OctaveOverride = hook,
                 };

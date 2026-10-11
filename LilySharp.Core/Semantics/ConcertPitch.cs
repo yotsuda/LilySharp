@@ -38,18 +38,23 @@ namespace LilySharp.Core.Semantics;
 /// A part header takes the same words to say it for THAT part alone (own &gt; file default,
 /// as <c>transpose</c> and <c>octave</c> do), so a saxophone copied from a transposed
 /// part-sheet and a piano copied from a concert-pitch score can share one book.
-/// The second spelling is on a score header — <c>score full pitch concert { … }</c> — and
-/// says how THAT score prints: at sounding pitch, the conductor's score, whichever
-/// convention the file is written in. The two compose to one page shift per part:
+/// The second spelling is on a score header — <c>score full pitch concert { … }</c>,
+/// <c>score trumpet pitch written { … }</c> — and says how THAT score prints: at sounding
+/// pitch (the conductor's score) or the way each player reads. A score that writes none
+/// prints each part in the convention its letters are written in — the part's own, else
+/// the file's — so nothing moves (owner's decision 2026-10-11: one word, one meaning at
+/// every level, and a score inherits it; until then a score that wrote none printed for
+/// the players, so a concert-pitch file's own score was transposed). The letters' convention
+/// and the page's compose to one page shift per part:
 /// </para>
 /// <list type="table">
-/// <item><term>file written, score written</term><description>nothing moves (the default,
-/// and every existing book)</description></item>
-/// <item><term>file written, score concert</term><description>+T: a written part shown
+/// <item><term>letters written, page written</term><description>nothing moves (the
+/// default, and every book that writes no <c>pitch</c>)</description></item>
+/// <item><term>letters written, page concert</term><description>+T: a written part shown
 /// at what it sounds</description></item>
-/// <item><term>file concert, score written</term><description>−T: the part printed for
+/// <item><term>letters concert, page written</term><description>−T: the part printed for
 /// its player</description></item>
-/// <item><term>file concert, score concert</term><description>nothing moves</description></item>
+/// <item><term>letters concert, page concert</term><description>nothing moves</description></item>
 /// </list>
 /// <para>
 /// where T is the part's chromatic transposition (<see cref="PartHeaderDefaults.ConcertShiftSemitones"/>:
@@ -103,7 +108,7 @@ public static class ConcertPitch
     /// <summary>
     /// Whether the file's music is written at concert pitch: the first top-level
     /// <c>pitch</c> directive says so. A directive on a score header is that score's own
-    /// (<see cref="ScoreIsConcert"/>) and is not the file's.
+    /// (<see cref="ScoreMode"/>) and is not the file's.
     /// </summary>
     /// <remarks>
     /// Green finder rather than a red walk, for the reason <see cref="PartTranspose.ReadScoreDefault"/>
@@ -137,9 +142,11 @@ public static class ConcertPitch
         return false;
     }
 
-    /// <summary>Whether <paramref name="render"/> asks to be printed at concert pitch.</summary>
-    public static bool ScoreIsConcert(RenderDeclarationSyntax? render)
-        => render?.PitchMode is { } p && ReadProperty(p) == true;
+    /// <summary>Whether <paramref name="render"/> asks to be printed at concert pitch (true),
+    /// for the players (false), or writes no <c>pitch</c> and prints each part in the
+    /// convention its letters are written in (null).</summary>
+    public static bool? ScoreMode(RenderDeclarationSyntax? render)
+        => render?.PitchMode is { } p ? ReadProperty(p) : null;
 
     /// <summary>
     /// The part header's own <c>pitch</c>, or null when it writes none: a part that copies a
@@ -167,13 +174,17 @@ public static class ConcertPitch
             : null;
 
     /// <summary>
-    /// The shift a score printed AT concert pitch gives <paramref name="part"/> — written to
-    /// sounding, +T — or null when the score is not, or the part does not transpose
-    /// chromatically. Composed onto the part's transpose where the score's own
-    /// <c>transpose</c> is, so with <see cref="InputShift"/> also armed the two cancel.
+    /// The shift a score printing <paramref name="part"/> AT concert pitch gives it — written
+    /// to sounding, +T — or null when the page is for the players, or the part does not
+    /// transpose chromatically. The page's convention is the score's own
+    /// (<see cref="ScoreMode"/>), else the part's letters' (its own <c>pitch</c>, else
+    /// <paramref name="fileIsConcert"/>). Composed onto the part's transpose where the score's
+    /// own <c>transpose</c> is, so with <see cref="InputShift"/> also armed the two cancel.
     /// </summary>
-    public static (int step, int alt, int oct)? OutputShift(bool scoreIsConcert, PartDeclarationSyntax? part)
-        => scoreIsConcert ? Interval(PartHeaderDefaults.Read(part).ConcertShiftSemitones) : null;
+    public static (int step, int alt, int oct)? OutputShift(bool? scoreMode, bool fileIsConcert, PartDeclarationSyntax? part)
+        => (scoreMode ?? PartMode(part) ?? fileIsConcert)
+            ? Interval(PartHeaderDefaults.Read(part).ConcertShiftSemitones)
+            : null;
 
     /// <summary>The declared part named <paramref name="partName"/>, or null: part
     /// declarations are top-level only (Parser.ParseTopLevelItem).</summary>

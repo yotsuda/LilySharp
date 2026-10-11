@@ -352,8 +352,9 @@ Not shown above, all in [`docs/GRAMMAR_FOR_LLM.md`](docs/GRAMMAR_FOR_LLM.md):
 - **Arpeggios** — `<< c e g >>` writes a broken chord out; `@arpeggio` rolls a chord
 - **Scale degrees** — `<c 3 5>` and `<1 3 5>` spell chords by degree instead of by letter
 - **Transposing instruments** — name the `instrument` (clarinet, horn, alto-sax, …) and
-  write either what the player reads or, under `pitch concert`, what sounds; the part is
-  printed in its own key and plays at concert pitch either way — percussion staves and `drummap`
+  write either what the player reads or, under `pitch concert`, what sounds; a score prints
+  as its parts are written unless it says `pitch written` (the players' key) or `pitch concert`
+  (as it sounds), and playback is at concert pitch either way — percussion staves and `drummap`
 - **Multi-file sources** — `using "other.lys"`
 
 ## Install
