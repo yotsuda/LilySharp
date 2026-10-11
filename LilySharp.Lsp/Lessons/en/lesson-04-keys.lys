@@ -10,10 +10,9 @@ composer "Christian Petzold"
 time 3/4
 key g major
 
-part melody { clef treble }
-
-section A {
-  melody {
+part melody {
+  clef treble
+  section A {
     d'4 g,8 a b c | d4 g, g | e'4 c8 d e fis | g4 g, g |
     c4 d8 c b a | b4 c8 b a g | f4@todo("make it fis") g8 a b g | a2. |
     d4 g,8 a b c | d4 g, g | e'4 c8 d e fis | g4 g, g |

@@ -19,12 +19,9 @@ part melody {
   // STEP 2 — Ctrl+Space on the empty line below. Pick `instrument`, then `cello`.
   // The bass clef appears by itself. Press ▶.
 
-}
-
-section A {
   // STEP 3 — Delete the first note's `@todo("STEP 3: …")`: its red circle goes away.
   // STEP 4 — Type `@` right after the ringed `e` in bar 2. Pick `mf`.
-  melody {
+  section A {
     e4@todo("STEP 3: delete this @todo") d c d | e@todo("STEP 4") e e2 |
     d4 d d2 | e4 g g2 |
     e4 d c d | e e e e | d d e d | c1 |

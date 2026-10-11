@@ -57,7 +57,7 @@
   歌詞・コード行）は `@todo` を付けられないのでコメントのまま。網は LYS4026 だけを許す。
 - 1 レッスン＝**そのまま鳴る完全な 1 ファイル**。インデントは 2 空白・タブ無し・LF。
 - **相対オクターブで書く**（Pages の推奨・TUTORIAL・ギャラリーと同じ）。
-- ファイルの形: `part melody { clef treble }`（括弧と clef を必ず書く）・`section A { melody { … } }`・
+- ファイルの形: **パートが 1 つなら by part**（`part melody { clef treble  section A { … } }`・2026-10-11 ユーザー指示。弱起は part の外に `section A { partial 4 }`）、複数パート（Lesson 9・10）は by section（`section A { rh { … } lh { … } }`）・
   `form { ~A }`・`score { staff melody }`。コード行は譜の上（`chords prog  staff melody`）、歌詞は下。
 - 用語は Pages のもの: Lily#（LilySharp と書かない）・part／section／form／score・row・chord row・lyrics track が
   part を **sings**・pickup・the preview。音名はオランダ式（`fis` `bes`）。

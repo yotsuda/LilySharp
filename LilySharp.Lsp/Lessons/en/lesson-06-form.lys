@@ -7,21 +7,14 @@
 title "Jingle Bells"
 composer "James Lord Pierpont"
 
-part melody { clef treble }
-
-section Chorus {
-  melody {
+part melody {
+  clef treble
+  section Chorus {
     e4 e e2 | e4 e e2 | e4 g c, d | e1 |
     f4 f f f | f e e e8 e |
   }
-}
-
-section First {
-  melody { e4 d d e | d2 g2 | }
-}
-
-section Second {
-  melody { g'4 g f d | c1 |. }       // each section starts near middle C
+  section First { e4 d d e | d2 g2 | }
+  section Second { g'4 g f d | c1 |. }   // each section starts near middle C
 }
 
 form { |: Chorus [1. ~First] :| [2. ~Second] }

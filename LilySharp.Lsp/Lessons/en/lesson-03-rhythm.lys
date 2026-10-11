@@ -8,11 +8,11 @@ composer "Mildred J. Hill and Patty Hill"
 
 time 3/4
 
-part melody { clef treble }
+section A { partial 4 }         // a pickup: the first bar is one beat
 
-section A {
-  partial 4                     // a pickup: the first bar is one beat
-  melody {
+part melody {
+  clef treble
+  section A {
     g'8. g16 | a8@todo("type 4 here") g4 c | b2 g8. g16 | a4 g d' | c2 g8. g16 |
     g'4 e c | b a f'8. f16 | e4 c d | c2.@todo("make it c2 r4") |.
   }

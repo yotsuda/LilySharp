@@ -11,10 +11,9 @@ composer "Franz Xaver Gruber"
 tempo 60
 time 6/8
 
-part melody { clef treble }
-
-section A {
-  melody {
+part melody {
+  clef treble
+  section A {
     g'8.@p( a16 g8) e4. | g8.( a16 g8) e4. |
     d'4@mp@todo("make it @mp.up") d8 b4. | c4 c8 g4. |
     a4@cresc a8 c8.( b16 a8) | g8.@mf( a16 g8) e4. |

@@ -8,10 +8,9 @@
 title "Ode to Joy"
 composer "Ludwig van Beethoven"
 
-part melody { clef treble }     // a player
-
-section A {                     // the music
-  melody {
+part melody {                   // a player
+  clef treble
+  section A {                   // the music
     e4 e f g | g f e d | c c d e | e d d2@todo("make it d4 d") |
     e4 e f g | g f e d | c c d e | d c c2 |
     d4 d e c | d e8 f e4 c | d4 e8 f e4 d | c d g,2@todo("delete the comma") |   // g, = the low G
