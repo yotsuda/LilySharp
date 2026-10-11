@@ -68,6 +68,19 @@ internal sealed class ChordNameCollector
     /// or null (a lead-sheet row, a piano staff) — set by the collector before each row.</summary>
     public TuningType? RowStaffTuning { get; set; }
 
+    /// <summary>The <c>@todo</c> a chords-row entry or rest carries (docs/todo-memo-design.md §5),
+    /// as <see cref="ChordNameItem.TodoKey"/> / <see cref="ChordNameItem.TodoMemo"/> /
+    /// <see cref="ChordNameItem.TodoBelow"/> hold it — read the way a note's is
+    /// (<c>MeasureCollector.TodoKeyOf</c>): the marks are the host's child nodes.</summary>
+    private static (string? Key, string? Memo, bool Below) TodoOf(SyntaxNode host)
+    {
+        foreach (var child in host.ChildNodes())
+            if (Semantics.TodoAnnotation.Of(child) is { } todo)
+                return (todo.Key ?? "", string.IsNullOrEmpty(todo.Memo) ? null : todo.Memo,
+                        child is MusicMarkSyntax mark && mark.ForcedAbove == false);
+        return (null, null, false);
+    }
+
     /// <summary>
     /// The diagram spec a row entry draws under its symbol, or null: a WRITTEN shape (owner's
     /// decision 2026-09-28) — else the layout table's shape for the chord (<see cref="Table"/>,
@@ -358,18 +371,22 @@ internal sealed class ChordNameCollector
             {
                 if (node is RestSyntax rest)
                 {
+                    var (key, memo, below) = TodoOf(rest);
                     _items.Add(new ChordNameItem(
                         "N.C.", mi, itemIndex: -1, rest.RestToken.SourceStart, staffIndex,
-                        useTiming: true, timing: timing));
+                        useTiming: true, timing: timing)
+                    { TodoKey = key, TodoMemo = memo, TodoBelow = below });
                 }
                 else if (node is ChordEntrySyntax entry)
                 {
                     var (sym, structure) = ResolveChordEntry(entry, mi);
                     string? diagram = DiagramOf(entry, structure);
+                    var (key, memo, below) = TodoOf(entry);
                     _items.Add(new ChordNameItem(
                         sym.Text, mi, itemIndex: -1, entry.SourceStart, staffIndex,
                         useTiming: true, timing: timing, structure: structure)
                     {
+                        TodoKey = key, TodoMemo = memo, TodoBelow = below,
                         SuperFrom = sym.SuperFrom,
                         BracketSuperFrom = sym.BracketSuperFrom,
                         RomanText = Roman(structure, mi),
@@ -714,11 +731,13 @@ internal sealed class ChordNameCollector
             {
                 var (sym, structure) = ResolveChordEntry(entry, measureIndex);
                 string? diagram = DiagramOf(entry, structure);
+                var (key, memo, below) = TodoOf(entry);
                 _items.Add(new ChordNameItem(
                     sym.Text, measureIndex, itemIndex: -1, position,
                     staffIndex: staffIndex, useTiming: true, timing: timing, structure: structure,
                     isChordRow: true)
                 {
+                    TodoKey = key, TodoMemo = memo, TodoBelow = below,
                     SuperFrom = sym.SuperFrom,
                     BracketSuperFrom = sym.BracketSuperFrom,
                     RomanText = Roman(structure, measureIndex),
@@ -727,14 +746,16 @@ internal sealed class ChordNameCollector
                     DrawnShape = diagram,
                 });
             }
-            else if (node is RestSyntax)
+            else if (node is RestSyntax restNode)
             {
                 // r / R print "N.C." at their slot and occupy it (see ProcessRun's
                 // remark). A bar-head '.' group prints nothing and occupies its slot too.
+                var (key, memo, below) = TodoOf(restNode);
                 _items.Add(new ChordNameItem(
                     "N.C.", measureIndex, itemIndex: -1, position,
                     staffIndex: staffIndex, useTiming: true, timing: timing,
-                    isChordRow: true));
+                    isChordRow: true)
+                { TodoKey = key, TodoMemo = memo, TodoBelow = below });
             }
             // BaseDuration = the resolved fraction (Dots 0): only its Duration drives
             // the spacing spring, so a dotted/compound value spaces correctly too.

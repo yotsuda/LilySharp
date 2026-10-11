@@ -140,9 +140,22 @@ public sealed partial class LilySharpLanguageServer
         // user report, `here` in `chords prog { section A { Fm } /* here */ }`.
         if (IsInsideChordAnnotation(doc.Text, offset))
             return GetDiatonicChordCompletions(doc.Text, offset);
-        if (IsInsideChordsBlock(doc.Text, offset)
-            && context is not (CompletionContext.ChordsTrackBody or CompletionContext.AfterSection))
-            return GetDiatonicChordCompletions(doc.Text, offset, degreesToo: true);
+        if (IsInsideChordsBlock(doc.Text, offset))
+        {
+            // A chord's mark (owner's decision 2026-10-11, docs/todo-memo-design.md §5): after
+            // `G@` the one annotation a row takes, inside `@todo(…)` the memo — no chord names
+            // there — and after its `)` the placement (answered by the switch below).
+            if (context == CompletionContext.AfterAt)
+                return new CompletionList
+                {
+                    Items = [.. GetArticulationCompletions().Items.Where(i => i.Label == LilySharp.Core.Semantics.TodoAnnotation.Name)],
+                };
+            if (AnnotationArgumentName(doc.Text, offset) != null)
+                return new CompletionList { Items = [] };
+            if (context is not (CompletionContext.ChordsTrackBody or CompletionContext.AfterSection
+                    or CompletionContext.AfterValueAnnotationPlacement))
+                return GetDiatonicChordCompletions(doc.Text, offset, degreesToo: true);
+        }
 
         // `tempo 100 |`: the feel words. Mid-music (`c4 tempo 96 |`) a NOTE may follow as
         // well, so there the feel words lead the music list rather than replace it.

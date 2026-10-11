@@ -104,7 +104,12 @@ internal static partial class SharedRenderer
     /// its measure, a staff space each way.
     /// LILYSHARP-OWN: an editor's mark, with no LilyPond counterpart.
     /// </summary>
-    private static void DrawTodoMarks(MultiStaffScore score, Dictionary<int, SystemLayout> measureToSystem,
+    /// <remarks>A chords-row symbol's mark (<see cref="ChordNameItem.TodoKey"/>, owner's decision
+    /// 2026-10-11, docs/todo-memo-design.md §5) is ringed round the symbol's ink — the box the
+    /// row reserved for it (<see cref="ChordNameEngraver.SymbolInk(ScoreTextMetrics, ChordNameLayout)"/>)
+    /// — and its memo set by the same pass as a note's.</remarks>
+    private static void DrawTodoMarks(MultiStaffScore score, ScoreLayout layout,
+        Dictionary<int, double> sysTopYUp, Dictionary<int, SystemLayout> measureToSystem,
         InkRecorder? ink, in OssiaShrink os, IDrawingContext gc)
     {
         if (!gc.DrawsEditorMarks)
@@ -168,6 +173,35 @@ internal static partial class SharedRenderer
                     }
                 }
             }
+        }
+
+        // …and the chords rows' symbols: a chord chart has no notes, so its doubts sit on the
+        // symbols themselves. The ring is the symbol's ink box (its left edge on the column —
+        // DrawChordNames draws it TextAnchor.Start — and its baseline the row's), read off the
+        // LIVE item the placement indexes, as the notes' marks are read off the live score.
+        foreach (var c in layout.ChordNameLayouts)
+        {
+            if (c.SourceIndex < 0 || c.SourceIndex >= score.ChordNames.Length)
+                continue;
+            var chord = score.ChordNames[c.SourceIndex];
+            if (chord.TodoKey is not { } key
+                || !sysTopYUp.TryGetValue(c.MeasureIndex, out double systemTop)
+                || !measureToSystem.TryGetValue(c.MeasureIndex, out var system))
+                continue; // no mark, or another page
+            var (inkBottom, inkTop) = ChordNameEngraver.SymbolInk(fonts, c);
+            double width = ChordNameEngraver.SymbolInkWidth(fonts, c);
+            double baseline = systemTop + c.YUp;
+            double cx = c.X + width / 2, cy = baseline + (inkBottom + inkTop) / 2;
+            double rx = width / 2 + TodoMemoStyle.RingPadding;
+            double ry = (inkTop - inkBottom) / 2 + TodoMemoStyle.RingPadding;
+            int staffIndex = c.RowStaffIndex >= 0 ? c.RowStaffIndex : chord.StaffIndex;
+            using (gc.Staff(staffIndex))
+            using (gc.Source(chord.SourcePosition))
+            using (gc.Todo(key))
+                DrawHandRing(gc, cx, cy, rx, ry, TodoMemoStyle.Pen, chord.SourcePosition);
+            if (chord.TodoMemo is { Length: > 0 } memo)
+                callouts.Add(new TodoCallout(system, staffIndex, c.MeasureIndex, chord.SourcePosition, key, memo,
+                    chord.TodoBelow, cx, cy, rx, ry, 1.0));
         }
         if (callouts.Count == 0)
             return;
@@ -483,6 +517,10 @@ internal static partial class SharedRenderer
                     foreach (var item in measure.Items)
                         if (item.TodoMemo is { Length: > 0 })
                             return true;
+        // A chords row's memo too (ChordNameItem.TodoMemo, docs/todo-memo-design.md §5).
+        foreach (var chord in score.ChordNames)
+            if (chord.TodoMemo is { Length: > 0 })
+                return true;
         return false;
     }
 

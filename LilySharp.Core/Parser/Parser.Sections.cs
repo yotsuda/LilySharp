@@ -367,9 +367,30 @@ internal sealed partial class Parser
         // '.' — at a bar's head too — and an empty bar '| |', so the spacer said nothing
         // those two do not; it falls to the stray report, which names the spelling.
         if (Current.Kind is SyntaxKind.RestR or SyntaxKind.RestR_Full)
-            return new RestGreen(Advance(), null);
+        {
+            var rest = Advance();
+            // `r@todo("…")`: a doubt about a no-chord slot (ChordRowMarks).
+            return new RestGreen(rest, null, articulations: ChordRowMarks(rest));
+        }
         return null;
     }
+
+    /// <summary>
+    /// The marks GLUED to a chords-row entry or rest — <c>G@todo</c>, <c>Am7@todo("Am7 or
+    /// C?")</c>, <c>F(133211)@todo(o12 "…")</c>, <c>r@todo</c> — read as a note's marks are
+    /// (<see cref="ParseArticulations"/>), or null when none is written.
+    /// </summary>
+    /// <remarks>
+    /// Owner's decision 2026-10-11 (docs/todo-memo-design.md §5): a chord chart has no notes,
+    /// so a doubt about a chord had nowhere to go. A chords row takes <c>@todo</c> and nothing
+    /// else; any other mark is KEPT in the tree (so it still spells the source) and reported by
+    /// TodoValidator, not dropped here. The marks are child NODES after the entry's tokens, so
+    /// everything that reads the symbol or its shapes from the entry's direct tokens
+    /// (<c>ChordEntrySyntax.SymbolText</c>, <c>ShapeWords</c>, the stepping key) never sees them.
+    /// A '@' after a space belongs to no entry and stays the stray it always was.
+    /// </remarks>
+    private GreenNode?[]? ChordRowMarks(SyntaxToken last)
+        => last.TrailingTriviaWidth == 0 && Check(SyntaxKind.At) ? ParseArticulations() : null;
 
     /// <summary>True when the token run starting here opens a ROMAN degree entry: a
     /// numeral (I… / V…), or an accidental prefix GLUED to one (<c>bVII</c>, <c>#IV</c>).
@@ -448,8 +469,12 @@ internal sealed partial class Parser
                    && !Check(SyntaxKind.OpenBrace) && !Check(SyntaxKind.EndOfFile)
                    && !SyntaxFacts.IsMeasureBarlineKind(Current.Kind))
                 tokens.Add(Advance());
-            tokens.Add(Expect(SyntaxKind.CloseParen));
+            prev = Expect(SyntaxKind.CloseParen);
+            tokens.Add(prev);
         }
+        // `G@todo("…")` — after the symbol, or after its shapes (ChordRowMarks).
+        if (ChordRowMarks(prev) is { } marks)
+            tokens.AddRange(marks);
         return new ChordEntryGreen([.. tokens]);
     }
 

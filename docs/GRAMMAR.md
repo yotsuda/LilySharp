@@ -1283,9 +1283,19 @@ LyricSyllable  = LyricText , [ '-' ] | '--' | '-' | '~' | '_' ;
                     the slur's. '__' is the extender LINE and takes no note; '_' and a
                     detached '~' take one note each, holding the previous syllable. *)
 
-ChordsBlock    = 'chords' , [ Identifier ] , '{' , { ChordRowEntry | ChordExtend | Rest | Barline } , '}' ;
+ChordsBlock    = 'chords' , [ Identifier ] , '{' , { ChordRowEntry | ChordExtend | ChordRowRest | Barline } , '}' ;
                  (* The UNNAMED track (2026-10-09) is placed by a score's bare 'chords' row. *)
-ChordRowEntry  = ( ChordEntry | RomanEntry ) , [ '(' , ShapeWords , ')' ] ;   (* '(' GLUED to the symbol *)
+ChordRowEntry  = ( ChordEntry | RomanEntry ) , [ '(' , ShapeWords , ')' ] , [ TodoMark ] ;   (* '(' GLUED to the symbol *)
+ChordRowRest   = ( 'r' | 'R' ) , [ TodoMark ] ;
+TodoMark       = Annotation ;   (* GLUED: '@todo', '@todo(key)', '@todo("memo")', '@todo(key "memo")',
+                                   with '.up' / '.down' after the argument *)
+                 (* A MARK ON A CHORD (owner's decision 2026-10-11, docs/todo-memo-design.md §5):
+                    a chord chart has no notes, so a doubt about a chord sits on its symbol —
+                    `Am7@todo("Am7 or C?")`, `F(133211)@todo(o12 "barre?")`, `r@todo`. The mark is
+                    read as a note's marks are; a chords row takes @todo and NO OTHER annotation
+                    (one written there is LYS1028). It is
+                    reported as a note's @todo (LYS4026) and ringed in the preview round the
+                    symbol's ink. A '@' after a space belongs to no entry (the stray report). *)
                  (* The chord diagram's shapes (owner's design 2026-09-28): F(133211),
                     F(133211 2010), F(guitar 133211 ukulele 2010), F/A(x03211). ShapeWords
                     is ChordArgument's (§8.4): each unnamed shape goes to the diagram tuning

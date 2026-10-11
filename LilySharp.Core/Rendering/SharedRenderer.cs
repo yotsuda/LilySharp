@@ -281,7 +281,7 @@ internal static partial class SharedRenderer
                 DrawLyricHyphens(layout, measureToSystemTopYUp, gc);
                 DrawPartCombine(score.TextMetrics, layout, measureToSystemTopYUp, gc);
                 // LAST, over everything: the editor's red ink (the interactive SVG alone draws it).
-                DrawTodoMarks(score, measureToSystem, ink, os, gc);
+                DrawTodoMarks(score, layout, measureToSystemTopYUp, measureToSystem, ink, os, gc);
             }
             finally
             {

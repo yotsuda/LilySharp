@@ -70,6 +70,58 @@ one system costs under a millisecond of the preview's render.
 - A long memo on a note *between* two short ones, where the first row is taken on both
   sides, is placed by cost like any other; the probes in Lab `sessions/p899/probe` show no
   crossing left in the cases tried, but the search varies the sides only, not the order.
+- **Under the title** a memo on the first system can still climb OVER the title, its leader
+  across the letters (Lab `sessions/p902/probe/notetodo.png`, a note's memo; the same for a
+  chord's): the band reserves the memo's box on the system's silhouette, but the title is not
+  part of it, and the gap the header keeps above the box is narrower than the air the drawer
+  wants round a memo, so the drawer climbs past the title. Measured 2026-10-11; not yet fixed.
 - A memo is never shortened; a very long memo spans the margin (undecided since session 891).
 - `lysc png --todo` would draw the preview's picture as pixels; `PngDocumentOptions.EditorMarks`
   is the door, not yet opened in the CLI.
+
+## 5. A mark on a chord row's symbol (owner's decision 2026-10-11)
+
+The owner asked whether `@todo` could mark more than notes, and decided to start with the
+symbols of a `chords` row — the doubt a transcriber meets most ("Am7 or C?", a symbol the OMR
+could not read), and the one place a mark cannot borrow a nearby note: a chord chart with no
+staff has none.
+
+- **Spelling.** The mark is GLUED to the entry, after its symbol and its shapes, as on a note:
+  `G@todo`, `Am7@todo("check")`, `F(133211)@todo(o12 "barre?")`, and `r@todo("…")` on a
+  no-chord slot. `.down` puts the memo under the system, as on a note. A `.` slot extension
+  takes no mark (it is the chord before it, held).
+- **Only `@todo`.** A chord row's entry takes no other annotation; any other `@name` there is
+  an error naming the one it takes (the parser keeps the tokens, as it does every stray).
+- **Reports.** The same LYS4026 as on a note: the squiggle under the memo, Ctrl+. resolving it,
+  a key for a tool's side file, "Resolve all" across notes and chords alike.
+- **The preview.** The ring goes round the symbol's ink (the same pieces the row reserved and
+  drew, ChordNameGlyphRun); the memo is set like a note's — over the system, climbing clear of
+  the page's ink. Exports draw nothing, as for a note.
+- **Not yet.** The layout's reservation of the memos' room (`TodoMemoBand`, §1) reads the staves'
+  items only, so a chord-row memo has no reserved row: it is placed where the page has room,
+  and on a crowded page it may stand close to the system above. Lyrics, directives and the form
+  were judged after chords (lyrics next; the others borrow a nearby note well enough).
+
+## 5. A mark on a chord symbol (owner's decision 2026-10-11)
+
+A chords row has no notes, and a chord chart (a score of chord rows alone) has none at all, so
+a doubt about a chord — by ear, or from the OMR reader — had nowhere to go. The owner asked
+whether `@todo` could reach beyond notes; of the places weighed (chord symbols, lyrics,
+mid-music `key`/`time`/`tempo`, form items, headers) the chord symbol is the one with no
+workaround and the most doubts, and the owner said go.
+
+- **Spelling.** The mark is GLUED to the entry, after its shape group if it writes one:
+  `G@todo`, `Am7@todo("Am7 or C?")`, `F(133211)@todo(o12 "…")`, `r@todo` on a no-chord slot,
+  `.down` as on a note. The run reads like a note's marks (the same parser routine,
+  `ParseArticulations`); a chords row takes no other annotation, and one written there is an
+  error naming `@todo` as the only one.
+- **Reports.** Nothing new: the mark is the same annotation node, so LYS4026 (underlining the
+  memo), "Resolve this TODO", "Resolve all" and the OMR candidates work on it unchanged.
+- **The tree.** The annotation is a child NODE of the entry, after its tokens. Everything that
+  reads an entry's symbol or shapes reads its direct TOKENS (`SymbolText`, `ShapeWords`,
+  `NoteStepper`'s site), so none of them sees the mark — the stepping key inserts a shape
+  before it (`G@todo` → `G(320003)@todo`).
+- **The preview.** The ring goes round the symbol's ink (the box the row reserved for it), and
+  the memo is placed by §2–§3 as a note's is. Nothing is drawn in an export.
+- **Room.** The layout reserves a chord memo's room as a note's (`TodoMemoBand.Boxes` reads the
+  rows' symbols on their timing columns beside the staves' items).

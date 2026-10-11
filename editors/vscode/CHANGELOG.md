@@ -13,6 +13,15 @@ All notable changes to the Lily# VS Code extension are documented here.
   piano, a band. Lessons are kept per language and follow the editor's display language
   where a translation exists (English for now). The New Score file points to them.
 
+### Language
+
+- **A chord symbol takes `@todo`.** In a `chords` row the mark is glued after the symbol (and
+  after its shape group): `Am7@todo("Am7 or C?")`, `F(133211)@todo(o12 "barre?")`, and `r@todo`
+  on a no-chord slot. A chord chart has no notes, so a doubt about a chord had nowhere to go.
+  It is reported like a note's mark (LYS4026, Resolve this TODO), completed after `G@`, and the
+  preview rings the symbol and sets the memo, with room reserved for it. It is the only mark a
+  chords row takes; any other is LYS1028.
+
 ### Breaking changes
 
 - **A block's name is optional, and a score has one name, a bare word.** `form { … }` is the

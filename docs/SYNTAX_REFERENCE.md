@@ -414,6 +414,20 @@ r2@todo("bar 12 is only 7/8").down d'2 |
 c'4@todo(o1203 "smudged") e'4@todo g'2 |
 ```
 
+A chord chart has no notes, so a **chords-row symbol** takes the mark too, glued after the
+symbol and after its shape group, and so does a no-chord `r`; the preview rings the symbol.
+It is the only annotation a chords row accepts:
+
+```
+part melody { clef treble }
+section A {
+  melody { c'1 | a1 | f1 | g1 | }
+  chords prog { C | Am7@todo("Am7 or C?") | F(133211)@todo(o12 "barre?") | r@todo |. }
+}
+form { ~A }
+score { chords prog  staff melody }
+```
+
 `lysc check --todo-as-error` fails while any is left; `--no-todo` stops reporting them.
 When an OMR reader wrote the file, its side file `x.omr.json` (beside `x.lys`) may list
 candidates for a keyed mark; each is a quick fix that writes it over the marked item,

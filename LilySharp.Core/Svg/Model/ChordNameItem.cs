@@ -157,6 +157,21 @@ public sealed record ChordNameItem
     public string? DrawnShape { get; init; }
 
     /// <summary>
+    /// The <c>@todo</c> a chords-row symbol or no-chord slot carries (<c>Am7@todo("Am7 or C?")</c>,
+    /// owner's decision 2026-10-11, docs/todo-memo-design.md §5), as <see cref="MusicItem.TodoKey"/>
+    /// holds a note's: its key, <c>""</c> without one, null when there is none. The preview rings
+    /// the symbol's ink and sets the memo (<c>SharedRenderer.DrawTodoMarks</c>); nothing else
+    /// reads it, and no export draws it.
+    /// </summary>
+    public string? TodoKey { get; init; }
+
+    /// <inheritdoc cref="MusicItem.TodoMemo"/>
+    public string? TodoMemo { get; init; }
+
+    /// <inheritdoc cref="MusicItem.TodoBelow"/>
+    public bool TodoBelow { get; init; }
+
+    /// <summary>
     /// True when this symbol belongs to an independent chord ROW (a <c>chords name
     /// { }</c> part placed via <c>chords name</c> in a score). The engraver then
     /// places it WITHIN its row's band (by <see cref="StaffIndex"/>) rather than
