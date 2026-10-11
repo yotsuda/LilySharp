@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 237 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **363** | |
+| `OWN` | 238 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **364** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（237 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（238 件）
 
 ### `LilySharp.Core/Editing/NoteStepper.cs`
 - **`NoteStepper.NoProgram`** LILYSHARP-OWN: the editor's audition has no LilyPond counterpart (the performer
@@ -289,6 +289,8 @@
 - **`ChordVoicings`** LILYSHARP-OWN, all of it: LilyPond has no voicing catalogue. Its predefined fret diagrams
 ### `LilySharp.Core/Music/PhraseAnchor.cs`
 - **`PhraseAnchor.Shape`** LILYSHARP-OWN: LilyPond has neither the item nor a phrase anchor — the twin's
+### `LilySharp.Core/Music/PhraseSummary.cs`
+- **`PhraseSummary`** LILYSHARP-OWN (owner's request 2026-10-11): a drum part is written as phrases of patterns
 ### `LilySharp.Core/Music/PredefinedFretboards.cs`
 - **`PredefinedFretboards`** LILYSHARP-OWN: NINE of LilyPond's entries are LEFT OUT (owner's decisions 2026-09-28) — seven
 ### `LilySharp.Core/Music/PredefinedFretboardsGenerated.cs`

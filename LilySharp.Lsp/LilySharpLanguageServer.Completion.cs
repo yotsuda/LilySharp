@@ -188,10 +188,13 @@ public sealed partial class LilySharpLanguageServer
             // `IIm7` → `<d f a c>`), from the same declaration.
             // The document's phrase names ride along: a phrase reference is a music item
             // (GRAMMAR PhraseRef), and until 2026-09-10 the popup never named one.
+            // A drum part's popup names the phrases too, FIRST and by kit piece — a drum part
+            // is written as patterns (owner's request 2026-10-11) — and every phrase item tells
+            // what it holds (PhraseSummary: its pieces and length, the grid in its documentation).
             CompletionContext.MusicBlock => IsInsidePercussionPartMusic(doc.Text, offset, out bool inVoice)
-                ? GetDrumCompletions(inVoice)
-                : GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset), _flatSpellingContracted, inVoice,
-                    CurrentKey(doc.Text, offset).Tonic, DeclaredNamesOf(doc.Text, "phrase")),
+                ? WithPhraseSummaries(GetDrumCompletions(inVoice), doc.Tree, drums: true)
+                : WithPhraseSummaries(GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset), _flatSpellingContracted, inVoice,
+                    CurrentKey(doc.Text, offset).Tonic, DeclaredNamesOf(doc.Text, "phrase")), doc.Tree, drums: false),
             // The position goes with the text here too: a repeat barline typed as far as
             // `|` or `:` is REPLACED by the item, not appended to (see GetFormCompletions).
             CompletionContext.FormBlock => GetFormCompletions(doc.Text, offset, position),

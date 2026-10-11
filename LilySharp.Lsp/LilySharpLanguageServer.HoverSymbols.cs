@@ -56,7 +56,16 @@ public sealed partial class LilySharpLanguageServer
         // add one — checked first, because the mark sits INSIDE a chord (`<c e g>@chord(C)`),
         // which would otherwise answer.
         string? content = null;
-        if (ChordDiagramMarkAt(node) is { } diagramMark
+        // A phrase's name — where it is played or where it is declared — hovers as what the
+        // phrase holds: its length, how often it is played, its kit pieces and drum grid
+        // (Music.PhraseSummary, owner's request 2026-10-11).
+        if (PhraseNameAt(node, offset) is { } phrase
+            && LilySharp.Core.Music.PhraseSummary.Of(doc.Tree, phrase.Name) is { } summary)
+        {
+            node = phrase.Site;
+            content = summary.ToMarkdown();
+        }
+        else if (ChordDiagramMarkAt(node) is { } diagramMark
             && ChordDiagramHover(diagramMark) is { } diagramHover)
         {
             node = diagramMark;
@@ -96,6 +105,22 @@ public sealed partial class LilySharpLanguageServer
                 End = new Position(endLine, endCol)
             }
         };
+    }
+
+    /// <summary>The phrase name at <paramref name="offset"/>: a reference in music
+    /// (<c>hats8</c>), or the name of a <c>phrase NAME { … }</c> declaration; else null.</summary>
+    private static (string Name, SyntaxNode Site)? PhraseNameAt(SyntaxNode node, int offset)
+    {
+        for (var n = node; n != null; n = n.Parent)
+        {
+            if (n is VariableReferenceSyntax reference)
+                return (reference.Name.Text, reference);
+            if (n is PhraseDeclarationSyntax declaration)
+                return offset >= declaration.Name.Span.Start && offset <= declaration.Name.Span.End
+                    ? (declaration.Name.Text, declaration.Name)
+                    : null;
+        }
+        return null;
     }
 
     // The hover text lives in LanguageReference (ONE HOME with the signature

@@ -247,6 +247,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **A phrase says what it holds.** Hovering a phrase's name — where it is played or declared —
+  shows its length, how often the file plays it and its source; a drum phrase adds its kit pieces
+  and a grid of its hits, one row per drum — the chart a pattern written in durations does not line
+  up. The completion list carries the same: each phrase item
+  names its pieces and length, the grid in its documentation, and in a drum part the phrases are
+  offered first, hi-hat before snare before bass drum.
+
 - **`midiInstrument` completes with its quotes and its names**: the property item writes
   `midiInstrument ""` and re-opens the popup between the quotes with LilyPond's 128 General
   MIDI names in GM order (`lilysharp/completion`, the `AfterMidiInstrument` context); a name

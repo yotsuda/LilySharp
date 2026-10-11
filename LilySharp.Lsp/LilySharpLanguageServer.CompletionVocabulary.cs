@@ -3912,6 +3912,46 @@ public sealed partial class LilySharpLanguageServer
     /// </summary>
     // Internal with a default so the tests reach it — CompletionInsertsValidSyntaxTests nets
     // every parameterless list, and until 2026-09-03 this one was private and outside it.
+    /// <summary>
+    /// The document's phrases as reference items, each telling what it holds — its kit pieces
+    /// or "melody" and its length as the Detail, the hover's account (with a drum phrase's grid)
+    /// as the Documentation. In a drum part (<paramref name="drums"/>) they are added and sorted
+    /// FIRST, by kit piece (hi-hat, ride, …, bass drum) then name; elsewhere the reference items
+    /// the music list already carries are filled in where they stand.
+    /// </summary>
+    internal static CompletionList WithPhraseSummaries(CompletionList list, LilySharp.Core.Syntax.SyntaxTree tree, bool drums)
+    {
+        var names = tree.GetRoot().ChildNodes().OfType<LilySharp.Core.Syntax.PhraseDeclarationSyntax>()
+            .Select(p => p.Name.Text).Distinct(System.StringComparer.Ordinal).ToList();
+        if (names.Count == 0)
+            return list;
+        var items = list.Items.ToList();
+        foreach (var name in names)
+        {
+            var item = items.FirstOrDefault(i => i.Label == name && i.Kind == CompletionItemKind.Reference);
+            var summary = LilySharp.Core.Music.PhraseSummary.Of(tree, name);
+            if (item == null)
+            {
+                if (!drums)
+                    continue;
+                item = new CompletionItem { Label = name, Kind = CompletionItemKind.Reference };
+                items.Add(item);
+            }
+            if (drums)
+            {
+                int rank = summary?.Families.Count > 0
+                    ? System.Array.IndexOf(LilySharp.Core.Music.PhraseSummary.FamilyOrder, summary.Families[0])
+                    : 9;
+                item.SortText = "00" + rank + name;
+            }
+            if (summary == null)
+                continue;
+            item.Detail = summary.Tag;
+            item.Documentation = new MarkupContent { Kind = MarkupKind.Markdown, Value = summary.ToMarkdown() };
+        }
+        return new CompletionList { IsIncomplete = list.IsIncomplete, Items = items.ToArray() };
+    }
+
     internal static CompletionList GetDrumCompletions(bool insideVoice = false)
     {
         var items = new System.Collections.Generic.List<CompletionItem>();
