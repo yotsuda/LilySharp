@@ -1,0 +1,41 @@
+// Lesson 1 of 10 — Let the editor teach you
+//
+// STEP 0 — SEE THE MUSIC. Press Ctrl+K, release, then press V.
+// (Or click the preview icon at the top right of this editor.)
+// The score opens beside this file and redraws as you type.
+// Click the score, then ▶ to hear it.
+//
+// Then: Ctrl+Space anywhere lists what you can write there.
+
+title "Mary Had a Little Lamb"
+composer "Traditional"
+
+// STEP 1 — Ctrl+Space on the empty line below. Pick `key`, then `g`, then `major`.
+
+
+part melody {
+  clef treble
+  // STEP 2 — Ctrl+Space on the empty line below. Pick `instrument`, then `flute`. Press ▶.
+
+}
+
+section A {
+  melody {
+    e4 d c d | e e e2 | d4 d d2 | e4 g g2 |
+    e4 d c d | e e e e | d d e d | c1 |.
+  }
+  // STEP 3 — Type `@` right after the first `e4`. Pick `mf`.
+  // STEP 4 — Ctrl+Space after `c1 |.` — pick `C`: it writes <c e g>.
+}
+
+// STEP 5 — Ctrl+Space inside these braces: sections and repeat signs.
+form { ~A }
+
+score {
+  staff melody
+}
+
+// Also: hover any word to read about it · Alt+P plays the note at the caret
+// · Ctrl+Shift+Up/Down moves a note an octave.
+//
+// NEXT — type `lesson` on a new line and pick `lesson-02-notes`.

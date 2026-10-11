@@ -173,7 +173,7 @@ function migratePreviewKey(oldUri: string, newUri: string) {
 // ⚠️ Two spaces, no tabs: 545 of the 548 tracked .lys files that indent at all use
 // two spaces and not one uses a tab (measured 2026-08-23). The formatter cannot
 // settle this — it takes the indent from the client's formatting options.
-const NEW_SCORE_TEMPLATE = `// Ctrl+Space at the top level offers fuller score templates.
+const NEW_SCORE_TEMPLATE = `// New to Lily#? Type "lesson" on a new line and pick lesson-01. Preview: Ctrl+K V.
 title "Untitled"
 
 tempo 100

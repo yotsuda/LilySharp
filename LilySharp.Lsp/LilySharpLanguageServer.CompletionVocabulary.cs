@@ -3528,7 +3528,7 @@ public sealed partial class LilySharpLanguageServer
     }
 
     internal static CompletionList GetTopLevelCompletions(
-        string? text = null, int offset = 0, Position? position = null)
+        string? text = null, int offset = 0, Position? position = null, string? locale = null)
     {
         var items = new System.Collections.Generic.List<CompletionItem>
         {
@@ -3636,7 +3636,114 @@ public sealed partial class LilySharpLanguageServer
         if (text != null)
             items.AddRange(SectionScaffoldItems(text, offset, "Section", nest: "", includeNewSection: false));
 
+        items.AddRange(LessonItems(text, offset, position, locale));
+
         return new CompletionList { Items = items.ToArray() };
+    }
+
+    /// <summary>One lesson of the learning set: its label (the file name, the same in every
+    /// language — it is the lesson's identity, and the lessons name each other by it), the
+    /// language of its text, the title its first line gives it, and the whole file it puts
+    /// into the editor.</summary>
+    internal sealed record Lesson(string Label, string Language, string Title, string Text);
+
+    /// <summary>The learning set, <c>Lessons/LANG/lesson-NN-*.lys</c> embedded in this
+    /// assembly, by language, each in file-name order. Each lesson is a complete score that
+    /// teaches one step; the first is a tour of this completion list itself, so a writer can
+    /// find the rest of the language from it.</summary>
+    /// <remarks>
+    /// The texts are FILES rather than strings in this class (unlike the two Twinkle
+    /// templates): complete scores of comments and music are read, edited and translated as
+    /// scores, and <c>LessonTests</c> compiles each one, so a language change that breaks a
+    /// lesson is a red test rather than a tutorial that teaches an error.
+    /// <c>.gitattributes</c> pins <c>*.lys</c> to LF, and the loader drops any CR anyway: the
+    /// text is written into the document verbatim, as the templates are.
+    /// <para>English (<c>en</c>) is the complete set and the fallback; a translation may
+    /// cover only some lessons (<see cref="LessonsFor"/>).</para>
+    /// </remarks>
+    internal static readonly System.Collections.Generic.IReadOnlyDictionary<string, Lesson[]> LessonsByLanguage = LoadLessons();
+
+    /// <summary>The English lessons — the complete set, in order.</summary>
+    internal static System.Collections.Generic.IReadOnlyList<Lesson> Lessons => LessonsByLanguage["en"];
+
+    private static System.Collections.Generic.Dictionary<string, Lesson[]> LoadLessons()
+    {
+        const string prefix = "Lessons/", suffix = ".lys";
+        var assembly = typeof(LilySharpLanguageServer).Assembly;
+        var byLanguage = assembly.GetManifestResourceNames()
+            .Where(n => n.StartsWith(prefix, StringComparison.Ordinal) && n.EndsWith(suffix, StringComparison.Ordinal))
+            .OrderBy(n => n, StringComparer.Ordinal)
+            .Select(n =>
+            {
+                // Lessons/<language>/<label>.lys — the csproj builds the name from MSBuild's
+                // %(RecursiveDir), which keeps the platform's separator.
+                string[] path = n[prefix.Length..^suffix.Length].Split('/', '\\');
+                using var stream = assembly.GetManifestResourceStream(n)!;
+                using var reader = new System.IO.StreamReader(stream);
+                string text = reader.ReadToEnd().Replace("\r", "");
+                // The first line is `// Lesson N of M — Title` (in the lesson's language).
+                string title = text[..Math.Max(0, text.IndexOf('\n'))].TrimStart('/', ' ');
+                return new Lesson(path[^1], path[0].ToLowerInvariant(), title, text);
+            })
+            .GroupBy(l => l.Language)
+            .ToDictionary(g => g.Key, g => g.ToArray(), StringComparer.Ordinal);
+        if (!byLanguage.ContainsKey("en"))
+            byLanguage["en"] = [];
+        return byLanguage;
+    }
+
+    /// <summary>The lessons for a client <paramref name="locale"/>: the English set, with
+    /// each lesson replaced by its translation where the locale's language has one — the
+    /// full tag first (<c>pt-br</c>), then its language (<c>pt</c>). A lesson nobody has
+    /// translated yet is offered in English rather than missing from the set.</summary>
+    internal static Lesson[] LessonsFor(string? locale)
+    {
+        var english = LessonsByLanguage["en"];
+        string tag = (locale ?? "en").ToLowerInvariant().Replace('_', '-');
+        Lesson[]? Of(string language) =>
+            language != "en" && LessonsByLanguage.TryGetValue(language, out var set) ? set : null;
+        var translated = Of(tag) ?? (tag.IndexOf('-') is > 0 and var dash ? Of(tag[..dash]) : null);
+        if (translated is null)
+            return [.. english];
+        return [.. english.Select(e => translated.FirstOrDefault(t => t.Label == e.Label) ?? e)];
+    }
+
+    /// <summary>The lesson items for the word being completed: only the first lesson on an
+    /// empty word (the list is already long, and lesson 1 is the way in), all of them once the
+    /// word is on its way to <c>lesson</c> or <c>learn</c>, none for any other word.</summary>
+    /// <remarks>
+    /// The client asks once, when the word starts, and filters what it got as the word grows
+    /// — so the decision has to be made on the first letter: <c>l</c> already brings all ten,
+    /// and <c>ly</c> (lyrics) or <c>la</c> (layout) leave them behind in the client's own
+    /// filtering, since no lesson's filter text holds those letters in that order.
+    /// Each item is a <see cref="ScoreTemplateItem"/>: it replaces the whole file, asking
+    /// first, exactly as the templates do.
+    /// </remarks>
+    private static System.Collections.Generic.IEnumerable<CompletionItem> LessonItems(
+        string? text, int offset, Position? position, string? locale)
+    {
+        string typed = "";
+        if (text != null)
+        {
+            int start = Math.Min(offset, text.Length);
+            while (start > 0 && (char.IsLetterOrDigit(text[start - 1])
+                                 || text[start - 1] == '_' || text[start - 1] == '-'))
+                start--;
+            typed = text[start..Math.Min(offset, text.Length)].ToLowerInvariant();
+        }
+
+        static bool Toward(string word, string typed) =>
+            word.StartsWith(typed, StringComparison.Ordinal) || typed.StartsWith(word, StringComparison.Ordinal);
+
+        var lessons = LessonsFor(locale);
+        var offered = typed.Length == 0 ? lessons.Take(1)
+            : Toward("lesson", typed) || Toward("learn", typed) ? lessons
+            : [];
+        return offered.Select(l => ScoreTemplateItem(
+            l.Label,
+            l.Label + " lesson learn tutorial",
+            $"{l.Title} — REPLACES the whole file (it asks first)",
+            l.Text, text, offset, position));
     }
 
     /// <summary>Top-level keywords that may appear only ONCE at the global scope — metadata

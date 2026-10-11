@@ -1,0 +1,44 @@
+// Lesson 9 of 10 — Piano
+// Preview: Ctrl+K V
+//
+// Two parts on a grand staff. A `phrase` is music with a name, played
+// wherever the name is written. (Left hand simplified.)
+
+title "Minuet in G"
+composer "Christian Petzold"
+
+time 3/4
+key g major
+
+part rh { clef treble }
+part lh { clef bass  octave 3 }    // octave 3: start near the C below middle C
+
+phrase opening {
+  d'4 g,8 a b c | d4 g, g | e'4 c8 d e fis | g4 g, g |
+  c4 d8 c b a | b4 c8 b a g |
+}
+
+section A {
+  rh {
+    opening fis4 g8 a b g | a2. |
+    opening a'4 b8 a g fis | g2. |.
+  }
+  lh {
+    g'2 a4 | b2. | c2. | b2. | a2. | g2. | d'4 b g | d2. |
+    g2 a4 | b2. | c2. | b2. | a2. | g2. | d2. | g,2. |.
+  }
+}
+
+form { ~A }
+
+score {
+  grandStaff {
+    staff rh
+    staff lh
+  }
+}
+
+// TRY: end the left hand with `<g, d' b'>2.` (a chord) ·
+// `tuplet 3/2 { g8 a b }` for a triplet · `voice { b2 c4 } { g2 a4 }` for two voices.
+//
+// NEXT — type `lesson` on a new line and pick `lesson-10-band`.

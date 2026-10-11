@@ -1,0 +1,42 @@
+// Lesson 7 of 10 — Lyrics
+// Preview: Ctrl+K V
+//
+// A lyrics track `sings` a part: one syllable per note, `sleep- ing` joins a
+// word, `|` keeps in step with the bars. Each row goes under the staff.
+
+title "Frère Jacques"
+composer "Traditional"
+
+part melody {
+  clef treble
+  section A {
+    c4 d e c | c d e c | e f g2 | e4 f g2 |
+    g8 a g f e4 c | g'8 a g f e4 c | c g c2 | c4 g c2 |.
+  }
+}
+
+lyrics en sings melody {
+  section A {
+    Are you sleep- ing, | are you sleep- ing, | Bro- ther John? | Bro- ther John? |
+    Morn- ing bells are ring- ing, | morn- ing bells are ring- ing: | Ding, dang, dong! | Ding, dang, dong! |
+  }
+}
+
+lyrics fr sings melody {
+  section A {
+    Frè- re Jac- ques, | frè- re Jac- ques, | dor- mez- vous? | dor- mez- vous? |
+    Son- nez les ma- ti- nes, | son- nez les ma- ti- nes: | Ding, dang, dong! | Ding, dang, dong! |
+  }
+}
+
+form { ~A }
+
+score {
+  staff melody
+  lyrics en
+  lyrics fr
+}
+
+// TRY: remove `lyrics fr` from the score · add a syllable and hover the squiggle.
+//
+// NEXT — type `lesson` on a new line and pick `lesson-08-chords`.

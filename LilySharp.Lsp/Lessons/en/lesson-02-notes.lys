@@ -1,0 +1,29 @@
+// Lesson 2 of 10 — Notes and octaves
+// Preview: Ctrl+K V
+//
+// A note is a letter and a length: `e4` = E, quarter note.
+//   1 whole · 2 half · 4 quarter · 8 eighth — no number = same as before.
+// Each note goes to the nearest octave. `'` = one octave up, `,` = down.
+
+title "Ode to Joy"
+composer "Ludwig van Beethoven"
+
+part melody { clef treble }     // a player
+
+section A {                     // the music
+  melody {
+    e4 e f g | g f e d | c c d e | e d d2 |
+    e4 e f g | g f e d | c c d e | d c c2 |
+    d4 d e c | d e8 f e4 c | d4 e8 f e4 d | c d g,2 |   // g, = the low G
+    e'4 e f g | g f e d | c c d e | d c c2 |.           // e' = back up
+  }
+}
+
+form { ~A }                     // the playing order
+
+score { staff melody }          // what is printed
+
+// TRY: delete the `,` from `g,2` and watch it jump · type `d4 d d` for `d2`
+// and hover the squiggle.
+//
+// NEXT — type `lesson` on a new line and pick `lesson-03-rhythm`.

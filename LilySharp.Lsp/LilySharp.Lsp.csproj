@@ -67,4 +67,12 @@
   <ItemGroup>
     <InternalsVisibleTo Include="LilySharp.Tests" />
   </ItemGroup>
+
+  <!-- The learning set the `lesson-…` completion items put into the editor
+       (LilySharpLanguageServer.LessonsByLanguage): Lessons/<language>/lesson-NN-*.lys,
+       English complete, other languages as far as they are translated. The logical name
+       keeps the folder, so the language is the folder and the order is the file name. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Lessons\**\*.lys" LogicalName="Lessons/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
 </Project>

@@ -1,0 +1,28 @@
+// Lesson 3 of 10 — Rhythm
+// Preview: Ctrl+K V
+//
+// A dot adds half: `4.` = dotted quarter.  `r4` = rest.  `c2~ c4` = tie.
+
+title "Happy Birthday to You"
+composer "Mildred J. Hill and Patty Hill"
+
+time 3/4
+
+part melody { clef treble }
+
+section A {
+  partial 4                     // a pickup: the first bar is one beat
+  melody {
+    g'8. g16 | a4 g c | b2 g8. g16 | a4 g d' | c2 g8. g16 |
+    g'4 e c | b a f'8. f16 | e4 c d | c2. |.
+  }
+}
+
+form { ~A }
+
+score { staff melody }
+
+// TRY: end with `c2 r4` · then `c2.~ | c2. |.` · put the caret on a note and
+// type 8.
+//
+// NEXT — type `lesson` on a new line and pick `lesson-04-keys`.

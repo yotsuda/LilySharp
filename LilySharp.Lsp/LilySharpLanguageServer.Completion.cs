@@ -167,7 +167,7 @@ public sealed partial class LilySharpLanguageServer
         {
             // The position goes with the text: the `template-…` items need a RANGE (not just
             // an offset) to re-type the word being completed without changing it.
-            CompletionContext.TopLevel => GetTopLevelCompletions(doc.Text, offset, position),
+            CompletionContext.TopLevel => GetTopLevelCompletions(doc.Text, offset, position, _locale),
             // A percussion part's music block offers the drum-kit vocabulary,
             // not pitch letters (LILYPOND-REF: \drummode note names).
             // The key's tonic travels with its signature: the pitch rows are spelled for the

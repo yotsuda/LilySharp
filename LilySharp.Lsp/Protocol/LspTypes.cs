@@ -226,6 +226,11 @@ public class InitializeParams
 
     [JsonProperty("trace")]
     public string? Trace { get; set; }
+
+    /// <summary>The client's UI language (LSP 3.16), e.g. <c>en</c>, <c>ja</c>, <c>pt-br</c>;
+    /// VS Code sends its display language. It picks the language of the lessons.</summary>
+    [JsonProperty("locale")]
+    public string? Locale { get; set; }
 }
 
 public class InitializeResult

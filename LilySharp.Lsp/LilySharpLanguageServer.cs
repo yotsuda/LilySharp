@@ -74,6 +74,10 @@ public sealed partial class LilySharpLanguageServer
     // DidChangeConfiguration. Default = full (ees/aes).
     private bool _flatSpellingContracted;
 
+    // The client's UI language from `initialize` (LSP `locale`): the language the lessons
+    // are offered in, falling back to English lesson by lesson (LessonsFor). Null = English.
+    private string? _locale;
+
     /// <summary>
     /// True iff the pushed settings ask for the contracted Dutch flats (es/as).
     /// The client sends <c>{ completion: { flatSpelling: "contracted" | "full" } }</c>
@@ -151,6 +155,7 @@ public sealed partial class LilySharpLanguageServer
         _flatSpellingContracted = ParseFlatSpellingContracted(
             @params.InitializationOptions as Newtonsoft.Json.Linq.JObject);
         ApplyFontPaths(@params.InitializationOptions as Newtonsoft.Json.Linq.JObject);
+        _locale = @params.Locale;
 
         return new InitializeResult
         {

@@ -1,0 +1,47 @@
+// Lesson 10 of 10 — A band
+// Preview: Ctrl+K V
+//
+// More parts, same section. `tab` prints a part as tablature, `clef percussion`
+// makes a drum part, and each `score` is one printout of the same music.
+
+title "Saturday"
+composer "Lily# lessons"
+
+tempo 112
+
+part lead { clef treble  midiInstrument "trumpet" }
+part bass { clef bass  tuning bass  octave 3 }
+part kit { clef percussion }
+
+section A {
+  lead { e4 g a g | c2 a | g4 e d c | d1 | }
+  bass { c4 c g c | a a e a | f f a f | g g b g | }
+  kit {
+    voice { repeat unfold 4 { hh8 hh hh hh hh hh hh hh | } }
+          { repeat unfold 4 { bd4 sn bd sn | } }
+  }
+}
+
+chords prog {
+  section A { C | Am | F | G | }
+}
+
+form { |: ~A :| }
+
+score {                          // the full band
+  chords prog
+  staff lead
+  staff bass
+  tab bass
+  staff kit
+}
+
+score bassist {                  // just the bass part
+  staff bass
+  tab bass
+}
+
+// TRY: pick `bassist` at the top of the preview · Ctrl+Space after
+// `midiInstrument "` lists the 128 sounds · change `sn` to `hh` and listen.
+//
+// That is the whole tour. Keep Ctrl+Space close: it knows the rest.
