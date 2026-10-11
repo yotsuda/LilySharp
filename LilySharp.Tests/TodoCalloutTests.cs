@@ -189,6 +189,22 @@ public class TodoCalloutTests
         CheckLeaders("c''4@todo(\"first memo here\") d''4 e''4@todo(\"second memo here\") f''4 |", 2);
     }
 
+    [Theory]
+    [InlineData("3/4", "c'4@todo(\"memo\") d'4 e'4 |")]
+    [InlineData("6/8", "c'4.@todo(\"memo\") d'4. |")]
+    [InlineData("12/8", "c'1.@todo(\"memo\") |")]
+    public void AMemo_InAScoreWithANumericMeter_StillRenders(string meter, string music)
+    {
+        // The memo's placing records the page's ink, glyph by glyph, from each glyph's design
+        // box — and the time-signature digits have none (only an outline box), so the preview
+        // of ANY score with a memo and a numeric meter threw "the music font has no box for
+        // timeSig3" and drew nothing (found 2026-10-11, writing the lessons: 4/4 draws the C
+        // glyph and passed, 3/4 and 6/8 failed).
+        var tree = SyntaxTree.Parse($"time {meter}\n" + Book(music));
+        string preview = SvgGenerator.Generate(tree, SvgRenderOptions.Preview());
+        Assert.Single(MemoBoxes(preview));
+    }
+
     [Fact]
     public void TheLayoutReservesTheMemosRows_InThePreviewOnly()
     {

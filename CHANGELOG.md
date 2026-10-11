@@ -152,6 +152,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A `@todo` memo in a score with a numeric meter (3/4, 6/8, …) no longer stops the
+  preview.** Placing the memo measured every glyph on the page by its design box, which the
+  time-signature digits do not have; the picture failed to render at all (4/4, drawn as the
+  C glyph, was not affected).
 - **PDF: two documents with different `fonts { }` for one face no longer share the first one's
   answer.** PdfSharpCore caches what a family name resolved to for the life of the process, so
   in a host that renders book after book (the language server, `lysc pdf --batch`)

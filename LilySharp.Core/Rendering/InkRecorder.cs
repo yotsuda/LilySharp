@@ -147,13 +147,17 @@ internal sealed class InkRecorder : IDrawingContext
     {
         // The glyph's design box at the drawn size (the frame here is Y down, so the box's
         // top goes up the page as a smaller Y); an unknown character gets a token box.
+        // ⚠️ Not every glyph HAS a design box: the time-signature digits (timeSig0…9) carry
+        // only their outline box, and `Box` throws for them — so the preview of any score with
+        // a memo and a numeric meter (3/4, 6/8; 4/4 draws the C glyph) failed to render at all
+        // (found 2026-10-11 writing the lessons). The outline box is the ink, which is what
+        // this recorder wants anyway; the token box is the floor under both.
         var font = MusicFont.Current;
         double scale = fontSize / SharedRenderer.FontSize;
-        if (font.GlyphOf(glyph) is { } g)
-        {
-            var box = font.FullSize.Box(g);
+        if (font.GlyphOf(glyph) is { } g
+            && font.FullSize.Metrics(g) is var metrics
+            && (metrics.DesignBox ?? metrics.OutlineBox) is { } box)
             Put(x + box.Left * scale, y - box.Top * scale, x + box.Right * scale, y - box.Bottom * scale);
-        }
         else
             Put(x, y - 0.5 * scale, x + 1.0 * scale, y + 0.5 * scale);
     }

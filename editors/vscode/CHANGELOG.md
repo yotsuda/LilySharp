@@ -77,6 +77,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Fixes
 
+- **A `@todo` memo in a score with a numeric meter (3/4, 6/8, …) no longer stops the
+  preview.** Placing the memo measured every glyph on the page by its design box, which the
+  time-signature digits do not have; the picture failed to render at all (4/4, drawn as the
+  C glyph, was not affected).
 - **Petaluma Script is kerned in the preview.** The bundled WOFF2s are now the OTFs wrapped
   unchanged; the old conversion carried no GPOS or kern table, so a section label overran its
   box and every chord symbol was a little wide.
