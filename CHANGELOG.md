@@ -218,6 +218,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A `@todo` in a drum chart line is drawn.** `r@todo("…")` (or one on a hit) inside a `drums { }`
+  line drew no ring: the chart rebuilds its rests when it merges the lines, and the merged
+  notes did not carry the mark either. Both do now, and a rest's other marks ride along.
+
 - **Regroup keeps the comments.** Converting between by-part and by-section dropped every comment
   after the last block (a lesson's TRY and NEXT lines), every comment on a part or between the
   blocks, and those around a part's music in a section. They survive now: one around a cell moves

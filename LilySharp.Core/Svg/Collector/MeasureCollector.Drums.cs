@@ -44,7 +44,13 @@ public sealed partial class MeasureCollector
     /// <summary>One item of a merged voice: a chord of hits (or one), or a rest when
     /// <see cref="Hits"/> is null, at a written value; <see cref="Run"/> is the tuplet it
     /// stands in.</summary>
-    private sealed record DrumPiece(int Value, int Dots, List<DrumHit>? Hits, DrumTupletRun? Run, int SourceStart);
+    private sealed record DrumPiece(int Value, int Dots, List<DrumHit>? Hits, DrumTupletRun? Run, int SourceStart)
+    {
+        /// <summary>A rest of a line that writes something on it (<c>r4@todo("…")</c>,
+        /// <c>r@fermata</c>): the merge rebuilds the silences, so its marks ride the piece
+        /// standing at its moment.</summary>
+        public RestSyntax? MarkedRest { get; init; }
+    }
 
     /// <summary>A chart's two voices; <see cref="Lower"/> is empty when the chart has one.</summary>
     private sealed record DrumPlan(List<DrumPiece> Upper, List<DrumPiece> Lower);
@@ -96,21 +102,37 @@ public sealed partial class MeasureCollector
     {
         var hits = new List<DrumHit>();
         var runs = new List<DrumTupletRun>();
+        var restMarks = new List<(Fraction Onset, RestSyntax Node, bool Down)>();
         Fraction length = Fraction.Zero;
         foreach (var (line, down) in chart.DrumLines)
         {
+            int before = hits.Count;
             var reader = new DrumLineReader(this, down, hits, runs) { Value = value, Dots = dots };
             if (!reader.Read(GatherVoiceMusicNodes(line), new Fraction(1, 1), -1))
                 return null;
             if (reader.Time > length)
                 length = reader.Time;
+            // A marked rest stands on its line's side: the line's word, else its first hit's.
+            bool lineDown = down ?? (hits.Count > before && hits[before].Down);
+            foreach (var (onset, rest) in reader.MarkedRests)
+                restMarks.Add((onset, rest, lineDown));
         }
 
         var upper = hits.Where(h => !h.Down).ToList();
         var lower = hits.Where(h => h.Down).ToList();
+        bool upperIsDown = false;
         // A chart of feet alone (a kick line) is one voice, drawn where it lies.
         if (upper.Count == 0)
+        {
             (upper, lower) = (lower, upper);
+            upperIsDown = true;
+        }
+        // A marked rest on a side with no voice of its own (a kick-only chart's hands)
+        // joins the voice there is.
+        var upperMarks = restMarks.Where(m => m.Down == upperIsDown || lower.Count == 0)
+            .Select(m => (m.Onset, m.Node)).ToList();
+        var lowerMarks = restMarks.Where(m => m.Down != upperIsDown && lower.Count > 0)
+            .Select(m => (m.Onset, m.Node)).ToList();
         var bars = new List<Fraction>();
         if (barLength > Fraction.Zero)
             for (var b = barLength - offsetInBar; b < length; b += barLength)
@@ -118,7 +140,35 @@ public sealed partial class MeasureCollector
                     bars.Add(b);
         var up = VoiceOf(upper, runs, bars, length);
         var low = lower.Count > 0 ? VoiceOf(lower, runs, bars, length) : new List<DrumPiece>();
-        return up == null || low == null ? null : new DrumPlan(up, low);
+        return up == null || low == null ? null : new DrumPlan(WithMarkedRests(up, upperMarks), WithMarkedRests(low, lowerMarks));
+    }
+
+    /// <summary>
+    /// Gives each marked rest of a voice's lines to the piece standing at its moment: the rest
+    /// that begins there, else whatever does (a hit of another line), else the piece it falls in.
+    /// </summary>
+    private static List<DrumPiece> WithMarkedRests(List<DrumPiece> pieces, List<(Fraction Onset, RestSyntax Node)> marks)
+    {
+        if (marks.Count == 0)
+            return pieces;
+        var starts = new List<Fraction>(pieces.Count);
+        Fraction t = Fraction.Zero;
+        foreach (var piece in pieces)
+        {
+            starts.Add(t);
+            t += Fraction.FromNoteValue(piece.Value).Dotted(piece.Dots) * (piece.Run?.Scale ?? new Fraction(1, 1));
+        }
+        var result = pieces.ToList();
+        foreach (var (onset, rest) in marks)
+        {
+            int at = Enumerable.Range(0, result.Count).Where(i => starts[i] == onset)
+                .OrderBy(i => result[i].Hits == null ? 0 : 1).DefaultIfEmpty(-1).First();
+            if (at < 0)
+                at = Enumerable.Range(0, result.Count).LastOrDefault(i => starts[i] <= onset);
+            if (at >= 0 && at < result.Count && result[at].MarkedRest == null)
+                result[at] = result[at] with { MarkedRest = rest };
+        }
+        return result;
     }
 
     /// <summary>
@@ -242,6 +292,8 @@ public sealed partial class MeasureCollector
         public Fraction Time = Fraction.Zero;
         public Fraction Value;
         public int Dots;
+        /// <summary>The line's rests that write something on them, at their moments.</summary>
+        public readonly List<(Fraction Onset, RestSyntax Node)> MarkedRests = new();
         private GraceExpressionSyntax? _grace;
 
         public bool Read(List<GreenSite> sites, Fraction scale, int run)
@@ -274,6 +326,8 @@ public sealed partial class MeasureCollector
                         }
                         break;
                     case RestSyntax rest when rest.RestText != "R" || rest.Duration != null:
+                        if (rest.Articulations.Any())
+                            MarkedRests.Add((Time, rest));
                         Time += Length(rest.Duration) * new Fraction(rest.MeasureCount, 1) * scale;
                         break;
                     case TupletExpressionSyntax tuplet when run < 0:
@@ -463,6 +517,11 @@ public sealed partial class MeasureCollector
                     : c,
                 _ => item,
             };
+        // A `@todo` written in a line rides the item it became: a hit's, or a marked rest's
+        // (the merge rebuilt that silence). Until 2026-10-11 neither reached the page.
+        if ((piece.MarkedRest as SyntaxNode ?? piece.Hits?.Select(h => h.Node).FirstOrDefault(n => TodoKeyOf(n) != null)) is { } todo
+            && TodoKeyOf(todo) != null)
+            item = item with { TodoKey = TodoKeyOf(todo), TodoMemo = TodoMemoOf(todo), TodoBelow = TodoBelowOf(todo) };
         if (scaled is { } scale)
             builder.AddItemWithoutDuration(item switch
             {
@@ -474,6 +533,11 @@ public sealed partial class MeasureCollector
         else
             builder.AddItem(item);
 
+        if (piece.MarkedRest is { } marked)
+        {
+            CollectDynamics(marked, measureIndex, itemIndex);
+            CollectArticulations(marked, measureIndex, itemIndex, stemUp, null, anchor);
+        }
         if (piece.Hits is { } members)
         {
             foreach (var h in members)

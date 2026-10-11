@@ -209,4 +209,20 @@ public class DrumsChartTests
         Assert.DoesNotContain(tree.GetRoot().DescendantNodes().OfType<ParallelExpressionSyntax>(), p => p.IsDrums);
         Assert.Contains(tree.GetRoot().DescendantNodes().OfType<VariableReferenceSyntax>(), r => r.Name.Text == "drums");
     }
+    [Theory]
+    [InlineData("drums { hats  back  { bd4 r8 bd bd4 r@todo(\"ほえほえ\") | } }", 1, "ほえほえ")]   // a rest: feet's voice
+    [InlineData("drums { hats  { r4 sn r sn@todo(\"louder\") | }  kick }", 0, "louder")]             // a hit: in a chord
+    [InlineData("drums { { r4@todo(\"count in\") hh hh hh | }  kick }", 0, "count in")]               // a rest under a kick
+    public void ATodoInAChartLine_ReachesThePage(string chart, int voice, string memo)
+    {
+        // Owner's report 2026-10-11: `r@todo("…")` in a chart line drew no ring — the merge
+        // rebuilds the silences, and set no @todo on what it built from a hit either.
+        var score = Collect(Book(chart));
+        var items = score.EnumerateStaves().Single().Staff.Voices[voice].Measures.SelectMany(m => m.Items);
+        Assert.Contains(items, it => it.TodoMemo == memo);
+        // …and the preview draws its ring and memo.
+        string preview = SvgGenerator.Generate(SyntaxTree.Parse(Book(chart)), LilySharp.Core.Svg.Renderer.SvgRenderOptions.Preview());
+        Assert.Contains("data-todo", preview);
+        Assert.Contains(memo, preview);
+    }
 }
