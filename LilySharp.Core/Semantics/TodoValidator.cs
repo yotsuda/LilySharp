@@ -37,12 +37,50 @@ internal sealed class TodoValidator : ISemanticValidator
         {
             if (TodoAnnotation.Of(node) is not { } todo)
                 continue;
-            _diagnostics.Warning(node.Span, DiagnosticCodes.TodoMark, todo.Message);
+            _diagnostics.Warning(MessageSpan(node), DiagnosticCodes.TodoMark, todo.Message);
             if (todo.Problem is { } problem)
                 _diagnostics.Warning(node.Span, DiagnosticCodes.TodoArgument, problem);
             else if (todo.Key is { } key && !keys.Add(key))
                 _diagnostics.Warning(node.Span, DiagnosticCodes.TodoKeyRepeated,
                     $"the todo key '{key}' is written twice in this file; a key names one mark.");
         }
+    }
+
+    /// <summary>
+    /// Where a mark's report is underlined: the memo's text inside its quotes, else the key,
+    /// else the word <c>todo</c> — never the whole mark.
+    /// </summary>
+    /// <remarks>
+    /// A todo is a note to oneself, not a mistake, so the editor underlines what it SAYS
+    /// (owner's request 2026-10-11: "@todo(\"ここ\") — underline only ここ"); a squiggle over
+    /// <c>@todo("…")</c> as a whole read like an error in the mark. The other two reports
+    /// (an argument that does not read, a key written twice) are about the mark itself and
+    /// keep its span. The quick fixes that delete the mark find it from this span
+    /// (LilySharpLanguageServer.TodoMarkAt) — the span alone no longer starts at the '@'.
+    /// </remarks>
+    internal static TextSpan MessageSpan(SyntaxNode mark)
+    {
+        SyntaxTokenNode? key = null, word = null;
+        foreach (var n in mark.DescendantNodes())
+        {
+            if (n is not SyntaxTokenNode token)
+                continue;
+            if (token.Kind == SyntaxKind.StringLiteral)
+            {
+                // Inside the quotes: `"memo"` and the verbatim `@"memo"`. An empty or unclosed
+                // string keeps the whole token, which is then the only text to underline.
+                string text = token.Text;
+                int open = text.StartsWith('@') ? 2 : 1;
+                int close = text.Length > open && text[^1] == '"' ? 1 : 0;
+                return text.Length - open - close > 0
+                    ? new TextSpan(token.Span.Start + open, text.Length - open - close)
+                    : token.Span;
+            }
+            if (token.Text == TodoAnnotation.Name && word == null)
+                word = token;
+            else if (word != null && key == null && TodoAnnotation.IsKey(token.Text))
+                key = token;
+        }
+        return (key ?? word)?.Span ?? mark.Span;
     }
 }

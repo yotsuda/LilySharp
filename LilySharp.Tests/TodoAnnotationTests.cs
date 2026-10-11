@@ -75,6 +75,34 @@ public class TodoAnnotationTests
     }
 
     [Theory]
+    [InlineData("c'4@todo(\"ここ\")", "ここ")]                // the memo, inside its quotes
+    [InlineData("c'4@todo(b4-lh \"bar 4\")", "bar 4")]       // the memo, not the key beside it
+    [InlineData("c'4@todo(@\"C:\\x\")", "C:\\x")]           // a verbatim memo
+    [InlineData("c'4@todo(o1203)", "o1203")]                 // no memo: the key
+    [InlineData("c'4@todo", "todo")]                         // nothing written: the word
+    [InlineData("c'4@todo(\"\")", "\"\"")]                   // an empty memo: its quotes
+    public void TheReport_UnderlinesWhatTheMarkSays_NotTheWholeMark(string note, string underlined)
+    {
+        // A todo is a note to oneself, not a mistake (owner's request 2026-10-11): the editor
+        // underlines its memo — else its key, else the word — never `@todo(…)` as a whole.
+        string text = Book(note + " d'2. |");
+        var mark = Assert.Single(Diagnostics(text), d => d.Code == DiagnosticCodes.TodoMark);
+        Assert.Equal(underlined, text.Substring(mark.Span.Start, mark.Span.Length));
+    }
+
+    [Fact]
+    public void Resolve_IsOfferedOnTheMemoAndOnTheWord_AndDeletesTheWholeMark()
+    {
+        string text = Book("c'4@todo(\"check\") d'4 e'4 f'4 |");
+        foreach (string where in new[] { "check", "todo", "@todo" })
+        {
+            var actions = ActionsAt(text, text.IndexOf(where, System.StringComparison.Ordinal) + 1);
+            var one = Assert.Single(actions, a => a.Title.StartsWith("Resolve this TODO", System.StringComparison.Ordinal));
+            Assert.Equal(Book("c'4 d'4 e'4 f'4 |"), Apply(text, one));
+        }
+    }
+
+    [Theory]
     [InlineData("c'4@todo(1x)")]                 // not a key
     [InlineData("c'4@todo(\"a\" \"b\")")]        // two memos
     [InlineData("c'4@todo(\"memo\" o1)")]        // memo first

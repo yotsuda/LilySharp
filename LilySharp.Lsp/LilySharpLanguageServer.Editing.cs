@@ -350,7 +350,11 @@ public sealed partial class LilySharpLanguageServer
             bool todoOffered = false;
             foreach (var diagnostic in semantic)
             {
-                if (diagnostic.Span.Start > endOffset || diagnostic.Span.End < startOffset)
+                // A todo's report underlines its memo only; its fixes answer anywhere on the
+                // mark, '@' to ')' — Ctrl+. on the word `todo` resolves it too.
+                var reach = diagnostic.Code == DiagnosticCodes.TodoMark && TodoMarkAt(doc.Tree, diagnostic) is { } todoMark
+                    ? todoMark.Span : diagnostic.Span;
+                if (reach.Start > endOffset || reach.End < startOffset)
                     continue;
                 if (BarCountPadding(doc.Tree, doc.Text, diagnostic) is { } pads)
                     actions.Add(PadBarsAction(doc, uri, diagnostic, pads));
@@ -506,10 +510,12 @@ public sealed partial class LilySharpLanguageServer
     private static IEnumerable<CodeAction> ResolveTodoActions(
         Document doc, Uri uri, CoreDiagnostic diagnostic, IReadOnlyList<CoreDiagnostic> all)
     {
-        TextEdit Delete(CoreDiagnostic d) => EditOf(doc.Text, d.Span.Start, d.Span.End, "");
-        bool IsMark(CoreDiagnostic d) => d.Code == DiagnosticCodes.TodoMark
-            && d.Span.Start >= 0 && d.Span.End <= doc.Text.Length
-            && doc.Text.AsSpan(d.Span.Start).StartsWith("@todo", StringComparison.Ordinal);
+        // The report underlines what the mark says (TodoValidator.MessageSpan), so the edit
+        // deletes the MARK the report sits in, '@' to ')'.
+        TextEdit Delete(CoreDiagnostic d) => TodoMarkAt(doc.Tree, d) is { } mark
+            ? EditOf(doc.Text, mark.Span.Start, mark.Span.End, "")
+            : EditOf(doc.Text, d.Span.Start, d.Span.Start, "");
+        bool IsMark(CoreDiagnostic d) => d.Code == DiagnosticCodes.TodoMark && TodoMarkAt(doc.Tree, d) != null;
 
         if (!IsMark(diagnostic))
             yield break;
@@ -524,6 +530,15 @@ public sealed partial class LilySharpLanguageServer
             };
     }
 
+    /// <summary>The <c>@todo</c> mark a LYS4026 report sits in — the report underlines the
+    /// memo, the key or the word, so it is found by CONTAINMENT, not by where it starts
+    /// (TodoValidator.MessageSpan). Null when none holds it.</summary>
+    private static SyntaxNode? TodoMarkAt(SyntaxTree tree, CoreDiagnostic diagnostic)
+        => tree.GetRoot().DescendantNodes().FirstOrDefault(n =>
+            n is ArticulationSyntax or MusicMarkSyntax
+            && n.Span.Start <= diagnostic.Span.Start && diagnostic.Span.End <= n.Span.End
+            && TodoAnnotation.Of(n) != null);
+
     /// <summary>
     /// The OMR reader's candidates for a <c>@todo(key …)</c> (LilySharp-Omr proposal B2): the
     /// side file <c>x.omr.json</c> beside <c>x.lys</c> lists, per key, what the mark's item
@@ -536,8 +551,7 @@ public sealed partial class LilySharpLanguageServer
     {
         if (!uri.IsFile)
             return [];
-        var mark = doc.Tree.GetRoot().DescendantNodes()
-            .FirstOrDefault(n => n is ArticulationSyntax or MusicMarkSyntax && n.Span.Start == diagnostic.Span.Start);
+        var mark = TodoMarkAt(doc.Tree, diagnostic);
         if (mark?.Parent is not { } host || TodoAnnotation.Of(mark) is not { Key: { } key })
             return [];
         var candidates = OmrSideFile.Candidates(System.IO.Path.ChangeExtension(uri.LocalPath, ".omr.json"), key);

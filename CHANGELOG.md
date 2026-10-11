@@ -152,6 +152,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A `@todo`'s warning underlines what it says, not the whole mark.** `@todo("check this")`
+  underlines `check this` (a key when there is no memo, the word `todo` when there is
+  neither): a note to yourself is not a mistake. "Resolve this TODO" (Ctrl+.) still answers
+  anywhere on the mark and deletes all of it.
 - **A `@todo` memo in a score with a numeric meter (3/4, 6/8, …) no longer stops the
   preview.** Placing the memo measured every glyph on the page by its design box, which the
   time-signature digits do not have; the picture failed to render at all (4/4, drawn as the
