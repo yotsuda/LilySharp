@@ -16,6 +16,7 @@
 
 using System.Linq;
 using LilySharp.Lsp;
+using LilySharp.Lsp.Protocol;
 using Xunit;
 
 namespace LilySharp.Tests;
@@ -71,9 +72,38 @@ public class PartPropertyCompletionTests
         Assert.Equal("editor.action.triggerSuggest", pitch.Command?.CommandIdentifier);
     }
 
+    /// <summary>Picking <c>midiInstrument</c> writes the quotes, parks the caret between them
+    /// and re-opens the popup, where the 128 names appear (owner's request 2026-10-11; the
+    /// item used to insert the bare word and stop).</summary>
+    [Fact]
+    public void MidiInstrumentProperty_WritesItsQuotes_AndTriggersTheNames()
+    {
+        var item = LilySharpLanguageServer.GetPartPropertyCompletions().Items
+            .Single(i => i.Label == "midiInstrument");
+        Assert.Equal("midiInstrument \"$0\"", item.InsertText);
+        Assert.Equal(InsertTextFormat.Snippet, item.InsertTextFormat);
+        Assert.Equal("editor.action.triggerSuggest", item.Command?.CommandIdentifier);
+    }
+
+    [Theory]
+    [InlineData("part m { midiInstrument \"", true)]                 // the snippet's caret
+    [InlineData("part m { midiInstrument \"electric gui", true)]     // mid-name, with a space
+    [InlineData("part m { midiInstrument ", true)]                   // typed by hand, no quotes yet
+    [InlineData("part m { instrument flute midiInstrument \"", true)]
+    [InlineData("part m { midiInstrument \"flute\" ", false)]        // the value is written: back to the properties
+    [InlineData("lyrics { midiInstrument \"", false)]                // not a part header
+    [InlineData("title \"midiInstrument ", false)]                   // a title holding the word
+    [InlineData("section S { m { midiInstrument \"", false)]         // a part REFERENCE body
+    public void MidiInstrumentContext_FiresInsideAPartHeader(string text, bool expected)
+    {
+        Assert.Equal(expected,
+            ContextOf(text) == LilySharpLanguageServer.CompletionContext.AfterMidiInstrument);
+    }
+
     [Theory]
     [InlineData("part m { clef ", "AfterClef")]
     [InlineData("part m { instrument ", "AfterInstrument")]
+    [InlineData("part m { midiInstrument \"", "AfterMidiInstrument")]
     [InlineData("section S { m { ", "MusicBlock")] // part REFERENCE, not a header
     public void ValueContexts_TakePriorityOverThePropertyList(string text, string expected)
     {

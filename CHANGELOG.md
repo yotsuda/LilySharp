@@ -173,6 +173,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **`midiInstrument` completes with its quotes and its names**: the property item writes
+  `midiInstrument ""` and re-opens the popup between the quotes with LilyPond's 128 General
+  MIDI names in GM order (`lilysharp/completion`, the `AfterMidiInstrument` context); a name
+  typed part-way is replaced whole, spaces and parentheses included.
 - **A `lily#` fence in Markdown may hold a whole book.** It draws the book's default score
   instead of refusing a fence with more than one score; a fence with no score is still refused
   (LYS6014).

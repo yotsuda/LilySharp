@@ -177,7 +177,7 @@ public sealed partial class LilySharpLanguageServer
 
     // Prose per property, and whether the editor has a VALUE list to enumerate for it.
     // ⚠️ Values must be true only where a value context actually exists — AfterClef,
-    // AfterInstrument, AfterPitch. It is false for `octave` because the part-header
+    // AfterInstrument, AfterPitch, AfterMidiInstrument. It is false for `octave` because the part-header
     // `octave` takes a NUMBER (the AfterOctave context is gated to the top-level directive),
     // and false for `tuning`/`pedal`/`transposition`, which have no value context at
     // all. Setting it re-opens suggestions onto whatever list is general to the position,
@@ -207,8 +207,8 @@ public sealed partial class LilySharpLanguageServer
             ["transposition"] = ($"Sounding-octave marker ({string.Join("/", LanguageVocabulary.TranspositionMarkers)})", false),
             ["pitch"] = ($"This part's pitch convention for a transposing instrument ({string.Join("/", LanguageVocabulary.PitchModes)}) — overrides the top-level directive", true),
             ["pedal"] = ($"Piano pedal style ({string.Join("/", LanguageVocabulary.PedalStyles)})", false),
-            ["midiInstrument"] = ("General MIDI sound for the .mid — one of LilyPond's 128 names in quotes, "
-                                  + "e.g. `midiInstrument \"flute\"`; the default is the preset's", false),
+            ["midiInstrument"] = ("General MIDI sound for the .mid and the preview — one of LilyPond's 128 names in quotes, "
+                                  + "e.g. `midiInstrument \"flute\"`; the default is the preset's", true),
             // (`removeEmpty` left this table 2026-09-08 with the property: hara-kiri is the
             // score's `staff m as removeEmpty V` — GetStaffAttachNameCompletions.)
         };
@@ -253,7 +253,12 @@ public sealed partial class LilySharpLanguageServer
                 Kind = CompletionItemKind.Property,
                 Detail = p.Detail,
                 InsertTextFormat = p.Values ? InsertTextFormat.Snippet : default,
-                InsertText = p.Values ? $"{p.Label} $0" : null,
+                // `midiInstrument` takes a QUOTED value: the item writes the quotes and
+                // puts the caret between them, where the re-opened popup lists the names
+                // (AfterMidiInstrument) — as `fonts { music "…" }` does for its key.
+                InsertText = !p.Values ? null
+                    : p.Label == "midiInstrument" ? $"{p.Label} \"$0\""
+                    : $"{p.Label} $0",
                 Command = p.Values
                     ? new Command { Title = "Suggest value", CommandIdentifier = "editor.action.triggerSuggest" }
                     : null,
@@ -3297,6 +3302,64 @@ public sealed partial class LilySharpLanguageServer
                 Kind = CompletionItemKind.EnumMember,
                 Detail = "Instrument preset (clef/octave defaults)",
                 SortText = i.ToString("D2"),
+                TextEdit = replaceRange == null
+                    ? null
+                    : new TextEdit { Range = replaceRange, NewText = name },
+            }).ToArray()
+        };
+    }
+
+    /// <summary>The sixteen General MIDI families, eight programs each — the item detail.</summary>
+    private static readonly string[] GeneralMidiFamilies =
+    [
+        "piano", "chromatic percussion", "organ", "guitar", "bass", "strings", "ensemble", "brass",
+        "reed", "pipe", "synth lead", "synth pad", "synth effects", "ethnic", "percussive", "sound effects",
+    ];
+
+    /// <summary>
+    /// LilyPond's 128 General MIDI names — the value of <c>midiInstrument "…"</c> — in GM
+    /// order, sourced from <see cref="LilySharp.Core.Midi.GeneralMidi.InstrumentNames"/> so the
+    /// list never drifts from what the compiler accepts (LYS: "Unknown midiInstrument").
+    /// Inside the string each item replaces what is typed between the opening quote and the
+    /// caret: the names hold spaces and parentheses, which the client's default word range
+    /// stops at (<c>"electric gui|</c> would otherwise become <c>"electric electric guitar
+    /// (clean)</c>), and a closing quote already after the caret is kept. Before the quote
+    /// (<c>midiInstrument |</c>) each item brings its own quotes.
+    /// </summary>
+    internal static CompletionList GetMidiInstrumentCompletions(
+        string? text = null, int offset = 0, Position? position = null)
+    {
+        LspRange? replaceRange = null;
+        bool bare = false;   // `midiInstrument |`: no quotes yet
+        if (text != null && position != null)
+        {
+            if (IsInsideStringLiteral(text, offset))
+            {
+                int start = offset;
+                while (start > 0 && text[start - 1] != '"' && text[start - 1] != '\n')
+                    start--;
+                replaceRange = new LspRange
+                {
+                    Start = new Position(position.Line, position.Character - (offset - start)),
+                    End = position,
+                };
+            }
+            else
+                bare = true;
+        }
+
+        return new CompletionList
+        {
+            Items = LilySharp.Core.Midi.GeneralMidi.InstrumentNames.Select((name, i) => new CompletionItem
+            {
+                Label = name,
+                Kind = CompletionItemKind.EnumMember,
+                Detail = $"General MIDI {i + 1}: {GeneralMidiFamilies[i / 8]}",
+                // GM order, as the standard numbers them — VS Code would otherwise sort by
+                // label and scatter the families.
+                SortText = i.ToString("D3"),
+                FilterText = name,
+                InsertText = bare ? $"\"{name}\"" : null,
                 TextEdit = replaceRange == null
                     ? null
                     : new TextEdit { Range = replaceRange, NewText = name },

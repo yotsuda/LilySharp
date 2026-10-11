@@ -53,6 +53,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Editor
 
+- **`midiInstrument` completes with its quotes and its names.** Picking the property writes
+  `midiInstrument ""` with the caret between the quotes and lists LilyPond's 128 General MIDI
+  names there, in GM order with their family; a name typed part-way (`"electric gui`) is
+  replaced whole, spaces and parentheses included, and before any quote the names bring
+  their own.
 - **A `lily#` fence may hold a whole book**: the preview draws the book's default score instead
   of refusing a fence with more than one score. A fence with no score is still refused.
 - **A section's label is declared once** — `section A2 "A'" { }` at the top level — and the

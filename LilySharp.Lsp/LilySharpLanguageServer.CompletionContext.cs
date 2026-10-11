@@ -718,6 +718,9 @@ public sealed partial class LilySharpLanguageServer
         AfterChordDisplayAs,
         AfterTabDisplayAs,
         AfterInstrument,
+        /// <summary><c>midiInstrument "|"</c>, <c>midiInstrument "ele|"</c> or
+        /// <c>midiInstrument |</c> in a part header — the 128 General MIDI names.</summary>
+        AfterMidiInstrument,
         AfterRemoveEmpty,
         AfterPitch,
         /// <summary><c>marks |</c> — its two arrangements (stacked / beside), at the top
@@ -1157,6 +1160,17 @@ public sealed partial class LilySharpLanguageServer
             && IsInsidePartBlock(scan.Stack)
             && !IsInsideStringLiteral(text, offset))
             return CompletionContext.AfterInstrument;
+
+        // `midiInstrument "|"` / `midiInstrument "ele|"` / `midiInstrument |` in a part
+        // header: LilyPond's 128 General MIDI names, the one value the property takes
+        // (owner's request 2026-10-11: the property item used to insert the bare word and
+        // leave the writer to know the names). Inside the string the owner is read off its
+        // opening quote; before the quote the items bring their own. Gated to a part body
+        // like `instrument`, so a lyric or a title holding the word is not hijacked.
+        if (IsInsidePartBlock(scan.Stack)
+            && (KeywordBeforeCurrentString(text, offset) == "midiInstrument"
+                || (prevWord == "midiInstrument" && !IsInsideStringLiteral(text, offset))))
+            return CompletionContext.AfterMidiInstrument;
 
         // (`removeEmpty` left the part header on 2026-09-08 — it is a score selector now,
         // `staff m as removeEmpty V`, served inside the score branch below.)

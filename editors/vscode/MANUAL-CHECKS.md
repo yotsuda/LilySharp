@@ -95,6 +95,7 @@
 - [ ] Alt+P を長押し → その part の楽器で鳴り続け、離すと止まる。Ctrl+Shift+↑ の後の音も同じ楽器。
 - [ ] 設定 `lilysharp.playback.soundFont` に別の .sf2/.sf3 の path を入れる → 開いているプレビューの音が替わる（Reload 不要）。存在しない path → 出力チャネルに `does not exist` の行、音は同梱のまま。空に戻す → 同梱に戻る。
 - [ ] `media\soundfont` を空にして（実験）Reload → 出力チャネルに `Preview synth none`、▶ は従来のオシレーターの音で鳴る。
+- [ ] part の `{ }` の中で Ctrl+Space → `midiInstrument` を選ぶ → `midiInstrument ""` が入ってカーソルがクオートの中、そのまま 128 の楽器名（GM 順・家族名つき）が出る。`electric gui` まで打って `electric guitar (clean)` を選ぶと `"electric guitar (clean)"` になる（`"electric electric …` にならない）。`midiInstrument ` と手で打って Ctrl+Space → クオート付きの名前が入る。
 
 ### 2.4 エディターの小さな直し
 
