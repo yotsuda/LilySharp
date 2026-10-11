@@ -20,8 +20,8 @@ part melody {
   // The bass clef appears by itself. Press ▶.
 
   // STEP 3 — Delete the first note's `@todo("STEP 3: …")`: its red circle goes away.
-  // STEP 4 — In `e@todo("STEP 4")`, put the caret right after the `e` and type `@`.
-  // Pick `mf` from the list.
+  // STEP 4 — Replace `@todo("STEP 4")` with `@mf`: delete it, type `@` right after the `e`,
+  // and pick `mf` from the list.
   section A {
     e4@todo("STEP 3: delete this @todo") d c d | e@todo("STEP 4") e e2 |
     d4 d d2 | e4 g g2 |

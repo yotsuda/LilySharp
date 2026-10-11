@@ -301,11 +301,14 @@ public class LessonTests
     }
 
     [Fact]
-    public void Lesson1_Step4_AnAtAfterTheRingedE_ListsDynamicsArticulationsAndFermata()
+    public void Lesson1_Step4_WhereTheMarkWas_AnAtListsDynamicsArticulationsAndFermata()
     {
-        int at = Lesson1.LastIndexOf("e@todo(\"STEP 4\")", System.StringComparison.Ordinal) + "e".Length;   // the comment quotes it first
+        // The writer deletes the mark first, then types @ right after the e (the comment quotes
+        // the mark too, so the one in the music is the last).
+        int at = Lesson1.LastIndexOf("e@todo(\"STEP 4\")", System.StringComparison.Ordinal) + "e".Length;
         Assert.True(at > Lesson1.IndexOf(Step3Mark, System.StringComparison.Ordinal), "the rings run in step order");
-        var labels = Labels(CompletionAt(Lesson1.Insert(at, "@"), at + 1));
+        string emptied = Lesson1.Remove(at, "@todo(\"STEP 4\")".Length);
+        var labels = Labels(CompletionAt(emptied.Insert(at, "@"), at + 1));
         Assert.Contains("mf", labels);
         Assert.Contains("p", labels);
         Assert.Contains("staccato", labels);
@@ -349,7 +352,8 @@ public class LessonTests
         text = text.Insert(EmptyLineAfter(text, "STEP 1"), "key g major");
         text = text.Insert(EmptyLineAfter(text, "STEP 2"), "instrument cello");
         text = text.Replace(Step3Mark, "");
-        text = text.Insert(text.LastIndexOf("e@todo(\"STEP 4\")", System.StringComparison.Ordinal) + 1, "@mf");
+        int step4 = text.LastIndexOf("e@todo(\"STEP 4\")", System.StringComparison.Ordinal) + 1;
+        text = text.Remove(step4, "@todo(\"STEP 4\")".Length).Insert(step4, "@mf");
         int rest = text.LastIndexOf("r1@todo(\"STEP 5\")", System.StringComparison.Ordinal);
         text = text.Remove(rest, "r1@todo(\"STEP 5\")".Length).Insert(rest, "<c e g b>");
         Assert.Contains("form { |: ~A :| }", Lesson1);   // the sample step 6 shows
