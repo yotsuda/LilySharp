@@ -103,15 +103,19 @@ public static class NoteStepper
     /// <summary>
     /// What a step comes to: the edits (against the text asked about; empty when the step
     /// changed nothing), a status-bar message, the pitches to sound afterwards (MIDI, lowest
-    /// first) with the timbre to sound them in, and <see cref="Fallback"/> when no selection
-    /// was on anything steppable — the editor then runs the key's own command.
+    /// first) with the timbre and the General MIDI program to sound them in (the program is
+    /// the part's, as the .mid plays it — <see cref="Midi.MidiTrack.Program"/>; -1 when the
+    /// sound comes from no part, and the preview then picks one for the timbre), and
+    /// <see cref="Fallback"/> when no selection was on anything steppable — the editor then
+    /// runs the key's own command.
     /// </summary>
     public sealed record StepResult(
         bool Fallback, ImmutableArray<Edit> Edits, string? Message,
-        ImmutableArray<int> Pitches, int Timbre);
+        ImmutableArray<int> Pitches, int Timbre, int Program = -1);
 
-    /// <summary>What the caret is on and what it sounds (MIDI, lowest first).</summary>
-    public sealed record Audition(Target Target, ImmutableArray<int> Pitches, int Timbre);
+    /// <summary>What the caret is on and what it sounds (MIDI, lowest first), with the timbre
+    /// and the program as <see cref="StepResult"/> carries them.</summary>
+    public sealed record Audition(Target Target, ImmutableArray<int> Pitches, int Timbre, int Program = -1);
 
     /// <summary>The most pitches one audition sounds (a selection of a whole passage would
     /// otherwise strike every note of it at once).</summary>
@@ -120,6 +124,21 @@ public static class NoteStepper
     /// <summary>The timbre a voicing sounds in when its host note plays nothing to copy one
     /// from: the guitar family (MidiNote.Timbre 4).</summary>
     private const int GuitarTimbre = 4;
+
+    /// <summary>A sound no part claims: the preview chooses the program from the timbre.
+    /// LILYSHARP-OWN: the editor's audition has no LilyPond counterpart (the performer
+    /// always has a staff, hence a program); observed by StepRequestTests.</summary>
+    private const int NoProgram = -1;
+
+    /// <summary>The program of that voicing: the guitar preset's
+    /// (<see cref="Svg.Model.InstrumentDefaults.GetMidiProgram"/>, the nylon guitar).</summary>
+    private static readonly int GuitarProgram = Svg.Model.InstrumentDefaults.GetMidiProgram("guitar") ?? NoProgram;
+
+    /// <summary>What a target sounds: pitches (MIDI, lowest first), timbre family and program.</summary>
+    private readonly record struct Voice(ImmutableArray<int> Pitches, int Timbre, int Program)
+    {
+        public static readonly Voice Silent = new([], 0, NoProgram);
+    }
 
     // ------------------------------------------------------------------ the step
 
@@ -188,6 +207,7 @@ public static class NoteStepper
         // only what stands after it), sounded as the compiler now reads it.
         var pitches = new SortedSet<int>();
         int timbre = -1;
+        int program = NoProgram;
         try
         {
             var newTree = SyntaxTree.Parse(newText);
@@ -197,11 +217,11 @@ public static class NoteStepper
                 int at = MapThrough(edits, t.Key);
                 if (FindTarget(newTree, t.Kind, at) is not { } moved)
                     continue;
-                var (p, i) = Sound(moved, sounding, includeStretch);
-                foreach (int pitch in p)
+                var voice = Sound(moved, sounding, includeStretch);
+                foreach (int pitch in voice.Pitches)
                     pitches.Add(pitch);
-                if (timbre < 0 && p.Length > 0)
-                    timbre = i;
+                if (timbre < 0 && voice.Pitches.Length > 0)
+                    (timbre, program) = (voice.Timbre, voice.Program);
             }
         }
         catch (Exception)
@@ -210,7 +230,7 @@ public static class NoteStepper
         }
 
         return new StepResult(false, [.. edits], message,
-            [.. pitches.Take(MaxAuditionPitches)], Math.Max(timbre, 0));
+            [.. pitches.Take(MaxAuditionPitches)], Math.Max(timbre, 0), program);
     }
 
     // ------------------------------------------------------------------ the audition
@@ -240,8 +260,8 @@ public static class NoteStepper
         // audition's KEY is the chord's, so the caret crossing the members strikes it once.
         if (ChordOfMember(target) is { } chord)
             target = new Target(TargetKind.Chord, chord);
-        var (pitches, timbre) = Sound(target, sounding ?? tree, includeStretch);
-        return pitches.IsEmpty ? null : new Audition(target, pitches, timbre);
+        var voice = Sound(target, sounding ?? tree, includeStretch);
+        return voice.Pitches.IsEmpty ? null : new Audition(target, voice.Pitches, voice.Timbre, voice.Program);
     }
 
     /// <summary>The <c>&lt;…&gt;</c> a member target belongs to — what it SOUNDS as (owner's
@@ -894,10 +914,9 @@ public static class NoteStepper
 
     // ------------------------------------------------------------------ the sound
 
-    /// <summary>The pitches a target sounds (MIDI, lowest first) and the timbre to sound
-    /// them in, read off <paramref name="sounding"/>.</summary>
-    private static (ImmutableArray<int> Pitches, int Timbre) Sound(Target target, SyntaxTree sounding,
-        bool includeStretch)
+    /// <summary>The pitches a target sounds (MIDI, lowest first) and the timbre and program
+    /// to sound them in, read off <paramref name="sounding"/>.</summary>
+    private static Voice Sound(Target target, SyntaxTree sounding, bool includeStretch)
     {
         var index = SoundIndex.Of(sounding);
         switch (target.Kind)
@@ -906,9 +925,9 @@ public static class NoteStepper
             {
                 int at = target.Key;
                 if (index.Midi.TryGetValue(at, out var played))
-                    return ([played[0]], index.Timbre[at]);
+                    return new Voice([played[0]], index.Timbre[at], index.Program[at]);
                 return index.Trace.TryGetValue(((NoteSyntax)target.Node).Pitch.SourceStart, out int written)
-                    ? ([written], 0) : ([], 0);
+                    ? new Voice([written], 0, NoProgram) : Voice.Silent;
             }
             case TargetKind.Member:
             {
@@ -919,13 +938,14 @@ public static class NoteStepper
                     return Sound(new Target(TargetKind.Chord, chord), sounding, includeStretch);
                 int at = target.Key;
                 if (index.Midi.TryGetValue(at, out var played))
-                    return ([played[0]], index.Timbre[at]);
-                return index.Trace.TryGetValue(at, out int written) ? ([written], 0) : ([], 0);
+                    return new Voice([played[0]], index.Timbre[at], index.Program[at]);
+                return index.Trace.TryGetValue(at, out int written) ? new Voice([written], 0, NoProgram) : Voice.Silent;
             }
             case TargetKind.Chord:
             {
                 var set = new SortedSet<int>();
                 int timbre = 0;
+                int program = NoProgram;
                 IEnumerable<int> positions = target.Node is ArpeggioSyntax arpeggio
                     ? arpeggio.Members.Select(m => m.SourceStart)
                     : [target.Key];
@@ -934,18 +954,19 @@ public static class NoteStepper
                     {
                         set.UnionWith(played);
                         timbre = index.Timbre[at];
+                        program = index.Program[at];
                     }
                 if (set.Count == 0)
                     foreach (var m in MembersOf(target.Node))
                         if (index.Trace.TryGetValue(m.SourceStart, out int p))
                             set.Add(p);
-                return ([.. set.Take(MaxAuditionPitches)], timbre);
+                return new Voice([.. set.Take(MaxAuditionPitches)], timbre, program);
             }
             default:
             {
                 var mark = target.Node;
                 if (SoundedShape(mark, includeStretch) is not { } sounded)
-                    return ([], 0);
+                    return Voice.Silent;
                 var (tuning, frets) = sounded;
                 var pitches = new SortedSet<int>();
                 for (int s = 0; s < frets.Length && s < tuning.Count; s++)
@@ -953,7 +974,9 @@ public static class NoteStepper
                         pitches.Add(tuning[s] + frets[s]);
                 int host = mark is MusicMarkSyntax ? mark.Parent?.SourceStart ?? -1
                     : mark is ChordSyntax ? mark.SourceStart : -1;
-                return ([.. pitches], index.Timbre.TryGetValue(host, out int t) ? t : GuitarTimbre);
+                return index.Timbre.TryGetValue(host, out int t)
+                    ? new Voice([.. pitches], t, index.Program[host])
+                    : new Voice([.. pitches], GuitarTimbre, GuitarProgram);
             }
         }
     }
@@ -1002,15 +1025,18 @@ public static class NoteStepper
     }
 
     /// <summary>
-    /// What a tree sounds, by source position: the MIDI export's pitches (and timbre) filed
-    /// under each note's position, and the collector's resolved pitch of each written pitch
-    /// (<see cref="ResolvedPitches.ForFile"/>, as MIDI numbers). Built once per tree — the
-    /// caret moving over an unchanged document asks the same tree again and again.
+    /// What a tree sounds, by source position: the MIDI export's pitches (with the timbre and
+    /// the track's program) filed under each note's position, and the collector's resolved
+    /// pitch of each written pitch (<see cref="ResolvedPitches.ForFile"/>, as MIDI numbers).
+    /// Built once per tree — the caret moving over an unchanged document asks the same tree
+    /// again and again.
     /// </summary>
     private sealed class SoundIndex
     {
         public Dictionary<int, List<int>> Midi { get; } = [];
         public Dictionary<int, int> Timbre { get; } = [];
+        /// <summary>Filed beside <see cref="Timbre"/>, for the same positions.</summary>
+        public Dictionary<int, int> Program { get; } = [];
         public Dictionary<int, int> Trace { get; } = [];
 
         private static readonly ConditionalWeakTable<SyntaxTree, SoundIndex> Cache = new();
@@ -1023,7 +1049,9 @@ public static class NoteStepper
             try
             {
                 var midi = new Midi.MidiExporter().Export(tree);
-                foreach (var note in midi.Tracks.SelectMany(t => t.Notes).OrderBy(n => n.StartTick))
+                var placed = midi.Tracks.SelectMany(t => t.Notes.Select(n => (Track: t, Note: n)))
+                    .OrderBy(x => x.Note.StartTick);
+                foreach (var (track, note) in placed)
                 {
                     if (note.SourcePos < 0 || note.Channel == 9)
                         continue;
@@ -1031,6 +1059,7 @@ public static class NoteStepper
                     {
                         index.Midi[note.SourcePos] = list = [];
                         index.Timbre[note.SourcePos] = note.Timbre;
+                        index.Program[note.SourcePos] = track.Program ?? NoProgram;
                     }
                     if (!list.Contains(note.Pitch))
                         list.Add(note.Pitch);

@@ -914,11 +914,15 @@ public sealed partial class LilySharpLanguageServer
                 return sec + (tick - prevTick) * usPerBeat / tpq / 1e6;
             }
 
+            // Each note with its track: the channel and the program the .mid would play it
+            // with (SplitIntoPartTracks gave every part a track and a channel), so the
+            // preview's SoundFont synth sounds the same instruments the export does.
             var notes = midi.Tracks
-                .SelectMany(t => t.Notes)
-                .OrderBy(n => n.StartTick)
-                .Select(n =>
+                .SelectMany(t => t.Notes.Select(n => (Track: t, Note: n)))
+                .OrderBy(x => x.Note.StartTick)
+                .Select(x =>
                 {
+                    var n = x.Note;
                     double t0 = SecondsAt(n.StartTick);
                     return new PlaybackNote
                     {
@@ -929,6 +933,8 @@ public sealed partial class LilySharpLanguageServer
                         S = n.SourcePos,
                         O = n.SourceOrdinal,
                         I = n.Timbre,
+                        C = n.Channel,
+                        G = n.Channel == 9 ? 0 : x.Track.Program ?? 0,
                     };
                 })
                 .ToArray();

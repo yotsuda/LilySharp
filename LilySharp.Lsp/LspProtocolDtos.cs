@@ -273,7 +273,15 @@ public class PlaybackNote
     public int V { get; set; }      // velocity 0-127
     public int S { get; set; }      // source offset (-1 = none) for follow-along highlight
     public int O { get; set; }      // printed-copy ordinal of this onset among same-S copies
-    public int I { get; set; }      // timbre family for the preview synth
+    public int I { get; set; }      // timbre family for the preview's fallback oscillator synth
+    /// <summary>The MIDI channel (0-15) the .mid export plays the note on — the part's
+    /// (<c>MidiExporter.SplitIntoPartTracks</c>); 9 is the GM drum channel. The preview's
+    /// SoundFont synth plays the note on this channel, so a part keeps one sound.</summary>
+    public int C { get; set; }
+    /// <summary>The General MIDI program (0-127) of the note's channel — the part's
+    /// <c>midiInstrument</c>, else its preset's default, else 0 (<c>MidiTrack.Program</c>);
+    /// 0 on the drum channel, where the program is not read.</summary>
+    public int G { get; set; }
 }
 
 /// <summary>Response for the lilysharp/playback request.</summary>
@@ -594,8 +602,10 @@ public class StepTextEdit
 /// Response for lilysharp/step. <see cref="Fallback"/>: no selection was on anything
 /// steppable, so the editor runs the key's own command (add a cursor above/below).
 /// Otherwise the edits (applied as ONE undo step; empty when the step changed nothing), a
-/// status-bar message, and what to sound afterwards: MIDI pitches from the compiler and the
-/// preview synth's timbre family (PlaybackNote.I).
+/// status-bar message, and what to sound afterwards: MIDI pitches from the compiler, the
+/// preview synth's timbre family (PlaybackNote.I) and the General MIDI program the
+/// SoundFont synth sounds them with (PlaybackNote.G; -1 when no part names one — the
+/// preview then picks a program for the timbre family).
 /// </summary>
 public class StepResponse
 {
@@ -604,6 +614,7 @@ public class StepResponse
     public string? Message { get; set; }
     public int[] Pitches { get; set; } = System.Array.Empty<int>();
     public int Timbre { get; set; }
+    public int Program { get; set; } = -1;
     /// <summary>The document version the edits are against; the client applies them only
     /// when its document is still that version.</summary>
     public int Version { get; set; }
@@ -631,5 +642,7 @@ public class AuditionAtResponse
     public string? Kind { get; set; }
     public int[] Pitches { get; set; } = System.Array.Empty<int>();
     public int Timbre { get; set; }
+    /// <summary>The General MIDI program, as <see cref="StepResponse.Program"/>.</summary>
+    public int Program { get; set; } = -1;
     public int Version { get; set; }
 }

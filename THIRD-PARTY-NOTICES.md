@@ -123,6 +123,27 @@ ships with the binaries.
 | Package | Copyright | License |
 |---|---|---|
 | vscode-languageclient | © Microsoft Corporation | MIT |
+| spessasynth_lib, spessasynth_core | © Spessasus | Apache-2.0 |
+
+spessasynth_lib is the preview's SoundFont synthesizer (`docs/playback-design.md`): its
+browser half is bundled into `out/synth/preview-synth.js` and its AudioWorklet processor
+ships unmodified as `out/synth/spessasynth_processor.min.js`. Both carry MIT-licensed code
+the project vendors (hajimehoshi's stbvorbis.js, 101arrowz's fflate), noticed in the
+processor file's own legal comments.
+
+## Sound font (bundled in the VS Code extension)
+
+### MuseScore_General.sf3 (the General MIDI sound font the preview plays)
+
+FluidR3 (original version) by Frank Wen, Copyright (c) 2000-02, 2008; the mono conversion
+(FluidR3Mono) by Michael Cowgill, Copyright (c) 2014-17; the adaptation for
+MuseScore_General.sf2 by S. Christian Collins, Copyright (c) 2018-19; Temple Blocks by Ethan
+Winer, Copyright (c) 2002; Drumline Cymbals by Michael Schorsch, Copyright (c) 2016.
+
+MIT License, as FluidR3Mono and FluidR3 before it; the acknowledgements and copyright notices
+above must be included in any derivative work. The licence and the upstream README ship
+beside the font as `media/soundfont/MuseScore_General-LICENSE.md`. Redistributed unmodified,
+as published by MuseScore (ftp.osuosl.org/pub/musescore/soundfont/MuseScore_General/).
 
 ## Deliberately NOT bundled
 
@@ -172,7 +193,9 @@ THE SOFTWARE.
 ## Apache License 2.0
 
 Applies to the components marked "Apache-2.0" above (the Six Labors
-libraries). The full text ships as
-[LICENSE-Apache-2.0.txt](LICENSE-Apache-2.0.txt), as section 4(a) requires.
-Those libraries are redistributed unmodified, in binary form, exactly as
-published on NuGet.
+libraries, and spessasynth_lib / spessasynth_core in the VS Code extension).
+The full text ships as [LICENSE-Apache-2.0.txt](LICENSE-Apache-2.0.txt), as
+section 4(a) requires. The Six Labors libraries are redistributed unmodified,
+in binary form, exactly as published on NuGet; spessasynth's processor file
+is redistributed unmodified as published on npm, and its browser half is
+bundled (minified, not otherwise changed) with Lily#'s own page code.

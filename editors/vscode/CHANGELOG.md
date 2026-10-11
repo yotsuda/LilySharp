@@ -35,6 +35,22 @@ All notable changes to the Lily# VS Code extension are documented here.
   section labels, tempo and navigation words, `@text`, dynamic and pedal words and instrument
   names, unless the score names their face; the lyrics keep the engraving face.
 
+### Playback
+
+- **The preview plays a sound font.** The Play button, Alt+P / Alt+M and the auditions sound
+  through a SoundFont synthesizer (spessasynth_lib, in an audio worklet) instead of the old
+  oscillator tones: each part plays the General MIDI instrument its `midiInstrument` or preset
+  names, as the exported MIDI does, with drums on the drum channel and a quarter tone as a
+  pitch bend. `lilysharp.playback.soundFont` names an `.sf2`, `.sf3` or `.dls` of your own
+  (empty: the bundled General MIDI font); it takes effect in open previews. The oscillator
+  tones remain the fallback while no font is loaded.
+- **A dense score no longer breaks up.** The old player built every note's oscillator the
+  moment Play was pressed and summed the voices with no ceiling, so four voices already
+  clipped and a long piece dropped out. The synth is now fed a quarter of a second ahead of
+  the clock (longer while the preview is hidden), the output goes through a limiter, Stop
+  silences what was queued, and the follow-along highlight walks the onsets once instead of
+  scanning the piece every tick.
+
 ### Editor
 
 - **A `lily#` fence may hold a whole book**: the preview draws the book's default score instead

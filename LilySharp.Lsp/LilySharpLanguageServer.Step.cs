@@ -57,6 +57,7 @@ public sealed partial class LilySharpLanguageServer
                 Message = result.Message,
                 Pitches = [.. result.Pitches],
                 Timbre = result.Timbre,
+                Program = result.Program,
                 Version = doc.Version,
             };
         }
@@ -91,6 +92,7 @@ public sealed partial class LilySharpLanguageServer
                 Kind = audition.Target.Kind.ToString().ToLowerInvariant(),
                 Pitches = [.. audition.Pitches],
                 Timbre = audition.Timbre,
+                Program = audition.Program,
                 Version = doc.Version,
             };
         }

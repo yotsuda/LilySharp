@@ -481,6 +481,19 @@ export function activate(context: vscode.ExtensionContext) {
                     panel.webview.postMessage({ type: 'setHighlightTodos', on });
                 }
             }
+            if (e.affectsConfiguration('lilysharp.playback.soundFont')) {
+                // The new font's folder has to be a resource root before the page can
+                // fetch it; the options can be reset on a live webview.
+                for (const panel of previewPanels.values()) {
+                    panel.webview.options = {
+                        enableScripts: true,
+                        localResourceRoots: previewResourceRoots(context.extensionUri),
+                    };
+                    panel.webview.postMessage({
+                        type: 'setSoundFont', uri: synthUrls(panel.webview, context.extensionUri).soundFont,
+                    });
+                }
+            }
             if (!e.affectsConfiguration('lilysharp.preview.theme')) {
                 return;
             }
@@ -863,9 +876,8 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
         }
     }
 
-    // Create new preview panel with access to font resources
+    // Create new preview panel with access to the fonts, the synth and the sound font
     const fileName = path.basename(document.uri.fsPath);
-    const fontsUri = vscode.Uri.joinPath(context.extensionUri, 'media', 'fonts');
 
     outputChannel.appendLine('Creating new preview panel');
     const panel = vscode.window.createWebviewPanel(
@@ -875,7 +887,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
         {
             enableScripts: true,
             retainContextWhenHidden: true,
-            localResourceRoots: [fontsUri, textFontsRoot(context.extensionUri)]
+            localResourceRoots: previewResourceRoots(context.extensionUri)
         }
     );
 
@@ -949,6 +961,16 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 // when sound gets through.
                 outputChannel.appendLine(`Audio blocked in the preview (AudioContext ${message.state}): click the preview once`);
                 vscode.window.setStatusBarMessage('Lily#: click the preview once to enable its sound', 8000);
+                return;
+            }
+            if (message.type === 'synthStatus') {
+                // The SoundFont synth's account of itself: loading, ready (the font's size
+                // and load time), failed (why — the page falls back to oscillator tones),
+                // or none (no font configured or bundled).
+                outputChannel.appendLine(`Preview synth ${message.state}: ${message.detail}`);
+                if (message.state === 'failed') {
+                    vscode.window.setStatusBarMessage(`Lily#: the preview's sound font did not load (see the Lily# Extension output)`, 8000);
+                }
                 return;
             }
             if (message.type === 'webviewPerf') {
@@ -1042,7 +1064,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     // Set initial HTML structure with font
     outputChannel.appendLine('Setting webview HTML');
     panel.webview.html = getPreviewHtml(fontUri.toString(), braceFontUri.toString(), panel.webview.cspSource, getNonce(), getPreviewTheme(),
-        textFontFaceCss(panel.webview, context.extensionUri), getHighlightTodos());
+        textFontFaceCss(panel.webview, context.extensionUri), getHighlightTodos(), synthUrls(panel.webview, context.extensionUri));
 
     // Then load content
     outputChannel.appendLine('Calling updatePreviewContent');
@@ -2117,6 +2139,56 @@ function getNonce(): string {
     return text;
 }
 
+/** Where the preview's SoundFont synth lives: the bundle and the worklet processor
+ *  esbuild.js writes to out/synth (docs/playback-design.md). */
+function synthRoot(extensionUri: vscode.Uri): vscode.Uri {
+    return vscode.Uri.joinPath(extensionUri, 'out', 'synth');
+}
+
+/** The sound font the preview plays with: `lilysharp.playback.soundFont` when it names a
+ *  file on this machine (a missing one is logged and the bundled one used), else the
+ *  first .sf2/.sf3/.dls under media/soundfont — the General MIDI font the extension
+ *  bundles. Null when there is none: the preview then plays its oscillator patches. */
+function soundFontFile(extensionUri: vscode.Uri): { file: vscode.Uri; root: vscode.Uri } | null {
+    const setting = vscode.workspace.getConfiguration('lilysharp').get<string>('playback.soundFont', '').trim();
+    if (setting) {
+        if (fs.existsSync(setting)) {
+            return { file: vscode.Uri.file(setting), root: vscode.Uri.file(path.dirname(setting)) };
+        }
+        outputChannel.appendLine(`lilysharp.playback.soundFont: ${setting} does not exist; using the bundled sound font`);
+    }
+    const dir = vscode.Uri.joinPath(extensionUri, 'media', 'soundfont');
+    try {
+        const files = fs.readdirSync(dir.fsPath).filter(f => /\.(sf2|sf3|dls)$/i.test(f)).sort();
+        if (files.length > 0) { return { file: vscode.Uri.joinPath(dir, files[0]), root: dir }; }
+    } catch { /* no bundled font */ }
+    return null;
+}
+
+/** The preview webview's resource roots: the music fonts, the text fonts, the synth
+ *  and the sound font's folder. */
+function previewResourceRoots(extensionUri: vscode.Uri): vscode.Uri[] {
+    const roots = [
+        vscode.Uri.joinPath(extensionUri, 'media', 'fonts'),
+        textFontsRoot(extensionUri),
+        synthRoot(extensionUri),
+    ];
+    const sf = soundFontFile(extensionUri);
+    if (sf) { roots.push(sf.root); }
+    return roots;
+}
+
+/** The synth's files as the page's webview reaches them. */
+function synthUrls(webview: vscode.Webview, extensionUri: vscode.Uri): SynthUrls {
+    const root = synthRoot(extensionUri);
+    const sf = soundFontFile(extensionUri);
+    return {
+        script: webview.asWebviewUri(vscode.Uri.joinPath(root, 'preview-synth.js')).toString(),
+        processor: webview.asWebviewUri(vscode.Uri.joinPath(root, 'spessasynth_processor.min.js')).toString(),
+        soundFont: sf ? webview.asWebviewUri(sf.file).toString() : '',
+    };
+}
+
 /** The preview's color scheme, as the `lilysharp.preview.theme` setting spells it:
  *  `auto` (follow VS Code's theme — the webview's prefers-color-scheme tracks it),
  *  `light` or `dark`. Anything else reads as `auto`. */
@@ -2131,15 +2203,25 @@ function getHighlightTodos(): boolean {
     return vscode.workspace.getConfiguration('lilysharp').get<boolean>('preview.highlightTodos', true);
 }
 
+/** The URLs of the preview's SoundFont synth, as the webview reaches them (synthUrls). */
+interface SynthUrls { script: string; processor: string; soundFont: string }
+
+// The CSP: the page's own scripts by nonce; the synth bundle, its AudioWorklet
+// processor (fetched by audioWorklet.addModule — a worklet module answers to
+// script-src) and the fonts from the extension's resources; the processor's Vorbis
+// decoder is WebAssembly ('wasm-unsafe-eval'), and previewSynth.ts re-adds the processor
+// from a blob when the host will not hand a worklet a cross-origin module; the sound
+// font is fetch()ed (connect-src).
 function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string, nonce: string,
                         theme: 'auto' | 'light' | 'dark', textFontCss: string,
-                        highlightTodos: boolean = true): string {
+                        highlightTodos: boolean = true,
+                        synth: SynthUrls = { script: '', processor: '', soundFont: '' }): string {
     return `<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src ${cspSource}; script-src 'nonce-${nonce}';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src ${cspSource}; script-src 'nonce-${nonce}' ${cspSource} 'wasm-unsafe-eval' blob:; connect-src ${cspSource};">
     <script nonce="${nonce}">
         // The color scheme is a class on <html>, set HERE — before the body parses —
         // so a dark preview never flashes white on open. 'auto' follows VS Code's
@@ -2152,7 +2234,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             document.documentElement.classList.toggle('theme-dark', dark);
             document.documentElement.classList.toggle('todo-plain', ${highlightTodos ? 'false' : 'true'});
         })();
+        // The SoundFont synth's files (docs/playback-design.md): the worklet processor
+        // and the sound font ('' = none, the page then plays its oscillator patches).
+        window.lysSynthConfig = { processor: '${synth.processor}', soundFont: '${synth.soundFont}' };
     </script>
+    <script nonce="${nonce}" src="${synth.script}"></script>
     <style>
         @font-face {
             font-family: 'Emmentaler';
@@ -3460,15 +3546,84 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             vscode.postMessage({ type: 'export', renderName: renderSelect.value });
         });
 
-        // ---- WebAudio playback (simple triangle synth; events from the LSP) ----
+        // ---- Playback and audition ----
+        // The sound is the SoundFont synth (out/synth/preview-synth.js = window.LysSynth,
+        // spessasynth_lib's worklet; docs/playback-design.md), fed the server's note list a
+        // few hundred milliseconds ahead of the clock; the oscillator patches further down
+        // are the fallback while no sound font is loaded. ONE AudioContext for the page,
+        // made at boot and never closed. The browser's autoplay policy lets it run only
+        // once the user has clicked or typed in THIS document (the editor's keys do not
+        // count): until then it stays 'suspended' — so it is resumed from the first gesture
+        // here and asked to resume at every strike, and if it is still not running shortly
+        // after, the host is told once (audioBlocked) and the status bar says to click the
+        // preview. The Play button is a click, so it always gets through.
         let audioCtx = null;
+        let audioBlockedTold = false;
+        function audioContext() {
+            if (!audioCtx || audioCtx.state === 'closed') { audioCtx = new AudioContext(); }
+            return audioCtx;
+        }
+        function audio() {
+            const ctx = audioContext();
+            if (ctx.state !== 'running') {
+                ctx.resume().catch(() => { /* reported below */ });
+                setTimeout(() => {
+                    if (audioCtx && audioCtx.state !== 'running' && !audioBlockedTold) {
+                        audioBlockedTold = true;
+                        vscode.postMessage({ type: 'audioBlocked', state: audioCtx.state });
+                    }
+                }, 300);
+            }
+            return ctx;
+        }
+        function resumeAudioOnGesture() {
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume().then(() => { audioBlockedTold = false; }).catch(() => { /* noop */ });
+            }
+        }
+        window.addEventListener('pointerdown', resumeAudioOnGesture, true);
+        window.addEventListener('keydown', resumeAudioOnGesture, true);
+
+        function flashInfo(text, ms) {
+            zoomInfo.textContent = text;
+            zoomInfo.classList.add('visible');
+            setTimeout(() => zoomInfo.classList.remove('visible'), ms || 2500);
+        }
+
+        // The SoundFont synth, created once at boot so the font is parsed before the first
+        // Play (a suspended context loads it fine). window.lysSynthConfig carries the URLs
+        // the extension gave this page (the head script); no bundle or no processor URL
+        // means no synth, and the page plays its oscillator patches.
+        let sfSynth = null;
+        function soundFontSynth() {
+            if (sfSynth) { return sfSynth; }
+            const cfg = window.lysSynthConfig;
+            if (!window.LysSynth || !cfg || !cfg.processor) { return null; }
+            sfSynth = window.LysSynth.create(audioContext(), cfg.processor, cfg.soundFont || '', (status) => {
+                vscode.postMessage({ type: 'synthStatus', state: status.state, detail: status.detail || '' });
+                if (status.state === 'failed') {
+                    flashInfo('Sound: ' + (status.detail || 'the sound font did not load'), 4000);
+                }
+            });
+            return sfSynth;
+        }
+        setTimeout(() => {
+            try { soundFontSynth(); }
+            catch (e) { vscode.postMessage({ type: 'synthStatus', state: 'failed', detail: String(e) }); }
+        }, 0);
+        // lilysharp.playback.soundFont changed: the extension sends the new URL ('' = none).
+        function setSoundFont(uri) {
+            if (!window.lysSynthConfig) { window.lysSynthConfig = {}; }
+            window.lysSynthConfig.soundFont = uri || '';
+            const sf = soundFontSynth();
+            if (sf) { sf.setSoundFont(uri || ''); }
+        }
+
         let playingOscs = [];
         let playEndTimer = null;
         let playheadTimer = null;
-        let onsetList = [];
-        let onsetIdx = 0;
-        let playStartTime = 0;
-        let playbackNotes = null; // last received event list — enables click-to-seek
+        let sfPlayer = null;        // the SoundFont player of the current playback
+        let playbackNotes = null;   // last received event list — enables click-to-seek
         let pendingStartPos = -1;   // play-button start point (the highlighted note)
         let lastResolvedPos = -1;   // the note the current highlight actually resolved to
 
@@ -3482,8 +3637,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             playEndTimer = null;
             clearInterval(playheadTimer);
             playheadTimer = null;
-            onsetList = [];
-            onsetIdx = 0;
             clearHighlights();
             lastHighlightPos = -1;
             // No note is highlighted once playback ends (naturally or via Stop),
@@ -3492,14 +3645,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // instead of restarting from the top. Cursor sync re-sets it when the
             // caret lands on a note again.
             lastResolvedPos = -1;
+            if (sfPlayer) {
+                sfPlayer = null;
+                if (sfSynth) { sfSynth.stop(); }
+            }
             for (const o of playingOscs) {
                 try { o.stop(); } catch (e) { /* already ended */ }
             }
             playingOscs = [];
-            if (audioCtx) {
-                try { audioCtx.close(); } catch (e) { /* noop */ }
-                audioCtx = null;
-            }
             setPlayUi(false);
         }
 
@@ -3512,33 +3665,91 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // worse than starting cleanly at the next onset).
             notes = notes.filter(n => n.T >= offset - 0.001);
             if (notes.length === 0) { return; }
-            audioCtx = new AudioContext();
-            if (audioCtx.state === 'suspended') { audioCtx.resume(); }
-            // Timbre families (note.I): waveform + envelope approximations —
-            // the webview has no access to OS synths or soundfonts (CSP), so
-            // instruments are voiced, not sampled. pluck = exponential decay.
-            const PATCHES = [
-                { w: 'triangle', a: 0.010, s: 0.55, r: 0.05, g: 1.00, pluck: true,  tau: 0.9  }, // 0 piano-ish
-                { w: 'sine',     a: 0.050, s: 0.90, r: 0.06, g: 1.15, pluck: false, tau: 0    }, // 1 flute
-                { w: 'square',   a: 0.030, s: 0.75, r: 0.05, g: 0.45, pluck: false, tau: 0    }, // 2 clarinet/reed
-                { w: 'sawtooth', a: 0.080, s: 0.85, r: 0.09, g: 0.55, pluck: false, tau: 0    }, // 3 strings
-                { w: 'triangle', a: 0.005, s: 0.40, r: 0.04, g: 1.00, pluck: true,  tau: 0.35 }, // 4 guitar
-                { w: 'sine',     a: 0.008, s: 0.45, r: 0.05, g: 1.30, pluck: true,  tau: 0.5  }, // 5 bass
-                { w: 'sawtooth', a: 0.020, s: 0.90, r: 0.06, g: 0.50, pluck: false, tau: 0    }, // 6 brass
-                { w: 'square',   a: 0.040, s: 1.00, r: 0.05, g: 0.35, pluck: false, tau: 0    }, // 7 organ
-                { w: 'sine',     a: 0.060, s: 0.90, r: 0.08, g: 1.10, pluck: false, tau: 0    }, // 8 voice
-                { drum: true }                                                                     // 9 drums (noise)
-            ];
-            const master = audioCtx.createGain();
-            master.gain.value = 0.25;
-            master.connect(audioCtx.destination);
-            const t0 = audioCtx.currentTime + 0.15;
+            const ctx = audio();
+            let t0 = ctx.currentTime + 0.15;
+            let end;
+            const sf = soundFontSynth();
+            if (sf && sf.ready) {
+                sfPlayer = sf.play(notes, offset, t0);
+                t0 = sfPlayer.t0;
+                end = sfPlayer.end;
+            } else {
+                if (sf && sf.state === 'loading') { flashInfo('The sound font is still loading: plain tones this time'); }
+                end = startOscillators(ctx, notes, offset, t0);
+            }
+            setPlayUi(true);
+            playEndTimer = setTimeout(stopPlayback, (end - offset + 0.5) * 1000);
+            followAlong(notes, offset, t0);
+        }
+
+        // Follow-along: light the notes SOUNDING now (a quarter stays lit while the other
+        // hand's eighths change under it) — each entry carries the server-side printed-copy
+        // ordinal (O), so repeats and seeks cannot drift — and keep the newest onset in
+        // view without fighting manual scrolling more than needed. The cursor
+        // (playbackCore.ts) walks the onsets once, so a tick costs what started since.
+        function followAlong(notes, offset, t0) {
+            const Cursor = window.LysSynth ? window.LysSynth.SoundingCursor : null;
+            if (!Cursor) { return; }
+            const cursor = new Cursor(notes.map(n => ({ t: n.T - offset, d: n.D, s: n.S, o: n.O || 0 })));
+            playheadTimer = setInterval(() => {
+                if (!audioCtx) return;
+                const r = cursor.at(audioCtx.currentTime - t0);
+                if (!r.changed) return;
+                clearHighlights();
+                const painted = highlightPositions(r.sounding);
+                if (r.sounding.length > 0) {
+                    lastHighlightPos = r.sounding[0].pos;
+                    lastResolvedPos = r.sounding[0].pos;
+                }
+                const el = r.hadNew && painted.length > 0 ? painted[0] : null;
+                if (el) {
+                    const rect = el.getBoundingClientRect();
+                    const m = mainContent.getBoundingClientRect();
+                    const off = rect.top < m.top + 30 || rect.bottom > m.bottom - 30
+                             || rect.left < m.left + 30 || rect.right > m.right - 30;
+                    if (off) el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+                }
+            }, 50);
+        }
+
+        // The fallback: oscillator patches, one node pair per note, built up front (fine
+        // for the short pieces this plays while no sound font is loaded). Timbre families
+        // (note.I): waveform + envelope approximations; pluck = exponential decay. The sum
+        // goes through a limiter — many voices at once used to clip. Returns when the last
+        // note ends, in seconds from the piece's start.
+        const PATCHES = [
+            { w: 'triangle', a: 0.010, s: 0.55, r: 0.05, g: 1.00, pluck: true,  tau: 0.9  }, // 0 piano-ish
+            { w: 'sine',     a: 0.050, s: 0.90, r: 0.06, g: 1.15, pluck: false, tau: 0    }, // 1 flute
+            { w: 'square',   a: 0.030, s: 0.75, r: 0.05, g: 0.45, pluck: false, tau: 0    }, // 2 clarinet/reed
+            { w: 'sawtooth', a: 0.080, s: 0.85, r: 0.09, g: 0.55, pluck: false, tau: 0    }, // 3 strings
+            { w: 'triangle', a: 0.005, s: 0.40, r: 0.04, g: 1.00, pluck: true,  tau: 0.35 }, // 4 guitar
+            { w: 'sine',     a: 0.008, s: 0.45, r: 0.05, g: 1.30, pluck: true,  tau: 0.5  }, // 5 bass
+            { w: 'sawtooth', a: 0.020, s: 0.90, r: 0.06, g: 0.50, pluck: false, tau: 0    }, // 6 brass
+            { w: 'square',   a: 0.040, s: 1.00, r: 0.05, g: 0.35, pluck: false, tau: 0    }, // 7 organ
+            { w: 'sine',     a: 0.060, s: 0.90, r: 0.08, g: 1.10, pluck: false, tau: 0    }, // 8 voice
+            { drum: true }                                                                     // 9 drums (noise)
+        ];
+        function oscillatorOutput(ctx, gain) {
+            const master = ctx.createGain();
+            master.gain.value = gain;
+            const limiter = ctx.createDynamicsCompressor();
+            limiter.threshold.value = -10;
+            limiter.knee.value = 12;
+            limiter.ratio.value = 12;
+            limiter.attack.value = 0.002;
+            limiter.release.value = 0.12;
+            master.connect(limiter);
+            limiter.connect(ctx.destination);
+            return master;
+        }
+        function startOscillators(ctx, notes, offset, t0) {
+            const master = oscillatorOutput(ctx, 0.25);
             let end = 0;
             // Shared white-noise buffer for the drum patch (timbre 9).
             let noiseBuf = null;
             const getNoise = () => {
                 if (!noiseBuf) {
-                    noiseBuf = audioCtx.createBuffer(1, audioCtx.sampleRate, audioCtx.sampleRate);
+                    noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
                     const d = noiseBuf.getChannelData(0);
                     for (let i = 0; i < d.length; i++) { d[i] = Math.random() * 2 - 1; }
                 }
@@ -3550,9 +3761,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     // GM percussion approximation: filtered noise burst.
                     // Kick (<45): lowpass thump; snare-ish (45-47 + 38-40):
                     // bandpass; cymbals/hats (42+, 49+): highpass sizzle.
-                    const src = audioCtx.createBufferSource();
+                    const src = ctx.createBufferSource();
                     src.buffer = getNoise();
-                    const filt = audioCtx.createBiquadFilter();
+                    const filt = ctx.createBiquadFilter();
                     let tau = 0.06;
                     if (n.P <= 36) { filt.type = 'lowpass'; filt.frequency.value = 180; tau = 0.10; }
                     else if (n.P === 38 || n.P === 39 || n.P === 40) { filt.type = 'bandpass'; filt.frequency.value = 1800; filt.Q.value = 0.8; tau = 0.09; }
@@ -3560,7 +3771,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     else if (n.P === 46) { filt.type = 'highpass'; filt.frequency.value = 6500; tau = 0.25; } // open hat
                     else if (n.P >= 41 && n.P <= 48 && n.P !== 42 && n.P !== 44) { filt.type = 'bandpass'; filt.frequency.value = 300 + (n.P - 41) * 90; filt.Q.value = 1.2; tau = 0.12; } // toms
                     else { filt.type = 'highpass'; filt.frequency.value = 7500; tau = 0.05; } // closed/pedal hat, ride tick
-                    const dg = audioCtx.createGain();
+                    const dg = ctx.createGain();
                     const dat = t0 + n.T - offset;
                     const dpk = 0.9 * (n.V / 127);
                     dg.gain.setValueAtTime(0, dat);
@@ -3574,10 +3785,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     if (n.T + n.D > end) end = n.T + n.D;
                     continue;
                 }
-                const osc = audioCtx.createOscillator();
+                const osc = ctx.createOscillator();
                 osc.type = p.w;
                 osc.frequency.value = 440 * Math.pow(2, (n.P - 69) / 12);
-                const g = audioCtx.createGain();
+                const g = ctx.createGain();
                 const at = t0 + n.T - offset;
                 const rel = at + n.D;
                 const peak = 0.9 * (n.V / 127) * p.g;
@@ -3601,138 +3812,68 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 playingOscs.push(osc);
                 if (n.T + n.D > end) end = n.T + n.D;
             }
-            setPlayUi(true);
-            playEndTimer = setTimeout(stopPlayback, (end - offset + 0.5) * 1000);
-
-            // Follow-along: at each onset highlight the notation being played
-            // (the note's own data-pos - an exact match, so the existing
-            // click-sync highlighter lights the right head), and keep it in
-            // view without fighting manual scrolling more than needed.
-            playStartTime = t0;
-            // Highlight = the set of notes SOUNDING now (a quarter stays lit
-            // while the other hand's eighths change under it), not just the
-            // latest onset group. Entries carry the server-side printed-copy
-            // ordinal (O), so repeats and seeks cannot drift.
-            const sched = notes.filter(n => n.S >= 0)
-                .map(n => ({ t: n.T - offset, d: n.D, s: n.S, o: n.O || 0 }));
-            let activeKeys = '';
-            playheadTimer = setInterval(() => {
-                if (!audioCtx) return;
-                const elapsed = audioCtx.currentTime - playStartTime;
-                const sounding = [];
-                const seen = new Set();
-                for (const n of sched) {
-                    if (n.t > elapsed || elapsed >= n.t + n.d) continue;
-                    const key = n.s + ':' + n.o;
-                    if (seen.has(key)) continue;
-                    seen.add(key);
-                    sounding.push({ pos: n.s, occ: n.o, t: n.t, key: key });
-                }
-                // Newest onset first: painted[0] is the scroll target.
-                sounding.sort((a, b) => b.t - a.t);
-                const keys = sounding.map(x => x.key).sort().join(',');
-                if (keys === activeKeys) return;
-                const hadNew = sounding.some(x => activeKeys.indexOf(x.key) < 0);
-                activeKeys = keys;
-                clearHighlights();
-                const painted = highlightPositions(sounding);
-                if (sounding.length > 0) {
-                    lastHighlightPos = sounding[0].pos;
-                    lastResolvedPos = sounding[0].pos;
-                }
-                const el = hadNew && painted.length > 0 ? painted[0] : null;
-                if (el) {
-                    const r = el.getBoundingClientRect();
-                    const m = mainContent.getBoundingClientRect();
-                    const off = r.top < m.top + 30 || r.bottom > m.bottom - 30
-                             || r.left < m.left + 30 || r.right > m.right - 30;
-                    if (off) el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
-                }
-            }, 50);
+            return end;
         }
 
         // ---- Audition: sound the caret's note (held) or its whole measure ----
         // The caret's note rings while the key is held. VS Code has no key-up event,
         // so a held key arrives as an OS key-repeat of the play command; each fire
-        // re-arms a watchdog, and the note stops once the repeats cease.
-        // ONE AudioContext for the audition, for the life of this document, never closed.
-        // The browser's autoplay policy lets a context run only once the user has
-        // interacted with THIS document (a click or a key in the preview — the editor's
-        // keys do not count): a context made before that stays 'suspended', and resume()
-        // from a message handler is no gesture. Until 2026-10-10 every strike made a new
-        // context and closed it 400 ms later, so a strike before the first click was
-        // silent and nothing said why (owner's report). Now the one context is resumed
-        // from the first pointer / key gesture here and asked to resume at every strike;
-        // if it is still not running shortly after, the host is told once (audioBlocked)
-        // and the status bar says to click the preview. The Play button has its own
-        // context (startPlayback) — a click, so always allowed.
-        let synthCtx = null;
-        let audioBlockedTold = false;
-        function synth() {
-            if (!synthCtx || synthCtx.state === 'closed') { synthCtx = new AudioContext(); }
-            if (synthCtx.state !== 'running') {
-                synthCtx.resume().catch(() => { /* reported below */ });
-                setTimeout(() => {
-                    if (synthCtx && synthCtx.state !== 'running' && !audioBlockedTold) {
-                        audioBlockedTold = true;
-                        vscode.postMessage({ type: 'audioBlocked', state: synthCtx.state });
-                    }
-                }, 300);
-            }
-            return synthCtx;
-        }
-        function resumeSynthOnGesture() {
-            if (synthCtx && synthCtx.state === 'suspended') {
-                synthCtx.resume().then(() => { audioBlockedTold = false; }).catch(() => { /* noop */ });
-            }
-        }
-        window.addEventListener('pointerdown', resumeSynthOnGesture, true);
-        window.addEventListener('keydown', resumeSynthOnGesture, true);
-
+        // re-arms a watchdog, and the note stops once the repeats cease. The strike is
+        // the SoundFont synth's (the part's program, PlaybackNote.G / the server's
+        // Program) when it is ready, else an oscillator of the timbre family's wave.
         let heldOscs = [];
-        let heldPitchKey = '';     // pitches currently ringing, so a repeat sustains
+        let heldPitches = [];       // ringing on the SoundFont synth, on heldChannel
+        let heldChannel = -1;
+        let heldKey = '';           // what rings, so a fast repeat sustains instead of re-striking
         let heldWatchdog = null;
         let pendingAudition = null; // audition awaiting a fresh note list
         const AUD_WAVE = ['triangle','sine','square','sawtooth','triangle','sine','sawtooth','square','sine','triangle'];
 
         function stopHeldNote() {
             if (heldWatchdog) { clearTimeout(heldWatchdog); heldWatchdog = null; }
-            if (heldOscs.length === 0 || !synthCtx) return;
-            const t = synthCtx.currentTime;
-            for (const o of heldOscs) {
-                try {
-                    o.g.gain.cancelScheduledValues(t);
-                    o.g.gain.setTargetAtTime(0.0001, t, 0.05);
-                    o.osc.stop(t + 0.3);
-                } catch (e) { /* already ended */ }
+            if (heldPitches.length && sfSynth) { sfSynth.release(heldChannel, heldPitches); }
+            heldPitches = []; heldChannel = -1;
+            if (heldOscs.length && audioCtx) {
+                const t = audioCtx.currentTime;
+                for (const o of heldOscs) {
+                    try {
+                        o.g.gain.cancelScheduledValues(t);
+                        o.g.gain.setTargetAtTime(0.0001, t, 0.05);
+                        o.osc.stop(t + 0.3);
+                    } catch (e) { /* already ended */ }
+                }
             }
-            heldOscs = []; heldPitchKey = '';
+            heldOscs = []; heldKey = '';
         }
 
-        function holdNotes(pitches, timbre, gapMs) {
-            const key = pitches.slice().sort((a, b) => a - b).join(',');
+        function holdNotes(pitches, timbre, program, gapMs) {
+            const key = pitches.slice().sort((a, b) => a - b).join(',') + '/' + timbre + '/' + program;
             // Fresh press (or a different note) re-attacks; a fast repeat of the SAME
             // note leaves the tone ringing and only re-arms the watchdog.
-            const fresh = heldOscs.length === 0 || key !== heldPitchKey || gapMs > 700;
+            const fresh = (heldOscs.length === 0 && heldPitches.length === 0) || key !== heldKey || gapMs > 700;
             if (fresh) {
                 stopHeldNote();
-                const ctx = synth();
-                const master = ctx.createGain();
-                master.gain.value = 0.22;
-                master.connect(ctx.destination);
-                const t0 = ctx.currentTime;
-                for (const p of pitches) {
-                    const osc = ctx.createOscillator();
-                    osc.type = AUD_WAVE[timbre] || 'triangle';
-                    osc.frequency.value = 440 * Math.pow(2, (p - 69) / 12);
-                    const g = ctx.createGain();
-                    g.gain.setValueAtTime(0, t0);
-                    g.gain.linearRampToValueAtTime(0.9, t0 + 0.02);
-                    osc.connect(g); g.connect(master);
-                    osc.start(t0);
-                    heldOscs.push({ osc, g });
+                const ctx = audio();
+                const sf = soundFontSynth();
+                if (sf && sf.ready) {
+                    heldChannel = sf.strike(pitches, timbre, program, 100);
+                    heldPitches = pitches.slice();
+                } else {
+                    const master = oscillatorOutput(ctx, 0.22);
+                    const t0 = ctx.currentTime;
+                    for (const p of pitches) {
+                        const osc = ctx.createOscillator();
+                        osc.type = AUD_WAVE[timbre] || 'triangle';
+                        osc.frequency.value = 440 * Math.pow(2, (p - 69) / 12);
+                        const g = ctx.createGain();
+                        g.gain.setValueAtTime(0, t0);
+                        g.gain.linearRampToValueAtTime(0.9, t0 + 0.02);
+                        osc.connect(g); g.connect(master);
+                        osc.start(t0);
+                        heldOscs.push({ osc, g });
+                    }
                 }
-                heldPitchKey = key;
+                heldKey = key;
             }
             // Long window on a fresh press (bridge the OS repeat delay), short once
             // the repeats are flowing (a snappy release when the key goes up).
@@ -3751,7 +3892,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             if (!best) { return; }
             const pitches = playbackNotes.filter(n => n.S === best.S).map(n => n.P);
-            if (pitches.length) { holdNotes(pitches, best.I || 0, gapMs); }
+            if (pitches.length) {
+                holdNotes(pitches, best.I || 0, typeof best.G === 'number' ? best.G : -1, gapMs);
+            }
         }
 
         function auditionMeasure(start, end) {
@@ -3771,13 +3914,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
 
         // Arbitrary pitches for a fixed time: the step keys and the automatic
         // audition (the caret landing on a note, a typed note, an @chord's shape).
-        // The extension sends the compiler's MIDI numbers, so no note list is
-        // needed here. Same voice as the held audition: a fresh strike (the huge
-        // gap), then released after durationMs instead of waiting for key-repeats.
-        function playPitches(pitches, timbre, durationMs) {
+        // The extension sends the compiler's MIDI numbers and the part's program, so
+        // no note list is needed here. Same voice as the held audition: a fresh strike
+        // (the huge gap), then released after durationMs instead of waiting for key-repeats.
+        function playPitches(pitches, timbre, program, durationMs) {
             if (!pitches || pitches.length === 0) { return; }
             stopHeldNote();
-            holdNotes(pitches, timbre || 0, 1e9);
+            holdNotes(pitches, timbre || 0, typeof program === 'number' ? program : -1, 1e9);
             if (heldWatchdog) { clearTimeout(heldWatchdog); }
             heldWatchdog = setTimeout(stopHeldNote, durationMs || 450);
         }
@@ -3971,7 +4114,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 }
                 case 'playPitches':
-                    playPitches(message.pitches, message.timbre, message.durationMs);
+                    playPitches(message.pitches, message.timbre, message.program, message.durationMs);
+                    break;
+                case 'setSoundFont':
+                    setSoundFont(message.uri);
                     break;
                 // Context-menu actions. Play reuses the Play button's path
                 // exactly (fetch the events, then start at pendingStartPos), so

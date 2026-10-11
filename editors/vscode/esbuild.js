@@ -74,8 +74,22 @@ const LICENSE_BANNER = `/*!
  * Source: https://github.com/yotsuda/LilySharp
  */`;
 
+// The preview's SoundFont synth runs IN THE WEBVIEW, which cannot require() anything: its
+// half (src/webview/previewSynth.ts + spessasynth_lib) is bundled for the browser into
+// out/synth/preview-synth.js, and spessasynth_lib's AudioWorklet processor — a separate
+// file the page hands to audioWorklet.addModule — is copied beside it. The page loads
+// both by webview URI (extension.ts, getPreviewHtml); out/ ships in the VSIX.
+function copyWorkletProcessor() {
+    const src = path.resolve(__dirname, 'node_modules', 'spessasynth_lib', 'dist', 'spessasynth_processor.min.js');
+    const outDir = path.resolve(__dirname, 'out', 'synth');
+    fs.mkdirSync(outDir, { recursive: true });
+    fs.copyFileSync(src, path.join(outDir, 'spessasynth_processor.min.js'));
+    console.log('esbuild: copied spessasynth_processor.min.js');
+}
+
 async function main() {
     copyGrammar();
+    copyWorkletProcessor();
     const ctx = await esbuild.context({
         entryPoints: ['src/extension.ts'],
         bundle: true,
@@ -91,12 +105,29 @@ async function main() {
         legalComments: 'inline',
         logLevel: 'warning',
     });
+    const synthCtx = await esbuild.context({
+        entryPoints: ['src/webview/previewSynth.ts'],
+        bundle: true,
+        format: 'iife',
+        platform: 'browser',
+        target: 'es2022',
+        outfile: 'out/synth/preview-synth.js',
+        minify: production,
+        sourcemap: !production,
+        sourcesContent: false,
+        banner: { js: LICENSE_BANNER },
+        legalComments: 'inline',
+        logLevel: 'warning',
+    });
     if (watch) {
         await ctx.watch();
+        await synthCtx.watch();
         console.log('esbuild: watching...');
     } else {
         await ctx.rebuild();
+        await synthCtx.rebuild();
         await ctx.dispose();
+        await synthCtx.dispose();
     }
 }
 

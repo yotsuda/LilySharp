@@ -47,6 +47,9 @@ interface StepResponse {
     Message?: string | null;
     Pitches: number[];
     Timbre: number;
+    /** The part's General MIDI program for the preview's SoundFont synth; -1 (or absent,
+     *  from an older server) when no part names one — the synth then voices the timbre. */
+    Program?: number;
     Version: number;
     Error?: string | null;
 }
@@ -56,6 +59,7 @@ interface AuditionAtResponse {
     Kind?: string | null;
     Pitches: number[];
     Timbre: number;
+    Program?: number;
     Version: number;
 }
 
@@ -80,11 +84,12 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
     const lastEdit = new Map<string, number>();
 
     /** Sends pitches to the document's preview synth; silent without a preview. */
-    const play = (uri: string, pitches: readonly number[], timbre: number) => {
+    const play = (uri: string, pitches: readonly number[], timbre: number, program?: number) => {
         const panel = deps.getPreview(uri);
         if (!panel || pitches.length === 0) { return; }
         void panel.webview.postMessage({
-            type: 'playPitches', pitches, timbre, durationMs: auditionDurationMs(pitches.length),
+            type: 'playPitches', pitches, timbre, program: program ?? -1,
+            durationMs: auditionDurationMs(pitches.length),
         });
     };
 
@@ -164,7 +169,7 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
         }
         if (auditionEnabled() && response.Pitches.length > 0) {
             const uri = doc.uri.toString();
-            play(uri, response.Pitches, response.Timbre);
+            play(uri, response.Pitches, response.Timbre, response.Program);
             // The caret now rests on what just sounded: remember it, so the caret
             // audition does not repeat it. The key is asked for, not guessed.
             const here = await askAt(editor);
@@ -201,7 +206,7 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
                 if (vscode.window.activeTextEditor !== editor) { return; }
                 const answer = await askAt(editor);
                 if (answer && memory.typed(uri, { key: answer.Key, pitches: answer.Pitches })) {
-                    play(uri, answer.Pitches, answer.Timbre);
+                    play(uri, answer.Pitches, answer.Timbre, answer.Program);
                 }
             });
         }),
@@ -225,7 +230,7 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
                 if (typingWait.pending) { return; }
                 const answer = await askAt(editor);
                 if (answer && memory.caretLanded(uri, { key: answer.Key, pitches: answer.Pitches })) {
-                    play(uri, answer.Pitches, answer.Timbre);
+                    play(uri, answer.Pitches, answer.Timbre, answer.Program);
                 }
             });
         }),

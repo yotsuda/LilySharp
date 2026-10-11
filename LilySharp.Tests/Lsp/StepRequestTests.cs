@@ -45,6 +45,15 @@ public class StepRequestTests
 
     private static string Plain(string music) => MusicSource.Wrap(music, "octave absolute");
 
+    /// <summary>A flute part (GM program 73, 0-based), absolute octaves.</summary>
+    private static string Flute(string music) => $$"""
+        octave absolute
+        part fl { instrument flute }
+        section A { fl { {{music}} } }
+        form { A }
+        score { staff fl }
+        """;
+
     /// <summary>Strips the markers: the text and each selection as (start, end).</summary>
     private static (string Text, List<(int Start, int End)> Selections) Marked(string marked)
     {
@@ -508,6 +517,27 @@ public class StepRequestTests
             TextDocument = new TextDocumentIdentifier { Uri = DocUri },
             Offset = selections[0].Start,
         });
+    }
+
+    /// <summary>
+    /// The audition and the step name the General MIDI program the preview's SoundFont synth
+    /// strikes with: the part's, as the .mid plays it (the flute's 73; a part naming no sound
+    /// plays LilyPond's default, 0). A voicing on a rest sounds from no part: the guitar
+    /// preset's program, with the guitar timbre, as before.
+    /// </summary>
+    [Fact]
+    public void TheAudition_NamesTheProgramThePartPlays()
+    {
+        var flute = AuditionAt(Flute("c'4 d'‸4"));
+        Assert.Equal([74], flute.Pitches);
+        Assert.Equal(73, flute.Program);
+        Assert.Equal(1, flute.Timbre);
+        Assert.Equal(0, AuditionAt(Plain("c'4 d'‸4")).Program);
+        Assert.Equal(73, Step(Flute("c'‸4 d'4"), +1).Response.Program);
+
+        var voicing = AuditionAt(Guitar("r1@chord(Cm7 ‸x35343)"));
+        Assert.Equal(4, voicing.Timbre);
+        Assert.Equal(24, voicing.Program);
     }
 
     [Fact]

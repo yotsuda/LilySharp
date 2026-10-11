@@ -56,6 +56,18 @@ note, not on every arrow-key repeat — and a note as you type it, once its pitc
 octave marks are in. Switch this off with `"lilysharp.audition.enabled": false`; `Alt+P`
 and `Alt+M` keep working either way. Nothing sounds while no preview is open.
 
+### Playback
+
+The preview's synth is a **SoundFont synthesizer** (spessasynth_lib, in an audio worklet):
+each part plays the General MIDI instrument its `midiInstrument` or preset names, as the
+exported MIDI does — drums on the drum channel, a quarter tone as a pitch bend — and the
+step keys and the caret strike the part's instrument too. A General MIDI sound font is
+bundled; `"lilysharp.playback.soundFont"` names an `.sf2`, `.sf3` or `.dls` of your own and
+takes effect in open previews. While no font is loaded the preview plays plain oscillator
+tones instead. The sound is allowed to start only once you have clicked or typed in the
+preview itself (the browser's autoplay rule); the status bar says so when a strike comes
+first.
+
 To use other keys, open **Keyboard Shortcuts** (`Ctrl+K Ctrl+S`), search for
 `lilysharp.stepUp` / `lilysharp.stepDown`, and bind them where you like — and, on Linux, if
 you want `Ctrl+Shift+Up/Down` back as plain *Add Cursor Above / Below*, remove the two
@@ -147,7 +159,7 @@ If not set, the extension looks for `lilysharp-lsp` in PATH.
 5. Press `Ctrl+Shift+O` to jump to a symbol, or open the **Outline** view in the Explorer sidebar for the score structure
 6. Use `F12` to go to variable definition
 7. Use `Shift+Alt+F` to format document
-8. Open the preview (`Ctrl+Shift+V`), then **hold `Alt+P`** to hear the note under the caret, or press `Alt+M` to play the measure the caret is in (the preview panel is the synth)
+8. Open the preview (`Ctrl+Shift+V`), then **hold `Alt+P`** to hear the note under the caret, or press `Alt+M` to play the measure the caret is in (the preview panel is the synth — a sound font, see [Playback](#playback)); the preview's ▶ plays the score
 9. Press `Ctrl+Shift+Up` / `Ctrl+Shift+Down` on a note to move it an octave, or on `@chord(Cm7)` (or a chords-row `Cm7`) to add a chord diagram and try the next shape — see [Stepping and Audition](#stepping-and-audition)
 
 ## Example

@@ -159,6 +159,18 @@ workflow attaches that section to the GitHub Release verbatim.
   advisories fixable only in a version whose licence a GPL binary cannot take; it is excluded
   from every bin, publish, archive and VSIX, and the PDFs are byte-identical.
 
+### Playback (VS Code preview)
+
+- **The preview plays a sound font** (spessasynth_lib in an audio worklet; the oscillator
+  tones remain the fallback). Each part plays the General MIDI instrument its
+  `midiInstrument` or preset names — the `lilysharp/playback` notes now carry the channel and
+  the program the `.mid` export plays them with, and `lilysharp/step` / `lilysharp/auditionAt`
+  answer the part's program beside the timbre, so the step keys and the caret strike the
+  part's instrument too. `lilysharp.playback.soundFont` names a font of your own.
+- **A dense score no longer breaks up**: events go to the synth a quarter of a second ahead of
+  the clock instead of every note's oscillator being built up front, the output is limited,
+  and Stop silences what was queued. Design: `docs/playback-design.md`.
+
 ### Editor
 
 - **A `lily#` fence in Markdown may hold a whole book.** It draws the book's default score

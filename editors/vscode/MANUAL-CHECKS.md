@@ -25,7 +25,7 @@
 キーは **Ctrl+Shift+↑↓ の 1 組だけ**（オクターブ記号もコード図の形も同じキー）。HANDOFF の「Ctrl+Alt+↑↓」は Lily# の割り当てではない
 （Ctrl+Alt+↑↓ は Windows のカーソル追加＝`auditionCore.ts` の註）＝起票が古い。
 
-> ⚠️ **音はプレビューの webview が鳴らす**（`stepAudition.ts` の頭の註・2026-09-28 のユーザー決定）＝**その本のプレビューが開いていないと、ステップも自動の試聴も黙って何も鳴らさない**（ステップはプレビューを開かない）。Alt+P / Alt+M だけは 1 回目でプレビューを開き、2 回目で鳴る。確かめる前に `Ctrl+K V` でプレビューを横に開く。音が出ないときの切り分け: ⑴ プレビューが開いているか ⑵ Alt+P で鳴るか（鳴らなければ webview の合成器＝`AudioContext` の側） ⑶ 出力チャネル「Lily#」に `step:` の行が出ていないか（サーバーが Fallback を返した） ⑷ `lilysharp.audition.enabled` が切られていないか。サーバーの `lilysharp/step` は SHOTLIST の 4 行の本で `pitches=[72]` を返す（第888 が使い捨ての試験で確認）。
+> ⚠️ **音はプレビューの webview が鳴らす**（`stepAudition.ts` の頭の註・2026-09-28 のユーザー決定）＝**その本のプレビューが開いていないと、ステップも自動の試聴も黙って何も鳴らさない**（ステップはプレビューを開かない）。Alt+P / Alt+M だけは 1 回目でプレビューを開き、2 回目で鳴る。確かめる前に `Ctrl+K V` でプレビューを横に開く。音が出ないときの切り分け: ⑴ プレビューが開いているか ⑵ Alt+P で鳴るか（鳴らなければ webview の合成器＝`AudioContext` の側・第901 からは SoundFont シンセ＝出力チャネル「Lily# Extension」の `Preview synth …` の行を見る） ⑶ 出力チャネル「Lily#」に `step:` の行が出ていないか（サーバーが Fallback を返した） ⑷ `lilysharp.audition.enabled` が切られていないか。サーバーの `lilysharp/step` は SHOTLIST の 4 行の本で `pitches=[72]` を返す（第888 が使い捨ての試験で確認）。
 
 - [ ] **オクターブ記号**（SHOTLIST clip 3 の手順）: `c4` の上で ↑ 2 回 → `c''4`、↓ 1 回 → `c'4`。各回その音が鳴る。
 - [ ] 和音の中の `e` で ↑ → `<c e' g>`（動くのはその音だけ・**鳴るのは和音全体**＝c e' g の 3 音・2026-10-10 のユーザー決定）。`>` の直後で ↑ → `<c e' g>'4`（和音全体が動いて鳴る）。カレットを `c` `e` `g` と渡っても和音は 1 回しか鳴らない。
@@ -85,6 +85,16 @@
 - [ ] MIDI / LilyPond の Export の警告がエディターの通知に出る。
 - [ ] 1 part だけの score を選んで Play → その score の part と form だけが鳴る。
 - [ ] form が 6 回弾く section の中で音を打つ → プレビューの 6 回全部が描き直る。
+
+#### 2.3.1 SoundFont の音源（第901・`docs/playback-design.md`）
+
+- [ ] プレビューを開いて数秒後、出力チャネル「Lily# Extension」に `Preview synth ready: 38.1 MB in … ms: …MuseScore_General.sf3` の行が出る（`failed` なら理由がその行にある）。
+- [ ] ▶ で楽器の音（ピアノ・ギター等）が鳴る。`part vn { midiInstrument "violin" }` と `part kit { clef percussion }` の本で、vn はバイオリン・kit はドラムの音。
+- [ ] 密な本（和音の多いピアノ譜・4 part 以上）で、途切れ・歪みが無い。⏹ を押すと直ちに止まり、後から音が漏れない。▶ を押し直す（seek）と頭から正しく鳴る。
+- [ ] プレビューのタブを隠して（別のタブを前に出して）も再生が続く。
+- [ ] Alt+P を長押し → その part の楽器で鳴り続け、離すと止まる。Ctrl+Shift+↑ の後の音も同じ楽器。
+- [ ] 設定 `lilysharp.playback.soundFont` に別の .sf2/.sf3 の path を入れる → 開いているプレビューの音が替わる（Reload 不要）。存在しない path → 出力チャネルに `does not exist` の行、音は同梱のまま。空に戻す → 同梱に戻る。
+- [ ] `media\soundfont` を空にして（実験）Reload → 出力チャネルに `Preview synth none`、▶ は従来のオシレーターの音で鳴る。
 
 ### 2.4 エディターの小さな直し
 

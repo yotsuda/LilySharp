@@ -40,13 +40,27 @@ public class PlaybackRequestTests
         "score {\n  staff p1\n  staff p2\n}\n\n" +
         "score p2 {\n  staff p2\n}\n";
 
-    private static PlaybackResponse Playback(string? renderName)
+    // A violin, a part that names no sound, and a drum kit — three channels, two programs.
+    private const string Sounds =
+        "part vn { midiInstrument \"violin\" }\n" +
+        "part pno\n" +
+        "part kit { clef percussion }\n" +
+        "section A {\n" +
+        "  vn { c'4 d e f | }\n" +
+        "  pno { e f g a | }\n" +
+        "  kit { bd4 bd sn bd | }\n" +
+        "}\n\nform { A }\n\n" +
+        "score {\n  staff vn\n  staff pno\n  staff kit\n}\n";
+
+    private static PlaybackResponse Playback(string? renderName) => Playback(Doc, renderName);
+
+    private static PlaybackResponse Playback(string doc, string? renderName)
     {
         var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
         var uri = new Uri("file:///parts.lys");
         server.DidOpen(new DidOpenTextDocumentParams
         {
-            TextDocument = new TextDocumentItem { Uri = uri, Text = Doc, Version = 1, LanguageId = "lilysharp" },
+            TextDocument = new TextDocumentItem { Uri = uri, Text = doc, Version = 1, LanguageId = "lilysharp" },
         });
         return server.GetPlayback(new PlaybackParams
         {
@@ -84,5 +98,28 @@ public class PlaybackRequestTests
     public void AScoreThatIsNotInTheFile_FallsBackToTheFirst_AsTheDrawingDoes()
     {
         Assert.Equal(12, Playback("gone").Notes!.Length);
+    }
+
+    /// <summary>
+    /// Every note names the channel and the General MIDI program the .mid export plays it
+    /// with (MidiExporter.SplitIntoPartTracks, MidiTrack.Program), so the preview's SoundFont
+    /// synth sounds the instruments the export does: the violin on its own channel with its
+    /// program, the part naming no sound on the next with LilyPond's default (the acoustic
+    /// grand, 0), the kit on the drum channel, where the program is not read.
+    /// </summary>
+    [Fact]
+    public void EveryNote_CarriesTheChannelAndTheProgram_TheMidWouldPlayItWith()
+    {
+        var pb = Playback(Sounds, null);
+        Assert.Null(pb.Error);
+        var programByChannel = pb.Notes!
+            .GroupBy(n => n.C)
+            .ToDictionary(g => g.Key, g => g.Select(n => n.G).Distinct().Single());
+        Assert.Equal(new[] { 0, 1, 9 }, programByChannel.Keys.OrderBy(c => c));
+        Assert.Equal(40, programByChannel[0]);   // violin: GM 41, 0-based
+        Assert.Equal(0, programByChannel[1]);
+        Assert.Equal(0, programByChannel[9]);
+        Assert.Equal(4, pb.Notes!.Count(n => n.C == 9));
+        Assert.All(pb.Notes!.Where(n => n.C == 9), n => Assert.Equal(9, n.I));
     }
 }
