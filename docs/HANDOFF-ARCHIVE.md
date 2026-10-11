@@ -129,6 +129,21 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第899セッションの経緯
+
+### 1.1 第899セッション（2026-10-11・YT-DELL2）
+
+同じ会話（第898 の続き）。`-Start p899`（HEAD `4ce7d20ac`）＝full **11781 / 0 / 2 / 11783**。着手＝**ユーザー決定（第899 冒頭の問い「設計変更に進む」）**: 第896 で保留した「段組みが memo の行を取る」。設計は **`docs/todo-memo-design.md`**（置き場の規則を 1 か所に）。
+- **帯**＝`LayoutOptions.TodoBands`（LILYSHARP-OWN・paper の鍵ではなく render options が立てる: `SvgGenerator.PaperBaseOf(snippet, interactive)`・**`IncrementalCompiler` の 2 つの collector にも同じ `PaperBase`**＝無いと session の絵が full と違う）。`TodoMemoBand.Estimate`（新・`Svg/Layout/TodoMemoBand.cs`・定数は `TodoMemoStyle` へ移して renderer と共有）が段ごとに memo の箱を余白の広い側へ greedy に行へ詰めて帯の高さ（gap＋行数×(箱＋air)）を出し、**Prelim の `EnrichExtentsWithAnnotationProtrusions` の直後**で up/down extent（と breaker の annotation extent）に足し、`AugmentSkylinesForPaging` に全幅の `AddMarkBox` として渡す（lyric band の手前）。頁の top spring・段間の floor・page breaker が全部読む。書き出しは `Default` のまま＝`AMark_MovesNothingOnThePage` 不変。
+- **並び**＝`DrawTodoMarks` pass 2 を書き直し: 同じ段・同じ側の memo を**幅の短い順**に、**左右の全組み合わせ（n ≤ 8＝2^n）を試して総コスト最小の並び**を描く（コスト＝登り＋横切り 4（線が他の文字を通る／箱が他の線に乗る）＋狭い側 2）。第898 の greedy＋「覆い（covering）」の発想は捨てた（c10＝one-title で覆いの連鎖が横切りを 2 本に増やした・Lab `probe/one-title-poisonA.png` との比較）。`MemoFit` record struct に memo の寸法を持つ。
+- 計器 Lab `sessions/p899/`: `cand.ps1`（候補 16 冊を real／poison で描き比べ）・`crossings.ps1`（線が他の memo の箱を通る数）・`poisons.ps1`（A 探索を切る／B LeadersClear 常に true／C 帯を切る／D IncrementalCompiler の PaperBase を外す）・`ZzP898{Probe,Candidate}Tests.cs.txt`・`ZzP899TimingTests.cs.txt`。**候補 16 冊すべて横切り 0**（`cand-search/`）。絵 `probe/*-preview.png`（one・one-title・busy・piano・twinkle・c6・c9＝全部帯で段が下がり、横切り 0）。
+- 網 `TodoCalloutTests`: `ALeader_RunsThroughNoOtherMemo`（4 冊＝5 本・隣 2 音・4 連続・1 音おき）／新 `TheLayoutReservesTheMemosRows_InThePreviewOnly`（`one` の preview 頁が export 頁より 4 以上高い・memo 6 本の箱が互いに離れ・線の横切り 0・**`IncrementalCompiler(…, Preview()).Render()` が `SvgGenerator.Generate` と byte 同一**）。毒 A／B／C／D＝それぞれ赤 1（`poison{A..D}.log`）。
+- 時間（`probe/timing.txt`・mean of 20・preview）: one 4.03 ms（memo を空にすると 3.37）・busy 20.8／15.1・twinkle 44／75（ばらつき）＝探索は 1 ms 未満。
+- docs＝`docs/todo-memo-design.md`（新）・SYNTAX_REFERENCE・CHANGELOG×2・MANUAL-CHECKS §2.1（「他の要素は動かない」→「プレビューの段は帯のぶん下がる・書き出しは同じ」）。棚卸し 2 枚再生成（OWN＝定数の移設と帯）。
+- commit `8a2e2cdb0`（`todo:`）。拡張は `tools\Deploy-Lsp.ps1` で入れ直し済み（**Reload Window が要る**）。
+- `-End p899 -DiffBase 4ce7d20ac`（門は全部 OK）＝full **11782 / 0 / 2 / 11784**（＋1＝`TheLayoutReservesTheMemosRows_InThePreviewOnly`）。Core '+' 468 行／REF 0／OWN 4＝7.6 ⒞（`TodoMemoStyle`・`TodoMemoBand`・`LayoutOptions.TodoBands`・Prelim の帯＝全部エディターの印の置き場・LP に対応物なし）。7.7: 9 本以上の memo は探索せず greedy（`combos = 0` の腕・註に明記）・sentinel なし。HANDOFF 376,812 B（残り 73,188）・§1 現在便 10,337 字。未 push 87＋docs（push はユーザー）。Lab `sessions/p899/`。
+判定: **ユーザーの実機確認とフィードバック待ち**（Reload Window 後に `Untitled-2.lys`＝第 2 段が memo の帯ぶん下がる・`sessions/p896/probe/one.lys`＝6 本が重ならない・書き出しは動かない）。(a) 次の一手は memo の文脈の上に立つ／(b) **2 便＝まだ軽い**（圧縮は未だ）／(c) 既定は続ける ⇒ **フィードバックが来たらこの会話で `-Start p900`**。残りの候補は `docs/todo-memo-design.md` §4。
+
 ## 以下は第898セッションの経緯
 
 ### 1.1 第898セッション（2026-10-11・YT-DELL2）

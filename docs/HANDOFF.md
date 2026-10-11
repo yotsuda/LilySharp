@@ -85,6 +85,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後（`lilysharp-omr-distribution-2026-10-05.md`）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
+- **プレビューの音源＝第901 で SoundFont シンセ（spessasynth_lib）に替えた**（`docs/playback-design.md`）。残り: ⑴ **音源の同梱はユーザー決定**（MuseScore_General 39.9 MB／FluidR3Mono 14.5 MB・VSIX 同梱か初回 DL か＝design §4）→ 決まったら `media/soundfont/` の sf3 を commit ／⑵ **次段 B＝LSP サーバーから MIDI 出力ポート**（loopMIDI／IAC → DAW＝VST ホスト・design §6・2〜3 便）／⑶ `lysc wav`（MeltySynth・同じ音源）は B の後。**ユーザーの実機確認待ち**（`MANUAL-CHECKS.md` §2.3.1）。
 - **`@todo` の memo の置き場＝第899〜900 で「段組みが memo の置き場を予約（必要なときだけ段が下がる）＋並びの探索」まで閉じた**（規則は `docs/todo-memo-design.md`・残りは同 §4＝順番の探索・長い memo の切り詰め・`lysc png --todo`）。**ユーザーの実機確認待ち**（Reload Window 後・`Untitled-2.lys`＝余白が増えない・`sessions/p896/probe/one.lys`＝段が下がって 6 本が収まる）
 - ⚠️ **VS Code の手動確認が未**＝**手順と期待は `editors/vscode/MANUAL-CHECKS.md`（第888 起票・§1〜§5 の 60 項目＝ステップ・入力補助・Split Sections・SHOTLIST の 9 本・0.11.0 と Unreleased の拡張側・R13 ⒝・OMR B1〜B6）**。⚠️ 「Ctrl+Alt+↑↓」は Lily# の割り当てではない（Ctrl+Shift+↑↓ の 1 組だけ＝起票が古かった）。⚠️ ユーザーの拡張のフォルダ名は yotsuda.lilysharp-0.7.0 のままだが、**中身（`server`＋`out\extension.js`）は 2026-10-10 17:42 に組み直されて入っている**（第884 が時刻で確認・18:05 の `89168e9c1` だけ未収録）＝SMuFL と `(Default)` は今の拡張で見られる
 - **v0.11.0 は出した（第854・`docs/RELEASING.md` §8）**。残り: Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663・**Honesty L13 `bes, aes, | fis, f, |` の 2 小節＝音価 `2` が落ちている・LYS2001＝第881**）／**push はユーザー**／**CHANGELOG の 0.11.0 以降は両 changelog の `## Unreleased` に書いた（第887）**＝release 時に見出しを版番号へ替え、その後の commit を足す（`RELEASING.md` §3 に書いた）
@@ -119,6 +120,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第901セッション（2026-10-11・YT-DELL2）
+
+新しい会話。`-Start p901`（HEAD `331e67ef0`）＝full **11807 / 0 / 2 / 11809**。着手＝**ユーザー決定「着手して」**（問い「VST などのリッチな音源を鳴らせるようにできるか」→ 提案 A→B を承認）: プレビューの再生を SoundFont 音源にする＋**ユーザー報告 15 件目「同時発声が多くなると鳴る音がとぎれとぎれになる」**を一緒に直す。設計は **`docs/playback-design.md`**（§6 に次段＝サーバーから MIDI 出力ポート→DAW／VST ホスト。**VST の自前ホストはしない**）。
+- 途切れの原因 2 つ（旧 `startPlayback` で確認）: ⒜ 1 音 peak 0.9×最大 1.3・master 0.25・リミッター無し＝4 音でクリップ／⒝ 曲全体の Oscillator＋Gain を ▶ の瞬間に全部生成。直し＝spessasynth_lib（4.3.14・Apache-2.0）の AudioWorklet 1 本に **0.25 s 先読み**（hidden なら 1.5 s・`Lookahead`）で送る・出口に DynamicsCompressor・⏹ は queue の後ろに All Sound Off（`stopAll` は時刻付き queue を捨てない＝core の `processMessage` で確認）・ハイライトは `SoundingCursor`（onset 順の cursor・毎 tick の全走査をやめた）。
+- サーバー: `PlaybackNote` に **`C`（channel）と `G`（GM program＝`MidiTrack.Program`）**、`StepResponse`／`AuditionAtResponse` に **`Program`**（`NoteStepper.Voice` record・`SoundIndex.Program`・`-1`＝part の無い音＝preview が timbre から選ぶ）。拡張: `src/webview/playbackCore.ts`（純粋・node test 9 本）＋`previewSynth.ts`（`window.LysSynth`）→ `esbuild.js` が `out/synth/preview-synth.js`＋processor を書く。CSP は `script-src 'nonce' ${cspSource} 'wasm-unsafe-eval' blob:`＋`connect-src ${cspSource}`。設定 **`lilysharp.playback.soundFont`**（machine-overridable・空＝`media/soundfont/` の最初の sf2/sf3/dls・変更は開いているプレビューに即時＝`webview.options` を張り直して `setSoundFont`）。試聴は ch 15 に part の program（ドラムは ch 9）。音源なし＝従来のオシレーター（こちらにもリミッター）。
+- 網: `PlaybackRequestTests.EveryNote_CarriesTheChannelAndTheProgram_TheMidWouldPlayItWith`（violin 40／無指定 0／kit ch 9）・`StepRequestTests.TheAudition_NamesTheProgramThePartPlays`（flute 73・rest 上の voicing は guitar 24）・`test/playbackCore.test.ts`（順序・quarter tone の bend・lookahead・cursor）・`webviewScript.test.ts`（頁の script が parse する）。
+- ⚠️ **音源ファイルは未 commit＝ユーザー決定待ち**（`docs/playback-design.md` §4）: `editors/vscode/media/soundfont/MuseScore_General.sf3`（39.9 MB・MIT・MuseScore 3 の既定）を置いて Deploy した＝**今の拡張はこれで鳴る**。代案 FluidR3Mono_GM.sf3（14.5 MB・MIT・mono）。両方 scratch（`…\scratchpad\sf\`）。VSIX に同梱か初回ダウンロードかも未決。決まるまで `git status` に `??` が 1 つ残る。
+- commit `9990ccc4f`（`playback:`・22 files）。拡張は `tools\Deploy-Lsp.ps1` で入れ直し済み（**package.json が変わったので Reload Window は 2 回**）。毒 A（C# の `G` を埋めない）＝赤 1・B（off の順序）＝赤 2・C（cursor が音を退かせない）＝赤 2・戻して 221/0（Lab `sessions/p901/poisons.ps1`・`poisons-BC.txt`）。⚠️ 計器の罠: `[IO.File]::ReadAllBytes` の相対パスは*プロセス*の cwd（`Set-Location` は効かない）＝B/C は 1 回目に走っていなかった。
+- `-End p901 -DiffBase 331e67ef0`（1 回目は `ApproximationInventoryTests.TheInventoryIsNotStale` 1 赤＝NoteStepper の OWN 1 件で棚卸しが古い→`LILYSHARP_UPDATE_DOCS=1` で再生成・CRLF に揃えて commit に含めた。2 回目＝門は全部 OK）＝full **11809 / 0 / 2 / 11811**（＋2＝C# の網 2 本）。Core '+' 57 行／REF 0／OWN 1＝7.6 ⒞（`NoteStepper.Voice`・`SoundIndex.Program`・`NoProgram`＝エディターの試聴の program・LP の performer に対応物なし）。7.7: sentinel `Program = -1`（part の無い音）の読み手は webview の `programOf` と `strike` の 2 軒＝`playbackCore.ts` に 1 か所で定義。HANDOFF 377,727 B（残り 72,273）・§1 現在便 11,047 字。未 push 93（push はユーザー）。Lab `sessions/p901/`（start／build／test／deploy／poisons／end ×2 の log・poisons.ps1・commit-msg）。
+判定: **ユーザーの実機確認待ち**（`MANUAL-CHECKS.md` §2.3.1 の 7 項目＝▶ で楽器の音・密な本で途切れない・⏹ で漏れない・Alt+P が part の楽器）。次の一手は ⑴ 音源の同梱の決定（どれ・VSIX か DL か）→ commit／⑵ 次段 B＝サーバーから MIDI 出力（design §6）。(a) どちらもこの便の文脈の上に立つ／(b) 1 便＝軽い／(c) 既定は続ける ⇒ **フィードバックが来たらこの会話で `-Start p902`**。
+
+## 以下は第900セッションの経緯
+
 ### 1.1 第900セッション（2026-10-11・YT-DELL2）
 
 同じ会話（第899 の続き）。`-Start p900`（HEAD `b1b9752bf`）＝full **11782 / 0 / 2 / 11784**。着手＝**ユーザー報告 14 件目**「五線と五線の間の y の余白が無駄に広くなった。`Untitled-2.lys` は y の余白をいっさい増やさずに todo を表示できる」。
@@ -130,21 +144,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - commit `e6681acf5`（`todo:`）。拡張は `tools\Deploy-Lsp.ps1` で入れ直し済み（**Reload Window が要る**）。
 - `-End p900 -DiffBase b1b9752bf`（門は全部 OK）＝full **11782 / 0 / 2 / 11784**（±0＝既存の網に 1 主張）。Core '+' 137 行／REF 0／OWN 2＝7.6 ⒞（`TodoMemoBand.Boxes` と Prelim の箱＝エディターの印の置き場・LP に対応物なし）。7.7: 該当なし。HANDOFF 376,864 B（残り 73,136）・§1 現在便 9,601 字。未 push 89＋docs（push はユーザー）。Lab `sessions/p900/`（probe の絵・poisons・log・Zz の写し）。
 判定: **ユーザーの実機確認待ち**（Reload Window 後に `Untitled-2.lys`＝余白が元どおり・`one.lys`＝段が必要なぶんだけ下がる）。(a) 次の一手は memo の文脈の上に立つ／(b) **3 便＝重くなってきた**（圧縮は未だ）／(c) 既定は続ける ⇒ **次の報告が memo の島ならこの会話で `-Start p901`、別の島なら新しい会話**。
-
-## 以下は第899セッションの経緯
-
-### 1.1 第899セッション（2026-10-11・YT-DELL2）
-
-同じ会話（第898 の続き）。`-Start p899`（HEAD `4ce7d20ac`）＝full **11781 / 0 / 2 / 11783**。着手＝**ユーザー決定（第899 冒頭の問い「設計変更に進む」）**: 第896 で保留した「段組みが memo の行を取る」。設計は **`docs/todo-memo-design.md`**（置き場の規則を 1 か所に）。
-- **帯**＝`LayoutOptions.TodoBands`（LILYSHARP-OWN・paper の鍵ではなく render options が立てる: `SvgGenerator.PaperBaseOf(snippet, interactive)`・**`IncrementalCompiler` の 2 つの collector にも同じ `PaperBase`**＝無いと session の絵が full と違う）。`TodoMemoBand.Estimate`（新・`Svg/Layout/TodoMemoBand.cs`・定数は `TodoMemoStyle` へ移して renderer と共有）が段ごとに memo の箱を余白の広い側へ greedy に行へ詰めて帯の高さ（gap＋行数×(箱＋air)）を出し、**Prelim の `EnrichExtentsWithAnnotationProtrusions` の直後**で up/down extent（と breaker の annotation extent）に足し、`AugmentSkylinesForPaging` に全幅の `AddMarkBox` として渡す（lyric band の手前）。頁の top spring・段間の floor・page breaker が全部読む。書き出しは `Default` のまま＝`AMark_MovesNothingOnThePage` 不変。
-- **並び**＝`DrawTodoMarks` pass 2 を書き直し: 同じ段・同じ側の memo を**幅の短い順**に、**左右の全組み合わせ（n ≤ 8＝2^n）を試して総コスト最小の並び**を描く（コスト＝登り＋横切り 4（線が他の文字を通る／箱が他の線に乗る）＋狭い側 2）。第898 の greedy＋「覆い（covering）」の発想は捨てた（c10＝one-title で覆いの連鎖が横切りを 2 本に増やした・Lab `probe/one-title-poisonA.png` との比較）。`MemoFit` record struct に memo の寸法を持つ。
-- 計器 Lab `sessions/p899/`: `cand.ps1`（候補 16 冊を real／poison で描き比べ）・`crossings.ps1`（線が他の memo の箱を通る数）・`poisons.ps1`（A 探索を切る／B LeadersClear 常に true／C 帯を切る／D IncrementalCompiler の PaperBase を外す）・`ZzP898{Probe,Candidate}Tests.cs.txt`・`ZzP899TimingTests.cs.txt`。**候補 16 冊すべて横切り 0**（`cand-search/`）。絵 `probe/*-preview.png`（one・one-title・busy・piano・twinkle・c6・c9＝全部帯で段が下がり、横切り 0）。
-- 網 `TodoCalloutTests`: `ALeader_RunsThroughNoOtherMemo`（4 冊＝5 本・隣 2 音・4 連続・1 音おき）／新 `TheLayoutReservesTheMemosRows_InThePreviewOnly`（`one` の preview 頁が export 頁より 4 以上高い・memo 6 本の箱が互いに離れ・線の横切り 0・**`IncrementalCompiler(…, Preview()).Render()` が `SvgGenerator.Generate` と byte 同一**）。毒 A／B／C／D＝それぞれ赤 1（`poison{A..D}.log`）。
-- 時間（`probe/timing.txt`・mean of 20・preview）: one 4.03 ms（memo を空にすると 3.37）・busy 20.8／15.1・twinkle 44／75（ばらつき）＝探索は 1 ms 未満。
-- docs＝`docs/todo-memo-design.md`（新）・SYNTAX_REFERENCE・CHANGELOG×2・MANUAL-CHECKS §2.1（「他の要素は動かない」→「プレビューの段は帯のぶん下がる・書き出しは同じ」）。棚卸し 2 枚再生成（OWN＝定数の移設と帯）。
-- commit `8a2e2cdb0`（`todo:`）。拡張は `tools\Deploy-Lsp.ps1` で入れ直し済み（**Reload Window が要る**）。
-- `-End p899 -DiffBase 4ce7d20ac`（門は全部 OK）＝full **11782 / 0 / 2 / 11784**（＋1＝`TheLayoutReservesTheMemosRows_InThePreviewOnly`）。Core '+' 468 行／REF 0／OWN 4＝7.6 ⒞（`TodoMemoStyle`・`TodoMemoBand`・`LayoutOptions.TodoBands`・Prelim の帯＝全部エディターの印の置き場・LP に対応物なし）。7.7: 9 本以上の memo は探索せず greedy（`combos = 0` の腕・註に明記）・sentinel なし。HANDOFF 376,812 B（残り 73,188）・§1 現在便 10,337 字。未 push 87＋docs（push はユーザー）。Lab `sessions/p899/`。
-判定: **ユーザーの実機確認とフィードバック待ち**（Reload Window 後に `Untitled-2.lys`＝第 2 段が memo の帯ぶん下がる・`sessions/p896/probe/one.lys`＝6 本が重ならない・書き出しは動かない）。(a) 次の一手は memo の文脈の上に立つ／(b) **2 便＝まだ軽い**（圧縮は未だ）／(c) 既定は続ける ⇒ **フィードバックが来たらこの会話で `-Start p900`**。残りの候補は `docs/todo-memo-design.md` §4。
 
 ## 2. 開いている作業
 
