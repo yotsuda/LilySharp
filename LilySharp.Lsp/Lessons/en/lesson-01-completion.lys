@@ -1,8 +1,8 @@
 // Lesson 1 of 11 — Let the editor teach you
 //
-// STEP 0 — SEE THE MUSIC. Press Ctrl+K, release, then press V.
-// (Or click the preview icon at the top right of this editor.)
-// The score opens beside this file and redraws as you type.
+// STEP 0 — SEE THE MUSIC. The score opens beside this file by itself and
+// redraws as you type. Not there? Press Ctrl+K, release, then press V
+// (or click the preview icon at the top right of this editor).
 // Click the score, then ▶ to hear it.
 //
 // Then: Ctrl+Space anywhere lists what you can write there.

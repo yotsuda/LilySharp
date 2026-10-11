@@ -79,3 +79,64 @@ export function svgPostKey(
     const list = (renders || []).map(r => `${r.Type}${r.Name}${r.Filename}`).join('');
     return svg + '\n\n' + (error ?? '') + '\n\n' + list + '\n' + drawnRender;
 }
+
+/** What the editor that just came to the front is, as the preview's follower reads it. */
+export interface ShownEditor {
+    languageId: string;
+    scheme: string;
+    /** A diff or merge view shows it (git's working-tree side is a file: too). */
+    inDiff: boolean;
+    /** A preview of its own is open (a locked one, or the follower already on it). */
+    hasOwnPreview: boolean;
+    /** The follower — the one preview that is not locked — is open. */
+    hasFollower: boolean;
+    /** lilysharp.preview.openOnOpen. */
+    openOnOpen: boolean;
+    /** It has not been in front since it was opened (a tab switch back to it is not an opening). */
+    firstShow: boolean;
+    /** The writer closed this file's preview this session. */
+    dismissed: boolean;
+}
+
+/**
+ * What an editor coming to the front does to the previews (owner's decision 2026-10-12): the
+ * follower turns to it, like the Markdown preview; with no follower, OPENING a .lys opens one
+ * beside it. Switching back to a tab is not an opening — a writer who closed the preview is
+ * not handed it again for every tab click — and neither is a diff, a git: side or a file
+ * whose preview the writer closed. New Score's untitled buffer counts as an opening.
+ */
+export function previewOnEditorShown(e: ShownEditor): 'none' | 'follow' | 'open' {
+    if (e.languageId !== 'lilysharp' || e.hasOwnPreview) {
+        return 'none';
+    }
+    // A file, or an untitled score (New Score) — never a git: side or another scheme's copy.
+    if (e.scheme !== 'file' && e.scheme !== 'untitled') {
+        return 'none';
+    }
+    if (e.hasFollower) {
+        return 'follow';
+    }
+    return e.openOnOpen && !e.inDiff && e.firstShow && !e.dismissed ? 'open' : 'none';
+}
+
+/** One editor tab, as far as revealing a preview's source needs it. */
+export interface SourceTab {
+    column: number;
+    uri: string;
+    /** The front tab of its group (already on screen). */
+    active: boolean;
+}
+
+/**
+ * The editor group whose tab of `uri` comes to the front when a preview of it is brought
+ * forward, or undefined to leave the tabs alone: the source is not open (a closed file is not
+ * reopened), it is already in front somewhere, or it lives only in the preview's own group —
+ * where bringing it forward would cover the preview just picked.
+ */
+export function sourceGroupToReveal(tabs: readonly SourceTab[], previewColumn: number | undefined, uri: string): number | undefined {
+    const elsewhere = tabs.filter(t => t.uri === uri && t.column !== previewColumn);
+    if (elsewhere.length === 0 || elsewhere.some(t => t.active)) {
+        return undefined;
+    }
+    return elsewhere[0].column;
+}

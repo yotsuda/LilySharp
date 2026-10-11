@@ -157,6 +157,11 @@
           "default": "off",
           "description": "Traces the communication between VS Code and the language server"
         },
+        "lilysharp.preview.openOnOpen": {
+          "default": true,
+          "markdownDescription": "Open a preview beside a `.lys` file when it is opened (not on a tab switch, nor in a diff). An open preview follows the active `.lys` file whatever this says; lock it from its title bar to keep it on one file.",
+          "type": "boolean"
+        },
         "lilysharp.preview.autoRefresh": {
           "default": true,
           "description": "Automatically refresh preview on document change",
@@ -276,6 +281,18 @@
         "category": "Lily#",
         "icon": "$(open-preview)",
         "title": "Open Preview to Side"
+      },
+      {
+        "command": "lilysharp.lockPreview",
+        "category": "Lily#",
+        "icon": "$(unlock)",
+        "title": "Lock Preview to This File"
+      },
+      {
+        "command": "lilysharp.unlockPreview",
+        "category": "Lily#",
+        "icon": "$(lock)",
+        "title": "Unlock Preview (Follow the Active File)"
       },
       {
         "command": "lilysharp.regroup",
@@ -535,6 +552,14 @@
           "when": "resourceLangId == lilysharp"
         },
         {
+          "command": "lilysharp.lockPreview",
+          "when": "activeWebviewPanelId == 'lilysharpPreview' && !lilysharp.previewLocked"
+        },
+        {
+          "command": "lilysharp.unlockPreview",
+          "when": "activeWebviewPanelId == 'lilysharpPreview' && lilysharp.previewLocked"
+        },
+        {
           "command": "lilysharp.previewPlayFromHere",
           "when": "activeWebviewPanelId == 'lilysharpPreview'"
         },
@@ -659,6 +684,16 @@
         {
           "command": "lilysharp.openPreviewToSide",
           "when": "resourceLangId == lilysharp",
+          "group": "navigation"
+        },
+        {
+          "command": "lilysharp.lockPreview",
+          "when": "activeWebviewPanelId == 'lilysharpPreview' && !lilysharp.previewLocked",
+          "group": "navigation"
+        },
+        {
+          "command": "lilysharp.unlockPreview",
+          "when": "activeWebviewPanelId == 'lilysharpPreview' && lilysharp.previewLocked",
           "group": "navigation"
         }
       ]

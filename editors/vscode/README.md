@@ -159,7 +159,7 @@ If not set, the extension looks for `lilysharp-lsp` in PATH.
 5. Press `Ctrl+Shift+O` to jump to a symbol, or open the **Outline** view in the Explorer sidebar for the score structure
 6. Use `F12` to go to variable definition
 7. Use `Shift+Alt+F` to format document
-8. Open the preview (`Ctrl+Shift+V`), then **hold `Alt+P`** to hear the note under the caret, or press `Alt+M` to play the measure the caret is in (the preview panel is the synth — a sound font, see [Playback](#playback)); the preview's ▶ plays the score
+8. The preview opens beside the file by itself (`lilysharp.preview.openOnOpen`; `Ctrl+K V` opens it by hand) and follows whichever `.lys` is in front — the lock in its title bar keeps it on one file. Then **hold `Alt+P`** to hear the note under the caret, or press `Alt+M` to play the measure the caret is in (the preview panel is the synth — a sound font, see [Playback](#playback)); the preview's ▶ plays the score
 9. Press `Ctrl+Shift+Up` / `Ctrl+Shift+Down` on a note to move it an octave, or on `@chord(Cm7)` (or a chords-row `Cm7`) to add a chord diagram and try the next shape — see [Stepping and Audition](#stepping-and-audition)
 
 ## Example

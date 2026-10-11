@@ -100,8 +100,8 @@ index の「03 Speed」は見出しだけ。
   弱起 `partial`（`#sections` の pre の註だけ。曲中の `| partial 2. r2. |` と `time none` は皆無）・強弱とヘアピン
   （`#anno` に混在）・`using "other.lys"`（LilyPond 対照表だけ）。
 - P7 レッスン（`lesson-…`）の案内: editor 頁 `#language` は済（2026-10-11）。`start` 頁は再構成で。
-- P13 **「まずプレビューを開く」が入口に無い**。Ctrl+K V は「Ctrl+K を離してから V」の和音キーで、初心者は押し方を知らない。
-  エディタ右上のアイコンでも開ける。start 頁の 1 段目に置く（Lesson 1 の STEP 0 と同じ文）。
+- P13 「まずプレビューを開く」: 2026-10-12 から .lys を開けば横に自動で開く（Lesson 1 STEP 0 もそう書いた）。
+  Ctrl+K V（離してから V）と右上のアイコンは閉じた後の開き直しとして書く。
 - P14 **文章量**: レッスンは「文章は可能な限り少なく」がユーザーの指示（§3）。learn 頁も同じ型（2〜4 行＋例＋TRY）で書き、
   詳しい説明は Reference に置く。今の manual は 1 章が長く、learn に転用するなら大きく削る。
 
@@ -135,8 +135,8 @@ index の「03 Speed」は見出しだけ。
 Grammar 抜粋が `octave absolute`・P11・P12・P13・P14＝manual は 1251 行・重複と §6.4 のナビ）。加えて:
 
 **A. 今の製品と食い違う記述**（直す＝小さい・確実）
-- A1 index「Install」: 見出し「two steps」の下に 3 段・**段 3「開けば楽譜が横に開く」は誤り**（プレビューは Ctrl+K V／
-  右上のアイコンで開く・自動で開く設定は無い＝確認済み）。同梱フォントに SMuFL 3 書体（Bravura・Petaluma・Leland）が無い。
+- A1 index「Install」: 見出し「two steps」の下に 3 段・段 3「開けば楽譜が横に開く」は**2026-10-12 から正しい**（lilysharp.preview.openOnOpen・既定 on・
+  プレビューは前面の .lys に追従しロックできる）。同梱フォントに SMuFL 3 書体（Bravura・Petaluma・Leland）が無い。
   Licence 枠も同じ（OFL の書体を足す・TeX Gyre は「既定で」本文）。
 - A2 `grammar#drums` は `voice { } { }` だけ＝**レッスン 10 と書き方が違う**。`drums { }`・行の `up`/`down`・定番パターン
   14 本（補完で宣言が入る）・フラム・`@parenthesize`・LYS4030/LYS0040 が無い。「Ctrl+Space で全部」は今は phrase→

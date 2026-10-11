@@ -36,7 +36,7 @@
   <kbd>Cmd+Shift+X</kbd> on macOS — search for “Lily#” and install the one by
   <i>yotsuda</i>. Each platform's package carries its own .NET runtime, the compiler, the
   language server and the fonts, so there is nothing else to install. Open any
-  <code>.lys</code> file and the language server starts.</p>
+  <code>.lys</code> file and the language server starts, with the score beside it.</p>
   <table class="g">
     <tr><th>Key</th><th>Does</th></tr>
     <tr><td><kbd>Ctrl+Space</kbd></td><td>list what can come next — words, names, chords, marks; in an empty file, the lessons — <a href="#language">below</a></td></tr>
@@ -163,6 +163,12 @@
   <p>The score redraws as you type, not when you save: a keystroke reparses only what it
   touched, and only the systems whose width changed are laid out again.</p>
   <ul>
+    <li><b>It opens by itself and follows you.</b> Opening a <code>.lys</code> file opens the
+    preview beside it (<code>lilysharp.preview.openOnOpen</code>); switching to another
+    <code>.lys</code> turns the same preview to it, each file keeping its own zoom and scroll,
+    and while it plays it waits for the music to stop. The lock at the top right of the preview
+    keeps it on one file — to compare two scores, lock one and open the other. Bringing a
+    locked preview forward brings its file's tab forward too.</li>
     <li><b>Source and score are linked both ways.</b> The note under the caret is highlighted
     in the score, and a selection highlights every note in it. Click a note, a tie, a slur, a
     clef or a key signature in the preview to jump to the text that wrote it.</li>
@@ -317,6 +323,7 @@
     <tr><th>Setting</th><th>Default</th><th>Does</th></tr>
     <tr><td><code>lilysharp.audition.enabled</code></td><td><code>true</code></td><td>sound notes as you edit (<a href="#audition">Audition</a>)</td></tr>
     <tr><td><code>lilysharp.chordShapes.includeStretch</code></td><td><code>false</code></td><td>let chord-shape stepping walk stretch shapes too</td></tr>
+    <tr><td><code>lilysharp.preview.openOnOpen</code></td><td><code>true</code></td><td>open the preview beside a <code>.lys</code> file when it is opened (<a href="#preview">The preview</a>)</td></tr>
     <tr><td><code>lilysharp.preview.theme</code></td><td><code>auto</code></td><td>the preview's colours: follow VS Code, light or dark</td></tr>
     <tr><td><code>lilysharp.preview.autoRefresh</code> · <code>refreshDelay</code></td><td><code>true</code> · 100 ms</td><td>redraw on every change, after this pause</td></tr>
     <tr><td><code>lilysharp.completion.flatSpelling</code></td><td><code>full</code></td><td>how completion spells flats (both spellings compile)</td></tr>

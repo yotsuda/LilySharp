@@ -36,7 +36,7 @@ import { locateOmr } from './omrCore';
 import { OmrScanDeps, hasScan, previewReady, previewShowsBar, registerScanFollow, showScan } from './omrScan';
 import { registerVerifyOnSave } from './omrVerify';
 import { markdownItExtensionApi } from './markdownFence';
-import { svgPostKey, pagesSummary, SvgPages } from './previewCore';
+import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, SourceTab } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 import { SplitSectionsChoice, modalText, splitChoiceItems } from './splitSectionsCore';
 
@@ -64,6 +64,95 @@ function ensureClientReady(): Promise<void> {
     return clientReadyPromise;
 }
 const previewPanels = new Map<string, vscode.WebviewPanel>();
+// The follower: the one preview that is not locked. It turns to whichever .lys comes to the
+// front, the Markdown preview's way (owner's decision 2026-10-12), so opening another score
+// reuses the pane instead of adding a tab. Every other panel is locked to its own file.
+let followerPanel: vscode.WebviewPanel | undefined;
+// Panels whose page is playing: the follower turns only once the music stops, to the last
+// .lys that came to the front meanwhile (pendingFollow) — a turn would cut the piece off.
+const playingPanels = new Set<vscode.WebviewPanel>();
+let pendingFollow: string | undefined;
+// Files whose preview the writer closed this session: opening them again opens none.
+const dismissedPreviews = new Set<string>();
+// The URI a panel shows now — the map's key, which a follow or an untitled save moves.
+function panelKey(panel: vscode.WebviewPanel): string | undefined {
+    for (const [key, value] of previewPanels) {
+        if (value === panel) { return key; }
+    }
+    return undefined;
+}
+function previewTitle(uri: string, panel: vscode.WebviewPanel): string {
+    const name = path.basename(vscode.Uri.parse(uri).fsPath);
+    return panel === followerPanel ? `Preview: ${name}` : `Preview: ${name} (locked)`;
+}
+
+// Turn a preview to another document (the follower following): the panel and its per-file
+// state move to the new key, the page puts the old file's zoom and scroll away and draws the
+// new one. The old file's picked score stays in selectedRenders for when it comes back.
+function retargetPreview(panel: vscode.WebviewPanel, document: vscode.TextDocument, context: vscode.ExtensionContext) {
+    const from = panelKey(panel);
+    const to = document.uri.toString();
+    if (from === undefined || from === to || previewPanels.has(to)) { return; }
+    // A turn asked for by name overrides one waiting for the music to stop.
+    pendingFollow = undefined;
+    previewPanels.delete(from);
+    previewPanels.set(to, panel);
+    const ready = panelReady.get(from);
+    panelReady.delete(from);
+    if (ready) { panelReady.set(to, ready); }
+    // The page holds neither file's picture as far as the dedup and the page versions go.
+    for (const key of [from, to]) {
+        lastPostedSvg.delete(key);
+        shownPagesVersion.delete(key);
+    }
+    cancelSvgRequest(from);
+    svgRequestGeneration.delete(from);
+    const timer = debounceTimers.get(from);
+    if (timer) { clearTimeout(timer); debounceTimers.delete(from); }
+    panel.title = previewTitle(to, panel);
+    outputChannel.appendLine(`Preview follows ${from} -> ${to}`);
+    void panel.webview.postMessage({ type: 'retarget', from, to });
+    updatePreviewContent(document, panel, context);
+    if (scanDeps) { previewReady(to, scanDeps); }
+}
+
+// Lock or unlock the preview in front: an unlocked one becomes the follower, and the previous
+// follower is locked to the file it shows — there is one follower at a time.
+function setActivePreviewLocked(lock: boolean) {
+    const panel = [...previewPanels.values()].find(p => p.active);
+    if (!panel) { return; }
+    const previous = followerPanel;
+    if (lock) {
+        if (followerPanel === panel) { followerPanel = undefined; }
+    } else {
+        followerPanel = panel;
+    }
+    for (const p of [panel, previous]) {
+        const key = p && panelKey(p);
+        if (p && key) { p.title = previewTitle(key, p); }
+    }
+    void vscode.commands.executeCommand('setContext', 'lilysharp.previewLocked', lock);
+}
+
+// A preview brought to the front brings its source's tab forward in another group — only a
+// tab already open there and behind others (sourceGroupToReveal), with the focus left on the
+// preview. The source coming forward cannot turn anything back: it has its own preview.
+function revealPreviewSource(panel: vscode.WebviewPanel) {
+    const key = panelKey(panel);
+    if (!key) { return; }
+    const tabs: SourceTab[] = [];
+    for (const group of vscode.window.tabGroups.all) {
+        for (const tab of group.tabs) {
+            if (tab.input instanceof vscode.TabInputText) {
+                tabs.push({ column: group.viewColumn, uri: tab.input.uri.toString(), active: tab.isActive });
+            }
+        }
+    }
+    const column = sourceGroupToReveal(tabs, panel.viewColumn, key);
+    if (column !== undefined) {
+        void vscode.window.showTextDocument(vscode.Uri.parse(key), { viewColumn: column, preserveFocus: true });
+    }
+}
 // The scan view's hooks (omrScan.ts, set in activate): a preview reports the bar it scrolled to.
 let scanDeps: OmrScanDeps | undefined;
 // A message posted before the webview has finished loading its HTML is
@@ -707,7 +796,7 @@ export function activate(context: vscode.ExtensionContext) {
         migratePreviewKey(best, newUri);
         const panel = previewPanels.get(newUri);
         if (panel) {
-            panel.title = `Preview: ${path.basename(doc.uri.fsPath)}`;
+            panel.title = previewTitle(newUri, panel);
             // Refresh under the saved file; updatePreviewContent retries if the server
             // has not registered it yet, so this cannot flash "Document not found".
             updatePreviewContent(doc, panel, context);
@@ -727,6 +816,47 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.onDidChangeActiveTextEditor(editor => adoptRecentOrphanPreview(editor?.document)),
         vscode.workspace.onDidSaveTextDocument(adoptRecentOrphanPreview)
     );
+
+    // A .lys coming to the front: the follower turns to it, and opening one with no follower
+    // open opens a preview beside it (previewOnEditorShown; lilysharp.preview.openOnOpen).
+    // Registered AFTER the orphan adoption above: a just-saved untitled score must take its
+    // own preview with it before this decides the file has none.
+    const shownDocs = new Set<string>();
+    const onEditorShown = (editor: vscode.TextEditor | undefined) => {
+        if (!editor) { return; }
+        const doc = editor.document;
+        const uri = doc.uri.toString();
+        const firstShow = !shownDocs.has(uri);
+        shownDocs.add(uri);
+        const tab = vscode.window.tabGroups.activeTabGroup.activeTab;
+        const action = previewOnEditorShown({
+            languageId: doc.languageId,
+            scheme: doc.uri.scheme,
+            inDiff: !!tab && tab.input instanceof vscode.TabInputTextDiff,
+            hasOwnPreview: previewPanels.has(uri),
+            hasFollower: followerPanel !== undefined,
+            openOnOpen: vscode.workspace.getConfiguration('lilysharp').get<boolean>('preview.openOnOpen', true),
+            firstShow,
+            dismissed: dismissedPreviews.has(uri),
+        });
+        if (action === 'follow' && followerPanel) {
+            if (playingPanels.has(followerPanel)) {
+                pendingFollow = uri;
+            } else {
+                retargetPreview(followerPanel, doc, context);
+            }
+        } else if (action === 'open') {
+            openPreview(context, vscode.ViewColumn.Beside, true);
+        }
+    };
+    context.subscriptions.push(
+        vscode.window.onDidChangeActiveTextEditor(onEditorShown),
+        vscode.workspace.onDidCloseTextDocument(d => shownDocs.delete(d.uri.toString())),
+        vscode.commands.registerCommand('lilysharp.lockPreview', () => setActivePreviewLocked(true)),
+        vscode.commands.registerCommand('lilysharp.unlockPreview', () => setActivePreviewLocked(false))
+    );
+    // The score the window opened with (a restored session has no preview to bring back).
+    onEditorShown(vscode.window.activeTextEditor);
 
     // Watch for cursor position changes
     context.subscriptions.push(
@@ -844,7 +974,8 @@ function measureRangeAt(text: string, offset: number): [number, number] {
     return [start, end];
 }
 
-function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewColumn) {
+// `preserveFocus`: the automatic opening (a .lys just opened) leaves the caret in the editor.
+function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewColumn, preserveFocus = false) {
     const editor = vscode.window.activeTextEditor;
     if (!editor || editor.document.languageId !== 'lilysharp') {
         vscode.window.showWarningMessage('No Lily# file is open');
@@ -859,10 +990,12 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     const existingPanel = previewPanels.get(uri);
     if (existingPanel) {
         outputChannel.appendLine('Revealing existing panel');
-        existingPanel.reveal(viewColumn);
+        existingPanel.reveal(viewColumn, preserveFocus);
         updatePreviewContent(document, existingPanel, context);
         return;
     }
+    // Asked for by name: a preview the writer closed before is wanted again.
+    dismissedPreviews.delete(uri);
 
     // Reuse an ORPHANED untitled preview (its buffer was saved to this file but the
     // automatic migration missed) rather than opening a second window: re-key it here.
@@ -872,7 +1005,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
             migratePreviewKey(key, uri);
             const adopted = previewPanels.get(uri);
             if (adopted) {
-                adopted.title = `Preview: ${path.basename(document.uri.fsPath)}`;
+                adopted.title = previewTitle(uri, adopted);
                 adopted.reveal(viewColumn);
                 updatePreviewContent(document, adopted, context);
                 outputChannel.appendLine(`Reused orphaned preview ${key} -> ${uri}`);
@@ -881,14 +1014,20 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
         }
     }
 
-    // Create new preview panel with access to the fonts, the synth and the sound font
-    const fileName = path.basename(document.uri.fsPath);
+    // The follower turns to this file rather than a second preview opening beside it. Asked
+    // for by name it does so even while playing: the writer chose to leave the piece.
+    if (followerPanel) {
+        retargetPreview(followerPanel, document, context);
+        followerPanel.reveal(viewColumn, preserveFocus);
+        return;
+    }
 
+    // Create new preview panel with access to the fonts, the synth and the sound font
     outputChannel.appendLine('Creating new preview panel');
     const panel = vscode.window.createWebviewPanel(
         'lilysharpPreview',
-        `Preview: ${fileName}`,
-        viewColumn,
+        '',
+        { viewColumn, preserveFocus },
         {
             enableScripts: true,
             retainContextWhenHidden: true,
@@ -898,14 +1037,36 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
 
     previewPanels.set(uri, panel);
     armPanelReady(uri);
+    // With no follower open, the new preview is it.
+    followerPanel = panel;
+    panel.title = previewTitle(uri, panel);
+    if (panel.active) {
+        void vscode.commands.executeCommand('setContext', 'lilysharp.previewLocked', false);
+    }
+    // Brought to the front: the title bar's lock shows this panel's state, and its source's
+    // tab comes forward in another group (revealPreviewSource).
+    let wasActive = panel.active;
+    panel.onDidChangeViewState(() => {
+        if (!panel.active) {
+            wasActive = false;
+            return;
+        }
+        if (wasActive) { return; }
+        wasActive = true;
+        void vscode.commands.executeCommand('setContext', 'lilysharp.previewLocked', panel !== followerPanel);
+        revealPreviewSource(panel);
+    });
 
     panel.onDidDispose(() => {
+        if (followerPanel === panel) { followerPanel = undefined; }
+        playingPanels.delete(panel);
         // Find this panel's CURRENT key by value: it may have been re-keyed when an
         // untitled score was saved to a file (see onDidCloseTextDocument), so the URI
         // captured here at creation can be stale — deleting by it would leak the entry.
         for (const [key, value] of previewPanels) {
             if (value !== panel) { continue; }
             outputChannel.appendLine(`Preview panel disposed: ${key}`);
+            dismissedPreviews.add(key);
             previewPanels.delete(key);
             panelReady.delete(key);
             selectedRenders.delete(key);
@@ -922,8 +1083,27 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     });
 
     // Handle messages from webview
+    const openedUri = uri;
     panel.webview.onDidReceiveMessage(
         async message => {
+            // The file the panel shows NOW: the follower turns, and an untitled save re-keys.
+            const uri = panelKey(panel) ?? openedUri;
+            if (message.type === 'playState') {
+                // Not logged: every Play and every stop.
+                if (message.playing) {
+                    playingPanels.add(panel);
+                    return;
+                }
+                playingPanels.delete(panel);
+                const target = pendingFollow;
+                pendingFollow = undefined;
+                const doc = target === undefined || panel !== followerPanel ? undefined
+                    : vscode.workspace.textDocuments.find(d => d.uri.toString() === target && !d.isClosed);
+                if (doc) {
+                    retargetPreview(panel, doc, context);
+                }
+                return;
+            }
             if (message.type === 'visibleBar') {
                 // Every settled scroll — not logged.
                 if (scanDeps && Number.isInteger(message.bar)) {
@@ -2624,6 +2804,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         const HIGHLIGHT_THRESHOLD = ${HIGHLIGHT_DISTANCE_THRESHOLD};
 
         let scale = 1;
+        // Each file's zoom and scroll while the follower shows another (keyed by URI), and
+        // the one to put back when the file it turned to draws.
+        const viewByFile = new Map();
+        let pendingView = null;
         const minScale = 0.25;
         const maxScale = 4;
         const scaleStep = 0.1;
@@ -3743,6 +3927,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let lastResolvedPos = -1;   // the note the current highlight actually resolved to
 
         function setPlayUi(playing) {
+            // The host's follower waits for the music to stop before it turns to another file.
+            if (playing !== !document.getElementById('stopBtn').disabled) {
+                vscode.postMessage({ type: 'playState', playing });
+            }
             document.getElementById('playBtn').disabled = playing;
             document.getElementById('stopBtn').disabled = !playing;
         }
@@ -4163,6 +4351,28 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     flaggedBars = new Set(message.bars || []);
                     applyBarFlags();
                     break;
+                case 'retarget':
+                    // The follower turns to another file: put this one's zoom and scroll
+                    // away, start the new one blank, and give it back its own view when
+                    // its picture arrives (pendingView, in updateContent).
+                    viewByFile.set(message.from, { scale, fitMode, scrollTop: mainContent.scrollTop });
+                    pendingView = viewByFile.get(message.to) || { scale: 1, fitMode: 'width', scrollTop: 0 };
+                    stopPlayback();
+                    pendingAudition = null;
+                    playbackNotes = null;
+                    pendingStartPos = -1;
+                    lastResolvedPos = -1;
+                    lastHighlightPos = -1;
+                    lastHighlightTokenStart = -1;
+                    lastHighlightRanges = null;
+                    flaggedBars = new Set();
+                    hideErrorBanner();
+                    svgContainer.classList.remove('stale');
+                    svgContainer.innerHTML = '<div class="loading">Loading preview...</div>';
+                    forgetShownPages();
+                    invalidateSourcePositions();
+                    collectPages();
+                    break;
                 case 'updateContent': {
                     updateRenderSelect(message.renders, message.selectedRender);
                     const hasPreview = !!svgContainer.querySelector('svg');
@@ -4203,8 +4413,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         // Keep the fit across re-renders (this is also what fits
                         // the FIRST render of a freshly opened preview); otherwise
                         // re-apply the current manual zoom to the fresh SVG.
+                        if (pendingView) {
+                            // The first picture after a turn: the view this file had.
+                            scale = pendingView.scale;
+                            fitMode = pendingView.fitMode;
+                        }
                         if (fitMode === 'width') fitWidth();
                         else updateZoom();
+                        if (pendingView) {
+                            mainContent.scrollTop = pendingView.scrollTop;
+                            pendingView = null;
+                            updatePageInfo();
+                        }
                         if (lastHighlightRanges) {
                             highlightRange(lastHighlightRanges);
                         } else if (lastHighlightPos >= 0) {
