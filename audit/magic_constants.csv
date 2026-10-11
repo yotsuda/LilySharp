@@ -78,6 +78,7 @@
 "Svg/Layout/MultiStaffLayouter.cs","MultiStaffLayouter.StaffRefpoint","2.0","internal static double StaffRefpoint(StaffLayout staff) => staff.Y - staff.Height / 2.0;","(file-level) LILYPOND-REF: lily/system.cc","Yellow"
 "Svg/Layout/MultiStaffLayouter.cs","MultiStaffLayouter.BuildAllStaffSkylines","2.0","double halfStaff = StaffHeightOf(staff, _options.StaffHeight) / 2.0;","(file-level) LILYPOND-REF: lily/system.cc","Yellow"
 "Svg/Layout/MultiStaffLayouter.cs","MultiStaffLayouter.BuildAllStaffSkylines","2.0","halfStaff + EngravingDefaults.StaffLineThickness / 2.0,","(file-level) LILYPOND-REF: lily/system.cc","Yellow"
+"Svg/Layout/MultiStaffLayouter.cs","MultiStaffLayouter.BuildAllStaffSkylines","2.0","StaffHeightOf(staff, _options.StaffHeight) / 2.0 - EngravingDefaults.StaffMiddle,","(file-level) LILYPOND-REF: lily/system.cc","Yellow"
 "Svg/Layout/MultiStaffLayouter.cs","MultiStaffLayouter.StaffTrillInk","0.0","? -Math.Max(0.0, qUp.Distance(insideDown) + OutsideStaffStacker.OutsideStaffPadding)","(file-level) LILYPOND-REF: lily/system.cc","Yellow"
 "Svg/Layout/MultiStaffLayouter.cs","MultiStaffLayouter.StaffTrillInk","0.0",": Math.Max(0.0, qDown.Distance(insideUp) + OutsideStaffStacker.OutsideStaffPadding);","(file-level) LILYPOND-REF: lily/system.cc","Yellow"
 "Svg/Layout/MultiStaffLayouter.cs","MultiStaffLayouter.StaffTrillInk","0.0","if (move != 0.0)","(file-level) LILYPOND-REF: lily/system.cc","Yellow"

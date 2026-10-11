@@ -105,14 +105,51 @@ internal static class TodoMemoBand
     /// </summary>
     public static List<Box>? Boxes(MultiStaffScore score, SystemLayout system,
         VerticalSkyline up, VerticalSkyline down)
+        => BoxesFor(score, system.Measures, up, down,
+            si => LayoutUtilities.StaffMiddleUpInSystem(system, si),
+            (si, below) => IsOuter(score, si, below), chordRows: true);
+
+    /// <summary>
+    /// The boxes the memos of ONE staff need in the gap beside it — over it, under it for
+    /// <c>.down</c> — in the staff's own skyline frame (Y over its middle), for every memo
+    /// that does not stand at the system's edge (those are <see cref="Boxes"/>'). Merged into
+    /// the staff's skylines, they open the gap to the next staff for the memo (owner's
+    /// request 2026-10-12: a staff's memo goes in that staff's margin, not over the system).
+    /// </summary>
+    public static List<Box>? StaffBoxes(MultiStaffScore score, ImmutableArray<MeasureLayout> measures,
+        int staffIndex, double ringFrameOffset, VerticalSkyline up, VerticalSkyline down)
+        => BoxesFor(score, measures, up, down, _ => ringFrameOffset,
+            (si, below) => si == staffIndex && !IsOuter(score, si, below), chordRows: false);
+
+    /// <summary>True when a memo of <paramref name="staffIndex"/> on that side stands at the
+    /// system's edge: over the first spaceable staff, or under the last.</summary>
+    internal static bool IsOuter(MultiStaffScore score, int staffIndex, bool below)
     {
-        if (system.Measures.IsDefaultOrEmpty)
+        int first = -1, last = -1, i = 0;
+        foreach (var group in score.StaffGroups)
+            foreach (var staff in group.Staves)
+            {
+                if (!staff.IsTextRow && StaffAffinity.IsSpaceable(staff.StaffAffinity))
+                {
+                    if (first < 0) first = i;
+                    last = i;
+                }
+                i++;
+            }
+        return below ? staffIndex >= last : staffIndex <= first;
+    }
+
+    private static List<Box>? BoxesFor(MultiStaffScore score, ImmutableArray<MeasureLayout> systemMeasures,
+        VerticalSkyline up, VerticalSkyline down, Func<int, double> middleOf, Func<int, bool, bool> wanted,
+        bool chordRows)
+    {
+        if (systemMeasures.IsDefaultOrEmpty)
             return null;
         var fonts = score.TextMetrics;
-        double sysLeft = system.Measures[0].X;
-        double sysRight = system.Measures[^1].X + system.Measures[^1].Width;
+        double sysLeft = systemMeasures[0].X;
+        double sysRight = systemMeasures[^1].X + systemMeasures[^1].Width;
         var measureToLayout = new Dictionary<int, MeasureLayout>();
-        foreach (var ml in system.Measures)
+        foreach (var ml in systemMeasures)
             measureToLayout[ml.MeasureIndex] = ml;
 
         // The memos, each with its note's column, its text's box and its ring's outer edges
@@ -123,7 +160,7 @@ internal static class TodoMemoBand
         {
             int staffLines = MultiStaffLayouter.NotationStaffLinesOf(staff);
             double spacing = MultiStaffLayouter.LineSpacingOf(staff);
-            double middle = LayoutUtilities.StaffMiddleUpInSystem(system, staffIndex);
+            double middle = double.NaN;
             foreach (var voice in staff.Voices)
             {
                 var measures = voice.Measures;
@@ -135,15 +172,22 @@ internal static class TodoMemoBand
                     for (int ii = 0; ii < items.Length; ii++)
                     {
                         var item = items[ii];
-                        if (item.TodoMemo is not { Length: > 0 } memo)
+                        if (item.TodoMemo is not { Length: > 0 } memo || !wanted(staffIndex, item.TodoBelow))
                             continue;
+                        if (double.IsNaN(middle))
+                            middle = middleOf(staffIndex);
                         var (_, width, boxUp, boxDown) = TodoMemoStyle.MetricsOf(fonts, memo, 1.0);
                         // The ring's box as the drawer rings it (the head, the chord's heads, the
                         // rest — never the stem: a stem-up note's ring stands far under its stem's
                         // top, and a floor read off the silhouette over the column reserved a memo
                         // over a note inside the staff a stem too high).
-                        if (SharedRenderer.TodoInkBox(item, measureLayout, measures, mi, ii, staffLines, spacing)
-                            is var (left, right, bottom, top))
+                        // A tab's ring goes round its fret digits (SharedRenderer.TabTodoInkBox).
+                        var ringBox = staff.IsTab
+                            ? SharedRenderer.TabTodoInkBox(fonts, staff, item,
+                                measureLayout.X + LayoutUtilities.GetItemXOffset(measures, mi, ii, measureLayout))
+                              ?? SharedRenderer.TodoInkBox(item, measureLayout, measures, mi, ii, staffLines, spacing)
+                            : SharedRenderer.TodoInkBox(item, measureLayout, measures, mi, ii, staffLines, spacing);
+                        if (ringBox is var (left, right, bottom, top))
                             memos.Add(((left + right) / 2, item.TodoBelow, width, boxUp + boxDown,
                                 middle + top + TodoMemoStyle.RingPadding, middle + bottom - TodoMemoStyle.RingPadding));
                         else
@@ -157,7 +201,7 @@ internal static class TodoMemoBand
         // row's symbol stands on its timing column (ChordNameEngraver.SymbolX), its ring's centre
         // half its ink to the right. Without these a row's memo had no room reserved and climbed
         // over the title (the p902 probe `chordtodo`).
-        foreach (var chord in score.ChordNames)
+        foreach (var chord in chordRows ? score.ChordNames : [])
         {
             if (chord.TodoMemo is not { Length: > 0 } memo || !chord.UseTiming
                 || !measureToLayout.TryGetValue(chord.MeasureIndex, out var measureLayout))

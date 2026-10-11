@@ -4169,6 +4169,22 @@ internal sealed class MultiStaffLayouter
                         pedalRows.Add(mixedRows.IsDefaultOrEmpty || mixedRows.Length == 0
                             ? textRows : mixedRows);
 
+                    // The preview's @todo memos of THIS staff that stand between it and a
+                    // neighbour (LayoutOptions.TodoBands; the memos at the system's edge are
+                    // TodoMemoBand.Boxes', on the system silhouette): each memo's box over the ink
+                    // it clears, so the gap to the next staff opens for it (owner's request
+                    // 2026-10-12: a staff's memo goes in that staff's own margin). LAST, as the
+                    // drawer sets a memo clear of everything else. The ring frame is the notation
+                    // middle (EngravingDefaults.StaffMiddle under the top line); this skyline's is
+                    // the staff's own middle — the two part on a tab.
+                    if (_options.TodoBands
+                        && TodoMemoBand.StaffBoxes(score, measureLayouts, thisStaff,
+                            StaffHeightOf(staff, _options.StaffHeight) / 2.0 - EngravingDefaults.StaffMiddle,
+                            sky.Up, sky.Down) is { } memoBoxes)
+                        foreach (var memoBox in memoBoxes)
+                            (memoBox.Bottom >= 0 ? sky.Up : sky.Down).MergeBox(
+                                memoBox.X0, memoBox.X1, memoBox.Bottom, memoBox.Top);
+
                     if (layoutPass)
                         layoutSky = sky;
                     else

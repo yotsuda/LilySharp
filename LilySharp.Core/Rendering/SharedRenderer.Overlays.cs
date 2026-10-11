@@ -233,8 +233,12 @@ internal static partial class SharedRenderer
         // a place is clear only when its box meets no leader and its own leader meets no memo.
         var placedMemos = new List<(double Left, double Right, double Bottom, double Top)>();
         var placedLeaders = new List<(double X1, double Y1, double X2, double Y2)>();
-        var systemEdge = new Dictionary<(int System, bool Below), double>();
-        foreach (var group in callouts.GroupBy(c => (c.System.SystemIndex, c.Below)))
+        // A memo's margin is its OWN staff's (owner's request 2026-10-12: a lower staff's memo
+        // went over the whole system): over that staff's top line, under its bottom one for
+        // .down — the gap the layout opened for it (TodoMemoBand.StaffBoxes), or the system's
+        // edge for the outermost staff (TodoMemoBand.Boxes). A chords row's memo is its row's.
+        var systemEdge = new Dictionary<(int System, int Staff, bool Below), double>();
+        foreach (var group in callouts.GroupBy(c => (c.System.SystemIndex, c.StaffIndex, c.Below)))
         {
             // The short memos first, then the long, left to right among equals: a short memo
             // stays by its note on the first row, and a long one — whose words would stand
@@ -248,16 +252,15 @@ internal static partial class SharedRenderer
             bool below = first.Below;
             if (!systemEdge.TryGetValue(group.Key, out double edge))
             {
-                // The system's outermost drawn line, over every staff standing on it.
+                // The memo's staff's outer drawn line on that side.
                 edge = below ? double.MaxValue : double.MinValue;
-                foreach (var (si, (staffTop, staffBottom, _, _)) in staffEdges)
-                {
-                    double mid = os.StaffMiddleYUp(si, first.MeasureIndex, StaffHeight);
-                    if (double.IsNaN(mid))
-                        continue;
-                    edge = below ? Math.Min(edge, os.YUp(mid + staffBottom, si, first.MeasureIndex))
-                                 : Math.Max(edge, os.YUp(mid + staffTop, si, first.MeasureIndex));
-                }
+                if (staffEdges.TryGetValue(first.StaffIndex, out var own) && own.Top >= own.Bottom   // a text row draws no line
+                    && os.StaffMiddleYUp(first.StaffIndex, first.MeasureIndex, StaffHeight) is var mid
+                    && !double.IsNaN(mid))
+                    edge = below ? os.YUp(mid + own.Bottom, first.StaffIndex, first.MeasureIndex)
+                                 : os.YUp(mid + own.Top, first.StaffIndex, first.MeasureIndex);
+                else
+                    edge = below ? first.RingY - first.RingRy : first.RingY + first.RingRy;
                 systemEdge[group.Key] = edge;
             }
             var system = first.System;

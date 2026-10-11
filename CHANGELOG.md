@@ -218,6 +218,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A `@todo` memo stands in its own staff's margin.** In the preview a memo on a lower staff
+  went up over the whole system; it now stands over its own staff (under it for `.down`),
+  between it and its neighbour, and the gap between the two staves opens for it when it has to.
+
 - **A `@todo` on a tab note rings its fret number.** The ring was the size of a notehead and
   stood where the notation staff's head would be, so a fret number (two digits above all) stuck
   out of it. It now goes round the digits as drawn — a chord's on all its strings.
