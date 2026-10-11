@@ -428,6 +428,9 @@ form { ~A }
 score { chords prog  staff melody }
 ```
 
+It goes where any `@` goes — on an item with a place in time. A lyric syllable, a `key`,
+`time` or `tempo`, and a form's section take none; a doubt about one of them is a `//` comment.
+
 `lysc check --todo-as-error` fails while any is left; `--no-todo` stops reporting them.
 When an OMR reader wrote the file, its side file `x.omr.json` (beside `x.lys`) may list
 candidates for a keyed mark; each is a quick fix that writes it over the marked item,

@@ -362,9 +362,12 @@ degrees-only group anchors on the tonic. NOT LilyPond's `<< >>`
 
 Must fit in one measure (else it overflows the meter).
 
-## Annotations (`@name` attached to a note or chord)
+## Annotations (`@name` glued to an item with a place in time)
 
-Attach with `@`. One note may take several: `c4@staccato@p`. Two suffixes:
+Attach with `@`, glued to a note, rest, chord or `<< >>` group (a chords row's symbol takes
+`@todo` only). Nothing else takes one — not a lyric syllable, `key`, `time`, `tempo`, `clef`
+or a form's section (the one exception: a volta bracket's `]@voltaBracket(N)`).
+One note may take several: `c4@staccato@p`. Two suffixes:
 `.up` / `.down` forces an articulation/dynamic above / below the note (default is
 automatic, opposite the stem): `c4@staccato.up`, `d4@accent.down`, `@f.up`.
 An annotation that takes a VALUE puts it in parentheses (space- or comma-separated):

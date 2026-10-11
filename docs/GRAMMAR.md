@@ -2321,10 +2321,19 @@ Beam           = '[' | ']' ;      (* manual; beaming is automatic otherwise *)
    on the target. A beam and every other span never cross a section boundary; the running state
    (frame, value, meter, key, clef, overrides) still resets there. *)
 
-### 8.4 Annotations (@name, attached to a note or chord)
+### 8.4 Annotations (@name, glued to an item with a place in time)
 
 Annotation     = '@' , [ '!' ] , AnnotationName , [ '(' , Arg , { ( ' ' | ',' ) , Arg } , ')' ] , [ Placement ] ;
 Placement      = '.up' | '.down' ;   (* force above / below; default is automatic *)
+
+(* WHERE '@' GOES (owner's decision 2026-10-11): an annotation is GLUED to an item with a
+   place in time — a note, a rest, a chord or a '<< >>' group, and a chords row's symbol or
+   its no-chord 'r' (which take '@todo' only, LYS1028). Nothing else takes one: not a lyric
+   syllable (its text is its own), not a 'key', 'time', 'tempo' or 'clef', not a form's
+   section reference. The one exception is a form's volta bracket, '…]@voltaBracket(N)', a
+   modifier of the bracket glued to its ']'. '@todo' stays inside this rule: it prints and
+   plays nothing, but it points at ONE item, which is what the preview rings and an OMR key
+   names; a doubt about a key, a meter or a form is a '//' comment. *)
 
 (* @chord's argument: its Args are WORDS (owner's decisions 2026-09-27 / 28). *)
 ChordArgument  = ChordEntry , ShapeWords                         (* the name + its diagram's shapes *)
