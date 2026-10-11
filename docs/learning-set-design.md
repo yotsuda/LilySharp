@@ -107,6 +107,8 @@ index の「03 Speed」は見出しだけ。
   エディタ右上のアイコンでも開ける。start 頁の 1 段目に置く（Lesson 1 の STEP 0 と同じ文）。
 - P14 **文章量**: レッスンは「文章は可能な限り少なく」がユーザーの指示（§3）。learn 頁も同じ型（2〜4 行＋例＋TRY）で書き、
   詳しい説明は Reference に置く。今の manual は 1 章が長く、learn に転用するなら大きく削る。
+- P16 **`@todo` がサイトに一切無い**（音符の印も、2026-10-11 に入ったコード行の記号の印も）。メモ・赤い丸・`.down`・Resolve this TODO・
+  OMR のキーの説明が要る（`SYNTAX_REFERENCE.md` の「Left to check」が下敷きになる）。
 - P15 tab の音域: `tuning bass` の part は書いた音の E2 より下を tab から落とす（LYS5002「likely an octave too low」）。
   `#tab` に「bass は `octave 3` で書くと E2〜」の 1 行が要る（Lesson 10 で踏んだ）。
 

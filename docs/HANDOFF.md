@@ -134,6 +134,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **その途中で製品の欠陥**: `@todo` のメモがあり拍子が数字（3/4・6/8）の譜面はプレビューが例外で何も描かなかった（`InkRecorder.PutGlyph` が拍子の数字の design box を引いて throw）→ outline box で測る＝`b2b7449d9`（網 `TodoCalloutTests.AMemo_InAScoreWithANumericMeter_StillRenders`・旧コードで赤 3）。
 - ⚠️ **事故**: 毒の `git stash push -q -- $c` が `$c` null のまま Lab で走り（cwd が Lab に残っていた）、Lab の未 commit 555 ファイルを stash → pop で戻したが **92 ファイルが LF→CRLF** になった＝stash の警告の一覧（Lab `sessions/p902/lf-restore-list.txt`）で LF に戻した。規則は Lab `notes/CLAUDE-OPERATIONS.md` §1。更新時刻は 555 ファイルで変わった。
 - full **11890 / 0 / 2 / 11892**（門は全部 OK・Deploy 済み）。
+- **その後のレビューと追加（同じ会話）**: Lesson 1〜5 の手直し（`450326bd7` by part・`2594f8d77` Lesson 2 で Ctrl+Shift+↑↓ と数字キー・`d4cdc9ec9` 空の語で lesson-01 だけ返す一覧を isIncomplete に＝`lesson` と打っても lesson-01 しか出なかった）。製品: `e754efdc8` LYS4026 の波線をメモだけに（Resolve は印全体を消す）・`bfa445614` 強弱にも `.up`／`.down` の補完・`f41059354` プレビューが reconcile 後の data-pos を読み返して食い違えばページを作り直す（ユーザー報告「d を選ぶと 3 つ先の e が光る」・開き直すと直った・サーバー側は約 150 編集で 0 ずれ＝根本原因は未特定、次に起きたら出力の `STALE OFFSETS` 行で特定する）。
+- **`@todo` をコード行の記号に（ユーザー決定「進めて」）**＝`f2055979b`: `Am7@todo("…")`・`F(133211)@todo(o12 "…")`・`r@todo`・他の注記は LYS1028。プレビューは記号の字形を丸で囲みメモを置く（TodoMemoBand も予約）。設計 `docs/todo-memo-design.md` §5・網 `ChordRowTodoTests` 17・毒 4 本。⚠️ 最初の段のメモが題名の上へ登る件は音符でも同じ＝§4 に起票（未修正）。歌詞・key/time/tempo・form への拡張は未着手。full **11930 / 0 / 2 / 11932**。
 判定: **ユーザーの実機確認待ち**（New Score → `lesson` → lesson-01 から 10 まで）。次の一手は ⑴ レッスンの手直し（実機の感想）→ ⑵ Pages の再構成（`learning-set-design.md` §7 の案をユーザーが選ぶ）→ ⑶ 日本語訳。(a) どれもこの便の文脈（レッスンと監査）の上に立つ／(b) 1 便＝軽い／(c) 既定は続ける ⇒ **この会話で続ける**。
 
 ## 以下は第901セッションの経緯
