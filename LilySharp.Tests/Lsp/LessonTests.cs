@@ -65,13 +65,15 @@ public class LessonTests
     [MemberData(nameof(AllLessons))]
     public void ALesson_CompilesWithNoErrorAndNoWarning_AndRenders(string language, string label)
     {
-        // The one message a lesson may raise is its own tasks: an `@todo("…")` on the note to
+        // The messages a lesson may raise are its own tasks: an `@todo("…")` on the note to
         // change, which the preview rings in red with the memo beside it (LYS4026 says the
-        // same in the Problems list). Anything else is a lesson teaching a mistake.
+        // same in the Problems list) — and a task may START from a broken bar, whose squiggle
+        // the task then mends (lesson 3: `a8@todo("type 4 here") g4 c` is a short bar until
+        // the 4 is typed). Any other message is a lesson teaching a mistake.
         var lesson = LessonOf(language, label);
         var tree = SyntaxTree.Parse(lesson.Text);
         var diagnostics = tree.Diagnostics.Concat(SemanticValidation.Run(tree))
-            .Where(d => d.Code != DiagnosticCodes.TodoMark).ToList();
+            .Where(d => d.Code != DiagnosticCodes.TodoMark && !OnATaskBar(lesson.Text, d.Span.Start)).ToList();
         Assert.True(diagnostics.Count == 0,
             $"{language}/{label}:\n" + string.Join("\n", diagnostics.Select(d => $"  {d.Code}: {d.Message}")));
 
@@ -81,6 +83,33 @@ public class LessonTests
         // …and the preview, which draws the memos, renders too (it did not, for a memo in
         // 3/4 or 6/8, until 2026-10-11 — TodoCalloutTests).
         Assert.False(string.IsNullOrWhiteSpace(SvgGenerator.Generate(tree, SvgRenderOptions.Preview())));
+    }
+
+    /// <summary>Whether <paramref name="offset"/> lies in a bar (between two `|`) that carries
+    /// an <c>@todo</c> — a bar a task starts from.</summary>
+    private static bool OnATaskBar(string text, int offset)
+    {
+        int start = text.LastIndexOf('|', Math.Max(0, offset - 1)) + 1;
+        int end = text.IndexOf('|', offset);
+        if (end < 0) end = text.Length;
+        return text[start..end].Contains("@todo(", StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Lesson3_TheShortBarItStartsWith_IsMendedByItsTask()
+    {
+        // `a8@todo("type 4 here") g4 c` is 5/8 in 3/4 — the squiggle is the point; typing the
+        // 4 on the a (the digit lands in the duration's slot) leaves a clean score.
+        string lesson = LilySharpLanguageServer.Lessons[2].Text;
+        const string task = "a8@todo(\"type 4 here\") g4 c";
+        Assert.Contains(task, lesson);
+        static List<LilySharp.Core.Syntax.Diagnostic> Messages(string text)
+        {
+            var tree = SyntaxTree.Parse(text);
+            return tree.Diagnostics.Concat(SemanticValidation.Run(tree)).Where(d => d.Code != DiagnosticCodes.TodoMark).ToList();
+        }
+        Assert.Single(Messages(lesson));
+        Assert.Empty(Messages(lesson.Replace(task, task.Replace("a8@", "a4@"))));
     }
 
     [Theory]

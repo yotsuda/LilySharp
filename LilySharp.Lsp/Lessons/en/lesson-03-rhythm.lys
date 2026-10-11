@@ -13,7 +13,7 @@ part melody { clef treble }
 section A {
   partial 4                     // a pickup: the first bar is one beat
   melody {
-    g'8. g16 | a4@todo("type 8 here") g c | b2 g8. g16 | a4 g d' | c2 g8. g16 |
+    g'8. g16 | a8@todo("type 4 here") g4 c | b2 g8. g16 | a4 g d' | c2 g8. g16 |
     g'4 e c | b a f'8. f16 | e4 c d | c2.@todo("make it c2 r4") |.
   }
 }
