@@ -129,27 +129,70 @@ index の「03 Speed」は見出しだけ。
   index の眉の番号が「01 Engraving / Lineage / 02 Grammar」と混在。manual の 01〜25 は手打ち（章を動かすと壊れる）。
 - 確かめた頁間アンカーはすべて解決する。`README.md` が `grammar.html` を指す＝URL を残すか転送する。
 
-## 7. Pages の再構成案（ユーザー判断待ち）
+### 6.5 再監査（2026-10-12・第902・読むだけ・2 本の監査を突き合わせた）
 
-上部ナビを**全頁で生成**（index も）: **Home · Get started · Learn · Reference · Chords · Editor · About**。章番号は生成。
-大きさは chords.html を 1.0 として:
+§6.1〜6.4 は**すべてまだ成り立つ**（P1・P2 残り・P3・P7 半分・P8＝grammar 15 例中 12・chords 8 例中 6・index の
+Grammar 抜粋が `octave absolute`・P11・P12・P13・P14＝manual は 1251 行・重複と §6.4 のナビ）。加えて:
 
-1. `index.html` Home（約 0.7）: ヒーロー・3 段のインストール＋「Get started →」・6 本の柱・ギャラリー・短い AI。
-   Lineage／Licence／Speed／Architecture は About へ。Grammar 節は抜粋＋Learn への導線に縮める。
-2. `start.html` Get started（約 0.4）: インストール（index と `editor#install` を統合）・プレビュー（Ctrl+K V）・最初の 1 曲・
-   「`lesson` と打って Ctrl+Space」。
-3. `learn-01.html`〜`learn-11.html`（各 0.5〜0.8・前後リンク）＝**拡張のレッスンと 1 対 1**。移す元: 01←`editor#language`
-   `#typing`（要約）`#step` `#audition`・`grammar#chordrows` の補完 h3／02←`#pitch` `#duration` `#glance`（簡約）／03←
-   `#duration` `#events` の休符 `#connect` のタイ `#sections` の partial `#bars`／04←調と臨時記号（新規）・`#transposing` の score の `transpose`／05←`#anno` を
-   割る `#connect`／06←`#sections` `#forms`＋P4／07←`#lyrics`／08←`#chordrows` の前半・slash notes・chords.html への入口／
-   09←`#scores` の grouping・`#groups` `#phrases`／10←`grammar#drums`（`drums { }`・定番パターン・`@parenthesize`・フラム）＋補完の定番パターン（新規）／
-   11←`#tab` `#parts`（instrument・midiInstrument）・`#transposing`（移調楽器と `pitch concert`）・複数 score。
-4. Reference（`grammar.html` を割る。URL は入口として残すか転送）: `ref-music.html`（約 1.5）・`ref-structure.html`（約 1.5）・
-   `ref-output.html`（約 1.2）・`ref-lookup.html`（約 0.8＝予約語・診断・LilyPond から・Rough edges）。
-5. `chords.html` はそのまま（`#check` を末尾へ）。`editor.html`（約 1.2・Ctrl+Space を正面に）。`ai.html`（約 0.5）。
-   `about.html`（約 0.6・Lineage／Licence／Architecture／Speed／CLI）。
-6. ビルド: index を `build-manual` の頁一覧に入れるか上部ナビを共通化・learn の前後ナビを生成・TUTORIAL の内容を
-   start／learn-02 へ吸わせて漂流を止める（TUTORIAL は Pages へのリンクに縮める）。
+**A. 今の製品と食い違う記述**（直す＝小さい・確実）
+- A1 index「Install」: 見出し「two steps」の下に 3 段・**段 3「開けば楽譜が横に開く」は誤り**（プレビューは Ctrl+K V／
+  右上のアイコンで開く・自動で開く設定は無い＝確認済み）。同梱フォントに SMuFL 3 書体（Bravura・Petaluma・Leland）が無い。
+  Licence 枠も同じ（OFL の書体を足す・TeX Gyre は「既定で」本文）。
+- A2 `grammar#drums` は `voice { } { }` だけ＝**レッスン 10 と書き方が違う**。`drums { }`・行の `up`/`down`・定番パターン
+  14 本（補完で宣言が入る）・フラム・`@parenthesize`・LYS4030/LYS0040 が無い。「Ctrl+Space で全部」は今は phrase→
+  定番→ドラム名の順。
+- A3 `#anno` の表に `@parenthesize` が無い（和音全体に 1 組・構成音は自分の玉）。
+- A4 `#diagnostics` の例が「in form 'main'」＝今は「in the form」（SectionCarryValidator・確認済み）。
+- A5 `#glance`「a score names a form」・`#scores`「A score binds a form」＝今は「既定の form を演奏し、中で `form NAME`
+  を選べる」。`#forms` の pre の「a second form = a second output」も誤り（score が選ぶ）・名前の無い form 3 つの並びは
+  1 ファイルなら LYS1016（断片と書く）。
+- A6 `#todo`／`editor#preview`「メモは丸の横」＝今はメモは**自分の譜表の余白**に下線付きで・引出線・`.down` で下。
+- A7 `editor`「空のファイルでレッスン」＝今はトップレベルで `lesson-01`、`lesson` と打つと 11 本。「最初の音から」→
+  Lesson 1 は補完とプレビュー。
+- A8 `#scores` に clef 先頭の `staff bass melody`（と LYS1046）が無い＝Blues in F の `staff bass bass` が説明なし。
+  `#scores` の表に `form NAME`・`pitch …`・`transpose`・中に書く `fonts/paper/layout { }` が無い。名前の無い
+  `chords { }`／`lyrics { }`／`part { }` が一度も出ない。
+- A9 chords.html: LYS1038（どの score も描けない形）と、コード行の `@todo` が無い。
+- A10 editor.html: 音源（`lilysharp.playback.soundFont`・Choose Sound Font・最初に 1 回クリック）、▶ ボタンと上部の
+  score 選択、和音の構成音の試聴、phrase のホバー（長さ・回数・ドラムの格子）、`midiInstrument` などの補完、設定表に
+  `fontPaths`・`playback.soundFont`・`preview.highlightTodos`・`typingAids.enabled`・`omr.verifyOnSave`、CLI の
+  `--score`・`--set music=`・`check --todo-as-error`／`--no-todo`。
+- A11 **サイト外**: `GRAMMAR_FOR_LLM.md:683` が「名前の無い `chords { }` は LYS0032」＝廃止済み（CHANGELOG:75）。
+  拡張の AI 機能に同梱される文書なので先に直す。
+
+**B. 初めての人の導線**: index の最初のリンクが「manual を読む」・`lesson` が index に一度も出ない・Ctrl+K V を
+「離してから V」と書いていない・▶ がサイトのどこにも無い・小さな最初の例が無い（manual の 4 行の次に 30 行の骨格）。
+
+**C. スマホ**: index の `.cols4 minmax(360px,…)`・`.gallery minmax(540px,…)` が 375px 幅で横スクロール（**実害**）・
+表の `code` が `nowrap`＋横スクロールの枠なし・manual の 25 項の目次が本文の前に数画面・図の alt が全部
+「engraved example」・OGP／favicon なし（共有されたときの見え方）。
+
+## 7. 修正の計画（2026-10-12 改訂・ユーザー判断待ち）
+
+**順番の考え方**: 誤りを先に消す（小さい・確実・今のサイトを読む人に効く）→ 入口を作る → 大きな再構成。各段は
+単独で出荷できる。
+
+**段 1 — 誤りと欠けの修正（構成は変えない）** ＝ §6.5 の A1〜A11・C の実害 2 つ（grid・表）・P12（綴り）。
+`#drums` は書き直し（`drums { }` を先頭・`voice` は「2 声で書きたいとき」として残す）。P8 は例を相対に直す
+（**例の出力が変わる**＝`build-examples` の here-string と期待 SVG を作り直す）。目安 1 便。
+
+**段 2 — 入口（Get started）**: index の Install を 5 段に（入れる → `first.lys` を作るか New Score → Ctrl+K を離して
+V（またはアイコン）→ `lesson` と打って Ctrl+Space → ▶）＋スクリーンショット 1 枚。index の最初のリンクを
+「Get started →」に。全頁に**生成する**上部ナビ（index も）・章番号を生成・OGP と favicon。目安 1 便。
+
+**段 3 — Learn 頁（レッスンと 1 対 1）**: §7 旧案は手書き 11 頁（chords.html の 5〜9 倍）だった。**改案: レッスンの
+`.lys` から生成する** ＝ 描いた楽譜＋レッスンの本文＋「学んだこと → Reference へのリンク」2〜3 行。頁は 0.3 程度、
+レッスンと食い違わない（LessonTests と pre のコンパイル検査がそのまま網）、レッスンを訳せば頁も訳される。
+Chords は「lesson 8 の次に深く」として Learn の下に置く（上部ナビを 6 項に減らす）。
+
+**段 4 — Reference と About**: `grammar.html` を 4 つに割る（`ref-music`・`ref-structure`・`ref-output`・`ref-lookup`。
+`grammar.html` の URL は入口として残す）・P3 の章（調と臨時記号・拍子・テンポ・音部記号・`partial`／`time none`・強弱・
+`using`）・`#phrases` を厚く（レッスン 9〜11 の土台）・index の Lineage／Licence／Architecture／Speed を About へ・
+重複（§6.3）を 1 か所に。目安 2 便。
+
+**判断が要ること**: ① 段 3 を「生成」でよいか（手書きより小さく・ずれない／自由度は下がる）② 上部ナビの項目
+（案: Home · Get started · Learn · Reference · Editor · About）③ P8 で例を相対に直す（絵が変わる）④ 段 1 から順に
+進めてよいか。
 
 ## 8. 書いている途中の気づき（製品側・Pages とは別）
 
