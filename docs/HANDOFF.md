@@ -130,6 +130,10 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **Pages の監査（subagent・読むだけ）と過不足の台帳・再構成案は `docs/learning-set-design.md` §5〜§7**（P1〜P15）。§8 に製品側の気づき 1 件（2 言語の歌詞 2 行に `1.` `2.` が付く＝ユーザー判断）。
 - commit `54dec873b`（`lessons:`）。拡張は `tools\Deploy-Lsp.ps1` で入れ直し済み（Reload Window 1 回）。
 - `-End p902 -DiffBase 132113d1f`（門は全部 OK）＝full **11875 / 0 / 2 / 11877**（＋49）。Core '+' 0 行。未 push 106（push はユーザー）。Lab `sessions/p902/`（start／end1／deploy の log）。
+- **ユーザーのレビュー（続き）**: Lesson 1＝part に clef を書かず `instrument cello` で clef が自動で変わるのを見せる・STEP 4 は空の小節に `Cmaj7`（`C` は音名と紛れる）・STEP 5 は書く文 `form { |: ~A :| }` を示す・「hover any word」は削除（hover は `@mf` や `clef` に何も返さない＝`learning-set-design.md` §8）→ `3cb36f94b`。Lesson 2 の「line 1」が曖昧 →**音符を指す課題は `@todo("…")`**（プレビューが赤い丸とメモを譜面に描く）＝2・3・4・5・9 → `8ae29a5da`。
+- **その途中で製品の欠陥**: `@todo` のメモがあり拍子が数字（3/4・6/8）の譜面はプレビューが例外で何も描かなかった（`InkRecorder.PutGlyph` が拍子の数字の design box を引いて throw）→ outline box で測る＝`b2b7449d9`（網 `TodoCalloutTests.AMemo_InAScoreWithANumericMeter_StillRenders`・旧コードで赤 3）。
+- ⚠️ **事故**: 毒の `git stash push -q -- $c` が `$c` null のまま Lab で走り（cwd が Lab に残っていた）、Lab の未 commit 555 ファイルを stash → pop で戻したが **92 ファイルが LF→CRLF** になった＝stash の警告の一覧（Lab `sessions/p902/lf-restore-list.txt`）で LF に戻した。規則は Lab `notes/CLAUDE-OPERATIONS.md` §1。更新時刻は 555 ファイルで変わった。
+- full **11890 / 0 / 2 / 11892**（門は全部 OK・Deploy 済み）。
 判定: **ユーザーの実機確認待ち**（New Score → `lesson` → lesson-01 から 10 まで）。次の一手は ⑴ レッスンの手直し（実機の感想）→ ⑵ Pages の再構成（`learning-set-design.md` §7 の案をユーザーが選ぶ）→ ⑶ 日本語訳。(a) どれもこの便の文脈（レッスンと監査）の上に立つ／(b) 1 便＝軽い／(c) 既定は続ける ⇒ **この会話で続ける**。
 
 ## 以下は第901セッションの経緯
