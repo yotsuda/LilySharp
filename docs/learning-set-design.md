@@ -101,24 +101,16 @@ index の「03 Speed」は見出しだけ。
 - P4 **「同じ section 名＝同じ時間」がどこにも明言されていない**（TUTORIAL には 1 節ある・LYS2007 も）。
 - P5 **ドラム／打楽器がサイトにも GRAMMAR_FOR_LLM にも SYNTAX_REFERENCE にも無い**（予約語表の `percussion drummap`
   とドラム名だけ）＝Lesson 10 が指す先が無い。
-- P6 ~~済（2026-10-11）: GRAMMAR_FOR_LLM の Rules と SYNTAX_REFERENCE の Part Declaration に part の属性を列挙~~ `midiInstrument` はサイト（`#parts` の表）には在るが GRAMMAR_FOR_LLM・SYNTAX_REFERENCE に無い（文書間のずれ）。
 - P7 レッスン（`lesson-…`）の案内が無い（作ったら `start` 頁と editor 頁から指す）。
 - P13 **「まずプレビューを開く」が入口に無い**。Ctrl+K V は「Ctrl+K を離してから V」の和音キーで、初心者は押し方を知らない。
   エディタ右上のアイコンでも開ける。start 頁の 1 段目に置く（Lesson 1 の STEP 0 と同じ文）。
 - P14 **文章量**: レッスンは「文章は可能な限り少なく」がユーザーの指示（§3）。learn 頁も同じ型（2〜4 行＋例＋TRY）で書き、
   詳しい説明は Reference に置く。今の manual は 1 章が長く、learn に転用するなら大きく削る。
-- P16 ~~**`@todo` がサイトに一切無い**~~ 済（2026-10-11）: grammar 頁 `#anno` に h3「Notes to yourself — `@todo`」（`#todo`）、editor 頁 `#preview` に赤丸の 1 行。OMR のキーは grammar 頁には書いていない（SYNTAX_REFERENCE に任せる）。元の記述:（音符の印も、2026-10-11 に入ったコード行の記号の印も）。メモ・赤い丸・`.down`・Resolve this TODO・
-  OMR のキーの説明が要る（`SYNTAX_REFERENCE.md` の「Left to check」が下敷きになる）。
-- P15 ~~済（2026-10-11）: `#tab` に「最低弦の下は譜だけ・bass は `octave 2` で `e` が最低弦（書いた E2）」~~ tab の音域: `tuning bass` の part は書いた音の E2 より下を tab から落とす（LYS5002「likely an octave too low」）。
-  `#tab` に「bass は `octave 3` で書くと E2〜」の 1 行が要る（Lesson 10 で踏んだ）。
 
 ### 6.2 違うもの・食い違い
 
 - P8 **オクターブの方針が自己矛盾**: `grammar#pitch` は「相対で書け、絶対は生成器や AI 向け」と言うのに、本文の例 23 のうち
   18 が `octave absolute` で始まる（ギャラリー・TUTORIAL・editor の例は相対）。
-- P9 ~~済（2026-10-11）: 2 か所とも `~Main`~~ `grammar#glance` が `form { Main }`＝枠付きの "Main" が出る形（GRAMMAR_FOR_LLM は `~Main` を勧め、サイトの他の例も `~`）。
-- P10 ~~済（2026-10-11）: 両文書で「`time`/`tempo` は part の属性ではない」と明記~~ **part の属性に `time`/`tempo` が入るか**: サイトの parts 表は「入らない」（正しい・LYS1026）、GRAMMAR_FOR_LLM の
-  「Rules and gotchas」は「Part header attributes (`clef`/`key`/`time`/`tempo`)」＝**GRAMMAR_FOR_LLM 側を直す**。
 - P11 TUTORIAL は `part melody`（括弧なし）、サイトは常に `part melody { clef treble }`。（どちらも正しい＝誤りではなく揃え方の問題。再構成で TUTORIAL を吸わせるときに揃える）
 - P12 綴りの混在: harmonise／colour の隣にコマンド名 auto-harmonize。
 
