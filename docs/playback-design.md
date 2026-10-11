@@ -123,7 +123,10 @@ Now:
   `SoundIndex.Program`), and a note from the list carries `G`. A sound no part claims
   (`Program` −1: a voicing on a rest sounds the guitar preset's program; a note the export
   cannot place sounds the timbre family's nearest GM voice, `FAMILY_PROGRAM`). The drum
-  family (timbre 9) strikes the drum channel.
+  family (timbre 9) strikes the drum channel. A note the export filed no onset under — the
+  target of a tie, a note in music no form plays — sounds its written pitch in the voice of
+  the part whose music holds it (`SoundIndex.PartVoice`, `Written`), so the caret on
+  `a~ | a` strikes the flute's a and not a piano's (owner's report 2026-10-11).
 - A held key re-arms a watchdog as before; the strike is a `noteOn` and the release a
   `noteOff`, so the font's own release plays.
 

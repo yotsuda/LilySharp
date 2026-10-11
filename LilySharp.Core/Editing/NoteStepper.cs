@@ -927,7 +927,7 @@ public static class NoteStepper
                 if (index.Midi.TryGetValue(at, out var played))
                     return new Voice([played[0]], index.Timbre[at], index.Program[at]);
                 return index.Trace.TryGetValue(((NoteSyntax)target.Node).Pitch.SourceStart, out int written)
-                    ? new Voice([written], 0, NoProgram) : Voice.Silent;
+                    ? Written(index, target.Node, [written]) : Voice.Silent;
             }
             case TargetKind.Member:
             {
@@ -939,7 +939,7 @@ public static class NoteStepper
                 int at = target.Key;
                 if (index.Midi.TryGetValue(at, out var played))
                     return new Voice([played[0]], index.Timbre[at], index.Program[at]);
-                return index.Trace.TryGetValue(at, out int written) ? new Voice([written], 0, NoProgram) : Voice.Silent;
+                return index.Trace.TryGetValue(at, out int written) ? Written(index, target.Node, [written]) : Voice.Silent;
             }
             case TargetKind.Chord:
             {
@@ -957,9 +957,12 @@ public static class NoteStepper
                         program = index.Program[at];
                     }
                 if (set.Count == 0)
+                {
                     foreach (var m in MembersOf(target.Node))
                         if (index.Trace.TryGetValue(m.SourceStart, out int p))
                             set.Add(p);
+                    return Written(index, target.Node, [.. set.Take(MaxAuditionPitches)]);
+                }
                 return new Voice([.. set.Take(MaxAuditionPitches)], timbre, program);
             }
             default:
@@ -1025,11 +1028,37 @@ public static class NoteStepper
     }
 
     /// <summary>
+    /// A note the export filed no onset under — the target of a tie, a note in music no form
+    /// plays — sounds its WRITTEN pitch in the voice of the part whose music holds it, so the
+    /// caret on <c>a~ | a</c> strikes the flute's a and not a piano's (owner's report
+    /// 2026-10-11). Music no part claims keeps the default voice.
+    /// </summary>
+    private static Voice Written(SoundIndex index, SyntaxNode node, ImmutableArray<int> pitches)
+        => PartOf(node) is { } part && index.PartVoice.TryGetValue(part, out var voice)
+            ? new Voice(pitches, voice.Timbre, voice.Program)
+            : new Voice(pitches, 0, NoProgram);
+
+    /// <summary>The part whose music holds <paramref name="node"/>: the nearest enclosing
+    /// part cell in a section (<see cref="PartBlockSyntax"/>) or part declaration holding its
+    /// own sections (<see cref="PartDeclarationSyntax"/>); null for music no part claims.</summary>
+    private static string? PartOf(SyntaxNode node)
+    {
+        for (var n = node.Parent; n != null; n = n.Parent)
+        {
+            if (n is PartBlockSyntax cell)
+                return cell.Name;
+            if (n is PartDeclarationSyntax part)
+                return part.Name.Text;
+        }
+        return null;
+    }
+
+    /// <summary>
     /// What a tree sounds, by source position: the MIDI export's pitches (with the timbre and
-    /// the track's program) filed under each note's position, and the collector's resolved
-    /// pitch of each written pitch (<see cref="ResolvedPitches.ForFile"/>, as MIDI numbers).
-    /// Built once per tree — the caret moving over an unchanged document asks the same tree
-    /// again and again.
+    /// the track's program) filed under each note's position, the voice of each part that
+    /// sounds at all, and the collector's resolved pitch of each written pitch
+    /// (<see cref="ResolvedPitches.ForFile"/>, as MIDI numbers). Built once per tree — the
+    /// caret moving over an unchanged document asks the same tree again and again.
     /// </summary>
     private sealed class SoundIndex
     {
@@ -1037,6 +1066,9 @@ public static class NoteStepper
         public Dictionary<int, int> Timbre { get; } = [];
         /// <summary>Filed beside <see cref="Timbre"/>, for the same positions.</summary>
         public Dictionary<int, int> Program { get; } = [];
+        /// <summary>By part name: the timbre and program of its pitched notes (the export's
+        /// track), for the positions the export filed nothing under (<see cref="Written"/>).</summary>
+        public Dictionary<string, (int Timbre, int Program)> PartVoice { get; } = [];
         public Dictionary<int, int> Trace { get; } = [];
 
         private static readonly ConditionalWeakTable<SyntaxTree, SoundIndex> Cache = new();
@@ -1055,6 +1087,8 @@ public static class NoteStepper
                 {
                     if (note.SourcePos < 0 || note.Channel == 9)
                         continue;
+                    if (note.Part is { } part)
+                        index.PartVoice.TryAdd(part, (note.Timbre, track.Program ?? NoProgram));
                     if (!index.Midi.TryGetValue(note.SourcePos, out var list))
                     {
                         index.Midi[note.SourcePos] = list = [];

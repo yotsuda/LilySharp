@@ -540,6 +540,22 @@ public class StepRequestTests
         Assert.Equal(24, voicing.Program);
     }
 
+    /// <summary>The target of a tie is no onset in the export, so the audition sounds its
+    /// written pitch — in the part's voice, not the default piano (owner's report 2026-10-11:
+    /// "the a in the second bar sounds wrong" on <c>e f g a~ | a b c d</c>).</summary>
+    [Fact]
+    public void ATiedNote_StrikesThePartsInstrument()
+    {
+        var tied = AuditionAt(Flute("e'4 f' g' a'~ | ‸a' b' c'' d'' |"));
+        Assert.Equal([81], tied.Pitches);
+        Assert.Equal(73, tied.Program);
+        Assert.Equal(1, tied.Timbre);
+        // The same note where it is struck, for comparison.
+        var struck = AuditionAt(Flute("e'4 f' g' ‸a'~ | a' b' c'' d'' |"));
+        Assert.Equal(tied.Pitches, struck.Pitches);
+        Assert.Equal(struck.Program, tied.Program);
+    }
+
     [Fact]
     public void TheCaret_SoundsWhatItIsOn()
     {
