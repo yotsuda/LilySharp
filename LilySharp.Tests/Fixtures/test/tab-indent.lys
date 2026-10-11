@@ -1,12 +1,14 @@
 // A tab staff on the FIRST (indented) system: an instrument name pushes the
 // system-start indent, and the tab staff lines must start at that indent —
 // aligned with the notation staff — not run left to the page margin.
+// The label is written out: a preset's printed name shows only beside two or more
+// instruments (2026-10-11), and this book has one.
 title "Tab indent"
 time 4/4
 key c major
 
 part m {
-  instrument bass
+  instrument bass "Bass"
   section A { c d e f | g a g2 | }
 }
 

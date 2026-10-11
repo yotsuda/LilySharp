@@ -308,6 +308,56 @@ public static class InstrumentDefaults
     };
 
     /// <summary>
+    /// The name a preset prints beside its staff (<c>alto-sax</c> → "Alto Saxophone"), or null
+    /// for a name that is not a preset. A bare name is the common member of its family, as the
+    /// preset word is (<see cref="GetTransposition"/>): "Clarinet", "Trumpet" and "Horn" are the
+    /// B♭, B♭ and F ones, and only the other members name their key ("Clarinet in A",
+    /// "Trumpet in C") — a key written "B♭" set its flat in a fallback face, apart from the
+    /// letter, and pushed "Trumpet in B ♭" to the page's edge (Lab sessions/p902, lesson 10).
+    /// Both piano hands print "Piano": a grand staff shows it once, across its brace.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN (owner's decision 2026-10-11): until then the preset WORD itself was the
+    /// label — "alto-sax", "piano-right", a lower-case "cello" beside lesson 1's staff — and it
+    /// printed even on a score of one staff. Where the name prints is RenderSpecParser's
+    /// ensemble rule, not this table. ⚠️ Keep this in step with <see cref="KnownInstruments"/> —
+    /// InstrumentPresetTests holds the two lists to each other.
+    /// </remarks>
+    public static string? PrintedName(string? preset) => preset?.ToLowerInvariant() switch
+    {
+        "violin" => "Violin",
+        "viola" => "Viola",
+        "cello" => "Cello",
+        "bass" or "bass5" or "bass6" => "Bass",
+        "contrabass" => "Contrabass",
+        "piano-right" or "piano-left" => "Piano",
+        "guitar" => "Guitar",
+        "ukulele" => "Ukulele",
+        "mandolin" => "Mandolin",
+        "banjo" => "Banjo",
+        "flute" => "Flute",
+        "piccolo" => "Piccolo",
+        "oboe" => "Oboe",
+        "clarinet" => "Clarinet",
+        "clarinet-a" => "Clarinet in A",
+        "bassoon" => "Bassoon",
+        "soprano-sax" => "Soprano Saxophone",
+        "alto-sax" => "Alto Saxophone",
+        "tenor-sax" => "Tenor Saxophone",
+        "baritone-sax" => "Baritone Saxophone",
+        "trumpet" => "Trumpet",
+        "trumpet-c" => "Trumpet in C",
+        "horn" => "Horn",
+        "trombone" => "Trombone",
+        "tuba" => "Tuba",
+        "soprano" => "Soprano",
+        "alto" => "Alto",
+        "tenor" => "Tenor",
+        "voice-bass" => "Bass",
+        _ => null,
+    };
+
+    /// <summary>
     /// Maps a <c>transposition</c> property value (an ottava marker — <c>8va</c>,
     /// <c>8vb</c>, <c>15ma</c>, <c>15mb</c>) to its signed semitone shift, or null if
     /// the text is not a recognized marker. <c>vb</c>/<c>mb</c> = down (sounds lower),

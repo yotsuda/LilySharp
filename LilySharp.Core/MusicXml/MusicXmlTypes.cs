@@ -97,11 +97,12 @@ internal sealed class MusicXmlDocument
             }
             var scorePart = new XElement("score-part",
                 new XAttribute("id", id),
-                // A staff the page labels nothing still needs a name: the id, marked as
-                // not printed (2026-09-30), so a reader prints what the page prints.
+                // A staff the page labels nothing still needs a name: its preset's
+                // ("Cello"), else the id, marked as not printed (2026-09-30), so a reader
+                // prints what the page prints.
                 new XElement("part-name",
                     part.DisplayName == null ? new XAttribute("print-object", "no") : null,
-                    part.DisplayName ?? part.Name ?? $"Part {i + 1}"));
+                    part.DisplayName ?? part.UnprintedName ?? part.Name ?? $"Part {i + 1}"));
             if (part.MidiProgram is int program)
             {
                 // The sound the .mid gives the part (HANDOFF §2 F-midi): <score-instrument>
@@ -163,6 +164,11 @@ internal sealed class MusicXmlPart
     /// <summary>The name the page labels the part's staff with (<c>part vo "Vocal"</c>,
     /// <c>staff rh "Right"</c>), written as <c>&lt;part-name&gt;</c>; null writes the id.</summary>
     public string? DisplayName { get; set; }
+
+    /// <summary>The part's name where the page prints none — its <c>instrument</c> preset's
+    /// (<c>StaffSpec.PresetName</c>: a solo cello is still "Cello" to a reader's part list,
+    /// written with <c>print-object="no"</c>); null writes the id.</summary>
+    public string? UnprintedName { get; set; }
 
     /// <summary>The part's General MIDI program (0-based), written as its
     /// <c>&lt;midi-instrument&gt;</c>; null writes none.</summary>

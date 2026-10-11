@@ -99,6 +99,16 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **An `instrument` preset prints a real name, and only beside another instrument.** The label
+  used to be the preset word itself — "alto-sax", "piano-right", a lower-case "cello" — on
+  every staff, a score of one staff included. A preset now prints its name ("Alto Saxophone",
+  "Cello"; a bare name is its family's common member, "Clarinet", and the others name their
+  key, "Clarinet in A") under the rule a part name already followed: only when the score has
+  two or more instruments. A grand staff is one instrument and prints a name its staves share
+  once, across the brace (the piano's two hands: "Piano"); each staff of a staffGroup or
+  choirStaff is its own. A label you write (`instrument bass "Bass"`, `part bs "Bass"`) prints
+  as before, and MusicXML still names a solo part after its preset (`print-object="no"`).
+
 - **A staff of fewer than five lines (`as lines N`) is engraved on its own lines.** The
   five-line staff had been written into nearly every reader: the ledger lines (a one-line
   staff's d' carried one ledger where LilyPond draws three), the bar lines (twice LilyPond's

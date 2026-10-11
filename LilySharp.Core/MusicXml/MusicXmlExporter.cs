@@ -499,8 +499,12 @@ public sealed class MusicXmlExporter
                 Svg.Collector.TabStaffSpec t => t.Staff,
                 _ => null,
             };
-            if (staff is { InstrumentName: { } label } && _partsByName.TryGetValue(staff.VoiceName, out var part))
+            if (staff == null || !_partsByName.TryGetValue(staff.VoiceName, out var part))
+                continue;
+            if (staff.InstrumentName is { } label)
                 part.DisplayName ??= label;
+            else if (staff.PresetName is { } preset)
+                part.UnprintedName ??= preset;
         }
     }
 
@@ -624,6 +628,7 @@ public sealed class MusicXmlExporter
             }
             // The one part answers to the brace's label, which may be written on either staff.
             upper.DisplayName ??= lower.DisplayName;
+            upper.UnprintedName ??= lower.UnprintedName;
             Document.Parts.Remove(lower);
             _mergedInto[lower] = upper;
         }

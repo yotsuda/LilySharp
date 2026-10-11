@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 236 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **362** | |
+| `OWN` | 237 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **363** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（236 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（237 件）
 
 ### `LilySharp.Core/Editing/NoteStepper.cs`
 - **`NoteStepper.NoProgram`** LILYSHARP-OWN: the editor's audition has no LilyPond counterpart (the performer
@@ -592,6 +592,7 @@
 - **`FiguredBassItem.ParseFigures`** LILYSHARP-OWN: the @figuredBass(…) SPELLING is Lily#'s, not a port — LilyPond writes
 ### `LilySharp.Core/Svg/Model/InstrumentDefaults.cs`
 - **`InstrumentDefaults.GetMidiProgram`** LILYSHARP-OWN: LilyPond has no instrument presets, so which of its 128 sounds a preset
+- **`InstrumentDefaults.PrintedName`** LILYSHARP-OWN (owner's decision 2026-10-11): until then the preset WORD itself was the
 ### `LilySharp.Core/Svg/Model/Measure.cs`
 - **`Measure.IsTrailingClefColumn`** ⚠️ LILYSHARP-OWN: THE FLAGGED ZERO-WIDTH MEASURE IS A TRANSLATION DEVICE. LilyPond
 ### `LilySharp.Core/Svg/Model/MusicMarkItem.cs`

@@ -486,7 +486,7 @@ part sing   { clef treble transpose d }</pre>
     <tr><td>the <b>tuning</b></td><td>which strings a <code>tab</code> row has — hence the fret numbers</td></tr>
     <tr><td>the <b>MIDI program</b></td><td>what playback sounds like</td></tr>
     <tr><td>the <b>sounding octave</b></td><td>the bass family sounds an octave below its notation, a piccolo an octave above</td></tr>
-    <tr><td>the <b>printed name</b></td><td>the label beside the staff</td></tr>
+    <tr><td>the <b>printed name</b></td><td>the label beside the staff — <code>alto-sax</code> prints “Alto Saxophone”, <code>cello</code> “Cello” — when the score has two or more instruments</td></tr>
   </table>
 <pre>part gt { instrument guitar }                  // preset: clef, tuning, sound, label
 part bs { instrument bass "Bass" }             // preset, with the label overridden
@@ -494,6 +494,13 @@ part v1 { clef treble instrument "1st Violin" } // label only — no preset beha
   <p>A bare word is the preset; a quoted string is the display label; both together set the
   preset and rename it. A quoted string <i>alone</i> is a free-text name and carries no
   preset behaviour — the clef and the rest come from whatever else the header says.</p>
+  <p>A preset's name prints as a part name does by default: only beside another instrument,
+  never on a score of one staff. A grand staff is one instrument — the piano's two hands
+  print “Piano” once, across the brace — while each staff of a <code>staffGroup</code> or
+  <code>choirStaff</code> is its own. A bare name is the common member of its family
+  (“Clarinet” is the B♭ one); the others name their key (“Clarinet in A”). A label you
+  write yourself — <code>instrument bass "Bass"</code>, <code>part bs "Bass"</code>,
+  <code>staff bs "Bass"</code> — prints wherever the staff stands.</p>
 
   <h3 id="transposing">Transposing instruments</h3>
   <p><b>Write what the player reads, and the preset makes it sound right.</b> Naming a

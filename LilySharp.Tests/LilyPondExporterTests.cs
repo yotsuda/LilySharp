@@ -1072,12 +1072,12 @@ public class LilyPondExporterTests
             form { ~S }
             score { staff vln staff vla }
             """);
-        // ⚠️ LOWER CASE, because that is what the PAGE prints: a preset's DisplayName is the
-        // preset's own spelling, and only the ensemble default (the capitalised part name)
-        // ever capitalises. Asserting "Violin" here would be the twin inventing a label the
-        // .lys never shows — which is the whole failure mode a twin is built to avoid.
-        Assert.Contains("instrumentName = \"violin\"", named);
-        Assert.Contains("instrumentName = \"viola\"", named);
+        // The name the PAGE prints: a preset's printed name (InstrumentDefaults.PrintedName,
+        // owner's decision 2026-10-11 — until then the preset word, "violin"). Asserting
+        // anything the page does not show would be the twin inventing a label the .lys never
+        // shows — which is the whole failure mode a twin is built to avoid.
+        Assert.Contains("instrumentName = \"Violin\"", named);
+        Assert.Contains("instrumentName = \"Viola\"", named);
         // The indent shares its \layout with the opening-repeat switch every twin carries
         // (InitialRepeatBarTests.TheTwin_TellsLilyPondToPrintItsOwn).
         Assert.Contains("\\layout { indent = 15\\mm \\context { \\Score printInitialRepeatBar = ##t } }", named);

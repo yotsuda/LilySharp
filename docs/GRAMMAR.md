@@ -1081,15 +1081,26 @@ TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
    the part — `part vln1 "Violin I" { … }`. Same `symbol "label"` idiom as a
    structure section (`A "A2"`) and a staff render (`staff X "…"`). A score's
    `staff X "…"` overrides it for that score. Priority for the shown label:
-   `staff X "…"` (per-score) > part display name > `instrument` label > the
-   capitalized part identifier. (There is no `name` property — the inline string
-   replaced it.) *)
+   `staff X "…"` (per-score) > part display name > `instrument`'s own quoted label >
+   the preset's printed name > the capitalized part identifier — the last two only
+   with two or more instruments (below). (There is no `name` property — the inline
+   string replaced it.) *)
 
 (* instrument: a bare preset word (violin, cello, piano-right, …) drives the
-   default clef/octave/tuning and the MIDI timbre, and is shown as the staff name.
+   default clef/octave/tuning and the MIDI timbre, and names the staff by the
+   preset's PRINTED name (InstrumentDefaults.PrintedName: alto-sax → "Alto
+   Saxophone", both piano hands → "Piano"; a bare name is its family's common
+   member, "Clarinet" the B♭ one, and the others name their key, "Clarinet in A").
+   That name follows the ensemble default (owner's decision 2026-10-11; until then
+   the preset WORD printed on every staff): it shows only when the score engraves two
+   or more INSTRUMENTS — a staff is one, a grandStaff is one (a name its staves share
+   prints once, centred across the brace), a staffGroup / choirStaff is its members,
+   a tab or a row none. Shown or not, it is MusicXML's <part-name> (print-object="no"
+   where the page prints none).
    An optional trailing quoted string overrides just the shown name, keeping the
-   preset's defaults: `instrument cello "Cello I"` = cello defaults, label "Cello I".
-   A quoted string alone is a free-text name with no preset (default clef). *)
+   preset's defaults: `instrument cello "Cello I"` = cello defaults, label "Cello I",
+   printed wherever the staff stands. A quoted string alone is a free-text name with
+   no preset (default clef). *)
 
 (* octave: the octave a part's bare letters are anchored to in relative mode
    (`octave 3` puts a bare `c` at C3). The anchor is `octave N`, else the `instrument`

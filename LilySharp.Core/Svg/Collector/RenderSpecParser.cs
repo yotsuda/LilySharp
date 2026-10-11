@@ -786,14 +786,21 @@ public static class RenderSpecParser
 
         // No explicit clef in the render block → take it from the part definition.
         ClefType clef = explicitClef ?? GetPartClef(staff, voiceName) ?? ClefType.Treble;
-        // Priority: per-score override ("…") > part inline display name > instrument.
-        // The ensemble default (capitalized part name) is applied in Parse()
-        // once the staff count is known; ~ suppresses the label entirely.
+        // Priority: per-score override ("…") > part inline display name > the instrument's
+        // own label. A PRESET's printed name ("Alto Saxophone") and the capitalized part
+        // name are the ensemble defaults, applied in Parse() once the score's instruments
+        // are counted; ~ suppresses the label entirely. An `instrument` that writes its own
+        // label (`instrument trumpet "Tpt."`, `instrument "1st Violin"`) or a word that is no
+        // preset is the writer's text, printed as written wherever it stands.
+        var instrument = GetInstrument(staff, voiceName);
+        bool presetOnly = instrument is { } ins && ins.DisplayName == ins.Preset
+            && InstrumentDefaults.IsKnownInstrument(ins.Preset);
+        string? presetName = presetOnly ? InstrumentDefaults.PrintedName(instrument!.Value.Preset) : null;
         string? instrumentName = nameSuppressed
             ? null
             : nameOverride
               ?? GetPartDisplayName(staff, voiceName)
-              ?? GetInstrument(staff, voiceName)?.DisplayName;
+              ?? (presetOnly ? null : instrument?.DisplayName);
 
         // Hara-kiri is the score item's `as removeEmpty V` (2026-09-08, user decision;
         // it was a part property until then) — read above with the line count. The
@@ -816,7 +823,8 @@ public static class RenderSpecParser
             // only writer.
             WithLyrics: ImmutableArray<string>.Empty,
             PedalStyle: pedalStyle,
-            WrittenClef: explicitClef);
+            WrittenClef: explicitClef,
+            PresetName: presetName);
     }
 
     /// <summary>Maps the `as roman | names` selector text to its mode.</summary>
@@ -926,11 +934,19 @@ public static class RenderSpecParser
     /// for the score a Markdown fence used to imply; that implied score is gone (a fence
     /// writes its score since 2026-09-10) and this stays the one place the default is spelt.
     /// </summary>
+    /// <remarks>
+    /// An <c>instrument</c> PRESET's printed name (<see cref="StaffSpec.PresetName"/>) follows
+    /// the same rule, counted by INSTRUMENTS rather than plain staves (owner's decision
+    /// 2026-10-11 — until then the preset word printed on every staff, a score of one staff
+    /// included): with two or more instruments each unlabelled staff of a preset shows its
+    /// name, a member of a staffGroup or choirStaff too; a grandStaff is ONE instrument and
+    /// shows a name its members share once (the piano's two hands, "Piano"), which the page
+    /// centres across the brace (SharedRenderer.DrawInstrumentNames).
+    /// </remarks>
     private static void ApplyEnsembleDefault(List<RenderItemSpec> items)
     {
         int plainStaffCount = items.Count(it => it is SingleStaffSpec);
-        if (plainStaffCount < 2)
-            return;
+        bool ensemble = InstrumentCount(items) >= 2;
         for (int ii = 0; ii < items.Count; ii++)
         {
             // VoiceName is empty only when the part name failed to parse (a
@@ -938,13 +954,57 @@ public static class RenderSpecParser
             // missing token, reported as a syntax error). Skip auto-labeling it
             // rather than indexing [0] into an empty string and crashing — the
             // diagnostics already surface the real problem.
-            if (items[ii] is SingleStaffSpec { Staff: { InstrumentName: null, NameSuppressed: false } st } sss
-                && st.VoiceName.Length > 0)
+            if (items[ii] is SingleStaffSpec { Staff: { InstrumentName: null, NameSuppressed: false } st } sss)
             {
-                string defaultName = char.ToUpperInvariant(st.VoiceName[0]) + st.VoiceName[1..];
-                items[ii] = sss with { Staff = st with { InstrumentName = defaultName } };
+                if (ensemble && st.PresetName is { } preset)
+                    items[ii] = sss with { Staff = st with { InstrumentName = preset } };
+                else if (plainStaffCount >= 2 && st.VoiceName.Length > 0)
+                {
+                    string defaultName = char.ToUpperInvariant(st.VoiceName[0]) + st.VoiceName[1..];
+                    items[ii] = sss with { Staff = st with { InstrumentName = defaultName } };
+                }
+            }
+            else if (ensemble && items[ii] is GrandStaffRenderSpec group)
+                items[ii] = new GrandStaffRenderSpec(WithPresetNames(group.GrandStaff));
+        }
+    }
+
+    /// <summary>How many instruments a score's items engrave: a staff (plain, condensed or
+    /// combined) is one, a grandStaff is one, a staffGroup or choirStaff is its members; a
+    /// tab, an ossia and a row are none.</summary>
+    private static int InstrumentCount(IEnumerable<RenderItemSpec> items) => items.Sum(it => it switch
+    {
+        SingleStaffSpec or CondensedStaffSpec or CombinedStaffSpec => 1,
+        GrandStaffRenderSpec { GrandStaff: { Type: StaffGroupType.GrandStaff } } => 1,
+        GrandStaffRenderSpec g => InstrumentCount(g.GrandStaff.Members),
+        _ => 0,
+    });
+
+    /// <summary>A group's members with their presets' printed names, where a member has no
+    /// label of its own; inside a grandStaff a name an earlier member already shows is not
+    /// repeated, so the brace carries it once.</summary>
+    private static GrandStaffSpec WithPresetNames(GrandStaffSpec group)
+    {
+        var shown = new HashSet<string>(StringComparer.Ordinal);
+        var members = group.Members.ToBuilder();
+        for (int i = 0; i < members.Count; i++)
+        {
+            switch (members[i])
+            {
+                case SingleStaffSpec { Staff: { InstrumentName: { } own } }:
+                    shown.Add(own);
+                    break;
+                case SingleStaffSpec { Staff: { InstrumentName: null, NameSuppressed: false, PresetName: { } preset } st } sss:
+                    if (group.Type == StaffGroupType.GrandStaff && !shown.Add(preset))
+                        break;
+                    members[i] = sss with { Staff = st with { InstrumentName = preset } };
+                    break;
+                case GrandStaffRenderSpec inner:
+                    members[i] = new GrandStaffRenderSpec(WithPresetNames(inner.GrandStaff));
+                    break;
             }
         }
+        return group with { Members = members.ToImmutable() };
     }
 
     /// <summary>

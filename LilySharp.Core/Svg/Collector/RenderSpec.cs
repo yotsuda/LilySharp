@@ -62,7 +62,13 @@ public sealed record StaffSpec(
     // its NAME (`lyrics alt`), or singing the part itself, has no entry and keeps the
     // name rule (LyricsCollector.CollectNoteBound). Written with WithLyrics by the two
     // folds (RenderSpecParser.WithFoldedVerse), read through VerseVoiceMap.
-    ImmutableArray<(string Track, string Voice)> VerseVoices = default
+    ImmutableArray<(string Track, string Voice)> VerseVoices = default,
+    // The name the part's `instrument` preset prints ("Alto Saxophone",
+    // InstrumentDefaults.PrintedName), whether or not this staff shows it: the label only
+    // where the ensemble rule allows (RenderSpecParser.ApplyEnsembleDefault), and MusicXML's
+    // unprinted <part-name> where the page shows none. Null for a part with no preset, or
+    // whose `instrument` wrote its own label.
+    string? PresetName = null
 )
 {
     /// <summary>The voice each folded verse sings by its <c>sings</c> (see

@@ -125,6 +125,19 @@ public sealed class InstrumentPresetTests
     }
 
     [Fact]
+    public void EveryPreset_HasAPrintedName_AndANonPresetHasNone()
+    {
+        // InstrumentDefaults.PrintedName is the label a preset prints (2026-10-11): a preset
+        // added to KnownInstruments without one would print nothing where it used to print
+        // its word.
+        foreach (var preset in InstrumentDefaults.KnownInstruments)
+            Assert.False(string.IsNullOrEmpty(InstrumentDefaults.PrintedName(preset)), preset);
+        Assert.Null(InstrumentDefaults.PrintedName("kazoo"));
+        Assert.Equal("Clarinet", InstrumentDefaults.PrintedName("clarinet"));         // the B♭ one, as the bare word is
+        Assert.Equal("Clarinet in A", InstrumentDefaults.PrintedName("clarinet-a"));
+    }
+
+    [Fact]
     public void TranspositionMarkers_AreExactlyWhatTheSwitchReads()
     {
         // ★ The published list and the switch beside it are two spellings of one vocabulary, and

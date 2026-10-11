@@ -149,6 +149,77 @@ score test { staff vln staff vla }
         Assert.Contains("Viola", svg);
     }
 
+    // ===== A preset's printed name, and where it shows (owner's decision 2026-10-11) =====
+    // Until then the preset WORD was the label — "alto-sax", "piano-right", lesson 1's
+    // lower-case "cello" — on every staff, a score of one staff included.
+
+    private static List<string?> Labels(string book)
+    {
+        var spec = RenderSpecParser.FindFirst(SyntaxTree.Parse(book));
+        Assert.NotNull(spec);
+        var labels = new List<string?>();
+        void Walk(IEnumerable<RenderItemSpec> items)
+        {
+            foreach (var item in items)
+                switch (item)
+                {
+                    case SingleStaffSpec s: labels.Add(s.Staff.InstrumentName); break;
+                    case GrandStaffRenderSpec g: Walk(g.GrandStaff.Members); break;
+                }
+        }
+        Walk(spec!.Items);
+        return labels;
+    }
+
+    [Fact]
+    public void APreset_PrintsItsName_BesideAnotherInstrument_AndNotAlone()
+    {
+        const string parts = "part sx { instrument alto-sax section S { c'1 } }\npart vc { instrument cello section S { c1 } }\nform { ~S }\n";
+        Assert.Equal(new[] { "Alto Saxophone", "Cello" }, Labels(parts + "score { staff sx staff vc }"));
+        // One instrument: no label — as a part name gives none on a score of one staff.
+        Assert.Equal(new string?[] { null }, Labels(parts + "score { staff vc }"));
+        // …and a tab of the same part is not a second instrument.
+        Assert.Equal(new string?[] { null }, Labels("part b { instrument bass section S { c1 } }\nform { ~S }\nscore { staff b  tab b }"));
+    }
+
+    [Fact]
+    public void TheWritersOwnLabel_PrintsAlways_AndWinsOverThePresetsName()
+    {
+        // `instrument trumpet "Tpt."` and `part X "…"` are the writer's words: printed as
+        // written, even alone.
+        Assert.Equal(new[] { "Tpt." }, Labels("part t { instrument trumpet \"Tpt.\" section S { c'1 } }\nform { ~S }\nscore { staff t }"));
+        Assert.Equal(new[] { "Lead" }, Labels("part t \"Lead\" { instrument trumpet section S { c'1 } }\nform { ~S }\nscore { staff t }"));
+        // `staff ~t` still says no.
+        Assert.Equal(new string?[] { null, "Cello" }, Labels(
+            "part t { instrument trumpet section S { c'1 } }\npart vc { instrument cello section S { c1 } }\nform { ~S }\nscore { staff ~t staff vc }"));
+    }
+
+    [Fact]
+    public void AGrandStaff_IsOneInstrument_ThatShowsItsSharedNameOnce()
+    {
+        const string piano = "part rh { instrument piano-right section S { c'1 } }\npart lh { instrument piano-left section S { c1 } }\n";
+        // A solo piano: one instrument, no label (it used to print "piano-right" and "piano-left").
+        Assert.Equal(new string?[] { null, null }, Labels(piano + "form { ~S }\nscore { grandStaff { staff rh staff lh } }"));
+        // Beside a singer: "Piano" once, on the upper staff — the page centres a group's one
+        // name across its brace (GrandStaff_InstrumentName_CenteredInSvg).
+        Assert.Equal(new string?[] { "Soprano", "Piano", null }, Labels(piano
+            + "part v { instrument soprano section S { c'1 } }\nform { ~S }\nscore { staff v  grandStaff { staff rh staff lh } }"));
+        // A choirStaff is its members: each voice is an instrument and shows its name.
+        Assert.Equal(new[] { "Soprano", "Alto" }, Labels(
+            "part s { instrument soprano section S { c'1 } }\npart a { instrument alto section S { c'1 } }\nform { ~S }\nscore { choirStaff { staff s staff a } }"));
+    }
+
+    [Fact]
+    public void ASoloPresetsPart_IsStillNamedInMusicXml_UnprintedAsThePageIs()
+    {
+        // A reader's part list still calls a solo cello "Cello" — with print-object="no",
+        // since the page prints no label beside it.
+        string xml = new LilySharp.Core.MusicXml.MusicXmlExporter()
+            .Export(SyntaxTree.Parse("part vc { instrument cello section S { c1 } }\nform { ~S }\nscore { staff vc }"))
+            .ToXml().ToString();
+        Assert.Contains("<part-name print-object=\"no\">Cello</part-name>", xml);
+    }
+
     [Fact]
     public void Staff_InstrumentName_PropagatedFromStaffSpec()
     {
