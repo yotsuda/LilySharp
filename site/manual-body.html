@@ -560,7 +560,10 @@ section Main { melody { motif g2 g | } }</pre>
   <p class="eyebrow">13</p>
   <h2>Sections</h2>
   <p>A section binds music to each part by name, and is the unit the <code>form</code>
-  orders. Section boundaries reset the relative frame.</p>
+  orders. Section boundaries reset the relative frame.</p>  <p><b>Same section name, same time.</b> Everything written under one name — each part's
+  music, a chord row, a lyrics track — plays at once, over the same bars; a section with
+  another name comes when the form plays it. So a section's parts should be the same length:
+  when they are not, the editor warns and names the length each one writes.</p>
 <pre>section Verse {
   partial 8                       // optional pickup, for every part at once
   melody { a'8 | c4 d8 e8. f16 e8 |  }

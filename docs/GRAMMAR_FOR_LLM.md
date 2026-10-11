@@ -54,6 +54,9 @@ part leftHand  { clef bass octave 3 }  // the register is `octave N` or an instr
 phrase motif { c4 d e f | }     // optional reusable music, referenced by bare name
 
 section Main {                  // a section binds music to each part by name
+                                // SAME NAME = SAME TIME: every part, chord row and lyrics
+                                // track under one name plays over the same bars — write them
+                                // the same length (LYS2007 names each length when they differ)
   partial 8                     // optional pickup: shortens THIS section's opening bar
                                 // for every part at once — the ONLY place for it (the top
                                 // level, a part header and a part's first bar reject it).

@@ -98,7 +98,6 @@ index の「03 Speed」は見出しだけ。
 - P3 **章の無い基本**: 調号と臨時記号・拍子・テンポ（`#glance` の註と parts の表だけ）・音部記号（表の 1 行）・
   弱起 `partial`（`#sections` の pre の註だけ。曲中の `| partial 2. r2. |` と `time none` は皆無）・強弱とヘアピン
   （`#anno` に混在）・`using "other.lys"`（LilyPond 対照表だけ）。
-- P4 **「同じ section 名＝同じ時間」がどこにも明言されていない**（TUTORIAL には 1 節ある・LYS2007 も）。
 - P5 **ドラム／打楽器がサイトにも GRAMMAR_FOR_LLM にも SYNTAX_REFERENCE にも無い**（予約語表の `percussion drummap`
   とドラム名だけ）＝Lesson 10 が指す先が無い。
 - P7 レッスン（`lesson-…`）の案内が無い（作ったら `start` 頁と editor 頁から指す）。

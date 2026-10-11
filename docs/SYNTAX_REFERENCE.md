@@ -1350,6 +1350,11 @@ section Main {
   leftHand { c2 c | }
 }
 ```
+**Same section name = same time.** Everything written under one name — each part's music,
+a chord row, a lyrics track, in either grouping — plays at once over the same bars; a
+section with another name comes when the form plays it. So a section's parts should be the
+same length: when they are not, the compiler warns (LYS2007), naming the length each one
+writes.
 
 ### Section-level key, meter, tempo, and pickup
 
