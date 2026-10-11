@@ -1443,6 +1443,7 @@ public sealed partial class MeasureCollector
                         CreateBareDurationItem(bare, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, isCue),
                         bare, isCue);
                     builder.AddItem(WithBowSources(bareItem, m));
+                    AddRepeatedDrumMark(bare, measureIndex, itemIndex);
                     bool bareStemUp = bareItem switch
                     {
                         NoteItem n => n.StemUp,
@@ -2170,15 +2171,33 @@ public sealed partial class MeasureCollector
     private void CollectDrumNoteMarks(DrumNoteSyntax drumNote, NoteItem drumItem,
         int measureIndex, int itemIndex, Fraction anchorTiming)
     {
-        if (DrumOverrides.Resolve(_drumOverrides, drumNote.DrumName) is { Mark: not null } dInfoMark
+        AddDrumMark(drumNote.DrumName, measureIndex, itemIndex, drumNote.SourceStart);
+        CollectDynamics(drumNote, measureIndex, itemIndex);
+        CollectArticulations(drumNote, measureIndex, itemIndex, drumItem.StemUp, null, anchorTiming);
+    }
+
+    /// <summary>The drum's automatic style-table mark ("+", "○", …) on the item at
+    /// <paramref name="itemIndex"/>, when its drum has one.</summary>
+    private void AddDrumMark(string drumName, int measureIndex, int itemIndex, int sourceStart)
+    {
+        if (DrumOverrides.Resolve(_drumOverrides, drumName) is { Mark: not null } dInfoMark
             && DrumNameRegistry.MarkArticulation(dInfoMark.Mark) is not ArticulationType.None)
             _articulations.Add(new ArticulationItem(
                 DrumNameRegistry.MarkArticulation(dInfoMark.Mark),
                 measureIndex, itemIndex, true,
-                drumNote.SourceStart, _cursor.StaffIndex)
+                sourceStart, _cursor.StaffIndex)
             { VoiceIndex = _cursor.VoiceIndex });
-        CollectDynamics(drumNote, measureIndex, itemIndex);
-        CollectArticulations(drumNote, measureIndex, itemIndex, drumItem.StemUp, null, anchorTiming);
+    }
+
+    /// <summary>
+    /// A bare duration repeating a drum (<c>hho8 8</c>) repeats its automatic mark too: the
+    /// copy is the same drum — it plays the open hi-hat — so it wears the open hi-hat's "○".
+    /// Until 2026-10-11 the copy sounded open and printed bare (owner's report).
+    /// </summary>
+    private void AddRepeatedDrumMark(BareDurationSyntax bare, int measureIndex, int itemIndex)
+    {
+        if (Music.BareDurations.OriginalOf(bare) is DrumNoteSyntax drum)
+            AddDrumMark(drum.DrumName, measureIndex, itemIndex, bare.SourceStart);
     }
 
     private Fraction EmitScaledItem(SyntaxNode item, MeasureBuilder builder, Fraction scale,
@@ -2368,6 +2387,7 @@ public sealed partial class MeasureCollector
                         Fraction written = n.Duration;
                         n = DecorateSoundingItem(n with { TimeScale = scale }, bare, isCue);
                         builder.AddItemWithoutDuration(WithBowSources(n, m));
+                        AddRepeatedDrumMark(bare, annMeasureIndex, annItemIndex);
                         CollectDynamics(bare, annMeasureIndex, annItemIndex);
                         CollectArticulations(bare, annMeasureIndex, annItemIndex, n.StemUp, anchorTiming: annAnchor);
                         CollectChordNames(bare, annMeasureIndex, annItemIndex, annAnchor);

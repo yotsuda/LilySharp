@@ -201,6 +201,9 @@ workflow attaches that section to the GitHub Release verbatim.
   and took no time on the page, with no warning (the MIDI played it); a triplet fill now prints with
   its bracket, and an open or closed hi-hat in it keeps its mark.
 
+- **A bare duration repeating a drum keeps its mark.** In `hho8 8` the second note played the open
+  hi-hat but printed without its "○"; it now wears it (and a repeated `hhc` its "+"), in a tuplet too.
+
 - **`@mp|` (any dynamic level) offers `.up` / `.down` on Ctrl+Space**, as `@staccato|` did:
   the placement completion knew the articulations only. A hairpin (`@cresc`) still offers none,
   since it is always below the staff.

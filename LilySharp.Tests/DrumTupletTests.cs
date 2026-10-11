@@ -57,6 +57,19 @@ public class DrumTupletTests
         Assert.Contains(score.Articulations, a => a.ItemIndex == 6);
     }
 
+    [Theory]
+    [InlineData("hh8 8 8 8 8 8 hho 8 |", 2)]                  // the bare 8 repeats the open hi-hat
+    [InlineData("tuplet 3/2 { hho8 8 8 } r4 r2 |", 3)]         // …inside a tuplet too
+    [InlineData("hhc4 4 hh 4 |", 2)]                           // the closed one's "+", and none after hh
+    public void ABareDurationRepeatingADrum_WearsItsMark(string music, int marks)
+    {
+        // Owner's report 2026-10-11: `hho8 8` played the open hi-hat twice and printed the
+        // "○" once. The copy is the same drum, so it wears the same mark.
+        var tree = SyntaxTree.Parse(Book(music));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), null));
+        Assert.Equal(marks, score.Articulations.Length);
+    }
+
     [Fact]
     public void ADrumTriplet_PlaysThreeEvenNotes_OnTheDrumChannel()
     {
