@@ -152,30 +152,54 @@ public class LessonTests
         Assert.True(positions.Max() - positions.Min() <= 7, string.Join(" ", positions));
     }
 
-    [Theory]
-    [InlineData(3, "low", -1)]      // lesson 4: `score low transpose bes,` — a step down
-    [InlineData(9, "trumpet", 1)]   // lesson 10: a B♭ trumpet's part under `pitch concert` — a step up
-    public void ATransposingPrintout_PrintsTheTuneAStepAway(int lesson, string score, int steps)
+    /// <summary>The first staff of notes of a lesson's score <paramref name="score"/> (null:
+    /// the default) — the melody, or lesson 10's lead under its chord row — as each head's
+    /// staff position and its printed MIDI key.</summary>
+    private static (int Position, int Midi)[] FirstStaffOf(string text, string? score)
     {
-        // The two lessons that teach transposing (owner's request 2026-10-11, "レッスンに
-        // transpose がない"): the printout the comments send the writer to exists, and it prints
-        // the same notes the default score prints, the step away its comment says — every head
-        string text = LilySharpLanguageServer.Lessons[lesson].Text;
-        Assert.Contains($"pick `{score}`", text);
-        Assert.Contains($"score {score} ", text);
         var tree = SyntaxTree.Parse(text);
-        var specs = LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree);
-        int[] PositionsOf(string? name)
-        {
-            var collected = SvgGenerator.CollectScore(tree, LilySharp.Core.Svg.Collector.RenderSpecParser.Choose(specs, name));
-            // The first staff of notes: the melody, and in lesson 10 the lead under the chord row.
-            var (_, staff, _) = collected.EnumerateStaves().First(s => !s.Staff.IsTextRow);
-            return staff.Voices[0].Measures.SelectMany(m => m.Items).OfType<LilySharp.Core.Svg.Model.NoteItem>().Select(n => n.StaffPosition).ToArray();
-        }
-        var main = PositionsOf(null);
-        var moved = PositionsOf(score);
+        var spec = LilySharp.Core.Svg.Collector.RenderSpecParser.Choose(
+            LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree), score);
+        var (_, staff, _) = SvgGenerator.CollectScore(tree, spec).EnumerateStaves().First(s => !s.Staff.IsTextRow);
+        return [.. staff.Voices[0].Measures.SelectMany(m => m.Items)
+            .OfType<LilySharp.Core.Svg.Model.NoteItem>().Select(n => (n.StaffPosition, n.Midi))];
+    }
+
+    [Fact]
+    public void Lesson4_ItsLowPrintout_IsTheTuneAStepDown()
+    {
+        // Owner's request 2026-10-11 ("レッスンに transpose がない"): the printout the comment
+        // sends the writer to exists, and prints every head one staff position down (F major
+        // for G) — `score low transpose bes,`.
+        string text = LilySharpLanguageServer.Lessons[3].Text;
+        Assert.Contains("pick `low`", text);
+        var main = FirstStaffOf(text, null);
         Assert.NotEmpty(main);
-        Assert.Equal(main.Select(p => p + steps), moved);
+        Assert.Equal(main.Select(n => n.Position - 1), FirstStaffOf(text, "low").Select(n => n.Position));
+    }
+
+    [Fact]
+    public void Lesson10_TheTrumpetReadsItsKey_AndTheBandSoundsInC()
+    {
+        // Owner's report 2026-10-11: the full score printed the trumpet in C (`score pitch
+        // concert`, the conductor's sounding score), which a trumpeter cannot play from; under
+        // `pitch written` it sounded in B♭ against a band in C. Under the file's `pitch concert`
+        // the letters are what sounds: the trumpet's staff prints a step up (D major) in the
+        // full score and in its own printout, and sounds the letters — the same keys as the same
+        // letters on an instrument that does not transpose.
+        string text = LilySharpLanguageServer.Lessons[9].Text;
+        Assert.Contains("pick `trumpet`", text);
+        string untransposed = text.Replace("part lead { instrument trumpet }", "part lead { clef treble }");
+        Assert.NotEqual(text, untransposed);
+        var asWritten = FirstStaffOf(untransposed, null);
+        Assert.NotEmpty(asWritten);
+        foreach (var score in new[] { null, "trumpet" })
+            Assert.Equal(asWritten.Select(n => n.Position + 1), FirstStaffOf(text, score).Select(n => n.Position));
+        // What it SOUNDS is the .mid's (NoteItem.Midi is the printed head's): the lead is the
+        // first part, so the first track with notes.
+        static int[] Sounding(string book) => [.. new LilySharp.Core.Midi.MidiExporter().Export(SyntaxTree.Parse(book))
+            .Tracks.First(t => t.Notes.Count > 0).Notes.Select(n => n.Pitch)];
+        Assert.Equal(Sounding(untransposed), Sounding(text));
     }
 
     [Theory]
