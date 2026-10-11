@@ -48,8 +48,8 @@ public class ValueContextCompletionTests
     [InlineData("pitch ", "AfterPitch")]
     [InlineData("pitch wr", "AfterPitch")]
     [InlineData("part sax { pitch ", "AfterPitch")]
-    [InlineData("score full pitch ", "AfterPitch")]
-    [InlineData("score out transpose d pitch ", "AfterPitch")]
+    [InlineData("score full pitch ", "AfterPagePitch")]
+    [InlineData("score out transpose d pitch ", "AfterPagePitch")]
     // …and NOT in a music body, where `pitch` is no directive; nor inside a string.
     [InlineData("section A { m { pitch ", "MusicBlock")]
     [InlineData("title \"perfect pitch ", "AfterTitleText")]

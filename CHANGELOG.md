@@ -17,7 +17,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Language
 
-- **One staff can print in its player's key.** `staff tp as pitch written` prints that staff's
+- **One staff can print in its player's key.** `staff tp as pitch transposed` prints that staff's
   transposing part for its player (`as pitch concert`: as it sounds), over the score's own
   `pitch` — a sounding full score with the trumpet in its key. It chains with `lines` and
   `removeEmpty` after the one `as`; an `ossia` refuses it, since it prints as its staff.
@@ -36,8 +36,13 @@ workflow attaches that section to the GitHub Release verbatim.
   transposing instrument's player reads (`written`) — and a score that writes none inherits it.
   Under a top-level `pitch concert` the plain `score { … }` used to print each transposing part
   for its player; it is now a sounding score, and a player's part says so:
-  `score trumpet pitch written { staff tp }`. A file without `pitch` prints as before, and
-  playback does not change. On a score, `pitch written` now means something: the players' key.
+  `score trumpet pitch transposed { staff tp }`. A file without `pitch` prints as before, and
+  playback does not change.
+- **A page's `pitch` says `transposed`, not `written`.** One keyword, and the word says which
+  question it answers: where notes are typed (the top level, a part header) `pitch written` or
+  `concert`; where a page prints (a score header, a staff's `as pitch`) `pitch transposed` or
+  `concert`. `written` on a score or a staff, and `transposed` where notes are typed, are
+  refused with the fix.
 
 - **A block's name is optional, and the unnamed block is the file's default.** `form { … }` is
   the file's default form (a second unnamed one is LYS1016), `score { … }` its default score,

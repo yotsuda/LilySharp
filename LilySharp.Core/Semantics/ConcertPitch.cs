@@ -39,7 +39,7 @@ namespace LilySharp.Core.Semantics;
 /// as <c>transpose</c> and <c>octave</c> do), so a saxophone copied from a transposed
 /// part-sheet and a piano copied from a concert-pitch score can share one book.
 /// The second spelling is on a score header — <c>score full pitch concert { … }</c>,
-/// <c>score trumpet pitch written { … }</c> — and says how THAT score prints: at sounding
+/// <c>score trumpet pitch transposed { … }</c> — and says how THAT score prints: at sounding
 /// pitch (the conductor's score) or the way each player reads. A score that writes none
 /// prints each part in the convention its letters are written in — the part's own, else
 /// the file's — so nothing moves (owner's decision 2026-10-11: one word, one meaning at
@@ -79,19 +79,49 @@ public static class ConcertPitch
     /// <summary>The property name, in both positions.</summary>
     public const string Property = "pitch";
 
-    /// <summary>The value that says the letters are sounding pitches.</summary>
+    /// <summary>The value that says the notes are sounding pitches — typed (top level, part)
+    /// or printed (score, staff).</summary>
     public const string Concert = "concert";
 
-    /// <summary>The value that says the letters are what the player reads — the default.</summary>
+    /// <summary>The value that says the TYPED notes are what the player reads — the default,
+    /// at the top level and in a part header.</summary>
     public const string Written = "written";
 
-    /// <summary>The two words <c>pitch</c> takes, beside the parser that refuses a third.</summary>
-    public static readonly IReadOnlyList<string> Modes = [Written, Concert];
+    /// <summary>The value that says a score or a staff PRINTS a transposing part in its
+    /// player's key.</summary>
+    public const string Transposed = "transposed";
+
+    /// <summary>The two words <c>pitch</c> takes where it says how the notes are TYPED — the
+    /// top level and a part header — the default first.</summary>
+    /// <remarks>
+    /// Owner's decision 2026-10-11 (option D): one keyword, and the word after it says which
+    /// question it answers — <c>written</c> is how notes are written, <c>transposed</c> how a
+    /// page is printed — so a misplaced one is refused with the fix
+    /// (<see cref="MisplacedMessage"/>). Until then both places took <c>written</c>, read as
+    /// "as the file writes it" as often as "as the player reads it".
+    /// </remarks>
+    public static readonly IReadOnlyList<string> NotesModes = [Written, Concert];
+
+    /// <summary>The two words <c>pitch</c> takes where it says how a page PRINTS — a score
+    /// header and a staff's <c>as pitch …</c>.</summary>
+    public static readonly IReadOnlyList<string> PageModes = [Transposed, Concert];
+
+    /// <summary>The message for a mode written where the other kind belongs — <c>written</c>
+    /// on a score or a staff, <c>transposed</c> at the top level or in a part header — naming
+    /// the word that place takes; null for any other word.</summary>
+    public static string? MisplacedMessage(string word, bool page) => (word, page) switch
+    {
+        (Written, true) => "'written' says how notes are typed; a score or a staff prints them "
+                         + "'transposed' (in the player's key) or 'concert' (as they sound).",
+        (Transposed, false) => "'transposed' says how a score or a staff prints; notes are typed "
+                             + "'written' (as the player reads them) or 'concert' (as they sound).",
+        _ => null,
+    };
 
     /// <summary>
-    /// Reads a <c>pitch</c> property: true for <c>concert</c>, false for <c>written</c>, null
-    /// when the node is not a pitch property or carries a value outside the two (the parser
-    /// has reported that one already).
+    /// Reads a TYPED-notes <c>pitch</c> property (top level, part header): true for
+    /// <c>concert</c>, false for <c>written</c>, null when the node is not a pitch property or
+    /// carries another word (the parser or the header's validator has reported that one).
     /// </summary>
     public static bool? ReadProperty(PropertyAssignmentSyntax prop)
     {
@@ -104,6 +134,15 @@ public static class ConcertPitch
             _ => null,
         };
     }
+
+    /// <summary>Reads a PAGE mode word (score header, staff): true for <c>concert</c>, false
+    /// for <c>transposed</c>, null for anything else.</summary>
+    private static bool? ReadPageWord(string? word) => word switch
+    {
+        Concert => true,
+        Transposed => false,
+        _ => null,
+    };
 
     /// <summary>
     /// Whether the file's music is written at concert pitch: the first top-level
@@ -143,16 +182,11 @@ public static class ConcertPitch
     }
 
     /// <summary>
-    /// How a <c>staff</c> item prints its part — <c>staff tp as pitch written</c> (false),
+    /// How a <c>staff</c> item prints its part — <c>staff tp as pitch transposed</c> (false),
     /// <c>as pitch concert</c> (true) — or null when it writes no <c>pitch</c> and the score's
     /// own answers (<see cref="ScoreMode"/>).
     /// </summary>
-    public static bool? StaffMode(StaffRenderSyntax staff) => StaffTargets.Of(staff).Pitch?.Text switch
-    {
-        Concert => true,
-        Written => false,
-        _ => null,
-    };
+    public static bool? StaffMode(StaffRenderSyntax staff) => ReadPageWord(StaffTargets.Of(staff).Pitch?.Text);
 
     /// <summary>
     /// How <paramref name="render"/> prints the part <paramref name="partName"/>: the first of
@@ -163,7 +197,7 @@ public static class ConcertPitch
     /// <remarks>
     /// Owner's decision 2026-10-11: how a page reads belongs to the score — the whole score
     /// (<c>score full pitch concert</c>) or one of its staves (a sounding full score with the
-    /// trumpet in its player's key: <c>staff tp as pitch written</c>).
+    /// trumpet in its player's key: <c>staff tp as pitch transposed</c>).
     /// </remarks>
     public static bool? PageMode(RenderDeclarationSyntax? render, string partName)
         => StaffModes(render)?.TryGetValue(partName, out bool own) == true ? own : ScoreMode(render);
@@ -189,7 +223,7 @@ public static class ConcertPitch
     /// for the players (false), or writes no <c>pitch</c> and prints each part in the
     /// convention its letters are written in (null).</summary>
     public static bool? ScoreMode(RenderDeclarationSyntax? render)
-        => render?.PitchMode is { } p ? ReadProperty(p) : null;
+        => render?.PitchMode is { } p ? ReadPageWord(p.ValueText) : null;
 
     /// <summary>
     /// The part header's own <c>pitch</c>, or null when it writes none: a part that copies a

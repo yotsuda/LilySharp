@@ -211,25 +211,18 @@ verbatim `@"C:\music"` / `@"say ""hi"""` (backslash as written, `""` = one quote
   `c,` = C3), independent per note - octave mistakes never cascade. RECOMMENDED
   when generating scores. `part X { octave 2 }` re-anchors the base (bass parts).
   Sections restore the file-level mode.
-- `pitch concert` / `pitch written` say which pitch the notes are in — what SOUNDS, or what
-  the player of a transposing `instrument` (clarinet, trumpet, horn, alto-sax, …) READS —
-  and mean that at every level: the top level for the file's letters (default `written`:
-  playback moves, a B♭ trumpet's `c` sounds B♭), a part header for that part's letters
-  (own wins, as with `transpose`), a score for its PAGE. ⚠️ A score that writes none
-  INHERITS: each part prints in its letters' convention, so nothing moves. Under a
-  top-level `pitch concert` the plain `score { … }` is the sounding (conductor's) score,
-  and a player's part is `score trumpet pitch written { staff tp }` — an alto-sax `c'`
-  prints there as `a'` in A major when the piece is in C, and still plays C. Octave-only
-  instruments (bass, piccolo) keep their notation either way; without a transposing
-  `instrument` the word changes nothing.
-
-```
-c d e f g a b c    // C4 D4 E4 F4 G4 A4 B4 C5
-c' c,              // C6 C5
-```
-
-## Durations
-
+- `pitch` says which pitch the notes are in — what SOUNDS, or what the player of a
+  transposing `instrument` (clarinet, trumpet, horn, alto-sax, …) READS — and its word says
+  which notes: where notes are TYPED (the top level for the file, a part header for that part —
+  own wins, as with `transpose`) it takes `written` (as the player reads them, the default;
+  playback moves, a B♭ trumpet's `c` sounds B♭) or `concert`; where a page PRINTS (a score
+  header, a staff's `as pitch`) it takes `transposed` (the player's key) or `concert`. Each
+  place refuses the other's word with the fix. ⚠️ A score that writes none INHERITS: each part
+  prints in its typed convention, so nothing moves. Under a top-level `pitch concert` the plain
+  `score { … }` is the sounding (conductor's) score, and a player's part is
+  `score trumpet pitch transposed { staff tp }` — an alto-sax `c'` prints there as `a'` in
+  A major when the piece is in C, and still plays C. Octave-only instruments (bass, piccolo)
+  keep their notation either way; without a transposing `instrument` the word changes nothing.
 - Numbers: `1`=whole, `2`=half, `4`=quarter, `8`, `16`, `32`, `64`, `128`.
 - Dots after the number: `4.`=dotted quarter, `4..`=double-dotted.
 - Omitting the duration reuses the previous note's duration.
@@ -821,7 +814,7 @@ quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LY
   takes an octave marker (`8va` / `8vb` / `15ma` / `15mb`) and nothing else. For a B♭
   or E♭ instrument you normally write NO `transpose` at all: name the `instrument` and
   either write what the player reads (the default) or write what sounds under a top-level
-  `pitch concert` and print the player's part with `score NAME pitch written` (see Pitches).
+  `pitch concert` and print the player's part with `score NAME pitch transposed` (see Pitches).
 - **A section's label is hidden at the FORM reference only**: `form { A |: B [1. ~B1]
   :| [2. ~B2] }` plays B1 and B2 without a rehearsal letter. ⚠️ **Never write
   `section ~A { … }`** — a declaration takes no tilde (LYS0033). Write the `~` on every
@@ -850,8 +843,8 @@ quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LY
   too (`\RemoveAllEmptyStaves`); any playing voice keeps the staff visible. It chains with
   the line count after one `as` (`staff m as lines 1 removeEmpty all`) and is NOT a part
   property: the full score hides the empty systems, the part sheet of the same part never does.
-- `staff NAME as pitch written|concert` prints THAT staff's transposing part for its player or
-  as it sounds, over the score's `pitch` (see Pitches): `score { staff tp as pitch written
+- `staff NAME as pitch transposed|concert` prints THAT staff's transposing part for its player or
+  as it sounds, over the score's `pitch` (see Pitches): `score { staff tp as pitch transposed
   staff bs }` under a top-level `pitch concert` is a sounding score with the trumpet in its
   player's key. Not on an `ossia` (it prints as its staff).
 - Identifiers (parts, phrases, sections) may use any Unicode letters: `phrase 動機 { ... }`.

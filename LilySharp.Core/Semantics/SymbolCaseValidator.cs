@@ -46,9 +46,10 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
         "octave", "pedal", "pitch", "midiInstrument",
     };
 
-    /// <summary>The two words <c>pitch</c> takes, read from their one home.</summary>
+    /// <summary>The two words a part header's <c>pitch</c> takes (how its notes are typed),
+    /// read from their one home.</summary>
     private static readonly HashSet<string> PitchModes =
-        new(ConcertPitch.Modes, StringComparer.Ordinal);
+        new(ConcertPitch.NotesModes, StringComparer.Ordinal);
 
     private static readonly HashSet<string> PedalValues = new(StringComparer.Ordinal)
     {
@@ -233,7 +234,10 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
             case "pitch":
                 // The same two words the top-level directive takes (the parser refuses a
                 // third there; here the header's generic value path leaves it to this rule).
-                CheckValue(valueTokens, PitchModes, "pitch", "modes");
+                if (ConcertPitch.MisplacedMessage(Joined(valueTokens), page: false) is { } misplaced)
+                    Error(valueTokens[0], misplaced);
+                else
+                    CheckValue(valueTokens, PitchModes, "pitch", "modes");
                 break;
             case "midiInstrument":
                 // One quoted name from LilyPond's General MIDI table, exactly as LilyPond

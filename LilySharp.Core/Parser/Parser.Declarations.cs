@@ -386,30 +386,35 @@ internal sealed partial class Parser
     // node kind. The value is checked HERE, as `octave absolute|relative` is: a word
     // outside the two is refused at the word, and the node still carries it so the
     // round trip holds.
-    private PropertyAssignmentGreen ParsePitchDirective()
+    /// <param name="page">A score header's <c>pitch</c> (how the score PRINTS: transposed |
+    /// concert) rather than the top level's (how the notes are TYPED: written | concert).</param>
+    private PropertyAssignmentGreen ParsePitchDirective(bool page = false)
     {
         var keyword = Advance(); // pitch
+        var modes = page ? Semantics.ConcertPitch.PageModes : Semantics.ConcertPitch.NotesModes;
         SyntaxToken mode;
         if (Check(SyntaxKind.Identifier)
-            && Semantics.ConcertPitch.Modes.Contains(Current.Text))
+            && modes.Contains(Current.Text))
         {
             mode = Advance();
         }
         else if (Check(SyntaxKind.Identifier))
         {
             // A wrong word: report it where it stands and keep it, so the offsets after
-            // it are unmoved (the recovery rule every header property follows).
+            // it are unmoved (the recovery rule every header property follows). The other
+            // place's word gets the fix (ConcertPitch.MisplacedMessage).
             var span = new TextSpan(_textPosition, Current.FullWidth);
             _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
-                $"'{Current.Text}' is not a pitch mode. 'pitch' takes "
-                + $"{string.Join(" or ", Semantics.ConcertPitch.Modes)} — e.g. 'pitch concert'.");
+                Semantics.ConcertPitch.MisplacedMessage(Current.Text, page)
+                ?? $"'{Current.Text}' is not a pitch mode. 'pitch' takes "
+                   + $"{string.Join(" or ", modes)} here — e.g. 'pitch concert'.");
             mode = Advance();
         }
         else
         {
             var span = new TextSpan(_textPosition, Current.FullWidth);
             _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
-                $"Expected pitch mode ({string.Join(" or ", Semantics.ConcertPitch.Modes)})");
+                $"Expected pitch mode ({string.Join(" or ", modes)})");
             // Zero-width missing token, as ParseOctaveDirective recovers: an empty mode
             // reads as neither word, i.e. the written-pitch default.
             mode = new SyntaxToken(SyntaxKind.Identifier, "", null, null);

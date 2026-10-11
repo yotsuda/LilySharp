@@ -117,6 +117,22 @@ public class StaffLinesCompletionTests
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterStaffLinesValue,
             Ctx("score { staff melody as removeEmpty all lines "));
 
+    /// <summary>`pitch |` offers the words its place takes (2026-10-11, option D): how notes are
+    /// typed at the top level and in a part header, how a page prints on a score header and a
+    /// staff — each list read from the compiler.</summary>
+    [Theory]
+    [InlineData("pitch ", false)]
+    [InlineData("part sax { instrument alto-sax pitch ", false)]
+    [InlineData("score full pitch ", true)]
+    [InlineData("score { staff melody as pitch ", true)]
+    public void APitchOffersItsPlacesWords(string text, bool page)
+    {
+        Assert.Equal(page ? LilySharpLanguageServer.CompletionContext.AfterPagePitch
+                          : LilySharpLanguageServer.CompletionContext.AfterPitch, Ctx(text));
+        Assert.Equal(LanguageVocabulary.PagePitchModes,
+            LilySharpLanguageServer.GetPagePitchModeCompletions().Items.Select(i => i.Label));
+    }
+
     [Fact]
     public void ARemoveEmptyNoAsGoverns_IsNotAValueSlot()
         // A part that happens to be named removeEmpty, placed as a MIDI-only item.

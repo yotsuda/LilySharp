@@ -478,7 +478,7 @@
                     }
                 },
                 {
-                    "comment": "`pitch concert|written` — this part's convention for a transposing instrument (LilySharp.Core ConcertPitch.Modes). The same pair the top-level directive takes.",
+                    "comment": "`pitch concert|written` — this part's convention for a transposing instrument (LilySharp.Core ConcertPitch.NotesModes). The same pair the top-level directive takes; a page takes transposed|concert.",
                     "match": "\\b(pitch)\\s+(written|concert)\\b",
                     "captures": {
                         "1": { "name": "keyword.other.lilysharp" },

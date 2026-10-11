@@ -527,19 +527,21 @@ part v1 { clef treble instrument "1st Violin" } // label only — no preset beha
   octave on the <code>treble_8</code> clef instead of here, which is why their parts print
   the little 8 under the clef and this table does not list them.</p>
   <p><b>Or write what sounds, and print the players' parts transposed.</b> A top-level
-  <code>pitch concert</code> says the letters are concert pitch: they play as written, and
-  the file's scores print them so — a sounding score. On a score the same words say how
-  <i>that page</i> reads: <code>score sax pitch written { staff sx }</code> prints the
-  saxophone the way its player reads it, pitches and key signature together — an
-  <code>alto-sax</code> part of a piece in C major prints its <code>c'</code> as
-  <code>a'</code>, in A major, and still plays C — and <code>score full pitch concert { … }</code>
-  prints a file written the first way at concert pitch, the conductor's score. One staff can
-  say it for itself — <code>score { staff sx as pitch written  staff pno }</code> is a
-  sounding score with the saxophone in its player's key. A score that says neither prints
-  each part as its letters are written. The default,
-  <code>pitch written</code>, is the first convention above. Octave-only instruments
-  (<code>bass</code>, <code>piccolo</code>, a <code>transposition 8vb</code>) keep their
-  notation under both, as a printed concert score keeps them.</p>
+  <code>pitch concert</code> says the notes are typed as they sound: they play as written,
+  and the file's scores print them so — a sounding score. On a score, <code>pitch</code> says
+  how <i>that page</i> prints, in a page's own two words: <code>score sax pitch transposed
+  { staff sx }</code> prints the saxophone the way its player reads it, pitches and key
+  signature together — an <code>alto-sax</code> part of a piece in C major prints its
+  <code>c'</code> as <code>a'</code>, in A major, and still plays C — and <code>score full
+  pitch concert { … }</code> prints a file written the first way at concert pitch, the
+  conductor's score. One staff can say it for itself: <code>score { staff sx as pitch
+  transposed  staff pno }</code> is a sounding score with the saxophone in its player's key.
+  A score that says neither prints each part as its notes are typed. Where notes are typed
+  the words are <code>written</code> (the default, the first convention above) and
+  <code>concert</code>; where a page prints, <code>transposed</code> and <code>concert</code> —
+  each place refuses the other's word. Octave-only instruments (<code>bass</code>,
+  <code>piccolo</code>, a <code>transposition 8vb</code>) keep their notation under both, as
+  a printed concert score keeps them.</p>
   <p class="note">An explicit <code>transpose</code> is a different thing: it moves the
   written notes by hand. Its argument is a PITCH, not a number of steps — it renames
   <code>c</code> to that pitch and shifts every note by the same interval, so
@@ -910,7 +912,7 @@ form practice { Verse }        // a second form = a second output</pre>
     <tr><td><code>staff NAME "Label"</code></td><td>…with a printed name</td></tr>
     <tr><td><code>staff NAME as lines N</code></td><td>…with N staff lines (1–5). <code>as lines 1</code> is a rhythm staff</td></tr>
     <tr><td><code>staff NAME as removeEmpty true</code></td><td>…hidden in systems where it only rests (<code>all</code>: in the first system too)</td></tr>
-    <tr><td><code>staff NAME as pitch written</code></td><td>…a transposing part in its player's key (<code>concert</code>: as it sounds), whatever the score's <code>pitch</code> — see <a href="#transposing">Transposing instruments</a></td></tr>
+    <tr><td><code>staff NAME as pitch transposed</code></td><td>…a transposing part in its player's key (<code>concert</code>: as it sounds), whatever the score's <code>pitch</code> — see <a href="#transposing">Transposing instruments</a></td></tr>
     <tr><td><code>tab NAME</code></td><td>tablature — see below</td></tr>
     <tr><td><code>chords NAME</code></td><td>a chord row</td></tr>
     <tr><td><code>lyrics NAME</code></td><td>a lyric row</td></tr>

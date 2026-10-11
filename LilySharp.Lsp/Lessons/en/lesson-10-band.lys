@@ -3,7 +3,7 @@
 //
 // More parts, same section. `tab` prints a part as tablature, `clef percussion`
 // makes a drum part, and each `score` is one printout of the same music.
-// `pitch concert`: write what sounds. `pitch written` on a score prints it for the player.
+// `pitch concert`: write what sounds. `pitch transposed` on a score prints it for the player.
 
 title "Saturday"
 composer "Lily# lessons"
@@ -38,7 +38,7 @@ score {                          // the full band, as it sounds
   staff kit
 }
 
-score trumpet pitch written {    // the trumpeter's part, a step up
+score trumpet pitch transposed { // the trumpeter's part, a step up
   staff lead
 }
 

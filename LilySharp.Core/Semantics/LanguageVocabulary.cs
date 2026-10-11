@@ -91,9 +91,13 @@ public static class LanguageVocabulary
     /// selector <c>staff m as removeEmpty V</c> since 2026-09-08, no longer a part property.</summary>
     public static IReadOnlyCollection<string> RemoveEmptyValues => SymbolCaseValidator.RemoveEmptyValueVocabulary;
 
-    /// <summary>The two words <c>pitch</c> takes — in a part header, at the top level and on a
-    /// score header alike (<see cref="ConcertPitch"/>).</summary>
-    public static IReadOnlyCollection<string> PitchModes => ConcertPitch.Modes;
+    /// <summary>The two words <c>pitch</c> takes where it says how notes are TYPED — the top
+    /// level and a part header (<see cref="ConcertPitch.NotesModes"/>).</summary>
+    public static IReadOnlyCollection<string> PitchModes => ConcertPitch.NotesModes;
+
+    /// <summary>The two words <c>pitch</c> takes where it says how a page PRINTS — a score
+    /// header and a staff's <c>as pitch</c> (<see cref="ConcertPitch.PageModes"/>).</summary>
+    public static IReadOnlyCollection<string> PagePitchModes => ConcertPitch.PageModes;
 
     /// <summary>The two words the <c>marks</c> key of a <c>layout { }</c> block takes
     /// (<see cref="MarkArrangement"/>), the default first.</summary>

@@ -37,7 +37,7 @@
 | 7 | `lesson-07-lyrics` | `lyrics … sings`・ハイフン・`\|`・2 言語の 2 行 | Frère Jacques（英・仏） |
 | 8 | `lesson-08-chords` | `chords` 行・リードシート・（TRY で Ctrl+Shift+↑ のダイアグラム・`chordDiagrams all`） | Evening Walk（オリジナル） |
 | 9 | `lesson-09-piano` | 大譜表・`octave 3`・`phrase`・（TRY で和音・3 連符・2 声） | Minuet in G（両手・左手は簡略） |
-| 10 | `lesson-10-band` | **移調楽器**（`pitch concert`＋`instrument trumpet`＝書く文字は実音・全体の楽譜は実音、`score trumpet pitch written` が奏者の調＝ニ長調。鳴る音はハ長調のまま。2026-10-11 ユーザー決定＝score は `pitch` を受け継ぐ）・`tab`/`tuning bass`・`clef percussion` とドラム・score を 3 つ（`midiInstrument` は TRY の補完だけ） | Saturday（オリジナル） |
+| 10 | `lesson-10-band` | **移調楽器**（`pitch concert`＋`instrument trumpet`＝書く文字は実音・全体の楽譜は実音、`score trumpet pitch transposed` が奏者の調＝ニ長調。鳴る音はハ長調のまま。2026-10-11 ユーザー決定＝score は `pitch` を受け継ぐ）・`tab`/`tuning bass`・`clef percussion` とドラム・score を 3 つ（`midiInstrument` は TRY の補完だけ） | Saturday（オリジナル） |
 
 曲は**音を確実に書けるもの**に絞った（初案の Oh! Susanna・Scarborough Fair・Brahms・Clementine・Saints は、
 旋律や歌詞の割り付けを確かめられないので差し替えた）。Lesson 4 と 9 は同じ曲＝「4 で書いた曲に 9 で左手を足す」。

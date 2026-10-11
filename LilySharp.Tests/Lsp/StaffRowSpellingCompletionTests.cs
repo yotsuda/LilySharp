@@ -166,7 +166,7 @@ public class StaffRowSpellingCompletionTests
     public void AStaffOffersPitch_ItsTwoValuesFollow_AndAnOssiaGetsNone()
     {
         Assert.Contains("pitch", LabelsAt(OnePart, "score { staff m as ▮ }"));
-        Assert.Equal(new[] { "written", "concert" }, LabelsAt(OnePart, "score { staff m as pitch ▮ }"));
+        Assert.Equal(new[] { "transposed", "concert" }, LabelsAt(OnePart, "score { staff m as pitch ▮ }"));
         Assert.Contains("pitch", LabelsAt(OnePart, "score { staff m as lines 1 ▮ }"));
         Assert.DoesNotContain("as pitch", LabelsAt(OnePart, "score { ossia m ▮ }"));
         Assert.DoesNotContain("pitch", LabelsAt(OnePart, "score { ossia m as ▮ }"));

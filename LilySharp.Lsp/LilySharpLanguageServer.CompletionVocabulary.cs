@@ -205,7 +205,7 @@ public sealed partial class LilySharpLanguageServer
                           + "directive and a part header refuses them", false),
             ["transpose"] = ("Transpose target pitch, e.g. `transpose d`, `transpose bes,`", false),
             ["transposition"] = ($"Sounding-octave marker ({string.Join("/", LanguageVocabulary.TranspositionMarkers)})", false),
-            ["pitch"] = ($"This part's pitch convention for a transposing instrument ({string.Join("/", LanguageVocabulary.PitchModes)}) — overrides the top-level directive", true),
+            ["pitch"] = ($"How this part's notes are typed for a transposing instrument ({string.Join("/", LanguageVocabulary.PitchModes)}) — overrides the top-level directive", true),
             ["pedal"] = ($"Piano pedal style ({string.Join("/", LanguageVocabulary.PedalStyles)})", false),
             ["midiInstrument"] = ("General MIDI sound for the .mid and the preview — one of LilyPond's 128 names in quotes, "
                                   + "e.g. `midiInstrument \"flute\"`; the default is the preset's", true),
@@ -315,8 +315,28 @@ public sealed partial class LilySharpLanguageServer
     // first). Membership decides nothing — the words come from the compiler.
     private static readonly System.Collections.Generic.Dictionary<string, string> PitchModeDetails = new()
     {
-        ["written"] = "The note letters are what the player reads; a transposing part prints them as-is and only playback moves (default)",
-        ["concert"] = "The note letters are what sounds; a transposing part is printed transposed for its player",
+        ["written"] = "The notes are typed as the player of a transposing instrument reads them; playback moves to what sounds (default)",
+        ["concert"] = "The notes are typed as they sound",
+    };
+
+    // Prose per PAGE mode (a score header, a staff's `as pitch`), in ConcertPitch.PageModes' order.
+    private static readonly System.Collections.Generic.Dictionary<string, string> PagePitchModeDetails = new()
+    {
+        ["transposed"] = "Print each transposing part in its player's key - a part sheet",
+        ["concert"] = "Print each transposing part as it sounds - a conductor's score",
+    };
+
+    /// <summary>The two words after a PAGE's <c>pitch</c> — a score header, a staff's
+    /// <c>as pitch</c> — read from the compiler (<c>LanguageVocabulary.PagePitchModes</c>).</summary>
+    internal static CompletionList GetPagePitchModeCompletions() => new()
+    {
+        Items = LanguageVocabulary.PagePitchModes.Select((name, i) => new CompletionItem
+        {
+            Label = name,
+            Kind = CompletionItemKind.EnumMember,
+            Detail = PagePitchModeDetails.TryGetValue(name, out var d) ? d : null,
+            SortText = i.ToString(),
+        }).ToArray()
     };
 
     /// <summary>
@@ -2066,7 +2086,7 @@ public sealed partial class LilySharpLanguageServer
             Kind = CompletionItemKind.Keyword,
             InsertTextFormat = InsertTextFormat.Snippet,
             InsertText = prefix + "pitch $0",
-            Detail = "How this staff prints a transposing part: written (the player's key) | concert (as it sounds)",
+            Detail = "How this staff prints a transposing part: transposed (the player's key) | concert (as it sounds)",
             SortText = "2",
             Command = new Command
             {
@@ -4952,7 +4972,7 @@ public sealed partial class LilySharpLanguageServer
                 Kind = CompletionItemKind.Keyword,
                 InsertTextFormat = InsertTextFormat.Snippet,
                 InsertText = "pitch $0",
-                Detail = $"How THIS score prints transposing parts ({string.Join(" | ", LanguageVocabulary.PitchModes)}) — a conductor's concert score",
+                Detail = $"How THIS score prints transposing parts ({string.Join(" | ", LanguageVocabulary.PagePitchModes)}) — a part sheet or a conductor's score",
                 SortText = "3",
                 Command = new Command { Title = "Suggest pitch mode", CommandIdentifier = "editor.action.triggerSuggest" },
             },

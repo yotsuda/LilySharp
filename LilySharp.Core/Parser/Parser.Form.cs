@@ -627,11 +627,11 @@ internal sealed partial class Parser
         }
 
         // Optional per-score options, in either order: `transpose <pitch>` (stored as a
-        // transpose property, the shape the part header uses) and `pitch concert|written`
+        // transpose property, the shape the part header uses) and `pitch transposed|concert`
         // (how this score prints a transposing part — Semantics.ConcertPitch).
         var options = new List<GreenNode?>();
         while (Check(SyntaxKind.TransposeKeyword) || Check(SyntaxKind.PitchKeyword))
-            options.Add(Check(SyntaxKind.TransposeKeyword) ? ParsePartProperty() : ParsePitchDirective());
+            options.Add(Check(SyntaxKind.TransposeKeyword) ? ParsePartProperty() : ParsePitchDirective(page: true));
 
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
@@ -926,7 +926,7 @@ internal sealed partial class Parser
                 any = true;
                 continue;
             }
-            // `pitch written|concert`: how THIS staff prints its part — for the player or as
+            // `pitch transposed|concert`: how THIS staff prints its part — for the player or as
             // it sounds — over the score's own `pitch` (owner's decision 2026-10-11:
             // Semantics.ConcertPitch.PageMode).
             if (string.Equals(Current.Text, Semantics.ConcertPitch.Property, System.StringComparison.Ordinal))
@@ -940,15 +940,16 @@ internal sealed partial class Parser
                         pitchSpan,
                         DiagnosticCodes.UnknownSymbolCase,
                         "An ossia prints its part the way the part's staff does - write 'as pitch …' on that staff.");
-                var modes = Semantics.ConcertPitch.Modes;
+                var modes = Semantics.ConcertPitch.PageModes;
                 if (!modes.Contains(Current.Text, System.StringComparer.Ordinal))
                     _diagnostics.Error(
                         new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length),
                         DiagnosticCodes.UnknownSymbolCase,
-                        $"'{Current.Text}' is not a pitch mode. A staff's 'pitch' takes " +
-                        $"{string.Join(" or ", modes)}.");
+                        Semantics.ConcertPitch.MisplacedMessage(Current.Text, page: true)
+                        ?? $"'{Current.Text}' is not a pitch mode. A staff's 'pitch' takes " +
+                           $"{string.Join(" or ", modes)}.");
                 if (Check(SyntaxKind.Identifier))
-                    tokens.Add(Advance()); // written | concert
+                    tokens.Add(Advance()); // transposed | concert
                 any = true;
                 continue;
             }
@@ -960,7 +961,7 @@ internal sealed partial class Parser
                 DiagnosticCodes.UnknownSymbolCase,
                 $"'{Current.Text}' is not a staff selector. 'as' takes 'lines N' " +
                 $"({Semantics.LanguageVocabulary.MinStaffLines}..{Semantics.LanguageVocabulary.MaxStaffLines}), " +
-                "'removeEmpty true|all|false' and/or 'pitch written|concert'.");
+                "'removeEmpty true|all|false' and/or 'pitch transposed|concert'.");
     }
 
     /// <summary>

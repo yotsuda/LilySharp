@@ -237,14 +237,15 @@ PartialDecl    = 'partial' , DurationToken ;
                     warning suggesting this. *)
 OctaveDecl     = 'octave' , ( 'absolute' | 'relative' ) ;
 PitchDecl      = 'pitch' , PitchMode ;
-PitchMode      = 'written' | 'concert' ;
+PitchMode      = 'written' | 'concert' ;     (* the top level and a part header: how notes are TYPED *)
+PagePitchMode  = 'transposed' | 'concert' ;  (* a score header and a staff: how a page PRINTS *)
                  (* Which convention the note letters follow for a TRANSPOSING instrument.
                     'written' (the default): the letters are what the player reads, and
                     playback moves (InstrumentDefaults' sounding shift — a B♭ clarinet's c
                     sounds b♭). 'concert': the letters are what SOUNDS, and play as written.
                     The same word at every level means the same thing (owner's decision
                     2026-10-11): on a part header, that part's letters; on a score
-                    (ScoreDecl, §7), that score's PAGE — 'pitch written' prints every
+                    (ScoreDecl, §7), that score's PAGE, in its own words (PagePitchMode) — 'pitch transposed' prints every
                     chromatically transposing part the way its player reads it, pitches AND
                     key signature together (a concert-pitch book's E♭ alto saxophone c'
                     prints as a', in A major when the piece is in C), 'pitch concert' prints
@@ -254,7 +255,10 @@ PitchMode      = 'written' | 'concert' ;
                     written'. (Until 2026-10-11 a score that wrote none printed for the
                     players.) Octave-only transposers (bass, piccolo, a 'transposition 8vb')
                     keep their notation under both, as a concert score keeps them. A third
-                    word is refused at the word. Semantics.ConcertPitch holds the rule. *)
+                    word is refused at the word, and each place refuses the other place's word
+                    with the fix: 'written' is how notes are typed, 'transposed' how a page
+                    prints (owner's decision 2026-10-11, option D — until then both places took
+                    'written'). Semantics.ConcertPitch holds the rule. *)
 TransposeDecl  = 'transpose' , PitchToken ;
                  (* the file default: every part that sets no 'transpose' of its own *)
 
@@ -1124,7 +1128,7 @@ TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
    letters start from ('octave N' / the preset — never the clef, above). 'transpose' moves the written pitches; 'transposition' states
    that the written pitches sound elsewhere. A chromatic transposer's shift comes from
    its 'instrument' preset (clarinet −2, alto-sax −9, …); a concert-pitch part on a
-   page for its player ('score … pitch written', §2.3) is PRINTED by that same shift, negated. *)
+   page for its player ('score … pitch transposed', §2.3) is PRINTED by that same shift, negated. *)
 
 (* pedal: how a sustain span is drawn - the 'Ped.' text, a bracket, or 'mixed'
    (text at the start, bracket for the hold). *)
@@ -1535,9 +1539,9 @@ NavMark        = 'segno' | 'coda' | 'fine' | 'to' 'coda'
 
 ScoreDecl      = 'score' , [ Identifier ] , { ScoreOption } , '{' , { ScoreItem } , '}' ;
 ScoreOption    = 'transpose' , PitchToken       (* this score's transpose, composed on each part's own *)
-               | 'pitch' , PitchMode ;          (* how THIS score's page reads: 'concert' shows every
+               | 'pitch' , PagePitchMode ;      (* how THIS score's page reads: 'concert' shows every
                                                    chromatically transposing part at what it sounds (the
-                                                   conductor's score), 'written' as its player reads it
+                                                   conductor's score), 'transposed' as its player reads it
                                                    (a part sheet). None written: each part in its
                                                    letters' own convention — nothing moves (§2.3). *)
                  (* The Identifier is THE SCORE'S OWN NAME (2026-10-09; until then it named
@@ -1749,10 +1753,10 @@ StaffRender    = 'staff' , [ [ ClefName ] , PartRef ] , [ DisplayName ] ,
                     dropped part bass, in silence. *)
 StaffSelector  = 'lines' , Integer
                | 'removeEmpty' , RemoveEmptyValue
-               | 'pitch' , PitchMode ;
+               | 'pitch' , PagePitchMode ;
                  (* 'pitch' (2026-10-11, owner's decision): how THIS staff prints its part,
                     over the score's own 'pitch' (§2.3) — a sounding full score with one
-                    transposing staff in its player's key: 'staff tp as pitch written'. The
+                    transposing staff in its player's key: 'staff tp as pitch transposed'. The
                     first staff of a part that writes one decides for that part in that score
                     (Semantics.ConcertPitch.PageMode). An 'ossia' refuses it: it prints its
                     part as the part's staff does. *)

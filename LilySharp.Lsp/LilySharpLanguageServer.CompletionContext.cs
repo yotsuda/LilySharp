@@ -722,7 +722,12 @@ public sealed partial class LilySharpLanguageServer
         /// <c>midiInstrument |</c> in a part header — the 128 General MIDI names.</summary>
         AfterMidiInstrument,
         AfterRemoveEmpty,
+        /// <summary><c>pitch |</c> where it says how notes are TYPED (top level, part header):
+        /// written | concert.</summary>
         AfterPitch,
+        /// <summary><c>pitch |</c> where it says how a page PRINTS (score header, a staff's
+        /// <c>as pitch</c>): transposed | concert.</summary>
+        AfterPagePitch,
         /// <summary><c>marks |</c> — its two arrangements (stacked / beside), at the top
         /// level and inside a score body.</summary>
         AfterMarks,
@@ -1185,7 +1190,11 @@ public sealed partial class LilySharpLanguageServer
         if (prevWord == "pitch"
             && !IsInsideStringLiteral(text, offset)
             && (InnermostOpenBlock(scan.Stack) == null || IsInsidePartBlock(scan.Stack)))
-            return CompletionContext.AfterPitch;
+            // A score header's `pitch` says how that score PRINTS (2026-10-11, option D): its
+            // own two words. The header stands on the `score` line, before the brace.
+            return InnermostOpenBlock(scan.Stack) == null && OnAScoreHeaderLine(text, offset)
+                ? CompletionContext.AfterPagePitch
+                : CompletionContext.AfterPitch;
 
         // (`marks` left the top level and the score body on 2026-09-11 — it is a key of
         // `layout { }` now, served inside the layout branch above.)
@@ -1263,7 +1272,7 @@ public sealed partial class LilySharpLanguageServer
                     if (row.OpenSelector == "removeEmpty")
                         return CompletionContext.AfterRemoveEmpty;
                     if (row.OpenSelector == "pitch")
-                        return CompletionContext.AfterPitch;
+                        return CompletionContext.AfterPagePitch;
                     // Inside the `as` clause: the FIRST selector must follow the `as` (the
                     // row cannot end there — ConsumeStaffSelectors reports a bare `as`),
                     // while after a complete one the chain may continue OR the row may end.
@@ -1732,6 +1741,14 @@ public sealed partial class LilySharpLanguageServer
             return [];
         // An ossia takes no `pitch`: offering it would propose an error.
         return row.IsOssia && !row.Selectors.Contains("pitch") ? [.. row.Selectors, "pitch"] : row.Selectors;
+    }
+
+    /// <summary>Whether the caret's line opens a score header (<c>score NAME … pitch |</c>):
+    /// the line, up to the caret, starts with the <c>score</c> keyword.</summary>
+    private static bool OnAScoreHeaderLine(string text, int offset)
+    {
+        int start = text.LastIndexOf('\n', Math.Max(0, Math.Min(offset, text.Length) - 1)) + 1;
+        return System.Text.RegularExpressions.Regex.IsMatch(text[start..Math.Min(offset, text.Length)], @"^\s*score\b");
     }
 
     /// <summary>Whether the caret is in an <c>ossia</c> row — whose selector lists leave out
