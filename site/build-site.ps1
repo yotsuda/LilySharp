@@ -77,8 +77,14 @@ foreach ($page in $pages) {
     foreach ($m in [regex]::Matches($html, 'Lily# (\d+\.\d+\.\d+)')) {
         if ($m.Groups[1].Value -ne $ver) { $problems.Add("${page}:$(LineOf $m.Index): says Lily# $($m.Groups[1].Value), the repository is $ver") }
     }
+    # The language's own todo is not a writer's leftover: the @todo mark, its section's
+    # anchor (#todo), the CLI's --todo-as-error / --no-todo and the quick fix "Resolve this
+    # TODO" are blanked out of
+    # the leftover scan (same length, so line numbers hold).
+    $prose = [regex]::Replace($html, '(?i)[@#-]todo\b|id="todo"|Resolve this TODO',
+        { param($m) ' ' * $m.Value.Length })
     foreach ($pattern in '\{\{[A-Z_]+\}\}', '<!--EXAMPLE:', '(?i)local preview', '(?i)\bTODO\b') {
-        foreach ($m in [regex]::Matches($html, $pattern)) { $problems.Add("${page}:$(LineOf $m.Index): leftover '$($m.Value)'") }
+        foreach ($m in [regex]::Matches($prose, $pattern)) { $problems.Add("${page}:$(LineOf $m.Index): leftover '$($m.Value)'") }
     }
     # A <pre> that is a whole document (it has a form and a score) is compiled as shown.
     # `<pre data-fragment>` opts out: a listing that is not a .lys file as it stands (a
