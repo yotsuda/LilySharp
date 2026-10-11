@@ -3636,9 +3636,14 @@ public sealed partial class LilySharpLanguageServer
         if (text != null)
             items.AddRange(SectionScaffoldItems(text, offset, "Section", nest: "", includeNewSection: false));
 
-        items.AddRange(LessonItems(text, offset, position, locale));
+        var lessons = LessonItems(text, offset, position, locale, out bool lessonsHeldBack);
+        items.AddRange(lessons);
 
-        return new CompletionList { Items = items.ToArray() };
+        // On an empty word only lesson 1 is offered (LessonItems), so the list is INCOMPLETE:
+        // without the flag the client filters this list as the word grows and never asks
+        // again, and `lesson` typed after Ctrl+Space found lesson 1 alone (owner report
+        // 2026-10-11, opening lesson 2 from lesson 1's NEXT line).
+        return new CompletionList { Items = items.ToArray(), IsIncomplete = lessonsHeldBack };
     }
 
     /// <summary>One lesson of the learning set: its label (the file name, the same in every
@@ -3716,11 +3721,17 @@ public sealed partial class LilySharpLanguageServer
     /// — so the decision has to be made on the first letter: <c>l</c> already brings all ten,
     /// and <c>ly</c> (lyrics) or <c>la</c> (layout) leave them behind in the client's own
     /// filtering, since no lesson's filter text holds those letters in that order.
+    /// ⚠️ An empty word holds lessons back, so the list it answers is marked incomplete
+    /// (<paramref name="heldBack"/>): the client otherwise keeps filtering that short list as
+    /// `lesson` is typed and never asks for the other nine.
     /// Each item is a <see cref="ScoreTemplateItem"/>: it replaces the whole file, asking
     /// first, exactly as the templates do.
     /// </remarks>
+    /// <param name="heldBack">True when some lessons were left out for the word as it stands
+    /// (an empty word) — the list must then say it is incomplete, so the client asks again
+    /// once the word starts.</param>
     private static System.Collections.Generic.IEnumerable<CompletionItem> LessonItems(
-        string? text, int offset, Position? position, string? locale)
+        string? text, int offset, Position? position, string? locale, out bool heldBack)
     {
         string typed = "";
         if (text != null)
@@ -3736,6 +3747,7 @@ public sealed partial class LilySharpLanguageServer
             word.StartsWith(typed, StringComparison.Ordinal) || typed.StartsWith(word, StringComparison.Ordinal);
 
         var lessons = LessonsFor(locale);
+        heldBack = typed.Length == 0 && lessons.Length > 1;
         var offered = typed.Length == 0 ? lessons.Take(1)
             : Toward("lesson", typed) || Toward("learn", typed) ? lessons
             : [];

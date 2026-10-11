@@ -183,6 +183,21 @@ public class LessonTests
     }
 
     [Theory]
+    [InlineData("", true)]
+    [InlineData("title \"x\"\n\n", true)]
+    [InlineData("l", false)]
+    [InlineData("lesson", false)]
+    [InlineData("part", false)]
+    public void AListThatHeldLessonsBack_SaysItIsIncomplete(string text, bool incomplete)
+    {
+        // Ctrl+Space on an empty line offers lesson 1 alone; typing `lesson` then filters THAT
+        // list in the client unless the list says it is incomplete — which is how lesson 1's
+        // NEXT line found lesson 1 and nothing else (owner report 2026-10-11).
+        var list = LilySharpLanguageServer.GetTopLevelCompletions(text, text.Length, PositionAtEnd(text));
+        Assert.Equal(incomplete, list.IsIncomplete);
+    }
+
+    [Theory]
     [InlineData("l")]
     [InlineData("les")]
     [InlineData("lesson")]
