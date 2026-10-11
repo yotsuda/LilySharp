@@ -41,9 +41,33 @@ public class ArticulationPlacementCompletionTests
         Assert.Equal("AfterArticulationPlacement", Ctx(text));
 
     [Theory]
+    [InlineData("c4@mp")]          // a dynamic level takes the qualifier too (@f.up)
+    [InlineData("c4@p")]
+    [InlineData("c4@f")]
+    [InlineData("c4@sfz")]
+    [InlineData("c4@mf.")]
+    [InlineData("c4@ff.u")]
+    public void AfterADynamicLevel_OffersPlacement(string text) =>
+        // Owner report 2026-10-11: `@mp|` offered no .up / .down while `@staccato|` did —
+        // the check knew the articulation registry only. The parser reads both alike.
+        Assert.Equal("AfterArticulationPlacement", Ctx(text));
+
+    [Fact]
+    public void ADynamicsPlacement_ListsUpFirst_AndSaysItIsADynamic()
+    {
+        // Below the staff is a dynamic's own side, so `.up` is the qualifier that moves it.
+        var items = LilySharpLanguageServer.GetArticulationPlacementCompletions("c4@mp", 5).Items
+            .OrderBy(i => i.SortText, System.StringComparer.Ordinal).ToList();
+        Assert.Equal(".up", items[0].Label);
+        Assert.Contains("dynamic", items[0].Detail);
+    }
+
+    [Theory]
     [InlineData("c4@ferm")]       // partial name → keep the '@' list
     [InlineData("c4@finger")]     // arg-taking, not a placement articulation
     [InlineData("c4@fermata ")]   // trailing space → the user moved on
+    [InlineData("c4@cresc")]      // a hairpin: always below, the parser refuses .up / .down
+    [InlineData("c4@decresc")]
     public void PartialOrArgOrSpaced_NotPlacement(string text) =>
         Assert.NotEqual("AfterArticulationPlacement", Ctx(text));
 

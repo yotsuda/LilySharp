@@ -4193,6 +4193,13 @@ public sealed partial class LilySharpLanguageServer
             End = position,
         };
 
+        // The bare name the qualifier follows (`mp` in `@mp|` / `@mp.u|`): a dynamic level has
+        // a default side of its own (below the staff), an articulation follows its stem.
+        int nameEnd = afterDot ? j - 1 : offset - 1, nameStart = nameEnd;
+        while (nameStart >= 0 && (char.IsLetterOrDigit(text[nameStart]) || text[nameStart] == '-')) nameStart--;
+        bool dynamic = valueAnnotation == null && nameStart >= 0 && text[nameStart] == '@'
+            && LanguageVocabulary.IsDynamicLevel(text[(nameStart + 1)..(nameEnd + 1)]);
+
         // The value annotations' own sides (Parser.Music: @text below by default, @diagram
         // and @todo above): the qualifier that moves the mark is listed first.
         (string Up, string Down, bool DownFirst) words = valueAnnotation switch
@@ -4200,6 +4207,7 @@ public sealed partial class LilySharpLanguageServer
             "todo" => ("The memo above the system (the default)", "Put the memo BELOW the system", true),
             "text" => ("Put the text ABOVE the note", "The text below the note (the default)", false),
             "diagram" => ("The fret diagram above the staff (the default)", "Put the fret diagram BELOW the staff", true),
+            _ when dynamic => ("Put the dynamic ABOVE the staff", "The dynamic below the staff (the default)", false),
             _ => ("Force this articulation ABOVE the note", "Force this articulation BELOW the note", false),
         };
 

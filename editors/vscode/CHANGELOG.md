@@ -77,6 +77,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Fixes
 
+- **`@mp|` (any dynamic level) offers `.up` / `.down` on Ctrl+Space**, as `@staccato|` did:
+  the placement completion knew the articulations only. A hairpin (`@cresc`) still offers none,
+  since it is always below the staff.
 - **A `@todo`'s warning underlines what it says, not the whole mark.** `@todo("check this")`
   underlines `check this` (a key when there is no memo, the word `todo` when there is
   neither): a note to yourself is not a mistake. "Resolve this TODO" (Ctrl+.) still answers

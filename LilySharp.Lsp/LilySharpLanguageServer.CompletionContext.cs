@@ -1971,6 +1971,15 @@ public sealed partial class LilySharpLanguageServer
     /// '@fermata|', '@fermata.|', '@fermata.d|'. Only the char immediately before
     /// the cursor is inspected — a trailing space means the user moved on.
     /// </summary>
+    /// <summary>Whether a bare annotation name takes the <c>.up</c> / <c>.down</c> qualifier:
+    /// an articulation, or a dynamic level — the parser reads <c>@mp.up</c> as it reads
+    /// <c>@fermata.up</c> (Parser.Music, IsDynamicName), refusing it only on the hairpin
+    /// triggers <c>cresc</c> / <c>decresc</c> / <c>dim</c>, which are no dynamic LEVEL.
+    /// The dynamics were missing until 2026-10-11 (owner report: <c>@mp|</c> offered no
+    /// placement while <c>@staccato|</c> did).</summary>
+    internal static bool TakesPlacement(string name)
+        => ArticulationRegistry.IsKnown(name) || LanguageVocabulary.IsDynamicLevel(name);
+
     private static bool IsArticulationPlacementContext(string text, int offset)
     {
         int i = offset - 1;
@@ -1985,7 +1994,7 @@ public sealed partial class LilySharpLanguageServer
             int k = nameEnd;
             while (k >= 0 && (char.IsLetterOrDigit(text[k]) || text[k] == '-')) k--;
             return k >= 0 && text[k] == '@' && nameEnd > k
-                && ArticulationRegistry.IsKnown(text.Substring(k + 1, nameEnd - k));
+                && TakesPlacement(text.Substring(k + 1, nameEnd - k));
         }
 
         // '@name|' — cursor right after a COMPLETE articulation name (no dot, no
@@ -1996,7 +2005,7 @@ public sealed partial class LilySharpLanguageServer
             int k = i;
             while (k >= 0 && (char.IsLetterOrDigit(text[k]) || text[k] == '-')) k--;
             return k >= 0 && text[k] == '@'
-                && ArticulationRegistry.IsKnown(text.Substring(k + 1, i - k));
+                && TakesPlacement(text.Substring(k + 1, i - k));
         }
         return false;
     }

@@ -252,6 +252,12 @@ public static class LanguageVocabulary
     public static bool AnnotationTakesPlacementAfterArgument(string name)
         => SyntaxFacts.AnnotationTakesPlacementAfterArgument(name);
 
+    /// <summary>Whether <c>@name</c> is a dynamic LEVEL (<c>p</c>, <c>mf</c>, <c>sfz</c>, <c>niente</c> …) —
+    /// <see cref="SyntaxFacts.IsDynamicText"/>, the test the parser makes before it reads a
+    /// <c>.up</c> / <c>.down</c> after the name. The hairpin triggers (<c>cresc</c>, <c>decresc</c>,
+    /// <c>dim</c>) are not levels. Published 2026-10-11 for the editor's placement completion.</summary>
+    public static bool IsDynamicLevel(string name) => SyntaxFacts.IsDynamicText(name);
+
     /// <summary>Whether <c>@name</c> is complete without an argument and also takes one, so a
     /// glued <c>(</c> followed by a space opens a slur rather than the argument —
     /// <see cref="SyntaxFacts.AnnotationArgumentIsOptional"/>.</summary>
