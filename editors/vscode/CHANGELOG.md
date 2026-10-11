@@ -43,7 +43,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   names, as the exported MIDI does, with drums on the drum channel and a quarter tone as a
   pitch bend. `lilysharp.playback.soundFont` names an `.sf2`, `.sf3` or `.dls` of your own
   (empty: the bundled General MIDI font); it takes effect in open previews. The oscillator
-  tones remain the fallback while no font is loaded.
+  tones remain the fallback while no font is loaded. **Lily#: Choose Sound Font…** (also a
+  link in the setting's description) picks it: the bundled font, the General MIDI bank your
+  OS ships for its own synth (Windows' `gm.dls`, macOS's `gs_instruments.dls`), or a file of
+  yours through a file dialog.
 - **A dense score no longer breaks up.** The old player built every note's oscillator the
   moment Play was pressed and summed the voices with no ceiling, so four voices already
   clipped and a long piece dropped out. The synth is now fed a quarter of a second ahead of

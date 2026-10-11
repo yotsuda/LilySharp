@@ -208,7 +208,7 @@
           "type": "string",
           "default": "",
           "scope": "machine-overridable",
-          "markdownDescription": "The sound font the preview plays with (the Play button, Alt+P / Alt+M and the auditions): a path to an `.sf2`, `.sf3` or `.dls` file on this machine. Empty: the General MIDI sound font bundled with the extension. Each part plays the instrument its `midiInstrument` or preset names, as the exported MIDI does. Takes effect in open previews. Without any sound font the preview falls back to simple oscillator tones."
+          "markdownDescription": "The sound font the preview plays with (the Play button, Alt+P / Alt+M and the auditions): a path to an `.sf2`, `.sf3` or `.dls` file on this machine — [choose a file…](command:lilysharp.chooseSoundFont) (also the **Lily#: Choose Sound Font…** command, which offers the font bundled with the extension, the one your OS ships, or a file of yours). Empty: the General MIDI sound font bundled with the extension. Each part plays the instrument its `midiInstrument` or preset names, as the exported MIDI does. Takes effect in open previews. Without any sound font the preview falls back to simple oscillator tones."
         },
         "lilysharp.typingAids.enabled": {
           "type": "boolean",
@@ -341,6 +341,11 @@
         "title": "Select AI Model…"
       },
       {
+        "command": "lilysharp.chooseSoundFont",
+        "category": "Lily#",
+        "title": "Choose Sound Font…"
+      },
+      {
         "command": "lilysharp.playNoteAtCursor",
         "category": "Lily#",
         "title": "Play Note at Cursor (hold)"
@@ -462,6 +467,9 @@
       "commandPalette": [
         {
           "command": "lilysharp.newScore"
+        },
+        {
+          "command": "lilysharp.chooseSoundFont"
         },
         {
           "command": "lilysharp.openPreview",

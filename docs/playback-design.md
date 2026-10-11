@@ -92,7 +92,11 @@ Now:
   `media/soundfont/` plays. A missing file is logged and the bundled one used. Changing the
   setting re-roots the open previews' webviews and swaps the font in place
   (`previewResourceRoots`, `synthUrls`, the `setSoundFont` message). No font at all: the
-  oscillator patches, and the output channel says so (`Preview synth none`).
+  oscillator patches, and the output channel says so (`Preview synth none`). The setting's
+  description links to **Lily#: Choose Sound Font…** (`chooseSoundFont`), a picker: the
+  bundled font, the General MIDI bank the OS ships for its own synth where present
+  (Windows' `gm.dls`, macOS's `gs_instruments.dls` — Roland GS, DLS, small and dated; read
+  in place, never copied), the current file, or a file dialog filtered to the three formats.
 - **Which one** — the owner's decision, pending (session 901 placed MuseScore_General for the
   owner to hear and committed no font):
   - *MuseScore_General.sf3* (MuseScore 3's default; S. Christian Collins' adaptation of

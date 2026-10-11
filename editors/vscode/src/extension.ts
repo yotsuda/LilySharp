@@ -506,6 +506,11 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Register preview commands
     context.subscriptions.push(
+        // `lilysharp.playback.soundFont` through a picker and a file dialog — the settings
+        // UI gives a string no browse button, so its description links here (owner's
+        // request 2026-10-11). The choice is written to the user settings; the open
+        // previews pick it up through onDidChangeConfiguration.
+        vscode.commands.registerCommand('lilysharp.chooseSoundFont', () => chooseSoundFont()),
         vscode.commands.registerCommand('lilysharp.openPreview', () => {
             outputChannel.appendLine('openPreview command triggered');
             openPreview(context, vscode.ViewColumn.Active);
@@ -2163,6 +2168,64 @@ function soundFontFile(extensionUri: vscode.Uri): { file: vscode.Uri; root: vsco
         if (files.length > 0) { return { file: vscode.Uri.joinPath(dir, files[0]), root: dir }; }
     } catch { /* no bundled font */ }
     return null;
+}
+
+/** The General MIDI banks an OS ships for its own synth, where present: Windows' Microsoft GS
+ *  Wavetable bank and macOS's DLSMusicDevice bank (both Roland GS, DLS; small and dated, but
+ *  there with no download). Offered by the picker; never copied or redistributed. */
+function osSoundFonts(): { label: string; path: string }[] {
+    const candidates = process.platform === 'win32'
+        ? [{ label: 'Windows: gm.dls (the Microsoft GS Wavetable bank, 3 MB)',
+             path: path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'drivers', 'gm.dls') }]
+        : process.platform === 'darwin'
+            ? [{ label: 'macOS: gs_instruments.dls (the DLSMusicDevice bank)',
+                 path: '/System/Library/Components/CoreAudio.component/Contents/Resources/gs_instruments.dls' }]
+            : [];
+    return candidates.filter(c => fs.existsSync(c.path));
+}
+
+/** The picker behind `Lily#: Choose Sound Font…` and the setting's link: the bundled font,
+ *  the OS's bank, a file of the user's (a dialog filtered to .sf2 / .sf3 / .dls), written to
+ *  the user settings as `lilysharp.playback.soundFont`. */
+async function chooseSoundFont(): Promise<void> {
+    const config = vscode.workspace.getConfiguration('lilysharp');
+    const current = config.get<string>('playback.soundFont', '').trim();
+    type Pick = vscode.QuickPickItem & { action: 'bundled' | 'browse' | 'path'; path?: string };
+    const items: Pick[] = [
+        { label: 'Bundled General MIDI sound font', description: current ? '' : '(current)',
+          detail: 'The font the extension ships (empties the setting)', action: 'bundled' },
+        ...osSoundFonts().map<Pick>(f => ({
+            label: f.label, description: f.path === current ? '(current)' : '', detail: f.path,
+            action: 'path', path: f.path })),
+        { label: 'Browse for a file…', detail: 'An .sf2, .sf3 or .dls file on this machine', action: 'browse' },
+    ];
+    if (current && !items.some(i => i.path === current)) {
+        items.splice(1, 0, { label: path.basename(current), description: '(current)', detail: current,
+                             action: 'path', path: current });
+    }
+    const picked = await vscode.window.showQuickPick(items, {
+        title: 'Lily#: the sound font the preview plays with',
+        placeHolder: 'Each part plays the General MIDI instrument its midiInstrument or preset names',
+    });
+    if (!picked) { return; }
+    let value: string | undefined;
+    if (picked.action === 'bundled') {
+        value = '';
+    } else if (picked.action === 'path') {
+        value = picked.path;
+    } else {
+        const chosen = await vscode.window.showOpenDialog({
+            title: 'Choose a sound font',
+            canSelectMany: false,
+            filters: { 'Sound fonts': ['sf2', 'sf3', 'dls'], 'All files': ['*'] },
+            defaultUri: current ? vscode.Uri.file(path.dirname(current)) : undefined,
+        });
+        if (!chosen || chosen.length === 0) { return; }
+        value = chosen[0].fsPath;
+    }
+    await config.update('playback.soundFont', value, vscode.ConfigurationTarget.Global);
+    vscode.window.setStatusBarMessage(
+        value ? `Lily#: the preview plays ${path.basename(value)}` : 'Lily#: the preview plays the bundled sound font', 5000);
 }
 
 /** The preview webview's resource roots: the music fonts, the text fonts, the synth
