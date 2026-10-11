@@ -12,9 +12,9 @@ part melody { clef treble }     // a player
 
 section A {                     // the music
   melody {
-    e4 e f g | g f e d | c c d e | e d d2 |
+    e4 e f g | g f e d | c c d e | e d d2@todo("make it d4 d") |
     e4 e f g | g f e d | c c d e | d c c2 |
-    d4 d e c | d e8 f e4 c | d4 e8 f e4 d | c d g,2 |   // g, = the low G
+    d4 d e c | d e8 f e4 c | d4 e8 f e4 d | c d g,2@todo("delete the comma") |   // g, = the low G
     e'4 e f g | g f e d | c c d e | d c c2 |.           // e' = back up
   }
 }
@@ -23,7 +23,7 @@ form { ~A }                     // the playing order
 
 score { staff melody }          // what is printed
 
-// TRY: delete the `,` from `g,2` and watch it jump · at the end of line 1,
-// change `e d d2` to `e d d d d` — rest the mouse on the squiggle.
+// TRY: the red circles in the preview are tasks. Do what each says, then
+// delete its `@todo(…)`. (Write `@todo("…")` yourself to leave a note.)
 //
 // NEXT — type `lesson` on a new line and pick `lesson-03-rhythm`.

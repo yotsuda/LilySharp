@@ -13,8 +13,8 @@ part melody { clef treble }
 section A {
   partial 4                     // a pickup: the first bar is one beat
   melody {
-    g'8. g16 | a4 g c | b2 g8. g16 | a4 g d' | c2 g8. g16 |
-    g'4 e c | b a f'8. f16 | e4 c d | c2. |.
+    g'8. g16 | a4@todo("type 8 here") g c | b2 g8. g16 | a4 g d' | c2 g8. g16 |
+    g'4 e c | b a f'8. f16 | e4 c d | c2.@todo("make it c2 r4") |.
   }
 }
 
@@ -22,7 +22,6 @@ form { ~A }
 
 score { staff melody }
 
-// TRY: end with `c2 r4` · then `c2.~ | c2. |.` · put the caret on a note and
-// type 8.
+// TRY: do what the red circles say, then delete each `@todo(…)`.
 //
 // NEXT — type `lesson` on a new line and pick `lesson-04-keys`.

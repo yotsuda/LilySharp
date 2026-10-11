@@ -25,7 +25,7 @@ section A {
   }
   lh {
     g'2 a4 | b2. | c2. | b2. | a2. | g2. | d'4 b g | d2. |
-    g2 a4 | b2. | c2. | b2. | a2. | g2. | d2. | g,2. |.
+    g2 a4 | b2. | c2. | b2. | a2. | g2. | d2. | g,2.@todo("make it <g, d' b'>2.") |.
   }
 }
 
@@ -38,7 +38,7 @@ score {
   }
 }
 
-// TRY: end the left hand with `<g, d' b'>2.` (a chord) ·
-// `tuplet 3/2 { g8 a b }` for a triplet · `voice { b2 c4 } { g2 a4 }` for two voices.
+// TRY: do what the red circle says (a chord) · `tuplet 3/2 { g8 a b }` is a
+// triplet · `voice { b2 c4 } { g2 a4 }` puts two voices on one staff.
 //
 // NEXT — type `lesson` on a new line and pick `lesson-10-band`.

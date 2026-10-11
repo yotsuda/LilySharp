@@ -20,6 +20,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Syntax;
 using LilySharp.Lsp;
 using LilySharp.Lsp.Protocol;
@@ -64,15 +65,32 @@ public class LessonTests
     [MemberData(nameof(AllLessons))]
     public void ALesson_CompilesWithNoErrorAndNoWarning_AndRenders(string language, string label)
     {
+        // The one message a lesson may raise is its own tasks: an `@todo("…")` on the note to
+        // change, which the preview rings in red with the memo beside it (LYS4026 says the
+        // same in the Problems list). Anything else is a lesson teaching a mistake.
         var lesson = LessonOf(language, label);
         var tree = SyntaxTree.Parse(lesson.Text);
-        var diagnostics = tree.Diagnostics.Concat(SemanticValidation.Run(tree)).ToList();
+        var diagnostics = tree.Diagnostics.Concat(SemanticValidation.Run(tree))
+            .Where(d => d.Code != DiagnosticCodes.TodoMark).ToList();
         Assert.True(diagnostics.Count == 0,
             $"{language}/{label}:\n" + string.Join("\n", diagnostics.Select(d => $"  {d.Code}: {d.Message}")));
 
         var outputs = SvgGenerator.GenerateAll(tree);
         Assert.NotEmpty(outputs);
         Assert.All(outputs, o => Assert.False(string.IsNullOrWhiteSpace(o.Svg)));
+        // …and the preview, which draws the memos, renders too (it did not, for a memo in
+        // 3/4 or 6/8, until 2026-10-11 — TodoCalloutTests).
+        Assert.False(string.IsNullOrWhiteSpace(SvgGenerator.Generate(tree, SvgRenderOptions.Preview())));
+    }
+
+    [Theory]
+    [MemberData(nameof(AllLessons))]
+    public void ALessonsTasks_AreShortMemosOnTheNotes(string language, string label)
+    {
+        // A task is read off the score, beside its red ring: a few words, or it is a
+        // paragraph in the margin nobody reads (owner: keep the text as short as possible).
+        foreach (Match m in Regex.Matches(LessonOf(language, label).Text, "@todo\\(\"([^\"]*)\"\\)"))
+            Assert.True(m.Groups[1].Value.Length <= 28, $"{language}/{label}: memo too long: {m.Groups[1].Value}");
     }
 
     [Theory]

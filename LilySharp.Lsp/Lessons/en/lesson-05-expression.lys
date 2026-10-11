@@ -15,11 +15,11 @@ part melody { clef treble }
 section A {
   melody {
     g'8.@p( a16 g8) e4. | g8.( a16 g8) e4. |
-    d'4@mp d8 b4. | c4 c8 g4. |
+    d'4@mp@todo("make it @mp.up") d8 b4. | c4 c8 g4. |
     a4@cresc a8 c8.( b16 a8) | g8.@mf( a16 g8) e4. |
     a4 a8 c8.( b16 a8) | g8.( a16 g8) e4. |
     d'4@f d8 f8.( d16 b8) | c4.@tenuto e4.@decresc |
-    c8@p@rit( g) e g8.( f16 d8) | c4.@!rit~ c4.@pp@fermata |.
+    c8@p@rit( g) e@todo("add @staccato") g8.( f16 d8) | c4.@!rit~ c4.@pp@fermata |.
   }
 }
 
@@ -27,7 +27,6 @@ form { ~A }
 
 score { staff melody }
 
-// TRY: type `@` after a note to see every mark · add `@staccato` to `e` in the
-// last line · change `@mp` to `@mp.up`.
+// TRY: do what the red circles say · type `@` after any note to see every mark.
 //
 // NEXT — type `lesson` on a new line and pick `lesson-06-form`.

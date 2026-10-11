@@ -15,7 +15,7 @@ part melody { clef treble }
 section A {
   melody {
     d'4 g,8 a b c | d4 g, g | e'4 c8 d e fis | g4 g, g |
-    c4 d8 c b a | b4 c8 b a g | fis4 g8 a b g | a2. |
+    c4 d8 c b a | b4 c8 b a g | fis4@todo("make it f") g8 a b g | a2. |
     d4 g,8 a b c | d4 g, g | e'4 c8 d e fis | g4 g, g |
     c4 d8 c b a | b4 c8 b a g | a4 b8 a g fis | g2. |.
   }
@@ -25,7 +25,7 @@ form { ~A }
 
 score { staff melody }
 
-// TRY: change a `fis` to `f` · change the key to `g mixolydian` and see the
-// sharps move into the music.
+// TRY: do what the red circle says · change the key to `g mixolydian`:
+// the sharps move into the music.
 //
 // NEXT — type `lesson` on a new line and pick `lesson-05-expression`.
