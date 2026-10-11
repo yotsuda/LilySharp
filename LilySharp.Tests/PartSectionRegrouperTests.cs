@@ -422,4 +422,37 @@ public class PartSectionRegrouperTests
         Assert.Equal(Grouping.BySection, PartSectionRegrouper.Detect(back!));
         Assert.False(SyntaxTree.Parse(back!).HasErrors);
     }
+    /// <summary>
+    /// The comments after the last block — a lesson's TRY and NEXT lines — survive Regroup both
+    /// ways. They are the end-of-file token's leading trivia, which the member walk never
+    /// visited: until 2026-10-11 they were all dropped (owner's report).
+    /// </summary>
+    [Theory]
+    [InlineData(GroupedBySection)]
+    [InlineData("part p { clef treble  section A { c'4 d e f | } }\nform { ~A }\nscore { staff p }")]
+    public void TheCommentsAtTheEndOfTheFile_SurviveRegroup_BothWays(string book)
+    {
+        const string tail = "\n\n// TRY: change a note.\n//\n// NEXT — pick lesson-02.\n";
+        string there = Assert.IsType<string>(PartSectionRegrouper.Convert(book + tail));
+        Assert.EndsWith(tail, there);
+        string back = Assert.IsType<string>(PartSectionRegrouper.Convert(there));
+        Assert.EndsWith(tail, back);
+    }
+
+    [Fact]
+    public void EveryLesson_KeepsItsClosingComments_ThroughRegroup()
+    {
+        foreach (var lesson in LilySharp.Lsp.LilySharpLanguageServer.Lessons)
+        {
+            string text = lesson.Text;
+            if (PartSectionRegrouper.Convert(text) is not { } converted)
+                continue;   // a layout the converter refuses is left alone
+            // The comment lines after the last line of code.
+            var lines = text.Split('\n');
+            int last = System.Array.FindLastIndex(lines, l => l.Trim().Length > 0 && !l.TrimStart().StartsWith("//", System.StringComparison.Ordinal));
+            string closing = string.Join("\n", lines.Skip(last + 1));
+            Assert.Contains("//", closing);
+            Assert.True(converted.EndsWith(closing, System.StringComparison.Ordinal), lesson.Label);
+        }
+    }
 }

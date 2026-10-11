@@ -449,6 +449,12 @@ public static class PartSectionRegrouper
             sb.Append(Verbatim(source, member));
         }
         if (!emitted) sb.Append(structuralBody);
+        // What follows the last member — the comments and blank lines at the END of the
+        // file — is the end-of-file token's leading trivia, and the walk above visits nodes
+        // only. Until 2026-10-11 every comment after the last block (a lesson's TRY and NEXT
+        // lines, say) was dropped by Regroup (owner's report).
+        if (root.GetChild(root.SlotCount - 1) is SyntaxTokenNode { Kind: SyntaxKind.EndOfFile } eof)
+            sb.Append(source, eof.FullSpan.Start, source.Length - eof.FullSpan.Start);
         return sb.ToString();
     }
 
