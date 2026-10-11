@@ -21,23 +21,27 @@ part melody {
 }
 
 section A {
-  // STEP 3 — Type `@` right after the ringed `e4`. Pick `mf`.
+  // STEP 3 — Delete the first note's `@todo("STEP 3: …")`: its red circle goes away.
+  // STEP 4 — Type `@` right after the ringed `e` in bar 2. Pick `mf`.
   melody {
-    e4@todo("STEP 3") d c d | e@todo("MESSAGES") e e2 | d4 d d2 | e4 g g2 |
+    e4@todo("STEP 3: delete this @todo") d c d | e@todo("STEP 4") e e2 |
+    d4 d@todo("MESSAGES") d2 | e4 g g2 |
     e4 d c d | e e e e | d d e d | c1 |
-    // STEP 4 — Delete `r1@todo("STEP 4")`, press Ctrl+Space there, pick `Cmaj7`.
-    r1@todo("STEP 4") |.
+    // STEP 5 — Delete `r1@todo("STEP 5")`, press Ctrl+Space there, pick `Cmaj7`.
+    r1@todo("STEP 5") |.
   }
 }
 
-// STEP 5 — Change the line below to:  form { |: ~A :| }   — now it plays twice.
+// STEP 6 — Change the line below to:  form { |: ~A :| }   — now it plays twice.
 form { ~A }
 
 score {
   staff melody
 }
 
-// MESSAGES — delete the ringed note in bar 2: a squiggle appears under the bar.
+// MESSAGES — delete the ringed note in bar 3: a squiggle appears under the bar.
 // Rest the mouse on it to read what is wrong. Ctrl+Z puts it back.
+//
+// DONE — remove the `@todo(…)` marks: Ctrl+. on one, then "Resolve all TODOs".
 //
 // NEXT — type `lesson` on a new line and pick `lesson-02-notes`.

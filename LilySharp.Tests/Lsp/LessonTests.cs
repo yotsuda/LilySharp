@@ -248,16 +248,34 @@ public class LessonTests
         // "The bass clef appears by itself": the part writes no clef of its own, so the
         // preset's is the one drawn.
         Assert.DoesNotContain(Lesson1[Lesson1.IndexOf("part melody", System.StringComparison.Ordinal)..
-                                               Lesson1.IndexOf("section A", System.StringComparison.Ordinal)]
-                                       .Split('\n'), l => !l.TrimStart().StartsWith("//") && l.Contains("clef"));
+                                       Lesson1.IndexOf("section A", System.StringComparison.Ordinal)]
+                                .Split('\n'), l => !l.TrimStart().StartsWith("//") && l.Contains("clef"));
         Assert.Equal(LilySharp.Core.Svg.Model.ClefType.Bass,
             LilySharp.Core.Svg.Model.InstrumentDefaults.GetDefaults("cello").Clef);
     }
 
+    private const string Step3Mark = "@todo(\"STEP 3: delete this @todo\")";
+
     [Fact]
-    public void Lesson1_Step3_AnAtAfterTheFirstNote_ListsDynamicsArticulationsAndFermata()
+    public void Lesson1_Step3_DeletingTheFirstRing_LeavesOneMarkFewer_AndTheTuneAsItWas()
     {
-        int at = Lesson1.IndexOf("e4@todo(\"STEP 3\")", System.StringComparison.Ordinal) + "e4".Length;
+        // The writer's first edit is to take a mark away: the ring on the first note goes,
+        // and nothing else changes.
+        Assert.StartsWith("e4" + Step3Mark, Lesson1[Lesson1.IndexOf("e4@todo", System.StringComparison.Ordinal)..]);
+        static int Marks(string text)
+        {
+            var tree = SyntaxTree.Parse(text);
+            return SemanticValidation.Run(tree).Count(d => d.Code == DiagnosticCodes.TodoMark);
+        }
+        Assert.Equal(Marks(Lesson1) - 1, Marks(Lesson1.Replace(Step3Mark, "")));
+        Assert.True(Step3Mark.Length - "@todo(\"\")".Length <= 28);
+    }
+
+    [Fact]
+    public void Lesson1_Step4_AnAtAfterTheRingedE_ListsDynamicsArticulationsAndFermata()
+    {
+        int at = Lesson1.IndexOf("e@todo(\"STEP 4\")", System.StringComparison.Ordinal) + "e".Length;
+        Assert.True(at > Lesson1.IndexOf(Step3Mark, System.StringComparison.Ordinal), "the rings run in step order");
         var labels = Labels(CompletionAt(Lesson1.Insert(at, "@"), at + 1));
         Assert.Contains("mf", labels);
         Assert.Contains("p", labels);
@@ -267,12 +285,12 @@ public class LessonTests
     }
 
     [Fact]
-    public void Lesson1_Step4_WhereTheRingedRestWas_Cmaj7IsOffered_InCMajorAndAfterStep1sGMajor()
+    public void Lesson1_Step5_WhereTheRingedRestWas_Cmaj7IsOffered_InCMajorAndAfterStep1sGMajor()
     {
         // Cmaj7, not C: a label nobody can take for the note c. It is the key's IV7 in
         // G major too, so step 1 having changed the key does not take it away. The writer
-        // deletes `r1@todo("STEP 4")` and asks there.
-        const string rest = "r1@todo(\"STEP 4\")";
+        // deletes `r1@todo("STEP 5")` and asks there.
+        const string rest = "r1@todo(\"STEP 5\")";
         Assert.Contains(rest, Lesson1);
         string emptied = Lesson1.Replace(rest, "");
         int at = Lesson1.IndexOf(rest, System.StringComparison.Ordinal);
@@ -284,7 +302,7 @@ public class LessonTests
     }
 
     [Fact]
-    public void Lesson1_Step5_TheFormOffersTheSectionsAndTheRepeatSigns()
+    public void Lesson1_Step6_TheFormOffersTheSectionsAndTheRepeatSigns()
     {
         int at = Lesson1.IndexOf("form { ~A", System.StringComparison.Ordinal) + "form { ~A".Length;
         var labels = Labels(CompletionAt(Lesson1, at + 1));
@@ -301,24 +319,31 @@ public class LessonTests
         string text = Lesson1;
         text = text.Insert(EmptyLineAfter(text, "STEP 1"), "key g major");
         text = text.Insert(EmptyLineAfter(text, "STEP 2"), "instrument cello");
-        int first = text.IndexOf("e4@todo(\"STEP 3\")", System.StringComparison.Ordinal) + "e4".Length;
-        text = text.Insert(first, "@mf");
-        text = text.Replace("r1@todo(\"STEP 4\")", "<c e g b>");
-        Assert.Contains("form { |: ~A :| }", Lesson1);   // the sample step 5 shows
+        text = text.Replace(Step3Mark, "");
+        text = text.Replace("e@todo(\"STEP 4\")", "e@mf@todo(\"STEP 4\")");
+        text = text.Replace("r1@todo(\"STEP 5\")", "<c e g b>");
+        Assert.Contains("form { |: ~A :| }", Lesson1);   // the sample step 6 shows
         text = text.Replace("form { ~A }", "form { |: ~A :| }");
 
         var tree = SyntaxTree.Parse(text);
         var diagnostics = tree.Diagnostics.Concat(SemanticValidation.Run(tree))
             .Where(d => d.Code != DiagnosticCodes.TodoMark).ToList();   // the rings may stay
         Assert.True(diagnostics.Count == 0, string.Join("\n", diagnostics.Select(d => $"{d.Code}: {d.Message}")));
+
+        // …and "DONE": removing every mark leaves a clean score too.
+        string done = Regex.Replace(text, "@todo\\(\"[^\"]*\"\\)", "");
+        var doneTree = SyntaxTree.Parse(done);
+        Assert.Empty(doneTree.Diagnostics.Concat(SemanticValidation.Run(doneTree)));
     }
 
     [Fact]
     public void Lesson1_TheMessageExercise_DoesRaiseAMessage()
     {
-        // "delete one `e` from `e e e2`: a squiggle appears".
-        Assert.Contains("e@todo(\"MESSAGES\") e e2", Lesson1);
-        var tree = SyntaxTree.Parse(Lesson1.Replace("e@todo(\"MESSAGES\") e e2", "e e2"));
+        // "delete the ringed note in bar 3: a squiggle appears". The rings themselves are
+        // not the message.
+        const string ringed = "d@todo(\"MESSAGES\") ";
+        Assert.Contains("d4 " + ringed + "d2", Lesson1);
+        var tree = SyntaxTree.Parse(Lesson1.Replace(ringed, ""));
         Assert.NotEmpty(tree.Diagnostics.Concat(SemanticValidation.Run(tree)).Where(d => d.Code != DiagnosticCodes.TodoMark));
     }
 
