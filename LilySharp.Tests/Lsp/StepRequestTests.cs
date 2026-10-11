@@ -556,6 +556,28 @@ public class StepRequestTests
         Assert.Equal(struck.Program, tied.Program);
     }
 
+    /// <summary>A guitar sounds an octave below what is written, a clarinet two semitones:
+    /// the tie's target sounds where the struck note does (owner's report 2026-10-11: it rang
+    /// an octave high, and wrong on a transposing instrument).</summary>
+    [Theory]
+    [InlineData("guitar", 62)]      // d' written = 74; the guitar's octave below
+    [InlineData("clarinet", 72)]    // the B♭ clarinet: two semitones below
+    public void ATiedNote_SoundsWhereThePartsStruckNotesDo(string preset, int sounding)
+    {
+        string Book(string music) => $$"""
+            octave absolute
+            part p { instrument {{preset}} }
+            section A { p { {{music}} } }
+            form { A }
+            score { staff p }
+            """;
+        var struck = AuditionAt(Book("c'4 ‸d'~ | d' e' |"));
+        var tied = AuditionAt(Book("c'4 d'~ | ‸d' e' |"));
+        Assert.Equal([sounding], struck.Pitches);
+        Assert.Equal(struck.Pitches, tied.Pitches);
+        Assert.Equal(struck.Program, tied.Program);
+    }
+
     [Fact]
     public void TheCaret_SoundsWhatItIsOn()
     {

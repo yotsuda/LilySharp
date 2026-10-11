@@ -1034,9 +1034,15 @@ public static class NoteStepper
     /// 2026-10-11). Music no part claims keeps the default voice.
     /// </summary>
     private static Voice Written(SoundIndex index, SyntaxNode node, ImmutableArray<int> pitches)
-        => PartOf(node) is { } part && index.PartVoice.TryGetValue(part, out var voice)
-            ? new Voice(pitches, voice.Timbre, voice.Program)
-            : new Voice(pitches, 0, NoProgram);
+    {
+        if (PartOf(node) is not { } part || !index.PartVoice.TryGetValue(part, out var voice))
+            return new Voice(pitches, 0, NoProgram);
+        // The written pitch, shifted as the part's struck notes are (a guitar's octave, a
+        // clarinet's two semitones — owner's report 2026-10-11: the tie's target rang an
+        // octave high, and wrong on a transposing instrument).
+        int shift = index.PartShift.TryGetValue(part, out int s) ? s : 0;
+        return new Voice([.. pitches.Select(p => p + shift)], voice.Timbre, voice.Program);
+    }
 
     /// <summary>The part whose music holds <paramref name="node"/>: the nearest enclosing
     /// part cell in a section (<see cref="PartBlockSyntax"/>) or part declaration holding its
@@ -1069,6 +1075,14 @@ public static class NoteStepper
         /// <summary>By part name: the timbre and program of its pitched notes (the export's
         /// track), for the positions the export filed nothing under (<see cref="Written"/>).</summary>
         public Dictionary<string, (int Timbre, int Program)> PartVoice { get; } = [];
+        /// <summary>By part name: what the export ADDS to a written pitch — the preset's
+        /// transposition, the part's <c>transpose</c>, the concert-pitch input, the clef's
+        /// octave, composed in <c>MidiExporter</c> and not re-derived here. Read off the
+        /// positions both the export and the collector filed: the most common
+        /// exported − written. Absent for a part with no such position.</summary>
+        public Dictionary<string, int> PartShift { get; } = [];
+        /// <summary>The part of each position in <see cref="Midi"/>, for <see cref="PartShift"/>.</summary>
+        private Dictionary<int, string> PartAt { get; } = [];
         public Dictionary<int, int> Trace { get; } = [];
 
         private static readonly ConditionalWeakTable<SyntaxTree, SoundIndex> Cache = new();
@@ -1088,7 +1102,10 @@ public static class NoteStepper
                     if (note.SourcePos < 0 || note.Channel == 9)
                         continue;
                     if (note.Part is { } part)
+                    {
                         index.PartVoice.TryAdd(part, (note.Timbre, track.Program ?? NoProgram));
+                        index.PartAt.TryAdd(note.SourcePos, part);
+                    }
                     if (!index.Midi.TryGetValue(note.SourcePos, out var list))
                     {
                         index.Midi[note.SourcePos] = list = [];
@@ -1119,6 +1136,20 @@ public static class NoteStepper
             {
                 // Nor can it always be collected; what the export gave stands.
             }
+            // Each part's shift: over the positions the export filed ONE pitch under and the
+            // collector spelled, the most common exported − written.
+            var votes = new Dictionary<string, Dictionary<int, int>>();
+            foreach (var (pos, part) in index.PartAt)
+            {
+                if (!index.Trace.TryGetValue(pos, out int written) || index.Midi[pos].Count != 1)
+                    continue;
+                if (!votes.TryGetValue(part, out var tally))
+                    votes[part] = tally = [];
+                int diff = index.Midi[pos][0] - written;
+                tally[diff] = tally.TryGetValue(diff, out int n) ? n + 1 : 1;
+            }
+            foreach (var (part, tally) in votes)
+                index.PartShift[part] = tally.MaxBy(kv => kv.Value).Key;
             return index;
         }
 

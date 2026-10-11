@@ -126,7 +126,12 @@ Now:
   family (timbre 9) strikes the drum channel. A note the export filed no onset under — the
   target of a tie, a note in music no form plays — sounds its written pitch in the voice of
   the part whose music holds it (`SoundIndex.PartVoice`, `Written`), so the caret on
-  `a~ | a` strikes the flute's a and not a piano's (owner's report 2026-10-11).
+  `a~ | a` strikes the flute's a and not a piano's (owner's report 2026-10-11) — shifted as
+  the part's struck notes are (`SoundIndex.PartShift`: the most common exported − written over
+  the positions both the export and the collector filed, which composes the preset's
+  transposition, `transpose`, the concert-pitch input and the clef's octave without
+  re-deriving them), so a guitar's tied note sounds its octave below and a clarinet's its two
+  semitones (the same report: an octave high, wrong on a transposing instrument).
 - A held key re-arms a watchdog as before; the strike is a `noteOn` and the release a
   `noteOff`, so the font's own release plays.
 
