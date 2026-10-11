@@ -8,6 +8,7 @@
 title "Silent Night"
 composer "Franz Xaver Gruber"
 
+tempo 60
 time 6/8
 
 part melody { clef treble }
