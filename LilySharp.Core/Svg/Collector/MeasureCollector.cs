@@ -5006,9 +5006,15 @@ public sealed partial class MeasureCollector
     }
 
     private static readonly GreenSiteRule s_musicSiteRuleParallelWrapped = static g => (
-        IsMusicCandidateKind(g.Kind), !IsProcessedContainerKind(g.Kind, includeParallel: true));
+        IsMusicCandidate(g), !IsProcessedContainerKind(g.Kind, includeParallel: true));
     private static readonly GreenSiteRule s_musicSiteRuleParallelFlattened = static g => (
-        IsMusicCandidateKind(g.Kind), !IsProcessedContainerKind(g.Kind, includeParallel: false));
+        IsMusicCandidate(g), !IsProcessedContainerKind(g.Kind, includeParallel: false));
+
+    /// <summary>A candidate kind, less a chord's drum member (<c>&lt;bd hh&gt;</c>): the walk goes
+    /// into a chord for the marks on it, and its drums are the chord's, not notes of their own
+    /// (<see cref="Syntax.InternalSyntax.DrumNoteGreen.IsChordMember"/>).</summary>
+    internal static bool IsMusicCandidate(Syntax.InternalSyntax.GreenNode g)
+        => IsMusicCandidateKind(g.Kind) && g is not Syntax.InternalSyntax.DrumNoteGreen { IsChordMember: true };
 
     /// <summary>The music gather's green-walk rule — collect every candidate kind, walk into
     /// everything but a processed container — the one rule both spellings of the gather and

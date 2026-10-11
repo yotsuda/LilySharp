@@ -84,4 +84,17 @@ public class DrumTupletTests
             .Tracks.SelectMany(t => t.Notes).ToList();
         Assert.Equal(2 * (plain[1].StartTick - plain[0].StartTick), 3 * step);
     }
+
+    [Fact]
+    public void ADrumChord_IsOneItem_NotItsDrumsOverAgain()
+    {
+        // Until 2026-10-11 `<bd hh>4 r r2` drew the chord AND each of its drums as a note of
+        // its own (the music gather walks into a chord, and a drum name is a note kind), so
+        // the bar overflowed into a second one. Found writing drum-chord marks.
+        var tree = SyntaxTree.Parse(Book("<bd hh>4 r r2 |"));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), null));
+        var measures = score.EnumerateStaves().Single().Staff.Voices[0].Measures;
+        Assert.Single(measures);
+        Assert.Equal(new[] { "ChordItem", "RestItem", "RestItem" }, measures[0].Items.Select(i => i.GetType().Name));
+    }
 }

@@ -706,9 +706,13 @@ internal sealed partial class Parser
             }
             // Drum chord member: <bd hh> — a bare drum name (no duration
             // inside the brackets, like pitches).
+            // Its own annotations ride it as a pitch member's do (<hh sn@parenthesize>, a ghost
+            // snare under the hi-hat — owner's request 2026-10-11); until then a '@' here was
+            // "Expected 'CloseAngle'".
             if (Current.Kind == SyntaxKind.Identifier && DrumNameRegistry.Contains(Current.Text))
             {
-                pitches.Add(new DrumNoteGreen(Advance(), null, null, []));
+                var name = Advance();
+                pitches.Add(new DrumNoteGreen(name, null, null, ParseArticulations(), isChordMember: true));
                 continue;
             }
             // A slur mark on a pitch MEMBER (<c e( g>4 <d f) a>): the bow starts or ends on

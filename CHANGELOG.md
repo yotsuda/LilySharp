@@ -218,6 +218,17 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A drum chord draws once.** `<bd hh>4` drew the chord and then each of its drums again as a
+  note of its own, so the bar overflowed into the next. It is one chord now.
+
+- **A drum chord is written to MusicXML.** `<bd hh>4` (and `<bd hh>8 8`) wrote nothing and took no
+  time, leaving the bar short; a chord mixing pitches and drums lost its drums. Each drum is an
+  unpitched note now, with its head and marks.
+
+- **A drum in a chord takes its own marks.** `<hh sn@parenthesize>` and `<hh sn@accent>` were a
+  syntax error ("Expected 'CloseAngle'"); the snare's parentheses or accent are its own now, on the
+  page, in the LilyPond twin (`<hh \parenthesize sn>`) and in MusicXML.
+
 - **A flam is drawn and played.** `acciaccatura { sn16 } sn4` drew no grace note (LYS4020 called
   the body empty), played a single stroke and wrote no grace to MusicXML: a grace body did not
   take drum notes. It now does, in a plain drum line and in a `drums { }` chart alike.

@@ -129,4 +129,30 @@ public class ParenthesizeTests
         Assert.False(ghost.Parenthesized);
         Assert.Single(ghost.Notes, n => n.Parenthesized);   // the snare, not the hi-hat
     }
+
+    [Fact]
+    public void ADrumChordMember_TakesItsOwnMarks()
+    {
+        // Until 2026-10-11 `<hh sn@parenthesize>` was "Expected 'CloseAngle'": a drum member
+        // took no annotation. Now its parentheses and its scripts are its own.
+        var kit = Items(Book("<hh sn@parenthesize>4 <hh sn@accent>4 r2 |", "percussion")).OfType<ChordItem>().ToList();
+        Assert.Equal(1, kit[0].Notes.Count(n => n.Parenthesized));
+        Assert.True(kit[0].Notes.Single(n => n.Parenthesized).StaffPosition == 1);   // the snare's line
+        var tree = SyntaxTree.Parse(Book("<hh sn@parenthesize>4 <hh sn@accent>4 r2 |", "percussion"));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), null));
+        Assert.Contains(score.Articulations, a => a.ItemIndex == 1 && a.Type == ArticulationType.Accent);
+        string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree);
+        Assert.Contains("<hh \\parenthesize sn>4", ly);
+        Assert.Contains("<hh sn-\\accent>4", ly);
+    }
+
+    [Fact]
+    public void AGhostMemberOfAChartLinesChord_IsItsOwnPair()
+    {
+        var tree = SyntaxTree.Parse(Book("drums { { <hh sn@parenthesize>4 hh hh hh | }  { bd4 r bd r | } }", "percussion"));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), null));
+        var first = Assert.IsType<ChordItem>(score.EnumerateStaves().Single().Staff.Voices[0].Measures[0].Items[0]);
+        Assert.Single(first.Notes, n => n.Parenthesized);
+    }
+
 }

@@ -3300,6 +3300,30 @@ public sealed class MusicXmlExporter
     /// drums-style staff position mapped onto treble letters (middle line =
     /// B4), notehead from the same table.</summary>
     /// <remarks>LILYPOND-REF: ly/drumpitch-init.ly drums-style.</remarks>
+    /// <summary>One drum of a chord as an unpitched note (ProcessDrumNote's placement and head).</summary>
+    private MusicXmlNote DrumChordMember(DrumNoteSyntax drum, int durationTicks, string type, int dots,
+        bool isChord, int? tupletActual, int? tupletNormal, bool chordParenthesized)
+    {
+        var info = DrumOverrides.Resolve(DrumOverridesMap, drum.DrumName);
+        int idx = 6 + info.StaffPosition;
+        var xmlNote = new MusicXmlNote
+        {
+            IsUnpitched = true,
+            Step = "CDEFGAB"[((idx % 7) + 7) % 7].ToString(),
+            Octave = 4 + (int)Math.Floor(idx / 7.0),
+            Duration = durationTicks,
+            Type = type,
+            Dots = dots,
+            IsChord = isChord,
+            ActualNotes = tupletActual,
+            NormalNotes = tupletNormal,
+            Notehead = NoteheadName(info.Notehead),
+            NoteheadParentheses = chordParenthesized || WritesParenthesize(drum.Articulations),
+        };
+        AddDrumMark(xmlNote, info);
+        return xmlNote;
+    }
+
     /// <summary>True when the list writes <c>@parenthesize</c>.</summary>
     private static bool WritesParenthesize(IEnumerable<SyntaxNode> articulations)
         => articulations.Any(a => a is ArticulationSyntax { Type: ArticulationType.None } p
@@ -3831,6 +3855,28 @@ public sealed class MusicXmlExporter
 
         switch (Music.BareDurations.OriginalOf(bare))
         {
+            // A bare duration repeating a chord of drums (<bd hh>8 8): its drums again.
+            case ChordSyntax drums when drums.DrumNames.Any() && !drums.Pitches.Any() && !drums.Degrees.Any():
+            {
+                EmitPendingDynamic();
+                bool isFirst = true;
+                foreach (var drum in drums.DrumNames)
+                {
+                    var xmlNote = DrumChordMember(drum, durationTicks, type, dots, !isFirst,
+                        tupletActual, tupletNormal, WritesParenthesize(drums.Articulations));
+                    if (isFirst)
+                        ProcessArticulations(bare.Articulations, xmlNote, host: bare.SourceStart);
+                    isFirst = false;
+                    _currentMeasure.Notes.Add(xmlNote);
+                    _chordMembers.Add(xmlNote);
+                }
+                _lastPitchedNote = null;
+                _lastEmittedNotes.Clear();
+                _lastEmittedNotes.AddRange(_chordMembers);
+                _chordMembers.Clear();
+                MaybeClosePickup(duration);
+                return;
+            }
             case NoteSyntax note when _resolvedNoteXml.TryGetValue(note, out var m):
             {
                 EmitPendingDynamic();
@@ -4128,7 +4174,7 @@ public sealed class MusicXmlExporter
             MaybeClosePickup(spacerDuration);
             return;
         }
-        if (pitches.Count == 0 && !chord.Degrees.Any() && !chord.IsShapeChord)
+        if (pitches.Count == 0 && !chord.Degrees.Any() && !chord.IsShapeChord && !chord.DrumNames.Any())
         {
             // An EMPTY chord emits no note of its own, so nothing downstream will read
             // its post-events — but a marker written on it still belongs to the music
@@ -4341,6 +4387,28 @@ public sealed class MusicXmlExporter
             if (_chordArpeggio == "arpeggiate")
                 xmlNote.ExtraNotations.Add(new System.Xml.Linq.XElement("arpeggiate",
                     new System.Xml.Linq.XAttribute("number", 1)));
+            _currentMeasure.Notes.Add(xmlNote);
+            _chordMembers.Add(xmlNote);
+            needsOnset = false;
+        }
+
+        // Drum members (<bd hh>, <hh sn@parenthesize>): unpitched notes, placed and headed as
+        // ProcessDrumNote writes a lone drum. Until 2026-10-11 a chord of drums alone counted as
+        // EMPTY here — no note and no time, so every bar holding one came out short — and a
+        // mixed chord lost its drums. The chord's own marks ride its first note when no pitch
+        // took them.
+        bool chordMarksTaken = pitches.Count > 0;
+        foreach (var drum in chord.DrumNames)
+        {
+            var xmlNote = DrumChordMember(drum, durationTicks, type, dots, !needsOnset,
+                tupletActual, tupletNormal, WritesParenthesize(chord.Articulations));
+            if (!chordMarksTaken)
+            {
+                ProcessArticulations(
+                    chord.Articulations.Where(a => a is not StringNumberAnnotationSyntax), xmlNote, host: chord.SourceStart);
+                chordMarksTaken = true;
+            }
+            ProcessArticulations(drum.Articulations, xmlNote, host: drum.SourceStart);
             _currentMeasure.Notes.Add(xmlNote);
             _chordMembers.Add(xmlNote);
             needsOnset = false;

@@ -147,10 +147,18 @@ internal sealed class NestedVoiceRecoveryGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class DrumNoteGreen : GreenSyntaxNode
 {
-    public DrumNoteGreen(SyntaxToken name, DurationGreen? duration, SyntaxToken? tremolo, GreenNode?[] articulations)
+    public DrumNoteGreen(SyntaxToken name, DurationGreen? duration, SyntaxToken? tremolo, GreenNode?[] articulations,
+        bool isChordMember = false)
         : base(SyntaxKind.DrumNote, [name, duration, tremolo, .. articulations])
     {
+        IsChordMember = isChordMember;
     }
+
+    /// <summary>A member of a chord (<c>&lt;bd hh&gt;</c>), not an item of its own: the music
+    /// gather walks INTO a chord (for the marks written on it) and must not collect these as
+    /// notes (MeasureCollector.MusicSiteRule). Until 2026-10-11 it did, and every drum chord
+    /// drew its drums twice — the chord, then each member as a note of its own.</summary>
+    public bool IsChordMember { get; }
 }
 
 /// <summary>

@@ -679,6 +679,10 @@ public sealed partial class MeasureCollector
                 foreach (var pitch in chord.Pitches)
                     foreach (var a in pitch.Articulations)
                         Collect(a, isChordMember: true);
+                // A drum member's own script (<hh sn@accent>), like a pitch member's.
+                foreach (var drum in chord.DrumNames)
+                    foreach (var a in drum.Articulations)
+                        Collect(a, isChordMember: true);
                 break;
             case ChordRepetitionSyntax rep:
                 foreach (var a in rep.Articulations)

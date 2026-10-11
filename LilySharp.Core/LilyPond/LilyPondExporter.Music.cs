@@ -1367,7 +1367,25 @@ public sealed partial class LilyPondExporter
                 continue;
             }
             if (!first) sb.Append(' ');
+            // A member's own marks, as a pitch member's (<hh \parenthesize sn->): the
+            // parentheses are a music function before the name, the scripts post-events.
+            if (drum.Articulations.Any(a => a is ArticulationSyntax pa && IsParenthesize(pa)))
+                sb.Append("\\parenthesize ");
             sb.Append(drum.DrumName);
+            foreach (var art in drum.Articulations)
+                switch (art)
+                {
+                    case ArticulationSyntax pa when IsParenthesize(pa):
+                        break;
+                    case ArticulationSyntax ma when MapArticulation(ma) is { Length: > 0 } mev:
+                        if (mev[0] == '\\')
+                            sb.Append('-');
+                        sb.Append(mev);
+                        break;
+                    default:
+                        _warnings.Add($"drum chord member {drum.DrumName}: {art.GetType().Name} dropped (out of scope)");
+                        break;
+                }
             first = false;
         }
 

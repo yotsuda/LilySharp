@@ -32,7 +32,11 @@ public sealed partial class MeasureCollector
     /// <summary>One hit of a chart line: when it sounds (from the chart's start), how long its
     /// line held it, the tuplet run it was written in (-1: none), and which voice it joins.</summary>
     private readonly record struct DrumHit(Fraction Onset, Fraction Length, int Run, string Drum, SyntaxNode Node, bool Down,
-        GraceExpressionSyntax? Grace = null);
+        GraceExpressionSyntax? Grace = null, DrumNoteSyntax? Member = null)
+    {
+        /// <summary>Where this hit's head was written: a chord member's own name, else the item.</summary>
+        public int HeadSource => Member?.SourceStart ?? Node.SourceStart;
+    }
 
     /// <summary>A <c>tuplet</c> written in a chart line: the time it covers and its ratio.</summary>
     private sealed record DrumTupletRun(Fraction Start, Fraction End, Fraction Scale, int Ratio, int Base, int SourceStart);
@@ -249,21 +253,21 @@ public sealed partial class MeasureCollector
                 switch (site.Node)
                 {
                     case DrumNoteSyntax drum:
-                        Hit(scale, run, Length(drum.Duration), (drum.DrumName, drum));
+                        Hit(scale, run, Length(drum.Duration), (drum.DrumName, drum, null));
                         break;
                     case ChordSyntax chord when IsDrumChord(chord):
                         Hit(scale, run, Length(chord.Duration),
-                            chord.DrumNames.Select(d => (d.DrumName, (SyntaxNode)chord)).ToArray());
+                            chord.DrumNames.Select(d => (d.DrumName, (SyntaxNode)chord, (DrumNoteSyntax?)d)).ToArray());
                         break;
                     case BareDurationSyntax bare:
                         switch (Music.BareDurations.OriginalOf(bare))
                         {
                             case DrumNoteSyntax drum:
-                                Hit(scale, run, Length(bare.Duration), (drum.DrumName, bare));
+                                Hit(scale, run, Length(bare.Duration), (drum.DrumName, bare, null));
                                 break;
                             case ChordSyntax chord when IsDrumChord(chord):
                                 Hit(scale, run, Length(bare.Duration),
-                                    chord.DrumNames.Select(d => (d.DrumName, (SyntaxNode)bare)).ToArray());
+                                    chord.DrumNames.Select(d => (d.DrumName, (SyntaxNode)bare, (DrumNoteSyntax?)d)).ToArray());
                                 break;
                             default:
                                 return false;
@@ -320,12 +324,12 @@ public sealed partial class MeasureCollector
             return Value.Dotted(Dots);
         }
 
-        private void Hit(Fraction scale, int run, Fraction written, params (string Drum, SyntaxNode Node)[] members)
+        private void Hit(Fraction scale, int run, Fraction written, params (string Drum, SyntaxNode Node, DrumNoteSyntax? Member)[] members)
         {
             var sound = written * scale;
-            foreach (var (drum, node) in members)
+            foreach (var (drum, node, member) in members)
             {
-                hits.Add(new DrumHit(Time, sound, run, drum, node, down ?? DrumNameRegistry.IsFootDrum(drum), _grace));
+                hits.Add(new DrumHit(Time, sound, run, drum, node, down ?? DrumNameRegistry.IsFootDrum(drum), _grace, member));
                 _grace = null;
             }
             Time += sound;
@@ -395,6 +399,11 @@ public sealed partial class MeasureCollector
         }
     }
 
+    /// <summary>A hit's head stands in parentheses: its item writes <c>@parenthesize</c>, or, as a
+    /// chord member, the member does (<c>&lt;hh sn@parenthesize&gt;</c>).</summary>
+    private static bool HitParenthesized(DrumHit h)
+        => WritesParenthesize(h.Node) || (h.Member is { } m && m.Articulations.Any(IsParenthesizeMark));
+
     /// <summary>One piece of a merged voice; returns its written value.</summary>
     private Fraction EmitDrumPiece(DrumPiece piece, MeasureBuilder builder, bool stemUp, Fraction? scaled)
     {
@@ -428,7 +437,7 @@ public sealed partial class MeasureCollector
             {
                 var info = DrumOverrides.Resolve(_drumOverrides, h.Drum);
                 return new ChordNoteInfo(info.StaffPosition, null, Notehead: info.Notehead, Midi: info.GmKey,
-                    SourcePosition: h.Node.SourceStart);
+                    SourcePosition: h.HeadSource);
             }).OrderBy(n => n.StaffPosition).ToImmutableArray();
             item = new ChordItem(notes, value, piece.Dots, piece.SourceStart);
         }
@@ -440,7 +449,7 @@ public sealed partial class MeasureCollector
             {
                 NoteItem n => DecorateSoundingItem(n, sounding[0].Node, false) with
                 {
-                    Parenthesized = WritesParenthesize(sounding[0].Node),
+                    Parenthesized = HitParenthesized(sounding[0]),
                 },
                 ChordItem c => DecorateSoundingItem(c, sounding[0].Node, false) is var dc
                     ? dc with
@@ -448,8 +457,7 @@ public sealed partial class MeasureCollector
                         Parenthesized = false,
                         Notes = [.. dc.Notes.Select(n => n with
                         {
-                            Parenthesized = sounding.Any(h => h.Node.SourceStart == n.SourcePosition
-                                                               && WritesParenthesize(h.Node)),
+                            Parenthesized = sounding.Any(h => h.HeadSource == n.SourcePosition && HitParenthesized(h)),
                         })],
                     }
                     : c,

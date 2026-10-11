@@ -49,6 +49,7 @@ Annotations:
 a4@courtesy    // Courtesy (cautionary) accidental — parenthesized, left of the note
 c4@editorial   // Editorial (suggestion) accidental — small, above the note (musica ficta)
 d4@parenthesize  // The head in parentheses (with its accidental and dots) — a ghost note
+<hh sn@parenthesize>8  // a drum in a chord takes its own marks too
 <c e@parenthesize g>2   // one member's head;  <c e g>2@parenthesize — one pair round the chord
 ```
 

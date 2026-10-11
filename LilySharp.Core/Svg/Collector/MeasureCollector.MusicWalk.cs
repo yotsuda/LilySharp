@@ -2138,10 +2138,17 @@ public sealed partial class MeasureCollector
             return chord with { Parenthesized = true };
         HashSet<int>? members = null;
         if (node is ChordSyntax written)
+        {
             foreach (var pitch in written.Pitches)
                 foreach (var a in pitch.Articulations)
                     if (IsParenthesizeMark(a))
                         (members ??= new()).Add(pitch.SourceStart);
+            // <hh sn@parenthesize> — a drum member's own (its ChordNoteInfo carries its name's offset).
+            foreach (var drum in written.DrumNames)
+                foreach (var a in drum.Articulations)
+                    if (IsParenthesizeMark(a))
+                        (members ??= new()).Add(drum.SourceStart);
+        }
         if (members == null)
             return chord;
         return chord with
