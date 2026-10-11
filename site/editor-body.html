@@ -39,6 +39,7 @@
   <code>.lys</code> file and the language server starts.</p>
   <table class="g">
     <tr><th>Key</th><th>Does</th></tr>
+    <tr><td><kbd>Ctrl+Space</kbd></td><td>list what can come next — words, names, chords, marks; in an empty file, the lessons — <a href="#language">below</a></td></tr>
     <tr><td><kbd>Ctrl+Shift+V</kbd></td><td>open the score preview</td></tr>
     <tr><td><kbd>Ctrl+K</kbd> <kbd>V</kbd></td><td>open it beside the source</td></tr>
     <tr><td><kbd>Alt+P</kbd> (hold)</td><td>sound the note under the caret</td></tr>
@@ -244,7 +245,11 @@
   <p class="eyebrow">06</p>
   <h2>Completion, hover, fixes</h2>
   <ul>
-    <li><b>Completion offers what can come next</b> — after <code>lyrics NAME</code> it offers
+    <li><b>Lessons.</b> In an empty <code>.lys</code> file type <code>lesson</code> and press
+    <kbd>Ctrl+Space</kbd>: ten lessons, from the first note to a band score. Each is a score
+    whose steps are marked in red in the preview (<a href="grammar.html#todo"><code>@todo</code></a>);
+    picking one replaces the file, after asking.</li>
+    <li><b>Completion (<kbd>Ctrl+Space</kbd>) offers what can come next</b> — after <code>lyrics NAME</code> it offers
     <code>sings</code>, then the part names in the file; inside <code>layout { }</code>,
     <code>fonts { }</code> and <code>paper { }</code> the keys and their values. In a section's
     music it offers the key's chords, and accepting one writes its notes (<code>IIm7</code> in C

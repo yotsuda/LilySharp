@@ -93,14 +93,14 @@ index の「03 Speed」は見出しだけ。
 
 - P1 **初心者の入口が無い**: 「最初の 1 曲」の頁が無い。`grammar#glance` は 2 章目でいきなり fonts／paper／layout 入りの
   骨格を見せる。`docs/TUTORIAL.md` はサイトに載っていない。
-- P2 **Ctrl+Space という語がサイトのどこにも無い**。補完は `editor#language` の 1 項目と `grammar#chordrows` の
+- P2 （一部済 2026-10-11: editor 頁の鍵の表と `#language` に Ctrl+Space。残りは learn-01＝Lesson 1 の手順そのもの）**Ctrl+Space という語がサイトのどこにも無かった**。補完は `editor#language` の 1 項目と `grammar#chordrows` の
   「What completion offers」（コードだけ）のみ。`@` の一覧は typing aids の表で触れるだけ。⇒ Lesson 1 の内容が丸ごと無い。
 - P3 **章の無い基本**: 調号と臨時記号・拍子・テンポ（`#glance` の註と parts の表だけ）・音部記号（表の 1 行）・
   弱起 `partial`（`#sections` の pre の註だけ。曲中の `| partial 2. r2. |` と `time none` は皆無）・強弱とヘアピン
   （`#anno` に混在）・`using "other.lys"`（LilyPond 対照表だけ）。
 - P5 **ドラム／打楽器がサイトにも GRAMMAR_FOR_LLM にも SYNTAX_REFERENCE にも無い**（予約語表の `percussion drummap`
   とドラム名だけ）＝Lesson 10 が指す先が無い。
-- P7 レッスン（`lesson-…`）の案内が無い（作ったら `start` 頁と editor 頁から指す）。
+- P7 レッスン（`lesson-…`）の案内: editor 頁 `#language` は済（2026-10-11）。`start` 頁は再構成で。
 - P13 **「まずプレビューを開く」が入口に無い**。Ctrl+K V は「Ctrl+K を離してから V」の和音キーで、初心者は押し方を知らない。
   エディタ右上のアイコンでも開ける。start 頁の 1 段目に置く（Lesson 1 の STEP 0 と同じ文）。
 - P14 **文章量**: レッスンは「文章は可能な限り少なく」がユーザーの指示（§3）。learn 頁も同じ型（2〜4 行＋例＋TRY）で書き、
