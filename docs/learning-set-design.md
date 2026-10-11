@@ -31,13 +31,13 @@
 | 1 | `lesson-01-completion` | **STEP 0＝プレビューを開く**（Ctrl+K → V・エディタ右上のアイコン・▶）→ 補完ツアー: トップレベル（`key`→`g`→`major`）・part の中（`instrument`→`cello`＝clef が自動でヘ音記号になる・part に clef は書かない）・`@todo` を 1 つ消す（赤い丸が消える＝以後の課題の印の扱いを覚える）・`@` の一覧・休符の小節を `Cmaj7`→`<c e g b>`（`C` は音名 c と紛れるので避けた・G major でも出る）・form を `form { |: ~A :| }` に書き換え・squiggle にマウスを乗せる | Mary Had a Little Lamb |
 | 2 | `lesson-02-notes` | 音名・音価・`\|`・相対オクターブ `'` `,`・ファイルの 4 要素・**Ctrl+Shift+Up/Down**（`g2` を Down で `g,2`、後ろの音まで戻る）・**数字キー**（`d4` の d の前で `2`＝音符のどこで打っても音価に入る。2026-10-11 ユーザー指示「キーボードが上手な人ほど永久に気づかない」） | Ode to Joy（Beethoven） |
 | 3 | `lesson-03-rhythm` | 付点・16 分・3/4・`partial`・（TRY で休符・タイ・数字キー） | Happy Birthday to You（Hill） |
-| 4 | `lesson-04-keys` | `is`/`es`・「鳴る音を書く・調は印刷だけ」・`key` と旋法 | Minuet in G（Petzold・右手） |
+| 4 | `lesson-04-keys` | `is`/`es`・「鳴る音を書く・調は印刷だけ」・`key` と旋法・**`score low transpose bes,`＝同じ曲を別の調で印刷**（2026-10-11 ユーザー指摘「レッスンに transpose がない」） | Minuet in G（Petzold・右手） |
 | 5 | `lesson-05-expression` | 強弱・ヘアピン・スラー・`@tenuto` `@fermata`・`@rit`…`@!rit` | Silent Night（Gruber・6/8） |
 | 6 | `lesson-06-form` | section・form・`\|: :\|`・1 番 2 番括弧・`~`・**同じ名前＝同じ時間** | Jingle Bells（Pierpont・サビ） |
 | 7 | `lesson-07-lyrics` | `lyrics … sings`・ハイフン・`\|`・2 言語の 2 行 | Frère Jacques（英・仏） |
 | 8 | `lesson-08-chords` | `chords` 行・リードシート・（TRY で Ctrl+Shift+↑ のダイアグラム・`chordDiagrams all`） | Evening Walk（オリジナル） |
 | 9 | `lesson-09-piano` | 大譜表・`octave 3`・`phrase`・（TRY で和音・3 連符・2 声） | Minuet in G（両手・左手は簡略） |
-| 10 | `lesson-10-band` | `midiInstrument`・`tab`/`tuning bass`・`clef percussion` とドラム・score を 2 つ | Saturday（オリジナル） |
+| 10 | `lesson-10-band` | **移調楽器**（`pitch concert`＋`instrument trumpet`＝全体の楽譜は `score pitch concert` で実音、`score trumpet` は奏者の調）・`tab`/`tuning bass`・`clef percussion` とドラム・score を 3 つ（`midiInstrument` は TRY の補完だけ） | Saturday（オリジナル） |
 
 曲は**音を確実に書けるもの**に絞った（初案の Oh! Susanna・Scarborough Fair・Brahms・Clementine・Saints は、
 旋律や歌詞の割り付けを確かめられないので差し替えた）。Lesson 4 と 9 は同じ曲＝「4 で書いた曲に 9 で左手を足す」。
@@ -139,9 +139,9 @@ index の「03 Speed」は見出しだけ。
    「`lesson` と打って Ctrl+Space」。
 3. `learn-01.html`〜`learn-10.html`（各 0.5〜0.8・前後リンク）＝**拡張のレッスンと 1 対 1**。移す元: 01←`editor#language`
    `#typing`（要約）`#step` `#audition`・`grammar#chordrows` の補完 h3／02←`#pitch` `#duration` `#glance`（簡約）／03←
-   `#duration` `#events` の休符 `#connect` のタイ `#sections` の partial `#bars`／04←調と臨時記号（新規）／05←`#anno` を
+   `#duration` `#events` の休符 `#connect` のタイ `#sections` の partial `#bars`／04←調と臨時記号（新規）・`#transposing` の score の `transpose`／05←`#anno` を
    割る `#connect`／06←`#sections` `#forms`＋P4／07←`#lyrics`／08←`#chordrows` の前半・slash notes・chords.html への入口／
-   09←`#scores` の grouping・`#groups` `#phrases`／10←`#tab` `#parts`（instrument・midiInstrument）・ドラム（新規・P5）・複数 score。
+   09←`#scores` の grouping・`#groups` `#phrases`／10←`#tab` `#parts`（instrument・midiInstrument）・`#transposing`（移調楽器と `pitch concert`）・ドラム（新規・P5）・複数 score。
 4. Reference（`grammar.html` を割る。URL は入口として残すか転送）: `ref-music.html`（約 1.5）・`ref-structure.html`（約 1.5）・
    `ref-output.html`（約 1.2）・`ref-lookup.html`（約 0.8＝予約語・診断・LilyPond から・Rough edges）。
 5. `chords.html` はそのまま（`#check` を末尾へ）。`editor.html`（約 1.2・Ctrl+Space を正面に）。`ai.html`（約 0.5）。

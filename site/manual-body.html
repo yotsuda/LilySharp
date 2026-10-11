@@ -533,7 +533,10 @@ part v1 { clef treble instrument "1st Violin" } // label only — no preset beha
   written notes by hand. Its argument is a PITCH, not a number of steps — it renames
   <code>c</code> to that pitch and shifts every note by the same interval, so
   <code>part cl { clef treble transpose bes }</code> prints <code>c d e f</code> as
-  B♭ C D E♭ — and it composes with the instrument's own shift. Do not confuse it with
+  B♭ C D E♭ — and it composes with the instrument's own shift. On a score it prints that
+  score in another key, the file unchanged: <code>score low transpose bes, { … }</code> is the
+  same music a step down (the comma counts — <code>bes</code> alone is a seventh up). Do not
+  confuse it with
   <code>transposition</code>, which takes an octave marker
   (<code>8va</code> / <code>8vb</code> / <code>15ma</code> / <code>15mb</code>) and overrides
   the preset's written-to-sounding octave.</p>

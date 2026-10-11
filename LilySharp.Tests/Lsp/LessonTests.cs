@@ -134,6 +134,32 @@ public class LessonTests
     }
 
     [Theory]
+    [InlineData(3, "low", -1)]      // lesson 4: `score low transpose bes,` — a step down
+    [InlineData(9, "trumpet", 1)]   // lesson 10: a B♭ trumpet's part under `pitch concert` — a step up
+    public void ATransposingPrintout_PrintsTheTuneAStepAway(int lesson, string score, int steps)
+    {
+        // The two lessons that teach transposing (owner's request 2026-10-11, "レッスンに
+        // transpose がない"): the printout the comments send the writer to exists, and it prints
+        // the same notes the default score prints, the step away its comment says — every head
+        string text = LilySharpLanguageServer.Lessons[lesson].Text;
+        Assert.Contains($"pick `{score}`", text);
+        Assert.Contains($"score {score} ", text);
+        var tree = SyntaxTree.Parse(text);
+        var specs = LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree);
+        int[] PositionsOf(string? name)
+        {
+            var collected = SvgGenerator.CollectScore(tree, LilySharp.Core.Svg.Collector.RenderSpecParser.Choose(specs, name));
+            // The first staff of notes: the melody, and in lesson 10 the lead under the chord row.
+            var (_, staff, _) = collected.EnumerateStaves().First(s => !s.Staff.IsTextRow);
+            return staff.Voices[0].Measures.SelectMany(m => m.Items).OfType<LilySharp.Core.Svg.Model.NoteItem>().Select(n => n.StaffPosition).ToArray();
+        }
+        var main = PositionsOf(null);
+        var moved = PositionsOf(score);
+        Assert.NotEmpty(main);
+        Assert.Equal(main.Select(p => p + steps), moved);
+    }
+
+    [Theory]
     [MemberData(nameof(AllLessons))]
     public void ALessonsTasks_AreShortMemosOnTheNotes(string language, string label)
     {

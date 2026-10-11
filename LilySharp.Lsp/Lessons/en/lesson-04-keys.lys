@@ -3,6 +3,7 @@
 //
 // Sharp = `is`, flat = `es`: fis = F#, bes = Bb.
 // Write what sounds: in G major, F# is still `fis`. The key only prints it.
+// `transpose` prints the same music in another key — pick `low` at the top of the preview.
 
 title "Minuet in G"
 composer "Christian Petzold"
@@ -24,7 +25,9 @@ form { ~A }
 
 score { staff melody }
 
+score low transpose bes, { staff melody }   // one step down: F major
+
 // TRY: do what the red circle says · change the key to `g mixolydian`:
-// the sharps move into the music.
+// the sharps move into the music · change `bes,` to `a,`.
 //
 // NEXT — type `lesson` on a new line and pick `lesson-05-expression`.
