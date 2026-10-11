@@ -23,7 +23,7 @@ form { ~A }                     // the playing order
 
 score { staff melody }          // what is printed
 
-// TRY: delete the `,` from `g,2` and watch it jump · type `d4 d d` for `d2`
-// and hover the squiggle.
+// TRY: delete the `,` from `g,2` and watch it jump · at the end of line 1,
+// change `e d d2` to `e d d d d` — rest the mouse on the squiggle.
 //
 // NEXT — type `lesson` on a new line and pick `lesson-03-rhythm`.

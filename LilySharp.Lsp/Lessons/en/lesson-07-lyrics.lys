@@ -37,6 +37,7 @@ score {
   lyrics fr
 }
 
-// TRY: remove `lyrics fr` from the score · add a syllable and hover the squiggle.
+// TRY: remove `lyrics fr` from the score · change the last English bar to
+// `Ding, dang, dong, ding! |` — rest the mouse on the squiggle.
 //
 // NEXT — type `lesson` on a new line and pick `lesson-08-chords`.

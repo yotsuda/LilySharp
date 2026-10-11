@@ -14,28 +14,30 @@ composer "Traditional"
 
 
 part melody {
-  clef treble
-  // STEP 2 — Ctrl+Space on the empty line below. Pick `instrument`, then `flute`. Press ▶.
+  // STEP 2 — Ctrl+Space on the empty line below. Pick `instrument`, then `cello`.
+  // The bass clef appears by itself. Press ▶.
 
 }
 
 section A {
+  // STEP 3 — Type `@` right after the first `e4` below. Pick `mf`.
   melody {
     e4 d c d | e e e2 | d4 d d2 | e4 g g2 |
-    e4 d c d | e e e e | d d e d | c1 |.
+    e4 d c d | e e e e | d d e d | c1 |
+    // STEP 4 — Ctrl+Space on the empty line below. Pick `Cmaj7`: a chord, one more bar.
+
+    |.
   }
-  // STEP 3 — Type `@` right after the first `e4`. Pick `mf`.
-  // STEP 4 — Ctrl+Space after `c1 |.` — pick `C`: it writes <c e g>.
 }
 
-// STEP 5 — Ctrl+Space inside these braces: sections and repeat signs.
+// STEP 5 — Change the line below to:  form { |: ~A :| }   — now it plays twice.
 form { ~A }
 
 score {
   staff melody
 }
 
-// Also: hover any word to read about it · Alt+P plays the note at the caret
-// · Ctrl+Shift+Up/Down moves a note an octave.
+// MESSAGES — delete one `e` from `e e e2`: a squiggle appears under the bar.
+// Rest the mouse on it to read what is wrong. Ctrl+Z puts it back.
 //
 // NEXT — type `lesson` on a new line and pick `lesson-02-notes`.

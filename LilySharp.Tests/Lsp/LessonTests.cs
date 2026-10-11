@@ -221,20 +221,19 @@ public class LessonTests
     }
 
     [Fact]
-    public void Lesson1_Step2_APartOffersInstrument_ThenFlute()
+    public void Lesson1_Step2_APartOffersInstrument_ThenCello_WhichBringsTheBassClef()
     {
         int at = EmptyLineAfter(Lesson1, "STEP 2");
         Assert.Contains("instrument", Labels(CompletionAt(Lesson1, at)));
         string withInstrument = Lesson1.Insert(at, "instrument ");
-        Assert.Contains("flute", Labels(CompletionAt(withInstrument, at + "instrument ".Length)));
-    }
-
-    [Fact]
-    public void Lesson1_Step4_AfterTheLastBarline_TheChordCWritesCEG()
-    {
-        int at = Lesson1.IndexOf("c1 |.", System.StringComparison.Ordinal) + "c1 |.".Length;
-        var c = CompletionAt(Lesson1, at).Single(i => i.Label == "C");
-        Assert.Equal("<c e g>", c.InsertText);
+        Assert.Contains("cello", Labels(CompletionAt(withInstrument, at + "instrument ".Length)));
+        // "The bass clef appears by itself": the part writes no clef of its own, so the
+        // preset's is the one drawn.
+        Assert.DoesNotContain(Lesson1[Lesson1.IndexOf("part melody", System.StringComparison.Ordinal)..
+                                               Lesson1.IndexOf("section A", System.StringComparison.Ordinal)]
+                                       .Split('\n'), l => !l.TrimStart().StartsWith("//") && l.Contains("clef"));
+        Assert.Equal(LilySharp.Core.Svg.Model.ClefType.Bass,
+            LilySharp.Core.Svg.Model.InstrumentDefaults.GetDefaults("cello").Clef);
     }
 
     [Fact]
@@ -250,13 +249,55 @@ public class LessonTests
     }
 
     [Fact]
+    public void Lesson1_Step4_TheEmptyBarOffersCmaj7_InCMajorAndAfterStep1sGMajor()
+    {
+        // Cmaj7, not C: a label nobody can take for the note c. It is the key's IV7 in
+        // G major too, so step 1 having changed the key does not take it away.
+        int at = EmptyLineAfter(Lesson1, "STEP 4");
+        Assert.Equal("<c e g b>", CompletionAt(Lesson1, at).Single(i => i.Label == "Cmaj7").InsertText);
+
+        int keyAt = EmptyLineAfter(Lesson1, "STEP 1");
+        string inG = Lesson1.Insert(keyAt, "key g major");
+        int inGAt = EmptyLineAfter(inG, "STEP 4");
+        Assert.Equal("<c e g b>", CompletionAt(inG, inGAt).Single(i => i.Label == "Cmaj7").InsertText);
+    }
+
+    [Fact]
     public void Lesson1_Step5_TheFormOffersTheSectionsAndTheRepeatSigns()
     {
         int at = Lesson1.IndexOf("form { ~A", System.StringComparison.Ordinal) + "form { ~A".Length;
         var labels = Labels(CompletionAt(Lesson1, at + 1));
-        Assert.Contains("A", labels);
         Assert.Contains("~A", labels);
         Assert.Contains("|:", labels);
+        Assert.Contains(":|", labels);
+    }
+
+    [Fact]
+    public void Lesson1_EveryStepDoneAsWritten_StillCompilesClean()
+    {
+        // The lesson is done by hand, step after step, on one file; each step's result has to
+        // be a score that compiles with no message, or the next step starts from a squiggle.
+        string text = Lesson1;
+        text = text.Insert(EmptyLineAfter(text, "STEP 1"), "key g major");
+        text = text.Insert(EmptyLineAfter(text, "STEP 2"), "instrument cello");
+        int first = text.IndexOf("e4 d c d", System.StringComparison.Ordinal) + "e4".Length;
+        text = text.Insert(first, "@mf");
+        text = text.Insert(EmptyLineAfter(text, "STEP 4"), "<c e g b>");
+        Assert.Contains("form { |: ~A :| }", Lesson1);   // the sample step 5 shows
+        text = text.Replace("form { ~A }", "form { |: ~A :| }");
+
+        var tree = SyntaxTree.Parse(text);
+        var diagnostics = tree.Diagnostics.Concat(SemanticValidation.Run(tree)).ToList();
+        Assert.True(diagnostics.Count == 0, string.Join("\n", diagnostics.Select(d => $"{d.Code}: {d.Message}")));
+    }
+
+    [Fact]
+    public void Lesson1_TheMessageExercise_DoesRaiseAMessage()
+    {
+        // "delete one `e` from `e e e2`: a squiggle appears".
+        Assert.Contains("e e e2", Lesson1);
+        var tree = SyntaxTree.Parse(Lesson1.Replace("e e e2", "e e2"));
+        Assert.NotEmpty(tree.Diagnostics.Concat(SemanticValidation.Run(tree)));
     }
 
     private static Position PositionAtEnd(string text)

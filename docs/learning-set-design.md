@@ -28,7 +28,7 @@
 
 | # | ラベル | 新しく出るもの | 曲（すべて PD） |
 |---|---|---|---|
-| 1 | `lesson-01-completion` | **STEP 0＝プレビューを開く**（Ctrl+K → V・エディタ右上のアイコン・▶）→ 補完ツアー: トップレベル（`key`→`g`→`major`）・part の中（`instrument`→`flute`）・`@` の一覧・音符の中（`C`→`<c e g>`）・form の中・hover・Alt+P・Ctrl+Shift+↑↓ | Mary Had a Little Lamb |
+| 1 | `lesson-01-completion` | **STEP 0＝プレビューを開く**（Ctrl+K → V・エディタ右上のアイコン・▶）→ 補完ツアー: トップレベル（`key`→`g`→`major`）・part の中（`instrument`→`cello`＝clef が自動でヘ音記号になる・part に clef は書かない）・`@` の一覧・空の小節で `Cmaj7`→`<c e g b>`（`C` は音名 c と紛れるので避けた・G major でも出る）・form を `form { |: ~A :| }` に書き換え・squiggle にマウスを乗せる | Mary Had a Little Lamb |
 | 2 | `lesson-02-notes` | 音名・音価・`\|`・相対オクターブ `'` `,`・ファイルの 4 要素 | Ode to Joy（Beethoven） |
 | 3 | `lesson-03-rhythm` | 付点・16 分・3/4・`partial`・（TRY で休符・タイ・数字キー） | Happy Birthday to You（Hill） |
 | 4 | `lesson-04-keys` | `is`/`es`・「鳴る音を書く・調は印刷だけ」・`key` と旋法 | Minuet in G（Petzold・右手） |
@@ -157,3 +157,8 @@ index の「03 Speed」は見出しだけ。
 
 - 歌詞の行を 2 本重ねると、2 言語（`lyrics en`／`lyrics fr`）でも行頭に `1.` `2.` が付く（Lesson 7 の絵）。
   言語違いの 2 行に番号は不自然かもしれない＝**ユーザー判断**（行に番号を付けない書き方が要るか）。
+- **hover が薄い**（2026-10-11 ユーザー指摘「hover any word は何がおこるかわからないし、実際何もおきない」）:
+  `LanguageReference.Hover` は音符（`**Note**: e / Octave offset / Duration`）・休符・小節線などの構文の名前を返すだけで、
+  `@mf` などの印・`clef`／`instrument`／`key` の語・part の名前には何も返さない。⇒ Lesson 1 は hover の案内をやめ、
+  確実に動く「squiggle にマウスを乗せる」を具体的な手順で書いた。**hover を「その語が何をするか」まで厚くする**のは
+  製品側の改善候補（ユーザー判断）。厚くしたらレッスンで案内し直す。
