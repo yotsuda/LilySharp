@@ -759,6 +759,68 @@ internal static partial class SharedRenderer
     }
 
     /// <summary>
+    /// A tab item's ring box for a <c>@todo</c> (DrawTodoMarks): its fret digits — each as
+    /// <see cref="DrawTabFret"/> sets it, on its string, at its width, a chord's at their zigzag
+    /// columns — in the ring's frame (X on the page, Y over the staff middle the ring reads,
+    /// the notation staff's StaffHeight/2 below the top line). Null for anything that draws no
+    /// digit (a rest goes round its glyph as on any staff).
+    /// </summary>
+    internal static (double Left, double Right, double Bottom, double Top)? TabTodoInkBox(
+        ScoreTextMetrics fonts, Staff staff, MusicItem item, double xColumn)
+    {
+        int[] tuning = Tunings.GetTuning(staff.Tuning ?? TuningType.Guitar);
+        int n = tuning.Length;
+        double space = EngravingDefaults.TabStringSpace(n);
+        int shift = Tunings.SoundingShift(staff.TabSourceClef, staff.Transposition);
+        double em = TabFretEm(fonts, n);
+        double digitHeight = LilySharp.Core.Svg.Layout.TabConstants.FretDigitHeight(fonts, n);
+        double axis = xColumn + EngravingDefaults.TabHeadCenterOffset;
+        double YOf(int str) => StaffHeight / 2 - (str - 1) * space;
+        double WidthOf(int fret) => LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fonts, n,
+            fret.ToString(System.Globalization.CultureInfo.InvariantCulture), em);
+
+        double left = double.PositiveInfinity, right = double.NegativeInfinity;
+        double bottom = double.PositiveInfinity, top = double.NegativeInfinity;
+        void Add(double cx, int str, double width, double height)
+        {
+            left = Math.Min(left, cx - width / 2);
+            right = Math.Max(right, cx + width / 2);
+            bottom = Math.Min(bottom, YOf(str) - height / 2);
+            top = Math.Max(top, YOf(str) + height / 2);
+        }
+        switch (item)
+        {
+            case NoteItem { TabHidden: false, IsPitchlessSlash: false } note:
+            {
+                var (str, fret) = Tunings.CalculateFret(note.Midi + shift, tuning, note.StringNumber ?? 0);
+                if (note.IsDead)
+                    Add(axis, str, TabDeadHeadWidth, TabDeadHeadHeight);
+                else
+                    Add(axis, str, WidthOf(fret), digitHeight);
+                break;
+            }
+            case ChordItem { Notes.Length: > 0 } chord:
+            {
+                var notes = Tunings.CalculateChordFrets(
+                        chord.Notes.Select(cn => (cn.Midi + shift, cn.StringNumber)).ToList(), tuning)
+                    .Select(p => (str: p.stringNum, fret: p.fret)).OrderBy(p => p.str).ToList();
+                double[] dx = TabChordColumns.Offsets(fonts, n, notes);
+                for (int i = 0; i < notes.Count; i++)
+                    Add(axis + dx[i], notes[i].str, WidthOf(notes[i].fret), digitHeight);
+                break;
+            }
+            default:
+                return null;
+        }
+        return left <= right ? (left, right, bottom, top) : null;
+    }
+
+    /// <summary>The tab's dead-note head's height — its box (TabDeadHeadWidth's remarks)
+    /// at magstep(−2).</summary>
+    private static readonly double TabDeadHeadHeight =
+        LilySharp.Core.Svg.Layout.GlyphMetrics.GetNoteheadBBox(MusicFont.Current.DesignAt(0), 4).Height * TabDeadHeadScale;
+
+    /// <summary>
     /// Draws one fret number (with its string-line-occluding background) at the
     /// given string line and x. Chord notes share this after their x is shifted.
     /// </summary>

@@ -218,6 +218,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A `@todo` on a tab note rings its fret number.** The ring was the size of a notehead and
+  stood where the notation staff's head would be, so a fret number (two digits above all) stuck
+  out of it. It now goes round the digits as drawn — a chord's on all its strings.
+
 - **A `@todo` in a drum chart line is drawn.** `r@todo("…")` (or one on a hit) inside a `drums { }`
   line drew no ring: the chart rebuilds its rests when it merges the lines, and the merged
   notes did not carry the mark either. Both do now, and a rest's other marks ride along.

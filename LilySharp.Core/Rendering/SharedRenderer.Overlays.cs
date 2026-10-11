@@ -156,7 +156,14 @@ internal static partial class SharedRenderer
                         var item = items[ii];
                         if (item.TodoKey is not { } key)
                             continue;
-                        if (TodoInkBox(item, measureLayout, measures, mi, ii, staffLines, spacing) is not var (left, right, bottom, top))
+                        // On a tab the ring goes round the fret DIGITS (owner's report 2026-10-12:
+                        // the notehead's box drew a ring smaller than the number it marked).
+                        var inkBox = staff.IsTab
+                            ? TabTodoInkBox(fonts, staff, item,
+                                measureLayout.X + LayoutUtilities.GetItemXOffset(measures, mi, ii, measureLayout))
+                              ?? TodoInkBox(item, measureLayout, measures, mi, ii, staffLines, spacing)
+                            : TodoInkBox(item, measureLayout, measures, mi, ii, staffLines, spacing);
+                        if (inkBox is not var (left, right, bottom, top))
                             continue;
                         double scale = os.Size(1.0, staffIndex);
                         double cx = (left + right) / 2, cy = (top + bottom) / 2;
