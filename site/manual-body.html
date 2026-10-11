@@ -361,6 +361,17 @@ score { staff vc }</pre>
   <p><code>@fermata.up</code> is a fermata forced above. It follows that
   <code>@notehead.x</code> does not work — an argument always goes in parentheses:
   <code>@notehead(cross)</code>.</p>
+
+  <h3 id="todo">Notes to yourself — <code>@todo</code></h3>
+  <p><code>@todo</code> marks a note, rest or chord to come back to. It prints nothing and
+  plays nothing. The editor lists each one as a warning, and the preview rings the item in
+  red, with the memo beside it (<code>.down</code> puts the memo below). Done? Delete the
+  mark, or press <kbd>Ctrl+.</kbd> on it: <i>Resolve this TODO</i>.</p>
+<pre>c'4 fis'8@todo("F# or F natural?") e'8 g'2 |
+r2@todo("bar 12 is only 7/8").down d'2 |
+c'4@todo e'4 g'2 |</pre>
+  <p>A <code>chords</code> row's symbol takes one too (<code>Am7@todo("or C?")</code>). An
+  export draws none. <code>lysc check --todo-as-error</code> fails while any is left.</p>
   <!--EXAMPLE:annotations-->
   <!--EXAMPLE:spanners-->
 </section>
