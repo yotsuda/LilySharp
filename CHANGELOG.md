@@ -197,6 +197,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **Drum notes inside `tuplet { }` are drawn.** `tuplet 3/2 { sn8 sn sn }` in a drum part drew nothing
+  and took no time on the page, with no warning (the MIDI played it); a triplet fill now prints with
+  its bracket, and an open or closed hi-hat in it keeps its mark.
+
 - **`@mp|` (any dynamic level) offers `.up` / `.down` on Ctrl+Space**, as `@staccato|` did:
   the placement completion knew the articulations only. A hairpin (`@cresc`) still offers none,
   since it is always below the staff.

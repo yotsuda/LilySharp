@@ -1150,19 +1150,7 @@ public sealed partial class MeasureCollector
                     Fraction drumAnchorTiming = builder.CurrentDuration;
                     var drumItem = CreateDrumNoteItem(drumNote);
                     builder.AddItem(drumItem);
-                    // LilyPond's style tables mark the closed hi-hat and the muted hand drums
-                    // "+", the open ones "○", and the short/long guiro staccato/tenuto —
-                    // automatically. DrumNameRegistry.MarkArticulation is the one reading.
-                    if (DrumOverrides.Resolve(_drumOverrides, drumNote.DrumName) is { Mark: not null } dInfoMark
-                        && DrumNameRegistry.MarkArticulation(dInfoMark.Mark) is not ArticulationType.None)
-                        _articulations.Add(new ArticulationItem(
-                            DrumNameRegistry.MarkArticulation(dInfoMark.Mark),
-                            drumMeasureIndex, drumItemIndex, true,
-                            drumNote.SourceStart, _cursor.StaffIndex)
-                        { VoiceIndex = _cursor.VoiceIndex });
-                    CollectDynamics(drumNote, drumMeasureIndex, drumItemIndex);
-                    CollectArticulations(drumNote, drumMeasureIndex, drumItemIndex, drumItem.StemUp,
-                        null, drumAnchorTiming);
+                    CollectDrumNoteMarks(drumNote, drumItem, drumMeasureIndex, drumItemIndex, drumAnchorTiming);
                 }
                 break;
 
@@ -2173,6 +2161,26 @@ public sealed partial class MeasureCollector
     /// notation-vs-time factor) with its post-events, and returns its WRITTEN duration.
     /// Shared by <see cref="ProcessTuplet"/> and the arpeggio auto-tuplet.
     /// </summary>
+    /// <summary>
+    /// What a drum note carries besides its head, for the main walk and the tuplet arm alike:
+    /// LilyPond's style-table mark — the closed hi-hat and the muted hand drums "+", the open
+    /// ones "○", the short/long guiro staccato/tenuto, automatically
+    /// (DrumNameRegistry.MarkArticulation is the one reading) — then its dynamics and scripts.
+    /// </summary>
+    private void CollectDrumNoteMarks(DrumNoteSyntax drumNote, NoteItem drumItem,
+        int measureIndex, int itemIndex, Fraction anchorTiming)
+    {
+        if (DrumOverrides.Resolve(_drumOverrides, drumNote.DrumName) is { Mark: not null } dInfoMark
+            && DrumNameRegistry.MarkArticulation(dInfoMark.Mark) is not ArticulationType.None)
+            _articulations.Add(new ArticulationItem(
+                DrumNameRegistry.MarkArticulation(dInfoMark.Mark),
+                measureIndex, itemIndex, true,
+                drumNote.SourceStart, _cursor.StaffIndex)
+            { VoiceIndex = _cursor.VoiceIndex });
+        CollectDynamics(drumNote, measureIndex, itemIndex);
+        CollectArticulations(drumNote, measureIndex, itemIndex, drumItem.StemUp, null, anchorTiming);
+    }
+
     private Fraction EmitScaledItem(SyntaxNode item, MeasureBuilder builder, Fraction scale,
         MarkerFlags m)
     {
@@ -2331,6 +2339,18 @@ public sealed partial class MeasureCollector
                 CollectDynamics(slash, annMeasureIndex, annItemIndex);
                 CollectArticulations(slash, annMeasureIndex, annItemIndex, slashItem.StemUp, anchorTiming: annAnchor);
                 CollectChordNames(slash, annMeasureIndex, annItemIndex, annAnchor);
+                return written;
+            }
+            case DrumNoteSyntax drumNote:
+            {
+                // A drum note inside a tuplet — the main walk's arm, scaled. Until 2026-10-11
+                // this arm did not exist and the switch fell through: `tuplet 3/2 { sn8 sn sn }`
+                // drew nothing, played nothing and took no time, with no diagnostic (the
+                // owner's report on drum fills, a triplet fill being the common one).
+                var drumItem = CreateDrumNoteItem(drumNote);
+                Fraction written = drumItem.Duration;
+                builder.AddItemWithoutDuration(WithBowSources(drumItem with { TimeScale = scale }, m));
+                CollectDrumNoteMarks(drumNote, drumItem, annMeasureIndex, annItemIndex, annAnchor);
                 return written;
             }
             case BareDurationSyntax bare:
