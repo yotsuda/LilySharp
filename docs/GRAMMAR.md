@@ -2507,7 +2507,9 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                      it as data-todo on the head. Other arguments: LYS4027; a key twice in a
                      file: LYS4028. *)
    - Half ties:     c4@laissezVibrer (l.v. into silence) , c4@repeatTie (from a repeat)
-   - Effects:       @cross / @dead (x notehead) ,
+   - Effects:       @cross / @dead (x notehead) , @parenthesize (the head in
+                    parentheses, a ghost note; on a chord one pair round it, on a member
+                    its own; LilyPond's \parenthesize — the parentheses take no room) ,
                     @fall @doit (jazz bends) , @breath @caesura
                     (* a CUE is not an annotation — it is a region, 'cue { … }', below *)
    - Feathered beam: c16@feather(right) … (accel) / @feather(left) (rit)

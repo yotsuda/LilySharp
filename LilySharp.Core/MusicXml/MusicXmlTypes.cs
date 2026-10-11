@@ -851,6 +851,9 @@ internal sealed class MusicXmlNote
     public int? Voice { get; set; }
     /// <summary>Notehead style name ("x", "diamond", …) or null for default.</summary>
     public string? Notehead { get; set; }
+    /// <summary>The head stands in parentheses (<c>@parenthesize</c>):
+    /// <c>&lt;notehead parentheses="yes"&gt;</c>, "normal" when no style is set.</summary>
+    public bool NoteheadParentheses { get; set; }
     public string? Step { get; set; }
     public double? Alter { get; set; }
     public int? Octave { get; set; }
@@ -1025,7 +1028,9 @@ internal sealed class MusicXmlNote
                 new XElement("actual-notes", ActualNotes.Value),
                 new XElement("normal-notes", NormalNotes.Value)));
 
-        if (Notehead != null)
+        if (NoteheadParentheses)
+            note.Add(new XElement("notehead", new XAttribute("parentheses", "yes"), Notehead ?? "normal"));
+        else if (Notehead != null)
             note.Add(new XElement("notehead", Notehead));
 
         // MusicXML order: … notehead, staff, beam, notations, lyric.

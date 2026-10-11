@@ -434,7 +434,8 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - Fingering (per chord note): `<c@finger(1) e@finger(3)>4`
 - Rehearsal mark: `c4@mark("A")`
 - Half ties: `c4@laissezVibrer` (l.v. into silence), `c4@repeatTie` (resume from a repeat)
-- Effects: `@cross`/`@dead` (x notehead), `@fall`/`@doit` (jazz bends), `@breath`/`@caesura`
+- Effects: `@cross`/`@dead` (x notehead), `@parenthesize` (head in parentheses, a ghost note:
+  `sn16@parenthesize`; `<c e g>2@parenthesize` = one pair round the chord), `@fall`/`@doit` (jazz bends), `@breath`/`@caesura`
 - Cue notes: `cue { … }` — a REGION, not an annotation, so there is no `@cue`:
   `c4 d cue { e4 f } g4 |` (it maps onto LilyPond's CueVoice context). Name the quoted
   instrument's clef to read the cue in it: `c4 d cue bass { e4 f } g4 |` — the staff's own
@@ -610,7 +611,7 @@ drummap { hh: position 6 notehead x }  // TOP LEVEL, optional: re-table a drum
   LYS0040; three hands / three feet / hh with hho at once = warning LYS4030. Prefer it to
   `voice { } { }` for a kit: write each pattern once as a one-bar phrase. Flam:
   `acciaccatura { sn16 } sn4`. The editor offers stock one-bar patterns (`hats8 hats16 hats4
-  hatsOpen shuffle back halfTime flam fourFloor kick8 kickSync fillToms fillTriplet`) and
+  hatsOpen shuffle back halfTime ghost flam fourFloor kick8 kickSync fillToms fillTriplet`) and
   writes their `phrase` declarations into the file; outside the editor, declare them yourself.
 - `drummap { NAME: position N notehead W midi K mark M … }`: position −9…9 (0 = middle
   line), notehead `x cross diamond triangle slash xcircle default`, midi 0…127, mark `open

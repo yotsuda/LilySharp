@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -50,6 +50,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             "arpeggio",
             "laissezVibrer", "repeatTie",
             "dead",
+            // A head in parentheses — a drummer's ghost note (MeasureCollector.IsParenthesizeMark).
+            "parenthesize",
             "rest",
             "stemUp", "stemDown",
             // '@ho' / '@po' are NOT here: retired from the registry pre-0.3.0, they stayed in
@@ -80,7 +82,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         "sfz", "sf", "fp", "rf", "rfz", "fz", "sffz",
         "pppp", "ppppp", "ffff", "fffff", "niente",
         "trill", "mordent", "prall", "turn", "reverseTurn", "pralltriller",
-        "startTrillSpan", "stopTrillSpan", "courtesy", "editorial", "glissando",
+        "startTrillSpan", "stopTrillSpan", "courtesy", "editorial", "glissando", "parenthesize",
         // ⚠️ The navigation marks (segno, coda, fine, ds, dc, to coda) are NOT
         // here: they are bare landmarks, and writing one with an '@' has its own
         // diagnostic ("A navigation mark is bare, not '@'"). Suggesting '@segno'

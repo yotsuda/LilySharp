@@ -3300,6 +3300,11 @@ public sealed class MusicXmlExporter
     /// drums-style staff position mapped onto treble letters (middle line =
     /// B4), notehead from the same table.</summary>
     /// <remarks>LILYPOND-REF: ly/drumpitch-init.ly drums-style.</remarks>
+    /// <summary>True when the list writes <c>@parenthesize</c>.</summary>
+    private static bool WritesParenthesize(IEnumerable<SyntaxNode> articulations)
+        => articulations.Any(a => a is ArticulationSyntax { Type: ArticulationType.None } p
+                                  && p.NameToken.Text.Equals("parenthesize", StringComparison.Ordinal));
+
     private void ProcessDrumNote(DrumNoteSyntax drum)
     {
         if (_currentMeasure == null) return;
@@ -3328,6 +3333,7 @@ public sealed class MusicXmlExporter
             ActualNotes = tupletActual,
             NormalNotes = tupletNormal,
             Notehead = NoteheadName(info.Notehead),
+            NoteheadParentheses = WritesParenthesize(drum.Articulations),
         };
         AddDrumMark(xmlNote, info);
         _currentMeasure.Notes.Add(xmlNote);
@@ -3409,6 +3415,7 @@ public sealed class MusicXmlExporter
                 _ => null,
             },
             Notehead = NoteheadFromMarks(note.Articulations),
+            NoteheadParentheses = WritesParenthesize(note.Articulations),
             ActualNotes = tupletActual,
             NormalNotes = tupletNormal
         };
@@ -3904,6 +3911,7 @@ public sealed class MusicXmlExporter
                     ActualNotes = tupletActual,
                     NormalNotes = tupletNormal,
                     Notehead = NoteheadName(info.Notehead),
+                    NoteheadParentheses = WritesParenthesize(bare.Articulations),
                 };
                 AddDrumMark(drumNote, info);
                 _currentMeasure.Notes.Add(drumNote);
@@ -4187,7 +4195,10 @@ public sealed class MusicXmlExporter
                 Dots = dots,
                 IsChord = !isFirst,
                 ActualNotes = tupletActual,
-                NormalNotes = tupletNormal
+                NormalNotes = tupletNormal,
+                // MusicXML parenthesizes a HEAD, not a chord: a whole chord's one pair
+                // (ChordItem.Parenthesized) is each member's here.
+                NoteheadParentheses = WritesParenthesize(chord.Articulations) || WritesParenthesize(pitch.Articulations),
             };
 
             // The member's own <technical> marks: its fingering, and its string number

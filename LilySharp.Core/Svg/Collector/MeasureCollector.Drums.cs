@@ -433,11 +433,26 @@ public sealed partial class MeasureCollector
             item = new ChordItem(notes, value, piece.Dots, piece.SourceStart);
         }
 
+        // Decorated as any sounding item, then given its parentheses hit by hit: a ghost
+        // note's pair is its own head's, whichever lines it shares the chord with.
         if (piece.Hits is { Count: > 0 } sounding)
             item = item switch
             {
-                NoteItem n => DecorateSoundingItem(n, sounding[0].Node, false),
-                ChordItem c => DecorateSoundingItem(c, sounding[0].Node, false),
+                NoteItem n => DecorateSoundingItem(n, sounding[0].Node, false) with
+                {
+                    Parenthesized = WritesParenthesize(sounding[0].Node),
+                },
+                ChordItem c => DecorateSoundingItem(c, sounding[0].Node, false) is var dc
+                    ? dc with
+                    {
+                        Parenthesized = false,
+                        Notes = [.. dc.Notes.Select(n => n with
+                        {
+                            Parenthesized = sounding.Any(h => h.Node.SourceStart == n.SourcePosition
+                                                               && WritesParenthesize(h.Node)),
+                        })],
+                    }
+                    : c,
                 _ => item,
             };
         if (scaled is { } scale)

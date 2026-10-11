@@ -674,6 +674,7 @@ internal sealed record NoteItemRare
     public bool? VoiceStemUp { get; init; }
     public bool TabBelowRange { get; init; }
     public string? LineStartAccidental { get; init; }
+    public bool Parenthesized { get; init; }
 }
 
 /// <summary>
@@ -728,6 +729,14 @@ public sealed record NoteItem : MusicItem
     {
         get => _rare?.Notehead ?? NoteheadStyle.Default;
         init { if (value != Notehead) _rare = (_rare ?? NoteItemRare.Empty) with { Notehead = value }; }
+    }
+    /// <summary>The head stands in parentheses (<c>@parenthesize</c>, LilyPond's
+    /// <c>\parenthesize</c>) — a drummer's ghost note above all. Drawn around the head, its
+    /// accidental and its dots; it takes no room (LilyPond's Parentheses grob widens nothing).</summary>
+    public bool Parenthesized
+    {
+        get => _rare?.Parenthesized ?? false;
+        init { if (value != Parenthesized) _rare = (_rare ?? NoteItemRare.Empty) with { Parenthesized = value }; }
     }
     /// <summary>Whether this note starts a tie to the next note.</summary>
     public bool HasTieStart { get; }
@@ -1422,7 +1431,10 @@ public readonly record struct ChordNoteInfo(
     int RepeatTieSourcePosition = -1,
     // The accidental a tie swallowed on THIS member — drawn and spaced only when the chord
     // starts a system (Accidental is null meanwhile). See NoteItem.LineStartAccidental.
-    string? LineStartAccidental = null
+    string? LineStartAccidental = null,
+    // THIS member's head stands in parentheses (a member's @parenthesize, or the chord's for
+    // every member) — see NoteItem.Parenthesized.
+    bool Parenthesized = false
 );
 
 /// <summary>
@@ -1467,6 +1479,13 @@ public sealed record ChordItem : MusicItem
 {
     /// <summary>The notes making up this chord.</summary>
     public ImmutableArray<ChordNoteInfo> Notes { get; init; }
+
+    /// <summary>The whole chord stands in ONE pair of parentheses (<c>&lt;c e g&gt;4@parenthesize</c>,
+    /// LilyPond's <c>\parenthesize &lt;c e g&gt;</c>, which gives the chord's heads one
+    /// parenthesis-id); a member's own pair is <see cref="ChordNoteInfo.Parenthesized"/>.</summary>
+    /// <remarks>LILYPOND-REF: ly/music-functions-init.ly:1575-1586 unique-parenthesis-id — parenthesize: an event-chord
+    /// takes (tweak 'parenthesis-id (gensym …)).</remarks>
+    public bool Parenthesized { get; init; }
 
     /// <summary>
     /// Whether this chord's accidentals were packed with the rest of its staff column

@@ -176,6 +176,12 @@ public sealed partial class LilyPondExporter
                 case ArticulationSyntax art when IsDeadNote(art):
                     prefix.Append("\\deadNote ");
                     break;
+                // `@parenthesize` is LilyPond's own \parenthesize, a music function on the event
+                // (a chord's: every head, as the page draws it).
+                // LILYPOND-REF: ly/music-functions-init.ly:1575-1586 parenthesis-id — parenthesize, a define-music-function on the event.
+                case ArticulationSyntax art when IsParenthesize(art):
+                    prefix.Append("\\parenthesize ");
+                    break;
                 // `a4@rest` is LilyPond's own `a4\rest` — a post-event, so it goes in the
                 // suffix right where the reader expects it. Without this the twin wrote
                 // the NOTE, which is not the same music: LilyPond would engrave a head
@@ -198,6 +204,9 @@ public sealed partial class LilyPondExporter
 
     private static bool IsDeadNote(ArticulationSyntax a)
         => a.NameToken.Text.Equals("dead", StringComparison.Ordinal);
+
+    private static bool IsParenthesize(ArticulationSyntax a)
+        => a.NameToken.Text.Equals("parenthesize", StringComparison.Ordinal);
 
     /// <summary>
     /// An ottava annotation as LilyPond's <c>\ottava #n</c>, or null for any other name:
@@ -762,6 +771,7 @@ public sealed partial class LilyPondExporter
             case "fall": return "\\bendAfter #-" + LilySharp.Core.Svg.Layout.BendAfterGeometry.DeltaStep;
             case "doit": return "\\bendAfter #+" + LilySharp.Core.Svg.Layout.BendAfterGeometry.DeltaStep;
             case "dead": return "\\deadNote";      // normally intercepted as a prefix
+            case "parenthesize": return "";        // intercepted as a prefix (note) or before the pitch (member)
             // ⚠️ NOT A SCRIPT, so it must answer here and never reach the `dir + glyph` tail
             // below: LilyPond's arpeggio is an EVENT on the chord (`<c e g>1\arpeggio`), and
             // `-\arpeggio` is not the same thing. Lily#'s ChordItem.HasArpeggio is a plain

@@ -4662,6 +4662,7 @@ public sealed partial class LilySharpLanguageServer
                 // a stub — the `ottava(bassa)` shape.
                 new CompletionItem { Label = "arpeggio(bracket)", Kind = CompletionItemKind.Value, Detail = "Chord bracket — play the notes together, not arpeggiated (LilyPond \\nonArpeggiato)", SortText = "6arpeggio.bracket" },
                 new CompletionItem { Label = "courtesy", Kind = CompletionItemKind.Value, Detail = "Force courtesy accidental", SortText = "6courtesy" },
+            new CompletionItem { Label = "parenthesize", Kind = CompletionItemKind.Value, Detail = "Head in parentheses (ghost note)", SortText = "6parenthesize" },
                 new CompletionItem { Label = "editorial", Kind = CompletionItemKind.Value, Detail = "Editorial (suggestion) accidental above the note", SortText = "6editorial" },
                 new CompletionItem { Label = "cross", Kind = CompletionItemKind.Value, Detail = "Cross-staff note (moves to the other staff of the pair)", SortText = "6cross" },
                 new CompletionItem { Label = "laissezVibrer", Kind = CompletionItemKind.Value, Detail = "Laissez vibrer tie (hanging, no destination)", SortText = "6laissezVibrer" },

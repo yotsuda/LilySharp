@@ -27,10 +27,16 @@ workflow attaches that section to the GitHub Release verbatim.
   `drums` in a drum part and colors its words. MIDI plays every line; the LilyPond and
   MusicXML exports write a voice a line.
 
+- **A head in parentheses: `@parenthesize`.** LilyPond's `\parenthesize` — a drummer's ghost note
+  (`sn16@parenthesize`), or any note: the parentheses enclose the head with its accidental and
+  dots, at half size, and take no room, exactly where LilyPond 2.26 puts them. On a chord
+  (`<c e g>2@parenthesize`) one pair encloses the chord; on a member (`<c e@parenthesize g>`)
+  that head alone. Exported as `\parenthesize` and as MusicXML's `parentheses="yes"`.
+
 - **Stock drum patterns in the completion list.** In a drum part, after the file's own phrases,
-  the list offers thirteen one-bar patterns — hi-hats in eighths, sixteenths and quarters, open
-  off-beats, a ride shuffle, backbeat, half time, a flam, four on the floor, two kicks and two
-  fills — each showing its drum grid. Accepting one writes its name and adds its `phrase`
+  the list offers fourteen one-bar patterns — hi-hats in eighths, sixteenths and quarters, open
+  off-beats, a ride shuffle, backbeat, half time, ghost notes, a flam, four on the floor, two
+  kicks and two fills — each showing its drum grid. Accepting one writes its name and adds its `phrase`
   declaration above the first part, so the notes stay in the file to be changed.
 - **One staff can print in its player's key.** `staff tp as pitch transposed` prints that staff's
   transposing part for its player (`as pitch concert`: as it sounds), over the score's own

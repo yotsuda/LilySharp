@@ -2110,6 +2110,46 @@ public sealed partial class MeasureCollector
     /// and joins the pair with the subdivision's beams — the same for a note, a chord, a <c>q</c>
     /// (regression repeat-tremolo-chord-rep.ly) and a bare duration.
     /// </remarks>
+    /// <summary>True for the <c>@parenthesize</c> annotation (LilyPond's <c>\parenthesize</c>).</summary>
+    internal static bool IsParenthesizeMark(SyntaxNode annotation)
+        => annotation is ArticulationSyntax { Type: ArticulationType.None } mark
+           && mark.Name.Equals("parenthesize", StringComparison.Ordinal);
+
+    /// <summary>True when <paramref name="node"/> itself writes <c>@parenthesize</c>.</summary>
+    private static bool WritesParenthesize(SyntaxNode node)
+    {
+        foreach (var a in ArticulationsOf(node))
+            if (IsParenthesizeMark(a))
+                return true;
+        return false;
+    }
+
+    /// <summary>
+    /// A chord's parentheses: ONE pair round the whole chord when it writes
+    /// <c>@parenthesize</c> (<c>&lt;c e&gt;4@parenthesize</c>), and a pair of its own for each
+    /// member that writes it (<c>&lt;c e@parenthesize&gt;</c>) — LilyPond's two cases: the
+    /// chord's heads share one parenthesis-id, a lone head's grob gets its own Parentheses.
+    /// LILYPOND-REF: ly/music-functions-init.ly:1575-1586 unique-parenthesis-id (parenthesize gives an event-chord one id);
+    /// lily/parenthesis-engraver.cc:58-100 Parenthesis_engraver::acknowledge_grob — one Parentheses an id, else a grob.
+    /// </summary>
+    private static ChordItem WithParenthesizedMembers(ChordItem chord, SyntaxNode node)
+    {
+        if (WritesParenthesize(node))
+            return chord with { Parenthesized = true };
+        HashSet<int>? members = null;
+        if (node is ChordSyntax written)
+            foreach (var pitch in written.Pitches)
+                foreach (var a in pitch.Articulations)
+                    if (IsParenthesizeMark(a))
+                        (members ??= new()).Add(pitch.SourceStart);
+        if (members == null)
+            return chord;
+        return chord with
+        {
+            Notes = [.. chord.Notes.Select(n => members.Contains(n.SourcePosition) ? n with { Parenthesized = true } : n)],
+        };
+    }
+
     private T DecorateSoundingItem<T>(T item, SyntaxNode node, bool isCue) where T : MusicItem
     {
         switch (item)
@@ -2124,6 +2164,8 @@ public sealed partial class MeasureCollector
                 if (ExtractNoteheadStyle(node) is var style && style != NoteheadStyle.Default
                     && !n.IsDead)
                     n = n with { Notehead = style };
+                if (WritesParenthesize(node))
+                    n = n with { Parenthesized = true };
                 if (_tremoloPairShape is { } pair)
                 {
                     n = n with
@@ -2149,6 +2191,9 @@ public sealed partial class MeasureCollector
                     c = c with { BeginsCueRegion = true };
                 if (ExtractNoteheadStyle(node) is var style && style != NoteheadStyle.Default)
                     c = c with { Notehead = style };
+                // A merged drum chart's chord takes its parentheses hit by hit (EmitDrumPiece).
+                if (node is not DrumNoteSyntax)
+                    c = WithParenthesizedMembers(c, node);
                 if (_tremoloPairShape is { } pair)
                 {
                     c = c with

@@ -1216,6 +1216,10 @@ public sealed partial class LilyPondExporter
         foreach (var p in c.Pitches)
         {
             if (!first) sb.Append(' ');
+            // `<c \parenthesize e g>` — LilyPond's \parenthesize is a music function on the
+            // member, so it stands before the pitch, not among the post-events.
+            if (p.Articulations.Any(a => a is ArticulationSyntax pa && IsParenthesize(pa)))
+                sb.Append("\\parenthesize ");
             if (first && !_octaveAbsolute)
             {
                 // The root, written where Lily# sounds it: the anchor plus its own marks.
@@ -1299,6 +1303,8 @@ public sealed partial class LilyPondExporter
                         break;
                     case ArticulationSyntax ca when AccidentalMark(ca) == '?':
                         break; // written on the pitch above
+                    case ArticulationSyntax pa when IsParenthesize(pa):
+                        break; // written before the pitch above
                     // A member's own script (`<c'@staccato e'>`, chord-scripts.ly) and string
                     // number (`<a,\2 d>`) take the note's spelling — a chord member takes
                     // post-events (chord_body_element). Until 2026-10-02 both were "dropped (out

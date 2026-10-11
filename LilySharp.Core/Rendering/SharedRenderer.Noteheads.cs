@@ -705,6 +705,10 @@ internal static partial class SharedRenderer
         // match ResolveVoiceStemDirections, which skips these when baking).
         bool stemUp = note.ForcedStemUp ?? forcedStemUp ?? note.StemUp;
 
+        // What a parenthesized head's parentheses enclose besides the head: its accidental's
+        // ink left and its dots' right (DrawHeadParentheses).
+        double? parenLeft = null, parenRight = null;
+
         // Accidental (left of notehead). Placed through the SAME single-ape skyline path the
         // spacing reservation uses (AccidentalPlacement.CalculateSinglePosition), so draw =
         // reserve: a natural clears the head by its real right skyline (0.367672), not a fixed
@@ -734,6 +738,7 @@ internal static partial class SharedRenderer
                 ? x - voiceX + packedX
                 : AccidentalColumn.CalculateSinglePosition(note, accFont, accHeadFont)
                     is { } al ? x + al.XOffset : null;
+            parenLeft = accInkLeft;
             if (accInkLeft is { } inkLeft)
                 using (GrobFontSize.IsReduced(note)
                        ? gc.MusicFace(GrobFontSize.DesignOf(note, SizedGrob.Accidental))
@@ -1019,6 +1024,45 @@ internal static partial class SharedRenderer
                     gc.DrawGlyph(Music(MusicGlyph.AugmentationDot),
                         dotStartX + d * 2 * dotWidth, dotY,
                         FontSize * GrobFontSize.ScaleOf(note, SizedGrob.Dots), noteheadColor);
+            parenRight = dotStartX + (2 * note.Dots - 1) * dotWidth;
+        }
+
+        if (note.Parenthesized && !headWiped && !headTransparent)
+        {
+            var box = GlyphMetrics.GetNoteheadBBox(headFont, note.Notehead, noteValue);
+            DrawHeadParentheses(Math.Min(x + box.Left, parenLeft ?? double.MaxValue),
+                Math.Max(x + box.Right, parenRight ?? double.MinValue), noteY,
+                GrobFontSize.StepOf(note, SizedGrob.NoteHead), note.SourcePosition, gc);
+        }
+    }
+
+    /// <summary>
+    /// A parenthesized head's parentheses (<c>@parenthesize</c>): LilyPond's Parentheses grob —
+    /// the accidental-paren glyphs at the head's font-size −6, their origins
+    /// <c>padding</c> 0.2 outside the X extent of the head and its friends (accidental, dots),
+    /// centred on the head. It moves nothing: the grob widens no column (the engraver's own
+    /// "TODO? enlarge victim to allow for parentheses space?"), MEASURED on 2.26.0 (Lab
+    /// sessions/p902/paren: a drum line and a pitched one with and without `\parenthesize`
+    /// differ by the paren glyphs alone, every other translate identical).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm Parentheses — (font-size . -6) (padding . 0.2).
+    /// LILYPOND-REF: scm/output-lib.scm:1196-1238 parentheses-interface::calc-parenthesis-stencils /
+    ///   ::print — accidentals.leftparen / rightparen at (interval-widen x-ext padding).
+    /// LILYPOND-REF: lily/parenthesis-engraver.cc:58-100 Parenthesis_engraver::acknowledge_grob — the Parentheses font-size adds the grob's.
+    /// LILYPOND-REF: scm/define-grobs.scm NoteHead — (parenthesis-friends . (accidental-grob dot)).
+    /// </remarks>
+    private static void DrawHeadParentheses(double left, double right, double y, double headStep,
+        int sourcePosition, IDrawingContext gc)
+    {
+        const double Padding = 0.2;
+        double step = headStep - 6;
+        double fs = FontSize * EmmentalerDesignSize.Magstep(step);
+        using (gc.Source(sourcePosition))
+        using (gc.MusicFace(MusicFont.Current.DesignAt(step).Rounded))
+        {
+            gc.DrawAttachedGlyph(Music(MusicGlyph.AccidentalParensLeft), left - Padding, y, fs);
+            gc.DrawAttachedGlyph(Music(MusicGlyph.AccidentalParensRight), right + Padding, y, fs);
         }
     }
 
@@ -1206,6 +1250,7 @@ internal static partial class SharedRenderer
         // The dot column clears heads reversed to the RIGHT of the stem.
         // A grace chord's dot comes through here as well — see the single-note branch for the
         // measured reason the drawn stem is what decides it.
+        double? chordDotsRight = null;
         if (chord.Dots > 0 && chord.Notes.Length > 0)
         {
             // The head's INK right, and the DOT's own font's dot — see the single-note
@@ -1250,7 +1295,45 @@ internal static partial class SharedRenderer
                                 FontSize * GrobFontSize.ScaleOf(chord, SizedGrob.Dots),
                                 noteheadColor);
                 }
+            chordDotsRight = dotStartX + (2 * chord.Dots - 1) * dotWidth;
         }
+
+        // A parenthesized member's own pair, around its head, its accidental and the dots —
+        // LilyPond gives each parenthesized head a Parentheses of its own (DrawHeadParentheses).
+        // A parenthesized CHORD has one pair round all of them, centred on the heads' span
+        // (the Y-offset is the elements' extent's centre; the glyphs do not stretch).
+        if (chord.Parenthesized && !headWiped && !headTransparent && chord.Notes.Length > 0)
+        {
+            double left = double.MaxValue, right = double.MinValue;
+            for (int i = 0; i < chord.Notes.Length; i++)
+            {
+                var box = GlyphMetrics.GetNoteheadBBox(chordHeadFont, chord.Notes[i].Notehead, noteValue);
+                left = Math.Min(left, x + headOffsets[i] + box.Left);
+                right = Math.Max(right, x + headOffsets[i] + box.Right);
+            }
+            foreach (var al in accLayouts)
+                left = Math.Min(left, accOriginX + al.XOffset);
+            DrawHeadParentheses(left, Math.Max(right, chordDotsRight ?? double.MinValue),
+                (topY + bottomY) / 2, GrobFontSize.StepOf(chord, SizedGrob.NoteHead),
+                chord.SourcePosition, gc);
+        }
+        if (!headWiped && !headTransparent)
+            for (int i = 0; i < chord.Notes.Length; i++)
+            {
+                var n = chord.Notes[i];
+                if (!n.Parenthesized)
+                    continue;
+                var box = GlyphMetrics.GetNoteheadBBox(chordHeadFont, n.Notehead, noteValue);
+                double left = x + headOffsets[i] + box.Left;
+                foreach (var al in accLayouts)
+                    if (al.StaffPosition == n.StaffPosition)
+                        left = Math.Min(left, accOriginX + al.XOffset);
+                DrawHeadParentheses(left,
+                    Math.Max(x + headOffsets[i] + box.Right, chordDotsRight ?? double.MinValue),
+                    staffMiddleY + n.StaffPosition / 2.0,
+                    GrobFontSize.StepOf(chord, SizedGrob.NoteHead),
+                    n.SourcePosition >= 0 ? n.SourcePosition : chord.SourcePosition, gc);
+            }
 
         // Skip chord stem when chord is part of a beam — DrawBeams handles it.
         // The geometry was settled above (chordHasStem / stemX / stemEndY), where the dot

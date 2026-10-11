@@ -66,9 +66,12 @@ public class DrumPatternTests
     {
         var data = new TheoryData<string, string, string>();
         foreach (var hands in DrumPatterns.All.Where(p => p.Family is "hi-hat" or "ride"))
-            foreach (var snare in new[] { "back", "halfTime", "flam" })
+            foreach (var snare in new[] { "back", "halfTime", "ghost", "flam" })
                 foreach (var kick in DrumPatterns.All.Where(p => p.Family == "bass drum"))
-                    data.Add(hands.Name, snare, kick.Name);
+                    // A straight sixteenth inside a shuffle's triplet beat has no tuplet to be
+                    // written in: that pair is drawn as written (the next test).
+                    if (!(hands.Name == "shuffle" && snare == "ghost"))
+                        data.Add(hands.Name, snare, kick.Name);
         return data;
     }
 
@@ -83,6 +86,13 @@ public class DrumPatternTests
         Assert.Equal(2, score.EnumerateStaves().Single().Staff.Voices.Length);
     }
 
+    [Fact]
+    public void AStraightGhostOverAShuffle_IsDrawnAsWritten()
+    {
+        var tree = SyntaxTree.Parse(Book("drums { shuffle ghost kick8 }"));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), null));
+        Assert.Equal(3, score.EnumerateStaves().Single().Staff.Voices.Length);
+    }
     [Theory]
     [InlineData("fillToms")]
     [InlineData("fillTriplet")]

@@ -52,6 +52,7 @@ public static class DrumPatterns
         // Snare
         new("back", "snare", "r4 sn r sn |", "backbeat on 2 and 4"),
         new("halfTime", "snare", "r2 sn |", "half time, on 3"),
+        new("ghost", "snare", "r4 sn r8. sn16@parenthesize sn4 |", "backbeat with a ghost note"),
         // Bass drum
         new("fourFloor", "bass drum", "bd4 4 4 4 |", "four on the floor"),
         new("kick8", "bass drum", "bd4 r8 bd bd4 r |", "eighth-beat kick"),
