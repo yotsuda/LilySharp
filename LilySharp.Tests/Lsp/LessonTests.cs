@@ -380,8 +380,10 @@ public class LessonTests
         string text = LilySharpLanguageServer.Lessons[9].Text;
         Assert.StartsWith("// Lesson 10 of 11 — Drums", text);
 
-        // STEP 1: in bar 4, after `kick` and a space, the patterns lead the list.
-        int step1 = text.IndexOf("drums { kick }", System.StringComparison.Ordinal) + "drums { kick ".Length;
+        // STEP 1: in bar 4, after the kick line's `}` and a space, the patterns lead the list.
+        const string bar4 = "drums { { bd4@todo(\"STEP 1: add a fill\") r8 bd bd4 r | }";
+        int step1 = text.IndexOf(bar4, System.StringComparison.Ordinal) + bar4.Length;
+        Assert.True(step1 > bar4.Length, "bar 4's kick line moved");
         text = text.Insert(step1, " ");
         step1++;
         var fill = CompletionAt(text, step1).Single(i => i.Label == "fillTriplet");
@@ -394,6 +396,9 @@ public class LessonTests
         var ghost = CompletionAt(text, step2).Single(i => i.Label == "ghost");
         text = Accept(text, step2, ghost);
 
+        // Each step done, its red circle goes: the marks are deleted (Ctrl+. on each).
+        Assert.Contains("@todo", text);
+        text = System.Text.RegularExpressions.Regex.Replace(text, "@todo(\\(\"[^\"]*\"\\))?", "");
         var tree = SyntaxTree.Parse(text);
         Assert.Empty(LilySharp.Core.Semantics.SemanticValidation.Run(tree)
             .Where(d => d.Severity is LilySharp.Core.Syntax.DiagnosticSeverity.Error or LilySharp.Core.Syntax.DiagnosticSeverity.Warning));

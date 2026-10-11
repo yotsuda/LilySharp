@@ -17,7 +17,7 @@ part melody {
 
 chords prog {
   section A {
-    C | Am | F | G |
+    C | Am | F | G@todo("Ctrl+Shift+Up on G") |
     C | Am | Dm7 G7 | C |.
   }
 }
@@ -29,7 +29,7 @@ score {
   staff melody
 }
 
-// TRY: caret on `G`, press Ctrl+Shift+Up — a guitar diagram appears ·
+// TRY: do what the red circle says — a guitar diagram appears ·
 // Ctrl+Space inside the chord row · add `layout { chordDiagrams all }` at the top.
 //
 // NEXT — type `lesson` on a new line and pick `lesson-09-piano`.
