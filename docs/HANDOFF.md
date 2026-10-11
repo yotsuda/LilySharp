@@ -85,6 +85,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後（`lilysharp-omr-distribution-2026-10-05.md`）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
+- **学習セット＝第902 で 10 本入れた**（`docs/learning-set-design.md`）。残り: ⑴ **ユーザーの実機確認**（New Score → `lesson` → lesson-01〜10）→ 手直し／⑵ **gh Pages の再構成＝§7 の案のユーザー判断待ち**（過不足の台帳 §6 の P1〜P15 を閉じながら・learn 頁はレッスンと 1 対 1・文章は短く）／⑶ 日本語訳（`Lessons/ja/`・§4 の手順・英語版が固まってから）。
 - **プレビューの音源＝第901 で SoundFont シンセ（spessasynth_lib）に替えた**（`docs/playback-design.md`）。残り: ⑴ **音源の同梱はユーザー決定**（MuseScore_General 39.9 MB／FluidR3Mono 14.5 MB・VSIX 同梱か初回 DL か＝design §4）→ 決まったら `media/soundfont/` の sf3 を commit ／⑵ **次段 B＝LSP サーバーから MIDI 出力ポート**（loopMIDI／IAC → DAW＝VST ホスト・design §6・2〜3 便）／⑶ `lysc wav`（MeltySynth・同じ音源）は B の後。**ユーザーの実機確認待ち**（`MANUAL-CHECKS.md` §2.3.1）。
 - **`@todo` の memo の置き場＝第899〜900 で「段組みが memo の置き場を予約（必要なときだけ段が下がる）＋並びの探索」まで閉じた**（規則は `docs/todo-memo-design.md`・残りは同 §4＝順番の探索・長い memo の切り詰め・`lysc png --todo`）。**ユーザーの実機確認待ち**（Reload Window 後・`Untitled-2.lys`＝余白が増えない・`sessions/p896/probe/one.lys`＝段が下がって 6 本が収まる）
 - ⚠️ **VS Code の手動確認が未**＝**手順と期待は `editors/vscode/MANUAL-CHECKS.md`（第888 起票・§1〜§5 の 60 項目＝ステップ・入力補助・Split Sections・SHOTLIST の 9 本・0.11.0 と Unreleased の拡張側・R13 ⒝・OMR B1〜B6）**。⚠️ 「Ctrl+Alt+↑↓」は Lily# の割り当てではない（Ctrl+Shift+↑↓ の 1 組だけ＝起票が古かった）。⚠️ ユーザーの拡張のフォルダ名は yotsuda.lilysharp-0.7.0 のままだが、**中身（`server`＋`out\extension.js`）は 2026-10-10 17:42 に組み直されて入っている**（第884 が時刻で確認・18:05 の `89168e9c1` だけ未収録）＝SMuFL と `(Default)` は今の拡張で見られる
@@ -120,6 +121,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第902セッション（2026-10-11・YT-DELL2）
+
+新しい会話。`-Start p902`（HEAD `132113d1f`）＝full **11826 / 0 / 2 / 11828**（引継ぎと一致）。着手＝**ユーザー指示「ユーザーを増やす方法を考えたい。template-twinkle と同じ仕組みで段階的に lily# の使い方を学習できるセットを作成して」**→ 計画 10 本を提示 →「あなたの提案通りに進めて」。途中の追加指示: ⑴ 最初の段階で補完入力を紹介する／⑵ 説明を gh Pages と整合させ、Pages の過不足を記録する／⑶ Pages の構成も大きく改善したい／⑷ 多言語化を視野に／⑸ Lesson 1 はまずプレビューを開かせる／⑹ **文章を可能な限り少なく**。
+- 実装: `LilySharp.Lsp/Lessons/<言語>/lesson-NN-slug.lys`（EmbeddedResource）を `ScoreTemplateItem` で出す（ファイル全体を置き換え・訊く＝拡張の変更なし）。空語なら lesson-01 だけ、`lesson`/`learn` に向かう語なら 10 本。`InitializeParams.Locale`→`LessonsFor`（訳はレッスン単位・無ければ英語）。New Score の 1 行目がレッスンを指す。
+- 曲: Mary／Ode to Joy／Happy Birthday／Minuet in G（右手）／Silent Night／Jingle Bells／Frère Jacques（英仏）／オリジナル 2／Minuet（両手）。全部 `lysc check --pitches` で音を確かめ、7〜10 は絵を見た。
+- 網 `LessonTests` 49 本（全言語の全レッスンが警告ゼロでコンパイル・Lesson 1 の Ctrl+Space の 5 手順が実際の補完経路で出る ほか）。毒 2 本＝各 1 赤。
+- **Pages の監査（subagent・読むだけ）と過不足の台帳・再構成案は `docs/learning-set-design.md` §5〜§7**（P1〜P15）。§8 に製品側の気づき 1 件（2 言語の歌詞 2 行に `1.` `2.` が付く＝ユーザー判断）。
+- commit `54dec873b`（`lessons:`）。拡張は `tools\Deploy-Lsp.ps1` で入れ直し済み（Reload Window 1 回）。
+- `-End p902 -DiffBase 132113d1f`（門は全部 OK）＝full **11875 / 0 / 2 / 11877**（＋49）。Core '+' 0 行。未 push 106（push はユーザー）。Lab `sessions/p902/`（start／end1／deploy の log）。
+判定: **ユーザーの実機確認待ち**（New Score → `lesson` → lesson-01 から 10 まで）。次の一手は ⑴ レッスンの手直し（実機の感想）→ ⑵ Pages の再構成（`learning-set-design.md` §7 の案をユーザーが選ぶ）→ ⑶ 日本語訳。(a) どれもこの便の文脈（レッスンと監査）の上に立つ／(b) 1 便＝軽い／(c) 既定は続ける ⇒ **この会話で続ける**。
+
+## 以下は第901セッションの経緯
+
 ### 1.1 第901セッション（2026-10-11・YT-DELL2）
 
 新しい会話。`-Start p901`（HEAD `331e67ef0`）＝full **11807 / 0 / 2 / 11809**。着手＝**ユーザー決定「着手して」**（問い「VST などのリッチな音源を鳴らせるようにできるか」→ 提案 A→B を承認）: プレビューの再生を SoundFont 音源にする＋**ユーザー報告 15 件目「同時発声が多くなると鳴る音がとぎれとぎれになる」**を一緒に直す。設計は **`docs/playback-design.md`**（§6 に次段＝サーバーから MIDI 出力ポート→DAW／VST ホスト。**VST の自前ホストはしない**）。
@@ -135,20 +149,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **ユーザー報告 16 件目「`e f g a~ | a b c d` の 2 小節目の `a` の音色がおかしい」**＝タイの行き先は export に onset が無く、試聴が「書かれた音高＋既定の声（timbre 0・program なし＝SoundFont では acoustic grand）」に落ちていた（オシレーター時代から同じだが piano-ish の triangle では目立たなかった）。直し＝`SoundIndex.PartVoice`（part 名→その track の timbre・program）＋`NoteStepper.Written`／`PartOf`（`PartBlockSyntax`／`PartDeclarationSyntax` を遡る）＝export に無い音はその part の声で鳴る。網 `StepRequestTests.ATiedNote_StrikesThePartsInstrument`・毒 D＝その 1 本だけ赤。full **11824 / 0 / 2 / 11826**（＋1）。commit `4d44117a0`・Deploy 済み（Reload Window 1 回）。
 - **ユーザー報告 17 件目「音色は直ったがオクターブが高い・移調楽器の音符がおかしい」**＝同じ経路: 書かれた音高に part の移調（preset の transposition・`transpose`・concert 入力・clef のオクターブ＝exporter が合成）が掛かっていなかった。直し＝`SoundIndex.PartShift`（export と collector の両方が filed した位置の「export − written」の最頻値＝exporter の合成を再導出しない）を `Written` が足す。網 `ATiedNote_SoundsWhereThePartsStruckNotesDo`（guitar 62・clarinet 72）・毒 E＝その 2 本だけ赤。full **11826 / 0 / 2 / 11828**（＋2）。commit `75a9badab`・Deploy 済み（Reload Window 1 回）。
 判定: **ユーザーの実機確認待ち**（`MANUAL-CHECKS.md` §2.3.1 の 7 項目＝▶ で楽器の音・密な本で途切れない・⏹ で漏れない・Alt+P が part の楽器）。次の一手は ⑴ 音源の同梱の決定（どれ・VSIX か DL か）→ commit／⑵ 次段 B＝サーバーから MIDI 出力（design §6）。(a) どちらもこの便の文脈の上に立つ／(b) 1 便＝軽い／(c) 既定は続ける ⇒ **フィードバックが来たらこの会話で `-Start p902`**。
-
-## 以下は第900セッションの経緯
-
-### 1.1 第900セッション（2026-10-11・YT-DELL2）
-
-同じ会話（第899 の続き）。`-Start p900`（HEAD `b1b9752bf`）＝full **11782 / 0 / 2 / 11784**。着手＝**ユーザー報告 14 件目**「五線と五線の間の y の余白が無駄に広くなった。`Untitled-2.lys` は y の余白をいっさい増やさずに todo を表示できる」。
-- 原因＝第899 の帯は**段ごとに全幅・全行ぶん**（`Gap＋行数×(箱＋air)`）を段の up extent の*上*に積んでいた＝memo が実際には段の端の高さ（印や歌詞の隙間・左の余白）に収まる本でも、段がまるごと下がった。
-- 直し＝`TodoMemoBand.Estimate`（帯）→ **`TodoMemoBand.Boxes`（memo ごとの箱）**: 段の paging silhouette（印・コードネーム・強弱・歌詞が入った後の `AugmentSkylinesForPaging` の結果）の**その x 範囲の高さ**（`MaxHeightInRange`）＋gap を箱の底にし、両側のうち低い側（同点は余白の広い側）、先に見積もった箱と重なれば上へ積む。箱は `AugmentSkylinesForPaging` の末尾で **X-aware の `AddMarkBox`** として silhouette に合流（`todoBoxesOf` の lambda＝Prelim が箱を受け取って scalar の up/down extent と breaker の annotation extent を `max` で上げる）。⇒ 段間は**上の段がその x で本当に届くときだけ**、頁の先頭は**memo が段自身の最上のインクより高いときだけ**広がる。
-- 結果（preview の viewBox 高さ・p898＝予約なし／p899＝帯／p900）: **twinkle 53.58／66.68／53.58**（ユーザーの言うとおり 0 増）・busy 28.35／35.41／34.36・piano 29.98／37.03／32.51・one 20.92／36.31／27.40・one-title 26.59／42.44／33.52。絵 `sessions/p900/probe/*-preview.png`。
-- 網 `TheLayoutReservesTheMemosRows_InThePreviewOnly` に**「収まる memo は何も動かさない」**（title＋section mark の本で g'4 の memo＝preview 頁 == export 頁）を足した。毒 A／B／C（`todoBoxes` を切る）／D＝それぞれ赤 1（`sessions/p900/poisons.ps1`）。
-- docs＝`docs/todo-memo-design.md` §1・SYNTAX_REFERENCE・CHANGELOG×2・MANUAL-CHECKS §2.1（「帯のぶん下がる」→「収まらないときだけ下がる」）。
-- commit `e6681acf5`（`todo:`）。拡張は `tools\Deploy-Lsp.ps1` で入れ直し済み（**Reload Window が要る**）。
-- `-End p900 -DiffBase b1b9752bf`（門は全部 OK）＝full **11782 / 0 / 2 / 11784**（±0＝既存の網に 1 主張）。Core '+' 137 行／REF 0／OWN 2＝7.6 ⒞（`TodoMemoBand.Boxes` と Prelim の箱＝エディターの印の置き場・LP に対応物なし）。7.7: 該当なし。HANDOFF 376,864 B（残り 73,136）・§1 現在便 9,601 字。未 push 89＋docs（push はユーザー）。Lab `sessions/p900/`（probe の絵・poisons・log・Zz の写し）。
-判定: **ユーザーの実機確認待ち**（Reload Window 後に `Untitled-2.lys`＝余白が元どおり・`one.lys`＝段が必要なぶんだけ下がる）。(a) 次の一手は memo の文脈の上に立つ／(b) **3 便＝重くなってきた**（圧縮は未だ）／(c) 既定は続ける ⇒ **次の報告が memo の島ならこの会話で `-Start p901`、別の島なら新しい会話**。
 
 ## 2. 開いている作業
 

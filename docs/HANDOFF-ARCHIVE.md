@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第900セッションの経緯
+
+### 1.1 第900セッション（2026-10-11・YT-DELL2）
+
+同じ会話（第899 の続き）。`-Start p900`（HEAD `b1b9752bf`）＝full **11782 / 0 / 2 / 11784**。着手＝**ユーザー報告 14 件目**「五線と五線の間の y の余白が無駄に広くなった。`Untitled-2.lys` は y の余白をいっさい増やさずに todo を表示できる」。
+- 原因＝第899 の帯は**段ごとに全幅・全行ぶん**（`Gap＋行数×(箱＋air)`）を段の up extent の*上*に積んでいた＝memo が実際には段の端の高さ（印や歌詞の隙間・左の余白）に収まる本でも、段がまるごと下がった。
+- 直し＝`TodoMemoBand.Estimate`（帯）→ **`TodoMemoBand.Boxes`（memo ごとの箱）**: 段の paging silhouette（印・コードネーム・強弱・歌詞が入った後の `AugmentSkylinesForPaging` の結果）の**その x 範囲の高さ**（`MaxHeightInRange`）＋gap を箱の底にし、両側のうち低い側（同点は余白の広い側）、先に見積もった箱と重なれば上へ積む。箱は `AugmentSkylinesForPaging` の末尾で **X-aware の `AddMarkBox`** として silhouette に合流（`todoBoxesOf` の lambda＝Prelim が箱を受け取って scalar の up/down extent と breaker の annotation extent を `max` で上げる）。⇒ 段間は**上の段がその x で本当に届くときだけ**、頁の先頭は**memo が段自身の最上のインクより高いときだけ**広がる。
+- 結果（preview の viewBox 高さ・p898＝予約なし／p899＝帯／p900）: **twinkle 53.58／66.68／53.58**（ユーザーの言うとおり 0 増）・busy 28.35／35.41／34.36・piano 29.98／37.03／32.51・one 20.92／36.31／27.40・one-title 26.59／42.44／33.52。絵 `sessions/p900/probe/*-preview.png`。
+- 網 `TheLayoutReservesTheMemosRows_InThePreviewOnly` に**「収まる memo は何も動かさない」**（title＋section mark の本で g'4 の memo＝preview 頁 == export 頁）を足した。毒 A／B／C（`todoBoxes` を切る）／D＝それぞれ赤 1（`sessions/p900/poisons.ps1`）。
+- docs＝`docs/todo-memo-design.md` §1・SYNTAX_REFERENCE・CHANGELOG×2・MANUAL-CHECKS §2.1（「帯のぶん下がる」→「収まらないときだけ下がる」）。
+- commit `e6681acf5`（`todo:`）。拡張は `tools\Deploy-Lsp.ps1` で入れ直し済み（**Reload Window が要る**）。
+- `-End p900 -DiffBase b1b9752bf`（門は全部 OK）＝full **11782 / 0 / 2 / 11784**（±0＝既存の網に 1 主張）。Core '+' 137 行／REF 0／OWN 2＝7.6 ⒞（`TodoMemoBand.Boxes` と Prelim の箱＝エディターの印の置き場・LP に対応物なし）。7.7: 該当なし。HANDOFF 376,864 B（残り 73,136）・§1 現在便 9,601 字。未 push 89＋docs（push はユーザー）。Lab `sessions/p900/`（probe の絵・poisons・log・Zz の写し）。
+判定: **ユーザーの実機確認待ち**（Reload Window 後に `Untitled-2.lys`＝余白が元どおり・`one.lys`＝段が必要なぶんだけ下がる）。(a) 次の一手は memo の文脈の上に立つ／(b) **3 便＝重くなってきた**（圧縮は未だ）／(c) 既定は続ける ⇒ **次の報告が memo の島ならこの会話で `-Start p901`、別の島なら新しい会話**。
+
 ## 以下は第899セッションの経緯
 
 ### 1.1 第899セッション（2026-10-11・YT-DELL2）
