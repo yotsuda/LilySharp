@@ -79,7 +79,7 @@
   <p>The smallest complete document is four lines:</p>
 <pre>part melody { clef treble }
 section Main { melody { c4 d e f | g2 g | } }
-form { Main }
+form { ~Main }
 score { staff melody }</pre>
   <p>Everything else is optional, and top-level settings come first:</p>
 <pre>// comments are // to end of line, or /* … */
@@ -106,7 +106,7 @@ section Main {
   leftHand  { c2 c | g2 g | }
 }
 
-form { Main }           // the playing order
+form { ~Main }          // the playing order; ~ keeps the name off the page
 
 score {               // one or more render blocks
   grandStaff { staff rightHand  staff leftHand }
@@ -929,6 +929,10 @@ score {
   <p><code>\N</code> pins a note to string N when the automatic choice is not the one your
   fingers want: <code>c'\2</code>. Technique letters (<code>@tap @hammerOn @pullOff
   @pluck(i)</code>) print on the tab, because they are ink a guitarist reads there.</p>
+  <p>A note below the lowest string shows on the staff only, and the editor warns. A bass
+  reads an octave above what it sounds, so its lowest string is the written E2: begin a bass
+  part at <code>octave 2</code> (<code>part bs { clef bass octave 2 tuning bass }</code>) and
+  its <code>e</code> is that string.</p>
   <p>Fret numbers are set in the regular weight; <code>fonts { tab bold }</code> brings the
   bold face back, and <code>fonts { tab size 3 }</code> makes them a little larger (the
   default is 2.8). A word after <code>tab</code> that names a declared part is that part —

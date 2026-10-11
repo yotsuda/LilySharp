@@ -810,8 +810,12 @@ quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LY
   tilde hides only the label), a volta ending takes them (`[1. B']`), and they work in
   `octave absolute` too. This is how a section cut only to carry a repeat says its music
   belongs an octave away: the boundary's frame reset stays, and the carry is written down.
-- Part header attributes (`clef`/`key`/`time`/`tempo`) are written **bare, no `=`**, like
-  the top-level commands. Override/revert use `=`.
+- Part header attributes are written **bare, no `=`**, like the top-level commands:
+  `clef` `key` `octave` `instrument` `transpose` `transposition` `tuning` `pitch` `pedal`
+  and `midiInstrument "acoustic bass"` (a quoted General MIDI sound — what playback sounds
+  like, overriding the preset's). ⚠️ `time` and `tempo` are NOT part attributes: every
+  part shares them, so `part m { time 3/4 }` is an error — write them at the top level or
+  in a section header. Override/revert use `=`.
 - `staff NAME as removeEmpty true|all` in a SCORE hides that staff in systems where it only
   rests (hara-kiri). `true` keeps the first system (LP `\RemoveEmptyStaves`), `all` hides it
   too (`\RemoveAllEmptyStaves`); any playing voice keeps the staff visible. It chains with

@@ -1298,8 +1298,11 @@ theme              // Insert the phrase's music here (bare name)
 
 ### Part Declaration
 
-Header attributes are written bare (no colon), the same as the top-level
-`clef` / `key` / `time` / `tempo` commands:
+Header attributes are written bare (no colon), the same as the top-level commands:
+`clef`, `key`, `octave`, `instrument`, `transpose`, `transposition`, `tuning`, `pitch`,
+`pedal` and `midiInstrument "acoustic bass"` (a quoted General MIDI sound for playback,
+overriding the instrument preset's). `time` and `tempo` are not part attributes — every
+part shares them, so they go at the top level or in a section header:
 
 ```
 part rightHand {
