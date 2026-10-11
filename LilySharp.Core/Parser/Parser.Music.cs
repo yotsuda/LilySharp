@@ -204,6 +204,12 @@ internal sealed partial class Parser
             // `@chord` is read after its '@' and never reaches this switch.
             SyntaxKind.Identifier when Current.Text == ShapeChordWord => ParseShapeChord(),
 
+            // `drums { hats  back  kick }` — a drum chart, its lines played together
+            // (Parser.Drums). Claimed only before a `{`, so a phrase may still be named
+            // `drums` and referenced bare.
+            SyntaxKind.Identifier when Current.Text == DrumsWord && Peek().Kind == SyntaxKind.OpenBrace
+                => ParseDrumsBlock(),
+
             // Drum-kit vocabulary (bd, sn, hh, …) claims otherwise-invalid bare
             // identifiers; anything else keeps the deprecated-variable warning.
             SyntaxKind.Identifier => DrumNameRegistry.Contains(Current.Text)

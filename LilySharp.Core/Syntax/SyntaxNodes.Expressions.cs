@@ -102,6 +102,34 @@ public sealed class ParallelExpressionSyntax : SyntaxNode
             }
         }
     }
+
+    /// <summary>True for a <c>drums { … }</c> chart (Parser.Drums): its voices are LINES the
+    /// page merges by limb, not voices of their own.</summary>
+    public bool IsDrums => Green.GetSlot(0)?.Kind == SyntaxKind.DrumsOpener;
+
+    /// <summary>
+    /// A chart's lines, each with the side its <c>up</c>/<c>down</c> word puts it on (true =
+    /// down), or null where none is written and each kit piece takes its own (hands up, feet
+    /// down — <see cref="DrumNameRegistry.IsFootDrum"/>).
+    /// </summary>
+    public IEnumerable<(MusicBlockSyntax Line, bool? Down)> DrumLines
+    {
+        get
+        {
+            bool? pending = null;
+            for (int i = 1; i < SlotCount - 1; i++)
+            {
+                var child = GetChild(i);
+                if (child is MusicBlockSyntax line)
+                {
+                    yield return (line, pending);
+                    pending = null;
+                }
+                else if (child is SyntaxTokenNode { Kind: SyntaxKind.DrumsLineDirection } dir)
+                    pending = dir.Text == "down";
+            }
+        }
+    }
 }
 
 /// <summary>

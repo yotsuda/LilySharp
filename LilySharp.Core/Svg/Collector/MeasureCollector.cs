@@ -2588,8 +2588,8 @@ public sealed partial class MeasureCollector
     {
         int totalMeasures = track0.Count;
         int voiceCount = 1;
-        foreach (var (parallel, _, _, _, _, _, _) in _parallelSpans)
-            voiceCount = Math.Max(voiceCount, parallel.Voices.Count());
+        foreach (var (parallel, _, offset, _, duration, dots, meta) in _parallelSpans)
+            voiceCount = Math.Max(voiceCount, VoiceCountOf(parallel, offset, duration, dots, meta));
 
         var tracks = new List<ImmutableArray<Measure>>();
         for (int t = 1; t < voiceCount; t++)
@@ -2601,7 +2601,11 @@ public sealed partial class MeasureCollector
             foreach (var (parallel, start, startOffset, spanFrame, spanDuration, spanDots, spanMeta) in _parallelSpans)
             {
                 var blocks = parallel.Voices.ToList();
-                if (t >= blocks.Count)
+                // A merged drum chart has one more voice at most — the feet's (Drums.cs).
+                var drums = parallel.IsDrums
+                    ? DrumPlanOf(parallel, startOffset, BarLengthOf(spanMeta), spanDuration, spanDots)
+                    : null;
+                if (drums != null ? t > 1 || drums.Lower.Count == 0 : t >= blocks.Count)
                     continue;
 
                 // Each sub-voice evaluates from the frame the SPAN OPENED IN — the same
@@ -2648,9 +2652,10 @@ public sealed partial class MeasureCollector
                     VoiceScope = t + 1,
                 }))
                 {
-                    sub = CollectMeasuresFromNode(blocks[t], applyFilePartial: start == 0,
+                    sub = CollectMeasuresFromNode(drums != null ? parallel : blocks[t], applyFilePartial: start == 0,
                         leadingOffset: startOffset,
-                        logicalIndexBase: MidBarBreaks?.ToLogical(start) ?? start);
+                        logicalIndexBase: MidBarBreaks?.ToLogical(start) ?? start,
+                        emit: drums != null ? b => EmitDrumVoice(drums.Lower, b, stemUp: false) : null);
                     ResolveBeamStemDirections(sub, measureOffset: start);
                 }
 
@@ -3370,8 +3375,11 @@ public sealed partial class MeasureCollector
 
     // ⚠️ The `autoFinalBarline: false` parameter this used to carry is GONE with the rule
     // it suppressed (see FinalizeMeasures). Do not reintroduce either.
+    /// <param name="emit">Fills the builder in place of the walk of <paramref name="voiceNode"/>'s
+    /// music — a drum chart's merged feet voice (Drums.cs), which has no block of its own.</param>
     private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode,
-        bool applyFilePartial = true, Fraction? leadingOffset = null, int logicalIndexBase = 0)
+        bool applyFilePartial = true, Fraction? leadingOffset = null, int logicalIndexBase = 0,
+        Action<MeasureBuilder>? emit = null)
     {
         var builder = new MeasureBuilder(ScoreMeter, voiceNode.SourceStart, _meta.TimeSenzaMisura)
         {
@@ -3404,12 +3412,17 @@ public sealed partial class MeasureCollector
         // expressions travel as one wrapper — EXCEPT parallel: the per-voice
         // path flattens << \\ >> (see GatherMusicSite), so its descendants
         // must reach the walk (includeParallel: false).
-        var musicNodes = new List<GreenSite>();
+        if (emit != null)
+            emit(builder);
+        else
+        {
+            var musicNodes = new List<GreenSite>();
 
-        foreach (var site in MusicSitesLazy(voiceNode, includeParallel: false))
-            GatherMusicSite(site, musicNodes);
+            foreach (var site in MusicSitesLazy(voiceNode, includeParallel: false))
+                GatherMusicSite(site, musicNodes);
 
-        ProcessMusicNodeSequence(musicNodes, builder);
+            ProcessMusicNodeSequence(musicNodes, builder);
+        }
 
         FinalizeInlineVoltas();
 

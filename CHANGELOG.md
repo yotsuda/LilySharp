@@ -17,6 +17,15 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Language
 
+- **Drum charts: `drums { hats  back  kick }`.** A kit part can be written as the patterns a
+  drummer thinks in — each line a phrase or a `{ … }` block, all played together — and the page
+  draws them as drum music is read: the hands' hits merged into chords on stems up, the feet's
+  (`bd`, `bda`, `hhp`) on stems down; `up` or `down` before a line moves the whole line. A line
+  keeps its own rhythm, so a triplet fill is a line with a `tuplet`. Hits no drummer can play
+  at once (three for the hands or the feet, the closed and the open hi-hat together) warn
+  (LYS4030); notes written straight into the chart are an error (LYS0040). The editor offers
+  `drums` in a drum part and colors its words. MIDI plays every line; the LilyPond and
+  MusicXML exports write a voice a line.
 - **One staff can print in its player's key.** `staff tp as pitch transposed` prints that staff's
   transposing part for its player (`as pitch concert`: as it sounds), over the score's own
   `pitch` — a sounding full score with the trumpet in its key. It chains with `lines` and
@@ -196,6 +205,10 @@ workflow attaches that section to the GitHub Release verbatim.
   above the line with ledgers.
 
 ### Fixes
+
+- **A drum note's own script is drawn.** `sn4@accent` in a drum part drew no accent (nor any
+  other script written on the drum note): only the automatic `+`/`○` of `hhc`/`hho` came
+  through. The LilyPond export wrote them; the page now draws them too.
 
 - **Drum notes inside `tuplet { }` are drawn.** `tuplet 3/2 { sn8 sn sn }` in a drum part drew nothing
   and took no time on the page, with no warning (the MIDI played it); a triplet fill now prints with

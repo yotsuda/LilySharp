@@ -3997,7 +3997,12 @@ public sealed partial class LilySharpLanguageServer
         // NESTED voice blocks silently become parallel siblings (verified),
         // so the snippet is withheld inside a voice wrapper.
         if (!insideVoice)
+        {
             items.Add(new CompletionItem { Label = "voice", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "voice { $0 }", Detail = "Voice", Documentation = "Hats up / kick+snare down", SortText = "3voice" });
+            // A drum chart: lines (phrases or { … }) played together, the hands' merged on
+            // stems up and the feet's on stems down (Parser.Drums, owner's design 2026-10-11).
+            items.Add(new CompletionItem { Label = "drums", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "drums { $0 }", Detail = "Drum chart", Documentation = "drums { hats  back  kick } - each line a phrase or { … }; hands drawn stems up, feet (bd, bda, hhp) stems down; up/down before a line moves it", SortText = "3drums" });
+        }
         return new CompletionList { IsIncomplete = false, Items = [.. items] };
     }
 

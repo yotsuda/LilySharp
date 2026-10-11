@@ -1067,7 +1067,16 @@ public sealed partial class MeasureCollector
                     _parallelSpans.Add(
                         (parallel, builder.CurrentMeasureIndex, builder.CurrentDuration, spanFrame,
                             spanDuration, spanDots, spanMeta));
-                    if (voiceBlocks.Count > 0)
+                    // A drum chart whose lines merge: the hands' voice is walked here, the
+                    // feet's in BuildExtraVoiceTracks (MeasureCollector.Drums).
+                    if (parallel.IsDrums
+                        && DrumPlanOf(parallel, builder.CurrentDuration, BarLengthOf(spanMeta), spanDuration, spanDots) is { } drums)
+                    {
+                        _cursor.VoiceScope = 1;
+                        EmitDrumVoice(drums.Upper, builder, stemUp: true);
+                        _cursor.VoiceScope = null;
+                    }
+                    else if (voiceBlocks.Count > 0)
                     {
                         // Voice 0 is render voice 1: an override in its block scopes to it.
                         _cursor.VoiceScope = 1;

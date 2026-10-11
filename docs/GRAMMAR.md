@@ -1410,6 +1410,34 @@ VoicePart      = [ Identifier ] , MusicBlock ;
    engraves exactly like the music without it, and an UNNAMED lone voice warns (LYS4011).
    A named one does not: its name is what a 'lyrics NAME { }' block binds to. *)
 
+### 5.2 Drum chart (one drum staff)
+
+DrumChart      = 'drums' , '{' , DrumLine , { DrumLine } , '}' ;
+DrumLine       = [ 'up' | 'down' ] , ( PhraseRef | MusicBlock ) ;
+(* 'drums' is a word only before '{' (a phrase may still be named drums and played bare).
+   Its LINES — each a phrase or a '{ … }' — play together from the chart's start, as the
+   voices of a VoiceBlock do; the page then draws them as a drummer reads them, in TWO
+   voices: every hand's hit on stems up, merged into chords where the lines meet, and every
+   foot's (bd, bda, hhp) on stems down. 'up' / 'down' before a line puts all of it on that
+   side. A line holds drum notes, drum chords, bare durations, rests, bar lines, 'tuplet'
+   and 'repeat unfold/percent'; a chart whose lines hold anything else (a pitched note, a
+   nested tuplet, two tuplets crossing in one voice) is drawn as written, a voice a line.
+   Music written straight into the chart, not in a line, is LYS0040. Hits no drummer can
+   play at once — three for the hands, three for the feet, the closed and the open hi-hat
+   together — warn (LYS4030). MIDI plays every line; the LilyPond and MusicXML exports
+   write a voice a line. Owner's design, 2026-10-11. *)
+
+(* Example (three patterns, a triplet fill; phrases of one bar each):
+   phrase hats { hh8 8 8 8 8 8 hho hh | }
+   phrase back { r4 sn r sn@accent | }
+   phrase kick { bd4 r8 bd bd4 r | }
+   phrase fill { r2 tuplet 3/2 { sn8 sn sn  tomh tomml tomfh } | }
+   part kit { clef percussion }
+   section A { kit { drums { hats back kick }  drums { { hh4 hh r2 | } fill kick } } }
+   form { ~A }
+   score { staff kit }
+*)
+
 ================================================================================
 ## 6. Structure Definition
 ================================================================================
@@ -1925,7 +1953,8 @@ MusicBlock     = '{' , { MusicItem } , '}' ;
 
 MusicItem      = Note | Rest | Chord | Arpeggio | Barline | PhraseRef
                | SlashNote | BareDuration
-               | Slur | Tie | Beam | Tuplet | Grace | Cue | MidMusicCommand ;
+               | Slur | Tie | Beam | Tuplet | Grace | Cue | MidMusicCommand
+               | DrumChart ;                      (* §5.2 *)
 
 (* ⚠️ REPEAT STRUCTURE IS NOT A MUSIC ITEM (user decision, 2026-08-31; LYS1034). A repeat
    barline ('|:' ':|' ':|:') and a volta ending ('[1. … ]') change the ORDER the music plays

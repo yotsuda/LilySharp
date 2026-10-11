@@ -603,6 +603,12 @@ drummap { hh: position 6 notehead x }  // TOP LEVEL, optional: re-table a drum
 - Durations, dots, bare durations, rests, `<bd hh>4` chords, `repeat`, `@` marks work as on
   notes. A drum name is read as a drum note in ANY part, so a phrase cannot be named after
   one (LYS1030); keep pitches out of a drum part (the LilyPond export drops its drums).
+- `drums { LINE LINE … }` — a drum chart: each LINE is a phrase name or `{ … }`, optionally
+  led by `up`/`down`; the lines play together (`drums { hats back kick }`). Drawn in two
+  voices: hands merged on stems up, feet (`bd bda hhp`) stems down. Lines hold drum notes,
+  drum chords, rests, `tuplet`, `repeat unfold/percent`. Notes straight in the chart =
+  LYS0040; three hands / three feet / hh with hho at once = warning LYS4030. Prefer it to
+  `voice { } { }` for a kit: write each pattern once as a one-bar phrase.
 - `drummap { NAME: position N notehead W midi K mark M … }`: position −9…9 (0 = middle
   line), notehead `x cross diamond triangle slash xcircle default`, midi 0…127, mark `open
   stopped staccato tenuto`. It only changes existing drums; a bad entry warns LYS0024. The

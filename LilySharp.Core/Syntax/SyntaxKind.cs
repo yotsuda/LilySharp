@@ -564,4 +564,13 @@ public enum SyntaxKind : ushort
     RevertDeclaration,
     /// <summary>A once modifier node (<c>once override/revert ...</c>).</summary>
     OnceModifier,
+
+    // === Drums ===
+    /// <summary>The <c>drums</c> word opening a drum chart, <c>drums { hats  back  kick }</c>.
+    /// Lexed as an identifier and re-kinded by the parser, so <c>drums</c> stays an ordinary
+    /// name everywhere else.</summary>
+    DrumsOpener,
+    /// <summary>The <c>up</c> / <c>down</c> word before a line of a drum chart, overriding
+    /// the stem side its kit pieces would take (hands up, feet down).</summary>
+    DrumsLineDirection,
 }

@@ -746,6 +746,33 @@ drummap { hh: position 6 notehead x midi 44  sn: notehead slash }
 It changes the drums there are and cannot add one; an entry it cannot use warns (LYS0024).
 The LilyPond export keeps LilyPond's own drum table and warns that the map is not exported.
 
+### Drum charts: `drums { }`
+
+A groove is easier to write as the patterns a drummer thinks in — a hi-hat line, a backbeat,
+a kick — than as two voices. `drums { … }` takes those LINES, each a phrase or a `{ … }`
+block, and plays them together:
+
+```
+phrase hats { hh8 8 8 8 8 8 hho hh | }
+phrase back { r4 sn r sn@accent | }
+phrase kick { bd4 r8 bd bd4 r | }
+phrase fill { r2 tuplet 3/2 { sn8 sn sn  tomh tomml tomfh } | }
+part kit { clef percussion }
+section A { kit { drums { hats back kick }  drums { { hh4 hh r2 | } fill kick } } }
+form { ~A }
+score { staff kit }
+```
+
+The page draws the chart in two voices, as drum music is read: the hands' hits on stems up,
+merged into chords where lines meet, and the feet's (`bd`, `bda`, `hhp`) on stems down. Write
+`up` or `down` before a line to put the whole line on that side (`drums { hats  down
+{ … } }`). Each line keeps its own durations, so a triplet fill is just a line with a `tuplet`.
+Hits no drummer can play at once — three for the hands, three for the feet, or the closed and
+the open hi-hat together — warn (LYS4030); notes written straight into the chart instead of
+in a line are an error (LYS0040). A line holding something a drum part does not (a pitched
+note, a nested tuplet) leaves the chart drawn a voice a line. MIDI plays every line; the
+LilyPond and MusicXML exports write each line as a voice.
+
 ## Time Signature
 
 ```

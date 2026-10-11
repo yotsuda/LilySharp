@@ -688,6 +688,13 @@ public sealed partial class MeasureCollector
                 foreach (var a in slashNote.Articulations)
                     Collect(a, isChordMember: false);
                 break;
+            // A drum note's own scripts — the snare's accent above all. Until 2026-10-11 this
+            // arm did not exist and `sn4@accent` drew no accent, in silence (found writing
+            // the drums { } chart); its automatic "+"/"○" came through AddDrumMark only.
+            case DrumNoteSyntax drumNote:
+                foreach (var a in drumNote.Articulations)
+                    Collect(a, isChordMember: false);
+                break;
             case BareDurationSyntax bareDur:
                 foreach (var a in bareDur.Articulations)
                     Collect(a, isChordMember: false);

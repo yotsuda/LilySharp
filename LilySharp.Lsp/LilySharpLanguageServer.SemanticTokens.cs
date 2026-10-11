@@ -236,7 +236,9 @@ public sealed partial class LilySharpLanguageServer
                 SyntaxKind.ClefKeyword or SyntaxKind.TupletKeyword or SyntaxKind.GraceKeyword or
                 SyntaxKind.MajorKeyword or SyntaxKind.MinorKeyword or SyntaxKind.LyricsKeyword or
                 SyntaxKind.OverrideKeyword or SyntaxKind.RevertKeyword or SyntaxKind.OnceKeyword or
-                SyntaxKind.PhraseKeyword or SyntaxKind.SectionKeyword or SyntaxKind.FormKeyword => 0,
+                SyntaxKind.PhraseKeyword or SyntaxKind.SectionKeyword or SyntaxKind.FormKeyword or
+                // A drum chart's opener and its line words, re-kinded by Parser.Drums.
+                SyntaxKind.DrumsOpener or SyntaxKind.DrumsLineDirection => 0,
 
                 // Numbers
                 SyntaxKind.IntegerLiteral => 2,

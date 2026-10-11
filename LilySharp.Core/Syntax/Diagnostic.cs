@@ -637,6 +637,12 @@ public static class DiagnosticCodes
     /// for its width and means nothing (owner's decision 2026-10-09).</summary>
     public const string SectionLabelInsidePart = "LYS0039";
 
+    /// <summary>Parser error: music written straight into a <c>drums { }</c> chart —
+    /// <c>drums { hh8 hh … }</c>. A chart holds LINES, each a phrase name or a <c>{ … }</c>
+    /// block (owner's design 2026-10-11); the stray item is kept as a line of its own so it
+    /// still sounds and the source keeps its width.</summary>
+    public const string DrumsLineNotALine = "LYS0040";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>
@@ -1386,7 +1392,12 @@ public static class DiagnosticCodes
     /// is drawn as a circle; at the loud end it contradicts the wedge. The wedge is drawn plain
     /// and the word printed (owner's decision, 2026-10-06).</summary>
     public const string NienteAtThickEnd = "LYS4029";
-    /// <summary>A slur, phrasing slur, tie or hairpin — and, since 2026-09-29, a text spanner,
+
+    /// <summary>Semantic warning: hits in a <c>drums { }</c> chart no drummer can play at once —
+    /// three or more kit pieces for the hands, three or more for the feet, or the closed and the
+    /// open hi-hat together (owner's rule 2026-10-11). The chart still plays and draws them;
+    /// lines that merely meet (a hi-hat and a snare on one beat) are not reported.</summary>
+    public const string DrumsUnplayable = "LYS4030";    /// <summary>A slur, phrasing slur, tie or hairpin — and, since 2026-09-29, a text spanner,
     /// ottava, pedal or trill span — that breaks the SECTION CARRY RULE
     /// (owner's decisions, 2026-09-28): a span open when a section ends is carried into the
     /// section the form plays next and must end there. Four faults, checked per form, per part

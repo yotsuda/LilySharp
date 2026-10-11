@@ -281,6 +281,12 @@ public static class DrumNameRegistry
             name = full;
         return Canonical.TryGetValue(name, out info);
     }
+
+    /// <summary>True for a kit piece played with a FOOT — the bass drums and the pedal
+    /// hi-hat. A <c>drums { }</c> chart stems them down and the rest up (owner's design
+    /// 2026-10-11, the usual drum-set notation).</summary>
+    public static bool IsFootDrum(string name)
+        => TryGet(name, out var info) && info.FullName is "bassdrum" or "acousticbassdrum" or "pedalhihat";
 }
 
 /// <summary>
