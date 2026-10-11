@@ -278,7 +278,7 @@ internal static partial class SharedRenderer
                 double scale = c.Scale;
                 double em = os.Size(DynamicEngraver.LabelEm(fonts, true), c.StaffIndex) * TodoMemoStyle.Scale;
                 double width = 2 * DynamicEngraver.LabelHalfWidth(fonts, c.Memo, expressive: true) * scale * TodoMemoStyle.Scale;
-                var (ascent, descent) = DynamicEngraver.InkOf(fonts, c.Memo, true);
+                var (ascent, descent) = TodoMemoStyle.InkOf(fonts, c.Memo);
                 ascent *= scale * TodoMemoStyle.Scale;
                 descent *= scale * TodoMemoStyle.Scale;
                 double gap = TodoMemoStyle.Gap * scale;
@@ -378,7 +378,7 @@ internal static partial class SharedRenderer
                     return (l, b, 0);
                 // The climb ends at the page's edge: a memo that finds no clear place before
                 // it stays at the edge, over whatever is there, rather than be cut off.
-                const double climb = 0.5;
+                const double climb = TodoMemoStyle.Climb;   // the reservation rounds to it (TodoMemoBand)
                 double pageTop = ink.PageHeight - air, pageBottom = air;
                 double? inkClear = null, allClear = null;
                 for (int tries = 0; tries < 400; tries++)

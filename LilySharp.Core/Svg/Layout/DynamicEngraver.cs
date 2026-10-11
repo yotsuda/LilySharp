@@ -128,6 +128,20 @@ internal static class DynamicEngraver
     // face's own ascender/descender box over its advance.
     //   departs from: LilyPond's Pango shapes the fallback face and reads its glyphs.
     //   goes away when: the layout measures the fallback face the renderer draws with.
+    /// <summary>An expressive label's INK, or null where the face has no glyph for some of it
+    /// (a CJK memo, set by the fallback font, whose ink no metric here can measure).</summary>
+    internal static (double Ascent, double Descent)? MeasuredExpressiveInk(Rendering.ScoreTextMetrics fonts, string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return (0.0, 0.0);
+        double em = LabelEm(fonts, true);
+        var face = fonts.Face(LabelRole(true), LabelStyle(fonts, true));
+        if (HasMissingGlyph(text, em, face))
+            return null;
+        var (b, t) = Rendering.TextFontMetrics.Ink(text, em, face);
+        return (t, -b);
+    }
+
     private static bool HasMissingGlyph(string text, double em, Rendering.TextFace face)
         => Rendering.TextFontMetrics.HasMissingGlyph(text, em, face);
 

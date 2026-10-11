@@ -218,6 +218,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A memo's underline sits alike under Latin and Japanese words.** It hung a third of a space too
+  low under Japanese (measured from the fallback face's whole descent) and too close under Latin
+  words without descenders. It now sits a fixed distance under the glyphs' own ink — a
+  descender takes it down — and Japanese is taken to stand on the baseline.
+
 - **A `@todo` memo stands in its own staff's margin.** In the preview a memo on a lower staff
   went up over the whole system; it now stands over its own staff (under it for `.down`),
   between it and its neighbour, and the gap between the two staves opens for it when it has to.

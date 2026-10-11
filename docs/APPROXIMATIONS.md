@@ -434,7 +434,7 @@
 ### `LilySharp.Core/Svg/Layout/DotColumn.cs`
 - **`DotColumn.Reserved`** ⚠️ LILYSHARP-OWN: the dots' preferred DIRECTION is not read here. LilyPond's
 ### `LilySharp.Core/Svg/Layout/DynamicEngraver.cs`
-- **`DynamicEngraver.HasMissingGlyph`** ⚠️ LILYSHARP-OWN: a string the bundled face cannot spell (CJK — TextFontMetrics reports
+- **`DynamicEngraver.MeasuredExpressiveInk`** ⚠️ LILYSHARP-OWN: a string the bundled face cannot spell (CJK — TextFontMetrics reports
 - **`DynamicEngraver.PlaceOnMultiMeasureRests`** ⚠️ LILYSHARP-OWN: the number is a support of THIS text alone, not ink of the staff's
 - **`DynamicEngraver.SmuflGlyphRun`** the ink the side-position reads. LILYSHARP-OWN: LilyPond reads no SMuFL font and sets its
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`

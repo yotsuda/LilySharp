@@ -849,6 +849,7 @@
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.FallbackAscent","1.2","private const double FallbackAscent = 1.2;","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.FallbackDescent","0.64","private const double FallbackDescent = 0.64;","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.TextScriptPadding","0.3","private const double TextScriptPadding = 0.3;","LILYPOND-REF: lily/text-engraver.cc:84-100 — acknowledge_note_column sets the X parent","Green"
+"Svg/Layout/DynamicEngraver.cs","DynamicEngraver.MeasuredExpressiveInk","0.0, 0.0","return (0.0, 0.0);","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.InkOf","0.0, 0.0","return (0.0, 0.0);","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.StackStep","2.0","internal const double StackStep = 2.0;","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.StaffExtent","1.0","=> StaffExtentToward(1.0, EngravingDefaults.DefaultStaffLines);","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
