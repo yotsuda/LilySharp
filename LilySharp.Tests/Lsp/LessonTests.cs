@@ -96,6 +96,27 @@ public class LessonTests
     }
 
     [Fact]
+    public void Lesson2_ItsTwoKeyTasks_TurnItIntoTheTune()
+    {
+        // The digit task starts from a short bar (`d4`, typed 2 anywhere on the note), and the
+        // octave task from a note written an octave high (`g2`, Ctrl+Shift+Down adds the `,`) —
+        // which also lifts the note after it, the relative frame carrying the slip. Done, the
+        // lesson is clean, and nothing else in it raises a message.
+        string lesson = LilySharpLanguageServer.Lessons[1].Text;
+        const string digit = "d4@todo(\"caret before d, type 2\")", octave = "g2@todo(\"Ctrl+Shift+Down on g\")";
+        Assert.Contains(digit, lesson);
+        Assert.Contains(octave, lesson);
+        static List<LilySharp.Core.Syntax.Diagnostic> Messages(string text)
+        {
+            var tree = SyntaxTree.Parse(text);
+            return tree.Diagnostics.Concat(SemanticValidation.Run(tree)).Where(d => d.Code != DiagnosticCodes.TodoMark).ToList();
+        }
+        Assert.Single(Messages(lesson));                                  // the short bar
+        string done = lesson.Replace(digit, "d2").Replace(octave, "g,2");
+        Assert.Empty(Messages(done));
+    }
+
+    [Fact]
     public void Lesson3_TheShortBarItStartsWith_IsMendedByItsTask()
     {
         // `a8@todo("type 4 here") g4 c` is 5/8 in 3/4 — the squiggle is the point; typing the
