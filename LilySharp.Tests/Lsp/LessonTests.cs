@@ -133,6 +133,25 @@ public class LessonTests
         Assert.Empty(Messages(lesson.Replace(task, task.Replace("a8@", "a4@"))));
     }
 
+    [Fact]
+    public void Lesson9_ItsChordTask_GivesTheLeftHandAChordWithinAnOctave()
+    {
+        // The task's chord as its memo writes it. `<g, d' b'>` was G2 D5 B4 — a member's mark
+        // moves that member only, from an anchor near the note before (owner's report
+        // 2026-10-11: "the octave is unnatural"); `<g b d>,` moves the whole chord: G2 B2 D3.
+        string lesson = LilySharpLanguageServer.Lessons[8].Text;
+        const string task = "g,2.@todo(\"make it <g b d>,2.\")";
+        Assert.Contains(task, lesson);
+        var tree = SyntaxTree.Parse(lesson.Replace(task, "<g b d>,2."));
+        Assert.Empty(tree.Diagnostics.Concat(SemanticValidation.Run(tree)));
+        var score = SvgGenerator.CollectScore(tree, LilySharp.Core.Svg.Collector.RenderSpecParser.Choose(
+            LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree), null));
+        var lh = score.EnumerateStaves().Select(s => s.Staff).Last();
+        var chord = lh.Voices[0].Measures.SelectMany(m => m.Items).OfType<LilySharp.Core.Svg.Model.ChordItem>().Last();
+        var positions = chord.Notes.Select(n => n.StaffPosition).ToList();
+        Assert.True(positions.Max() - positions.Min() <= 7, string.Join(" ", positions));
+    }
+
     [Theory]
     [InlineData(3, "low", -1)]      // lesson 4: `score low transpose bes,` — a step down
     [InlineData(9, "trumpet", 1)]   // lesson 10: a B♭ trumpet's part under `pitch concert` — a step up
