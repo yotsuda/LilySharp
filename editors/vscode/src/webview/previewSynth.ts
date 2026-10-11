@@ -149,7 +149,12 @@ export class PreviewSynth {
         limiter.release.value = 0.12;
         this.master.connect(limiter);
         limiter.connect(ctx.destination);
-        this.init = this.start(processorUrl, soundFontUrl);
+        // `init` is the synth alone. setSoundFont awaits it, so it must not await
+        // setSoundFont back: until session 901's third build start() did, and the two
+        // waited on each other for ever — the log stopped at "the worklet answered",
+        // no font was ever fetched, and every Play fell back to the oscillator patches.
+        this.init = this.start(processorUrl);
+        void this.init.then(() => this.setSoundFont(soundFontUrl));
     }
 
     get ready(): boolean { return this.state === 'ready' && this.synth !== null; }
@@ -184,26 +189,24 @@ export class PreviewSynth {
     // the processor's construction (isReady) and the bank's parsing (addSoundBank) —
     // do not complete while the context is suspended, and a log that stops at a stage
     // says which one is waiting (owner's report 2026-10-11: no synth line at all).
-    private async start(processorUrl: string, soundFontUrl: string): Promise<void> {
+    private async start(processorUrl: string): Promise<void> {
         try {
             this.settle('loading', 'adding the worklet processor (context ' + this.ctx.state + ')');
             await addProcessor(this.ctx, processorUrl);
             const synth = new WorkletSynthesizer(this.ctx);
             synth.connect(this.master);
             this.synth = synth;
-            this.settle('loading', 'synth created; its processor starts with the audio thread (context ' + this.ctx.state + ')');
+            this.settle('loading', 'synth created (context ' + this.ctx.state + ')');
             void synth.isReady.then(() => this.onStatus({ state: this.state, detail: 'the worklet answered' }));
         } catch (e) {
             this.settle('failed', 'the synth did not start: ' + String(e));
-            return;
         }
-        await this.setSoundFont(soundFontUrl);
     }
 
     /** Loads (or replaces) the sound font; an empty URL unloads it, and the page falls
      *  back to its oscillator patches. */
     async setSoundFont(url: string): Promise<void> {
-        await this.init.catch(() => { /* reported by start */ });
+        await this.init;   // never rejects: start() reports its own failure
         if (!this.synth) { return; }
         if (!url) {
             this.settle('none', 'no sound font');
