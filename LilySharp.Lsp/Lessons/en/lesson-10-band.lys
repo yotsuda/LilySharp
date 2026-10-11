@@ -3,6 +3,7 @@
 //
 // More parts, same section. `tab` prints a part as tablature, `clef percussion`
 // makes a drum part, and each `score` is one printout of the same music.
+// `drums { }` plays drum patterns together: hands on top, feet below.
 // `pitch concert`: write what sounds. `pitch transposed` on a score prints it for the player.
 
 title "Saturday"
@@ -15,13 +16,16 @@ part lead { instrument trumpet }
 part bass { clef bass  tuning bass  octave 3 }
 part kit { clef percussion }
 
+phrase hats   { hh8 8 8 8 8 8 8 8 | }
+phrase back   { r4 sn r sn | }
+phrase kick   { bd4 r bd r | }
+phrase groove { drums { hats back kick } }
+phrase fill   { drums { { hh4 hh r2 | } { r2 tuplet 3/2 { sn8 sn sn tomh tomml tomfh } | } kick } }
+
 section A {
   lead { e4 g a g | c2 a | g4 e d c | d1 | }
   bass { c4 c g c | a a e a | f f a f | g g b g | }
-  kit {
-    voice { repeat unfold 4 { hh8 hh hh hh hh hh hh hh | } }
-          { repeat unfold 4 { bd4 sn bd sn | } }
-  }
+  kit { groove groove groove fill }
 }
 
 chords prog {
@@ -48,6 +52,6 @@ score bassist {                  // just the bass part
 }
 
 // TRY: pick `trumpet` or `bassist` at the top of the preview · in a part,
-// Ctrl+Space after `midiInstrument "` lists the 128 sounds · change `sn` to `hh`.
+// Ctrl+Space after `midiInstrument "` lists the 128 sounds · hover `hats` to see its beat.
 //
 // That is the whole tour. Keep Ctrl+Space close: it knows the rest.

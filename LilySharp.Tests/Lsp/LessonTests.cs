@@ -202,6 +202,22 @@ public class LessonTests
         Assert.Equal(Sounding(untransposed), Sounding(text));
     }
 
+    [Fact]
+    public void Lesson10_TheKitIsADrumChart_DrawnInTwoVoices()
+    {
+        // Owner's request 2026-10-11: the band's drums are written as patterns in drums { }
+        // and read as a drummer reads them — hats and snare as chords on top, the kick below.
+        string text = LilySharpLanguageServer.Lessons[9].Text;
+        Assert.Contains("drums {", text);
+        var tree = SyntaxTree.Parse(text);
+        var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(tree,
+            LilySharp.Core.Svg.Collector.RenderSpecParser.Choose(LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree), null));
+        var kit = score.EnumerateStaves().Last().Staff;
+        Assert.Equal(2, kit.Voices.Length);
+        Assert.Equal(2, kit.Voices[0].Measures[0].Items.OfType<LilySharp.Core.Svg.Model.ChordItem>().Count());
+        Assert.Single(score.TupletBrackets);
+    }
+
     [Theory]
     [MemberData(nameof(AllLessons))]
     public void ALessonsTasks_AreShortMemosOnTheNotes(string language, string label)
