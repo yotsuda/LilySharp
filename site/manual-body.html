@@ -538,6 +538,35 @@ part v1 { clef treble instrument "1st Violin" } // label only — no preset beha
   (<code>8va</code> / <code>8vb</code> / <code>15ma</code> / <code>15mb</code>) and overrides
   the preset's written-to-sounding octave.</p>
   <!--EXAMPLE:instrument-->
+
+  <h3 id="drums">Drums</h3>
+  <p><code>clef percussion</code> makes a drum part: it writes drum names where a part writes
+  pitches, draws no key signature, and plays on the General MIDI drum channel. A kit is
+  usually two voices, hands up and feet down:</p>
+<pre>part kit { clef percussion }
+section Groove {
+  kit {
+    voice { hh8 hh hh hh hh hh hho hhc | }
+          { bd4 r8 bd sn4 bd | }
+  }
+}
+form { ~Groove }
+score { staff kit }</pre>
+  <p>The names are LilyPond's: <code>bd</code> bass drum, <code>sn</code> snare,
+  <code>ss</code> side stick, <code>hh</code> hi-hat (<code>hho</code> open and
+  <code>hhc</code> closed draw their ○ and + by themselves, <code>hhp</code> the pedal),
+  <code>tomh tommh tomml toml tomfh tomfl</code> the toms from high to low,
+  <code>cymc</code> crash, <code>cymr</code> ride, <code>rb</code> ride bell,
+  <code>cyms</code> splash, <code>cb</code> cowbell, <code>tamb</code> tambourine — and the
+  long names (<code>bassdrum</code>, <code>snare</code>) as well. <kbd>Ctrl+Space</kbd> in a
+  drum part lists them all. Durations, rests, chords (<code>&lt;bd hh&gt;4</code>),
+  <code>repeat</code> and marks work as they do on notes.</p>
+  <p>A top-level <code>drummap { hh: position 6 notehead x }</code> re-tables a drum: its
+  staff position (−9 to 9, 0 the middle line), its notehead (<code>x cross diamond triangle
+  slash xcircle default</code>), its sound (<code>midi 44</code>) or its mark (<code>mark
+  open</code>, <code>stopped</code>, <code>staccato</code>, <code>tenuto</code>). It changes
+  the drums there are; it cannot add one. The LilyPond export keeps LilyPond's own table, and
+  says so.</p>
 </section>
 
 <section id="phrases">

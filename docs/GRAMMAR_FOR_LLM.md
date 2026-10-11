@@ -588,6 +588,31 @@ appoggiatura { c8 } d4       // unslashed grace
 ```
 voice { c'2 d } { e2 f }     // each voice { } is a simultaneous voice
 ```
+## Drums (`clef percussion`)
+
+```
+part kit { clef percussion }          // a drum part: drum names, no key signature, MIDI channel 10
+section Groove {
+  kit {
+    voice { hh8 hh hh hh hh hh hho hhc | }   // hands up
+          { bd4 r8 bd sn4 bd | }             // feet (and snare) down
+  }
+}
+drummap { hh: position 6 notehead x }  // TOP LEVEL, optional: re-table a drum
+```
+
+- Names are LilyPond's drum pitches, short or long: `bd`/`bassdrum` `sn`/`snare` `ss`
+  (side stick) `hh` `hho` (open, draws ○) `hhc` (closed, draws +) `hhp` (pedal) `tomh tommh
+  tomml toml tomfh tomfl` (toms, high → low) `cymc` (crash) `cymr` (ride) `rb` (ride bell)
+  `cyms` (splash) `cb` (cowbell) `tamb`, plus the Latin set (`boh bol cgh cgl timh timl agh
+  agl cab mar wbh wbl tri …`). `tt` (tamtam) is not one.
+- Durations, dots, bare durations, rests, `<bd hh>4` chords, `repeat`, `@` marks work as on
+  notes. A drum name is read as a drum note in ANY part, so a phrase cannot be named after
+  one (LYS1030); keep pitches out of a drum part (the LilyPond export drops its drums).
+- `drummap { NAME: position N notehead W midi K mark M … }`: position −9…9 (0 = middle
+  line), notehead `x cross diamond triangle slash xcircle default`, midi 0…127, mark `open
+  stopped staccato tenuto`. It only changes existing drums; a bad entry warns LYS0024. The
+  LilyPond export ignores it (warning).
 
 ## Lyrics (a named track that SINGS a part)
 

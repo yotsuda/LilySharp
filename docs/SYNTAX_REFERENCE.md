@@ -707,6 +707,44 @@ clef bass        // Bass clef (F clef)
 clef alto        // Alto clef (C clef, line 3)
 clef tenor       // Tenor clef (C clef, line 4)
 ```
+## Drums
+
+`clef percussion` makes a drum part. It writes drum names instead of pitches, draws no key
+signature, and plays on the General MIDI drum channel (10). A kit is usually two voices,
+hands up and feet down:
+
+```
+part kit { clef percussion }
+section Groove {
+  kit {
+    voice { hh8 hh hh hh hh hh hho hhc | }
+          { bd4 r8 bd sn4 bd | }
+  }
+}
+form { ~Groove }
+score { staff kit }
+```
+
+The names are LilyPond's drum pitches, each with a short and a long spelling: `bd`
+(`bassdrum`), `sn` (`snare`), `ss` (side stick), `hh` (hi-hat), `hho` / `hhc` (open /
+closed — they draw their ○ / + themselves), `hhp` (pedal hi-hat), `tomh tommh tomml toml tomfh
+tomfl` (toms from high to low), `cymc` (crash), `cymr` (ride), `rb` (ride bell), `cyms`
+(splash), `cb` (cowbell), `tamb` (tambourine), and the Latin set (bongos `boh` `bol`, congas
+`cgh` `cgl`, timbales `timh` `timl`, `agh` `agl` `cab` `mar` `wbh` `wbl` `tri` …). The table
+is `DrumNameRegistry`. Durations, rests, chords (`<bd hh>4`), `repeat` and marks work as on
+notes. A drum name is a drum note in any part, which is why a phrase cannot take one as its
+name (LYS1030).
+
+A top-level `drummap` re-tables drums for the file — staff position (−9 to 9, 0 the middle
+line), notehead (`x cross diamond triangle slash xcircle default`), MIDI key (0–127) and
+mark (`open stopped staccato tenuto`):
+
+```
+drummap { hh: position 6 notehead x midi 44  sn: notehead slash }
+```
+
+It changes the drums there are and cannot add one; an entry it cannot use warns (LYS0024).
+The LilyPond export keeps LilyPond's own drum table and warns that the map is not exported.
 
 ## Time Signature
 

@@ -98,8 +98,6 @@ index の「03 Speed」は見出しだけ。
 - P3 **章の無い基本**: 調号と臨時記号・拍子・テンポ（`#glance` の註と parts の表だけ）・音部記号（表の 1 行）・
   弱起 `partial`（`#sections` の pre の註だけ。曲中の `| partial 2. r2. |` と `time none` は皆無）・強弱とヘアピン
   （`#anno` に混在）・`using "other.lys"`（LilyPond 対照表だけ）。
-- P5 **ドラム／打楽器がサイトにも GRAMMAR_FOR_LLM にも SYNTAX_REFERENCE にも無い**（予約語表の `percussion drummap`
-  とドラム名だけ）＝Lesson 10 が指す先が無い。
 - P7 レッスン（`lesson-…`）の案内: editor 頁 `#language` は済（2026-10-11）。`start` 頁は再構成で。
 - P13 **「まずプレビューを開く」が入口に無い**。Ctrl+K V は「Ctrl+K を離してから V」の和音キーで、初心者は押し方を知らない。
   エディタ右上のアイコンでも開ける。start 頁の 1 段目に置く（Lesson 1 の STEP 0 と同じ文）。
@@ -166,3 +164,5 @@ index の「03 Speed」は見出しだけ。
   （`TodoCalloutTests.AMemo_InAScoreWithANumericMeter_StillRenders`）。
 - 大譜表の**下の段**の音符に付けたメモは、上の段の上へ出て引き出し線が上の段を横切る（Lesson 9）。読めるが、
   段の下に置けるならその方が近い＝メモ配置の改善候補（ユーザー判断）。
+- ドラムの 2 声で、**下の声のスネア（`sn4`）の符幹が上を向く**（`voice { hh8 … } { bd4 r8 bd sn4 bd | }`・2026-10-11 に文書の例を描いて気づいた）。
+  下の声は符幹が下のはず＝製品側の確認候補（未調査）。
