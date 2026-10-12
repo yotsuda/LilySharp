@@ -131,19 +131,12 @@ ships unmodified as `out/synth/spessasynth_processor.min.js`. Both carry MIT-lic
 the project vendors (hajimehoshi's stbvorbis.js, 101arrowz's fflate), noticed in the
 processor file's own legal comments.
 
-## Sound font (bundled in the VS Code extension)
+## Sound font (none bundled)
 
-### MuseScore_General.sf3 (the General MIDI sound font the preview plays)
-
-FluidR3 (original version) by Frank Wen, Copyright (c) 2000-02, 2008; the mono conversion
-(FluidR3Mono) by Michael Cowgill, Copyright (c) 2014-17; the adaptation for
-MuseScore_General.sf2 by S. Christian Collins, Copyright (c) 2018-19; Temple Blocks by Ethan
-Winer, Copyright (c) 2002; Drumline Cymbals by Michael Schorsch, Copyright (c) 2016.
-
-MIT License, as FluidR3Mono and FluidR3 before it; the acknowledgements and copyright notices
-above must be included in any derivative work. The licence and the upstream README ship
-beside the font as `media/soundfont/MuseScore_General-LICENSE.md`. Redistributed unmodified,
-as published by MuseScore (ftp.osuosl.org/pub/musescore/soundfont/MuseScore_General/).
+The VS Code extension bundles no sound font (owner's decision, 2026-10-12). The preview plays
+the General MIDI bank the operating system ships for its own synthesizer — Windows'
+`gm.dls`, macOS's DLS bank — read in place where it is installed, never copied or
+redistributed; or a sound font the user downloads and names in `lilysharp.playback.soundFont`.
 
 ## Deliberately NOT bundled
 

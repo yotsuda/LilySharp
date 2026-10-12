@@ -27,3 +27,9 @@ node_modules/**
 !server/**
 # …but not its debug symbols (not needed at runtime; trims the VSIX).
 **/*.pdb
+
+# A sound font a developer keeps under media/soundfont/ to hear the preview with is NOT
+# shipped: no font is bundled (owner's decision 2026-10-12 — the OS's General MIDI bank by
+# default, a better one the user's to install). The extension still reads that folder first,
+# so a local build plays it; a release never carries it.
+media/soundfont/**

@@ -89,7 +89,9 @@ Now:
 
 - **Where it comes from**: `lilysharp.playback.soundFont` (machine-overridable) names an
   `.sf2`, `.sf3` or `.dls` on this machine; empty, the first such file under the extension's
-  `media/soundfont/` plays. A missing file is logged and the bundled one used. Changing the
+  `media/soundfont/` (a developer's local build only — a release carries none), else the
+  General MIDI bank the OS ships (`osSoundFonts`: Windows' `gm.dls`, macOS's
+  `gs_instruments.dls`). A missing file is logged and the default used. Changing the
   setting re-roots the open previews' webviews and swaps the font in place
   (`previewResourceRoots`, `synthUrls`, the `setSoundFont` message). No font at all: the
   oscillator patches, and the output channel says so (`Preview synth none`). The setting's
@@ -97,18 +99,22 @@ Now:
   bundled font, the General MIDI bank the OS ships for its own synth where present
   (Windows' `gm.dls`, macOS's `gs_instruments.dls` — Roland GS, DLS, small and dated; read
   in place, never copied), the current file, or a file dialog filtered to the three formats.
-- **Which one** — the owner's decision, pending (session 901 placed MuseScore_General for the
-  owner to hear and committed no font):
+- **Which one — DECIDED 2026-10-12 (owner): none is bundled.** "Windows ships one, small as it
+  is; whoever wants better installs it — document the recommended fonts and the steps." So the
+  default is the OS's bank (Windows' `gm.dls`: 3.4 MB, 235 presets with the GS drum kits,
+  parsed by spessasynth_core 4.3.22 in 45 ms — measured), simple tones on Linux, and
+  `site/editor-body.html` `#soundfonts` names the three below with their publishers' links and
+  the steps (Choose Sound Font… → Browse). `media/soundfont/` is in `.gitignore` and
+  `.vscodeignore`. The three considered for bundling, now the recommendations:
   - *MuseScore_General.sf3* (MuseScore 3's default; S. Christian Collins' adaptation of
     FluidR3Mono; MIT; 39.9 MB as SF3) — fuller, stereo.
   - *FluidR3Mono_GM.sf3* (MuseScore 2's default; Michael Cowgill's mono conversion of Frank
     Wen's FluidR3; MIT; 14.5 MB as SF3) — lighter.
   - *GeneralUser GS* (S. Christian Collins; its own permissive licence; ~30 MB as SF2) — a
     third option spessasynth is tuned against.
-  The licence file ships beside the font (`media/soundfont/<name>-LICENSE.md`) and the font is
-  listed in `THIRD-PARTY-NOTICES.md`. Whether the VSIX bundles it or the extension fetches it
-  on first use into `globalStorage` is the same decision: the platform VSIXs already carry a
-  self-contained .NET server, so 15–40 MB more is a size question, not a licence one.
+  Bundling one would have meant its licence beside it and a THIRD-PARTY-NOTICES entry (all
+  three permit it; 15–40 MB more per VSIX was a size question, not a licence one). Not
+  bundling also leaves fetching on first use unbuilt — the user downloads from the publisher.
 - **Loading** happens at page boot (a suspended context parses a bank fine), so the first Play
   does not wait; the output channel logs `Preview synth ready: N MB in M ms`. Each preview
   keeps its own synth and bank (the panels retain their context when hidden).
@@ -165,5 +171,5 @@ Now:
 | The page: context, Play/Stop, follow-along, auditions, oscillator fallback | `editors/vscode/src/extension.ts`, the page script's "Playback and audition" section |
 | The URLs, the roots, the setting, the CSP | `extension.ts`: `synthRoot`, `soundFontFile`, `previewResourceRoots`, `synthUrls`, `getPreviewHtml` |
 | The bundle | `editors/vscode/esbuild.js` (`copyWorkletProcessor`, the second context) |
-| The font | `editors/vscode/media/soundfont/` (+ `<name>-LICENSE.md`), `THIRD-PARTY-NOTICES.md` |
+| The font | none bundled — `soundFontFile` / `osSoundFonts` in `extension.ts`; the advice for users: `site/editor-body.html` `#soundfonts` |
 | The nets | `PlaybackRequestTests`, `StepRequestTests.TheAudition_NamesTheProgramThePartPlays`, `test/playbackCore.test.ts`, `test/webviewScript.test.ts` (the page script still parses) |

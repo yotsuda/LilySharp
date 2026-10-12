@@ -2593,22 +2593,27 @@ function synthRoot(extensionUri: vscode.Uri): vscode.Uri {
 }
 
 /** The sound font the preview plays with: `lilysharp.playback.soundFont` when it names a
- *  file on this machine (a missing one is logged and the bundled one used), else the
- *  first .sf2/.sf3/.dls under media/soundfont — the General MIDI font the extension
- *  bundles. Null when there is none: the preview then plays its oscillator patches. */
+ *  file on this machine (a missing one is logged and the default used); else a font under
+ *  media/soundfont, which a release does not carry (a developer's own build may); else the
+ *  General MIDI bank the OS ships (Windows' gm.dls, macOS's DLS bank). Null when there is
+ *  none — Linux without a font set: the preview then plays its oscillator patches.
+ *  Owner's decision 2026-10-12: no font in the VSIX; the OS's bank by default, and a better
+ *  one is the user's to install (the editor page names three and how). */
 function soundFontFile(extensionUri: vscode.Uri): { file: vscode.Uri; root: vscode.Uri } | null {
     const setting = vscode.workspace.getConfiguration('lilysharp').get<string>('playback.soundFont', '').trim();
     if (setting) {
         if (fs.existsSync(setting)) {
             return { file: vscode.Uri.file(setting), root: vscode.Uri.file(path.dirname(setting)) };
         }
-        outputChannel.appendLine(`lilysharp.playback.soundFont: ${setting} does not exist; using the bundled sound font`);
+        outputChannel.appendLine(`lilysharp.playback.soundFont: ${setting} does not exist; using the default sound`);
     }
     const dir = vscode.Uri.joinPath(extensionUri, 'media', 'soundfont');
     try {
         const files = fs.readdirSync(dir.fsPath).filter(f => /\.(sf2|sf3|dls)$/i.test(f)).sort();
         if (files.length > 0) { return { file: vscode.Uri.joinPath(dir, files[0]), root: dir }; }
-    } catch { /* no bundled font */ }
+    } catch { /* none here — a release carries none */ }
+    const os = osSoundFonts()[0];
+    if (os) { return { file: vscode.Uri.file(os.path), root: vscode.Uri.file(path.dirname(os.path)) }; }
     return null;
 }
 
@@ -2626,20 +2631,21 @@ function osSoundFonts(): { label: string; path: string }[] {
     return candidates.filter(c => fs.existsSync(c.path));
 }
 
-/** The picker behind `Lily#: Choose Sound Font…` and the setting's link: the bundled font,
- *  the OS's bank, a file of the user's (a dialog filtered to .sf2 / .sf3 / .dls), written to
- *  the user settings as `lilysharp.playback.soundFont`. */
+/** The picker behind `Lily#: Choose Sound Font…` and the setting's link: the default (the
+ *  OS's General MIDI bank where there is one), the current file, or a file of the user's (a
+ *  dialog filtered to .sf2 / .sf3 / .dls), written to the user settings as
+ *  `lilysharp.playback.soundFont`. */
 async function chooseSoundFont(): Promise<void> {
     const config = vscode.workspace.getConfiguration('lilysharp');
     const current = config.get<string>('playback.soundFont', '').trim();
-    type Pick = vscode.QuickPickItem & { action: 'bundled' | 'browse' | 'path'; path?: string };
+    type Pick = vscode.QuickPickItem & { action: 'default' | 'browse' | 'path'; path?: string };
+    const os = osSoundFonts()[0];
     const items: Pick[] = [
-        { label: 'Bundled General MIDI sound font', description: current ? '' : '(current)',
-          detail: 'The font the extension ships (empties the setting)', action: 'bundled' },
-        ...osSoundFonts().map<Pick>(f => ({
-            label: f.label, description: f.path === current ? '(current)' : '', detail: f.path,
-            action: 'path', path: f.path })),
-        { label: 'Browse for a file…', detail: 'An .sf2, .sf3 or .dls file on this machine', action: 'browse' },
+        { label: os ? `Default — ${os.label}` : 'Default — simple tones', description: current ? '' : '(current)',
+          detail: os ? 'The General MIDI bank this computer already has (empties the setting)'
+                     : 'This system has no General MIDI bank of its own: browse for a sound font for real instruments',
+          action: 'default' },
+        { label: 'Browse for a file…', detail: 'An .sf2, .sf3 or .dls file on this machine — see "Sound fonts" on the Lily# site for three free ones', action: 'browse' },
     ];
     if (current && !items.some(i => i.path === current)) {
         items.splice(1, 0, { label: path.basename(current), description: '(current)', detail: current,
@@ -2651,7 +2657,7 @@ async function chooseSoundFont(): Promise<void> {
     });
     if (!picked) { return; }
     let value: string | undefined;
-    if (picked.action === 'bundled') {
+    if (picked.action === 'default') {
         value = '';
     } else if (picked.action === 'path') {
         value = picked.path;
@@ -2667,7 +2673,7 @@ async function chooseSoundFont(): Promise<void> {
     }
     await config.update('playback.soundFont', value, vscode.ConfigurationTarget.Global);
     vscode.window.setStatusBarMessage(
-        value ? `Lily#: the preview plays ${path.basename(value)}` : 'Lily#: the preview plays the bundled sound font', 5000);
+        value ? `Lily#: the preview plays ${path.basename(value)}` : 'Lily#: the preview plays the default sound', 5000);
 }
 
 /** The preview webview's resource roots: the music fonts, the text fonts, the synth

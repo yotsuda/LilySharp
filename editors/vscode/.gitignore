@@ -9,3 +9,6 @@ THIRD-PARTY-NOTICES.md
 THIRD-PARTY-NOTICES-SkiaSharp.txt
 LICENSE-Apache-2.0.txt
 LILYPOND-ATTRIBUTION.md
+# A developer's own sound font (see .vscodeignore): not committed, not shipped.
+media/soundfont/
+

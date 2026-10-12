@@ -11,6 +11,7 @@
   <ol>
     <li><a href="#step">Stepping: Ctrl+Shift+Up/Down</a></li>
     <li><a href="#audition">Audition</a></li>
+    <li><a href="#soundfonts">Sound fonts</a></li>
     <li><a href="#language">Completion, hover, fixes</a></li>
     <li><a href="#commands">Commands</a></li>
     <li><a href="#settings">Settings</a></li>
@@ -173,11 +174,10 @@
     Width</i> and <i>Reset Zoom</i>. Playback highlights each note as it sounds, with each
     part's own General MIDI sound, and plays the score the preview shows — that score's parts,
     under its form.</li>
-    <li><b>Its sound</b> is a SoundFont synthesizer: <code>lilysharp.playback.soundFont</code>
-    names an <code>.sf2</code>, <code>.sf3</code> or <code>.dls</code> of your own (<i>Lily#:
-    Choose Sound Font…</i> browses for one); with no font loaded it plays plain tones. A
-    browser lets sound start only once you have clicked or typed in the preview itself — the
-    status bar says so when a note comes first.</li>
+    <li><b>Its sound</b> is a SoundFont synthesizer. Out of the box it plays the General MIDI
+    bank your computer already has; for fuller instruments, install a free sound font —
+    <a href="#soundfonts">Sound fonts</a>, below. A browser lets sound start only once you have
+    clicked or typed in the preview itself — the status bar says so when a note comes first.</li>
     <li><b>It exports.</b> <i>Lily#: Export</i> writes PDF, SVG, PNG, LilyPond
     (<code>.ly</code>), MusicXML, MIDI or a VOCALOID sequence — from the preview (the score it
     shows, under that score's own form), the command palette, or by right-clicking
@@ -245,6 +245,45 @@
     <video src="videos/editor-audition.mp4" controls playsinline preload="none"></video>
     <figcaption>The caret's note sounds as it moves, and a typed note sounds as it is written.</figcaption>
   </figure>
+</section>
+
+<section id="soundfonts">
+  <h2>Sound fonts</h2>
+  <p>The preview plays each part with the General MIDI instrument its <code>midiInstrument</code>
+  or instrument preset names — the same sounds the exported MIDI asks for. Which recording of
+  those instruments you hear is the <b>sound font</b>.</p>
+  <ul>
+    <li><b>Out of the box</b> Lily# plays the General MIDI bank your computer already has:
+    on Windows the Microsoft GS Wavetable bank (<code>gm.dls</code>, 3 MB), on a Mac the bank
+    of its DLS music device. Every instrument and drum kit is there, but the sound is small
+    and dated. On Linux there is none, and the preview plays simple tones until you choose a
+    font.</li>
+    <li><b>For fuller sound</b>, download a free General MIDI sound font and choose it. Lily#
+    does not bundle one, so the extension stays small and you pick the sound you like.</li>
+  </ul>
+  <table class="g">
+    <tr><th>Sound font</th><th>Size</th><th>Licence</th><th>Character</th></tr>
+    <tr><td><a href="https://ftp.osuosl.org/pub/musescore/soundfont/MuseScore_General/MuseScore_General.sf3">MuseScore_General.sf3</a></td><td>36 MB</td><td>MIT</td><td>full and stereo; MuseScore 3's default — <b>the one to try first</b></td></tr>
+    <tr><td><a href="https://github.com/musescore/MuseScore/raw/2.1/share/sound/FluidR3Mono_GM.sf3">FluidR3Mono_GM.sf3</a></td><td>14 MB</td><td>MIT</td><td>lighter and mono; MuseScore 2's default — for a slower computer</td></tr>
+    <tr><td><a href="https://www.schristiancollins.com/generaluser">GeneralUser GS</a></td><td>about 30 MB</td><td>its author's own, free</td><td>balanced; download from the author's page</td></tr>
+  </table>
+  <p class="note">The links are to the fonts' own publishers. More, and their licences, on
+  MuseScore's <a href="https://musescore.org/en/handbook/soundfonts-and-sfz-files">sound font
+  page</a>; any <code>.sf2</code>, <code>.sf3</code> or <code>.dls</code> General MIDI font
+  works.</p>
+  <h3>Setting one up</h3>
+  <ol>
+    <li>Download the file (for MuseScore_General, click its name above). Keep it in a folder
+    you will not tidy away — <i>Documents\Sound fonts</i>, say. Lily# reads it from there; it
+    does not copy it.</li>
+    <li>In VS Code, open the command palette (<kbd>Ctrl+Shift+P</kbd>, <kbd>Cmd+Shift+P</kbd> on a
+    Mac), type <b>sound font</b> and choose <b>Lily#: Choose Sound Font…</b>.</li>
+    <li>Pick <b>Browse for a file…</b> and select the file you downloaded.</li>
+    <li>The open previews switch to it at once — press <b>▶</b> to hear the difference. (A large
+    font can take a moment to load when a preview opens.)</li>
+  </ol>
+  <p>To go back, run <b>Lily#: Choose Sound Font…</b> again and pick <b>Default</b>. The choice is
+  the <code>lilysharp.playback.soundFont</code> setting, which holds the file's path.</p>
 </section>
 
 <section id="language">

@@ -325,9 +325,11 @@ workflow attaches that section to the GitHub Release verbatim.
   `midiInstrument` or preset names — the `lilysharp/playback` notes now carry the channel and
   the program the `.mid` export plays them with, and `lilysharp/step` / `lilysharp/auditionAt`
   answer the part's program beside the timbre, so the step keys and the caret strike the
-  part's instrument too. `lilysharp.playback.soundFont` names a font of your own, and
-  **Lily#: Choose Sound Font…** (linked from the setting) picks it — the bundled font, the
-  OS's own General MIDI bank, or a file through a dialog.
+  part's instrument too. By default it plays the OS's own General MIDI bank (Windows'
+  `gm.dls`, macOS's DLS bank; no font is bundled — the oscillator tones where there is none);
+  `lilysharp.playback.soundFont` names a font of your own, and **Lily#: Choose Sound Font…**
+  (linked from the setting) picks the default or a file through a dialog. The site's editor
+  page names three free General MIDI fonts and how to set one up.
 - **A dense score no longer breaks up**: events go to the synth a quarter of a second ahead of
   the clock instead of every note's oscillator being built up front, the output is limited,
   and Stop silences what was queued. Design: `docs/playback-design.md`.
