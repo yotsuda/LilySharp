@@ -145,20 +145,28 @@ function isPreviewTab(tab: vscode.Tab): boolean {
 // Move a score just opened in a preview's group (`from`) to `to`: shown there first, with the
 // caret it had, then its tab in the preview's group closed — the document stays open in the
 // other group, so nothing asks to be saved, an untitled New Score included.
-async function moveScoreTab(uri: vscode.Uri, from: number, to: number | 'beside', isPreview: boolean) {
+// 'left' makes a new group left of the preview's (the group the tab just opened in is the active
+// one); the groups' columns shift by one then, so the tab to close is found as the one sitting
+// beside a preview, not by its old column.
+async function moveScoreTab(uri: vscode.Uri, from: number, to: number | 'left', isPreview: boolean) {
     const key = uri.toString();
     const old = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === key && e.viewColumn === from);
+    const isScoreTab = (t: vscode.Tab) => t.input instanceof vscode.TabInputText && t.input.uri.toString() === key;
     try {
         const doc = await vscode.workspace.openTextDocument(uri);
+        if (to === 'left') {
+            await vscode.commands.executeCommand('workbench.action.newGroupLeft');
+        }
         await vscode.window.showTextDocument(doc, {
-            viewColumn: to === 'beside' ? vscode.ViewColumn.Beside : to,
+            viewColumn: to === 'left' ? vscode.ViewColumn.Active : to,
             selection: old?.selection,
             preview: isPreview,
         });
-        const group = vscode.window.tabGroups.all.find(g => g.viewColumn === from);
-        const tab = group?.tabs.find(t => t.input instanceof vscode.TabInputText && t.input.uri.toString() === key);
-        if (tab) {
-            await vscode.window.tabGroups.close(tab, true);
+        for (const group of vscode.window.tabGroups.all) {
+            const tab = group.tabs.some(isPreviewTab) ? group.tabs.find(isScoreTab) : undefined;
+            if (tab) {
+                await vscode.window.tabGroups.close(tab, true);
+            }
         }
         outputChannel.appendLine(`Moved ${key} out of the preview's group ${from} to ${to}`);
     } catch (err) {

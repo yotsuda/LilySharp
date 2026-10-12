@@ -25,8 +25,8 @@ describe('a score opened into a preview\'s group', () => {
             { column: 3, hasPreview: true }, { column: 4, hasPreview: false }]), 2);
     });
 
-    it('moves to a new group beside when every group holds a preview', () => {
-        assert.equal(scoreGroupFor(1, [{ column: 1, hasPreview: true }]), 'beside');
+    it('moves to a new group left of the preview when every group holds one', () => {
+        assert.equal(scoreGroupFor(1, [{ column: 1, hasPreview: true }]), 'left');
     });
 
     it('stays where it opened in a group without a preview', () => {

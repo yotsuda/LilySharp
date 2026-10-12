@@ -319,7 +319,7 @@ workflow attaches that section to the GitHub Release verbatim.
   compare two, lock one and switch to the other: its preview opens in a new group beside the
   locked one — and bringing a locked preview forward brings its
   file's tab forward in the other group. A `.lys` opened into a preview's group moves to a
-  group of scores instead of covering the preview. Lesson 1's STEP 0 says so.
+  group of scores (a new one left of the preview when there is none) instead of covering it. Lesson 1's STEP 0 says so.
 - **A phrase says what it holds.** Hovering a phrase's name — where it is played or declared —
   shows its length, how often the file plays it and its source; a drum phrase adds its kit pieces
   and a grid of its hits, one row per drum — the chart a pattern written in durations does not line

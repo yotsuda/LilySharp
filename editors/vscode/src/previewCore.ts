@@ -143,14 +143,15 @@ export interface GroupInfo {
 /**
  * Where a .lys just opened in `openedColumn` moves to, or undefined to leave it: a score opened
  * into a preview's group would cover the preview (owner's request 2026-10-12), so it goes to the
- * leftmost group with no preview in it, or — every group holding one — to a new group beside.
+ * leftmost group with no preview in it, or — every group holding one — to a new group LEFT of the
+ * preview's (owner's request: the score on the left, its picture on the right).
  */
-export function scoreGroupFor(openedColumn: number, groups: readonly GroupInfo[]): number | 'beside' | undefined {
+export function scoreGroupFor(openedColumn: number, groups: readonly GroupInfo[]): number | 'left' | undefined {
     if (!groups.some(g => g.column === openedColumn && g.hasPreview)) {
         return undefined;
     }
     const free = groups.filter(g => !g.hasPreview).map(g => g.column);
-    return free.length > 0 ? Math.min(...free) : 'beside';
+    return free.length > 0 ? Math.min(...free) : 'left';
 }
 
 /** One editor tab, as far as revealing a preview's source needs it. */
