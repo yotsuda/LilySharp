@@ -26,7 +26,7 @@ internal sealed class PdfDocumentOptions
     /// <summary>PDF points per staff-space (sets the overall engraving size).</summary>
     public double PointsPerSpace { get; init; } = 6.0;
 
-    /// <summary>Draw the editor's @todo marks (<see cref="Pdf.PdfRenderOptions.EditorMarks"/>).</summary>
+    /// <summary>Draw the editor's @todo marks (<see cref="LilySharp.Core.Pdf.PdfRenderOptions.EditorMarks"/>).</summary>
     public bool EditorMarks { get; init; }
 
     /// <summary>If <c>true</c>, lay out the page using the first page's

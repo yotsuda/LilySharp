@@ -47,7 +47,7 @@ internal sealed class SvgDocumentOptions
     public bool Interactive { get; init; }
 
     /// <summary>Draw the editor's @todo marks on a static page
-    /// (<see cref="Svg.Renderer.SvgRenderOptions.EditorMarks"/>).</summary>
+    /// (<see cref="LilySharp.Core.Svg.Renderer.SvgRenderOptions.EditorMarks"/>).</summary>
     public bool EditorMarks { get; init; }
 }
 
