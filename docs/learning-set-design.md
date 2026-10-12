@@ -97,9 +97,7 @@ index の「03 Speed」は見出しだけ。
   骨格を見せる。`docs/TUTORIAL.md` はサイトに載っていない。
 - P2 （一部済 2026-10-11: editor 頁の鍵の表と `#language` に Ctrl+Space。残りは learn-01＝Lesson 1 の手順そのもの）**Ctrl+Space という語がサイトのどこにも無かった**。補完は `editor#language` の 1 項目と `grammar#chordrows` の
   「What completion offers」（コードだけ）のみ。`@` の一覧は typing aids の表で触れるだけ。⇒ Lesson 1 の内容が丸ごと無い。
-- P3 **章の無い基本**: 調号と臨時記号・拍子・テンポ（`#glance` の註と parts の表だけ）・音部記号（表の 1 行）・
-  弱起 `partial`（`#sections` の pre の註だけ。曲中の `| partial 2. r2. |` と `time none` は皆無）・強弱とヘアピン
-  （`#anno` に混在）・`using "other.lys"`（LilyPond 対照表だけ）。
+- ~~P3 章の無い基本~~ → 2026-10-12 に `#key` `#meter` `#tempo` `#clefs` `#dynamics` `#using` を足した（HANDOFF-LEARNING §1）。
 - P7 レッスン（`lesson-…`）の案内: editor 頁 `#language` は済（2026-10-11）。`start` 頁は再構成で。
 - P13 「まずプレビューを開く」: 2026-10-12 から .lys を開けば横に自動で開く（Lesson 1 STEP 0 もそう書いた）。
   Ctrl+K V（離してから V）と右上のアイコンは閉じた後の開き直しとして書く。
@@ -127,7 +125,7 @@ index の「03 Speed」は見出しだけ。
   tab（`grammar#tab`）が `chord(…)`（`chords#notes`）から遠い。`repeat unfold/percent/tremolo` が `#groups` にあり反復記号は `#forms`。
   CLI と Markdown が「Editor and AI」頁。Lineage・Licence・Architecture が宣伝頁。
 - index に上部ナビが無く、読み物 3 頁のナビは index を載せない（ブランド名だけが home）。manual の目次が上部ナビを繰り返す。
-  index の眉の番号が「01 Engraving / Lineage / 02 Grammar」と混在。manual の 01〜25 は手打ち（章を動かすと壊れる）。
+  index の眉の番号が「01 Engraving / Lineage / 02 Grammar」と混在。~~manual の 01〜25 は手打ち~~ → 2026-10-12 に生成へ（`Add-SectionNumbers`）。
 - 確かめた頁間アンカーはすべて解決する。`README.md` が `grammar.html` を指す＝URL を残すか転送する。
 
 ### 6.5 再監査（2026-10-12・第902・読むだけ・2 本の監査を突き合わせた）
@@ -196,7 +194,11 @@ Chords は「lesson 8 の次に深く」として Learn の下に置く（上部
 `using`）・`#phrases` を厚く（レッスン 9〜11 の土台）・index の Lineage／Licence／Architecture／Speed を About へ・
 重複（§6.3）を 1 か所に。目安 2 便。
 
-**判断が要ること**: ① 段 3 を「生成」でよいか（手書きより小さく・ずれない／自由度は下がる）② 上部ナビの項目
+⇒ **2026-10-12 段 2 と段 4 も済**（オーナー「ナビはあなたの提案通りに」）: 上部ナビ Home · Get started · Learn ·
+Reference · Editor · About を全頁に生成、`start.html`・`about.html`、grammar を 4 頁に割って `grammar.html` を入口に、
+重複を寄せた。中身は HANDOFF-LEARNING §1。
+
+**判断が要ること**（以下は当時の問い・すべて決着）: ① 段 3 を「生成」でよいか（手書きより小さく・ずれない／自由度は下がる）② 上部ナビの項目
 （案: Home · Get started · Learn · Reference · Editor · About）③ P8 で例を相対に直す（絵が変わる）④ 段 1 から順に
 進めてよいか。
 
@@ -214,4 +216,7 @@ Chords は「lesson 8 の次に深く」として Learn の下に置く（上部
   読み、拍子の数字には outline box しか無い）。4/4 は C の字形なので通っていた。outline box で測るよう直した
   （`TodoCalloutTests.AMemo_InAScoreWithANumericMeter_StillRenders`）。
 - 大譜表の**下の段**の音符に付けたメモは、上の段の上へ出て引き出し線が上の段を横切る（Lesson 9）。読めるが、
-  段の下に置けるならその方が近い＝メモ配置の改善候補（ユーザー判断）。
+  段の下に置けるならその方が近い＝メモ配置の改善候補（ユーザー判断）。⚠️ **2026-10-12 に再確認＝まだ起きる**
+  （`9cc4410e8`「メモは自分の譜表の余白に」の後でも、Release の `lysc png --todo lesson-09-piano.lys` で lh の
+  `g,2.@todo` のメモが系の上に出て、線が上の段を横切る）。直っている見込みと書いていたのは誤り。⇒ ユーザー判断
+  ではなく `9cc4410e8` の取り残し＝**幅の広いメモ**だけが外れる（切り分けは HANDOFF-LEARNING §3）。
