@@ -83,6 +83,16 @@ internal sealed class InkRecorder : IDrawingContext
         return new Resume(this);
     }
 
+    /// <summary><see cref="Suspend"/> on the recorder <paramref name="gc"/> draws into, through
+    /// the page's Y flip — or null where the page records no ink (no memo on it, or an
+    /// export without <c>--todo</c>). For a drawer that holds only the context.</summary>
+    public static IDisposable? Unrecorded(IDrawingContext gc) => gc switch
+    {
+        InkRecorder ink => ink.Suspend(),
+        YFlipDrawingContext flip => Unrecorded(flip.Inner),
+        _ => null,
+    };
+
     private sealed class Resume(InkRecorder owner) : IDisposable
     {
         public void Dispose() => owner._suspended--;

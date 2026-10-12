@@ -35,14 +35,15 @@ public class TodoStaffMarginTests
     private static double D(string s) => double.Parse(s, CultureInfo.InvariantCulture);
 
     /// <summary>The preview's memo baselines and the two staves' outer lines, in page Y (down).</summary>
-    private static (double[] Memos, double UpperBottom, double LowerTop) Measure(string upper, string lower)
+    private static (double[] Memos, double UpperBottom, double LowerTop) Measure(string upper, string lower,
+        string staves = "staff up  staff low")
     {
         string text = $$"""
             part up { clef treble }
             part low { clef bass }
             section A { up { {{upper}} } low { {{lower}} } }
             form { ~A }
-            score { staff up  staff low }
+            score { {{staves}} }
             """;
         string svg = SvgGenerator.Generate(SyntaxTree.Parse(text), SvgRenderOptions.Preview());
         double dy = D(Regex.Match(svg, @"<g transform=""translate\(0\.00,([\d.]+)\)").Groups[1].Value);
@@ -61,6 +62,27 @@ public class TodoStaffMarginTests
     public void AMemoBetweenTwoStaves_StandsInTheirGap(string upper, string lower)
     {
         var (memos, upperBottom, lowerTop) = Measure(upper, lower);
+        double memo = Assert.Single(memos);
+        Assert.True(memo > upperBottom && memo < lowerTop,
+            $"memo baseline {memo} is not between the staves ({upperBottom} .. {lowerTop})");
+    }
+
+    /// <summary>
+    /// A memo WIDER THAN A BAR between the staves (Lesson 9's <c>make it &lt;g b d&gt;,2.</c>, the
+    /// owner's report 2026-10-12). A grand staff draws its bar lines through the gap, and the
+    /// system's start bar joins the staves at the left; the drawer counted those lines as ink a
+    /// memo must clear, so a memo across one found no place in the gap and climbed over the
+    /// whole system — while the layout's reservation, reading each staff's skyline, never saw
+    /// them. The lines that cross the gap are thin and the words stay legible over them.
+    /// </summary>
+    [Theory]
+    [InlineData("grandStaff { staff up  staff low }")]   // the bar lines cross the gap
+    [InlineData("staff up  staff low")]                  // the control: no bar line crosses it
+    public void AMemoWiderThanABar_BetweenTwoStaves_StandsInTheirGap(string staves)
+    {
+        var (memos, upperBottom, lowerTop) = Measure(
+            "g'2. g4 | g'2. g4 | g'2. g4 | g'2. g4 |",
+            "c1 | c4 d@todo(\"make it a much longer memo than one bar\") e f | c1 | c1 |", staves);
         double memo = Assert.Single(memos);
         Assert.True(memo > upperBottom && memo < lowerTop,
             $"memo baseline {memo} is not between the staves ({upperBottom} .. {lowerTop})");

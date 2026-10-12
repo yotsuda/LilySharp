@@ -64,6 +64,10 @@ internal sealed class YFlipDrawingContext : IDrawingContext
         _height = height;
     }
 
+    /// <summary>The context this one draws into — for <see cref="InkRecorder.Unrecorded"/>,
+    /// which looks through the flip for the page's ink recorder.</summary>
+    internal IDrawingContext Inner => _inner;
+
     private double F(double y) => _height - y;
 
     public void DrawLine(double x1, double y1, double x2, double y2,

@@ -248,6 +248,15 @@ internal static partial class SharedRenderer
             return;
         double systemYUp = LayoutUtilities.SystemTopYUp(system);
 
+        // The lines drawn here cross the GAPS between staves, which is where a lower staff's
+        // @todo memo stands (owner's request 2026-10-12). They are not recorded as ink a memo
+        // must clear (InkRecorder, the preview and `--todo` only): a memo wider than a bar
+        // always meets a grand staff's bar line in the gap, found no place there, and climbed
+        // over the whole system (Lesson 9). The layout's reservation (TodoMemoBand) reads the
+        // staves' skylines, which never held these lines, so the two now agree; the words stay
+        // legible over a thin line. TodoStaffMarginTests.AMemoWiderThanABar_….
+        using var unrecorded = InkRecorder.Unrecorded(gc);
+
         var allStaves = SystemStartBarStaves(score, system);
         if (allStaves.Count >= 2)
         {

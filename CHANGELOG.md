@@ -246,6 +246,10 @@ workflow attaches that section to the GitHub Release verbatim.
 - **A `@todo` memo stands in its own staff's margin.** In the preview a memo on a lower staff
   went up over the whole system; it now stands over its own staff (under it for `.down`),
   between it and its neighbour, and the gap between the two staves opens for it when it has to.
+  A memo wider than a bar in a grand staff (or any group whose bar lines run through the gap)
+  still climbed over the whole system: the bar lines through the gap, and the line joining the
+  staves at the system's start, counted as ink it had to clear. The memo now stands in the gap
+  across them (`lysc svg|png|pdf --todo` too — Lesson 9's memo on the Learn pages).
 
 - **A `@todo` on a tab note rings its fret number.** The ring was the size of a notehead and
   stood where the notation staff's head would be, so a fret number (two digits above all) stuck
