@@ -127,9 +127,16 @@ export function todoStroke(todo: Pick<ScanTodo, 'confidence' | 'quiet'>): { widt
     return { width: Math.round((1 + 1.5 * doubt) * 10) / 10, opacity: Math.round((0.35 + 0.65 * doubt) * 100) / 100 };
 }
 
-/** Whether the slider at `threshold` shows a mark: one below it, or one with no confidence. */
+/** Whether the slider at `threshold` shows a mark: one below it, or one with no confidence —
+ *  and every mark at the slider's top (1), as the view's own filter has it. */
 export function shownAt(todo: Pick<ScanTodo, 'confidence'>, threshold: number): boolean {
-    return todo.confidence === undefined || todo.confidence < threshold;
+    return todo.confidence === undefined || threshold >= 1 || todo.confidence < threshold;
+}
+
+/** The keys of the marks the slider at `threshold` hides — what the score preview hides too,
+ *  so the two show the same marks (owner's request 2026-10-12). Each key once. */
+export function hiddenTodoKeys(todos: readonly Pick<ScanTodo, 'key' | 'confidence'>[], threshold: number): string[] {
+    return [...new Set(todos.filter(t => !shownAt(t, threshold)).map(t => t.key))];
 }
 
 /** The side file of a .lys: `x.lys` → `x.omr.json`. */

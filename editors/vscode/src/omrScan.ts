@@ -27,7 +27,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import {
-    BarAnchor, PrintedBar, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, parseSideFile,
+    BarAnchor, PrintedBar, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, hiddenTodoKeys, parseSideFile,
     SCAN_DEFAULT_THRESHOLD, pageLabel, scanBarForPrinted, scanTitle, shiftAnchors, shownImage, sideFileOf, todoStroke,
     todoTarget,
 } from './omrScanCore';
@@ -57,6 +57,8 @@ interface ScanView {
     printed?: { version: number; bars: PrintedBar[] };
     /** Whether the scan and the preview scroll together (the view's checkbox). */
     linked: boolean;
+    /** The view's slider (*Marks below*): the preview hides what it hides. */
+    threshold?: number;
 }
 
 const views = new Map<string, ScanView>();
@@ -138,12 +140,13 @@ export async function showScan(
             panel.webview.options = { ...panel.webview.options, localResourceRoots: rootsOf(next, sidePath) };
             panel.title = scanTitle(next.pages, lys.fsPath);
             render(view);
+            hidePreviewTodos(view, deps);
         }
     };
     watcher.onDidChange(reload);
     watcher.onDidCreate(reload);
 
-    panel.webview.onDidReceiveMessage(async (m: { type: string; key?: string; index?: number; on?: boolean }) => {
+    panel.webview.onDidReceiveMessage(async (m: { type: string; key?: string; index?: number; on?: boolean; value?: number }) => {
         try {
             if (m.type === 'todo' && m.key) {
                 await goToTodo(view, m.key, deps);
@@ -156,6 +159,9 @@ export async function showScan(
                 }
             } else if (m.type === 'link') {
                 view.linked = !!m.on;
+            } else if (m.type === 'threshold' && typeof m.value === 'number') {
+                view.threshold = m.value;
+                hidePreviewTodos(view, deps);
             }
         } catch (err) {
             deps.output.appendLine(`Scan: ${err}`);
@@ -165,6 +171,8 @@ export async function showScan(
         watcher.dispose();
         views.delete(lys.toString());
         deps.postToPreview(lys, { type: 'markBars', bars: [] });
+        // With the view gone nothing filters the marks: the preview shows them all again.
+        deps.postToPreview(lys, { type: 'hideTodos', keys: [] });
     });
 
     const editor = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === lys.toString());
@@ -254,6 +262,16 @@ export function previewReady(lys: string, deps: OmrScanDeps): void {
     const view = views.get(lys);
     if (view) {
         void markPreview(view, deps);
+        hidePreviewTodos(view, deps);
+    }
+}
+
+/** The preview hides the marks the view's slider hides (owner's request 2026-10-12), by key —
+ *  the SVG stamps every piece of a mark with it (data-todo). Also when the side file is read
+ *  again: the marks and their confidences may have changed. */
+function hidePreviewTodos(view: ScanView, deps: OmrScanDeps): void {
+    if (view.threshold !== undefined) {
+        deps.postToPreview(view.lys, { type: 'hideTodos', keys: hiddenTodoKeys(view.side.todos, view.threshold) });
     }
 }
 
@@ -400,6 +418,9 @@ ${pages || '<p>The side file lists no page.</p>'}
     thrOut.textContent = v.toFixed(2) + ' (' + shown + ' / ' + total + ')';
   }
   thr.addEventListener('input', () => { state.threshold = Number(thr.value); vscode.setState(state); filter(); });
+  // The preview of the .lys hides the same marks (the extension turns the value into keys).
+  thr.addEventListener('input', () => vscode.postMessage({ type: 'threshold', value: Number(thr.value) }));
+  vscode.postMessage({ type: 'threshold', value: Number(thr.value) });
   filter();
   document.addEventListener('click', e => {
     const r = e.target.closest('rect');

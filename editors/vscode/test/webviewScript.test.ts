@@ -173,3 +173,35 @@ describe('the preview scrolls when the sheet is dragged', () => {
         }
     });
 });
+
+// The scan view's slider hides the same marks in the preview (owner's request 2026-10-12):
+// hiddenTodoCss turns the keys into one stylesheet. Lifted out of the page script like the
+// functions above.
+describe('the preview hides the marks the scan view hides', () => {
+    const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const start = source.indexOf('return `<!DOCTYPE html>') + 'return '.length;
+    const end = source.indexOf('</html>`;', start) + '</html>`'.length;
+    const html = new vm.Script(source.slice(start, end).replace(/\$\{[^}]*\}/g, 'X')).runInNewContext({}) as string;
+    const at = html.indexOf('function hiddenTodoCss(');
+    let depth = 0, close = -1;
+    for (let i = html.indexOf('{', at); i < html.length; i++) {
+        if (html[i] === '{') depth++;
+        else if (html[i] === '}' && --depth === 0) { close = i + 1; break; }
+    }
+    const css = new vm.Script('(' + html.slice(at, close) + ')').runInNewContext({ String }) as (keys: string[]) => string;
+
+    it('hides every piece of a hidden key but the music it rings', () => {
+        const rule = css(['b2', 'b11-p1-n1']);
+        for (const sel of ['path', 'ellipse', 'rect', 'line']) {
+            assert.ok(rule.includes(`#svgContainer ${sel}[data-todo="b2"]`), sel);
+        }
+        assert.ok(rule.includes('#svgContainer text[data-todo="b11-p1-n1"]:not(.music)'));
+        assert.ok(!/text\[data-todo="b2"\][,{ ]/.test(rule), 'the ringed glyph would vanish');
+        assert.match(rule, /\{ display: none; \}$/);
+    });
+    it('writes nothing for no key, and cannot be broken out of by a quote', () => {
+        assert.equal(css([]), '');
+        assert.ok(!css(['a"] body {x']).includes('"]  body'));
+        assert.equal(css(['a"b']).match(/"/g)!.length % 2, 0);
+    });
+});

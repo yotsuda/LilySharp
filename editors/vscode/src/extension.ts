@@ -2939,7 +2939,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .main-content [data-pos] {
             cursor: pointer;
         }
-        .container {            max-width: 100%;
+        .container {
+            max-width: 100%;
         }
         #svgContainer {
             transform-origin: top left;
@@ -3983,11 +3984,29 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             lastResolvedPos = -1;   // a range has no single resolved note
         }
 
-        // Groups all elements sharing one data-pos into printed instances
-        // (phrase copies): elements of ONE instance sit within a chord's
-        // footprint; other copies live in other measures/systems. Bands by
-        // y-gap (systems are far apart), then splits by x-gap. Returned in
-        // reading order = chronological within the part's staff.
+        // The marks the scan view's slider hides (*Marks below*), hidden here too (owner's
+        // request 2026-10-12): every piece of a mark carries its key in data-todo, so one
+        // stylesheet hides the ring, the memo and its leader of each key, and keeps doing so
+        // across re-renders. The music glyph a mark rings (text.music) is never hidden.
+        function hideTodos(keys) {
+            let style = document.getElementById('hiddenTodos');
+            if (!style) {
+                style = document.createElement('style');
+                style.id = 'hiddenTodos';
+                document.head.appendChild(style);
+            }
+            style.textContent = hiddenTodoCss(keys);
+        }
+        function hiddenTodoCss(keys) {
+            const rules = [];
+            for (const key of keys) {
+                const k = '[data-todo="' + String(key).replace(/["\\\\]/g, '') + '"]';
+                rules.push('#svgContainer path' + k, '#svgContainer ellipse' + k, '#svgContainer rect' + k,
+                    '#svgContainer line' + k, '#svgContainer text' + k + ':not(.music)');
+            }
+            return rules.length === 0 ? '' : rules.join(', ') + ' { display: none; }';
+        }
+
         // Drag the sheet to scroll it (owner request 2026-10-12). A press becomes a drag only
         // once the mouse has moved SLOP pixels, so a click on a note still jumps to the editor
         // (or seeks, or extends the selection), and the click a drag ends with is swallowed
@@ -4038,7 +4057,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }, true);
         }
 
-        function clusterInstances(matches) {            // DOM order IS drawing order (measure by measure, system by
+        // Groups all elements sharing one data-pos into printed instances
+        // (phrase copies): elements of ONE instance sit within a chord's
+        // footprint; other copies live in other measures/systems. Bands by
+        // y-gap (systems are far apart), then splits by x-gap. Returned in
+        // reading order = chronological within the part's staff.
+        function clusterInstances(matches) {
+            // DOM order IS drawing order (measure by measure, system by
             // system) - i.e. chronological within the part's staff. Keep it,
             // and only SPLIT when the next element sits far from the
             // previous one (another measure or another system). The earlier
@@ -4724,6 +4749,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 case 'setTheme':
                     applyTheme(message.theme);
                     break;
+                case 'hideTodos':
+                    hideTodos(message.keys || []);
+                    break;
                 case 'setHighlightTodos':
                     document.documentElement.classList.toggle('todo-plain', !message.on);
                     break;
@@ -4931,7 +4959,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
 
         installDragScroll(mainContent, document);
 
-        document.addEventListener('wheel', (e) => {            if (e.ctrlKey) {
+        document.addEventListener('wheel', (e) => {
+            if (e.ctrlKey) {
                 e.preventDefault();
                 const delta = e.deltaY > 0 ? -scaleStep : scaleStep;
                 scale = Math.min(maxScale, Math.max(minScale, scale + delta));

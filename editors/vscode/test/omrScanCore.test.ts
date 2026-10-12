@@ -24,7 +24,7 @@ import * as path from 'node:path';
 import * as vm from 'node:vm';
 import {
     SCAN_DEFAULT_THRESHOLD, anchorsOf, barOnLine, markFactsOf, pageLabel, parseSideFile, scanBarForPrinted, scanTitle,
-    shiftAnchors, shownAt, shownImage, sideFileOf, todoStroke, todoTarget,
+    hiddenTodoKeys, shiftAnchors, shownAt, shownImage, sideFileOf, todoStroke, todoTarget,
 } from '../src/omrScanCore';
 
 // Absolute on whichever OS runs the tests.
@@ -157,6 +157,13 @@ describe('how sure the reader is (LilySharp-Omr reply 2026-10-12: a confidence o
         assert.equal(SCAN_DEFAULT_THRESHOLD, 0.8);
         assert.deepEqual(side.todos.filter(t => shownAt(t, SCAN_DEFAULT_THRESHOLD)).map(t => t.key), ['b3', 'o9']);
         assert.deepEqual(side.todos.filter(t => shownAt(t, 0.1)).map(t => t.key), ['o9']);
+    });
+
+    it('tells the preview which marks the slider hides, by key, and none at the top', () => {
+        assert.deepEqual(hiddenTodoKeys(side.todos, SCAN_DEFAULT_THRESHOLD), ['b4']);
+        assert.deepEqual(hiddenTodoKeys(side.todos, 0.1), ['b3', 'b4']);
+        assert.deepEqual(hiddenTodoKeys([...side.todos, { key: 'sure', confidence: 1 }], 1), []);
+        assert.deepEqual(hiddenTodoKeys([{ key: 'b2', confidence: 0.5 }, { key: 'b2', confidence: 0.7 }], 0.3), ['b2']);
     });
 });
 

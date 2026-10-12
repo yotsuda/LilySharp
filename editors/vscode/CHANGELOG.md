@@ -4,6 +4,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### The scan view's slider filters the preview too
+
+- **Moving *Marks below* in the scan view hides and shows the same `@todo` marks in the score
+  preview** — their rings, memos and leaders; the notes they ring stay. Closing the scan view
+  shows them all again.
 ### A `@todo` ring round a moved rest
 
 - **A rest marked `@todo` is ringed where it is drawn.** A rest moved up or down by its voice
