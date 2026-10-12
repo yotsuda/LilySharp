@@ -45,6 +45,13 @@ public sealed class SvgRenderOptions
     public bool Interactive { get; init; }
 
     /// <summary>
+    /// Draw the editor's <c>@todo</c> marks — the red rings and the memo callouts, with the
+    /// room the preview opens for the memos — on a static SVG (<c>lysc svg --todo</c>; the
+    /// site's lesson pictures). The interactive preview draws them anyway.
+    /// </summary>
+    public bool EditorMarks { get; init; }
+
+    /// <summary>
     /// Lay the music out as a SNIPPET — a picture in a document rather than a page
     /// (<see cref="Layout.LayoutOptions.Snippet"/>: one page as tall as the music, no
     /// automatic page breaks, cropped to the widest system). Set by the Markdown lys

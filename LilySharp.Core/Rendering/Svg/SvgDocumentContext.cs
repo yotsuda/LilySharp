@@ -45,6 +45,10 @@ internal sealed class SvgDocumentOptions
     /// rectangles). Used by the VS Code preview; off for static export.
     /// </summary>
     public bool Interactive { get; init; }
+
+    /// <summary>Draw the editor's @todo marks on a static page
+    /// (<see cref="Svg.Renderer.SvgRenderOptions.EditorMarks"/>).</summary>
+    public bool EditorMarks { get; init; }
 }
 
 /// <summary>
@@ -116,7 +120,7 @@ internal sealed class SvgDocumentContext : IDocumentContext
         _currentContent = _buffers?.Take(_pages.Count) ?? new StringBuilder();
         _currentWidth = widthSpaces;
         _currentHeight = heightSpaces;
-        _currentPage = new SvgDrawingContext(_currentContent, _options.Interactive, _usedDesigns, Fonts);
+        _currentPage = new SvgDrawingContext(_currentContent, _options.Interactive, _usedDesigns, Fonts, _options.EditorMarks);
         return _currentPage;
     }
 

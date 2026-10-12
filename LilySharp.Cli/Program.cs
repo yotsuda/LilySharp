@@ -225,6 +225,7 @@ static int RunSvg(string[] args)
         .Value("score", "--score requires a score name", "--score")
         .Flag("no-embed-font", "--no-embed-font", "-n")
         .Flag("combined", "--combined")
+        .Flag("todo", "--todo")
         .Value("set", "--set requires KEY=VALUE", "--set")
         .Parse(args);
     if (r.Error != null) return OptionError(r.Error, "svg");
@@ -238,9 +239,9 @@ static int RunSvg(string[] args)
             return OptionError("--combined and --score are mutually exclusive.", "svg");
         var (input, dir, error) = ResolveOutputs(r);
         if (error != null) return OptionError(error, "svg");
-        return ExecuteSvgCombined(input!, OutputPathFor(input!, dir!, ".svg"), embedFont, settings);
+        return ExecuteSvgCombined(input!, OutputPathFor(input!, dir!, ".svg"), embedFont, settings, r.Has("todo"));
     }
-    var options = new ExportOptions { EmbedFont = embedFont, PaperOverrides = settings };
+    var options = new ExportOptions { EmbedFont = embedFont, PaperOverrides = settings, TodoMarks = r.Has("todo") };
     return RunScoreOutputs("svg", r, ".svg",
         (tree, output) => Report(ScoreExport.Write(tree, "svg", output.Path, output.Score, options)));
 }
@@ -257,7 +258,7 @@ static void ShowSvgHelp()
 
         Options:
           -d, --out-dir <folder> Write into this folder (default: the input's folder)
-          --score <name>         Write only the named score
+          --score <name>         Write only the named score          --todo                 Draw the @todo marks as the preview shows them (red rings, memos)
           -n, --no-embed-font    Don't embed font (smaller file, requires font installed)
           --combined             Stack every score into ONE <input>.svg (like a \book)
           --set <KEY=VALUE>      Override a paper or layout value (repeatable): spacingIncrement=1.6,
@@ -275,8 +276,9 @@ static void ShowSvgHelp()
 }
 
 // The combined stack draws with the options a score's export uses (ScoreExport, one home).
-static LilySharp.Core.Svg.Renderer.SvgRenderOptions MakeSvgOptions(bool embedFont, LilySharp.Core.Semantics.PaperOverrides? settings)
-    => ScoreExport.SvgOptions(embedFont, settings);
+static LilySharp.Core.Svg.Renderer.SvgRenderOptions MakeSvgOptions(bool embedFont, LilySharp.Core.Semantics.PaperOverrides? settings,
+    bool todoMarks = false)
+    => ScoreExport.SvgOptions(embedFont, settings, todoMarks: todoMarks);
 
 // `--set KEY=VALUE` (repeatable, svg/png/pdf): paper values over the file's (PaperOverrides —
 // LilySharp-Omr's training data engraves one piece many ways without rewriting it). Null when
@@ -309,10 +311,10 @@ static bool ValidateScoreName(LilySharp.Core.Syntax.SyntaxTree tree, string? sco
 
 // LILYPOND-REF: lily/book.cc — a \book stacks every \score into one document.
 static int ExecuteSvgCombined(string inputPath, string outputPath, bool embedFont,
-    LilySharp.Core.Semantics.PaperOverrides? settings) =>
+    LilySharp.Core.Semantics.PaperOverrides? settings, bool todoMarks) =>
     RunOutputCommand(inputPath, null, tree =>
     {
-        var svg = LilySharp.Core.Svg.SvgGenerator.GenerateMultiMovement(tree, MakeSvgOptions(embedFont, settings));
+        var svg = LilySharp.Core.Svg.SvgGenerator.GenerateMultiMovement(tree, MakeSvgOptions(embedFont, settings, todoMarks));
         File.WriteAllText(outputPath, svg);
         Console.WriteLine($"Created: {outputPath}");
         return 0;
@@ -330,12 +332,13 @@ static int RunPdf(string[] args)
 
     var r = OutputOptions()
         .Value("score", "--score requires a score name", "--score")
+        .Flag("todo", "--todo")
         .Value("set", "--set requires KEY=VALUE", "--set")
         .Parse(args);
     if (r.Error != null) return OptionError(r.Error, "pdf");
     var settings = PaperOverridesOf(r, out var setError);
     if (setError != null) return OptionError("--set: " + setError, "pdf");
-    var pdfOptions = new ExportOptions { PaperOverrides = settings };
+    var pdfOptions = new ExportOptions { PaperOverrides = settings, TodoMarks = r.Has("todo") };
 
     return RunScoreOutputs("pdf", r, ".pdf",
         (tree, output) => Report(ScoreExport.Write(tree, "pdf", output.Path, output.Score, pdfOptions)));
@@ -353,7 +356,7 @@ static void ShowPdfHelp()
 
         Options:
           -d, --out-dir <folder> Write into this folder (default: the input's folder)
-          --score <name>         Write only the named score
+          --score <name>         Write only the named score          --todo                 Draw the @todo marks as the preview shows them (red rings, memos)
           --set <KEY=VALUE>      Override a paper or layout value (repeatable): spacingIncrement=1.6,
                                  staffStaffSpacing.basicDistance=9, leftMargin=20mm, raggedRight=false,
                                  systemsPerPage=4, staffSpace=1.5mm, Stem.thickness=1.5 (CLI_REFERENCE)
@@ -428,6 +431,7 @@ static int RunPng(string[] args)
         .Value("score", "--score requires a score name", "--score")
         .Value("scale", "--scale requires a number", "--scale")
         .Flag("crop", "--crop")
+        .Flag("todo", "--todo")
         .Value("set", "--set requires KEY=VALUE", "--set")
         .Parse(args);
     if (r.Error != null) return OptionError(r.Error, "png");
@@ -440,7 +444,7 @@ static int RunPng(string[] args)
     bool crop = r.Has("crop");
 
     // One file per page, named as LilyPond names them (ScoreExport.PngPagePaths).
-    var options = new ExportOptions { PngScale = scale, CropPng = crop, PaperOverrides = settings };
+    var options = new ExportOptions { PngScale = scale, CropPng = crop, PaperOverrides = settings, TodoMarks = r.Has("todo") };
     return RunScoreOutputs("png", r, ".png",
         (tree, output) => Report(ScoreExport.Write(tree, "png", output.Path, output.Score, options)));
 }
@@ -460,7 +464,7 @@ static void ShowPngHelp()
           -d, --out-dir <folder> Write into this folder (default: the input's folder)
           --score <name>         Write only the named score
           --scale <factor>       Scale factor (default: 2.0 = 192 DPI)
-          --crop                 Trim whitespace to the content bounding box
+          --crop                 Trim whitespace to the content bounding box          --todo                 Draw the @todo marks as the preview shows them (red rings, memos)
           --set <KEY=VALUE>      Override a paper or layout value (repeatable): spacingIncrement=1.6,
                                  staffStaffSpacing.basicDistance=9, leftMargin=20mm, raggedRight=false,
                                  systemsPerPage=4, staffSpace=1.5mm, Stem.thickness=1.5 (CLI_REFERENCE)

@@ -56,6 +56,10 @@ public sealed class ExportOptions
     /// (<c>lysc svg|png|pdf --set KEY=VALUE</c>; <see cref="Semantics.PaperOverrides"/>).</summary>
     public Semantics.PaperOverrides? PaperOverrides { get; init; }
 
+    /// <summary>SVG, PNG, PDF: draw the editor's <c>@todo</c> marks — red rings and memos — as
+    /// the preview shows them (<c>lysc svg|png|pdf --todo</c>).</summary>
+    public bool TodoMarks { get; init; }
+
     public static ExportOptions Default { get; } = new();
 }
 
@@ -100,10 +104,10 @@ public static class ScoreExport
     /// file stands alone, or a bare reference to it when the caller asks for the smaller
     /// file. The combined (<c>\book</c>-like) SVG the command line stacks uses the same.</summary>
     public static SvgRenderOptions SvgOptions(bool embedFont, Semantics.PaperOverrides? paperSettings = null,
-        Action<string>? layoutWarning = null)
+        Action<string>? layoutWarning = null, bool todoMarks = false)
         => embedFont
-            ? new SvgRenderOptions { EmbedFont = true, FontDirectory = FontLocator.Find(), PaperOverrides = paperSettings, LayoutWarning = layoutWarning }
-            : new SvgRenderOptions { PaperOverrides = paperSettings, LayoutWarning = layoutWarning };
+            ? new SvgRenderOptions { EmbedFont = true, FontDirectory = FontLocator.Find(), PaperOverrides = paperSettings, LayoutWarning = layoutWarning, EditorMarks = todoMarks }
+            : new SvgRenderOptions { PaperOverrides = paperSettings, LayoutWarning = layoutWarning, EditorMarks = todoMarks };
 
     /// <summary>
     /// Writes <paramref name="score"/> (null: a file with no <c>score</c> block — its one
@@ -133,7 +137,7 @@ public static class ScoreExport
         {
             case "svg":
                 File.WriteAllText(outputPath, SvgGenerator.GenerateScore(tree, spec,
-                    SvgOptions(options.EmbedFont, options.PaperOverrides, layoutWarnings.Add)));
+                    SvgOptions(options.EmbedFont, options.PaperOverrides, layoutWarnings.Add, options.TodoMarks)));
                 return new ExportResult([outputPath], [], layoutWarnings);
 
             case "png":
@@ -141,7 +145,7 @@ public static class ScoreExport
                 var pngOptions = new PngRenderOptions
                 {
                     Scale = options.PngScale, FontDirectory = FontLocator.Find(), PaperOverrides = options.PaperOverrides,
-                    LayoutWarning = layoutWarnings.Add,
+                    LayoutWarning = layoutWarnings.Add, EditorMarks = options.TodoMarks,
                 };
                 var rendered = PngGenerator.GenerateScorePages(tree, spec, pngOptions);
                 var pages = options.CropPng
@@ -171,6 +175,7 @@ public static class ScoreExport
                 var bytes = PdfGenerator.GenerateScore(tree, spec, new PdfRenderOptions
                 {
                     PaperOverrides = options.PaperOverrides, LayoutWarning = layoutWarnings.Add,
+                    EditorMarks = options.TodoMarks,
                 });
                 File.WriteAllBytes(outputPath, bytes);
                 return new ExportResult([outputPath], [$"Size: {Kilobytes(bytes)}"], layoutWarnings);

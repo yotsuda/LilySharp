@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -57,9 +57,10 @@ internal sealed class PdfDrawingContext : IDrawingContext
 
     public PdfDrawingContext(XGraphics gfx, double pointsPerSpace, double originPt = 0,
         EmmentalerFontResolver? fontResolver = null, TextFontPlan? plan = null,
-        DocumentTextFaces? faces = null)
+        DocumentTextFaces? faces = null, bool editorMarks = false)
     {
         _gfx = gfx;
+        DrawsEditorMarks = editorMarks;
         _scale = pointsPerSpace;
         _originPt = originPt;
         _fontResolver = fontResolver;
@@ -67,6 +68,9 @@ internal sealed class PdfDrawingContext : IDrawingContext
         _faces = faces ?? DocumentTextFaces.None;
         _metrics = new ScoreTextMetrics(_plan);
     }
+
+    /// <summary>The preview's @todo marks, on a PDF asked for them (<c>lysc pdf --todo</c>).</summary>
+    public bool DrawsEditorMarks { get; }
 
     // Positions are offset by the page margin; sizes (T) are not.
     private double X(double s) => s * _scale + _originPt;

@@ -57,7 +57,7 @@ public static class PdfGenerator
         // ONE collection path for every output format (see PngGenerator):
         // the hand-copied variant here silently missed score transpose and the
         // `with chords` attachment.
-        MultiStaffScore multiScore = SvgGenerator.CollectScore(tree, renderSpec, settings: options.PaperOverrides);
+        MultiStaffScore multiScore = SvgGenerator.CollectScore(tree, renderSpec, SvgGenerator.PaperBaseOf(false, options.EditorMarks), options.PaperOverrides);
         ScoreLayout layout = new LayoutEngine(multiScore.Paper).Layout(multiScore);
         LayoutWarnings.Report(layout, multiScore.Paper, options.LayoutWarning);
 
@@ -67,6 +67,7 @@ public static class PdfGenerator
             PointsPerSpace = options.StaffSpacePt * multiScore.Paper.StaffSpaceScale,
             AutoSizePages = true,
             FontDirectory = options.FontDirectory,
+            EditorMarks = options.EditorMarks,
             // The `font` directive travels ON THE SCORE and reaches the document through
             // SharedRenderer.RenderTo (IDocumentContext.Fonts), which is also what
             // configures the resolver's embed set — so there is nothing to copy here.

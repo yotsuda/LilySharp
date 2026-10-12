@@ -117,6 +117,7 @@ Writes every score: `score.svg` for the unnamed one, `score-<name>.svg` for each
 | `--score <name>` | Write only the named score |
 | `-n, --no-embed-font` | Don't embed Emmentaler font (smaller file, requires font installed) |
 | `--combined` | Stack every score into ONE `score.svg` (like a `\book`) |
+| `--todo` | Draw the `@todo` marks as the editor's preview shows them — red rings and memos, on the room the preview opens for the memos (a lesson's tasks on a picture) |
 | `--set <KEY=VALUE>` | Override a `paper` or `layout` value for this run, over what the file says (repeatable; see [Paper and layout settings](#paper-and-layout-settings---set)) |
 | `-h, --help` | Show help |
 
@@ -129,6 +130,7 @@ lysc svg -d out score.lys             # The same, into out/
 lysc svg --no-embed-font score.lys    # Without embedded font
 lysc svg --score tab score.lys        # Only score-tab.svg
 lysc svg --combined multi-movement.lys # Every score stacked into one
+lysc svg --todo lesson.lys             # With the @todo rings and memos
 ```
 
 ### pdf - Export to PDF
@@ -142,6 +144,7 @@ lysc pdf [options] <input.lys>
 |--------|-------------|
 | `-d, --out-dir <folder>` | Write into this folder (default: the input's folder) |
 | `--score <name>` | Write only the named score |
+| `--todo` | Draw the `@todo` marks as the editor's preview shows them — red rings and memos, on the room the preview opens for the memos (a lesson's tasks on a picture) |
 | `--set <KEY=VALUE>` | Override a `paper` or `layout` value for this run, over what the file says (repeatable; see [Paper and layout settings](#paper-and-layout-settings---set)) |
 | `-h, --help` | Show help |
 
@@ -169,6 +172,7 @@ lysc png [options] <input.lys>
 | `--score <name>` | Write only the named score |
 | `--scale <factor>` | Scale factor for resolution (default: 2.0 = 192 DPI) |
 | `--crop` | Crop each page to its ink instead of keeping the page box |
+| `--todo` | Draw the `@todo` marks as the editor's preview shows them — red rings and memos, on the room the preview opens for the memos (a lesson's tasks on a picture) |
 | `--set <KEY=VALUE>` | Override a `paper` or `layout` value for this run, over what the file says (repeatable; see [Paper and layout settings](#paper-and-layout-settings---set)) |
 | `-h, --help` | Show help |
 

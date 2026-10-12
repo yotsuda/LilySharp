@@ -59,7 +59,7 @@ Get-ChildItem $learnDir -Filter *.svg | Remove-Item
 foreach ($lesson in Get-ChildItem (Join-Path $here '../LilySharp.Lsp/Lessons/en') -Filter 'lesson-*.lys' | Sort-Object Name) {
     $out = & $Lysc check $lesson.FullName 2>&1 | Out-String
     if ($out -match ': error:') { $failed += "$($lesson.Name): $((($out -split "`r?`n") -match ': error:' | Select-Object -First 2) -join ' / ')"; continue }
-    & $Lysc svg $lesson.FullName -d $learnDir 2>&1 | Out-Null   # its warnings are the tasks
+    & $Lysc svg --todo $lesson.FullName -d $learnDir 2>&1 | Out-Null   # the tasks' red rings, as the editor shows them; its warnings are the tasks
     Write-Host "ok  $($lesson.BaseName)"
 }
 if ($failed) { throw "lessons that do not compile:`n  $($failed -join "`n  ")" }

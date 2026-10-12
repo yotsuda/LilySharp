@@ -288,7 +288,7 @@ for ($n = 0; $n -lt $lessons.Count; $n++) {
     if ($svgs.Count -eq 0) { $svgs = @([pscustomobject]@{ Name = "$label.svg"; BaseName = $label }) }
     $figures = ($svgs | ForEach-Object {
         $scoreName = $_.BaseName -eq $label ? '' : $_.BaseName.Substring($label.Length + 1)
-        $cap = $scoreName ? "The score <code>$scoreName</code>." : 'The lesson as it opens. In the editor, red circles mark where a step happens.'
+        $cap = $scoreName ? "The score <code>$scoreName</code>." : 'The lesson as it opens: the red rings mark where a step happens.'
         "<figure class=`"ex`">`n  <div class=`"paper`"><img src=`"learn/$($_.Name)`" alt=`"$title — engraved`" loading=`"lazy`"></div>`n  <p class=`"caption`">$cap</p>`n</figure>"
     }) -join "`n"
 

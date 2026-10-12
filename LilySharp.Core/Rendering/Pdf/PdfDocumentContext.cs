@@ -26,6 +26,9 @@ internal sealed class PdfDocumentOptions
     /// <summary>PDF points per staff-space (sets the overall engraving size).</summary>
     public double PointsPerSpace { get; init; } = 6.0;
 
+    /// <summary>Draw the editor's @todo marks (<see cref="Pdf.PdfRenderOptions.EditorMarks"/>).</summary>
+    public bool EditorMarks { get; init; }
+
     /// <summary>If <c>true</c>, lay out the page using the first page's
     /// requested dimensions plus a small margin. If <c>false</c>, every
     /// PDF page uses the explicit <see cref="PageWidthPt"/> /
@@ -130,7 +133,7 @@ internal sealed class PdfDocumentContext : IDocumentContext
 
         _currentGfx = XGraphics.FromPdfPage(page);
         _currentPage = new PdfDrawingContext(_currentGfx, _options.PointsPerSpace, originPt,
-            _resolver, _fonts, TextFaces);
+            _resolver, _fonts, TextFaces, _options.EditorMarks);
         return _currentPage;
     }
 

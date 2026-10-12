@@ -59,7 +59,7 @@ public static class PngGenerator
         // hand-copied subset of SvgGenerator.CollectScore and silently missed
         // its newer behaviours (score transpose, `with chords` attachment) —
         // the PNG of a score could differ from its SVG.
-        MultiStaffScore multiScore = SvgGenerator.CollectScore(tree, renderSpec, settings: options.PaperOverrides);
+        MultiStaffScore multiScore = SvgGenerator.CollectScore(tree, renderSpec, SvgGenerator.PaperBaseOf(false, options.EditorMarks), options.PaperOverrides);
         ScoreLayout layout = new LayoutEngine(multiScore.Paper).Layout(multiScore);
         LayoutWarnings.Report(layout, multiScore.Paper, options.LayoutWarning);
 
@@ -73,6 +73,7 @@ public static class PngGenerator
             PixelsPerSpace = options.Scale * 10.0 * multiScore.Paper.StaffSpaceScale,
             Quality = options.Quality,
             FontDirectory = fontDir,
+            EditorMarks = options.EditorMarks,
         };
 
         using var doc = new PngDocumentContext(docOptions);
@@ -100,7 +101,7 @@ public static class PngGenerator
     {
         options ??= PngRenderOptions.Default;
 
-        MultiStaffScore multiScore = SvgGenerator.CollectScore(tree, renderSpec, settings: options.PaperOverrides);
+        MultiStaffScore multiScore = SvgGenerator.CollectScore(tree, renderSpec, SvgGenerator.PaperBaseOf(false, options.EditorMarks), options.PaperOverrides);
         ScoreLayout layout = new LayoutEngine(multiScore.Paper).Layout(multiScore);
         LayoutWarnings.Report(layout, multiScore.Paper, options.LayoutWarning);
 
@@ -111,6 +112,7 @@ public static class PngGenerator
             Quality = options.Quality,
             FontDirectory = fontDir,
             SeparatePages = true,
+            EditorMarks = options.EditorMarks,
         };
 
         using var doc = new PngDocumentContext(docOptions);

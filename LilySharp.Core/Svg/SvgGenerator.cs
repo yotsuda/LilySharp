@@ -68,7 +68,7 @@ public static class SvgGenerator
     /// <summary>The paper a book without a <c>paper { }</c> lays out on, from the
     /// caller's options: the snippet layout for a Markdown fence, else the defaults.</summary>
     private static LayoutOptions PaperBaseOf(SvgRenderOptions options)
-        => PaperBaseOf(options.Snippet, options.Interactive);
+        => PaperBaseOf(options.Snippet, options.Interactive || options.EditorMarks);
 
     /// <summary>The paper a book without a <c>paper { }</c> lays out on: the snippet layout
     /// for a Markdown fence, else the defaults — and, for the interactive preview, with the
@@ -282,6 +282,7 @@ public static class SvgGenerator
             OmitFontFace = options.OmitFontFace,
             FontDirectory = options.FontDirectory,
             Interactive = options.Interactive,
+            EditorMarks = options.EditorMarks,
         };
         var doc = new SvgDocumentContext(docOptions, pageBuffers);
         using (var fallbacks = MusicFallbackLog.Open())

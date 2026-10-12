@@ -61,10 +61,11 @@ internal sealed class SvgDrawingContext : IDrawingContext
     private readonly TextFontPlan _fonts;
 
     public SvgDrawingContext(StringBuilder sb, bool interactive = false,
-        HashSet<int>? usedDesigns = null, TextFontPlan? fonts = null)
+        HashSet<int>? usedDesigns = null, TextFontPlan? fonts = null, bool editorMarks = false)
     {
         _sb = sb;
         _interactive = interactive;
+        _editorMarks = editorMarks;
         _usedDesigns = usedDesigns;
         _fonts = fonts ?? TextFontPlan.Default;
     }
@@ -493,9 +494,10 @@ internal sealed class SvgDrawingContext : IDrawingContext
     private readonly List<string?> _savedTodos = [];
     private TodoRestore? _todoRestore;
 
-    /// <summary>The preview's @todo marks are drawn in interactive mode alone (the export's
-    /// page carries none of the editor's ink).</summary>
-    public bool DrawsEditorMarks => _interactive;
+    /// <summary>The preview's @todo marks are drawn in interactive mode, and on a static page
+    /// only when asked (<c>lysc svg --todo</c>) — an export carries none of the editor's ink.</summary>
+    public bool DrawsEditorMarks => _interactive || _editorMarks;
+    private readonly bool _editorMarks;
 
     public IDisposable Todo(string key)
     {

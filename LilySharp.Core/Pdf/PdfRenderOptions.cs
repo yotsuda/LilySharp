@@ -27,6 +27,9 @@ public sealed class PdfRenderOptions
 
     /// <summary>Told what the layout had to give up (<see cref="Svg.Layout.LayoutWarnings"/>).</summary>
     public System.Action<string>? LayoutWarning { get; init; }
+    /// <summary>Draw the editor's <c>@todo</c> marks — the red rings and the memo callouts, with
+    /// the room the preview opens for the memos (<c>lysc png|pdf --todo</c>).</summary>
+    public bool EditorMarks { get; init; }
 
     /// <summary>Page size in points (1 point = 1/72 inch).</summary>
     public double PageWidthPt { get; init; } = 595.28; // A4

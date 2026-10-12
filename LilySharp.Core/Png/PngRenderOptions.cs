@@ -27,6 +27,9 @@ public sealed class PngRenderOptions
 
     /// <summary>Told what the layout had to give up (<see cref="Svg.Layout.LayoutWarnings"/>).</summary>
     public System.Action<string>? LayoutWarning { get; init; }
+    /// <summary>Draw the editor's <c>@todo</c> marks — the red rings and the memo callouts, with
+    /// the room the preview opens for the memos (<c>lysc png|pdf --todo</c>).</summary>
+    public bool EditorMarks { get; init; }
 
     /// <summary>
     /// Scale factor for output resolution. 1.0 = 96 DPI, 2.0 = 192 DPI, 3.0 = 288 DPI.

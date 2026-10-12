@@ -202,6 +202,12 @@ workflow attaches that section to the GitHub Release verbatim.
   sign alone, so the tie reaches no note. LilyPond says "unterminated tie"; Lily# said nothing.
   The message names `@laissezVibrer` for a note meant to ring.
 
+### Command line
+
+- **`lysc svg|png|pdf --todo` draws the `@todo` marks** as the editor's preview shows them: the
+  red rings and the memos, on the room the preview opens for the memos. Without it an export is
+  as it was. The site's lesson pictures use it, so each task is ringed where the lesson says.
+
 ### MIDI, MusicXML and the LilyPond twin
 
 - **The twin compresses `R1*N` as the page does.** It never wrote `\compressMMRests`, so
