@@ -155,6 +155,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **Pages 段 3＝ユーザー「自動で作ってみて」**＝`fd4405b41`: `learn.html`＋`lesson-NN-….html` をレッスンから生成（`build-manual.ps1`・絵は `build-site.ps1` 2b）。`site\index.html` は `build-preview.ps1` の生成物（手書きではない）。残り: 段 1・2・4 と判断 ②③④。
 - **ユーザー「todo の赤丸を出すオプションを lysc に」**＝`0668a9705`（`--todo`＝svg/png/pdf・`EditorMarks`＋`TodoBands`・サイトのレッスンの絵も）。途中で**スラッシュの `@todo` が描かれない**不具合＝`217597a58`。**「Petaluma の一線譜リードシートのレッスン」**＝`3191eb6b2`（lesson-12-chart・全レッスン of 12）。
 - **Pages 段 1＝ユーザー「進めて」**＝`8e716785f`（A1〜A11・#drums・grid/表＝375px ではみ出し 0・P8＝例 17 本を相対に・P12）。残り: 段 2（入口・上部ナビ）・段 4（Reference 分割・About）・判断②上部ナビ。
+- **ユーザー報告「Leland だと / の notehead が出ない」**＝`2fd110561`: 代替フォントの字の face を属性で書いていて `.music` の CSS に負けていた→style に。⚠️ 同じフォントの別サイズ（Emmentaler-16 等）は属性のまま＝同じ理由で効いていない可能性（未対応・出力が変わるので要判断）。
 判定: **ユーザーの実機確認待ち**（New Score → `lesson` → lesson-01 から 10 まで）。次の一手は ⑴ レッスンの手直し（実機の感想）→ ⑵ Pages の再構成（`learning-set-design.md` §7 の案をユーザーが選ぶ）→ ⑶ 日本語訳。(a) どれもこの便の文脈（レッスンと監査）の上に立つ／(b) 1 便＝軽い／(c) 既定は続ける ⇒ **この会話で続ける**。
 
 ## 以下は第901セッションの経緯
