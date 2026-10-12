@@ -564,6 +564,10 @@ score { staff melody }
   move the break to a beat nothing crosses. `e2 break |` (a bar line right after) is the
   ordinary bar-line break.
 - Percent repeat (repeat the previous measure): `repeat percent 2 { c4 d e f | }`.
+- Tremolo. On ONE note, `:N` after the duration strikes the stem (`c4:16` — one stroke per
+  beam of N: `:8` one, `:16` two, `:32` three). Between TWO notes, `repeat tremolo N { a16 b }`
+  alternates them, and lasts N times the body: `repeat tremolo 4 { c16 e }` = 4 × an eighth =
+  a half note's time, drawn as two half notes joined by the tremolo beams.
 - NOT Lily#: `repeat volta` / `alternative` are LilyPond's spellings (the parser refuses
   `repeat volta` and points at the symbolic `|: ... :|` form above; `alternative` is just a
   word). `repeat` is only for `percent` / `unfold` / `tremolo`.
