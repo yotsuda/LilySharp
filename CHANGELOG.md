@@ -6,6 +6,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### A shared staff places every part under its clef
+
+- **`condensedStaff { vla vc }` and `combinedStaff { … }` drew a later part's notes where its own
+  clef would put them**: the cello's C3 landed on the alto staff's B3 space instead of under the
+  staff. Every part now reads its pitches under the staff's one clef (the first part's), as
+  LilyPond does.
+
 ### Short instrument names
 
 - **`part vn1 "Violin I" "Vn. I"`**: a second string on the part is its short name, printed at the

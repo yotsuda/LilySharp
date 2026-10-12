@@ -385,8 +385,9 @@ public sealed record RenderSpec(
     }
 
     /// <summary>The clef the first plain staff rendering <paramref name="voiceName"/> wrote
-    /// for itself (<c>staff bass melody</c>), or null when none did. Grand-staff members count;
-    /// tab, ossia and shared staves do not carry this clef.</summary>
+    /// for itself (<c>staff bass melody</c>), or null when none did. Grand-staff members count,
+    /// and so do the parts of a condensed or combined staff (that staff's one clef); tab and
+    /// ossia staves do not carry this clef.</summary>
     public ClefType? WrittenClefOf(string voiceName)
     {
         // Loops, not Select(… Find(…, name)).FirstOrDefault(…): each lambda captured the name,
@@ -399,6 +400,16 @@ public sealed record RenderSpec(
             {
                 case SingleStaffSpec s when s.Staff.VoiceName == name:
                     return s.Staff.WrittenClef;
+                // A shared staff draws ONE clef (the first part's), and every part on it is
+                // placed under that clef: the cello of `condensedStaff { vla vc }` was placed
+                // by its own bass clef on the alto staff, its C3 drawn on the B3 space
+                // (grammar feedback C2, 2026-10-13). MEASURED (LilyPond 2.26.0, Lab
+                // sessions/p903/c2): the twin's << \vla \\ \vc >> under \clef "alto" puts
+                // that C3 under the staff on its ledger line.
+                case CondensedStaffSpec c when c.PartNames.Contains(name):
+                    return c.Clef;
+                case CombinedStaffSpec c when c.PartNames.Contains(name):
+                    return c.Clef;
                 case GrandStaffRenderSpec g:
                     foreach (var m in g.GrandStaff.Members)
                         if (Find(m, name) is { } clef)

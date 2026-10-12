@@ -1129,8 +1129,8 @@ TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
    (user decision 2026-09-15, reversing 2026-08-17): a clef in a part header, mid-music,
    on a cue or on a score's `staff bass x` only says how the staff is drawn and moves no
    pitch, as LilyPond's \clef never moves \relative. A bass part without an instrument
-   preset writes `clef bass octave 3` to read bare letters in the bass register. In
-   absolute mode only `octave N` moves the base. *)
+   preset writes `clef bass octave 3` to read bare letters in the bass register. Absolute
+   mode reads the same anchor (since 2026-10-13; it used to read only `octave N`). *)
 
 (* Hara-kiri (removeEmpty) is NOT a part property: it is the score item's
    'as removeEmpty true|all|false' selector — see StaffRender, §7. *)
@@ -1753,7 +1753,10 @@ CondensedStaff = 'condensedStaff' , '{' , PartRef , PartRef , { PartRef } , '}' 
                     One staff takes ONE key, meter and clef at a moment: where every part
                     writes the section's `time 12/8`, it is drawn once; where a later part
                     writes a `key` / `time` / `clef` that differs from the first part's at
-                    the same moment, the first part's stands and the other warns (LYS4024). *)
+                    the same moment, the first part's stands and the other warns (LYS4024).
+                    The staff's clef is the first part's, and every part is placed under it
+                    (a cello on a viola's alto staff reads its own pitches there, ledger
+                    lines and all), as on a `combinedStaff`. *)
 
 CombinedStaff  = 'combinedStaff' , '{' , PartRef , PartRef , '}' ;
                  (* The part COMBINER: exactly two parts on one staff, merged wherever they
