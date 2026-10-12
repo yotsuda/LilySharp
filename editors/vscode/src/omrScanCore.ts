@@ -36,6 +36,11 @@ export interface ScanPage {
     readonly height: number;
     /** The reader's annotated copy of the page, resolved, when it wrote one. */
     readonly annotated?: string;
+    /** The file the page was read FROM when `image` is the reader's own copy of it — a PDF or a
+     *  multi-page TIFF, resolved — and which of its pages (from 1). Absent for a single image:
+     *  there `image` is the original itself. */
+    readonly source?: string;
+    readonly sourcePage?: number;
 }
 
 export interface ScanBar {
@@ -62,6 +67,39 @@ export interface ScanSideFile {
     readonly pages: readonly ScanPage[];
     readonly measures: readonly ScanBar[];
     readonly todos: readonly ScanTodo[];
+}
+
+/** The original a page was read from — the PDF or TIFF it came out of, else the image itself. */
+export function originalOf(page: ScanPage): string {
+    return page.source ?? page.image;
+}
+
+/** How a page names its original: `score.pdf p.3` for a page of a PDF or TIFF, `page1.jpg`
+ *  for an image read as it is. */
+export function pageLabel(page: ScanPage): string {
+    const name = path.basename(originalOf(page));
+    return page.source ? `${name} p.${page.sourcePage ?? page.page}` : name;
+}
+
+/**
+ * The scan view's tab: the originals the pages were read from, each once in the order they
+ * come (LilySharp-Omr's proposal 2026-10-12, the owner's report: "Scan: score.lys" named the
+ * score, not what is shown) — `Scan: score.pdf`, `Scan: page1.jpg, page2.jpg`,
+ * `Scan: page1.jpg +2`; with no page, the .lys as before.
+ */
+export function scanTitle(pages: readonly ScanPage[], lysPath: string): string {
+    const seen = new Set<string>(), names: string[] = [];
+    for (const p of pages) {
+        const original = originalOf(p);
+        if (!seen.has(original.toLowerCase())) {
+            seen.add(original.toLowerCase());
+            names.push(path.basename(original));
+        }
+    }
+    if (names.length === 0) {
+        return `Scan: ${path.basename(lysPath)}`;
+    }
+    return names.length <= 2 ? `Scan: ${names.join(', ')}` : `Scan: ${names[0]} +${names.length - 1}`;
 }
 
 /** The side file of a .lys: `x.lys` → `x.omr.json`. */
@@ -113,8 +151,13 @@ export function parseSideFile(text: string, sideFilePath: string): ScanSideFile 
     for (const p of list(root.pages)) {
         const page = int(p?.page), image = str(p?.image), width = int(p?.width), height = int(p?.height);
         if (page !== undefined && image && width && height && width > 0 && height > 0) {
-            const annotated = str(p?.annotated);
-            pages.push({ page, image: resolve(image), width, height, ...(annotated ? { annotated: resolve(annotated) } : {}) });
+            const annotated = str(p?.annotated), source = str(p?.source), sourcePage = int(p?.sourcePage);
+            pages.push({
+                page, image: resolve(image), width, height,
+                ...(annotated ? { annotated: resolve(annotated) } : {}),
+                ...(source ? { source: resolve(source) } : {}),
+                ...(source && sourcePage !== undefined && sourcePage > 0 ? { sourcePage } : {}),
+            });
         }
     }
     const measures: ScanBar[] = [];

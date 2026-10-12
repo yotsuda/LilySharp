@@ -28,7 +28,7 @@ import * as path from 'path';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import {
     BarAnchor, PrintedBar, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, parseSideFile,
-    scanBarForPrinted, shiftAnchors, shownImage, sideFileOf, todoTarget,
+    pageLabel, scanBarForPrinted, scanTitle, shiftAnchors, shownImage, sideFileOf, todoTarget,
 } from './omrScanCore';
 
 export interface OmrScanDeps {
@@ -116,7 +116,7 @@ export async function showScan(
     // The bars are pinned to the text as it is NOW — the reader's, when the view opens on a
     // score it has just written; a score edited before its view opened pins by moved lines.
     const doc = await vscode.workspace.openTextDocument(lys);
-    const panel = vscode.window.createWebviewPanel('lilysharpScan', `Scan: ${path.basename(lys.fsPath)}`,
+    const panel = vscode.window.createWebviewPanel('lilysharpScan', scanTitle(side.pages, lys.fsPath),
         { viewColumn: column ?? vscode.ViewColumn.Beside, preserveFocus: true },
         { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: rootsOf(side, sidePath) });
     const view: ScanView = { panel, lys, side, anchors: anchorsOf(side, doc.getText()), linked: true };
@@ -135,6 +135,7 @@ export async function showScan(
             view.lastTarget = undefined;
             view.printed = undefined;
             panel.webview.options = { ...panel.webview.options, localResourceRoots: rootsOf(next, sidePath) };
+            panel.title = scanTitle(next.pages, lys.fsPath);
             render(view);
         }
     };
@@ -324,7 +325,7 @@ function render(view: ScanView): void {
     const pages = side.pages.map(p => {
         const shown = shownImage(p);
         if (!shown || !fs.existsSync(shown)) {
-            return `<section class="page missing"><p>Page ${p.page}: ${esc(path.basename(p.image))} cannot be shown here`
+            return `<section class="page missing"><p>Page ${p.page}: ${esc(pageLabel(p))} cannot be shown here`
                 + `${shown ? ' (the file is not there)' : ' (a webview draws PNG, JPEG, GIF, BMP and WebP)'}.</p></section>`;
         }
         const src = panel.webview.asWebviewUri(vscode.Uri.file(shown)).toString();
@@ -333,7 +334,7 @@ function render(view: ScanView): void {
             + `<title>bar ${m.measure}${m.part ? ` (${esc(m.part)})` : ''}</title></rect>`).join('');
         const todos = side.todos.filter(t => t.page === p.page).map(t =>
             `<rect class="todo" ${rect(t.box)} data-key="${esc(t.key)}"><title>${esc(t.memo ?? t.key)}</title></rect>`).join('');
-        return `<section class="page" data-page="${p.page}">`
+        return `<section class="page" data-page="${p.page}" title="${esc(pageLabel(p))}">`
             + `<img src="${src}" alt="page ${p.page}">`
             + `<svg viewBox="0 0 ${p.width} ${p.height}" preserveAspectRatio="none">${bars}${todos}`
             + `<rect class="light" x="0" y="0" width="0" height="0"/></svg></section>`;

@@ -18,6 +18,7 @@ workflow attaches that section to the GitHub Release verbatim.
   compares it with the scan while reading (`omr read --verify`), so the first look already carries
   the comparison's marks. `.bmp` scans are offered too.
 - The first import says once that the reader is a Beta and where its marks are.
+- **The scan view's tab names the original** — `Scan: score.pdf`, `Scan: page1.jpg, page2.jpg`, `Scan: page1.jpg +2` — instead of the `.lys`; hovering a page shows which file and page it is (`score.pdf p.3`).
 
 ## 0.12.0
 

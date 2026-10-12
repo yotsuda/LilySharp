@@ -23,7 +23,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
 import {
-    anchorsOf, barOnLine, markFactsOf, parseSideFile, scanBarForPrinted, shiftAnchors, shownImage, sideFileOf, todoTarget,
+    anchorsOf, barOnLine, markFactsOf, pageLabel, parseSideFile, scanBarForPrinted, scanTitle, shiftAnchors, shownImage,
+    sideFileOf, todoTarget,
 } from '../src/omrScanCore';
 
 // Absolute on whichever OS runs the tests.
@@ -95,6 +96,37 @@ describe('the side file', () => {
         assert.equal(shownImage(side.pages[0]), path.join(SCANS, 'p01.png'));
         assert.equal(shownImage(side.pages[1]), undefined);
         assert.equal(shownImage({ ...side.pages[1], annotated: 'C:\\o\\x.omr-p02.png' }), 'C:\\o\\x.omr-p02.png');
+    });
+});
+
+describe('the scan view names the originals (LilySharp-Omr proposal 2026-10-12)', () => {
+    const sidePath = path.join(WORK, 'score.omr.json');
+    const side = (pages: object[]) => parseSideFile(JSON.stringify({ version: 1, pages, measures: [], todos: [] }), sidePath)!;
+    const pdf = path.join(SCANS, 'score.pdf');
+
+    it('reads a page\'s source and its page in it', () => {
+        const s = side([
+            { page: 1, image: 'score.p01.png', width: 10, height: 10, source: pdf, sourcePage: 1 },
+            { page: 2, image: 'score.p03.png', width: 10, height: 10, source: 'score.pdf', sourcePage: 3 },
+            { page: 3, image: path.join(SCANS, 'page1.jpg'), width: 10, height: 10 },
+        ]);
+        assert.equal(s.pages[0].source, pdf);
+        assert.equal(s.pages[1].source, path.join(WORK, 'score.pdf'));   // resolved as image is
+        assert.equal(s.pages[1].sourcePage, 3);
+        assert.equal(s.pages[2].source, undefined);
+        assert.equal(pageLabel(s.pages[1]), 'score.pdf p.3');
+        assert.equal(pageLabel(s.pages[2]), 'page1.jpg');
+    });
+
+    it('titles the tab by the originals, each once', () => {
+        const lys = path.join(WORK, 'score.lys');
+        const pdfPage = (n: number) => ({ page: n, image: `score.p0${n}.png`, width: 10, height: 10, source: pdf, sourcePage: n });
+        const jpg = (n: number) => ({ page: n, image: path.join(SCANS, `page${n}.jpg`), width: 10, height: 10 });
+        assert.equal(scanTitle(side([pdfPage(1), pdfPage(2), pdfPage(3)]).pages, lys), 'Scan: score.pdf');
+        assert.equal(scanTitle(side([jpg(1)]).pages, lys), 'Scan: page1.jpg');
+        assert.equal(scanTitle(side([jpg(1), jpg(2)]).pages, lys), 'Scan: page1.jpg, page2.jpg');
+        assert.equal(scanTitle(side([jpg(1), jpg(2), jpg(3)]).pages, lys), 'Scan: page1.jpg +2');
+        assert.equal(scanTitle([], lys), 'Scan: score.lys');
     });
 });
 
