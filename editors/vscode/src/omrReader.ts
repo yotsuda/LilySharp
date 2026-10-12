@@ -70,7 +70,10 @@ export async function offerOmrExtension(): Promise<void> {
  *  installed, now and whenever an extension is installed or removed. The palette's item does
  *  not wait for it: a context set here exists only once Lily# has activated (a .lys opened),
  *  so the palette reads VS Code's own `isWindows` instead (owner's report 2026-10-12: no item
- *  before a .lys was opened). */
+ *  before a .lys was opened). ⚠️ The NAME `lilysharp.omrAvailable` is shared: the reader's
+ *  extension sets it to true on startup so the right-click shows before Lily# runs
+ *  (LilySharp-Omr docs/repro/lilysharp-implemented-2026-10-12.md §2), and this overwrites it
+ *  with Lily#'s own answer. Renaming it breaks that. */
 export function registerOmrContexts(context: vscode.ExtensionContext, output: vscode.OutputChannel): void {
     let said: string | undefined;
     const update = async () => {

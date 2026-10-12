@@ -132,6 +132,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 網 `test/omrCore.test.ts` +4（拡張の順・exports の形・`--verify`・入力の拡張子）＝拡張 255 / 0。毒 3 本（拡張を素通り／`--verify` を付けない／`bmp` を外す）＝各 1 赤。CHANGELOG 両方に `## Unreleased`「Scan import (Beta)」・site `commands-body.html`・`MANUAL-CHECKS.md` §5 B7（OMR の VSIX で通す手順）。Deploy 済み（**package.json が変わったので Reload Window は 2 回**）。
 - ⚠️ **表示名「Lily# Scan Import」は OMR の推し＝オーナー未決**（handoff §1.4-1）。Lily# の文言は通知と *Install Scan Import* ボタンの 2 か所（`omrReader.ts`）。⚠️ **OMR 拡張が Marketplace に出るまでは、パレットの項目は存在しない拡張の導入を案内する**＝Lily# 0.13.0 は OMR 拡張の公開と同時か後に出す。
 - `-End p903 -DiffBase 928c6d683`（1 回目は `HistoryCitationTests.DeadCitationsDoNotGrow` 1 赤＝この語りに Lab の commit SHA を書いた＝本体の履歴に無い引用。消して 2 回目＝門は全部 OK）＝full **12147 / 0 / 2 / 12149**（C# は不変）。Core '+' 0 行。Lab `sessions/p903/`（start／deploy／end ×2 の log）。
+- **実機（オーナー）: OMR の VSIX を入れて `LILYSHARP_OMR_PATH` を消した（控え Lab `sessions/p903/omr-env-before.txt`）→ パレットにも右クリックにも出ない、`.lys` を開くと出る**＝Lily# は `onLanguage` でしか起動せず、context はそれまで無い。パレットは `isWindows` に替えた（`2cb7399e6`・隔離した VS Code で「未起動でも出る」を確認）。起動時に Output へ `OMR reader (extension|environment)…`／`none` を 1 行。
+- **右クリックはオーナー決定「A」＝OMR 拡張が起動時に `lilysharp.omrAvailable` を立てる**。依頼は `..\LilySharp-Omr\docs\repro\lilysharp-implemented-2026-10-12.md`。⚠️ 実測: OMR 拡張に `extensionDependencies: [yotsuda.lilysharp]` を残して `onStartupFinished` にすると **Lily# まで起動して全窓で言語サーバーが立つ** ⇒ 依存は外す、と依頼した（依存なしなら Lily# は起きず、png の右クリックに項目が出た）。context の名前は OMR との約束＝`omrReader.ts` に註。
 判定: 残りは B7 の実機確認（OMR の VSIX）・表示名と利用条件（オーナー）・文法の 16 点の選択（ユーザー）＝どれもユーザーの手番 ⇒ **返事が来たらこの会話で続ける**（(a) 文法の台帳と OMR の受け口の文脈がここにある）。
 
 ## 以下は第902セッションの経緯
