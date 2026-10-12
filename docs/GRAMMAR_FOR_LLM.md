@@ -932,6 +932,35 @@ Rules worth knowing before emitting one:
   (group) override — override a role with the same or a narrower key. An unknown
   reference name is an error; an unreferenced named block warns.
 
+## Music font (`fonts { music "…" }`)
+
+The glyphs — noteheads, clefs, accidentals, rests, dynamics — come from the `music` entry
+of the same `fonts { }` block:
+
+```
+fonts {
+  music "Bravura"                 // Emmentaler (LilyPond's own) when not written
+}
+score sketch { fonts { music "Petaluma" }  staff melody }   // one score in another font
+```
+
+- Bundled: **Emmentaler** (the default), **Bravura**, **Petaluma** (handwritten, jazz),
+  **Leland** — the last three are SMuFL fonts. The name is compared without regard to case.
+- Several names are a per-glyph fallback chain, most preferred first:
+  `music "Petaluma" "Bravura"`. A glyph no named font has is drawn in Emmentaler, with a
+  warning once per glyph (Leland lacks the figured-bass digits, for one).
+- ⚠️ `music` takes **quoted names only**. `step`, `size`, `as` and a style on it are errors:
+  a glyph's size is its grob's (`layout { NoteHead.scale 1.2 }`).
+- Another SMuFL font is found by NAME — a score never names a file — in the folders of the
+  VS Code setting `lilysharp.fontPaths`, then `LILYSHARP_FONT_PATH`, the SMuFL metadata
+  location and the system font folders. A name found nowhere warns (LYS8019) and the next
+  name, or Emmentaler, is used.
+- Under a music font, chord symbols use the font's own ♭ ♯ △ ° ø + glyphs, and under
+  Petaluma their letters are set in Petaluma Script — unless `chord` (or `chords`, or `sans`)
+  names a face, or `chord as serif` / `as sans` says which family to follow.
+- `lysc svg --set music=Bravura song.lys` lays a font over the file's for one render. The
+  LilyPond twin (`lysc ly`) stays in Emmentaler and warns: LilyPond 2.26 reads no SMuFL font.
+
 ## Paper (`paper { … }`)
 
 The page's dimensions — paper size, margins, indents, vertical spacing. One per file;

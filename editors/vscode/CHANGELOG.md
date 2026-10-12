@@ -6,12 +6,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Lessons
 
-- **Ten lessons inside the editor.** At the top level of a `.lys` file, Ctrl+Space offers
-  `lesson-01-completion`; typing `lesson` lists all ten. Each one replaces the file (it asks
+- **Twelve lessons inside the editor.** At the top level of a `.lys` file, Ctrl+Space offers
+  `lesson-01-completion`; typing `lesson` lists all twelve. Each one replaces the file (it asks
   first) with a short, playable score that teaches one step: the completion list and the
   preview, notes and octaves, rhythm, keys, expression, form and repeats, lyrics, chords,
-  piano, a band. Lessons are kept per language and follow the editor's display language
-  where a translation exists (English for now). The New Score file points to them.
+  piano, drums (patterns picked from the completion list), a band, and a jazz chart (slashes
+  on a one-line staff under chord symbols, in Petaluma). Lessons are kept per language and
+  follow the editor's display language where a translation exists (English for now). The New
+  Score file points to them, and the same lessons are on the site's Learn pages.
 
 ### Language
 
