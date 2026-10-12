@@ -1078,7 +1078,7 @@ internal static class DynamicEngraver
         return (d.X - half - (d.IsSubito ? SubitoWidth(fonts) : 0), d.X + half);
     }
 
-    /// <summary>A placed dynamic's ink up and down about its baseline — <see cref="InkOf"/>,
+    /// <summary>A placed dynamic's ink up and down about its baseline — <see cref="InkOf(Rendering.ScoreTextMetrics, string?, bool)"/>,
     /// widened by the subito's word when it has one.</summary>
     internal static (double Ascent, double Descent) InkOf(Rendering.ScoreTextMetrics fonts, in DynamicLayout d)
     {
