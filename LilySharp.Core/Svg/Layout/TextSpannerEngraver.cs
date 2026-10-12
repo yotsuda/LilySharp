@@ -360,7 +360,7 @@ internal static class TextSpannerEngraver
                 // staff's offset (staffOffset) reflects it into the system-relative
                 // device frame this method (and minY) works in.
                 double dynY = staffOffset + (2.0 - dyn.YUp);
-                var (_, descent) = DynamicEngraver.InkOf(fonts, dyn.Text, dyn.IsExpressiveText);
+                var (_, descent) = DynamicEngraver.InkOf(fonts, dyn);
                 // Device-down frame: the glyph's bottom is BELOW its baseline, i.e. +.
                 maxDynamicBottom = Math.Max(maxDynamicBottom, dynY + descent);
             }

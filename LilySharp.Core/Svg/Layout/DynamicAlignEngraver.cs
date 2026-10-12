@@ -200,7 +200,7 @@ internal static class DynamicAlignEngraver
                         continue;
                     sysTexts.Add(di);
                     Fold(DynamicEngraver.LabelSkylines(fonts, d.Text, d.IsExpressiveText, d.X,
-                        -DynamicEngraver.TextOffsetInSpanner(fonts)));
+                        -DynamicEngraver.TextOffsetInSpanner(fonts), d.IsSubito));
                 }
                 var sysWedges = new List<(int LayoutIdx, int HairpinItemIdx)>();
                 foreach (var (pi, hi) in wedgePieces)

@@ -574,7 +574,7 @@ internal sealed partial class LayoutEngine
             // audit/lp-geometry dynamic.page.{quiet,deep} opened at -0.412774 and -0.390489,
             // i.e. a page that ends closer under its own ink than LilyPond's does.
             double dY = 2.0 - d.YUp;
-            var (dAscent, dDescent) = DynamicEngraver.InkOf(fonts, d.Text, d.IsExpressiveText);
+            var (dAscent, dDescent) = DynamicEngraver.InkOf(fonts, d);
             Add(d.MeasureIndex, dY - dAscent, dY + dDescent);
         }
         foreach (var h in ann.Hairpins)
@@ -1373,8 +1373,8 @@ internal sealed partial class LayoutEngine
         {
             foreach (var d in dynamics)
             {
-                double halfW = DynamicEngraver.LabelHalfWidth(fonts, d.Text, d.IsExpressiveText);
-                var (dAscent, dDescent) = DynamicEngraver.InkOf(fonts, d.Text, d.IsExpressiveText);
+                var (dLeft, dRight) = DynamicEngraver.LabelExtentX(fonts, d);
+                var (dAscent, dDescent) = DynamicEngraver.InkOf(fonts, d);
                 // The system this dynamic's box belongs to — same resolution as the mark
                 // and custom-text arms above.
                 if (!measureToSystem.TryGetValue(d.MeasureIndex, out int ds))
@@ -1394,7 +1394,7 @@ internal sealed partial class LayoutEngine
                 // before this fix; the sweep is its record).
                 double dY = ScoreGrobStaffTopUp(ds, d.StaffIndex) + d.YUp
                     - EngravingDefaults.StaffMiddle;
-                AddMarkBox(d.MeasureIndex, d.X - halfW, d.X + halfW, dY + dAscent, dY - dDescent);
+                AddMarkBox(d.MeasureIndex, dLeft, dRight, dY + dAscent, dY - dDescent);
             }
         }
 

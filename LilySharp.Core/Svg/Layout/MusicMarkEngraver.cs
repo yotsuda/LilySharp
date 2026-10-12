@@ -773,10 +773,10 @@ internal static class MusicMarkEngraver
                     if (!measureToSystemIdx.TryGetValue(d.MeasureIndex, out int ds) || ds != sysIdx
                         || LayoutUtilities.ResolveScoreGrobStaff(systems[sysIdx], d.StaffIndex) != bottomStaff.StaffIndex)
                         continue;
-                    double halfW = DynamicEngraver.LabelHalfWidth(fonts, d.Text, d.IsExpressiveText);
-                    if (d.X + halfW < range.X0 || d.X - halfW > range.X1)
+                    var (dLeft, dRight) = DynamicEngraver.LabelExtentX(fonts, d);
+                    if (dRight < range.X0 || dLeft > range.X1)
                         continue;
-                    var (_, descent) = DynamicEngraver.InkOf(fonts, d.Text, d.IsExpressiveText);
+                    var (_, descent) = DynamicEngraver.InkOf(fonts, d);
                     systemUp = Math.Min(systemUp,
                         bottomStaff.Y + d.YUp - EngravingDefaults.StaffMiddle - descent);
                 }

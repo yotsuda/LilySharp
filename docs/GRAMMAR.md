@@ -2466,7 +2466,7 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
 (* - Articulations: @staccato @staccatissimo @accent @tenuto @marcato @fermata @portato  (.up/.down ok)
    - Strings:       @upBow @downBow @flageolet  (always above)
    - Ornaments:     @trill @mordent @prall @turn @reverseTurn
-   - Dynamics:      @ppp @pp @p @mp @mf @f @ff @fff @sfz @sf @fp @rfz @fz   (default below; @f.up forces side)
+   - Dynamics:      @ppp @pp @p @mp @mf @f @ff @fff @sfz @sf @fp @rfz @fz   (default below; @f.up forces side; @p.subito prints "sub. p", plays p)
    - Hairpins:      @cresc @decresc @dim  (start note → next dynamic, or to @!cresc / @!decresc /
                  @!dim on a later note — LilyPond's \! — which ends whichever is open; .up/.down REJECTED)
    - Niente:        @niente  (a hairpin's thin end on it is a circle: @decresc … @niente,

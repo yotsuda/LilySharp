@@ -688,6 +688,9 @@ internal sealed class MusicXmlAttributes
 internal sealed class MusicXmlDirection
 {
     public string? DynamicType { get; set; }
+    /// <summary>`@p.subito`: the dynamic follows the words "sub." in the one direction, as
+    /// the page prints them.</summary>
+    public bool Subito { get; set; }
     /// <summary>The metronome's per-minute figure, in <see cref="TempoBeatUnit"/>s.</summary>
     public int? Tempo { get; set; }
     /// <summary>The metronome's beat unit as a note value (4 = quarter) and its dots. Until
@@ -742,6 +745,9 @@ internal sealed class MusicXmlDirection
 
         if (DynamicType != null)
         {
+            if (Subito)
+                direction.Add(new XElement("direction-type",
+                    new XElement("words", new XAttribute("font-style", "italic"), "sub.")));
             direction.Add(new XElement("direction-type",
                 new XElement("dynamics",
                     new XElement(DynamicType))));

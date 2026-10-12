@@ -1319,7 +1319,25 @@ internal sealed partial class Parser
                     // @p, @f, @mf, @cresc, etc. - dynamics with @ prefix (new style).
                     // An optional '.up' / '.down' forces the dynamic above / below.
                     var name = Advance();
+                    // `@p.subito` (owner's spelling 2026-10-13, grammar feedback B9): the dynamic
+                    // printed with an italic "sub." before it, sounding as the plain one. It takes
+                    // slots 2-3; a placement after it (`@p.subito.up`) slots 4-5.
                     if (Current.Kind == SyntaxKind.Dot
+                        && Peek(1) is { Kind: SyntaxKind.Identifier, Text: "subito" }
+                        && name.Text is not ("cresc" or "decresc" or "dim"))
+                    {
+                        var subDot = Advance();
+                        var subito = Advance();
+                        if (Current.Kind == SyntaxKind.Dot && IsPlacementWord(Peek(1)))
+                        {
+                            var pDot = Advance();
+                            var pDir = Advance();
+                            GreenRun.Take(new DynamicGreen(at, name, subDot, subito, pDot, pDir), ref first, ref second, ref more);
+                        }
+                        else
+                            GreenRun.Take(new DynamicGreen(at, name, subDot, subito), ref first, ref second, ref more);
+                    }
+                    else if (Current.Kind == SyntaxKind.Dot
                         && IsPlacementWord(Peek(1))
                         && Peek(2)?.Kind != SyntaxKind.Dot)
                     {

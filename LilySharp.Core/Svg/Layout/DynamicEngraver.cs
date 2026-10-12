@@ -46,7 +46,8 @@ public readonly record struct DynamicLayout(
     int StaffIndex = 0,     // Which staff this dynamic hangs under (per-staff stacking).
     bool IsExpressiveText = false, // @text("…"): plain italic, not a dynamic level.
     bool OnMultiMeasureRest = false, // @text on an R: MultiMeasureRestText (DynamicItem.OnMultiMeasureRest).
-    double? GlyphRunWidth = null // A SMuFL score's level in the font's own glyphs: its width (DynamicEngraver.SmuflGlyphRun).
+    double? GlyphRunWidth = null, // A SMuFL score's level in the font's own glyphs: its width (DynamicEngraver.SmuflGlyphRun).
+    bool IsSubito = false   // @p.subito: an italic "sub." hangs left of the level (DynamicEngraver.SubitoWidth).
 );
 
 /// <summary>
@@ -346,7 +347,8 @@ internal static class DynamicEngraver
                 dynamic.StaffIndex,
                 expressive,
                 dynamic.OnMultiMeasureRest,
-                expressive ? null : SmuflGlyphRun(score.TextMetrics, labelText)?.Width
+                expressive ? null : SmuflGlyphRun(score.TextMetrics, labelText)?.Width,
+                IsSubito: dynamic.IsSubito && !expressive
             ));
         }
 
@@ -757,8 +759,27 @@ internal static class DynamicEngraver
     /// </summary>
     internal static (VerticalSkyline Up, VerticalSkyline Down) LabelSkylines(
         Rendering.ScoreTextMetrics fonts,
+        string? text, bool expressive, double xCentre, double yBaseline, bool subito)
+    {
+        var level = LabelSkylines(fonts, text, expressive, xCentre, yBaseline);
+        if (!subito || expressive)
+            return level;
+        // A subito's "sub." hangs left of the level, a word space off its left edge
+        // (SubitoWidth), in the expressive text's own outline.
+        double em = LabelEm(fonts, true);
+        var face = fonts.Face(LabelRole(true), LabelStyle(fonts, true));
+        double left = xCentre - LabelHalfWidth(fonts, text ?? "", false) - SubitoWidth(fonts);
+        var word = TextOutlineSkylines.Place(SubitoWord, em, face, left, yBaseline);
+        level.Up.Merge(word.Up);
+        level.Down.Merge(word.Down);
+        return level;
+    }
+
+    internal static (VerticalSkyline Up, VerticalSkyline Down) LabelSkylines(
+        Rendering.ScoreTextMetrics fonts,
         string? text, bool expressive, double xCentre, double yBaseline)
     {
+
         if (!expressive && SmuflGlyphRun(fonts, text) is { } run)
         {
             double left = xCentre - run.Width / 2;
@@ -1033,8 +1054,42 @@ internal static class DynamicEngraver
     internal static double LabelEm(Rendering.ScoreTextMetrics fonts)
         => fonts.Size(Rendering.TextRole.Dynamics, DynamicFontSize);
 
-    // internal, not private: MarkReserveVersusDrawTests calls it to state that the reserved
-    // half-width is half of the DRAWN advance. Nothing else outside this type uses it.
+    /// <summary>The word a subito dynamic prints before its level.</summary>
+    internal const string SubitoWord = "sub.";
+
+    /// <summary>The space between "sub." and the level: markup's word-space.
+    /// LILYPOND-REF: scm/define-markup-commands.scm line — word-space 0.6.</summary>
+    internal const double SubitoGap = 0.6;
+
+    /// <summary>How far a subito's "sub." reaches left of its level's own left edge — the italic
+    /// word at the expressive-text em and the word space after it. LilyPond hangs it there and
+    /// keeps the level where the plain one stands (MEASURED, 2.26.0, Lab sessions/p903/b9:
+    /// `make-dynamic-script` of `#:italic "sub." #:dynamic "p"` puts the p under its note as
+    /// a plain \p).</summary>
+    internal static double SubitoWidth(Rendering.ScoreTextMetrics fonts)
+        => fonts.Advance(SubitoWord, LabelEm(fonts, true), LabelRole(true), LabelStyle(fonts, true)) + SubitoGap;
+
+    /// <summary>A placed dynamic's ink across, about its own X: the level's half-width each way,
+    /// and on the left the subito's word as well. ONE HOME for every reader that boxes a
+    /// dynamic (skylines, stacker, paging, the marks that avoid it).</summary>
+    internal static (double Left, double Right) LabelExtentX(Rendering.ScoreTextMetrics fonts, in DynamicLayout d)
+    {
+        double half = LabelHalfWidth(fonts, d.Text ?? string.Empty, d.IsExpressiveText);
+        return (d.X - half - (d.IsSubito ? SubitoWidth(fonts) : 0), d.X + half);
+    }
+
+    /// <summary>A placed dynamic's ink up and down about its baseline — <see cref="InkOf"/>,
+    /// widened by the subito's word when it has one.</summary>
+    internal static (double Ascent, double Descent) InkOf(Rendering.ScoreTextMetrics fonts, in DynamicLayout d)
+    {
+        var (a, ds) = InkOf(fonts, d.Text, d.IsExpressiveText);
+        if (!d.IsSubito)
+            return (a, ds);
+        var (sa, sd) = InkOf(fonts, SubitoWord, true);
+        return (Math.Max(a, sa), Math.Max(ds, sd));
+    }
+
+    // internal, not private: MarkReserveVersusDrawTests calls it to state that the reserved    // half-width is half of the DRAWN advance. Nothing else outside this type uses it.
     internal static double LabelHalfWidth(
         Rendering.ScoreTextMetrics fonts, string text, bool expressive)
     {

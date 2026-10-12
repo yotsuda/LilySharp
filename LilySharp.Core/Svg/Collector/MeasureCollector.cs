@@ -5093,6 +5093,7 @@ public sealed partial class MeasureCollector
                     {
                         IsAbove = dynamicSyntax.ForcedAbove == true,
                         VoiceIndex = _cursor.VoiceIndex,
+                        IsSubito = dynamicSyntax.IsSubito,
                     });
                 }
                 else

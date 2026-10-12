@@ -1798,6 +1798,12 @@ public sealed partial class LilyPondExporter
     /// </remarks>
     private string EmitDynamic(DynamicSyntax d) => IsSecondDynamicLevel(d) ? ""
         : d.Level == DynamicLevel.Niente ? EmitNiente(d)
+        // `@p.subito`: LilyPond has no subito dynamic of its own; its manual builds one with
+        // make-dynamic-script, written inline as the post-event (2.26 draws the level where the
+        // plain one stands and the italic word left of it — the page's picture).
+        // LILYPOND-REF: ly/dynamic-scripts-init.ly:26-29 make-dynamic-script — the same constructor the built-in levels use.
+        : d.IsSubito ? (d.ForcedAbove switch { true => "^", false => "_", null => "-" })
+            + "#(make-dynamic-script (markup #:normal-text #:italic \"sub.\" #:dynamic \"" + d.DynamicToken.Text + "\"))"
         : (d.ForcedAbove switch
         {
             true => "^",

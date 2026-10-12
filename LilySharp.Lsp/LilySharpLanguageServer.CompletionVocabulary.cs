@@ -4368,7 +4368,9 @@ public sealed partial class LilySharpLanguageServer
         {
             Label = p + word,
             Kind = CompletionItemKind.EnumMember,
-            Detail = word == "up" ? words.Up : words.Down,
+            Detail = word == "up" ? words.Up : word == "down" ? words.Down
+                // `@p.subito` (2026-10-13, grammar feedback B9).
+                : "Subito: an italic \"sub.\" before the dynamic",
             SortText = sort,
             FilterText = p + word,
             TextEdit = range == null ? null : new TextEdit { Range = range, NewText = p + word },
@@ -4382,7 +4384,9 @@ public sealed partial class LilySharpLanguageServer
             // it is the more specific continuation of what was just typed.
             Items = words.DownFirst
                 ? new[] { Item("down", "!0down"), Item("up", "!1up") }
-                : new[] { Item("up", "!0up"), Item("down", "!1down") },
+                : dynamic
+                    ? new[] { Item("up", "!0up"), Item("down", "!1down"), Item("subito", "!2subito") }
+                    : new[] { Item("up", "!0up"), Item("down", "!1down") },
         };
     }
 

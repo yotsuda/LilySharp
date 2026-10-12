@@ -2720,7 +2720,7 @@ public sealed class MusicXmlExporter
                 break;
 
             case DynamicSyntax dynamic:
-                HandleDynamicText(dynamic.DynamicToken.Text, dynamic.SourceStart);
+                HandleDynamicText(dynamic.DynamicToken.Text, dynamic.SourceStart, dynamic.IsSubito);
                 break;
 
             case TieSyntax:
@@ -3521,7 +3521,7 @@ public sealed class MusicXmlExporter
         // through the shared dynamic/wedge funnel and emit before the first member.
         foreach (var a in arpeggio.Articulations)
             if (a is DynamicSyntax dyn)
-                HandleDynamicText(dyn.DynamicToken.Text);
+                HandleDynamicText(dyn.DynamicToken.Text, subito: dyn.IsSubito);
         EmitPendingDynamic();
         // A string number on the group (`>>4\3`) is every pitched / degree member's that
         // names none of its own — the collector's groupString (a chord member inside the
@@ -5166,7 +5166,7 @@ public sealed class MusicXmlExporter
             }
             else if (artic is DynamicSyntax dynamic)
             {
-                HandleDynamicText(dynamic.DynamicToken.Text, dynamic.SourceStart);
+                HandleDynamicText(dynamic.DynamicToken.Text, dynamic.SourceStart, dynamic.IsSubito);
             }
             else if (artic is StringNumberAnnotationSyntax stringNumber)
             {
@@ -5252,7 +5252,7 @@ public sealed class MusicXmlExporter
     /// <summary>A dynamic word: cresc/decresc/dim OPEN a &lt;wedge&gt; (they
     /// used to leak into &lt;dynamics&gt; as invalid &lt;cresc/&gt;); a level
     /// mark closes any open wedge, then emits as a dynamics direction.</summary>
-    private void HandleDynamicText(string text, int position = -1)
+    private void HandleDynamicText(string text, int position = -1, bool subito = false)
     {
         if (text == "niente")
         {
@@ -5296,7 +5296,7 @@ public sealed class MusicXmlExporter
         // Written where it stands — its note's onset (a note's marks are read before the note
         // is added) — rather than held for the next note: a dynamic on a bar's last note used
         // to be written at the next bar's head, and one on a part's last note never (2026-09-29).
-        AddDirection(new MusicXmlDirection { DynamicType = text, Placement = "below" });
+        AddDirection(new MusicXmlDirection { DynamicType = text, Placement = "below", Subito = subito });
     }
 
     /// <summary>The open wedge's start direction, while <see cref="_wedgeOpen"/>.</summary>

@@ -877,6 +877,7 @@
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.DynamicAnchorCentreOffset","2.0","return left <= right ? (left + right) / 2.0 : PaperColumnAlignmentCentre;","LILYPOND-REF: scm/define-grobs.scm:2750 PaperColumn (X-alignment-extent . (0 . 1.35))","Green"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.PaperColumnAlignmentCentre","1.35, 2.0","private const double PaperColumnAlignmentCentre = 1.35 / 2.0;","LILYPOND-REF: scm/define-grobs.scm:2750 PaperColumn (X-alignment-extent . (0 . 1.35))","Green"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.DynamicFontSize","2.0","private const double DynamicFontSize = 2.0;","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
+"Svg/Layout/DynamicEngraver.cs","DynamicEngraver.SubitoGap","0.6","internal const double SubitoGap = 0.6;","LILYPOND-REF: scm/define-markup-commands.scm line — word-space 0.6.</summary>","Green"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.LabelHalfWidth","2.0","return run.Width / 2.0;","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.LabelHalfWidth","2.0","return w / 2.0;","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
 "Svg/Layout/TextSpannerEngraver.cs","TextSpannerEngraver.DashPeriod","3.0","private const double DashPeriod = 3.0;","LILYPOND-REF: scm/define-grobs.scm:3845 (dash-period . 3.0)</remarks>","Green"

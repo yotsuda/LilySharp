@@ -6,6 +6,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Subito dynamics
+
+- **`@p.subito`** prints the dynamic with an italic *sub.* before it and plays it as the plain
+  dynamic. The level stands where the plain one would; the word hangs to its left, as LilyPond's
+  `make-dynamic-script` draws it (which the twin writes). A side goes after it: `@ff.subito.up`.
+  MusicXML writes the words and the dynamic in one direction. The editor offers `.subito` after a
+  dynamic.
 ### One octave rule for both modes (breaking)
 
 - **In `octave absolute`, an `instrument` preset now sets the part's base octave, as it always did

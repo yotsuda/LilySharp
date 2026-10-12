@@ -82,10 +82,21 @@ public sealed class DynamicSyntax : SyntaxNode
     /// Forced placement from a <c>.up</c> / <c>.down</c> qualifier (<c>@f.up</c>):
     /// <c>true</c> = above, <c>false</c> = below, <c>null</c> = default (below).
     /// </summary>
-    /// <remarks>Slot 3 — slot 2 is the qualifier's '.', see ArticulationSyntax.</remarks>
-    public bool? ForcedAbove => Green.GetSlot(3) is { IsToken: true } dir
+    /// <remarks>Slot 3 — slot 2 is the qualifier's '.', see ArticulationSyntax. After a
+    /// <c>.subito</c> (slots 2-3) the placement is slot 5 (<c>@p.subito.up</c>). A rejected
+    /// placement on a hairpin trigger also lands in slots 4-5, with slot 3 empty, so it is
+    /// never read here.</remarks>
+    public bool? ForcedAbove => PlacementOf(Green.GetSlot(3) is { IsToken: true, Text: "subito" }
+        ? Green.GetSlot(5) : Green.GetSlot(3));
+
+    private static bool? PlacementOf(InternalSyntax.GreenNode? dir) => dir is { IsToken: true }
         ? dir.Text == "up" ? true : dir.Text == "down" ? false : (bool?)null
         : null;
+
+    /// <summary><c>@p.subito</c>: the dynamic is printed with an italic "sub." before it
+    /// (LilyPond's <c>make-dynamic-script</c> of "sub." and the dynamic) and sounds as the
+    /// plain one.</summary>
+    public bool IsSubito => Green.GetSlot(3) is { IsToken: true, Text: "subito" };
 
     /// <summary>
     /// Gets the dynamic level.

@@ -90,6 +90,10 @@ public sealed record DynamicItem
     /// </summary>
     public bool OnMultiMeasureRest { get; init; }
 
+    /// <summary><c>@p.subito</c>: the level printed with an italic "sub." hanging left of it;
+    /// the level itself stands and sounds where the plain one would (DynamicEngraver.SubitoWidth).</summary>
+    public bool IsSubito { get; init; }
+
     /// <summary>Creates a dynamic marking of the given level.</summary>
     public DynamicItem(DynamicLevel level, int measureIndex, int itemIndex,
         int sourcePosition, int staffIndex = 0)

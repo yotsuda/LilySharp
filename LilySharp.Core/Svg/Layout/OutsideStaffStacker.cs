@@ -499,7 +499,7 @@ internal static class OutsideStaffStacker
         var adjHairpins = hpB?.MoveToImmutable() ?? hairpins;
 
         double LabelLeft(DynamicLayout d)
-            => d.X - DynamicEngraver.LabelHalfWidth(fonts, d.Text ?? string.Empty, d.IsExpressiveText);
+            => DynamicEngraver.LabelExtentX(fonts, d).Left;
 
         // A multi-member line (texts + wedges linked by running hairpins) is ONE grob of
         // this pass: its members' combined outline takes one Place and one move, so a tie
@@ -551,7 +551,7 @@ internal static class OutsideStaffStacker
                 var dyn = dynB![di];
                 Fold(DynamicEngraver.LabelSkylines(
                     fonts, dyn.Text, dyn.IsExpressiveText, dyn.X,
-                    dyn.YUp - off - EngravingDefaults.StaffMiddle));
+                    dyn.YUp - off - EngravingDefaults.StaffMiddle, dyn.IsSubito));
             }
             foreach (int hi in g.HairpinIndices)
             {
@@ -605,7 +605,7 @@ internal static class OutsideStaffStacker
             // LILYPOND-REF: lily/axis-group-interface.cc:648-676,:747-749 avoid_outside_staff_collisions
             //   — padding = outside-staff-padding.
             var (myUp, myDown) = DynamicEngraver.LabelSkylines(
-                fonts, dyn.Text, dyn.IsExpressiveText, dyn.X, dynYup);
+                fonts, dyn.Text, dyn.IsExpressiveText, dyn.X, dynYup, dyn.IsSubito);
             // @text is a TextScript: its horizontal padding (see PlaceAboveDynamics).
             double move = tracker.Place(myUp, myDown, OutsideStaffPadding,
                 dyn.IsExpressiveText ? OutsideStaffHorizontalPadding : 0.0);
@@ -2569,7 +2569,7 @@ internal static class OutsideStaffStacker
             // LILYPOND-REF: scm/define-grobs.scm:1446 DynamicText Grob::vertical_skylines_from_stencil.
             double midUp = LayoutUtilities.StaffMiddleUpInSystem(systems[sysIdx], dyn.StaffIndex);
             var (myUp, myDown) = DynamicEngraver.LabelSkylines(
-                fonts, dyn.Text, dyn.IsExpressiveText, dyn.X, dyn.YUp + midUp);
+                fonts, dyn.Text, dyn.IsExpressiveText, dyn.X, dyn.YUp + midUp, dyn.IsSubito);
             // Free expressive text is a TextScript, which declares the horizontal padding a
             // DynamicText does not (define-grobs.scm:3806 outside-staff-horizontal-padding 0.2).
             double move = trackers(sysIdx, dyn.StaffIndex).Place(myUp, myDown, OutsideStaffPadding,

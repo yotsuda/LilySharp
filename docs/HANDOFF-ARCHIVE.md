@@ -1,4 +1,17 @@
 
+## 第903 の OMR 受け口の脚（逐語）← §1 の 20,000 字の門を超えたので出した
+
+- **OMR の返事（`..\LilySharp-Omr\docs\repro\lilysharp-reply-2026-10-12.md`）**を受けて、handoff 10-12 §3 の Lily# 側の受け口に着手。
+- 受け口: 新 `editors/vscode/src/omrReader.ts`（`findOmr`＝環境変数 → OMR 拡張 `yotsuda.lilysharp-omr` の exports の `path`（`activate` を呼ぶ・子プロセスは起きない）→ globalStorage／`offerOmrExtension`＝`workbench.extensions.installExtension`、失敗なら `@id:` の検索／`registerOmrContexts`＝`lilysharp.omrPlatform`（win-x64）と `lilysharp.omrAvailable` を `extensions.onDidChange` で更新／`noteOmrBeta`＝初回だけ Beta の一言）。`omrCore.locateOmr` に最後の引数 `fromExtension`（ディスクに無ければ素通り）・`readerOfExports`・`OMR_EXTENSION_ID`。パレットは win-x64 なら常に（無ければ導入の案内）、Explorer の右クリックは reader があるときだけ。題名「Import from Image/PDF… (Beta)」。
+- 返事の §4: **取り込みに `--verify` を付けた**（reader が `verify` を持つときだけ・lysc が無ければ OMR が warning を出して飛ばす）＝保存時の照合は既定で切なので、取り込み直後に照合の `@todo` が無かった。`bmp` を入力に足した（パレットのファイル選択・Explorer の when・site）。
+- 網 `test/omrCore.test.ts` +4（拡張の順・exports の形・`--verify`・入力の拡張子）＝拡張 255 / 0。毒 3 本（拡張を素通り／`--verify` を付けない／`bmp` を外す）＝各 1 赤。CHANGELOG 両方に `## Unreleased`「Scan import (Beta)」・site `commands-body.html`・`MANUAL-CHECKS.md` §5 B7（OMR の VSIX で通す手順）。Deploy 済み（**package.json が変わったので Reload Window は 2 回**）。
+- `-End p903 -DiffBase 928c6d683`（1 回目は `HistoryCitationTests.DeadCitationsDoNotGrow` 1 赤＝この語りに Lab の commit SHA を書いた＝本体の履歴に無い引用。消して 2 回目＝門は全部 OK）＝full **12147 / 0 / 2 / 12149**（C# は不変）。Core '+' 0 行。Lab `sessions/p903/`（start／deploy／end ×2 の log）。
+- **実機（オーナー）: OMR の VSIX を入れて `LILYSHARP_OMR_PATH` を消した（控え Lab `sessions/p903/omr-env-before.txt`）→ パレットにも右クリックにも出ない、`.lys` を開くと出る**＝Lily# は `onLanguage` でしか起動せず、context はそれまで無い。パレットは `isWindows` に替えた（`2cb7399e6`・隔離した VS Code で「未起動でも出る」を確認）。起動時に Output へ `OMR reader (extension|environment)…`／`none` を 1 行。
+- **右クリックはオーナー決定「A」＝OMR 拡張が起動時に `lilysharp.omrAvailable` を立てる**。依頼は `..\LilySharp-Omr\docs\repro\lilysharp-implemented-2026-10-12.md`。⚠️ 実測: OMR 拡張に `extensionDependencies: [yotsuda.lilysharp]` を残して `onStartupFinished` にすると **Lily# まで起動して全窓で言語サーバーが立つ** ⇒ 依存は外す、と依頼した（依存なしなら Lily# は起きず、png の右クリックに項目が出た）。context の名前は OMR との約束＝`omrReader.ts` に註。
+- OMR は依存を外して A を実装済み（OMR `2936965`）。**依存を外すと OMR を入れても Lily# は入らない**→ 実測（隔離 VS Code）: `extensionPack` は一緒に入り起動も引きずらないが、**OMR を外すと Lily# も消える**（先に入れていても）＝不採用。**オーナー決定: OMR 拡張が起動時に Lily# の有無を見て 1 回だけ導入を案内**＝依頼は同じ md の §2.5。キャプションは「Convert Image/PDF to Lily# (.lys)… (Beta)」（オーナー指示・`dfe87bd8f`）。
+- **オーナー決定: `@todo`（LYS4026）は Information**（`TodoValidator`・確かめる印は音楽の欠陥ではない。F8 と Problems には残り、重さ順なので本物の警告の後に回る）。LYS4027／LYS4028 は Warning のまま。網 `TodoAnnotationTests.TheFourSpellings…` の期待を Info に（毒＝Warning に戻すと 5 赤）。full 12147 / 0 / 2。OMR の印のうち confidence の低いものだけを言語サーバーが Warning に上げる案は、OMR の分布待ち（依頼 `..\LilySharp-Omr\docs\repro\lilysharp-request-2026-10-12-todo-volume.md`）。
+- **OMR の confidence（OMR の返事 `lilysharp-reply-2026-10-12-todo.md`・O1〜O6 実装済み）を受けて L1〜L4**: 言語サーバーが `.omr.json` の confidence 0.6 未満（または null）の印を Warning に上げる（`OmrSideFile.WarnBelow`／`RaiseUnsureMarks`・網 `TodoAnnotationTests.TheReadersUnsureMarks…`）・scan view は線だけで太さ濃さを confidence で・*Marks below* スライダー（既定 0.8）・取り込みの通知に quiet。毒 2 本で各赤。隔離 VS Code で `out\real\scan-ties004` を目視。OMR の V1（照合の todo を 1 小節 1 件）は**しない**と返事（`lilysharp-implemented-2026-10-12-todo.md`）。残り: プレビューの `@todo` の強調にスライダーを効かせる。
+
 ## 第374 の chords/lyrics 脚（逐語）← §1 の 20,000 字の門を超えたので出した
 
 > 第374 の第 1 便（ユーザー起票＝`chords prog { section A { Fm } ▮ }` で和音が出て `section` が出ない）の

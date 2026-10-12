@@ -474,6 +474,15 @@ c4@f.up      // forte above the staff
 d4@p.down    // piano below (the default)
 ```
 
+A **subito** dynamic adds `.subito`: the level prints with an italic *sub.* before it, stands where
+the plain level would, and plays as the plain level (the LilyPond twin writes it with
+`make-dynamic-script`):
+
+```
+g4@p.subito         // sub. p
+c4@ff.subito.up     // sub. ff, above the staff: the side goes after .subito
+```
+
 A note takes one dynamic: in `c4@f@sfz` the `f` is printed and the `sfz` is not, and the
 second warns (LYS4022) — LilyPond keeps the first as well. A hairpin beside a dynamic is
 fine (`c4@p@cresc`).
