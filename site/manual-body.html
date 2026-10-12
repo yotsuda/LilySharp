@@ -112,7 +112,8 @@ score {               // one or more render blocks
   grandStaff { staff rightHand  staff leftHand }
 }</pre>
   <p>The declaration order above is the conventional one. Parts must be declared before the
-  sections that use them, and a <code>score</code> names a <code>form</code>.</p>
+  sections that use them. A <code>score</code> plays the file's unnamed form, or the one a
+  <code>form NAME</code> item inside it names.</p>
 </section>
 
 <section id="lexical">
@@ -335,7 +336,7 @@ score { staff vc }</pre>
     <tr><td>Hairpins</td><td><code>@cresc @decresc @dim</code> — placed on the starting note, running to the next dynamic. No <code>.up</code>/<code>.down</code>: a hairpin is always below.</td></tr>
     <tr><td>Stems</td><td><code>@stemUp @stemDown</code> — on a beamed note the beam's shared direction wins</td></tr>
     <tr><td>Accidental style</td><td><code>@courtesy</code> (parenthesised), <code>@editorial</code></td></tr>
-    <tr><td>Effects</td><td><code>@arpeggio @glissando @cross @dead @fall @doit @breath @caesura</code></td></tr>
+    <tr><td>Effects</td><td><code>@arpeggio @glissando @cross @dead @parenthesize @fall @doit @breath @caesura</code> — <code>@parenthesize</code> puts the head in parentheses (a ghost note, <code>sn16@parenthesize</code>); on a chord it draws one pair round the whole chord</td></tr>
     <tr><td>Half ties</td><td><code>@laissezVibrer</code>, <code>@repeatTie</code></td></tr>
     <tr><td>With a value</td><td><code>@finger(3) @figuredBass(6 4) @bend(half) @notehead(triangle) @feather(right) @text("dolce") @mark("A") @chord(Dm) @chord(Cm7 x3x546) @diagram(032010) @pluck(i) @ottava(bassa)</code> — an <code>@chord</code> that also writes a shape (<code>@chord(Cm7 x3x546)</code>) draws that chord diagram under its name; a name alone draws none. Shapes, <code>@diagram</code> and which instrument a diagram is drawn for are on <a href="chords.html">Chords and chord diagrams</a></td></tr>
   </table>
@@ -365,13 +366,16 @@ score { staff vc }</pre>
   <h3 id="todo">Notes to yourself — <code>@todo</code></h3>
   <p><code>@todo</code> marks a note, rest or chord to come back to. It prints nothing and
   plays nothing. The editor lists each one as a warning, and the preview rings the item in
-  red, with the memo beside it (<code>.down</code> puts the memo below). Done? Delete the
+  red and writes the memo, underlined, in its staff's margin with a line down to the ring
+  (<code>.down</code> puts the memo below the staff). Done? Delete the
   mark, or press <kbd>Ctrl+.</kbd> on it: <i>Resolve this TODO</i>.</p>
 <pre>c'4 fis'8@todo("F# or F natural?") e'8 g'2 |
 r2@todo("bar 12 is only 7/8").down d'2 |
 c'4@todo e'4 g'2 |</pre>
   <p>A <code>chords</code> row's symbol takes one too (<code>Am7@todo("or C?")</code>). An
-  export draws none. <code>lysc check --todo-as-error</code> fails while any is left.</p>
+  export draws none unless asked — <code>lysc svg --todo</code> (and <code>png</code>,
+  <code>pdf</code>) draws them as the preview does. <code>lysc check --todo-as-error</code>
+  fails while any is left.</p>
   <!--EXAMPLE:annotations-->
   <!--EXAMPLE:spanners-->
 </section>
@@ -558,16 +562,31 @@ part v1 { clef treble instrument "1st Violin" } // label only — no preset beha
   <h3 id="drums">Drums</h3>
   <p><code>clef percussion</code> makes a drum part: it writes drum names where a part writes
   pitches, draws no key signature, and plays on the General MIDI drum channel. A kit is
-  usually two voices, hands up and feet down:</p>
-<pre>part kit { clef percussion }
+  written as patterns — each a one-bar <code>phrase</code> — that <code>drums { }</code> plays
+  together and draws as drummers read: the hands on stems up, the feet (<code>bd</code>,
+  <code>hhp</code>) on stems down.</p>
+<pre>phrase hats   { hh8 8 8 8 8 8 8 8 | }
+phrase back   { r4 sn r sn | }
+phrase kick   { bd4 r8 bd bd4 r | }
+phrase groove { drums { hats back kick } }
+
+part kit { clef percussion }
 section Groove {
-  kit {
-    voice { hh8 hh hh hh hh hh hho hhc | }
-          { bd4 r8 bd sn4 bd | }
-  }
+  kit { groove groove groove drums { { hh8 hh hh hh hh hh hho hhc | } back kick } }
 }
 form { ~Groove }
 score { staff kit }</pre>
+  <p>Each line of a chart is a phrase name or <code>{ … }</code>, led by <code>up</code> or
+  <code>down</code> to choose its side; a line holds drum notes, drum chords, rests,
+  <code>tuplet</code> and <code>repeat</code>. A note written straight in the chart is an error
+  (LYS0040); three hands, three feet, or the hi-hat open and closed at once warns (LYS4030).
+  In the editor, <kbd>Ctrl+Space</kbd> in a drum part offers your phrases first, then fourteen
+  stock one-bar patterns — <code>hats8 hats16 hats4 hatsOpen shuffle back halfTime ghost flam
+  fourFloor kick8 kickSync fillToms fillTriplet</code> — whose <code>phrase</code> declaration
+  it writes into the file, then the drum names. Hovering a phrase's name shows its beat as a
+  grid, one row per drum. A ghost note is <code>sn16@parenthesize</code>, a flam
+  <code>acciaccatura { sn16 } sn4</code>. Two voices, <code>voice { hh8 … } { bd4 … }</code>,
+  still write a kit too.</p>
   <p>The names are LilyPond's: <code>bd</code> bass drum, <code>sn</code> snare,
   <code>ss</code> side stick, <code>hh</code> hi-hat (<code>hho</code> open and
   <code>hhc</code> closed draw their ○ and + by themselves, <code>hhp</code> the pedal),
@@ -848,10 +867,10 @@ score { staff melody  lyrics words }</pre>
   <h2>Forms — the playing order</h2>
   <p>A <code>form</code> lists sections in the order they are played and printed. This is
   where repeats live, because a repeat is a change to the order.</p>
-<pre>form { Intro Main Main "Main (reprise)" Coda }
-form { |: Body [1. ~First] :| [2. ~Second] }
-form { |: A :|*3 }
-form practice { Verse }        // a second form = a second output</pre>
+<pre>form { Intro Main Main "Main (reprise)" Coda }   // three ways to write a form —
+form { |: Body [1. ~First] :| [2. ~Second] }     // a file has ONE unnamed form
+form { |: A :|*3 }                               // (a second is LYS1016)
+form practice { Verse }        // a named form: a score plays it with `form practice`</pre>
   <table class="g">
     <tr><th>Written</th><th>Means</th></tr>
     <tr><td><code>|: … :|</code></td><td>repeat; without endings the body plays twice</td></tr>
@@ -899,7 +918,8 @@ form practice { Verse }        // a second form = a second output</pre>
 <section id="scores">
   <p class="eyebrow">17</p>
   <h2>Scores</h2>
-  <p>A <code>score</code> binds a form to a set of rows. <b>It is a vertical stack of
+  <p>A <code>score</code> is one printout: it plays the file's unnamed form — or the one its
+  <code>form NAME</code> item names — on a set of rows. <b>It is a vertical stack of
   bands</b>: what a row means comes from where it sits.</p>
 <pre>score {
   chords prog                     // a chord row above ...
@@ -910,6 +930,7 @@ form practice { Verse }        // a second form = a second output</pre>
     <tr><th>Item</th><th>Row it draws</th></tr>
     <tr><td><code>staff NAME</code></td><td>a notation staff for that part</td></tr>
     <tr><td><code>staff NAME "Label"</code></td><td>…with a printed name</td></tr>
+    <tr><td><code>staff CLEF NAME</code></td><td>…on another clef: <code>staff bass melody</code> prints the melody in the bass clef. A clef word that is also a part's name reads as the part (LYS1046 says how to write either)</td></tr>
     <tr><td><code>staff NAME as lines N</code></td><td>…with N staff lines (1–5). <code>as lines 1</code> is a rhythm staff</td></tr>
     <tr><td><code>staff NAME as removeEmpty true</code></td><td>…hidden in systems where it only rests (<code>all</code>: in the first system too)</td></tr>
     <tr><td><code>staff NAME as pitch transposed</code></td><td>…a transposing part in its player's key (<code>concert</code>: as it sounds), whatever the score's <code>pitch</code> — see <a href="#transposing">Transposing instruments</a></td></tr>
@@ -918,6 +939,9 @@ form practice { Verse }        // a second form = a second output</pre>
     <tr><td><code>lyrics NAME</code></td><td>a lyric row</td></tr>
     <tr><td><code>ossia NAME</code></td><td>a small alternative staff</td></tr>
     <tr><td><code>NAME</code> (bare)</td><td>played to MIDI only, never engraved — a click track, a cue part</td></tr>
+    <tr><td><code>staff</code> <code>chords</code> <code>lyrics</code> (no name)</td><td>the file's unnamed <code>part { }</code>, <code>chords { }</code> or <code>lyrics { }</code></td></tr>
+    <tr><td><code>form NAME</code></td><td>not a row: the form this score plays, instead of the unnamed one (<code>form { … }</code>: a form of its own)</td></tr>
+    <tr><td><code>title "…"</code>, <code>fonts { … }</code>, <code>layout NAME</code></td><td>not rows: this score's own header, faces and display switches, over the file's</td></tr>
     <tr><td><code>title</code> / <code>composer</code></td><td>restate the file's metadata for this score alone</td></tr>
     <tr><td><code>paper NAME</code> / <code>fonts NAME</code> / <code>layout NAME</code></td><td>use a named block for this score</td></tr>
   </table>
@@ -1174,7 +1198,7 @@ ppp pp p mp mf ff fff</pre>
     <tr><td><code>c4~ d4</code></td><td>the note after a tie '~' does not repeat the tied pitch; a tie joins two notes of the same pitch - use a slur '( )' to connect different pitches</td></tr>
     <tr><td>a slur crossing a cue edge</td><td>a slur cannot cross a cue boundary…</td></tr>
     <tr><td><code>c4@upbow</code></td><td>Unknown annotation '@upbow' — it is ignored. Names are case-sensitive: write '@upBow'.</td></tr>
-    <tr><td><code>c( ||</code> ending a section, nothing closing it in the next</td><td>a slur '(' is carried from section C into section D, which follows it in form 'main', and is not closed there, so no slur is drawn; close it with ')' in section D…</td></tr>
+    <tr><td><code>c( ||</code> ending a section, nothing closing it in the next</td><td>a slur '(' is carried from section C into section D, which follows it in the form, and is not closed there, so no slur is drawn; close it with ')' in section D…</td></tr>
     <tr><td><code>@chord(C x02210)</code></td><td>'x02210' sounds A C E, which is Am, not C (A is not a tone of C) - write @chord(Am x02210) or another shape.</td></tr>
     <tr><td><code>r1@chord</code></td><td>@chord on a rest has no notes to name a chord from, so nothing is drawn; write the name, e.g. @chord(C).</td></tr>
   </table>

@@ -66,6 +66,12 @@
   instrument that might draw it — <code>F(133211 2010)</code> is the guitar's six strings
   and the ukulele's four. When two tunings have the same count, a tuning word names which
   shape is whose: <code>F(guitar 133211 guitardropd 333211)</code>.</p>
+  <p>A shape that <b>no score of the file can draw</b> warns too (LYS1038): <code>G(xx543)</code> is a
+  five-string shape, and in a file whose scores draw guitar diagrams it would draw nothing, so
+  the warning names the strings the scores draw. The same holds for a shape named for a tuning
+  no score uses.</p>
+  <p>A symbol in a <code>chords</code> row takes an <a href="grammar.html#todo"><code>@todo</code></a>
+  like a note — <code>Am7@todo("or C?")</code> — and the preview rings it.</p>
 </section>
 
 <section id="onnote">

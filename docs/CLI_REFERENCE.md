@@ -209,6 +209,7 @@ reader's training data does exactly that).
 | `raggedRight`, `raggedRight=true`, `raggedRight=false` | a flag on, or off (off undoes the file's) |
 | `Stem.thickness=1.5`, `lineThickness=0.12`, `barNumbers=none` | a layout key and its value, as written in `layout { }` |
 | `LedgerLine.thickness=1.0,0.1` | two numbers, with a comma for the space |
+| `music=Bravura` | the music font, laid over the file's `fonts { music "…" }` (one name) |
 
 A key or value the block would refuse is an error, with the block's message. A setting
 wins over the file — `staffSpace` too, though it is laid under the file's paper so the

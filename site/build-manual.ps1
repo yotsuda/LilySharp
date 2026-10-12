@@ -50,6 +50,7 @@ $extra = @'
   table.g { margin:14px 0 4px; }
   table.g td:first-child, table.g th:first-child { white-space:nowrap; }
   table.g code { white-space:nowrap; }
+  @media (max-width:700px) { table.g code, table.g td:first-child { white-space:normal; } }
   figure.ex { margin:18px 0 22px; }
   figure.ex .paper { padding:12px; }
   figure.ex details { margin-top:10px; }
@@ -258,7 +259,7 @@ function Format-Block($block) {
     foreach ($line in $block.Lines) {
         if ($line -match '^  \S') {
             # A table row under `//` (two or more spaces in): its own line, its spacing kept.
-            $out += "<br><span class=`"k`" style=`"white-space:pre`">$(ConvertTo-LessonHtml $line.TrimEnd())</span>"
+            $out += "<br><span class=`"k`" style=`"white-space:pre-wrap`">$(ConvertTo-LessonHtml $line.TrimEnd())</span>"
             $afterRow = $true
         } else {
             $out += ($afterRow ? '<br>' : ($out ? ' ' : '')) + (ConvertTo-LessonHtml $line.Trim())

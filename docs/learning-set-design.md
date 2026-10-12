@@ -176,6 +176,7 @@ Grammar 抜粋が `octave absolute`・P11・P12・P13・P14＝manual は 1251 �
 **段 1 — 誤りと欠けの修正（構成は変えない）** ＝ §6.5 の A1〜A11・C の実害 2 つ（grid・表）・P12（綴り）。
 `#drums` は書き直し（`drums { }` を先頭・`voice` は「2 声で書きたいとき」として残す）。P8 は例を相対に直す
 （**例の出力が変わる**＝`build-examples` の here-string と期待 SVG を作り直す）。目安 1 便。
+⇒ **2026-10-12 済（ユーザー「進めて」）**: A1〜A11（A11＝GRAMMAR_FOR_LLM の LYS0032 行）・#drums を `drums { }` 先頭に・`@parenthesize`・C の grid（`minmax(min(…,100%),1fr)`）と表（700px 以下は表の中で横スクロール）＝375px で全頁はみ出し 0（CDP の端末エミュレーションで測定）・P12（harmonize）・P8＝例 17 本と index の抜粋を相対に（`lysc octave --relative`、変換前後の SVG が data-pos 以外一致）。`octaves` の例は絶対の説明なので残した。CLI_REFERENCE に `--set music=`。
 
 **段 2 — 入口（Get started）**: index の Install を 5 段に（入れる → `first.lys` を作るか New Score → Ctrl+K を離して
 V（またはアイコン）→ `lesson` と打って Ctrl+Space → ▶）＋スクリーンショット 1 枚。index の最初のリンクを

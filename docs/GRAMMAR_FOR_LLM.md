@@ -679,8 +679,8 @@ score { staff melody  lyrics words }
 
 A `chords NAME { … }` part's symbols align above a staff by timing when its row
 stands directly above that staff in the score (`chords prog` then `staff melody`)
-- and the SAME `prog` can also be a lead-sheet row, written once. (The nameless
-`chords { }` auto-attach form was removed - LYS0032: name it and place it.) An independent `chords NAME { … }` and/or `lyrics NAME { … }` part, placed in a
+- and the SAME `prog` can also be a lead-sheet row, written once. A nameless `chords { … }`
+is the file's one chord track, named bare in the score (`chords`). An independent `chords NAME { … }` and/or `lyrics NAME { … }` part, placed in a
 `score` with `chords NAME` / `lyrics NAME` (instead of `staff NAME`), renders WITHOUT
 a staff: just a grid of measure barlines, the chord symbols between them and the
 lyrics below. A chord entry is the SYMBOL as it prints — `C`, `Am`, `G7`, `F#m`,

@@ -3,12 +3,11 @@
 // at the head. `chordNames both` prints both: the sounding name, then the pressed one.
 layout { chordDiagrams guitar capo 3 all  chordNames both }
 title "Capo"
-octave absolute
 time 4/4
 key ees major
 part melody { clef treble }
 section A {
-  melody { g'2 ees'2 | aes'2 f'2 | bes'2 d'2 | ees'1 | }
+  melody { g''2 ees2 | aes2 f2 | bes2 d,2 | ees1 | }
   chords prog { Eb | Ab | Bb7 | Eb | }
 }
 form { ~A }

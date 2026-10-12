@@ -62,12 +62,14 @@ $template = @'
   /* auto-fit + minmax reflows on the CONTAINER's width, not the viewport's.
      min-width:0 stops a wide child (a long code line, a big SVG) from forcing
      its track wider than the container — the usual cause of a clipped page. */
-  .cols2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:34px; align-items:center; }
+  .cols2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr)); gap:34px; align-items:center; }
   /* six pillars: 360px min lands them 3 + 3 on a wide screen, 2 + 2 + 2 then 1-up
      as it narrows — every step is a clean divisor of six */
-  .cols4 { display:grid; grid-template-columns:repeat(auto-fit,minmax(360px,1fr)); gap:24px; }
-  .gallery { display:grid; grid-template-columns:repeat(auto-fit,minmax(540px,1fr)); gap:48px; align-items:start; }
+  .cols4 { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(360px,100%),1fr)); gap:24px; }
+  .gallery { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(540px,100%),1fr)); gap:48px; align-items:start; }
   .cols2>*, .cols4>*, .gallery>* { min-width:0; }
+  /* min(…, 100%): on a phone narrower than a track's minimum the track shrinks to the
+     container instead of pushing the page sideways (375 px scrolled before). */
 
   pre { background:var(--code); border:1px solid var(--rule); border-radius:10px;
         padding:20px 22px; margin:0; overflow-x:auto;
@@ -124,6 +126,8 @@ $template = @'
   th,td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--rule); }
   th { font-size:12.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); font-weight:600; }
   td.num { font:14px/1 "SFMono-Regular",Consolas,monospace; white-space:nowrap; }
+  /* A table wider than a phone scrolls inside its own box, never the page. */
+  @media (max-width:700px) { table { display:block; overflow-x:auto; } }
   .note { color:var(--muted); font-size:13px; margin:14px 0 0; }
 
   ul.plain { margin:0; padding-left:1.15em; }
@@ -161,9 +165,10 @@ $template = @'
 
 <section><div class="wrap">
   <p class="eyebrow">Install</p>
-  <h2>Install in two steps</h2>
+  <h2>Install, then open a score</h2>
   <p class="lede">Nothing else to install. Each platform's package brings its own .NET
-  runtime and the Emmentaler and TeX Gyre fonts, so there is no toolchain to assemble.</p>
+  runtime and its fonts — Emmentaler and three SMuFL music fonts, and the TeX Gyre text
+  faces — so there is no toolchain to assemble.</p>
   <ol class="steps">
     <li><b><a href="https://code.visualstudio.com/">Install Visual Studio Code</a></b>
       <span>Version 1.90 or newer.</span></li>
@@ -173,8 +178,10 @@ $template = @'
       from its <a href="https://marketplace.visualstudio.com/items?itemName=yotsuda.lilysharp">Marketplace
       page</a>.)</span></li>
     <li><b>Open any <code>.lys</code> file</b>
-      <span>The score opens beside the source, with diagnostics and completion as you
-      type. For batch work there is also a <code>lysc</code> command-line build.</span></li>
+      <span>The score opens beside the source by itself, with diagnostics and completion as
+      you type. New to it? Run <i>Lily#: New Score</i>, type <code>lesson</code> and press
+      <code>Ctrl+Space</code> — or <a href="learn.html">read the lessons here</a>. For batch
+      work there is also a <code>lysc</code> command-line build.</span></li>
   </ol>
 </div></section>
 
@@ -329,11 +336,13 @@ $template = @'
     License v3.0 or later</b>. It contains modified code from LilyPond, which is under that
     same licence; the modifications are Lily#'s own and are marked in the files that carry
     them.</p>
-    <p class="note" style="margin:0">The fonts ship with it too. <b>Emmentaler</b>, the music
-    face, comes from LilyPond (GPL-3.0-or-later / SIL OFL dual licensed, redistributed here
-    under the GPL). <b>TeX Gyre Schola</b> and <b>TeX Gyre Heros</b> set every piece of text —
-    and provide the metrics it is spaced by — under the GUST Font Licence (LPPL 1.3c). They
-    are the same faces LilyPond sets text in.</p>
+    <p class="note" style="margin:0">The fonts ship with it too. <b>Emmentaler</b>, the default
+    music face, comes from LilyPond (GPL-3.0-or-later / SIL OFL dual licensed, redistributed here
+    under the GPL). <b>Bravura</b>, <b>Petaluma</b> (with its text face Petaluma Script) and
+    <b>Leland</b>, the music fonts a score can name instead, are under the SIL Open Font
+    License 1.1. <b>TeX Gyre Schola</b> and <b>TeX Gyre Heros</b> set the text by default — and
+    provide the metrics it is spaced by — under the GUST Font Licence (LPPL 1.3c). They are the
+    same faces LilyPond sets text in.</p>
   </div>
 </div></section>
 
@@ -436,12 +445,11 @@ $grammarSnip = Esc @'
 // one canonical form per idea
 time 6/8
 key a minor
-octave absolute            // a bare c is C4 here
 
 part gt { clef treble_8 tuning guitar }
 
 section Verse {
-  gt     { a,8 e a c' a e | }
+  gt     { a8 e' a c a e | }   // each note: the octave nearest the last
   chords prog { Am | }
 }
 

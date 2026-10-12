@@ -197,7 +197,7 @@
         "lilysharp.preview.highlightTodos": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Draw the notes, chords and rests marked `@todo` in red in the preview. Printing (`lysc png` / `pdf` / `svg`) never does. Takes effect immediately in open previews."
+          "markdownDescription": "Draw the notes, chords and rests marked `@todo` in red in the preview. An export draws none unless asked (`lysc svg|png|pdf --todo`). Takes effect immediately in open previews."
         },
         "lilysharp.omr.verifyOnSave": {
           "type": "boolean",

@@ -172,18 +172,25 @@
     <li><b>Source and score are linked both ways.</b> The note under the caret is highlighted
     in the score, and a selection highlights every note in it. Click a note, a tie, a slur, a
     clef or a key signature in the preview to jump to the text that wrote it.</li>
-    <li><b>It plays.</b> Right-click in the preview for <i>Play from Here</i>, <i>Stop
-    Playback</i>, <i>Fit Width</i> and <i>Reset Zoom</i>; playback highlights each note as it
-    sounds, with each part's own General MIDI sound. It plays the score the preview shows —
-    that score's parts, under its form.</li>
+    <li><b>It plays.</b> The <b>▶</b> and <b>⏹</b> buttons at the top play and stop, from the
+    highlighted note if there is one; the picker beside them chooses which <code>score</code>
+    the preview shows. Right-click for <i>Play from Here</i>, <i>Stop Playback</i>, <i>Fit
+    Width</i> and <i>Reset Zoom</i>. Playback highlights each note as it sounds, with each
+    part's own General MIDI sound, and plays the score the preview shows — that score's parts,
+    under its form.</li>
+    <li><b>Its sound</b> is a SoundFont synthesizer: <code>lilysharp.playback.soundFont</code>
+    names an <code>.sf2</code>, <code>.sf3</code> or <code>.dls</code> of your own (<i>Lily#:
+    Choose Sound Font…</i> browses for one); with no font loaded it plays plain tones. A
+    browser lets sound start only once you have clicked or typed in the preview itself — the
+    status bar says so when a note comes first.</li>
     <li><b>It exports.</b> <i>Lily#: Export</i> writes PDF, SVG, PNG, LilyPond
     (<code>.ly</code>), MusicXML, MIDI or a VOCALOID sequence — from the preview (the score it
     shows, under that score's own form), the command palette, or by right-clicking
     <code>.lys</code> files in the Explorer (every score of every selected file, into one
     folder). Every door writes the same file as <code>lysc</code>.</li>
     <li><b>Red rings</b> mark the <a href="grammar.html#todo"><code>@todo</code></a> notes, with
-    their memos beside them; the export draws none. <code>lilysharp.preview.highlightTodos</code>
-    hides them.</li>
+    their memos in the staff's margin; an export draws none (<code>lysc svg --todo</code> does).
+    <code>lilysharp.preview.highlightTodos</code> hides them.</li>
     <li><b>Its colours</b> follow VS Code's theme, or stay light (the printed page) or dark:
     <code>lilysharp.preview.theme</code>.</li>
   </ul>
@@ -251,10 +258,12 @@
   <p class="eyebrow">06</p>
   <h2>Completion, hover, fixes</h2>
   <ul>
-    <li><b>Lessons.</b> In an empty <code>.lys</code> file type <code>lesson</code> and press
-    <kbd>Ctrl+Space</kbd>: eleven lessons, from the first note to drums and a band score. Each is a score
-    whose steps are marked in red in the preview (<a href="grammar.html#todo"><code>@todo</code></a>);
-    picking one replaces the file, after asking.</li>
+    <li><b>Lessons.</b> At the top level of a <code>.lys</code> file <kbd>Ctrl+Space</kbd> offers
+    <code>lesson-01-completion</code>; type <code>lesson</code> for all twelve — from the completion
+    list and the preview to drums, a band and a jazz chart. Each is a score whose steps are
+    marked in red in the preview (<a href="grammar.html#todo"><code>@todo</code></a>); picking one
+    replaces the file, after asking. The same lessons are on the <a href="learn.html">Learn</a>
+    pages.</li>
     <li><b>Completion (<kbd>Ctrl+Space</kbd>) offers what can come next</b> — after <code>lyrics NAME</code> it offers
     <code>sings</code>, then the part names in the file; inside <code>layout { }</code>,
     <code>fonts { }</code> and <code>paper { }</code> the keys and their values. In a section's
@@ -262,7 +271,12 @@
     writes <code>&lt;d f a c&gt;</code>); in a <code>chords</code> row or an
     <code>@chord(…)</code> it offers the key's chord names.</li>
     <li><b>Hover</b> names a chord — symbol, degree and pitches (<code>Dm (IIm)  D4 F4 A4</code>)
-    — and shows a chord's diagram, or how to add one.</li>
+    — and shows a chord's diagram, or how to add one. Over a phrase's name it shows the
+    phrase's length, how often the file plays it and its source; a drum phrase adds its beat as
+    a grid, one row per drum.</li>
+    <li><b>Value words complete too</b>: <code>instrument</code>, <code>clef</code> and
+    <code>key</code> offer their words, and <code>midiInstrument "</code> lists the 128 General
+    MIDI sounds.</li>
     <li><b>Diagnostics</b> as you type, worded to be acted on, and <b>quick fixes</b> where there
     is one obvious repair: a section written at different lengths gets <i>Add bar lines</i>
     (pad the shorter parts) and, when one part has cut it into sections, <i>Split Sections to
@@ -324,6 +338,11 @@
     <tr><td><code>lilysharp.audition.enabled</code></td><td><code>true</code></td><td>sound notes as you edit (<a href="#audition">Audition</a>)</td></tr>
     <tr><td><code>lilysharp.chordShapes.includeStretch</code></td><td><code>false</code></td><td>let chord-shape stepping walk stretch shapes too</td></tr>
     <tr><td><code>lilysharp.preview.openOnOpen</code></td><td><code>true</code></td><td>open the preview beside a <code>.lys</code> file when it is opened (<a href="#preview">The preview</a>)</td></tr>
+    <tr><td><code>lilysharp.preview.highlightTodos</code></td><td><code>true</code></td><td>draw the <code>@todo</code> rings and memos in the preview</td></tr>
+    <tr><td><code>lilysharp.playback.soundFont</code></td><td></td><td>the sound font the preview plays with (<i>Lily#: Choose Sound Font…</i>)</td></tr>
+    <tr><td><code>lilysharp.fontPaths</code></td><td></td><td>more folders to find SMuFL music fonts in, for <code>fonts { music "…" }</code></td></tr>
+    <tr><td><code>lilysharp.typingAids.enabled</code></td><td><code>true</code></td><td>the typing aids above (<a href="#typing">Typing aids</a>)</td></tr>
+    <tr><td><code>lilysharp.omr.verifyOnSave</code></td><td><code>false</code></td><td>on saving a score read from a scan, check it against the scan</td></tr>
     <tr><td><code>lilysharp.preview.theme</code></td><td><code>auto</code></td><td>the preview's colours: follow VS Code, light or dark</td></tr>
     <tr><td><code>lilysharp.preview.autoRefresh</code> · <code>refreshDelay</code></td><td><code>true</code> · 100 ms</td><td>redraw on every change, after this pause</td></tr>
     <tr><td><code>lilysharp.completion.flatSpelling</code></td><td><code>full</code></td><td>how completion spells flats (both spellings compile)</td></tr>
@@ -343,7 +362,7 @@
 
   <h3>Transform Selection with AI — <kbd>Ctrl+I</kbd></h3>
   <p>Select a few bars — in the text, or by clicking and shift-clicking notes in the preview —
-  press <kbd>Ctrl+I</kbd> (<kbd>Cmd+I</kbd>) and ask in words: <i>“harmonise this in
+  press <kbd>Ctrl+I</kbd> (<kbd>Cmd+I</kbd>) and ask in words: <i>“harmonize this in
   thirds”</i>, <i>“transpose up a fourth”</i>, <i>“add a crescendo”</i>.</p>
   <ul>
     <li><b>The model is given what the compiler knows</b>: the Lily# grammar, the file around
@@ -420,6 +439,10 @@ score { staff m }
   <p>The same compiler, for batch work and scripts:</p>
 <pre>lysc check song.lys         // errors and warnings, nothing written
 lysc svg song.lys           // song.svg, plus song-NAME.svg for each named score
+lysc svg --score tab song.lys     // only the score named tab
+lysc svg --todo lesson.lys        // with the @todo rings and memos
+lysc svg --set music=Bravura song.lys   // another music font, over the file's
+lysc check --todo-as-error song.lys     // fail while a @todo is left (--no-todo: say nothing)
 lysc pdf | png | midi | xml | ly | vsqx song.lys
 lysc import score.musicxml  // MusicXML to .lys
 lysc octave --absolute song.lys   // rewrite into absolute (or --relative) octaves

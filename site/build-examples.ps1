@@ -41,13 +41,12 @@ score { staff melody }
 'events' = @'
 // Rests, spacers, a full-measure rest, a pitched rest, chords by letter and by
 // scale degree, and the pitchless slash note.
-octave absolute
 time 4/4
 key c major
 part melody { clef treble }
 section A {
   melody {
-    c4 r4 s4 g4 | R1 | c4 a,4@rest d4 r4 |
+    c4 r4 s4 g'4 | R1 | c,4 a4@rest d4 r4 |
     <c e g>4 <c 3 5>4 <1 3 5>2 | /4 4 8 8 4 |
   }
 }
@@ -58,7 +57,6 @@ score { staff melody }
 'arpeggio' = @'
 // `<< … >>` writes a broken chord out: the members play in sequence and divide the
 // group's total. A bare number inside is a scale degree, never a duration.
-octave absolute
 time 4/4
 key c major
 part melody { clef treble }
@@ -72,7 +70,6 @@ score { staff melody }
 'connectors' = @'
 // A tie joins the SAME pitch, a slur joins different ones, and square brackets
 // beam by hand where the meter's own beaming is not what you want.
-octave absolute
 time 4/4
 part melody { clef treble }
 section A {
@@ -98,14 +95,13 @@ score { staff vn }
 'annotations' = @'
 // Articulations, ornaments and dynamics attach with '@'. A hairpin goes on the
 // note it starts from and runs to the next dynamic. '.up' forces the side.
-octave absolute
 time 4/4
 part melody { clef treble }
 section A {
   melody {
     c4@staccato d4@accent e4@tenuto f4@marcato |
-    g4@trill a4@mordent b4@fermata c'4@staccato.up |
-    c'4@p@cresc b4 a4 g4@f | f4@f@decresc e4 d4 c4@p |
+    g4@trill a4@mordent b4@fermata c4@staccato.up |
+    c4@p@cresc b4 a4 g4@f | f4@f@decresc e4 d4 c4@p |
   }
 }
 form { ~A }
@@ -115,14 +111,13 @@ score { staff melody }
 'spanners' = @'
 // A spanner opens on one note and MUST be closed on another: one that is never
 // closed draws nothing at all and says so.
-octave absolute
 time 4/4
 part rh { clef treble }
 part lh { clef bass octave 3 }
 section A {
   rh {
-    c'4@ottava d' e' f' | g'4 a' b' c''@!ottava |
-    c'4@rit b a g@!rit | c'1 |
+    c'4@ottava d e f | g4 a b c@!ottava |
+    c,4@rit b a g@!rit | c1 |
   }
   lh {
     c4@sustain e g e | c4@sustain e g e |   // a second @sustain while down re-pedals
@@ -136,14 +131,13 @@ score { grandStaff { staff rh  staff lh } }
 'groups' = @'
 // Tuplets nest, grace notes come in three flavours, and `voice { } { }` opens a
 // span of simultaneous voices on ONE staff.
-octave absolute
 time 4/4
 part melody { clef treble }
 section A {
   melody {
-    tuplet 3/2 { c8 d e } tuplet 3/2 { f8 g a } c'2 |
-    grace { d16 e } f4 acciaccatura { a16 } b4 appoggiatura { c'8 } d'4 r4 |
-    voice { g'2 a'2 } { c'2 c'2 } |
+    tuplet 3/2 { c8 d e } tuplet 3/2 { f8 g a } c2 |
+    grace { d,16 e } f4 acciaccatura { a16 } b4 appoggiatura { c8 } d4 r4 |
+    voice { g2 a2 } { c2 c2 } |
   }
 }
 form { ~A }
@@ -153,7 +147,6 @@ score { staff melody }
 'barlines' = @'
 // Every written '|' closes exactly one measure, so a bar with nothing in it is an
 // empty bar. '||' and '|.' decorate the bar behind them; '!' is dashed.
-octave absolute
 time 4/4
 part melody { clef treble }
 section A {
@@ -166,13 +159,12 @@ score { staff melody }
 'repeats' = @'
 // A repeat changes the playing ORDER, so it lives in the form, never in the music.
 // The endings name sections; the bracket and the repeat dots are drawn from this.
-octave absolute
 time 3/4
 key g major
 part melody { clef treble }
-section Body   { melody { d'4 g' fis' | g'2. | } }
-section First  { melody { a'2. | } }
-section Second { melody { g'2.@fermata | } }
+section Body   { melody { d'4 g fis | g2. | } }
+section First  { melody { a''2. | } }
+section Second { melody { g''2.@fermata | } }
 form { |: ~Body [1. ~First] :| [2. ~Second] }
 score { staff melody }
 '@
@@ -180,12 +172,11 @@ score { staff melody }
 'lyrics' = @'
 // A lyric track sings a part. '-' joins syllables of one word, '~' holds the previous
 // syllable over one more note, and '|' mirrors the music's barlines.
-octave absolute
 time 4/4
 key f major
 part melody { clef treble }
 section A {
-  melody { f4 g a bes | c'2 a4 f4 | g4 a bes a | f1 | }
+  melody { f4 g a bes | c2 a4 f4 | g4 a bes a | f1 | }
   lyrics words sings melody {
     Sing- ing all the | day ~ long, |
     ev- ery word a | song |
@@ -199,13 +190,12 @@ score { staff melody  lyrics words }
 // `sings` is a property of the lyric TRACK, and it can be spelled at either site:
 // on the definition, on the score row, or both. Spelling it on the ROW is what lets
 // ONE set of words serve several staves — here the same track is placed twice.
-octave absolute
 time 4/4
 key c major
 part sop { clef treble }
 part alt { clef treble }
 section A {
-  sop { c'4 c' b a | g1 | }
+  sop { c'4 c b a | g1 | }
   alt { e4 e g f | e1 | }
   lyrics verse { Sing- ing a song | now | }
 }
@@ -240,7 +230,6 @@ score {
 'override' = @'
 // The override vocabulary is four properties. `once` applies to the next note only,
 // and `revert` puts the default back.
-octave absolute
 time 4/4
 part melody { clef treble }
 section A {
@@ -249,7 +238,7 @@ section A {
     c4 d e f |
     revert NoteHead.color
     once override Stem.transparent = true
-    g4 a b c' |
+    g4 a b c |
   }
 }
 form { ~A }
@@ -275,11 +264,10 @@ score { chords prog  staff melody }
 // A shape in parentheses after a row's chord draws its diagram under the name. One
 // character per string from the low string: x mutes the string, 0 (or o) leaves it open,
 // a digit is the fret. Frets 10-15 take a '-' on each side: 8xx88-11, xx-10-12-13-11.
-octave absolute
 time 4/4
 part melody { clef treble }
 section A {
-  melody { e'2 c'2 | c'2 b2 | c''2 g'2 | }
+  melody { e'2 c2 | c2 b2 | c'2 g2 | }
   chords prog { C(x32010) Am(x02210) | F(133211) G7(320001) | Cm(8xx88-11) Cm(xx-10-12-13-11) | }
 }
 form { ~A }
@@ -289,11 +277,10 @@ score { chords prog  staff melody }
 'chord-on-note' = @'
 // On a note, the shape follows the name inside @chord( ). A shape with no name names
 // itself from its notes; @diagram draws a diagram with no name at all.
-octave absolute
 time 4/4
 part melody { clef treble }
 section A {
-  melody { e'1@chord(C x32010) | c'1@chord(Am7 x02010) | a'1@chord(x02210) | b'1@diagram(x24442) | }
+  melody { e'1@chord(C x32010) | c1@chord(Am7 x02010) | a'1@chord(x02210) | b1@diagram(x24442) | }
 }
 form { ~A }
 score { staff melody }
@@ -320,11 +307,10 @@ score { staff gt  tab gt }
 // tuning, else its usual shape. The row stands above a ukulele staff, so the diagrams
 // are the ukulele's - no layout word needed for that.
 layout { chordDiagrams all }
-octave absolute
 time 4/4
 part uke { instrument ukulele "Ukulele" }
 section A {
-  uke { g'4 e' c' e' | a'2 c'' | a'4 f' c' f' | g'1 | }
+  uke { g''4 e c e | a2 c | a4 f c f | g1 | }
   chords prog { C | Am | F | G7(0212) | }
 }
 form { ~A }
@@ -335,11 +321,10 @@ score { chords prog  staff uke }
 // A shape table lists the chords that draw, wherever they are named. C draws its usual
 // shape and F the listed xx3211 - except in the Chorus, where F is the barre and G draws too.
 layout { chordDiagrams guitar { C  F xx3211  section Chorus { F 133211  G } } }
-octave absolute
 time 4/4
 part melody { clef treble }
-section Verse  { melody { e'2 c'2 | f'2 d'2 | }  chords prog { C | F G | } }
-section Chorus { melody { e'2 c'2 | f'2 d'2 | }  chords prog { C | F G | } }
+section Verse  { melody { e'2 c2 | f2 d2 | }  chords prog { C | F G | } }
+section Chorus { melody { e'2 c2 | f2 d2 | }  chords prog { C | F G | } }
 form { ~Verse ~Chorus }
 score { chords prog  staff melody }
 '@
@@ -350,12 +335,11 @@ score { chords prog  staff melody }
 // at the head. `chordNames both` prints both: the sounding name, then the pressed one.
 layout { chordDiagrams guitar capo 3 all  chordNames both }
 title "Capo"
-octave absolute
 time 4/4
 key ees major
 part melody { clef treble }
 section A {
-  melody { g'2 ees'2 | aes'2 f'2 | bes'2 d'2 | ees'1 | }
+  melody { g''2 ees2 | aes2 f2 | bes2 d,2 | ees1 | }
   chords prog { Eb | Ab | Bb7 | Eb | }
 }
 form { ~A }
@@ -367,11 +351,10 @@ score { chords prog  staff melody }
 // first appearance, over the diagram it draws there - the songbook's "chords used" row.
 layout { chordDiagrams guitar  chordList true }
 title "Chord list"
-octave absolute
 time 4/4
 part melody { clef treble }
 section A {
-  melody { e'2 c'2 | f'2 d'2 | g'2 b2 | c'1 | }
+  melody { e'2 c2 | f2 d2 | g2 b,2 | c1 | }
   chords prog { C | F(xx3211) | G | C | }
 }
 form { ~A }
