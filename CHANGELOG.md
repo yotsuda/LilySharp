@@ -218,6 +218,9 @@ workflow attaches that section to the GitHub Release verbatim.
   signatures went from 429 to 463 of 491 scores matching.
 - **A part named `r`, `s`, `q` or `R` gets another variable name in the twin** — they are
   note-mode words, and LilyPond refused the file ("unexpected RESTNAME").
+- **A script clears a slash head, and the top line of a two- or four-line staff.** `/4@accent`
+  stood inside the slash (read as a plain head, half its height), and on two or four lines the
+  accent sat on the top line (the staff was read as LilyPond's, not as drawn).
 - **On a two-line staff the repeat dots stand in the space between the lines**, not on them: they
   were found on LilyPond's two lines a space apart and drawn on Lily#'s, two spaces apart.
 - **A slash note carries no ledger line.** On a two-line staff a ledger was drawn through each

@@ -2011,7 +2011,23 @@ internal static class ArticulationEngraver
     }
 
     private static double NoteheadHalfWidth(MusicItem item)
-        => GlyphMetrics.GetNoteheadBBox(ScriptHeadNoteValue(item)).CenterX;
+        => ScriptHeadBox(item).CenterX;
+
+    /// <summary>
+    /// The head a script centres on and clears: its OWN glyph's box, in the style it is drawn —
+    /// LilyPond's support is the head's stencil (note-head.cc), and a slash head is ±1.05 tall
+    /// and 1.72 wide where a plain one is ±0.545 and 1.18. Read as the plain head, an accent on
+    /// a slash stood inside the slash's ink (owner's report 2026-10-12: <c>/4@accent</c>).
+    /// </summary>
+    private static GlyphMetrics.BBox ScriptHeadBox(MusicItem item)
+        => GlyphMetrics.GetNoteheadBBox(GlyphMetrics.StaffHeadFont, ScriptHeadStyle(item), ScriptHeadNoteValue(item));
+
+    private static NoteheadStyle ScriptHeadStyle(MusicItem item) => item switch
+    {
+        NoteItem n => n.Notehead,
+        ChordItem c => c.Notehead,
+        _ => NoteheadStyle.Default,
+    };
 
     /// <summary>
     /// Where a script glyph's ORIGIN stands relative to the point its box is centred on —
@@ -2706,7 +2722,7 @@ internal static class ArticulationEngraver
     /// <see cref="NoteheadHalfWidth"/>).</summary>
     private static (double From, double To) HeadRangeAboutScript(MusicItem item)
     {
-        var box = GlyphMetrics.GetNoteheadBBox(ScriptHeadNoteValue(item));
+        var box = ScriptHeadBox(item);
         return (box.Left - box.CenterX, box.Right - box.CenterX);
     }
 
@@ -2972,7 +2988,7 @@ internal static class ArticulationEngraver
         int dir = isAbove ? 1 : -1;
         double supportReach = dir * noteUp + SupportReach(articulation, isAbove, stemUp, item, column, fonts);
         return AlignedSideUp(articulation, isAbove, supportReach, staffSpace: 1.0, staffLines,
-            onNoteHead: item is NoteItem or ChordItem, fonts);
+            onNoteHead: item is NoteItem or ChordItem, fonts, drawnLines: true);
     }
 
     /// <summary>
@@ -3041,7 +3057,9 @@ internal static class ArticulationEngraver
     /// </para>
     /// </remarks>
     private static double HeadSupportExtent(NoteColumnLayout? column)
-        => column is { } c ? GlyphMetrics.GetNoteheadBBox(c.NoteValue).Top : NoteheadHalfHeight;
+        => column is { } c
+            ? GlyphMetrics.GetNoteheadBBox(GlyphMetrics.StaffHeadFont, c.Notehead, c.NoteValue).Top   // the head's own style (ScriptHeadBox)
+            : NoteheadHalfHeight;
 
     /// <summary>
     /// aligned_side from the supports' reach on, on the staff the script sits on: the staff as a
@@ -3076,11 +3094,23 @@ internal static class ArticulationEngraver
     /// </remarks>
     private static double AlignedSideUp(ArticulationItem articulation, bool isAbove,
         double supportReach, double staffSpace, int staffLines, bool onNoteHead,
-        ScoreTextMetrics? fonts)
+        ScoreTextMetrics? fonts, bool drawnLines = false)
     {
         int dir = isAbove ? 1 : -1;
         bool quantize = ShouldQuantize(articulation.Type);
-        double staffExtent = (staffLines - 1) * staffSpace / 2
+        // The outer lines, in line positions (half spaces). A notation staff's are the lines it
+        // DRAWS (drawnLines: EngravingDefaults.StaffLinePositions, the five-line frame — a
+        // two-line staff at ±2, a four-line one at −2…4); a tab's strings are symmetric. Read as
+        // LilyPond's ±(N−1), an accent on a two- or four-line staff stood on the top line
+        // (owner's report 2026-10-12).
+        double low = -(staffLines - 1), high = staffLines - 1;
+        if (drawnLines)
+        {
+            var drawn = EngravingDefaults.StaffLinePositions(staffLines);
+            low = drawn[0];
+            high = drawn[^1];
+        }
+        double staffExtent = (isAbove ? high : -low) * staffSpace / 2
                              + EngravingDefaults.StaffLineThickness / 2;
         double reach = supportReach;
         if (!quantize)
@@ -3091,11 +3121,16 @@ internal static class ArticulationEngraver
             double position = 2 * up / staffSpace;
             double rounded = isAbove ? Math.Ceiling(position) : Math.Floor(position);
             int outerLine = staffLines - 1;
-            if ((position >= -outerLine - 1 && position <= outerLine + 1)
+            if ((position >= low - 1 && position <= high + 1)
                 || (onNoteHead && dir * position < 0))
             {
                 up += (rounded - position) * 0.5 * staffSpace;
-                if (((int)rounded - outerLine) % 2 == 0)
+                // On a line (or a ledger's place): on the drawn frame its lines and ledgers,
+                // else every position of the outer line's parity.
+                bool onLine = drawnLines
+                    ? EngravingDefaults.OnLineOrLedger((int)rounded, staffLines)
+                    : ((int)rounded - outerLine) % 2 == 0;
+                if (onLine)
                     up += dir * 0.5 * staffSpace;
             }
         }

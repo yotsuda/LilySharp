@@ -119,6 +119,40 @@ public class ArticulationPlacementTests
         return lineYs[2];
     }
 
+    /// <summary>
+    /// An accent over a slash on a few-line staff (owner's report 2026-10-12): it clears the
+    /// SLASH's ink — the support is the head's own glyph, ±1.05 tall where a plain head is
+    /// ±0.545 — and the staff's TOP DRAWN line: a two-line staff's at +1, a four-line one's at
+    /// +2 (the five-line frame), not LilyPond's +0.5 and +1.5 the search used to assume.
+    /// </summary>
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(5)]
+    public void AnAccentOverASlash_ClearsTheSlashAndTheTopLine(int lines)
+    {
+        string svg = LilySharp.Core.Svg.SvgGenerator.Generate(
+            SyntaxTree.Parse($"part m {{ }}\nsection A {{ m {{ /4@accent / / / | }} }}\nform {{ A }}\nscore {{ staff m as lines {lines} }}\n"),
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+        var lineYs = System.Text.RegularExpressions.Regex.Matches(svg,
+                "<line x1=\"([-\\d.]+)\" y1=\"([-\\d.]+)\" x2=\"([-\\d.]+)\" y2=\"([-\\d.]+)\"")
+            .Where(m => m.Groups[2].Value == m.Groups[4].Value
+                && double.Parse(m.Groups[3].Value) - double.Parse(m.Groups[1].Value) > 5)
+            .Select(m => double.Parse(m.Groups[2].Value)).Distinct().OrderBy(v => v).ToList();
+        Assert.Equal(lines, lineYs.Count);
+        var font = LilySharp.Core.Svg.Layout.MusicFont.Current.FullSize;
+        var glyphs = MusicGlyphs(svg);
+        var accent = Assert.Single(glyphs.Where(g => g.Glyph == LilySharp.Core.Svg.Layout.MusicFont.Current.Codepoint(MusicGlyph.ArticAccentAbove)));
+        var slash = glyphs.Where(g => g.Glyph == LilySharp.Core.Svg.Layout.MusicFont.Current.Codepoint(MusicGlyph.NoteheadSlashHorizontalEnds)).OrderBy(g => g.X).First();
+        // Device Y-down: the accent's ink bottom is its origin minus its box's bottom.
+        double accentBottom = accent.Y - font.Box(MusicGlyph.ArticAccentAbove).Bottom;
+        double slashTop = slash.Y - font.Box(MusicGlyph.NoteheadSlashHorizontalEnds).Top;
+        Assert.True(accentBottom < slashTop, $"accent bottom {accentBottom} reaches the slash top {slashTop}");
+        Assert.True(accentBottom < lineYs[0], $"accent bottom {accentBottom} reaches the top line {lineYs[0]}");
+    }
+
     [Fact]
     public void ForcedUpMarcato_QuantizesIntoTheStaff()
     {
