@@ -2,7 +2,7 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
-## Unreleased
+## 0.12.0
 
 ### Lessons
 
@@ -17,6 +17,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Language
 
+- **Drum charts: `drums { hats  back  kick }`.** A kit part written as the patterns a drummer
+  thinks in, each line a phrase or a block, all played together; the preview draws the hands'
+  hits stems up and the feet's stems down. In a drum part, Ctrl+Space also offers fourteen
+  stock one-bar patterns (hi-hats, a ride shuffle, backbeat, half time, ghost notes, a flam,
+  four on the floor, fills…), each showing its drum grid; picking one writes its phrase.
+- **A head in parentheses: `@parenthesize`** — a drummer's ghost note, or any note — offered by
+  the `@` completion; on a chord one pair encloses it, on a member that head alone.
+- **One staff can print in its player's key**: `staff tp as pitch transposed` (or `concert`).
 - **A chord symbol takes `@todo`.** In a `chords` row the mark is glued after the symbol (and
   after its shape group): `Am7@todo("Am7 or C?")`, `F(133211)@todo(o12 "barre?")`, and `r@todo`
   on a no-chord slot. A chord chart has no notes, so a doubt about a chord had nowhere to go.
@@ -26,6 +34,12 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Breaking changes
 
+- **A score without `pitch` prints the parts as they are written**, and a page says
+  `pitch transposed` where it said `written` (`written` stays where notes are typed). The
+  product changelog has the details.
+- **An `instrument` preset prints a real name ("Alto Saxophone"), and only beside another
+  instrument**: a one-staff score loses the preset's word as its label. Write `part X "Name"` to
+  keep one.
 - **A block's name is optional, and a score has one name, a bare word.** `form { … }` is the
   file's default form, `score { … }` its default score (the picker shows it as `(Default)` and
   draws it first), `part { … }` its one part, `chords { … }` and `lyrics { … }` its unnamed
@@ -79,6 +93,15 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Editor
 
+- **The preview opens by itself and follows the file in front.** Opening a `.lys` (or New
+  Score) opens the preview beside it (`lilysharp.preview.openOnOpen`); switching to another
+  `.lys` turns the same preview to it, each keeping its zoom and scroll. The lock in the
+  preview's title bar keeps it on one file.
+- **A phrase says what it holds**: hovering its name shows its length, how often the file
+  plays it and its source — a drum phrase as a grid, a row per drum.
+- **A tied note sounds as its part plays it**: landing on or stepping the second note of a tie
+  struck the default piano at the written pitch; it now takes the part's instrument and
+  transposition.
 - **Guess Section Key…** (editor context menu and the command palette). It reads the notes of
   the section at the caret — or of every section a selection touches, or the one a `form`
   reference names — across all its parts, and lists the likely keys best first, only those scoring within 0.3 of the best and at most five (duration-weighted
@@ -150,8 +173,21 @@ All notable changes to the Lily# VS Code extension are documented here.
   the note's other side where that is clear and climbing past a chord symbol, a dynamic, a
   ledgered note or an earlier memo otherwise, and a system's memos are arranged together so
   that no leader runs through another memo's words where any arrangement avoids it.
-  `lilysharp.preview.highlightTodos` off hides them, and no export lays out or draws them —
-  an export is the page the book would have without its memos.
+  `lilysharp.preview.highlightTodos` off hides them, and an export draws none unless asked
+  (`lysc svg|png|pdf --todo`) — without them it is the page the book would have without its
+  memos.
+- **`@todo` in the preview, fixed where it was wrong**: a memo stands in its own staff's margin
+  (and in the gap between two staves when it is wider than a bar), not over the whole system; a
+  tab note's ring goes round its fret number; a `@todo` in a `drums { }` line or on a slash
+  note is drawn; the underline sits alike under Latin and Japanese words.
+- **Regroup keeps the comments** it used to drop.
+- **Drums in the preview**: a drum chord draws once, a drum in a chord takes its own marks, a
+  flam is drawn and played, a drum note's own script and drum notes inside `tuplet { }` are
+  drawn, and a bare duration repeating a drum keeps its mark.
+- **A fallback music font's glyphs show** (Leland's slash heads were missing), and so do a
+  grace's or a cue's design of the music font.
+- **Two new warnings**: a chord shape no score can draw (LYS1038), and a tie on the last note
+  of a `repeat percent` body (LYS4007).
 - **`todo` completes into its quotes**: `todo("")` with the caret between the quotes, like
   `text` and `mark`; it used to write the bare word.
 - **`.down` completes after a memo**: after `@todo("…")`, `@text("…")` or `@diagram(…)`, a `.`

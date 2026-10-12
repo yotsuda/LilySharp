@@ -4,7 +4,7 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
-## Unreleased
+## 0.12.0
 
 ### Lessons
 
@@ -52,6 +52,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Breaking changes
 
+- **A lone staff no longer prints its `instrument` preset's word.** A one-staff score whose part
+  names a preset used to print the word ("cello"); it now prints no label, and a score of two or
+  more instruments prints the preset's real name ("Alto Saxophone", "Clarinet in A") — see
+  Engraving. Write `part X "Name"` (or `staff X "Name"`) to keep a label. No diagnostic.
 - **A score without `pitch` prints the parts as they are written.** `pitch` now means the same
   thing at every level — which pitch the notes are in, what sounds (`concert`) or what a
   transposing instrument's player reads (`written`) — and a score that writes none inherits it.
@@ -124,8 +128,8 @@ workflow attaches that section to the GitHub Release verbatim.
   the multi-measure rest's count placed by its ink, "To ⊕" centred by the sign's box, "Ped."
   with one period, a ledger line stopping short of the accidental's own box, a down flag's stem
   lengthened so the longer SMuFL flag keeps LilyPond's clearance from the head, and the
-  dynamics (`p m f r s z n`) as the font's own glyphs. An Emmentaler page is byte-identical
-  before and after all of this (every svg of the 998-book corpus).
+  dynamics (`p m f r s z n`) as the font's own glyphs. This SMuFL work moves no Emmentaler page
+  (every svg of the 998-book corpus compared).
 - **Under Petaluma, the text is Petaluma Script.** Petaluma is a handwritten jazz font, and its
   companion face (bundled, OFL) now sets the title, subtitle, composer and poet, chord symbols,
   rehearsal marks and section labels, tempo and navigation words, `@text` and the text
@@ -138,6 +142,15 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **Quarter-tone accidentals are LilyPond's glyphs, and take their room.** The three-quarter
+  sharp was drawn as a makam sharp and the quarter-tone flats as slashed flats; LilyPond draws
+  `sharp.slashslash.stemstemstem` and the mirrored flats, and so does Lily# now. All four signs
+  also had no box, so the accidental column reserved nothing and the sign was drawn over its
+  note head (in a chord, over its neighbour's); they now stagger in a chord as LilyPond 2.26's do.
+- **A line-start label clears the clef the staff actually draws.** Over a percussion, soprano,
+  mezzo-soprano or `bass_8` staff, a rehearsal or section label at the start of a line stacked
+  over an imagined treble clef and stood well over a space too high (2.21 over a percussion
+  staff where LilyPond puts it 0.85). It now reads the drawn clef, as LilyPond does.
 - **An `instrument` preset prints a real name, and only beside another instrument.** The label
   used to be the preset word itself — "alto-sax", "piano-right", a lower-case "cello" — on
   every staff, a score of one staff included. A preset now prints its name ("Alto Saxophone",
@@ -337,6 +350,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **A tied note sounds as its part plays it.** Landing on, or stepping, the second note of a tie
+  (`a~ | a`) struck the default piano at the written pitch — an octave high on a guitar, a step
+  off on a clarinet. It now takes the part's instrument and the same transposition as the part's
+  struck notes.
+- **The preview checks the offsets of a page it updated in place.** The caret or a selection
+  could light the wrong note until the preview was reopened (a stale source offset in the page).
+  A page whose offsets disagree with what the server sent is now replaced whole, and the output
+  channel says `STALE OFFSETS on page N`.
 - **Guess Section Key…** (editor context menu and the command palette). It reads the notes of
   the section at the caret — or of every section a selection touches, or the one a `form`
   reference names — across all its parts, and lists the likely keys best first, only those scoring within 0.3 of the best and at most five (duration-weighted
@@ -408,8 +429,9 @@ workflow attaches that section to the GitHub Release verbatim.
   the note's other side where that is clear and climbing past a chord symbol, a dynamic, a
   ledgered note or an earlier memo otherwise, and a system's memos are arranged together so
   that no leader runs through another memo's words where any arrangement avoids it.
-  `lilysharp.preview.highlightTodos` off hides them, and no export lays out or draws them —
-  an export is the page the book would have without its memos.
+  `lilysharp.preview.highlightTodos` off hides them, and an export draws none unless asked
+  (`lysc svg|png|pdf --todo`, under Command line) — without them it is the page the book would
+  have without its memos.
 - **`todo` completes into its quotes.** Picking `todo` from the `@` completion writes
   `todo("")` with the caret between the quotes, as `text`, `mark` and `textSpan` do; it used to
   write the bare word and leave the parens and quotes to type. An empty memo compiles.
