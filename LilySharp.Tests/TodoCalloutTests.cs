@@ -85,6 +85,20 @@ public class TodoCalloutTests
         Assert.Equal(("o1", null, false), (items[3].TodoKey, items[3].TodoMemo, items[3].TodoBelow));
     }
 
+    // A slash note took no mark: `lysc check` counted `/4@todo` while the page dropped it
+    // (found writing the slash-chart lesson, 2026-10-12). Now it is ringed like a note.
+    [Fact]
+    public void ASlashNote_CarriesItsMark_AndThePreviewRingsIt()
+    {
+        var tree = SyntaxTree.Parse(Book("/4 /@todo(\"push\") / /@todo(k2).down |"));
+        var items = new MeasureCollector().Collect(tree, "m").Voice.Measures[0].Items;
+        Assert.Equal(("", "push", false), (items[1].TodoKey, items[1].TodoMemo, items[1].TodoBelow));
+        Assert.Equal(("k2", null, true), (items[3].TodoKey, items[3].TodoMemo, items[3].TodoBelow));
+        string preview = SvgGenerator.Generate(tree, SvgRenderOptions.Preview());
+        Assert.Equal(2, RingHeights(preview).Count);
+        Assert.Contains(">push<", preview);
+    }
+
     [Fact]
     public void ThePreviewDrawsTheRingsAndTheCallouts_AndTheExportNeither()
     {

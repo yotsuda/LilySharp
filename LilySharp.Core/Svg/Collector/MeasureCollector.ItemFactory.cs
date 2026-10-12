@@ -1007,6 +1007,9 @@ public sealed partial class MeasureCollector
             // this pair (slash head, Midi 0) and does not warn about it.
             Midi = 0,
             ForcedStemUp = GetStemDirectionOverride(slash),
+            // `/4@todo("…")` is ringed like a note — `lysc check` counted it while the page
+            // dropped it in silence (found writing the slash-chart lesson, 2026-10-12).
+            TodoKey = TodoKeyOf(slash), TodoMemo = TodoMemoOf(slash), TodoBelow = TodoBelowOf(slash),
         };
     }
 
