@@ -139,6 +139,18 @@ export function hiddenTodoKeys(todos: readonly Pick<ScanTodo, 'key' | 'confidenc
     return [...new Set(todos.filter(t => !shownAt(t, threshold)).map(t => t.key))];
 }
 
+/** The printed bars the preview frames (B4): those holding a mark the slider shows — a mark
+ *  whose key is hidden frames nothing, one the side file does not know (written by hand) is
+ *  always shown. Each bar once, in the order met (owner's report 2026-10-12: the frames
+ *  stayed when the slider hid their marks). */
+export function flaggedBars(todos: readonly ServerTodo[], hiddenKeys: readonly string[]): number[] {
+    const hidden = new Set(hiddenKeys);
+    return [...new Set(todos
+        .filter(t => !(t.Key && hidden.has(t.Key)))
+        .map(t => t.Measure)
+        .filter((m): m is number => m !== null && m !== undefined))];
+}
+
 /** The side file of a .lys: `x.lys` → `x.omr.json`. */
 export function sideFileOf(lysPath: string): string {
     return lysPath.replace(/\.lys$/i, '') + '.omr.json';

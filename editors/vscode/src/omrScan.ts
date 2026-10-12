@@ -27,7 +27,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import {
-    BarAnchor, PrintedBar, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, hiddenTodoKeys, parseSideFile,
+    BarAnchor, PrintedBar, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, flaggedBars, hiddenTodoKeys, parseSideFile,
     SCAN_DEFAULT_THRESHOLD, pageLabel, scanBarForPrinted, scanTitle, shiftAnchors, shownImage, sideFileOf, todoStroke,
     todoTarget,
 } from './omrScanCore';
@@ -141,6 +141,7 @@ export async function showScan(
             panel.title = scanTitle(next.pages, lys.fsPath);
             render(view);
             hidePreviewTodos(view, deps);
+            void markPreview(view, deps);
         }
     };
     watcher.onDidChange(reload);
@@ -162,6 +163,7 @@ export async function showScan(
             } else if (m.type === 'threshold' && typeof m.value === 'number') {
                 view.threshold = m.value;
                 hidePreviewTodos(view, deps);
+                void markPreview(view, deps);   // the frames follow the marks they hold
             }
         } catch (err) {
             deps.output.appendLine(`Scan: ${err}`);
@@ -237,8 +239,8 @@ async function printedOf(view: ScanView, deps: OmrScanDeps): Promise<PrintedBar[
 async function markPreview(view: ScanView, deps: OmrScanDeps): Promise<void> {
     try {
         const doc = await vscode.workspace.openTextDocument(view.lys);
-        const bars = [...new Set((await todosOf(view, doc, deps))
-            .map(t => t.Measure).filter((m): m is number => m !== null && m !== undefined))];
+        const bars = flaggedBars(await todosOf(view, doc, deps),
+            view.threshold === undefined ? [] : hiddenTodoKeys(view.side.todos, view.threshold));
         deps.postToPreview(view.lys, { type: 'markBars', bars });
     } catch (err) {
         deps.output.appendLine(`Scan: ${err}`);

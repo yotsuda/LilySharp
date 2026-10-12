@@ -24,7 +24,7 @@ import * as path from 'node:path';
 import * as vm from 'node:vm';
 import {
     SCAN_DEFAULT_THRESHOLD, anchorsOf, barOnLine, markFactsOf, pageLabel, parseSideFile, scanBarForPrinted, scanTitle,
-    hiddenTodoKeys, shiftAnchors, shownAt, shownImage, sideFileOf, todoStroke, todoTarget,
+    flaggedBars, hiddenTodoKeys, shiftAnchors, shownAt, shownImage, sideFileOf, todoStroke, todoTarget,
 } from '../src/omrScanCore';
 
 // Absolute on whichever OS runs the tests.
@@ -164,6 +164,19 @@ describe('how sure the reader is (LilySharp-Omr reply 2026-10-12: a confidence o
         assert.deepEqual(hiddenTodoKeys(side.todos, 0.1), ['b3', 'b4']);
         assert.deepEqual(hiddenTodoKeys([...side.todos, { key: 'sure', confidence: 1 }], 1), []);
         assert.deepEqual(hiddenTodoKeys([{ key: 'b2', confidence: 0.5 }, { key: 'b2', confidence: 0.7 }], 0.3), ['b2']);
+    });
+
+    it('frames on the preview only the bars whose marks the slider shows', () => {
+        const server = [
+            { Key: 'b3', HostStart: 0, HostEnd: 1, Measure: 2 },
+            { Key: 'b4', HostStart: 2, HostEnd: 3, Measure: 3 },
+            { Key: 'b4', HostStart: 4, HostEnd: 5, Measure: 4 },
+            { Key: null, HostStart: 6, HostEnd: 7, Measure: 3 },     // written by hand
+            { Key: 'o9', HostStart: 8, HostEnd: 9, Measure: null },  // no score plays it
+        ];
+        assert.deepEqual(flaggedBars(server, []), [2, 3, 4]);
+        assert.deepEqual(flaggedBars(server, hiddenTodoKeys(side.todos, SCAN_DEFAULT_THRESHOLD)), [2, 3]);
+        assert.deepEqual(flaggedBars(server, ['b3', 'b4']), [3]);
     });
 });
 
