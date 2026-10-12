@@ -89,6 +89,7 @@
 #### 2.3.1 SoundFont の音源（第901・`docs/playback-design.md`）
 
 - [ ] プレビューを開くと出力チャネル「Lily# Extension」に `Preview synth loading: …` の行が段階ごとに出る（processor を足す→synth を作る→音源を fetch）。すぐに `Preview synth ready: 約 3 MB in … ms: …gm.dls` が出る（音源は同梱しない＝既定は OS の General MIDI バンク・2026-10-12 オーナー決定。開発機で `media/soundfont/` に音源を置いているとそちらが先に鳴るので、確かめるときは一時的に退ける）（AudioContext は最初のクリックまで suspended だが、worklet は suspended でも答える＝第901 実機 2 回目で確認。出なければプレビューを 1 回クリック）。`failed` なら理由がその行にある。読み込み中に ▶ を押すと「Loading the sound font…」と出て、間に合えば音源で、8 秒で来なければ従来の音で鳴る。
+- [ ] **Choose Sound Font… の履歴**（2026-10-12）: Browse で 2 つの音源を順に選ぶ → もう一度開くと `Default` の下に 2 つ（新しい順・使用中に `(current)`）。片方のファイルを別の場所へ移してから開くと、その 1 つだけ出ない（戻すとまた出る）。🗑 を押すとその行が消え、ファイルは残る。`Default` を選ぶと既定の音に戻る。
 - [ ] ▶ で楽器の音（ピアノ・ギター等）が鳴る。`part vn { midiInstrument "violin" }` と `part kit { clef percussion }` の本で、vn はバイオリン・kit はドラムの音。
 - [ ] 密な本（和音の多いピアノ譜・4 part 以上）で、途切れ・歪みが無い。⏹ を押すと直ちに止まり、後から音が漏れない。▶ を押し直す（seek）と頭から正しく鳴る。
 - [ ] プレビューのタブを隠して（別のタブを前に出して）も再生が続く。

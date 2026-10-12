@@ -39,6 +39,7 @@ import { markdownItExtensionApi } from './markdownFence';
 import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, SourceTab } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 import { SplitSectionsChoice, modalText, splitChoiceItems } from './splitSectionsCore';
+import { cleanHistory, forgetFont, recordFont, samePath, shownFonts } from './soundFontHistoryCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -611,6 +612,9 @@ export function activate(context: vscode.ExtensionContext) {
                 }
             }
             if (e.affectsConfiguration('lilysharp.playback.soundFont')) {
+                // Remembered for Choose Sound Font…'s list — set through it or by hand.
+                void rememberSoundFont(context,
+                    vscode.workspace.getConfiguration('lilysharp').get<string>('playback.soundFont', '').trim());
                 // The new font's folder has to be a resource root before the page can
                 // fetch it; the options can be reset on a live webview.
                 for (const panel of previewPanels.values()) {
@@ -639,7 +643,7 @@ export function activate(context: vscode.ExtensionContext) {
         // UI gives a string no browse button, so its description links here (owner's
         // request 2026-10-11). The choice is written to the user settings; the open
         // previews pick it up through onDidChangeConfiguration.
-        vscode.commands.registerCommand('lilysharp.chooseSoundFont', () => chooseSoundFont()),
+        vscode.commands.registerCommand('lilysharp.chooseSoundFont', () => chooseSoundFont(context)),
         vscode.commands.registerCommand('lilysharp.openPreview', () => {
             outputChannel.appendLine('openPreview command triggered');
             openPreview(context, vscode.ViewColumn.Active);
@@ -2631,30 +2635,65 @@ function osSoundFonts(): { label: string; path: string }[] {
     return candidates.filter(c => fs.existsSync(c.path));
 }
 
+/** Where the sound fonts used before are kept: this computer's, so globalState rather than the
+ *  settings (a path must not travel with Settings Sync). soundFontHistoryCore.ts says why. */
+const SOUND_FONT_HISTORY_KEY = 'lilysharp.soundFontHistory';
+/** Windows' and (by default) macOS's file names ignore case. */
+const PATHS_IGNORE_CASE = process.platform === 'win32' || process.platform === 'darwin';
+
+function soundFontHistory(context: vscode.ExtensionContext): string[] {
+    return cleanHistory(context.globalState.get(SOUND_FONT_HISTORY_KEY), PATHS_IGNORE_CASE);
+}
+
+/** Remembers a font that is there now as the one used last (the setting written by the
+ *  picker or by hand, through onDidChangeConfiguration). */
+async function rememberSoundFont(context: vscode.ExtensionContext, file: string): Promise<void> {
+    if (!file || !fs.existsSync(file)) { return; }
+    await context.globalState.update(SOUND_FONT_HISTORY_KEY, recordFont(soundFontHistory(context), file, PATHS_IGNORE_CASE));
+}
+
 /** The picker behind `Lily#: Choose Sound Font…` and the setting's link: the default (the
- *  OS's General MIDI bank where there is one), the current file, or a file of the user's (a
- *  dialog filtered to .sf2 / .sf3 / .dls), written to the user settings as
- *  `lilysharp.playback.soundFont`. */
-async function chooseSoundFont(): Promise<void> {
+ *  OS's General MIDI bank where there is one), the fonts used before whose files are there now
+ *  (each with a button that takes it off the list), or a file of the user's (a dialog filtered
+ *  to .sf2 / .sf3 / .dls), written to the user settings as `lilysharp.playback.soundFont`.
+ *  The files are looked for when the picker opens, not at start-up: only the picker needs the
+ *  answer, and a drive plugged in since then counts (owner's request 2026-10-12). */
+async function chooseSoundFont(context: vscode.ExtensionContext): Promise<void> {
     const config = vscode.workspace.getConfiguration('lilysharp');
     const current = config.get<string>('playback.soundFont', '').trim();
+    await rememberSoundFont(context, current);   // a font set before the list existed
     type Pick = vscode.QuickPickItem & { action: 'default' | 'browse' | 'path'; path?: string };
     const os = osSoundFonts()[0];
-    const items: Pick[] = [
-        { label: os ? `Default — ${os.label}` : 'Default — simple tones', description: current ? '' : '(current)',
+    const playsDefault = !current || !fs.existsSync(current) || (!!os && samePath(current, os.path, PATHS_IGNORE_CASE));
+    const forget: vscode.QuickInputButton = {
+        iconPath: new vscode.ThemeIcon('trash'), tooltip: 'Remove from this list (the file stays where it is)' };
+    const build = (): Pick[] => [
+        { label: os ? `Default — ${os.label}` : 'Default — simple tones', description: playsDefault ? '(current)' : '',
           detail: os ? 'The General MIDI bank this computer already has (empties the setting)'
                      : 'This system has no General MIDI bank of its own: browse for a sound font for real instruments',
           action: 'default' },
+        ...shownFonts(soundFontHistory(context), f => fs.existsSync(f), PATHS_IGNORE_CASE, os ? [os.path] : [])
+            .map<Pick>(f => ({
+                label: path.basename(f), description: !playsDefault && samePath(f, current, PATHS_IGNORE_CASE) ? '(current)' : '',
+                detail: f, action: 'path', path: f, buttons: [forget] })),
         { label: 'Browse for a file…', detail: 'An .sf2, .sf3 or .dls file on this machine — see "Sound fonts" on the Lily# site for three free ones', action: 'browse' },
     ];
-    if (current && !items.some(i => i.path === current)) {
-        items.splice(1, 0, { label: path.basename(current), description: '(current)', detail: current,
-                             action: 'path', path: current });
-    }
-    const picked = await vscode.window.showQuickPick(items, {
-        title: 'Lily#: the sound font the preview plays with',
-        placeHolder: 'Each part plays the General MIDI instrument its midiInstrument or preset names',
+    const qp = vscode.window.createQuickPick<Pick>();
+    qp.title = 'Lily#: the sound font the preview plays with';
+    qp.placeholder = 'Each part plays the General MIDI instrument its midiInstrument or preset names';
+    qp.items = build();
+    const picked = await new Promise<Pick | undefined>(resolve => {
+        qp.onDidAccept(() => { resolve(qp.selectedItems[0]); qp.hide(); });
+        qp.onDidHide(() => resolve(undefined));
+        qp.onDidTriggerItemButton(async e => {
+            if (!e.item.path) { return; }
+            await context.globalState.update(SOUND_FONT_HISTORY_KEY,
+                forgetFont(soundFontHistory(context), e.item.path, PATHS_IGNORE_CASE));
+            qp.items = build();
+        });
+        qp.show();
     });
+    qp.dispose();
     if (!picked) { return; }
     let value: string | undefined;
     if (picked.action === 'default') {

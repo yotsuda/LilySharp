@@ -328,7 +328,8 @@ workflow attaches that section to the GitHub Release verbatim.
   part's instrument too. By default it plays the OS's own General MIDI bank (Windows'
   `gm.dls`, macOS's DLS bank; no font is bundled — the oscillator tones where there is none);
   `lilysharp.playback.soundFont` names a font of your own, and **Lily#: Choose Sound Font…**
-  (linked from the setting) picks the default or a file through a dialog. The site's editor
+  (linked from the setting) picks the default or a file through a dialog, and lists the last
+  five fonts used for a pick (one whose file is missing is left out; 🗑 removes one). The site's editor
   page names three free General MIDI fonts and how to set one up.
 - **A dense score no longer breaks up**: events go to the synth a quarter of a second ahead of
   the clock instead of every note's oscillator being built up front, the output is limited,

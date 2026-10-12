@@ -66,7 +66,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   none (Linux), the oscillator tones play. `lilysharp.playback.soundFont` names an `.sf2`,
   `.sf3` or `.dls` of your own for fuller instruments; it takes effect in open previews.
   **Lily#: Choose Sound Font…** (also a link in the setting's description) picks the default
-  or a file of yours through a file dialog. The site's editor page names three free General
+  or a file of yours through a file dialog, and remembers the last five fonts used, listed for
+  a pick (a font whose file is not there now is left out; 🗑 takes one off the list). The
+  list is kept on this computer, not in the settings. The site's editor page names three free General
   MIDI fonts (MuseScore_General, FluidR3Mono_GM, GeneralUser GS) and how to set one up.
 - **A dense score no longer breaks up.** The old player built every note's oscillator the
   moment Play was pressed and summed the voices with no ceiling, so four voices already
