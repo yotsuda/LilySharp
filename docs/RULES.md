@@ -35,6 +35,7 @@
 | **不変条件** | **テスト**（`SpacingInvariantTests` 等） | 両 spring 系の一致 |
 | **未移植・近似・無観測の総数** | `docs/APPROXIMATIONS.md`（**自動生成**・元はコード内コメント・**生成器は `LilySharp.Tests/ApproximationInventoryTests.cs`**＝古くなると赤くなる） | 「LP は pointwise・こちらはスカラー」 |
 | **現在地・次の一手・開いている作業** | `docs/HANDOFF.md` §1–§3（**このファイルではない**。§1.0 が「次の一手」の唯一の一覧） | |
+| **学習セット（レッスン）と Pages の現在地・残り** | `docs/HANDOFF-LEARNING.md`（§1.0 の 1 行がここを指す。設計と台帳は `docs/learning-set-design.md`） | 段 2 の入口・レッスンの訳 |
 | **過去のセッション記録** | `docs/HANDOFF-ARCHIVE.md`（§8） | 閉じた欠陥をどう測ったか |
 | **ユーザーの好み・作業規律** | 公開してよいものは **この RULES §5**。Claude の道具の使い方・機械や社内環境に固有のもの・ユーザーの個人的な作業上の好みは **private repo `LilySharp-Lab` の `notes/CLAUDE-OPERATIONS.md`** | 「done は push 済みで」 |
 

@@ -85,9 +85,10 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／配布の L2〜L6・L9 は OMR の最初の発行と合わせて、L8・L10・L11 はその後（`lilysharp-omr-distribution-2026-10-05.md`）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- **学習セット＝第902 で 10 本入れた**（`docs/learning-set-design.md`）。残り: ⑴ **ユーザーの実機確認**（New Score → `lesson` → lesson-01〜10）→ 手直し／⑵ **gh Pages の再構成＝§7 の案のユーザー判断待ち**（過不足の台帳 §6 の P1〜P15 を閉じながら・learn 頁はレッスンと 1 対 1・文章は短く）／⑶ 日本語訳（`Lessons/ja/`・§4 の手順・英語版が固まってから）。
+- **学習セットと Pages＝`docs/HANDOFF-LEARNING.md`**（レッスン 12 本・Pages 段 1／3 済＝現在地・ユーザー判断待ち・段 2／4 と残りはそこ）。
 - **プレビューの音源＝第901 で SoundFont シンセ（spessasynth_lib）に替えた**（`docs/playback-design.md`）。残り: ⑴ **音源の同梱はユーザー決定**（MuseScore_General 39.9 MB／FluidR3Mono 14.5 MB・VSIX 同梱か初回 DL か＝design §4）→ 決まったら `media/soundfont/` の sf3 を commit ／⑵ **次段 B＝LSP サーバーから MIDI 出力ポート**（loopMIDI／IAC → DAW＝VST ホスト・design §6・2〜3 便）／⑶ `lysc wav`（MeltySynth・同じ音源）は B の後。**ユーザーの実機確認待ち**（`MANUAL-CHECKS.md` §2.3.1）。
-- **`@todo` の memo の置き場＝第899〜900 で「段組みが memo の置き場を予約（必要なときだけ段が下がる）＋並びの探索」まで閉じた**（規則は `docs/todo-memo-design.md`・残りは同 §4＝順番の探索・長い memo の切り詰め・`lysc png --todo`）。**ユーザーの実機確認待ち**（Reload Window 後・`Untitled-2.lys`＝余白が増えない・`sessions/p896/probe/one.lys`＝段が下がって 6 本が収まる）
+- **`@todo` の memo の置き場＝第899〜900 で「段組みが memo の置き場を予約（必要なときだけ段が下がる）＋並びの探索」まで閉じた**（規則は `docs/todo-memo-design.md`・残りは同 §4＝順番の探索・長い memo の切り詰め。`lysc svg|png|pdf --todo`＝`0668a9705` で済）。**下の声部の memo を自動で下に置くかはユーザー判断**（第902 で質問・未回答）。**ユーザーの実機確認待ち**（Reload Window 後・`Untitled-2.lys`＝余白が増えない・`sessions/p896/probe/one.lys`＝段が下がって 6 本が収まる）
+- **線数の少ない譜表の点検＝Lily# は 2・4 線を五線の枠で描く（2 線 ±2・4 線 −2…4）のに、LP の対称な線（±1・±1／±3）を前提にした計算が残っていた**。第902 で 3 件直した（反復記号のドットとスラッシュの加線＝89d0e7c99・アクセント＝84baa2fab）。残りの候補: SharedRenderer.Prefix.cs:589 の staffY - (staffLines - 1)・EngravingDefaults.OnStaffLine(int,int) の呼び手・quantize する記号／強弱／休符の記号（s lines 1..5 の 5 段を lysc png --scale 3 --crop で描いて見る）。
 - ⚠️ **VS Code の手動確認が未**＝**手順と期待は `editors/vscode/MANUAL-CHECKS.md`（第888 起票・§1〜§5 の 60 項目＝ステップ・入力補助・Split Sections・SHOTLIST の 9 本・0.11.0 と Unreleased の拡張側・R13 ⒝・OMR B1〜B6）**。⚠️ 「Ctrl+Alt+↑↓」は Lily# の割り当てではない（Ctrl+Shift+↑↓ の 1 組だけ＝起票が古かった）。⚠️ ユーザーの拡張のフォルダ名は yotsuda.lilysharp-0.7.0 のままだが、**中身（`server`＋`out\extension.js`）は 2026-10-10 17:42 に組み直されて入っている**（第884 が時刻で確認・18:05 の `89168e9c1` だけ未収録）＝SMuFL と `(Default)` は今の拡張で見られる
 - **v0.11.0 は出した（第854・`docs/RELEASING.md` §8）**。残り: Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663・**Honesty L13 `bes, aes, | fis, f, |` の 2 小節＝音価 `2` が落ちている・LYS2001＝第881**）／**push はユーザー**／**CHANGELOG の 0.11.0 以降は両 changelog の `## Unreleased` に書いた（第887）**＝release 時に見出しを版番号へ替え、その後の commit を足す（`RELEASING.md` §3 に書いた）
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
@@ -156,7 +157,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **ユーザー「todo の赤丸を出すオプションを lysc に」**＝`0668a9705`（`--todo`＝svg/png/pdf・`EditorMarks`＋`TodoBands`・サイトのレッスンの絵も）。途中で**スラッシュの `@todo` が描かれない**不具合＝`217597a58`。**「Petaluma の一線譜リードシートのレッスン」**＝`3191eb6b2`（lesson-12-chart・全レッスン of 12）。
 - **Pages 段 1＝ユーザー「進めて」**＝`8e716785f`（A1〜A11・#drums・grid/表＝375px ではみ出し 0・P8＝例 17 本を相対に・P12）。残り: 段 2（入口・上部ナビ）・段 4（Reference 分割・About）・判断②上部ナビ。
 - **ユーザー報告「Leland だと / の notehead が出ない」**＝`2fd110561`: 代替フォントの字の face を属性で書いていて `.music` の CSS に負けていた→style に。別サイズも style に＝`6f1c144a5`。二線譜のドット（実際の線 ±2 で探す）とスラッシュの加線（`HeadTakesLedgers`）＝`89d0e7c99`。 アクセントがスラッシュ／2・4 線の上端の線に重なる＝`84baa2fab`（符頭は字の箱で・譜表の端は描く線で）。
-判定: **ユーザーの実機確認待ち**（New Score → `lesson` → lesson-01 から 10 まで）。次の一手は ⑴ レッスンの手直し（実機の感想）→ ⑵ Pages の再構成（`learning-set-design.md` §7 の案をユーザーが選ぶ）→ ⑶ 日本語訳。(a) どれもこの便の文脈（レッスンと監査）の上に立つ／(b) 1 便＝軽い／(c) 既定は続ける ⇒ **この会話で続ける**。
+判定: レッスンと Pages の残りは **`docs/HANDOFF-LEARNING.md`**、それ以外は §1.0（音源の同梱・線数の少ない譜表の点検・下の声部の memo）。⇒ **次のセッションで続ける**。
 
 ## 以下は第901セッションの経緯
 
