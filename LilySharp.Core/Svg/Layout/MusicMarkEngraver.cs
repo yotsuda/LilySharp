@@ -568,7 +568,11 @@ internal static class MusicMarkEngraver
         // Each (system, staff)'s INSIDE-staff profile (LayoutEngine's staffProfile — the room's
         // skyline, scripts included), Y-up about the staff's reference point: a below-staff
         // text drops until it clears the bottom staff's ink. Null keeps the fixed depth.
-        Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffInkOf = null)
+        Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffInkOf = null,
+        // The dynamics as the below-staff stacker placed them: a below-staff text clears the
+        // bottom staff's dynamics under it too (they are outside-staff grobs of lower
+        // priority, so LilyPond has placed them before the jump text reaches that staff).
+        ImmutableArray<DynamicLayout> belowDynamics = default)
     {
         // Does THIS mark carry a frame? Only a SECTION label loses one, and only under
         // `plain`: a `@mark` rehearsal box is a different spelling with its own meaning,
@@ -750,12 +754,34 @@ internal static class MusicMarkEngraver
                 foreach (var st in g.Staves)
                     if (!st.IsHidden && (bottomStaff == null || st.Height - st.Y > bottomStaff.Height - bottomStaff.Y))
                         bottomStaff = st;
-            if (bottomStaff == null || staffInkOf(sysIdx, bottomStaff.StaffIndex) is not { } profile)
+            if (bottomStaff == null)
                 return null;
-            double low = profile.Down.MaxHeightInRange(range.X0, range.X1);
-            if (double.IsInfinity(low))
+            double systemUp = double.PositiveInfinity;
+            if (staffInkOf(sysIdx, bottomStaff.StaffIndex) is { } profile)
+            {
+                double low = profile.Down.MaxHeightInRange(range.X0, range.X1);
+                if (!double.IsInfinity(low))
+                    systemUp = low + bottomStaff.Y - (bottomStaff.RefpointBelowTop ?? 2.0);
+            }
+            // The staff's dynamics under the text — owner's report 2026-10-12, the trumpet part
+            // of b-bigband.lys: its D.S. al Coda printed over an `ff`. A dynamic's box is its
+            // label's ink about its baseline (LayoutEngine.PagingSkylines' dynamics arm), YUp
+            // about its staff's middle.
+            if (!belowDynamics.IsDefaultOrEmpty)
+                foreach (var d in belowDynamics)
+                {
+                    if (!measureToSystemIdx.TryGetValue(d.MeasureIndex, out int ds) || ds != sysIdx
+                        || LayoutUtilities.ResolveScoreGrobStaff(systems[sysIdx], d.StaffIndex) != bottomStaff.StaffIndex)
+                        continue;
+                    double halfW = DynamicEngraver.LabelHalfWidth(fonts, d.Text, d.IsExpressiveText);
+                    if (d.X + halfW < range.X0 || d.X - halfW > range.X1)
+                        continue;
+                    var (_, descent) = DynamicEngraver.InkOf(fonts, d.Text, d.IsExpressiveText);
+                    systemUp = Math.Min(systemUp,
+                        bottomStaff.Y + d.YUp - EngravingDefaults.StaffMiddle - descent);
+                }
+            if (double.IsInfinity(systemUp))
                 return null;
-            double systemUp = low + bottomStaff.Y - (bottomStaff.RefpointBelowTop ?? 2.0);
             return 2.0 + systemUp - AnchorStaffUp(mark.MeasureIndex);
         }
 

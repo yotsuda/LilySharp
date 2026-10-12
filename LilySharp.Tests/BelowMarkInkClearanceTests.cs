@@ -61,4 +61,29 @@ public class BelowMarkInkClearanceTests
         double gap = D(ds.Groups[1].Value) - D(accent.Groups[1].Value);
         Assert.True(gap > 2.2, $"D.S. baseline only {gap:F2} under the accent");
     }
+
+    /// <summary>…and the staff's dynamics under it: the trumpet part of b-bigband.lys printed its
+    /// D.S. al Coda over an <c>ff</c> (owner's report 2026-10-12, GRAMMAR-FEEDBACK C). A dynamic is
+    /// an outside-staff grob placed before the jump text, so the text stacks under it.</summary>
+    [Fact]
+    public void AJumpText_ClearsADynamicUnderTheStaff()
+    {
+        const string book = """
+            octave absolute
+            part m { clef treble }
+            section A { m { c''4 d'' e'' f'' | } }
+            section B { m { e''4 d'' c'' g'4@ff | } }
+            section C { m { g'1 | } }
+            form { segno A to coda B ds al coda coda C }
+            score { staff m }
+            """;
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(book), SvgRenderOptions.Preview());
+        var ds = Regex.Match(svg, @"<text x=""-?[\d.]+"" y=""(-?[\d.]+)""[^>]*>D\.S\. al Coda<");
+        var ff = Regex.Match(svg, @"<text x=""-?[\d.]+"" y=""(-?[\d.]+)""[^>]*>ff<");
+        Assert.True(ds.Success && ff.Success, "the D.S. or the ff is missing from the SVG");
+        // Baseline to baseline: the words' capitals (~1.5) and the padding (0.46) over the ff's
+        // shallow descent. The fixed depth stood 0.96 under it, through the letters.
+        double gap = D(ds.Groups[1].Value) - D(ff.Groups[1].Value);
+        Assert.True(gap > 2.2, $"D.S. baseline only {gap:F2} under the ff's");
+    }
 }

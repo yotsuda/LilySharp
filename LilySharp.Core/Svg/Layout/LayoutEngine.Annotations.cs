@@ -1233,7 +1233,8 @@ internal sealed partial class LayoutEngine
             prebuiltMeasureToSystem: measureToSystem,
             gridBarlineRowIndex: ctx.GridBarlineRowIndex,
             staffLinesOf: staffLinesOf,
-            staffInkOf: staffProfile);
+            staffInkOf: staffProfile,
+            belowDynamics: stackedDynamics);
         var customTextLayouts = CustomTextEngraver.Calculate(customTexts, ml);
         // A leading \partial pickup is bar 0: shift displayed numbers down by one
         // so the first FULL measure is numbered 1, not 2.

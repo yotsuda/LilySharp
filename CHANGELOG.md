@@ -9,7 +9,7 @@ workflow attaches that section to the GitHub Release verbatim.
 ### D.S. / D.C. / Fine clear the notes under the staff
 
 - **A jump instruction under the staff ("D.S. al Coda", "D.C.", "Fine") now drops below the bottom
-  staff's own ink** — a low note, its ledger lines, an accent under it — keeping LilyPond's
+  staff's own ink** — a low note, its ledger lines, an accent under it, a dynamic — keeping LilyPond's
   outside-staff padding, where it used to hang at one fixed depth and could print through them.
 ### Reopening the scan
 
