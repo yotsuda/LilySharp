@@ -16,7 +16,7 @@
   `lesson`／`learn` に向かう語なら**全部**、それ以外の語なら出さない。client は語の 1 文字目で 1 回だけ訊き、
   その後は手元で絞るので、`l` で 11 本が来て `ly`（lyrics）・`la`（layout）で自然に消える。
 - **本文はファイル**: `LilySharp.Lsp/Lessons/<言語>/lesson-NN-slug.lys` を EmbeddedResource（csproj の
-  `Lessons\**\*.lys`）。順序はファイル名。1 行目 `// Lesson N of 11 — Title` が item の detail になる。
+  `Lessons\**\*.lys`）。順序はファイル名。1 行目 `// Lesson N of 12 — Title` が item の detail になる。
 - **言語**: LSP `initialize` の `locale`（VS Code は表示言語を送る）→ `LessonsFor(locale)`＝英語の全セットを土台に、
   `pt-br` → `pt` の順で訳を探し、**訳の無いレッスンは英語のまま出す**（欠けて見えない）。
   **ラベル（slug）は全言語で同じ英語**＝レッスンの身元で、本文の「NEXT: `lesson-02-notes`」もこれで引く。
@@ -39,6 +39,7 @@
 | 9 | `lesson-09-piano` | 大譜表・`octave 3`・`phrase`・（TRY で和音・3 連符・2 声） | Minuet in G（両手・左手は簡略） |
 | 10 | `lesson-10-drums` | **ドラム**（2026-10-11 ユーザー決定「作って。前に入れて」）: `drums { }` の行＝phrase・手は上／足は下・ホバーでビートの格子・**STEP 1 = bar 4 の `kick` の後で Ctrl+Space → 定番パターン `fillTriplet`**（宣言が上に自動で入る）・**STEP 2 = `groove` の `back` を `ghost` に**（括弧付きのゴーストノート）・TRY で `hho`・フラム | Back Beat（オリジナル） |
 | 11 | `lesson-11-band` | **移調楽器**（`pitch concert`＋`instrument trumpet`＝書く文字は実音・全体の楽譜は実音、`score trumpet pitch transposed` が奏者の調＝ニ長調。鳴る音はハ長調のまま。2026-10-11 ユーザー決定＝score は `pitch` を受け継ぐ）・`tab`/`tuning bass`・`clef percussion` とドラム・score を 3 つ（`midiInstrument` は TRY の補完だけ） | Saturday（オリジナル） |
+| 12 | `lesson-12-chart` | **ジャズのリズム譜**（2026-10-12 ユーザー要望「music フォントに Petaluma を指定した一線譜のリードシート」）: `/` のスラッシュ・`staff comp as lines 1`・`chords` 行・`fonts { music "Petaluma" }`・**STEP 1 = 最後の `C7` を `Gm7 C7` に**・**STEP 2 = 赤丸のスラッシュに `@` → `accent`**・TRY で Bravura/Leland・五線に戻す | Late Train Blues（オリジナル・F のブルース） |
 
 曲は**音を確実に書けるもの**に絞った（初案の Oh! Susanna・Scarborough Fair・Brahms・Clementine・Saints は、
 旋律や歌詞の割り付けを確かめられないので差し替えた）。Lesson 4 と 9 は同じ曲＝「4 で書いた曲に 9 で左手を足す」。

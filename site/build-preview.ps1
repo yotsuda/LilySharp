@@ -150,7 +150,7 @@ $template = @'
   <h1 class="brand">Lily#</h1>
   <p class="tagline">Publication-quality sheet music from plain text — engraved by a
   LilyPond port, edited in an IDE that keeps up with your keystrokes.
-  <a href="learn.html">Learn it in eleven short lessons &rarr;</a> ·
+  <a href="learn.html">Learn it lesson by lesson &rarr;</a> ·
   <a href="grammar.html">Read the language manual &rarr;</a> ·
   <a href="chords.html">Chords and chord diagrams</a> ·
   <a href="editor.html">The editor and AI</a></p>

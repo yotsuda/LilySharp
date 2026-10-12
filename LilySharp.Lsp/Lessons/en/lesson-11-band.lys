@@ -1,4 +1,4 @@
-// Lesson 11 of 11 — A band
+// Lesson 11 of 12 — A band
 // Preview: Ctrl+K V
 //
 // More parts, same section. `tab` prints a part as tablature, `clef percussion`
@@ -54,4 +54,4 @@ score bassist {                  // just the bass part
 // TRY: pick `trumpet` or `bassist` at the top of the preview · in a part,
 // Ctrl+Space after `midiInstrument "` lists the 128 sounds · hover `hats` to see its beat.
 //
-// That is the whole tour. Keep Ctrl+Space close: it knows the rest.
+// NEXT — type `lesson` on a new line and pick `lesson-12-chart`.

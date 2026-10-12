@@ -50,10 +50,10 @@ public class LessonTests
         LilySharpLanguageServer.LessonsByLanguage[language].Single(l => l.Label == label);
 
     [Fact]
-    public void TheEnglishSet_IsElevenLessons_NumberedInOrder()
+    public void TheEnglishSet_IsTwelveLessons_NumberedInOrder()
     {
         var lessons = LilySharpLanguageServer.Lessons;
-        Assert.Equal(11, lessons.Count);
+        Assert.Equal(12, lessons.Count);
         for (int i = 0; i < lessons.Count; i++)
         {
             Assert.StartsWith($"lesson-{i + 1:D2}-", lessons[i].Label);
@@ -378,7 +378,7 @@ public class LessonTests
     public void Lesson10_ItsStepsPickAFillAndAGhostFromTheList_AndTheResultIsAClean4BarGroove()
     {
         string text = LilySharpLanguageServer.Lessons[9].Text;
-        Assert.StartsWith("// Lesson 10 of 11 — Drums", text);
+        Assert.StartsWith("// Lesson 10 of 12 — Drums", text);
 
         // STEP 1: in bar 4, after the kick line's `}` and a space, the patterns lead the list.
         const string bar4 = "drums { { bd4@todo(\"STEP 1: add a fill\") r8 bd bd4 r | }";
@@ -410,6 +410,41 @@ public class LessonTests
         Assert.Equal(4, score.TupletBrackets.Length);        // the fill, a bracket a beat
         Assert.Equal(3, kit.Voices[0].Measures.SelectMany(m => m.Items).OfType<LilySharp.Core.Svg.Model.NoteItem>()
             .Count(n => n.Parenthesized));                   // a ghost in each groove bar
+    }
+
+    [Fact]
+    public void Lesson12_ItsStepsGiveTheLastBarTwoChords_AndTheRingedSlashAnAccent()
+    {
+        // Owner's request 2026-10-12: a lead sheet on a one-line staff, in Petaluma.
+        string text = LilySharpLanguageServer.Lessons[11].Text;
+        Assert.StartsWith("// Lesson 12 of 12 — A jazz chart", text);
+
+        // STEP 1: the ringed C7 becomes Gm7 C7 — two chords in the bar.
+        const string ringedChord = "C7@todo(\"STEP 1\") |";
+        Assert.Contains(ringedChord, text);
+        text = text.Replace(ringedChord, "Gm7 C7@todo(\"STEP 1\") |");
+
+        // STEP 2: `@` right after the ringed slash offers `accent`.
+        const string ringedSlash = "/ / /@todo(\"STEP 2\")";
+        int at = text.IndexOf(ringedSlash, System.StringComparison.Ordinal) + "/ / /".Length;
+        Assert.True(at > "/ / /".Length, "the ringed slash moved");
+        text = text.Insert(at, "@");
+        var accent = CompletionAt(text, at + 1).Single(i => i.Label == "accent");
+        text = text.Insert(at + 1, accent.InsertText ?? accent.Label!);
+        Assert.Contains("/ / /@accent@todo(\"STEP 2\")", text);
+
+        text = System.Text.RegularExpressions.Regex.Replace(text, "@todo(\\(\"[^\"]*\"\\))?", "");
+        var tree = SyntaxTree.Parse(text);
+        Assert.Empty(tree.Diagnostics.Concat(SemanticValidation.Run(tree))
+            .Where(d => d.Severity is LilySharp.Core.Syntax.DiagnosticSeverity.Error or LilySharp.Core.Syntax.DiagnosticSeverity.Warning));
+        var score = SvgGenerator.CollectScore(tree,
+            LilySharp.Core.Svg.Collector.RenderSpecParser.Choose(LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree), null));
+        var comp = score.EnumerateStaves().Select(s => s.Staff).Single(s => s.Voices.SelectMany(v => v.Measures).SelectMany(m => m.Items)
+            .OfType<LilySharp.Core.Svg.Model.NoteItem>().Any(n => n.Notehead == LilySharp.Core.Svg.Model.NoteheadStyle.Slash));
+        Assert.Equal(1, LilySharp.Core.Svg.Layout.MultiStaffLayouter.LinePositionsOf(comp).Length);   // the slashes' staff: one line
+        Assert.Equal(13, score.ChordNames.Length);                                          // 12 bars, one of them two chords
+        Assert.Single(score.Articulations);                                                 // the accent
+        Assert.Contains("Petaluma", SvgGenerator.GenerateAll(tree).Single().Svg);
     }
 
     private static string Lesson1 => LilySharpLanguageServer.Lessons[0].Text;

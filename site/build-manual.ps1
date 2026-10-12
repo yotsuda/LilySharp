@@ -171,6 +171,9 @@ foreach ($page in $pages) {
 $lessonDir = Join-Path $here '../LilySharp.Lsp/Lessons/en'
 $lessons = @(Get-ChildItem $lessonDir -Filter 'lesson-*.lys' | Sort-Object Name)
 if ($lessons.Count -eq 0) { throw "No lessons found in $lessonDir" }
+# The count in words, from the lessons found — a lesson added leaves no stale "eleven" behind.
+$countWord = @('zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen','twenty')[[Math]::Min($lessons.Count, 20)]
+$countWordTitle = $countWord.Substring(0, 1).ToUpperInvariant() + $countWord.Substring(1)
 
 # Where the manual says more, per lesson: page#section. The link text is the section's own
 # heading, read from its body file, so a renamed or removed section fails the build here.
@@ -186,6 +189,7 @@ $moreOf = @{
     'lesson-09-piano'      = 'grammar.html#parts', 'grammar.html#phrases', 'grammar.html#groups'
     'lesson-10-drums'      = 'grammar.html#drums', 'grammar.html#phrases'
     'lesson-11-band'       = 'grammar.html#transposing', 'grammar.html#tab', 'grammar.html#scores'
+    'lesson-12-chart'      = 'grammar.html#events', 'grammar.html#scores', 'grammar.html#paper', 'grammar.html#chordrows'
 }
 $headings = @{}
 foreach ($page in $pages) {
@@ -323,7 +327,7 @@ $(($closing | ForEach-Object { "<p>$(Format-Block $_)</p>" }) -join "`n")
 "@
     Write-Page "$label.html" 'learn.html' "Lily# — Lesson ${num}: $title" `
         "Lily# lesson ${num} of ${of}: $title — a short score that teaches one step, opened in VS Code with one word." `
-        'Learn — eleven short lessons, in the editor' $body `
+        "Learn — $countWord short lessons, in the editor" $body `
         'The lesson file is the authority: this page is drawn from it, and the editor offers the same file.'
     # The list's one line: the intro's first sentence ("Then: " is lesson 1's link to its STEP 0).
     $first = $intro.Count ? ((Format-Block $intro[0]) -replace '^Then: ', '' -replace '<br>.*$', '' -replace '(?<=[.!?])\s.*$', '') : ''
@@ -333,7 +337,7 @@ $(($closing | ForEach-Object { "<p>$(Format-Block $_)</p>" }) -join "`n")
 $learnBody = @"
 <article class="lesson">
 <p class="eyebrow">Learn</p>
-<h1>Eleven short lessons</h1>
+<h1>$countWordTitle short lessons</h1>
 <p>Each lesson is a complete, playable score that teaches one step. They live in the editor:
 in VS Code, open an empty <code>.lys</code> file, type <code>lesson</code> and press
 <kbd>Ctrl+Space</kbd> — the list shows all $($lessons.Count), and picking one puts it in the
@@ -346,7 +350,7 @@ $($learnItems -join "`n")
 </ol>
 </article>
 "@
-Write-Page 'learn.html' 'learn.html' 'Lily# — learn in eleven lessons' `
-    'Learn Lily#, the plain-text music notation language, in eleven short lessons that open in VS Code.' `
-    'Learn — eleven short lessons, in the editor' $learnBody `
+Write-Page 'learn.html' 'learn.html' "Lily# — learn in $countWord lessons" `
+    "Learn Lily#, the plain-text music notation language, in $countWord short lessons that open in VS Code." `
+    "Learn — $countWord short lessons, in the editor" $learnBody `
     'The lesson files are the authority: these pages are drawn from them, and the editor offers the same files.'
