@@ -3506,7 +3506,9 @@ internal sealed class SkylineBuilder
         // timbales pair's ledger ON the middle to both.
         // LILYPOND-REF: lily/ledger-line-spanner.cc:220-221, :354-356, :400-403 Ledger_line_spanner::print.
         System.Span<int> ledgers = stackalloc int[EngravingDefaults.LedgerCapacity(staffPosition)];
-        int ledgerCount = EngravingDefaults.LedgerPositions(staffPosition, staffLines, ledgers);
+        // A slash carries none (EngravingDefaults.HeadTakesLedgers) — the DRAW half's rule.
+        int ledgerCount = EngravingDefaults.HeadTakesLedgers(headStyle)
+            ? EngravingDefaults.LedgerPositions(staffPosition, staffLines, ledgers) : 0;
         // From the staff outward, the order the boxes were always merged in.
         for (int li = 0; li < ledgerCount; li++)
         {

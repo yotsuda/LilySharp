@@ -370,7 +370,11 @@ internal static partial class SharedRenderer
         // How far each dot sits from the band's centre is LilyPond's search over the
         // staff's own line positions, not one number: a one-line rhythm staff wants 0.45
         // and a four-line one 1.0 where five lines want 0.5 (EngravingDefaults).
-        double half = EngravingDefaults.RepeatDotHalfSpan(staffLines);
+        // …run over the lines this staff DRAWS (a two-line staff at ±2, the five-line frame).
+        // The band handed in already spans those lines, so its centre is theirs.
+        double half = staffLines > 0
+            ? EngravingDefaults.RepeatDots(EngravingDefaults.StaffLinePositions(staffLines)).HalfSpan
+            : EngravingDefaults.RepeatDotHalfSpan(0);
         // On a tab staff the dots straddle the centre, each centred in a string
         // space (passed in, already in this frame); otherwise they straddle the band's own
         // centre — which for a five-line staff is 2.0 below its top line, giving back the

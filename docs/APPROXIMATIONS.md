@@ -14,16 +14,16 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 240 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **366** | |
+| `OWN` | 241 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **367** | |
 
 ## 密度の高いファイル（上位 12）
 
 | ファイル | 件数 |
 |---|---:|
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 21 |
+| `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 12 |
-| `LilySharp.Core/Svg/EngravingDefaults.cs` | 11 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 10 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 8 |
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（240 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（241 件）
 
 ### `LilySharp.Core/Editing/NoteStepper.cs`
 - **`NoteStepper.NoProgram`** LILYSHARP-OWN: the editor's audition has no LilyPond counterpart (the performer
@@ -396,6 +396,7 @@
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
 - **`EngravingDefaults.StaffLinePositions`** ⚠️ LILYSHARP-OWN in the two- and four-line rows. LilyPond's own line-count N
 - **`EngravingDefaults.LedgerCapacity`** LILYSHARP-OWN: a buffer size, not a quantity — LilyPond's vector grows as it fills.
+- **`EngravingDefaults.HeadTakesLedgers`** (owner's report 2026-10-12). LILYSHARP-OWN: LilyPond's \improvisationOn slashes
 - **`EngravingDefaults.MinStemLength`** LILYSHARP-OWN: a 5-half-space floor with no single named LP constant behind it.
 - **`EngravingDefaults.StaffMiddle`** LILYSHARP-OWN: a frame, not a quantity. LilyPond has no counterpart to look up
 - **`EngravingDefaults.NoteheadHalfHeight`** ⚠️ LILYSHARP-OWN: A NOMINAL HALF-HEAD, NOT THE GLYPH'S. LilyPond has no such constant —

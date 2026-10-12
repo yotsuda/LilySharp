@@ -102,4 +102,28 @@ public class LedgerPositionsTests
                                        && Math.Abs(l.X2 - l.X1) < 4.0);
         Assert.Equal(ledgers, drawn);
     }
+
+    /// <summary>A slash has no pitch and carries no ledger — on the two-line staff its middle is
+    /// the pair's gap, where a pitched head (the <c>b</c> here) does carry one (owner's report
+    /// 2026-10-12: a ledger was drawn through each slash's centre).</summary>
+    [Theory]
+    [InlineData(2, "/4 / / / |", 0)]
+    [InlineData(2, "b4 b b b |", 4)]
+    [InlineData(1, "/4 / / / |", 0)]
+    [InlineData(5, "/4 / / / |", 0)]
+    public void ASlashCarriesNoLedger(int lines, string music, int ledgers)
+    {
+        var g = RenderedGeometry.RenderProduct($$"""
+            octave absolute
+            part p { }
+            section A { p { {{music}} } }
+            form { A }
+            score { staff p as lines {{lines}} }
+            """);
+        int drawn = g.Lines.Count(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
+                                       && !l.IsDashed
+                                       && Math.Abs(l.StrokeWidth - EngravingDefaults.LegerLineThickness) < 1e-9
+                                       && Math.Abs(l.X2 - l.X1) < 4.0);
+        Assert.Equal(ledgers, drawn);
+    }
 }

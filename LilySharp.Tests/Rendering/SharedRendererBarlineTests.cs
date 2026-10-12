@@ -173,6 +173,40 @@ public sealed class SharedRendererBarlineTests
     public void RepeatDotHalfSpan_IsLilyPondsSearchOverTheStaffsLines(int lineCount, double expected)
         => Assert.Equal(expected, EngravingDefaults.RepeatDotHalfSpan(lineCount), 6);
 
+    /// <summary>
+    /// The same search over the lines Lily# DRAWS (the five-line frame: two lines at ±2, four
+    /// at −2…4), which is where the dots are drawn. Owner's report 2026-10-12: a two-line
+    /// staff's dots sat ON its two lines — found at LilyPond's ±1 (0.95 out), drawn between
+    /// lines two spaces apart. Over the drawn pair they fall in its one space, 0.5 each side.
+    /// </summary>
+    [Theory]
+    [InlineData(1, 0.45)]
+    [InlineData(2, 0.50)]
+    [InlineData(3, 0.50)]
+    [InlineData(4, 1.00)]
+    [InlineData(5, 0.50)]
+    public void TheRepeatDots_AreFoundOnTheLinesDrawn(int lineCount, double expected)
+        => Assert.Equal(expected, EngravingDefaults.RepeatDots(EngravingDefaults.StaffLinePositions(lineCount)).HalfSpan, 6);
+
+    [Fact]
+    public void OnATwoLineStaff_TheRepeatDotsStandInTheSpaceBetweenItsLines()
+    {
+        var svg = SvgGenerator.Generate(SyntaxTree.Parse(
+            "part m { }\nsection A { m { c'1 | } }\nform { |: A :| }\nscore { staff m as lines 2 }\n"),
+            new SvgRenderOptions { EmbedFont = false });
+        var lines = System.Text.RegularExpressions.Regex.Matches(svg,
+                "<line x1=\"[0-9.]+\" y1=\"([0-9.]+)\" x2=\"[0-9.]+\" y2=\"([0-9.]+)\"")
+            .Where(m => m.Groups[1].Value == m.Groups[2].Value)
+            .Select(m => double.Parse(m.Groups[1].Value)).Distinct().OrderBy(y => y).ToList();
+        Assert.Equal(2, lines.Count);
+        var dots = System.Text.RegularExpressions.Regex.Matches(svg, "<circle cx=\"[0-9.]+\" cy=\"([0-9.]+)\" r=\"([0-9.]+)\"")
+            .Select(m => (Y: double.Parse(m.Groups[1].Value), R: double.Parse(m.Groups[2].Value))).ToList();
+        Assert.NotEmpty(dots);
+        // Every dot clear of both lines, inside the space they bound.
+        Assert.All(dots, d => Assert.True(d.Y - d.R > lines[0] && d.Y + d.R < lines[1],
+            $"dot at {d.Y} (r {d.R}) is not between the lines {lines[0]} and {lines[1]}"));
+    }
+
     private static int CountOccurrences(string haystack, string needle)
     {
         int count = 0, i = 0;

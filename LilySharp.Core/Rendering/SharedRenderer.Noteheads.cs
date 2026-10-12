@@ -482,8 +482,10 @@ internal static partial class SharedRenderer
         {
             case NoteItem note:
             {
-                // A head with ledgers, or outside the staff without any (ledger-line-spanner.cc:223-226).
-                if (!EngravingDefaults.LedgerRequested(note.StaffPosition, staffLines))
+                // A head with ledgers, or outside the staff without any (ledger-line-spanner.cc:223-226)
+                // — never a slash (EngravingDefaults.HeadTakesLedgers).
+                if (!EngravingDefaults.HeadTakesLedgers(note.Notehead)
+                    || !EngravingDefaults.LedgerRequested(note.StaffPosition, staffLines))
                     break;
                 int noteValue = GlyphMetrics.NoteValueOf(note.BaseDuration);
                 // The head's INK width, not its advance: LilyPond's ledger takes the head's

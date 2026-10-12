@@ -218,6 +218,10 @@ workflow attaches that section to the GitHub Release verbatim.
   signatures went from 429 to 463 of 491 scores matching.
 - **A part named `r`, `s`, `q` or `R` gets another variable name in the twin** — they are
   note-mode words, and LilyPond refused the file ("unexpected RESTNAME").
+- **On a two-line staff the repeat dots stand in the space between the lines**, not on them: they
+  were found on LilyPond's two lines a space apart and drawn on Lily#'s, two spaces apart.
+- **A slash note carries no ledger line.** On a two-line staff a ledger was drawn through each
+  slash's centre — the pair's gap, where a pitched head does carry one.
 - **A glyph a music font lacks is drawn in the SVG and the preview, not only in the PNG and PDF.**
   Under Leland the slash heads (and figured-bass digits) are Emmentaler's, but the page's
   `.music` rule overrode their face and the browser drew nothing; the face now goes in a style.

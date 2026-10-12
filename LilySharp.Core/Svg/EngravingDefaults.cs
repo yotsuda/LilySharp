@@ -230,6 +230,14 @@ internal static class EngravingDefaults
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/ledger-line-spanner.cc:223-226 — <c>ledger_positions.size ()
     /// != 0 || !staff_extent.contains (pos)</c>.</remarks>
+    /// <summary>Whether a head drawn in <paramref name="style"/> carries ledger lines at all. A
+    /// slash head has no pitch — it stands on the middle whatever the staff — so it carries
+    /// none: on the two-line staff (lines at ±2) the middle is the pair's gap, which a pitched
+    /// head marks with a ledger as LilyPond does, and a slash had one drawn through its centre
+    /// (owner's report 2026-10-12). LILYSHARP-OWN: LilyPond's <c>\improvisationOn</c> slashes
+    /// sit on a pitch and take that pitch's ledgers; a Lily# slash has no pitch to take them from.</summary>
+    public static bool HeadTakesLedgers(Model.NoteheadStyle style) => style != Model.NoteheadStyle.Slash;
+
     public static bool LedgerRequested(int position, int lineCount)
     {
         if (!StaffLinesSpan(position, lineCount))
@@ -1135,7 +1143,47 @@ internal static class EngravingDefaults
     /// </para>
     /// </remarks>
     public static double RepeatDotHalfSpan(int lineCount, double staffSpace = 1.0)
+        => RepeatDotHalfSpan(lineCount <= 0 ? System.ReadOnlySpan<double>.Empty : SymmetricPositions(lineCount), staffSpace);
+
+    private static double[] SymmetricPositions(int lineCount)
     {
+        var positions = new double[lineCount];
+        for (int i = 0; i < lineCount; i++)
+            positions[i] = (lineCount - 1) - 2.0 * i;
+        return positions;
+    }
+
+    /// <summary>
+    /// The repeat dots of a staff whose lines stand at <paramref name="linePositions"/> (half
+    /// spaces about the band's centre, as <see cref="StaffLinePositions"/> draws them): the
+    /// dots' centre — the middle of the line span — and each dot's distance from it, both in
+    /// staff spaces (Y up).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/bar-line.scm make-colon-bar-line — <c>center</c> is the middle of the
+    /// staff symbol's line span and the search runs over the lines folded about it. ⚠️ Lily#
+    /// DRAWS a two-line staff at ±2 and a four-line one at −2…4 (the five-line frame), while
+    /// LilyPond's own are ±1 and ±1, ±3; the dots were found on LilyPond's lines and drawn on
+    /// Lily#'s, so a two-line staff's dots sat ON its lines (owner's report 2026-10-12). They
+    /// are found on the lines drawn.
+    /// </remarks>
+    public static (double Center, double HalfSpan) RepeatDots(System.ReadOnlySpan<double> linePositions, double staffSpace = 1.0)
+    {
+        if (linePositions.IsEmpty)
+            return (0.0, RepeatDotHalfSpan(System.ReadOnlySpan<double>.Empty, staffSpace));
+        double low = double.PositiveInfinity, high = double.NegativeInfinity;
+        foreach (double p in linePositions) { low = System.Math.Min(low, p); high = System.Math.Max(high, p); }
+        double center = (low + high) / 2;
+        var folded = new double[linePositions.Length];
+        for (int i = 0; i < folded.Length; i++)
+            folded[i] = linePositions[i] - center;
+        return (center * staffSpace / 2, RepeatDotHalfSpan(folded, staffSpace));
+    }
+
+    // The search itself, over line positions folded about their centre (any sign).
+    private static double RepeatDotHalfSpan(System.ReadOnlySpan<double> centred, double staffSpace)
+    {
+        int lineCount = centred.Length;
         // The glyph's own height is what the search measures against — the same `dots.dot`
         // whose half extent is RepeatDotRadius.
         double dotYLength = 2 * RepeatDotRadius;
@@ -1147,7 +1195,7 @@ internal static class EngravingDefaults
             // (N-1) - 2i and symmetric, so folding is |position| and the centre is 0.
             var folded = new double[lineCount];
             for (int i = 0; i < lineCount; i++)
-                folded[i] = System.Math.Abs((lineCount - 1) - 2.0 * i);
+                folded[i] = System.Math.Abs(centred[i]);
             System.Array.Sort(folded);
 
             double gapToFind = (dotYLength + LineThickness) / (staffSpace / 2);
