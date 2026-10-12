@@ -184,6 +184,10 @@ V（またはアイコン）→ `lesson` と打って Ctrl+Space → ▶）＋�
 `.lys` から生成する** ＝ 描いた楽譜＋レッスンの本文＋「学んだこと → Reference へのリンク」2〜3 行。頁は 0.3 程度、
 レッスンと食い違わない（LessonTests と pre のコンパイル検査がそのまま網）、レッスンを訳せば頁も訳される。
 Chords は「lesson 8 の次に深く」として Learn の下に置く（上部ナビを 6 項に減らす）。
+⇒ **2026-10-12 ユーザー決定「自動で作ってみて」→ 作った**: `build-manual.ps1` が `learn.html`＋`lesson-NN-….html`
+を生成（導入・STEP・TRY はレッスンのコメントから、絵は `build-site.ps1` 2b が `site/learn/` に描く・警告は課題なので許し
+エラーで止める・「In the manual」の行き先は `$moreOf`、見出しは本文から読むので消えた節はビルドが落ちる）。上部ナビの
+先頭に Learn、index の tagline にリンク。⚠️ サイトの絵には赤丸（@todo）が出ない（`lysc svg` は描かない）。
 
 **段 4 — Reference と About**: `grammar.html` を 4 つに割る（`ref-music`・`ref-structure`・`ref-output`・`ref-lookup`。
 `grammar.html` の URL は入口として残す）・P3 の章（調と臨時記号・拍子・テンポ・音部記号・`partial`／`time none`・強弱・

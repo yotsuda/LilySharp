@@ -4,5 +4,7 @@
 /grammar.html
 /chords.html
 /editor.html
+/learn.html
+/lesson-*.html
 *.svg
 /_site/

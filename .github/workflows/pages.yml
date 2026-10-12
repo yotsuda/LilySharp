@@ -1,7 +1,7 @@
 name: Pages
 
 # The showcase site (site/) is built from source on every push that could change it: the
-# pages, the .lys examples, or the engraver that draws them. build-site.ps1 refuses a site
+# pages, the .lys examples and lessons, or the engraver that draws them. build-site.ps1 refuses a site
 # whose examples do not compile, whose pictures are missing or whose version is stale, so a
 # red run here means the site stays as it was.
 #
@@ -15,6 +15,7 @@ on:
       - 'site/**'
       - 'LilySharp.Core/**'
       - 'LilySharp.Cli/**'
+      - 'LilySharp.Lsp/Lessons/**'   # the learn pages are drawn from the lessons
       - 'Directory.Build.props'
       - 'README.md'
       - '.github/workflows/pages.yml'

@@ -49,6 +49,21 @@ foreach ($name in $pictures) {
 }
 if ($failed) { throw "scores that do not compile:`n  $($failed -join "`n  ")" }
 
+# ------------------------------------------------------------------ 2b. the lessons
+# The learn pages show each lesson as it opens in the editor (build-manual.ps1). A lesson is a
+# score with its tasks still to do — a short bar, a @todo — so its warnings are expected
+# (LessonTests holds each one to what it teaches); an ERROR is refused.
+$learnDir = Join-Path $here 'learn'
+New-Item -ItemType Directory -Force -Path $learnDir | Out-Null
+Get-ChildItem $learnDir -Filter *.svg | Remove-Item
+foreach ($lesson in Get-ChildItem (Join-Path $here '../LilySharp.Lsp/Lessons/en') -Filter 'lesson-*.lys' | Sort-Object Name) {
+    $out = & $Lysc check $lesson.FullName 2>&1 | Out-String
+    if ($out -match ': error:') { $failed += "$($lesson.Name): $((($out -split "`r?`n") -match ': error:' | Select-Object -First 2) -join ' / ')"; continue }
+    & $Lysc svg $lesson.FullName -d $learnDir 2>&1 | Out-Null   # its warnings are the tasks
+    Write-Host "ok  $($lesson.BaseName)"
+}
+if ($failed) { throw "lessons that do not compile:`n  $($failed -join "`n  ")" }
+
 # ------------------------------------------------------------------ 3. pages
 & (Join-Path $here 'build-manual.ps1')
 & (Join-Path $here 'build-preview.ps1')
@@ -59,7 +74,8 @@ $problems = [System.Collections.Generic.List[string]]::new()
 $published = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $tmp = Join-Path ([IO.Path]::GetTempPath()) 'lilysharp-site-check'
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
-$pages = 'index.html', 'grammar.html', 'chords.html', 'editor.html'
+$pages = @('index.html', 'learn.html', 'grammar.html', 'chords.html', 'editor.html') +
+    @(Get-ChildItem (Join-Path $here '../LilySharp.Lsp/Lessons/en') -Filter 'lesson-*.lys' | Sort-Object Name | ForEach-Object { "$($_.BaseName).html" })
 foreach ($page in $pages) {
     $html = Get-Content (Join-Path $here $page) -Raw -Encoding UTF8
     function LineOf([int]$index) { ($html.Substring(0, $index) -split "`n").Count }
@@ -73,6 +89,11 @@ foreach ($page in $pages) {
         if ($src -match '^[a-z]+:') { continue }
         if (-not (Test-Path (Join-Path $here $src))) { $problems.Add("${page}:$(LineOf $m.Index): missing file $src") }
         else { $published.Add($src) | Out-Null }
+    }
+    # A link to another page of the site names one this build writes (the learn pages are
+    # generated, and a lesson renamed would otherwise leave a link to nothing).
+    foreach ($m in [regex]::Matches($html, '<a[^>]+href="([a-z0-9-]+\.html)(?:#[^"]*)?"')) {
+        if ($pages -notcontains $m.Groups[1].Value) { $problems.Add("${page}:$(LineOf $m.Index): link to a page the site does not have: $($m.Groups[1].Value)") }
     }
     foreach ($m in [regex]::Matches($html, 'Lily# (\d+\.\d+\.\d+)')) {
         if ($m.Groups[1].Value -ne $ver) { $problems.Add("${page}:$(LineOf $m.Index): says Lily# $($m.Groups[1].Value), the repository is $ver") }
@@ -88,9 +109,10 @@ foreach ($page in $pages) {
     }
     # A <pre> that is a whole document (it has a form and a score) is compiled as shown.
     # `<pre data-fragment>` opts out: a listing that is not a .lys file as it stands (a
-    # Markdown fence wrapped around one).
+    # Markdown fence wrapped around one); so does `<pre data-lesson>`, a lesson with its tasks
+    # still to do, checked for errors (only) in step 2b.
     $i = 0
-    foreach ($m in [regex]::Matches($html, '(?s)<pre(?![^>]*(?:mermaid|data-fragment))[^>]*>(.*?)</pre>')) {
+    foreach ($m in [regex]::Matches($html, '(?s)<pre(?![^>]*(?:mermaid|data-fragment|data-lesson))[^>]*>(.*?)</pre>')) {
         $text = [System.Web.HttpUtility]::HtmlDecode(($m.Groups[1].Value -replace '<[^>]+>', ''))
         if ($text -notmatch '(?m)^\s*score\b' -or $text -notmatch '(?m)^\s*form\b') { continue }
         $i++
