@@ -2611,14 +2611,24 @@ function soundFontFile(extensionUri: vscode.Uri): { file: vscode.Uri; root: vsco
         }
         outputChannel.appendLine(`lilysharp.playback.soundFont: ${setting} does not exist; using the default sound`);
     }
+    const fallback = defaultSoundFont(extensionUri);
+    return fallback ? { file: vscode.Uri.file(fallback.path), root: vscode.Uri.file(path.dirname(fallback.path)) } : null;
+}
+
+/** What plays when the setting is empty, named as the picker shows it: a font under
+ *  media/soundfont (a developer's local build — a release carries none), else the OS's bank.
+ *  ONE answer for the player and the picker: the picker said "gm.dls" while a local build
+ *  played its MuseScore_General, which then had no name in the list (owner's report
+ *  2026-10-12). */
+function defaultSoundFont(extensionUri: vscode.Uri): { label: string; path: string } | null {
     const dir = vscode.Uri.joinPath(extensionUri, 'media', 'soundfont');
     try {
         const files = fs.readdirSync(dir.fsPath).filter(f => /\.(sf2|sf3|dls)$/i.test(f)).sort();
-        if (files.length > 0) { return { file: vscode.Uri.joinPath(dir, files[0]), root: dir }; }
+        if (files.length > 0) {
+            return { label: `${files[0]} (this build's own, under media/soundfont)`, path: path.join(dir.fsPath, files[0]) };
+        }
     } catch { /* none here — a release carries none */ }
-    const os = osSoundFonts()[0];
-    if (os) { return { file: vscode.Uri.file(os.path), root: vscode.Uri.file(path.dirname(os.path)) }; }
-    return null;
+    return osSoundFonts()[0] ?? null;
 }
 
 /** The General MIDI banks an OS ships for its own synth, where present: Windows' Microsoft GS
@@ -2652,8 +2662,9 @@ async function rememberSoundFont(context: vscode.ExtensionContext, file: string)
     await context.globalState.update(SOUND_FONT_HISTORY_KEY, recordFont(soundFontHistory(context), file, PATHS_IGNORE_CASE));
 }
 
-/** The picker behind `Lily#: Choose Sound Font…` and the setting's link: the default (the
- *  OS's General MIDI bank where there is one), the fonts used before whose files are there now
+/** The picker behind `Lily#: Choose Sound Font…` and the setting's link: the default, named
+ *  for what plays (defaultSoundFont — the OS's bank, or a local build's own font, with the OS's
+ *  bank then listed by its name), the fonts used before whose files are there now
  *  (each with a button that takes it off the list), or a file of the user's (a dialog filtered
  *  to .sf2 / .sf3 / .dls), written to the user settings as `lilysharp.playback.soundFont`.
  *  The files are looked for when the picker opens, not at start-up: only the picker needs the
@@ -2663,18 +2674,26 @@ async function chooseSoundFont(context: vscode.ExtensionContext): Promise<void> 
     const current = config.get<string>('playback.soundFont', '').trim();
     await rememberSoundFont(context, current);   // a font set before the list existed
     type Pick = vscode.QuickPickItem & { action: 'default' | 'browse' | 'path'; path?: string };
+    const def = defaultSoundFont(context.extensionUri);
     const os = osSoundFonts()[0];
-    const playsDefault = !current || !fs.existsSync(current) || (!!os && samePath(current, os.path, PATHS_IGNORE_CASE));
+    const playsDefault = !current || !fs.existsSync(current) || (!!def && samePath(current, def.path, PATHS_IGNORE_CASE));
+    const isCurrent = (f: string) => !playsDefault && samePath(f, current, PATHS_IGNORE_CASE);
+    // The OS's bank by its own name when the default is something else (a local build's font).
+    const osApart = os && def && !samePath(os.path, def.path, PATHS_IGNORE_CASE) ? os : undefined;
     const forget: vscode.QuickInputButton = {
         iconPath: new vscode.ThemeIcon('trash'), tooltip: 'Remove from this list (the file stays where it is)' };
     const build = (): Pick[] => [
-        { label: os ? `Default — ${os.label}` : 'Default — simple tones', description: playsDefault ? '(current)' : '',
-          detail: os ? 'The General MIDI bank this computer already has (empties the setting)'
-                     : 'This system has no General MIDI bank of its own: browse for a sound font for real instruments',
+        { label: def ? `Default — ${def.label}` : 'Default — simple tones', description: playsDefault ? '(current)' : '',
+          detail: !def ? 'This system has no General MIDI bank of its own: browse for a sound font for real instruments'
+                : def === os ? 'The General MIDI bank this computer already has (empties the setting)'
+                : 'What plays when no font is chosen (empties the setting)',
           action: 'default' },
-        ...shownFonts(soundFontHistory(context), f => fs.existsSync(f), PATHS_IGNORE_CASE, os ? [os.path] : [])
+        ...(osApart ? [{ label: osApart.label, description: isCurrent(osApart.path) ? '(current)' : '',
+                         detail: osApart.path, action: 'path' as const, path: osApart.path }] : []),
+        ...shownFonts(soundFontHistory(context), f => fs.existsSync(f), PATHS_IGNORE_CASE,
+                      [def?.path, os?.path].filter((p): p is string => !!p))
             .map<Pick>(f => ({
-                label: path.basename(f), description: !playsDefault && samePath(f, current, PATHS_IGNORE_CASE) ? '(current)' : '',
+                label: path.basename(f), description: isCurrent(f) ? '(current)' : '',
                 detail: f, action: 'path', path: f, buttons: [forget] })),
         { label: 'Browse for a file…', detail: 'An .sf2, .sf3 or .dls file on this machine — see "Sound fonts" on the Lily# site for three free ones', action: 'browse' },
     ];
