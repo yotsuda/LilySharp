@@ -566,10 +566,10 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
-    // "Import from Image/PDF…": in the palette on Windows x64, where the reader's extension
-    // exists (it offers that extension when the reader is missing); in the Explorer's menu only
-    // where a reader is — kept current as extensions come and go (omrReader.ts).
-    registerOmrContexts(context);
+    // "Import from Image/PDF…": in the palette on Windows, where the reader's extension exists
+    // (it offers that extension when the reader is missing); in the Explorer's menu only where a
+    // reader is — kept current as extensions come and go (omrReader.ts).
+    registerOmrContexts(context, outputChannel);
 
     // "Show Original Scan" (LilySharp-Omr proposal B3) is offered on a .lys an OMR reader
     // wrote, i.e. one with its side file beside it.

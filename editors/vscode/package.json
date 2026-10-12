@@ -543,7 +543,7 @@
         },
         {
           "command": "lilysharp.importImage",
-          "when": "lilysharp.omrAvailable || lilysharp.omrPlatform"
+          "when": "lilysharp.omrAvailable || isWindows"
         },
         {
           "command": "lilysharp.showScan",

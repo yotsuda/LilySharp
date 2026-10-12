@@ -66,12 +66,23 @@ export async function offerOmrExtension(): Promise<void> {
     }
 }
 
-/** Keeps the `lilysharp.omrAvailable` / `lilysharp.omrPlatform` contexts true to what is
- *  installed, now and whenever an extension is installed or removed. */
-export function registerOmrContexts(context: vscode.ExtensionContext): void {
-    void vscode.commands.executeCommand('setContext', 'lilysharp.omrPlatform', omrPlatformSupported());
+/** Keeps the `lilysharp.omrAvailable` context (the Explorer's right-click) true to what is
+ *  installed, now and whenever an extension is installed or removed. The palette's item does
+ *  not wait for it: a context set here exists only once Lily# has activated (a .lys opened),
+ *  so the palette reads VS Code's own `isWindows` instead (owner's report 2026-10-12: no item
+ *  before a .lys was opened). */
+export function registerOmrContexts(context: vscode.ExtensionContext, output: vscode.OutputChannel): void {
+    let said: string | undefined;
     const update = async () => {
-        await vscode.commands.executeCommand('setContext', 'lilysharp.omrAvailable', (await findOmr(context)) !== undefined);
+        const where = await findOmr(context);
+        // One line whenever the answer changes: where "Import from Image/PDF…" will run.
+        const line = where ? `OMR reader (${where.source}): ${where.path}`
+            : `OMR reader: none${omrPlatformSupported() ? ' (Import from Image/PDF… offers the extension)' : ''}`;
+        if (line !== said) {
+            said = line;
+            output.appendLine(line);
+        }
+        await vscode.commands.executeCommand('setContext', 'lilysharp.omrAvailable', where !== undefined);
     };
     void update();
     context.subscriptions.push(vscode.extensions.onDidChange(() => void update()));
