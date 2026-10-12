@@ -23,7 +23,6 @@
 <article>
 
 <section id="names">
-  <p class="eyebrow">01</p>
   <h2>Chord names</h2>
   <p>A chord name is typed the way it prints — <code>C</code>, <code>Am</code>,
   <code>Dm7</code>, <code>G7</code>, <code>Bb7/D</code>, <code>F#m7-5</code> (an altered
@@ -44,7 +43,6 @@
 </section>
 
 <section id="shapes">
-  <p class="eyebrow">02</p>
   <h2>A shape draws a diagram</h2>
   <p>Write the chord's <b>shape</b> in parentheses after its name —
   <code>C(x32010)</code> in a row — and a chord diagram is drawn under the name, between the
@@ -75,7 +73,6 @@
 </section>
 
 <section id="onnote">
-  <p class="eyebrow">03</p>
   <h2>On a note, and with no name</h2>
   <p>On a note the shape follows the name, inside the parentheses:
   <code>@chord(C x32010)</code>. The words after the name are its shapes — which is why
@@ -92,7 +89,6 @@
 </section>
 
 <section id="notes">
-  <p class="eyebrow">04</p>
   <h2>The notes on the staff</h2>
   <p>A diagram shows a shape; <b><code>chord(NAME SHAPE)</code></b> plays it. It is a music
   item, written where a note or a <code>&lt;…&gt;</code> chord would be, and it writes each
@@ -123,7 +119,6 @@
 </section>
 
 <section id="layout">
-  <p class="eyebrow">05</p>
   <h2>Which instrument, and every chord</h2>
   <p>A diagram is drawn for one tuning. Which one is decided per score, strongest first:</p>
   <ol>
@@ -191,7 +186,6 @@ score piano { layout piano  chords prog  staff melody } // no diagrams</pre>
 </section>
 
 <section id="capo">
-  <p class="eyebrow">06</p>
   <h2>A capo</h2>
   <p><code>layout { chordDiagrams guitar capo 3 }</code> puts a capo on the third fret. The
   music still writes the <b>sounding</b> chords — a row's <code>Eb</code>,
@@ -231,7 +225,6 @@ score piano { layout piano  chords prog  staff melody } // no diagrams</pre>
 </section>
 
 <section id="list">
-  <p class="eyebrow">07</p>
   <h2>The chord list</h2>
   <p>A songbook page opens with the chords it uses. <code>layout { chordList true }</code>
   draws that row at the score's head, under the title and above the first system: every chord
@@ -248,7 +241,6 @@ score piano { layout piano  chords prog  staff melody } // no diagrams</pre>
 </section>
 
 <section id="check">
-  <p class="eyebrow">08</p>
   <h2>When a shape is not the chord</h2>
   <p>A written shape is checked against the name it is written for (<b>LYS1039</b>, a
   warning — the shape still draws). Two things are asked: every note it sounds is a tone of
@@ -268,7 +260,6 @@ score piano { layout piano  chords prog  staff melody } // no diagrams</pre>
 </section>
 
 <section id="editor">
-  <p class="eyebrow">09</p>
   <h2>Let the editor write the shapes</h2>
   <p>You rarely need to type a shape. In VS Code, put the caret on a chord — an
   <code>@chord(Cm7)</code> or a row's <code>Cm7</code> — and press <kbd>Ctrl+Shift+Up</kbd>:

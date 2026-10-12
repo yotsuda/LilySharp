@@ -1,0 +1,86 @@
+<div class="layout">
+
+<nav class="toc">
+  <p class="grp">About</p>
+  <ol>
+    <li><a href="#lineage">What Lily# owes LilyPond</a></li>
+    <li><a href="#licence">Licence and fonts</a></li>
+    <li><a href="#speed">Why the preview keeps up</a></li>
+    <li><a href="#architecture">How it is put together</a></li>
+  </ol>
+</nav>
+
+<article>
+
+<section id="lineage">
+  <h2>What Lily# owes LilyPond</h2>
+  <p>LilyPond has set the standard for computer-engraved music for decades. Lily# does not try
+  to out-engrave it. It carries LilyPond's engraving decisions across — with attribution, and
+  under the same licence.</p>
+  <div class="cols2">
+    <div class="pillar">
+      <h3>The engine is a port, not an imitation</h3>
+      <p>Beam quanting, slur and tie scoring, skylines, springs and page breaking are
+      modified translations of LilyPond's own C++ and Scheme. Every ported file carries the
+      copyright notice of the LilyPond file it came from, and
+      <code>LILYPOND-ATTRIBUTION.md</code> lists all of them.</p>
+      <p>The house rule is that layout code is transliterated from LilyPond's <i>source</i>
+      rather than reverse-engineered from its pictures — and that nothing may be tuned merely
+      to make the output match byte for byte. Elsewhere, most <code>LILYPOND-REF</code>
+      comments are citations rather than ports: they mark where LilyPond decides something, so
+      this code can be checked against it.</p>
+    </div>
+    <div class="pillar">
+      <h3>It is an independent project</h3>
+      <p><b>Lily# is not affiliated with, endorsed by, or a release of the LilyPond
+      project.</b> The name is a nod, not a badge. If something here engraves badly, that is
+      Lily#'s bug — please don't take it to the LilyPond maintainers.</p>
+      <p>The language is deliberately not LilyPond's: <code>\relative</code>,
+      <code>\new Staff</code>, <code>\version</code> and
+      <code>&lt;&lt; … \\ … &gt;&gt;</code> are rejected outright, and a chord symbol is
+      typed the way it prints. What the two share is engraving knowledge, not syntax — see
+      <a href="grammar.html#lilypond">Coming from LilyPond</a>.</p>
+    </div>
+  </div>
+</section>
+
+<section id="licence">
+  <h2>Licence and fonts</h2>
+  <p>Lily# is free software under the <b>GNU General Public License v3.0 or later</b>. It
+  contains modified code from LilyPond, which is under that same licence; the modifications
+  are Lily#'s own and are marked in the files that carry them.</p>
+  <p>The fonts ship with it too. <b>Emmentaler</b>, the default music face, comes from
+  LilyPond (GPL-3.0-or-later / SIL OFL dual licensed, redistributed here under the GPL).
+  <b>Bravura</b>, <b>Petaluma</b> (with its text face Petaluma Script) and <b>Leland</b>, the
+  music fonts a score can name instead, are under the SIL Open Font License 1.1. <b>TeX Gyre
+  Schola</b> and <b>TeX Gyre Heros</b> set the text by default — and provide the metrics it is
+  spaced by — under the GUST Font Licence (LPPL 1.3c). They are the same faces LilyPond sets
+  text in.</p>
+  <p>The extension keeps no account or key of its own and sends no telemetry; its AI features
+  use the language models VS Code offers you (<a href="editor.html#ai">AI in the editor</a>).</p>
+</section>
+
+<section id="speed">
+  <h2>Why the preview keeps up</h2>
+  <p>The compiler keeps a Roslyn-style red-green tree, so a keystroke reparses only the part
+  you touched; the renderer then reuses every system whose width did not change. The parse is
+  the cheap half — the time is in layout, and layout is what gets skipped. That is what lets
+  the score redraw as you type rather than when you save.</p>
+  <!-- VIDEO about-speed: SHOTLIST 15. A long score (several pages) with the preview open beside it. Type
+       steadily in the middle of page 2 — notes, a bar line, a dynamic — and scroll the preview
+       to show only that system re-spacing while the rest stays put. ~15 s, no sound. -->
+  <figure class="demo-video" data-pending>
+    <video src="videos/about-speed.mp4" muted loop playsinline autoplay preload="none"></video>
+    <figcaption>Typing in the middle of a long score: only the system you touched is laid out
+    again.</figcaption>
+  </figure>
+</section>
+
+<section id="architecture">
+  <h2>How it is put together</h2>
+  <p>The same diagram as in <code>README.md</code>.</p>
+  <div class="box"><pre class="mermaid">{{MERMAID}}</pre></div>
+</section>
+
+</article>
+</div>

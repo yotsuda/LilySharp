@@ -4,6 +4,7 @@ $ErrorActionPreference = 'Stop'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $here
 
+. (Join-Path $here 'site-common.ps1')
 function Esc([string]$s) { $s.Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;') }
 function LysOf([string]$n) { Esc ((Get-Content "$n.lys" -Raw -Encoding UTF8).TrimEnd()) }
 
@@ -13,13 +14,6 @@ $props = Get-Content (Join-Path $here '../Directory.Build.props') -Raw -Encoding
 $ver = [regex]::Match($props, '<Version>([^<]+)</Version>').Groups[1].Value
 if (-not $ver) { throw 'No <Version> found in Directory.Build.props' }
 
-# The architecture diagram is lifted out of README.md so the preview shows the real
-# thing rather than a copy that can drift.
-$readme = Get-Content (Join-Path $here '../README.md') -Raw -Encoding UTF8
-$m = [regex]::Match($readme, '(?s)```mermaid\r?\n(.*?)```')
-if (-not $m.Success) { throw 'No mermaid block found in README.md' }
-$mermaid = Esc ($m.Groups[1].Value.TrimEnd())
-
 $template = @'
 <!doctype html>
 <html lang="en">
@@ -28,6 +22,7 @@ $template = @'
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lily# — sheet music from plain text</title>
 <meta name="description" content="Lily#: publication-quality sheet music from plain text, engraved by a port of LilyPond's layout engine, with a VS Code extension that previews as you type.">
+{{HEAD_META}}
 <style>
   /* No viewport units anywhere: every size is fixed or a share of its own
      container, so the layout does not depend on the browser's dimensions. */
@@ -147,42 +142,42 @@ $template = @'
   figure.demo-video video { display:block; width:100%; max-width:960px; height:auto;
                             border:1px solid var(--rule); border-radius:10px; box-shadow:0 2px 14px var(--shadow); }
   figure.demo-video figcaption { color:var(--muted); font-size:14px; margin:8px 0 0; }
+  kbd { font:12.5px/1.3 "SFMono-Regular",Consolas,monospace; background:var(--code);
+        border:1px solid var(--rule); border-bottom-width:2px; border-radius:4px; padding:1px 5px; white-space:nowrap; }
+  /* the links along the top of every page (site-common.ps1) */
+  .topbar { border-bottom:1px solid var(--rule); padding:14px 0; }
+  .topbar .wrap { display:flex; flex-wrap:wrap; gap:18px; align-items:baseline; }
+  .topbar a.home { font-weight:700; font-size:18px; text-decoration:none; }
+  .topbar span { color:var(--muted); font-size:14px; }
+  .topbar nav.pages { margin-left:auto; display:flex; flex-wrap:wrap; gap:6px 18px; font-size:14px; }
+  .topbar nav.pages b { font-weight:600; }
+  @media (max-width:700px) { .topbar nav.pages { margin-left:0; } }
 </style>
 </head>
 <body>
+<div class="topbar"><div class="wrap">
+  <a class="home" href="index.html">Lily#</a>
+  <nav class="pages">{{NAV}}</nav>
+</div></div>
 <header><div class="wrap">
   <h1 class="brand">Lily#</h1>
   <p class="tagline">Publication-quality sheet music from plain text — engraved by a
   LilyPond port, edited in an IDE that keeps up with your keystrokes.
-  <a href="learn.html">Learn it lesson by lesson &rarr;</a> ·
-  <a href="grammar.html">Read the language manual &rarr;</a> ·
-  <a href="chords.html">Chords and chord diagrams</a> ·
-  <a href="editor.html">The editor and AI</a></p>
+  <a href="start.html">Get started &rarr;</a> ·
+  <a href="learn.html">Learn it lesson by lesson &rarr;</a></p>
   {{HERO_SHOT}}
   <p class="caption">The source and the engraving, side by side. The preview follows your
   keystrokes — it does not wait for a save.</p>
 </div></header>
 
-<section><div class="wrap">
+<section id="install"><div class="wrap">
   <p class="eyebrow">Install</p>
-  <h2>Install, then open a score</h2>
-  <p class="lede">Nothing else to install. Each platform's package brings its own .NET
-  runtime and its fonts — Emmentaler and three SMuFL music fonts, and the TeX Gyre text
-  faces — so there is no toolchain to assemble.</p>
-  <ol class="steps">
-    <li><b><a href="https://code.visualstudio.com/">Install Visual Studio Code</a></b>
-      <span>Version 1.90 or newer.</span></li>
-    <li><b>Install the Lily# extension</b>
-      <span>In VS Code, press <code>Ctrl+Shift+X</code> (<code>Cmd+Shift+X</code> on macOS),
-      search for “Lily#” and click <b>Install</b> on the one by <i>yotsuda</i>. (Or install it
-      from its <a href="https://marketplace.visualstudio.com/items?itemName=yotsuda.lilysharp">Marketplace
-      page</a>.)</span></li>
-    <li><b>Open any <code>.lys</code> file</b>
-      <span>The score opens beside the source by itself, with diagnostics and completion as
-      you type. New to it? Run <i>Lily#: New Score</i>, type <code>lesson</code> and press
-      <code>Ctrl+Space</code> — or <a href="learn.html">read the lessons here</a>. For batch
-      work there is also a <code>lysc</code> command-line build.</span></li>
-  </ol>
+  <h2>Install it, and write your first score</h2>
+  <p class="lede">Two free downloads and a few minutes. Nothing else to set up — no programming,
+  no command line.</p>
+  {{INSTALL_STEPS}}
+  <p class="note" style="margin-top:16px">Stuck? <a href="start.html">Get started</a> goes
+  through it again with a first score, step by step.</p>
 </div></section>
 
 <section><div class="wrap">
@@ -299,54 +294,6 @@ $template = @'
 </div></section>
 
 <section><div class="wrap">
-  <p class="eyebrow">Lineage</p>
-  <h2>What Lily# owes LilyPond</h2>
-  <p class="lede">LilyPond has set the standard for computer-engraved music for decades.
-  Lily# does not try to out-engrave it. It carries LilyPond's engraving decisions across —
-  with attribution, and under the same licence.</p>
-
-  <div class="cols2">
-    <div class="pillar">
-      <h3>The engine is a port, not an imitation</h3>
-      <p>Beam quanting, slur and tie scoring, skylines, springs and page breaking are
-      modified translations of LilyPond's own C++ and Scheme. Every ported file carries the
-      copyright notice of the LilyPond file it came from, and
-      <code>LILYPOND-ATTRIBUTION.md</code> lists all of them.</p>
-      <p>The house rule is that layout code is transliterated from LilyPond's <i>source</i>
-      rather than reverse-engineered from its pictures — and that nothing may be tuned merely
-      to make the output match byte for byte. Elsewhere, most <code>LILYPOND-REF</code>
-      comments are citations rather than ports: they mark where LilyPond decides something, so this
-      code can be checked against it.</p>
-    </div>
-    <div class="pillar">
-      <h3>It is an independent project</h3>
-      <p><b>Lily# is not affiliated with, endorsed by, or a release of the LilyPond
-      project.</b> The name is a nod, not a badge. If something here engraves badly, that is
-      Lily#'s bug — please don't take it to the LilyPond maintainers.</p>
-      <p>The language is deliberately not LilyPond's: <code>\relative</code>,
-      <code>\new Staff</code>, <code>\version</code> and
-      <code>&lt;&lt; … \\ … &gt;&gt;</code> are rejected outright, and a chord symbol is
-      typed the way it prints. What the two share is engraving knowledge, not syntax.</p>
-    </div>
-  </div>
-
-  <div class="box" style="margin-top:26px">
-    <h3 style="margin:0 0 12px;font-size:17px">Licence</h3>
-    <p style="margin:0 0 12px">Lily# is free software under the <b>GNU General Public
-    License v3.0 or later</b>. It contains modified code from LilyPond, which is under that
-    same licence; the modifications are Lily#'s own and are marked in the files that carry
-    them.</p>
-    <p class="note" style="margin:0">The fonts ship with it too. <b>Emmentaler</b>, the default
-    music face, comes from LilyPond (GPL-3.0-or-later / SIL OFL dual licensed, redistributed here
-    under the GPL). <b>Bravura</b>, <b>Petaluma</b> (with its text face Petaluma Script) and
-    <b>Leland</b>, the music fonts a score can name instead, are under the SIL Open Font
-    License 1.1. <b>TeX Gyre Schola</b> and <b>TeX Gyre Heros</b> set the text by default — and
-    provide the metrics it is spaced by — under the GUST Font Licence (LPPL 1.3c). They are the
-    same faces LilyPond sets text in.</p>
-  </div>
-</div></section>
-
-<section><div class="wrap">
   <p class="eyebrow">02 — Grammar</p>
   <h2>Explicit, and only one way to say it</h2>
   <div class="cols2">
@@ -355,39 +302,24 @@ $template = @'
         <li><b>No backslashes.</b> <code>\relative</code>, <code>\new Staff</code> and
         <code>&lt;&lt; … \\ … &gt;&gt;</code> are rejected outright, with a diagnostic that
         names the Lily# spelling instead of failing quietly.</li>
-        <li><b>Music lives in a part.</b> A stray note at the top level is an error, which
-        is what lets a bare <code>key</code> or <code>time</code> always mean the file default.</li>
-        <li><b>Order carries meaning, not clauses.</b> A score is a stack of bands: a
-        <code>lyrics</code> row under a staff is its verse; a <code>chords</code> row above it
-        aligns over it.</li>
         <li><b>Octaves can be absolute.</b> <code>octave absolute</code> anchors a bare
         <code>c</code> to C4 (or to the part's <code>octave N</code>), so a wrong octave stays
         one wrong note instead of cascading.</li>
         <li><b>Repeats go where order is written.</b> <code>|:</code> and <code>:|</code> live in
         the <code>form</code>, because a repeat changes the playing order.</li>
-        <li><b>A chord symbol is its own spelling.</b> You write <code>F#m7-5</code> and
-        <code>Bb7/D</code> — the glyphs you would read off a chart — rather than encoding them
-        as <code>fis:m7.5-</code> and <code>bes:7/d</code>.</li>
       </ul>
     </div>
     <div>
       <pre>{{GRAMMAR_SNIP}}</pre>
-      <p class="note" style="margin-top:14px">Every construct, with the corners spelled out,
-      is in the <a href="grammar.html">language manual</a>.</p>
+      <p class="note" style="margin-top:14px">The three ideas the whole language follows are in
+      <a href="grammar.html#read">How to read this</a>; every construct, with the corners
+      spelled out, is in the <a href="grammar.html">reference</a>.</p>
     </div>
   </div>
 </div></section>
 
 <section><div class="wrap">
-  <p class="eyebrow">03 — Speed</p>
-  <h2>The preview redraws while you type</h2>
-  <p class="lede">The compiler keeps a Roslyn-style red-green tree, so a keystroke reparses
-  only the part you touched; the renderer then reuses every system whose width did not
-  change. The parse is the cheap half — the time is in layout, and layout is what gets skipped.</p>
-</div></section>
-
-<section><div class="wrap">
-  <p class="eyebrow">04 — AI</p>
+  <p class="eyebrow">03 — AI</p>
   <h2>It compiles the answer before showing it to you</h2>
   <p class="lede">Select a few bars, press <code>Ctrl+I</code> (<code>Cmd+I</code> on macOS),
   and ask in words —
@@ -416,17 +348,12 @@ $template = @'
   </div>
 </div></section>
 
-<section><div class="wrap">
-  <p class="eyebrow">Architecture</p>
-  <h2>How it is put together</h2>
-  <p class="lede">The same diagram as in <code>README.md</code>.</p>
-  <div class="box"><pre class="mermaid">{{MERMAID}}</pre></div>
-</div></section>
-
 <footer><div class="wrap">
   <p style="margin:0 0 10px">Scores: Beethoven and the traditional song are public domain;
   Blues in F, Sketch in C, Air in D and Petite Valse were written for this showcase.
   Engraved by Lily# {{VER}}.</p>
+  <p style="margin:0 0 10px">Lily# is not affiliated with, endorsed by, or a release of the
+  LilyPond project — <a href="about.html">what it owes LilyPond, and its licence</a>.</p>
   <p style="margin:0" class="note">Built {{BUILT}}.</p>
 </div></footer>
 
@@ -515,6 +442,7 @@ if ($clips -contains 'hero-vscode.mp4') {
 }
 
 $html = $template.
+    Replace('{{HEAD_META}}',    (Get-HeadMeta 'Lily# — sheet music from plain text' "Publication-quality sheet music from plain text, engraved by a port of LilyPond's layout engine, with a VS Code extension that previews as you type." 'index.html').TrimEnd()).
     Replace('{{HERO_SHOT}}',    $heroShot).
     Replace('{{ODE_LYS}}',      (LysOf 'ode-to-joy')).
     Replace('{{SUN_LYS}}',      (LysOf 'rising-sun')).
@@ -524,7 +452,8 @@ $html = $template.
     Replace('{{VALSE_LYS}}',    (LysOf 'petite-valse')).
     Replace('{{GRAMMAR_SNIP}}', $grammarSnip).
     Replace('{{AI_FLOW}}',      $aiFlow).
-    Replace('{{MERMAID}}',      $mermaid).
+    Replace('{{NAV}}',          (Get-SiteNav 'index.html')).
+    Replace('{{INSTALL_STEPS}}', $InstallSteps).
     Replace('{{VER}}',          $ver).
     Replace('{{BUILT}}',        (Get-Date -Format 'yyyy-MM-dd'))
 

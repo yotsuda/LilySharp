@@ -17,6 +17,14 @@
     <li><a href="#groups">Tuplets, grace notes, voices, cues</a></li>
     <li><a href="#bars">Barlines and breaks</a></li>
   </ol>
+  <p class="grp">Key, meter, tempo</p>
+  <ol>
+    <li><a href="#key">Keys and accidentals</a></li>
+    <li><a href="#meter">Time signatures and pickups</a></li>
+    <li><a href="#tempo">Tempo</a></li>
+    <li><a href="#clefs">Clefs and register</a></li>
+    <li><a href="#dynamics">Dynamics and hairpins</a></li>
+  </ol>
   <p class="grp">Structure</p>
   <ol>
     <li><a href="#parts">Parts</a></li>
@@ -25,6 +33,7 @@
     <li><a href="#lyrics">Lyrics</a></li>
     <li><a href="#chordrows">Chords and chord rows</a></li>
     <li><a href="#forms">Forms</a></li>
+    <li><a href="#using">Using other files</a></li>
   </ol>
   <p class="grp">Output</p>
   <ol>
@@ -51,7 +60,6 @@
 <article>
 
 <section id="read">
-  <p class="eyebrow">01</p>
   <h2>How to read this</h2>
   <p>This is a reference to the <code>.lys</code> language as Lily# {{VER}} accepts it.
   Every example here is run through <code>lysc check</code> when the page is built — the
@@ -74,7 +82,6 @@
 </section>
 
 <section id="glance">
-  <p class="eyebrow">02</p>
   <h2>A file at a glance</h2>
   <p>The smallest complete document is four lines:</p>
 <pre>part melody { clef treble }
@@ -117,7 +124,6 @@ score {               // one or more render blocks
 </section>
 
 <section id="lexical">
-  <p class="eyebrow">03</p>
   <h2>Lexical rules</h2>
   <table class="g">
     <tr><th>Thing</th><th>Rule</th></tr>
@@ -134,7 +140,6 @@ score {               // one or more render blocks
 </section>
 
 <section id="pitch">
-  <p class="eyebrow">04</p>
   <h2>Pitches and octaves</h2>
   <p>Note names are Dutch: <code>c d e f g a b</code>, sharp <code>is</code>, flat
   <code>es</code>.</p>
@@ -166,7 +171,6 @@ score {               // one or more render blocks
 </section>
 
 <section id="duration">
-  <p class="eyebrow">05</p>
   <h2>Durations</h2>
   <table class="g">
     <tr><th>Written</th><th>Means</th></tr>
@@ -191,7 +195,6 @@ score {               // one or more render blocks
 </section>
 
 <section id="events">
-  <p class="eyebrow">06</p>
   <h2>Notes, rests, chords</h2>
   <table class="g">
     <tr><th>Written</th><th>Means</th></tr>
@@ -276,7 +279,6 @@ score {               // one or more render blocks
 </section>
 
 <section id="connect">
-  <p class="eyebrow">07</p>
   <h2>Ties, slurs, beams</h2>
 <pre>c4~ | c4 d e f       // tie — same pitch, with ~
 c4( d e f)           // slur — different pitches, with ( )
@@ -320,7 +322,6 @@ score { staff vc }</pre>
 </section>
 
 <section id="anno">
-  <p class="eyebrow">08</p>
   <h2>Annotations</h2>
   <p>Attach with <code>@</code>; one note may take several
   (<code>c4@staccato@p</code>). Two suffixes force a side: <code>.up</code> and
@@ -381,7 +382,6 @@ c'4@todo e'4 g'2 |</pre>
 </section>
 
 <section id="groups">
-  <p class="eyebrow">09</p>
   <h2>Tuplets, grace notes, voices, cues</h2>
 <pre>tuplet 3/2 { c8 d e }                          // 3 in the time of 2
 tuplet 3/2 { c8 d tuplet 3/2 { e16 f g } }     // nesting is allowed
@@ -409,7 +409,6 @@ c4 cue bass { e4 f } g4 |       // drawn in another instrument's clef; the staff
 </section>
 
 <section id="bars">
-  <p class="eyebrow">10</p>
   <h2>Barlines and breaks</h2>
   <table class="g">
     <tr><th>In the music</th><th>Draws</th></tr>
@@ -448,8 +447,151 @@ c4 cue bass { e4 f } g4 |       // drawn in another instrument's clef; the staff
   <!--EXAMPLE:barlines-->
 </section>
 
+<section id="key">
+  <h2>Keys and accidentals</h2>
+  <p><code>key</code> takes a tonic and a mode: <code>key d major</code>, <code>key fis minor</code>,
+  <code>key bes major</code>. Every church mode works too (<code>dorian</code>,
+  <code>mixolydian</code>, …). With none written, a piece is in C major.</p>
+  <table class="g">
+    <tr><th>Written</th><th>Means</th></tr>
+    <tr><td>at the top of the file</td><td>the piece's key</td></tr>
+    <tr><td>in a section, before its parts</td><td>that section's key, in every part; the next section starts again in the file's</td></tr>
+    <tr><td>in the music</td><td>a change from there on, to the end of the section — written in each part that changes key</td></tr>
+  </table>
+<pre>key g major                    // the file's key
+part melody { clef treble }
+section A { melody { g'4 fis e d | c'4 b a2 | } }
+section B {
+  key ees major                // this section's key, in every part
+  melody { ees'4 f g aes | bes2 g | }
+}
+section C { melody { g'4 f e d | g1 | } }   // back in G: f is F natural, and prints one
+form { A B C }
+score { staff melody }</pre>
+  <p><b>A note name says the pitch, not what is printed.</b> In G major you write
+  <code>fis</code> and no sharp is drawn, because the key signature already has it; write
+  <code>f</code> and a natural is drawn. So transposing, or changing the key, never changes
+  which notes sound. An accidental the music prints holds to the bar line, in its own
+  octave; <code>layout { accidentals modern }</code> and the other styles are in
+  <a href="#layout">Layout switches</a>. To print one that is not needed, write
+  <code>@courtesy</code> (in parentheses) or <code>@editorial</code> (small, above the note).</p>
+  <p>A key that changes nothing is not drawn — at a section's start, the key the section
+  before it left counts. To draw it anyway (a courtesy key at a new movement) write
+  <code>key!</code>. Not sure of the key of music you took down by ear? The editor's
+  <a href="commands.html#guess-key">Guess Section Key</a> suggests one, and
+  <a href="commands.html#respell">Respell Notes to Key</a> turns <code>fis</code> into
+  <code>ges</code> where the key wants it.</p>
+</section>
+
+<section id="meter">
+  <h2>Time signatures and pickups</h2>
+  <p><code>time 3/4</code> sets the meter; with none written it is 4/4, which engraves as C
+  (and 2/2 as cut C). Like <code>key</code>, it can stand at the top of the file, in a section
+  (that section's meter), or in the music — there, at the start of a bar, it is the meter of
+  every part from that bar to the end of the section.</p>
+<pre>time 3/4
+part melody { clef treble }
+section Intro {
+  partial 4                      // the section opens on a one-beat pickup
+  melody { d'4 | g2 a4 | b2. | }
+}
+section Verse {
+  melody { g'4 a b | time 2/4 c2 | time 3/4 b2. | }   // a change from that bar on
+}
+section Cadenza {
+  melody { time none g'8 a b c d e f g a b | time 3/4 g2. | }   // unmetered: bars only where written
+}
+form { Intro Verse Cadenza }
+score { staff melody }</pre>
+  <ul>
+    <li><b>A pickup</b> is <code>partial</code> and the length of the short bar, written in the
+    section before its parts — one pickup for every part. Written in a part's music in the
+    section's first bar it is refused, with this spelling as the fix.</li>
+    <li><b>A short bar later on</b> is <code>partial</code> at that bar's start —
+    <code>| partial 2. r2. |</code> — in every part that shares the bar.</li>
+    <li><b><code>time none</code></b> is unmetered music (a cadenza, a recitative): no time
+    signature, and a bar ends only where a <code>|</code> is written. With no beat to follow,
+    beams are not added for you (write them: <code>c8[ d e f]</code>), and the bar number does
+    not advance. The next
+    <code>time</code> ends it.</li>
+    <li>A meter that changes nothing is not drawn; <code>time!</code> draws it anyway.</li>
+  </ul>
+</section>
+
+<section id="tempo">
+  <h2>Tempo</h2>
+<pre data-fragment>tempo 120                      // a quarter = 120
+tempo "Allegro"                // a word, no metronome mark
+tempo "Andante" 4 = 76         // both; the beat can be any value: 4. = 60, 2 = 50
+tempo 120 swing                // the swing equation beside the mark (swing 16: sixteenths)</pre>
+  <p>Written at the top of the file it is the opening tempo; in a section, the section's.
+  <b>A tempo lasts until the next one</b> — unlike key and meter, it does not go back at the
+  next section. Playback and the MIDI export follow the number; the word prints.</p>
+<pre>tempo "Andante" 4 = 76
+part melody { clef treble }
+section A { melody { c'4 d e f | g1 | } }
+section B {
+  tempo "Più mosso" 4 = 96         // from here on: a tempo stays until the next one
+  melody { a'4 g f e | d1 | }
+}
+section C { melody { c'4 e g e | c1 | } }   // still 96
+form { A B C }
+score { staff melody }</pre>
+</section>
+
+<section id="clefs">
+  <h2>Clefs and register</h2>
+  <p>A part's clef goes on the part: <code>part cello { clef bass }</code>. The words are
+  <code>treble</code>, <code>bass</code>, <code>alto</code>, <code>tenor</code>,
+  <code>treble_8</code> (a tenor voice's), <code>treble^8</code>, <code>bass_8</code>,
+  <code>soprano</code>, <code>mezzosoprano</code>, <code>baritone</code>, and
+  <code>percussion</code> for a drum part (<a href="#drums">Drums</a>). A change mid-piece is
+  written in the music where it happens, and takes one of the first five.</p>
+  <p><b>A clef only draws.</b> Where a part's bare letters land is <code>octave N</code> on the
+  part (or an <code>instrument</code>, which sets clef and register together): a cello in bass
+  clef with no <code>octave</code> would start its <code>c</code> at middle C.</p>
+<pre>part cello {
+  clef bass
+  octave 3                       // where bare letters land; the clef only draws
+}
+section A {
+  cello { c4 d e f | clef tenor g a b c | clef bass c,1 | }
+}
+form { A }
+score { staff cello }</pre>
+  <p>A clef that changes nothing is not drawn; <code>clef!</code> draws it anyway (after a
+  long rest, say). In a section that holds part cells, a loose <code>clef</code> beside the
+  cells belongs to no part and is refused — put it on the part, or in the music.</p>
+</section>
+
+<section id="dynamics">
+  <h2>Dynamics and hairpins</h2>
+  <p>A dynamic is an annotation on the note it starts on: <code>c4@p</code>, from
+  <code>@ppp</code> to <code>@fff</code>, and <code>@sfz @sf @fp @rfz @fz</code>. A hairpin —
+  <code>@cresc</code>, <code>@decresc</code>, <code>@dim</code> — starts on its note and runs
+  to the next dynamic or hairpin on the staff.</p>
+<pre>part melody { clef treble }
+section A {
+  melody { c'4@p@cresc d e f | g2@f g@decresc | f4 e d c | c1@niente | }
+}
+form { A }
+score { staff melody }</pre>
+  <ul>
+    <li>Dynamics sit below the staff; <code>@f.up</code> puts one above. A hairpin is always
+    below, so <code>.up</code> on it is an error.</li>
+    <li>A note takes one dynamic: in <code>c4@f@sfz</code> the second warns and is not printed.
+    A dynamic and a hairpin together are fine (<code>c4@p@cresc</code>).</li>
+    <li><code>@niente</code> is the silent end: a hairpin that fades into it (or grows out of
+    it) gets the small circle at its tip, and the word is not printed.</li>
+    <li>Playback and the MIDI export follow the levels: each sets the loudness of the notes
+    from it on. A hairpin itself is drawn, not played — the loudness changes at the next
+    level, not gradually.</li>
+  </ul>
+  <p>The full list of marks is in <a href="#anno">Annotations</a>.</p>
+</section>
+
+
 <section id="parts">
-  <p class="eyebrow">11</p>
   <h2>Parts</h2>
   <p>A part is declared once and carries what stays true for it. Attributes are written
   bare, with no <code>=</code>.</p>
@@ -605,7 +747,6 @@ score { staff kit }</pre>
 </section>
 
 <section id="phrases">
-  <p class="eyebrow">12</p>
   <h2>Phrases</h2>
   <p>Named music, declared with <code>phrase</code> and used by its bare name:</p>
 <pre>phrase motif { c4 d e f | }
@@ -618,10 +759,42 @@ section Main { melody { motif g2 g | } }</pre>
   <p>A trailing <code>'</code> or <code>,</code> on a reference shifts that play's octave.
   There is no per-reference transposition: a motif quoted at another interval is written
   out, because <code>transpose</code> is a property of a part, not of a quotation.</p>
+  <p>A phrase can be played by any part, as often as you like, and can play another phrase.
+  It is the <b>same notes everywhere</b> — the playing part's <code>octave</code> does not
+  move it — so a lower instrument quoting it shifts it with marks:</p>
+<pre>time 3/4
+part violin { clef treble }
+part cello  { clef bass }
+
+phrase turn { e'8 d c d e4 }    // one bar
+phrase answer { turn | g2. }        // two bars: a phrase can play another
+
+section A {
+  violin { turn | answer | c'2. | }
+  cello  { c,2. | c2. | g2. | c2. | }
+}
+section B {
+  violin { g'2. | g2. | e2. | c2. | }
+  cello  { turn,, | turn,, | g2. | c2. | }   // two octaves down: the same bar, in the cello's range
+}
+form { A B }
+score { staff violin  staff cello }</pre>
+  <ul>
+    <li><b>Names.</b> A phrase is played by its bare name, so it cannot be named for a word
+    the music already reads as something else: a keyword, the note <code>f</code>,
+    <code>q</code>, <code>chord</code> or a drum name (LYS1030). The clef words and the
+    dynamics words (<code>bass</code>, <code>p</code>, <code>mf</code>, …) are fine.</li>
+    <li><b>Drum patterns.</b> In a drum part, <kbd>Ctrl+Space</kbd> offers the standard
+    patterns by name; picking one writes its <code>phrase</code> for you, ready to edit
+    (<a href="#drums">Drums</a>).</li>
+    <li><b>In the editor.</b> Hovering a phrase's name shows its length, how often the file
+    plays it and its source (a drum phrase as a grid, a row per drum); <i>Rename</i> renames
+    every reference; and <a href="commands.html#extract-phrase">Extract Phrase from
+    Section</a> turns bars you have written into a phrase.</li>
+  </ul>
 </section>
 
 <section id="sections">
-  <p class="eyebrow">13</p>
   <h2>Sections</h2>
   <p>A section binds music to each part by name, and is the unit the <code>form</code>
   orders. Section boundaries reset the relative frame.</p>  <p><b>Same section name, same time.</b> Everything written under one name — each part's
@@ -683,7 +856,6 @@ score { staff melody  staff bass }</pre>
 </section>
 
 <section id="lyrics">
-  <p class="eyebrow">14</p>
   <h2>Lyrics</h2>
   <p><code>sings</code> binds a lyric track to the part it sings. It is a property of the
   <b>track</b>, not of one place in the file, so it may be spelled at the definition, on the
@@ -747,7 +919,6 @@ score { staff melody  lyrics words }</pre>
 </section>
 
 <section id="chordrows">
-  <p class="eyebrow">15</p>
   <h2>Chords and chord rows</h2>
   <p>A <code>chords NAME { … }</code> row holds chord <b>symbols as they print</b>. Placed
   directly above a staff, they align over it by timing; placed on their own, they draw a
@@ -863,7 +1034,6 @@ score { staff melody  lyrics words }</pre>
 </section>
 
 <section id="forms">
-  <p class="eyebrow">16</p>
   <h2>Forms — the playing order</h2>
   <p>A <code>form</code> lists sections in the order they are played and printed. This is
   where repeats live, because a repeat is a change to the order.</p>
@@ -915,8 +1085,29 @@ form practice { Verse }        // a named form: a score plays it with `form prac
   <!--EXAMPLE:repeats-->
 </section>
 
+<section id="using">
+  <h2>Using other files</h2>
+  <p>A long piece can be spread over several files. <code>using "strings.lys"</code> at the top
+  level brings in that file's declarations — its parts, phrases, sections — as if they were
+  written here, so one file can hold the form and the scores and others the music.</p>
+<pre data-fragment>// song.lys
+using "melody.lys"            // a path relative to this file's folder
+using "parts/bass.lys"
+form { Verse Chorus }
+score { staff melody  staff bass }</pre>
+  <ul>
+    <li>Only at the top level; inside a section or a score it is an error.</li>
+    <li>A file is brought in once however many files name it, and files that name each other
+    do not loop.</li>
+    <li>A file that cannot be read is a warning, not an error: the rest still renders.</li>
+    <li>The preview of the file that names them shows the whole piece. Commands that rewrite
+    every note (<a href="commands.html#octaves">Convert Octaves</a>) leave a file with
+    <code>using</code> alone, since some of its notes are in another file.</li>
+  </ul>
+</section>
+
+
 <section id="scores">
-  <p class="eyebrow">17</p>
   <h2>Scores</h2>
   <p>A <code>score</code> is one printout: it plays the file's unnamed form — or the one its
   <code>form NAME</code> item names — on a set of rows. <b>It is a vertical stack of
@@ -985,7 +1176,6 @@ score parts { staff fl1  staff fl2 }</pre>
 </section>
 
 <section id="tab">
-  <p class="eyebrow">18</p>
   <h2>Tablature</h2>
   <p>Give a part a <code>tuning</code> and render it with <code>tab</code>:</p>
 <pre>part gt { clef treble_8 tuning guitar }
@@ -1018,7 +1208,6 @@ score {
 </section>
 
 <section id="paper">
-  <p class="eyebrow">19</p>
   <h2>Paper and fonts</h2>
   <p>Both are optional blocks whose defaults equal LilyPond's, so an absent block changes
   nothing. Both can also be <b>named</b> at the top level and referenced (or partly
@@ -1091,7 +1280,6 @@ score sketch { fonts { music "Petaluma" }  staff melody }   // one score only</p
 </section>
 
 <section id="layout">
-  <p class="eyebrow">20</p>
   <h2>Layout — display switches</h2>
   <p><code>layout { }</code> holds the score-wide switches that pick one of a few drawings.
   Like <code>paper</code> and <code>fonts</code>, one unnamed block is the file's default and
@@ -1131,7 +1319,6 @@ score parts { layout chart  staff melody }   // this score's own</pre>
 </section>
 
 <section id="override">
-  <p class="eyebrow">21</p>
   <h2>Override / revert</h2>
 <pre>override NoteHead.color = red
 c4 d e f |
@@ -1148,7 +1335,6 @@ c4 d e f |</pre>
 </section>
 
 <section id="reserved">
-  <p class="eyebrow">22</p>
   <h2>Reserved words</h2>
 <pre>section form using tab ossia transpose octave pitch instrument percussion drummap
 score part staff grandStaff staffGroup choirStaff condensedStaff combinedStaff
@@ -1174,7 +1360,6 @@ ppp pp p mp mf ff fff</pre>
 </section>
 
 <section id="diagnostics">
-  <p class="eyebrow">23</p>
   <h2>Diagnostics</h2>
   <p>Lily# would rather refuse than quietly do the wrong thing, and its messages are
   written to be acted on. A few worth knowing, quoted as the compiler prints them:</p>
@@ -1207,7 +1392,6 @@ ppp pp p mp mf ff fff</pre>
 </section>
 
 <section id="lilypond">
-  <p class="eyebrow">24</p>
   <h2>Coming from LilyPond</h2>
   <p>Lily#'s engraving engine is a port of LilyPond's, but the language is deliberately not
   LilyPond's. LilyPond's backslash commands are rejected outright, with a message naming the
@@ -1233,7 +1417,6 @@ ppp pp p mp mf ff fff</pre>
 </section>
 
 <section id="rough">
-  <p class="eyebrow">25</p>
   <h2>Rough edges</h2>
   <p>Measured against Lily# {{VER}} while this page was built. These are real and current;
   they are listed here rather than smoothed over.</p>

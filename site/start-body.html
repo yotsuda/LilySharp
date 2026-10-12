@@ -1,0 +1,99 @@
+<div class="layout">
+
+<nav class="toc">
+  <p class="grp">Get started</p>
+  <ol>
+    <li><a href="#install">Install</a></li>
+    <li><a href="#first">A first score</a></li>
+    <li><a href="#lessons">The lessons</a></li>
+    <li><a href="#next">Where next</a></li>
+  </ol>
+</nav>
+
+<article>
+
+<section id="install">
+  <h2>Install</h2>
+  <p>Lily# works inside Visual Studio Code, a free editor. Two downloads, a few minutes, and
+  nothing else to set up — no programming and no command line. (For the curious: the extension
+  brings its own runtime, compiler and fonts — Emmentaler, three SMuFL music fonts and the TeX
+  Gyre text faces.)</p>
+  {{INSTALL_STEPS}}
+  <!-- VIDEO start-install: SHOTLIST 10. A clean VS Code. Click the Extensions icon, type Lily#,
+       Install; then File → New File… → Lily# Score (.lys): the tune opens with the title
+       selected and the engraved score appears beside it. ~20 s, no sound. -->
+  <figure class="demo-video" data-pending>
+    <video src="videos/start-install.mp4" muted loop playsinline autoplay preload="none"></video>
+    <figcaption>From the Extensions view to a first engraved score.</figcaption>
+  </figure>
+</section>
+
+<section id="first">
+  <h2>A first score</h2>
+  <p><i>New Score</i> gives you this file, with the title selected so you can type over it:</p>
+<pre>title "Untitled"
+
+tempo 100
+time 4/4
+key c major
+
+part melody {
+  clef treble
+  section A { c'4 d e f | g2 g | }
+}
+
+form { A }
+
+score {
+  staff melody
+}</pre>
+  <p>Read it from the top: the piece's settings, then a <b>part</b> (who plays) holding a
+  <b>section</b> of music, then the <b>form</b> (in what order the sections play) and the
+  <b>score</b> (what is printed). The music is <code>c'4 d e f | g2 g |</code>: note names,
+  a duration after a note (<code>4</code> a quarter, <code>2</code> a half) that the next notes
+  keep until you write another, and <code>|</code> at each bar line.</p>
+  <ul>
+    <li><b>Change a note</b> — the score redraws as you type, not when you save. Put the caret
+    on a note: it lights up in the score, and sounds.</li>
+    <li><b>Add a bar</b> — type <code>e4 d c2 |</code> before the closing brace.</li>
+    <li><b>Hear it</b> — press <b>▶</b> at the top of the preview. <kbd>Alt+P</kbd> plays the
+    note under the caret, <kbd>Alt+M</kbd> the bar.</li>
+    <li><b>Make a mistake</b> — type a bar that is too long. A squiggle appears; hover it to
+    read what is wrong, and the lightbulb (<kbd>Ctrl+.</kbd>) fixes it where there is one obvious
+    repair.</li>
+    <li><b>Export</b> — <i>Lily#: Export as PDF</i> (or SVG, PNG, MIDI, MusicXML, LilyPond) from
+    the command palette or the preview.</li>
+  </ul>
+  <!-- VIDEO start-first-score: SHOTLIST 11. WITH SOUND. The New Score template, preview open. Type a title;
+       add a bar "e4 d c2 |" (the score grows as each note is typed, each note sounds); press ▶
+       (it plays, the notes light in turn); type a bar too long and hover the squiggle. ~25 s. -->
+  <figure class="demo-video" data-pending>
+    <video src="videos/start-first-score.mp4" controls playsinline preload="none"></video>
+    <figcaption>A first score: typing, hearing it, and the first squiggle.</figcaption>
+  </figure>
+</section>
+
+<section id="lessons">
+  <h2>The lessons</h2>
+  <p>Twelve short lessons live in the editor. On an empty line at the top level of a
+  <code>.lys</code> file, type <code>lesson</code> and press <kbd>Ctrl+Space</kbd>: picking one
+  puts it in the file. Each is a playable score with its steps marked in red in the preview —
+  completion and the preview, notes and octaves, rhythm, keys, expression, form and repeats,
+  lyrics, chords, piano, drums, a band, and a jazz chart. The same lessons are on the
+  <a href="learn.html">Learn</a> pages.</p>
+</section>
+
+<section id="next">
+  <h2>Where next</h2>
+  <table class="g">
+    <tr><th>To</th><th>Read</th></tr>
+    <tr><td>learn step by step</td><td><a href="learn.html">Learn</a> — the twelve lessons</td></tr>
+    <tr><td>look something up</td><td><a href="grammar.html">Reference</a> — the language, in four pages, and <a href="chords.html">chords and chord diagrams</a></td></tr>
+    <tr><td>know the editor</td><td><a href="editor.html">Editor</a> — the preview, typing aids, stepping, audition, AI — and <a href="commands.html">every command</a></td></tr>
+    <tr><td>work outside VS Code</td><td><a href="editor.html#cli">The <code>lysc</code> command line</a> and <a href="editor.html#markdown">scores in Markdown</a></td></tr>
+    <tr><td>coming from LilyPond</td><td><a href="grammar.html#lilypond">Coming from LilyPond</a> and <a href="about.html">what Lily# owes it</a></td></tr>
+  </table>
+</section>
+
+</article>
+</div>

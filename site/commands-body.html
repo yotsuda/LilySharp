@@ -1,0 +1,317 @@
+<div class="layout">
+
+<nav class="toc">
+  <p class="grp">Finding them</p>
+  <ol>
+    <li><a href="#where">Where the commands are</a></li>
+    <li><a href="#safe">What every rewrite promises</a></li>
+  </ol>
+  <p class="grp">Starting a score</p>
+  <ol>
+    <li><a href="#new-score">New Score</a></li>
+    <li><a href="#import-musicxml">Import MusicXML…</a></li>
+    <li><a href="#import-image">Import from Image/PDF…</a></li>
+  </ol>
+  <p class="grp">Reshaping the file</p>
+  <ol>
+    <li><a href="#regroup">Regroup</a></li>
+    <li><a href="#split">Split Sections to Match a Part</a></li>
+    <li><a href="#octaves">Convert Octaves</a></li>
+    <li><a href="#extract-phrase">Extract Phrase from Section</a></li>
+  </ol>
+  <p class="grp">Harmony and key</p>
+  <ol>
+    <li><a href="#chord-track">Add Chord Track</a></li>
+    <li><a href="#guess-key">Guess Section Key…</a></li>
+    <li><a href="#respell">Respell Notes to Key…</a></li>
+  </ol>
+  <p class="grp">Listening and output</p>
+  <ol>
+    <li><a href="#play">Play, step and sound</a></li>
+    <li><a href="#preview-menu">The preview's menu</a></li>
+    <li><a href="#export">Export</a></li>
+    <li><a href="#ai">With AI</a></li>
+  </ol>
+</nav>
+
+<article>
+
+<section id="where">
+  <h2>Where the commands are</h2>
+  <p>Every command is in the command palette (<kbd>Ctrl+Shift+P</kbd>, <kbd>Cmd+Shift+P</kbd> on
+  macOS) under <i>Lily#:</i> — type <code>lily</code> to list them. The ones that work on the
+  file you are editing are also on the editor's right-click menu, and a few live where their
+  subject is: on a file in the Explorer, or in the preview.</p>
+  <table class="g">
+    <tr><th>Where</th><th>What is there</th></tr>
+    <tr><td>Right-click in a <code>.lys</code> editor</td><td>Transform Selection with AI… · Regroup · Split Sections to Match a Part · Convert Octaves to Absolute / to Relative · Extract Phrase from Section · Add Chord Track · Guess Section Key… · Respell Notes to Key…</td></tr>
+    <tr><td>Right-click a file in the Explorer</td><td>on a <code>.lys</code>: the <i>Lily#: Export</i> submenu · on a <code>.xml</code> / <code>.musicxml</code> / <code>.mxl</code>: Import MusicXML… · on a scan or PDF: Import from Image/PDF… (when a reader is installed)</td></tr>
+    <tr><td>Right-click in the preview</td><td>Play from Here · Stop Playback · Fit Width · Reset Zoom (100%)</td></tr>
+    <tr><td>The editor's title bar</td><td>Open Preview to Side · the lock that keeps the preview on one file</td></tr>
+    <tr><td><i>File → New File…</i></td><td>Lily# Score (.lys)</td></tr>
+    <tr><td>Keys</td><td><kbd>Ctrl+Shift+V</kbd> preview · <kbd>Ctrl+K</kbd> <kbd>V</kbd> preview to the side · <kbd>Alt+P</kbd> play note · <kbd>Alt+M</kbd> play measure · <kbd>Ctrl+Shift+Up/Down</kbd> step · <kbd>Ctrl+I</kbd> transform with AI</td></tr>
+  </table>
+  <p class="note">To give a command a key of your own, open <i>Keyboard Shortcuts</i>
+  (<kbd>Ctrl+K</kbd> <kbd>Ctrl+S</kbd>) and search for <code>lilysharp.</code>.</p>
+</section>
+
+<section id="safe">
+  <h2>What every rewrite promises</h2>
+  <p>The commands that rewrite the file — everything under <i>Reshaping the file</i> and
+  <i>Harmony and key</i> — share three rules:</p>
+  <ul>
+    <li><b>The result is checked before you get it.</b> A rewrite that should not change the
+    music (Regroup, Split Sections, Convert Octaves, Extract Phrase, Respell Notes) is compiled
+    and compared with the file as it was, note by note or by its MIDI, and is refused — with
+    the reason, and nothing changed — if anything would sound different.</li>
+    <li><b>One undo.</b> Each command is applied as a single edit, so <kbd>Ctrl+Z</kbd> once
+    puts the file back.</li>
+    <li><b>Errors first.</b> A file with syntax errors is left alone; fix the red squiggles and
+    run the command again.</li>
+  </ul>
+</section>
+
+<section id="new-score">
+  <h2>New Score</h2>
+  <p>Opens a new, untitled <code>.lys</code> from a template — one part, a section, a form and a
+  score — with the title selected so you can type over it, and the preview beside it. It is
+  also <i>File → New File… → Lily# Score (.lys)</i>. In the new file, type <code>lesson</code>
+  and <kbd>Ctrl+Space</kbd> for the <a href="learn.html">lessons</a>.</p>
+</section>
+
+<section id="import-musicxml">
+  <h2>Import MusicXML…</h2>
+  <p>Turns a MusicXML file — <code>.xml</code>, <code>.musicxml</code> or the compressed
+  <code>.mxl</code> — into Lily#. From the command palette it asks for the file and opens the
+  result as a new untitled <code>.lys</code>; from the Explorer's right-click menu it writes
+  <code>NAME.lys</code> beside the file. Either way the preview opens beside it.</p>
+  <p>An import is a faithful <b>starting point</b>, not a byte-for-byte copy: what Lily# writes
+  differently or leaves out is listed in a warning when it is done. Sections come from the
+  rehearsal marks, or — with none — from each change of key, time or clef. The notes are
+  written with absolute octaves (<code>c'</code>, <code>d''</code>); set
+  <code>lilysharp.import.relativeOctave</code> for relative ones. The command line does the
+  same: <code>lysc import score.musicxml</code>.</p>
+</section>
+
+<section id="import-image">
+  <h2>Import from Image/PDF… · Show Original Scan</h2>
+  <p>Reads printed music from a scan (<code>.png</code>, <code>.jpg</code>, <code>.tif</code>)
+  or a PDF with an optical music reader and opens the <code>.lys</code> it writes, with the
+  preview. <b>These two commands appear only when a reader is installed</b> — the reader is a
+  separate program, not part of the extension.</p>
+  <p><i>Show Original Scan</i> opens the scanned pages beside a <code>.lys</code> read this way,
+  with the marks the reader was unsure of boxed in red. Click a box to go to its music; the
+  caret lights the box of what it is on. The doubtful notes are also marked
+  <a href="grammar.html#todo"><code>@todo</code></a> in the source, so they show in red in the
+  preview until you have checked them. With <code>lilysharp.omr.verifyOnSave</code>, saving
+  has the reader engrave the file again and compare it with the scan, bar by bar.</p>
+</section>
+
+<section id="regroup">
+  <h2>Regroup (by part ⇄ by section)</h2>
+  <p>A Lily# file can be written two ways round: <b>by part</b>, each part holding its sections,
+  or <b>by section</b>, each section holding every part's music. The first suits a part copied
+  in one go (a bass line, a drum part); the second suits writing a song section by section.
+  <i>Regroup</i> rewrites the whole file into the other way, music unchanged.</p>
+<pre data-fragment>// by part                          // by section
+part melody { clef treble           part melody { clef treble }
+  section A { c'4 d' e' f' | }      part bass { clef bass }
+  section B { g'1 | }
+}                                   section A {
+part bass { clef bass                 melody { c'4 d' e' f' | }
+  section A { c1 | }                  bass { c1 | }
+  section B { g,1 | }               }
+}                                   section B {
+                                      melody { g'1 | }
+                                      bass { g,1 | }
+                                    }</pre>
+  <p>Run it again to go back. More on the two layouts:
+  <a href="grammar.html#parts">Parts and sections</a>.</p>
+</section>
+
+<section id="split">
+  <h2>Split Sections to Match a Part</h2>
+  <p>In a file grouped by part, one part may cut a section into several (<code>A</code> of 16
+  bars and <code>B</code> of 121) while the others still write it whole. The editor warns that
+  the section is not the same length everywhere. This command cuts the other parts — and the
+  section's chord rows and lyrics — at the same bars, and makes every form play
+  <code>A B</code> where it played <code>A</code>.</p>
+  <ul>
+    <li>Run it with the caret anywhere, or from the warning's lightbulb (<kbd>Ctrl+.</kbd>),
+    which names the section.</li>
+    <li>If the parts cut the section differently, it asks which part to follow. One
+    confirmation then shows the whole plan before anything changes.</li>
+    <li>Every cut part must sound and count exactly as before. A slur, tie or hairpin running
+    across a cut is carried into the new section. A beam, a pedal or another span across a
+    cut, or a cut in the middle of a bar, is reported instead, and nothing changes.</li>
+  </ul>
+</section>
+
+<section id="octaves">
+  <h2>Convert Octaves to Absolute / to Relative</h2>
+  <p>Rewrites the whole file into the other octave mode. In <b>relative</b> mode (the default) a
+  note without marks lands nearest the note before it; in <b>absolute</b> mode
+  (<code>octave absolute</code>) a bare <code>c</code> is always the same C. Every note keeps the
+  pitch it sounds — only its <code>'</code> and <code>,</code> marks and the
+  <code>octave</code> lines change — and the result is compared with the file note by note.</p>
+  <table class="g">
+    <tr><th>Relative</th><th>Absolute</th></tr>
+    <tr><td class="ba">c'4 e g c | b1 |</td><td class="ba">c'4 e' g' c'' | b'1 |</td></tr>
+  </table>
+  <p>A note that no score plays has no octave to keep, so the command names it and stops: play
+  it in a form, or remove it. Absolute octaves are the safer mode for music an AI writes, since
+  one wrong mark cannot shift every note after it. The command line:
+  <code>lysc octave --absolute song.lys</code>.</p>
+</section>
+
+<section id="extract-phrase">
+  <h2>Extract Phrase from Section</h2>
+  <p>Lifts music out of a section into a named <code>phrase</code> at the top level and writes
+  the name where it was, so other parts and sections can use the same music
+  (<code>theme</code>, or <code>theme'</code> an octave up). With the caret in a section's music
+  it takes that music; with a selection, the whole bars the selection touches. It asks for the
+  name, then checks that the file still sounds exactly the same, or changes nothing.</p>
+<pre data-fragment>// before                                  // after
+section A { melody { c'4 d' e' f' | g'1 | } }   phrase theme { c'4 d' e' f' | g'1 | }
+                                                section A { melody { theme } }</pre>
+  <p>More on phrases: <a href="grammar.html#phrases">Phrases</a>.</p>
+  <!-- VIDEO commands-extract-phrase: SHOTLIST 14. Caret in bar 1 of a two-bar melody;
+       right-click → Extract Phrase from Section, type "theme", Enter: the music moves into
+       phrase theme { … } and the section reads melody { theme }; the preview does not change. ~15 s. -->
+  <figure class="demo-video" data-pending>
+    <video src="videos/commands-extract-phrase.mp4" muted loop playsinline autoplay preload="none"></video>
+    <figcaption>Extract Phrase: the bars become a named phrase, and the score stays the same.</figcaption>
+  </figure>
+</section>
+
+<section id="chord-track">
+  <h2>Add Chord Track (auto-harmonize)</h2>
+  <p>Writes a first harmonization of the melody as a <code>chords harmony</code> row, placed
+  directly above the melody's staff. It picks <b>one chord per bar</b> from the key's seven
+  diatonic triads — the one whose notes cover most of the bar's melody, longer notes and the
+  downbeat counting more — and prefers the common chords (I, IV, V) when it is close. In a
+  major key the V is written as a V7. A bar of rests keeps the chord before it.</p>
+  <p>The file keeps its layout: a file grouped by section gets a chords block in each section;
+  one grouped by part gets one top-level track with a section per section. It is a <b>starting
+  point to edit</b> — the chords are plain text in the file. The key it harmonizes in is the
+  file's <code>key</code>; set the right one first (<a href="#guess-key">Guess Section Key</a>
+  helps). The command line: <code>lysc harmonize song.lys</code>.</p>
+</section>
+
+<section id="guess-key">
+  <h2>Guess Section Key…</h2>
+  <p>For music written down before its key was known — transcribed by ear, or played in.
+  Put the caret in a section (or select several sections, or put it on a section's name in a
+  <code>form</code>) and run the command. It reads the section's notes in <b>every part</b> and
+  lists the keys they fit, best first:</p>
+<pre data-fragment>Lily#: key of section A (no key stated at its start)
+  key c major    C major · score 1.03 · best guess
+  key c minor    C minor · score 0.76</pre>
+  <p>Only the likely keys are listed: those scoring within 0.3 of the best, at most five. The
+  score compares how long each pitch sounds with the pattern a major or minor key gives its
+  notes; the key whose tonic the section ends on gets a small extra. The tonic is spelled the
+  way the notes are written — <code>fis major</code> when the music writes sharps,
+  <code>ges major</code> when it writes flats.</p>
+  <p><b>Picking a key writes it</b> as the key the section starts in: a <code>key</code> already
+  there is rewritten; otherwise it goes in the section's header
+  (<code>section A { key d major … }</code>), and in a file grouped by part with no top-level
+  <code>section A</code>, a line <code>section A { key d major }</code> is added. Every part
+  playing the section takes the key, and the next section starts again from the file's own.
+  Then the command offers to <a href="#respell">respell the notes</a> for the new key.
+  <kbd>Esc</kbd> at either step changes nothing.</p>
+  <p class="note">A guess, not a verdict: a short or modal section can fit two keys equally
+  well, and the parallel or relative key is often a close second. Listen, and pick.</p>
+  <!-- VIDEO commands-guess-key: SHOTLIST 13. A melody taken down by ear, half in flats and two
+       notes as fis. Caret in section A, right-click → Guess Section Key…: ges major is first;
+       pick it (key ges major appears in the header, the signature in the preview), then the
+       respell list (fis → ges, checked) → Enter: the two sharps in the preview become G♭. ~20 s. -->
+  <figure class="demo-video" data-pending>
+    <video src="videos/commands-guess-key.mp4" muted loop playsinline autoplay preload="none"></video>
+    <figcaption>Guess Section Key, then Respell: the key goes into the section and the stray
+    <code>fis</code> become <code>ges</code>.</figcaption>
+  </figure>
+</section>
+
+<section id="respell">
+  <h2>Respell Notes to Key…</h2>
+  <p>Notes written before the key was known often come out spelled the wrong way round —
+  <code>fis</code> where G♭ major wants <code>ges</code>, <code>b</code> where it wants
+  <code>ces</code>, or <code>fis</code> and <code>ges</code> both in one section. They sound
+  right but print wrong: accidentals against the key signature. This command respells the
+  section at the caret (or every section a selection touches) for the key it starts in. If no
+  key is stated there, it uses the guessed key and tells you so.</p>
+  <p>It lists what it would change, all checked; uncheck any you want to keep as written, and
+  <kbd>Enter</kbd> applies the rest:</p>
+<pre data-fragment>Lily#: respell section A for ges major (G♭ major)
+  ☑ fis → ges    3 notes
+  ☑ ais → bes    1 note
+  ☑ b → ces      1 note
+  ☑ cis → des    1 note
+  ☑ dis → ees    1 note
+  ☑ gis → aes    1 note</pre>
+<pre data-fragment>// before, in G♭ major
+fis'4 gis' ais' b' | cis''4 dis'' f'' fis'' | fis'1 |
+// after: every note sounds as before
+ges'4 aes' bes' ces'' | des''4 ees'' f'' ges'' | ges'1 |</pre>
+  <ul>
+    <li><b>A note in the key's scale</b> takes the scale's spelling.</li>
+    <li><b>A note outside the scale</b> is left alone when the section writes it one way — a
+    written <code>aes</code> in C major is your choice. When the section writes it several ways,
+    it is unified to the spelling written most; a tie goes to the key's way (the raised sixth
+    and seventh in a minor key, <code>gis</code> in A minor; otherwise sharps in a sharp key,
+    flats in a flat key).</li>
+    <li>Notes after a <code>key</code> change inside the section are left alone.</li>
+    <li><b>Every note keeps its pitch.</b> In relative mode a new letter changes where the next
+    note lands, and <code>b</code> ⇄ <code>ces</code> crosses the octave, so the octave marks
+    are recomputed; the result is checked note by note, or nothing changes.</li>
+  </ul>
+</section>
+
+<section id="play">
+  <h2>Play, step and sound</h2>
+  <table class="g">
+    <tr><th>Command</th><th>Does</th></tr>
+    <tr><td>Play Note at Cursor — <kbd>Alt+P</kbd></td><td>sounds the note or chord under the caret for as long as the key is held</td></tr>
+    <tr><td>Play Current Measure — <kbd>Alt+M</kbd></td><td>plays the bar the caret is in</td></tr>
+    <tr><td>Step Up / Step Down — <kbd>Ctrl+Shift+Up/Down</kbd></td><td>moves the note an octave mark, or a chord name to its next shape — <a href="editor.html#step">Stepping</a></td></tr>
+    <tr><td>Choose Sound Font…</td><td>picks what the preview plays with: the General MIDI font bundled with the extension, the one your OS ships, or an <code>.sf2</code> / <code>.sf3</code> / <code>.dls</code> of yours</td></tr>
+  </table>
+  <p>The sound comes from the preview, so with no preview open the first <kbd>Alt+P</kbd> opens
+  one; press again to play. As you edit, the notes you land on and type sound too —
+  <a href="editor.html#audition">Audition</a>.</p>
+</section>
+
+<section id="preview-menu">
+  <h2>The preview's menu</h2>
+  <table class="g">
+    <tr><th>Command</th><th>Does</th></tr>
+    <tr><td>Open Preview — <kbd>Ctrl+Shift+V</kbd></td><td>shows the score in place of the source</td></tr>
+    <tr><td>Open Preview to Side — <kbd>Ctrl+K</kbd> <kbd>V</kbd></td><td>shows it beside the source (it opens there by itself when a <code>.lys</code> is opened)</td></tr>
+    <tr><td>Lock Preview to This File · Unlock</td><td>the lock in the preview's title bar: a locked preview stays on its file instead of following the one in front</td></tr>
+    <tr><td>Play from Here · Stop Playback</td><td>right-click on a note in the preview</td></tr>
+    <tr><td>Fit Width · Reset Zoom (100%)</td><td>right-click anywhere in the preview</td></tr>
+  </table>
+  <p>Everything else the preview does — the link between notes and source, the score picker,
+  the colours — is in <a href="editor.html#preview">The preview</a>.</p>
+</section>
+
+<section id="export">
+  <h2>Export</h2>
+  <p><i>Export as PDF</i>, <i>SVG</i>, <i>PNG</i>, <i>LilyPond (.ly)</i>, <i>MusicXML</i>,
+  <i>MIDI</i> and <i>VOCALOID sequence (.vsqx)</i>. They are in the command palette, in the
+  preview, and in the <i>Lily#: Export</i> submenu when you right-click <code>.lys</code> files in
+  the Explorer — select several to export every score of every file into one folder. From the
+  preview, the export is the score the preview shows, under that score's own form. Whichever
+  way, the file written is the one <code>lysc</code> writes from the command line.</p>
+</section>
+
+<section id="ai">
+  <h2>With AI</h2>
+  <p><i>Transform Selection with AI…</i> (<kbd>Ctrl+I</kbd>, also on the right-click menu)
+  rewrites the selected bars as you ask in words, and shows the answer engraved beside the
+  original before anything changes. <i>Select AI Model…</i> chooses the model. Both are
+  described in <a href="editor.html#ai">AI in the editor</a>.</p>
+</section>
+
+</article>
+</div>

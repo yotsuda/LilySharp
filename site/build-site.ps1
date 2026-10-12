@@ -74,7 +74,8 @@ $problems = [System.Collections.Generic.List[string]]::new()
 $published = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $tmp = Join-Path ([IO.Path]::GetTempPath()) 'lilysharp-site-check'
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
-$pages = @('index.html', 'learn.html', 'grammar.html', 'chords.html', 'editor.html') +
+$pages = @('index.html', 'start.html', 'learn.html', 'grammar.html', 'ref-music.html', 'ref-structure.html',
+    'ref-output.html', 'ref-lookup.html', 'chords.html', 'editor.html', 'commands.html', 'about.html') +
     @(Get-ChildItem (Join-Path $here '../LilySharp.Lsp/Lessons/en') -Filter 'lesson-*.lys' | Sort-Object Name | ForEach-Object { "$($_.BaseName).html" })
 foreach ($page in $pages) {
     $html = Get-Content (Join-Path $here $page) -Raw -Encoding UTF8
@@ -94,6 +95,17 @@ foreach ($page in $pages) {
     # generated, and a lesson renamed would otherwise leave a link to nothing).
     foreach ($m in [regex]::Matches($html, '<a[^>]+href="([a-z0-9-]+\.html)(?:#[^"]*)?"')) {
         if ($pages -notcontains $m.Groups[1].Value) { $problems.Add("${page}:$(LineOf $m.Index): link to a page the site does not have: $($m.Groups[1].Value)") }
+    }
+    # ...and a link to a place on a page names an id that page has. The reference was split
+    # into pages by its chapters (2026-10-12); a link rewritten to the wrong page, or a
+    # chapter renamed, would land on the top of a page instead of the place.
+    foreach ($m in [regex]::Matches($html, '<a[^>]+href="([a-z0-9-]+\.html)?#([^"]+)"')) {
+        $target = $m.Groups[1].Value ? $m.Groups[1].Value : $page
+        if ($pages -notcontains $target) { continue }
+        $targetHtml = $target -eq $page ? $html : (Get-Content (Join-Path $here $target) -Raw -Encoding UTF8)
+        if ($targetHtml -notmatch ('id="' + [regex]::Escape($m.Groups[2].Value) + '"')) {
+            $problems.Add("${page}:$(LineOf $m.Index): link to #$($m.Groups[2].Value), which $target does not have")
+        }
     }
     foreach ($m in [regex]::Matches($html, 'Lily# (\d+\.\d+\.\d+)')) {
         if ($m.Groups[1].Value -ne $ver) { $problems.Add("${page}:$(LineOf $m.Index): says Lily# $($m.Groups[1].Value), the repository is $ver") }
@@ -138,5 +150,7 @@ foreach ($f in @($pages) + @($published)) {
     New-Item -ItemType Directory -Force -Path (Split-Path $target) | Out-Null
     Copy-Item (Join-Path $here $f) $target
 }
+# The favicon every page names (site-common.ps1) is the extension's icon: one picture, kept there.
+Copy-Item (Join-Path $here '../editors/vscode/icon.png') (Join-Path $out 'favicon.png')
 New-Item -ItemType File -Path (Join-Path $out '.nojekyll') | Out-Null   # serve as is, no Jekyll pass
 Write-Host "Site built and checked: Lily# $ver -> _site/ ($($published.Count + $pages.Count) files)" -ForegroundColor Green
