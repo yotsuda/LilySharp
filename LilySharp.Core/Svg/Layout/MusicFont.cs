@@ -141,6 +141,11 @@ internal abstract class MusicFont
     /// one, and answers that font's character and face (docs/smufl-design.md §6 ② ⒟).</remarks>
     internal virtual (char Code, int Face) Drawn(char glyph, int design) => (glyph, design);
 
+    /// <summary>Whether <paramref name="face"/> (a number <see cref="Drawn"/> answered) is
+    /// ANOTHER font's — a <see cref="MusicFontChain"/>'s later member drawing a glyph its first
+    /// font lacks — rather than one of this font's own designs.</summary>
+    internal virtual bool IsOtherFont(int face) => false;
+
     /// <summary>
     /// The engraving style a score in this font is engraved with: <paramref name="style"/> —
     /// LilyPond's defaults with what the score's <c>layout { }</c> and <c>--set</c> wrote — and,

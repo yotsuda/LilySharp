@@ -88,7 +88,12 @@ public class SmuflFallbackTests
     {
         var (svg, warnings) = Render("fonts { music \"Leland\" }");
         Assert.Contains(".music { font-family: 'Leland', serif; }", svg, StringComparison.Ordinal);
-        Assert.Contains("font-family=\"Emmentaler, Leland, serif\"", svg, StringComparison.Ordinal);
+        // In a STYLE, which beats the class rule above: a font-family ATTRIBUTE loses to it, and
+        // the browser drew Emmentaler's character in Leland, which lacks it (owner's report
+        // 2026-10-12: the slash heads were missing in Leland). Leland is not in the chain — its
+        // character there means another glyph.
+        Assert.Contains("style=\"font-family: 'Emmentaler', serif\"", svg, StringComparison.Ordinal);
+        Assert.DoesNotContain("font-family=\"Emmentaler, Leland", svg, StringComparison.Ordinal);
         // No stand-in reaches the page.
         Assert.DoesNotContain(svg, c => c is >= '\uD800' and <= '\uDFFF');
         // 6, 4 and 5 — each said once although the score has three figures.
@@ -100,11 +105,24 @@ public class SmuflFallbackTests
     }
 
     [Fact]
+    public void ALelandScoresSlashHeads_AreEmmentalersInAStyle_TheBrowserDraws()
+    {
+        // Owner's report 2026-10-12: Leland has no slash heads, and the preview showed none.
+        var svg = SvgGenerator.Generate(SyntaxTree.Parse(
+            "fonts { music \"Leland\" }\npart m { }\nsection A { m { /4 / /2 | /1 | } }\nform { A }\nscore { staff m }\n"),
+            new SvgRenderOptions());
+        string slash = EmmentalerMusicFont.Instance.Codepoint(MusicGlyph.NoteheadSlashHorizontalEnds).ToString();
+        var heads = System.Text.RegularExpressions.Regex.Matches(svg, "<text class=\"music\"([^>]*)>" + slash + "</text>");
+        Assert.Equal(2, heads.Count);                     // the two quarters (the half and the whole are other glyphs)
+        Assert.All(heads, m => Assert.Contains("style=\"font-family: 'Emmentaler', serif\"", m.Groups[1].Value));
+    }
+
+    [Fact]
     public void ANextNamedFont_DrawsWhatTheFirstLacks_AndIsNoFallbackToWarnAbout()
     {
         var (svg, warnings) = Render("fonts { music \"Leland\" \"Bravura\" }");
-        Assert.Contains("font-family=\"Bravura, Leland, serif\"", svg, StringComparison.Ordinal);
-        Assert.DoesNotContain("Emmentaler,", svg, StringComparison.Ordinal);
+        Assert.Contains("style=\"font-family: 'Bravura', serif\"", svg, StringComparison.Ordinal);
+        Assert.DoesNotContain("'Emmentaler'", svg, StringComparison.Ordinal);
         Assert.Empty(warnings);
     }
 

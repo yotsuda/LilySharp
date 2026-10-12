@@ -218,6 +218,9 @@ workflow attaches that section to the GitHub Release verbatim.
   signatures went from 429 to 463 of 491 scores matching.
 - **A part named `r`, `s`, `q` or `R` gets another variable name in the twin** — they are
   note-mode words, and LilyPond refused the file ("unexpected RESTNAME").
+- **A glyph a music font lacks is drawn in the SVG and the preview, not only in the PNG and PDF.**
+  Under Leland the slash heads (and figured-bass digits) are Emmentaler's, but the page's
+  `.music` rule overrode their face and the browser drew nothing; the face now goes in a style.
 - **A slash note's `@todo` is ringed in the preview.** `/4@todo("…")` was counted by the
   diagnostics and dropped from the page without a word.
 - **A slash note's middle-line pitch follows every clef in the twin.** A percussion, soprano,

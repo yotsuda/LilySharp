@@ -154,6 +154,9 @@ internal sealed class MusicFontChain : MusicFont
     }
 
     /// <inheritdoc/>
+    internal override bool IsOtherFont(int face) => face >= FaceStride && face / FaceStride < _members.Length;
+
+    /// <inheritdoc/>
     /// <remarks>The first font's design number, whatever the size (the remarks on the class).</remarks>
     public override MusicFontDesign DesignAt(double fontSizeStep) => _design;
 

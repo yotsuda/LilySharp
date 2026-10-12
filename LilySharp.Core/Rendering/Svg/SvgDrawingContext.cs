@@ -291,7 +291,17 @@ internal sealed class SvgDrawingContext : IDrawingContext
         // draws the glyph from the default design instead of showing tofu. It is the wrong
         // OUTLINE by ~0.5% and the right glyph, which is the better of the two failures.
         var font = MusicFont.Current;
-        if (face != font.DefaultDesign)
+        if (font.IsOtherFont(face))
+        {
+            // ⚠️ ANOTHER FONT's glyph (Leland has no slash heads; Emmentaler draws them) goes in
+            // a STYLE: a presentation attribute loses to the page's `.music { font-family }`
+            // rule, so the browser drew the character in the class's font, which lacks it, and
+            // the slash heads were simply missing from the SVG and the preview (owner's report
+            // 2026-10-12; the PNG and the PDF, which read no CSS, drew them). The class's family
+            // is NOT in the chain: its character code means another glyph there.
+            _sb.Append(" style=\"font-family: '").Append(font.FaceFamily(face)).Append("', serif\"");
+        }
+        else if (face != font.DefaultDesign)
             _sb.Append(" font-family=\"").Append(font.FaceFamily(face))
                .Append(", ").Append(font.FaceFamily(font.DefaultDesign)).Append(", serif\"");
     }
