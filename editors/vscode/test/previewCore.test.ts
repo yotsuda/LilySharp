@@ -16,7 +16,7 @@
 
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { svgPostKey, pagesSummary, previewOnEditorShown, sourceGroupToReveal, ShownEditor } from '../src/previewCore';
+import { svgPostKey, pagesSummary, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, ShownEditor } from '../src/previewCore';
 
 describe('the page answer summary', () => {
     it('counts the pages by what they did and the characters that travelled', () => {
@@ -68,8 +68,14 @@ describe('the svg post key', () => {
 describe('an editor coming to the front', () => {
     const opened: ShownEditor = {
         languageId: 'lilysharp', scheme: 'file', inDiff: false, hasOwnPreview: false,
-        hasFollower: false, openOnOpen: true, firstShow: true, dismissed: false,
+        hasFollower: false, openOnOpen: true, firstShow: true, dismissed: false, followerLocked: false,
     };
+
+    it('opens the second preview on a tab switch once the follower was locked to compare', () => {
+        assert.equal(previewOnEditorShown({ ...opened, firstShow: false, followerLocked: true }), 'open');
+        assert.equal(previewOnEditorShown({ ...opened, firstShow: false, followerLocked: true, dismissed: true }), 'none');
+        assert.equal(previewOnEditorShown({ ...opened, firstShow: false, followerLocked: true, inDiff: true }), 'none');
+    });
 
     it('opens a preview when a .lys file is opened and none is open', () => {
         assert.equal(previewOnEditorShown(opened), 'open');
@@ -97,6 +103,17 @@ describe('an editor coming to the front', () => {
         assert.equal(previewOnEditorShown({ ...opened, openOnOpen: false }), 'none');
         assert.equal(previewOnEditorShown({ ...opened, languageId: 'markdown' }), 'none');
         assert.equal(previewOnEditorShown({ ...opened, hasFollower: true, scheme: 'git' }), 'none');
+    });
+});
+
+describe('the column a new preview opens in', () => {
+    it('is the next one right of the rightmost locked preview on screen', () => {
+        assert.equal(newPreviewColumn([2]), 3);
+        assert.equal(newPreviewColumn([3, 2]), 4);
+    });
+
+    it('is VS Code\'s own beside with no locked preview on screen', () => {
+        assert.equal(newPreviewColumn([]), undefined);
     });
 });
 

@@ -36,7 +36,7 @@ import { locateOmr } from './omrCore';
 import { OmrScanDeps, hasScan, previewReady, previewShowsBar, registerScanFollow, showScan } from './omrScan';
 import { registerVerifyOnSave } from './omrVerify';
 import { markdownItExtensionApi } from './markdownFence';
-import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, SourceTab } from './previewCore';
+import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, SourceTab } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 import { SplitSectionsChoice, modalText, splitChoiceItems } from './splitSectionsCore';
 
@@ -74,6 +74,9 @@ const playingPanels = new Set<vscode.WebviewPanel>();
 let pendingFollow: string | undefined;
 // Files whose preview the writer closed this session: opening them again opens none.
 const dismissedPreviews = new Set<string>();
+// The follower went away by being LOCKED (to compare), not closed: the next .lys in front opens a
+// second preview even on a tab switch (previewOnEditorShown). Any preview closing clears it.
+let followerLocked = false;
 // The URI a panel shows now — the map's key, which a follow or an untitled save moves.
 function panelKey(panel: vscode.WebviewPanel): string | undefined {
     for (const [key, value] of previewPanels) {
@@ -123,9 +126,10 @@ function setActivePreviewLocked(lock: boolean) {
     if (!panel) { return; }
     const previous = followerPanel;
     if (lock) {
-        if (followerPanel === panel) { followerPanel = undefined; }
+        if (followerPanel === panel) { followerPanel = undefined; followerLocked = true; }
     } else {
         followerPanel = panel;
+        followerLocked = false;
     }
     for (const p of [panel, previous]) {
         const key = p && panelKey(p);
@@ -838,6 +842,7 @@ export function activate(context: vscode.ExtensionContext) {
             openOnOpen: vscode.workspace.getConfiguration('lilysharp').get<boolean>('preview.openOnOpen', true),
             firstShow,
             dismissed: dismissedPreviews.has(uri),
+            followerLocked,
         });
         if (action === 'follow' && followerPanel) {
             if (playingPanels.has(followerPanel)) {
@@ -1022,6 +1027,15 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
         return;
     }
 
+    // Beside a locked preview on screen, not stacked on it: that one is kept to be compared.
+    // (With no follower open, every preview there is is locked.)
+    if (viewColumn === vscode.ViewColumn.Beside) {
+        const locked = [...previewPanels.values()]
+            .filter(p => p.visible && p.viewColumn !== undefined)
+            .map(p => p.viewColumn as number);
+        viewColumn = newPreviewColumn(locked) ?? viewColumn;
+    }
+
     // Create new preview panel with access to the fonts, the synth and the sound font
     outputChannel.appendLine('Creating new preview panel');
     const panel = vscode.window.createWebviewPanel(
@@ -1039,6 +1053,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     armPanelReady(uri);
     // With no follower open, the new preview is it.
     followerPanel = panel;
+    followerLocked = false;
     panel.title = previewTitle(uri, panel);
     if (panel.active) {
         void vscode.commands.executeCommand('setContext', 'lilysharp.previewLocked', false);
@@ -1059,6 +1074,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
 
     panel.onDidDispose(() => {
         if (followerPanel === panel) { followerPanel = undefined; }
+        followerLocked = false;
         playingPanels.delete(panel);
         // Find this panel's CURRENT key by value: it may have been re-keyed when an
         // untitled score was saved to a file (see onDidCloseTextDocument), so the URI

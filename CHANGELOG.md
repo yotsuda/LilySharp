@@ -315,8 +315,9 @@ workflow attaches that section to the GitHub Release verbatim.
   `lilysharp.preview.openOnOpen`, on by default; not on a tab switch, in a diff, or for a file
   whose preview was closed this session. Switching to another `.lys` turns the same preview to
   it instead of adding a tab, each file keeping its own zoom and scroll; while it plays it
-  waits for the music to stop. The lock in the preview's title bar keeps it on one file (to
-  compare two, lock one and open the other), and bringing a locked preview forward brings its
+  waits for the music to stop. The lock in the preview's title bar keeps it on one file — to
+  compare two, lock one and switch to the other: its preview opens in a new group beside the
+  locked one — and bringing a locked preview forward brings its
   file's tab forward in the other group. Lesson 1's STEP 0 says so.
 - **A phrase says what it holds.** Hovering a phrase's name — where it is played or declared —
   shows its length, how often the file plays it and its source; a drum phrase adds its kit pieces

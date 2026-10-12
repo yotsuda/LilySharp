@@ -96,6 +96,9 @@ export interface ShownEditor {
     firstShow: boolean;
     /** The writer closed this file's preview this session. */
     dismissed: boolean;
+    /** The follower is gone because the writer LOCKED it (to compare), not because they closed
+     *  a preview: then a tab switch opens the second preview too. */
+    followerLocked: boolean;
 }
 
 /**
@@ -116,7 +119,18 @@ export function previewOnEditorShown(e: ShownEditor): 'none' | 'follow' | 'open'
     if (e.hasFollower) {
         return 'follow';
     }
-    return e.openOnOpen && !e.inDiff && e.firstShow && !e.dismissed ? 'open' : 'none';
+    return e.openOnOpen && !e.inDiff && (e.firstShow || e.followerLocked) && !e.dismissed ? 'open' : 'none';
+}
+
+/**
+ * The column a new preview opened beside its file goes to, or undefined for VS Code's own
+ * "beside": with a locked preview on screen it opens in a new group just right of the
+ * rightmost one, so the two stand side by side to be compared instead of stacking as tabs
+ * (owner's decision 2026-10-12 — a preview is locked to be compared). A column past the last
+ * group makes VS Code create that group.
+ */
+export function newPreviewColumn(visibleLockedColumns: readonly number[]): number | undefined {
+    return visibleLockedColumns.length === 0 ? undefined : Math.max(...visibleLockedColumns) + 1;
 }
 
 /** One editor tab, as far as revealing a preview's source needs it. */
