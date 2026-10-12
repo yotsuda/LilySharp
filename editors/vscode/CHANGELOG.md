@@ -4,6 +4,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A part cannot be named `as`
+
+- **`part as` is refused at the declaration**, naming the reserved words. In a score `as` opens a
+  staff's drawing words (`staff m as lines 1`), and a bare `staff as …` is the unnamed part drawn
+  so — a part named `as` could never be placed, and the score used to say "a bare 'staff' renders
+  the unnamed part" about a file that named one.
+
 ### Ending a hairpin with no dynamic
 
 - **`@!cresc`, `@!decresc` and `@!dim` end a hairpin on their note** — LilyPond's `\!`, which

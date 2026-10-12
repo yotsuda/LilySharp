@@ -86,6 +86,20 @@ public class PartNameVocabularyTests
         Assert.Equal(name, spec.Items.OfType<SingleStaffSpec>().Single().Staff.VoiceName);
     }
 
+    /// <summary>`as` opens a staff's drawing words in a score (`staff m as lines 1`), so a part
+    /// named `as` could never be placed (grammar feedback A5, 2026-10-12): it is refused at the
+    /// declaration, once, with the list — and the name is consumed, so the A-flat the lexer also
+    /// reads it as does not cascade into "music at the top level".</summary>
+    [Fact]
+    public void As_IsRefusedAsAName_Once()
+    {
+        Assert.False(SyntaxFacts.IsPartNameToken(SyntaxKind.Identifier, "as"));
+        Assert.True(SyntaxFacts.IsPartNameToken(SyntaxKind.Identifier, "asx"));
+        var diagnostics = SyntaxTree.Parse("part as \"Alto Sax\" { instrument alto-sax }").Diagnostics;
+        var error = Assert.Single(diagnostics);
+        Assert.Contains("'as', a reserved word", error.Message);
+        Assert.Contains(", as)", error.Message);
+    }
     [Fact]
     public void TheReservedListCanFail()
     {

@@ -559,7 +559,17 @@ internal static class SyntaxFacts
     /// the other seven for no reason anybody chose.
     /// </remarks>
     public static bool IsPartNameToken(SyntaxKind kind, string? text) =>
-        IsBareWord(text) && !char.IsDigit(text![0]) && !PartNameReservedKinds.Contains(kind);
+        IsBareWord(text) && !char.IsDigit(text![0]) && !PartNameReservedKinds.Contains(kind)
+        && !PartNameContextualWords.Contains(text, StringComparer.Ordinal);
+
+    /// <summary>
+    /// Words a part cannot be named although the lexer reads them as plain identifiers: they are
+    /// keywords only where a score item stands. <c>as</c> opens a staff's drawing words
+    /// (<c>staff m as lines 1</c>), and a bare <c>staff as …</c> is the unnamed part drawn
+    /// so — a part named <c>as</c> could never be placed (grammar feedback A5, 2026-10-12: the
+    /// score said "a bare 'staff' renders the unnamed part" about a file that named one).
+    /// </summary>
+    public static IReadOnlyList<string> PartNameContextualWords { get; } = ["as"];
 
     /// <summary>
     /// A bare word: letters, digits and <c>_</c>, nothing else and not empty. Quoted strings,

@@ -727,10 +727,19 @@ internal sealed partial class Parser
         var span = new TextSpan(_textPosition, Current.FullWidth);
         string found = !string.IsNullOrEmpty(Current.Text) && char.IsLetter(Current.Text[0])
             ? $"'{Current.Text}', a reserved word — pick another name (the words a name "
-              + $"cannot be: {string.Join(", ", SyntaxFacts.PartNameReservedVocabulary)})"
+              + $"cannot be: {string.Join(", ", SyntaxFacts.PartNameReservedVocabulary.Concat(SyntaxFacts.PartNameContextualWords))})"
             : $"'{Current.Kind}'";
         _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
             $"Expected a name, found {found}");
+
+        // A word refused only by its CONTEXT (`as`) is a bare word the rest of the declaration
+        // is written around: take it as the name so "part as { … }" says one thing, not
+        // "music at the top level" for the A-flat the lexer also reads it as.
+        if (SyntaxFacts.PartNameContextualWords.Contains(Current.Text, StringComparer.Ordinal))
+        {
+            var refused = Advance();
+            return new SyntaxToken(SyntaxKind.Identifier, refused.Text, refused.LeadingTrivia, refused.TrailingTrivia);
+        }
 
         // Zero-width missing token with NO trivia (Current keeps its own; borrowing it
         // here would double-count — see Expect).

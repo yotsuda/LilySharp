@@ -1156,7 +1156,7 @@ These are keywords. A PART or SECTION name may be any of them EXCEPT the structu
 (`voice lyrics chords section part phrase form score tab staff ossia grandStaff staffGroup
 choirStaff condensedStaff combinedStaff layout paper fonts grace acciaccatura appoggiatura
 cue key time tempo partial override revert once using title subtitle composer poet segno
-fine coda dc ds al to break noBreak pageBreak noPageBreak`) — so
+fine coda dc ds al to break noBreak pageBreak noPageBreak`, and `as` — a score's `staff X as …` word) — so
 `part p`, `part bass`, `part q` are fine (2026-10-03). A PHRASE name is referenced bare in
 music, so it is an identifier, a clef word (`treble bass alto tenor`) or a dynamic word
 (`ppp pp p mp mf ff fff`; `f` is the note F, so not `f`); any other keyword is LYS1030.
