@@ -52,7 +52,9 @@ $InstallSteps = @'
     <li><b>Hear it</b>
       <span>Click the score once, then press <b>▶</b> at its top: it plays, and each note lights
       as it sounds. (A computer lets a page make sound only after you have clicked in it — that
-      first click is what it waits for.)</span></li>
+      first click is what it waits for.) Out of the box it uses the instrument sounds your
+      computer already has; for fuller ones, install a free <a href="editor.html#soundfonts">sound
+      font</a> — a download and a few clicks.</span></li>
     <li><b>Learn the rest as you go</b>
       <span>On an empty line at the end of the file, type <code>lesson</code> and press
       <kbd>Ctrl+Space</kbd>: a list of twelve short lessons appears. Pick
