@@ -37,11 +37,16 @@ internal sealed partial class Parser
         // `staff X "…"` overrides it per-score). Same `symbol "label"` idiom as a
         // structure section (`A "A2"`) and a staff render (`staff X "…"`).
         SyntaxToken? displayName = Check(SyntaxKind.StringLiteral) ? Advance() : (SyntaxToken?)null;
+        // …and an optional SHORT name after it (`part vn1 "Violin I" "Vn. I"`), printed from the
+        // second system on (LilyPond's shortInstrumentName; grammar feedback B6, 2026-10-13).
+        SyntaxToken? shortName = displayName != null && Check(SyntaxKind.StringLiteral) ? Advance() : null;
 
         // Check if there's a body
         if (!Check(SyntaxKind.OpenBrace))
         {
             // No body: part name ["display"]
+            if (shortName is { } snn)
+                return new PartDeclarationGreen(keyword, name, displayName!, snn, null, [], null);
             return displayName is { } dnn
                 ? new PartDeclarationGreen(keyword, name, dnn)
                 : new PartDeclarationGreen(keyword, name);
@@ -117,6 +122,8 @@ internal sealed partial class Parser
         }
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
+        if (shortName is { } sn)
+            return new PartDeclarationGreen(keyword, name, displayName!, sn, openBrace, [.. properties], closeBrace);
         return displayName is { } dn
             ? new PartDeclarationGreen(keyword, name, dn, openBrace, [.. properties], closeBrace)
             : new PartDeclarationGreen(keyword, name, openBrace, [.. properties], closeBrace);

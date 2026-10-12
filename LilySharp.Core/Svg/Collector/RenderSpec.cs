@@ -71,6 +71,11 @@ public sealed record StaffSpec(
     string? PresetName = null
 )
 {
+    /// <summary>The part's short name (`part vn1 "Violin I" "Vn. I"`), printed from the second
+    /// system on — LilyPond's shortInstrumentName. Null when the part has none or the label is
+    /// suppressed (`~`).</summary>
+    public string? ShortInstrumentName { get; init; }
+
     /// <summary>The voice each folded verse sings by its <c>sings</c> (see
     /// <see cref="VerseVoices"/>), keyed by track, or null when no verse of this staff
     /// names one — the common case, which then allocates nothing.</summary>
@@ -698,6 +703,7 @@ public sealed record RenderSpec(
                         getVoices(single.Staff.VoiceName),
                         single.Staff.InstrumentName) with
                     {
+                        ShortInstrumentName = single.Staff.ShortInstrumentName,
                         RemoveEmpty = single.Staff.RemoveEmpty,
                         RemoveFirst = single.Staff.RemoveFirst,
                         Lines = single.Staff.Lines,

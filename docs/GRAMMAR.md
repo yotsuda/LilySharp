@@ -1103,7 +1103,9 @@ TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
    `staff X "…"` (per-score) > part display name > `instrument`'s own quoted label >
    the preset's printed name > the capitalized part identifier — the last two only
    with two or more instruments (below). (There is no `name` property — the inline
-   string replaced it.) *)
+   string replaced it.) A SECOND string is the short name (`part vln1 "Violin I" "Vn. I"`,
+   2026-10-13): printed from the second system on, LilyPond's shortInstrumentName; on the
+   part only, and silenced with the long one by `staff ~X`. *)
 
 (* instrument: a bare preset word (violin, cello, piano-right, …) drives the
    default clef/octave/tuning and the MIDI timbre, and names the staff by the

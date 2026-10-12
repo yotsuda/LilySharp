@@ -103,6 +103,9 @@ internal sealed class MusicXmlDocument
                 new XElement("part-name",
                     part.DisplayName == null ? new XAttribute("print-object", "no") : null,
                     part.DisplayName ?? part.UnprintedName ?? part.Name ?? $"Part {i + 1}"));
+            // The schema's order: part-name, then part-abbreviation, then the instruments.
+            if (part.Abbreviation is { } abbreviation)
+                scorePart.Add(new XElement("part-abbreviation", abbreviation));
             if (part.MidiProgram is int program)
             {
                 // The sound the .mid gives the part (HANDOFF §2 F-midi): <score-instrument>
@@ -164,6 +167,8 @@ internal sealed class MusicXmlPart
     /// <summary>The name the page labels the part's staff with (<c>part vo "Vocal"</c>,
     /// <c>staff rh "Right"</c>), written as <c>&lt;part-name&gt;</c>; null writes the id.</summary>
     public string? DisplayName { get; set; }
+    /// <summary>The part's short name, written as `&lt;part-abbreviation&gt;`; null writes none.</summary>
+    public string? Abbreviation { get; set; }
 
     /// <summary>The part's name where the page prints none — its <c>instrument</c> preset's
     /// (<c>StaffSpec.PresetName</c>: a solo cello is still "Cello" to a reader's part list,

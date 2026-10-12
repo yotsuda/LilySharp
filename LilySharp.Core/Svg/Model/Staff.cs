@@ -133,6 +133,10 @@ public sealed record Staff(
     // Identity, not value equality: see ModelIdentity.
     public bool Equals(Staff? other) => ReferenceEquals(this, other);
 
+    /// <summary>The short name printed at the staff's left from the second system on
+    /// (`part vn1 "Violin I" "Vn. I"` — LilyPond's shortInstrumentName), or null.</summary>
+    public string? ShortInstrumentName { get; init; }
+
     /// <inheritdoc/>
     public override int GetHashCode() => ModelIdentity.HashOf(this);
 

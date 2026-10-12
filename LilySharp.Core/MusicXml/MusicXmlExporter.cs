@@ -503,6 +503,9 @@ public sealed class MusicXmlExporter
                 continue;
             if (staff.InstrumentName is { } label)
                 part.DisplayName ??= label;
+            // The short name (`part vn1 "Violin I" "Vn. I"`) is MusicXML's part-abbreviation.
+            if (staff.ShortInstrumentName is { } abbreviation)
+                part.Abbreviation ??= abbreviation;
             else if (staff.PresetName is { } preset)
                 part.UnprintedName ??= preset;
         }

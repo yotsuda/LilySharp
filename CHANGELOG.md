@@ -6,6 +6,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Short instrument names
+
+- **`part vn1 "Violin I" "Vn. I"`**: a second string on the part is its short name, printed at the
+  staff's left from the second system on (LilyPond's `shortInstrumentName`, which the twin writes;
+  MusicXML's `part-abbreviation`). Like LilyPond with its default short indent, the short name
+  hangs into the left margin. `staff ~vn1` silences both names. A later system no longer prints
+  the long name when a paper's `shortIndent` is set.
 ### Subito dynamics
 
 - **`@p.subito`** prints the dynamic with an italic *sub.* before it and plays it as the plain

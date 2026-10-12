@@ -1714,6 +1714,11 @@ A staff's display name is a quoted string (`staff flute "Piccolo"`) — a bare w
 `click` MIDI-only part), so position never changes what a word means. And a score of
 nothing but bare names has nothing to engrave, which is the empty-body error.
 
+A part may also carry a **short name**, a second string after its own: `part vn1 "Violin I" "Vn. I"`.
+The first system prints the long name, every later system the short one, hanging into the left
+margin as LilyPond's `shortInstrumentName` does (the twin writes it; MusicXML's
+`part-abbreviation`). `staff ~vn1` silences both.
+
 A clef word before the part puts that clef on this staff only (`staff bass melody`). Since a
 clef word may also be a part's name, a file that declares a part named `bass` reads
 `staff bass click` as **part bass's staff plus `click` played to MIDI only**, and warns

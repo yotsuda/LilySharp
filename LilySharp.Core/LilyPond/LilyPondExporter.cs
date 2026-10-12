@@ -90,6 +90,8 @@ public sealed partial class LilyPondExporter
     /// </para>
     /// </remarks>
     private readonly Dictionary<string, string> _instrumentNames = new(StringComparer.Ordinal);
+    // The parts' short names (`part vn1 "Violin I" "Vn. I"`) — shortInstrumentName.
+    private readonly Dictionary<string, string> _shortInstrumentNames = new(StringComparer.Ordinal);
 
 
     /// <summary>

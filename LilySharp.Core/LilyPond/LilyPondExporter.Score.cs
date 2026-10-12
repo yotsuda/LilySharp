@@ -412,6 +412,7 @@ public sealed partial class LilyPondExporter
     private void CollectInstrumentNames(SyntaxTree tree)
     {
         _instrumentNames.Clear();
+        _shortInstrumentNames.Clear();
         var spec = Score is { } score ? RenderSpecParser.Parse(score) : RenderSpecParser.FindFirst(tree);
         if (spec is null) return;
 
@@ -422,6 +423,8 @@ public sealed partial class LilyPondExporter
         {
             if (!string.IsNullOrEmpty(st.InstrumentName))
                 _instrumentNames[st.VoiceName] = st.InstrumentName!;
+            if (!string.IsNullOrEmpty(st.ShortInstrumentName))
+                _shortInstrumentNames[st.VoiceName] = st.ShortInstrumentName!;
         }
 
         void TakeGroup(GrandStaffSpec group)
@@ -509,11 +512,16 @@ public sealed partial class LilyPondExporter
         return names[0];
     }
 
-    /// <summary>The <c>\with { instrumentName = … }</c> clause a staff carries, or null.</summary>
-    private string? InstrumentNameClause(string? partName) =>
-        partName != null && _instrumentNames.TryGetValue(partName, out var n)
-            ? "instrumentName = " + QuoteLilyPondString(n)
-            : null;
+    /// <summary>The <c>\with { instrumentName = … shortInstrumentName = … }</c> clause a staff
+    /// carries, or null — the short name (the systems after the first) beside the long one.</summary>
+    private string? InstrumentNameClause(string? partName)
+    {
+        if (partName == null)
+            return null;
+        string? full = _instrumentNames.TryGetValue(partName, out var n) ? "instrumentName = " + QuoteLilyPondString(n) : null;
+        string? shortName = _shortInstrumentNames.TryGetValue(partName, out var s) ? "shortInstrumentName = " + QuoteLilyPondString(s) : null;
+        return full != null && shortName != null ? full + " " + shortName : full ?? shortName;
+    }
 
     /// <summary>A Lily# label as a LilyPond string literal.</summary>
     /// <remarks>Only the two characters LilyPond's lexer treats specially inside <c>"…"</c>

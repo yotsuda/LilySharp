@@ -1105,9 +1105,17 @@ public sealed class PartDeclarationSyntax : SyntaxNode
     /// label printed at the staff's left. Not a symbol — free text, may contain spaces.</summary>
     public string? DisplayName => DisplayNameToken is { } t ? StringLiteral.Value(t.Text) : null;
 
-    // Layout: keyword name [displayName] [openBrace props… closeBrace]. The body,
-    // when present, begins at the first token after the optional display name.
-    private int OpenBraceIndex => DisplayNameToken != null ? 3 : 2;
+    /// <summary>The optional SHORT name (`part vn1 "Violin I" "Vn. I"`, 2026-10-13, grammar
+    /// feedback B6): a second string right after the display name, printed at the staff's left
+    /// from the second system on (LilyPond's shortInstrumentName). On the part only (owner's
+    /// decision 2026-10-13). Null when absent.</summary>
+    public string? ShortName => DisplayNameToken != null
+        && GetChild(3) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } t
+            ? StringLiteral.Value(t.Text) : null;
+
+    // Layout: keyword name [displayName [shortName]] [openBrace props… closeBrace]. The body,
+    // when present, begins at the first token after the optional names.
+    private int OpenBraceIndex => DisplayNameToken == null ? 2 : ShortName != null ? 4 : 3;
     private bool HasBody =>
         SlotCount > OpenBraceIndex
         && GetChild(OpenBraceIndex) is SyntaxTokenNode { Kind: SyntaxKind.OpenBrace };

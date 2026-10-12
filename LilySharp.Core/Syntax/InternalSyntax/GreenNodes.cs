@@ -561,6 +561,22 @@ internal sealed class PartDeclarationGreen : GreenSyntaxNode
         : base(SyntaxKind.PartDeclaration, [keyword, name, displayName, openBrace, .. properties, closeBrace])
     {
     }
+
+    // With a display name AND a short one (`part vn1 "Violin I" "Vn. I"`, 2026-10-13), with or
+    // without a body: the short name is the slot after the display name.
+    public PartDeclarationGreen(
+        SyntaxToken keyword,
+        SyntaxToken? name,
+        SyntaxToken displayName,
+        SyntaxToken shortName,
+        SyntaxToken? openBrace,
+        GreenNode?[] properties,
+        SyntaxToken? closeBrace)
+        : base(SyntaxKind.PartDeclaration, openBrace is null
+            ? [keyword, name, displayName, shortName]
+            : [keyword, name, displayName, shortName, openBrace, .. properties, closeBrace])
+    {
+    }
 }
 
 /// <summary>

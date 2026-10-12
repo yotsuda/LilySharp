@@ -468,6 +468,7 @@ public readonly record struct MeasureContentKey(long Hash)
         // measures of EVERY voice are already captured by the caller (entry context +
         // AddIntrinsic per voice), so nothing voice-related belongs here.
         hc.Add(staff.InstrumentName);
+        hc.Add(staff.ShortInstrumentName);   // the later systems' label (2026-10-13)
         hc.Add(staff.Tuning);
         hc.Add(staff.IsOssia);
         hc.Add(staff.RemoveEmpty);

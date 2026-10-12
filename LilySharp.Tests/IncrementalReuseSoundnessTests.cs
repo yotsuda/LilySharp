@@ -446,7 +446,7 @@ public class IncrementalReuseSoundnessTests
         // geometry. This canary fails until the new field is triaged into the key.
         var foldedByStaffIdentity = new[]
         {
-            nameof(Staff.Tuning), nameof(Staff.InstrumentName), nameof(Staff.IsOssia),
+            nameof(Staff.Tuning), nameof(Staff.InstrumentName), nameof(Staff.ShortInstrumentName), nameof(Staff.IsOssia),
             nameof(Staff.RemoveEmpty), nameof(Staff.RemoveFirst), nameof(Staff.StaffAffinity),
             nameof(Staff.PerStaffKeySignature), nameof(Staff.IsTextRow), nameof(Staff.TextRowVerses),
             nameof(Staff.IsLyricsTextRow),

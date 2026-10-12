@@ -88,7 +88,24 @@ internal static partial class SharedRenderer
     private static void DrawInstrumentNames(
         MultiStaffScore score, SystemLayout system, double systemStartX, IDrawingContext gc)
     {
-        if (system.Indent <= 0) return;
+        // The FIRST system prints the long name in its indent; every later one the part's SHORT
+        // name (LilyPond's shortInstrumentName, grammar feedback B6 2026-10-13), or nothing.
+        // A later system's indent is short-indent, 0 by default, and LilyPond still prints the
+        // short name there — hanging into the margin (MEASURED, 2.26.0, Lab sessions/p903/b6).
+        // Until now only `Indent <= 0` kept the long name off later systems, so a score that
+        // set `shortIndent` printed the LONG name on every system.
+        bool first = system.SystemIndex == 0;
+        if (first && system.Indent <= 0) return;
+        Dictionary<int, string?>? shortNames = null;
+        if (!first)
+        {
+            shortNames = new Dictionary<int, string?>();
+            foreach (var (_, st, idx) in score.EnumerateStaves())
+                shortNames[idx] = st.ShortInstrumentName;
+            if (shortNames.Values.All(string.IsNullOrEmpty)) return;
+        }
+        string? NameOf(int staffIndex, string? longName)
+            => first ? longName : shortNames!.GetValueOrDefault(staffIndex);
 
         double actualFontSize = InstrumentNameEm(score.TextMetrics);
         var nameStyle = InstrumentNameStyle(score.TextMetrics);
@@ -129,11 +146,12 @@ internal static partial class SharedRenderer
         // at the system Y with the standard staff height.
         if (system.StaffGroups.IsDefaultOrEmpty)
         {
-            foreach (var (_, st, _) in score.EnumerateStaves())
+            foreach (var (_, st, stIdx) in score.EnumerateStaves())
             {
-                if (string.IsNullOrEmpty(st.InstrumentName) || st.IsTab)
+                string? name = NameOf(stIdx, st.InstrumentName);
+                if (string.IsNullOrEmpty(name) || st.IsTab)
                     continue;
-                gc.DrawText(st.InstrumentName, NameX(st.InstrumentName),
+                gc.DrawText(name, NameX(name),
                     systemYUp - StaffHeight / 2.0,
                     actualFontSize, TextRole.Instrument, nameStyle,
                     TextAnchor.End, fill: null,
@@ -148,7 +166,7 @@ internal static partial class SharedRenderer
             bool anyNamed = false;
             foreach (var sl in staffGroup.Staves)
             {
-                if (!string.IsNullOrEmpty(sl.InstrumentName)) { anyNamed = true; break; }
+                if (!string.IsNullOrEmpty(NameOf(sl.StaffIndex, sl.InstrumentName))) { anyNamed = true; break; }
             }
             if (!anyNamed) continue;
 
@@ -159,7 +177,7 @@ internal static partial class SharedRenderer
                 StaffLayout? onlyNamed = null;
                 foreach (var sl in staffGroup.Staves)
                 {
-                    if (string.IsNullOrEmpty(sl.InstrumentName)) continue;
+                    if (string.IsNullOrEmpty(NameOf(sl.StaffIndex, sl.InstrumentName))) continue;
                     namedCount++;
                     onlyNamed = sl;
                     if (namedCount > 1) break;
@@ -167,7 +185,8 @@ internal static partial class SharedRenderer
                 if (namedCount == 1 && onlyNamed is { })
                 {
                     double centerY = systemYUp + (gs.BraceTop + gs.BraceBottom) / 2.0;
-                    gc.DrawText(onlyNamed.InstrumentName!, NameX(onlyNamed.InstrumentName!),
+                    string onlyName = NameOf(onlyNamed.StaffIndex, onlyNamed.InstrumentName)!;
+                    gc.DrawText(onlyName, NameX(onlyName),
                         centerY,
                         actualFontSize, TextRole.Instrument, nameStyle,
                         TextAnchor.End, fill: null,
@@ -179,11 +198,12 @@ internal static partial class SharedRenderer
 
             foreach (var staffLayout in staffGroup.Staves)
             {
-                if (string.IsNullOrEmpty(staffLayout.InstrumentName) || staffLayout.IsHidden)
+                string? name = NameOf(staffLayout.StaffIndex, staffLayout.InstrumentName);
+                if (string.IsNullOrEmpty(name) || staffLayout.IsHidden)
                     continue;
                 double staffY = systemYUp + staffLayout.Y;
                 double centerY = staffY - staffLayout.Height / 2.0;
-                gc.DrawText(staffLayout.InstrumentName, NameX(staffLayout.InstrumentName),
+                gc.DrawText(name, NameX(name),
                     centerY,
                     actualFontSize, TextRole.Instrument, nameStyle,
                     TextAnchor.End, fill: null,

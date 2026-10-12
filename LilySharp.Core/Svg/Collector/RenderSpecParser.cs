@@ -825,7 +825,12 @@ public static class RenderSpecParser
             WithLyrics: ImmutableArray<string>.Empty,
             PedalStyle: pedalStyle,
             WrittenClef: explicitClef,
-            PresetName: presetName);
+            PresetName: presetName)
+        {
+            // The part's short name, for the systems after the first (grammar feedback B6,
+            // 2026-10-13) — on the part only; ~ silences it with the long one.
+            ShortInstrumentName = nameSuppressed ? null : GetPartShortName(staff, voiceName),
+        };
     }
 
     /// <summary>Maps the `as roman | names` selector text to its mode.</summary>
@@ -1090,6 +1095,18 @@ public static class RenderSpecParser
         "percussion" => ClefType.Percussion,
         _ => ClefType.Treble
     };
+
+    /// <summary>The part's short name (`part vn1 "Violin I" "Vn. I"`), or null.</summary>
+    private static string? GetPartShortName(SyntaxNode node, string partName)
+    {
+        var root = node;
+        while (root.Parent != null)
+            root = root.Parent;
+        foreach (var child in root.ChildNodes())
+            if (child is PartDeclarationSyntax partDecl && partDecl.Name.Text == partName)
+                return partDecl.ShortName;
+        return null;
+    }
 
     /// <summary>
     /// The inline display name of the part named <paramref name="partName"/>

@@ -161,6 +161,9 @@ A staff's display name is a quoted string (`staff flute "Piccolo"`) — a bare w
 `staff NAME` is always another score item (`staff flute click` is flute's staff plus the
 `click` MIDI-only part), so position never changes what a word means.
 
+A part's own name and SHORT name: `part vn1 "Violin I" "Vn. I" { instrument violin }` — the long
+name on the first system, the short one on every later system (LilyPond's shortInstrumentName).
+
 A minimal single-staff document:
 
 ```
