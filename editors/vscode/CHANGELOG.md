@@ -4,6 +4,12 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Reopening the scan
+
+- **A `.lys` read from a scan has a button in the editor's title bar that opens the scan
+  again** (*Show Original Scan*, until now only in the Command Palette — closing the scan's tab
+  left no visible way back). The scan is found through the `x.omr.json` the reader wrote beside
+  `x.lys`, so keep the two together when moving or renaming the file.
 ### A resolved `@todo` leaves the scan view
 
 - **Deleting a `@todo` from the `.lys` takes its red frame off the scanned page** (shortly after the

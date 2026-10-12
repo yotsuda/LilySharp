@@ -354,6 +354,7 @@
       {
         "command": "lilysharp.showScan",
         "category": "Lily#",
+        "icon": "$(file-media)",
         "title": "Show Original Scan"
       },
       {
@@ -712,6 +713,11 @@
         {
           "command": "lilysharp.openPreviewToSide",
           "when": "resourceLangId == lilysharp",
+          "group": "navigation"
+        },
+        {
+          "command": "lilysharp.showScan",
+          "when": "resourceLangId == lilysharp && lilysharp.hasScan",
           "group": "navigation"
         },
         {
