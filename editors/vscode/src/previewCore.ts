@@ -133,6 +133,26 @@ export function newPreviewColumn(visibleLockedColumns: readonly number[]): numbe
     return visibleLockedColumns.length === 0 ? undefined : Math.max(...visibleLockedColumns) + 1;
 }
 
+/** One editor group, as far as keeping scores out of the previews' groups needs it. */
+export interface GroupInfo {
+    column: number;
+    /** A Lily# preview is one of its tabs. */
+    hasPreview: boolean;
+}
+
+/**
+ * Where a .lys just opened in `openedColumn` moves to, or undefined to leave it: a score opened
+ * into a preview's group would cover the preview (owner's request 2026-10-12), so it goes to the
+ * leftmost group with no preview in it, or — every group holding one — to a new group beside.
+ */
+export function scoreGroupFor(openedColumn: number, groups: readonly GroupInfo[]): number | 'beside' | undefined {
+    if (!groups.some(g => g.column === openedColumn && g.hasPreview)) {
+        return undefined;
+    }
+    const free = groups.filter(g => !g.hasPreview).map(g => g.column);
+    return free.length > 0 ? Math.min(...free) : 'beside';
+}
+
 /** One editor tab, as far as revealing a preview's source needs it. */
 export interface SourceTab {
     column: number;

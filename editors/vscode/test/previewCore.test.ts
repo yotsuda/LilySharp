@@ -16,7 +16,23 @@
 
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { svgPostKey, pagesSummary, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, ShownEditor } from '../src/previewCore';
+import { svgPostKey, pagesSummary, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, ShownEditor } from '../src/previewCore';
+
+describe('a score opened into a preview\'s group', () => {
+    it('moves to the leftmost group with no preview', () => {
+        assert.equal(scoreGroupFor(2, [{ column: 1, hasPreview: false }, { column: 2, hasPreview: true }]), 1);
+        assert.equal(scoreGroupFor(3, [{ column: 1, hasPreview: true }, { column: 2, hasPreview: false },
+            { column: 3, hasPreview: true }, { column: 4, hasPreview: false }]), 2);
+    });
+
+    it('moves to a new group beside when every group holds a preview', () => {
+        assert.equal(scoreGroupFor(1, [{ column: 1, hasPreview: true }]), 'beside');
+    });
+
+    it('stays where it opened in a group without a preview', () => {
+        assert.equal(scoreGroupFor(1, [{ column: 1, hasPreview: false }, { column: 2, hasPreview: true }]), undefined);
+    });
+});
 
 describe('the page answer summary', () => {
     it('counts the pages by what they did and the characters that travelled', () => {

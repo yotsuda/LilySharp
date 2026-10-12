@@ -36,7 +36,7 @@ import { locateOmr } from './omrCore';
 import { OmrScanDeps, hasScan, previewReady, previewShowsBar, registerScanFollow, showScan } from './omrScan';
 import { registerVerifyOnSave } from './omrVerify';
 import { markdownItExtensionApi } from './markdownFence';
-import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, SourceTab } from './previewCore';
+import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, SourceTab } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 import { SplitSectionsChoice, modalText, splitChoiceItems } from './splitSectionsCore';
 
@@ -136,6 +136,34 @@ function setActivePreviewLocked(lock: boolean) {
         if (p && key) { p.title = previewTitle(key, p); }
     }
     void vscode.commands.executeCommand('setContext', 'lilysharp.previewLocked', lock);
+}
+
+function isPreviewTab(tab: vscode.Tab): boolean {
+    return tab.input instanceof vscode.TabInputWebview && tab.input.viewType.endsWith('lilysharpPreview');
+}
+
+// Move a score just opened in a preview's group (`from`) to `to`: shown there first, with the
+// caret it had, then its tab in the preview's group closed — the document stays open in the
+// other group, so nothing asks to be saved, an untitled New Score included.
+async function moveScoreTab(uri: vscode.Uri, from: number, to: number | 'beside', isPreview: boolean) {
+    const key = uri.toString();
+    const old = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === key && e.viewColumn === from);
+    try {
+        const doc = await vscode.workspace.openTextDocument(uri);
+        await vscode.window.showTextDocument(doc, {
+            viewColumn: to === 'beside' ? vscode.ViewColumn.Beside : to,
+            selection: old?.selection,
+            preview: isPreview,
+        });
+        const group = vscode.window.tabGroups.all.find(g => g.viewColumn === from);
+        const tab = group?.tabs.find(t => t.input instanceof vscode.TabInputText && t.input.uri.toString() === key);
+        if (tab) {
+            await vscode.window.tabGroups.close(tab, true);
+        }
+        outputChannel.appendLine(`Moved ${key} out of the preview's group ${from} to ${to}`);
+    } catch (err) {
+        outputChannel.appendLine(`Could not move ${key} out of the preview's group: ${err}`);
+    }
 }
 
 // A preview brought to the front brings its source's tab forward in another group — only a
@@ -862,6 +890,24 @@ export function activate(context: vscode.ExtensionContext) {
     );
     // The score the window opened with (a restored session has no preview to bring back).
     onEditorShown(vscode.window.activeTextEditor);
+
+    // A .lys opened into a preview's group would cover the preview (owner's request 2026-10-12):
+    // it moves to a group of scores (scoreGroupFor). A tab OPENED there only — a score the
+    // writer dragged in, or switched to among that group's tabs, stays where they put it.
+    context.subscriptions.push(vscode.window.tabGroups.onDidChangeTabs(e => {
+        for (const tab of e.opened) {
+            if (!(tab.input instanceof vscode.TabInputText)) { continue; }
+            const uri = tab.input.uri;
+            if (uri.scheme !== 'file' && uri.scheme !== 'untitled') { continue; }
+            const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString());
+            if (doc ? doc.languageId !== 'lilysharp' : !uri.path.toLowerCase().endsWith('.lys')) { continue; }
+            const groups = vscode.window.tabGroups.all.map(g => ({ column: g.viewColumn, hasPreview: g.tabs.some(isPreviewTab) }));
+            const target = scoreGroupFor(tab.group.viewColumn, groups);
+            if (target !== undefined) {
+                void moveScoreTab(uri, tab.group.viewColumn, target, tab.isPreview);
+            }
+        }
+    }));
 
     // Watch for cursor position changes
     context.subscriptions.push(
