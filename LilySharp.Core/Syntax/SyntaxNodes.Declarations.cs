@@ -194,6 +194,25 @@ public sealed class TimeSignatureSyntax : SyntaxNode
         }
     }
 
+    /// <summary>The beat grouping as written after the meter ("2+2+3" for
+    /// <c>time 7/8 (2+2+3)</c>), or null when none is written.</summary>
+    public string? Grouping
+    {
+        get
+        {
+            if (GetChild(SlashIndex + 2) is not SyntaxTokenNode { Kind: SyntaxKind.OpenParen })
+                return null;
+            var sb = new System.Text.StringBuilder();
+            for (int i = SlashIndex + 3; i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode t && t.Kind is SyntaxKind.IntegerLiteral or SyntaxKind.Plus)
+                    sb.Append(t.Text);
+            return sb.Length > 0 ? sb.ToString() : null;
+        }
+    }
+
+    /// <summary>The sum of <see cref="Grouping"/>'s terms, or null with no grouping.</summary>
+    public int? GroupingSum => Grouping?.Split('+').Sum(t => int.TryParse(t, out int v) ? v : 0);
+
     /// <summary>
     /// Gets the denominator value (e.g., 4 for 4/4).
     /// </summary>

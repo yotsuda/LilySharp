@@ -660,7 +660,13 @@ public sealed partial class LilyPondExporter
                 // meter in force; `time!` writes it regardless — LilyPond draws every \time.
                 bool same = ts.IsSenzaMisura == (head?.Senza ?? _bars.SenzaMisura)
                             && (ts.IsSenzaMisura || TimeText(ts) == (head?.TimeText ?? TimeTextInForce));
+                // The same meter grouped otherwise: the page prints no signature, so neither may the
+                // twin — LilyPond draws one for every \time (Regrouped).
+                bool regroupOnly = !same && !ts.IsForced && !ts.IsSenzaMisura
+                    && Ungrouped(TimeText(ts)) == Ungrouped(head?.TimeText ?? TimeTextInForce);
                 string written = EmitItemCore(item);   // advances the running meter either way
+                if (regroupOnly)
+                    written = Regrouped(written);
                 if (same && !ts.IsForced)
                 {
                     if (head != null)
@@ -1674,7 +1680,16 @@ public sealed partial class LilyPondExporter
     ///   numerator is one number or a list of two or more numbers. A list represents
     ///   concatenation."</summary>
     private static string TimeText(TimeSignatureSyntax ts)
-        => TimeText(new Semantics.Meter(ts.Beats, ts.BeatType, ts.BeatsText));
+        => TimeText(new Semantics.Meter(ts.Beats, ts.BeatType, ts.BeatsText, ts.Grouping));
+
+    /// <summary>A <c>\time</c> that only regroups the beats of the meter in force, drawn as the
+    /// page draws it — not at all (LILYSHARP-OWN, as MeasureBuilder.SectionHead: a meter that
+    /// changes nothing prints nothing).</summary>
+    private static string Regrouped(string timeText) => "\\once \\omit Staff.TimeSignature " + timeText;
+
+    /// <summary>A <c>\time</c> spelling without its beat grouping (<c>\time 2,2,3 7/8</c> → <c>\time 7/8</c>).</summary>
+    private static string Ungrouped(string timeText)
+        => System.Text.RegularExpressions.Regex.Replace(timeText, @"\\time [0-9]+(,[0-9]+)+ ", @"\time ");
 
     /// <summary>The same spelling for the meter in force (<see cref="TimeTextInForce"/>).</summary>
     private static string TimeText(Semantics.Meter meter)
@@ -1682,6 +1697,10 @@ public sealed partial class LilyPondExporter
         string beats = meter.BeatsText ?? meter.Beats.ToString();
         if (beats.Contains('+'))
             return "\\time #'((" + beats.Replace("+", " ") + ") . " + meter.BeatType + ")";
+        // A beat grouping (time 7/8 (2+2+3)) is LilyPond's own \time 2,2,3 7/8.
+        // LILYPOND-REF: ly/music-functions-init.ly:2375-2410 time, sane-time-signature? — "\time [beat-structure] fraction".
+        if (meter.Grouping is { } grouping)
+            return "\\time " + grouping.Replace('+', ',') + " " + beats + "/" + meter.BeatType;
         return "\\time " + beats + "/" + meter.BeatType;
     }
 

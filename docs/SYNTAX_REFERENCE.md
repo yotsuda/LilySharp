@@ -791,7 +791,18 @@ time 4/4         // Common time
 time 3/4         // Waltz time
 time 6/8         // Compound duple
 time 2/2         // Cut time
+time 3+2+2/8     // Additive: prints 3+2+2 over 8, beams the eighths 3+2+2
+time 7/8 (2+2+3) // Prints 7/8, beams the eighths 2+2+3
 ```
+
+A meter's eighths are beamed by its beats. LilyPond's table groups 4/8, 5/8 (3+2) and 8/8
+(3+3+2) and leaves 7/8 ungrouped, so its eighths stay unbeamed. To group them, write the
+grouping: an **additive numerator** (`time 3+2+2/8`) prints the sum and groups by its terms;
+a **grouping after the meter** (`time 7/8 (2+2+3)`) prints the plain signature and groups as
+written. The terms add up to the numerator (LYS0041 otherwise). A `time` that only regroups the
+meter in force — `time 7/8 (3+2+2)` after a `7/8 (2+2+3)`, or a plain `time 7/8` after one —
+prints no signature and regroups the beams from there; a section that writes no `time` returns to
+the file's grouping.
 
 ## Tempo
 

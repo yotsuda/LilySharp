@@ -559,7 +559,8 @@ public sealed partial class LilyPondExporter
         var (homeBeats, homeBeatType) = ScoreHomeMeter.Read(root);
         _homeTimeNode = ScoreHomeMeter.Declaration(root);
         _bars.HomeMeter = new Semantics.Meter(homeBeats, homeBeatType,
-            _homeTimeNode is { IsSenzaMisura: false } homeTime ? homeTime.BeatsText : null);
+            _homeTimeNode is { IsSenzaMisura: false } homeTime ? homeTime.BeatsText : null,
+            _homeTimeNode is { IsSenzaMisura: false } groupedHome ? groupedHome.Grouping : null);
         _bars.HomeSenzaMisura = _homeTimeNode?.IsSenzaMisura ?? false;
         _bars.RevertToHome();
 

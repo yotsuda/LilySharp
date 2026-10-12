@@ -1065,6 +1065,7 @@ public sealed partial class MeasureCollector
                         spanMeta.TimeBeats = inForce.Beats;
                         spanMeta.TimeBeatType = inForce.BeatType;
                         spanMeta.TimeBeatsText = inForce.BeatsText;
+                        spanMeta.TimeGrouping = inForce.Grouping;
                     }
                     _parallelSpans.Add(
                         (parallel, builder.CurrentMeasureIndex, builder.CurrentDuration, spanFrame,
@@ -1770,12 +1771,13 @@ public sealed partial class MeasureCollector
         {
             _meta.TimeBeats = timeSigChange.Beats;
             _meta.TimeBeatsText = timeSigChange.BeatsText;
+            _meta.TimeGrouping = timeSigChange.Grouping;
             _meta.TimeBeatType = timeSigChange.BeatType;
             _meta.TimeSenzaMisura = timeSigChange.IsSenzaMisura;
-            builder.SetMeter(new Meter(timeSigChange.Beats, timeSigChange.BeatType, timeSigChange.BeatsText),
+            builder.SetMeter(new Meter(timeSigChange.Beats, timeSigChange.BeatType, timeSigChange.BeatsText, timeSigChange.Grouping),
                 timeSigChange.IsSenzaMisura);
             builder.MeterInForce = new TimeSignature(timeSigChange.Beats,
-                timeSigChange.BeatType, timeSigChange.BeatsText, timeSigChange.IsSenzaMisura);
+                timeSigChange.BeatType, timeSigChange.BeatsText, timeSigChange.IsSenzaMisura, timeSigChange.Grouping);
             return;
         }
         // Mid-piece change: a zero-duration grob printed at the
@@ -1783,7 +1785,7 @@ public sealed partial class MeasureCollector
         // `time none` carries no ink and no width (LilyPond's \cadenzaOn is
         // a property set, not a grob) — see TimeSignatureChangeItem.Blanked.
         var newTime = new TimeSignature(timeSigChange.Beats, timeSigChange.BeatType,
-            timeSigChange.BeatsText, timeSigChange.IsSenzaMisura);
+            timeSigChange.BeatsText, timeSigChange.IsSenzaMisura, timeSigChange.Grouping);
         // A meter that changes nothing is not drawn unless written `time!`: at a
         // section head compared with what the section before left (the reset
         // standing there is withdrawn too), elsewhere with the meter in force
@@ -1794,11 +1796,17 @@ public sealed partial class MeasureCollector
             : MeasureBuilder.SameMeter(builder.MeterInForce, newTime);
         if (unchanged && !timeSigChange.IsForced)
         {
+            // The same meter grouped otherwise (	ime 7/8 (3+2+2) after a 2+2+3, or a plain
+            // 	ime 7/8 after one) prints nothing — the signature reads the same — but the
+            // beams regroup from here: a blanked change carries the new grouping to them.
+            bool regrouped = builder.MeterInForce is { } before && before.Grouping != newTime.Grouping;
             if (head != null)
                 builder.WithdrawStanding<TimeSignatureChangeItem>();
-            builder.SetMeter(new Meter(newTime.Beats, newTime.BeatType, newTime.BeatsText),
+            builder.SetMeter(new Meter(newTime.Beats, newTime.BeatType, newTime.BeatsText, newTime.Grouping),
                 newTime.SenzaMisura);
             builder.MeterInForce = newTime;
+            if (regrouped)
+                builder.AddItem(new TimeSignatureChangeItem(newTime, TimeDataPos(timeSigChange)) { Blanked = true });
             return;
         }
         // The numerator, not the keyword — see TimeDataPos.

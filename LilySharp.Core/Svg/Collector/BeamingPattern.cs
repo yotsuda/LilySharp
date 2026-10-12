@@ -277,7 +277,7 @@ internal static class BeamingPattern
             // eighths 3 + 2 + 2, as LilyPond does with the twin's `\time #'((3 2 2) . 8)`.
             // LILYPOND-REF: scm/time-signature-settings.scm:384-385 calc-subdivided-fraction-structure
             //   — "Return numerator terms, which define the beat structure."
-            if (timeSig.BeatsText is { } text && text.Contains('+'))
+            if ((timeSig.Grouping ?? timeSig.BeatsText) is { } text && text.Contains('+'))
             {
                 var terms = ImmutableArray.CreateBuilder<int>();
                 int sum = 0;

@@ -566,10 +566,13 @@ internal sealed class MeasureBuilder
             return;
         var home = _bars.HomeMeter;
         bool senza = _bars.HomeSenzaMisura;
+        // Left only by its beat grouping (time 7/8 (3+2+2) in a 7/8 (2+2+3) piece): the home
+        // signature reads the same, so it is not printed again — the beams regroup alone.
+        bool regroupOnly = _bars.Meter.SamePair(home) && _bars.SenzaMisura == senza;
         AddItem(new TimeSignatureChangeItem(
-            new TimeSignature(home.Beats, home.BeatType, home.BeatsText, senza), sourcePosition)
+            new TimeSignature(home.Beats, home.BeatType, home.BeatsText, senza, home.Grouping), sourcePosition)
         {
-            Blanked = senza,
+            Blanked = senza || regroupOnly,
         });
         // For a metered home the change item above has already moved the meter (AddItem); this
         // adds the pair for a `time none` home, whose change item carries none (p748 poison 4).
@@ -1249,7 +1252,7 @@ internal sealed class MeasureBuilder
     }
 
     /// <summary>The pair a <see cref="TimeSignature"/> states, as the bar context keeps it.</summary>
-    private static Meter MeterOf(TimeSignature time) => new(time.Beats, time.BeatType, time.BeatsText);
+    private static Meter MeterOf(TimeSignature time) => new(time.Beats, time.BeatType, time.BeatsText, time.Grouping);
 
 
     private Fraction GetItemDuration(MusicItem item)

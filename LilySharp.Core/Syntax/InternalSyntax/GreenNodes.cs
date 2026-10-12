@@ -411,8 +411,9 @@ internal sealed class TimeSignatureGreen : GreenSyntaxNode
 
     // Additive meter (time 3+2/8): extra (+, int)* tokens follow the first
     // numerator IN SOURCE ORDER, before the slash.
-    public TimeSignatureGreen(SyntaxToken timeKeyword, SyntaxToken? bang, SyntaxToken? colon, GreenNode?[] numeratorTokens, SyntaxToken slash, SyntaxToken denominator)
-        : base(SyntaxKind.TimeSignature, [timeKeyword, bang, colon, .. numeratorTokens, slash, denominator])
+    // A beat grouping (time 7/8 (2+2+3)) follows the denominator: '(' int ('+' int)* ')'.
+    public TimeSignatureGreen(SyntaxToken timeKeyword, SyntaxToken? bang, SyntaxToken? colon, GreenNode?[] numeratorTokens, SyntaxToken slash, SyntaxToken denominator, GreenNode?[]? grouping = null)
+        : base(SyntaxKind.TimeSignature, [timeKeyword, bang, colon, .. numeratorTokens, slash, denominator, .. grouping ?? []])
     {
     }
 }

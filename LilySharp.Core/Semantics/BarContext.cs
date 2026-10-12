@@ -21,7 +21,7 @@ namespace LilySharp.Core.Semantics;
 /// <summary>A written meter: the pair <c>\time</c> takes, kept as the pair (4/4 and 2/2 are
 /// not the same meter), and the numerator AS WRITTEN when it is additive (<c>3+2</c>, the
 /// MusicXML's <c>&lt;beats&gt;</c> text) — <see cref="Length"/> is the bar it measures.</summary>
-public readonly record struct Meter(int Beats, int BeatType, string? BeatsText = null)
+public readonly record struct Meter(int Beats, int BeatType, string? BeatsText = null, string? Grouping = null)
 {
     /// <summary>The length of one bar of this meter.</summary>
     public Fraction Length => new(Beats, BeatType);
@@ -151,7 +151,7 @@ public sealed class BarContext
         SenzaMisura = time.IsSenzaMisura;
         if (time.IsSenzaMisura)
             return false;
-        Meter = new(time.Beats, time.BeatType, time.BeatsText);
+        Meter = new(time.Beats, time.BeatType, time.BeatsText, time.Grouping);
         return true;
     }
 
@@ -208,7 +208,8 @@ public sealed class BarContext
     /// same meter and re-armed the pickup to a whole bar (the page's own <c>time</c> rule, gone in p751).
     /// Owner's GO 2026-10-02 (p750): the page asks the pair like everyone else.
     /// </remarks>
-    public bool LeftHome => !Meter.SamePair(HomeMeter) || SenzaMisura != HomeSenzaMisura;
+    public bool LeftHome => !Meter.SamePair(HomeMeter) || SenzaMisura != HomeSenzaMisura
+        || Meter.Grouping != HomeMeter.Grouping;
 
     /// <summary>A section that states no <c>time</c> of its own opens at the HOME meter — a
     /// mid-section change cannot leak into the next section, nor into the same section played

@@ -12,6 +12,11 @@ workflow attaches that section to the GitHub Release verbatim.
   numerator is the beat structure, as LilyPond reads the twin's `\time #'((3 2 2) . 8)`. Until
   now the page drew the additive meter and left every eighth unbeamed. A plain `time 7/8` still
   beams nothing — LilyPond's table has no grouping for it either.
+- **`time 7/8 (2+2+3)`: a beat grouping after the meter.** The signature prints 7/8 and the
+  eighths beam 2 + 2 + 3 — LilyPond's `\time 2,2,3 7/8`, which the twin writes. The terms add
+  up to the numerator (LYS0041 otherwise). A `time` that only regroups the meter in force prints
+  no signature again and regroups the beams from there; a section that writes no `time` returns
+  to the file's grouping.
 
 ### Chord names on a transposing part
 

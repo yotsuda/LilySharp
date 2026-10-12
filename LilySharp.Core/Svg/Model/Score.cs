@@ -22,7 +22,8 @@ namespace LilySharp.Core.Svg.Model;
 /// <summary>
 /// Time signature (e.g., 3/4, 4/4, 6/8).
 /// </summary>
-public readonly record struct TimeSignature(int Beats, int BeatType, string? BeatsText = null, bool SenzaMisura = false)
+public readonly record struct TimeSignature(int Beats, int BeatType, string? BeatsText = null, bool SenzaMisura = false,
+    string? Grouping = null)
 {
     /// <summary>The numerator AS PRINTED — the additive spelling when there is one
     /// ("3+2"), otherwise the beat count.</summary>

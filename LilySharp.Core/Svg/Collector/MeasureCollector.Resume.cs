@@ -847,6 +847,7 @@ public sealed partial class MeasureCollector
             && _meta.SwingSubdivision == rec.SwingSubdivision
             && _meta.TimeBeats == rec.TimeBeats
             && _meta.TimeBeatsText == rec.TimeBeatsText
+            && _meta.TimeGrouping == rec.TimeGrouping
             && _meta.TimeSenzaMisura == rec.TimeSenzaMisura
             && _meta.TimeBeatType == rec.TimeBeatType
             && _meta.KeySharps == rec.KeySharps

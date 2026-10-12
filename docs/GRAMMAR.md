@@ -289,8 +289,14 @@ FeelWord       = 'swing' | 'shuffle' ;      (* contextual, NOT reserved words *)
                     Every one of those is pinned in TempoValueTests; changing one changes
                     what existing scores mean. A Decimal anywhere in the run is LYS0022 —
                     a metronome mark is whole and a beat unit is a note value. *)
-TimeDecl       = 'time' , [ '!' ] , Integer , '/' , Integer
+TimeDecl       = 'time' , [ '!' ] , Integer , { '+' , Integer } , '/' , Integer , [ BeatGrouping ]
                | 'time' , [ '!' ] , 'none' ;
+BeatGrouping   = '(' , Integer , { '+' , Integer } , ')' ;
+                 (* 	ime 7/8 (2+2+3) (owner's decision 2026-10-12): the signature prints 7/8 and
+                    the beats group 2+2+3 — the beams, LilyPond's \time 2,2,3 7/8. The terms add up
+                    to the numerator, and an additive numerator (3+2+2/8, which groups by its own
+                    terms) takes none: LYS0041 otherwise. The same meter grouped otherwise mid-piece
+                    prints no signature and regroups the beams from there. *)
                  (* 'time none' is SENZA MISURA — unmetered music, LilyPond's \cadenzaOn.
                     From it to the next 'time N/M' the engine builds no automatic measure
                     boundary: a measure ends only at a WRITTEN '|', which still draws the

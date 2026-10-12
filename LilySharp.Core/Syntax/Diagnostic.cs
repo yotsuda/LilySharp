@@ -643,6 +643,11 @@ public static class DiagnosticCodes
     /// still sounds and the source keeps its width.</summary>
     public const string DrumsLineNotALine = "LYS0040";
 
+    /// <summary>Error: a beat grouping after a meter whose terms do not add up to its numerator
+    /// (<c>time 7/8 (2+3)</c>), or one written after an additive numerator, which groups the
+    /// beats itself (<c>time 3+2+2/8 (2+2+3)</c>). Owner's decision 2026-10-12.</summary>
+    public const string BeatGroupingMismatch = "LYS0041";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>

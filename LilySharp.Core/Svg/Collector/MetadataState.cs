@@ -74,6 +74,7 @@ internal sealed class MetadataState
 
     public int TimeBeats = 4;
     public string? TimeBeatsText; // additive numerator as written ("3+2")
+    public string? TimeGrouping;  // beat grouping written after the meter ("2+2+3" for time 7/8 (2+2+3))
     public bool TimeSenzaMisura;  // time none — unmeasured
     public int TimeBeatType = 4;
 
@@ -125,6 +126,7 @@ internal sealed class MetadataState
         SwingSubdivision = other.SwingSubdivision;
         TimeBeats = other.TimeBeats;
         TimeBeatsText = other.TimeBeatsText;
+        TimeGrouping = other.TimeGrouping;
         TimeSenzaMisura = other.TimeSenzaMisura;
         TimeBeatType = other.TimeBeatType;
         KeySharps = other.KeySharps;
@@ -167,6 +169,7 @@ internal sealed class MetadataState
             && SwingSubdivision == other.SwingSubdivision
             && TimeBeats == other.TimeBeats
             && TimeBeatsText == other.TimeBeatsText
+            && TimeGrouping == other.TimeGrouping
             && TimeSenzaMisura == other.TimeSenzaMisura
             && TimeBeatType == other.TimeBeatType
             && KeySharps == other.KeySharps
@@ -212,6 +215,7 @@ internal sealed class MetadataState
         SwingSubdivision = 0;
         TimeBeats = 4;
         TimeBeatsText = null;
+        TimeGrouping = null;
         TimeSenzaMisura = false;
         TimeBeatType = 4;
         KeySharps = 0;

@@ -436,7 +436,7 @@ public sealed partial class MeasureCollector
         var probe = OttavaDisplayProbe(measures, measureOffset);
         var voice = new Voice("beam-direction-probe", probe);
         var groups = new BeamDetector().DetectBeamGroups(
-            voice, new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura),
+            voice, new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura, _meta.TimeGrouping),
             ProbeTupletBrackets(measureOffset),
             memo: BeamMemo);
 

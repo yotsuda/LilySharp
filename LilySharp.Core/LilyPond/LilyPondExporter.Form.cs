@@ -911,12 +911,17 @@ public sealed partial class LilyPondExporter
         // per-voice snapshot and the page draws the restored signature. Until 2026-08-31
         // this carrier answered only the key question, so `section A { … time 3/4 … }
         // section B { c'4 d e f | }` handed LilyPond a 3/4 bar holding four quarters.
+        bool regroupOnly = _bars.Meter.SamePair(_bars.HomeMeter) && _bars.SenzaMisura == _bars.HomeSenzaMisura
+            && _bars.Meter.Grouping != _bars.HomeMeter.Grouping;
         if (!sp.HasHeaderTime
-            && (!_bars.Meter.SamePair(_bars.HomeMeter) || _bars.SenzaMisura != _bars.HomeSenzaMisura))
+            && (!_bars.Meter.SamePair(_bars.HomeMeter) || _bars.SenzaMisura != _bars.HomeSenzaMisura || regroupOnly))
         {
             if (_homeTimeNode != null)
             {
-                parts.Add(EmitTime(_homeTimeNode)); // EmitTime advances the running meter
+                // EmitTime advances the running meter; a home left only by its beat grouping
+                // comes back without a signature, as on the page (MeasureBuilder.RevertMeterToHome).
+                string home = EmitTime(_homeTimeNode);
+                parts.Add(regroupOnly ? Regrouped(home) : home);
             }
             else
             {

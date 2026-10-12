@@ -461,7 +461,7 @@ public sealed partial class LilyPondExporter
             if (!cadenza && length != inForce)
             {
                 AppendToken(line, !home.SenzaMisura && length == home.MeasureDuration
-                    ? TimeText(new Semantics.Meter(home.Beats, home.BeatType, home.BeatsText))
+                    ? TimeText(new Semantics.Meter(home.Beats, home.BeatType, home.BeatsText, home.Grouping))
                     : "\\time " + length.Numerator + "/" + length.Denominator, "  ");
                 inForce = length;
             }

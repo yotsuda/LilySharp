@@ -552,17 +552,18 @@ public sealed partial class MeasureCollector
             //   TimeSignature per timestep.
             _meta.TimeBeats = sectionTime.Beats;
             _meta.TimeBeatsText = sectionTime.BeatsText;
+            _meta.TimeGrouping = sectionTime.Grouping;
             _meta.TimeBeatType = sectionTime.BeatType;
             _meta.TimeSenzaMisura = sectionTime.IsSenzaMisura;
-            builder.SetMeter(new Meter(sectionTime.Beats, sectionTime.BeatType, sectionTime.BeatsText),
+            builder.SetMeter(new Meter(sectionTime.Beats, sectionTime.BeatType, sectionTime.BeatsText, sectionTime.Grouping),
                 sectionTime.IsSenzaMisura);
             builder.MeterInForce = new TimeSignature(sectionTime.Beats, sectionTime.BeatType,
-                sectionTime.BeatsText, sectionTime.IsSenzaMisura);
+                sectionTime.BeatsText, sectionTime.IsSenzaMisura, sectionTime.Grouping);
         }
         else if (sectionTime is not null)
         {
             var headerTime = new TimeSignature(sectionTime.Beats, sectionTime.BeatType,
-                sectionTime.BeatsText, sectionTime.IsSenzaMisura);
+                sectionTime.BeatsText, sectionTime.IsSenzaMisura, sectionTime.Grouping);
             // A header restating the meter the section before left is no change unless written
             // `time!` (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so
             // there is nothing to withdraw.
@@ -574,7 +575,7 @@ public sealed partial class MeasureCollector
                 {
                     Blanked = sectionTime.IsSenzaMisura,
                 });
-            builder.SetMeter(new Meter(sectionTime.Beats, sectionTime.BeatType, sectionTime.BeatsText),
+            builder.SetMeter(new Meter(sectionTime.Beats, sectionTime.BeatType, sectionTime.BeatsText, sectionTime.Grouping),
                 sectionTime.IsSenzaMisura);
         }
         else

@@ -973,11 +973,46 @@ internal sealed partial class Parser
             }
             var addSlash = Expect(SyntaxKind.Slash);
             var addDen = Expect(SyntaxKind.IntegerLiteral);
-            return new TimeSignatureGreen(timeKeyword, bang, colon, [.. numTokens], addSlash, addDen);
+            return new TimeSignatureGreen(timeKeyword, bang, colon, [.. numTokens], addSlash, addDen, ParseBeatGrouping(null));
         }
         var slash = Expect(SyntaxKind.Slash);
         var denominator = Expect(SyntaxKind.IntegerLiteral);
-        return new TimeSignatureGreen(timeKeyword, bang, colon, numerator, slash, denominator);
+        return new TimeSignatureGreen(timeKeyword, bang, colon, [numerator], slash, denominator,
+            ParseBeatGrouping(int.TryParse(numerator.Text, out int beats) ? beats : null));
+    }
+
+    // The beat grouping after a meter — 	ime 7/8 (2+2+3) (owner's decision 2026-10-12): the
+    // signature prints 7/8 and the beats are grouped 2+2+3, LilyPond's \time 2,2,3 7/8. Null
+    // when no '(' follows; the sum is checked by TimeSignatureValidator.
+    // `beats` is the plain numerator; null after an additive one, which groups the beats itself.
+    private GreenNode?[]? ParseBeatGrouping(int? beats)
+    {
+        if (!Check(SyntaxKind.OpenParen))
+            return null;
+        int start = _textPosition;
+        var tokens = new List<GreenNode?> { Advance() };
+        int sum = 0;
+        var first = Expect(SyntaxKind.IntegerLiteral);
+        tokens.Add(first);
+        sum += int.TryParse(first.Text, out int v0) ? v0 : 0;
+        while (Check(SyntaxKind.Plus))
+        {
+            tokens.Add(Advance());
+            var term = Expect(SyntaxKind.IntegerLiteral);
+            tokens.Add(term);
+            sum += int.TryParse(term.Text, out int v) ? v : 0;
+        }
+        tokens.Add(Expect(SyntaxKind.CloseParen));
+        var span = new TextSpan(start, System.Math.Max(1, _textPosition - start));
+        if (beats is null)
+            _diagnostics.Error(span, DiagnosticCodes.BeatGroupingMismatch,
+                "an additive numerator groups the beats itself (3+2+2/8 beams 3+2+2) - write the grouping "
+                + "there, or a plain meter with the grouping after it: time 7/8 (3+2+2).");
+        else if (sum != beats)
+            _diagnostics.Error(span, DiagnosticCodes.BeatGroupingMismatch,
+                $"the beat grouping adds up to {sum}, and the meter has {beats} beats - its terms are the "
+                + $"beats of each group, together the whole bar (a 7/8 grouped 2+2+3: time 7/8 (2+2+3)).");
+        return [.. tokens];
     }
 
     // 'tempo 120' is written bare everywhere (music-stream command and part/staff

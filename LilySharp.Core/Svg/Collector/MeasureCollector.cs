@@ -752,10 +752,10 @@ public sealed partial class MeasureCollector
     // sections never reverted, and a grand staff's second staff lost the revert the first
     // staff drew (2026-09-26). (Until stage C6 each voice copied this into four
     // _sectionResetTime* fields the prologue compared against; the builder's context holds it now.)
-    private (int Beats, int BeatType, string? BeatsText, bool SenzaMisura) _scoreTime = (4, 4, null, false);
+    private (int Beats, int BeatType, string? BeatsText, bool SenzaMisura, string? Grouping) _scoreTime = (4, 4, null, false, null);
 
     /// <summary>The home meter as the bar context keeps it (<see cref="_scoreTime"/>).</summary>
-    private Meter HomeMeterOfScore => new(_scoreTime.Beats, _scoreTime.BeatType, _scoreTime.BeatsText);
+    private Meter HomeMeterOfScore => new(_scoreTime.Beats, _scoreTime.BeatType, _scoreTime.BeatsText, _scoreTime.Grouping);
 
     // The grob-override state a section boundary reverts to (the grob analogue of
     // _sectionResetClef, but a SET): the part-default values — global + this voice's
@@ -949,12 +949,12 @@ public sealed partial class MeasureCollector
     private Fraction TimeSignatureFraction => new(_meta.TimeBeats, _meta.TimeBeatType);
 
     /// <summary>The score-level meter as the bar context keeps it — a builder's opening meter.</summary>
-    private Meter ScoreMeter => new(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText);
+    private Meter ScoreMeter => new(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeGrouping);
 
     /// <summary>The running meter as written — <see cref="MeasureBuilder.MeterInForce"/>'s
     /// opening value.</summary>
     private TimeSignature MeterOfMeta()
-        => new(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura);
+        => new(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura, _meta.TimeGrouping);
 
     /// <summary>
     /// Snapshots the accumulated piece-level metadata and annotation lists into an
@@ -966,7 +966,7 @@ public sealed partial class MeasureCollector
     /// <param name="measureCount">Total measures collected — the virtual stop an
     /// unterminated trill spanner runs to (one past the last measure).</param>
     private ScoreContent CaptureScoreContent(int measureCount) => new(
-        new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura),
+        new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura, _meta.TimeGrouping),
         new KeySignature(_meta.InitialKeySharps, _meta.InitialKeyCustom), // initial key, not the post-change state
         _meta.InitialClef, // initial clef, not the post-change state
         _meta.Tempo,
@@ -1622,7 +1622,7 @@ public sealed partial class MeasureCollector
         var table = MidBarBreakTable.Build(
             _midBarBreakRequests,
             voices.Concat(_harvestedVoices),
-            new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura),
+            new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura, _meta.TimeGrouping),
             _tupletBrackets, _percentRepeats, conflicts);
         _midBarBreakConflicts.Clear();
         _midBarBreakConflicts.AddRange(conflicts);
@@ -3047,11 +3047,12 @@ public sealed partial class MeasureCollector
             {
                 _meta.TimeBeats = opening.Beats;
                 _meta.TimeBeatsText = opening.BeatsText;
+                _meta.TimeGrouping = opening.Grouping;
                 _meta.TimeBeatType = opening.BeatType;
                 break;
             }
         var home = new Fraction(_meta.TimeBeats, _meta.TimeBeatType);
-        var homeSig = new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura);
+        var homeSig = new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura, _meta.TimeGrouping);
         var table = new List<RowsOnlyBar>(_rowsOnlyFormGridBars);
         for (int i = 0; i < _rowsOnlyFormGridBars; i++)
             table.Add(new RowsOnlyBar(home, false, homeSig, 0));
@@ -3063,7 +3064,7 @@ public sealed partial class MeasureCollector
             bool hasTime = _sectionHeaders.Times.TryGetValue(name, out var time) && !time.IsSenzaMisura;
             var meter = hasTime ? new Fraction(time!.Beats, time.BeatType) : home;
             TimeSignature? meterSig = hasTime
-                ? new TimeSignature(time!.Beats, time.BeatType, time.BeatsText, false)
+                ? new TimeSignature(time!.Beats, time.BeatType, time.BeatsText, false, time.Grouping)
                 : _sectionHeaders.Times.ContainsKey(name) ? null : homeSig;
             int meterPos = hasTime ? TimeDataPos(time!) : 0;
             Fraction? headerPickup = _sectionHeaders.Partials.TryGetValue(name, out var partial) && partial.Duration != null
@@ -3775,7 +3776,7 @@ public sealed partial class MeasureCollector
         // earlier voice's opening `time` left its own meter there — the second staff then
         // began in 3/4, its section reset drew a 4/4 "change", and its own opening `time
         // 3/4` stood beside it ("3/4 C"). Each voice's opening `time` sets _meta again.
-        (_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura) = _scoreTime;
+        (_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura, _meta.TimeGrouping) = _scoreTime;
         // And the grob-override part default (global + this voice's part-body overrides,
         // already collected at (0,0)) — the state each section boundary reverts to.
         _sectionResetOverrides.Clear();

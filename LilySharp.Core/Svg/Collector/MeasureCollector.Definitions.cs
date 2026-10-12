@@ -312,6 +312,7 @@ public sealed partial class MeasureCollector
                     {
                         _meta.TimeBeats = timeSig.Beats;
                         _meta.TimeBeatsText = timeSig.BeatsText;
+                        _meta.TimeGrouping = timeSig.Grouping;
                         _meta.TimeSenzaMisura = timeSig.IsSenzaMisura;
                         _meta.TimeBeatType = timeSig.BeatType;
                         _meta.TimePosition = TimeDataPos(timeSig);
@@ -538,7 +539,7 @@ public sealed partial class MeasureCollector
         // armed with THIS as its home (CollectMeasures, MeasureBuilder.SetHomeMeter), not with
         // whatever _meta holds when that voice starts — the first voice's opening `time` has
         // rewritten it by then.
-        _scoreTime = (_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura);
+        _scoreTime = (_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura, _meta.TimeGrouping);
         // The section HEADER registry (Semantics.SectionHeaders, the one spelling): a section
         // that carries its own key / time / tempo / partial but no inline music applies those
         // to every part of the section — by-section (`section A { key g major  melody { … } }`)
