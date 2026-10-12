@@ -258,6 +258,9 @@ public class ChordDisplayCompletionTests
     // does not take.
     [InlineData("score { condensedStaff { ")]
     [InlineData("score { combinedStaff { ")]
+    // …and after the staff's own clef word (`condensedStaff bass { … }`, 2026-10-13).
+    [InlineData("score { condensedStaff bass { ")]
+    [InlineData("score { combinedStaff alto { fl1 ")]
     public void InsideABarePartNameGroup_OffersTheParts(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.BarePartNameList, Ctx(text));
 

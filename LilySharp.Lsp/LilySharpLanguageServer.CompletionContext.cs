@@ -353,6 +353,10 @@ public sealed partial class LilySharpLanguageServer
         int end2 = k + 1;
         while (k >= 0 && IsWordChar(text[k])) k--;
         string prefix = text.Substring(k + 1, end2 - (k + 1));  // and the one before it
+        // `condensedStaff bass {`: the clef word is the staff's, and the block is still the
+        // bare-part-name group (2026-10-13) — read as if the clef were not there.
+        if (IsBarePartNameGroup(prefix) && name is "treble" or "bass" or "alto" or "tenor" or "treble_8")
+            return new BlockFrame("", prefix);
         return new BlockFrame(prefix, name);
     }
 

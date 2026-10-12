@@ -1085,6 +1085,15 @@ public sealed partial class CondensedStaffRenderSyntax : SyntaxNode
     /// <summary>The <c>condensedStaff</c> keyword token.</summary>
     public SyntaxTokenNode CondensedStaffKeyword => (SyntaxTokenNode)GetChild(0)!;
 
+    /// <summary>The clef word of <c>condensedStaff bass { … }</c>, or null: the staff then
+    /// takes its first part's clef.</summary>
+    public SyntaxTokenNode? ClefToken => ClefBeforeBrace(this);
+
+    /// <summary>Slot 1 when it is a clef word (the parser takes one only before the brace).</summary>
+    internal static SyntaxTokenNode? ClefBeforeBrace(SyntaxNode node) =>
+        node.SlotCount > 1 && node.GetChild(1) is SyntaxTokenNode t && SyntaxFacts.IsClefKeyword(t.Kind)
+            ? t : null;
+
     /// <summary>The part-name TOKENS to condense, in source order — which is also VOICE
     /// order, so the first part gets voice 1 (stems up) exactly as the first block of a
     /// <c>voice { … } { … }</c> span does. Tokens rather than text, because a reference that
@@ -1125,7 +1134,8 @@ public sealed partial class CondensedStaffRenderSyntax : SyntaxNode
     internal static IEnumerable<SyntaxTokenNode> BarePartNameMembers(SyntaxNode node)
     {
         int depth = 0;
-        for (int i = 2; i < node.SlotCount - 1; i++)   // inside the node's own braces
+        // Inside the node's own braces: the open brace is slot 1, or 2 after a clef word.
+        for (int i = ClefBeforeBrace(node) is null ? 2 : 3; i < node.SlotCount - 1; i++)
         {
             if (node.GetChild(i) is not SyntaxTokenNode t) continue;
             if (t.Kind == SyntaxKind.OpenBrace) { depth++; continue; }
@@ -1154,6 +1164,10 @@ public sealed partial class CombinedStaffRenderSyntax : SyntaxNode
 
     /// <summary>The <c>combinedStaff</c> keyword token.</summary>
     public SyntaxTokenNode CombinedStaffKeyword => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>The clef word of <c>combinedStaff bass { … }</c>, or null: the staff then
+    /// takes its first part's clef.</summary>
+    public SyntaxTokenNode? ClefToken => CondensedStaffRenderSyntax.ClefBeforeBrace(this);
 
     /// <summary>The two part-name TOKENS, in source order: the first is the part whose stems
     /// go UP where the two are engraved apart, and the one "Solo" refers to. Tokens rather

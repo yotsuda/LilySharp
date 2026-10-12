@@ -1105,18 +1105,27 @@ internal sealed partial class Parser
     /// first block of a <c>voice { … } { … }</c> span.
     /// The arity rule (two or more) is enforced semantically, not here, so a half-typed
     /// <c>condensedStaff { fl1 }</c> still produces a tree for the editor.
+    /// A clef word before the brace (<c>condensedStaff bass { vla vc }</c>) is the staff's
+    /// clef, as in <c>staff bass x</c> (owner's decision 2026-10-13, grammar feedback B7):
+    /// the brace that must follow makes it unambiguous, part names living inside.
     /// </remarks>
     private CondensedStaffRenderGreen ParseCondensedStaffRender()
     {
         var keyword = Expect(SyntaxKind.CondensedStaffKeyword);
+        var clef = ParseSharedStaffClef();
         var openBrace = Expect(SyntaxKind.OpenBrace);
         var partNames = ParseBarePartNameMembers(
             "condensedStaff", DiagnosticCodes.CondensedStaffBadMember,
             "Everything inside becomes a VOICE of the one staff it produces, and a staff or "
             + "a group of staves is not a voice.");
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new CondensedStaffRenderGreen(keyword, openBrace, [.. partNames], closeBrace);
+        return new CondensedStaffRenderGreen(keyword, clef, openBrace, [.. partNames], closeBrace);
     }
+
+    /// <summary>The optional clef word of <c>condensedStaff bass { … }</c> /
+    /// <c>combinedStaff bass { … }</c>: taken only when the brace follows it.</summary>
+    private SyntaxToken? ParseSharedStaffClef() =>
+        IsClefKeyword() && Peek(1).Kind == SyntaxKind.OpenBrace ? Advance() : null;
 
     /// <summary>
     /// Parse a combined-staff render: <c>combinedStaff { partA partB }</c>.
@@ -1124,18 +1133,20 @@ internal sealed partial class Parser
     /// <remarks>
     /// Same shape as <see cref="ParseCondensedStaffRender"/> — bare part names, one staff
     /// out. The arity (exactly two) is enforced semantically so a half-typed
-    /// <c>combinedStaff { fl1 }</c> still produces a tree for the editor.
+    /// <c>combinedStaff { fl1 }</c> still produces a tree for the editor. A clef word may
+    /// stand before the brace, as for the condensed staff.
     /// </remarks>
     private CombinedStaffRenderGreen ParseCombinedStaffRender()
     {
         var keyword = Expect(SyntaxKind.CombinedStaffKeyword);
+        var clef = ParseSharedStaffClef();
         var openBrace = Expect(SyntaxKind.OpenBrace);
         var partNames = ParseBarePartNameMembers(
             "combinedStaff", DiagnosticCodes.CombinedStaffBadMember,
             "It combines two PARTS — it has to see each part's own music to decide, moment "
             + "by moment, whether they are playing the same thing.");
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new CombinedStaffRenderGreen(keyword, openBrace, [.. partNames], closeBrace);
+        return new CombinedStaffRenderGreen(keyword, clef, openBrace, [.. partNames], closeBrace);
     }
 
     /// <summary>

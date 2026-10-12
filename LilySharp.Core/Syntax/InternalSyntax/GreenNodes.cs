@@ -1137,11 +1137,14 @@ internal sealed class CondensedStaffRenderGreen : GreenSyntaxNode
 {
     public CondensedStaffRenderGreen(
         SyntaxToken condensedStaffKeyword,
+        SyntaxToken? clef,
         SyntaxToken openBrace,
         SyntaxToken[] partNames,
         SyntaxToken closeBrace)
         : base(SyntaxKind.CondensedStaffRender,
-               [condensedStaffKeyword, openBrace, ..partNames, closeBrace])
+               clef is null
+                   ? [condensedStaffKeyword, openBrace, ..partNames, closeBrace]
+                   : [condensedStaffKeyword, clef, openBrace, ..partNames, closeBrace])
     {
     }
 }
@@ -1155,11 +1158,14 @@ internal sealed class CombinedStaffRenderGreen : GreenSyntaxNode
 {
     public CombinedStaffRenderGreen(
         SyntaxToken combinedStaffKeyword,
+        SyntaxToken? clef,
         SyntaxToken openBrace,
         SyntaxToken[] partNames,
         SyntaxToken closeBrace)
         : base(SyntaxKind.CombinedStaffRender,
-               [combinedStaffKeyword, openBrace, ..partNames, closeBrace])
+               clef is null
+                   ? [combinedStaffKeyword, openBrace, ..partNames, closeBrace]
+                   : [combinedStaffKeyword, clef, openBrace, ..partNames, closeBrace])
     {
     }
 }

@@ -6,6 +6,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### A clef for a condensed or combined staff
+
+- **`condensedStaff bass { vla vc }`** (and `combinedStaff bass { … }`) draws the shared staff in
+  the clef written before the brace, as `staff bass x` does for one part; without one the staff
+  keeps its first part's clef. The twin writes the same `\clef`. A part named like a clef still
+  works inside the braces (`condensedStaff { bass vc }`).
+
 ### A shared staff places every part under its clef
 
 - **`condensedStaff { vla vc }` and `combinedStaff { … }` drew a later part's notes where its own

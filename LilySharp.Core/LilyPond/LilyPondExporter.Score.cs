@@ -461,7 +461,8 @@ public sealed partial class LilyPondExporter
     /// <c>CondensedStaffRenderSyntax.PartNameTokens</c>). Combined is
     /// <c>\partCombine \a \b</c>, LilyPond's own combiner, whose a2 / Solo / Solo II texts
     /// the page prints too (CombinedStaffTests).
-    /// The clef is the FIRST part's, as <c>RenderSpecParser.ParseCombinedStaff</c> reads it;
+    /// The clef is the one written before the brace (<c>condensedStaff bass { … }</c>), else the
+    /// FIRST part's, as <c>RenderSpecParser.ParseCombinedStaff</c> reads it;
     /// it stands before the voices in the staff's own braces (LilyPond 2.26.0 draws one staff
     /// with that clef for both spellings — scratch/p382/shared/clef-pc.ly).
     /// No instrument name: the page names single staves only (RenderSpecParser's default
@@ -495,7 +496,13 @@ public sealed partial class LilyPondExporter
         var sb = new StringBuilder();
         sb.Append(indent).Append("\\new Staff { ");
         var part = parts.FirstOrDefault(p => p.Name.Text == names[0]);
-        if (PartClefWord(part) is { } clef)
+        var writtenClef = item switch
+        {
+            CombinedStaffRenderSyntax c => c.ClefToken?.Text,
+            CondensedStaffRenderSyntax c => c.ClefToken?.Text,
+            _ => null,
+        };
+        if ((writtenClef ?? PartClefWord(part)) is { } clef)
             sb.Append("\\clef ").Append(LyClefName(clef)).Append(' ');
         sb.Append(PedalStyleSet(names[0]));
         sb.Append(OttavaStyleSet(names[0]));

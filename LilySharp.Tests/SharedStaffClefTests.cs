@@ -16,6 +16,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using LilySharp.Core.LilyPond;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
@@ -64,5 +65,37 @@ public class SharedStaffClefTests
         var celloUnderAlto = Positions("staff vla staff alto vc", staff: 1);
         var violaUnderAlto = Positions("staff vla");
         Assert.Equal(celloUnderAlto.Concat(violaUnderAlto).OrderBy(p => p), Positions(shared));
+    }
+
+    // `condensedStaff bass { vla vc }` (owner's decision 2026-10-13, grammar feedback B7): the
+    // clef word before the brace is the staff's, as in `staff bass x`. MEASURED (LilyPond
+    // 2.26.0, Lab sessions/p903/c2 c2c): the twin's \clef "bass" << \vla \\ \vc >> draws the
+    // same page.
+    [Theory]
+    [InlineData("condensedStaff")]
+    [InlineData("combinedStaff")]
+    public void AClefBeforeTheBrace_IsTheStaffsClef_ForEveryPart(string keyword)
+    {
+        string items = keyword + " bass { vla vc }";
+        var tree = SyntaxTree.Parse(Book(items));
+        Assert.Empty(tree.Diagnostics);
+        Assert.Equal(Book(items), tree.GetRoot().ToFullString());
+        var celloUnderBass = Positions("staff bass vla staff vc", staff: 1);
+        var violaUnderBass = Positions("staff bass vla staff vc", staff: 0);
+        Assert.Equal(celloUnderBass.Concat(violaUnderBass).OrderBy(p => p), Positions(items));
+        Assert.Equal(ClefType.Bass, SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree))
+            .StaffGroups[0].Staves[0].Clef);
+        Assert.Contains("\\new Staff { \\clef \"bass\" ", new LilyPondExporter().Export(tree));
+    }
+
+    [Fact]
+    public void APartNamedLikeAClef_InsideTheBraces_IsStillAPart()
+    {
+        var tree = SyntaxTree.Parse(
+            "part bass { clef bass }\npart vc { clef bass }\nsection A { bass { c1 | } vc { e1 | } }\n"
+            + "form { A }\nscore { condensedStaff { bass vc } }");
+        var node = tree.GetRoot().DescendantNodes<CondensedStaffRenderSyntax>().Single();
+        Assert.Null(node.ClefToken);
+        Assert.Equal(["bass", "vc"], node.PartNames);
     }
 }

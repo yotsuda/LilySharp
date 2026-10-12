@@ -1734,7 +1734,7 @@ StaffGroupBody = '{' , { StaffRender | CondensedStaff | CombinedStaff
                     reason: of its seventeen staff contexts, `StaffGroup` is the only one that
                     is not a musical term. *)
 
-CondensedStaff = 'condensedStaff' , '{' , PartRef , PartRef , { PartRef } , '}' ;
+CondensedStaff = 'condensedStaff' , [ ClefName ] , '{' , PartRef , PartRef , { PartRef } , '}' ;
                  (* A CONDENSED score: the named parts, each of which would otherwise be its
                     own staff, share ONE staff — one voice each, in source order, so the
                     first part is voice 1 (stems up) exactly as the first block of a
@@ -1754,11 +1754,16 @@ CondensedStaff = 'condensedStaff' , '{' , PartRef , PartRef , { PartRef } , '}' 
                     writes the section's `time 12/8`, it is drawn once; where a later part
                     writes a `key` / `time` / `clef` that differs from the first part's at
                     the same moment, the first part's stands and the other warns (LYS4024).
-                    The staff's clef is the first part's, and every part is placed under it
-                    (a cello on a viola's alto staff reads its own pitches there, ledger
-                    lines and all), as on a `combinedStaff`. *)
+                    The staff's clef is the ClefName written before the brace, else the
+                    first part's, and every part is placed under it (a cello on a viola's
+                    alto staff reads its own pitches there, ledger lines and all), as on a
+                    `combinedStaff`. `condensedStaff bass { vla vc }` puts both on a bass
+                    staff, as `staff bass x` does for one part (user decision 2026-10-13);
+                    the brace that must follow tells the clef from a part named `bass`
+                    (`condensedStaff { bass vc }`). *)
 
-CombinedStaff  = 'combinedStaff' , '{' , PartRef , PartRef , '}' ;
+CombinedStaff  = 'combinedStaff' , [ ClefName ] , '{' , PartRef , PartRef , '}' ;
+                 (* The clef as for `condensedStaff`: written, else the first part's. *)
                  (* The part COMBINER: exactly two parts on one staff, merged wherever they
                     agree. At each moment the two are compared —
 

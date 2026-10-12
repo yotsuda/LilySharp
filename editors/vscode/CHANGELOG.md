@@ -4,6 +4,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A clef for a condensed or combined staff
+
+- **`condensedStaff bass { vla vc }`** (and `combinedStaff bass { … }`) draws the shared staff in
+  the clef written before the brace, as `staff bass x` does for one part; without one the staff
+  keeps its first part's clef. The twin writes the same `\clef`, and completion still offers the
+  part names inside the braces.
+
 ### A shared staff places every part under its clef
 
 - **`condensedStaff { vla vc }` and `combinedStaff { … }` drew a later part's notes where its own

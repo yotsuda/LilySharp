@@ -94,6 +94,9 @@ This is plain condensation: unisons are not merged into one notehead and no "a2"
 printed. One staff takes one key, meter and clef at a moment: a `time` both parts write is
 drawn once, and a later part's `key` / `time` / `clef` that differs from the first part's at
 the same moment is not applied and warns (LYS4024) — write the same change in every part.
+The staff's clef is the first part's unless one is written before the brace:
+`condensedStaff bass { viola cello }` (also `combinedStaff bass { … }`). Every part is drawn
+under that clef, at its own pitches.
 
 **Several staves as ONE GROUP** — `grandStaff`, `staffGroup` and `choirStaff` all take
 `staff` items and nothing else, and differ only in the left edge:
