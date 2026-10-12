@@ -151,6 +151,13 @@ export function flaggedBars(todos: readonly ServerTodo[], hiddenKeys: readonly s
         .filter((m): m is number => m !== null && m !== undefined))];
 }
 
+/** The side file's marks the .lys no longer carries — taken out once checked (owner's request
+ *  2026-10-12: a resolved @todo takes its frame off the scan too). A quiet mark was never in
+ *  the .lys, so its absence says nothing and it is never resolved. Each key once. */
+export function resolvedTodoKeys(todos: readonly Pick<ScanTodo, 'key' | 'quiet'>[], inSource: readonly ServerTodo[]): string[] {
+    const present = new Set(inSource.map(t => t.Key).filter((k): k is string => !!k));
+    return [...new Set(todos.filter(t => !t.quiet && !present.has(t.key)).map(t => t.key))];
+}
 /** The side file of a .lys: `x.lys` → `x.omr.json`. */
 export function sideFileOf(lysPath: string): string {
     return lysPath.replace(/\.lys$/i, '') + '.omr.json';

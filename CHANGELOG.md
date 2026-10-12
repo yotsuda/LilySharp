@@ -6,6 +6,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### A resolved `@todo` leaves the scan view
+
+- **Deleting a `@todo` from the `.lys` takes its red frame off the scanned page** (shortly after the
+  edit), and an undo brings it back. Marks the reader kept out of the `.lys` (the faint dashed
+  ones) are not affected.
 ### The scan view's slider filters the preview too
 
 - **Moving *Marks below* in the scan view hides and shows the same `@todo` marks in the score

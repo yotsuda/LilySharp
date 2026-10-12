@@ -24,7 +24,7 @@ import * as path from 'node:path';
 import * as vm from 'node:vm';
 import {
     SCAN_DEFAULT_THRESHOLD, anchorsOf, barOnLine, markFactsOf, pageLabel, parseSideFile, scanBarForPrinted, scanTitle,
-    flaggedBars, hiddenTodoKeys, shiftAnchors, shownAt, shownImage, sideFileOf, todoStroke, todoTarget,
+    flaggedBars, hiddenTodoKeys, resolvedTodoKeys, shiftAnchors, shownAt, shownImage, sideFileOf, todoStroke, todoTarget,
 } from '../src/omrScanCore';
 
 // Absolute on whichever OS runs the tests.
@@ -177,6 +177,14 @@ describe('how sure the reader is (LilySharp-Omr reply 2026-10-12: a confidence o
         assert.deepEqual(flaggedBars(server, []), [2, 3, 4]);
         assert.deepEqual(flaggedBars(server, hiddenTodoKeys(side.todos, SCAN_DEFAULT_THRESHOLD)), [2, 3]);
         assert.deepEqual(flaggedBars(server, ['b3', 'b4']), [3]);
+    });
+
+    it('calls a mark resolved once the .lys no longer carries it — never a quiet one', () => {
+        const at = (...keys: (string | null)[]) => keys.map((Key, i) => ({ Key, HostStart: i, HostEnd: i + 1, Measure: 1 }));
+        // b3 and o9 are in the .lys; b4 is quiet (never written there).
+        assert.deepEqual(resolvedTodoKeys(side.todos, at('b3', 'o9')), []);
+        assert.deepEqual(resolvedTodoKeys(side.todos, at('o9', null)), ['b3']);
+        assert.deepEqual(resolvedTodoKeys(side.todos, []), ['b3', 'o9']);
     });
 });
 

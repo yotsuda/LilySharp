@@ -27,7 +27,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import {
-    BarAnchor, PrintedBar, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, flaggedBars, hiddenTodoKeys, parseSideFile,
+    BarAnchor, PrintedBar, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, flaggedBars, hiddenTodoKeys, parseSideFile, resolvedTodoKeys,
     SCAN_DEFAULT_THRESHOLD, pageLabel, scanBarForPrinted, scanTitle, shiftAnchors, shownImage, sideFileOf, todoStroke,
     todoTarget,
 } from './omrScanCore';
@@ -211,7 +211,11 @@ async function todosOf(view: ScanView, doc: vscode.TextDocument, deps: OmrScanDe
         return [];
     }
     const resp = await client.sendRequest<TodosResponse>('lilysharp/todos', { textDocument: { uri: doc.uri.toString() } });
-    const list = resp.Error ? [] : (resp.Todos ?? []);
+    if (resp.Error) {
+        // Not cached: a failed answer is not "no marks" (markPreview reads the cache to tell).
+        return [];
+    }
+    const list = resp.Todos ?? [];
     view.todos = { version: doc.version, list };
     return list;
 }
@@ -239,9 +243,15 @@ async function printedOf(view: ScanView, deps: OmrScanDeps): Promise<PrintedBar[
 async function markPreview(view: ScanView, deps: OmrScanDeps): Promise<void> {
     try {
         const doc = await vscode.workspace.openTextDocument(view.lys);
-        const bars = flaggedBars(await todosOf(view, doc, deps),
+        const todos = await todosOf(view, doc, deps);
+        const bars = flaggedBars(todos,
             view.threshold === undefined ? [] : hiddenTodoKeys(view.side.todos, view.threshold));
         deps.postToPreview(view.lys, { type: 'markBars', bars });
+        // …and the scan drops the frames of the marks the .lys no longer carries — only on a
+        // real answer (todosOf caches nothing else), or every mark would look resolved.
+        if (view.todos?.version === doc.version) {
+            void view.panel.webview.postMessage({ type: 'resolved', keys: resolvedTodoKeys(view.side.todos, todos) });
+        }
     } catch (err) {
         deps.output.appendLine(`Scan: ${err}`);
     }
@@ -408,10 +418,13 @@ ${pages || '<p>The side file lists no page.</p>'}
   // The marks the reader is less sure of than the slider show (one with no confidence always).
   const thr = document.getElementById('thr'), thrOut = document.getElementById('thrOut');
   if (typeof state.threshold === 'number') thr.value = String(state.threshold);
+  // The marks the .lys no longer carries (resolved, sent by the extension) show at no value.
+  let resolved = new Set();
   function filter() {
     const v = Number(thr.value);
     let shown = 0, total = 0;
     for (const r of document.querySelectorAll('rect.todo')) {
+      if (resolved.has(r.dataset.key)) { r.style.display = 'none'; continue; }
       total++;
       const on = r.dataset.c === '' || v >= 1 || Number(r.dataset.c) < v;
       r.style.display = on ? '' : 'none';
@@ -454,6 +467,11 @@ ${pages || '<p>The side file lists no page.</p>'}
   });
 
   window.addEventListener('message', ({ data }) => {
+    if (data.type === 'resolved') {
+      resolved = new Set(data.keys || []);
+      filter();
+      return;
+    }
     if (data.type === 'showBar') {
       const r = document.querySelector('rect.bar[data-i="' + data.index + '"]');
       if (!r) return;
