@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// The editor-free half of "Lily#: Import from Image/PDF…" (omrImport.ts holds the half that
+// The editor-free half of "Lily#: Convert Image/PDF to Lily# (.lys)…" (omrImport.ts holds the half that
 // talks to VS Code). The OMR reader (LilySharp-Omr) is a SEPARATE PROGRAM: this runs it as a
 // child process and reads the files it writes, nothing more — no OMR code comes in here
 // (LilySharp-Omr docs/repro/lilysharp-omr-distribution-2026-10-05.md, the agreement this

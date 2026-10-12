@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// The editor-free half of "Import from Image/PDF…": where the reader is, what it is asked,
+// The editor-free half of "Convert Image/PDF to Lily# (.lys)…": where the reader is, what it is asked,
 // how its progress lines read, and a real run against a stand-in reader that speaks the
 // agreement (LilySharp-Omr docs/repro/lilysharp-omr-distribution-2026-10-05.md §3.2).
 

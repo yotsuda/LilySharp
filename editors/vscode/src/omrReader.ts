@@ -78,9 +78,9 @@ export function registerOmrContexts(context: vscode.ExtensionContext, output: vs
     let said: string | undefined;
     const update = async () => {
         const where = await findOmr(context);
-        // One line whenever the answer changes: where "Import from Image/PDF…" will run.
+        // One line whenever the answer changes: where "Convert Image/PDF to Lily# (.lys)…" will run.
         const line = where ? `OMR reader (${where.source}): ${where.path}`
-            : `OMR reader: none${omrPlatformSupported() ? ' (Import from Image/PDF… offers the extension)' : ''}`;
+            : `OMR reader: none${omrPlatformSupported() ? ' (Convert Image/PDF to Lily# (.lys)… offers the extension)' : ''}`;
         if (line !== said) {
             said = line;
             output.appendLine(line);

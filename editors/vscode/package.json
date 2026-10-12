@@ -349,7 +349,7 @@
       {
         "command": "lilysharp.importImage",
         "category": "Lily#",
-        "title": "Import from Image/PDF… (Beta)"
+        "title": "Convert Image/PDF to Lily# (.lys)… (Beta)"
       },
       {
         "command": "lilysharp.showScan",

@@ -8,7 +8,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 - **The OMR reader comes as its own extension, *Lily# Scan Import (Beta)*** (`yotsuda.lilysharp-omr`,
   Windows x64). Lily# finds the reader it carries — after `LILYSHARP_OMR_PATH`, before the global
-  storage — and *Import from Image/PDF… (Beta)* offers to install it when no reader is found. The
+  storage — and *Convert Image/PDF to Lily# (.lys)… (Beta)* offers to install it when no reader is found. The
   command is in the palette on Windows, before any `.lys` is opened; the Explorer's right-click
   item appears once Lily# is running and a reader is installed, and goes when it is removed, with no
   reload.

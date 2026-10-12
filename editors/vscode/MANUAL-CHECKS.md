@@ -146,7 +146,7 @@
 
 ## 5. OMR 連携 B1〜B6（`LilySharp-Omr` が要る・HANDOFF §1.0「B1〜B6 は VS Code で未確認」）
 
-- [ ] **B1** `Lily#: Import from Image/PDF…`: コマンド・Explorer の右クリック（png/jpg/tif/pdf）・エディターへのドラッグ＆ドロップ・画像の貼り付けの 4 経路で
+- [ ] **B1** `Lily#: Convert Image/PDF to Lily# (.lys)…`: コマンド・Explorer の右クリック（png/jpg/tif/pdf）・エディターへのドラッグ＆ドロップ・画像の貼り付けの 4 経路で
       `lilysharp.omr.path` の OMR が走り、進み具合が通知に出て、終わると `.lys` とプレビューと scan が開く。OMR が無いと Scan Import 拡張の導入を案内する（第903）。
 - [ ] **B2** `x.omr.json` のある本で `#キー` 付きの `@todo` に、候補（`fis'8` / `f'8` …）がクイックフィックスとして出て、選ぶと音が置き換わり `@todo` が外れる。候補の無い todo は *Resolve* だけ。
 - [ ] **B3** `Lily#: Show Original Scan`: 頁画像の上に todo の枠が赤、小節の枠がクリックできる。枠のクリック → `.lys` の `@todo` / 小節の行。
@@ -156,7 +156,7 @@
 - [ ] **B5** `lilysharp.omr.verifyOnSave` 入 → 保存で `omr verify` が走り、scan とクイックフィックスが更新される（**OMR 側の `verify` 実装待ち**。無ければ呼ばれないことを確かめる）。
 - [ ] **B6** `@todo` を含む範囲を選んで Ctrl+I → プロンプトに todo のメモ・確信度・候補が入っている（Output / デバッグで見る）。直した印は `@todo` が外れ、直さない印は残る。
 - [ ] **B7**（第903・OMR 拡張の受け口）: `LILYSHARP_OMR_PATH` を外し、OMR 側の VSIX（`..\LilySharp-Omr\out\extension\lilysharp-omr-win32-x64-0.3.0.vsix`）を
-      *Install from VSIX…* で入れる → Reload なしで Explorer の画像の右クリックに *Import from Image/PDF… (Beta)* が出る・Output に `OMR reader (extension): …\bin\omr.exe`・
+      *Install from VSIX…* で入れる → Reload なしで Explorer の画像の右クリックに *Convert Image/PDF to Lily# (.lys)… (Beta)* が出る・Output に `OMR reader (extension): …\bin\omr.exe`・
       取り込み直後に照合の `@todo` が付く（`--verify`）・初回だけ Beta の一言。拡張を外す → 右クリックから消え、パレットから実行すると *Install Scan Import* の案内。
 
 ## 6. 結果の書き方

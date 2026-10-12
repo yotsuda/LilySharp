@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// "Lily#: Import from Image/PDF…" (LilySharp-Omr's agreement, L1 and L7): runs the OMR reader
+// "Lily#: Convert Image/PDF to Lily# (.lys)…" (LilySharp-Omr's agreement, L1 and L7): runs the OMR reader
 // on a scan or a PDF and opens what it writes — the .lys, the preview, the annotated page.
 // The reader is its own extension (omrReader.ts finds it, or offers it); omrCore.ts is the
 // editor-free half.
