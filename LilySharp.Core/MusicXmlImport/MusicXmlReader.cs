@@ -1304,7 +1304,7 @@ internal static class MusicXmlReader
         "part", "section", "score", "staff", "structure", "chords", "lyrics",
         "time", "key", "clef", "tempo", "octave", "title", "composer", "subtitle", "poet",
         "phrase", "drummap", "grace", "partial", "repeat", "tuplet",
-        "acciaccatura", "appoggiatura",
+        "acciaccatura", "appoggiatura", "afterGrace",
         "a", "b", "c", "d", "e", "f", "g", "r", "s",
         "ppp", "pp", "p", "mp", "mf", "ff", "fff", "sf", "sfz", "fp", "fz", "rfz", "rf", "sffz",
     };

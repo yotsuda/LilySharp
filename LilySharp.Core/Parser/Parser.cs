@@ -499,7 +499,7 @@ internal sealed partial class Parser
     {
         SyntaxKind.OpenBrace => true,                                    // { … } music block
         SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword
-            or SyntaxKind.AppoggiaturaKeyword => true,
+            or SyntaxKind.AppoggiaturaKeyword or SyntaxKind.AfterGraceKeyword => true,
         SyntaxKind.TupletKeyword => true,
         SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword
             or SyntaxKind.PageBreakKeyword or SyntaxKind.NoPageBreakKeyword => true,
@@ -583,7 +583,7 @@ internal sealed partial class Parser
             SyntaxKind.PitchKeyword => ParsePitchDirective(),
 
             SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or
-            SyntaxKind.AppoggiaturaKeyword => ParseGraceExpression(),
+            SyntaxKind.AppoggiaturaKeyword or SyntaxKind.AfterGraceKeyword => ParseGraceExpression(),
 
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
             SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword

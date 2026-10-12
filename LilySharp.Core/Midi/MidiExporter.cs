@@ -747,10 +747,15 @@ public sealed class MidiExporter
                 ProcessNode(tuplet.Body, track, conductorTrack);
                 _tupletStack.Pop();
                 break;
+            // `c2 afterGrace { d16 e }`: the run sounds at the END of the main note, which gives
+            // up the run's time — the mirror of a leading grace taking it from the note after.
+            case GraceExpressionSyntax { IsAfterGrace: true } afterGrace:
+                if (Semantics.GraceBodySupport.AfterGraceHasMain(afterGrace))
+                    ProcessAfterGrace(afterGrace, track);
+                break;
             case GraceExpressionSyntax grace:
                 ProcessGrace(grace, track);
                 break;
-
             // Articulations and dynamics are handled within ProcessNote, skip here
             case ArticulationSyntax:
             case DynamicSyntax:
@@ -2791,6 +2796,34 @@ public sealed class MidiExporter
     // Truncated, as the integer division before it was: a rounding here moved the tempo meta of
     // 157 books by one microsecond in the session-398 sweep, for no reader's benefit.
     private static int BpmToMicroseconds(double bpm) => (int)(60_000_000 / Math.Max(1.0, bpm));
+
+    /// <summary>
+    /// An afterGrace's run, played as a leading grace would be (<see cref="ProcessGrace"/>:
+    /// 9/40 of each written value) but moved back so it ENDS where the main note ends, and the
+    /// main note, which sounded up to here, cut off where the run begins. A run longer than
+    /// the main note leaves it one tick.
+    /// </summary>
+    private void ProcessAfterGrace(GraceExpressionSyntax grace, MidiTrack track)
+    {
+        int end = _currentTick, first = track.Notes.Count, stealBefore = _pendingGraceSteal;
+        ProcessGrace(grace, track);
+        int run = _currentTick - end;
+        _currentTick = end;
+        _pendingGraceSteal = stealBefore;
+        // The main note: the latest-starting sounding notes before the run (a chord's members
+        // share its start).
+        int mainStart = -1;
+        for (int i = first - 1; i >= 0; i--)
+            if (!track.Notes[i].IsGrace) { mainStart = track.Notes[i].StartTick; break; }
+        if (mainStart < 0 || run <= 0)
+            return;
+        int at = Math.Max(mainStart + 1, end - run);
+        for (int i = first; i < track.Notes.Count; i++)
+            track.Notes[i] = track.Notes[i] with { StartTick = track.Notes[i].StartTick - (end - at) };
+        for (int i = first - 1; i >= 0 && track.Notes[i].StartTick >= mainStart; i--)
+            if (!track.Notes[i].IsGrace && track.Notes[i].StartTick + track.Notes[i].DurationTicks > at)
+                track.Notes[i] = track.Notes[i] with { DurationTicks = at - track.Notes[i].StartTick };
+    }
 
     private void ProcessGrace(GraceExpressionSyntax grace, MidiTrack track)
     {

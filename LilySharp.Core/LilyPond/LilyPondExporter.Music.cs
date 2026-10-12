@@ -742,7 +742,19 @@ public sealed partial class LilyPondExporter
         return pad.Length == 0 ? written : written.Length == 0 ? pad : pad + " " + written;
     }
 
-    private string EmitItemBody(SyntaxNode item) => item switch
+    /// <summary>The item as written, opened with <c>\afterGrace</c> when an
+    /// <c>afterGrace { … }</c> follows it — LilyPond writes the main note as the function's
+    /// first argument, and the grace body (<see cref="EmitGrace"/>) as its second.</summary>
+    private string EmitItemBody(SyntaxNode item)
+    {
+        string written = EmitItemBodyCore(item);
+        return SyntaxFacts.IsAfterGraceMainKind(item.Kind) && written.Length > 0
+            && Semantics.GraceBodySupport.AfterGraceAfter(item) != null
+            ? "\\afterGrace " + written
+            : written;
+    }
+
+    private string EmitItemBodyCore(SyntaxNode item) => item switch
     {
         NoteSyntax n => CloseImprovisation() + EmitNote(n) + TakeRepeatTie(n.Articulations),
         DrumNoteSyntax dn => CloseImprovisation() + EmitDrumNote(dn),
@@ -2311,7 +2323,11 @@ public sealed partial class LilyPondExporter
 
     private string EmitGrace(GraceExpressionSyntax g)
     {
-        string kw = g.IsAcciaccatura ? "\\acciaccatura" : g.IsAppoggiatura ? "\\appoggiatura" : "\\grace";
+        // An afterGrace writes its body bare: `\afterGrace` went out in front of its main note
+        // (EmitItemBody). One with no main note is engraved nowhere, so it is not written.
+        if (g.IsAfterGrace && !Semantics.GraceBodySupport.AfterGraceHasMain(g))
+            return "";
+        string kw = g.IsAfterGrace ? "" : g.IsAcciaccatura ? "\\acciaccatura " : g.IsAppoggiatura ? "\\appoggiatura " : "\\grace ";
         var buf = OpenNested();
         // The grace body has its OWN default duration, an eighth, and it is Lily#'s own rule
         // (MeasureCollector.CollectGraceNotes graceDefaultDuration = Fraction.Eighth;
@@ -2338,7 +2354,7 @@ public sealed partial class LilyPondExporter
         _lastWrittenValue = streamValue;
         _lastWrittenDots = streamDots;
         _forceNextDuration = true;
-        return $"{kw} {{ {body} }}";
+        return $"{kw}{{ {body} }}";
     }
 
     // The clef the twin is reading in — what a slash note's middle-line pitch is spelled against.

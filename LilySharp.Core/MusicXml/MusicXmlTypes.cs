@@ -876,6 +876,8 @@ internal sealed class MusicXmlNote
     public List<XElement> ExtraNotations { get; } = new();
     public bool IsGrace { get; set; }
     public bool IsSlash { get; set; }
+    /// <summary>The grace's <c>steal-time-previous</c> percentage: an afterGrace's 25.</summary>
+    public int? StealTimePrevious { get; set; }
     public bool TieStart { get; set; }
     public bool TieStop { get; set; }
     public bool SlurStart { get; set; }
@@ -963,6 +965,8 @@ internal sealed class MusicXmlNote
             var graceEl = new XElement("grace");
             if (IsSlash)
                 graceEl.Add(new XAttribute("slash", "yes"));
+            if (StealTimePrevious is { } steal)
+                graceEl.Add(new XAttribute("steal-time-previous", steal));
             note.Add(graceEl);
         }
 

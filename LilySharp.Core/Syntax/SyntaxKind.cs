@@ -179,6 +179,9 @@ public enum SyntaxKind : ushort
     AcciaccaturaKeyword,
     /// <summary>The <c>appoggiatura</c> grace-note keyword.</summary>
     AppoggiaturaKeyword,
+    /// <summary>The <c>afterGrace</c> keyword: grace notes AFTER the note before it (LilyPond's
+    /// <c>\afterGrace</c>; owner's decision 2026-10-12, grammar feedback A4).</summary>
+    AfterGraceKeyword,
     /// <summary>
     /// The <c>cue</c> keyword, which opens a REGION of cue-sized music
     /// (<c>cue { … }</c>, optionally <c>cue &lt;clef&gt; { … }</c>).

@@ -130,7 +130,9 @@ internal static partial class SpacingRules
         // is a skip's unused one (RestItem.RepeatSlashCount).
         // LILYPOND-REF: scm/define-grobs.scm:2909-2918 RepeatSlash rhythmic-grob-interface;
         // LILYPOND-REF: lily/paper-column.cc:115-136 Paper_column::is_used.
-        && item is NoteItem or ChordItem or RestItem { IsSpacer: false } or RestItem { RepeatSlashCount: not null };
+        && item is NoteItem or ChordItem or RestItem { IsSpacer: false } or RestItem { RepeatSlashCount: not null }
+        // An afterGrace's closing spacer carries the grace run, which stands in its column.
+        or RestItem { LeadingGrace.IsDefaultOrEmpty: false };
 
     /// <summary>
     /// True when a single musical column fills the whole measure (whole note in 4/4,

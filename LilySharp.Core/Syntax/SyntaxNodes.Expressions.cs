@@ -283,6 +283,13 @@ public sealed class GraceExpressionSyntax : SyntaxNode
     /// True if this is an appoggiatura (unslashed grace note)
     /// </summary>
     public bool IsAppoggiatura => GraceKeyword.Kind == SyntaxKind.AppoggiaturaKeyword;
+
+    /// <summary>
+    /// True for <c>afterGrace { … }</c>: grace notes AFTER the note written before it, played
+    /// at the end of that note and drawn before what follows it (LilyPond's <c>\afterGrace</c>,
+    /// which places them at 3/4 of the main note — just before the next column).
+    /// </summary>
+    public bool IsAfterGrace => GraceKeyword.Kind == SyntaxKind.AfterGraceKeyword;
 }
 
 /// <summary>

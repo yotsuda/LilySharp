@@ -943,7 +943,7 @@ public sealed partial class LilyPondExporter
         "remove", "repeat", "rest", "revert", "score", "sequential", "set", "simultaneous",
         "tempo", "type", "unset", "with",
         // commands and music functions this exporter writes
-        "accent", "acciaccatura", "accidentalStyle", "appoggiatura", "arpeggio", "bar",
+        "accent", "acciaccatura", "accidentalStyle", "afterGrace", "appoggiatura", "arpeggio", "bar",
         "bendAfter", "bold", "box", "break", "breathe", "cadenzaOff", "cadenzaOn", "caesura",
         "clef", "codaMark", "concat", "cueClef", "cueClefUnset", "deadNote", "downbow", "fermata",
         "fixed", "flageolet", "fontsize", "glissando", "grace", "hspace", "improvisationOff",

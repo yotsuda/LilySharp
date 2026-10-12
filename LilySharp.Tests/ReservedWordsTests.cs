@@ -48,7 +48,7 @@ public class ReservedWordsTests
         "break", "partial",
         "title", "composer", "tempo", "time", "key", "clef",
         "major", "minor", "dorian", "phrygian", "lydian", "mixolydian", "aeolian", "locrian",
-        "tuplet", "grace", "acciaccatura", "appoggiatura", "lyrics", "chords",
+        "tuplet", "grace", "acciaccatura", "appoggiatura", "afterGrace", "lyrics", "chords",
         "tuning",
         "override", "revert", "once",
         "segno", "fine", "coda", "dc", "ds", "al", "to",

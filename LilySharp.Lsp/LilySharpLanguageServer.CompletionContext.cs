@@ -1785,7 +1785,7 @@ public sealed partial class LilySharpLanguageServer
         // this brace opens that block, not a score.
         if (w1 is "section" or "part" or "phrase" or "form" or "chords"
             or "lyrics" or "voice" or "tuplet" or "grace" or "acciaccatura"
-            or "appoggiatura" or "repeat" or "ossia" or "tab")
+            or "appoggiatura" or "afterGrace" or "repeat" or "ossia" or "tab")
             return false;
         // Otherwise w1 was a bare name or a quoted one (w1 == ""; LYS0038, which the parser
         // still reads as the name): walk back over the rest of the header looking for `score`.
@@ -1825,7 +1825,7 @@ public sealed partial class LilySharpLanguageServer
                 return true;
             if (w is "section" or "part" or "phrase" or "form" or "chords"
                 or "lyrics" or "voice" or "tuplet" or "grace" or "acciaccatura"
-                or "appoggiatura" or "repeat" or "ossia" or "tab")
+                or "appoggiatura" or "afterGrace" or "repeat" or "ossia" or "tab")
                 return false;
             // else a name — keep walking back
         }
@@ -1973,7 +1973,7 @@ public sealed partial class LilySharpLanguageServer
             // Structural keywords: this is not a part-music block.
             if (name is "section" or "score" or "form" or "part" or "phrase"
                 or "grandstaff" or "lyrics" or "chords" or "repeat" or "tuplet"
-                or "grace" or "acciaccatura" or "appoggiatura")
+                or "grace" or "acciaccatura" or "appoggiatura" or "afterGrace")
                 return false;
 
             if (PartIsPercussion(text, name))

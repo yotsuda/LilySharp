@@ -158,6 +158,46 @@ internal readonly record struct GraceBodyElement(SyntaxNode Node, string? ViaPhr
 /// </remarks>
 internal static class GraceBodySupport
 {
+    /// <summary>The <c>afterGrace { … }</c> that <paramref name="main"/> is the main note of
+    /// (the next sibling past its tie, slur and beam markers), or null.</summary>
+    internal static GraceExpressionSyntax? AfterGraceAfter(SyntaxNode main)
+    {
+        if (main.Parent is not { } parent)
+            return null;
+        bool seen = false;
+        foreach (var child in parent.ChildNodes())
+        {
+            if (!seen)
+            {
+                seen = ReferenceEquals(child, main);
+                continue;
+            }
+            if (child.Kind is SyntaxKind.Tie or SyntaxKind.Slur or SyntaxKind.BeamMarker)
+                continue;
+            return child is GraceExpressionSyntax { IsAfterGrace: true } after ? after : null;
+        }
+        return null;
+    }
+    /// <summary>
+    /// True when an <c>afterGrace { … }</c> has its main note: the sibling written just before
+    /// it — past the tie, slur and beam markers that annotate that note — is a note, chord or
+    /// rest (SyntaxFacts.IsAfterGraceMainKind). The page, the sound and the report all engrave
+    /// nothing for one without (GraceBodyValidator says so).
+    /// </summary>
+    internal static bool AfterGraceHasMain(GraceExpressionSyntax grace)
+    {
+        if (!grace.IsAfterGrace || grace.Parent is not { } parent)
+            return false;
+        SyntaxNode? previous = null;
+        foreach (var child in parent.ChildNodes())
+        {
+            if (ReferenceEquals(child, grace))
+                return previous != null && SyntaxFacts.IsAfterGraceMainKind(previous.Kind);
+            if (child.Kind is not (SyntaxKind.Tie or SyntaxKind.Slur or SyntaxKind.BeamMarker))
+                previous = child;
+        }
+        return false;
+    }
     /// <summary>A grace column built from ONE pitch, or null for everything else.</summary>
     internal static NoteSyntax? CarriedNote(SyntaxNode item) => item as NoteSyntax;
 

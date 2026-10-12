@@ -429,7 +429,7 @@ internal sealed partial class Parser
     }
     private GraceExpressionGreen ParseGraceExpression()
     {
-        var keyword = Advance(); // grace, acciaccatura, or appoggiatura
+        var keyword = Advance(); // grace, acciaccatura, appoggiatura, or afterGrace
         var body = ParseMusicBlock();
         return new GraceExpressionGreen(keyword, body);
     }

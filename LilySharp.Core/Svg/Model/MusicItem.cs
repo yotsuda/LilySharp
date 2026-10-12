@@ -1183,6 +1183,15 @@ public sealed record RestItem : MusicItem
     public bool IsSpacer { get; init; }
 
     /// <summary>
+    /// An afterGrace's notes, hanging left of this SPACER's column (<see cref="NoteItem.LeadingGrace"/>):
+    /// <c>c2 afterGrace { d16 }</c> is LilyPond's <c>&lt;&lt; c2 { s4. \grace d16 } &gt;&gt;</c> in one voice
+    /// — the main note sounds 3/4 of its length in the item list, and a spacer of the last
+    /// quarter carries the grace run, so the run stands at 3/4 of the note, before the next
+    /// column or the bar line (ly/music-functions-init.ly afterGrace, afterGraceFraction 3/4).
+    /// </summary>
+    public ImmutableArray<GraceColumnInfo> LeadingGrace { get; init; } = ImmutableArray<GraceColumnInfo>.Empty;
+
+    /// <summary>
     /// The collector's padding in front of a <c>voice { } { }</c> span's later voice where the
     /// span opens mid-bar — not written music. Its length is where the span, and so the
     /// \voiceOne forcing of the first voice, begins in that bar (<see cref="VoiceDefaults.SpanStartIn"/>);

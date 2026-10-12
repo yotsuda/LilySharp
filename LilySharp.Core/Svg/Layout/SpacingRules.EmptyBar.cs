@@ -361,7 +361,7 @@ internal static partial class SpacingRules
         // LILYPOND-REF: lily/paper-column.cc:115-136 Paper_column::is_used — the RepeatSlash
         //   is an element of its column, so the bar is not a skip-only bar.
         for (; i < items.Length; i++)
-            if (items[i] is not RestItem { IsSpacer: true, RepeatSlashCount: null })
+            if (items[i] is not RestItem { IsSpacer: true, RepeatSlashCount: null, LeadingGrace.IsDefaultOrEmpty: true })
                 return false;
         return true;
     }

@@ -188,7 +188,7 @@ internal static partial class SpacingRules
                 // A beat slash's spacer is a USED column (its RepeatSlash grob) and stays.
                 // LILYPOND-REF: lily/paper-column.cc:115-136 Paper_column::is_used — a column
                 //   with an element in it stays in the spacing problem.
-                if (keep.Contains(item) && item is not RestItem { IsSpacer: true, RepeatSlashCount: null })
+                if (keep.Contains(item) && item is not RestItem { IsSpacer: true, RepeatSlashCount: null, LeadingGrace.IsDefaultOrEmpty: true })
                     kept.Add((item, onset));
                 onset += item.Duration;
             }

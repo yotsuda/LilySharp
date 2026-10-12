@@ -2809,7 +2809,7 @@ internal sealed class MultiStaffLayouter
                             // its moment, and the spacer that opens there carries it
                             // (RestItem.RepeatSlashCount) — a used column, anchored.
                             // LILYPOND-REF: scm/define-grobs.scm:2909-2918 RepeatSlash rhythmic-grob-interface.
-                            if (staff.IsTextRow || item is not RestItem { IsSpacer: true, RepeatSlashCount: null })
+                            if (staff.IsTextRow || item is not RestItem { IsSpacer: true, RepeatSlashCount: null, LeadingGrace.IsDefaultOrEmpty: true })
                                 anchoredOnsets.Add(currentTiming);
                             currentTiming += item.Duration;
                         }

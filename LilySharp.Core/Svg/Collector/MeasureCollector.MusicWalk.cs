@@ -52,6 +52,10 @@ public sealed partial class MeasureCollector
             musicNodes.Add(site);
     }
 
+    /// <summary>How much of an afterGrace's main note sounds before its grace run — LilyPond's
+    /// afterGraceFraction, 3/4 (ly/music-functions-init.ly afterGrace).</summary>
+    private static readonly Fraction AfterGraceFraction = new(3, 4);
+
     /// <summary>
     /// Processes a flat list of music sites with one-node lookahead for
     /// ties/slurs/beams (which annotate the preceding note). Every site this
@@ -104,6 +108,11 @@ public sealed partial class MeasureCollector
             }
 
             SetFollowingBoundary(nodes, i, in site, builder);
+            // `c2 afterGrace { … }`: the main note sounds 3/4 of its length in the list, and
+            // the afterGrace below adds the last quarter as a spacer carrying the run.
+            if (SyntaxFacts.IsAfterGraceMainKind(site.Kind)
+                && AfterGraceFollows(k => k < musicNodes.Count ? musicNodes[k] : null, i))
+                builder.PendingAfterGraceScale = AfterGraceFraction;
             ProcessMusicNode(site.Node, builder, PeekMarkers(nodes, i, out _));
             builder.ClearFollowingBarline();
         }
@@ -198,8 +207,19 @@ public sealed partial class MeasureCollector
     /// <summary>True for the marker nodes that annotate the preceding note and
     /// are otherwise skipped by the walk ("already processed"), i.e. exactly the
     /// nodes <see cref="FoldMarker"/> reads.</summary>
-    private static bool IsMarkerNode(SyntaxNode node) => IsMarkerKind(node.Kind);
+    /// <summary>True when the site after <paramref name="i"/> — past the tie, slur and beam
+    /// markers that annotate it — is an <c>afterGrace</c>, so the item at <paramref name="i"/>
+    /// is its main note. Kinds first: only the grace itself is materialized.</summary>
+    private static bool AfterGraceFollows(Func<int, GreenSite?> siteAt, int i)
+    {
+        int k = i + 1;
+        while (siteAt(k) is { } marker && IsMarkerKind(marker.Kind))
+            k++;
+        return siteAt(k) is { Kind: SyntaxKind.GraceExpression } next
+            && next.Node is GraceExpressionSyntax { IsAfterGrace: true };
+    }
 
+    private static bool IsMarkerNode(SyntaxNode node) => IsMarkerKind(node.Kind);
     /// <summary>
     /// Kind-level spelling of <see cref="IsMarkerNode"/>, for the places that must ask
     /// WITHOUT materializing a red node. Kinds are 1:1 with red types (each Green class
@@ -1019,6 +1039,18 @@ public sealed partial class MeasureCollector
 
         switch (node)
         {
+            // `afterGrace { … }` after its main note (owner's decision 2026-10-12): the run and,
+            // behind it, a spacer of the length the main note gave up — LilyPond's
+            // << main { s*3/4 \grace { … } } >> in one voice, so the run stands at 3/4 of the note.
+            case GraceExpressionSyntax afterGrace when afterGrace.IsAfterGrace:
+                builder.PendingAfterGraceScale = null;
+                if (builder.AfterGraceRemainder is { } remainder && remainder > Fraction.Zero)
+                {
+                    builder.AfterGraceRemainder = null;
+                    builder.AddItem(AfterGraceSpacer(afterGrace, builder, remainder));
+                }
+                break;
+
             case GraceExpressionSyntax grace:
                 // Store grace expression to attach to the next note
                 _pendingGrace = grace;
@@ -1910,6 +1942,34 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
+    /// Walks an afterGrace's run and returns the spacer that closes its main note: the
+    /// <paramref name="length"/> the main note gave up, carrying the run as its leading grace
+    /// (RestItem.LeadingGrace), so the run hangs at 3/4 of the note as LilyPond's
+    /// <c>s*3/4 \grace { … }</c> puts it. The caller adds it (with or without duration).
+    /// </summary>
+    private RestItem AfterGraceSpacer(GraceExpressionSyntax afterGrace, MeasureBuilder builder, Fraction length)
+    {
+        ProcessGraceRegion(afterGrace, builder, builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset);
+        var run = _pendingLeadingGrace;
+        _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
+        return new RestItem(length, 0, afterGrace.SourceStart)
+        {
+            IsSpacer = true,
+            LeadingGrace = run.IsDefault ? ImmutableArray<GraceColumnInfo>.Empty : run,
+        };
+    }
+
+    /// <summary><see cref="AfterGraceFollows(Func{int, GreenSite?}, int)"/> over red nodes
+    /// (a tuplet body's items).</summary>
+    private static bool AfterGraceFollows(List<SyntaxNode> nodes, int i)
+    {
+        int k = i + 1;
+        while (k < nodes.Count && IsMarkerNode(nodes[k]))
+            k++;
+        return k < nodes.Count && nodes[k] is GraceExpressionSyntax { IsAfterGrace: true };
+    }
+
+    /// <summary>
     /// Processes a tuplet expression, collecting notes and creating a bracket item.
     /// Supports nested tuplets via recursive calls with increasing nesting depth.
     /// </summary>
@@ -1953,6 +2013,7 @@ public sealed partial class MeasureCollector
         // (not DescendantNodes which includes all nested nodes)
         // Use AddItemWithoutDuration to avoid incorrect auto-completion
         var tupletItems = tuplet.Body.Items.ToList();
+        Fraction? afterGraceWritten = null;
         for (int j = 0; j < tupletItems.Count; j++)
         {
             var item = tupletItems[j];
@@ -1982,9 +2043,24 @@ public sealed partial class MeasureCollector
                 // counts as "written" duration for this outer tuplet
                 writtenDuration += ProcessTuplet(nestedTuplet, builder, nestingDepth + 1, scale);
             }
+            else if (item is GraceExpressionSyntax { IsAfterGrace: true } afterGrace)
+            {
+                // The main note before it already counted its whole written length; the
+                // spacer holds the quarter it gave up, at the tuplet's scale, and adds none.
+                if (afterGraceWritten is { } w)
+                    builder.AddItemWithoutDuration(
+                        AfterGraceSpacer(afterGrace, builder, w * (new Fraction(1, 1) - AfterGraceFraction)) with { TimeScale = scale });
+                afterGraceWritten = null;
+            }
             else
             {
-                writtenDuration += EmitScaledItem(item, builder, scale, flags);
+                // `tuplet 3/2 { c4 afterGrace { d16 } d e }`: the main note sounds 3/4 of its
+                // scaled length, as on the main walk (MeasureBuilder.PendingAfterGraceScale).
+                bool afterGraceMain = SyntaxFacts.IsAfterGraceMainKind(item.Kind)
+                    && AfterGraceFollows(tupletItems, j);
+                var written = EmitScaledItem(item, builder, afterGraceMain ? scale * AfterGraceFraction : scale, flags);
+                writtenDuration += written;
+                afterGraceWritten = afterGraceMain ? written : null;
             }
             lastSourcePosition = item.SourceStart;
         }

@@ -1398,13 +1398,8 @@ internal static partial class SpacingRules
         double w = 0;
         for (int i = 0; i < items.Count; i++)
         {
-            var item = items[i];
-            var grace = item switch
-            {
-                NoteItem n => n.LeadingGrace,
-                ChordItem c => c.LeadingGrace,
-                _ => ImmutableArray<GraceColumnInfo>.Empty
-            };
+            // GraceNotesOf, so an afterGrace's closing spacer reserves its run like a note.
+            var grace = GraceNotesOf(items[i]);
             if (grace.IsDefaultOrEmpty)
                 continue;
             w = Math.Max(w, CalculateGraceGroupSpringWidth(grace));

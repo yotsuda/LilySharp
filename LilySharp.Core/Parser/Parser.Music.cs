@@ -75,7 +75,8 @@ internal sealed partial class Parser
             SyntaxKind.KeyKeyword => true,
             SyntaxKind.ClefKeyword => true,
             SyntaxKind.OctaveKeyword => true,
-            SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or SyntaxKind.AppoggiaturaKeyword => true,
+            SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or SyntaxKind.AppoggiaturaKeyword
+                or SyntaxKind.AfterGraceKeyword => true,
             SyntaxKind.CueKeyword => true, // cue region: cue { } / cue <clef> { }
             SyntaxKind.LyricsKeyword => true,
             SyntaxKind.OverrideKeyword or SyntaxKind.RevertKeyword or SyntaxKind.OnceKeyword => true,
@@ -172,7 +173,7 @@ internal sealed partial class Parser
             SyntaxKind.PartialKeyword => ParsePartialDeclaration(),
 
             SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or
-            SyntaxKind.AppoggiaturaKeyword => ParseGraceExpression(),
+            SyntaxKind.AppoggiaturaKeyword or SyntaxKind.AfterGraceKeyword => ParseGraceExpression(),
 
             SyntaxKind.CueKeyword => ParseCueExpression(),
 

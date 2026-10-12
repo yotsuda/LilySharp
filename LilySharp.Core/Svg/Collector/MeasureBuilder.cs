@@ -831,6 +831,15 @@ internal sealed class MeasureBuilder
         _ => 2,
     };
 
+    /// <summary>Set by the collector when the next sounding item is followed by
+    /// <c>afterGrace</c>: that item is added sounding this fraction of its length (3/4,
+    /// LilyPond's afterGraceFraction), and <see cref="AfterGraceRemainder"/> holds the rest.</summary>
+    public Fraction? PendingAfterGraceScale { get; set; }
+
+    /// <summary>The length the last afterGrace main note gave up — the spacer that carries the
+    /// grace run lasts this long. Taken (and cleared) by the collector.</summary>
+    public Fraction? AfterGraceRemainder { get; set; }
+
     /// <summary>
     /// Adds a music item and automatically completes the measure if duration is reached.
     /// </summary>
@@ -907,6 +916,23 @@ internal sealed class MeasureBuilder
             // withdraws the reset and adds nothing (SectionHead).
             _currentItems[standingKey] = merged;
             return;
+        }
+
+        // A main note written before `afterGrace { … }` sounds 3/4 of its length in the list (its
+        // glyph keeps the written value); the collector adds the last quarter as a spacer that
+        // carries the grace run (RestItem.LeadingGrace).
+        if (PendingAfterGraceScale is { } afterScale && item is NoteItem or ChordItem or RestItem { IsSpacer: false })
+        {
+            PendingAfterGraceScale = null;
+            var full = GetItemDuration(item);
+            item = item switch
+            {
+                NoteItem n => n with { TimeScale = n.TimeScale * afterScale },
+                ChordItem c => c with { TimeScale = c.TimeScale * afterScale },
+                RestItem r => r with { TimeScale = r.TimeScale * afterScale },
+                _ => item,
+            };
+            AfterGraceRemainder = full - GetItemDuration(item);
         }
 
         var itemDuration = GetItemDuration(item);

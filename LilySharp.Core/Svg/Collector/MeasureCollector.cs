@@ -4090,6 +4090,10 @@ public sealed partial class MeasureCollector
                 int readTo = SetFollowingBoundary(nodeList, i, in site, builder);
                 if (_probeRecording != null && readTo > _walkMaxSourceRead && _formBarRead == null)
                     _walkMaxSourceRead = readTo;
+                // `c2 afterGrace { … }` (ProcessMusicNodeSequence's twin): the main note sounds 3/4.
+                if (SyntaxFacts.IsAfterGraceMainKind(site.Kind)
+                    && AfterGraceFollows(k => nodeList.TryGet(k, out var s) ? s : null, i))
+                    builder.PendingAfterGraceScale = AfterGraceFraction;
                 ProcessMusicNode(site.Node, builder, flags);
                 builder.ClearFollowingBarline();
             }
@@ -5967,7 +5971,7 @@ public sealed partial class MeasureCollector
             _cursor.VoiceIndex,
             // Where each column stands in that same list — the address the ordinary
             // engravers reach a grob by (GraceNoteItem.ColumnItemIndices).
-            columnItemIndices));
+            columnItemIndices) { IsAfterGrace = grace.IsAfterGrace });
         // Hand the infos to the next main note/chord so it can reserve front space.
         _pendingLeadingGrace = graceColumns;
     }

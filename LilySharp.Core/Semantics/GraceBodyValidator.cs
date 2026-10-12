@@ -78,6 +78,17 @@ internal sealed class GraceBodyValidator : ISemanticValidator
             // hoisting this walk out of the loop would undo that.
             phrases ??= PhraseBodies(root);
 
+            // An afterGrace takes the last quarter of the note, chord or rest written just
+            // before it (SyntaxFacts.IsAfterGraceMainKind); with none there the run has no
+            // time to stand in and is not engraved at all.
+            if (grace.IsAfterGrace && !GraceBodySupport.AfterGraceHasMain(grace))
+            {
+                _diagnostics.Warning(grace.GraceKeyword.Span, DiagnosticCodes.UnengravedGraceContent,
+                    "'afterGrace { }' is not engraved: it must come straight after the note, chord "
+                    + "or rest it ends (c2 afterGrace { d16 e })");
+                continue;
+            }
+
             // ⚠️ THE BODY IS EXPANDED THROUGH THE STATEMENT THE COLLECTOR READS. A phrase
             // reference is a container, so what it NAMES is what has to be judged — a
             // validator that stopped at the reference would fall silent about a `<c e>`

@@ -143,6 +143,7 @@ public class MusicCompletionFlatSpellingTests
                 "grace" => "grace { g16 } a4 b c' d' |",
                 "acciaccatura" => "acciaccatura { g16 } a4 b c' d' |",
                 "appoggiatura" => "appoggiatura { g16 } a4 b c' d' |",
+                "afterGrace" => "g2 afterGrace { a16 } b2 |",   // after its main note (2026-10-12)
                 "voice" => "voice { g4 a b c' | } { e4 f g a | }",   // one keyword, N blocks
                 "cue" => "cue { g4 a } b4 c' |",                       // a region inside the bar
                 "q" => "<g b d'>4 q q q |",                            // repeats the chord before it

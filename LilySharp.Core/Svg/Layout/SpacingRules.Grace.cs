@@ -834,6 +834,8 @@ internal static partial class SpacingRules
     {
         NoteItem n => n.LeadingGrace,
         ChordItem c => c.LeadingGrace,
+        // An afterGrace's run hangs off the spacer that ends its main note (RestItem.LeadingGrace).
+        RestItem r => r.LeadingGrace,
         _ => ImmutableArray<GraceColumnInfo>.Empty
     };
 

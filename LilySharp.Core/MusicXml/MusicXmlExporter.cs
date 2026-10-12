@@ -4737,8 +4737,12 @@ public sealed class MusicXmlExporter
     private void ProcessGraceNotes(GraceExpressionSyntax grace)
     {
         if (_currentMeasure == null) return;
+        // An afterGrace with no main note is engraved nowhere (GraceBodyValidator says so).
+        if (grace.IsAfterGrace && !Semantics.GraceBodySupport.AfterGraceHasMain(grace)) return;
 
         bool isAcciaccatura = grace.IsAcciaccatura;
+        // An afterGrace takes the last quarter of the note before it — MusicXML's own words for it.
+        int? stealPrevious = grace.IsAfterGrace ? 25 : null;
         // The grace group's own memory. Written duration threads WITHIN the group and the
         // main stream's is untouched, so `grace { d16 e } c4` leaves the c a quarter.
         Fraction graceDuration = Fraction.Eighth;
@@ -4880,6 +4884,7 @@ public sealed class MusicXmlExporter
                     {
                         IsGrace = true,
                         IsSlash = isAcciaccatura,
+                        StealTimePrevious = stealPrevious,
                         Step = step,
                         Alter = alter,
                         Octave = targetOctave,
@@ -4911,6 +4916,7 @@ public sealed class MusicXmlExporter
                     {
                         IsGrace = true,
                         IsSlash = isAcciaccatura,
+                        StealTimePrevious = stealPrevious,
                         IsUnpitched = true,
                         Step = "CDEFGAB"[((idx % 7) + 7) % 7].ToString(),
                         Octave = 4 + (int)Math.Floor(idx / 7.0),
@@ -4955,6 +4961,7 @@ public sealed class MusicXmlExporter
                         {
                             IsGrace = true,
                             IsSlash = isAcciaccatura,
+                            StealTimePrevious = stealPrevious,
                             IsChord = !firstMember,
                             Step = cstep,
                             Alter = calter,
@@ -4987,6 +4994,7 @@ public sealed class MusicXmlExporter
                         {
                             IsGrace = true,
                             IsSlash = isAcciaccatura,
+                            StealTimePrevious = stealPrevious,
                             IsChord = !firstMember,
                             Step = "CDEFGAB"[dstep].ToString(),
                             Alter = dalter,
@@ -5006,6 +5014,7 @@ public sealed class MusicXmlExporter
                         {
                             IsGrace = true,
                             IsSlash = isAcciaccatura,
+                            StealTimePrevious = stealPrevious,
                             IsChord = !firstMember,
                             Step = "CDEFGAB"[sstep].ToString(),
                             Alter = salter,
@@ -5051,6 +5060,7 @@ public sealed class MusicXmlExporter
                     {
                         IsGrace = true,
                         IsSlash = isAcciaccatura,
+                        StealTimePrevious = stealPrevious,
                         IsRest = true,
                         Type = restType,
                         ActualNotes = restActual,

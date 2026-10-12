@@ -771,6 +771,7 @@ internal sealed class Lexer
             "grace" => SyntaxKind.GraceKeyword,
             "acciaccatura" => SyntaxKind.AcciaccaturaKeyword,
             "appoggiatura" => SyntaxKind.AppoggiaturaKeyword,
+            "afterGrace" => SyntaxKind.AfterGraceKeyword,
             "cue" => SyntaxKind.CueKeyword,
             "lyrics" => SyntaxKind.LyricsKeyword,
             "chords" => SyntaxKind.ChordsKeyword,

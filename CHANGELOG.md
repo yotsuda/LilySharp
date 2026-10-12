@@ -6,6 +6,15 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Grace notes after a note: `afterGrace`
+
+- **`c2 afterGrace { d16 e }` writes grace notes AFTER the note before them** — LilyPond's
+  `\afterGrace c2 { d16 e }`, which the twin writes. The run stands at 3/4 of the main note, as
+  LilyPond places it: mid-bar it reads as the next note's grace, at the end of a bar it sits
+  before the bar line. A tie over it reaches the next note (`g1~ afterGrace { a16 b } | g4`), it
+  works inside a tuplet, and the MIDI sounds the run at the end of the main note. MusicXML marks
+  the run `steal-time-previous="25"`. Written with no note before it, it is not engraved and
+  Lily# says so (LYS4020). `afterGrace` cannot name a part.
 ### A part cannot be named `as`
 
 - **`part as` is refused at the declaration**, naming the reserved words. In a score `as` opens a

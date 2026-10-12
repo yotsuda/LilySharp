@@ -70,6 +70,12 @@ public sealed partial class LilyPondExporter
         {
             if (!staves.TryGetValue(g.StaffIndex, out var staff) || g.VoiceIndex >= staff.Voices.Length)
                 continue;
+            // An afterGrace's run is written inside \afterGrace with its main note, and the
+            // event it leads on the page is the closing spacer, which the twin never writes.
+            // ⚠️ UNMEASURED: whether LilyPond draws a second bar line against a run that ends
+            // a bar on one staff alone.
+            if (g.IsAfterGrace)
+                continue;
             var measures = staff.Voices[g.VoiceIndex].Measures;
             if (g.MeasureIndex >= measures.Length)
                 continue;

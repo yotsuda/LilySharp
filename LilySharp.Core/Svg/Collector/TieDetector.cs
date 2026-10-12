@@ -194,10 +194,27 @@ internal sealed class TieDetector
     {
         var next = NoteScan.FindNext(measures, measureIdx, itemIdx,
             x => x is NoteItem or ChordItem or RestItem);
+        // An afterGrace's run and its closing spacer stand inside the main note's time, so the
+        // tie reaches past them to the next note (`g1~ afterGrace { a16 b } | g4`).
+        // MEASURED (2.26.0, Lab sessions/p903, `\afterGrace g'1 ~ { a'16 b' } | g'4`): one Tie,
+        // g' to g'.
+        while (next is { } run && AfterGraceSpacerFrom(measures[run.MeasureIdx].Items, run.ItemIdx) is int spacer)
+            next = NoteScan.FindNext(measures, run.MeasureIdx, spacer,
+                x => x is NoteItem or ChordItem or RestItem);
         if (next is { } n && graph != null && n.Item.BeginsSectionPlay != SectionPlayEdge.None
             && !graph.PrintedNextIsPlayedNext(graph.PlayOf(measureIdx, itemIdx)))
             return null;
         return next;
+    }
+
+    /// <summary>The index of the afterGrace spacer that the grace items from
+    /// <paramref name="i"/> lead to (or that stands at <paramref name="i"/>), or null.</summary>
+    private static int? AfterGraceSpacerFrom(ImmutableArray<MusicItem> items, int i)
+    {
+        while (i < items.Length && items[i].GraceTime)
+            i++;
+        return i < items.Length && items[i] is RestItem { IsSpacer: true, LeadingGrace.IsDefaultOrEmpty: false }
+            ? i : null;
     }
 
     /// <summary>

@@ -1124,7 +1124,16 @@ default part pages.
 grace { d16 e } f4          // Grace notes before F
 acciaccatura { a16 } b4     // Slashed grace (takes no time)
 appoggiatura { c8 } d4      // Unslashed grace
+c2 afterGrace { d16 e } f2  // Grace notes AFTER the c, ending it
 ```
+
+**`afterGrace { … }` is written after its main note** (LilyPond's `\afterGrace c2 { d16 e }`
+puts the note inside). The run stands at 3/4 of the main note — LilyPond's
+`afterGraceFraction` — so mid-bar it reads as the next note's grace and at the end of a bar
+it sits before the bar line; in the MIDI the run sounds at the end of the main note, which
+gives up the time. The main note is the note, chord or rest written just before (a tie or
+slur mark between them is fine: `g1~ afterGrace { a16 b } | g4`, and the tie reaches past
+the run); written anywhere else, the run is not engraved (LYS4020).
 
 **A grace body is parsed as a full music block, and engraved much more narrowly than that.**
 The engraver reads a **bare note's pitch and its duration VALUE** out of the body and nothing
@@ -2590,7 +2599,7 @@ The following words are keywords. A **part or section name may still be any of t
 except the structural ones (2026-10-03): the words that open a block of their own where a
 name could stand — `voice` `lyrics` `chords` `section` `part` `phrase` `form` `score` `tab`
 `staff` `ossia` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff`
-`layout` `paper` `fonts` `grace` `acciaccatura` `appoggiatura` `cue` — plus the section
+`layout` `paper` `fonts` `grace` `acciaccatura` `appoggiatura` `afterGrace` `cue` — plus the section
 settings and item-head directives `key` `time` `tempo` `partial` `override` `revert` `once`
 `using` `title` `subtitle` `composer` `poet`, and the words a form body reads as items of
 its own, `segno` `fine` `coda` `dc` `ds` `al` `to` `break` `noBreak` `pageBreak`
@@ -2610,7 +2619,7 @@ phrase). Any other keyword — and `f`, which is the note F — is refused at th
 | Metadata | `title` `subtitle` `composer` `poet` `tempo` `time` `key` `clef` |
 | Modes | `major` `minor` `ionian` `dorian` `phrygian` `lydian` `mixolydian` `aeolian` `locrian` |
 | Clef names | `treble` `bass` `alto` `tenor` `treble_8` `bass_8` `soprano` `mezzosoprano` `baritone` |
-| Notation | `tuplet` `grace` `acciaccatura` `appoggiatura` `cue` `lyrics` `chords` `tuning` |
+| Notation | `tuplet` `grace` `acciaccatura` `appoggiatura` `afterGrace` `cue` `lyrics` `chords` `tuning` |
 | Overrides | `override` `revert` `once` |
 | Navigation (form block) | `segno` `fine` `coda` `dc` `ds` `al` `to` |
 | Dynamics | `ppp` `pp` `p` `mp` `mf` `f` `ff` `fff` |

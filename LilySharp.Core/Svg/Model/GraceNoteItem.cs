@@ -331,6 +331,15 @@ public sealed record GraceNoteItem
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; init; }
 
+    /// <summary>
+    /// Written <c>afterGrace { … }</c>: the notes belong to the note BEFORE them, sound at its
+    /// end and are drawn before what follows it — on the page the same run a leading grace of
+    /// the next note is (LilyPond's \afterGrace places them at 3/4 of the main note, which is
+    /// the run before the next column). <see cref="MainNoteItemIndex"/> still names the note
+    /// the run stands before.
+    /// </summary>
+    public bool IsAfterGrace { get; init; }
+
     /// <summary>Global staff index this grace group belongs to (multi-staff
     /// routing; see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>
     public int StaffIndex { get; }

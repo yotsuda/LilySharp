@@ -271,6 +271,16 @@ internal static class SyntaxFacts
         SyntaxKind.RepeatEndBar or SyntaxKind.RepeatBothBar;
 
     /// <summary>
+    /// The music an <c>afterGrace { … }</c> can follow: one note, chord or rest, whose last
+    /// quarter the grace run takes (LilyPond's <c>\afterGrace main { … }</c>, where main is
+    /// any music; Lily# writes the grace AFTER its main note, so the main is the one event
+    /// before it).
+    /// </summary>
+    public static bool IsAfterGraceMainKind(SyntaxKind kind) => kind is
+        SyntaxKind.Note or SyntaxKind.DrumNote or SyntaxKind.Chord or SyntaxKind.ChordRepetition
+        or SyntaxKind.SlashNote or SyntaxKind.BareDuration or SyntaxKind.Rest;
+
+    /// <summary>
     /// Barlines that delimit a chord-block or lyric measure. EXCLUDES the dashed
     /// barline — chord and lyric rows never treated <c>!</c> as a measure break,
     /// a behavior preserved verbatim from the original per-site predicates.
@@ -532,7 +542,7 @@ internal static class SyntaxFacts
         "voice", "lyrics", "chords", "section", "part", "phrase", "form", "score",
         "tab", "staff", "ossia", "grandStaff", "staffGroup", "choirStaff",
         "condensedStaff", "combinedStaff", "layout", "paper", "fonts",
-        "grace", "acciaccatura", "appoggiatura", "cue",
+        "grace", "acciaccatura", "appoggiatura", "afterGrace", "cue",
         "key", "time", "tempo", "partial", "override", "revert", "once",
         "using", "title", "subtitle", "composer", "poet",
         "segno", "fine", "coda", "dc", "ds", "al", "to",

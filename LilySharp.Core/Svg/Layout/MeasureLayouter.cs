@@ -392,7 +392,7 @@ internal sealed class MeasureLayouter
             foreach (var item in items)
             {
                 if (!item.GraceTime && !SpacingRules.IsMidMeasureChangeColumn(item)
-                    && item is not RestItem { IsSpacer: true, RepeatSlashCount: null })
+                    && item is not RestItem { IsSpacer: true, RepeatSlashCount: null, LeadingGrace.IsDefaultOrEmpty: true })
                 {
                     int column = timings.IndexOf(onset);
                     if (column >= 0)
@@ -583,7 +583,7 @@ internal sealed class MeasureLayouter
             // the main one. Skipped for the same reason a mid-measure change is: neither is
             // the musical column being spaced.
             if (acc == t && !item.GraceTime && !SpacingRules.IsMidMeasureChangeColumn(item))
-                return item is RestItem { IsSpacer: true, RepeatSlashCount: null } ? null : item;
+                return item is RestItem { IsSpacer: true, RepeatSlashCount: null, LeadingGrace.IsDefaultOrEmpty: true } ? null : item;
             if (acc > t) break;
             acc += item.Duration;
         }

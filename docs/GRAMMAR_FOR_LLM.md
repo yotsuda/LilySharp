@@ -586,6 +586,7 @@ repeat unfold 8 { ground }               // 32 bars from one line
 grace { d16 e } f4           // grace before F
 acciaccatura { a16 } b4      // slashed grace
 appoggiatura { c8 } d4       // unslashed grace
+c2 afterGrace { d16 e } f2   // AFTER the note before it: the run ends the c (LilyPond \afterGrace)
 ```
 
 ## Multi-voice (one staff)
@@ -1154,7 +1155,7 @@ layout {
 
 These are keywords. A PART or SECTION name may be any of them EXCEPT the structural ones
 (`voice lyrics chords section part phrase form score tab staff ossia grandStaff staffGroup
-choirStaff condensedStaff combinedStaff layout paper fonts grace acciaccatura appoggiatura
+choirStaff condensedStaff combinedStaff layout paper fonts grace acciaccatura appoggiatura afterGrace
 cue key time tempo partial override revert once using title subtitle composer poet segno
 fine coda dc ds al to break noBreak pageBreak noPageBreak`, and `as` — a score's `staff X as …` word) — so
 `part p`, `part bass`, `part q` are fine (2026-10-03). A PHRASE name is referenced bare in
@@ -1169,7 +1170,7 @@ voice phrase repeat break noBreak pageBreak noPageBreak partial cue embedded fon
 title subtitle composer poet tempo time key clef
 major minor ionian dorian phrygian lydian mixolydian aeolian locrian
 treble bass alto tenor treble_8 bass_8 soprano mezzosoprano baritone
-tuplet grace acciaccatura appoggiatura lyrics chords tuning
+tuplet grace acciaccatura appoggiatura afterGrace lyrics chords tuning
 override revert once
 segno fine coda dc ds al to
 ppp pp p mp mf ff fff   (f is a PITCH; @f still works - dynamics resolve from text)

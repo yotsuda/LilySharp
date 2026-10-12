@@ -112,7 +112,7 @@ Keyword = 'title' | 'subtitle' | 'composer' | 'poet' | 'tempo' | 'time' | 'key' 
         | 'condensedStaff' | 'combinedStaff' | 'tab' | 'ossia' | 'voice'
         | 'lyrics' | 'chords' | 'tuning' | 'instrument' | 'percussion' | 'drummap'
         | 'transpose' | 'octave' | 'pitch' | 'using' | 'break' | 'noBreak' | 'pageBreak' | 'noPageBreak' | 'partial'
-        | 'tuplet' | 'grace' | 'acciaccatura' | 'appoggiatura' | 'cue'
+        | 'tuplet' | 'grace' | 'acciaccatura' | 'appoggiatura' | 'afterGrace' | 'cue'
         | 'repeat' | 'embedded' | 'fonts' | 'paper' | 'layout'
         | 'override' | 'revert' | 'once'
         | 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian' | 'lydian' | 'mixolydian'
@@ -995,7 +995,7 @@ PartDecl       = 'part' , [ PartName ] , [ String ] , [ PartBody ] ;  (* String 
    treble/bass/alto/tenor). The words a name cannot be are the ones that open a block
    of their own where a name could stand, and the section settings: voice lyrics chords
    section part phrase form score tab staff ossia grandStaff staffGroup choirStaff
-   condensedStaff combinedStaff layout paper fonts grace acciaccatura appoggiatura cue
+   condensedStaff combinedStaff layout paper fonts grace acciaccatura appoggiatura afterGrace cue
    key time tempo partial override revert once using title subtitle composer poet, and
    the words a form body reads as items of its own — segno fine coda dc ds al to and
    break noBreak pageBreak noPageBreak — since a section is named by the same rule
@@ -2539,7 +2539,11 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
 ### 8.5 Tuplets and Grace notes
 
 Tuplet         = 'tuplet' , Integer , '/' , Integer , MusicBlock ;   (* nesting allowed *)
-Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' ) , MusicBlock ;
+Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' | 'afterGrace' ) , MusicBlock ;
+                 (* 'afterGrace' follows its MAIN note — the note, chord or rest written just
+                    before it, past any tie/slur/beam mark — and its run takes that note's last
+                    quarter (LilyPond afterGraceFraction 3/4); anywhere else it is not engraved
+                    (LYS4020). *)
                  (* THE BLOCK IS FULL AND THE ENGRAVING IS NARROW. The body parses as any
                     music block, but only a BARE NOTE is engraved, and of it only the pitch
                     and the duration VALUE. A chord, a rest, a tuplet, a phrase reference,
