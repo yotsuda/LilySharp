@@ -91,3 +91,85 @@ describe('the preview reads its offsets back after a reconcile', () => {
         assert.notEqual(offsetsDisagree(page([pos('12')], [pos('30'), alt('31 40')], [pos('99')]), markup), null);
     });
 });
+
+// Dragging the sheet scrolls it (installDragScroll, owner request 2026-10-12) without taking
+// the click that jumps to the editor: the function is taken out of the page script and handed
+// a scroller and a document made of plain objects that record their listeners.
+describe('the preview scrolls when the sheet is dragged', () => {
+    const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const start = source.indexOf('return `<!DOCTYPE html>') + 'return '.length;
+    const end = source.indexOf('</html>`;', start) + '</html>`'.length;
+    const html = new vm.Script(source.slice(start, end).replace(/\$\{[^}]*\}/g, 'X')).runInNewContext({}) as string;
+    const head = 'function installDragScroll(';
+    const at = html.indexOf(head);
+    let depth = 0, close = -1;
+    for (let i = html.indexOf('{', at); i < html.length; i++) {
+        if (html[i] === '{') depth++;
+        else if (html[i] === '}' && --depth === 0) { close = i + 1; break; }
+    }
+    const install = new vm.Script('(' + html.slice(at, close) + ')').runInNewContext({ Math }) as
+        (scroller: unknown, doc: unknown) => void;
+
+    type Handler = (e: Record<string, unknown>) => void;
+    function sheet() {
+        const on: Record<string, Handler[]> = {}, onDoc: Record<string, Handler[]> = {};
+        const classes = new Set<string>();
+        const scroller = {
+            scrollLeft: 100, scrollTop: 500, clientLeft: 0, clientTop: 0, clientWidth: 800, clientHeight: 600,
+            getBoundingClientRect: () => ({ left: 0, top: 40 }),
+            setPointerCapture: () => { },
+            classList: { add: (c: string) => classes.add(c), remove: (c: string) => classes.delete(c) },
+            addEventListener: (t: string, h: Handler) => (on[t] ??= []).push(h),
+        };
+        const doc = { addEventListener: (t: string, h: Handler) => (onDoc[t] ??= []).push(h) };
+        install(scroller, doc);
+        const note = { closest: () => null };
+        const fire = (t: string, e: Record<string, unknown>) =>
+            (on[t] ?? []).forEach(h => h({ pointerId: 1, pointerType: 'mouse', button: 0, target: note, ...e }));
+        // What the page's own click handler would get: true when the click reaches it.
+        const click = () => {
+            let reached = true;
+            const e = { stopImmediatePropagation: () => { reached = false; }, preventDefault: () => { } };
+            (onDoc['click'] ?? []).forEach(h => h(e));
+            return reached;
+        };
+        return { scroller, classes, fire, click };
+    }
+
+    it('finds the function in the page script', () => {
+        assert.ok(at >= 0 && close > at, 'installDragScroll is not in the page script');
+    });
+    it('scrolls with the mouse, and the click that ends the drag does not jump', () => {
+        const s = sheet();
+        s.fire('pointerdown', { clientX: 300, clientY: 300 });
+        s.fire('pointermove', { clientX: 260, clientY: 180 });
+        assert.deepEqual([s.scroller.scrollLeft, s.scroller.scrollTop], [140, 620]);
+        assert.ok(s.classes.has('dragging'));
+        s.fire('pointerup', { clientX: 260, clientY: 180 });
+        assert.ok(!s.classes.has('dragging'));
+        assert.equal(s.click(), false);
+        // …and the next plain click on a note jumps as before.
+        s.fire('pointerdown', { clientX: 300, clientY: 300 });
+        s.fire('pointerup', { clientX: 300, clientY: 300 });
+        assert.equal(s.click(), true);
+    });
+    it('keeps a click that wobbles less than the slop a click', () => {
+        const s = sheet();
+        s.fire('pointerdown', { clientX: 300, clientY: 300 });
+        s.fire('pointermove', { clientX: 302, clientY: 297 });
+        s.fire('pointerup', { clientX: 302, clientY: 297 });
+        assert.deepEqual([s.scroller.scrollLeft, s.scroller.scrollTop], [100, 500]);
+        assert.equal(s.click(), true);
+    });
+    it('leaves shift-click, other buttons, touch, the scroll bar and controls alone', () => {
+        for (const e of [{ shiftKey: true }, { button: 2 }, { pointerType: 'touch' },
+            { clientX: 805 }, { target: { closest: () => ({}) } }]) {
+            const s = sheet();
+            s.fire('pointerdown', { clientX: 300, clientY: 300, ...e });
+            s.fire('pointermove', { clientX: 200, clientY: 100 });
+            s.fire('pointerup', {});
+            assert.deepEqual([s.scroller.scrollLeft, s.scroller.scrollTop], [100, 500], JSON.stringify(e));
+            assert.equal(s.click(), true, JSON.stringify(e));
+        }
+    });
+});

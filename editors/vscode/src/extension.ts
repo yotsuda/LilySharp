@@ -2928,9 +2928,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             justify-content: center;
             align-items: flex-start;
             overflow: auto;
+            /* The sheet is dragged to scroll (installDragScroll): an open hand over it, a closed
+               one while it moves, and the pointer over what a click jumps to. */
+            cursor: grab;
         }
-        .container {
-            max-width: 100%;
+        .main-content.dragging,
+        .main-content.dragging [data-pos] {
+            cursor: grabbing;
+        }
+        .main-content [data-pos] {
+            cursor: pointer;
+        }
+        .container {            max-width: 100%;
         }
         #svgContainer {
             transform-origin: top left;
@@ -3979,8 +3988,57 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // footprint; other copies live in other measures/systems. Bands by
         // y-gap (systems are far apart), then splits by x-gap. Returned in
         // reading order = chronological within the part's staff.
-        function clusterInstances(matches) {
-            // DOM order IS drawing order (measure by measure, system by
+        // Drag the sheet to scroll it (owner request 2026-10-12). A press becomes a drag only
+        // once the mouse has moved SLOP pixels, so a click on a note still jumps to the editor
+        // (or seeks, or extends the selection), and the click a drag ends with is swallowed
+        // here, in the capture phase, before the document's click handler sees it. Only the
+        // left button of a mouse with no modifier: shift-click selects, a touch or pen
+        // scrolls natively, and a press on a scroll bar or a control is left alone.
+        function installDragScroll(scroller, doc) {
+            const SLOP = 4;
+            let press = null;
+            let dragged = false;
+            scroller.addEventListener('pointerdown', (e) => {
+                // Every click starts with a press, so a flag a drag left behind (its click
+                // never came) cannot swallow the next real click.
+                dragged = false;
+                press = null;
+                if (e.pointerType !== 'mouse' || e.button !== 0
+                    || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+                const r = scroller.getBoundingClientRect();
+                if (e.clientX - r.left >= scroller.clientLeft + scroller.clientWidth
+                    || e.clientY - r.top >= scroller.clientTop + scroller.clientHeight) return;
+                if (e.target && e.target.closest && e.target.closest('button, input, select, textarea, a')) return;
+                press = { id: e.pointerId, x: e.clientX, y: e.clientY, left: scroller.scrollLeft, top: scroller.scrollTop };
+            });
+            scroller.addEventListener('pointermove', (e) => {
+                if (press === null || e.pointerId !== press.id) return;
+                const dx = e.clientX - press.x, dy = e.clientY - press.y;
+                if (!dragged) {
+                    if (Math.abs(dx) < SLOP && Math.abs(dy) < SLOP) return;
+                    dragged = true;
+                    scroller.setPointerCapture(e.pointerId);
+                    scroller.classList.add('dragging');
+                }
+                scroller.scrollLeft = press.left - dx;
+                scroller.scrollTop = press.top - dy;
+            });
+            const release = (e) => {
+                if (press === null || e.pointerId !== press.id) return;
+                press = null;
+                scroller.classList.remove('dragging');
+            };
+            scroller.addEventListener('pointerup', release);
+            scroller.addEventListener('pointercancel', (e) => { release(e); dragged = false; });
+            doc.addEventListener('click', (e) => {
+                if (!dragged) return;
+                dragged = false;
+                e.stopImmediatePropagation();
+                e.preventDefault();
+            }, true);
+        }
+
+        function clusterInstances(matches) {            // DOM order IS drawing order (measure by measure, system by
             // system) - i.e. chronological within the part's staff. Keep it,
             // and only SPLIT when the next element sits far from the
             // previous one (another measure or another system). The earlier
@@ -4871,8 +4929,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
         });
 
-        document.addEventListener('wheel', (e) => {
-            if (e.ctrlKey) {
+        installDragScroll(mainContent, document);
+
+        document.addEventListener('wheel', (e) => {            if (e.ctrlKey) {
                 e.preventDefault();
                 const delta = e.deltaY > 0 ? -scaleStep : scaleStep;
                 scale = Math.min(maxScale, Math.max(minScale, scale + delta));

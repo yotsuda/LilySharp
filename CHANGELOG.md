@@ -6,6 +6,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Drag the preview to scroll
+
+- **The score preview scrolls when you drag the sheet** with the left mouse button (an open hand
+  over the sheet, a closed one while it moves). A click on a note still jumps to the editor —
+  a press becomes a drag only once the mouse has moved a few pixels, and the click that ends a
+  drag does nothing. Shift-click still selects, and touch, the scroll bars and the toolbar work
+  as before.
 ### Grace notes after a note: `afterGrace`
 
 - **`c2 afterGrace { d16 e }` writes grace notes AFTER the note before them** — LilyPond's
