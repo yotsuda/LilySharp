@@ -273,6 +273,19 @@ internal static class BeamingPattern
 
         private static ImmutableArray<int> DefaultBeatStructure(TimeSignature timeSig)
         {
+            // An ADDITIVE numerator states the beat structure itself: `time 3+2+2/8` beams its
+            // eighths 3 + 2 + 2, as LilyPond does with the twin's `\time #'((3 2 2) . 8)`.
+            // LILYPOND-REF: scm/time-signature-settings.scm:384-385 calc-subdivided-fraction-structure
+            //   — "Return numerator terms, which define the beat structure."
+            if (timeSig.BeatsText is { } text && text.Contains('+'))
+            {
+                var terms = ImmutableArray.CreateBuilder<int>();
+                int sum = 0;
+                foreach (var part in text.Split('+'))
+                    if (int.TryParse(part, out int term) && term > 0) { terms.Add(term); sum += term; }
+                if (terms.Count > 1 && sum == timeSig.Beats)
+                    return terms.ToImmutable();
+            }
             if (timeSig.BeatType == 8)
             {
                 switch (timeSig.Beats)

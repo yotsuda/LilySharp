@@ -4,6 +4,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Additive meters beam by their terms
+
+- **`time 3+2+2/8` beams its eighths 3 + 2 + 2** (and `2+2+3/8` 2 + 2 + 3): an additive
+  numerator is the beat structure, as LilyPond reads the twin's `\time #'((3 2 2) . 8)`. Until
+  now the page drew the additive meter and left every eighth unbeamed. A plain `time 7/8` still
+  beams nothing — LilyPond's table has no grouping for it either.
+
 ### Chord names on a transposing part
 
 - **A chords row over a staff printed for a transposing player names the chords that player
