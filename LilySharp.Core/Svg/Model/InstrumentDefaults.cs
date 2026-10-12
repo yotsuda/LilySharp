@@ -433,4 +433,20 @@ public static class InstrumentDefaults
     /// Checks if the given string is a known instrument name.
     /// </summary>
     public static bool IsKnownInstrument(string name) => KnownSet.Contains(name);
+
+    /// <summary>
+    /// The preset an unknown <paramref name="name"/> most likely meant, or null: a voice written
+    /// with the <c>voice-</c> prefix only <c>voice-bass</c> takes (<c>voice-alto</c> → <c>alto</c>
+    /// — grammar feedback B4, 2026-10-12; the prefix exists because <c>bass</c> is the bass
+    /// guitar, and the other voices keep ONE name, the owner's rule of 2026-09-15), else the
+    /// closest typo.
+    /// </summary>
+    public static string? SuggestPreset(string name)
+    {
+        const string voicePrefix = "voice-";
+        if (name.StartsWith(voicePrefix, StringComparison.OrdinalIgnoreCase)
+            && KnownSet.Contains(name[voicePrefix.Length..]))
+            return name[voicePrefix.Length..].ToLowerInvariant();
+        return Semantics.AnnotationNameValidator.ClosestTypo(name, KnownInstruments);
+    }
 }

@@ -162,4 +162,24 @@ public sealed class InstrumentPresetTests
         Assert.Equal(InstrumentDefaults.ParseTranspositionSemitones("8vb"),
                      InstrumentDefaults.ParseTranspositionSemitones("8VB"));
     }
+
+    /// <summary>An unknown preset names the one it most likely meant (grammar feedback B4,
+    /// 2026-10-12): a voice written with the prefix only <c>voice-bass</c> takes, and a typo.
+    /// The voices keep one name each — no alias is added.</summary>
+    [Theory]
+    [InlineData("voice-alto", "Did you mean 'alto'?")]
+    [InlineData("voice-soprano", "Did you mean 'soprano'?")]
+    [InlineData("voice-tenor", "Did you mean 'tenor'?")]
+    [InlineData("violn", "Did you mean 'violin'?")]
+    [InlineData("xylophonium", null)]
+    public void AnUnknownPreset_SaysWhichOneItMeant(string preset, string? hint)
+    {
+        var tree = SyntaxTree.Parse("part m { instrument " + preset + " }\nsection A { m { c'1 | } }\nform { A }\nscore { staff m }");
+        var error = Assert.Single(LilySharp.Core.Semantics.SemanticValidation.Run(tree),
+            d => d.Message.StartsWith("Unknown instrument preset", System.StringComparison.Ordinal));
+        if (hint is null)
+            Assert.DoesNotContain("Did you mean", error.Message);
+        else
+            Assert.Contains(hint, error.Message);
+    }
 }

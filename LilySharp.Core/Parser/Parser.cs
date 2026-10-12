@@ -91,7 +91,11 @@ internal sealed partial class Parser
             int inkPos = scanPos + t.LeadingTriviaWidth;
 
             bool inChordFigArg = argDepth > 0 || chordsDepth > 0 || tableDepth > 0;
-            if (t.Kind == SyntaxKind.BadToken && !(inChordFigArg && t.Text == "#") && lyricsDepth == 0)
+            // A '^' glued after a '-' is LilyPond's marcato shorthand, which the music parse
+            // reports as one (Parser.Music ReportLilyPondScript) — not a second error here.
+            bool scriptShorthandTail = t.Text == "^" && glued && previous?.Kind == SyntaxKind.Minus;
+            if (t.Kind == SyntaxKind.BadToken && !(inChordFigArg && t.Text == "#") && lyricsDepth == 0
+                && !scriptShorthandTail)
             {
                 // '?' is LilyPond's cautionary accidental; Lily# has no such
                 // shorthand, so point at the annotation form instead of a bare

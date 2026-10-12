@@ -45,7 +45,6 @@ public class SlurPairingValidatorTests
     [Theory]
     [InlineData("c4( d e f)")]                  // the plain slur
     [InlineData("c4( d) e( f)")]                // two in a row
-    [InlineData("c4( d( e) f)")]                // nested
     [InlineData("c2.( | d1)")]                  // across the barline
     [InlineData("<c e>4( <d f>2.)")]            // chords
     [InlineData("c4( d) e f")]                  // plain notes after a closed slur
@@ -139,4 +138,40 @@ public class SlurPairingValidatorTests
             SemanticValidation.Run(SyntaxTree.Parse(
                 "part m { section A { c4( d e f } } form { A } score { staff m }")),
             d => d.Code == DiagnosticCodes.UnpairedSlur);
+
+    /// <summary>
+    /// ONE slur at a time, as LilyPond (grammar feedback B3, 2026-10-12): a '(' while a slur is
+    /// open is ignored and named, and the ')' after it closes the FIRST — so `c( d e f( | g)`
+    /// draws c to g, as LilyPond 2.26 does ("already have slur"), where Lily# drew f to g and
+    /// dropped the outer bow. A grace run's own slur inside a slurred passage is not this.
+    /// </summary>
+    [Theory]
+    [InlineData("c4( d e f( | g1) |", 1)]
+    [InlineData("c4( d( e) f)", 2)]    // the inner '(' is ignored, so 'f)' has nothing open
+    [InlineData("c4( grace { d16( e) } f4 g a)", 0)]
+    public void ASecondOpen_IsIgnoredAndNamed(string music, int warnings)
+    {
+        var all = Warnings(music);
+        Assert.Equal(warnings, all.Count);
+        if (warnings > 0)
+            Assert.Contains(all, d => d.Message.Contains("while another slur is open is ignored"));
+    }
+
+    [Fact]
+    public void ASecondOpen_TheFirstSlurIsTheOneDrawn()
+    {
+        var score = new LilySharp.Core.Svg.Collector.MeasureCollector().Collect(SyntaxTree.Parse(
+            "part m { clef treble }\nsection A { m { c'4( d e f( | g1) | } }\nform { A }\nscore { staff m }"));
+        var slur = Assert.Single(new LilySharp.Core.Svg.Collector.SlurDetector().DetectSlurs(score));
+        Assert.Equal((0, 0, 1, 0), (slur.StartMeasureIndex, slur.StartItemIndex, slur.EndMeasureIndex, slur.EndItemIndex));
+    }
+
+    /// <summary>A slur mark after a barline binds to no note; it is named where it stands
+    /// (LilyPond: "Unattached SlurEvent"), not only through the '(' it left open.</summary>
+    [Fact]
+    public void AMarkAfterABarline_IsNamed()
+    {
+        var all = Warnings("c4( d e f | g1 |)");
+        Assert.Contains(all, d => d.Message.StartsWith("this ')' follows a barline", System.StringComparison.Ordinal));
+    }
 }

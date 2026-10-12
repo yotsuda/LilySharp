@@ -495,4 +495,21 @@ score test {
         Assert.Equal(ClefType.Treble8Below, clef);
         Assert.Equal(4, octave);
     }
+
+    /// <summary>`octave absolute` inside a PART declaration is not where the mode goes, and the
+    /// error says where it does (grammar feedback B2, 2026-10-12 — the docs had said "part
+    /// header"); in the part's music it works.</summary>
+    [Fact]
+    public void OctaveAbsolute_InAPartDeclaration_NamesWhereTheModeGoes()
+    {
+        var inPart = SyntaxTree.Parse("part bs { clef bass octave absolute }\nsection A { bs { c4 d e f | } }\nform { A }\nscore { staff bs }");
+        var error = Assert.Single(LilySharp.Core.Semantics.SemanticValidation.Run(inPart),
+            d => d.Severity == DiagnosticSeverity.Error);
+        Assert.Contains("is a mode, not a part property", error.Message);
+        Assert.Contains("octave absolute c4", error.Message);
+
+        var inMusic = SyntaxTree.Parse("part bs { clef bass }\nsection A { bs { octave absolute c4 d e f | } }\nform { A }\nscore { staff bs }");
+        Assert.DoesNotContain(LilySharp.Core.Semantics.SemanticValidation.Run(inMusic).Concat(inMusic.Diagnostics),
+            d => d.Severity == DiagnosticSeverity.Error);
+    }
 }

@@ -199,8 +199,9 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
                 var (preset, _) = InstrumentDefaults.SplitInstrument(valueTokens.Select(t => t.Text));
                 if (!InstrumentPresets.Contains(preset))
                     Error(valueTokens[0],
-                        $"Unknown instrument preset '{preset}'. Presets are case-sensitive; " +
-                        "use a known preset (e.g. violin, cello, piano-right) or a quoted \"…\" name.");
+                        $"Unknown instrument preset '{preset}'."
+                        + (InstrumentDefaults.SuggestPreset(preset) is { } meant ? $" Did you mean '{meant}'?" : "")
+                        + " Presets are case-sensitive; use a known preset (e.g. violin, cello, piano-right) or a quoted \"…\" name.");
                 break;
             // ("lines" left this list 2026-08-19 and "removeEmpty" 2026-09-08: both are
             // properties of the RENDERING, written `staff m as lines N removeEmpty V` in
@@ -208,6 +209,19 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
             case "octave":
                 // No bound: an octave number is read as written (PartHeaderDefaults),
                 // so the only thing that can be wrong about it is not being a number.
+                // `octave absolute` is a MODE, and a mode is written where music is: the file's
+                // top (every section) or a part's music (to its section's end). A part
+                // declaration is where the base is set, so name both places instead of saying
+                // only "not a number" (grammar feedback B2, 2026-10-12 — the docs had said
+                // "part header", which a reader took for this).
+                if (Joined(valueTokens) is "absolute" or "relative")
+                {
+                    Error(valueTokens[0],
+                        $"'octave {Joined(valueTokens)}' is a mode, not a part property: write it at the top of the file "
+                        + "(every section), or at the start of the part's music in a section (to that section's end), "
+                        + "e.g. 'm { octave absolute c4 d e f | }'. In a part, 'octave' takes the base number, e.g. 'octave 3'.");
+                    break;
+                }
                 CheckWholeNumber(valueTokens, "octave", int.MinValue, int.MaxValue,
                     "an octave number", "a whole number, e.g. 'octave 3'");
                 break;

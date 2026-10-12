@@ -90,7 +90,8 @@ Contraction    = 'es' | 'as' | 'eses' | 'ases' ;   (* = ees / aes / eeses / aese
 (* Octaves default to RELATIVE: each bare pitch lands in the octave nearest the
    previous pitch (an interval of a fourth or less), then any '/',' marks shift it;
    the frame resets to the part's base at each section boundary and phrase call.
-   `octave absolute` (top-level, part header, or mid-music) switches to ABSOLUTE
+   `octave absolute` (top-level, or in a part's music — at its start or mid-music, to the
+   section's end; NOT in a `part` declaration, which sets the base) switches to ABSOLUTE
    mode: bare c = C4, and '/',' are absolute offsets from that anchor (c' = C5,
    c, = C3) with NO carry between notes — octave mistakes cannot cascade, which
    is the recommended mode for AI-generated scores. `part X { octave N }`
@@ -2065,7 +2066,8 @@ SlashNote      = '/' , [ DurationToken ] , { Annotation } ;
    that class warns (LYS1031): a repeat reaching back across a barline is the
    shape the dropped letter takes, so a measure opening on a bare number is
    named — a warning, because the repeat is legal. Within-measure runs are
-   the idiom and stay silent (GRAMMAR_AUDIT 3.3).
+   the idiom and stay silent (GRAMMAR_AUDIT 3.3), and so does a repeated SLASH
+   (`/4 4 4 4 | 4 4 4 4`), which has no pitch letter to drop (2026-10-12).
    ⚠️ '[' , Integer , '.' stays an INLINE VOLTA: a beamed run that opens on a
    DOTTED bare duration spells the slash or the pitch (`[/4. 8]`, `[bes4. 8]`). *)
 BareDuration   = DurationToken , { Annotation } ;

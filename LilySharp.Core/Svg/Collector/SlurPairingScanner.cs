@@ -87,7 +87,7 @@ internal static class SlurPairingScanner
         // The '(' marks still looking for a ')' — position, WHICH cue region that note sits
         // in (0 = not in one), and the section play it was opened in. A list used as a
         // stack: the carry rule can drop an entry from under the top.
-        var open = new List<(int Position, int Region, int Play)>();
+        var open = new List<(int Position, int Region, int Play, bool Grace)>();
         var plays = new SectionPlayCursor();
         bool openedThisPlay = false;
         int regionsSeen = 0;
@@ -140,9 +140,11 @@ internal static class SlurPairingScanner
                     else
                         sink.Add(new UnpairedSlurWarning(items[ii].SourcePosition, IsOpen: false));
                 }
-                if (hasStart)
+                if (hasStart && SlurDetector.IgnoredAsAlreadyOpen(items[ii], open.Exists(o => !o.Grace)))
+                    sink.Add(new UnpairedSlurWarning(items[ii].SourcePosition, IsOpen: true) { AlreadyOpen = true });
+                else if (hasStart)
                 {
-                    open.Add((items[ii].SourcePosition, region, plays.Play));
+                    open.Add((items[ii].SourcePosition, region, plays.Play, items[ii].GraceTime));
                     openedThisPlay = true;
                 }
             }
@@ -151,7 +153,7 @@ internal static class SlurPairingScanner
         // Whatever is still open when the voice ends is dropped by the renderer. Reported
         // in the order the marks were WRITTEN (the list holds them oldest first), so a
         // diagnostic list reads down the score rather than back up it.
-        foreach (var (position, _, play) in open)
+        foreach (var (position, _, play, _) in open)
         {
             if (plays.AtEnd(play) is { } fault)
             {

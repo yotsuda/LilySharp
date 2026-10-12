@@ -43,6 +43,29 @@ internal sealed class SlurPairingValidator : ISharedCollectValidator
 
     public void ValidateWith(SyntaxTree tree, System.Lazy<Svg.Collector.MeasureCollector?> sharedCollect)
     {
+        // A slur mark written after a BARLINE binds to no note (a mark annotates the note
+        // before it), so it is dropped — and until 2026-10-12 only its partner was reported
+        // ("'(' is never closed"), never the mark that went astray (grammar feedback B3).
+        // LilyPond says "Unattached SlurEvent" for `g'1 |)`.
+        foreach (var slur in tree.GetRoot().DescendantNodes<SlurSyntax>())
+        {
+            if (slur.Parent is not { } parent)
+                continue;
+            SyntaxNode? before = null;
+            foreach (var child in parent.ChildNodes())
+            {
+                if (ReferenceEquals(child, slur))
+                    break;
+                if (child.Kind is not (SyntaxKind.Tie or SyntaxKind.Slur or SyntaxKind.BeamMarker))
+                    before = child;
+            }
+            if (before is BarlineSyntax)
+                _diagnostics.Warning(slur.Span, DiagnosticCodes.UnpairedSlur,
+                    $"this '{(slur.IsOpen ? "(" : ")")}' follows a barline, so it belongs to no note and "
+                    + "is dropped; a slur mark is glued to the note it starts or ends on (g1) |, not g1 |)");
+        }
+
+
         // A malformed score (null collector) surfaces its real error elsewhere.
         var warnings = sharedCollect.Value?.UnpairedSlurWarnings;
         if (warnings == null)
@@ -53,7 +76,11 @@ internal sealed class SlurPairingValidator : ISharedCollectValidator
             // ASCII punctuation only: these strings reach legacy-codepage consoles via the CLI.
             _diagnostics.Warning(new TextSpan(w.SourcePosition, 1),
                 DiagnosticCodes.UnpairedSlur,
-                w.IsOpen
+                w.AlreadyOpen
+                    ? "a slur '(' while another slur is open is ignored - slurs do not nest, "
+                      + "so the ')' after it closes the first; close the first slur before "
+                      + "opening another, or mark the outer phrase with @phrasingSlur ... @!phrasingSlur"
+                    : w.IsOpen
                     ? "a slur '(' is never closed, so no slur is drawn; add the matching ')' "
                       + "after the last note of the phrase - note that a slur does not carry "
                       + "into another voice"

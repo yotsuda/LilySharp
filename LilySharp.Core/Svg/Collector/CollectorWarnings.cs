@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -158,7 +158,12 @@ public enum TieTargetProblem
 public record UnpairedSlurWarning(
     int SourcePosition,
     bool IsOpen       // true = an unclosed '('; false = a ')' with nothing open
-);
+)
+{
+    /// <summary>A '(' written while a slur is already open, which is ignored (one slur at a
+    /// time — SlurDetector.IgnoredAsAlreadyOpen), rather than one never closed.</summary>
+    public bool AlreadyOpen { get; init; }
+}
 
 /// <summary>Which span family a pairing complaint is about. One enum rather than one per
 /// family, because the LANGUAGE now has one answer for all of them: a span must be closed,

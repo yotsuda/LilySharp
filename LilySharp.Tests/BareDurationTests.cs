@@ -172,6 +172,16 @@ public class BareDurationTests
         Assert.Equal(notes[3].Midi, notes[4].Midi); // the repeat itself is untouched
     }
 
+    /// <summary>A repeated SLASH across a barline is plain comping — a slash has no pitch letter
+    /// to have dropped, so the typo warning has nothing to warn about (grammar feedback B10,
+    /// 2026-10-12: `gtr { /4 4 4 4 | 4 4 4 4 | }` warned once a bar). A note's repeat still warns.</summary>
+    [Theory]
+    [InlineData("/4 4 4 4 | 4 4 4 4 |", 0)]
+    [InlineData("/8 8 8 8 8 8 8 8 | 4 4 4 4 |", 0)]
+    [InlineData("c'4 d e f | 4 g f e |", 1)]
+    public void ARepeatedSlash_AcrossABarline_DoesNotWarn(string music, int warnings)
+        => Assert.Equal(warnings, SemanticValidation.Run(SyntaxTree.Parse(music))
+            .Count(d => d.Code == DiagnosticCodes.BareDurationAcrossBarline));
     [Fact]
     public void RepeatWithinTheMeasure_DoesNotWarn()
     {

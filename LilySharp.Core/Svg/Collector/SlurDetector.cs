@@ -156,7 +156,14 @@ internal sealed class SlurDetector
                 });
             }
 
-            if (hasStart)
+            // ONE slur at a time per voice, as LilyPond's Slur_engraver keeps it: a '(' while
+            // one is open is ignored, and the ')' closes the FIRST (grammar feedback B3,
+            // 2026-10-12 — `c( d e f( | g)` drew f-g and dropped the outer bow; LilyPond
+            // draws c-g and warns "already have slur"). Grace time keeps its own: a grace
+            // run's slur inside a slurred passage is the written idiom. SlurPairingScanner
+            // reports the ignored mark by the same test (AlreadyOpen).
+            // LILYPOND-REF: lily/slur-engraver.cc:295-324 process_music — "already have slur".
+            if (hasStart && !IgnoredAsAlreadyOpen(item, openSlurs.Exists(o => !o.item.GraceTime)))
             {
                 openSlurs.Add((measureIdx, itemIdx, item, plays.Play));
             }
@@ -166,6 +173,12 @@ internal sealed class SlurDetector
             slurs.AddRange(phrasingSlurs);
         return slurs.ToImmutableArray();
     }
+
+    /// <summary>Whether a '(' on <paramref name="item"/> is ignored because a slur outside
+    /// grace time is already open — the one rule <see cref="DetectSlurs"/> draws by and
+    /// <see cref="SlurPairingScanner"/> reports by.</summary>
+    internal static bool IgnoredAsAlreadyOpen(MusicItem item, bool aMainSlurIsOpen)
+        => !item.GraceTime && aMainSlurIsOpen;
 
     /// <summary>Which item kinds carry a slur bound, and its two marks — the ONE home of that
     /// question: <see cref="SlurPairingScanner"/> asks it too, so the warning pairs exactly the

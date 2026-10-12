@@ -54,7 +54,11 @@ internal sealed class BareDurationValidator : ISemanticValidator
                     + "and nothing repeatable comes before this one. Write the note "
                     + "itself (c4), or glue the number to what it lengthens (c4, "
                     + "not c 4).");
-            else if (BareDurations.CrossesBarline(bare))
+            // A repeated SLASH has no pitch letter to have dropped (/4 4 4 4 | 4 4 4 4 | is
+            // plain comping), so only a note's or a chord's repeat is the suspicious shape
+            // (grammar feedback B10, 2026-10-12).
+            else if (BareDurations.CrossesBarline(bare)
+                     && BareDurations.OriginalOf(bare) is not SlashNoteSyntax)
                 _diagnostics.Warning(
                     bare.Span,
                     DiagnosticCodes.BareDurationAcrossBarline,

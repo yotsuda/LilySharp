@@ -209,7 +209,8 @@ verbatim `@"C:\music"` / `@"say ""hi"""` (backslash as written, `""` = one quote
 - Octave: `'` up one, `,` down one (repeatable: `''`, `,,`).
 - Default octave is C4. Each bare pitch takes the octave nearest the previous note
   (an interval of a fourth or less); `'`/`,` shift from there.
-- `octave absolute` (top level, part header, or mid-music) switches to ABSOLUTE
+- `octave absolute` (top level, or in a part's music — `m { octave absolute c4 … }` — to the section's end;
+  NOT inside `part X { }`, which takes only the base number) switches to ABSOLUTE
   mode: bare `c` = C4 and `'`/`,` are absolute offsets from that anchor (`c'` = C5,
   `c,` = C3), independent per note - octave mistakes never cascade. RECOMMENDED
   when generating scores. `part X { octave 2 }` re-anchors the base (bass parts).
@@ -240,6 +241,7 @@ verbatim `@"C:\music"` / `@"say ""hi"""` (backslash as written, `""` = one quote
   it to repeat it is an error (LYS0016). A repeat reaching back ACROSS a
   barline warns (LYS1031) — that shape is also a dropped pitch letter
   (`4 g f e` meant as `a4 g f e`) — so open a measure with the event itself.
+  A repeated slash (`/4 4 4 4 | 4 4 4 4 |`) never warns: it has no pitch to drop.
 
 ```
 c4 d e f    // all quarters
@@ -474,6 +476,7 @@ c4@staccato d4@accent <e g>4@arpeggio |
 c4~ | c4 d e f       // tie (same pitch across the barline) with ~
 c4( d e f)           // slur (different pitches) with ( )
 <c e>4( <d f>)       // a slur may bind chords, not just single notes
+c4( d e( f) g)       // WRONG: one slur at a time (the inner '(' is ignored); an outer phrase is @phrasingSlur
 c8[ d e f]           // manual beam; beaming is automatic otherwise
 r8[ c d e]           // a manual beam may open or close on a rest, and reaches it
 ```

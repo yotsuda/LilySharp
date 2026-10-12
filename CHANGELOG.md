@@ -6,6 +6,21 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Clearer errors for five common slips
+
+- **LilyPond's script shorthands** (`c4-.` `->` `--` `-^` `-_` `-!`) are now one error each that
+  names the Lily# annotation (`@staccato`, `@accent`, …), instead of two or three unrelated ones —
+  and `a-!` no longer closes the bar with a dashed barline.
+- **A second `(` while a slur is open is ignored and named**, and the `)` after it closes the first
+  slur — as LilyPond draws it ("already have slur"). Lily# used to draw the inner slur and drop the
+  outer one. A grace run's own slur inside a slurred passage is unaffected. A slur mark written
+  after a barline (`g1 |)`) is now named where it stands.
+- **`octave absolute` in a `part` declaration** says where the mode goes (the top of the file, or
+  a part's music in a section), instead of "'absolute' is not an octave number".
+- **An unknown instrument preset suggests the one meant**: `voice-alto` → `alto` (only the bass
+  voice is `voice-bass`, since `bass` is the bass guitar), `violn` → `violin`.
+- **Repeated slashes across a barline** (`/4 4 4 4 | 4 4 4 4 |`) no longer warn LYS1031: a slash
+  has no pitch letter to have dropped.
 ### D.S. / D.C. / Fine clear the notes under the staff
 
 - **A jump instruction under the staff ("D.S. al Coda", "D.C.", "Fine") now drops below the bottom

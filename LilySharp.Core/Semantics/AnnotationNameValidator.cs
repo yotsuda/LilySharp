@@ -711,14 +711,21 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     /// "did you mean '@sf'?", which is noise, not a typo. A swap of two adjacent letters
     /// counts as one edit (<c>@tenuot</c> → <c>@tenuto</c>).
     /// </remarks>
-    private static string? FindSuggestion(string name)
+    private static string? FindSuggestion(string name) => ClosestTypo(name, SuggestionCandidates);
+
+    /// <summary>
+    /// The candidate <paramref name="name"/> is a plausible TYPO of, by the rule
+    /// <see cref="FindSuggestion"/> states (a length-scaled edit distance, a swapped pair one
+    /// edit), or null — shared so every "did you mean" in the language measures closeness alike.
+    /// </summary>
+    internal static string? ClosestTypo(string name, IEnumerable<string> candidates)
     {
         var written = name.ToLowerInvariant();
         int allowed = AllowedTypoDistance(written.Length);
         string? best = null;
         int bestDistance = int.MaxValue;
 
-        foreach (var candidate in SuggestionCandidates)
+        foreach (var candidate in candidates)
         {
             var known = candidate.ToLowerInvariant();
             int d = allowed == 0
