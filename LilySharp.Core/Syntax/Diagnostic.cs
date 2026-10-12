@@ -1372,7 +1372,8 @@ public static class DiagnosticCodes
     /// Scope when written: 0 of the 8 forms on disk with a jump text (2026-10-03's count).
     /// </para></summary>
     public const string JumpTargetMissing = "LYS4025";
-    /// <summary>Warning: a <c>@todo</c> mark — a note, rest or chord the writer (or a tool
+    /// <summary>Information (since 2026-10-12, owner's decision; a warning before — a mark left to check is not a
+    /// problem in the music): a <c>@todo</c> mark — a note, rest or chord the writer (or a tool
     /// such as an OMR reader) has left to check, with its memo when it has one
     /// (<c>TODO: …</c>). It changes neither the page nor the playback; the preview shows the
     /// marked head in red. <c>lysc check --todo-as-error</c> makes it an error and

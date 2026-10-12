@@ -37,7 +37,9 @@ internal sealed class TodoValidator : ISemanticValidator
         {
             if (TodoAnnotation.Of(node) is not { } todo)
                 continue;
-            _diagnostics.Warning(MessageSpan(node), DiagnosticCodes.TodoMark, todo.Message);
+            // A mark left to check is not a problem in the music: Information, so F8 and the Problems
+            // list still reach it, after the real warnings (owner's decision 2026-10-12).
+            _diagnostics.Add(Diagnostic.Info(MessageSpan(node), DiagnosticCodes.TodoMark, todo.Message));
             if (todo.Problem is { } problem)
                 _diagnostics.Warning(node.Span, DiagnosticCodes.TodoArgument, problem);
             else if (todo.Key is { } key && !keys.Add(key))

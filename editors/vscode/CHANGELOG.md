@@ -4,6 +4,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### `@todo` is information, not a warning
+
+- **A `@todo` mark (LYS4026) is now reported as information**, not as a warning: a mark left to
+  check is not a problem in the music. It still lists in the Problems view, and F8 / Shift+F8
+  still reach it — after the real warnings, since VS Code orders them by severity. In the editor
+  it underlines in blue. `lysc check` prints it as `info:`; `--todo-as-error` and `--no-todo` are
+  unchanged. A malformed `@todo(…)` (LYS4027) and a key written twice (LYS4028) stay warnings.
+
 ### Scan import (Beta)
 
 - **The OMR reader comes as its own extension, *Lily# Scan Import (Beta)*** (`yotsuda.lilysharp-omr`,

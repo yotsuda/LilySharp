@@ -70,7 +70,9 @@ public class TodoAnnotationTests
         var diagnostics = Diagnostics(Book(note + " d'2. |"));
         Assert.DoesNotContain(diagnostics, d => d.Code == DiagnosticCodes.UnknownAnnotation);
         var mark = Assert.Single(diagnostics, d => d.Code == DiagnosticCodes.TodoMark);
-        Assert.Equal(DiagnosticSeverity.Warning, mark.Severity);
+        // Information, not a warning: a mark left to check is not a problem in the music, and F8 and
+        // the Problems list reach it after the real warnings (owner's decision 2026-10-12).
+        Assert.Equal(DiagnosticSeverity.Info, mark.Severity);
         Assert.Equal(memo == null ? "TODO" : "TODO: " + memo, mark.Message);
     }
 

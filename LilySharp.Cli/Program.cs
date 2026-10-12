@@ -853,7 +853,7 @@ static int RunCheck(string[] args)
     }
 
     return ExecuteCheck(inputPath, r.Has("pitches"),
-        r.Has("todo-as-error") ? TodoReport.AsError : r.Has("no-todo") ? TodoReport.Silent : TodoReport.AsWarning);
+        r.Has("todo-as-error") ? TodoReport.AsError : r.Has("no-todo") ? TodoReport.Silent : TodoReport.AsInfo);
 }
 
 static void ShowCheckHelp()
@@ -882,7 +882,7 @@ static void ShowCheckHelp()
         """);
 }
 
-static int ExecuteCheck(string inputPath, bool showPitches = false, TodoReport todos = TodoReport.AsWarning)
+static int ExecuteCheck(string inputPath, bool showPitches = false, TodoReport todos = TodoReport.AsInfo)
 {
     try
     {
@@ -1324,5 +1324,5 @@ sealed record ScoreOutput(string Path,
     (LilySharp.Core.Syntax.RenderDeclarationSyntax Declaration, LilySharp.Core.Svg.Collector.RenderSpec Spec)? Score);
 
 /// <summary>What <c>lysc check</c> does with a <c>@todo</c> mark (LYS4026):
-/// <c>--todo-as-error</c>, <c>--no-todo</c>, or the warning it is.</summary>
-enum TodoReport { AsWarning, AsError, Silent }
+/// <c>--todo-as-error</c>, <c>--no-todo</c>, or the information it is.</summary>
+enum TodoReport { AsInfo, AsError, Silent }

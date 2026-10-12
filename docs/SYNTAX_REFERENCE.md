@@ -390,10 +390,11 @@ d4@accent.down     // accent forced below
 ### Left to check (`@todo`)
 
 `@todo` marks a note, rest or chord to come back to — a reading you are unsure of, a bar to
-review. It draws nothing on the page and plays nothing: the compiler reports each one as a
-warning (LYS4026, `TODO: memo`), and the quick fix *Resolve this TODO* deletes it. A quoted
-argument is a memo; a bare one is a key — a letter, then letters, digits, `_` and `-` — which
-a tool (an OMR reader) links its own data to.
+review. It draws nothing on the page and plays nothing: the compiler reports each one as
+information, not a warning (LYS4026, `TODO: memo` — F8 and the Problems list reach it after
+the real warnings), and the quick fix *Resolve this TODO* deletes it. A quoted argument is a
+memo; a bare one is a key — a letter, then letters, digits, `_` and `-` — which a tool (an
+OMR reader) links its own data to.
 
 The preview shows the marks as red ink over the finished page: the marked head, rest or
 chord wears a ring drawn as a hand draws one (one ring round a whole chord), and a memo
