@@ -45,7 +45,7 @@
   <table class="g">
     <tr><th>Where</th><th>What is there</th></tr>
     <tr><td>Right-click in a <code>.lys</code> editor</td><td>Transform Selection with AI… · Regroup · Split Sections to Match a Part · Convert Octaves to Absolute / to Relative · Extract Phrase from Section · Add Chord Track · Guess Section Key… · Respell Notes to Key…</td></tr>
-    <tr><td>Right-click a file in the Explorer</td><td>on a <code>.lys</code>: the <i>Lily#: Export</i> submenu · on a <code>.xml</code> / <code>.musicxml</code> / <code>.mxl</code>: Import MusicXML… · on a scan or PDF: Import from Image/PDF… (when a reader is installed)</td></tr>
+    <tr><td>Right-click a file in the Explorer</td><td>on a <code>.lys</code>: the <i>Lily#: Export</i> submenu · on a <code>.xml</code> / <code>.musicxml</code> / <code>.mxl</code>: Import MusicXML… · on a scan or PDF: Import from Image/PDF… (when the reader is installed)</td></tr>
     <tr><td>Right-click in the preview</td><td>Play from Here · Stop Playback · Fit Width · Reset Zoom (100%)</td></tr>
     <tr><td>The editor's title bar</td><td>Open Preview to Side · the lock that keeps the preview on one file</td></tr>
     <tr><td><i>File → New File…</i></td><td>Lily# Score (.lys)</td></tr>
@@ -95,10 +95,11 @@
 
 <section id="import-image">
   <h2>Import from Image/PDF… · Show Original Scan</h2>
-  <p>Reads printed music from a scan (<code>.png</code>, <code>.jpg</code>, <code>.tif</code>)
+  <p>Reads printed music from a scan (<code>.png</code>, <code>.jpg</code>, <code>.bmp</code>, <code>.tif</code>)
   or a PDF with an optical music reader and opens the <code>.lys</code> it writes, with the
-  preview. <b>These two commands appear only when a reader is installed</b> — the reader is a
-  separate program, not part of the extension.</p>
+  preview. <b>The reader is a separate extension</b> (Windows x64, Beta), not part of Lily#: on Windows
+  the command is in the palette and offers to install it when it is missing; once it is
+  installed, scans and PDFs also get the command on their right-click menu.</p>
   <p><i>Show Original Scan</i> opens the scanned pages beside a <code>.lys</code> read this way,
   with the marks the reader was unsure of boxed in red. Click a box to go to its music; the
   caret lights the box of what it is on. The doubtful notes are also marked

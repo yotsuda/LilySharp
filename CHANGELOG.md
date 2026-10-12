@@ -4,6 +4,20 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
+## Unreleased
+
+### Scan import (Beta)
+
+- **The OMR reader comes as its own extension, *Lily# Scan Import (Beta)*** (`yotsuda.lilysharp-omr`,
+  Windows x64). Lily# finds the reader it carries — after `LILYSHARP_OMR_PATH`, before the global
+  storage — and *Import from Image/PDF… (Beta)* offers to install it when no reader is found. The
+  command appears in the palette on Windows x64; the Explorer's right-click item appears as soon
+  as a reader is installed, and disappears when it is removed, with no reload.
+- **Import checks what it read right away**: a reader that has `omr verify` engraves the score and
+  compares it with the scan while reading (`omr read --verify`), so the first look already carries
+  the comparison's marks. `.bmp` scans are offered too.
+- The first import says once that the reader is a Beta and where its marks are.
+
 ## 0.12.0
 
 ### Lessons

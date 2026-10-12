@@ -16,17 +16,18 @@
 
 // "Lily#: Import from Image/PDF…" (LilySharp-Omr's agreement, L1 and L7): runs the OMR reader
 // on a scan or a PDF and opens what it writes — the .lys, the preview, the annotated page.
-// The reader is found by the environment variable for now; fetching and installing it
-// (L2-L6) waits for its first release. omrCore.ts is the editor-free half.
+// The reader is its own extension (omrReader.ts finds it, or offers it); omrCore.ts is the
+// editor-free half.
 
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execFile } from 'child_process';
 import {
-    OMR_INPUT_EXTENSIONS, OMR_PATH_VARIABLE, OMR_PROTOCOLS, exitMeaning, launchOf, locateOmr,
-    parseVersion, progressText, readArguments, runOmr, speaksProtocol,
+    OMR_INPUT_EXTENSIONS, OMR_PROTOCOLS, canVerify, exitMeaning, launchOf, parseVersion,
+    progressText, readArguments, runOmr, speaksProtocol,
 } from './omrCore';
+import { findOmr, noteOmrBeta, offerOmrExtension } from './omrReader';
 
 export interface OmrImportDeps {
     readonly output: vscode.OutputChannel;
@@ -55,12 +56,9 @@ export async function importFromImage(
         inputs = picked;
     }
 
-    const where = locateOmr(process.env, path.join(context.globalStorageUri.fsPath, 'omr'),
-        process.platform, process.arch);
+    const where = await findOmr(context);
     if (!where) {
-        vscode.window.showInformationMessage(
-            `Lily#: the OMR reader is not installed. Installing it from Lily# is not available yet; `
-            + `to try a reader you have, set the environment variable ${OMR_PATH_VARIABLE} to it and restart VS Code.`);
+        await offerOmrExtension();
         return;
     }
     const launch = launchOf(where.path);
@@ -98,7 +96,8 @@ export async function importFromImage(
     }
 
     const name = path.basename(inputs[0].fsPath) + (inputs.length > 1 ? ` (+${inputs.length - 1})` : '');
-    const args = readArguments(inputs.map(u => u.fsPath), outDir, deps.lysc());
+    const args = readArguments(inputs.map(u => u.fsPath), outDir, deps.lysc(), canVerify(v));
+    void noteOmrBeta(context);
     deps.output.appendLine(`OMR ${v.version}: read ${inputs.map(u => u.fsPath).join(', ')} → ${outDir}`);
 
     const result = await vscode.window.withProgress({

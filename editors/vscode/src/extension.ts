@@ -32,7 +32,7 @@ import { registerSmartTyping } from './smartTyping';
 import { registerStepAudition } from './stepAudition';
 import { registerExportBatch } from './exportBatch';
 import { importFromImage } from './omrImport';
-import { locateOmr } from './omrCore';
+import { registerOmrContexts } from './omrReader';
 import { OmrScanDeps, hasScan, previewReady, previewShowsBar, registerScanFollow, showScan } from './omrScan';
 import { registerVerifyOnSave } from './omrVerify';
 import { markdownItExtensionApi } from './markdownFence';
@@ -566,11 +566,10 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
-    // "Import from Image/PDF…" is shown only where an OMR reader is (L1): the reader is not
-    // distributed yet (L2-L6), and a menu item that can only say "not installed" helps nobody.
-    void vscode.commands.executeCommand('setContext', 'lilysharp.omrAvailable',
-        locateOmr(process.env, path.join(context.globalStorageUri.fsPath, 'omr'),
-            process.platform, process.arch) !== undefined);
+    // "Import from Image/PDF…": in the palette on Windows x64, where the reader's extension
+    // exists (it offers that extension when the reader is missing); in the Explorer's menu only
+    // where a reader is — kept current as extensions come and go (omrReader.ts).
+    registerOmrContexts(context);
 
     // "Show Original Scan" (LilySharp-Omr proposal B3) is offered on a .lys an OMR reader
     // wrote, i.e. one with its side file beside it.

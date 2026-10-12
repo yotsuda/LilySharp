@@ -31,8 +31,26 @@ export const OMR_PROTOCOLS = { min: 1, max: 1 } as const;
 /** The environment variable that points at a reader by hand (development; L1 ①). */
 export const OMR_PATH_VARIABLE = 'LILYSHARP_OMR_PATH';
 
+/** The VS Code extension that carries the reader (LilySharp-Omr's reply of 2026-10-12 §3: a
+ *  separate, Windows-only, Beta extension; its `activate` returns {@link OmrExtensionExports}). */
+export const OMR_EXTENSION_ID = 'yotsuda.lilysharp-omr';
+
+/** What the reader's extension exports: where its `omr.exe` is, and what `omr --version --json`
+ *  answered when it was packed. `undefined` off Windows x64 or when its `bin` is broken. */
+export interface OmrExtensionExports {
+    readonly path: string;
+    readonly version: string;
+    readonly protocol: number;
+}
+
+/** The reader's path from the extension's exports, or undefined when they are not that shape. */
+export function readerOfExports(exports: unknown): string | undefined {
+    const e = exports as Partial<OmrExtensionExports> | undefined;
+    return typeof e?.path === 'string' && e.path.trim() !== '' ? e.path.trim() : undefined;
+}
+
 /** The input files the reader takes, lower case, without the dot. */
-export const OMR_INPUT_EXTENSIONS = ['png', 'jpg', 'jpeg', 'tif', 'tiff', 'pdf'] as const;
+export const OMR_INPUT_EXTENSIONS = ['png', 'jpg', 'jpeg', 'bmp', 'tif', 'tiff', 'pdf'] as const;
 
 /** The reader's build for this machine: `win-x64`, `osx-arm64`, `linux-x64`, or undefined. */
 export function omrRid(platform: string, arch: string): string | undefined {
@@ -48,21 +66,26 @@ export function omrExecutableName(platform: string): string {
 /** Where the reader is, and how it was found. */
 export interface OmrLocation {
     readonly path: string;
-    readonly source: 'environment' | 'installed';
+    readonly source: 'environment' | 'extension' | 'installed';
 }
 
 /**
- * Finds the reader (L1): ① the environment variable, ② the newest version installed under
- * `<installRoot>/<version>/<rid>/`, else undefined (the caller offers the download, L2).
- * Not a setting on purpose (the agreement §1: the reader's place is not shown in Settings).
+ * Finds the reader: ① the environment variable (a reader under development), ② the reader's
+ * extension ({@link OMR_EXTENSION_ID}; `fromExtension` is its exported path, when it exists on
+ * disk), ③ the newest version installed under `<installRoot>/<version>/<rid>/`, else undefined
+ * (the caller offers the extension). Not a setting on purpose (the agreement §1: the reader's
+ * place is not shown in Settings).
  */
 export function locateOmr(
     env: Record<string, string | undefined>, installRoot: string | undefined,
     platform: string, arch: string, exists: (p: string) => boolean = fs.existsSync,
-    list: (dir: string) => string[] = d => fs.readdirSync(d)): OmrLocation | undefined {
+    list: (dir: string) => string[] = d => fs.readdirSync(d), fromExtension?: string): OmrLocation | undefined {
     const fromEnv = env[OMR_PATH_VARIABLE]?.trim();
     if (fromEnv) {
         return { path: fromEnv, source: 'environment' };
+    }
+    if (fromExtension && exists(fromExtension)) {
+        return { path: fromExtension, source: 'extension' };
     }
     const rid = omrRid(platform, arch);
     if (!installRoot || !rid || !exists(installRoot)) {
@@ -98,9 +121,14 @@ export function launchOf(readerPath: string): { command: string; prefix: string[
 }
 
 /** The arguments of `omr read` (§3.2), as an ARRAY — never a shell string: paths carry spaces
- *  and Japanese. */
-export function readArguments(inputs: readonly string[], outDir: string, lysc?: string): string[] {
+ *  and Japanese. `verify` asks the reader to engrave what it read and compare it with the scan
+ *  right away (`--verify`), so the first look at the score already has the comparison's marks;
+ *  a reader with no lysc to engrave with says so as a warning and skips it. */
+export function readArguments(inputs: readonly string[], outDir: string, lysc?: string, verify = false): string[] {
     const args = ['read', ...inputs, '--out', outDir, '--progress', 'json'];
+    if (verify) {
+        args.push('--verify');
+    }
     if (lysc) {
         args.push('--lysc', lysc);
     }

@@ -25,8 +25,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { execFile } from 'child_process';
 import {
-    OmrVersion, canVerify, exitMeaning, launchOf, locateOmr, parseVersion, runOmr, verifyArguments,
+    OmrVersion, canVerify, exitMeaning, launchOf, parseVersion, runOmr, verifyArguments,
 } from './omrCore';
+import { findOmr } from './omrReader';
 import { sideFileOf } from './omrScanCore';
 
 export interface OmrVerifyDeps {
@@ -47,8 +48,7 @@ export function registerVerifyOnSave(context: vscode.ExtensionContext, deps: Omr
             || !fs.existsSync(sideFileOf(doc.uri.fsPath))) {
             return;
         }
-        const where = locateOmr(process.env, path.join(context.globalStorageUri.fsPath, 'omr'),
-            process.platform, process.arch);
+        const where = await findOmr(context);
         if (!where) {
             return;
         }

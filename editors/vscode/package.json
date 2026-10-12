@@ -349,7 +349,7 @@
       {
         "command": "lilysharp.importImage",
         "category": "Lily#",
-        "title": "Import from Image/PDF…"
+        "title": "Import from Image/PDF… (Beta)"
       },
       {
         "command": "lilysharp.showScan",
@@ -543,7 +543,7 @@
         },
         {
           "command": "lilysharp.importImage",
-          "when": "lilysharp.omrAvailable"
+          "when": "lilysharp.omrAvailable || lilysharp.omrPlatform"
         },
         {
           "command": "lilysharp.showScan",
@@ -652,7 +652,7 @@
         },
         {
           "command": "lilysharp.importImage",
-          "when": "lilysharp.omrAvailable && resourceExtname =~ /^\\.(png|jpe?g|tiff?|pdf)$/i",
+          "when": "lilysharp.omrAvailable && resourceExtname =~ /^\\.(png|jpe?g|bmp|tiff?|pdf)$/i",
           "group": "7_modification"
         },
         {

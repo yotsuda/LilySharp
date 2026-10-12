@@ -24,8 +24,8 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import {
-    OMR_PATH_VARIABLE, exitMeaning, launchOf, locateOmr, omrRid, parseEvent, parseVersion,
-    canVerify, readArguments, runOmr, speaksProtocol, verifyArguments,
+    OMR_EXTENSION_ID, OMR_INPUT_EXTENSIONS, OMR_PATH_VARIABLE, exitMeaning, launchOf, locateOmr, omrRid,
+    parseEvent, parseVersion, canVerify, readArguments, readerOfExports, runOmr, speaksProtocol, verifyArguments,
 } from '../src/omrCore';
 
 describe('the core is editor-free', () => {
@@ -58,6 +58,28 @@ describe('where the reader is (L1)', () => {
         assert.deepEqual(at, { path: path.join(root, '0.10.0', 'win-x64', 'omr.exe'), source: 'installed' });
     });
 
+    it('then the reader\'s extension, when the path it exports is there', () => {
+        const exe = 'C:\\ext\\bin\\omr.exe';
+        const root = path.join('S', 'omr');
+        const have = new Set([exe, root, path.join(root, '0.10.0', 'win-x64', 'omr.exe')]);
+        const list = () => ['0.10.0'];
+        assert.deepEqual(locateOmr({}, root, 'win32', 'x64', p => have.has(p), list, exe), { path: exe, source: 'extension' });
+        // The environment variable still wins: a reader under development beats the published one.
+        assert.equal(locateOmr({ [OMR_PATH_VARIABLE]: 'C:\\dev\\omr.exe' }, root, 'win32', 'x64', p => have.has(p), list, exe)?.source,
+            'environment');
+        // An exported path that is not on disk (a broken bin) falls through to the storage.
+        assert.equal(locateOmr({}, root, 'win32', 'x64', p => have.has(p), list, 'C:\\gone\\omr.exe')?.source, 'installed');
+    });
+
+    it('reads the extension\'s exports: a path, or nothing usable', () => {
+        assert.equal(OMR_EXTENSION_ID, 'yotsuda.lilysharp-omr');
+        assert.equal(readerOfExports({ path: 'C:\\e\\bin\\omr.exe', version: '0.3.0', protocol: 1 }), 'C:\\e\\bin\\omr.exe');
+        assert.equal(readerOfExports(undefined), undefined);
+        assert.equal(readerOfExports({ path: '  ' }), undefined);
+        assert.equal(readerOfExports({ path: 3 }), undefined);
+        assert.equal(readerOfExports('C:\\omr.exe'), undefined);
+    });
+
     it('and nothing when neither is there', () => {
         assert.equal(locateOmr({}, 'S', 'win32', 'x64', () => false, () => []), undefined);
     });
@@ -74,6 +96,17 @@ describe('what the reader is asked and answers (§3.2)', () => {
             ['read', 'C:\\楽譜 1\\p1.png', 'C:\\楽譜 1\\p2.png', '--out', 'C:\\楽譜 1', '--progress', 'json',
                 '--lysc', 'C:\\x\\lysc.exe']);
         assert.deepEqual(readArguments(['a.pdf'], 'o'), ['read', 'a.pdf', '--out', 'o', '--progress', 'json']);
+    });
+
+    it('asks for the comparison right away when the reader can verify', () => {
+        assert.deepEqual(readArguments(['a.png'], 'o', 'C:\\x\\lysc.exe', true),
+            ['read', 'a.png', '--out', 'o', '--progress', 'json', '--verify', '--lysc', 'C:\\x\\lysc.exe']);
+        assert.deepEqual(readArguments(['a.png'], 'o', undefined, true),
+            ['read', 'a.png', '--out', 'o', '--progress', 'json', '--verify']);
+    });
+
+    it('offers every input the reader reads, bmp included', () => {
+        assert.deepEqual([...OMR_INPUT_EXTENSIONS].sort(), ['bmp', 'jpeg', 'jpg', 'pdf', 'png', 'tif', 'tiff']);
     });
 
     it('reads --version --json and the protocol range', () => {
