@@ -64,8 +64,8 @@ workflow attaches that section to the GitHub Release verbatim.
   gives a mark a `confidence` below 0.6 (or none), the mark is a warning; the rest stay
   information. F8 then walks the doubtful readings — a wrong note, a bar's length — before the
   ties and slurs the reader was surer of.
-- **The scan view draws a mark by how sure the reader is**: an outline only, heavier and darker
-  the less sure; a slider at the top (*Marks below 0.80*, with how many show) hides the surer
+- **The scan view draws a mark by how sure the reader is**: an outline only, darker and a little
+  heavier the less sure (1 to 2.5 px, so it does not cover the heads under it); a slider at the top (*Marks below 0.80*, with how many show) hides the surer
   ones, and starts where the reader's own threshold left the `.lys`. Marks the reader kept out of
   the `.lys` (`inSource: false`) draw as faint dashes. The import's message counts them
   ("+40 quiet").

@@ -146,8 +146,8 @@ describe('how sure the reader is (LilySharp-Omr reply 2026-10-12: a confidence o
     });
 
     it('draws the less sure heavier and darker, a quiet mark faint, a mark with no value as the least sure', () => {
-        assert.deepEqual(todoStroke({ confidence: 0 }), { width: 5, opacity: 1 });
-        assert.deepEqual(todoStroke({ confidence: 0.8 }), { width: 1.8, opacity: 0.48 });
+        assert.deepEqual(todoStroke({ confidence: 0 }), { width: 2.5, opacity: 1 });
+        assert.deepEqual(todoStroke({ confidence: 0.8 }), { width: 1.3, opacity: 0.48 });
         assert.deepEqual(todoStroke({}), todoStroke({ confidence: 0 }));
         assert.deepEqual(todoStroke({ confidence: 0.1, quiet: true }), { width: 1, opacity: 0.35 });
         assert.ok(todoStroke({ confidence: 0.2 }).width > todoStroke({ confidence: 0.6 }).width);

@@ -121,7 +121,10 @@ export function todoStroke(todo: Pick<ScanTodo, 'confidence' | 'quiet'>): { widt
         return { width: 1, opacity: 0.35 };
     }
     const doubt = 1 - Math.min(1, Math.max(0, todo.confidence ?? 0));
-    return { width: Math.round((1 + 4 * doubt) * 10) / 10, opacity: Math.round((0.35 + 0.65 * doubt) * 100) / 100 };
+    // 1 to 2.5 px: the reader's own marks sit at 0..0.3, and wider than that hid the heads and
+    // lines under them (LilySharp-Omr's proposal 2026-10-12-mark-stroke) — the doubt shows in the
+    // darkness more than the width.
+    return { width: Math.round((1 + 1.5 * doubt) * 10) / 10, opacity: Math.round((0.35 + 0.65 * doubt) * 100) / 100 };
 }
 
 /** Whether the slider at `threshold` shows a mark: one below it, or one with no confidence. */
