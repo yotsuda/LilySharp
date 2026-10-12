@@ -92,6 +92,12 @@ public sealed partial class LilyPondExporter
                     when Semantics.AnnotationValues.IsPhrasingSlurName(pe.Name):
                     suffix.Append("\\)");
                     break;
+                // '@!cresc' / '@!decresc' / '@!dim' — `\!`, a POST-event too: written before the
+                // note it would end the hairpin on the previous one.
+                case MusicMarkSyntax { IsSpanEnd: true } he
+                    when Svg.Model.MusicMarkItem.ParseSpanEndName(he.Name) == Svg.Model.MusicMarkType.HairpinStop:
+                    suffix.Append("\\!");
+                    break;
                 // A pedal is a SPAN EVENT on its note — a post-event, so it trails the note
                 // as \sustainOn does. Until 2026-09-23 every pedal was "dropped (out of
                 // scope)" and the twin of a piano book had no pedal line at all.

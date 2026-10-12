@@ -128,6 +128,11 @@ public class SpanTerminatorSyntaxTests
     [InlineData("sustain", MusicMarkType.SustainOff)]
     [InlineData("sostenuto", MusicMarkType.SostenutoOff)]
     [InlineData("unaCorda", MusicMarkType.UnaCordaOff)]
+    // A hairpin still ends at the next dynamic by itself, and may now also be ended where none
+    // stands — LilyPond's \! (grammar feedback A3, 2026-10-12); one stop for all three words.
+    [InlineData("cresc", MusicMarkType.HairpinStop)]
+    [InlineData("decresc", MusicMarkType.HairpinStop)]
+    [InlineData("dim", MusicMarkType.HairpinStop)]
     public void AFamilyWithATerminator_AnswersWithItsStop(string name, MusicMarkType stop)
         => Assert.Equal(stop, MusicMarkItem.ParseSpanEndName(name));
 
@@ -137,7 +142,6 @@ public class SpanTerminatorSyntaxTests
     [Theory]
     [InlineData("segno")]
     [InlineData("staccato")]
-    [InlineData("cresc")]      // the ONE family LilyPond ends automatically - see section 3
     [InlineData("mark")]
     public void AFamilyWithNoTerminator_RefusesTheSpelling(string name)
         => Assert.Null(MusicMarkItem.ParseSpanEndName(name));

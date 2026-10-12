@@ -63,6 +63,10 @@ public sealed record HairpinItem(
     /// <summary>The <c>@niente</c> that ends the hairpin (<c>… g@niente</c>), or null.</summary>
     public DynamicItem? NienteAtEnd { get; init; }
 
+    /// <summary>The hairpin ends at an explicit stop (<c>@!cresc</c>, LilyPond's <c>\!</c>) on
+    /// the note at its end: the bound is that note's column, as for a niente.</summary>
+    public bool EndsAtStop { get; init; }
+
     /// <summary>
     /// The hairpin's THIN end touches a niente — a crescendo from it (dal niente) or a
     /// decrescendo to it (al niente) — so that end is drawn as a circle and the niente is not

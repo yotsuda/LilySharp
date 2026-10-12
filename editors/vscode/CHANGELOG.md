@@ -4,6 +4,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Ending a hairpin with no dynamic
+
+- **`@!cresc`, `@!decresc` and `@!dim` end a hairpin on their note** — LilyPond's `\!`, which
+  the twin writes. The wedge reaches that note's right edge, or the bar line when the note opens
+  its bar, as LilyPond draws it. Until now a hairpin could only end at the next dynamic or
+  hairpin, and `@!cresc` was refused.
+
 ### Additive meters beam by their terms
 
 - **`time 3+2+2/8` beams its eighths 3 + 2 + 2** (and `2+2+3/8` 2 + 2 + 3): an additive

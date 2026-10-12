@@ -492,6 +492,7 @@ its tip and the word is not printed:
 
 ```
 c4@mf@decresc d e f | g1@niente |     // decrescendo al niente: fades to nothing
+c4@cresc d e f@!cresc | g1 |          // ends ON f (to its right edge) — no dynamic needed
 c4@niente@cresc d e f | g1@f |        // crescendo dal niente: grows from nothing
 c4@p@decresc d e@niente@cresc f | g1@f |   // both on one note share one circle
 ```

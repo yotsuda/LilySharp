@@ -231,8 +231,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                             $"'@!{name}' is ignored: nothing of that name can be ended. "
                             + "The spans with a terminator: a text spanner ('@!rit', '@!accel', "
                             + "'@!rall', '@!textSpan'), an ottava ('@!ottava', '@!quindicesima'), "
-                            + "a pedal ('@!sustain', '@!sostenuto', '@!unaCorda') and a phrasing "
-                            + "slur ('@!phrasingSlur').");
+                            + "a pedal ('@!sustain', '@!sostenuto', '@!unaCorda'), a phrasing "
+                            + "slur ('@!phrasingSlur') and a hairpin ('@!cresc', '@!decresc', '@!dim').");
                 }
                 else if (!IsKnownCompoundName(mark))
                 {

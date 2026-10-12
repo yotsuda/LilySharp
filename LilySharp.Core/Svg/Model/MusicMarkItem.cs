@@ -135,6 +135,12 @@ public enum MusicMarkType
     PhrasingSlurStart,
     /// <summary>The END of a phrasing slur (<c>@!phrasingSlur</c>, LilyPond's <c>\)</c>).</summary>
     PhrasingSlurStop,
+    /// <summary>The END of a hairpin with no dynamic there (<c>@!cresc</c>, <c>@!decresc</c>,
+    /// <c>@!dim</c> — LilyPond's <c>\!</c>). It prints nothing: the wedge stops at its note.
+    /// Grammar feedback A3, 2026-10-12.</summary>
+    /// <remarks>LILYPOND-REF: ly/declarations-init.ly:86 make-span-event — <c>"\\!" = #(make-span-event
+    /// 'CrescendoEvent STOP)</c>, the event the dynamic engraver ends the open hairpin on.</remarks>
+    HairpinStop,
 }
 
 /// <summary>
@@ -320,7 +326,9 @@ public sealed record MusicMarkItem
              or MusicMarkType.QuindicesUp or MusicMarkType.QuindicesDown
              or MusicMarkType.OttavaStop
              // Drawn as a curve by the slur pass, never as a mark.
-             or MusicMarkType.PhrasingSlurStart or MusicMarkType.PhrasingSlurStop;
+             or MusicMarkType.PhrasingSlurStart or MusicMarkType.PhrasingSlurStop
+             // Where a hairpin stops; HairpinEngraver reads it, the mark pass draws nothing.
+             or MusicMarkType.HairpinStop;
 
     /// <summary>
     /// The words that open a text spanner as SUGAR, mapped to the text each one prints —
@@ -470,6 +478,8 @@ public sealed record MusicMarkItem
             MusicMarkType.SostenutoOn => MusicMarkType.SostenutoOff,
             MusicMarkType.UnaCordaOn => MusicMarkType.UnaCordaOff,
             MusicMarkType.PhrasingSlurStart => MusicMarkType.PhrasingSlurStop,
+            // A hairpin of either direction ends at the same stop, as LilyPond's \! ends both.
+            MusicMarkType.Cresc or MusicMarkType.Decresc or MusicMarkType.Dim => MusicMarkType.HairpinStop,
             _ => null
         };
 
@@ -537,6 +547,7 @@ public sealed record MusicMarkItem
         MusicMarkType.UnaCordaOff => "tre corde",
         // A phrasing slur is a curve, not a word (IsSpannerHandled keeps it off the mark pass).
         MusicMarkType.PhrasingSlurStart or MusicMarkType.PhrasingSlurStop => "",
+        MusicMarkType.HairpinStop => "",
         _ => type.ToString()
     };
 

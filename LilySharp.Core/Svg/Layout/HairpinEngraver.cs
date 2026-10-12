@@ -361,12 +361,12 @@ internal static class HairpinEngraver
                     ownEndX = measureLayouts[hairpin.EndMeasureIndex].X - BoundPadding;
                 }
             }
-            else if (hairpin.NienteAtEnd != null
+            else if ((hairpin.NienteAtEnd != null || hairpin.EndsAtStop)
                      && ColumnExtent(hairpin.EndMeasureIndex, hairpin.EndItemIndex, hpMeasures,
                          measureLayouts) is { } endColumn)
             {
-                // A niente is no DynamicText — the twin ends the hairpin with \! — so the bound
-                // is the note column: its right edge (the default endpoint alignment), a rest's
+                // A niente is no DynamicText — the twin ends the hairpin with \! — and an explicit
+                // stop (@!cresc) IS \!, so for both the bound is the note column: its right edge (the default endpoint alignment), a rest's
                 // left edge, or, where a crescendo dal niente starts on the same note, just
                 // right of the column's centre, so that the two circles fall on one place.
                 // LILYPOND-REF: lily/dynamic-engraver.cc:246-249 acknowledge_note_column —
@@ -918,16 +918,34 @@ internal static class HairpinEngraver
                      (m.MeasureIndex == mark.MeasureIndex &&
                       m.AnchorItemIndex > mark.AnchorItemIndex)));
 
-            // End at whichever comes first: next dynamic or next cresc/decresc
+            // An explicit stop (@!cresc, LilyPond's \!) on this staff, strictly after the start:
+            // the wedge ends at its note. Another playing of the same written stop is fine — a
+            // stop ends whatever hairpin is open, as \! does.
+            var nextStop = musicMarks.FirstOrDefault(m =>
+                m.Type == MusicMarkType.HairpinStop && m.StaffIndex == mark.StaffIndex &&
+                (m.MeasureIndex > mark.MeasureIndex ||
+                 (m.MeasureIndex == mark.MeasureIndex && m.AnchorItemIndex > startItem)));
+            static bool Before(int m1, int i1, int m2, int i2) => m1 < m2 || (m1 == m2 && i1 <= i2);
+
+            // End at whichever comes first: next dynamic, next cresc/decresc, or a stop
             int endMeasure;
             int endItem;
             DynamicItem? endDynamic = null;
+            bool endsAtStop = false;
 
             // The dynamic ends it when it stands at or before the next mark. ⚠️ Until session 847
             // only a dynamic at the bar's head beat a mark in the same bar, so `c@p@cresc d@f
             // e@decresc` ended the crescendo at the mark — whose end is its bar's head, before
             // the start — and drew neither hairpin (LilyPond draws both, the f between).
-            if (nextDynamic != null && (nextMark == null ||
+            if (nextStop != null
+                && (nextDynamic == null || Before(nextStop.MeasureIndex, nextStop.AnchorItemIndex, nextDynamic.MeasureIndex, nextDynamic.ItemIndex))
+                && (nextMark == null || Before(nextStop.MeasureIndex, nextStop.AnchorItemIndex, nextMark.MeasureIndex, Math.Max(0, nextMark.AnchorItemIndex))))
+            {
+                endMeasure = nextStop.MeasureIndex;
+                endItem = nextStop.AnchorItemIndex;
+                endsAtStop = true;
+            }
+            else if (nextDynamic != null && (nextMark == null ||
                 nextDynamic.MeasureIndex < nextMark.MeasureIndex ||
                 (nextDynamic.MeasureIndex == nextMark.MeasureIndex
                  && nextDynamic.ItemIndex <= Math.Max(0, nextMark.AnchorItemIndex))))
@@ -950,7 +968,7 @@ internal static class HairpinEngraver
 
             // The carry rule at section boundaries. Only an end the pairing FOUND is judged;
             // the default end above never reaches past the next bar line.
-            if (plays != null && (nextDynamic != null || nextMark != null)
+            if (plays != null && (nextDynamic != null || nextMark != null || nextStop != null)
                 && plays.Judge(mark.MeasureIndex, endMeasure) is { } fault)
             {
                 int ownPlay = plays.PlayAt(mark.MeasureIndex);
@@ -960,6 +978,7 @@ internal static class HairpinEngraver
                 endMeasure = plays.StartOf(ownPlay + 1);
                 endItem = 0;
                 endDynamic = null;
+                endsAtStop = false;
             }
 
             // Only add if there's actually a span
@@ -984,6 +1003,7 @@ internal static class HairpinEngraver
                         d.Level == DynamicLevel.Niente && d.StaffIndex == mark.StaffIndex
                         && d.MeasureIndex == mark.MeasureIndex && d.ItemIndex == startItem),
                     NienteAtEnd = endDynamic is { Level: DynamicLevel.Niente } ? endDynamic : null,
+                    EndsAtStop = endsAtStop,
                 });
             }
         }

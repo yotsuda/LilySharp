@@ -480,11 +480,13 @@ r8[ c d e]           // a manual beam may open or close on a rest, and reaches i
 
 ## Hairpins (spanners over several notes)
 
-Place the spanner mark on the starting note; it runs to the next dynamic.
+Place the spanner mark on the starting note; it runs to the next dynamic — or to an explicit
+stop, `@!cresc` / `@!decresc` / `@!dim` (LilyPond's `\!`), where no dynamic follows.
 
 ```
 c4@p@cresc d e f@f |        // crescendo p -> f
 g4@f@decresc a b c@p |      // decrescendo
+c4@cresc d e f@!cresc | g1 | // a crescendo that ends on f, no dynamic after it
 ```
 
 `.up` / `.down` is NOT allowed on `@cresc` / `@decresc` / `@dim` (a hairpin is always

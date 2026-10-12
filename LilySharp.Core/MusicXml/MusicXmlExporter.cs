@@ -5494,6 +5494,11 @@ public sealed class MusicXmlExporter
                     case Svg.Model.MusicMarkType.UnaCordaOff:
                         AddDirection(new MusicXmlDirection { Words = "tre corde", Placement = "below" });
                         break;
+                    // '@!cresc' / '@!decresc' / '@!dim' (LilyPond's \!): the open wedge stops here.
+                    case Svg.Model.MusicMarkType.HairpinStop when _wedgeOpen:
+                        AddDirection(new MusicXmlDirection { WedgeType = "stop", Placement = "below" });
+                        _wedgeOpen = false;
+                        break;
                     // The text spanner has no stop spelling here — the silence '@rit' meets.
                 }
             return;
