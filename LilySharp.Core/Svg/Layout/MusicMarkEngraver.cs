@@ -564,7 +564,11 @@ internal static class MusicMarkEngraver
         // The lines a staff (by index) draws: a boxed label's and a tempo's quiet base pad
         // 0.8 from the anchor staff's OWN outer line's ink (an `as lines N` staff's), not a
         // five-line frame's. Null keeps five.
-        Func<int, int>? staffLinesOf = null)
+        Func<int, int>? staffLinesOf = null,
+        // Each (system, staff)'s INSIDE-staff profile (LayoutEngine's staffProfile — the room's
+        // skyline, scripts included), Y-up about the staff's reference point: a below-staff
+        // text drops until it clears the bottom staff's ink. Null keeps the fixed depth.
+        Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffInkOf = null)
     {
         // Does THIS mark carry a frame? Only a SECTION label loses one, and only under
         // `plain`: a `@mark` rehearsal box is a different spelling with its own meaning,
@@ -728,6 +732,32 @@ internal static class MusicMarkEngraver
         // (session 781) and mid-line (session 783). The owner reversed the decision on
         // 2026-10-04, looking at that last shape ("the section mark reads better in the row
         // above"), for every staffless sheet; the X half went with it (HANDOFF 5.3).
+
+        // The lowest ink of the system's BOTTOM staff (the one the below marks hang under,
+        // as SystemBottomByMeasure picks it) over [x0, x1], in the mark frame (Y-up about the
+        // anchor staff's middle); null without a profile or with no ink there. The profile is
+        // about the staff's reference point, which sits RefpointBelowTop under its top line
+        // (st.Y, Y-up from the system top) — OutsideStaffStacker's conversion.
+        double? BelowInkMarkUp(MusicMarkItem mark, (double X0, double X1) range)
+        {
+            if (staffInkOf == null
+                || !measureToSystemIdx.TryGetValue(mark.MeasureIndex, out int sysIdx)
+                || sysIdx < 0 || sysIdx >= systems.Length
+                || systems[sysIdx].StaffGroups.IsDefaultOrEmpty)
+                return null;
+            StaffLayout? bottomStaff = null;
+            foreach (var g in systems[sysIdx].StaffGroups)
+                foreach (var st in g.Staves)
+                    if (!st.IsHidden && (bottomStaff == null || st.Height - st.Y > bottomStaff.Height - bottomStaff.Y))
+                        bottomStaff = st;
+            if (bottomStaff == null || staffInkOf(sysIdx, bottomStaff.StaffIndex) is not { } profile)
+                return null;
+            double low = profile.Down.MaxHeightInRange(range.X0, range.X1);
+            if (double.IsInfinity(low))
+                return null;
+            double systemUp = low + bottomStaff.Y - (bottomStaff.RefpointBelowTop ?? 2.0);
+            return 2.0 + systemUp - AnchorStaffUp(mark.MeasureIndex);
+        }
 
         // ⚠️ BUILT ON DEMAND, AND THE DEMAND IS RARE. This map has exactly ONE reader — the
         // below-staff stacking base further down — and that reader stands behind
@@ -1344,6 +1374,33 @@ internal static class MusicMarkEngraver
                 {
                     yUp -= JumpInstructionDrop;
                     stackBottomYUp = Math.Min(stackBottomYUp, yUp - halfExtent);
+                }
+
+                // …and the bottom staff's own ink under it: a D.S. al Coda hung at its fixed
+                // depth printed over an accent under the bass drum (owner's report 2026-10-12,
+                // b-bigband.lys bar 24). LilyPond's JumpScript is an outside-staff grob and
+                // clears the staff's skyline by outside-staff-padding; the inside-staff profile
+                // is that skyline (notes, stems, beams, scripts, slurs, ties).
+                // LILYPOND-REF: lily/axis-group-interface.cc:937-950 skyline_spacing — the
+                //   outside-staff pass starts from the inside-staff skylines.
+                // LILYPOND-REF: lily/axis-group-interface.cc:45 default_outside_staff_padding_ = 0.46
+                // ⚠️ The clearance is the TEXT'S OWN INK TOP over its baseline (yUp is the
+                // baseline of a plain word — OutsideStaffStacker.MusicMarkExtents' arm), not the
+                // generic halfExtent of 1.0, which stands half a space short of a capital at
+                // this size and left the word touching the accent it had just cleared.
+                if (staffInkOf != null && !IsPedal(mark.Type)
+                    && BelowInkMarkUp(mark, MarkXExtent(fonts, mark, x, BoxedOf(mark.Type))) is double inkUp)
+                {
+                    double top = mark.IsSymbol || string.IsNullOrEmpty(mark.Text)
+                        || mark.Type is MusicMarkType.Rehearsal or MusicMarkType.SectionLabel   // a box (IsBoxDrawn answers only for these)
+                        ? halfExtent
+                        : fonts.Ink(mark.Text, PlainMarkEm(fonts, mark.Type), TextRoleOf(mark.Type),
+                            TextStyleOf(fonts, mark.Type)).Top;
+                    if (yUp + top > inkUp - OutsideStaffPadding)
+                    {
+                        yUp = inkUp - OutsideStaffPadding - top;
+                        stackBottomYUp = Math.Min(stackBottomYUp, yUp - halfExtent);
+                    }
                 }
 
                 // Below-staff text must clear the LYRIC lines: lyrics hang under

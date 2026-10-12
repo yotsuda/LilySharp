@@ -6,6 +6,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### D.S. / D.C. / Fine clear the notes under the staff
+
+- **A jump instruction under the staff ("D.S. al Coda", "D.C.", "Fine") now drops below the bottom
+  staff's own ink** — a low note, its ledger lines, an accent under it — keeping LilyPond's
+  outside-staff padding, where it used to hang at one fixed depth and could print through them.
 ### Reopening the scan
 
 - **A `.lys` read from a scan has a button in the editor's title bar that opens the scan

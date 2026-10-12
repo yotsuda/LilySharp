@@ -1232,7 +1232,8 @@ internal sealed partial class LayoutEngine
             // The pass's one map, handed down like the stackers' (see its build above).
             prebuiltMeasureToSystem: measureToSystem,
             gridBarlineRowIndex: ctx.GridBarlineRowIndex,
-            staffLinesOf: staffLinesOf);
+            staffLinesOf: staffLinesOf,
+            staffInkOf: staffProfile);
         var customTextLayouts = CustomTextEngraver.Calculate(customTexts, ml);
         // A leading \partial pickup is bar 0: shift displayed numbers down by one
         // so the first FULL measure is numbered 1, not 2.
