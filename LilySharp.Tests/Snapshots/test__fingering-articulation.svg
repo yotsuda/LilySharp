@@ -29,9 +29,9 @@
   <text class="music" x="21.03" y="16.53" font-size="4.00" data-pos="640"></text>
   <text class="music" x="21.03" y="16.25" font-size="4.00" data-pos="647"></text>
   <text class="music" x="23.78" y="18.86" font-size="4.00" data-pos="669"></text>
-  <text class="music" font-family="Emmentaler-11, Emmentaler, serif" x="17.36" y="16.51" font-size="2.24" data-pos="614"></text>
-  <text class="music" font-family="Emmentaler-11, Emmentaler, serif" x="20.63" y="14.65" font-size="2.24" data-pos="636"></text>
-  <text class="music" font-family="Emmentaler-11, Emmentaler, serif" x="23.35" y="18.16" font-size="2.24" data-pos="666"></text>
+  <text class="music" style="font-family: 'Emmentaler-11', 'Emmentaler', serif" x="17.36" y="16.51" font-size="2.24" data-pos="614"></text>
+  <text class="music" style="font-family: 'Emmentaler-11', 'Emmentaler', serif" x="20.63" y="14.65" font-size="2.24" data-pos="636"></text>
+  <text class="music" style="font-family: 'Emmentaler-11', 'Emmentaler', serif" x="23.35" y="18.16" font-size="2.24" data-pos="666"></text>
   <rect x="11.90" y="13.47" width="7.32" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="697"/>
   <text x="15.57" y="15.82" font-size="2.77" text-anchor="middle" data-pos="697">Main</text>
   </g>

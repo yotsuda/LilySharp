@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -344,7 +344,7 @@ public class EngravingStyleTests
 
     // Every music glyph, whatever face and size it is drawn at: (char, x, font-size, face or "").
     private static (char Glyph, double X, string Size, string Face)[] Glyphs(string svg) =>
-        [.. Regex.Matches(svg, "<text class=\"music\"(?: font-family=\"([^\"]*)\")? x=\"([-\\d.]+)\" y=\"[-\\d.]+\" font-size=\"([\\d.]+)\"[^>]*>(.)</text>")
+        [.. Regex.Matches(svg, "<text class=\"music\"(?: style=\"font-family: '([^']*)'[^\"]*\")? x=\"([-\\d.]+)\" y=\"[-\\d.]+\" font-size=\"([\\d.]+)\"[^>]*>(.)</text>")
             .Select(m => (m.Groups[4].Value[0], double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture),
                 m.Groups[3].Value, m.Groups[1].Value))];
 

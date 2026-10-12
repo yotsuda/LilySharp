@@ -219,7 +219,7 @@ public sealed class EmmentalerDesignMetricsTests
         var family = "Emmentaler-" + GraceNoteItem.DesignSize;
 
         // The grace's own glyphs name that design's face…
-        Assert.Contains($"font-family=\"{family},", svg);
+        Assert.Contains($"style=\"font-family: '{family}', ", svg);
         // …the document declares it (embedded or local, per SvgDocumentOptions.EmbedFont)…
         Assert.Contains($"font-family: '{family}'", svg);
         // …and the full-size glyphs are untouched: the bare class, no per-element override.
@@ -310,10 +310,10 @@ public sealed class EmmentalerDesignMetricsTests
 
         var svg = LiveRender.Svg("grace { d16 eis } f4 g2 r4");
 
-        Assert.Contains($"font-family=\"Emmentaler-{GraceNoteItem.AccidentalDesignSize},", svg);
+        Assert.Contains($"style=\"font-family: 'Emmentaler-{GraceNoteItem.AccidentalDesignSize}', ", svg);
         Assert.Contains($"font-family: 'Emmentaler-{GraceNoteItem.AccidentalDesignSize}'", svg);
         // The heads of the same run still name their own, one design up.
-        Assert.Contains($"font-family=\"Emmentaler-{GraceNoteItem.DesignSize},", svg);
+        Assert.Contains($"style=\"font-family: 'Emmentaler-{GraceNoteItem.DesignSize}', ", svg);
     }
 
     /// <summary>

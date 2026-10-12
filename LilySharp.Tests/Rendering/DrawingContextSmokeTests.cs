@@ -98,7 +98,7 @@ public sealed class DrawingContextSmokeTests
         Assert.Contains("class=\"music\"", svg);
         // The other design names its own face and falls back to the default one, so a viewer
         // without it draws the right glyph from the wrong design instead of tofu.
-        Assert.Contains("font-family=\"Emmentaler-14, Emmentaler, serif\"", svg);
+        Assert.Contains("style=\"font-family: 'Emmentaler-14', 'Emmentaler', serif\"", svg);
         Assert.Contains("data-pos=\"42\"", svg);
         Assert.Contains("transform=\"translate(", svg);
         Assert.EndsWith("</svg>" + Environment.NewLine, svg);

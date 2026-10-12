@@ -221,6 +221,8 @@ workflow attaches that section to the GitHub Release verbatim.
 - **A glyph a music font lacks is drawn in the SVG and the preview, not only in the PNG and PDF.**
   Under Leland the slash heads (and figured-bass digits) are Emmentaler's, but the page's
   `.music` rule overrode their face and the browser drew nothing; the face now goes in a style.
+  So does a grace note's or a cue's smaller Emmentaler design, which the browser had been
+  drawing from the full-size one.
 - **A slash note's `@todo` is ringed in the preview.** `/4@todo("…")` was counted by the
   diagnostics and dropped from the page without a word.
 - **A slash note's middle-line pitch follows every clef in the twin.** A percussion, soprano,

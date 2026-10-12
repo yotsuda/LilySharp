@@ -45,8 +45,8 @@
   <line x1="37.96" y1="25.43" x2="40.03" y2="25.43" stroke="#000000" stroke-width="0.200"/>
   <line x1="37.96" y1="24.43" x2="40.03" y2="24.43" stroke="#000000" stroke-width="0.200"/>
   <line x1="37.96" y1="23.43" x2="40.03" y2="23.43" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="16.24" y="27.93" font-size="2.83" data-pos="451"></text>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="17.66" y="27.43" font-size="2.83" data-pos="455"></text>
+  <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="16.24" y="27.93" font-size="2.83" data-pos="451"></text>
+  <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="17.66" y="27.43" font-size="2.83" data-pos="455"></text>
   <text class="music" x="19.08" y="26.93" font-size="4.00" data-pos="459"></text>
   <line x1="19.15" y1="27.08" x2="19.15" y2="30.43" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="22.09" y="26.43" font-size="4.00" data-pos="462"></text>
@@ -55,8 +55,8 @@
   <line x1="25.15" y1="26.08" x2="25.15" y2="29.43" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="28.09" y="25.43" font-size="4.00" data-pos="466"></text>
   <line x1="28.16" y1="25.58" x2="28.16" y2="28.93" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="31.20" y="24.93" font-size="2.83" data-pos="478"></text>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="32.62" y="24.43" font-size="2.83" data-pos="482"></text>
+  <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="31.20" y="24.93" font-size="2.83" data-pos="478"></text>
+  <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="32.62" y="24.43" font-size="2.83" data-pos="482"></text>
   <text class="music" x="34.03" y="23.93" font-size="4.00" data-pos="486"></text>
   <line x1="34.10" y1="23.93" x2="34.10" y2="28.43" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="38.31" y="23.43" font-size="4.00" data-pos="489"></text>

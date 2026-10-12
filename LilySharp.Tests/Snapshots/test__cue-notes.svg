@@ -22,17 +22,17 @@
   <line x1="18.36" y1="24.91" x2="18.36" y2="21.56" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="20.12" y="24.56" font-size="4.00" data-pos="2582"></text>
   <line x1="21.36" y1="24.41" x2="21.36" y2="21.06" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="23.02" y="24.06" font-size="2.52" data-pos="2590"></text>
+  <text class="music" style="font-family: 'Emmentaler-13', 'Emmentaler', serif" x="23.02" y="24.06" font-size="2.52" data-pos="2590"></text>
   <line x1="23.77" y1="23.91" x2="23.77" y2="21.86" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="25.53" y="23.56" font-size="2.52" data-pos="2593"></text>
+  <text class="music" style="font-family: 'Emmentaler-13', 'Emmentaler', serif" x="25.53" y="23.56" font-size="2.52" data-pos="2593"></text>
   <line x1="26.28" y1="23.41" x2="26.28" y2="21.36" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="29.29" y="23.06" font-size="4.00" data-pos="2601"></text>
   <line x1="30.53" y1="22.91" x2="30.53" y2="19.56" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="32.29" y="22.56" font-size="4.00" data-pos="2604"></text>
   <line x1="33.53" y1="22.41" x2="33.53" y2="19.06" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="35.22" y="22.06" font-size="2.52" data-pos="2612"></text>
+  <text class="music" style="font-family: 'Emmentaler-13', 'Emmentaler', serif" x="35.22" y="22.06" font-size="2.52" data-pos="2612"></text>
   <line x1="35.29" y1="22.21" x2="35.29" y2="24.16" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="37.98" y="18.06" font-size="2.52" data-pos="2615"></text>
+  <text class="music" style="font-family: 'Emmentaler-13', 'Emmentaler', serif" x="37.98" y="18.06" font-size="2.52" data-pos="2615"></text>
   <line x1="38.05" y1="18.21" x2="38.05" y2="22.06" stroke="#000000" stroke-width="0.130"/>
   <rect x="28.20" y="20.06" width="0.19" height="4.00" data-pos="2597"/>
   <rect x="40.35" y="20.06" width="0.19" height="4.00" data-pos="2620"/>

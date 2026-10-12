@@ -275,10 +275,12 @@ internal sealed class SvgDrawingContext : IDrawingContext
     }
 
     /// <summary>
-    /// The face attribute a music glyph carries: nothing at the score's own size (the
-    /// <c>.music</c> CSS class already names that family), and an explicit
-    /// <c>font-family</c> — which overrides the class — for any other design. Also RECORDS
-    /// the design, so the document embeds exactly the faces the score drew with.
+    /// The face a music glyph carries: nothing at the score's own size (the <c>.music</c> CSS
+    /// class already names that family), and for any other design or font a <c>style</c>
+    /// naming it — a style, because a <c>font-family</c> ATTRIBUTE loses to the class rule
+    /// (CSS gives presentation attributes the lowest weight), so the browser drew every glyph
+    /// in the class's face. Also RECORDS the design, so the document embeds exactly the faces
+    /// the score drew with.
     /// </summary>
     /// <remarks>The face is a number <see cref="MusicFont.Drawn"/> answered: the scope's design,
     /// or a later font's face for a glyph the score's first music font lacks.</remarks>
@@ -302,8 +304,10 @@ internal sealed class SvgDrawingContext : IDrawingContext
             _sb.Append(" style=\"font-family: '").Append(font.FaceFamily(face)).Append("', serif\"");
         }
         else if (face != font.DefaultDesign)
-            _sb.Append(" font-family=\"").Append(font.FaceFamily(face))
-               .Append(", ").Append(font.FaceFamily(font.DefaultDesign)).Append(", serif\"");
+            // The same font's other design (Emmentaler-16 for a cue): the default design after
+            // it, for a viewer given only that one (the preview).
+            _sb.Append(" style=\"font-family: '").Append(font.FaceFamily(face))
+               .Append("', '").Append(font.FaceFamily(font.DefaultDesign)).Append("', serif\"");
     }
 
     /// <summary>

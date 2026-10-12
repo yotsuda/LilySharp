@@ -29,9 +29,9 @@
   <line x1="48.76" y1="15.28" x2="50.72" y2="15.28" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="17.12" y="15.28" font-size="4.00" data-pos="858"></text>
   <line x1="18.36" y1="15.13" x2="18.36" y2="11.78" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="19.88" y="16.78" font-size="2.83" data-pos="869"></text>
+  <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="19.88" y="16.78" font-size="2.83" data-pos="869"></text>
   <line x1="20.74" y1="16.63" x2="20.74" y2="13.98" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="20.80" y="14.02" font-size="2.83"></text>
+  <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="20.80" y="14.02" font-size="2.83"></text>
   <text class="music" x="21.82" y="16.28" font-size="4.00" data-pos="876"></text>
   <line x1="23.06" y1="16.13" x2="23.06" y2="12.28" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="23.13" y="12.32" font-size="4.00"></text>
@@ -41,9 +41,9 @@
   <line x1="29.33" y1="14.63" x2="29.33" y2="11.28" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="33.10" y="15.28" font-size="4.00" data-pos="887"></text>
   <line x1="34.34" y1="15.13" x2="34.34" y2="11.78" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="35.87" y="16.78" font-size="2.83" data-pos="905"></text>
+  <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="35.87" y="16.78" font-size="2.83" data-pos="905"></text>
   <line x1="36.72" y1="16.63" x2="36.72" y2="13.98" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="36.78" y="14.02" font-size="2.83"></text>
+  <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="36.78" y="14.02" font-size="2.83"></text>
   <text class="music" x="37.80" y="16.28" font-size="4.00" data-pos="911"></text>
   <line x1="39.04" y1="16.13" x2="39.04" y2="12.28" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="39.11" y="12.32" font-size="4.00"></text>
@@ -53,8 +53,8 @@
   <line x1="45.32" y1="14.63" x2="45.32" y2="11.28" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="49.08" y="15.28" font-size="4.00" data-pos="921"></text>
   <line x1="50.32" y1="15.13" x2="50.32" y2="11.78" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="52.25" y="13.78" font-size="2.83" data-pos="932"></text>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="53.67" y="13.28" font-size="2.83" data-pos="937"></text>
+  <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="52.25" y="13.78" font-size="2.83" data-pos="932"></text>
+  <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="53.67" y="13.28" font-size="2.83" data-pos="937"></text>
   <text class="music" x="55.08" y="12.78" font-size="4.00" data-pos="943"></text>
   <line x1="56.32" y1="12.63" x2="56.32" y2="9.28" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="56.39" y="9.32" font-size="4.00"></text>
