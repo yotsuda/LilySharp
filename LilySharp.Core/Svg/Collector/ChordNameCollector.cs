@@ -68,6 +68,11 @@ internal sealed class ChordNameCollector
     /// or null (a lead-sheet row, a piano staff) — set by the collector before each row.</summary>
     public TuningType? RowStaffTuning { get; set; }
 
+    /// <summary>How many semitones down the row being collected names its chords
+    /// (<see cref="Semantics.ConcertPitch.ChordNameDrop"/>: the staff it stands over prints a
+    /// transposing part for its player), 0 for as written — set by the collector before each row.</summary>
+    public int RowNameDrop { get; set; }
+
     /// <summary>The <c>@todo</c> a chords-row entry or rest carries (docs/todo-memo-design.md §5),
     /// as <see cref="ChordNameItem.TodoKey"/> / <see cref="ChordNameItem.TodoMemo"/> /
     /// <see cref="ChordNameItem.TodoBelow"/> hold it — read the way a note's is
@@ -812,9 +817,14 @@ internal sealed class ChordNameCollector
     {
         string symbol = entry.SymbolText;
         var (tonicStep, sharps) = KeyAt(measure);
-        // The key at the bar spells a capo score's pressed name (ChordStructure.Pressed).
+        // The key at the bar spells a capo score's pressed name (ChordStructure.Pressed), and
+        // the name a transposing staff's player reads (RowNameDrop) the same way: the chord that
+        // many semitones down, spelled in the key that many down. The STRUCTURE stays sounding —
+        // the MIDI, the hover and the diagrams read what sounds.
         return StructureOf(symbol, tonicStep, sharps) is { } structure
-            ? (structure.PrintedSymbol(Spelling, sharps), structure)
+            ? (RowNameDrop == 0 ? structure.PrintedSymbol(Spelling, sharps)
+                : structure.Pressed(RowNameDrop, sharps).PrintedSymbol(Spelling,
+                    LilySharp.Core.Music.ChordStructure.PressedKeySharps(sharps, RowNameDrop)), structure)
             // Unparseable root — show the raw run with no structure at all.
             : (LilySharp.Core.Music.ChordSymbolText.Flat(symbol), null);
     }

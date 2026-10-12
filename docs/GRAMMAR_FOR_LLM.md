@@ -223,6 +223,11 @@ verbatim `@"C:\music"` / `@"say ""hi"""` (backslash as written, `""` = one quote
   `score trumpet pitch transposed { staff tp }` — an alto-sax `c'` prints there as `a'` in
   A major when the piece is in C, and still plays C. Octave-only instruments (bass, piccolo)
   keep their notation either way; without a transposing `instrument` the word changes nothing.
+- A chords row is SOUNDING pitch (it belongs to no instrument; the MIDI plays it so). A row
+  standing directly above a staff that prints a transposing part for its player names the
+  chords that player reads: over `score trumpet pitch transposed { chords prog  staff tp }`
+  a B♭ trumpet reads concert `F6 Bb7` as `G6 C7`, spelled in the key the staff prints. A row
+  over a sounding staff, or over no staff (a lead sheet), prints as written.
 - Numbers: `1`=whole, `2`=half, `4`=quarter, `8`, `16`, `32`, `64`, `128`.
 - Dots after the number: `4.`=dotted quarter, `4..`=double-dotted.
 - Omitting the duration reuses the previous note's duration.

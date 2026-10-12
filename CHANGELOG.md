@@ -6,6 +6,18 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Chord names on a transposing part
+
+- **A chords row over a staff printed for a transposing player names the chords that player
+  reads.** The row is sounding pitch (it belongs to no instrument, and the MIDI plays it so);
+  over a B♭ trumpet's part (`score trumpet pitch transposed { chords prog  staff tp }`, or a
+  `staff tp as pitch transposed` in a sounding score) concert `F6 B♭7 B°7` prints `G6 C7 C♯°7`,
+  spelled in the key the staff prints — the capo's pressed-name road. Until now the trumpet read
+  G major under concert names. A row over a sounding staff, or over none, is unchanged.
+  The LilyPond twin writes the row under the same `\transpose`; MusicXML writes a transposing
+  part's harmonies in its written pitch, as it writes its notes (a reader adds the part's
+  `<transpose>` to both).
+
 ### `@todo` is information, not a warning
 
 - **A `@todo` mark (LYS4026) is now reported as information**, not as a warning: a mark left to

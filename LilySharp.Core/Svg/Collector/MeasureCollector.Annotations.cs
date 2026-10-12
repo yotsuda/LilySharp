@@ -267,6 +267,12 @@ public sealed partial class MeasureCollector
     /// of the parts a score omits collects them through this same collector, which leaves the
     /// last omitted part's tuning behind (measured: <c>staff uk with chords prog</c> drew the
     /// guitar's shape until this took the name).</remarks>
+    /// <summary>How many semitones down a chord row over <paramref name="partName"/>'s staff names
+    /// its chords on THIS score's page (<see cref="Semantics.ConcertPitch.ChordNameDrop"/>).</summary>
+    private int ChordRowDrop(SyntaxNode root, string? partName)
+        => partName == null ? 0
+            : Semantics.ConcertPitch.ChordNameDrop(PagePitchOf(partName), _fileIsConcert, Semantics.ConcertPitch.FindPart(root, partName));
+
     private static TuningType? StaffDiagramTuning(SyntaxNode root, RenderSpec? spec, string? voiceName, string rowName)
         => voiceName != null
            && Semantics.ChordDiagramScores.StaffWord(root, spec, voiceName, rowName) is { } word

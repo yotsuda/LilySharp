@@ -28,6 +28,29 @@ namespace LilySharp.Core.LilyPond;
 // instance state, no behavior change.
 public sealed partial class LilyPondExporter
 {
+    /// <summary>
+    /// The <c>\transpose</c> a ChordNames row takes over a staff that prints a transposing part
+    /// for its player (<see cref="Semantics.ConcertPitch.ChordNameDrop"/>: the page names the
+    /// chords that player reads) — <c>\transpose c d </c> over a B♭ trumpet's part — or empty.
+    /// The row's chords are sounding pitch, as the part's music is under the part's own
+    /// <c>\transpose</c>, so the twin moves them by the same interval the page does.
+    /// </summary>
+    private string ChordNamesTranspose(RenderDeclarationSyntax? render, string rowName)
+    {
+        if (render == null || RenderSpecParser.Parse(render) is not { } spec
+            || Semantics.ChordDiagramScores.RowStaffPart(spec, rowName) is not { } partName)
+            return "";
+        SyntaxNode root = render;
+        while (root.Parent != null)
+            root = root.Parent;
+        int drop = Semantics.ConcertPitch.ChordNameDrop(Semantics.ConcertPitch.PageMode(render, partName),
+            Semantics.ConcertPitch.FileIsConcert(root), Semantics.ConcertPitch.FindPart(root, partName));
+        if (drop == 0)
+            return "";
+        var (step, alt, oct) = Semantics.PitchTransposer.IntervalFromSemitones(12 - drop);
+        return "\\transpose c " + SpellPitch(step, alt) + OctaveMarks(oct) + " ";
+    }
+
     private void EmitScore(RenderDeclarationSyntax? render, List<PartDeclarationSyntax> parts,
         Dictionary<string, string> partVars)
     {
@@ -92,7 +115,7 @@ public sealed partial class LilyPondExporter
                     case ChordRowRenderSyntax chords:
                         if (_chordVars.TryGetValue(chords.PartName, out var chordVar))
                         {
-                            rows.Add("    \\new ChordNames " + ChordNamesWith() + "\\" + chordVar + "\n");
+                            rows.Add("    \\new ChordNames " + ChordNamesWith() + ChordNamesTranspose(render, chords.PartName) + "\\" + chordVar + "\n");
                             // …and its diagrams under the names, when some entry writes a shape.
                             if (_fretVars.TryGetValue(chords.PartName, out var fretVar))
                                 rows.Add("    \\new FretBoards " + FretBoardsWith(chords.PartName) + "\\" + fretVar + "\n");

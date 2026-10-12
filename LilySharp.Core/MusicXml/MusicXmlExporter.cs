@@ -5855,7 +5855,8 @@ public sealed class MusicXmlExporter
                 for (int k = 0; k < bars.Count && start + k < part.Measures.Count; k++)
                 {
                     var measure = part.Measures[start + k];
-                    AddRowHarmonies(measure, bars[k], pending, tuning, k == 0 && measure.Implicit ? pending.Pickup : null);
+                    AddRowHarmonies(measure, bars[k], pending, tuning, k == 0 && measure.Implicit ? pending.Pickup : null,
+                        WrittenDrop(header.TranspositionSemitones));
                 }
             }
             else if (!scoreHasStaff)
@@ -5872,7 +5873,7 @@ public sealed class MusicXmlExporter
     /// not written, as the MIDI does not play it.
     /// </summary>
     private void AddRowHarmonies(MusicXmlMeasure measure, List<SyntaxNode> bar, PendingChordRow pending,
-        TuningType? tuning, Fraction? cut)
+        TuningType? tuning, Fraction? cut, int drop = 0)
     {
         if (bar.Count == 0)
             return;
@@ -5886,7 +5887,12 @@ public sealed class MusicXmlExporter
                 continue;
             if (Svg.Collector.ChordNameCollector.StructureOf(entry.SymbolText, pending.TonicStep, pending.Sharps) is not { } chord)
                 continue;
-            if (BuildHarmony(chord.PrintedSymbol(LilySharp.Core.Semantics.ChordSpelling.Canonical).Text) is not { } harmony)
+            // A part written with a <transpose> carries its harmonies in WRITTEN pitch, as it does
+            // its notes (a reader adds the <transpose> to both): the row is sounding, so a B♭
+            // trumpet's harmony is the chord a major second up — the name its page prints
+            // (ConcertPitch.ChordNameDrop). The diagram stays the sounding chord's.
+            var named = drop == 0 ? chord : chord.Pressed(drop, pending.Sharps);
+            if (BuildHarmony(named.PrintedSymbol(LilySharp.Core.Semantics.ChordSpelling.Canonical).Text) is not { } harmony)
                 continue;
             if (tuning is { } t)
             {
@@ -5905,6 +5911,10 @@ public sealed class MusicXmlExporter
             measure.Notes.Insert(insertAt++, new MusicXmlNote { RawElement = harmony });
         }
     }
+
+    /// <summary>How many semitones down a sounding chord is written in a part whose
+    /// <c>&lt;transpose&gt;</c> is <paramref name="soundingShift"/> (written to sounding): 0..11.</summary>
+    private static int WrittenDrop(int soundingShift) => ((soundingShift % 12) + 12) % 12;
 
     /// <summary>The measure's harmonies with the position (divisions from the bar's head) each
     /// stands at: its place in the stream, plus its own offset.</summary>

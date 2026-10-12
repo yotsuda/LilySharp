@@ -1209,6 +1209,7 @@ public sealed partial class MeasureCollector
         if (attachedChordPart != null)
         {
             _chordNameCollector.RowStaffTuning = StaffDiagramTuning(tree.GetRoot(), renderSpec, voiceName, attachedChordPart);
+            _chordNameCollector.RowNameDrop = ChordRowDrop(tree.GetRoot(), voiceName);
             _chordNameCollector.CollectAttached(
                 tree.GetRoot(), attachedChordPart, _sectionState.StartMeasure, _cursor.StaffIndex,
                 _meta.TimeBeats, _meta.TimeBeatType, attachedChordDisplay);
@@ -1841,6 +1842,8 @@ public sealed partial class MeasureCollector
             _chordNameCollector.RowStaffTuning =
                 Semantics.ChordDiagramScores.RowStaffWord(tree.GetRoot(), renderSpec, rowName) is { } rowWord
                     ? Tablature.Tunings.Parse(rowWord) : null;
+            _chordNameCollector.RowNameDrop = renderSpec == null ? 0
+                : ChordRowDrop(tree.GetRoot(), Semantics.ChordDiagramScores.RowStaffPart(renderSpec, rowName));
             var rowMeasures = _chordNameCollector.CollectPart(
                 tree.GetRoot(), rowName, rowIdx, _sectionState.StartMeasure, _meta.TimeBeats, _meta.TimeBeatType, rowMode);
             staffVoices[rowName] = ImmutableArray.Create(new Voice(rowName, rowMeasures));
@@ -2054,6 +2057,7 @@ public sealed partial class MeasureCollector
             _chordNameCollector.RowStaffTuning =
                 Semantics.ChordDiagramScores.StaffWord(tree.GetRoot(), renderSpec, staffVoice, attachedPart) is { } staffWord
                     ? Tablature.Tunings.Parse(staffWord) : null;
+            _chordNameCollector.RowNameDrop = ChordRowDrop(tree.GetRoot(), staffVoice);
             _chordNameCollector.CollectAttached(
                 tree.GetRoot(), attachedPart, _sectionState.StartMeasure, attachedStaff,
                 _meta.TimeBeats, _meta.TimeBeatType, attachedMode);
@@ -2539,6 +2543,7 @@ public sealed partial class MeasureCollector
         if (attachedChordPart != null)
         {
             _chordNameCollector.RowStaffTuning = StaffDiagramTuning(root, renderSpec, voiceName, attachedChordPart);
+            _chordNameCollector.RowNameDrop = ChordRowDrop(root, voiceName);
             _chordNameCollector.CollectAttached(
                 root, attachedChordPart, _sectionState.StartMeasure, _cursor.StaffIndex,
                 _meta.TimeBeats, _meta.TimeBeatType, attachedChordDisplay);

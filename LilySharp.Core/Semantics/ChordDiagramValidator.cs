@@ -182,6 +182,38 @@ public static class ChordDiagramScores
         return null;
     }
 
+    /// <summary>
+    /// The part of the staff the row <paramref name="rowName"/> is FIRST placed over in
+    /// <paramref name="spec"/> — the staff its names are read against (a transposing part's
+    /// player reads them in its key, <see cref="ConcertPitch.ChordNameDrop"/>); null when it
+    /// stands over no staff (a lead sheet). A group answers its first member's part.
+    /// </summary>
+    public static string? RowStaffPart(RenderSpec spec, string rowName)
+    {
+        foreach (var (voice, withChords, _, _, _) in spec.GetVoiceBindings())
+            if (withChords == rowName)
+                return voice;
+        var items = spec.Items;
+        for (int i = 0; i < items.Length; i++)
+        {
+            if (items[i] is TabStaffSpec { WithChords: { } w } attachedTab && w == rowName)
+                return attachedTab.Staff.VoiceName;
+            if (items[i] is ChordRowSpec row && row.PartName == rowName)
+                return i + 1 < items.Length ? PartUnder(items[i + 1]) : null;
+        }
+        return null;
+    }
+
+    private static string? PartUnder(RenderItemSpec item) => item switch
+    {
+        TabStaffSpec tab => tab.Staff.VoiceName,
+        SingleStaffSpec s => s.Staff.VoiceName,
+        GrandStaffRenderSpec g => g.GrandStaff.Members.Length > 0 ? PartUnder(g.GrandStaff.Members[0]) : null,
+        CondensedStaffSpec c => c.PartNames.Length > 0 ? c.PartNames[0] : null,
+        CombinedStaffSpec c => c.PartNames.Length > 0 ? c.PartNames[0] : null,
+        _ => null,
+    };
+
     /// <summary>The fretted tuning word of a staff-like item: a tab's own tuning, a staff's
     /// part's, a group's first member's, a condensed or combined staff's first part's.</summary>
     private static string? WordUnder(SyntaxNode root, RenderItemSpec item) => item switch

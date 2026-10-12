@@ -263,6 +263,24 @@ public static class ConcertPitch
             ? Interval(PartHeaderDefaults.Read(part).ConcertShiftSemitones)
             : null;
 
+    /// <summary>
+    /// How many semitones DOWN a chord name above <paramref name="part"/>'s staff is to be read
+    /// (0..11; 0 = as written): a chord row is sounding pitch — it belongs to no instrument, and
+    /// the MIDI plays it so — and a staff that prints a transposing part for its player
+    /// (<paramref name="pageMode"/>, else the part's letters' convention, false) prints the names
+    /// the player reads: a B♭ trumpet's 10 (concert F6 reads G6), an E♭ alto saxophone's 3
+    /// (concert F reads D). The same move as a capo's pressed name
+    /// (<see cref="Music.ChordStructure.Pressed"/>), which this feeds. Owner's report
+    /// 2026-10-12 (a trumpet part in G major under F6 and B♭7).
+    /// </summary>
+    public static int ChordNameDrop(bool? pageMode, bool fileIsConcert, PartDeclarationSyntax? part)
+    {
+        if (part == null || (pageMode ?? PartMode(part) ?? fileIsConcert))
+            return 0;
+        int shift = PartHeaderDefaults.Read(part).ConcertShiftSemitones;
+        return ((shift % 12) + 12) % 12;
+    }
+
     /// <summary>The declared part named <paramref name="partName"/>, or null: part
     /// declarations are top-level only (Parser.ParseTopLevelItem).</summary>
     public static PartDeclarationSyntax? FindPart(SyntaxNode root, string partName)
