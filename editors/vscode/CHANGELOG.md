@@ -4,6 +4,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A `@todo` ring round a moved rest
+
+- **A rest marked `@todo` is ringed where it is drawn.** A rest moved up or down by its voice
+  (`voice { r4.@todo … } { … }`), by another voice's notes, or by its written pitch
+  (`g''4@rest`) used to be ringed at the middle line, beside the rest.
 ### Drag the preview to scroll
 
 - **The score preview scrolls when you drag the sheet** with the left mouse button (an open hand

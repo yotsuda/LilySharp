@@ -162,7 +162,8 @@ internal static partial class SharedRenderer
                             ? TabTodoInkBox(fonts, staff, item,
                                 measureLayout.X + LayoutUtilities.GetItemXOffset(measures, mi, ii, measureLayout))
                               ?? TodoInkBox(item, measureLayout, measures, mi, ii, staffLines, spacing)
-                            : TodoInkBox(item, measureLayout, measures, mi, ii, staffLines, spacing);
+                            : TodoInkBox(item, measureLayout, measures, mi, ii, staffLines, spacing,
+                                layout.GetRestShift(mi, v, ii));
                         if (inkBox is not var (left, right, bottom, top))
                             continue;
                         double scale = os.Size(1.0, staffIndex);
@@ -590,9 +591,14 @@ internal static partial class SharedRenderer
     /// lowest head's bottom to the highest head's top), a rest's glyph at its drawn position,
     /// a multi-measure rest's bar over its measure; null for an item that draws no such thing.
     /// </summary>
+    /// <param name="restShift">The rest's shift off its neutral letter, in staff positions —
+    /// <see cref="ScoreLayout.GetRestShift"/>, the number the rest itself is drawn by
+    /// (DrawStaffMeasures: neutral + shift), so a voiced, pitched or collision-moved rest is
+    /// ringed where it stands (owner's report 2026-10-12: an upper voice's r4. was ringed at the
+    /// middle line, under the rest).</param>
     internal static (double Left, double Right, double Bottom, double Top)? TodoInkBox(
         MusicItem item, MeasureLayout measureLayout, ImmutableArray<Measure> measures,
-        int measureIndex, int itemIndex, int staffLines, double lineSpacing)
+        int measureIndex, int itemIndex, int staffLines, double lineSpacing, double restShift = 0)
     {
         double xColumn = measureLayout.X + LayoutUtilities.GetItemXOffset(measures, measureIndex, itemIndex, measureLayout);
         switch (item)
@@ -635,8 +641,9 @@ internal static partial class SharedRenderer
             {
                 int noteValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
                 var box = GlyphMetrics.GetRestBBox(noteValue);
-                // The glyph's origin: the rest's own position, else the neutral one DrawRest draws at.
-                double y = (rest.StaffPosition ?? ElementCoordinator.NeutralRestPosition(staffLines, noteValue)) / 2.0;
+                // The glyph's origin where DrawRest puts it: the neutral letter plus the shift (a
+                // pitched rest's own position is in that shift too — CalculateRestShifts).
+                double y = (ElementCoordinator.NeutralRestPosition(staffLines, noteValue) + restShift) / 2.0;
                 return (xColumn + box.Left, xColumn + box.Right, y + box.Bottom, y + box.Top);
             }
             default:
