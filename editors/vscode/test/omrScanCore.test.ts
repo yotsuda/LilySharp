@@ -23,8 +23,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
 import {
-    anchorsOf, barOnLine, markFactsOf, pageLabel, parseSideFile, scanBarForPrinted, scanTitle, shiftAnchors, shownImage,
-    sideFileOf, todoTarget,
+    SCAN_DEFAULT_THRESHOLD, anchorsOf, barOnLine, markFactsOf, pageLabel, parseSideFile, scanBarForPrinted, scanTitle,
+    shiftAnchors, shownAt, shownImage, sideFileOf, todoStroke, todoTarget,
 } from '../src/omrScanCore';
 
 // Absolute on whichever OS runs the tests.
@@ -127,6 +127,36 @@ describe('the scan view names the originals (LilySharp-Omr proposal 2026-10-12)'
         assert.equal(scanTitle(side([jpg(1), jpg(2)]).pages, lys), 'Scan: page1.jpg, page2.jpg');
         assert.equal(scanTitle(side([jpg(1), jpg(2), jpg(3)]).pages, lys), 'Scan: page1.jpg +2');
         assert.equal(scanTitle([], lys), 'Scan: score.lys');
+    });
+});
+
+describe('how sure the reader is (LilySharp-Omr reply 2026-10-12: a confidence on every todo)', () => {
+    const side = parseSideFile(JSON.stringify({
+        version: 1, pages: [{ page: 1, image: 'p.png', width: 10, height: 10 }], measures: [],
+        todos: [
+            { key: 'b3', page: 1, box: [0, 0, 5, 5], confidence: 0.2, inSource: null },
+            { key: 'b4', page: 1, box: [0, 0, 5, 5], confidence: 0.85, inSource: false },
+            { key: 'o9', page: 1, box: [0, 0, 5, 5] },
+        ],
+    }), path.join(WORK, 'x.omr.json'))!;
+
+    it('reads the confidence, and inSource: false as a mark the .lys does not carry', () => {
+        assert.deepEqual(side.todos.map(t => [t.key, t.confidence, t.quiet]),
+            [['b3', 0.2, undefined], ['b4', 0.85, true], ['o9', undefined, undefined]]);
+    });
+
+    it('draws the less sure heavier and darker, a quiet mark faint, a mark with no value as the least sure', () => {
+        assert.deepEqual(todoStroke({ confidence: 0 }), { width: 5, opacity: 1 });
+        assert.deepEqual(todoStroke({ confidence: 0.8 }), { width: 1.8, opacity: 0.48 });
+        assert.deepEqual(todoStroke({}), todoStroke({ confidence: 0 }));
+        assert.deepEqual(todoStroke({ confidence: 0.1, quiet: true }), { width: 1, opacity: 0.35 });
+        assert.ok(todoStroke({ confidence: 0.2 }).width > todoStroke({ confidence: 0.6 }).width);
+    });
+
+    it('starts the slider at the reader\'s own threshold and shows what is below it', () => {
+        assert.equal(SCAN_DEFAULT_THRESHOLD, 0.8);
+        assert.deepEqual(side.todos.filter(t => shownAt(t, SCAN_DEFAULT_THRESHOLD)).map(t => t.key), ['b3', 'o9']);
+        assert.deepEqual(side.todos.filter(t => shownAt(t, 0.1)).map(t => t.key), ['o9']);
     });
 });
 

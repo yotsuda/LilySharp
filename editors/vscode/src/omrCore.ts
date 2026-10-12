@@ -180,7 +180,7 @@ export type OmrEvent =
     | { event: 'start'; pages: number }
     | { event: 'page'; page: number; of: number }
     | { event: 'warning'; message: string }
-    | { event: 'done'; lys: string; json?: string; annotated?: string[]; todos?: number }
+    | { event: 'done'; lys: string; json?: string; annotated?: string[]; todos?: number; quiet?: number }
     | { event: 'error'; code?: string; message: string };
 
 /** Reads one stdout line, or undefined for a line that is not an event (ignored, not fatal). */

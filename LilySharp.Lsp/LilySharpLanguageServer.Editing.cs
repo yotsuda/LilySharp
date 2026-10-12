@@ -533,6 +533,15 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>The <c>@todo</c> mark a LYS4026 report sits in — the report underlines the
     /// memo, the key or the word, so it is found by CONTAINMENT, not by where it starts
     /// (TodoValidator.MessageSpan). Null when none holds it.</summary>
+    /// <summary>Every <c>@todo</c> mark of the tree with its key (null for one with none), for
+    /// matching many LYS4026 reports at once by containment, as <see cref="TodoMarkAt"/> does one.</summary>
+    private static List<(int Start, int End, string? Key)> TodoMarksOf(SyntaxTree tree)
+        => [.. tree.GetRoot().DescendantNodes()
+            .Where(n => n is ArticulationSyntax or MusicMarkSyntax)
+            .Select(n => (Node: n, Todo: TodoAnnotation.Of(n)))
+            .Where(x => x.Todo != null)
+            .Select(x => (x.Node.Span.Start, x.Node.Span.End, x.Todo!.Key))];
+
     private static SyntaxNode? TodoMarkAt(SyntaxTree tree, CoreDiagnostic diagnostic)
         => tree.GetRoot().DescendantNodes().FirstOrDefault(n =>
             n is ArticulationSyntax or MusicMarkSyntax

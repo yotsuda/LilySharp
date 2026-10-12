@@ -61,6 +61,12 @@ export interface ScanTodo {
     readonly page: number;
     readonly box: Box;
     readonly memo?: string;
+    /** How likely the place needs no edit, 0..1 (the reader's `confidence`, every todo since
+     *  LilySharp-Omr's reply of 2026-10-12); absent from an older reader. */
+    readonly confidence?: number;
+    /** The reader left the mark out of the .lys (`inSource: false`: above its threshold, or a
+     *  bar the check found right) — kept here to be seen faintly, never in F8. */
+    readonly quiet?: boolean;
 }
 
 export interface ScanSideFile {
@@ -100,6 +106,27 @@ export function scanTitle(pages: readonly ScanPage[], lysPath: string): string {
         return `Scan: ${path.basename(lysPath)}`;
     }
     return names.length <= 2 ? `Scan: ${names.join(', ')}` : `Scan: ${names[0]} +${names.length - 1}`;
+}
+
+/** The scan view's slider starts here: the marks below it show, the rest hide. 0.8 is the
+ *  reader's own default threshold (`omr read --todo-threshold`), so at first the view shows
+ *  what the .lys carries (LilySharp-Omr's reply 2026-10-12 §3). */
+export const SCAN_DEFAULT_THRESHOLD = 0.8;
+
+/** How a mark is drawn: an outline only, heavier and darker the less sure the reader is —
+ *  `width` in screen pixels, `opacity` 0..1. A mark with no confidence draws as the least
+ *  sure (it is not to be overlooked); a quiet one is a faint hairline whatever its value. */
+export function todoStroke(todo: Pick<ScanTodo, 'confidence' | 'quiet'>): { width: number; opacity: number } {
+    if (todo.quiet) {
+        return { width: 1, opacity: 0.35 };
+    }
+    const doubt = 1 - Math.min(1, Math.max(0, todo.confidence ?? 0));
+    return { width: Math.round((1 + 4 * doubt) * 10) / 10, opacity: Math.round((0.35 + 0.65 * doubt) * 100) / 100 };
+}
+
+/** Whether the slider at `threshold` shows a mark: one below it, or one with no confidence. */
+export function shownAt(todo: Pick<ScanTodo, 'confidence'>, threshold: number): boolean {
+    return todo.confidence === undefined || todo.confidence < threshold;
 }
 
 /** The side file of a .lys: `x.lys` → `x.omr.json`. */
@@ -180,6 +207,8 @@ export function parseSideFile(text: string, sideFilePath: string): ScanSideFile 
                 ...(int(t?.measure) !== undefined ? { measure: t.measure } : {}),
                 ...(str(t?.part) ? { part: t.part } : {}),
                 ...(str(t?.memo) ? { memo: t.memo } : {}),
+                ...(typeof t?.confidence === 'number' && Number.isFinite(t.confidence) ? { confidence: t.confidence } : {}),
+                ...(t?.inSource === false ? { quiet: true } : {}),
             });
         }
     }

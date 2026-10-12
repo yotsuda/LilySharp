@@ -199,6 +199,40 @@ public class TodoAnnotationTests
     }
 
     /// <summary>
+    /// A mark the OMR reader is unsure of is a warning, every other <c>@todo</c> information
+    /// (owner's decision 2026-10-12): <c>x.omr.json</c> gives each key a <c>confidence</c>, and
+    /// one below <see cref="OmrSideFile.WarnBelow"/> — or with none — is raised so F8 reaches it
+    /// first. A key the file does not list, a mark with no key and a file with no side file stay.
+    /// </summary>
+    [Fact]
+    public void TheReadersUnsureMarks_AreWarnings_TheRestStayInformation()
+    {
+        string dir = Directory.CreateTempSubdirectory("lys-omr-").FullName;
+        string lys = Path.Combine(dir, "x.lys");
+        string text = Book("c'4@todo(b1 \"wrong note?\") d'4@todo(b2 \"a tie\") e'4@todo(b3) f'4@todo(o9) | g'1@todo |");
+        string Severities()
+        {
+            var tree = SyntaxTree.Parse(text);
+            var pairs = SemanticValidation.Run(tree).Where(d => d.Code == DiagnosticCodes.TodoMark)
+                .Select(d => (d, LilySharpLanguageServer.ConvertDiagnostic(d, text))).ToList();
+            LilySharpLanguageServer.RaiseUnsureMarks(tree, new System.Uri(lys), pairs);
+            return string.Join(" ", pairs.Select(p => p.Item2.Severity == LilySharp.Lsp.Protocol.DiagnosticSeverity.Warning ? "W" : "I"));
+        }
+
+        // No side file: every mark is information.
+        Assert.Equal("I I I I I", Severities());
+
+        File.WriteAllText(Path.ChangeExtension(lys, ".omr.json"), """
+            { "version": 1, "todos": [
+              { "key": "b1", "confidence": 0.2 }, { "key": "b2", "confidence": 0.6 },
+              { "key": "b3", "confidence": null } ] }
+            """);
+        // b1 below 0.6 and b3 with no value are warnings; b2 (0.6), o9 (not listed) and the
+        // keyless mark stay information.
+        Assert.Equal("W I W I I", Severities());
+    }
+
+    /// <summary>
     /// The OMR reader's candidates (proposal B2): <c>x.omr.json</c> beside <c>x.lys</c> lists,
     /// per key, what the marked item might be; each is a quick fix that writes it over the
     /// item, the mark with it. A key the file does not list, and a mark without a key, get none.

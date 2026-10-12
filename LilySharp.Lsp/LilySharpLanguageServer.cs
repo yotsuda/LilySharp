@@ -484,10 +484,11 @@ public sealed partial class LilySharpLanguageServer
         // settled keystroke the collect is there to lend.
         try
         {
+            var semantic = new List<(LilySharp.Core.Syntax.Diagnostic Core, LilySharp.Lsp.Protocol.Diagnostic Lsp)>();
             foreach (var d in DocumentDiagnostics(doc, token, out _))
-            {
-                diagnostics.Add(ConvertDiagnostic(d, doc.Text, doc.Uri));
-            }
+                semantic.Add((d, ConvertDiagnostic(d, doc.Text, doc.Uri)));
+            RaiseUnsureMarks(doc.Tree, doc.Uri, semantic);
+            diagnostics.AddRange(semantic.Select(s => s.Lsp));
         }
         catch (OperationCanceledException)
         {
@@ -514,6 +515,33 @@ public sealed partial class LilySharpLanguageServer
             Uri = doc.Uri,
             Diagnostics = [.. diagnostics]
         });
+    }
+
+    /// <summary>
+    /// An OMR reader's marks it is unsure of become warnings; every other <c>@todo</c> stays the
+    /// information it is (owner's decision 2026-10-12). The side file <c>x.omr.json</c> beside
+    /// <c>x.lys</c> gives each key its <c>confidence</c>; a mark the file lists below
+    /// <see cref="OmrSideFile.WarnBelow"/> (or with none) is raised, so F8 reaches it first.
+    /// </summary>
+    internal static void RaiseUnsureMarks(SyntaxTree tree, Uri uri,
+        IReadOnlyList<(LilySharp.Core.Syntax.Diagnostic Core, LilySharp.Lsp.Protocol.Diagnostic Lsp)> diagnostics)
+    {
+        if (!uri.IsFile || !diagnostics.Any(d => d.Core.Code == DiagnosticCodes.TodoMark))
+            return;
+        var sure = OmrSideFile.Confidences(System.IO.Path.ChangeExtension(uri.LocalPath, ".omr.json"));
+        if (sure.Count == 0)
+            return;
+        var marks = TodoMarksOf(tree);
+        foreach (var (core, lsp) in diagnostics)
+        {
+            if (core.Code != DiagnosticCodes.TodoMark)
+                continue;
+            string? key = null;
+            foreach (var m in marks)
+                if (m.Start <= core.Span.Start && core.Span.End <= m.End) { key = m.Key; break; }
+            if (OmrSideFile.Raises(sure, key))
+                lsp.Severity = LspDiagnosticSeverity.Warning;
+        }
     }
 
     internal static LilySharp.Lsp.Protocol.Diagnostic ConvertDiagnostic(

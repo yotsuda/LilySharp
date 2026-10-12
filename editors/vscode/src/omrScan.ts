@@ -28,7 +28,8 @@ import * as path from 'path';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import {
     BarAnchor, PrintedBar, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, parseSideFile,
-    pageLabel, scanBarForPrinted, scanTitle, shiftAnchors, shownImage, sideFileOf, todoTarget,
+    SCAN_DEFAULT_THRESHOLD, pageLabel, scanBarForPrinted, scanTitle, shiftAnchors, shownImage, sideFileOf, todoStroke,
+    todoTarget,
 } from './omrScanCore';
 
 export interface OmrScanDeps {
@@ -332,8 +333,13 @@ function render(view: ScanView): void {
         const bars = side.measures.map((m, i) => m.page !== p.page ? '' :
             `<rect class="bar" ${rect(m.box)} data-i="${i}">`
             + `<title>bar ${m.measure}${m.part ? ` (${esc(m.part)})` : ''}</title></rect>`).join('');
-        const todos = side.todos.filter(t => t.page === p.page).map(t =>
-            `<rect class="todo" ${rect(t.box)} data-key="${esc(t.key)}"><title>${esc(t.memo ?? t.key)}</title></rect>`).join('');
+        // An outline, heavier and darker the less sure the reader is; the slider hides the surer.
+        const todos = side.todos.filter(t => t.page === p.page).map(t => {
+            const s = todoStroke(t), sure = t.confidence === undefined ? '' : ` (${t.confidence.toFixed(2)})`;
+            return `<rect class="todo${t.quiet ? ' quiet' : ''}" ${rect(t.box)} data-key="${esc(t.key)}" `
+                + `data-c="${t.confidence ?? ''}" style="stroke-width: ${s.width}px; stroke-opacity: ${s.opacity}">`
+                + `<title>${esc(t.memo ?? t.key)}${sure}</title></rect>`;
+        }).join('');
         return `<section class="page" data-page="${p.page}" title="${esc(pageLabel(p))}">`
             + `<img src="${src}" alt="page ${p.page}">`
             + `<svg viewBox="0 0 ${p.width} ${p.height}" preserveAspectRatio="none">${bars}${todos}`
@@ -353,13 +359,19 @@ function render(view: ScanView): void {
   .page.missing { padding: 12px; border: 1px dashed var(--vscode-editorWidget-border, #888); }
   rect.bar { fill: transparent; stroke: none; cursor: pointer; }
   rect.bar:hover { fill: rgba(0, 120, 215, .08); }
-  rect.todo { fill: rgba(220, 0, 0, .08); stroke: #d00; stroke-width: 4; vector-effect: non-scaling-stroke; cursor: pointer; }
-  rect.todo:hover { fill: rgba(220, 0, 0, .18); }
+  rect.todo { fill: transparent; stroke: #d00; vector-effect: non-scaling-stroke; cursor: pointer; }
+  rect.todo.quiet { stroke-dasharray: 4 3; }
+  rect.todo:hover { fill: rgba(220, 0, 0, .12); }
+  .filter { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; }
+  .filter input { width: 140px; }
   rect.light { fill: rgba(0, 120, 215, .14); stroke: #0078d7; stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: none; }
 </style></head><body>
 <p class="note">${esc(path.basename(view.lys.fsPath))} — read from ${side.pages.length === 1 ? 'this page' : `these ${side.pages.length} pages`}. `
-        + `Red: marked to check. A click goes to the music; the caret lights its bar here. `
-        + `<label><input type="checkbox" id="link" checked> Scroll with the preview</label></p>
+        + `Red: marked to check — heavier where the reader is less sure. A click goes to the music; the caret lights its bar here. `
+        + `<label><input type="checkbox" id="link" checked> Scroll with the preview</label>`
+        + `<label class="filter" title="Show the marks the reader is less sure of than this (its confidence, 0 to 1)">`
+        + `Marks below <input type="range" id="thr" min="0.05" max="1" step="0.05" value="${SCAN_DEFAULT_THRESHOLD}">`
+        + `<span id="thrOut"></span></label></p>
 ${pages || '<p>The side file lists no page.</p>'}
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
@@ -368,9 +380,27 @@ ${pages || '<p>The side file lists no page.</p>'}
   if (state.linked === false) link.checked = false;
   vscode.postMessage({ type: 'link', on: link.checked });
   link.addEventListener('change', () => {
-    vscode.setState({ ...state, linked: link.checked });
+    state.linked = link.checked;
+    vscode.setState(state);
     vscode.postMessage({ type: 'link', on: link.checked });
   });
+
+  // The marks the reader is less sure of than the slider show (one with no confidence always).
+  const thr = document.getElementById('thr'), thrOut = document.getElementById('thrOut');
+  if (typeof state.threshold === 'number') thr.value = String(state.threshold);
+  function filter() {
+    const v = Number(thr.value);
+    let shown = 0, total = 0;
+    for (const r of document.querySelectorAll('rect.todo')) {
+      total++;
+      const on = r.dataset.c === '' || v >= 1 || Number(r.dataset.c) < v;
+      r.style.display = on ? '' : 'none';
+      if (on) shown++;
+    }
+    thrOut.textContent = v.toFixed(2) + ' (' + shown + ' / ' + total + ')';
+  }
+  thr.addEventListener('input', () => { state.threshold = Number(thr.value); vscode.setState(state); filter(); });
+  filter();
   document.addEventListener('click', e => {
     const r = e.target.closest('rect');
     if (!r) return;

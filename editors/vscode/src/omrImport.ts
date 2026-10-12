@@ -167,10 +167,14 @@ export async function importFromImage(
     const todos = result.done.todos ?? 0;
     const marks = todos === 0 ? 'nothing marked to check'
         : todos === 1 ? '1 mark to check (@todo)' : `${todos} marks to check (@todo)`;
+    // The marks the reader was sure enough of to leave out of the .lys (its --todo-threshold):
+    // the scan view still draws them faintly, its slider shows them.
+    const quiet = result.done.quiet ?? 0;
+    const markText = quiet > 0 ? `${marks} (+${quiet} quiet, in the scan view)` : marks;
     if (meaning === 'partial') {
-        vscode.window.showWarningMessage(`Lily#: read ${name} — some pages could not be read; ${marks}.`, 'Show Output')
+        vscode.window.showWarningMessage(`Lily#: read ${name} — some pages could not be read; ${markText}.`, 'Show Output')
             .then(choice => { if (choice === 'Show Output') { deps.output.show(true); } });
     } else {
-        vscode.window.showInformationMessage(`Lily#: read ${name} — ${marks}.`);
+        vscode.window.showInformationMessage(`Lily#: read ${name} — ${markText}.`);
     }
 }
