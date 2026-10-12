@@ -378,6 +378,89 @@ public class ExtractPhraseResponse
     public string? Error { get; set; }
 }
 
+/// <summary>Parameters for lilysharp/guessSectionKey: the caret or selection (0-based
+/// character offsets) naming the sections whose key to guess.</summary>
+public class GuessSectionKeyParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    public int SelectionStart { get; set; }
+    public int SelectionEnd { get; set; }
+}
+
+/// <summary>Response for lilysharp/guessSectionKey: one entry per section the selection
+/// touches, or an <see cref="Error"/>.</summary>
+public class GuessSectionKeyResponse
+{
+    public SectionKeyGuess[]? Sections { get; set; }
+    public string? Error { get; set; }
+}
+
+/// <summary>One section's guesses, best first, and the key its source starts it in.</summary>
+public class SectionKeyGuess
+{
+    public string Section { get; set; } = "";
+    /// <summary>The key the source states at the section's start (<c>d major</c>), or null.</summary>
+    public string? CurrentKey { get; set; }
+    public KeyGuess[] Candidates { get; set; } = [];
+}
+
+/// <summary>One ranked key: <see cref="Key"/> as written after <c>key</c>, and its score.</summary>
+public class KeyGuess
+{
+    public string Key { get; set; } = "";
+    public double Score { get; set; }
+}
+
+/// <summary>Parameters for lilysharp/setSectionKey: write <see cref="Key"/>
+/// (<c>d major</c>) as the key <see cref="Section"/> starts in.</summary>
+public class SetSectionKeyParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    public string Section { get; set; } = "";
+    public string Key { get; set; } = "";
+}
+
+/// <summary>Response for lilysharp/setSectionKey: the rewritten source, or an error.</summary>
+public class SetSectionKeyResponse
+{
+    public string? NewText { get; set; }
+    public string? Error { get; set; }
+}
+
+/// <summary>Parameters for lilysharp/planRespell and lilysharp/respellToKey: respell
+/// <see cref="Section"/>'s notes to <see cref="Key"/> (<c>ges major</c>); for the latter,
+/// only the changes whose id is in <see cref="Accepted"/> (all when null).</summary>
+public class RespellParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    public string Section { get; set; } = "";
+    public string Key { get; set; } = "";
+    public string[]? Accepted { get; set; }
+}
+
+/// <summary>One planned respelling: <c>fis</c> → <c>ges</c> on <see cref="Count"/> notes.</summary>
+public class RespellChange
+{
+    public string Id { get; set; } = "";
+    public string From { get; set; } = "";
+    public string To { get; set; } = "";
+    public int Count { get; set; }
+}
+
+/// <summary>Response for lilysharp/planRespell.</summary>
+public class PlanRespellResponse
+{
+    public RespellChange[] Changes { get; set; } = [];
+}
+
+/// <summary>Response for lilysharp/respellToKey: the rewritten source, or an error.</summary>
+public class RespellToKeyResponse
+{
+    public string? NewText { get; set; }
+    public string? Error { get; set; }
+    public int Changed { get; set; }
+}
+
 /// <summary>Parameters for lilysharp/importMusicXml. A <see cref="FilePath"/> is
 /// preferred (handles a binary <c>.mxl</c>); <see cref="XmlText"/> is the fallback
 /// when only raw XML is on hand.</summary>

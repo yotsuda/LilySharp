@@ -325,6 +325,16 @@
         "title": "Add Chord Track (auto-harmonize)"
       },
       {
+        "command": "lilysharp.guessSectionKey",
+        "category": "Lily#",
+        "title": "Guess Section Key…"
+      },
+      {
+        "command": "lilysharp.respellNotesToKey",
+        "category": "Lily#",
+        "title": "Respell Notes to Key…"
+      },
+      {
         "command": "lilysharp.newScore",
         "category": "Lily#",
         "icon": "$(new-file)",
@@ -521,6 +531,14 @@
           "when": "resourceLangId == lilysharp"
         },
         {
+          "command": "lilysharp.guessSectionKey",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.respellNotesToKey",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
           "command": "lilysharp.importMusicXml"
         },
         {
@@ -676,6 +694,16 @@
         },
         {
           "command": "lilysharp.addChordTrack",
+          "when": "resourceLangId == lilysharp",
+          "group": "1_modification@3"
+        },
+        {
+          "command": "lilysharp.guessSectionKey",
+          "when": "resourceLangId == lilysharp",
+          "group": "1_modification@3"
+        },
+        {
+          "command": "lilysharp.respellNotesToKey",
           "when": "resourceLangId == lilysharp",
           "group": "1_modification@3"
         }

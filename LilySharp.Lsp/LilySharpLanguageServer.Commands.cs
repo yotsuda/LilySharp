@@ -975,6 +975,101 @@ public sealed partial class LilySharpLanguageServer
             : new ExtractPhraseResponse { Success = false, Error = result.Error };
     }
 
+    /// <summary>
+    /// "Guess Section Key": the ranked keys of every section the caret or selection touches
+    /// (<see cref="LilySharp.Core.Harmony.KeyEstimator"/>).
+    /// </summary>
+    [JsonRpcMethod("lilysharp/guessSectionKey", UseSingleObjectParameterDeserialization = true)]
+    public Task<GuessSectionKeyResponse> GuessSectionKeyAsync(GuessSectionKeyParams @params, CancellationToken token)
+        => OffDispatch(() => GuessSectionKey(@params), token);
+
+    public GuessSectionKeyResponse GuessSectionKey(GuessSectionKeyParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new GuessSectionKeyResponse { Error = "Document not found." };
+
+        var tree = SyntaxTree.Parse(doc.Text);
+        if (tree.HasErrors)
+            return new GuessSectionKeyResponse { Error = "Fix the errors in the score first." };
+
+        int start = Math.Min(@params.SelectionStart, @params.SelectionEnd);
+        int end = Math.Max(@params.SelectionStart, @params.SelectionEnd);
+        var names = LilySharp.Core.Harmony.KeyEstimator.SectionsAt(tree.GetRoot(), start, end);
+        if (names.Count == 0)
+            return new GuessSectionKeyResponse { Error = "Put the caret in a section (or select sections) to guess its key." };
+
+        var sections = new List<SectionKeyGuess>();
+        foreach (var name in names)
+        {
+            if (LilySharp.Core.Harmony.KeyEstimator.Estimate(tree, name) is not { } estimate)
+                continue;
+            sections.Add(new SectionKeyGuess
+            {
+                Section = name,
+                CurrentKey = estimate.CurrentKey,
+                Candidates = estimate.Likely
+                    .Select(c => new KeyGuess { Key = c.Text, Score = c.Score }).ToArray(),
+            });
+        }
+        return sections.Count == 0
+            ? new GuessSectionKeyResponse { Error = $"No notes to read in section {string.Join(", ", names)}." }
+            : new GuessSectionKeyResponse { Sections = sections.ToArray() };
+    }
+
+    /// <summary>Writes the chosen key as the key a section starts in
+    /// (<see cref="LilySharp.Core.Harmony.KeyEstimator.SetSectionKey"/>).</summary>
+    [JsonRpcMethod("lilysharp/setSectionKey", UseSingleObjectParameterDeserialization = true)]
+    public Task<SetSectionKeyResponse> SetSectionKeyAsync(SetSectionKeyParams @params, CancellationToken token)
+        => OffDispatch(() => SetSectionKey(@params), token);
+
+    public SetSectionKeyResponse SetSectionKey(SetSectionKeyParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new SetSectionKeyResponse { Error = "Document not found." };
+
+        var text = LilySharp.Core.Harmony.KeyEstimator.SetSectionKey(doc.Text, @params.Section, @params.Key);
+        return text != null
+            ? new SetSectionKeyResponse { NewText = text }
+            : new SetSectionKeyResponse { Error = $"Could not write key {@params.Key} into section {@params.Section}." };
+    }
+
+    /// <summary>The respellings "Respell Notes to Key" would make in a section
+    /// (<see cref="LilySharp.Core.Editing.KeyRespeller.Plan"/>).</summary>
+    [JsonRpcMethod("lilysharp/planRespell", UseSingleObjectParameterDeserialization = true)]
+    public Task<PlanRespellResponse> PlanRespellAsync(RespellParams @params, CancellationToken token)
+        => OffDispatch(() => PlanRespell(@params), token);
+
+    public PlanRespellResponse PlanRespell(RespellParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new PlanRespellResponse();
+        return new PlanRespellResponse
+        {
+            Changes = LilySharp.Core.Editing.KeyRespeller.Plan(doc.Text, @params.Section, @params.Key)
+                .Select(c => new RespellChange { Id = c.Id, From = c.From, To = c.To, Count = c.Count })
+                .ToArray(),
+        };
+    }
+
+    /// <summary>Respells a section's notes to a key, every note keeping its pitch
+    /// (<see cref="LilySharp.Core.Editing.KeyRespeller.Respell"/>).</summary>
+    [JsonRpcMethod("lilysharp/respellToKey", UseSingleObjectParameterDeserialization = true)]
+    public Task<RespellToKeyResponse> RespellToKeyAsync(RespellParams @params, CancellationToken token)
+        => OffDispatch(() => RespellToKey(@params), token);
+
+    public RespellToKeyResponse RespellToKey(RespellParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new RespellToKeyResponse { Error = "Document not found." };
+        var result = LilySharp.Core.Editing.KeyRespeller.Respell(
+            doc.Text, @params.Section, @params.Key, @params.Accepted);
+        return new RespellToKeyResponse { NewText = result.NewText, Error = result.Error, Changed = result.ChangedPitches };
+    }
+
     [JsonRpcMethod("lilysharp/convertOctaves", UseSingleObjectParameterDeserialization = true)]
     public Task<ConvertOctavesResponse> ConvertOctavesAsync(ConvertOctavesParams @params, CancellationToken token)
         => OffDispatch(() => ConvertOctaves(@params), token);

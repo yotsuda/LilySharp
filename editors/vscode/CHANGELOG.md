@@ -74,6 +74,26 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Editor
 
+- **Guess Section Key…** (editor context menu and the command palette). It reads the notes of
+  the section at the caret — or of every section a selection touches, or the one a `form`
+  reference names — across all its parts, and lists the likely keys best first, only those scoring within 0.3 of the best and at most five (duration-weighted
+  pitch classes against the Krumhansl–Kessler profiles, plus a nudge for the key whose tonic the
+  section ends on; the tonic is spelled as the written accidentals spell it, `fis` or `ges`).
+  The key picked is written as the one the section starts in: a key already stated there is
+  rewritten, otherwise it goes into the section's header (a file grouped by part with no
+  top-level `section` gets `section A { key … }`). Escape changes nothing.
+  After a key is picked, the notes spelled against it are offered for respelling (below).
+- **Respell Notes to Key…** (editor context menu and the command palette). Notes written before
+  the key was known come out spelled the wrong way round — `fis` where G♭ major wants `ges`, or
+  `fis` and `ges` both in one section. The command lists the respellings that put the section
+  at the caret (or every section a selection touches) in the key it starts in — the guessed
+  key when it states none — as `fis → ges · 5 notes`, all checked; the checked ones are
+  applied. A note in the key's scale takes the scale's spelling; a note outside it is left
+  alone when the section writes it one way, and unified to the spelling written most when it
+  writes it several (a tie goes to the key's way: the raised sixth and seventh in minor, sharps
+  in a sharp key, flats in a flat key). Notes after a key change inside the section are left
+  alone. Every note keeps its pitch: octave marks are recomputed for relative music and for
+  `b` ⇄ `ces`, and the rewrite is checked note by note or refused.
 - **`midiInstrument` completes with its quotes and its names.** Picking the property writes
   `midiInstrument ""` with the caret between the quotes and lists LilyPond's 128 General MIDI
   names there, in GM order with their family; a name typed part-way (`"electric gui`) is

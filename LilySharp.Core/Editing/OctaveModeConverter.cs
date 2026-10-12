@@ -200,9 +200,16 @@ public static class OctaveModeConverter
     /// part's later sections under a form that did not list them yet) has nothing recorded
     /// and is left as written; one the original played is played exactly as often, or the
     /// rewrite is refused.
+    /// <para>
+    /// <paramref name="octaveShift"/> (original position → octaves) is for a rewrite that
+    /// RESPELLS a pitch across the B/C letter boundary (<see cref="KeyRespeller"/>): the
+    /// octave the walk reports is the LETTER's, so <c>b'</c> respelled <c>ces</c> sounds the
+    /// same as <c>ces''</c> — its recorded octave plus one.
+    /// </para>
     /// </remarks>
-    internal static Result Repin(string source, string candidate)
+    internal static Result Repin(string source, string candidate, IReadOnlyDictionary<int, int>? octaveShift = null)
     {
+        int Shift(int orig) => octaveShift != null && octaveShift.TryGetValue(orig, out int s) ? s : 0;
         var tree = SyntaxTree.Parse(source);
         if (tree.HasErrors)
             return Fail("The file has syntax errors — no changes made.");
@@ -239,11 +246,12 @@ public static class OctaveModeConverter
                 plays[orig] = k + 1;
                 if (k >= wanted.Count)
                     return octave;
-                int marks = wanted[k] - (octave - candidatePitches[pos].Marks);
+                int target = wanted[k] + Shift(orig);
+                int marks = target - (octave - candidatePitches[pos].Marks);
                 if (newMarks.TryGetValue(pos, out int earlier) && earlier != marks)
                     conflict ??= orig;
                 newMarks[pos] = marks;
-                return wanted[k];
+                return target;
             }))
             return Fail("The rewritten file could not be compiled — no changes made.");
         if (conflict is { } c)
@@ -283,7 +291,7 @@ public static class OctaveModeConverter
             }))
             return Fail("The re-marked file could not be compiled — no changes made.");
         foreach (var (pos, wanted) in recorded)
-            if (!again.TryGetValue(pos, out var got) || !got.SequenceEqual(wanted))
+            if (!again.TryGetValue(pos, out var got) || !got.SequenceEqual(wanted.Select(o => o + Shift(pos))))
                 return Fail($"The rewrite would move the note at {LineCol(source, pos)} — "
                     + "no changes made.");
         return new Result(result, null, changed);

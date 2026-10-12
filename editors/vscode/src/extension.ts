@@ -683,6 +683,8 @@ export function activate(context: vscode.ExtensionContext) {
             outputChannel.appendLine('addChordTrack command triggered');
             addChordTrack();
         }),
+        vscode.commands.registerCommand('lilysharp.guessSectionKey', () => guessSectionKey()),
+        vscode.commands.registerCommand('lilysharp.respellNotesToKey', () => respellNotesToKey()),
         vscode.commands.registerCommand('lilysharp.newScore', async () => {
             outputChannel.appendLine('newScore command triggered');
             const doc = await vscode.workspace.openTextDocument({
@@ -2134,6 +2136,196 @@ async function addChordTrack() {
         vscode.window.showErrorMessage(`Lily#: add chord track failed: ${err}`);
     }
 }
+
+interface SectionKeyGuess {
+    Section: string;
+    CurrentKey: string | null;
+    Candidates: { Key: string; Score: number }[];
+}
+interface GuessSectionKeyResponse {
+    Sections: SectionKeyGuess[] | null;
+    Error: string | null;
+}
+interface SetSectionKeyResponse {
+    NewText: string | null;
+    Error: string | null;
+}
+
+/** `fis major` → `F♯ major`, for the picker's description. */
+function displayKey(key: string): string {
+    const [tonic, mode] = key.split(' ');
+    const accidental = tonic.endsWith('isis') ? '𝄪' : tonic.endsWith('eses') ? '𝄫'
+        : tonic.endsWith('is') ? '♯' : tonic.length > 1 && tonic.endsWith('es') ? '♭' : '';
+    return `${tonic[0].toUpperCase()}${accidental} ${mode}`;
+}
+
+/** Replaces the whole document with the server's rewrite. */
+async function replaceDocument(doc: vscode.TextDocument, text: string) {
+    const fullRange = new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length));
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(doc.uri, fullRange, text);
+    await vscode.workspace.applyEdit(edit);
+}
+
+/** The .lys editor in front with the server ready, or undefined after saying why not. */
+function lysEditorFor(what: string): vscode.TextEditor | undefined {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || editor.document.languageId !== 'lilysharp') {
+        vscode.window.showErrorMessage(`Lily#: open a .lys file to ${what}.`);
+        return undefined;
+    }
+    if (!client) {
+        vscode.window.showErrorMessage('Lily#: language server not ready.');
+        return undefined;
+    }
+    return editor;
+}
+
+/** The key guesses for the sections at the caret or selection, or undefined after an error. */
+async function sectionKeyGuesses(editor: vscode.TextEditor): Promise<SectionKeyGuess[] | undefined> {
+    const doc = editor.document;
+    const sel = editor.selection;
+    const response = await client!.sendRequest<GuessSectionKeyResponse>('lilysharp/guessSectionKey', {
+        textDocument: { uri: doc.uri.toString() },
+        selectionStart: doc.offsetAt(sel.start),
+        selectionEnd: doc.offsetAt(sel.end),
+    });
+    if (!response.Sections || response.Sections.length === 0) {
+        vscode.window.showErrorMessage(`Lily#: ${response.Error ?? 'could not guess a key.'}`);
+        return undefined;
+    }
+    return response.Sections;
+}
+
+/**
+ * Guesses the key of the section(s) at the caret or selection from their notes, and
+ * offers the ranked keys in a picker; the one picked is written as the key the section
+ * starts in (an existing starting key is rewritten), then the notes spelled against it
+ * are offered for respelling. Escape leaves the file untouched.
+ */
+async function guessSectionKey() {
+    const editor = lysEditorFor('guess a section\'s key');
+    if (!editor) { return; }
+    const doc = editor.document;
+    try {
+        const sections = await sectionKeyGuesses(editor);
+        if (!sections) { return; }
+
+        for (const section of sections) {
+            const items = section.Candidates.map((c, i) => ({
+                label: `key ${c.Key}`,
+                description: [
+                    displayKey(c.Key),
+                    `score ${c.Score.toFixed(2)}`,
+                    i === 0 ? 'best guess' : undefined,
+                    c.Key === section.CurrentKey ? 'current' : undefined,
+                ].filter(Boolean).join(' · '),
+                key: c.Key,
+            }));
+            const current = section.CurrentKey ? `now ${section.CurrentKey}` : 'no key stated at its start';
+            const picked = await vscode.window.showQuickPick(items, {
+                title: `Lily#: key of section ${section.Section} (${current})`,
+                placeHolder: 'Pick a key to write at the start of the section (Escape: leave it as it is)',
+            });
+            if (!picked) { continue; }
+
+            if (picked.key !== section.CurrentKey) {
+                const set = await client!.sendRequest<SetSectionKeyResponse>('lilysharp/setSectionKey', {
+                    textDocument: { uri: doc.uri.toString() },
+                    section: section.Section,
+                    key: picked.key,
+                });
+                if (set.NewText == null) {
+                    vscode.window.showErrorMessage(`Lily#: ${set.Error ?? 'could not write the key.'}`);
+                    return;
+                }
+                await replaceDocument(doc, set.NewText);
+            }
+            await offerRespell(doc, section.Section, picked.key, false);
+        }
+    } catch (err) {
+        vscode.window.showErrorMessage(`Lily#: guess section key failed: ${err}`);
+    }
+}
+
+interface RespellChange {
+    Id: string;
+    From: string;
+    To: string;
+    Count: number;
+}
+interface RespellToKeyResponse {
+    NewText: string | null;
+    Error: string | null;
+    Changed: number;
+}
+
+/**
+ * Offers the respellings that put a section's notes in `key` (`fis` → `ges` in G♭ major),
+ * every one checked; the checked ones are applied, each note keeping its pitch. With
+ * nothing to respell it says so only when asked directly (`tellIfNone`).
+ */
+async function offerRespell(doc: vscode.TextDocument, section: string, key: string, tellIfNone: boolean) {
+    const plan = await client!.sendRequest<{ Changes: RespellChange[] }>('lilysharp/planRespell', {
+        textDocument: { uri: doc.uri.toString() }, section, key,
+    });
+    if (plan.Changes.length === 0) {
+        if (tellIfNone) {
+            vscode.window.showInformationMessage(`Lily#: section ${section} is already spelled for ${key}.`);
+        }
+        return;
+    }
+    const items = plan.Changes.map(c => ({
+        label: `${c.From} → ${c.To}`,
+        description: `${c.Count} note${c.Count === 1 ? '' : 's'}`,
+        picked: true,
+        id: c.Id,
+    }));
+    const chosen = await vscode.window.showQuickPick(items, {
+        title: `Lily#: respell section ${section} for ${key} (${displayKey(key)})`,
+        placeHolder: 'Uncheck what to keep as written; Enter respells the rest (Escape: none)',
+        canPickMany: true,
+    });
+    if (!chosen || chosen.length === 0) { return; }
+
+    const response = await client!.sendRequest<RespellToKeyResponse>('lilysharp/respellToKey', {
+        textDocument: { uri: doc.uri.toString() }, section, key,
+        accepted: chosen.map(c => c.id),
+    });
+    if (response.NewText == null) {
+        vscode.window.showErrorMessage(`Lily#: ${response.Error ?? 'could not respell.'}`);
+        return;
+    }
+    await replaceDocument(doc, response.NewText);
+    vscode.window.showInformationMessage(
+        `Lily#: respelled ${response.Changed} note${response.Changed === 1 ? '' : 's'} in section ${section} for ${key}.`);
+}
+
+/**
+ * Respells the notes of the section(s) at the caret or selection to the key each starts
+ * in — or, where no key is stated, to the guessed one (the picker's title says which).
+ */
+async function respellNotesToKey() {
+    const editor = lysEditorFor('respell notes');
+    if (!editor) { return; }
+    try {
+        const sections = await sectionKeyGuesses(editor);
+        if (!sections) { return; }
+        for (const section of sections) {
+            const key = section.CurrentKey && section.CurrentKey !== 'custom'
+                ? section.CurrentKey : section.Candidates[0]?.Key;
+            if (!key) { continue; }
+            if (!section.CurrentKey) {
+                vscode.window.showInformationMessage(
+                    `Lily#: section ${section.Section} states no key; respelling for the guessed ${key}.`);
+            }
+            await offerRespell(editor.document, section.Section, key, true);
+        }
+    } catch (err) {
+        vscode.window.showErrorMessage(`Lily#: respell notes failed: ${err}`);
+    }
+}
+
 
 interface ImportMusicXmlResponse {
     Lys: string | null;
