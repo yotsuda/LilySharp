@@ -40,15 +40,15 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public sealed class ConcertPitchTests
 {
-    // ⚠️ `octave absolute` on purpose, as InstrumentTranspositionMidiTests: a preset also
-    // moves the RELATIVE anchor, and that would mix a second variable into a table about
-    // the transposition. Absolute pins the written note at C5 for every row.
+    // ⚠️ `octave 4` on purpose, as InstrumentTranspositionMidiTests: a preset moves the
+    // anchor (both modes, since 2026-10-13), and that would mix a second variable into a
+    // table about the transposition. The explicit octave pins the written note at C5.
     private static string Book(string top, string header, string scoreOpts = "") => $$"""
         time 4/4
         key c major
         octave absolute
         {{top}}
-        part x { {{header}} }
+        part x { {{header}} octave 4 }
         part ctl
         section A { x { c'1 | } ctl { c'1 | } }
         form { A }
@@ -167,7 +167,7 @@ public sealed class ConcertPitchTests
     {
         var tree = Parse(
             $"time 4/4\nkey c major\noctave absolute\n{top}\n"
-            + $"part x {{ {header} section A {{ c'1 | }} }}\n"
+            + $"part x {{ {header} octave 4 section A {{ c'1 | }} }}\n"
             + $"form {{ A }}\nscore{scoreOpts} {{ staff x }}");
         var midi = new MidiExporter().Export(tree);
         return midi.Tracks[1].Notes[0].Pitch;
@@ -408,8 +408,8 @@ public sealed class ConcertPitchTests
             key c major
             octave absolute
             pitch concert
-            part sax { instrument alto-sax pitch written }
-            part cl { instrument clarinet }
+            part sax { instrument alto-sax pitch written octave 4 }
+            part cl { instrument clarinet octave 4 }
             section A { sax { c'1 | } cl { c'1 | } }
             form { A }
             score pitch transposed { staff sax staff cl }

@@ -94,8 +94,10 @@ Contraction    = 'es' | 'as' | 'eses' | 'ases' ;   (* = ees / aes / eeses / aese
    section's end; NOT in a `part` declaration, which sets the base) switches to ABSOLUTE
    mode: bare c = C4, and '/',' are absolute offsets from that anchor (c' = C5,
    c, = C3) with NO carry between notes — octave mistakes cannot cascade, which
-   is the recommended mode for AI-generated scores. `part X { octave N }`
-   re-anchors the absolute base (e.g. a bass part with `octave 2`). Section
+   is the recommended mode for AI-generated scores. The base is the part's anchor,
+   the SAME as in relative mode: `part X { octave N }`, else the `instrument`'s octave
+   (`instrument bass` = C3, `flute` = C5 — since 2026-10-13; it used to be C4 whatever the
+   preset), else C4. E.g. a bass part with `octave 2` writes its low notes bare. Section
    boundaries restore the file-level mode. *)
 
 ### Duration

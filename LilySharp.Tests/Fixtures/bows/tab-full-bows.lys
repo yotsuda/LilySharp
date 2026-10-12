@@ -2,6 +2,7 @@ octave absolute
 time 4/4
 part m {
   instrument bass
+  octave 4   // the base the notes were written to: absolute mode now reads the preset's octave (2026-10-13)
   clef bass
   section A { e,,4( f,,) g,,~ g,, | a,,8( b,, c, d,) e,4~ e, | c,2( e,,) | g,,4~ g,, a,,( b,,) | }
 }

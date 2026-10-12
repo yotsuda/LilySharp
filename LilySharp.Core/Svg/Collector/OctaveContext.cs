@@ -42,10 +42,10 @@ internal sealed class OctaveContext
     // Reset target for section boundaries (the octave armed for this voice).
     public int InitialOctave = 4;
 
-    // Absolute-mode anchor: bare c = C(OctaveBase). Defaults to 4 (LilyPond's
-    // fixed c=C4) and is overridden ONLY by an explicit `part X { octave N }`, so
-    // a bass part can be written `octave 2` to avoid piling up `,` commas. The
-    // clef default is deliberately NOT used here (absolute stays c=C4 by default).
+    // Absolute-mode anchor: bare c = C(OctaveBase). The part's anchor, as in relative mode
+    // (InstrumentDefaults.AbsoluteBaseOctave): `part X { octave N }`, else the instrument
+    // preset's octave (since 2026-10-13), else 4 — so a bass part can be written `octave 2`
+    // to avoid piling up `,` commas. The clef is deliberately NOT used here.
     public int OctaveBase = 4;
 
     // Reset target for section boundaries, the absolute-mode twin of InitialOctave: the

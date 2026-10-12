@@ -70,9 +70,10 @@ shift octaves on top of that.
 > octaves *relative* to the previous note (the "nearest octave" rule above). It is
 > compact, but a wide leap can leave the line an octave from where you meant it,
 > and a repeated figure like `c c g g` can walk steadily downward. To write
-> **fixed** octaves instead — bare `c` always means C4, and `'` / `,` are absolute
-> per-note offsets — put **`octave absolute`** at the top of your file (return to
-> the default with `octave relative`):
+> **fixed** octaves instead — bare `c` always means the part's anchor (C4 unless the part
+> says `octave N` or its `instrument` preset has another octave: `instrument bass` is C3),
+> and `'` / `,` are absolute per-note offsets — put **`octave absolute`** at the top of your
+> file (return to the default with `octave relative`):
 >
 > ```
 > octave absolute

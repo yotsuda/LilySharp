@@ -49,6 +49,7 @@ public class TabTupletBracketTests
         octave absolute
         part cb {
           instrument bass
+          octave 4
           section A { tuplet 3/2 { bes,,8@f bes,,4 } bes,,4 r8 bes\2 bes bes | }
         }
         form { A }
@@ -62,6 +63,7 @@ public class TabTupletBracketTests
         octave absolute
         part cb {
           instrument bass
+          octave 4
           section A { tuplet 3/2 { e,8\3@f e,4\3 } e,4\3 r8 bes\2 bes bes | }
         }
         form { A }
@@ -76,6 +78,7 @@ public class TabTupletBracketTests
         octave absolute
         part cb {
           instrument bass
+          octave 4
           section A { bes,4@mf tuplet 3/2 { g,8\2 g,4\2~ } g,4\2 f,4 | }
         }
         form { A }
@@ -124,6 +127,7 @@ public class TabTupletBracketTests
             octave absolute
             part cb {
               instrument bass
+              octave 4
               section A { tuplet 3/2 { tuplet 3/2 { bes,,8 bes,, bes,, } bes,,4 bes,, } r2 | }
             }
             form { A }
@@ -153,6 +157,7 @@ public class TabTupletBracketTests
             octave absolute
             part cb {
               instrument bass
+              octave 4
               section A { tuplet 3/2 { bes,,4@turn bes,,8@turn } r4 r2 | }
             }
             form { A }
@@ -177,6 +182,7 @@ public class TabTupletBracketTests
             octave absolute
             part cb {
               instrument bass
+              octave 4
               section A { tuplet 3/2 { f,4 bes,,8[ } bes,,8 bes,,] r4 r4 | }
             }
             form { A }
@@ -200,6 +206,7 @@ public class TabTupletBracketTests
             octave absolute
             part cb {
               instrument bass
+              octave 4
               section A { tuplet 3/2 { a,,8 d,8 g,8[ } g,8] r4 r2 | }
             }
             form { A }

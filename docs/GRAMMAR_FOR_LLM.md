@@ -213,7 +213,9 @@ verbatim `@"C:\music"` / `@"say ""hi"""` (backslash as written, `""` = one quote
   NOT inside `part X { }`, which takes only the base number) switches to ABSOLUTE
   mode: bare `c` = C4 and `'`/`,` are absolute offsets from that anchor (`c'` = C5,
   `c,` = C3), independent per note - octave mistakes never cascade. RECOMMENDED
-  when generating scores. `part X { octave 2 }` re-anchors the base (bass parts).
+  when generating scores. The base is the part's anchor, as in relative mode:
+  `part X { octave N }`, else its `instrument`'s octave (`instrument bass` → bare `c` = C3,
+  `flute` → C5), else C4. `part X { octave 2 }` re-anchors it lower (bass parts).
   Sections restore the file-level mode.
 - `pitch` says which pitch the notes are in — what SOUNDS, or what the player of a
   transposing `instrument` (clarinet, trumpet, horn, alto-sax, …) READS — and its word says

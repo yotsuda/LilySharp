@@ -56,6 +56,7 @@ public class TupletBracketRestBoundTests
         octave absolute
         part melody {
           instrument bass
+          octave 4
           section A { d,4\3 tuplet 3/4 { r16 c a,\2 } g,4\2 a,,4 | }
         }
         form { A }
@@ -71,6 +72,7 @@ public class TupletBracketRestBoundTests
         octave absolute
         part melody {
           instrument bass
+          octave 4
           section A { d,4\3 tuplet 3/4 { e16 c a,\2 } g,4\2 a,,4 | }
         }
         form { A }
@@ -158,7 +160,7 @@ public class TupletBracketRestBoundTests
     // follows it (the rest's stem carries it), so the bracket slopes with the beam.
     private const string BeamOverTheBoundingRest = """
         octave absolute
-        part melody { instrument bass
+        part melody { instrument bass octave 4
           section A { c,16[ tuplet 3/4 { r16 c a,\2 ] } g,4\2 a,,4 r8. | }
         }
         form { A }

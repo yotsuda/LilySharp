@@ -1068,9 +1068,9 @@ public sealed partial class MeasureCollector
                 _meta.ClefPosition = partClefPos;
             }
             _octave.CurrentOctave = partOctave ?? InstrumentDefaults.DefaultAnchorOctave;
-            // ABSOLUTE mode sees the part's OWN `octave N` and nothing else — not the preset
-            // and not the clef. See GetPartDefaults' remarks for what folding them cost.
-            _octave.OctaveBase = InstrumentDefaults.AbsoluteBaseOctave(partExplicitOctave);
+            // ABSOLUTE mode reads the same chain (InstrumentDefaults.AbsoluteBaseOctave):
+            // partOctave is already the part's `octave N`, else its preset's. Not the clef.
+            _octave.OctaveBase = InstrumentDefaults.AbsoluteBaseOctave(partOctave, instrumentPreset: null);
             ApplyTranspose(partTranspose);
             // A part-header key overrides the file key for THIS part (CollectDefinitions
             // left the global key in place; a part that sets none keeps it).
@@ -1789,8 +1789,8 @@ public sealed partial class MeasureCollector
             // Set initial octave: explicit > instrument default > 4. The clef is drawing only.
             _octave.CurrentOctave = partOctave ?? InstrumentDefaults.DefaultAnchorOctave;
             _octave.InitialOctave = _octave.CurrentOctave;
-            // …and the ABSOLUTE base from the part's OWN `octave N` alone (see GetPartDefaults).
-            _octave.OctaveBase = InstrumentDefaults.AbsoluteBaseOctave(partExplicitOctave);
+            // …and the ABSOLUTE base from the same chain (partOctave = `octave N`, else the preset).
+            _octave.OctaveBase = InstrumentDefaults.AbsoluteBaseOctave(partOctave, instrumentPreset: null);
             _octave.InitialOctaveBase = _octave.OctaveBase; // absolute mode's section-reset target
             _octave.SectionOctaveOffset = 0;                // …and no play's shift is open yet
             _octave.OctaveAbsolute = _octave.InitialOctaveAbsolute; // restore file-level octave mode

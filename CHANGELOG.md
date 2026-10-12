@@ -6,6 +6,15 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### One octave rule for both modes (breaking)
+
+- **In `octave absolute`, an `instrument` preset now sets the part's base octave, as it always did
+  in relative mode**: `instrument bass` makes a bare `c` C3, `flute` C5. Until now absolute mode
+  ignored the preset (bare `c` was C4 whatever the instrument) while `octave N` moved it — so the
+  same part sat an octave apart depending on the mode. **Existing files written in absolute mode
+  with a preset whose octave is not 4 (viola, cello, bass/contrabass/bass5/bass6, piano-left,
+  bassoon, trombone, voice-bass: 3; tuba: 2; flute, piccolo: 5) move by
+  that octave**; add `octave 4` to the part to keep their notes where they were.
 ### Clearer errors for five common slips
 
 - **LilyPond's script shorthands** (`c4-.` `->` `--` `-^` `-_` `-!`) are now one error each that

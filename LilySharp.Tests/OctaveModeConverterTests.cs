@@ -115,14 +115,15 @@ public class OctaveModeConverterTests
         Convert(absolute, OctaveMode.Relative);
     }
 
-    /// <summary>A preset moves the RELATIVE anchor only (InstrumentDefaults.AnchorOctave), so
-    /// a bass part's bare letters change their marks both ways.</summary>
+    /// <summary>A preset is the part's anchor in BOTH modes (InstrumentDefaults.AnchorOctave /
+    /// AbsoluteBaseOctave, one chain since 2026-10-13): a bass part's G2 is `g,` in absolute,
+    /// one comma under its C3 base, and converts back to the same relative text.</summary>
     [Fact]
     public void AnInstrumentPresetsAnchor_IsWrittenIntoTheMarks()
     {
         var src = "part m { instrument bass5 \"bass\" }\nsection A {\n  m { g4 a b c | }\n}" + Score;
         var absolute = Convert(src, OctaveMode.Absolute);
-        Assert.Contains("m { g,,4 a,, b,, c, | }", absolute);
+        Assert.Contains("m { g,4 a, b, c | }", absolute);
         Assert.Equal(src, Convert(absolute, OctaveMode.Relative));
     }
 

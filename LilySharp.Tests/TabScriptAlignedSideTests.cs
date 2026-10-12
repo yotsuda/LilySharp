@@ -65,6 +65,7 @@ public sealed class TabScriptAlignedSideTests
             octave absolute
             part cb {
               instrument bass
+              octave 4
               section A { {{note}} r4 r2 | }
             }
             form { A }

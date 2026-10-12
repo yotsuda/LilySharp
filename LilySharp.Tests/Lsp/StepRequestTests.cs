@@ -48,7 +48,7 @@ public class StepRequestTests
     /// <summary>A flute part (GM program 73, 0-based), absolute octaves.</summary>
     private static string Flute(string music) => $$"""
         octave absolute
-        part fl { instrument flute }
+        part fl { instrument flute octave 4 }
         section A { fl { {{music}} } }
         form { A }
         score { staff fl }

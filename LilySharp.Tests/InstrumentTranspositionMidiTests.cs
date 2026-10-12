@@ -62,12 +62,12 @@ public class InstrumentTranspositionMidiTests
     [InlineData("tenor-sax", 58)]    // in B♭, a major 9th down
     [InlineData("baritone-sax", 51)] // in E♭, an octave and a major 6th down
     public void AChromaticTransposer_SoundsWhereTheInstrumentIs(string preset, int expected)
-        // ⚠️ `octave absolute` on purpose: a preset also moves the RELATIVE anchor (a flute
-        // part anchors at 5), and that would mix a second variable into a test about the
-        // sounding shift. Absolute pins the written note at C5 = 72 for every row, so the
-        // only thing that can move the answer is the transposition being measured.
+        // ⚠️ `octave 4` on purpose: a preset moves the anchor (a flute part anchors at 5 —
+        // in both modes since 2026-10-13), and that would mix a second variable into a test
+        // about the sounding shift. The explicit octave pins the written note at C5 = 72 for
+        // every row, so only the transposition being measured can move the answer.
         => Assert.Equal(expected, FirstPitch(
-            $"octave absolute\npart x {{ instrument {preset} section A {{ c'1 | }} }}"));
+            $"octave absolute\npart x {{ instrument {preset} octave 4 section A {{ c'1 | }} }}"));
 
     /// <summary>
     /// ⚠️ Every saxophone is named after a VOICE range, and the MIDI timbre families are

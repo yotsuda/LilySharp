@@ -652,13 +652,10 @@ public sealed partial class LilyPondExporter
                 _lysClef = part != null && PartProperty(part, "clef") is { } partClefWord
                     ? Svg.Collector.MeasureCollector.ParseClefType(partClefWord.ToLowerInvariant())
                     : ClefType.Treble;
-                // The RELATIVE anchor above and the ABSOLUTE one here answer different
-                // questions and resolve differently: the relative one follows the clef and
-                // the instrument preset, the absolute one is middle C unless the part states
-                // an `octave N`. Same split the collector makes in GetPartDefaults, and
-                // reading them off one value is how the twin came to be an octave out.
+                // The ABSOLUTE base reads the same chain as the relative anchor above
+                // (`octave N`, else the preset, else 4 — InstrumentDefaults.AbsoluteBaseOctave).
                 _absoluteBaseOctave = InstrumentDefaults.AbsoluteBaseOctave(
-                    part != null ? ExplicitPartOctave(part) : null);
+                    part != null ? ExplicitPartOctave(part) : null, part != null ? InstrumentPresetOf(part) : null);
                 var music = OrderedMusic(name, part, form, sections);
                 if (IsDrumPart(name, music))
                 {

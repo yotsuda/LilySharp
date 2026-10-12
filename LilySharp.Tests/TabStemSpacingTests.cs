@@ -191,6 +191,7 @@ public sealed class TabStemSpacingTests
             octave absolute
             part cb {
               instrument bass
+              octave 4
               section A { {{music}} }
             }
             form { A }

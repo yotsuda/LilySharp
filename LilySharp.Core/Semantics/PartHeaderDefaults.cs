@@ -248,7 +248,7 @@ public sealed class PartHeaderDefaults
             ClefWord = clefWord,
             Clef = clef,
             AnchorOctave = InstrumentDefaults.AnchorOctave(explicitOctave, preset),
-            AbsoluteBaseOctave = InstrumentDefaults.AbsoluteBaseOctave(explicitOctave),
+            AbsoluteBaseOctave = InstrumentDefaults.AbsoluteBaseOctave(explicitOctave, preset),
             ClefOctaveSemitones = Tunings.ClefOctaveShift(clef),
             TranspositionSemitones = transposition,
             MidiProgram = midiProgram,

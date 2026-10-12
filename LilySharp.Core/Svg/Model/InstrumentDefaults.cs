@@ -127,8 +127,7 @@ public static class InstrumentDefaults
     /// ⚠️ ONE HOME, because it is one quantity and it had drifted into three: the layout
     /// (MeasureCollector.GetPartDefaults), the LilyPond exporter and the MIDI exporter.
     /// ⚠️ The clef is not a step of this chain (see <see cref="DefaultAnchorOctave"/>).
-    /// ⚠️ NOT used by ABSOLUTE mode, which anchors at middle C unless <c>octave N</c> says
-    /// otherwise (<see cref="AbsoluteBaseOctave"/>).
+    /// ABSOLUTE mode reads the same chain (<see cref="AbsoluteBaseOctave"/>, 2026-10-13).
     /// </remarks>
     public static int AnchorOctave(int? explicitOctave, string? instrumentPreset)
     {
@@ -140,22 +139,23 @@ public static class InstrumentDefaults
     }
 
     /// <summary>
-    /// The octave a bare letter means in ABSOLUTE mode: an explicit <c>octave N</c>, else
-    /// middle C — and nothing else.
+    /// The octave a bare letter means in ABSOLUTE mode: an explicit <c>octave N</c>, else the
+    /// <c>instrument</c> preset's octave, else middle C — the same chain as the relative
+    /// anchor (<see cref="AnchorOctave"/>). The clef is in neither.
     /// </summary>
     /// <remarks>
-    /// ⚠️ THE TWO MODES ANCHOR DIFFERENTLY ON PURPOSE, and this one is the short rule.
-    /// OctaveContext says it in as many words: "Absolute-mode anchor: bare c =
-    /// C(OctaveBase). Defaults to 4 … and is overridden ONLY by an explicit
-    /// <c>part X { octave N }</c> … The clef default is deliberately NOT used here."
-    /// Neither the clef nor an instrument preset reaches it — <see cref="AnchorOctave"/>
-    /// is the relative-mode chain and takes both.
+    /// ⚠️ ONE CHAIN FOR BOTH MODES since 2026-10-13 (owner's decision, grammar feedback B1):
+    /// until then the preset moved the relative anchor and not the absolute base, so
+    /// `instrument piano-left` placed a bare <c>des,</c> in D♭2 under the default relative
+    /// mode and in D♭3 under <c>octave absolute</c>, while `octave 3` moved both. A part's
+    /// register is now the same answer whichever mode reads it.
     /// <para>
-    /// Reading one where the other belongs is not academic: it made a bass part written
+    /// The clef stays out (2026-09-15): reading it here made a bass part written
     /// <c>octave absolute</c> play a third lower than it prints.
     /// </para>
     /// </remarks>
-    public static int AbsoluteBaseOctave(int? explicitOctave) => explicitOctave ?? 4;
+    public static int AbsoluteBaseOctave(int? explicitOctave, string? instrumentPreset)
+        => AnchorOctave(explicitOctave, instrumentPreset);
 
     /// <summary>
     /// The <c>.lys</c> clef WORD for a clef — the spelling a part's <c>clef</c> property
