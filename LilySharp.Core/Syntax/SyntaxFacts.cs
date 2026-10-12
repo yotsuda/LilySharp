@@ -456,6 +456,7 @@ internal static class SyntaxFacts
     public static IReadOnlyList<string> LayoutKeyVocabulary { get; } =
         ["markTempo", "barNumbers", "accidentals", "sectionLabels", "partCombineText",
          "chordQualities", "minorChords", "chordDiagrams", "chordNames", "chordList", "voltaBracket",
+         "compressRests",
          // The engraving style (Svg.EngravingStyle, 2026-10-05): a number each, the dotted ones
          // a grob's property (`Stem.thickness 1.5`), cut by the entry walker as one key.
          "lineThickness", "StaffLine.thickness", "LedgerLine.thickness", "LedgerLine.lengthFraction",

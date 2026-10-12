@@ -691,6 +691,8 @@ public sealed partial class LilySharpLanguageServer
         AfterLayoutChordNames,
         /// <summary><c>layout { chordList |</c> — none / center / left.</summary>
         AfterLayoutChordList,
+        /// <summary><c>layout { compressRests |</c> — false / true.</summary>
+        AfterLayoutCompressRests,
         /// <summary><c>layout { voltaBracket |</c> — all / line / a number of bars.</summary>
         AfterLayoutVoltaBracket,
         /// <summary><c>[1. B C]@voltaBracket(|</c> — all / line / a number of bars.</summary>
@@ -1125,6 +1127,8 @@ public sealed partial class LilySharpLanguageServer
                 return CompletionContext.AfterLayoutChordNames;
             if (prevWord.Equals(ChordListKey.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutChordList;
+            if (prevWord.Equals(CompressRestsKey.Key, StringComparison.Ordinal))
+                return CompletionContext.AfterLayoutCompressRests;
             if (prevWord.Equals(VoltaBracketLength.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutVoltaBracket;
             // `Stem.thickness |` — the word before the caret read WITH its dot.

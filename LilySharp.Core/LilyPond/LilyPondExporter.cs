@@ -582,6 +582,9 @@ public sealed partial class LilyPondExporter
         _renderSpec = render != null ? Svg.Collector.RenderSpecParser.Parse(render) : null;
 
         EmitHeader(root);
+        // Before the part variables that call it (EmitPartVariable).
+        if (_layoutPlan.CompressRests)
+            _sb.Append(CompressRestsFunction);
 
         var parts = root.DescendantNodes<PartDeclarationSyntax>().ToList();
         var sections = root.DescendantNodes<SectionDeclarationSyntax>().ToList();

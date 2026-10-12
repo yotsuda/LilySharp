@@ -141,6 +141,10 @@ public static class LanguageVocabulary
     /// (<see cref="ChordListKey"/>): the chord list at the score's head, the default first.</summary>
     public static IReadOnlyCollection<string> ChordListWords => ChordListKey.Words;
 
+    /// <summary>The words the <c>compressRests</c> key of a <c>layout { }</c> block takes
+    /// (<see cref="CompressRestsKey"/>), the default first.</summary>
+    public static IReadOnlyCollection<string> CompressRestsWords => CompressRestsKey.Words;
+
     /// <summary>The keys a <c>layout { }</c> block takes (<c>marks</c>, <c>barNumbers</c>) —
     /// <see cref="SyntaxFacts.LayoutKeyVocabulary"/>, the list the block's entry walker and
     /// its reader share.</summary>

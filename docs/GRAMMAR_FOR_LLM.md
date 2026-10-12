@@ -1062,6 +1062,7 @@ layout {
   chordNames both          // under a capo a name shows: shape (default, the pressed chord's) | sounding | both "E♭ (C)"
   chordList true           // the chords the score uses, each with its diagram, under the title: true | false (default)
   voltaBracket line        // how far an ending's bracket reaches: all (default) | line | N bars
+  compressRests true       // R1 | R1 | R1 written apart engrave as one rest with its count (a part sheet): true | false (default)
 }
 ```
 

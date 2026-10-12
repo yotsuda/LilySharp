@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 243 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **369** | |
+| `OWN` | 246 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **372** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（243 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（246 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -265,6 +265,8 @@
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Music.cs`
 - **`LilyPondExporter.EmitItem`** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision 2026-10-02). Any other
 - **`LilyPondExporter.EmitShapeChord`** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
+### `LilySharp.Core/LilyPond/LilyPondExporter.Parts.cs`
+- **`LilyPondExporter.CompressRestsFunction`** LILYSHARP-OWN: LilyPond has none. MEASURED (2.26.0, Lab sessions/p903/b5):
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Score.cs`
 - **`LilyPondExporter.EmitStaff`** LILYSHARP-OWN: ±2, and −2…+4), where line-count alone spreads them one space apart
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Streams.cs`
@@ -363,6 +365,7 @@
 ### `LilySharp.Core/Semantics/LayoutPlan.cs`
 - **`ChordNameMode`** LILYSHARP-OWN: LilyPond 2.26 has no capo property on its ChordNames context (its
 - **`ChordListKey`** LILYSHARP-OWN: LilyPond has no such list; the twin writes a \markup line of
+- **`CompressRestsKey`** LILYSHARP-OWN: LilyPond's \compressMMRests leaves separately written rests
 - **`ChordDiagramsKey`** LILYSHARP-OWN: LilyPond's FretBoards context carries its own stringTunings
 ### `LilySharp.Core/Semantics/RepeatPasses.cs`
 - **`RepeatPasses.EndingFor`** LILYSHARP-OWN: a pass no ending names replays the LAST ending — |: A [1. B] :|*3 [2. C]
@@ -372,6 +375,8 @@
 - **`BeamDetector.BuildTupletSpans`** LILYSHARP-OWN guard: a bracket whose indices do not address this voice's
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **`BeamingPattern.Options.For`** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
+### `LilySharp.Core/Svg/Collector/CompressRests.cs`
+- **`CompressRests`** LILYSHARP-OWN: LilyPond has no switch for this. MEASURED (2.26.0, Lab sessions/p903/b5):
 ### `LilySharp.Core/Svg/Collector/MeasureBuilder.cs`
 - **`MeasureBuilder.SectionHead`** LILYSHARP-OWN (owner's decisions, 2026-10-02, HANDOFF §1.1 第737): a time, key
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`

@@ -77,6 +77,9 @@ public sealed record LayoutPlan(
     // `chordList true|false` — the chords the score uses, each with its diagram, at the head of
     // the score under the title (ChordListKey; HANDOFF §2 K5 ⑤, 2026-09-29).
     bool ChordList = false,
+    // `compressRests true|false` — whole-bar rests written one after another engrave as one
+    // rest with its count (CompressRestsKey; grammar feedback B5, 2026-10-13).
+    bool CompressRests = false,
     // `lineThickness 0.12`, `Stem.thickness 1.5`, … — the line thicknesses and the stem length
     // (Svg.EngravingStyle; owner's decision 2026-10-05, LilySharp-Omr's proposal P4). Null is
     // LilyPond's defaults. NUMBERS, the one exception to "no unit" above: each is a multiple of a
@@ -300,6 +303,30 @@ public static class ChordListKey
 {
     /// <summary>The key as written in the block.</summary>
     public const string Key = "chordList";
+
+    /// <summary>The two words, the default first — the language's one boolean spelling.</summary>
+    public static readonly IReadOnlyList<string> Words = ["false", "true"];
+
+    /// <summary>True for <c>true</c>, false for <c>false</c>, null for anything else.</summary>
+    public static bool? Find(string word) => word switch
+    {
+        "true" => true,
+        "false" => false,
+        _ => null,
+    };
+}
+
+/// <summary>
+/// The <c>compressRests</c> key's words: <c>true</c> engraves whole-bar rests written one after
+/// another as one rest with its count, as if written <c>R1*N</c> (<c>Svg.Collector.CompressRests</c>;
+/// owner's decision 2026-10-13, grammar feedback B5).
+/// </summary>
+/// <remarks>LILYSHARP-OWN: LilyPond's <c>\compressMMRests</c> leaves separately written rests
+/// apart (MEASURED 2.26.0, Lab sessions/p903/b5); the twin merges the events itself.</remarks>
+public static class CompressRestsKey
+{
+    /// <summary>The key as written in the block.</summary>
+    public const string Key = "compressRests";
 
     /// <summary>The two words, the default first — the language's one boolean spelling.</summary>
     public static readonly IReadOnlyList<string> Words = ["false", "true"];

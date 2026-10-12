@@ -630,6 +630,15 @@ public sealed partial class LilySharpLanguageServer
         ["true"] = "The chords the score uses, each with its diagram, under the title — centred rows of even counts",
     };
 
+    internal static CompletionList GetCompressRestsCompletions()
+        => WordList(LanguageVocabulary.CompressRestsWords, CompressRestsDetails);
+
+    private static readonly System.Collections.Generic.Dictionary<string, string> CompressRestsDetails = new()
+    {
+        ["false"] = "Each written whole-bar rest is its own (default)",
+        ["true"] = "Whole-bar rests written one after another engrave as one rest with its count, as R1*N would",
+    };
+
     private static readonly System.Collections.Generic.Dictionary<string, string> ChordDiagramDetails = new()
     {
         ["none"] = "No chord diagrams, even for written shapes (a piano score from the same source)",
@@ -759,7 +768,7 @@ public sealed partial class LilySharpLanguageServer
                         // `guitar`, not the absent key's "the part's instrument, else guitar"
                         // (no word says that): the same page unless a part is a ukulele,
                         // a mandolin, a bass… (owner's rule 2026-09-28, ChordDiagramsKey.Resolve).
-                        + "\n  chordDiagrams ${8:guitar}\n  chordNames ${9:shape}\n  chordList ${10:false}\n  voltaBracket ${11:all}" + LayoutNumberLines("  ") + "$0\n}",
+                        + "\n  chordDiagrams ${8:guitar}\n  chordNames ${9:shape}\n  chordList ${10:false}\n  voltaBracket ${11:all}\n  compressRests ${12:false}" + LayoutNumberLines("  ") + "$0\n}",
                     Preselect = true,
                     SortText = "0",
                     Detail = "Set the score's display switches (pre-filled with LilyPond's defaults)",
@@ -784,7 +793,7 @@ public sealed partial class LilySharpLanguageServer
     private static string LayoutNumberLines(string indent)
     {
         var sb = new System.Text.StringBuilder();
-        int stop = 12;
+        int stop = 13;
         foreach (string key in LanguageVocabulary.LayoutKeys)
             if (LanguageVocabulary.LayoutNumberKeyDefault(key) is { } value)
                 sb.Append('\n').Append(indent).Append(key).Append(" ${").Append(stop++).Append(':').Append(value).Append('}');
@@ -831,6 +840,7 @@ public sealed partial class LilySharpLanguageServer
         "chordDiagrams" => "The tuning written chord shapes draw on: guitar | ukulele | mandolin | … | none (default: the part's instrument, else guitar); add `capo N` for a capo, `all` to draw every chord, `{ … }` to list the chords that draw",
         "chordNames" => "What a chord name shows under a capo: shape (default, the pressed chord's) | sounding | both",
         "chordList" => "The chords the score uses, each with its diagram, under the title: true | false (default)",
+        "compressRests" => "Whole-bar rests written one after another engrave as one, with its count: true | false (default)",
         "voltaBracket" => "How far an ending's bracket reaches: all (default) | line | N bars; an ending's own @voltaBracket(…) overrides it",
         "lineThickness" => "The line every other line is a multiple of, in staff spaces (default 0.1)",
         "StaffLine.thickness" => "Staff lines, in line thicknesses (default 1.0); stems, ledger lines, ties and slurs follow, bar lines do not",
@@ -3612,7 +3622,7 @@ public sealed partial class LilySharpLanguageServer
                 // ⚠️ Pre-filled with the DEFAULTS (stacked, lines), the paper snippet's rule:
                 // accepting the completion and changing nothing does not move the page — save
                 // chordDiagrams, whose default no word spells (see GetLayoutDeclarationCompletions).
-                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {\n\tmarkTempo ${1:stacked}\n\tbarNumbers ${2:lines}\n\taccidentals ${3:default}\n\tsectionLabels ${4:boxed}\n\tpartCombineText ${5:true}\n\tchordQualities ${6:symbols}\n\tminorChords ${7:upper}\n\tchordDiagrams ${8:guitar}\n\tchordNames ${9:shape}\n\tchordList ${10:false}\n\tvoltaBracket ${11:all}" + LayoutNumberLines("\t") + "$0\n}", Detail = "Display switches (marks, barNumbers, accidentals, sectionLabels, partCombineText, chordQualities, minorChords, chordDiagrams, chordNames, chordList, voltaBracket) and the line thicknesses and stem length, pre-filled with LilyPond's defaults" },
+                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {\n\tmarkTempo ${1:stacked}\n\tbarNumbers ${2:lines}\n\taccidentals ${3:default}\n\tsectionLabels ${4:boxed}\n\tpartCombineText ${5:true}\n\tchordQualities ${6:symbols}\n\tminorChords ${7:upper}\n\tchordDiagrams ${8:guitar}\n\tchordNames ${9:shape}\n\tchordList ${10:false}\n\tvoltaBracket ${11:all}\n\tcompressRests ${12:false}" + LayoutNumberLines("\t") + "$0\n}", Detail = "Display switches (marks, barNumbers, accidentals, sectionLabels, partCombineText, chordQualities, minorChords, chordDiagrams, chordNames, chordList, voltaBracket) and the line thicknesses and stem length, pre-filled with LilyPond's defaults" },
                 // `override` is a valid global default; `revert` / `once` are NOT offered at
                 // the top level — they only work in a music stream (LYS1023 otherwise).
                 // `partial` is likewise NOT offered here — a pickup belongs to a section, not

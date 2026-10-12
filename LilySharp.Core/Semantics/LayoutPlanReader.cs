@@ -87,6 +87,7 @@ internal static class LayoutPlanReader
         ChordDiagramsKey.Key => ChordDiagramsKey.Words,
         ChordNamesKey.Key => ChordNamesKey.Words,
         ChordListKey.Key => ChordListKey.Words,
+        CompressRestsKey.Key => CompressRestsKey.Words,
         VoltaBracketLength.Key => VoltaBracketLength.Words,
         _ => [],
     };
@@ -289,6 +290,10 @@ internal static class LayoutPlanReader
                 ChordListKey.Key => ReadOneWord(plan, entry, span, found, ChordListKey.Key,
                     ChordListKey.Words, w => ChordListKey.Find(w) is { } on
                         ? plan with { ChordList = on } : null),
+                // Whole-bar rests written one after another, engraved as one (CompressRestsKey).
+                CompressRestsKey.Key => ReadOneWord(plan, entry, span, found, CompressRestsKey.Key,
+                    CompressRestsKey.Words, w => CompressRestsKey.Find(w) is { } on
+                        ? plan with { CompressRests = on } : null),
                 VoltaBracketLength.Key => ReadVoltaBracket(plan, entry, span, found),
                 // The engraving style (Svg.EngravingStyle): a number each, LedgerLine two.
                 "lineThickness" => ReadStyle(plan, entry, span, found, (s, v) => s with { LineThickness = v[0] }),

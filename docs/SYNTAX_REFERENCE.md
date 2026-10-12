@@ -2068,6 +2068,16 @@ Without a capo the three print the same name.
 of the score under the title: every chord once in order of first appearance, in centred rows
 of even counts — see *The chord list* under *Chord Diagrams*. `false` (the default) draws none.
 
+**`compressRests`** — `true` engraves whole-bar rests written one after another (`R1 | R1 | R1`,
+typically one per section of a part that sits out) as ONE rest with its count, as `R1*3` would
+be. A run stops where something stands between two rests: a section label, a rehearsal mark, a
+tempo or another mark, a volta, a bar line other than the plain one, a `break` / `noBreak`, a
+key / time / clef change, or anything written on the later rest (`R1@p`); the first rest of a
+run may carry its own `@fermata` or dynamic. In a score with several staves a bar joins the run
+only where every staff rests. `false` (the default) keeps each written rest its own, as
+LilyPond does — its `\compressMMRests` compresses one written `R1*N` but never joins rests
+written apart, so the twin joins them with a small music function of its own.
+
 **`voltaBracket`** — how far a form ending's volta bracket reaches: `all` (the default)
 covers every bar of the ending; `line` stops at the end of the system the bracket starts in;
 a whole number `N` covers the ending's first N bars (all of it when the ending is shorter,

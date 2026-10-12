@@ -722,6 +722,7 @@ LayoutEntry    = 'markTempo' , MarkArrangement
                | 'chordDiagrams' , ( 'none' | [ TuningName ] , [ 'capo' , Integer ] , [ 'all' ] , [ ShapeTable ] )   (* TuningName: the tab's 'tuning' words; at least one of the four; the capo's Integer 1..11 *)
                | 'chordNames' , ChordNameMode
                | 'chordList' , Boolean
+               | 'compressRests' , Boolean
                | 'voltaBracket' , VoltaLength        (* VoltaLength: 'all' | 'line' | Integer >= 1 — §6 StructureVolta *)
                | StyleKey , Number                     (* > 0, no unit *)
                | ( 'Beam.damping' | 'Dots.padding' | 'Accidental.rightPadding' ) , Number   (* >= 0 *)
@@ -944,6 +945,19 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
    \markup lines of \center-column { "NAME" \fret-diagram-terse … } before the score, the
    names as plain text.
 
+   compressRests — 'true' engraves whole-bar rests written one after another (`R1 | R1 | R1`,
+   a part's sections it sits out) as ONE rest with its count, as if written `R1*3`
+   (2026-10-13, user decision; grammar feedback B5). A bar's rest continues the run before it
+   in its voice unless something stands between them: a section label (unless
+   'sectionLabels none'), any music mark at the bar (an end mark on the bar before), a volta
+   starting there, a text, anything on that staff's rest (a dynamic, a fermata), a bar line
+   other than the plain one, a written break / noBreak, a key / time / clef change, a pickup.
+   The run's first rest may carry its own marks, as R1*4@fermata does. A bar still joins the
+   engraved run only where every staff rests. LILYSHARP-OWN: LilyPond's \compressMMRests
+   leaves separately written rests apart (one Multi_measure_rest per written event — measured
+   on 2.26.0); the twin defines a music function, lysCompressRests, that merges the events on
+   the same rule, and wraps each part's music in it.
+
    voltaBracket — how far a form ending's volta bracket reaches (2026-09-28). 'all' (the
    default) covers every bar of the ending; 'line' stops at the end of the system the
    bracket starts in; a whole number N covers the ending's first N bars (all of them when
@@ -976,6 +990,7 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
      chordNames both
      chordList true
      voltaBracket line
+     compressRests true
    }
 *)
 

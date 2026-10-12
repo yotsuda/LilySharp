@@ -296,6 +296,62 @@ public sealed partial class LilyPondExporter
     /// </summary>
     private (int step, int alt, int oct)? _partTranspose;
 
+    /// <summary>
+    /// <c>layout { compressRests true }</c>'s LilyPond spelling: a music function that merges
+    /// whole-bar rests written one after another into one <c>R1*N</c> event, which
+    /// <c>skipBars</c> then engraves as one rest with its count.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond has none. MEASURED (2.26.0, Lab sessions/p903/b5):
+    /// <c>\compressMMRests</c> compresses one written event only — one Multi_measure_rest
+    /// spanner per event, so <c>R1 | R1 | R1</c> stays three one-bar rests. Two rests merge
+    /// only across bar checks and the <c>\once \set Score.skipBars</c> the twin writes before
+    /// every rest; anything else between them (a mark, a tempo, a <c>\bar</c>, a
+    /// <c>\time</c>, a <c>\break</c>) or written ON the later rest (a dynamic, a fermata)
+    /// keeps them apart — the rule <c>Svg.Collector.CompressRests</c> applies to the page.
+    /// The merged length is the sum, on the first rest's base duration. ⚠️ 2.26.0 names the
+    /// bar check <c>BarCheckEvent</c> (dumped from the parsed music, Lab sessions/p903/b5
+    /// dbg.ly); a test for <c>BarCheck</c> alone merged nothing.
+    /// </remarks>
+    internal const string CompressRestsFunction =
+        "lysCompressRests =\n"
+        + "#(define-music-function (music) (ly:music?)\n"
+        + "   (define (name-of m) (ly:music-property m 'name))\n"
+        + "   (define (mm-rest? m) (eq? (name-of m) 'MultiMeasureRestMusic))\n"
+        + "   (define (transparent? m)\n"
+        + "     (or (memq (name-of m) '(BarCheck BarCheckEvent))\n"
+        + "         (and (eq? (name-of m) 'ContextSpeccedMusic)\n"
+        + "              (let ((e (ly:music-property m 'element)))\n"
+        + "                (and (ly:music? e) (eq? (name-of e) 'PropertySet)\n"
+        + "                     (eq? (ly:music-property e 'symbol) 'skipBars))))))\n"
+        + "   (define (merge-into! prev r)\n"
+        + "     (let* ((d (ly:music-property prev 'duration))\n"
+        + "            (total (+ (ly:moment-main (ly:music-length prev)) (ly:moment-main (ly:music-length r))))\n"
+        + "            (base (/ (ly:moment-main (ly:music-length prev)) (ly:duration-scale d)))\n"
+        + "            (f (/ total base)))\n"
+        + "       (set! (ly:music-property prev 'duration)\n"
+        + "             (ly:make-duration (ly:duration-log d) (ly:duration-dot-count d)\n"
+        + "                               (numerator f) (denominator f)))))\n"
+        + "   (define (compress elts)\n"
+        + "     (let loop ((in elts) (out '()))\n"
+        + "       (if (null? in)\n"
+        + "           (reverse out)\n"
+        + "           (let ((m (car in)))\n"
+        + "             (if (and (mm-rest? m) (null? (ly:music-property m 'articulations)))\n"
+        + "                 (let skip ((o out))\n"
+        + "                   (cond ((and (pair? o) (transparent? (car o))) (skip (cdr o)))\n"
+        + "                         ((and (pair? o) (mm-rest? (car o)))\n"
+        + "                          (merge-into! (car o) m)\n"
+        + "                          (loop (cdr in) o))\n"
+        + "                         (else (loop (cdr in) (cons m out)))))\n"
+        + "                 (loop (cdr in) (cons m out)))))))\n"
+        + "   (music-map\n"
+        + "     (lambda (m)\n"
+        + "       (if (eq? (name-of m) 'SequentialMusic)\n"
+        + "           (set! (ly:music-property m 'elements) (compress (ly:music-property m 'elements))))\n"
+        + "       m)\n"
+        + "     music))\n\n";
+
     private void EmitPartVariable(string varName, List<SyntaxNode> music, CompilationUnitSyntax root)
     {
         // ⚠️ The two modes anchor DIFFERENTLY on purpose. Absolute octave is middle C
@@ -313,6 +369,10 @@ public sealed partial class LilyPondExporter
         // ⚠️ It goes on the variable, not the \score, because it is per PART.
         if (TransposeTarget() is { } target)
             wrapper = "\\transpose c " + target + " " + wrapper;
+        // `layout { compressRests true }`: the written rests merged as the page merges them
+        // (Svg.Collector.CompressRests; the function is CompressRestsFunction).
+        if (_layoutPlan.CompressRests)
+            wrapper = "\\lysCompressRests " + wrapper;
         _sb.Append(varName).Append(" = ").Append(wrapper).Append(" {\n");
 
         // Each part starts from Lily#'s own default duration, as the collector does

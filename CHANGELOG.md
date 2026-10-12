@@ -6,6 +6,15 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Join a part's rests: `layout { compressRests true }`
+
+- **`compressRests true`** engraves whole-bar rests written one after another (`R1 | R1 | R1`,
+  typically one per section a part sits out) as one rest with its count, as `R1*3` would be. A
+  run stops at a section label, a mark or tempo, a volta, a special bar line, a written break, a
+  key/time/clef change, or a dynamic or fermata on the later rest. LilyPond's `\compressMMRests`
+  never joins rests written apart, so the twin joins them with its own music function and draws
+  the same page.
+
 ### A clef for a condensed or combined staff
 
 - **`condensedStaff bass { vla vc }`** (and `combinedStaff bass { … }`) draws the shared staff in

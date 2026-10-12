@@ -4,6 +4,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Join a part's rests: `layout { compressRests true }`
+
+- **`compressRests true`** engraves whole-bar rests written one after another (`R1 | R1 | R1`,
+  typically one per section a part sits out) as one rest with its count, as `R1*3` would be. A
+  run stops at a section label, a mark or tempo, a volta, a special bar line, a written break, a
+  key/time/clef change, or a dynamic or fermata on the later rest. Completion, colouring and the
+  layout snippet know the key.
+
 ### A clef for a condensed or combined staff
 
 - **`condensedStaff bass { vla vc }`** (and `combinedStaff bass { … }`) draws the shared staff in

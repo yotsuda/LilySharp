@@ -218,7 +218,7 @@ public class LayoutBlockTests
         Assert.Equal(
             new[] { "markTempo", "barNumbers", "accidentals", "sectionLabels", "partCombineText",
                     "chordQualities", "minorChords", "chordDiagrams", "chordNames", "chordList", "voltaBracket",
-                    "lineThickness", "StaffLine.thickness", "LedgerLine.thickness", "LedgerLine.lengthFraction", "Stem.thickness",
+                    "compressRests", "lineThickness", "StaffLine.thickness", "LedgerLine.thickness", "LedgerLine.lengthFraction", "Stem.thickness",
                     "Stem.lengthFraction", "Beam.thickness", "Beam.damping", "Dots.padding", "Accidental.rightPadding", "NoteHead.scale", "BarLine.thinThickness", "BarLine.thickThickness" },
             LanguageVocabulary.LayoutKeys);
         Assert.Equal(LanguageVocabulary.LayoutKeys, LayoutPlanReader.AllKeySpellings());
