@@ -154,6 +154,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **ユーザー「.lys を開いたら自動でプレビュー・既定 on・同じペインに・プレビュー切替でソースも」**＝`810d02578`: 追従するプレビュー 1 枚（`followerPanel`・`retargetPreview`）＋題名バーのロック・再生中は止まるまで待つ・ファイルごとのズーム/スクロール・ロック中のプレビューを前に出すと別グループのソースのタブも前へ。判断は `previewCore`（`previewOnEditorShown`／`sourceGroupToReveal`・node テスト・毒で赤）。実機＝隔離 VS Code を CDP で運転（⚠️ 更新待ちの VS Code が `vscode-updating` mutex を握ると 2 つ目が起動しない→Code.exe と版フォルダを複製し product.json の `win32MutexName` を変える）。Lesson 1 STEP 0・editor 頁・README を合わせた。 続けて「並べて見比べ」＝`1d4508edc`: ロック中のプレビューが見えていれば新しいプレビューはその右の新グループへ（`newPreviewColumn`）・ロックで追従役が消えた後はタブ切替でも開く（`followerLocked`）。 さらに「.lys をプレビューのペインで開かない」＝`b1228c87f`（`onDidChangeTabs` の opened→`scoreGroupFor`・プレビューの無い一番左のグループへ移す・無ければ `newGroupLeft` でプレビューの左に作る）。
 - **Pages 段 3＝ユーザー「自動で作ってみて」**＝`fd4405b41`: `learn.html`＋`lesson-NN-….html` をレッスンから生成（`build-manual.ps1`・絵は `build-site.ps1` 2b）。`site\index.html` は `build-preview.ps1` の生成物（手書きではない）。残り: 段 1・2・4 と判断 ②③④。
 - **ユーザー「todo の赤丸を出すオプションを lysc に」**＝`0668a9705`（`--todo`＝svg/png/pdf・`EditorMarks`＋`TodoBands`・サイトのレッスンの絵も）。途中で**スラッシュの `@todo` が描かれない**不具合＝`217597a58`。**「Petaluma の一線譜リードシートのレッスン」**＝`3191eb6b2`（lesson-12-chart・全レッスン of 12）。
+- **Pages 段 1＝ユーザー「進めて」**＝`8e716785f`（A1〜A11・#drums・grid/表＝375px ではみ出し 0・P8＝例 17 本を相対に・P12）。残り: 段 2（入口・上部ナビ）・段 4（Reference 分割・About）・判断②上部ナビ。
 判定: **ユーザーの実機確認待ち**（New Score → `lesson` → lesson-01 から 10 まで）。次の一手は ⑴ レッスンの手直し（実機の感想）→ ⑵ Pages の再構成（`learning-set-design.md` §7 の案をユーザーが選ぶ）→ ⑶ 日本語訳。(a) どれもこの便の文脈（レッスンと監査）の上に立つ／(b) 1 便＝軽い／(c) 既定は続ける ⇒ **この会話で続ける**。
 
 ## 以下は第901セッションの経緯
