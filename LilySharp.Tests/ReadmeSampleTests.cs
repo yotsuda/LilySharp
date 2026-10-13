@@ -22,14 +22,14 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// The README opens with a picture of <c>samples/harbour-lights.lys</c> and the source under
-/// it. The sample itself is compiled by every sample sweep; this keeps the README's copy of
-/// the source from drifting away from the file, and the picture from going missing.
+/// The README opens with <c>samples/harbour-lights.lys</c> playing and the source under it.
+/// The sample itself is compiled by every sample sweep; this keeps the README's copy of the
+/// source from drifting away from the file.
 /// </summary>
 /// <remarks>
-/// The picture is not compared: engraving improvements change its pixels. Re-render it with
-/// <c>lysc png samples/harbour-lights.lys -d docs/images</c> (Release build)
-/// when the sample changes or the engraving visibly moves.
+/// The video is a GitHub attachment, not a file here, so nothing can check it: remake it
+/// (the preview's playback events and highlight, frame by frame — Lab sessions/p903/readme-audio)
+/// and upload it again when the sample changes or the engraving visibly moves.
 /// </remarks>
 public class ReadmeSampleTests
 {
@@ -45,9 +45,6 @@ public class ReadmeSampleTests
         Assert.True(m.Success, "README.md lost its README-SAMPLE:harbour-lights block");
         Assert.Equal(Normalize(sample), Normalize(m.Groups[1].Value));
 
-        Assert.Contains("docs/images/harbour-lights.png", readme, StringComparison.Ordinal);
-        Assert.True(File.Exists(Path.Combine(root, "docs", "images", "harbour-lights.png")),
-            "docs/images/harbour-lights.png is missing — render it with lysc png");
     }
 
     private static string Normalize(string s) => s.Replace("\r\n", "\n").TrimEnd();
