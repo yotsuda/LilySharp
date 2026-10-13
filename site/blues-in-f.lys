@@ -10,7 +10,7 @@ key f major
 
 part head { clef treble }
 part comp { clef treble }
-part bass { clef bass }
+part bass { clef bass octave 3 }
 
 phrase riffF   { r4 f8 aes a c r4 | }
 phrase riffBb  { r4 bes'8 des d f r4 | }
