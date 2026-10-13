@@ -78,6 +78,24 @@ public class CompressRestsTests
         Assert.Equal(new[] { (0, 1), (2, 1) }, Runs(source));
     }
 
+    // The places the page and the twin could part company — the twin merges each part's events
+    // alone, the page merges only where every staff rests, and a chord symbol lives in its own
+    // context there. MEASURED (LilyPond 2.26.0, Lab sessions/p903/b5 e1–e3): the twin's page is
+    // this one in all three — LilyPond splits the merged rest where the other staff plays, and
+    // engraves no run under a chord symbol, inline or a chords row.
+    [Theory]
+    [InlineData("part a { clef treble }\npart b { clef bass }\n"
+        + "section A { a { R1 | R1 | R1 | c'1 | } b { R1 | R1 | c1 | c1 | } }\nform { A }\nscore { staff a staff b }",
+        "0:2")]
+    [InlineData("part m { clef treble }\nsection A { m { R1 | R1@chord(F) | R1 | c'1 | } }\nform { A }\nscore { staff m }",
+        "0:1 1:1 2:1")]
+    [InlineData("part m { clef treble }\nsection A { chords ch { C | F | G | C | } m { R1 | R1 | R1 | c'1 | } }\n"
+        + "form { A }\nscore { chords ch staff m }",
+        "")]   // the chords row is a staff that never rests: no run at all, each bar its own rest
+    public void WhereTheTwinMergesAPartAlone_ThePagesStillAgree(string music, string runs)
+        => Assert.Equal(runs, string.Join(" ",
+            Runs("layout { compressRests true }\n" + music).Select(r => $"{r.Start}:{r.Count}")));
+
     [Fact]
     public void TheTwin_WrapsEachPartInTheMergingFunction()
     {
