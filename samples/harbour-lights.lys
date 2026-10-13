@@ -11,6 +11,8 @@ time 4/4
 key ees major
 octave absolute
 
+paper { paperWidth 297mm  paperHeight 210mm }
+
 part singer "Voice" { clef treble }
 part rh "Piano" { clef treble }
 part lh { clef bass octave 3 }
