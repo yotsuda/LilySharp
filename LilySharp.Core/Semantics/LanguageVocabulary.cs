@@ -145,6 +145,12 @@ public static class LanguageVocabulary
     /// (<see cref="CompressRestsKey"/>), the default first.</summary>
     public static IReadOnlyCollection<string> CompressRestsWords => CompressRestsKey.Words;
 
+    /// <summary>The Lily# annotation a LilyPond script shorthand spells (<c>-.</c> →
+    /// <c>staccato</c>), or null — the parser's table (<see cref="Syntax.SyntaxFacts.LilyPondScriptAnnotation"/>),
+    /// for the editor's quick fix.</summary>
+    public static string? LilyPondScriptAnnotation(string shorthand)
+        => Syntax.SyntaxFacts.LilyPondScriptAnnotation(shorthand);
+
     /// <summary>The keys a <c>layout { }</c> block takes (<c>marks</c>, <c>barNumbers</c>) —
     /// <see cref="SyntaxFacts.LayoutKeyVocabulary"/>, the list the block's entry walker and
     /// its reader share.</summary>

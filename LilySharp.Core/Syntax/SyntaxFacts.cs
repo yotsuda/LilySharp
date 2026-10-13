@@ -314,6 +314,25 @@ internal static class SyntaxFacts
         SyntaxKind.Treble8Keyword;
 
     /// <summary>
+    /// The Lily# annotation a LilyPond script shorthand spells (<c>-.</c> → <c>staccato</c>),
+    /// or null — the one table the parser's report (LYS0030) and the editor's quick fix read.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/script-init.ly dashDot / dashHat / dashPlus / dashDash / dashBang /
+    ///   dashLarger / dashUnderscore — the shorthands and the scripts they name.
+    /// </remarks>
+    public static string? LilyPondScriptAnnotation(string shorthand) => shorthand switch
+    {
+        "-." => "staccato",
+        "->" => "accent",
+        "--" => "tenuto",
+        "-^" => "marcato",
+        "-_" => "portato",
+        "-!" => "staccatissimo",
+        _ => null,
+    };
+
+    /// <summary>
     /// The same five clefs as WORDS — the part header's eleven filtered by
     /// <see cref="IsClefKeyword"/>, so this can neither name a word the parser would reject
     /// nor miss one it accepts.

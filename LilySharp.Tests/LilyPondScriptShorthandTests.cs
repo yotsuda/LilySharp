@@ -53,6 +53,41 @@ public class LilyPondScriptShorthandTests
         Assert.Equal(Book(music), tree.GetRoot().ToFullString());
     }
 
+    // The quick fix writes the annotation the error names, glued to its note (the B8 leftover,
+    // 2026-10-13): the book that comes out has no error left.
+    [Theory]
+    [InlineData("c'4-. d e f |", "c'4@staccato d e f |")]
+    [InlineData("c'4-! d e f |", "c'4@staccatissimo d e f |")]
+    [InlineData("c'4 -- d e f |", "c'4@tenuto d e f |")]
+    public void TheQuickFix_WritesTheAnnotation(string music, string fixedMusic)
+    {
+        string text = Book(music);
+        var server = new LilySharp.Lsp.LilySharpLanguageServer(System.IO.Stream.Null, System.IO.Stream.Null);
+        var uri = new System.Uri("file:///shorthand.lys");
+        server.DidOpen(new LilySharp.Lsp.Protocol.DidOpenTextDocumentParams
+        {
+            TextDocument = new LilySharp.Lsp.Protocol.TextDocumentItem { Uri = uri, Text = text, LanguageId = "lilysharp", Version = 1 },
+        });
+        int at = text.IndexOf('-', System.StringComparison.Ordinal) + 1;
+        var (line, character) = LilySharp.Lsp.LilySharpLanguageServer.GetLineAndCharacter(text, at);
+        var fix = Assert.Single(server.GetCodeActions(new LilySharp.Lsp.Protocol.CodeActionParams
+        {
+            TextDocument = new LilySharp.Lsp.Protocol.TextDocumentIdentifier { Uri = uri },
+            Range = new LilySharp.Lsp.Protocol.Range
+            {
+                Start = new LilySharp.Lsp.Protocol.Position(line, character),
+                End = new LilySharp.Lsp.Protocol.Position(line, character),
+            },
+        }) ?? [], a => a.Title.StartsWith("Write '@", System.StringComparison.Ordinal));
+        var edit = fix.Edit!.Changes!.Values.Single().Single();
+        int Offset(LilySharp.Lsp.Protocol.Position p)
+            => text.Split('\n').Take(p.Line).Sum(l => l.Length + 1) + p.Character;
+        string after = text[..Offset(edit.Range.Start)] + edit.NewText + text[Offset(edit.Range.End)..];
+        Assert.Equal(Book(fixedMusic), after);
+        var tree = SyntaxTree.Parse(after);
+        Assert.DoesNotContain(tree.Diagnostics.Concat(SemanticValidation.Run(tree)), d => d.Severity == DiagnosticSeverity.Error);
+    }
+
     [Fact]
     public void AMinusWithSpaceAfterIt_IsStillJustAStrayMinus()
     {

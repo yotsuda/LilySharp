@@ -4,6 +4,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A quick fix for LilyPond's script shorthands
+
+- **`c4-.` → `c4@staccato`** in one step: the error on a LilyPond shorthand (`-.` `->` `--` `-^`
+  `-_` `-!`) now offers to write the annotation it names, glued to the note.
+
 ### Join a part's rests: `layout { compressRests true }`
 
 - **`compressRests true`** engraves whole-bar rests written one after another (`R1 | R1 | R1`,

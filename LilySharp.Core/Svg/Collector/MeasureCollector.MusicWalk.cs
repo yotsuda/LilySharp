@@ -204,9 +204,6 @@ public sealed partial class MeasureCollector
         bool HasBeamStartAfter, bool HasBeamEndAfter,
         int TieSource = 0, int SlurStartSource = 0, int SlurEndSource = 0);
 
-    /// <summary>True for the marker nodes that annotate the preceding note and
-    /// are otherwise skipped by the walk ("already processed"), i.e. exactly the
-    /// nodes <see cref="FoldMarker"/> reads.</summary>
     /// <summary>True when the site after <paramref name="i"/> — past the tie, slur and beam
     /// markers that annotate it — is an <c>afterGrace</c>, so the item at <paramref name="i"/>
     /// is its main note. Kinds first: only the grace itself is materialized.</summary>
@@ -219,6 +216,9 @@ public sealed partial class MeasureCollector
             && next.Node is GraceExpressionSyntax { IsAfterGrace: true };
     }
 
+    /// <summary>True for the marker nodes that annotate the preceding note and
+    /// are otherwise skipped by the walk ("already processed"), i.e. exactly the
+    /// nodes <see cref="FoldMarker"/> reads.</summary>
     private static bool IsMarkerNode(SyntaxNode node) => IsMarkerKind(node.Kind);
     /// <summary>
     /// Kind-level spelling of <see cref="IsMarkerNode"/>, for the places that must ask

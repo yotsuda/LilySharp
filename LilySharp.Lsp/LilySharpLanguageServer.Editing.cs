@@ -334,6 +334,8 @@ public sealed partial class LilySharpLanguageServer
                     actions.Add(spelling);
                 if (ScoreNameQuotedAction(doc, uri, diagnostic) is { } bareName)
                     actions.Add(bareName);
+                if (LilyPondScriptAction(doc, uri, diagnostic) is { } script)
+                    actions.Add(script);
             }
         }
 
@@ -424,6 +426,25 @@ public sealed partial class LilySharpLanguageServer
                 Arguments = [uri.ToString(), offer.Section],
             },
         };
+    }
+
+    /// <summary>
+    /// The quick fix for a LilyPond script shorthand (LYS0030 on <c>-.</c> <c>-&gt;</c> <c>--</c>
+    /// <c>-^</c> <c>-_</c> <c>-!</c>; grammar feedback B8): <c>c4-.</c> becomes
+    /// <c>c4@staccato</c>. The squiggled two characters are read against the parser's own table
+    /// (<see cref="LanguageVocabulary.LilyPondScriptAnnotation"/>), so the fix can only write what the
+    /// error named. Spaces before the <c>-</c> go too: the annotation is glued to its note.
+    /// </summary>
+    private static CodeAction? LilyPondScriptAction(Document doc, Uri uri, CoreDiagnostic diagnostic)
+    {
+        int start = diagnostic.Span.Start, end = diagnostic.Span.End;
+        if (diagnostic.Code != DiagnosticCodes.StrayItemToken || end - start != 2 || end > doc.Text.Length
+            || LanguageVocabulary.LilyPondScriptAnnotation(doc.Text[start..end]) is not { } annotation)
+            return null;
+        while (start > 0 && doc.Text[start - 1] is ' ' or '\t')
+            start--;
+        return QuickFix($"Write '@{annotation}'", doc, uri, diagnostic,
+            EditOf(doc.Text, start, end, "@" + annotation));
     }
 
     /// <summary>
@@ -530,9 +551,6 @@ public sealed partial class LilySharpLanguageServer
             };
     }
 
-    /// <summary>The <c>@todo</c> mark a LYS4026 report sits in — the report underlines the
-    /// memo, the key or the word, so it is found by CONTAINMENT, not by where it starts
-    /// (TodoValidator.MessageSpan). Null when none holds it.</summary>
     /// <summary>Every <c>@todo</c> mark of the tree with its key (null for one with none), for
     /// matching many LYS4026 reports at once by containment, as <see cref="TodoMarkAt"/> does one.</summary>
     private static List<(int Start, int End, string? Key)> TodoMarksOf(SyntaxTree tree)
@@ -542,6 +560,9 @@ public sealed partial class LilySharpLanguageServer
             .Where(x => x.Todo != null)
             .Select(x => (x.Node.Span.Start, x.Node.Span.End, x.Todo!.Key))];
 
+    /// <summary>The <c>@todo</c> mark a LYS4026 report sits in — the report underlines the
+    /// memo, the key or the word, so it is found by CONTAINMENT, not by where it starts
+    /// (TodoValidator.MessageSpan). Null when none holds it.</summary>
     private static SyntaxNode? TodoMarkAt(SyntaxTree tree, CoreDiagnostic diagnostic)
         => tree.GetRoot().DescendantNodes().FirstOrDefault(n =>
             n is ArticulationSyntax or MusicMarkSyntax

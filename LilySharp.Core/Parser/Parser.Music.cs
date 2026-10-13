@@ -323,6 +323,43 @@ internal sealed partial class Parser
         return Advance();
     }
 
+    /// <summary>The token index of the second character of a reported LilyPond script
+    /// shorthand (<see cref="ReportLilyPondScript"/>), which the next item keeps silently.</summary>
+    private int _scriptShorthandTail = -1;
+
+    /// <summary>
+    /// The Lily# annotation a LilyPond script shorthand at <c>Current</c> spells — a <c>-</c>
+    /// glued to <c>.</c> <c>&gt;</c> <c>-</c> <c>^</c> <c>_</c> or <c>!</c> — or null.
+    /// </summary>
+    /// <remarks>
+    /// Grammar feedback B8 (2026-10-12): <c>c4-. d-&gt; e-- f-^</c> answered two or three
+    /// unrelated errors per mark ("'-' is not something a music block can hold", "this '.'
+    /// belongs to nothing"), and <c>a-!</c> silently closed the bar with a dashed barline.
+    /// It is the first thing a LilyPond author writes. The table is
+    /// <see cref="SyntaxFacts.LilyPondScriptAnnotation"/>, which the editor's quick fix reads.
+    /// </remarks>
+    private string? LilyPondScriptAnnotation()
+    {
+        var next = Peek(1);
+        if (next is null || Current.TrailingTriviaWidth != 0 || next.LeadingTriviaWidth != 0)
+            return null;
+        return SyntaxFacts.LilyPondScriptAnnotation(Current.Text + next.Text);
+    }
+
+    /// <summary>Reports a LilyPond script shorthand once, naming the annotation Lily# spells
+    /// it with (LYS0030), and keeps both of its characters in the tree.</summary>
+    private GreenNode ReportLilyPondScript(string annotation)
+    {
+        var next = Peek(1)!;
+        string written = Current.Text + next.Text;
+        var span = new TextSpan(_textPosition + Current.LeadingTriviaWidth, written.Length);
+        _diagnostics.Error(span, DiagnosticCodes.StrayItemToken,
+            $"'{written}' is LilyPond's {annotation} shorthand; Lily# writes it as an annotation "
+            + $"glued to the note: c4@{annotation}.");
+        _scriptShorthandTail = _position + 1;
+        return Advance();
+    }
+
     /// <summary>Reports a '.' that no rule claimed (LYS0023) and yields the dot itself,
     /// so the token stays in the tree.</summary>
     /// <remarks>
@@ -353,54 +390,8 @@ internal sealed partial class Parser
     /// annotation itself gets its own ("'@finger' takes its argument in parentheses").
     /// </para>
     /// </remarks>
-    /// <summary>The token index of the second character of a reported LilyPond script
-    /// shorthand (<see cref="ReportLilyPondScript"/>), which the next item keeps silently.</summary>
-    private int _scriptShorthandTail = -1;
-
-    /// <summary>
-    /// The Lily# annotation a LilyPond script shorthand at <c>Current</c> spells — a <c>-</c>
-    /// glued to <c>.</c> <c>&gt;</c> <c>-</c> <c>^</c> <c>_</c> or <c>!</c> — or null.
-    /// </summary>
-    /// <remarks>
-    /// Grammar feedback B8 (2026-10-12): <c>c4-. d-&gt; e-- f-^</c> answered two or three
-    /// unrelated errors per mark ("'-' is not something a music block can hold", "this '.'
-    /// belongs to nothing"), and <c>a-!</c> silently closed the bar with a dashed barline.
-    /// It is the first thing a LilyPond author writes.
-    /// LILYPOND-REF: ly/script-init.ly dashDot / dashHat / dashPlus / dashDash / dashBang /
-    ///   dashLarger / dashUnderscore — the shorthands and the scripts they name.
-    /// </remarks>
-    private string? LilyPondScriptAnnotation()
+    private GreenNode ReportUnclaimedDot()
     {
-        var next = Peek(1);
-        if (next is null || Current.TrailingTriviaWidth != 0 || next.LeadingTriviaWidth != 0)
-            return null;
-        return next.Text switch
-        {
-            "." => "staccato",
-            ">" => "accent",
-            "-" => "tenuto",
-            "^" => "marcato",
-            "_" => "portato",
-            "!" => "staccatissimo",
-            _ => null,
-        };
-    }
-
-    /// <summary>Reports a LilyPond script shorthand once, naming the annotation Lily# spells
-    /// it with (LYS0030), and keeps both of its characters in the tree.</summary>
-    private GreenNode ReportLilyPondScript(string annotation)
-    {
-        var next = Peek(1)!;
-        string written = Current.Text + next.Text;
-        var span = new TextSpan(_textPosition + Current.LeadingTriviaWidth, written.Length);
-        _diagnostics.Error(span, DiagnosticCodes.StrayItemToken,
-            $"'{written}' is LilyPond's {annotation} shorthand; Lily# writes it as an annotation "
-            + $"glued to the note: c4@{annotation}.");
-        _scriptShorthandTail = _position + 1;
-        return Advance();
-    }
-
-    private GreenNode ReportUnclaimedDot()    {
         if (_position == 0 || _tokens[_position - 1].Kind != SyntaxKind.Dot)
         {
             var span = new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length);
