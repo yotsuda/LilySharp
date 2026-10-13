@@ -2373,6 +2373,34 @@ public class IncrementalCompilerTests
             + "g8@finger(5) a8@finger(4) b8@finger(3) c'8@finger(2) |", bars))
         + " } }\n";
 
+    /// <summary>A written bar's fill is decided by the music up to its bar line
+    /// (MeasureBuilder.OverflowsTheWrittenBar): `c'1 d8×7 |` is two bars with a bar line left
+    /// out, and deleting d's AFTER the fill makes it one overfull bar whose d's are not drawn.
+    /// The keystrokes land past the fill point, so a resume that adopted the walk up to the
+    /// fill without reading on to the bar line would keep the old answer.</summary>
+    [Fact]
+    public void AnEditPastTheFill_ReDecidesTheWrittenBar()
+    {
+        string bar = "c'8 d e f g a b c |";
+        string source = "time 4/4\npart melody { clef treble }\nsection Main { melody { "
+            + string.Join(" ", Enumerable.Repeat(bar, 6))
+            + " c'1 d8 d d d d d d | "
+            + string.Join(" ", Enumerable.Repeat(bar, 6))
+            + " } }\n";
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        session.Render();
+        string live = source;
+        int at = source.IndexOf("d8 d d d d d d |", StringComparison.Ordinal) + "d8".Length;
+        for (int k = 0; k < 4; k++)
+        {
+            // Each keystroke deletes one " d": 15/8 → 14/8 → 13/8 (still two bars) → 12/8 → 11/8
+            // (one bar with too much in it).
+            string incremental = Norm(session.Edit(new TextChange(new TextSpan(at, 2), "")));
+            live = live[..at] + live[(at + 2)..];
+            Assert.Equal(Full(live), incremental);
+        }
+    }
+
     /// <summary>Three single-character insertions, sent one at a time exactly as an editor
     /// sends them: every one must still render byte-identical to a full recompile. The
     /// liveness asserts pin that the chain actually reaches the regime — a keystroke that
@@ -2393,7 +2421,11 @@ public class IncrementalCompilerTests
         string live = source;
         bool everReranLayout = false;
         string incremental = "";
-        foreach (var (offset, ch) in new[] { (0, " "), (1, "g"), (2, "4") })
+        // ` g1 |` before a bar line of a full bar: the first keystrokes overfill the bar (the
+        // music past its end is not drawn, WrittenBarOverflowTests), the closing `|` makes it a
+        // bar of its own — the step that re-runs layout. Until 2026-10-14 the chain was ` g4`,
+        // which made a new bar of its own when every fill closed one.
+        foreach (var (offset, ch) in new[] { (0, " "), (1, "g"), (2, "1"), (3, " "), (4, "|") })
         {
             incremental = Norm(session.Edit(new TextChange(new TextSpan(at + offset, 0), ch)));
             live = live[..(at + offset)] + ch + live[(at + offset)..];

@@ -11,10 +11,14 @@ workflow attaches that section to the GitHub Release verbatim.
 - **A bar of the wrong length no longer pushes the rest of a part out of step.** At each bar
   line the playback (preview and `lysc midi`) starts the next bar where the bar grid says it
   starts, as the page does: a short bar is filled with silence, a bar with too much in it is cut
-  at the bar line (a note sounding across it is shortened; one starting after it is not played),
-  and a span close to two bars is taken as a missing bar line and keeps every note. A section's
-  first bar is evened out only when its parts disagree about it — a pickup every part writes,
-  or half a bar the next section completes, plays as before.
+  at the bar line (a note sounding across it is shortened; one starting after it is not played).
+  A section's first bar is evened out only when its parts disagree about it — a pickup every
+  part writes, or half a bar the next section completes, plays as before.
+- **A written bar with too much in it stays one bar on the page.** The music that starts after
+  its end is not drawn (nor played), so the bars after it stay under the other parts' bars:
+  `g4 g c,8 f1 c1 | e1` used to make `c1` a bar of its own and push `e1` out of the score. The
+  one exception is a bar line left out — a span within a quarter of a bar of two or more whole
+  bars (15/8 in 4/4) is that many bars and keeps every note.
 - **The empty chord `<>` takes no time in playback**, as on the page: `c4 <>@sfz d` sounded the
   `d` a beat late.
 

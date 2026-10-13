@@ -70,6 +70,19 @@ public class BarLineSyncMidiTests
     }
 
     [Fact]
+    public void TheOwnersSecondBook_TheNotePastTheBar_IsNotPlayed()
+    {
+        // 21/8 is one bar with too much in it (not within a quarter of three bars): the c1 that
+        // starts after its end is not played, as the page does not draw it, and the e1 sounds
+        // with the other part's third bar (Semantics.WrittenBar).
+        var src = Book("c'4 d e f | g2 g | c1", "c'4 d e  | g4 g c,8 f1 c1 | e1");
+        var p2 = Notes(src, "p2");
+        Assert.Equal(new[] { 0, 480, 960, Bar, Bar + 480, Bar + 960, Bar + 1200, 2 * Bar },
+            p2.Select(n => n.StartTick));
+        Assert.True(p2[^2].StartTick + p2[^2].DurationTicks <= 2 * Bar); // the f1, cut at the bar line
+    }
+
+    [Fact]
     public void AShortBar_IsFilledWithSilence()
     {
         var notes = Notes(Book("c'1 | d1 | e1", "c'1 | d2. | e1"), "p2");

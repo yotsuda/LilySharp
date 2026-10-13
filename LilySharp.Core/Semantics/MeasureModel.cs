@@ -46,8 +46,11 @@ namespace LilySharp.Core.Semantics;
 internal static class MeasureModel
 {
     /// <summary>One measure of a flattened scope: its total sounded duration, the source
-    /// span to squiggle, and whether it is an explicit empty <c>| |</c> placeholder.</summary>
-    internal readonly record struct Bar(Fraction Duration, TextSpan Span, bool IsEmpty = false);
+    /// span to squiggle, whether it is an explicit empty <c>| |</c> placeholder, and the end of
+    /// the written bar line that closed its music, or -1 (<see cref="WrittenBar"/> reads only
+    /// closed bars: the music after a scope's last bar line, or a bar a repeat's flow filled,
+    /// has no written end).</summary>
+    internal readonly record struct Bar(Fraction Duration, TextSpan Span, bool IsEmpty = false, int BarLineEnd = -1);
 
     /// <summary>
     /// Flattens <paramref name="scope"/> (expanding phrase references via
@@ -97,11 +100,11 @@ internal static class MeasureModel
         int repeatFlow = 0;       // depth of percent/unfold expansions in flight
         int plannedFor = -1;      // the bar plannedMeterAt was last asked for
 
-        void FlushMusic()
+        void FlushMusic(int barLineEnd = -1)
         {
             if (current.Count == 0)
                 return;
-            bars.Add(new Bar(total, MeasureDurations.GetSpan(current)));
+            bars.Add(new Bar(total, MeasureDurations.GetSpan(current), BarLineEnd: barLineEnd));
             current = new List<SyntaxNode>();
             total = Fraction.Zero;
             confirmable = false;
@@ -171,7 +174,7 @@ internal static class MeasureModel
                 bool openerAtScopeStart = atScopeStart && bar.BarToken.Text == "|:";
                 atScopeStart = false;
                 if (current.Count > 0)
-                    FlushMusic(); // the barline closes the bar of music before it
+                    FlushMusic(barEnd); // the barline closes the bar of music before it
                 else if (!pairsLikeBare || openerAtScopeStart)
                     confirmable = false; // a typed bar decorates the boundary
                 else if (confirmable)

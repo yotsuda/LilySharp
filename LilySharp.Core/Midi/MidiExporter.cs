@@ -1976,12 +1976,13 @@ public sealed class MidiExporter
 
     /// <summary>
     /// Closes a bar whose length is wrong at its bar line, so the bars after it start where
-    /// the other parts' do. The span since the last bar line is taken as the bar it opened
-    /// (the meter, a pickup, or the first bar the parts settle on) plus the whole number of
-    /// meter bars it is nearest to: short of that it is filled with silence, past it
-    /// it is cut there (a note sounding across the end is shortened, one starting past it is
-    /// dropped). The page does the same with bar N of every part — it walks bars, this walk
-    /// counts durations.
+    /// the other parts' do. The span since the last bar line is the bar it opened (the meter,
+    /// a pickup, or the first bar the parts settle on) — plus the bars a left-out bar line
+    /// would have made, by <see cref="Semantics.WrittenBar"/>, the rule the page reads it by:
+    /// short of that it is filled with silence, past it it is cut there (a note sounding
+    /// across the end is shortened, one starting past it is not played, as the page does
+    /// not draw it). The page puts bar N under bar N of every part — it walks bars, this
+    /// walk counts durations.
     /// </summary>
     /// <remarks>
     /// Only a bar that opened on a bar line (or a declared pickup) is measured. A span of
@@ -2000,13 +2001,9 @@ public sealed class MidiExporter
         int length = _bars.Partial == null && _firstBarTicks is { } first ? first : MeasureTicks();
         if (length <= 0)
             return;
-        // 9/8 in 4/4 is one bar with an eighth too many; 15/8 is two bars with a bar line
-        // missing (`… cis, break fis,,8 …` in the owner's 銀河鉄道999 — cutting that to one
-        // bar dropped seven of its notes).
         // The bars after the first are the meter's, whatever the first was (a pickup).
         int meter = FractionToTicks(_bars.MeterLength);
-        int elapsed = _currentTick - _barStart;
-        int more = meter <= 0 ? 0 : Math.Max(0, (int)Math.Floor((elapsed - length) / (double)meter + 0.5));
+        int more = Semantics.WrittenBar.MissingBarLines(_currentTick - _barStart, length, meter);
         int end = _barStart + length + more * meter;
         if (_currentTick == end)
             return;

@@ -932,6 +932,50 @@ public sealed partial class MeasureCollector
     // Record mode only: the end of the furthest source text this walk has read
     // (WalkCheckpoint.MaxSourceRead — see its remarks for the fold sites).
     private int _walkMaxSourceRead;
+
+    // The written bars of each music scope (MeasureModel.Split), split the first time a fill in
+    // it asks (WrittenBarAt) — only a fill with no bar line right after asks — cleared per collect.
+    private readonly Dictionary<SyntaxNode, List<Semantics.MeasureModel.Bar>> _writtenBars = new();
+    private IReadOnlyDictionary<string, SyntaxNode>? _writtenBarPhrases;
+    private Func<int, (Fraction Length, int Start)?>? _writtenBarAt;
+
+    /// <summary>
+    /// The written bar <paramref name="position"/> stands in — its length and its start — when a
+    /// written bar line closes it, else null (MeasureBuilder.WrittenBarAt). The scope is the part
+    /// block or the section the position is written in; music inlined from a phrase stands
+    /// outside it and answers null, as music with no bar line after it does.
+    /// </summary>
+    /// <remarks>The answer depends on the bar's music up to its bar line, so that much is read
+    /// (folded into MaxSourceRead): an edit further on in the bar re-walks from before it.</remarks>
+    private (Fraction Length, int Start)? WrittenBarAt(int position)
+    {
+        if (_root?.FindNode(position) is not { } node)
+            return null;
+        SyntaxNode? scope = null;
+        for (var p = node; p != null && scope == null; p = p.Parent)
+        {
+            if (p is PhraseDeclarationSyntax or VariableDeclarationSyntax)
+                return null;
+            if (p is PartBlockSyntax or SectionDeclarationSyntax)
+                scope = p;
+        }
+        if (scope == null)
+            return null;
+        if (!_writtenBars.TryGetValue(scope, out var bars))
+            _writtenBars[scope] = bars = Semantics.MeasureModel.Split(scope,
+                _writtenBarPhrases ??= SectionBarCounts.PhraseBodies(_root!), ScoreMeter.Length);
+        foreach (var bar in bars)
+        {
+            if (position < bar.Span.Start || position >= bar.Span.End)
+                continue;
+            if (bar.BarLineEnd < 0 || bar.IsEmpty)
+                return null;
+            if (_probeRecording != null && _formBarRead == null)
+                _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, bar.BarLineEnd);
+            return (bar.Duration, bar.Span.Start);
+        }
+        return null;
+    }
     // Record mode only: the header spans this walk read, in walk order (part
     // name/config at entry, then each visited section's name + header directives).
     // See VoiceWalkRecording.HeaderReads.
@@ -3672,6 +3716,8 @@ public sealed partial class MeasureCollector
         _condensedStaffChangeWarnings.Clear();
         _canonicalSectionBars.Clear();
         _canonicalByName = null;
+        _writtenBars.Clear();
+        _writtenBarPhrases = null;
         _meterPlan = null;
         // The definitions walk's own gatherings (its fields say what for): cleared here as
         // every collection field is, and refilled by CollectDefinitions right after.
@@ -3903,6 +3949,7 @@ public sealed partial class MeasureCollector
             MidBarBreaks = MidBarBreaks,
             MidBarBreakRequests = _midBarBreakRequests,
             MidBarBreakRefusals = _midBarBreakRefusals,
+            WrittenBarAt = _writtenBarAt ??= WrittenBarAt,
         };
         builder.SetHomeMeter(HomeMeterOfScore, _scoreTime.SenzaMisura);
         if (_filePartial is { } filePickup)
