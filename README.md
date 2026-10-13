@@ -13,7 +13,7 @@ editor at work, a gallery of engraved scores, and the
 
 Harbour Lights, engraved and played by Lily# — each note lights as it sounds, the way the VS Code preview follows along:
 
-https://github.com/user-attachments/assets/4483b787-1d2d-4f43-b3b7-09782aff3a47
+https://github.com/user-attachments/assets/2b00e458-15b7-485c-a82c-ce7db2970d13
 
 The song — music, words and source — was composed by an AI (Claude, by Anthropic), and the page in the video is the whole of [`samples/harbour-lights.lys`](samples/harbour-lights.lys):
 
