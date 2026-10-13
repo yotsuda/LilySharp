@@ -3147,6 +3147,12 @@ public sealed partial class MeasureCollector
             return;
         var firstMeasures = firstVoices[0].Measures.ToArray();
         bool firstChanged = false;
+        // Each part's OWN clef timeline, read before the changes below are moved or junked:
+        // what its notes were placed under (PlaceUnderTheStaffsClefs).
+        var ownClefs = new Dictionary<string, List<(int Measure, Fraction Onset, ClefType Clef)>>(StringComparer.Ordinal);
+        foreach (string name in condensed.PartNames)
+            if (staffVoices.TryGetValue(name, out var pv) && pv.Length > 0)
+                ownClefs[name] = ClefEvents(pv[0].Measures);
 
         // Each part's key timeline as the collect spelled its notes: the opening key (the
         // part's own header key, else the score's) and its own key changes, in order.
@@ -3271,6 +3277,7 @@ public sealed partial class MeasureCollector
             updated[0] = firstVoices[0] with { Measures = firstMeasures.ToImmutableArray() };
             staffVoices[firstPart] = updated.ToImmutableArray();
         }
+        PlaceUnderTheStaffsClefs(condensed, staffVoices, ownClefs);
 
         static int KindOf(MusicItem it) => it switch
         {
@@ -3324,6 +3331,104 @@ public sealed partial class MeasureCollector
         static string KeyWords(KeySignature key) => key.Custom != null ? "a custom key"
             : key.Sharps == 0 ? "no sharps or flats"
             : $"{Math.Abs(key.Sharps)} {(key.Sharps > 0 ? "sharp" : "flat")}{(Math.Abs(key.Sharps) == 1 ? "" : "s")}";
+    }
+
+    /// <summary>The clef changes of <paramref name="measures"/> (not a cue's), in order.</summary>
+    private static List<(int Measure, Fraction Onset, ClefType Clef)> ClefEvents(ImmutableArray<Measure> measures)
+    {
+        var list = new List<(int, Fraction, ClefType)>();
+        for (int m = 0; m < measures.Length; m++)
+        {
+            var at = Fraction.Zero;
+            foreach (var it in measures[m].Items)
+            {
+                if (it is ClefChangeItem { IsCue: false } clef)
+                    list.Add((m, at, clef.NewClef));
+                at += it.Duration;
+            }
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// Every note of a condensed staff placed under the clef THE STAFF stands in at its moment,
+    /// not the one its own part was walked under.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="RenderSpec.WrittenClefOf"/> starts every part under the staff's clef, but a
+    /// clef CHANGE is one part's: the collect placed that part's later notes under it and the
+    /// other parts' under theirs, while the staff takes ONE change (the junk pass above). So a
+    /// change only the cello writes turned the staff to the bass clef and left the viola's notes
+    /// where the alto clef puts them — MEASURED (LilyPond 2.26.0, Lab sessions/p903/c2 cc.lys):
+    /// the twin's <c>&lt;&lt; \vla \\ \vc &gt;&gt;</c> moves both, a <c>\clef</c> in any voice
+    /// being the Staff's. A position is a diatonic distance from the middle line, so placing a
+    /// note under another clef is a shift by the distance between the two clefs' middle-line
+    /// pitches (<see cref="MiddleLinePitch"/>).
+    /// </remarks>
+    private static void PlaceUnderTheStaffsClefs(CondensedStaffSpec condensed,
+        Dictionary<string, ImmutableArray<Voice>> staffVoices,
+        Dictionary<string, List<(int Measure, Fraction Onset, ClefType Clef)>> ownClefs)
+    {
+        if (condensed.PartNames.Length < 2
+            || !staffVoices.TryGetValue(condensed.PartNames[0], out var firstVoices) || firstVoices.Length == 0)
+            return;
+        var staffClefs = ClefEvents(firstVoices[0].Measures);
+        static ClefType InForce(ClefType opening, List<(int Measure, Fraction Onset, ClefType Clef)> events, int m, Fraction at)
+        {
+            var clef = opening;
+            foreach (var (em, eat, c) in events)
+                if (em < m || (em == m && eat <= at))
+                    clef = c;
+            return clef;
+        }
+        static int Diatonic(ClefType clef) => MiddleLinePitch(clef) is var (step, octave) ? step + octave * 7 : 0;
+
+        foreach (string part in condensed.PartNames)
+        {
+            if (!ownClefs.TryGetValue(part, out var own) || !staffVoices.TryGetValue(part, out var voices))
+                continue;
+            if (own.Count == 0 && staffClefs.Count == 0)
+                continue;
+            Voice[]? rewritten = null;
+            for (int vi = 0; vi < voices.Length; vi++)
+            {
+                var measures = voices[vi].Measures;
+                Measure[]? fitted = null;
+                for (int m = 0; m < measures.Length; m++)
+                {
+                    var items = measures[m].Items;
+                    MusicItem[]? moved = null;
+                    var at = Fraction.Zero;
+                    for (int i = 0; i < items.Length; i++)
+                    {
+                        int shift = Diatonic(InForce(condensed.Clef, own, m, at))
+                            - Diatonic(InForce(condensed.Clef, staffClefs, m, at));
+                        if (shift != 0)
+                        {
+                            MusicItem? placed = items[i] switch
+                            {
+                                NoteItem n => n with { StaffPosition = n.StaffPosition + shift },
+                                ChordItem c => c with
+                                {
+                                    Notes = c.Notes.Select(x => x with { StaffPosition = x.StaffPosition + shift }).ToImmutableArray(),
+                                },
+                                RestItem { StaffPosition: { } p } r => r with { StaffPosition = p + shift },
+                                _ => null,
+                            };
+                            if (placed != null)
+                                (moved ??= items.ToArray())[i] = placed;
+                        }
+                        at += items[i].Duration;
+                    }
+                    if (moved != null)
+                        (fitted ??= measures.ToArray())[m] = measures[m] with { Items = moved.ToImmutableArray() };
+                }
+                if (fitted != null)
+                    (rewritten ??= voices.ToArray())[vi] = voices[vi] with { Measures = fitted.ToImmutableArray() };
+            }
+            if (rewritten != null)
+                staffVoices[part] = rewritten.ToImmutableArray();
+        }
     }
 
     /// <summary>The row skeleton of a melody-bound lyrics row: the melody's

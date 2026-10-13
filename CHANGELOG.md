@@ -6,6 +6,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### A clef change on a condensed staff moves every part
+
+- **A `clef` written by one part of a `condensedStaff` changes the staff for all of them**, and
+  now the other parts' notes follow it too: they used to stay where the old clef put them (the
+  viola's E5 one ledger line above a staff that had turned to the bass clef).
+
 ### A quick fix for LilyPond's script shorthands
 
 - **`c4-.` → `c4@staccato`** in one step: the error on a LilyPond shorthand (`-.` `->` `--` `-^`

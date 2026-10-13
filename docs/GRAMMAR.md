@@ -1772,7 +1772,9 @@ CondensedStaff = 'condensedStaff' , [ ClefName ] , '{' , PartRef , PartRef , { P
                     The staff's clef is the ClefName written before the brace, else the
                     first part's, and every part is placed under it (a cello on a viola's
                     alto staff reads its own pitches there, ledger lines and all), as on a
-                    `combinedStaff`. `condensedStaff bass { vla vc }` puts both on a bass
+                    `combinedStaff`. A clef change one part writes is the staff's, and every
+                    part's later notes stand under it, as a \clef in any voice is LilyPond's
+                    Staff's. `condensedStaff bass { vla vc }` puts both on a bass
                     staff, as `staff bass x` does for one part (user decision 2026-10-13);
                     the brace that must follow tells the clef from a part named `bass`
                     (`condensedStaff { bass vc }`). *)

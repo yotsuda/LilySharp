@@ -88,6 +88,23 @@ public class SharedStaffClefTests
         Assert.Contains("\\new Staff { \\clef \"bass\" ", new LilyPondExporter().Export(tree));
     }
 
+    // A clef CHANGE one part writes is the staff's, and moves every part's notes after it.
+    // MEASURED (LilyPond 2.26.0, Lab sessions/p903/c2 cc.lys): `clef bass` in the cello alone
+    // puts the viola's E5 four ledger lines above the bass staff (position 15) and the cello's
+    // C4 on the first (6). The reverse — the viola alone turning to treble — is the same rule.
+    [Theory]
+    [InlineData("vla { e'1 | e'1 | } vc { c1 | clef bass c1 | }", "6 15")]
+    [InlineData("vla { e'1 | clef treble e'1 | } vc { c1 | c1 | }", "-6 3")]
+    public void AClefChangeInOnePart_MovesEveryPartsNotes(string music, string secondBar)
+    {
+        var tree = SyntaxTree.Parse("octave absolute\npart vla { clef alto }\npart vc { clef alto }\n"
+            + "section A { " + music + " }\nform { A }\nscore { condensedStaff { vla vc } }");
+        var staff = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)).StaffGroups[0].Staves[0];
+        var positions = staff.Voices.SelectMany(v => v.Measures[1].Items.OfType<NoteItem>())
+            .Select(n => n.StaffPosition).OrderBy(p => p);
+        Assert.Equal(secondBar, string.Join(" ", positions));
+    }
+
     [Fact]
     public void APartNamedLikeAClef_InsideTheBraces_IsStillAPart()
     {
