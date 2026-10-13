@@ -11,11 +11,11 @@ editor at work, a gallery of engraved scores, and the
 [![VS Code Marketplace](https://vsmarketplacebadges.dev/version/yotsuda.lilysharp.svg?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=yotsuda.lilysharp)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3%20or%20later-blue.svg)](LICENSE)
 
-Harbour Lights, engraved and played by Lily# — each note lights as it sounds, the way the VS Code preview follows along:
+*Harbour Lights* — music, words and source composed by an AI (Claude, by Anthropic) — engraved and played by Lily#. Each note lights as it sounds, the way the VS Code preview follows along:
 
 https://github.com/user-attachments/assets/2b00e458-15b7-485c-a82c-ce7db2970d13
 
-The song — music, words and source — was composed by an AI (Claude, by Anthropic), and the page in the video is the whole of [`samples/harbour-lights.lys`](samples/harbour-lights.lys):
+The page in the video is the whole of [`samples/harbour-lights.lys`](samples/harbour-lights.lys):
 
 <!-- README-SAMPLE:harbour-lights (kept identical to the file by ReadmeSampleTests) -->
 ```lilysharp
