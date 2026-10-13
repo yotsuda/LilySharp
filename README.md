@@ -1,15 +1,15 @@
 # Lily#
 
+[![CI](https://github.com/yotsuda/LilySharp/actions/workflows/ci.yml/badge.svg)](https://github.com/yotsuda/LilySharp/actions/workflows/ci.yml)
+[![VS Code Marketplace](https://vsmarketplacebadges.dev/version/yotsuda.lilysharp.svg?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=yotsuda.lilysharp)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3%20or%20later-blue.svg)](LICENSE)
+
 A music notation language and engraving engine — publication-quality sheet music
 from plain text, with an IDE-first toolchain.
 
 **Website: [yotsuda.github.io/LilySharp](https://yotsuda.github.io/LilySharp/)** — the
 editor at work, a gallery of engraved scores, and the
 [language manual](https://yotsuda.github.io/LilySharp/grammar.html).
-
-[![CI](https://github.com/yotsuda/LilySharp/actions/workflows/ci.yml/badge.svg)](https://github.com/yotsuda/LilySharp/actions/workflows/ci.yml)
-[![VS Code Marketplace](https://vsmarketplacebadges.dev/version/yotsuda.lilysharp.svg?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=yotsuda.lilysharp)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3%20or%20later-blue.svg)](LICENSE)
 
 *Harbour Lights* — music, words and source composed by an AI (Claude, by Anthropic) — engraved by Lily#. Play it in the VS Code preview and each note lights up as it sounds:
 
