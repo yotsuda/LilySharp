@@ -20,11 +20,12 @@ The same page playing, with each note lit as it sounds — the way the VS Code p
 
 https://github.com/user-attachments/assets/4483b787-1d2d-4f43-b3b7-09782aff3a47
 
-That page is the whole of [`samples/harbour-lights.lys`](samples/harbour-lights.lys):
+The song — music, words and source — was composed by an AI (Claude, by Anthropic), and that page is the whole of [`samples/harbour-lights.lys`](samples/harbour-lights.lys):
 
 <!-- README-SAMPLE:harbour-lights (kept identical to the file by ReadmeSampleTests) -->
 ```lilysharp
-// Harbour Lights — an original song written for the Lily# README.
+// Harbour Lights — an original song written for the Lily# README. The music, the words
+// and this source were composed by an AI (Claude, by Anthropic).
 //
 // One page from one source: chord symbols, a voice with its lyrics, and a piano on a
 // grand staff — pedal changes, hairpins, a triplet, a ritardando, rolled chords and
