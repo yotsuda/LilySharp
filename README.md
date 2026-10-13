@@ -16,6 +16,10 @@ editor at work, a gallery of engraved scores, and the
        alt="Harbour Lights, engraved by Lily#: chord symbols, a voice with its lyrics, and a piano on a grand staff">
 </p>
 
+The same page playing, with each note lit as it sounds — the way the VS Code preview follows along:
+
+https://github.com/user-attachments/assets/4483b787-1d2d-4f43-b3b7-09782aff3a47
+
 That page is the whole of [`samples/harbour-lights.lys`](samples/harbour-lights.lys):
 
 <!-- README-SAMPLE:harbour-lights (kept identical to the file by ReadmeSampleTests) -->
