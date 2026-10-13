@@ -153,22 +153,8 @@ internal static class TextOutlineSkylines
         (SkylineBuilding[] Up, SkylineBuilding[] Down)> MusicProfileCache = new();
 
     /// <summary>
-    /// One music glyph's outline skylines, out of the current music font
-    /// (<see cref="MusicFont.Current"/>), at <paramref name="fontSize"/> (staff spaces,
-    /// 4.0 = the nominal staff), in the GLYPH's own frame — its origin at 0, unplaced;
-    /// <see cref="PlaceMusicGlyph"/> is the overload that puts it somewhere. The SAME walk as
-    /// the text overload — LilyPond's named-glyph skyline runs the same freetype
-    /// flattening over the glyph outline, and the flattening happens at the
-    /// TRANSFORMED size, which is why the size is in the cache key.
-    /// Returns an EMPTY pair when the music font's file cannot be located — the
-    /// caller keeps the glyph's designed box.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments;
-    /// lily/freetype.cc:174-202 ly_FT_add_outline_to_skyline.
-    /// </remarks>
-    /// <summary>
-    /// The same profile, RESOLVED and unplaced — for a caller that merges it straight into a
+    /// A music glyph's outline profile (<see cref="ResolvedMusicGlyph"/>'s), RESOLVED and
+    /// unplaced — for a caller that merges it straight into a
     /// skyline with <see cref="VerticalSkyline.Merge(IReadOnlyList{SkylineBuilding}, double,
     /// double)"/> rather than taking a placed copy of its own. Empty when the bundled music
     /// font cannot be located.
@@ -214,6 +200,21 @@ internal static class TextOutlineSkylines
         return PlaceResolved(direction, side, x, y);
     }
 
+    /// <summary>
+    /// One music glyph's outline skylines, out of the current music font
+    /// (<see cref="MusicFont.Current"/>), at <paramref name="fontSize"/> (staff spaces,
+    /// 4.0 = the nominal staff), in the GLYPH's own frame — its origin at 0, unplaced;
+    /// <see cref="PlaceMusicGlyph"/> is the overload that puts it somewhere. The SAME walk as
+    /// the text overload — LilyPond's named-glyph skyline runs the same freetype
+    /// flattening over the glyph outline, and the flattening happens at the
+    /// TRANSFORMED size, which is why the size is in the cache key.
+    /// Returns an EMPTY pair when the music font's file cannot be located — the
+    /// caller keeps the glyph's designed box.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments;
+    /// lily/freetype.cc:174-202 ly_FT_add_outline_to_skyline.
+    /// </remarks>
     private static (SkylineBuilding[] Up, SkylineBuilding[] Down) ResolvedMusicGlyph(
         MusicGlyph glyph, double fontSize, int design, double horizonPadding = 0.0,
         double extraPad = 0.0)

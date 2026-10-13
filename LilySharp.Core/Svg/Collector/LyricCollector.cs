@@ -21,6 +21,16 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Svg.Collector;
 
 /// <summary>
+/// A lyric line's overflow: how many syllables ran past the notes, and where
+/// the FIRST of them sits — its text, source offset, and 1-based bar number
+/// within the lyric line — plus how many notes of that bar a slur and a tie held
+/// (they take no syllable), which is usually WHY the bar ran out.
+/// </summary>
+public readonly record struct LyricOverflow(
+    int Count, string FirstText, int FirstPosition, int FirstBar,
+    int SlurHeldInFirstBar = 0, int TieHeldInFirstBar = 0);
+
+/// <summary>
 /// Collects lyrics from syntax tree and associates them with notes.
 /// </summary>
 /// <remarks>
@@ -32,16 +42,6 @@ namespace LilySharp.Core.Svg.Collector;
 /// LyricsCollector.BuildNoteIndices). Hyphens (--) indicate word continuation, extenders
 /// (__) draw the melisma's line and take no note, `_` / detached `~` take one note.
 /// </remarks>
-/// <summary>
-/// A lyric line's overflow: how many syllables ran past the notes, and where
-/// the FIRST of them sits — its text, source offset, and 1-based bar number
-/// within the lyric line — plus how many notes of that bar a slur and a tie held
-/// (they take no syllable), which is usually WHY the bar ran out.
-/// </summary>
-public readonly record struct LyricOverflow(
-    int Count, string FirstText, int FirstPosition, int FirstBar,
-    int SlurHeldInFirstBar = 0, int TieHeldInFirstBar = 0);
-
 internal sealed class LyricCollector
 {
     /// <summary>One note a syllable can take, and the last note of the melisma that runs on

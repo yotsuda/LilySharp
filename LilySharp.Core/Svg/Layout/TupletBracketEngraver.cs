@@ -1595,16 +1595,6 @@ internal static class TupletBracketEngraver
     }
 
     /// <summary>
-    /// The NOTE/CHORD items a tuplet spans, read from its OWN staff's measures — so a
-    /// tab tuplet gets the assigned string numbers (the covering beam may be the
-    /// companion notation beam, whose members carry no string).
-    /// </summary>
-    /// <summary>
-    /// The item at ONE index of the tuplet's own measure, or null when the index is out of
-    /// range — the bound whose STEM a bracket hook stands on, so each end can read its own
-    /// head shape rather than sharing one offset with the other end.
-    /// </summary>
-    /// <summary>
     /// The x of the bracket's bound on <paramref name="left"/>'s side, relative to the bound
     /// item's column x: the STEM's edge when the item has a visible stem pointing the
     /// bracket's way, the COLUMN's ink edge otherwise — a rest's glyph box, a stemless
@@ -2140,6 +2130,11 @@ internal static class TupletBracketEngraver
         return geom.TabStemUp(item);
     }
 
+    /// <summary>
+    /// The item at ONE index of the tuplet's own measure, or null when the index is out of
+    /// range — the bound whose STEM a bracket hook stands on, so each end can read its own
+    /// head shape rather than sharing one offset with the other end.
+    /// </summary>
     private static MusicItem? TupletItemAt(
         TupletBracketItem tuplet, ImmutableArray<Measure> measures, int itemIndex)
     {
@@ -2149,6 +2144,11 @@ internal static class TupletBracketEngraver
         return itemIndex >= 0 && itemIndex < items.Length ? items[itemIndex] : null;
     }
 
+    /// <summary>
+    /// The NOTE/CHORD items a tuplet spans, read from its OWN staff's measures — so a
+    /// tab tuplet gets the assigned string numbers (the covering beam may be the
+    /// companion notation beam, whose members carry no string).
+    /// </summary>
     private static System.Collections.Generic.IEnumerable<MusicItem> TupletNoteItems(
         TupletBracketItem tuplet, ImmutableArray<Measure> measures)
     {

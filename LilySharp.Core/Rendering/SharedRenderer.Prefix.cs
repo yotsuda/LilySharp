@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -206,14 +206,6 @@ internal static partial class SharedRenderer
     }
 
     /// <summary>
-    /// Returns the key-signature change that OPENS the first measure of a
-    /// (non-first) system, or null. Such a change lands exactly at the line
-    /// break and prints as the NEW key in the system prefix; the cancellation
-    /// belongs to the previous line, not to bar one of the new line.
-    /// LILYPOND-REF: lily/break-align-engraver.cc — KeySignature is
-    /// break-aligned at every line start.
-    /// </summary>
-    /// <summary>
     /// The key signature a system opening at <paramref name="measures"/>' first measure prints
     /// at its head, and the clef it is positioned by — what <c>DrawSystem</c> draws there
     /// (<see cref="ResolveKeySignature(Staff, SystemLayout, MultiStaffScore)"/>, then a key
@@ -344,6 +336,15 @@ internal static partial class SharedRenderer
     internal static double LineStartMeterX(
         MultiStaffScore score, ImmutableArray<MeasureLayout> measures, bool isFirstSystem, double systemStartX)
         => SharedPrefixColumns(score, new SystemLayout(isFirstSystem ? 0 : 1, 0, 0, 0, measures), systemStartX).TimeX;
+
+    /// <summary>
+    /// Returns the key-signature change that OPENS the first measure of a
+    /// (non-first) system, or null. Such a change lands exactly at the line
+    /// break and prints as the NEW key in the system prefix; the cancellation
+    /// belongs to the previous line, not to bar one of the new line.
+    /// LILYPOND-REF: lily/break-align-engraver.cc — KeySignature is
+    /// break-aligned at every line start.
+    /// </summary>
     private static KeySignatureChangeItem? GetSystemStartKeyChange(Staff staff, SystemLayout system)
     {
         if (system.SystemIndex == 0 || system.Measures.IsDefaultOrEmpty || system.Measures.Length == 0)
@@ -729,23 +730,6 @@ internal static partial class SharedRenderer
         }
     }
 
-    /// <summary>
-    /// A meter's two rows about the staff's MIDDLE line (Y up): each row's baseline, and the
-    /// ink the pair spans — what <see cref="DrawTimeSignature"/> draws and what
-    /// <c>SkylineBuilder.SeedMeter</c> puts in the skylines, from this one home.
-    /// </summary>
-    /// <remarks>
-    /// Each row's centre stands a staff space from the middle line — LilyPond's 2-space slot
-    /// (the denominator translated -2 under the numerator, scm/time-signature-settings.scm
-    /// format-time-fraction) — unless its digits are TALLER than the slot: then the row's ink
-    /// starts at the middle line and grows outward. LILYSHARP-OWN for that arm: LilyPond's rule
-    /// is written for Emmentaler's 2-space numerals and has none for a taller face. Petaluma's
-    /// timeSig digits stand 3.1–3.9 spaces tall (±1.57 / ±1.96 about their baseline), so the
-    /// fixed ±1 overlapped the two rows by two staff spaces (owner report 2026-10-09); the rule
-    /// is MuseScore's for the same font (the numerator's bottom and the denominator's top on the
-    /// middle line). A row within the slot (Emmentaler, Leland) keeps the ±1 exactly; Bravura's
-    /// 4 is 2.004 tall, 0.002 out.
-    /// </remarks>
     /// <summary>The C / cut-C glyph a meter prints instead of digits — 4/4 and 2/2, LilyPond's
     /// default style (scm/time-signature-settings.scm:954-964,981-982) — or null.</summary>
     internal static MusicGlyph? MeterSymbol(TimeSignature ts)
@@ -771,6 +755,23 @@ internal static partial class SharedRenderer
         return (rows.InkBottom, rows.InkTop);
     }
 
+    /// <summary>
+    /// A meter's two rows about the staff's MIDDLE line (Y up): each row's baseline, and the
+    /// ink the pair spans — what <see cref="DrawTimeSignature"/> draws and what
+    /// <c>SkylineBuilder.SeedMeter</c> puts in the skylines, from this one home.
+    /// </summary>
+    /// <remarks>
+    /// Each row's centre stands a staff space from the middle line — LilyPond's 2-space slot
+    /// (the denominator translated -2 under the numerator, scm/time-signature-settings.scm
+    /// format-time-fraction) — unless its digits are TALLER than the slot: then the row's ink
+    /// starts at the middle line and grows outward. LILYSHARP-OWN for that arm: LilyPond's rule
+    /// is written for Emmentaler's 2-space numerals and has none for a taller face. Petaluma's
+    /// timeSig digits stand 3.1–3.9 spaces tall (±1.57 / ±1.96 about their baseline), so the
+    /// fixed ±1 overlapped the two rows by two staff spaces (owner report 2026-10-09); the rule
+    /// is MuseScore's for the same font (the numerator's bottom and the denominator's top on the
+    /// middle line). A row within the slot (Emmentaler, Leland) keeps the ±1 exactly; Bravura's
+    /// 4 is 2.004 tall, 0.002 out.
+    /// </remarks>
     internal static (double NumBaseline, double DenBaseline, double InkBottom, double InkTop) MeterRows(
         TimeSignature ts)
     {
@@ -955,14 +956,6 @@ internal static partial class SharedRenderer
         return hi > lo ? 0.3 : 0.15;
     }
 
-    /// <summary>
-    /// Staff position of the i-th key-signature accidental for a clef.
-    /// LILYPOND-REF: scm/output-lib.scm:1056 key-signature-interface::alteration-positions —
-    /// staffPosition = hi − modulo(hi − (c0 + step), 7).
-    /// </summary>
-    /// <summary>Key-signature staff position for an ARBITRARY step (custom
-    /// signatures) — same octave-choice tables, indexed by step instead of the
-    /// standard order. LILYPOND-REF: key-signature-interface alteration-positions.</summary>
     /// <summary>The (step, alter) pairs of a STANDARD key signature in print
     /// order (sharps F C G D A E B / flats B E A D G C F).</summary>
     /// <remarks>
@@ -973,6 +966,12 @@ internal static partial class SharedRenderer
     /// </remarks>
     private static List<(int Step, int Alter)> StandardKeySteps(int sharps) =>
         [.. KeySpelling.SignatureSteps(sharps)];
+
+    /// <summary>Key-signature staff position for an ARBITRARY step (custom
+    /// signatures) — same octave-choice tables, indexed by step instead of the
+    /// standard order.
+    /// LILYPOND-REF: scm/output-lib.scm:1056 key-signature-interface::alteration-positions —
+    /// staffPosition = hi − modulo(hi − (c0 + step), 7).</summary>
     private static int KeySigStaffPositionForStep(ClefType clef, bool sharpish, int step)
     {
         int c0Position = clef switch

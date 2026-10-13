@@ -491,20 +491,6 @@ internal sealed class SkylineBuilder
     // ours, or the next reader cannot tell which of the two is the real one.
 
     /// <summary>
-    /// Seeds a staff's opening clef into both skylines.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/axis-group-interface.cc:914-940 skyline_spacing —
-    /// inside_staff_skylines carry every inside-staff grob, and a Clef is one, so it
-    /// joins the staff's vertical skyline exactly as a notehead does.
-    ///
-    /// The anchor mirrors <c>SharedRenderer.DrawClef</c>: the glyph sits on the line it
-    /// names, which is that clef's middle integer in
-    /// LILYPOND-REF: scm/parser-clef.scm supported-clefs (treble G = staff position -2,
-    /// bass F = +2, alto C = 0). Keeping the two in one shape is the point — a skyline
-    /// that anchors the clef anywhere else reserves space where no ink is.
-    /// </remarks>
-    /// <summary>
     /// Seeds the key signature a system prints at its head into both skylines, where the
     /// renderer draws it (the shared key column, <c>SharedRenderer.DrawSystem</c>).
     /// </summary>
@@ -664,6 +650,20 @@ internal sealed class SkylineBuilder
         }
     }
 
+    /// <summary>
+    /// Seeds a staff's opening clef into both skylines.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-940 skyline_spacing —
+    /// inside_staff_skylines carry every inside-staff grob, and a Clef is one, so it
+    /// joins the staff's vertical skyline exactly as a notehead does.
+    ///
+    /// The anchor mirrors <c>SharedRenderer.DrawClef</c>: the glyph sits on the line it
+    /// names, which is that clef's middle integer in
+    /// LILYPOND-REF: scm/parser-clef.scm supported-clefs (treble G = staff position -2,
+    /// bass F = +2, alto C = 0). Keeping the two in one shape is the point — a skyline
+    /// that anchors the clef anywhere else reserves space where no ink is.
+    /// </remarks>
     private void SeedClef(
         Staff staff, double staffMiddleUp, double systemLeft,
         StaffSize size,
@@ -2522,12 +2522,6 @@ internal sealed class SkylineBuilder
     }
 
     /// <summary>
-    /// Seeds staff-local Script articulation ink into the per-staff skylines so the
-    /// inter-staff gap reserves room for them. The layouts carry Y relative to the
-    /// staff top line (= this skyline's Y origin); the ink transform matches
-    /// LayoutEngine.AugmentSkylinesWithScripts (BBox Top is up-positive).
-    /// </summary>
-    /// <summary>
     /// Seeds each fingering's drawn digit run as a box in the staff's own inside profile:
     /// the run's advance width about its centre, its ink from the baseline the engraver
     /// placed.
@@ -2576,6 +2570,12 @@ internal sealed class SkylineBuilder
         }
     }
 
+    /// <summary>
+    /// Seeds staff-local Script articulation ink into the per-staff skylines so the
+    /// inter-staff gap reserves room for them. The layouts carry Y relative to the
+    /// staff top line (= this skyline's Y origin); the ink transform matches
+    /// LayoutEngine.AugmentSkylinesWithScripts (BBox Top is up-positive).
+    /// </summary>
     private void AddArticulationLayoutsToSkyline(
         ImmutableArray<ArticulationLayout> articulationLayouts,
         double staffMiddleUp, StaffSize size,

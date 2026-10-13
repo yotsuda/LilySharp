@@ -300,37 +300,6 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
-    /// Bakes beam-resolved stem directions into the collected items, IN
-    /// PLACE. A beam forces one direction onto all members, and LilyPond
-    /// resolves directions in the engravers BEFORE spacing — skyline rods and
-    /// stem-direction corrections must see the same stems the renderer draws,
-    /// or beamed runs space differently from LilyPond (this showed up as
-    /// down-natural 8ths inside an up-beam getting ~8% extra room).
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/beam.cc Beam::calc_direction — beam direction wins.
-    /// LILYPOND-REF: lily/beam.cc:894-982 consider_auto_knees — per-member
-    /// directions for kneed beams (BeamMember.MemberStemUp).
-    /// </remarks>
-    /// <summary>
-    /// The brackets addressed to the stream <see cref="ResolveBeamStemDirections"/> is about
-    /// to probe — the ones this collector stamped with the staff and voice it is collecting
-    /// RIGHT NOW.
-    /// </summary>
-    /// <remarks>
-    /// ⚠️ ONE COLLECTOR COLLECTS EVERY STAFF (the voice-binding loop bumps
-    /// <c>_cursor.StaffIndex</c>), and <c>_tupletBrackets</c> is never cleared, so by the time
-    /// staff N is probed the list also holds staves 0..N−1's brackets — and, inside a
-    /// <c>&lt;&lt; \\ &gt;&gt;</c> span, the sibling voices'. Handed unfiltered, the detector reads
-    /// every one of them as an index into THIS stream's items:
-    /// <c>BeamDetector.BuildTupletSpans</c> drops only the out-of-range ones and says so, and
-    /// says the in-range collision "closes only when the probe filters by staff/voice". This
-    /// is that filter, spelt once in <see cref="TupletBracketItem.AddressedTo"/> — the
-    /// annotation quantity's caller (<c>LayoutEngine.DetectionScoreFor</c>) has the same
-    /// problem and calls the same home. The list is empty in the overwhelming majority of
-    /// books, so the common path allocates nothing.
-    /// </remarks>
-    /// <summary>
     /// <paramref name="measures"/> as the page will draw them: the ottava display shift of
     /// the staff being collected applied (<see cref="OttavaTransposer"/>, the same pass that
     /// runs later on the finished voice). The same array, uncopied, when this staff has no
@@ -363,6 +332,24 @@ public sealed partial class MeasureCollector
         return OttavaTransposer.Transpose(new Voice("ottava-display-probe", written), spans).Measures;
     }
 
+    /// <summary>
+    /// The brackets addressed to the stream <see cref="ResolveBeamStemDirections"/> is about
+    /// to probe — the ones this collector stamped with the staff and voice it is collecting
+    /// RIGHT NOW.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE COLLECTOR COLLECTS EVERY STAFF (the voice-binding loop bumps
+    /// <c>_cursor.StaffIndex</c>), and <c>_tupletBrackets</c> is never cleared, so by the time
+    /// staff N is probed the list also holds staves 0..N−1's brackets — and, inside a
+    /// <c>&lt;&lt; \\ &gt;&gt;</c> span, the sibling voices'. Handed unfiltered, the detector reads
+    /// every one of them as an index into THIS stream's items:
+    /// <c>BeamDetector.BuildTupletSpans</c> drops only the out-of-range ones and says so, and
+    /// says the in-range collision "closes only when the probe filters by staff/voice". This
+    /// is that filter, spelt once in <see cref="TupletBracketItem.AddressedTo"/> — the
+    /// annotation quantity's caller (<c>LayoutEngine.DetectionScoreFor</c>) has the same
+    /// problem and calls the same home. The list is empty in the overwhelming majority of
+    /// books, so the common path allocates nothing.
+    /// </remarks>
     /// <param name="measureOffset">Where the probed stream starts in the staff (see
     /// <see cref="ResolveBeamStemDirections"/>). The brackets are keyed by the STAFF's bar
     /// (the walk adds <c>_cursor.MetadataMeasureOffset</c>), the probe's measures by the span's
@@ -384,6 +371,19 @@ public sealed partial class MeasureCollector
         return shifted.ToImmutable();
     }
 
+    /// <summary>
+    /// Bakes beam-resolved stem directions into the collected items, IN
+    /// PLACE. A beam forces one direction onto all members, and LilyPond
+    /// resolves directions in the engravers BEFORE spacing — skyline rods and
+    /// stem-direction corrections must see the same stems the renderer draws,
+    /// or beamed runs space differently from LilyPond (this showed up as
+    /// down-natural 8ths inside an up-beam getting ~8% extra room).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc Beam::calc_direction — beam direction wins.
+    /// LILYPOND-REF: lily/beam.cc:894-982 consider_auto_knees — per-member
+    /// directions for kneed beams (BeamMember.MemberStemUp).
+    /// </remarks>
     /// <param name="measureOffset">Where <paramref name="measures"/> starts in the staff — a
     /// parallel sub-voice is collected from its span's bar, 0-based, and the ottava spans it
     /// may sit under are counted in the staff's own bars.</param>

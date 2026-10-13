@@ -850,38 +850,6 @@ internal static class CollectResumePlanner
     }
 
     /// <summary>
-    /// The collect-level guard (layer 2 of the soundness argument above), over the
-    /// BASELINE tree's top-level items:
-    /// <list type="bullet">
-    /// <item>Music-body containers (section/part/phrase/variable/chords/lyrics
-    /// declarations) need no top-level constraint: their MUSIC reads fold into
-    /// MaxSourceRead, and their header reads (section names/directives, part
-    /// config) are recorded per walk and validated per checkpoint (HeaderReads) —
-    /// a renamed phrase/variable invalidates through its folded BODY span.</item>
-    /// <item>A form/structure declaration orders the section visits and a render
-    /// (score) block seeds the collector's spec: value-only readers, so textually
-    /// unchanged suffices even when positions shift (a bottom-of-file block below
-    /// the edit stays usable) — EXCEPT a render block restating `title`/`composer`
-    /// (HeaderOverrides bakes those token positions into MetadataState), which
-    /// must be fully stable.</item>
-    /// <item>Everything else (file-default key/time/clef/tempo/partial, title,
-    /// font, drummap, top-level overrides, error-recovery leftovers — the
-    /// conservative default for kinds this list has never seen) feeds value state
-    /// AND source positions into the checkpoints, so it must be fully stable.</item>
-    /// </list>
-    /// </summary>
-    /// <summary>
-    /// The two trees have the same top-level declarations, kind by kind in order. Every
-    /// guard above judges a BASELINE top-level node by its text; this one asks whether the
-    /// new parse still has it at top level at all. A length-preserving edit can turn a
-    /// part's closing `}` into a space and pull everything below into the part: the form
-    /// is still there, byte for byte, and no longer the book's form (session 594:
-    /// PrefixResume_AnEditThatSwallowsTheForm_DoesNotAdoptItsBars — the formless collect
-    /// labels its sections from other positions). Until session 594 the part's closing
-    /// brace was read as a position-sensitive header read and stood in for this guard by
-    /// accident, at the price of every length-changing edit inside the part.
-    /// </summary>
-    /// <summary>
     /// The start of the earliest event in the unchanged prefix that the NEW tree makes the
     /// original of a <c>q</c> or a bare duration and the baseline did not (int.MaxValue when
     /// none). The recorder logs a resolved spelling only for an event its OWN tree calls an
@@ -923,6 +891,17 @@ internal static class CollectResumePlanner
         return floor;
     }
 
+    /// <summary>
+    /// The two trees have the same top-level declarations, kind by kind in order. Every
+    /// guard above judges a BASELINE top-level node by its text; this one asks whether the
+    /// new parse still has it at top level at all. A length-preserving edit can turn a
+    /// part's closing `}` into a space and pull everything below into the part: the form
+    /// is still there, byte for byte, and no longer the book's form (session 594:
+    /// PrefixResume_AnEditThatSwallowsTheForm_DoesNotAdoptItsBars — the formless collect
+    /// labels its sections from other positions). Until session 594 the part's closing
+    /// brace was read as a position-sensitive header read and stood in for this guard by
+    /// accident, at the price of every length-changing edit inside the part.
+    /// </summary>
     private static bool TopLevelKindsAgree(SyntaxNode oldRoot, SyntaxNode newRoot)
     {
         if (ReferenceEquals(oldRoot.Green, newRoot.Green))
@@ -939,6 +918,27 @@ internal static class CollectResumePlanner
         }
     }
 
+    /// <summary>
+    /// The collect-level guard (layer 2 of the soundness argument above), over the
+    /// BASELINE tree's top-level items:
+    /// <list type="bullet">
+    /// <item>Music-body containers (section/part/phrase/variable/chords/lyrics
+    /// declarations) need no top-level constraint: their MUSIC reads fold into
+    /// MaxSourceRead, and their header reads (section names/directives, part
+    /// config) are recorded per walk and validated per checkpoint (HeaderReads) —
+    /// a renamed phrase/variable invalidates through its folded BODY span.</item>
+    /// <item>A form/structure declaration orders the section visits and a render
+    /// (score) block seeds the collector's spec: value-only readers, so textually
+    /// unchanged suffices even when positions shift (a bottom-of-file block below
+    /// the edit stays usable) — EXCEPT a render block restating `title`/`composer`
+    /// (HeaderOverrides bakes those token positions into MetadataState), which
+    /// must be fully stable.</item>
+    /// <item>Everything else (file-default key/time/clef/tempo/partial, title,
+    /// font, drummap, top-level overrides, error-recovery leftovers — the
+    /// conservative default for kinds this list has never seen) feeds value state
+    /// AND source positions into the checkpoints, so it must be fully stable.</item>
+    /// </list>
+    /// </summary>
     private static bool WindowRespectsTopLevel(
         SyntaxTree baselineTree, int prefix, int suffixStart, int delta)
     {

@@ -141,20 +141,6 @@ internal readonly record struct SlurExtraObject(
     double AvoidBottomY = double.NaN);
 
 /// <summary>
-/// Solves the slur positioning problem using LilyPond's priority-queue
-/// scoring approach with lazy scorer evaluation.
-/// Scorers (in LilyPond order):
-///   1. SLOPE - slope penalties
-///   2. ENCOMPASS - note head/stem encompass + variance
-///   3. EXTRA_ENCOMPASS - staff lines, accidentals, ties
-///   4. EDGES - edge attraction
-/// </summary>
-/// <remarks>
-/// LILYPOND-REF: lily/slur-scoring.cc:1-906 Slur_scoring class
-/// LILYPOND-REF: lily/slur-configuration.cc:1-558 Slur_configuration class
-/// LILYPOND-REF: lily/misc.cc:39-46 peak_around()
-/// </remarks>
-/// <summary>
 /// The slur-edge note facts the scorer needs, per endpoint.
 /// LILYPOND-REF: lily/slur-scoring.cc Slur_score_state — extremes_[d].stem_ / stem_dir_,
 /// edge_has_beams_, and Stem::get_beaming(stem, -d) (beamed on the INNER side, toward the
@@ -197,6 +183,20 @@ internal readonly record struct SlurEdgeInfo(
     double StemTipY = double.NaN, double StemBeginY = double.NaN,
     bool OnHead = false, double HeadCenterOffset = 0.0);
 
+/// <summary>
+/// Solves the slur positioning problem using LilyPond's priority-queue
+/// scoring approach with lazy scorer evaluation.
+/// Scorers (in LilyPond order):
+///   1. SLOPE - slope penalties
+///   2. ENCOMPASS - note head/stem encompass + variance
+///   3. EXTRA_ENCOMPASS - staff lines, accidentals, ties
+///   4. EDGES - edge attraction
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/slur-scoring.cc:1-906 Slur_scoring class
+/// LILYPOND-REF: lily/slur-configuration.cc:1-558 Slur_configuration class
+/// LILYPOND-REF: lily/misc.cc:39-46 peak_around()
+/// </remarks>
 internal sealed class SlurScoringProblem
 {
     // Not readonly: a lent problem is re-bound to every slur (Bind), like the beam quanter

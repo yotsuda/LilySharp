@@ -1137,7 +1137,6 @@ internal sealed class MeasureValidator : ISemanticValidator
         return new TextSpan(start, end - start);
     }
 
-    /// <summary>Emits the overfull-measure warning (a bar longer than its expected fill).</summary>
     /// <summary>A span's later voice whose trailing chunk stops between the span's end and
     /// the bar's: it neither ends with the span nor writes the rest of the bar.</summary>
     private void EmitSpanTailBetween(MeasureContent measure, Fraction duration, Fraction spanEnd,
@@ -1151,6 +1150,7 @@ internal sealed class MeasureValidator : ISemanticValidator
             + "the music written after the span goes on from there - or writes the rest of the bar itself");
     }
 
+    /// <summary>Emits the overfull-measure warning (a bar longer than its expected fill).</summary>
     private void EmitOverfull(MeasureContent measure, Fraction duration, Fraction expected,
         Fraction? partialLength, TextSpan? leadInSpan = null)
     {

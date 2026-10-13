@@ -29,37 +29,6 @@ internal static partial class SharedRenderer
     // ---------- System-start delimiters (group brackets / bar lines) ----------
 
     /// <summary>
-    /// Draws the system-start delimiter (brace / bracket / line-bracket /
-    /// bar-line) on the left edge of each multi-staff group.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/system-start-delimiter.cc:127-129 collapse_height check
-    /// LILYPOND-REF: scm/define-grobs.scm SystemStartBrace/Bracket/Square/Bar
-    /// </remarks>
-    /// <summary>
-    /// Draws the instrument name text for each staff group. When a grand-staff
-    /// group has only one named staff, the name is centered vertically across
-    /// the brace span; otherwise each named staff gets its own centered name.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/instrument-name-engraver.cc — InstrumentName grob
-    /// LILYPOND-REF: scm/define-grobs.scm:1851-1858 self-alignment-X system-start-text::print
-    ///   — the InstrumentName entry: serif, <c>(padding . 0.3)</c>, self-alignment-X CENTER,
-    ///   and <c>X-offset</c> the callback below.
-    /// LILYPOND-REF: scm/output-lib.scm:2108-2142 system-start-text::calc-x-offset — the
-    ///   placement ported in <see cref="InstrumentNameRightEdge"/>.
-    /// <para>
-    /// ⚠️ UNTIL 2026-08-04 THIS CENTRED EVERY NAME AT <c>Indent / 2</c> and never looked at
-    /// the delimiter, while the indent was sized from a flat half-em-per-character ESTIMATE of
-    /// the name's width and the name was DRAWN from real metrics — two spellings of one
-    /// quantity, erring both ways (WWWWWWW estimated 10.5 against 20.55 real, iiiiiii 10.5
-    /// against 6.69). With the brace ink 1.3734 wide, ordinary names overlapped it: measured
-    /// gaps from the name's right edge to the brace's right edge were Alto 1.048, Bass 0.638,
-    /// Piano 0.205, Tenor 0.154, Soprano -0.019, Contrabassoon -0.128 — the last two past the
-    /// brace's right edge entirely.
-    /// </para>
-    /// </remarks>
-    /// <summary>
     /// The instrument name's ENGRAVING em — the paper's text size, 2.2 staff spaces, as
     /// LilyPond sets it: InstrumentName declares no font-size.
     /// </summary>
@@ -85,6 +54,29 @@ internal static partial class SharedRenderer
     internal static FontStyle InstrumentNameStyle(ScoreTextMetrics fonts)
         => fonts.Style(TextRole.Instrument, FontStyle.Regular);
 
+    /// <summary>
+    /// Draws the instrument name text for each staff group. When a grand-staff
+    /// group has only one named staff, the name is centered vertically across
+    /// the brace span; otherwise each named staff gets its own centered name.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/instrument-name-engraver.cc — InstrumentName grob
+    /// LILYPOND-REF: scm/define-grobs.scm:1851-1858 self-alignment-X system-start-text::print
+    ///   — the InstrumentName entry: serif, <c>(padding . 0.3)</c>, self-alignment-X CENTER,
+    ///   and <c>X-offset</c> the callback below.
+    /// LILYPOND-REF: scm/output-lib.scm:2108-2142 system-start-text::calc-x-offset — the
+    ///   placement ported in <see cref="InstrumentNameRightEdge"/>.
+    /// <para>
+    /// ⚠️ UNTIL 2026-08-04 THIS CENTRED EVERY NAME AT <c>Indent / 2</c> and never looked at
+    /// the delimiter, while the indent was sized from a flat half-em-per-character ESTIMATE of
+    /// the name's width and the name was DRAWN from real metrics — two spellings of one
+    /// quantity, erring both ways (WWWWWWW estimated 10.5 against 20.55 real, iiiiiii 10.5
+    /// against 6.69). With the brace ink 1.3734 wide, ordinary names overlapped it: measured
+    /// gaps from the name's right edge to the brace's right edge were Alto 1.048, Bass 0.638,
+    /// Piano 0.205, Tenor 0.154, Soprano -0.019, Contrabassoon -0.128 — the last two past the
+    /// brace's right edge entirely.
+    /// </para>
+    /// </remarks>
     private static void DrawInstrumentNames(
         MultiStaffScore score, SystemLayout system, double systemStartX, IDrawingContext gc)
     {
@@ -213,21 +205,6 @@ internal static partial class SharedRenderer
     }
 
     /// <summary>
-    /// Joins the staves of a multi-staff system: a SystemStartBar at the left
-    /// edge (always, for 2+ staves), and — within delimited groups (grand
-    /// staff etc.) — every barline extended through the inter-staff gap
-    /// (Span_bar), with repeat dots omitted in the gap.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/system-start-delimiter-engraver.cc — Score-level
-    ///   SystemStartBar joins all staves of any multi-staff system.
-    /// LILYPOND-REF: lily/span-bar-engraver.cc + ly/engraver-init.ly —
-    ///   Span_bar_engraver lives in GrandStaff/PianoStaff/StaffGroup, so
-    ///   ungrouped staves do NOT span their barlines.
-    /// LILYPOND-REF: lily/span-bar-engraver.cc — the spanned segment redraws
-    ///   the bar glyph without the dots.
-    /// </remarks>
-    /// <summary>
     /// Where a placed staff's bar lines end, Y-up in the system frame: its band's top and bottom
     /// on a five-line staff, a tab or a text row; LilyPond's bar extent about the middle on a
     /// notation staff of other lines (<see cref="MultiStaffLayouter.BarExtentOf"/>, in the
@@ -260,6 +237,21 @@ internal static partial class SharedRenderer
         return (middle + top, middle + bottom);
     }
 
+    /// <summary>
+    /// Joins the staves of a multi-staff system: a SystemStartBar at the left
+    /// edge (always, for 2+ staves), and — within delimited groups (grand
+    /// staff etc.) — every barline extended through the inter-staff gap
+    /// (Span_bar), with repeat dots omitted in the gap.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/system-start-delimiter-engraver.cc — Score-level
+    ///   SystemStartBar joins all staves of any multi-staff system.
+    /// LILYPOND-REF: lily/span-bar-engraver.cc + ly/engraver-init.ly —
+    ///   Span_bar_engraver lives in GrandStaff/PianoStaff/StaffGroup, so
+    ///   ungrouped staves do NOT span their barlines.
+    /// LILYPOND-REF: lily/span-bar-engraver.cc — the spanned segment redraws
+    ///   the bar glyph without the dots.
+    /// </remarks>
     private static void DrawStaffConnectors(
         MultiStaffScore score, ScoreLayout layout, SystemLayout system,
         double systemStartX, IDrawingContext gc)
@@ -726,6 +718,14 @@ internal static partial class SharedRenderer
         };
     }
 
+    /// <summary>
+    /// Draws the system-start delimiter (brace / bracket / line-bracket /
+    /// bar-line) on the left edge of each multi-staff group.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/system-start-delimiter.cc:127-129 collapse_height check
+    /// LILYPOND-REF: scm/define-grobs.scm SystemStartBrace/Bracket/Square/Bar
+    /// </remarks>
     private static void DrawSystemStartDelimiters(SystemLayout system, IDrawingContext gc)
     {
         if (system.StaffGroups.IsDefaultOrEmpty) return;

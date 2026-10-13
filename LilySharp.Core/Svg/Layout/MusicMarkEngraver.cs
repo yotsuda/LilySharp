@@ -2117,17 +2117,6 @@ internal static class MusicMarkEngraver
     }
 
     /// <summary>
-    /// Gets the approximate half-height of a mark's visual extent in staff spaces.
-    /// Used for collision avoidance stacking between marks.
-    /// </summary>
-    /// <remarks>
-    /// These values match the renderer's sizes (SharedRenderer.Marks):
-    /// - Boxed marks (Rehearsal/SectionLabel): (fontSize + boxPadding*2) / 2
-    ///   where boxPadding = 0.2 (LILYPOND-REF: define-markup-commands.scm)
-    /// - Symbol marks (Segno/Coda): symbol glyph height / 2
-    /// - Text marks (D.S./Fine/etc.): fontSize / 2
-    /// </remarks>
-    /// <summary>
     /// The mark's approximate horizontal ink span. Tempo (left-anchored)
     /// extends right from its X; End-positioned jump text extends left;
     /// boxed labels and symbols are centred. Widths use the same faces the
@@ -2572,13 +2561,20 @@ internal static class MusicMarkEngraver
     };
 
     /// <summary>
-    /// Calculates X position for a mark.
+    /// A metronome mark standing at its bar's FIRST moment — break-aligned on the meter there
+    /// (CalculateXPosition), and priced from it (MultiStaffLayouter.ColumnOverhangs) — rather
+    /// than on a later note's column. Read off the timing: the item index counts the key and
+    /// meter changes the bar opens with.
     /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: mark-engraver.cc:75-80 break-align-symbol
-    /// - Beginning marks (segno, coda): align to start of measure
-    /// - End marks (fine, D.S., D.C.): align to end of measure
-    /// </remarks>
+    internal static bool IsMeasureStartTempo(MusicMarkItem mark)
+        => mark.AnchorItemIndex <= 0 || mark.AnchorTiming == Semantics.Fraction.Zero;
+
+    /// <summary>A mark that stands after its bar's first moment (a default timing, 0/0, is the
+    /// bar's own) — for a rehearsal mark, one in its own mark column
+    /// (<see cref="Measure.MarkColumnTimings"/>).</summary>
+    internal static bool IsMidBarMark(MusicMarkItem mark)
+        => mark.AnchorTiming.Denominator != 0 && mark.AnchorTiming > Semantics.Fraction.Zero;
+
     /// <summary>
     /// X anchor for a mark. Marks break-align: mid-line they anchor on the
     /// measure's start barline; at a line start (no visible barline) the
@@ -2595,21 +2591,6 @@ internal static class MusicMarkEngraver
     /// LILYPOND-REF: scm/define-grobs.scm RehearsalMark —
     ///   break-align-symbols (staff-bar key-signature clef).
     /// </remarks>
-    /// <summary>
-    /// A metronome mark standing at its bar's FIRST moment — break-aligned on the meter there
-    /// (CalculateXPosition), and priced from it (MultiStaffLayouter.ColumnOverhangs) — rather
-    /// than on a later note's column. Read off the timing: the item index counts the key and
-    /// meter changes the bar opens with.
-    /// </summary>
-    internal static bool IsMeasureStartTempo(MusicMarkItem mark)
-        => mark.AnchorItemIndex <= 0 || mark.AnchorTiming == Semantics.Fraction.Zero;
-
-    /// <summary>A mark that stands after its bar's first moment (a default timing, 0/0, is the
-    /// bar's own) — for a rehearsal mark, one in its own mark column
-    /// (<see cref="Measure.MarkColumnTimings"/>).</summary>
-    internal static bool IsMidBarMark(MusicMarkItem mark)
-        => mark.AnchorTiming.Denominator != 0 && mark.AnchorTiming > Semantics.Fraction.Zero;
-
     private static double CalculateXPosition(
         ScoreTextMetrics fonts,
         MusicMarkItem mark, MeasureLayout measureLayout,

@@ -599,13 +599,6 @@ internal static partial class SharedRenderer
     [ThreadStatic]
     private static HashSet<(int Staff, int Measure)>? t_percentByStaff;
 
-    // LILYPOND-REF: lily/stem.cc Stem::extremal_heads — the stem attaches at the
-    // extremal head: lowest (Min) staff position for a stem-up chord, highest (Max)
-    // for stem-down.
-    /// <summary>
-    /// Staff position of the stem's notehead attachment: for chords the head
-    /// on the far side from the beam (stem-up beams attach at the bottom head).
-    /// </summary>
     /// <summary>The staff at a score-wide staff index, or null when the score has none there.</summary>
     private static Staff? StaffAtIndex(MultiStaffScore score, int globalStaffIndex)
     {
@@ -615,6 +608,13 @@ internal static partial class SharedRenderer
         return null;
     }
 
+    // LILYPOND-REF: lily/stem.cc Stem::extremal_heads — the stem attaches at the
+    // extremal head: lowest (Min) staff position for a stem-up chord, highest (Max)
+    // for stem-down.
+    /// <summary>
+    /// Staff position of the stem's notehead attachment: for chords the head
+    /// on the far side from the beam (stem-up beams attach at the bottom head).
+    /// </summary>
     private static int GetMemberStaffPosition(MusicItem item, bool stemUp) => item switch
     {
         NoteItem n => n.StaffPosition,

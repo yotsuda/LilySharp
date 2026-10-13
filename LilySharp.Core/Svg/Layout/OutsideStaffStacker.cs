@@ -2243,6 +2243,10 @@ internal static class OutsideStaffStacker
         }
     }
 
+    /// <summary><see cref="ChordRowSupport"/>'s answer for a book with no chord names — read
+    /// only, never written (its readers TryGetValue).</summary>
+    private static readonly Dictionary<int, (VerticalSkyline Up, VerticalSkyline Down)> s_noRowSupport = new();
+
     /// <summary>
     /// A chord ROW's symbols, per system, as the extra support the SCORE-LEVEL movers — the
     /// volta brackets and the marks — are placed against, in the system frame the trackers
@@ -2276,10 +2280,6 @@ internal static class OutsideStaffStacker
     /// anchor's own profile already carries.
     /// </para>
     /// </remarks>
-    /// <summary><see cref="ChordRowSupport"/>'s answer for a book with no chord names — read
-    /// only, never written (its readers TryGetValue).</summary>
-    private static readonly Dictionary<int, (VerticalSkyline Up, VerticalSkyline Down)> s_noRowSupport = new();
-
     private static Dictionary<int, (VerticalSkyline Up, VerticalSkyline Down)> ChordRowSupport(
         ScoreTextMetrics fonts,
         ImmutableArray<SystemLayout> systems,
@@ -3558,16 +3558,16 @@ internal static class OutsideStaffStacker
             return move;
         }
 
-        /// <summary>The allowed point nearest 0 in direction <paramref name="dir"/>,
-        /// where "allowed" is outside every (open) forbidden interval — LilyPond's
-        /// <c>Interval_set::nearest_point (0, dir)</c>. Touching an interval's edge is
-        /// allowed (the paddings are already inside the bounds).</summary>
         /// <summary><see cref="NearestAllowed"/> for the single-interval case, which is
         /// 97.7% of the calls: sorting one interval cannot reorder it, so the whole method
         /// is its one comparison.</summary>
         private static double NearestAllowedOne(double lo, double hi, int dir) =>
             0 > lo && 0 < hi ? (dir > 0 ? hi : lo) : 0;
 
+        /// <summary>The allowed point nearest 0 in direction <paramref name="dir"/>,
+        /// where "allowed" is outside every (open) forbidden interval — LilyPond's
+        /// <c>Interval_set::nearest_point (0, dir)</c>. Touching an interval's edge is
+        /// allowed (the paddings are already inside the bounds).</summary>
         private static double NearestAllowed(List<(double Lo, double Hi)> forbidden, int dir)
         {
             double m = 0;

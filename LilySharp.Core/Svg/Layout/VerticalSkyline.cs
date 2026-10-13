@@ -1392,20 +1392,6 @@ internal sealed class VerticalSkyline
     }
 
     /// <summary>
-    /// Creates a padded copy of this skyline with 45° sloped edges.
-    /// Each building gets flat+sloped extensions on both sides.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/skyline.cc:558-615 Skyline::padded()
-    ///
-    /// For each building, 4 padding buildings are created:
-    /// - Left-outer: 45° slope from (x-2P, h-P) to (x-P, h)
-    /// - Left-inner: flat from (x-P, h) to (x, h)
-    /// - Right-inner: flat from (xR, h) to (xR+P, h)
-    /// - Right-outer: 45° slope from (xR+P, h) to (xR+2P, h-P)
-    /// These are merged with the original to form the padded skyline.
-    /// </remarks>
-    /// <summary>
     /// A copy restricted to the horizon interval [<paramref name="xLeft"/>,
     /// <paramref name="xRight"/>]: ink outside the range is dropped, a building
     /// straddling a boundary is trimmed at it. Distances against the result read only
@@ -1434,6 +1420,20 @@ internal sealed class VerticalSkyline
         return new VerticalSkyline(clipped, _direction);
     }
 
+    /// <summary>
+    /// Creates a padded copy of this skyline with 45° sloped edges.
+    /// Each building gets flat+sloped extensions on both sides.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/skyline.cc:558-615 Skyline::padded()
+    ///
+    /// For each building, 4 padding buildings are created:
+    /// - Left-outer: 45° slope from (x-2P, h-P) to (x-P, h)
+    /// - Left-inner: flat from (x-P, h) to (x, h)
+    /// - Right-inner: flat from (xR, h) to (xR+P, h)
+    /// - Right-outer: 45° slope from (xR+P, h) to (xR+2P, h-P)
+    /// These are merged with the original to form the padded skyline.
+    /// </remarks>
     public VerticalSkyline Padded(double horizonPadding)
     {
         if (horizonPadding <= 0.0)

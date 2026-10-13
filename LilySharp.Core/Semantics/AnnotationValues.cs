@@ -334,11 +334,15 @@ public static class AnnotationValues
             : null;
 
     /// <summary>
-    /// The chord symbol of <c>@chord(c:m7)</c> as it should print (<c>Cm7</c>), the
-    /// empty string for a bare <c>@chord</c> (which derives its symbol from the notes),
-    /// or null when this is not a chord annotation or names no chord Lily# can write.
+    /// The symbol an <c>@chord</c> mark prints, spelled the way <paramref name="spelling"/>
+    /// asks, and the structure behind it; null when the mark is not an <c>@chord</c> or
+    /// names nothing Lily# can print from its words alone.
     /// </summary>
     /// <remarks>
+    /// ⚠️ The spelling is a REQUIRED argument (<see cref="ChordSpelling"/>). A caller that
+    /// only asks "is this a chord at all?" — the annotation-name validator — passes
+    /// <see cref="ChordSpelling.Default"/> because the answer is the same under every
+    /// spelling, and MusicXML passes it because a <c>&lt;harmony&gt;</c> is data.
     /// <para>
     /// ★ A SUB-LANGUAGE, not a value (VALUE_SITE_AUDIT §9.2): the argument borrows the
     /// music grammar, so <c>c:m7</c> arrives as the tokens <c>c</c> <c>:</c> <c>m7</c>
@@ -375,17 +379,6 @@ public static class AnnotationValues
     /// names no chord.
     /// </para>
     /// LILYPOND-REF: scm/chord-ignatzek-names.scm — root + quality → printed name.
-    /// </remarks>
-    /// <summary>
-    /// The symbol an <c>@chord</c> mark prints, spelled the way <paramref name="spelling"/>
-    /// asks, and the structure behind it; null when the mark is not an <c>@chord</c> or
-    /// names nothing Lily# can print from its words alone.
-    /// </summary>
-    /// <remarks>
-    /// ⚠️ The spelling is a REQUIRED argument (<see cref="ChordSpelling"/>). A caller that
-    /// only asks "is this a chord at all?" — the annotation-name validator — passes
-    /// <see cref="ChordSpelling.Default"/> because the answer is the same under every
-    /// spelling, and MusicXML passes it because a <c>&lt;harmony&gt;</c> is data.
     /// </remarks>
     /// <param name="keySharps">The key signature in force at the mark, which a capo score's
     /// pressed name is spelled in (<see cref="Music.ChordStructure.PrintedSymbol"/>).</param>

@@ -21,18 +21,6 @@ using LilySharp.Core.Semantics;
 
 namespace LilySharp.Core.Svg.Model;
 
-/// <summary>
-/// A chord name symbol to display above the staff (e.g., "Cm7", "B♭maj7").
-/// </summary>
-/// <remarks>
-/// LILYPOND-REF: lily/chord-name.cc - ChordName grob
-/// LILYPOND-REF: scm/chord-ignatzek-names.scm - Ignatzek naming algorithm
-/// LILYPOND-REF: scm/define-grobs.scm - ChordName: font-family=sans, font-size=1.5
-///
-/// LilySharp uses annotation-based chord names (@chord.TEXT) rather than
-/// LilyPond's separate ChordNames context with pitch-set analysis.
-/// The chord symbol text is specified directly and displayed above the staff.
-/// </remarks>
 /// <summary>How a chord row / attachment wants its symbols shown.</summary>
 /// <remarks>
 /// ⚠️ <c>Both</c> — the degree stacked above the name as ONE symbol — was retired
@@ -55,6 +43,15 @@ public enum ChordDisplayMode
 /// <summary>A resolved chord symbol to be engraved above the staff (or as an
 /// independent chord row): its display text, the moment/index it aligns to, and
 /// how it should be shown (see <see cref="ChordDisplayMode"/>).</summary>
+/// <remarks>
+/// LILYPOND-REF: lily/chord-name.cc - ChordName grob
+/// LILYPOND-REF: scm/chord-ignatzek-names.scm - Ignatzek naming algorithm
+/// LILYPOND-REF: scm/define-grobs.scm - ChordName: font-family=sans, font-size=1.5
+///
+/// LilySharp uses annotation-based chord names (@chord(TEXT)) rather than
+/// LilyPond's separate ChordNames context with pitch-set analysis.
+/// The chord symbol text is specified directly and displayed above the staff.
+/// </remarks>
 public sealed record ChordNameItem
 {
     // Identity, not value equality: see ModelIdentity.

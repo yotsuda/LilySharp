@@ -333,19 +333,6 @@ internal sealed class MultiStaffLayouter
         => StaffHeightOf(staff, _options.StaffHeight);
 
     /// <summary>
-    /// The same height, for a caller that carries the score's nominal staff height but not
-    /// this layouter — <see cref="SkylineBuilder"/>, which seeds each staff's own profile.
-    /// </summary>
-    /// <remarks>
-    /// ⚠️ ONE HOME FOR "HOW TALL IS THIS STAFF". <c>SkylineBuilder</c> used to answer it with
-    /// the score's nominal height for every staff, and its own remark said so ("this builder
-    /// has ONE staff height, not one per staff"); the system silhouette beside it already
-    /// read the placed <c>StaffLayout.Height</c> and so already knew a six-string tab spans
-    /// 7.500000. The two disagreed by 1.750000 under a tab staff, and a lyrics row read the
-    /// smaller one — HANDOFF §5.2.1②. The per-staff path has no <c>StaffLayout</c> to read,
-    /// so it asks the model the same question this layouter does.
-    /// </remarks>
-    /// <summary>
     /// The distance between two neighbouring lines of <paramref name="staff"/>, in staff
     /// spaces of the notation staff: a tab's strings are <see cref="EngravingDefaults.TabStringSpace"/>
     /// apart (LilyPond's TabStaff <c>StaffSymbol.staff-space = 1.5</c>), every other staff's
@@ -434,6 +421,19 @@ internal sealed class MultiStaffLayouter
         return (low + halfLine, high - halfLine);
     }
 
+    /// <summary>
+    /// The same height, for a caller that carries the score's nominal staff height but not
+    /// this layouter — <see cref="SkylineBuilder"/>, which seeds each staff's own profile.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE HOME FOR "HOW TALL IS THIS STAFF". <c>SkylineBuilder</c> used to answer it with
+    /// the score's nominal height for every staff, and its own remark said so ("this builder
+    /// has ONE staff height, not one per staff"); the system silhouette beside it already
+    /// read the placed <c>StaffLayout.Height</c> and so already knew a six-string tab spans
+    /// 7.500000. The two disagreed by 1.750000 under a tab staff, and a lyrics row read the
+    /// smaller one — HANDOFF §5.2.1②. The per-staff path has no <c>StaffLayout</c> to read,
+    /// so it asks the model the same question this layouter does.
+    /// </remarks>
     internal static double StaffHeightOf(Staff staff, double nominalStaffHeight)
     {
         if (staff.IsTab && staff.Tuning.HasValue)
@@ -1606,14 +1606,6 @@ internal sealed class MultiStaffLayouter
     }
 
     /// <summary>
-    /// Solves the line-start break-align column table for the system opening at
-    /// <paramref name="startMeasureIndex"/> — ONE derivation shared by the spring model
-    /// (<see cref="LineStartSpringForLine"/>), the measure layout
-    /// (<see cref="LayoutMeasures"/>) and the metronome mark's break-align X
-    /// (<c>MusicMarkEngraver</c>), so the reserved, drawn and annotated prefix cannot
-    /// drift apart (three hand-rolled copies is how they would).
-    /// </summary>
-    /// <summary>
     /// The width a line reserves after its final bar line when the NEXT line opens with a key
     /// and/or time change: the cancellation + new signature, and the new meter after it.
     /// 0 when <paramref name="nextMeasureIndex"/> is past the end or opens with no change.
@@ -1650,6 +1642,14 @@ internal sealed class MultiStaffLayouter
         return SpacingRules.LineEndCourtesy(score, nextMeasureIndex, leadTime).Width;
     }
 
+    /// <summary>
+    /// Solves the line-start break-align column table for the system opening at
+    /// <paramref name="startMeasureIndex"/> — ONE derivation shared by the spring model
+    /// (<see cref="LineStartSpringForLine"/>), the measure layout
+    /// (<see cref="LayoutMeasures"/>) and the metronome mark's break-align X
+    /// (<c>MusicMarkEngraver</c>), so the reserved, drawn and annotated prefix cannot
+    /// drift apart (three hand-rolled copies is how they would).
+    /// </summary>
     internal static LineStartPrefix SolveLineStartPrefix(
         MultiStaffScore score, int startMeasureIndex, bool isFirstSystem)
     {
@@ -3820,10 +3820,6 @@ internal sealed class MultiStaffLayouter
         public List<(VerticalSkyline Up, VerticalSkyline Down)>? Pure { get; init; }
     }
 
-    /// <summary>
-    /// Builds UP/DOWN skylines for every staff in the score.
-    /// Returns a list indexed by global staff index.
-    /// </summary>
     /// <summary>The score-order index of the first staff that is neither a text row nor
     /// non-spaceable — the staff a score-context grob's <c>-1</c> resolves to
     /// (<see cref="StaffAffinity.TopSpaceableStaff"/>), asked before any system exists.
@@ -3853,6 +3849,10 @@ internal sealed class MultiStaffLayouter
         return n;
     }
 
+    /// <summary>
+    /// Builds UP/DOWN skylines for every staff in the score.
+    /// Returns a list indexed by global staff index.
+    /// </summary>
     private StaffSkylineSet BuildAllStaffSkylines(
         MultiStaffScore score, SkylineBuilder skylineBuilder,
         ImmutableArray<MeasureLayout> measureLayouts, int systemIndex)
@@ -4536,6 +4536,41 @@ internal sealed class MultiStaffLayouter
         => _restCollisionsOf ??= RestCollisionsOf;
 
     /// <summary>
+    /// One staff's fingerings, in that staff's own frame — the reservation half of the
+    /// placement the same engraver does for the page.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE SAME ENGRAVER, NOT A SECOND SPELLING, exactly as
+    /// <see cref="StaffArticulationLayouts"/> argues for the scripts: a
+    /// <see cref="FingeringLayout"/>'s <c>YUp</c> is already about its own staff's middle
+    /// line, so the answer needs no staff offset and no translation — it is the drawn
+    /// geometry, asked for again.
+    /// <para>
+    /// ⚠️ THIS IS THE ISLAND ANSWER, and it is the right one to reserve. The script-column
+    /// walk can still raise an ABOVE fingering that a bow outranks
+    /// (<c>ArticulationEngraver.CalculateWithFingerings</c>), and that walk runs after this
+    /// pass — so a fingering under a script reserves the band it would have had alone. The
+    /// same approximation the scripts' own remark records for the movers; the books that
+    /// measure a fingering's reservation (ledger fingering.chord.dynamic-*) reach the DOWN
+    /// side, where nothing outranks anything.
+    /// </para>
+    /// </remarks>
+    private static ImmutableArray<FingeringLayout> StaffFingeringLayouts(
+        Staff staff, int staffIndex, ImmutableArray<MeasureLayout> measureLayouts,
+        MultiStaffScore score, ImmutableArray<BeamLayout> beamLayouts = default)
+    {
+        var staffScore = new Score(
+            staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
+            LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer);
+        // The beams arrive stamped with the trivial one-staff system's index 0 and the
+        // engraver keys its stem tips by staff, so they are restamped to meet the score's
+        // real index — the same restamp StaffArticulationLayouts makes, for the same reason.
+        var localBeams = RestampedToStaff(beamLayouts, staffIndex);
+        // The plan is the SCORE's, not the one-voice staffScore's (which carries none).
+        return FingeringEngraver.Calculate(score.TextMetrics, staffScore, measureLayouts, staffIndex, localBeams);
+    }
+
+    /// <summary>
     /// This staff's own Scripts, laid out in the staff's own frame so the skyline can reserve
     /// the band they occupy outside the staff. The mirror of
     /// <see cref="StaffTupletBracketLayouts"/>, and the same engraver the drawn pass runs.
@@ -4576,41 +4611,6 @@ internal sealed class MultiStaffLayouter
     /// <see cref="StaffTupletBracketLayouts"/> makes, for the same reason.
     /// </para>
     /// </remarks>
-    /// <summary>
-    /// One staff's fingerings, in that staff's own frame — the reservation half of the
-    /// placement the same engraver does for the page.
-    /// </summary>
-    /// <remarks>
-    /// ⚠️ THE SAME ENGRAVER, NOT A SECOND SPELLING, exactly as
-    /// <see cref="StaffArticulationLayouts"/> argues for the scripts: a
-    /// <see cref="FingeringLayout"/>'s <c>YUp</c> is already about its own staff's middle
-    /// line, so the answer needs no staff offset and no translation — it is the drawn
-    /// geometry, asked for again.
-    /// <para>
-    /// ⚠️ THIS IS THE ISLAND ANSWER, and it is the right one to reserve. The script-column
-    /// walk can still raise an ABOVE fingering that a bow outranks
-    /// (<c>ArticulationEngraver.CalculateWithFingerings</c>), and that walk runs after this
-    /// pass — so a fingering under a script reserves the band it would have had alone. The
-    /// same approximation the scripts' own remark records for the movers; the books that
-    /// measure a fingering's reservation (ledger fingering.chord.dynamic-*) reach the DOWN
-    /// side, where nothing outranks anything.
-    /// </para>
-    /// </remarks>
-    private static ImmutableArray<FingeringLayout> StaffFingeringLayouts(
-        Staff staff, int staffIndex, ImmutableArray<MeasureLayout> measureLayouts,
-        MultiStaffScore score, ImmutableArray<BeamLayout> beamLayouts = default)
-    {
-        var staffScore = new Score(
-            staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
-            LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer);
-        // The beams arrive stamped with the trivial one-staff system's index 0 and the
-        // engraver keys its stem tips by staff, so they are restamped to meet the score's
-        // real index — the same restamp StaffArticulationLayouts makes, for the same reason.
-        var localBeams = RestampedToStaff(beamLayouts, staffIndex);
-        // The plan is the SCORE's, not the one-voice staffScore's (which carries none).
-        return FingeringEngraver.Calculate(score.TextMetrics, staffScore, measureLayouts, staffIndex, localBeams);
-    }
-
     private ImmutableArray<ArticulationLayout> StaffArticulationLayouts(
         MultiStaffScore score, Staff staff, int staffIndex,
         ImmutableArray<MeasureLayout> measureLayouts, ImmutableArray<BeamLayout> beamLayouts,
@@ -4661,24 +4661,6 @@ internal sealed class MultiStaffLayouter
             slurLayouts: staffSlurs);
     }
 
-    /// <summary>
-    /// One staff seen as a score of its own — every voice it has, so the detectors that
-    /// walk a <see cref="Score"/> see the same music the drawn pass does.
-    /// </summary>
-    /// <remarks>
-    /// ⚠️ ALL THE VOICES, and that is the whole of this helper. Until 2026-08-04 the slur and
-    /// tie paths built this from <c>PrimaryVoice</c> alone while
-    /// <see cref="StaffBeamLayouts"/> — the third member of the same family, whose remark
-    /// already says the score MUST expose all voices — branched on the voice count. So a
-    /// SECOND voice's slur was laid out nowhere and reserved nowhere: MEASURED on one book,
-    /// the alignment's minimum for a staff pair read 8.095000 with a drooping second-voice
-    /// slur and 8.095000 without it, against 9.512596 once the voice was visible — the same
-    /// 1.417596 the identical slur contributes from the primary voice.
-    /// <para>
-    /// ⚠️ NOT A SECOND SPELLING OF THE VOICE TEST: the three call sites used to disagree
-    /// about it, which is how one of them could be wrong while the suite stayed green.
-    /// </para>
-    /// </remarks>
     /// <summary>
     /// One staff's staff-local <see cref="Score"/> and the slur and tie ITEMS detected from
     /// it — computed once per staff rather than once per staff PER SYSTEM.
@@ -4809,6 +4791,24 @@ internal sealed class MultiStaffLayouter
         return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(restamped);
     }
 
+    /// <summary>
+    /// One staff seen as a score of its own — every voice it has, so the detectors that
+    /// walk a <see cref="Score"/> see the same music the drawn pass does.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ALL THE VOICES, and that is the whole of this helper. Until 2026-08-04 the slur and
+    /// tie paths built this from <c>PrimaryVoice</c> alone while
+    /// <see cref="StaffBeamLayouts"/> — the third member of the same family, whose remark
+    /// already says the score MUST expose all voices — branched on the voice count. So a
+    /// SECOND voice's slur was laid out nowhere and reserved nowhere: MEASURED on one book,
+    /// the alignment's minimum for a staff pair read 8.095000 with a drooping second-voice
+    /// slur and 8.095000 without it, against 9.512596 once the voice was visible — the same
+    /// 1.417596 the identical slur contributes from the primary voice.
+    /// <para>
+    /// ⚠️ NOT A SECOND SPELLING OF THE VOICE TEST: the three call sites used to disagree
+    /// about it, which is how one of them could be wrong while the suite stayed green.
+    /// </para>
+    /// </remarks>
     private static Score StaffLocalScore(MultiStaffScore score, Staff staff)
         => staff.Voices.Length > 1
             ? new Score(
@@ -4980,6 +4980,17 @@ internal sealed class MultiStaffLayouter
             staffLines: BeamStaffLinesOf(staff));
     }
 
+    /// <summary>The line count a staff's NOTATION beams are quanted on: its own drawn lines; a
+    /// tab's notation shadow keeps the five-line default (its drawn beams are
+    /// <see cref="TabStaffGeometry"/>'s, quanted on the strings).</summary>
+    internal static int BeamStaffLinesOf(Staff staff) => NotationStaffLinesOf(staff);
+
+    /// <summary>The lines a staff's NOTATION reading draws — <c>as lines N</c> — which the side
+    /// positions (dynamics, hairpins) floor on; a tab stands on five (its dynamics are blanked,
+    /// and its strings are not staff lines).</summary>
+    internal static int NotationStaffLinesOf(Staff staff)
+        => staff.IsTab ? EngravingDefaults.DefaultStaffLines : staff.Lines;
+
     /// <summary>
     /// The score one staff's beams are detected and laid out on: every voice of the staff
     /// (auto-beaming runs per voice, so a second-voice beam never forms on a
@@ -4995,17 +5006,6 @@ internal sealed class MultiStaffLayouter
     /// (<see cref="BeamDetector"/> is stateless and its Score entry touches only those), so
     /// the clef/tempo/header fields here serve the LAYOUT call, not the detection.
     /// </remarks>
-    /// <summary>The line count a staff's NOTATION beams are quanted on: its own drawn lines; a
-    /// tab's notation shadow keeps the five-line default (its drawn beams are
-    /// <see cref="TabStaffGeometry"/>'s, quanted on the strings).</summary>
-    internal static int BeamStaffLinesOf(Staff staff) => NotationStaffLinesOf(staff);
-
-    /// <summary>The lines a staff's NOTATION reading draws — <c>as lines N</c> — which the side
-    /// positions (dynamics, hairpins) floor on; a tab stands on five (its dynamics are blanked,
-    /// and its strings are not staff lines).</summary>
-    internal static int NotationStaffLinesOf(Staff staff)
-        => staff.IsTab ? EngravingDefaults.DefaultStaffLines : staff.Lines;
-
     internal static Score StaffBeamScoreOf(MultiStaffScore score, Staff staff, int staffIndex)
     {
         var staffTuplets = score.TupletBrackets.IsDefaultOrEmpty

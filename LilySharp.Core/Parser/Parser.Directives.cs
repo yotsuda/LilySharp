@@ -70,14 +70,6 @@ internal sealed partial class Parser
         return new RepeatExpressionGreen(repeatKeyword, repeatType, count, body);
     }
 
-    /// <summary>
-    /// Parse parallel voices on one staff: <c>voice { … } voice { … } …</c>.
-    /// Consecutive <c>voice</c> blocks become the staff's simultaneous voices
-    /// (the 1st gets stems up, the 2nd down, and so on). This is the only
-    /// polyphony form — the old <c>&lt;&lt; … \\ … &gt;&gt;</c> was removed — and it
-    /// desugars to the same ParallelExpression those produced, so the collector,
-    /// renderer and exporters are unchanged.
-    /// </summary>
     /// <summary>Tracks whether the parser is inside a voice { } body, so a
     /// nested voice keyword can be flagged (it would silently become a
     /// parallel SIBLING voice, not an inner one).</summary>
@@ -477,9 +469,6 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// Parse phrase declaration: phrase name { ... }
-    /// </summary>
-    /// <summary>
     /// Parse a using directive: <c>using "file.lys"</c>. The expander resolves
     /// the file before collection; here it is parsed as an inert top-level marker.
     /// </summary>
@@ -522,6 +511,9 @@ internal sealed partial class Parser
         return ParseUsingDirective();
     }
 
+    /// <summary>
+    /// Parse phrase declaration: phrase name { ... }
+    /// </summary>
     private PhraseDeclarationGreen ParsePhraseDeclaration()
     {
         var keyword = Expect(SyntaxKind.PhraseKeyword);

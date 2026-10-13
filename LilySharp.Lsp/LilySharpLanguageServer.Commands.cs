@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -214,10 +214,6 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// Custom request to generate SVG from a document.
-    /// Used for real-time preview in VS Code.
-    /// </summary>
-    /// <summary>
     /// The document's tree with <c>using "..."</c> directives resolved (files read
     /// relative to the document), or the plain tree when there are no includes, plus the
     /// warnings from resolving them. The document's own text stays the prefix, so its
@@ -409,6 +405,10 @@ public sealed partial class LilySharpLanguageServer
         return null;
     }
 
+    /// <summary>
+    /// Custom request to generate SVG from a document.
+    /// Used for real-time preview in VS Code.
+    /// </summary>
     [JsonRpcMethod("lilysharp/svg", UseSingleObjectParameterDeserialization = true)]
     public Task<SvgResponse> GetSvgAsync(SvgParams @params, CancellationToken token)
     {
@@ -947,11 +947,6 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// Converts the document between the by-section and by-part authoring
-    /// layouts (the editor command toggles whichever the file currently uses) and
-    /// returns the rewritten source; the extension applies it as a full-document edit.
-    /// </summary>
-    /// <summary>
     /// The "Extract phrase" refactoring: lifts the section music at the caret (or
     /// the whole measures a selection touches) into a top-level phrase and replaces
     /// it with the reference. Verified semantics-preserving (the MIDI of the old
@@ -1126,6 +1121,11 @@ public sealed partial class LilySharpLanguageServer
         return new SplitSectionsResponse { Success = false, Error = result.Error };
     }
 
+    /// <summary>
+    /// Converts the document between the by-section and by-part authoring
+    /// layouts (the editor command toggles whichever the file currently uses) and
+    /// returns the rewritten source; the extension applies it as a full-document edit.
+    /// </summary>
     [JsonRpcMethod("lilysharp/regroup", UseSingleObjectParameterDeserialization = true)]
     public Task<RegroupResponse> RegroupAsync(RegroupParams @params, CancellationToken token)
         => OffDispatch(() => Regroup(@params), token);

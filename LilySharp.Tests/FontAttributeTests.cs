@@ -667,6 +667,16 @@ public class FontAttributeTests
         => Assert.Equal(["serif", "sans"],
             LilySharpLanguageServer.GetFontAsCompletions().Items.Select(i => i.Label).ToArray());
 
+    /// <summary>The chord book this pair is measured on, minus its fonts line.</summary>
+    private const string Book0Body =
+        "part m { clef treble }\n"
+        + "section A { m { c4 d e f | } chords prog { Am7 | } }\n"
+        + "form { ~A }\n"
+        + "score { chords prog  staff m }\n";
+
+    /// <summary>…and the same book writing no fonts block at all — the control.</summary>
+    private const string Book0 = "time 4/4\n" + Book0Body;
+
     /// <summary>
     /// A STEPPED chord name steps its SUPERSCRIPT with it: the raised run keeps the same
     /// ratio to the symbol at every step the score can write.
@@ -696,16 +706,6 @@ public class FontAttributeTests
     ///   Assert.Equal() … Expected: 1.25992105  Actual: 1
     /// </para>
     /// </remarks>
-    /// <summary>The chord book this pair is measured on, minus its fonts line.</summary>
-    private const string Book0Body =
-        "part m { clef treble }\n"
-        + "section A { m { c4 d e f | } chords prog { Am7 | } }\n"
-        + "form { ~A }\n"
-        + "score { chords prog  staff m }\n";
-
-    /// <summary>…and the same book writing no fonts block at all — the control.</summary>
-    private const string Book0 = "time 4/4\n" + Book0Body;
-
     [Theory]
     [InlineData("", 0)]
     [InlineData("fonts { chord step +2 }", 2)]

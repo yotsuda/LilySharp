@@ -515,6 +515,13 @@ internal sealed class SystemLayoutCache
             isLastSystem, indent, commonShortestDuration, extra: 0,
             state, compute, out _, extra2: staffIndex, systemIndex: systemIndex);
 
+    /// <summary>Hits and misses of the two bow memos below over this cache's lifetime
+    /// (diagnostics / tests) — the liveness counter that lets the bowed chained-edit net
+    /// assert the memo actually served, rather than silently falling back forever
+    /// (a fixture whose bows all straddle systems would pass byte-equality without
+    /// exercising the memo at all).</summary>
+    public (int Hits, int Misses) BowMemoStats { get; private set; }
+
     /// <summary>Reuses or computes ONE staff's laid-out TIES for ONE system — keyed like
     /// <see cref="GetOrComputeStaffSystemBeams"/> and standing on the same claim, extended
     /// one step: a tie's Ys carry the staff's WITHIN-system offset, and that offset is a
@@ -525,13 +532,6 @@ internal sealed class SystemLayoutCache
     /// memoized here (the caller falls back for the whole staff — same posture as the
     /// beams' cross-system group). Held by the bowed chained-edit net in
     /// IncrementalCompilerTests.</summary>
-    /// <summary>Hits and misses of the two bow memos below over this cache's lifetime
-    /// (diagnostics / tests) — the liveness counter that lets the bowed chained-edit net
-    /// assert the memo actually served, rather than silently falling back forever
-    /// (a fixture whose bows all straddle systems would pass byte-equality without
-    /// exercising the memo at all).</summary>
-    public (int Hits, int Misses) BowMemoStats { get; private set; }
-
     public ImmutableArray<TieLayout> GetOrComputeStaffSystemTies<TState>(
         int staffIndex, int systemIndex,
         int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,

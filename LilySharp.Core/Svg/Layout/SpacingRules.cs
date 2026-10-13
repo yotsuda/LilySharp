@@ -184,17 +184,6 @@ internal static partial class SpacingRules
     }
 
     /// <summary>
-    /// Calculates the width of system prefix (clef + key + optional time signature).
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/break-alignment-interface.cc
-    /// LILYPOND-REF: scm/define-grobs.scm break-align-orders, Clef/KeySignature/TimeSignature space-alist
-    ///
-    /// Delegates to BreakAlignSpacing which implements LP's break-alignment-interface
-    /// with space-alist lookups and break-align-orders for correct element ordering.
-    /// Uses the treble G-clef stencil ink as default; for other clefs, use the overload with clefWidth.
-    /// </remarks>
-    /// <summary>
     /// The ink width of a key signature — the sum of its accidentals' advances, 0 for an
     /// empty (C major) signature. This is the ONE key-width model: the break-align
     /// reservation (<c>CalculatePrefixWidth</c>, any overload → SolvePrefixColumns, the
@@ -232,6 +221,17 @@ internal static partial class SpacingRules
         return width;
     }
 
+    /// <summary>
+    /// Calculates the width of system prefix (clef + key + optional time signature).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/break-alignment-interface.cc
+    /// LILYPOND-REF: scm/define-grobs.scm break-align-orders, Clef/KeySignature/TimeSignature space-alist
+    ///
+    /// Delegates to BreakAlignSpacing which implements LP's break-alignment-interface
+    /// with space-alist lookups and break-align-orders for correct element ordering.
+    /// Uses the treble G-clef stencil ink as default; for other clefs, use the overload with clefWidth.
+    /// </remarks>
     public static double CalculatePrefixWidth(Rendering.ScoreTextMetrics fonts, KeySignature key, bool includeTimeSignature,
         string timeSigNumerator = "4", string timeSigDenominator = "4")
     {
@@ -1416,26 +1416,6 @@ internal static partial class SpacingRules
         return extent;
     }
 
-    /// <summary>
-    /// How far a CHORD's own ink reaches LEFT of its column origin, as a positive number: a
-    /// head reversed to the left of a down stem (a second), and the leftmost of its packed
-    /// accidentals — 0 for a plain chord. This is the ink an arpeggio stands <c>padding</c>
-    /// clear of, so the arpeggio's placement (<see cref="ArpeggioEngraver"/>), its
-    /// reservation (<c>ItemSkylineFactory.AddArpeggio</c>) and the column's own reach
-    /// (<see cref="CalculateLeftExtent"/>) all read it here and nowhere else.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/arpeggio-engraver.cc:112-122 acknowledge_rhythmic_head — every
-    ///   head is a side-position support of the arpeggio;
-    /// LILYPOND-REF: lily/accidental-engraver.cc:298-307 make_standard_accidental — every
-    ///   accidental it makes is added to the support of each arpeggio it acknowledged,
-    ///   "so it is put left of the accidentals";
-    /// LILYPOND-REF: lily/stem.cc:606-760 calc_positioning_done (the reversed head);
-    ///   lily/accidental-placement.cc position_apes (the accidentals' X).
-    /// MEASURED (2.26.0, audit/lp-geometry/probes/arpeggio.ly AAC, <c>&lt;cis e g&gt;4\arpeggio</c>):
-    /// the wiggle's right edge 8.585000 against the sharp's ink left 9.085000 — the padding,
-    /// off the ACCIDENTAL; the heads start 1.45 further right.
-    /// </remarks>
     /// <summary>The cue font for a cue note or chord, null (the twenty) otherwise — what a
     /// column's heads and accidentals are read from, as the renderer draws them.</summary>
     internal static MusicFontDesign? CueFontOf(MusicItem item)
@@ -1466,6 +1446,26 @@ internal static partial class SpacingRules
             : GlyphMetrics.GetNoteheadBBox(HeadFontOf(item) ?? MusicFont.Current.DesignAt(0),
                 GlyphMetrics.HeadStyleOf(item), noteValue);
 
+    /// <summary>
+    /// How far a CHORD's own ink reaches LEFT of its column origin, as a positive number: a
+    /// head reversed to the left of a down stem (a second), and the leftmost of its packed
+    /// accidentals — 0 for a plain chord. This is the ink an arpeggio stands <c>padding</c>
+    /// clear of, so the arpeggio's placement (<see cref="ArpeggioEngraver"/>), its
+    /// reservation (<c>ItemSkylineFactory.AddArpeggio</c>) and the column's own reach
+    /// (<see cref="CalculateLeftExtent"/>) all read it here and nowhere else.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/arpeggio-engraver.cc:112-122 acknowledge_rhythmic_head — every
+    ///   head is a side-position support of the arpeggio;
+    /// LILYPOND-REF: lily/accidental-engraver.cc:298-307 make_standard_accidental — every
+    ///   accidental it makes is added to the support of each arpeggio it acknowledged,
+    ///   "so it is put left of the accidentals";
+    /// LILYPOND-REF: lily/stem.cc:606-760 calc_positioning_done (the reversed head);
+    ///   lily/accidental-placement.cc position_apes (the accidentals' X).
+    /// MEASURED (2.26.0, audit/lp-geometry/probes/arpeggio.ly AAC, <c>&lt;cis e g&gt;4\arpeggio</c>):
+    /// the wiggle's right edge 8.585000 against the sharp's ink left 9.085000 — the padding,
+    /// off the ACCIDENTAL; the heads start 1.45 further right.
+    /// </remarks>
     internal static double ChordSupportLeftReach(ChordItem chord)
     {
         int noteValue = GetNoteValue(chord);

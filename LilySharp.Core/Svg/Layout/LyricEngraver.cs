@@ -506,6 +506,49 @@ internal sealed class LyricEngraver
     }
 
     /// <summary>
+    /// The staff a system's below-the-system lyric block hangs from: its DEEPEST spaceable,
+    /// non-hidden staff — per SYSTEM, because hara-kiri can hide a different staff on every
+    /// one. Null on a staffless sheet.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:943-944 — find_system_offsets records each
+    /// spaceable staff as <c>last_spaceable_line</c> as it walks THAT system, so the anchor
+    /// is a per-system fact. Lily# read it off system 0 for every system, and got away with
+    /// it only while the block was measured against the per-system SILHOUETTE — the anchor's
+    /// own Y cancelled out of that arithmetic. It stopped cancelling the moment the block
+    /// began reading the anchor staff's own profile (MEASURED:
+    /// lyrics.hara-kiri.shown-system.staff-to-lyric regressed by exactly one system gap).
+    /// ⚠️ ONE SPELLING: LayoutEngine.BuildStaffAnchorTables routes its system-0 anchor
+    /// through this same method — the predicate must not fork (HANDOFF 5.2.1②).
+    /// <para>
+    /// ⚠️ <c>DeviceDown</c> IS TO THE STAFF'S TOP, not to its reference point, and
+    /// <c>RefpointBelowTop</c> is the rest of that step — carried out of here BECAUSE the two
+    /// belong to the same staff. The chain used to finish the step with the score's nominal
+    /// half-staff, which is right for a five-line staff and 1.750000 short for a six-string
+    /// tab; see <c>SkylineBuilder.SeedStaffSymbol</c> for the other half of that defect.
+    /// </para>
+    /// </remarks>
+    internal static (int StaffIndex, double DeviceDown, double? RefpointBelowTop)?
+        LastSpaceableStaffOf(SystemLayout system)
+    {
+        if (system.StaffGroups.IsDefaultOrEmpty) return null;
+        (int StaffIndex, double DeviceDown, double? RefpointBelowTop)? best = null;
+        foreach (var group in system.StaffGroups)
+        {
+            if (group.Staves.IsDefaultOrEmpty) continue;
+            foreach (var st in group.Staves)
+            {
+                if (st.IsHidden || !StaffAffinity.IsSpaceable(st.StaffAffinity))
+                    continue;
+                double down = -st.Y;
+                if (best == null || down > best.Value.DeviceDown)
+                    best = (st.StaffIndex, down, st.RefpointBelowTop);
+            }
+        }
+        return best;
+    }
+
+    /// <summary>
     /// Places every line of a note-bound lyric block at once, as LilyPond's second
     /// spacing pass does: one spring chain from the staff down through the verses to
     /// whatever closes it, solved into the room the page left.
@@ -570,49 +613,6 @@ internal sealed class LyricEngraver
     /// would be somebody else's.
     /// </para>
     /// </remarks>
-    /// <summary>
-    /// The staff a system's below-the-system lyric block hangs from: its DEEPEST spaceable,
-    /// non-hidden staff — per SYSTEM, because hara-kiri can hide a different staff on every
-    /// one. Null on a staffless sheet.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/page-layout-problem.cc:943-944 — find_system_offsets records each
-    /// spaceable staff as <c>last_spaceable_line</c> as it walks THAT system, so the anchor
-    /// is a per-system fact. Lily# read it off system 0 for every system, and got away with
-    /// it only while the block was measured against the per-system SILHOUETTE — the anchor's
-    /// own Y cancelled out of that arithmetic. It stopped cancelling the moment the block
-    /// began reading the anchor staff's own profile (MEASURED:
-    /// lyrics.hara-kiri.shown-system.staff-to-lyric regressed by exactly one system gap).
-    /// ⚠️ ONE SPELLING: LayoutEngine.BuildStaffAnchorTables routes its system-0 anchor
-    /// through this same method — the predicate must not fork (HANDOFF 5.2.1②).
-    /// <para>
-    /// ⚠️ <c>DeviceDown</c> IS TO THE STAFF'S TOP, not to its reference point, and
-    /// <c>RefpointBelowTop</c> is the rest of that step — carried out of here BECAUSE the two
-    /// belong to the same staff. The chain used to finish the step with the score's nominal
-    /// half-staff, which is right for a five-line staff and 1.750000 short for a six-string
-    /// tab; see <c>SkylineBuilder.SeedStaffSymbol</c> for the other half of that defect.
-    /// </para>
-    /// </remarks>
-    internal static (int StaffIndex, double DeviceDown, double? RefpointBelowTop)?
-        LastSpaceableStaffOf(SystemLayout system)
-    {
-        if (system.StaffGroups.IsDefaultOrEmpty) return null;
-        (int StaffIndex, double DeviceDown, double? RefpointBelowTop)? best = null;
-        foreach (var group in system.StaffGroups)
-        {
-            if (group.Staves.IsDefaultOrEmpty) continue;
-            foreach (var st in group.Staves)
-            {
-                if (st.IsHidden || !StaffAffinity.IsSpaceable(st.StaffAffinity))
-                    continue;
-                double down = -st.Y;
-                if (best == null || down > best.Value.DeviceDown)
-                    best = (st.StaffIndex, down, st.RefpointBelowTop);
-            }
-        }
-        return best;
-    }
-
     private List<LyricLayout> DistributeLooseLines(
         List<LyricLayout> layouts, ImmutableArray<SystemLayout> systems,
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,

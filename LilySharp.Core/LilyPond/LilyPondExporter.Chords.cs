@@ -371,10 +371,6 @@ public sealed partial class LilyPondExporter
             ? "\\with { chordNameLowercaseMinor = ##t } "
             : "";
 
-    /// <summary>One placed inline symbol as its entry: the model's resolved structure spelled
-    /// by <see cref="Music.ChordStructure.ToChordMode"/>; a symbol with no tone set (an
-    /// unregistered quality, or a literal the page could not parse) goes out as its root or
-    /// as silence, and the twin says so once.</summary>
     /// <summary>
     /// The chord a <c>\chordmode</c> entry spells under the score's capo: the PRESSED chord
     /// (<see cref="Music.ChordStructure.Pressed"/>) in the FretBoards track (its diagrams are
@@ -388,6 +384,10 @@ public sealed partial class LilyPondExporter
             ? chord.Pressed(_layoutPlan.Chords.Capo, keySharps)
             : chord;
 
+    /// <summary>One placed inline symbol as its entry: the model's resolved structure spelled
+    /// by <see cref="Music.ChordStructure.ToChordMode"/>; a symbol with no tone set (an
+    /// unregistered quality, or a literal the page could not parse) goes out as its root or
+    /// as silence, and the twin says so once.</summary>
     private string InlineChordEntry(Svg.Model.ChordNameItem c, string duration)
     {
         if (c.Structure is { } s)

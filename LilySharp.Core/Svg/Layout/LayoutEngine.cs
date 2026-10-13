@@ -658,8 +658,6 @@ internal sealed partial class LayoutEngine
         public required ImmutableArray<MeasureLayout> FirstSystemMeasureLayouts { get; init; }
         public required ImmutableArray<StaffGroupLayout> FirstStaffGroupLayouts { get; init; }
         public required MultiStaffLayouter.StaffSkylineSet FirstStaffSkylines { get; init; }
-        /// <summary>System 0's loose-line lookup, built by the caller alongside its placement
-        /// so the springs below are floored against the SAME alignment that drew it.</summary>
         /// <summary>System 0's pair-run suppliers (note-bound block + attached chord
         /// line), built once and shared by the placement and the springs.</summary>
         public MultiStaffLayouter.PairRunSources FirstRunSources { get; init; }

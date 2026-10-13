@@ -1448,6 +1448,38 @@ internal static partial class SpacingRules
     }
 
     /// <summary>
+    /// The bar line's column (a key or meter opening the bar) → a grace run → its main note:
+    /// the approach <paramref name="approach"/>, whose minimum is min_dist to the first grace
+    /// column, scaled by 0.8, then the run's own springs, in series. Null when the run has no
+    /// gaps to stand on.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:519-527 Spacing_spanner::breakable_column_spacing — spring *= 0.8 on a grace_part_ right column.
+    /// LILYPOND-REF: lily/spring.cc:85-93 Spring::operator*= — ideal_distance_ = max (min_distance_, ideal × r).
+    /// The run's parts are <see cref="GraceColumns"/>' gaps, as in <see cref="MidMeasureChangeBeforeGraceSeries"/>.
+    /// </remarks>
+    private static Spring? BoundaryGraceSeries(Spring approach, ImmutableArray<GraceColumnInfo> grace, MusicItem item)
+    {
+        var run = GraceColumns(grace, item);
+        if (run.Offsets.IsDefaultOrEmpty || run.Gaps.IsDefaultOrEmpty)
+            return null;
+        double gapStretch = GraceSpringInverseStretch();
+        var parts = new Spring[run.Offsets.Length + 1];
+        parts[0] = approach.Scale(GraceApproachScale);
+        double min = parts[0].MinDistance;
+        for (int k = 0; k < run.Offsets.Length; k++)
+        {
+            parts[k + 1] = new Spring(run.Gap(k), run.Gaps[k].Rod, gapStretch, run.Gaps[k].InverseCompress);
+            min += parts[k + 1].MinDistance;
+        }
+        // The column rod over the approach pair: the spanner's padding over the same skyline
+        // distance min_dist is — it binds wherever min_dist does, 0.1 further on.
+        // LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods; lily/separation-item.cc:47-68 Separation_item::set_distance.
+        return Spring.InSeries(ImmutableArray.Create(parts), min)
+            .WithPartRod(0, approach.MinDistance + SeparationRodPadding);
+    }
+
+    /// <summary>
     /// The spring from a mid-line bar line to the first musical column after it —
     /// the SINGLE implementation shared by both spring systems.
     /// </summary>
@@ -1486,38 +1518,6 @@ internal static partial class SpacingRules
     ///   full-measure-extra-space is `situational_space` on THIS spring, keyed on the
     ///   measure AFTER the bar line, so the caller decides and passes it in.
     /// </remarks>
-    /// <summary>
-    /// The bar line's column (a key or meter opening the bar) → a grace run → its main note:
-    /// the approach <paramref name="approach"/>, whose minimum is min_dist to the first grace
-    /// column, scaled by 0.8, then the run's own springs, in series. Null when the run has no
-    /// gaps to stand on.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/spacing-spanner.cc:519-527 Spacing_spanner::breakable_column_spacing — spring *= 0.8 on a grace_part_ right column.
-    /// LILYPOND-REF: lily/spring.cc:85-93 Spring::operator*= — ideal_distance_ = max (min_distance_, ideal × r).
-    /// The run's parts are <see cref="GraceColumns"/>' gaps, as in <see cref="MidMeasureChangeBeforeGraceSeries"/>.
-    /// </remarks>
-    private static Spring? BoundaryGraceSeries(Spring approach, ImmutableArray<GraceColumnInfo> grace, MusicItem item)
-    {
-        var run = GraceColumns(grace, item);
-        if (run.Offsets.IsDefaultOrEmpty || run.Gaps.IsDefaultOrEmpty)
-            return null;
-        double gapStretch = GraceSpringInverseStretch();
-        var parts = new Spring[run.Offsets.Length + 1];
-        parts[0] = approach.Scale(GraceApproachScale);
-        double min = parts[0].MinDistance;
-        for (int k = 0; k < run.Offsets.Length; k++)
-        {
-            parts[k + 1] = new Spring(run.Gap(k), run.Gaps[k].Rod, gapStretch, run.Gaps[k].InverseCompress);
-            min += parts[k + 1].MinDistance;
-        }
-        // The column rod over the approach pair: the spanner's padding over the same skyline
-        // distance min_dist is — it binds wherever min_dist does, 0.1 further on.
-        // LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods; lily/separation-item.cc:47-68 Separation_item::set_distance.
-        return Spring.InSeries(ImmutableArray.Create(parts), min)
-            .WithPartRod(0, approach.MinDistance + SeparationRodPadding);
-    }
-
     internal static Spring BarlineToFirstColumnSpring(
         Rendering.ScoreTextMetrics fonts, ItemColumn firstItems, bool fillsMeasure,
         IReadOnlyList<IReadOnlyList<MusicItem>>? staffFirstItems = null,

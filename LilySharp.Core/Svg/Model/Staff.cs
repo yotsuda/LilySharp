@@ -152,9 +152,6 @@ public sealed record Staff(
     /// <summary>Whether this is a tablature staff.</summary>
     public bool IsTab => Clef == ClefType.Tab;
 
-    /// <summary>
-    /// Creates a single-voice staff.
-    /// </summary>
     /// <summary>Number of staff lines (5 default; 1 = rhythmic, 2 = timbales
     /// style), drawn centered on the normal 5-line frame — positions, barline
     /// height and stems keep the standard geometry.

@@ -183,12 +183,12 @@ public sealed class CourtesyMeterTests
     /// signature inks 3.300030 = 3 x 1.100010 with nothing after it, so the 0.4 was pure
     /// surplus and this reading is what says so.
     /// </summary>
-    /// <summary>
+    /// <remarks>
     /// ⚠️ FROM C MAJOR, so the change prints a signature and NO cancellation — the half of
     /// the pair below that never depended on the kerning. Both halves read 0.5 now that the
     /// reservation consumes the drawn walk; keeping both keeps the cancel-free case pinned
     /// independently of the kerning arithmetic.
-    /// </summary>
+    /// </remarks>
     [Fact]
     public void ACourtesyKeyWithNoMeter_LeavesTheSameGap()
         => Assert.Equal(0.5, KeyOnlyMargin(Book("4/4", "r1", "key a major", openingKey: "c major")), 3);

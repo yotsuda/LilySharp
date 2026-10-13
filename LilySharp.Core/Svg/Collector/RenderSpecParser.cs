@@ -745,8 +745,6 @@ public static class RenderSpecParser
             RemoveFirst: removeEmpty is "all");
     }
 
-    /// <summary>One home for the staff-item token scan: the sings validator reads
-    /// the same (part, with-lyrics) answer the renderer does, never a re-spelling.</summary>
     /// <summary>The clef a <c>staff</c> / <c>ossia</c> item's clef word writes, or null for none.</summary>
     private static ClefType? ClefOfKeyword(SyntaxTokenNode? clef) => clef?.Kind switch
     {
@@ -764,6 +762,8 @@ public static class RenderSpecParser
         _ => null,
     };
 
+    /// <summary>One home for the staff-item token scan: the sings validator reads
+    /// the same (part, with-lyrics) answer the renderer does, never a re-spelling.</summary>
     internal static StaffSpec? ParseStaffSpec(StaffRenderSyntax staff) => ParseStaff(staff);
 
     private static StaffSpec? ParseStaff(StaffRenderSyntax staff)

@@ -452,25 +452,6 @@ internal static class TrillSpannerEngraver
     }
 
     /// <summary>
-    /// The line's right end: the stop note column's LEFT edge.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/line-spanner.cc:155-175 calc_bound_info — the right
-    ///   bound-details declare <c>(attach-dir . LEFT)</c> (scm/define-grobs.scm:4072-4074),
-    ///   so <c>x_coord</c> is the bound column extent's LEFT point, and :561-562 reads no
-    ///   bound-details padding for TrillSpanner, so nothing is subtracted from it.
-    /// ⚠️ Until 2026-07-30 this spent <see cref="BoundPadding"/> here, and that 0.5 was
-    ///   load bearing in the wrong direction: it held the line's ink clear of the stop
-    ///   column's LEDGER lines, which reach only length-fraction * head width (0.326) left
-    ///   of the column, so Lily#'s outside-staff pass never saw the obstacle LilyPond
-    ///   clears. Ledger trill.x.wave-zone is that measurement (its binding support is the
-    ///   ledger at 4.100000, not the head or the stem).
-    /// ⚠️ LilyPond then shortens the DRAWN line to whole <c>scripts.trill_element</c>
-    ///   repetitions (line-interface.cc:86-102 make_trill_line), which is why its dump ends
-    ///   0.0486 short of this point. Lily# draws a continuous polyline, so it reaches the
-    ///   bound exactly; the remainder goes when the wave becomes the real glyph run.
-    /// </remarks>
-    /// <summary>
     /// The ink LEFT edge of the bar line closing <paramref name="measureIndex"/> — the
     /// bound a measure-start terminator rewrites to under <c>to-barline</c>.
     /// </summary>
@@ -496,6 +477,25 @@ internal static class TrillSpannerEngraver
             ? voices[0].Measures[measureIndex].EndBarline
             : BarlineType.Single;
 
+    /// <summary>
+    /// The line's right end: the stop note column's LEFT edge.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/line-spanner.cc:155-175 calc_bound_info — the right
+    ///   bound-details declare <c>(attach-dir . LEFT)</c> (scm/define-grobs.scm:4072-4074),
+    ///   so <c>x_coord</c> is the bound column extent's LEFT point, and :561-562 reads no
+    ///   bound-details padding for TrillSpanner, so nothing is subtracted from it.
+    /// ⚠️ Until 2026-07-30 this spent <see cref="BoundPadding"/> here, and that 0.5 was
+    ///   load bearing in the wrong direction: it held the line's ink clear of the stop
+    ///   column's LEDGER lines, which reach only length-fraction * head width (0.326) left
+    ///   of the column, so Lily#'s outside-staff pass never saw the obstacle LilyPond
+    ///   clears. Ledger trill.x.wave-zone is that measurement (its binding support is the
+    ///   ledger at 4.100000, not the head or the stem).
+    /// ⚠️ LilyPond then shortens the DRAWN line to whole <c>scripts.trill_element</c>
+    ///   repetitions (line-interface.cc:86-102 make_trill_line), which is why its dump ends
+    ///   0.0486 short of this point. Lily# draws a continuous polyline, so it reaches the
+    ///   bound exactly; the remainder goes when the wave becomes the real glyph run.
+    /// </remarks>
     private static double GetEndX(TrillSpannerItem spanner,
         ImmutableArray<MeasureLayout> measureLayouts, ImmutableArray<Voice> voices)
     {

@@ -1457,11 +1457,6 @@ internal sealed class MeasureBuilder
         MeasureCompleted?.Invoke();
     }
 
-    /// <summary>Forces a line break here (<c>break</c>, LP's <c>\break</c>). At a bar
-    /// boundary it flags the measure just closed; INSIDE a bar it flags the measure the bar
-    /// closes into — unless music follows it in the same bar, in which case the score splits
-    /// the bar there on its second collect (<see cref="MidBarBreaks"/>; the request is made
-    /// by <see cref="RequestPendingMidBar"/>, the cut by <see cref="TrySplitAtMidBar"/>).</summary>
     /// <summary>
     /// True while a break directive stands AT THE BAR LINE: a measure is closed and the bar
     /// under construction holds no time yet — nothing, or only the prelude a bar opens with
@@ -1485,6 +1480,11 @@ internal sealed class MeasureBuilder
         => _measures.Count > 0
            && (_currentItems.Count == 0 || (!_hasMeasureContent && _currentDuration == Fraction.Zero));
 
+    /// <summary>Forces a line break here (<c>break</c>, LP's <c>\break</c>). At a bar
+    /// boundary it flags the measure just closed; INSIDE a bar it flags the measure the bar
+    /// closes into — unless music follows it in the same bar, in which case the score splits
+    /// the bar there on its second collect (<see cref="MidBarBreaks"/>; the request is made
+    /// by <see cref="RequestPendingMidBar"/>, the cut by <see cref="TrySplitAtMidBar"/>).</summary>
     public void SetBreak(int sourcePosition = -1)
     {
         if (DirectiveStandsAtTheBarLine)

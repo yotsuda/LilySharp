@@ -458,7 +458,6 @@ public enum SyntaxKind : ushort
     MusicMark,
 
     // === Nodes: Legacy Structure ===
-    /// <summary>A staff declaration node (legacy).</summary>
     /// <summary>A voice declaration node (legacy).</summary>
     VoiceDeclaration,
 

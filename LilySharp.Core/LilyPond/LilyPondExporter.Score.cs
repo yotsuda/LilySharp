@@ -383,9 +383,10 @@ public sealed partial class LilyPondExporter
         return row.Insert(at + "\\new Staff".Length, " = \"" + varName + "\"");
     }
 
-    /// <summary>
-    /// True for <c>tab part as numbers</c> — fret digits only.
-    /// </summary>
+    /// <summary>The page's answer to a tab's style — explicit clause, else numbers beside
+    /// a notation staff of the same part and full alone — asked of the one home that
+    /// answers it for the page (session 335: the twin used to read the explicit word only,
+    /// and exported every paired tab with <c>\tabFullNotation</c>).</summary>
     /// <remarks>
     /// ⚠️ IT NO LONGER MIRRORS <c>RenderSpecParser</c>, IT SHARES WITH IT. This walked the
     /// tokens for the <c>as</c> itself and then compared <c>OrdinalIgnoreCase</c> — the same
@@ -393,10 +394,6 @@ public sealed partial class LilyPondExporter
     /// must agree, or the twin is drawn in the other mode from the page", which is the
     /// argument for one reading rather than two careful ones (HANDOFF §5.2.1②).
     /// </remarks>
-    /// <summary>The page's answer to a tab's style — explicit clause, else numbers beside
-    /// a notation staff of the same part and full alone — asked of the one home that
-    /// answers it for the page (session 335: the twin used to read the explicit word only,
-    /// and exported every paired tab with <c>\tabFullNotation</c>).</summary>
     private static bool TabIsNumbersOnly(TabRenderSyntax tab, RenderDeclarationSyntax render) =>
         Svg.Collector.RenderSpecParser.TabIsNumbersOnly(tab, render);
 

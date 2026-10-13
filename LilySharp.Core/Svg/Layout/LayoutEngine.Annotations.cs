@@ -383,14 +383,6 @@ internal sealed partial class LayoutEngine
     }
 
     /// <summary>
-    /// Per system, the ABSOLUTE X of the line-start TimeSignature column's ink left
-    /// (NaN when that system's prefix engraves no meter) — the break-align anchor the
-    /// metronome mark self-aligns LEFT on. Derived from the SAME line-start prefix
-    /// table the spring model and the measure layout solve
-    /// (<see cref="MultiStaffLayouter.SolveLineStartPrefix"/>), so the annotated,
-    /// reserved and drawn meter columns cannot drift apart.
-    /// </summary>
-    /// <summary>
     /// By MEASURE index: where the bar line that OPENS a system is actually drawn, or NaN
     /// when there is none. A mark that break-aligns on <c>staff-bar</c> needs this because at
     /// a line start the bar line is not at the measure's X — the redrawn clef/key/time prefix
@@ -423,6 +415,14 @@ internal sealed partial class LayoutEngine
             return double.NaN;
         };
 
+    /// <summary>
+    /// Per system, the ABSOLUTE X of the line-start TimeSignature column's ink left
+    /// (NaN when that system's prefix engraves no meter) — the break-align anchor the
+    /// metronome mark self-aligns LEFT on. Derived from the SAME line-start prefix
+    /// table the spring model and the measure layout solve
+    /// (<see cref="MultiStaffLayouter.SolveLineStartPrefix"/>), so the annotated,
+    /// reserved and drawn meter columns cannot drift apart.
+    /// </summary>
     private static Func<int, double> BuildPrefixTimeSignatureX(
         MultiStaffScore score, ImmutableArray<SystemLayout> systems)
         => sysIdx =>
@@ -1860,29 +1860,6 @@ internal sealed partial class LayoutEngine
     }
 
     /// <summary>
-    /// The alignment's loose lines between each pair of staves of ONE system: the
-    /// <c>with lyrics</c> block a non-last group carries, as skylines, so the room the two
-    /// staves leave is the block's own ink rather than a constant per verse.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/page-layout-problem.cc:919-925 — the run of non-spaceable lines
-    /// collected between two spaceable staves, which
-    /// <c>Align_interface::internal_get_minimum_translations</c> has already walked over.
-    /// <para>
-    /// Null when the score has no such block, so a score without one does no extra work and
-    /// takes the adjacent-pair path unchanged.
-    /// </para>
-    /// <para>
-    /// ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
-    /// no such test: a Lyrics context is an element of the alignment wherever it sits, so a
-    /// block between two staves of ONE group would be in its walk too. Lily# hangs a
-    /// note-bound line below the whole GROUP (<c>LyricEngraver.CalculateLayouts</c>: a block
-    /// under a non-last group anchors on that group's bottom staff), so under this model a
-    /// pair inside one group really has nothing between it — the condition follows the
-    /// model rather than the source, and closing it means moving the model first.
-    /// </para>
-    /// </remarks>
-    /// <summary>
     /// The system's LOOSE BLOCK — the note-bound verses and the independent lyrics ROWS
     /// standing under them, in alignment order — as DOWN profiles in the SYSTEM-ORIGIN
     /// frame, in the two readings its two consumers need: every line at its ALIGNMENT
@@ -2243,6 +2220,29 @@ internal sealed partial class LayoutEngine
     private static LyricEngraver BuildBlockEngraver(MultiStaffScore score)
         => LyricEngraver.ForGeometry(score);
 
+    /// <summary>
+    /// The alignment's loose lines between each pair of staves of ONE system: the
+    /// <c>with lyrics</c> block a non-last group carries, as skylines, so the room the two
+    /// staves leave is the block's own ink rather than a constant per verse.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:919-925 — the run of non-spaceable lines
+    /// collected between two spaceable staves, which
+    /// <c>Align_interface::internal_get_minimum_translations</c> has already walked over.
+    /// <para>
+    /// Null when the score has no such block, so a score without one does no extra work and
+    /// takes the adjacent-pair path unchanged.
+    /// </para>
+    /// <para>
+    /// ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
+    /// no such test: a Lyrics context is an element of the alignment wherever it sits, so a
+    /// block between two staves of ONE group would be in its walk too. Lily# hangs a
+    /// note-bound line below the whole GROUP (<c>LyricEngraver.CalculateLayouts</c>: a block
+    /// under a non-last group anchors on that group's bottom staff), so under this model a
+    /// pair inside one group really has nothing between it — the condition follows the
+    /// model rather than the source, and closing it means moving the model first.
+    /// </para>
+    /// </remarks>
     /// <param name="cache">The session's per-system cache, or null (full compile). With a
     /// cache, each upper staff's block is served across keystrokes by
     /// <see cref="SystemLayoutCache.GetOrComputeLooseLines"/> (finding 4-4) — the slice
@@ -2323,18 +2323,6 @@ internal sealed partial class LayoutEngine
     }
 
     /// <summary>
-    /// ONE SYSTEM's attached chord lines, by the staff that hosts them — the run's TRAILING
-    /// element for the pair whose lower staff that is. Null when no staff of the score
-    /// qualifies (<c>MultiStaffLayouter.AttachedChordLineInRun</c>), so every other score
-    /// pays two O(chordNames) scans and nothing else.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/page-layout-problem.cc:919-925 loose_lines — the ChordNames
-    /// context above a lower staff is one of the pair's run, not a band on the staff's skyline.
-    /// Built per system because the line's ink is this system's symbols at this system's
-    /// columns, cached per staff for the three walk consumers (placement, gap, springs).
-    /// </remarks>
-    /// <summary>
     /// ONE SYSTEM's pair-run suppliers, as the one value the placement, the springs and
     /// the drawn-baseline walk all take (<c>MultiStaffLayouter.PairRunSources</c>).
     /// </summary>
@@ -2401,6 +2389,18 @@ internal sealed partial class LayoutEngine
         };
     }
 
+    /// <summary>
+    /// ONE SYSTEM's attached chord lines, by the staff that hosts them — the run's TRAILING
+    /// element for the pair whose lower staff that is. Null when no staff of the score
+    /// qualifies (<c>MultiStaffLayouter.AttachedChordLineInRun</c>), so every other score
+    /// pays two O(chordNames) scans and nothing else.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:919-925 loose_lines — the ChordNames
+    /// context above a lower staff is one of the pair's run, not a band on the staff's skyline.
+    /// Built per system because the line's ink is this system's symbols at this system's
+    /// columns, cached per staff for the three walk consumers (placement, gap, springs).
+    /// </remarks>
     private Func<int, MultiStaffLayouter.PairLooseLine?>? BuildAttachedChordLines(
         MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts)
     {

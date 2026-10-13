@@ -195,6 +195,13 @@ public class LpFidelityFaceGuardTests
     /// </remarks>
     private static readonly char[] ChordCharactersTheFaceCannotDraw = ['△', '♭', '♯'];
 
+    /// <summary>Every spelling a <c>layout { }</c> block can ask a chord symbol for — the
+    /// cross product of the two switches, derived from their own vocabularies.</summary>
+    private static IEnumerable<LilySharp.Core.Semantics.ChordSpelling> AllChordSpellings
+        => from names in System.Enum.GetValues<LilySharp.Core.Semantics.ChordQualityStyle>()
+           from lower in new[] { false, true }
+           select new LilySharp.Core.Semantics.ChordSpelling(names, lower);
+
     /// <summary>
     /// No character the chord namer can print is MEASURED as text in a face that cannot
     /// draw it: every one either has ink in that face, or the chord run turns it into a
@@ -226,13 +233,6 @@ public class LpFidelityFaceGuardTests
     /// recognising a spelling.
     /// </para>
     /// </remarks>
-    /// <summary>Every spelling a <c>layout { }</c> block can ask a chord symbol for — the
-    /// cross product of the two switches, derived from their own vocabularies.</summary>
-    private static IEnumerable<LilySharp.Core.Semantics.ChordSpelling> AllChordSpellings
-        => from names in System.Enum.GetValues<LilySharp.Core.Semantics.ChordQualityStyle>()
-           from lower in new[] { false, true }
-           select new LilySharp.Core.Semantics.ChordSpelling(names, lower);
-
     [Fact]
     public void NoCharacterAChordSymbolCanPrint_IsMeasuredAsTextInAFaceThatCannotDrawIt()
     {

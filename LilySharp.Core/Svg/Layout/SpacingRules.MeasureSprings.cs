@@ -1013,6 +1013,58 @@ internal static partial class SpacingRules
     }
 
     /// <summary>
+    /// One collision table per STAFF object, filled a measure at a time
+    /// (<see cref="VoiceCollisionTable"/>): this decoration runs once per measure in BOTH
+    /// the break gate and the system layout, and computing the staff's collisions inline
+    /// made the pass O(measures²) per staff (MEASURED: +26% end-to-end on a 120-bar
+    /// two-voice book, 1991→2514 ms). The answer derives purely from the staff's immutable
+    /// Voices, so one table per Staff instance is exact; a model rebuild makes new Staff
+    /// objects and a fresh table — which then solves only the bars it is asked about
+    /// (session 405: the whole-staff fill on every edit was 3 ms / 7.5 MB on the two-voice
+    /// 1000-bar book, for the three bars the spring memo re-springs).
+    /// </summary>
+    /// <remarks>
+    /// Keyed on the VOICES, not on the <see cref="Model.Staff"/> that holds them, so that the
+    /// BEAM frame can read this same answer: <c>ElementCoordinator.LayoutBeams</c> is handed a
+    /// per-staff <c>Score</c> (<c>MultiStaffLayouter.StaffBeamScoreOf</c>) and never sees the
+    /// Staff, and a fourth computation of one quantity is how the third one started
+    /// (HANDOFF §5.2.1②). Every producer passes <c>staff.Voices</c> through unchanged, so the
+    /// underlying array is one object per staff and the memo is exactly as sharp as before.
+    /// </remarks>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<
+        Model.Voice[], VoiceCollisionTable> s_staffVoiceCollisions = new();
+
+    /// <summary>
+    /// The staff's note-collision table — THE answer every consumer reads (this spacing
+    /// pass, the ledger rods, the skyline seed that must reserve a shifted voice where it
+    /// is DRAWN, the beam frame whose stems stand on those shifted heads, and the finishing
+    /// pass that files the renderer's tables from it). VoiceId is 1-based, matching
+    /// VoiceCollector / the renderer's VoiceItemKey.
+    /// </summary>
+    internal static VoiceCollisionTable VoiceCollisionShiftsOf(Model.Staff staff)
+        => VoiceCollisionShiftsOf(staff.Voices);
+
+    /// <inheritdoc cref="VoiceCollisionShiftsOf(Model.Staff)"/>
+    internal static VoiceCollisionTable VoiceCollisionShiftsOf(ImmutableArray<Model.Voice> voices)
+    {
+        // A single voice collides with nothing: answering here keeps the one-voice book —
+        // every book, mostly — off the table entirely.
+        if (voices.Length < 2)
+            return VoiceCollisionTable.Empty;
+
+        var key = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsArray(voices)!;
+        if (s_staffVoiceCollisions.TryGetValue(key, out var cached))
+            return cached;
+
+        // Static, from the key: `_ => new VoiceCollisionTable(voices)` captured the parameter,
+        // so its environment was built at this method's ENTRY — on the one-voice return and on
+        // every hit, 346 B a keystroke over the reader's corpus (session 470's allocation-tick
+        // price by type). The key IS the voices' array.
+        return s_staffVoiceCollisions.GetValue(key, static k =>
+            new VoiceCollisionTable(System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(k)));
+    }
+
+    /// <summary>
     /// Prices the CROSS-VOICE column pairs of one staff — the pairs the per-voice rod
     /// loop in <see cref="MeasureLayouter"/> cannot see — with each item's ink taken at
     /// the X the renderer will draw it, its note-collision voice shift included. The
@@ -1070,58 +1122,6 @@ internal static partial class SpacingRules
     /// own, one separation item per staff.
     /// </para>
     /// </remarks>
-    /// <summary>
-    /// One collision table per STAFF object, filled a measure at a time
-    /// (<see cref="VoiceCollisionTable"/>): this decoration runs once per measure in BOTH
-    /// the break gate and the system layout, and computing the staff's collisions inline
-    /// made the pass O(measures²) per staff (MEASURED: +26% end-to-end on a 120-bar
-    /// two-voice book, 1991→2514 ms). The answer derives purely from the staff's immutable
-    /// Voices, so one table per Staff instance is exact; a model rebuild makes new Staff
-    /// objects and a fresh table — which then solves only the bars it is asked about
-    /// (session 405: the whole-staff fill on every edit was 3 ms / 7.5 MB on the two-voice
-    /// 1000-bar book, for the three bars the spring memo re-springs).
-    /// </summary>
-    /// <remarks>
-    /// Keyed on the VOICES, not on the <see cref="Model.Staff"/> that holds them, so that the
-    /// BEAM frame can read this same answer: <c>ElementCoordinator.LayoutBeams</c> is handed a
-    /// per-staff <c>Score</c> (<c>MultiStaffLayouter.StaffBeamScoreOf</c>) and never sees the
-    /// Staff, and a fourth computation of one quantity is how the third one started
-    /// (HANDOFF §5.2.1②). Every producer passes <c>staff.Voices</c> through unchanged, so the
-    /// underlying array is one object per staff and the memo is exactly as sharp as before.
-    /// </remarks>
-    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<
-        Model.Voice[], VoiceCollisionTable> s_staffVoiceCollisions = new();
-
-    /// <summary>
-    /// The staff's note-collision table — THE answer every consumer reads (this spacing
-    /// pass, the ledger rods, the skyline seed that must reserve a shifted voice where it
-    /// is DRAWN, the beam frame whose stems stand on those shifted heads, and the finishing
-    /// pass that files the renderer's tables from it). VoiceId is 1-based, matching
-    /// VoiceCollector / the renderer's VoiceItemKey.
-    /// </summary>
-    internal static VoiceCollisionTable VoiceCollisionShiftsOf(Model.Staff staff)
-        => VoiceCollisionShiftsOf(staff.Voices);
-
-    /// <inheritdoc cref="VoiceCollisionShiftsOf(Model.Staff)"/>
-    internal static VoiceCollisionTable VoiceCollisionShiftsOf(ImmutableArray<Model.Voice> voices)
-    {
-        // A single voice collides with nothing: answering here keeps the one-voice book —
-        // every book, mostly — off the table entirely.
-        if (voices.Length < 2)
-            return VoiceCollisionTable.Empty;
-
-        var key = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsArray(voices)!;
-        if (s_staffVoiceCollisions.TryGetValue(key, out var cached))
-            return cached;
-
-        // Static, from the key: `_ => new VoiceCollisionTable(voices)` captured the parameter,
-        // so its environment was built at this method's ENTRY — on the one-voice return and on
-        // every hit, 346 B a keystroke over the reader's corpus (session 470's allocation-tick
-        // price by type). The key IS the voices' array.
-        return s_staffVoiceCollisions.GetValue(key, static k =>
-            new VoiceCollisionTable(System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(k)));
-    }
-
     internal static ImmutableArray<Spring> ApplyCrossVoiceColumnSpacing(
         ImmutableArray<Spring> springs,
         IReadOnlyList<Fraction> timings,

@@ -750,25 +750,6 @@ internal sealed class BeamDetector
     }
 
     /// <summary>
-    /// The automatic beams of one measure — LilyPond's auto-beam engraver, walked once.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/auto-beam-engraver.cc:336-407 Auto_beam_engraver::handle_current_stem
-    /// — the shape of this loop, stem by stem: keep the SHORTEST duration seen so far; ask
-    /// whether the beam must end here (with that shortest); ask whether one may begin here
-    /// (with this note's own duration); add the stem; and if the shortest just got shorter,
-    /// recheck the boundaries already passed.
-    /// <para>
-    /// ⚠️ THIS REPLACED TWO PASSES AND COULD NOT HAVE BEEN SPLIT OUT OF THEM. Lily# used to
-    /// cut at every beat and then merge back the runs that were all eighths, which can only
-    /// produce groups COARSER than the beat. Half of LilyPond's table asks for FINER ones —
-    /// 6/4 and 4/2 beam sixteenths by the quarter against beats of a dotted half and a half
-    /// (ledger beam.grouping.six-four-sixteenths, four-two-sixteenths), 2/2 and 3/2 do the
-    /// same to thirty-seconds — so the merge, the eighth-only exception length it consulted,
-    /// and the two tuplet guards that were papering over the difference all went together.
-    /// </para>
-    /// </remarks>
-    /// <summary>
     /// The beat position a measure's FIRST item stands on. Zero for an ordinary
     /// measure; a PICKUP starts mid-bar, at the meter's period minus the pickup's
     /// own length — so the beat structure its stems are checked against is the
@@ -798,6 +779,25 @@ internal sealed class BeamDetector
         return content < options.Period ? options.Period - content : Fraction.Zero;
     }
 
+    /// <summary>
+    /// The automatic beams of one measure — LilyPond's auto-beam engraver, walked once.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/auto-beam-engraver.cc:336-407 Auto_beam_engraver::handle_current_stem
+    /// — the shape of this loop, stem by stem: keep the SHORTEST duration seen so far; ask
+    /// whether the beam must end here (with that shortest); ask whether one may begin here
+    /// (with this note's own duration); add the stem; and if the shortest just got shorter,
+    /// recheck the boundaries already passed.
+    /// <para>
+    /// ⚠️ THIS REPLACED TWO PASSES AND COULD NOT HAVE BEEN SPLIT OUT OF THEM. Lily# used to
+    /// cut at every beat and then merge back the runs that were all eighths, which can only
+    /// produce groups COARSER than the beat. Half of LilyPond's table asks for FINER ones —
+    /// 6/4 and 4/2 beam sixteenths by the quarter against beats of a dotted half and a half
+    /// (ledger beam.grouping.six-four-sixteenths, four-two-sixteenths), 2/2 and 3/2 do the
+    /// same to thirty-seconds — so the merge, the eighth-only exception length it consulted,
+    /// and the two tuplet guards that were papering over the difference all went together.
+    /// </para>
+    /// </remarks>
     private void DetectBeamGroupsInMeasure(
         Measure measure,
         int measureIndex,

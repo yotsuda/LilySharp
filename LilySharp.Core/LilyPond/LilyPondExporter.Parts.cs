@@ -172,16 +172,6 @@ public sealed partial class LilyPondExporter
 
     // ---- Phrases -----------------------------------------------------------
 
-    /// <summary>
-    /// Whether a part's music is DRUM music — it names drum instruments rather than pitches.
-    /// </summary>
-    /// <remarks>
-    /// LilyPond's two vocabularies do not mix in one stream: inside <c>\drummode</c> a
-    /// <c>c</c> is not a pitch, and outside it <c>hh</c> is not a drum. Lily# has no such
-    /// mode — a bare identifier is a drum name wherever the registry knows it — so a part
-    /// that writes both cannot be spelled at all, and saying so is better than writing a
-    /// <c>.ly</c> LilyPond refuses to read.
-    /// </remarks>
     /// <summary>Whether any note of the part's music carries a <c>\N</c> string number
     /// (see <see cref="_stringNumberParts"/>).</summary>
     private static bool HasStringNumbers(List<SyntaxNode> music)
@@ -260,6 +250,16 @@ public sealed partial class LilyPondExporter
             ? "\\set Staff.strokeFingerOrientations = #'(down) "
             : "";
 
+    /// <summary>
+    /// Whether a part's music is DRUM music — it names drum instruments rather than pitches.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's two vocabularies do not mix in one stream: inside <c>\drummode</c> a
+    /// <c>c</c> is not a pitch, and outside it <c>hh</c> is not a drum. Lily# has no such
+    /// mode — a bare identifier is a drum name wherever the registry knows it — so a part
+    /// that writes both cannot be spelled at all, and saying so is better than writing a
+    /// <c>.ly</c> LilyPond refuses to read.
+    /// </remarks>
     private bool IsDrumPart(string partName, List<SyntaxNode> music)
     {
         bool drums = false, pitched = false;

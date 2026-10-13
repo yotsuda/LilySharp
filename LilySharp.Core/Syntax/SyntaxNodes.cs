@@ -600,9 +600,6 @@ public sealed class RestSyntax : SyntaxNode
 }
 
 /// <summary>
-/// A chord: <c>&lt; pitches &gt;</c> + optional duration
-/// </summary>
-/// <summary>
 /// A scale-degree chord member (<c>3</c> / <c>3is</c> / <c>7,</c>): a degree
 /// number, an optional glued accidental, and octave marks. Resolved against the
 /// chord's root and the current key into a concrete pitch.
@@ -776,6 +773,9 @@ public sealed class ArpeggioSyntax : SyntaxNode
 public readonly record struct ArpeggioMember(
     SyntaxNode Node, int Shares, bool SlurStart, bool SlurEnd, int SlurStartSource, int SlurEndSource);
 
+/// <summary>
+/// A chord: <c>&lt; pitches &gt;</c> + optional duration
+/// </summary>
 public sealed class ChordSyntax : SyntaxNode
 {
     internal ChordSyntax(ChordGreen green, SyntaxNode? parent, int position)

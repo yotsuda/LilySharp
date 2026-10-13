@@ -2877,6 +2877,34 @@ internal static class LpGeometryProbes
     private static readonly string RVH3 =
         RowVerseHoleScore("RVH3", holeInVerse1: true, oneTrack: true);
 
+    /// <summary>Which systems of <see cref="ChordRowAlternatingScore"/> carry a chord row.</summary>
+    private enum Rows
+    {
+        /// <summary>None of them — the control that isolates the mark.</summary>
+        None,
+
+        /// <summary>Systems 1 and 3, the user's arrangement.</summary>
+        Alternating,
+
+        /// <summary>
+        /// Systems 1 and 3, but system 3's row opens on a SPACER, so its first chord stands
+        /// one bar further right and no chord ink is under the section mark. The control
+        /// that separates "the row exists" from "row ink stands under the mark".
+        /// </summary>
+        AlternatingLate,
+
+        /// <summary>
+        /// Systems 1 and 3, but system 3's row is FOUR SPACERS: the context is still there,
+        /// still prints on system 1, and has NO INK AT ALL where the section mark stands.
+        /// The control that separates the row's INK from Lily#'s nominal band — see
+        /// <see cref="ROWMZ"/>.
+        /// </summary>
+        AlternatingEmpty,
+
+        /// <summary>All three — the control that isolates the alternation.</summary>
+        Every,
+    }
+
     /// <summary>
     /// A CHORD ROW THAT IS NOT ON EVERY SYSTEM — the mirrors of books ROWA and ROWAC, and the
     /// arrangement the user's fifth report is about.
@@ -2928,34 +2956,6 @@ internal static class LpGeometryProbes
     /// which system has a row, so it cannot be left to the breaker.
     /// </para>
     /// </remarks>
-    /// <summary>Which systems of <see cref="ChordRowAlternatingScore"/> carry a chord row.</summary>
-    private enum Rows
-    {
-        /// <summary>None of them — the control that isolates the mark.</summary>
-        None,
-
-        /// <summary>Systems 1 and 3, the user's arrangement.</summary>
-        Alternating,
-
-        /// <summary>
-        /// Systems 1 and 3, but system 3's row opens on a SPACER, so its first chord stands
-        /// one bar further right and no chord ink is under the section mark. The control
-        /// that separates "the row exists" from "row ink stands under the mark".
-        /// </summary>
-        AlternatingLate,
-
-        /// <summary>
-        /// Systems 1 and 3, but system 3's row is FOUR SPACERS: the context is still there,
-        /// still prints on system 1, and has NO INK AT ALL where the section mark stands.
-        /// The control that separates the row's INK from Lily#'s nominal band — see
-        /// <see cref="ROWMZ"/>.
-        /// </summary>
-        AlternatingEmpty,
-
-        /// <summary>All three — the control that isolates the alternation.</summary>
-        Every,
-    }
-
     private static string ChordRowAlternatingScore(string name, Rows rows, bool marks,
         bool rehearsalMarks = false)
     {
@@ -6427,33 +6427,33 @@ internal static class LpGeometryProbes
     private static readonly string HPT =
         HairpinWedgeScore("HPT", "@startTrillSpan.down", "@stopTrillSpan");
 
-    /// <summary>
-    /// The figured-bass arrangements — the mirrors of figured-bass-placement.ly's books
-    /// FBLA / FBLB / FBLC, the corpus's FIRST figured-bass points.
-    /// </summary>
-    /// <remarks>
-    /// The figure-bearing part is identical in all three: bass clef, forced-down-stem C2
-    /// half notes (LilyPond <c>c,</c>, drawn position −8 = two ledger lines below the staff),
-    /// so the staff's ink reaches well past its own edge and neither engine can sit on a
-    /// floor. FBB and FBC are the SAME SCORE with the figures moved from one staff to the
-    /// other — the companion carries the identical deep-ink music, which is what a
-    /// system-wide reading would wrongly pick up.
-    /// ⚠️ <c>@stemDown</c> is a per-note override and works here because the notes are
-    /// UNBEAMED; a beam ignores per-note direction (HANDOFF §1 session-37 note 5), which is
-    /// why the fermata books force stems with a voice split instead.
-    /// ⚠️ The staff names are suppressed (<c>staff ~fig</c>) because the LilyPond books carry
-    /// no instrument name either. It ALSO used to be load-bearing for the harness: Lily# drew
-    /// an instrument name in the same serif face and the same em as a bass figure, so a named
-    /// staff put a decoy into <see cref="RenderedGeometry.BassFigures"/>. Since the face port
-    /// (2026-07-30) a figure is a music GLYPH and a name is text, so the decoy is gone —
-    /// the suppression stays for the first reason.
-    /// <para>
-    /// The three differ ONLY in where the figure-bearing staff sits, which is the entire
-    /// claim: LilyPond reads the same 8.124795235605315 in all three
-    /// (audit/lp-geometry/probes/figured-bass-placement.ly, measured 2026-07-30), because
-    /// both of its devices resolve against the figures' OWN staff.
-    /// </para>
-    /// </remarks>
+    // <summary>
+    // The figured-bass arrangements — the mirrors of figured-bass-placement.ly's books
+    // FBLA / FBLB / FBLC, the corpus's FIRST figured-bass points.
+    // </summary>
+    // <remarks>
+    // The figure-bearing part is identical in all three: bass clef, forced-down-stem C2
+    // half notes (LilyPond <c>c,</c>, drawn position −8 = two ledger lines below the staff),
+    // so the staff's ink reaches well past its own edge and neither engine can sit on a
+    // floor. FBB and FBC are the SAME SCORE with the figures moved from one staff to the
+    // other — the companion carries the identical deep-ink music, which is what a
+    // system-wide reading would wrongly pick up.
+    // ⚠️ <c>@stemDown</c> is a per-note override and works here because the notes are
+    // UNBEAMED; a beam ignores per-note direction (HANDOFF §1 session-37 note 5), which is
+    // why the fermata books force stems with a voice split instead.
+    // ⚠️ The staff names are suppressed (<c>staff ~fig</c>) because the LilyPond books carry
+    // no instrument name either. It ALSO used to be load-bearing for the harness: Lily# drew
+    // an instrument name in the same serif face and the same em as a bass figure, so a named
+    // staff put a decoy into <see cref="RenderedGeometry.BassFigures"/>. Since the face port
+    // (2026-07-30) a figure is a music GLYPH and a name is text, so the decoy is gone —
+    // the suppression stays for the first reason.
+    // <para>
+    // The three differ ONLY in where the figure-bearing staff sits, which is the entire
+    // claim: LilyPond reads the same 8.124795235605315 in all three
+    // (audit/lp-geometry/probes/figured-bass-placement.ly, measured 2026-07-30), because
+    // both of its devices resolve against the figures' OWN staff.
+    // </para>
+    // </remarks>
     /// <summary>The figure-bearing staff ALONE — the mirror of book FBLA.</summary>
     private static readonly string FBA = """
         octave absolute
@@ -7996,22 +7996,6 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
-    /// A DOWN-stem flag's room in the staff gap: the upper staff's C4 with its stem forced
-    /// down (the flag rises off the stem's lower end, to the right), over the lower staff's
-    /// C4 with its stem forced up — the lower stem stands at the head's RIGHT, under the
-    /// flag's far end, and the upper stem at the head's LEFT, so the two stems never meet in X
-    /// and the flag is the only ink between them.
-    /// </summary>
-    /// <remarks>
-    /// LilyPond's Flag declares <c>grob::always-vertical-skylines-from-stencil</c>
-    /// (scm/define-grobs.scm Flag), so the gap reads the glyph's traced outline; Lily#'s
-    /// SkylineBuilder seeded a nominal 1.2 × 2.5 box at the stem's tip until session 812
-    /// (EngravingDefaults.FlagWidth — LILYSHARP-OWN, with no LilyPond counterpart).
-    /// The control <see cref="FDC"/> is the same book with a quarter (no flag); FDL16 a
-    /// sixteenth's.
-    /// LilyPond twin: score FDL of audit/lp-geometry/probes/flag-staff-gap.ly.
-    /// </remarks>
-    /// <summary>
     /// A REST'S OUTLINE in the staff gap: <see cref="RSTD"/>'s shape — voice two's rest pushed
     /// below the staff by voice one's middle-line heads — with ONE rest (then spacers) and the
     /// lower staff's B4 stem forced UP, so its stem stands at the head's RIGHT. An eighth or
@@ -8059,6 +8043,22 @@ internal static class LpGeometryProbes
         }
         """;
 
+    /// <summary>
+    /// A DOWN-stem flag's room in the staff gap: the upper staff's C4 with its stem forced
+    /// down (the flag rises off the stem's lower end, to the right), over the lower staff's
+    /// C4 with its stem forced up — the lower stem stands at the head's RIGHT, under the
+    /// flag's far end, and the upper stem at the head's LEFT, so the two stems never meet in X
+    /// and the flag is the only ink between them.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's Flag declares <c>grob::always-vertical-skylines-from-stencil</c>
+    /// (scm/define-grobs.scm Flag), so the gap reads the glyph's traced outline; Lily#'s
+    /// SkylineBuilder seeded a nominal 1.2 × 2.5 box at the stem's tip until session 812
+    /// (EngravingDefaults.FlagWidth — LILYSHARP-OWN, with no LilyPond counterpart).
+    /// The control <see cref="FDC"/> is the same book with a quarter (no flag); FDL16 a
+    /// sixteenth's.
+    /// LilyPond twin: score FDL of audit/lp-geometry/probes/flag-staff-gap.ly.
+    /// </remarks>
     private static readonly string FDL = FlagStaffGapScore("FDL", "c8@stemDown r8 r4 r2");
 
     /// <summary>The control — <see cref="FDL"/> with a quarter, so no flag: the gap rests on
@@ -9072,27 +9072,6 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
-    /// A beam whose left end runs over a printed ACCIDENTAL — the first book that reads the
-    /// beam QUANTER's own answer rather than the room a beam takes on a page.
-    /// </summary>
-    /// <remarks>
-    /// In bass clef, key A major, only <c>dis</c> prints a sharp (D sharp is not in the key),
-    /// and it stands on the middle line right under the beam's left end — under the
-    /// SIXTEENTH's beamlet stub, which is the second beam line. So the reading binds against
-    /// the stack's inner beam over a stub's own horizontal extent, which is exactly what
-    /// <c>add_collision</c> walks the beam segments for.
-    /// <para>
-    /// LilyPond twin (audit/lp-geometry/probes/beam-over-accidental.ly, score A):
-    /// <c>\new Staff { \clef bass \key a \major r2 r4 gis,16 dis8 fis16 }</c> — its
-    /// <c>Beam.positions</c> is <c>(2.81 . 4.5)</c>. Score B of the same probe is the CONTROL
-    /// with the sharp spelled away (<c>d</c> for <c>dis</c>): <c>(2.0 . 3.5)</c>, so the
-    /// accidental is worth +0.81 / +1.0 of beam height and the point is not sitting on a
-    /// floor.
-    /// </para>
-    /// ⚠️ Lily#'s <c>octave absolute</c> sits an octave above LilyPond's, hence the extra
-    /// commas here.
-    /// </remarks>
-    /// <summary>
     /// A single-note tremolo on a BEAMED stem (audit/lp-geometry/probes/beamed-tremolo.ly,
     /// HANDOFF §2 R9⒢): the stem reserves the tremolo's height (lily/stem.cc:1187-1211,
     /// :1256), which moves the beam, and the slash stack hangs beam_count translations inside
@@ -9304,8 +9283,6 @@ internal static class LpGeometryProbes
     private static readonly string GKF = GraceSlurBook("GKF", "treble", "c'4 grace { d8 } c4 g4 a4 |");
     private static readonly string GKD = GraceSlurBook("GKD", "treble", "c'4 grace { f16 g16 } a'4 c'4 d'4 |");
 
-    /// <summary>The lower voice's grace OPENS the second bar: the bar line's optical correction
-    /// reads the grace column's DOWN stem (SpacingRules.LeadGraceOpticalCorrection).</summary>
     /// <summary>
     /// THE SLUR'S SPACING ROD on the main grid (probes/slur-spacing-rod.ly), read on
     /// <see cref="NarrowPaper"/>: every spring at its minimum, and a 64th on c'''' then one on c'
@@ -9330,8 +9307,31 @@ internal static class LpGeometryProbes
     private static readonly string SRN = SlurRodBook(
         "c64[ c'''64] c64[ c'''64] c64[ c'''64] c64[ c'''64] c64[ c'''64] c64[ c'''64] c64[ c'''64] c64[ c'''64] c64[ c'''64] c64[ c'''64] |");
 
+    /// <summary>The lower voice's grace OPENS the second bar: the bar line's optical correction
+    /// reads the grace column's DOWN stem (SpacingRules.LeadGraceOpticalCorrection).</summary>
     private static readonly string GDO = GraceSlurBook("GDO", "treble", "c1 | voice { s1 } { grace { d'8 } c'4 e4 f4 g4 } |");
 
+    /// <summary>
+    /// A beam whose left end runs over a printed ACCIDENTAL — the first book that reads the
+    /// beam QUANTER's own answer rather than the room a beam takes on a page.
+    /// </summary>
+    /// <remarks>
+    /// In bass clef, key A major, only <c>dis</c> prints a sharp (D sharp is not in the key),
+    /// and it stands on the middle line right under the beam's left end — under the
+    /// SIXTEENTH's beamlet stub, which is the second beam line. So the reading binds against
+    /// the stack's inner beam over a stub's own horizontal extent, which is exactly what
+    /// <c>add_collision</c> walks the beam segments for.
+    /// <para>
+    /// LilyPond twin (audit/lp-geometry/probes/beam-over-accidental.ly, score A):
+    /// <c>\new Staff { \clef bass \key a \major r2 r4 gis,16 dis8 fis16 }</c> — its
+    /// <c>Beam.positions</c> is <c>(2.81 . 4.5)</c>. Score B of the same probe is the CONTROL
+    /// with the sharp spelled away (<c>d</c> for <c>dis</c>): <c>(2.0 . 3.5)</c>, so the
+    /// accidental is worth +0.81 / +1.0 of beam height and the point is not sitting on a
+    /// floor.
+    /// </para>
+    /// ⚠️ Lily#'s <c>octave absolute</c> sits an octave above LilyPond's, hence the extra
+    /// commas here.
+    /// </remarks>
     private static readonly string BQA = """
         octave absolute
         time 4/4
@@ -11251,6 +11251,33 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A SLUR ON A GRACE COLUMN, ON A TAB STAFF (probes/tab-grace-slur.ly): the grace's own digit
+    /// is the bound and a slur that starts in grace time is DOWN. TGH: a hand-written
+    /// `grace { d16( } e4)`; TGA: an acciaccatura's automatic slur; TGI: both ends in grace time.
+    /// </summary>
+    private static string TabGraceSlurBook(string tag, string music) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part bl { clef bass tuning bass }
+
+        section Main {
+          bl { {{music}} }
+        }
+
+        form { ~Main }
+
+        score {{tag}} { tab bl as numbers }
+        """;
+
+    private static readonly string TGH = TabGraceSlurBook("TGH", "c,4\\3 r g,,\\4 r | c,\\3 r grace { d,16\\3( } e,4\\3) g,,\\4 |");
+    private static readonly string TGA = TabGraceSlurBook("TGA", "c,4\\3 r g,,\\4 r | c,\\3 r acciaccatura { d,16\\3 } e,4\\3 g,,\\4 |");
+    /// <summary>TGN: TGH without its slur — the TAB grace column's own spacing (probes/tab-grace-slur.ly NOSLUR).</summary>
+    private static readonly string TGN = TabGraceSlurBook("TGN", "c,4\\3 r g,,\\4 r | c,\\3 r grace { d,16\\3 } e,4\\3 g,,\\4 |");
+    private static readonly string TGI = TabGraceSlurBook("TGI", "c,4\\3 r g,,\\4 r | c,\\3 r grace { d,16\\3( e,16\\3) } f,4\\3 g,,\\4 |");
+
+    /// <summary>
     /// A TAB slur, in BOTH directions — the regime the notation slur points miss, because a
     /// tab slur is the same scorer on a different STAFF plus one translation afterwards.
     /// </summary>
@@ -11292,33 +11319,6 @@ internal static class LpGeometryProbes
     /// control points by the same 1.5 — the convention <see cref="BQT"/> already set.
     /// </para>
     /// </remarks>
-    /// <summary>
-    /// A SLUR ON A GRACE COLUMN, ON A TAB STAFF (probes/tab-grace-slur.ly): the grace's own digit
-    /// is the bound and a slur that starts in grace time is DOWN. TGH: a hand-written
-    /// `grace { d16( } e4)`; TGA: an acciaccatura's automatic slur; TGI: both ends in grace time.
-    /// </summary>
-    private static string TabGraceSlurBook(string tag, string music) => $$"""
-        octave absolute
-        time 4/4
-        key c major
-
-        part bl { clef bass tuning bass }
-
-        section Main {
-          bl { {{music}} }
-        }
-
-        form { ~Main }
-
-        score {{tag}} { tab bl as numbers }
-        """;
-
-    private static readonly string TGH = TabGraceSlurBook("TGH", "c,4\\3 r g,,\\4 r | c,\\3 r grace { d,16\\3( } e,4\\3) g,,\\4 |");
-    private static readonly string TGA = TabGraceSlurBook("TGA", "c,4\\3 r g,,\\4 r | c,\\3 r acciaccatura { d,16\\3 } e,4\\3 g,,\\4 |");
-    /// <summary>TGN: TGH without its slur — the TAB grace column's own spacing (probes/tab-grace-slur.ly NOSLUR).</summary>
-    private static readonly string TGN = TabGraceSlurBook("TGN", "c,4\\3 r g,,\\4 r | c,\\3 r grace { d,16\\3 } e,4\\3 g,,\\4 |");
-    private static readonly string TGI = TabGraceSlurBook("TGI", "c,4\\3 r g,,\\4 r | c,\\3 r grace { d,16\\3( e,16\\3) } f,4\\3 g,,\\4 |");
-
     private static readonly string TSL = """
         octave absolute
         time 4/4

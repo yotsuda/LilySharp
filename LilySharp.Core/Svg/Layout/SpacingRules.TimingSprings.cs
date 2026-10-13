@@ -135,24 +135,6 @@ internal static partial class SpacingRules
     /// </remarks>
     private static ItemColumn One(MusicItem item) => new(item);
 
-    /// <summary>
-    /// Refines a duration-based ideal to the LEFT note column's actual head width.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/note-spacing.cc:77 Note_spacing::get_spacing —
-    ///   ideal = base.ideal_distance() - increment + left_head_end.
-    /// The duration space assumes a generic notehead (spacing-increment). LilyPond
-    /// swaps that generic width for the left column's ACTUAL head width, so a wide
-    /// head (half 1.376 / whole 1.96) reserves proportionally more room than a
-    /// black head (1.304). For a black head the net adjustment is
-    /// 1.304 - 1.2 = +0.104 ss — the uniform gap LilyPond has over Lily#'s raw
-    /// duration spacing. A rest uses its glyph's right extent instead (LilyPond's
-    /// g = the rest grob): a quarter rest (~0.95) is NARROWER than the increment,
-    /// so the space after a rest shrinks, matching LilyPond ("a quarter rest gets
-    /// almost 0.5 ss less horizontal space than a note"). The widest such left
-    /// item wins (a safe choice for simultaneous voices); non-musical items leave
-    /// the ideal unchanged.
-    /// </remarks>
     /// <summary>Whether this item's heads are drawn in the cue font.</summary>
     /// <remarks>
     /// ⚠️ ONE DECISION, TWO READERS (EngravingDefaults.CueDesignSize says so in writing): the
@@ -371,6 +353,24 @@ internal static partial class SpacingRules
         return anyCue;
     }
 
+    /// <summary>
+    /// Refines a duration-based ideal to the LEFT note column's actual head width.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-spacing.cc:77 Note_spacing::get_spacing —
+    ///   ideal = base.ideal_distance() - increment + left_head_end.
+    /// The duration space assumes a generic notehead (spacing-increment). LilyPond
+    /// swaps that generic width for the left column's ACTUAL head width, so a wide
+    /// head (half 1.376 / whole 1.96) reserves proportionally more room than a
+    /// black head (1.304). For a black head the net adjustment is
+    /// 1.304 - 1.2 = +0.104 ss — the uniform gap LilyPond has over Lily#'s raw
+    /// duration spacing. A rest uses its glyph's right extent instead (LilyPond's
+    /// g = the rest grob): a quarter rest (~0.95) is NARROWER than the increment,
+    /// so the space after a rest shrinks, matching LilyPond ("a quarter rest gets
+    /// almost 0.5 ss less horizontal space than a note"). The widest such left
+    /// item wins (a safe choice for simultaneous voices); non-musical items leave
+    /// the ideal unchanged.
+    /// </remarks>
     /// <param name="headOverrides">Per left item (index-aligned with
     /// <paramref name="leftItems"/>), the head's right edge to read INSTEAD of the notehead
     /// glyph's — NaN, or past the span's end, reads the glyph. A tab voice's wish passes

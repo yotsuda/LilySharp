@@ -256,11 +256,6 @@ public class PaperOverridesTests
         Assert.Empty(warnings);
     }
 
-    /// <summary>
-    /// More systems than fit: LilyPond places them anyway and compresses the page ("compressing
-    /// over-full page by 14.6 staff-spaces", "page 1 has been compressed" — the same twin at 20).
-    /// The systems stay on the paper, and the layout says so.
-    /// </summary>
     /// <summary>measuresPerSystem: N bars a system, however many the breaker would have put
     /// there (12 systems of 5 by default).</summary>
     [Theory]
@@ -299,6 +294,11 @@ public class PaperOverridesTests
         Assert.Empty(warnings);
     }
 
+    /// <summary>
+    /// More systems than fit: LilyPond places them anyway and compresses the page ("compressing
+    /// over-full page by 14.6 staff-spaces", "page 1 has been compressed" — the same twin at 20).
+    /// The systems stay on the paper, and the layout says so.
+    /// </summary>
     [Fact]
     public void TooManySystemsForThePage_AreCompressedOntoIt_AndSaidSo()
     {

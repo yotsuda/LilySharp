@@ -3299,10 +3299,6 @@ public sealed class MusicXmlExporter
         return null;
     }
 
-    /// <summary>Drum note → &lt;unpitched&gt; note: display position from the
-    /// drums-style staff position mapped onto treble letters (middle line =
-    /// B4), notehead from the same table.</summary>
-    /// <remarks>LILYPOND-REF: ly/drumpitch-init.ly drums-style.</remarks>
     /// <summary>One drum of a chord as an unpitched note (ProcessDrumNote's placement and head).</summary>
     private MusicXmlNote DrumChordMember(DrumNoteSyntax drum, int durationTicks, string type, int dots,
         bool isChord, int? tupletActual, int? tupletNormal, bool chordParenthesized)
@@ -3332,6 +3328,10 @@ public sealed class MusicXmlExporter
         => articulations.Any(a => a is ArticulationSyntax { Type: ArticulationType.None } p
                                   && p.NameToken.Text.Equals("parenthesize", StringComparison.Ordinal));
 
+    /// <summary>Drum note → &lt;unpitched&gt; note: display position from the
+    /// drums-style staff position mapped onto treble letters (middle line =
+    /// B4), notehead from the same table.</summary>
+    /// <remarks>LILYPOND-REF: ly/drumpitch-init.ly drums-style.</remarks>
     private void ProcessDrumNote(DrumNoteSyntax drum)
     {
         if (_currentMeasure == null) return;

@@ -142,9 +142,6 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     }
 
     /// <summary>
-    /// Validates all <c>@name</c> annotations in a syntax tree.
-    /// </summary>
-    /// <summary>
     /// The kinds <see cref="CheckNode"/>'s switch has a case for. The list mirrors that
     /// switch, and <c>AnnotationKindsTests</c> is the net that keeps the two in step: it
     /// walks every net book and asks that the nodes these kinds yield are, one for one and
@@ -160,6 +157,9 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     internal static readonly SyntaxKind[] AnnotationKinds =
         [SyntaxKind.Articulation, SyntaxKind.MusicMark];
 
+    /// <summary>
+    /// Validates all <c>@name</c> annotations in a syntax tree.
+    /// </summary>
     public void Validate(SyntaxTree tree)
     {
         var root = tree.GetRoot();

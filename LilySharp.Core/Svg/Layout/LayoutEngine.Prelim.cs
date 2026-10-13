@@ -27,6 +27,16 @@ namespace LilySharp.Core.Svg.Layout;
 internal sealed partial class LayoutEngine
 {
     /// <summary>
+    /// One system's PAGE-BREAKER silhouette in LilyPond's two parts
+    /// (<see cref="PagingAugmentProgram.ExecuteForBreaker"/>): the staves' pure top over the
+    /// line, the staves' own up silhouette, and the System's grobs (marks, bar numbers) as
+    /// boxes standing over their bars' staff tops — x0, x1, top over the bar's staff top, bar
+    /// (−1 left of the first) — so that a line over other bars can be priced from them
+    /// (<c>EstimateMeasureHeights</c>).
+    /// </summary>
+    private sealed record BreakerSplit(double PureTopUp, VerticalSkyline StaffUp, double[] Boxes);
+
+    /// <summary>
     /// What the preliminary pass produces: the skylines paging spaces against, and the beams
     /// it laid out on the way — which are the SAME beams the final spanner pass needs.
     /// </summary>
@@ -69,16 +79,6 @@ internal sealed partial class LayoutEngine
     /// placement and the page writes to that list; the systems paging moves are new objects in
     /// the array <c>CreatePages</c> returns.
     /// </remarks>
-    /// <summary>
-    /// One system's PAGE-BREAKER silhouette in LilyPond's two parts
-    /// (<see cref="PagingAugmentProgram.ExecuteForBreaker"/>): the staves' pure top over the
-    /// line, the staves' own up silhouette, and the System's grobs (marks, bar numbers) as
-    /// boxes standing over their bars' staff tops — x0, x1, top over the bar's staff top, bar
-    /// (−1 left of the first) — so that a line over other bars can be priced from them
-    /// (<c>EstimateMeasureHeights</c>).
-    /// </summary>
-    private sealed record BreakerSplit(double PureTopUp, VerticalSkyline StaffUp, double[] Boxes);
-
     private readonly record struct PreliminaryPass(
         List<(VerticalSkyline up, VerticalSkyline down)>? PagingSkylines,
         Dictionary<int, ImmutableArray<BeamLayout>> BeamsByStaff,

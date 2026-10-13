@@ -180,16 +180,6 @@ internal static class ArticulationEngraver
     private const double BreathStaffY = 0.0;
 
     /// <summary>
-    /// Calculates layout for all articulations in a score.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: side-position-interface.cc:193-400 aligned_side()
-    /// Articulations are positioned relative to the note's staff position:
-    /// - For notes above middle line: articulations go below (unless overridden)
-    /// - For notes below middle line: articulations go above (unless overridden)
-    /// - Fermata and ornaments always go above
-    /// </remarks>
-    /// <summary>
     /// Iteration order that stacks multiple scripts on one note in LilyPond's
     /// script-priority order (staccato innermost, then tenuto, then default
     /// scripts, then fermata), independent of the written order. Groups by note
@@ -285,6 +275,16 @@ internal static class ArticulationEngraver
     [ThreadStatic]
     private static Dictionary<(int Staff, int Voice, int Measure, int Item), (BeamLayout Beam, double StemX, bool StemUp)>? t_beamedTips;
 
+    /// <summary>
+    /// Calculates layout for all articulations in a score.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: side-position-interface.cc:193-400 aligned_side()
+    /// Articulations are positioned relative to the note's staff position:
+    /// - For notes above middle line: articulations go below (unless overridden)
+    /// - For notes below middle line: articulations go above (unless overridden)
+    /// - Fermata and ornaments always go above
+    /// </remarks>
     /// <param name="fonts">The SCORE's text metrics — the fingering digits' plan. Passed
     /// beside <paramref name="score"/> because callers hand this engraver a one-voice
     /// <see cref="Score"/> built for the walk, which carries no <c>fonts</c> plan of its own.</param>
@@ -1958,24 +1958,6 @@ internal static class ArticulationEngraver
         _ => 0 // Default to middle line (StaffPosition 0 = B4 in treble clef)
     };
 
-    /// <summary>
-    /// The offset from the notehead's left edge (the item X) to its horizontal CENTRE —
-    /// half its EXTENT. Picks the head glyph by note value (whole / half / black) so the
-    /// script centres on the actual head.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: scm/output-lib.scm:1906-1907 script-interface::calc-x-offset takes its
-    ///   note-head-location from ly:self-alignment-interface::aligned-on-x-parent — the same
-    ///   callback scm/define-grobs.scm:110 gives an AccidentalSuggestion outright.
-    /// LILYPOND-REF: lily/self-alignment-interface.cc:116-160 aligned_on_parent — it reads the
-    ///   X parent's EXTENT (the note column's, i.e. the head's box) and takes a
-    ///   linear_combination of it, so what a script centres on is the head's extent centre
-    ///   and never its advance.
-    /// ⚠️ IT WAS THE ADVANCE (1.304000/2) UNTIL 2026-08-02, which put every script 0.000100
-    /// left of LilyPond's — MEASURED by all three editorial.accidental.* ledger points at
-    /// once, the same residual on three different glyphs, which is what said it was not the
-    /// accidental's own box but this one.
-    /// </remarks>
     /// <summary>The string and fret a tab staff draws <paramref name="item"/> on — the same
     /// call the renderer makes, with the same sounding shift (a chord's first note).</summary>
     internal static (int StringNumber, int Fret) TabFretOf(Staff tab, int[] tuning, MusicItem item)
@@ -2010,6 +1992,24 @@ internal static class ArticulationEngraver
         return false;
     }
 
+    /// <summary>
+    /// The offset from the notehead's left edge (the item X) to its horizontal CENTRE —
+    /// half its EXTENT. Picks the head glyph by note value (whole / half / black) so the
+    /// script centres on the actual head.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/output-lib.scm:1906-1907 script-interface::calc-x-offset takes its
+    ///   note-head-location from ly:self-alignment-interface::aligned-on-x-parent — the same
+    ///   callback scm/define-grobs.scm:110 gives an AccidentalSuggestion outright.
+    /// LILYPOND-REF: lily/self-alignment-interface.cc:116-160 aligned_on_parent — it reads the
+    ///   X parent's EXTENT (the note column's, i.e. the head's box) and takes a
+    ///   linear_combination of it, so what a script centres on is the head's extent centre
+    ///   and never its advance.
+    /// ⚠️ IT WAS THE ADVANCE (1.304000/2) UNTIL 2026-08-02, which put every script 0.000100
+    /// left of LilyPond's — MEASURED by all three editorial.accidental.* ledger points at
+    /// once, the same residual on three different glyphs, which is what said it was not the
+    /// accidental's own box but this one.
+    /// </remarks>
     private static double NoteheadHalfWidth(MusicItem item)
         => ScriptHeadBox(item).CenterX;
 
@@ -2509,17 +2509,6 @@ internal static class ArticulationEngraver
                 VerticalSkyline.FromBox(l, r, b, t, VerticalDirection.Down));
     }
 
-    /// <summary>
-    /// Ink box used to seed the outside-staff occupancy (so movable grobs —
-    /// rehearsal/section marks etc. — clear the scripts). Uses the real font
-    /// metrics for the ornament glyphs (extracted from Emmentaler via
-    /// audit/scripts/Extract-EmmentalerMetrics.py), which are much wider/taller
-    /// than the 0.5×0.5 positioning fallback — e.g. prall-prall spans ~2.85sp
-    /// wide. The ornaments' own POSITIONING still uses the simplified extents
-    /// (GetGlyphBBox), exactly as the trill does; only
-    /// the occupancy a mark must clear changes. Other types fall back.
-    /// LILYPOND-REF: mf/feta-scripts.mf set_char_box() for each script glyph.
-    /// </summary>
     /// <summary>Real ink box of a chord diagram, anchored at the GRID BOTTOM centre, at the
     /// score's size — the drawing's own dimensions (<see cref="FretFrameGeometry.Box"/>).</summary>
     private static GlyphMetrics.BBox FrameBox(string? spec, ScoreTextMetrics fonts)
@@ -2578,6 +2567,17 @@ internal static class ArticulationEngraver
                 ? TabTechniqueInkBox(fonts, letter)
                 : GetSeedBBox(articulation.Type, articulation.IsAbove);
 
+    /// <summary>
+    /// Ink box used to seed the outside-staff occupancy (so movable grobs —
+    /// rehearsal/section marks etc. — clear the scripts). Uses the real font
+    /// metrics for the ornament glyphs (extracted from Emmentaler via
+    /// audit/scripts/Extract-EmmentalerMetrics.py), which are much wider/taller
+    /// than the 0.5×0.5 positioning fallback — e.g. prall-prall spans ~2.85sp
+    /// wide. The ornaments' own POSITIONING still uses the simplified extents
+    /// (GetGlyphBBox), exactly as the trill does; only
+    /// the occupancy a mark must clear changes. Other types fall back.
+    /// LILYPOND-REF: mf/feta-scripts.mf set_char_box() for each script glyph.
+    /// </summary>
     private static GlyphMetrics.BBox GetSeedBBox(ArticulationType type, bool isAbove = true) => type switch
     {
         ArticulationType.Trill => MusicFont.Current.FullSize.Box(MusicGlyph.OrnamentTrill),
@@ -2589,17 +2589,6 @@ internal static class ArticulationEngraver
         _ => GetGlyphBBox(type, isAbove)
     };
 
-    /// <summary>
-    /// Gets the vertical extent of the glyph in the direction toward the note
-    /// (the "near side" extent used in skyline distance calculation).
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: side-position-interface.cc:229-264 my_dim skyline is the articulation's
-    /// extent in the -dir direction (toward the support/note).
-    ///
-    /// For symmetric glyphs (staccato, tenuto): near extent = half height.
-    /// For asymmetric glyphs (marcato): near extent = 0 (tip points toward note).
-    /// </remarks>
     /// <summary>All fermata shapes (normal / short-angled / long-square)
     /// share direction-UP and placement behaviour.</summary>
     private static bool IsFermata(ArticulationType t) =>
@@ -2645,6 +2634,17 @@ internal static class ArticulationEngraver
         return GetNearExtent(a.Type, isAbove);
     }
 
+    /// <summary>
+    /// Gets the vertical extent of the glyph in the direction toward the note
+    /// (the "near side" extent used in skyline distance calculation).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: side-position-interface.cc:229-264 my_dim skyline is the articulation's
+    /// extent in the -dir direction (toward the support/note).
+    ///
+    /// For symmetric glyphs (staccato, tenuto): near extent = half height.
+    /// For asymmetric glyphs (marcato): near extent = 0 (tip points toward note).
+    /// </remarks>
     private static double GetNearExtent(ArticulationType type, bool isAbove)
     {
         var bbox = GetGlyphBBox(type, isAbove);
@@ -2727,19 +2727,6 @@ internal static class ArticulationEngraver
     }
 
     /// <summary>
-    /// Beam-quanted stem tips by (staff, measure, item) in staff-local device Y,
-    /// plus the beam-resolved stem direction. A beamed stem ends on the beam
-    /// line — the unbeamed length formula under- or over-clears it — so the
-    /// script support must read the quanted end.
-    /// ⚠️ Keyed by VOICE as well, and every voice's beams are in it: the key used to drop
-    /// sub-voice groups because an articulation carried no voice and a sub-voice key could
-    /// collide with a primary-voice item. It carries one now
-    /// (<see cref="ArticulationItem.VoiceIndex"/>), so the exclusion would only hide a
-    /// lower voice's beam from its own script.
-    /// LILYPOND-REF: lily/stem.cc — a beamed stem's end comes from the beam;
-    /// side-position then sees that real extent via the stem support.
-    /// </summary>
-    /// <summary>
     /// Maps each beamed item to its beam group by (staff, voice, measure, item), so the tab
     /// branch can find the group's outer beam edge (the tab beam Y lives only in the
     /// renderer's geometry, recomputed here from the group's members via TabStaffGeometry).
@@ -2819,6 +2806,19 @@ internal static class ArticulationEngraver
     /// the script walk's (see <see cref="t_firstSeen"/>) and the fingering engraver's. A SPAN,
     /// so a caller holding a list of its unit's beams hands it over without first copying it
     /// into an array (the fingering island's miss did, once per unit).
+    /// </para>
+    /// <para>
+    /// Beam-quanted stem tips by (staff, measure, item) in staff-local device Y,
+    /// plus the beam-resolved stem direction. A beamed stem ends on the beam
+    /// line — the unbeamed length formula under- or over-clears it — so the
+    /// script support must read the quanted end.
+    /// ⚠️ Keyed by VOICE as well, and every voice's beams are in it: the key used to drop
+    /// sub-voice groups because an articulation carried no voice and a sub-voice key could
+    /// collide with a primary-voice item. It carries one now
+    /// (<see cref="ArticulationItem.VoiceIndex"/>), so the exclusion would only hide a
+    /// lower voice's beam from its own script.
+    /// LILYPOND-REF: lily/stem.cc — a beamed stem's end comes from the beam;
+    /// side-position then sees that real extent via the stem support.
     /// </para>
     /// </remarks>
     /// <param name="wanted">The keys the caller can ask for, or null for every member — see

@@ -801,18 +801,6 @@ public class LilyPondExporterTests
     }
 
     /// <summary>
-    /// The exporter carries every fingering Lily# will ENGRAVE, not a convenient subset.
-    /// </summary>
-    /// <remarks>
-    /// ⚠️ The first version of the mapping accepted 1-5 only. Nothing was behind that:
-    /// MeasureCollector.ParseFingerMark takes any <c>finger &gt;= 0</c>, so <c>@finger(6)</c>
-    /// draws in Lily# and would have vanished from the twin — the same "compiles and is
-    /// different music" defect the mapping was added to close, over a smaller range.
-    /// MEASURED on 2.26.0 before widening (a scratch probe dumping the Fingering grob's
-    /// <c>text</c>): LilyPond engraves <c>-0</c>, <c>-5</c>, <c>-6</c> and <c>-12</c> as
-    /// fingerings reading 0, 5, 6 and 12, so its grammar's UNSIGNED takes them all.
-    /// </remarks>
-    /// <summary>
     /// The four TRUE SCRIPTS among the dropped articulations reach the twin as
     /// direction-carrying post-events.
     /// </summary>
@@ -878,6 +866,18 @@ public class LilyPondExporterTests
         Assert.DoesNotContain("not mapped, dropped", Export(Score("c,1@glissando")));
     }
 
+    /// <summary>
+    /// The exporter carries every fingering Lily# will ENGRAVE, not a convenient subset.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The first version of the mapping accepted 1-5 only. Nothing was behind that:
+    /// MeasureCollector.ParseFingerMark takes any <c>finger &gt;= 0</c>, so <c>@finger(6)</c>
+    /// draws in Lily# and would have vanished from the twin — the same "compiles and is
+    /// different music" defect the mapping was added to close, over a smaller range.
+    /// MEASURED on 2.26.0 before widening (a scratch probe dumping the Fingering grob's
+    /// <c>text</c>): LilyPond engraves <c>-0</c>, <c>-5</c>, <c>-6</c> and <c>-12</c> as
+    /// fingerings reading 0, 5, 6 and 12, so its grammar's UNSIGNED takes them all.
+    /// </remarks>
     [Fact]
     public void Fingering_CarriesEveryNumberTheEngraverAccepts()
     {

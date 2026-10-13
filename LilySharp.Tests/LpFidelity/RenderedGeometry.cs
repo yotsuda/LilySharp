@@ -80,22 +80,6 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
-    /// Parses and lays out <paramref name="source"/>, recording what gets drawn.
-    /// </summary>
-    /// <param name="options">
-    /// Paper to engrave onto; defaults to the product's own <see cref="LayoutOptions.Default"/>.
-    /// </param>
-    /// <remarks>
-    /// The paper is a HARNESS parameter, not a language one, and deliberately so. In
-    /// LilyPond the quantities it carries — <c>paper-height</c>, <c>top-system-spacing</c>,
-    /// <c>systems-per-page</c> — are <c>\paper</c> variables, NOT grob properties, so a
-    /// Lily# probe cannot reach them through <c>override</c> without inventing a spelling
-    /// LilyPond does not have. The .ly twin says <c>\paper { … }</c> and the .lys twin says
-    /// it here; that is the same kind of documented asymmetry as the octave spelling
-    /// (Lily# <c>c</c> = LilyPond <c>c'</c>), and it keeps the corpus able to reach paper
-    /// regimes the default page never enters.
-    /// </remarks>
-    /// <summary>
     /// The paper a probe is engraved on: <paramref name="options"/>, with the first system's
     /// indent zeroed unless a staff names an instrument — the indent the probe corpus's
     /// LilyPond twins were MEASURED on.
@@ -119,6 +103,22 @@ internal sealed class RenderedGeometry
         return options with { Indent = 0 };
     }
 
+    /// <summary>
+    /// Parses and lays out <paramref name="source"/>, recording what gets drawn.
+    /// </summary>
+    /// <param name="options">
+    /// Paper to engrave onto; defaults to the product's own <see cref="LayoutOptions.Default"/>.
+    /// </param>
+    /// <remarks>
+    /// The paper is a HARNESS parameter, not a language one, and deliberately so. In
+    /// LilyPond the quantities it carries — <c>paper-height</c>, <c>top-system-spacing</c>,
+    /// <c>systems-per-page</c> — are <c>\paper</c> variables, NOT grob properties, so a
+    /// Lily# probe cannot reach them through <c>override</c> without inventing a spelling
+    /// LilyPond does not have. The .ly twin says <c>\paper { … }</c> and the .lys twin says
+    /// it here; that is the same kind of documented asymmetry as the octave spelling
+    /// (Lily# <c>c</c> = LilyPond <c>c'</c>), and it keeps the corpus able to reach paper
+    /// regimes the default page never enters.
+    /// </remarks>
     public static RenderedGeometry Render(string source, LayoutOptions? options = null)
     {
         var tree = SyntaxTree.Parse(source);
@@ -192,20 +192,6 @@ internal sealed class RenderedGeometry
     public double PageWidth(int page = 0) => _pages[page].WidthSpaces;
 
     /// <summary>
-    /// Each system's staff refpoint on <paramref name="page"/>, top of the page downwards,
-    /// measured from the top paper edge.
-    /// </summary>
-    /// <remarks>
-    /// One entry per STAFF, top of the page down — not per system. That is what makes the
-    /// same method serve both regimes, and it is also the trap: on a one-staff score the
-    /// consecutive difference is the SYSTEM distance the page's springs decide, while on a
-    /// one-system two-staff score it is the STAFF distance Align_interface decides. The
-    /// probes are written so that only one of the two is present (probes V/W/S are one
-    /// staff and many systems; P/Q are one system and two staves), because a score with
-    /// both would need grouping this does not do — and would silently return a brace's
-    /// inner gap where the caller asked for a system's.
-    /// </remarks>
-    /// <summary>
     /// The outermost-to-outermost span of the staff LINES on the page, i.e. line centre to
     /// line centre. On a probe with a single staff this is that staff's height.
     /// </summary>
@@ -227,6 +213,33 @@ internal sealed class RenderedGeometry
                 + "\nDrawn geometry:\n" + Describe());
         return ys.Max() - ys.Min();
     }
+
+    /// <summary>
+    /// The decimal place the two staff-line readers group on — and the reason neither of them
+    /// may RETURN what it groups by.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Rules that belong to one staff line are drawn in pieces (a tab string is broken around
+    /// its fret digits, SharedRenderer.Tab.cs DrawTabStringLine), so the pieces have to be
+    /// gathered by Y before their span can be judged. Rounding to nine places is a safe key for
+    /// that: two different lines of one staff are 1.0 or 1.5 apart, nine orders of magnitude
+    /// away.
+    /// </para>
+    /// <para>
+    /// ⚠️ BUT THE KEY IS NOT THE MEASUREMENT. Handing back <c>g.Key</c> stamped this reader's
+    /// own quantisation onto every reading taken off a staff line, and probes then asserted on
+    /// digits the reader had just discarded. MEASURED 2026-09-07 (scratch/p345):
+    /// <c>TabSlurDirectionTests</c> asks whether two tab slurs are exact mirrors about the staff
+    /// middle to NINE places. The bows are exact — their raw ys 10.588414262266500 and
+    /// 14.704414262266500 have midpoint 12.646414262266500 — but <c>g.Key</c> answered
+    /// 12.646414262, and the 2.665e-10 residue, over the 1.5 string space, WAS the whole of the
+    /// reported asymmetry (3.553e-10). The residue is a function of where the staff happens to
+    /// sit on the page, so the probe passed or failed by luck of an absolute Y that no part of
+    /// its claim mentions: moving a rehearsal box 0.25 up the page turned it red.
+    /// </para>
+    /// </remarks>
+    private const int RoundedKey = 9;
 
     /// <summary>
     /// Every drawn STAFF LINE's Y on <paramref name="page"/>, deduplicated and top down —
@@ -266,33 +279,6 @@ internal sealed class RenderedGeometry
     /// neighbour at either step is dropped. (A bracket sits at least 2.25 below the bottom
     /// line: staff ink 2.05 + spanner padding 1.2 + edge-height 1.0 from the middle.)
     /// </remarks>
-    /// <summary>
-    /// The decimal place the two staff-line readers group on — and the reason neither of them
-    /// may RETURN what it groups by.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Rules that belong to one staff line are drawn in pieces (a tab string is broken around
-    /// its fret digits, SharedRenderer.Tab.cs DrawTabStringLine), so the pieces have to be
-    /// gathered by Y before their span can be judged. Rounding to nine places is a safe key for
-    /// that: two different lines of one staff are 1.0 or 1.5 apart, nine orders of magnitude
-    /// away.
-    /// </para>
-    /// <para>
-    /// ⚠️ BUT THE KEY IS NOT THE MEASUREMENT. Handing back <c>g.Key</c> stamped this reader's
-    /// own quantisation onto every reading taken off a staff line, and probes then asserted on
-    /// digits the reader had just discarded. MEASURED 2026-09-07 (scratch/p345):
-    /// <c>TabSlurDirectionTests</c> asks whether two tab slurs are exact mirrors about the staff
-    /// middle to NINE places. The bows are exact — their raw ys 10.588414262266500 and
-    /// 14.704414262266500 have midpoint 12.646414262266500 — but <c>g.Key</c> answered
-    /// 12.646414262, and the 2.665e-10 residue, over the 1.5 string space, WAS the whole of the
-    /// reported asymmetry (3.553e-10). The residue is a function of where the staff happens to
-    /// sit on the page, so the probe passed or failed by luck of an absolute Y that no part of
-    /// its claim mentions: moving a rehearsal box 0.25 up the page turned it red.
-    /// </para>
-    /// </remarks>
-    private const int RoundedKey = 9;
-
     private List<double> StaffLineYs(int page)
     {
         var ys = StaffLineCandidateYs(page);
@@ -321,6 +307,20 @@ internal sealed class RenderedGeometry
             .OrderBy(y => y)
             .ToList();
 
+    /// <summary>
+    /// Each system's staff refpoint on <paramref name="page"/>, top of the page downwards,
+    /// measured from the top paper edge.
+    /// </summary>
+    /// <remarks>
+    /// One entry per STAFF, top of the page down — not per system. That is what makes the
+    /// same method serve both regimes, and it is also the trap: on a one-staff score the
+    /// consecutive difference is the SYSTEM distance the page's springs decide, while on a
+    /// one-system two-staff score it is the STAFF distance Align_interface decides. The
+    /// probes are written so that only one of the two is present (probes V/W/S are one
+    /// staff and many systems; P/Q are one system and two staves), because a score with
+    /// both would need grouping this does not do — and would silently return a brace's
+    /// inner gap where the caller asked for a system's.
+    /// </remarks>
     public IReadOnlyList<double> StaffRefpoints(int page = 0)
     {
         var ys = StaffLineYs(page);
@@ -768,30 +768,6 @@ internal sealed class RenderedGeometry
              .ToList();
 
     /// <summary>
-    /// The FIRST bar number's baseline above the staff reference point it rides over.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm BarNumber — <c>outside-staff-priority 100</c> and
-    /// <c>padding 1.0</c>, placed by the X-AWARE skyline pass
-    /// (lily/axis-group-interface.cc:359-474). The number stands at the LINE START, left of
-    /// the clef, so the notes — which begin after it — cannot push it up however high they
-    /// are. That invariance is the whole of the pair this serves (books BNL/BNH): LilyPond's
-    /// two readings are IDENTICAL, so any difference Lily# shows between them is its own.
-    /// <para>
-    /// ⚠️ Bar 1 carries no number, so the topmost one belongs to the SECOND system, and the
-    /// reference point it is measured against is that system's — the first refpoint BELOW
-    /// it, which is what the search here finds.
-    /// </para>
-    /// <para>
-    /// ⚠️ CARRIES A FONT TERM, small and named: LilyPond puts the number's INK BOTTOM
-    /// 1.0 above the staff (2.050000 + 1.0 = 3.050000 for a flat-bottomed digit), so the
-    /// BASELINE this reads sits a digit's own bottom overshoot higher — measured across
-    /// LilyPond's own books as 0.000000, 0.024440 and 0.026208 depending on which digits the
-    /// number happens to contain. A residual of that order is the floor of this entry, not a
-    /// defect; the defect it was opened for is over a staff space.
-    /// </para>
-    /// </remarks>
-    /// <summary>
     /// The FIRST bar number's INK BOTTOM above the staff reference point — the
     /// font-free spelling of <see cref="FirstBarNumberBaselineAboveStaff"/>: LilyPond
     /// puts this at staff ink 2.05 + BarNumber padding 1.0 = 3.050000 for EVERY digit,
@@ -957,6 +933,30 @@ internal sealed class RenderedGeometry
         return numbers[0];
     }
 
+    /// <summary>
+    /// The FIRST bar number's baseline above the staff reference point it rides over.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm BarNumber — <c>outside-staff-priority 100</c> and
+    /// <c>padding 1.0</c>, placed by the X-AWARE skyline pass
+    /// (lily/axis-group-interface.cc:359-474). The number stands at the LINE START, left of
+    /// the clef, so the notes — which begin after it — cannot push it up however high they
+    /// are. That invariance is the whole of the pair this serves (books BNL/BNH): LilyPond's
+    /// two readings are IDENTICAL, so any difference Lily# shows between them is its own.
+    /// <para>
+    /// ⚠️ Bar 1 carries no number, so the topmost one belongs to the SECOND system, and the
+    /// reference point it is measured against is that system's — the first refpoint BELOW
+    /// it, which is what the search here finds.
+    /// </para>
+    /// <para>
+    /// ⚠️ CARRIES A FONT TERM, small and named: LilyPond puts the number's INK BOTTOM
+    /// 1.0 above the staff (2.050000 + 1.0 = 3.050000 for a flat-bottomed digit), so the
+    /// BASELINE this reads sits a digit's own bottom overshoot higher — measured across
+    /// LilyPond's own books as 0.000000, 0.024440 and 0.026208 depending on which digits the
+    /// number happens to contain. A residual of that order is the floor of this entry, not a
+    /// defect; the defect it was opened for is over a staff space.
+    /// </para>
+    /// </remarks>
     public double FirstBarNumberBaselineAboveStaff(int page = 0)
     {
         var numbers = BarNumbers;
@@ -2734,17 +2734,6 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
-    /// How wide bow <paramref name="index"/> comes out — end to end, which is LilyPond's
-    /// <c>control-points</c> [3].x − [0].x.
-    /// </summary>
-    /// <remarks>
-    /// The span is the whole attachment question in one number: LilyPond reads the column's
-    /// chord-outline skyline at the tie's own Y, so a tie that clears its heads attaches at
-    /// the head CENTRES and a tie running alongside a head, a neighbouring head or a stem
-    /// attaches at their EDGES — a difference of one notehead per end. Bows are indexed in
-    /// draw order (ties bottom to top within a chord, then along the staff).
-    /// </remarks>
-    /// <summary>
     /// How high bow <paramref name="index"/> attaches, in staff spaces above the middle line —
     /// LilyPond's <c>control-points</c> [0].y.
     /// </summary>
@@ -2885,6 +2874,17 @@ internal sealed class RenderedGeometry
         return ys[line] - glyphs[index].Y;
     }
 
+    /// <summary>
+    /// How wide bow <paramref name="index"/> comes out — end to end, which is LilyPond's
+    /// <c>control-points</c> [3].x − [0].x.
+    /// </summary>
+    /// <remarks>
+    /// The span is the whole attachment question in one number: LilyPond reads the column's
+    /// chord-outline skyline at the tie's own Y, so a tie that clears its heads attaches at
+    /// the head CENTRES and a tie running alongside a head, a neighbouring head or a stem
+    /// attaches at their EDGES — a difference of one notehead per end. Bows are indexed in
+    /// draw order (ties bottom to top within a chord, then along the staff).
+    /// </remarks>
     public double BowSpan(int index, int page = 0)
     {
         var bows = _pages[page].Beziers;
@@ -3228,14 +3228,6 @@ internal sealed class RenderedGeometry
     private const double BeamletProbeOffset = 0.1;
 
     /// <summary>
-    /// The beam groups drawn on <paramref name="page"/>, left to right: each group's PRIMARY
-    /// line, which is the widest segment starting at that group's left.
-    /// </summary>
-    /// <remarks>
-    /// A beamlet stub lies strictly inside its group's primary, so containment is what tells
-    /// the two apart — no assumption about how long a stub is.
-    /// </remarks>
-    /// <summary>
     /// The drawn quads that are BEAM segments — every quad except a beamed stem's tremolo
     /// slash, which is also a filled quad (<c>SharedRenderer.DrawBeamedTremolo</c>).
     /// </summary>
@@ -3303,6 +3295,14 @@ internal sealed class RenderedGeometry
         return refs[0] - found[index].Y;
     }
 
+    /// <summary>
+    /// The beam groups drawn on <paramref name="page"/>, left to right: each group's PRIMARY
+    /// line, which is the widest segment starting at that group's left.
+    /// </summary>
+    /// <remarks>
+    /// A beamlet stub lies strictly inside its group's primary, so containment is what tells
+    /// the two apart — no assumption about how long a stub is.
+    /// </remarks>
     private List<(double Left, double Right)> PrimaryBeams(int page)
     {
         var quads = BeamQuads(page)

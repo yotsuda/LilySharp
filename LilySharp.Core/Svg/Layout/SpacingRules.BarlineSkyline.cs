@@ -23,14 +23,6 @@ namespace LilySharp.Core.Svg.Layout;
 internal static partial class SpacingRules
 {
     /// <summary>
-    /// Calculates the minimum distance between two items using skyline collision detection.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/note-spacing.cc:44-86
-    /// Uses skylines to find the actual minimum distance where items don't overlap,
-    /// considering the shape of noteheads and accidentals at each Y coordinate.
-    /// </remarks>
-    /// <summary>
     /// Gets the space from a barline to the next item, based on item type.
     /// </summary>
     /// <remarks>
@@ -160,6 +152,14 @@ internal static partial class SpacingRules
         };
     }
 
+    /// <summary>
+    /// Calculates the minimum distance between two items using skyline collision detection.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-spacing.cc:44-86
+    /// Uses skylines to find the actual minimum distance where items don't overlap,
+    /// considering the shape of noteheads and accidentals at each Y coordinate.
+    /// </remarks>
     /// <param name="prevShift">X the LEFT item is drawn at, relative to its column — a
     /// note-collision voice shift. LilyPond's separation boxes are extents in the PAPER
     /// COLUMN's frame, so a shifted voice's ink (and its dots) reaches further right; the

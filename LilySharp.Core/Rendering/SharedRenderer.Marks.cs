@@ -403,26 +403,6 @@ internal static partial class SharedRenderer
 
     // ---------- Fingering ----------
 
-    /// <summary>
-    /// Draws fingering numerals next to noteheads — the fetaText digit run at
-    /// font-size −5, centred on the layout's X the way the profile the script column
-    /// stacked was measured (<c>FingeringEngraver.DigitRun</c> — one metric home for pen
-    /// and reservation).
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm:1547-1568 Fingering (self-alignment-interface
-    ///   family) — font-encoding fetaText, font-features cv47 ss01, font-size −5; its
-    ///   stencil is ly:text-interface::print (:1559).
-    /// ⚠️ IT WAS A SERIF DIGIT AT 0.56 EM until 2026-08-08 — about half LilyPond's
-    /// ink (feta numerals are 2.0 design-ss tall), so a bow stacked over a fingering
-    /// sat half a space low. Like the figured bass, the run does not scale on an
-    /// ossia staff (the two halves — pen here, metric in DigitRun — stay together).
-    /// ⚠️ AND IT DREW THE FIGURED BASS'S DIGITS until 2026-08-11 — the tabular cut, out of
-    /// the default design. A Fingering declares font-features WITHOUT <c>tnum</c>, so the
-    /// glyphs are the proportional ones, and its 11.2246 pt lands on <c>emmentaler-11</c>:
-    /// hence the face scope below. <see cref="FingeringGlyphRun"/> holds both halves of that
-    /// claim, and <c>DigitRun</c> has already applied the metric half.
-    /// </remarks>
     /// <summary>⒭ overlay fragment: the score's fingerings bucketed per page, ONCE per
     /// render. This replaces the old per-page filter over the whole array — that scan
     /// was O(pages × fingerings) and, measured (session 160), it and the per-item staff
@@ -543,6 +523,26 @@ internal static partial class SharedRenderer
             DrawFingeringsLive(fonts, pageItems, os, gc);
     }
 
+    /// <summary>
+    /// Draws fingering numerals next to noteheads — the fetaText digit run at
+    /// font-size −5, centred on the layout's X the way the profile the script column
+    /// stacked was measured (<c>FingeringEngraver.DigitRun</c> — one metric home for pen
+    /// and reservation).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:1547-1568 Fingering (self-alignment-interface
+    ///   family) — font-encoding fetaText, font-features cv47 ss01, font-size −5; its
+    ///   stencil is ly:text-interface::print (:1559).
+    /// ⚠️ IT WAS A SERIF DIGIT AT 0.56 EM until 2026-08-08 — about half LilyPond's
+    /// ink (feta numerals are 2.0 design-ss tall), so a bow stacked over a fingering
+    /// sat half a space low. Like the figured bass, the run does not scale on an
+    /// ossia staff (the two halves — pen here, metric in DigitRun — stay together).
+    /// ⚠️ AND IT DREW THE FIGURED BASS'S DIGITS until 2026-08-11 — the tabular cut, out of
+    /// the default design. A Fingering declares font-features WITHOUT <c>tnum</c>, so the
+    /// glyphs are the proportional ones, and its 11.2246 pt lands on <c>emmentaler-11</c>:
+    /// hence the face scope below. <see cref="FingeringGlyphRun"/> holds both halves of that
+    /// claim, and <c>DigitRun</c> has already applied the metric half.
+    /// </remarks>
     private static void DrawFingeringsLive(ScoreTextMetrics fonts, List<FingeringLayout> pageItems,
         in OssiaShrink os, IDrawingContext gc)
     {
@@ -1412,22 +1412,6 @@ internal static partial class SharedRenderer
 
     // ---------- Tremolo (stem slashes, drawn from DrawNote) ----------
 
-    /// <summary>
-    /// Draws tremolo beams across a stem: short angled slashes at the stem's
-    /// midpoint. Number of slashes corresponds to the tremolo subdivision.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/stem-tremolo.cc:127-150 raw_stencil.
-    /// Width — calc_width (stem-tremolo.cc:84-93): <c>((dir==UP &amp;&amp; flag) || beam) ? 1.0 :
-    /// 1.5</c>. This method is reached ONLY for unbeamed stems (the caller in DrawNote guards
-    /// the whole stem/flag/tremolo block with <c>!isBeamed</c>; beamed stems are drawn by
-    /// DrawBeams), so the <c>beam</c> branch is unreachable and the width reduces to
-    /// <c>(stemUp &amp;&amp; hasFlag) ? 1.0 : 1.5</c> — an UP-stem flag gets 1.0, a DOWN-stem
-    /// flag keeps 1.5. (Tremolo slashes on a BEAMED stem are a separate unimplemented case:
-    /// DrawBeams renders the beamed stem but not its tremolo.)
-    /// Slope — calc_slope's non-beam branch (stem-tremolo.cc:75-78): a DOWN-stem flag gets
-    /// the steeper 0.40 (avoids flag/stem collision), else 0.25.
-    /// </remarks>
     /// <summary>Tremolo slashes for a STEMLESS note (a whole/breve): the flag
     /// nearest the head sits 1.5ss beyond the outermost head in the would-be
     /// stem direction, the rest stack outward 0.81 apart, all centred on the
@@ -1491,6 +1475,22 @@ internal static partial class SharedRenderer
     //   path's, which never calls here). The beamed anchor law (end at the
     //   beam minus beam_count translations) is therefore unported and
     //   unreachable, not approximated.
+    /// <summary>
+    /// Draws tremolo beams across a stem: short angled slashes at the stem's
+    /// midpoint. Number of slashes corresponds to the tremolo subdivision.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem-tremolo.cc:127-150 raw_stencil.
+    /// Width — calc_width (stem-tremolo.cc:84-93): <c>((dir==UP &amp;&amp; flag) || beam) ? 1.0 :
+    /// 1.5</c>. This method is reached ONLY for unbeamed stems (the caller in DrawNote guards
+    /// the whole stem/flag/tremolo block with <c>!isBeamed</c>; beamed stems are drawn by
+    /// DrawBeams), so the <c>beam</c> branch is unreachable and the width reduces to
+    /// <c>(stemUp &amp;&amp; hasFlag) ? 1.0 : 1.5</c> — an UP-stem flag gets 1.0, a DOWN-stem
+    /// flag keeps 1.5. (Tremolo slashes on a BEAMED stem are a separate unimplemented case:
+    /// DrawBeams renders the beamed stem but not its tremolo.)
+    /// Slope — calc_slope's non-beam branch (stem-tremolo.cc:75-78): a DOWN-stem flag gets
+    /// the steeper 0.40 (avoids flag/stem collision), else 0.25.
+    /// </remarks>
     private static void DrawTremolo(
         double stemX, double stemEndY,
         bool stemUp, int noteValue, int beamCount, bool hasFlag, IDrawingContext gc)

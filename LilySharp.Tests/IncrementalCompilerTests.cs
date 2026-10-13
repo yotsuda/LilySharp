@@ -2814,14 +2814,6 @@ public class IncrementalCompilerTests
         Assert.Equal(FullNamed(tree.Text, "sub"), svg);
     }
 
-    /// <summary>THE SPEC-IDENTITY GUARD, on the named side. Inserting ANOTHER block
-    /// named sub — with a transpose — above the one the session has been rendering
-    /// drifts resolution (first match wins) to the inserted block, while every guard
-    /// keyed on content stays green: the music above is an untouched common prefix,
-    /// the baseline's own render blocks are value-stable, and no walk-entry check
-    /// reads the transpose. Without the guard the resume adopts every measure at
-    /// concert pitch under the new name (verified red while building this test);
-    /// the guard sheds the session cold instead.</summary>
     /// <summary>A book whose music is written directly in the section cell — the
     /// shape whose measure boundaries the collect resume actually checkpoints and
     /// adopts (a phrase-reference cell is one item and adopts nothing), which is
@@ -2832,6 +2824,14 @@ public class IncrementalCompilerTests
         + " |\n  }\n}\nform { S }\nform sub { S }\n"
         + "score { staff m }\nscore sub { form sub staff m }\n";
 
+    /// <summary>THE SPEC-IDENTITY GUARD, on the named side. Inserting ANOTHER block
+    /// named sub — with a transpose — above the one the session has been rendering
+    /// drifts resolution (first match wins) to the inserted block, while every guard
+    /// keyed on content stays green: the music above is an untouched common prefix,
+    /// the baseline's own render blocks are value-stable, and no walk-entry check
+    /// reads the transpose. Without the guard the resume adopts every measure at
+    /// concert pitch under the new name (verified red while building this test);
+    /// the guard sheds the session cold instead.</summary>
     [Fact]
     public void NamedSession_SameNamedBlockInsertedAbove_StaysEqualToFull()
     {

@@ -485,6 +485,19 @@ public sealed partial class LilyPondExporter
     // expands references through when a section's bars are measured (FirstBarsLength).
     private IReadOnlyDictionary<string, SyntaxNode> _phraseBodies = new Dictionary<string, SyntaxNode>();
 
+    /// <summary>The section a chord container belongs to: the container itself when it is
+    /// a by-part track's inner section, else the section enclosing the flat block; null
+    /// for a block at top level.</summary>
+    private static SectionDeclarationSyntax? SectionOf(SyntaxNode container)
+    {
+        if (container is SectionDeclarationSyntax own)
+            return own;
+        for (var n = container.Parent; n != null; n = n.Parent)
+            if (n is SectionDeclarationSyntax s)
+                return s;
+        return null;
+    }
+
     /// <summary>
     /// The silent bars that bring one voice's play of a section up to the section's
     /// canonical bar count — what the page pads the short staff with (MeasureCollector's
@@ -503,19 +516,6 @@ public sealed partial class LilyPondExporter
     /// the first cut used the page's syntactic count and wrote 48 spurious bars after
     /// canon-in-d's <c>repeat unfold 13</c>.
     /// </remarks>
-    /// <summary>The section a chord container belongs to: the container itself when it is
-    /// a by-part track's inner section, else the section enclosing the flat block; null
-    /// for a block at top level.</summary>
-    private static SectionDeclarationSyntax? SectionOf(SyntaxNode container)
-    {
-        if (container is SectionDeclarationSyntax own)
-            return own;
-        for (var n = container.Parent; n != null; n = n.Parent)
-            if (n is SectionDeclarationSyntax s)
-                return s;
-        return null;
-    }
-
     private IEnumerable<SyntaxNode> PaddingBars(SyntaxNode container)
     {
         int missing = _sectionBars.Missing(container, out bool open);

@@ -624,32 +624,6 @@ internal static class LayoutUtilities
     // (page.titled.first-staff-refpoint, −5.632695 before the port) is the measurement.
 
     /// <summary>
-    /// A staff's WITHIN-SYSTEM vertical offset in LilyPond's frame: staff-spaces
-    /// <b>UP</b> from the system top to this staff's top line, so it is NEGATIVE for
-    /// every staff below the first and 0 for the first. Now that
-    /// <see cref="StaffLayout.Y"/> stores that frame natively (island 1's atomic
-    /// flip), this reads <c>staff.Y</c> straight out. Returns 0 when the staff is not
-    /// found (single-staff fallback), so this is exactly
-    /// <see cref="FindStaffYInSystem"/> minus <see cref="SystemLayout.Y"/>.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/align-interface.cc:274 — <c>where += stacking_dir * dy</c>
-    /// with <c>stacking_dir = DOWN = -1</c>; the accumulator walks negative and the
-    /// translates are stored as-is.
-    /// LILYPOND-REF: lily/page-layout-problem.cc:896-901 — a system's staves are placed
-    /// from <c>min_offsets</c>, which <c>Align_interface::get_minimum_translations</c>
-    /// produces Y-up (negative going down); :915-917 calls the sign out explicitly
-    /// ("this is relative to the system: negative numbers are down").
-    ///
-    /// This is the frame-INVARIANT part of the staff's vertical position: it is
-    /// the offset within the system, independent of where paging places the
-    /// system. Engravers that lay an element out relative to its own staff
-    /// (ties, slurs, ledger spans, multi-measure rests, outside-staff stacking,
-    /// figured bass) resolve against THIS or its <see cref="StaffOffsetInSystemDown"/>
-    /// reflection rather than the absolute <see cref="FindStaffYInSystem"/>, so they
-    /// stay decoupled from <see cref="SystemLayout.Y"/>.
-    /// </remarks>
-    /// <summary>
     /// The staff a SCORE-CONTEXT grob hangs on — a rehearsal mark, a section label, a
     /// bar number: the system's topmost SPACEABLE staff.
     /// </summary>
@@ -712,6 +686,32 @@ internal static class LayoutUtilities
     public static int ResolveScoreGrobStaff(SystemLayout system, int staffIndex)
         => staffIndex >= 0 ? staffIndex : TopScoreGrobStaff(system);
 
+    /// <summary>
+    /// A staff's WITHIN-SYSTEM vertical offset in LilyPond's frame: staff-spaces
+    /// <b>UP</b> from the system top to this staff's top line, so it is NEGATIVE for
+    /// every staff below the first and 0 for the first. Now that
+    /// <see cref="StaffLayout.Y"/> stores that frame natively (island 1's atomic
+    /// flip), this reads <c>staff.Y</c> straight out. Returns 0 when the staff is not
+    /// found (single-staff fallback), so this is exactly
+    /// <see cref="FindStaffYInSystem"/> minus <see cref="SystemLayout.Y"/>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:274 — <c>where += stacking_dir * dy</c>
+    /// with <c>stacking_dir = DOWN = -1</c>; the accumulator walks negative and the
+    /// translates are stored as-is.
+    /// LILYPOND-REF: lily/page-layout-problem.cc:896-901 — a system's staves are placed
+    /// from <c>min_offsets</c>, which <c>Align_interface::get_minimum_translations</c>
+    /// produces Y-up (negative going down); :915-917 calls the sign out explicitly
+    /// ("this is relative to the system: negative numbers are down").
+    ///
+    /// This is the frame-INVARIANT part of the staff's vertical position: it is
+    /// the offset within the system, independent of where paging places the
+    /// system. Engravers that lay an element out relative to its own staff
+    /// (ties, slurs, ledger spans, multi-measure rests, outside-staff stacking,
+    /// figured bass) resolve against THIS or its <see cref="StaffOffsetInSystemDown"/>
+    /// reflection rather than the absolute <see cref="FindStaffYInSystem"/>, so they
+    /// stay decoupled from <see cref="SystemLayout.Y"/>.
+    /// </remarks>
     public static double StaffOffsetInSystemUp(SystemLayout system, int staffIndex)
     {
         if (!system.StaffGroups.IsDefaultOrEmpty && staffIndex >= 0)

@@ -222,14 +222,6 @@ internal static class EngravingDefaults
         return lines.Length > 0 && position >= lines[0] && position <= lines[lines.Length - 1];
     }
 
-    /// <summary>
-    /// Whether a head at a position asks the ledger-line spanner for anything: it carries
-    /// ledger lines, or it stands outside the staff's lines without any (the first space
-    /// beyond the staff) — the heads <c>Ledger_line_spanner::print</c> works with, whose
-    /// extents shorten a neighbour's ledgers even when they draw none of their own.
-    /// </summary>
-    /// <remarks>LILYPOND-REF: lily/ledger-line-spanner.cc:223-226 — <c>ledger_positions.size ()
-    /// != 0 || !staff_extent.contains (pos)</c>.</remarks>
     /// <summary>Whether a head drawn in <paramref name="style"/> carries ledger lines at all. A
     /// slash head has no pitch — it stands on the middle whatever the staff — so it carries
     /// none: on the two-line staff (lines at ±2) the middle is the pair's gap, which a pitched
@@ -238,6 +230,14 @@ internal static class EngravingDefaults
     /// sit on a pitch and take that pitch's ledgers; a Lily# slash has no pitch to take them from.</summary>
     public static bool HeadTakesLedgers(Model.NoteheadStyle style) => style != Model.NoteheadStyle.Slash;
 
+    /// <summary>
+    /// Whether a head at a position asks the ledger-line spanner for anything: it carries
+    /// ledger lines, or it stands outside the staff's lines without any (the first space
+    /// beyond the staff) — the heads <c>Ledger_line_spanner::print</c> works with, whose
+    /// extents shorten a neighbour's ledgers even when they draw none of their own.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/ledger-line-spanner.cc:223-226 — <c>ledger_positions.size ()
+    /// != 0 || !staff_extent.contains (pos)</c>.</remarks>
     public static bool LedgerRequested(int position, int lineCount)
     {
         if (!StaffLinesSpan(position, lineCount))

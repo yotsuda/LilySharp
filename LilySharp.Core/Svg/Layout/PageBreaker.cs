@@ -585,9 +585,6 @@ internal sealed class PageSpacing
     }
 
     /// <summary>
-    /// Calculates the force needed to fit systems on page.
-    /// </summary>
-    /// <summary>
     /// The height a page actually offers its systems: the printable band LESS the
     /// whitespace the top-system and last-bottom springs reserve at its two ends.
     /// </summary>
@@ -610,6 +607,9 @@ internal sealed class PageSpacing
         }
     }
 
+    /// <summary>
+    /// Calculates the force needed to fit systems on page.
+    /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/page-spacing.cc:29-41 calc_force().
     ///

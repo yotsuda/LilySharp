@@ -262,12 +262,6 @@ public class SpringRodModelTests
     }
 
     /// <summary>
-    /// A ROD raises a spring's minimum through <c>Spring::set_blocking_force</c>, which sets
-    /// <c>min_distance_ = length (f)</c> and updates the blocking force — the strengths are
-    /// what make the new blocking force come out as <c>f</c>, so restating them would undo
-    /// the rod. LILYPOND-REF: lily/spring.cc:183-195; lily/simple-spacer.cc:124-126.
-    /// </summary>
-    /// <summary>
     /// A rod's force is solved FROM the blocking forces the earlier rods left in its range, so
     /// it lands the range exactly on its distance — not on a closed form that assumes none.
     /// </summary>
@@ -295,6 +289,12 @@ public class SpringRodModelTests
         Assert.Equal(0.5, rodded[1].BlockingForce, 9);
     }
 
+    /// <summary>
+    /// A ROD raises a spring's minimum through <c>Spring::set_blocking_force</c>, which sets
+    /// <c>min_distance_ = length (f)</c> and updates the blocking force — the strengths are
+    /// what make the new blocking force come out as <c>f</c>, so restating them would undo
+    /// the rod. LILYPOND-REF: lily/spring.cc:183-195; lily/simple-spacer.cc:124-126.
+    /// </summary>
     [Fact]
     public void ApplyRods_RaisesTheMinimum_WithoutRestatingTheCompressibility()
     {

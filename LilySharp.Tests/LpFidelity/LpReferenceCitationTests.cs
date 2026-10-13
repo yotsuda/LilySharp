@@ -701,44 +701,6 @@ public sealed class LpReferenceCitationTests
     }
 
     /// <summary>
-    /// A cited RANGE must name something that is actually in the definition it lands in.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// WHY THIS EXISTS, AND WHY <see cref="EveryNamedSymbolOccursInItsCitedFile"/> IS NOT IT.
-    /// That test asks the FILE, deliberately, so that a comment may cite a definition while
-    /// naming the class declared in the header. The cost of that leniency came due on
-    /// 2026-08-03: one function's three citations were each about 38 lines off
-    /// (<c>note-spacing.cc:243-248</c> for what lives at <c>:281-286</c>, <c>:263-264</c> for
-    /// <c>:299-300</c>, <c>:200-201</c> for <c>:248-249</c>) and every one of them named the
-    /// right symbol, in the right file. A range that has drifted inside its own file is
-    /// invisible to a file-level check, and drifted ranges are the normal way a citation
-    /// rots — the source moves, the name does not.
-    /// </para>
-    /// <para>
-    /// ⚠️ THE ENCLOSING DEFINITION, NOT THE RANGE ITSELF. Requiring the name between
-    /// <c>From</c> and <c>To</c> would fail on correct citations: <c>:281-286</c> is six
-    /// lines inside <c>Note_spacing::stem_dir_correction</c> that mention neither the class
-    /// nor the function, and that is exactly the kind of line worth citing. Asking whether
-    /// the name occurs anywhere in the definition those lines belong to is the weakest
-    /// question that still separates ":281-286 in stem_dir_correction" from ":243-248 in
-    /// stem_dir_correction" — no, it does not separate those two, and that is the honest
-    /// limit of this test: it catches a range that left the named definition, not one that
-    /// merely moved within it. HANDOFF 5.4's guessing helper is the alternative.
-    /// </para>
-    /// <para>
-    /// ⚠️ WHAT IS OUT OF SCOPE, said rather than silently dropped: citations with no line
-    /// range (nothing to check), citations naming no verifiable symbol (the ratchet
-    /// <see cref="CitationsThatNameNothing_DoNotGrow"/> owns those), names absent from the
-    /// whole file (<see cref="EveryNamedSymbolOccursInItsCitedFile"/> owns those, and
-    /// claiming them here would report one debt twice), and every non-C++ file.
-    /// Scheme and <c>.ly</c> are skipped because <see cref="IsVerifiableSymbol"/> claims only
-    /// underscored names, and closing THAT wants a real symbol index of the LilyPond tree
-    /// rather than a sharper regex — the same limit the file-level test already documents.
-    /// The test reports its own coverage so the untested share stays visible.
-    /// </para>
-    /// </remarks>
-    /// <summary>
     /// The brace scanner must find the definition a known line is in, and not find one it
     /// is not in.
     /// </summary>
@@ -778,6 +740,44 @@ public sealed class LpReferenceCitationTests
         Assert.Contains("calc_stem_info", atCitedRange.Text, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A cited RANGE must name something that is actually in the definition it lands in.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// WHY THIS EXISTS, AND WHY <see cref="EveryNamedSymbolOccursInItsCitedFile"/> IS NOT IT.
+    /// That test asks the FILE, deliberately, so that a comment may cite a definition while
+    /// naming the class declared in the header. The cost of that leniency came due on
+    /// 2026-08-03: one function's three citations were each about 38 lines off
+    /// (<c>note-spacing.cc:243-248</c> for what lives at <c>:281-286</c>, <c>:263-264</c> for
+    /// <c>:299-300</c>, <c>:200-201</c> for <c>:248-249</c>) and every one of them named the
+    /// right symbol, in the right file. A range that has drifted inside its own file is
+    /// invisible to a file-level check, and drifted ranges are the normal way a citation
+    /// rots — the source moves, the name does not.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE ENCLOSING DEFINITION, NOT THE RANGE ITSELF. Requiring the name between
+    /// <c>From</c> and <c>To</c> would fail on correct citations: <c>:281-286</c> is six
+    /// lines inside <c>Note_spacing::stem_dir_correction</c> that mention neither the class
+    /// nor the function, and that is exactly the kind of line worth citing. Asking whether
+    /// the name occurs anywhere in the definition those lines belong to is the weakest
+    /// question that still separates ":281-286 in stem_dir_correction" from ":243-248 in
+    /// stem_dir_correction" — no, it does not separate those two, and that is the honest
+    /// limit of this test: it catches a range that left the named definition, not one that
+    /// merely moved within it. HANDOFF 5.4's guessing helper is the alternative.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHAT IS OUT OF SCOPE, said rather than silently dropped: citations with no line
+    /// range (nothing to check), citations naming no verifiable symbol (the ratchet
+    /// <see cref="CitationsThatNameNothing_DoNotGrow"/> owns those), names absent from the
+    /// whole file (<see cref="EveryNamedSymbolOccursInItsCitedFile"/> owns those, and
+    /// claiming them here would report one debt twice), and every non-C++ file.
+    /// Scheme and <c>.ly</c> are skipped because <see cref="IsVerifiableSymbol"/> claims only
+    /// underscored names, and closing THAT wants a real symbol index of the LilyPond tree
+    /// rather than a sharper regex — the same limit the file-level test already documents.
+    /// The test reports its own coverage so the untested share stays visible.
+    /// </para>
+    /// </remarks>
     [Fact]
     public void CitationRangesHoldTheirNamedSymbol()
     {

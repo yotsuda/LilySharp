@@ -338,7 +338,7 @@
 - **`SharedRenderer.DrawGuitarBend`** LILYSHARP-OWN: LilyPond's guitar bend is the BendSpanner (`\^`) — a line and curve to
 ### `LilySharp.Core/Rendering/SharedRenderer.Prefix.cs`
 - **`SharedRenderer.DrawTimeSignature`** LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
-- **`SharedRenderer.MeterSymbol`** starts at the middle line and grows outward. LILYSHARP-OWN for that arm: LilyPond's rule
+- **`SharedRenderer.MeterRows`** starts at the middle line and grows outward. LILYSHARP-OWN for that arm: LilyPond's rule
 ### `LilySharp.Core/Rendering/SharedRenderer.Tab.cs`
 - **`SharedRenderer.DrawTabMeasure`** LILYSHARP-OWN: LilyPond has no pitchless note — its slash is a style on
 - **`SharedRenderer.DrawTabMeasure`** ⚠️ LILYSHARP-OWN on a FULL tab, and deliberately so (USER DECISION,
@@ -468,8 +468,8 @@
 - **`LayoutEngine.BuildPrefixMarkAnchorX`** ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's mark aligns to the BreakAlignGroup,
 - **`LayoutEngine.ClearChordDiagramsOverStaffInk`** LILYSHARP-OWN (2026-09-28): see for
 - **`LayoutEngine.CalculateAnnotationLayouts`** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
-- **`LayoutEngine.LyricReservationBelowSystem`** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
 - **`LayoutEngine.TrailingRowBandBelowSystem`** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
+- **`LayoutEngine.BuildLooseLinesBetween`** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
 - **`LayoutEngine.LayoutSystems`** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`

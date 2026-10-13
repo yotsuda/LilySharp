@@ -1769,21 +1769,6 @@ public sealed partial class MeasureCollector
         }
     }
 
-    /// <summary>
-    /// Walks one <c>cue { … }</c> / <c>cue &lt;clef&gt; { … }</c> region.
-    /// </summary>
-    /// <remarks>
-    /// The body goes through <see cref="ProcessMusicNodeSequence"/> unchanged; the only
-    /// state the region carries is <see cref="_cueDepth"/> (which makes the items cue-sized)
-    /// and, when a clef is given, LilyPond's <c>\cueClef</c> / <c>\cueClefUnset</c> pair.
-    /// <para>
-    /// ⚠️ BOTH clefs are emitted, and that is not tidiness: MEASURED
-    /// (audit/lp-geometry/probes/cue-span.ly, book D-NOUNSET) LilyPond leaks the cue clef
-    /// into the rest of the staff when the unset is missing — the note after the region read
-    /// staff position 13 instead of 1. The closing clef restores the staff's own clef and is
-    /// itself drawn small.
-    /// </para>
-    /// </remarks>
     /// <summary>A <c>time</c> taking effect here — written in this voice's music, or written in
     /// another part's at the start of this bar (<see cref="ApplyPlannedMeter"/>).</summary>
     private void ApplyMeterChange(TimeSignatureSyntax timeSigChange, MeasureBuilder builder)
@@ -1895,6 +1880,21 @@ public sealed partial class MeasureCollector
             ApplyMeterChange(time, builder);
     }
 
+    /// <summary>
+    /// Walks one <c>cue { … }</c> / <c>cue &lt;clef&gt; { … }</c> region.
+    /// </summary>
+    /// <remarks>
+    /// The body goes through <see cref="ProcessMusicNodeSequence"/> unchanged; the only
+    /// state the region carries is <see cref="_cueDepth"/> (which makes the items cue-sized)
+    /// and, when a clef is given, LilyPond's <c>\cueClef</c> / <c>\cueClefUnset</c> pair.
+    /// <para>
+    /// ⚠️ BOTH clefs are emitted, and that is not tidiness: MEASURED
+    /// (audit/lp-geometry/probes/cue-span.ly, book D-NOUNSET) LilyPond leaks the cue clef
+    /// into the rest of the staff when the unset is missing — the note after the region read
+    /// staff position 13 instead of 1. The closing clef restores the staff's own clef and is
+    /// itself drawn small.
+    /// </para>
+    /// </remarks>
     private void ProcessCueRegion(CueExpressionSyntax cue, MeasureBuilder builder)
     {
         string? outerClef = null;
@@ -2182,18 +2182,6 @@ public sealed partial class MeasureCollector
         return (itemIndex, _cueDepth > 0, GetFeatherDirection(node));
     }
 
-    /// <summary>
-    /// What the walk stamps ON a sounding item once it is built — the cue region's edge, the
-    /// <c>@notehead</c> style, the two-note tremolo's halving and beam join, and the grace
-    /// columns that reserve space in front of it — written once for the main arm and the tuplet
-    /// arm. A spacer standing in for a bad <c>q</c> or bare duration passes through untouched
-    /// (and, unlike the bare-duration arm before session 397, does not take the cue stamp).
-    /// </summary>
-    /// <remarks>
-    /// The two-note tremolo halves the SOUNDING time while the display keeps the pair's total,
-    /// and joins the pair with the subdivision's beams — the same for a note, a chord, a <c>q</c>
-    /// (regression repeat-tremolo-chord-rep.ly) and a bare duration.
-    /// </remarks>
     /// <summary>True for the <c>@parenthesize</c> annotation (LilyPond's <c>\parenthesize</c>).</summary>
     internal static bool IsParenthesizeMark(SyntaxNode annotation)
         => annotation is ArticulationSyntax { Type: ArticulationType.None } mark
@@ -2241,6 +2229,18 @@ public sealed partial class MeasureCollector
         };
     }
 
+    /// <summary>
+    /// What the walk stamps ON a sounding item once it is built — the cue region's edge, the
+    /// <c>@notehead</c> style, the two-note tremolo's halving and beam join, and the grace
+    /// columns that reserve space in front of it — written once for the main arm and the tuplet
+    /// arm. A spacer standing in for a bad <c>q</c> or bare duration passes through untouched
+    /// (and, unlike the bare-duration arm before session 397, does not take the cue stamp).
+    /// </summary>
+    /// <remarks>
+    /// The two-note tremolo halves the SOUNDING time while the display keeps the pair's total,
+    /// and joins the pair with the subdivision's beams — the same for a note, a chord, a <c>q</c>
+    /// (regression repeat-tremolo-chord-rep.ly) and a bare duration.
+    /// </remarks>
     private T DecorateSoundingItem<T>(T item, SyntaxNode node, bool isCue) where T : MusicItem
     {
         switch (item)
@@ -2310,11 +2310,6 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
-    /// Emits one note / rest / chord at a tuplet-scaled duration (TimeScale carries the
-    /// notation-vs-time factor) with its post-events, and returns its WRITTEN duration.
-    /// Shared by <see cref="ProcessTuplet"/> and the arpeggio auto-tuplet.
-    /// </summary>
-    /// <summary>
     /// What a drum note carries besides its head, for the main walk and the tuplet arm alike:
     /// LilyPond's style-table mark — the closed hi-hat and the muted hand drums "+", the open
     /// ones "○", the short/long guiro staccato/tenuto, automatically
@@ -2352,6 +2347,11 @@ public sealed partial class MeasureCollector
             AddDrumMark(drum.DrumName, measureIndex, itemIndex, bare.SourceStart);
     }
 
+    /// <summary>
+    /// Emits one note / rest / chord at a tuplet-scaled duration (TimeScale carries the
+    /// notation-vs-time factor) with its post-events, and returns its WRITTEN duration.
+    /// Shared by <see cref="ProcessTuplet"/> and the arpeggio auto-tuplet.
+    /// </summary>
     private Fraction EmitScaledItem(SyntaxNode item, MeasureBuilder builder, Fraction scale,
         MarkerFlags m)
     {

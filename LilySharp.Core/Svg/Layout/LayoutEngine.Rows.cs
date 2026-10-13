@@ -27,22 +27,6 @@ namespace LilySharp.Core.Svg.Layout;
 internal sealed partial class LayoutEngine
 {
     /// <summary>
-    /// Per system, the independent lyrics ROWS that hang below its last spaceable staff —
-    /// the elements of that system's own loose block, after its note-bound verses.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/page-layout-problem.cc:919-925 — a Lyrics context is a
-    /// non-spaceable line wherever it stands, so the run below the last spaceable staff
-    /// contains it and <c>distribute_loose_lines</c> solves it with everything else in that
-    /// run. Nothing here asks whether the syllables were <c>\lyricsto</c> anything: measured
-    /// as whole dumps, LilyPond reads books LYRC/LYRR and LYRV/LYRRV line for line the same.
-    /// <para>
-    /// ⚠️ EMPTY WHERE THE CHAIN DECLINES, so the row keeps the band it was laid out in rather
-    /// than being solved into a room somebody else owns — the same bail-out
-    /// <see cref="BuildLooseChainEnds"/> makes, out of the same classification.
-    /// </para>
-    /// </remarks>
-    /// <summary>
     /// Per system and per spaceable staff, the independent lyrics ROWS standing between that
     /// staff and the NEXT spaceable one — the elements of the run those two bound.
     /// </summary>
@@ -87,6 +71,22 @@ internal sealed partial class LayoutEngine
             : Array.Empty<int>();
     }
 
+    /// <summary>
+    /// Per system, the independent lyrics ROWS that hang below its last spaceable staff —
+    /// the elements of that system's own loose block, after its note-bound verses.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:919-925 — a Lyrics context is a
+    /// non-spaceable line wherever it stands, so the run below the last spaceable staff
+    /// contains it and <c>distribute_loose_lines</c> solves it with everything else in that
+    /// run. Nothing here asks whether the syllables were <c>\lyricsto</c> anything: measured
+    /// as whole dumps, LilyPond reads books LYRC/LYRR and LYRV/LYRRV line for line the same.
+    /// <para>
+    /// ⚠️ EMPTY WHERE THE CHAIN DECLINES, so the row keeps the band it was laid out in rather
+    /// than being solved into a room somebody else owns — the same bail-out
+    /// <see cref="BuildLooseChainEnds"/> makes, out of the same classification.
+    /// </para>
+    /// </remarks>
     private static Func<int, IReadOnlyList<int>>? BuildTrailingRowStaves(
         ImmutableArray<SystemLayout> systemsArray, IReadOnlySet<int> textRowStaves)
     {

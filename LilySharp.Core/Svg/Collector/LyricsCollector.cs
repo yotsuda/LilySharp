@@ -374,16 +374,6 @@ internal sealed class LyricsCollector
     }
 
     /// <summary>
-    /// Collects an independent lyrics row (<c>lyrics name { … }</c> placed via
-    /// <c>lyrics name</c> in a score) with NO bound melody: each bar's syllables are
-    /// spread evenly across it, and an empty bar (bare <c>|</c>) is skipped. Multiple
-    /// blocks of the same name stack as verses (1番, 2番, …). A SINGLE block whose bars
-    /// exceed the section's bar count also auto-wraps: every wrap-bars measures start
-    /// the next stacked verse, mapped back onto the same bars. Returns the row's measure
-    /// skeleton (spacer rests for width); the syllables go to <see cref="Lyrics"/>
-    /// tagged with this row's staff index.
-    /// </summary>
-    /// <summary>
     /// Collects a melody-BOUND lyrics row: a track that <c>sings</c> a part the
     /// score does not engrave. The syllables align to the melody's notes with the
     /// SAME machinery a <c>with lyrics</c> attachment uses (melisma <c>~</c>,
@@ -406,6 +396,16 @@ internal sealed class LyricsCollector
             sectionStartMeasure, sectionAllStarts,
             onlyBlocks: new[] { trackName }, staffIndex: staffIndex, asRow: true);
 
+    /// <summary>
+    /// Collects an independent lyrics row (<c>lyrics name { … }</c> placed via
+    /// <c>lyrics name</c> in a score) with NO bound melody: each bar's syllables are
+    /// spread evenly across it, and an empty bar (bare <c>|</c>) is skipped. Multiple
+    /// blocks of the same name stack as verses (1番, 2番, …). A SINGLE block whose bars
+    /// exceed the section's bar count also auto-wraps: every wrap-bars measures start
+    /// the next stacked verse, mapped back onto the same bars. Returns the row's measure
+    /// skeleton (spacer rests for width); the syllables go to <see cref="Lyrics"/>
+    /// tagged with this row's staff index.
+    /// </summary>
     public ImmutableArray<Measure> CollectRow(
         SyntaxNode root, string partName, int staffIndex, int totalBars,
         IReadOnlyDictionary<string, int> sectionStartMeasure, int timeBeats, int timeBeatType,

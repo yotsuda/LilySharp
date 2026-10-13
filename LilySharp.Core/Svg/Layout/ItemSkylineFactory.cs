@@ -713,10 +713,6 @@ internal static class ItemSkylineFactory
     }
 
     /// <summary>
-    /// Everything the column has that reaches somewhere. One entry per drawn part, in no
-    /// significant order — a skyline takes the extreme at each Y, so the list is a set.
-    /// </summary>
-    /// <summary>
     /// The buffer <see cref="ColumnParts"/> fills, lent from one list the thread keeps between
     /// columns.
     /// </summary>
@@ -769,6 +765,10 @@ internal static class ItemSkylineFactory
         t_parts = parts;
     }
 
+    /// <summary>
+    /// Everything the column has that reaches somewhere. One entry per drawn part, in no
+    /// significant order — a skyline takes the extreme at each Y, so the list is a set.
+    /// </summary>
     private static List<ColumnPart> ColumnParts(MusicItem item, double referenceX, double staffY,
         int staffLines = EngravingDefaults.DefaultStaffLines)
     {

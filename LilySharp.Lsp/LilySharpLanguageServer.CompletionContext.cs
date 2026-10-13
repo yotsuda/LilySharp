@@ -785,15 +785,6 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// The whole word immediately before the partial word being typed at
-    /// <paramref name="offset"/> (skipping the current word and any whitespace),
-    /// e.g. "clef" in <c>clef tr|</c> or <c>clef |</c>. Empty if none. Hyphen counts
-    /// as a word character: instrument presets are hyphenated (piano-right,
-    /// piano-left), and the scan must not truncate at the hyphen — in
-    /// <c>instrument piano-|</c> the partial word is "piano-", and the preceding
-    /// word must still come out as "instrument".
-    /// </summary>
-    /// <summary>
     /// The last KEY written in the enclosing <c>fonts { … }</c> block before
     /// <paramref name="offset"/> — the entry the caret is still inside — or null when no
     /// key has been written yet. Quoted faces are skipped whole; a word that is not a key
@@ -854,6 +845,15 @@ public sealed partial class LilySharpLanguageServer
         return text.Substring(i, end - i);
     }
 
+    /// <summary>
+    /// The whole word immediately before the partial word being typed at
+    /// <paramref name="offset"/> (skipping the current word and any whitespace),
+    /// e.g. "clef" in <c>clef tr|</c> or <c>clef |</c>. Empty if none. Hyphen counts
+    /// as a word character: instrument presets are hyphenated (piano-right,
+    /// piano-left), and the scan must not truncate at the hyphen — in
+    /// <c>instrument piano-|</c> the partial word is "piano-", and the preceding
+    /// word must still come out as "instrument".
+    /// </summary>
     internal static string WordBeforeCursor(string text, int offset)
     {
         static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '-';
@@ -1448,8 +1448,6 @@ public sealed partial class LilySharpLanguageServer
         return scan.RawBraceDepth > 0 ? CompletionContext.MusicBlock : CompletionContext.TopLevel;
     }
 
-    /// <summary>The clef names valid right after the <c>clef</c> keyword, ordered
-    /// from the highest-sounding clef to the lowest (not alphabetically).</summary>
     /// <summary>True for a bare pitch-name word (c…b with optional is/es
     /// accidental suffixes) — the tonic between `key` and its mode.</summary>
     internal static bool IsPitchName(string word)
@@ -2018,12 +2016,6 @@ public sealed partial class LilySharpLanguageServer
         return PercussionClefRegex().IsMatch(body);
     }
 
-    /// <summary>
-    /// True when <paramref name="offset"/> sits right after a complete articulation
-    /// name or its '.', so the '.up'/'.down' placement qualifier fits:
-    /// '@fermata|', '@fermata.|', '@fermata.d|'. Only the char immediately before
-    /// the cursor is inspected — a trailing space means the user moved on.
-    /// </summary>
     /// <summary>Whether a bare annotation name takes the <c>.up</c> / <c>.down</c> qualifier:
     /// an articulation, or a dynamic level — the parser reads <c>@mp.up</c> as it reads
     /// <c>@fermata.up</c> (Parser.Music, IsDynamicName), refusing it only on the hairpin
@@ -2033,6 +2025,12 @@ public sealed partial class LilySharpLanguageServer
     internal static bool TakesPlacement(string name)
         => ArticulationRegistry.IsKnown(name) || LanguageVocabulary.IsDynamicLevel(name);
 
+    /// <summary>
+    /// True when <paramref name="offset"/> sits right after a complete articulation
+    /// name or its '.', so the '.up'/'.down' placement qualifier fits:
+    /// '@fermata|', '@fermata.|', '@fermata.d|'. Only the char immediately before
+    /// the cursor is inspected — a trailing space means the user moved on.
+    /// </summary>
     private static bool IsArticulationPlacementContext(string text, int offset)
     {
         int i = offset - 1;

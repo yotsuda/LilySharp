@@ -2973,17 +2973,6 @@ internal sealed class ElementCoordinator
     }
 
     /// <summary>
-    /// Detects slurs and calculates their layouts, splitting cross-system slurs into broken pieces.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/slur.cc, lily/slur-scoring.cc
-    /// LILYPOND-REF: lily/spanner.cc:36-144 — Spanner::do_break_processing
-    /// LILYPOND-REF: lily/break-substitution.cc:67-153 — substitute_grob &amp; do_break_substitution
-    /// A slur that crosses one or more system breaks is split into per-system pieces.
-    /// Each piece is scored independently with its bounds reattached to the system edges
-    /// (LP-faithful: each broken piece gets its own SlurScoringProblem invocation).
-    /// </remarks>
-    /// <summary>
     /// Staff position of the note nearest a broken slur edge: the first
     /// (leftEdge) or last sounding note of <paramref name="segSystem"/> that
     /// lies within the slur's span. For chords the head on the curve's side
@@ -3276,20 +3265,6 @@ internal sealed class ElementCoordinator
     }
 
     /// <summary>
-    /// The notehead box a slur reads off a note column: a cue note's in the cue's own font
-    /// (EngravingDefaults.CueFont — the thirteen design at font-size −4), everyone else's in
-    /// the twenty.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/slur-scoring.cc:556-562 get_base_attachments (head->extent), as the
-    /// encompass infos read theirs —
-    /// every head extent the slur reads is the head grob's own, and a CueVoice head is set at
-    /// font-size −4. MEASURED, Lab sessions/p656 cue1 (LilyPond 2.26.0): `cue { e4( f) }`'s
-    /// down slur ends 0.354 under the head centres (0.56222 × 0.62996) and starts 0.461 right
-    /// of the head's left edge (the cue head's centre 0.4077 + the tilt shift); Lily# read the
-    /// twenty's 0.545 and 0.652 until session 656.
-    /// </remarks>
-    /// <summary>
     /// Device Y of a HEAD-bound slur end's base: the head's Y extent read at
     /// <c>linear_combination (0.5 · dir)</c> — three quarters of the way to its slurward edge.
     /// </summary>
@@ -3309,6 +3284,15 @@ internal sealed class ElementCoordinator
     /// slur-scoring.cc:576), and a black slash is 1.7152 wide where the plain head is 1.3042: until
     /// 2026-10-10 this read the plain head for every style, so a slash tie left its head 0.41 early
     /// and crossed into its own ink (Lab sessions/p872/probe/slashtie, st5).</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur-scoring.cc:556-562 get_base_attachments (head->extent), as the
+    /// encompass infos read theirs —
+    /// every head extent the slur reads is the head grob's own, and a CueVoice head is set at
+    /// font-size −4. MEASURED, Lab sessions/p656 cue1 (LilyPond 2.26.0): `cue { e4( f) }`'s
+    /// down slur ends 0.354 under the head centres (0.56222 × 0.62996) and starts 0.461 right
+    /// of the head's left edge (the cue head's centre 0.4077 + the tilt shift); Lily# read the
+    /// twenty's 0.545 and 0.652 until session 656.
+    /// </remarks>
     private static GlyphMetrics.BBox BowHeadBox(MusicItem item, int noteValue)
         => GlyphMetrics.GetNoteheadBBox(BowFont(item) ?? GlyphMetrics.StaffHeadFont,
             GlyphMetrics.HeadStyleOf(item), noteValue);
@@ -4323,6 +4307,17 @@ internal sealed class ElementCoordinator
         return (left, right, -topUp, -bottomUp);
     }
 
+    /// <summary>
+    /// Detects slurs and calculates their layouts, splitting cross-system slurs into broken pieces.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur.cc, lily/slur-scoring.cc
+    /// LILYPOND-REF: lily/spanner.cc:36-144 — Spanner::do_break_processing
+    /// LILYPOND-REF: lily/break-substitution.cc:67-153 — substitute_grob &amp; do_break_substitution
+    /// A slur that crosses one or more system breaks is split into per-system pieces.
+    /// Each piece is scored independently with its bounds reattached to the system edges
+    /// (LP-faithful: each broken piece gets its own SlurScoringProblem invocation).
+    /// </remarks>
     /// <param name="fonts">The SCORE's text metrics — a tab slur clears fret digits whose em
     /// is the plan's; a per-staff <c>Score</c> carries no plan, so the caller passes the
     /// enclosing score's.</param>

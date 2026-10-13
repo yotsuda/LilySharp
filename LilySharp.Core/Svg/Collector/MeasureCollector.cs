@@ -4913,10 +4913,6 @@ public sealed partial class MeasureCollector
         _ => MusicMarkType.Segno
     };
 
-    /// <summary>
-    /// Checks if a node is inside music content (phrase/section/variable body).
-    /// Used by CollectDefinitions to distinguish top-level declarations from mid-music changes.
-    /// </summary>
     /// <summary>True when <paramref name="node"/> sits inside a <c>score { … }</c>
     /// block — a per-score setting rather than a file-level one.</summary>
     private static bool IsInsideRenderDeclaration(SyntaxNode node)
@@ -4927,6 +4923,10 @@ public sealed partial class MeasureCollector
         return false;
     }
 
+    /// <summary>
+    /// Checks if a node is inside music content (phrase/section/variable body).
+    /// Used by CollectDefinitions to distinguish top-level declarations from mid-music changes.
+    /// </summary>
     private static bool IsInsideMusicContent(SyntaxNode node)
     {
         var parent = node.Parent;

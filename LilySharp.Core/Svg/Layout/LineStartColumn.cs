@@ -526,26 +526,6 @@ internal static class LineStartColumn
         double InkLeft, double InkRight, double EswLeft, double EswRight);
 
     /// <summary>
-    /// The break-aligned grobs one staff contributes to the line-start prefatory column:
-    /// its clef, and the key and meter it ENGRAVES, at the shared break-align columns.
-    /// </summary>
-    /// <remarks>
-    /// A tab staff engraves no KEY in either mode: ly/engraver-init.ly:1214 is \remove
-    /// Key_engraver in the TabStaff context, and <c>tabFullNotation</c> has nothing to revert
-    /// because a removed engraver is not an override. Its
-    /// METER is the mode's to decide — blanked stencil bare, reverted under
-    /// <c>\tabFullNotation</c>, which is Lily#'s default <c>tab</c>
-    /// (<see cref="SpacingRules.ContributesToTimeColumnWidth"/>). The probe harness reports
-    /// skipping <c>TKC TABTIME</c> because that probe's twin is a BARE TabStaff. Its TAB
-    /// clef IS an ordinary Clef grob in the shared group, and a wide one.
-    /// <para>
-    /// The key ink is the one THIS staff engraves (<see cref="SpacingRules.ActiveKeyInkForStaff"/>),
-    /// not the group's union: the column X is shared (that is what break-alignment is) but
-    /// the extent is the grob's own, so a transposed part's wider signature does not widen
-    /// its neighbour's grob.
-    /// </para>
-    /// </remarks>
-    /// <summary>
     /// The right edge of <paramref name="staff"/>'s OWN line-start prefatory ink — its clef,
     /// the key and meter it engraves, the opening bar line — in the break-align frame
     /// (<paramref name="columns"/>), or null for a row that engraves none.
@@ -571,6 +551,26 @@ internal static class LineStartColumn
         return double.IsNegativeInfinity(right) ? null : right;
     }
 
+    /// <summary>
+    /// The break-aligned grobs one staff contributes to the line-start prefatory column:
+    /// its clef, and the key and meter it ENGRAVES, at the shared break-align columns.
+    /// </summary>
+    /// <remarks>
+    /// A tab staff engraves no KEY in either mode: ly/engraver-init.ly:1214 is \remove
+    /// Key_engraver in the TabStaff context, and <c>tabFullNotation</c> has nothing to revert
+    /// because a removed engraver is not an override. Its
+    /// METER is the mode's to decide — blanked stencil bare, reverted under
+    /// <c>\tabFullNotation</c>, which is Lily#'s default <c>tab</c>
+    /// (<see cref="SpacingRules.ContributesToTimeColumnWidth"/>). The probe harness reports
+    /// skipping <c>TKC TABTIME</c> because that probe's twin is a BARE TabStaff. Its TAB
+    /// clef IS an ordinary Clef grob in the shared group, and a wide one.
+    /// <para>
+    /// The key ink is the one THIS staff engraves (<see cref="SpacingRules.ActiveKeyInkForStaff"/>),
+    /// not the group's union: the column X is shared (that is what break-alignment is) but
+    /// the extent is the grob's own, so a transposed part's wider signature does not widen
+    /// its neighbour's grob.
+    /// </para>
+    /// </remarks>
     private static List<PrefatoryGrob> PrefatoryGrobs(
         Model.MultiStaffScore score,
         Model.Staff staff,

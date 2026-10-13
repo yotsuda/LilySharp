@@ -29,24 +29,6 @@ namespace LilySharp.Core.LilyPond;
 // no behavior change.
 public sealed partial class LilyPondExporter
 {
-    /// <summary>
-    /// One <c>\chordmode</c> variable per part carrying INLINE <c>@chord</c> marks — read off
-    /// the PAGE's model rather than the syntax: the collector has already placed every
-    /// symbol at its note's moment, recognized a bare <c>@chord</c> from the notes it sits
-    /// on and resolved a degree in its key, so the twin asks it instead of re-deriving the
-    /// note durations a second time. Each bar is the symbols at their onsets with silent
-    /// <c>s</c> filling the gaps, so LilyPond prints exactly the symbols the page prints,
-    /// where it prints them; a bar's length is the part's own (a pickup is short).
-    /// </summary>
-    /// <remarks>
-    /// The model's bar sequence is the twin's: neither unfolds a <c>\repeat volta</c> or an
-    /// ending (both write the bars once, in order), and both write a reprise twice — so
-    /// the linear stream lines up bar for bar with the music stream's written bars. The
-    /// page collects only when the file writes a <c>@chord</c> at all (the collect costs a
-    /// render). Two symbols at one moment (two voices) keep the first.
-    /// ⚠️ A chords ROW is the other reader (<see cref="EmitChordTracks"/>, syntax-driven
-    /// through the form walk); the two contexts stand side by side when a book has both.
-    /// </remarks>
     /// <summary>The page's model of the exported score, collected ONCE on first demand —
     /// the readers that ask the page (inline chords, lyrics) share it. Null when the
     /// collect fails (warned once) or the file has no score.</summary>
@@ -165,6 +147,24 @@ public sealed partial class LilyPondExporter
         _sb.Append("}\n\n");
     }
 
+    /// <summary>
+    /// One <c>\chordmode</c> variable per part carrying INLINE <c>@chord</c> marks — read off
+    /// the PAGE's model rather than the syntax: the collector has already placed every
+    /// symbol at its note's moment, recognized a bare <c>@chord</c> from the notes it sits
+    /// on and resolved a degree in its key, so the twin asks it instead of re-deriving the
+    /// note durations a second time. Each bar is the symbols at their onsets with silent
+    /// <c>s</c> filling the gaps, so LilyPond prints exactly the symbols the page prints,
+    /// where it prints them; a bar's length is the part's own (a pickup is short).
+    /// </summary>
+    /// <remarks>
+    /// The model's bar sequence is the twin's: neither unfolds a <c>\repeat volta</c> or an
+    /// ending (both write the bars once, in order), and both write a reprise twice — so
+    /// the linear stream lines up bar for bar with the music stream's written bars. The
+    /// page collects only when the file writes a <c>@chord</c> at all (the collect costs a
+    /// render). Two symbols at one moment (two voices) keep the first.
+    /// ⚠️ A chords ROW is the other reader (<see cref="EmitChordTracks"/>, syntax-driven
+    /// through the form walk); the two contexts stand side by side when a book has both.
+    /// </remarks>
     private void EmitInlineChordTracks(SyntaxTree tree, RenderDeclarationSyntax? render)
     {
         if (render == null)

@@ -1114,6 +1114,16 @@ public class VocabularyPerturbationTests
         return data;
     }
 
+    /// <summary>The two words that ARE the guitar, written out rather than derived.</summary>
+    /// <remarks>
+    /// ⚠️⚠️ THE CONTROL MUST NOT BE CHOSEN BY THE THING UNDER TEST. This branch first read
+    /// <c>Tunings.Parse(word) == TuningType.Guitar</c> — so poisoning <c>Parse</c> to answer
+    /// "guitar" for <c>guitardropd</c> moved that word into the INERT branch and the theory
+    /// stayed green (measured 2026-09-13, the poison this tripwire failed the first time).
+    /// A tripwire whose two sides are picked by the code it watches cannot fire.
+    /// </remarks>
+    private static readonly string[] SpellingsOfTheGuitar = ["guitar"];
+
     /// <summary>
     /// Every tuning the language accepts must fret DIFFERENTLY from the plain guitar — the
     /// only check that reads the strings rather than repeating them.
@@ -1125,16 +1135,6 @@ public class VocabularyPerturbationTests
     /// three spellings are the control — they MUST be inert, and are asserted equal below
     /// rather than skipped, exactly as <c>removeEmpty false</c> is.
     /// </remarks>
-    /// <summary>The two words that ARE the guitar, written out rather than derived.</summary>
-    /// <remarks>
-    /// ⚠️⚠️ THE CONTROL MUST NOT BE CHOSEN BY THE THING UNDER TEST. This branch first read
-    /// <c>Tunings.Parse(word) == TuningType.Guitar</c> — so poisoning <c>Parse</c> to answer
-    /// "guitar" for <c>guitardropd</c> moved that word into the INERT branch and the theory
-    /// stayed green (measured 2026-09-13, the poison this tripwire failed the first time).
-    /// A tripwire whose two sides are picked by the code it watches cannot fire.
-    /// </remarks>
-    private static readonly string[] SpellingsOfTheGuitar = ["guitar"];
-
     [Theory]
     [MemberData(nameof(TuningWords))]
     public void EveryTuningFretsDifferentlyFromTheGuitar(string word)

@@ -348,17 +348,6 @@ internal sealed class SpringSolver
     }
 
     /// <summary>
-    /// Applies multi-column rod constraints to a set of springs.
-    /// A rod enforces a minimum total distance across a span of springs.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/simple-spacer.cc:92-128 Simple_spacer::add_rod()
-    ///
-    /// If the rod's distance exceeds what the springs can provide at maximum compression,
-    /// the springs' ideal distances are scaled up proportionally.
-    /// Otherwise, blocking forces are updated to enforce the constraint.
-    /// </remarks>
-    /// <summary>
     /// Applies multi-column rod constraints to a set of springs with blocking force propagation.
     /// </summary>
     /// <remarks>
