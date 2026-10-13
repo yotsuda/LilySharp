@@ -407,6 +407,15 @@ public class HistoryCitationTests
     private static readonly Regex HexRun = new(@"\b[0-9a-f]{7,40}\b", RegexOptions.Compiled);
 
     /// <summary>
+    /// A UUID (8-4-4-4-12), blanked before the hex runs are read: its first group is an
+    /// eight-letter hex run that is never a commit. The README's video is a GitHub attachment
+    /// (<c>user-attachments/assets/&lt;uuid&gt;</c>), and that one URL put the census one over
+    /// its ceiling on 2026-10-13.
+    /// </summary>
+    private static readonly Regex Uuid = new(
+        @"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b", RegexOptions.Compiled);
+
+    /// <summary>
     /// Of the tokens that are not live citations, the ones shaped like a citation rather than
     /// like a number. Every citation in this repository that is live is 7 or 8 characters
     /// long, and the tree is full of hexadecimal-looking decimals — residuals such as
@@ -524,7 +533,7 @@ public class HistoryCitationTests
                 continue;   // tracked but not checked out (sparse checkout)
             var lines = File.ReadAllLines(path);
             for (int i = 0; i < lines.Length; i++)
-                foreach (Match m in HexRun.Matches(lines[i]))
+                foreach (Match m in HexRun.Matches(Uuid.Replace(lines[i], " ")))
                     occurrences.Add(new Token(m.Value, relative, i + 1));
         }
 
