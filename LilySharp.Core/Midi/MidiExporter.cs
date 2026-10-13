@@ -156,6 +156,24 @@ public sealed class MidiExporter
     // writes `partial N |` (13825 counted); the pair is kept honest by EmptyMeasureValidatorTests.
     private readonly Semantics.BarContext _bars = new();
 
+    // The bar grid of the lane being played: where its current bar opened, the first note
+    // that bar sounded, and whether that opening is a bar line at all (a lane's start may be
+    // the middle of a bar a section boundary splits, or a bare anacrusis). A wrong-length
+    // bar re-syncs at its closing bar line (AlignBarLine) — the page lays every part's bar
+    // N under the others' bar N, and this walk, which counts durations, let one miscounted
+    // bar push everything after it out of step with the other parts (owner's report
+    // 2026-10-14, Lab sessions/p904/sync: `c'4 d e | g2 g c,8 | e1` beside a correct part
+    // sounded its last bar an eighth early).
+    private int _barStart;
+    private int _barNotes;
+    private bool _barKnown;
+    // The first bar's length when the lane opens on a bar the parts disagree about
+    // (FirstBarTargets), or null: that bar is then measured against this, not the meter.
+    private int? _firstBarTicks;
+    // The length a note cut away by AlignBarLine carries until Export drops it: far enough
+    // below zero that a tie extending it later cannot bring it back.
+    private const int DroppedNote = int.MinValue / 2;
+
     // Tie handling: a tie (~) merges the next same-pitch note into the previous
     // one (one sustained note) instead of re-articulating it.
     // ⚠️ The previous ONSET, not the previous NOTE. A chord is one onset with several
@@ -468,7 +486,11 @@ public sealed class MidiExporter
         _partVelocity.Clear();
         _velocity = DefaultVelocity;
         _sourceOrdinals = new Dictionary<int, int>();
+        OpenBarGrid(mainTrack, null);
         ProcessNode(_root, mainTrack, conductorTrack);
+        // The notes an overfull bar ran past its bar line (AlignBarLine), once nothing indexes
+        // the track any more.
+        mainTrack.Notes.RemoveAll(n => n.DurationTicks < 0);
 
         // Ensure there is an initial time signature at tick 0. If the score already
         // declared one at the downbeat (ProcessTimeSignature added it), keep that and
@@ -780,16 +802,28 @@ public sealed class MidiExporter
                 int startOctave = _currentOctave;
                 Fraction startDuration = _defaultDuration;
                 int voicesEndTick = blockStartTick;
+                // Every voice is in the bar the span opened in (AlignBarLine); a later voice's
+                // cut reaches only its own notes — the first voice's later bars are already
+                // written after the bar's first note. The music after the span goes on in the
+                // first voice's bars.
+                var gridAtStart = (_barStart, _barNotes, _barKnown, _firstBarTicks);
+                (int, int, bool, int?)? gridAfterFirst = null;
                 foreach (var voice in voices)
                 {
                     _currentTick = blockStartTick;
                     _currentNoteName = startNoteName;
                     _currentOctave = startOctave;
                     _defaultDuration = startDuration;
+                    (_barStart, _barNotes, _barKnown, _firstBarTicks) = gridAtStart;
+                    if (gridAfterFirst != null)
+                        _barNotes = Math.Max(_barNotes, track.Notes.Count);
                     _pendingGraceSteal = 0; // a lane opens with no grace debt (PlaySection says why)
                     ProcessNode(voice, track, conductorTrack);
                     voicesEndTick = Math.Max(voicesEndTick, _currentTick);
+                    gridAfterFirst ??= (_barStart, _barNotes, _barKnown, _firstBarTicks);
                 }
+                (_barStart, _barNotes, _barKnown, _firstBarTicks) = gridAfterFirst is { } g
+                    && g.Item1 != gridAtStart._barStart ? g : gridAtStart;
                 _pendingGraceSteal = 0;
                 _currentTick = voicesEndTick;
                 // …and the music AFTER the span reads from the frame the span opened in
@@ -957,7 +991,7 @@ public sealed class MidiExporter
     /// part reopens the octave frame and the note value the section starts at.
     /// </summary>
     private void PlaySection(SectionDeclarationSyntax section, MidiTrack track, MidiTrack conductorTrack,
-        int octaveOffset = 0)
+        int octaveOffset = 0, int? firstBarTicks = null)
     {
         // The lyric blocks met in this section are sung onto its notes once the play is
         // done, whichever of PlaySectionCore's exits it leaves by (AttachLyrics).
@@ -965,13 +999,13 @@ public sealed class MidiExporter
         int sectionStart = _currentTick;
         var outerLyrics = _sectionLyrics;
         _sectionLyrics = new List<(LyricsBlockSyntax, string?)>();
-        PlaySectionCore(section, track, conductorTrack, octaveOffset);
+        PlaySectionCore(section, track, conductorTrack, octaveOffset, firstBarTicks);
         AttachLyrics(track, section, notesBefore, sectionStart);
         _sectionLyrics = outerLyrics;
     }
 
     private void PlaySectionCore(SectionDeclarationSyntax section, MidiTrack track, MidiTrack conductorTrack,
-        int octaveOffset)
+        int octaveOffset, int? firstBarTicks)
     {
         // A section is self-contained: its phrase auto-transpose baseline and the
         // scale-degree key both revert to the score's home key (a mid-section
@@ -1033,6 +1067,7 @@ public sealed class MidiExporter
         {
             if (p is PartDeclarationSyntax owner)
             {
+                OpenBarGrid(track, firstBarTicks);
                 PlayInPart(owner.Name.Text, () => ProcessSequence(
                         WithPlannedMeters(section.SectionName, section, ChildrenOf(section)), track, conductorTrack),
                     octaveOffset);
@@ -1045,6 +1080,7 @@ public sealed class MidiExporter
         // by-part section is played inside the part that contains it.
         if (_bareSectionOwner is { } bareOwner && !SectionHasPartBlock(section))
         {
+            OpenBarGrid(track, firstBarTicks);
             PlayInPart(bareOwner, () => ProcessChildren(section, track, conductorTrack),
                 octaveOffset);
             _currentTick = Math.Max(_currentTick, rowsEnd);
@@ -1060,6 +1096,12 @@ public sealed class MidiExporter
         // (`partial 2`, a melody and an empty `X { | | | }`) ran its section a bar and a half
         // past the page's 4,800 ticks.
         var sectionPickup = _bars.Partial;
+        // Each part block's first bar, when the parts disagree about it (AlignBarLine).
+        var partBlocks = new List<(string, SyntaxNode)>();
+        for (int i = 0; i < section.SlotCount; i++)
+            if (section.GetChild(i) is PartBlockSyntax block && !partBlocks.Any(b => b.Item1 == block.Name))
+                partBlocks.Add((block.Name, block));
+        var firstBars = FirstBarTargets(partBlocks);
         for (int i = 0; i < section.SlotCount; i++)
         {
             var child = section.GetChild(i);
@@ -1096,6 +1138,10 @@ public sealed class MidiExporter
                 _pendingGraceSteal = 0;
                 if (!tickLanes.ContainsKey(pname))
                     _bars.Partial = sectionPickup;
+                // A part's second block goes on from wherever its first stopped — no bar line
+                // this walk can vouch for.
+                OpenBarGrid(track, tickLanes.ContainsKey(pname) ? null
+                    : firstBars.TryGetValue(pname, out int firstBar) ? firstBar : null);
                 ProcessNode(sectionPart, track, conductorTrack);
                 _pendingGraceSteal = 0;
                 _currentPart = outerPart;
@@ -1134,11 +1180,23 @@ public sealed class MidiExporter
             return;
         int start = _currentTick;
         int end = start;
+        // Each part's copy's first bar, when the copies disagree about it (AlignBarLine), asked
+        // under the meter and pickup every copy opens with (PlaySectionCore's OpenSection).
+        var firstBars = new Dictionary<SectionDeclarationSyntax, int>();
+        if (sections.Count > 1)
+        {
+            var (meterBefore, pickupBefore) = (_bars.Save(), _bars.Partial);
+            _bars.OpenSection(_sectionHeaders.Times.GetValueOrDefault(name), _sectionHeaders.Partials.GetValueOrDefault(name));
+            firstBars = FirstBarTargets(sections.Where(s => s.Parent is PartDeclarationSyntax).Select(s => (s, (SyntaxNode)s)));
+            _bars.Restore(meterBefore);
+            _bars.Partial = pickupBefore;
+        }
         foreach (var section in sections)
         {
             _currentTick = start;
             _pendingGraceSteal = 0; // each part's copy is a lane of its own (PlaySection says why)
-            PlaySection(section, track, conductorTrack, octaveOffset);
+            PlaySection(section, track, conductorTrack, octaveOffset,
+                firstBars.TryGetValue(section, out int firstBar) ? firstBar : null);
             // A by-part cell (or a bare section the score attributes to one part) is one
             // part's voice: pad it to the section's canonical bar count. A by-section
             // declaration pads each of its part blocks inside PlaySection; a chord-track
@@ -1772,6 +1830,8 @@ public sealed class MidiExporter
                     || (bar.BarToken.Kind is SyntaxKind.RepeatStartBar && !atScopeStart);
                 atScopeStart = false;
                 bool timePassed = _currentTick > boundaryTick;
+                if (_currentTick > _barStart)
+                    AlignBarLine(track, items, i);
                 if (pairsHere && _currentTick <= boundaryTick && boundaryClaimed)
                 {
                     _currentTick += MeasureTicks();  // the second of a `| |` pair
@@ -1785,6 +1845,7 @@ public sealed class MidiExporter
                     _bars.SpendPartial();
                 boundaryTick = _currentTick;
                 boundaryClaimed = true;
+                MarkBarLine(track);
                 // …and fall through: the repeat spans below key on the repeat barlines,
                 // and every other node type still takes its ordinary path.
             }
@@ -1870,19 +1931,136 @@ public sealed class MidiExporter
             _defaultDuration = savedDuration;
             if (pass > 1)
                 _sourceOrdinals = new Dictionary<int, int>(ordinalSnapshot);
+            // The `:|` that ends a turn is not walked, so where the turn ends is no bar line
+            // this walk saw: the bar grid starts over unknown (AlignBarLine leaves its first bar).
+            if (pass > 1)
+                OpenBarGrid(track, null);
 
             ProcessSequence(body, track, conductorTrack);
 
             int ending = RepeatPasses.EndingFor(pass, endingPasses);
             if (ending >= 0)
+            {
+                OpenBarGrid(track, null);
                 ProcessSequence(endings[ending].Items.ToList(), track, conductorTrack);
+            }
         }
+        OpenBarGrid(track, null);
 
         return last;
     }
 
     private static bool IsRepeatBar(SyntaxNode node, SyntaxKind kind)
         => node is BarlineSyntax b && b.BarToken.Kind == kind;
+
+    /// <summary>Opens a lane's bar grid at the current tick: its first bar is held to
+    /// <paramref name="firstBarTicks"/> when the parts disagree about it, to the pickup when
+    /// one is declared, and otherwise left alone — a lane may open mid-bar (a bar the section
+    /// boundary splits) or on a bare anacrusis, and nothing here can tell which.</summary>
+    private void OpenBarGrid(MidiTrack track, int? firstBarTicks)
+    {
+        _barStart = _currentTick;
+        _barNotes = track.Notes.Count;
+        _firstBarTicks = firstBarTicks;
+        _barKnown = firstBarTicks != null;
+    }
+
+    /// <summary>A bar line at the current tick: the next bar opens here.</summary>
+    private void MarkBarLine(MidiTrack track)
+    {
+        _barStart = _currentTick;
+        _barNotes = track.Notes.Count;
+        _firstBarTicks = null;
+        _barKnown = true;
+    }
+
+    /// <summary>
+    /// Closes a bar whose length is wrong at its bar line, so the bars after it start where
+    /// the other parts' do. The span since the last bar line is taken as the bar it opened
+    /// (the meter, a pickup, or the first bar the parts settle on) plus the whole number of
+    /// meter bars it is nearest to: short of that it is filled with silence, past it
+    /// it is cut there (a note sounding across the end is shortened, one starting past it is
+    /// dropped). The page does the same with bar N of every part — it walks bars, this walk
+    /// counts durations.
+    /// </summary>
+    /// <remarks>
+    /// Only a bar that opened on a bar line (or a declared pickup) is measured. A span of
+    /// whole bars (a multi-bar rest, an unfolded repeat with no bar line between its turns)
+    /// is left as it is.
+    /// A short bar with nothing sounding after it in <paramref name="items"/> is left short
+    /// too: it is the first half of a bar the section boundary splits, written with a bar
+    /// line (`… a,, a,, | break` before a section opening with the other two beats — the
+    /// owner's Disco Inferno; MeasureValidator's splitByBoundary), and the section's end is
+    /// the longest lane's anyway.
+    /// </remarks>
+    private void AlignBarLine(MidiTrack track, List<SyntaxNode> items, int barLine)
+    {
+        if (!(_barKnown || _bars.Partial != null) || _bars.SenzaMisura)
+            return;
+        int length = _bars.Partial == null && _firstBarTicks is { } first ? first : MeasureTicks();
+        if (length <= 0)
+            return;
+        // 9/8 in 4/4 is one bar with an eighth too many; 15/8 is two bars with a bar line
+        // missing (`… cis, break fis,,8 …` in the owner's 銀河鉄道999 — cutting that to one
+        // bar dropped seven of its notes).
+        // The bars after the first are the meter's, whatever the first was (a pickup).
+        int meter = FractionToTicks(_bars.MeterLength);
+        int elapsed = _currentTick - _barStart;
+        int more = meter <= 0 ? 0 : Math.Max(0, (int)Math.Floor((elapsed - length) / (double)meter + 0.5));
+        int end = _barStart + length + more * meter;
+        if (_currentTick == end)
+            return;
+        if (_currentTick < end)
+        {
+            for (int k = barLine + 1; k < items.Count; k++)
+                if (items[k] is not (BarlineSyntax or BreakSyntax or LyricsBlockSyntax))
+                {
+                    _currentTick = end;
+                    break;
+                }
+            return;
+        }
+        for (int i = _barNotes; i < track.Notes.Count; i++)
+        {
+            var n = track.Notes[i];
+            if (n.DurationTicks <= 0)
+                continue;
+            if (n.StartTick >= end)
+                track.Notes[i] = n with { DurationTicks = DroppedNote };
+            else if (n.StartTick + n.DurationTicks > end)
+                track.Notes[i] = n with { DurationTicks = end - n.StartTick };
+        }
+        _currentTick = end;
+    }
+
+    /// <summary>
+    /// The first-bar length each lane of a section is held to, by the lane's key, when the
+    /// lanes disagree about it (an empty map when they agree, or there is one lane): the
+    /// meter when any lane fills it, else the longest that does not overfill it, else the
+    /// meter. Lanes that agree are a pickup or a bar the boundary splits — the same for
+    /// every part, so nothing to re-sync.
+    /// </summary>
+    private Dictionary<T, int> FirstBarTargets<T>(IEnumerable<(T Key, SyntaxNode Scope)> lanes) where T : notnull
+    {
+        var targets = new Dictionary<T, int>();
+        if (_bars.Partial != null || _bars.SenzaMisura)
+            return targets;
+        var meter = _bars.MeterLength;
+        var firsts = new List<(T Key, Fraction Duration)>();
+        foreach (var (key, scope) in lanes)
+        {
+            var bars = Semantics.MeasureModel.Split(scope, _phraseBodies!, meter);
+            if (bars.Count > 0 && !bars[0].IsEmpty && bars[0].Duration != Fraction.Zero)
+                firsts.Add((key, bars[0].Duration));
+        }
+        if (firsts.Count < 2 || firsts.All(f => f.Duration == firsts[0].Duration))
+            return targets;
+        var target = firsts.Any(f => f.Duration == meter) ? meter
+            : firsts.Where(f => f.Duration < meter).Select(f => f.Duration).DefaultIfEmpty(meter).Max();
+        foreach (var (key, _) in firsts)
+            targets[key] = FractionToTicks(target);
+        return targets;
+    }
 
     /// <summary>One measure of the meter in force, in ticks — what an empty <c>| |</c> bar
     /// costs. The same length <c>MeasureBuilder.EmitEmptyMeasure</c> gives that bar's
@@ -2480,6 +2658,20 @@ public sealed class MidiExporter
 
     private void ProcessChord(ChordSyntax chord, MidiTrack track, int extraOctave = 0)
     {
+        // The empty chord <> carries marks and occupies no time; a duration written on it
+        // still becomes the default (Semantics.MeasureDurations has the LilyPond measurements).
+        // It used to take its time here like any chord: `c'4 <>@sfz d e f` sounded five beats,
+        // and AlignBarLine then cut the bar's last note (audit/lp-regression/lys/empty-chord).
+        if (chord.IsEmpty)
+        {
+            if (chord.Duration is { } written)
+                GetDuration(written);
+            foreach (var child in chord.Articulations)
+                if (child is DynamicSyntax { Level: not DynamicLevel.None } dynamic)
+                    _velocity = dynamic.Velocity;
+            return;
+        }
+
         // A chord is ONE onset: a tie arriving here extends every member the previous
         // onset also sounded, and a member it did not sound articulates. The other two
         // outputs already state the same rule from their own side — the MusicXML
@@ -3172,7 +3364,7 @@ public sealed class MidiExporter
             if (sung != null && !PartSounds(sung))
                 continue;
             var onsets = track.Notes.Skip(notesBefore)
-                .Where(n => !n.IsGrace && (sung == null || n.Part == sung))
+                .Where(n => !n.IsGrace && n.DurationTicks >= 0 && (sung == null || n.Part == sung))
                 .Select(n => n.StartTick).Distinct().OrderBy(t => t).ToList();
             int bar = 0, oi = 0;
             foreach (var (text, _, _, isBarline, isMelisma) in Svg.Collector.LyricCollector.ParseSyllables(block))

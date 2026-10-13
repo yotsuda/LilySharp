@@ -6,6 +6,18 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Playback keeps the parts together after a miscounted bar
+
+- **A bar of the wrong length no longer pushes the rest of a part out of step.** At each bar
+  line the playback (preview and `lysc midi`) starts the next bar where the bar grid says it
+  starts, as the page does: a short bar is filled with silence, a bar with too much in it is cut
+  at the bar line (a note sounding across it is shortened; one starting after it is not played),
+  and a span close to two bars is taken as a missing bar line and keeps every note. A section's
+  first bar is evened out only when its parts disagree about it — a pickup every part writes,
+  or half a bar the next section completes, plays as before.
+- **The empty chord `<>` takes no time in playback**, as on the page: `c4 <>@sfz d` sounded the
+  `d` a beat late.
+
 ### A clef change on a condensed staff moves every part
 
 - **A `clef` written by one part of a `condensedStaff` changes the staff for all of them**, and
