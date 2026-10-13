@@ -24,13 +24,13 @@ The page in the video is the whole of [`samples/harbour-lights.lys`](samples/har
 //
 // One page from one source: chord symbols, a voice with its lyrics, and a piano on a
 // grand staff — pedal changes, hairpins, a triplet, a ritardando, rolled chords and
-// fermatas. Written in absolute octaves: bare c is C4 (C3 in the left hand).
+// fermatas. Written in relative octaves: each note takes the octave nearest the one
+// before it.
 title "Harbour Lights"
 composer "Lily#"
 tempo "Andante" 4 = 72
 time 4/4
 key ees major
-octave absolute
 
 paper { paperWidth 297mm  paperHeight 210mm }
 
@@ -41,10 +41,10 @@ part lh { clef bass octave 3 }
 section Song {
   chords harmony { Eb | Cm7 | Ab Bb7 | Eb | Ab | Fm7 Bb7 | Gm7 C7 | Fm7 Bb7 | Eb | }
   singer {
-    r4 g8@mp@phrasingSlur aes bes4. g8 | c'4 bes8 g ees4 g@!phrasingSlur |
-    aes4@phrasingSlur c'8 bes aes4 g8 f | g2.~ g8@!phrasingSlur r |
-    tuplet 3/2 { aes8@cresc@phrasingSlur bes c' } ees'4 d'8 c' bes4 | aes4. g8 f4 bes@!phrasingSlur |
-    bes4@f@phrasingSlur g'@accent f'8 ees' d' c'@!phrasingSlur | c'4@rit@decresc bes8 aes g4 f |
+    r4 g'8@mp@phrasingSlur aes bes4. g8 | c4 bes8 g ees4 g@!phrasingSlur |
+    aes4@phrasingSlur c8 bes aes4 g8 f | g2.~ g8@!phrasingSlur r |
+    tuplet 3/2 { aes8@cresc@phrasingSlur bes c } ees4 d8 c bes4 | aes4. g8 f4 bes@!phrasingSlur |
+    bes4@f@phrasingSlur g'@accent f8 ees d c@!phrasingSlur | c4@rit@decresc bes8 aes g4 f |
     ees1@p@fermata@!rit |.
   }
   lyrics words sings singer {
@@ -54,17 +54,17 @@ section Song {
     all the lights are call- ing | me, back a- long the | shore. |
   }
   rh {
-    r8 g@p bes ees' r g bes ees' | r8 g bes ees' r g bes d' |
-    r8 aes c' ees' r f aes d' | <ees g bes>2 <g bes ees'>2@arpeggio |
-    r8 aes c' ees' r aes c' ees' | r8 f aes c' r f aes d' |
-    r8 g bes d' r g bes e' | <f aes c'>2 <f aes d'>2 |
-    <ees g bes ees'>1@arpeggio@fermata |.
+    r8 g'@p bes ees r g, bes ees | r8 g, bes ees r g, bes d |
+    r8 aes c ees r f, aes d | <ees, g, bes,>2 <g, bes, ees,>2@arpeggio |
+    r8 aes, c ees r aes, c ees | r8 f, aes c r f, aes d |
+    r8 g, bes d r g, bes e | <f, aes, c,>2 <f, aes, d,>2 |
+    <ees, g, bes, ees>1@arpeggio@fermata |.
   }
   lh {
-    ees,2@sustain bes, | c2@sustain g, |
-    aes,2@sustain bes,@sustain | ees,2@sustain bes,4 g, |
-    aes,8@sustain ees aes ees aes, ees aes ees | f,8@sustain c f aes bes,@sustain f aes d |
-    g,8@sustain d f bes c@sustain g bes e | f,2@sustain bes,@sustain |
+    ees,2@sustain bes' | c2@sustain g |
+    aes2@sustain bes@sustain | ees,2@sustain bes'4 g |
+    aes8@sustain ees' aes ees aes, ees' aes ees | f,8@sustain c' f aes bes,@sustain f' aes d, |
+    g,8@sustain d' f bes c,@sustain g' bes e, | f,2@sustain bes@sustain |
     <ees, bes, ees>1@fermata@!sustain |.
   }
 }
