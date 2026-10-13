@@ -6,7 +6,7 @@ composer "Traditional"
 tempo "Andante" 4. = 56
 time 6/8  key a minor
 
-part gt { clef treble_8 tuning guitar }
+part gt { instrument guitar }
 
 phrase Amchord { a8 e' a c\2 a e | }
 phrase Cchord  { c8 e g c g e | }
