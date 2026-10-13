@@ -11,7 +11,7 @@ editor at work, a gallery of engraved scores, and the
 [![VS Code Marketplace](https://vsmarketplacebadges.dev/version/yotsuda.lilysharp.svg?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=yotsuda.lilysharp)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3%20or%20later-blue.svg)](LICENSE)
 
-*Harbour Lights* — music, words and source composed by an AI (Claude, by Anthropic) — engraved and played by Lily#. Each note lights as it sounds, the way the VS Code preview follows along:
+*Harbour Lights* — music, words and source composed by an AI (Claude, by Anthropic) — engraved by Lily#. Play it in the VS Code preview and each note lights up as it sounds:
 
 https://github.com/user-attachments/assets/2b00e458-15b7-485c-a82c-ce7db2970d13
 
