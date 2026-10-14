@@ -194,6 +194,11 @@ internal static class MeasureModel
                 // to, its bars close where their beats fill (Flowed), every note kept.
                 if (current.Count > 0)
                     flows = true;
+                // …and one inside a phrase body leaves the body unpriced by the bar check
+                // (MeasureValidator.FlowingPhraseBody), which could not report what the page would
+                // leave undrawn: the bar it opens closes where its beats fill.
+                if (callSites.Count > 0)
+                    flows = true;
                 continue;
             }
             if (node is BarlineSyntax bar)

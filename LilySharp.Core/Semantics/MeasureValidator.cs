@@ -1299,9 +1299,11 @@ internal sealed class MeasureValidator : ISemanticValidator
     /// is priced exactly by <see cref="MeasureDurations.ItemDuration"/> or occupies no time
     /// (a marker, a key or clef change, a break) or is a reference to such a phrase in turn
     /// (priced by <see cref="PricePhraseBody"/>, its note value restarting at a quarter as the
-    /// collector's frame does); else null, and the reference stays an opaque zero-duration item.
-    /// A meter change, a repeat, a voice span, a multi-bar rest or a reference that cycles keeps
-    /// it opaque — pricing only part of such a body would invent misfills.</summary>
+    /// collector's frame does) or a voice span played by its first voice; else null, and the
+    /// reference stays an opaque zero-duration item. A meter change, a repeat, a multi-bar rest
+    /// or a reference that cycles keeps it opaque — pricing only part of such a body would invent
+    /// misfills (MeasureModel lets the bars of the first three close where their beats fill, so
+    /// nothing is left undrawn unreported).</summary>
     /// <remarks>A nested reference was opaque until 2026-10-14, so a bar holding one could not
     /// be held to its bar line (MeasureModel.Bar.Flowed) — the last bar whose music closed bars
     /// of its own where the beats filled, against "the bar lines are the bars".</remarks>
@@ -1315,31 +1317,7 @@ internal sealed class MeasureValidator : ISemanticValidator
             return null;
         try
         {
-            var items = new List<SyntaxNode>();
-            foreach (var item in block.Items)
-            {
-                switch (item)
-                {
-                    case NoteSyntax or DrumNoteSyntax or ChordSyntax or ChordRepetitionSyntax
-                        or SlashNoteSyntax or BareDurationSyntax
-                        or TupletExpressionSyntax or ArpeggioSyntax or GraceExpressionSyntax
-                        or CueExpressionSyntax or BarlineSyntax
-                        or TieSyntax or SlurSyntax or BeamMarkerSyntax
-                        or KeySignatureSyntax or ClefDeclarationSyntax or BreakSyntax:
-                        break;
-                    case RestSyntax rest when rest.MeasureCount <= 1:
-                        break;
-                    case RepeatExpressionSyntax trem when trem.RepeatType.Text == "tremolo"
-                        && int.TryParse(trem.Count.Text, out _):
-                        break;
-                    case VariableReferenceSyntax nested when FlowingPhraseBody(nested, open) != null:
-                        break;
-                    default:
-                        return null;
-                }
-                items.Add(item);
-            }
-            return items;
+            return block.Items.All(item => PricedInPlace(item, open)) ? block.Items.ToList() : null;
         }
         finally
         {
@@ -1347,11 +1325,34 @@ internal sealed class MeasureValidator : ISemanticValidator
         }
     }
 
+    /// <summary>True for an item <see cref="PricePhraseBody"/> can play onto a bar tally: one
+    /// <see cref="MeasureDurations.ItemDuration"/> prices exactly, one that occupies no time, a
+    /// reference to a flowing phrase, or a voice span whose first voice is all such items (the
+    /// voice the collector walks inline and whose bars are the staff's — the others are checked
+    /// against it where the body is declared).</summary>
+    private bool PricedInPlace(SyntaxNode item, HashSet<string> open) => item switch
+    {
+        NoteSyntax or DrumNoteSyntax or ChordSyntax or ChordRepetitionSyntax
+            or SlashNoteSyntax or BareDurationSyntax
+            or TupletExpressionSyntax or ArpeggioSyntax or GraceExpressionSyntax
+            or CueExpressionSyntax or BarlineSyntax
+            or TieSyntax or SlurSyntax or BeamMarkerSyntax
+            or KeySignatureSyntax or ClefDeclarationSyntax or BreakSyntax => true,
+        RestSyntax rest => rest.MeasureCount <= 1,
+        RepeatExpressionSyntax trem => trem.RepeatType.Text == "tremolo" && int.TryParse(trem.Count.Text, out _),
+        VariableReferenceSyntax nested => FlowingPhraseBody(nested, open) != null,
+        ParallelExpressionSyntax span => span.Voices.FirstOrDefault() is MusicBlockSyntax lead
+            && lead.Items.All(i => PricedInPlace(i, open)),
+        _ => false,
+    };
+
     /// <summary>Plays a flowing phrase body (<see cref="FlowingPhraseBody(VariableReferenceSyntax)"/>)
     /// onto a bar tally: its beats join <paramref name="total"/>, a body bar line closes the bar
     /// where the tally stands (counted in <paramref name="barsClosed"/>), a nested reference plays
-    /// its own body in place from a fresh quarter. Returns the note value the body leaves.</summary>
-    private Fraction PricePhraseBody(List<SyntaxNode> body, Fraction entryDefault, ref Fraction total, ref int barsClosed)
+    /// its own body in place from a fresh quarter, a voice span plays its first voice and leaves
+    /// the note value it opened with (the collector restores the frame after a span). Returns the
+    /// note value the body leaves.</summary>
+    private Fraction PricePhraseBody(IEnumerable<SyntaxNode> body, Fraction entryDefault, ref Fraction total, ref int barsClosed)
     {
         var running = entryDefault;
         foreach (var bodyItem in body)
@@ -1366,6 +1367,11 @@ internal sealed class MeasureValidator : ISemanticValidator
             if (bodyItem is VariableReferenceSyntax nested && FlowingPhraseBody(nested) is { } nestedBody)
             {
                 running = PricePhraseBody(nestedBody, Fraction.Quarter, ref total, ref barsClosed);
+                continue;
+            }
+            if (bodyItem is ParallelExpressionSyntax { Voices: var voices } && voices.FirstOrDefault() is MusicBlockSyntax lead)
+            {
+                PricePhraseBody(lead.Items, running, ref total, ref barsClosed);
                 continue;
             }
             total += MeasureDurations.ItemDuration(bodyItem, ref running);

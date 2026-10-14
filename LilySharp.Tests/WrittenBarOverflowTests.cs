@@ -205,6 +205,28 @@ public class WrittenBarOverflowTests
     }
 
     [Fact]
+    public void APhraseHoldingAVoiceSpan_IsPricedByItsFirstVoice()
+    {
+        // `p f g |` with p a three-beat voice span: the bar is five beats, the g past it is not
+        // drawn — and the bar check says so. It priced the span as nothing (an opaque phrase)
+        // and called the bar short while the page dropped the g in silence.
+        const string phrases = "phrase p { voice { c''4 d e } { c'4 d e } }";
+        var bars = PhraseBars(phrases, "p f g | c1 |");
+        Assert.Equal(2, bars.Length);
+        var diags = PhraseDiagnostics(phrases, "p f g | c1 |");
+        Assert.Contains(diags, d => d.Code == DiagnosticCodes.MeasureOverflow);
+    }
+
+    [Fact]
+    public void APhraseChangingTheMeter_KeepsEveryNote()
+    {
+        // A `time` inside a phrase body leaves the body unpriced by the bar check, so its bar
+        // closes where the beats fill rather than leaving music undrawn unreported.
+        var bars = PhraseBars("phrase p { time 3/4 c'2. }", "p d4 | time 4/4 c1 |");
+        Assert.Equal(3, bars.Sum(Sounding));
+    }
+
+    [Fact]
     public void MusicWithNoBarLines_StillFillsBarAfterBar_AndIsAnError()
     {
         var bars = Bars("c'1 d e f");
