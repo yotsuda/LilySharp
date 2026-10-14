@@ -6,6 +6,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Roman numerals follow the key back after a modulated section
+
+- **`chords … as roman` reads a section in the file's key again after a section that wrote
+  its own `key`.** The boundary always put the staff back in the home key, but the degrees
+  stayed in the other one (a section in C after one in F printed C as V).
+
 ### A lyric extender that ends before a line break stays on its line
 
 - **A melisma that ends before a line break no longer draws its extender line to the end of

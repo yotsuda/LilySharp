@@ -643,6 +643,11 @@ public sealed partial class MeasureCollector
             var previousKey = new KeySignature(_meta.KeySharps, _meta.KeyCustom);
             _meta.KeySharps = _sectionResetKeySharps;
             _meta.KeyCustom = _sectionResetKeyCustom;
+            // The revert is a key change for the Roman-numeral degrees too: a section after
+            // one that wrote `key f major` is back in the home key, and `chords … as roman`
+            // read it in F until session 905 (C showed as V). A custom home key has no tonic.
+            if (_sectionResetKeyCustom == null)
+                RecordKeyAtMeasure(builder.CurrentMeasureIndex, _meta.KeyTonicStep, _sectionResetKeySharps);
             builder.AddItem(new KeySignatureChangeItem(
                 new KeySignature(_meta.KeySharps, _meta.KeyCustom), previousKey, sectionPos)
             {

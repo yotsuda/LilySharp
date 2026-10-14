@@ -203,4 +203,28 @@ public class RomanChordEntryTests
             """);
         Assert.True(tree.HasErrors);
     }
+
+    [Fact]
+    public void ASectionAfterAModulatedOneReadsItsDegreesInTheHomeKey()
+    {
+        // A section boundary reverts the key to the home key (the staff draws the naturals),
+        // and that revert is a key change for the degrees too. Until session 905 only a
+        // WRITTEN `key` re-based them, so C2 below read C F as V I (in F) — the owner met it
+        // in a lesson sheet that set out each progression in C, then in F.
+        var tree = SyntaxTree.Parse("""
+            part m { clef treble }
+            section C1 { chords prog { C F | }  m { c'2 f' | } }
+            section F1 { chords prog { F Bb | }  m { key f major f'2 bes' | } }
+            section C2 { chords prog { C F | }  m { c'2 f' | } }
+            form { ~C1 ~F1 ~C2 }
+            score { chords prog as roman  staff m }
+            """);
+        Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+        var spec = RenderSpecParser.FindFirst(tree);
+        Assert.NotNull(spec);
+        var score = new MeasureCollector().CollectMultiStaff(tree, spec!);
+        Assert.Equal(new[] { "I", "IV", "I", "IV", "I", "IV" },
+            score.ChordNames.OrderBy(c => c.MeasureIndex).ThenBy(c => c.Timing)
+                .Select(c => c.RomanText).ToArray());
+    }
 }

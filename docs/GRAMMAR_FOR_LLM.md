@@ -748,6 +748,30 @@ form { Main |: ~Loop :| }
 score sheet { chords prog lyrics words }     // chords + lyrics rows, no staff
 ```
 
+**Roman numerals.** A chord entry may also be a DEGREE of the key in force at its bar —
+`I` `IIm7` `V7` `IVmaj7` `VIIm7-5` `bVII` (ASCII `b`/`#`, not `♭`/`♯`); a `/` adds a BASS written as a
+spelling is printed as names or as degrees by the SCORE: `chords prog` prints names,
+`chords prog as roman` prints degrees. To show both, place the track twice (two rows):
+
+```
+key c major
+part bass { instrument bass }
+section Main {
+  chords prog { C | Am | F | G7 | }       // prints C Am F G7 …
+  bass { c1 | a | f | g | }
+}
+form { ~Main }
+score {
+  chords prog
+  chords prog as roman                    // … and under it I VIm IV V7
+  staff bass
+}
+```
+
+The degrees follow the key: a `key` in the music re-bases every degree after it, and so
+does the revert to the file's key at a section boundary. Write chord functions for teaching
+this way rather than as lyrics.
+
 ## Structure: reuse and navigation
 
 ```
