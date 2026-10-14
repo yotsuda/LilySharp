@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 254 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **380** | |
+| `OWN` | 255 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **381** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -26,8 +26,8 @@
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 12 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 10 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 9 |
+| `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 8 |
-| `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 7 |
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（254 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（255 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -457,6 +457,7 @@
 - **`DynamicEngraver.PlaceOnMultiMeasureRests`** ⚠️ LILYSHARP-OWN: the number is a support of THIS text alone, not ink of the staff's
 - **`DynamicEngraver.SmuflGlyphRun`** the ink the side-position reads. LILYSHARP-OWN: LilyPond reads no SMuFL font and sets its
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
+- **`ElementCoordinator.BuildTieColumn`** LILYSHARP-OWN: LilyPond boxes the slash head as any head (tie-formatting-problem.cc
 - **`ElementCoordinator.BuildTieSpecification`** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
 - **`ElementCoordinator.BuildTieSpecification`** ⚠️ LILYSHARP-OWN, and LilyPond cannot be asked: MEASURED on 2.26.0, all three
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`

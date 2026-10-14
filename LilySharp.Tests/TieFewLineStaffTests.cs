@@ -35,6 +35,13 @@ namespace LilySharp.Tests;
 /// <item>ONE line, <c>b4 b4~ b4 b4</c>: 0.7500 above, 2.6022 wide;</item>
 /// <item>ONE line, <c>/4 /4~ /4 /4</c>: 0.7500 above, 3.0132 wide.</item>
 /// </list>
+/// ⚠️ THE TWO SLASH ROWS ARE NO LONGER LILYPOND'S (session 905, the owner: "the tie sticks to
+/// the /"): LilyPond boxes the slash as any head, and its one-line tie starts 0.11 inside the
+/// first slash's ink. The slash's slanted ink above and below the head box now enters the tie
+/// outline (ElementCoordinator.AddSlashInk, LILYSHARP-OWN), so the one-line tie runs from the
+/// first slash's ink to the second's — 2.1556 wide where LilyPond's 3.0132 starts inside the first —
+/// and the five-line one, which never touched, keeps LilyPond's width and stands 0.2783 over
+/// the line where LilyPond's stands 0.2469 (the scorer weighs the new outline above the head).
 /// On the one-line staff the widened staff span is EMPTY, so position 0 is not "within the
 /// staff" (tie-formatting-problem.cc:522-528); the search lands on position 1 instead, the
 /// head-edge hug lifts it to 0.5 + outer-tie-vertical-gap = 0.75 (:495-505), and at that height
@@ -63,9 +70,9 @@ public class TieFewLineStaffTests
 
     [Theory]
     [InlineData("b4 b4~ b4 b4", "staff comp", 2, 0.2604, 1.2980)]
-    [InlineData("/4 /4~ /4 /4", "staff comp", 2, 0.2469, 1.2980)]
+    [InlineData("/4 /4~ /4 /4", "staff comp", 2, 0.2783, 1.2980)]   // LILYSHARP-OWN lift, see the remarks
     [InlineData("b4 b4~ b4 b4", "staff comp as lines 1", 0, 0.7500, 2.6022)]
-    [InlineData("/4 /4~ /4 /4", "staff comp as lines 1", 0, 0.7500, 3.0132)]
+    [InlineData("/4 /4~ /4 /4", "staff comp as lines 1", 0, 0.7500, 2.1556)]
     public void ATieIsScoredAgainstItsOwnStaffsLines(string music, string staff, int middleLine, double lift, double span)
     {
         var g = RenderedGeometry.RenderProduct(Book(music, staff));

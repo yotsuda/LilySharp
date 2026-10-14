@@ -2105,6 +2105,18 @@ internal sealed class ElementCoordinator
         }
         if (tied.Count == 0)
             return null;
+        // A SLASH head is a slanted parallelogram about twice a staff space tall, and the tied
+        // head's one-staff-space box (and the recession box above it, at the head's CENTRE) let
+        // a tie over it start and end inside the slash's ink: `/4~ | 4` drew the tie from the
+        // first slash's upper half into the second's. Its slanted ink enters the outline in
+        // thin strips, so the tie clears the slash at the tie's own height.
+        // LILYSHARP-OWN: LilyPond boxes the slash head as any head (tie-formatting-problem.cc
+        //   :116-121) and draws the same overlap — measured on 2.26 (Lab probes/slash-tie
+        //   lp-user.svg): its tie starts 0.11 inside the first slash's right edge and ends 0.1
+        //   from the second's left (the owner: "the tie sticks to the /", session 905).
+        if (LayoutUtilities.NoteheadStyleOf(item) == NoteheadStyle.Slash)
+            for (int i = 0; i < positions.Count; i++)
+                AddSlashInk(others ??= [], positions[i] * 0.5, columnX + offsets[i], headBBox);
         // Equal positions (a UNISON pair) fall back to X: LilyPond's bounds order is the
         // ties' order, and its unison pair always has the RIGHT head second (the second
         // member is the one displaced, and it goes to the right for either stem direction),
@@ -3296,6 +3308,40 @@ internal sealed class ElementCoordinator
     private static GlyphMetrics.BBox BowHeadBox(MusicItem item, int noteValue)
         => GlyphMetrics.GetNoteheadBBox(BowFont(item) ?? GlyphMetrics.StaffHeadFont,
             GlyphMetrics.HeadStyleOf(item), noteValue);
+
+    /// <summary>The slash head's horizontal stroke width as a share of its box: Emmentaler's
+    /// <c>noteheads.s2slash</c> is a parallelogram whose bottom and top edges are 100 of its
+    /// 420 design units wide.</summary>
+    private const double SlashStrokeShare = 100.0 / 420.0;
+
+    /// <summary>How many strips a slash head's slanted ink enters a tie outline in.</summary>
+    private const int SlashInkStrips = 8;
+
+    /// <summary>
+    /// A SLASH head's ink, bottom-left to top-right, as thin boxes stacked over its height —
+    /// each strip as wide as the parallelogram's ink across it — in the tie outline's frame
+    /// (Y up from the middle line, page X). See BuildTieColumn.
+    /// </summary>
+    private static void AddSlashInk(List<TieOutlineBox> boxes, double centreY, double headX,
+        GlyphMetrics.BBox box)
+    {
+        double width = box.Right - box.Left;
+        double stroke = width * SlashStrokeShare;
+        double run = width - stroke;   // how far the stroke travels right from bottom to top
+        double height = box.Top - box.Bottom;
+        for (int k = 0; k < SlashInkStrips; k++)
+        {
+            double f0 = (double)k / SlashInkStrips, f1 = (double)(k + 1) / SlashInkStrips;
+            double yDown = centreY + box.Bottom + f0 * height, yUp = centreY + box.Bottom + f1 * height;
+            // Only the ink ABOVE and BELOW the tied head's one-staff-space box: inside it the
+            // head box already stands at the slash's outer edge, and a tie that stays within it
+            // (a five-line staff's, 0.25 over the head) keeps LilyPond's outline exactly.
+            if (yDown >= centreY - 0.5 && yUp <= centreY + 0.5)
+                continue;
+            boxes.Add(new TieOutlineBox(yDown, yUp,
+                headX + box.Left + f0 * run, headX + box.Left + f1 * run + stroke));
+        }
+    }
 
     /// <summary>
     /// The font a slur reads a note column's head-hung grobs from — its stem's attachment x

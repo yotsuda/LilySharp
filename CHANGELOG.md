@@ -6,6 +6,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### A tie between slash heads no longer runs into the slash
+
+- **A tie between slash notes (`/4~ /4`) starts and ends clear of the slanted heads** — on a
+  one-line rhythm staff it used to start inside the first slash. LilyPond draws the same
+  overlap; Lily# now reads the slash's own outline.
+
 ### Multi-bar percent repeats draw the standard sign
 
 - **`%3` and longer draw one sign at the middle of the repeated bars** — on the middle bar line
