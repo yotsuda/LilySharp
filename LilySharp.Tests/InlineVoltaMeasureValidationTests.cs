@@ -74,7 +74,7 @@ public sealed class InlineVoltaMeasureValidationTests
         // was one opaque zero-duration item this was silent — the only bar in the book
         // nobody counted.
         Assert.Contains(BarFullness("|: c'4 c' c' c' | [1. c'1 c'1 c'1 | ] :| [2. c'4 c' c' c' | ]"),
-            d => d.Code is DiagnosticCodes.MeasureOverflow or DiagnosticCodes.MissingBarLine);
+            d => d.Code == DiagnosticCodes.MissingBarLine); // three whole bars: two bar lines left out
 
     [Fact]
     public void AWellFormedEndingIsSilent() =>
