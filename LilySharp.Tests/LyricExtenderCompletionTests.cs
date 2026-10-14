@@ -133,4 +133,49 @@ public class LyricExtenderCompletionTests
             Regex.Match(attrs, name + "=\"([^\"]+)\"").Groups[1].Value,
             CultureInfo.InvariantCulture);
     }
+
+    [Fact]
+    public void ExtenderBeforeABreak_WhoseMelismaEndsOnItsOwnLine_DoesNotCrossTheBreak()
+    {
+        // `la _ _ _ | lu` over `c4 d e f | break g1`: the next syllable is on line 2, but
+        // every held note is on line 1. LilyPond completizes the extender on f, so it is
+        // never broken: it ends at f's ink right (not the line end) and line 2 draws
+        // nothing before "lu" (measured, Lab probes/lyric-extender lp-hand.ly). It ran to
+        // the line end and drew a stub on line 2 until session 905.
+        var svg = LiveRender.SvgFromRenderSpec("""
+            part m { clef treble }
+            section S {
+              m { c4 d e f | break g1 | }
+              lyrics w sings m { la _ _ _ | lu | }
+            }
+            form { ~S }
+            score { staff m  lyrics w }
+            """);
+
+        var segments = new List<(double X1, double X2, double Y)>();
+        foreach (Match m in Regex.Matches(svg, "<line ([^>]*stroke-width=\"0.080\"[^>]*)/>"))
+        {
+            var a = m.Groups[1].Value;
+            double y1 = Attr3(a, "y1"), y2 = Attr3(a, "y2");
+            double x1 = Attr3(a, "x1"), x2 = Attr3(a, "x2");
+            if (y1 == y2 && x2 - x1 < 90)   // staff lines span the full width
+                segments.Add((x1, x2, y1));
+        }
+        var ext = Assert.Single(segments);
+
+        // The quarter-note heads of line 1: the ones above the extender, in x order;
+        // f is the last of them.
+        var heads = Regex.Matches(svg,
+                "<text class=\"music\" x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*data-pos[^>]*>")
+            .Select(m => (X: Attr3(m.Value, "x"), Y: Attr3(m.Value, "y")))
+            .Where(h => h.Y < ext.Y)
+            .Select(h => h.X).Distinct().OrderBy(x => x).ToList();
+        double fInkRight = heads[^1] + GlyphMetrics.GetNoteheadBBox(4).Right;
+        // The svg writes two decimals, the head's x included.
+        Assert.InRange(ext.X2, fInkRight - 0.02, fInkRight + 0.02);
+
+        static double Attr3(string attrs, string name) => double.Parse(
+            Regex.Match(attrs, name + "=\"([^\"]+)\"").Groups[1].Value,
+            CultureInfo.InvariantCulture);
+    }
 }

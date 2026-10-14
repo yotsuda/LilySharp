@@ -651,6 +651,26 @@ internal sealed class LyricHyphenEngraver
         // stands at 29.07.
         // LILYPOND-REF: lily/lyric-extender.cc:80-84 print — right_point is
         //   raised to the last head's extent RIGHT.
+        // A melisma whose held notes all stand on THIS line does not cross the break,
+        // even though the next syllable does: LilyPond completizes the extender on its
+        // last head before the next syllable arrives, so the spanner is never broken —
+        // no run to the line end, and no stub on the next line (a piece there would
+        // hold no head and print nothing either). It ends as an unbroken one does,
+        // except that the next syllable, on another line, does not cap it.
+        // LILYPOND-REF: lily/extender-engraver.cc:241-257 completize_extender — RIGHT
+        //   bound = heads.back();
+        // LILYPOND-REF: lily/lyric-extender.cc:50-53 extract_grob_set (me, "heads", heads) — no heads, no stencil.
+        // MEASURED (Lab probes/lyric-extender lp-hand.ly, LP 2.26): `la __ _ _ _ lu`
+        // over `c4 d e f | \break g1` ends at 88.49 = f's note-column right 88.485,
+        // the line ending at 110.78, and line 2 draws nothing before "lu".
+        bool heldOnThisLine = crossesSystem
+            && current.Item.MelismaEndMeasureIndex >= 0
+            && measureToSystem.TryGetValue(current.Item.MeasureIndex, out var ownSystem)
+            && measureToSystem.TryGetValue(current.Item.MelismaEndMeasureIndex, out var heldSystem)
+            && heldSystem.systemIndex == ownSystem.systemIndex;
+        if (heldOnThisLine)
+            crossesSystem = false;
+
         double endX;
         if (crossesSystem)
             endX = next.X - next.Width / 2 - _params.ExtenderPadding;
@@ -660,7 +680,9 @@ internal sealed class LyricHyphenEngraver
                 SystemRightOf(current, measureToSystem));
             if (HeldEndInkRight(current.Item, measuresByStaff, systems) is { } heldEnd)
                 rightPoint = Math.Max(rightPoint, heldEnd);
-            endX = Math.Min(rightPoint, next.X - next.Width / 2 - _params.ExtenderPadding);
+            endX = heldOnThisLine
+                ? rightPoint
+                : Math.Min(rightPoint, next.X - next.Width / 2 - _params.ExtenderPadding);
         }
         // Lyric baseline is stored Y-up from the system top; reflect back for the
         // still-device extender layout.
