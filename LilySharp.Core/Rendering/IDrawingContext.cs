@@ -322,6 +322,14 @@ public interface IDrawingContext
     void DrawBarBox(int barNumber, double x, double y, double width, double height) { }
 
     /// <summary>
+    /// In interactive SVG, an invisible box over one bar of one staff — the bar's X range, the
+    /// staff's top line to its bottom one — carrying where that bar is written
+    /// (<c>data-start</c>, the offset of its first note, rest or chord). A click on the bar in
+    /// the preview takes the editor there. Draws nothing; static backends emit nothing.
+    /// </summary>
+    void DrawBarStaffBox(int sourcePosition, double x, double y, double width, double height) { }
+
+    /// <summary>
     /// Begins a transformed group scope. Subsequent draw operations have the
     /// transform applied (in document order, after any enclosing groups).
     /// Dispose the returned token to end the scope.

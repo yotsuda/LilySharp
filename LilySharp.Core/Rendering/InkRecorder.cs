@@ -348,6 +348,9 @@ internal sealed class InkRecorder : IDrawingContext
     public void DrawBarBox(int barNumber, double x, double y, double width, double height)
         => _inner.DrawBarBox(barNumber, x, y, width, height);
 
+    public void DrawBarStaffBox(int sourcePosition, double x, double y, double width, double height)
+        => _inner.DrawBarStaffBox(sourcePosition, x, y, width, height);
+
     public IDisposable BeginGroup(DrawingTransform transform)
     {
         var (tx, ty, sx, sy) = _transforms.Peek();

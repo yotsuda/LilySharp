@@ -27,7 +27,7 @@ public enum SvgPageChange
     Changed,
     /// <summary>Byte-identical to the previous render's page — the same string instance.</summary>
     Same,
-    /// <summary>The same text, except that every <c>data-pos</c>/<c>data-alt</c> number is
+    /// <summary>The same text, except that every <c>data-pos</c>/<c>data-alt</c>/<c>data-start</c> number is
     /// the previous one mapped through <see cref="SvgPageSet.Window"/>: a viewer holding the
     /// previous page reproduces this one by shifting its offsets.</summary>
     Shifted,
@@ -170,6 +170,8 @@ public sealed class SvgPageSet
     {
         const string Pos = " data-pos=\"";
         const string Alt = " data-alt=\"";
+        // A bar's written place (SvgDrawingContext.DrawBarStaffBox) is a source offset too.
+        const string Start = " data-start=\"";
         int i = 0, j = 0;
         while (i < previous.Length && j < current.Length)
         {
@@ -183,11 +185,15 @@ public sealed class SvgPageSet
                 if (rel < 0)
                     break;
                 var at = previous.AsSpan(from + rel);
-                if (at.StartsWith(Pos, StringComparison.Ordinal) || at.StartsWith(Alt, StringComparison.Ordinal))
+                string? spelled = at.StartsWith(Pos, StringComparison.Ordinal) ? Pos
+                    : at.StartsWith(Alt, StringComparison.Ordinal) ? Alt
+                    : at.StartsWith(Start, StringComparison.Ordinal) ? Start
+                    : null;
+                if (spelled != null)
                 {
-                    isAlt = at.StartsWith(Alt, StringComparison.Ordinal);
+                    isAlt = ReferenceEquals(spelled, Alt);
                     opener = true;
-                    end = from + rel + Pos.Length;
+                    end = from + rel + spelled.Length;
                     break;
                 }
                 from += rel + 1;

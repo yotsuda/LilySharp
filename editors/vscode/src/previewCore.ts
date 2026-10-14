@@ -42,7 +42,7 @@ export interface RenderEntry {
  * The picture as pages (the server's SvgPages, 2026-09-18): the frame around them and one
  * item per page. With BaseVersion, a DELTA against the picture of that version, which this
  * client said the webview holds: a 'same' page carries no markup, a 'shifted' page carries
- * none either and the webview maps every data-pos / data-alt of the page it holds through
+ * none either and the webview maps every data-pos / data-alt / data-start of the page it holds through
  * Window, and only a 'changed' page carries its markup. Without BaseVersion every page
  * carries its markup, and Head + markup… + Tail is the one-string picture.
  */

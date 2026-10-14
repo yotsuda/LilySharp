@@ -2936,8 +2936,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .main-content.dragging [data-pos] {
             cursor: grabbing;
         }
-        .main-content [data-pos] {
+        .main-content [data-pos],
+        .main-content.over-bar {
             cursor: pointer;
+        }
+        /* The bar a click would go to (barStaffAt), tinted as the scan view tints its bars. */
+        #svgContainer rect.bar-staff.hover {
+            fill: rgba(0, 120, 215, 0.08);
         }
         .container {
             max-width: 100%;
@@ -3349,7 +3354,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // single one is the template's own escape and vanishes (a \\s written
         // singly became an s, and a \\/ a /, which ended the regex early and took
         // the whole script down — the preview stayed on "Loading", 2026-09-04).
-        const SOURCE_ATTRS = /\\s(data-pos|data-alt)="[^"]*"/g;
+        const SOURCE_ATTRS = /\\s(data-pos|data-alt|data-start)="[^"]*"/g;
+        // The elements that carry one: a grob's data-pos, a barline's data-alt list, and a bar's
+        // written place (rect.bar-staff's data-start, which a click on the bar goes to).
+        const SOURCE_SELECTOR = '[data-pos], [data-alt], [data-start]';
         let shownPages = null;      // per page: { markup, blank } of what is on screen
         let shownFrame = null;      // the markup around the pages (svg tag, style, closing)
 
@@ -3379,11 +3387,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // any line up one to one. false when they do not — a count that differs —
         // and the caller replaces the page instead.
         function restampPage(page, markup) {
-            const els = page.querySelectorAll('[data-pos], [data-alt]');
-            const attrs = /\\sdata-(pos|alt)="([^"]*)"/g;
+            const els = page.querySelectorAll(SOURCE_SELECTOR);
+            const attrs = /\\sdata-(pos|alt|start)="([^"]*)"/g;
             for (let k = 0; k < els.length; k++) {
                 const el = els[k];
-                const carried = (el.hasAttribute('data-pos') ? 1 : 0) + (el.hasAttribute('data-alt') ? 1 : 0);
+                const carried = (el.hasAttribute('data-pos') ? 1 : 0) + (el.hasAttribute('data-alt') ? 1 : 0)
+                    + (el.hasAttribute('data-start') ? 1 : 0);
                 for (let j = 0; j < carried; j++) {
                     const m = attrs.exec(markup);
                     if (!m) return false;
@@ -3404,12 +3413,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // null when they agree, else what differed first, for the output channel.
         function offsetsDisagree(page, markup) {
             const drawn = [];
-            for (const el of page.querySelectorAll('[data-pos], [data-alt]')) {
+            for (const el of page.querySelectorAll(SOURCE_SELECTOR)) {
                 for (const a of el.attributes) {
-                    if (a.name === 'data-pos' || a.name === 'data-alt') drawn.push(a.name + '=' + a.value);
+                    if (a.name === 'data-pos' || a.name === 'data-alt' || a.name === 'data-start') drawn.push(a.name + '=' + a.value);
                 }
             }
-            const attrs = /\\sdata-(pos|alt)="([^"]*)"/g;
+            const attrs = /\\sdata-(pos|alt|start)="([^"]*)"/g;
             let k = 0;
             for (let m; (m = attrs.exec(markup)); k++) {
                 const want = 'data-' + m[1] + '=' + m[2];
@@ -3736,12 +3745,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // so this is the picture and the answer disagreeing, and the caller starts over.
         function shiftPage(page, w) {
             if (!w) return false;
-            for (const el of page.querySelectorAll('[data-pos], [data-alt]')) {
-                const pos = el.getAttribute('data-pos');
-                if (pos !== null) {
+            for (const el of page.querySelectorAll(SOURCE_SELECTOR)) {
+                for (const name of ['data-pos', 'data-start']) {
+                    const pos = el.getAttribute(name);
+                    if (pos === null) continue;
                     const m = shiftOffset(parseInt(pos, 10), w);
                     if (!Number.isFinite(m)) return false;
-                    el.setAttribute('data-pos', String(m));
+                    el.setAttribute(name, String(m));
                 }
                 const alt = el.getAttribute('data-alt');
                 if (alt) {
@@ -4055,6 +4065,48 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 e.stopImmediatePropagation();
                 e.preventDefault();
             }, true);
+        }
+
+        // A bar of a staff is a click target too (owner request 2026-10-14, after the OMR scan
+        // view's bars): a click that lands on no data-pos element but inside a bar goes to where
+        // that bar is written — the server's rect.bar-staff boxes carry it (data-start). They
+        // take no pointer events, so a note keeps its own click and the sheet its drag; the box
+        // is found here by its geometry. A click beside a staff (a lyric line, a chord name, the
+        // gap to the next staff) takes the nearest staff of the same bar, up to two staff
+        // heights away.
+        function barStaffAt(clientX, clientY) {
+            let best = null, bestDist = Infinity;
+            for (const r of svgContainer.querySelectorAll('rect.bar-staff')) {
+                const b = r.getBoundingClientRect();
+                if (clientX < b.left || clientX > b.right) continue;
+                const d = clientY < b.top ? b.top - clientY : clientY > b.bottom ? clientY - b.bottom : 0;
+                if (d <= 2 * b.height && d < bestDist) { best = r; bestDist = d; }
+            }
+            return best;
+        }
+        let hoveredBar = null;
+        function hoverBar(r) {
+            if (r === hoveredBar) return;
+            if (hoveredBar) hoveredBar.classList.remove('hover');
+            hoveredBar = r;
+            if (r) r.classList.add('hover');
+            mainContent.classList.toggle('over-bar', r !== null);
+        }
+        function installBarHover() {
+            let pending = null;
+            svgContainer.addEventListener('mousemove', (e) => {
+                pending = e;
+                requestAnimationFrame(() => {
+                    if (pending === null) return;
+                    const ev = pending;
+                    pending = null;
+                    const t = ev.target;
+                    const onNote = t && t.hasAttribute && t.hasAttribute('data-pos');
+                    hoverBar(onNote || ev.buttons !== 0 || ev.shiftKey || mainContent.classList.contains('dragging')
+                        ? null : barStaffAt(ev.clientX, ev.clientY));
+                });
+            });
+            svgContainer.addEventListener('mouseleave', () => { pending = null; hoverBar(null); });
         }
 
         // Groups all elements sharing one data-pos into printed instances
@@ -4969,6 +5021,38 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
         }, { passive: false });
 
+        // During playback a click on a played note SEEKS there instead of jumping the editor
+        // (listening mode). The clicked printed COPY — the first of the data-pos's instances
+        // (in document order) holding an element isCopy accepts — maps to the onset whose
+        // server-side ordinal (O) matches. False when nothing is playing or no onset is the
+        // position's. Clears the active highlight FIRST: it raises its element, corrupting
+        // the document order.
+        function seekToCopy(pos, isCopy) {
+            if (playheadTimer === null || !playbackNotes) return false;
+            clearHighlights();
+            const copies = Array.from(document.querySelectorAll('[data-pos="' + pos + '"]'));
+            const instances = clusterInstances(copies);
+            let occ = 0;
+            for (let k = 0; k < instances.length; k++) {
+                if (instances[k].some(isCopy)) { occ = k; break; }
+            }
+            let best = null;
+            for (const n of playbackNotes) {
+                if (n.S !== pos) continue;
+                if ((n.O || 0) === occ && (best === null || n.T < best.T)) best = n;
+            }
+            if (best === null) {
+                for (const n of playbackNotes) {
+                    if (n.S === pos && (best === null || n.T < best.T)) best = n;
+                }
+            }
+            if (best === null) return false;
+            startPlayback(playbackNotes, best.T);
+            return true;
+        }
+
+        installBarHover();
+
         document.addEventListener('click', (e) => {
             const target = e.target;
             if (target && target.hasAttribute && target.hasAttribute('data-pos')) {
@@ -4989,33 +5073,26 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 // During playback a click on a played note SEEKS there instead
                 // of jumping the editor (listening mode). Non-note grobs
                 // (barlines, marks) fall through to the normal click.
-                if (playheadTimer !== null && playbackNotes) {
-                    // The clicked printed COPY (its instance index in document
-                    // order) maps to the onset whose server-side ordinal (O)
-                    // matches. Clear the active highlight FIRST: it raises
-                    // its element, corrupting the document order.
-                    clearHighlights();
-                    const copies = Array.from(document.querySelectorAll('[data-pos="' + pos + '"]'));
-                    const instances = clusterInstances(copies);
-                    let occ = 0;
-                    for (let k = 0; k < instances.length; k++) {
-                        if (instances[k].indexOf(target) >= 0) { occ = k; break; }
-                    }
-                    let best = null;
-                    for (const n of playbackNotes) {
-                        if (n.S !== pos) continue;
-                        if ((n.O || 0) === occ && (best === null || n.T < best.T)) best = n;
-                    }
-                    if (best === null) {
-                        for (const n of playbackNotes) {
-                            if (n.S === pos && (best === null || n.T < best.T)) best = n;
-                        }
-                    }
-                    if (best !== null) {
-                        startPlayback(playbackNotes, best.T);
-                        return;
-                    }
-                }
+                if (seekToCopy(pos, (copy) => copy === target)) return;
+                vscode.postMessage({ type: 'jumpToPosition', position: pos });
+            } else if (!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
+                && target && svgContainer.contains(target) && barStaffAt(e.clientX, e.clientY)) {
+                // A bar: its first note's place in the editor — or, while playing, the
+                // bar's own copy of that note (a section played twice prints it twice).
+                const bar = barStaffAt(e.clientX, e.clientY);
+                const pos = parseInt(bar.getAttribute('data-start'), 10);
+                lastHighlightPos = -1;
+                aiAnchorPos = pos;
+                aiClearSelection();
+                const box = bar.getBoundingClientRect();
+                const inBar = (copy) => {
+                    const b = copy.getBoundingClientRect();
+                    const cx = (b.left + b.right) / 2, cy = (b.top + b.bottom) / 2;
+                    return cx >= box.left && cx <= box.right
+                        && cy >= box.top - box.height && cy <= box.bottom + box.height;
+                };
+                if (seekToCopy(pos, inBar)) return;
+                clearHighlights();
                 vscode.postMessage({ type: 'jumpToPosition', position: pos });
             } else {
                 // Clicked empty space / a non-clickable grob: just drop the

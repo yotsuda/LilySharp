@@ -67,7 +67,9 @@ describe('the preview reads its offsets back after a reconcile', () => {
         if (html[i] === '{') depth++;
         else if (html[i] === '}' && --depth === 0) { close = i + 1; break; }
     }
-    const offsetsDisagree = new vm.Script('(' + html.slice(at, close) + ')').runInNewContext({}) as
+    // The selector of the offset-carrying elements, as the page script spells it.
+    const SOURCE_SELECTOR = /const SOURCE_SELECTOR = '([^']*)'/.exec(html)?.[1];
+    const offsetsDisagree = new vm.Script('(' + html.slice(at, close) + ')').runInNewContext({ SOURCE_SELECTOR }) as
         (page: unknown, markup: string) => string | null;
 
     type Attr = { name: string; value: string };
@@ -85,6 +87,13 @@ describe('the preview reads its offsets back after a reconcile', () => {
     it('names the first offset a reused group kept stale', () => {
         const why = offsetsDisagree(page([pos('12')], [pos('38'), alt('31 40')]), markup);
         assert.match(why ?? '', /#1 drawn data-pos=38, markup data-pos=30/);
+    });
+    it('reads a bar\'s written place (data-start) as an offset too', () => {
+        const start = (v: string): Attr => ({ name: 'data-start', value: v });
+        const withBar = markup + '<rect class="bar-staff" data-start="50"/>';
+        assert.equal(offsetsDisagree(page([pos('12')], [pos('30'), alt('31 40')], [start('50')]), withBar), null);
+        assert.match(offsetsDisagree(page([pos('12')], [pos('30'), alt('31 40')], [start('47')]), withBar) ?? '',
+            /data-start=47, markup data-start=50/);
     });
     it('notices an element too many or too few', () => {
         assert.notEqual(offsetsDisagree(page([pos('12')]), markup), null);
@@ -203,5 +212,47 @@ describe('the preview hides the marks the scan view hides', () => {
         assert.equal(css([]), '');
         assert.ok(!css(['a"] body {x']).includes('"]  body'));
         assert.equal(css(['a"b']).match(/"/g)!.length % 2, 0);
+    });
+});
+
+// A click on a bar goes to where it is written (barStaffAt, owner request 2026-10-14): the
+// server's rect.bar-staff boxes take no pointer events, so the page finds the one under the
+// click by its geometry. Lifted out of the page script like the functions above and handed a
+// container of plain boxes.
+describe('the preview finds the bar a click lands on', () => {
+    const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const start = source.indexOf('return `<!DOCTYPE html>') + 'return '.length;
+    const end = source.indexOf('</html>`;', start) + '</html>`'.length;
+    const html = new vm.Script(source.slice(start, end).replace(/\$\{[^}]*\}/g, 'X')).runInNewContext({}) as string;
+    const at = html.indexOf('function barStaffAt(');
+    let depth = 0, close = -1;
+    for (let i = html.indexOf('{', at); i < html.length; i++) {
+        if (html[i] === '{') depth++;
+        else if (html[i] === '}' && --depth === 0) { close = i + 1; break; }
+    }
+    // Two bars of two staves, 40 px tall, 100 px apart; the next system 400 px down.
+    const box = (name: string, left: number, top: number) =>
+        ({ name, getBoundingClientRect: () => ({ left, right: left + 200, top, bottom: top + 40, height: 40 }) });
+    const boxes = [box('1 upper', 0, 100), box('1 lower', 0, 200), box('2 upper', 200, 100), box('2 lower', 200, 200),
+        box('3 upper', 0, 600)];
+    const svgContainer = { querySelectorAll: (sel: string) => sel === 'rect.bar-staff' ? boxes : [] };
+    const barStaffAt = new vm.Script('(' + html.slice(at, close) + ')').runInNewContext({ svgContainer, Infinity }) as
+        (x: number, y: number) => { name: string } | null;
+
+    it('finds the function in the page script', () => {
+        assert.ok(at >= 0 && close > at, 'barStaffAt is not in the page script');
+    });
+    it('takes the bar and the staff under the click', () => {
+        assert.equal(barStaffAt(50, 120)?.name, '1 upper');
+        assert.equal(barStaffAt(250, 230)?.name, '2 lower');
+    });
+    it('takes the nearest staff of the bar beside a staff (a lyric line, the gap between staves)', () => {
+        assert.equal(barStaffAt(50, 150)?.name, '1 upper');
+        assert.equal(barStaffAt(250, 180)?.name, '2 lower');
+        assert.equal(barStaffAt(50, 300)?.name, '1 lower');
+    });
+    it('takes nothing more than two staff heights from every staff, or beside every bar', () => {
+        assert.equal(barStaffAt(50, 400), null);
+        assert.equal(barStaffAt(450, 120), null);
     });
 });

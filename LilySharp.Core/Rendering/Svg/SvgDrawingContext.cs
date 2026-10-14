@@ -407,6 +407,21 @@ internal sealed class SvgDrawingContext : IDrawingContext
         _sb.Append(" fill=\"none\" pointer-events=\"none\"/>").AppendLine();
     }
 
+    public void DrawBarStaffBox(int sourcePosition, double x, double y, double width, double height)
+    {
+        // As DrawBarBox: no data-pos and no pointer events, so a note's click target and the
+        // highlight recolor never meet it; the webview hit-tests it by its geometry.
+        if (!_interactive) return;
+        _sb.Append("  <rect class=\"bar-staff\" data-start=\"");
+        AppendInt(sourcePosition);
+        _sb.Append('"');
+        Attr("x", x);
+        Attr("y", y);
+        Attr("width", width);
+        Attr("height", height);
+        _sb.Append(" fill=\"none\" pointer-events=\"none\"/>").AppendLine();
+    }
+
     public void DrawAttachedGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
     {
         // Static output: identical to DrawGlyph.

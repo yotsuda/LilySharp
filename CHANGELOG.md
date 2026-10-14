@@ -6,6 +6,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Click a bar in the preview to go to it
+
+- **A click on a bar in the score preview puts the editor's caret at the start of that bar**: its
+  first note, rest or chord, in the staff you clicked. A click beside a staff (a lyric line, a
+  chord name) goes to the nearest staff of that bar, and the bar under the mouse is tinted. A
+  click on a note still goes to the note, a drag still scrolls, and during playback a click on a
+  bar plays from there.
+
 ### A tie on a note in a space above or below the staff is no longer short
 
 - **A tie on a single note in a space outside the staff (d‴ over the treble, E2 under the

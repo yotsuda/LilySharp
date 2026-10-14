@@ -75,11 +75,11 @@ public sealed class SvgPageSetTests
         => Norm(SvgGenerator.Generate(SyntaxTree.Parse(text), options));
 
     /// <summary>The viewer's rule for a Shifted page, spelled independently of the engine:
-    /// every <c>data-pos</c>/<c>data-alt</c> number of the page it holds, mapped through the
-    /// window. A number the window declines fails the test — the server must not have
-    /// called such a page Shifted.</summary>
+    /// every <c>data-pos</c>/<c>data-alt</c>/<c>data-start</c> number of the page it holds,
+    /// mapped through the window. A number the window declines fails the test — the server
+    /// must not have called such a page Shifted.</summary>
     internal static string Restamp(string page, SvgEditWindow window)
-        => Regex.Replace(page, "( data-(?:pos|alt)=\")([^\"]*)\"", m =>
+        => Regex.Replace(page, "( data-(?:pos|alt|start)=\")([^\"]*)\"", m =>
         {
             var mapped = m.Groups[2].Value.Split(' ').Select(n =>
             {
@@ -273,6 +273,9 @@ public sealed class SvgPageSetTests
     [InlineData("<t x=\"1\" data-pos=\"5\"/>", "<t x=\"2\" data-pos=\"5\"/>", false)]   // ink differs
     [InlineData("<t data-pos=\"\"/>", "<t data-pos=\"\"/>", false)]       // no number where one belongs
     [InlineData("<t>data-pos=\"14\"</t>", "<t>data-pos=\"17\"</t>", false)] // a lyric spelling the attribute: not the emitted token
+    [InlineData("<r data-start=\"14\"/>", "<r data-start=\"17\"/>", true)]   // a bar's written place
+    [InlineData("<r data-start=\"14\"/>", "<r data-start=\"14\"/>", false)]
+    [InlineData("<r data-start=\"11\"/>", "<r data-start=\"11\"/>", false)]  // inside the window
     public void SameModuloWindow_AcceptsExactlyTheShiftedText(string previous, string current, bool expected)
     {
         var w = new SvgEditWindow(Prefix: 10, SuffixStart: 14, Delta: 3);
@@ -327,11 +330,13 @@ public sealed class SvgPageSetTests
             $"the net did not bite: {pairs} pairs, {same} shifted-or-same");
     }
 
-    // The character walk SameModuloWindow was until session 605 — verbatim, the oracle.
+    // The character walk SameModuloWindow was until session 605 — the oracle; since session
+    // 905 it also reads a bar's written place (data-start).
     private static bool CharWalk(string previous, string current, SvgEditWindow window)
     {
         const string Pos = " data-pos=\"";
         const string Alt = " data-alt=\"";
+        const string Start = " data-start=\"";
         int i = 0, j = 0;
         while (i < previous.Length && j < current.Length)
         {
@@ -344,7 +349,8 @@ public sealed class SvgPageSetTests
                 continue;
             var opener = previous.AsSpan(i - Pos.Length, Pos.Length);
             bool isAlt = opener.SequenceEqual(Alt);
-            if (!isAlt && !opener.SequenceEqual(Pos))
+            bool isStart = i >= Start.Length && previous.AsSpan(i - Start.Length, Start.Length).SequenceEqual(Start);
+            if (!isAlt && !isStart && !opener.SequenceEqual(Pos))
                 continue;
             while (true)
             {

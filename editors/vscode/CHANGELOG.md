@@ -4,6 +4,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Click a bar in the preview to go to it
+
+- **A click on a bar in the score preview puts the editor's caret at the start of that bar**: its
+  first note, rest or chord, in the staff you clicked. A click beside a staff (a lyric line, a
+  chord name) goes to the nearest staff of that bar, and the bar under the mouse is tinted. A
+  click on a note still goes to the note, a drag still scrolls, and during playback a click on a
+  bar plays from there.
+
 ### A clef change in mid-line writes the key's sharps and flats out
 
 - After a clef change in the middle of a line, a note its key alters carries the key's ?/?
