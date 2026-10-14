@@ -1008,7 +1008,7 @@ public sealed partial class LilySharpLanguageServer
             });
         }
         return sections.Count == 0
-            ? new GuessSectionKeyResponse { Error = $"No notes to read in section {string.Join(", ", names)}." }
+            ? new GuessSectionKeyResponse { Error = $"No notes or chords to read in section {string.Join(", ", names)}." }
             : new GuessSectionKeyResponse { Sections = sections.ToArray() };
     }
 

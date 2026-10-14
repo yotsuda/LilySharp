@@ -41,6 +41,16 @@ namespace LilySharp.Core.Harmony;
 /// relative major/minor, and a tonal section usually ends on its tonic.
 /// </para>
 /// <para>
+/// The section's CHORD ROWS count too (owner request 2026-10-15): a row in the section's
+/// declaration or a chord track's inner section, each symbol's tones weighted by how long it
+/// sounds on the row's beat grid (the page's own reading, ChordNameCollector.SlotGroups), its
+/// root counted once more — it names what the chord does in the key — and the last chord's
+/// root stands for the final bass. A symbol only a key can spell (a degree) is passed over.
+/// MEASURED (2026-10-15, the Lab's corpora, the samples, the lessons and the test books: the
+/// 64 sections that write a key and a chord row): the written key ranked first in 38 of them
+/// from the notes alone, in 48 with the chords.
+/// </para>
+/// <para>
 /// The tonic is SPELLED from the written notes: of the enharmonic spellings of one tonic
 /// (F♯ / G♭ major), the one whose scale agrees with more of the written accidentals wins,
 /// then the one with fewer accidentals in its signature.
@@ -129,8 +139,9 @@ public static class KeyEstimator
     }
 
     /// <summary>
-    /// Estimates the key of <paramref name="sectionName"/> from every part's music in it.
-    /// Null when the section has no pitched note.
+    /// Estimates the key of <paramref name="sectionName"/> from every part's music in it and
+    /// the chord rows written for it. Null when the section has neither a pitched note nor a
+    /// chord symbol.
     /// </summary>
     public static SectionKeyEstimate? Estimate(SyntaxTree tree, string sectionName)
     {
@@ -193,6 +204,36 @@ public static class KeyEstimator
                 finalEnd = lastEnd;
             }
         }
+
+        // The chord rows written for the section (owner request 2026-10-15): each symbol's
+        // tones, weighted by how long it sounds on the row's beat grid — the page's own
+        // reading of the row (ChordNameCollector.SlotGroups). A symbol only a key can
+        // spell (a degree, a Roman numeral) says nothing about the key and is passed over.
+        var meter = root.ChildNodesOfKind<TimeSignatureSyntax>().FirstOrDefault();
+        int beats = meter?.Beats ?? 4, beatType = meter?.BeatType ?? 4;
+        int? lastChordRoot = null;
+        foreach (var bar in ChordBars(root, sectionName))
+        {
+            foreach (var (node, _, duration) in ChordNameCollector.SlotGroups(bar, beats, beatType, out _))
+            {
+                if (node is not ChordEntrySyntax entry
+                    || !ChordStructure.TryParseChordEntry(entry.SymbolText, out var chord))
+                    continue;
+                double w = duration.ToDouble();
+                int rootPc = Mod12(StepSemitones[chord.RootStep] + chord.RootAlter);
+                foreach (int pc in chord.Intervals.Select(i => Mod12(rootPc + i)).Append(rootPc).Distinct())
+                    weight[pc] += w;
+                // …and the root once more: it names what the chord does in the key, which
+                // a melody's long note on another tone must not outweigh (`e'1` over C, G7, C).
+                weight[rootPc] += w;
+                spelled.Add((chord.RootStep, chord.RootAlter, w));
+                lastChordRoot = rootPc;
+            }
+        }
+        // The section's last chord stands for its final bass: a chord row is written for the
+        // harmony, where the lowest of the last notes is as often a melody's (`e'1` over C).
+        if (lastChordRoot is int last)
+            finalBass = (0, last);
 
         if (weight.Sum() <= 0)
             return null;
@@ -312,6 +353,56 @@ public static class KeyEstimator
         if (parts.Count == 0)
             parts.Add(null);
         return parts;
+    }
+
+    // The bars of the chord rows written for the section — a row in the section's own
+    // declaration (`section A { … chords { C G | } }`), or a chord track's inner section
+    // (`chords prog { section A { C | G | } }`) — each as its written slots (entries, rests,
+    // '.' extensions), the bar lines between them. A flat chord track belongs to no one
+    // section and is not read.
+    private static IEnumerable<List<SyntaxNode>> ChordBars(SyntaxNode root, string sectionName)
+    {
+        foreach (var block in root.DescendantNodes<ChordPartBlockSyntax>())
+        {
+            if (block.HasSections)
+            {
+                foreach (var section in block.Sections)
+                    if (section.SectionName == sectionName)
+                        foreach (var bar in Bars(ChordNameCollector.SectionItems(section)))
+                            yield return bar;
+            }
+            else if (EnclosingSection(block)?.SectionName == sectionName)
+            {
+                foreach (var bar in Bars(block.Items))
+                    yield return bar;
+            }
+        }
+
+        static IEnumerable<List<SyntaxNode>> Bars(IEnumerable<SyntaxNode> items)
+        {
+            var bar = new List<SyntaxNode>();
+            foreach (var item in items)
+            {
+                if (item is BarlineSyntax)
+                {
+                    if (bar.Count > 0) yield return bar;
+                    bar = new List<SyntaxNode>();
+                }
+                else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
+                {
+                    bar.Add(item);
+                }
+            }
+            if (bar.Count > 0) yield return bar;
+        }
+    }
+
+    private static SectionDeclarationSyntax? EnclosingSection(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is SectionDeclarationSyntax section)
+                return section;
+        return null;
     }
 
     private static PartDeclarationSyntax? EnclosingPart(SyntaxNode node)

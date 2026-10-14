@@ -87,6 +87,51 @@ public class KeyEstimatorTests
         Assert.Equal("g major", Best(source, "B").Text);
     }
 
+    // The chord rows written for a section are read too (owner request 2026-10-15): a
+    // symbol's tones, weighted by how long it sounds on the row's beat grid.
+    private static string WithChords(string melody, string chords) => $$"""
+        octave absolute
+        time 4/4
+        part melody { clef treble }
+        section A { melody { {{melody}} } chords { {{chords}} } }
+        form { A }
+        score { staff melody }
+        """;
+
+    [Theory]
+    [InlineData("C | G7 | C |", "c major")]
+    [InlineData("Am | E7 | Am |", "a minor")]
+    [InlineData("F | C7 | F |", "f major")]
+    public void AMelodyOfOneNote_TakesItsKeyFromTheChords(string chords, string key)
+        // The melody alone (E, E, E) fits C major and A minor alike — the chords decide.
+        => Assert.Equal(key, Best(WithChords("e'1 | e'1 | e'1 |", chords)).Text);
+
+    [Fact]
+    public void ASectionOfChordsAlone_IsGuessed_FromATrack()
+    {
+        var source = """
+            octave absolute
+            time 4/4
+            part melody { clef treble }
+            chords prog { section A { D | G | A7 | D | } }
+            section A { melody { r1 | r1 | r1 | r1 | } }
+            form { A }
+            score { chords prog  staff melody }
+            """;
+        Assert.Equal("d major", Best(source).Text);
+    }
+
+    [Fact]
+    public void ChordsShareTheBarAsThePageDoes()
+    {
+        // `C . . G7` is three beats of C and one of G7: still C major, where `G7 . . C`
+        // (three beats of G7) leans the other way — the weights follow the grid.
+        var c = KeyEstimator.Estimate(SyntaxTree.Parse(WithChords("r1 |", "C . . G7 |")), "A")!;
+        var g = KeyEstimator.Estimate(SyntaxTree.Parse(WithChords("r1 |", "G7 . . C |")), "A")!;
+        Assert.Equal("c major", c.Candidates[0].Text);
+        Assert.NotEqual(c.Candidates[0].Score, g.Candidates.First(k => k.Text == "c major").Score);
+    }
+
     [Fact]
     public void SectionsAt_CaretAndSelection()
     {

@@ -4,6 +4,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Guess Section Key reads the chord names too
+
+- **Lily#: Guess Section Key… now reads a section's chord rows as well as its notes** — a
+  `chords { }` row written in the section, or a chord track's `section` — each chord weighted by
+  how long it sounds in the bar, and the last chord taken as the section's ending. A section of
+  chords alone is guessed too. On the sections in our test books that write both a key and a chord
+  row, the written key came first in 48 of 64, where the notes alone gave 38.
+
 ### A space after the note that fills a bar writes the bar line
 
 - **Type `c d e r` and a space, and the `|` is written for you** (`c d e r | `) — when that note
