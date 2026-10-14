@@ -1952,7 +1952,14 @@ DisplayName    = String ;
    does the same. A mid-piece 'key' rebases every degree after it.
    The degree grammar: an optional accidental 'b'/'#' (as many as needed), a numeral
    I II III IV V VI VII, the ordinary quality (Imaj7, IIm7, V7, VIIdim, Vaug, IIm7-5),
-   and an optional '/' bass written as a degree too (V7/VII).
+   and an optional '/' after it: a NUMERAL there is the target of a SECONDARY function,
+   read in the major key on that degree (V7/V = D7 in C, IIm7/IV = Gm7, VIIdim7/V =
+   F#dim7, V7/bVII = F7), and a DIGIT 1-7 with an optional 'b'/'#' is the BASS as the key's
+   scale degree, the Nashville-number spelling (I/3 = C/E, V7/7 = G7/B, IV/b7 = F/Bb). Both
+   may stand together, the bass last (V7/V/#4 = D7/F#). One target only (no V7/V/V).
+   'as roman' prints a secondary as written and every slash bass as its digit, so a G/B
+   written by name shows V/7. (Owner's decision 2026-10-14: until then '/' + a numeral was
+   the bass, V7/VII = G7/B.)
    ⚠️ Written with the ASCII 'b' and '#'. The PRINTED accidentals (♭ ♯) and the printed
    roman quality symbols (° ø) are refused by the lexer, so a degree cannot be pasted
    back into the source from the score it came out of — write 'bVII', not '♭VII', and

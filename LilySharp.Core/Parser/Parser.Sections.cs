@@ -353,7 +353,7 @@ internal sealed partial class Parser
         if (Current.Kind == SyntaxKind.Identifier
             && Current.Text.Length > 0 && Current.Text[0] is >= 'A' and <= 'G')
             return ParseChordEntry();
-        // …or a ROMAN degree of the key (Imaj7, V7, IIm7, bVII, #IVm7-5, V7/VII). The two
+        // …or a ROMAN degree of the key (Imaj7, V7, IIm7, bVII, #IVm7-5, V7/V, I/3). The two
         // spellings cannot collide: an absolute root is A-G and a numeral is I or V, so
         // this arm decides only what it alone can start. Which KEY it means is not the
         // parser's business — ChordNameCollector resolves it against the key at the bar.
@@ -444,6 +444,15 @@ internal sealed partial class Parser
         _ => false,
     };
 
+    // A degree entry's flat bass digit, `IV/b7`: the lowercase `b` after the '/' lexes as a
+    // note (`b`, or `b7` with its "duration"), which no chord run takes otherwise — only
+    // straight after a '/' does it continue one (owner's decision 2026-10-14, session 905:
+    // `/` + a digit is the bass, `/` + a numeral the function's target).
+    private static bool IsFlatBassDigitAfterSlash(SyntaxToken prev, SyntaxToken token)
+        => prev.Kind == SyntaxKind.Slash
+           && token.Text.Length > 0 && token.Text.TrimStart('b').All(char.IsAsciiDigit)
+           && token.Text[0] == 'b';
+
     // One printed chord symbol: the glued run from its uppercase root. The run,
     // not the token, is the entry (the MarkArgument rule): ChordEntrySyntax
     // re-joins the texts and the collector hands them to the ONE string parser.
@@ -452,7 +461,8 @@ internal sealed partial class Parser
         var tokens = new List<GreenNode?>();
         var prev = Advance();
         tokens.Add(prev);
-        while (prev.TrailingTriviaWidth == 0 && IsChordSymbolToken(Current))
+        while (prev.TrailingTriviaWidth == 0
+               && (IsChordSymbolToken(Current) || IsFlatBassDigitAfterSlash(prev, Current)))
         {
             prev = Advance();
             tokens.Add(prev);

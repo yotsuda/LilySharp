@@ -71,9 +71,12 @@ public class RomanNumeralTests
     }
 
     [Fact]
-    public void SlashBass_ShownAsDegree()
+    public void SlashBass_ShownAsTheKeysDegreeDigit()
     {
-        Assert.Equal("V7/VII", Roman("G7/B", 0, 0));
+        // The Nashville-number spelling (owner's decision 2026-10-14): a numeral after the
+        // slash is a secondary function's target, so the bass is a digit.
+        Assert.Equal("V7/7", Roman("G7/B", 0, 0));
+        Assert.Equal("IV/♭7", Roman("F/Bb", 0, 0));
     }
 
     [Fact]

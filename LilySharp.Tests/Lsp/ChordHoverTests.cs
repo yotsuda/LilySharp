@@ -91,8 +91,8 @@ public class ChordHoverTests
     [Fact]
     public void AChordRowSlash_ListsTheBassAnOctaveBelowTheWindow()
     {
-        Assert.Equal("`G7/B (V7/VII)` \u00A0B2 \u00A0G3 \u00A0B3 \u00A0D4 \u00A0F4", ChordLine("G7/B"));
-        Assert.Equal("`C/E (I/III)` \u00A0E3 \u00A0G3 \u00A0C4 \u00A0E4", ChordLine("C/E"));
+        Assert.Equal("`G7/B (V7/7)` \u00A0B2 \u00A0G3 \u00A0B3 \u00A0D4 \u00A0F4", ChordLine("G7/B"));
+        Assert.Equal("`C/E (I/3)` \u00A0E3 \u00A0G3 \u00A0C4 \u00A0E4", ChordLine("C/E"));
     }
 
     [Fact]
@@ -106,11 +106,11 @@ public class ChordHoverTests
 
     [Fact]
     public void AnInversion_ShowsTheWrittenBassAsTheSlash_AndListsLowestFirst() =>
-        Assert.Equal("`Dm/F (IIm/IV)` \u00A0F4 \u00A0A4 \u00A0D5", HoverAt("<f d a>"));
+        Assert.Equal("`Dm/F (IIm/4)` \u00A0F4 \u00A0A4 \u00A0D5", HoverAt("<f d a>"));
 
     [Fact]
     public void AMemberPitch_HoversAsItsChord() =>
-        Assert.Equal("`Dm/F (IIm/IV)` \u00A0F4 \u00A0A4 \u00A0D5", HoverAt("<f d a>", skip: 3));
+        Assert.Equal("`Dm/F (IIm/4)` \u00A0F4 \u00A0A4 \u00A0D5", HoverAt("<f d a>", skip: 3));
 
     [Fact]
     public void AnArpeggio_HoversAsItsSymbol() =>

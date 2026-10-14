@@ -6,6 +6,15 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Secondary dominants in Roman numerals: `V7/V`, and the bass as a digit
+
+- **A degree entry reads `/` + a numeral as a secondary function** — `V7/V` is D7 in C,
+  `IIm7/IV` Gm7, `VIIdim7/V` F♯dim7, `V7/bVII` F7 — and **`/` + a digit as the bass**, the
+  key's scale degree (`I/3` = C/E, `V7/7` = G7/B, `IV/b7` = F/B♭; `V7/V/#4` = D7/F♯).
+  `as roman` prints a secondary as written and a slash bass as its digit. ⚠️ Until now `/` +
+  a numeral was the bass (`V7/VII` was G7/B; it now means F♯7). No book in the repository or
+  the owner's corpus wrote one.
+
 ### Roman numerals follow the key back after a modulated section
 
 - **`chords … as roman` reads a section in the file's key again after a section that wrote

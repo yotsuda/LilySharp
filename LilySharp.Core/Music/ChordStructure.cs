@@ -571,7 +571,12 @@ public sealed record ChordStructure(
     bool BassIsAdded = false,
     // The assembled quality of a Composed chord (ChordFormula): its tones, name and
     // LilyPond spelling. Null for every registered quality.
-    ChordFormula? Formula = null)
+    ChordFormula? Formula = null,
+    // The root of the degree a SECONDARY-function entry tonicizes — `V7/V` in C is D7
+    // with target G — so the degree display can give the function back (`V7/V`) instead
+    // of the plain degree (`II7`). The chord itself (root, tones, name) is the resolved
+    // one; this records only how it was written. Null for every other chord.
+    (int Step, int Alter)? SecondaryTarget = null)
 {
     // Diatonic-step semitones come from RelativeOctave.StepSemitoneOf (single source).
 
@@ -893,35 +898,60 @@ public sealed record ChordStructure(
     /// This chord as a Roman-numeral scale degree in the given key, jazz style: an
     /// UPPERCASE numeral for the root's scale degree plus the SAME quality suffix as
     /// the printed name (e.g. <c>Imaj7</c>, <c>IIm7</c>, <c>V7</c>, <c>VIm</c>). A
-    /// chromatic root gets a ♯/♭ prefix (<c>♭III</c>, <c>♯IV</c>); a slash bass shows
-    /// as its own degree (<c>V7/VII</c>).
+    /// chromatic root gets a ♯/♭ prefix (<c>♭III</c>, <c>♯IV</c>). A chord written as a
+    /// SECONDARY function shows it (<c>V7/V</c>: the degree in the major key on the target,
+    /// then the target's degree), and a slash bass shows as a DIGIT — the bass's scale
+    /// degree of the key, the Nashville-number spelling (<c>I/3</c> = C/E, <c>V7/7</c> = G7/B)
+    /// — so the two can never be read for each other.
     /// </summary>
     /// <param name="tonicStep">The key tonic's diatonic step (0=C .. 6=B) — the actual
     /// tonic, so a minor key is measured from its own tonic (A minor: Am = I).</param>
     /// <param name="keySharps">The signature: +sharps / -flats.</param>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond has no Roman-numeral chord names. Owner's decision
+    /// 2026-10-14 (session 905): <c>/</c> + a numeral is the function's target, as in the
+    /// classical and jazz texts (<c>V7/V</c>), and <c>/</c> + a digit is the bass; until
+    /// then <c>/</c> + a numeral was the bass (<c>V7/VII</c> = G7/B).
+    /// </remarks>
     public string ToRomanNumeral(int tonicStep, int keySharps)
     {
+        static string Accidental(int acc) =>
+            acc > 0 ? new string('♯', acc) : acc < 0 ? new string('♭', -acc) : "";
+
         static string Degree(int step, int alter, int tonicStep, int keySharps)
         {
             int degree = ((step - tonicStep) % 7 + 7) % 7;
-            string numeral = new[] { "I", "II", "III", "IV", "V", "VI", "VII" }[degree];
+            string numeral = RomanNumeralsInOrder[degree];
             // Accidental = how far the root sits from the scale's own note on that
             // letter (0 = diatonic, +/- = chromatic).
-            int acc = alter - KeySpelling.Alteration(step, keySharps);
-            string prefix = acc > 0 ? new string('♯', acc)    // ♯
-                : acc < 0 ? new string('♭', -acc)             // ♭
-                : "";
-            return prefix + numeral;
+            return Accidental(alter - KeySpelling.Alteration(step, keySharps)) + numeral;
         }
 
-        var sb = new StringBuilder(Degree(RootStep, RootAlter, tonicStep, keySharps));
-        sb.Append(RawSuffix ?? (Formula is { } f
+        string suffix = RawSuffix ?? (Formula is { } f
             ? f.Name(Semantics.ChordQualityStyle.Words).Suffix
-            : RomanSuffix(Quality)));
+            : RomanSuffix(Quality));
+        var sb = new StringBuilder();
+        if (SecondaryTarget is { } target)
+            sb.Append(Degree(RootStep, RootAlter, target.Step, MajorKeySharps(target.Step, target.Alter)))
+              .Append(suffix)
+              .Append('/').Append(Degree(target.Step, target.Alter, tonicStep, keySharps));
+        else
+            sb.Append(Degree(RootStep, RootAlter, tonicStep, keySharps)).Append(suffix);
         if (BassStep is int bs)
-            sb.Append('/').Append(Degree(bs, BassAlter ?? 0, tonicStep, keySharps));
+        {
+            int degree = ((bs - tonicStep) % 7 + 7) % 7;
+            sb.Append('/')
+              .Append(Accidental((BassAlter ?? 0) - KeySpelling.Alteration(bs, keySharps)))
+              .Append(degree + 1);
+        }
         return sb.ToString();
     }
+
+    /// <summary>The signature (+sharps / -flats) of the MAJOR key on a tonic — the key a
+    /// secondary function's degree is read in (<c>VIIdim7/V</c> in C: G major, so F♯).</summary>
+    private static int MajorKeySharps(int tonicStep, int tonicAlter)
+        // C D E F G A B on the circle of fifths; a sharp is seven fifths up.
+        => new[] { 0, 2, 4, -1, 1, 3, 5 }[tonicStep] + 7 * tonicAlter;
 
     /// <summary>The quality suffix in Roman-numeral style: the triad symbols
     /// diminished ° / augmented + / half-diminished ø are more idiomatic there than
@@ -967,7 +997,7 @@ public sealed record ChordStructure(
 
     /// <summary>
     /// Reads a chord written as a ROMAN DEGREE of the key — <c>Imaj7</c>, <c>V7</c>,
-    /// <c>IIm7</c>, <c>bVII</c>, <c>#IVm7-5</c>, <c>V7/VII</c> — into the same
+    /// <c>IIm7</c>, <c>bVII</c>, <c>#IVm7-5</c>, <c>V7/V</c>, <c>I/3</c> — into the same
     /// <see cref="ChordStructure"/> an absolute symbol produces, resolved against the key
     /// in force where it is written.
     /// </summary>
@@ -1008,26 +1038,60 @@ public sealed record ChordStructure(
         if (string.IsNullOrEmpty(s))
             return false;
 
-        int slash = s.IndexOf('/');
-        string main = slash >= 0 ? s.Substring(0, slash) : s;
-        string? bass = slash >= 0 ? s.Substring(slash + 1) : null;
+        // DEGREE[/TARGET][/BASS]: a numeral after a '/' is the function's target (once, and
+        // before the bass), a digit is the bass (last). See ToRomanNumeral's remarks.
+        var parts = s.Split('/');
+        if (parts.Length > 3)
+            return false;
+        (int Step, int Alter)? target = null;
+        int? bassStep = null, bassAlter = null;
+        for (int k = 1; k < parts.Length; k++)
+        {
+            if (TryParseBassDigit(parts[k], tonicStep, keySharps, out int bs, out int ba))
+            {
+                if (k != parts.Length - 1)
+                    return false;   // the bass comes last
+                (bassStep, bassAlter) = (bs, ba);
+            }
+            else if (target == null
+                && TryParseDegree(parts[k], tonicStep, keySharps, out int ts, out int ta, out string rest)
+                && rest.Length == 0)
+                target = (ts, ta);
+            else
+                return false;
+        }
 
-        if (!TryParseDegree(main, tonicStep, keySharps, out int step, out int alter, out string qualStr))
+        // The degree is read in the major key on the target when there is one.
+        var (keyStep, keyOfDegree) = target is { } t
+            ? (t.Step, MajorKeySharps(t.Step, t.Alter))
+            : (tonicStep, keySharps);
+        if (!TryParseDegree(parts[0], keyStep, keyOfDegree, out int step, out int alter, out string qualStr))
             return false;
         if (!TryResolveRomanQuality(qualStr, out var quality, out var formula))
             return false;
 
-        int? bassStep = null, bassAlter = null;
-        if (bass != null)
-        {
-            if (!TryParseDegree(bass, tonicStep, keySharps, out int bs, out int ba, out string rest)
-                || rest.Length != 0)
-                return false;
-            bassStep = bs;
-            bassAlter = ba;
-        }
+        result = new ChordStructure(step, alter, quality, bassStep, bassAlter, Formula: formula,
+            SecondaryTarget: target);
+        return true;
+    }
 
-        result = new ChordStructure(step, alter, quality, bassStep, bassAlter, Formula: formula);
+    /// <summary>A bass written as the key's scale degree: an optional accidental prefix and
+    /// one digit 1–7 (<c>3</c>, <c>b7</c>, <c>#4</c>) — the Nashville-number spelling.</summary>
+    private static bool TryParseBassDigit(string s, int tonicStep, int keySharps,
+        out int step, out int alter)
+    {
+        step = 0;
+        alter = 0;
+        int i = 0, acc = 0;
+        while (i < s.Length && (s[i] == '#' || s[i] == '♯' || s[i] == 'b' || s[i] == '♭'))
+        {
+            acc += s[i] == '#' || s[i] == '♯' ? 1 : -1;
+            i++;
+        }
+        if (i != s.Length - 1 || s[i] < '1' || s[i] > '7')
+            return false;
+        step = (tonicStep + (s[i] - '1')) % 7;
+        alter = KeySpelling.Alteration(step, keySharps) + acc;
         return true;
     }
 

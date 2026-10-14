@@ -749,8 +749,11 @@ score sheet { chords prog lyrics words }     // chords + lyrics rows, no staff
 ```
 
 **Roman numerals.** A chord entry may also be a DEGREE of the key in force at its bar —
-`I` `IIm7` `V7` `IVmaj7` `VIIm7-5` `bVII` (ASCII `b`/`#`, not `♭`/`♯`); a `/` adds a BASS written as a
-spelling is printed as names or as degrees by the SCORE: `chords prog` prints names,
+`I` `IIm7` `V7` `IVmaj7` `VIIm7-5` `bVII` (ASCII `b`/`#`, not `♭`/`♯`). After a `/`, a
+NUMERAL is a secondary function's target, read in the major key on it (`V7/V` = D7 in C,
+`IIm7/IV` = Gm7, `VIIdim7/V` = F#dim7), and a DIGIT 1-7 (with `b`/`#`) is the BASS as the
+key's scale degree (`I/3` = C/E, `V7/7` = G7/B, `IV/b7` = F/Bb; `V7/V/#4` = D7/F#, bass
+last). Either spelling is printed as names or as degrees by the SCORE: `chords prog` prints names,
 `chords prog as roman` prints degrees. To show both, place the track twice (two rows):
 
 ```

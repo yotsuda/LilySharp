@@ -112,7 +112,13 @@ public class RomanChordEntryTests
     [Theory]
     [InlineData("#IVm7-5 |", "F♯ø")]      // chromatic degree, altered tension
     [InlineData("bVII |", "B♭")]           // flat degree, typed ASCII
-    [InlineData("V7/VII |", "G7/B")]       // slash bass, itself a degree
+    [InlineData("V7/7 |", "G7/B")]         // slash bass, the key's degree as a digit
+    [InlineData("IV/b7 |", "F/B♭")]        // a flat bass digit
+    [InlineData("V7/V |", "D7")]           // secondary dominant: V7 of the major key on V
+    [InlineData("IIm7/IV |", "Gm7")]       // the 2 of IV's 2-5
+    [InlineData("VIIdim7/V |", "F♯°7")]    // the leading-tone chord of V
+    [InlineData("V7/bVII |", "F7")]        // a flat target
+    [InlineData("V7/V/#4 |", "D7/F♯")]     // a secondary with its own bass
     [InlineData("VIIdim |", "B°")]
     [InlineData("Vaug |", "G+")]
     public void TheDegreeGrammarCoversTheOrdinaryShapes(string entry, string expected)
@@ -202,6 +208,19 @@ public class RomanChordEntryTests
             score { staff m  chords prog }
             """);
         Assert.True(tree.HasErrors);
+    }
+
+    [Fact]
+    public void ASecondaryFunctionPrintsAsWritten_AndABassAsADigit()
+    {
+        // `/` + a numeral is the target of a secondary function, `/` + a digit the bass
+        // (owner's decision 2026-10-14, session 905). The degree row gives the function back
+        // — a D7 written V7/V prints V7/V, not II7 — and the bass as the Nashville digit.
+        Assert.Equal(new[] { "V7/V", "V7", "VII°7/V", "IV/♭7" },
+            Degrees(Collect("c major", "V7/V | V7 | VIIdim7/V | IV/b7 |", " as roman")));
+        // The same functions in F: the target is read in the key at the bar.
+        Assert.Equal(new[] { "G7", "C7", "B°7", "B♭/E♭" },
+            Names(Collect("f major", "V7/V | V7 | VIIdim7/V | IV/b7 |")));
     }
 
     [Fact]

@@ -2247,7 +2247,12 @@ chords prog { section A { Imaj7 | V7 | IIm7 | bVII | } }
 
 In C that is `Cmaj7 G7 Dm7 B♭`; in E♭ the same source is `E♭maj7 B♭7 Fm7 D♭`. A degree is
 an optional `b`/`#`, a numeral `I`–`VII`, the ordinary quality (`Imaj7`, `IIm7`, `V7`,
-`VIIdim`, `Vaug`, `IIm7-5`) and an optional `/` bass written as a degree too (`V7/VII`).
+`VIIdim`, `Vaug`, `IIm7-5`), then an optional `/`: a numeral there is a secondary
+function's target, read in the major key on that degree (`V7/V` = D7 in C, `IIm7/IV` =
+Gm7, `VIIdim7/V` = F♯dim7), and a digit 1–7 with an optional `b`/`#` is the bass as the
+key's scale degree (`I/3` = C/E, `V7/7` = G7/B, `IV/b7` = F/B♭). Both may stand together,
+the bass last (`V7/V/#4` = D7/F♯). `as roman` prints a secondary as written and a slash
+bass as its digit (a G/B written by name shows `V/7`).
 Degrees and absolute names may not collide — a root is `A`–`G`, a numeral is `I` or `V` —
 and both resolve to the same chord, so the written form and the displayed form stay
 independent: a degree chart prints names by default and degrees under `as roman`.

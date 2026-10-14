@@ -2762,7 +2762,7 @@ public class LilyPondExporterTests
     [Fact]
     public void ChordRow_RomanDegrees_ResolveInTheKeyInForce()
     {
-        var ly = Export(ChordBook("V7 | IIm7/I |", key: "key g major"));
+        var ly = Export(ChordBook("V7 | IIm7/1 |", key: "key g major"));
         Assert.Contains("d1:7 |", ly);
         Assert.Contains("a1:m7/g |", ly);
     }

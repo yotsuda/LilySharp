@@ -320,7 +320,7 @@ public sealed partial class LilySharpLanguageServer
     /// A chord's hover: the symbol a bare <c>@chord</c> on it would print — the same
     /// reader (MeasureCollector.RecordsChordFacts), so the hover and the page cannot
     /// disagree — its Roman-numeral degree in the key in force, and the pitches it sounds, a
-    /// chord's lowest first and an arpeggio's in played order: <c>`Dm/F (IIm/IV)`  F4  A4  D5</c>.
+    /// chord's lowest first and an arpeggio's in played order: <c>`Dm/F (IIm/4)`  F4  A4  D5</c>.
     /// A <c>chords { }</c> entry hovers the same way, with its tones as letters (a symbol
     /// voices no octave): <c>`Dm (IIm)`  D  F  A</c>. No "Chord:" head and no dash (VS Code drew it long and tight against its neighbours) — the symbol says what
     /// it is. The pitches also fill the line: VS Code sizes a hover to at least 150 px, and

@@ -841,7 +841,7 @@ internal sealed class ChordNameCollector
         if (LilySharp.Core.Music.ChordStructure.TryParseChordEntry(symbol, out var parsed))
             return parsed;
 
-        // A ROMAN degree of the key in force at this bar (Imaj7, V7, bVII, V7/VII). It
+        // A ROMAN degree of the key in force at this bar (Imaj7, V7, bVII, V7/V, I/3). It
         // resolves to the SAME structure an absolute symbol would give, so everything
         // downstream — the printed name, the degree the `as roman` display re-derives, the
         // transposition — is the one road. That is also what makes the WRITTEN form and the
