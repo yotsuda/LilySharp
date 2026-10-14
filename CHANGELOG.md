@@ -11,8 +11,9 @@ workflow attaches that section to the GitHub Release verbatim.
 - **A melisma that ends before a line break no longer draws its extender line to the end of
   the line, nor a short stub on the next line before the next syllable.** It ends at the last
   held note, as LilyPond draws it (`la _ _ _ | lu` over `c4 d e f | break g1`). A melisma held
-  across the break (a tie onto the next line) still draws its two pieces. None of the
-  repository's or the owner's books changes.
+  across the break (a tie onto the next line) draws its two pieces as LilyPond does: the first
+  runs to the end bar line, the second starts under the first held note of the next line and
+  ends just past the last one, no longer running on to the next syllable.
 
 ### A clef change in mid-line writes the key's sharps and flats out
 
