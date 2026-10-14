@@ -33,7 +33,7 @@ import { registerStepAudition } from './stepAudition';
 import { registerExportBatch } from './exportBatch';
 import { importFromImage } from './omrImport';
 import { registerOmrContexts } from './omrReader';
-import { OmrScanDeps, hasScan, previewReady, previewShowsBar, registerScanFollow, showScan } from './omrScan';
+import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, registerScanFollow, showScan } from './omrScan';
 import { registerVerifyOnSave } from './omrVerify';
 import { markdownItExtensionApi } from './markdownFence';
 import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab } from './previewCore';
@@ -1211,6 +1211,13 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     : vscode.workspace.textDocuments.find(d => d.uri.toString() === target && !d.isClosed);
                 if (doc) {
                     retargetPreview(panel, doc, context);
+                }
+                return;
+            }
+            if (message.type === 'hoverBar') {
+                // The bar under the mouse, for a scan view beside it to light — not logged.
+                if (scanDeps) {
+                    void previewHoversBar(uri, Number.isInteger(message.start) ? message.start : null, scanDeps);
                 }
                 return;
             }
@@ -2977,7 +2984,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         /* The bar a click would go to (barStaffAt), its staff tinted in the colour the scan view
            lights a bar in (omrScan.ts rect.light; the owner's request 2026-10-14: the two alike). */
-        #svgContainer rect.bar-staff.hover {
+        #svgContainer rect.bar-staff.hover,
+        #svgContainer rect.bar-staff.peer {
             fill: rgba(0, 120, 215, 0.14);
         }
         .container {
@@ -4127,6 +4135,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             hoveredBar = r;
             if (r) r.classList.add('hover');
             mainContent.classList.toggle('over-bar', r !== null);
+            // …and a scan view of the score lights the same bar (omrScan previewHoversBar).
+            vscode.postMessage({ type: 'hoverBar', start: r ? parseInt(r.getAttribute('data-start'), 10) : null });
+        }
+        // The scan view's bar under the mouse, lit here: every bar whose first note is written
+        // on the line the reader wrote it on, [from, to] (omrScan lineOfScanBar); none without.
+        function lightPeerBars(from, to) {
+            for (const r of svgContainer.querySelectorAll('rect.bar-staff.peer')) r.classList.remove('peer');
+            if (!Number.isInteger(from) || !Number.isInteger(to)) return;
+            for (const r of svgContainer.querySelectorAll('rect.bar-staff')) {
+                const s = parseInt(r.getAttribute('data-start'), 10);
+                if (s >= from && s <= to) r.classList.add('peer');
+            }
         }
         function installBarHover() {
             let pending = null;
@@ -4849,6 +4869,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 case 'markBars':
                     flaggedBars = new Set(message.bars || []);
                     applyBarFlags();
+                    break;
+                case 'peerBars':
+                    lightPeerBars(message.from, message.to);
                     break;
                 case 'retarget':
                     // The follower turns to another file: put this one's zoom and scroll

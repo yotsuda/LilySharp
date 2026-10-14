@@ -402,9 +402,47 @@ export function scanBarForPrinted(bars: readonly PrintedBar[], printed: number):
  *  there: a deleted line's anchor falls onto the start of the line after it, ahead of that
  *  line's own. */
 export function barOnLine(anchors: readonly BarAnchor[], lineStart: number, lineEnd: number): ScanTarget | undefined {
+    const a = anchorOnLine(anchors, lineStart, lineEnd);
+    return a ? { kind: 'bar', page: a.bar.page, box: a.bar.box, staff: barStaff(a.bar), label: String(a.bar.measure) } : undefined;
+}
+
+/** The anchor of the bar written on the line [lineStart, lineEnd] — barOnLine's choice. */
+export function anchorOnLine(anchors: readonly BarAnchor[], lineStart: number, lineEnd: number): BarAnchor | undefined {
     let a: BarAnchor | undefined;
     for (const x of anchors) {
         if (x.offset >= lineStart && x.offset <= lineEnd) { a = x; }
     }
-    return a ? { kind: 'bar', page: a.bar.page, box: a.bar.box, staff: barStaff(a.bar), label: String(a.bar.measure) } : undefined;
+    return a;
+}
+
+/** The line holding `offset` in `text`: [its start, its end before the line break]. */
+export function lineAround(text: string, offset: number): [number, number] {
+    const at = Math.max(0, Math.min(offset, text.length));
+    const start = text.lastIndexOf('\n', at - 1) + 1;
+    let end = text.indexOf('\n', at);
+    if (end < 0) { end = text.length; }
+    if (end > start && text[end - 1] === '\r') { end--; }
+    return [start, end];
+}
+
+/**
+ * The two views light each other's bar under the mouse (owner's request 2026-10-14), matched
+ * through the .lys: the reader writes a part's bar on a line of its own, and a bar of the
+ * preview carries where its first note is written (rect.bar-staff's data-start). The scan's bar
+ * (its index in `side.measures`) for a preview bar that starts at `start`: the bar written on
+ * that line, or undefined.
+ */
+export function scanBarForStart(side: ScanSideFile, anchors: readonly BarAnchor[], text: string, start: number): number | undefined {
+    const [from, to] = lineAround(text, start);
+    const a = anchorOnLine(anchors, from, to);
+    const index = a ? side.measures.indexOf(a.bar) : -1;
+    return index >= 0 ? index : undefined;
+}
+
+/** …and back: the line a scan bar is written on, [start, end] — the preview lights each of its
+ *  bars whose first note is on it (every printed copy of it). undefined for a bar with no line. */
+export function lineOfScanBar(side: ScanSideFile, anchors: readonly BarAnchor[], text: string, index: number): [number, number] | undefined {
+    const bar = side.measures[index];
+    const a = bar && anchors.find(x => x.bar === bar);
+    return a ? lineAround(text, a.offset) : undefined;
 }

@@ -29,7 +29,7 @@ import type { LanguageClient } from 'vscode-languageclient/node';
 import {
     BarAnchor, PrintedBar, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, flaggedBars, hiddenTodoKeys, parseSideFile, resolvedTodoKeys, barStaff,
     SCAN_DEFAULT_THRESHOLD, pageLabel, scanBarForPrinted, scanTitle, shiftAnchors, shownImage, sideFileOf, todoStroke,
-    todoTarget,
+    todoTarget, lineOfScanBar, scanBarForStart,
 } from './omrScanCore';
 
 export interface OmrScanDeps {
@@ -158,6 +158,12 @@ export async function showScan(
                 if (printed !== null && printed !== undefined) {
                     deps.postToPreview(lys, { type: 'showBar', bar: printed });
                 }
+            } else if (m.type === 'hoverBar') {
+                // The bar under the mouse lights on the preview too: each of its printed bars
+                // whose first note is on the bar's line (lineOfScanBar).
+                const doc = await vscode.workspace.openTextDocument(lys);
+                const line = Number.isInteger(m.index) ? lineOfScanBar(view.side, view.anchors, doc.getText(), m.index!) : undefined;
+                deps.postToPreview(lys, line ? { type: 'peerBars', from: line[0], to: line[1] } : { type: 'peerBars' });
             } else if (m.type === 'link') {
                 view.linked = !!m.on;
             } else if (m.type === 'threshold' && typeof m.value === 'number') {
@@ -267,6 +273,21 @@ export async function previewShowsBar(lys: string, bar: number, deps: OmrScanDep
     if (index !== undefined) {
         void view.panel.webview.postMessage({ type: 'showBar', index });
     }
+}
+
+/** The preview of `lys` has the mouse over the bar whose first note is written at `start` (null:
+ *  over none): the scan lights the bar written on that line (scanBarForStart). */
+export async function previewHoversBar(lys: string, start: number | null, deps: OmrScanDeps): Promise<void> {
+    const view = views.get(lys);
+    if (!view) {
+        return;
+    }
+    let index: number | undefined;
+    if (start !== null) {
+        const doc = await vscode.workspace.openTextDocument(view.lys);
+        index = scanBarForStart(view.side, view.anchors, doc.getText(), start);
+    }
+    void view.panel.webview.postMessage({ type: 'peer', index: index ?? null });
 }
 
 /** A preview of `lys` (re)loaded: it shows no marks until told again. */
@@ -393,7 +414,7 @@ function render(view: ScanView): void {
      colour the caret's bar is lit in (owner's request 2026-10-14). */
   g.bar { cursor: pointer; }
   g.bar rect { fill: transparent; stroke: none; }
-  g.bar:hover rect.tint { fill: rgba(0, 120, 215, .14); }
+  g.bar:hover rect.tint, g.bar.peer rect.tint { fill: rgba(0, 120, 215, .14); }
   rect.todo { fill: transparent; stroke: #d00; vector-effect: non-scaling-stroke; cursor: pointer; }
   rect.todo.quiet { stroke-dasharray: 4 3; }
   rect.todo:hover { fill: rgba(220, 0, 0, .12); }
@@ -449,6 +470,17 @@ ${pages || '<p>The side file lists no page.</p>'}
     else vscode.postMessage({ type: 'bar', index: Number(r.dataset.i) });
   });
 
+  // The bar under the mouse lights on the preview too, and the preview's bar under the mouse
+  // lights here (peer) — the owner's request 2026-10-14. Sent when it changes only.
+  let hovered = null;
+  function hover(g) {
+    if (g === hovered) return;
+    hovered = g;
+    vscode.postMessage({ type: 'hoverBar', index: g ? Number(g.dataset.i) : null });
+  }
+  document.addEventListener('mouseover', e => hover(e.target.closest ? e.target.closest('g.bar') : null));
+  document.addEventListener('mouseout', e => { if (!e.relatedTarget) hover(null); });
+
   // B4: the bar at the top of the view goes to the preview as the scan scrolls; a scroll
   // the preview asked for (showBar) is not reported back.
   let quietUntil = 0, reportTimer = null;
@@ -475,6 +507,12 @@ ${pages || '<p>The side file lists no page.</p>'}
     if (data.type === 'resolved') {
       resolved = new Set(data.keys || []);
       filter();
+      return;
+    }
+    if (data.type === 'peer') {
+      for (const g of document.querySelectorAll('g.bar.peer')) g.classList.remove('peer');
+      const g = data.index === null ? null : document.querySelector('g.bar[data-i="' + data.index + '"]');
+      if (g) g.classList.add('peer');
       return;
     }
     if (data.type === 'showBar') {

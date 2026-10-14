@@ -25,6 +25,7 @@ import * as vm from 'node:vm';
 import {
     SCAN_DEFAULT_THRESHOLD, anchorsOf, barOnLine, markFactsOf, pageLabel, parseSideFile, scanBarForPrinted, scanTitle,
     flaggedBars, hiddenTodoKeys, resolvedTodoKeys, shiftAnchors, shownAt, shownImage, sideFileOf, barStaff, todoStroke, todoTarget,
+    lineAround, lineOfScanBar, scanBarForStart,
 } from '../src/omrScanCore';
 
 // Absolute on whichever OS runs the tests.
@@ -295,5 +296,18 @@ describe('what the caret lights', () => {
         edited = edited.slice(0, s32) + edited.slice(s32 + 4);
         const at2 = edited.indexOf('  l33');
         assert.equal(barOnLine(anchors, at2, at2 + 5)?.box[1], 1046);
+    });
+
+    // The two views light each other's bar under the mouse, matched by the line it is written on.
+    it('matches a preview bar to the scan bar written on its first note\'s line, and back', () => {
+        const anchors = anchorsOf(side, text);
+        const [s33, e33] = lineOf(text, 33);
+        assert.deepEqual(lineAround(text, s33 + 1), [s33, e33]);
+        assert.deepEqual(lineAround('a\r\nbc\r\n', 4), [3, 5]);              // a CRLF line ends before its \r
+        assert.equal(scanBarForStart(side, anchors, text, s33 + 2), 1);       // side.measures[1]: bar 4 lh
+        assert.equal(scanBarForStart(side, anchors, text, lineOf(text, 32)[0]), 0);
+        assert.equal(scanBarForStart(side, anchors, text, lineOf(text, 31)[0]), undefined);
+        assert.deepEqual(lineOfScanBar(side, anchors, text, 1), [s33, e33]);
+        assert.equal(lineOfScanBar(side, anchors, text, 5), undefined);
     });
 });

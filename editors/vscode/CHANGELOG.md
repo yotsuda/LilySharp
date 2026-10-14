@@ -4,6 +4,12 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### The scan view and the preview light each other's bar under the mouse
+
+- **With Show Original Scan beside the preview, the bar under the mouse lights on both**: hover a
+  bar of the preview and the scan lights that bar of that part; hover a bar of the scan and the
+  preview lights it (each printed copy, where a section is played again).
+
 ### A line that opens on a `%4` keeps its four bars alike
 
 - **A multi-bar percent (`%3` and up) that opens a justified line stands evenly**: its first bar,
