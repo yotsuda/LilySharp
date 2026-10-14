@@ -178,4 +178,56 @@ public class LyricExtenderCompletionTests
             Regex.Match(attrs, name + "=\"([^\"]+)\"").Groups[1].Value,
             CultureInfo.InvariantCulture);
     }
+
+    [Theory]
+    [InlineData("c4 d e f | break g4 a2. |", "la _ _ _ | _ lu |")]   // held by skips
+    [InlineData("c4 d e f~ | break f4 g2. |", "la _ _ _ | lu |")]    // held by a tie
+    public void ExtenderHeldAcrossABreak_EndsItsPiecesWhereLilyPondDoes(string music, string words)
+    {
+        // A broken extender: line 1's piece runs to the end barline's ink left less the
+        // padding; line 2's starts at its first held head's ink left plus the padding and
+        // ends minimum-length (1.5) past that head — not at the next syllable. LP 2.26:
+        // 110.696 = barline 110.78 − 0.08, and 14.416 → 15.836 = head 14.34 + 0.08 → + 1.5
+        // (Lab probes/lyric-extender lp-cross.ly). Until session 905 line 1 ended 0.5 short
+        // of the system's right and line 2 ran from the measure's left + 0.5 to "lu".
+        var svg = LiveRender.SvgFromRenderSpec($$"""
+            part m { clef treble }
+            section S {
+              m { {{music}} }
+              lyrics w sings m { {{words}} }
+            }
+            form { ~S }
+            score { staff m  lyrics w }
+            """);
+
+        var segments = new List<(double X1, double X2, double Y)>();
+        foreach (Match m in Regex.Matches(svg, "<line ([^>]*stroke-width=\"0.080\"[^>]*)/>"))
+        {
+            var a = m.Groups[1].Value;
+            double y1 = Attr4(a, "y1"), y2 = Attr4(a, "y2");
+            double x1 = Attr4(a, "x1"), x2 = Attr4(a, "x2");
+            if (y1 == y2 && x2 - x1 < 90)
+                segments.Add((x1, x2, y1));
+        }
+        Assert.Equal(2, segments.Count);
+        var first = segments.OrderBy(s => s.Y).First();
+        var second = segments.OrderBy(s => s.Y).Last();
+
+        // Line 1's end barline: the first thin bar rect (both systems share its x).
+        double barLeft = Regex.Matches(svg, "<rect x=\"([-\\d.]+)\" y=\"[-\\d.]+\" width=\"0.19\"")
+            .Select(m => double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture)).Max();
+        Assert.InRange(first.X2, barLeft - 0.08 - 0.02, barLeft - 0.08 + 0.02);
+
+        // Line 2's first head: the leftmost notehead below line 1's lyric row.
+        double headLeft = Regex.Matches(svg,
+                "<text class=\"music\" x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*data-pos[^>]*>")
+            .Select(m => (X: Attr4(m.Value, "x"), Y: Attr4(m.Value, "y")))
+            .Where(h => h.Y > first.Y).Select(h => h.X).Where(x => x > 2).Min();
+        Assert.InRange(second.X1, headLeft + 0.08 - 0.02, headLeft + 0.08 + 0.02);
+        Assert.InRange(second.X2, headLeft + 1.5 - 0.02, headLeft + 1.5 + 0.02);
+
+        static double Attr4(string attrs, string name) => double.Parse(
+            Regex.Match(attrs, name + "=\"([^\"]+)\"").Groups[1].Value,
+            CultureInfo.InvariantCulture);
+    }
 }

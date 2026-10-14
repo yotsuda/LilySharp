@@ -642,10 +642,6 @@ internal sealed class LyricHyphenEngraver
         // notes are unknown (no markers, or no score measures — unit tests) only in the
         // fallback, where the minimum-length and the cap alone place the end, as they do
         // in LilyPond for an extender with no heads.
-        // A CROSSING extender keeps the segment bounds below unchanged — its
-        // held-end may sit on either side of the break, and the broken-piece
-        // geometry (segment ends, per-system Y) is pinned by
-        // lyric-extender-right-margin (第37号); rebounding it is that regime's work.
         // MEASURED (lyric-melisma-melisma twin): LP extender right 27.210 = the
         // f16 head's ink right (25.906 + head width), while the next syllable
         // stands at 29.07.
@@ -672,8 +668,45 @@ internal sealed class LyricHyphenEngraver
             crossesSystem = false;
 
         double endX;
+        double firstSegmentEndX = systemEndX - 0.5;
+        double secondSegmentStartX = nextSystemStartX + 0.5;
         if (crossesSystem)
+        {
             endX = next.X - next.Width / 2 - _params.ExtenderPadding;
+            // A melisma held across the break is a broken spanner. The line-end piece
+            // runs to the end barline's ink left less the padding ("run to end of line").
+            // The next line's piece starts at its first held head's ink left (its left
+            // bound is the break, not a syllable) and ends like any extender: minimum-length
+            // past that head, raised to the last held head, capped by the next syllable.
+            // LILYPOND-REF: lily/lyric-extender.cc:98-107 break_status_dir — a broken RIGHT bound
+            //   runs the piece to the bound's extent LEFT less right-padding;
+            // LILYPOND-REF: lily/lyric-extender.cc:57-64 left_point — heads[0]'s
+            //   extent LEFT when the left bound is not a lyric syllable;
+            // LILYPOND-REF: lily/lyric-extender.cc:69-96 right_point — minimum-length, the last
+            //   head, the next syllable.
+            // MEASURED (Lab probes/lyric-extender lp-cross.ly, LP 2.26): `la __ _ _ _ _ lu`
+            // over `c4 d e f | \break g4 a2.` — line 1 ends at 110.696 = the barline's
+            // 110.78 less 0.08; line 2 runs 14.416 → 15.836 = g's head left 14.34 + 0.08 →
+            // 14.34 + 1.5 (the same for the tie `f~ | \break f4`). Until session 905 line 1
+            // ended 0.5 short of the system's right and line 2 ran from the first measure's
+            // left + 0.5 to the next syllable.
+            // The held heads on the next line are the notes before the next syllable there.
+            // Their last one is the `_` slots' recorded end when the syllable has one;
+            // a `__` held by a tie or slur records none, and the tie/slur chain from the
+            // syllable's note gives it (lyric-extender-right-margin: `effff __` over
+            // `f~ | \break f4` — LP 2.26 draws 14.416 → 15.836 under the tied f, where
+            // Lily# drew a stub that ended before the head).
+            firstSegmentEndX = systemEndX - EngravingDefaults.ThinBarlineThickness - _params.ExtenderPadding;
+            if (measureToSystem.TryGetValue(next.Item.MeasureIndex, out var nextSys)
+                && FirstHeadOnLine(current.Item.StaffIndex, systems[nextSys.systemIndex], measuresByStaff) is { } head
+                && (head.MeasureIndex < next.Item.MeasureIndex
+                    || (head.MeasureIndex == next.Item.MeasureIndex && head.Onset < next.Item.Timing))
+                && LastHeldOnNextLine(current, nextSys.systemIndex, measuresByStaff, systems, measureToSystem) is { } lastHeld)
+            {
+                secondSegmentStartX = head.InkLeft + _params.ExtenderPadding;
+                endX = Math.Min(Math.Max(head.InkLeft + _params.ExtenderMinimumLength, lastHeld), endX);
+            }
+        }
         else
         {
             double rightPoint = Math.Min(inkRight + _params.ExtenderMinimumLength,
@@ -704,8 +737,8 @@ internal sealed class LyricHyphenEngraver
                 ExtenderEndX: endX,
                 ExtenderY: y,
                 CrossesSystemBreak: true,
-                FirstSegmentEndX: systemEndX - 0.5,
-                SecondSegmentStartX: nextSystemStartX + 0.5,
+                FirstSegmentEndX: firstSegmentEndX,
+                SecondSegmentStartX: secondSegmentStartX,
                 NextLyricIndex: nextIndex,
                 SecondSegmentY: -next.YUp + _params.ExtenderCentreBelowBaseline
             );
@@ -723,6 +756,58 @@ internal sealed class LyricHyphenEngraver
             ExtenderEndX: endX,
             ExtenderY: y
         );
+    }
+
+    /// <summary>
+    /// The first note of a system's first measure of the staff — the first head a melisma
+    /// held across the break covers there: its measure, onset and ink LEFT edge (absolute
+    /// X). Null when the line opens on a rest (no head is held there) or the staff's
+    /// measures are unknown.
+    /// </summary>
+    private static (int MeasureIndex, Fraction Onset, double InkLeft)? FirstHeadOnLine(
+        int staffIndex,
+        SystemLayout system,
+        IReadOnlyDictionary<int, ImmutableArray<Measure>>? measuresByStaff)
+    {
+        if (system.Measures.Length == 0
+            || measuresByStaff == null
+            || !measuresByStaff.TryGetValue(staffIndex, out var measures))
+            return null;
+        var ml = system.Measures[0];
+        if (ml.MeasureIndex < 0 || ml.MeasureIndex >= measures.Length)
+            return null;
+        var onset = Fraction.Zero;
+        foreach (var it in measures[ml.MeasureIndex].Items)
+        {
+            if (it is NoteItem or ChordItem)
+                return (ml.MeasureIndex, onset, ml.X + ml.GetXForTiming(onset)
+                    + GlyphMetrics.GetNoteheadBBox(GlyphMetrics.NoteValueOf(it)).Left);
+            if (it.Duration > Fraction.Zero)
+                return null;
+            onset += it.Duration;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Ink RIGHT edge of a broken extender's last held head on the next line: the `_`
+    /// slots' recorded end when it stands on that line (null when it stands elsewhere — a
+    /// melisma over three lines is not laid out piece by piece), else the tie/slur chain
+    /// from the syllable's note.
+    /// </summary>
+    private static double? LastHeldOnNextLine(
+        LyricLayout current,
+        int nextSystemIndex,
+        IReadOnlyDictionary<int, ImmutableArray<Measure>>? measuresByStaff,
+        IReadOnlyList<SystemLayout> systems,
+        Dictionary<int, (int systemIndex, double systemEndX, double systemStartX)> measureToSystem)
+    {
+        if (current.Item.MelismaEndMeasureIndex >= 0)
+            return measureToSystem.TryGetValue(current.Item.MelismaEndMeasureIndex, out var held)
+                && held.systemIndex == nextSystemIndex
+                ? HeldEndInkRight(current.Item, measuresByStaff, systems)
+                : null;
+        return MelismaEndInkRight(current, measuresByStaff, systems);
     }
 
     /// <summary>
