@@ -6,6 +6,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### A lyric extender that ends before a line break stays on its line
+
+- **A melisma that ends before a line break no longer draws its extender line to the end of
+  the line, nor a short stub on the next line before the next syllable.** It ends at the last
+  held note, as LilyPond draws it (`la _ _ _ | lu` over `c4 d e f | break g1`). A melisma held
+  across the break (a tie onto the next line) still draws its two pieces. None of the
+  repository's or the owner's books changes.
+
 ### A clef change in mid-line writes the key's sharps and flats out
 
 - **After a clef change in the middle of a line, a note its key alters carries the key's
